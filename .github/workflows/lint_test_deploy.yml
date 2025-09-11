@@ -1,0 +1,13 @@
+name: Main Deploy Pipeline
+
+on:
+  push:
+    branches: [ main ]  # Triggers on pushes to main
+
+jobs:
+  lint-readme:
+    uses: ./.github/workflows/lint-readme.yml  # Calls the reusable lint workflow
+
+  deploy-itch:
+    needs: lint-readme  # Only runs if lint succeeds
+    uses: ./.github/workflows/deploy-itch.yml  # Calls the reusable deploy workflow

@@ -1,0 +1,17 @@
+name: Lint README
+
+on:
+  workflow_call:  # Makes it reusable; called by other workflows
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Lint README.md
+        uses: DavidAnson/markdownlint-cli2-action@v16  # Lints Markdown for formatting/spelling
+        with:
+          globs: 'README.md'  # Target README; add more like '**/*.md' later
+          fix: true  # Auto-fix simple issues (optional)
