@@ -16,4 +16,4 @@ func _on_options_pressed():
 	print("Options menu coming soon!")  # Stub; later change to load options scene
 
 func _on_quit_pressed():
-	get_tree().quit()  # Works in desktop; in web, it may pause or need JavaScript interopextends Control
+	print("Quit menu coming soon!")  # Stub; later change to load options scene
