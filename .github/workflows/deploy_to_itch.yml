@@ -33,7 +33,7 @@ jobs:
       - name: Deploy to itch.io with Butler
         run: |
           butler --version
-          butler login --api-key $ITCHIO_API_KEY
+          butler login
           butler push ${{ steps.export.outputs.archive_directory }}/web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion ${{ github.ref_name }}
         env:
           ITCHIO_API_KEY: ${{ secrets.ITCHIO_API_KEY }}
