@@ -11,3 +11,5 @@ jobs:
   deploy-itch:
     needs: lint-readme  # Only runs if lint succeeds
     uses: ./.github/workflows/deploy_to_itch.yml  # Calls the reusable deploy workflow
+    secrets:
+      ITCHIO_API_KEY: ${{ secrets.ITCHIO_API_KEY }}

@@ -2,6 +2,10 @@ name: Deploy to itch.io
 
 on:
   workflow_call:  # Reusable
+    secrets:
+      ITCHIO_API_KEY:
+        description: "Itch.io API key"
+        required: true
 
 jobs:
   export-and-deploy:
