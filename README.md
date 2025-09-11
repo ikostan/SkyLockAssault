@@ -134,10 +134,10 @@ server {
 
 ### Troubleshooting
 
-- **Empty compose file error**: Check indentation in docker-compose.yml—use spaces, not tabs.
-  Recreate file if corrupted.
-- **Config not found in logs**: Ensure default.conf (no .txt) is in infra/nginx/. Restart Docker Desktop
-  if mounts fail.
+- **Empty compose file error**: Check indentation in docker-compose.yml—use spaces,
+  not tabs. Recreate file if corrupted.
+- **Config not found in logs**: Ensure default.conf (no .txt) is in infra/nginx/.
+  Restart Docker Desktop if mounts fail.
 - **Port conflict**: Change ports line to e.g., "8080:80" if 9090 is used.
 - **No game loads**: Confirm export/web/ has files (re-export). Test manually with Python:
   `python -m http.server 8000 --directory export/web`, browse http://localhost:8000.
@@ -145,5 +145,5 @@ server {
 - **Docker not starting**: Ensure Docker Desktop is running (tray icon green).
   Restart PC if issues.
 
-This Docker setup promotes good habits for learning web game deployment—test locally, then automate with
-GitHub Actions for itch.io.
+This Docker setup promotes good habits for learning web game deployment—test locally,
+then automate with GitHub Actions for itch.io.
