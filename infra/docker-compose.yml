@@ -1,0 +1,10 @@
+services:
+  godot_web_server:
+	image: nginx:latest
+	container_name: sky_lock_assault_server
+	ports:
+	  - "9090:80"  # Local port 9090 to container 80; change if conflicted
+	restart: unless-stopped
+	volumes:
+	  - ../export/web:/usr/share/nginx/html:ro  # Mount your HTML5 export read-only
+	  - ./nginx:/etc/nginx/conf.d  # Mount custom Nginx config
