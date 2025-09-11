@@ -30,14 +30,4 @@ infra/*.log  # If Docker logs appear
 
 # Ignore user-specific Godot settings if shared
 project.godot.override
-addons/godot-git-plugin/git_plugin.gdextension
-addons/godot-git-plugin/git_plugin.gdextension.uid
-addons/godot-git-plugin/LICENSE
-addons/godot-git-plugin/linux/libgit_plugin.linux.editor.x86_64.so
-addons/godot-git-plugin/macos/libgit_plugin.macos.editor.universal.dylib
-addons/godot-git-plugin/plugin.cfg
-addons/godot-git-plugin/THIRDPARTY.md
-addons/godot-git-plugin/win64/libgit_plugin.windows.editor.x86_64.dll
-addons/godot-git-plugin/win64/libgit_plugin.windows.editor.x86_64.exp
-addons/godot-git-plugin/win64/libgit_plugin.windows.editor.x86_64.lib
-addons/godot-git-plugin/win64/~libgit_plugin.windows.editor.x86_64.dll
+addons/
