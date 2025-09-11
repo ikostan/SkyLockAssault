@@ -1,6 +1,6 @@
 # Sky Lock Assault
 
-**A top-down online web browser game built with Godot 4.4**
+## A top-down online web browser game built with Godot 4.4
 
 This is a dedicated Godot v4.4 game dev project on Windows 10 64-bit OS.
 We'll be learning game dev here, starting with a simple main menu and expanding
@@ -41,8 +41,8 @@ Current features:
 
 To mimic itch.io hosting locally (for testing Web exports in browsers like Chrome/Firefox
 without uploading every time), we use a Docker-based Nginx server. This handles static
-files with required headers for Godot Web (e.g., COEP/COOP for WASM security). It's great
-for learning deployment flows before GitHub CI/CD pushes to itch.io.
+files with required headers for Godot Web (e.g., COEP/COOP for WASM security). It's
+great for learning deployment flows before GitHub CI/CD pushes to itch.io.
 
 ### Prerequisites
 
@@ -56,6 +56,7 @@ for learning deployment flows before GitHub CI/CD pushes to itch.io.
 ### docker-compose.yml Content
 
 Paste this into `infra/docker-compose.yml` (use 2 spaces for indentation, no tabs):
+<!-- markdownlint-disable-line MD013 -->
 
 ```yaml
 services:
@@ -72,7 +73,7 @@ services:
 
 ### Nginx Config (default.conf)
 
-Paste this into `infra/nginx/default.conf` (rename from .txt via File Explorer if Godot adds it):
+Paste this into `infra/nginx/default.conf`(rename from .txt via File Explorer if Godot adds it):
 
 ```nginx
 server {
@@ -97,15 +98,18 @@ server {
 }
 ```
 
+<!-- markdownlint-enable-line MD013 -->
+
 ### Running the Docker Server
 
 1. Open PowerShell or cmd as admin (search "PowerShell", right-click > Run as administrator).
 2. Navigate to infra folder:
-   ```
+
+   ```bash
    cd C:\Users\super\Documents\GitHub\SkyLockAssault\infra
    ```
 3. Start the container (detached mode):
-   ```
+   ```bash
    docker compose up -d
    ```
    - First run pulls Nginx (may take a minute).
@@ -114,27 +118,30 @@ server {
    - Your game menu should load. Click Start to test game_level (even if placeholder).
    - Use browser dev tools (F12) to check console for errors (e.g., WASM loading).
 5. Stop the container:
-   ```
+   ```bash
    docker compose down
    ```
 6. Restart after changes (e.g., new export):
-   ```
+   ```bash
    docker compose restart
    ```
 7. View logs for debugging:
-   ```
+   ```bash
    docker logs sky_lock_assault_server
    ```
    - Look for no errors like "default.conf not found."
 
 ### Troubleshooting
 
-- **Empty compose file error**: Check indentation in docker-compose.yml—use spaces, not tabs. Recreate file if corrupted.
-- **Config not found in logs**: Ensure default.conf (no .txt) is in infra/nginx/. Restart Docker Desktop if mounts fail.
+- **Empty compose file error**: Check indentation in docker-compose.yml—use spaces, not tabs.
+  Recreate file if corrupted.
+- **Config not found in logs**: Ensure default.conf (no .txt) is in infra/nginx/. Restart Docker Desktop
+  if mounts fail.
 - **Port conflict**: Change ports line to e.g., "8080:80" if 9090 is used.
 - **No game loads**: Confirm export/web/ has files (re-export). Test manually with Python:
   `python -m http.server 8000 --directory export/web`, browse http://localhost:8000.
 - **WASM errors in browser**: Headers in config fix most—inspect network tab.
 - **Docker not starting**: Ensure Docker Desktop is running (tray icon green). Restart PC if issues.
 
-This Docker setup promotes good habits for learning web game deployment—test locally, then automate with GitHub Actions for itch.io.
+This Docker setup promotes good habits for learning web game deployment—test locally, then automate with
+GitHub Actions for itch.io.
