@@ -1,3 +1,32 @@
 # Godot 4+ specific ignores
 .godot/
-/android/
+
+# Godot-specific ignores (older .import for compat)
+.import/
+*.import
+
+# Imported asset reimport files
+*.reimport
+
+# System/OS files
+.DS_Store
+Thumbs.db
+
+# Editor-specific files
+*.tmp
+*.bak
+*.log
+*.pidb
+*.meta  # Unity-like, but sometimes from imports
+
+# Build/export folders (ignore exports; commit presets.cfg)
+export/*
+!export/export_presets.cfg  # Keep your export settings
+
+# Temp files from tools/Docker
+*.swp
+*.swo
+infra/*.log  # If Docker logs appear
+
+# Ignore user-specific Godot settings if shared
+project.godot.override
