@@ -1,5 +1,9 @@
 # Sky Lock Assault
 
+<!-- markdownlint-disable line-length -->
+[![Main Deploy Pipeline](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml/badge.svg)](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml)
+<!-- markdownlint-enable line-length -->
+
 ## A top-down online web browser game built with Godot 4.4
 
 This is a dedicated Godot v4.4 game dev project on Windows 10 64-bit OS.
