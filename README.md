@@ -1,4 +1,4 @@
-# Sky Lock Assault
+# [Sky Lock Assault](https://ikostan.itch.io/sky-lock-assault)
 
 <!-- markdownlint-disable line-length -->
 [![Main Deploy Pipeline](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml/badge.svg)](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml)
@@ -12,6 +12,8 @@ This is a dedicated Godot v4.4 game dev project on Windows 10 64-bit OS.
 We'll be learning game dev here, starting with a simple main menu and expanding
 to core mechanics like player controls, enemy AI, and assaults in the sky.
 The repo is open-source at [SkyLockAssault](https://github.com/ikostan/SkyLockAssault).
+
+You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 
 ## Project Overview
 
