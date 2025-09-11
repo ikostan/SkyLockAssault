@@ -56,7 +56,8 @@ great for learning deployment flows before GitHub CI/CD pushes to itch.io.
 ### docker-compose.yml Content
 
 Paste this into `infra/docker-compose.yml` (use 2 spaces for indentation, no tabs):
-<!-- markdownlint-disable-line MD013 -->
+
+<!-- markdownlint-disable line-length -->
 
 ```yaml
 services:
@@ -98,7 +99,7 @@ server {
 }
 ```
 
-<!-- markdownlint-enable-line MD013 -->
+<!-- markdownlint-enable line-length -->
 
 ### Running the Docker Server
 
@@ -141,7 +142,8 @@ server {
 - **No game loads**: Confirm export/web/ has files (re-export). Test manually with Python:
   `python -m http.server 8000 --directory export/web`, browse http://localhost:8000.
 - **WASM errors in browser**: Headers in config fix most—inspect network tab.
-- **Docker not starting**: Ensure Docker Desktop is running (tray icon green). Restart PC if issues.
+- **Docker not starting**: Ensure Docker Desktop is running (tray icon green).
+  Restart PC if issues.
 
 This Docker setup promotes good habits for learning web game deployment—test locally, then automate with
 GitHub Actions for itch.io.
