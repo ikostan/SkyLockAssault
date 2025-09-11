@@ -14,12 +14,12 @@ jobs:
         id: export
         uses: firebelley/godot-export@v5.2.1  # Exports using your presets.cfg
         with:
-          godot_executable_download_url: https://downloads.tuxfamily.org/godotengine/4.4.1/Godot_v4.4.1-stable_linux.x86_64.zip
-          godot_export_templates_download_url: https://downloads.tuxfamily.org/godotengine/4.4.1/Godot_v4.4.1-stable_export_templates.tpz
+          godot_executable_download_url: https://github.com/godotengine/godot-builds/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip  # Official GitHub mirror (faster)
+          godot_export_templates_download_url: https://github.com/godotengine/godot-builds/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz  # GitHub mirror for templates
           relative_project_path: ./  # Project root
           relative_export_path: ./export/web  # Output folder
           archive_output: true  # Zips for upload
-          use_preset: itch-web  # Match your Web preset name (change if different)
+          # Removed 'use_preset'—action auto-exports all presets (e.g., your Web one)
 
       - name: Deploy to itch.io
         uses: Ayowel/butler-to-itch@v1.0.0  # Pushes via Butler
@@ -28,5 +28,5 @@ jobs:
           itch_user: ikostan  # Your itch.io username
           itch_game: sky-lock-assault  # Game slug (from URL)
           version: ${{ github.ref_name }}  # Branch/tag as version
-          files: ${{ steps.export.outputs.archive_directory }}/itch-web.zip  # Zipped export
+          files: ${{ steps.export.outputs.archive_directory }}/web.zip  # Zipped export (adjust if preset names zip differently; check logs)
           channel: html5  # itch.io channel for Web
