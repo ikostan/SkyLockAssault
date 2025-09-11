@@ -1,26 +1,35 @@
 # Sky Lock Assault
 
-**A top-down online web browser game built with Godot 4.4, targeting deployment on itch.io via GitHub CI/CD actions.**
+**A top-down online web browser game built with Godot 4.4**
 
-This is a dedicated Godot v4.4 game dev project on Windows 10 64-bit OS. We'll be learning game dev here, starting with a simple main menu and expanding to core mechanics like player controls, enemy AI, and assaults in the sky. The repo is open-source at [https://github.com/ikostan/SkyLockAssault](https://github.com/ikostan/SkyLockAssault).
+This is a dedicated Godot v4.4 game dev project on Windows 10 64-bit OS.
+We'll be learning game dev here, starting with a simple main menu and expanding
+to core mechanics like player controls, enemy AI, and assaults in the sky.
+The repo is open-source at [SkyLockAssault](https://github.com/ikostan/SkyLockAssault).
 
 ## Project Overview
+
 - **Godot Version**: 4.4.1 stable (or compatible).
 - **OS**: Windows 10 64-bit.
-- **Tools**: Docker Desktop v4.45 for local testing, GitHub Desktop v3.5 for repo management.
-- **Goal**: Build a playable top-down shooter with web deployment in mind—export to HTML5/Web, test locally, deploy to itch.io.
+- **Tools**: Docker Desktop v4.45 for local testing, GitHub Desktop v3.5
+  for repo management.
+- **Goal**: Build a playable top-down shooter with web deployment in mind—export
+  to HTML5/Web, test locally, deploy to itch.io.
 
 Current features:
+
 - Main menu scene (`main_menu.tscn`) with buttons (Start, Resume, Options, Quit).
 - Placeholder game level (`game_level.tscn`) for future mechanics.
 
 ## Setup Instructions
+
 1. **Clone the Repo**:
    - Use GitHub Desktop: Clone https://github.com/ikostan/SkyLockAssault.
    - Open in Godot 4.4: Launch Godot > Import > Select `project.godot`.
 
 2. **Install Export Templates**:
-   - In Godot: Editor > Manage Export Templates > Download for 4.4.1 (or manual from https://godotengine.org/download/archive/4.4.1-stable/).
+   - In Godot: Editor > Manage Export Templates > Download for 4.4.1
+     (or manual from https://godotengine.org/download/archive/4.4.1-stable/).
    - Required for Web exports.
 
 3. **Export to Web**:
@@ -29,16 +38,23 @@ Current features:
    - This generates index.html, .wasm, .js, etc., for browser testing.
 
 ## Docker Local Test Server
-To mimic itch.io hosting locally (for testing Web exports in browsers like Chrome/Firefox without uploading every time), we use a Docker-based Nginx server. This handles static files with required headers for Godot Web (e.g., COEP/COOP for WASM security). It's great for learning deployment flows before GitHub CI/CD pushes to itch.io.
+
+To mimic itch.io hosting locally (for testing Web exports in browsers like Chrome/Firefox
+without uploading every time), we use a Docker-based Nginx server. This handles static
+files with required headers for Godot Web (e.g., COEP/COOP for WASM security). It's great
+for learning deployment flows before GitHub CI/CD pushes to itch.io.
 
 ### Prerequisites
-- Docker Desktop v4.45 installed and running (download from https://www.docker.com/products/docker-desktop/).
+
+- Docker Desktop v4.45 installed and running
+  (download from https://www.docker.com/products/docker-desktop/).
 - Project exported to `export/web/` (see above).
 - infra/ folder in project root with:
   - `docker-compose.yml`
   - `nginx/default.conf` (no .txt extension—rename via File Explorer if needed).
 
 ### docker-compose.yml Content
+
 Paste this into `infra/docker-compose.yml` (use 2 spaces for indentation, no tabs):
 
 ```yaml
@@ -55,6 +71,7 @@ services:
 ```
 
 ### Nginx Config (default.conf)
+
 Paste this into `infra/nginx/default.conf` (rename from .txt via File Explorer if Godot adds it):
 
 ```nginx
@@ -81,6 +98,7 @@ server {
 ```
 
 ### Running the Docker Server
+
 1. Open PowerShell or cmd as admin (search "PowerShell", right-click > Run as administrator).
 2. Navigate to infra folder:
    ```
@@ -110,10 +128,12 @@ server {
    - Look for no errors like "default.conf not found."
 
 ### Troubleshooting
+
 - **Empty compose file error**: Check indentation in docker-compose.yml—use spaces, not tabs. Recreate file if corrupted.
 - **Config not found in logs**: Ensure default.conf (no .txt) is in infra/nginx/. Restart Docker Desktop if mounts fail.
 - **Port conflict**: Change ports line to e.g., "8080:80" if 9090 is used.
-- **No game loads**: Confirm export/web/ has files (re-export). Test manually with Python: `python -m http.server 8000 --directory export/web`, browse http://localhost:8000.
+- **No game loads**: Confirm export/web/ has files (re-export). Test manually with Python:
+  `python -m http.server 8000 --directory export/web`, browse http://localhost:8000.
 - **WASM errors in browser**: Headers in config fix most—inspect network tab.
 - **Docker not starting**: Ensure Docker Desktop is running (tray icon green). Restart PC if issues.
 
