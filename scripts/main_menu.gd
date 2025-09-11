@@ -18,6 +18,7 @@ func _ready():
 	quit_dialog = $CenterContainer/VBoxContainer/QuitDialog
 
 	if quit_dialog:
+		# Add signals
 		log_message("QuitDialog found via get_node (using scene node).")
 		quit_dialog.confirmed.connect(_on_quit_dialog_confirmed)
 		quit_dialog.get_cancel_button().pressed.connect(_on_quit_dialog_canceled)
