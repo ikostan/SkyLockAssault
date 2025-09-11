@@ -6,8 +6,8 @@ on:
 
 jobs:
   lint-readme:
-    uses: ./.github/workflows/lint-readme.yml  # Calls the reusable lint workflow
+    uses: ./.github/workflows/lint_readme.yml  # Calls the reusable lint workflow
 
   deploy-itch:
     needs: lint-readme  # Only runs if lint succeeds
-    uses: ./.github/workflows/deploy-itch.yml  # Calls the reusable deploy workflow
+    uses: ./.github/workflows/deploy_itch.yml  # Calls the reusable deploy workflow
