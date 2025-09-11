@@ -24,12 +24,12 @@ jobs:
           relative_export_path: ./export/web  # Output folder
           archive_output: true  # Zips for upload
 
-      - name: Deploy to itch.io
-        uses: Ayowel/butler-to-itch@v1.0.0  # Pushes via Butler
+      - name: Set up Butler
+        uses: RageAgainstThePixel/setup-butler@v1  # Installs Butler reliably, avoids redirect issues
         with:
-          butler_key: ${{ secrets.ITCHIO_API_KEY }}  # Matches action input; your secret
-          itch_user: ikostan  # Your itch.io username
-          itch_game: sky-lock-assault  # Game slug
-          version: ${{ github.ref_name }}  # Branch/tag as version
-          files: ${{ steps.export.outputs.archive_directory }}/web.zip  # Zipped export
-          auto_channel: true  # Auto-generates channel from file name (e.g., "web" for html5)
+          version: latest  # Or '15.21.0' for specific stable version
+
+      - name: Deploy to itch.io with Butler
+        run: |
+          butler login --api-key ${{ secrets.ITCHIO_API_KEY }}
+          butler push ${{ steps.export.outputs.archive_directory }}/web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion ${{ github.ref_name }}
