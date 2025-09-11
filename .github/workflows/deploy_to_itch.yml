@@ -25,9 +25,11 @@ jobs:
           archive_output: true  # Zips for upload
 
       - name: Set up Butler
-        uses: RageAgainstThePixel/setup-butler@v1  # Installs Butler reliably, avoids redirect issues
+        uses: RageAgainstThePixel/setup-butler@v1.0.3  # Installs Butler reliably, avoids redirect issues
         with:
           version: latest  # Or '15.21.0' for specific stable version
+          api-key: ${{ secrets.ITCHIO_API_KEY }}
+        run: butler --version
 
       - name: Deploy to itch.io with Butler
         run: |
