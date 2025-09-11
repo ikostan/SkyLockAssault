@@ -143,8 +143,12 @@ server {
 - **Config not found in logs**: Ensure default.conf (no .txt) is in infra/nginx/.
   Restart Docker Desktop if mounts fail.
 - **Port conflict**: Change ports line to e.g., "8080:80" if 9090 is used.
-- **No game loads**: Confirm export/web/ has files (re-export). Test manually with Python:
-  `python -m http.server 8000 --directory export/web`, browse http://localhost:8000.
+- **No game loads**: Confirm export/web/ has files (re-export). Test manually with
+  Python:
+  ```bash
+  python -m http.server 8000 --directory export/web
+  ```
+- browse http://localhost:8000.
 - **WASM errors in browser**: Headers in config fix most—inspect network tab.
 - **Docker not starting**: Ensure Docker Desktop is running (tray icon green).
   Restart PC if issues.
