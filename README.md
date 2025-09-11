@@ -6,6 +6,8 @@
 
 ## A top-down online web browser game built with Godot 4.4
 
+![Sky Lock Assault](https://github.com/ikostan/SkyLockAssault/blob/master/img/main_menu.png)
+
 This is a dedicated Godot v4.4 game dev project on Windows 10 64-bit OS.
 We'll be learning game dev here, starting with a simple main menu and expanding
 to core mechanics like player controls, enemy AI, and assaults in the sky.
