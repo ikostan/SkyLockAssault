@@ -2,9 +2,12 @@
 
 <!-- markdownlint-disable line-length -->
 [![Made with Godot](https://img.shields.io/badge/Made%20with-Godot-478CBF?style=flat&logo=godot%20engine&logoColor=white)](https://godotengine.org)
-![Visitors](https://visitor-badge.laobi.icu/badge?page_id=ikostan.SkyLockAssault&left_color=blue&right_color=green&left_text=Total%20Visitors)
 [![Main Deploy Pipeline](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml/badge.svg)](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml)
 ![Repo Size](https://img.shields.io/github/repo-size/ikostan/SkyLockAssault)
+![Closed Issues](https://img.shields.io/github/issues-closed/ikostan/SkyLockAssault?%2FSkyLockAssault?style=flat-square&label=Issues&color=green)
+![Open Issues](https://img.shields.io/github/issues/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=red)
+![Visitors](https://visitor-badge.laobi.icu/badge?page_id=ikostan.SkyLockAssault&left_color=blue&right_color=green&left_text=Total%20Visitors)
+
 <!-- markdownlint-enable line-length -->
 
 ## A top-down online web browser game built with Godot 4.4
