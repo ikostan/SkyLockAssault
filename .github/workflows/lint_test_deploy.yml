@@ -1,4 +1,8 @@
-name: Main Deploy Pipeline
+name: "Main Deploy Pipeline"
+
+# Define permissions at the workflow level
+permissions:
+  pull-requests: write
 
 on:
   push:
