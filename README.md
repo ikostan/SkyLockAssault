@@ -1,6 +1,7 @@
 # [Sky Lock Assault](https://ikostan.itch.io/sky-lock-assault)
 
 <!-- markdownlint-disable line-length -->
+![Visitors](https://visitor-badge.laobi.icu/badge?page_id=ikostan.SkyLockAssault&left_color=blue&right_color=green&left_text=Total%20Visitors)
 [![Main Deploy Pipeline](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml/badge.svg)](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml)
 <!-- markdownlint-enable line-length -->
 
