@@ -7,9 +7,15 @@ on:
 jobs:
   lint-readme:
     uses: ./.github/workflows/lint_readme.yml  # Calls the reusable lint workflow
-
+  yamllint:
+    name: "YAML Lint"
+    uses: "ikostan/connectme/.github/workflows/yamllint.yml@master"
+    with:
+      config-path: ".github/workflows/*.yml"  # Pass the folder name parameter here
   deploy-itch:
-    needs: lint-readme  # Only runs if lint succeeds
+    needs: 
+      - lint-readme  # Only runs if lint succeeds
+      - yamllint
     uses: ./.github/workflows/deploy_to_itch.yml  # Calls the reusable deploy workflow
     secrets:
       ITCHIO_API_KEY: ${{ secrets.ITCHIO_API_KEY }}
