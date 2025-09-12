@@ -1,3 +1,4 @@
+---
 name: "Main Deploy Pipeline"
 
 # Define permissions at the workflow level
@@ -7,7 +8,7 @@ permissions:
 
 on:
   push:
-    branches: [ main ]  # Triggers on pushes to main
+    branches: [main]  # Triggers on pushes to main
 
 jobs:
   lint-readme:
@@ -20,7 +21,7 @@ jobs:
       config-path: ".github/workflows/*.yml"  # Pass the folder name parameter here
   deploy-itch:
     name: "Deploy to itch.io"
-    needs: 
+    needs:
       - lint-readme  # Only runs if lint succeeds
       - yamllint
     uses: "./.github/workflows/deploy_to_itch.yml"  # Calls the reusable deploy workflow
