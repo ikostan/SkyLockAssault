@@ -2,6 +2,7 @@ name: "Main Deploy Pipeline"
 
 # Define permissions at the workflow level
 permissions:
+  contents: write
   pull-requests: write
 
 on:
