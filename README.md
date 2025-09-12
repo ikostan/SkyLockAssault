@@ -14,6 +14,8 @@
 
 ![Sky Lock Assault](https://github.com/ikostan/SkyLockAssault/blob/main/img/main_menu_2.png)
 
+Combat airplane web game with fuel management, multiple weapons, multi-level, and adjustable difficulty.
+
 This is a dedicated Godot v4.4 game dev project on Windows 10 64-bit OS.
 We'll be learning game dev here, starting with a simple main menu and expanding
 to core mechanics like player controls, enemy AI, and assaults in the sky.
