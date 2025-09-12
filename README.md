@@ -2,7 +2,7 @@
 
 <!-- markdownlint-disable line-length -->
 [![Made with Godot](https://img.shields.io/badge/Made%20with-Godot-478CBF?style=flat&logo=godot%20engine&logoColor=white)](https://godotengine.org)
-![Unique Visitors](https://views-counter.vercel.app/badge?pageId=ikostan%2FSkyLockAssault&type=unique&label=Unique%20Visitors&leftColor=0081cf&rightColor=85E024)
+![Visitors](https://visitor-badge.laobi.icu/badge?page_id=ikostan.SkyLockAssault&left_color=blue&right_color=green&left_text=Total%20Visitors)
 [![Main Deploy Pipeline](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml/badge.svg)](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml)
 ![Repo Size](https://img.shields.io/github/repo-size/ikostan/SkyLockAssault)
 <!-- markdownlint-enable line-length -->
