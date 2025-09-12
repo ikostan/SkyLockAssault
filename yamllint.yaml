@@ -1,0 +1,40 @@
+---
+# yamllint — Linter for YAML files
+# https://www.mankier.com/1/yamllint#Table_of_Contents-Configuration
+ignore: |
+  deprecated/
+  generated_configs/
+  vendor/*.yaml
+
+rules:
+  anchors: enable
+  braces: enable
+  brackets: enable
+  colons: enable
+  commas: enable
+  comments: enable
+  comments-indentation: enable
+  document-start: enable
+  empty-lines: enable
+  empty-values:
+    level: warning
+  float-values:
+    level: warning
+  hyphens: enable
+  indentation:
+    spaces: 2
+    indent-sequences: true
+  key-duplicates: enable
+  key-ordering: disable
+  line-length:
+    max: 90
+    level: warning
+  new-line-at-end-of-file: enable
+  new-lines: disable
+  octal-values: enable
+  quoted-strings:
+    quote-type: double  # Enforce double quotes for strings
+    level: warning
+  trailing-spaces: enable
+  truthy:
+    level: warning
