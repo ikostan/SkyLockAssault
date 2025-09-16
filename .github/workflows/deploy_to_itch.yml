@@ -27,8 +27,8 @@ jobs:
 
       - name: "Install Butler Manually"
         run: |
-          # Download stable butler v15.24.0 for Linux AMD64 from itch.zone (official current domain, ~8.7 MB ZIP)
-          curl -L -o butler.zip https://broth.itch.zone/butler/linux-amd64/15.24.0/archive/default  # FIXED: Use .itch.zone + specific version
+          # Download latest stable butler v15.24.0 for Linux AMD64 from itch.zone (~8.7 MB ZIP)
+          curl -L -o butler.zip --proto '=https' https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default  # FIXED: Add --proto '=https' for secure redirects
           unzip butler.zip
           chmod +x butler
           # Verify installation (should output "butler version 15.24.0")
