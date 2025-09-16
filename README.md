@@ -118,6 +118,7 @@ server {
 
 <!-- markdownlint-enable line-length -->
 
+<!-- markdownlint-disable MD033 -->
 <details>
   <summary>### Running the Docker Server</summary>
 
@@ -150,6 +151,7 @@ server {
    ```
    - Look for no errors like "default.conf not found."
 </details>
+<!-- markdownlint-enable MD033 -->
 
 ### Troubleshooting
 
