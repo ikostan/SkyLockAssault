@@ -35,10 +35,11 @@ jobs:
       #    ./butler -V
       #    # Move to PATH
       #    sudo mv butler /usr/local/bin/
+
       - name: "Setup Butler"  # NEW: Maintained action (handles zone download + install, no curl errors)
-              uses: remarkablegames/setup-butler@v2
-              with:
-                version: latest  # Fetches v15.24.0 binary for Linux AMD64
+        uses: remarkablegames/setup-butler@v2
+        with:
+          version: latest  # Fetches v15.24.0 binary for Linux AMD64
 
       - name: "Deploy to itch.io with Butler"
         run: |
