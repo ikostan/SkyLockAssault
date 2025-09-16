@@ -11,8 +11,8 @@ on:
 jobs:
   export-and-deploy:
     runs-on: ubuntu-latest
-    container:  # Keep godot-ci Docker for Godot 4.4 export (includes binary + templates)
-      image: barichello/godot-ci:4.4-stable
+    container:  # FIXED: Use correct tag for Godot 4.4 (includes binary + templates)
+      image: barichello/godot-ci:4.4
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v4
@@ -20,7 +20,7 @@ jobs:
       - name: "Setup Export Templates"  # godot-ci requirement: Move templates to user dir
         run: |
           mkdir -p ~/.local/share/godot/export_templates
-          mv /root/.local/share/godot/export_templates/4.4.stable ~/.local/share/godot/export_templates/4.4.stable
+          mv /root/.local/share/godot/export_templates/4.4 ~/.local/share/godot/export_templates/4.4
 
       - name: "Export Godot to Web"  # Direct godot command (uses presets.cfg HTML5 preset)
         id: export
@@ -30,10 +30,10 @@ jobs:
           cd ./build/web && zip -r ../web.zip .  # Zip web folder
           echo "archive_directory=./build" >> $GITHUB_OUTPUT
 
-      - name: "Install Butler Manually"  # NEW: Manual install with fixed curl (ovh + --proto for full ZIP)
+      - name: "Install Butler Manually"  # Manual install with fixed curl (ovh + --proto for full ZIP)
         run: |
           # Download stable butler v15.24.0 binary ZIP for Linux AMD64 (~8.7 MB)
-          curl -L --proto '=https' -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default  # FIXED: ovh domain + --proto flag (avoids 23/169-byte errors)
+          curl -L --proto '=https' -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
           unzip butler.zip  # Extracts 'butler' executable + libs
           chmod +x butler
           # Verify (should output "butler version 15.24.0")
