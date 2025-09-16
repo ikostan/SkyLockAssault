@@ -25,12 +25,10 @@ jobs:
           relative_export_path: ./export/web  # Output folder
           archive_output: true  # Zips for upload
 
-      # REPLACED: Remove the old "Set up Butler" step entirely
-      # NEW: Manual butler installation using correct domain
       - name: "Install Butler Manually"
         run: |
-          # Download latest stable butler for Linux AMD64 from itch.zone (resolves to 15.24.0)
-          curl -L -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          # Download latest stable butler for Linux AMD64 from itch.ovh (resolves to 15.24.0)
+          curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default  # FIXED: Use .itch.ovh domain
           unzip butler.zip
           chmod +x butler
           # Verify installation
@@ -40,7 +38,7 @@ jobs:
 
       - name: "Deploy to itch.io with Butler"
         run: |
-          butler --version  # Should now work without 404
+          butler --version  # Should now work
           butler push ${{ steps.export.outputs.archive_directory }}/Web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion ${{ github.ref_name }}
         env:
           BUTLER_API_KEY: ${{ secrets.ITCHIO_API_KEY }}
