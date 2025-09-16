@@ -70,7 +70,7 @@ great for learning deployment flows before GitHub CI/CD pushes to itch.io.
 
 <!-- markdownlint-disable MD033 -->
 <details>
-  <summary><h4>R docker-compose.yml </h4></summary>
+  <summary><b>R docker-compose.yml</b></summary>
 
 Paste this into `infra/docker-compose.yml` (use 2 spaces for indentation, no tabs):
 
@@ -91,7 +91,7 @@ services:
 </details>
 
 <details>
-  <summary><h4>Nginx Config (default.conf)</h4></summary>
+  <summary><b>Nginx Config (default.conf)</b></summary>
 
 Paste this into `infra/nginx/default.conf`(rename from .txt via File Explorer if Godot adds it):
 
@@ -120,7 +120,7 @@ server {
 </details>
 <!-- markdownlint-enable line-length -->
 <details>
-  <summary><h4>Running the Docker Server</h4></summary>
+  <summary><b>Running the Docker Server</b></summary>
 
 1. Open PowerShell or cmd as admin (search "PowerShell", right-click > Run as administrator).
 2. Navigate to infra folder:
@@ -152,7 +152,7 @@ server {
    - Look for no errors like "default.conf not found."
 </details>
 <details>
-  <summary><h4>Troubleshooting</h4></summary>
+  <summary><b>Troubleshooting</b></summary>
 
 - **Empty compose file error**: Check indentation in docker-compose.yml—use spaces,
   not tabs. Recreate file if corrupted.
