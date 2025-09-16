@@ -25,7 +25,7 @@ jobs:
           relative_export_path: ./export/web  # Output folder
           archive_output: true  # Zips for upload
 
-      #- name: "Install Butler Manually"  # FIXED: Use zone domain, pinned v15.24.0, + --proto (matches screenshot URL)
+      # - name: "Install Butler Manually"  # FIXED: Use zone domain, pinned v15.24.0, + --proto (matches screenshot URL)
       #  run: |
       #    # Download stable butler v15.24.0 binary ZIP for Linux AMD64 (~8.79 MiB)
       #    curl -L --proto '=https' -o butler.zip https://broth.itch.zone/butler/linux-amd64/15.24.0/archive/default  # Zone from screenshot, pinned to avoid LATEST errors
@@ -36,10 +36,10 @@ jobs:
       #    # Move to PATH
       #    sudo mv butler /usr/local/bin/
 
-      - name: "Setup Butler"  # NEW: Maintained action (handles zone download + install, no curl errors)
+      - name: "Setup Butler"
         uses: remarkablegames/setup-butler@v2
         with:
-          version: latest  # Fetches v15.24.0 binary for Linux AMD64
+          version: latest
 
       - name: "Deploy to itch.io with Butler"
         run: |
