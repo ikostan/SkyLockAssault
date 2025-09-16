@@ -121,7 +121,6 @@ server {
 ```
 </details>
 <!-- markdownlint-enable line-length -->
-
 <details>
   <summary><h4>Running the Docker Server</h4></summary>
 
@@ -154,7 +153,6 @@ server {
    ```
    - Look for no errors like "default.conf not found."
 </details>
-
 <details>
   <summary><h4>Troubleshooting</h4></summary>
 
