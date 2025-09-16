@@ -27,18 +27,18 @@ jobs:
 
       - name: "Install Butler Manually"
         run: |
-          # Download latest stable butler for Linux AMD64 from itch.ovh (resolves to 15.24.0)
-          curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default  # FIXED: Use .itch.ovh domain
+          # Download stable butler v15.24.0 for Linux AMD64 from itch.zone (official current domain, ~8.7 MB ZIP)
+          curl -L -o butler.zip https://broth.itch.zone/butler/linux-amd64/15.24.0/archive/default  # FIXED: Use .itch.zone + specific version
           unzip butler.zip
           chmod +x butler
-          # Verify installation
+          # Verify installation (should output "butler version 15.24.0")
           ./butler -V
           # Move to a PATH directory for easy access
           sudo mv butler /usr/local/bin/
 
       - name: "Deploy to itch.io with Butler"
         run: |
-          butler --version  # Should now work
+          butler --version  # Confirm it's in PATH
           butler push ${{ steps.export.outputs.archive_directory }}/Web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion ${{ github.ref_name }}
         env:
           BUTLER_API_KEY: ${{ secrets.ITCHIO_API_KEY }}
