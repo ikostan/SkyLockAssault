@@ -39,7 +39,8 @@ jobs:
       - name: "Setup Butler"
         uses: remarkablegames/setup-butler@v2
         with:
-          version: latest
+          butler-version: LATEST
+          cli-name: butler
 
       - name: "Deploy to itch.io with Butler"
         run: |
