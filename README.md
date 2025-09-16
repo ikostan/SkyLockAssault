@@ -118,7 +118,8 @@ server {
 
 <!-- markdownlint-enable line-length -->
 
-### Running the Docker Server
+<details>
+  <summary>### Running the Docker Server</summary>
 
 1. Open PowerShell or cmd as admin (search "PowerShell", right-click > Run as administrator).
 2. Navigate to infra folder:
@@ -148,6 +149,7 @@ server {
    docker logs sky_lock_assault_server
    ```
    - Look for no errors like "default.conf not found."
+</details>
 
 ### Troubleshooting
 
