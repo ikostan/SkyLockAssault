@@ -11,39 +11,29 @@ on:
 jobs:
   export-and-deploy:
     runs-on: ubuntu-latest
-    container:  # FIXED: Use correct tag for Godot 4.4.1-stable (manifest exists; includes binary + templates)
-      image: barichello/godot-ci:4.4.1-stable
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v4
 
-      - name: "Setup Export Templates"  # godot-ci requirement: Move templates to user dir
-        run: |
-          mkdir -p ~/.local/share/godot/export_templates
-          mv /root/.local/share/godot/export_templates/4.4.stable ~/.local/share/godot/export_templates/4.4.stable
-
-      - name: "Export Godot to Web"  # Direct godot command (uses presets.cfg HTML5 preset)
+      - name: "Export Godot to Web"
         id: export
-        run: |
-          mkdir -p ./build/web
-          godot --headless --export "HTML5" ./build/web/index.html  # Adjust preset if not "HTML5"
-          cd ./build/web && zip -r ../web.zip .  # Zip web folder
-          echo "archive_directory=./build" >> $GITHUB_OUTPUT
+        uses: firebelley/godot-export@v5.2.1  # Exports using your presets.cfg
+        with:
+          godot_executable_download_url: https://github.com/godotengine/godot-builds/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip  # GitHub mirror
+          godot_export_templates_download_url: https://github.com/godotengine/godot-builds/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz  # GitHub mirror
+          relative_project_path: ./  # Project root
+          relative_export_path: ./export/web  # Output folder
+          archive_output: true  # Zips for upload
 
-      - name: "Install Butler Manually"  # Manual install with fixed curl (ovh + --proto for full ZIP)
-        run: |
-          # Download stable butler v15.24.0 binary ZIP for Linux AMD64 (~8.7 MB)
-          curl -L --proto '=https' -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
-          unzip butler.zip  # Extracts 'butler' executable + libs
-          chmod +x butler
-          # Verify (should output "butler version 15.24.0")
-          ./butler -V
-          # Move to PATH
-          sudo mv butler /usr/local/bin/
+      - name: "Set up Butler"
+        uses: RageAgainstThePixel/setup-butler@v1.0.3  # Installs Butler reliably, avoids redirect issues
+        with:
+          version: latest  # Or '15.21.0' for specific stable version
+          api-key: ${{ secrets.ITCHIO_API_KEY }}
 
-      - name: "Deploy to itch.io with Butler"  # Push zipped web build
+      - name: "Deploy to itch.io with Butler"
         run: |
-          butler --version  # Confirm
-          butler push ${{ steps.export.outputs.archive_directory }}/web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion ${{ github.ref_name }}
+          butler --version
+          butler push ${{ steps.export.outputs.archive_directory }}/Web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion ${{ github.ref_name }}
         env:
           BUTLER_API_KEY: ${{ secrets.ITCHIO_API_KEY }}
