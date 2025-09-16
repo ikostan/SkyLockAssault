@@ -70,7 +70,9 @@ great for learning deployment flows before GitHub CI/CD pushes to itch.io.
   - `docker-compose.yml`
   - `nginx/default.conf` (no .txt extension—rename via File Explorer if needed).
 
-### docker-compose.yml Content
+<!-- markdownlint-disable MD033 -->
+<details>
+  <summary><h4>R docker-compose.yml </h4></summary>
 
 Paste this into `infra/docker-compose.yml` (use 2 spaces for indentation, no tabs):
 
@@ -88,8 +90,10 @@ services:
 	  - ../export/web:/usr/share/nginx/html:ro  # Mount your Web export folder read-only
 	  - ./nginx:/etc/nginx/conf.d  # Mount custom Nginx config folder
 ```
+</details>
 
-### Nginx Config (default.conf)
+<details>
+  <summary><h4>Nginx Config (default.conf)</h4></summary>
 
 Paste this into `infra/nginx/default.conf`(rename from .txt via File Explorer if Godot adds it):
 
@@ -115,10 +119,9 @@ server {
 	}
 }
 ```
-
+</details>
 <!-- markdownlint-enable line-length -->
 
-<!-- markdownlint-disable MD033 -->
 <details>
   <summary><h4>Running the Docker Server</h4></summary>
 
@@ -151,9 +154,9 @@ server {
    ```
    - Look for no errors like "default.conf not found."
 </details>
-<!-- markdownlint-enable MD033 -->
 
-### Troubleshooting
+<details>
+  <summary><h4>Troubleshooting</h4></summary>
 
 - **Empty compose file error**: Check indentation in docker-compose.yml—use spaces,
   not tabs. Recreate file if corrupted.
@@ -172,3 +175,5 @@ server {
 
 This Docker setup promotes good habits for learning web game deployment—test locally,
 then automate with GitHub Actions for itch.io.
+</details>
+<!-- markdownlint-enable MD033 -->
