@@ -37,8 +37,6 @@ jobs:
           ./butler -V
           # Move to a PATH directory for easy access
           sudo mv butler /usr/local/bin/
-        env:
-          # No API key needed here; it's set in the next step
 
       - name: "Deploy to itch.io with Butler"
         run: |
