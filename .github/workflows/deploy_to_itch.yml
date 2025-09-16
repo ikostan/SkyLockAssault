@@ -11,32 +11,39 @@ on:
 jobs:
   export-and-deploy:
     runs-on: ubuntu-latest
-    container:  # NEW: Use godot-ci Docker for Godot 4.4 export (includes binary + templates)
+    container:  # Keep godot-ci Docker for Godot 4.4 export (includes binary + templates)
       image: barichello/godot-ci:4.4-stable
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v4
 
-      - name: "Setup Export Templates"  # NEW: Move templates to user dir (godot-ci requirement)
+      - name: "Setup Export Templates"  # godot-ci requirement: Move templates to user dir
         run: |
           mkdir -p ~/.local/share/godot/export_templates
           mv /root/.local/share/godot/export_templates/4.4.stable ~/.local/share/godot/export_templates/4.4.stable
 
-      - name: "Export Godot to Web"  # NEW: Direct godot command via container (uses your presets.cfg HTML5 preset)
+      - name: "Export Godot to Web"  # Direct godot command (uses presets.cfg HTML5 preset)
         id: export
         run: |
           mkdir -p ./build/web
-          godot --headless --export "HTML5" ./build/web/index.html  # Exports to folder; adjust preset name if not "HTML5"
-          cd ./build/web && zip -r ../web.zip .  # Zip the web folder (matches your archive_output)
-          echo "archive_directory=./build" >> $GITHUB_OUTPUT  # Output for push step
+          godot --headless --export "HTML5" ./build/web/index.html  # Adjust preset if not "HTML5"
+          cd ./build/web && zip -r ../web.zip .  # Zip web folder
+          echo "archive_directory=./build" >> $GITHUB_OUTPUT
 
-      # NEW: Butler publish action (installs Butler v15.24.0, pushes zipped web)
-      - name: "Publish to itch.io"
-        uses: manleydev/butler-publish-itchio-action@master
-        with:
-          api-key: ${{ secrets.ITCHIO_API_KEY }}  # Your secret
-          itch-user: ikostan  # Your username
-          itch-game: sky-lock-assault  # Game slug
-          channel: ${{ github.ref_name }}  # Branch as channel (e.g., main)
-          package: ${{ steps.export.outputs.archive_directory }}/web.zip  # Zipped web path
-          version: ${{ github.ref_name }}  # Optional: Branch as version label
+      - name: "Install Butler Manually"  # NEW: Manual install with fixed curl (ovh + --proto for full ZIP)
+        run: |
+          # Download stable butler v15.24.0 binary ZIP for Linux AMD64 (~8.7 MB)
+          curl -L --proto '=https' -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default  # FIXED: ovh domain + --proto flag (avoids 23/169-byte errors)
+          unzip butler.zip  # Extracts 'butler' executable + libs
+          chmod +x butler
+          # Verify (should output "butler version 15.24.0")
+          ./butler -V
+          # Move to PATH
+          sudo mv butler /usr/local/bin/
+
+      - name: "Deploy to itch.io with Butler"  # Push zipped web build
+        run: |
+          butler --version  # Confirm
+          butler push ${{ steps.export.outputs.archive_directory }}/web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion ${{ github.ref_name }}
+        env:
+          BUTLER_API_KEY: ${{ secrets.ITCHIO_API_KEY }}
