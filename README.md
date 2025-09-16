@@ -120,7 +120,7 @@ server {
 
 <!-- markdownlint-disable MD033 -->
 <details>
-  <summary>### Running the Docker Server</summary>
+  <summary><h4>Running the Docker Server</h4></summary>
 
 1. Open PowerShell or cmd as admin (search "PowerShell", right-click > Run as administrator).
 2. Navigate to infra folder:
