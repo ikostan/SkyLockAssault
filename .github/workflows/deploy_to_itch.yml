@@ -25,15 +25,24 @@ jobs:
           relative_export_path: ./export/web  # Output folder
           archive_output: true  # Zips for upload
 
-      - name: "Set up Butler"
-        uses: RageAgainstThePixel/setup-butler@v1.0.3  # Installs Butler reliably, avoids redirect issues
-        with:
-          version: latest  # Or '15.21.0' for specific stable version
-          api-key: ${{ secrets.ITCHIO_API_KEY }}
+      # REPLACED: Remove the old "Set up Butler" step entirely
+      # NEW: Manual butler installation using correct domain
+      - name: "Install Butler Manually"
+        run: |
+          # Download latest stable butler for Linux AMD64 from itch.zone (resolves to 15.24.0)
+          curl -L -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip butler.zip
+          chmod +x butler
+          # Verify installation
+          ./butler -V
+          # Move to a PATH directory for easy access
+          sudo mv butler /usr/local/bin/
+        env:
+          # No API key needed here; it's set in the next step
 
       - name: "Deploy to itch.io with Butler"
         run: |
-          butler --version
+          butler --version  # Should now work without 404
           butler push ${{ steps.export.outputs.archive_directory }}/Web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion ${{ github.ref_name }}
         env:
           BUTLER_API_KEY: ${{ secrets.ITCHIO_API_KEY }}
