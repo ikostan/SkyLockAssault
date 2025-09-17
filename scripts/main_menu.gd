@@ -2,10 +2,12 @@ extends Control
 
 @onready var quit_dialog: ConfirmationDialog = $QuitDialog  # Reference to the node you added
 
+
 # Custom logging function with timestamp
 func log_message(message: String) -> void:
 	var timestamp: String = Time.get_datetime_string_from_system()
 	print("[%s] %s" % [timestamp, message])
+
 
 func _ready() -> void:
 	log_message("Initializing main menu...")
@@ -13,7 +15,7 @@ func _ready() -> void:
 	$CenterContainer/VBoxContainer/ResumeButton.pressed.connect(_on_resume_pressed)
 	$CenterContainer/VBoxContainer/OptionsButton.pressed.connect(_on_options_pressed)
 	$CenterContainer/VBoxContainer/QuitButton.pressed.connect(_on_quit_pressed)
-	
+
 	# Connect dialog signals (can also do this in editor; add null check)
 	quit_dialog = $CenterContainer/VBoxContainer/QuitDialog
 
@@ -26,20 +28,24 @@ func _ready() -> void:
 		var message: String = "Warning: QuitDialog node not found! Add it to the scene."
 		log_message(message)
 
+
 func _on_start_pressed() -> void:
 	# Stub; later: get_tree().change_scene_to_file("res://game_scene.tscn")
 	var message: String = "Start menu coming soon!"
 	log_message(message)
+
 
 func _on_resume_pressed() -> void:
 	# Stub; later: load save and change scene
 	var message: String = "Resume menu coming soon!"
 	log_message(message)
 
+
 func _on_options_pressed() -> void:
 	# Stub; later: get_tree().change_scene_to_file("res://options_scene.tscn")
 	var message: String = "Options menu coming soon!"
 	log_message(message)
+
 
 func _on_quit_pressed() -> void:
 	# Show confirmation dialog
@@ -51,6 +57,7 @@ func _on_quit_pressed() -> void:
 		var message: String = "No quit_dialog found."
 		log_message(message)
 
+
 func _on_quit_dialog_confirmed() -> void:
 	# User confirmed: Execute platform-specific quit
 	if OS.get_name() == "Web":
@@ -61,6 +68,7 @@ func _on_quit_dialog_confirmed() -> void:
 		get_tree().quit()
 	var message: String = "Quit confirmed and executed!"
 	log_message(message)
+
 
 func _on_quit_dialog_canceled() -> void:
 	# Optional: Handle cancel (e.g., play sound or log)
