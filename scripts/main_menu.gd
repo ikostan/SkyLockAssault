@@ -1,7 +1,6 @@
 extends Control
 
-@onready var quit_dialog: ConfirmationDialog = $QuitDialog  # Reference to the node you added
-
+@onready var quit_dialog: ConfirmationDialog
 
 # Custom logging function with timestamp
 func log_message(message: String) -> void:
@@ -22,8 +21,10 @@ func _ready() -> void:
 	if quit_dialog:
 		# Add signals
 		log_message("QuitDialog found via get_node (using scene node).")
-		quit_dialog.confirmed.connect(_on_quit_dialog_confirmed)
-		quit_dialog.get_cancel_button().pressed.connect(_on_quit_dialog_canceled)
+		if not quit_dialog.confirmed.is_connected(_on_quit_dialog_confirmed):
+			quit_dialog.confirmed.connect(_on_quit_dialog_confirmed)
+		if not quit_dialog.get_cancel_button().pressed.is_connected(_on_quit_dialog_canceled):
+			quit_dialog.get_cancel_button().pressed.connect(_on_quit_dialog_canceled)
 	else:
 		var message: String = "Warning: QuitDialog node not found! Add it to the scene."
 		log_message(message)
