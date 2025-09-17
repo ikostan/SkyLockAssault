@@ -34,7 +34,7 @@ jobs:
         # yamllint disable rule:line-length
       - name: Set up Python ${{ matrix.python-version }}  # yamllint disable-line rule:quoted-strings
         # yamllint enable rule:line-length
-        uses: "actions/setup-python@v5"
+        uses: "actions/setup-python@v6"
         with:
           python-version: "${{ matrix.python-version }}"
       # You can test your matrix by printing the current Python version
