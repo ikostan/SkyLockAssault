@@ -42,7 +42,7 @@ jobs:
       - name: "Setup Butler"
         run: |
           chmod +x butler/butler
-          sudo mv butler/butler /usr/local/bin/
+          echo "$(pwd)/butler" >> $GITHUB_PATH
       - name: "Deploy to itch.io with Butler"
         run: |
           butler --version
