@@ -1,5 +1,5 @@
 ---
-name: "Lint GDScript"
+name: "GDScript Lint and Format Check"
 
 on:  # yamllint disable-line rule:truthy
   # Makes it reusable; called by other workflows

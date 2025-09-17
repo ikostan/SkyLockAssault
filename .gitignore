@@ -2,6 +2,7 @@
 .godot/
 .qodo/
 venv/
+.idea/
 
 # Godot-specific ignores (older .import for compat)
 .import/

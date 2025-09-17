@@ -1,5 +1,5 @@
 ---
-name: "Lint README"
+name: "Markdown Lint"
 
 on:  # yamllint disable-line rule:truthy
   # Makes it reusable; called by other workflows
