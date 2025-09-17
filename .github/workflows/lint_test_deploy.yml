@@ -9,7 +9,7 @@ permissions:
 on:  # yamllint disable-line rule:truthy
   push:
     # Triggers on pushes to main
-    branches: [main]
+    branches: [main]  # yamllint disable-line rule:quoted-strings
 
 jobs:
   lint-readme:
