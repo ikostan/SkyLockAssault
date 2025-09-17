@@ -8,7 +8,7 @@ permissions:
 
 on:  # yamllint disable-line rule:truthy
   push:
-    branches: "[main]"  # Triggers on pushes to main
+    branches: [main]  # Triggers on pushes to main
 
 jobs:
   lint-readme:
