@@ -8,7 +8,7 @@
 ![Open Issues](https://img.shields.io/github/issues/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=red)
 <!-- markdownlint-enable line-length -->
 
-## A top-down online web browser game built with Godot 4.4
+## A top-down online web browser game built with Godot 4.5
 
 ![Sky Lock Assault](https://github.com/ikostan/SkyLockAssault/blob/main/img/main_menu_2.png)
 
@@ -24,7 +24,7 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 
 ## Project Overview
 
-- **Godot Version**: 4.4.1 stable (or compatible).
+- **Godot Version**: 4.5 stable (or compatible).
 - **OS**: Windows 10 64-bit.
 - **Tools**: Docker Desktop v4.45 for local testing, GitHub Desktop v3.5
   for repo management.
@@ -40,10 +40,10 @@ Current features:
 
 1. **Clone the Repo**:
    - Use GitHub Desktop: Clone https://github.com/ikostan/SkyLockAssault.
-   - Open in Godot 4.4: Launch Godot > Import > Select `project.godot`.
+   - Open in Godot 4.5: Launch Godot > Import > Select `project.godot`.
 
 2. **Install Export Templates**:
-   - In Godot: Editor > Manage Export Templates > Download for 4.4.1
+   - In Godot: Editor > Manage Export Templates > Download for 4.5
      (or manual from https://godotengine.org/download/archive/4.4.1-stable/).
    - Required for Web exports.
 
@@ -70,7 +70,7 @@ great for learning deployment flows before GitHub CI/CD pushes to itch.io.
 
 <!-- markdownlint-disable MD033 -->
 <details>
-  <summary><b>R docker-compose.yml</b></summary>
+  <summary><b>Docker file</b></summary>
 
 Paste this into `infra/docker-compose.yml` (use 2 spaces for indentation, no tabs):
 
@@ -91,7 +91,7 @@ services:
 </details>
 
 <details>
-  <summary><b>Nginx Config (default.conf)</b></summary>
+  <summary><b>Nginx Config</b></summary>
 
 Paste this into `infra/nginx/default.conf`(rename from .txt via File Explorer if Godot adds it):
 
