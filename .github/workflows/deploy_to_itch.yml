@@ -16,7 +16,7 @@ jobs:
         uses: "actions/checkout@v4"
       - name: "Export Godot to Web"
         id: export
-        # yamllint disable rule:line-length
+      # yamllint disable rule:line-length
         uses: "firebelley/godot-export@29965918cc35b77c465839035775e0e12dc87029"  # Pinned to SHA for security (was @v6.0.0)
         with:
           godot_executable_download_url: https://github.com/godotengine/godot-builds/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip  # Updated to Godot 4.5-stable
@@ -24,7 +24,7 @@ jobs:
           relative_project_path: ./  # Project root
           relative_export_path: ./export/web  # Output folder
           archive_output: true  # Zips for upload
-        # yamllint enable rule:line-length
+      # yamllint enable rule:line-length
       - name: "Install Butler Manually"
         run: |
           curl -L --proto '=https' -o butler.zip https://broth.itch.zone/butler/linux-amd64/15.24.0/archive/default
