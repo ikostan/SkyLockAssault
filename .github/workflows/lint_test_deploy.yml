@@ -27,7 +27,7 @@ jobs:
   deploy-itch:
     name: "Deploy to itch.io"
     needs:
-      - "lint-readme"  # Only runs if lint succeeds
+      - "lint-readme"
       - "yamllint"
       - "gdlint"
     uses: "./.github/workflows/deploy_to_itch.yml"
