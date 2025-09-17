@@ -34,5 +34,6 @@ jobs:
         run: |
           butler --version
           butler push ${{ steps.export.outputs.archive_directory }}/Web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion ${{ github.ref_name }}
+          butler status ikostan/sky-lock-assault:main
         env:
           BUTLER_API_KEY: ${{ secrets.ITCHIO_API_KEY }}
