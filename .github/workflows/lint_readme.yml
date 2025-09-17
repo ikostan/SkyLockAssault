@@ -11,6 +11,9 @@ jobs:
     # Adding 'timeout-minutes: 10' would prevent jobs from running
     # indefinitely if something goes wrong
     timeout-minutes: 10
+    strategy:
+      matrix:
+        python-version: [ "3.x" ]  # Single entry for consistent display
     steps:
       - name: "Checkout code"
         uses: "actions/checkout@v4"
