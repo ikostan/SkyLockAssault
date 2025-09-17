@@ -6,7 +6,7 @@ permissions:
   contents: write
   pull-requests: write
 
-on:
+on:  # yamllint disable-line rule:truthy
   push:
     branches: [main]  # Triggers on pushes to main
 
@@ -22,8 +22,8 @@ jobs:
   deploy-itch:
     name: "Deploy to itch.io"
     needs:
-      - lint-readme  # Only runs if lint succeeds
-      - yamllint
+      - "lint-readme"  # Only runs if lint succeeds
+      - "yamllint"
     uses: "./.github/workflows/deploy_to_itch.yml"  # Calls the reusable deploy workflow
     secrets:
-      ITCHIO_API_KEY: ${{ secrets.ITCHIO_API_KEY }}
+      ITCHIO_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"

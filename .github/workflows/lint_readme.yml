@@ -1,7 +1,7 @@
 ---
 name: "Lint README"
 
-on:
+on:  # yamllint disable-line rule:truthy
   workflow_call:  # Makes it reusable; called by other workflows
 
 jobs:
