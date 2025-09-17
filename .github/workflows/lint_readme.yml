@@ -13,8 +13,8 @@ jobs:
 
       - name: "Lint README.md"
         # Lints Markdown for formatting/spelling
-        uses: "DavidAnson/markdownlint-cli2-action@v19"
-        with:
+        # Pinned to SHA for security (was @v19)
+        uses: "DavidAnson/markdownlint-cli2-action@05f32210e84442804257b2a6f20b273450ec8265"
           config: ".markdownlint-cli2.yaml"
           fix: true
           globs: "**/*.md"
