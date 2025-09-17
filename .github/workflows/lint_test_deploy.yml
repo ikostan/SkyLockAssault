@@ -15,7 +15,7 @@ jobs:
   gdlint:
     name: "GDScript Lint and Format Check"
     uses: "./.github/workflows/gdlint.yml"
-  lint-readme:
+  readmelint:
     name: "Markdown Lint"
     uses: "./.github/workflows/lint_readme.yml"
   yamllint:
@@ -26,9 +26,9 @@ jobs:
   deploy-itch:
     name: "Deploy to itch.io"
     needs:
-      - "lint-readme"
-      - "yamllint"
-      - "gdlint"
+      - gdlint
+      - readmelint
+      - yamllint
     uses: "./.github/workflows/deploy_to_itch.yml"
     secrets:
       ITCHIO_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"
