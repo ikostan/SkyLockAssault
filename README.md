@@ -15,7 +15,7 @@
 Combat airplane web game with fuel management, multiple weapons, multi-level,
 and adjustable difficulty.
 
-This is a dedicated Godot v4.4 game dev project on Windows 10 64-bit OS.
+This is a dedicated Godot v4.5 game dev project on Windows 10 64-bit OS.
 We'll be learning game dev here, starting with a simple main menu and expanding
 to core mechanics like player controls, enemy AI, and assaults in the sky.
 The repo is open-source at [SkyLockAssault](https://github.com/ikostan/SkyLockAssault).
@@ -25,13 +25,16 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 ## Project Overview
 
 - **Godot Version**: 4.5 stable (or compatible).
-- **OS**: Windows 10 64-bit.
-- **Tools**: Docker Desktop v4.45 for local testing, GitHub Desktop v3.5
-  for repo management.
+- **OS**: `Windows 10 64-bit`.
+- **Tools**: 
+  * `Docker Desktop v4.45` for local testing
+  * `GitHub Desktop v3.5` for repo management 
+  * `PyCharm 2024.1.7 (Community Edition)` for file editing
+  * `Windows PowerShell` for running Docker commands
 - **Goal**: Build a playable top-down shooter with web deployment in mind—export
   to HTML5/Web, test locally, deploy to itch.io.
 
-Current features:
+### Current features:
 
 - Main menu scene (`main_menu.tscn`) with buttons (Start, Resume, Options, Quit).
 - Placeholder game level (`game_level.tscn`) for future mechanics.
