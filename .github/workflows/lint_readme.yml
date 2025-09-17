@@ -8,10 +8,13 @@ on:  # yamllint disable-line rule:truthy
 jobs:
   lint:
     runs-on: "ubuntu-latest"
+    # Adding 'timeout-minutes: 10' would prevent jobs from running
+    # indefinitely if something goes wrong
+    timeout-minutes: 10
     steps:
       - name: "Checkout code"
         uses: "actions/checkout@v4"
-      - name: "Lint README.md"
+      - name: "Lint MARKDOWN Files"
         # Lints Markdown for formatting/spelling
         # Pinned to SHA for security (was @v19)
         # yamllint disable rule:line-length
