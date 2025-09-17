@@ -2,7 +2,8 @@
 name: "Lint README"
 
 on:  # yamllint disable-line rule:truthy
-  workflow_call:  # Makes it reusable; called by other workflows
+  # Makes it reusable; called by other workflows
+  workflow_call:  # yamllint disable rule:empty-values
 
 jobs:
   lint:
@@ -13,7 +14,9 @@ jobs:
       - name: "Lint README.md"
         # Lints Markdown for formatting/spelling
         # Pinned to SHA for security (was @v19)
+        # yamllint disable rule:line-length
         uses: "DavidAnson/markdownlint-cli2-action@05f32210e84442804257b2a6f20b273450ec8265"
+        # yamllint enable rule:line-length
         with:
           config: ".markdownlint-cli2.yaml"
           fix: true
