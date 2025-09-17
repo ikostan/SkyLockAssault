@@ -91,7 +91,7 @@ services:
 </details>
 
 <details>
-  <summary><b>Nginx Config: `default.conf`</b></summary>
+  <summary><b>Nginx Config: default.conf</b></summary>
 
 Paste this into `infra/nginx/default.conf`(rename from .txt via File Explorer if Godot adds it):
 
