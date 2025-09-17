@@ -27,13 +27,22 @@ jobs:
           relative_project_path: "./"  # Project root
           relative_export_path: "./export/web"  # Output folder
           archive_output: true  # Zips for upload
-      - name: "Install Butler Manually"
+          cache: true  # Enable caching for Godot executable and templates
+      - name: "Cache Butler"
+        id: "cache-butler"
+        uses: "actions/cache@v4"
+        with:
+          path: "butler"
+          key: "${{ runner.os }}-butler-15.24.0"
+      - name: "Download Butler if not cached"
+        if: "steps.cache-butler.outputs.cache-hit != 'true'"
         run: |
           curl -L --proto '=https' -o butler.zip https://broth.itch.zone/butler/linux-amd64/15.24.0/archive/default
-          unzip butler.zip  # Extracts 'butler' executable + libs
-          chmod +x butler
-          ./butler -V
-          sudo mv butler /usr/local/bin/
+          unzip butler.zip -d butler
+      - name: "Setup Butler"
+        run: |
+          chmod +x butler/butler
+          sudo mv butler/butler /usr/local/bin/
       - name: "Deploy to itch.io with Butler"
         run: |
           butler --version
