@@ -13,7 +13,7 @@ jobs:
     timeout-minutes: 10
     strategy:
       matrix:
-        python-version: [ "3.x" ]  # Single entry for consistent display
+        python-version: ["3.x"]  # Single entry for consistent display
     steps:
       - name: "Checkout code"
         uses: "actions/checkout@v4"
