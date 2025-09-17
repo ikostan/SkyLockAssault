@@ -25,18 +25,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: "Cache PIP Dependencies"
-        uses: actions/cache@v4
+        uses: "actions/cache@v4"
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          path: "~/.cache/pip"
+          key: "${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}"
           restore-keys: |
             ${{ runner.os }}-pip-
       - name: Set up Python ${{ matrix.python-version }}
         # This is the version of the action for setting up
         # Python, not the Python version.
-        uses: actions/setup-python@v5
+        uses: "actions/setup-python@v5"
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "${{ matrix.python-version }}"
       # You can test your matrix by printing the current Python version
       - name: "Display Python Version"
         run: python -c "import sys; print(sys.version)"
