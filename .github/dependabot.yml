@@ -1,0 +1,17 @@
+---
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      # Optional: Timezone and day for PR creation (e.g., Monday at 9 AM UTC)
+      time: "09:00"
+      timezone: "UTC"
+    # Optional: Open PRs only for major/minor versions, ignore patches
+    open-pull-requests-limit: 5
+    rebase-strategy: "auto"
+    # Optional: Ignore specific updates if needed (e.g., if @master is unstable)
+    ignore:
+      - dependency-name: "josephbmanley/butler-publish-itchio-action"
+        update-types: ["version-update:semver-major"]
