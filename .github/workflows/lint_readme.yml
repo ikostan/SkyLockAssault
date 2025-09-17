@@ -9,10 +9,10 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v4
+        uses: "actions/checkout@v4"
 
       - name: "Lint README.md"
-        uses: DavidAnson/markdownlint-cli2-action@v19  # Lints Markdown for formatting/spelling
+        uses: "DavidAnson/markdownlint-cli2-action@v19"  # Lints Markdown for formatting/spelling
         with:
           config: ".markdownlint-cli2.yaml"
           fix: true
