@@ -15,6 +15,17 @@ jobs:
     steps:
       - name: "Checkout code"
         uses: "actions/checkout@v4"
+      - name: "Set up Python"
+        uses: "actions/setup-python@v5"
+        with:
+          python-version: "3.x"
+      - name: "Cache PIP Dependencies"
+        uses: "actions/cache@v4"
+        with:
+          path: "~/.cache/pip"
+          key: "${{ runner.os }}-pip-gdtoolkit"
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - name: "Install GDToolkit (for gdlint & gdformat)"
         # Installs gdtoolkit==4.* for Godot 4.x
         uses: "Scony/godot-gdscript-toolkit@master"
