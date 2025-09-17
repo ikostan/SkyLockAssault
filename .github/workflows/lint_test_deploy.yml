@@ -26,9 +26,9 @@ jobs:
   deploy-itch:
     name: "Deploy to itch.io"
     needs:
-      - gdlint
-      - readmelint
-      - yamllint
+      - "gdlint"
+      - "readmelint"
+      - "yamllint"
     uses: "./.github/workflows/deploy_to_itch.yml"
     secrets:
       ITCHIO_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"
