@@ -70,7 +70,7 @@ great for learning deployment flows before GitHub CI/CD pushes to itch.io.
 
 <!-- markdownlint-disable MD033 -->
 <details>
-  <summary><b>Docker file: `docker-compose.yml`</b></summary>
+  <summary><b>Docker file: docker-compose.yml</b></summary>
 
 Paste this into `infra/docker-compose.yml` (use 2 spaces for indentation, no tabs):
 
