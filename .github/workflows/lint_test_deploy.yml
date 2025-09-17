@@ -12,6 +12,9 @@ on:  # yamllint disable-line rule:truthy
     branches: [main]  # yamllint disable-line rule:quoted-strings
 
 jobs:
+  gdlint:
+    name: "GDScript Lint and Format Check"
+    uses: "./.github/workflows/gdlint.yml"
   lint-readme:
     name: "Markdown Lint"
     uses: "./.github/workflows/lint_readme.yml"
@@ -19,11 +22,7 @@ jobs:
     name: "YAML Lint"
     uses: "./.github/workflows/yamllint.yml"
     with:
-      # Pass the folder name parameter here
       config-path: ".github/workflows/*.yml"
-  gdlint:
-    name: "GDScript Lint and Format Check"
-    uses: "./.github/workflows/gdlint.yml"
   deploy-itch:
     name: "Deploy to itch.io"
     needs:
