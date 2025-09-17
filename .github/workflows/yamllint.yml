@@ -23,7 +23,7 @@ jobs:
       matrix:
         python-version: ["3.x"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: "actions/checkout@v5"
       - name: "Cache PIP Dependencies"
         uses: "actions/cache@v4"
         with:
@@ -31,7 +31,7 @@ jobs:
           key: "${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}"
           restore-keys: |
             ${{ runner.os }}-pip-
-      - name: Set up Python ${{ matrix.python-version }}  # yamllint disable-line rule:quoted-strings
+      - name: Set up Python ${{ matrix.python-version }}  # yamllint disable-line rule:quoted-strings, line-length
         uses: "actions/setup-python@v5"
         with:
           python-version: "${{ matrix.python-version }}"
