@@ -8,22 +8,26 @@ permissions:
 
 on:  # yamllint disable-line rule:truthy
   push:
-    branches: [main]  # Triggers on pushes to main
+    # Triggers on pushes to main
+    branches: [main]
 
 jobs:
   lint-readme:
     name: "Markdown Lint"
-    uses: "./.github/workflows/lint_readme.yml"  # Calls the reusable lint workflow
+    # Calls the reusable lint workflow
+    uses: "./.github/workflows/lint_readme.yml"
   yamllint:
     name: "YAML Lint"
     uses: "./.github/workflows/yamllint.yml"
     with:
-      config-path: ".github/workflows/*.yml"  # Pass the folder name parameter here
+      # Pass the folder name parameter here
+      config-path: ".github/workflows/*.yml"
   deploy-itch:
     name: "Deploy to itch.io"
     needs:
       - "lint-readme"  # Only runs if lint succeeds
       - "yamllint"
-    uses: "./.github/workflows/deploy_to_itch.yml"  # Calls the reusable deploy workflow
+    # Calls the reusable deploy workflow
+    uses: "./.github/workflows/deploy_to_itch.yml"
     secrets:
       ITCHIO_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"
