@@ -39,8 +39,14 @@ jobs:
         run: |
           curl -L --proto '=https' -o butler.zip https://broth.itch.zone/butler/linux-amd64/15.24.0/archive/default
           unzip butler.zip -d butler
+          rm butler.zip
       - name: "Setup Butler"
+        # Ensure file exists (safety for any edge cases)
         run: |
+          if [ ! -f "butler/butler" ]; then
+            echo "Error: butler executable not found. Cache may be invalid."
+            exit 1
+          fi
           chmod +x butler/butler
           echo "$(pwd)/butler" >> $GITHUB_PATH
       - name: "Deploy to itch.io with Butler"
