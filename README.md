@@ -70,7 +70,7 @@ great for learning deployment flows before GitHub CI/CD pushes to itch.io.
 
 <!-- markdownlint-disable MD033 -->
 <details>
-  <summary><b>Docker file</b></summary>
+  <summary><b>Docker file: `docker-compose.yml`</b></summary>
 
 Paste this into `infra/docker-compose.yml` (use 2 spaces for indentation, no tabs):
 
@@ -91,7 +91,7 @@ services:
 </details>
 
 <details>
-  <summary><b>Nginx Config</b></summary>
+  <summary><b>Nginx Config: `default.conf`</b></summary>
 
 Paste this into `infra/nginx/default.conf`(rename from .txt via File Explorer if Godot adds it):
 
