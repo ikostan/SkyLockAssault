@@ -23,7 +23,7 @@ jobs:
           relative_project_path: ./  # Project root
           relative_export_path: ./export/web  # Output folder
           archive_output: true  # Zips for upload
-      # FIXED: Use zone domain, pinned v15.24.0, + --proto (matches screenshot URL)
+        # FIXED: Use zone domain, pinned v15.24.0, + --proto (matches screenshot URL)
       - name: "Install Butler Manually"
         run: |
         # Download stable butler v15.24.0 binary ZIP for Linux AMD64 (~8.79 MiB)
