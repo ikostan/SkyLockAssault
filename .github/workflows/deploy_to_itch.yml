@@ -1,7 +1,7 @@
 ---
 name: "Deploy to itch.io"
 
-on:
+on:  # yamllint disable-line rule:truthy
   workflow_call:  # Reusable
     secrets:
       ITCHIO_API_KEY:
@@ -10,19 +10,21 @@ on:
 
 jobs:
   export-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: "ubuntu-latest"
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@v4
+        uses: "actions/checkout@v4"
       - name: "Export Godot to Web"
         id: export
-        uses: firebelley/godot-export@v6.0.0  # Updated to latest version for better Godot 4.5 support
+        uses: "firebelley/godot-export@v6.0.0"  # Updated to latest version for better Godot 4.5 support
+        # yamllint disable rule:line-length
         with:
           godot_executable_download_url: https://github.com/godotengine/godot-builds/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip  # Updated to Godot 4.5-stable
           godot_export_templates_download_url: https://github.com/godotengine/godot-builds/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz  # Updated to Godot 4.5-stable
           relative_project_path: ./  # Project root
           relative_export_path: ./export/web  # Output folder
           archive_output: true  # Zips for upload
+        # yamllint enable rule:line-length
       - name: "Install Butler Manually"
         run: |
           curl -L --proto '=https' -o butler.zip https://broth.itch.zone/butler/linux-amd64/15.24.0/archive/default
@@ -31,9 +33,11 @@ jobs:
           ./butler -V
           sudo mv butler /usr/local/bin/
       - name: "Deploy to itch.io with Butler"
+        # yamllint disable rule:line-length
         run: |
           butler --version
           butler push ${{ steps.export.outputs.archive_directory }}/Web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion ${{ github.ref_name }}
           butler status ikostan/sky-lock-assault:main
+        # yamllint enable rule:line-length
         env:
           BUTLER_API_KEY: ${{ secrets.ITCHIO_API_KEY }}
