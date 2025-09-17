@@ -1,6 +1,7 @@
 extends Control
 
 @onready var quit_dialog: ConfirmationDialog
+@onready var game_scene: PackedScene
 
 # Custom logging function with timestamp
 func log_message(message: String) -> void:
@@ -17,6 +18,7 @@ func _ready() -> void:
 
 	# Connect dialog signals (can also do this in editor; add null check)
 	quit_dialog = $CenterContainer/VBoxContainer/QuitDialog
+	game_scene = preload("res://scenes/main_scene.tscn")
 
 	if quit_dialog:
 		# Add signals
@@ -32,8 +34,13 @@ func _ready() -> void:
 
 func _on_start_pressed() -> void:
 	# Stub; later: get_tree().change_scene_to_file("res://game_scene.tscn")
-	var message: String = "Start menu coming soon!"
-	log_message(message)
+	log_message("Start Game menu button pressed.")
+	
+	if game_scene:
+		log_message("Loading main game scene...")
+		get_tree().change_scene_to_packed(game_scene)
+	else:
+		log_message("Error: Game scene not set!")
 
 
 func _on_resume_pressed() -> void:
