@@ -31,7 +31,9 @@ jobs:
           key: "${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}"
           restore-keys: |
             ${{ runner.os }}-pip-
-      - name: Set up Python ${{ matrix.python-version }}  # yamllint disable-line rule:quoted-strings, line-length
+        # yamllint disable rule:line-length
+      - name: Set up Python ${{ matrix.python-version }}  # yamllint disable-line rule:quoted-strings
+        # yamllint enable rule:line-length
         uses: "actions/setup-python@v5"
         with:
           python-version: "${{ matrix.python-version }}"
