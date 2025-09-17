@@ -14,7 +14,6 @@ on:  # yamllint disable-line rule:truthy
 jobs:
   lint-readme:
     name: "Markdown Lint"
-    # Calls the reusable lint workflow
     uses: "./.github/workflows/lint_readme.yml"
   yamllint:
     name: "YAML Lint"
@@ -22,12 +21,15 @@ jobs:
     with:
       # Pass the folder name parameter here
       config-path: ".github/workflows/*.yml"
+  gdlint:
+    name: "GDScript Lint and Format Check"
+    uses: "./.github/workflows/gdlint.yml"
   deploy-itch:
     name: "Deploy to itch.io"
     needs:
       - "lint-readme"  # Only runs if lint succeeds
       - "yamllint"
-    # Calls the reusable deploy workflow
+      - "gdlint"
     uses: "./.github/workflows/deploy_to_itch.yml"
     secrets:
       ITCHIO_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"

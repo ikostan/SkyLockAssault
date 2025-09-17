@@ -1,0 +1,23 @@
+---
+name: "Lint GDScript"
+
+on:  # yamllint disable-line rule:truthy
+  # Makes it reusable; called by other workflows
+  workflow_call:  # yamllint disable rule:empty-values
+  
+jobs:
+  review:
+    name: "Lint and Format Check"
+    runs-on: ubuntu-latest
+    steps:
+    - name: "Checkout code"
+      uses: actions/checkout@v4
+    - name: "Install GDToolkit (for gdlint & gdformat)"
+      # Installs gdtoolkit==4.* for Godot 4.x
+      uses: Scony/godot-gdscript-toolkit@master
+    - name: "Check Formatting"
+      # Scans all .gd files; use --diff for detailed output
+      run: gdformat --check .
+    - name: "Lint Code"
+      # Runs static analysis; fails if issues found
+      run: gdlint .
