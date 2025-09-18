@@ -17,7 +17,7 @@ func _ready() -> void:
 	$CenterContainer/VBoxContainer/OptionsButton.pressed.connect(_on_options_pressed)
 	$CenterContainer/VBoxContainer/QuitButton.pressed.connect(_on_quit_pressed)
 	setup_quit_dialog()  # New: Handles dialog setup in one place
-	assert(quit_dialog != null, "QuitDialog must be assigned!")
+	# assert(quit_dialog != null, "QuitDialog must be assigned!")
 
 	# Assign from exported path
 
@@ -31,7 +31,12 @@ func setup_quit_dialog() -> void:
 		if not quit_dialog.get_cancel_button().pressed.is_connected(_on_quit_dialog_canceled):
 			quit_dialog.get_cancel_button().pressed.connect(_on_quit_dialog_canceled)
 	else:
-		Globals.log_message("Warning: QuitDialog node not found! Add it to the scene.", Globals.LogLevel.WARNING)
+		Globals.log_message("Warning: QuitDialog not assigned! Disabling Quit button.", Globals.LogLevel.WARNING)
+		# Fallback: Disable Quit button to prevent null errors
+		var quit_button: Button = $CenterContainer/VBoxContainer/QuitButton
+		if quit_button:
+			quit_button.disabled = true
+			quit_button.visible = false  # Or hide it entirely
 
 
 # Handles the Start button press.

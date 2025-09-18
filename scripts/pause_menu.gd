@@ -15,7 +15,7 @@ func _ready() -> void:
 
 # Processes unhandled input for pause toggle (e.g., ESC key).
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_just_pressed("ui_cancel"):  # Default ESC action
+	if event.is_action_pressed("ui_cancel"):  # Default ESC action
 		toggle_pause()
 
 
