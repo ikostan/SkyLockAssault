@@ -10,6 +10,7 @@ func _ready() -> void:
 	$ColorRect/Control/CenterContainer/VBoxContainer/ResumeButton.pressed.connect(_on_resume_button_pressed)
 	$ColorRect/Control/CenterContainer/VBoxContainer/BackToMainButton.pressed.connect(_on_back_to_main_button_pressed)
 	visible = false
+	Globals.log_message("Resume menu is ready.", Globals.LogLevel.DEBUG)
 
 
 # Processes unhandled input for pause toggle (e.g., ESC key).

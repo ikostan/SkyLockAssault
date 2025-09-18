@@ -12,7 +12,7 @@ var game_scene: PackedScene = preload("res://scenes/main_scene.tscn")
 # Called when the node enters the scene tree for the first time.
 # Initializes button signals and quit dialog connections.
 func _ready() -> void:
-	Globals.log_message("Initializing main menu...")
+	Globals.log_message("Initializing main menu...", Globals.LogLevel.DEBUG)
 	$CenterContainer/VBoxContainer/StartButton.pressed.connect(_on_start_pressed)
 	$CenterContainer/VBoxContainer/OptionsButton.pressed.connect(_on_options_pressed)
 	$CenterContainer/VBoxContainer/QuitButton.pressed.connect(_on_quit_pressed)
