@@ -4,7 +4,9 @@ extends CanvasLayer
 # Use for exiting game levels back to main menu without quitting.
 
 @onready var resume_button: Button = $ColorRect/Control/CenterContainer/VBoxContainer/ResumeButton
-@onready var back_to_main_button: Button = $ColorRect/Control/CenterContainer/VBoxContainer/BackToMainButton
+@onready
+var back_to_main_button: Button = $ColorRect/Control/CenterContainer/VBoxContainer/BackToMainButton
+
 
 # Called when the node enters the scene tree.
 # Hides the menu initially.

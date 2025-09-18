@@ -26,17 +26,22 @@ func _ready() -> void:
 
 	# Assign from exported path
 
+
 # Connect dialog signals (can also do this in editor; add null check)
 func setup_quit_dialog() -> void:
 	quit_dialog = get_node(quit_dialog_path)
 	if quit_dialog:
-		Globals.log_message("QuitDialog found via get_node (using scene node).", Globals.LogLevel.DEBUG)
+		Globals.log_message(
+			"QuitDialog found via get_node (using scene node).", Globals.LogLevel.DEBUG
+		)
 		if not quit_dialog.confirmed.is_connected(_on_quit_dialog_confirmed):
 			quit_dialog.confirmed.connect(_on_quit_dialog_confirmed)
 		if not quit_dialog.get_cancel_button().pressed.is_connected(_on_quit_dialog_canceled):
 			quit_dialog.get_cancel_button().pressed.connect(_on_quit_dialog_canceled)
 	else:
-		Globals.log_message("Warning: QuitDialog not assigned! Disabling Quit button.", Globals.LogLevel.WARNING)
+		Globals.log_message(
+			"Warning: QuitDialog not assigned! Disabling Quit button.", Globals.LogLevel.WARNING
+		)
 		# Fallback: Disable Quit button to prevent null errors
 		var quit_button: Button = $CenterContainer/VBoxContainer/QuitButton
 		if quit_button:
