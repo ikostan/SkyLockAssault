@@ -15,6 +15,9 @@ venv/
 .DS_Store
 Thumbs.db
 
+# Exclude editor metadata UIDs
+*.uid
+
 # Editor-specific files
 *.tmp
 *.bak
