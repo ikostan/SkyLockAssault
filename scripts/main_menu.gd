@@ -5,6 +5,10 @@ extends Control
 @export var quit_dialog: ConfirmationDialog 
 var game_scene: PackedScene = preload("res://scenes/main_scene.tscn")
 
+@onready var start_button: Button = $CenterContainer/VBoxContainer/StartButton
+@onready var options_button: Button = $CenterContainer/VBoxContainer/OptionsButton
+@onready var quit_button: Button = $CenterContainer/VBoxContainer/QuitButton
+
 # Handles the main menu UI, including button connections and quit dialog logic.
 # This script manages scene transitions and platform-specific quitting for web/desktop.
 
@@ -13,9 +17,9 @@ var game_scene: PackedScene = preload("res://scenes/main_scene.tscn")
 # Initializes button signals and quit dialog connections.
 func _ready() -> void:
 	Globals.log_message("Initializing main menu...", Globals.LogLevel.DEBUG)
-	$CenterContainer/VBoxContainer/StartButton.pressed.connect(_on_start_pressed)
-	$CenterContainer/VBoxContainer/OptionsButton.pressed.connect(_on_options_pressed)
-	$CenterContainer/VBoxContainer/QuitButton.pressed.connect(_on_quit_pressed)
+	start_button.pressed.connect(_on_start_pressed)
+	options_button.pressed.connect(_on_options_pressed)
+	quit_button.pressed.connect(_on_quit_pressed)
 	setup_quit_dialog()  # New: Handles dialog setup in one place
 	# assert(quit_dialog != null, "QuitDialog must be assigned!")
 

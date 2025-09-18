@@ -3,12 +3,14 @@ extends CanvasLayer
 # Pause menu overlay: Toggles with ESC, pauses the game tree, and handles resume/back to menu.
 # Use for exiting game levels back to main menu without quitting.
 
+@onready var resume_button: Button = $ColorRect/Control/CenterContainer/VBoxContainer/ResumeButton
+@onready var back_to_main_button: Button = $ColorRect/Control/CenterContainer/VBoxContainer/BackToMainButton
 
 # Called when the node enters the scene tree.
 # Hides the menu initially.
 func _ready() -> void:
-	$ColorRect/Control/CenterContainer/VBoxContainer/ResumeButton.pressed.connect(_on_resume_button_pressed)
-	$ColorRect/Control/CenterContainer/VBoxContainer/BackToMainButton.pressed.connect(_on_back_to_main_button_pressed)
+	resume_button.pressed.connect(_on_resume_button_pressed)
+	back_to_main_button.pressed.connect(_on_back_to_main_button_pressed)
 	visible = false
 	Globals.log_message("Resume menu is ready.", Globals.LogLevel.DEBUG)
 
