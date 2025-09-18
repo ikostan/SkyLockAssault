@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3 uid="uid://brpckgp7j86jp"]
 
-[ext_resource type="Script" uid="uid://dyep7jkkv3xtd" path="res://scripts/main_menu.gd" id="1_l6cm7"]
+[ext_resource type="Script" uid="uid://cdubukgyitlm8" path="res://scripts/main_menu.gd" id="1_l6cm7"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_l6cm7"]
 bg_color = Color(0.301316, 0.570076, 0.313499, 1)
@@ -26,7 +26,7 @@ corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 shadow_size = 2
 
-[node name="Control" type="Control" node_paths=PackedStringArray("quit_dialog")]
+[node name="Control" type="Control"]
 layout_mode = 3
 anchors_preset = 8
 anchor_left = 0.5
@@ -36,7 +36,6 @@ anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_l6cm7")
-quit_dialog = NodePath("CenterContainer/VBoxContainer/QuitDialog")
 
 [node name="CenterContainer" type="CenterContainer" parent="."]
 layout_mode = 1

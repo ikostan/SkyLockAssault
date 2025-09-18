@@ -67,7 +67,9 @@ func _on_start_pressed() -> void:
 func _on_options_pressed() -> void:
 	# Stub; later: get_tree().change_scene_to_file("res://options_scene.tscn")
 	Globals.log_message("Options menu coming soon!", Globals.LogLevel.DEBUG)
-	# Future: var options_scene = preload("res://scenes/options_scene.tscn"); get_tree().change_scene_to_packed(options_scene)
+	# Future: 
+	# var options_scene = preload("res://scenes/options_scene.tscn"); 
+	# get_tree().change_scene_to_packed(options_scene)
 
 
 # Handles the Quit button press.
