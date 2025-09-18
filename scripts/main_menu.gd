@@ -1,6 +1,8 @@
 extends Control
 
-@onready var quit_dialog: ConfirmationDialog = $CenterContainer/VBoxContainer/QuitDialog
+# Default relative path; override in Inspector if needed
+@export var quit_dialog_path: NodePath = NodePath("CenterContainer/VBoxContainer/QuitDialog")
+@onready var quit_dialog: ConfirmationDialog 
 var game_scene: PackedScene = preload("res://scenes/main_scene.tscn")
 
 # Handles the main menu UI, including button connections and quit dialog logic.
@@ -15,6 +17,9 @@ func _ready() -> void:
 	$CenterContainer/VBoxContainer/OptionsButton.pressed.connect(_on_options_pressed)
 	$CenterContainer/VBoxContainer/QuitButton.pressed.connect(_on_quit_pressed)
 
+	# Assign from exported path
+	quit_dialog = get_node(quit_dialog_path)
+
 	# Connect dialog signals (can also do this in editor; add null check)
 	if quit_dialog:
 		# Add signals
@@ -24,8 +29,7 @@ func _ready() -> void:
 		if not quit_dialog.get_cancel_button().pressed.is_connected(_on_quit_dialog_canceled):
 			quit_dialog.get_cancel_button().pressed.connect(_on_quit_dialog_canceled)
 	else:
-		var message: String = "Warning: QuitDialog node not found! Add it to the scene."
-		Globals.log_message(message)
+		Globals.log_message("Warning: QuitDialog node not found! Add it to the scene.")
 
 
 # Handles the Start button press.
@@ -45,8 +49,7 @@ func _on_start_pressed() -> void:
 # Placeholder for loading an options scene.
 func _on_options_pressed() -> void:
 	# Stub; later: get_tree().change_scene_to_file("res://options_scene.tscn")
-	var message: String = "Options menu coming soon!"
-	Globals.log_message(message)
+	Globals.log_message("Options menu coming soon!")
 	# Future: var options_scene = preload("res://scenes/options_scene.tscn"); get_tree().change_scene_to_packed(options_scene)
 
 
@@ -59,8 +62,7 @@ func _on_quit_pressed() -> void:
 		Globals.log_message("Attempting to show QuitDialog.")
 		quit_dialog.popup_centered()  # Sets visible=true internally
 	else:
-		var message: String = "No quit_dialog found."
-		Globals.log_message(message)
+		Globals.log_message("No quit_dialog found.")
 
 
 # Called when the quit dialog is confirmed.
