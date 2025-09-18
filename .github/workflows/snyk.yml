@@ -29,7 +29,7 @@ jobs:
       - name: "Scan Container"
         run: |
           snyk container test --file=infra/docker-compose.yml --severity-threshold=high
-        continue-on-error: true  # Optional: Proceed if low issues
+        continue-on-error: true
       - name: "Scan Code/Secrets"
         # Scans all files, flags secrets
         run: |
