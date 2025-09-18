@@ -1,3 +1,5 @@
+version: v1.XX.X  # Use latest from `snyk policy update`
 ignore:
-  - '*':  # Ignore all for GDScript
-      reason: Godot project, no deps
+  SNYK-UNKNOWN-XXXX:  # Placeholder; run `snyk test` locally to get real IDs, then add like:
+    reason: Godot web server image vulns (non-critical for local)
+    expiry: 2026-01-01  # Optional: Auto-review later
