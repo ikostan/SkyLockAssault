@@ -4,4 +4,4 @@
 
 [node name="Node2D" type="Node2D"]
 
-[node name="Control" parent="." instance=ExtResource("1_w2twt")]
+[node name="PauseMenu" parent="." instance=ExtResource("1_w2twt")]
