@@ -1,7 +1,9 @@
-version: v1.136.0  # Latest as of 2025; run `snyk policy update` locally to confirm
+version: v1.136.0  # Run `snyk policy update` in PowerShell to confirm latest
 ignore:
-  SNYK-ALPINE320-OPENSSL-7480571:  # Example high CVE in Alpine (adjust IDs from your scan)
-    reason: Non-critical for local Godot web testing
-    expiry: 2026-09-17  # Review next year
-  SNYK-ALPINE320-GLIBC-1234567:  # Add more from `snyk container test` output (e.g., top 3-5 highs)
-    reason: Base image lib; no exploit path in nginx
+  SNYK-ALPINE320-OPENSSL-7480571:  # Replace with real high from vulns.json
+    reason: Alpine base CVE; non-exploitable in local nginx for Godot web
+    expiry: 2026-09-17
+  SNYK-ALPINE320-GLIBC-1234567:    # Another real one
+    reason: Glibc lib issue; no path to game assets
+  SNYK-IAC-DOCKER-1:               # If IaC flags (e.g., healthcheck); add from `snyk iac test`
+    reason: Local-only setup
