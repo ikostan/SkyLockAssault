@@ -1,3 +1,4 @@
+---
 name: "Snyk Security Scan"
 
 on:  # yamllint disable-line rule:truthy
