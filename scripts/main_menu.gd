@@ -2,7 +2,8 @@ extends Control
 
 # Default relative path; override in Inspector if needed
 @export var quit_dialog_path: NodePath = NodePath("CenterContainer/VBoxContainer/QuitDialog")
-@export var quit_dialog: ConfirmationDialog 
+# Reference to the quit dialog node, assigned in setup_quit_dialog or _ready()
+var quit_dialog: ConfirmationDialog
 var game_scene: PackedScene = preload("res://scenes/main_scene.tscn")
 
 @onready var start_button: Button = $CenterContainer/VBoxContainer/StartButton
