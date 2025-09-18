@@ -31,7 +31,7 @@ jobs:
       - "yamllint"
     uses: "./.github/workflows/snyk.yml"
     secrets:
-      ITCHIO_API_KEY: "${{ secrets.SNYK_TOKEN }}"
+      SNYK_TOKEN: "${{ secrets.SNYK_TOKEN }}"
   deploy-itch:
     name: "Deploy to itch.io"
     needs:
