@@ -1,7 +1,7 @@
 extends Control
 
-@onready var quit_dialog: ConfirmationDialog
-@onready var game_scene: PackedScene
+@onready var quit_dialog: ConfirmationDialog = $CenterContainer/VBoxContainer/QuitDialog
+var game_scene: PackedScene = preload("res://scenes/main_scene.tscn")
 
 # Custom logging function with timestamp
 func log_message(message: String) -> void:
@@ -17,9 +17,6 @@ func _ready() -> void:
 	$CenterContainer/VBoxContainer/QuitButton.pressed.connect(_on_quit_pressed)
 
 	# Connect dialog signals (can also do this in editor; add null check)
-	quit_dialog = $CenterContainer/VBoxContainer/QuitDialog
-	game_scene = preload("res://scenes/main_scene.tscn")
-
 	if quit_dialog:
 		# Add signals
 		log_message("QuitDialog found via get_node (using scene node).")
@@ -58,9 +55,9 @@ func _on_options_pressed() -> void:
 func _on_quit_pressed() -> void:
 	# Show confirmation dialog
 	if is_instance_valid(quit_dialog):
-		$CenterContainer/VBoxContainer/QuitDialog.visible = true
+		quit_dialog.show()
 		log_message("Attempting to show QuitDialog.")
-		quit_dialog.popup_centered()
+		quit_dialog.popup_centered()  # Sets visible=true internally
 	else:
 		var message: String = "No quit_dialog found."
 		log_message(message)
@@ -80,7 +77,7 @@ func _on_quit_dialog_confirmed() -> void:
 
 func _on_quit_dialog_canceled() -> void:
 	# Optional: Handle cancel (e.g., play sound or log)
-	$CenterContainer/VBoxContainer/QuitDialog.visible = false
+	quit_dialog.hide()
 	var message: String = "Quit canceled—back to skies!"
 	log_message(message)
 	# Dialog auto-hides on cancel, no extra code needed
