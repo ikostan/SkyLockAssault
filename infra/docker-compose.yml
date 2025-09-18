@@ -1,10 +1,16 @@
 services:
   godot_web_server:
-    image: nginx:latest
+    image: nginx:latest  # Keep this; we'll optimize later if container scan still complains
     container_name: sky_lock_assault_server
     ports:
-      - "9090:80"  # Local port 9090 to container 80; change if conflicted (e.g., to 8080:80)
+      - "127.0.0.1:9090:80"  # NEW: Restrict to localhost (your PC only); fixes exposed port errors
     restart: unless-stopped
     volumes:
       - ../export/web:/usr/share/nginx/html:ro  # Mount your Web export folder read-only
       - ./nginx:/etc/nginx/conf.d  # Mount custom Nginx config folder
+    user: "nginx:nginx"  # NEW: Run as non-root user; fixes privilege escalation risks
+    healthcheck:  # NEW: Adds monitoring; pings server to check if healthy
+      test: ["CMD", "curl", "-f", "http://localhost"]  # Simple check: Does the server respond?
+      interval: 30s  # Check every 30 seconds
+      timeout: 10s  # Give up after 10s if no response
+      retries: 3  # Try 3 times before restarting

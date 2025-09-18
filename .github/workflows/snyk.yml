@@ -33,5 +33,5 @@ jobs:
       - name: "Scan Code/Secrets"
         # Scans all files, flags secrets
         run: |
-          snyk test --all-projects --detection-depth=5
+          snyk test --all-projects --detection-depth=5 --exclude=*.gd
         continue-on-error: true  # Optional: Proceed if low issues

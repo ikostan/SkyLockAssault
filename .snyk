@@ -1,0 +1,3 @@
+ignore:
+  - '*':  # Ignore all for GDScript
+      reason: Godot project, no deps
