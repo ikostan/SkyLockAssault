@@ -1,0 +1,33 @@
+name: "Snyk Security Scan"
+
+on:  # yamllint disable-line rule:truthy
+  # Makes it reusable; called by other workflows
+  workflow_call:
+    secrets:
+      SNYK_TOKEN:
+        description: "Snyk Auth Token"
+        required: true
+
+jobs:
+  snyk:
+    runs-on: "ubuntu-latest"
+    # Adding 'timeout-minutes: 10' would prevent jobs from running
+    # indefinitely if something goes wrong
+    timeout-minutes: 10
+    steps:
+      - uses: "actions/checkout@v4"
+      - name: "Set up Snyk"
+        uses: snyk/actions/setup@master
+      - name: "Authenticate Snyk"
+        # Add your Snyk API token as repo secret
+        run: |
+          snyk auth ${{ secrets.SNYK_TOKEN }}
+      - name: "Scan IaC"
+        run: snyk iac test infra/docker-compose.yml --severity-threshold=medium
+      - name: "Scan Container"
+        run: |
+          snyk container test --file=infra/docker-compose.yml --severity-threshold=medium
+      - name: "Scan Code/Secrets"
+        # Scans all files, flags secrets
+        run: |
+          snyk test --all-projects --detection-depth=5

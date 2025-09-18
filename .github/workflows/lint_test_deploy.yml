@@ -23,12 +23,19 @@ jobs:
     uses: "./.github/workflows/yamllint.yml"
     with:
       config-path: ".github/workflows/*.yml"
-  deploy-itch:
-    name: "Deploy to itch.io"
+  snyk:
+    name: "Snyk Security Scan"
     needs:
       - "gdlint"
       - "readmelint"
       - "yamllint"
+    uses: "./.github/workflows/snyk.yml"
+    secrets:
+      ITCHIO_API_KEY: "${{ secrets.SNYK_TOKEN }}"
+  deploy-itch:
+    name: "Deploy to itch.io"
+    needs:
+      - "snyk"
     uses: "./.github/workflows/deploy_to_itch.yml"
     secrets:
       ITCHIO_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"
