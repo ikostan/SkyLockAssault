@@ -55,6 +55,3 @@ text = "Resume"
 [node name="BackToMainButton" type="Button" parent="ColorRect/Control/CenterContainer/VBoxContainer"]
 layout_mode = 2
 text = "Back To Main Menu"
-
-[connection signal="pressed" from="ColorRect/Control/CenterContainer/VBoxContainer/ResumeButton" to="." method="_on_resume_button_pressed"]
-[connection signal="pressed" from="ColorRect/Control/CenterContainer/VBoxContainer/BackToMainButton" to="." method="_on_back_to_main_button_pressed"]

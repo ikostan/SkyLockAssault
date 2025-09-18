@@ -2,11 +2,16 @@ extends Node
 
 # Global utilities singleton: Provides shared functions like logging.
 # Access from any script as Globals.log_message("message").
+enum LogLevel { DEBUG, INFO, WARNING, ERROR }
+@export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
 
 
-# Custom logging function with timestamp.
-# Prints messages with a timestamp for debugging in editor output or browser console.
+# Custom logging function with timestamp and level filtering.
 # @param message: The string message to log.
-func log_message(message: String) -> void:
+# @param level: The log level (default INFO).
+func log_message(message: String, level: LogLevel = LogLevel.INFO) -> void:
+	if level < current_log_level:
+		return  # Skip if below threshold
+	var level_str: String = LogLevel.keys()[level]  # Converts enum to string: "INFO", etc.
 	var timestamp: String = Time.get_datetime_string_from_system()
-	print("[%s] %s" % [timestamp, message])
+	print("[%s] [%s] %s" % [timestamp, level_str, message])

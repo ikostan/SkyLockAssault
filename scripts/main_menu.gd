@@ -16,40 +16,41 @@ func _ready() -> void:
 	$CenterContainer/VBoxContainer/StartButton.pressed.connect(_on_start_pressed)
 	$CenterContainer/VBoxContainer/OptionsButton.pressed.connect(_on_options_pressed)
 	$CenterContainer/VBoxContainer/QuitButton.pressed.connect(_on_quit_pressed)
+	setup_quit_dialog()  # New: Handles dialog setup in one place
 
 	# Assign from exported path
-	quit_dialog = get_node(quit_dialog_path)
 
-	# Connect dialog signals (can also do this in editor; add null check)
+# Connect dialog signals (can also do this in editor; add null check)
+func setup_quit_dialog() -> void:
+	quit_dialog = get_node(quit_dialog_path)
 	if quit_dialog:
-		# Add signals
-		Globals.log_message("QuitDialog found via get_node (using scene node).")
+		Globals.log_message("QuitDialog found via get_node (using scene node).", Globals.LogLevel.DEBUG)
 		if not quit_dialog.confirmed.is_connected(_on_quit_dialog_confirmed):
 			quit_dialog.confirmed.connect(_on_quit_dialog_confirmed)
 		if not quit_dialog.get_cancel_button().pressed.is_connected(_on_quit_dialog_canceled):
 			quit_dialog.get_cancel_button().pressed.connect(_on_quit_dialog_canceled)
 	else:
-		Globals.log_message("Warning: QuitDialog node not found! Add it to the scene.")
+		Globals.log_message("Warning: QuitDialog node not found! Add it to the scene.", Globals.LogLevel.WARNING)
 
 
 # Handles the Start button press.
 # Loads the main game scene using a preloaded PackedScene for efficiency.
 func _on_start_pressed() -> void:
 	# Stub; later: get_tree().change_scene_to_file("res://game_scene.tscn")
-	Globals.log_message("Start Game menu button pressed.")
+	Globals.log_message("Start Game menu button pressed.", Globals.LogLevel.DEBUG)
 
 	if game_scene:
-		Globals.log_message("Loading main game scene...")
+		Globals.log_message("Loading main game scene...", Globals.LogLevel.DEBUG)
 		get_tree().change_scene_to_packed(game_scene)
 	else:
-		Globals.log_message("Error: Game scene not set!")
+		Globals.log_message("Error: Game scene not set!", Globals.LogLevel.ERROR)
 
 
 # Handles the Options button press.
 # Placeholder for loading an options scene.
 func _on_options_pressed() -> void:
 	# Stub; later: get_tree().change_scene_to_file("res://options_scene.tscn")
-	Globals.log_message("Options menu coming soon!")
+	Globals.log_message("Options menu coming soon!", Globals.LogLevel.DEBUG)
 	# Future: var options_scene = preload("res://scenes/options_scene.tscn"); get_tree().change_scene_to_packed(options_scene)
 
 
@@ -59,10 +60,10 @@ func _on_quit_pressed() -> void:
 	# Show confirmation dialog
 	if is_instance_valid(quit_dialog):
 		quit_dialog.show()
-		Globals.log_message("Attempting to show QuitDialog.")
+		Globals.log_message("Attempting to show QuitDialog.", Globals.LogLevel.DEBUG)
 		quit_dialog.popup_centered()  # Sets visible=true internally
 	else:
-		Globals.log_message("No quit_dialog found.")
+		Globals.log_message("No quit_dialog found.", Globals.LogLevel.ERROR)
 
 
 # Called when the quit dialog is confirmed.
@@ -75,8 +76,7 @@ func _on_quit_dialog_confirmed() -> void:
 	else:
 		# Desktop/editor: Standard quit
 		get_tree().quit()
-	var message: String = "Quit confirmed and executed!"
-	Globals.log_message(message)
+	Globals.log_message("Quit confirmed and executed!", Globals.LogLevel.DEBUG)
 
 
 # Called when the quit dialog is canceled.
@@ -84,6 +84,5 @@ func _on_quit_dialog_confirmed() -> void:
 func _on_quit_dialog_canceled() -> void:
 	# Optional: Handle cancel (e.g., play sound or log)
 	quit_dialog.hide()
-	var message: String = "Quit canceled—back to skies!"
-	Globals.log_message(message)
+	Globals.log_message("Quit canceled—back to skies!", Globals.LogLevel.DEBUG)
 	# Dialog auto-hides on cancel, no extra code needed

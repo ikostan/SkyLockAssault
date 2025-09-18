@@ -88,6 +88,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_wu84c")
 text = "Quit"
 
 [node name="QuitDialog" type="ConfirmationDialog" parent="CenterContainer/VBoxContainer"]
+oversampling_override = 1.0
 title = "Quit Game?"
 size = Vector2i(383, 100)
 dialog_text = "Are you sure you want to quit Sky Lock Assault?"
