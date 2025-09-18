@@ -2,7 +2,7 @@ extends Control
 
 # Default relative path; override in Inspector if needed
 @export var quit_dialog_path: NodePath = NodePath("CenterContainer/VBoxContainer/QuitDialog")
-@onready var quit_dialog: ConfirmationDialog 
+@export var quit_dialog: ConfirmationDialog 
 var game_scene: PackedScene = preload("res://scenes/main_scene.tscn")
 
 # Handles the main menu UI, including button connections and quit dialog logic.
@@ -17,6 +17,7 @@ func _ready() -> void:
 	$CenterContainer/VBoxContainer/OptionsButton.pressed.connect(_on_options_pressed)
 	$CenterContainer/VBoxContainer/QuitButton.pressed.connect(_on_quit_pressed)
 	setup_quit_dialog()  # New: Handles dialog setup in one place
+	assert(quit_dialog != null, "QuitDialog must be assigned!")
 
 	# Assign from exported path
 

@@ -26,7 +26,7 @@ corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 shadow_size = 2
 
-[node name="Control" type="Control"]
+[node name="Control" type="Control" node_paths=PackedStringArray("quit_dialog")]
 layout_mode = 3
 anchors_preset = 8
 anchor_left = 0.5
@@ -36,6 +36,7 @@ anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_l6cm7")
+quit_dialog = NodePath("CenterContainer/VBoxContainer/QuitDialog")
 
 [node name="CenterContainer" type="CenterContainer" parent="."]
 layout_mode = 1
