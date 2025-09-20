@@ -1,14 +1,14 @@
 extends Control
 
 # Default relative path; override in Inspector if needed
-@export var quit_dialog_path: NodePath = NodePath("CenterContainer/VBoxContainer/QuitDialog")
+@export var quit_dialog_path: NodePath = NodePath("Panel/VBoxContainer/QuitDialog")
 # Reference to the quit dialog node, assigned in setup_quit_dialog or _ready()
 var quit_dialog: ConfirmationDialog
 var game_scene: PackedScene = preload("res://scenes/main_scene.tscn")
 
-@onready var start_button: Button = $CenterContainer/VBoxContainer/StartButton
-@onready var options_button: Button = $CenterContainer/VBoxContainer/OptionsButton
-@onready var quit_button: Button = $CenterContainer/VBoxContainer/QuitButton
+@onready var start_button: Button = $Panel/VBoxContainer/StartButton
+@onready var options_button: Button = $Panel/VBoxContainer/OptionsButton
+@onready var quit_button: Button = $Panel/VBoxContainer/QuitButton
 
 # Handles the main menu UI, including button connections and quit dialog logic.
 # This script manages scene transitions and platform-specific quitting for web/desktop.
@@ -43,7 +43,7 @@ func setup_quit_dialog() -> void:
 			"Warning: QuitDialog not assigned! Disabling Quit button.", Globals.LogLevel.WARNING
 		)
 		# Fallback: Disable Quit button to prevent null errors
-		var quit_button: Button = $CenterContainer/VBoxContainer/QuitButton
+		var quit_button: Button = $Panel/VBoxContainer/QuitButton
 		if quit_button:
 			quit_button.disabled = true
 			quit_button.visible = false  # Or hide it entirely

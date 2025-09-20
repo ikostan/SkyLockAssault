@@ -37,7 +37,21 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_l6cm7")
 
-[node name="CenterContainer" type="CenterContainer" parent="."]
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -242.5
+offset_top = -142.5
+offset_right = 232.5
+offset_bottom = 192.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -45,17 +59,14 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -178.5
-offset_top = -127.5
+offset_top = -103.5
 offset_right = 178.5
-offset_bottom = 127.5
+offset_bottom = 103.5
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer"]
-layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="Label" type="Label" parent="CenterContainer/VBoxContainer"]
+[node name="Label" type="Label" parent="Panel/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_font_sizes/font_size = 45
@@ -63,34 +74,34 @@ text = "Sky Lock Assault"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="StartButton" type="Button" parent="CenterContainer/VBoxContainer"]
+[node name="StartButton" type="Button" parent="Panel/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_l6cm7")
 text = "Start Game"
 
-[node name="OptionsButton" type="Button" parent="CenterContainer/VBoxContainer"]
+[node name="OptionsButton" type="Button" parent="Panel/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_bqqt6")
 text = "Options"
 
-[node name="QuitButton" type="Button" parent="CenterContainer/VBoxContainer"]
+[node name="QuitButton" type="Button" parent="Panel/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_wu84c")
 text = "Quit"
 
-[node name="QuitDialog" type="ConfirmationDialog" parent="CenterContainer/VBoxContainer"]
+[node name="QuitDialog" type="ConfirmationDialog" parent="Panel/VBoxContainer"]
 oversampling_override = 1.0
 title = "Quit Game?"
 size = Vector2i(383, 100)
 dialog_text = "Are you sure you want to quit Sky Lock Assault?"
 
-[connection signal="confirmed" from="CenterContainer/VBoxContainer/QuitDialog" to="." method="_on_quit_dialog_confirmed"]
+[connection signal="confirmed" from="Panel/VBoxContainer/QuitDialog" to="." method="_on_quit_dialog_confirmed"]
