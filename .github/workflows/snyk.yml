@@ -16,7 +16,7 @@ jobs:
     # indefinitely if something goes wrong
     timeout-minutes: 10
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@v5"
       - name: "Set up Snyk"
         uses: snyk/actions/setup@master
       - name: "Authenticate Snyk"
