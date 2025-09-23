@@ -6,6 +6,7 @@ extends CanvasLayer
 @onready var resume_button: Button = $Panel/VBoxContainer/ResumeButton
 @onready var back_to_main_button: Button = $Panel/VBoxContainer/BackToMainButton
 
+
 # Called when the node enters the scene tree.
 # Hides the menu initially.
 func _ready() -> void:
