@@ -26,6 +26,11 @@ jobs:
       - name: "Checkout repository"
         uses: actions/checkout@v4
 
+      - name: "List files in export/web (for visibility)"
+        run: |
+          echo "Files to be scanned in export/web:"
+          ls -R export/web || echo "No files found—check if folder exists!"
+
       - name: "Initialize CodeQL"
         uses: github/codeql-action/init@v3
         with:
@@ -34,9 +39,16 @@ jobs:
           config-file: .github/codeql-config.yml
           # Enables dep caching (minimal impact here but covers possibilities)
           dependency-caching: true
+          # Enable debug for more detailed logs and artifacts
+          debug: true
 
       - name: "Autobuild (optional for JS but included for completeness)"
         uses: github/codeql-action/autobuild@v3
 
       - name: "Perform CodeQL Analysis"
         uses: github/codeql-action/analyze@v3
+
+      - name: "Post-scan summary (optional)"
+        if: always()  # Run even if previous steps fail
+        run: |
+          echo "Scan complete—check Security > Code scanning for results or download artifacts for debug info."
