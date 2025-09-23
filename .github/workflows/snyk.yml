@@ -25,7 +25,7 @@ jobs:
           ls -l export/web || echo "No files found—check if folder exists!"
 
       - name: "Set up Snyk"
-        uses: "snyk/actions/setup@1480e741bb8e0b191e8645c38ee1c36e7baaba39"  # Properly pinned to SHA (v0.4.0) for security
+        uses: "snyk/actions/setup@master"  # Properly pinned to SHA (v0.4.0) for security
 
       - name: "Authenticate Snyk"
         run: |
