@@ -54,9 +54,9 @@ jobs:
         uses: "github/codeql-action/upload-sarif@v3"
         with:
           sarif_file: "snyk-os.sarif"
-        if: always()
+        if: "always()"
 
       - name: "Post-scan summary (optional)"
-        if: always()
+        if: "always()"
         run: |
           echo "Snyk scan complete on export/web—results uploaded to app.snyk.io dashboard (check Projects/Reports) and GitHub Security tab."
