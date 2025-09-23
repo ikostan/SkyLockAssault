@@ -34,7 +34,8 @@ jobs:
       - name: "Initialize CodeQL"
         uses: "github/codeql-action/init@v3"
         with:
-          languages: ${{ matrix.language }}   # yamllint disable-line quoted-strings
+          # yamllint disable rule: quoted-strings
+          languages: ${{ matrix.language }}
           # References our path limiter
           config-file: ".github/codeql-config.yml"
           # Enables dep caching (minimal impact here but covers possibilities)
@@ -49,7 +50,7 @@ jobs:
         uses: "github/codeql-action/analyze@v3"
 
       - name: "Post-scan summary (optional)"
-        if: always()  # Run even if previous steps fail
+        if: "always()"  # Run even if previous steps fail
         # yamllint disable rule:line-length
         run: |
           echo "Scan complete—check Security > Code scanning for results or download artifacts for debug info."

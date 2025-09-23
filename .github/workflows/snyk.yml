@@ -14,9 +14,9 @@ jobs:
     runs-on: "ubuntu-latest"
     timeout-minutes: 10
     permissions:
-      actions: read
-      contents: read
-      security-events: write  # For SARIF uploads to GitHub Security tab
+      actions: "read"
+      contents: "read"
+      security-events: "write"  # For SARIF uploads to GitHub Security tab
     steps:
       - name: "Checkout repository"
         uses: "actions/checkout@v4"
@@ -40,10 +40,10 @@ jobs:
         continue-on-error: true
 
       - name: "Upload Snyk Code SARIF to GitHub"
-        uses: github/codeql-action/upload-sarif@v3
+        uses: "github/codeql-action/upload-sarif@v3"
         with:
-          sarif_file: snyk-code.sarif
-        if: always()
+          sarif_file: "snyk-code.sarif"
+        if: "always()"
 
       - name: "Scan Open Source (unmanaged deps in export/web)"
         run: |
@@ -51,9 +51,9 @@ jobs:
         continue-on-error: true
 
       - name: "Upload Snyk Open Source SARIF to GitHub"
-        uses: github/codeql-action/upload-sarif@v3
+        uses: "github/codeql-action/upload-sarif@v3"
         with:
-          sarif_file: snyk-os.sarif
+          sarif_file: "snyk-os.sarif"
         if: always()
 
       - name: "Post-scan summary (optional)"
