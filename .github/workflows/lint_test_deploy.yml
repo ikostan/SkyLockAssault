@@ -34,10 +34,20 @@ jobs:
       - "readmelint"
       - "yamllint"
     uses: "./.github/workflows/codeql.yml"
+  snyk:
+    name: "Snyk Scan on Web Export"
+    needs:
+      - "gdlint"
+      - "readmelint"
+      - "yamllint"
+    uses: "./.github/workflows/snyk.yml"
+    secrets:
+      SNYK_TOKEN: "${{ secrets.SNYK_TOKEN }}"
   deploy-itch:
     name: "Deploy to itch.io"
     needs:
       - "codeql"
+      - "snyk"
     uses: "./.github/workflows/deploy_to_itch.yml"
     secrets:
       ITCHIO_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"

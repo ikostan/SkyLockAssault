@@ -1,5 +1,5 @@
 ---
-name: "Snyk Security Scan"
+name: "Snyk Scan on Web Export"
 
 on:  # yamllint disable-line rule:truthy
   # Makes it reusable; called by other workflows
@@ -16,22 +16,35 @@ jobs:
     # indefinitely if something goes wrong
     timeout-minutes: 10
     steps:
-      - uses: "actions/checkout@v5"
+      - name: "Checkout repository"
+        uses: "actions/checkout@v4"  # Updated to v4 for consistency with CodeQL
+
+      - name: "List files in export/web (for visibility)"
+        run: |
+          echo "Files to be scanned in export/web:"
+          ls -R export/web || echo "No files found—check if folder exists!"
+
       - name: "Set up Snyk"
-        uses: snyk/actions/setup@master
+        # Pinned to full SHA (v0.4.0) for security
+        uses: "snyk/actions/setup@1480e741bb8e0b191e8645c38ee1c36e7baaba39"
+
       - name: "Authenticate Snyk"
         # Add your Snyk API token as repo secret
         run: |
           snyk auth ${{ secrets.SNYK_TOKEN }}
-      - name: "Scan IaC"
-        run: snyk iac test infra/docker-compose.yml --severity-threshold=medium
-        continue-on-error: true  # Optional: Proceed if low issues
-      - name: "Scan Container"
+
+      - name: "Scan Code (SAST on export/web)"
         run: |
-          snyk container test --file=infra/docker-compose.yml --severity-threshold=high
-        continue-on-error: true
-      - name: "Scan Code/Secrets"
-        # Scans all files, flags secrets
+          snyk code test export/web --severity-threshold=medium -d  # -d for debug logs
+        # continue-on-error: true  # Proceed if low issues or no findings
+
+      - name: "Scan Open Source (unmanaged deps in export/web)"
         run: |
-          snyk test --all-projects --detection-depth=5 --exclude=*.gd
-        continue-on-error: true  # Optional: Proceed if low issues
+          snyk test export/web --unmanaged --severity-threshold=high -d  # -d for debug
+        # continue-on-error: true  # Proceed if no manifests/deps found
+
+      - name: "Post-scan summary (optional)"
+        if: always()  # Run even if previous steps fail
+        # yamllint disable rule:line-length
+        run: |
+          echo "Snyk scan complete on export/web—check logs for details or Security tab if integrated."
