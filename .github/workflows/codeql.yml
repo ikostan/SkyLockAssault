@@ -47,9 +47,3 @@ jobs:
 
       - name: "Perform CodeQL Analysis"
         uses: "github/codeql-action/analyze@v3"
-
-      - name: "Post-scan summary (optional)"
-        if: "always()"  # Run even if previous steps fail
-        # yamllint disable rule:line-length
-        run: |
-          echo "Scan complete—check Security > Code scanning for results or download artifacts for debug info."

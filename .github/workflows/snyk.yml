@@ -35,16 +35,10 @@ jobs:
 
       - name: "Scan Code (SAST on export/web)"
         run: |
-          snyk code test export/web --severity-threshold=medium -d  # -d for debug logs
+          snyk code test export/web --severity-threshold=medium -d
         # continue-on-error: true  # Proceed if low issues or no findings
 
       - name: "Scan Open Source (unmanaged deps in export/web)"
         run: |
-          snyk test export/web --unmanaged --severity-threshold=high -d  # -d for debug
+          snyk test export/web --unmanaged --severity-threshold=high -d
         # continue-on-error: true  # Proceed if no manifests/deps found
-
-      - name: "Post-scan summary (optional)"
-        if: always()  # Run even if previous steps fail
-        # yamllint disable rule:line-length
-        run: |
-          echo "Snyk scan complete on export/web—check logs for details or Security tab if integrated."
