@@ -53,4 +53,8 @@ jobs:
         if: "always()"  # Run even if previous steps fail
         # yamllint disable rule:line-length
         run: |
-          echo "Scan complete—check Security > Code scanning for results or download artifacts for debug info."
+          if [ -n "$(find . -name '*.sarif')" ]; then
+            echo "Scan complete—check Security > Code scanning for results or download artifacts for debug info."
+          else
+            echo "Scan complete—no supported files or issues found. No results uploaded."
+          fi
