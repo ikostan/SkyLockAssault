@@ -41,7 +41,7 @@ jobs:
           # Enables dep caching (minimal impact here but covers possibilities)
           dependency-caching: "true"
           # Enable debug for more detailed logs and artifacts
-          debug: "true"
+          debug: "false"
 
       - name: "Autobuild (optional for JS but included for completeness)"
         uses: "github/codeql-action/autobuild@v3"
