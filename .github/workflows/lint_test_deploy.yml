@@ -5,6 +5,9 @@ name: "Main Deploy Pipeline"
 permissions:
   contents: "write"
   pull-requests: "write"
+  actions: "read"
+  # Needed to upload SARIF results
+  security-events: "write"
 
 on:  # yamllint disable-line rule:truthy
   push:
@@ -23,12 +26,18 @@ jobs:
     uses: "./.github/workflows/yamllint.yml"
     with:
       config-path: ".github/workflows/*.yml"
-  deploy-itch:
-    name: "Deploy to itch.io"
+
+  codeql:
+    name: "CodeQL Scan on Web Export"
     needs:
       - "gdlint"
       - "readmelint"
       - "yamllint"
+    uses: "./.github/workflows/codeql.yml"
+  deploy-itch:
+    name: "Deploy to itch.io"
+    needs:
+      - "codeql"
     uses: "./.github/workflows/deploy_to_itch.yml"
     secrets:
       ITCHIO_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"
