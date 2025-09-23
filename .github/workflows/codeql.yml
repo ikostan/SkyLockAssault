@@ -17,7 +17,7 @@ jobs:
       # Needed to upload SARIF results
       security-events: "write"
     strategy:
-      fail-fast: false
+      fail-fast: "false"
       matrix:
         # Limit to JS for export/web files
         language: ["javascript"]
@@ -38,9 +38,9 @@ jobs:
           # References our path limiter
           config-file: ".github/codeql-config.yml"
           # Enables dep caching (minimal impact here but covers possibilities)
-          dependency-caching: true
+          dependency-caching: "true"
           # Enable debug for more detailed logs and artifacts
-          debug: true
+          debug: "true"
 
       - name: "Autobuild (optional for JS but included for completeness)"
         uses: "github/codeql-action/autobuild@v3"
@@ -50,5 +50,6 @@ jobs:
 
       - name: "Post-scan summary (optional)"
         if: always()  # Run even if previous steps fail
+        # yamllint disable rule:line-length
         run: |
           echo "Scan complete—check Security > Code scanning for results or download artifacts for debug info."

@@ -33,15 +33,24 @@ jobs:
 
       - name: "Scan Code (SAST on export/web)"
         run: |
-          snyk code test export/web --severity-threshold=medium -d  # -d for debug logs; removed --report to avoid upload issues
-        continue-on-error: true  # Proceed if no supported files or low issues—learn from logs
+          snyk code test export/web --severity-threshold=medium -d
+        # Proceed if no supported files or low issues—learn from logs
+        continue-on-error: true
 
       - name: "Scan Open Source (unmanaged deps in export/web)"
+        # yamllint disable rule:line-length
         run: |
-          snyk test export/web --unmanaged --severity-threshold=high -d  # -d for debug; removed --report
-        continue-on-error: true  # Proceed if no deps found; change to false if you want strict fails on highs
+          snyk test export/web --unmanaged --severity-threshold=high -d --sarif-file-output=snyk-os.sarif
+        continue-on-error: true
+
+      - name: "Upload Snyk Open Source SARIF"
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "snyk-os.sarif"
+        if: always()
 
       - name: "Post-scan summary (optional)"
         if: always()  # Run even if previous steps fail
+        # yamllint disable rule:line-length
         run: |
-          echo "Snyk scan complete on export/web—check logs for details or Security tab if integrated."
+          echo "Snyk scan complete on export/web—results uploaded to Security > Code scanning tab. Check for alerts there or in logs."
