@@ -32,6 +32,8 @@ jobs:
           languages: ${{ matrix.language }}
           # References our path limiter
           config-file: .github/codeql-config.yml
+          # Enables dep caching (minimal impact here but covers possibilities)
+          dependency-caching: true
 
       - name: "Autobuild (optional for JS but included for completeness)"
         uses: github/codeql-action/autobuild@v3
