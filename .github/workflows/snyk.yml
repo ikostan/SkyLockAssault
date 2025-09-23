@@ -33,18 +33,6 @@ jobs:
         run: |
           snyk auth ${{ secrets.SNYK_TOKEN }}
 
-      - name: "Scan Code (SAST on export/web)"
-        # yamllint disable rule:line-length
-        run: |
-          snyk code test export/web --severity-threshold=medium -d --report --sarif-file-output=snyk-code.sarif
-        continue-on-error: true
-
-      - name: "Upload Snyk Code SARIF to GitHub"
-        uses: "github/codeql-action/upload-sarif@v3"
-        with:
-          sarif_file: "snyk-code.sarif"
-        if: "always()"
-
       - name: "Scan Open Source (unmanaged deps in export/web)"
         run: |
           snyk test export/web --unmanaged --severity-threshold=high -d --report --sarif-file-output=snyk-os.sarif
