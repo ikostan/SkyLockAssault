@@ -34,9 +34,7 @@ jobs:
       - name: "Scan Code (SAST on export/web)"
         run: |
           snyk code test export/web --severity-threshold=medium -d --report  # -d for debug, --report for JSON if issues
-        continue-on-error: true  # Proceed on medium/low or no findings; learn from logs
 
       - name: "Scan Open Source (unmanaged deps in export/web)"
         run: |
           snyk test export/web --unmanaged --severity-threshold=high -d --report  # -d for debug, --report for JSON
-        # No continue-on-error: Fail on high/critical for awareness, but add if blocking deploys
