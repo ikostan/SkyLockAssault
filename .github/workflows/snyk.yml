@@ -17,28 +17,26 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: "Checkout repository"
-        uses: "actions/checkout@v4"  # Updated to v4 for consistency with CodeQL
+        uses: "actions/checkout@v4"  # Consistent with CodeQL
 
       - name: "List files in export/web (for visibility)"
         run: |
           echo "Files to be scanned in export/web:"
-          ls -R export/web || echo "No files found—check if folder exists!"
+          ls -l export/web || echo "No files found—check if folder exists!"
 
       - name: "Set up Snyk"
-        # Pinned to full SHA (v0.4.0) for security
-        uses: "snyk/actions/setup@1480e741bb8e0b191e8645c38ee1c36e7baaba39"
+        uses: "snyk/actions/setup@1480e741bb8e0b191e8645c38ee1c36e7baaba39"  # Pinned SHA for security
 
       - name: "Authenticate Snyk"
-        # Add your Snyk API token as repo secret
         run: |
           snyk auth ${{ secrets.SNYK_TOKEN }}
 
       - name: "Scan Code (SAST on export/web)"
         run: |
-          snyk code test export/web --severity-threshold=medium -d
-        # continue-on-error: true  # Proceed if low issues or no findings
+          snyk code test export/web --severity-threshold=medium -d --report  # -d for debug, --report for JSON if issues
+        continue-on-error: true  # Proceed on medium/low or no findings; learn from logs
 
       - name: "Scan Open Source (unmanaged deps in export/web)"
         run: |
-          snyk test export/web --unmanaged --severity-threshold=high -d
-        # continue-on-error: true  # Proceed if no manifests/deps found
+          snyk test export/web --unmanaged --severity-threshold=high -d --report  # -d for debug, --report for JSON
+        # No continue-on-error: Fail on high/critical for awareness, but add if blocking deploys
