@@ -39,7 +39,7 @@ jobs:
       - name: "Scan Code (SAST on export/web)"
         # yamllint disable rule:line-length
         run: |
-          snyk code test export/web --severity-threshold=medium -d --report --project-name="SkyLockAssault-WebExport-Code" --org=${{ secrets.ORG_ID }} --sarif-file-output=snyk-code.sarif
+          snyk code test export/web --severity-threshold=medium -d --report --org=${{ secrets.ORG_ID }} --sarif-file-output=snyk-code.sarif
         continue-on-error: true
 
       - name: "Upload Snyk Code SARIF to GitHub"
@@ -50,7 +50,7 @@ jobs:
 
       - name: "Scan Open Source (unmanaged deps in export/web)"
         run: |
-          snyk test export/web --unmanaged --severity-threshold=high -d --report --project-name="SkyLockAssault-WebExport-OS" --org=${{ secrets.ORG_ID }} --sarif-file-output=snyk-os.sarif
+          snyk test export/web --unmanaged --severity-threshold=high -d --report --org=${{ secrets.ORG_ID }} --sarif-file-output=snyk-os.sarif
         continue-on-error: true
 
       - name: "Upload Snyk Open Source SARIF to GitHub"
