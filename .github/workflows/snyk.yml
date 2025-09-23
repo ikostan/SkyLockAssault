@@ -59,4 +59,8 @@ jobs:
       - name: "Post-scan summary (optional)"
         if: "always()"
         run: |
-          echo "Snyk scan complete on export/web—results uploaded to app.snyk.io dashboard (check Projects/Reports) and GitHub Security tab."
+          if [ -f snyk-code.sarif ] || [ -f snyk-os.sarif ]; then
+            echo "Snyk scan complete on export/web—results uploaded to app.snyk.io dashboard (check Projects/Reports) and GitHub Security tab."
+          else
+            echo "Snyk scan complete on export/web—no supported files or vulnerabilities found. No results uploaded."
+          fi
