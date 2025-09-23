@@ -43,6 +43,7 @@ jobs:
     uses: "./.github/workflows/snyk.yml"
     secrets:
       SNYK_TOKEN: "${{ secrets.SNYK_TOKEN }}"
+      ORG_ID: "${{ secrets.ORG_ID }}"
   deploy-itch:
     name: "Deploy to itch.io"
     needs:
