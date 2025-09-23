@@ -1,0 +1,42 @@
+---
+name: "CodeQL Scan on Web Export"
+
+on:  # yamllint disable-line rule:truthy
+  # Makes it reusable; called by other workflows
+  workflow_call:  # yamllint disable rule:empty-values
+
+jobs:
+  export-and-scan:
+    runs-on: ubuntu-latest
+    # Adding 'timeout-minutes: 10' would prevent jobs from running
+    # indefinitely if something goes wrong
+    timeout-minutes: 10
+    permissions:
+      actions: "read"
+      contents: "read"
+      # Needed to upload SARIF results
+      security-events: "write"
+    strategy:
+      fail-fast: false
+      matrix:
+        # Limit to JS for export/web files
+        language: ["javascript"]
+
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "Initialize CodeQL"
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # References our path limiter
+          config-file: .github/codeql-config.yml
+          # Enables dep caching (minimal impact here but covers possibilities)
+          dependency-caching: true
+
+      - name: "Autobuild (optional for JS but included for completeness)"
+        uses: github/codeql-action/autobuild@v3
+
+      - name: "Perform CodeQL Analysis"
+        uses: github/codeql-action/analyze@v3
