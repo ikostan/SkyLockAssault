@@ -1,9 +1,0 @@
-version: v1.136.0  # Run `snyk policy update` in PowerShell to confirm latest
-ignore:
-  SNYK-ALPINE320-OPENSSL-7480571:  # Replace with real high from vulns.json
-    reason: Alpine base CVE; non-exploitable in local nginx for Godot web
-    expiry: 2026-09-17
-  SNYK-ALPINE320-GLIBC-1234567:    # Another real one
-    reason: Glibc lib issue; no path to game assets
-  SNYK-IAC-DOCKER-1:               # If IaC flags (e.g., healthcheck); add from `snyk iac test`
-    reason: Local-only setup
