@@ -25,7 +25,8 @@ jobs:
           ls -R export/web || echo "No files found—check if folder exists!"
 
       - name: "Set up Snyk"
-        uses: "snyk/actions/setup@master"
+        # Pinned to full SHA (v0.4.0) for security
+        uses: "snyk/actions/setup@1480e741bb8e0b191e8645c38ee1c36e7baaba39"
 
       - name: "Authenticate Snyk"
         # Add your Snyk API token as repo secret
@@ -35,12 +36,12 @@ jobs:
       - name: "Scan Code (SAST on export/web)"
         run: |
           snyk code test export/web --severity-threshold=medium -d  # -d for debug logs
-        continue-on-error: true  # Proceed if low issues or no findings
+        # continue-on-error: true  # Proceed if low issues or no findings
 
       - name: "Scan Open Source (unmanaged deps in export/web)"
         run: |
           snyk test export/web --unmanaged --severity-threshold=high -d  # -d for debug
-        continue-on-error: true  # Proceed if no manifests/deps found
+        # continue-on-error: true  # Proceed if no manifests/deps found
 
       - name: "Post-scan summary (optional)"
         if: always()  # Run even if previous steps fail
