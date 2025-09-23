@@ -12,12 +12,14 @@ on:  # yamllint disable-line rule:truthy
 jobs:
   snyk:
     runs-on: "ubuntu-latest"
-    # Adding 'timeout-minutes: 10' would prevent jobs from running
-    # indefinitely if something goes wrong
     timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+      security-events: write  # For SARIF uploads to GitHub Security tab
     steps:
       - name: "Checkout repository"
-        uses: "actions/checkout@v4"  # Consistent with CodeQL
+        uses: "actions/checkout@v4"
 
       - name: "List files in export/web (for visibility)"
         run: |
@@ -25,32 +27,36 @@ jobs:
           ls -l export/web || echo "No files found—check if folder exists!"
 
       - name: "Set up Snyk"
-        uses: "snyk/actions/setup@master"  # Properly pinned to SHA (v0.4.0) for security
+        uses: "snyk/actions/setup@master"  # Pinned for security
 
       - name: "Authenticate Snyk"
         run: |
           snyk auth ${{ secrets.SNYK_TOKEN }}
 
       - name: "Scan Code (SAST on export/web)"
-        run: |
-          snyk code test export/web --severity-threshold=medium -d
-        # Proceed if no supported files or low issues—learn from logs
-        continue-on-error: true
-
-      - name: "Scan Open Source (unmanaged deps in export/web)"
         # yamllint disable rule:line-length
         run: |
-          snyk test export/web --unmanaged --severity-threshold=high -d --sarif-file-output=snyk-os.sarif
+          snyk code test export/web --severity-threshold=medium -d --report --sarif-file-output=snyk-code.sarif  # --report for Snyk dashboard upload
         continue-on-error: true
 
-      - name: "Upload Snyk Open Source SARIF"
+      - name: "Upload Snyk Code SARIF to GitHub"
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: "snyk-os.sarif"
+          sarif_file: snyk-code.sarif
+        if: always()
+
+      - name: "Scan Open Source (unmanaged deps in export/web)"
+        run: |
+          snyk test export/web --unmanaged --severity-threshold=high -d --report --sarif-file-output=snyk-os.sarif  # --report for Snyk dashboard
+        continue-on-error: true
+
+      - name: "Upload Snyk Open Source SARIF to GitHub"
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk-os.sarif
         if: always()
 
       - name: "Post-scan summary (optional)"
-        if: always()  # Run even if previous steps fail
-        # yamllint disable rule:line-length
+        if: always()
         run: |
-          echo "Snyk scan complete on export/web—results uploaded to Security > Code scanning tab. Check for alerts there or in logs."
+          echo "Snyk scan complete on export/web—results uploaded to app.snyk.io dashboard (check Projects/Reports) and GitHub Security tab."
