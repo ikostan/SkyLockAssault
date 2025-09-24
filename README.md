@@ -10,7 +10,7 @@
 
 ## A top-down online web browser game built with Godot 4.5
 
-![Sky Lock Assault](https://github.com/ikostan/SkyLockAssault/blob/main/img/main_menu_2.png)
+![Sky Lock Assault](https://github.com/ikostan/SkyLockAssault/blob/main/files/img/main_menu_2.png)
 
 Combat airplane web game with fuel management, multiple weapons, multi-level,
 and adjustable difficulty.
