@@ -1,30 +1,36 @@
-[gd_scene load_steps=5 format=3 uid="uid://brpckgp7j86jp"]
+[gd_scene load_steps=7 format=3 uid="uid://brpckgp7j86jp"]
 
 [ext_resource type="Script" uid="uid://cdubukgyitlm8" path="res://scripts/main_menu.gd" id="1_l6cm7"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_l6cm7"]
-bg_color = Color(0.301316, 0.570076, 0.313499, 1)
-corner_radius_top_left = 16
-corner_radius_top_right = 16
-corner_radius_bottom_right = 16
-corner_radius_bottom_left = 16
-shadow_size = 2
+[ext_resource type="VideoStream" uid="uid://dxu50q1yffe6a" path="res://files/video/grok-video-main2.ogv" id="2_ekxnf"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bqqt6"]
-bg_color = Color(0.301961, 0.568627, 0.313726, 1)
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
 corner_radius_top_left = 16
 corner_radius_top_right = 16
 corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
-shadow_size = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ekxnf"]
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8ln24"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+border_color = Color(0.20871013, 0.20871016, 0.20870999, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+shadow_size = 5
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wu84c"]
-bg_color = Color(0.301961, 0.568627, 0.313726, 1)
+bg_color = Color(0.6, 0.6, 0.6, 0.54901963)
 corner_radius_top_left = 16
 corner_radius_top_right = 16
 corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
-shadow_size = 2
 
 [node name="Control" type="Control"]
 layout_mode = 3
@@ -37,21 +43,21 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_l6cm7")
 
-[node name="Panel" type="Panel" parent="."]
+[node name="VideoStreamPlayer" type="VideoStreamPlayer" parent="."]
 layout_mode = 1
-anchors_preset = 8
+anchors_preset = 13
 anchor_left = 0.5
-anchor_top = 0.5
 anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -242.5
-offset_top = -142.5
-offset_right = 232.5
-offset_bottom = 192.5
+anchor_bottom = 1.0
+offset_left = -232.0
+offset_right = 232.0
 grow_horizontal = 2
 grow_vertical = 2
+stream = ExtResource("2_ekxnf")
+autoplay = true
+loop = true
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VideoStreamPlayer"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -59,14 +65,15 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -178.5
-offset_top = -103.5
+offset_top = -114.0
 offset_right = 178.5
-offset_bottom = 103.5
+offset_bottom = 114.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 6
 
-[node name="Label" type="Label" parent="Panel/VBoxContainer"]
+[node name="Label" type="Label" parent="VideoStreamPlayer/VBoxContainer"]
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_font_sizes/font_size = 45
@@ -74,34 +81,46 @@ text = "Sky Lock Assault"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="StartButton" type="Button" parent="Panel/VBoxContainer"]
+[node name="StartButton" type="Button" parent="VideoStreamPlayer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 35
-theme_override_styles/normal = SubResource("StyleBoxFlat_l6cm7")
-text = "Start Game"
-
-[node name="OptionsButton" type="Button" parent="Panel/VBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 0.74509805)
+theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_constants/h_separation = 6
 theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_bqqt6")
-text = "Options"
+theme_override_styles/pressed = SubResource("StyleBoxFlat_ekxnf")
+theme_override_styles/hover = SubResource("StyleBoxFlat_8ln24")
+text = "Start Game"
 
-[node name="QuitButton" type="Button" parent="Panel/VBoxContainer"]
+[node name="OptionsButton" type="Button" parent="VideoStreamPlayer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 0.74509805)
+theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_constants/h_separation = 6
+theme_override_font_sizes/font_size = 35
+theme_override_styles/normal = SubResource("StyleBoxFlat_bqqt6")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_ekxnf")
+theme_override_styles/hover = SubResource("StyleBoxFlat_8ln24")
+text = "Options"
+
+[node name="QuitButton" type="Button" parent="VideoStreamPlayer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 0.74509805)
+theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_constants/h_separation = 6
 theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_wu84c")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_ekxnf")
+theme_override_styles/hover = SubResource("StyleBoxFlat_8ln24")
 text = "Quit"
 
-[node name="QuitDialog" type="ConfirmationDialog" parent="Panel/VBoxContainer"]
+[node name="QuitDialog" type="ConfirmationDialog" parent="VideoStreamPlayer/VBoxContainer"]
 oversampling_override = 1.0
 title = "Quit Game?"
 size = Vector2i(383, 100)
 dialog_text = "Are you sure you want to quit Sky Lock Assault?"
 
-[connection signal="confirmed" from="Panel/VBoxContainer/QuitDialog" to="." method="_on_quit_dialog_confirmed"]
+[connection signal="confirmed" from="VideoStreamPlayer/VBoxContainer/QuitDialog" to="." method="_on_quit_dialog_confirmed"]

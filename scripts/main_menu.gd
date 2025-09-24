@@ -1,14 +1,15 @@
 extends Control
 
 # Default relative path; override in Inspector if needed
-@export var quit_dialog_path: NodePath = NodePath("Panel/VBoxContainer/QuitDialog")
+@export var quit_dialog_path: NodePath = NodePath("VideoStreamPlayer/VBoxContainer/QuitDialog")
 # Reference to the quit dialog node, assigned in setup_quit_dialog or _ready()
 var quit_dialog: ConfirmationDialog
 var game_scene: PackedScene = preload("res://scenes/main_scene.tscn")
 
-@onready var start_button: Button = $Panel/VBoxContainer/StartButton
-@onready var options_button: Button = $Panel/VBoxContainer/OptionsButton
-@onready var quit_button: Button = $Panel/VBoxContainer/QuitButton
+@onready var ui_container: VBoxContainer = $VideoStreamPlayer/VBoxContainer
+@onready var start_button: Button = $VideoStreamPlayer/VBoxContainer/StartButton
+@onready var options_button: Button = $VideoStreamPlayer/VBoxContainer/OptionsButton
+@onready var quit_button: Button = $VideoStreamPlayer/VBoxContainer/QuitButton
 
 # Handles the main menu UI, including button connections and quit dialog logic.
 # This script manages scene transitions and platform-specific quitting for web/desktop.
@@ -18,15 +19,34 @@ var game_scene: PackedScene = preload("res://scenes/main_scene.tscn")
 # Initializes button signals and quit dialog connections.
 func _ready() -> void:
 	Globals.log_message("Initializing main menu...", Globals.LogLevel.DEBUG)
+	
 	start_button.pressed.connect(_on_start_pressed)
 	options_button.pressed.connect(_on_options_pressed)
 	quit_button.pressed.connect(_on_quit_pressed)
 	setup_quit_dialog()  # New: Handles dialog setup in one place
 	# assert(quit_dialog != null, "QuitDialog must be assigned!")
+	# Hide UI initially (buttons and dialog won't show right away)
+	ui_container.modulate.a = 0.0  # Start fully transparent for fade-in
+	ui_container.visible = false  # Or just hide if no fade needed
+	
+	# New: Create and start a timer for delayed UI show
+	var delay_timer: Timer = Timer.new()
+	delay_timer.wait_time = 1.0  # Delay in seconds (change to 5.0 for longer)
+	delay_timer.one_shot = true  # Runs once
+	add_child(delay_timer)  # Add to scene tree
+	delay_timer.timeout.connect(_show_ui)  # Connect to show function
+	delay_timer.start()
+	Globals.log_message("Starting UI delay timer...", Globals.LogLevel.DEBUG)
 
-	# Assign from exported path
+# New: Function to reveal the UI after delay (with optional fade-in)
+func _show_ui() -> void:
+	ui_container.visible = true  # Make visible
+	# Optional: Fade in over 1 second for smooth effect (learning Tween basics)
+	var tween: Tween = create_tween()
+	tween.tween_property(ui_container, "modulate:a", 1.0, 1.0)  # From current alpha to 1.0
+	Globals.log_message("Showing main menu UI after delay.", Globals.LogLevel.DEBUG)
 
-
+	
 # Connect dialog signals (can also do this in editor; add null check)
 func setup_quit_dialog() -> void:
 	quit_dialog = get_node(quit_dialog_path)
@@ -43,7 +63,7 @@ func setup_quit_dialog() -> void:
 			"Warning: QuitDialog not assigned! Disabling Quit button.", Globals.LogLevel.WARNING
 		)
 		# Fallback: Disable Quit button to prevent null errors
-		var quit_button: Button = $Panel/VBoxContainer/QuitButton
+		var quit_button: Button = $VideoStreamPlayer/VBoxContainer/QuitButton
 		if quit_button:
 			quit_button.disabled = true
 			quit_button.visible = false  # Or hide it entirely
