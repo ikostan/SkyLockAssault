@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://brpckgp7j86jp"]
+[gd_scene load_steps=10 format=3 uid="uid://brpckgp7j86jp"]
 
 [ext_resource type="Script" uid="uid://cdubukgyitlm8" path="res://scripts/main_menu.gd" id="1_l6cm7"]
 [ext_resource type="VideoStream" uid="uid://dxu50q1yffe6a" path="res://files/video/grok-video-main2.ogv" id="2_ekxnf"]
@@ -25,12 +25,18 @@ corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 shadow_size = 5
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ekxnf"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_bqqt6"]
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wu84c"]
 bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
 corner_radius_top_left = 16
 corner_radius_top_right = 16
 corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_wu84c"]
 
 [node name="Control" type="Control"]
 layout_mode = 3
@@ -91,6 +97,7 @@ theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_bqqt6")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_ekxnf")
 theme_override_styles/hover = SubResource("StyleBoxFlat_8ln24")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_ekxnf")
 text = "Start Game"
 
 [node name="OptionsButton" type="Button" parent="VideoStreamPlayer/VBoxContainer"]
@@ -103,6 +110,7 @@ theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_bqqt6")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_ekxnf")
 theme_override_styles/hover = SubResource("StyleBoxFlat_8ln24")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_bqqt6")
 text = "Options"
 
 [node name="QuitButton" type="Button" parent="VideoStreamPlayer/VBoxContainer"]
@@ -115,6 +123,7 @@ theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_wu84c")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_ekxnf")
 theme_override_styles/hover = SubResource("StyleBoxFlat_8ln24")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_wu84c")
 text = "Quit"
 
 [node name="QuitDialog" type="ConfirmationDialog" parent="VideoStreamPlayer/VBoxContainer"]
