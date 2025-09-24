@@ -19,7 +19,7 @@ var game_scene: PackedScene = preload("res://scenes/main_scene.tscn")
 # Initializes button signals and quit dialog connections.
 func _ready() -> void:
 	Globals.log_message("Initializing main menu...", Globals.LogLevel.DEBUG)
-	
+
 	start_button.pressed.connect(_on_start_pressed)
 	options_button.pressed.connect(_on_options_pressed)
 	quit_button.pressed.connect(_on_quit_pressed)
@@ -28,7 +28,7 @@ func _ready() -> void:
 	# Hide UI initially (buttons and dialog won't show right away)
 	ui_container.modulate.a = 0.0  # Start fully transparent for fade-in
 	ui_container.visible = false  # Or just hide if no fade needed
-	
+
 	# New: Create and start a timer for delayed UI show
 	var delay_timer: Timer = Timer.new()
 	delay_timer.wait_time = 1.0  # Delay in seconds (change to 5.0 for longer)
@@ -38,6 +38,7 @@ func _ready() -> void:
 	delay_timer.start()
 	Globals.log_message("Starting UI delay timer...", Globals.LogLevel.DEBUG)
 
+
 # New: Function to reveal the UI after delay (with optional fade-in)
 func _show_ui() -> void:
 	ui_container.visible = true  # Make visible
@@ -46,7 +47,7 @@ func _show_ui() -> void:
 	tween.tween_property(ui_container, "modulate:a", 1.0, 1.0)  # From current alpha to 1.0
 	Globals.log_message("Showing main menu UI after delay.", Globals.LogLevel.DEBUG)
 
-	
+
 # Connect dialog signals (can also do this in editor; add null check)
 func setup_quit_dialog() -> void:
 	quit_dialog = get_node(quit_dialog_path)
