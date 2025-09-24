@@ -37,6 +37,7 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 ## Game Assets
 
 - [Empire State Font](https://www.dafont.com/empire-state.font?l[]=10&l[]=1)
+- [Pixel Planes Assets Pack](https://clavs.itch.io/pixel-planes-assets-pack)
 
 ### Current features:
 
