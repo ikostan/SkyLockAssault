@@ -34,6 +34,10 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 - **Goal**: Build a playable top-down shooter with web deployment in mind—export
   to HTML5/Web, test locally, deploy to itch.io.
 
+## Game Assets
+
+- [Empire State Font](https://www.dafont.com/empire-state.font?l[]=10&l[]=1)
+
 ### Current features:
 
 - Main menu scene (`main_menu.tscn`) with buttons (Start, Resume, Options, Quit).
