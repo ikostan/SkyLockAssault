@@ -1,16 +1,16 @@
 services:
   godot_web_server:
-    image: nginx:1.27-alpine  # Keep this; confirmed ~56 vulns, but we'll ignore below
+    image: nginxinc/nginx-unprivileged:1.27-alpine  # Switch to unprivileged image; handles non-root natively
     container_name: sky_lock_assault_server
     ports:
-      - "127.0.0.1:9090:80"  # Local-only; good
+      - "127.0.0.1:9090:8080"  # Map host 9090 to container 8080 (unprivileged default)
     restart: unless-stopped
     volumes:
       - ../export/web:/usr/share/nginx/html:ro
       - ./nginx:/etc/nginx/conf.d
-    user: "nginx:nginx"  # Non-root; good
+    # Remove 'user: "nginx:nginx"' - image runs as non-root by default
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "80"]  # CHANGED: Use netcat (nc) for TCP probe; Alpine has busybox nc built-in, no shell needed
+      test: ["CMD", "nc", "-z", "localhost", "8080"]  # Update to probe port 8080
       interval: 30s
       timeout: 10s
       retries: 3
