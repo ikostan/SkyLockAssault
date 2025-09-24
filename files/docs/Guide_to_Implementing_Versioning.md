@@ -1,7 +1,7 @@
 # Guide to Implementing Versioning
 
 A step-by-step guide summarizing our conversation on versioning,
-specifically choosing the Manual Approach. The main focus on the core
+specifically choosing the Manual Approach. The main focus is on the core
 steps that directly support your goals with Semantic Versioning and
 manual releases.
 
