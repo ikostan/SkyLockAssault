@@ -71,4 +71,4 @@ func _physics_process(_delta: float) -> void:
 	player.position.y = clamp(player.position.y, player_y_min, player_y_max)
 
 	# Optional per-frame log (comment out unless debugging; it's spammy)
-	# Globals.log_message("Player positioned at: " + str(player.position), Globals.LogLevel.DEBUG)
+	Globals.log_message("Player positioned at: " + str(player.position), Globals.LogLevel.DEBUG)

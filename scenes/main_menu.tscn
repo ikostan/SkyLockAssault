@@ -1,40 +1,60 @@
-[gd_scene load_steps=10 format=3 uid="uid://brpckgp7j86jp"]
+[gd_scene load_steps=12 format=3 uid="uid://brpckgp7j86jp"]
 
 [ext_resource type="Script" uid="uid://cdubukgyitlm8" path="res://scripts/main_menu.gd" id="1_l6cm7"]
 [ext_resource type="VideoStream" uid="uid://dxu50q1yffe6a" path="res://files/video/grok-video-main2.ogv" id="2_ekxnf"]
+[ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="3_bqqt6"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bqqt6"]
-bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
-corner_radius_top_left = 16
-corner_radius_top_right = 16
-corner_radius_bottom_right = 16
-corner_radius_bottom_left = 16
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rtw2f"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.5882353)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ekxnf"]
-corner_radius_top_left = 16
-corner_radius_top_right = 16
-corner_radius_bottom_right = 16
-corner_radius_bottom_left = 16
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8ln24"]
 bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
 border_color = Color(0.20871013, 0.20871016, 0.20870999, 1)
-corner_radius_top_left = 16
-corner_radius_top_right = 16
-corner_radius_bottom_right = 16
-corner_radius_bottom_left = 16
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
 shadow_size = 5
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ekxnf"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bqqt6"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.54901963)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_bqqt6"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wu84c"]
-bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
-corner_radius_top_left = 16
-corner_radius_top_right = 16
-corner_radius_bottom_right = 16
-corner_radius_bottom_left = 16
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.5882353)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_wu84c"]
 
@@ -70,10 +90,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -178.5
-offset_top = -114.0
-offset_right = 178.5
-offset_bottom = 114.0
+offset_left = -160.0
+offset_top = -100.0
+offset_right = 160.0
+offset_bottom = 100.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 6
@@ -90,41 +110,44 @@ vertical_alignment = 1
 [node name="StartButton" type="Button" parent="VideoStreamPlayer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 0.74509805)
+theme_override_colors/font_color = Color(0.023529412, 0.023529412, 0, 1)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
-theme_override_constants/h_separation = 6
+theme_override_fonts/font = ExtResource("3_bqqt6")
 theme_override_font_sizes/font_size = 35
-theme_override_styles/normal = SubResource("StyleBoxFlat_bqqt6")
+theme_override_styles/normal = SubResource("StyleBoxFlat_rtw2f")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_ekxnf")
 theme_override_styles/hover = SubResource("StyleBoxFlat_8ln24")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_ekxnf")
-text = "Start Game"
+text = "{START=GAME}"
 
 [node name="OptionsButton" type="Button" parent="VideoStreamPlayer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 0.74509805)
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
-theme_override_constants/h_separation = 6
+theme_override_fonts/font = ExtResource("3_bqqt6")
 theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_bqqt6")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_ekxnf")
 theme_override_styles/hover = SubResource("StyleBoxFlat_8ln24")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_bqqt6")
-text = "Options"
+text = "{OPTIONS}"
 
 [node name="QuitButton" type="Button" parent="VideoStreamPlayer/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 0.74509805)
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
-theme_override_constants/h_separation = 6
+theme_override_fonts/font = ExtResource("3_bqqt6")
 theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_wu84c")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_ekxnf")
 theme_override_styles/hover = SubResource("StyleBoxFlat_8ln24")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_wu84c")
-text = "Quit"
+text = "{QUIT}"
 
 [node name="QuitDialog" type="ConfirmationDialog" parent="VideoStreamPlayer/VBoxContainer"]
 oversampling_override = 1.0
