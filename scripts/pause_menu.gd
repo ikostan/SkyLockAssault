@@ -3,8 +3,8 @@ extends CanvasLayer
 # Pause menu overlay: Toggles with ESC, pauses the game tree, and handles resume/back to menu.
 # Use for exiting game levels back to main menu without quitting.
 
-@onready var resume_button: Button = $Panel/VBoxContainer/ResumeButton
-@onready var back_to_main_button: Button = $Panel/VBoxContainer/BackToMainButton
+@onready var resume_button: Button = $VBoxContainer/ResumeButton
+@onready var back_to_main_button: Button = $VBoxContainer/BackToMainButton
 
 
 # Called when the node enters the scene tree.
