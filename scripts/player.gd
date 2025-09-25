@@ -15,6 +15,7 @@ var player_y_max: float = 0.0
 @onready var player: CharacterBody2D = $CharacterBody2D
 @onready var collision_shape: CollisionShape2D = $CharacterBody2D/CollisionShape2D
 
+
 func _ready() -> void:
 	# Dynamically calculate half-sizes (use both extents for width/height; assumes RectangleShape2D)
 	if collision_shape.shape is RectangleShape2D:
