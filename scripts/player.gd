@@ -3,10 +3,6 @@ extends Node2D
 # Exported vars first (for Inspector editing)
 @export var speed: float = 300.0
 
-# Onreadys next
-@onready var player: CharacterBody2D = $CharacterBody2D
-@onready var collision_shape: CollisionShape2D = $CharacterBody2D/CollisionShape2D
-
 # Regular vars for computed boundaries (no export needed if set in code)
 var player_half_width: float = 0.0
 var player_half_height: float = 0.0
@@ -15,6 +11,9 @@ var player_x_max: float = 0.0
 var player_y_min: float = 0.0
 var player_y_max: float = 0.0
 
+# Onreadys next
+@onready var player: CharacterBody2D = $CharacterBody2D
+@onready var collision_shape: CollisionShape2D = $CharacterBody2D/CollisionShape2D
 
 func _ready() -> void:
 	# Dynamically calculate half-sizes (use both extents for width/height; assumes RectangleShape2D)
@@ -56,7 +55,7 @@ func _physics_process(delta: float) -> void:
 		"move_left", "move_right", "move_backward", "move_forward"
 	)
 	if direction != Vector2.ZERO:
-		player.velocity += direction * speed * delta
+		player.velocity = direction * speed
 		# Optional: Add rotation for facing (uncomment for top-down airplane feel)
 		# player.rotation = direction.angle()
 	else:
