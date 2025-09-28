@@ -24,3 +24,17 @@ func log_message(message: String, level: LogLevel = LogLevel.INFO) -> void:
 	var level_str: String = LogLevel.keys()[level]  # Converts enum to string: "INFO", etc.
 	var timestamp: String = Time.get_datetime_string_from_system()
 	print("[%s] [%s] %s" % [timestamp, level_str, message])
+	
+# Override to handle engine notifications, like window close requests.
+# @param what: The notification ID (int constant from Godot).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+ 		# Cleanup logic here—runs just before quit.
+		log_message("Window close requested—performing cleanup...", LogLevel.INFO)
+		
+		# Example: Save game state if you have a save system.
+		# Replace with your actual save function, e.g., from a save_manager.gd.
+		# save_game_state()  # Uncomment and implement as needed.
+		
+		# After cleanup, let the quit proceed (optional on desktop; auto on web).
+		get_tree().quit()
