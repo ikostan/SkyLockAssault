@@ -6,6 +6,9 @@ enum LogLevel { DEBUG, INFO, WARNING, ERROR }
 @export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
 @export var enable_debug_logging: bool = false  # Toggle in Inspector or settings
 
+# In globals.gd (add after @export vars)
+var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
+
 
 func _ready() -> void:
 	if Engine.is_editor_hint() or enable_debug_logging:
@@ -13,7 +16,28 @@ func _ready() -> void:
 	else:
 		current_log_level = LogLevel.INFO
 	log_message("Log level set to: " + LogLevel.keys()[current_log_level], LogLevel.INFO)
+	# In _ready(), add after initial log level set:
+	_load_settings()  # If not already; loads log level and could expand for more
 
+# Add these new functions (for consistency with log level persistence)
+func _load_settings() -> void:
+	var config: ConfigFile = ConfigFile.new()
+	var err:= config.load("user://settings.cfg")
+	if err == OK:
+		current_log_level = config.get_value("Settings", "log_level", LogLevel.INFO)
+		log_message("Loaded saved log level: " + LogLevel.keys()[current_log_level], LogLevel.INFO)
+	else:
+		log_message("No saved settings found—using default.", LogLevel.DEBUG)
+
+# In globals.gd (add after _load_settings())
+func load_options() -> void:
+	previous_scene = get_tree().current_scene.scene_file_path  # Store current path
+	log_message("Loading options menu from: " + previous_scene, LogLevel.DEBUG)
+	var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
+	if options_scene:
+		get_tree().change_scene_to_packed(options_scene)
+	else:
+		log_message("Error: Options scene not found!", LogLevel.ERROR)
 
 # Custom logging function with timestamp and level filtering.
 # @param message: The string message to log.
@@ -24,17 +48,18 @@ func log_message(message: String, level: LogLevel = LogLevel.INFO) -> void:
 	var level_str: String = LogLevel.keys()[level]  # Converts enum to string: "INFO", etc.
 	var timestamp: String = Time.get_datetime_string_from_system()
 	print("[%s] [%s] %s" % [timestamp, level_str, message])
-	
+
+
 # Override to handle engine notifications, like window close requests.
 # @param what: The notification ID (int constant from Godot).
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
- 		# Cleanup logic here—runs just before quit.
+		# Cleanup logic here—runs just before quit.
 		log_message("Window close requested—performing cleanup...", LogLevel.INFO)
-		
+
 		# Example: Save game state if you have a save system.
 		# Replace with your actual save function, e.g., from a save_manager.gd.
 		# save_game_state()  # Uncomment and implement as needed.
-		
+
 		# After cleanup, let the quit proceed (optional on desktop; auto on web).
 		get_tree().quit()

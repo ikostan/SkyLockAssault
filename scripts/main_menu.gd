@@ -5,6 +5,7 @@ extends Control
 # Reference to the quit dialog node, assigned in setup_quit_dialog or _ready()
 var quit_dialog: ConfirmationDialog
 var game_scene: PackedScene = preload("res://scenes/main_scene.tscn")
+var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 
 @onready var ui_container: VBoxContainer = $VideoStreamPlayer/VBoxContainer
 @onready var start_button: Button = $VideoStreamPlayer/VBoxContainer/StartButton
@@ -21,7 +22,7 @@ func _ready() -> void:
 	Globals.log_message("Initializing main menu...", Globals.LogLevel.DEBUG)
 
 	start_button.pressed.connect(_on_start_pressed)
-	options_button.pressed.connect(_on_options_pressed)
+	options_button.pressed.connect(_on_options_button_pressed)
 	quit_button.pressed.connect(_on_quit_pressed)
 	setup_quit_dialog()  # New: Handles dialog setup in one place
 	# assert(quit_dialog != null, "QuitDialog must be assigned!")
@@ -85,12 +86,8 @@ func _on_start_pressed() -> void:
 
 # Handles the Options button press.
 # Placeholder for loading an options scene.
-func _on_options_pressed() -> void:
-	# Stub; later: get_tree().change_scene_to_file("res://options_scene.tscn")
-	Globals.log_message("Options menu coming soon!", Globals.LogLevel.DEBUG)
-	# Future:
-	# var options_scene = preload("res://scenes/options_scene.tscn");
-	# get_tree().change_scene_to_packed(options_scene)
+func _on_options_button_pressed() -> void:
+	Globals.load_options()
 
 
 # Handles the Quit button press.

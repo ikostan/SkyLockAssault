@@ -1,73 +1,31 @@
-[gd_scene load_steps=11 format=3 uid="uid://cb4n4cqkuddqg"]
+[gd_scene load_steps=7 format=3 uid="uid://cb4n4cqkuddqg"]
 
 [ext_resource type="Script" uid="uid://jdb4e3uytiw1" path="res://scripts/pause_menu.gd" id="1_n87rw"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="2_myx47"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_n87rw"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1s2dm"]
 bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.5882353)
 corner_radius_top_left = 40
 corner_radius_top_right = 40
 corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
-shadow_size = 2
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kukqi"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 4.0
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_88e76"]
 corner_radius_top_left = 40
 corner_radius_top_right = 40
 corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
-corner_detail = 5
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5d2l8"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 4.0
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_knqa7"]
 bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+border_color = Color(0.20871013, 0.20871016, 0.20870999, 1)
 corner_radius_top_left = 40
 corner_radius_top_right = 40
 corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
-corner_detail = 5
+shadow_size = 5
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_n87rw"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_myx47"]
-bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.5882353)
-corner_radius_top_left = 40
-corner_radius_top_right = 40
-corner_radius_bottom_right = 40
-corner_radius_bottom_left = 40
-shadow_size = 2
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7l7mv"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 4.0
-corner_radius_top_left = 40
-corner_radius_top_right = 40
-corner_radius_bottom_right = 40
-corner_radius_bottom_left = 40
-corner_detail = 5
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_v4r4p"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 4.0
-bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
-corner_radius_top_left = 40
-corner_radius_top_right = 40
-corner_radius_bottom_right = 40
-corner_radius_bottom_left = 40
-corner_detail = 5
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_myx47"]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_71k7c"]
 
 [node name="Control" type="CanvasLayer"]
 process_mode = 3
@@ -82,7 +40,7 @@ anchor_bottom = 0.5
 offset_left = -225.0
 offset_top = -100.0
 offset_right = 225.0
-offset_bottom = 50.0
+offset_bottom = 100.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 6
@@ -104,11 +62,25 @@ theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("2_myx47")
 theme_override_font_sizes/font_size = 35
-theme_override_styles/normal = SubResource("StyleBoxFlat_n87rw")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_kukqi")
-theme_override_styles/hover = SubResource("StyleBoxFlat_5d2l8")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_n87rw")
+theme_override_styles/normal = SubResource("StyleBoxFlat_1s2dm")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_88e76")
+theme_override_styles/hover = SubResource("StyleBoxFlat_knqa7")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_71k7c")
 text = "{BACK=TO=MAIN=MENU}"
+
+[node name="OptionsButton" type="Button" parent="VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("2_myx47")
+theme_override_font_sizes/font_size = 35
+theme_override_styles/normal = SubResource("StyleBoxFlat_1s2dm")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_88e76")
+theme_override_styles/hover = SubResource("StyleBoxFlat_knqa7")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_71k7c")
+text = "{OPTIONS}"
 
 [node name="ResumeButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
@@ -118,8 +90,10 @@ theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("2_myx47")
 theme_override_font_sizes/font_size = 35
-theme_override_styles/normal = SubResource("StyleBoxFlat_myx47")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_7l7mv")
-theme_override_styles/hover = SubResource("StyleBoxFlat_v4r4p")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_myx47")
+theme_override_styles/normal = SubResource("StyleBoxFlat_1s2dm")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_88e76")
+theme_override_styles/hover = SubResource("StyleBoxFlat_knqa7")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_71k7c")
 text = "{RESUME}"
+
+[connection signal="pressed" from="VBoxContainer/OptionsButton" to="." method="_on_options_button_pressed"]
