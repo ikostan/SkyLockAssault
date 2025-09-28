@@ -8,6 +8,7 @@ extends CanvasLayer
 @onready var options_button: Button = $VBoxContainer/OptionsButton
 var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 
+
 # Called when the node enters the scene tree.
 # Hides the menu initially.
 func _ready() -> void:

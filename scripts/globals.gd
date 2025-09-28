@@ -19,15 +19,17 @@ func _ready() -> void:
 	# In _ready(), add after initial log level set:
 	_load_settings()  # If not already; loads log level and could expand for more
 
+
 # Add these new functions (for consistency with log level persistence)
 func _load_settings() -> void:
 	var config: ConfigFile = ConfigFile.new()
-	var err:= config.load("user://settings.cfg")
+	var err := config.load("user://settings.cfg")
 	if err == OK:
 		current_log_level = config.get_value("Settings", "log_level", LogLevel.INFO)
 		log_message("Loaded saved log level: " + LogLevel.keys()[current_log_level], LogLevel.INFO)
 	else:
 		log_message("No saved settings found—using default.", LogLevel.DEBUG)
+
 
 # In globals.gd (add after _load_settings())
 func load_options() -> void:
@@ -38,6 +40,7 @@ func load_options() -> void:
 		get_tree().change_scene_to_packed(options_scene)
 	else:
 		log_message("Error: Options scene not found!", LogLevel.ERROR)
+
 
 # Custom logging function with timestamp and level filtering.
 # @param message: The string message to log.
