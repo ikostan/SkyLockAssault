@@ -45,14 +45,18 @@ func _save_settings() -> void:
 # Handles Back button: Return to main menu
 # In options_menu.gd (_on_back_pressed())
 func _on_back_pressed() -> void:
-	if Globals.previous_scene != "":
-		get_tree().change_scene_to_file(Globals.previous_scene)
-		Globals.log_message(
-			"Returning to previous scene: " + Globals.previous_scene, Globals.LogLevel.DEBUG
-		)
-	else:
-		# Fallback to main menu if not set (e.g., direct run)
-		get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
-		Globals.log_message(
-			"No previous scene set—falling back to main menu.", Globals.LogLevel.WARNING
-		)
+	get_tree().paused = false  # Unpause if was paused (safe call)
+	Globals.log_message("Closing options menu.", Globals.LogLevel.DEBUG)
+	queue_free()  # Remove self from tree (returns to underlying scene)
+
+#	if Globals.previous_scene != "":
+#		get_tree().change_scene_to_file(Globals.previous_scene)
+#		Globals.log_message(
+#			"Returning to previous scene: " + Globals.previous_scene, Globals.LogLevel.DEBUG
+#		)
+#	else:
+#		# Fallback to main menu if not set (e.g., direct run)
+#		get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+#		Globals.log_message(
+#			"No previous scene set—falling back to main menu.", Globals.LogLevel.WARNING
+#		)
