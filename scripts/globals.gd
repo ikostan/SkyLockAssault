@@ -31,8 +31,19 @@ func _load_settings() -> void:
 		log_message("No saved settings found—using default.", LogLevel.DEBUG)
 
 
-# In globals.gd (add after _load_settings())
+# In globals.gd (load_options())
 func load_options() -> void:
+	log_message("Instancing options menu over current scene.", LogLevel.DEBUG)
+	var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
+	if options_scene:
+		var options_inst: = options_scene.instantiate()
+		get_tree().root.add_child(options_inst)  # Add to root (on top)
+	else:
+		log_message("Error: Options scene not found!", LogLevel.ERROR)
+
+
+# In globals.gd (add after _load_settings())
+func _load_options() -> void:
 	previous_scene = get_tree().current_scene.scene_file_path  # Store current path
 	log_message("Loading options menu from: " + previous_scene, LogLevel.DEBUG)
 	get_tree().paused = false  # Unpause tree before change (key fix)
