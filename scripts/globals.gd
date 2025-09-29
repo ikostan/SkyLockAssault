@@ -35,6 +35,7 @@ func _load_settings() -> void:
 func load_options() -> void:
 	previous_scene = get_tree().current_scene.scene_file_path  # Store current path
 	log_message("Loading options menu from: " + previous_scene, LogLevel.DEBUG)
+	get_tree().paused = false  # Unpause tree before change (key fix)
 	var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 	if options_scene:
 		get_tree().change_scene_to_packed(options_scene)
