@@ -1,8 +1,9 @@
 extends Control
 
 # Default relative path; override in Inspector if needed
-@export var quit_dialog_path: NodePath = NodePath(
-	"VideoStreamPlayer/Panel/VBoxContainer/QuitDialog")
+const QUIT_DIALOG_DEFAULT_PATH: String = "VideoStreamPlayer/Panel/VBoxContainer/QuitDialog"
+@export var quit_dialog_path: NodePath = NodePath(QUIT_DIALOG_DEFAULT_PATH)
+
 # Reference to the quit dialog node, assigned in setup_quit_dialog or _ready()
 var quit_dialog: ConfirmationDialog
 var game_scene: PackedScene = preload("res://scenes/main_scene.tscn")
