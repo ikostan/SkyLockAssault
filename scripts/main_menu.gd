@@ -43,20 +43,23 @@ func _ready() -> void:
 	delay_timer.start()
 	Globals.log_message("Starting initial delay timer...", Globals.LogLevel.DEBUG)
 
+
 # New: Starts the sequenced fades after delay
 func _start_ui_fade() -> void:
 	ui_panel.visible = true  # Make visible before fade
-	var tween:= create_tween()  # Node-specific Tween (auto-frees on finish)
+	var tween := create_tween()  # Node-specific Tween (auto-frees on finish)
 	tween.tween_property(ui_panel, "modulate:a", 1.0, 0.5)  # Fade panel over 0.5s
 	tween.tween_callback(_fade_ui_container)  # Chain: Call next after panel fade
 	Globals.log_message("Fading in UI panel.", Globals.LogLevel.DEBUG)
 
+
 # New: Fades ui_container after panel
 func _fade_ui_container() -> void:
 	ui_container.visible = true
-	var tween:= create_tween()
+	var tween := create_tween()
 	tween.tween_property(ui_container, "modulate:a", 1.0, 0.3)  # Shorter fade for container
 	Globals.log_message("Fading in UI container.", Globals.LogLevel.DEBUG)
+
 
 # Connect dialog signals (can also do this in editor; add null check)
 func setup_quit_dialog() -> void:

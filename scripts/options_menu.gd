@@ -24,7 +24,9 @@ func _ready() -> void:
 
 	# In options_menu.gd (_ready()—add at end)
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignores pause for this node/tree
-	Globals.log_message("Set options_menu process_mode to ALWAYS for pause ignoring.", Globals.LogLevel.DEBUG)
+	Globals.log_message(
+		"Set options_menu process_mode to ALWAYS for pause ignoring.", Globals.LogLevel.DEBUG
+	)
 	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
 
 

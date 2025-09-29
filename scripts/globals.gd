@@ -36,7 +36,7 @@ func load_options() -> void:
 	log_message("Instancing options menu over current scene.", LogLevel.DEBUG)
 	var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 	if options_scene:
-		var options_inst: = options_scene.instantiate()
+		var options_inst := options_scene.instantiate()
 		get_tree().root.add_child(options_inst)  # Add to root (on top)
 	else:
 		log_message("Error: Options scene not found!", LogLevel.ERROR)
