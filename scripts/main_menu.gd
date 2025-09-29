@@ -34,33 +34,29 @@ func _ready() -> void:
 	ui_container.visible = false  # Or just hide if no fade needed
 
 	# New: Create and start a timer for delayed UI show
-	var delay_timer: Timer = Timer.new()
-	delay_timer.wait_time = 0.5  # Delay in seconds (change to 5.0 for longer)
-	delay_timer.one_shot = true  # Runs once
-	add_child(delay_timer)  # Add to scene tree
-	delay_timer.timeout.connect(_show_ui_panel)  # Connect to show function
+	# In _ready() (replace timer; no Timer needed)
+	var delay_timer: Timer = Timer.new()  # Still use timer for initial delay
+	delay_timer.wait_time = 0.5
+	delay_timer.one_shot = true
+	add_child(delay_timer)
+	delay_timer.timeout.connect(_start_ui_fade)
 	delay_timer.start()
-	Globals.log_message("Starting UI delay timer #1...", Globals.LogLevel.DEBUG)
-	
-	delay_timer.timeout.connect(_show_ui_container)
-	delay_timer.start()
-	Globals.log_message("Starting UI delay timer #2...", Globals.LogLevel.DEBUG)
+	Globals.log_message("Starting initial delay timer...", Globals.LogLevel.DEBUG)
 
-# New: Function to reveal the UI after delay (with optional fade-in)
-func _show_ui_panel() -> void:
-	ui_panel.visible = true  # Make visible
-	# Optional: Fade in over 1 second for smooth effect (learning Tween basics)
-	var tween: Tween = create_tween()
-	tween.tween_property(ui_panel, "modulate:a", 1.0, 1.0)  # From current alpha to 1.0
-	Globals.log_message("Showing main menu UI after delay.", Globals.LogLevel.DEBUG)
+# New: Starts the sequenced fades after delay
+func _start_ui_fade() -> void:
+	ui_panel.visible = true  # Make visible before fade
+	var tween:= create_tween()  # Node-specific Tween (auto-frees on finish)
+	tween.tween_property(ui_panel, "modulate:a", 1.0, 0.5)  # Fade panel over 0.5s
+	tween.tween_callback(_fade_ui_container)  # Chain: Call next after panel fade
+	Globals.log_message("Fading in UI panel.", Globals.LogLevel.DEBUG)
 
-func _show_ui_container() -> void:
-	ui_container.visible = true  # Make visible
-	# Optional: Fade in over 1 second for smooth effect (learning Tween basics)
-	var tween: Tween = create_tween()
-	tween.tween_property(ui_container, "modulate:a", 1.0, 1.0)  # From current alpha to 1.0
-	Globals.log_message("Showing main menu UI after delay.", Globals.LogLevel.DEBUG)
-
+# New: Fades ui_container after panel
+func _fade_ui_container() -> void:
+	ui_container.visible = true
+	var tween:= create_tween()
+	tween.tween_property(ui_container, "modulate:a", 1.0, 0.3)  # Shorter fade for container
+	Globals.log_message("Fading in UI container.", Globals.LogLevel.DEBUG)
 
 # Connect dialog signals (can also do this in editor; add null check)
 func setup_quit_dialog() -> void:
