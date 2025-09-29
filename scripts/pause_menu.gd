@@ -5,6 +5,8 @@ extends CanvasLayer
 
 @onready var resume_button: Button = $VBoxContainer/ResumeButton
 @onready var back_to_main_button: Button = $VBoxContainer/BackToMainButton
+@onready var options_button: Button = $VBoxContainer/OptionsButton
+var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 
 
 # Called when the node enters the scene tree.
@@ -48,3 +50,7 @@ func _on_back_to_main_button_pressed() -> void:
 	else:
 		Globals.log_message("Error: Main menu scene not set!", Globals.LogLevel.ERROR)
 		# Optional: Fallback, e.g., get_tree().quit() if critical
+
+
+func _on_options_button_pressed() -> void:
+	Globals.load_options()
