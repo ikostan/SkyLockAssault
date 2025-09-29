@@ -39,6 +39,7 @@ var log_level_display_to_enum := {
 	"None": Globals.LogLevel.NONE
 }
 
+
 # Handles log level selection change
 func _on_log_selected(index: int) -> void:
 	var selected_name: String = log_lvl_option.get_item_text(index)
