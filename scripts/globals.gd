@@ -2,7 +2,7 @@ extends Node
 
 # Global utilities singleton: Provides shared functions like logging.
 # Access from any script as Globals.log_message("message").
-enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE }
+enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 @export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
 @export var enable_debug_logging: bool = false  # Toggle in Inspector or settings
 
@@ -38,18 +38,6 @@ func load_options() -> void:
 	if options_scene:
 		var options_inst := options_scene.instantiate()
 		get_tree().root.add_child(options_inst)  # Add to root (on top)
-	else:
-		log_message("Error: Options scene not found!", LogLevel.ERROR)
-
-
-# In globals.gd (add after _load_settings())
-func _load_options() -> void:
-	previous_scene = get_tree().current_scene.scene_file_path  # Store current path
-	log_message("Loading options menu from: " + previous_scene, LogLevel.DEBUG)
-	get_tree().paused = false  # Unpause tree before change (key fix)
-	var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
-	if options_scene:
-		get_tree().change_scene_to_packed(options_scene)
 	else:
 		log_message("Error: Options scene not found!", LogLevel.ERROR)
 

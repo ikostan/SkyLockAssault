@@ -6,8 +6,11 @@ extends CanvasLayer
 
 func _ready() -> void:
 	# Populate OptionButton with all LogLevel enum values
+	# In _ready() (replace population and add "None")
 	for level: String in Globals.LogLevel.keys():
-		log_lvl_option.add_item(level)
+		if level != "NONE":  # Skip auto-add NONE; add manually as "None"
+			log_lvl_option.add_item(level)  # "Debug", "Info", etc.
+	log_lvl_option.add_item("NONE")  # Manual for title case
 
 	# Set to current log level (find index by enum value)
 	var current_value: int = Globals.current_log_level
@@ -32,20 +35,22 @@ func _ready() -> void:
 
 # Explicit mapping from display names to enum values
 var log_level_display_to_enum := {
-	"Debug": Globals.LogLevel.DEBUG,
-	"Info": Globals.LogLevel.INFO,
-	"Warning": Globals.LogLevel.WARNING,
-	"Error": Globals.LogLevel.ERROR,
-	"None": Globals.LogLevel.NONE
+	"DEBUG": Globals.LogLevel.DEBUG,
+	"INFO": Globals.LogLevel.INFO,
+	"WARNING": Globals.LogLevel.WARNING,
+	"ERROR": Globals.LogLevel.ERROR,
+	"NONE": Globals.LogLevel.NONE
 }
 
 
 # Handles log level selection change
 func _on_log_selected(index: int) -> void:
 	var selected_name: String = log_lvl_option.get_item_text(index)
-	var selected_enum: int = log_level_display_to_enum.get(selected_name, Globals.LogLevel.INFO)
+	var selected_enum: Globals.LogLevel = log_level_display_to_enum.get(
+		selected_name, Globals.LogLevel.INFO
+	)
 	Globals.current_log_level = selected_enum
-	Globals.log_message("Log level changed to: " + selected_name, Globals.LogLevel.INFO)
+	Globals.log_message("Log level changed to: " + selected_name, Globals.LogLevel.INFO)  # May skip if new level high
 	_save_settings()
 
 
