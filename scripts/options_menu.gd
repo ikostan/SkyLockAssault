@@ -30,11 +30,20 @@ func _ready() -> void:
 	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
 
 
+# Explicit mapping from display names to enum values
+var log_level_display_to_enum := {
+	"Debug": Globals.LogLevel.DEBUG,
+	"Info": Globals.LogLevel.INFO,
+	"Warning": Globals.LogLevel.WARNING,
+	"Error": Globals.LogLevel.ERROR,
+	"None": Globals.LogLevel.NONE
+}
+
 # Handles log level selection change
-# Update _on_log_selected to use the selected name for enum lookup:
 func _on_log_selected(index: int) -> void:
 	var selected_name: String = log_lvl_option.get_item_text(index)
-	Globals.current_log_level = Globals.LogLevel[selected_name]  # Gets the int enum value
+	var selected_enum := log_level_display_to_enum.get(selected_name, Globals.LogLevel.INFO)
+	Globals.current_log_level = selected_enum
 	Globals.log_message("Log level changed to: " + selected_name, Globals.LogLevel.INFO)
 	_save_settings()
 
