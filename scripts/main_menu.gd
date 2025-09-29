@@ -1,16 +1,17 @@
 extends Control
 
 # Default relative path; override in Inspector if needed
-@export var quit_dialog_path: NodePath = NodePath("VideoStreamPlayer/VBoxContainer/QuitDialog")
+@export var quit_dialog_path: NodePath = NodePath("VideoStreamPlayer/Panel/VBoxContainer/QuitDialog")
 # Reference to the quit dialog node, assigned in setup_quit_dialog or _ready()
 var quit_dialog: ConfirmationDialog
 var game_scene: PackedScene = preload("res://scenes/main_scene.tscn")
 var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 
-@onready var ui_container: VBoxContainer = $VideoStreamPlayer/VBoxContainer
-@onready var start_button: Button = $VideoStreamPlayer/VBoxContainer/StartButton
-@onready var options_button: Button = $VideoStreamPlayer/VBoxContainer/OptionsButton
-@onready var quit_button: Button = $VideoStreamPlayer/VBoxContainer/QuitButton
+@onready var ui_panel: Panel = $VideoStreamPlayer/Panel
+@onready var ui_container: VBoxContainer = $VideoStreamPlayer/Panel/VBoxContainer
+@onready var start_button: Button = $VideoStreamPlayer/Panel/VBoxContainer/StartButton
+@onready var options_button: Button = $VideoStreamPlayer/Panel/VBoxContainer/OptionsButton
+@onready var quit_button: Button = $VideoStreamPlayer/Panel/VBoxContainer/QuitButton
 
 # Handles the main menu UI, including button connections and quit dialog logic.
 # This script manages scene transitions and platform-specific quitting for web/desktop.
@@ -27,21 +28,33 @@ func _ready() -> void:
 	setup_quit_dialog()  # New: Handles dialog setup in one place
 	# assert(quit_dialog != null, "QuitDialog must be assigned!")
 	# Hide UI initially (buttons and dialog won't show right away)
+	ui_panel.modulate.a = 0.0  # Start fully transparent for fade-in
+	ui_panel.visible = false  # Or just hide if no fade needed
 	ui_container.modulate.a = 0.0  # Start fully transparent for fade-in
 	ui_container.visible = false  # Or just hide if no fade needed
 
 	# New: Create and start a timer for delayed UI show
 	var delay_timer: Timer = Timer.new()
-	delay_timer.wait_time = 1.0  # Delay in seconds (change to 5.0 for longer)
+	delay_timer.wait_time = 0.5  # Delay in seconds (change to 5.0 for longer)
 	delay_timer.one_shot = true  # Runs once
 	add_child(delay_timer)  # Add to scene tree
-	delay_timer.timeout.connect(_show_ui)  # Connect to show function
+	delay_timer.timeout.connect(_show_ui_panel)  # Connect to show function
 	delay_timer.start()
-	Globals.log_message("Starting UI delay timer...", Globals.LogLevel.DEBUG)
-
+	Globals.log_message("Starting UI delay timer #1...", Globals.LogLevel.DEBUG)
+	
+	delay_timer.timeout.connect(_show_ui_container)
+	delay_timer.start()
+	Globals.log_message("Starting UI delay timer #2...", Globals.LogLevel.DEBUG)
 
 # New: Function to reveal the UI after delay (with optional fade-in)
-func _show_ui() -> void:
+func _show_ui_panel() -> void:
+	ui_panel.visible = true  # Make visible
+	# Optional: Fade in over 1 second for smooth effect (learning Tween basics)
+	var tween: Tween = create_tween()
+	tween.tween_property(ui_panel, "modulate:a", 1.0, 1.0)  # From current alpha to 1.0
+	Globals.log_message("Showing main menu UI after delay.", Globals.LogLevel.DEBUG)
+
+func _show_ui_container() -> void:
 	ui_container.visible = true  # Make visible
 	# Optional: Fade in over 1 second for smooth effect (learning Tween basics)
 	var tween: Tween = create_tween()

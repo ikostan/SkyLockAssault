@@ -1,4 +1,4 @@
-extends Control
+extends CanvasLayer
 
 @onready var log_lvl_option: OptionButton = $VBoxContainer/HBoxContainer/LogLevelOptionButton
 @onready var back_button: Button = $VBoxContainer/BackButton
@@ -22,6 +22,9 @@ func _ready() -> void:
 	log_lvl_option.item_selected.connect(_on_log_selected)
 	back_button.pressed.connect(_on_back_pressed)
 
+	# In options_menu.gd (_ready()—add at end)
+	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignores pause for this node/tree
+	Globals.log_message("Set options_menu process_mode to ALWAYS for pause ignoring.", Globals.LogLevel.DEBUG)
 	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
 
 
@@ -48,15 +51,3 @@ func _on_back_pressed() -> void:
 	get_tree().paused = false  # Unpause if was paused (safe call)
 	Globals.log_message("Closing options menu.", Globals.LogLevel.DEBUG)
 	queue_free()  # Remove self from tree (returns to underlying scene)
-
-#	if Globals.previous_scene != "":
-#		get_tree().change_scene_to_file(Globals.previous_scene)
-#		Globals.log_message(
-#			"Returning to previous scene: " + Globals.previous_scene, Globals.LogLevel.DEBUG
-#		)
-#	else:
-#		# Fallback to main menu if not set (e.g., direct run)
-#		get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
-#		Globals.log_message(
-#			"No previous scene set—falling back to main menu.", Globals.LogLevel.WARNING
-#		)

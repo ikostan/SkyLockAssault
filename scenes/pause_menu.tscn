@@ -1,14 +1,22 @@
-[gd_scene load_steps=7 format=3 uid="uid://cb4n4cqkuddqg"]
+[gd_scene load_steps=8 format=3 uid="uid://cb4n4cqkuddqg"]
 
 [ext_resource type="Script" uid="uid://jdb4e3uytiw1" path="res://scripts/pause_menu.gd" id="1_n87rw"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="2_myx47"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_myx47"]
+bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1s2dm"]
-bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.5882353)
+bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
 corner_radius_top_left = 40
 corner_radius_top_right = 40
 corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
+shadow_color = Color(0, 0, 0, 0.27058825)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_88e76"]
 corner_radius_top_left = 40
@@ -31,15 +39,29 @@ shadow_size = 5
 process_mode = 3
 script = ExtResource("1_n87rw")
 
+[node name="Panel" type="Panel" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -195.0
+offset_top = -120.0
+offset_right = 195.0
+offset_bottom = 120.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_myx47")
+
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -225.0
+offset_left = -175.0
 offset_top = -100.0
-offset_right = 225.0
+offset_right = 175.0
 offset_bottom = 100.0
 grow_horizontal = 2
 grow_vertical = 2
@@ -57,7 +79,7 @@ horizontal_alignment = 1
 [node name="BackToMainButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
 theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("2_myx47")
@@ -66,12 +88,12 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_1s2dm")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_88e76")
 theme_override_styles/hover = SubResource("StyleBoxFlat_knqa7")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_71k7c")
-text = "{BACK=TO=MAIN=MENU}"
+text = "{MAIN=MENU}"
 
 [node name="OptionsButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
 theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("2_myx47")
@@ -85,7 +107,7 @@ text = "{OPTIONS}"
 [node name="ResumeButton" type="Button" parent="VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
 theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("2_myx47")
