@@ -1,0 +1,29 @@
+---
+name: "Godot Unit Tests"
+
+on:
+  workflow_call:
+
+jobs:
+  unit-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup Godot Headless
+        uses: firebelley/godot-export@v6.0.0  # Align with your deploy action's version
+        with:
+          godot_executable_download_url: "https://github.com/godotengine/godot-builds/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip"
+          cache: true
+      - name: Run GdUnit4 Tests
+        uses: MikeSchulze/gdUnit4-action@v2  # Latest version for Godot 4.x
+        with:
+          paths: "res://tests/"  # Your test folder
+          api-key: ${{ secrets.GDUNIT_API_KEY }}  # Optional for reports
+          report-junit: true
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: gdunit4-report.xml
