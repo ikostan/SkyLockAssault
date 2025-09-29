@@ -1,5 +1,14 @@
 extends CanvasLayer
 
+# Explicit mapping from display names to enum values
+var log_level_display_to_enum := {
+	"DEBUG": Globals.LogLevel.DEBUG,
+	"INFO": Globals.LogLevel.INFO,
+	"WARNING": Globals.LogLevel.WARNING,
+	"ERROR": Globals.LogLevel.ERROR,
+	"NONE": Globals.LogLevel.NONE
+}
+
 @onready var log_lvl_option: OptionButton = $VBoxContainer/HBoxContainer/LogLevelOptionButton
 @onready var back_button: Button = $VBoxContainer/BackButton
 
@@ -33,16 +42,6 @@ func _ready() -> void:
 	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
 
 
-# Explicit mapping from display names to enum values
-var log_level_display_to_enum := {
-	"DEBUG": Globals.LogLevel.DEBUG,
-	"INFO": Globals.LogLevel.INFO,
-	"WARNING": Globals.LogLevel.WARNING,
-	"ERROR": Globals.LogLevel.ERROR,
-	"NONE": Globals.LogLevel.NONE
-}
-
-
 # Handles log level selection change
 func _on_log_selected(index: int) -> void:
 	var selected_name: String = log_lvl_option.get_item_text(index)
@@ -50,7 +49,8 @@ func _on_log_selected(index: int) -> void:
 		selected_name, Globals.LogLevel.INFO
 	)
 	Globals.current_log_level = selected_enum
-	Globals.log_message("Log level changed to: " + selected_name, Globals.LogLevel.INFO)  # May skip if new level high
+	# May skip if new level high
+	Globals.log_message("Log level changed to: " + selected_name, Globals.LogLevel.INFO)
 	_save_settings()
 
 

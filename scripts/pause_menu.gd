@@ -3,10 +3,10 @@ extends CanvasLayer
 # Pause menu overlay: Toggles with ESC, pauses the game tree, and handles resume/back to menu.
 # Use for exiting game levels back to main menu without quitting.
 
+var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 @onready var resume_button: Button = $VBoxContainer/ResumeButton
 @onready var back_to_main_button: Button = $VBoxContainer/BackToMainButton
 @onready var options_button: Button = $VBoxContainer/OptionsButton
-var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 
 
 # Called when the node enters the scene tree.

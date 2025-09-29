@@ -8,6 +8,7 @@ enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 
 # In globals.gd (add after @export vars)
 var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
+var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 
 
 func _ready() -> void:
@@ -34,7 +35,6 @@ func _load_settings() -> void:
 # In globals.gd (load_options())
 func load_options() -> void:
 	log_message("Instancing options menu over current scene.", LogLevel.DEBUG)
-	var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 	if options_scene:
 		var options_inst := options_scene.instantiate()
 		get_tree().root.add_child(options_inst)  # Add to root (on top)
