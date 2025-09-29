@@ -43,7 +43,7 @@ var log_level_display_to_enum := {
 # Handles log level selection change
 func _on_log_selected(index: int) -> void:
 	var selected_name: String = log_lvl_option.get_item_text(index)
-	var selected_enum := log_level_display_to_enum.get(selected_name, Globals.LogLevel.INFO)
+	var selected_enum: int = log_level_display_to_enum.get(selected_name, Globals.LogLevel.INFO)
 	Globals.current_log_level = selected_enum
 	Globals.log_message("Log level changed to: " + selected_name, Globals.LogLevel.INFO)
 	_save_settings()
