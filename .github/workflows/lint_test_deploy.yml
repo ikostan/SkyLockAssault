@@ -26,20 +26,24 @@ jobs:
     uses: "./.github/workflows/yamllint.yml"
     with:
       config-path: ".github/workflows/*.yml"
-
+  unit_tests:
+    name: "Godot Unit Tests"
+    uses: "./.github/workflows/unit_tests.yml"
+    needs:
+      - "gdlint"
+      - "readmelint"
+      - "yamllint"
   codeql:
     name: "CodeQL Scan on Web Export"
     needs:
-      - "gdlint"
-      - "readmelint"
-      - "yamllint"
+      - "unit_tests"
     uses: "./.github/workflows/codeql.yml"
+    secrets:
+      # GDUNIT_API_KEY : "${{ secrets.GDUNIT_API_KEY }}"
   snyk:
     name: "Snyk Scan on Web Export"
     needs:
-      - "gdlint"
-      - "readmelint"
-      - "yamllint"
+      - "unit_tests"
     uses: "./.github/workflows/snyk.yml"
     secrets:
       SNYK_TOKEN: "${{ secrets.SNYK_TOKEN }}"

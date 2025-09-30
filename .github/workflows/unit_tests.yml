@@ -1,29 +1,33 @@
 ---
 name: "Godot Unit Tests"
 
-on:
+on:  # yamllint disable-line rule:truthy
   workflow_call:
+    # secrets:
+    #  GDUNIT_API_KEY:
+    #    description: "Key for uploading reports"
+    #    required: true
 
 jobs:
   unit-test:
-    runs-on: ubuntu-latest
+    runs-on: "ubuntu-latest"
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-      - name: Setup Godot Headless
-        uses: firebelley/godot-export@v6.0.0  # Align with your deploy action's version
+      - uses: "actions/checkout@v5"
+      - name: "Setup Godot Headless"
+        uses: "firebelley/godot-export@29965918cc35b77c465839035775e0e12dc87029"  # Pinned to commit SHA for v6.0.0
         with:
           godot_executable_download_url: "https://github.com/godotengine/godot-builds/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip"
           cache: true
-      - name: Run GdUnit4 Tests
-        uses: MikeSchulze/gdUnit4-action@v2  # Latest version for Godot 4.x
+      - name: "Run GdUnit4 Tests"
+        uses: "MikeSchulze/gdUnit4-action@a5b68eab7dd87974a2b44dc047685ff86fabfabb"  # Changed to v1 and pinned to commit SHA (latest in v1.x series)
         with:
           paths: "res://tests/"  # Your test folder
-          api-key: ${{ secrets.GDUNIT_API_KEY }}  # Optional for reports
+          # api-key: ${{ secrets.GDUNIT_API_KEY }}  # Optional for reports
           report-junit: true
-      - name: Upload Test Results
+      - name: "Upload Test Results"
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: "actions/upload-artifact@v4"
         with:
           name: unit-test-results
           path: gdunit4-report.xml
