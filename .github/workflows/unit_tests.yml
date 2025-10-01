@@ -26,11 +26,13 @@ jobs:
           rm -rf ./.install-gdunit4/addons/gdUnit4/test  # Remove self-tests if not needed
           mkdir -p ./addons
           cp -R ./.install-gdunit4/addons/gdUnit4 ./addons
-          chmod +x ./addons/gdUnit4/runtest.sh
+          # Fix for Godot 4.5 parser error in CallableDouble.gd
+          sed -i 's/func call(args: Array)/func call(...)/g' ./addons/gdUnit4/src/core/double/CallableDouble.gd
+          sed -i 's/\bargs\b/arguments/g' ./addons/gdUnit4/src/core/double/CallableDouble.gd
       - name: "Run GdUnit4 Tests"  # Manual run with xvfb-run for headless
         run: |
           GODOT_BIN="/home/runner/.local/share/godot/godot_executable/Godot_v4.5-stable_linux.x86_64"
-          xvfb-run --auto-servernum ./addons/gdUnit4/runtest.sh -a res://tests/ --godot_binary "$GODOT_BIN"
+          xvfb-run --auto-servernum $GODOT_BIN --headless --no-window --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --add res://tests/ --report junit gdunit4-report.xml
       - name: "Upload Test Results"
         if: always()
         uses: "actions/upload-artifact@v4"
