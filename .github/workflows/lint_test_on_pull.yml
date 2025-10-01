@@ -8,6 +8,7 @@ permissions:
   actions: "read"
   # Needed to upload SARIF results
   security-events: "write"
+  checks: "write"  # Add this to allow check run creation
 
 on:  # yamllint disable-line rule:truthy
   pull_request:
