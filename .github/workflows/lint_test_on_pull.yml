@@ -1,0 +1,34 @@
+---
+name: "Pull Request Pipeline"
+
+# Define permissions at the workflow level
+permissions:
+  contents: "write"
+  pull-requests: "write"
+  actions: "read"
+  # Needed to upload SARIF results
+  security-events: "write"
+
+on:  # yamllint disable-line rule:truthy
+  pull_request:
+    branches: [main]  # yamllint disable-line rule:quoted-strings
+
+jobs:
+  gdlint:
+    name: "GDScript Lint and Format Check"
+    uses: "./.github/workflows/gdlint.yml"
+  readmelint:
+    name: "Markdown Lint"
+    uses: "./.github/workflows/lint_readme.yml"
+  yamllint:
+    name: "YAML Lint"
+    uses: "./.github/workflows/yamllint.yml"
+    with:
+      config-path: ".github/workflows/*.yml"
+  unit_tests:
+    name: "Godot Unit Tests"
+    uses: "./.github/workflows/unit_tests.yml"
+    needs:
+      - "gdlint"
+      - "readmelint"
+      - "yamllint"
