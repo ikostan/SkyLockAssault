@@ -1,12 +1,15 @@
 extends GdUnitTestSuite
 
+
 # Optional: Setup before all tests (e.g., mock globals)
 func before() -> void:
 	pass
 
+
 # Optional: Teardown after all tests
 func after() -> void:
 	pass
+
 
 func test_player_present(timeout: int = 4000) -> void:
 	var runner: GdUnitSceneRunner = scene_runner("res://scenes/main_scene.tscn")

@@ -38,8 +38,6 @@ jobs:
     needs:
       - "unit_tests"
     uses: "./.github/workflows/codeql.yml"
-    secrets:
-      # GDUNIT_API_KEY : "${{ secrets.GDUNIT_API_KEY }}"
   snyk:
     name: "Snyk Scan on Web Export"
     needs:

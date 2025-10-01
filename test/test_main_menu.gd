@@ -1,12 +1,15 @@
 extends GdUnitTestSuite
 
+
 # Optional: Setup before all tests (e.g., mock globals)
 func before() -> void:
 	pass
 
+
 # Optional: Teardown after all tests
 func after() -> void:
 	pass
+
 
 # Test: Start button loads the game scene
 func test_start_btn_present(timeout: int = 4000) -> void:  # Timeout in ms for async test
@@ -19,7 +22,8 @@ func test_start_btn_present(timeout: int = 4000) -> void:  # Timeout in ms for a
 	assert_bool(start_btn.visible).is_true()  # Check post-fade
 	var label: String = start_btn.text
 	assert_str(label).is_equal("{START=GAME}")
-	
+
+
 # Test: Options button loads the game scene
 func test_options_btn_present(timeout: int = 4000) -> void:  # Timeout in ms for async test
 	# Load and run the scene
@@ -32,6 +36,7 @@ func test_options_btn_present(timeout: int = 4000) -> void:  # Timeout in ms for
 	var label: String = options_btn.text
 	assert_str(label).is_equal("{OPTIONS}")
 
+
 # Test: Quit button loads the game scene
 func test_quit_btn_present(timeout: int = 4000) -> void:  # Timeout in ms for async test
 	# Load and run the scene
@@ -43,7 +48,8 @@ func test_quit_btn_present(timeout: int = 4000) -> void:  # Timeout in ms for as
 	assert_bool(quit_btn.visible).is_true()  # Check post-fade
 	var label: String = quit_btn.text
 	assert_str(label).is_equal("{QUIT}")
-	
+
+
 func test_quit_dialog_is_null(timeout: int = 4000) -> void:  # Timeout in ms for async test
 	# Load and run the scene
 	var runner: GdUnitSceneRunner = scene_runner("res://scenes/main_menu.tscn")

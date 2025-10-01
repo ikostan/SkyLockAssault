@@ -3,10 +3,6 @@ name: "Godot Unit Tests"
 
 on:  # yamllint disable-line rule:truthy
   workflow_call:
-    # secrets:
-    #  GDUNIT_API_KEY:
-    #    description: "Key for uploading reports"
-    #    required: true
 
 jobs:
   unit-test:
