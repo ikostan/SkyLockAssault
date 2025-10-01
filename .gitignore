@@ -37,3 +37,4 @@ infra/*.log  # If Docker logs appear
 # Ignore user-specific Godot settings if shared
 project.godot.override
 addons/
+reports/

@@ -8,6 +8,7 @@ permissions:
   actions: "read"
   # Needed to upload SARIF results
   security-events: "write"
+  checks: "write"  # Add this to allow check run creation
 
 on:  # yamllint disable-line rule:truthy
   push:
@@ -26,20 +27,22 @@ jobs:
     uses: "./.github/workflows/yamllint.yml"
     with:
       config-path: ".github/workflows/*.yml"
-
-  codeql:
-    name: "CodeQL Scan on Web Export"
+  unit_tests:
+    name: "Godot Unit Tests"
+    uses: "./.github/workflows/unit_tests.yml"
     needs:
       - "gdlint"
       - "readmelint"
       - "yamllint"
+  codeql:
+    name: "CodeQL Scan on Web Export"
+    needs:
+      - "unit_tests"
     uses: "./.github/workflows/codeql.yml"
   snyk:
     name: "Snyk Scan on Web Export"
     needs:
-      - "gdlint"
-      - "readmelint"
-      - "yamllint"
+      - "unit_tests"
     uses: "./.github/workflows/snyk.yml"
     secrets:
       SNYK_TOKEN: "${{ secrets.SNYK_TOKEN }}"
