@@ -10,8 +10,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: "actions/checkout@v5"
-      - name: "Setup Xvfb"  # Added: Virtual display for headless CI
-        uses: "coactions/setup-xvfb@b6b4fcfb9f5a895edadc3bc76318fae0ac17c8b3"  # Pinned to v1 commit SHA
+      - name: "Install Xvfb"  # Manual install for virtual display
+        run: |
+          sudo apt update
+          sudo apt install -y xvfb
       - name: "Setup Godot Headless"
         uses: "firebelley/godot-export@29965918cc35b77c465839035775e0e12dc87029"  # Pinned to commit SHA for v6.0.0
         with:
