@@ -30,7 +30,7 @@ jobs:
       - name: "Run GdUnit4 Tests"  # Manual run with xvfb-run for headless
         run: |
           GODOT_BIN="/home/runner/.local/share/godot/godot_executable/Godot_v4.5-stable_linux.x86_64"
-          xvfb-run --auto-servernum ./addons/gdUnit4/runtest.sh -a res://tests/
+          xvfb-run --auto-servernum ./addons/gdUnit4/runtest.sh -a res://tests/ --godot_binary "$GODOT_BIN"
       - name: "Upload Test Results"
         if: always()
         uses: "actions/upload-artifact@v4"
