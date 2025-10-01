@@ -1,5 +1,9 @@
 extends GdUnitTestSuite
 
+@warning_ignore('unused_parameter')
+@warning_ignore('return_value_discarded')
+
+var runner: GdUnitSceneRunner
 
 # Optional: Setup before all tests (e.g., mock globals)
 func before() -> void:
@@ -14,7 +18,7 @@ func after() -> void:
 # Test: Start button loads the game scene
 func test_start_btn_present() -> void:  # Timeout in ms for async test
 	# Load and run the scene
-	var runner: GdUnitSceneRunner = scene_runner("res://scenes/main_menu.tscn")
+	runner = scene_runner("res://scenes/main_menu.tscn")
 	# Find the button and ensure it's ready
 	var start_btn: Button = runner.find_child("StartButton") as Button
 	assert_object(start_btn).is_not_null()
@@ -27,7 +31,7 @@ func test_start_btn_present() -> void:  # Timeout in ms for async test
 # Test: Options button loads the game scene
 func test_options_btn_present() -> void:  # Timeout in ms for async test
 	# Load and run the scene
-	var runner: GdUnitSceneRunner = scene_runner("res://scenes/main_menu.tscn")
+	runner = scene_runner("res://scenes/main_menu.tscn")
 	# Find the button and ensure it's ready
 	var options_btn: Button = runner.find_child("OptionsButton") as Button
 	assert_object(options_btn).is_not_null()
@@ -40,7 +44,7 @@ func test_options_btn_present() -> void:  # Timeout in ms for async test
 # Test: Quit button loads the game scene
 func test_quit_btn_present() -> void:  # Timeout in ms for async test
 	# Load and run the scene
-	var runner: GdUnitSceneRunner = scene_runner("res://scenes/main_menu.tscn")
+	runner = scene_runner("res://scenes/main_menu.tscn")
 	# Find the button and ensure it's ready
 	var quit_btn: Button = runner.find_child("QuitButton") as Button
 	assert_object(quit_btn).is_not_null()
@@ -52,7 +56,7 @@ func test_quit_btn_present() -> void:  # Timeout in ms for async test
 
 func test_quit_dialog_is_null() -> void:  # Timeout in ms for async test
 	# Load and run the scene
-	var runner: GdUnitSceneRunner = scene_runner("res://scenes/main_menu.tscn")
+	runner = scene_runner("res://scenes/main_menu.tscn")
 	# Find the button and ensure it's ready
 	var quit_dialog: Button = runner.find_child("QuitDialog") as Button
 	assert_object(quit_dialog).is_null()
