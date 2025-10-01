@@ -24,7 +24,7 @@ jobs:
         with:
           paths: "res://tests/"  # Your test folder
           # api-key: ${{ secrets.GDUNIT_API_KEY }}  # Optional for reports
-          report-junit: true
+          # report-junit: true
       - name: "Upload Test Results"
         if: always()
         uses: "actions/upload-artifact@v4"
