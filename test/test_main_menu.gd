@@ -58,5 +58,6 @@ func test_quit_dialog_is_null() -> void:  # Timeout in ms for async test
 	# Load and run the scene
 	runner = scene_runner("res://scenes/main_menu.tscn")
 	# Find the button and ensure it's ready
-	var quit_dialog: Button = runner.find_child("QuitDialog") as Button
-	assert_object(quit_dialog).is_null()
+	var quit_dialog: ConfirmationDialog = runner.find_child("QuitDialog") as ConfirmationDialog
+	assert_object(quit_dialog).is_not_null()
+	assert_bool(quit_dialog.visible).is_false()  # And initial hidden state
