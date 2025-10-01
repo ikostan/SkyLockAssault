@@ -19,9 +19,8 @@ jobs:
       - name: "Run GdUnit4 Tests"
         uses: "MikeSchulze/gdUnit4-action@a5b68eab7dd87974a2b44dc047685ff86fabfabb"  # Changed to v1 and pinned to commit SHA (latest in v1.x series)
         with:
+          godot-version: '4.5'  # Added: Specifies Godot 4.5 (defaults to stable status)
           paths: "res://tests/"  # Your test folder
-          # api-key: ${{ secrets.GDUNIT_API_KEY }}  # Optional for reports
-          # report-junit: true
       - name: "Upload Test Results"
         if: always()
         uses: "actions/upload-artifact@v4"
