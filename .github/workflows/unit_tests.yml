@@ -10,6 +10,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: "actions/checkout@v5"
+      - name: "Setup Xvfb"  # Added: Virtual display for headless CI
+        uses: "coactions/setup-xvfb@v1"
       - name: "Setup Godot Headless"
         uses: "firebelley/godot-export@29965918cc35b77c465839035775e0e12dc87029"  # Pinned to commit SHA for v6.0.0
         with:
@@ -20,6 +22,7 @@ jobs:
         uses: "MikeSchulze/gdUnit4-action@a5b68eab7dd87974a2b44dc047685ff86fabfabb"  # Changed to v1 and pinned to commit SHA (latest in v1.x series)
         with:
           godot-version: '4.5'  # Added: Specifies Godot 4.5 (defaults to stable status)
+          godot-status: 'stable'  # Added: Ensures correct download URL
           paths: "res://tests/"  # Your test folder
       - name: "Upload Test Results"
         if: always()
