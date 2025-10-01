@@ -12,7 +12,7 @@ func before() -> void:
 
 # Optional: Teardown after all tests
 func after() -> void:
-	runner.free()
+	runner = null  # Optional: Explicitly drop reference (safe for RefCounted)
 
 
 # Test: Start button loads the game scene
