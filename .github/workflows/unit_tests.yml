@@ -14,28 +14,10 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y xvfb
-      - name: "Setup Godot Headless"
-        uses: "firebelley/godot-export@29965918cc35b77c465839035775e0e12dc87029"  # Pinned to commit SHA for v6.0.0
+      - name: "GdUnit4 - Test Runner Action"
+        uses: "MikeSchulze/gdUnit4-action@v1.1.6"
         with:
-          godot_executable_download_url: "https://github.com/godotengine/godot-builds/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip"
-          godot_export_templates_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz"
-          cache: true
-      - name: "Install GdUnit4"  # Manual install to addons (v5.1.1)
-        run: |
-          git clone --branch v5.1.1 --depth 1 https://github.com/MikeSchulze/gdUnit4 ./.install-gdunit4
-          rm -rf ./.install-gdunit4/addons/gdUnit4/test  # Remove self-tests if not needed
-          mkdir -p ./addons
-          cp -R ./.install-gdunit4/addons/gdUnit4 ./addons
-          # Fix for Godot 4.5 parser error in CallableDouble.gd
-          sed -i 's/func call(args: Array)/func call(...)/g' ./addons/gdUnit4/src/core/double/CallableDouble.gd
-          sed -i 's/\bargs\b/arguments/g' ./addons/gdUnit4/src/core/double/CallableDouble.gd
-      - name: "Run GdUnit4 Tests"  # Manual run with xvfb-run for headless
-        run: |
-          GODOT_BIN="/home/runner/.local/share/godot/godot_executable/Godot_v4.5-stable_linux.x86_64"
-          xvfb-run --auto-servernum $GODOT_BIN --headless --no-window --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --add res://tests/ --report junit gdunit4-report.xml
-      - name: "Upload Test Results"
-        if: always()
-        uses: "actions/upload-artifact@v4"
-        with:
-          name: unit-test-results
-          path: gdunit4-report.xml
+          godot-version: '4.5'
+          paths: 'res://tests'
+          timeout: 5              # Optional: Test timeout in minutes
+          version: 'latest'       # Optional: GdUnit4 version
