@@ -14,6 +14,7 @@ jobs:
         uses: "firebelley/godot-export@29965918cc35b77c465839035775e0e12dc87029"  # Pinned to commit SHA for v6.0.0
         with:
           godot_executable_download_url: "https://github.com/godotengine/godot-builds/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip"
+          godot_export_templates_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz"
           cache: true
       - name: "Run GdUnit4 Tests"
         uses: "MikeSchulze/gdUnit4-action@a5b68eab7dd87974a2b44dc047685ff86fabfabb"  # Changed to v1 and pinned to commit SHA (latest in v1.x series)
