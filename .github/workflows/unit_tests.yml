@@ -17,7 +17,7 @@ jobs:
           sudo apt update
           sudo apt install -y xvfb
       - name: "GdUnit4 - Test Runner Action"
-        uses: "MikeSchulze/gdUnit4-action@v1.1.6"
+        uses: "MikeSchulze/gdUnit4-action@7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1"  # Pinned to v1.1.6 SHA
         with:
           godot-version: '4.4'
           paths: 'res://test'
