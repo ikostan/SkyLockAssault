@@ -21,3 +21,4 @@ jobs:
           paths: 'res://tests'
           timeout: 5              # Optional: Test timeout in minutes
           version: 'latest'       # Optional: GdUnit4 version
+          arguments: '--verbose'
