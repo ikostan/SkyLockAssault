@@ -17,7 +17,7 @@ jobs:
       - name: "GdUnit4 - Test Runner Action"
         uses: "MikeSchulze/gdUnit4-action@v1.1.6"
         with:
-          godot-version: '4.5'
+          godot-version: '4.4'
           paths: 'res://tests'
           timeout: 5              # Optional: Test timeout in minutes
           version: 'latest'       # Optional: GdUnit4 version
