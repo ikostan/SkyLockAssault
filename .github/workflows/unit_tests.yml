@@ -10,22 +10,25 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: "actions/checkout@v5"
-      - name: "Install Xvfb"  # Manual install for virtual display
-        run: |
-          sudo apt update
-          sudo apt install -y xvfb
       - name: "Setup Godot Headless"
-        uses: "firebelley/godot-export@29965918cc35b77c465839035775e0e12dc87029"  # Pinned to commit SHA for v6.0.0
+        uses: "firebelley/godot-export@29965918cc35b77c465839035775e0e12dc87029"  # Pinned to v6.0.0 commit
         with:
           godot_executable_download_url: "https://github.com/godotengine/godot-builds/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip"
           godot_export_templates_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz"
           cache: true
-      - name: "Run GdUnit4 Tests"
-        uses: "MikeSchulze/gdUnit4-action@a5b68eab7dd87974a2b44dc047685ff86fabfabb"  # Changed to v1 and pinned to commit SHA (latest in v1.x series)
-        with:
-          godot-version: '4.5'  # Added: Specifies Godot 4.5 (defaults to stable status)
-          godot-status: 'stable'  # Added: Ensures correct download URL
-          paths: "res://tests/"  # Your test folder
+      - name: "Install Xvfb"  # Manual install for virtual display
+        run: |
+          sudo apt update
+          sudo apt install -y xvfb
+      - name: "Install GdUnit4"  # Manual install to addons (v5.1.1)
+        run: |
+          git clone --branch v5.1.1 --depth 1 https://github.com/MikeSchulze/gdUnit4 addons/gdUnit4
+          rm -rf addons/gdUnit4/test  # Remove self-tests if not needed
+          chmod +x addons/gdUnit4/runtest.sh
+      - name: "Run GdUnit4 Tests"  # Manual run with xvfb-run for headless
+        run: |
+          GODOT_BIN="/home/runner/.local/share/godot/godot_executable/Godot_v4.5-stable_linux.x86_64"
+          xvfb-run --auto-servernum $GODOT_BIN --headless --path . -s addons/gdUnit4/bin/GdUnitCmdTool.gd --add res://tests/ --report junit gdunit4-report.xml
       - name: "Upload Test Results"
         if: always()
         uses: "actions/upload-artifact@v4"
