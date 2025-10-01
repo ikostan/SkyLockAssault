@@ -11,7 +11,7 @@ func after() -> void:
 	pass
 
 
-func test_player_present(timeout: int = 4000) -> void:
+func test_player_present() -> void:
 	var runner: GdUnitSceneRunner = scene_runner("res://scenes/main_scene.tscn")
 	# Wait for _ready() delays/fades (timer 0.5s + tweens 0.5s + 0.3s)
 	await await_millis(500)  # Or await runner.simulate_frames(60) for ~1s at 60fps

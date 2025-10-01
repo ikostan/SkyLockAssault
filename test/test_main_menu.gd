@@ -12,7 +12,7 @@ func after() -> void:
 
 
 # Test: Start button loads the game scene
-func test_start_btn_present(timeout: int = 4000) -> void:  # Timeout in ms for async test
+func test_start_btn_present() -> void:  # Timeout in ms for async test
 	# Load and run the scene
 	var runner: GdUnitSceneRunner = scene_runner("res://scenes/main_menu.tscn")
 	# Find the button and ensure it's ready
@@ -25,7 +25,7 @@ func test_start_btn_present(timeout: int = 4000) -> void:  # Timeout in ms for a
 
 
 # Test: Options button loads the game scene
-func test_options_btn_present(timeout: int = 4000) -> void:  # Timeout in ms for async test
+func test_options_btn_present() -> void:  # Timeout in ms for async test
 	# Load and run the scene
 	var runner: GdUnitSceneRunner = scene_runner("res://scenes/main_menu.tscn")
 	# Find the button and ensure it's ready
@@ -38,7 +38,7 @@ func test_options_btn_present(timeout: int = 4000) -> void:  # Timeout in ms for
 
 
 # Test: Quit button loads the game scene
-func test_quit_btn_present(timeout: int = 4000) -> void:  # Timeout in ms for async test
+func test_quit_btn_present() -> void:  # Timeout in ms for async test
 	# Load and run the scene
 	var runner: GdUnitSceneRunner = scene_runner("res://scenes/main_menu.tscn")
 	# Find the button and ensure it's ready
@@ -50,7 +50,7 @@ func test_quit_btn_present(timeout: int = 4000) -> void:  # Timeout in ms for as
 	assert_str(label).is_equal("{QUIT}")
 
 
-func test_quit_dialog_is_null(timeout: int = 4000) -> void:  # Timeout in ms for async test
+func test_quit_dialog_is_null() -> void:  # Timeout in ms for async test
 	# Load and run the scene
 	var runner: GdUnitSceneRunner = scene_runner("res://scenes/main_menu.tscn")
 	# Find the button and ensure it's ready
