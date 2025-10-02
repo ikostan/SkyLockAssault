@@ -43,24 +43,39 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 
 1. [Guide to Implementing Versioning](/files/docs/Guide_to_Implementing_Versioning.md)
 2. [Docker Local Test Server](/files/docs/Docker_Local_Test_Server.md)
+3. [Setup Instructions](/files/docs/Setup_Instructions.md)
+
+### Play Instructions
+- **In Godot Editor**: Open the project > Press F5 to run the main scene (main_menu.tscn). Use keyboard/mouse for navigation.
+- **Local Web Testing**: After exporting to HTML5 (see Setup), cd to infra/ in PowerShell > `docker compose up -d` > Open http://localhost:9090 in browser. Click "Run game" iframe; use fullscreen for immersion (ignore desktop console warnings).
+- **Online on itch.io**: Visit [ikostan.itch.io/sky-lock-assault](https://ikostan.itch.io/sky-lock-assault) > Click "Run game". Supports browser play; mobile-friendly with landscape orientation.
+
+For learning: Test quit handling (platform-specific) and log levels in options menu during play.
 
 ### Current features:
 
 - Main menu scene (`main_menu.tscn`) with buttons (Start, Resume, Options, Quit).
 - Placeholder game level (`game_level.tscn`) for future mechanics.
+- Add options menu with log level settings accessible from main and pause menus.
+- Implement fade-in animations for main menu UI panels
 
-## Setup Instructions
+### Features Roadmap
 
-1. **Clone the Repo**:
-   - Use GitHub Desktop: Clone https://github.com/ikostan/SkyLockAssault.
-   - Open in Godot 4.5: Launch Godot > Import > Select `project.godot`.
+- **Current**: Main menu with Start/Resume/Options/Quit; placeholder game level; fade-in animations; web export/testing with Docker.
+- **Planned**: Fuel management (timer-based depletion/refuel); multiple weapons (guns/missiles with switching); multi-level progression; adjustable difficulty (enemy spawn rates); enemy AI (pathing/assaults); scoring/HUD.
+- **Future Milestones**: Mobile exports, audio, particle effects, itch.io CI/CD integration.
 
-2. **Install Export Templates**:
-   - In Godot: Editor > Manage Export Templates > Download for 4.5
-     (or manual from https://godotengine.org/download/archive/4.4.1-stable/).
-   - Required for Web exports.
+Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milestones).
 
-3. **Export to Web**:
-   - Project > Export > Add Web preset.
-   - Export to `export/web/` folder in the project root.
-   - This generates index.html, .wasm, .js, etc., for browser testing.
+### Known Issues
+
+- Harmless console warning on desktop fullscreen (NotSupportedError for orientation lock—ignored as non-fatal; doesn't affect gameplay).
+- Placeholder level lacks mechanics—work in progress.
+- Report new issues on [GitHub](https://github.com/ikostan/SkyLockAssault/issues).
+
+### How to Contribute
+
+- Fork the repo and create a branch for your changes.
+- Follow GDScript best practices; test in editor and web export.
+- Open a Pull Request with details.
+- See [CONTRIBUTING.md](/CONTRIBUTING.md) for full guidelines (coming soon in #70).
