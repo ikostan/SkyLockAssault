@@ -46,11 +46,16 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 3. [Setup Instructions](/files/docs/Setup_Instructions.md)
 
 ### Play Instructions
-- **In Godot Editor**: Open the project > Press F5 to run the main scene (main_menu.tscn). Use keyboard/mouse for navigation.
-- **Local Web Testing**: After exporting to HTML5 (see Setup), cd to infra/ in PowerShell > `docker compose up -d` > Open http://localhost:9090 in browser. Click "Run game" iframe; use fullscreen for immersion (ignore desktop console warnings).
+- **In Godot Editor**: Open the project > Press F5 to run the main scene
+  (`main_menu.tscn`). Use keyboard/mouse for navigation.
+- **Local Web Testing**: After exporting to HTML5 (see Setup),
+  cd to `infra/` in `PowerShell` > `docker compose up -d` > 
+  Open http://localhost:9090 in browser. Click "Run game" iframe;
+  use fullscreen for immersion (ignore desktop console warnings).
 - **Online on itch.io**: Visit [ikostan.itch.io/sky-lock-assault](https://ikostan.itch.io/sky-lock-assault) > Click "Run game". Supports browser play; mobile-friendly with landscape orientation.
 
-For learning: Test quit handling (platform-specific) and log levels in options menu during play.
+For learning: Test quit handling (platform-specific) and log levels in options
+menu during play.
 
 ### Current features:
 
@@ -61,15 +66,29 @@ For learning: Test quit handling (platform-specific) and log levels in options m
 
 ### Features Roadmap
 
-- **Current**: Main menu with Start/Resume/Options/Quit; placeholder game level; fade-in animations; web export/testing with Docker.
-- **Planned**: Fuel management (timer-based depletion/refuel); multiple weapons (guns/missiles with switching); multi-level progression; adjustable difficulty (enemy spawn rates); enemy AI (pathing/assaults); scoring/HUD.
-- **Future Milestones**: Mobile exports, audio, particle effects, itch.io CI/CD integration.
+- **Current**: 
+  * Main menu with Start/Resume/Options/Quit; 
+  * placeholder game level; 
+  * fade-in animations; 
+  * web export/testing with Docker.
+  * itch.io CI/CD integration.
+- **Planned**: 
+  * Fuel management (timer-based depletion/refuel); 
+  * multiple weapons (guns/missiles with switching); 
+  * multi-level progression; 
+  * adjustable difficulty (enemy spawn rates); 
+  * enemy AI (pathing/assaults); scoring/HUD.
+- **Future Milestones**:
+  * Mobile exports, 
+  * audio, 
+  * particle effects,
 
 Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milestones).
 
 ### Known Issues
 
-- Harmless console warning on desktop fullscreen (NotSupportedError for orientation lock—ignored as non-fatal; doesn't affect gameplay).
+- Harmless console warning on desktop fullscreen 
+  (NotSupportedError for orientation lock—ignored as non-fatal; doesn't affect gameplay).
 - Placeholder level lacks mechanics—work in progress.
 - Report new issues on [GitHub](https://github.com/ikostan/SkyLockAssault/issues).
 

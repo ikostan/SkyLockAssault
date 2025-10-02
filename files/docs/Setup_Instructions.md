@@ -16,7 +16,8 @@ on Windows 10 64-bit.
 
 1. Open GitHub Desktop.
 2. Clone the repo: URL = https://github.com/ikostan/SkyLockAssault.
-3. Open the project in Godot: Launch Godot > Import > Select `project.godot` in the cloned folder.
+3. Open the project in Godot: Launch Godot > Import > Select
+   `project.godot` in the cloned folder.
 
 ## Step 2: Install Export Templates
 
@@ -30,9 +31,11 @@ and restart Godot.
 
 ## Step 3: Set Up GDUnit4 for Testing
 
-1. In Godot Editor: Go to AssetLib (top menu) > Search for "GDUnit4" > Install v5.1.1.
+1. In Godot Editor:
+   Go to `AssetLib (top menu) > Search for "GDUnit4" > Install v5.1.1`.
 2. Restart Godot to enable.
-3. Create a `tests/` folder in the project root for unit tests (e.g., test_quit.gd).
+3. Create a `tests/` folder in the project root for unit tests
+   (e.g., `test_quit.gd`).
 
 This is required for automated testing in Milestone 3.
 
@@ -55,8 +58,10 @@ This is required for automated testing in Milestone 3.
 (ignored per Issue #100). Test quit handling here before itch.io deploy.
 
 ## Additional Tools
-- **PyCharm**: Open the repo folder for editing GDScript/Markdown. No special config needed.
-- **GitHub Actions**: Enabled via .github/workflows/—runs on push/PR for lint/test/deploy.
+- **PyCharm**: Open the repo folder for editing `GDScript/Markdown`. No special
+  config needed.
+- **GitHub Actions**: Enabled via .`github/workflows/—runs` on `push/PR` for
+  `lint/test/deploy`.
 
 Once set up, run the game in editor (F5) or web export. For issues, check Godot console
 or browser dev tools (F12).

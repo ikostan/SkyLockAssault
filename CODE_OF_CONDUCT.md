@@ -59,9 +59,9 @@ at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported
-to the community leaders responsible for enforcement by opening a GitHub issue
-[here](https://github.com/ikostan/SkyLockAssault/issues). All complaints will be
-reviewed and investigated promptly and fairly.
+to the community leaders responsible for enforcement by opening a 
+[GitHub issue](https://github.com/ikostan/SkyLockAssault/issues). All complaints will
+be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the
 reporter of any incident.
@@ -85,39 +85,40 @@ was inappropriate. A public apology may be requested.
 **Community Impact**: A violation through a single incident or series of actions.
 
 **Consequence**: A warning with consequences for continued behavior. No interaction
-with the people involved, including unsolicited interaction with those enforcing the
-Code of Conduct, for a specified period of time. This includes avoiding interactions
-in community spaces as well as external channels like social media. Violating these
-terms may lead to a temporary or permanent ban.
+with the people involved, including unsolicited interaction with those enforcing
+the Code of Conduct, for a specified period of time. This includes avoiding
+interactions in community spaces as well as external channels like social media.
+Violating these terms may lead to a temporary or permanent ban.
 
 ### 3. Temporary Ban
 
-**Community Impact**: A serious violation of community standards, including sustained
-inappropriate behavior.
+**Community Impact**: A serious violation of community standards, including
+sustained inappropriate behavior.
 
-**Consequence**: A temporary ban from any sort of interaction or public communication
-with the community for a specified period of time. No public or private interaction
-with the people involved, including unsolicited interaction with those enforcing the
-Code of Conduct, is allowed during this period. Violating these terms may lead to a
-permanent ban.
+**Consequence**: A temporary ban from any sort of interaction or public
+communication with the community for a specified period of time. No public or
+private interaction with the people involved, including unsolicited interaction
+with those enforcing the Code of Conduct, is allowed during this period.
+Violating these terms may lead to a permanent ban.
 
 ### 4. Permanent Ban
 
-**Community Impact**: Demonstrating a pattern of violation of community standards,
-including sustained inappropriate behavior, harassment of an individual, or aggression
-toward or disparagement of classes of individuals.
+**Community Impact**: Demonstrating a pattern of violation of community
+standards, including sustained inappropriate behavior, harassment of an
+individual, or aggression toward or disparagement of classes of individuals.
 
-**Consequence**: A permanent ban from any sort of public interaction within the community.
+**Consequence**: A permanent ban from any sort of public interaction within
+the community.
 
 ## Attribution
 
 This Code of Conduct is adapted from the
-[Contributor Covenant](https://www.contributor-covenant.org), version 2.1, available
-[here](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html).
+[Contributor Covenant](https://www.contributor-covenant.org),
+[version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html).
 
 Community Impact Guidelines were inspired by
 [Mozilla’s code of conduct enforcement ladder](https://github.com/mozilla/diversity).
 
 For answers to common questions about this code of conduct, see the 
-[FAQ](https://www.contributor-covenant.org/faq). Translations are available
-[here](https://www.contributor-covenant.org/translations).
+[FAQ](https://www.contributor-covenant.org/faq).
+[Translations are available as well.](https://www.contributor-covenant.org/translations).

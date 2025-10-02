@@ -33,15 +33,16 @@ Check issues labeled "good first issue" for easy starts, like:
    - Export to HTML5 and test via Docker (`cd infra/ && docker compose up -d`,
      open http://localhost:9090).
    - On Win10: Verify no errors in console; test fullscreen/quit.
-6. **Commit**: `git add . && git commit -m "Descriptive message (closes #issue-number)"`.
+6. **Commit**:
+   `git add . && git commit -m "Descriptive message (closes #issue-number)"`.
 7. **Push and PR**: Push branch > Open Pull Request on GitHub
    (describe changes, link issue).
 
 ## Reporting Bugs
 
 - Open an issue: https://github.com/ikostan/SkyLockAssault/issues/new
-- Include: Godot version (4.5), OS (Win10 64-bit), steps to reproduce, screenshots if
-  UI/export-related.
+- Include: Godot version (4.5), OS (Win10 64-bit), steps to reproduce,
+  screenshots if UI/export-related.
 - Use templates if available (e.g., bug_report.md).
 
 ## Optional: Issue Templates
