@@ -52,7 +52,10 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
   cd to `infra/` in `PowerShell` > `docker compose up -d` > 
   Open http://localhost:9090 in browser. Click "Run game" iframe;
   use fullscreen for immersion (ignore desktop console warnings).
-- **Online on itch.io**: Visit [ikostan.itch.io/sky-lock-assault](https://ikostan.itch.io/sky-lock-assault) > Click "Run game". Supports browser play; mobile-friendly with landscape orientation.
+- **Online on itch.io**:
+  1. Visit [ikostan.itch.io/sky-lock-assault](https://ikostan.itch.io/sky-lock-assault)
+  2. Click "Run game". 
+- The game supports browser play; mobile-friendly with landscape orientation.
 
 For learning: Test quit handling (platform-specific) and log levels in options
 menu during play.
