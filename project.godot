@@ -32,7 +32,9 @@ gdscript/warnings/return_value_discarded=1
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
+window/size/resizable=false
 window/stretch/mode="canvas_items"
+window/handheld/orientation=6
 
 [editor_plugins]
 
