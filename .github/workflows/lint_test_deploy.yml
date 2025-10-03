@@ -18,7 +18,7 @@ on:  # yamllint disable-line rule:truthy
 jobs:
   gdlint:
     name: "GDScript Lint and Format Check"
-    uses: "./.github/workflows/gdlint.yml"
+    uses: "./.github/workflows/workflows/gdlint.yml"
   readmelint:
     name: "Markdown Lint"
     uses: "./.github/workflows/lint_readme.yml"
@@ -55,3 +55,10 @@ jobs:
     uses: "./.github/workflows/deploy_to_itch.yml"
     secrets:
       ITCHIO_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"
+  release_drafter:
+    name: "Release Drafter"
+    needs:
+      - "deploy-itch"  # Runs only after successful deploy
+    uses: "./.github/workflows/release_drafter.yml"
+    secrets:
+      GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

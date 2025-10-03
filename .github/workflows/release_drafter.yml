@@ -1,0 +1,26 @@
+---
+name: "Release Drafter"
+
+on:  # yamllint disable-line rule:truthy
+  # Makes it reusable; called by other workflows
+  workflow_call:  # yamllint disable rule:empty-values
+    secrets:
+      GITHUB_TOKEN:
+        description: "Auth GITHUB Token"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  update_release_draft:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "release-drafter/release-drafter@v6"
+        with:
+          config-name: "release-drafter.yml"  # Explicitly point to your config
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
