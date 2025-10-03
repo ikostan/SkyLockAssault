@@ -44,6 +44,7 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 1. [Guide to Implementing Versioning](/files/docs/Guide_to_Implementing_Versioning.md)
 2. [Docker Local Test Server](/files/docs/Docker_Local_Test_Server.md)
 3. [Setup Instructions](/files/docs/Setup_Instructions.md)
+4. [IMGBOT](https://imgbot.net/docs/)
 
 ### Play Instructions
 - **In Godot Editor**: Open the project > Press F5 to run the main scene
