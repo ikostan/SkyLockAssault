@@ -1,0 +1,38 @@
+---
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+categories:
+  - title: '🚀 Features'
+    labels:
+      - 'enhancement'
+      - 'mechanics'
+  - title: '🌐 Web Enhancements'
+    labels:
+      - 'web'
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'bug'
+  - title: '🧰 Maintenance'
+    labels:
+      - 'setup'
+      - 'tools'
+      - 'CI/CD'
+  - title: '📄 Documentation'
+    labels:
+      - 'documentation'
+change-template: '* $TITLE (#$NUMBER) @$AUTHOR'
+no-changes-template: '* No changes'
+version-resolver:
+  major:
+    labels:
+      - 'major'
+  minor:
+    labels:
+      - 'minor'
+  patch:
+    labels:
+      - 'patch'
+  default: patch
+template: |
+  ## Changes
+  $CHANGES

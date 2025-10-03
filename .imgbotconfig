@@ -11,11 +11,12 @@
         scenes/*,
         scripts/*,
         test/*,
+        .github/*,
     ],
     "aggressiveCompression": "false", // true|false
     "compressWiki": "false", // true|false
     "minKBReduced": 500, // delay new prs until size reduction meets this threshold (default to 10)
     "prTitle" : "IMGBOT image compression",
-    "prBody" : " Text before optimization ratio {optimization_ratio} Text after optimization ratio
-                 Text before optimization details {optimization_details} Text after optimization details",
+    "prBody" : ""prBody": "Image optimizations applied.\nRatio: {optimization_ratio}
+                           \nFull details: {optimization_details}",
 }
