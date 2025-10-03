@@ -61,4 +61,4 @@ jobs:
       - "deploy-itch"  # Runs only after successful deploy
     uses: "./.github/workflows/release_drafter.yml"
     secrets:
-      GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+      AUTH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
