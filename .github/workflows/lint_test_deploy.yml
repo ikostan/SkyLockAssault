@@ -18,7 +18,7 @@ on:  # yamllint disable-line rule:truthy
 jobs:
   gdlint:
     name: "GDScript Lint and Format Check"
-    uses: "./.github/workflows/workflows/gdlint.yml"
+    uses: "./.github/workflows/gdlint.yml"  # Removed extra /workflows/
   readmelint:
     name: "Markdown Lint"
     uses: "./.github/workflows/lint_readme.yml"
