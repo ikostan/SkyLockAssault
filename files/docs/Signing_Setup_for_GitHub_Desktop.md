@@ -65,23 +65,12 @@ If `gpg` isn't recognized in `PowerShell`, add the bin path to your system PATH:
 ### 4. Configure Git for Automatic Signing
 
 Edit your global `.gitconfig` file (located at `C:\Users\YourUsername\.gitconfig`)
-using Notepad or PyCharm. Add or update these sections:
-
-```ini
-[user]
-name =        # Your GitHub name
-email =       # Must match the key's email
-signingkey =  # Your long key ID (from step 5 below)
-
-[commit]
-gpgsign = true  # Auto-sign all commits
-```
+using Notepad or PyCharm.
 
 - **Finding Your Long Key ID**: In PowerShell, run:
   ```bash
   gpg --list-secret-keys --keyid-format=long
   ```
-  
   Use the 16-hex digit ID after the slash on the "sec" line (primary key).
 - If using a subkey, append `!` (e.g., `0C2A685FB6E880DA1!`).
 
