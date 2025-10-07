@@ -71,7 +71,7 @@ using Notepad or PyCharm. Add or update these sections:
 [user]
 name = Name  # Your GitHub name
 email = mail@gmail.com  # Must match the key's email
-signingkey = ABCDEF1234567890  # Your long key ID (from step 5 below)
+signingkey = SAMPLE_KEY_HERE  # Your long key ID (from step 5 below)
 
 [commit]
 gpgsign = true  # Auto-sign all commits
