@@ -2,7 +2,7 @@
 name: "Release Drafter PR Updates"
 
 on:  # yamllint disable-line rule:truthy
-  pull_request_target:
+  pull_request:
     types: ["opened", "reopened", "synchronize", "edited"]  # Same types
 
 permissions:
