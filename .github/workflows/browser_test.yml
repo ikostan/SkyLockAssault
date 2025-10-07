@@ -10,8 +10,8 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: "actions/checkout@v4"
-      - name: Export Godot to Web
-        id: export
+      - name: "Export Godot to Web"
+        id: "export"
         # yamllint disable rule:line-length
         uses: "firebelley/godot-export@930577654862a320eef793f399ee911b4479efb9"  # Pinned to SHA for security (was @v6.0.0)
         with:
