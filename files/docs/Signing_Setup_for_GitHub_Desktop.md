@@ -69,9 +69,9 @@ using Notepad or PyCharm. Add or update these sections:
 
 ```ini
 [user]
-name = Name  # Your GitHub name
-email = mail@gmail.com  # Must match the key's email
-signingkey = SAMPLE_KEY_HERE  # Your long key ID (from step 5 below)
+name =        # Your GitHub name
+email =       # Must match the key's email
+signingkey =  # Your long key ID (from step 5 below)
 
 [commit]
 gpgsign = true  # Auto-sign all commits
