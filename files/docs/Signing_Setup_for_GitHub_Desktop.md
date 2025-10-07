@@ -87,7 +87,7 @@ using Notepad or PyCharm.
 
 - **"gpg: signing failed"**: Ensure email matches exactly (case-sensitive).
   Run `git config --global user.email` to verify. Restart GitHub Desktop.
-- **Key not found**: Double-check the signingkey ID with the gpg command.
+- **Key not found**: Double-check the signing key ID with the gpg command.
   Use the long format (16 hex digits).
 - **Passphrase prompt missing**: If no popup, test in PowerShell:
   `cd path/to/SkyLockAssault` then `git commit -S -m "Test signed commit"`.
