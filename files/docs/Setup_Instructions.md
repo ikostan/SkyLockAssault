@@ -68,10 +68,9 @@ This is required for automated testing in Milestone 3.
 (ignored per Issue #100). Test quit handling here before itch.io deploy.
 
 ### Additional Tools
-
 - **PyCharm**: Open the repo folder for editing `GDScript/Markdown`. No special
   config needed.
-- **GitHub Actions**: Enabled via .`github/workflows/—runs` on `push/PR` for
+- **GitHub Actions**: Enabled via `.github/workflows/`, runs on `push/PR` for
   `lint/test/deploy`.
 
 Once set up, run the game in editor (F5) or web export. For issues, check Godot
