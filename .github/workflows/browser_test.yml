@@ -40,6 +40,7 @@ jobs:
         # Background server
         run: |
           python -m http.server 8080 --directory export/web &
+          sleep 5
       - name: "Run Tests"
         # Waits implicitly; add sleep if needed
         run: |

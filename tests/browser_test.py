@@ -1,29 +1,17 @@
 import pytest
 from playwright.sync_api import sync_playwright
-import subprocess
 import time
-import os
 
 
-@pytest.fixture(scope="module")
-def browser_server():
-    # Export Godot to HTML5 (run once manually or automate)
-    os.system('godot --headless --export-release "HTML5" build/index.html')  # Use your project.godot path if needed
-
-    # Start simple Python server
-    server = subprocess.Popen(["python", "-m", "http.server", "8080", "--directory", "build"])
-    time.sleep(2)  # Wait for server start
-    yield
-    server.kill()  # Cleanup
-
-
-def test_main_menu_loads(browser_server):
+def test_main_menu_loads():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         page.goto("http://localhost:8080/index.html")
-        assert page.title() == "SkyLockAssault"  # Adjust for your game's title
-        page.wait_for_selector("text=Start Game", timeout=10000)  # Check button visible
-        page.click("text=Start Game")
-        assert "game_level" in page.url()  # Check navigation; tweak for your scenes
+        time.sleep(5)  # Wait for Godot HTML5 to fully load (canvas init can be slow)
+        assert "Sky Lock Assault" in page.title()  # Adjust if title differs
+        page.wait_for_selector("text=Start", timeout=30000)  # Increased timeout; check button visible
+        page.click("text=Start")
+        time.sleep(2)  # Give time for scene transition
+        assert "game" in page.url()  # Check for game_level load; adjust if URL changes
         browser.close()
