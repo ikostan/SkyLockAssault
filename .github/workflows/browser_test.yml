@@ -7,20 +7,31 @@ on:  # yamllint disable-line rule:truthy
 jobs:
   test:
     runs-on: "ubuntu-latest"
+    timeout-minutes: 25
     steps:
       - uses: "actions/checkout@v4"
-      - name: "Set up Godot"
-        uses: "croconut/godot-tester@v5.2"
+      - name: Export Godot to Web
+        id: export
+        # yamllint disable rule:line-length
+        uses: "firebelley/godot-export@930577654862a320eef793f399ee911b4479efb9"  # Pinned to SHA for security (was @v6.0.0)
         with:
-          version: "4.5"  # Your Godot version
-      - name: "Export to HTML5"
-        # Adjust preset name if custom
-        run: |
-          godot --headless --export-release "HTML5" build/index.html
+          godot_executable_download_url: "https://github.com/godotengine/godot/releases/download/4.4-stable/Godot_v4.4-stable_linux.x86_64.zip"  # Godot 4.4 stable from GitHub
+          godot_export_templates_download_url: "https://github.com/godotengine/godot/releases/download/4.4-stable/Godot_v4.4-stable_export_templates.tpz"  # Matching templates
+          relative_project_path: "./"  # Project root
+          relative_export_path: "./export/web"  # Output folder
+          archive_output: true  # Zips for upload (optional; disable if not needed)
+          cache: true  # Enable caching for Godot executable and templates
       - name: "Set up Python"
         uses: "actions/setup-python@v5"
         with:
           python-version: "3.11"
+      - name: "Cache PIP Dependencies"
+        uses: "actions/cache@v4"
+        with:
+          path: "~/.cache/pip"
+          key: "${{ runner.os }}-pip-gdtoolkit"
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - name: "Install Playwright"
         run: |
           pip install playwright pytest-playwright
