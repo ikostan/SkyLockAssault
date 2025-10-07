@@ -71,8 +71,6 @@ using Notepad or PyCharm.
   ```bash
   gpg --list-secret-keys --keyid-format=long
   ```
-  Use the 16-hex digit ID after the slash on the "sec" line (primary key).
-- If using a subkey, append `!`.
 
 ### 5. Test Commit Signing in GitHub Desktop
 
