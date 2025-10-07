@@ -8,10 +8,13 @@ def test_main_menu_loads():
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         page.goto("http://localhost:8080/index.html")
-        time.sleep(5)  # Wait for Godot HTML5 to fully load (canvas init can be slow)
-        assert "SkyLockAssault" in page.title()  # Adjust if title differs
-        page.wait_for_selector("text=Start", timeout=30000)  # Increased timeout; check button visible
-        page.click("text=Start")
-        time.sleep(2)  # Give time for scene transition
-        assert "game" in page.url()  # Check for game_level load; adjust if URL changes
+        page.wait_for_load_state("networkidle", timeout=30000)  # Wait for network idle
+        time.sleep(5)  # Buffer for Godot init
+        assert "SkyLockAssault" in page.title()  # Title check (adjust if "SkyLockAssault")
+        # Change "Start" to inspected text, e.g., "text=Play" or "button"
+        page.wait_for_selector("text=Start Game", timeout=30000)
+        page.screenshot(path="main_menu.png")  # Debug screenshot (view in Actions artifacts)
+        page.click("text=Start Game")
+        time.sleep(2)  # Scene transition
+        assert "game" in page.url()  # Adjust for your game_level URL pattern
         browser.close()
