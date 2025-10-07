@@ -26,7 +26,7 @@ jobs:
           version: "latest"       # Optional: GdUnit4 version
           arguments: "--verbose --ignoreHeadlessMode"
       - name: "Upload Test Reports"
-        if: always()  # Runs even on failure
+        if: "always()"  # Runs even on failure
         uses: "actions/upload-artifact@v4"
         with:
           name: "gdunit-reports"
