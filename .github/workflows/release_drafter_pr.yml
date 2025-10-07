@@ -1,20 +1,21 @@
 ---
 name: "Release Drafter PR Updates"
 
-on:
+on:  # yamllint disable-line rule:truthy
   pull_request:
-    types: [opened, reopened, synchronize, edited]  # Triggers on PR changes
+    types: ["opened", "reopened", "synchronize", "edited"]  # Triggers on PR changes
 
 permissions:
-  contents: read
+  contents: "read"
 
 jobs:
   update_release_draft:
     permissions:
-      contents: write
-      pull-requests: write
+      contents: "write"
+      pull-requests: "write"
     runs-on: "ubuntu-latest"
     steps:
+      # yamllint disable-line rule:line-length
       - uses: "release-drafter/release-drafter@b1476f6e6eb133afa41ed8589daba6dc69b4d3f5"  # v6.1.0
         with:
           config-name: "release-drafter.yml"  # Your existing config
