@@ -12,14 +12,24 @@ on Windows 10 64-bit.
   like GDScript/Markdown).
 - **Windows PowerShell**: For running Docker commands (built-in).
 
-## Step 1: Clone the Repository
+## Requiring Signed Commits on Main
+
+To enforce security:
+
+1. Go to repo `settings` > `Branches` > Add rule for `main`.
+2. Enable "Require signed commits."
+
+This blocks unsigned pushes, ensuring trustworthy Godot exports.
+
+
+### Step 1: Clone the Repository
 
 1. Open GitHub Desktop.
 2. Clone the repo: URL = https://github.com/ikostan/SkyLockAssault.
 3. Open the project in Godot: Launch Godot > Import > Select
    `project.godot` in the cloned folder.
 
-## Step 2: Install Export Templates
+### Step 2: Install Export Templates
 
 1. In Godot Editor: Go to Editor > Manage Export Templates.
 2. Download the templates for version 4.5 (or manually from
@@ -29,7 +39,7 @@ on Windows 10 64-bit.
 **Troubleshooting**: If templates fail to download, ensure internet access
 and restart Godot.
 
-## Step 3: Set Up GDUnit4 for Testing
+### Step 3: Set Up GDUnit4 for Testing
 
 1. In Godot Editor:
    Go to `AssetLib (top menu) > Search for "GDUnit4" > Install v5.1.1`.
@@ -39,14 +49,14 @@ and restart Godot.
 
 This is required for automated testing in Milestone 3.
 
-## Step 4: Export to Web (HTML5)
+### Step 4: Export to Web (HTML5)
 
 1. In Godot: Project > Export > Add Preset > Select "Web".
 2. Set Export Path: `export/web/index.html` (create `export/web/` if needed).
 3. Enable "Runnable" and export the project.
 4. This generates files like index.html, .wasm for browser deployment.
 
-## Step 5: Local Testing with Docker
+### Step 5: Local Testing with Docker
 
 1. Install Docker Desktop if not already (from docker.com).
 2. In PowerShell: Navigate to repo root > `cd infra/`.
@@ -57,11 +67,12 @@ This is required for automated testing in Milestone 3.
 **Notes**: For fullscreen testing, note the harmless console warning on desktop
 (ignored per Issue #100). Test quit handling here before itch.io deploy.
 
-## Additional Tools
+### Additional Tools
+
 - **PyCharm**: Open the repo folder for editing `GDScript/Markdown`. No special
   config needed.
 - **GitHub Actions**: Enabled via .`github/workflows/—runs` on `push/PR` for
   `lint/test/deploy`.
 
-Once set up, run the game in editor (F5) or web export. For issues, check Godot console
-or browser dev tools (F12).
+Once set up, run the game in editor (F5) or web export. For issues, check Godot
+console or browser dev tools (F12).
