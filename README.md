@@ -6,6 +6,7 @@
 ![Repo Size](https://img.shields.io/github/repo-size/ikostan/SkyLockAssault)
 ![Closed Issues](https://img.shields.io/github/issues-closed/ikostan/SkyLockAssault?%2FSkyLockAssault?style=flat-square&label=Issues&color=green)
 ![Open Issues](https://img.shields.io/github/issues/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=red)
+[![Known Vulnerabilities](https://snyk.io/test/github/ikostan/SkyLockAssault/badge.svg)](https://snyk.io/test/github/ikostan/SkyLockAssault)
 <!-- markdownlint-enable line-length -->
 
 ## A top-down online web browser game built with Godot 4.5
@@ -45,7 +46,8 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 2. [Docker Local Test Server](/files/docs/Docker_Local_Test_Server.md)
 3. [Setup Instructions](/files/docs/Setup_Instructions.md)
 4. BOTS:
-   - [Dependabot](https://docs.github.com/en/code-security/dependabot) 
+   - [Dependabot](https://docs.github.com/en/code-security/dependabot)
+   - [Snyk](https://docs.snyk.io/)
    - [Sourcery AI](https://docs.sourcery.ai/)
    - [IMGBOT](https://imgbot.net/docs/)
    - [Release Drafter](https://github.com/release-drafter/release-drafter?tab=readme-ov-file#readme)
