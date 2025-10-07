@@ -45,12 +45,12 @@ With Release Drafter, PRs auto-generate changelog previews, feeding into release
 - **Key insight**: Tags point to specific commits, making it easy to check-out
   old versions. Drafter's version-resolver suggests next versions based on labels.
 
-#### Action to take for adding
+### Action to take for adding
 
 - `git tag v0.3.1` (on desired commit)
 - Push: `git push origin v0.3.1`
 
-#### Action to take for deleting
+### Action to take for deleting
 
 - Local: `git tag -d v0.3.0` (verify with `git tag -l`)
 - Remote (if pushed): `git push origin --delete v0.3.0`
