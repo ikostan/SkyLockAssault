@@ -60,7 +60,7 @@ If `gpg` isn't recognized in `PowerShell`, add the bin path to your system PATH:
 4. Paste the public key content
    (starts with `-----BEGIN PGP PUBLIC KEY BLOCK-----`) and add it.
 5. Verify: Your key should appear in the GPG keys list with the
-   correct Key ID (e.g., `ABCDEF1234567890`).
+   correct Key ID.
 
 ### 4. Configure Git for Automatic Signing
 
@@ -72,7 +72,7 @@ using Notepad or PyCharm.
   gpg --list-secret-keys --keyid-format=long
   ```
   Use the 16-hex digit ID after the slash on the "sec" line (primary key).
-- If using a subkey, append `!` (e.g., `0C2A685FB6E880DA1!`).
+- If using a subkey, append `!`.
 
 ### 5. Test Commit Signing in GitHub Desktop
 
