@@ -8,28 +8,28 @@ jobs:
   test:
     runs-on: "ubuntu-latest"
     steps:
-    - uses: "actions/checkout@v4"
-    - name: "Set up Godot"
-      uses: "croconut/godot-tester@v5.2"
-      with:
-        version: "4.5"  # Your Godot version
-    - name: "Export to HTML5"
-      # Adjust preset name if custom
-      run: |
-        godot --headless --export-release "HTML5" build/index.html
-    - name: "Set up Python"
-      uses: "actions/setup-python@v5"
-      with:
-        python-version: "3.11"
-    - name: "Install Playwright"
-      run: |
-        pip install playwright pytest-playwright
-        playwright install --with-deps chromium
-    - name: "Start Server"
-      # Background server
-      run: |
-        python -m http.server 8080 --directory build &
-    - name: "Run Tests"
-      # Waits implicitly; add sleep if needed
-      run: |
-        pytest tests/browser_test.py
+      - uses: "actions/checkout@v4"
+      - name: "Set up Godot"
+        uses: "croconut/godot-tester@v5.2"
+        with:
+          version: "4.5"  # Your Godot version
+      - name: "Export to HTML5"
+        # Adjust preset name if custom
+        run: |
+          godot --headless --export-release "HTML5" build/index.html
+      - name: "Set up Python"
+        uses: "actions/setup-python@v5"
+        with:
+          python-version: "3.11"
+      - name: "Install Playwright"
+        run: |
+          pip install playwright pytest-playwright
+          playwright install --with-deps chromium
+      - name: "Start Server"
+        # Background server
+        run: |
+          python -m http.server 8080 --directory build &
+      - name: "Run Tests"
+        # Waits implicitly; add sleep if needed
+        run: |
+          pytest tests/browser_test.py
