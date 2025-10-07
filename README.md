@@ -49,6 +49,7 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
    - [Sourcery AI](https://docs.sourcery.ai/)
    - [IMGBOT](https://imgbot.net/docs/)
    - [Release Drafter](https://github.com/release-drafter/release-drafter?tab=readme-ov-file#readme)
+5. [Signing Setup for GitHub Desktop](/files/docs/Signing_Setup_for_GitHub_Desktop.md)
 
 ### Play Instructions
 - **In Godot Editor**: Open the project > Press F5 to run the main scene
