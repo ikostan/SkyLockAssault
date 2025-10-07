@@ -34,10 +34,15 @@ jobs:
       - "gdlint"
       - "readmelint"
       - "yamllint"
+  browser_tests:
+    name: "Browser Functional Tests"
+    uses: "./.github/workflows/browser_test.yml"
+    needs:
+      - "unit_tests"
   codeql:
     name: "CodeQL Scan on Web Export"
     needs:
-      - "unit_tests"
+      - "browser_tests"
     uses: "./.github/workflows/codeql.yml"
   snyk:
     name: "Snyk Scan on Web Export"
