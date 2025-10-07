@@ -78,7 +78,7 @@ gpgsign = true  # Auto-sign all commits
 ```
 
 - **Finding Your Long Key ID**: In PowerShell, run:
-  ```
+  ```bash
   gpg --list-secret-keys --keyid-format=long
   ```
   
