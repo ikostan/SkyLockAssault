@@ -39,7 +39,7 @@ jobs:
       - name: "Start Server"
         # Background server
         run: |
-          python -m http.server 8080 --directory build &
+          python -m http.server 8080 --directory export/web &
       - name: "Run Tests"
         # Waits implicitly; add sleep if needed
         run: |
