@@ -12,9 +12,9 @@ def test_main_menu_loads():
         time.sleep(5)  # Buffer for Godot init
         assert "SkyLockAssault" in page.title()  # Title check (adjust if "SkyLockAssault")
         # Change "Start" to inspected text, e.g., "text=Play" or "button"
-        page.wait_for_selector("text=Start Game", timeout=30000)
+        page.wait_for_selector("text={START=GAME}", timeout=30000)
         page.screenshot(path="main_menu.png")  # Debug screenshot (view in Actions artifacts)
-        page.click("text=Start Game")
+        page.click("text={START=GAME}")
         time.sleep(2)  # Scene transition
         assert "game" in page.url()  # Adjust for your game_level URL pattern
         browser.close()
