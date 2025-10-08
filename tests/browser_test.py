@@ -1,4 +1,5 @@
 import pytest
+import os
 from playwright.sync_api import Page, ConsoleMessage
 
 
@@ -15,14 +16,21 @@ def error_logs(page: Page):
 
 
 def test_main_menu_loads(page: Page, error_logs):
+    # Configurable timeout from env (defaults to 10000ms for faster CI)
+    timeout = int(os.getenv("PW_TIMEOUT", 10000))
     page.goto("http://localhost:8080/index.html")
-    page.wait_for_load_state("networkidle", timeout=30000)  # Network idle first
-    # Replacement for time.sleep(5): Wait for canvas visibility (basic init indicator)
-    page.wait_for_selector("canvas", state="visible", timeout=30000)  # Verifies Godot canvas loads and is visible
-    # Optional: If adding JS signal in GDScript (see below), add this for full init wait
-    # After page.wait_for_selector("canvas", state="visible", timeout=30000)
-    # Confirms _ready() finished
-    page.wait_for_function("() => window.godotInitialized", timeout=30000)
+    page.wait_for_load_state("networkidle", timeout=timeout)  # Network idle first
+    # Replacement for time.sleep: Wait for canvas visibility (basic init indicator)
+    # Verifies Godot canvas loads and is visible
+    page.wait_for_selector("canvas", state="visible", timeout=timeout)
+    # Optional full init wait:
+    # Assumes main_menu.gd sets window.godotInitialized in _ready() for web exports.
+    # If not set (e.g., non-web or code change),
+    # test may timeout—see docs or make optional via env var.
+    page.wait_for_function("() => window.godotInitialized", timeout=timeout)  # Confirms _ready() finished
+    # Assert existence to catch if signal missing (prevents silent timeout)
+    assert page.evaluate("typeof window.godotInitialized !== 'undefined'"), ("godotInitialized not set—check "
+                                                                             "main_menu.gd")
     assert "SkyLockAssault" in page.title()  # Title check
     page.screenshot(path="main_menu.png")  # Debug screenshot
     assert not error_logs, f"Console errors: {error_logs}"  # Check no errors

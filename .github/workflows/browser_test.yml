@@ -8,8 +8,10 @@ jobs:
   test:
     runs-on: "ubuntu-latest"
     timeout-minutes: 25
+    env:
+      PW_TIMEOUT: 10000  # Configurable timeout (ms); lower for faster CI
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@v4"  # Aligned to latest stable
       - name: "Export Godot to Web"
         id: "export"
         # yamllint disable rule:line-length
@@ -38,12 +40,19 @@ jobs:
           pip install playwright pytest-playwright
           playwright install --with-deps chromium
       - name: "Start Server"
-        # Background server
+        # Managed background with readiness check and trap for teardown
         run: |
+          trap 'kill $(jobs -p)' EXIT  # Explicit teardown on exit
           python -m http.server 8080 --directory export/web &
-          sleep 5
+          for i in {1..10}; do  # Readiness loop (up to 10s)
+            if curl -f http://localhost:8080/index.html >/dev/null 2>&1; then
+              echo "Server ready"
+              break
+            fi
+            sleep 1
+          done
+          if [ $i -eq 10 ]; then exit 1; fi  # Fail if not ready
       - name: "Run Tests"
-        # Waits implicitly; add sleep if needed
         run: |
           pytest tests/browser_test.py -v
       - name: "Upload Screenshot Artifact"
