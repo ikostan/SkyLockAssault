@@ -47,7 +47,7 @@ jobs:
   snyk:
     name: "Snyk Scan on Web Export"
     needs:
-      - "unit_tests"
+      - "browser_tests"
     uses: "./.github/workflows/snyk.yml"
     secrets:
       SNYK_TOKEN: "${{ secrets.SNYK_TOKEN }}"
