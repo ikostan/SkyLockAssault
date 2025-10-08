@@ -20,6 +20,7 @@ categories:
   - title: '📄 Documentation'
     labels:
       - 'documentation'
+commitish: main  # Add this to fix the target_commitish error
 change-template: '* $TITLE (#$NUMBER) @$AUTHOR'
 no-changes-template: '* No changes'
 version-resolver:

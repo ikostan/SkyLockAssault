@@ -33,3 +33,8 @@ jobs:
       - "gdlint"
       - "readmelint"
       - "yamllint"
+  browser_tests:
+    name: "Browser Functional Tests"
+    uses: "./.github/workflows/browser_test.yml"
+    needs:
+      - "unit_tests"
