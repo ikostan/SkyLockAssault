@@ -45,3 +45,9 @@ jobs:
         # Waits implicitly; add sleep if needed
         run: |
           pytest tests/browser_test.py
+      - name: "Upload Screenshot Artifact"
+        if: always()  # Even on failure
+        uses: "actions/upload-artifact@v4"
+        with:
+          name: "test-screenshots"
+          path: "main_menu.png"
