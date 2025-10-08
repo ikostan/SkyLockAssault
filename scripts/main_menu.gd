@@ -44,6 +44,10 @@ func _ready() -> void:
 	delay_timer.timeout.connect(_start_ui_fade)
 	delay_timer.start()
 	Globals.log_message("Starting initial delay timer...", Globals.LogLevel.DEBUG)
+	# Optional: Signal init complete for web tests (after UI setup)
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.godotInitialized = true;")
+		Globals.log_message("JS init signal set for web.", Globals.LogLevel.DEBUG)
 
 
 # New: Starts the sequenced fades after delay
