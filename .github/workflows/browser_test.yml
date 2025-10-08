@@ -20,7 +20,8 @@ jobs:
           godot_executable_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip"
           godot_export_templates_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz"
           relative_project_path: "./"  # Project root
-          relative_export_path: "./export/web"  # Output folder
+          relative_export_path: "./build/html5"  # Align with deploy yml
+          presets_to_export: "Web"  # Export only HTML5 preset (faster)
           archive_output: true  # Zips for upload (optional; disable if not needed)
           cache: true  # Enable caching for Godot executable and templates
       - name: "Set up Python"
@@ -39,11 +40,9 @@ jobs:
         run: |
           pip install playwright pytest-playwright
           playwright install --with-deps chromium
-      - name: "Start Server"
-        # Managed background with readiness check and trap for teardown
+      - name: "Run Server and Tests"
         run: |
-          trap 'kill $(jobs -p)' EXIT  # Explicit teardown on exit
-          python -m http.server 8080 --directory export/web &
+          python -m http.server 8080 --directory build/html5 &
           for i in {1..10}; do  # Readiness loop (up to 10s)
             if curl -f http://localhost:8080/index.html >/dev/null 2>&1; then
               echo "Server ready"
@@ -52,11 +51,9 @@ jobs:
             sleep 1
           done
           if [ $i -eq 10 ]; then exit 1; fi  # Fail if not ready
-      - name: "Run Tests"
-        run: |
           pytest tests/browser_test.py -v
       - name: "Upload Screenshot Artifact"
-        if: "always()"  # Even on failure
+        if: always()  # Even on failure
         uses: "actions/upload-artifact@v4"
         with:
           name: "test-screenshots"
