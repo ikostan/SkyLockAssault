@@ -78,13 +78,13 @@ jobs:
             echo "No report.xml found—tests may not have run."
           fi
       - name: "Upload Test Report Artifact"
-        if: always()  # Even on failure
+        if: "always()"  # Even on failure
         uses: "actions/upload-artifact@v4"
         with:
           name: "test-report"
           path: "report.xml"  # XML with pass/fail summary
       - name: "Upload Screenshot Artifact"
-        if: always()  # Even on failure
+        if: "always()"  # Even on failure
         uses: "actions/upload-artifact@v4"
         with:
           name: "test-screenshots"
