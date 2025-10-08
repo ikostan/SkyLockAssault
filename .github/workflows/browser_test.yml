@@ -8,6 +8,8 @@ jobs:
   test:
     runs-on: "ubuntu-latest"
     timeout-minutes: 25
+    env:
+      PW_TIMEOUT: 10000  # Configurable timeout (ms); lower for faster CI
     steps:
       - uses: "actions/checkout@v4"
       - name: "Export Godot to Web"
@@ -37,14 +39,49 @@ jobs:
         run: |
           pip install playwright pytest-playwright
           playwright install --with-deps chromium
-      - name: "Start Server"
-        # Background server
+      # Background web game server
+      - name: "Start WEB Server"
         run: |
           python -m http.server 8080 --directory export/web &
-      - name: "Run Tests"
-        # Waits implicitly; add sleep if needed
+      - name: "Wait For WEB Server Response"
+        # Managed background with readiness check
         run: |
-          pytest tests/browser_test.py -v
+          for i in {1..20}; do  # Readiness loop (up to 10s)
+            if curl -f http://localhost:8080/index.html >/dev/null 2>&1; then
+              echo "Server ready"
+              break
+            fi
+            sleep 1
+          done
+          if [ $i -eq 20 ]; then exit 1; fi
+      - name: "Run Tests"
+        # Generate JUnit XML report
+        run: |
+          pytest tests/browser_test.py -v --junitxml=report.xml
+      - name: "Console summary report"
+        # parses XML for pass/fail counts
+        run: |
+          if [ -f report.xml ]; then
+            total=$(xmllint --xpath 'count(//testcase)' report.xml)
+            failures=$(xmllint --xpath 'count(//testcase/failure)' report.xml)
+            errors=$(xmllint --xpath 'count(//testcase/error)' report.xml)
+            skipped=$(xmllint --xpath 'count(//testcase/skipped)' report.xml)
+            passed=$((total - failures - errors - skipped))
+            echo "Test Report Summary:"
+            echo "- Total tests: $total"
+            echo "- Passed: $passed"
+            echo "- Failed: $failures"
+            echo "- Errors: $errors"
+            echo "- Skipped: $skipped"
+          else
+            echo "No report.xml found—tests may not have run."
+          fi
+      - name: "Upload Test Report Artifact"
+        if: always()  # Even on failure
+        uses: "actions/upload-artifact@v4"
+        with:
+          name: "test-report"
+          path: "report.xml"  # XML with pass/fail summary
       - name: "Upload Screenshot Artifact"
         if: always()  # Even on failure
         uses: "actions/upload-artifact@v4"
