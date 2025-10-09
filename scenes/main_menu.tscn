@@ -89,6 +89,7 @@ offset_right = 180.0
 offset_bottom = 115.0
 grow_horizontal = 2
 grow_vertical = 2
+tooltip_text = "Main Menu Panel"
 theme_override_styles/panel = SubResource("StyleBoxFlat_oa1go")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VideoStreamPlayer/Panel"]

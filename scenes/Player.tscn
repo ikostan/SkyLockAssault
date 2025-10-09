@@ -20,3 +20,7 @@ region_rect = Rect2(129.12057, 1.3690486, 28.879425, 29.416893)
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D"]
 position = Vector2(1.5, 1)
 shape = SubResource("RectangleShape2D_5q5h1")
+
+[node name="FuelTimer" type="Timer" parent="."]
+process_callback = 0
+autostart = true

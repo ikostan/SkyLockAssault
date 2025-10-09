@@ -46,6 +46,7 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 ## Documentation
 
 1. [Guide to Implementing Versioning](/files/docs/Guide_to_Implementing_Versioning.md)
+2. [Godot v4.5 Docs](https://docs.godotengine.org/en/stable/index.html)
 2. [Development Guide](files/docs/Development_Guide.md)
 3. [Docker Local Test Server](/files/docs/Docker_Local_Test_Server.md)
 4. [Setup Instructions](/files/docs/Setup_Instructions.md)
@@ -69,6 +70,12 @@ Here's a high-level plan for upcoming features. Contributions welcome!
 - **v0.5: Ongoing Development** - Feedback gathering, minor updates, release tagging.
 - Future: Multiplayer elements, AI enemies, mobile export
   (post-launch based on community input).
+
+## Contributing
+
+Pull requests welcome for mechanics like enemy AI, levels, or web optimizations!
+Fork the repo and submit your ideas. See [CONTRIBUTING](CONTRIBUTING.md) for
+guidelines (create if needed).
 
 ## Player Feedback
 
