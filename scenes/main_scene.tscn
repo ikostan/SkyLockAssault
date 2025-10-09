@@ -12,17 +12,7 @@ corner_radius_top_right = 20
 corner_radius_bottom_right = 20
 corner_radius_bottom_left = 20
 
-[sub_resource type="FontFile" id="FontFile_pu3yx"]
-cache/0/20/0/ascent = 0.0
-cache/0/20/0/descent = 0.0
-cache/0/20/0/underline_position = 0.0
-cache/0/20/0/underline_thickness = 0.0
-cache/0/20/0/scale = 1.0
-cache/0/16/0/ascent = 0.0
-cache/0/16/0/descent = 0.0
-cache/0/16/0/underline_position = 0.0
-cache/0/16/0/underline_thickness = 0.0
-cache/0/16/0/scale = 1.0
+[sub_resource type="FontVariation" id="FontVariation_pu3yx"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gubc5"]
 bg_color = Color(0.6, 0.6, 0.6, 0)
@@ -89,7 +79,7 @@ tooltip_text = "Fuel Progress Bar"
 accessibility_name = "Fuel"
 accessibility_description = "Fuel Progress Bar"
 theme_override_colors/font_color = Color(0.16565621, 0.16565639, 0.16565683, 1)
-theme_override_fonts/font = SubResource("FontFile_pu3yx")
+theme_override_fonts/font = SubResource("FontVariation_pu3yx")
 theme_override_font_sizes/font_size = 20
 theme_override_styles/background = SubResource("StyleBoxFlat_gubc5")
 theme_override_styles/fill = SubResource("StyleBoxFlat_rt2n2")
