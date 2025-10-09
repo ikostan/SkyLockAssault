@@ -43,17 +43,38 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 ## Documentation
 
 1. [Guide to Implementing Versioning](/files/docs/Guide_to_Implementing_Versioning.md)
-2. [Docker Local Test Server](/files/docs/Docker_Local_Test_Server.md)
-3. [Setup Instructions](/files/docs/Setup_Instructions.md)
-4. BOTS:
+2. [Development Guide](files/docs/Development_Guide.md)
+3. [Docker Local Test Server](/files/docs/Docker_Local_Test_Server.md)
+4. [Setup Instructions](/files/docs/Setup_Instructions.md)
+5. [Signing Setup for GitHub Desktop](/files/docs/Signing_Setup_for_GitHub_Desktop.md)
+6. BOTS:
    - [Dependabot](https://docs.github.com/en/code-security/dependabot)
    - [Snyk](https://docs.snyk.io/)
    - [Sourcery AI](https://docs.sourcery.ai/)
    - [IMGBOT](https://imgbot.net/docs/)
    - [Release Drafter](https://github.com/release-drafter/release-drafter?tab=readme-ov-file#readme)
-5. [Signing Setup for GitHub Desktop](/files/docs/Signing_Setup_for_GitHub_Desktop.md)
+
+## Roadmap
+
+Here's a high-level plan for upcoming features. Contributions welcome!
+
+- **v0.2: Completed Foundations** - Project import, Docker local testing,
+  basic input actions, top-down movement, main menu, quit handling for browser,
+  HTML5 export and testing, GitHub Actions CI/CD to Itch.io (complete).
+- **v0.3: Expansion** - Add levels, weapons, player feedback integration.
+- **v0.4: Post-MVP Refinements** - Performance optimization, audio polish, bug fixes.
+- **v0.5: Ongoing Development** - Feedback gathering, minor updates, release tagging.
+- Future: Multiplayer elements, AI enemies, mobile export
+  (post-launch based on community input).
+
+## Player Feedback
+
+We value your input to improve Sky Lock Assault! Share your thoughts via:
+- [Itch.io Comments](https://ikostan.itch.io/sky-lock-assault) – Discuss
+  gameplay, bugs, or suggestions directly on the game's page.
 
 ### Play Instructions
+
 - **In Godot Editor**: Open the project > Press F5 to run the main scene
   (`main_menu.tscn`). Use keyboard/mouse for navigation.
 - **Local Web Testing**: After exporting to HTML5 (see Setup),
@@ -108,4 +129,4 @@ Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milest
 - Fork the repo and create a branch for your changes.
 - Follow GDScript best practices; test in editor and web export.
 - Open a Pull Request with details.
-- See [CONTRIBUTING.md](/CONTRIBUTING.md) for full guidelines (coming soon in #70).
+- See [CONTRIBUTING.md](/CONTRIBUTING.md) for full guidelines.

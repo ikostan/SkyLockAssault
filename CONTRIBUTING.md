@@ -14,9 +14,10 @@ Check issues labeled "good first issue" for easy starts, like:
 
 ## Code Style
 
-- **GDScript**: Use snake_case for variables/functions. Prefer typed variables
-  (e.g., `var speed: float = 100.0`) for better readability and error catching.
-- **Indentation**: 4 spaces (Godot default).
+- **GDScript**: Use snake_case for variables/functions. Typed variables are
+  mandatory (e.g., `var speed: float = 100.0`) for better readability and
+  error catching.
+- **Indentation**: 1 tab (Godot default).
 - **Comments**: Add inline comments for learning (e.g., explain quit logic).
 - **Best Practices**: Follow Godot docs (e.g., use signals for UI events).
 
