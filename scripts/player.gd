@@ -1,5 +1,11 @@
 extends Node2D
 
+# Fuel color thresholds (percentages)
+const HIGH_FUEL_THRESHOLD: float = 90.0  # Starts green lerp
+const MEDIUM_FUEL_THRESHOLD: float = 50.0  # Switches to yellow lerp
+const LOW_FUEL_THRESHOLD: float = 30.0  # Switches to red lerp
+const NO_FUEL_THRESHOLD: float = 15.0  # Fully Red Color
+
 # Exported vars first (for Inspector editing)
 @export var speed: float = 300.0
 @export var max_fuel: float = 100.0
@@ -14,7 +20,6 @@ var player_y_min: float = 0.0
 var player_y_max: float = 0.0
 # For gradual colors shifts (e.g., green to red as fuel drops), use Color.lerp
 var lerp_factor: float
-var progress_bar_bg_color: Color
 
 # Onreadys next
 @onready var player: CharacterBody2D = $CharacterBody2D
@@ -22,8 +27,10 @@ var progress_bar_bg_color: Color
 @onready
 var fuel_bar: ProgressBar = $"../PlayerStatsPanel/VBoxContainer/HBoxContainer/FuelProgressBar"
 @onready var fuel_timer: Timer = $FuelTimer
-# Get the fill style (assume it's StyleBoxFlat; if not, create one first in _ready)
+# Get the fill style
 @onready var fill_style: StyleBoxFlat = fuel_bar.get_theme_stylebox("fill")
+# Cached initial fill color
+@onready var progress_bar_bg_color: Color = fill_style.bg_color
 
 
 func _ready() -> void:
@@ -59,7 +66,6 @@ func _ready() -> void:
 		Globals.LogLevel.DEBUG
 	)
 
-	progress_bar_bg_color = fill_style.bg_color
 	current_fuel = max_fuel
 	fuel_bar.value = current_fuel
 	fuel_timer.timeout.connect(_on_fuel_timer_timeout)
@@ -76,13 +82,13 @@ func _on_fuel_timer_timeout() -> void:
 	lerp_factor = 1.0 - (current_fuel / max_fuel)  # 0=full (green), 1=empty (red)
 	progress_bar_bg_color = fill_style.bg_color
 
-	if current_fuel >= 50.0 and current_fuel <= 90:
+	if current_fuel >= MEDIUM_FUEL_THRESHOLD and current_fuel <= HIGH_FUEL_THRESHOLD:
 		fill_style.bg_color = progress_bar_bg_color.lerp(Color.GREEN, lerp_factor)
-	elif 30.0 <= current_fuel and current_fuel < 50.0:
+	elif LOW_FUEL_THRESHOLD <= current_fuel and current_fuel < MEDIUM_FUEL_THRESHOLD:
 		fill_style.bg_color = progress_bar_bg_color.lerp(Color.YELLOW, lerp_factor)  # Medium-high: green
-	elif current_fuel >= 15.0 and current_fuel < 30.0:
+	elif current_fuel > NO_FUEL_THRESHOLD and current_fuel < LOW_FUEL_THRESHOLD:
 		fill_style.bg_color = progress_bar_bg_color.lerp(Color.RED, lerp_factor)  # Medium-low: yellow
-	elif current_fuel < 15.0:
+	elif current_fuel <= NO_FUEL_THRESHOLD:
 		fill_style.bg_color = Color.RED  # Low: red
 
 	if current_fuel <= 0:

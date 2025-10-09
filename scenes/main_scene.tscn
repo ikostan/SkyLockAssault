@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://nnnc0qhx07i8"]
+[gd_scene load_steps=9 format=3 uid="uid://nnnc0qhx07i8"]
 
 [ext_resource type="Script" uid="uid://ctm7qg12s2swt" path="res://scripts/main_scene.gd" id="1_7ykc4"]
 [ext_resource type="PackedScene" uid="uid://cb4n4cqkuddqg" path="res://scenes/pause_menu.tscn" id="1_w2twt"]
@@ -11,6 +11,18 @@ corner_radius_top_left = 20
 corner_radius_top_right = 20
 corner_radius_bottom_right = 20
 corner_radius_bottom_left = 20
+
+[sub_resource type="FontFile" id="FontFile_pu3yx"]
+cache/0/20/0/ascent = 0.0
+cache/0/20/0/descent = 0.0
+cache/0/20/0/underline_position = 0.0
+cache/0/20/0/underline_thickness = 0.0
+cache/0/20/0/scale = 1.0
+cache/0/16/0/ascent = 0.0
+cache/0/16/0/descent = 0.0
+cache/0/16/0/underline_position = 0.0
+cache/0/16/0/underline_thickness = 0.0
+cache/0/16/0/scale = 1.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gubc5"]
 bg_color = Color(0.6, 0.6, 0.6, 0)
@@ -29,12 +41,13 @@ corner_radius_top_left = 20
 corner_radius_top_right = 20
 corner_radius_bottom_right = 20
 corner_radius_bottom_left = 20
+shadow_color = Color(0, 0, 0, 0.3882353)
+shadow_size = 1
 
 [node name="Node2D" type="Node2D"]
 script = ExtResource("1_7ykc4")
 
 [node name="PlayerStatsPanel" type="Panel" parent="."]
-visible = false
 offset_left = 910.0
 offset_top = 20.0
 offset_right = 1260.0
@@ -50,10 +63,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -160.0
-offset_top = -10.0
-offset_right = 160.0
-offset_bottom = 10.0
+offset_left = -167.5
+offset_top = -14.0
+offset_right = 167.5
+offset_bottom = 14.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -65,7 +78,7 @@ size_flags_vertical = 3
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9104413, 0, 0.10132807, 1)
 theme_override_fonts/font = ExtResource("2_pu3yx")
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 26
 text = "{FUEL}"
 
 [node name="FuelProgressBar" type="ProgressBar" parent="PlayerStatsPanel/VBoxContainer/HBoxContainer"]
@@ -76,8 +89,8 @@ tooltip_text = "Fuel Progress Bar"
 accessibility_name = "Fuel"
 accessibility_description = "Fuel Progress Bar"
 theme_override_colors/font_color = Color(0.16565621, 0.16565639, 0.16565683, 1)
-theme_override_fonts/font = ExtResource("2_pu3yx")
-theme_override_font_sizes/font_size = 18
+theme_override_fonts/font = SubResource("FontFile_pu3yx")
+theme_override_font_sizes/font_size = 20
 theme_override_styles/background = SubResource("StyleBoxFlat_gubc5")
 theme_override_styles/fill = SubResource("StyleBoxFlat_rt2n2")
 rounded = true
