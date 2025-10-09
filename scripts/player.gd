@@ -14,7 +14,7 @@ var player_y_min: float = 0.0
 var player_y_max: float = 0.0
 # For gradual colors shifts (e.g., green to red as fuel drops), use Color.lerp
 var lerp_factor: float
-var BG_COLOR: Color
+var progress_bar_bg_color: Color
 
 # Onreadys next
 @onready var player: CharacterBody2D = $CharacterBody2D
@@ -59,7 +59,7 @@ func _ready() -> void:
 		Globals.LogLevel.DEBUG
 	)
 
-	BG_COLOR = fill_style.bg_color
+	progress_bar_bg_color = fill_style.bg_color
 	current_fuel = max_fuel
 	fuel_bar.value = current_fuel
 	fuel_timer.timeout.connect(_on_fuel_timer_timeout)
@@ -73,7 +73,7 @@ func _on_fuel_timer_timeout() -> void:
 	lerp_factor = 1.0 - (current_fuel / 100.0)  # 0=full (green), 1=empty (red)
 
 	if current_fuel >= 80.0:
-		fill_style.bg_color = BG_COLOR.lerp(Color.GREEN, lerp_factor)
+		fill_style.bg_color = progress_bar_bg_color.lerp(Color.GREEN, lerp_factor)
 	elif 60.0 <= current_fuel and current_fuel < 80.0:
 		fill_style.bg_color = Color.GREEN.lerp(Color.YELLOW, lerp_factor)  # Medium-high: green
 	elif current_fuel >= 30.0 and current_fuel < 60.0:
