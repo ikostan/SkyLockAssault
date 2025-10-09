@@ -1,8 +1,9 @@
 extends GdUnitTestSuite
-@warning_ignore('unused_parameter')
-@warning_ignore('return_value_discarded')
+@warning_ignore("unused_parameter")
+@warning_ignore("return_value_discarded")
 
 var runner: GdUnitSceneRunner
+
 
 # Optional: Setup before all tests (e.g., mock globals)
 func before() -> void:

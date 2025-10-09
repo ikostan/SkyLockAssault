@@ -19,7 +19,8 @@ var BG_COLOR: Color
 # Onreadys next
 @onready var player: CharacterBody2D = $CharacterBody2D
 @onready var collision_shape: CollisionShape2D = $CharacterBody2D/CollisionShape2D
-@onready var fuel_bar: ProgressBar = $"../PlayerStatsPanel/VBoxContainer/HBoxContainer/FuelProgressBar"
+@onready
+var fuel_bar: ProgressBar = $"../PlayerStatsPanel/VBoxContainer/HBoxContainer/FuelProgressBar"
 @onready var fuel_timer: Timer = $FuelTimer
 # Get the fill style (assume it's StyleBoxFlat; if not, create one first in _ready)
 @onready var fill_style: StyleBoxFlat = fuel_bar.get_theme_stylebox("fill") as StyleBoxFlat
@@ -57,16 +58,16 @@ func _ready() -> void:
 		),
 		Globals.LogLevel.DEBUG
 	)
-	
+
 	BG_COLOR = fill_style.bg_color
 	current_fuel = max_fuel
 	fuel_bar.value = current_fuel
 	fuel_timer.timeout.connect(_on_fuel_timer_timeout)
 	fuel_timer.start()
 
+
 # Connect Timer's timeout signal
 func _on_fuel_timer_timeout() -> void:
-	
 	current_fuel -= 0.5
 	fuel_bar.value = current_fuel
 	lerp_factor = 1.0 - (current_fuel / 100.0)  # 0=full (green), 1=empty (red)
@@ -79,7 +80,7 @@ func _on_fuel_timer_timeout() -> void:
 		fill_style.bg_color = Color.YELLOW.lerp(Color.RED, lerp_factor)  # Medium-low: yellow
 	elif current_fuel < 30.0:
 		fill_style.bg_color = Color.RED  # Low: red
-	
+
 	if current_fuel <= 0:
 		speed = 0.0  # Or game over logic
 		fuel_timer.stop()

@@ -47,11 +47,11 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 
 1. [Guide to Implementing Versioning](/files/docs/Guide_to_Implementing_Versioning.md)
 2. [Godot v4.5 Docs](https://docs.godotengine.org/en/stable/index.html)
-2. [Development Guide](files/docs/Development_Guide.md)
-3. [Docker Local Test Server](/files/docs/Docker_Local_Test_Server.md)
-4. [Setup Instructions](/files/docs/Setup_Instructions.md)
-5. [Signing Setup for GitHub Desktop](/files/docs/Signing_Setup_for_GitHub_Desktop.md)
-6. BOTS:
+3. [Development Guide](files/docs/Development_Guide.md)
+4. [Docker Local Test Server](/files/docs/Docker_Local_Test_Server.md)
+5. [Setup Instructions](/files/docs/Setup_Instructions.md)
+6. [Signing Setup for GitHub Desktop](/files/docs/Signing_Setup_for_GitHub_Desktop.md)
+7. BOTS:
    - [Dependabot](https://docs.github.com/en/code-security/dependabot)
    - [Snyk](https://docs.snyk.io/)
    - [Sourcery AI](https://docs.sourcery.ai/)
