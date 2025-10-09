@@ -102,9 +102,15 @@ menu during play.
 ### Current features:
 
 - Main menu scene (`main_menu.tscn`) with buttons (Start, Resume, Options, Quit).
-- Placeholder game level (`game_level.tscn`) for future mechanics.
-- Add options menu with log level settings accessible from main and pause menus.
-- Implement fade-in animations for main menu UI panels
+- Placeholder game level (`main_scene.tscn`) for future mechanics and game testing.
+- Add options menu (`options_menu.tscn`) with log level settings accessible
+  from main and pause menus.
+- Add pause menu (`pause_menu.tscn`) with buttons (Main Menu, Options, Resume).
+  from main and pause menus.
+- Add Player scene (`Player.tscn`) with CharacterBody2D, ShaderBody, CollisionShape,
+  FuelTimer.
+- Implement fade-in animations for main menu UI panels.
+- Fuel system including fuel level progress bar.
 
 ### Features Roadmap
 

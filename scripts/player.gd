@@ -23,7 +23,7 @@ var progress_bar_bg_color: Color
 var fuel_bar: ProgressBar = $"../PlayerStatsPanel/VBoxContainer/HBoxContainer/FuelProgressBar"
 @onready var fuel_timer: Timer = $FuelTimer
 # Get the fill style (assume it's StyleBoxFlat; if not, create one first in _ready)
-@onready var fill_style: StyleBoxFlat = fuel_bar.get_theme_stylebox("fill") as StyleBoxFlat
+@onready var fill_style: StyleBoxFlat = fuel_bar.get_theme_stylebox("fill")
 
 
 func _ready() -> void:
@@ -68,17 +68,21 @@ func _ready() -> void:
 
 # Connect Timer's timeout signal
 func _on_fuel_timer_timeout() -> void:
-	current_fuel -= 0.5
+	var fuel_left: float = current_fuel - 0.5
+	# Add a clamp so current_fuel never drops below zero
+	# to prevent negative values and any unintended behavior in the fuel bar.
+	current_fuel = clamp(fuel_left, 0, max_fuel)
 	fuel_bar.value = current_fuel
-	lerp_factor = 1.0 - (current_fuel / 100.0)  # 0=full (green), 1=empty (red)
+	lerp_factor = 1.0 - (current_fuel / max_fuel)  # 0=full (green), 1=empty (red)
+	progress_bar_bg_color = fill_style.bg_color
 
-	if current_fuel >= 80.0:
+	if current_fuel >= 50.0 and current_fuel <= 90:
 		fill_style.bg_color = progress_bar_bg_color.lerp(Color.GREEN, lerp_factor)
-	elif 60.0 <= current_fuel and current_fuel < 80.0:
-		fill_style.bg_color = Color.GREEN.lerp(Color.YELLOW, lerp_factor)  # Medium-high: green
-	elif current_fuel >= 30.0 and current_fuel < 60.0:
-		fill_style.bg_color = Color.YELLOW.lerp(Color.RED, lerp_factor)  # Medium-low: yellow
-	elif current_fuel < 30.0:
+	elif 30.0 <= current_fuel and current_fuel < 50.0:
+		fill_style.bg_color = progress_bar_bg_color.lerp(Color.YELLOW, lerp_factor)  # Medium-high: green
+	elif current_fuel >= 15.0 and current_fuel < 30.0:
+		fill_style.bg_color = progress_bar_bg_color.lerp(Color.RED, lerp_factor)  # Medium-low: yellow
+	elif current_fuel < 15.0:
 		fill_style.bg_color = Color.RED  # Low: red
 
 	if current_fuel <= 0:

@@ -23,4 +23,5 @@ shape = SubResource("RectangleShape2D_5q5h1")
 
 [node name="FuelTimer" type="Timer" parent="."]
 process_callback = 0
+wait_time = 0.1
 autostart = true
