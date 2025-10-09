@@ -1,5 +1,5 @@
 ---
-name: "Main Deploy Pipeline"
+name: "Main CI/CD Pipeline"
 
 # Define permissions at the workflow level
 permissions:

@@ -2,10 +2,10 @@
 
 <!-- markdownlint-disable line-length -->
 [![Made with Godot](https://img.shields.io/badge/Made%20with-Godot-478CBF?style=flat&logo=godot%20engine&logoColor=white)](https://godotengine.org)
-<img width="70" height="20" alt="Image" src="https://github.com/user-attachments/assets/4bef8888-dc13-480b-ba76-c19844d9fdb0" />
+[![Godot](https://img.shields.io/badge/Godot-4.5-blue?logo=godot-engine)](https://godotengine.org/)
 [![GDScript](https://img.shields.io/badge/Language-GDScript-brightgreen)](https://docs.godotengine.org/en/stable/tutorials/scripting/gdscript/index.html)
 [![Itch.io](https://img.shields.io/badge/Deployment-Itch.io-purple?logo=itch-dot-io)](https://itch.io/)
-[![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-orange?logo=github)](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml)
+[![CI/CD](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml/badge.svg)](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml)
 ![Repo Size](https://img.shields.io/github/repo-size/ikostan/SkyLockAssault)
 ![Closed Issues](https://img.shields.io/github/issues-closed/ikostan/SkyLockAssault?%2FSkyLockAssault?style=flat-square&label=Issues&color=green)
 ![Open Issues](https://img.shields.io/github/issues/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=red)
