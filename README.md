@@ -2,7 +2,10 @@
 
 <!-- markdownlint-disable line-length -->
 [![Made with Godot](https://img.shields.io/badge/Made%20with-Godot-478CBF?style=flat&logo=godot%20engine&logoColor=white)](https://godotengine.org)
-[![Main Deploy Pipeline](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml/badge.svg)](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml)
+[![Godot](https://img.shields.io/badge/Godot-4.5-blue?logo=godot-engine)](https://godotengine.org/)
+[![GDScript](https://img.shields.io/badge/Language-GDScript-brightgreen)](https://docs.godotengine.org/en/stable/tutorials/scripting/gdscript/index.html)
+[![Itch.io](https://img.shields.io/badge/Deployment-Itch.io-purple?logo=itch-dot-io)](https://itch.io/)
+[![CI/CD](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml/badge.svg)](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml)
 ![Repo Size](https://img.shields.io/github/repo-size/ikostan/SkyLockAssault)
 ![Closed Issues](https://img.shields.io/github/issues-closed/ikostan/SkyLockAssault?%2FSkyLockAssault?style=flat-square&label=Issues&color=green)
 ![Open Issues](https://img.shields.io/github/issues/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=red)
@@ -43,17 +46,45 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 ## Documentation
 
 1. [Guide to Implementing Versioning](/files/docs/Guide_to_Implementing_Versioning.md)
-2. [Docker Local Test Server](/files/docs/Docker_Local_Test_Server.md)
-3. [Setup Instructions](/files/docs/Setup_Instructions.md)
-4. BOTS:
+2. [Godot v4.5 Docs](https://docs.godotengine.org/en/stable/index.html)
+3. [Development Guide](files/docs/Development_Guide.md)
+4. [Docker Local Test Server](/files/docs/Docker_Local_Test_Server.md)
+5. [Setup Instructions](/files/docs/Setup_Instructions.md)
+6. [Signing Setup for GitHub Desktop](/files/docs/Signing_Setup_for_GitHub_Desktop.md)
+7. BOTS:
    - [Dependabot](https://docs.github.com/en/code-security/dependabot)
    - [Snyk](https://docs.snyk.io/)
    - [Sourcery AI](https://docs.sourcery.ai/)
    - [IMGBOT](https://imgbot.net/docs/)
    - [Release Drafter](https://github.com/release-drafter/release-drafter?tab=readme-ov-file#readme)
-5. [Signing Setup for GitHub Desktop](/files/docs/Signing_Setup_for_GitHub_Desktop.md)
+
+## Roadmap
+
+Here's a high-level plan for upcoming features. Contributions welcome!
+
+- **v0.2: Completed Foundations** - Project import, Docker local testing,
+  basic input actions, top-down movement, main menu, quit handling for browser,
+  HTML5 export and testing, GitHub Actions CI/CD to Itch.io (complete).
+- **v0.3: Expansion** - Add levels, weapons, player feedback integration.
+- **v0.4: Post-MVP Refinements** - Performance optimization, audio polish, bug fixes.
+- **v0.5: Ongoing Development** - Feedback gathering, minor updates, release tagging.
+- Future: Multiplayer elements, AI enemies, mobile export
+  (post-launch based on community input).
+
+## Contributing
+
+Pull requests welcome for mechanics like enemy AI, levels, or web optimizations!
+Fork the repo and submit your ideas. See [CONTRIBUTING](CONTRIBUTING.md) for
+guidelines (create if needed).
+
+## Player Feedback
+
+We value your input to improve Sky Lock Assault! Share your thoughts via:
+- [Itch.io Comments](https://ikostan.itch.io/sky-lock-assault) – Discuss
+  gameplay, bugs, or suggestions directly on the game's page.
 
 ### Play Instructions
+
 - **In Godot Editor**: Open the project > Press F5 to run the main scene
   (`main_menu.tscn`). Use keyboard/mouse for navigation.
 - **Local Web Testing**: After exporting to HTML5 (see Setup),
@@ -71,9 +102,15 @@ menu during play.
 ### Current features:
 
 - Main menu scene (`main_menu.tscn`) with buttons (Start, Resume, Options, Quit).
-- Placeholder game level (`game_level.tscn`) for future mechanics.
-- Add options menu with log level settings accessible from main and pause menus.
-- Implement fade-in animations for main menu UI panels
+- Placeholder game level (`main_scene.tscn`) for future mechanics and game testing.
+- Add options menu (`options_menu.tscn`) with log level settings accessible
+  from main and pause menus.
+- Add pause menu (`pause_menu.tscn`) with buttons (Main Menu, Options, Resume).
+  from main and pause menus.
+- Add Player scene (`Player.tscn`) with CharacterBody2D, ShaderBody, CollisionShape,
+  FuelTimer.
+- Implement fade-in animations for main menu UI panels.
+- Fuel system including fuel level progress bar.
 
 ### Features Roadmap
 
@@ -108,4 +145,4 @@ Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milest
 - Fork the repo and create a branch for your changes.
 - Follow GDScript best practices; test in editor and web export.
 - Open a Pull Request with details.
-- See [CONTRIBUTING.md](/CONTRIBUTING.md) for full guidelines (coming soon in #70).
+- See [CONTRIBUTING.md](/CONTRIBUTING.md) for full guidelines.

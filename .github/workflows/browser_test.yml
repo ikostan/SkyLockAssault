@@ -7,7 +7,7 @@ on:  # yamllint disable-line rule:truthy
       pw_timeout:
         description: "Playwright timeout in ms"
         required: false
-        type: number
+        type: "number"
         # Configurable timeout (ms); lower for faster CI
         default: 10000
 
@@ -16,7 +16,7 @@ jobs:
     runs-on: "ubuntu-latest"
     timeout-minutes: 25
     env:
-      PW_TIMEOUT: ${{ inputs.pw_timeout }}
+      PW_TIMEOUT: "${{ inputs.pw_timeout }}"
     steps:
       - uses: "actions/checkout@v4"
       - name: "Export Godot to Web"

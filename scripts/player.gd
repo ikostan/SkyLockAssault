@@ -1,7 +1,15 @@
 extends Node2D
 
+# Fuel color thresholds (percentages)
+const HIGH_FUEL_THRESHOLD: float = 90.0  # Starts green lerp
+const MEDIUM_FUEL_THRESHOLD: float = 50.0  # Switches to yellow lerp
+const LOW_FUEL_THRESHOLD: float = 30.0  # Switches to red lerp
+const NO_FUEL_THRESHOLD: float = 15.0  # Fully Red Color
+
 # Exported vars first (for Inspector editing)
 @export var speed: float = 300.0
+@export var max_fuel: float = 100.0
+var current_fuel: float
 
 # Regular vars for computed boundaries (no export needed if set in code)
 var player_half_width: float = 0.0
@@ -10,10 +18,19 @@ var player_x_min: float = 0.0
 var player_x_max: float = 0.0
 var player_y_min: float = 0.0
 var player_y_max: float = 0.0
+# For gradual colors shifts (e.g., green to red as fuel drops), use Color.lerp
+var lerp_factor: float
 
 # Onreadys next
 @onready var player: CharacterBody2D = $CharacterBody2D
 @onready var collision_shape: CollisionShape2D = $CharacterBody2D/CollisionShape2D
+@onready
+var fuel_bar: ProgressBar = $"../PlayerStatsPanel/VBoxContainer/HBoxContainer/FuelProgressBar"
+@onready var fuel_timer: Timer = $FuelTimer
+# Get the fill style
+@onready var fill_style: StyleBoxFlat = fuel_bar.get_theme_stylebox("fill")
+# Cached initial fill color
+@onready var progress_bar_bg_color: Color = fill_style.bg_color
 
 
 func _ready() -> void:
@@ -49,6 +66,36 @@ func _ready() -> void:
 		Globals.LogLevel.DEBUG
 	)
 
+	current_fuel = max_fuel
+	fuel_bar.value = current_fuel
+	fuel_timer.timeout.connect(_on_fuel_timer_timeout)
+	fuel_timer.start()
+
+
+# Connect Timer's timeout signal
+func _on_fuel_timer_timeout() -> void:
+	var fuel_left: float = current_fuel - 0.5
+	# Add a clamp so current_fuel never drops below zero
+	# to prevent negative values and any unintended behavior in the fuel bar.
+	current_fuel = clamp(fuel_left, 0, max_fuel)
+	fuel_bar.value = current_fuel
+	lerp_factor = 1.0 - (current_fuel / max_fuel)  # 0=full (green), 1=empty (red)
+	progress_bar_bg_color = fill_style.bg_color
+
+	if current_fuel >= MEDIUM_FUEL_THRESHOLD and current_fuel <= HIGH_FUEL_THRESHOLD:
+		fill_style.bg_color = progress_bar_bg_color.lerp(Color.GREEN, lerp_factor)
+	elif LOW_FUEL_THRESHOLD <= current_fuel and current_fuel < MEDIUM_FUEL_THRESHOLD:
+		fill_style.bg_color = progress_bar_bg_color.lerp(Color.YELLOW, lerp_factor)  # Medium-high: green
+	elif current_fuel > NO_FUEL_THRESHOLD and current_fuel < LOW_FUEL_THRESHOLD:
+		fill_style.bg_color = progress_bar_bg_color.lerp(Color.RED, lerp_factor)  # Medium-low: yellow
+	elif current_fuel <= NO_FUEL_THRESHOLD:
+		fill_style.bg_color = Color.RED  # Low: red
+
+	if current_fuel <= 0:
+		speed = 0.0  # Or game over logic
+		fuel_timer.stop()
+	Globals.log_message("Fuel left: " + str(current_fuel), Globals.LogLevel.DEBUG)
+
 
 # warning-ignore:unused_parameter
 func _physics_process(_delta: float) -> void:
@@ -71,4 +118,4 @@ func _physics_process(_delta: float) -> void:
 	player.position.y = clamp(player.position.y, player_y_min, player_y_max)
 
 	# Optional per-frame log (comment out unless debugging; it's spammy)
-	Globals.log_message("Player positioned at: " + str(player.position), Globals.LogLevel.DEBUG)
+	# Globals.log_message("Player positioned at: " + str(player.position), Globals.LogLevel.DEBUG)
