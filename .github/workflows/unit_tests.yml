@@ -19,6 +19,11 @@ jobs:
           unzip Godot_v4.5-stable_linux.x86_64.zip
           mv Godot_v4.5-stable_linux.x86_64 godot
           chmod +x godot
+      - name: "Install GDUnit4"
+        run: |
+          mkdir -p addons
+          wget https://github.com/MikeSchulze/gdUnit4/releases/download/v6.0.0/GdUnit4-v6.0.0.zip
+          unzip GdUnit4-v6.0.0.zip -d addons
       - name: "Import Resources"
         run: ./godot --headless --path . --import --quit
       - name: "Run GDUnit4 Tests"
