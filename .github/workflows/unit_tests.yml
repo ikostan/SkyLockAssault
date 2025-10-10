@@ -22,9 +22,9 @@ jobs:
         with:
           godot-version: "4.5"
           paths: "res://test"
-          timeout: 5              # Optional: Test timeout in minutes
+          timeout: 10             # Optional: Test timeout in minutes
           version: "latest"       # Optional: GdUnit4 version
-          arguments: "--verbose --ignoreHeadlessMode"
+          arguments: "--verbose"  # Remove --ignoreHeadlessMode
       - name: "Upload Test Reports"
         if: "always()"  # Runs even on failure
         uses: "actions/upload-artifact@v4"

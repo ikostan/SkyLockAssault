@@ -35,6 +35,7 @@ window/size/viewport_height=720
 window/size/resizable=false
 window/stretch/mode="canvas_items"
 window/handheld/orientation=6
+window/vsync/vsync_mode=0
 
 [editor_plugins]
 
