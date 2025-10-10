@@ -16,13 +16,21 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y xvfb
+      - name: "Install Dependencies for Xvfb and Mesa"
+        run: |
+          sudo apt update
+          sudo apt install -y xvfb libgl1-mesa-dri libgl1-mesa-glx libegl1-mesa
+      - name: "Start Xvfb"
+        run: |
+          Xvfb :99 -screen 0 1280x1024x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
       - name: "GdUnit4 - Test Runner Action"
         # yamllint disable-line rule:line-length
         uses: "MikeSchulze/gdunit4-action@a5b68eab7dd87974a2b44dc047685ff86fabfabb"  # Correct SHA for v1.1.6
         with:
           godot-version: "4.5"
           paths: "res://test"
-          timeout: 10             # Optional: Test timeout in minutes
+          timeout: 5              # Optional: Test timeout in minutes
           version: "latest"       # Optional: GdUnit4 version
           arguments: "--verbose"  # Remove --ignoreHeadlessMode
       - name: "Upload Test Reports"
