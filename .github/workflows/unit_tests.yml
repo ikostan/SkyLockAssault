@@ -12,18 +12,18 @@ jobs:
       checks: "write"  # Add this to allow check run creation
     steps:
       - uses: "actions/checkout@v5"
-      - name: "Install Xvfb"  # Manual install for virtual display
+      - name: "Install Xvfb"  # Manual install for virtual display (optional for now)
         run: |
           sudo apt update
           sudo apt install -y xvfb
-      - name: "Install Dependencies for Xvfb and Mesa"
+      - name: "Download Godot Binary"
         run: |
-          sudo apt update
-          sudo apt install -y xvfb libgl1-mesa-dri libgl1-mesa-glx libegl1-mesa
-      - name: "Start Xvfb"
-        run: |
-          Xvfb :99 -screen 0 1280x1024x24 &
-          echo "DISPLAY=:99" >> $GITHUB_ENV
+          wget https://downloads.tuxfamily.org/godotengine/4.5/Godot_v4.5-stable_linux.x86_64.zip
+          unzip Godot_v4.5-stable_linux.x86_64.zip
+          mv Godot_v4.5-stable_linux.x86_64 godot
+          chmod +x godot
+      - name: "Import Resources"
+        run: ./godot --headless --path . --import --quit
       - name: "GdUnit4 - Test Runner Action"
         # yamllint disable-line rule:line-length
         uses: "MikeSchulze/gdunit4-action@a5b68eab7dd87974a2b44dc047685ff86fabfabb"  # Correct SHA for v1.1.6
@@ -32,7 +32,7 @@ jobs:
           paths: "res://test"
           timeout: 5              # Optional: Test timeout in minutes
           version: "latest"       # Optional: GdUnit4 version
-          arguments: "--verbose"  # Remove --ignoreHeadlessMode
+          arguments: "--verbose --ignoreHeadlessMode"
       - name: "Upload Test Reports"
         if: "always()"  # Runs even on failure
         uses: "actions/upload-artifact@v4"
