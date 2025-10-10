@@ -7,7 +7,7 @@ const LOW_FUEL_THRESHOLD: float = 30.0  # Switches to red lerp
 const NO_FUEL_THRESHOLD: float = 15.0  # Fully Red Color
 
 # Exported vars first (for Inspector editing)
-@export var speed: float = 300.0
+@export var speed: float = 250.0
 @export var max_fuel: float = 100.0
 var current_fuel: float
 
@@ -43,8 +43,9 @@ func _ready() -> void:
 		player_half_width = collision_shape.shape.extents.x * abs(collision_shape.scale.x)
 		player_half_height = collision_shape.shape.extents.y * abs(collision_shape.scale.y)
 	else:
-		Globals.log_message("Warning: Using fallback size—check collision shape type.", 
-							Globals.LogLevel.WARNING)
+		Globals.log_message(
+			"Warning: Using fallback size—check collision shape type.", Globals.LogLevel.WARNING
+		)
 		player_half_width = 12.0  # Default guess; adjust based on your sprite
 		player_half_height = 12.0
 
@@ -76,7 +77,7 @@ func _ready() -> void:
 	fuel_timer.timeout.connect(_on_fuel_timer_timeout)
 	fuel_timer.start()
 	# Assumes child named "Weapon"; use get_node("Path/To/Weapon") if nested
-	weapons.append($Weapon)  
+	weapons.append($CharacterBody2D/Weapon)
 
 
 # Choose a diferent weapon
@@ -124,11 +125,10 @@ func _physics_process(_delta: float) -> void:
 	else:
 		player.velocity = Vector2.ZERO
 	player.move_and_slide()
-	global_position = player.global_position
-	
-	for weapon in weapons:
-		weapon.global_position = global_position  # Sync position
-		weapon.global_rotation = global_rotation  # Sync (fixed)
+
+	#for weapon in weapons:
+	#	weapon.global_position = global_position  # Sync position
+	#	weapon.global_rotation = global_rotation  # Sync (fixed)
 
 	# Get fresh screen_size each frame (handles resizes)
 	var screen_size: Vector2 = get_viewport_rect().size
@@ -138,4 +138,8 @@ func _physics_process(_delta: float) -> void:
 	player.position.y = clamp(player.position.y, player_y_min, player_y_max)
 
 	# Optional per-frame log (comment out unless debugging; it's spammy)
-	Globals.log_message("Player positioned at: " + str(player.position), Globals.LogLevel.DEBUG)
+	#Globals.log_message("Player positioned at: " + str(player.position), Globals.LogLevel.DEBUG)
+	Globals.log_message(
+		"Root global: " + str(global_position) + ", Child global: " + str(player.global_position),
+		Globals.LogLevel.DEBUG
+	)

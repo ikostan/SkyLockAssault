@@ -6,13 +6,13 @@ extends RigidBody2D
 
 @onready var area: Area2D = $Area2D
 
+
 func _ready() -> void:
 	gravity_scale = 0.0  # No gravity—constant upward speed
 	linear_velocity = Vector2(0, -speed)
 	if area:
 		area.connect("area_entered", _on_hit)
 	get_tree().create_timer(lifetime).timeout.connect(queue_free)
-	
 
 
 func _on_hit(body: Node2D) -> void:

@@ -112,6 +112,7 @@ menu during play.
   FuelTimer.
 - Implement fade-in animations for main menu UI panels.
 - Fuel system including fuel level progress bar.
+- Basic weapon system.
 
 ### Features Roadmap
 

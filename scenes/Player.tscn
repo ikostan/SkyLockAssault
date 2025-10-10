@@ -12,6 +12,8 @@ script = ExtResource("1_v6fml")
 
 [node name="CharacterBody2D" type="CharacterBody2D" parent="."]
 
+[node name="Weapon" parent="CharacterBody2D" instance=ExtResource("3_qhqgy")]
+
 [node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D"]
 position = Vector2(1, 2)
 texture = ExtResource("1_p0vlq")
@@ -25,5 +27,3 @@ shape = SubResource("RectangleShape2D_5q5h1")
 [node name="FuelTimer" type="Timer" parent="."]
 process_callback = 0
 autostart = true
-
-[node name="Weapon" parent="." instance=ExtResource("3_qhqgy")]
