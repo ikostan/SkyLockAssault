@@ -21,6 +21,10 @@ var player_y_max: float = 0.0
 # For gradual colors shifts (e.g., green to red as fuel drops), use Color.lerp
 var lerp_factor: float
 
+# Weapon system
+var weapons: Array[Node] = []  # Fill in editor or _ready
+var current_weapon: int = 0
+
 # Onreadys next
 @onready var player: CharacterBody2D = $CharacterBody2D
 @onready var collision_shape: CollisionShape2D = $CharacterBody2D/CollisionShape2D
@@ -39,7 +43,8 @@ func _ready() -> void:
 		player_half_width = collision_shape.shape.extents.x * abs(collision_shape.scale.x)
 		player_half_height = collision_shape.shape.extents.y * abs(collision_shape.scale.y)
 	else:
-		print("Warning: Using fallback size—check collision shape type.")
+		Globals.log_message("Warning: Using fallback size—check collision shape type.", 
+							Globals.LogLevel.WARNING)
 		player_half_width = 12.0  # Default guess; adjust based on your sprite
 		player_half_height = 12.0
 
@@ -70,6 +75,16 @@ func _ready() -> void:
 	fuel_bar.value = current_fuel
 	fuel_timer.timeout.connect(_on_fuel_timer_timeout)
 	fuel_timer.start()
+	# Assumes child named "Weapon"; use get_node("Path/To/Weapon") if nested
+	weapons.append($Weapon)  
+
+
+# Choose a diferent weapon
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("next_weapon"):
+		current_weapon = (current_weapon + 1) % weapons.size()
+		for i in weapons.size():
+			weapons[i].visible = (i == current_weapon)
 
 
 # Connect Timer's timeout signal
@@ -109,6 +124,11 @@ func _physics_process(_delta: float) -> void:
 	else:
 		player.velocity = Vector2.ZERO
 	player.move_and_slide()
+	global_position = player.global_position
+	
+	for weapon in weapons:
+		weapon.global_position = global_position  # Sync position
+		weapon.global_rotation = global_rotation  # Sync (fixed)
 
 	# Get fresh screen_size each frame (handles resizes)
 	var screen_size: Vector2 = get_viewport_rect().size
@@ -118,4 +138,4 @@ func _physics_process(_delta: float) -> void:
 	player.position.y = clamp(player.position.y, player_y_min, player_y_max)
 
 	# Optional per-frame log (comment out unless debugging; it's spammy)
-	# Globals.log_message("Player positioned at: " + str(player.position), Globals.LogLevel.DEBUG)
+	Globals.log_message("Player positioned at: " + str(player.position), Globals.LogLevel.DEBUG)

@@ -6,10 +6,10 @@ func test_bullet_movement() -> void:
 	var bullet: = bullet_scene.instantiate()
 	get_tree().current_scene.add_child(bullet)
 	bullet.global_position = Vector2.ZERO
-	bullet.global_rotation = 0  # Rightward
-	await get_tree().physics_frame  # Initial frame
-	await get_tree().create_timer(0.1).timeout  # Allow 0.1s for movement (~80 units at 800 speed)
-	assert_float(bullet.global_position.x).is_greater(0.0).with_margin(70.0)  # ~80 units with tolerance
+	bullet.global_rotation = -PI / 2  # If needed for sprite
+	await get_tree().physics_frame
+	await get_tree().create_timer(0.1).timeout  # ~80 units up
+	assert_float(bullet.global_position.y).is_equal_approx(-80.0, 10.0)  # Negative y = up
 	bullet.queue_free()
 
 func test_bullet_collision() -> void:
@@ -22,6 +22,8 @@ func test_bullet_collision() -> void:
 	var dummy: Node2D = Node2D.new()
 	var script: = GDScript.new()
 	script.source_code = """
+extends Node2D
+
 func take_damage(d: int) -> void:
     pass
     """
