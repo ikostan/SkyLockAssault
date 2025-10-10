@@ -12,28 +12,17 @@ jobs:
       checks: "write"  # Add this to allow check run creation
     steps:
       - uses: "actions/checkout@v5"
-      - name: "Install Xvfb"  # Manual install for virtual display (optional for now)
-        run: |
-          sudo apt update
-          sudo apt install -y xvfb
       - name: "Download Godot Binary"
         # yamllint disable-line rule:line-length
         run: |
-            wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
-            unzip Godot_v4.5-stable_linux.x86_64.zip
-            mv Godot_v4.5-stable_linux.x86_64 godot
-            chmod +x godot
+          wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
+          unzip Godot_v4.5-stable_linux.x86_64.zip
+          mv Godot_v4.5-stable_linux.x86_64 godot
+          chmod +x godot
       - name: "Import Resources"
         run: ./godot --headless --path . --import --quit
-      - name: "GdUnit4 - Test Runner Action"
-        # yamllint disable-line rule:line-length
-        uses: "MikeSchulze/gdunit4-action@a5b68eab7dd87974a2b44dc047685ff86fabfabb"  # Correct SHA for v1.1.6
-        with:
-          godot-version: "4.5"
-          paths: "res://test"
-          timeout: 5              # Optional: Test timeout in minutes
-          version: "latest"       # Optional: GdUnit4 version
-          arguments: "--verbose --ignoreHeadlessMode"
+      - name: "Run GDUnit4 Tests"
+        run: ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --verbose --ignoreHeadlessMode
       - name: "Upload Test Reports"
         if: "always()"  # Runs even on failure
         uses: "actions/upload-artifact@v4"
