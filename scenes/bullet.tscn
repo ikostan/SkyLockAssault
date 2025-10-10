@@ -1,0 +1,22 @@
+[gd_scene load_steps=5 format=3 uid="uid://blc0ioe12jlnk"]
+
+[ext_resource type="Script" uid="uid://uyw8e8i6adxn" path="res://scripts/bullet.gd" id="1_mkf8s"]
+[ext_resource type="Texture2D" uid="uid://b7utqr70u1mex" path="res://files/sprite/laser_sprites/01.png" id="2_y25gk"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_y25gk"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_mkf8s"]
+
+[node name="BulletRigidBody2D" type="RigidBody2D"]
+script = ExtResource("1_mkf8s")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_y25gk")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_y25gk")
+
+[node name="Area2D" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+shape = SubResource("CircleShape2D_mkf8s")

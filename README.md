@@ -42,6 +42,7 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 
 - [Empire State Font](https://www.dafont.com/empire-state.font?l[]=10&l[]=1)
 - [Pixel Planes Assets Pack](https://clavs.itch.io/pixel-planes-assets-pack)
+- [Assets Free Laser Bullets Pack 2020](https://wenrexa.itch.io/laser2020)
 
 ## Documentation
 
@@ -111,6 +112,7 @@ menu during play.
   FuelTimer.
 - Implement fade-in animations for main menu UI panels.
 - Fuel system including fuel level progress bar.
+- Basic weapon system.
 
 ### Features Roadmap
 
