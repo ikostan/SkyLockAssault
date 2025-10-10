@@ -16,7 +16,7 @@ extends Node2D
 
 func take_damage(d: int) -> void:
     pass
-    """
+	"""
 	script.reload()
 	dummy.set_script(script)
 	bullet.get_node("Area2D").area_entered.emit(dummy)
