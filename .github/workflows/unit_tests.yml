@@ -24,7 +24,8 @@ jobs:
           mkdir -p addons
           wget https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.0.0.zip
           unzip v6.0.0.zip -d addons
-          mv addons/gdUnit4-6.0.0 addons/gdUnit4
+          mv addons/gdUnit4-6.0.0/addons/gdUnit4 addons/gdUnit4
+          rm -rf addons/gdUnit4-6.0.0  # Optional cleanup
       - name: "Import Resources"
         run: ./godot --headless --path . --import --quit
       - name: "Run GDUnit4 Tests"
