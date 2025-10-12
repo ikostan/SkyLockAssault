@@ -84,7 +84,7 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("next_weapon"):
 		current_weapon = (current_weapon + 1) % weapons.size()
-		for i in weapons.size():
+		for i in range(weapons.size()):
 			weapons[i].visible = (i == current_weapon)
 
 
@@ -120,15 +120,9 @@ func _physics_process(_delta: float) -> void:
 	)
 	if direction != Vector2.ZERO:
 		player.velocity = direction * speed
-		# Optional: Add rotation for facing (uncomment for top-down airplane feel)
-		# player.rotation = direction.angle()
 	else:
 		player.velocity = Vector2.ZERO
 	player.move_and_slide()
-
-	#for weapon in weapons:
-	#	weapon.global_position = global_position  # Sync position
-	#	weapon.global_rotation = global_rotation  # Sync (fixed)
 
 	# Get fresh screen_size each frame (handles resizes)
 	var screen_size: Vector2 = get_viewport_rect().size
