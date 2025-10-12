@@ -5,6 +5,7 @@ extends Node
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 @export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
 @export var enable_debug_logging: bool = false  # Toggle in Inspector or settings
+@export var difficulty: float = 1.0  # Multiplier: 1.0=Normal, <1=Easy, >1=Hard
 
 # In globals.gd (add after @export vars)
 var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
@@ -30,6 +31,9 @@ func _load_settings() -> void:
 		log_message("Loaded saved log level: " + LogLevel.keys()[current_log_level], LogLevel.INFO)
 	else:
 		log_message("No saved settings found—using default.", LogLevel.DEBUG)
+		
+	difficulty = config.get_value("Settings", "difficulty", 1.0)
+	log_message("Loaded saved difficulty: " + str(difficulty), LogLevel.INFO)
 
 
 # In globals.gd (load_options())
