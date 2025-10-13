@@ -113,6 +113,7 @@ menu during play.
 - Implement fade-in animations for main menu UI panels.
 - Fuel system including fuel level progress bar.
 - Basic weapon system.
+- Difficulty settings.
 
 ### Features Roadmap
 
