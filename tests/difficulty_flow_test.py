@@ -1,29 +1,39 @@
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 
 
-def run(playwright):
+def difficulty_flow_test(playwright):
     browser = playwright.chromium.launch(headless=False)
     page = browser.new_page()
-    page.goto("https://ikostan.itch.io/sky-lock-assault")  # Or local export URL
+    logs = []
+    page.on("console", lambda msg: logs.append(msg.text))
 
-    # Open options from main menu, set difficulty to 2.0
-    page.wait_for_selector("button:text('Options')")
-    page.click("button:text('Options')")
-    slider = page.locator("#difficulty-slider")  # Add id in scene if needed
-    slider.drag_to(slider, target_position={"x": 200, "y": 0})  # To max (2.0)
-    page.click("button:text('Back')")
+    page.goto("https://ikostan.itch.io/sky-lock-assault")
+    page.wait_for_timeout(2000)
 
-    # Start game, enter level
-    page.click("button:text('Start')")
-    page.wait_for_selector("#player")  # Assume player element in level
+    canvas = page.locator("canvas")
+    box = canvas.bounding_box()
 
-    # Simulate firing (if input mappable) and check cooldown via logs or timing
-    # For simplicity: Wait and check if firing feels slower (manual inspect or add debug)
-    page.keyboard.press("Space")  # Assume 'fire' action
-    print("Inspect browser console for scaled cooldown log >0.5")
+    # Open options, drag slider to 2.0 (full right drag ~200px)
+    page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.8)  # Options
+    slider_x = box['x'] + box['width'] / 2
+    slider_y = box['y'] + box['height'] / 2
+    page.mouse.move(slider_x, slider_y)
+    page.mouse.down()
+    page.mouse.move(slider_x + 200, slider_y)  # To max (2.0)
+    page.mouse.up()
+    assert any("Difficulty changed to: 2.0" in log for log in logs), "Expected change to 2.0"
+
+    # Back, start game
+    page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.9)  # Back
+    page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.7)  # Start (adjust pos)
+
+    # Wait for level load, simulate fire (Space)
+    page.wait_for_timeout(2000)
+    page.keyboard.press("Space")
+    assert any("Firing with scaled cooldown: 1.0" in log for log in logs), "Expected doubled cooldown (1.0)"
 
     browser.close()
 
 
 with sync_playwright() as playwright:
-    run(playwright)
+    difficulty_flow_test(playwright)

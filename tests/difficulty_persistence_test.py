@@ -1,36 +1,53 @@
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 
 
-def run(playwright):
-    browser = playwright.chromium.launch(headless=False)  # Or True for CI
+def difficulty_persistence_test(playwright):
+    browser = playwright.chromium.launch(headless=False)  # True for CI
     page = browser.new_page()
+    logs = []  # New: Collect console logs
+    page.on("console", lambda msg: logs.append(msg.text))  # Capture all logs
 
-    # Navigate to your itch.io game URL
+    # Navigate to itch.io game URL (or local: "http://localhost:8000/index.html")
     page.goto("https://ikostan.itch.io/sky-lock-assault")
 
-    # Assume game loads; wait for options button (adapt selectors to your UI)
-    page.wait_for_selector("button:text('Options')")  # Use actual selector
-    page.click("button:text('Options')")
+    # Wait for game load (e.g., title or log)
+    page.wait_for_timeout(2000)  # Adjust for load time
 
-    # Check initial slider value (assume label shows value)
-    initial_value = page.inner_text("#difficulty-label")  # Adapt ID/class
-    assert initial_value == "1.0", f"Expected default 1.0, got {initial_value}"
+    # Find canvas for interactions
+    canvas = page.locator("canvas")
+    box = canvas.bounding_box()  # Get position/size for relative clicks/drags
 
-    # Change slider to 1.5 (drag or set value)
-    slider = page.locator("#difficulty-slider")
-    slider.drag_to(slider, target_position={"x": 150, "y": 0})  # Adjust based on range
-    new_value = page.inner_text("#difficulty-label")
-    assert new_value == "1.5", f"Expected 1.5 after change, got {new_value}"
+    # Simulate click on "Options" button (assume position; test manually first)
+    # Learning: Use dev tools to find approx % positions (e.g., Options at center-bottom)
+    page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.8)  # Adjust coords
 
-    # Close options and reload page to test persistence (user:// in web is localStorage)
-    page.click("button:text('Back')")
+    # Check initial difficulty via log (after load)
+    assert any("Loaded saved difficulty: 1.0" in log for log in logs), "Expected default 1.0 load"
+
+    # Drag slider to 1.5 (assume horizontal slider at mid-screen; drag right 150px)
+    slider_x = box['x'] + box['width'] / 2
+    slider_y = box['y'] + box['height'] / 2  # Assume mid-y
+    page.mouse.move(slider_x, slider_y)
+    page.mouse.down()
+    page.mouse.move(slider_x + 150, slider_y)  # Drag for ~0.5 increase (calibrate range: 0.5-2.0 over ~300px)
+    page.mouse.up()
+
+    # Assert change via log
+    assert any("Difficulty changed to: 1.5" in log for log in logs), "Expected change to 1.5"
+
+    # Close options (click "Back" position)
+    page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.9)  # Adjust
+
+    # Reload and reopen options
     page.reload()
-    page.click("button:text('Options')")
-    reloaded_value = page.inner_text("#difficulty-label")
-    assert reloaded_value == "1.5", f"Expected persisted 1.5, got {reloaded_value}"
+    page.wait_for_timeout(2000)
+    page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.8)  # Reopen
+
+    # Assert persistence via log
+    assert any("Loaded saved difficulty: 1.5" in log for log in logs), "Expected persisted 1.5"
 
     browser.close()
 
 
 with sync_playwright() as playwright:
-    run(playwright)
+    difficulty_persistence_test(playwright)
