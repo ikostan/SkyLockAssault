@@ -71,7 +71,7 @@ func _on_difficulty_changed(value: float) -> void:
 	Globals.difficulty = value
 	difficulty_label.text = "{" + str(value) + "}"
 	Globals.log_message("Difficulty changed to: " + str(value), Globals.LogLevel.INFO)
-	_save_settings()
+	Globals._save_settings()
 
 
 # Handles log level selection change
@@ -83,16 +83,16 @@ func _on_log_selected(index: int) -> void:
 	Globals.current_log_level = selected_enum
 	# May skip if new level high
 	Globals.log_message("Log level changed to: " + selected_name, Globals.LogLevel.INFO)
-	_save_settings()
+	Globals._save_settings()
 
 
 # Saves settings to file (call from here or Globals as needed)
-func _save_settings() -> void:
-	var config: ConfigFile = ConfigFile.new()
-	config.set_value("Settings", "log_level", Globals.current_log_level)
-	config.set_value("Settings", "difficulty", Globals.difficulty)  # New: Save difficulty
-	config.save("user://settings.cfg")  # Web-safe path
-	Globals.log_message("Settings saved.", Globals.LogLevel.DEBUG)
+#func _save_settings() -> void:
+#	var config: ConfigFile = ConfigFile.new()
+#	config.set_value("Settings", "log_level", Globals.current_log_level)
+#	config.set_value("Settings", "difficulty", Globals.difficulty)  # New: Save difficulty
+#	config.save("user://settings.cfg")  # Web-safe path
+#	Globals.log_message("Settings saved.", Globals.LogLevel.DEBUG)
 
 
 # Handles Back button: Return to main menu

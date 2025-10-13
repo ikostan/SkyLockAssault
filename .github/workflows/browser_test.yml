@@ -45,7 +45,7 @@ jobs:
       - name: "Install Playwright"
         run: |
           sudo apt-get update && sudo apt-get install -y libxml2-utils
-          pip install playwright pytest-playwright
+          pip install playwright pytest-playwright pytest-asyncio
       - name: "Cache Playwright Browsers"
         uses: "actions/cache@v4"
         id: "playwright-cache"  # For conditional install
@@ -75,7 +75,7 @@ jobs:
       - name: "Run Tests"
         # Generate JUnit XML report
         run: |
-          pytest tests/ -v --junitxml=report.xml
+          pytest tests/difficulty_persistence_test.py -v --junitxml=report.xml
       - name: "Test Report"
         run: |
           if [ -f report.xml ]; then

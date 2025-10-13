@@ -43,6 +43,15 @@ func _load_settings() -> void:
 		log_message("No saved settings found—using default.", LogLevel.DEBUG)
 
 
+# New: Add _save_settings to globals.gd (move from options_menu.gd if needed)
+func _save_settings() -> void:
+	var config: ConfigFile = ConfigFile.new()
+	config.set_value("Settings", "log_level", current_log_level)
+	config.set_value("Settings", "difficulty", difficulty)
+	config.save("user://settings.cfg")
+	log_message("Settings saved.", LogLevel.DEBUG)
+
+
 # In globals.gd (load_options())
 func load_options() -> void:
 	log_message("Instancing options menu over current scene.", LogLevel.DEBUG)
