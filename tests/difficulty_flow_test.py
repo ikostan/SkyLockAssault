@@ -2,12 +2,12 @@ from playwright.sync_api import sync_playwright, expect
 
 
 def difficulty_flow_test(playwright):
-    browser = playwright.chromium.launch(headless=False)
+    browser = playwright.chromium.launch(headless=True)
     page = browser.new_page()
     logs = []
     page.on("console", lambda msg: logs.append(msg.text))
 
-    page.goto("https://ikostan.itch.io/sky-lock-assault")
+    page.goto("http://localhost:8080/index.html")
     page.wait_for_timeout(2000)
 
     canvas = page.locator("canvas")
