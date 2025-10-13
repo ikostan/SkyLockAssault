@@ -29,7 +29,8 @@ func _fire() -> void:
 
 	var bullet := bullet_scene.instantiate()
 	bullet.add_to_group("bullets")
-	get_tree().root.add_child(bullet)  # Updated: Use root instead of current_scene for reliability in tests/CI
+	# Updated: Use root instead of current_scene for reliability in tests/CI
+	get_tree().root.add_child(bullet)
 	bullet.global_position = global_position + muzzle_offset  # Fixed offset, no rotate
 	bullet.global_rotation = -PI / 2  # Point bullet up if sprite needs it
 	Globals.log_message(
