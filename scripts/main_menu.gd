@@ -23,11 +23,16 @@ var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 # Initializes button signals and quit dialog connections.
 func _ready() -> void:
 	Globals.log_message("Initializing main menu...", Globals.LogLevel.DEBUG)
-
-	@warning_ignore("return_value_discarded") start_button.pressed.connect(_on_start_pressed)
+	# Connect START button signal
+	@warning_ignore("return_value_discarded")
+	start_button.pressed.connect(_on_start_pressed)
+	# Connect OPTIONS button signal
 	@warning_ignore("return_value_discarded")
 	options_button.pressed.connect(_on_options_button_pressed)
-	@warning_ignore("return_value_discarded") quit_button.pressed.connect(_on_quit_pressed)
+	# Connect QUIT button signal
+	@warning_ignore("return_value_discarded")
+	quit_button.pressed.connect(_on_quit_pressed)
+
 	setup_quit_dialog()  # New: Handles dialog setup in one place
 	# assert(quit_dialog != null, "QuitDialog must be assigned!")
 	# Hide UI initially (buttons and dialog won't show right away)
