@@ -31,7 +31,7 @@ func _ready() -> void:
 	options_button.pressed.connect(_on_options_button_pressed)
 	# Connect QUIT button signal
 	@warning_ignore("return_value_discarded")
- 	quit_button.pressed.connect(_on_quit_pressed)
+	quit_button.pressed.connect(_on_quit_pressed)
 
 	setup_quit_dialog()  # New: Handles dialog setup in one place
 	# assert(quit_dialog != null, "QuitDialog must be assigned!")
