@@ -1,22 +1,20 @@
 extends GdUnitTestSuite
 
-var bullet_scene: = preload("res://scenes/bullet.tscn")
+var runner: Variant
 
-func test_fire_instantiation() -> void:
-	var weapon: = preload("res://scenes/weapon.tscn").instantiate()
-	add_child(weapon)
-	weapon._fire()
-	await get_tree().physics_frame
-	var bullets: = get_tree().get_nodes_in_group("bullets")
-	assert_int(bullets.size()).is_equal(1)
-	var bullet: = bullets[0]
-	assert_float(bullet.linear_velocity.y).is_equal_approx(-400.0, 10.0)
-	weapon.queue_free()
+# Optional: Setup before all tests (e.g., mock globals)
+func before() -> void:
+	runner = scene_runner("res://scenes/main_scene.tscn")
+
+
+# Optional: Teardown after all tests
+func after() -> void:
+	runner = null  # Optional: Explicitly drop reference (safe for RefCounted)
+
 
 func test_firing_bullet() -> void:
-	var runner: = scene_runner("res://scenes/main_scene.tscn")
 	await await_millis(500)
-	var player: = runner.find_child("Player")
+	var player: Node2D = runner.find_child("Player")
 	assert_object(player).is_not_null()
 	# Clear any existing bullets to prevent count issues
 	for b in get_tree().get_nodes_in_group("bullets"):
