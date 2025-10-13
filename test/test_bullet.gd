@@ -21,7 +21,7 @@ extends Node2D
 
 func take_damage(d: int) -> void:
     pass
-    """
+	"""
 	script.reload()
 	dummy.set_script(script)
 	

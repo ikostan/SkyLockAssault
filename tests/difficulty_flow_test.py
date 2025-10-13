@@ -1,9 +1,18 @@
 from playwright.sync_api import sync_playwright, expect
+import pytest
 
 
-def difficulty_flow_test(playwright):
-    browser = playwright.chromium.launch(headless=True)
-    page = browser.new_page()
+@pytest.fixture(scope="function")
+def page_fixture():
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page()
+        yield page
+        browser.close()
+
+
+def test_difficulty_flow(page_fixture):
+    page = page_fixture
     logs = []
     page.on("console", lambda msg: logs.append(msg.text))
 
@@ -31,9 +40,3 @@ def difficulty_flow_test(playwright):
     page.wait_for_timeout(2000)
     page.keyboard.press("Space")
     assert any("Firing with scaled cooldown: 1.0" in log for log in logs), "Expected doubled cooldown (1.0)"
-
-    browser.close()
-
-
-with sync_playwright() as playwright:
-    difficulty_flow_test(playwright)

@@ -1,13 +1,22 @@
 from playwright.sync_api import sync_playwright, expect
+import pytest
 
 
-def difficulty_persistence_test(playwright):
-    browser = playwright.chromium.launch(headless=True)  # True for CI
-    page = browser.new_page()
-    logs = []  # New: Collect console logs
+@pytest.fixture(scope="function")
+def page_fixture():
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page()
+        yield page
+        browser.close()
+
+
+def test_difficulty_persistence(page_fixture):
+    page = page_fixture
+    logs = []  # Collect console logs
     page.on("console", lambda msg: logs.append(msg.text))  # Capture all logs
 
-    # Navigate to itch.io game URL (or local: "http://localhost:8000/index.html")
+    # Navigate to local export URL (CI uses http://localhost:8080/index.html)
     page.goto("http://localhost:8080/index.html")
 
     # Wait for game load (e.g., title or log)
@@ -19,7 +28,7 @@ def difficulty_persistence_test(playwright):
 
     # Simulate click on "Options" button (assume position; test manually first)
     # Learning: Use dev tools to find approx % positions (e.g., Options at center-bottom)
-    page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.8)
+    page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.8)  # Adjust coords
 
     # Check initial difficulty via log (after load)
     assert any("Loaded saved difficulty: 1.0" in log for log in logs), "Expected default 1.0 load"
@@ -29,8 +38,9 @@ def difficulty_persistence_test(playwright):
     slider_y = box['y'] + box['height'] / 2  # Assume mid-y
     page.mouse.move(slider_x, slider_y)
     page.mouse.down()
-    # Drag for ~0.5 increase (calibrate range: 0.5-2.0 over ~300px)
-    page.mouse.move(slider_x + 150, slider_y)
+    page.mouse.move(slider_x + 150, slider_y)  # Drag for ~0.5 increase (calibrate range: 0.5-2.0 over ~300px)
+    page.mouse.up()
+
     # Assert change via log
     assert any("Difficulty changed to: 1.5" in log for log in logs), "Expected change to 1.5"
 
@@ -44,9 +54,3 @@ def difficulty_persistence_test(playwright):
 
     # Assert persistence via log
     assert any("Loaded saved difficulty: 1.5" in log for log in logs), "Expected persisted 1.5"
-
-    browser.close()
-
-
-with sync_playwright() as playwright:
-    difficulty_persistence_test(playwright)

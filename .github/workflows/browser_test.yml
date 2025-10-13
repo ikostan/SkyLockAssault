@@ -76,9 +76,6 @@ jobs:
         # Generate JUnit XML report
         run: |
           pytest tests/ -v --junitxml=report.xml
-      - name: "Console summary report"
-        # parses XML for pass/fail counts
-        run: |
           if [ -f report.xml ]; then
             total=$(xmllint --xpath 'count(//testcase)' report.xml)
             failures=$(xmllint --xpath 'count(//testcase/failure)' report.xml)
