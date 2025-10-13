@@ -23,7 +23,8 @@ func _ready() -> void:
 
 
 # Add these new functions (for consistency with log level persistence)
-func _load_settings(config: ConfigFile = ConfigFile.new()) -> void:  # New: Optional param (default new; fixes error)
+# New: Optional param (default new; fixes error)
+func _load_settings(config: ConfigFile = ConfigFile.new()) -> void:
 	var err := config.load("user://settings.cfg")
 	if err == OK:
 		current_log_level = config.get_value("Settings", "log_level", LogLevel.INFO)
