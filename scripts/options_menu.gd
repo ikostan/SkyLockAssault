@@ -35,17 +35,28 @@ func _ready() -> void:
 	# Connect signals
 	log_lvl_option.item_selected.connect(_on_log_selected)
 	back_button.pressed.connect(_on_back_pressed)
-	
+
 	# Difficulty level setup
 	if difficulty_slider:
 		difficulty_slider.min_value = 0.5  # Easy
 		difficulty_slider.max_value = 2.0  # Hard
 		difficulty_slider.step = 0.1
 		difficulty_slider.value = Globals.difficulty  # Load current
-		difficulty_label.text = "{" + str(Globals.difficulty) + "}"
+
+		if !difficulty_label:
+			Globals.log_message(
+				"Difficulty label node not found! Using fallback label.", Globals.LogLevel.WARNING
+			)
+			difficulty_label = Label.new()
+			difficulty_label.text = "N/A"
+		else:
+			difficulty_label.text = "{" + str(Globals.difficulty) + "}"
+
 		difficulty_slider.value_changed.connect(_on_difficulty_changed)
 	else:
-		Globals.log_message("Warning: DifficultySlider not found in options menu.", Globals.LogLevel.WARNING)
+		Globals.log_message(
+			"Warning: DifficultySlider not found in options menu.", Globals.LogLevel.WARNING
+		)
 
 	# In options_menu.gd (_ready()—add at end)
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignores pause for this node/tree
@@ -61,6 +72,7 @@ func _on_difficulty_changed(value: float) -> void:
 	difficulty_label.text = "{" + str(value) + "}"
 	Globals.log_message("Difficulty changed to: " + str(value), Globals.LogLevel.INFO)
 	_save_settings()
+
 
 # Handles log level selection change
 func _on_log_selected(index: int) -> void:

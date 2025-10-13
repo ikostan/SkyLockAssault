@@ -22,18 +22,25 @@ func _ready() -> void:
 	_load_settings()  # If not already; loads log level and could expand for more
 
 
-# Add these new functions (for consistency with log level persistence)
+# Add these new functions (for consistency with log level and difficulty persistence)
 func _load_settings() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	var err := config.load("user://settings.cfg")
 	if err == OK:
 		current_log_level = config.get_value("Settings", "log_level", LogLevel.INFO)
 		log_message("Loaded saved log level: " + LogLevel.keys()[current_log_level], LogLevel.INFO)
+
+		difficulty = config.get_value("Settings", "difficulty", 1.0)
+		# New: Validate and clamp difficulty to slider range (0.5-2.0)
+		if difficulty < 0.5 or difficulty > 2.0:
+			log_message(
+				"Invalid difficulty loaded (" + str(difficulty) + ")—clamping to valid range.",
+				LogLevel.WARNING
+			)
+			difficulty = clamp(difficulty, 0.5, 2.0)
+		log_message("Loaded saved difficulty: " + str(difficulty), LogLevel.INFO)
 	else:
 		log_message("No saved settings found—using default.", LogLevel.DEBUG)
-		
-	difficulty = config.get_value("Settings", "difficulty", 1.0)
-	log_message("Loaded saved difficulty: " + str(difficulty), LogLevel.INFO)
 
 
 # In globals.gd (load_options())
