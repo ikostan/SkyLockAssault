@@ -22,7 +22,10 @@ func _input(event: InputEvent) -> void:
 
 func _fire() -> void:
 	can_fire = false
-	timer.start(fire_rate)
+	# New: Scale cooldown with difficulty (longer wait if >1.0)
+	var scaled_rate: float = fire_rate * Globals.difficulty
+	timer.start(scaled_rate)
+	Globals.log_message("Firing with scaled cooldown: " + str(scaled_rate), Globals.LogLevel.DEBUG)
 
 	var bullet := bullet_scene.instantiate()
 	bullet.add_to_group("bullets")
