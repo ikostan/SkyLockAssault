@@ -28,11 +28,14 @@ func _load_settings(config: ConfigFile = ConfigFile.new()) -> void:  # New: Opti
 	if err == OK:
 		current_log_level = config.get_value("Settings", "log_level", LogLevel.INFO)
 		log_message("Loaded saved log level: " + LogLevel.keys()[current_log_level], LogLevel.INFO)
-		
+
 		difficulty = config.get_value("Settings", "difficulty", 1.0)
 		# New: Validate and clamp difficulty to slider range (0.5-2.0)
 		if difficulty < 0.5 or difficulty > 2.0:
-			log_message("Invalid difficulty loaded (" + str(difficulty) + ")—clamping to valid range.", LogLevel.WARNING)
+			log_message(
+				"Invalid difficulty loaded (" + str(difficulty) + ")—clamping to valid range.",
+				LogLevel.WARNING
+			)
 			difficulty = clamp(difficulty, 0.5, 2.0)
 		log_message("Loaded saved difficulty: " + str(difficulty), LogLevel.INFO)
 	else:
