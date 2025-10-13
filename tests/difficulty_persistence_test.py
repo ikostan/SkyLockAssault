@@ -8,9 +8,13 @@ async def test_difficulty_persistence():
         browser = await playwright.chromium.launch(headless=True)
         page = await browser.new_page()
         logs = []  # Collect console logs
-        
-        def handle(msg):
-            logs.append(await msg.text)
+
+        async def handle(msg):
+            try:
+                logs.append(await msg.text())  # Await text async
+            except Exception as exc:
+                pass  # Ignore non-text msgs
+
         page.on("console", handle)
 
         await page.goto("http://localhost:8080/index.html")
@@ -28,7 +32,7 @@ async def test_difficulty_persistence():
         slider_y = box['y'] + box['height'] / 2  # Assume mid-y
         await page.mouse.move(slider_x, slider_y)
         await page.mouse.down()
-        await page.mouse.move(slider_x + 150, slider_y)  # Drag for ~0.5 increase
+        await page.mouse.move(slider_x + 150, slider_y)  # Drag for ~0.5 increase (calibrate range: 0.5-2.0 over ~300px)
         await page.mouse.up()
 
         assert any("Difficulty changed to: 1.5" in log for log in logs), "Expected change to 1.5"
