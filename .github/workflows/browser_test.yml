@@ -46,8 +46,18 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y libxml2-utils
           pip install playwright pytest-playwright
-          playwright install --with-deps chromium
-      # Background web game server
+      - name: "Cache Playwright Browsers"
+        uses: "actions/cache@v4"
+        id: "playwright-cache"  # For conditional install
+        with:
+          path: "~/.cache/ms-playwright"
+          # Key: OS + PW version + deps hash (invalidation on updates)
+          key: "${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}-v1.48.0"  # Update version if PW upgrades
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+      - name: "Install Playwright Browsers (if cache miss)"
+        if: "steps.playwright-cache.outputs.cache-hit != 'true'"  # Skip if cached
+        run: "playwright install --with-deps"
       - name: "Start WEB Server"
         run: |
           python -m http.server 8080 --directory export/web &
