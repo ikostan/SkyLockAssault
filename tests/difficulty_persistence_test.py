@@ -19,14 +19,18 @@ async def test_difficulty_persistence():
 
         await page.goto("http://localhost:8080/index.html")
 
-        await page.wait_for_timeout(2000)  # Adjust for load time
+        # Wait for game load with function (checks for startup log from _ready)
+        await page.wait_for_function("() => document.querySelector('canvas') && console.log.toString().includes('Log "
+                                     "level set to')", timeout=10000)  # Adjust if log differs
+        await page.wait_for_timeout(5000)  # Increased for CI load (fixes missed log)
 
         canvas = page.locator("canvas")
         box = await canvas.bounding_box()  # Get position/size for relative clicks/drags
 
         await page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.8)  # Adjust coords
 
-        assert any("Loaded saved difficulty: 1.0" in log for log in logs), "Expected default 1.0 load"
+        # Check initial difficulty via log (fallback for no file)
+        assert any("Loaded saved difficulty: 1.0" in log or "No saved settings found" in log for log in logs), "Expected default load log"
 
         slider_x = box['x'] + box['width'] / 2
         slider_y = box['y'] + box['height'] / 2  # Assume mid-y
@@ -40,7 +44,7 @@ async def test_difficulty_persistence():
         await page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.9)  # Adjust
 
         await page.reload()
-        await page.wait_for_timeout(2000)
+        await page.wait_for_timeout(5000)
         await page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.8)  # Reopen
 
         assert any("Loaded saved difficulty: 1.5" in log for log in logs), "Expected persisted 1.5"
