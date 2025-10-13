@@ -75,7 +75,7 @@ jobs:
       - name: "Run Tests"
         # Generate JUnit XML report
         run: |
-          pytest tests/browser_test.py -v --junitxml=report.xml
+          pytest tests/ -v --junitxml=report.xml
       - name: "Console summary report"
         # parses XML for pass/fail counts
         run: |
