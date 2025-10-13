@@ -83,7 +83,7 @@ theme_override_fonts/font = SubResource("FontVariation_pu3yx")
 theme_override_font_sizes/font_size = 20
 theme_override_styles/background = SubResource("StyleBoxFlat_gubc5")
 theme_override_styles/fill = SubResource("StyleBoxFlat_rt2n2")
-rounded = true
+step = 0.1
 
 [node name="Player" parent="." instance=ExtResource("2_pw63i")]
 

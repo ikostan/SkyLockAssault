@@ -9,8 +9,10 @@ var log_level_display_to_enum := {
 	"NONE": Globals.LogLevel.NONE
 }
 
-@onready var log_lvl_option: OptionButton = $VBoxContainer/HBoxContainer/LogLevelOptionButton
-@onready var back_button: Button = $VBoxContainer/BackButton
+@onready var log_lvl_option: OptionButton = $Panel/VBoxContainer/HBoxContainer/LogLevelOptionButton
+@onready var back_button: Button = $Panel/VBoxContainer/BackButton
+@onready var difficulty_slider: HSlider = $Panel/VBoxContainer/HBoxContainer2/DifficultyHSlider
+@onready var difficulty_label: Label = $Panel/VBoxContainer/HBoxContainer2/DifficultyValueLabel
 
 
 func _ready() -> void:
@@ -33,6 +35,17 @@ func _ready() -> void:
 	# Connect signals
 	log_lvl_option.item_selected.connect(_on_log_selected)
 	back_button.pressed.connect(_on_back_pressed)
+	
+	# Difficulty level setup
+	if difficulty_slider:
+		difficulty_slider.min_value = 0.5  # Easy
+		difficulty_slider.max_value = 2.0  # Hard
+		difficulty_slider.step = 0.1
+		difficulty_slider.value = Globals.difficulty  # Load current
+		difficulty_label.text = "{" + str(Globals.difficulty) + "}"
+		difficulty_slider.value_changed.connect(_on_difficulty_changed)
+	else:
+		Globals.log_message("Warning: DifficultySlider not found in options menu.", Globals.LogLevel.WARNING)
 
 	# In options_menu.gd (_ready()—add at end)
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignores pause for this node/tree
@@ -41,6 +54,13 @@ func _ready() -> void:
 	)
 	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
 
+
+# New function for slider change
+func _on_difficulty_changed(value: float) -> void:
+	Globals.difficulty = value
+	difficulty_label.text = "{" + str(value) + "}"
+	Globals.log_message("Difficulty changed to: " + str(value), Globals.LogLevel.INFO)
+	_save_settings()
 
 # Handles log level selection change
 func _on_log_selected(index: int) -> void:
@@ -58,6 +78,7 @@ func _on_log_selected(index: int) -> void:
 func _save_settings() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("Settings", "log_level", Globals.current_log_level)
+	config.set_value("Settings", "difficulty", Globals.difficulty)  # New: Save difficulty
 	config.save("user://settings.cfg")  # Web-safe path
 	Globals.log_message("Settings saved.", Globals.LogLevel.DEBUG)
 
