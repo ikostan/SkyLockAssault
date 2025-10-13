@@ -1,9 +1,18 @@
 from playwright.sync_api import sync_playwright, expect
+import pytest
 
 
-def test_weapon_isolation(playwright):
-    browser = playwright.chromium.launch(headless=True)
-    page = browser.new_page()
+@pytest.fixture(scope="function")
+def page_fixture():
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page()
+        yield page
+        browser.close()
+
+
+def test_weapon_isolation(page_fixture):
+    page = page_fixture
     logs = []
     page.on("console", lambda msg: logs.append(msg.text))
 
@@ -23,9 +32,3 @@ def test_weapon_isolation(playwright):
     # Assert 1 fire (via log count)
     fire_logs = [log for log in logs if "Fire called" in log]
     assert len(fire_logs) == 1, f"Expected 1 fire, got {len(fire_logs)}"
-
-    browser.close()
-
-
-with sync_playwright() as playwright:
-    test_weapon_isolation(playwright)  # For local; remove for pytest

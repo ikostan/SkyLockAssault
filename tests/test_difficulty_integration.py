@@ -1,8 +1,18 @@
 from playwright.sync_api import sync_playwright, expect
+import pytest
 
-def test_difficulty_integration(playwright):
-    browser = playwright.chromium.launch(headless=True)
-    page = browser.new_page()
+
+@pytest.fixture(scope="function")
+def page_fixture():
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page()
+        yield page
+        browser.close()
+
+
+def test_difficulty_integration(page_fixture):
+    page = page_fixture
     logs = []
     page.on("console", lambda msg: logs.append(msg.text))
 
@@ -36,8 +46,3 @@ def test_difficulty_integration(playwright):
     assert len(fuel_logs) > 0, "No fuel logs"
     last_fuel = float(fuel_logs[-1].split("Fuel left: ")[1])
     assert last_fuel < 95.0, f"Fuel scaling failed: got {last_fuel}"
-
-    browser.close()
-
-with sync_playwright() as playwright:
-    test_difficulty_integration(playwright)  # For local run; remove for pytest

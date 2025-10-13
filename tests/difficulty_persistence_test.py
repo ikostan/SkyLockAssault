@@ -1,7 +1,6 @@
 from playwright.sync_api import sync_playwright, expect
 import pytest
 
-
 @pytest.fixture(scope="function")
 def page_fixture():
     with sync_playwright() as playwright:
@@ -9,7 +8,6 @@ def page_fixture():
         page = browser.new_page()
         yield page
         browser.close()
-
 
 def test_difficulty_persistence(page_fixture):
     page = page_fixture

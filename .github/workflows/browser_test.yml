@@ -76,6 +76,8 @@ jobs:
         # Generate JUnit XML report
         run: |
           pytest tests/ -v --junitxml=report.xml
+      - name: "Test Report"
+        run: |
           if [ -f report.xml ]; then
             total=$(xmllint --xpath 'count(//testcase)' report.xml)
             failures=$(xmllint --xpath 'count(//testcase/failure)' report.xml)

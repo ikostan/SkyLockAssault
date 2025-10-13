@@ -1,9 +1,18 @@
 from playwright.sync_api import sync_playwright, expect
+import pytest
 
 
-def test_weapon_firing(playwright):
-    browser = playwright.chromium.launch(headless=True)
-    page = browser.new_page()
+@pytest.fixture(scope="function")
+def page_fixture():
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page()
+        yield page
+        browser.close()
+
+
+def test_weapon_firing(page_fixture):
+    page = page_fixture
     logs = []
     page.on("console", lambda msg: logs.append(msg.text))
 
@@ -27,8 +36,3 @@ def test_weapon_firing(playwright):
     # Assert velocity
     velocity = float(bullet_logs[0].split("Bullet velocity:")[1].strip())
     assert abs(velocity + 400.0) < 10.0, f"Expected ~ -400.0, got {velocity}"
-
-    browser.close()
-
-with sync_playwright() as playwright:
-    test_weapon_firing(playwright)  # For local; remove for pytest
