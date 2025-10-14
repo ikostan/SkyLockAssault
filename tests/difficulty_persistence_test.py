@@ -1,5 +1,6 @@
 from playwright.async_api import async_playwright, expect
 import pytest
+import time
 
 
 @pytest.mark.asyncio
@@ -19,9 +20,20 @@ async def test_difficulty_persistence():
 
         await page.goto("http://localhost:8080/index.html")
 
-        # Wait for game load with function (checks for startup log from _ready)
-        await page.wait_for_function("() => document.querySelector('canvas') && console.log.toString().includes('Log "
-                                     "level set to')", timeout=10000)  # Adjust if log differs
+        # Wait for canvas to appear
+        await page.wait_for_selector("canvas", timeout=10000)
+
+        # Wait for startup log
+        async def wait_for_log_containing(text, timeout=10000):
+            start = time.time()
+            while time.time() - start < timeout / 1000:
+                if any(text in log for log in logs):
+                    return
+                await asyncio.sleep(0.05)
+            raise TimeoutError(f"Timeout {timeout}ms exceeded waiting for log containing '{text}'")
+
+        await wait_for_log_containing("Log level set to")
+
         await page.wait_for_timeout(5000)  # Increased for CI load (fixes missed log)
 
         canvas = page.locator("canvas")
@@ -44,6 +56,13 @@ async def test_difficulty_persistence():
         await page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.9)  # Adjust
 
         await page.reload()
+
+        # Wait for canvas after reload
+        await page.wait_for_selector("canvas", timeout=10000)
+
+        # Wait for startup log after reload
+        await wait_for_log_containing("Log level set to")
+
         await page.wait_for_timeout(5000)
         await page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.8)  # Reopen
 
