@@ -1,6 +1,7 @@
 from playwright.async_api import async_playwright, expect
 import pytest
 import time
+import asyncio
 
 
 @pytest.mark.asyncio
