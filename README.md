@@ -45,20 +45,23 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 - [Assets Free Laser Bullets Pack 2020](https://wenrexa.itch.io/laser2020)
 
 ## Documentation
+<!-- markdownlint-disable line-length -->
 
 1. [Guide to Implementing Versioning](/files/docs/Guide_to_Implementing_Versioning.md)
 2. [Godot v4.5 Docs](https://docs.godotengine.org/en/stable/index.html)
 3. [Development Guide](files/docs/Development_Guide.md)
-4. [Docker Local Test Server](/files/docs/Docker_Local_Test_Server.md)
-5. [Setup Instructions](/files/docs/Setup_Instructions.md)
-6. [Signing Setup for GitHub Desktop](/files/docs/Signing_Setup_for_GitHub_Desktop.md)
-7. BOTS:
+4. [Local CI Pipeline for Godot Project using Docker](/files/docs/Local_CI_Pipeline_for_Godot_Project_using_Docker.md)
+5. [Docker Local Test Server](/files/docs/Docker_Local_Test_Server.md)
+6. [Setup Instructions](/files/docs/Setup_Instructions.md)
+7. [Signing Setup for GitHub Desktop](/files/docs/Signing_Setup_for_GitHub_Desktop.md)
+8. BOTS:
    - [Dependabot](https://docs.github.com/en/code-security/dependabot)
    - [Snyk](https://docs.snyk.io/)
    - [Sourcery AI](https://docs.sourcery.ai/)
    - [IMGBOT](https://imgbot.net/docs/)
    - [Release Drafter](https://github.com/release-drafter/release-drafter?tab=readme-ov-file#readme)
 
+<!-- markdownlint-enable line-length -->
 ## Roadmap
 
 Here's a high-level plan for upcoming features. Contributions welcome!
