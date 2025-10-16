@@ -464,9 +464,11 @@ docker run -it --rm -v %CD%:/project sky-lock-assault-pipeline /bin/bash /projec
 - **Test Failures**: If test_settings.gd or test_settings_persistence.gd
     still fail, verify that DirAccess.remove_absolute is used correctly.
     You can test interactively:
+
     ```bash
     docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash, then check gio --version, kioclient5 --version, and gvfs-trash --version to confirm installations. If issues persist, the DirAccess approach should bypass these dependencies.
     ```
+
 - **Slow Test Scanning**: The warnings about test suite scanning
     taking >300ms (e.g., test_settings.gd took 962ms) are normal for
     complex scenes but indicate potential optimization (e.g., simplify
