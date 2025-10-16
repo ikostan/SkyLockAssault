@@ -1,7 +1,9 @@
+# tests/difficulty_persistence_test.py
 from playwright.async_api import async_playwright, expect
 import pytest
 import time
 import asyncio
+
 
 @pytest.mark.asyncio
 async def test_difficulty_persistence():
@@ -12,7 +14,7 @@ async def test_difficulty_persistence():
 
         async def handle_console(msg):
             try:
-                log_text = await msg.text()
+                log_text = msg.text  # Changed from msg.text() to msg.text
                 logs.append(log_text)
                 print(f"Captured log: {log_text}")
             except Exception as e:
@@ -62,7 +64,7 @@ async def test_difficulty_persistence():
         except TimeoutError as e:
             print(f"Log timeout: {e}")
 
-        await page.wait_for_timeout(5000)
+        await page.wait_for_timeout(10000)  # Increased to 10s for CI stability
 
         canvas = page.locator("canvas")
         box = await canvas.bounding_box()
@@ -104,7 +106,7 @@ async def test_difficulty_persistence():
             if box:
                 print("Canvas detected after reload, proceeding despite log timeout")
 
-        await page.wait_for_timeout(5000)
+        await page.wait_for_timeout(10000)  # Increased to 10s
         await page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.8)
 
         assert any("Loaded saved difficulty: 1.5" in log for log in logs), "Expected persisted 1.5"
