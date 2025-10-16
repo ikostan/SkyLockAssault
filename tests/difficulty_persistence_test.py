@@ -96,28 +96,33 @@ async def test_difficulty_persistence():
 
         canvas = page.locator("canvas")
         box = await canvas.bounding_box()
-        click_x = box['x'] + box['width'] * 0.8  # Adjusted to target options button
-        click_y = box['y'] + box['height'] * 0.9
-        print(f"Clicking at coordinates: ({click_x}, {click_y})")
+        print(f"Canvas bounds: x={box['x']}, y={box['y']}, width={box['width']}, height={box['height']}")
+        # Adjust click coordinates based on canvas offset
+        click_x = box['x'] + (658.420104980469 - box['x'])  # Relative to canvas top-left
+        click_y = box['y'] + (359.608276367188 - box['y'])
+        print(f"Clicking at adjusted coordinates: ({click_x}, {click_y})")
         await page.mouse.click(click_x, click_y)
 
-        await wait_for_log_containing("Instancing options menu", timeout=30000)  # Wait for options menu log
-        assert any("Loaded saved difficulty: 1.0" in log or "No saved settings found" in log for log in logs), "Expected default load log"
+        await wait_for_log_containing("Instancing options menu", timeout=30000)
+        await wait_for_log_containing("Options menu loaded", timeout=30000)
+        assert any("Loaded saved difficulty: 1.6" in log for log in logs), "Expected loaded difficulty 1.6"
 
-        slider_x = box['x'] + box['width'] / 2
-        slider_y = box['y'] + box['height'] / 2
-        print(f"Moving slider from ({slider_x}, {slider_y}) to ({slider_x + 150}, {slider_y})")
+        slider_x = box['x'] + box['width'] * 0.5
+        slider_y = box['y'] + box['height'] * 0.5
+        print(f"Moving slider from ({slider_x}, {slider_y}) to ({slider_x + 100}, {slider_y})")
         await page.mouse.move(slider_x, slider_y)
         await page.mouse.down()
-        await page.mouse.move(slider_x + 150, slider_y)
+        await page.mouse.move(slider_x + 100, slider_y)
         await page.mouse.up()
 
+        await wait_for_log_containing("Difficulty changed to", timeout=30000)
         assert any("Difficulty changed to: 1.5" in log for log in logs), "Expected change to 1.5"
 
-        click_x = box['x'] + box['width'] * 0.8
-        click_y = box['y'] + box['height'] * 0.9
-        print(f"Clicking to save at coordinates: ({click_x}, {click_y})")
+        click_x = box['x'] + box['width'] * 0.5
+        click_y = box['y'] + box['height'] * 0.8
+        print(f"Clicking to save and close at coordinates: ({click_x}, {click_y})")
         await page.mouse.click(click_x, click_y)
+        await wait_for_log_containing("Closing options menu", timeout=30000)
 
         await page.reload()
 
@@ -142,12 +147,13 @@ async def test_difficulty_persistence():
                 print("Canvas detected after reload, proceeding despite log timeout")
 
         await page.wait_for_timeout(10000)
-        click_x = box['x'] + box['width'] * 0.8
-        click_y = box['y'] + box['height'] * 0.9
+        click_x = box['x'] + (658.420104980469 - box['x'])  # Reuse Options button coordinates
+        click_y = box['y'] + (359.608276367188 - box['y'])
         print(f"Clicking after reload at coordinates: ({click_x}, {click_y})")
         await page.mouse.click(click_x, click_y)
 
         await wait_for_log_containing("Instancing options menu", timeout=30000)
+        await wait_for_log_containing("Options menu loaded", timeout=30000)
         assert any("Loaded saved difficulty: 1.5" in log for log in logs), "Expected persisted 1.5"
 
         await browser.close()

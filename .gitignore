@@ -38,3 +38,4 @@ infra/*.log  # If Docker logs appear
 project.godot.override
 addons/
 reports/
+tests/__pycache__/
