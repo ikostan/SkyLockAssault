@@ -13,8 +13,8 @@ jobs:
     steps:
       - uses: "actions/checkout@v5"
       - name: "Download Godot Binary"
+        run: |        
         # yamllint disable-line rule:line-length
-        run: |
           wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
           unzip Godot_v4.5-stable_linux.x86_64.zip
           mv Godot_v4.5-stable_linux.x86_64 godot
@@ -30,8 +30,8 @@ jobs:
         run: |
           ./godot --headless --path . --import --quit
       - name: "Run GDUnit4 Tests"
-        # yamllint disable-line rule:line-length
         run: |
+        # yamllint disable-line rule:line-length
           ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --verbose --ignoreHeadlessMode --add res://test
       - name: "Upload Test Reports"
         if: "always()"  # Runs even on failure
