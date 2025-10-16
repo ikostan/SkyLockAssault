@@ -30,10 +30,14 @@ RUN wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot
     && chmod +x /usr/local/bin/godot \
     && rm Godot_v4.5-stable_linux.x86_64.zip
 
+# Download and extract export templates, ensuring correct naming
 RUN wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz \
-    && mkdir -p ~/.local/share/godot/export_templates/4.5.stable/ \
-    && unzip Godot_v4.5-stable_export_templates.tpz -d ~/.local/share/godot/export_templates/4.5.stable/ \
-    && rm Godot_v4.5-stable_export_templates.tpz
+    && mkdir -p /root/.local/share/godot/export_templates/4.5.stable \
+    && unzip Godot_v4.5-stable_export_templates.tpz -d /tmp/templates \
+    && mv /tmp/templates/templates/* /root/.local/share/godot/export_templates/4.5.stable/ \
+    && mv /root/.local/share/godot/export_templates/4.5.stable/web_debug.zip /root/.local/share/godot/export_templates/4.5.stable/web_nothreads_debug.zip || true \
+    && mv /root/.local/share/godot/export_templates/4.5.stable/web_release.zip /root/.local/share/godot/export_templates/4.5.stable/web_nothreads_release.zip || true \
+    && rm -rf /tmp/templates Godot_v4.5-stable_export_templates.tpz
 
 # Install GDUnit4 v6
 RUN mkdir -p /project/addons \
