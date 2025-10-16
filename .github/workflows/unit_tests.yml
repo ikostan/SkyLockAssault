@@ -27,9 +27,12 @@ jobs:
           mv addons/gdUnit4-6.0.0/addons/gdUnit4 addons/gdUnit4
           rm -rf addons/gdUnit4-6.0.0  # Cleanup
       - name: "Import Resources"
-        run: ./godot --headless --path . --import --quit
+        run: |
+          ./godot --headless --path . --import --quit
       - name: "Run GDUnit4 Tests"
-        run: ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --verbose --ignoreHeadlessMode --add res://test
+        # yamllint disable-line rule:line-length
+        run: |
+          ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --verbose --ignoreHeadlessMode --add res://test
       - name: "Upload Test Reports"
         if: "always()"  # Runs even on failure
         uses: "actions/upload-artifact@v4"

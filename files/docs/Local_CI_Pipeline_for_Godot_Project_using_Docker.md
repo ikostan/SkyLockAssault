@@ -29,7 +29,7 @@ testing a new script without full exports.
 - **Docker Desktop**: Version 4.45 or compatible (ensure it's installed
     and running; enable WSL2 backend if prompted).
 - **Project Setup**: Ensure your project is cloned from
-    https://github.com/ikostan/SkyLockAssault and you're in the project
+    <https://github.com/ikostan/SkyLockAssault> and you're in the project
     root directory.
 - **Godot Project**: Your Godot v4.5 project files (e.g., scripts in
     `./scripts`, tests in `./test`, etc.) must be present.
@@ -45,26 +45,48 @@ Create the following files in your project root (e.g.,
 This builds an Ubuntu-based image with all dependencies. Save it as
 `Dockerfile` (no extension).
 
+The previous Dockerfile failed due to conflicts with system-installed
+Python packages (e.g., wheel from Debian). To resolve this, we've
+switched to using a virtual environment (venv) for all Python installations.
+This isolates the tools from the system Python, avoiding uninstall issues
+and the need for --break-system-packages. Save this updated version as
+Dockerfile (no extension).
+
+The previous build failed because `gvfs-bin` is unavailable in `Ubuntu 24.04`.
+We've replaced it with `gvfs`, which provides `gvfs-trash`. The `Dockerfile`
+also includes `libglib2.0-bin` (for `gio`) and `kio` (for `kioclient5`)
+to support `OS.move_to_trash` in your tests.
+
+We've updated the Dockerfile to install Node.js and npm in the base
+dependencies, then globally install markdownlint-cli2 via npm. This matches
+the original GitHub Action, which uses a Node.js-based tool. Save this
+updated version as Dockerfile (no extension).
+
 ```bash
 # Use Ubuntu 24.04 as base (matches GitHub Actions runner)
 FROM ubuntu:24.04
 
-# Install base dependencies
+# Install base dependencies (added nodejs, npm, libglib2.0-bin, kio, gvfs)
 RUN apt-get update && apt-get install -y \
-    python3 python3-pip wget unzip curl git zip libxml2-utils netcat-openbsd \
+    python3 python3-pip wget unzip curl git zip libxml2-utils netcat-openbsd python3-venv nodejs npm \
+    libglib2.0-bin kio gvfs \
     && rm -rf /var/lib/apt/lists/*
 
-# Set up Python and pip
-RUN pip3 install --upgrade pip setuptools wheel
+# Create and activate virtual environment for Python tools
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Upgrade pip, setuptools, and wheel in venv
+RUN pip install --upgrade pip setuptools wheel
 
 # Install GDToolkit for GDScript lint/format (gdtoolkit==4.* for Godot 4.x)
-RUN pip3 install gdtoolkit==4.*
+RUN pip install gdtoolkit==4.*
 
 # Install yamllint
-RUN pip3 install yamllint
+RUN pip install yamllint
 
-# Install markdownlint-cli2 (for Markdown linting)
-RUN pip3 install markdownlint-cli2
+# Install markdownlint-cli2 via npm (Node.js tool)
+RUN npm install -g markdownlint-cli2
 
 # Download Godot v4.5 binary and export templates
 RUN wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip \
@@ -85,8 +107,8 @@ RUN mkdir -p /project/addons \
     && mv /project/addons/gdUnit4-6.0.0/addons/gdUnit4 /project/addons/gdUnit4 \
     && rm -rf /project/addons/gdUnit4-6.0.0 v6.0.0.zip
 
-# Install Playwright and dependencies for browser tests
-RUN pip3 install playwright pytest-playwright pytest-asyncio \
+# Install Playwright and dependencies for browser tests (in venv)
+RUN pip install playwright pytest-playwright pytest-asyncio \
     && playwright install-deps \
     && playwright install
 
@@ -230,7 +252,7 @@ echo "Pipeline completed successfully!"
 Open PowerShell or Command Prompt in the project root and run:
 
 ```bash
-docker build -t sky-lock-assault-pipeline .
+docker build -t sky-lock-assault-pipeline:latest .
 ```
 
 This builds the image named `sky-lock-assault-pipeline`. Run it once or
@@ -241,7 +263,7 @@ when dependencies change.
 Mount your project directory into the container and execute `run_pipeline.sh`:
 
 ```bash
-docker run -it --rm -v %CD%:/project sky-lock-assault-pipeline /bin/bash /project/run_pipeline.sh
+docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline:latest /bin/bash /project/run_pipeline.sh
 ```
 
 - `-v %CD%:/project`: Mounts your current directory (project root) to
@@ -431,10 +453,24 @@ docker run -it --rm -v %CD%:/project sky-lock-assault-pipeline /bin/bash /projec
     administrator.
 - **Timeouts**: Adjust `PW_TIMEOUT` in scripts if browser tests are slow.
 - **Godot Export Failures**: Verify your project has a valid export
-    preset for "Web" in Godot Editor.
+    preset for "Web" in Godot Editor (Project > Export > Add "Web" preset).
 - **Missing Dependencies**: If a tool fails, check the Dockerfile and
     rebuild the image.
-- **Windows Path Issues**: Use forward slashes in paths if editing scripts.
+- **Windows Path Issues**: Use forward slashes in paths if editing
+    scripts manually (e.g., C:/Users/...).
+- **Docker Build Errors**: If the build fails, try rebuilding with
+    no cache: `docker build -t sky-lock-assault-pipeline . --no-cache`.
+    Ensure your internet connection is stable for downloading packages.
+- **Test Failures**: If test_settings.gd or test_settings_persistence.gd
+    still fail, verify that DirAccess.remove_absolute is used correctly.
+    You can test interactively:
+    ```bash
+    docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash, then check gio --version, kioclient5 --version, and gvfs-trash --version to confirm installations. If issues persist, the DirAccess approach should bypass these dependencies.
+    ```
+- **Slow Test Scanning**: The warnings about test suite scanning
+    taking >300ms (e.g., test_settings.gd took 962ms) are normal for
+    complex scenes but indicate potential optimization (e.g., simplify
+    test setup or reduce resource loading).
 
 ## Testing Requirement Example
 

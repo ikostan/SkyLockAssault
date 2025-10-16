@@ -4,6 +4,7 @@ This document covers the initial setup for developing and testing the project
 on Windows 10 64-bit.
 
 ## Prerequisites
+
 - **Godot Engine**: v4.5 stable (download from
   [godotengine.org/download](https://godotengine.org/download)).
 - **GitHub Desktop**: v3.5 (for repo cloning/management).
@@ -21,11 +22,10 @@ To enforce security:
 
 This blocks unsigned pushes, ensuring trustworthy Godot exports.
 
-
 ### Step 1: Clone the Repository
 
 1. Open GitHub Desktop.
-2. Clone the repo: URL = https://github.com/ikostan/SkyLockAssault.
+2. Clone the repo: URL = <https://github.com/ikostan/SkyLockAssault>.
 3. Open the project in Godot: Launch Godot > Import > Select
    `project.godot` in the cloned folder.
 
@@ -61,13 +61,14 @@ This is required for automated testing in Milestone 3.
 1. Install Docker Desktop if not already (from docker.com).
 2. In PowerShell: Navigate to repo root > `cd infra/`.
 3. Run: `docker compose up -d` (starts a local Nginx server).
-4. Open browser: http://localhost:9090 (view the exported game).
+4. Open browser: <http://localhost:9090> (view the exported game).
 5. Stop: `docker compose down`.
 
 **Notes**: For fullscreen testing, note the harmless console warning on desktop
 (ignored per Issue #100). Test quit handling here before itch.io deploy.
 
 ### Additional Tools
+
 - **PyCharm**: Open the repo folder for editing `GDScript/Markdown`. No special
   config needed.
 - **GitHub Actions**: Enabled via `.github/workflows/`, runs on `push/PR` for
