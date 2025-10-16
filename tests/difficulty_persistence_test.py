@@ -6,6 +6,35 @@ import asyncio
 
 
 @pytest.mark.asyncio
+async def test_console_log_presence():
+    async with async_playwright() as playwright:
+        browser = await playwright.chromium.launch(headless=True)
+        page = await browser.new_page()
+        logs = []
+
+        async def handle_console(msg):
+            try:
+                log_text = msg.text
+                logs.append(log_text)
+                print(f"Captured log: {log_text}")
+            except Exception as e:
+                print(f"Console capture error: {e}")
+
+        page.on("console", handle_console)
+
+        try:
+            await page.goto("http://localhost:8080/index.html", timeout=60000)
+            await page.wait_for_selector("canvas", timeout=30000)
+            await page.wait_for_timeout(10000)  # Wait for game to initialize
+            assert len(logs) > 0, "Expected at least one console log from the game"
+            print(f"Logs captured: {logs}")
+        except Exception as e:
+            print(f"Test failed: {e}")
+            raise
+        await browser.close()
+
+
+@pytest.mark.asyncio
 async def test_difficulty_persistence():
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(headless=True)
