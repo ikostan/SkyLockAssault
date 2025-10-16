@@ -25,7 +25,7 @@ async def test_difficulty_persistence():
         page.on("pageerror", handle_error)
 
         try:
-            await page.goto("http://localhost:8080/tmp.js_export.html", timeout=60000)
+            await page.goto("http://localhost:8080/index.html", timeout=60000)
         except Exception as e:
             print(f"Failed to load page: {e}")
             raise
