@@ -43,7 +43,7 @@ async def test_difficulty_persistence():
 
         async def handle_console(msg):
             try:
-                log_text = msg.text  # Changed from msg.text() to msg.text
+                log_text = msg.text
                 logs.append(log_text)
                 print(f"Captured log: {log_text}")
             except Exception as e:
@@ -79,8 +79,7 @@ async def test_difficulty_persistence():
                     print(f"Found log: {text}")
                     return
                 await asyncio.sleep(0.2)
-            print(f"Logs captured: {logs}")
-            # Fallback: Check canvas interactivity
+            print(f"Timeout waiting for '{text}'. Logs captured: {logs}")
             canvas = page.locator("canvas")
             box = await canvas.bounding_box()
             if box:
@@ -93,17 +92,21 @@ async def test_difficulty_persistence():
         except TimeoutError as e:
             print(f"Log timeout: {e}")
 
-        await page.wait_for_timeout(10000)  # Increased to 10s for CI stability
+        await page.wait_for_timeout(10000)
 
         canvas = page.locator("canvas")
         box = await canvas.bounding_box()
+        click_x = box['x'] + box['width'] * 0.8  # Adjusted to target options button
+        click_y = box['y'] + box['height'] * 0.9
+        print(f"Clicking at coordinates: ({click_x}, {click_y})")
+        await page.mouse.click(click_x, click_y)
 
-        await page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.8)
-
+        await wait_for_log_containing("Instancing options menu", timeout=30000)  # Wait for options menu log
         assert any("Loaded saved difficulty: 1.0" in log or "No saved settings found" in log for log in logs), "Expected default load log"
 
         slider_x = box['x'] + box['width'] / 2
         slider_y = box['y'] + box['height'] / 2
+        print(f"Moving slider from ({slider_x}, {slider_y}) to ({slider_x + 150}, {slider_y})")
         await page.mouse.move(slider_x, slider_y)
         await page.mouse.down()
         await page.mouse.move(slider_x + 150, slider_y)
@@ -111,7 +114,10 @@ async def test_difficulty_persistence():
 
         assert any("Difficulty changed to: 1.5" in log for log in logs), "Expected change to 1.5"
 
-        await page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.9)
+        click_x = box['x'] + box['width'] * 0.8
+        click_y = box['y'] + box['height'] * 0.9
+        print(f"Clicking to save at coordinates: ({click_x}, {click_y})")
+        await page.mouse.click(click_x, click_y)
 
         await page.reload()
 
@@ -135,9 +141,13 @@ async def test_difficulty_persistence():
             if box:
                 print("Canvas detected after reload, proceeding despite log timeout")
 
-        await page.wait_for_timeout(10000)  # Increased to 10s
-        await page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.8)
+        await page.wait_for_timeout(10000)
+        click_x = box['x'] + box['width'] * 0.8
+        click_y = box['y'] + box['height'] * 0.9
+        print(f"Clicking after reload at coordinates: ({click_x}, {click_y})")
+        await page.mouse.click(click_x, click_y)
 
+        await wait_for_log_containing("Instancing options menu", timeout=30000)
         assert any("Loaded saved difficulty: 1.5" in log for log in logs), "Expected persisted 1.5"
 
         await browser.close()
