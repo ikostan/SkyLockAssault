@@ -30,6 +30,9 @@ jobs:
           relative_export_path: "./export/web"  # Output folder
           archive_output: true  # Zips for upload (optional; disable if not needed)
           cache: true  # Enable caching for Godot executable and templates
+      - name: "List Export Directory Contents"
+        run: |
+          ls -la export/web
       - name: "Set up Python"
         uses: "actions/setup-python@v5"
         with:
