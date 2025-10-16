@@ -303,7 +303,7 @@ echo "GDScript Lint and Format Check completed!"
 Run it:
 
 ```bash
-docker run -it --rm -v %CD%:/project sky-lock-assault-pipeline /bin/bash /project/run_gdlint.sh
+docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/run_gdlint.sh
 ```
 
 ### run_markdown_lint.sh (Markdown Lint)
@@ -321,7 +321,7 @@ echo "Markdown Lint completed!"
 Run it:
 
 ```bash
-docker run -it --rm -v %CD%:/project sky-lock-assault-pipeline /bin/bash /project/run_markdown_lint.sh
+docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/run_markdown_lint.sh
 ```
 
 ### run_yaml_lint.sh (YAML Lint)
@@ -339,7 +339,7 @@ echo "YAML Lint completed!"
 Run it:
 
 ```bash
-docker run -it --rm -v %CD%:/project sky-lock-assault-pipeline /bin/bash /project/run_yaml_lint.sh
+docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/run_yaml_lint.sh
 ```
 
 ### run_unit_tests.sh (Godot Unit Tests with GDUnit4)
@@ -370,7 +370,7 @@ echo "Godot Unit Tests completed!"
 Run it:
 
 ```bash
-docker run -it --rm -v %CD%:/project sky-lock-assault-pipeline /bin/bash /project/run_unit_tests.sh
+docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/run_unit_tests.sh
 ```
 
 ### run_browser_tests.sh (Browser Functional Tests with Playwright)
@@ -442,7 +442,7 @@ echo "Browser Functional Tests completed!"
 Run it:
 
 ```bash
-docker run -it --rm -v %CD%:/project sky-lock-assault-pipeline /bin/bash /project/run_browser_tests.sh
+docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline:latest /bin/bash /project/run_browser_tests.sh
 ```
 
 ## Troubleshooting
@@ -466,9 +466,11 @@ docker run -it --rm -v %CD%:/project sky-lock-assault-pipeline /bin/bash /projec
     You can test interactively:
 
     ```bash
-    docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash, then check gio --version, kioclient5 --version, and gvfs-trash --version to confirm installations. If issues persist, the DirAccess approach should bypass these dependencies.
-    ```
-
+    docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash
+    ``` 
+    then check: `gio --version`, `kioclient5 --version`, and `gvfs-trash --version`
+    to confirm installations. If issues persist, the DirAccess approach should bypass 
+    these dependencies.
 - **Slow Test Scanning**: The warnings about test suite scanning
     taking >300ms (e.g., test_settings.gd took 962ms) are normal for
     complex scenes but indicate potential optimization (e.g., simplify
