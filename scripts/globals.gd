@@ -15,7 +15,7 @@ var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 func _ready() -> void:
 	if Engine.is_editor_hint() or enable_debug_logging:
 		current_log_level = LogLevel.DEBUG
-	
+
 	log_message("Log level set to: " + LogLevel.keys()[current_log_level], LogLevel.INFO)
 	# In _ready(), add after initial log level set:
 	_load_settings()  # If not already; loads log level and could expand for more
