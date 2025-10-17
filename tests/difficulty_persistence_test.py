@@ -3,7 +3,7 @@ from playwright.async_api import async_playwright, expect
 import pytest
 import time
 import asyncio
-
+from ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
 
 @pytest.mark.asyncio
 async def test_console_log_presence():
@@ -32,7 +32,6 @@ async def test_console_log_presence():
             print(f"Test failed: {e}")
             raise
         await browser.close()
-
 
 @pytest.mark.asyncio
 async def test_difficulty_persistence():
@@ -97,31 +96,37 @@ async def test_difficulty_persistence():
         canvas = page.locator("canvas")
         box = await canvas.bounding_box()
         print(f"Canvas bounds: x={box['x']}, y={box['y']}, width={box['width']}, height={box['height']}")
-        # Adjust click coordinates based on canvas offset
-        click_x = box['x'] + (658.420104980469 - box['x'])  # Relative to canvas top-left
-        click_y = box['y'] + (359.608276367188 - box['y'])
-        print(f"Clicking at adjusted coordinates: ({click_x}, {click_y})")
-        await page.mouse.click(click_x, click_y)
+
+        # Click options button to open menu
+        options_x = box['x'] + UI_ELEMENTS["options_button"]["x"]
+        options_y = box['y'] + UI_ELEMENTS["options_button"]["y"]
+        print(f"Clicking Options at: ({options_x}, {options_y})")
+        await page.mouse.click(options_x, options_y)
 
         await wait_for_log_containing("Instancing options menu", timeout=30000)
         await wait_for_log_containing("Options menu loaded", timeout=30000)
+        await page.wait_for_timeout(5000)
         assert any("Loaded saved difficulty: 1.6" in log for log in logs), "Expected loaded difficulty 1.6"
 
-        slider_x = box['x'] + box['width'] * 0.5
-        slider_y = box['y'] + box['height'] * 0.5
-        print(f"Moving slider from ({slider_x}, {slider_y}) to ({slider_x + 100}, {slider_y})")
-        await page.mouse.move(slider_x, slider_y)
+        # Drag slider to 1.5 (start from 0.5, drag to approximate 1.5 position)
+        start_slider_x = box['x'] + UI_ELEMENTS["difficulty_slider_0.5"]["x"]
+        start_slider_y = box['y'] + UI_ELEMENTS["difficulty_slider_0.5"]["y"]
+        mid_slider_x = box['x'] + UI_ELEMENTS["difficulty_slider_1.3"]["x"]
+        mid_slider_y = box['y'] + UI_ELEMENTS["difficulty_slider_1.3"]["y"]  # Note: y typo in dict, assuming 324
+        print(f"Moving slider from ({start_slider_x}, {start_slider_y}) to ({mid_slider_x + 15}, {mid_slider_y})")  # Approximate +15px for 1.5
+        await page.mouse.move(start_slider_x, start_slider_y)
         await page.mouse.down()
-        await page.mouse.move(slider_x + 100, slider_y)
+        await page.mouse.move(mid_slider_x + 15, mid_slider_y)
         await page.mouse.up()
 
         await wait_for_log_containing("Difficulty changed to", timeout=30000)
         assert any("Difficulty changed to: 1.5" in log for log in logs), "Expected change to 1.5"
 
-        click_x = box['x'] + box['width'] * 0.5
-        click_y = box['y'] + box['height'] * 0.8
-        print(f"Clicking to save and close at coordinates: ({click_x}, {click_y})")
-        await page.mouse.click(click_x, click_y)
+        # Click back button to save/close
+        back_x = box['x'] + UI_ELEMENTS["back_button"]["x"]
+        back_y = box['y'] + UI_ELEMENTS["back_button"]["y"]
+        print(f"Clicking to save and close at: ({back_x}, {back_y})")
+        await page.mouse.click(back_x, back_y)
         await wait_for_log_containing("Closing options menu", timeout=30000)
 
         await page.reload()
@@ -147,10 +152,10 @@ async def test_difficulty_persistence():
                 print("Canvas detected after reload, proceeding despite log timeout")
 
         await page.wait_for_timeout(10000)
-        click_x = box['x'] + (658.420104980469 - box['x'])  # Reuse Options button coordinates
-        click_y = box['y'] + (359.608276367188 - box['y'])
-        print(f"Clicking after reload at coordinates: ({click_x}, {click_y})")
-        await page.mouse.click(click_x, click_y)
+        options_x = box['x'] + UI_ELEMENTS["options_button"]["x"]
+        options_y = box['y'] + UI_ELEMENTS["options_button"]["y"]
+        print(f"Clicking Options after reload at: ({options_x}, {options_y})")
+        await page.mouse.click(options_x, options_y)
 
         await wait_for_log_containing("Instancing options menu", timeout=30000)
         await wait_for_log_containing("Options menu loaded", timeout=30000)
