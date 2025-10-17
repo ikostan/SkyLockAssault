@@ -76,9 +76,9 @@ jobs:
           done
           if [ $i -eq 20 ]; then exit 1; fi
       - name: "Run Tests"
-        # Generate JUnit XML report
+        # Generate JUnit XML report with PYTHONPATH adjustment
         run: |
-          pytest tests/difficulty_persistence_test.py -v --junitxml=report.xml
+          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/ -v --junitxml=report.xml
       - name: "Test Report"
         run: |
           if [ -f report.xml ]; then
