@@ -1,6 +1,7 @@
+# tests/fuel_depletion_test.py
 from playwright.sync_api import sync_playwright, expect
 import pytest
-
+from ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
 
 @pytest.fixture(scope="function")
 def page_fixture():
@@ -9,7 +10,6 @@ def page_fixture():
         page = browser.new_page()
         yield page
         browser.close()
-
 
 def test_fuel_depletion(page_fixture):
     page = page_fixture
@@ -22,19 +22,27 @@ def test_fuel_depletion(page_fixture):
     canvas = page.locator("canvas")
     box = canvas.bounding_box()
 
-    # Set difficulty to 2.0 (copy from flow test for brevity)
-    page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.8)  # Options
-    slider_x = box['x'] + box['width'] / 2
-    slider_y = box['y'] + box['height'] / 2
-    page.mouse.move(slider_x, slider_y)
-    page.mouse.down()
-    page.mouse.move(slider_x + 200, slider_y)  # To max (2.0)
-    page.mouse.up()
+    # Open options
+    options_x = box['x'] + UI_ELEMENTS["options_button"]["x"]
+    options_y = box['y'] + UI_ELEMENTS["options_button"]["y"]
+    page.mouse.click(options_x, options_y)  # Click Options button
+
+    # Set difficulty to 2.0 (direct click to slider_2.0 position)
+    slider_x = box['x'] + UI_ELEMENTS["difficulty_slider_2.0"]["x"]
+    slider_y = box['y'] + UI_ELEMENTS["difficulty_slider_2.0"]["y"]
+    page.mouse.move(slider_x, slider_y)  # Move to 2.0 position
+    page.mouse.click(slider_x, slider_y)  # Click to set 2.0
     assert any("Difficulty changed to: 2.0" in log for log in logs), "Expected change to 2.0"
 
-    # Back, start level
-    page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.9)  # Back
-    page.mouse.click(box['x'] + box['width'] / 2, box['y'] + box['height'] * 0.7)  # Start
+    # Back to main menu
+    back_x = box['x'] + UI_ELEMENTS["back_button"]["x"]
+    back_y = box['y'] + UI_ELEMENTS["back_button"]["y"]
+    page.mouse.click(back_x, back_y)  # Click Back button
+
+    # Start level
+    start_x = box['x'] + UI_ELEMENTS["start_game_button"]["x"]
+    start_y = box['y'] + UI_ELEMENTS["start_game_button"]["y"]
+    page.mouse.click(start_x, start_y)  # Click Start button
 
     # Simulate idle time for depletion (fuel_timer is 1s default; wait 5s for ~5 ticks)
     page.wait_for_timeout(5000)
@@ -43,4 +51,4 @@ def test_fuel_depletion(page_fixture):
     fuel_logs = [log for log in logs if "Fuel left:" in log]
     assert len(fuel_logs) > 0, "No fuel logs found"
     last_fuel = float(fuel_logs[-1].split("Fuel left: ")[1])  # Parse last value
-    assert last_fuel < 97.5, f"Expected faster drop (<97.5), got {last_fuel}"  # Base 0.5*5=2.5 drop; scaled 1.0*5=5.0 -> <95.0, but adjust
+    assert last_fuel < 95.0, f"Expected faster drop (<95.0), got {last_fuel}"  # Adjusted for 5-unit drop at 2.0x
