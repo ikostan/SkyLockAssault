@@ -6,7 +6,7 @@ UI_ELEMENTS = {
     "options_button": {"x": 629, "y": 357},
     "quit_button": {"x": 637, "y": 430},
     "difficulty_slider_0.5": {"x": 629, "y": 324},
-    "difficulty_slider_1.3": {"x": 686, "y": 3324},
+    "difficulty_slider_1.3": {"x": 686, "y": 324},
     "difficulty_slider_2.0": {"x": 733, "y": 324},
     "back_button": {"x": 655, "y": 450},
     "confirm_dialog_cancel_button": {"x": 659, "y": 429},
