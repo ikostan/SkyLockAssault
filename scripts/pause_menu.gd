@@ -9,6 +9,13 @@ var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 @onready var options_button: Button = $VBoxContainer/OptionsButton
 
 
+
+func _input(event: InputEvent) -> void:  # Add type hints
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var pos: Vector2 = event.position  # Explicitly type as Vector2
+		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.INFO)
+
+
 # Called when the node enters the scene tree.
 # Hides the menu initially.
 func _ready() -> void:
