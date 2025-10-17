@@ -1,10 +1,10 @@
 # Use Ubuntu 24.04 as base (matches GitHub Actions runner)
 FROM ubuntu:24.04
 
-# Install base dependencies (added nodejs, npm, libglib2.0-bin, kio, gvfs)
+# Install base dependencies (added nodejs, npm, libglib2.0-bin, kio, gvfs, xvfb)
 RUN apt-get update && apt-get install -y \
     python3 python3-pip wget unzip curl git zip libxml2-utils netcat-openbsd python3-venv nodejs npm \
-    libglib2.0-bin kio gvfs \
+    libglib2.0-bin kio gvfs xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment for Python tools
@@ -35,8 +35,6 @@ RUN wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot
     && mkdir -p /root/.local/share/godot/export_templates/4.5.stable \
     && unzip Godot_v4.5-stable_export_templates.tpz -d /tmp/templates \
     && mv /tmp/templates/templates/* /root/.local/share/godot/export_templates/4.5.stable/ \
-    && mv /root/.local/share/godot/export_templates/4.5.stable/web_debug.zip /root/.local/share/godot/export_templates/4.5.stable/web_nothreads_debug.zip || true \
-    && mv /root/.local/share/godot/export_templates/4.5.stable/web_release.zip /root/.local/share/godot/export_templates/4.5.stable/web_nothreads_release.zip || true \
     && rm -rf /tmp/templates Godot_v4.5-stable_export_templates.tpz
 
 # Install GDUnit4 v6

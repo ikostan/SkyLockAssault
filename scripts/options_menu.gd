@@ -69,7 +69,7 @@ func _ready() -> void:
 	Globals.log_message(
 		"Set options_menu process_mode to ALWAYS for pause ignoring.", Globals.LogLevel.DEBUG
 	)
-	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
+	Globals.log_message("Options menu loaded.", Globals.LogLevel.INFO)
 
 
 # New function for slider change
@@ -92,18 +92,9 @@ func _on_log_selected(index: int) -> void:
 	Globals._save_settings()
 
 
-# Saves settings to file (call from here or Globals as needed)
-#func _save_settings() -> void:
-#	var config: ConfigFile = ConfigFile.new()
-#	config.set_value("Settings", "log_level", Globals.current_log_level)
-#	config.set_value("Settings", "difficulty", Globals.difficulty)  # New: Save difficulty
-#	config.save("user://settings.cfg")  # Web-safe path
-#	Globals.log_message("Settings saved.", Globals.LogLevel.DEBUG)
-
-
 # Handles Back button: Return to main menu
 # In options_menu.gd (_on_back_pressed())
 func _on_back_pressed() -> void:
 	get_tree().paused = false  # Unpause if was paused (safe call)
-	Globals.log_message("Closing options menu.", Globals.LogLevel.DEBUG)
+	Globals.log_message("Back button pressed.", Globals.LogLevel.INFO)
 	queue_free()  # Remove self from tree (returns to underlying scene)

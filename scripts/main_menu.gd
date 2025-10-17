@@ -102,10 +102,10 @@ func setup_quit_dialog() -> void:
 # Loads the main game scene using a preloaded PackedScene for efficiency.
 func _on_start_pressed() -> void:
 	# Stub; later: get_tree().change_scene_to_file("res://game_scene.tscn")
-	Globals.log_message("Start Game menu button pressed.", Globals.LogLevel.DEBUG)
+	Globals.log_message("Start Game menu button pressed.", Globals.LogLevel.INFO)
 
 	if game_scene:
-		Globals.log_message("Loading main game scene...", Globals.LogLevel.DEBUG)
+		Globals.log_message("Loading main game scene...", Globals.LogLevel.INFO)
 		get_tree().change_scene_to_packed(game_scene)
 	else:
 		Globals.log_message("Error: Game scene not set!", Globals.LogLevel.ERROR)
@@ -114,6 +114,7 @@ func _on_start_pressed() -> void:
 # Handles the Options button press.
 # Placeholder for loading an options scene.
 func _on_options_button_pressed() -> void:
+	Globals.log_message("Options button pressed.", Globals.LogLevel.INFO)
 	Globals.load_options()
 
 
@@ -123,7 +124,7 @@ func _on_quit_pressed() -> void:
 	# Show confirmation dialog
 	if is_instance_valid(quit_dialog):
 		quit_dialog.show()
-		Globals.log_message("Attempting to show QuitDialog.", Globals.LogLevel.DEBUG)
+		Globals.log_message("Attempting to show QuitDialog.", Globals.LogLevel.INFO)
 		quit_dialog.popup_centered()  # Sets visible=true internally
 	else:
 		Globals.log_message("No quit_dialog found.", Globals.LogLevel.ERROR)
@@ -139,7 +140,7 @@ func _on_quit_dialog_confirmed() -> void:
 	else:
 		# Desktop/editor: Standard quit
 		get_tree().quit()
-	Globals.log_message("Quit confirmed and executed!", Globals.LogLevel.DEBUG)
+	Globals.log_message("Quit confirmed and executed!", Globals.LogLevel.INFO)
 
 
 # Called when the quit dialog is canceled.
@@ -147,5 +148,5 @@ func _on_quit_dialog_confirmed() -> void:
 func _on_quit_dialog_canceled() -> void:
 	# Optional: Handle cancel (e.g., play sound or log)
 	quit_dialog.hide()
-	Globals.log_message("Quit canceled—back to skies!", Globals.LogLevel.DEBUG)
+	Globals.log_message("Quit canceled.", Globals.LogLevel.INFO)
 	# Dialog auto-hides on cancel, no extra code needed

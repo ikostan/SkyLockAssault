@@ -5,6 +5,7 @@ import time
 import asyncio
 from ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
 
+
 @pytest.mark.asyncio
 async def test_console_log_presence():
     async with async_playwright() as playwright:
@@ -32,6 +33,7 @@ async def test_console_log_presence():
             print(f"Test failed: {e}")
             raise
         await browser.close()
+
 
 @pytest.mark.asyncio
 async def test_difficulty_persistence():

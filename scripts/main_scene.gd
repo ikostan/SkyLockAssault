@@ -10,3 +10,4 @@ func _ready() -> void:
 	# Example: Place at center-bottom
 	player.position = Vector2(viewport_size.x / 2, viewport_size.y / 1.2)
 	stats_panel.visible = true
+	Globals.log_message("Initializing main scene...", Globals.LogLevel.INFO)

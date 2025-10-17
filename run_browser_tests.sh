@@ -7,7 +7,8 @@ PW_TIMEOUT=10000
 
 echo "Exporting Godot Project to Web..."
 mkdir -p $EXPORT_DIR
-godot --headless --path $PROJECT_DIR --export-release "Web" $EXPORT_DIR/index.html
+# Use debug export for better logging
+godot --headless --path $PROJECT_DIR --export-debug "Web" $EXPORT_DIR/index.html
 if [ $? -ne 0 ]; then echo "Web export failed."; exit 1; fi
 
 # Start web server
@@ -28,10 +29,13 @@ if [ $i -eq 20 ]; then
   exit 1
 fi
 
-# Run tests
+# Run tests with xvfb for headless WebGL
 echo "Running Playwright Browser Tests..."
-pytest tests/difficulty_persistence_test.py -v --junitxml=$PROJECT_DIR/report.xml
-if [ $? -ne 0 ]; then echo "Browser tests failed."; kill $SERVER_PID; exit 1; fi
+Xvfb :99 -screen 0 1280x720x24 &
+XVFB_PID=$!
+export DISPLAY=:99
+PYTHONPATH="$PROJECT_DIR/tests:$PYTHONPATH" pytest tests/difficulty_integration_test.py -v --junitxml=$PROJECT_DIR/report.xml
+if [ $? -ne 0 ]; then echo "Browser tests failed."; kill $SERVER_PID; kill $XVFB_PID; exit 1; fi
 
 # Report summary
 if [ -f $PROJECT_DIR/report.xml ]; then
@@ -52,6 +56,7 @@ fi
 
 # Cleanup
 kill $SERVER_PID
+kill $XVFB_PID
 
 # Simulate artifacts
 mkdir -p $PROJECT_DIR/artifacts

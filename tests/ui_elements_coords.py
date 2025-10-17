@@ -2,8 +2,8 @@
 
 # Define element coordinates relative to canvas top-left
 UI_ELEMENTS = {
-    "start_game_button": {"X": 645, "y": 288},
-    "options_button": {"x": 629, "y": 357},
+    "start_game_button": {"x": 645, "y": 288},
+    "options_button": {"x": 650, "y": 355},
     "quit_button": {"x": 637, "y": 430},
     "difficulty_slider_0.5": {"x": 629, "y": 324},
     "difficulty_slider_1.3": {"x": 686, "y": 324},

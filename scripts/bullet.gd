@@ -16,7 +16,7 @@ func _ready() -> void:
 
 
 func _on_hit(body: Node2D) -> void:
-	Globals.log_message("Bullet hit: " + str(body.name), Globals.LogLevel.DEBUG)
+	Globals.log_message("Bullet hit: " + str(body.name), Globals.LogLevel.INFO)
 	if body.has_method("take_damage"):
 		body.take_damage(damage)
 	queue_free()
