@@ -110,7 +110,7 @@ func _on_fuel_timer_timeout() -> void:
 	if current_fuel <= 0:
 		speed = 0.0  # Or game over logic
 		fuel_timer.stop()
-	Globals.log_message("Fuel left: " + str(current_fuel), Globals.LogLevel.INFO)
+	Globals.log_message("Fuel left: " + str(current_fuel), Globals.LogLevel.DEBUG)
 
 
 # warning-ignore:unused_parameter

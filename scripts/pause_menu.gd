@@ -12,7 +12,7 @@ var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 func _input(event: InputEvent) -> void:  # Add type hints
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var pos: Vector2 = event.position  # Explicitly type as Vector2
-		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.INFO)
+		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
 
 
 # Called when the node enters the scene tree.
@@ -39,19 +39,19 @@ func toggle_pause() -> void:
 # Connected to ResumeButton's pressed signal.
 # Resumes the game by toggling pause.
 func _on_resume_button_pressed() -> void:
-	Globals.log_message("Resume button pressed.", Globals.LogLevel.INFO)
+	Globals.log_message("Resume button pressed.", Globals.LogLevel.DEBUG)
 	toggle_pause()
 
 
 # Connected to BackToMainButton's pressed signal.
 # Unpauses and loads the main menu scene.
 func _on_back_to_main_button_pressed() -> void:
-	Globals.log_message("Back To Main Menu button pressed.", Globals.LogLevel.INFO)
+	Globals.log_message("Back To Main Menu button pressed.", Globals.LogLevel.DEBUG)
 	get_tree().paused = false  # Always unpause before scene change
 	visible = false  # Extra: Force hide for smooth transition
 	var main_menu_scene: PackedScene = load("res://scenes/main_menu.tscn")
 	if main_menu_scene:
-		Globals.log_message("Switch back to Main menu scene.", Globals.LogLevel.INFO)
+		Globals.log_message("Switch back to Main menu scene.", Globals.LogLevel.DEBUG)
 		get_tree().change_scene_to_packed(main_menu_scene)
 	else:
 		Globals.log_message("Error: Main menu scene not set!", Globals.LogLevel.ERROR)
@@ -59,5 +59,5 @@ func _on_back_to_main_button_pressed() -> void:
 
 
 func _on_options_button_pressed() -> void:
-	Globals.log_message("Options button pressed.", Globals.LogLevel.INFO)
+	Globals.log_message("Options button pressed.", Globals.LogLevel.DEBUG)
 	Globals.load_options()

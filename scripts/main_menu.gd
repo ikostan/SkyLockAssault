@@ -19,7 +19,7 @@ var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 func _input(event: InputEvent) -> void:  # Add type hints
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var pos: Vector2 = event.position  # Explicitly type as Vector2
-		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.INFO)
+		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
 
 
 # Called when the node enters the scene tree for the first time.
@@ -102,10 +102,10 @@ func setup_quit_dialog() -> void:
 # Loads the main game scene using a preloaded PackedScene for efficiency.
 func _on_start_pressed() -> void:
 	# Stub; later: get_tree().change_scene_to_file("res://game_scene.tscn")
-	Globals.log_message("Start Game menu button pressed.", Globals.LogLevel.INFO)
+	Globals.log_message("Start Game menu button pressed.", Globals.LogLevel.DEBUG)
 
 	if game_scene:
-		Globals.log_message("Loading main game scene...", Globals.LogLevel.INFO)
+		Globals.log_message("Loading main game scene...", Globals.LogLevel.DEBUG)
 		get_tree().change_scene_to_packed(game_scene)
 	else:
 		Globals.log_message("Error: Game scene not set!", Globals.LogLevel.ERROR)
@@ -114,7 +114,7 @@ func _on_start_pressed() -> void:
 # Handles the Options button press.
 # Placeholder for loading an options scene.
 func _on_options_button_pressed() -> void:
-	Globals.log_message("Options button pressed.", Globals.LogLevel.INFO)
+	Globals.log_message("Options button pressed.", Globals.LogLevel.DEBUG)
 	Globals.load_options()
 
 
@@ -124,7 +124,7 @@ func _on_quit_pressed() -> void:
 	# Show confirmation dialog
 	if is_instance_valid(quit_dialog):
 		quit_dialog.show()
-		Globals.log_message("Attempting to show QuitDialog.", Globals.LogLevel.INFO)
+		Globals.log_message("Attempting to show QuitDialog.", Globals.LogLevel.DEBUG)
 		quit_dialog.popup_centered()  # Sets visible=true internally
 	else:
 		Globals.log_message("No quit_dialog found.", Globals.LogLevel.ERROR)
@@ -140,7 +140,7 @@ func _on_quit_dialog_confirmed() -> void:
 	else:
 		# Desktop/editor: Standard quit
 		get_tree().quit()
-	Globals.log_message("Quit confirmed and executed!", Globals.LogLevel.INFO)
+	Globals.log_message("Quit confirmed and executed!", Globals.LogLevel.DEBUG)
 
 
 # Called when the quit dialog is canceled.
@@ -148,5 +148,5 @@ func _on_quit_dialog_confirmed() -> void:
 func _on_quit_dialog_canceled() -> void:
 	# Optional: Handle cancel (e.g., play sound or log)
 	quit_dialog.hide()
-	Globals.log_message("Quit canceled.", Globals.LogLevel.INFO)
+	Globals.log_message("Quit canceled.", Globals.LogLevel.DEBUG)
 	# Dialog auto-hides on cancel, no extra code needed

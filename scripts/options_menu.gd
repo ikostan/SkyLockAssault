@@ -18,7 +18,7 @@ var log_level_display_to_enum := {
 func _input(event: InputEvent) -> void:  # Add type hints
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var pos: Vector2 = event.position  # Explicitly type as Vector2
-		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.INFO)
+		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
 
 
 func _ready() -> void:
@@ -69,14 +69,14 @@ func _ready() -> void:
 	Globals.log_message(
 		"Set options_menu process_mode to ALWAYS for pause ignoring.", Globals.LogLevel.DEBUG
 	)
-	Globals.log_message("Options menu loaded.", Globals.LogLevel.INFO)
+	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
 
 
 # New function for slider change
 func _on_difficulty_changed(value: float) -> void:
 	Globals.difficulty = value
 	difficulty_label.text = "{" + str(value) + "}"
-	Globals.log_message("Difficulty changed to: " + str(value), Globals.LogLevel.INFO)
+	Globals.log_message("Difficulty changed to: " + str(value), Globals.LogLevel.DEBUG)
 	Globals._save_settings()
 
 
@@ -88,7 +88,7 @@ func _on_log_selected(index: int) -> void:
 	)
 	Globals.current_log_level = selected_enum
 	# May skip if new level high
-	Globals.log_message("Log level changed to: " + selected_name, Globals.LogLevel.INFO)
+	Globals.log_message("Log level changed to: " + selected_name, Globals.LogLevel.DEBUG)
 	Globals._save_settings()
 
 
@@ -96,5 +96,5 @@ func _on_log_selected(index: int) -> void:
 # In options_menu.gd (_on_back_pressed())
 func _on_back_pressed() -> void:
 	get_tree().paused = false  # Unpause if was paused (safe call)
-	Globals.log_message("Back button pressed.", Globals.LogLevel.INFO)
+	Globals.log_message("Back button pressed.", Globals.LogLevel.DEBUG)
 	queue_free()  # Remove self from tree (returns to underlying scene)

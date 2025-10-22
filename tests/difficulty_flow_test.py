@@ -2,7 +2,7 @@
 import os
 import time
 import pytest
-from playwright.sync_api import sync_playwright, expect, Page, Browser
+from playwright.sync_api import Page
 from ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
 
 
@@ -42,14 +42,14 @@ def test_difficulty_flow(page: Page):
         options_x = box['x'] + UI_ELEMENTS["options_button"]["x"]
         options_y = box['y'] + UI_ELEMENTS["options_button"]["y"]
         page.mouse.click(options_x, options_y)
-        page.wait_for_timeout(7000)
+        page.wait_for_timeout(2000)
         # assert any("Options menu loaded." in log["text"] for log in logs), "Options menu failed to load"
 
         # Click log level dropdown
         log_dropdown_x = box['x'] + UI_ELEMENTS["log_level_dropdown"]["x"]
         log_dropdown_y = box['y'] + UI_ELEMENTS["log_level_dropdown"]["y"]
         page.mouse.click(log_dropdown_x, log_dropdown_y)
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(2000)
 
         # Select DEBUG
         debug_item_x = box['x'] + UI_ELEMENTS["log_level_debug"]["x"]
@@ -62,14 +62,14 @@ def test_difficulty_flow(page: Page):
         back_x = box['x'] + UI_ELEMENTS["back_button"]["x"]
         back_y = box['y'] + UI_ELEMENTS["back_button"]["y"]
         page.mouse.click(back_x, back_y)
-        page.wait_for_timeout(5000)
+        page.wait_for_timeout(2000)
         assert any("Back button pressed." in log["text"] for log in logs), "Back button failed"
 
         # Open options
         options_x = box['x'] + UI_ELEMENTS["options_button"]["x"]
         options_y = box['y'] + UI_ELEMENTS["options_button"]["y"]
         page.mouse.click(options_x, options_y)  # Click Options button
-        page.wait_for_timeout(7000)  # Wait for options menu to load
+        page.wait_for_timeout(5000)  # Wait for options menu to load
         assert any("Options button pressed." in log["text"] for log in logs), "Options menu not found"
         assert any("Options menu loaded." in log["text"] for log in logs), "Options menu is not loaded"
 
@@ -77,14 +77,14 @@ def test_difficulty_flow(page: Page):
         slider_x = box['x'] + UI_ELEMENTS["difficulty_slider_2.0"]["x"]
         slider_y = box['y'] + UI_ELEMENTS["difficulty_slider_2.0"]["y"]
         page.mouse.click(slider_x, slider_y)  # Move to 2.0 position
-        page.wait_for_timeout(5000)
+        page.wait_for_timeout(2000)
         assert any("Difficulty changed to: 2.0" in log["text"] for log in logs), "Expected change to 2.0"
 
         # Back to main menu
         back_x = box['x'] + UI_ELEMENTS["back_button"]["x"]
         back_y = box['y'] + UI_ELEMENTS["back_button"]["y"]
         page.mouse.click(back_x, back_y)  # Click Back button
-        page.wait_for_timeout(5000)
+        page.wait_for_timeout(2000)
         assert any("Back button pressed." in log["text"] for log in logs), "Back button not found"
 
         # Start game
@@ -103,7 +103,7 @@ def test_difficulty_flow(page: Page):
         # Save screenshot
         os.makedirs("artifacts", exist_ok=True)
         page.screenshot(path=f"artifacts/test_difficulty_failure_{int(time.time())}.png")
-        print(f"Test: Difficulty change failed: {str(e)}")
+        print(f"Test: Difficulty flow test failed: {str(e)}")
         # Save logs to file (in case teardown fixture is skipped)
         log_file = "artifacts/test_difficulty_failure_console_logs.txt"
         with open(log_file, "w") as f:
