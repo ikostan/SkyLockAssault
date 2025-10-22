@@ -22,11 +22,15 @@ func _input(event: InputEvent) -> void:
 
 func _fire() -> void:
 	can_fire = false
-	timer.start(fire_rate)
+	# New: Scale cooldown with difficulty (longer wait if >1.0)
+	var scaled_rate: float = fire_rate * Globals.difficulty
+	timer.start(scaled_rate)
+	Globals.log_message("Firing with scaled cooldown: " + str(scaled_rate), Globals.LogLevel.DEBUG)
 
 	var bullet := bullet_scene.instantiate()
 	bullet.add_to_group("bullets")
-	get_tree().current_scene.add_child(bullet)
+	# Updated: Use root instead of current_scene for reliability in tests/CI
+	get_tree().root.add_child(bullet)
 	bullet.global_position = global_position + muzzle_offset  # Fixed offset, no rotate
 	bullet.global_rotation = -PI / 2  # Point bullet up if sprite needs it
 	Globals.log_message(

@@ -13,12 +13,13 @@ jobs:
     steps:
       - uses: "actions/checkout@v5"
       - name: "Download Godot Binary"
-        # yamllint disable-line rule:line-length
+        # yamllint disable rule:line-length
         run: |
           wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
           unzip Godot_v4.5-stable_linux.x86_64.zip
           mv Godot_v4.5-stable_linux.x86_64 godot
           chmod +x godot
+        # yamllint enable rule:line-length
       - name: "Install GDUnit4"
         run: |
           mkdir -p addons
@@ -27,9 +28,13 @@ jobs:
           mv addons/gdUnit4-6.0.0/addons/gdUnit4 addons/gdUnit4
           rm -rf addons/gdUnit4-6.0.0  # Cleanup
       - name: "Import Resources"
-        run: ./godot --headless --path . --import --quit
+        run: |
+          ./godot --headless --path . --import --quit
       - name: "Run GDUnit4 Tests"
-        run: ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --verbose --ignoreHeadlessMode --add res://test
+        # yamllint disable rule:line-length
+        run: |
+          ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --verbose --ignoreHeadlessMode --add res://test
+        # yamllint enable rule:line-length
       - name: "Upload Test Reports"
         if: "always()"  # Runs even on failure
         uses: "actions/upload-artifact@v4"

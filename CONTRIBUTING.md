@@ -29,10 +29,10 @@ Check issues labeled "good first issue" for easy starts, like:
    (e.g., feature/add-sound-effects).
 4. **Make Changes**: Open in Godot 4.5; edit scenes/scripts
    (e.g., main_menu.gd for quit handling).
-5. **Test**: 
+5. **Test**:
    - Run in editor (F5).
    - Export to HTML5 and test via Docker (`cd infra/ && docker compose up -d`,
-     open http://localhost:9090).
+     open <http://localhost:9090>).
    - On Win10: Verify no errors in console; test fullscreen/quit.
 6. **Commit**:
    `git add . && git commit -m "Descriptive message (closes #issue-number)"`.
@@ -41,7 +41,7 @@ Check issues labeled "good first issue" for easy starts, like:
 
 ## Reporting Bugs
 
-- Open an issue: https://github.com/ikostan/SkyLockAssault/issues/new
+- Open an issue: <https://github.com/ikostan/SkyLockAssault/issues/new>
 - Include: Godot version (4.5), OS (Win10 64-bit), steps to reproduce,
   screenshots if UI/export-related.
 - Use templates if available (e.g., bug_report.md).

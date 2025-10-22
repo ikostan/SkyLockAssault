@@ -8,7 +8,7 @@ great for learning deployment flows before GitHub CI/CD pushes to itch.io.
 ## Prerequisites
 
 - Docker Desktop v4.45 installed and running
-  (download from https://www.docker.com/products/docker-desktop/).
+  (download from <https://www.docker.com/products/docker-desktop/>).
 - Project exported to `export/web/` (see above).
 - infra/ folder in project root with:
   - `docker-compose.yml`
@@ -42,6 +42,7 @@ services:
       timeout: 10s
       retries: 3
 ```
+
 </details>
 
 <details>
@@ -71,6 +72,7 @@ server {
     }
 }
 ```
+
 </details>
 <!-- markdownlint-enable line-length -->
 <details>
@@ -82,28 +84,38 @@ server {
    ```bash
    cd C:\Users\super\Documents\GitHub\SkyLockAssault\infra
    ```
+
 3. Start the container (detached mode):
+
    ```bash
    docker compose up -d
    ```
+
    - First run pulls Nginx (may take a minute).
    - Check status: `docker ps` (should show sky_lock_assault_server running).
-4. Test in browser: http://localhost:9090
+4. Test in browser: <http://localhost:9090>
    - Your game menu should load. Click Start to test game_level (even if placeholder).
    - Use browser dev tools (F12) to check console for errors (e.g., WASM loading).
 5. Stop the container:
+
    ```bash
    docker compose down
    ```
+
 6. Restart after changes (e.g., new export):
+
    ```bash
    docker compose restart
    ```
+
 7. View logs for debugging:
+
    ```bash
    docker logs sky_lock_assault_server
    ```
+
    - Look for no errors like "default.conf not found."
+
 </details>
 <details>
   <summary><b>Troubleshooting</b></summary>
@@ -115,10 +127,12 @@ server {
 - **Port conflict**: Change ports line to e.g., "8080:80" if 9090 is used.
 - **No game loads**: Confirm export/web/ has files (re-export). Test manually with
   Python:
+
   ```bash
   python -m http.server 8000 --directory export/web
   ```
-- browse http://localhost:8000.
+
+- browse <http://localhost:8000>.
 - **WASM errors in browser**: Headers in config fix most—inspect network tab.
 - **Docker not starting**: Ensure Docker Desktop is running (tray icon green).
   Restart PC if issues.

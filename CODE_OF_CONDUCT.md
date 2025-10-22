@@ -59,7 +59,7 @@ at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported
-to the community leaders responsible for enforcement by opening a 
+to the community leaders responsible for enforcement by opening a
 [GitHub issue](https://github.com/ikostan/SkyLockAssault/issues). All complaints
 will be reviewed and investigated promptly and fairly.
 
@@ -119,6 +119,6 @@ This Code of Conduct is adapted from the
 Community Impact Guidelines were inspired by
 [Mozilla’s code of conduct enforcement ladder](https://github.com/mozilla/diversity).
 
-For answers to common questions about this code of conduct, see the 
+For answers to common questions about this code of conduct, see the
 [FAQ](https://www.contributor-covenant.org/faq).
 [Translations are available as well.](https://www.contributor-covenant.org/translations).

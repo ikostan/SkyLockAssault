@@ -30,6 +30,9 @@ jobs:
           relative_export_path: "./export/web"  # Output folder
           archive_output: true  # Zips for upload (optional; disable if not needed)
           cache: true  # Enable caching for Godot executable and templates
+      - name: "List Export Directory Contents"
+        run: |
+          ls -la export/web
       - name: "Set up Python"
         uses: "actions/setup-python@v5"
         with:
@@ -45,9 +48,19 @@ jobs:
       - name: "Install Playwright"
         run: |
           sudo apt-get update && sudo apt-get install -y libxml2-utils
-          pip install playwright pytest-playwright
-          playwright install --with-deps chromium
-      # Background web game server
+          pip install playwright pytest-playwright pytest-asyncio
+      - name: "Cache Playwright Browsers"
+        uses: "actions/cache@v4"
+        id: "playwright-cache"  # For conditional install
+        with:
+          path: "~/.cache/ms-playwright"
+          # Key: OS + PW version + deps hash (invalidation on updates)
+          key: "${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}-v1.48.0"  # Update version if PW upgrades
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+      - name: "Install Playwright Browsers (if cache miss)"
+        if: "steps.playwright-cache.outputs.cache-hit != 'true'"  # Skip if cached
+        run: "playwright install --with-deps"
       - name: "Start WEB Server"
         run: |
           python -m http.server 8080 --directory export/web &
@@ -63,11 +76,10 @@ jobs:
           done
           if [ $i -eq 20 ]; then exit 1; fi
       - name: "Run Tests"
-        # Generate JUnit XML report
+        # Generate JUnit XML report with PYTHONPATH adjustment
         run: |
-          pytest tests/browser_test.py -v --junitxml=report.xml
-      - name: "Console summary report"
-        # parses XML for pass/fail counts
+          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/ -v --junitxml=report.xml
+      - name: "Test Report"
         run: |
           if [ -f report.xml ]; then
             total=$(xmllint --xpath 'count(//testcase)' report.xml)

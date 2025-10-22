@@ -90,7 +90,7 @@ func _input(event: InputEvent) -> void:
 
 # Connect Timer's timeout signal
 func _on_fuel_timer_timeout() -> void:
-	var fuel_left: float = current_fuel - 0.5
+	var fuel_left: float = current_fuel - (0.5 * Globals.difficulty)  # Scale base rate
 	# Add a clamp so current_fuel never drops below zero
 	# to prevent negative values and any unintended behavior in the fuel bar.
 	current_fuel = clamp(fuel_left, 0, max_fuel)
