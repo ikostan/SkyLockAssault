@@ -41,3 +41,4 @@ reports/
 tests/__pycache__/
 report.xml
 artifacts/
+artifacts/main_menu.png
