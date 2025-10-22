@@ -18,7 +18,7 @@ jobs:
     env:
       PW_TIMEOUT: "${{ inputs.pw_timeout }}"
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@v5"
       - name: "Export Godot to Web"
         id: "export"
         # yamllint disable rule:line-length
