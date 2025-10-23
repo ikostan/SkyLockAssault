@@ -16,48 +16,58 @@ jobs:
       checks: write
     steps:
       - uses: actions/checkout@v5
-      - name: "Verify Project Godot Version"
+      - name: "Download Godot Binary"
         run: |
-          # Extract version from project.godot
-          VERSION=$(grep '^godot_version' project.godot | cut -d'=' -f2 | tr -d '"' | tr -d "'")
-          echo "Detected Godot version: $VERSION"
-          if [[ ! "$VERSION" =~ ^4\.5 ]]; then
-            echo "Warning: Version mismatch; forcing 4.5-stable for GdUnit4"
-            echo "GODOT_VERSION=4.5-stable" >> $GITHUB_ENV
-          fi
-      - name: "Run GdUnit4 Tests"
-        uses: MikeSchulze/gdunit4-action@v1
-        with:
-          godot_version: "4.5-stable"  # Override to match project
-          test_suites: "res://test"    # Your test dir
-          continue_on_failure: false   # Fail CI on test errors
-      - name: "List Reports"
+          wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
+          unzip Godot_v4.5-stable_linux.x86_64.zip
+          mv Godot_v4.5-stable_linux.x86_64 godot
+          chmod +x godot
+      - name: "Install GDUnit4"
         run: |
-          ls -la res/reports/
+          mkdir -p addons
+          wget https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.0.0.zip
+          unzip v6.0.0.zip -d addons
+          mv addons/gdUnit4-6.0.0/addons/gdUnit4 addons/gdUnit4
+          rm -rf addons/gdUnit4-6.0.0
+      - name: "Import Resources"
+        run: |
+          ./godot --headless --path . --import --quit
+      - name: "Create Reports Directory"
+        run: |
+          mkdir -p res/reports
+      - name: "Run GDUnit4 Tests"
+        run: |
+          ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+            --verbose \
+            --ignoreHeadlessMode \
+            --add res://test
       - name: "Extract Coverage from HTML (for Codecov)"
         run: |
-          python3 -c "
-          import json
-          import re
-          try:
-              with open('res/reports/index.html', 'r') as f:
-                  html = f.read()
-              match = re.search(r'id=\"coverage\"[^>]*>([0-9]+)%', html)
-              coverage_pct = int(match.group(1)) if match else 0
-              data = {'coverage': {'total': 100, 'covered': coverage_pct, 'pct': coverage_pct}}
-              with open('res/reports/coverage.json', 'w') as f:
-                  json.dump(data, f, indent=2)
-              print(f'Extracted coverage: {coverage_pct}%')
-          except FileNotFoundError:
-              print('No index.html; skipping extraction')
-          "
+            python3 -c "
+            import json
+            import re
+            try:
+                with open('res/reports/index.html', 'r') as f:
+                    html = f.read()
+                match = re.search(r'id=\"coverage\"[^>]*>([0-9]+)%', html)
+                coverage_pct = int(match.group(1)) if match else 0
+                data = {'coverage': {'total': 100, 'covered': coverage_pct, 'pct': coverage_pct}}
+                with open('res/reports/coverage.json', 'w') as f:
+                    json.dump(data, f, indent=2)
+                print(f'Extracted coverage: {coverage_pct}%')
+            except FileNotFoundError:
+                print('No index.html; skipping extraction')
+            "
+      - name: "List Coverage Reports"
+        run: |
+          ls -la res/reports/
       - name: "Upload Coverage to Codecov"
         if: ${{ !cancelled() }}
         uses: codecov/codecov-action@v5
         with:
-          files: ./res/reports/coverage.json,./res/reports/*.xml,./res/reports/index.html  # JSON + JUnit + HTML fallback
+          files: ./res/reports/coverage.json
           flags: gdscript
-          fail_ci_if_error: false  # Soften to avoid CI block if format issues
+          fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: "Upload Test Reports Artifacts"
         if: always()
