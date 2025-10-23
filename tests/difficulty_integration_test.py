@@ -158,6 +158,15 @@ def test_difficulty_integration(page: Page):
         page.mouse.click(options_x, options_y)  # Click Options button
         page.wait_for_timeout(5000)  # Wait for options menu to load
         assert any("Options button pressed." in log["text"] for log in logs), "Options menu not found"
+        # Assert that no unexpected error messages are present in the logs
+        unexpected_errors = [
+            log for log in logs
+            if any(
+                error_keyword in log["text"]
+                for error_keyword in ["Error", "Exception", "Traceback"]
+            )
+        ]
+        assert not unexpected_errors, f"Unexpected error messages found in logs: {unexpected_errors}"
         assert any("Options menu loaded." in log["text"] for log in logs), "Options menu is not loaded"
 
         # Set difficulty to 2.0 (direct click to slider_2.0 position)
