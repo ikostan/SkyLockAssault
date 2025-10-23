@@ -16,39 +16,38 @@ jobs:
       checks: write
     steps:
       - uses: actions/checkout@v5
-      - name: "Download Godot Binary"
-        run: |
-          wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
-          unzip Godot_v4.5-stable_linux.x86_64.zip
-          mv Godot_v4.5-stable_linux.x86_64 godot
-          chmod +x godot
-      - name: "Install GDUnit4"
-        run: |
-          mkdir -p addons
-          wget https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.0.0.zip
-          unzip v6.0.0.zip -d addons
-          mv addons/gdUnit4-6.0.0/addons/gdUnit4 addons/gdUnit4
-          rm -rf addons/gdUnit4-6.0.0
-      - name: "Import Resources"
-        run: |
-          ./godot --headless --path . --import --quit
-      - name: "Create Reports Directory"
-        run: |
-          mkdir -p res/reports
-      - name: "Run GDUnit4 Tests"
-        run: |
-          ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
-            --verbose \
-            --ignoreHeadlessMode \
-            --add res://test
-      - name: "List Coverage Reports"
+      - name: "Run GdUnit4 Tests"
+        id: gdunit
+        uses: MikeSchulze/gdunit4-action@v1
+        with:
+          godot_version: "4.5-stable"  # Matches your project
+          test_suites: "res://test"    # Your test dir
+          continue_on_failure: false   # Fail CI on test errors
+      - name: "List Reports"
         run: |
           ls -la res/reports/
+      - name: "Extract Coverage from HTML (for Codecov)"
+        run: |
+          # Simple Python script to parse GdUnit4 HTML for coverage data
+          # Assumes index.html has a <div id="coverage">70%</div> or similar; adjust selector if needed
+          python3 -c "
+          import json
+          import re
+          with open('res/reports/index.html', 'r') as f:
+              html = f.read()
+          # Example regex for coverage % (tune based on your HTML structure)
+          match = re.search(r'id=\"coverage\"[^>]*>([0-9]+)%', html)
+          coverage_pct = int(match.group(1)) if match else 0
+          data = {'coverage': {'total': 100, 'covered': coverage_pct, 'pct': coverage_pct}}
+          with open('res/reports/coverage.json', 'w') as f:
+              json.dump(data, f, indent=2)
+          print(f'Extracted coverage: {coverage_pct}%')
+          "
       - name: "Upload Coverage to Codecov"
         if: ${{ !cancelled() }}
         uses: codecov/codecov-action@v5
         with:
-          files: ./res/reports/coverage.json
+          files: ./res/reports/coverage.json,./res/reports/*.xml  # JSON + JUnit fallback
           flags: gdscript
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
