@@ -6,7 +6,7 @@ coverage:
         paths: scripts/
         flags: gdscript
       javascript:
-        target: auto  # Lower expectation for JS
+        target: 50%  # Explicit threshold for JS coverage
         paths: export/web/
         flags: playwright
   patch:
