@@ -3,6 +3,10 @@ name: "Godot Unit Tests"
 
 on:  # yamllint disable-line rule:truthy
   workflow_call:  # yamllint disable-line rule:empty-values
+    secrets:
+      CODECOV_TOKEN:
+        description: "Codecov requires a token to authenticate"
+        required: true
 
 jobs:
   unit-test:
@@ -33,9 +37,24 @@ jobs:
       - name: "Run GDUnit4 Tests"
         # yamllint disable rule:line-length
         run: |
-          ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --verbose --ignoreHeadlessMode --add res://test
+          ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+            --verbose \
+            --ignoreHeadlessMode \
+            --add res://test \
+            --report reports/
         # yamllint enable rule:line-length
-      - name: "Upload Test Reports"
+      - name: "List Coverage Reports"
+        run: |
+          ls -la reports/
+      - name: "Upload Coverage to Codecov"
+        if: ${{ !cancelled() }}
+        uses: "codecov/codecov-action@v5"
+        with:
+          files: ./reports/coverage.json
+          flags: gdscript
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: "Upload Test Reports Artifacts"
         if: "always()"  # Runs even on failure
         uses: "actions/upload-artifact@v4"
         with:

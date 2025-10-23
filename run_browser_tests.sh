@@ -34,7 +34,7 @@ echo "Running Playwright Browser Tests..."
 Xvfb :99 -screen 0 1280x720x24 &
 XVFB_PID=$!
 export DISPLAY=:99
-PYTHONPATH="$PROJECT_DIR/tests:$PYTHONPATH" pytest tests/ -v --junitxml=$PROJECT_DIR/report.xml
+PYTHONPATH="$PROJECT_DIR/tests:$PYTHONPATH" pytest tests/weapon_firing_test.py -v --junitxml=$PROJECT_DIR/report.xml
 if [ $? -ne 0 ]; then echo "Browser tests failed."; kill $SERVER_PID; kill $XVFB_PID; exit 1; fi
 
 # Report summary

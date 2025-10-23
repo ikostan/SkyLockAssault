@@ -34,11 +34,15 @@ jobs:
       - "gdlint"
       - "readmelint"
       - "yamllint"
+    secrets:
+      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
   browser_tests:
     name: "Browser Functional Tests"
     uses: "./.github/workflows/browser_test.yml"
     needs:
       - "unit_tests"
+    secrets:
+      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
   codeql:
     name: "CodeQL Scan on Web Export"
     needs:

@@ -1,0 +1,25 @@
+coverage:
+  status:
+    project:
+      gdscript:
+        target: 70%
+        paths: scripts/
+        flags: gdscript
+      javascript:
+        target: auto  # Lower expectation for JS
+        paths: export/web/
+        flags: playwright
+  patch:
+    default:
+      target: 80%
+comment:
+  layout: "diff, files"
+ignore:
+  - export/web/*  # Still exclude JS from project total
+flags:
+  gdscript:
+    paths:
+      - scripts/
+  playwright:
+    paths:
+      - export/web/
