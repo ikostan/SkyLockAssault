@@ -1,5 +1,7 @@
 """List of coordinates for all UI elements in the game."""
 
+# tests/ui_elements_coords.py
+
 # Define element coordinates relative to canvas top-left
 UI_ELEMENTS = {
     "start_game_button": {"x": 645, "y": 288},
