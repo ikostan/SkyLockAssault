@@ -1,7 +1,7 @@
 ---
 name: "Browser Functional Tests"
 
-on:
+on:  # yamllint disable-line rule:truthy
   workflow_call:
     secrets:
       CODECOV_TOKEN:
@@ -11,27 +11,29 @@ on:
       pw_timeout:
         description: "Playwright timeout in ms"
         required: false
-        type: number
+        type: "number"
         default: 10000
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: "ubuntu-latest"
     timeout-minutes: 25
     env:
       PW_TIMEOUT: "${{ inputs.pw_timeout }}"
     steps:
       - uses: "actions/checkout@v5"
       - name: "Export Godot to Web"
-        id: export
-        uses: firebelley/godot-export@930577654862a320eef793f399ee911b4479efb9
+        id: "export"
+        uses: "firebelley/godot-export@930577654862a320eef793f399ee911b4479efb9"
+        # yamllint disable rule:line-length
         with:
-          godot_executable_download_url: https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
-          godot_export_templates_download_url: https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz
+          godot_executable_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip"
+          godot_export_templates_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz"
           relative_project_path: ./
           relative_export_path: ./export/web
           archive_output: true
           cache: true
+        # yamllint enable rule:line-length
       - name: "List Export Directory Contents"
         run: |
           ls -la export/web
