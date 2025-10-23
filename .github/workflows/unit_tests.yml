@@ -1,8 +1,8 @@
 ---
 name: "Godot Unit Tests"
 
-on:  # yamllint disable-line rule:truthy
-  workflow_call:  # yamllint disable-line rule:empty-values
+on:
+  workflow_call:
     secrets:
       CODECOV_TOKEN:
         description: "Codecov requires a token to authenticate"
@@ -10,54 +10,52 @@ on:  # yamllint disable-line rule:truthy
 
 jobs:
   unit-test:
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      checks: "write"  # Add this to allow check run creation
+      checks: write
     steps:
-      - uses: "actions/checkout@v5"
+      - uses: actions/checkout@v5
       - name: "Download Godot Binary"
-        # yamllint disable rule:line-length
         run: |
           wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
           unzip Godot_v4.5-stable_linux.x86_64.zip
           mv Godot_v4.5-stable_linux.x86_64 godot
           chmod +x godot
-        # yamllint enable rule:line-length
       - name: "Install GDUnit4"
         run: |
           mkdir -p addons
           wget https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.0.0.zip
           unzip v6.0.0.zip -d addons
           mv addons/gdUnit4-6.0.0/addons/gdUnit4 addons/gdUnit4
-          rm -rf addons/gdUnit4-6.0.0  # Cleanup
+          rm -rf addons/gdUnit4-6.0.0
       - name: "Import Resources"
         run: |
           ./godot --headless --path . --import --quit
+      - name: "Create Reports Directory"
+        run: |
+          mkdir -p res/reports
       - name: "Run GDUnit4 Tests"
-        # yamllint disable rule:line-length
         run: |
           ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
             --verbose \
             --ignoreHeadlessMode \
-            --add res://test \
-            --report reports/
-        # yamllint enable rule:line-length
+            --add res://test
       - name: "List Coverage Reports"
         run: |
-          ls -la reports/
+          ls -la res/reports/
       - name: "Upload Coverage to Codecov"
         if: ${{ !cancelled() }}
-        uses: "codecov/codecov-action@v5"
+        uses: codecov/codecov-action@v5
         with:
-          files: ./reports/coverage.json
+          files: ./res/reports/coverage.json
           flags: gdscript
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: "Upload Test Reports Artifacts"
-        if: "always()"  # Runs even on failure
-        uses: "actions/upload-artifact@v4"
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: "gdunit-reports"
-          path: "reports/**"
-          retention-days: 5  # Keep for 5 days
+          name: gdunit-reports
+          path: res/reports/**
+          retention-days: 5
