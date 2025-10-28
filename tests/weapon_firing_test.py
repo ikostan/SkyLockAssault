@@ -1,4 +1,60 @@
+# tests/weapon_firing_test.py
+"""
+Weapon Firing Test (Playwright, Python)
+======================================
+
+Overview
+--------
+This browser test validates that a single weapon fire action produces exactly one bullet
+spawn event after starting the game. It drives the Godot HTML5 build using Playwright's
+sync API and asserts on console logs emitted by the game to count bullet instantiations.
+
+Test Flow
+---------
+- Launch headless Chromium with software rendering-friendly flags for CI.
+- Start a CDP session to capture precise V8 coverage and attach a console listener.
+- Navigate to http://localhost:8080/index.html, verify canvas visibility and page title.
+- Open Options, set log level to DEBUG, return to the main menu.
+- Start the level and wait for scene load.
+- Press Space once to fire and assert that exactly one "Firing bullet from weapon global"
+  log entry is recorded.
+
+Prerequisites
+-------------
+- Local server hosting the game at http://localhost:8080/index.html.
+- Python with pytest and Playwright installed:
+  - pip install pytest playwright
+  - playwright install chromium
+- The HTML5 build must emit the following logs used by this test, for example:
+  - "Options button pressed."
+  - "Back button pressed."
+  - "Start Game menu button pressed."
+  - "Firing bullet from weapon global"
+
+How It Works
+------------
+- The test uses coordinate-based interactions computed as: canvas bounding box origin +
+  offsets provided by tests/ui_elements_coords.py.
+- Bullet creation is inferred via console logs; ensure weapon.gd prints a consistent log
+  on bullet instantiation (or adapt the string in this test).
+
+Artifacts
+---------
+- v8_coverage_weapon_firing_test.json: Precise V8 coverage dump saved at teardown.
+- artifacts/test_weapon_firing_failure_*.png: Screenshot captured on failure.
+- artifacts/test_weapon_firing_failure_console_logs.txt: Console logs written on failure.
+
+Running
+-------
+- Execute only this test: pytest -k weapon_firing_test -q
+
+Maintenance Notes
+-----------------
+- Keep UI coordinates in tests/ui_elements_coords.py in sync with the in-canvas layout.
+- If the bullet instantiation log message changes, update the filter string accordingly.
+"""
 import pytest
+import json  # Added for saving coverage data
 from playwright.sync_api import Page
 from ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
 
@@ -19,7 +75,13 @@ def page(playwright: "playwright") -> Page:
 
 def test_weapon_firing(page: Page):
     logs: list = []
+    cdp_session = None
     try:
+        # Start CDP session for V8 JS coverage (workaround for Python Playwright lacking native coverage API)
+        cdp_session = page.context.new_cdp_session(page)
+        cdp_session.send("Profiler.enable")
+        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+
         # Set up console log capture
         page.on("console", lambda msg: logs.append({"type": msg.type, "text": msg.text}))
 
@@ -90,3 +152,11 @@ def test_weapon_firing(page: Page):
                 f.write(f"[{log['type']}] {log['text']}\n")
         print(f"Console logs saved to {log_file}")
         raise
+    finally:
+        if cdp_session:
+            # Stop V8 coverage and save to file (even on failure)
+            coverage = cdp_session.send("Profiler.takePreciseCoverage")['result']
+            cdp_session.send("Profiler.stopPreciseCoverage")
+            cdp_session.send("Profiler.disable")
+            with open("v8_coverage_weapon_firing_test.json", "w") as f:
+                json.dump(coverage, f)
