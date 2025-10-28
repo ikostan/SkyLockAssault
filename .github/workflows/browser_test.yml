@@ -111,14 +111,13 @@ jobs:
                   console.log('Skipping entry without functions: ' + (entry.url || 'empty'));
                   continue;
                 }
-                // Force dummy path for anonymous, use source if available
-                const scriptPath = entry.url && entry.url.startsWith('http://localhost:8080/')
-                  ? entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web/'))
+                const scriptPath = entry.url && entry.url.startsWith('http://localhost:8080/') 
+                  ? entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web/')) 
                   : 'anonymous_' + localCounter + '.js';
                 const options = entry.source ? { source: entry.source } : {};
                 try {
                   const converter = new V8ToIstanbul(scriptPath, 0, options);
-                  await converter.load();
+                  if (entry.url) await converter.load();  # Only load if real path (skip for anonymous to avoid ENOENT)
                   converter.applyCoverage(entry.functions);
                   const filename = path.basename(scriptPath) + '_' + (localCounter++) + '.json';
                   fs.writeFileSync(path.join('.nyc_output', filename), JSON.stringify(converter.toIstanbul()));
