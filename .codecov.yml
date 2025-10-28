@@ -9,13 +9,19 @@ coverage:
         target: 50%  # Explicit threshold for JS coverage
         paths: export/web/
         flags: playwright
-  patch:
-    default:
-      target: 80%
+    patch:
+      default:
+        target: 80%
+  precision: 2  # Rounds coverage to 2 decimal places
+  range: "60...90"  # Coverage below 60% shows red, above 90% green
+  round: down  # Rounding direction
+
 comment:
-  layout: "diff, files"
+  layout: "diff, files"  # Shows diff and file changes in PR comments
+
 ignore:
-  - export/web/*  # Still exclude JS from project total
+  - export/web/*  # Exclude JS from overall project total (but still track via flag)
+
 flags:
   gdscript:
     paths:
