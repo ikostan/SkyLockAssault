@@ -96,7 +96,7 @@ jobs:
 
       - name: "Convert V8 to Istanbul and Merge LCOV"
         run: |
-          mkdir -p .nyc_output coverage/lcov
+          mkdir -p .nyc_output coverage/lcov temp
           counter=0
           for file in v8_coverage_*.json; do
             node -e "
@@ -107,19 +107,25 @@ jobs:
             (async () => {
               let localCounter = 0;
               for (const entry of coverage) {
-                if (!entry.url || !entry.url.startsWith('http://localhost:8080/')) {
-                  console.log('Skipping non-matching URL: ' + (entry.url || 'empty'));
+                let scriptPath;
+                if (entry.url && entry.url.startsWith('http://localhost:8080/')) {
+                  scriptPath = entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web/'));
+                } else if (entry.source) {
+                  // Handle anonymous: write source to temp file
+                  scriptPath = path.join('temp', 'anonymous_' + localCounter + '.js');
+                  fs.writeFileSync(scriptPath, entry.source);
+                } else {
+                  console.log('Skipping entry without URL or source: ' + (entry.url || 'empty'));
                   continue;
                 }
-                const scriptPath = entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web/'));
                 try {
-                  const converter = new V8ToIstanbul(scriptPath, 0, { source: entry.source });
+                  const converter = new V8ToIstanbul(scriptPath, 0);
                   await converter.load();
                   converter.applyCoverage(entry.functions);
                   const filename = path.basename(scriptPath) + '_' + (localCounter++) + '.json';
                   fs.writeFileSync(path.join('.nyc_output', filename), JSON.stringify(converter.toIstanbul()));
                 } catch (e) {
-                  console.error('Skipping entry ' + entry.url + ': ' + e.message);
+                  console.error('Skipping entry ' + (entry.url || 'anonymous') + ': ' + e.message);
                 }
               }
             })();
