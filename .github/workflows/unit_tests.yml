@@ -50,7 +50,6 @@ jobs:
       - name: "List Coverage Reports"
         run: |
           ls -la ${{ steps.find_report.outputs.latest_report }}/
-      
       - name: "Extract Coverage from HTML (for Codecov)"
         run: |
           pip install beautifulsoup4
@@ -92,7 +91,7 @@ jobs:
           files: ./reports/coverage.lcov,./reports/**/*.xml  # LCOV + any JUnit XML
           flags: gdscript
           fail_ci_if_error: false
-          verbose: true # optional (default = false)
+          verbose: true  # optional (default = false)
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: "Upload Test Reports Artifacts"

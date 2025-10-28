@@ -116,7 +116,7 @@ jobs:
           files: ./coverage/lcov/lcov.info  # Now a supported LCOV file
           flags: playwright
           fail_ci_if_error: true
-          verbose: true # optional (default = false)
+          verbose: true  # optional (default = false)
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: "Test Report"
