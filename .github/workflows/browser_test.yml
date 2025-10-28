@@ -88,7 +88,7 @@ jobs:
       - name: "Set up Node.js for Coverage Conversion"
         uses: "actions/setup-node@v4"
         with:
-          node-version: '20'  # Stable for Win10 compat
+          node-version: "20"
 
       - name: "Install Conversion Tools"
         run: |
@@ -96,7 +96,7 @@ jobs:
 
       - name: "Convert V8 to LCOV"
         run: |
-          npx mcr v8-merge v8_coverage_*.json -o coverage/lcov/lcov.info
+          npx mcr v8 v8_coverage_*.json -o coverage/lcov/lcov.info
 
       - name: "Upload Coverage to Codecov"
         if: ${{ !cancelled() }}
