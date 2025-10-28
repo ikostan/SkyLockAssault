@@ -92,7 +92,8 @@ jobs:
 
       - name: "Install Conversion Tools"
         run: |
-          npm install monocart-coverage-reports  # Install the tool
+          npm install monocart-coverage-reports
+          npm fund
 
       - name: "Convert V8 to LCOV"
         run: |
