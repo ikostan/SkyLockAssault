@@ -105,13 +105,20 @@ jobs:
             (async () => {
               let localCounter = 0;
               for (const entry of coverage) {
-                // Remap browser URL to local CI path (your export dir)
+                if (!entry.url || !entry.url.startsWith('http://localhost:8080/')) {
+                  console.log('Skipping non-matching URL: ' + (entry.url || 'empty'));
+                  continue;
+                }
                 const scriptPath = entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web/'));
-                const converter = new V8ToIstanbul(scriptPath, 0, { source: entry.source });
-                await converter.load();
-                converter.applyCoverage(entry.functions);
-                const filename = entry.url.split('/').pop() + '_' + (localCounter++) + '.json';
-                fs.writeFileSync('.nyc_output/' + filename, JSON.stringify(converter.toIstanbul()));
+                try {
+                  const converter = new V8ToIstanbul(scriptPath, 0, { source: entry.source });
+                  await converter.load();
+                  converter.applyCoverage(entry.functions);
+                  const filename = path.basename(scriptPath) + '_' + (localCounter++) + '.json';
+                  fs.writeFileSync(path.join('.nyc_output', filename), JSON.stringify(converter.toIstanbul()));
+                } catch (e) {
+                  console.error('Skipping entry ' + entry.url + ': ' + e.message);
+                }
               }
             })();
             "
