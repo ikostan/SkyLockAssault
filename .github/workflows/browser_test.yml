@@ -101,19 +101,19 @@ jobs:
             const fs = require('fs');
             const V8ToIstanbul = require('v8-to-istanbul');
             const coverage = JSON.parse(fs.readFileSync('$file', 'utf8'));
-            let localCounter = 0;
-            for (const entry of coverage) {
-              const converter = new V8ToIstanbul(entry.url.replace('file://', ''), 0, { source: entry.source });
-              converter.load().then(() => {
+            (async () => {
+              let localCounter = 0;
+              for (const entry of coverage) {
+                const converter = new V8ToIstanbul(entry.url.replace('file://', ''), 0, { source: entry.source });
+                await converter.load();
                 converter.applyCoverage(entry.functions);
                 const filename = entry.url.split('/').pop() + '_' + (localCounter++) + '.json';
                 fs.writeFileSync('.nyc_output/' + filename, JSON.stringify(converter.toIstanbul()));
-              });
-            }
-            counter++;
+              }
+            })();
             "
+            counter=$((counter + 1))
           done
-          # nyc merges and reports as LCOV
           npx nyc report --reporter=lcov --report-dir coverage/lcov
 
       - name: "Upload Coverage to Codecov"
