@@ -1,19 +1,22 @@
 ---
 name: "Godot Unit Tests"
 
-on:  # yamllint disable-line rule:truthy
-  workflow_call:  # yamllint disable-line rule:empty-values
+on:
+  workflow_call:
+    secrets:
+      CODECOV_TOKEN:
+        description: "Codecov requires a token to authenticate"
+        required: true
 
 jobs:
   unit-test:
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      checks: "write"  # Add this to allow check run creation
+      checks: write
     steps:
-      - uses: "actions/checkout@v5"
+      - uses: actions/checkout@v5
       - name: "Download Godot Binary"
-        # yamllint disable-line rule:line-length
         run: |
           wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
           unzip Godot_v4.5-stable_linux.x86_64.zip
@@ -25,15 +28,60 @@ jobs:
           wget https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.0.0.zip
           unzip v6.0.0.zip -d addons
           mv addons/gdUnit4-6.0.0/addons/gdUnit4 addons/gdUnit4
-          rm -rf addons/gdUnit4-6.0.0  # Cleanup
+          rm -rf addons/gdUnit4-6.0.0
       - name: "Import Resources"
-        run: ./godot --headless --path . --import --quit
+        run: |
+          ./godot --headless --path . --import --quit
       - name: "Run GDUnit4 Tests"
-        run: ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --verbose --ignoreHeadlessMode --add res://test
-      - name: "Upload Test Reports"
-        if: "always()"  # Runs even on failure
-        uses: "actions/upload-artifact@v4"
+        run: |
+          ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+            --verbose \
+            --ignoreHeadlessMode \
+            --add res://test
+      - name: "Find Latest Report Directory"
+        id: find_report
+        run: |
+          LATEST_REPORT=$(ls -td reports/report_* | head -1 || echo "")
+          if [ -z "$LATEST_REPORT" ]; then
+            echo "No report directory found; tests may not have generated reports."
+            exit 1
+          fi
+          echo "latest_report=$LATEST_REPORT" >> $GITHUB_OUTPUT
+      - name: "List Coverage Reports"
+        run: |
+          ls -la ${{ steps.find_report.outputs.latest_report }}/
+      - name: "Extract Coverage from HTML (for Codecov)"
+        run: |
+          python3 -c "
+          import json
+          import re
+          try:
+              with open('${{ steps.find_report.outputs.latest_report }}/index.html', 'r') as f:
+                  html = f.read()
+              # Updated regex for typical GdUnit4 structure (e.g., 'Coverage: 75%' or table <td>75%</td>)
+              match = re.search(r'(Coverage|Total Coverage|Line Coverage)[:\s]*(\d+)%', html, re.IGNORECASE)
+              coverage_pct = int(match.group(2)) if match else 0
+              data = {'coverage': {'total': 100, 'covered': coverage_pct, 'pct': coverage_pct}}
+              with open('reports/coverage.json', 'w') as f:
+                  json.dump(data, f, indent=2)
+              print(f'Extracted coverage: {coverage_pct}%')
+          except FileNotFoundError:
+              print('No index.html found; skipping extraction')
+          except Exception as e:
+              print(f'Extraction failed: {str(e)}')
+          "
+      - name: "Upload Coverage to Codecov"
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v5
         with:
-          name: "gdunit-reports"
-          path: "reports/**"
-          retention-days: 5  # Keep for 5 days
+          files: ./reports/coverage.json,./reports/**/*.xml,./reports/**/index.html  # JSON + XML + HTML fallback
+          flags: gdscript
+          fail_ci_if_error: false  # Don't fail CI if upload issues
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: "Upload Test Reports Artifacts"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdunit-reports
+          path: reports/**
+          retention-days: 5

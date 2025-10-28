@@ -6,6 +6,7 @@
 [![GDScript](https://img.shields.io/badge/Language-GDScript-brightgreen)](https://docs.godotengine.org/en/stable/tutorials/scripting/gdscript/index.html)
 [![Itch.io](https://img.shields.io/badge/Deployment-Itch.io-purple?logo=itch-dot-io)](https://itch.io/)
 [![CI/CD](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml/badge.svg)](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml)
+[![codecov](https://codecov.io/gh/ikostan/SkyLockAssault/graph/badge.svg?token=A4O6I72HP0)](https://codecov.io/gh/ikostan/SkyLockAssault)
 ![Repo Size](https://img.shields.io/github/repo-size/ikostan/SkyLockAssault)
 ![Closed Issues](https://img.shields.io/github/issues-closed/ikostan/SkyLockAssault?%2FSkyLockAssault?style=flat-square&label=Issues&color=green)
 ![Open Issues](https://img.shields.io/github/issues/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=red)
@@ -30,11 +31,11 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 
 - **Godot Version**: 4.5 stable (or compatible).
 - **OS**: `Windows 10 64-bit`.
-- **Tools**: 
-  * `Docker Desktop v4.45` for local testing
-  * `GitHub Desktop v3.5` for repo management 
-  * `PyCharm 2024.1.7 (Community Edition)` for file editing
-  * `Windows PowerShell` for running Docker commands
+- **Tools**:
+  - `Docker Desktop v4.45` for local testing
+  - `GitHub Desktop v3.5` for repo management
+  - `PyCharm 2024.1.7 (Community Edition)` for file editing
+  - `Windows PowerShell` for running Docker commands
 - **Goal**: Build a playable top-down shooter with web deployment in mind—export
   to HTML5/Web, test locally, deploy to itch.io.
 
@@ -45,20 +46,23 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 - [Assets Free Laser Bullets Pack 2020](https://wenrexa.itch.io/laser2020)
 
 ## Documentation
+<!-- markdownlint-disable line-length -->
 
 1. [Guide to Implementing Versioning](/files/docs/Guide_to_Implementing_Versioning.md)
 2. [Godot v4.5 Docs](https://docs.godotengine.org/en/stable/index.html)
 3. [Development Guide](files/docs/Development_Guide.md)
-4. [Docker Local Test Server](/files/docs/Docker_Local_Test_Server.md)
-5. [Setup Instructions](/files/docs/Setup_Instructions.md)
-6. [Signing Setup for GitHub Desktop](/files/docs/Signing_Setup_for_GitHub_Desktop.md)
-7. BOTS:
+4. [Local CI Pipeline for Godot Project using Docker](/files/docs/Local_CI_Pipeline_for_Godot_Project_using_Docker.md)
+5. [Docker Local Test Server](/files/docs/Docker_Local_Test_Server.md)
+6. [Setup Instructions](/files/docs/Setup_Instructions.md)
+7. [Signing Setup for GitHub Desktop](/files/docs/Signing_Setup_for_GitHub_Desktop.md)
+8. BOTS:
    - [Dependabot](https://docs.github.com/en/code-security/dependabot)
    - [Snyk](https://docs.snyk.io/)
    - [Sourcery AI](https://docs.sourcery.ai/)
    - [IMGBOT](https://imgbot.net/docs/)
    - [Release Drafter](https://github.com/release-drafter/release-drafter?tab=readme-ov-file#readme)
 
+<!-- markdownlint-enable line-length -->
 ## Roadmap
 
 Here's a high-level plan for upcoming features. Contributions welcome!
@@ -81,6 +85,7 @@ guidelines (create if needed).
 ## Player Feedback
 
 We value your input to improve Sky Lock Assault! Share your thoughts via:
+
 - [Itch.io Comments](https://ikostan.itch.io/sky-lock-assault) – Discuss
   gameplay, bugs, or suggestions directly on the game's page.
 
@@ -89,18 +94,18 @@ We value your input to improve Sky Lock Assault! Share your thoughts via:
 - **In Godot Editor**: Open the project > Press F5 to run the main scene
   (`main_menu.tscn`). Use keyboard/mouse for navigation.
 - **Local Web Testing**: After exporting to HTML5 (see Setup),
-  cd to `infra/` in `PowerShell` > `docker compose up -d` > 
-  Open http://localhost:9090 in browser. Click "Run game" iframe;
+  cd to `infra/` in `PowerShell` > `docker compose up -d` >
+  Open <http://localhost:9090> in browser. Click "Run game" iframe;
   use fullscreen for immersion (ignore desktop console warnings).
 - **Online on itch.io**:
   1. Visit [ikostan.itch.io/sky-lock-assault](https://ikostan.itch.io/sky-lock-assault)
-  2. Click "Run game". 
+  2. Click "Run game".
 - The game supports browser play; mobile-friendly with landscape orientation.
 
 For learning: Test quit handling (platform-specific) and log levels in options
 menu during play.
 
-### Current features:
+### Current features
 
 - Main menu scene (`main_menu.tscn`) with buttons (Start, Resume, Options, Quit).
 - Placeholder game level (`main_scene.tscn`) for future mechanics and game testing.
@@ -113,31 +118,32 @@ menu during play.
 - Implement fade-in animations for main menu UI panels.
 - Fuel system including fuel level progress bar.
 - Basic weapon system.
+- Difficulty settings.
 
 ### Features Roadmap
 
-- **Current**: 
-  * Main menu with Start/Resume/Options/Quit; 
-  * placeholder game level; 
-  * fade-in animations; 
-  * web export/testing with Docker.
-  * itch.io CI/CD integration.
-- **Planned**: 
-  * Fuel management (timer-based depletion/refuel); 
-  * multiple weapons (guns/missiles with switching); 
-  * multi-level progression; 
-  * adjustable difficulty (enemy spawn rates); 
-  * enemy AI (pathing/assaults); scoring/HUD.
+- **Current**:
+  - Main menu with Start/Resume/Options/Quit;
+  - placeholder game level;
+  - fade-in animations;
+  - web export/testing with Docker.
+  - itch.io CI/CD integration.
+- **Planned**:
+  - Fuel management (timer-based depletion/refuel);
+  - multiple weapons (guns/missiles with switching);
+  - multi-level progression;
+  - adjustable difficulty (enemy spawn rates);
+  - enemy AI (pathing/assaults); scoring/HUD.
 - **Future Milestones**:
-  * Mobile exports, 
-  * audio, 
-  * particle effects,
+  - Mobile exports,
+  - audio,
+  - particle effects,
 
 Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milestones).
 
 ### Known Issues
 
-- Harmless console warning on desktop fullscreen 
+- Harmless console warning on desktop fullscreen
   (NotSupportedError for orientation lock—ignored as non-fatal; doesn't affect gameplay).
 - Placeholder level lacks mechanics—work in progress.
 - Report new issues on [GitHub](https://github.com/ikostan/SkyLockAssault/issues).

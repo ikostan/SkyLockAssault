@@ -12,8 +12,8 @@ assignees: ''
 **OS**: (e.g., Windows 10 64-bit)
 
 **Steps to Reproduce**:
-1. 
-2. 
+1.
+2.
 
 **Expected Behavior**:
 

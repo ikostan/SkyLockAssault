@@ -15,21 +15,27 @@ var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 @onready var options_button: Button = $VideoStreamPlayer/Panel/VBoxContainer/OptionsButton
 @onready var quit_button: Button = $VideoStreamPlayer/Panel/VBoxContainer/QuitButton
 
-# Handles the main menu UI, including button connections and quit dialog logic.
-# This script manages scene transitions and platform-specific quitting for web/desktop.
+
+func _input(event: InputEvent) -> void:  # Add type hints
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var pos: Vector2 = event.position  # Explicitly type as Vector2
+		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
 
 
 # Called when the node enters the scene tree for the first time.
 # Initializes button signals and quit dialog connections.
 func _ready() -> void:
 	Globals.log_message("Initializing main menu...", Globals.LogLevel.DEBUG)
-
+	# Connect START button signal
 	@warning_ignore("return_value_discarded")
 	start_button.pressed.connect(_on_start_pressed)
+	# Connect OPTIONS button signal
 	@warning_ignore("return_value_discarded")
 	options_button.pressed.connect(_on_options_button_pressed)
+	# Connect QUIT button signal
 	@warning_ignore("return_value_discarded")
 	quit_button.pressed.connect(_on_quit_pressed)
+
 	setup_quit_dialog()  # New: Handles dialog setup in one place
 	# assert(quit_dialog != null, "QuitDialog must be assigned!")
 	# Hide UI initially (buttons and dialog won't show right away)
@@ -108,6 +114,7 @@ func _on_start_pressed() -> void:
 # Handles the Options button press.
 # Placeholder for loading an options scene.
 func _on_options_button_pressed() -> void:
+	Globals.log_message("Options button pressed.", Globals.LogLevel.DEBUG)
 	Globals.load_options()
 
 
@@ -141,5 +148,5 @@ func _on_quit_dialog_confirmed() -> void:
 func _on_quit_dialog_canceled() -> void:
 	# Optional: Handle cancel (e.g., play sound or log)
 	quit_dialog.hide()
-	Globals.log_message("Quit canceled—back to skies!", Globals.LogLevel.DEBUG)
+	Globals.log_message("Quit canceled.", Globals.LogLevel.DEBUG)
 	# Dialog auto-hides on cancel, no extra code needed

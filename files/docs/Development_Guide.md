@@ -9,7 +9,7 @@ current features (e.g., menu, movement) and future expansions
 ## 1. Project Overview
 
 - **Engine**: Godot v4.4 (64-bit Windows compatible).
-- **Tools**: Docker Desktop v4.45 for local web testing (http://localhost:9090),
+- **Tools**: Docker Desktop v4.45 for local web testing (<http://localhost:9090>),
   GitHub Desktop v3.5 for version control, GDUnit4 v5.1.1 for unit tests.
 - **Goal**: Web browser game deployed to itch.io via GitHub Actions.
 - **Key Files**:
@@ -60,6 +60,7 @@ func _physics_process(delta: float) -> void:
 ### Menu System (main_menu.gd)
 
 Use Control node for UI. Connect buttons with signals:
+
 ```gdscript
 @onready var start_button: Button = $VBoxContainer/StartButton
 
@@ -69,13 +70,16 @@ func _ready() -> void:
 func _on_start_pressed() -> void:
     get_tree().change_scene_to_file("res://scenes/game_level.tscn")
 ```
+
 - Web Quit: Use JavaScriptBridge for browser close:
+
 ```gdscript
 if OS.get_name() == "Web":
     JavaScriptBridge.eval("window.close()")
 else:
     get_tree().quit()
 ```
+
 - Tip: Use Tween for fades (e.g., modulate.a from 0 to 1).
 
 ### Global Utilities (Globals.gd)
@@ -90,6 +94,7 @@ enum LogLevel { DEBUG, INFO, WARNING, ERROR }
 func log_message(message: String, level: LogLevel = LogLevel.INFO) -> void:
     print("[%s] %s" % [LogLevel.keys()[level], message])
 ```
+
 - Tip: Use for debug in _ready() functions.
 
 ## 4. Testing

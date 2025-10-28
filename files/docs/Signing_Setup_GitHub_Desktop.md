@@ -35,8 +35,9 @@ Download the latest Gpg4win from the official site:
   (default path: `C:\Program Files (x86)\GnuPG\bin`).
 
 If `gpg` isn't recognized in `PowerShell`, add the bin path to your system PATH:
+
 - Right-click `This PC` > `Properties` > `Advanced system settings` >
-  `Environment Variables` > `System variables` > `Path` > `Edit` > `New` > 
+  `Environment Variables` > `System variables` > `Path` > `Edit` > `New` >
   Add `C:\Program Files (x86)\GnuPG\bin` > `OK`.
 
 ### 2. Generate a GPG Key Pair
@@ -68,6 +69,7 @@ Edit your global `.gitconfig` file (located at `C:\Users\YourUsername\.gitconfig
 using Notepad or PyCharm.
 
 - **Finding Your Long Key ID**: In PowerShell, run:
+
   ```bash
   gpg --list-secret-keys --keyid-format=long
   ```

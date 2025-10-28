@@ -2,13 +2,16 @@
 name: "Browser Functional Tests"
 
 on:  # yamllint disable-line rule:truthy
-  workflow_call:  # yamllint disable-line rule:empty-values
+  workflow_call:
+    secrets:
+      CODECOV_TOKEN:
+        description: "Codecov requires a token to authenticate"
+        required: true
     inputs:
       pw_timeout:
         description: "Playwright timeout in ms"
         required: false
         type: "number"
-        # Configurable timeout (ms); lower for faster CI
         default: 10000
 
 jobs:
@@ -18,18 +21,22 @@ jobs:
     env:
       PW_TIMEOUT: "${{ inputs.pw_timeout }}"
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@v5"
       - name: "Export Godot to Web"
         id: "export"
-        # yamllint disable rule:line-length
-        uses: "firebelley/godot-export@930577654862a320eef793f399ee911b4479efb9"  # Pinned to SHA for security (was @v6.0.0)
+        uses: "firebelley/godot-export@930577654862a320eef793f399ee911b4479efb9"
         with:
+          # yamllint disable rule:line-length
           godot_executable_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip"
           godot_export_templates_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz"
-          relative_project_path: "./"  # Project root
-          relative_export_path: "./export/web"  # Output folder
-          archive_output: true  # Zips for upload (optional; disable if not needed)
-          cache: true  # Enable caching for Godot executable and templates
+          relative_project_path: ./
+          relative_export_path: ./export/web
+          archive_output: true
+          cache: true
+          # yamllint enable rule:line-length
+      - name: "List Export Directory Contents"
+        run: |
+          ls -la export/web
       - name: "Set up Python"
         uses: "actions/setup-python@v5"
         with:
@@ -37,24 +44,31 @@ jobs:
       - name: "Cache PIP Dependencies"
         uses: "actions/cache@v4"
         with:
-          path: "~/.cache/pip"
-          # Hash for invalidation
-          key: "${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}"
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
       - name: "Install Playwright"
         run: |
           sudo apt-get update && sudo apt-get install -y libxml2-utils
-          pip install playwright pytest-playwright
-          playwright install --with-deps chromium
-      # Background web game server
+          pip install playwright pytest-playwright pytest-asyncio
+      - name: "Cache Playwright Browsers"
+        uses: "actions/cache@v4"
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}-v1.48.0
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+      - name: "Install Playwright Browsers (if cache miss)"
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: playwright install --with-deps
       - name: "Start WEB Server"
         run: |
           python -m http.server 8080 --directory export/web &
       - name: "Wait For WEB Server Response"
-        # Managed background with readiness check
         run: |
-          for i in {1..20}; do  # Readiness loop (up to 10s)
+          for i in {1..20}; do
             if curl -f http://localhost:8080/index.html >/dev/null 2>&1; then
               echo "Server ready"
               break
@@ -63,17 +77,26 @@ jobs:
           done
           if [ $i -eq 20 ]; then exit 1; fi
       - name: "Run Tests"
-        # Generate JUnit XML report
         run: |
-          pytest tests/browser_test.py -v --junitxml=report.xml
-      - name: "Console summary report"
-        # parses XML for pass/fail counts
+          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/ -v --junitxml=junit.xml -o junit_family=legacy
+      - name: "List Coverage Reports"
         run: |
-          if [ -f report.xml ]; then
-            total=$(xmllint --xpath 'count(//testcase)' report.xml)
-            failures=$(xmllint --xpath 'count(//testcase/failure)' report.xml)
-            errors=$(xmllint --xpath 'count(//testcase/error)' report.xml)
-            skipped=$(xmllint --xpath 'count(//testcase/skipped)' report.xml)
+          ls -la v8_coverage_*.json || echo "No v8_coverage_*.json found"
+      - name: "Upload Coverage to Codecov"
+        if: ${{ !cancelled() }}
+        uses: "codecov/codecov-action@v5"
+        with:
+          files: ./v8_coverage_*.json
+          flags: playwright
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: "Test Report"
+        run: |
+          if [ -f junit.xml ]; then
+            total=$(xmllint --xpath 'count(//testcase)' junit.xml)
+            failures=$(xmllint --xpath 'count(//testcase/failure)' junit.xml)
+            errors=$(xmllint --xpath 'count(//testcase/error)' junit.xml)
+            skipped=$(xmllint --xpath 'count(//testcase/skipped)' junit.xml)
             passed=$((total - failures - errors - skipped))
             echo "Test Report Summary:"
             echo "- Total tests: $total"
@@ -82,17 +105,19 @@ jobs:
             echo "- Errors: $errors"
             echo "- Skipped: $skipped"
           else
-            echo "No report.xml found—tests may not have run."
+            echo "No junit.xml found—tests may not have run."
           fi
       - name: "Upload Test Report Artifact"
-        if: "always()"  # Even on failure
+        if: always()
         uses: "actions/upload-artifact@v4"
         with:
-          name: "test-report"
-          path: "report.xml"  # XML with pass/fail summary
-      - name: "Upload Screenshot Artifact"
-        if: "always()"  # Even on failure
+          name: test-report
+          path: junit.xml
+      - name: "Upload Screenshot and Coverage Artifacts"
+        if: always()
         uses: "actions/upload-artifact@v4"
         with:
-          name: "test-screenshots"
-          path: "main_menu.png"
+          name: test-screenshots
+          path: |
+            main_menu.png
+            coverage_*.json
