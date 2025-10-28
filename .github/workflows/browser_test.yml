@@ -99,12 +99,15 @@ jobs:
           for file in v8_coverage_*.json; do
             node -e "
             const fs = require('fs');
+            const path = require('path');
             const V8ToIstanbul = require('v8-to-istanbul');
             const coverage = JSON.parse(fs.readFileSync('$file', 'utf8'));
             (async () => {
               let localCounter = 0;
               for (const entry of coverage) {
-                const converter = new V8ToIstanbul(entry.url.replace('file://', ''), 0, { source: entry.source });
+                // Remap browser URL to local CI path (your export dir)
+                const scriptPath = entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web/'));
+                const converter = new V8ToIstanbul(scriptPath, 0, { source: entry.source });
                 await converter.load();
                 converter.applyCoverage(entry.functions);
                 const filename = entry.url.split('/').pop() + '_' + (localCounter++) + '.json';
@@ -125,7 +128,6 @@ jobs:
           fail_ci_if_error: true
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
-
       - name: "Test Report"
         run: |
           if [ -f junit.xml ]; then
