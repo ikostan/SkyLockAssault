@@ -89,7 +89,6 @@ jobs:
         uses: "actions/setup-node@v4"
         with:
           node-version: '20'  # Stable for Win10 compat
-
       - name: "Install Conversion Tools"
         run: |
           npm install v8-to-istanbul nyc
@@ -111,13 +110,13 @@ jobs:
                   console.log('Skipping entry without functions: ' + (entry.url || 'empty'));
                   continue;
                 }
-                const scriptPath = entry.url && entry.url.startsWith('http://localhost:8080/')
-                  ? entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web/'))
+                const scriptPath = entry.url && entry.url.startsWith('http://localhost:8080/') 
+                  ? entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web/')) 
                   : 'anonymous_' + localCounter + '.js';
                 const options = entry.source ? { source: entry.source } : {};
                 try {
                   const converter = new V8ToIstanbul(scriptPath, 0, options);
-                  if (entry.url) await converter.load();  # Only load if real path (skip for anonymous to avoid ENOENT)
+                  if (entry.url) await converter.load();  // Only load if real path (skip for anonymous to avoid ENOENT)
                   converter.applyCoverage(entry.functions);
                   const filename = path.basename(scriptPath) + '_' + (localCounter++) + '.json';
                   fs.writeFileSync(path.join('.nyc_output', filename), JSON.stringify(converter.toIstanbul()));
