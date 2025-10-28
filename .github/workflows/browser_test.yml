@@ -88,7 +88,7 @@ jobs:
       - name: "Set up Node.js for Coverage Conversion"
         uses: "actions/setup-node@v4"
         with:
-          node-version: '20'  # Stable for Win10
+          node-version: '20'  # Stable for Win10 compat
 
       - name: "Install Conversion Tools"
         run: |
@@ -96,13 +96,13 @@ jobs:
 
       - name: "Convert V8 to LCOV"
         run: |
-          npx monocart v8-merge v8_coverage_*.json -o coverage/lcov/lcov.info
+          npx mcr v8-merge v8_coverage_*.json -o coverage/lcov/lcov.info
 
       - name: "Upload Coverage to Codecov"
         if: ${{ !cancelled() }}
         uses: "codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7"
         with:
-          files: ./coverage/lcov/lcov.info  # Now a supported LCOV file
+          files: ./coverage/lcov/lcov.info  # Upload the generated LCOV
           flags: playwright
           fail_ci_if_error: true
           verbose: true
