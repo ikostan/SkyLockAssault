@@ -86,7 +86,7 @@ jobs:
           "
       - name: "Upload Coverage to Codecov"
         if: ${{ !cancelled() }}
-        uses: "codecov/codecov-action@v5"
+        uses: "codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7"
         with:
           files: ./reports/coverage.lcov,./reports/**/*.xml  # LCOV + any JUnit XML
           flags: gdscript
