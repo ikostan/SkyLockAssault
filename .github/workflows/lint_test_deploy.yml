@@ -43,6 +43,11 @@ jobs:
       - "unit_tests"
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+  trivy:
+    name: "Trivy vulnerability scanner"
+    needs:
+      - "browser_tests"
+    uses: "./.github/workflows/trivy.yml"
   codeql:
     name: "CodeQL Scan on Web Export"
     needs:
@@ -61,6 +66,7 @@ jobs:
     needs:
       - "codeql"
       - "snyk"
+      - "trivy"
     uses: "./.github/workflows/deploy_to_itch.yml"
     secrets:
       ITCHIO_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"

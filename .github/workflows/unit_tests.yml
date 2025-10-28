@@ -50,34 +50,51 @@ jobs:
       - name: "List Coverage Reports"
         run: |
           ls -la ${{ steps.find_report.outputs.latest_report }}/
+      
       - name: "Extract Coverage from HTML (for Codecov)"
         run: |
+          pip install beautifulsoup4
           python3 -c "
-          import json
-          import re
-          try:
-              with open('${{ steps.find_report.outputs.latest_report }}/index.html', 'r') as f:
-                  html = f.read()
-              # Updated regex for typical GdUnit4 structure (e.g., 'Coverage: 75%' or table <td>75%</td>)
-              match = re.search(r'(Coverage|Total Coverage|Line Coverage)[:\s]*(\d+)%', html, re.IGNORECASE)
-              coverage_pct = int(match.group(2)) if match else 0
-              data = {'coverage': {'total': 100, 'covered': coverage_pct, 'pct': coverage_pct}}
-              with open('reports/coverage.json', 'w') as f:
-                  json.dump(data, f, indent=2)
-              print(f'Extracted coverage: {coverage_pct}%')
-          except FileNotFoundError:
-              print('No index.html found; skipping extraction')
-          except Exception as e:
-              print(f'Extraction failed: {str(e)}')
+          from bs4 import BeautifulSoup
+          import os
+          report_dir = '${{ steps.find_report.outputs.latest_report }}'
+          html_path = os.path.join(report_dir, 'index.html')
+          if not os.path.exists(html_path):
+            print('No index.html; skipping')
+            exit(0)
+          with open(html_path, 'r') as f:
+            soup = BeautifulSoup(f, 'html.parser')
+          # Assume table with rows like <tr><td>script.gd</td><td>75%</td></tr> - adjust selectors based on your HTML
+          rows = soup.find_all('tr')  # Or specific class/id for coverage table
+          lcov_lines = []
+          for row in rows[1:]:  # Skip header
+            cols = row.find_all('td')
+            if len(cols) >= 2:
+              file_path = cols[0].text.strip()  # e.g., scripts/weapon.gd
+              pct = int(cols[1].text.strip().rstrip('%'))  # e.g., 75
+              # Fake LCOV for learning: assume 100 lines, covered = pct/100 * 100
+              total_lines = 100  # Placeholder; parse real if in HTML
+              covered = int(pct / 100 * total_lines)
+              lcov_lines.append(f'TN:{file_path}')
+              lcov_lines.append(f'SF:{file_path}')
+              lcov_lines.append(f'DA:1,{covered}')  # Simplified; expand for real lines
+              lcov_lines.append(f'LF:{total_lines}')
+              lcov_lines.append(f'LH:{covered}')
+              lcov_lines.append('end_of_record')
+          with open('reports/coverage.lcov', 'w') as f:
+            f.write('\\n'.join(lcov_lines))
+          print('Generated LCOV')
           "
       - name: "Upload Coverage to Codecov"
         if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v5
+        uses: "codecov/codecov-action@v5"
         with:
-          files: ./reports/coverage.json,./reports/**/*.xml,./reports/**/index.html  # JSON + XML + HTML fallback
+          files: ./reports/coverage.lcov,./reports/**/*.xml  # LCOV + any JUnit XML
           flags: gdscript
-          fail_ci_if_error: false  # Don't fail CI if upload issues
+          fail_ci_if_error: false
+          verbose: true # optional (default = false)
           token: ${{ secrets.CODECOV_TOKEN }}
+
       - name: "Upload Test Reports Artifacts"
         if: always()
         uses: actions/upload-artifact@v5

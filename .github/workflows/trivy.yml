@@ -1,0 +1,31 @@
+---
+name: "Trivy vulnerability scanner"
+
+on:  # yamllint disable-line rule:truthy
+  # Makes it reusable; called by other workflows
+  workflow_call:  # yamllint disable rule:empty-values
+
+jobs:
+  security-scan:
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: "Checkout code"
+        uses: "actions/checkout@v4"
+
+      - name: "Run Trivy vulnerability scanner"
+        uses: "aquasecurity/trivy-action@master"
+        with:
+          scan-type: 'fs'  # Scans the filesystem (your repo after checkout)
+          scanners: 'vuln,secret,misconfig,license'  # Vulns, secrets, configs, licenses
+          hide-progress: false
+          format: 'sarif'  # Outputs in SARIF for GitHub integration (shows in Security tab)
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'  # Focus on serious issues
+          exit-code: '1'  # Fail the workflow if critical/high vulns found (set to '0' to not fail)
+          ignore-unfixed: true  # Ignore vulns without fixes available
+
+      - name: "Upload Trivy scan results to GitHub Security tab"
+        uses: "github/codeql-action/upload-sarif@v3"
+        if: always()  # Upload even if scan fails
+        with:
+          sarif_file: 'trivy-results.sarif'

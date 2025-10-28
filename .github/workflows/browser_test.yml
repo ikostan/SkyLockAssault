@@ -82,14 +82,43 @@ jobs:
       - name: "List Coverage Reports"
         run: |
           ls -la v8_coverage_*.json || echo "No v8_coverage_*.json found"
+
+      - name: "Set up Node.js for Coverage Conversion"
+        uses: "actions/setup-node@v4"
+        with:
+          node-version: '20'  # Stable for Win10 compat
+      - name: "Install Conversion Tools"
+        run: |
+          npm install v8-to-istanbul @istanbuljs/nyc-report lcov-result-merger
+      - name: "Convert V8 to Istanbul and Merge LCOV"
+        run: |
+          mkdir -p coverage/istanbul
+          for file in v8_coverage_*.json; do
+            node -e "
+            const fs = require('fs');
+            const V8ToIstanbul = require('v8-to-istanbul');
+            const coverage = JSON.parse(fs.readFileSync('$file', 'utf8'));
+            for (const entry of coverage) {
+              const converter = new V8ToIstanbul(entry.url.replace('file://', ''), 0, { source: entry.source });
+              converter.load().then(() => {
+                converter.applyCoverage(entry.functions);
+                fs.writeFileSync('coverage/istanbul/' + entry.url.split('/').pop() + '.json', JSON.stringify(converter.toIstanbul()));
+              });
+            }
+            "
+          done
+          # Merge into single LCOV for Codecov
+          npx nyc report --reporter=lcov --report-dir=coverage/lcov
       - name: "Upload Coverage to Codecov"
         if: ${{ !cancelled() }}
         uses: "codecov/codecov-action@v5"
         with:
-          files: ./v8_coverage_*.json
+          files: ./coverage/lcov/lcov.info  # Now a supported LCOV file
           flags: playwright
           fail_ci_if_error: true
+          verbose: true # optional (default = false)
           token: ${{ secrets.CODECOV_TOKEN }}
+
       - name: "Test Report"
         run: |
           if [ -f junit.xml ]; then
