@@ -110,8 +110,8 @@ jobs:
                   console.log('Skipping entry without functions: ' + (entry.url || 'empty'));
                   continue;
                 }
-                const scriptPath = entry.url && entry.url.startsWith('http://localhost:8080/') 
-                  ? entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web/')) 
+                const scriptPath = entry.url && entry.url.startsWith('http://localhost:8080/')
+                  ? entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web/'))
                   : 'anonymous_' + localCounter + '.js';
                 const options = entry.source ? { source: entry.source } : {};
                 try {
