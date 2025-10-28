@@ -3,12 +3,16 @@ coverage:
     project:
       gdscript:
         target: 70%
-        paths: scripts/
-        flags: gdscript
+        paths:
+          - scripts/
+        flags:
+          - gdscript
       javascript:
         target: 50%  # Explicit threshold for JS coverage
-        paths: export/web/
-        flags: playwright
+        paths:
+          - export/web/
+        flags:
+          - playwright
     patch:
       default:
         target: 80%
