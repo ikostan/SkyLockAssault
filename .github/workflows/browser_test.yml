@@ -96,7 +96,7 @@ jobs:
 
       - name: "Convert V8 to Istanbul and Merge LCOV"
         run: |
-          mkdir -p .nyc_output coverage/lcov temp
+          mkdir -p .nyc_output coverage/lcov
           counter=0
           for file in v8_coverage_*.json; do
             node -e "
@@ -107,19 +107,17 @@ jobs:
             (async () => {
               let localCounter = 0;
               for (const entry of coverage) {
-                let scriptPath;
-                if (entry.url && entry.url.startsWith('http://localhost:8080/')) {
-                  scriptPath = entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web/'));
-                } else if (entry.source) {
-                  // Handle anonymous: write source to temp file
-                  scriptPath = path.join('temp', 'anonymous_' + localCounter + '.js');
-                  fs.writeFileSync(scriptPath, entry.source);
-                } else {
-                  console.log('Skipping entry without URL or source: ' + (entry.url || 'empty'));
+                if (!entry.functions || entry.functions.length === 0) {
+                  console.log('Skipping entry without functions: ' + (entry.url || 'empty'));
                   continue;
                 }
+                // Force dummy path for anonymous, use source if available
+                const scriptPath = entry.url && entry.url.startsWith('http://localhost:8080/') 
+                  ? entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web/')) 
+                  : 'anonymous_' + localCounter + '.js';
+                const options = entry.source ? { source: entry.source } : {};
                 try {
-                  const converter = new V8ToIstanbul(scriptPath, 0);
+                  const converter = new V8ToIstanbul(scriptPath, 0, options);
                   await converter.load();
                   converter.applyCoverage(entry.functions);
                   const filename = path.basename(scriptPath) + '_' + (localCounter++) + '.json';
@@ -132,7 +130,7 @@ jobs:
             "
             counter=$((counter + 1))
           done
-          npx nyc report --reporter=lcov --report-dir coverage/lcov
+          npx nyc report --reporter=lcov --report-dir coverage/lcov || echo "No coverage data; skipping report"
 
       - name: "Upload Coverage to Codecov"
         if: ${{ !cancelled() }}
