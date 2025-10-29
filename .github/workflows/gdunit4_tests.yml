@@ -1,5 +1,5 @@
 ---
-name: "Godot Unit Tests"
+name: "GDUnit4 Unit Tests"
 
 on:
   workflow_call:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   unit-test:
-    runs-on: ubuntu-latest
+    runs-on: "ubuntu-latest"
     timeout-minutes: 10
     permissions:
       checks: write
