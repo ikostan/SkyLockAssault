@@ -8,7 +8,7 @@ coverage:
         flags:
           - gdscript
       javascript:
-        target: 50%  # Explicit threshold for JS coverage
+        target: 50%
         paths:
           - export/web/
         flags:
@@ -16,15 +16,15 @@ coverage:
     patch:
       default:
         target: 80%
-  precision: 2  # Rounds coverage to 2 decimal places
-  range: "60...90"  # Coverage below 60% shows red, above 90% green
-  round: down  # Rounding direction
+  precision: 2
+  range: "60...90"
+  round: down
 
 comment:
-  layout: "diff, files"  # Shows diff and file changes in PR comments
+  layout: "diff, files"
 
 ignore:
-  - export/web/*  # Exclude JS from overall project total (but still track via flag)
+  - export/web/*
 
 flags:
   gdscript:
@@ -33,3 +33,8 @@ flags:
   playwright:
     paths:
       - export/web/
+
+fixes:
+  - "::export/web/"  # New: Strip empty prefixes
+  - "anonymous_::export/web/index.js"  # Map anonymous to real JS file (adjust if multiple)
+  - "/home/runner/work/SkyLockAssault/SkyLockAssault/::"  # Strip CI absolute paths

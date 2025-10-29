@@ -27,9 +27,9 @@ jobs:
     uses: "./.github/workflows/yamllint.yml"
     with:
       config-path: ".github/workflows/*.yml"
-  unit_tests:
+  gdunit4_tests:
     name: "Godot Unit Tests"
-    uses: "./.github/workflows/unit_tests.yml"
+    uses: "./.github/workflows/gdunit4_tests.yml"
     needs:
       - "gdlint"
       - "readmelint"
@@ -40,9 +40,14 @@ jobs:
     name: "Browser Functional Tests"
     uses: "./.github/workflows/browser_test.yml"
     needs:
-      - "unit_tests"
+      - "gdunit4_tests"
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+  trivy:
+    name: "Trivy vulnerability scanner"
+    needs:
+      - "browser_tests"
+    uses: "./.github/workflows/trivy.yml"
   codeql:
     name: "CodeQL Scan on Web Export"
     needs:
@@ -61,6 +66,7 @@ jobs:
     needs:
       - "codeql"
       - "snyk"
+      - "trivy"
     uses: "./.github/workflows/deploy_to_itch.yml"
     secrets:
       ITCHIO_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"
