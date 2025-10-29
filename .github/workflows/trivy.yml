@@ -18,9 +18,9 @@ jobs:
       - name: "Run Trivy vulnerability scanner"
         uses: "aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8"  # Pinned to SHA for v0.33.1 (latest as of 2025-10-28)
         env:  # Suppress version check notification
-          TRIVY_SKIP_VERSION_CHECK: 'false'
+          TRIVY_SKIP_VERSION_CHECK: 'true'
         with:
-          version: '0.67.2'
+          version: 'latest'
           scan-type: 'fs'  # Scans the filesystem (your repo after checkout)
           scanners: 'vuln,secret,misconfig,license'  # Vulns, secrets, configs, licenses
           hide-progress: false
