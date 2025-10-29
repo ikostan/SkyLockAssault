@@ -63,7 +63,7 @@ USER godotuser
 
 # Optional: Add a simple HEALTHCHECK to verify Godot is runnable (addresses DS026, though LOW severity)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD godot --version || exit 1
+    CMD /usr/local/bin/godot --version || exit 1
 
 # Set working directory
 WORKDIR /project
