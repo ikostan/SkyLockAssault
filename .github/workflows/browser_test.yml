@@ -92,36 +92,34 @@ jobs:
         uses: "actions/setup-node@v4"
         with:
           node-version: "20"
-      - name: "Install Conversion Tools"
-        run: |
-          npm install monocart-coverage-reports  # Install the library
 
+      - name: "Set up Node.js for Coverage Conversion"
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'  # Stable for Win10 compat
+      - name: "Install Conversion Tools"
+        run: npm install c8  # Install c8 for V8 to LCOV
       - name: "Convert V8 to LCOV"
         run: |
-          node -e "
-          const CoverageReport = require('monocart-coverage-reports');
-          const fs = require('fs');
-          (async () => {
-            const coverageReport = new CoverageReport({
-              reports: [['lcov', { outputFile: 'coverage/lcov/lcov.info' }]],
-              name: 'Playwright Coverage',
-              reportAnonymousScripts: true  // Handle Godot's dynamic/anonymous JS
-            });
-            const files = fs.readdirSync('.').filter(f => f.startsWith('v8_coverage_') && f.endsWith('.json'));
-            for (const file of files) {
-              try {
-                const v8Data = JSON.parse(fs.readFileSync(file, 'utf8'));
-                console.log('V8 data length for ' + file + ': ' + v8Data.length);  // Log for debug
-                await coverageReport.add(v8Data);  // Add each V8 JSON
-                console.log('Added coverage from: ' + file);
-              } catch (e) {
-                console.error('Skipping invalid file ' + file + ': ' + e.message);
-              }
-            }
-            await coverageReport.generate();  // Merge and output LCOV
-            console.log('Generate complete - lcov.info created? ' + fs.existsSync('coverage/lcov/lcov.info'));
-          })();
-          "
+          npx c8 report --reporter=lcov --all --include=export/web/*.js --report-dir coverage/lcov
+      - name: "Upload LCOV Artifact"
+        if: always()
+        uses: "actions/upload-artifact@v5"
+        with:
+          name: lcov-report
+          path: ./coverage/lcov/lcov.info
+          retention-days: 5
+
+      - name: "Upload Coverage to Codecov"
+        if: ${{ !cancelled() }}
+        uses: "codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7"
+        with:
+          files: ./coverage/lcov/lcov.info
+          flags: playwright
+          fail_ci_if_error: false  # Non-blocking on 0%
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: export/web
 
       - name: "Upload LCOV Artifact"
         if: always()
