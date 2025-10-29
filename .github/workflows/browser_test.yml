@@ -91,9 +91,9 @@ jobs:
           node-version: "20"
 
       - name: "Set up Node.js for Coverage Conversion"
-        uses: actions/setup-node@v4
+        uses: "actions/setup-node@v4"
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: "Install Conversion Tools"
         run: |
@@ -112,8 +112,13 @@ jobs:
             });
             const files = fs.readdirSync('.').filter(f => f.startsWith('v8_coverage_') && f.endsWith('.json'));
             for (const file of files) {
-              const v8Data = JSON.parse(fs.readFileSync(file, 'utf8'));
-              await coverageReport.add(v8Data);  // Add each V8 JSON
+              try {
+                const v8Data = JSON.parse(fs.readFileSync(file, 'utf8'));
+                await coverageReport.add(v8Data);  // Add each V8 JSON
+                console.log('Added coverage from: ' + file);  // Log success
+              } catch (e) {
+                console.error('Skipping invalid file ' + file + ': ' + e.message);  // Log errors
+              }
             }
             await coverageReport.generate();  // Merge and output LCOV
           })();
