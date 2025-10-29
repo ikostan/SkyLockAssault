@@ -6,6 +6,7 @@
 [![GDScript](https://img.shields.io/badge/Language-GDScript-brightgreen)](https://docs.godotengine.org/en/stable/tutorials/scripting/gdscript/index.html)
 [![Itch.io](https://img.shields.io/badge/Deployment-Itch.io-purple?logo=itch-dot-io)](https://itch.io/)
 [![CI/CD](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml/badge.svg)](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml)
+![Last Commit](https://img.shields.io/github/last-commit/ikostan/SkyLockAssault)
 [![codecov](https://codecov.io/gh/ikostan/SkyLockAssault/graph/badge.svg?token=A4O6I72HP0)](https://codecov.io/gh/ikostan/SkyLockAssault)
 ![Repo Size](https://img.shields.io/github/repo-size/ikostan/SkyLockAssault)
 ![Closed Issues](https://img.shields.io/github/issues-closed/ikostan/SkyLockAssault?%2FSkyLockAssault?style=flat-square&label=Issues&color=green)
