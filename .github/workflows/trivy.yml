@@ -8,13 +8,19 @@ on:  # yamllint disable-line rule:truthy
 jobs:
   security-scan:
     runs-on: "ubuntu-latest"
+    permissions:  # Added: Explicit least-privilege permissions (adjust if needed)
+      contents: read  # For checkout
+      security-events: write  # For uploading SARIF to Security tab
     steps:
       - name: "Checkout code"
-        uses: "actions/checkout@v4"
+        uses: "actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332"  # Updated: Pinned to SHA for v4.1.7 tag (verify latest at https://github.com/actions/checkout/tags)
 
       - name: "Run Trivy vulnerability scanner"
-        uses: "aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8"
+        uses: "aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8"  # Pinned to SHA for v0.33.1
+        env:  # Added: Suppress version check notification (fallback)
+          TRIVY_SKIP_VERSION_CHECK: 'false'
         with:
+          version: '0.67.2'  # Added: Install the latest Trivy version to avoid outdated notices
           scan-type: 'fs'  # Scans the filesystem (your repo after checkout)
           scanners: 'vuln,secret,misconfig,license'  # Vulns, secrets, configs, licenses
           hide-progress: false
@@ -25,7 +31,7 @@ jobs:
           ignore-unfixed: true  # Ignore vulns without fixes available
 
       - name: "Upload Trivy scan results to GitHub Security tab"
-        uses: "github/codeql-action/upload-sarif@v3"
+        uses: "github/codeql-action/upload-sarif@83f0fe6c984a149f72f766b17cfedefea6849c18"  # Updated: Pinned to SHA for v3.0.0 tag (verify latest at https://github.com/github/codeql-action/tags)
         if: always()  # Upload even if scan fails
         with:
           sarif_file: 'trivy-results.sarif'
