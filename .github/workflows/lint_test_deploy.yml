@@ -43,11 +43,6 @@ jobs:
       - "gdunit4_tests"
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
-  trivy:
-    name: "Trivy vulnerability scanner"
-    needs:
-      - "browser_tests"
-    uses: "./.github/workflows/trivy.yml"
   codeql:
     name: "CodeQL Scan on Web Export"
     needs:
@@ -61,6 +56,11 @@ jobs:
     secrets:
       SNYK_TOKEN: "${{ secrets.SNYK_TOKEN }}"
       ORG_ID: "${{ secrets.ORG_ID }}"
+  trivy:
+    name: "Trivy vulnerability scanner"
+    needs:
+      - "browser_tests"
+    uses: "./.github/workflows/trivy.yml"
   deploy-itch:
     name: "Deploy to itch.io"
     needs:
