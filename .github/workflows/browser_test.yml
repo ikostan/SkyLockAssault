@@ -84,17 +84,14 @@ jobs:
       - name: "List Coverage Reports"
         run: |
           ls -la v8_coverage_*.json || echo "No v8_coverage_*.json found"
-
       - name: "Set up Node.js for Coverage Conversion"
         uses: "actions/setup-node@v4"
         with:
           node-version: "20"
-
       - name: "Set up Node.js for Coverage Conversion"
         uses: "actions/setup-node@v4"
         with:
           node-version: "20"
-
       - name: "Install Conversion Tools"
         run: |
           npm install monocart-coverage-reports  # Install the library
@@ -109,7 +106,6 @@ jobs:
               reports: [['lcov', { outputFile: 'coverage/lcov/lcov.info' }]],
               name: 'Playwright Coverage',
               reportAnonymousScripts: true  // Handle Godot's dynamic/anonymous JS
-              all: 'export/web'  // New: Include untested JS files for 0% coverage if no hits
             });
             const files = fs.readdirSync('.').filter(f => f.startsWith('v8_coverage_') && f.endsWith('.json'));
             for (const file of files) {
