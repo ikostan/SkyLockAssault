@@ -118,6 +118,13 @@ jobs:
             await coverageReport.generate();  // Merge and output LCOV
           })();
           "
+      - name: "Upload LCOV Artifact"
+        if: always()
+        uses: "actions/upload-artifact@v5"
+        with:
+          name: lcov-report
+          path: "./coverage/lcov/lcov.info"
+          retention-days: 5
 
       - name: "Upload Coverage to Codecov"
         if: ${{ !cancelled() }}
@@ -128,6 +135,7 @@ jobs:
           fail_ci_if_error: true
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
+          directory: export/web  # New: Set root for path matching
       - name: "Test Report"
         run: |
           if [ -f junit.xml ]; then
