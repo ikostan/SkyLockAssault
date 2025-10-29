@@ -145,8 +145,8 @@ def test_fuel_depletion(page: Page):
         # Set difficulty to 2.0 (direct click to slider_2.0 position)
         slider_x = box['x'] + UI_ELEMENTS["difficulty_slider_2.0"]["x"]
         slider_y = box['y'] + UI_ELEMENTS["difficulty_slider_2.0"]["y"]
-        page.mouse.move(slider_x, slider_y)  # Move to 2.0 position
         page.mouse.click(slider_x, slider_y)  # Click to set 2.0
+        page.wait_for_timeout(2000)  # Wait for change to register
         assert any("Difficulty changed to: 2.0" in log["text"] for log in logs), "Expected change to 2.0"
 
         # Back to main menu

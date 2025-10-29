@@ -25,7 +25,7 @@ jobs:
           scanners: 'vuln,secret,misconfig,license'  # Vulns, secrets, configs, licenses
           hide-progress: false
           format: 'sarif'  # Outputs in SARIF for GitHub integration (shows in Security tab)
-          # output: 'trivy-results.sarif'
+          output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'  # Focus on serious issues
           exit-code: '1'  # Fail the workflow if critical/high vulns found (set to '0' to not fail)
           ignore-unfixed: true  # Ignore vulns without fixes available
