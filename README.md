@@ -1,15 +1,16 @@
 # [Sky Lock Assault](https://ikostan.itch.io/sky-lock-assault)
 
 <!-- markdownlint-disable line-length -->
-[![Made with Godot](https://img.shields.io/badge/Made%20with-Godot-478CBF?style=flat&logo=godot%20engine&logoColor=white)](https://godotengine.org)
-[![Godot](https://img.shields.io/badge/Godot-4.5-blue?logo=godot-engine)](https://godotengine.org/)
-[![GDScript](https://img.shields.io/badge/Language-GDScript-brightgreen)](https://docs.godotengine.org/en/stable/tutorials/scripting/gdscript/index.html)
-[![Itch.io](https://img.shields.io/badge/Deployment-Itch.io-purple?logo=itch-dot-io)](https://itch.io/)
-[![CI/CD](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml/badge.svg)](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml)
-![Last Commit](https://img.shields.io/github/last-commit/ikostan/SkyLockAssault)
+[![Project Start](https://img.shields.io/badge/Project_Start-Jul_28%2C_2025-blue?style=flat-square)](https://github.com/ikostan/SkyLockAssault/commit/c412eb3cea0bbc73f716a14afa678d21c7d4d0d0)
+[![Made with Godot](https://img.shields.io/badge/Made%20with-Godot-478CBF?style=flat-square&logo=godot%20engine&logoColor=white)](https://godotengine.org)
+[![Godot](https://img.shields.io/badge/Godot-4.5-blue?style=flat-square&logo=godot-engine)](https://godotengine.org/)
+[![GDScript](https://img.shields.io/badge/Language-GDScript-brightgreen?style=flat-square)](https://docs.godotengine.org/en/stable/tutorials/scripting/gdscript/index.html)
+[![Itch.io](https://img.shields.io/badge/Deployment-Itch.io-purple?style=flat-square&logo=itch-dot-io)](https://itch.io/)
+[![CI/CD](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml/badge.svg?style=flat-square)](https://github.com/ikostan/SkyLockAssault/actions/workflows/lint_test_deploy.yml)
+![Last Commit](https://img.shields.io/github/last-commit/ikostan/SkyLockAssault?style=flat-square)
 [![codecov](https://codecov.io/gh/ikostan/SkyLockAssault/graph/badge.svg?token=A4O6I72HP0)](https://codecov.io/gh/ikostan/SkyLockAssault)
-![Repo Size](https://img.shields.io/github/repo-size/ikostan/SkyLockAssault)
-![Closed Issues](https://img.shields.io/github/issues-closed/ikostan/SkyLockAssault?%2FSkyLockAssault?style=flat-square&label=Issues&color=green)
+![Repo Size](https://img.shields.io/github/repo-size/ikostan/SkyLockAssault?style=flat-square)
+![Closed Issues](https://img.shields.io/github/issues-closed/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=green)
 ![Open Issues](https://img.shields.io/github/issues/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=red)
 [![Known Vulnerabilities](https://snyk.io/test/github/ikostan/SkyLockAssault/badge.svg)](https://snyk.io/test/github/ikostan/SkyLockAssault)
 <!-- markdownlint-enable line-length -->
@@ -55,7 +56,7 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 4. [Local CI Pipeline for Godot Project using Docker](/files/docs/Local_CI_Pipeline_for_Godot_Project_using_Docker.md)
 5. [Docker Local Test Server](/files/docs/Docker_Local_Test_Server.md)
 6. [Setup Instructions](/files/docs/Setup_Instructions.md)
-7. [Signing Setup for GitHub Desktop](/files/docs/Signing_Setup_for_GitHub_Desktop.md)
+7. [Signing Setup for GitHub Desktop](/files/docs/Signing_Setup_GitHub_Desktop.md)
 8. BOTS:
    - [Dependabot](https://docs.github.com/en/code-security/dependabot)
    - [Snyk](https://docs.snyk.io/)
@@ -155,3 +156,5 @@ Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milest
 - Follow GDScript best practices; test in editor and web export.
 - Open a Pull Request with details.
 - See [CONTRIBUTING.md](/CONTRIBUTING.md) for full guidelines.
+- **Join the Discussions**: Chat about ideas, ask questions on web exports, or suggest
+  features at [GitHub Discussions](https://github.com/ikostan/SkyLockAssault/discussions).
