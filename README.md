@@ -1,6 +1,7 @@
 # [Sky Lock Assault](https://ikostan.itch.io/sky-lock-assault)
 
 <!-- markdownlint-disable line-length -->
+[![Project Start](https://img.shields.io/badge/Project_Start-Jul_28,_2025-blue)](https://github.com/ikostan/SkyLockAssault/commit/c412eb3cea0bbc73f716a14afa678d21c7d4d0d0)
 [![Made with Godot](https://img.shields.io/badge/Made%20with-Godot-478CBF?style=flat&logo=godot%20engine&logoColor=white)](https://godotengine.org)
 [![Godot](https://img.shields.io/badge/Godot-4.5-blue?logo=godot-engine)](https://godotengine.org/)
 [![GDScript](https://img.shields.io/badge/Language-GDScript-brightgreen)](https://docs.godotengine.org/en/stable/tutorials/scripting/gdscript/index.html)
