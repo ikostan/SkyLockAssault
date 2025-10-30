@@ -56,7 +56,7 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 4. [Local CI Pipeline for Godot Project using Docker](/files/docs/Local_CI_Pipeline_for_Godot_Project_using_Docker.md)
 5. [Docker Local Test Server](/files/docs/Docker_Local_Test_Server.md)
 6. [Setup Instructions](/files/docs/Setup_Instructions.md)
-7. [Signing Setup for GitHub Desktop](/files/docs/Signing_Setup_for_GitHub_Desktop.md)
+7. [Signing Setup for GitHub Desktop](/files/docs/Signing_Setup_GitHub_Desktop.md)
 8. BOTS:
    - [Dependabot](https://docs.github.com/en/code-security/dependabot)
    - [Snyk](https://docs.snyk.io/)
