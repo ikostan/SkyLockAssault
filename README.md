@@ -156,3 +156,5 @@ Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milest
 - Follow GDScript best practices; test in editor and web export.
 - Open a Pull Request with details.
 - See [CONTRIBUTING.md](/CONTRIBUTING.md) for full guidelines.
+- **Join the Discussions**: Chat about ideas, ask questions on web exports, or suggest
+  features at [GitHub Discussions](https://github.com/ikostan/SkyLockAssault/discussions).
