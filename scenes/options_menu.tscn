@@ -125,19 +125,19 @@ theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 50
 text = "{OPTIONS}"
 
-[node name="DifficultyLevelHBoxContainer" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
+[node name="DifficultyLevelContainer" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/DifficultyLevelHBoxContainer"]
+[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/DifficultyLevelContainer"]
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 20
 text = "{DIFFICULTY}"
 
-[node name="DifficultyHSlider" type="HSlider" parent="Panel/OptionsVBoxContainer/DifficultyLevelHBoxContainer"]
+[node name="DifficultyHSlider" type="HSlider" parent="Panel/OptionsVBoxContainer/DifficultyLevelContainer"]
 custom_minimum_size = Vector2(120, 51)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -152,7 +152,7 @@ value = 0.5
 tick_count = 16
 ticks_on_borders = true
 
-[node name="DifficultyValueLabel" type="Label" parent="Panel/OptionsVBoxContainer/DifficultyLevelHBoxContainer"]
+[node name="DifficultyValueLabel" type="Label" parent="Panel/OptionsVBoxContainer/DifficultyLevelContainer"]
 layout_mode = 2
 size_flags_horizontal = 10
 theme_override_fonts/font = ExtResource("1_liyum")
@@ -213,19 +213,19 @@ text = "{SFX=VOLUME}"
 layout_mode = 2
 size_flags_horizontal = 8
 
-[node name="LogLevelHBoxContainer" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
+[node name="LogLevelContainer" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 6
 theme_override_constants/separation = 35
 
-[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/LogLevelHBoxContainer"]
+[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/LogLevelContainer"]
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 20
 text = "{LOG=LEVEL}"
 
-[node name="LogLevelOptionButton" type="OptionButton" parent="Panel/OptionsVBoxContainer/LogLevelHBoxContainer"]
+[node name="LogLevelOptionButton" type="OptionButton" parent="Panel/OptionsVBoxContainer/LogLevelContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
