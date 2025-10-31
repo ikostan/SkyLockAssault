@@ -11,7 +11,7 @@ var log_level_display_to_enum := {
 
 @onready var log_lvl_option: OptionButton = $Panel/OptionsVBoxContainer/LogLevelHBoxContainer/LogLevelOptionButton
 @onready var back_button: Button = $Panel/OptionsVBoxContainer/BackButton
-@onready var difficulty_slider: HSlider =$Panel/OptionsVBoxContainer/DifficultyLevelHBoxContainer/DifficultyHSlider 
+@onready var difficulty_slider: HSlider = $Panel/OptionsVBoxContainer/DifficultyLevelHBoxContainer/DifficultyHSlider
 @onready var difficulty_label: Label = $Panel/OptionsVBoxContainer/DifficultyLevelHBoxContainer/DifficultyValueLabel
 
 

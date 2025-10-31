@@ -25,14 +25,18 @@ func _ready() -> void:
 	var master_bus_idx: int = AudioServer.get_bus_index("Master")
 	if master_bus_idx != -1:
 		AudioServer.set_bus_volume_db(master_bus_idx, linear_to_db(master_volume))
-		log_message("Applied loaded Master volume to AudioServer: " + str(master_volume), LogLevel.DEBUG)
+		log_message(
+			"Applied loaded Master volume to AudioServer: " + str(master_volume), LogLevel.DEBUG
+		)
 	else:
 		log_message("Master audio bus not found!", LogLevel.ERROR)
 
 	var music_bus_idx: int = AudioServer.get_bus_index("Music")
 	if music_bus_idx != -1:
 		AudioServer.set_bus_volume_db(music_bus_idx, linear_to_db(music_volume))
-		log_message("Applied loaded Music volume to AudioServer: " + str(music_volume), LogLevel.DEBUG)
+		log_message(
+			"Applied loaded Music volume to AudioServer: " + str(music_volume), LogLevel.DEBUG
+		)
 	else:
 		log_message("Music audio bus not found!", LogLevel.ERROR)
 
@@ -43,6 +47,7 @@ func _ready() -> void:
 	else:
 		log_message("SFX audio bus not found!", LogLevel.ERROR)
 
+
 # Add these new functions (for consistency with log level persistence)
 # New: Optional param (default new; fixes error)
 func _load_settings(config: ConfigFile = ConfigFile.new()) -> void:
@@ -50,13 +55,13 @@ func _load_settings(config: ConfigFile = ConfigFile.new()) -> void:
 	if err == OK:
 		master_volume = config.get_value("Settings", "master_volume", 1.0)
 		log_message("Loaded master_volume level: " + str(master_volume), LogLevel.DEBUG)
-		
+
 		music_volume = config.get_value("Settings", "music_volume", 1.0)
 		log_message("Loaded music_volume level: " + str(music_volume), LogLevel.DEBUG)
-		
+
 		sfx_volume = config.get_value("Settings", "sfx_volume", 1.0)
 		log_message("Loaded sfx_volume level: " + str(sfx_volume), LogLevel.DEBUG)
-		 
+
 		current_log_level = config.get_value("Settings", "log_level", LogLevel.INFO)
 		log_message("Loaded saved log level: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
 
@@ -76,7 +81,7 @@ func _load_settings(config: ConfigFile = ConfigFile.new()) -> void:
 # New: Add _save_settings to globals.gd (move from options_menu.gd if needed)
 func _save_settings() -> void:
 	var config: ConfigFile = ConfigFile.new()
-	
+
 	config.set_value("Settings", "log_level", current_log_level)
 	config.set_value("Settings", "difficulty", difficulty)
 	config.set_value("Settings", "master_volume", master_volume)
