@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://cdubukgyitlm8" path="res://scripts/main_menu.gd" id="1_l6cm7"]
 [ext_resource type="VideoStream" uid="uid://dxu50q1yffe6a" path="res://files/video/grok-video-main2.ogv" id="2_ekxnf"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="3_bqqt6"]
-[ext_resource type="AudioStream" uid="uid://7k2sjsnma3he" path="res://files/sounds/music/battle-epic-241575.mp3" id="4_wu84c"]
+[ext_resource type="AudioStream" uid="uid://b2bbye26af2qg" path="res://files/sounds/music/battle-epic-241575.ogg" id="4_wu84c"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_oa1go"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
