@@ -46,6 +46,9 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 - [Empire State Font](https://www.dafont.com/empire-state.font?l[]=10&l[]=1)
 - [Pixel Planes Assets Pack](https://clavs.itch.io/pixel-planes-assets-pack)
 - [Assets Free Laser Bullets Pack 2020](https://wenrexa.itch.io/laser2020)
+- [Pixabay: royalty free stock](https://pixabay.com/)
+- Music:
+  - [Battle Epic](https://pixabay.com/music/main-title-battle-epic-241575/) by [Hot_Dope](https://pixabay.com/users/hot_dope-27442149/)
 
 ## Documentation
 <!-- markdownlint-disable line-length -->

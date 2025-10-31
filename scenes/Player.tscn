@@ -15,6 +15,7 @@ script = ExtResource("1_v6fml")
 [node name="Weapon" parent="CharacterBody2D" instance=ExtResource("3_qhqgy")]
 
 [node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D"]
+texture_filter = 1
 position = Vector2(1, 2)
 texture = ExtResource("1_p0vlq")
 region_enabled = true

@@ -1,8 +1,9 @@
-[gd_scene load_steps=13 format=3 uid="uid://brpckgp7j86jp"]
+[gd_scene load_steps=14 format=3 uid="uid://brpckgp7j86jp"]
 
 [ext_resource type="Script" uid="uid://cdubukgyitlm8" path="res://scripts/main_menu.gd" id="1_l6cm7"]
 [ext_resource type="VideoStream" uid="uid://dxu50q1yffe6a" path="res://files/video/grok-video-main2.ogv" id="2_ekxnf"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="3_bqqt6"]
+[ext_resource type="AudioStream" uid="uid://7k2sjsnma3he" path="res://files/sounds/music/battle-epic-241575.mp3" id="4_wu84c"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_oa1go"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
@@ -163,5 +164,11 @@ oversampling_override = 1.0
 title = "Quit Game?"
 size = Vector2i(383, 100)
 dialog_text = "Are you sure you want to quit Sky Lock Assault?"
+
+[node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="."]
+stream = ExtResource("4_wu84c")
+autoplay = true
+bus = &"Music"
+parameters/looping = true
 
 [connection signal="confirmed" from="VideoStreamPlayer/Panel/VBoxContainer/QuitDialog" to="." method="_on_quit_dialog_confirmed"]
