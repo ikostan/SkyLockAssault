@@ -57,8 +57,7 @@ func _ready() -> void:
 		# On web: Show prompt, wait for gesture
 		background_music.play()
 		Globals.log_message(
-			"Web platform detected—waiting, start music by clicking on the screeen.", 
-			Globals.LogLevel.DEBUG
+			"Web platform detected, start music by clicking on the screeen.", Globals.LogLevel.DEBUG
 		)
 
 	# New: Create and start a timer for delayed UI show
