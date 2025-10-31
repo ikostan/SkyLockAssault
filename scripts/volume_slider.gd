@@ -1,7 +1,7 @@
-extends HSlider
-
 # New: Register as global class for testing and reuse
 class_name VolumeSlider
+
+extends HSlider
 
 @export var bus_name: String
 var bus_index: int
