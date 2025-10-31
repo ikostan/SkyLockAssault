@@ -18,6 +18,6 @@ UI_ELEMENTS = {
     "main_menu_button": {"x": 652, "y": 286},
     "resume_button": {"x": 639, "y": 429},
     # Added for log level dropdown
-    "log_level_dropdown": {"x": 705, "y": 420},  # Matches log_level_combo, adjust if needed
-    "log_level_debug": {"x": 713, "y": 420},    # DEBUG item in dropdown
+    "log_level_dropdown": {"x": 700, "y": 420},  # Matches log_level_combo, adjust if needed
+    "log_level_debug": {"x": 700, "y": 440},    # DEBUG item in dropdown
 }
