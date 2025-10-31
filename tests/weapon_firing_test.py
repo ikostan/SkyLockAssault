@@ -53,6 +53,9 @@ Maintenance Notes
 - Keep UI coordinates in tests/ui_elements_coords.py in sync with the in-canvas layout.
 - If the bullet instantiation log message changes, update the filter string accordingly.
 """
+
+import os
+import time
 import pytest
 import json  # Added for saving coverage data
 from playwright.sync_api import Page

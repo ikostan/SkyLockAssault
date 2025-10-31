@@ -13,6 +13,7 @@
 ![Closed Issues](https://img.shields.io/github/issues-closed/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=green)
 ![Open Issues](https://img.shields.io/github/issues/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=red)
 [![Known Vulnerabilities](https://snyk.io/test/github/ikostan/SkyLockAssault/badge.svg)](https://snyk.io/test/github/ikostan/SkyLockAssault)
+[![All Contributors](https://img.shields.io/github/all-contributors/ikostan/SkyLockAssault?color=ee8449&style=flat-square)](#contributors)
 <!-- markdownlint-enable line-length -->
 
 ## A top-down online web browser game built with Godot 4.5
@@ -46,6 +47,9 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 - [Empire State Font](https://www.dafont.com/empire-state.font?l[]=10&l[]=1)
 - [Pixel Planes Assets Pack](https://clavs.itch.io/pixel-planes-assets-pack)
 - [Assets Free Laser Bullets Pack 2020](https://wenrexa.itch.io/laser2020)
+- [Pixabay: royalty free stock](https://pixabay.com/)
+- Music:
+  - [Battle Epic](https://pixabay.com/music/main-title-battle-epic-241575/) by [Hot_Dope](https://pixabay.com/users/hot_dope-27442149/)
 
 ## Documentation
 <!-- markdownlint-disable line-length -->
@@ -63,6 +67,8 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
    - [Sourcery AI](https://docs.sourcery.ai/)
    - [IMGBOT](https://imgbot.net/docs/)
    - [Release Drafter](https://github.com/release-drafter/release-drafter?tab=readme-ov-file#readme)
+   - [Close Stale Issues and PRs](https://github.com/actions/stale)
+   - [AllContributors GitHub App](https://allcontributors.org/docs/en/bot/installation)
 
 <!-- markdownlint-enable line-length -->
 ## Roadmap
@@ -158,3 +164,14 @@ Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milest
 - See [CONTRIBUTING.md](/CONTRIBUTING.md) for full guidelines.
 - **Join the Discussions**: Chat about ideas, ask questions on web exports, or suggest
   features at [GitHub Discussions](https://github.com/ikostan/SkyLockAssault/discussions).
+
+### Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->

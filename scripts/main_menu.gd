@@ -14,12 +14,20 @@ var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 @onready var start_button: Button = $VideoStreamPlayer/Panel/VBoxContainer/StartButton
 @onready var options_button: Button = $VideoStreamPlayer/Panel/VBoxContainer/OptionsButton
 @onready var quit_button: Button = $VideoStreamPlayer/Panel/VBoxContainer/QuitButton
+@onready var background_music: AudioStreamPlayer2D = $AudioStreamPlayer2D
 
 
 func _input(event: InputEvent) -> void:  # Add type hints
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var pos: Vector2 = event.position  # Explicitly type as Vector2
 		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
+
+	# New: Unlock audio on first qualifying gesture (click or key press)
+	if OS.get_name() == "Web" and not background_music.playing:
+		background_music.play()
+		Globals.log_message(
+			"User gesture detected—starting background music.", Globals.LogLevel.DEBUG
+		)
 
 
 # Called when the node enters the scene tree for the first time.
@@ -43,6 +51,14 @@ func _ready() -> void:
 	ui_panel.visible = false  # Or just hide if no fade needed
 	ui_container.modulate.a = 0.0  # Start fully transparent for fade-in
 	ui_container.visible = false  # Or just hide if no fade needed
+
+	# New: Handle music start
+	if OS.get_name() == "Web" and not background_music.playing:
+		# On web: Show prompt, wait for gesture
+		background_music.play()
+		Globals.log_message(
+			"Web platform detected, start music by clicking on the screeen.", Globals.LogLevel.DEBUG
+		)
 
 	# New: Create and start a timer for delayed UI show
 	# In _ready() (replace timer; no Timer needed)

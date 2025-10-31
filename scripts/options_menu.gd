@@ -9,10 +9,16 @@ var log_level_display_to_enum := {
 	"NONE": Globals.LogLevel.NONE
 }
 
-@onready var log_lvl_option: OptionButton = $Panel/VBoxContainer/HBoxContainer/LogLevelOptionButton
-@onready var back_button: Button = $Panel/VBoxContainer/BackButton
-@onready var difficulty_slider: HSlider = $Panel/VBoxContainer/HBoxContainer2/DifficultyHSlider
-@onready var difficulty_label: Label = $Panel/VBoxContainer/HBoxContainer2/DifficultyValueLabel
+@onready var log_lvl_option: OptionButton = get_node(
+	"Panel/OptionsVBoxContainer/LogLevelContainer/LogLevelOptionButton"
+)
+@onready var back_button: Button = $Panel/OptionsVBoxContainer/BackButton
+@onready var difficulty_slider: HSlider = get_node(
+	"Panel/OptionsVBoxContainer/DifficultyLevelContainer/DifficultyHSlider"
+)
+@onready var difficulty_label: Label = get_node(
+	"Panel/OptionsVBoxContainer/DifficultyLevelContainer/DifficultyValueLabel"
+)
 
 
 func _input(event: InputEvent) -> void:  # Add type hints

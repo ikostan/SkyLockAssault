@@ -1,8 +1,11 @@
-[gd_scene load_steps=15 format=3 uid="uid://cl4m4q2eurcn0"]
+[gd_scene load_steps=18 format=3 uid="uid://cl4m4q2eurcn0"]
 
 [ext_resource type="Script" uid="uid://cajq8hf84eplh" path="res://scripts/options_menu.gd" id="1_ijpji"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_liyum"]
 [ext_resource type="Theme" uid="uid://caiajgnblwnqt" path="res://files/themes/difficulty_slider.tres" id="3_hm4m4"]
+[ext_resource type="PackedScene" uid="uid://4cavnb0mmtn8" path="res://scenes/master_volume_control.tscn" id="4_lfjc7"]
+[ext_resource type="PackedScene" uid="uid://eb04pytcq5xc" path="res://scenes/music_volume_control.tscn" id="5_dhn0l"]
+[ext_resource type="PackedScene" uid="uid://6npyx3vjw3wg" path="res://scenes/sfx_volume_control.tscn" id="6_k61yy"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lfjc7"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
@@ -90,15 +93,15 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -185.0
-offset_top = -133.0
-offset_right = 185.0
-offset_bottom = 127.0
+offset_left = -180.0
+offset_top = -160.0
+offset_right = 180.0
+offset_bottom = 160.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_lfjc7")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
+[node name="OptionsVBoxContainer" type="VBoxContainer" parent="Panel"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -106,14 +109,14 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -170.0
-offset_top = -120.0
+offset_top = -150.0
 offset_right = 170.0
-offset_bottom = 120.0
+offset_bottom = 150.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 12
 
-[node name="Label" type="Label" parent="Panel/VBoxContainer"]
+[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 6
@@ -122,19 +125,19 @@ theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 50
 text = "{OPTIONS}"
 
-[node name="HBoxContainer2" type="HBoxContainer" parent="Panel/VBoxContainer"]
+[node name="DifficultyLevelContainer" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="Panel/VBoxContainer/HBoxContainer2"]
+[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/DifficultyLevelContainer"]
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 20
 text = "{DIFFICULTY}"
 
-[node name="DifficultyHSlider" type="HSlider" parent="Panel/VBoxContainer/HBoxContainer2"]
+[node name="DifficultyHSlider" type="HSlider" parent="Panel/OptionsVBoxContainer/DifficultyLevelContainer"]
 custom_minimum_size = Vector2(120, 51)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -149,26 +152,80 @@ value = 0.5
 tick_count = 16
 ticks_on_borders = true
 
-[node name="DifficultyValueLabel" type="Label" parent="Panel/VBoxContainer/HBoxContainer2"]
+[node name="DifficultyValueLabel" type="Label" parent="Panel/OptionsVBoxContainer/DifficultyLevelContainer"]
 layout_mode = 2
 size_flags_horizontal = 10
 theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 20
 text = "{0.0}"
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Panel/VBoxContainer"]
+[node name="VolumeControls" type="VBoxContainer" parent="Panel/OptionsVBoxContainer"]
+layout_mode = 2
+
+[node name="MasterVolumeControl" type="HBoxContainer" parent="Panel/OptionsVBoxContainer/VolumeControls"]
+layout_mode = 2
+size_flags_vertical = 3
+tooltip_text = "Master Volium Controls"
+theme_override_constants/separation = 10
+
+[node name="MasterVolumeLabel" type="Label" parent="Panel/OptionsVBoxContainer/VolumeControls/MasterVolumeControl"]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_fonts/font = ExtResource("1_liyum")
+theme_override_font_sizes/font_size = 15
+text = "{MASTER=VOLUME}"
+
+[node name="MasterVolumeControl" parent="Panel/OptionsVBoxContainer/VolumeControls/MasterVolumeControl" instance=ExtResource("4_lfjc7")]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+
+[node name="MusicVolumeControl" type="HBoxContainer" parent="Panel/OptionsVBoxContainer/VolumeControls"]
+layout_mode = 2
+tooltip_text = "Music Volium Controls"
+theme_override_constants/separation = 31
+
+[node name="MusicVolumeLabel" type="Label" parent="Panel/OptionsVBoxContainer/VolumeControls/MusicVolumeControl"]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_fonts/font = ExtResource("1_liyum")
+theme_override_font_sizes/font_size = 15
+text = "{MUSIC=VOLUME}"
+
+[node name="MusicVolumeControl" parent="Panel/OptionsVBoxContainer/VolumeControls/MusicVolumeControl" instance=ExtResource("5_dhn0l")]
+layout_mode = 2
+size_flags_horizontal = 8
+
+[node name="SFXVolumeControl" type="HBoxContainer" parent="Panel/OptionsVBoxContainer/VolumeControls"]
+layout_mode = 2
+size_flags_vertical = 3
+tooltip_text = "SFX Volium Controls"
+theme_override_constants/separation = 46
+
+[node name="SFXVolumeLabel" type="Label" parent="Panel/OptionsVBoxContainer/VolumeControls/SFXVolumeControl"]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_fonts/font = ExtResource("1_liyum")
+theme_override_font_sizes/font_size = 15
+text = "{SFX=VOLUME}"
+
+[node name="SFXVolumeControl" parent="Panel/OptionsVBoxContainer/VolumeControls/SFXVolumeControl" instance=ExtResource("6_k61yy")]
+layout_mode = 2
+size_flags_horizontal = 8
+
+[node name="LogLevelContainer" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 6
 theme_override_constants/separation = 35
 
-[node name="Label" type="Label" parent="Panel/VBoxContainer/HBoxContainer"]
+[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/LogLevelContainer"]
 layout_mode = 2
 size_flags_horizontal = 0
 theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 20
 text = "{LOG=LEVEL}"
 
-[node name="LogLevelOptionButton" type="OptionButton" parent="Panel/VBoxContainer/HBoxContainer"]
+[node name="LogLevelOptionButton" type="OptionButton" parent="Panel/OptionsVBoxContainer/LogLevelContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
@@ -188,7 +245,7 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_2f1bn")
 theme_override_styles/hover = SubResource("StyleBoxFlat_7txom")
 theme_override_styles/focus = SubResource("StyleBoxFlat_binsn")
 
-[node name="BackButton" type="Button" parent="Panel/VBoxContainer"]
+[node name="BackButton" type="Button" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)

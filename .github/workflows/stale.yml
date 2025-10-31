@@ -1,0 +1,33 @@
+---
+name: "STALE: Mark stale issues and PRs"
+
+on:
+  schedule:
+    - cron: "0 0 * * *"  # Runs daily at midnight UTC
+
+jobs:
+  stale:
+    runs-on: "ubuntu-latest"
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: "actions/stale@v10.1.0"
+        # yamllint disable rule:line-length
+        with:
+          stale-issue-message: "This issue has been inactive for 30 days. It will be marked stale and closed in 5 days unless updated or the stale label is removed."
+          stale-pr-message: "This PR has been inactive for 45 days. It will be marked stale and closed in 10 days unless updated or the stale label is removed."
+          close-issue-message: "This issue was closed due to inactivity after being marked stale."
+          close-pr-message: "This PR was closed due to inactivity after being marked stale."
+          days-before-stale: 60
+          days-before-close: 7
+          days-before-issue-stale: 30
+          days-before-pr-stale: 45
+          days-before-issue-close: 5
+          days-before-pr-close: 10
+          stale-issue-label: "stale"
+          stale-pr-label: "stale"
+          exempt-issue-labels: "in-progress,help wanted"
+          exempt-pr-labels: "in-progress"
+          operations-per-run: 50  # Increase if your repo has many issues/PRs
+          remove-stale-when-updated: true

@@ -6,6 +6,9 @@ enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 @export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
 @export var enable_debug_logging: bool = false  # Toggle in Inspector or settings
 @export var difficulty: float = 1.0  # Multiplier: 1.0=Normal, <1=Easy, >1=Hard
+@export var master_volume: float = 1.0
+@export var music_volume: float = 1.0
+@export var sfx_volume: float = 1.0
 
 # In globals.gd (add after @export vars)
 var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
@@ -15,9 +18,26 @@ var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 func _ready() -> void:
 	if Engine.is_editor_hint() or enable_debug_logging:
 		current_log_level = LogLevel.DEBUG
+
 	log_message("Log level set to: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
-	# In _ready(), add after initial log level set:
-	_load_settings()  # If not already; loads log level and could expand for more
+	_load_settings()  # Load persisted settings first
+
+	# Apply loaded volumes to AudioServer buses (using new helper)
+	_apply_volume_to_bus("Master", master_volume)
+	_apply_volume_to_bus("Music", music_volume)
+	_apply_volume_to_bus("SFX", sfx_volume)
+
+
+# New: Helper to apply volume to a named bus (extracted from _ready)
+func _apply_volume_to_bus(bus_name: String, volume: float) -> void:
+	var bus_idx: int = AudioServer.get_bus_index(bus_name)
+	if bus_idx != -1:
+		AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
+		log_message(
+			"Applied loaded " + bus_name + " volume to AudioServer: " + str(volume), LogLevel.DEBUG
+		)
+	else:
+		log_message(bus_name + " audio bus not found!", LogLevel.ERROR)
 
 
 # Add these new functions (for consistency with log level persistence)
@@ -25,6 +45,15 @@ func _ready() -> void:
 func _load_settings(config: ConfigFile = ConfigFile.new()) -> void:
 	var err := config.load("user://settings.cfg")
 	if err == OK:
+		master_volume = config.get_value("Settings", "master_volume", 1.0)
+		log_message("Loaded master_volume level: " + str(master_volume), LogLevel.DEBUG)
+
+		music_volume = config.get_value("Settings", "music_volume", 1.0)
+		log_message("Loaded music_volume level: " + str(music_volume), LogLevel.DEBUG)
+
+		sfx_volume = config.get_value("Settings", "sfx_volume", 1.0)
+		log_message("Loaded sfx_volume level: " + str(sfx_volume), LogLevel.DEBUG)
+
 		current_log_level = config.get_value("Settings", "log_level", LogLevel.INFO)
 		log_message("Loaded saved log level: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
 
@@ -44,8 +73,13 @@ func _load_settings(config: ConfigFile = ConfigFile.new()) -> void:
 # New: Add _save_settings to globals.gd (move from options_menu.gd if needed)
 func _save_settings() -> void:
 	var config: ConfigFile = ConfigFile.new()
+
 	config.set_value("Settings", "log_level", current_log_level)
 	config.set_value("Settings", "difficulty", difficulty)
+	config.set_value("Settings", "master_volume", master_volume)
+	config.set_value("Settings", "music_volume", music_volume)
+	config.set_value("Settings", "sfx_volume", sfx_volume)
+
 	config.save("user://settings.cfg")
 	log_message("Settings saved.", LogLevel.DEBUG)
 

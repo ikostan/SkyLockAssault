@@ -53,4 +53,21 @@ To standardize, we've added templates in .github/ISSUE_TEMPLATE/:
 - bug_report.md: For bugs (fields: Godot version, OS, steps).
 - feature_request.md: For new ideas.
 
+## Acknowledging Contributors
+
+We use the [All Contributors](https://allcontributors.org)
+bot to recognize everyone who helps!
+
+To add yourself or someone else:
+
+- Comment on any issue or PR: `@all-contributors please add @username for contribution-types`
+- Replace `@username` with the GitHub username.
+- Replace `contribution-types` with comma-separated types (e.g., code,docs,test).
+  See [emoji key](https://allcontributors.org/docs/en/emoji-key) for types like 💻
+  for code, 📖 for docs.
+
+Example: `@all-contributors please add @ikostan for code,design`
+
+The bot will create a PR updating README.md—review and merge it.
+
 Questions? Comment on an issue or PR. Happy coding—let's learn Godot together!
