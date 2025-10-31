@@ -1,0 +1,10 @@
+{
+  "projectName": "SkyLockAssault",
+  "projectOwner": "ikostan",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": ["README.md"],
+  "imageSize": 100,
+  "contributorsPerLine": 7,
+  "badgeTemplate": "[<image-card alt="All Contributors" src="https://img.shields.io/github/all-contributors/<%= projectOwner %>/<%= projectName %>?color=ee8449&style=flat-square" ></image-card>](<%= contributorsUrl %>)"
+}
