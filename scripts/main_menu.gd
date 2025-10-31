@@ -25,7 +25,9 @@ func _input(event: InputEvent) -> void:  # Add type hints
 	# New: Unlock audio on first qualifying gesture (click or key press)
 	if OS.get_name() == "Web" and not background_music.playing:
 		background_music.play()
-		Globals.log_message("User gesture detected—starting background music.", Globals.LogLevel.DEBUG)
+		Globals.log_message(
+			"User gesture detected—starting background music.", Globals.LogLevel.DEBUG
+		)
 
 
 # Called when the node enters the scene tree for the first time.
@@ -54,7 +56,10 @@ func _ready() -> void:
 	if OS.get_name() == "Web" and not background_music.playing:
 		# On web: Show prompt, wait for gesture
 		background_music.play()
-		Globals.log_message("Web platform detected—waiting, start music by clicking on the screeen.", Globals.LogLevel.DEBUG)
+		Globals.log_message(
+			"Web platform detected—waiting, start music by clicking on the screeen.", 
+			Globals.LogLevel.DEBUG
+		)
 
 	# New: Create and start a timer for delayed UI show
 	# In _ready() (replace timer; no Timer needed)
