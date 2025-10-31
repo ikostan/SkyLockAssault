@@ -68,6 +68,7 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
    - [IMGBOT](https://imgbot.net/docs/)
    - [Release Drafter](https://github.com/release-drafter/release-drafter?tab=readme-ov-file#readme)
    - [Close Stale Issues and PRs](https://github.com/actions/stale)
+   - [AllContributors GitHub App](https://allcontributors.org/docs/en/bot/installation)
 
 <!-- markdownlint-enable line-length -->
 ## Roadmap
