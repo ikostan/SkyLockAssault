@@ -1,7 +1,7 @@
 extends HSlider
 
 @export var bus_name: String
-@export var bus_index: int
+var bus_index: int
 
 
 func _ready() -> void:
