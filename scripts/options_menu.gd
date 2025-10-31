@@ -20,6 +20,7 @@ var log_level_display_to_enum := {
 	"Panel/OptionsVBoxContainer/DifficultyLevelContainer/DifficultyValueLabel"
 )
 
+
 func _input(event: InputEvent) -> void:  # Add type hints
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var pos: Vector2 = event.position  # Explicitly type as Vector2
