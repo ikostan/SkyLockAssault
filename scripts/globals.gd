@@ -18,7 +18,7 @@ var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 func _ready() -> void:
 	if Engine.is_editor_hint() or enable_debug_logging:
 		current_log_level = LogLevel.DEBUG
- 	
+
 	log_message("Log level set to: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
 	_load_settings()  # Load persisted settings first
 
@@ -26,6 +26,7 @@ func _ready() -> void:
 	_apply_volume_to_bus("Master", master_volume)
 	_apply_volume_to_bus("Music", music_volume)
 	_apply_volume_to_bus("SFX", sfx_volume)
+
 
 # New: Helper to apply volume to a named bus (extracted from _ready)
 func _apply_volume_to_bus(bus_name: String, volume: float) -> void:
