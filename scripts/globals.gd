@@ -18,34 +18,25 @@ var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 func _ready() -> void:
 	if Engine.is_editor_hint() or enable_debug_logging:
 		current_log_level = LogLevel.DEBUG
+ 	
 	log_message("Log level set to: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
 	_load_settings()  # Load persisted settings first
 
-	# Apply loaded volumes to AudioServer buses
-	var master_bus_idx: int = AudioServer.get_bus_index("Master")
-	if master_bus_idx != -1:
-		AudioServer.set_bus_volume_db(master_bus_idx, linear_to_db(master_volume))
+	# Apply loaded volumes to AudioServer buses (using new helper)
+	_apply_volume_to_bus("Master", master_volume)
+	_apply_volume_to_bus("Music", music_volume)
+	_apply_volume_to_bus("SFX", sfx_volume)
+
+# New: Helper to apply volume to a named bus (extracted from _ready)
+func _apply_volume_to_bus(bus_name: String, volume: float) -> void:
+	var bus_idx: int = AudioServer.get_bus_index(bus_name)
+	if bus_idx != -1:
+		AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
 		log_message(
-			"Applied loaded Master volume to AudioServer: " + str(master_volume), LogLevel.DEBUG
+			"Applied loaded " + bus_name + " volume to AudioServer: " + str(volume), LogLevel.DEBUG
 		)
 	else:
-		log_message("Master audio bus not found!", LogLevel.ERROR)
-
-	var music_bus_idx: int = AudioServer.get_bus_index("Music")
-	if music_bus_idx != -1:
-		AudioServer.set_bus_volume_db(music_bus_idx, linear_to_db(music_volume))
-		log_message(
-			"Applied loaded Music volume to AudioServer: " + str(music_volume), LogLevel.DEBUG
-		)
-	else:
-		log_message("Music audio bus not found!", LogLevel.ERROR)
-
-	var sfx_bus_idx: int = AudioServer.get_bus_index("SFX")
-	if sfx_bus_idx != -1:
-		AudioServer.set_bus_volume_db(sfx_bus_idx, linear_to_db(sfx_volume))
-		log_message("Applied loaded SFX volume to AudioServer: " + str(sfx_volume), LogLevel.DEBUG)
-	else:
-		log_message("SFX audio bus not found!", LogLevel.ERROR)
+		log_message(bus_name + " audio bus not found!", LogLevel.ERROR)
 
 
 # Add these new functions (for consistency with log level persistence)
