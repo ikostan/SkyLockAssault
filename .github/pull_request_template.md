@@ -8,7 +8,8 @@ assignees: ''
 
 ## Description
 
-What does this PR do? (e.g., "Fixes player jump physics in level 2" or "Adds new enemy AI script")
+What does this PR do? (e.g., "Fixes player jump physics in level 2" or "Adds
+new enemy AI script")
 
 ## Related Issue
 
@@ -16,12 +17,14 @@ Closes #ISSUE_NUMBER (if applicable)
 
 ## Changes
 
-- [ ] List key changes here (e.g., "Updated Jump.gd to use Godot 4.4's new Tween system")
+- [ ] List key changes here (e.g., "Updated Jump.gd to use Godot 4.4's new Tween
+  system")
 - [ ] Any breaking changes? (e.g., "Deprecated old signal; migrate to new one")
 
 ## Testing
 
-- [ ] Ran the game in Godot v4.5 editor—describe what you tested (e.g., "Jump works on Win10 with 60 FPS")
+- [ ] Ran the game in Godot v4.5 editor—describe what you tested (e.g., "Jump
+  works on Win10 with 60 FPS")
 - [ ] Any new unit tests added? (Link to test scene if yes)
 - [ ] Screenshots/GIFs if UI-related: (Attach below)
 
