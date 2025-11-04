@@ -45,8 +45,6 @@ Please report vulnerabilities privately:
     tested on Chrome 120+").
   - Impact (e.g., "Could allow fuel cheat in multiplayer preview").
   - Environment (e.g., "Godot v4.5 export to Win10/Chrome").
-- **Alternative:** Email [your-email@example.com] (replace with maintainer's contact)
-  with the same details.
 - Do **not** disclose publicly (e.g., no X posts or itch.io comments) until resolved.
 
 We'll acknowledge reports within **48 hours**.
