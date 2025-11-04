@@ -63,7 +63,7 @@ func _ready() -> void:
 	# New: Create and start a timer for delayed UI show
 	# In _ready() (replace timer; no Timer needed)
 	var delay_timer: Timer = Timer.new()  # Still use timer for initial delay
-	delay_timer.wait_time = 0.5
+	delay_timer.wait_time = 3.0
 	delay_timer.one_shot = true
 	add_child(delay_timer)
 	delay_timer.timeout.connect(_start_ui_fade)
