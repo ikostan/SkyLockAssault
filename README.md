@@ -97,6 +97,11 @@ We value your input to improve Sky Lock Assault! Share your thoughts via:
 - [Itch.io Comments](https://ikostan.itch.io/sky-lock-assault) – Discuss
   gameplay, bugs, or suggestions directly on the game's page.
 
+## Security
+
+For details on reporting vulnerabilities and our disclosure process, see
+[SECURITY.md](/.github/SECURITY.md).
+
 ### Play Instructions
 
 - **In Godot Editor**: Open the project > Press F5 to run the main scene
