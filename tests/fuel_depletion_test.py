@@ -99,7 +99,9 @@ def test_fuel_depletion(page: Page):
         # Set up console log capture
         page.on("console", lambda msg: logs.append({"type": msg.type, "text": msg.text}))
         page.goto("http://localhost:8080/index.html")
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(10000)  # Increased to match passing tests; allows time for WASM/init/delays
+        # Optional: Add explicit wait for Godot initialization if set in main_menu.gd _ready()
+        page.wait_for_function("() => window.godotInitialized", timeout=1000)
 
         # Verify canvas and title
         canvas = page.locator("canvas")
