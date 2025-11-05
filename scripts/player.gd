@@ -24,6 +24,7 @@ var lerp_factor: float
 # Weapon system
 var weapons: Array[Node] = []  # Fill in editor or _ready
 var current_weapon: int = 0
+var screen_size: Vector2
 
 # Onreadys next
 @onready var player: CharacterBody2D = $CharacterBody2D
@@ -35,6 +36,8 @@ var fuel_bar: ProgressBar = $"../PlayerStatsPanel/VBoxContainer/HBoxContainer/Fu
 @onready var fill_style: StyleBoxFlat = fuel_bar.get_theme_stylebox("fill")
 # Cached initial fill color
 @onready var progress_bar_bg_color: Color = fill_style.bg_color
+# In plane.gd (or main player script) - central input
+@onready var weapon: Node2D = $CharacterBody2D/Weapon  # Path to your WeaponManager node
 
 
 func _ready() -> void:
@@ -56,36 +59,34 @@ func _ready() -> void:
 	player_y_min = (screen_size.y * -0.83) + player_half_height
 	player_y_max = screen_size.y / 7
 
-	# One-time debug log (avoid per-frame spam)
-	Globals.log_message(
-		(
-			"Player boundaries set: x("
-			+ str(player_x_min)
-			+ ", "
-			+ str(player_x_max)
-			+ "), y("
-			+ str(player_y_min)
-			+ ", "
-			+ str(player_y_max)
-			+ ")"
-		),
-		Globals.LogLevel.DEBUG
-	)
+	# After player_half_width/height calc
+	Globals.log_message("Boundaries: x(" + str(player_x_min) + "-" + str(player_x_max) + ") y(" + str(player_y_min) + "-" + str(player_y_max) + ")", Globals.LogLevel.DEBUG)
 
+	# Initialize fuel
 	current_fuel = max_fuel
-	fuel_bar.value = current_fuel
-	fuel_timer.timeout.connect(_on_fuel_timer_timeout)
+	fuel_bar.max_value = max_fuel
+	fuel_bar.value = current_fuel  # Set initial progress
 	fuel_timer.start()
-	# Assumes child named "Weapon"; use get_node("Path/To/Weapon") if nested
-	weapons.append($CharacterBody2D/Weapon)
+
+	# Null-safe weapon log
+	if weapon:
+		Globals.log_message("Player ready. Weapons loaded: " + str(weapon.weapon_types.size()), Globals.LogLevel.DEBUG)
+	else:
+		push_error("Weapon node not found! Check player.tscn scene tree for $Weapon child.")
 
 
-# Choose a diferent weapon
 func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("fire"):
+		Globals.log_message("Fire input pressed → calling weapon.fire()", Globals.LogLevel.DEBUG)
+		if weapon and weapon.has_method("fire"):
+			weapon.fire()
+		get_viewport().set_input_as_handled()
 	if event.is_action_pressed("next_weapon"):
-		current_weapon = (current_weapon + 1) % weapons.size()
-		for i in range(weapons.size()):
-			weapons[i].visible = (i == current_weapon)
+		Globals.log_message("Next weapon input pressed", Globals.LogLevel.DEBUG)
+		if weapon and weapon.has_method("switch_to") and weapon.get_num_weapons() > 1:
+			var next: int = (weapon.current_index + 1) % weapon.get_num_weapons()
+			weapon.switch_to(next)
+		get_viewport().set_input_as_handled()
 
 
 # Connect Timer's timeout signal
@@ -113,33 +114,16 @@ func _on_fuel_timer_timeout() -> void:
 	Globals.log_message("Fuel left: " + str(current_fuel), Globals.LogLevel.DEBUG)
 
 
-# warning-ignore:unused_parameter
 func _physics_process(_delta: float) -> void:
-	var direction: Vector2 = (
-		Input
-		. get_vector(
-			"move_left",
-			"move_right",
-			"move_forward",  # neg_y = forward → UP
-			"move_backward",  # pos_y = backward → DOWN
-		)
-	)
+	var direction: Vector2 = Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	if direction != Vector2.ZERO:
+		Globals.log_message("Direction: " + str(direction) + " (Left pressed? x<0)", Globals.LogLevel.DEBUG)  # Temp debug
 		player.velocity = direction * speed
 	else:
 		player.velocity = Vector2.ZERO
 	player.move_and_slide()
 
-	# Get fresh screen_size each frame (handles resizes)
-	var screen_size: Vector2 = get_viewport_rect().size
-
-	# Clamp position (recompute mins/maxes if screen_size changes, or keep as-is for performance)
 	player.position.x = clamp(player.position.x, player_x_min, player_x_max)
 	player.position.y = clamp(player.position.y, player_y_min, player_y_max)
-
-	# Optional per-frame log (comment out unless debugging; it's spammy)
-	#Globals.log_message("Player positioned at: " + str(player.position), Globals.LogLevel.DEBUG)
-	Globals.log_message(
-		"Root global: " + str(global_position) + ", Child global: " + str(player.global_position),
-		Globals.LogLevel.DEBUG
-	)
+	# Comment out spammy log
+	# Globals.log_message("Root global: " + str(global_position) + ", Child global: " + str(player.global_position), Globals.LogLevel.DEBUG)

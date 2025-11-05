@@ -1,29 +1,26 @@
-[gd_scene load_steps=6 format=3 uid="uid://blc0ioe12jlnk"]
+[gd_scene load_steps=5 format=3 uid="uid://blc0ioe12jlnk"]
 
 [ext_resource type="Script" uid="uid://uyw8e8i6adxn" path="res://scripts/bullet.gd" id="1_mkf8s"]
 [ext_resource type="Texture2D" uid="uid://b7utqr70u1mex" path="res://files/sprite/laser_sprites/01.png" id="2_y25gk"]
 [ext_resource type="AudioStream" uid="uid://881t7na373tm" path="res://files/sounds/sfx/retro-laser-1-236669.mp3" id="3_l5glv"]
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_y25gk"]
+[sub_resource type="CircleShape2D" id="CircleShape2D_l5glv"]
+radius = 5.0
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_mkf8s"]
-
-[node name="BulletRigidBody2D" type="RigidBody2D"]
+[node name="BulletFirer" type="Node2D"]
 texture_filter = 1
 script = ExtResource("1_mkf8s")
+projectile_texture = ExtResource("2_y25gk")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-shape = SubResource("CircleShape2D_y25gk")
-
-[node name="Sprite2D" type="Sprite2D" parent="."]
-texture_filter = 1
-texture = ExtResource("2_y25gk")
+[node name="ShotSFX" type="AudioStreamPlayer2D" parent="."]
+stream = ExtResource("3_l5glv")
+bus = &"SFX"
 
 [node name="Area2D" type="Area2D" parent="."]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
-shape = SubResource("CircleShape2D_mkf8s")
+shape = SubResource("CircleShape2D_l5glv")
 
-[node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="."]
-stream = ExtResource("3_l5glv")
-bus = &"SFX"
+[node name="Sprite2D" type="Sprite2D" parent="Area2D"]
+texture_filter = 1
+texture = ExtResource("2_y25gk")

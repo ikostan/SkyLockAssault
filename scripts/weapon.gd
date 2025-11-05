@@ -1,43 +1,42 @@
+# weapon.gd - FIXED with debug logs for null current_weapon
 extends Node2D
 
-@export var bullet_scene: PackedScene = preload("res://scenes/bullet.tscn")
-@export var fire_rate: float = 0.5  # Seconds between shots
-@export var muzzle_offset: Vector2 = Vector2(0, -25)  # Fixed up; adjust based on plane size
+@export var weapon_types: Array[PackedScene] = []  # Drag bullet.tscn...
 
-var can_fire: bool = true
-var timer: Timer
-
+var current_weapon: Node2D
+var current_index: int = 0
 
 func _ready() -> void:
-	timer = Timer.new()
-	timer.one_shot = true
-	add_child(timer)
-	timer.timeout.connect(_on_can_fire)
+	Globals.log_message("Weapon _ready: Types size " + str(weapon_types.size()), Globals.LogLevel.DEBUG)
+	if weapon_types.is_empty():
+		push_error("Weapon: No weapon_types assigned!")
+		return
+	switch_to(0)
 
+func switch_to(index: int) -> void:
+	Globals.log_message("Switching to " + str(index) + ": " + str(weapon_types[index].resource_path if index < weapon_types.size() else "INVALID"), Globals.LogLevel.DEBUG)
+	if index < 0 or index >= weapon_types.size():
+		push_warning("Weapon: Invalid index " + str(index))
+		return
+	if current_weapon:
+		current_weapon.queue_free()
+	current_weapon = weapon_types[index].instantiate()
+	Globals.log_message("Instantiate result: " + str(current_weapon), Globals.LogLevel.DEBUG)
+	if current_weapon:
+		add_child(current_weapon)
+		current_weapon.position = Vector2.ZERO
+		current_index = index
+		Globals.log_message("Switched to " + current_weapon.name, Globals.LogLevel.INFO)
+	else:
+		push_error("Failed to instantiate weapon_types[" + str(index) + "] - check scene/script errors!")
+		current_weapon = null  # Explicit
 
-func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("fire") and can_fire:
-		_fire()
+func fire() -> void:
+	if current_weapon and current_weapon.has_method("fire"):
+		Globals.log_message("Weapon.fire() delegating to " + current_weapon.name, Globals.LogLevel.DEBUG)
+		current_weapon.fire()
+	else:
+		push_error("Weapon.fire(): current_weapon null or no 'fire()' method! Types: " + str(weapon_types.size()))
 
-
-func _fire() -> void:
-	can_fire = false
-	# New: Scale cooldown with difficulty (longer wait if >1.0)
-	var scaled_rate: float = fire_rate * Globals.difficulty
-	timer.start(scaled_rate)
-	Globals.log_message("Firing with scaled cooldown: " + str(scaled_rate), Globals.LogLevel.DEBUG)
-
-	var bullet := bullet_scene.instantiate()
-	bullet.add_to_group("bullets")
-	# Updated: Use root instead of current_scene for reliability in tests/CI
-	get_tree().root.add_child(bullet)
-	bullet.global_position = global_position + muzzle_offset  # Fixed offset, no rotate
-	bullet.global_rotation = -PI / 2  # Point bullet up if sprite needs it
-	bullet.shot_sfx.play()
-	Globals.log_message(
-		"Firing bullet from weapon global: " + str(global_position), Globals.LogLevel.DEBUG
-	)
-
-
-func _on_can_fire() -> void:
-	can_fire = true
+func get_num_weapons() -> int:
+	return weapon_types.size()
