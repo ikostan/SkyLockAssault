@@ -1,7 +1,10 @@
 extends GdUnitTestSuite
 
-
 func test_label_display_web_safe() -> void:
+	# Clean up if action already exists (for test isolation)
+	if InputMap.has_action("test_action"):
+		InputMap.erase_action("test_action")
+	
 	# Setup action with physical KEY_SPACE
 	InputMap.add_action("test_action")
 	var event: = InputEventKey.new()
@@ -18,4 +21,4 @@ func test_label_display_web_safe() -> void:
 	
 	# Cleanup
 	button.queue_free()
-	InputMap.action_erase_events("test_action")
+	InputMap.erase_action("test_action")
