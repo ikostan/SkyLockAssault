@@ -1,4 +1,4 @@
-# bullet.gd - UPDATED: Extra debug for script load + fire confirm (Godot v4.4 Win10 instantiate bug fix)
+# bullet.gd - UPDATED: Extra debug for script load + fire confirm
 extends Node2D
 
 # Seconds between shots – adjust for balance (learning: lower = faster fire)
