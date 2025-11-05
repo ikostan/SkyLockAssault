@@ -5,6 +5,7 @@ extends RigidBody2D
 @export var damage: int = 10
 
 @onready var area: Area2D = $Area2D
+@onready var shot_sfx: AudioStreamPlayer2D = $AudioStreamPlayer2D
 
 
 func _ready() -> void:
