@@ -1,10 +1,12 @@
 extends Button
 
+# gdlint:ignore = class-definitions-order
 class_name InputRemapButton
 
 @export var action: String
 @export var action_event_index: int = 0
 
+# gdlint:ignore = class-definitions-order
 const KEY_LABELS: Dictionary = {
 	Key.KEY_W: "W",
 	Key.KEY_S: "S",
