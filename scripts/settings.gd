@@ -1,7 +1,9 @@
 extends Node
 
 const CONFIG_PATH: String = "user://settings.cfg"
-const ACTIONS: Array[String] = ["move_forward", "move_backward", "move_left", "move_right", "fire", "next_weapon"]
+const ACTIONS: Array[String] = [
+	"move_forward", "move_backward", "move_left", "move_right", "fire", "next_weapon"
+]
 
 const DEFAULT_KEYS: Dictionary = {
 	"move_forward": KEY_W,
@@ -12,12 +14,14 @@ const DEFAULT_KEYS: Dictionary = {
 	"next_weapon": KEY_Q
 }
 
+
 func _ready() -> void:
 	load_input_mappings()
 
+
 func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
 	var config: ConfigFile = ConfigFile.new()
-	var err: = config.load(path)
+	var err := config.load(path)
 	for action: String in actions:
 		var keycode: int = config.get_value("input", action, -1)
 		if keycode == -1:
@@ -27,11 +31,12 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			var events: Array[InputEvent] = InputMap.action_get_events(action)
 			if events.size() > 0 and events[0] is InputEventKey:
 				InputMap.action_erase_event(action, events[0])
-			
+
 			# Add key event
 			var new_event: InputEventKey = InputEventKey.new()
 			new_event.physical_keycode = keycode
 			InputMap.action_add_event(action, new_event)
+
 
 func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
 	var config: ConfigFile = ConfigFile.new()

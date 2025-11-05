@@ -115,11 +115,14 @@ func _on_fuel_timer_timeout() -> void:
 
 # warning-ignore:unused_parameter
 func _physics_process(_delta: float) -> void:
-	var direction: Vector2 = Input.get_vector(
-		"move_left", 
-		"move_right", 
-		"move_forward",    # neg_y = forward → UP
-		"move_backward",   # pos_y = backward → DOWN
+	var direction: Vector2 = (
+		Input
+		. get_vector(
+			"move_left",
+			"move_right",
+			"move_forward",  # neg_y = forward → UP
+			"move_backward",  # pos_y = backward → DOWN
+		)
 	)
 	if direction != Vector2.ZERO:
 		player.velocity = direction * speed
