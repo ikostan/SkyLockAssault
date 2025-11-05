@@ -17,6 +17,7 @@ const KEY_LABELS: Dictionary = {
 
 var listening: bool = false
 
+
 func _ready() -> void:
 	toggle_mode = true
 	update_button_text()
@@ -24,12 +25,14 @@ func _ready() -> void:
 		# Safe: Only connect if not already
 		pressed.connect(_on_pressed)
 
+
 func _on_pressed() -> void:
 	listening = button_pressed
 	if listening:
 		text = "Press a key..."
 	else:
 		update_button_text()
+
 
 func _input(event: InputEvent) -> void:
 	if listening and event is InputEventKey and event.pressed:
@@ -52,6 +55,7 @@ func _input(event: InputEvent) -> void:
 		Settings.save_input_mappings()
 
 		get_viewport().set_input_as_handled()
+
 
 func update_button_text() -> void:
 	var events := InputMap.action_get_events(action)
