@@ -14,15 +14,19 @@ var timer: Timer
 # Child node for sound – must exist in scene
 @onready var shot_sfx: AudioStreamPlayer2D = $ShotSFX
 
+
 func _ready() -> void:
-	Globals.log_message("*** BulletFirer _ready: Script LOADED! Name: " + name + " ShotSFX: " + str(shot_sfx), Globals.LogLevel.DEBUG)  # NEW: Confirm script runs on instantiate
+	Globals.log_message(
+		"*** BulletFirer _ready: Script LOADED! Name: " + name + " ShotSFX: " + str(shot_sfx),
+		Globals.LogLevel.DEBUG
+	)  # NEW: Confirm script runs on instantiate
 	if not projectile_texture:
 		projectile_texture = preload("res://icon.svg")  # Godot icon fallback – visible small dot for testing
 		push_warning(name + ": No texture; using fallback.")
 	if not shot_sound:
 		shot_sound = preload("res://files/sounds/sfx/retro-laser-1-236669.mp3")  # Fallback sound – download free SFX if missing
 		push_warning(name + ": Default sound.")
-	
+
 	# Polyphonic sound – allows overlaps for rapid fire (Godot learning: prevents audio cutoff)
 	var poly: AudioStreamPolyphonic = AudioStreamPolyphonic.new()
 	poly.polyphony = 12  # Max simultaneous sounds – adjust for performance
@@ -38,21 +42,29 @@ func _ready() -> void:
 	add_child(timer)
 	timer.timeout.connect(func() -> void: can_fire = true)  # Cooldown reset
 
+
 func fire() -> void:
-	Globals.log_message("*** BulletFirer.fire(): Called! can_fire: " + str(can_fire), Globals.LogLevel.DEBUG)  # NEW: Confirm method exists/runs
-	if not can_fire: return
+	Globals.log_message(
+		"*** BulletFirer.fire(): Called! can_fire: " + str(can_fire), Globals.LogLevel.DEBUG
+	)  # NEW: Confirm method exists/runs
+	if not can_fire:
+		return
 	can_fire = false
 	timer.start(fire_rate * Globals.difficulty)
-	
+
 	spawn_projectile()  # Spawns bullet – programmatic (no extra scene = efficient)
-	
+
 	if shot_sfx:
 		var playback: AudioStreamPlaybackPolyphonic = shot_sfx.get_stream_playback()
 		if playback:
 			playback.play_stream(shot_sound)
-			Globals.log_message("Bullet weapon fired (sound: " + shot_sound.resource_path.get_file() + ")", Globals.LogLevel.DEBUG)
+			Globals.log_message(
+				"Bullet weapon fired (sound: " + shot_sound.resource_path.get_file() + ")",
+				Globals.LogLevel.DEBUG
+			)
 		else:
 			push_warning("Polyphonic playback null—ensure shot_sfx.play() was called!")
+
 
 func spawn_projectile() -> void:
 	var proj: RigidBody2D = RigidBody2D.new()  # Projectile body – physics for movement/collision
@@ -65,11 +77,12 @@ func spawn_projectile() -> void:
 	# Collision detection – Area2D for hit events (learning: lighter than RigidBody collisions)
 	var area: Area2D = Area2D.new()
 	proj.add_child(area)
-	area.area_entered.connect(func(body: Node2D) -> void:
-		Globals.log_message("Projectile hit: " + body.name, Globals.LogLevel.DEBUG)
-		if body.has_method("take_damage"):
-			body.take_damage(damage)  # Apply damage to enemy
-		proj.queue_free()  # Destroy on hit
+	area.area_entered.connect(
+		func(body: Node2D) -> void:
+			Globals.log_message("Projectile hit: " + body.name, Globals.LogLevel.DEBUG)
+			if body.has_method("take_damage"):
+				body.take_damage(damage)  # Apply damage to enemy
+			proj.queue_free()  # Destroy on hit
 	)
 
 	# Sprite for visuals – drag texture in Inspector

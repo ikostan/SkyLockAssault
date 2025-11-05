@@ -6,15 +6,27 @@ extends Node2D
 var current_weapon: Node2D
 var current_index: int = 0
 
+
 func _ready() -> void:
-	Globals.log_message("Weapon _ready: Types size " + str(weapon_types.size()), Globals.LogLevel.DEBUG)
+	Globals.log_message(
+		"Weapon _ready: Types size " + str(weapon_types.size()), Globals.LogLevel.DEBUG
+	)
 	if weapon_types.is_empty():
 		push_error("Weapon: No weapon_types assigned!")
 		return
 	switch_to(0)
 
+
 func switch_to(index: int) -> void:
-	Globals.log_message("Switching to " + str(index) + ": " + str(weapon_types[index].resource_path if index < weapon_types.size() else "INVALID"), Globals.LogLevel.DEBUG)
+	Globals.log_message(
+		(
+			"Switching to "
+			+ str(index)
+			+ ": "
+			+ str(weapon_types[index].resource_path if index < weapon_types.size() else "INVALID")
+		),
+		Globals.LogLevel.DEBUG
+	)
 	if index < 0 or index >= weapon_types.size():
 		push_warning("Weapon: Invalid index " + str(index))
 		return
@@ -28,15 +40,26 @@ func switch_to(index: int) -> void:
 		current_index = index
 		Globals.log_message("Switched to " + current_weapon.name, Globals.LogLevel.INFO)
 	else:
-		push_error("Failed to instantiate weapon_types[" + str(index) + "] - check scene/script errors!")
+		push_error(
+			"Failed to instantiate weapon_types[" + str(index) + "] - check scene/script errors!"
+		)
 		current_weapon = null  # Explicit
+
 
 func fire() -> void:
 	if current_weapon and current_weapon.has_method("fire"):
-		Globals.log_message("Weapon.fire() delegating to " + current_weapon.name, Globals.LogLevel.DEBUG)
+		Globals.log_message(
+			"Weapon.fire() delegating to " + current_weapon.name, Globals.LogLevel.DEBUG
+		)
 		current_weapon.fire()
 	else:
-		push_error("Weapon.fire(): current_weapon null or no 'fire()' method! Types: " + str(weapon_types.size()))
+		push_error(
+			(
+				"Weapon.fire(): current_weapon null or no 'fire()' method! Types: "
+				+ str(weapon_types.size())
+			)
+		)
+
 
 func get_num_weapons() -> int:
 	return weapon_types.size()

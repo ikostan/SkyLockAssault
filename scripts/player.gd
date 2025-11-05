@@ -60,7 +60,20 @@ func _ready() -> void:
 	player_y_max = screen_size.y / 7
 
 	# After player_half_width/height calc
-	Globals.log_message("Boundaries: x(" + str(player_x_min) + "-" + str(player_x_max) + ") y(" + str(player_y_min) + "-" + str(player_y_max) + ")", Globals.LogLevel.DEBUG)
+	Globals.log_message(
+		(
+			"Boundaries: x("
+			+ str(player_x_min)
+			+ "-"
+			+ str(player_x_max)
+			+ ") y("
+			+ str(player_y_min)
+			+ "-"
+			+ str(player_y_max)
+			+ ")"
+		),
+		Globals.LogLevel.DEBUG
+	)
 
 	# Initialize fuel
 	current_fuel = max_fuel
@@ -70,7 +83,10 @@ func _ready() -> void:
 
 	# Null-safe weapon log
 	if weapon:
-		Globals.log_message("Player ready. Weapons loaded: " + str(weapon.weapon_types.size()), Globals.LogLevel.DEBUG)
+		Globals.log_message(
+			"Player ready. Weapons loaded: " + str(weapon.weapon_types.size()),
+			Globals.LogLevel.DEBUG
+		)
 	else:
 		push_error("Weapon node not found! Check player.tscn scene tree for $Weapon child.")
 
@@ -115,9 +131,13 @@ func _on_fuel_timer_timeout() -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	var direction: Vector2 = Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
+	var direction: Vector2 = Input.get_vector(
+		"move_left", "move_right", "move_forward", "move_backward"
+	)
 	if direction != Vector2.ZERO:
-		Globals.log_message("Direction: " + str(direction) + " (Left pressed? x<0)", Globals.LogLevel.DEBUG)  # Temp debug
+		Globals.log_message(
+			"Direction: " + str(direction) + " (Left pressed? x<0)", Globals.LogLevel.DEBUG
+		)  # Temp debug
 		player.velocity = direction * speed
 	else:
 		player.velocity = Vector2.ZERO
