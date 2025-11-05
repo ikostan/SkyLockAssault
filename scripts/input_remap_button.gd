@@ -3,8 +3,6 @@ extends Button
 @export var action: String
 @export var action_event_index: int = 0
 
-class_name InputRemapButton
-
 const KEY_LABELS: Dictionary = {
 	Key.KEY_W: "W",
 	Key.KEY_S: "S",
@@ -14,6 +12,8 @@ const KEY_LABELS: Dictionary = {
 	Key.KEY_SPACE: "Space",
 	Key.KEY_Q: "Q"
 }
+
+class_name InputRemapButton
 
 var listening: bool = false
 
