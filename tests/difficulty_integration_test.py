@@ -81,6 +81,7 @@ Maintenance Notes
 - Balance changes to fuel or weapon cooldown may require adjusting thresholds or asserted
   log values.
 """
+
 import os
 import time
 import pytest
@@ -91,6 +92,17 @@ from ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
 
 @pytest.fixture(scope="function")
 def page(playwright: "playwright") -> Page:
+    """
+    Provision a Chromium Page for each test run.
+
+    Launches headless Chromium with SwiftShader-friendly flags for CI stability and
+    uses a fixed 1280x720 viewport to keep canvas-relative UI coordinates stable.
+
+    Returns
+    -------
+    Page
+        A Playwright Page instance bound to a fresh browser context.
+    """
     browser = playwright.chromium.launch(
         headless=True,
         args=["--enable-unsafe-swiftshader", "--disable-gpu", "--use-gl=swiftshader"]
@@ -104,6 +116,14 @@ def page(playwright: "playwright") -> Page:
 
 
 def test_difficulty_integration(page: Page):
+    """
+    Full flow validation that difficulty 2.0 affects gameplay systems.
+
+    The test navigates menus, sets log level to DEBUG, selects difficulty 2.0 using
+    canvas-relative clicks from ``tests/ui_elements_coords.py``, and verifies via
+    console logs that cooldown scaling and fuel consumption reflect the selected
+    difficulty. It also captures V8 coverage through CDP and stores it at teardown.
+    """
     logs: list = []
     cdp_session = None
     try:
@@ -121,7 +141,7 @@ def test_difficulty_integration(page: Page):
         # Optional: Add explicit wait for Godot initialization if set in main_menu.gd _ready()
         page.wait_for_function("() => window.godotInitialized", timeout=1000)
 
-        # Verify canvas and title
+        # Verify canvas and title to ensure the game is initialized
         canvas = page.locator("canvas")
         page.wait_for_selector("canvas", state="visible", timeout=7000)
         box = canvas.bounding_box()
@@ -171,7 +191,7 @@ def test_difficulty_integration(page: Page):
         assert not unexpected_errors, f"Unexpected error messages found in logs: {unexpected_errors}"
         assert any("Options menu loaded." in log["text"] for log in logs), "Options menu is not loaded"
 
-        # Set difficulty to 2.0 (direct click to slider_2.0 position)
+        # Set difficulty to 2.0 (absolute position derived from stable UI coordinates)
         slider_x = box['x'] + UI_ELEMENTS["difficulty_slider_2.0"]["x"]
         slider_y = box['y'] + UI_ELEMENTS["difficulty_slider_2.0"]["y"]
         page.mouse.click(slider_x, slider_y)  # Click to set 2.0
@@ -192,7 +212,7 @@ def test_difficulty_integration(page: Page):
         page.wait_for_timeout(5000)  # Increased for level load
         assert any("Start Game menu button pressed." in log["text"] for log in logs), "Start Game button not found"
 
-        # Simulate fire and idle for fuel
+        # Simulate fire to assert cooldown scaling, then idle to accumulate fuel logs
         page.keyboard.press("Space")
         page.wait_for_timeout(5000)
         assert any("Firing with scaled cooldown: 1.0" in log["text"] for log in logs), "Weapon scaling failed"

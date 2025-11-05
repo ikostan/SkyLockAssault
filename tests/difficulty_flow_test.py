@@ -65,6 +65,7 @@ Maintenance Notes
   sync with the Godot scripts (main_menu.gd, options_menu.gd, weapon.gd).
 - Adjust asserted strings/thresholds if gameplay balance or log text changes.
 """
+
 import os
 import time
 import json  # Added for saving coverage data
@@ -75,6 +76,17 @@ from ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
 
 @pytest.fixture(scope="function")
 def page(playwright: "playwright") -> Page:
+    """
+    Provide a fresh Chromium Page per test.
+
+    Launches headless Chromium with SwiftShader flags for CI stability and creates
+    a context with a fixed 1280x720 viewport to keep UI coordinates stable.
+
+    Returns
+    -------
+    Page
+        A Playwright Page instance tied to the created browser context.
+    """
     browser = playwright.chromium.launch(
         headless=True,
         args=["--enable-unsafe-swiftshader", "--disable-gpu", "--use-gl=swiftshader"]
@@ -88,6 +100,13 @@ def page(playwright: "playwright") -> Page:
 
 
 def test_difficulty_flow(page: Page):
+    """
+    Set difficulty to 2.0 via options and validate gameplay effect.
+
+    Uses canvas-relative clicks from ``tests/ui_elements_coords.py`` and asserts
+    on console logs for navigation, difficulty change, and weapon cooldown
+    scaling. Captures precise V8 coverage via CDP and persists it at teardown.
+    """
     logs: list = []
     cdp_session = None
     try:
@@ -103,7 +122,7 @@ def test_difficulty_flow(page: Page):
         page.goto("http://localhost:8080/index.html")
         page.wait_for_timeout(10000)  # Increased significantly for WASM/scene init
 
-        # Verify canvas and title
+        # Verify canvas and title to ensure game is initialized
         canvas = page.locator("canvas")
         page.wait_for_selector("canvas", state="visible", timeout=7000)
         box = canvas.bounding_box()
@@ -144,7 +163,7 @@ def test_difficulty_flow(page: Page):
         assert any("Options button pressed." in log["text"] for log in logs), "Options menu not found"
         assert any("Options menu loaded." in log["text"] for log in logs), "Options menu is not loaded"
 
-        # Drag slider to 2.0
+        # Drag slider to 2.0 (position derived from stable UI coordinates)
         slider_x = box['x'] + UI_ELEMENTS["difficulty_slider_2.0"]["x"]
         slider_y = box['y'] + UI_ELEMENTS["difficulty_slider_2.0"]["y"]
         page.mouse.click(slider_x, slider_y)  # Move to 2.0 position
@@ -166,7 +185,7 @@ def test_difficulty_flow(page: Page):
         assert any("Start Game menu button pressed." in log["text"] for log in logs), "Start Game button not found"
         assert any("Loading main game scene..." in log["text"] for log in logs), "Main game scene is failed to load"
 
-        # Wait for level load, simulate fire (Space)
+        # Wait for level load, simulate fire (Space) -> expect doubled cooldown log
         page.wait_for_timeout(2000)
         page.keyboard.press("Space")
         assert any("Firing with scaled cooldown: 1.0" in log["text"] for log in logs), "Expected doubled cooldown (1.0)"

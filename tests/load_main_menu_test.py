@@ -49,6 +49,7 @@ Maintenance Notes
   update the wait_for_function and assertion accordingly.
 - If the title changes, update the title assertion string.
 """
+
 import time
 import os
 import pytest
@@ -58,6 +59,17 @@ from playwright.sync_api import Page
 
 @pytest.fixture(scope="function")
 def page(playwright: "playwright") -> Page:
+    """
+    Provision a Chromium Page with CI-friendly settings for each test.
+
+    Launches headless Chromium with SwiftShader-compatible flags and uses a
+    fixed 1280x720 viewport to keep UI coordinates predictable.
+
+    Returns
+    -------
+    Page
+        A Playwright Page instance tied to a new browser context.
+    """
     browser = playwright.chromium.launch(
         headless=True,
         args=["--enable-unsafe-swiftshader", "--disable-gpu", "--use-gl=swiftshader"]
@@ -71,6 +83,12 @@ def page(playwright: "playwright") -> Page:
 
 
 def test_main_menu_loads(page: Page):
+    """
+    Verify the main menu loads and initializes correctly in the browser.
+
+    Ensures network-idle state, canvas visibility, and that main_menu.gd has set
+    ``window.godotInitialized``. Uses CDP to capture V8 coverage for analysis.
+    """
     logs: list = []
     cdp_session = None
     try:
@@ -86,6 +104,7 @@ def test_main_menu_loads(page: Page):
         # Replacement for time.sleep: Wait for canvas visibility (basic init indicator)
         # Verifies Godot canvas loads and is visible
         page.wait_for_selector("canvas", state="visible", timeout=timeout)
+        # Canvas visibility is a lightweight readiness signal before full init
         # Optional full init wait:
         # Assumes main_menu.gd sets window.godotInitialized in _ready() for web exports.
         # If not set (e.g., non-web or code change),

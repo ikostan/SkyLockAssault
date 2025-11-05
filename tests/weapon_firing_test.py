@@ -64,6 +64,17 @@ from ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
 
 @pytest.fixture(scope="function")
 def page(playwright: "playwright") -> Page:
+    """
+    Provision a Chromium Page for each test with CI-friendly settings.
+
+    Launches headless Chromium with SwiftShader-compatible flags and a fixed
+    1280x720 viewport to keep canvas-relative coordinates predictable.
+
+    Returns
+    -------
+    Page
+        A Playwright Page instance bound to a fresh browser context.
+    """
     browser = playwright.chromium.launch(
         headless=True,
         args=["--enable-unsafe-swiftshader", "--disable-gpu", "--use-gl=swiftshader"]
@@ -77,6 +88,13 @@ def page(playwright: "playwright") -> Page:
 
 
 def test_weapon_firing(page: Page):
+    """
+    Assert a single Space press yields exactly one bullet spawn log.
+
+    After loading the scene and setting DEBUG logs, the test fires once and
+    counts occurrences of the bullet instantiation log. V8 coverage is captured
+    via CDP and saved at teardown.
+    """
     logs: list = []
     cdp_session = None
     try:
@@ -97,6 +115,7 @@ def test_weapon_firing(page: Page):
         # Verify canvas and title
         canvas = page.locator("canvas")
         page.wait_for_selector("canvas", state="visible", timeout=7000)
+        # Canvas visible indicates basic readiness before full init checks
         box = canvas.bounding_box()
         assert box, "Canvas not found on page"
         assert "SkyLockAssault" in page.title(), "Title not found"
