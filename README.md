@@ -123,9 +123,11 @@ menu during play.
 
 - Main menu scene (`main_menu.tscn`) with buttons (Start, Resume, Options, Quit).
 - Placeholder game level (`main_scene.tscn`) for future mechanics and game testing.
-- Options menu (`options_menu.tscn`) with log level settings, accessible from main and pause menus.
+- Options menu (`options_menu.tscn`) with log level settings, accessible from main
+  and pause menus.
 - Pause menu (`pause_menu.tscn`) with buttons (Main Menu, Options, Resume).
-- Player scene (`Player.tscn`) with CharacterBody2D, ShaderBody, CollisionShape, and FuelTimer.
+- Player scene (`Player.tscn`) with CharacterBody2D, ShaderBody, CollisionShape,
+  and FuelTimer.
 - Fade-in animations for main menu UI panels.
 - Fuel system including fuel level progress bar.
 - Basic weapon system.
