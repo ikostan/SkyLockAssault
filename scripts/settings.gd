@@ -37,7 +37,12 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			new_event.physical_keycode = keycode
 			InputMap.action_add_event(action, new_event)
 		else:
-			push_warning("Input action '%s' is missing from both config and DEFAULT_KEYS. No key mapping applied." % action)
+			push_warning(
+				(
+					"Input action '%s' is missing from both config and DEFAULT_KEYS. No key mapping applied."
+					% action
+				)
+			)
 
 
 func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
