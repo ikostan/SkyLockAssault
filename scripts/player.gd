@@ -145,5 +145,3 @@ func _physics_process(_delta: float) -> void:
 
 	player.position.x = clamp(player.position.x, player_x_min, player_x_max)
 	player.position.y = clamp(player.position.y, player_y_min, player_y_max)
-	# Comment out spammy log
-	# Globals.log_message("Root global: " + str(global_position) + ", Child global: " + str(player.global_position), Globals.LogLevel.DEBUG)

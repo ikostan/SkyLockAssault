@@ -1,8 +1,10 @@
 # bullet.gd - UPDATED: Extra debug for script load + fire confirm (Godot v4.4 Win10 instantiate bug fix)
 extends Node2D
 
-@export var fire_rate: float = 0.15  # Seconds between shots – adjust for balance (learning: lower = faster fire)
-@export var muzzle_offset: Vector2 = Vector2(0, -25)  # Spawn offset from plane – tweak for visuals
+# Seconds between shots – adjust for balance (learning: lower = faster fire)
+@export var fire_rate: float = 0.15
+# Spawn offset from plane – tweak for visuals
+@export var muzzle_offset: Vector2 = Vector2(0, -25)
 @export var projectile_speed: float = 400.0  # Bullet speed – higher = faster travel
 @export var projectile_lifetime: float = 5.0  # Auto-destroy time – prevents memory leak
 @export var damage: int = 10  # Damage on hit – for enemy take_damage()
@@ -21,10 +23,12 @@ func _ready() -> void:
 		Globals.LogLevel.DEBUG
 	)  # NEW: Confirm script runs on instantiate
 	if not projectile_texture:
-		projectile_texture = preload("res://icon.svg")  # Godot icon fallback – visible small dot for testing
+		# Godot icon fallback – visible small dot for testing
+		projectile_texture = preload("res://icon.svg")
 		push_warning(name + ": No texture; using fallback.")
 	if not shot_sound:
-		shot_sound = preload("res://files/sounds/sfx/retro-laser-1-236669.mp3")  # Fallback sound – download free SFX if missing
+		# Fallback sound – download free SFX if missing
+		shot_sound = preload("res://files/sounds/sfx/retro-laser-1-236669.mp3")
 		push_warning(name + ": Default sound.")
 
 	# Polyphonic sound – allows overlaps for rapid fire (Godot learning: prevents audio cutoff)
