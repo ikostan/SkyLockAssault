@@ -12,10 +12,11 @@ extends Node2D
 var can_fire: bool = true
 var timer: Timer
 
+
 # NO @onready for ShotSFX — we’ll create players dynamically
 func _ready() -> void:
 	Globals.log_message("BulletFirer _ready: Script loaded.", Globals.LogLevel.DEBUG)
-	
+
 	if not projectile_texture:
 		projectile_texture = preload("res://icon.svg")
 		push_warning(name + ": No texture; using fallback.")
@@ -29,8 +30,10 @@ func _ready() -> void:
 	add_child(timer)
 	timer.timeout.connect(_reset_can_fire)
 
+
 func _reset_can_fire() -> void:
 	can_fire = true
+
 
 func fire() -> void:
 	if not can_fire:
@@ -41,6 +44,7 @@ func fire() -> void:
 	spawn_projectile()
 	play_sfx_with_volume()
 
+
 # NEW: Play SFX with correct bus + volume scaling
 func play_sfx_with_volume() -> void:
 	if not shot_sound:
@@ -50,17 +54,16 @@ func play_sfx_with_volume() -> void:
 	sfx_player.stream = shot_sound
 	sfx_player.bus = "SFX"  # Critical: assign to SFX bus
 	sfx_player.volume_db = 0.0  # Base volume (will be scaled by bus)
-	
+
 	# Add to root to avoid being freed with bullet
 	get_tree().root.add_child(sfx_player)
-	
+
 	# Play and auto-cleanup
 	sfx_player.play()
-	sfx_player.finished.connect(func() -> void:
-		sfx_player.queue_free()
-	)
-	
+	sfx_player.finished.connect(func() -> void: sfx_player.queue_free())
+
 	Globals.log_message("SFX played on Web with bus volume control.", Globals.LogLevel.DEBUG)
+
 
 func spawn_projectile() -> void:
 	var proj: RigidBody2D = RigidBody2D.new()  # Projectile body – physics for movement/collision
