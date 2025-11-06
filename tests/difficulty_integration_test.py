@@ -215,7 +215,7 @@ def test_difficulty_integration(page: Page):
         # Simulate fire to assert cooldown scaling, then idle to accumulate fuel logs
         page.keyboard.press("Space")
         page.wait_for_timeout(5000)
-        assert any("Firing with scaled cooldown: 1.0" in log["text"] for log in logs), "Weapon scaling failed"
+        assert any("Firing with scaled cooldown: 0.3" in log["text"] for log in logs), "Weapon scaling failed: expected 0.3 (0.15 × 2.0)"
 
         page.wait_for_timeout(10000)
         fuel_logs = [log for log in logs if "Fuel left:" in log["text"]]

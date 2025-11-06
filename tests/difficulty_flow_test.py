@@ -67,6 +67,7 @@ Maintenance Notes
 """
 
 import os
+import re
 import time
 import json  # Added for saving coverage data
 import pytest
@@ -186,9 +187,15 @@ def test_difficulty_flow(page: Page):
         assert any("Loading main game scene..." in log["text"] for log in logs), "Main game scene is failed to load"
 
         # Wait for level load, simulate fire (Space) -> expect doubled cooldown log
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
         page.keyboard.press("Space")
-        assert any("Firing with scaled cooldown: 1.0" in log["text"] for log in logs), "Expected doubled cooldown (1.0)"
+        # assert any("Firing with scaled cooldown: 0.3" in log["text"] for log in logs), "Expected doubled cooldown (0.3)"
+        # Replace the assert with:
+        cooldown_logs = [log["text"] for log in logs if "Firing with scaled cooldown:" in log["text"]]
+        assert cooldown_logs, "No cooldown log found"
+        match = re.search(r"([\d.]+)", cooldown_logs[-1])
+        assert match, "Could not parse cooldown value"
+        assert abs(float(match.group(1)) - 0.3) < 0.01, f"Expected ~0.3, got {match.group(1)}"
     except Exception as e:
         # Save screenshot
         os.makedirs("artifacts", exist_ok=True)

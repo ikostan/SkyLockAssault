@@ -36,10 +36,19 @@ func _reset_can_fire() -> void:
 
 
 func fire() -> void:
+
 	if not can_fire:
 		return
 	can_fire = false
-	timer.start(fire_rate * Globals.difficulty)
+
+	var scaled_cooldown: float = fire_rate * Globals.difficulty
+	timer.start(scaled_cooldown)
+
+	# LOG
+	Globals.log_message(
+		"Firing with scaled cooldown: " + str(scaled_cooldown),
+		Globals.LogLevel.DEBUG
+	)
 
 	spawn_projectile()
 	play_sfx_with_volume()
