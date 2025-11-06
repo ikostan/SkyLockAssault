@@ -1,75 +1,66 @@
-# bullet.gd - UPDATED: Extra debug for script load + fire confirm
+# bullet.gd - FIXED for Web SFX Volume Control
 extends Node2D
 
-# Seconds between shots – adjust for balance (learning: lower = faster fire)
 @export var fire_rate: float = 0.15
-# Spawn offset from plane – tweak for visuals
 @export var muzzle_offset: Vector2 = Vector2(0, -25)
-@export var projectile_speed: float = 400.0  # Bullet speed – higher = faster travel
-@export var projectile_lifetime: float = 5.0  # Auto-destroy time – prevents memory leak
-@export var damage: int = 10  # Damage on hit – for enemy take_damage()
-@export var projectile_texture: Texture2D  # Drag PNG in Inspector – fallback icon if empty
-@export var shot_sound: AudioStream  # Drag MP3/OGG – fallback retro-laser
+@export var projectile_speed: float = 400.0
+@export var projectile_lifetime: float = 5.0
+@export var damage: int = 10
+@export var projectile_texture: Texture2D
+@export var shot_sound: AudioStream  # Assign in Inspector
 
 var can_fire: bool = true
 var timer: Timer
-# Child node for sound – must exist in scene
-@onready var shot_sfx: AudioStreamPlayer2D = $ShotSFX
 
-
+# NO @onready for ShotSFX — we’ll create players dynamically
 func _ready() -> void:
-	Globals.log_message(
-		"*** BulletFirer _ready: Script LOADED! Name: " + name + " ShotSFX: " + str(shot_sfx),
-		Globals.LogLevel.DEBUG
-	)  # NEW: Confirm script runs on instantiate
+	Globals.log_message("BulletFirer _ready: Script loaded.", Globals.LogLevel.DEBUG)
+	
 	if not projectile_texture:
-		# Godot icon fallback – visible small dot for testing
 		projectile_texture = preload("res://icon.svg")
 		push_warning(name + ": No texture; using fallback.")
 	if not shot_sound:
-		# Fallback sound – download free SFX if missing
 		shot_sound = preload("res://files/sounds/sfx/retro-laser-1-236669.mp3")
-		push_warning(name + ": Default sound.")
-
-	# Polyphonic sound – allows overlaps for rapid fire (Godot learning: prevents audio cutoff)
-	var poly: AudioStreamPolyphonic = AudioStreamPolyphonic.new()
-	poly.polyphony = 12  # Max simultaneous sounds – adjust for performance
-	if shot_sfx:
-		shot_sfx.stream = poly
-		# NEW: Start the player to activate polyphonic playback
-		shot_sfx.play()
-	else:
-		push_error("ShotSFX missing! Add AudioStreamPlayer2D child named 'ShotSFX' in bullet.tscn.")
+		push_warning(name + ": No sound; using fallback.")
 
 	timer = Timer.new()
 	timer.one_shot = true
+	timer.name = "CooldownTimer"
 	add_child(timer)
-	timer.name = "CooldownTimer"  # NEW: Named for tests (no perf hit)
-	timer.timeout.connect(func() -> void: can_fire = true)  # Cooldown reset
+	timer.timeout.connect(_reset_can_fire)
 
+func _reset_can_fire() -> void:
+	can_fire = true
 
 func fire() -> void:
-	Globals.log_message(
-		"*** BulletFirer.fire(): Called! can_fire: " + str(can_fire), Globals.LogLevel.DEBUG
-	)  # NEW: Confirm method exists/runs
 	if not can_fire:
 		return
 	can_fire = false
 	timer.start(fire_rate * Globals.difficulty)
 
-	spawn_projectile()  # Spawns bullet – programmatic (no extra scene = efficient)
+	spawn_projectile()
+	play_sfx_with_volume()
 
-	if shot_sfx:
-		var playback: AudioStreamPlaybackPolyphonic = shot_sfx.get_stream_playback()
-		if playback:
-			playback.play_stream(shot_sound)
-			Globals.log_message(
-				"Bullet weapon fired (sound: " + shot_sound.resource_path.get_file() + ")",
-				Globals.LogLevel.DEBUG
-			)
-		else:
-			push_warning("Polyphonic playback null—ensure shot_sfx.play() was called!")
+# NEW: Play SFX with correct bus + volume scaling
+func play_sfx_with_volume() -> void:
+	if not shot_sound:
+		return
 
+	var sfx_player := AudioStreamPlayer2D.new()
+	sfx_player.stream = shot_sound
+	sfx_player.bus = "SFX"  # Critical: assign to SFX bus
+	sfx_player.volume_db = 0.0  # Base volume (will be scaled by bus)
+	
+	# Add to root to avoid being freed with bullet
+	get_tree().root.add_child(sfx_player)
+	
+	# Play and auto-cleanup
+	sfx_player.play()
+	sfx_player.finished.connect(func() -> void:
+		sfx_player.queue_free()
+	)
+	
+	Globals.log_message("SFX played on Web with bus volume control.", Globals.LogLevel.DEBUG)
 
 func spawn_projectile() -> void:
 	var proj: RigidBody2D = RigidBody2D.new()  # Projectile body – physics for movement/collision
