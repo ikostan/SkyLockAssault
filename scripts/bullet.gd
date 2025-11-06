@@ -44,6 +44,7 @@ func _ready() -> void:
 	timer = Timer.new()
 	timer.one_shot = true
 	add_child(timer)
+	timer.name = "CooldownTimer"  # NEW: Named for tests (no perf hit)
 	timer.timeout.connect(func() -> void: can_fire = true)  # Cooldown reset
 
 
