@@ -36,7 +36,6 @@ func _reset_can_fire() -> void:
 
 
 func fire() -> void:
-
 	if not can_fire:
 		return
 	can_fire = false
@@ -46,8 +45,7 @@ func fire() -> void:
 
 	# LOG
 	Globals.log_message(
-		"Firing with scaled cooldown: " + str(scaled_cooldown),
-		Globals.LogLevel.DEBUG
+		"Firing with scaled cooldown: " + str(scaled_cooldown), Globals.LogLevel.DEBUG
 	)
 
 	spawn_projectile()
