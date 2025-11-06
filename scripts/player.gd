@@ -79,6 +79,7 @@ func _ready() -> void:
 	current_fuel = max_fuel
 	fuel_bar.max_value = max_fuel
 	fuel_bar.value = current_fuel  # Set initial progress
+	fuel_timer.timeout.connect(_on_fuel_timer_timeout)
 	fuel_timer.start()
 
 	# Null-safe weapon log

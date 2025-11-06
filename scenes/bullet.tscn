@@ -4,7 +4,7 @@
 [ext_resource type="Texture2D" uid="uid://b7utqr70u1mex" path="res://files/sprite/laser_sprites/01.png" id="2_y25gk"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_l5glv"]
-radius = 5.0
+radius = 2.0
 
 [node name="BulletFirer" type="Node2D"]
 texture_filter = 1
@@ -21,4 +21,6 @@ shape = SubResource("CircleShape2D_l5glv")
 
 [node name="Sprite2D" type="Sprite2D" parent="Area2D"]
 texture_filter = 1
+position = Vector2(-1, 0)
+scale = Vector2(0.3, 0.3)
 texture = ExtResource("2_y25gk")
