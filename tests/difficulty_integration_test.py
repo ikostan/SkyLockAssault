@@ -87,7 +87,7 @@ import time
 import pytest
 import json  # For saving coverage data
 from playwright.sync_api import Page
-from ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
+from .ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
 
 
 @pytest.fixture(scope="function")

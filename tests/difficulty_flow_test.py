@@ -72,7 +72,7 @@ import time
 import json  # Added for saving coverage data
 import pytest
 from playwright.sync_api import Page
-from ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
+from .ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
 
 
 @pytest.fixture(scope="function")
@@ -135,27 +135,26 @@ def test_difficulty_flow(page: Page):
         options_x = box['x'] + UI_ELEMENTS["options_button"]["x"]
         options_y = box['y'] + UI_ELEMENTS["options_button"]["y"]
         page.mouse.click(options_x, options_y)
-        page.wait_for_timeout(2000)
-        # assert any("Options menu loaded." in log["text"] for log in logs), "Options menu failed to load"
+        page.wait_for_timeout(3000)
 
         # Click log level dropdown
         log_dropdown_x = box['x'] + UI_ELEMENTS["log_level_dropdown"]["x"]
         log_dropdown_y = box['y'] + UI_ELEMENTS["log_level_dropdown"]["y"]
         page.mouse.click(log_dropdown_x, log_dropdown_y)
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
 
         # Select DEBUG
         debug_item_x = box['x'] + UI_ELEMENTS["log_level_debug"]["x"]
         debug_item_y = box['y'] + UI_ELEMENTS["log_level_debug"]["y"]
         page.mouse.click(debug_item_x, debug_item_y)
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
         assert any("Log level changed to: DEBUG" in log["text"] for log in logs), "Failed to set log level to DEBUG"
 
         # Back to main menu
         back_x = box['x'] + UI_ELEMENTS["back_button"]["x"]
         back_y = box['y'] + UI_ELEMENTS["back_button"]["y"]
         page.mouse.click(back_x, back_y)
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
         assert any("Back button pressed." in log["text"] for log in logs), "Back button not found"
 
         # Open options menu again
@@ -168,14 +167,14 @@ def test_difficulty_flow(page: Page):
         slider_x = box['x'] + UI_ELEMENTS["difficulty_slider_2.0"]["x"]
         slider_y = box['y'] + UI_ELEMENTS["difficulty_slider_2.0"]["y"]
         page.mouse.click(slider_x, slider_y)  # Move to 2.0 position
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
         assert any("Difficulty changed to: 2.0" in log["text"] for log in logs), "Expected change to 2.0"
 
         # Back to main menu
         back_x = box['x'] + UI_ELEMENTS["back_button"]["x"]
         back_y = box['y'] + UI_ELEMENTS["back_button"]["y"]
         page.mouse.click(back_x, back_y)  # Click Back button
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
         assert any("Back button pressed." in log["text"] for log in logs), "Back button not found"
 
         # Start game
@@ -189,13 +188,15 @@ def test_difficulty_flow(page: Page):
         # Wait for level load, simulate fire (Space) -> expect doubled cooldown log
         page.wait_for_timeout(3000)
         page.keyboard.press("Space")
-        # assert any("Firing with scaled cooldown: 0.3" in log["text"] for log in logs), "Expected doubled cooldown (0.3)"
-        # Replace the assert with:
+        # Extract cooldown logs
         cooldown_logs = [log["text"] for log in logs if "Firing with scaled cooldown:" in log["text"]]
         assert cooldown_logs, "No cooldown log found"
-        match = re.search(r"([\d.]+)", cooldown_logs[-1])
+        # Improved regex: Specifically match the number after "cooldown: "
+        match = re.search(r"Firing with scaled cooldown: ([\d.]+)", cooldown_logs[-1])
         assert match, "Could not parse cooldown value"
-        assert abs(float(match.group(1)) - 0.3) < 0.01, f"Expected ~0.3, got {match.group(1)}"
+        cooldown_value = float(match.group(1))
+        print(f"Parsed cooldown value: {cooldown_value}")  # For debug during runs
+        assert abs(cooldown_value - 0.3) < 0.01, f"Expected ~0.3, got {cooldown_value}"
     except Exception as e:
         # Save screenshot
         os.makedirs("artifacts", exist_ok=True)

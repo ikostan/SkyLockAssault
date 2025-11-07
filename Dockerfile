@@ -10,6 +10,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create a non-root user to run the container (fixes DS002)
 RUN useradd -m -s /bin/bash godotuser  # Creates 'godotuser' with home dir /home/godotuser
 
+# Set Godot config path to non-root user's home
+ENV GODOT_VERSION="4.5.stable" \
+    XDG_DATA_HOME="/home/godotuser/.local/share"
+
 # Create and activate virtual environment for Python tools
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
@@ -33,17 +37,13 @@ RUN wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot
     && chmod +x /usr/local/bin/godot \
     && rm Godot_v4.5-stable_linux.x86_64.zip
 
-# Download and extract export templates, placing them in a shared location accessible to non-root user
+# Download and extract export templates, placing them in the user-specific location
 RUN wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz \
-    && mkdir -p /usr/local/share/godot/export_templates/4.5.stable \
+    && mkdir -p "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}" \
     && unzip Godot_v4.5-stable_export_templates.tpz -d /tmp/templates \
-    && mv /tmp/templates/templates/* /usr/local/share/godot/export_templates/4.5.stable/ \
+    && mv /tmp/templates/templates/* "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}/" \
     && rm -rf /tmp/templates Godot_v4.5-stable_export_templates.tpz \
-    && chown -R godotuser:godotuser /usr/local/share/godot  # Make accessible to godotuser
-
-# Set Godot config path to non-root user's home
-ENV GODOT_VERSION="4.5.stable" \
-    XDG_DATA_HOME="/home/godotuser/.local/share"  # Redirect Godot data to user home
+    && chown -R godotuser:godotuser "${XDG_DATA_HOME}"
 
 # Install GDUnit4 v6
 RUN mkdir -p /project/addons \
@@ -53,13 +53,15 @@ RUN mkdir -p /project/addons \
     && rm -rf /project/addons/gdUnit4-6.0.0 v6.0.0.zip \
     && chown -R godotuser:godotuser /project  # Make project dir accessible
 
-# Install Playwright and dependencies for browser tests (in venv)
+# Install Playwright Python packages and system deps (as root)
 RUN pip install playwright pytest-playwright pytest-asyncio \
-    && playwright install-deps \
-    && playwright install
+    && playwright install-deps
 
 # Switch to non-root user (fixes DS002; all subsequent commands run as godotuser)
 USER godotuser
+
+# Install Playwright browsers (as godotuser, to place in user's cache)
+RUN playwright install
 
 # Optional: Add a simple HEALTHCHECK to verify Godot is runnable (addresses DS026, though LOW severity)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

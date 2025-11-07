@@ -16,8 +16,8 @@ Test Flow
 - Navigate to http://localhost:8080/index.html, verify canvas visibility and page title.
 - Open Options, set log level to DEBUG, return to the main menu.
 - Start the level and wait for scene load.
-- Press Space once to fire and assert that exactly one "Firing bullet from weapon global"
-  log entry is recorded.
+- Press Space once to fire and assert that exactly one "Firing with scaled cooldown:"
+  log entry is recorded (indicating one bullet spawn).
 
 Prerequisites
 -------------
@@ -29,13 +29,13 @@ Prerequisites
   - "Options button pressed."
   - "Back button pressed."
   - "Start Game menu button pressed."
-  - "Firing bullet from weapon global"
+  - "Firing with scaled cooldown:"
 
 How It Works
 ------------
 - The test uses coordinate-based interactions computed as: canvas bounding box origin +
   offsets provided by tests/ui_elements_coords.py.
-- Bullet creation is inferred via console logs; ensure weapon.gd prints a consistent log
+- Bullet creation is inferred via console logs; ensure bullet.gd prints a consistent log
   on bullet instantiation (or adapt the string in this test).
 
 Artifacts
@@ -59,21 +59,19 @@ import time
 import pytest
 import json  # Added for saving coverage data
 from playwright.sync_api import Page
-from ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
+from .ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
 
 
 @pytest.fixture(scope="function")
 def page(playwright: "playwright") -> Page:
     """
-    Provision a Chromium Page for each test with CI-friendly settings.
-
-    Launches headless Chromium with SwiftShader-compatible flags and a fixed
-    1280x720 viewport to keep canvas-relative coordinates predictable.
-
+    Provide a fresh Chromium Page per test.
+    Launches headless Chromium with SwiftShader flags for CI stability and creates
+    a context with a fixed 1280x720 viewport to keep UI coordinates stable.
     Returns
     -------
     Page
-        A Playwright Page instance bound to a fresh browser context.
+        A Playwright Page instance tied to the created browser context.
     """
     browser = playwright.chromium.launch(
         headless=True,
@@ -82,7 +80,6 @@ def page(playwright: "playwright") -> Page:
     context = browser.new_context(viewport={"width": 1280, "height": 720})
     page = context.new_page()
     yield page
-    page.close()
     context.close()
     browser.close()
 
@@ -90,7 +87,6 @@ def page(playwright: "playwright") -> Page:
 def test_weapon_firing(page: Page):
     """
     Assert a single Space press yields exactly one bullet spawn log.
-
     After loading the scene and setting DEBUG logs, the test fires once and
     counts occurrences of the bullet instantiation log. V8 coverage is captured
     via CDP and saved at teardown.
@@ -102,16 +98,13 @@ def test_weapon_firing(page: Page):
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
         cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
-
         # Set up console log capture
         page.on("console", lambda msg: logs.append({"type": msg.type, "text": msg.text}))
-
         # Navigate to game and wait for load
         page.goto("http://localhost:8080/index.html")
         page.wait_for_timeout(10000)  # Increased to match passing tests; allows time for WASM/init/delays
         # Optional: Add explicit wait for Godot initialization if set in main_menu.gd _ready()
         page.wait_for_function("() => window.godotInitialized", timeout=1000)
-
         # Verify canvas and title
         canvas = page.locator("canvas")
         page.wait_for_selector("canvas", state="visible", timeout=7000)
@@ -119,7 +112,6 @@ def test_weapon_firing(page: Page):
         box = canvas.bounding_box()
         assert box, "Canvas not found on page"
         assert "SkyLockAssault" in page.title(), "Title not found"
-
         # Set log level to DEBUG
         # Open options menu
         options_x = box['x'] + UI_ELEMENTS["options_button"]["x"]
@@ -127,42 +119,36 @@ def test_weapon_firing(page: Page):
         page.mouse.click(options_x, options_y)
         page.wait_for_timeout(7000)
         # assert any("Options menu loaded." in log["text"] for log in logs), "Options menu failed to load"
-
         # Click log level dropdown
         log_dropdown_x = box['x'] + UI_ELEMENTS["log_level_dropdown"]["x"]
         log_dropdown_y = box['y'] + UI_ELEMENTS["log_level_dropdown"]["y"]
         page.mouse.click(log_dropdown_x, log_dropdown_y)
         page.wait_for_timeout(3000)
-
         # Select DEBUG
         debug_item_x = box['x'] + UI_ELEMENTS["log_level_debug"]["x"]
         debug_item_y = box['y'] + UI_ELEMENTS["log_level_debug"]["y"]
         page.mouse.click(debug_item_x, debug_item_y)
         page.wait_for_timeout(3000)
         assert any("Log level changed to: DEBUG" in log["text"] for log in logs), "Failed to set log level to DEBUG"
-
         # Back to main menu
         back_x = box['x'] + UI_ELEMENTS["back_button"]["x"]
         back_y = box['y'] + UI_ELEMENTS["back_button"]["y"]
         page.mouse.click(back_x, back_y)
         page.wait_for_timeout(5000)
         assert any("Back button pressed." in log["text"] for log in logs), "Back button failed"
-
         # Start level (assume click Start)
         start_x = box['x'] + UI_ELEMENTS["start_game_button"]["x"]
         start_y = box['y'] + UI_ELEMENTS["start_game_button"]["y"]
         page.mouse.click(start_x, start_y)  # Click Start button
         page.wait_for_timeout(5000)  # Increased for level load
         assert any("Start Game menu button pressed." in log["text"] for log in logs), "Start Game button not found"
-
         # Simulate idle time for depletion (fuel_timer is 1s default; wait 5s for ~5 ticks)
         page.wait_for_timeout(10000)
-
         # Fire one time
         page.keyboard.press("Space")
-
-        # Assert 1 bullet fired (via log count; add "Bullet instantiated" print in weapon.gd _fire if needed)
-        bullet_logs = [log["text"] for log in logs if "Firing bullet from weapon global" in log["text"]]
+        # Assert 1 bullet fired (via log count; matches current bullet.gd fire() log)
+        bullet_logs = [log["text"] for log in logs if "Firing with scaled cooldown:" in log["text"]]
+        print(f"Bullet logs found: {bullet_logs}")  # Debug print for runs (remove if not needed)
         assert len(bullet_logs) == 1, f"Expected 1 bullet, got {len(bullet_logs)}"
     except Exception as e:
         # Save screenshot

@@ -71,7 +71,7 @@ import time
 import pytest
 import json  # Added for saving coverage data
 from playwright.sync_api import Page
-from ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
+from .ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
 
 
 @pytest.fixture(scope="function")
@@ -143,20 +143,20 @@ def test_fuel_depletion(page: Page):
         log_dropdown_x = box['x'] + UI_ELEMENTS["log_level_dropdown"]["x"]
         log_dropdown_y = box['y'] + UI_ELEMENTS["log_level_dropdown"]["y"]
         page.mouse.click(log_dropdown_x, log_dropdown_y)
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
 
         # Select DEBUG
         debug_item_x = box['x'] + UI_ELEMENTS["log_level_debug"]["x"]
         debug_item_y = box['y'] + UI_ELEMENTS["log_level_debug"]["y"]
         page.mouse.click(debug_item_x, debug_item_y)
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
         assert any("Log level changed to: DEBUG" in log["text"] for log in logs), "Failed to set log level to DEBUG"
 
         # Back to main menu
         back_x = box['x'] + UI_ELEMENTS["back_button"]["x"]
         back_y = box['y'] + UI_ELEMENTS["back_button"]["y"]
         page.mouse.click(back_x, back_y)
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
         assert any("Back button pressed." in log["text"] for log in logs), "Back button failed"
 
         # Open options menu again
@@ -169,14 +169,14 @@ def test_fuel_depletion(page: Page):
         slider_x = box['x'] + UI_ELEMENTS["difficulty_slider_2.0"]["x"]
         slider_y = box['y'] + UI_ELEMENTS["difficulty_slider_2.0"]["y"]
         page.mouse.click(slider_x, slider_y)  # Click to set 2.0
-        page.wait_for_timeout(2000)  # Wait for change to register
+        page.wait_for_timeout(3000)  # Wait for change to register
         assert any("Difficulty changed to: 2.0" in log["text"] for log in logs), "Expected change to 2.0"
 
         # Back to main menu
         back_x = box['x'] + UI_ELEMENTS["back_button"]["x"]
         back_y = box['y'] + UI_ELEMENTS["back_button"]["y"]
         page.mouse.click(back_x, back_y)  # Click Back button
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
         assert any("Back button pressed." in log["text"] for log in logs), "Back button not found"
 
         # Start level
