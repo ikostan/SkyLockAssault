@@ -1,7 +1,7 @@
 [gd_scene load_steps=14 format=3 uid="uid://brpckgp7j86jp"]
 
 [ext_resource type="Script" uid="uid://cdubukgyitlm8" path="res://scripts/main_menu.gd" id="1_l6cm7"]
-[ext_resource type="VideoStream" uid="uid://dxu50q1yffe6a" path="res://files/video/grok-video-main2.ogv" id="2_ekxnf"]
+[ext_resource type="VideoStream" uid="uid://bmpiyn7clgg1c" path="res://files/video/grok-video-main_menu_3_by_2.ogv" id="2_wu84c"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="3_bqqt6"]
 [ext_resource type="AudioStream" uid="uid://b2bbye26af2qg" path="res://files/sounds/music/battle-epic-241575.ogg" id="4_wu84c"]
 
@@ -73,7 +73,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-stream = ExtResource("2_ekxnf")
+stream = ExtResource("2_wu84c")
 autoplay = true
 loop = true
 

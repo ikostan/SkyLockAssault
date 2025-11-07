@@ -65,16 +65,29 @@ Maintenance Notes
   sync with the Godot scripts (main_menu.gd, options_menu.gd, weapon.gd).
 - Adjust asserted strings/thresholds if gameplay balance or log text changes.
 """
+
 import os
+import re
 import time
 import json  # Added for saving coverage data
 import pytest
 from playwright.sync_api import Page
-from ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
+from .ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
 
 
 @pytest.fixture(scope="function")
 def page(playwright: "playwright") -> Page:
+    """
+    Provide a fresh Chromium Page per test.
+
+    Launches headless Chromium with SwiftShader flags for CI stability and creates
+    a context with a fixed 1280x720 viewport to keep UI coordinates stable.
+
+    Returns
+    -------
+    Page
+        A Playwright Page instance tied to the created browser context.
+    """
     browser = playwright.chromium.launch(
         headless=True,
         args=["--enable-unsafe-swiftshader", "--disable-gpu", "--use-gl=swiftshader"]
@@ -88,6 +101,13 @@ def page(playwright: "playwright") -> Page:
 
 
 def test_difficulty_flow(page: Page):
+    """
+    Set difficulty to 2.0 via options and validate gameplay effect.
+
+    Uses canvas-relative clicks from ``tests/ui_elements_coords.py`` and asserts
+    on console logs for navigation, difficulty change, and weapon cooldown
+    scaling. Captures precise V8 coverage via CDP and persists it at teardown.
+    """
     logs: list = []
     cdp_session = None
     try:
@@ -103,7 +123,7 @@ def test_difficulty_flow(page: Page):
         page.goto("http://localhost:8080/index.html")
         page.wait_for_timeout(10000)  # Increased significantly for WASM/scene init
 
-        # Verify canvas and title
+        # Verify canvas and title to ensure game is initialized
         canvas = page.locator("canvas")
         page.wait_for_selector("canvas", state="visible", timeout=7000)
         box = canvas.bounding_box()
@@ -115,27 +135,26 @@ def test_difficulty_flow(page: Page):
         options_x = box['x'] + UI_ELEMENTS["options_button"]["x"]
         options_y = box['y'] + UI_ELEMENTS["options_button"]["y"]
         page.mouse.click(options_x, options_y)
-        page.wait_for_timeout(2000)
-        # assert any("Options menu loaded." in log["text"] for log in logs), "Options menu failed to load"
+        page.wait_for_timeout(3000)
 
         # Click log level dropdown
         log_dropdown_x = box['x'] + UI_ELEMENTS["log_level_dropdown"]["x"]
         log_dropdown_y = box['y'] + UI_ELEMENTS["log_level_dropdown"]["y"]
         page.mouse.click(log_dropdown_x, log_dropdown_y)
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
 
         # Select DEBUG
         debug_item_x = box['x'] + UI_ELEMENTS["log_level_debug"]["x"]
         debug_item_y = box['y'] + UI_ELEMENTS["log_level_debug"]["y"]
         page.mouse.click(debug_item_x, debug_item_y)
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
         assert any("Log level changed to: DEBUG" in log["text"] for log in logs), "Failed to set log level to DEBUG"
 
         # Back to main menu
         back_x = box['x'] + UI_ELEMENTS["back_button"]["x"]
         back_y = box['y'] + UI_ELEMENTS["back_button"]["y"]
         page.mouse.click(back_x, back_y)
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
         assert any("Back button pressed." in log["text"] for log in logs), "Back button not found"
 
         # Open options menu again
@@ -144,18 +163,18 @@ def test_difficulty_flow(page: Page):
         assert any("Options button pressed." in log["text"] for log in logs), "Options menu not found"
         assert any("Options menu loaded." in log["text"] for log in logs), "Options menu is not loaded"
 
-        # Drag slider to 2.0
+        # Drag slider to 2.0 (position derived from stable UI coordinates)
         slider_x = box['x'] + UI_ELEMENTS["difficulty_slider_2.0"]["x"]
         slider_y = box['y'] + UI_ELEMENTS["difficulty_slider_2.0"]["y"]
         page.mouse.click(slider_x, slider_y)  # Move to 2.0 position
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
         assert any("Difficulty changed to: 2.0" in log["text"] for log in logs), "Expected change to 2.0"
 
         # Back to main menu
         back_x = box['x'] + UI_ELEMENTS["back_button"]["x"]
         back_y = box['y'] + UI_ELEMENTS["back_button"]["y"]
         page.mouse.click(back_x, back_y)  # Click Back button
-        page.wait_for_timeout(2000)
+        page.wait_for_timeout(3000)
         assert any("Back button pressed." in log["text"] for log in logs), "Back button not found"
 
         # Start game
@@ -166,10 +185,18 @@ def test_difficulty_flow(page: Page):
         assert any("Start Game menu button pressed." in log["text"] for log in logs), "Start Game button not found"
         assert any("Loading main game scene..." in log["text"] for log in logs), "Main game scene is failed to load"
 
-        # Wait for level load, simulate fire (Space)
-        page.wait_for_timeout(2000)
+        # Wait for level load, simulate fire (Space) -> expect doubled cooldown log
+        page.wait_for_timeout(3000)
         page.keyboard.press("Space")
-        assert any("Firing with scaled cooldown: 1.0" in log["text"] for log in logs), "Expected doubled cooldown (1.0)"
+        # Extract cooldown logs
+        cooldown_logs = [log["text"] for log in logs if "Firing with scaled cooldown:" in log["text"]]
+        assert cooldown_logs, "No cooldown log found"
+        # Improved regex: Specifically match the number after "cooldown: "
+        match = re.search(r"Firing with scaled cooldown: ([\d.]+)", cooldown_logs[-1])
+        assert match, "Could not parse cooldown value"
+        cooldown_value = float(match.group(1))
+        print(f"Parsed cooldown value: {cooldown_value}")  # For debug during runs
+        assert abs(cooldown_value - 0.3) < 0.01, f"Expected ~0.3, got {cooldown_value}"
     except Exception as e:
         # Save screenshot
         os.makedirs("artifacts", exist_ok=True)

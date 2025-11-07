@@ -50,6 +50,7 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 - [Pixabay: royalty free stock](https://pixabay.com/)
 - Music:
   - [Battle Epic](https://pixabay.com/music/main-title-battle-epic-241575/) by [Hot_Dope](https://pixabay.com/users/hot_dope-27442149/)
+  - [Retro laser 1](https://pixabay.com/sound-effects/retro-laser-1-236669/) by [Driken5482](https://pixabay.com/users/driken5482-45721595/)
 
 ## Documentation
 <!-- markdownlint-disable line-length -->
@@ -122,13 +123,12 @@ menu during play.
 
 - Main menu scene (`main_menu.tscn`) with buttons (Start, Resume, Options, Quit).
 - Placeholder game level (`main_scene.tscn`) for future mechanics and game testing.
-- Add options menu (`options_menu.tscn`) with log level settings accessible
-  from main and pause menus.
-- Add pause menu (`pause_menu.tscn`) with buttons (Main Menu, Options, Resume).
-  from main and pause menus.
-- Add Player scene (`Player.tscn`) with CharacterBody2D, ShaderBody, CollisionShape,
-  FuelTimer.
-- Implement fade-in animations for main menu UI panels.
+- Options menu (`options_menu.tscn`) with log level settings, accessible from main
+  and pause menus.
+- Pause menu (`pause_menu.tscn`) with buttons (Main Menu, Options, Resume).
+- Player scene (`Player.tscn`) with CharacterBody2D, ShaderBody, CollisionShape,
+  and FuelTimer.
+- Fade-in animations for main menu UI panels.
 - Fuel system including fuel level progress bar.
 - Basic weapon system.
 - Difficulty settings.

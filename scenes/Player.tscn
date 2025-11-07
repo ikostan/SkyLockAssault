@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3 uid="uid://37rarq1yywmc"]
+[gd_scene load_steps=6 format=3 uid="uid://37rarq1yywmc"]
 
 [ext_resource type="Texture2D" uid="uid://gnx6aovalhxs" path="res://files/sprite/PixelPlanesAssetPack.png" id="1_p0vlq"]
 [ext_resource type="Script" uid="uid://bcplrymg5tt06" path="res://scripts/player.gd" id="1_v6fml"]
+[ext_resource type="PackedScene" uid="uid://blc0ioe12jlnk" path="res://scenes/bullet.tscn" id="3_dqkch"]
 [ext_resource type="PackedScene" uid="uid://bafpwe0qf0vm0" path="res://scenes/weapon.tscn" id="3_qhqgy"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_5q5h1"]
@@ -13,6 +14,8 @@ script = ExtResource("1_v6fml")
 [node name="CharacterBody2D" type="CharacterBody2D" parent="."]
 
 [node name="Weapon" parent="CharacterBody2D" instance=ExtResource("3_qhqgy")]
+visible = false
+weapon_types = Array[PackedScene]([ExtResource("3_dqkch")])
 
 [node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D"]
 texture_filter = 1

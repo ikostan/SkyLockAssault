@@ -5,17 +5,27 @@ EXPORT_DIR="$PROJECT_DIR/export/web"
 SERVER_PORT=8080
 PW_TIMEOUT=10000
 
+# Function to check if a step failed
+check_exit() {
+  if [ $? -ne 0 ]; then
+    echo "Error in $1. Exiting pipeline."
+    exit 1
+  fi
+}
+
+# Browser Functional Tests
 echo "Exporting Godot Project to Web..."
 mkdir -p $EXPORT_DIR
-# Use debug export for better logging
-godot --headless --path $PROJECT_DIR --export-debug "Web" $EXPORT_DIR/index.html
-if [ $? -ne 0 ]; then echo "Web export failed."; exit 1; fi
 
-# Start web server
+# Simulate firebelley/godot-export action: Run Godot export to HTML5
+godot --headless --path $PROJECT_DIR --export-release "Web" $EXPORT_DIR/index.html
+check_exit "Godot Web Export"
+
+# Start web server in background
 python3 -m http.server $SERVER_PORT --directory $EXPORT_DIR &
 SERVER_PID=$!
 
-# Wait for server
+# Wait for server to be ready
 for i in {1..20}; do
   if curl -f http://localhost:$SERVER_PORT/index.html >/dev/null 2>&1; then
     echo "Web server ready"
@@ -29,15 +39,12 @@ if [ $i -eq 20 ]; then
   exit 1
 fi
 
-# Run tests with xvfb for headless WebGL
+# Run Playwright tests
 echo "Running Playwright Browser Tests..."
-Xvfb :99 -screen 0 1280x720x24 &
-XVFB_PID=$!
-export DISPLAY=:99
-PYTHONPATH="$PROJECT_DIR/tests:$PYTHONPATH" pytest tests/ -v --junitxml=$PROJECT_DIR/report.xml
-if [ $? -ne 0 ]; then echo "Browser tests failed."; kill $SERVER_PID; kill $XVFB_PID; exit 1; fi
+pytest tests/ -v --junitxml=$PROJECT_DIR/report.xml
+check_exit "Playwright Tests"
 
-# Report summary
+# Generate test report summary
 if [ -f $PROJECT_DIR/report.xml ]; then
   total=$(xmllint --xpath 'count(//testcase)' $PROJECT_DIR/report.xml)
   failures=$(xmllint --xpath 'count(//testcase/failure)' $PROJECT_DIR/report.xml)
@@ -51,16 +58,16 @@ if [ -f $PROJECT_DIR/report.xml ]; then
   echo "- Errors: $errors"
   echo "- Skipped: $skipped"
 else
-  echo "No report.xml found."
+  echo "No report.xml found—tests may not have run."
 fi
 
-# Cleanup
+# Cleanup: Stop server
 kill $SERVER_PID
-kill $XVFB_PID
 
-# Simulate artifacts
+# Simulate artifact uploads (copy to host via mounted volume)
 mkdir -p $PROJECT_DIR/artifacts
 cp $PROJECT_DIR/report.xml $PROJECT_DIR/artifacts/ || true
-cp main_menu.png $PROJECT_DIR/artifacts/ || true
+cp main_menu.png $PROJECT_DIR/artifacts/ || true  # If screenshot exists
+cp -r $PROJECT_DIR/reports $PROJECT_DIR/artifacts/gdunit-reports || true
 
-echo "Browser Functional Tests completed!"
+echo "Pipeline completed successfully!"

@@ -3,6 +3,7 @@ extends Node
 # Global utilities singleton: Provides shared functions like logging.
 # Access from any script as Globals.log_message("message").
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
+
 @export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
 @export var enable_debug_logging: bool = false  # Toggle in Inspector or settings
 @export var difficulty: float = 1.0  # Multiplier: 1.0=Normal, <1=Easy, >1=Hard
