@@ -86,7 +86,7 @@ jobs:
           ls -la v8_coverage_*.json || echo "No v8_coverage_*.json found"
 
       - name: "Set up Node.js for Coverage Conversion"
-        uses: "actions/setup-node@v4"
+        uses: "actions/setup-node@v6"
         with:
           node-version: '20'  # Stable for Win10 compat
       - name: "Install Conversion Tools"
