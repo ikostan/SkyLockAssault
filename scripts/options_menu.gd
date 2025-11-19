@@ -75,7 +75,10 @@ func _ready() -> void:
 	Globals.log_message(
 		"Set options_menu process_mode to ALWAYS for pause ignoring.", Globals.LogLevel.DEBUG
 	)
-	JavaScriptBridge.eval("""
+	(
+		JavaScriptBridge
+		. eval(
+			"""
         var difficultySlider = document.createElement('input');
         difficultySlider.id = 'difficulty-slider';
         difficultySlider.type = 'range';
@@ -116,12 +119,15 @@ func _ready() -> void:
         backButton.innerText = 'BACK';
         document.body.appendChild(backButton);
         backButton.onclick = function() { godot.call('_on_back_pressed'); };
-	""")
+	"""
+		)
+	)
 	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
 
 
 func get_log_level_index() -> int:
 	return Globals.LogLevel.values().find(Globals.current_log_level)
+
 
 # New function for slider change
 func _on_difficulty_changed(value: float) -> void:

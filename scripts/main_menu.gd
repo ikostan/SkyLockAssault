@@ -35,14 +35,12 @@ func _input(event: InputEvent) -> void:  # Add type hints
 func _ready() -> void:
 	Globals.log_message("Initializing main menu...", Globals.LogLevel.DEBUG)
 	# Connect START button signal
-	@warning_ignore("return_value_discarded")
-	start_button.pressed.connect(_on_start_pressed)
+	@warning_ignore("return_value_discarded") start_button.pressed.connect(_on_start_pressed)
 	# Connect OPTIONS button signal
 	@warning_ignore("return_value_discarded")
 	options_button.pressed.connect(_on_options_button_pressed)
 	# Connect QUIT button signal
-	@warning_ignore("return_value_discarded")
-	quit_button.pressed.connect(_on_quit_pressed)
+	@warning_ignore("return_value_discarded") quit_button.pressed.connect(_on_quit_pressed)
 
 	setup_quit_dialog()  # New: Handles dialog setup in one place
 	# assert(quit_dialog != null, "QuitDialog must be assigned!")
@@ -56,7 +54,10 @@ func _ready() -> void:
 	if OS.get_name() == "Web" and not background_music.playing:
 		# On web: Show prompt, wait for gesture
 		background_music.play()
-		JavaScriptBridge.eval("""
+		(
+			JavaScriptBridge
+			. eval(
+				"""
 			var startBtn = document.createElement('button');
 			startBtn.id = 'start-button';
 			startBtn.style.position = 'absolute';
@@ -95,11 +96,14 @@ func _ready() -> void:
 			quitBtn.style.height = '50px';
             document.body.appendChild(quitBtn);
 			quitBtn.onclick = function() { godot.call('_on_quit_pressed'); };
-		""")
+			
+			console.log('Overlays added to DOM');
+		"""
+			)
+		)
 		Globals.log_message(
 			"Web platform detected, start music by clicking on the screeen.", Globals.LogLevel.DEBUG
 		)
-		
 
 	# New: Create and start a timer for delayed UI show
 	# In _ready() (replace timer; no Timer needed)

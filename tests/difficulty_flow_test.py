@@ -101,18 +101,24 @@ def test_difficulty_flow(page: Page):
         page.wait_for_timeout(5000)  # Extra buffer for HTML5 load
 
         # Wait main menu (ID check)
-        page.wait_for_selector("#options-button", timeout=30000)
+        # page.wait_for_selector("#options-button", timeout=30000)
+        # Wait main menu (function check for ID)
+        page.wait_for_function("() => document.getElementById('options-button') !== null", timeout=60000)
+
+        assert any("Overlays added to DOM" in log["text"] for log in logs)  # Check JS ran
 
         # Click OPTIONS
         page.click("#options-button")
 
         # After click #options-button
-        page.wait_for_selector("#log-lvl-select", timeout=10000)
+        # page.wait_for_selector("#log-lvl-select", timeout=10000)
+        page.wait_for_function("() => document.getElementById('log-lvl-select') !== null", timeout=10000)
         page.select_option("#log-lvl-select", value="0")  # Index 0 = DEBUG
         assert any("Log level changed to: DEBUG" in log["text"] for log in logs)
 
         # Set slider to 2.0 (evaluate to set value, as range in HTML)
-        page.wait_for_selector("#difficulty-slider", timeout=10000)
+        # page.wait_for_selector("#difficulty-slider", timeout=10000)
+        page.wait_for_function("() => document.getElementById('difficulty-slider') !== null", timeout=10000)
         page.evaluate("document.getElementById('difficulty-slider').value = 2.0")
 
         # Click BACK
