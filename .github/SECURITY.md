@@ -5,10 +5,10 @@
 This policy applies to the latest stable release of SkyLockAssault, built with
 Godot v4.5. We prioritize security for web exports (HTML5) deployed to itch.io.
 
-| Version | Supported          |
-|---------|--------------------|
-| 1.x     | ✅ Yes (latest)    |
-| < 1.x   | ❌ No              |
+| Version | Supported      |
+|---------|----------------|
+| 1.x     | ✅ Yes (latest) |
+| < 1.x   | ❌ No           |
 
 As a Godot-based top-down combat game, we have minimal external dependencies
 (e.g., no Node.js runtime), reducing vuln surface. Focus areas: GDScript logic,
@@ -20,12 +20,12 @@ We classify vulnerabilities using Common Vulnerability Scoring System (CVSS v3.1
 ranges for consistency. This helps prioritize fixes based on impact.
 
 <!-- markdownlint-disable line-length -->
-| Severity  | CVSS Score | Description & Examples (Godot-Specific) |
-|-----------|------------|-----------------------------------------|
-| Critical | 9.0–10.0  | Immediate threat: Full compromise, remote code execution, or data loss. E.g., Arbitrary script injection in exported HTML5 binary allowing cheat execution in browser; SQL-like injection in save files leading to total game state overwrite. |
-| High     | 7.0–8.9   | Significant risk: Unauthorized access or disruption. E.g., Server-side request forgery via Godot's HTTPRequest node; Cross-site scripting (XSS) in web UI exposing player inputs. |
-| Medium   | 4.0–6.9   | Moderate impact: Often misconfigs aiding chained attacks. E.g., Reflected XSS in debug console; Missing input validation in fuel mechanics allowing minor cheats. |
-| Low      | 0.1–3.9   | Minor weakness: Little direct exploitability. E.g., Verbose error messages revealing Godot version; Missing secure cookie flags in web sessions. |
+| Severity | CVSS Score | Description & Examples (Godot-Specific)                                                                                                                                                                                                        |
+|----------|------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Critical | 9.0–10.0   | Immediate threat: Full compromise, remote code execution, or data loss. E.g., Arbitrary script injection in exported HTML5 binary allowing cheat execution in browser; SQL-like injection in save files leading to total game state overwrite. |
+| High     | 7.0–8.9    | Significant risk: Unauthorized access or disruption. E.g., Server-side request forgery via Godot's HTTPRequest node; Cross-site scripting (XSS) in web UI exposing player inputs.                                                              |
+| Medium   | 4.0–6.9    | Moderate impact: Often misconfigs aiding chained attacks. E.g., Reflected XSS in debug console; Missing input validation in fuel mechanics allowing minor cheats.                                                                              |
+| Low      | 0.1–3.9    | Minor weakness: Little direct exploitability. E.g., Verbose error messages revealing Godot version; Missing secure cookie flags in web sessions.                                                                                               |
 <!-- markdownlint-enable line-length -->
 
 If CVSS doesn't fit, we adjust based on factors like exploit ease or affected

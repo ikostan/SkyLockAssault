@@ -10,6 +10,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create a non-root user to run the container (fixes DS002)
 RUN useradd -m -s /bin/bash godotuser  # Creates 'godotuser' with home dir /home/godotuser
 
+# Set up artifacts dir with permissions (after useradd)
+RUN mkdir -p /project/artifacts \
+    && chown -R godotuser:godotuser /project  # Added early for artifacts
+
 # Set Godot config path to non-root user's home
 ENV GODOT_VERSION="4.5.stable" \
     XDG_DATA_HOME="/home/godotuser/.local/share"
@@ -26,6 +30,9 @@ RUN pip install gdtoolkit==4.*
 
 # Install yamllint
 RUN pip install yamllint
+
+# Install pytest plugins for html/timeout (fixes unrecognized arguments)
+RUN pip install pytest-html pytest-timeout
 
 # Install markdownlint-cli2 via npm (Node.js tool)
 RUN npm install -g markdownlint-cli2

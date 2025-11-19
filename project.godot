@@ -38,10 +38,6 @@ window/stretch/mode="canvas_items"
 window/handheld/orientation=6
 window/vsync/vsync_mode=0
 
-[editor_plugins]
-
-enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")
-
 [gdunit4]
 
 settings/test/test_discovery=true
