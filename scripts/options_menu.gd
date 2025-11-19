@@ -92,7 +92,7 @@ func _ready() -> void:
         difficultySlider.style.transform = 'translate(-50%, -50%)';
         document.body.appendChild(difficultySlider);
         difficultySlider.onchange = function() {godot.call('_on_difficulty_changed', this.value);};
-		
+
 		var logLvlSelect = document.createElement('select');
         logLvlSelect.id = 'log-lvl-select';
         logLvlSelect.style.position = 'absolute';
