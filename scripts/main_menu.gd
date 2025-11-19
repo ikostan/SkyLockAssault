@@ -56,9 +56,50 @@ func _ready() -> void:
 	if OS.get_name() == "Web" and not background_music.playing:
 		# On web: Show prompt, wait for gesture
 		background_music.play()
+		JavaScriptBridge.eval("""
+			var startBtn = document.createElement('button');
+			startBtn.id = 'start-button';
+			startBtn.style.position = 'absolute';
+			startBtn.style.left = '50%';
+			startBtn.style.top = '40%';  # Adjust from screenshot (upper)
+			startBtn.style.transform = 'translate(-50%, -50%)';
+			startBtn.style.background = 'transparent';  # Invisible, over canvas text
+			startBtn.style.border = 'none';  # No visual
+			startBtn.style.width = '200px';  # Approximate size
+			startBtn.style.height = '50px';
+            document.body.appendChild(startBtn);
+			startBtn.onclick = function() { godot.call('_on_start_pressed'); };
+
+			var optionsBtn = document.createElement('button');
+			optionsBtn.id = 'options-button';
+			optionsBtn.style.position = 'absolute';
+			optionsBtn.style.left = '50%';
+			optionsBtn.style.top = '50%';  # Middle
+			optionsBtn.style.transform = 'translate(-50%, -50%)';
+			optionsBtn.style.background = 'transparent';
+			optionsBtn.style.border = 'none';
+			optionsBtn.style.width = '200px';
+			optionsBtn.style.height = '50px';
+            document.body.appendChild(optionsBtn);
+			optionsBtn.onclick = function() { godot.call('_on_options_button_pressed'); };
+
+			var quitBtn = document.createElement('button');
+			quitBtn.id = 'quit-button';
+			quitBtn.style.position = 'absolute';
+			quitBtn.style.left = '50%';
+			quitBtn.style.top = '60%';  # Lower
+			quitBtn.style.transform = 'translate(-50%, -50%)';
+			quitBtn.style.background = 'transparent';
+			quitBtn.style.border = 'none';
+			quitBtn.style.width = '200px';
+			quitBtn.style.height = '50px';
+            document.body.appendChild(quitBtn);
+			quitBtn.onclick = function() { godot.call('_on_quit_pressed'); };
+		""")
 		Globals.log_message(
 			"Web platform detected, start music by clicking on the screeen.", Globals.LogLevel.DEBUG
 		)
+		
 
 	# New: Create and start a timer for delayed UI show
 	# In _ready() (replace timer; no Timer needed)

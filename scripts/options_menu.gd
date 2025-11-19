@@ -75,8 +75,53 @@ func _ready() -> void:
 	Globals.log_message(
 		"Set options_menu process_mode to ALWAYS for pause ignoring.", Globals.LogLevel.DEBUG
 	)
+	JavaScriptBridge.eval("""
+        var difficultySlider = document.createElement('input');
+        difficultySlider.id = 'difficulty-slider';
+        difficultySlider.type = 'range';
+        difficultySlider.min = '1.0';
+        difficultySlider.max = '3.0';
+        difficultySlider.step = '0.1';
+        difficultySlider.value = godot.call('get_difficulty');
+        difficultySlider.style.position = 'absolute';
+        difficultySlider.style.left = '50%';
+        difficultySlider.style.top = '30%';  # Adjust from screenshot
+        difficultySlider.style.transform = 'translate(-50%, -50%)';
+        document.body.appendChild(difficultySlider);
+        difficultySlider.onchange = function() { godot.call('_on_difficulty_changed', this.value); };
+
+		var logLvlSelect = document.createElement('select');
+        logLvlSelect.id = 'log-lvl-select';
+        logLvlSelect.style.position = 'absolute';
+        logLvlSelect.style.left = '50%';
+        logLvlSelect.style.top = '35%';  # Adjust from screenshot
+        logLvlSelect.style.transform = 'translate(-50%, -50%)';
+        var options = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'NONE'];
+        for (var i = 0; i < options.length; i++) {
+            var opt = document.createElement('option');
+            opt.value = options[i];
+            opt.text = options[i];
+            logLvlSelect.add(opt);
+        }
+        logLvlSelect.value = godot.call('get_current_log_level_name');  # Get from GDScript (add func to return name)
+        document.body.appendChild(logLvlSelect);
+        logLvlSelect.onchange = function() { godot.call('_on_log_selected', this.selectedIndex); };
+
+        var backButton = document.createElement('button');
+        backButton.id = 'back-button';
+        backButton.style.position = 'absolute';
+        backButton.style.left = '50%';
+        backButton.style.top = '90%';  # Bottom from screenshot
+        backButton.style.transform = 'translate(-50%, -50%)';
+        backButton.innerText = 'BACK';
+        document.body.appendChild(backButton);
+        backButton.onclick = function() { godot.call('_on_back_pressed'); };
+	""")
 	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
 
+
+func get_log_level_index() -> int:
+	return Globals.LogLevel.values().find(Globals.current_log_level)
 
 # New function for slider change
 func _on_difficulty_changed(value: float) -> void:
