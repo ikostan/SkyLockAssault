@@ -35,12 +35,14 @@ func _input(event: InputEvent) -> void:  # Add type hints
 func _ready() -> void:
 	Globals.log_message("Initializing main menu...", Globals.LogLevel.DEBUG)
 	# Connect START button signal
-	@warning_ignore("return_value_discarded") start_button.pressed.connect(_on_start_pressed)
+	@warning_ignore("return_value_discarded")
+	start_button.pressed.connect(_on_start_pressed)
 	# Connect OPTIONS button signal
 	@warning_ignore("return_value_discarded")
 	options_button.pressed.connect(_on_options_button_pressed)
 	# Connect QUIT button signal
-	@warning_ignore("return_value_discarded") quit_button.pressed.connect(_on_quit_pressed)
+	@warning_ignore("return_value_discarded")
+	quit_button.pressed.connect(_on_quit_pressed)
 
 	setup_quit_dialog()  # New: Handles dialog setup in one place
 	# assert(quit_dialog != null, "QuitDialog must be assigned!")
