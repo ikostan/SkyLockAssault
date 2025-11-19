@@ -98,7 +98,6 @@ func _ready() -> void:
 			quitBtn.style.height = '50px';
             document.body.appendChild(quitBtn);
 			quitBtn.onclick = function() { godot.call('_on_quit_pressed'); };
-			
 			console.log('Overlays added to DOM');
 		"""
 			)

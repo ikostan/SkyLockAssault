@@ -91,8 +91,8 @@ func _ready() -> void:
         difficultySlider.style.top = '30%';  # Adjust from screenshot
         difficultySlider.style.transform = 'translate(-50%, -50%)';
         document.body.appendChild(difficultySlider);
-        difficultySlider.onchange = function() { godot.call('_on_difficulty_changed', this.value); };
-
+        difficultySlider.onchange = function() {godot.call('_on_difficulty_changed', this.value);};
+		
 		var logLvlSelect = document.createElement('select');
         logLvlSelect.id = 'log-lvl-select';
         logLvlSelect.style.position = 'absolute';
@@ -106,7 +106,7 @@ func _ready() -> void:
             opt.text = options[i];
             logLvlSelect.add(opt);
         }
-        logLvlSelect.value = godot.call('get_current_log_level_name');  # Get from GDScript (add func to return name)
+        logLvlSelect.value = godot.call('get_current_log_level_name');
         document.body.appendChild(logLvlSelect);
         logLvlSelect.onchange = function() { godot.call('_on_log_selected', this.selectedIndex); };
 
