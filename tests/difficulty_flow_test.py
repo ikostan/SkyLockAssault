@@ -72,7 +72,7 @@ def page(playwright: Playwright) -> Page:
         cdp_session.send("Profiler.startPreciseCoverage",
                          {"callCount": False,
                           "detailed": True})
-    except:
+    except Exception:
         pass
     yield page
     browser.close()
