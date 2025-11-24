@@ -13,7 +13,7 @@ jobs:
       security-events: write  # For uploading SARIF to Security tab
     steps:
       - name: "Checkout code"
-        uses: "actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8"  # Pinned to SHA for v5.0.0 (latest as of 2025-10-28)
+        uses: "actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd"  # Pinned to SHA for v5.0.0 (latest as of 2025-10-28)
 
       - name: "Run Trivy vulnerability scanner"
         uses: "aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8"  # Pinned to SHA for v0.33.1 (latest as of 2025-10-28)

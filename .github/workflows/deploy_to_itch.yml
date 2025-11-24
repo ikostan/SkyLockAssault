@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: "Checkout code"
-        uses: "actions/checkout@v5"
+        uses: "actions/checkout@v6"
       - name: "Export Godot to Web"
         id: "export"
         # yamllint disable rule:line-length
