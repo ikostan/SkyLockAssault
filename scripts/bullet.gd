@@ -17,7 +17,7 @@ var timer: Timer
 # NO @onready for ShotSFX — we’ll create players dynamically
 func _ready() -> void:
 	Globals.log_message("BulletFirer _ready: Script loaded.", Globals.LogLevel.DEBUG)
-	
+
 	if not projectile_texture:
 		projectile_texture = preload("res://files/sprite/laser_sprites/01.png")
 		# push_warning(name + ": No texture; using fallback.")
@@ -26,9 +26,11 @@ func _ready() -> void:
 		shot_sound = preload("res://files/sounds/sfx/retro-laser-1-236669.mp3")
 		# push_warning(name + ": No sound; using fallback.")
 		Globals.log_message(name + ": No sound; using fallback.", Globals.LogLevel.WARNING)
-	
+
 	# Set Texture Filter to Nearest
-	get_viewport().canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
+	get_viewport().canvas_item_default_texture_filter = (
+		Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
+	)
 
 	timer = Timer.new()
 	timer.one_shot = true

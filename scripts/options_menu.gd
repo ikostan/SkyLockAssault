@@ -56,7 +56,8 @@ func _ready() -> void:
 		difficulty_slider.value = Globals.difficulty
 		if not difficulty_label:
 			Globals.log_message(
-				"Warning: DifficultyValueLabel not found—creating fallback label.", Globals.LogLevel.WARNING
+				"Warning: DifficultyValueLabel not found—creating fallback label.",
+				Globals.LogLevel.WARNING
 			)
 			difficulty_label = Label.new()
 			difficulty_label.text = "N/A"
@@ -77,7 +78,7 @@ func _ready() -> void:
 	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
 
 	if OS.has_feature("web"):
-		var window: = JavaScriptBridge.get_interface("window")
+		var window := JavaScriptBridge.get_interface("window")
 		Globals.log_message("Exposed options menu callbacks for web.", Globals.LogLevel.DEBUG)
 
 

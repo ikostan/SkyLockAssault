@@ -83,6 +83,7 @@ func _ready() -> void:
 	# Setup quit dialog
 	setup_quit_dialog()
 
+
 func setup_quit_dialog() -> void:
 	"""
 	Sets up the quit confirmation dialog.
@@ -103,7 +104,9 @@ func setup_quit_dialog() -> void:
 		quit_dialog.hide()  # Ensure initially hidden
 		Globals.log_message("QuitDialog signals connected.", Globals.LogLevel.DEBUG)
 	else:
-		Globals.log_message("QuitDialog not found at path: " + str(quit_dialog_path), Globals.LogLevel.ERROR)
+		Globals.log_message(
+			"QuitDialog not found at path: " + str(quit_dialog_path), Globals.LogLevel.ERROR
+		)
 
 
 # Handles the Start button press.
