@@ -3,8 +3,8 @@
 ## Handles initialization, button connections, and platform-specific behaviors
 ## for the main menu scene.
 ##
-## This script manages the main menu UI, including button presses, quit
-## confirmation, and scene transitions.
+## This script manages the main menu UI, including button presses,
+## quit confirmation, and scene transitions.
 ##
 ## It includes platform-specific handling for web exports.
 ##
@@ -38,15 +38,13 @@ var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 
 
 func _input(event: InputEvent) -> void:
-	"""
-	Handles input events for the main menu.
-
-	Logs mouse clicks and unlocks audio on web platforms upon user gesture.
-
-	:param event: The input event to process.
-	:type event: InputEvent
-	:rtype: void
-	"""
+	## Handles input events for the main menu.
+	##
+	## Logs mouse clicks and unlocks audio on web platforms upon user gesture.
+	##
+	## :param event: The input event to process.
+	## :type event: InputEvent
+	## :rtype: void
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var pos: Vector2 = event.position  # Explicitly type as Vector2
 		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
@@ -59,16 +57,13 @@ func _input(event: InputEvent) -> void:
 		)
 
 
-# Called when the node enters the scene tree for the first time.
-# Initializes button signals, quit dialog connections, and web callbacks.
 func _ready() -> void:
-	"""
-	Initializes the main menu when the node enters the scene tree.
-
-	Connects button signals and sets up the quit dialog.
-
-	:rtype: void
-	"""
+	## Initializes the main menu when the node enters the scene tree.
+	##
+	## Connects button signals and sets up the quit dialog.
+	## Exposes functions to JS for web overlays if on web.
+	##
+	## :rtype: void
 	Globals.log_message("Initializing main menu...", Globals.LogLevel.DEBUG)
 
 	# Connect START button signal
@@ -84,16 +79,24 @@ func _ready() -> void:
 	# Setup quit dialog
 	setup_quit_dialog()
 
+	if OS.get_name() == "Web":
+		var js_window: = JavaScriptBridge.get_interface("window")
+		js_window.startPressed = JavaScriptBridge.create_callback(Callable(self, "_on_start_pressed"))
+		print("Exposed startPressed")  # Debug print
+		js_window.optionsPressed = JavaScriptBridge.create_callback(Callable(self, "_on_options_button_pressed"))
+		print("Exposed optionsPressed")  # Debug print
+		js_window.quitPressed = JavaScriptBridge.create_callback(Callable(self, "_on_quit_pressed"))
+		print("Exposed quitPressed")  # Debug print
+		Globals.log_message("Exposed main menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG)
+
 
 func setup_quit_dialog() -> void:
-	"""
-	Sets up the quit confirmation dialog.
-
-	Finds the dialog node and connects signals if not already connected.
-	Hides the dialog initially.
-
-	:rtype: void
-	"""
+	## Sets up the quit confirmation dialog.
+	##
+	## Finds the dialog node and connects signals if not already connected.
+	## Hides the dialog initially.
+	##
+	## :rtype: void
 	quit_dialog = get_node_or_null(quit_dialog_path)
 	if is_instance_valid(quit_dialog):
 		# Connect 'confirmed' signal only if not already connected to avoid errors
@@ -110,16 +113,14 @@ func setup_quit_dialog() -> void:
 		)
 
 
-# Handles the Start button press.
-# Loads the main game scene using PackedScene for efficiency.
-func _on_start_pressed() -> void:
-	"""
-	Handles the Start button press.
-
-	Loads and transitions to the main game scene.
-
-	:rtype: void
-	"""
+func _on_start_pressed(args: Array = []) -> void:
+	## Handles the Start button press.
+	##
+	## Loads and transitions to the main game scene.
+	##
+	## :param args: Optional arguments from web overlays (unused).
+	## :type args: Array
+	## :rtype: void
 	# Stub; later: get_tree().change_scene_to_file("res://game_scene.tscn")
 	Globals.log_message("Start Game menu button pressed.", Globals.LogLevel.DEBUG)
 
@@ -130,31 +131,26 @@ func _on_start_pressed() -> void:
 		Globals.log_message("Error: Game scene not set!", Globals.LogLevel.ERROR)
 
 
-# Handles the Options button press.
-# Placeholder for loading an options scene.
-# Shows options menu and toggles web overlays if on web.
-func _on_options_button_pressed() -> void:
-	"""
-	Handles the Options button press.
-
-	Loads options and logs the action.
-
-	:rtype: void
-	"""
+func _on_options_button_pressed(args: Array = []) -> void:
+	## Handles the Options button press.
+	##
+	## Loads options and logs the action.
+	##
+	## :param args: Optional arguments from web overlays (unused).
+	## :type args: Array
+	## :rtype: void
 	Globals.log_message("Options button pressed.", Globals.LogLevel.DEBUG)
 	Globals.load_options()  # Your existing load
 
 
-# Handles the Quit button press.
-# Displays the quit confirmation dialog if valid.
-func _on_quit_pressed() -> void:
-	"""
-	Handles the Quit button press.
-
-	Shows the quit confirmation dialog if available.
-
-	:rtype: void
-	"""
+func _on_quit_pressed(args: Array = []) -> void:
+	## Handles the Quit button press.
+	##
+	## Shows the quit confirmation dialog if available.
+	##
+	## :param args: Optional arguments from web overlays (unused).
+	## :type args: Array
+	## :rtype: void
 	# Show confirmation dialog
 	if is_instance_valid(quit_dialog):
 		quit_dialog.show()
@@ -164,16 +160,12 @@ func _on_quit_pressed() -> void:
 		Globals.log_message("No quit_dialog found.", Globals.LogLevel.ERROR)
 
 
-# Called when the quit dialog is confirmed.
-# Executes platform-specific quit (web redirect or app quit).
 func _on_quit_dialog_confirmed() -> void:
-	"""
-	Handles quit dialog confirmation.
-
-	Performs platform-specific quit actions.
-
-	:rtype: void
-	"""
+	## Handles quit dialog confirmation.
+	##
+	## Performs platform-specific quit actions.
+	##
+	## :rtype: void
 	# User confirmed: Execute platform-specific quit
 	if OS.get_name() == "Web":
 		# Web export: Redirect to itch.io game page (clean exit, no freeze)
@@ -184,16 +176,12 @@ func _on_quit_dialog_confirmed() -> void:
 	Globals.log_message("Quit confirmed and executed!", Globals.LogLevel.DEBUG)
 
 
-# Called when the quit dialog is canceled.
-# Hides the dialog and logs the action.
 func _on_quit_dialog_canceled() -> void:
-	"""
-	Handles quit dialog cancellation.
-
-	Hides the dialog and logs the action.
-
-	:rtype: void
-	"""
+	## Handles quit dialog cancellation.
+	##
+	## Hides the dialog and logs the action.
+	##
+	## :rtype: void
 	# Optional: Handle cancel (e.g., play sound or log)
 	quit_dialog.hide()
 	Globals.log_message("Quit canceled.", Globals.LogLevel.DEBUG)

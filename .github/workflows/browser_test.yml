@@ -87,8 +87,9 @@ jobs:
         with:
           node-version: '20'  # Stable for Win10 compat
       - name: "Install Conversion Tools"
+        # For conversion and report
         run: |
-          npm install v8-to-istanbul nyc  # For conversion and report
+          npm install v8-to-istanbul nyc
       # yamllint disable rule:line-length
       - name: "Convert V8 to LCOV"
         run: |

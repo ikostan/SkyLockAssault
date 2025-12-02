@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
-    <title>Sky Lock Assault</title>
+    <title>SkyLockAssault (DEBUG)</title>
     <style>
         html, body, #canvas {
             margin: 0;
@@ -42,17 +42,18 @@
             display: none;
         }
     </style>
+<!-- Removed favicon link to avoid 404 -->
 </head>
 <body>
-    <canvas id="canvas" tabindex="0"></canvas>
+    <canvas id="canvas" tabindex="0" width="1280" height="720" style="position: absolute; top: 0px; left: 0px; width: 1280px; height: 720px;"></canvas>
 
     <!-- Main Menu Buttons (invisible overlays) -->
-    <button id="start-button" style="top: 40%;">START GAME</button>
+    <button id="start-button" style="top: 40%;">START</button>
     <button id="options-button" style="top: 50%;">OPTIONS</button>
     <button id="quit-button" style="top: 60%;">QUIT</button>
 
-    <!-- Options (invisible when shown) -->
-    <select id="log-level-select" style="top: 35%;">  <!-- Position over Godot dropdown -->
+    <!-- Options Menu Elements (invisible overlays, shown when menu loads) -->
+    <select id="log-level-select" style="top: 55%;">
         <option>DEBUG</option>
         <option>INFO</option>
         <option>WARNING</option>
@@ -62,10 +63,9 @@
     <input id="difficulty-slider" type="range" min="0.5" max="2.0" step="0.1" value="1.0" style="top: 45%;">
     <button id="back-button" style="top: 65%;">BACK</button>
 
-    <script src="$GODOT_URL"></script>
+    <script src="$GODOT_URL"></script> <!-- Godot replaces with actual JS file, e.g., tmp_js_export.js -->
     <script>
-        const GODOT_CONFIG = $GODOT_CONFIG;
-        const engine = new Engine(GODOT_CONFIG);
+        var engine = new Engine($GODOT_CONFIG); // Official placeholder for config
 
         // Start Godot engine (async for stability)
         engine.startGame().then(() => {
@@ -75,13 +75,16 @@
             console.error("Error starting Godot:", err);
         });
 
-        // Hook buttons/sliders to Godot functions (call your GDScript methods)
-        document.getElementById('start-button').onclick = () => godot.call('_on_start_pressed');
-        document.getElementById('options-button').onclick = () => godot.call('_on_options_button_pressed');
-        document.getElementById('quit-button').onclick = () => godot.call('_on_quit_pressed');
-        document.getElementById('difficulty-slider').onchange = (e) => godot.call('_on_difficulty_changed', parseFloat(e.target.value));
-        document.getElementById('back-button').onclick = () => godot.call('_on_back_pressed');
-        document.getElementById('log-level-select').onchange = (e) => godot.call('_on_log_selected', e.target.selectedIndex);
+        // Hook buttons/sliders to exposed Godot functions
+        document.getElementById('start-button').onclick = () => window.startPressed([]);
+        document.getElementById('options-button').onclick = () => window.optionsPressed([]);
+        document.getElementById('quit-button').onclick = () => window.quitPressed([]);
+        document.getElementById('difficulty-slider').onchange = (e) => window.changeDifficulty([parseFloat(e.target.value)]);
+        document.getElementById('back-button').onclick = () => window.backPressed([]);
+        document.getElementById('log-level-select').onchange = (e) => window.changeLogLevel([e.target.selectedIndex]);
     </script>
+
+
+<div class="ime" contenteditable="true" style="background: none; opacity: 0; position: fixed; text-align: left; font-size: 1px; left: 0px; top: 0px; width: 100%; height: 40px; pointer-events: none; display: none;"></div>
 </body>
 </html>

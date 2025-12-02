@@ -11,7 +11,7 @@ No coords - DOM overlays for IDs.
 Test Flow
 ---------
 - Navigate, wait #options-button.
-- Click #options-button, set #log-level-select to DEBUG, set #difficulty-slider to 2.0, click #back-button.
+- Click #options-button, wait for options loaded (via log), set #log-level-select to DEBUG, set #difficulty-slider to 2.0, click #back-button.
 - Click #start-button, simulate fire (Space), parse cooldown log (0.15*2.0=0.3).
 - CDP V8 coverage saved.
 
@@ -30,12 +30,11 @@ v8_coverage_difficulty_flow_test.json, artifacts/test_difficulty_failure_*.png/t
 """
 
 import os
-import re
 import time
 import json
 import pytest
 from playwright.sync_api import Page, Playwright
-from .ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
+from .ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary (unused after ID switch)
 
 
 @pytest.fixture(scope="function")
@@ -64,12 +63,21 @@ def page(playwright: Playwright) -> Page:
     try:
         cdp_session = context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage",
-                         {"callCount": False,
-                          "detailed": True})
-    except Exception:
+        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": False, "detailed": True})
+    except:
         pass
     yield page
+    # Save coverage on teardown
+    if cdp_session:
+        try:
+            coverage = cdp_session.send("Profiler.takePreciseCoverage")
+            coverage_path = os.path.join("artifacts", "v8_coverage_difficulty_flow_test.json")
+            with open(coverage_path, "w") as f:
+                json.dump(coverage, f, indent=4)
+            cdp_session.send("Profiler.stopPreciseCoverage")
+            cdp_session.send("Profiler.disable")
+        except Exception as e:
+            print(f"Failed to save coverage: {e}")
     browser.close()
 
 
@@ -77,16 +85,19 @@ def test_difficulty_flow(page: Page) -> None:
     """
     Main test for difficulty flow using DOM overlays.
 
+    Test that invisible HTML overlays allow passthrough clicks to Godot UI.
+
+    Verifies overlays are present, invisible, and do not block events (via log check after click).
     :param page: The Playwright page object.
     :type page: Page
     :rtype: None
     """
     logs: list[dict[str, str]] = []
+    cdp_session = None
 
     def on_console(msg) -> None:
         """
         Console message handler.
-
         :param msg: The console message.
         :type msg: Any
         :rtype: None
@@ -94,21 +105,14 @@ def test_difficulty_flow(page: Page) -> None:
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
-
-    cdp_session = None  # Initialize to None outside try
     try:
+        # Start CDP session for V8 JS coverage (workaround for Python Playwright lacking native coverage API)
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage",
-                         {"callCount": False,
-                          "detailed": True})
-    except:
-        pass
+        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
 
-    try:
         page.goto("http://localhost:8080/index.html", wait_until="networkidle")
         page.wait_for_timeout(10000)  # Bump for GPU stalls/load
-
         # Wait for Godot engine init (ensures 'godot' object is defined)
         page.wait_for_function("() => window.godotInitialized", timeout=90000)
 
@@ -119,181 +123,110 @@ def test_difficulty_flow(page: Page) -> None:
         assert box is not None, "Canvas not found on page"
         assert "SkyLockAssault" in page.title(), "Title not found"
 
-        # Wait main menu (function check for ID)
-        page.wait_for_function("() => document.getElementById('options-button') !== null", timeout=90000)  # Longer for stalls
+        # Wait for Godot engine init (ensures 'godot' object is defined)
+        page.wait_for_function("() => window.godotInitialized", timeout=90000)
+        # Check element present
+        assert page.evaluate("document.getElementById('options-button') !== null")
 
+        # Check invisible (opacity 0)
+        opacity: str = page.evaluate("window.getComputedStyle(document.getElementById('options-button')).opacity")
+        assert opacity == '0', f"Expected opacity 0, got {opacity}"
+
+        # Check pointer-events none
+        pointer_events: str = page.evaluate(
+            "window.getComputedStyle(document.getElementById('options-button')).pointerEvents")
+        assert pointer_events == 'none', f"Expected pointer-events none, got {pointer_events}"
+
+        # Wait main menu (function check for ID)
+        page.wait_for_function("() => document.getElementById('options-button') !== null",
+                               timeout=90000)  # Longer for stalls
         # Open options menu
         page.click("#options-button", force=True)
         page.wait_for_timeout(3000)
+        display_style = page.evaluate("window.getComputedStyle(document.getElementById('log-level-select')).display")
+        assert display_style == 'block', "Options menu not loaded (display not set to block)"
 
-        # Wait options (ID check for log select and slider)
-        # page.wait_for_function("() => document.getElementById('log-level-select') !== null && "
-        #                       "document.getElementById('difficulty-slider') !== null", timeout=60000)
-
-        # Wait for callbacks to be set (exposed by GDScript)
-        # page.wait_for_function("() => typeof window.changeLogLevel !== 'undefined'", timeout=30000)
-
-        # Set log level to DEBUG (index 0) - call the callback
+        # Set log level to DEBUG (index 0) - directly call the exposed callback
+        # (bypasses event for reliability in automation)
         # page.evaluate("window.changeLogLevel([0])")
+
         # Click log level dropdown
         log_dropdown_x = box['x'] + UI_ELEMENTS["log_level_dropdown"]["x"]
         log_dropdown_y = box['y'] + UI_ELEMENTS["log_level_dropdown"]["y"]
         page.mouse.click(log_dropdown_x, log_dropdown_y)
-        page.wait_for_timeout(5000)
+        page.wait_for_timeout(3000)
 
         # Select DEBUG
         debug_item_x = box['x'] + UI_ELEMENTS["log_level_debug"]["x"]
         debug_item_y = box['y'] + UI_ELEMENTS["log_level_debug"]["y"]
         page.mouse.click(debug_item_x, debug_item_y)
-        page.wait_for_timeout(5000)  # Bump wait for log propagation
+        page.wait_for_timeout(3000)
         assert any("Log level changed to: DEBUG" in log["text"] for log in logs), "Failed to set log level to DEBUG"
 
-        # Back to main menu
-        page.click("#back-button", force=True)
+        page.wait_for_timeout(3000)  # Bump wait for log propagation
+        assert any(
+            "log level changed to: debug" in log["text"].lower() for log in logs), "Failed to set log level to DEBUG"
+        assert any(
+            "settings saved" in log["text"].lower() for log in logs), "Failed to save the settings"
+
+        # Set difficulty to 2.0 - directly call the exposed callback (bypasses event for reliability in automation)
+        # page.evaluate("window.changeDifficulty([2.0])")
+
+        # Drag slider to 2.0 (position derived from stable UI coordinates)
+        slider_x = box['x'] + UI_ELEMENTS["difficulty_slider_2.0"]["x"]
+        slider_y = box['y'] + UI_ELEMENTS["difficulty_slider_2.0"]["y"]
+        page.mouse.click(slider_x, slider_y)  # Move to 2.0 position
         page.wait_for_timeout(3000)
-        assert any("Back button pressed." in log["text"] for log in logs), "Back button not found"
-
-        # Reopen options menu
-        page.click("#options-button", force=True)
-        page.wait_for_timeout(5000)  # Wait for options menu to load
-        assert any("Options button pressed." in log["text"] for log in logs), "Options menu not found"
-        assert any("Options menu loaded." in log["text"] for log in logs), "Options menu is not loaded"
-
-        # Wait for callbacks again (since options reloaded)
-        page.wait_for_function("() => typeof window.changeDifficulty !== 'undefined'", timeout=30000)
-
-        # Set difficulty=2.0 - call the callback
-        assert any("Difficulty changed to: 2.0" in log["text"] for log in logs), "Expected change to 2.0"
+        assert any(
+            "difficulty changed to: 2.0" in log["text"].lower() for log in logs), "Failed to set difficulty to 2.0"
+        assert any(
+            "settings saved" in log["text"].lower() for log in logs), "Failed to save the settings"
 
         # Back to main menu
-        page.click("#back-button", force=True)
-        page.wait_for_timeout(3000)
-        assert any("Back button pressed." in log["text"] for log in logs), "Back button not found"
+        # page.click("#back-button", force=True)
 
-        # Click START GAME (force)
+        # Back to main menu
+        back_x = box['x'] + UI_ELEMENTS["back_button"]["x"]
+        back_y = box['y'] + UI_ELEMENTS["back_button"]["y"]
+        page.mouse.click(back_x, back_y)  # Click Back button
+
+        page.wait_for_timeout(3000)
+        assert any("back button pressed." in log["text"].lower() for log in logs), "Back button not found"
+
+        # Start game
         page.click("#start-button", force=True)
-        page.wait_for_timeout(5000)
-        assert any("Start Game menu button pressed." in log["text"] for log in logs), "Start Game button not found"
-        assert any("Loading main game scene..." in log["text"] for log in logs), "Main game scene is failed to load"
+        page.wait_for_timeout(10000)  # Wait for game load
 
-        # Simulate fire (Space)
+        # Simulate fire (press Space)
         page.keyboard.press("Space")
-        page.wait_for_timeout(1000)  # Log emission
-
-        # Parse cooldown log (0.15 * 2.0 = 0.3)
-        cooldown_logs: list[str] = [log["text"] for log in logs if "Firing with scaled cooldown:" in log["text"]]
-        assert cooldown_logs, "No fire cooldown log"
-        match = re.search(r"Firing with scaled cooldown:\s*([\d.]+)", cooldown_logs[-1])
-        assert match, "Parse failed on: " + cooldown_logs[-1]
-        cooldown_value: float = float(match.group(1))
-        print(f"Parsed cooldown: {cooldown_value}")
-        assert abs(cooldown_value - 0.3) < 0.01, f"Expected 0.3 (0.15*2.0), got {cooldown_value}"
+        page.wait_for_timeout(3000)
+        # Verify scaled cooldown in logs (fire_rate 0.15 * 2.0 = 0.3)
+        assert any("firing with scaled cooldown: 0.3" in log["text"].lower() for log in
+                   logs), "Scaled cooldown not found in logs"
 
     except Exception as e:
+        print(f"Test: 'test_difficulty_flow' failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
-        page.screenshot(path=f"artifacts/test_difficulty_failure_{int(time.time())}.png")
-        log_file: str = f"artifacts/test_difficulty_failure_console_logs_{int(time.time())}.txt"
+        # Artifact on failure
+        timestamp = int(time.time())
+        page.screenshot(path=f"artifacts/test_difficulty_failure_screenshot_{timestamp}.png")
+
+        log_file: str = f"artifacts/test_difficulty_failure_console_logs_{timestamp}.txt"
         with open(log_file, "w") as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
-        print(f"Failure logs: {log_file}. Error: {e}")
+            print(f"Console logs saved to {log_file}")
 
-        page.screenshot(path="artifacts/local_failure.png")
-        html_content: str = page.content()
-        html_file: str = f"artifacts/test_difficulty_failure_html_{int(time.time())}.html"
-        with open(html_file, "w", encoding="utf-8") as f:
-            f.write(html_content)
-        print(f"Failure HTML dump: {html_file}")
+        with open(f"artifacts/test_difficulty_failure_html_{timestamp}.html", "w") as f:
+            f.write(page.content())
 
+        print(f"Failure logs: artifacts/test_difficulty_failure_console_logs_{timestamp}.txt. Error: {e}")
         raise
     finally:
         if cdp_session:
-            coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
+            # Stop V8 coverage and save to file (even on failure)
+            coverage = cdp_session.send("Profiler.takePreciseCoverage")['result']
             cdp_session.send("Profiler.stopPreciseCoverage")
             cdp_session.send("Profiler.disable")
             with open("v8_coverage_difficulty_flow_test.json", "w") as f:
-                json.dump(coverage, f, indent=2)
-
-def test_overlay_click_passthrough(page: Page) -> None:
-    """
-    Test that invisible HTML overlays allow passthrough clicks to Godot UI.
-
-    Verifies overlays are present, invisible, and do not block events (via log check after click).
-
-    :param page: The Playwright page object.
-    :type page: Page
-    :rtype: None
-    """
-    logs: list[dict[str, str]] = []
-
-    def on_console(msg) -> None:
-        """
-        Console message handler for logs.
-
-        :param msg: The console message.
-        :type msg: Any
-        :rtype: None
-        """
-        logs.append({"type": msg.type, "text": msg.text})
-
-    page.on("console", on_console)
-
-    page.goto("http://localhost:8080/index.html", wait_until="networkidle")
-    page.wait_for_timeout(10000)  # Bump for load
-
-    # Verify canvas and title to ensure game is initialized
-    canvas = page.locator("canvas")
-    page.wait_for_selector("canvas", state="visible", timeout=7000)
-    box: dict[str, float] | None = canvas.bounding_box()
-    assert box is not None, "Canvas not found on page"
-
-    # Wait for Godot engine init (ensures 'godot' object is defined)
-    page.wait_for_function("() => window.godotInitialized", timeout=90000)
-
-    # Check element present
-    assert page.evaluate("document.getElementById('options-button') !== null")
-
-    # Check invisible (opacity 0)
-    opacity: str = page.evaluate("window.getComputedStyle(document.getElementById('options-button')).opacity")
-    assert opacity == '0', f"Expected opacity 0, got {opacity}"
-
-    # Open options menu
-    page.click("#options-button", force=True)
-    page.wait_for_timeout(3000)
-
-    # Set difficulty=2.0 - call the callback
-    # Click log level dropdown
-    log_dropdown_x = box['x'] + UI_ELEMENTS["log_level_dropdown"]["x"]
-    log_dropdown_y = box['y'] + UI_ELEMENTS["log_level_dropdown"]["y"]
-    page.mouse.click(log_dropdown_x, log_dropdown_y)
-    page.wait_for_timeout(5000)
-
-    # Select DEBUG
-    debug_item_x = box['x'] + UI_ELEMENTS["log_level_debug"]["x"]
-    debug_item_y = box['y'] + UI_ELEMENTS["log_level_debug"]["y"]
-    page.mouse.click(debug_item_x, debug_item_y)
-    page.wait_for_timeout(5000)
-    assert any("Log level changed to: DEBUG" in log["text"] for log in logs), "Failed to set log level to DEBUG"
-
-    # Wait options (ID check for log select and slider)
-    # page.wait_for_function("() => document.getElementById('log-level-select') !== null && "
-    #                       "document.getElementById('difficulty-slider') !== null", timeout=60000)
-
-    # Wait for callbacks to be set (exposed by GDScript)
-    # page.wait_for_function("() => typeof window.changeLogLevel !== 'undefined'", timeout=30000)
-
-    # Back to main menu
-    page.click("#back-button", force=True)
-    page.wait_for_timeout(3000)
-    assert any("Back button pressed." in log["text"] for log in logs), "Back button not found"
-
-    # Check pointer-events none
-    pointer_events: str = page.evaluate("window.getComputedStyle(document.getElementById("
-                                        "'options-button')).pointerEvents")
-    assert pointer_events == 'none', f"Expected pointer-events none, got {pointer_events}"
-
-    # Simulate click on overlay—should trigger Godot log (force to bypass)
-    page.click("#options-button", force=True)
-    page.wait_for_timeout(2000)
-    assert any("Options button pressed." in log["text"] for log in logs), "Options menu not found"
-    assert any("Options menu loaded." in log["text"] for log in logs), "Options menu is not loaded"
+                json.dump(coverage, f)
