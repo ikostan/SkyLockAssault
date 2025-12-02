@@ -62,9 +62,9 @@
     <input id="difficulty-slider" type="range" min="0.5" max="2.0" step="0.1" value="1.0" style="top: 45%;">
     <button id="back-button" style="top: 65%;">BACK</button>
 
-    <script src="index.js"></script>
+    <script src="$GODOT_URL"></script>
     <script>
-        const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":25566648,"index.wasm":36160334},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+        const GODOT_CONFIG = $GODOT_CONFIG;
         const engine = new Engine(GODOT_CONFIG);
 
         // Start Godot engine (async for stability)

@@ -6,8 +6,9 @@ extends Node2D
 @export var projectile_speed: float = 400.0
 @export var projectile_lifetime: float = 5.0
 @export var damage: int = 10
-@export var projectile_texture: Texture2D
-@export var shot_sound: AudioStream  # Assign in Inspector
+@export var projectile_texture: Texture2D = preload("res://files/sprite/laser_sprites/01.png")
+# Default sound; assign in Inspector to override
+@export var shot_sound: AudioStream = preload("res://files/sounds/sfx/retro-laser-1-236669.mp3")
 
 var can_fire: bool = true
 var timer: Timer
@@ -16,13 +17,18 @@ var timer: Timer
 # NO @onready for ShotSFX — we’ll create players dynamically
 func _ready() -> void:
 	Globals.log_message("BulletFirer _ready: Script loaded.", Globals.LogLevel.DEBUG)
-
+	
 	if not projectile_texture:
-		projectile_texture = preload("res://icon.svg")
-		push_warning(name + ": No texture; using fallback.")
+		projectile_texture = preload("res://files/sprite/laser_sprites/01.png")
+		# push_warning(name + ": No texture; using fallback.")
+		Globals.log_message(name + ": No texture; using fallback.")
 	if not shot_sound:
 		shot_sound = preload("res://files/sounds/sfx/retro-laser-1-236669.mp3")
-		push_warning(name + ": No sound; using fallback.")
+		# push_warning(name + ": No sound; using fallback.")
+		Globals.log_message(name + ": No sound; using fallback.", Globals.LogLevel.WARNING)
+	
+	# Set Texture Filter to Nearest
+	get_viewport().canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
 
 	timer = Timer.new()
 	timer.one_shot = true
@@ -94,13 +100,13 @@ func spawn_projectile() -> void:
 	# Sprite for visuals – drag texture in Inspector
 	var sprite: Sprite2D = Sprite2D.new()
 	sprite.texture = projectile_texture
-	sprite.scale = Vector2(0.5, 1.0)  # Scale for bullet size – tweak
+	sprite.scale = Vector2(0.5, 0.5)  # Scale for bullet size – tweak
 	proj.add_child(sprite)
 
 	# Collision shape – rectangle for bullet hitbox (learning: match sprite size)
 	var collision: CollisionShape2D = CollisionShape2D.new()
-	var shape: RectangleShape2D = RectangleShape2D.new()
-	shape.size = Vector2(4, 12)  # Thin/tall – adjust for accuracy
+	var shape: CircleShape2D = CircleShape2D.new()
+	shape.radius = 3.0
 	collision.shape = shape
 	area.add_child(collision)
 

@@ -43,7 +43,7 @@ fi
 echo "Running Playwright Browser Tests..."
 mkdir -p $PROJECT_DIR/artifacts  # No chown
 source /opt/venv/bin/activate
-xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" pytest tests/difficulty_flow_test.py -v --timeout=$PW_TIMEOUT --capture=no --html=$PROJECT_DIR/report.html --self-contained-html --junitxml=$PROJECT_DIR/report.xml
+xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" pytest tests/log_level_test.py -v --timeout=$PW_TIMEOUT --capture=no --html=$PROJECT_DIR/report.html --self-contained-html --junitxml=$PROJECT_DIR/report.xml
 check_exit "Playwright Tests"
 
 # Generate test report summary

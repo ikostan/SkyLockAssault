@@ -50,14 +50,13 @@ func _ready() -> void:
 
 	# Difficulty level setup
 	if difficulty_slider:
-		difficulty_slider.min_value = 0.5  # Easy
-		difficulty_slider.max_value = 2.0  # Hard
+		difficulty_slider.min_value = 0.5
+		difficulty_slider.max_value = 2.0
 		difficulty_slider.step = 0.1
-		difficulty_slider.value = Globals.difficulty  # Load current
-
-		if !difficulty_label:
+		difficulty_slider.value = Globals.difficulty
+		if not difficulty_label:
 			Globals.log_message(
-				"Difficulty label node not found! Using fallback label.", Globals.LogLevel.WARNING
+				"Warning: DifficultyValueLabel not found—creating fallback label.", Globals.LogLevel.WARNING
 			)
 			difficulty_label = Label.new()
 			difficulty_label.text = "N/A"
@@ -75,62 +74,35 @@ func _ready() -> void:
 	Globals.log_message(
 		"Set options_menu process_mode to ALWAYS for pause ignoring.", Globals.LogLevel.DEBUG
 	)
-	(
-		JavaScriptBridge
-		. eval(
-			"""
-        var difficultySlider = document.createElement('input');
-        difficultySlider.id = 'difficulty-slider';
-        difficultySlider.type = 'range';
-        difficultySlider.min = '1.0';
-        difficultySlider.max = '3.0';
-        difficultySlider.step = '0.1';
-        difficultySlider.value = godot.call('get_difficulty');
-        difficultySlider.style.position = 'absolute';
-        difficultySlider.style.left = '50%';
-        difficultySlider.style.top = '30%';  # Adjust from screenshot
-        difficultySlider.style.transform = 'translate(-50%, -50%)';
-        document.body.appendChild(difficultySlider);
-        difficultySlider.onchange = function() {godot.call('_on_difficulty_changed', this.value);};
-
-		var logLvlSelect = document.createElement('select');
-        logLvlSelect.id = 'log-lvl-select';
-        logLvlSelect.style.position = 'absolute';
-        logLvlSelect.style.left = '50%';
-        logLvlSelect.style.top = '35%';  # Adjust from screenshot
-        logLvlSelect.style.transform = 'translate(-50%, -50%)';
-        var options = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'NONE'];
-        for (var i = 0; i < options.length; i++) {
-            var opt = document.createElement('option');
-            opt.value = options[i];
-            opt.text = options[i];
-            logLvlSelect.add(opt);
-        }
-        logLvlSelect.value = godot.call('get_current_log_level_name');
-        document.body.appendChild(logLvlSelect);
-        logLvlSelect.onchange = function() { godot.call('_on_log_selected', this.selectedIndex); };
-
-        var backButton = document.createElement('button');
-        backButton.id = 'back-button';
-        backButton.style.position = 'absolute';
-        backButton.style.left = '50%';
-        backButton.style.top = '90%';  # Bottom from screenshot
-        backButton.style.transform = 'translate(-50%, -50%)';
-        backButton.innerText = 'BACK';
-        document.body.appendChild(backButton);
-        backButton.onclick = function() { godot.call('_on_back_pressed'); };
-	"""
-		)
-	)
 	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
+
+	if OS.has_feature("web"):
+		var window: = JavaScriptBridge.get_interface("window")
+		Globals.log_message("Exposed options menu callbacks for web.", Globals.LogLevel.DEBUG)
 
 
 func get_log_level_index() -> int:
+	"""
+	Retrieves the index of the current log level in the enum values.
+
+	:returns: The index of the current log level.
+	:rtype: int
+	"""
 	return Globals.LogLevel.values().find(Globals.current_log_level)
 
 
 # New function for slider change
 func _on_difficulty_changed(value: float) -> void:
+	"""
+	Handles changes to the difficulty slider.
+
+	Updates global difficulty, label text, logs the change, and saves settings.
+
+	:param value: The new difficulty value from the slider.
+	:type value: float
+	:rtype: void
+	"""
+	# var value: float = args[0] if args.size() > 0 else Globals.difficulty
 	Globals.difficulty = value
 	difficulty_label.text = "{" + str(value) + "}"
 	Globals.log_message("Difficulty changed to: " + str(value), Globals.LogLevel.DEBUG)
@@ -139,6 +111,16 @@ func _on_difficulty_changed(value: float) -> void:
 
 # Handles log level selection change
 func _on_log_selected(index: int) -> void:
+	"""
+	Handles selection changes in the log level OptionButton.
+
+	Updates global log level, logs the change, and saves settings.
+
+	:param index: The index of the selected item.
+	:type index: int
+	:rtype: void
+	"""
+	# var index: int = args[0] if args.size() > 0 else log_lvl_option.selected
 	var selected_name: String = log_lvl_option.get_item_text(index)
 	var selected_enum: Globals.LogLevel = log_level_display_to_enum.get(
 		selected_name, Globals.LogLevel.INFO
@@ -151,7 +133,16 @@ func _on_log_selected(index: int) -> void:
 
 # Handles Back button: Return to main menu
 # In options_menu.gd (_on_back_pressed())
-func _on_back_pressed() -> void:
-	get_tree().paused = false  # Unpause if was paused (safe call)
+func _on_back_pressed(args: Array = []) -> void:
+	"""
+	Handles the Back button press.
+
+	Unpauses the game tree if paused, logs the action, and removes the options menu.
+
+	:param args: Optional arguments (unused, for web compatibility).
+	:type args: Array
+	:rtype: void
+	"""
+	get_tree().paused = false
 	Globals.log_message("Back button pressed.", Globals.LogLevel.DEBUG)
-	queue_free()  # Remove self from tree (returns to underlying scene)
+	queue_free()

@@ -1,3 +1,22 @@
+"""
+Main Menu Script
+
+Handles initialization, button connections, and platform-specific behaviors for the main menu scene.
+
+This script manages the main menu UI, including button presses, quit confirmation, and scene transitions.
+It includes platform-specific handling for web exports.
+
+:vartype quit_dialog: ConfirmationDialog
+:vartype game_scene: PackedScene
+:vartype options_menu: PackedScene
+:vartype ui_panel: Panel
+:vartype ui_container: VBoxContainer
+:vartype start_button: Button
+:vartype options_button: Button
+:vartype quit_button: Button
+:vartype background_music: AudioStreamPlayer2D
+"""
+
 extends Control
 
 # Default relative path; override in Inspector if needed
@@ -17,7 +36,16 @@ var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 @onready var background_music: AudioStreamPlayer2D = $AudioStreamPlayer2D
 
 
-func _input(event: InputEvent) -> void:  # Add type hints
+func _input(event: InputEvent) -> void:
+	"""
+	Handles input events for the main menu.
+
+	Logs mouse clicks and unlocks audio on web platforms upon user gesture.
+
+	:param event: The input event to process.
+	:type event: InputEvent
+	:rtype: void
+	"""
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var pos: Vector2 = event.position  # Explicitly type as Vector2
 		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
@@ -31,9 +59,17 @@ func _input(event: InputEvent) -> void:  # Add type hints
 
 
 # Called when the node enters the scene tree for the first time.
-# Initializes button signals and quit dialog connections.
+# Initializes button signals, quit dialog connections, and web callbacks.
 func _ready() -> void:
+	"""
+	Initializes the main menu when the node enters the scene tree.
+
+	Connects button signals and sets up the quit dialog.
+
+	:rtype: void
+	"""
 	Globals.log_message("Initializing main menu...", Globals.LogLevel.DEBUG)
+
 	# Connect START button signal
 	@warning_ignore("return_value_discarded")
 	start_button.pressed.connect(_on_start_pressed)
@@ -44,125 +80,44 @@ func _ready() -> void:
 	@warning_ignore("return_value_discarded")
 	quit_button.pressed.connect(_on_quit_pressed)
 
-	setup_quit_dialog()  # New: Handles dialog setup in one place
-	# assert(quit_dialog != null, "QuitDialog must be assigned!")
-	# Hide UI initially (buttons and dialog won't show right away)
-	ui_panel.modulate.a = 0.0  # Start fully transparent for fade-in
-	ui_panel.visible = false  # Or just hide if no fade needed
-	ui_container.modulate.a = 0.0  # Start fully transparent for fade-in
-	ui_container.visible = false  # Or just hide if no fade needed
+	# Setup quit dialog
+	setup_quit_dialog()
 
-	# New: Handle music start
-	if OS.get_name() == "Web" and not background_music.playing:
-		# On web: Show prompt, wait for gesture
-		background_music.play()
-		(
-			JavaScriptBridge
-			. eval(
-				"""
-			var startBtn = document.createElement('button');
-			startBtn.id = 'start-button';
-			startBtn.style.position = 'absolute';
-			startBtn.style.left = '50%';
-			startBtn.style.top = '40%';  # Adjust from screenshot (upper)
-			startBtn.style.transform = 'translate(-50%, -50%)';
-			startBtn.style.background = 'transparent';  # Invisible, over canvas text
-			startBtn.style.border = 'none';  # No visual
-			startBtn.style.width = '200px';  # Approximate size
-			startBtn.style.height = '50px';
-            document.body.appendChild(startBtn);
-			startBtn.onclick = function() { godot.call('_on_start_pressed'); };
-
-			var optionsBtn = document.createElement('button');
-			optionsBtn.id = 'options-button';
-			optionsBtn.style.position = 'absolute';
-			optionsBtn.style.left = '50%';
-			optionsBtn.style.top = '50%';  # Middle
-			optionsBtn.style.transform = 'translate(-50%, -50%)';
-			optionsBtn.style.background = 'transparent';
-			optionsBtn.style.border = 'none';
-			optionsBtn.style.width = '200px';
-			optionsBtn.style.height = '50px';
-            document.body.appendChild(optionsBtn);
-			optionsBtn.onclick = function() { godot.call('_on_options_button_pressed'); };
-
-			var quitBtn = document.createElement('button');
-			quitBtn.id = 'quit-button';
-			quitBtn.style.position = 'absolute';
-			quitBtn.style.left = '50%';
-			quitBtn.style.top = '60%';  # Lower
-			quitBtn.style.transform = 'translate(-50%, -50%)';
-			quitBtn.style.background = 'transparent';
-			quitBtn.style.border = 'none';
-			quitBtn.style.width = '200px';
-			quitBtn.style.height = '50px';
-            document.body.appendChild(quitBtn);
-			quitBtn.onclick = function() { godot.call('_on_quit_pressed'); };
-			console.log('Overlays added to DOM');
-		"""
-			)
-		)
-		Globals.log_message(
-			"Web platform detected, start music by clicking on the screeen.", Globals.LogLevel.DEBUG
-		)
-
-	# New: Create and start a timer for delayed UI show
-	# In _ready() (replace timer; no Timer needed)
-	var delay_timer: Timer = Timer.new()  # Still use timer for initial delay
-	delay_timer.wait_time = 3.0
-	delay_timer.one_shot = true
-	add_child(delay_timer)
-	delay_timer.timeout.connect(_start_ui_fade)
-	delay_timer.start()
-	Globals.log_message("Starting initial delay timer...", Globals.LogLevel.DEBUG)
-	# Optional: Signal init complete for web tests (after UI setup)
-	if OS.has_feature("web"):
-		JavaScriptBridge.eval("window.godotInitialized = true;")
-		Globals.log_message("JS init signal set for web.", Globals.LogLevel.DEBUG)
-
-
-# New: Starts the sequenced fades after delay
-func _start_ui_fade() -> void:
-	ui_panel.visible = true  # Make visible before fade
-	var tween := create_tween()  # Node-specific Tween (auto-frees on finish)
-	tween.tween_property(ui_panel, "modulate:a", 1.0, 0.5)  # Fade panel over 0.5s
-	tween.tween_callback(_fade_ui_container)  # Chain: Call next after panel fade
-	Globals.log_message("Fading in UI panel.", Globals.LogLevel.DEBUG)
-
-
-# New: Fades ui_container after panel
-func _fade_ui_container() -> void:
-	ui_container.visible = true
-	var tween := create_tween()
-	tween.tween_property(ui_container, "modulate:a", 1.0, 0.3)  # Shorter fade for container
-	Globals.log_message("Fading in UI container.", Globals.LogLevel.DEBUG)
-
-
-# Connect dialog signals (can also do this in editor; add null check)
 func setup_quit_dialog() -> void:
-	quit_dialog = get_node(quit_dialog_path)
-	if quit_dialog:
-		Globals.log_message(
-			"QuitDialog found via get_node (using scene node).", Globals.LogLevel.DEBUG
-		)
+	"""
+	Sets up the quit confirmation dialog.
+
+	Finds the dialog node and connects signals if not already connected.
+	Hides the dialog initially.
+
+	:rtype: void
+	"""
+	quit_dialog = get_node_or_null(quit_dialog_path)
+	if is_instance_valid(quit_dialog):
+		# Connect 'confirmed' signal only if not already connected to avoid errors
 		if not quit_dialog.confirmed.is_connected(_on_quit_dialog_confirmed):
 			quit_dialog.confirmed.connect(_on_quit_dialog_confirmed)
-		if not quit_dialog.get_cancel_button().pressed.is_connected(_on_quit_dialog_canceled):
-			quit_dialog.get_cancel_button().pressed.connect(_on_quit_dialog_canceled)
+		# Connect 'canceled' signal only if not already connected to avoid errors
+		if not quit_dialog.canceled.is_connected(_on_quit_dialog_canceled):
+			quit_dialog.canceled.connect(_on_quit_dialog_canceled)
+		quit_dialog.hide()  # Ensure initially hidden
+		Globals.log_message("QuitDialog signals connected.", Globals.LogLevel.DEBUG)
 	else:
-		Globals.log_message(
-			"Warning: QuitDialog not assigned! Disabling Quit button.", Globals.LogLevel.WARNING
-		)
-		# Fallback: Disable Quit button to prevent null errors
-		var quit_button: Button = $VideoStreamPlayer/VBoxContainer/QuitButton
-		if quit_button:
-			quit_button.disabled = true
-			quit_button.visible = false  # Or hide it entirely
+		Globals.log_message("QuitDialog not found at path: " + str(quit_dialog_path), Globals.LogLevel.ERROR)
 
 
 # Handles the Start button press.
-# Loads the main game scene using a preloaded PackedScene for efficiency.
-func _on_start_pressed() -> void:
+# Loads the main game scene using PackedScene for efficiency.
+func _on_start_pressed(args: Array = []) -> void:
+	"""
+	Handles the Start button press.
+
+	Loads and transitions to the main game scene.
+
+	:param args: Optional arguments (unused).
+	:type args: Array
+	:rtype: void
+	"""
 	# Stub; later: get_tree().change_scene_to_file("res://game_scene.tscn")
 	Globals.log_message("Start Game menu button pressed.", Globals.LogLevel.DEBUG)
 
@@ -175,14 +130,33 @@ func _on_start_pressed() -> void:
 
 # Handles the Options button press.
 # Placeholder for loading an options scene.
-func _on_options_button_pressed() -> void:
+# Shows options menu and toggles web overlays if on web.
+func _on_options_button_pressed(args: Array = []) -> void:
+	"""
+	Handles the Options button press.
+
+	Loads options and logs the action.
+
+	:param args: Optional arguments (unused).
+	:type args: Array
+	:rtype: void
+	"""
 	Globals.log_message("Options button pressed.", Globals.LogLevel.DEBUG)
-	Globals.load_options()
+	Globals.load_options()  # Your existing load
 
 
 # Handles the Quit button press.
 # Displays the quit confirmation dialog if valid.
-func _on_quit_pressed() -> void:
+func _on_quit_pressed(args: Array = []) -> void:
+	"""
+	Handles the Quit button press.
+
+	Shows the quit confirmation dialog if available.
+
+	:param args: Optional arguments (unused).
+	:type args: Array
+	:rtype: void
+	"""
 	# Show confirmation dialog
 	if is_instance_valid(quit_dialog):
 		quit_dialog.show()
@@ -195,6 +169,13 @@ func _on_quit_pressed() -> void:
 # Called when the quit dialog is confirmed.
 # Executes platform-specific quit (web redirect or app quit).
 func _on_quit_dialog_confirmed() -> void:
+	"""
+	Handles quit dialog confirmation.
+
+	Performs platform-specific quit actions.
+
+	:rtype: void
+	"""
 	# User confirmed: Execute platform-specific quit
 	if OS.get_name() == "Web":
 		# Web export: Redirect to itch.io game page (clean exit, no freeze)
@@ -208,6 +189,13 @@ func _on_quit_dialog_confirmed() -> void:
 # Called when the quit dialog is canceled.
 # Hides the dialog and logs the action.
 func _on_quit_dialog_canceled() -> void:
+	"""
+	Handles quit dialog cancellation.
+
+	Hides the dialog and logs the action.
+
+	:rtype: void
+	"""
 	# Optional: Handle cancel (e.g., play sound or log)
 	quit_dialog.hide()
 	Globals.log_message("Quit canceled.", Globals.LogLevel.DEBUG)
