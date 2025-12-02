@@ -134,14 +134,12 @@ func _on_log_selected(index: int) -> void:
 
 # Handles Back button: Return to main menu
 # In options_menu.gd (_on_back_pressed())
-func _on_back_pressed(args: Array = []) -> void:
+func _on_back_pressed() -> void:
 	"""
 	Handles the Back button press.
 
 	Unpauses the game tree if paused, logs the action, and removes the options menu.
 
-	:param args: Optional arguments (unused, for web compatibility).
-	:type args: Array
 	:rtype: void
 	"""
 	get_tree().paused = false

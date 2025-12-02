@@ -1,9 +1,14 @@
+extends Control
+
 """
 Main Menu Script
 
-Handles initialization, button connections, and platform-specific behaviors for the main menu scene.
+Handles initialization, button connections, and platform-specific
+behaviors for the main menu scene.
 
-This script manages the main menu UI, including button presses, quit confirmation, and scene transitions.
+This script manages the main menu UI, including button presses,
+quit confirmation, and scene transitions.
+
 It includes platform-specific handling for web exports.
 
 :vartype quit_dialog: ConfirmationDialog
@@ -17,7 +22,6 @@ It includes platform-specific handling for web exports.
 :vartype background_music: AudioStreamPlayer2D
 """
 
-extends Control
 
 # Default relative path; override in Inspector if needed
 const QUIT_DIALOG_DEFAULT_PATH: String = "VideoStreamPlayer/Panel/VBoxContainer/QuitDialog"
@@ -111,14 +115,12 @@ func setup_quit_dialog() -> void:
 
 # Handles the Start button press.
 # Loads the main game scene using PackedScene for efficiency.
-func _on_start_pressed(args: Array = []) -> void:
+func _on_start_pressed() -> void:
 	"""
 	Handles the Start button press.
 
 	Loads and transitions to the main game scene.
 
-	:param args: Optional arguments (unused).
-	:type args: Array
 	:rtype: void
 	"""
 	# Stub; later: get_tree().change_scene_to_file("res://game_scene.tscn")
@@ -134,14 +136,12 @@ func _on_start_pressed(args: Array = []) -> void:
 # Handles the Options button press.
 # Placeholder for loading an options scene.
 # Shows options menu and toggles web overlays if on web.
-func _on_options_button_pressed(args: Array = []) -> void:
+func _on_options_button_pressed() -> void:
 	"""
 	Handles the Options button press.
 
 	Loads options and logs the action.
 
-	:param args: Optional arguments (unused).
-	:type args: Array
 	:rtype: void
 	"""
 	Globals.log_message("Options button pressed.", Globals.LogLevel.DEBUG)
@@ -150,14 +150,12 @@ func _on_options_button_pressed(args: Array = []) -> void:
 
 # Handles the Quit button press.
 # Displays the quit confirmation dialog if valid.
-func _on_quit_pressed(args: Array = []) -> void:
+func _on_quit_pressed() -> void:
 	"""
 	Handles the Quit button press.
 
 	Shows the quit confirmation dialog if available.
 
-	:param args: Optional arguments (unused).
-	:type args: Array
 	:rtype: void
 	"""
 	# Show confirmation dialog
