@@ -1,27 +1,22 @@
+## Main Menu Script
+##
+## Handles initialization, button connections, and platform-specific behaviors for the main menu scene.
+##
+## This script manages the main menu UI, including button presses, quit confirmation, and scene transitions.
+##
+## It includes platform-specific handling for web exports.
+##
+## :vartype quit_dialog: ConfirmationDialog
+## :vartype game_scene: PackedScene
+## :vartype options_menu: PackedScene
+## :vartype ui_panel: Panel
+## :vartype ui_container: VBoxContainer
+## :vartype start_button: Button
+## :vartype options_button: Button
+## :vartype quit_button: Button
+## :vartype background_music: AudioStreamPlayer2D
+
 extends Control
-
-"""
-Main Menu Script
-
-Handles initialization, button connections, and platform-specific
-behaviors for the main menu scene.
-
-This script manages the main menu UI, including button presses,
-quit confirmation, and scene transitions.
-
-It includes platform-specific handling for web exports.
-
-:vartype quit_dialog: ConfirmationDialog
-:vartype game_scene: PackedScene
-:vartype options_menu: PackedScene
-:vartype ui_panel: Panel
-:vartype ui_container: VBoxContainer
-:vartype start_button: Button
-:vartype options_button: Button
-:vartype quit_button: Button
-:vartype background_music: AudioStreamPlayer2D
-"""
-
 
 # Default relative path; override in Inspector if needed
 const QUIT_DIALOG_DEFAULT_PATH: String = "VideoStreamPlayer/Panel/VBoxContainer/QuitDialog"
