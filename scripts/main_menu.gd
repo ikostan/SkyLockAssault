@@ -1,8 +1,10 @@
 ## Main Menu Script
 ##
-## Handles initialization, button connections, and platform-specific behaviors for the main menu scene.
+## Handles initialization, button connections, and platform-specific behaviors
+## for the main menu scene.
 ##
-## This script manages the main menu UI, including button presses, quit confirmation, and scene transitions.
+## This script manages the main menu UI, including button presses, quit
+## confirmation, and scene transitions.
 ##
 ## It includes platform-specific handling for web exports.
 ##
