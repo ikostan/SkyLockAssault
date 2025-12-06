@@ -54,7 +54,9 @@ func _input(event: InputEvent) -> void:
 func _ready() -> void:
 	## Initializes the options menu when the node enters the scene tree.
 	##
-	## Populates the log level options, sets initial values, connects signals, and configures process mode.
+	## Populates the log level options, sets initial values, connects signals,
+	## and configures process mode.
+	##
 	## Toggles web overlays to visible layout (but still invisible visually) if on web.
 	## Exposes functions to JS for web overlays if on web.
 	##
@@ -97,15 +99,19 @@ func _ready() -> void:
 
 		# Expose callbacks to JS (store refs to prevent GC)
 		var js_window: JavaScriptObject = JavaScriptBridge.get_interface("window")
-		_change_log_level_cb = JavaScriptBridge.create_callback(Callable(self, "_on_change_log_level_js"))
+		_change_log_level_cb = JavaScriptBridge.create_callback(
+			Callable(self, "_on_change_log_level_js"))
 		js_window.changeLogLevel = _change_log_level_cb
 
-		_change_difficulty_cb = JavaScriptBridge.create_callback(Callable(self, "_on_change_difficulty_js"))
+		_change_difficulty_cb = JavaScriptBridge.create_callback(
+			Callable(self, "_on_change_difficulty_js"))
 		js_window.changeDifficulty = _change_difficulty_cb
 
-		_back_pressed_cb = JavaScriptBridge.create_callback(Callable(self, "_on_back_pressed_js"))
+		_back_pressed_cb = JavaScriptBridge.create_callback(
+			Callable(self, "_on_back_pressed_js"))
 		js_window.backPressed = _back_pressed_cb
-		Globals.log_message("Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG)
+		Globals.log_message(
+			"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG)
 
 func get_log_level_index() -> int:
 	## Retrieves the index of the current log level in the enum values.
@@ -144,7 +150,8 @@ func _on_change_log_level_js(args: Array) -> void:
 	## :param args: Array containing the index (from JS).
 	## :type args: Array
 	## :rtype: void
-	Globals.log_message("JS change_log_level callback called with args: " + str(args[0][0]), Globals.LogLevel.DEBUG)
+	Globals.log_message(
+		"JS change_log_level callback called with args: " + str(args[0][0]), Globals.LogLevel.DEBUG)
 	if args.size() > 0:
 		# var js_array: Variant = args[0]  # The JS array passed from evaluate
 		# var arg_value: Variant = js_array[0]  # Access first element with []
@@ -178,7 +185,8 @@ func _on_change_difficulty_js(args: Array) -> void:
 	## :type args: Array
 	## :rtype: void
 	if args.size() > 0:
-		Globals.log_message("JS difficulty callback called with args: " + str(args[0][0]), Globals.LogLevel.DEBUG)
+		Globals.log_message(
+			"JS difficulty callback called with args: " + str(args[0][0]), Globals.LogLevel.DEBUG)
 		var value: float = float(args[0][0])
 		_on_difficulty_value_changed(value)
 
@@ -187,7 +195,8 @@ func _on_change_difficulty_js(args: Array) -> void:
 func _on_back_pressed() -> void:
 	## Handles the Back button press from the signal.
 	##
-	## Unpauses the game tree if paused, logs the action, removes the options menu, and hides web overlays if on web.
+	## Unpauses the game tree if paused, logs the action, removes the options menu,
+	## and hides web overlays if on web.
 	##
 	## :rtype: void
 	get_tree().paused = false
@@ -211,5 +220,6 @@ func _on_back_pressed_js(args: Array) -> void:
 	## :param args: Array (unused, from JS).
 	## :type args: Array
 	## :rtype: void
-	Globals.log_message("JS back_pressed callback called with args: " + str(args), Globals.LogLevel.DEBUG)
+	Globals.log_message(
+		"JS back_pressed callback called with args: " + str(args), Globals.LogLevel.DEBUG)
 	_on_back_pressed()

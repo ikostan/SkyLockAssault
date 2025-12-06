@@ -81,10 +81,14 @@ func _ready() -> void:
 
 	if OS.get_name() == "Web":
 		var js_window: = JavaScriptBridge.get_interface("window")
-		js_window.startPressed = JavaScriptBridge.create_callback(Callable(self, "_on_start_pressed"))
-		js_window.optionsPressed = JavaScriptBridge.create_callback(Callable(self, "_on_options_button_pressed"))
-		js_window.quitPressed = JavaScriptBridge.create_callback(Callable(self, "_on_quit_pressed"))
-		Globals.log_message("Exposed main menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG)
+		js_window.startPressed = JavaScriptBridge.create_callback(
+			Callable(self, "_on_start_pressed"))
+		js_window.optionsPressed = JavaScriptBridge.create_callback(
+			Callable(self, "_on_options_button_pressed"))
+		js_window.quitPressed = JavaScriptBridge.create_callback(
+			Callable(self, "_on_quit_pressed"))
+		Globals.log_message(
+			"Exposed main menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG)
 
 
 func setup_quit_dialog() -> void:
@@ -110,13 +114,13 @@ func setup_quit_dialog() -> void:
 		)
 
 
-func _on_start_pressed(args: Array = []) -> void:
+func _on_start_pressed(_args: Array = []) -> void:
 	## Handles the Start button press.
 	##
 	## Loads and transitions to the main game scene.
 	##
-	## :param args: Optional arguments from web overlays (unused).
-	## :type args: Array
+	## :param _args: Optional arguments from web overlays (unused).
+	## :type _args: Array
 	## :rtype: void
 	# Stub; later: get_tree().change_scene_to_file("res://game_scene.tscn")
 	Globals.log_message("Start Game menu button pressed.", Globals.LogLevel.DEBUG)
@@ -128,25 +132,25 @@ func _on_start_pressed(args: Array = []) -> void:
 		Globals.log_message("Error: Game scene not set!", Globals.LogLevel.ERROR)
 
 
-func _on_options_button_pressed(args: Array = []) -> void:
+func _on_options_button_pressed(_args: Array = []) -> void:
 	## Handles the Options button press.
 	##
 	## Loads options and logs the action.
 	##
-	## :param args: Optional arguments from web overlays (unused).
-	## :type args: Array
+	## :param _args: Optional arguments from web overlays (unused).
+	## :type _args: Array
 	## :rtype: void
 	Globals.log_message("Options button pressed.", Globals.LogLevel.DEBUG)
 	Globals.load_options()  # Your existing load
 
 
-func _on_quit_pressed(args: Array = []) -> void:
+func _on_quit_pressed(_args: Array = []) -> void:
 	## Handles the Quit button press.
 	##
 	## Shows the quit confirmation dialog if available.
 	##
-	## :param args: Optional arguments from web overlays (unused).
-	## :type args: Array
+	## :param _args: Optional arguments from web overlays (unused).
+	## :type _args: Array
 	## :rtype: void
 	# Show confirmation dialog
 	if is_instance_valid(quit_dialog):
