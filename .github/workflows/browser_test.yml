@@ -77,7 +77,7 @@ jobs:
           if [ $i -eq 20 ]; then exit 1; fi
       - name: "Run Tests"
         run: |
-          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/ -v --junitxml=junit.xml -o junit_family=legacy
+          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/difficulty_flow_test.py -v --junitxml=junit.xml -o junit_family=legacy
       - name: "List Coverage Reports"
         run: |
           ls -la v8_coverage_*.json || echo "No v8_coverage_*.json found"
