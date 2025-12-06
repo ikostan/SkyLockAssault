@@ -1,7 +1,35 @@
 """Test selecting DEBUG in Options."""
 
-from playwright.sync_api import Page
+import pytest
+from playwright.sync_api import Page, Playwright
 from .ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
+
+
+@pytest.fixture(scope="function")
+def page(playwright: Playwright) -> Page:
+    browser = playwright.chromium.launch(headless=True, args=[
+        "--enable-unsafe-swiftshader",
+        "--disable-gpu",
+        "--use-gl=swiftshader"
+    ])
+
+    context = browser.new_context(
+        viewport={"width": 1280, "height": 720},
+        record_har_path="artifacts/har.har"  # Optional network trace
+    )
+    page = context.new_page()
+    # CDP for V8 coverage
+    cdp_session = None  # Initialize to None outside try
+    try:
+        cdp_session = context.new_cdp_session(page)
+        cdp_session.send("Profiler.enable")
+        cdp_session.send("Profiler.startPreciseCoverage",
+                         {"callCount": False,
+                          "detailed": True})
+    except Exception:
+        pass
+    yield page
+    browser.close()
 
 
 def test_log_level_setting(page: Page):
