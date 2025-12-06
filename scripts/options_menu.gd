@@ -91,27 +91,36 @@ func _ready() -> void:
 
 	if OS.has_feature("web"):
 		# Toggle overlays visible (layout only; opacity=0)
-		JavaScriptBridge.eval("""
+		(
+			JavaScriptBridge
+			. eval(
+				"""
 			document.getElementById('log-level-select').style.display = 'block';
 			document.getElementById('difficulty-slider').style.display = 'block';
 			document.getElementById('back-button').style.display = 'block';
-		""", true)  # 'true' = allow JS execution in editor (for testing)
+		""",
+				true
+			)
+		)  # 'true' = allow JS execution in editor (for testing)
 
 		# Expose callbacks to JS (store refs to prevent GC)
 		var js_window: JavaScriptObject = JavaScriptBridge.get_interface("window")
 		_change_log_level_cb = JavaScriptBridge.create_callback(
-			Callable(self, "_on_change_log_level_js"))
+			Callable(self, "_on_change_log_level_js")
+		)
 		js_window.changeLogLevel = _change_log_level_cb
 
 		_change_difficulty_cb = JavaScriptBridge.create_callback(
-			Callable(self, "_on_change_difficulty_js"))
+			Callable(self, "_on_change_difficulty_js")
+		)
 		js_window.changeDifficulty = _change_difficulty_cb
 
-		_back_pressed_cb = JavaScriptBridge.create_callback(
-			Callable(self, "_on_back_pressed_js"))
+		_back_pressed_cb = JavaScriptBridge.create_callback(Callable(self, "_on_back_pressed_js"))
 		js_window.backPressed = _back_pressed_cb
 		Globals.log_message(
-			"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG)
+			"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
+		)
+
 
 func get_log_level_index() -> int:
 	## Retrieves the index of the current log level in the enum values.
@@ -151,7 +160,8 @@ func _on_change_log_level_js(args: Array) -> void:
 	## :type args: Array
 	## :rtype: void
 	Globals.log_message(
-		"JS change_log_level callback called with args: " + str(args[0][0]), Globals.LogLevel.DEBUG)
+		"JS change_log_level callback called with args: " + str(args[0][0]), Globals.LogLevel.DEBUG
+	)
 	if args.size() > 0:
 		# var js_array: Variant = args[0]  # The JS array passed from evaluate
 		# var arg_value: Variant = js_array[0]  # Access first element with []
@@ -186,7 +196,8 @@ func _on_change_difficulty_js(args: Array) -> void:
 	## :rtype: void
 	if args.size() > 0:
 		Globals.log_message(
-			"JS difficulty callback called with args: " + str(args[0][0]), Globals.LogLevel.DEBUG)
+			"JS difficulty callback called with args: " + str(args[0][0]), Globals.LogLevel.DEBUG
+		)
 		var value: float = float(args[0][0])
 		_on_difficulty_value_changed(value)
 
@@ -203,11 +214,16 @@ func _on_back_pressed() -> void:
 	Globals.log_message("Back button pressed.", Globals.LogLevel.DEBUG)
 	if OS.has_feature("web"):
 		# Hide options overlays after closing menu
-		JavaScriptBridge.eval("""
+		(
+			JavaScriptBridge
+			. eval(
+				"""
 			document.getElementById('log-level-select').style.display = 'none';
 			document.getElementById('difficulty-slider').style.display = 'none';
 			document.getElementById('back-button').style.display = 'none';
-		""")
+		"""
+			)
+		)
 	queue_free()
 
 
@@ -221,5 +237,6 @@ func _on_back_pressed_js(args: Array) -> void:
 	## :type args: Array
 	## :rtype: void
 	Globals.log_message(
-		"JS back_pressed callback called with args: " + str(args), Globals.LogLevel.DEBUG)
+		"JS back_pressed callback called with args: " + str(args), Globals.LogLevel.DEBUG
+	)
 	_on_back_pressed()

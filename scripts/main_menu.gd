@@ -80,15 +80,17 @@ func _ready() -> void:
 	setup_quit_dialog()
 
 	if OS.get_name() == "Web":
-		var js_window: = JavaScriptBridge.get_interface("window")
+		var js_window := JavaScriptBridge.get_interface("window")
 		js_window.startPressed = JavaScriptBridge.create_callback(
-			Callable(self, "_on_start_pressed"))
+			Callable(self, "_on_start_pressed")
+		)
 		js_window.optionsPressed = JavaScriptBridge.create_callback(
-			Callable(self, "_on_options_button_pressed"))
-		js_window.quitPressed = JavaScriptBridge.create_callback(
-			Callable(self, "_on_quit_pressed"))
+			Callable(self, "_on_options_button_pressed")
+		)
+		js_window.quitPressed = JavaScriptBridge.create_callback(Callable(self, "_on_quit_pressed"))
 		Globals.log_message(
-			"Exposed main menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG)
+			"Exposed main menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
+		)
 
 
 func setup_quit_dialog() -> void:
