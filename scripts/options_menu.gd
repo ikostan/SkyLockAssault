@@ -1,13 +1,30 @@
+## Options Menu Script
+##
+## Handles log level selection, difficulty adjustment, and back navigation
+## in the options menu.
+##
+## Supports web overlays for UI interactions and ignores pause mode.
+##
+## :vartype log_level_display_to_enum: Dictionary
+## :vartype log_lvl_option: OptionButton
+## :vartype back_button: Button
+## :vartype difficulty_slider: HSlider
+## :vartype difficulty_label: Label
+
 extends CanvasLayer
 
 # Explicit mapping from display names to enum values
-var log_level_display_to_enum := {
+var log_level_display_to_enum: Dictionary = {
 	"DEBUG": Globals.LogLevel.DEBUG,
 	"INFO": Globals.LogLevel.INFO,
 	"WARNING": Globals.LogLevel.WARNING,
 	"ERROR": Globals.LogLevel.ERROR,
 	"NONE": Globals.LogLevel.NONE
 }
+
+var _change_log_level_cb: JavaScriptObject
+var _change_difficulty_cb: JavaScriptObject
+var _back_pressed_cb: JavaScriptObject
 
 @onready var log_lvl_option: OptionButton = get_node(
 	"Panel/OptionsVBoxContainer/LogLevelContainer/LogLevelOptionButton"
@@ -21,15 +38,30 @@ var log_level_display_to_enum := {
 )
 
 
-func _input(event: InputEvent) -> void:  # Add type hints
+func _input(event: InputEvent) -> void:
+	## Handles input events for the options menu.
+	##
+	## Logs mouse click positions for debugging.
+	##
+	## :param event: The input event to process.
+	## :type event: InputEvent
+	## :rtype: void
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var pos: Vector2 = event.position  # Explicitly type as Vector2
 		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
 
 
 func _ready() -> void:
+	## Initializes the options menu when the node enters the scene tree.
+	##
+	## Populates the log level options, sets initial values, connects signals,
+	## and configures process mode.
+	##
+	## Toggles web overlays to visible layout (but still invisible visually) if on web.
+	## Exposes functions to JS for web overlays if on web.
+	##
+	## :rtype: void
 	# Populate OptionButton with all LogLevel enum values
-	# In _ready() (replace population and add "None")
 	for level: String in Globals.LogLevel.keys():
 		if level != "NONE":  # Skip auto-add NONE; add manually as "None"
 			log_lvl_option.add_item(level)  # "Debug", "Info", etc.
@@ -44,63 +76,167 @@ func _ready() -> void:
 		log_lvl_option.selected = 1  # Fallback to INFO (index 1)
 		Globals.log_message("Invalid saved log level—reset to INFO.", Globals.LogLevel.WARNING)
 
-	# Connect signals
-	log_lvl_option.item_selected.connect(_on_log_selected)
+	# Connect signals to type-specific handlers (change: separate from JS callbacks)
+	log_lvl_option.item_selected.connect(_on_log_level_item_selected)
+	difficulty_slider.value_changed.connect(_on_difficulty_value_changed)
 	back_button.pressed.connect(_on_back_pressed)
 
-	# Difficulty level setup
-	if difficulty_slider:
-		difficulty_slider.min_value = 0.5  # Easy
-		difficulty_slider.max_value = 2.0  # Hard
-		difficulty_slider.step = 0.1
-		difficulty_slider.value = Globals.difficulty  # Load current
+	# Set initial difficulty label (sync with global)
+	difficulty_slider.value = Globals.difficulty
+	difficulty_label.text = "{" + str(Globals.difficulty) + "}"
 
-		if !difficulty_label:
-			Globals.log_message(
-				"Difficulty label node not found! Using fallback label.", Globals.LogLevel.WARNING
-			)
-			difficulty_label = Label.new()
-			difficulty_label.text = "N/A"
-		else:
-			difficulty_label.text = "{" + str(Globals.difficulty) + "}"
-
-		difficulty_slider.value_changed.connect(_on_difficulty_changed)
-	else:
-		Globals.log_message(
-			"Warning: DifficultySlider not found in options menu.", Globals.LogLevel.WARNING
-		)
-
-	# In options_menu.gd (_ready()—add at end)
-	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignores pause for this node/tree
-	Globals.log_message(
-		"Set options_menu process_mode to ALWAYS for pause ignoring.", Globals.LogLevel.DEBUG
-	)
+	# Configure for web overlays (invisible but positioned)
+	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignore pause
 	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
 
+	if OS.has_feature("web"):
+		# Toggle overlays visible (layout only; opacity=0)
+		(
+			JavaScriptBridge
+			. eval(
+				"""
+			document.getElementById('log-level-select').style.display = 'block';
+			document.getElementById('difficulty-slider').style.display = 'block';
+			document.getElementById('back-button').style.display = 'block';
+		""",
+				true
+			)
+		)  # 'true' = allow JS execution in editor (for testing)
 
-# New function for slider change
-func _on_difficulty_changed(value: float) -> void:
-	Globals.difficulty = value
-	difficulty_label.text = "{" + str(value) + "}"
-	Globals.log_message("Difficulty changed to: " + str(value), Globals.LogLevel.DEBUG)
-	Globals._save_settings()
+		# Expose callbacks to JS (store refs to prevent GC)
+		var js_window: JavaScriptObject = JavaScriptBridge.get_interface("window")
+		_change_log_level_cb = JavaScriptBridge.create_callback(
+			Callable(self, "_on_change_log_level_js")
+		)
+		js_window.changeLogLevel = _change_log_level_cb
+
+		_change_difficulty_cb = JavaScriptBridge.create_callback(
+			Callable(self, "_on_change_difficulty_js")
+		)
+		js_window.changeDifficulty = _change_difficulty_cb
+
+		_back_pressed_cb = JavaScriptBridge.create_callback(Callable(self, "_on_back_pressed_js"))
+		js_window.backPressed = _back_pressed_cb
+		Globals.log_message(
+			"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
+		)
 
 
-# Handles log level selection change
-func _on_log_selected(index: int) -> void:
+func get_log_level_index() -> int:
+	## Retrieves the index of the current log level in the enum values.
+	##
+	## :returns: The index of the current log level.
+	## :rtype: int
+	return Globals.LogLevel.values().find(Globals.current_log_level)
+
+
+# Change: Separate handler for signal (int index)
+func _on_log_level_item_selected(index: int) -> void:
+	## Handles log level selection from the OptionButton signal.
+	##
+	## Updates global log level, logs the change, and saves settings.
+	##
+	## :param index: The selected item index.
+	## :type index: int
+	## :rtype: void
 	var selected_name: String = log_lvl_option.get_item_text(index)
 	var selected_enum: Globals.LogLevel = log_level_display_to_enum.get(
 		selected_name, Globals.LogLevel.INFO
 	)
 	Globals.current_log_level = selected_enum
-	# May skip if new level high
+	log_lvl_option.selected = Globals.current_log_level
+	# Temporary raw print to bypass log_message
 	Globals.log_message("Log level changed to: " + selected_name, Globals.LogLevel.DEBUG)
 	Globals._save_settings()
 
 
-# Handles Back button: Return to main menu
-# In options_menu.gd (_on_back_pressed())
+# New: JS-specific callback (exactly one Array arg, no default)
+func _on_change_log_level_js(args: Array) -> void:
+	## JS callback for changing log level.
+	##
+	## Routes to the signal handler.
+	##
+	## :param args: Array containing the index (from JS).
+	## :type args: Array
+	## :rtype: void
+	Globals.log_message(
+		"JS change_log_level callback called with args: " + str(args[0][0]), Globals.LogLevel.DEBUG
+	)
+	if args.size() > 0:
+		# var js_array: Variant = args[0]  # The JS array passed from evaluate
+		# var arg_value: Variant = js_array[0]  # Access first element with []
+		var index: int = int(args[0][0])
+		_on_log_level_item_selected(index)
+
+
+# Change: Separate handler for signal (float value)
+func _on_difficulty_value_changed(value: float) -> void:
+	## Handles changes to the difficulty slider from the signal.
+	##
+	## Updates global difficulty, label text, logs the change, and saves settings.
+	##
+	## :param value: The new slider value.
+	## :type value: float
+	## :rtype: void
+	Globals.difficulty = value
+	difficulty_slider.value = Globals.difficulty
+	difficulty_label.text = "{" + str(value) + "}"
+	Globals.log_message("Difficulty changed to: " + str(value), Globals.LogLevel.DEBUG)
+	Globals._save_settings()
+
+
+# New: JS-specific callback (exactly one Array arg, no default)
+func _on_change_difficulty_js(args: Array) -> void:
+	## JS callback for changing difficulty.
+	##
+	## Routes to the signal handler.
+	##
+	## :param args: Array containing the value (from JS).
+	## :type args: Array
+	## :rtype: void
+	if args.size() > 0:
+		Globals.log_message(
+			"JS difficulty callback called with args: " + str(args[0][0]), Globals.LogLevel.DEBUG
+		)
+		var value: float = float(args[0][0])
+		_on_difficulty_value_changed(value)
+
+
+# Change: Signal handler (no arg)
 func _on_back_pressed() -> void:
-	get_tree().paused = false  # Unpause if was paused (safe call)
+	## Handles the Back button press from the signal.
+	##
+	## Unpauses the game tree if paused, logs the action, removes the options menu,
+	## and hides web overlays if on web.
+	##
+	## :rtype: void
+	get_tree().paused = false
 	Globals.log_message("Back button pressed.", Globals.LogLevel.DEBUG)
-	queue_free()  # Remove self from tree (returns to underlying scene)
+	if OS.has_feature("web"):
+		# Hide options overlays after closing menu
+		(
+			JavaScriptBridge
+			. eval(
+				"""
+			document.getElementById('log-level-select').style.display = 'none';
+			document.getElementById('difficulty-slider').style.display = 'none';
+			document.getElementById('back-button').style.display = 'none';
+		"""
+			)
+		)
+	queue_free()
+
+
+# New: JS-specific callback (exactly one Array arg, no default)
+func _on_back_pressed_js(args: Array) -> void:
+	## JS callback for back button press.
+	##
+	## Routes to the signal handler (ignores args).
+	##
+	## :param args: Array (unused, from JS).
+	## :type args: Array
+	## :rtype: void
+	Globals.log_message(
+		"JS back_pressed callback called with args: " + str(args), Globals.LogLevel.DEBUG
+	)
+	_on_back_pressed()

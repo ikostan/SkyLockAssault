@@ -4,12 +4,11 @@
 [ext_resource type="Texture2D" uid="uid://b7utqr70u1mex" path="res://files/sprite/laser_sprites/01.png" id="2_y25gk"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_l5glv"]
-radius = 2.0
+radius = 3.0
 
 [node name="BulletFirer" type="Node2D"]
 texture_filter = 1
 script = ExtResource("1_mkf8s")
-projectile_texture = ExtResource("2_y25gk")
 
 [node name="ShotSFX" type="AudioStreamPlayer2D" parent="."]
 bus = &"SFX"
@@ -18,9 +17,10 @@ bus = &"SFX"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
 shape = SubResource("CircleShape2D_l5glv")
+debug_color = Color(0.9189266, 0.24795753, 0.3633065, 0.41960785)
 
 [node name="Sprite2D" type="Sprite2D" parent="Area2D"]
 texture_filter = 1
-position = Vector2(-1, 0)
-scale = Vector2(0.3, 0.3)
+position = Vector2(-2, 0)
+scale = Vector2(0.5, 0.5)
 texture = ExtResource("2_y25gk")

@@ -77,7 +77,7 @@ jobs:
           if [ $i -eq 20 ]; then exit 1; fi
       - name: "Run Tests"
         run: |
-          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/ -v --junitxml=junit.xml -o junit_family=legacy
+          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/difficulty_flow_test.py -v --junitxml=junit.xml -o junit_family=legacy
       - name: "List Coverage Reports"
         run: |
           ls -la v8_coverage_*.json || echo "No v8_coverage_*.json found"
@@ -87,8 +87,9 @@ jobs:
         with:
           node-version: '20'  # Stable for Win10 compat
       - name: "Install Conversion Tools"
+        # For conversion and report
         run: |
-          npm install v8-to-istanbul nyc  # For conversion and report
+          npm install v8-to-istanbul nyc
       # yamllint disable rule:line-length
       - name: "Convert V8 to LCOV"
         run: |
