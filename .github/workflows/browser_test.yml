@@ -62,6 +62,8 @@ jobs:
       - name: "Install Playwright Browsers"
         if: steps.cache.outputs.cache-hit != 'true'  # Only install if not cached
         run: playwright install --with-deps chromium
+      - name: "Install xvfb"
+        run: sudo apt-get update && sudo apt-get install -y xvfb
       - name: "Start WEB Server"
         run: |
           python -m http.server 8080 --directory export/web &
