@@ -148,18 +148,7 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Set log level to DEBUG (index 0) - directly call the exposed callback
         # (bypasses event for reliability in automation)
-        # page.evaluate("window.changeLogLevel([0])")
-
-        # Click log level dropdown
-        log_dropdown_x = box['x'] + UI_ELEMENTS["log_level_dropdown"]["x"]
-        log_dropdown_y = box['y'] + UI_ELEMENTS["log_level_dropdown"]["y"]
-        page.mouse.click(log_dropdown_x, log_dropdown_y)
-        page.wait_for_timeout(3000)
-
-        # Select DEBUG
-        debug_item_x = box['x'] + UI_ELEMENTS["log_level_debug"]["x"]
-        debug_item_y = box['y'] + UI_ELEMENTS["log_level_debug"]["y"]
-        page.mouse.click(debug_item_x, debug_item_y)
+        page.evaluate("window.changeLogLevel([0])")
         page.wait_for_timeout(3000)
         assert any("Log level changed to: DEBUG" in log["text"] for log in logs), "Failed to set log level to DEBUG"
 
@@ -170,12 +159,7 @@ def test_difficulty_flow(page: Page) -> None:
             "settings saved" in log["text"].lower() for log in logs), "Failed to save the settings"
 
         # Set difficulty to 2.0 - directly call the exposed callback (bypasses event for reliability in automation)
-        # page.evaluate("window.changeDifficulty([2.0])")
-
-        # Drag slider to 2.0 (position derived from stable UI coordinates)
-        slider_x = box['x'] + UI_ELEMENTS["difficulty_slider_2.0"]["x"]
-        slider_y = box['y'] + UI_ELEMENTS["difficulty_slider_2.0"]["y"]
-        page.mouse.click(slider_x, slider_y)  # Move to 2.0 position
+        page.evaluate("window.changeDifficulty([2.0])")
         page.wait_for_timeout(3000)
         assert any(
             "difficulty changed to: 2.0" in log["text"].lower() for log in logs), "Failed to set difficulty to 2.0"
@@ -184,18 +168,17 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Back to main menu
         # page.click("#back-button", force=True)
-
-        # Back to main menu
-        back_x = box['x'] + UI_ELEMENTS["back_button"]["x"]
-        back_y = box['y'] + UI_ELEMENTS["back_button"]["y"]
-        page.mouse.click(back_x, back_y)  # Click Back button
-
+        page.evaluate("window.backPressed([])")
         page.wait_for_timeout(3000)
         assert any("back button pressed." in log["text"].lower() for log in logs), "Back button not found"
 
         # Start game
         page.click("#start-button", force=True)
         page.wait_for_timeout(10000)  # Wait for game load
+        assert any(
+            "start game menu button pressed." in log["text"].lower() for log in logs), "Start Game button not found"
+        assert any(
+            "loading main game scene..." in log["text"].lower() for log in logs), "Game scene not found"
 
         # Simulate fire (press Space)
         page.keyboard.press("Space")

@@ -82,11 +82,8 @@ func _ready() -> void:
 	if OS.get_name() == "Web":
 		var js_window: = JavaScriptBridge.get_interface("window")
 		js_window.startPressed = JavaScriptBridge.create_callback(Callable(self, "_on_start_pressed"))
-		print("Exposed startPressed")  # Debug print
 		js_window.optionsPressed = JavaScriptBridge.create_callback(Callable(self, "_on_options_button_pressed"))
-		print("Exposed optionsPressed")  # Debug print
 		js_window.quitPressed = JavaScriptBridge.create_callback(Callable(self, "_on_quit_pressed"))
-		print("Exposed quitPressed")  # Debug print
 		Globals.log_message("Exposed main menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG)
 
 

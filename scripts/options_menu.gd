@@ -22,6 +22,10 @@ var log_level_display_to_enum: Dictionary = {
 	"NONE": Globals.LogLevel.NONE
 }
 
+var _change_log_level_cb: JavaScriptObject
+var _change_difficulty_cb: JavaScriptObject
+var _back_pressed_cb: JavaScriptObject
+
 @onready var log_lvl_option: OptionButton = get_node(
 	"Panel/OptionsVBoxContainer/LogLevelContainer/LogLevelOptionButton"
 )
@@ -82,6 +86,7 @@ func _ready() -> void:
 	# Configure for web overlays (invisible but positioned)
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignore pause
 	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
+
 	if OS.has_feature("web"):
 		# Toggle overlays visible (layout only; opacity=0)
 		JavaScriptBridge.eval("""
@@ -90,13 +95,17 @@ func _ready() -> void:
 			document.getElementById('back-button').style.display = 'block';
 		""", true)  # 'true' = allow JS execution in editor (for testing)
 
-		# Expose callbacks to JS (change: use separate JS-specific functions)
+		# Expose callbacks to JS (store refs to prevent GC)
 		var js_window: JavaScriptObject = JavaScriptBridge.get_interface("window")
-		js_window.changeLogLevel = JavaScriptBridge.create_callback(Callable(self, "_on_change_log_level_js"))
-		js_window.changeDifficulty = JavaScriptBridge.create_callback(Callable(self, "_on_change_difficulty_js"))
-		js_window.backPressed = JavaScriptBridge.create_callback(Callable(self, "_on_back_pressed_js"))
-		Globals.log_message("Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG)
+		_change_log_level_cb = JavaScriptBridge.create_callback(Callable(self, "_on_change_log_level_js"))
+		js_window.changeLogLevel = _change_log_level_cb
 
+		_change_difficulty_cb = JavaScriptBridge.create_callback(Callable(self, "_on_change_difficulty_js"))
+		js_window.changeDifficulty = _change_difficulty_cb
+
+		_back_pressed_cb = JavaScriptBridge.create_callback(Callable(self, "_on_back_pressed_js"))
+		js_window.backPressed = _back_pressed_cb
+		Globals.log_message("Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG)
 
 func get_log_level_index() -> int:
 	## Retrieves the index of the current log level in the enum values.
@@ -120,8 +129,8 @@ func _on_log_level_item_selected(index: int) -> void:
 		selected_name, Globals.LogLevel.INFO
 	)
 	Globals.current_log_level = selected_enum
+	log_lvl_option.selected = Globals.current_log_level
 	# Temporary raw print to bypass log_message
-	print("RAW PRINT: Log level changed to: " + selected_name)
 	Globals.log_message("Log level changed to: " + selected_name, Globals.LogLevel.DEBUG)
 	Globals._save_settings()
 
@@ -135,8 +144,11 @@ func _on_change_log_level_js(args: Array) -> void:
 	## :param args: Array containing the index (from JS).
 	## :type args: Array
 	## :rtype: void
+	Globals.log_message("JS change_log_level callback called with args: " + str(args[0][0]), Globals.LogLevel.DEBUG)
 	if args.size() > 0:
-		var index: int = args[0] as int
+		# var js_array: Variant = args[0]  # The JS array passed from evaluate
+		# var arg_value: Variant = js_array[0]  # Access first element with []
+		var index: int = int(args[0][0])
 		_on_log_level_item_selected(index)
 
 
@@ -150,6 +162,7 @@ func _on_difficulty_value_changed(value: float) -> void:
 	## :type value: float
 	## :rtype: void
 	Globals.difficulty = value
+	difficulty_slider.value = Globals.difficulty
 	difficulty_label.text = "{" + str(value) + "}"
 	Globals.log_message("Difficulty changed to: " + str(value), Globals.LogLevel.DEBUG)
 	Globals._save_settings()
@@ -165,7 +178,8 @@ func _on_change_difficulty_js(args: Array) -> void:
 	## :type args: Array
 	## :rtype: void
 	if args.size() > 0:
-		var value: float = args[0] as float
+		Globals.log_message("JS difficulty callback called with args: " + str(args[0][0]), Globals.LogLevel.DEBUG)
+		var value: float = float(args[0][0])
 		_on_difficulty_value_changed(value)
 
 
@@ -197,4 +211,5 @@ func _on_back_pressed_js(args: Array) -> void:
 	## :param args: Array (unused, from JS).
 	## :type args: Array
 	## :rtype: void
+	Globals.log_message("JS back_pressed callback called with args: " + str(args), Globals.LogLevel.DEBUG)
 	_on_back_pressed()
