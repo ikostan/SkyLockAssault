@@ -16,7 +16,7 @@ jobs:
         python-version: ["3.x"]  # Single entry for consistent display
     steps:
       - name: "Checkout code"
-        uses: "actions/checkout@v5"
+        uses: "actions/checkout@v6"
       - name: "Lint MARKDOWN Files"
         # Lints Markdown for formatting/spelling
         # Pinned to SHA for security (was @v19)
