@@ -22,7 +22,7 @@ jobs:
       security-events: "write"  # For SARIF uploads to GitHub Security tab
     steps:
       - name: "Checkout repository"
-        uses: "actions/checkout@v5"
+        uses: "actions/checkout@v6"
 
       - name: "List files in export/web (for visibility)"
         run: |
