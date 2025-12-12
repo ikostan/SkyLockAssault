@@ -89,6 +89,11 @@
             window.godotInitialized = true;  // Signal for Playwright waits
         }).catch(err => {
             console.error("Error starting Godot:", err);
+            // Update UI to show error instead of stuck loading
+            document.getElementById('status').innerText = 'Error loading game: ' + (err.message || 'Unknown error. Please refresh and try again.');
+            document.getElementById('progress').style.backgroundColor = 'red';  // Visual failure indicator
+            // Optional: Hide after 10 seconds to avoid permanent block - uncomment if desired
+            // setTimeout(() => { document.getElementById('loading').style.display = 'none'; }, 10000);
         });
 
         // Hook buttons/sliders to exposed Godot functions
