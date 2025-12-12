@@ -41,6 +41,40 @@
         #difficulty-slider, #back-button, #log-level-select {
             display: none;
         }
+        /* Loading UI styles (moved from inline for maintainability) */
+        #loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+        }
+        #loading img {
+            max-width: 50%;
+            max-height: 50%;
+        }
+        #progress-bar {
+            width: 50%;
+            height: 20px;
+            background-color: #333;
+            margin-top: 20px;
+            border: 1px solid #555;
+        }
+        #progress {
+            width: 0%;
+            height: 100%;
+            background-color: #0f0;
+        }
+        #status {
+            color: white;
+            margin-top: 10px;
+        }
     </style>
 <!-- Removed favicon link to avoid 404 -->
 </head>
@@ -48,12 +82,12 @@
     <canvas id="canvas" tabindex="0" width="1280" height="720" style="position: absolute; top: 0px; left: 0px; width: 1280px; height: 720px;"></canvas>
 
     <!-- Loading screen with progress bar -->
-    <div id="loading" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: black; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20;">
-        <img src="$GODOT_SPLASH" alt="Loading..." style="max-width: 50%; max-height: 50%;">
-        <div id="progress-bar" style="width: 50%; height: 20px; background-color: #333; margin-top: 20px; border: 1px solid #555;">
-            <div id="progress" style="width: 0%; height: 100%; background-color: #0f0;"></div>
+    <div id="loading">
+        <img src="$GODOT_SPLASH" alt="Loading...">
+        <div id="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div id="progress"></div>
         </div>
-        <p id="status" style="color: white; margin-top: 10px;">Loading...</p>
+        <p id="status" aria-live="polite">Loading...</p>
     </div>
 
     <!-- Main Menu Buttons (invisible overlays) -->
@@ -81,6 +115,7 @@
             onProgress: function(current, total) {
                 var percentage = total > 0 ? Math.round((current / total) * 100) : 0;
                 document.getElementById('progress').style.width = percentage + '%';
+                document.getElementById('progress-bar').setAttribute('aria-valuenow', percentage);
                 document.getElementById('status').innerText = 'Loading: ' + percentage + '%';
             }
         }).then(() => {
@@ -92,8 +127,9 @@
             // Update UI to show error instead of stuck loading
             document.getElementById('status').innerText = 'Error loading game: ' + (err.message || 'Unknown error. Please refresh and try again.');
             document.getElementById('progress').style.backgroundColor = 'red';  // Visual failure indicator
-            // Optional: Hide after 10 seconds to avoid permanent block - uncomment if desired
-            // setTimeout(() => { document.getElementById('loading').style.display = 'none'; }, 10000);
+            document.getElementById('progress-bar').setAttribute('aria-valuenow', '0');  // Reset ARIA for error state
+            // Hide after 10 seconds to avoid permanent block
+            setTimeout(() => { document.getElementById('loading').style.display = 'none'; }, 10000);
         });
 
         // Hook buttons/sliders to exposed Godot functions
