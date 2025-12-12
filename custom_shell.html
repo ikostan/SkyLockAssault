@@ -94,10 +94,11 @@
 <body>
     <canvas id="canvas" tabindex="0" width="1280" height="720" style="position: absolute; top: 0px; left: 0px; width: 1280px; height: 720px;"></canvas>
 
-    <!-- Loading screen with progress bar -->
+    <!-- Loading screen with progress bar (updated for better ARIA labeling) -->
     <div id="loading">
         <img src="$GODOT_SPLASH" alt="Loading...">
-        <div id="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <!-- Added aria-labelledby to reference #status, providing a dynamic accessible name like "Loading: X%" for screen readers -->
+        <div id="progress-bar" role="progressbar" aria-labelledby="status" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
             <div id="progress"></div>
         </div>
         <p id="status" aria-live="polite">Loading...</p>
@@ -134,7 +135,10 @@
             }
         }).then(() => {
             console.log("Godot engine started successfully!");
-            document.getElementById('loading').style.display = 'none';
+            // Hide the loading UI and set aria-hidden to prevent screen readers from announcing stale content
+            var loadingDiv = document.getElementById('loading');
+            loadingDiv.style.display = 'none';
+            loadingDiv.setAttribute('aria-hidden', 'true');
             window.godotInitialized = true;  // Signal for Playwright waits
         }).catch(err => {
             console.error("Error starting Godot:", err);
@@ -145,6 +149,7 @@
             document.getElementById('progress-bar').style.display = 'none';  // Hide progress bar on error
             document.getElementById('retry-button').style.display = 'block';  // Show retry button
             // window.godotInitialized remains false implicitly
+            // No aria-hidden here since error state should remain visible/accessible for recovery
         });
 
         // Retry button handler (reloads page to reset everything)
