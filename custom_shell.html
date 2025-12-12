@@ -75,6 +75,19 @@
             color: white;
             margin-top: 10px;
         }
+        /* Retry button style (visible override) */
+        #retry-button {
+            opacity: 1; /* Visible */
+            pointer-events: auto; /* Clickable */
+            color: white; /* Text color */
+            background-color: #f00; /* Red button for error theme */
+            border: 1px solid #fff;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 20px;
+            display: none; /* Hidden initially */
+        }
     </style>
 <!-- Removed favicon link to avoid 404 -->
 </head>
@@ -88,6 +101,7 @@
             <div id="progress"></div>
         </div>
         <p id="status" aria-live="polite">Loading...</p>
+        <button id="retry-button">Retry</button>
     </div>
 
     <!-- Main Menu Buttons (invisible overlays) -->
@@ -124,13 +138,19 @@
             window.godotInitialized = true;  // Signal for Playwright waits
         }).catch(err => {
             console.error("Error starting Godot:", err);
-            // Update UI to show error instead of stuck loading
-            document.getElementById('status').innerText = 'Error loading game: ' + (err.message || 'Unknown error. Please refresh and try again.');
+            // Update UI to persistent error state with retry
+            document.getElementById('status').innerText = 'Error loading game: ' + (err.message || 'Unknown error. Please try again or refresh the page.');
             document.getElementById('progress').style.backgroundColor = 'red';  // Visual failure indicator
             document.getElementById('progress-bar').setAttribute('aria-valuenow', '0');  // Reset ARIA for error state
-            // Hide after 10 seconds to avoid permanent block
-            setTimeout(() => { document.getElementById('loading').style.display = 'none'; }, 10000);
+            document.getElementById('progress-bar').style.display = 'none';  // Hide progress bar on error
+            document.getElementById('retry-button').style.display = 'block';  // Show retry button
+            // window.godotInitialized remains false implicitly
         });
+
+        // Retry button handler (reloads page to reset everything)
+        document.getElementById('retry-button').onclick = () => {
+            location.reload();
+        };
 
         // Hook buttons/sliders to exposed Godot functions
         document.getElementById('start-button').onclick = () => window.startPressed([]);
