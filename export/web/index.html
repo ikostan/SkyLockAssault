@@ -47,6 +47,15 @@
 <body>
     <canvas id="canvas" tabindex="0" width="1280" height="720" style="position: absolute; top: 0px; left: 0px; width: 1280px; height: 720px;"></canvas>
 
+    <!-- Loading screen with progress bar -->
+    <div id="loading" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: black; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20;">
+        <img src="index.png" alt="Loading..." style="max-width: 50%; max-height: 50%;">
+        <div id="progress-bar" style="width: 50%; height: 20px; background-color: #333; margin-top: 20px; border: 1px solid #555;">
+            <div id="progress" style="width: 0%; height: 100%; background-color: #0f0;"></div>
+        </div>
+        <p id="status" style="color: white; margin-top: 10px;">Loading...</p>
+    </div>
+
     <!-- Main Menu Buttons (invisible overlays) -->
     <button id="start-button" style="top: 40%;">START</button>
     <button id="options-button" style="top: 50%;">OPTIONS</button>
@@ -65,11 +74,18 @@
 
     <script src="index.js"></script> <!-- Godot replaces with actual JS file, e.g., tmp_js_export.js -->
     <script>
-        var engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":25562856,"index.wasm":36160334},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4}); // Official placeholder for config
+        var engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":25562152,"index.wasm":36160334},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4}); // Official placeholder for config
 
         // Start Godot engine (async for stability)
-        engine.startGame().then(() => {
+        engine.startGame({
+            onProgress: function(current, total) {
+                var percentage = total > 0 ? Math.round((current / total) * 100) : 0;
+                document.getElementById('progress').style.width = percentage + '%';
+                document.getElementById('status').innerText = 'Loading: ' + percentage + '%';
+            }
+        }).then(() => {
             console.log("Godot engine started successfully!");
+            document.getElementById('loading').style.display = 'none';
             window.godotInitialized = true;  // Signal for Playwright waits
         }).catch(err => {
             console.error("Error starting Godot:", err);
@@ -83,7 +99,6 @@
         document.getElementById('back-button').onclick = () => window.backPressed([]);
         document.getElementById('log-level-select').onchange = (e) => window.changeLogLevel([e.target.selectedIndex]);
     </script>
-
 
 <div class="ime" contenteditable="true" style="background: none; opacity: 0; position: fixed; text-align: left; font-size: 1px; left: 0px; top: 0px; width: 100%; height: 40px; pointer-events: none; display: none;"></div>
 </body>
