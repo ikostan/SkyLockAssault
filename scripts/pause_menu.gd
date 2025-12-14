@@ -36,7 +36,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	## :type event: InputEvent
 	## :rtype: void
 	if not visible and Globals.options_open:
-		return # Ignore input when hidden (e.g., during options)
+		return  # Ignore input when hidden (e.g., during options)
 	if event.is_action_pressed("ui_cancel"):  # Default ESC action
 		toggle_pause()
 
