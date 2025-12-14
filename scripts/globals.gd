@@ -94,12 +94,12 @@ func load_options(menu_to_hide: Node) -> void:
 	## :type menu_to_hide: Node
 	## :rtype: void
 	if menu_to_hide == null:
-		log_message(
-			"load_options: Called with null menu_to_hide—skipping hide.", LogLevel.WARNING)
+		log_message("load_options: Called with null menu_to_hide—skipping hide.", LogLevel.WARNING)
 	elif not is_instance_valid(menu_to_hide):
 		log_message(
 			"load_options: Invalid/freed menu_to_hide (" + str(menu_to_hide) + ")—skipping hide.", 
-			LogLevel.WARNING)
+			LogLevel.WARNING
+		)
 	else:
 		hidden_menu = menu_to_hide
 		hidden_menu.visible = false
