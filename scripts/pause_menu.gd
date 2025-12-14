@@ -10,6 +10,7 @@ var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 @onready var back_to_main_button: Button = $VBoxContainer/BackToMainButton
 @onready var options_button: Button = $VBoxContainer/OptionsButton
 
+
 func _input(event: InputEvent) -> void:
 	## Handles input events.
 	##
@@ -21,6 +22,7 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var pos: Vector2 = event.position
 		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
+
 
 func _ready() -> void:
 	## Initializes pause menu.
@@ -38,6 +40,7 @@ func _ready() -> void:
 	visible = false
 	Globals.log_message("Pause menu is ready.", Globals.LogLevel.DEBUG)
 
+
 func _unhandled_input(event: InputEvent) -> void:
 	## Processes unhandled input for pause toggle.
 	##
@@ -51,12 +54,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		toggle_pause()
 
+
 func toggle_pause() -> void:
 	## Toggles pause menu visibility and pause state.
 	##
 	## :rtype: void
 	visible = not visible
 	get_tree().paused = visible
+
 
 func _on_resume_button_pressed() -> void:
 	## Handles resume button press.
@@ -66,6 +71,7 @@ func _on_resume_button_pressed() -> void:
 	## :rtype: void
 	Globals.log_message("Resume button pressed.", Globals.LogLevel.DEBUG)
 	toggle_pause()
+
 
 func _on_back_to_main_button_pressed() -> void:
 	## Handles back to main button press.
@@ -82,6 +88,7 @@ func _on_back_to_main_button_pressed() -> void:
 		get_tree().change_scene_to_packed(main_menu_scene)
 	else:
 		Globals.log_message("Error: Main menu scene not set!", Globals.LogLevel.ERROR)
+
 
 func _on_options_button_pressed() -> void:
 	## Handles options button press.
