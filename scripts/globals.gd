@@ -86,16 +86,25 @@ func _save_settings() -> void:
 	log_message("Settings saved.", LogLevel.DEBUG)
 
 
-# Modified load_options
+# Modified load_options with guards
 func load_options(menu_to_hide: Node) -> void:
-	## Loads options menu and hides the caller menu.
+	## Loads options menu and hides the caller menu (if valid).
 	##
-	## :param menu_to_hide: The menu node to hide.
+	## :param menu_to_hide: The menu node to hide (guarded against null/invalid).
 	## :type menu_to_hide: Node
 	## :rtype: void
-	hidden_menu = menu_to_hide
-	hidden_menu.visible = false
-	log_message("Hiding menu: " + menu_to_hide.name, LogLevel.DEBUG)
+	if menu_to_hide == null:
+		log_message(
+			"load_options: Called with null menu_to_hide—skipping hide.", LogLevel.WARNING)
+	elif not is_instance_valid(menu_to_hide):
+		log_message(
+			"load_options: Invalid/freed menu_to_hide (" + str(menu_to_hide) + ")—skipping hide.", 
+			LogLevel.WARNING)
+	else:
+		hidden_menu = menu_to_hide
+		hidden_menu.visible = false
+		log_message("Hiding menu: " + menu_to_hide.name, LogLevel.DEBUG)
+	
 	if options_scene:
 		var options_inst: CanvasLayer = options_scene.instantiate()
 		get_tree().root.add_child(options_inst)  # Add to root (on top)
