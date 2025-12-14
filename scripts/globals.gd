@@ -98,7 +98,7 @@ func load_options(menu_to_hide: Node) -> void:
 	log_message("Hiding menu: " + menu_to_hide.name, LogLevel.DEBUG)
 	if options_scene:
 		var options_inst: CanvasLayer = options_scene.instantiate()
-		get_tree().root.add_child(options_inst)   # Add to root (on top)
+		get_tree().root.add_child(options_inst)  # Add to root (on top)
 	else:
 		log_message("Error: Options scene not found!", LogLevel.ERROR)
 
