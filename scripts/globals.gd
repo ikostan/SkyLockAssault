@@ -13,6 +13,7 @@ enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 
 # In globals.gd (add after @export vars)
 var hidden_menu: Node = null
+var options_open: bool = false
 var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
 var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 

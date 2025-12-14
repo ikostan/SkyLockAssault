@@ -87,6 +87,7 @@ func _ready() -> void:
 
 	# Configure for web overlays (invisible but positioned)
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignore pause
+	Globals.options_open = true  # Set flag on load
 	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
 
 	if OS.has_feature("web"):
@@ -211,6 +212,7 @@ func _on_back_pressed() -> void:
 	##
 	## :rtype: void
 	Globals.log_message("Back button pressed.", Globals.LogLevel.DEBUG)
+	Globals.options_open = false  # Clear flag before free
 	if Globals.hidden_menu and is_instance_valid(Globals.hidden_menu):
 		Globals.hidden_menu.visible = true
 		Globals.log_message("Showing menu: " + Globals.hidden_menu.name, Globals.LogLevel.DEBUG)

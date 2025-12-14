@@ -16,16 +16,27 @@ func _input(event: InputEvent) -> void:  # Add type hints
 
 
 # Called when the node enters the scene tree.
-# Hides the menu initially.
+# Hides the menu initially and sets process mode.
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS  # Process input always to catch initial ESC
 	resume_button.pressed.connect(_on_resume_button_pressed)
 	back_to_main_button.pressed.connect(_on_back_to_main_button_pressed)
+	options_button.pressed.connect(_on_options_button_pressed)
 	visible = false
-	Globals.log_message("Resume menu is ready.", Globals.LogLevel.DEBUG)
+	Globals.log_message("Pause menu is ready.", Globals.LogLevel.DEBUG)
 
 
 # Processes unhandled input for pause toggle (e.g., ESC key).
 func _unhandled_input(event: InputEvent) -> void:
+	## Processes unhandled input for pause toggle (e.g., ESC key).
+	##
+	## Ignores input only when hidden and options is open.
+	##
+	## :param event: The input event to process.
+	## :type event: InputEvent
+	## :rtype: void
+	if not visible and Globals.options_open:
+		return # Ignore input when hidden (e.g., during options)
 	if event.is_action_pressed("ui_cancel"):  # Default ESC action
 		toggle_pause()
 
