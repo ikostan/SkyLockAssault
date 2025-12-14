@@ -206,12 +206,12 @@ func _on_change_difficulty_js(args: Array) -> void:
 func _on_back_pressed() -> void:
 	## Handles the Back button press from the signal.
 	##
-	## Unpauses the game tree if paused, logs the action, removes the options menu,
+	## Shows hidden menu if valid, logs the action, removes the options menu,
 	## and hides web overlays if on web.
 	##
 	## :rtype: void
 	Globals.log_message("Back button pressed.", Globals.LogLevel.DEBUG)
-	if Globals.hidden_menu:
+	if Globals.hidden_menu and is_instance_valid(Globals.hidden_menu):
 		Globals.hidden_menu.visible = true
 		Globals.log_message("Showing menu: " + Globals.hidden_menu.name, Globals.LogLevel.DEBUG)
 		Globals.hidden_menu = null
