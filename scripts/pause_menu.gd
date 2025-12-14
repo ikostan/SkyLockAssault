@@ -59,5 +59,10 @@ func _on_back_to_main_button_pressed() -> void:
 
 
 func _on_options_button_pressed() -> void:
+	## Handles the Options button press.
+	##
+	## Loads options with self to hide and logs the action.
+	##
+	## :rtype: void
 	Globals.log_message("Options button pressed.", Globals.LogLevel.DEBUG)
-	Globals.load_options()
+	Globals.load_options(self)

@@ -143,7 +143,7 @@ func _on_options_button_pressed(_args: Array = []) -> void:
 	## :type _args: Array
 	## :rtype: void
 	Globals.log_message("Options button pressed.", Globals.LogLevel.DEBUG)
-	Globals.load_options()  # Your existing load
+	Globals.load_options(ui_panel)  # Your existing load
 
 
 func _on_quit_pressed(_args: Array = []) -> void:

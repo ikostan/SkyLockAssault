@@ -210,8 +210,13 @@ func _on_back_pressed() -> void:
 	## and hides web overlays if on web.
 	##
 	## :rtype: void
-	get_tree().paused = false
+	
+	# get_tree().paused = false
 	Globals.log_message("Back button pressed.", Globals.LogLevel.DEBUG)
+	if Globals.hidden_menu:
+		Globals.hidden_menu.visible = true
+		Globals.log_message("Showing menu: " + Globals.hidden_menu.name, Globals.LogLevel.DEBUG)
+		Globals.hidden_menu = null
 	if OS.has_feature("web"):
 		# Hide options overlays after closing menu
 		(

@@ -12,6 +12,7 @@ enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 @export var sfx_volume: float = 1.0
 
 # In globals.gd (add after @export vars)
+var hidden_menu: Node = null
 var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
 var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 
@@ -85,12 +86,19 @@ func _save_settings() -> void:
 	log_message("Settings saved.", LogLevel.DEBUG)
 
 
-# In globals.gd (load_options())
-func load_options() -> void:
-	log_message("Instancing options menu over current scene.", LogLevel.DEBUG)
+# Modified load_options
+func load_options(menu_to_hide: Node) -> void:
+	## Loads options menu and hides the caller menu.
+	##
+	## :param menu_to_hide: The menu node to hide.
+	## :type menu_to_hide: Node
+	## :rtype: void
+	hidden_menu = menu_to_hide
+	hidden_menu.visible = false
+	log_message("Hiding menu: " + menu_to_hide.name, LogLevel.DEBUG)
 	if options_scene:
-		var options_inst := options_scene.instantiate()
-		get_tree().root.add_child(options_inst)  # Add to root (on top)
+		var options_inst: CanvasLayer = options_scene.instantiate()
+		get_tree().root.add_child(options_inst)   # Add to root (on top)
 	else:
 		log_message("Error: Options scene not found!", LogLevel.ERROR)
 
