@@ -30,7 +30,7 @@ jobs:
           cache: true  # Enable caching for Godot executable and templates
       - name: "Cache Butler"
         id: "cache-butler"
-        uses: "actions/cache@v4"
+        uses: "actions/cache@v5"
         with:
           path: "butler"
           key: "${{ runner.os }}-butler-15.24.0-v2"  # Added -v2 to invalidate old cache
