@@ -123,20 +123,28 @@ func _ready() -> void:
 		)
 
 
+# New: Centralized teardown helper
+func _teardown() -> void:
+	## Central teardown: Restores hidden menu, clears flags/refs.
+	##
+	## Idempotent—safe for multiple calls.
+	##
+	## :rtype: void
+	if Globals.hidden_menu and is_instance_valid(Globals.hidden_menu):
+		Globals.hidden_menu.visible = true
+		Globals.log_message("Showing menu: " + Globals.hidden_menu.name, Globals.LogLevel.DEBUG)
+	Globals.hidden_menu = null  # Always clear
+	Globals.options_open = false
+	Globals.options_instance = null
+
+
 func _exit_tree() -> void:
 	## Handles node exit from scene tree.
 	##
 	## Restores hidden menu, clears flags/refs, logs exit.
 	##
 	## :rtype: void
-	if Globals.hidden_menu and is_instance_valid(Globals.hidden_menu):
-		Globals.hidden_menu.visible = true
-		Globals.log_message(
-			"Showing menu on exit: " + Globals.hidden_menu.name, Globals.LogLevel.DEBUG
-		)
-	Globals.hidden_menu = null
-	Globals.options_open = false
-	Globals.options_instance = null
+	_teardown()  # Centralized cleanup
 	Globals.log_message("Options menu exited.", Globals.LogLevel.DEBUG)
 
 
@@ -229,12 +237,8 @@ func _on_back_pressed() -> void:
 	##
 	## :rtype: void
 	Globals.log_message("Back button pressed.", Globals.LogLevel.DEBUG)
-	if Globals.hidden_menu and is_instance_valid(Globals.hidden_menu):
-		Globals.hidden_menu.visible = true
-		Globals.log_message("Showing menu: " + Globals.hidden_menu.name, Globals.LogLevel.DEBUG)
-	Globals.hidden_menu = null  # Always clear ref, even if invalid
-	Globals.options_open = false  # Clear flag before free
-	Globals.options_instance = null  # Clear instance ref
+	_teardown()  # Centralized cleanup
+
 	if OS.has_feature("web"):
 		# Hide options overlays after closing menu
 		(
