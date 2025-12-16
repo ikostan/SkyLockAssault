@@ -130,6 +130,7 @@ func _exit_tree() -> void:
 	##
 	## :rtype: void
 	Globals.options_open = false
+	Globals.options_instance = null  # Clear instance ref
 	Globals.log_message("Options menu exited.", Globals.LogLevel.DEBUG)
 
 
@@ -222,12 +223,12 @@ func _on_back_pressed() -> void:
 	##
 	## :rtype: void
 	Globals.log_message("Back button pressed.", Globals.LogLevel.DEBUG)
-	Globals.options_open = false  # Clear flag before free
 	if Globals.hidden_menu and is_instance_valid(Globals.hidden_menu):
 		Globals.hidden_menu.visible = true
 		Globals.log_message("Showing menu: " + Globals.hidden_menu.name, Globals.LogLevel.DEBUG)
 	Globals.hidden_menu = null  # Always clear ref, even if invalid
 	Globals.options_open = false  # Clear flag before free
+	Globals.options_instance = null  # Clear instance ref
 	if OS.has_feature("web"):
 		# Hide options overlays after closing menu
 		(

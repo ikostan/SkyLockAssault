@@ -12,6 +12,7 @@ enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 @export var sfx_volume: float = 1.0
 
 # In globals.gd (add after @export vars)
+var options_instance: CanvasLayer = null
 var hidden_menu: Node = null
 var options_open: bool = false
 var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
@@ -91,24 +92,27 @@ func _save_settings() -> void:
 func load_options(menu_to_hide: Node) -> void:
 	## Loads options menu and hides the caller menu (if valid).
 	##
+	## Guards against re-entrancy by checking existing instance.
+	##
 	## :param menu_to_hide: The menu node to hide (guarded against null/invalid).
 	## :type menu_to_hide: Node
 	## :rtype: void
+	if is_instance_valid(options_instance):
+		log_message("Options menu already open—ignoring load request.", LogLevel.WARNING)
+		return
+	
 	if menu_to_hide == null:
 		log_message("load_options: Called with null menu_to_hide—skipping hide.", LogLevel.WARNING)
 	elif not is_instance_valid(menu_to_hide):
-		log_message(
-			"load_options: Invalid/freed menu_to_hide (" + str(menu_to_hide) + ")—skipping hide.",
-			LogLevel.WARNING
-		)
+		log_message("load_options: Invalid/freed menu_to_hide (" + str(menu_to_hide) + ")—skipping hide.", LogLevel.WARNING)
 	else:
 		hidden_menu = menu_to_hide
 		hidden_menu.visible = false
 		log_message("Hiding menu: " + menu_to_hide.name, LogLevel.DEBUG)
-
+	
 	if options_scene:
-		var options_inst: CanvasLayer = options_scene.instantiate()
-		get_tree().root.add_child(options_inst)  # Add to root (on top)
+		options_instance = options_scene.instantiate()
+		get_tree().root.add_child(options_instance)
 	else:
 		log_message("Error: Options scene not found!", LogLevel.ERROR)
 		if hidden_menu and is_instance_valid(hidden_menu):
