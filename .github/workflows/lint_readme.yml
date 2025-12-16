@@ -21,7 +21,7 @@ jobs:
         # Lints Markdown for formatting/spelling
         # Pinned to SHA for security (was @v19)
         # yamllint disable rule:line-length
-        uses: "DavidAnson/markdownlint-cli2-action@30a0e04f1870d58f8d717450cc6134995f993c63"
+        uses: "DavidAnson/markdownlint-cli2-action@07035fd053f7be764496c0f8d8f9f41f98305101"
         # yamllint enable rule:line-length
         with:
           config: ".markdownlint-cli2.yaml"

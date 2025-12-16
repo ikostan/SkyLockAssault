@@ -3,10 +3,10 @@
 ## Supported Versions
 
 This policy applies to the latest stable release of SkyLockAssault, built with
-Godot v4.5. We prioritize security for web exports (HTML5) deployed to itch.io.
+Godot v4.4. We prioritize security for web exports (HTML5) deployed to itch.io.
 
-| Version | Supported      |
-|---------|----------------|
+| Version | Supported       |
+|---------|-----------------|
 | 1.x     | ✅ Yes (latest) |
 | < 1.x   | ❌ No           |
 
@@ -44,7 +44,7 @@ Please report vulnerabilities privately:
   - Reproduction steps (e.g., "In browser console: inject script during level load;
     tested on Chrome 120+").
   - Impact (e.g., "Could allow fuel cheat in multiplayer preview").
-  - Environment (e.g., "Godot v4.5 export to Win10/Chrome").
+  - Environment (e.g., "Godot v4.4 export to Win10/Chrome").
 - Do **not** disclose publicly (e.g., no X posts or itch.io comments) until resolved.
 
 We'll acknowledge reports within **48 hours**.

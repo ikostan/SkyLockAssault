@@ -63,8 +63,8 @@ To add yourself or someone else:
 - Comment on any issue or PR: `@all-contributors please add @username for contribution-types`
 - Replace `@username` with the GitHub username.
 - Replace `contribution-types` with comma-separated types (e.g., code,docs,test).
-  See [emoji key](https://allcontributors.org/docs/en/emoji-key) for types like 💻
-  for code, 📖 for docs.
+  See [emoji key](https://allcontributors.org/docs/en/emoji-key) for types
+  like 💻 for code, 📖 for docs.
 
 Example: `@all-contributors please add @ikostan for code,design`
 

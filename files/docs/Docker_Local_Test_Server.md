@@ -1,9 +1,10 @@
 # Docker Local Test Server
 
-To mimic itch.io hosting locally (for testing Web exports in browsers like Chrome/Firefox
-without uploading every time), we use a Docker-based Nginx server. This handles static
-files with required headers for Godot Web (e.g., COEP/COOP for WASM security). It's
-great for learning deployment flows before GitHub CI/CD pushes to itch.io.
+To mimic itch.io hosting locally (for testing Web exports in browsers like
+Chrome/Firefox without uploading every time), we use a Docker-based Nginx server.
+This handles static files with required headers for Godot Web
+(e.g., COEP/COOP for WASM security). It's great for learning deployment flows
+before GitHub CI/CD pushes to itch.io.
 
 ## Prerequisites
 
