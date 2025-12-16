@@ -100,16 +100,19 @@ func load_options(menu_to_hide: Node) -> void:
 	if is_instance_valid(options_instance):
 		log_message("Options menu already open—ignoring load request.", LogLevel.WARNING)
 		return
-	
+
 	if menu_to_hide == null:
 		log_message("load_options: Called with null menu_to_hide—skipping hide.", LogLevel.WARNING)
 	elif not is_instance_valid(menu_to_hide):
-		log_message("load_options: Invalid/freed menu_to_hide (" + str(menu_to_hide) + ")—skipping hide.", LogLevel.WARNING)
+		log_message(
+			"load_options: Invalid/freed menu_to_hide (" + str(menu_to_hide) + ")—skipping hide.",
+			LogLevel.WARNING
+		)
 	else:
 		hidden_menu = menu_to_hide
 		hidden_menu.visible = false
 		log_message("Hiding menu: " + menu_to_hide.name, LogLevel.DEBUG)
-	
+
 	if options_scene:
 		options_instance = options_scene.instantiate()
 		get_tree().root.add_child(options_instance)
