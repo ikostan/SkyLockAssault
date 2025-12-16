@@ -1,10 +1,28 @@
-## Test script: test_load_options_reentrancy.gd
-##
-## GDUnit test suite for load_options re-entrancy guard.
-## Tests prevention of multiple options loads.
-## Run via GDUnit inspector or command line.
-
+## Test script: test_load_options_reentrancy.gd (updated)
 extends GdUnitTestSuite
+
+var orig_options_scene: PackedScene
+var orig_options_instance: CanvasLayer
+var orig_hidden_menu: Node  # For completeness
+
+func before_test() -> void:
+	## Saves and resets globals before test.
+	##
+	## :rtype: void
+	orig_options_scene = Globals.options_scene
+	orig_options_instance = Globals.options_instance
+	orig_hidden_menu = Globals.hidden_menu
+	
+	Globals.options_instance = null
+	Globals.hidden_menu = null
+
+func after_test() -> void:
+	## Restores original globals after test.
+	##
+	## :rtype: void
+	Globals.options_scene = orig_options_scene
+	Globals.options_instance = orig_options_instance
+	Globals.hidden_menu = orig_hidden_menu
 
 func test_load_options_guards_reentrancy() -> void:
 	## Tests re-entrancy guard in load_options.
@@ -21,8 +39,8 @@ func test_load_options_guards_reentrancy() -> void:
 	assert_object(Globals.options_instance).is_null()
 	
 	# Simulate open instance
-	Globals.options_instance = CanvasLayer.new()  # Mock valid instance
+	Globals.options_instance = auto_free(CanvasLayer.new())  # Mock valid instance
 	Globals.load_options(mock_menu)
 	# Assert no change (guard fired)
 	assert_bool(mock_menu.visible).is_true()  # Not hidden
-	Globals.options_instance.queue_free()  # Cleanup mock
+	# auto_free handles cleanup
