@@ -111,6 +111,10 @@ func load_options(menu_to_hide: Node) -> void:
 		get_tree().root.add_child(options_inst)  # Add to root (on top)
 	else:
 		log_message("Error: Options scene not found!", LogLevel.ERROR)
+		if hidden_menu and is_instance_valid(hidden_menu):
+			hidden_menu.visible = true
+			log_message("Restored visibility of menu: " + hidden_menu.name, LogLevel.WARNING)
+		hidden_menu = null
 
 
 # Custom logging function with timestamp and level filtering.
