@@ -88,8 +88,6 @@ func _save_settings() -> void:
 	log_message("Settings saved.", LogLevel.DEBUG)
 
 
-## globals.gd (add after load_options func)
-## globals.gd (update handler)
 func _on_options_exited_unexpectedly() -> void:
 	## Handles unexpected tree exit of options_instance.
 	##

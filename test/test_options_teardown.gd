@@ -81,8 +81,6 @@ func test_unexpected_exit_resets_flag() -> void:
 	## Uses dummy node to isolate handler behavior without full menu load.
 	##
 	## :rtype: void
-	# Spy on Globals
-	var spy_globals: Node = spy(Globals)
 	
 	# Simulate stuck flag (as if teardown failed)
 	Globals.options_open = true
