@@ -123,6 +123,16 @@ func _ready() -> void:
 		)
 
 
+func _exit_tree() -> void:
+	## Handles node exit from scene tree.
+	##
+	## Clears options open flag.
+	##
+	## :rtype: void
+	Globals.options_open = false
+	Globals.log_message("Options menu exited.", Globals.LogLevel.DEBUG)
+
+
 func get_log_level_index() -> int:
 	## Retrieves the index of the current log level in the enum values.
 	##
@@ -216,7 +226,8 @@ func _on_back_pressed() -> void:
 	if Globals.hidden_menu and is_instance_valid(Globals.hidden_menu):
 		Globals.hidden_menu.visible = true
 		Globals.log_message("Showing menu: " + Globals.hidden_menu.name, Globals.LogLevel.DEBUG)
-		Globals.hidden_menu = null
+	Globals.hidden_menu = null  # Always clear ref, even if invalid
+	Globals.options_open = false  # Clear flag before free
 	if OS.has_feature("web"):
 		# Hide options overlays after closing menu
 		(
