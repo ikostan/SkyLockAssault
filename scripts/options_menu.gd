@@ -87,6 +87,7 @@ func _ready() -> void:
 
 	# Configure for web overlays (invisible but positioned)
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignore pause
+	Globals.options_open = true  # Set flag on load
 	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
 
 	if OS.has_feature("web"):
@@ -120,6 +121,31 @@ func _ready() -> void:
 		Globals.log_message(
 			"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
 		)
+
+
+# New: Centralized teardown helper
+func _teardown() -> void:
+	## Central teardown: Restores hidden menu, clears flags/refs.
+	##
+	## Idempotent—safe for multiple calls.
+	##
+	## :rtype: void
+	if Globals.hidden_menu and is_instance_valid(Globals.hidden_menu):
+		Globals.hidden_menu.visible = true
+		Globals.log_message("Showing menu: " + Globals.hidden_menu.name, Globals.LogLevel.DEBUG)
+	Globals.hidden_menu = null  # Always clear
+	Globals.options_open = false
+	Globals.options_instance = null
+
+
+func _exit_tree() -> void:
+	## Handles node exit from scene tree.
+	##
+	## Restores hidden menu, clears flags/refs, logs exit.
+	##
+	## :rtype: void
+	_teardown()  # Centralized cleanup
+	Globals.log_message("Options menu exited.", Globals.LogLevel.DEBUG)
 
 
 func get_log_level_index() -> int:
@@ -206,12 +232,13 @@ func _on_change_difficulty_js(args: Array) -> void:
 func _on_back_pressed() -> void:
 	## Handles the Back button press from the signal.
 	##
-	## Unpauses the game tree if paused, logs the action, removes the options menu,
+	## Shows hidden menu if valid, logs the action, removes the options menu,
 	## and hides web overlays if on web.
 	##
 	## :rtype: void
-	get_tree().paused = false
 	Globals.log_message("Back button pressed.", Globals.LogLevel.DEBUG)
+	_teardown()  # Centralized cleanup
+
 	if OS.has_feature("web"):
 		# Hide options overlays after closing menu
 		(
