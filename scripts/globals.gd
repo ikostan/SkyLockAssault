@@ -89,6 +89,7 @@ func _save_settings() -> void:
 
 
 ## globals.gd (add after load_options func)
+## globals.gd (update handler)
 func _on_options_exited_unexpectedly() -> void:
 	## Handles unexpected tree exit of options_instance.
 	##
@@ -96,7 +97,7 @@ func _on_options_exited_unexpectedly() -> void:
 	##
 	## :rtype: void
 	if Globals.options_open:  # Guard against redundant calls
-		log_message("Options exited unexpectedly—resetting flag.", LogLevel.WARNING)
+		log_message("Options instance exited unexpectedly—resetting flag.", LogLevel.WARNING)
 		Globals.options_open = false
 		Globals.options_instance = null
 
