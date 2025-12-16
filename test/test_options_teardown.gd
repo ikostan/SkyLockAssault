@@ -78,27 +78,31 @@ func test_hidden_menu_restored_on_exit() -> void:
 func test_unexpected_exit_resets_flag() -> void:
 	## Tests if handler resets flag on unexpected exit (e.g., if normal teardown fails).
 	##
-	## Direct queue_free simulates skip of _teardown; checks handler via log spy and direct assert.
+	## Uses dummy node to isolate handler behavior without full menu load.
 	##
 	## :rtype: void
-	Globals.load_options(null)  # Load normally; sets flag true
-	
-	await await_idle_frame()
-	
-	assert_bool(Globals.options_open).is_true()
-	
-	var opts: CanvasLayer = Globals.options_instance
-	
-	# Spy on Globals (class/instance)
+	# Spy on Globals
 	var spy_globals: Node = spy(Globals)
 	
-	# Simulate unexpected free (skips normal _teardown call)
-	opts.queue_free()
+	# Simulate stuck flag (as if teardown failed)
+	Globals.options_open = true
+	
+	# Create dummy to simulate options_instance
+	var dummy: CanvasLayer = auto_free(CanvasLayer.new())
+	Globals.options_instance = dummy  # Set ref for cleanup
+	
+	add_child(dummy)  # Add to tree to enable exit signals
+	
+	# Connect handler (as in load_options)
+	dummy.tree_exited.connect(Globals._on_options_exited_unexpectedly)
+	
+	# Simulate unexpected free
+	dummy.queue_free()
 	
 	await await_idle_frame()
 	
 	# Assert flag reset by handler
 	assert_bool(Globals.options_open).is_false()
 	
-	# Verify handler logged the reset
+	# Verify handler logged the reset (add period if in your handler string)
 	verify(spy_globals, 1).log_message("Options instance exited unexpectedly—resetting flag.", Globals.LogLevel.WARNING)
