@@ -88,6 +88,18 @@ func _save_settings() -> void:
 	log_message("Settings saved.", LogLevel.DEBUG)
 
 
+func _on_options_exited_unexpectedly() -> void:
+	## Handles unexpected tree exit of options_instance.
+	##
+	## Resets flag if stuck open; cleans ref.
+	##
+	## :rtype: void
+	if Globals.options_open:  # Guard against redundant calls
+		log_message("Options instance exited unexpectedly—resetting flag.", LogLevel.WARNING)
+		Globals.options_open = false
+		Globals.options_instance = null
+
+
 # Modified load_options with guards
 func load_options(menu_to_hide: Node) -> void:
 	## Loads options menu and hides the caller menu (if valid).
@@ -114,7 +126,19 @@ func load_options(menu_to_hide: Node) -> void:
 		log_message("Hiding menu: " + menu_to_hide.name, LogLevel.DEBUG)
 
 	if options_scene:
+		## Set flag before adding child to block pause immediately.
+		Globals.options_open = true  # Set early as before
+
 		options_instance = options_scene.instantiate()
+		if options_instance == null:
+			log_message("Failed to instantiate options scene—resetting flag.", LogLevel.ERROR)
+			Globals.options_open = false  # Reset to avoid stuck state
+			if hidden_menu and is_instance_valid(hidden_menu):
+				hidden_menu.visible = true  # Restore if we bailed
+			return
+
+		# Optional: Connect to tree_exited for unexpected free (extra safety)
+		options_instance.tree_exited.connect(_on_options_exited_unexpectedly)
 		get_tree().root.add_child(options_instance)
 	else:
 		log_message("Error: Options scene not found!", LogLevel.ERROR)

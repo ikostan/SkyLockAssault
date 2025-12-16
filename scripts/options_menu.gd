@@ -87,7 +87,6 @@ func _ready() -> void:
 
 	# Configure for web overlays (invisible but positioned)
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignore pause
-	Globals.options_open = true  # Set flag on load
 	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
 
 	if OS.has_feature("web"):
