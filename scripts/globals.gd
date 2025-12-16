@@ -114,6 +114,8 @@ func load_options(menu_to_hide: Node) -> void:
 		log_message("Hiding menu: " + menu_to_hide.name, LogLevel.DEBUG)
 
 	if options_scene:
+		## Set flag before adding child to block pause immediately.
+		Globals.options_open = true
 		options_instance = options_scene.instantiate()
 		get_tree().root.add_child(options_instance)
 	else:
