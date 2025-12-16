@@ -126,11 +126,15 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	## Handles node exit from scene tree.
 	##
-	## Clears options open flag.
+	## Restores hidden menu, clears flags/refs, logs exit.
 	##
 	## :rtype: void
+	if Globals.hidden_menu and is_instance_valid(Globals.hidden_menu):
+		Globals.hidden_menu.visible = true
+		Globals.log_message("Showing menu on exit: " + Globals.hidden_menu.name, Globals.LogLevel.DEBUG)
+	Globals.hidden_menu = null
 	Globals.options_open = false
-	Globals.options_instance = null  # Clear instance ref
+	Globals.options_instance = null
 	Globals.log_message("Options menu exited.", Globals.LogLevel.DEBUG)
 
 
