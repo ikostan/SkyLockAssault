@@ -1,4 +1,14 @@
-## Test script: test_options_teardown.gd (updated)
+## Test Options Teardown Script
+##
+## Unit tests for options menu teardown logic, including flag and menu restoration.
+##
+## Uses GdUnitTestSuite for assertions and lifecycle hooks.
+##
+## :vartype orig_hidden_menu: Node
+## :vartype orig_options_open: bool
+## :vartype orig_options_instance: CanvasLayer
+## :vartype orig_options_scene: PackedScene
+
 extends GdUnitTestSuite
 
 var orig_hidden_menu: Node
@@ -30,19 +40,18 @@ func after_test() -> void:
 	Globals.options_scene = orig_options_scene
 
 func test_options_open_cleared_on_exit() -> void:
-	## Tests if options_open is set on ready and cleared on exit_tree.
+	## Tests if options_open is set on load_options and cleared on exit_tree.
 	##
 	## :rtype: void
-	# Instance options menu
-	var options_inst: CanvasLayer = auto_free(load("res://scenes/options_menu.tscn").instantiate())
-	add_child(options_inst)  # Triggers _ready
+	# Mock hidden menu (null for this test)
+	Globals.load_options(null)  # Triggers instantiation and add_child; sets flag
+	
 	await await_idle_frame()  # Await init
 	
-	assert_bool(Globals.options_open).is_true()  # Set in _ready
+	assert_bool(Globals.options_open).is_true()  # Set in load_options
 	
 	# Simulate free (triggers _exit_tree)
-	remove_child(options_inst)
-	options_inst.queue_free()
+	Globals.options_instance.queue_free()
 	await await_idle_frame()  # Await exit
 	
 	assert_bool(Globals.options_open).is_false()  # Cleared in _exit_tree
@@ -54,16 +63,13 @@ func test_hidden_menu_restored_on_exit() -> void:
 	# Mock hidden menu
 	var mock_hidden: Panel = auto_free(Panel.new())
 	mock_hidden.visible = false
-	Globals.hidden_menu = mock_hidden
 	
-	# Instance options menu
-	var options_inst: CanvasLayer = auto_free(load("res://scenes/options_menu.tscn").instantiate())
-	add_child(options_inst)  # Triggers _ready
+	Globals.load_options(mock_hidden)  # Loads options, hides mock, sets flag/refs
+	
 	await await_idle_frame()
 	
 	# Simulate free
-	remove_child(options_inst)
-	options_inst.queue_free()
+	Globals.options_instance.queue_free()
 	await await_idle_frame()
 	
 	assert_bool(mock_hidden.visible).is_true()  # Restored in _exit_tree
