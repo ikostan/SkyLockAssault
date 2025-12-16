@@ -131,7 +131,9 @@ func _exit_tree() -> void:
 	## :rtype: void
 	if Globals.hidden_menu and is_instance_valid(Globals.hidden_menu):
 		Globals.hidden_menu.visible = true
-		Globals.log_message("Showing menu on exit: " + Globals.hidden_menu.name, Globals.LogLevel.DEBUG)
+		Globals.log_message(
+			"Showing menu on exit: " + Globals.hidden_menu.name, Globals.LogLevel.DEBUG
+		)
 	Globals.hidden_menu = null
 	Globals.options_open = false
 	Globals.options_instance = null
