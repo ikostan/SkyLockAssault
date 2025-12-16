@@ -8,7 +8,7 @@ Godot v4.4. We prioritize security for web exports (HTML5) deployed to itch.io.
 | Version | Supported       |
 |---------|-----------------|
 | 1.x     | ✅ Yes (latest) |
-| < 1.x   | ❌ No            |
+| < 1.x   | ❌ No           |
 
 As a Godot-based top-down combat game, we have minimal external dependencies
 (e.g., no Node.js runtime), reducing vuln surface. Focus areas: GDScript logic,
