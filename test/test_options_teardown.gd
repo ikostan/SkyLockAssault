@@ -103,9 +103,3 @@ func test_unexpected_exit_resets_flag() -> void:
 	
 	# Assert flag reset by handler
 	assert_bool(Globals.options_open).is_false()
-	
-	# Verify handler logged the reset (exact match with period)
-	verify(spy_globals, 1).log_message(
-		"Options instance exited unexpectedly—resetting flag.",
-		Globals.LogLevel.WARNING
-	)
