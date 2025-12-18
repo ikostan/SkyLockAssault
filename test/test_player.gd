@@ -40,7 +40,7 @@ func test_fuel_depletion() -> void:
 	await await_idle_frame()
 	
 	## Find player root node
-	var player_root: Node = runner.find_node("Player")
+	var player_root: Node = runner.find_child("Player")
 	assert_object(player_root).is_not_null()
 	
 	## Assert init (float)
@@ -65,7 +65,7 @@ func test_movement() -> void:
 	await await_idle_frame()
 	
 	## Find player root
-	var player_root: Node = runner.find_node("Player")
+	var player_root: Node = runner.find_child("Player")
 	
 	## Simulate action (left)
 	runner.simulate_action_pressed("move_left")
@@ -90,7 +90,7 @@ func test_clamping() -> void:
 	await await_idle_frame()
 	
 	## Find player root and re-call _ready to ensure boundaries (viewport sets screen_size)
-	var player_root: Node = runner.find_node("Player")
+	var player_root: Node = runner.find_child("Player")
 	player_root.call("_ready")  # Re-call to update mins/maxes
 	
 	## Get char_body
@@ -112,7 +112,7 @@ func test_fuel_colors() -> void:
 	await await_idle_frame()
 	
 	## Find player root
-	var player_root: Node = runner.find_node("Player")
+	var player_root: Node = runner.find_child("Player")
 	
 	## High fuel green (set float)
 	player_root.set("current_fuel", 95.0)
@@ -133,7 +133,7 @@ func test_fuel_colors_fixed() -> void:
 	await await_idle_frame()
 	
 	## Find player root
-	var player_root: Node = runner.find_node("Player")
+	var player_root: Node = runner.find_child("Player")
 	
 	player_root.set("current_fuel", 95.0)  # >90
 	player_root.call("_on_fuel_timer_timeout")
