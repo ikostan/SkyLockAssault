@@ -109,10 +109,11 @@ func _input(event: InputEvent) -> void:
 # Connect Timer's timeout signal
 func _on_fuel_timer_timeout() -> void:
 	var fuel_left: float = current_fuel - (0.5 * Globals.difficulty)  # Scale base rate
-	var fuel_percent: float = (current_fuel / max_fuel) * 100.0
 	# Add a clamp so current_fuel never drops below zero
 	# to prevent negative values and any unintended behavior in the fuel bar.
 	current_fuel = clamp(fuel_left, 0, max_fuel)
+	# Now compute percent and lerp from the clamped/updated value
+	var fuel_percent: float = (current_fuel / max_fuel) * 100.0
 	fuel_bar.value = current_fuel
 	lerp_factor = 1.0 - (current_fuel / max_fuel)  # 0=full (green), 1=empty (red)
 	progress_bar_bg_color = fill_style.bg_color
