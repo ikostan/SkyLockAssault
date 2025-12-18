@@ -29,8 +29,7 @@ var screen_size: Vector2
 # Onreadys next
 @onready var player: CharacterBody2D = $CharacterBody2D
 @onready var collision_shape: CollisionShape2D = $CharacterBody2D/CollisionShape2D
-@onready
-var fuel_bar: ProgressBar = $"../PlayerStatsPanel/VBoxContainer/HBoxContainer/FuelProgressBar"
+@onready var fuel_bar: ProgressBar = $"../PlayerStatsPanel/VBoxContainer/HBoxContainer/FuelProgressBar"
 @onready var fuel_timer: Timer = $FuelTimer
 # Get the fill style
 @onready var fill_style: StyleBoxFlat = fuel_bar.get_theme_stylebox("fill")
@@ -78,7 +77,7 @@ func _ready() -> void:
 	# Initialize fuel
 	current_fuel = max_fuel
 	fuel_bar.max_value = max_fuel
-	fuel_bar.value = current_fuel  # Set initial progress
+	update_fuel_bar()  # Set initial UI and color
 	fuel_timer.timeout.connect(_on_fuel_timer_timeout)
 	fuel_timer.start()
 
@@ -106,15 +105,9 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-# Connect Timer's timeout signal
-func _on_fuel_timer_timeout() -> void:
-	var fuel_left: float = current_fuel - (0.5 * Globals.difficulty)  # Scale base rate
-	# Add a clamp so current_fuel never drops below zero
-	# to prevent negative values and any unintended behavior in the fuel bar.
-	current_fuel = clamp(fuel_left, 0, max_fuel)
-	# Now compute percent and lerp from the clamped/updated value
-	var fuel_percent: float = (current_fuel / max_fuel) * 100.0
+func update_fuel_bar() -> void:
 	fuel_bar.value = current_fuel
+	var fuel_percent: float = (current_fuel / max_fuel) * 100.0
 	lerp_factor = 1.0 - (current_fuel / max_fuel)  # 0=full (green), 1=empty (red)
 	progress_bar_bg_color = fill_style.bg_color
 
@@ -141,6 +134,17 @@ func _on_fuel_timer_timeout() -> void:
 	else:
 		fill_style.bg_color = Color.RED  # Full red
 
+
+# Connect Timer's timeout signal
+func _on_fuel_timer_timeout() -> void:
+	var fuel_left: float = current_fuel - (0.5 * Globals.difficulty)  # Scale base rate
+	
+	# Clamp and update current_fuel first
+	current_fuel = clamp(fuel_left, 0, max_fuel)
+	
+	# Update UI from the clamped value
+	update_fuel_bar()
+	
 	if current_fuel <= 0:
 		speed = 0.0  # Or game over logic
 		fuel_timer.stop()
