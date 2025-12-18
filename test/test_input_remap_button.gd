@@ -240,8 +240,7 @@ func test_fallback_labels() -> void:
 	
 	InputMap.erase_action("test_action")
 
-## Test finish_remap with invalid index (no error, skips log)
-## :param none
+## Test finish_remap with invalid index (no error, skips log, adds event but displays Unbound).
 ## :rtype: void
 func test_finish_remap_invalid_index() -> void:
 	if InputMap.has_action("test_action"):
@@ -255,7 +254,6 @@ func test_finish_remap_invalid_index() -> void:
 	add_child(button)
 	button._ready()
 
-	# Simulate remap process but with invalid index
 	button.button_pressed = true
 	button._on_pressed()
 
@@ -264,7 +262,13 @@ func test_finish_remap_invalid_index() -> void:
 	sim_event.pressed = true
 	button._input(sim_event)  # Calls finish_remap, should not error
 
-	assert_str(button.text).is_equal("A")  # Still updates text
+	assert_str(button.text).is_equal("Unbound")  # Displays Unbound due to invalid index
 	assert_bool(button.listening).is_false()
+	
+	# Verify event added despite invalid index
+	var events: Array = InputMap.action_get_events("test_action")
+	assert_int(events.size()).is_equal(1)
+	assert_that(events[0] is InputEventKey).is_true()
+	assert_int(events[0].physical_keycode).is_equal(KEY_A)
 	
 	InputMap.erase_action("test_action")
