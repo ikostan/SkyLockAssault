@@ -71,7 +71,7 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				_needs_migration = true
 				serials = ["key:" + str(value)]
 			elif value is Array:  # New format
-				serials = value
+				serials = value as Array[String]
 			else:
 				Globals.log_message(
 					"Invalid saved value for " + action + ": skipping.", Globals.LogLevel.WARNING
