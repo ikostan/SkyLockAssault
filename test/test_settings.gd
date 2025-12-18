@@ -159,23 +159,54 @@ func test_backward_compat_old_format() -> void:
 	assert_that(events[0] is InputEventKey).is_true()
 	assert_int(events[0].physical_keycode).is_equal(KEY_Q)
 
-# Test default key fallback if empty after load
+# Test default key fallback if no saved data for action
 func test_default_key_fallback() -> void:
 	var test_path: String = "user://test_settings.cfg"
-	var test_actions: Array[String] = ["test_action"]
+	var test_actions: Array[String] = ["speed_up"]
 	
-	# Save empty (unbound)
-	InputMap.action_erase_events("test_action")
-	Settings.save_input_mappings(test_path, test_actions)  # Saves nothing for action
+	# Backup original
+	var original_events: Array[InputEvent] = InputMap.action_get_events("speed_up")
 	
-	# Load (should add default KEY_W from DEFAULT_KEYS)
+	# Create empty config (no key for action)
+	var config: ConfigFile = ConfigFile.new()
+	config.save(test_path)
+	
+	assert_bool(FileAccess.file_exists(test_path)).is_true()
+	
+	# Erase and load (should add default KEY_W since no saved)
+	InputMap.action_erase_events("speed_up")
 	Settings.load_input_mappings(test_path, test_actions)
 	
 	# Verify default added
-	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
+	var events: Array[InputEvent] = InputMap.action_get_events("speed_up")
 	assert_int(events.size()).is_equal(1)
 	assert_that(events[0] is InputEventKey).is_true()
-	assert_int(events[0].physical_keycode).is_equal(KEY_W)  # From DEFAULT_KEYS["speed_up"], but use test_action's default if set; adjust if needed
+	assert_int(events[0].physical_keycode).is_equal(KEY_W)
+	
+	# Restore original
+	InputMap.action_erase_events("speed_up")
+	for ev: InputEvent in original_events:
+		InputMap.action_add_event("speed_up", ev)
+
+# Test unbound action save/load (empty array)
+func test_unbound_action_persistence() -> void:
+	var test_path: String = "user://test_settings.cfg"
+	var test_actions: Array[String] = ["test_action"]
+	
+	# Unbind
+	InputMap.action_erase_events("test_action")
+	
+	# Save (should save empty array)
+	Settings.save_input_mappings(test_path, test_actions)
+	
+	assert_bool(FileAccess.file_exists(test_path)).is_true()
+	
+	# Load (should load empty, no default for test_action)
+	Settings.load_input_mappings(test_path, test_actions)
+	
+	# Verify empty
+	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
+	assert_int(events.size()).is_equal(0)
 
 # Test multi-action persistence (updated for array)
 func test_multi_action_persistence() -> void:
@@ -195,14 +226,14 @@ func test_multi_action_persistence() -> void:
 	assert_bool(FileAccess.file_exists(test_path)).is_true()
 	
 	# Erase and load
-	for action in test_actions:
+	for action: String in test_actions:
 		InputMap.action_erase_events(action)
 	Settings.load_input_mappings(test_path, test_actions)
 	
-	# Verify action1 has KEY_A, action2 empty (or default if applicable; test_action2 has no default, so empty)
+	# Verify action1 has KEY_A, action2 empty (unbound)
 	var events1: Array[InputEvent] = InputMap.action_get_events("test_action1")
 	assert_int(events1.size()).is_equal(1)
 	assert_int(events1[0].physical_keycode).is_equal(KEY_A)
 	
 	var events2: Array[InputEvent] = InputMap.action_get_events("test_action2")
-	assert_int(events2.size()).is_equal(0)  # Unbound, no default for test_action2
+	assert_int(events2.size()).is_equal(0)

@@ -1,10 +1,7 @@
-## settings.gd
-## Input settings singleton: Loads/saves InputMap events to preserve custom mappings.
-## Supports keys, joypad buttons, and joypad axes (serialized).
-## Autoload as "Settings".
-##
-## :vartype CONFIG_PATH: String
-## :vartype ACTIONS: Array[String]
+# settings.gd
+# Input settings singleton: Loads/saves InputMap events to preserve custom mappings.
+# Supports keys, joypad buttons, and joypad axes (serialized).
+# Autoload as "Settings".
 
 extends Node
 
@@ -22,11 +19,9 @@ const DEFAULT_KEYS: Dictionary = {
 	"pause": KEY_ESCAPE,
 }
 
-
 func _ready() -> void:
 	load_input_mappings()
 	save_input_mappings()  # Re-save in new format after load (upgrades old cfg)
-
 
 ## Serializes an InputEvent to string for ConfigFile storage.
 ## Handles Key (no device), JoypadButton, and JoypadMotion (with device).
@@ -45,7 +40,6 @@ func serialize_event(ev: InputEvent) -> String:
 
 	return ""
 
-
 ## Loads input mappings from config, overriding project defaults only if saved.
 ## Handles old int keycode format for backward compat.
 ## Skips if no saved data (preserves project key+joypad bindings).
@@ -61,24 +55,22 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 		Globals.log_message("No settings.cfg—using project defaults.", Globals.LogLevel.INFO)
 		return
 	for action: String in actions:
-		var value: Variant = config.get_value("input", action, null)
-		if value == null:
-			continue
-		var serials: Array[String] = []
-		if value is int:  # Old format: single keycode int
-			serials = ["key:" + str(value)]
-		elif value is Array:  # New format
-			serials = value
-		else:
-			Globals.log_message(
-				"Invalid saved value for " + action + ": skipping.", Globals.LogLevel.WARNING
-			)
-			continue
 		InputMap.action_erase_events(action)
-		for s: String in serials:
-			_deserialize_and_add(action, s)
-
-		# Add this block (ensures default key if no events after load)
+		var has_saved: bool = config.has_section_key("input", action)
+		if has_saved:
+			var value: Variant = config.get_value("input", action)
+			var serials: Array[String] = []
+			if value is int:  # Old format: single keycode int
+				serials = ["key:" + str(value)]
+			elif value is Array:  # New format
+				serials = value
+			else:
+				Globals.log_message(
+					"Invalid saved value for " + action + ": skipping.", Globals.LogLevel.WARNING
+				)
+				continue
+			for s: String in serials:
+				_deserialize_and_add(action, s)
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
 		if events.is_empty() and DEFAULT_KEYS.has(action):
 			var keycode: int = DEFAULT_KEYS[action]
@@ -87,7 +79,6 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				nev.physical_keycode = keycode
 				InputMap.action_add_event(action, nev)
 				Globals.log_message("Added default key for " + action, Globals.LogLevel.DEBUG)
-
 
 ## Deserializes string to event and adds to action.
 ## Handles device for joy events (-1 if omitted).
@@ -121,7 +112,6 @@ func _deserialize_and_add(action: String, serialized: String) -> void:
 		nev.device = dev
 		InputMap.action_add_event(action, nev)
 
-
 ## Saves current InputMap events to config (all per action as array).
 ## :param path: Config file path (default: CONFIG_PATH).
 ## :type path: String
@@ -137,6 +127,5 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			var s: String = serialize_event(ev)
 			if not s.is_empty():
 				serials.append(s)
-		if not serials.is_empty():
-			config.set_value("input", action, serials)
+		config.set_value("input", action, serials)  # Set even if empty
 	config.save(path)
