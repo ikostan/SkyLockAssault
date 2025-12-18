@@ -28,7 +28,7 @@ func test_player_present() -> void:
 	
 	assert_object(main_scene).is_not_null()  # Scene loads
 	## Get player node (Node2D)
-	var player: Node2D = main_scene.get_node("player")
+	var player: Node2D = main_scene.get_node("Player")
 	assert_object(player).is_instanceof(Node2D)
 	assert_object(player).is_not_null()
 	assert_bool(player.visible).is_true()  # Post-fade
