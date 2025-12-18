@@ -1,19 +1,27 @@
 # test_input_remap_button.gd (updated for new features: keyboard, joypad button, motion; tests display & remap)
-# Uses GdUnit4 (assume installed; install via AssetLib if not).
+# Unit tests for InputRemapButton class using GdUnit4.
+# Covers label display for various input types, unbound state, remapping simulations, and fallback labels.
+# Assumes GdUnit4 is installed via AssetLib.
 # Run via GdUnit Inspector or command line.
+# :classname: test_input_remap_button
+
 extends GdUnitTestSuite
 
-@warning_ignore("unused_parameter")
+## Global setup if needed (e.g., mock Globals/Settings if logging/save called)
+## :param none
+## :rtype: void
 func before() -> void:
-	# Global setup if needed (e.g., mock Globals/Settings if logging/save called)
 	pass
 
-@warning_ignore("unused_parameter")
+## Global cleanup
+## :param none
+## :rtype: void
 func after() -> void:
-	# Global cleanup
 	pass
 
-# Test keyboard label display (original, updated for Godot 4.4)
+## Test keyboard label display (original, updated for Godot 4.x)
+## :param none
+## :rtype: void
 func test_keyboard_label_display() -> void:
 	# Clean up if action exists
 	if InputMap.has_action("test_action"):
@@ -26,7 +34,7 @@ func test_keyboard_label_display() -> void:
 	InputMap.action_add_event("test_action", event)
 	
 	# Instance button, set action, ready
-	var button: InputRemapButton = InputRemapButton.new()
+	var button: InputRemapButton = auto_free(InputRemapButton.new())
 	button.action = "test_action"
 	button._ready()
 	
@@ -34,10 +42,11 @@ func test_keyboard_label_display() -> void:
 	assert_str(button.text).is_equal("Space")
 	
 	# Cleanup
-	button.free()
 	InputMap.erase_action("test_action")
 
-# Test joypad button label display
+## Test joypad button label display
+## :param none
+## :rtype: void
 func test_joypad_button_label_display() -> void:
 	if InputMap.has_action("test_action"):
 		InputMap.erase_action("test_action")
@@ -48,16 +57,17 @@ func test_joypad_button_label_display() -> void:
 	event.device = -1
 	InputMap.action_add_event("test_action", event)
 	
-	var button: InputRemapButton = InputRemapButton.new()
+	var button: InputRemapButton = auto_free(InputRemapButton.new())
 	button.action = "test_action"
 	button._ready()
 	
 	assert_str(button.text).is_equal("A")
 	
-	button.free()
 	InputMap.erase_action("test_action")
 
-# Test joypad motion (axis) label display
+## Test joypad motion (axis) label display
+## :param none
+## :rtype: void
 func test_joypad_motion_label_display() -> void:
 	if InputMap.has_action("test_action"):
 		InputMap.erase_action("test_action")
@@ -69,43 +79,46 @@ func test_joypad_motion_label_display() -> void:
 	event.device = -1
 	InputMap.action_add_event("test_action", event)
 	
-	var button: InputRemapButton = InputRemapButton.new()
+	var button: InputRemapButton = auto_free(InputRemapButton.new())
 	button.action = "test_action"
 	button._ready()
 	
 	assert_str(button.text).is_equal("Left Stick Left")
 	
-	button.free()
 	InputMap.erase_action("test_action")
 
-# Test unbound display
+## Test unbound display
+## :param none
+## :rtype: void
 func test_unbound_label_display() -> void:
 	if InputMap.has_action("test_action"):
 		InputMap.erase_action("test_action")
 	
 	InputMap.add_action("test_action")  # No events
 	
-	var button: InputRemapButton = InputRemapButton.new()
+	var button: InputRemapButton = auto_free(InputRemapButton.new())
 	button.action = "test_action"
 	button._ready()
 	
 	assert_str(button.text).is_equal("Unbound")
 	
-	button.free()
 	InputMap.erase_action("test_action")
 
-# Test remapping keyboard (simulate input)
+## Test remapping keyboard (simulate input)
+## :param none
+## :rtype: void
 func test_remap_keyboard() -> void:
 	if InputMap.has_action("test_action"):
 		InputMap.erase_action("test_action")
 	
 	InputMap.add_action("test_action")  # Start empty
 	
-	var button: InputRemapButton = InputRemapButton.new()
+	var button: InputRemapButton = auto_free(InputRemapButton.new())
 	button.action = "test_action"
 	button._ready()
 	
 	# Simulate press to start listening
+	button.button_pressed = true
 	button._on_pressed()  # Sets listening=true, text="Press..."
 	assert_bool(button.listening).is_true()
 	
@@ -125,20 +138,22 @@ func test_remap_keyboard() -> void:
 	assert_that(events[0] is InputEventKey).is_true()
 	assert_int(events[0].physical_keycode).is_equal(KEY_D)
 	
-	button.free()
 	InputMap.erase_action("test_action")
 
-# Test remapping joypad button
+## Test remapping joypad button
+## :param none
+## :rtype: void
 func test_remap_joypad_button() -> void:
 	if InputMap.has_action("test_action"):
 		InputMap.erase_action("test_action")
 	
 	InputMap.add_action("test_action")
 	
-	var button: InputRemapButton = InputRemapButton.new()
+	var button: InputRemapButton = auto_free(InputRemapButton.new())
 	button.action = "test_action"
 	button._ready()
 	
+	button.button_pressed = true
 	button._on_pressed()
 	assert_bool(button.listening).is_true()
 	
@@ -156,20 +171,22 @@ func test_remap_joypad_button() -> void:
 	assert_int(events[0].button_index).is_equal(JOY_BUTTON_B)
 	assert_int(events[0].device).is_equal(-1)
 	
-	button.free()
 	InputMap.erase_action("test_action")
 
-# Test remapping joypad motion (axis)
+## Test remapping joypad motion (axis)
+## :param none
+## :rtype: void
 func test_remap_joypad_motion() -> void:
 	if InputMap.has_action("test_action"):
 		InputMap.erase_action("test_action")
 	
 	InputMap.add_action("test_action")
 	
-	var button: InputRemapButton = InputRemapButton.new()
+	var button: InputRemapButton = auto_free(InputRemapButton.new())
 	button.action = "test_action"
 	button._ready()
 	
+	button.button_pressed = true
 	button._on_pressed()
 	assert_bool(button.listening).is_true()
 	
@@ -188,10 +205,11 @@ func test_remap_joypad_motion() -> void:
 	assert_float(events[0].axis_value).is_equal(1.0)
 	assert_int(events[0].device).is_equal(-1)
 	
-	button.free()
 	InputMap.erase_action("test_action")
 
-# Test fallback labels (unknown button/axis)
+## Test fallback labels (unknown button/axis)
+## :param none
+## :rtype: void
 func test_fallback_labels() -> void:
 	if InputMap.has_action("test_action"):
 		InputMap.erase_action("test_action")
@@ -203,19 +221,18 @@ func test_fallback_labels() -> void:
 	btn_event.button_index = 999  # Invalid
 	InputMap.action_add_event("test_action", btn_event)
 	
-	var button: InputRemapButton = InputRemapButton.new()
+	var button: InputRemapButton = auto_free(InputRemapButton.new())
 	button.action = "test_action"
 	button._ready()
 	assert_str(button.text).is_equal("Button 999")
 	
-	# Unknown axis
+	# Unknown direction for axis
 	InputMap.action_erase_event("test_action", btn_event)
 	var axis_event: InputEventJoypadMotion = InputEventJoypadMotion.new()
-	axis_event.axis = 999
-	axis_event.axis_value = 1.0
+	axis_event.axis = JOY_AXIS_TRIGGER_LEFT
+	axis_event.axis_value = -1.0
 	InputMap.action_add_event("test_action", axis_event)
 	button.update_button_text()
-	assert_str(button.text).is_equal("Axis 999 +")
+	assert_str(button.text).is_equal("Left Trigger -")
 	
-	button.free()
 	InputMap.erase_action("test_action")

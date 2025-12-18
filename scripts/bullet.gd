@@ -18,8 +18,7 @@ var timer: Timer
 
 # NO @onready for ShotSFX — we’ll create players dynamically
 func _ready() -> void:
-	Globals.log_message("BulletFirer _ready: Script loaded.", Globals.LogLevel.DEBUG)
-
+	# Globals.log_message("BulletFirer _ready: Script loaded.", Globals.LogLevel.DEBUG)
 	# Set Texture Filter to Nearest
 	get_viewport().canvas_item_default_texture_filter = (
 		Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
@@ -69,8 +68,7 @@ func play_sfx_with_volume() -> void:
 	# Play and auto-cleanup
 	sfx_player.play()
 	sfx_player.finished.connect(func() -> void: sfx_player.queue_free())
-
-	Globals.log_message("SFX played on Web with bus volume control.", Globals.LogLevel.DEBUG)
+	# Globals.log_message("SFX played on Web with bus volume control.", Globals.LogLevel.DEBUG)
 
 
 func spawn_projectile() -> void:

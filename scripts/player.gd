@@ -94,7 +94,7 @@ func _ready() -> void:
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("fire"):
-		Globals.log_message("Fire input pressed → calling weapon.fire()", Globals.LogLevel.DEBUG)
+		# Globals.log_message("Fire input pressed → calling weapon.fire()", Globals.LogLevel.DEBUG)
 		if weapon and weapon.has_method("fire"):
 			weapon.fire()
 		get_viewport().set_input_as_handled()
@@ -134,9 +134,6 @@ func _on_fuel_timer_timeout() -> void:
 func _physics_process(_delta: float) -> void:
 	var direction: Vector2 = Input.get_vector("move_left", "move_right", "speed_up", "speed_down")
 	if direction != Vector2.ZERO:
-		Globals.log_message(
-			"Direction: " + str(direction) + " (Left pressed? x<0)", Globals.LogLevel.DEBUG
-		)  # Temp debug
 		player.velocity = direction * speed
 	else:
 		player.velocity = Vector2.ZERO
