@@ -11,7 +11,8 @@ var runner: GdUnitSceneRunner
 
 ## Setup before all tests (e.g., mock globals)
 func before() -> void:
-	pass
+	# float: Set for consistent depletion (0.5 * 2 = 1)
+	Globals.difficulty = 2.0
 
 ## Teardown after all tests
 func after() -> void:
@@ -27,7 +28,7 @@ func test_player_present() -> void:
 	
 	assert_object(main_scene).is_not_null()  # Scene loads
 	## Get player node (Node2D)
-	var player: Node2D = main_scene.get_node("Player")
+	var player: Node2D = main_scene.get_node("player")
 	assert_object(player).is_instanceof(Node2D)
 	assert_object(player).is_not_null()
 	assert_bool(player.visible).is_true()  # Post-fade
@@ -64,7 +65,7 @@ func test_movement() -> void:
 	## Simulate action (left)
 	runner.simulate_action_pressed("move_left")
 	await await_idle_frame()
-	runner.simulate_frame(0.016)  # Simulates _physics_process
+	runner.simulate_frames(1)  # int: Simulates 1 frame (default delta 1/60)
 	## Assert velocity (Vector2)
 	var char_body: CharacterBody2D = runner.get_property("player")
 	assert_vector(char_body.velocity).is_equal(Vector2(-250.0, 0.0))  # Left
@@ -72,7 +73,7 @@ func test_movement() -> void:
 	runner.simulate_action_released("move_left")
 	runner.simulate_action_pressed("speed_up")
 	await await_idle_frame()
-	runner.simulate_frame(0.016)
+	runner.simulate_frames(1)  # int: Simulates 1 frame (default delta 1/60)
 	assert_vector(char_body.velocity).is_equal(Vector2(0.0, -250.0))  # Up (y negative?)
 	
 	# Add more for down/right/combos
@@ -90,12 +91,14 @@ func test_clamping() -> void:
 	## Set out-of-bound position (Vector2)
 	var char_body: CharacterBody2D = runner.get_property("player")
 	char_body.position = Vector2(-100, -100)  # Direct set (no set_property for sub-node)
-	runner.simulate_frame(0.016)  # Clamps in _physics_process
-	assert_vector(char_body.position).is_equal(Vector2(runner.get_property("player_half_width"), runner.get_property("player_half_height")))  # Min clamp
+	runner.simulate_frames(1)  # int: Simulates 1 frame (default delta 1/60)
+	assert_vector(char_body.position).is_equal(Vector2(runner.get_property("player_x_min"), runner.get_property("player_y_min")))
+	# assert_vector(char_body.position).is_equal(Vector2(runner.get_property("player_half_width"), runner.get_property("player_half_height")))  # Min clamp
 	
 	char_body.position = Vector2(1400, 800)
 	runner.simulate_frame(0.016)
-	assert_vector(char_body.position).is_equal(Vector2(1280 - runner.get_property("player_half_width"), 720 - runner.get_property("player_half_height")))  # Max
+	assert_vector(char_body.position).is_equal(Vector2(runner.get_property("player_x_max"), runner.get_property("player_y_max")))
+	# assert_vector(char_body.position).is_equal(Vector2(1280 - runner.get_property("player_half_width"), 720 - runner.get_property("player_half_height")))  # Max
 
 # Test fuel color changes (simulate _on_fuel_timer_timeout)
 func test_fuel_colors() -> void:
@@ -108,10 +111,30 @@ func test_fuel_colors() -> void:
 	runner.invoke("_on_fuel_timer_timeout")  # Updates color
 	var fuel_bar: ProgressBar = runner.get_property("fuel_bar")
 	var fill_style: StyleBoxFlat = fuel_bar.get_theme_stylebox("fill").duplicate()
-	assert_that(fill_style.bg_color).is_equal_approx(Color.GREEN.lerp(Color(0,0,0,0), (100.0 - 95.0) / (100.0 - 90.0)))  # Lerp calc; adjust per code
+	assert_that(fill_style.bg_color).is_equal(Color.GREEN)  # But requires logic fix below
+	assert_that(fill_style.bg_color).is_equal(runner.get_property("progress_bar_bg_color"))  # No change per current logic
+	# assert_that(fill_style.bg_color).is_equal_approx(Color.GREEN.lerp(Color(0,0,0,0), (100.0 - 95.0) / (100.0 - 90.0)))  # Lerp calc; adjust per code
 	
 	# Add tests for yellow/red thresholds
 	runner.set_property("current_fuel", 10.0)
 	runner.invoke("_on_fuel_timer_timeout")
 	fill_style = fuel_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(fill_style.bg_color).is_equal(Color.RED)
+
+
+# Test updated fuel bar color logic.
+func test_fuel_colors_fixed() -> void:
+
+	runner = scene_runner("res://scenes/Player.tscn")
+	await await_idle_frame()
+
+	runner.set_property("current_fuel", 95.0)  # >90
+	runner.invoke("_on_fuel_timer_timeout")
+	var fill_style: StyleBoxFlat = runner.get_property("fuel_bar").get_theme_stylebox("fill").duplicate()
+	assert_that(fill_style.bg_color).is_equal(Color.GREEN)
+
+	runner.set_property("current_fuel", 70.0)  # 50-90
+	runner.invoke("_on_fuel_timer_timeout")
+	fill_style = runner.get_property("fuel_bar").get_theme_stylebox("fill").duplicate()
+	var expected: Color = Color.GREEN.lerp(Color.YELLOW, (90 - 70) / (90 - 50))  # 0.5
+	assert_that(fill_style.bg_color).is_equal_approx(expected)

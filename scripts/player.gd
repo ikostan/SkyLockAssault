@@ -109,6 +109,7 @@ func _input(event: InputEvent) -> void:
 # Connect Timer's timeout signal
 func _on_fuel_timer_timeout() -> void:
 	var fuel_left: float = current_fuel - (0.5 * Globals.difficulty)  # Scale base rate
+	var fuel_percent: float = (current_fuel / max_fuel) * 100.0
 	# Add a clamp so current_fuel never drops below zero
 	# to prevent negative values and any unintended behavior in the fuel bar.
 	current_fuel = clamp(fuel_left, 0, max_fuel)
@@ -116,14 +117,22 @@ func _on_fuel_timer_timeout() -> void:
 	lerp_factor = 1.0 - (current_fuel / max_fuel)  # 0=full (green), 1=empty (red)
 	progress_bar_bg_color = fill_style.bg_color
 
-	if current_fuel >= MEDIUM_FUEL_THRESHOLD and current_fuel <= HIGH_FUEL_THRESHOLD:
-		fill_style.bg_color = progress_bar_bg_color.lerp(Color.GREEN, lerp_factor)
-	elif LOW_FUEL_THRESHOLD <= current_fuel and current_fuel < MEDIUM_FUEL_THRESHOLD:
-		fill_style.bg_color = progress_bar_bg_color.lerp(Color.YELLOW, lerp_factor)  # Medium-high: green
-	elif current_fuel > NO_FUEL_THRESHOLD and current_fuel < LOW_FUEL_THRESHOLD:
-		fill_style.bg_color = progress_bar_bg_color.lerp(Color.RED, lerp_factor)  # Medium-low: yellow
-	elif current_fuel <= NO_FUEL_THRESHOLD:
-		fill_style.bg_color = Color.RED  # Low: red
+	if fuel_percent > HIGH_FUEL_THRESHOLD:
+		fill_style.bg_color = Color.GREEN  # Full green for high fuel
+	elif fuel_percent >= MEDIUM_FUEL_THRESHOLD:
+		# Lerp green to yellow (factor 0 at 90%, 1 at 50%)
+		var section_factor: float = (HIGH_FUEL_THRESHOLD - fuel_percent) / (HIGH_FUEL_THRESHOLD - MEDIUM_FUEL_THRESHOLD)
+		fill_style.bg_color = Color.GREEN.lerp(Color.YELLOW, section_factor)
+	elif fuel_percent >= LOW_FUEL_THRESHOLD:
+		# Lerp yellow to red
+		var section_factor: float = (MEDIUM_FUEL_THRESHOLD - fuel_percent) / (MEDIUM_FUEL_THRESHOLD - LOW_FUEL_THRESHOLD)
+		fill_style.bg_color = Color.YELLOW.lerp(Color.RED, section_factor)
+	elif fuel_percent > NO_FUEL_THRESHOLD:
+		# Lerp red to darker or full red
+		var section_factor: float = (LOW_FUEL_THRESHOLD - fuel_percent) / (LOW_FUEL_THRESHOLD - NO_FUEL_THRESHOLD)
+		fill_style.bg_color = Color.RED.lerp(Color(0.5, 0, 0), section_factor)  # Example to dark red
+	else:
+		fill_style.bg_color = Color.RED  # Full red
 
 	if current_fuel <= 0:
 		speed = 0.0  # Or game over logic
