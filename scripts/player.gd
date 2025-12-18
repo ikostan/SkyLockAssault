@@ -29,7 +29,8 @@ var screen_size: Vector2
 # Onreadys next
 @onready var player: CharacterBody2D = $CharacterBody2D
 @onready var collision_shape: CollisionShape2D = $CharacterBody2D/CollisionShape2D
-@onready var fuel_bar: ProgressBar = $"../PlayerStatsPanel/VBoxContainer/HBoxContainer/FuelProgressBar"
+@onready
+var fuel_bar: ProgressBar = $"../PlayerStatsPanel/VBoxContainer/HBoxContainer/FuelProgressBar"
 @onready var fuel_timer: Timer = $FuelTimer
 # Get the fill style
 @onready var fill_style: StyleBoxFlat = fuel_bar.get_theme_stylebox("fill")
@@ -138,13 +139,13 @@ func update_fuel_bar() -> void:
 # Connect Timer's timeout signal
 func _on_fuel_timer_timeout() -> void:
 	var fuel_left: float = current_fuel - (0.5 * Globals.difficulty)  # Scale base rate
-	
+
 	# Clamp and update current_fuel first
 	current_fuel = clamp(fuel_left, 0, max_fuel)
-	
+
 	# Update UI from the clamped value
 	update_fuel_bar()
-	
+
 	if current_fuel <= 0:
 		speed = 0.0  # Or game over logic
 		fuel_timer.stop()
