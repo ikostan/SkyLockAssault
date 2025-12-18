@@ -55,14 +55,6 @@ func serialize_event(ev: InputEvent) -> String:
 ## :param actions: Actions to load (default: ACTIONS).
 ## :type actions: Array[String]
 ## :rtype: void
-## Loads input mappings from config, overriding project defaults only if saved.
-## Handles old int keycode format for backward compat.
-## Skips if no saved data (preserves project key+joypad bindings).
-## :param path: Config file path (default: CONFIG_PATH).
-## :type path: String
-## :param actions: Actions to load (default: ACTIONS).
-## :type actions: Array[String]
-## :rtype: void
 func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
 	var config: ConfigFile = ConfigFile.new()
 	var err: int = config.load(path)
@@ -79,7 +71,7 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				_needs_migration = true
 				serials = ["key:" + str(value)]
 			elif value is Array:  # New format
-				for item in value:
+				for item: String in value:
 					if typeof(item) == TYPE_STRING:
 						serials.append(item)
 					else:
