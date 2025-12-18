@@ -115,6 +115,7 @@ func test_remap_keyboard() -> void:
 	
 	var button: InputRemapButton = auto_free(InputRemapButton.new())
 	button.action = "test_action"
+	add_child(button)  # Add to scene tree for viewport access
 	button._ready()
 	
 	# Simulate press to start listening
@@ -151,6 +152,7 @@ func test_remap_joypad_button() -> void:
 	
 	var button: InputRemapButton = auto_free(InputRemapButton.new())
 	button.action = "test_action"
+	add_child(button)  # Add to scene tree for viewport access
 	button._ready()
 	
 	button.button_pressed = true
@@ -184,6 +186,7 @@ func test_remap_joypad_motion() -> void:
 	
 	var button: InputRemapButton = auto_free(InputRemapButton.new())
 	button.action = "test_action"
+	add_child(button)  # Add to scene tree for viewport access
 	button._ready()
 	
 	button.button_pressed = true
