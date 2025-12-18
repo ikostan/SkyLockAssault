@@ -19,10 +19,14 @@ const DEFAULT_KEYS: Dictionary = {
 	"pause": KEY_ESCAPE,
 }
 
+var _needs_migration: bool = false  # Flag for old-format upgrade
+
 
 func _ready() -> void:
 	load_input_mappings()
-	save_input_mappings()  # Re-save in new format after load (upgrades old cfg)
+	if _needs_migration:
+		save_input_mappings() # Only save if upgrade needed (old format detected)
+		_needs_migration = false
 
 
 ## Serializes an InputEvent to string for ConfigFile storage.
@@ -64,6 +68,7 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			var value: Variant = config.get_value("input", action)
 			var serials: Array[String] = []
 			if value is int:  # Old format: single keycode int
+				_needs_migration = true
 				serials = ["key:" + str(value)]
 			elif value is Array:  # New format
 				serials = value

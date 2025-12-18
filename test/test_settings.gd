@@ -293,3 +293,37 @@ func test_preserve_default_joypad_no_saved() -> void:
 	assert_int(events.size()).is_equal(1)
 	assert_that(events[0] is InputEventJoypadButton).is_true()
 	assert_int(events[0].button_index).is_equal(JOY_BUTTON_A)
+
+# Test migration save only on old-format config
+func test_migration_save_only_on_old() -> void:
+	var test_path: String = "user://migration_test.cfg"
+	
+	# Create old-format cfg
+	var config: ConfigFile = ConfigFile.new()
+	config.set_value("input", "test_action", KEY_Q)  # Old int
+	config.save(test_path)
+	
+	# Load (should detect old, set flag)
+	InputMap.action_erase_events("test_action")
+	Settings.load_input_mappings(test_path, ["test_action"])
+	
+	# Simulate _ready() save logic—check if flag triggers save
+	assert_bool(Settings._needs_migration).is_true()  # Flag set
+	Settings.save_input_mappings(test_path, ["test_action"])  # Would save in new format
+	
+	# Reload to verify upgraded, no flag next time
+	Settings._needs_migration = false  # Reset
+	Settings.load_input_mappings(test_path, ["test_action"])
+	assert_bool(Settings._needs_migration).is_false()  # No old format now
+
+# Test no save on new-format or no config
+func test_no_migration_on_new() -> void:
+	var test_path: String = "user://new_format.cfg"
+	
+	# Create new-format cfg
+	var config: ConfigFile = ConfigFile.new()
+	config.set_value("input", "test_action", ["key:81"])  # New array
+	config.save(test_path)
+	
+	Settings.load_input_mappings(test_path, ["test_action"])
+	assert_bool(Settings._needs_migration).is_false()  # No flag
