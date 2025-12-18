@@ -1,12 +1,19 @@
 # input_remap_button.gd (full updated script - removes Godot 3.x methods, uses custom dicts only)
 # Extends to handle joypad remapping and display (keys, buttons, axes).
 # Use device = -1 for "all controllers".
-extends Button
+# Handles listening, updating text, saving. Extends Button.
+# :vartype action: String
+# :vartype action_event_index: int
+# :vartype KEY_LABELS: Dictionary
+# :vartype JOY_BUTTON_LABELS: Dictionary
+# :vartype JOY_AXIS_BASE_LABELS: Dictionary
+# :vartype JOY_AXIS_LABELS: Dictionary
+# :vartype listening: bool
 
+# gdlint:ignore = class-definitions-order
 class_name InputRemapButton
 
-@export var action: String
-@export var action_event_index: int = 0
+extends Button
 
 const KEY_LABELS: Dictionary = {
 	Key.KEY_W: "W",
@@ -71,9 +78,14 @@ const JOY_AXIS_LABELS: Dictionary = {
 	JOY_AXIS_TRIGGER_RIGHT: {1.0: "Right Trigger"}
 }
 
+@export var action: String = ""
+@export var action_event_index: int = 0
+
 var listening: bool = false
 
 
+# Ready: Setup toggle, text, connect pressed.
+# :rtype: void
 func _ready() -> void:
 	toggle_mode = true
 	update_button_text()
@@ -81,6 +93,8 @@ func _ready() -> void:
 		pressed.connect(_on_pressed)
 
 
+# Pressed: Toggle listening, update text.
+# :rtype: void
 func _on_pressed() -> void:
 	listening = button_pressed
 	if listening:
@@ -89,6 +103,10 @@ func _on_pressed() -> void:
 		update_button_text()
 
 
+# Input: Handle remap for key/button/motion if listening.
+# :param event: Input event.
+# :type event: InputEvent
+# :rtype: void
 func _input(event: InputEvent) -> void:
 	if not listening:
 		return
@@ -125,6 +143,8 @@ func _input(event: InputEvent) -> void:
 
 
 # Helper to erase old event at index
+# Erase old event at index.
+# :rtype: void
 func erase_old_event() -> void:
 	var events := InputMap.action_get_events(action)
 	if events.size() > action_event_index:
@@ -133,6 +153,7 @@ func erase_old_event() -> void:
 
 # In input_remap_button.gd, inside finish_remap() func (before Settings.save_input_mappings())
 # Finish remap: update display, stop listening, save
+# :rtype: void
 func finish_remap() -> void:
 	update_button_text()
 	button_pressed = false
@@ -147,6 +168,7 @@ func finish_remap() -> void:
 
 
 # Updated to display key, joypad button, or axis label
+# :rtype: void
 func update_button_text() -> void:
 	var events := InputMap.action_get_events(action)
 	if events.size() > action_event_index:
@@ -157,12 +179,18 @@ func update_button_text() -> void:
 
 
 # Get display label for any event type (uses custom dicts only)
+# Get label for event (key/button/axis).
+# :param event: Input event.
+# :type event: InputEvent
+# :rtype: String
 func get_event_label(event: InputEvent) -> String:
 	if event is InputEventKey:
 		return KEY_LABELS.get(event.physical_keycode, OS.get_keycode_string(event.key_label))
-	elif event is InputEventJoypadButton:
+
+	if event is InputEventJoypadButton:
 		return JOY_BUTTON_LABELS.get(event.button_index, "Button " + str(event.button_index))
-	elif event is InputEventJoypadMotion:
+
+	if event is InputEventJoypadMotion:
 		var axis_labels: Dictionary = JOY_AXIS_LABELS.get(event.axis, {})
 		var dir_key: float = event.axis_value  # +1 or -1
 		return axis_labels.get(

@@ -36,10 +36,13 @@ func _ready() -> void:
 func serialize_event(ev: InputEvent) -> String:
 	if ev is InputEventKey:
 		return "key:" + str(ev.physical_keycode)
-	elif ev is InputEventJoypadButton:
+
+	if ev is InputEventJoypadButton:
 		return "joybtn:" + str(ev.button_index) + ":" + str(ev.device)
-	elif ev is InputEventJoypadMotion:
+
+	if ev is InputEventJoypadMotion:
 		return "joyaxis:" + str(ev.axis) + ":" + str(ev.axis_value) + ":" + str(ev.device)
+
 	return ""
 
 
