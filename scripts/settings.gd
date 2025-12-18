@@ -10,13 +10,7 @@ extends Node
 
 const CONFIG_PATH: String = "user://settings.cfg"
 const ACTIONS: Array[String] = [
-	"speed_up", 
-	"speed_down",
-	"move_left",
-	"move_right",
-	"fire",
-	"next_weapon",
-	"pause"
+	"speed_up", "speed_down", "move_left", "move_right", "fire", "next_weapon", "pause"
 ]
 const DEFAULT_KEYS: Dictionary = {
 	"speed_up": KEY_W,
@@ -73,12 +67,14 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 		elif value is Array:  # New format
 			serials = value
 		else:
-			Globals.log_message("Invalid saved value for " + action + ": skipping.", Globals.LogLevel.WARNING)
+			Globals.log_message(
+				"Invalid saved value for " + action + ": skipping.", Globals.LogLevel.WARNING
+			)
 			continue
 		InputMap.action_erase_events(action)
 		for s: String in serials:
 			_deserialize_and_add(action, s)
-		
+
 		# Add this block (ensures default key if no events after load)
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
 		if events.is_empty() and DEFAULT_KEYS.has(action):

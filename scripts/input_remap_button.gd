@@ -63,21 +63,23 @@ const JOY_AXIS_BASE_LABELS: Dictionary = {
 
 # Custom labels for common joypad axes/directions (for nice display)
 const JOY_AXIS_LABELS: Dictionary = {
-	JOY_AXIS_LEFT_X: { -1.0: "Left Stick Left", 1.0: "Left Stick Right" },
-	JOY_AXIS_LEFT_Y: { -1.0: "Left Stick Up", 1.0: "Left Stick Down" },
-	JOY_AXIS_RIGHT_X: { -1.0: "Right Stick Left", 1.0: "Right Stick Right" },
-	JOY_AXIS_RIGHT_Y: { -1.0: "Right Stick Up", 1.0: "Right Stick Down" },
-	JOY_AXIS_TRIGGER_LEFT: { 1.0: "Left Trigger" },
-	JOY_AXIS_TRIGGER_RIGHT: { 1.0: "Right Trigger" }
+	JOY_AXIS_LEFT_X: {-1.0: "Left Stick Left", 1.0: "Left Stick Right"},
+	JOY_AXIS_LEFT_Y: {-1.0: "Left Stick Up", 1.0: "Left Stick Down"},
+	JOY_AXIS_RIGHT_X: {-1.0: "Right Stick Left", 1.0: "Right Stick Right"},
+	JOY_AXIS_RIGHT_Y: {-1.0: "Right Stick Up", 1.0: "Right Stick Down"},
+	JOY_AXIS_TRIGGER_LEFT: {1.0: "Left Trigger"},
+	JOY_AXIS_TRIGGER_RIGHT: {1.0: "Right Trigger"}
 }
 
 var listening: bool = false
+
 
 func _ready() -> void:
 	toggle_mode = true
 	update_button_text()
 	if not pressed.is_connected(_on_pressed):
 		pressed.connect(_on_pressed)
+
 
 func _on_pressed() -> void:
 	listening = button_pressed
@@ -86,10 +88,11 @@ func _on_pressed() -> void:
 	else:
 		update_button_text()
 
+
 func _input(event: InputEvent) -> void:
 	if not listening:
 		return
-	
+
 	# Handle keyboard key press
 	if event is InputEventKey and event.pressed:
 		erase_old_event()
@@ -98,7 +101,7 @@ func _input(event: InputEvent) -> void:
 		InputMap.action_add_event(action, new_event)
 		finish_remap()
 		return
-	
+
 	# Handle joypad button press
 	if event is InputEventJoypadButton and event.pressed:
 		erase_old_event()
@@ -108,7 +111,7 @@ func _input(event: InputEvent) -> void:
 		InputMap.action_add_event(action, new_event)
 		finish_remap()
 		return
-	
+
 	# Handle joypad axis motion (if moved past deadzone)
 	if event is InputEventJoypadMotion and abs(event.axis_value) > 0.5:
 		erase_old_event()
@@ -120,11 +123,13 @@ func _input(event: InputEvent) -> void:
 		finish_remap()
 		return
 
+
 # Helper to erase old event at index
 func erase_old_event() -> void:
 	var events := InputMap.action_get_events(action)
 	if events.size() > action_event_index:
 		InputMap.action_erase_event(action, events[action_event_index])
+
 
 # In input_remap_button.gd, inside finish_remap() func (before Settings.save_input_mappings())
 # Finish remap: update display, stop listening, save
@@ -134,7 +139,9 @@ func finish_remap() -> void:
 	listening = false
 	# Log remap at DEBUG (uses get_event_label for new binding)
 	var new_label: String = get_event_label(InputMap.action_get_events(action)[action_event_index])
-	Globals.log_message("User remapped action '" + action + "' to '" + new_label + "'", Globals.LogLevel.DEBUG)
+	Globals.log_message(
+		"User remapped action '" + action + "' to '" + new_label + "'", Globals.LogLevel.DEBUG
+	)
 	Settings.save_input_mappings()
 	get_viewport().set_input_as_handled()
 
@@ -148,6 +155,7 @@ func update_button_text() -> void:
 	else:
 		text = "Unbound"
 
+
 # Get display label for any event type (uses custom dicts only)
 func get_event_label(event: InputEvent) -> String:
 	if event is InputEventKey:
@@ -157,5 +165,11 @@ func get_event_label(event: InputEvent) -> String:
 	elif event is InputEventJoypadMotion:
 		var axis_labels: Dictionary = JOY_AXIS_LABELS.get(event.axis, {})
 		var dir_key: float = event.axis_value  # +1 or -1
-		return axis_labels.get(dir_key, JOY_AXIS_BASE_LABELS.get(event.axis, "Axis " + str(event.axis)) + (" +" if dir_key > 0 else " -"))
+		return axis_labels.get(
+			dir_key,
+			(
+				JOY_AXIS_BASE_LABELS.get(event.axis, "Axis " + str(event.axis))
+				+ (" +" if dir_key > 0 else " -")
+			)
+		)
 	return "Unbound"
