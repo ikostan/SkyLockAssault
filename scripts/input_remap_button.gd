@@ -202,7 +202,10 @@ func update_button_text() -> void:
 # :rtype: String
 func get_event_label(event: InputEvent) -> String:
 	if event is InputEventKey:
-		return KEY_LABELS.get(event.physical_keycode, OS.get_keycode_string(event.key_label))
+		# FIX: Use physical_keycode for layout-agnostic labels (QWERTY-based).
+		# This replaces the invalid 'key_label' and ensures consistency with your dict lookups.
+		# OS.get_keycode_string() converts the enum (e.g., KEY_SPACE) to a string like "Space".
+		return KEY_LABELS.get(event.physical_keycode, OS.get_keycode_string(event.physical_keycode))
 
 	if event is InputEventJoypadButton:
 		return JOY_BUTTON_LABELS.get(event.button_index, "Button " + str(event.button_index))
