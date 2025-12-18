@@ -272,3 +272,23 @@ func test_finish_remap_invalid_index() -> void:
 	assert_int(events[0].physical_keycode).is_equal(KEY_A)
 	
 	InputMap.erase_action("test_action")
+
+## Test keyboard fallback label for key not in custom dict
+## :param none
+## :rtype: void
+func test_keyboard_fallback_label() -> void:
+	if InputMap.has_action("test_action"):
+		InputMap.erase_action("test_action")
+	
+	InputMap.add_action("test_action")
+	var event: InputEventKey = InputEventKey.new()
+	event.physical_keycode = KEY_F  # Not in KEY_LABELS
+	InputMap.action_add_event("test_action", event)
+	
+	var button: InputRemapButton = auto_free(InputRemapButton.new())
+	button.action = "test_action"
+	button._ready()
+	
+	assert_str(button.text).is_equal("F")  # Fallback via OS.get_keycode_string
+	
+	InputMap.erase_action("test_action")
