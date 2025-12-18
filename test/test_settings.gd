@@ -268,3 +268,28 @@ func test_malformed_deserialization() -> void:
 	# Verify no events added
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(0)
+
+# Test preservation of project-default joypad if no saved data
+func test_preserve_default_joypad_no_saved() -> void:
+	var test_path: String = "user://no_saved.cfg"
+	var test_actions: Array[String] = ["test_action"]
+
+	# Simulate project default: Add a joypad event (as if set in editor)
+	InputMap.action_erase_events("test_action")
+	var default_joy: InputEventJoypadButton = InputEventJoypadButton.new()
+	default_joy.button_index = JOY_BUTTON_A
+	default_joy.device = -1
+	InputMap.action_add_event("test_action", default_joy)
+
+	# Create empty config (no data for action)
+	var config: ConfigFile = ConfigFile.new()
+	config.save(test_path)
+
+	# Load
+	Settings.load_input_mappings(test_path, test_actions)
+
+	# Verify joypad preserved (not wiped)
+	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
+	assert_int(events.size()).is_equal(1)
+	assert_that(events[0] is InputEventJoypadButton).is_true()
+	assert_int(events[0].button_index).is_equal(JOY_BUTTON_A)

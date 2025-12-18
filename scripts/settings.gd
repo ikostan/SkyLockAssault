@@ -58,9 +58,9 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 		Globals.log_message("No settings.cfg—using project defaults.", Globals.LogLevel.INFO)
 		return
 	for action: String in actions:
-		InputMap.action_erase_events(action)
 		var has_saved: bool = config.has_section_key("input", action)
 		if has_saved:
+			InputMap.action_erase_events(action)  # Only erase if we're overriding with saved data
 			var value: Variant = config.get_value("input", action)
 			var serials: Array[String] = []
 			if value is int:  # Old format: single keycode int
@@ -74,6 +74,7 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				continue
 			for s: String in serials:
 				_deserialize_and_add(action, s)
+		# After loading (or skipping), check if empty and add default key if needed
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
 		if events.is_empty() and DEFAULT_KEYS.has(action):
 			var keycode: int = DEFAULT_KEYS[action]
