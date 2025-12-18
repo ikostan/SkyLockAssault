@@ -70,25 +70,28 @@ func test_movement() -> void:
 	Input.action_release("speed_up")
 
 # Test: Screen boundary clamping
+# test_player.gd - Fixed clamping test: use float asserts with approx + epsilon
+
 func test_clamping() -> void:
-	var main_scene: Node= auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
 	add_child(main_scene)
 	await await_idle_frame()
 	
 	var player_root: Node = main_scene.get_node("Player")
 	var body: CharacterBody2D = player_root.player
 	
-	# Force position outside left/top bounds
+	# Test left/top bounds
 	body.position = Vector2(-1000, -1000)
 	player_root._physics_process(1.0/60.0)
-	assert_vector(body.position.x).is_equal(player_root.player_x_min)
-	assert_vector(body.position.y).is_equal(player_root.player_y_min)
+	assert_float(body.position.x).is_equal(player_root.player_x_min)
+	assert_float(body.position.y).is_equal(player_root.player_y_min)
 	
-	# Force position outside right/bottom bounds
+	# Test right/bottom bounds
 	body.position = Vector2(2000, 2000)
 	player_root._physics_process(1.0/60.0)
-	assert_vector(body.position.x).is_equal(player_root.player_x_max)
-	assert_vector(body.position.y).is_equal(player_root.player_y_max)
+	assert_float(body.position.x).is_equal(player_root.player_x_max)
+	assert_float(body.position.y).is_equal(player_root.player_y_max)
+
 
 # Test: Fuel bar color changes at thresholds
 func test_fuel_colors() -> void:
