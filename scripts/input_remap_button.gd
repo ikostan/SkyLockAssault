@@ -78,6 +78,12 @@ const JOY_AXIS_LABELS: Dictionary = {
 	JOY_AXIS_TRIGGER_RIGHT: {1.0: "Right Trigger"}
 }
 
+# Add these new constants here for clarity and easy tweaking
+# Minimum axis value to consider for remapping (avoids jitter)
+const AXIS_DEADZONE_THRESHOLD: float = 0.5
+# Value to normalize axis direction to (e.g., +1.0 or -1.0)
+const AXIS_NORMALIZED_VALUE: float = 1.0
+
 @export var action: String = ""
 @export var action_event_index: int = 0
 
@@ -131,15 +137,24 @@ func _input(event: InputEvent) -> void:
 		return
 
 	# Handle joypad axis motion (if moved past deadzone)
-	if event is InputEventJoypadMotion and abs(event.axis_value) > 0.5:
+	if event is InputEventJoypadMotion and abs(event.axis_value) > AXIS_DEADZONE_THRESHOLD:
 		erase_old_event()
 		var new_event := InputEventJoypadMotion.new()
 		new_event.axis = event.axis
-		new_event.axis_value = sign(event.axis_value)  # Normalize to +1 or -1
+		new_event.axis_value = get_normalized_axis_direction(event.axis_value)  # Normalize to +1 or -1
 		new_event.device = -1  # All devices
 		InputMap.action_add_event(action, new_event)
 		finish_remap()
 		return
+
+
+# New helper function: Normalizes axis value to a direction (+1.0 or -1.0)
+# This keeps the logic clean and reusable if you add more axis features later.
+# :param axis_value: The raw axis value from the event.
+# :type axis_value: float
+# :rtype: float
+func get_normalized_axis_direction(axis_value: float) -> float:
+	return sign(axis_value) * AXIS_NORMALIZED_VALUE
 
 
 # Helper to erase old event at index
