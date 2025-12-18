@@ -17,7 +17,7 @@ func after() -> void:
 	for action: String in ["test_action", "test_action1", "test_action2"]:
 		if InputMap.has_action(action):
 			InputMap.erase_action(action)
-	for path: String in ["user://test_settings.cfg", "user://multi_test.cfg", "user://joy_test.cfg", "user://old_format.cfg"]:
+	for path: String in ["user://test_settings.cfg", "user://multi_test.cfg", "user://joy_test.cfg", "user://old_format.cfg", "user://malformed.cfg"]:
 		if FileAccess.file_exists(path):
 			DirAccess.remove_absolute(path)
 
@@ -246,8 +246,13 @@ func test_malformed_deserialization() -> void:
 	# Manually create cfg with malformed serials
 	var config: ConfigFile = ConfigFile.new()
 	var malformed_serials: Array[String] = [
-		"joybtn:",  # Missing btn
-		"joyaxis:1",  # Missing aval
+		"joybtn:",  # Insufficient parts (missing btn)
+		"joybtn:abc",  # Invalid btn index
+		"joybtn:1:def",  # Invalid dev
+		"joyaxis:1",  # Insufficient parts (missing aval)
+		"joyaxis:abc:1.0",  # Invalid axis
+		"joyaxis:0:def",  # Invalid aval
+		"joyaxis:0:1.0:ghi",  # Invalid dev
 		"key:",  # Missing kc
 		"invalid:123"  # Unknown prefix
 	]

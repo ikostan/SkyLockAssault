@@ -85,8 +85,9 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 
 
 ## Deserializes string to event and adds to action.
-## Handles device for joy events (-1 if omitted).
-## Skips and warns on malformed serialized strings.
+## Handles device for joy events (-1 if omitted or empty).
+## Skips and warns on malformed serialized strings, including invalid int/float values,
+## with robust error handling.
 ## :param action: Target action.
 ## :type action: String
 ## :param serialized: Serialized event string.
@@ -104,32 +105,60 @@ func _deserialize_and_add(action: String, serialized: String) -> void:
 		InputMap.action_add_event(action, nev)
 	elif serialized.begins_with("joybtn:"):
 		var parts: PackedStringArray = serialized.split(":")
+		var error: String = ""
 		if parts.size() < 2:
+			error = "insufficient parts"
+		elif not parts[1].is_valid_int():
+			error = "invalid button index"
+		else:
+			var btn: int = int(parts[1])
+			var dev: int = -1
+			if parts.size() >= 3:
+				if not parts[2].is_empty():
+					if not parts[2].is_valid_int():
+						error = "invalid device"
+					else:
+						dev = int(parts[2])
+			if error == "":
+				var nev: InputEventJoypadButton = InputEventJoypadButton.new()
+				nev.button_index = btn
+				nev.device = dev
+				InputMap.action_add_event(action, nev)
+		if error != "":
 			Globals.log_message(
-				"Invalid joybtn serialized: " + serialized, Globals.LogLevel.WARNING
+				"Invalid joybtn serialized: " + serialized + " (" + error + ")",
+				Globals.LogLevel.WARNING
 			)
 			return
-		var btn: int = int(parts[1])
-		var dev: int = -1 if parts.size() < 3 else int(parts[2])
-		var nev: InputEventJoypadButton = InputEventJoypadButton.new()
-		nev.button_index = btn
-		nev.device = dev
-		InputMap.action_add_event(action, nev)
 	elif serialized.begins_with("joyaxis:"):
 		var parts: PackedStringArray = serialized.split(":")
+		var error: String = ""
 		if parts.size() < 3:
+			error = "insufficient parts"
+		elif not parts[1].is_valid_int() or not parts[2].is_valid_float():
+			error = "invalid axis or axis_value"
+		else:
+			var axis: int = int(parts[1])
+			var aval: float = float(parts[2])
+			var dev: int = -1
+			if parts.size() >= 4:
+				if not parts[3].is_empty():
+					if not parts[3].is_valid_int():
+						error = "invalid device"
+					else:
+						dev = int(parts[3])
+			if error == "":
+				var nev: InputEventJoypadMotion = InputEventJoypadMotion.new()
+				nev.axis = axis
+				nev.axis_value = aval
+				nev.device = dev
+				InputMap.action_add_event(action, nev)
+		if error != "":
 			Globals.log_message(
-				"Invalid joyaxis serialized: " + serialized, Globals.LogLevel.WARNING
+				"Invalid joyaxis serialized: " + serialized + " (" + error + ")",
+				Globals.LogLevel.WARNING
 			)
 			return
-		var axis: int = int(parts[1])
-		var aval: float = float(parts[2])
-		var dev: int = -1 if parts.size() < 4 else int(parts[3])
-		var nev: InputEventJoypadMotion = InputEventJoypadMotion.new()
-		nev.axis = axis
-		nev.axis_value = aval
-		nev.device = dev
-		InputMap.action_add_event(action, nev)
 	else:
 		Globals.log_message("Unknown serialized prefix: " + serialized, Globals.LogLevel.WARNING)
 		return
