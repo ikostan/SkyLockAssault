@@ -327,3 +327,24 @@ func test_no_migration_on_new() -> void:
 	
 	Settings.load_input_mappings(test_path, ["test_action"])
 	assert_bool(Settings._needs_migration).is_false()  # No flag
+
+
+# Test type-safe load for new-format array
+func test_type_safe_new_format() -> void:
+	var test_path: String = "user://type_test.cfg"
+	var test_actions: Array[String] = ["test_action"]
+	
+	# Create new-format cfg with Array[String]
+	var config: ConfigFile = ConfigFile.new()
+	config.set_value("input", "test_action", ["key:81"])
+	config.save(test_path)
+	
+	# Load and verify no type error
+	InputMap.action_erase_events("test_action")
+	Settings.load_input_mappings(test_path, test_actions)
+	
+	# Verify loaded correctly
+	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
+	assert_int(events.size()).is_equal(1)
+	assert_that(events[0] is InputEventKey).is_true()
+	assert_int(events[0].physical_keycode).is_equal(KEY_Q)
