@@ -133,7 +133,7 @@ func _on_fuel_timer_timeout() -> void:
 
 func _physics_process(_delta: float) -> void:
 	var direction: Vector2 = Input.get_vector(
-		"move_left", "move_right", "move_forward", "move_backward"
+		"move_left", "move_right", "speed_up", "speed_down"
 	)
 	if direction != Vector2.ZERO:
 		Globals.log_message(
