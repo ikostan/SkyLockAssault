@@ -19,9 +19,11 @@ const DEFAULT_KEYS: Dictionary = {
 	"pause": KEY_ESCAPE,
 }
 
+
 func _ready() -> void:
 	load_input_mappings()
 	save_input_mappings()  # Re-save in new format after load (upgrades old cfg)
+
 
 ## Serializes an InputEvent to string for ConfigFile storage.
 ## Handles Key (no device), JoypadButton, and JoypadMotion (with device).
@@ -39,6 +41,7 @@ func serialize_event(ev: InputEvent) -> String:
 		return "joyaxis:" + str(ev.axis) + ":" + str(ev.axis_value) + ":" + str(ev.device)
 
 	return ""
+
 
 ## Loads input mappings from config, overriding project defaults only if saved.
 ## Handles old int keycode format for backward compat.
@@ -80,6 +83,7 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				InputMap.action_add_event(action, nev)
 				Globals.log_message("Added default key for " + action, Globals.LogLevel.DEBUG)
 
+
 ## Deserializes string to event and adds to action.
 ## Handles device for joy events (-1 if omitted).
 ## :param action: Target action.
@@ -111,6 +115,7 @@ func _deserialize_and_add(action: String, serialized: String) -> void:
 		nev.axis_value = aval
 		nev.device = dev
 		InputMap.action_add_event(action, nev)
+
 
 ## Saves current InputMap events to config (all per action as array).
 ## :param path: Config file path (default: CONFIG_PATH).
