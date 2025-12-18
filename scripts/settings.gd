@@ -25,7 +25,7 @@ var _needs_migration: bool = false  # Flag for old-format upgrade
 func _ready() -> void:
 	load_input_mappings()
 	if _needs_migration:
-		save_input_mappings() # Only save if upgrade needed (old format detected)
+		save_input_mappings()  # Only save if upgrade needed (old format detected)
 		_needs_migration = false
 
 
