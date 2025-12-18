@@ -239,3 +239,32 @@ func test_fallback_labels() -> void:
 	assert_str(button.text).is_equal("Left Trigger -")
 	
 	InputMap.erase_action("test_action")
+
+## Test finish_remap with invalid index (no error, skips log)
+## :param none
+## :rtype: void
+func test_finish_remap_invalid_index() -> void:
+	if InputMap.has_action("test_action"):
+		InputMap.erase_action("test_action")
+
+	InputMap.add_action("test_action")
+
+	var button: InputRemapButton = auto_free(InputRemapButton.new())
+	button.action = "test_action"
+	button.action_event_index = 99  # Invalid high index
+	add_child(button)
+	button._ready()
+
+	# Simulate remap process but with invalid index
+	button.button_pressed = true
+	button._on_pressed()
+
+	var sim_event: InputEventKey = InputEventKey.new()
+	sim_event.physical_keycode = KEY_A
+	sim_event.pressed = true
+	button._input(sim_event)  # Calls finish_remap, should not error
+
+	assert_str(button.text).is_equal("A")  # Still updates text
+	assert_bool(button.listening).is_false()
+	
+	InputMap.erase_action("test_action")

@@ -158,11 +158,13 @@ func finish_remap() -> void:
 	update_button_text()
 	button_pressed = false
 	listening = false
-	# Log remap at DEBUG (uses get_event_label for new binding)
-	var new_label: String = get_event_label(InputMap.action_get_events(action)[action_event_index])
-	Globals.log_message(
-		"User remapped action '" + action + "' to '" + new_label + "'", Globals.LogLevel.DEBUG
-	)
+	# Log remap at DEBUG if index valid (uses get_event_label for new binding)
+	var events: Array[InputEvent] = InputMap.action_get_events(action)
+	if events.size() > action_event_index:
+		var new_label: String = get_event_label(events[action_event_index])
+		Globals.log_message(
+			"User remapped action '" + action + "' to '" + new_label + "'", Globals.LogLevel.DEBUG
+		)
 	Settings.save_input_mappings()
 	get_viewport().set_input_as_handled()
 
