@@ -79,8 +79,14 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				_needs_migration = true
 				serials = ["key:" + str(value)]
 			elif value is Array:  # New format
-				for item: String in value:
-					serials.append(item)  # Append to typed array; GDScript validates types
+				for item in value:
+					if typeof(item) == TYPE_STRING:
+						serials.append(item)
+					else:
+						Globals.log_message(
+							"Non-string item in input array for " + action + ": skipping item.",
+							Globals.LogLevel.WARNING
+						)
 			else:
 				Globals.log_message(
 					"Invalid saved value for " + action + ": skipping.", Globals.LogLevel.WARNING
