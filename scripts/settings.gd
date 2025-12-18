@@ -86,6 +86,7 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 
 ## Deserializes string to event and adds to action.
 ## Handles device for joy events (-1 if omitted).
+## Skips and warns on malformed serialized strings.
 ## :param action: Target action.
 ## :type action: String
 ## :param serialized: Serialized event string.
@@ -93,12 +94,21 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 ## :rtype: void
 func _deserialize_and_add(action: String, serialized: String) -> void:
 	if serialized.begins_with("key:"):
-		var kc: int = int(serialized.substr(4))
+		var kc_str: String = serialized.substr(4)
+		if kc_str.is_empty() or not kc_str.is_valid_int():
+			Globals.log_message("Invalid key serialized: " + serialized, Globals.LogLevel.WARNING)
+			return
+		var kc: int = int(kc_str)
 		var nev: InputEventKey = InputEventKey.new()
 		nev.physical_keycode = kc
 		InputMap.action_add_event(action, nev)
 	elif serialized.begins_with("joybtn:"):
 		var parts: PackedStringArray = serialized.split(":")
+		if parts.size() < 2:
+			Globals.log_message(
+				"Invalid joybtn serialized: " + serialized, Globals.LogLevel.WARNING
+			)
+			return
 		var btn: int = int(parts[1])
 		var dev: int = -1 if parts.size() < 3 else int(parts[2])
 		var nev: InputEventJoypadButton = InputEventJoypadButton.new()
@@ -107,6 +117,11 @@ func _deserialize_and_add(action: String, serialized: String) -> void:
 		InputMap.action_add_event(action, nev)
 	elif serialized.begins_with("joyaxis:"):
 		var parts: PackedStringArray = serialized.split(":")
+		if parts.size() < 3:
+			Globals.log_message(
+				"Invalid joyaxis serialized: " + serialized, Globals.LogLevel.WARNING
+			)
+			return
 		var axis: int = int(parts[1])
 		var aval: float = float(parts[2])
 		var dev: int = -1 if parts.size() < 4 else int(parts[3])
@@ -115,6 +130,9 @@ func _deserialize_and_add(action: String, serialized: String) -> void:
 		nev.axis_value = aval
 		nev.device = dev
 		InputMap.action_add_event(action, nev)
+	else:
+		Globals.log_message("Unknown serialized prefix: " + serialized, Globals.LogLevel.WARNING)
+		return
 
 
 ## Saves current InputMap events to config (all per action as array).

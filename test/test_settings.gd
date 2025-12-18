@@ -237,3 +237,29 @@ func test_multi_action_persistence() -> void:
 	
 	var events2: Array[InputEvent] = InputMap.action_get_events("test_action2")
 	assert_int(events2.size()).is_equal(0)
+
+# Test malformed deserialization (skips invalid, no events added)
+func test_malformed_deserialization() -> void:
+	var test_path: String = "user://malformed.cfg"
+	var test_actions: Array[String] = ["test_action"]
+	
+	# Manually create cfg with malformed serials
+	var config: ConfigFile = ConfigFile.new()
+	var malformed_serials: Array[String] = [
+		"joybtn:",  # Missing btn
+		"joyaxis:1",  # Missing aval
+		"key:",  # Missing kc
+		"invalid:123"  # Unknown prefix
+	]
+	config.set_value("input", "test_action", malformed_serials)
+	config.save(test_path)
+	
+	assert_bool(FileAccess.file_exists(test_path)).is_true()
+	
+	# Erase and load (should skip all, events empty)
+	InputMap.action_erase_events("test_action")
+	Settings.load_input_mappings(test_path, test_actions)
+	
+	# Verify no events added
+	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
+	assert_int(events.size()).is_equal(0)
