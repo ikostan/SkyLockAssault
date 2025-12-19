@@ -1,0 +1,500 @@
+{"frames": {
+
+"Aircraft_01.png":
+{
+	"frame": {"x":114,"y":193,"w":110,"h":92},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":92},
+	"sourceSize": {"w":110,"h":92}
+},
+"Aircraft_01_hit.png":
+{
+	"frame": {"x":226,"y":99,"w":110,"h":92},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":92},
+	"sourceSize": {"w":110,"h":92}
+},
+"Aircraft_01_shadow.png":
+{
+	"frame": {"x":114,"y":99,"w":110,"h":92},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":92},
+	"sourceSize": {"w":110,"h":92}
+},
+"Aircraft_02.png":
+{
+	"frame": {"x":226,"y":369,"w":110,"h":86},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":86},
+	"sourceSize": {"w":110,"h":86}
+},
+"Aircraft_02_hit.png":
+{
+	"frame": {"x":338,"y":282,"w":110,"h":86},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":86},
+	"sourceSize": {"w":110,"h":86}
+},
+"Aircraft_02_shadow.png":
+{
+	"frame": {"x":2,"y":371,"w":110,"h":86},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":86},
+	"sourceSize": {"w":110,"h":86}
+},
+"Aircraft_03.png":
+{
+	"frame": {"x":114,"y":287,"w":110,"h":86},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":86},
+	"sourceSize": {"w":110,"h":86}
+},
+"Aircraft_03_hit.png":
+{
+	"frame": {"x":226,"y":281,"w":110,"h":86},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":86},
+	"sourceSize": {"w":110,"h":86}
+},
+"Aircraft_03_shadow.png":
+{
+	"frame": {"x":338,"y":194,"w":110,"h":86},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":86},
+	"sourceSize": {"w":110,"h":86}
+},
+"Aircraft_04.png":
+{
+	"frame": {"x":338,"y":370,"w":110,"h":84},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":84},
+	"sourceSize": {"w":110,"h":84}
+},
+"Aircraft_04_hit.png":
+{
+	"frame": {"x":2,"y":459,"w":110,"h":84},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":84},
+	"sourceSize": {"w":110,"h":84}
+},
+"Aircraft_04_shadow.png":
+{
+	"frame": {"x":114,"y":375,"w":110,"h":84},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":84},
+	"sourceSize": {"w":110,"h":84}
+},
+"Aircraft_05.png":
+{
+	"frame": {"x":226,"y":2,"w":110,"h":95},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":95},
+	"sourceSize": {"w":110,"h":95}
+},
+"Aircraft_05_hit.png":
+{
+	"frame": {"x":114,"y":2,"w":110,"h":95},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":95},
+	"sourceSize": {"w":110,"h":95}
+},
+"Aircraft_05_shadow.png":
+{
+	"frame": {"x":2,"y":2,"w":110,"h":95},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":95},
+	"sourceSize": {"w":110,"h":95}
+},
+"Aircraft_06.png":
+{
+	"frame": {"x":226,"y":193,"w":110,"h":86},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":86},
+	"sourceSize": {"w":110,"h":86}
+},
+"Aircraft_06_hit.png":
+{
+	"frame": {"x":2,"y":283,"w":110,"h":86},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":86},
+	"sourceSize": {"w":110,"h":86}
+},
+"Aircraft_06_shadow.png":
+{
+	"frame": {"x":2,"y":195,"w":110,"h":86},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":86},
+	"sourceSize": {"w":110,"h":86}
+},
+"Aircraft_07.png":
+{
+	"frame": {"x":114,"y":461,"w":110,"h":82},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":82},
+	"sourceSize": {"w":110,"h":82}
+},
+"Aircraft_07_hit.png":
+{
+	"frame": {"x":226,"y":457,"w":110,"h":82},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":82},
+	"sourceSize": {"w":110,"h":82}
+},
+"Aircraft_07_shadow.png":
+{
+	"frame": {"x":338,"y":456,"w":110,"h":82},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":82},
+	"sourceSize": {"w":110,"h":82}
+},
+"Aircraft_08.png":
+{
+	"frame": {"x":194,"y":619,"w":94,"h":76},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":94,"h":76},
+	"sourceSize": {"w":94,"h":76}
+},
+"Aircraft_08_hit.png":
+{
+	"frame": {"x":98,"y":545,"w":94,"h":76},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":94,"h":76},
+	"sourceSize": {"w":94,"h":76}
+},
+"Aircraft_08_shadow.png":
+{
+	"frame": {"x":2,"y":545,"w":94,"h":76},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":94,"h":76},
+	"sourceSize": {"w":94,"h":76}
+},
+"Aircraft_09.png":
+{
+	"frame": {"x":2,"y":99,"w":110,"h":94},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":94},
+	"sourceSize": {"w":110,"h":94}
+},
+"Aircraft_09_hit.png":
+{
+	"frame": {"x":338,"y":98,"w":110,"h":94},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":94},
+	"sourceSize": {"w":110,"h":94}
+},
+"Aircraft_09_shadow.png":
+{
+	"frame": {"x":338,"y":2,"w":110,"h":94},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":110,"h":94},
+	"sourceSize": {"w":110,"h":94}
+},
+"Aircraft_10.png":
+{
+	"frame": {"x":322,"y":618,"w":94,"h":76},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":94,"h":76},
+	"sourceSize": {"w":94,"h":76}
+},
+"Aircraft_10_hit.png":
+{
+	"frame": {"x":226,"y":541,"w":94,"h":76},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":94,"h":76},
+	"sourceSize": {"w":94,"h":76}
+},
+"Aircraft_10_shadow.png":
+{
+	"frame": {"x":338,"y":540,"w":94,"h":76},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":94,"h":76},
+	"sourceSize": {"w":94,"h":76}
+},
+"bullet_2_blue.png":
+{
+	"frame": {"x":500,"y":58,"w":10,"h":26},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":10,"h":26},
+	"sourceSize": {"w":10,"h":26}
+},
+"bullet_2_orange.png":
+{
+	"frame": {"x":500,"y":30,"w":10,"h":26},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":10,"h":26},
+	"sourceSize": {"w":10,"h":26}
+},
+"bullet_2_purple.png":
+{
+	"frame": {"x":500,"y":2,"w":10,"h":26},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":10,"h":26},
+	"sourceSize": {"w":10,"h":26}
+},
+"bullet_blue0000.png":
+{
+	"frame": {"x":492,"y":150,"w":12,"h":12},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":12,"h":12},
+	"sourceSize": {"w":12,"h":12}
+},
+"bullet_blue0001.png":
+{
+	"frame": {"x":478,"y":150,"w":12,"h":12},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":12,"h":12},
+	"sourceSize": {"w":12,"h":12}
+},
+"bullet_blue0002.png":
+{
+	"frame": {"x":464,"y":150,"w":12,"h":12},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":12,"h":12},
+	"sourceSize": {"w":12,"h":12}
+},
+"bullet_blue0003.png":
+{
+	"frame": {"x":464,"y":150,"w":12,"h":12},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":12,"h":12},
+	"sourceSize": {"w":12,"h":12}
+},
+"bullet_blue0004.png":
+{
+	"frame": {"x":450,"y":150,"w":12,"h":12},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":12,"h":12},
+	"sourceSize": {"w":12,"h":12}
+},
+"bullet_orange0000.png":
+{
+	"frame": {"x":492,"y":136,"w":12,"h":12},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":12,"h":12},
+	"sourceSize": {"w":12,"h":12}
+},
+"bullet_orange0001.png":
+{
+	"frame": {"x":478,"y":136,"w":12,"h":12},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":12,"h":12},
+	"sourceSize": {"w":12,"h":12}
+},
+"bullet_orange0002.png":
+{
+	"frame": {"x":464,"y":136,"w":12,"h":12},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":12,"h":12},
+	"sourceSize": {"w":12,"h":12}
+},
+"bullet_orange0003.png":
+{
+	"frame": {"x":464,"y":136,"w":12,"h":12},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":12,"h":12},
+	"sourceSize": {"w":12,"h":12}
+},
+"bullet_orange0004.png":
+{
+	"frame": {"x":450,"y":136,"w":12,"h":12},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":12,"h":12},
+	"sourceSize": {"w":12,"h":12}
+},
+"bullet_purple0000.png":
+{
+	"frame": {"x":492,"y":122,"w":12,"h":12},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":12,"h":12},
+	"sourceSize": {"w":12,"h":12}
+},
+"bullet_purple0001.png":
+{
+	"frame": {"x":478,"y":122,"w":12,"h":12},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":12,"h":12},
+	"sourceSize": {"w":12,"h":12}
+},
+"bullet_purple0002.png":
+{
+	"frame": {"x":464,"y":122,"w":12,"h":12},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":12,"h":12},
+	"sourceSize": {"w":12,"h":12}
+},
+"bullet_purple0003.png":
+{
+	"frame": {"x":464,"y":122,"w":12,"h":12},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":12,"h":12},
+	"sourceSize": {"w":12,"h":12}
+},
+"bullet_purple0004.png":
+{
+	"frame": {"x":450,"y":122,"w":12,"h":12},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":12,"h":12},
+	"sourceSize": {"w":12,"h":12}
+},
+"rocket_purple.png":
+{
+	"frame": {"x":500,"y":86,"w":7,"h":20},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":7,"h":20},
+	"sourceSize": {"w":7,"h":20}
+},
+"rotor00.png":
+{
+	"frame": {"x":450,"y":112,"w":48,"h":8},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":48,"h":8},
+	"sourceSize": {"w":48,"h":8}
+},
+"rotor01.png":
+{
+	"frame": {"x":450,"y":102,"w":48,"h":8},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":48,"h":8},
+	"sourceSize": {"w":48,"h":8}
+},
+"rotor02.png":
+{
+	"frame": {"x":450,"y":92,"w":48,"h":8},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":48,"h":8},
+	"sourceSize": {"w":48,"h":8}
+},
+"rotor03.png":
+{
+	"frame": {"x":450,"y":82,"w":48,"h":8},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":48,"h":8},
+	"sourceSize": {"w":48,"h":8}
+},
+"rotor04.png":
+{
+	"frame": {"x":450,"y":72,"w":48,"h":8},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":48,"h":8},
+	"sourceSize": {"w":48,"h":8}
+},
+"rotor05.png":
+{
+	"frame": {"x":450,"y":62,"w":48,"h":8},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":48,"h":8},
+	"sourceSize": {"w":48,"h":8}
+},
+"rotor06.png":
+{
+	"frame": {"x":450,"y":52,"w":48,"h":8},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":48,"h":8},
+	"sourceSize": {"w":48,"h":8}
+},
+"rotor07.png":
+{
+	"frame": {"x":450,"y":42,"w":48,"h":8},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":48,"h":8},
+	"sourceSize": {"w":48,"h":8}
+},
+"rotor08.png":
+{
+	"frame": {"x":450,"y":32,"w":48,"h":8},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":48,"h":8},
+	"sourceSize": {"w":48,"h":8}
+},
+"rotor09.png":
+{
+	"frame": {"x":450,"y":22,"w":48,"h":8},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":48,"h":8},
+	"sourceSize": {"w":48,"h":8}
+},
+"rotor10.png":
+{
+	"frame": {"x":450,"y":12,"w":48,"h":8},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":48,"h":8},
+	"sourceSize": {"w":48,"h":8}
+},
+"rotor11.png":
+{
+	"frame": {"x":450,"y":2,"w":48,"h":8},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":48,"h":8},
+	"sourceSize": {"w":48,"h":8}
+}},
+"meta": {
+	"app": "http://www.codeandweb.com/texturepacker ",
+	"version": "1.0",
+	"image": "aircrafts.png",
+	"format": "RGBA8888",
+	"size": {"w":512,"h":1024},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:90381d9786462002428634dab8c03b6c:fff19c3f5231dcc8d1fac2b6fdab2e2f:5d8d9a0297aa4db5c91163272dff2243$"
+}
+}
