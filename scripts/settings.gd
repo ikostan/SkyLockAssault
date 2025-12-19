@@ -58,9 +58,18 @@ func serialize_event(ev: InputEvent) -> String:
 func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
 	var config: ConfigFile = ConfigFile.new()
 	var err: int = config.load(path)
-	if err != OK:
-		Globals.log_message("No settings.cfg—using project defaults.", Globals.LogLevel.INFO)
+	if err == ERR_FILE_NOT_FOUND:  # NEW: Specific check for file missing
+		Globals.log_message(
+			"No settings file found at " + path + "—using project defaults.", Globals.LogLevel.INFO
+		)
 		return
+
+	if err != OK:  # NEW: Handle other errors (e.g., parse error, permissions)
+		Globals.log_message(
+			"Error loading settings file at " + path + ": " + str(err), Globals.LogLevel.ERROR
+		)
+		return
+
 	for action: String in actions:
 		var has_saved: bool = config.has_section_key("input", action)
 		if has_saved:

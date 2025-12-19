@@ -348,3 +348,27 @@ func test_type_safe_new_format() -> void:
 	assert_int(events.size()).is_equal(1)
 	assert_that(events[0] is InputEventKey).is_true()
 	assert_int(events[0].physical_keycode).is_equal(KEY_Q)
+
+
+# Add to test_settings.gd
+
+# Test load error handling (e.g., corrupt file)
+func test_load_error_handling() -> void:
+	var test_path: String = "user://corrupt.cfg"
+	# Create corrupt file (invalid ConfigFile syntax—write raw text)
+	var file: FileAccess = FileAccess.open(test_path, FileAccess.WRITE)
+	file.store_string("[input\ninvalid_syntax")  # Malformed section
+	file.close()
+	
+	assert_bool(FileAccess.file_exists(test_path)).is_true()
+	
+	# Load should log error and skip (events remain erased/default)
+	InputMap.action_erase_events("test_action")
+	Settings.load_input_mappings(test_path, ["test_action"])
+	
+	# Verify no events added (since load failed)
+	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
+	assert_int(events.size()).is_equal(0)  # Or check for default if applicable
+	
+	# Clean up
+	DirAccess.remove_absolute(test_path)
