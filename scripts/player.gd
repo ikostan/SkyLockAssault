@@ -18,9 +18,6 @@ var player_x_min: float = 0.0
 var player_x_max: float = 0.0
 var player_y_min: float = 0.0
 var player_y_max: float = 0.0
-# For gradual colors shifts (e.g., green to red as fuel drops), use Color.lerp
-var lerp_factor: float
-
 # Weapon system
 var weapons: Array[Node] = []  # Fill in editor or _ready
 var current_weapon: int = 0
@@ -34,8 +31,6 @@ var fuel_bar: ProgressBar = $"../PlayerStatsPanel/VBoxContainer/HBoxContainer/Fu
 @onready var fuel_timer: Timer = $FuelTimer
 # Get the fill style
 @onready var fill_style: StyleBoxFlat = fuel_bar.get_theme_stylebox("fill")
-# Cached initial fill color
-@onready var progress_bar_bg_color: Color = fill_style.bg_color
 # In plane.gd (or main player script) - central input
 @onready var weapon: Node2D = $CharacterBody2D/Weapon  # Path to your WeaponManager node
 
@@ -109,8 +104,6 @@ func _input(event: InputEvent) -> void:
 func update_fuel_bar() -> void:
 	fuel_bar.value = current_fuel
 	var fuel_percent: float = (current_fuel / max_fuel) * 100.0
-	lerp_factor = 1.0 - (current_fuel / max_fuel)  # 0=full (green), 1=empty (red)
-	progress_bar_bg_color = fill_style.bg_color
 
 	if fuel_percent > HIGH_FUEL_THRESHOLD:
 		fill_style.bg_color = Color.GREEN  # Full green for high fuel
@@ -138,11 +131,10 @@ func update_fuel_bar() -> void:
 
 # Connect Timer's timeout signal
 func _on_fuel_timer_timeout() -> void:
-	var fuel_left: float = current_fuel - (0.5 * Globals.difficulty)  # Scale base rate
-
+	# Scale base rate
+	var fuel_left: float = current_fuel - (0.5 * Globals.difficulty)
 	# Clamp and update current_fuel first
 	current_fuel = clamp(fuel_left, 0, max_fuel)
-
 	# Update UI from the clamped value
 	update_fuel_bar()
 
