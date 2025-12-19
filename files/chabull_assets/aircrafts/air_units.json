@@ -1,0 +1,708 @@
+{"frames": {
+
+"aircraft_1.png":
+{
+	"frame": {"x":203,"y":293,"w":57,"h":42},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":42},
+	"sourceSize": {"w":57,"h":42}
+},
+"aircraft_1_destroyed.png":
+{
+	"frame": {"x":209,"y":205,"w":57,"h":42},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":42},
+	"sourceSize": {"w":57,"h":42}
+},
+"aircraft_1_hit.png":
+{
+	"frame": {"x":209,"y":161,"w":57,"h":42},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":42},
+	"sourceSize": {"w":57,"h":42}
+},
+"aircraft_1_prop_1.png":
+{
+	"frame": {"x":168,"y":507,"w":57,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":2},
+	"sourceSize": {"w":57,"h":2}
+},
+"aircraft_1_prop_2.png":
+{
+	"frame": {"x":132,"y":503,"w":57,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":2},
+	"sourceSize": {"w":57,"h":2}
+},
+"aircraft_1_prop_3.png":
+{
+	"frame": {"x":132,"y":499,"w":57,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":2},
+	"sourceSize": {"w":57,"h":2}
+},
+"aircraft_1_shadow.png":
+{
+	"frame": {"x":203,"y":249,"w":57,"h":42},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":42},
+	"sourceSize": {"w":57,"h":42}
+},
+"aircraft_1b.png":
+{
+	"frame": {"x":191,"y":431,"w":57,"h":42},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":42},
+	"sourceSize": {"w":57,"h":42}
+},
+"aircraft_1b_destroyed.png":
+{
+	"frame": {"x":144,"y":387,"w":57,"h":42},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":42},
+	"sourceSize": {"w":57,"h":42}
+},
+"aircraft_1b_hit.png":
+{
+	"frame": {"x":144,"y":343,"w":57,"h":42},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":42},
+	"sourceSize": {"w":57,"h":42}
+},
+"aircraft_1b_prop_1.png":
+{
+	"frame": {"x":168,"y":507,"w":57,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":2},
+	"sourceSize": {"w":57,"h":2}
+},
+"aircraft_1b_prop_2.png":
+{
+	"frame": {"x":132,"y":503,"w":57,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":2},
+	"sourceSize": {"w":57,"h":2}
+},
+"aircraft_1b_prop_3.png":
+{
+	"frame": {"x":132,"y":499,"w":57,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":2},
+	"sourceSize": {"w":57,"h":2}
+},
+"aircraft_1c.png":
+{
+	"frame": {"x":144,"y":299,"w":57,"h":42},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":42},
+	"sourceSize": {"w":57,"h":42}
+},
+"aircraft_1c_destroyed.png":
+{
+	"frame": {"x":150,"y":205,"w":57,"h":42},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":42},
+	"sourceSize": {"w":57,"h":42}
+},
+"aircraft_1c_hit.png":
+{
+	"frame": {"x":150,"y":161,"w":57,"h":42},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":42},
+	"sourceSize": {"w":57,"h":42}
+},
+"aircraft_1c_prop_1.png":
+{
+	"frame": {"x":168,"y":507,"w":57,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":2},
+	"sourceSize": {"w":57,"h":2}
+},
+"aircraft_1c_prop_2.png":
+{
+	"frame": {"x":132,"y":503,"w":57,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":2},
+	"sourceSize": {"w":57,"h":2}
+},
+"aircraft_1c_prop_3.png":
+{
+	"frame": {"x":132,"y":499,"w":57,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":2},
+	"sourceSize": {"w":57,"h":2}
+},
+"aircraft_1d.png":
+{
+	"frame": {"x":144,"y":255,"w":57,"h":42},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":42},
+	"sourceSize": {"w":57,"h":42}
+},
+"aircraft_1d_destroyed.png":
+{
+	"frame": {"x":132,"y":455,"w":57,"h":42},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":42},
+	"sourceSize": {"w":57,"h":42}
+},
+"aircraft_1d_hit.png":
+{
+	"frame": {"x":85,"y":387,"w":57,"h":42},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":42},
+	"sourceSize": {"w":57,"h":42}
+},
+"aircraft_1d_prop_1.png":
+{
+	"frame": {"x":168,"y":507,"w":57,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":2},
+	"sourceSize": {"w":57,"h":2}
+},
+"aircraft_1d_prop_2.png":
+{
+	"frame": {"x":132,"y":503,"w":57,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":2},
+	"sourceSize": {"w":57,"h":2}
+},
+"aircraft_1d_prop_3.png":
+{
+	"frame": {"x":132,"y":499,"w":57,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":2},
+	"sourceSize": {"w":57,"h":2}
+},
+"aircraft_1e.png":
+{
+	"frame": {"x":85,"y":343,"w":57,"h":42},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":42},
+	"sourceSize": {"w":57,"h":42}
+},
+"aircraft_1e_destroyed.png":
+{
+	"frame": {"x":85,"y":299,"w":57,"h":42},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":42},
+	"sourceSize": {"w":57,"h":42}
+},
+"aircraft_1e_hit.png":
+{
+	"frame": {"x":85,"y":255,"w":57,"h":42},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":42},
+	"sourceSize": {"w":57,"h":42}
+},
+"aircraft_1e_prop_1.png":
+{
+	"frame": {"x":168,"y":507,"w":57,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":2},
+	"sourceSize": {"w":57,"h":2}
+},
+"aircraft_1e_prop_2.png":
+{
+	"frame": {"x":132,"y":503,"w":57,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":2},
+	"sourceSize": {"w":57,"h":2}
+},
+"aircraft_1e_prop_3.png":
+{
+	"frame": {"x":132,"y":499,"w":57,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":57,"h":2},
+	"sourceSize": {"w":57,"h":2}
+},
+"aircraft_2.png":
+{
+	"frame": {"x":85,"y":206,"w":63,"h":47},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":47},
+	"sourceSize": {"w":63,"h":47}
+},
+"aircraft_2_destroyed.png":
+{
+	"frame": {"x":428,"y":108,"w":63,"h":47},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":47},
+	"sourceSize": {"w":63,"h":47}
+},
+"aircraft_2_hit.png":
+{
+	"frame": {"x":363,"y":108,"w":63,"h":47},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":47},
+	"sourceSize": {"w":63,"h":47}
+},
+"aircraft_2_prop_1.png":
+{
+	"frame": {"x":85,"y":451,"w":63,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":2},
+	"sourceSize": {"w":63,"h":2}
+},
+"aircraft_2_prop_2.png":
+{
+	"frame": {"x":85,"y":447,"w":63,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":2},
+	"sourceSize": {"w":63,"h":2}
+},
+"aircraft_2_prop_3.png":
+{
+	"frame": {"x":85,"y":443,"w":63,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":2},
+	"sourceSize": {"w":63,"h":2}
+},
+"aircraft_2_shadow.png":
+{
+	"frame": {"x":298,"y":108,"w":63,"h":47},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":47},
+	"sourceSize": {"w":63,"h":47}
+},
+"aircraft_2b.png":
+{
+	"frame": {"x":85,"y":157,"w":63,"h":47},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":47},
+	"sourceSize": {"w":63,"h":47}
+},
+"aircraft_2b_destroyed.png":
+{
+	"frame": {"x":168,"y":112,"w":63,"h":47},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":47},
+	"sourceSize": {"w":63,"h":47}
+},
+"aircraft_2b_hit.png":
+{
+	"frame": {"x":233,"y":108,"w":63,"h":47},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":47},
+	"sourceSize": {"w":63,"h":47}
+},
+"aircraft_2b_prop_1.png":
+{
+	"frame": {"x":85,"y":451,"w":63,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":2},
+	"sourceSize": {"w":63,"h":2}
+},
+"aircraft_2b_prop_2.png":
+{
+	"frame": {"x":85,"y":447,"w":63,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":2},
+	"sourceSize": {"w":63,"h":2}
+},
+"aircraft_2b_prop_3.png":
+{
+	"frame": {"x":85,"y":443,"w":63,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":2},
+	"sourceSize": {"w":63,"h":2}
+},
+"aircraft_2c.png":
+{
+	"frame": {"x":446,"y":59,"w":63,"h":47},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":47},
+	"sourceSize": {"w":63,"h":47}
+},
+"aircraft_2c_destroyed.png":
+{
+	"frame": {"x":381,"y":59,"w":63,"h":47},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":47},
+	"sourceSize": {"w":63,"h":47}
+},
+"aircraft_2c_hit.png":
+{
+	"frame": {"x":316,"y":59,"w":63,"h":47},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":47},
+	"sourceSize": {"w":63,"h":47}
+},
+"aircraft_2c_prop_1.png":
+{
+	"frame": {"x":85,"y":439,"w":63,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":2},
+	"sourceSize": {"w":63,"h":2}
+},
+"aircraft_2c_prop_2.png":
+{
+	"frame": {"x":85,"y":435,"w":63,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":2},
+	"sourceSize": {"w":63,"h":2}
+},
+"aircraft_2c_prop_3.png":
+{
+	"frame": {"x":85,"y":431,"w":63,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":2},
+	"sourceSize": {"w":63,"h":2}
+},
+"aircraft_2d.png":
+{
+	"frame": {"x":85,"y":108,"w":63,"h":47},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":47},
+	"sourceSize": {"w":63,"h":47}
+},
+"aircraft_2d_destroyed.png":
+{
+	"frame": {"x":168,"y":63,"w":63,"h":47},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":47},
+	"sourceSize": {"w":63,"h":47}
+},
+"aircraft_2d_hit.png":
+{
+	"frame": {"x":251,"y":59,"w":63,"h":47},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":47},
+	"sourceSize": {"w":63,"h":47}
+},
+"aircraft_2d_prop_1.png":
+{
+	"frame": {"x":85,"y":439,"w":63,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":2},
+	"sourceSize": {"w":63,"h":2}
+},
+"aircraft_2d_prop_2.png":
+{
+	"frame": {"x":85,"y":435,"w":63,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":2},
+	"sourceSize": {"w":63,"h":2}
+},
+"aircraft_2d_prop_3.png":
+{
+	"frame": {"x":85,"y":431,"w":63,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":2},
+	"sourceSize": {"w":63,"h":2}
+},
+"aircraft_2e.png":
+{
+	"frame": {"x":85,"y":59,"w":63,"h":47},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":47},
+	"sourceSize": {"w":63,"h":47}
+},
+"aircraft_2e_destroyed.png":
+{
+	"frame": {"x":67,"y":458,"w":63,"h":47},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":47},
+	"sourceSize": {"w":63,"h":47}
+},
+"aircraft_2e_hit.png":
+{
+	"frame": {"x":2,"y":458,"w":63,"h":47},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":47},
+	"sourceSize": {"w":63,"h":47}
+},
+"aircraft_2e_prop_1.png":
+{
+	"frame": {"x":85,"y":439,"w":63,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":2},
+	"sourceSize": {"w":63,"h":2}
+},
+"aircraft_2e_prop_2.png":
+{
+	"frame": {"x":85,"y":435,"w":63,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":2},
+	"sourceSize": {"w":63,"h":2}
+},
+"aircraft_2e_prop_3.png":
+{
+	"frame": {"x":85,"y":431,"w":63,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":63,"h":2},
+	"sourceSize": {"w":63,"h":2}
+},
+"aircraft_3.png":
+{
+	"frame": {"x":2,"y":401,"w":81,"h":55},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":55},
+	"sourceSize": {"w":81,"h":55}
+},
+"aircraft_3_destroyed.png":
+{
+	"frame": {"x":2,"y":344,"w":81,"h":55},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":55},
+	"sourceSize": {"w":81,"h":55}
+},
+"aircraft_3_hit.png":
+{
+	"frame": {"x":2,"y":287,"w":81,"h":55},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":55},
+	"sourceSize": {"w":81,"h":55}
+},
+"aircraft_3_prop_1.png":
+{
+	"frame": {"x":168,"y":59,"w":81,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":2},
+	"sourceSize": {"w":81,"h":2}
+},
+"aircraft_3_prop_2.png":
+{
+	"frame": {"x":85,"y":507,"w":81,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":2},
+	"sourceSize": {"w":81,"h":2}
+},
+"aircraft_3_prop_3.png":
+{
+	"frame": {"x":2,"y":507,"w":81,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":2},
+	"sourceSize": {"w":81,"h":2}
+},
+"aircraft_3_shadow.png":
+{
+	"frame": {"x":2,"y":230,"w":81,"h":55},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":55},
+	"sourceSize": {"w":81,"h":55}
+},
+"aircraft_3b.png":
+{
+	"frame": {"x":2,"y":173,"w":81,"h":55},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":55},
+	"sourceSize": {"w":81,"h":55}
+},
+"aircraft_3b_destroyed.png":
+{
+	"frame": {"x":2,"y":116,"w":81,"h":55},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":55},
+	"sourceSize": {"w":81,"h":55}
+},
+"aircraft_3b_hit.png":
+{
+	"frame": {"x":2,"y":59,"w":81,"h":55},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":55},
+	"sourceSize": {"w":81,"h":55}
+},
+"aircraft_3b_prop_1.png":
+{
+	"frame": {"x":168,"y":59,"w":81,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":2},
+	"sourceSize": {"w":81,"h":2}
+},
+"aircraft_3b_prop_2.png":
+{
+	"frame": {"x":85,"y":507,"w":81,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":2},
+	"sourceSize": {"w":81,"h":2}
+},
+"aircraft_3b_prop_3.png":
+{
+	"frame": {"x":2,"y":507,"w":81,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":2},
+	"sourceSize": {"w":81,"h":2}
+},
+"aircraft_3d.png":
+{
+	"frame": {"x":417,"y":2,"w":81,"h":55},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":55},
+	"sourceSize": {"w":81,"h":55}
+},
+"aircraft_3d_destroyed.png":
+{
+	"frame": {"x":334,"y":2,"w":81,"h":55},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":55},
+	"sourceSize": {"w":81,"h":55}
+},
+"aircraft_3d_hit.png":
+{
+	"frame": {"x":251,"y":2,"w":81,"h":55},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":55},
+	"sourceSize": {"w":81,"h":55}
+},
+"aircraft_3d_prop_1.png":
+{
+	"frame": {"x":168,"y":59,"w":81,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":2},
+	"sourceSize": {"w":81,"h":2}
+},
+"aircraft_3d_prop_2.png":
+{
+	"frame": {"x":85,"y":507,"w":81,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":2},
+	"sourceSize": {"w":81,"h":2}
+},
+"aircraft_3d_prop_3.png":
+{
+	"frame": {"x":2,"y":507,"w":81,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":2},
+	"sourceSize": {"w":81,"h":2}
+},
+"aircraft_3e.png":
+{
+	"frame": {"x":168,"y":2,"w":81,"h":55},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":55},
+	"sourceSize": {"w":81,"h":55}
+},
+"aircraft_3e_destroyed.png":
+{
+	"frame": {"x":85,"y":2,"w":81,"h":55},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":55},
+	"sourceSize": {"w":81,"h":55}
+},
+"aircraft_3e_hit.png":
+{
+	"frame": {"x":2,"y":2,"w":81,"h":55},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":55},
+	"sourceSize": {"w":81,"h":55}
+},
+"aircraft_3e_prop_1.png":
+{
+	"frame": {"x":168,"y":59,"w":81,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":2},
+	"sourceSize": {"w":81,"h":2}
+},
+"aircraft_3e_prop_2.png":
+{
+	"frame": {"x":85,"y":507,"w":81,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":2},
+	"sourceSize": {"w":81,"h":2}
+},
+"aircraft_3e_prop_3.png":
+{
+	"frame": {"x":2,"y":507,"w":81,"h":2},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":81,"h":2},
+	"sourceSize": {"w":81,"h":2}
+}},
+"meta": {
+	"app": "http://www.texturepacker.com",
+	"version": "1.0",
+	"image": "air_units.png",
+	"format": "RGBA8888",
+	"size": {"w":512,"h":512},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:af29a7051c03b3e615b4269875a0692c$"
+}
+}

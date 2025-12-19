@@ -1,0 +1,44 @@
+{"frames": {
+
+"big_gun.png":
+{
+	"frame": {"x":2,"y":123,"w":52,"h":66},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":52,"h":66},
+	"sourceSize": {"w":52,"h":66}
+},
+"medium_tank.png":
+{
+	"frame": {"x":2,"y":2,"w":76,"h":89},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":76,"h":89},
+	"sourceSize": {"w":76,"h":89}
+},
+"rocket_launcher.png":
+{
+	"frame": {"x":2,"y":191,"w":52,"h":62},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":52,"h":62},
+	"sourceSize": {"w":52,"h":62}
+},
+"track.png":
+{
+	"frame": {"x":2,"y":93,"w":76,"h":28},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":76,"h":28},
+	"sourceSize": {"w":76,"h":28}
+}},
+"meta": {
+	"app": "http://www.codeandweb.com/texturepacker ",
+	"version": "1.0",
+	"image": "tank_5.png",
+	"format": "RGBA8888",
+	"size": {"w":128,"h":256},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:9d897940bdb4018876e0c017613de125:276e4d79f650ade95369c29f59c79fdf:72bf3edfc740eff20f39f267ff37b2f9$"
+}
+}

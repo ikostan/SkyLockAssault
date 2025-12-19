@@ -49,6 +49,7 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 - [Empire State Font](https://www.dafont.com/empire-state.font?l[]=10&l[]=1)
 - [Pixel Planes Assets Pack](https://clavs.itch.io/pixel-planes-assets-pack)
 - [Assets Free Laser Bullets Pack 2020](https://wenrexa.itch.io/laser2020)
+- Csaba Felvegi aka "chabull" free assets collection, [see here](https://opengameart.org/users/chabull)
 - [Pixabay: royalty free stock](https://pixabay.com/)
 <!-- markdownlint-disable line-length -->
 - Music:
@@ -124,17 +125,22 @@ menu during play.
 
 ### Current features
 
-- Main menu scene (`main_menu.tscn`) with buttons (Start, Resume, Options, Quit).
-- Placeholder game level (`main_scene.tscn`) for future mechanics and game testing.
-- Options menu (`options_menu.tscn`) with log level settings, accessible from main
+- Main menu scene with buttons (Start, Resume, Options, Quit).
+- Placeholder game level for future mechanics and game testing.
+- Options menu with log level settings, accessible from main
   and pause menus.
-- Pause menu (`pause_menu.tscn`) with buttons (Main Menu, Options, Resume).
-- Player scene (`Player.tscn`) with CharacterBody2D, ShaderBody, CollisionShape,
+- Pause menu with buttons (Main Menu, Options, Resume).
+- Player scene with CharacterBody2D, ShaderBody, CollisionShape,
   and FuelTimer.
 - Fade-in animations for main menu UI panels.
 - Fuel system including fuel level progress bar.
 - Basic weapon system.
 - Difficulty settings.
+- Game controls input remapping.
+- Fuel management (timer-based depletion only).
+- Basic adjustable difficulty (affects fire rate and fuel depletion only).
+- Basic sound effects & background music.
+- Added Scrolling Background to Main Scene for Flying Over Terrain.
 
 ### Features Roadmap
 
