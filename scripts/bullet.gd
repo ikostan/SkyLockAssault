@@ -18,8 +18,7 @@ var timer: Timer
 
 # NO @onready for ShotSFX — we’ll create players dynamically
 func _ready() -> void:
-	Globals.log_message("BulletFirer _ready: Script loaded.", Globals.LogLevel.DEBUG)
-
+	# Globals.log_message("BulletFirer _ready: Script loaded.", Globals.LogLevel.DEBUG)
 	# Set Texture Filter to Nearest
 	get_viewport().canvas_item_default_texture_filter = (
 		Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
@@ -69,8 +68,7 @@ func play_sfx_with_volume() -> void:
 	# Play and auto-cleanup
 	sfx_player.play()
 	sfx_player.finished.connect(func() -> void: sfx_player.queue_free())
-
-	Globals.log_message("SFX played on Web with bus volume control.", Globals.LogLevel.DEBUG)
+	# Globals.log_message("SFX played on Web with bus volume control.", Globals.LogLevel.DEBUG)
 
 
 func spawn_projectile() -> void:
@@ -89,7 +87,8 @@ func spawn_projectile() -> void:
 			Globals.log_message("Projectile hit: " + body.name, Globals.LogLevel.DEBUG)
 			if body.has_method("take_damage"):
 				body.take_damage(damage)  # Apply damage to enemy
-			proj.queue_free()  # Destroy on hit
+			if is_instance_valid(proj):  # Safe check (handles any rare race)
+				proj.queue_free()  # Destroy on hit
 	)
 
 	# Sprite for visuals – drag texture in Inspector
@@ -109,4 +108,8 @@ func spawn_projectile() -> void:
 	proj.add_to_group("bullets")  # Group for cleanup/query (e.g., count bullets)
 
 	# Timer destroy – prevents off-screen leaks (learning: memory management)
-	get_tree().create_timer(projectile_lifetime).timeout.connect(func() -> void: proj.queue_free())
+	var lifetime_timer: Timer = Timer.new()
+	lifetime_timer.one_shot = true  # Only fire once (like create_timer)
+	proj.add_child(lifetime_timer)
+	lifetime_timer.timeout.connect(proj.queue_free)  # Bound callable: safe, no lambda/capture
+	lifetime_timer.start(projectile_lifetime)

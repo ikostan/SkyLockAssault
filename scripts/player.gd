@@ -18,9 +18,6 @@ var player_x_min: float = 0.0
 var player_x_max: float = 0.0
 var player_y_min: float = 0.0
 var player_y_max: float = 0.0
-# For gradual colors shifts (e.g., green to red as fuel drops), use Color.lerp
-var lerp_factor: float
-
 # Weapon system
 var weapons: Array[Node] = []  # Fill in editor or _ready
 var current_weapon: int = 0
@@ -34,8 +31,6 @@ var fuel_bar: ProgressBar = $"../PlayerStatsPanel/VBoxContainer/HBoxContainer/Fu
 @onready var fuel_timer: Timer = $FuelTimer
 # Get the fill style
 @onready var fill_style: StyleBoxFlat = fuel_bar.get_theme_stylebox("fill")
-# Cached initial fill color
-@onready var progress_bar_bg_color: Color = fill_style.bg_color
 # In plane.gd (or main player script) - central input
 @onready var weapon: Node2D = $CharacterBody2D/Weapon  # Path to your WeaponManager node
 
@@ -78,7 +73,7 @@ func _ready() -> void:
 	# Initialize fuel
 	current_fuel = max_fuel
 	fuel_bar.max_value = max_fuel
-	fuel_bar.value = current_fuel  # Set initial progress
+	update_fuel_bar()  # Set initial UI and color
 	fuel_timer.timeout.connect(_on_fuel_timer_timeout)
 	fuel_timer.start()
 
@@ -94,7 +89,7 @@ func _ready() -> void:
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("fire"):
-		Globals.log_message("Fire input pressed → calling weapon.fire()", Globals.LogLevel.DEBUG)
+		# Globals.log_message("Fire input pressed → calling weapon.fire()", Globals.LogLevel.DEBUG)
 		if weapon and weapon.has_method("fire"):
 			weapon.fire()
 		get_viewport().set_input_as_handled()
@@ -106,24 +101,42 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+func update_fuel_bar() -> void:
+	fuel_bar.value = current_fuel
+	var fuel_percent: float = (current_fuel / max_fuel) * 100.0
+
+	if fuel_percent > HIGH_FUEL_THRESHOLD:
+		fill_style.bg_color = Color.GREEN  # Full green for high fuel
+	elif fuel_percent >= MEDIUM_FUEL_THRESHOLD:
+		# Lerp green to yellow (factor 0 at 90%, 1 at 50%)
+		var section_factor: float = (
+			(HIGH_FUEL_THRESHOLD - fuel_percent) / (HIGH_FUEL_THRESHOLD - MEDIUM_FUEL_THRESHOLD)
+		)
+		fill_style.bg_color = Color.GREEN.lerp(Color.YELLOW, section_factor)
+	elif fuel_percent >= LOW_FUEL_THRESHOLD:
+		# Lerp yellow to red
+		var section_factor: float = (
+			(MEDIUM_FUEL_THRESHOLD - fuel_percent) / (MEDIUM_FUEL_THRESHOLD - LOW_FUEL_THRESHOLD)
+		)
+		fill_style.bg_color = Color.YELLOW.lerp(Color.RED, section_factor)
+	elif fuel_percent > NO_FUEL_THRESHOLD:
+		# Lerp red to darker or full red
+		var section_factor: float = (
+			(LOW_FUEL_THRESHOLD - fuel_percent) / (LOW_FUEL_THRESHOLD - NO_FUEL_THRESHOLD)
+		)
+		fill_style.bg_color = Color.RED.lerp(Color(0.5, 0, 0), section_factor)  # Example to dark red
+	else:
+		fill_style.bg_color = Color.RED  # Full red
+
+
 # Connect Timer's timeout signal
 func _on_fuel_timer_timeout() -> void:
-	var fuel_left: float = current_fuel - (0.5 * Globals.difficulty)  # Scale base rate
-	# Add a clamp so current_fuel never drops below zero
-	# to prevent negative values and any unintended behavior in the fuel bar.
+	# Scale base rate
+	var fuel_left: float = current_fuel - (0.5 * Globals.difficulty)
+	# Clamp and update current_fuel first
 	current_fuel = clamp(fuel_left, 0, max_fuel)
-	fuel_bar.value = current_fuel
-	lerp_factor = 1.0 - (current_fuel / max_fuel)  # 0=full (green), 1=empty (red)
-	progress_bar_bg_color = fill_style.bg_color
-
-	if current_fuel >= MEDIUM_FUEL_THRESHOLD and current_fuel <= HIGH_FUEL_THRESHOLD:
-		fill_style.bg_color = progress_bar_bg_color.lerp(Color.GREEN, lerp_factor)
-	elif LOW_FUEL_THRESHOLD <= current_fuel and current_fuel < MEDIUM_FUEL_THRESHOLD:
-		fill_style.bg_color = progress_bar_bg_color.lerp(Color.YELLOW, lerp_factor)  # Medium-high: green
-	elif current_fuel > NO_FUEL_THRESHOLD and current_fuel < LOW_FUEL_THRESHOLD:
-		fill_style.bg_color = progress_bar_bg_color.lerp(Color.RED, lerp_factor)  # Medium-low: yellow
-	elif current_fuel <= NO_FUEL_THRESHOLD:
-		fill_style.bg_color = Color.RED  # Low: red
+	# Update UI from the clamped value
+	update_fuel_bar()
 
 	if current_fuel <= 0:
 		speed = 0.0  # Or game over logic
@@ -132,13 +145,8 @@ func _on_fuel_timer_timeout() -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	var direction: Vector2 = Input.get_vector(
-		"move_left", "move_right", "move_forward", "move_backward"
-	)
+	var direction: Vector2 = Input.get_vector("move_left", "move_right", "speed_up", "speed_down")
 	if direction != Vector2.ZERO:
-		Globals.log_message(
-			"Direction: " + str(direction) + " (Left pressed? x<0)", Globals.LogLevel.DEBUG
-		)  # Temp debug
 		player.velocity = direction * speed
 	else:
 		player.velocity = Vector2.ZERO

@@ -6,7 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://4cavnb0mmtn8" path="res://scenes/master_volume_control.tscn" id="4_lfjc7"]
 [ext_resource type="PackedScene" uid="uid://eb04pytcq5xc" path="res://scenes/music_volume_control.tscn" id="5_dhn0l"]
 [ext_resource type="PackedScene" uid="uid://6npyx3vjw3wg" path="res://scenes/sfx_volume_control.tscn" id="6_k61yy"]
-[ext_resource type="Script" uid="uid://dpnjuvidqg80k" path="res://scripts/input_remap_button.gd" id="7_k61yy"]
+[ext_resource type="Script" uid="uid://t5guwag0bdjc" path="res://scripts/input_remap_button.gd" id="7_k61yy"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lfjc7"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
@@ -247,37 +247,35 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_2f1bn")
 theme_override_styles/hover = SubResource("StyleBoxFlat_7txom")
 theme_override_styles/focus = SubResource("StyleBoxFlat_binsn")
 
-[node name="KeyMappingForward" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
+[node name="KeyMappingSpeedUp" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 tooltip_text = "Key mapping for forward button"
 
-[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/KeyMappingForward"]
+[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/KeyMappingSpeedUp"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("1_liyum")
-text = "{MOVE=FORWARD:}"
+text = "{SPEED=UP:}"
 
-[node name="ForwardInputRemapButton" type="Button" parent="Panel/OptionsVBoxContainer/KeyMappingForward"]
+[node name="SpeedUpInputRemapButton" type="Button" parent="Panel/OptionsVBoxContainer/KeyMappingSpeedUp"]
 layout_direction = 3
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 script = ExtResource("7_k61yy")
-action = "move_forward"
-metadata/_custom_type_script = "uid://dpnjuvidqg80k"
+action = "speed_up"
 
-[node name="KeyMappingBackward" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
+[node name="KeyMappingSpeedDown" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 tooltip_text = "Key mapping for backward button"
 
-[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/KeyMappingBackward"]
+[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/KeyMappingSpeedDown"]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("1_liyum")
-text = "{MOVE=BACWARD:}"
+text = "{SPEED=DOWN:}"
 
-[node name="BackwardInputRemapButton" type="Button" parent="Panel/OptionsVBoxContainer/KeyMappingBackward"]
+[node name="SpeedDownInputRemapButton" type="Button" parent="Panel/OptionsVBoxContainer/KeyMappingSpeedDown"]
 layout_mode = 2
 script = ExtResource("7_k61yy")
-action = "move_backward"
-metadata/_custom_type_script = "uid://dpnjuvidqg80k"
+action = "speed_down"
 
 [node name="KeyMappingLeft" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
@@ -293,7 +291,6 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 18
 script = ExtResource("7_k61yy")
 action = "move_left"
-metadata/_custom_type_script = "uid://dpnjuvidqg80k"
 
 [node name="KeyMappingRight" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
@@ -309,7 +306,6 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 18
 script = ExtResource("7_k61yy")
 action = "move_right"
-metadata/_custom_type_script = "uid://dpnjuvidqg80k"
 
 [node name="KeyMappingFire" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
@@ -325,7 +321,6 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 18
 script = ExtResource("7_k61yy")
 action = "fire"
-metadata/_custom_type_script = "uid://dpnjuvidqg80k"
 
 [node name="KeyMappingNextWeapon" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
@@ -341,7 +336,6 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 18
 script = ExtResource("7_k61yy")
 action = "next_weapon"
-metadata/_custom_type_script = "uid://dpnjuvidqg80k"
 
 [node name="BackButton" type="Button" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
