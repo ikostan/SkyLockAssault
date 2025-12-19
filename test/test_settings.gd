@@ -350,8 +350,6 @@ func test_type_safe_new_format() -> void:
 	assert_int(events[0].physical_keycode).is_equal(KEY_Q)
 
 
-# Add to test_settings.gd
-
 # Test load error handling (e.g., corrupt file)
 func test_load_error_handling() -> void:
 	var test_path: String = "user://corrupt.cfg"
@@ -362,13 +360,18 @@ func test_load_error_handling() -> void:
 	
 	assert_bool(FileAccess.file_exists(test_path)).is_true()
 	
-	# Load should log error and skip (events remain erased/default)
+	# Erase events before testing
 	InputMap.action_erase_events("test_action")
-	Settings.load_input_mappings(test_path, ["test_action"])
 	
-	# Verify no events added (since load failed)
+	# Expect the parse error during load (this captures the runtime error and verifies it)
+	var expected_error: String = "ConfigFile parse error at user://corrupt.cfg:0: Unexpected EOF while parsing simple tag."
+	assert_error(func() -> void:
+		Settings.load_input_mappings(test_path, ["test_action"])
+	).is_equal(expected_error)
+	
+	# Verify no events added (load skipped due to error handling)
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
-	assert_int(events.size()).is_equal(0)  # Or check for default if applicable
+	assert_int(events.size()).is_equal(0)
 	
 	# Clean up
 	DirAccess.remove_absolute(test_path)
