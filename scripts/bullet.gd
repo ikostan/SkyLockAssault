@@ -94,7 +94,7 @@ func spawn_projectile() -> void:
 	# Sprite for visuals – drag texture in Inspector
 	var sprite: Sprite2D = Sprite2D.new()
 	sprite.texture = projectile_texture
-	sprite.scale = Vector2(0.5, 0.5)  # Scale for bullet size – tweak
+	sprite.scale = Vector2(0.25, 0.25)  # Scale for bullet size – tweak
 	proj.add_child(sprite)
 
 	# Collision shape – rectangle for bullet hitbox (learning: match sprite size)

@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://cl4m4q2eurcn0"]
+[gd_scene load_steps=20 format=3 uid="uid://cl4m4q2eurcn0"]
 
 [ext_resource type="Script" uid="uid://cajq8hf84eplh" path="res://scripts/options_menu.gd" id="1_ijpji"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_liyum"]
@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://4cavnb0mmtn8" path="res://scenes/master_volume_control.tscn" id="4_lfjc7"]
 [ext_resource type="PackedScene" uid="uid://eb04pytcq5xc" path="res://scenes/music_volume_control.tscn" id="5_dhn0l"]
 [ext_resource type="PackedScene" uid="uid://6npyx3vjw3wg" path="res://scenes/sfx_volume_control.tscn" id="6_k61yy"]
+[ext_resource type="PackedScene" uid="uid://cwcx54enfythj" path="res://scenes/sfx_rotors_volume_control.tscn" id="7_7txom"]
 [ext_resource type="Script" uid="uid://t5guwag0bdjc" path="res://scripts/input_remap_button.gd" id="7_k61yy"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lfjc7"]
@@ -214,6 +215,22 @@ text = "{SFX=VOLUME}"
 [node name="SFXVolumeControl" parent="Panel/OptionsVBoxContainer/VolumeControls/SFXVolumeControl" instance=ExtResource("6_k61yy")]
 layout_mode = 2
 size_flags_horizontal = 8
+
+[node name="SFXRotorsVolumeControl" type="HBoxContainer" parent="Panel/OptionsVBoxContainer/VolumeControls"]
+layout_mode = 2
+size_flags_vertical = 3
+tooltip_text = "SFX Rotors Volium Controls"
+theme_override_constants/separation = 11
+
+[node name="SFXVolumeLabel" type="Label" parent="Panel/OptionsVBoxContainer/VolumeControls/SFXRotorsVolumeControl"]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_fonts/font = ExtResource("1_liyum")
+theme_override_font_sizes/font_size = 15
+text = "{ROTORS=VOLUME}"
+
+[node name="SFXRotorsVolumeControl" parent="Panel/OptionsVBoxContainer/VolumeControls/SFXRotorsVolumeControl" instance=ExtResource("7_7txom")]
+layout_mode = 2
 
 [node name="LogLevelContainer" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2

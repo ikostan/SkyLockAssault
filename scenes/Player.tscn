@@ -1,12 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://37rarq1yywmc"]
+[gd_scene load_steps=7 format=3 uid="uid://37rarq1yywmc"]
 
-[ext_resource type="Texture2D" uid="uid://gnx6aovalhxs" path="res://files/sprite/PixelPlanesAssetPack.png" id="1_p0vlq"]
 [ext_resource type="Script" uid="uid://bcplrymg5tt06" path="res://scripts/player.gd" id="1_v6fml"]
+[ext_resource type="PackedScene" uid="uid://c7c8smbqpkh0u" path="res://scenes/rotor_right.tscn" id="2_qlg0r"]
 [ext_resource type="PackedScene" uid="uid://blc0ioe12jlnk" path="res://scenes/bullet.tscn" id="3_dqkch"]
 [ext_resource type="PackedScene" uid="uid://bafpwe0qf0vm0" path="res://scenes/weapon.tscn" id="3_qhqgy"]
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_5q5h1"]
-size = Vector2(17, 16)
+[ext_resource type="Texture2D" uid="uid://quoucldyteg2" path="res://files/chabull_assets/aircrafts/p38_sprites/P38_lvl_0_d0.png" id="4_dqkch"]
+[ext_resource type="PackedScene" uid="uid://bh47kclxgeeah" path="res://scenes/rotor_left.tscn" id="4_tuyoq"]
 
 [node name="Player" type="Node2D"]
 script = ExtResource("1_v6fml")
@@ -15,18 +14,26 @@ script = ExtResource("1_v6fml")
 
 [node name="Weapon" parent="CharacterBody2D" instance=ExtResource("3_qhqgy")]
 visible = false
+position = Vector2(0, -18)
 weapon_types = Array[PackedScene]([ExtResource("3_dqkch")])
+
+[node name="RotorLeft" parent="CharacterBody2D" instance=ExtResource("4_tuyoq")]
+position = Vector2(-12.8, -25)
+scale = Vector2(0.25, 0.25)
+
+[node name="RotorRight" parent="CharacterBody2D" instance=ExtResource("2_qlg0r")]
+position = Vector2(12.2, -25)
+scale = Vector2(0.25, 0.25)
 
 [node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D"]
 texture_filter = 1
-position = Vector2(1, 2)
-texture = ExtResource("1_p0vlq")
-region_enabled = true
-region_rect = Rect2(129.12057, 1.3690486, 28.879425, 29.416893)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("4_dqkch")
+region_rect = Rect2(125, 125, 125, 125)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="CharacterBody2D"]
-position = Vector2(1.5, 1)
-shape = SubResource("RectangleShape2D_5q5h1")
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="CharacterBody2D"]
+visible = false
+polygon = PackedVector2Array(-41, -10, -17, -13, -14, -25, -12, -25, -10, -15, -4, -15, -3, -27, 0, -31, 2, -29, 3, -15, 9, -14, 11, -25, 13, -25, 16, -14, 40, -11, 40, -6, 16, -2, 15, 3, 16, 9, 14, 11, 13, 21, 16, 22, 16, 25, 13, 28, 11, 27, -12, 27, -12, 29, -14, 27, -17, 26, -17, 22, -14, 21, -14, 10, -16, 9, -16, 4, -15, 3, -15, -1, -41, -5)
 
 [node name="FuelTimer" type="Timer" parent="."]
 process_callback = 0

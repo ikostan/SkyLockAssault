@@ -1,4 +1,12 @@
-[gd_resource type="AudioBusLayout" format=3 uid="uid://ia7kqvsfnrnl"]
+[gd_resource type="AudioBusLayout" load_steps=3 format=3 uid="uid://ia7kqvsfnrnl"]
+
+[sub_resource type="AudioEffectPanner" id="AudioEffectPanner_j3pel"]
+resource_name = "Panner"
+pan = -1.0
+
+[sub_resource type="AudioEffectPanner" id="AudioEffectPanner_g28q7"]
+resource_name = "Panner"
+pan = 1.0
 
 [resource]
 bus/1/name = &"Music"
@@ -11,5 +19,27 @@ bus/2/name = &"SFX"
 bus/2/solo = false
 bus/2/mute = false
 bus/2/bypass_fx = false
-bus/2/volume_db = 0.0
+bus/2/volume_db = 1.1249313
 bus/2/send = &"Master"
+bus/3/name = &"SFX_Rotors"
+bus/3/solo = false
+bus/3/mute = false
+bus/3/bypass_fx = false
+bus/3/volume_db = 0.0
+bus/3/send = &"SFX"
+bus/4/name = &"SFX_Rotor_Left"
+bus/4/solo = false
+bus/4/mute = false
+bus/4/bypass_fx = false
+bus/4/volume_db = 0.0
+bus/4/send = &"SFX_Rotors"
+bus/4/effect/0/effect = SubResource("AudioEffectPanner_j3pel")
+bus/4/effect/0/enabled = true
+bus/5/name = &"SFX_Rotor_Right"
+bus/5/solo = false
+bus/5/mute = false
+bus/5/bypass_fx = false
+bus/5/volume_db = 0.0
+bus/5/send = &"SFX_Rotors"
+bus/5/effect/0/effect = SubResource("AudioEffectPanner_g28q7")
+bus/5/effect/0/enabled = true
