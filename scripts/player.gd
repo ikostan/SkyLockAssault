@@ -1,10 +1,15 @@
 extends Node2D
 
+## Player controller for P-38 Lightning in SkyLockAssault.
+## Manages movement, fuel, bounds, rotors (anim/sound), weapons.
+
 # Fuel color thresholds (percentages)
 const HIGH_FUEL_THRESHOLD: float = 90.0  # Starts green lerp
 const MEDIUM_FUEL_THRESHOLD: float = 50.0  # Switches to yellow lerp
 const LOW_FUEL_THRESHOLD: float = 30.0  # Switches to red lerp
 const NO_FUEL_THRESHOLD: float = 15.0  # Fully Red Color
+# Bounds hitbox scale (quarter texture = tight margin for top-down plane)
+const HITBOX_SCALE: float = 0.25
 
 # Exported vars first (for Inspector editing)
 @export var speed: float = 250.0
@@ -71,10 +76,10 @@ func _ready() -> void:
 	else:
 		push_warning("Player sprite texture missing! Using fallback size: " + str(sprite_size))
 
-	player_x_min = (screen_size.x * -0.5) + (sprite_size[0] / 4)
-	player_x_max = (screen_size.x * 0.5) - (sprite_size[0] / 4)
-	player_y_min = (screen_size.y * -0.83) + (sprite_size[1] / 4)
-	player_y_max = (screen_size.y / 6) - (sprite_size[1] / 4)
+	player_x_min = (screen_size.x * -0.5) + (sprite_size[0] * HITBOX_SCALE)
+	player_x_max = (screen_size.x * 0.5) - (sprite_size[0] * HITBOX_SCALE)
+	player_y_min = (screen_size.y * -0.83) + (sprite_size[1] * HITBOX_SCALE)
+	player_y_max = (screen_size.y / 6) - (sprite_size[1] * HITBOX_SCALE)
 
 	# After player_half_width/height calc
 	Globals.log_message(
