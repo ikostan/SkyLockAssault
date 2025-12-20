@@ -143,6 +143,7 @@ menu during play.
 - Airplane Rotor Sound (Stereo SFX) + Rotor Animation
 - Audio Buses & Panning (L/R Split)
 - Options Menu: Rotors Volume Slider
+- Multi-Thread support enabled
 
 ### Features Roadmap
 
