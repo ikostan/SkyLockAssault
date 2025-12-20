@@ -140,7 +140,9 @@ menu during play.
 - Fuel management (timer-based depletion only).
 - Basic adjustable difficulty (affects fire rate and fuel depletion only).
 - Basic sound effects & background music.
-- Added Scrolling Background to Main Scene for Flying Over Terrain.
+- Airplane Rotor Sound (Stereo SFX) + Rotor Animation
+- Audio Buses & Panning (L/R Split)
+- Options Menu: Rotors Volume Slider
 
 ### Features Roadmap
 
@@ -156,6 +158,7 @@ menu during play.
   - multi-level progression;
   - adjustable difficulty (enemy spawn rates);
   - enemy AI (pathing/assaults); scoring/HUD.
+  - Scrolling Background to Main Scene for Flying Over Terrain.
 - **Future Milestones**:
   - Mobile exports,
   - audio,
