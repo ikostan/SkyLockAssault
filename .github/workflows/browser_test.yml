@@ -30,7 +30,7 @@ jobs:
           wget -q https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz -O templates.tpz
           mkdir -p ~/.local/share/godot/export_templates/4.5.stable/
           unzip -q templates.tpz -d ~/.local/share/godot/export_templates/4.5.stable/
-          ./${godot_exe} --headless --export-release "Web (Runnable)" export/web/index.html --threads=off
+          ./${godot_exe} --headless --export-release "Web" export/web/index.html --threads=off
           echo "Export flags: --threads=off"
       - name: "List Export Directory Contents & Check Export flags"
         run: |
