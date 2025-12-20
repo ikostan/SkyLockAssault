@@ -28,11 +28,8 @@ Artifacts
 ---------
 v8_coverage_difficulty_flow_test.json, artifacts/test_difficulty_failure_*.png/txt
 """
-import http
-import http.server  # Fixed import for SimpleHTTPRequestHandler
+
 import os
-import socketserver
-import threading
 import time
 import json
 import pytest
@@ -41,60 +38,19 @@ from .ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary
 
 
 @pytest.fixture(scope="function")
-def http_server() -> None:
-    """
-    Fixture to start/stop local HTTP server for Godot HTML5 export.
-    Serves 'export/web' (your export folder with index.html).
-    Runs in thread to not block test.
-    """
-    export_dir = "export/web"  # Tweak if your export path differs (e.g., 'build/web')
-    if not os.path.exists(export_dir):
-        raise ValueError(f"Export dir not found: {export_dir} – run Godot export first!")
-    os.chdir(export_dir)  # Serve from export dir
-
-    class Handler(http.server.SimpleHTTPRequestHandler):
-        def end_headers(self):
-            # Add COOP/COEP for threads (fixes SharedArrayBuffer errors)
-            self.send_header("Cross-Origin-Opener-Policy", "same-origin")
-            self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
-            super().end_headers()
-
-        def log_message(self, format, *args):
-            print("[Server Log] %s" % format % args)  # Print server logs for debug
-
-    httpd = socketserver.TCPServer(("", 8080), Handler)
-    server_thread = threading.Thread(target=httpd.serve_forever)
-    server_thread.daemon = True
-    server_thread.start()
-    time.sleep(2)  # Wait for server start (bump if CI slow)
-    print("Local server started at http://localhost:8080 with COOP/COEP headers")
-
-    yield  # Run test
-
-    # Teardown
-    httpd.shutdown()
-    httpd.server_close()
-    print("Local server stopped")
-
-
-@pytest.fixture(scope="function")
-def page(playwright: Playwright, http_server) -> Page:
+def page(playwright: Playwright) -> Page:
     """
     Fixture for browser page setup with CDP for coverage.
 
     :param playwright: The Playwright instance.
     :type playwright: Playwright
-    :param http_server: The HTTP server fixture.
-    :type http_server: None
     :return: The configured page object.
     :rtype: Page
     """
     browser = playwright.chromium.launch(headless=True, args=[
-        "--disable-web-security",  # CORS bypass
-        "--allow-file-access-from-files",  # Local file fallback
-        "--no-sandbox",  # CI safe
-        "--enable-webgl",  # Force WebGL
-        "--ignore-gpu-blacklist"  # GPU enable
+        "--enable-unsafe-swiftshader",
+        "--disable-gpu",
+        "--use-gl=swiftshader",
     ])
 
     context = browser.new_context(
@@ -122,7 +78,6 @@ def page(playwright: Playwright, http_server) -> Page:
             cdp_session.send("Profiler.disable")
         except Exception as e:
             print(f"Failed to save coverage: {e}")
-    context.close()
     browser.close()
 
 
