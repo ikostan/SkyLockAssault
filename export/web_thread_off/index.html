@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+    <title>SkyLockAssault (DEBUG)</title>
+    <style>
+        html, body, #canvas {
+            margin: 0;
+            padding: 0;
+            border: 0;
+            overflow: hidden;
+            touch-action: none;
+            background-color: black;
+            color: white;
+        }
+        #canvas {
+            display: block;
+        }
+        #canvas:focus {
+            outline: none;
+        }
+        /* UI Buttons and Slider Styles (invisible but clickable overlays) */
+        button, input[type="range"], select {
+            position: absolute;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0; /* Invisible */
+            pointer-events: none; /* Pass through real mouse events to Godot canvas */
+            background: transparent;
+            border: none;
+            color: transparent; /* No text shown */
+            font-size: 32px; /* Match size for accurate overlay */
+            cursor: pointer;
+            z-index: 10; /* Above canvas for DOM presence, but events pass through */
+        }
+        input[type="range"] {
+            width: 250px; /* Match your Godot slider width */
+        }
+        /* Hide options elements initially (still invisible when shown) */
+        #difficulty-slider, #back-button, #log-level-select {
+            display: none;
+        }
+        /* Loading UI styles (moved from inline for maintainability) */
+        #loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+        }
+        #loading img {
+            max-width: 50%;
+            max-height: 50%;
+        }
+        #progress-bar {
+            width: 50%;
+            height: 20px;
+            background-color: #333;
+            margin-top: 20px;
+            border: 1px solid #555;
+        }
+        #progress {
+            width: 0%;
+            height: 100%;
+            background-color: #0f0;
+        }
+        #status {
+            color: white;
+            margin-top: 10px;
+        }
+        /* Retry button style (visible override) */
+        #retry-button {
+            opacity: 1; /* Visible */
+            pointer-events: auto; /* Clickable */
+            color: white; /* Text color */
+            background-color: #f00; /* Red button for error theme */
+            border: 1px solid #fff;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 20px;
+            display: none; /* Hidden initially */
+        }
+    </style>
+<!-- Removed favicon link to avoid 404 -->
+</head>
+<body>
+    <canvas id="canvas" tabindex="0" width="1280" height="720" style="position: absolute; top: 0px; left: 0px; width: 1280px; height: 720px;"></canvas>
+
+    <!-- Loading screen with progress bar (updated for better ARIA labeling) -->
+    <div id="loading">
+        <img src="index.png" alt="Loading...">
+        <!-- Added aria-labelledby to reference #status, providing a dynamic accessible name like "Loading: X%" for screen readers -->
+        <div id="progress-bar" role="progressbar" aria-labelledby="status" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div id="progress"></div>
+        </div>
+        <p id="status" aria-live="polite">Loading...</p>
+        <button id="retry-button">Retry</button>
+    </div>
+
+    <!-- Main Menu Buttons (invisible overlays) -->
+    <button id="start-button" style="top: 40%;">START</button>
+    <button id="options-button" style="top: 50%;">OPTIONS</button>
+    <button id="quit-button" style="top: 60%;">QUIT</button>
+
+    <!-- Options Menu Elements (invisible overlays, shown when menu loads) -->
+    <select id="log-level-select" style="top: 55%;">
+        <option>DEBUG</option>
+        <option>INFO</option>
+        <option>WARNING</option>
+        <option>ERROR</option>
+        <option>NONE</option>
+    </select>
+    <input id="difficulty-slider" type="range" min="0.5" max="2.0" step="0.1" value="1.0" style="top: 45%;">
+    <button id="back-button" style="top: 65%;">BACK</button>
+
+    <script src="index.js"></script> <!-- Godot replaces with actual JS file, e.g., tmp_js_export.js -->
+    <script>
+        var engine = new Engine({"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":42717428,"index.wasm":36160334},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4}); // Official placeholder for config
+
+        // Start Godot engine (async for stability)
+        engine.startGame({
+            onProgress: function(current, total) {
+                var percentage = total > 0 ? Math.round((current / total) * 100) : 0;
+                document.getElementById('progress').style.width = percentage + '%';
+                document.getElementById('progress-bar').setAttribute('aria-valuenow', percentage);
+                document.getElementById('status').innerText = 'Loading: ' + percentage + '%';
+            }
+        }).then(() => {
+            console.log("Godot engine started successfully!");
+            // Hide the loading UI and set aria-hidden to prevent screen readers from announcing stale content
+            var loadingDiv = document.getElementById('loading');
+            loadingDiv.style.display = 'none';
+            loadingDiv.setAttribute('aria-hidden', 'true');
+            window.godotInitialized = true;  // Signal for Playwright waits
+        }).catch(err => {
+            console.error("Error starting Godot:", err);
+            // Update UI to persistent error state with retry
+            document.getElementById('status').innerText = 'Error loading game: ' + (err.message || 'Unknown error. Please try again or refresh the page.');
+            document.getElementById('progress').style.backgroundColor = 'red';  // Visual failure indicator
+            document.getElementById('progress-bar').setAttribute('aria-valuenow', '0');  // Reset ARIA for error state
+            document.getElementById('progress-bar').style.display = 'none';  // Hide progress bar on error
+            document.getElementById('retry-button').style.display = 'block';  // Show retry button
+            // window.godotInitialized remains false implicitly
+            // No aria-hidden here since error state should remain visible/accessible for recovery
+        });
+
+        // Retry button handler (reloads page to reset everything)
+        document.getElementById('retry-button').onclick = () => {
+            location.reload();
+        };
+
+        // Hook buttons/sliders to exposed Godot functions
+        document.getElementById('start-button').onclick = () => window.startPressed([]);
+        document.getElementById('options-button').onclick = () => window.optionsPressed([]);
+        document.getElementById('quit-button').onclick = () => window.quitPressed([]);
+        document.getElementById('difficulty-slider').onchange = (e) => window.changeDifficulty([parseFloat(e.target.value)]);
+        document.getElementById('back-button').onclick = () => window.backPressed([]);
+        document.getElementById('log-level-select').onchange = (e) => window.changeLogLevel([e.target.selectedIndex]);
+    </script>
+
+<div class="ime" contenteditable="true" style="background: none; opacity: 0; position: fixed; text-align: left; font-size: 1px; left: 0px; top: 0px; width: 100%; height: 40px; pointer-events: none; display: none;"></div>
+</body>
+</html>
