@@ -30,17 +30,19 @@ jobs:
           godot_executable_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip"
           godot_export_templates_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz"
           relative_project_path: "./"
-          relative_export_path: "./export/web"
-          archive_output: true
-          cache: true
+          relative_export_path: "./export/web_thread_off"
+          archive_output: false
+          cache: false
+          verbose: true
+          presets_to_export: "Web_thread_off"
           # yamllint enable rule:line-length
       - name: "List Export Directory Contents"
         run: |
-          ls -la export/web
+          ls -la export/web_thread_off
       - name: "Set up Python"
         uses: "actions/setup-python@v6"
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: "Cache PIP Dependencies"
         uses: "actions/cache@v5"
         with:
@@ -64,7 +66,7 @@ jobs:
         run: playwright install --with-deps chromium
       - name: "Start WEB Server"
         run: |
-          python -m http.server 8080 --directory export/web &
+          python -m http.server 8080 --directory export/web_thread_off &
       - name: "Wait For WEB Server Response"
         run: |
           for i in {1..20}; do
