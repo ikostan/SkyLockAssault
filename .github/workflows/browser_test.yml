@@ -37,7 +37,7 @@ jobs:
           # Verify templates
           ls -la ~/.local/share/godot/export_templates/4.5.stable/
           # Export with --threads=off
-          ./${godot_exe} --headless --export-release "Web (Runnable)" export/web/index.html --threads=off
+          ./${godot_exe} --headless --export-release "Web" export/web/index.html --threads=off
           # Check files
           ls -la export/web
           # Debug: Check Exported threads flag
