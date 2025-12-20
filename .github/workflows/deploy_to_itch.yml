@@ -27,6 +27,7 @@ jobs:
           relative_project_path: "./"  # Project root
           relative_export_path: "./export/web"  # Output folder
           archive_output: true  # Zips for upload
+          verbose: true
           cache: true  # Enable caching for Godot executable and templates
           presets_to_export: "Web"
       - name: "Cache Butler"
