@@ -61,12 +61,20 @@ func _ready() -> void:
 	else:
 		Globals.log_message("No right rotor SFX found", Globals.LogLevel.DEBUG)
 
-	# Set screen boundaries (assuming centered origin; tweak if top-left)
-	screen_size = get_viewport_rect().size
-	player_x_min = (screen_size.x * -0.5) + (player_sprite.texture.get_size()[0] / 4)
-	player_x_max = (screen_size.x * 0.5) - (player_sprite.texture.get_size()[0] / 4)
-	player_y_min = (screen_size.y * -0.83) + (player_sprite.texture.get_size()[1] / 4)
-	player_y_max = (screen_size.y / 6) - (player_sprite.texture.get_size()[1] / 4)
+	# Set screen boundaries (safe null check + fallback)
+	screen_size = get_viewport_rect().size  # Dynamic for web/resizes
+
+	var sprite_size: Vector2 = Vector2(174.0, 132.0)  # Fallback if texture missing
+	if player_sprite.texture != null:
+		sprite_size = player_sprite.texture.get_size()
+		Globals.log_message("Player sprite size: " + str(sprite_size), Globals.LogLevel.DEBUG)
+	else:
+		push_warning("Player sprite texture missing! Using fallback size: " + str(sprite_size))
+
+	player_x_min = (screen_size.x * -0.5) + (sprite_size[0] / 4)
+	player_x_max = (screen_size.x * 0.5) - (sprite_size[0] / 4)
+	player_y_min = (screen_size.y * -0.83) + (sprite_size[1] / 4)
+	player_y_max = (screen_size.y / 6) - (sprite_size[1] / 4)
 
 	# After player_half_width/height calc
 	Globals.log_message(
