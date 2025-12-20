@@ -53,14 +53,14 @@ func _ready() -> void:
 		Globals.log_message("Twin rotors: LEFT stereo PAN active!", Globals.LogLevel.DEBUG)
 	else:
 		Globals.log_message("No left rotor SFX found", Globals.LogLevel.DEBUG)
-	
+
 	if rotor_right_sfx:
 		rotor_right_sfx.bus = "SFX_Rotor_Right"
 		rotor_right_sfx.play()
 		Globals.log_message("Twin rotors: RIGHT stereo PAN active!", Globals.LogLevel.DEBUG)
 	else:
 		Globals.log_message("No right rotor SFX found", Globals.LogLevel.DEBUG)
-	
+
 	# Set screen boundaries (assuming centered origin; tweak if top-left)
 	screen_size = get_viewport_rect().size
 	player_x_min = (screen_size.x * -0.5) + (player_sprite.texture.get_size()[0] / 4)
