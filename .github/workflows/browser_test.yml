@@ -23,32 +23,25 @@ jobs:
     steps:
       - uses: "actions/checkout@v6.0.1"
       - name: "Export Godot to Web"
-        run: |
-          # Download Godot executable
-          wget -q https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip -O godot.zip
-          unzip -q godot.zip
-          godot_exe=$(ls Godot_v4.5-stable_linux.x86_64)
-          # Download and install export templates correctly
-          wget -q https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz -O templates.tpz
-          mkdir -p ~/.local/share/godot/export_templates/4.5.stable/
-          unzip -q templates.tpz -d temp_templates/
-          mv temp_templates/templates/* ~/.local/share/godot/export_templates/4.5.stable/
-          rm -rf temp_templates templates.tpz
-          # Verify templates
-          ls -la ~/.local/share/godot/export_templates/4.5.stable/
-          # Export with --threads=off
-          ./${godot_exe} --headless --export-release "Web" export/web/index.html --threads=off
-          # Check files
-          ls -la export/web
-          # Debug: Check Exported threads flag
-          echo "Export flags: --threads=off"
+        id: "export"
+        uses: "firebelley/godot-export@930577654862a320eef793f399ee911b4479efb9"
+        with:
+          # yamllint disable rule:line-length
+          godot_executable_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip"
+          godot_export_templates_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz"
+          relative_project_path: "./"
+          relative_export_path: "./export/web"
+          archive_output: false
+          cache: false
+          presets_to_export: "Web_thread_off"
+          # yamllint enable rule:line-length
       - name: "List Export Directory Contents"
         run: |
           ls -la export/web
       - name: "Set up Python"
         uses: "actions/setup-python@v6"
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: "Cache PIP Dependencies"
         uses: "actions/cache@v5"
         with:
