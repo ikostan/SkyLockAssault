@@ -23,22 +23,21 @@ jobs:
     steps:
       - uses: "actions/checkout@v6.0.1"
       - name: "Export Godot to Web"
-        id: "export"
-        uses: "firebelley/godot-export@930577654862a320eef793f399ee911b4479efb9"
-        with:
-          # yamllint disable rule:line-length
-          godot_executable_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip"
-          godot_export_templates_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz"
-          relative_project_path: "./"
-          relative_export_path: "./export/web"
-          archive_output: false
-          cache: false
-          export_flags: "--threads=off"
-          # yamllint enable rule:line-length
+        run: |
+        # Download Godot
+          wget -q https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip -O godot.zip
+          unzip -q godot.zip
+          godot_exe=$(ls Godot_v4.5-stable_linux.x86_64)
+          wget -q https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz -O templates.tpz
+          mkdir -p ~/.local/share/godot/export_templates/4.5.stable/
+          unzip -q templates.tpz -d ~/.local/share/godot/export_templates/4.5.stable/ 
+        # Export with --threads=off
+          ./${godot_exe} --headless --export-release "Web (Runnable)" export/web/index.html --threads=off
+        # Debug Threads Status
+          echo "Export flags: --threads=off"
       - name: "List Export Directory Contents & Check Export flags"
         run: |
           ls -la export/web
-          echo "Export flags: --threads=off"
       - name: "Set up Python"
         uses: "actions/setup-python@v6"
         with:
