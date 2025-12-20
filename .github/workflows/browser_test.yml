@@ -24,16 +24,13 @@ jobs:
       - uses: "actions/checkout@v6.0.1"
       - name: "Export Godot to Web"
         run: |
-        # Download Godot
           wget -q https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip -O godot.zip
           unzip -q godot.zip
           godot_exe=$(ls Godot_v4.5-stable_linux.x86_64)
           wget -q https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz -O templates.tpz
           mkdir -p ~/.local/share/godot/export_templates/4.5.stable/
           unzip -q templates.tpz -d ~/.local/share/godot/export_templates/4.5.stable/ 
-        # Export with --threads=off
           ./${godot_exe} --headless --export-release "Web (Runnable)" export/web/index.html --threads=off
-        # Debug Threads Status
           echo "Export flags: --threads=off"
       - name: "List Export Directory Contents & Check Export flags"
         run: |
