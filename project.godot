@@ -15,6 +15,10 @@ run/main_scene="uid://brpckgp7j86jp"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 config/icon="res://icon.svg"
 
+[audio]
+
+general/default_playback_type.web=0
+
 [autoload]
 
 Globals="*res://scripts/globals.gd"

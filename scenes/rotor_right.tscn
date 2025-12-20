@@ -1,0 +1,70 @@
+[gd_scene load_steps=15 format=3 uid="uid://c7c8smbqpkh0u"]
+
+[ext_resource type="Texture2D" uid="uid://buncrhbjyvafd" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0000.png" id="1_6h7yr"]
+[ext_resource type="Texture2D" uid="uid://hh3bdhfaa7if" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0001.png" id="2_674yr"]
+[ext_resource type="Texture2D" uid="uid://bla0foo3clolc" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0003.png" id="3_a6o8x"]
+[ext_resource type="Texture2D" uid="uid://c7uulhm61waso" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0004.png" id="4_vcfda"]
+[ext_resource type="Texture2D" uid="uid://c5osepu44xgei" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0005.png" id="5_xm3dy"]
+[ext_resource type="Texture2D" uid="uid://dwm6voti2alnx" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0006.png" id="6_ljcm1"]
+[ext_resource type="Texture2D" uid="uid://bwsl7xr3rgudq" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0007.png" id="7_77bxo"]
+[ext_resource type="Texture2D" uid="uid://bumfrfmrja41a" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0008.png" id="8_hp3mt"]
+[ext_resource type="Texture2D" uid="uid://xyq5865s2s2v" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0009.png" id="9_g0tva"]
+[ext_resource type="Texture2D" uid="uid://b4ebl4gyo546n" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0010.png" id="10_cpmsx"]
+[ext_resource type="Texture2D" uid="uid://crkg0ghaog8ti" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0011.png" id="11_84qia"]
+[ext_resource type="Texture2D" uid="uid://bgycvhpqrxsok" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0002.png" id="12_i60hd"]
+[ext_resource type="AudioStream" uid="uid://bke2qkqjgter" path="res://files/sounds/sfx/airplane_prop.ogg" id="13_674yr"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_dtrdd"]
+animations = [{
+"frames": [{
+"duration": 0.04,
+"texture": ExtResource("1_6h7yr")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_674yr")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_a6o8x")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_vcfda")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5_xm3dy")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_ljcm1")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_77bxo")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_hp3mt")
+}, {
+"duration": 1.0,
+"texture": ExtResource("9_g0tva")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_cpmsx")
+}, {
+"duration": 1.0,
+"texture": ExtResource("11_84qia")
+}, {
+"duration": 1.0,
+"texture": ExtResource("12_i60hd")
+}],
+"loop": true,
+"name": &"default",
+"speed": 24.0
+}]
+
+[node name="RotorRight" type="Node2D"]
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_dtrdd")
+frame_progress = 0.119158015
+
+[node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="."]
+stream = ExtResource("13_674yr")
+bus = &"SFX_Rotor_Right"
+parameters/looping = true

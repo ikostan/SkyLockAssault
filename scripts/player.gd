@@ -1,10 +1,15 @@
 extends Node2D
 
+## Player controller for P-38 Lightning in SkyLockAssault.
+## Manages movement, fuel, bounds, rotors (anim/sound), weapons.
+
 # Fuel color thresholds (percentages)
 const HIGH_FUEL_THRESHOLD: float = 90.0  # Starts green lerp
 const MEDIUM_FUEL_THRESHOLD: float = 50.0  # Switches to yellow lerp
 const LOW_FUEL_THRESHOLD: float = 30.0  # Switches to red lerp
 const NO_FUEL_THRESHOLD: float = 15.0  # Fully Red Color
+# Bounds hitbox scale (quarter texture = tight margin for top-down plane)
+const HITBOX_SCALE: float = 0.25
 
 # Exported vars first (for Inspector editing)
 @export var speed: float = 250.0
@@ -12,8 +17,7 @@ const NO_FUEL_THRESHOLD: float = 15.0  # Fully Red Color
 var current_fuel: float
 
 # Regular vars for computed boundaries (no export needed if set in code)
-var player_half_width: float = 0.0
-var player_half_height: float = 0.0
+var screen_size: Vector2
 var player_x_min: float = 0.0
 var player_x_max: float = 0.0
 var player_y_min: float = 0.0
@@ -21,11 +25,15 @@ var player_y_max: float = 0.0
 # Weapon system
 var weapons: Array[Node] = []  # Fill in editor or _ready
 var current_weapon: int = 0
-var screen_size: Vector2
+var rotor_left_sfx: AudioStreamPlayer2D
+var rotor_right_sfx: AudioStreamPlayer2D
 
 # Onreadys next
+@onready var rotor_right: Node2D = $CharacterBody2D/RotorRight
+@onready var rotor_left: Node2D = $CharacterBody2D/RotorLeft
 @onready var player: CharacterBody2D = $CharacterBody2D
-@onready var collision_shape: CollisionShape2D = $CharacterBody2D/CollisionShape2D
+@onready var player_sprite: Sprite2D = $CharacterBody2D/Sprite2D
+@onready var collision_shape: CollisionPolygon2D = $CharacterBody2D/CollisionPolygon2D
 @onready
 var fuel_bar: ProgressBar = $"../PlayerStatsPanel/VBoxContainer/HBoxContainer/FuelProgressBar"
 @onready var fuel_timer: Timer = $FuelTimer
@@ -36,23 +44,42 @@ var fuel_bar: ProgressBar = $"../PlayerStatsPanel/VBoxContainer/HBoxContainer/Fu
 
 
 func _ready() -> void:
-	# Dynamically calculate half-sizes (use both extents for width/height; assumes RectangleShape2D)
-	if collision_shape.shape is RectangleShape2D:
-		player_half_width = collision_shape.shape.extents.x * abs(collision_shape.scale.x)
-		player_half_height = collision_shape.shape.extents.y * abs(collision_shape.scale.y)
-	else:
-		Globals.log_message(
-			"Warning: Using fallback size—check collision shape type.", Globals.LogLevel.WARNING
-		)
-		player_half_width = 12.0  # Default guess; adjust based on your sprite
-		player_half_height = 12.0
+	# Auto-start rotors (overrides editor if needed)
+	rotor_right.get_node("AnimatedSprite2D").play("default")
+	rotor_left.get_node("AnimatedSprite2D").play("default")
+	Globals.log_message("Rotors AUTO-STARTED at 24 FPS!", Globals.LogLevel.DEBUG)
 
-	# Set screen boundaries (assuming centered origin; tweak if top-left)
-	var screen_size: Vector2 = get_viewport_rect().size
-	player_x_min = (screen_size.x * -0.5) + (player_half_width * 2)
-	player_x_max = (screen_size.x * 0.5) - (player_half_width * 2)
-	player_y_min = (screen_size.y * -0.83) + player_half_height
-	player_y_max = screen_size.y / 7
+	rotor_left_sfx = rotor_left.get_node("AudioStreamPlayer2D")
+	rotor_right_sfx = rotor_right.get_node("AudioStreamPlayer2D")
+
+	if rotor_left_sfx:
+		rotor_left_sfx.bus = "SFX_Rotor_Left"
+		rotor_left_sfx.play()
+		Globals.log_message("Twin rotors: LEFT stereo PAN active!", Globals.LogLevel.DEBUG)
+	else:
+		Globals.log_message("No left rotor SFX found", Globals.LogLevel.DEBUG)
+
+	if rotor_right_sfx:
+		rotor_right_sfx.bus = "SFX_Rotor_Right"
+		rotor_right_sfx.play()
+		Globals.log_message("Twin rotors: RIGHT stereo PAN active!", Globals.LogLevel.DEBUG)
+	else:
+		Globals.log_message("No right rotor SFX found", Globals.LogLevel.DEBUG)
+
+	# Set screen boundaries (safe null check + fallback)
+	screen_size = get_viewport_rect().size  # Dynamic for web/resizes
+
+	var sprite_size: Vector2 = Vector2(174.0, 132.0)  # Fallback if texture missing
+	if player_sprite.texture != null:
+		sprite_size = player_sprite.texture.get_size()
+		Globals.log_message("Player sprite size: " + str(sprite_size), Globals.LogLevel.DEBUG)
+	else:
+		push_warning("Player sprite texture missing! Using fallback size: " + str(sprite_size))
+
+	player_x_min = (screen_size.x * -0.5) + (sprite_size[0] * HITBOX_SCALE)
+	player_x_max = (screen_size.x * 0.5) - (sprite_size[0] * HITBOX_SCALE)
+	player_y_min = (screen_size.y * -0.83) + (sprite_size[1] * HITBOX_SCALE)
+	player_y_max = (screen_size.y / 6) - (sprite_size[1] * HITBOX_SCALE)
 
 	# After player_half_width/height calc
 	Globals.log_message(
