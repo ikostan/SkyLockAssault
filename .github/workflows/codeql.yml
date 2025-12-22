@@ -47,21 +47,10 @@ jobs:
 
       - name: "Flatten Export Directory"
         run: |
-          bash ./.github/scripts/flatten_export.sh "export/web" "Web"
+          bash ./.github/tools/flatten_export.sh "export/web" "Web"
       - name: "Patch index.js for security"
         run: |
-          # Check if file exists
-          if [ ! -f "export/web/index.js" ]; then
-            echo "Error: index.js not found in export/web"
-            exit 1
-          fi
-          # Apply patch using perl with flexible regex to match smaller/stable fragment with optional whitespace
-          perl -i -pe 's/Module\[handler\]\s*=\s*\(\.\.\.args\)\s*=>\s*\{\s*postMessage\s*\(\s*\{\s*cmd\s*:\s*"callHandler"\s*,\s*handler\s*,\s*args\s*\}\s*\)\s*\}/if (["print","printErr"].includes(handler)) { $& }/g' export/web/index.js
-          # Verify replacement occurred by checking for added if statement
-          if ! grep -q 'if (\["print","printErr"\].includes(handler))' export/web/index.js; then
-            echo "Error: Patch failed to apply - expected code not found."
-            exit 1
-          fi
+          bash ./.github/tools/patch_index_js.sh "export/web"
       - name: "List files in export/web (for visibility)"
         run: |
           echo "Files to be scanned in export/web:"

@@ -42,7 +42,10 @@ jobs:
           # yamllint enable rule:line-length
       - name: "Flatten Export Directory"
         run: |
-          bash ./.github/scripts/flatten_export.sh "export/web_thread_off" "Web_thread_off"
+          bash ./.github/tools/flatten_export.sh "export/web_thread_off" "Web_thread_off"
+      - name: "Patch index.js for security"
+        run: |
+          bash ./.github/tools/patch_index_js.sh "export/web_thread_off"
       - name: "List Export Directory Contents"
         run: |
           ls -la export/web_thread_off
