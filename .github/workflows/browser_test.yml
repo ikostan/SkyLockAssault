@@ -42,20 +42,13 @@ jobs:
           # yamllint enable rule:line-length
       - name: "Flatten Export Directory"
         run: |
-          if [ -d "export/web_thread_off/Web_thread_off" ]; then
-            mv export/web_thread_off/Web_thread_off/* export/web_thread_off/
-            rmdir export/web_thread_off/Web_thread_off
-          fi
+          bash ./.github/scripts/flatten_export.sh "export/web_thread_off" "Web_thread_off"
       - name: "List Export Directory Contents"
         run: |
           ls -la export/web_thread_off
       - name: "Patch index.js for security"
         run: |
-          if [ ! -f "export/web_thread_off/index.js" ]; then
-            echo "Error: index.js not found in export/web_thread_off"
-            exit 1
-          fi
-          sed -i 's/Module\[handler\]=(\.\.\.args)=>{postMessage({cmd:"callHandler",handler,args})}/if (["print","printErr"].includes(handler)) { Module[handler]=(...args)=>{postMessage({cmd:"callHandler",handler,args})} }/g' export/web_thread_off/index.js
+          bash ./.github/scripts/patch_index_js.sh "export/web_thread_off"
       - name: "Set up Python"
         uses: "actions/setup-python@v6"
         with:
