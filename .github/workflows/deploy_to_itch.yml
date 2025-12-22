@@ -30,6 +30,9 @@ jobs:
           verbose: true
           cache: true  # Enable caching for Godot executable and templates
           presets_to_export: "Web"
+      - name: "Patch index.js for security"
+        run: |
+          sed -i 's/Module\[handler\]=(\.\.\.args)=>\{postMessage({cmd:"callHandler",handler,args})\}/if (["print","printErr"].includes(handler)) { Module[handler]=(...args)=>{postMessage({cmd:"callHandler",handler,args})} }/g' export/web/index.js
       - name: "Cache Butler"
         id: "cache-butler"
         uses: "actions/cache@v5"
