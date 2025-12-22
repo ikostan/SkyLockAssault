@@ -23,13 +23,13 @@ fi
 # Define the original pattern regex for detection (same as replacement but without capture)
 original_pattern='Module\[handler\]\s*=\s*\(\.\.\.args\)\s*=>\s*\{\s*postMessage\s*\(\s*\{\s*cmd\s*:\s*"callHandler"\s*,\s*handler\s*,\s*args\s*\}\s*\)\s*\}'
 
-# Check if the original pattern exists
-if grep -q "${original_pattern}" "${index_js}"; then
+# Check if the original pattern exists (using Perl-compatible regex for consistency)
+if grep -P -q "${original_pattern}" "${index_js}"; then
   # Apply patch using perl
   perl -i -pe "s/${original_pattern}/if ([\"print\",\"printErr\"].includes(handler)) { \$& }/g" "${index_js}"
 
-  # Verify replacement occurred by checking for added if statement
-  if ! grep -q 'if (\["print","printErr"\].includes(handler))' "${index_js}"; then
+  # Verify replacement occurred by checking for added if statement (no unnecessary escapes)
+  if ! grep -q 'if (["print","printErr"].includes(handler))' "${index_js}"; then
     echo "Error: Patch failed to apply despite pattern present."
     exit 1
   fi
