@@ -26,8 +26,9 @@ Thumbs.db
 *.meta  # Unity-like, but sometimes from imports
 
 # Build/export folders (ignore exports; commit presets.cfg)
-#export/*
-#!export/export_presets.cfg  # Keep your export settings
+export/web/**
+export/web_thread_off/**
+!export/export_presets.cfg  # Keep your export settings
 
 # Temp files from tools/Docker
 *.swp

@@ -22,6 +22,9 @@ jobs:
       PW_TIMEOUT: "${{ inputs.pw_timeout }}"
     steps:
       - uses: "actions/checkout@v6.0.1"
+      - name: "Create Export Directories"
+        run: |
+          mkdir -p export/web_thread_off
       - name: "Export Godot to Web"
         id: "export"
         uses: "firebelley/godot-export@930577654862a320eef793f399ee911b4479efb9"
@@ -35,10 +38,24 @@ jobs:
           cache: false
           verbose: true
           presets_to_export: "Web_thread_off"
+          use_preset_export_path: true  # Move exports to the directory defined in export_presets.cfg
           # yamllint enable rule:line-length
+      - name: "Flatten Export Directory"
+        run: |
+          if [ -d "export/web_thread_off/Web_thread_off" ]; then
+            mv export/web_thread_off/Web_thread_off/* export/web_thread_off/
+            rmdir export/web_thread_off/Web_thread_off
+          fi
       - name: "List Export Directory Contents"
         run: |
           ls -la export/web_thread_off
+      - name: "Patch index.js for security"
+        run: |
+          if [ ! -f "export/web_thread_off/index.js" ]; then
+            echo "Error: index.js not found in export/web_thread_off"
+            exit 1
+          fi
+          sed -i 's/Module\[handler\]=(\.\.\.args)=>{postMessage({cmd:"callHandler",handler,args})}/if (["print","printErr"].includes(handler)) { Module[handler]=(...args)=>{postMessage({cmd:"callHandler",handler,args})} }/g' export/web_thread_off/index.js
       - name: "Set up Python"
         uses: "actions/setup-python@v6"
         with:

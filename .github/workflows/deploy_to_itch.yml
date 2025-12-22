@@ -17,6 +17,9 @@ jobs:
     steps:
       - name: "Checkout code"
         uses: "actions/checkout@v6.0.1"
+      - name: "Create Export Directories"
+        run: |
+          mkdir -p export/web
       - name: "Export Godot to Web"
         id: "export"
         # yamllint disable rule:line-length
@@ -30,6 +33,23 @@ jobs:
           verbose: true
           cache: true  # Enable caching for Godot executable and templates
           presets_to_export: "Web"
+          use_preset_export_path: true  # Move exports to the directory defined in export_presets.cfg
+      - name: "Flatten Export Directory"
+        run: |
+          if [ -d "export/web/Web" ]; then
+            mv export/web/Web/* export/web/
+            rmdir export/web/Web
+          fi
+      - name: "List Export Directory Contents"
+        run: |
+          ls -la export/web
+      - name: "Patch index.js for security"
+        run: |
+          if [ ! -f "export/web/index.js" ]; then
+            echo "Error: index.js not found in export/web"
+            exit 1
+          fi
+          sed -i 's/Module\[handler\]=(\.\.\.args)=>{postMessage({cmd:"callHandler",handler,args})}/if (["print","printErr"].includes(handler)) { Module[handler]=(...args)=>{postMessage({cmd:"callHandler",handler,args})} }/g' export/web/index.js
       - name: "Cache Butler"
         id: "cache-butler"
         uses: "actions/cache@v5"
