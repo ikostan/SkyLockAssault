@@ -37,8 +37,8 @@ jobs:
           archive_output: false
           cache: false
           verbose: true
-          use_preset_export_path: true  # Move exports to the directory defined in export_presets.cfg
           presets_to_export: "Web_thread_off"
+          use_preset_export_path: true  # Move exports to the directory defined in export_presets.cfg
           # yamllint enable rule:line-length
       - name: "List Export Directory Contents"
         run: |
