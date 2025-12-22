@@ -2,7 +2,7 @@
 
 # To address the duplication of the "Flatten Export Directory" logic
 # across workflows, I've extracted it into a shared Bash script at
-# .github/tools/flatten_export.sh. This ensures consistency
+# .github/scripts/flatten_export.sh. This ensures consistency
 # (using the hardened version with existence/emptiness checks and find
 # to handle all files, including hidden ones), easier maintenance, and
 # avoids code repetition. Place this script in your repository.
