@@ -46,6 +46,8 @@ jobs:
           use_preset_export_path: true  # Move exports to the directory defined in export_presets.cfg
       - name: "List files in export/web (for visibility)"
         run: |
+          echo "Files to be scanned in export:"
+          ls -R export || echo "No files found—check if folder exists!"
           echo "Files to be scanned in export/web:"
           ls -R export/web || echo "No files found—check if folder exists!"
       - name: "Patch index.js for security"

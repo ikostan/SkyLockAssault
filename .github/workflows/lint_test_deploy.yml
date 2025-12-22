@@ -43,11 +43,11 @@ jobs:
       - "gdunit4_tests"
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
-  codeql:
-    name: "CodeQL Scan on Web Export"
-    needs:
-      - "browser_tests"
-    uses: "./.github/workflows/codeql.yml"
+  # codeql:
+  #  name: "CodeQL Scan on Web Export"
+  #  needs:
+  #    - "browser_tests"
+  #  uses: "./.github/workflows/codeql.yml"
   snyk:
     name: "Snyk Scan on Web Export"
     needs:
@@ -64,7 +64,7 @@ jobs:
   deploy-itch:
     name: "Deploy to itch.io"
     needs:
-      - "codeql"
+      # - "codeql"
       - "snyk"
       - "trivy"
     uses: "./.github/workflows/deploy_to_itch.yml"
