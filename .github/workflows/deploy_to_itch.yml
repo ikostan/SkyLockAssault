@@ -40,6 +40,9 @@ jobs:
             mv export/web/Web/* export/web/
             rmdir export/web/Web
           fi
+      - name: "List Export Directory Contents"
+        run: |
+          ls -la export/web
       - name: "Patch index.js for security"
         run: |
           if [ ! -f "export/web/index.js" ]; then
