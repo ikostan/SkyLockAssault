@@ -36,10 +36,10 @@ jobs:
           use_preset_export_path: true  # Move exports to the directory defined in export_presets.cfg
       - name: "Flatten Export Directory"
         run: |
-          bash ./.github/tools/flatten_export.sh "export/web" "Web"
+          bash ./.github/scripts/flatten_export.sh "export/web" "Web"
       - name: "Patch index.js for security"
         run: |
-          bash ./.github/tools/patch_index_js.sh "export/web"
+          bash ./.github/scripts/patch_index_js.sh "export/web"
       - name: "List Export Directory Contents"
         run: |
           ls -la export/web
