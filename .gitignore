@@ -27,6 +27,8 @@ Thumbs.db
 
 # Build/export folders (ignore exports; commit presets.cfg)
 export/**
+export/web/**
+export/web_thread_off/**
 !export/export_presets.cfg  # Keep your export settings
 
 # Temp files from tools/Docker
