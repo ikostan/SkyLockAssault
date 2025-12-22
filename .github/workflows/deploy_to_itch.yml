@@ -34,6 +34,17 @@ jobs:
           cache: true  # Enable caching for Godot executable and templates
           presets_to_export: "Web"
           use_preset_export_path: true  # Move exports to the directory defined in export_presets.cfg
+      - name: "Unzip Export Archive"
+        run: |
+          unzip export/web/Web.zip -d export/web
+      - name: "Flatten Export Directory"
+        run: |
+          bash ./.github/scripts/flatten_export.sh "export/web" "Web"
+      - name: "Re-zip Flattened Export"
+        run: |
+          cd export/web
+          zip -r ../Web.zip .
+          cd ../..
       - name: "List Export Directory Contents"
         run: |
           echo "Files to be scanned in export:"
