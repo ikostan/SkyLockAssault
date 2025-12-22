@@ -35,6 +35,10 @@ jobs:
           presets_to_export: "Web"
       - name: "Patch index.js for security"
         run: |
+          if [ ! -f "export/web/index.js" ]; then
+            echo "Error: index.js not found in export/web"
+            exit 1
+          fi
           sed -i 's/Module\[handler\]=(\.\.\.args)=>\{postMessage({cmd:"callHandler",handler,args})\}/if (["print","printErr"].includes(handler)) { Module[handler]=(...args)=>{postMessage({cmd:"callHandler",handler,args})} }/g' export/web/index.js
       - name: "Cache Butler"
         id: "cache-butler"
