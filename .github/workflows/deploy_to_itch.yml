@@ -37,9 +37,6 @@ jobs:
       - name: "Unzip Export Archive"
         run: |
           unzip export/web/Web.zip -d export/web
-      - name: "Flatten Export Directory"
-        run: |
-          bash ./.github/scripts/flatten_export.sh "export/web" "Web"
       - name: "Re-zip Flattened Export"
         run: |
           cd export/web
