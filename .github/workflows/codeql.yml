@@ -57,8 +57,8 @@ jobs:
             echo "Error: export/web/Web exists but is empty. Verify Godot export generated files."
             exit 1
           fi
-          # Now flatten (mv and rmdir will succeed since we've confirmed non-empty)
-          mv export/web/Web/* export/web/
+          # Now flatten (move all entries, including dotfiles, then remove the directory)
+          find export/web/Web -mindepth 1 -maxdepth 1 -exec mv -t export/web {} +
           rmdir export/web/Web
       - name: "Patch index.js for security"
         run: |
