@@ -22,6 +22,9 @@ jobs:
       PW_TIMEOUT: "${{ inputs.pw_timeout }}"
     steps:
       - uses: "actions/checkout@v6.0.1"
+      - name: "Create Export Directories"
+        run: |
+          mkdir -p export/web_thread_off
       - name: "Export Godot to Web"
         id: "export"
         uses: "firebelley/godot-export@930577654862a320eef793f399ee911b4479efb9"

@@ -17,6 +17,9 @@ jobs:
     steps:
       - name: "Checkout code"
         uses: "actions/checkout@v6.0.1"
+      - name: "Create Export Directories"
+        run: |
+          mkdir -p export/web
       - name: "Export Godot to Web"
         id: "export"
         # yamllint disable rule:line-length
