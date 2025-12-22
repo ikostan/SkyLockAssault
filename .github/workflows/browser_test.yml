@@ -39,6 +39,9 @@ jobs:
       - name: "List Export Directory Contents"
         run: |
           ls -la export/web_thread_off
+      - name: "Patch index.js for security"
+        run: |
+          sed -i 's/Module\[handler\]=(\.\.\.args)=>\{postMessage({cmd:"callHandler",handler,args})\}/if (["print","printErr"].includes(handler)) { Module[handler]=(...args)=>{postMessage({cmd:"callHandler",handler,args})} }/g' export/web_thread_off/index.js
       - name: "Set up Python"
         uses: "actions/setup-python@v6"
         with:
