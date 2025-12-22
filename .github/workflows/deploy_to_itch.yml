@@ -34,6 +34,12 @@ jobs:
           cache: true  # Enable caching for Godot executable and templates
           presets_to_export: "Web"
           use_preset_export_path: true  # Move exports to the directory defined in export_presets.cfg
+      - name: "Flatten Export Directory"
+        run: |
+          if [ -d "export/web/Web" ]; then
+            mv export/web/Web/* export/web/
+            rmdir export/web/Web
+          fi
       - name: "Patch index.js for security"
         run: |
           if [ ! -f "export/web/index.js" ]; then

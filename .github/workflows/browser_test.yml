@@ -40,6 +40,12 @@ jobs:
           presets_to_export: "Web_thread_off"
           use_preset_export_path: true  # Move exports to the directory defined in export_presets.cfg
           # yamllint enable rule:line-length
+      - name: "Flatten Export Directory"
+        run: |
+          if [ -d "export/web_thread_off/Web_thread_off" ]; then
+            mv export/web_thread_off/Web_thread_off/* export/web_thread_off/
+            rmdir export/web_thread_off/Web_thread_off
+          fi
       - name: "List Export Directory Contents"
         run: |
           ls -la export/web_thread_off
