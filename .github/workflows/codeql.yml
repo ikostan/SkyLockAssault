@@ -48,14 +48,13 @@ jobs:
       - name: "Flatten Export Directory"
         run: |
           bash ./.github/scripts/flatten_export.sh "export/web" "Web"
-      - name: "Patch index.js for security"
-        run: |
-          bash ./.github/scripts/patch_index_js.sh "export/web"
       - name: "List files in export/web (for visibility)"
         run: |
           echo "Files to be scanned in export/web:"
           ls -R export/web || echo "No files found—check if folder exists!"
-
+      - name: "Patch index.js for security"
+        run: |
+          bash ./.github/scripts/patch_index_js.sh "export/web"
       - name: "Initialize CodeQL"
         uses: "github/codeql-action/init@v4.31.8"
         with:

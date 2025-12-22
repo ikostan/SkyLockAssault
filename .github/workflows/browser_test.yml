@@ -43,12 +43,12 @@ jobs:
       - name: "Flatten Export Directory"
         run: |
           bash ./.github/scripts/flatten_export.sh "export/web_thread_off" "Web_thread_off"
-      - name: "Patch index.js for security"
-        run: |
-          bash ./.github/scripts/patch_index_js.sh "export/web_thread_off"
       - name: "List Export Directory Contents"
         run: |
           ls -la export/web_thread_off
+      - name: "Patch index.js for security"
+        run: |
+          bash ./.github/scripts/patch_index_js.sh "export/web_thread_off"
       - name: "Set up Python"
         uses: "actions/setup-python@v6"
         with:
