@@ -32,6 +32,7 @@ jobs:
           archive_output: true  # Zips for upload
           verbose: true
           cache: true  # Enable caching for Godot executable and templates
+          use_preset_export_path: true  # Move exports to the directory defined in export_presets.cfg
           presets_to_export: "Web"
       - name: "Patch index.js for security"
         run: |
