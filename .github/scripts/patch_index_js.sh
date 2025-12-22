@@ -25,8 +25,8 @@ original_pattern='Module\[handler\]\s*=\s*\(\.\.\.args\)\s*=>\s*\{\s*postMessage
 
 # Check if the original pattern exists (using Perl-compatible regex for consistency)
 if grep -P -q "${original_pattern}" "${index_js}"; then
-  # Apply patch using perl
-  perl -i -pe "s/${original_pattern}/if ([\"print\",\"printErr\"].includes(handler)) { \$& }/g" "${index_js}"
+  # Apply patch using perl with alternate ~ delimiter for safety
+  perl -i -pe "s~${original_pattern}~if ([\"print\",\"printErr\"].includes(handler)) { \$& }~g" "${index_js}"
 
   # Verify replacement occurred by checking for added if statement (no unnecessary escapes)
   if ! grep -q 'if (["print","printErr"].includes(handler))' "${index_js}"; then
