@@ -36,10 +36,21 @@ jobs:
           use_preset_export_path: true  # Move exports to the directory defined in export_presets.cfg
       - name: "Flatten Export Directory"
         run: |
-          if [ -d "export/web/Web" ]; then
-            mv export/web/Web/* export/web/
-            rmdir export/web/Web
+          # Explicitly fail if the directory doesn't exist
+          if [ ! -d "export/web/Web" ]; then
+            echo "Error: export/web/Web does not exist. Check the Godot export step."
+            exit 1
           fi
+          
+          # Explicitly fail if the directory exists but is empty
+          if [ -z "$(ls -A export/web/Web)" ]; then
+            echo "Error: export/web/Web exists but is empty. Verify Godot export generated files."
+            exit 1
+          fi
+          
+          # Now flatten (mv and rmdir will succeed since we've confirmed non-empty)
+          mv export/web/Web/* export/web/
+          rmdir export/web/Web
       - name: "List Export Directory Contents"
         run: |
           ls -la export/web
