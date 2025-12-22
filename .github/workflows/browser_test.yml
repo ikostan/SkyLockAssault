@@ -42,10 +42,7 @@ jobs:
           # yamllint enable rule:line-length
       - name: "Flatten Export Directory"
         run: |
-          if [ -d "export/web_thread_off/Web_thread_off" ]; then
-            mv export/web_thread_off/Web_thread_off/* export/web_thread_off/
-            rmdir export/web_thread_off/Web_thread_off
-          fi
+          bash ./.github/scripts/flatten_export.sh "export/web_thread_off" "Web_thread_off"
       - name: "List Export Directory Contents"
         run: |
           ls -la export/web_thread_off
