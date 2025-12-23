@@ -4,6 +4,13 @@ extends Node
 # Access from any script as Globals.log_message("message").
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 
+# Audio bus constants: Use these everywhere instead of hard-coded strings.
+# This prevents typos and makes renaming buses easy.
+const BUS_MASTER: String = "Master"
+const BUS_MUSIC: String = "Music"
+const BUS_SFX: String = "SFX"
+const BUS_SFX_ROTORS: String = "SFX_Rotors"
+
 @export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
 @export var enable_debug_logging: bool = false  # Toggle in Inspector or settings
 @export var difficulty: float = 1.0  # Multiplier: 1.0=Normal, <1=Easy, >1=Hard
@@ -11,13 +18,6 @@ enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 @export var music_volume: float = 1.0
 @export var sfx_volume: float = 1.0
 @export var rotors_volume: float = 1.0
-
-# Audio bus constants: Use these everywhere instead of hard-coded strings.
-# This prevents typos and makes renaming buses easy.
-const BUS_MASTER: String = "Master"
-const BUS_MUSIC: String = "Music"
-const BUS_SFX: String = "SFX"
-const BUS_SFX_ROTORS: String = "SFX_Rotors"
 
 # In globals.gd (add after @export vars)
 var options_instance: CanvasLayer = null
