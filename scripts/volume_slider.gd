@@ -31,8 +31,8 @@ func _ready() -> void:
 # change bus value/volume
 func _on_value_changed(value: float) -> void:
 	AudioServer.set_bus_volume_db(bus_index, linear_to_db(value))
-
-	if bus_name == "Master":
+	# Master volume
+	if bus_name == Globals.BUS_MASTER:
 		Globals.master_volume = value
 		Globals.log_message(
 			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
@@ -40,8 +40,8 @@ func _on_value_changed(value: float) -> void:
 		Globals.log_message(
 			"Master Volume Level in Globals: " + str(Globals.master_volume), Globals.LogLevel.DEBUG
 		)
-
-	if bus_name == "Music":
+	# Music volume
+	if bus_name == Globals.BUS_MUSIC:
 		Globals.music_volume = value
 		Globals.log_message(
 			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
@@ -49,14 +49,23 @@ func _on_value_changed(value: float) -> void:
 		Globals.log_message(
 			"Music Volume Level in Globals: " + str(Globals.music_volume), Globals.LogLevel.DEBUG
 		)
-
-	if bus_name == "SFX":
+	# SFX volume
+	if bus_name == Globals.BUS_SFX:
 		Globals.sfx_volume = value
 		Globals.log_message(
 			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
 		)
 		Globals.log_message(
 			"SFX Volume Level in Globals: " + str(Globals.sfx_volume), Globals.LogLevel.DEBUG
+		)
+	# Rotors volume
+	if bus_name == Globals.BUS_SFX_ROTORS:
+		Globals.rotors_volume = value
+		Globals.log_message(
+			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
+		)
+		Globals.log_message(
+			"Rotors Volume Level in Globals: " + str(Globals.rotors_volume), Globals.LogLevel.DEBUG
 		)
 
 	# New: Start/restart debounce timer instead of immediate save
