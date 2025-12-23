@@ -20,25 +20,25 @@ if [ ! -f "${index_js}" ]; then
   exit 1
 fi
 
-# Define the original pattern regex for detection (escaped \" for bash/perl compatibility)
-original_pattern='Module\[handler\]\s*=\s*\(\.\.\.args\)\s*=>\s*\{\s*postMessage\s*\(\s*\{\s*cmd\s*:\s*\"callHandler\"\s*,\s*handler\s*,\s*args\s*\}\s*\)\s*\}'
+# Define the original fixed string for detection (exact match from threaded minified code)
+original_fixed='Module[handler]=(...args)=>{postMessage({cmd:"callHandler",handler,args})}'
 
-# Define the patched pattern for pre-check (fixed-string to avoid regex issues)
-patched_pattern='if (["print","printErr"].includes(handler))'
+# Define the patched fixed string for pre-check (exact match after patch)
+patched_fixed='if (["print","printErr"].includes(handler)) { Module[handler]=(...args)=>{postMessage({cmd:"callHandler",handler,args})} }'
 
-# Pre-check if already patched
-if grep -F -q "${patched_pattern}" "${index_js}"; then
+# Pre-check if already patched (using fixed-string grep for simplicity and reliability)
+if grep -F -q "${patched_fixed}" "${index_js}"; then
   echo "File already patched; skipping."
   exit 0
 fi
 
-# Check if the original pattern exists (using Perl-compatible regex for consistency)
-if grep -P -q "${original_pattern}" "${index_js}"; then
-  # Apply patch using perl with alternate ~ delimiter for safety
-  perl -i -pe "s~${original_pattern}~if ([\"print\",\"printErr\"].includes(handler)) { \$& }~g" "${index_js}"
+# Check if the original pattern exists (using fixed-string grep for consistency)
+if grep -F -q "${original_fixed}" "${index_js}"; then
+  # Apply patch using perl with \Q for literal quoting of the original string
+  perl -i -pe "s~\Q${original_fixed}~if ([\"print\",\"printErr\"].includes(handler)) { \$& }~g" "${index_js}"
 
   # Verify replacement occurred by checking for added if statement (fixed-string)
-  if ! grep -F -q "${patched_pattern}" "${index_js}"; then
+  if ! grep -F -q "${patched_fixed}" "${index_js}"; then
     echo "Error: Patch failed to apply despite pattern present."
     exit 1
   fi
