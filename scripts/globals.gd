@@ -12,6 +12,13 @@ enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 @export var sfx_volume: float = 1.0
 @export var rotors_volume: float = 1.0
 
+# Audio bus constants: Use these everywhere instead of hard-coded strings.
+# This prevents typos and makes renaming buses easy.
+const BUS_MASTER: String = "Master"
+const BUS_MUSIC: String = "Music"
+const BUS_SFX: String = "SFX"
+const BUS_SFX_ROTORS: String = "SFX_Rotors"
+
 # In globals.gd (add after @export vars)
 var options_instance: CanvasLayer = null
 var hidden_menu: Node = null
@@ -28,10 +35,10 @@ func _ready() -> void:
 	_load_settings()  # Load persisted settings first
 
 	# Apply loaded volumes to AudioServer buses (using new helper)
-	_apply_volume_to_bus("Master", master_volume)
-	_apply_volume_to_bus("Music", music_volume)
-	_apply_volume_to_bus("SFX", sfx_volume)
-	_apply_volume_to_bus("SFX_Rotors", rotors_volume)
+	_apply_volume_to_bus(BUS_MASTER, master_volume)
+	_apply_volume_to_bus(BUS_MUSIC, music_volume)
+	_apply_volume_to_bus(BUS_SFX, sfx_volume)
+	_apply_volume_to_bus(BUS_SFX_ROTORS, rotors_volume)
 
 
 # New: Helper to apply volume to a named bus (extracted from _ready)
