@@ -58,7 +58,7 @@ func _on_value_changed(value: float) -> void:
 		Globals.log_message(
 			"SFX Volume Level in Globals: " + str(Globals.sfx_volume), Globals.LogLevel.DEBUG
 		)
-	
+
 	if bus_name == "SFX_Rotors":
 		Globals.rotors_volume = value
 		Globals.log_message(
