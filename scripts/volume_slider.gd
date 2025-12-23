@@ -58,6 +58,15 @@ func _on_value_changed(value: float) -> void:
 		Globals.log_message(
 			"SFX Volume Level in Globals: " + str(Globals.sfx_volume), Globals.LogLevel.DEBUG
 		)
+	
+	if bus_name == "SFX_Rotors":
+		Globals.rotors_volume = value
+		Globals.log_message(
+			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
+		)
+		Globals.log_message(
+			"Rotors Volume Level in Globals: " + str(Globals.rotors_volume), Globals.LogLevel.DEBUG
+		)
 
 	# New: Start/restart debounce timer instead of immediate save
 	if save_debounce_timer.is_stopped():

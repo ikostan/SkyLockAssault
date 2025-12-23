@@ -136,6 +136,7 @@ theme_override_constants/separation = 10
 [node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/DifficultyLevelContainer"]
 layout_mode = 2
 size_flags_horizontal = 0
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 20
 text = "{DIFFICULTY}"
@@ -158,6 +159,7 @@ ticks_on_borders = true
 [node name="DifficultyValueLabel" type="Label" parent="Panel/OptionsVBoxContainer/DifficultyLevelContainer"]
 layout_mode = 2
 size_flags_horizontal = 10
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 20
 text = "{0.0}"
@@ -351,6 +353,7 @@ theme_override_constants/separation = 35
 [node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/LogLevelContainer"]
 layout_mode = 2
 size_flags_horizontal = 0
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 20
 text = "{LOG=LEVEL}"

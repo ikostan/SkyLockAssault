@@ -10,6 +10,7 @@ enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 @export var master_volume: float = 1.0
 @export var music_volume: float = 1.0
 @export var sfx_volume: float = 1.0
+@export var rotors_volume: float = 1.0
 
 # In globals.gd (add after @export vars)
 var options_instance: CanvasLayer = null
@@ -30,6 +31,7 @@ func _ready() -> void:
 	_apply_volume_to_bus("Master", master_volume)
 	_apply_volume_to_bus("Music", music_volume)
 	_apply_volume_to_bus("SFX", sfx_volume)
+	_apply_volume_to_bus("SFX_Rotors", rotors_volume)
 
 
 # New: Helper to apply volume to a named bus (extracted from _ready)
@@ -58,6 +60,9 @@ func _load_settings(config: ConfigFile = ConfigFile.new()) -> void:
 		sfx_volume = config.get_value("Settings", "sfx_volume", 1.0)
 		log_message("Loaded sfx_volume level: " + str(sfx_volume), LogLevel.DEBUG)
 
+		rotors_volume = config.get_value("Settings", "rotors_volume", 1.0)
+		log_message("Loaded rotors_volume level: " + str(rotors_volume), LogLevel.DEBUG)
+
 		current_log_level = config.get_value("Settings", "log_level", LogLevel.INFO)
 		log_message("Loaded saved log level: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
 
@@ -83,6 +88,7 @@ func _save_settings() -> void:
 	config.set_value("Settings", "master_volume", master_volume)
 	config.set_value("Settings", "music_volume", music_volume)
 	config.set_value("Settings", "sfx_volume", sfx_volume)
+	config.set_value("Settings", "rotors_volume", rotors_volume)
 
 	config.save("user://settings.cfg")
 	log_message("Settings saved.", LogLevel.DEBUG)

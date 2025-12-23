@@ -37,6 +37,9 @@ jobs:
       - name: "Unzip Export Archive"
         run: |
           unzip export/web/Web.zip -d export/web
+      - name: "Patch index.js for security"
+        run: |
+          bash ./.github/scripts/patch_index_js.sh "export/web"
       - name: "Re-zip Flattened Export"
         run: |
           cd export/web

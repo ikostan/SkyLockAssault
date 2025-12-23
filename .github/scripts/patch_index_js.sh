@@ -20,16 +20,25 @@ if [ ! -f "${index_js}" ]; then
   exit 1
 fi
 
-# Define the original pattern regex for detection (same as replacement but without capture)
-original_pattern='Module\[handler\]\s*=\s*\(\.\.\.args\)\s*=>\s*\{\s*postMessage\s*\(\s*\{\s*cmd\s*:\s*"callHandler"\s*,\s*handler\s*,\s*args\s*\}\s*\)\s*\}'
+# Define the original pattern regex for detection (escaped \" for bash/perl compatibility)
+original_pattern='Module\[handler\]\s*=\s*\(\.\.\.args\)\s*=>\s*\{\s*postMessage\s*\(\s*\{\s*cmd\s*:\s*\"callHandler\"\s*,\s*handler\s*,\s*args\s*\}\s*\)\s*\}'
+
+# Define the patched pattern for pre-check (fixed-string to avoid regex issues)
+patched_pattern='if (["print","printErr"].includes(handler))'
+
+# Pre-check if already patched
+if grep -F -q "${patched_pattern}" "${index_js}"; then
+  echo "File already patched; skipping."
+  exit 0
+fi
 
 # Check if the original pattern exists (using Perl-compatible regex for consistency)
 if grep -P -q "${original_pattern}" "${index_js}"; then
   # Apply patch using perl with alternate ~ delimiter for safety
   perl -i -pe "s~${original_pattern}~if ([\"print\",\"printErr\"].includes(handler)) { \$& }~g" "${index_js}"
 
-  # Verify replacement occurred by checking for added if statement (no unnecessary escapes)
-  if ! grep -q 'if (["print","printErr"].includes(handler))' "${index_js}"; then
+  # Verify replacement occurred by checking for added if statement (fixed-string)
+  if ! grep -F -q "${patched_pattern}" "${index_js}"; then
     echo "Error: Patch failed to apply despite pattern present."
     exit 1
   fi
