@@ -101,7 +101,7 @@ func test_fuel_colors() -> void:
 	await await_idle_frame()
 	
 	var player_root : Node = main_scene.get_node("Player")
-	var fuel_bar : ProgressBar = player_root.player["bar"]
+	var fuel_bar : ProgressBar = player_root.player.fuel["bar"]
 	
 	# High fuel → Green
 	player_root.fuel["fuel"] = 95.0
