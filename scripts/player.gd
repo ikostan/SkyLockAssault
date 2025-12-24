@@ -242,21 +242,21 @@ func update_fuel_bar() -> void:
 		fuel["factor"] = (
 			(HIGH_FUEL_THRESHOLD - fuel_percent) / (HIGH_FUEL_THRESHOLD - MEDIUM_FUEL_THRESHOLD)
 		)
-		fuel["bar style"].bg_color = Color.GREEN.lerp(Color.YELLOW, fuel_section_factor)
+		fuel["bar style"].bg_color = Color.GREEN.lerp(Color.YELLOW, fuel["factor"])
 	elif fuel_percent >= LOW_FUEL_THRESHOLD:
 		# Lerp yellow to red
 		fuel["factor"] = (
 			(MEDIUM_FUEL_THRESHOLD - fuel_percent) / (MEDIUM_FUEL_THRESHOLD - LOW_FUEL_THRESHOLD)
 		)
-		fuel["bar style"].bg_color = Color.YELLOW.lerp(Color.RED, fuel_section_factor)
+		fuel["bar style"].bg_color = Color.YELLOW.lerp(Color.RED, fuel["factor"])
 	elif fuel_percent >= NO_FUEL_THRESHOLD:
 		# Lerp red to darker or full red
 		fuel["factor"] = (
 			(LOW_FUEL_THRESHOLD - fuel_percent) / (LOW_FUEL_THRESHOLD - NO_FUEL_THRESHOLD)
 		)
-		fuel["bar style"].bg_color = Color.RED.lerp(Color(0.5, 0, 0), fuel_section_factor)
+		fuel["bar style"].bg_color = Color.RED.lerp(Color(0.5, 0, 0), fuel["factor"])
 	else:
-		fuel["bar style"].bg_color = Color.RED.lerp(Color(0.5, 0, 0), fuel_section_factor)
+		fuel["bar style"].bg_color = Color.RED.lerp(Color(0.5, 0, 0), fuel["factor"])
 
 
 func update_speed_bar() -> void:
