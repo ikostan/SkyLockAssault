@@ -34,18 +34,18 @@ func test_fuel_depletion() -> void:
 	var player_root: Node = main_scene.get_node("Player")
 	
 	# Initial state
-	assert_float(player_root.current_fuel).is_equal(player_root.max_fuel)
-	assert_float(player_root.fuel_bar.value).is_equal(100.0)
+	assert_float(player_root.fuel["fuel"]).is_equal(player_root.max_fuel)
+	assert_float(player_root.fuel["bar"].value).is_equal(100.0)
 	
 	# Simulate one timer tick
 	player_root._on_fuel_timer_timeout()
-	assert_float(player_root.current_fuel).is_equal(99.0)
-	assert_float(player_root.fuel_bar.value).is_equal(99.0)
+	assert_float(player_root.fuel["fuel"]).is_equal(99.0)
+	assert_float(player_root.fuel["bar"].value).is_equal(99.0)
 	
 	# Force zero fuel
-	player_root.current_fuel = 0.0
+	player_root.fuel["fuel"] = 0.0
 	player_root._on_fuel_timer_timeout()
-	assert_float(player_root.speed).is_equal(0.0)
+	assert_float(player_root.speed["speed"]).is_equal(0.0)
 	assert_bool(player_root.fuel_timer.is_stopped()).is_true()
 
 # Test: Player movement with input actions
@@ -101,16 +101,16 @@ func test_fuel_colors() -> void:
 	await await_idle_frame()
 	
 	var player_root : Node = main_scene.get_node("Player")
-	var fuel_bar : ProgressBar = player_root.fuel_bar
+	var fuel_bar : ProgressBar = player_root.player["bar"]
 	
 	# High fuel → Green
-	player_root.current_fuel = 95.0
+	player_root.fuel["fuel"] = 95.0
 	player_root.update_fuel_bar()
 	var style : StyleBoxFlat = fuel_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(Color.GREEN)
 	
 	# Low fuel → Red
-	player_root.current_fuel = 10.0
+	player_root.fuel["fuel"] = 10.0
 	player_root.update_fuel_bar()
 	style = fuel_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(Color.RED)
@@ -123,16 +123,16 @@ func test_fuel_colors_fixed() -> void:
 	await await_idle_frame()
 	
 	var player_root : Node = main_scene.get_node("Player")
-	var fuel_bar : ProgressBar = player_root.fuel_bar
+	var fuel_bar : ProgressBar = player_root.fuel["bar"]
 	
 	# Still full → Green
-	player_root.current_fuel = 95.0
+	player_root.fuel["fuel"] = 95.0
 	player_root.update_fuel_bar()
-	var style : StyleBoxFlat = fuel_bar.get_theme_stylebox("fill").duplicate()
+	var style : StyleBoxFlat =  player_root.fuel["bar"].get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(Color.GREEN)
 	
 	# Between 90% and 50% → Lerp green → yellow
-	player_root.current_fuel = 70.0
+	player_root.fuel["fuel"] = 70.0
 	player_root.update_fuel_bar()
 	style = fuel_bar.get_theme_stylebox("fill").duplicate()
 	var expected := Color.GREEN.lerp(Color.YELLOW, (90.0 - 70.0) / (90.0 - 50.0))
