@@ -7,10 +7,10 @@
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pu3yx"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
-corner_radius_top_left = 20
-corner_radius_top_right = 20
-corner_radius_bottom_right = 20
-corner_radius_bottom_left = 20
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
 
 [sub_resource type="FontVariation" id="FontVariation_pu3yx"]
 
@@ -18,19 +18,19 @@ corner_radius_bottom_left = 20
 bg_color = Color(0.6, 0.6, 0.6, 0)
 border_color = Color(0.3366076, 0.33660766, 0.33660737, 1)
 border_blend = true
-corner_radius_top_left = 20
-corner_radius_top_right = 20
-corner_radius_bottom_right = 20
-corner_radius_bottom_left = 20
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
 shadow_color = Color(0.5137255, 0.5137255, 0.5137255, 0.47058824)
 shadow_size = 1
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rt2n2"]
 bg_color = Color(0.09411765, 0.5019608, 0.81960785, 0.49019608)
-corner_radius_top_left = 20
-corner_radius_top_right = 20
-corner_radius_bottom_right = 20
-corner_radius_bottom_left = 20
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
 shadow_color = Color(0, 0, 0, 0.3882353)
 shadow_size = 1
 
@@ -40,8 +40,8 @@ script = ExtResource("1_7ykc4")
 [node name="PlayerStatsPanel" type="Panel" parent="."]
 offset_left = 910.0
 offset_top = 20.0
-offset_right = 1260.0
-offset_bottom = 60.0
+offset_right = 1270.0
+offset_bottom = 120.0
 tooltip_text = "Player Status Panel"
 theme_override_styles/panel = SubResource("StyleBoxFlat_pu3yx")
 metadata/_edit_use_anchors_ = true
@@ -54,24 +54,28 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -167.5
-offset_top = -14.0
+offset_top = -35.0
 offset_right = 167.5
-offset_bottom = 14.0
+offset_bottom = 35.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 7
 
-[node name="HBoxContainer" type="HBoxContainer" parent="PlayerStatsPanel/VBoxContainer"]
+[node name="FuelHBoxContainer" type="HBoxContainer" parent="PlayerStatsPanel/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_constants/separation = 34
 
-[node name="Label" type="Label" parent="PlayerStatsPanel/VBoxContainer/HBoxContainer"]
+[node name="FuelLabel" type="Label" parent="PlayerStatsPanel/VBoxContainer/FuelHBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9104413, 0, 0.10132807, 1)
+theme_override_colors/font_color = Color(0.9102516, 5.2943824e-07, 0.102033384, 1)
 theme_override_fonts/font = ExtResource("2_pu3yx")
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 28
 text = "{FUEL}"
 
-[node name="FuelProgressBar" type="ProgressBar" parent="PlayerStatsPanel/VBoxContainer/HBoxContainer"]
+[node name="FuelLabelBlinkTimer" type="Timer" parent="PlayerStatsPanel/VBoxContainer/FuelHBoxContainer/FuelLabel"]
+
+[node name="FuelBar" type="ProgressBar" parent="PlayerStatsPanel/VBoxContainer/FuelHBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 1
@@ -84,6 +88,36 @@ theme_override_font_sizes/font_size = 20
 theme_override_styles/background = SubResource("StyleBoxFlat_gubc5")
 theme_override_styles/fill = SubResource("StyleBoxFlat_rt2n2")
 step = 0.1
+
+[node name="SpeedHBoxContainer" type="HBoxContainer" parent="PlayerStatsPanel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 7
+
+[node name="SpeedLabel" type="Label" parent="PlayerStatsPanel/VBoxContainer/SpeedHBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9104413, 0, 0.10132807, 1)
+theme_override_fonts/font = ExtResource("2_pu3yx")
+theme_override_font_sizes/font_size = 28
+text = "{SPEED}"
+
+[node name="SpeedLabelBlinkTimer" type="Timer" parent="PlayerStatsPanel/VBoxContainer/SpeedHBoxContainer/SpeedLabel"]
+
+[node name="SpeedBar" type="ProgressBar" parent="PlayerStatsPanel/VBoxContainer/SpeedHBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+tooltip_text = "Speed Progress Bar"
+accessibility_name = "Fuel"
+accessibility_description = "Fuel Progress Bar"
+theme_override_colors/font_color = Color(0.16565621, 0.16565639, 0.16565683, 1)
+theme_override_fonts/font = SubResource("FontVariation_pu3yx")
+theme_override_font_sizes/font_size = 20
+theme_override_styles/background = SubResource("StyleBoxFlat_gubc5")
+theme_override_styles/fill = SubResource("StyleBoxFlat_rt2n2")
+max_value = 713.0
+step = 1.0
+show_percentage = false
 
 [node name="Player" parent="." instance=ExtResource("2_pw63i")]
 
