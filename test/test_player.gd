@@ -34,7 +34,7 @@ func test_fuel_depletion() -> void:
 	var player_root: Node = main_scene.get_node("Player")
 	
 	# Initial state
-	assert_float(player_root.fuel["fuel"]).is_equal(player_root.max_fuel)
+	assert_float(player_root.fuel["fuel"]).is_equal(player_root.fuel["max"])
 	assert_float(player_root.fuel["bar"].value).is_equal(100.0)
 	
 	# Simulate one timer tick
