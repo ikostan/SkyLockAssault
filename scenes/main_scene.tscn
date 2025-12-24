@@ -46,7 +46,7 @@ tooltip_text = "Player Status Panel"
 theme_override_styles/panel = SubResource("StyleBoxFlat_pu3yx")
 metadata/_edit_use_anchors_ = true
 
-[node name="VBoxContainer" type="VBoxContainer" parent="PlayerStatsPanel"]
+[node name="Stats" type="VBoxContainer" parent="PlayerStatsPanel"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -61,21 +61,21 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 7
 
-[node name="FuelHBoxContainer" type="HBoxContainer" parent="PlayerStatsPanel/VBoxContainer"]
+[node name="Fuel" type="HBoxContainer" parent="PlayerStatsPanel/Stats"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 34
 
-[node name="FuelLabel" type="Label" parent="PlayerStatsPanel/VBoxContainer/FuelHBoxContainer"]
+[node name="FuelLabel" type="Label" parent="PlayerStatsPanel/Stats/Fuel"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9102516, 5.2943824e-07, 0.102033384, 1)
 theme_override_fonts/font = ExtResource("2_pu3yx")
 theme_override_font_sizes/font_size = 28
 text = "{FUEL}"
 
-[node name="FuelLabelBlinkTimer" type="Timer" parent="PlayerStatsPanel/VBoxContainer/FuelHBoxContainer/FuelLabel"]
+[node name="BlinkTimer" type="Timer" parent="PlayerStatsPanel/Stats/Fuel/FuelLabel"]
 
-[node name="FuelBar" type="ProgressBar" parent="PlayerStatsPanel/VBoxContainer/FuelHBoxContainer"]
+[node name="FuelBar" type="ProgressBar" parent="PlayerStatsPanel/Stats/Fuel"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 1
@@ -89,21 +89,21 @@ theme_override_styles/background = SubResource("StyleBoxFlat_gubc5")
 theme_override_styles/fill = SubResource("StyleBoxFlat_rt2n2")
 step = 0.1
 
-[node name="SpeedHBoxContainer" type="HBoxContainer" parent="PlayerStatsPanel/VBoxContainer"]
+[node name="Speed" type="HBoxContainer" parent="PlayerStatsPanel/Stats"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 7
 
-[node name="SpeedLabel" type="Label" parent="PlayerStatsPanel/VBoxContainer/SpeedHBoxContainer"]
+[node name="SpeedLabel" type="Label" parent="PlayerStatsPanel/Stats/Speed"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9104413, 0, 0.10132807, 1)
 theme_override_fonts/font = ExtResource("2_pu3yx")
 theme_override_font_sizes/font_size = 28
 text = "{SPEED}"
 
-[node name="SpeedLabelBlinkTimer" type="Timer" parent="PlayerStatsPanel/VBoxContainer/SpeedHBoxContainer/SpeedLabel"]
+[node name="BlinkTimer" type="Timer" parent="PlayerStatsPanel/Stats/Speed/SpeedLabel"]
 
-[node name="SpeedBar" type="ProgressBar" parent="PlayerStatsPanel/VBoxContainer/SpeedHBoxContainer"]
+[node name="SpeedBar" type="ProgressBar" parent="PlayerStatsPanel/Stats/Speed"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 1
@@ -120,5 +120,7 @@ step = 1.0
 show_percentage = false
 
 [node name="Player" parent="." instance=ExtResource("2_pw63i")]
+current_speed = 250.0
+max_fuel = 100.0
 
 [node name="PauseMenu" parent="." instance=ExtResource("1_w2twt")]

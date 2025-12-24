@@ -46,20 +46,16 @@ var speed: Dictionary
 @onready var player: CharacterBody2D = $CharacterBody2D
 @onready var player_sprite: Sprite2D = $CharacterBody2D/Sprite2D
 @onready var collision_shape: CollisionPolygon2D = $CharacterBody2D/CollisionPolygon2D
-@onready
-var fuel_bar: ProgressBar = $"../PlayerStatsPanel/VBoxContainer/FuelHBoxContainer/FuelBar"
-@onready var fuel_label: Label = $"../PlayerStatsPanel/VBoxContainer/FuelHBoxContainer/FuelLabel"
-@onready
-var fuel_label_blink_timer: Timer = $"../PlayerStatsPanel/VBoxContainer/FuelHBoxContainer/FuelLabel/FuelLabelBlinkTimer"
+@onready var fuel_bar: ProgressBar = $"../PlayerStatsPanel/Stats/Fuel/FuelBar"
+@onready var fuel_label: Label = $"../PlayerStatsPanel/Stats/Fuel/FuelLabel"
+@onready var fuel_label_blink_timer: Timer = $"../PlayerStatsPanel/Stats/Fuel/FuelLabel/BlinkTimer"
 @onready var fuel_timer: Timer = $FuelTimer
 @onready
-var speed_label_blink_timer: Timer = $"../PlayerStatsPanel/VBoxContainer/SpeedHBoxContainer/SpeedLabel/SpeedLabelBlinkTimer"
-@onready
-var speed_label: Label = $"../PlayerStatsPanel/VBoxContainer/SpeedHBoxContainer/SpeedLabel"
+var speed_label_blink_timer: Timer = $"../PlayerStatsPanel/Stats/Speed/SpeedLabel/BlinkTimer"
+@onready var speed_label: Label = $"../PlayerStatsPanel/Stats/Speed/SpeedLabel"
 # Get the fill style
 @onready var fuel_bar_fill_style: StyleBoxFlat = fuel_bar.get_theme_stylebox("fill")
-@onready
-var speed_bar: ProgressBar = $"../PlayerStatsPanel/VBoxContainer/SpeedHBoxContainer/SpeedBar"
+@onready var speed_bar: ProgressBar = $"../PlayerStatsPanel/Stats/Speed/SpeedBar"
 @onready var speed_bar_fill_style: StyleBoxFlat = speed_bar.get_theme_stylebox("fill")
 # In plane.gd (or main player script) - central input
 @onready var weapon: Node2D = $CharacterBody2D/Weapon  # Path to your WeaponManager node
@@ -67,21 +63,17 @@ var speed_bar: ProgressBar = $"../PlayerStatsPanel/VBoxContainer/SpeedHBoxContai
 
 func _ready() -> void:
 	# Auto-start rotors (overrides editor if needed)
-	# rotor_right.get_node("AnimatedSprite2D").play("default")
-	# rotor_left.get_node("AnimatedSprite2D").play("default")
 	rotor_left_sfx = rotor_left.get_node("AudioStreamPlayer2D")
 	rotor_right_sfx = rotor_right.get_node("AudioStreamPlayer2D")
 
 	if rotor_left_sfx:
 		rotor_left_sfx.bus = "SFX_Rotor_Left"
-		# rotor_left_sfx.play()
 		Globals.log_message("Twin rotors: LEFT stereo PAN active!", Globals.LogLevel.DEBUG)
 	else:
 		Globals.log_message("No left rotor SFX found", Globals.LogLevel.DEBUG)
 
 	if rotor_right_sfx:
 		rotor_right_sfx.bus = "SFX_Rotor_Right"
-		# rotor_right_sfx.play()
 		Globals.log_message("Twin rotors: RIGHT stereo PAN active!", Globals.LogLevel.DEBUG)
 	else:
 		Globals.log_message("No right rotor SFX found", Globals.LogLevel.DEBUG)
@@ -89,7 +81,6 @@ func _ready() -> void:
 	rotor_start(rotor_right, rotor_right_sfx)
 	rotor_start(rotor_left, rotor_left_sfx)
 	Globals.log_message("Rotors AUTO-STARTED at 24 FPS!", Globals.LogLevel.DEBUG)
-
 
 	# Set screen boundaries (safe null check + fallback)
 	screen_size = get_viewport_rect().size  # Dynamic for web/resizes
@@ -99,7 +90,9 @@ func _ready() -> void:
 		sprite_size = player_sprite.texture.get_size()
 		Globals.log_message("Player sprite size: " + str(sprite_size), Globals.LogLevel.DEBUG)
 	else:
-		var warning_msg: String = "Player sprite texture missing! Using fallback size: " + str(sprite_size)
+		var warning_msg: String = (
+			"Player sprite texture missing! Using fallback size: " + str(sprite_size)
+		)
 		Globals.log_message(warning_msg, Globals.LogLevel.WARNING)
 		push_warning(warning_msg)
 
@@ -123,7 +116,7 @@ func _ready() -> void:
 		),
 		Globals.LogLevel.DEBUG
 	)
-	
+
 	# Initialize fuel bar style
 	fuel_bar_fill_style = StyleBoxFlat.new()
 	set_bar_fill_style(fuel_bar, fuel_bar_fill_style)
@@ -139,7 +132,7 @@ func _ready() -> void:
 	current_fuel = max_fuel
 	fuel_timer.timeout.connect(_on_fuel_timer_timeout)
 	fuel_timer.start()
-	
+
 	speed = {
 		"speed": current_speed,
 		"factor": speed_section_factor,
@@ -150,7 +143,7 @@ func _ready() -> void:
 		"bar style": speed_bar_fill_style,
 		"blinking": false,
 	}
-	
+
 	fuel = {
 		"fuel": current_fuel,
 		"factor": fuel_section_factor,
@@ -161,19 +154,19 @@ func _ready() -> void:
 		"bar style": fuel_bar_fill_style,
 		"blinking": false,
 	}
-	
+
 	# Initialize fuel blink timer
 	if fuel["timer"]:
 		fuel["timer"].wait_time = BLINK_INTERVAL
 		fuel["timer"].one_shot = false  # Repeat indefinitely
 		fuel["timer"].timeout.connect(_on_fuel_blink_timer_timeout)
-		
+
 	# Initialize speed blink timer
 	if speed["timer"]:
 		speed["timer"].wait_time = BLINK_INTERVAL
 		speed["timer"].one_shot = false  # Repeat indefinitely
 		speed["timer"].timeout.connect(_on_speed_blink_timer_timeout)
-	
+
 	# Init speed bar
 	speed["bar"].max_value = speed["max"]  # Set max speed value
 	update_speed_bar()  # Ensure the bar updates with the initial speed
@@ -261,15 +254,15 @@ func update_fuel_bar() -> void:
 		fuel["factor"] = (
 			(LOW_FUEL_THRESHOLD - fuel_percent) / (LOW_FUEL_THRESHOLD - NO_FUEL_THRESHOLD)
 		)
-		fuel["bar style"].bg_color = Color.RED.lerp(Color(0.5, 0, 0), fuel_section_factor)  # Example to dark red
+		fuel["bar style"].bg_color = Color.RED.lerp(Color(0.5, 0, 0), fuel_section_factor)
 	else:
-		fuel["bar style"].bg_color = Color.RED.lerp(Color(0.5, 0, 0), fuel_section_factor)  # Example to dark red
+		fuel["bar style"].bg_color = Color.RED.lerp(Color(0.5, 0, 0), fuel_section_factor)
 
 
 func update_speed_bar() -> void:
 	speed["bar"].value = speed["speed"]
 	speed["factor"] = speed["speed"] * 100 / MAX_SPEED
-	speed["bar style"].bg_color = Color.CORAL.lerp(Color.DARK_ORANGE, speed["factor"])  # Example to dark red
+	speed["bar style"].bg_color = Color.CORAL.lerp(Color.DARK_ORANGE, speed["factor"])
 
 
 # Connect Timer's timeout signal
@@ -290,7 +283,7 @@ func _on_fuel_timer_timeout() -> void:
 		rotor_stop(rotor_left, rotor_left_sfx)
 		update_speed_bar()
 	Globals.log_message("Fuel left: " + str(fuel["fuel"]), Globals.LogLevel.DEBUG)
-		
+
 
 func check_fuel_warning() -> void:
 	if fuel["fuel"] <= LOW_FUEL_THRESHOLD and not fuel["blinking"]:
@@ -304,7 +297,11 @@ func check_speed_warning() -> void:
 		start_blinking(speed)
 	elif speed["speed"] >= OVER_SPEED_THRESHOLD and not speed["blinking"]:
 		start_blinking(speed)
-	elif OVER_SPEED_THRESHOLD > speed["speed"] and speed["speed"] > LOW_SPEED_THRESHOLD and speed["blinking"]:
+	elif (
+		OVER_SPEED_THRESHOLD > speed["speed"]
+		and speed["speed"] > LOW_SPEED_THRESHOLD
+		and speed["blinking"]
+	):
 		stop_blinking(speed)
 
 
@@ -326,7 +323,6 @@ func stop_blinking(param: Dictionary) -> void:
 func _on_fuel_blink_timer_timeout() -> void:
 	if fuel["blinking"] and fuel["label"]:
 		_toggle_label(fuel["label"])
-
 
 
 func _on_speed_blink_timer_timeout() -> void:
