@@ -6,6 +6,7 @@ extends Node2D
 # Fuel color thresholds (percentages)
 const HIGH_FUEL_THRESHOLD: float = 90.0  # Starts green lerp
 const MEDIUM_FUEL_THRESHOLD: float = 50.0  # Switches to yellow lerp
+const MAX_FUEL: float = 100.0  # Fully Red Color
 const LOW_FUEL_THRESHOLD: float = 30.0  # Switches to red lerp
 const NO_FUEL_THRESHOLD: float = 15.0  # Fully Red Color
 # Bounds hitbox scale (quarter texture = tight margin for top-down plane)
@@ -17,8 +18,6 @@ const BLINK_INTERVAL: float = 0.5  # Seconds between blinks
 
 # Exported vars first (for Inspector editing)
 @export var current_speed: float = 250.0
-
-@export var max_fuel: float = 100.0
 var current_fuel: float
 
 # Regular vars for computed boundaries (no export needed if set in code)
@@ -120,7 +119,7 @@ func _ready() -> void:
 	# Initialize fuel bar style
 	fuel_bar_fill_style = StyleBoxFlat.new()
 	set_bar_fill_style(fuel_bar, fuel_bar_fill_style)
-	fuel_bar.max_value = max_fuel
+	fuel_bar.max_value = MAX_FUEL
 
 	# Initialize speed bar style and value
 	speed_bar_fill_style = StyleBoxFlat.new()
@@ -129,7 +128,7 @@ func _ready() -> void:
 	label_color = get_label_text_color(fuel_label)
 
 	# Initialize fuel bar style and value
-	current_fuel = max_fuel
+	current_fuel = MAX_FUEL
 	fuel_timer.timeout.connect(_on_fuel_timer_timeout)
 	fuel_timer.start()
 
@@ -149,7 +148,7 @@ func _ready() -> void:
 		"factor": fuel_section_factor,
 		"timer": fuel_label_blink_timer,
 		"label": fuel_label,
-		"max": 100.0,
+		"max": MAX_FUEL,
 		"bar": fuel_bar,
 		"bar style": fuel_bar_fill_style,
 		"blinking": false,
@@ -270,7 +269,7 @@ func _on_fuel_timer_timeout() -> void:
 	# Scale base rate
 	var fuel_left: float = fuel["fuel"] - (0.5 * Globals.difficulty)
 	# Clamp and update current_fuel first
-	fuel["fuel"] = clamp(fuel_left, 0, max_fuel)
+	fuel["fuel"] = clamp(fuel_left, 0, fuel["max"])
 	# Update UI from the clamped value
 	update_fuel_bar()
 	# Check fuel level and start/stop blinking
