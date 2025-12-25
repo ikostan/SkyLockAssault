@@ -187,7 +187,8 @@ func _ready() -> void:
 ## @return: The effective font color.
 func get_label_text_color(label: Label) -> Color:
 	if label.has_theme_color_override("font_color"):
-		return label.get_theme_color("font_color", "")
+		# return label.get_theme_color("font_color", "")
+		return label.get("theme_override_colors/font_color")
 	return label.get_theme_color("font_color", "Label")
 
 
