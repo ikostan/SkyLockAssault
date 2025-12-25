@@ -228,7 +228,9 @@ func rotor_start(rotor: Node2D, rotor_sfx: AudioStreamPlayer2D) -> void:
 		var anim_sprite: AnimatedSprite2D = rotor.get_node("AnimatedSprite2D") as AnimatedSprite2D
 		anim_sprite.play("default")
 	else:
-		Globals.log_message("AnimatedSprite2D not found in rotor: " + rotor.name, Globals.LogLevel.WARNING)
+		Globals.log_message(
+			"AnimatedSprite2D not found in rotor: " + rotor.name, Globals.LogLevel.WARNING
+		)
 	if rotor_sfx != null:
 		rotor_sfx.play()
 
@@ -242,7 +244,9 @@ func rotor_stop(rotor: Node2D, rotor_sfx: AudioStreamPlayer2D) -> void:
 		var anim_sprite: AnimatedSprite2D = rotor.get_node("AnimatedSprite2D") as AnimatedSprite2D
 		anim_sprite.stop()
 	else:
-		Globals.log_message("AnimatedSprite2D not found in rotor: " + rotor.name, Globals.LogLevel.WARNING)
+		Globals.log_message(
+			"AnimatedSprite2D not found in rotor: " + rotor.name, Globals.LogLevel.WARNING
+		)
 	if rotor_sfx != null:
 		rotor_sfx.stop()
 
