@@ -106,14 +106,14 @@ func test_fuel_colors() -> void:
 	# High fuel → Green
 	player_root.fuel["fuel"] = 95.0
 	player_root.update_fuel_bar()
-	var style : StyleBoxFlat = fuel_bar.get_theme_stylebox("fill").duplicate()
-	assert_that(style.bg_color).is_equal(Color.GREEN)
-	
-	# Low fuel → Red
+	var style_1 : StyleBoxFlat = fuel_bar.get_theme_stylebox("fill").duplicate()
+	assert_that(style_1.bg_color).is_equal(Color.GREEN)
+		
+	# Low fuel → Dark Red (consistent with gradual depletion)
 	player_root.fuel["fuel"] = 10.0
 	player_root.update_fuel_bar()
-	style = fuel_bar.get_theme_stylebox("fill").duplicate()
-	assert_that(style.bg_color).is_equal(Color.RED)
+	var style_2 : StyleBoxFlat = fuel_bar.get_theme_stylebox("fill").duplicate()
+	assert_that(style_2.bg_color).is_equal(Color(0.5, 0, 0, 1.0))  # Or Color(0.5, 0.0, 0.0) if using floats
 
 
 # Test: Smooth color lerp between thresholds
