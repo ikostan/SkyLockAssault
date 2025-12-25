@@ -186,8 +186,7 @@ func _ready() -> void:
 ## @param label: The Label node to query.
 ## @return: The effective font color.
 func get_label_text_color(label: Label) -> Color:
-	# Omit theme_type for consistent override handling
-	return label.get_theme_color("font_color")
+	return label.get_theme_color("font_color", "Label")
 
 
 func set_label_text_color(label: Label, new_color: Color) -> void:
