@@ -32,8 +32,6 @@ var current_weapon: int = 0
 var rotor_left_sfx: AudioStreamPlayer2D
 var rotor_right_sfx: AudioStreamPlayer2D
 var corner_radius: int = 10
-var label_color: Color
-var label_warning_color: Color
 var fuel: Dictionary
 var speed: Dictionary
 
@@ -123,7 +121,6 @@ func _ready() -> void:
 	speed_bar_fill_style = StyleBoxFlat.new()
 	set_bar_fill_style(speed_bar, speed_bar_fill_style)
 	speed_bar.max_value = MAX_SPEED
-	label_color = get_label_text_color(fuel_label)
 
 	# Initialize fuel bar style and value
 	current_fuel = MAX_FUEL
@@ -151,6 +148,12 @@ func _ready() -> void:
 		"bar style": fuel_bar_fill_style,
 		"blinking": false,
 	}
+	
+	# Base and warning colors per stat
+	fuel["base_color"] = get_label_text_color(fuel["label"])
+	fuel["warning_color"] = Color.RED.lerp(Color(0.5, 0, 0), 1.0)
+	speed["base_color"] = get_label_text_color(speed["label"])
+	speed["warning_color"] = Color.RED.lerp(Color(0.5, 0, 0), 1.0)
 
 	# Initialize fuel blink timer
 	if fuel["timer"]:
@@ -313,34 +316,33 @@ func check_speed_warning() -> void:
 
 func start_blinking(param: Dictionary) -> void:
 	if param["label"] and param["timer"]:
-		label_warning_color = Color.RED.lerp(Color(0.5, 0, 0), 1.0)
 		param["blinking"] = true
 		param["timer"].start()
-		_toggle_label(param["label"])  # Immediate first toggle
+		_toggle_label(param)  # Immediate first toggle
 
 
 func stop_blinking(param: Dictionary) -> void:
 	if param["label"] and param["timer"]:
 		param["blinking"] = false
 		param["timer"].stop()
-		set_label_text_color(param["label"], label_color)
+		set_label_text_color(param["label"], param["base_color"])
 
 
 func _on_fuel_blink_timer_timeout() -> void:
 	if fuel["blinking"] and fuel["label"]:
-		_toggle_label(fuel["label"])
+		_toggle_label(fuel)
 
 
 func _on_speed_blink_timer_timeout() -> void:
 	if speed["blinking"] and speed["label"]:
-		_toggle_label(speed["label"])
+		_toggle_label(speed)
 
 
-func _toggle_label(label: Label) -> void:
-	if get_label_text_color(label) == label_color:
-		set_label_text_color(label, label_warning_color)
+func _toggle_label(param: Dictionary) -> void:
+	if get_label_text_color(param["label"]) == param["base_color"]:
+		set_label_text_color(param["label"], param["warning_color"])
 	else:
-		set_label_text_color(label, label_color)
+		set_label_text_color(param["label"], param["base_color"])
 
 
 func _physics_process(_delta: float) -> void:

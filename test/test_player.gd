@@ -187,3 +187,29 @@ func test_rotor_null_sfx() -> void:
 	# Assert animation started/stopped
 	assert_bool(player_root.rotor_left.get_node("AnimatedSprite2D").is_playing()).is_false()
 	assert_bool(player_root.rotor_right.get_node("AnimatedSprite2D").is_playing()).is_false()
+
+
+# Test: Independent blinking for fuel and speed labels
+func test_independent_blinking() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node = main_scene.get_node("Player")
+	
+	# Force low fuel and high speed to trigger both
+	player_root.fuel["fuel"] = 10.0
+	player_root.speed["speed"] = player_root.speed["max"] * 0.95
+	player_root.check_fuel_warning()
+	player_root.check_speed_warning()
+	
+	# Simulate blinks
+	player_root._toggle_label(player_root.fuel)
+	assert_that(player_root.get_label_text_color(player_root.fuel["label"])).is_equal(player_root.fuel["warning_color"])
+	player_root._toggle_label(player_root.speed)
+	assert_that(player_root.get_label_text_color(player_root.speed["label"])).is_equal(player_root.speed["warning_color"])
+	
+	# Toggle one, other unchanged
+	player_root._toggle_label(player_root.fuel)
+	assert_that(player_root.get_label_text_color(player_root.fuel["label"])).is_equal(player_root.fuel["base_color"])
+	assert_that(player_root.get_label_text_color(player_root.speed["label"])).is_equal(player_root.speed["warning_color"])
