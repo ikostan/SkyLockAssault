@@ -212,3 +212,30 @@ func test_independent_blinking() -> void:
 	player_root._toggle_label(player_root.fuel)
 	assert_that(player_root.get_label_text_color(player_root.fuel["label"])).is_equal(player_root.fuel["base_color"])
 	assert_that(player_root.get_label_text_color(player_root.speed["label"])).is_equal(player_root.speed["warning_color"])
+
+
+# Test: get_label_text_color returns override if set, else theme default
+func test_get_label_text_color_override() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node = main_scene.get_node("Player")
+	var fuel_label: Label = player_root.fuel["label"]
+	
+	# Assume initial is theme default (not black transparent)
+	var initial_color: Color = player_root.get_label_text_color(fuel_label)
+	assert_bool(initial_color.is_equal_approx(Color(0, 0, 0, 0))).is_false()
+	
+	# Set override
+	var override_color: Color = Color.BLUE
+	fuel_label.add_theme_color_override("font_color", override_color)
+	
+	# Assert returns override
+	assert_that(player_root.get_label_text_color(fuel_label)).is_equal(override_color)
+	
+	# Remove override
+	fuel_label.remove_theme_color_override("font_color")
+	
+	# Assert back to initial
+	assert_that(player_root.get_label_text_color(fuel_label)).is_equal(initial_color)

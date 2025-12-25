@@ -182,14 +182,11 @@ func _ready() -> void:
 		push_error("Weapon node not found! Check player.tscn scene tree for $Weapon child.")
 
 
+## Retrieves the effective text color of a Label, considering theme overrides.
+## @param label: The Label node to query.
+## @return: The effective font color.
 func get_label_text_color(label: Label) -> Color:
-	# Try to get the theme color first
-	var color: Color = label.get_theme_color("font_color", "Label")
-	if color.is_equal_approx(Color(0, 0, 0, 0)):  # Default color might be invalid
-		# Fall back to checking override if theme color is not set
-		if label.has_theme_color_override("font_color"):
-			color = label.get_theme_color("font_color", "Label")
-	return color
+	return label.get_theme_color("font_color", "Label")
 
 
 func set_label_text_color(label: Label, new_color: Color) -> void:
