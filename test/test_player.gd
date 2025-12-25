@@ -215,6 +215,7 @@ func test_independent_blinking() -> void:
 
 
 # Test: get_label_text_color returns override if set, else theme default
+# Test: get_label_text_color_override returns override if set, else theme default
 func test_get_label_text_color_override() -> void:
 	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
 	add_child(main_scene)
@@ -222,6 +223,9 @@ func test_get_label_text_color_override() -> void:
 	
 	var player_root: Node = main_scene.get_node("Player")
 	var fuel_label: Label = player_root.fuel["label"]
+	
+	# Clear any editor-set override to test from clean theme default
+	fuel_label.remove_theme_color_override("font_color")
 	
 	# Assume initial is theme default (not black transparent)
 	var initial_color: Color = player_root.get_label_text_color(fuel_label)
@@ -235,9 +239,10 @@ func test_get_label_text_color_override() -> void:
 	assert_that(player_root.get_label_text_color(fuel_label)).is_equal(override_color)
 	
 	# Remove override
-	# fuel_label.remove_theme_color_override("font_color")
+	fuel_label.remove_theme_color_override("font_color")
+	
 	# Assert back to initial
-	# assert_that(player_root.get_label_text_color(fuel_label)).is_equal(initial_color)
+	assert_that(player_root.get_label_text_color(fuel_label)).is_equal(initial_color)
 
 
 # Test: rotor_start/stop logs warning on missing AnimatedSprite2D
