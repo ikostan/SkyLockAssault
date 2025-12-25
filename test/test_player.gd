@@ -242,6 +242,7 @@ func test_get_label_text_color_override() -> void:
 
 
 # Test: rotor_start/stop logs warning on missing AnimatedSprite2D
+# Test: rotor_start/stop logs warning on missing AnimatedSprite2D
 func test_rotor_missing_anim_sprite() -> void:
 	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
 	add_child(main_scene)
@@ -254,9 +255,12 @@ func test_rotor_missing_anim_sprite() -> void:
 	var anim_sprite: AnimatedSprite2D = left_rotor.get_node("AnimatedSprite2D")
 	left_rotor.remove_child(anim_sprite)
 	
-	# Call start/stop - expect warning log, no crash
+	# Call start/stop - expect warning log, no crash or Godot error
 	player_root.rotor_start(left_rotor, player_root.rotor_left_sfx)
 	player_root.rotor_stop(left_rotor, player_root.rotor_left_sfx)
 	
 	# Restore for cleanup
 	left_rotor.add_child(anim_sprite)
+	
+	# Assert animation is still playing (unchanged, since missing during calls)
+	assert_bool(player_root.rotor_left.get_node("AnimatedSprite2D").is_playing()).is_true()

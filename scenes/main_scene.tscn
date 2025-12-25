@@ -120,6 +120,5 @@ step = 1.0
 show_percentage = false
 
 [node name="Player" parent="." instance=ExtResource("2_pw63i")]
-current_speed = 250.0
 
 [node name="PauseMenu" parent="." instance=ExtResource("1_w2twt")]
