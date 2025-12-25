@@ -11,13 +11,23 @@ const LOW_FUEL_THRESHOLD: float = 30.0  # Switches to red lerp
 const NO_FUEL_THRESHOLD: float = 15.0  # Fully Red Color
 # Bounds hitbox scale (quarter texture = tight margin for top-down plane)
 const HITBOX_SCALE: float = 0.25
-const MAX_SPEED: float = 713.0
-const LOW_SPEED_THRESHOLD: float = MAX_SPEED * 10.0 / 100.0
+const MAX_SPEED: float = 713.0  # mph
+const MIN_SPEED: float = 95.0  # mph
 const OVER_SPEED_THRESHOLD: float = MAX_SPEED * 90.0 / 100.0
+const HIGH_YELLOW_THRESHOLD: float = MAX_SPEED * 80.0 / 100.0
+const HIGH_RED_THRESHOLD: float = MAX_SPEED * 90.0 / 100.0
+const LOW_YELLOW_THRESHOLD: float = MIN_SPEED + (MAX_SPEED * 10.0 / 100.0)
+const LOW_RED_THRESHOLD: float = MIN_SPEED
+const DARK_RED: Color = Color(0.5, 0.0, 0.0)
 const BLINK_INTERVAL: float = 0.5  # Seconds between blinks
 
 # Exported vars first (for Inspector editing)
 @export var current_speed: float = 250.0
+@export var lateral_speed: float = 250.0
+@export var acceleration: float = 200.0
+@export var deceleration: float = 100.0
+# Base fuel cinsumption
+@export var base_fuel_drain: float = 1.0
 var current_fuel: float
 
 # Regular vars for computed boundaries (no export needed if set in code)
@@ -42,6 +52,7 @@ var speed: Dictionary
 @onready var player_sprite: Sprite2D = $CharacterBody2D/Sprite2D
 @onready var collision_shape: CollisionPolygon2D = $CharacterBody2D/CollisionPolygon2D
 @onready var fuel_bar: ProgressBar = $"../PlayerStatsPanel/Stats/Fuel/FuelBar"
+@onready var fuel_bar_fill_style: StyleBoxFlat
 @onready var fuel_label: Label = $"../PlayerStatsPanel/Stats/Fuel/FuelLabel"
 @onready var fuel_label_blink_timer: Timer = $"../PlayerStatsPanel/Stats/Fuel/FuelLabel/BlinkTimer"
 @onready var fuel_timer: Timer = $FuelTimer
@@ -49,9 +60,8 @@ var speed: Dictionary
 var speed_label_blink_timer: Timer = $"../PlayerStatsPanel/Stats/Speed/SpeedLabel/BlinkTimer"
 @onready var speed_label: Label = $"../PlayerStatsPanel/Stats/Speed/SpeedLabel"
 # Get the fill style
-@onready var fuel_bar_fill_style: StyleBoxFlat = fuel_bar.get_theme_stylebox("fill")
 @onready var speed_bar: ProgressBar = $"../PlayerStatsPanel/Stats/Speed/SpeedBar"
-@onready var speed_bar_fill_style: StyleBoxFlat = speed_bar.get_theme_stylebox("fill")
+@onready var speed_bar_fill_style: StyleBoxFlat
 # In plane.gd (or main player script) - central input
 @onready var weapon: Node2D = $CharacterBody2D/Weapon  # Path to your WeaponManager node
 
@@ -129,10 +139,14 @@ func _ready() -> void:
 
 	speed = {
 		"speed": current_speed,
+		"lateral_speed": lateral_speed,
+		"acceleration": acceleration,
+		"deceleration": deceleration,
 		"factor": 0.0,
 		"timer": speed_label_blink_timer,
 		"label": speed_label,
 		"max": MAX_SPEED,
+		"min": MIN_SPEED,
 		"bar": speed_bar,
 		"bar style": speed_bar_fill_style,
 		"blinking": false,
@@ -208,11 +222,13 @@ func set_bar_fill_style(bar: ProgressBar, bar_fill_style: StyleBoxFlat) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# Fire weapon
 	if event.is_action_pressed("fire"):
 		# Globals.log_message("Fire input pressed → calling weapon.fire()", Globals.LogLevel.DEBUG)
 		if weapon and weapon.has_method("fire"):
 			weapon.fire()
 		get_viewport().set_input_as_handled()
+	# Change weapon
 	if event.is_action_pressed("next_weapon"):
 		Globals.log_message("Next weapon input pressed", Globals.LogLevel.DEBUG)
 		if weapon and weapon.has_method("switch_to") and weapon.get_num_weapons() > 1:
@@ -280,17 +296,37 @@ func update_fuel_bar() -> void:
 		fuel["bar style"].bg_color = Color.RED.lerp(Color(0.5, 0, 0), fuel["factor"])
 
 
+## Updates the speed bar value and color based on current speed.
+## Colors: green normal, yellow approaching limits, red/dark red at limits.
+## @return: void
 func update_speed_bar() -> void:
 	speed["bar"].value = speed["speed"]
-	# Speed lerp factor is a 0–1 range, based on per-instance max
-	speed["factor"] = speed["speed"] / speed["max"]
-	speed["bar style"].bg_color = Color.CORAL.lerp(Color.DARK_ORANGE, speed["factor"])
+	var speed_val: float = speed["speed"]
+	var factor: float = 0.0
+
+	if speed_val >= HIGH_RED_THRESHOLD:
+		factor = (speed_val - HIGH_RED_THRESHOLD) / (MAX_SPEED - HIGH_RED_THRESHOLD)
+		speed["bar style"].bg_color = Color.YELLOW.lerp(DARK_RED, factor)
+	elif speed_val >= HIGH_YELLOW_THRESHOLD:
+		factor = (speed_val - HIGH_YELLOW_THRESHOLD) / (HIGH_RED_THRESHOLD - HIGH_YELLOW_THRESHOLD)
+		speed["bar style"].bg_color = Color.GREEN.lerp(Color.YELLOW, factor)
+	elif speed_val <= LOW_RED_THRESHOLD:
+		speed["bar style"].bg_color = DARK_RED
+	elif speed_val <= LOW_YELLOW_THRESHOLD:
+		factor = (LOW_YELLOW_THRESHOLD - speed_val) / (LOW_YELLOW_THRESHOLD - LOW_RED_THRESHOLD)
+		speed["bar style"].bg_color = Color.GREEN.lerp(Color.YELLOW, factor)
+	else:
+		speed["bar style"].bg_color = Color.GREEN
+	speed["factor"] = factor
 
 
 # Connect Timer's timeout signal
 func _on_fuel_timer_timeout() -> void:
 	# Scale base rate
-	var fuel_left: float = fuel["fuel"] - (0.5 * Globals.difficulty)
+	# var fuel_left: float = fuel["fuel"] - (0.5 * Globals.difficulty)
+	var fuel_left: float = (
+		fuel["fuel"] - ((base_fuel_drain * (speed["speed"] / MAX_SPEED)) * Globals.difficulty)
+	)
 	# Clamp and update current_fuel first
 	fuel["fuel"] = clamp(fuel_left, 0, fuel["max"])
 	# Update UI from the clamped value
@@ -314,14 +350,18 @@ func check_fuel_warning() -> void:
 		stop_blinking(fuel)
 
 
+## Checks speed and starts/stops label blinking if approaching or exceeding limits.
+## Blinking activates in yellow/red zones for low/high speeds.
+## @return: void
 func check_speed_warning() -> void:
-	if speed["speed"] <= LOW_SPEED_THRESHOLD and not speed["blinking"]:
-		start_blinking(speed)
-	elif speed["speed"] >= OVER_SPEED_THRESHOLD and not speed["blinking"]:
+	if (
+		(speed["speed"] < LOW_YELLOW_THRESHOLD or speed["speed"] > HIGH_YELLOW_THRESHOLD)
+		and not speed["blinking"]
+	):
 		start_blinking(speed)
 	elif (
-		OVER_SPEED_THRESHOLD > speed["speed"]
-		and speed["speed"] > LOW_SPEED_THRESHOLD
+		LOW_YELLOW_THRESHOLD <= speed["speed"]
+		and speed["speed"] <= HIGH_YELLOW_THRESHOLD
 		and speed["blinking"]
 	):
 		stop_blinking(speed)
@@ -359,14 +399,24 @@ func _toggle_label(param: Dictionary) -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	var direction: Vector2 = Input.get_vector("move_left", "move_right", "speed_up", "speed_down")
-	if direction != Vector2.ZERO:
-		player.velocity = direction * speed["speed"]
+	# Left/Right movment
+	var lateral_input: float = Input.get_axis("move_left", "move_right")
+	if lateral_input:
+		player.velocity.x = lateral_input * speed["lateral_speed"]
+	# Reset lateral velocity if no input
 	else:
-		player.velocity = Vector2.ZERO
-	player.move_and_slide()
-
+		player.velocity.x = 0.0
 	player.position.x = clamp(player.position.x, player_x_min, player_x_max)
 	player.position.y = clamp(player.position.y, player_y_min, player_y_max)
+
+	# Speed changes
+	if Input.is_action_pressed("speed_up"):
+		speed["speed"] += speed["acceleration"] * _delta
+	if Input.is_action_pressed("speed_down"):
+		speed["speed"] -= speed["deceleration"] * _delta
+	# Clamp current_speed between MIN_SPEED and MAX_SPEED
+	speed["speed"] = clamp(speed["speed"], speed["min"], speed["max"])
+
+	player.move_and_slide()
 	update_speed_bar()
 	check_speed_warning()

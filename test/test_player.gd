@@ -25,50 +25,6 @@ func test_player_present() -> void:
 	assert_bool(player_root.visible).is_true()
 	assert_bool(player_root.is_inside_tree()).is_true()
 
-# Test: Fuel initialization and depletion logic
-func test_fuel_depletion() -> void:
-	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
-	add_child(main_scene)
-	await await_idle_frame()
-	
-	var player_root: Node = main_scene.get_node("Player")
-	
-	# Initial state
-	assert_float(player_root.fuel["fuel"]).is_equal(player_root.fuel["max"])
-	assert_float(player_root.fuel["bar"].value).is_equal(100.0)
-	
-	# Simulate one timer tick
-	player_root._on_fuel_timer_timeout()
-	assert_float(player_root.fuel["fuel"]).is_equal(99.0)
-	assert_float(player_root.fuel["bar"].value).is_equal(99.0)
-	
-	# Force zero fuel
-	player_root.fuel["fuel"] = 0.0
-	player_root._on_fuel_timer_timeout()
-	assert_float(player_root.speed["speed"]).is_equal(0.0)
-	assert_bool(player_root.fuel_timer.is_stopped()).is_true()
-
-# Test: Player movement with input actions
-func test_movement() -> void:
-	var main_scene: Node= auto_free(load("res://scenes/main_scene.tscn").instantiate())
-	add_child(main_scene)
-	await await_idle_frame()
-	
-	var player_root : Node = main_scene.get_node("Player")
-	var body : CharacterBody2D = player_root.player
-	
-	# Left movement
-	Input.action_press("move_left")
-	player_root._physics_process(1.0/60.0)
-	assert_vector(body.velocity).is_equal(Vector2(-250.0, 0.0))
-	Input.action_release("move_left")
-	
-	# Up movement
-	Input.action_press("speed_up")
-	player_root._physics_process(1.0/60.0)
-	assert_vector(body.velocity).is_equal(Vector2(0.0, -250.0))
-	Input.action_release("speed_up")
-
 # Test: Screen boundary clamping
 # test_player.gd - Fixed clamping test: use float asserts with approx + epsilon
 # test_player.gd - Final fix for test_clamping: use approx comparison for floats
@@ -268,3 +224,134 @@ func test_rotor_missing_anim_sprite() -> void:
 	
 	# Assert animation is still playing (unchanged, since missing during calls)
 	assert_bool(player_root.rotor_left.get_node("AnimatedSprite2D").is_playing()).is_true()
+
+
+# Test: Blinking starts in yellow/red zones, stops in normal
+func test_speed_blinking_thresholds() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node = main_scene.get_node("Player")
+	
+	# Normal speed: no blink
+	player_root.speed["speed"] = (player_root.speed["min"] + player_root.HIGH_YELLOW_THRESHOLD) / 2.0
+	player_root.check_speed_warning()
+	assert_bool(player_root.speed["blinking"]).is_false()
+	
+	# Low yellow: start blink
+	player_root.speed["speed"] = player_root.LOW_YELLOW_THRESHOLD - 10.0
+	player_root.check_speed_warning()
+	assert_bool(player_root.speed["blinking"]).is_true()
+	
+	# Low red: remains blinking
+	player_root.speed["speed"] = player_root.speed["min"] - 1.0
+	player_root.check_speed_warning()
+	assert_bool(player_root.speed["blinking"]).is_true()
+	
+	# Back to normal: stop blink
+	player_root.speed["speed"] = (player_root.LOW_YELLOW_THRESHOLD + player_root.HIGH_YELLOW_THRESHOLD) / 2.0
+	player_root.check_speed_warning()
+	assert_bool(player_root.speed["blinking"]).is_false()
+	
+	# High yellow: start blink
+	player_root.speed["speed"] = player_root.HIGH_YELLOW_THRESHOLD + 10.0
+	player_root.check_speed_warning()
+	assert_bool(player_root.speed["blinking"]).is_true()
+	
+	# High red: remains blinking
+	player_root.speed["speed"] = player_root.HIGH_RED_THRESHOLD + 10.0
+	player_root.check_speed_warning()
+	assert_bool(player_root.speed["blinking"]).is_true()
+	
+	# Back to normal: stop blink
+	player_root.speed["speed"] = (player_root.LOW_YELLOW_THRESHOLD + player_root.HIGH_YELLOW_THRESHOLD) / 2.0
+	player_root.check_speed_warning()
+	assert_bool(player_root.speed["blinking"]).is_false()
+
+
+# Test: Fuel initialization and depletion logic (updated for scaled depletion)
+func test_fuel_depletion() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node = main_scene.get_node("Player")
+	
+	# Initial state
+	assert_float(player_root.fuel["fuel"]).is_equal(player_root.fuel["max"])
+	assert_float(player_root.fuel["bar"].value).is_equal(100.0)
+	
+	# Simulate one timer tick (scaled: ~100 - (1.0 * (250/443) * 2) ≈99.1)
+	var expected_depletion: float = player_root.base_fuel_drain * (player_root.speed["speed"] / player_root.MAX_SPEED) * Globals.difficulty
+	player_root._on_fuel_timer_timeout()
+	assert_float(player_root.fuel["fuel"]).is_equal_approx(100.0 - expected_depletion, 0.01)
+	assert_float(player_root.fuel["bar"].value).is_equal_approx(100.0 - expected_depletion, 0.01)
+	
+	# Force zero fuel
+	player_root.fuel["fuel"] = 0.0
+	player_root._on_fuel_timer_timeout()
+	assert_float(player_root.speed["speed"]).is_equal(0.0)
+	assert_bool(player_root.fuel_timer.is_stopped()).is_true()
+
+# Test: Player movement with input actions (updated for lateral-only refactor)
+func test_movement() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node = main_scene.get_node("Player")
+	var body: CharacterBody2D = player_root.player
+	
+	# Left movement (x only now)
+	Input.action_press("move_left")
+	player_root._physics_process(1.0/60.0)
+	assert_vector(body.velocity).is_equal(Vector2(-250.0, 0.0))
+	Input.action_release("move_left")
+	
+	# Speed up (no velocity change, just speed var)
+	var initial_speed: float = player_root.speed["speed"]
+	Input.action_press("speed_up")
+	player_root._physics_process(1.0/60.0)
+	assert_float(player_root.speed["speed"]).is_greater_than(initial_speed)  # Increases speed var
+	assert_vector(body.velocity).is_equal(Vector2(0.0, 0.0))  # No y velocity
+	Input.action_release("speed_up")
+
+# Test: Speed bar colors at various thresholds (fix Color.DARK_RED to custom)
+func test_speed_colors() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node = main_scene.get_node("Player")
+	var speed_bar: ProgressBar = player_root.speed["bar"]
+	
+	# Normal (green)
+	player_root.speed["speed"] = (player_root.speed["min"] + player_root.speed["max"]) / 2.0
+	player_root.update_speed_bar()
+	var style: StyleBoxFlat = speed_bar.get_theme_stylebox("fill").duplicate()
+	assert_that(style.bg_color).is_equal(Color.GREEN)
+	
+	# Approaching high (yellow lerp)
+	player_root.speed["speed"] = player_root.HIGH_YELLOW_THRESHOLD + (player_root.HIGH_RED_THRESHOLD - player_root.HIGH_YELLOW_THRESHOLD) * 0.5
+	player_root.update_speed_bar()
+	style = speed_bar.get_theme_stylebox("fill").duplicate()
+	assert_bool(style.bg_color.is_equal_approx(Color.GREEN.lerp(Color.YELLOW, 0.5))).is_true()
+	
+	# Overspeed (red lerp)
+	player_root.speed["speed"] = player_root.HIGH_RED_THRESHOLD + (player_root.speed["max"] - player_root.HIGH_RED_THRESHOLD) * 0.5
+	player_root.update_speed_bar()
+	style = speed_bar.get_theme_stylebox("fill").duplicate()
+	assert_bool(style.bg_color.is_equal_approx(Color.YELLOW.lerp(player_root.DARK_RED, 0.5))).is_true()
+	
+	# Approaching low (yellow lerp)
+	player_root.speed["speed"] = player_root.LOW_YELLOW_THRESHOLD - (player_root.LOW_YELLOW_THRESHOLD - player_root.LOW_RED_THRESHOLD) * 0.5
+	player_root.update_speed_bar()
+	style = speed_bar.get_theme_stylebox("fill").duplicate()
+	assert_bool(style.bg_color.is_equal_approx(Color.GREEN.lerp(Color.YELLOW, 0.5))).is_true()
+	
+	# Stall (dark red)
+	player_root.speed["speed"] = player_root.speed["min"] - 1.0  # Below min
+	player_root.update_speed_bar()
+	style = speed_bar.get_theme_stylebox("fill").duplicate()
+	assert_that(style.bg_color).is_equal(player_root.DARK_RED)

@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://ctm7qg12s2swt" path="res://scripts/main_scene.gd" id="1_7ykc4"]
 [ext_resource type="PackedScene" uid="uid://cb4n4cqkuddqg" path="res://scenes/pause_menu.tscn" id="1_w2twt"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="2_pu3yx"]
-[ext_resource type="PackedScene" uid="uid://37rarq1yywmc" path="res://scenes/Player.tscn" id="2_pw63i"]
+[ext_resource type="PackedScene" uid="uid://37rarq1yywmc" path="res://scenes/player.tscn" id="2_pw63i"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pu3yx"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
@@ -120,6 +120,5 @@ step = 1.0
 show_percentage = false
 
 [node name="Player" parent="." instance=ExtResource("2_pw63i")]
-current_speed = 250.0
 
 [node name="PauseMenu" parent="." instance=ExtResource("1_w2twt")]

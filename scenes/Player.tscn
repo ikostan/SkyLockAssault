@@ -1,36 +1,34 @@
 [gd_scene load_steps=7 format=3 uid="uid://37rarq1yywmc"]
 
-[ext_resource type="Script" uid="uid://bcplrymg5tt06" path="res://scripts/player.gd" id="1_v6fml"]
-[ext_resource type="PackedScene" uid="uid://c7c8smbqpkh0u" path="res://scenes/rotor_right.tscn" id="2_qlg0r"]
-[ext_resource type="PackedScene" uid="uid://blc0ioe12jlnk" path="res://scenes/bullet.tscn" id="3_dqkch"]
-[ext_resource type="PackedScene" uid="uid://bafpwe0qf0vm0" path="res://scenes/weapon.tscn" id="3_qhqgy"]
-[ext_resource type="Texture2D" uid="uid://quoucldyteg2" path="res://files/chabull_assets/aircrafts/p38_sprites/P38_lvl_0_d0.png" id="4_dqkch"]
-[ext_resource type="PackedScene" uid="uid://bh47kclxgeeah" path="res://scenes/rotor_left.tscn" id="4_tuyoq"]
+[ext_resource type="Script" uid="uid://bcplrymg5tt06" path="res://scripts/player.gd" id="1_tuyoq"]
+[ext_resource type="PackedScene" uid="uid://bafpwe0qf0vm0" path="res://scenes/weapon.tscn" id="2_fjrip"]
+[ext_resource type="PackedScene" uid="uid://blc0ioe12jlnk" path="res://scenes/bullet.tscn" id="3_smehm"]
+[ext_resource type="PackedScene" uid="uid://bh47kclxgeeah" path="res://scenes/rotor_left.tscn" id="4_ur7pv"]
+[ext_resource type="PackedScene" uid="uid://c7c8smbqpkh0u" path="res://scenes/rotor_right.tscn" id="5_y4r1p"]
+[ext_resource type="Texture2D" uid="uid://quoucldyteg2" path="res://files/chabull_assets/aircrafts/p38_sprites/P38_lvl_0_d0.png" id="6_d2wvv"]
 
 [node name="Player" type="Node2D"]
-script = ExtResource("1_v6fml")
-current_speed = null
-max_fuel = null
+script = ExtResource("1_tuyoq")
 
 [node name="CharacterBody2D" type="CharacterBody2D" parent="."]
 
-[node name="Weapon" parent="CharacterBody2D" instance=ExtResource("3_qhqgy")]
+[node name="Weapon" parent="CharacterBody2D" instance=ExtResource("2_fjrip")]
 visible = false
 position = Vector2(0, -18)
-weapon_types = Array[PackedScene]([ExtResource("3_dqkch")])
+weapon_types = Array[PackedScene]([ExtResource("3_smehm")])
 
-[node name="RotorLeft" parent="CharacterBody2D" instance=ExtResource("4_tuyoq")]
+[node name="RotorLeft" parent="CharacterBody2D" instance=ExtResource("4_ur7pv")]
 position = Vector2(-12.8, -25)
 scale = Vector2(0.25, 0.25)
 
-[node name="RotorRight" parent="CharacterBody2D" instance=ExtResource("2_qlg0r")]
+[node name="RotorRight" parent="CharacterBody2D" instance=ExtResource("5_y4r1p")]
 position = Vector2(12.2, -25)
 scale = Vector2(0.25, 0.25)
 
 [node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D"]
 texture_filter = 1
 scale = Vector2(0.5, 0.5)
-texture = ExtResource("4_dqkch")
+texture = ExtResource("6_d2wvv")
 region_rect = Rect2(125, 125, 125, 125)
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="CharacterBody2D"]
