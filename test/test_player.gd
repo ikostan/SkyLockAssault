@@ -239,3 +239,24 @@ func test_get_label_text_color_override() -> void:
 	
 	# Assert back to initial
 	assert_that(player_root.get_label_text_color(fuel_label)).is_equal(initial_color)
+
+
+# Test: rotor_start/stop logs warning on missing AnimatedSprite2D
+func test_rotor_missing_anim_sprite() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node2D = main_scene.get_node("Player")
+	
+	# Temporarily remove AnimatedSprite2D from left rotor
+	var left_rotor: Node2D = player_root.rotor_left
+	var anim_sprite: AnimatedSprite2D = left_rotor.get_node("AnimatedSprite2D")
+	left_rotor.remove_child(anim_sprite)
+	
+	# Call start/stop - expect warning log, no crash
+	player_root.rotor_start(left_rotor, player_root.rotor_left_sfx)
+	player_root.rotor_stop(left_rotor, player_root.rotor_left_sfx)
+	
+	# Restore for cleanup
+	left_rotor.add_child(anim_sprite)

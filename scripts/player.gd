@@ -186,7 +186,8 @@ func _ready() -> void:
 ## @param label: The Label node to query.
 ## @return: The effective font color.
 func get_label_text_color(label: Label) -> Color:
-	return label.get_theme_color("font_color", "Label")
+	# Omit theme_type for consistent override handling
+	return label.get_theme_color("font_color")
 
 
 func set_label_text_color(label: Label, new_color: Color) -> void:
@@ -223,7 +224,13 @@ func _input(event: InputEvent) -> void:
 ## @param rotor_sfx: The optional AudioStreamPlayer2D for sound.
 ## @return: void
 func rotor_start(rotor: Node2D, rotor_sfx: AudioStreamPlayer2D) -> void:
-	rotor.get_node("AnimatedSprite2D").play("default")
+	var anim_sprite: AnimatedSprite2D = rotor.get_node("AnimatedSprite2D") as AnimatedSprite2D
+	if anim_sprite:
+		anim_sprite.play("default")
+	else:
+		Globals.log_message(
+			"AnimatedSprite2D not found in rotor: " + rotor.name, Globals.LogLevel.WARNING
+		)
 	if rotor_sfx != null:
 		rotor_sfx.play()
 
@@ -233,7 +240,13 @@ func rotor_start(rotor: Node2D, rotor_sfx: AudioStreamPlayer2D) -> void:
 ## @param rotor_sfx: The optional AudioStreamPlayer2D for sound.
 ## @return: void
 func rotor_stop(rotor: Node2D, rotor_sfx: AudioStreamPlayer2D) -> void:
-	rotor.get_node("AnimatedSprite2D").stop()
+	var anim_sprite: AnimatedSprite2D = rotor.get_node("AnimatedSprite2D") as AnimatedSprite2D
+	if anim_sprite:
+		anim_sprite.stop()
+	else:
+		Globals.log_message(
+			"AnimatedSprite2D not found in rotor: " + rotor.name, Globals.LogLevel.WARNING
+		)
 	if rotor_sfx != null:
 		rotor_sfx.stop()
 
