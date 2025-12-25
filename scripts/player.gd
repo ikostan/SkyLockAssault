@@ -183,9 +183,11 @@ func _ready() -> void:
 
 
 ## Retrieves the effective text color of a Label, considering theme overrides.
-## @param label: The Label node to query.
-## @return: The effective font color.
+## @param label: Label The Label node to query.
+## @return: Color The effective font color.
 func get_label_text_color(label: Label) -> Color:
+	if label.has_theme_color_override("font_color"):
+		return label.get_theme_color_override("font_color")
 	return label.get_theme_color("font_color", "Label")
 
 
