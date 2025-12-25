@@ -270,7 +270,8 @@ func update_fuel_bar() -> void:
 
 func update_speed_bar() -> void:
 	speed["bar"].value = speed["speed"]
-	speed["factor"] = speed["speed"] / speed["max"]  # Speed lerp factor is a 0–1 range, based on per-instance max
+	# Speed lerp factor is a 0–1 range, based on per-instance max
+	speed["factor"] = speed["speed"] / speed["max"]
 	speed["bar style"].bg_color = Color.CORAL.lerp(Color.DARK_ORANGE, speed["factor"])
 
 
