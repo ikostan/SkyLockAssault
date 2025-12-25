@@ -190,6 +190,7 @@ func test_rotor_null_sfx() -> void:
 
 
 # Test: Independent blinking for fuel and speed labels
+# Test: Independent blinking for fuel and speed labels
 func test_independent_blinking() -> void:
 	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
 	add_child(main_scene)
@@ -203,10 +204,8 @@ func test_independent_blinking() -> void:
 	player_root.check_fuel_warning()
 	player_root.check_speed_warning()
 	
-	# Simulate blinks
-	player_root._toggle_label(player_root.fuel)
+	# Assert both are now at warning color after initial blink start
 	assert_that(player_root.get_label_text_color(player_root.fuel["label"])).is_equal(player_root.fuel["warning_color"])
-	player_root._toggle_label(player_root.speed)
 	assert_that(player_root.get_label_text_color(player_root.speed["label"])).is_equal(player_root.speed["warning_color"])
 	
 	# Toggle one, other unchanged
