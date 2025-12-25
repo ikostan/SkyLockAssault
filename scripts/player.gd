@@ -148,7 +148,7 @@ func _ready() -> void:
 		"bar style": fuel_bar_fill_style,
 		"blinking": false,
 	}
-	
+
 	# Base and warning colors per stat
 	fuel["base_color"] = get_label_text_color(fuel["label"])
 	fuel["warning_color"] = Color.RED.lerp(Color(0.5, 0, 0), 1.0)
