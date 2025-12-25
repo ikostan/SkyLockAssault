@@ -18,17 +18,17 @@ func test_fuel_depletion_with_difficulty() -> void:
 	# Normal (1.0)
 	Globals.difficulty = 1.0
 	player_inst._on_fuel_timer_timeout()
-	assert_float(player_inst.current_fuel).is_equal(99.5)  # Base 0.5 depletion
+	assert_float(player_inst.fuel["fuel"]).is_equal(99.5)  # Base 0.5 depletion
 	
 	# Hard (2.0)
 	Globals.difficulty = 2.0
 	player_inst._on_fuel_timer_timeout()
-	assert_float(player_inst.current_fuel).is_equal(98.5)  # Doubled depletion (1.0)
+	assert_float(player_inst.fuel["fuel"]).is_equal(98.5)  # Doubled depletion (1.0)
 	
 	# Easy (0.5)
 	Globals.difficulty = 0.5
 	player_inst._on_fuel_timer_timeout()
-	assert_float(player_inst.current_fuel).is_equal(98.25)  # Halved depletion (0.25)
+	assert_float(player_inst.fuel["fuel"]).is_equal(98.25)  # Halved depletion (0.25)
 	
 	# Reset original
 	Globals.difficulty = original_difficulty

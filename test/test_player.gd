@@ -34,18 +34,18 @@ func test_fuel_depletion() -> void:
 	var player_root: Node = main_scene.get_node("Player")
 	
 	# Initial state
-	assert_float(player_root.current_fuel).is_equal(player_root.max_fuel)
-	assert_float(player_root.fuel_bar.value).is_equal(100.0)
+	assert_float(player_root.fuel["fuel"]).is_equal(player_root.fuel["max"])
+	assert_float(player_root.fuel["bar"].value).is_equal(100.0)
 	
 	# Simulate one timer tick
 	player_root._on_fuel_timer_timeout()
-	assert_float(player_root.current_fuel).is_equal(99.0)
-	assert_float(player_root.fuel_bar.value).is_equal(99.0)
+	assert_float(player_root.fuel["fuel"]).is_equal(99.0)
+	assert_float(player_root.fuel["bar"].value).is_equal(99.0)
 	
 	# Force zero fuel
-	player_root.current_fuel = 0.0
+	player_root.fuel["fuel"] = 0.0
 	player_root._on_fuel_timer_timeout()
-	assert_float(player_root.speed).is_equal(0.0)
+	assert_float(player_root.speed["speed"]).is_equal(0.0)
 	assert_bool(player_root.fuel_timer.is_stopped()).is_true()
 
 # Test: Player movement with input actions
@@ -101,19 +101,19 @@ func test_fuel_colors() -> void:
 	await await_idle_frame()
 	
 	var player_root : Node = main_scene.get_node("Player")
-	var fuel_bar : ProgressBar = player_root.fuel_bar
+	var fuel_bar : ProgressBar = player_root.fuel["bar"]
 	
 	# High fuel → Green
-	player_root.current_fuel = 95.0
+	player_root.fuel["fuel"] = 95.0
 	player_root.update_fuel_bar()
-	var style : StyleBoxFlat = fuel_bar.get_theme_stylebox("fill").duplicate()
-	assert_that(style.bg_color).is_equal(Color.GREEN)
-	
-	# Low fuel → Red
-	player_root.current_fuel = 10.0
+	var style_1 : StyleBoxFlat = fuel_bar.get_theme_stylebox("fill").duplicate()
+	assert_that(style_1.bg_color).is_equal(Color.GREEN)
+		
+	# Low fuel → Dark Red (consistent with gradual depletion)
+	player_root.fuel["fuel"] = 10.0
 	player_root.update_fuel_bar()
-	style = fuel_bar.get_theme_stylebox("fill").duplicate()
-	assert_that(style.bg_color).is_equal(Color.RED)
+	var style_2 : StyleBoxFlat = fuel_bar.get_theme_stylebox("fill").duplicate()
+	assert_that(style_2.bg_color).is_equal(Color(0.5, 0, 0, 1.0))  # Or Color(0.5, 0.0, 0.0) if using floats
 
 
 # Test: Smooth color lerp between thresholds
@@ -123,17 +123,148 @@ func test_fuel_colors_fixed() -> void:
 	await await_idle_frame()
 	
 	var player_root : Node = main_scene.get_node("Player")
-	var fuel_bar : ProgressBar = player_root.fuel_bar
+	var fuel_bar : ProgressBar = player_root.fuel["bar"]
 	
 	# Still full → Green
-	player_root.current_fuel = 95.0
+	player_root.fuel["fuel"] = 95.0
 	player_root.update_fuel_bar()
-	var style : StyleBoxFlat = fuel_bar.get_theme_stylebox("fill").duplicate()
+	var style : StyleBoxFlat =  player_root.fuel["bar"].get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(Color.GREEN)
 	
 	# Between 90% and 50% → Lerp green → yellow
-	player_root.current_fuel = 70.0
+	player_root.fuel["fuel"] = 70.0
 	player_root.update_fuel_bar()
 	style = fuel_bar.get_theme_stylebox("fill").duplicate()
 	var expected := Color.GREEN.lerp(Color.YELLOW, (90.0 - 70.0) / (90.0 - 50.0))
 	assert_bool(style.bg_color.is_equal_approx(expected)).is_true()
+
+
+# Test: Gradual fuel color change to dark red
+func test_fuel_gradual_depletion_colors() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node = main_scene.get_node("Player")
+	
+	# Start at 30% (should be red)
+	player_root.fuel["fuel"] = 30.0
+	player_root.update_fuel_bar()
+	var style: StyleBoxFlat = player_root.fuel["bar"].get_theme_stylebox("fill").duplicate()
+	assert_that(style.bg_color).is_equal(Color.RED)
+	
+	# Drop to 15% (dark red)
+	player_root.fuel["fuel"] = 15.0
+	player_root.update_fuel_bar()
+	style = player_root.fuel["bar"].get_theme_stylebox("fill").duplicate()
+	assert_that(style.bg_color).is_equal(Color(0.5, 0, 0))
+	
+	# Drop to 10% (still dark red)
+	player_root.fuel["fuel"] = 10.0
+	player_root.update_fuel_bar()
+	style = player_root.fuel["bar"].get_theme_stylebox("fill").duplicate()
+	assert_that(style.bg_color).is_equal(Color(0.5, 0, 0))
+
+
+# Test: Rotor start/stop handles null SFX without crash
+func test_rotor_null_sfx() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node2D = main_scene.get_node("Player")
+	
+	# Force null SFX
+	player_root.rotor_left_sfx = null
+	player_root.rotor_right_sfx = null
+	
+	# Call start/stop - no crash expected
+	player_root.rotor_start(player_root.rotor_left, player_root.rotor_left_sfx)
+	player_root.rotor_start(player_root.rotor_right, player_root.rotor_right_sfx)
+	player_root.rotor_stop(player_root.rotor_left, player_root.rotor_left_sfx)
+	player_root.rotor_stop(player_root.rotor_right, player_root.rotor_right_sfx)
+	
+	# Assert animation started/stopped
+	assert_bool(player_root.rotor_left.get_node("AnimatedSprite2D").is_playing()).is_false()
+	assert_bool(player_root.rotor_right.get_node("AnimatedSprite2D").is_playing()).is_false()
+
+
+# Test: Independent blinking for fuel and speed labels
+# Test: Independent blinking for fuel and speed labels
+func test_independent_blinking() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node = main_scene.get_node("Player")
+	
+	# Force low fuel and high speed to trigger both
+	player_root.fuel["fuel"] = 10.0
+	player_root.speed["speed"] = player_root.speed["max"] * 0.95
+	player_root.check_fuel_warning()
+	player_root.check_speed_warning()
+	
+	# Assert both are now at warning color after initial blink start
+	assert_that(player_root.get_label_text_color(player_root.fuel["label"])).is_equal(player_root.fuel["warning_color"])
+	assert_that(player_root.get_label_text_color(player_root.speed["label"])).is_equal(player_root.speed["warning_color"])
+	
+	# Toggle one, other unchanged
+	player_root._toggle_label(player_root.fuel)
+	assert_that(player_root.get_label_text_color(player_root.fuel["label"])).is_equal(player_root.fuel["base_color"])
+	assert_that(player_root.get_label_text_color(player_root.speed["label"])).is_equal(player_root.speed["warning_color"])
+
+
+# Test: get_label_text_color returns override if set, else theme default
+# Test: get_label_text_color_override returns override if set, else theme default
+func test_get_label_text_color_override() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node = main_scene.get_node("Player")
+	var fuel_label: Label = player_root.fuel["label"]
+	
+	# Clear any editor-set override to test from clean theme default
+	fuel_label.remove_theme_color_override("font_color")
+	
+	# Assume initial is theme default (not black transparent)
+	var initial_color: Color = player_root.get_label_text_color(fuel_label)
+	assert_bool(initial_color.is_equal_approx(Color(0, 0, 0, 0))).is_false()
+	
+	# Set override
+	var override_color: Color = Color.BLUE
+	fuel_label.add_theme_color_override("font_color", override_color)
+	
+	# Assert returns override
+	assert_that(player_root.get_label_text_color(fuel_label)).is_equal(override_color)
+	
+	# Remove override
+	fuel_label.remove_theme_color_override("font_color")
+	
+	# Assert back to initial
+	assert_that(player_root.get_label_text_color(fuel_label)).is_equal(initial_color)
+
+
+# Test: rotor_start/stop logs warning on missing AnimatedSprite2D
+# Test: rotor_start/stop logs warning on missing AnimatedSprite2D
+func test_rotor_missing_anim_sprite() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node2D = main_scene.get_node("Player")
+	
+	# Temporarily remove AnimatedSprite2D from left rotor
+	var left_rotor: Node2D = player_root.rotor_left
+	var anim_sprite: AnimatedSprite2D = left_rotor.get_node("AnimatedSprite2D")
+	left_rotor.remove_child(anim_sprite)
+	
+	# Call start/stop - expect warning log, no crash or Godot error
+	player_root.rotor_start(left_rotor, player_root.rotor_left_sfx)
+	player_root.rotor_stop(left_rotor, player_root.rotor_left_sfx)
+	
+	# Restore for cleanup
+	left_rotor.add_child(anim_sprite)
+	
+	# Assert animation is still playing (unchanged, since missing during calls)
+	assert_bool(player_root.rotor_left.get_node("AnimatedSprite2D").is_playing()).is_true()

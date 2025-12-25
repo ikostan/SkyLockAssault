@@ -18,9 +18,9 @@ func test_difficulty_scales_fuel_and_weapon() -> void:
 	Globals.difficulty = 2.0
 
 	# TEST 1: Fuel depletion scales (base 0.5 * 2.0 = 1.0)
-	player.current_fuel = 100.0
+	player.fuel["fuel"] = 100.0
 	player._on_fuel_timer_timeout()
-	assert_float(player.current_fuel).is_equal(99.0)  # Exact (no tolerance needed)
+	assert_float(player.fuel["fuel"]).is_equal(99.0)  # Exact (no tolerance needed)
 
 	# TEST 2: Weapon cooldown scales (fire_rate 0.15 * 2.0 = 0.30)
 	weapon.fire()  # FIXED: fire() not _fire(); delegates → BulletFirer.fire() → timer.start(0.30)
