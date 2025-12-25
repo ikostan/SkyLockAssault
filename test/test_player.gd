@@ -139,6 +139,33 @@ func test_fuel_colors_fixed() -> void:
 	assert_bool(style.bg_color.is_equal_approx(expected)).is_true()
 
 
+# Test: Gradual fuel color change to dark red
+func test_fuel_gradual_depletion_colors() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node = main_scene.get_node("Player")
+	
+	# Start at 30% (should be red)
+	player_root.fuel["fuel"] = 30.0
+	player_root.update_fuel_bar()
+	var style: StyleBoxFlat = player_root.fuel["bar"].get_theme_stylebox("fill").duplicate()
+	assert_that(style.bg_color).is_equal(Color.RED)
+	
+	# Drop to 15% (dark red)
+	player_root.fuel["fuel"] = 15.0
+	player_root.update_fuel_bar()
+	style = player_root.fuel["bar"].get_theme_stylebox("fill").duplicate()
+	assert_that(style.bg_color).is_equal(Color(0.5, 0, 0))
+	
+	# Drop to 10% (still dark red)
+	player_root.fuel["fuel"] = 10.0
+	player_root.update_fuel_bar()
+	style = player_root.fuel["bar"].get_theme_stylebox("fill").duplicate()
+	assert_that(style.bg_color).is_equal(Color(0.5, 0, 0))
+
+
 # Test: Rotor start/stop handles null SFX without crash
 func test_rotor_null_sfx() -> void:
 	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())

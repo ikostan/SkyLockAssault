@@ -31,8 +31,6 @@ var weapons: Array[Node] = []  # Fill in editor or _ready
 var current_weapon: int = 0
 var rotor_left_sfx: AudioStreamPlayer2D
 var rotor_right_sfx: AudioStreamPlayer2D
-var fuel_section_factor: float
-var speed_section_factor: float
 var corner_radius: int = 10
 var label_color: Color
 var label_warning_color: Color
@@ -134,7 +132,7 @@ func _ready() -> void:
 
 	speed = {
 		"speed": current_speed,
-		"factor": speed_section_factor,
+		"factor": 0.0,
 		"timer": speed_label_blink_timer,
 		"label": speed_label,
 		"max": MAX_SPEED,
@@ -145,7 +143,7 @@ func _ready() -> void:
 
 	fuel = {
 		"fuel": current_fuel,
-		"factor": fuel_section_factor,
+		"factor": 0.0,
 		"timer": fuel_label_blink_timer,
 		"label": fuel_label,
 		"max": MAX_FUEL,
@@ -245,26 +243,25 @@ func update_fuel_bar() -> void:
 	var fuel_percent: float = (fuel["fuel"] / fuel["max"]) * 100.0
 
 	if fuel_percent > HIGH_FUEL_THRESHOLD:
-		fuel["bar style"].bg_color = Color.GREEN  # Full green for high fuel
+		fuel["factor"] = 0.0  # Reset for consistency, though not used here
+		fuel["bar style"].bg_color = Color.GREEN
 	elif fuel_percent >= MEDIUM_FUEL_THRESHOLD:
-		# Lerp green to yellow (factor 0 at 90%, 1 at 50%)
 		fuel["factor"] = (
 			(HIGH_FUEL_THRESHOLD - fuel_percent) / (HIGH_FUEL_THRESHOLD - MEDIUM_FUEL_THRESHOLD)
 		)
 		fuel["bar style"].bg_color = Color.GREEN.lerp(Color.YELLOW, fuel["factor"])
 	elif fuel_percent >= LOW_FUEL_THRESHOLD:
-		# Lerp yellow to red
 		fuel["factor"] = (
 			(MEDIUM_FUEL_THRESHOLD - fuel_percent) / (MEDIUM_FUEL_THRESHOLD - LOW_FUEL_THRESHOLD)
 		)
 		fuel["bar style"].bg_color = Color.YELLOW.lerp(Color.RED, fuel["factor"])
 	elif fuel_percent >= NO_FUEL_THRESHOLD:
-		# Lerp red to darker or full red
 		fuel["factor"] = (
 			(LOW_FUEL_THRESHOLD - fuel_percent) / (LOW_FUEL_THRESHOLD - NO_FUEL_THRESHOLD)
 		)
 		fuel["bar style"].bg_color = Color.RED.lerp(Color(0.5, 0, 0), fuel["factor"])
 	else:
+		fuel["factor"] = 1.0  # Explicitly set to max lerp (full dark red)
 		fuel["bar style"].bg_color = Color.RED.lerp(Color(0.5, 0, 0), fuel["factor"])
 
 
