@@ -220,14 +220,24 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+## Starts rotor animation and SFX if available.
+## @param rotor: The rotor Node2D to animate.
+## @param rotor_sfx: The optional AudioStreamPlayer2D for sound.
+## @return: void
 func rotor_start(rotor: Node2D, rotor_sfx: AudioStreamPlayer2D) -> void:
 	rotor.get_node("AnimatedSprite2D").play("default")
-	rotor_sfx.play()
+	if rotor_sfx != null:
+		rotor_sfx.play()
 
 
+## Stops rotor animation and SFX if available.
+## @param rotor: The rotor Node2D to stop.
+## @param rotor_sfx: The optional AudioStreamPlayer2D for sound.
+## @return: void
 func rotor_stop(rotor: Node2D, rotor_sfx: AudioStreamPlayer2D) -> void:
 	rotor.get_node("AnimatedSprite2D").stop()
-	rotor_sfx.stop()
+	if rotor_sfx != null:
+		rotor_sfx.stop()
 
 
 func update_fuel_bar() -> void:

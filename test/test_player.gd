@@ -137,3 +137,26 @@ func test_fuel_colors_fixed() -> void:
 	style = fuel_bar.get_theme_stylebox("fill").duplicate()
 	var expected := Color.GREEN.lerp(Color.YELLOW, (90.0 - 70.0) / (90.0 - 50.0))
 	assert_bool(style.bg_color.is_equal_approx(expected)).is_true()
+
+
+# Test: Rotor start/stop handles null SFX without crash
+func test_rotor_null_sfx() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node2D = main_scene.get_node("Player")
+	
+	# Force null SFX
+	player_root.rotor_left_sfx = null
+	player_root.rotor_right_sfx = null
+	
+	# Call start/stop - no crash expected
+	player_root.rotor_start(player_root.rotor_left, player_root.rotor_left_sfx)
+	player_root.rotor_start(player_root.rotor_right, player_root.rotor_right_sfx)
+	player_root.rotor_stop(player_root.rotor_left, player_root.rotor_left_sfx)
+	player_root.rotor_stop(player_root.rotor_right, player_root.rotor_right_sfx)
+	
+	# Assert animation started/stopped
+	assert_bool(player_root.rotor_left.get_node("AnimatedSprite2D").is_playing()).is_false()
+	assert_bool(player_root.rotor_right.get_node("AnimatedSprite2D").is_playing()).is_false()
