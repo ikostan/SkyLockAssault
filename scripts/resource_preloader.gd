@@ -20,7 +20,7 @@ func _ready() -> void:
 			remove_resource(id)
 		
 		# Load and add bushes (trees)
-		var bush_dir_path: String = "res://files/chabull_assets/bushes/"  # Use your original bushes path; change to "res://files/trees/" if needed
+		var bush_dir_path: String = "res://files/trees/"  # Use your original bushes path; change to "res://files/trees/" if needed
 		print("Starting bushes load call")  # Debug before call
 		var bush_textures: Array[Texture2D] = load_textures_from_dir(bush_dir_path)
 		print("Bushes call completed")  # Debug after call
@@ -31,7 +31,7 @@ func _ready() -> void:
 		print("Editor: Loaded ", bush_textures.size(), " bush textures")
 		
 		# Load and add decor
-		var decor_dir_path: String = "res://files/chabull_assets/random_decor/"
+		var decor_dir_path: String = "res://files/random_decor/"
 		print("Starting decor load call")  # Debug before call
 		var decor_textures: Array[Texture2D] = load_textures_from_dir(decor_dir_path)
 		print("Decor call completed")  # Debug after call
