@@ -294,6 +294,7 @@ func test_fuel_depletion() -> void:
 	assert_float(player_root.speed["speed"]).is_equal(0.0)
 	assert_bool(player_root.fuel_timer.is_stopped()).is_true()
 
+
 # Test: Player movement with input actions (updated for lateral-only refactor)
 func test_movement() -> void:
 	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
@@ -313,7 +314,7 @@ func test_movement() -> void:
 	var initial_speed: float = player_root.speed["speed"]
 	Input.action_press("speed_up")
 	player_root._physics_process(1.0/60.0)
-	assert_float(player_root.speed["speed"]).is_greater_than(initial_speed)  # Increases speed var
+	assert_float(player_root.speed["speed"]).is_greater(initial_speed)  # Increases speed var
 	assert_vector(body.velocity).is_equal(Vector2(0.0, 0.0))  # No y velocity
 	Input.action_release("speed_up")
 
