@@ -1,7 +1,9 @@
 @tool  # Runs in editor
 extends ResourcePreloader
 
-@export var force_reload: bool = false : set = _force_reload
+@export var force_reload: bool = false:
+	set = _force_reload
+
 
 ## Forces reload in editor.
 ## @param value: bool - Toggle value.
@@ -11,6 +13,7 @@ func _force_reload(value: bool) -> void:
 		print("Forcing reload of resources!")
 		_ready()
 		force_reload = false  # Reset toggle
+
 
 ## Editor-only ready function.
 ## @return: void
@@ -24,7 +27,7 @@ func _ready() -> void:
 		for id: String in ids:
 			remove_resource(id)
 		print("Clearing completed")  # Debug clear end
-		
+
 		# Load and add bushes
 		var bush_dir_path: String = "res://files/trees/"  # Your updated bushes path
 		var bush_textures: Array[Texture2D] = load_textures_from_dir(bush_dir_path)
@@ -33,7 +36,7 @@ func _ready() -> void:
 			if texture:
 				add_resource("bush_" + str(i), texture)  # Unique ID for each texture
 		print("Editor: Loaded ", bush_textures.size(), " bush textures")
-		
+
 		# Load and add decor
 		var decor_dir_path: String = "res://files/random_decor/"  # Your updated decor path
 		var decor_textures: Array[Texture2D] = load_textures_from_dir(decor_dir_path)
