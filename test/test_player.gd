@@ -336,45 +336,6 @@ func test_movement() -> void:
 	assert_vector(body.velocity).is_equal(Vector2(0.0, 0.0))  # No y velocity
 	Input.action_release("speed_up")
 
-# Test: Speed bar colors at various thresholds (fix Color.DARK_RED to custom)
-func test_speed_colors() -> void:
-	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
-	add_child(main_scene)
-	await await_idle_frame()
-	
-	var player_root: Node = main_scene.get_node("Player")
-	var speed_bar: ProgressBar = player_root.speed["bar"]
-	
-	# Normal (green)
-	player_root.speed["speed"] = (player_root.speed["min"] + player_root.speed["max"]) / 2.0
-	player_root.update_speed_bar()
-	var style: StyleBoxFlat = speed_bar.get_theme_stylebox("fill").duplicate()
-	assert_that(style.bg_color).is_equal(Color.GREEN)
-	
-	# Approaching high (yellow lerp)
-	player_root.speed["speed"] = player_root.HIGH_YELLOW_THRESHOLD + (player_root.HIGH_RED_THRESHOLD - player_root.HIGH_YELLOW_THRESHOLD) * 0.5
-	player_root.update_speed_bar()
-	style = speed_bar.get_theme_stylebox("fill").duplicate()
-	assert_bool(style.bg_color.is_equal_approx(Color.GREEN.lerp(Color.YELLOW, 0.5))).is_true()
-	
-	# Overspeed (red lerp)
-	player_root.speed["speed"] = player_root.HIGH_RED_THRESHOLD + (player_root.speed["max"] - player_root.HIGH_RED_THRESHOLD) * 0.5
-	player_root.update_speed_bar()
-	style = speed_bar.get_theme_stylebox("fill").duplicate()
-	assert_bool(style.bg_color.is_equal_approx(Color.YELLOW.lerp(player_root.DARK_RED, 0.5))).is_true()
-	
-	# Approaching low (yellow lerp)
-	player_root.speed["speed"] = player_root.LOW_YELLOW_THRESHOLD - (player_root.LOW_YELLOW_THRESHOLD - player_root.LOW_RED_THRESHOLD) * 0.5
-	player_root.update_speed_bar()
-	style = speed_bar.get_theme_stylebox("fill").duplicate()
-	assert_bool(style.bg_color.is_equal_approx(Color.GREEN.lerp(Color.YELLOW, 0.5))).is_true()
-	
-	# Stall (dark red)
-	player_root.speed["speed"] = player_root.speed["min"] - 1.0  # Below min
-	player_root.update_speed_bar()
-	style = speed_bar.get_theme_stylebox("fill").duplicate()
-	assert_that(style.bg_color).is_equal(player_root.DARK_RED)
-
 
 ## Tests helper consistency across difficulties.
 ## @return: void
@@ -396,3 +357,55 @@ func test_depletion_helper_difficulties() -> void:
 	# Difficulty 0.5
 	var dep_05: float = TestHelpers.calculate_expected_depletion(player_root, 0.5)
 	assert_float(dep_05).is_equal_approx(0.175315, 0.001)  # 1 * (250/713) * 0.5
+
+
+## Test: Speed bar colors and factors at various thresholds (updated for factor consistency)
+## Verifies bg_color lerps and factor (0.0 safe, 1.0 danger) across all branches.
+## @return: void
+func test_speed_colors() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node = main_scene.get_node("Player")
+	var speed_bar: ProgressBar = player_root.speed["bar"]
+	
+	# Normal (green, factor=0.0)
+	player_root.speed["speed"] = (player_root.speed["min"] + player_root.speed["max"]) / 2.0
+	player_root.update_speed_bar()
+	var style: StyleBoxFlat = speed_bar.get_theme_stylebox("fill").duplicate()
+	assert_that(style.bg_color).is_equal(Color.GREEN)
+	assert_float(player_root.speed["factor"]).is_equal(0.0)
+	
+	# Approaching high yellow (lerp to yellow, factor mid-range)
+	player_root.speed["speed"] = player_root.HIGH_YELLOW_THRESHOLD + (player_root.HIGH_RED_THRESHOLD - player_root.HIGH_YELLOW_THRESHOLD) * 0.5
+	player_root.update_speed_bar()
+	style = speed_bar.get_theme_stylebox("fill").duplicate()
+	assert_bool(style.bg_color.is_equal_approx(Color.GREEN.lerp(Color.YELLOW, 0.5))).is_true()
+	assert_float(player_root.speed["factor"]).is_equal_approx(0.5, 0.001)
+	
+	# Overspeed high red (lerp to dark red, factor mid-range to 1.0)
+	player_root.speed["speed"] = player_root.HIGH_RED_THRESHOLD + (player_root.speed["max"] - player_root.HIGH_RED_THRESHOLD) * 0.5
+	player_root.update_speed_bar()
+	style = speed_bar.get_theme_stylebox("fill").duplicate()
+	assert_bool(style.bg_color.is_equal_approx(Color.YELLOW.lerp(player_root.DARK_RED, 0.5))).is_true()
+	assert_float(player_root.speed["factor"]).is_equal_approx(0.5, 0.001)
+	
+	# Extreme overspeed (factor clamped at 1.0)
+	player_root.speed["speed"] = player_root.speed["max"] + 100.0  # Beyond max
+	player_root.update_speed_bar()
+	assert_float(player_root.speed["factor"]).is_equal(1.0)
+	
+	# Approaching low yellow (lerp to yellow, factor mid-range)
+	player_root.speed["speed"] = player_root.LOW_YELLOW_THRESHOLD - (player_root.LOW_YELLOW_THRESHOLD - player_root.LOW_RED_THRESHOLD) * 0.5
+	player_root.update_speed_bar()
+	style = speed_bar.get_theme_stylebox("fill").duplicate()
+	assert_bool(style.bg_color.is_equal_approx(Color.GREEN.lerp(Color.YELLOW, 0.5))).is_true()
+	assert_float(player_root.speed["factor"]).is_equal_approx(0.5, 0.001)
+	
+	# Stall low red (dark red, factor=1.0)
+	player_root.speed["speed"] = player_root.speed["min"] - 1.0  # Below min
+	player_root.update_speed_bar()
+	style = speed_bar.get_theme_stylebox("fill").duplicate()
+	assert_that(style.bg_color).is_equal(player_root.DARK_RED)
+	assert_float(player_root.speed["factor"]).is_equal(1.0)

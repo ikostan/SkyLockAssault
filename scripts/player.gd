@@ -297,26 +297,47 @@ func update_fuel_bar() -> void:
 
 ## Updates the speed bar value and color based on current speed.
 ## Colors: green normal, yellow approaching limits, red/dark red at limits.
+## Factor is always updated to represent normalized proximity to limits (0.0 safe, 1.0 danger).
 ## @return: void
 func update_speed_bar() -> void:
 	speed["bar"].value = speed["speed"]
 	var speed_val: float = speed["speed"]
-	var factor: float = 0.0
+	var factor: float = 0.0  # Always reset to safe/default
 
 	if speed_val >= HIGH_RED_THRESHOLD:
-		factor = (speed_val - HIGH_RED_THRESHOLD) / (MAX_SPEED - HIGH_RED_THRESHOLD)
+		# Proximity to high red limit, clamped into [0.0, 1.0]
+		factor = clamp(
+			(speed_val - HIGH_RED_THRESHOLD) / (MAX_SPEED - HIGH_RED_THRESHOLD),
+			0.0,
+			1.0
+		)
 		speed["bar style"].bg_color = Color.YELLOW.lerp(DARK_RED, factor)
 	elif speed_val >= HIGH_YELLOW_THRESHOLD:
-		factor = (speed_val - HIGH_YELLOW_THRESHOLD) / (HIGH_RED_THRESHOLD - HIGH_YELLOW_THRESHOLD)
+		# Proximity to high yellow limit, clamped into [0.0, 1.0]
+		factor = clamp(
+			(speed_val - HIGH_YELLOW_THRESHOLD) / (HIGH_RED_THRESHOLD - HIGH_YELLOW_THRESHOLD),
+			0.0,
+			1.0
+		)
 		speed["bar style"].bg_color = Color.GREEN.lerp(Color.YELLOW, factor)
 	elif speed_val <= LOW_RED_THRESHOLD:
+		# Full danger at/under low red limit
+		factor = 1.0
 		speed["bar style"].bg_color = DARK_RED
 	elif speed_val <= LOW_YELLOW_THRESHOLD:
-		factor = (LOW_YELLOW_THRESHOLD - speed_val) / (LOW_YELLOW_THRESHOLD - LOW_RED_THRESHOLD)
+		# Proximity to low yellow limit (inverted), clamped into [0.0, 1.0]
+		factor = clamp(
+			(LOW_YELLOW_THRESHOLD - speed_val) / (LOW_YELLOW_THRESHOLD - LOW_RED_THRESHOLD),
+			0.0,
+			1.0
+		)
 		speed["bar style"].bg_color = Color.GREEN.lerp(Color.YELLOW, factor)
 	else:
+		# Safe/green: explicit safe value
+		factor = 0.0
 		speed["bar style"].bg_color = Color.GREEN
-	speed["factor"] = factor
+
+	speed["factor"] = factor  # Always store the updated value
 
 
 # Connect Timer's timeout signal
