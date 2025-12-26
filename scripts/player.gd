@@ -26,7 +26,7 @@ const BLINK_INTERVAL: float = 0.5  # Seconds between blinks
 @export var lateral_speed: float = 250.0
 @export var acceleration: float = 200.0
 @export var deceleration: float = 100.0
-# Base fuel cinsumption
+# Base fuel consumption
 @export var base_fuel_drain: float = 1.0
 var current_fuel: float
 
