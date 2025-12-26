@@ -384,7 +384,7 @@ func test_speed_colors() -> void:
 	assert_bool(style.bg_color.is_equal_approx(Color.GREEN.lerp(Color.YELLOW, 0.5))).is_true()
 	assert_float(player_root.speed["factor"]).is_equal_approx(0.5, 0.001)
 	
-	# Overspeed high red (lerp to dark red, factor mid-range to 1.0)
+	# Overspeed high red (lerp to dark red, factor mid-range)
 	player_root.speed["speed"] = player_root.HIGH_RED_THRESHOLD + (player_root.speed["max"] - player_root.HIGH_RED_THRESHOLD) * 0.5
 	player_root.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate()

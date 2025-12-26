@@ -352,24 +352,26 @@ func update_speed_bar() -> void:
 
 # Connect Timer's timeout signal
 func _on_fuel_timer_timeout() -> void:
-	# Scale base rate
-	# var fuel_left: float = fuel["fuel"] - (0.5 * Globals.difficulty)
+	# Scale base rate with clamped normalized speed
+	# to avoid excessive drain at out-of-range speeds
+	var normalized_speed: float = clamp(speed["speed"] / MAX_SPEED, 0.0, 1.0)
 	var fuel_left: float = (
-		fuel["fuel"] - ((base_fuel_drain * (speed["speed"] / MAX_SPEED)) * Globals.difficulty)
+		fuel["fuel"] - ((base_fuel_drain * normalized_speed) * Globals.difficulty)
 	)
+	#
 	# Clamp and update current_fuel first
 	fuel["fuel"] = clamp(fuel_left, 0, fuel["max"])
-	# Update UI from the clamped value
-	update_fuel_bar()
-	# Check fuel level and start/stop blinking
-	check_fuel_warning()
 
 	if fuel["fuel"] <= 0:
 		speed["speed"] = 0.0  # Or game over logic
 		fuel_timer.stop()
 		rotor_stop(rotor_right, rotor_right_sfx)
 		rotor_stop(rotor_left, rotor_left_sfx)
-		update_speed_bar()
+	
+	# Update UI from the clamped value
+	update_fuel_bar()
+	# Check fuel level and start/stop blinking
+	check_fuel_warning()
 	Globals.log_message("Fuel left: " + str(fuel["fuel"]), Globals.LogLevel.DEBUG)
 
 
@@ -431,7 +433,7 @@ func _toggle_label(param: Dictionary) -> void:
 func _physics_process(_delta: float) -> void:
 	# Left/Right movment
 	var lateral_input: float = Input.get_axis("move_left", "move_right")
-	if lateral_input:
+	if lateral_input and  fuel["fuel"] > 0:
 		player.velocity.x = lateral_input * speed["lateral_speed"]
 	# Reset lateral velocity if no input
 	else:
@@ -440,12 +442,12 @@ func _physics_process(_delta: float) -> void:
 	player.position.y = clamp(player.position.y, player_y_min, player_y_max)
 
 	# Speed changes
-	if Input.is_action_pressed("speed_up"):
+	if Input.is_action_pressed("speed_up") and fuel["fuel"] > 0:
 		speed["speed"] += speed["acceleration"] * _delta
-	if Input.is_action_pressed("speed_down"):
+	if Input.is_action_pressed("speed_down") and fuel["fuel"] > 0:
 		speed["speed"] -= speed["deceleration"] * _delta
 	# Clamp current_speed between MIN_SPEED and MAX_SPEED
-	speed["speed"] = clamp(speed["speed"], speed["min"], speed["max"])
+	speed["speed"] = clamp(speed["speed"], 0, speed["max"])
 
 	player.move_and_slide()
 	update_speed_bar()
