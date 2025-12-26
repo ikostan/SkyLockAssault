@@ -1,57 +1,57 @@
 [gd_scene load_steps=15 format=3 uid="uid://c7c8smbqpkh0u"]
 
-[ext_resource type="Texture2D" uid="uid://buncrhbjyvafd" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0000.png" id="1_6h7yr"]
-[ext_resource type="Texture2D" uid="uid://hh3bdhfaa7if" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0001.png" id="2_674yr"]
-[ext_resource type="Texture2D" uid="uid://bla0foo3clolc" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0003.png" id="3_a6o8x"]
-[ext_resource type="Texture2D" uid="uid://c7uulhm61waso" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0004.png" id="4_vcfda"]
-[ext_resource type="Texture2D" uid="uid://c5osepu44xgei" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0005.png" id="5_xm3dy"]
-[ext_resource type="Texture2D" uid="uid://dwm6voti2alnx" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0006.png" id="6_ljcm1"]
-[ext_resource type="Texture2D" uid="uid://bwsl7xr3rgudq" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0007.png" id="7_77bxo"]
-[ext_resource type="Texture2D" uid="uid://bumfrfmrja41a" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0008.png" id="8_hp3mt"]
-[ext_resource type="Texture2D" uid="uid://xyq5865s2s2v" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0009.png" id="9_g0tva"]
-[ext_resource type="Texture2D" uid="uid://b4ebl4gyo546n" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0010.png" id="10_cpmsx"]
-[ext_resource type="Texture2D" uid="uid://crkg0ghaog8ti" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0011.png" id="11_84qia"]
-[ext_resource type="Texture2D" uid="uid://bgycvhpqrxsok" path="res://files/chabull_assets/aircrafts/rotor_anim/rotor_anim_big0002.png" id="12_i60hd"]
+[ext_resource type="Texture2D" uid="uid://cktgcl211hj8d" path="res://files/rotor/rotor00.png" id="1_674yr"]
+[ext_resource type="Texture2D" uid="uid://bobe2d6y0sl0v" path="res://files/rotor/rotor01.png" id="2_a6o8x"]
+[ext_resource type="Texture2D" uid="uid://diutt412dbjnr" path="res://files/rotor/rotor02.png" id="3_vcfda"]
+[ext_resource type="Texture2D" uid="uid://26uhjvxpc0cl" path="res://files/rotor/rotor03.png" id="4_xm3dy"]
+[ext_resource type="Texture2D" uid="uid://dqhii22kuugxo" path="res://files/rotor/rotor04.png" id="5_ljcm1"]
+[ext_resource type="Texture2D" uid="uid://bes2aupd22ror" path="res://files/rotor/rotor05.png" id="6_77bxo"]
+[ext_resource type="Texture2D" uid="uid://6duri8a82qol" path="res://files/rotor/rotor06.png" id="7_hp3mt"]
+[ext_resource type="Texture2D" uid="uid://ceu81k3ef2rpy" path="res://files/rotor/rotor07.png" id="8_g0tva"]
+[ext_resource type="Texture2D" uid="uid://05wvae4nkbse" path="res://files/rotor/rotor08.png" id="9_cpmsx"]
+[ext_resource type="Texture2D" uid="uid://daslcaircfgce" path="res://files/rotor/rotor09.png" id="10_84qia"]
+[ext_resource type="Texture2D" uid="uid://dkp1gp7vj6775" path="res://files/rotor/rotor10.png" id="11_i60hd"]
+[ext_resource type="Texture2D" uid="uid://d3w6uawy21yd0" path="res://files/rotor/rotor11.png" id="12_e6wr1"]
 [ext_resource type="AudioStream" uid="uid://bke2qkqjgter" path="res://files/sounds/sfx/airplane_prop.ogg" id="13_674yr"]
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_dtrdd"]
 animations = [{
 "frames": [{
-"duration": 0.04,
-"texture": ExtResource("1_6h7yr")
+"duration": 1.0,
+"texture": ExtResource("1_674yr")
 }, {
 "duration": 1.0,
-"texture": ExtResource("2_674yr")
+"texture": ExtResource("2_a6o8x")
 }, {
 "duration": 1.0,
-"texture": ExtResource("3_a6o8x")
+"texture": ExtResource("3_vcfda")
 }, {
 "duration": 1.0,
-"texture": ExtResource("4_vcfda")
+"texture": ExtResource("4_xm3dy")
 }, {
 "duration": 1.0,
-"texture": ExtResource("5_xm3dy")
+"texture": ExtResource("5_ljcm1")
 }, {
 "duration": 1.0,
-"texture": ExtResource("6_ljcm1")
+"texture": ExtResource("6_77bxo")
 }, {
 "duration": 1.0,
-"texture": ExtResource("7_77bxo")
+"texture": ExtResource("7_hp3mt")
 }, {
 "duration": 1.0,
-"texture": ExtResource("8_hp3mt")
+"texture": ExtResource("8_g0tva")
 }, {
 "duration": 1.0,
-"texture": ExtResource("9_g0tva")
+"texture": ExtResource("9_cpmsx")
 }, {
 "duration": 1.0,
-"texture": ExtResource("10_cpmsx")
+"texture": ExtResource("10_84qia")
 }, {
 "duration": 1.0,
-"texture": ExtResource("11_84qia")
+"texture": ExtResource("11_i60hd")
 }, {
 "duration": 1.0,
-"texture": ExtResource("12_i60hd")
+"texture": ExtResource("12_e6wr1")
 }],
 "loop": true,
 "name": &"default",
@@ -63,7 +63,7 @@ animations = [{
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 texture_filter = 1
 sprite_frames = SubResource("SpriteFrames_dtrdd")
-frame_progress = 0.119158015
+frame_progress = 0.23333338
 
 [node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="."]
 stream = ExtResource("13_674yr")
