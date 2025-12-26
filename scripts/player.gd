@@ -307,9 +307,7 @@ func update_speed_bar() -> void:
 	if speed_val >= HIGH_RED_THRESHOLD:
 		# Proximity to high red limit, clamped into [0.0, 1.0]
 		factor = clamp(
-			(speed_val - HIGH_RED_THRESHOLD) / (MAX_SPEED - HIGH_RED_THRESHOLD),
-			0.0,
-			1.0
+			(speed_val - HIGH_RED_THRESHOLD) / (MAX_SPEED - HIGH_RED_THRESHOLD), 0.0, 1.0
 		)
 		speed["bar style"].bg_color = Color.YELLOW.lerp(DARK_RED, factor)
 	elif speed_val >= HIGH_YELLOW_THRESHOLD:
