@@ -18,15 +18,12 @@ func _force_reload(value: bool) -> void:
 ## Editor-only ready function.
 ## @return: void
 func _ready() -> void:
-	print("@tool script starting in editor!")  # Debug to confirm run
 	if Engine.is_editor_hint():  # Only run in editor
-		print("@tool is in editor hint!")  # Confirm hint check
 		# Clear existing preloaded resources to avoid duplicates on reload
 		var ids: Array = get_resource_list()  # Changed to untyped Array
 		print("get_resource_list completed, ids size: ", ids.size())  # Debug after get_resource_list
 		for id: String in ids:
 			remove_resource(id)
-		print("Clearing completed")  # Debug clear end
 
 		# Load and add bushes
 		var bush_dir_path: String = "res://files/trees/"  # Your updated bushes path
@@ -55,7 +52,6 @@ func load_textures_from_dir(dir_path: String) -> Array[Texture2D]:
 	var textures: Array[Texture2D] = []
 	var dir: DirAccess = DirAccess.open(dir_path)
 	if dir:
-		print("Directory opened successfully!")  # Confirm open
 		dir.list_dir_begin()
 		var file_name: String = dir.get_next()
 		var file_count: int = 0  # Track total files found
