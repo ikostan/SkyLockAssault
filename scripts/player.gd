@@ -9,14 +9,26 @@ const MEDIUM_FUEL_THRESHOLD: float = 50.0  # Switches to yellow lerp
 const MAX_FUEL: float = 100.0  # Fully Red Color
 const LOW_FUEL_THRESHOLD: float = 30.0  # Switches to red lerp
 const NO_FUEL_THRESHOLD: float = 15.0  # Fully Red Color
+
 # Bounds hitbox scale (quarter texture = tight margin for top-down plane)
 const HITBOX_SCALE: float = 0.25
+
+# Speed
 const MAX_SPEED: float = 713.0  # mph
 const MIN_SPEED: float = 95.0  # mph
-const OVER_SPEED_THRESHOLD: float = MAX_SPEED * 90.0 / 100.0
-const HIGH_YELLOW_THRESHOLD: float = MAX_SPEED * 80.0 / 100.0
-const HIGH_RED_THRESHOLD: float = MAX_SPEED * 90.0 / 100.0
-const LOW_YELLOW_THRESHOLD: float = MIN_SPEED + (MAX_SPEED * 10.0 / 100.0)
+
+# Speed threshold fractions (kept in one place to avoid divergence)
+const HIGH_YELLOW_FRACTION: float = 0.80
+const HIGH_RED_FRACTION: float = 0.90
+const LOW_YELLOW_FRACTION: float = 0.10
+
+# Gameplay / UI thresholds derived from fractions
+const OVER_SPEED_THRESHOLD: float = MAX_SPEED * HIGH_RED_FRACTION
+const HIGH_YELLOW_THRESHOLD: float = MAX_SPEED * HIGH_YELLOW_FRACTION
+
+# UI high red warning intentionally matches over-speed gameplay threshold
+const HIGH_RED_THRESHOLD: float = OVER_SPEED_THRESHOLD
+const LOW_YELLOW_THRESHOLD: float = MIN_SPEED + (MAX_SPEED - MIN_SPEED) * LOW_YELLOW_FRACTION
 const LOW_RED_THRESHOLD: float = MIN_SPEED
 const DARK_RED: Color = Color(0.5, 0.0, 0.0)
 const BLINK_INTERVAL: float = 0.5  # Seconds between blinks
