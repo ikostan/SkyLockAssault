@@ -5,6 +5,8 @@
 
 extends GdUnitTestSuite
 
+const TestHelpers = preload("res://test/test_helpers.gd")
+
 @warning_ignore("unused_parameter")
 @warning_ignore("return_value_discarded")
 
@@ -13,6 +15,21 @@ func before() -> void:
 
 func after() -> void:
 	pass
+
+
+## Tests shared helper calculates depletion correctly.
+## @return: void
+func test_shared_depletion_helper() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node = main_scene.get_node("Player")
+	Globals.difficulty = 2.0
+	
+	var expected: float = player_root.base_fuel_drain * (player_root.speed["speed"] / player_root.MAX_SPEED) * Globals.difficulty
+	assert_float(TestHelpers.calculate_expected_depletion(player_root, Globals.difficulty)).is_equal_approx(expected, 0.001)
+
 
 # Test: Player node exists and is visible
 func test_player_present() -> void:
@@ -283,8 +300,9 @@ func test_fuel_depletion() -> void:
 	assert_float(player_root.fuel["bar"].value).is_equal(100.0)
 	
 	# Simulate one timer tick (scaled: ~100 - (1.0 * (250/443) * 2) ≈99.1)
-	var expected_depletion: float = player_root.base_fuel_drain * (player_root.speed["speed"] / player_root.MAX_SPEED) * Globals.difficulty
+	# Simulate one timer tick
 	player_root._on_fuel_timer_timeout()
+	var expected_depletion: float = TestHelpers.calculate_expected_depletion(player_root, Globals.difficulty)
 	assert_float(player_root.fuel["fuel"]).is_equal_approx(100.0 - expected_depletion, 0.01)
 	assert_float(player_root.fuel["bar"].value).is_equal_approx(100.0 - expected_depletion, 0.01)
 	
@@ -356,3 +374,25 @@ func test_speed_colors() -> void:
 	player_root.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(player_root.DARK_RED)
+
+
+## Tests helper consistency across difficulties.
+## @return: void
+func test_depletion_helper_difficulties() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node = main_scene.get_node("Player")
+	
+	# Difficulty 1.0
+	var dep_1: float = TestHelpers.calculate_expected_depletion(player_root, 1.0)
+	assert_float(dep_1).is_equal_approx(0.350631, 0.001)  # Real calc: 1 * (250/713) * 1
+	
+	# Difficulty 2.0
+	var dep_2: float = TestHelpers.calculate_expected_depletion(player_root, 2.0)
+	assert_float(dep_2).is_equal_approx(0.701262, 0.001)  # 1 * (250/713) * 2
+	
+	# Difficulty 0.5
+	var dep_05: float = TestHelpers.calculate_expected_depletion(player_root, 0.5)
+	assert_float(dep_05).is_equal_approx(0.175315, 0.001)  # 1 * (250/713) * 0.5

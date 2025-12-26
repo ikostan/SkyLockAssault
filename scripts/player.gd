@@ -137,7 +137,7 @@ func _ready() -> void:
 	fuel_timer.start()
 
 	speed = {
-		"speed": 250.0,
+		"speed": 250.0,  # Initial speed value (mph); was current_speed
 		"lateral_speed": lateral_speed,
 		"acceleration": acceleration,
 		"deceleration": deceleration,

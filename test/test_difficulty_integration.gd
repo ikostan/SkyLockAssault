@@ -3,6 +3,8 @@
 
 extends GdUnitTestSuite
 
+const TestHelpers = preload("res://test/test_helpers.gd")
+
 func test_difficulty_scales_fuel_and_weapon() -> void:
 	# Setup: Load main_scene for full context (PlayerStatsPanel for fuel_bar path)
 	var main_scene: Variant = auto_free(load("res://scenes/main_scene.tscn").instantiate())
@@ -22,7 +24,7 @@ func test_difficulty_scales_fuel_and_weapon() -> void:
 	# TEST 1: Fuel depletion scales (base_drain * (speed/max) * 2.0 ≈0.701, so ~99.299)
 	player.fuel["fuel"] = 100.0
 	player._on_fuel_timer_timeout()
-	var expected_fuel: float = 100.0 - (player.base_fuel_drain * (player.speed["speed"] / player.MAX_SPEED) * Globals.difficulty)
+	var expected_fuel: float = 100.0 - TestHelpers.calculate_expected_depletion(player, Globals.difficulty)
 	assert_float(player.fuel["fuel"]).is_equal_approx(expected_fuel, 0.001)  # Approx for float precision
 
 	# TEST 2: Weapon cooldown scales (fire_rate 0.15 * 2.0 = 0.30)
