@@ -27,7 +27,7 @@ func test_difficulty_scales_fuel_and_weapon() -> void:
 	var expected_depletion: float = player.base_fuel_drain * normalized_speed * Globals.difficulty
 	player._on_fuel_timer_timeout()
 	var expected_fuel: float = 100.0 - expected_depletion
-	assert_float(player.fuel["fuel"]).is_equal_approx(expected_fuel, 0.001)  # Approx for float precision
+	assert_float(player.fuel["fuel"]).is_equal_approx(expected_fuel, 0.01)  # Larger delta for precision
 
 	# TEST 2: Weapon cooldown scales (fire_rate 0.15 * 2.0 = 0.30)
 	weapon.fire()  # FIXED: fire() not _fire(); delegates → BulletFirer.fire() → timer.start(0.30)

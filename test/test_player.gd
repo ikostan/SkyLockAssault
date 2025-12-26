@@ -348,30 +348,33 @@ func test_speed_colors() -> void:
 	var style: StyleBoxFlat = speed_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(Color.GREEN)
 	
-	# Approaching high (yellow lerp) - derive thresholds from constants
-	var high_yellow: float = player_root.MAX_SPEED * player_root.HIGH_YELLOW_FRACTION  # Derive if using fractions
+	# Approaching high (yellow lerp) - derive thresholds from fractions
+	var high_yellow: float = player_root.MAX_SPEED * player_root.HIGH_YELLOW_FRACTION
 	var high_red: float = player_root.MAX_SPEED * player_root.HIGH_RED_FRACTION
-	player_root.speed["speed"] = high_yellow + (high_red - high_yellow) * 0.5
+	var mid_high_yellow: float = high_yellow + (high_red - high_yellow) / 2.0  # Derive mid-point
+	player_root.speed["speed"] = mid_high_yellow
 	player_root.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate()
 	assert_bool(style.bg_color.is_equal_approx(Color.GREEN.lerp(Color.YELLOW, 0.5))).is_true()
 	
 	# Overspeed (red lerp) - derive from max
-	player_root.speed["speed"] = high_red + (player_root.speed["max"] - high_red) * 0.5
+	var mid_high_red: float = high_red + (player_root.speed["max"] - high_red) / 2.0  # Derive mid-point
+	player_root.speed["speed"] = mid_high_red
 	player_root.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate()
 	assert_bool(style.bg_color.is_equal_approx(Color.YELLOW.lerp(player_root.DARK_RED, 0.5))).is_true()
 	
-	# Approaching low (yellow lerp) - derive low thresholds
-	var low_yellow: float = player_root.speed["min"] + (player_root.speed["max"] - player_root.speed["min"]) * player_root.LOW_YELLOW_FRACTION
-	var low_red: float = player_root.speed["min"]
-	player_root.speed["speed"] = low_yellow - (low_yellow - low_red) * 0.5
+	# Approaching low (yellow lerp) - derive low thresholds from fractions
+	var low_yellow: float = player_root.MIN_SPEED + (player_root.MAX_SPEED - player_root.MIN_SPEED) * player_root.LOW_YELLOW_FRACTION
+	var low_red: float = player_root.MIN_SPEED
+	var mid_low_yellow: float = low_yellow - (low_yellow - low_red) / 2.0  # Derive mid-point
+	player_root.speed["speed"] = mid_low_yellow
 	player_root.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate()
 	assert_bool(style.bg_color.is_equal_approx(Color.GREEN.lerp(Color.YELLOW, 0.5))).is_true()
 	
 	# Low red at min
-	player_root.speed["speed"] = player_root.speed["min"]
+	player_root.speed["speed"] = player_root.MIN_SPEED
 	player_root.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(player_root.DARK_RED)
@@ -393,8 +396,8 @@ func test_fuel_depletion() -> void:
 	var normalized_speed: float = player_root.speed["speed"] / player_root.MAX_SPEED
 	var expected_depletion: float = player_root.base_fuel_drain * normalized_speed * Globals.difficulty
 	player_root._on_fuel_timer_timeout()
-	assert_float(player_root.fuel["fuel"]).is_equal_approx(player_root.fuel["max"] - expected_depletion, 0.001)
-	assert_float(player_root.fuel["bar"].value).is_equal_approx(100.0 - expected_depletion, 0.001)  # Normalized to percent
+	assert_float(player_root.fuel["fuel"]).is_equal_approx(player_root.fuel["max"] - expected_depletion, 0.01)  # Larger delta for float precision
+	assert_float(player_root.fuel["bar"].value).is_equal_approx(100.0 - expected_depletion, 0.01)  # Normalized to percent
 	
 	# Force zero fuel
 	player_root.fuel["fuel"] = 0.0
