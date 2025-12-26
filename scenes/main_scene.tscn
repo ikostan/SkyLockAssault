@@ -5,10 +5,10 @@
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="2_pu3yx"]
 [ext_resource type="PackedScene" uid="uid://37rarq1yywmc" path="res://scenes/player.tscn" id="2_pw63i"]
 [ext_resource type="Script" uid="uid://csdce7ynrpivs" path="res://scripts/resource_preloader.gd" id="3_c1pb6"]
-[ext_resource type="Texture2D" uid="uid://c5epyq8bvjqxt" path="res://files/chabull_assets/bushes/tree_21.png" id="5_rt2n2"]
-[ext_resource type="Texture2D" uid="uid://brwwm3fy3qfj5" path="res://files/chabull_assets/ground_tileset/images/grass.png" id="6_18nlu"]
-[ext_resource type="Texture2D" uid="uid://5gfxelwjjyfm" path="res://files/chabull_assets/ground_tileset/images/sand.png" id="6_c16ls"]
-[ext_resource type="Texture2D" uid="uid://b84m1vjqhv2a8" path="res://files/chabull_assets/random_decor/rock_5.png" id="7_18nlu"]
+[ext_resource type="Texture2D" uid="uid://bko4u1o8x76wi" path="res://files/trees/tree_21.png" id="5_rt2n2"]
+[ext_resource type="Texture2D" uid="uid://b22q7c4floiwi" path="res://files/ground_tilesest/images/grass.png" id="6_18nlu"]
+[ext_resource type="Texture2D" uid="uid://dxqabty78ew4c" path="res://files/ground_tilesest/images/sand.png" id="6_c16ls"]
+[ext_resource type="Texture2D" uid="uid://dj1i7hslqv6o" path="res://files/random_decor/rock_5.png" id="7_18nlu"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pu3yx"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
