@@ -16,8 +16,6 @@ func after_test() -> void:
 
 ## Tests fuel depletion scaling with difficulty levels.
 ## @return: void
-## Tests fuel depletion scaling with difficulty levels.
-## @return: void
 func test_fuel_depletion_with_difficulty() -> void:
 	# Setup: Instance the full main scene and add to tree for _ready/@onready to resolve paths
 	var main_scene: Variant = auto_free(load("res://scenes/main_scene.tscn").instantiate())
@@ -50,6 +48,3 @@ func test_fuel_depletion_with_difficulty() -> void:
 	var dep_05: float = player_inst.base_fuel_drain * normalized_speed * Globals.difficulty
 	player_inst._on_fuel_timer_timeout()
 	assert_float(player_inst.fuel["fuel"]).is_equal_approx(100.0 - dep_05, 0.01)
-	
-	# Reset original
-	Globals.difficulty = original_difficulty

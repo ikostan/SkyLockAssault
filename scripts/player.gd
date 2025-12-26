@@ -431,7 +431,7 @@ func _toggle_label(param: Dictionary) -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	# Left/Right movment
+	# Left/Right movement
 	var lateral_input: float = Input.get_axis("move_left", "move_right")
 	if lateral_input and fuel["fuel"] > 0:
 		player.velocity.x = lateral_input * speed["lateral_speed"]
