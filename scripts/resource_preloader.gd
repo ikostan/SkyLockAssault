@@ -24,17 +24,19 @@ func _ready() -> void:
 			remove_resource(id)
 		
 		# Load and add bushes
-		var bush_dir_path: String = "res://files/trees/"  # Updated to match your structure
-		print("Attempting to load bushes from: ", bush_dir_path)
-		var bush_textures: Array[Texture2D] = load_textures_from_dir(bush_dir_path)
-		for i in bush_textures.size():
-			var texture: Texture2D = bush_textures[i]
+		var trees_dir_path: String = "res://files/trees/"  # Updated to match your structure
+		print("Calling load_textures_from_dir for trees")
+		print("Attempting to load trees from: ", trees_dir_path)
+		var trees_textures: Array[Texture2D] = load_textures_from_dir(trees_dir_path)
+		for i in trees_textures.size():
+			var texture: Texture2D = trees_textures[i]
 			if texture:
-				add_resource("bush_" + str(i), texture)  # Unique ID for each texture
-		print("Editor: Loaded ", bush_textures.size(), " bush textures")
+				add_resource("tree_" + str(i), texture)  # Unique ID for each texture
+		print("Editor: Loaded ", trees_textures.size(), " trees textures")
 		
 		# Load and add decor
 		var decor_dir_path: String = "res://files/random_decor/"  # Updated to match your structure
+		print("Calling load_textures_from_dir for decor")
 		print("Attempting to load decor from: ", decor_dir_path)
 		var decor_textures: Array[Texture2D] = load_textures_from_dir(decor_dir_path)
 		for i in decor_textures.size():
