@@ -431,24 +431,30 @@ func _toggle_label(param: Dictionary) -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	# Left/Right movement
-	var lateral_input: float = Input.get_axis("move_left", "move_right")
-	if lateral_input and fuel["fuel"] > 0:
-		player.velocity.x = lateral_input * speed["lateral_speed"]
-	# Reset lateral velocity if no input
-	else:
-		player.velocity.x = 0.0
-	player.position.x = clamp(player.position.x, player_x_min, player_x_max)
-	player.position.y = clamp(player.position.y, player_y_min, player_y_max)
-
-	# Speed changes
+	# Speed changes allowed only if fuel > 0
 	if Input.is_action_pressed("speed_up") and fuel["fuel"] > 0:
 		speed["speed"] += speed["acceleration"] * _delta
 	if Input.is_action_pressed("speed_down") and fuel["fuel"] > 0:
 		speed["speed"] -= speed["deceleration"] * _delta
 	# Clamp current_speed between MIN_SPEED and MAX_SPEED
-	speed["speed"] = clamp(speed["speed"], 0, speed["max"])
-
-	player.move_and_slide()
+	if fuel["fuel"] == 0:
+		# No fuel left, airplane can't fly
+		speed["speed"] = clamp(speed["speed"], 0, speed["max"])
+	else:
+		speed["speed"] = clamp(speed["speed"], speed["min"], speed["max"])
+	# Left/Right movement
+	var lateral_input: float = Input.get_axis("move_left", "move_right")
+	# Left/Right movement, only allowed when fuel > 0 and the player is moving
+	if lateral_input and fuel["fuel"] > 0 and speed["speed"] > 0:
+		player.velocity.x = lateral_input * speed["lateral_speed"]
+	# Reset lateral velocity if no input
+	else:
+		player.velocity.x = 0.0
+	# Clamp player position within allowed ranged of coords
+	player.position.x = clamp(player.position.x, player_x_min, player_x_max)
+	player.position.y = clamp(player.position.y, player_y_min, player_y_max)
+	# Update UI
 	update_speed_bar()
 	check_speed_warning()
+	# Perform player movement
+	player.move_and_slide()

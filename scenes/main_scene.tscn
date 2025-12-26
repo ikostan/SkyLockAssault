@@ -1,9 +1,81 @@
-[gd_scene load_steps=9 format=3 uid="uid://nnnc0qhx07i8"]
+[gd_scene load_steps=81 format=3 uid="uid://nnnc0qhx07i8"]
 
 [ext_resource type="Script" uid="uid://ctm7qg12s2swt" path="res://scripts/main_scene.gd" id="1_7ykc4"]
 [ext_resource type="PackedScene" uid="uid://cb4n4cqkuddqg" path="res://scenes/pause_menu.tscn" id="1_w2twt"]
+[ext_resource type="Texture2D" uid="uid://ce63ga8f5mua7" path="res://files/trees/tree_01.png" id="2_fm3ay"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="2_pu3yx"]
 [ext_resource type="PackedScene" uid="uid://37rarq1yywmc" path="res://scenes/player.tscn" id="2_pw63i"]
+[ext_resource type="Script" uid="uid://csdce7ynrpivs" path="res://scripts/resource_preloader.gd" id="3_c1pb6"]
+[ext_resource type="Texture2D" uid="uid://bsmbcgovcph7p" path="res://files/trees/tree_02.png" id="3_sgkfd"]
+[ext_resource type="Texture2D" uid="uid://syw5eae1ebna" path="res://files/trees/tree_11.png" id="4_qj6t7"]
+[ext_resource type="Texture2D" uid="uid://grifp8c6vrgt" path="res://files/trees/tree_12.png" id="5_k78mq"]
+[ext_resource type="Texture2D" uid="uid://bko4u1o8x76wi" path="res://files/trees/tree_21.png" id="5_rt2n2"]
+[ext_resource type="Texture2D" uid="uid://b22q7c4floiwi" path="res://files/ground_tilesest/images/grass.png" id="6_18nlu"]
+[ext_resource type="Texture2D" uid="uid://dxqabty78ew4c" path="res://files/ground_tilesest/images/sand.png" id="6_c16ls"]
+[ext_resource type="Texture2D" uid="uid://byci4nutsi1qq" path="res://files/trees/tree_13.png" id="6_ldtbd"]
+[ext_resource type="Texture2D" uid="uid://dj1i7hslqv6o" path="res://files/random_decor/rock_5.png" id="7_18nlu"]
+[ext_resource type="Texture2D" uid="uid://bn8sg7ttqmrci" path="res://files/trees/tree_14.png" id="7_gmxj2"]
+[ext_resource type="Texture2D" uid="uid://yexxcp7bx3" path="res://files/trees/tree_15.png" id="8_xncra"]
+[ext_resource type="Texture2D" uid="uid://beacwr0okpet5" path="res://files/trees/tree_16.png" id="9_4fyw0"]
+[ext_resource type="Texture2D" uid="uid://buue8ub3nufyj" path="res://files/trees/tree_17.png" id="10_00pac"]
+[ext_resource type="Texture2D" uid="uid://cyutih8v81n4n" path="res://files/trees/tree_18.png" id="11_3sutw"]
+[ext_resource type="Texture2D" uid="uid://4ivy1surycmc" path="res://files/trees/tree_19.png" id="12_h20w0"]
+[ext_resource type="Texture2D" uid="uid://ciapf2n01gvke" path="res://files/trees/tree_20.png" id="13_c1tim"]
+[ext_resource type="Texture2D" uid="uid://bhxhtkmmuqwst" path="res://files/trees/tree_03.png" id="14_ahecp"]
+[ext_resource type="Texture2D" uid="uid://d0hh1aq8lemir" path="res://files/trees/tree_22.png" id="16_f0q1o"]
+[ext_resource type="Texture2D" uid="uid://b663ygo4iy7y5" path="res://files/trees/tree_23.png" id="17_iaiog"]
+[ext_resource type="Texture2D" uid="uid://cq6t2cxgow3a3" path="res://files/trees/tree_24.png" id="18_bciwm"]
+[ext_resource type="Texture2D" uid="uid://dr1u1w3ef68nh" path="res://files/trees/tree_25.png" id="19_ds4wg"]
+[ext_resource type="Texture2D" uid="uid://c0tr5jkm2tbt4" path="res://files/trees/tree_26.png" id="20_lgwe5"]
+[ext_resource type="Texture2D" uid="uid://dn3d2fq2bbcso" path="res://files/trees/tree_27.png" id="21_6pqhf"]
+[ext_resource type="Texture2D" uid="uid://cbxog8hp8vnv0" path="res://files/trees/tree_28.png" id="22_hu1xv"]
+[ext_resource type="Texture2D" uid="uid://c6qdvywnwvjf3" path="res://files/trees/tree_29.png" id="23_2aaiw"]
+[ext_resource type="Texture2D" uid="uid://budj7ttoparex" path="res://files/trees/tree_30.png" id="24_tm4k6"]
+[ext_resource type="Texture2D" uid="uid://vk1gu0fdper" path="res://files/trees/tree_04.png" id="25_5t4fw"]
+[ext_resource type="Texture2D" uid="uid://beuo1c4aa65xl" path="res://files/trees/tree_38.png" id="26_65o4m"]
+[ext_resource type="Texture2D" uid="uid://bmuspd71d60gy" path="res://files/trees/tree_39.png" id="27_vygp1"]
+[ext_resource type="Texture2D" uid="uid://chbrkoxv121rj" path="res://files/trees/tree_40.png" id="28_75n0t"]
+[ext_resource type="Texture2D" uid="uid://83w4qudkpfgn" path="res://files/trees/tree_41.png" id="29_bt07v"]
+[ext_resource type="Texture2D" uid="uid://bxm3emykbrmg1" path="res://files/trees/tree_42.png" id="30_opbc2"]
+[ext_resource type="Texture2D" uid="uid://jeopcw5lsoe2" path="res://files/trees/tree_43.png" id="31_pxuh0"]
+[ext_resource type="Texture2D" uid="uid://oqwdv0d4alqq" path="res://files/trees/tree_44.png" id="32_abvoq"]
+[ext_resource type="Texture2D" uid="uid://dmksyq8d5ia3l" path="res://files/trees/tree_46.png" id="33_qj5h3"]
+[ext_resource type="Texture2D" uid="uid://cr25lmeg0xs6o" path="res://files/trees/tree_47.png" id="34_10pix"]
+[ext_resource type="Texture2D" uid="uid://cbeuexywjdn2c" path="res://files/trees/tree_48.png" id="35_k8vib"]
+[ext_resource type="Texture2D" uid="uid://b8wom1kndkbb7" path="res://files/trees/tree_05.png" id="36_5iwo2"]
+[ext_resource type="Texture2D" uid="uid://q3n8e4kokn5i" path="res://files/trees/tree_49.png" id="37_v7tct"]
+[ext_resource type="Texture2D" uid="uid://bd6sq1sgxu0m1" path="res://files/trees/tree_50.png" id="38_vlitc"]
+[ext_resource type="Texture2D" uid="uid://duuy01w518pyv" path="res://files/trees/tree_51.png" id="39_bofc0"]
+[ext_resource type="Texture2D" uid="uid://7xu1vd1ollyl" path="res://files/trees/tree_52.png" id="40_btbde"]
+[ext_resource type="Texture2D" uid="uid://cyxnldym6v768" path="res://files/trees/tree_53.png" id="41_8ic2j"]
+[ext_resource type="Texture2D" uid="uid://bxhekjcr3bkhp" path="res://files/trees/tree_54.png" id="42_magks"]
+[ext_resource type="Texture2D" uid="uid://0uq5nb4iwvf4" path="res://files/trees/tree_55.png" id="43_5vrw5"]
+[ext_resource type="Texture2D" uid="uid://cci88xtq2ji71" path="res://files/trees/tree_06.png" id="44_7062q"]
+[ext_resource type="Texture2D" uid="uid://c4jklh366s3vs" path="res://files/trees/tree_07.png" id="45_yk56o"]
+[ext_resource type="Texture2D" uid="uid://bvmoqkvv3urw7" path="res://files/trees/tree_08.png" id="46_mxavj"]
+[ext_resource type="Texture2D" uid="uid://ck0tcvx4s4k0g" path="res://files/trees/tree_09.png" id="47_uf32p"]
+[ext_resource type="Texture2D" uid="uid://o3naubycrba6" path="res://files/trees/tree_10.png" id="48_n8t7m"]
+[ext_resource type="Texture2D" uid="uid://b3uqfowbj688f" path="res://files/random_decor/barrels_1.png" id="49_agode"]
+[ext_resource type="Texture2D" uid="uid://bsyf33ajblj07" path="res://files/random_decor/barrels_2.png" id="50_3fm0y"]
+[ext_resource type="Texture2D" uid="uid://chpvq5le2s37m" path="res://files/random_decor/grass_01.png" id="51_l05tx"]
+[ext_resource type="Texture2D" uid="uid://ccr13gc7u35iu" path="res://files/random_decor/grass_02.png" id="52_y2xfi"]
+[ext_resource type="Texture2D" uid="uid://c63y5ttserd2w" path="res://files/random_decor/rock_010.png" id="53_grn4f"]
+[ext_resource type="Texture2D" uid="uid://k5t6w5f656ch" path="res://files/random_decor/rock_1.png" id="54_0rnsp"]
+[ext_resource type="Texture2D" uid="uid://b524jemsp1gax" path="res://files/random_decor/rock_2.png" id="55_fpmhc"]
+[ext_resource type="Texture2D" uid="uid://dd0jxwafvnmlw" path="res://files/random_decor/rock_3.png" id="56_cwycm"]
+[ext_resource type="Texture2D" uid="uid://bb5n848xai57o" path="res://files/random_decor/rock_4.png" id="57_ik4fr"]
+[ext_resource type="Texture2D" uid="uid://bljujdubmomq5" path="res://files/random_decor/rock_6.png" id="59_ukbd8"]
+[ext_resource type="Texture2D" uid="uid://dxdumgplxukvm" path="res://files/random_decor/rock_7.png" id="60_ycc4e"]
+[ext_resource type="Texture2D" uid="uid://c6j2m21mlkdpt" path="res://files/random_decor/bush_1.png" id="61_l7h1d"]
+[ext_resource type="Texture2D" uid="uid://c4h7pr80j2e4d" path="res://files/random_decor/rock_8.png" id="62_6t57n"]
+[ext_resource type="Texture2D" uid="uid://c158t7hkjejyb" path="res://files/random_decor/rock_9.png" id="63_h45r1"]
+[ext_resource type="Texture2D" uid="uid://d3vdlaf5ncpqy" path="res://files/random_decor/bush_big.png" id="64_4utpg"]
+[ext_resource type="Texture2D" uid="uid://c7cjl2mjwnlwl" path="res://files/random_decor/crates_1.png" id="65_yl5kd"]
+[ext_resource type="Texture2D" uid="uid://heuykgcffl5s" path="res://files/random_decor/crates_2.png" id="66_4c0ir"]
+[ext_resource type="Texture2D" uid="uid://crgnltub5vi18" path="res://files/random_decor/crates_3.png" id="67_y23kb"]
+[ext_resource type="Texture2D" uid="uid://btyfigdtk3x88" path="res://files/random_decor/crates_4.png" id="68_f3krf"]
+[ext_resource type="Texture2D" uid="uid://bvxu5x1awjrjv" path="res://files/random_decor/dirt_001.png" id="69_7tyuc"]
+[ext_resource type="Texture2D" uid="uid://f4hxu68qa4fi" path="res://files/random_decor/dirt_002.png" id="70_isor2"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pu3yx"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
@@ -36,6 +108,10 @@ shadow_size = 1
 
 [node name="Node2D" type="Node2D"]
 script = ExtResource("1_7ykc4")
+
+[node name="ResourcePreloader" type="ResourcePreloader" parent="."]
+resources = [PackedStringArray("bush_0", "bush_1", "bush_10", "bush_11", "bush_12", "bush_13", "bush_14", "bush_15", "bush_16", "bush_17", "bush_18", "bush_19", "bush_2", "bush_20", "bush_21", "bush_22", "bush_23", "bush_24", "bush_25", "bush_26", "bush_27", "bush_28", "bush_29", "bush_3", "bush_30", "bush_31", "bush_32", "bush_33", "bush_34", "bush_35", "bush_36", "bush_37", "bush_38", "bush_39", "bush_4", "bush_40", "bush_41", "bush_42", "bush_43", "bush_44", "bush_45", "bush_46", "bush_5", "bush_6", "bush_7", "bush_8", "bush_9", "decor_0", "decor_1", "decor_10", "decor_11", "decor_12", "decor_13", "decor_14", "decor_15", "decor_16", "decor_17", "decor_18", "decor_19", "decor_2", "decor_20", "decor_21", "decor_3", "decor_4", "decor_5", "decor_6", "decor_7", "decor_8", "decor_9"), [ExtResource("2_fm3ay"), ExtResource("3_sgkfd"), ExtResource("4_qj6t7"), ExtResource("5_k78mq"), ExtResource("6_ldtbd"), ExtResource("7_gmxj2"), ExtResource("8_xncra"), ExtResource("9_4fyw0"), ExtResource("10_00pac"), ExtResource("11_3sutw"), ExtResource("12_h20w0"), ExtResource("13_c1tim"), ExtResource("14_ahecp"), ExtResource("5_rt2n2"), ExtResource("16_f0q1o"), ExtResource("17_iaiog"), ExtResource("18_bciwm"), ExtResource("19_ds4wg"), ExtResource("20_lgwe5"), ExtResource("21_6pqhf"), ExtResource("22_hu1xv"), ExtResource("23_2aaiw"), ExtResource("24_tm4k6"), ExtResource("25_5t4fw"), ExtResource("26_65o4m"), ExtResource("27_vygp1"), ExtResource("28_75n0t"), ExtResource("29_bt07v"), ExtResource("30_opbc2"), ExtResource("31_pxuh0"), ExtResource("32_abvoq"), ExtResource("33_qj5h3"), ExtResource("34_10pix"), ExtResource("35_k8vib"), ExtResource("36_5iwo2"), ExtResource("37_v7tct"), ExtResource("38_vlitc"), ExtResource("39_bofc0"), ExtResource("40_btbde"), ExtResource("41_8ic2j"), ExtResource("42_magks"), ExtResource("43_5vrw5"), ExtResource("44_7062q"), ExtResource("45_yk56o"), ExtResource("46_mxavj"), ExtResource("47_uf32p"), ExtResource("48_n8t7m"), ExtResource("49_agode"), ExtResource("50_3fm0y"), ExtResource("51_l05tx"), ExtResource("52_y2xfi"), ExtResource("53_grn4f"), ExtResource("54_0rnsp"), ExtResource("55_fpmhc"), ExtResource("56_cwycm"), ExtResource("57_ik4fr"), ExtResource("7_18nlu"), ExtResource("59_ukbd8"), ExtResource("60_ycc4e"), ExtResource("61_l7h1d"), ExtResource("62_6t57n"), ExtResource("63_h45r1"), ExtResource("64_4utpg"), ExtResource("65_yl5kd"), ExtResource("66_4c0ir"), ExtResource("67_y23kb"), ExtResource("68_f3krf"), ExtResource("69_7tyuc"), ExtResource("70_isor2")]]
+script = ExtResource("3_c1pb6")
 
 [node name="PlayerStatsPanel" type="Panel" parent="."]
 offset_left = 910.0
@@ -121,3 +197,39 @@ step = 1.0
 [node name="Player" parent="." instance=ExtResource("2_pw63i")]
 
 [node name="PauseMenu" parent="." instance=ExtResource("1_w2twt")]
+
+[node name="Background" type="ParallaxBackground" parent="."]
+
+[node name="Sand" type="ParallaxLayer" parent="Background"]
+
+[node name="Sprite2D" type="Sprite2D" parent="Background/Sand"]
+texture_filter = 1
+texture_repeat = 2
+texture = ExtResource("6_c16ls")
+region_enabled = true
+region_rect = Rect2(128, 128, 128, 128)
+
+[node name="Grass" type="ParallaxLayer" parent="Background"]
+visible = false
+
+[node name="Sprite2D" type="Sprite2D" parent="Background/Grass"]
+texture_filter = 1
+texture_repeat = 2
+texture = ExtResource("6_18nlu")
+region_enabled = true
+region_rect = Rect2(128, 128, 128, 128)
+
+[node name="Decor" type="ParallaxLayer" parent="Background"]
+
+[node name="Sprite2D" type="Sprite2D" parent="Background/Decor"]
+texture_filter = 1
+texture_repeat = 2
+texture = ExtResource("7_18nlu")
+region_enabled = true
+region_rect = Rect2(128, 128, 128, 128)
+
+[node name="Bushes" type="ParallaxLayer" parent="Background"]
+
+[node name="Sprite2D" type="Sprite2D" parent="Background/Bushes"]
+texture_filter = 1
+texture = ExtResource("5_rt2n2")

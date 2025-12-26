@@ -5,7 +5,7 @@
 [ext_resource type="PackedScene" uid="uid://blc0ioe12jlnk" path="res://scenes/bullet.tscn" id="3_smehm"]
 [ext_resource type="PackedScene" uid="uid://bh47kclxgeeah" path="res://scenes/rotor_left.tscn" id="4_ur7pv"]
 [ext_resource type="PackedScene" uid="uid://c7c8smbqpkh0u" path="res://scenes/rotor_right.tscn" id="5_y4r1p"]
-[ext_resource type="Texture2D" uid="uid://quoucldyteg2" path="res://files/chabull_assets/aircrafts/p38_sprites/P38_lvl_0_d0.png" id="6_d2wvv"]
+[ext_resource type="Texture2D" uid="uid://beqr7nuy6a64d" path="res://files/p38_sprites/P38_lvl_0_d0.png" id="6_d2wvv"]
 
 [node name="Player" type="Node2D"]
 script = ExtResource("1_tuyoq")
@@ -19,11 +19,11 @@ weapon_types = Array[PackedScene]([ExtResource("3_smehm")])
 
 [node name="RotorLeft" parent="CharacterBody2D" instance=ExtResource("4_ur7pv")]
 position = Vector2(-12.8, -25)
-scale = Vector2(0.25, 0.25)
+scale = Vector2(0.6, 0.6)
 
 [node name="RotorRight" parent="CharacterBody2D" instance=ExtResource("5_y4r1p")]
 position = Vector2(12.2, -25)
-scale = Vector2(0.25, 0.25)
+scale = Vector2(0.6, 0.6)
 
 [node name="Sprite2D" type="Sprite2D" parent="CharacterBody2D"]
 texture_filter = 1
