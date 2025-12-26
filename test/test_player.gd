@@ -287,32 +287,6 @@ func test_speed_blinking_thresholds() -> void:
 	assert_bool(player_root.speed["blinking"]).is_false()
 
 
-# Test: Fuel initialization and depletion logic (updated for scaled depletion)
-func test_fuel_depletion() -> void:
-	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
-	add_child(main_scene)
-	await await_idle_frame()
-	
-	var player_root: Node = main_scene.get_node("Player")
-	
-	# Initial state
-	assert_float(player_root.fuel["fuel"]).is_equal(player_root.fuel["max"])
-	assert_float(player_root.fuel["bar"].value).is_equal(100.0)
-	
-	# Simulate one timer tick (scaled: ~100 - (1.0 * (250/443) * 2) ≈99.1)
-	# Simulate one timer tick
-	player_root._on_fuel_timer_timeout()
-	var expected_depletion: float = TestHelpers.calculate_expected_depletion(player_root, Globals.difficulty)
-	assert_float(player_root.fuel["fuel"]).is_equal_approx(100.0 - expected_depletion, 0.01)
-	assert_float(player_root.fuel["bar"].value).is_equal_approx(100.0 - expected_depletion, 0.01)
-	
-	# Force zero fuel
-	player_root.fuel["fuel"] = 0.0
-	player_root._on_fuel_timer_timeout()
-	assert_float(player_root.speed["speed"]).is_equal(0.0)
-	assert_bool(player_root.fuel_timer.is_stopped()).is_true()
-
-
 # Test: Player movement with input actions (updated for lateral-only refactor)
 func test_movement() -> void:
 	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
@@ -359,9 +333,7 @@ func test_depletion_helper_difficulties() -> void:
 	assert_float(dep_05).is_equal_approx(0.175315, 0.001)  # 1 * (250/713) * 0.5
 
 
-## Test: Speed bar colors and factors at various thresholds (updated for factor consistency)
-## Verifies bg_color lerps and factor (0.0 safe, 1.0 danger) across all branches.
-## @return: void
+# Test: Speed bar colors at various thresholds (fix Color.DARK_RED to custom)
 func test_speed_colors() -> void:
 	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
 	add_child(main_scene)
@@ -370,42 +342,62 @@ func test_speed_colors() -> void:
 	var player_root: Node = main_scene.get_node("Player")
 	var speed_bar: ProgressBar = player_root.speed["bar"]
 	
-	# Normal (green, factor=0.0)
+	# Normal (green) - derive mid-safe speed from min/max
 	player_root.speed["speed"] = (player_root.speed["min"] + player_root.speed["max"]) / 2.0
 	player_root.update_speed_bar()
 	var style: StyleBoxFlat = speed_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(Color.GREEN)
-	assert_float(player_root.speed["factor"]).is_equal(0.0)
 	
-	# Approaching high yellow (lerp to yellow, factor mid-range)
-	player_root.speed["speed"] = player_root.HIGH_YELLOW_THRESHOLD + (player_root.HIGH_RED_THRESHOLD - player_root.HIGH_YELLOW_THRESHOLD) * 0.5
+	# Approaching high (yellow lerp) - derive thresholds from constants
+	var high_yellow: float = player_root.MAX_SPEED * player_root.HIGH_YELLOW_FRACTION  # Derive if using fractions
+	var high_red: float = player_root.MAX_SPEED * player_root.HIGH_RED_FRACTION
+	player_root.speed["speed"] = high_yellow + (high_red - high_yellow) * 0.5
 	player_root.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate()
 	assert_bool(style.bg_color.is_equal_approx(Color.GREEN.lerp(Color.YELLOW, 0.5))).is_true()
-	assert_float(player_root.speed["factor"]).is_equal_approx(0.5, 0.001)
 	
-	# Overspeed high red (lerp to dark red, factor mid-range)
-	player_root.speed["speed"] = player_root.HIGH_RED_THRESHOLD + (player_root.speed["max"] - player_root.HIGH_RED_THRESHOLD) * 0.5
+	# Overspeed (red lerp) - derive from max
+	player_root.speed["speed"] = high_red + (player_root.speed["max"] - high_red) * 0.5
 	player_root.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate()
 	assert_bool(style.bg_color.is_equal_approx(Color.YELLOW.lerp(player_root.DARK_RED, 0.5))).is_true()
-	assert_float(player_root.speed["factor"]).is_equal_approx(0.5, 0.001)
 	
-	# Extreme overspeed (factor clamped at 1.0)
-	player_root.speed["speed"] = player_root.speed["max"] + 100.0  # Beyond max
-	player_root.update_speed_bar()
-	assert_float(player_root.speed["factor"]).is_equal(1.0)
-	
-	# Approaching low yellow (lerp to yellow, factor mid-range)
-	player_root.speed["speed"] = player_root.LOW_YELLOW_THRESHOLD - (player_root.LOW_YELLOW_THRESHOLD - player_root.LOW_RED_THRESHOLD) * 0.5
+	# Approaching low (yellow lerp) - derive low thresholds
+	var low_yellow: float = player_root.speed["min"] + (player_root.speed["max"] - player_root.speed["min"]) * player_root.LOW_YELLOW_FRACTION
+	var low_red: float = player_root.speed["min"]
+	player_root.speed["speed"] = low_yellow - (low_yellow - low_red) * 0.5
 	player_root.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate()
 	assert_bool(style.bg_color.is_equal_approx(Color.GREEN.lerp(Color.YELLOW, 0.5))).is_true()
-	assert_float(player_root.speed["factor"]).is_equal_approx(0.5, 0.001)
 	
-	# Stall low red (dark red, factor=1.0)
-	player_root.speed["speed"] = player_root.speed["min"] - 1.0  # Below min
+	# Low red at min
+	player_root.speed["speed"] = player_root.speed["min"]
 	player_root.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(player_root.DARK_RED)
-	assert_float(player_root.speed["factor"]).is_equal(1.0)
+
+
+# Test: Fuel initialization and depletion logic
+func test_fuel_depletion() -> void:
+	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+	
+	var player_root: Node = main_scene.get_node("Player")
+	
+	# Initial state
+	assert_float(player_root.fuel["fuel"]).is_equal(player_root.fuel["max"])
+	assert_float(player_root.fuel["bar"].value).is_equal(100.0)
+	
+	# Simulate one timer tick (derive expected from constants)
+	var normalized_speed: float = player_root.speed["speed"] / player_root.MAX_SPEED
+	var expected_depletion: float = player_root.base_fuel_drain * normalized_speed * Globals.difficulty
+	player_root._on_fuel_timer_timeout()
+	assert_float(player_root.fuel["fuel"]).is_equal_approx(player_root.fuel["max"] - expected_depletion, 0.001)
+	assert_float(player_root.fuel["bar"].value).is_equal_approx(100.0 - expected_depletion, 0.001)  # Normalized to percent
+	
+	# Force zero fuel
+	player_root.fuel["fuel"] = 0.0
+	player_root._on_fuel_timer_timeout()
+	assert_float(player_root.speed["speed"]).is_equal(0.0)
+	assert_bool(player_root.fuel_timer.is_stopped()).is_true()

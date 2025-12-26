@@ -21,10 +21,12 @@ func test_difficulty_scales_fuel_and_weapon() -> void:
 	var original_difficulty: float = Globals.difficulty
 	Globals.difficulty = 2.0
 
-	# TEST 1: Fuel depletion scales (base_drain * (speed/max) * 2.0 ≈0.701, so ~99.299)
+	# TEST 1: Fuel depletion scales (derive from constants)
 	player.fuel["fuel"] = 100.0
+	var normalized_speed: float = player.speed["speed"] / player.MAX_SPEED
+	var expected_depletion: float = player.base_fuel_drain * normalized_speed * Globals.difficulty
 	player._on_fuel_timer_timeout()
-	var expected_fuel: float = 100.0 - TestHelpers.calculate_expected_depletion(player, Globals.difficulty)
+	var expected_fuel: float = 100.0 - expected_depletion
 	assert_float(player.fuel["fuel"]).is_equal_approx(expected_fuel, 0.001)  # Approx for float precision
 
 	# TEST 2: Weapon cooldown scales (fire_rate 0.15 * 2.0 = 0.30)
