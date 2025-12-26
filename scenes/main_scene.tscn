@@ -1,9 +1,14 @@
-[gd_scene load_steps=9 format=3 uid="uid://nnnc0qhx07i8"]
+[gd_scene load_steps=14 format=3 uid="uid://nnnc0qhx07i8"]
 
 [ext_resource type="Script" uid="uid://ctm7qg12s2swt" path="res://scripts/main_scene.gd" id="1_7ykc4"]
 [ext_resource type="PackedScene" uid="uid://cb4n4cqkuddqg" path="res://scenes/pause_menu.tscn" id="1_w2twt"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="2_pu3yx"]
 [ext_resource type="PackedScene" uid="uid://37rarq1yywmc" path="res://scenes/player.tscn" id="2_pw63i"]
+[ext_resource type="Script" uid="uid://csdce7ynrpivs" path="res://scripts/resource_preloader.gd" id="3_c1pb6"]
+[ext_resource type="Texture2D" uid="uid://c5epyq8bvjqxt" path="res://files/chabull_assets/bushes/tree_21.png" id="5_rt2n2"]
+[ext_resource type="Texture2D" uid="uid://brwwm3fy3qfj5" path="res://files/chabull_assets/ground_tileset/images/grass.png" id="6_18nlu"]
+[ext_resource type="Texture2D" uid="uid://5gfxelwjjyfm" path="res://files/chabull_assets/ground_tileset/images/sand.png" id="6_c16ls"]
+[ext_resource type="Texture2D" uid="uid://b84m1vjqhv2a8" path="res://files/chabull_assets/random_decor/rock_5.png" id="7_18nlu"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pu3yx"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
@@ -36,6 +41,9 @@ shadow_size = 1
 
 [node name="Node2D" type="Node2D"]
 script = ExtResource("1_7ykc4")
+
+[node name="ResourcePreloader" type="ResourcePreloader" parent="."]
+script = ExtResource("3_c1pb6")
 
 [node name="PlayerStatsPanel" type="Panel" parent="."]
 offset_left = 910.0
@@ -121,3 +129,39 @@ step = 1.0
 [node name="Player" parent="." instance=ExtResource("2_pw63i")]
 
 [node name="PauseMenu" parent="." instance=ExtResource("1_w2twt")]
+
+[node name="Background" type="ParallaxBackground" parent="."]
+
+[node name="Sand" type="ParallaxLayer" parent="Background"]
+
+[node name="Sprite2D" type="Sprite2D" parent="Background/Sand"]
+texture_filter = 1
+texture_repeat = 2
+texture = ExtResource("6_c16ls")
+region_enabled = true
+region_rect = Rect2(128, 128, 128, 128)
+
+[node name="Grass" type="ParallaxLayer" parent="Background"]
+visible = false
+
+[node name="Sprite2D" type="Sprite2D" parent="Background/Grass"]
+texture_filter = 1
+texture_repeat = 2
+texture = ExtResource("6_18nlu")
+region_enabled = true
+region_rect = Rect2(128, 128, 128, 128)
+
+[node name="Decor" type="ParallaxLayer" parent="Background"]
+
+[node name="Sprite2D" type="Sprite2D" parent="Background/Decor"]
+texture_filter = 1
+texture_repeat = 2
+texture = ExtResource("7_18nlu")
+region_enabled = true
+region_rect = Rect2(128, 128, 128, 128)
+
+[node name="Bushes" type="ParallaxLayer" parent="Background"]
+
+[node name="Sprite2D" type="Sprite2D" parent="Background/Bushes"]
+texture_filter = 1
+texture = ExtResource("5_rt2n2")
