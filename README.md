@@ -131,31 +131,34 @@ menu during play.
 - Pause menu with buttons (Main Menu, Options, Resume).
 - Player scene with CharacterBody2D, ShaderBody, CollisionShape, and FuelTimer.
 - Fade-in animations for main menu UI panels.
-- Fuel system including fuel level progress bar with dynamic color gradients (green to yellow to red/dark red)
-  and low-fuel blinking warnings.
+- Fuel system including fuel level progress bar with dynamic color gradients
+  (green to yellow to red/dark red) and low-fuel blinking warnings.
 - Basic weapon system.
 - Difficulty settings.
 - Game controls input remapping.
-- Fuel management (timer-based depletion scaled by speed, base drain, and difficulty; refuel not yet implemented).
+- Fuel management (timer-based depletion scaled by speed, base drain, and difficulty;
+  refuel not yet implemented).
 - Basic adjustable difficulty (affects fire rate, fuel depletion, and more).
 - Basic sound effects & background music.
-- Airplane Rotor Sound (Stereo SFX) + Rotor Animation, with reusable helpers and rotors stopping on zero fuel.
+- Airplane Rotor Sound (Stereo SFX) + Rotor Animation, with reusable helpers and
+  rotors stopping on zero fuel.
 - Audio Buses & Panning (L/R Split).
 - Options Menu: Rotors Volume Slider.
 - Multi-Thread support enabled.
-- Player movement refactor: Lateral-only motion with acceleration-based forward/back speed control, clamped
-  between min/max speeds.
-- Speed system with progress bar, dynamic color changes (green normal, yellow caution, red/dark red danger based
-  on thresholds), and low/over-speed blinking warnings.
+- Player movement refactor: Lateral-only motion with acceleration-based forward/back
+  speed control, clamped between min/max speeds.
+- Speed system with progress bar, dynamic color changes (green normal, yellow caution,
+  red/dark red danger based on thresholds), and low/over-speed blinking warnings.
 - Centralized fuel/speed tracking via dictionaries for gameplay and UI integration.
 
 ### Features Roadmap
 
 - **Completed (Merged via Recent PRs)**:
   - Fuel management with timer-based depletion scaled by speed/difficulty (PR #288).
-  - Player movement refactor: Lateral-only controls with acceleration/deceleration, min/max speed clamping (PR #288).
-  - Speed system with progress bar, dynamic color gradients (green normal, yellow caution, red/dark red danger),
-    and low/over-speed blinking warnings (PR #275 and #288).
+  - Player movement refactor: Lateral-only controls with acceleration/deceleration,
+    min/max speed clamping (PR #288).
+  - Speed system with progress bar, dynamic color gradients (green normal, yellow caution,
+    red/dark red danger), and low/over-speed blinking warnings (PR #275 and #288).
   - Rotor SFX/animation with volume sliders and zero-fuel stopping (prior PRs).
 
 - **In Progress (Milestone 8: Advanced Features, Maintenance and Bug Fixes)**:
@@ -164,7 +167,8 @@ menu during play.
   - Switch testing from GDUnit4 to GUT for better coverage – Issues #282, #283.
   - GitHub Wiki for documentation/learning resources – Issue #284.
   - Version tagging in CI/CD – Issue #285.
-  - Dynamic speed bar color changes (partially merged in PR #275/#288, but full threshold logic ongoing) – Issue #286.
+  - Dynamic speed bar color changes
+    (partially merged in PR #275/#288, but full threshold logic ongoing) – Issue #286.
 
 - **Planned (Milestone 9: Expansions and Polish)**:
   - Mobile exports (Android/iOS) with touch controls and optimizations – Issues #35, #41, #43.
