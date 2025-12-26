@@ -127,43 +127,68 @@ menu during play.
 
 - Main menu scene with buttons (Start, Resume, Options, Quit).
 - Placeholder game level for future mechanics and game testing.
-- Options menu with log level settings, accessible from main
-  and pause menus.
+- Options menu with log level settings, accessible from main and pause menus.
 - Pause menu with buttons (Main Menu, Options, Resume).
-- Player scene with CharacterBody2D, ShaderBody, CollisionShape,
-  and FuelTimer.
+- Player scene with CharacterBody2D, ShaderBody, CollisionShape, and FuelTimer.
 - Fade-in animations for main menu UI panels.
-- Fuel system including fuel level progress bar.
+- Fuel system including fuel level progress bar with dynamic color gradients
+  (green to yellow to red/dark red) and low-fuel blinking warnings.
 - Basic weapon system.
 - Difficulty settings.
 - Game controls input remapping.
-- Fuel management (timer-based depletion only).
-- Basic adjustable difficulty (affects fire rate and fuel depletion only).
+- Fuel management (timer-based depletion scaled by speed, base drain, and difficulty;
+  refuel not yet implemented).
+- Basic adjustable difficulty (affects fire rate, fuel depletion, and more).
 - Basic sound effects & background music.
-- Airplane Rotor Sound (Stereo SFX) + Rotor Animation
-- Audio Buses & Panning (L/R Split)
-- Options Menu: Rotors Volume Slider
-- Multi-Thread support enabled
+- Airplane Rotor Sound (Stereo SFX) + Rotor Animation, with reusable helpers and
+  rotors stopping on zero fuel.
+- Audio Buses & Panning (L/R Split).
+- Options Menu: Rotors Volume Slider.
+- Multi-Thread support enabled.
+- Player movement refactor: Lateral-only motion with acceleration-based forward/back
+  speed control, clamped between min/max speeds.
+- Speed system with progress bar, dynamic color changes (green normal, yellow caution,
+  red/dark red danger based on thresholds), and low/over-speed blinking warnings.
+- Centralized fuel/speed tracking via dictionaries for gameplay and UI integration.
 
 ### Features Roadmap
 
-- **Current**:
-  - Main menu with Start/Resume/Options/Quit;
-  - placeholder game level;
-  - fade-in animations;
-  - web export/testing with Docker.
-  - itch.io CI/CD integration.
-- **Planned**:
-  - Fuel management (timer-based depletion/refuel);
-  - multiple weapons (guns/missiles with switching);
-  - multi-level progression;
-  - adjustable difficulty (enemy spawn rates);
-  - enemy AI (pathing/assaults); scoring/HUD.
-  - Scrolling Background to Main Scene for Flying Over Terrain.
-- **Future Milestones**:
-  - Mobile exports,
-  - audio,
-  - particle effects,
+- **Completed (Merged via Recent PRs)**:
+  - Fuel management with timer-based depletion scaled by speed/difficulty (PR #288).
+  - Player movement refactor: Lateral-only controls with acceleration/deceleration,
+    min/max speed clamping (PR #288).
+  - Speed system with progress bar, dynamic color gradients (green normal, yellow
+    caution, red/dark red danger), and low/over-speed blinking warnings
+    (PR #275 and #288).
+  - Rotor SFX/animation with volume sliders and zero-fuel stopping (prior PRs).
+
+- **In Progress (Milestone 8: Advanced Features, Maintenance and Bug Fixes)**:
+  - Refactor player movement integrations
+    (e.g., speed-based fuel drain, UI sync) – Issue #169.
+  - Add procedural random parallax background for speed-based
+    scrolling – Issue #273.
+  - Switch testing from GDUnit4 to GUT for better coverage – Issues #282, #283.
+  - GitHub Wiki for documentation/learning resources – Issue #284.
+  - Version tagging in CI/CD – Issue #285.
+  - Dynamic speed bar color changes (partially merged in PR #275/#288,
+    but full threshold logic ongoing) – Issue #286.
+
+- **Planned (Milestone 9: Expansions and Polish)**:
+  - Mobile exports (Android/iOS) with touch controls and
+    optimizations – Issues #35, #41, #43.
+  - Multiplayer (co-op/competitive) using Godot's High-Level Multiplayer API,
+    with security/testing – Issues #34, #36, #42.
+  - AI enemies with pathfinding (NavigationServer) and behavior
+    trees – Issues #40, #44.
+  - Refactor fuel/speed dictionaries to dedicated StatManager class – Issue #276.
+  - Add signals for fuel, speed, and weapons in player.gd – Issues #278, #279, #280.
+  - Convert hard-coded fuel elements to Godot Resources – Issue #281.
+  - Multi-level progression with scenes – Issue #21.
+  - Optimize performance (e.g., web-specific) – Issues #27, #37.
+  - Asset management/polish, bug fixes, feedback
+    guides – Issues #29, #31, #33, #38, #86, #90.
+  - Audio enhancements (e.g., refactor duplicated SFX volume logic) – Issue #267.
+  - Particle effects for explosions/weapons.
 
 Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milestones).
 

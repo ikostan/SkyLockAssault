@@ -1,5 +1,17 @@
 # test_difficulty_integration.gd (extends GdUnitTestSuite) - FIXED: fire() + bullet timer path/math
+# Updated for speed-scaled fuel depletion (issue: outdated fixed assert)
+
 extends GdUnitTestSuite
+
+const TestHelpers = preload("res://test/test_helpers.gd")
+
+var original_difficulty: float  # Snapshot holder
+
+func before_test() -> void:
+	original_difficulty = Globals.difficulty  # Snapshot before each test
+
+func after_test() -> void:
+	Globals.difficulty = original_difficulty  # Restore after each test
 
 func test_difficulty_scales_fuel_and_weapon() -> void:
 	# Setup: Load main_scene for full context (PlayerStatsPanel for fuel_bar path)
@@ -17,10 +29,13 @@ func test_difficulty_scales_fuel_and_weapon() -> void:
 	var original_difficulty: float = Globals.difficulty
 	Globals.difficulty = 2.0
 
-	# TEST 1: Fuel depletion scales (base 0.5 * 2.0 = 1.0)
+	# TEST 1: Fuel depletion scales (derive from constants)
 	player.fuel["fuel"] = 100.0
+	var normalized_speed: float = player.speed["speed"] / player.MAX_SPEED
+	var expected_depletion: float = player.base_fuel_drain * normalized_speed * Globals.difficulty
 	player._on_fuel_timer_timeout()
-	assert_float(player.fuel["fuel"]).is_equal(99.0)  # Exact (no tolerance needed)
+	var expected_fuel: float = 100.0 - expected_depletion
+	assert_float(player.fuel["fuel"]).is_equal_approx(expected_fuel, 0.01)  # Larger delta for precision
 
 	# TEST 2: Weapon cooldown scales (fire_rate 0.15 * 2.0 = 0.30)
 	weapon.fire()  # FIXED: fire() not _fire(); delegates → BulletFirer.fire() → timer.start(0.30)
