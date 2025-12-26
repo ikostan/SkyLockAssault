@@ -165,19 +165,21 @@ menu during play.
 - **In Progress (Milestone 8: Advanced Features, Maintenance and Bug Fixes)**:
   - Refactor player movement integrations
     (e.g., speed-based fuel drain, UI sync) – Issue #169.
-  - Add procedural random parallax background for speed-based scrolling – Issue #273.
+  - Add procedural random parallax background for speed-based
+    scrolling – Issue #273.
   - Switch testing from GDUnit4 to GUT for better coverage – Issues #282, #283.
   - GitHub Wiki for documentation/learning resources – Issue #284.
   - Version tagging in CI/CD – Issue #285.
-  - Dynamic speed bar color changes
-    (partially merged in PR #275/#288, but full threshold logic ongoing) – Issue #286.
+  - Dynamic speed bar color changes (partially merged in PR #275/#288,
+    but full threshold logic ongoing) – Issue #286.
 
 - **Planned (Milestone 9: Expansions and Polish)**:
   - Mobile exports (Android/iOS) with touch controls and
     optimizations – Issues #35, #41, #43.
   - Multiplayer (co-op/competitive) using Godot's High-Level Multiplayer API,
     with security/testing – Issues #34, #36, #42.
-  - AI enemies with pathfinding (NavigationServer) and behavior trees – Issues #40, #44.
+  - AI enemies with pathfinding (NavigationServer) and behavior
+    trees – Issues #40, #44.
   - Refactor fuel/speed dictionaries to dedicated StatManager class – Issue #276.
   - Add signals for fuel, speed, and weapons in player.gd – Issues #278, #279, #280.
   - Convert hard-coded fuel elements to Godot Resources – Issue #281.
