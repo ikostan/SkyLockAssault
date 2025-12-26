@@ -22,7 +22,7 @@ const DARK_RED: Color = Color(0.5, 0.0, 0.0)
 const BLINK_INTERVAL: float = 0.5  # Seconds between blinks
 
 # Exported vars first (for Inspector editing)
-@export var current_speed: float = 250.0
+# @export var current_speed: float = 250.0
 @export var lateral_speed: float = 250.0
 @export var acceleration: float = 200.0
 @export var deceleration: float = 100.0
@@ -137,7 +137,7 @@ func _ready() -> void:
 	fuel_timer.start()
 
 	speed = {
-		"speed": current_speed,
+		"speed": 250.0,
 		"lateral_speed": lateral_speed,
 		"acceleration": acceleration,
 		"deceleration": deceleration,
