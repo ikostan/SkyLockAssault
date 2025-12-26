@@ -367,7 +367,7 @@ func _on_fuel_timer_timeout() -> void:
 		fuel_timer.stop()
 		rotor_stop(rotor_right, rotor_right_sfx)
 		rotor_stop(rotor_left, rotor_left_sfx)
-	
+
 	# Update UI from the clamped value
 	update_fuel_bar()
 	# Check fuel level and start/stop blinking
@@ -433,7 +433,7 @@ func _toggle_label(param: Dictionary) -> void:
 func _physics_process(_delta: float) -> void:
 	# Left/Right movment
 	var lateral_input: float = Input.get_axis("move_left", "move_right")
-	if lateral_input and  fuel["fuel"] > 0:
+	if lateral_input and fuel["fuel"] > 0:
 		player.velocity.x = lateral_input * speed["lateral_speed"]
 	# Reset lateral velocity if no input
 	else:
