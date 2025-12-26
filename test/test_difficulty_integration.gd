@@ -5,6 +5,14 @@ extends GdUnitTestSuite
 
 const TestHelpers = preload("res://test/test_helpers.gd")
 
+var original_difficulty: float  # Snapshot holder
+
+func before_test() -> void:
+	original_difficulty = Globals.difficulty  # Snapshot before each test
+
+func after_test() -> void:
+	Globals.difficulty = original_difficulty  # Restore after each test
+
 func test_difficulty_scales_fuel_and_weapon() -> void:
 	# Setup: Load main_scene for full context (PlayerStatsPanel for fuel_bar path)
 	var main_scene: Variant = auto_free(load("res://scenes/main_scene.tscn").instantiate())

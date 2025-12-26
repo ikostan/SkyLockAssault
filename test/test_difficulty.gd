@@ -5,6 +5,15 @@ extends GdUnitTestSuite
 
 const TestHelpers = preload("res://test/test_helpers.gd")
 
+var original_difficulty: float  # Snapshot holder
+
+func before_test() -> void:
+	original_difficulty = Globals.difficulty  # Snapshot before each test
+
+func after_test() -> void:
+	Globals.difficulty = original_difficulty  # Restore after each test
+
+
 ## Tests fuel depletion scaling with difficulty levels.
 ## @return: void
 ## Tests fuel depletion scaling with difficulty levels.

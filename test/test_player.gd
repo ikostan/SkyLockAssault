@@ -10,11 +10,13 @@ const TestHelpers = preload("res://test/test_helpers.gd")
 @warning_ignore("unused_parameter")
 @warning_ignore("return_value_discarded")
 
-func before() -> void:
-	Globals.difficulty = 2.0
+var original_difficulty: float  # Snapshot holder
 
-func after() -> void:
-	pass
+func before_test() -> void:
+	original_difficulty = Globals.difficulty  # Snapshot before each test
+
+func after_test() -> void:
+	Globals.difficulty = original_difficulty  # Restore after each test
 
 
 ## Tests shared helper calculates depletion correctly.
