@@ -52,7 +52,7 @@ var speed: Dictionary
 @onready var player_sprite: Sprite2D = $CharacterBody2D/Sprite2D
 @onready var collision_shape: CollisionPolygon2D = $CharacterBody2D/CollisionPolygon2D
 @onready var fuel_bar: ProgressBar = $"../PlayerStatsPanel/Stats/Fuel/FuelBar"
-@onready var fuel_bar_fill_style: StyleBoxFlat
+@onready var fuel_bar_fill_style: StyleBoxFlat = fuel_bar.get_theme_stylebox("fill")
 @onready var fuel_label: Label = $"../PlayerStatsPanel/Stats/Fuel/FuelLabel"
 @onready var fuel_label_blink_timer: Timer = $"../PlayerStatsPanel/Stats/Fuel/FuelLabel/BlinkTimer"
 @onready var fuel_timer: Timer = $FuelTimer
@@ -61,8 +61,7 @@ var speed_label_blink_timer: Timer = $"../PlayerStatsPanel/Stats/Speed/SpeedLabe
 @onready var speed_label: Label = $"../PlayerStatsPanel/Stats/Speed/SpeedLabel"
 # Get the fill style
 @onready var speed_bar: ProgressBar = $"../PlayerStatsPanel/Stats/Speed/SpeedBar"
-@onready var speed_bar_fill_style: StyleBoxFlat
-# In plane.gd (or main player script) - central input
+@onready var speed_bar_fill_style: StyleBoxFlat = speed_bar.get_theme_stylebox("fill")
 @onready var weapon: Node2D = $CharacterBody2D/Weapon  # Path to your WeaponManager node
 
 

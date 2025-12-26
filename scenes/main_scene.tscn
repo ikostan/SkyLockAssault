@@ -117,7 +117,6 @@ theme_override_styles/background = SubResource("StyleBoxFlat_gubc5")
 theme_override_styles/fill = SubResource("StyleBoxFlat_rt2n2")
 max_value = 713.0
 step = 1.0
-show_percentage = false
 
 [node name="Player" parent="." instance=ExtResource("2_pw63i")]
 
