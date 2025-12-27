@@ -67,8 +67,12 @@ func _ready() -> void:
 	# Connect signals to type-specific handlers (change: separate from JS callbacks)
 	log_lvl_option.item_selected.connect(_on_log_level_item_selected)
 	difficulty_slider.value_changed.connect(_on_difficulty_value_changed)
-	options_back_button.pressed.connect(_on_options_back_button_pressed)
-	audio_settings_button.pressed.connect(_on_audio_settings_button_pressed)
+
+	if not options_back_button.pressed.is_connected(_on_options_back_button_pressed):
+		options_back_button.pressed.connect(_on_options_back_button_pressed)
+
+	if not audio_settings_button.pressed.is_connected(_on_audio_settings_button_pressed):
+		audio_settings_button.pressed.connect(_on_audio_settings_button_pressed)
 
 	# Set initial difficulty label (sync with global)
 	difficulty_slider.value = Globals.difficulty
