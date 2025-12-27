@@ -18,10 +18,8 @@ func before_test() -> void:
 	## :rtype: void
 	slider = auto_free(VolumeSlider.new())
 	slider.bus_name = "Master"  # Test with Master
-	mock_audio_manager = auto_free(Node.new())
-	mock_audio_manager.master_volume = 0.0
-	mock_audio_manager.BUS_MASTER = "Master"
-	mock_audio_manager._save_volumes = func() -> void: pass
+	mock_audio_manager = auto_free(load("res://scripts/audio_manager.gd").new())
+	mock_globals = auto_free(load("res://scripts/globals.gd").new())
 	# Assume AudioServer mocked or use real for bus_index
 	add_child(slider)  # Trigger _ready
 

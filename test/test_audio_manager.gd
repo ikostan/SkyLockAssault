@@ -15,7 +15,7 @@ func before_test() -> void:
 	## Per-test setup: Instantiate manager, override path if needed.
 	##
 	## :rtype: void
-	manager = auto_free(Node.new())
+	manager = auto_free(load("res://scripts/audio_manager.gd").new())
 	# Extend with script or call funcs directly
 	# For full, load script: manager.set_script(load("res://scripts/audio_manager.gd"))
 

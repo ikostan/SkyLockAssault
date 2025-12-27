@@ -15,7 +15,7 @@ func before() -> void:
 	## Global setup: Mock Globals and instantiate menu.
 	##
 	## :rtype: void
-	mock_globals = auto_free(Node.new())
+	mock_globals = auto_free(load("res://scripts/globals.gd").new())
 	mock_globals.hidden_menus = []
 	mock_globals.log_message = func(msg: String, lvl: int) -> void: pass  # Mock log
 	mock_globals.LogLevel = {DEBUG = 0, WARNING = 1}  # Mock enum
@@ -54,7 +54,7 @@ func test_back_button_pops_and_frees() -> void:
 	## Tests back handler pops menu, shows prev, frees.
 	##
 	## :rtype: void
-	var mock_prev: Node = auto_free(Node.new())
+	var mock_prev: Control = auto_free(Control.new())
 	mock_prev.visible = false
 	mock_globals.hidden_menus.push_back(mock_prev)
 	
@@ -71,7 +71,7 @@ func test_tree_exited_restores_if_stuck() -> void:
 	## Tests unexpected exit restores menu.
 	##
 	## :rtype: void
-	var mock_prev: Node = auto_free(Node.new())
+	var mock_prev: Control = auto_free(Control.new())
 	mock_prev.visible = false
 	mock_globals.hidden_menus.push_back(mock_prev)
 	
