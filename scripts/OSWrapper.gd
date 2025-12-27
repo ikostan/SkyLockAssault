@@ -1,7 +1,7 @@
 ## OSWrapper.gd
 ## Wrapper for OS singleton methods to enable mocking in unit tests.
 ##
-## Provides instance methods mirroring OS static/singleton methods.
+## Provides instance methods mirroring OS static methods.
 ##
 ## Use this instead of direct OS calls for testability.
 
@@ -9,9 +9,8 @@ class_name OSWrapper
 
 extends RefCounted
 
-
 func has_feature(feature: String) -> bool:
-	## Checks if the OS has a specific feature.
+	## Checks if the current platform has a specific feature.
 	##
 	## Mirrors OS.has_feature.
 	##

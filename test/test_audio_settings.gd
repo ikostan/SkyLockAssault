@@ -8,34 +8,58 @@
 extends GdUnitTestSuite
 
 var audio_menu: Control
+var mock_js_bridge: Variant  # GdUnit mock for JavaScriptBridgeWrapper
+var mock_os: Variant  # GdUnit mock for OSWrapper
 
 
 func before_test() -> void:
-	## Per-test setup: Instantiate fresh menu, reset Globals state.
+	## Per-test setup: Mock wrappers, instantiate fresh menu, reset Globals state.
 	##
 	## :rtype: void
 	Globals.hidden_menus = []  # Reset stack
+	
+	# Mock OSWrapper
+	mock_os = mock(OSWrapper)
+	
+	# Mock JavaScriptBridgeWrapper
+	mock_js_bridge = mock(JavaScriptBridgeWrapper)
+	do_return(null).on(mock_js_bridge).eval(GdUnitArgumentMatchers.any(), GdUnitArgumentMatchers.any())  # No-op for eval
+	do_return(null).on(mock_js_bridge).create_callback(GdUnitArgumentMatchers.any())  # No-op for callbacks
+	
 	audio_menu = auto_free(load("res://scenes/audio_settings.tscn").instantiate())
+	audio_menu.os_wrapper = mock_os
+	audio_menu.js_bridge_wrapper = mock_js_bridge
 	add_child(audio_menu)  # Enter tree to trigger _ready
 
 
 func after_test() -> void:
-	## Per-test cleanup: Free menu, reset Globals.
+	## Per-test cleanup: Free menu, reset Globals and mocks.
 	##
 	## :rtype: void
 	if is_instance_valid(audio_menu):
 		audio_menu.queue_free()
 	Globals.hidden_menus = []  # Clean up
+	reset(mock_os)
+	reset(mock_js_bridge)
 
 
 func test_ready_connects_signals() -> void:
-	## Tests _ready connects signals and sets mode.
+	## Tests _ready connects signals and sets mode, with web mocks.
 	##
 	## :rtype: void
+	# Test non-web path
+	do_return(false).on(mock_os).has_feature("web")
+	audio_menu._ready()  # Re-call if needed, but since in before_test, already run
 	assert_bool(audio_menu.audio_back_button.pressed.is_connected(audio_menu._on_audio_back_button_pressed)).is_true()
 	assert_bool(audio_menu.tree_exited.is_connected(audio_menu._on_tree_exited)).is_true()
 	assert_int(audio_menu.process_mode).is_equal(Node.PROCESS_MODE_ALWAYS)
-# Mock web feature for full coverage (requires spy/mock on OS/JavaScriptBridge)
+	
+	# Test web path
+	do_return(true).on(mock_os).has_feature("web")
+	audio_menu._ready()
+	verify(mock_js_bridge, 1).eval(GdUnitArgumentMatchers.by_type(TYPE_STRING), true)  # For show overlays
+	verify(mock_js_bridge, 1).get_interface("window")
+	verify(mock_js_bridge, 1).create_callback(GdUnitArgumentMatchers.any())  # For backPressed
 
 
 func test_back_button_pops_and_frees() -> void:

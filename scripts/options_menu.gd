@@ -13,6 +13,13 @@
 
 extends CanvasLayer
 
+## The wrappers (like JavaScriptBridgeWrapper and presumably OSWrapper)
+## are designed to abstract away direct singleton calls, making the code
+## easier to unit test by allowing mocks/stubs without relying on the
+## actual engine singletons.
+var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
+var os_wrapper: OSWrapper = OSWrapper.new()  # Assuming OSWrapper is defined similarly
+
 # Explicit mapping from display names to enum values
 var log_level_display_to_enum: Dictionary = {
 	"DEBUG": Globals.LogLevel.DEBUG,
@@ -82,33 +89,27 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignore pause
 	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
 
-	if OS.has_feature("web"):
-		# Toggle overlays visible (layout only; opacity=0)
-		(
-			JavaScriptBridge
-			. eval(
-				"""
-			document.getElementById('log-level-select').style.display = 'block';
-			document.getElementById('difficulty-slider').style.display = 'block';
-			document.getElementById('options-back-button').style.display = 'block';
-		""",
-				true
-			)
-		)  # 'true' = allow JS execution in editor (for testing)
+	if os_wrapper.has_feature("web"):
+		# Toggle overlays...
+		js_bridge_wrapper.eval("""
+	        document.getElementById('log-level-select').style.display = 'block';
+	        document.getElementById('difficulty-slider').style.display = 'block';
+	        document.getElementById('options-back-button').style.display = 'block';
+		""", true)
 
 		# Expose callbacks to JS (store refs to prevent GC)
-		var js_window: JavaScriptObject = JavaScriptBridge.get_interface("window")
-		_change_log_level_cb = JavaScriptBridge.create_callback(
+		var js_window: JavaScriptObject = js_bridge_wrapper.get_interface("window")
+		_change_log_level_cb = js_bridge_wrapper.create_callback(
 			Callable(self, "_on_change_log_level_js")
 		)
 		js_window.changeLogLevel = _change_log_level_cb
 
-		_change_difficulty_cb = JavaScriptBridge.create_callback(
+		_change_difficulty_cb = js_bridge_wrapper.create_callback(
 			Callable(self, "_on_change_difficulty_js")
 		)
 		js_window.changeDifficulty = _change_difficulty_cb
 
-		_options_back_button_pressed_cb = JavaScriptBridge.create_callback(
+		_options_back_button_pressed_cb = js_bridge_wrapper.create_callback(
 			Callable(self, "_on_options_back_button_pressed_js")
 		)
 		js_window.backPressed = _options_back_button_pressed_cb
@@ -247,18 +248,14 @@ func _on_options_back_button_pressed() -> void:
 	Globals.log_message("Options Back button pressed.", Globals.LogLevel.DEBUG)
 	_teardown()  # Centralized cleanup
 
-	if OS.has_feature("web"):
+	if os_wrapper.has_feature("web"):
 		# Hide options overlays after closing menu
-		(
-			JavaScriptBridge
-			. eval(
-				"""
-			document.getElementById('log-level-select').style.display = 'none';
-			document.getElementById('difficulty-slider').style.display = 'none';
-			document.getElementById('options-back-button').style.display = 'none';
-		"""
-			)
-		)
+		js_bridge_wrapper.eval("""
+	        document.getElementById('log-level-select').style.display = 'none';
+	        document.getElementById('difficulty-slider').style.display = 'none';
+	        document.getElementById('options-back-button').style.display = 'none';
+		""")
+
 	Globals.options_open = false  # Reset flag first
 	Globals.options_instance = null  # Optional: Clear ref
 	queue_free()
