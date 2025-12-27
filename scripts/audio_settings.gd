@@ -11,6 +11,7 @@
 ## :vartype _audio_back_button_pressed_cb: Variant
 ## :vartype _previous_back_pressed_cb: Variant
 ## :vartype audio_back_button: Button
+## :vartype _intentional_exit: bool
 
 extends Control
 
@@ -21,6 +22,7 @@ var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
 # local
 var _audio_back_button_pressed_cb: Variant
 var _previous_back_pressed_cb: Variant
+var _intentional_exit: bool = false
 
 @onready var audio_back_button: Button = $Panel/OptionsVBoxContainer/AudioBackButton
 
@@ -80,6 +82,7 @@ func _on_audio_back_button_pressed() -> void:
 				"""
 			)
 		)
+	_intentional_exit = true
 	queue_free()
 
 
@@ -104,6 +107,8 @@ func _on_tree_exited() -> void:
 	## Restores previous menu if not already handled.
 	##
 	## :rtype: void
+	if _intentional_exit:
+		return
 	if os_wrapper.has_feature("web"):
 		js_window.backPressed = _previous_back_pressed_cb  # Restore previous callback
 		(
