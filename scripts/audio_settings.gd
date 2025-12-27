@@ -13,14 +13,15 @@
 
 extends Control
 
+# global
 var js_window: JavaScriptObject
+var os_wrapper: OSWrapper = OSWrapper.new()
+var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
+# local
 var _audio_back_button_pressed_cb: JavaScriptObject
 var _previous_back_pressed_cb: JavaScriptObject
 
 @onready var audio_back_button: Button = $Panel/OptionsVBoxContainer/AudioBackButton
-
-var os_wrapper: OSWrapper = OSWrapper.new()
-var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
 
 
 func _ready() -> void:
