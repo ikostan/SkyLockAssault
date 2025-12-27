@@ -29,7 +29,9 @@ func _load_volumes() -> void:
 	var err: int = config.load("user://settings.cfg")
 	if err != OK:
 		if err != ERR_FILE_NOT_FOUND:
-			Globals.log_message("Failed to load settings config: " + str(err), Globals.LogLevel.ERROR)
+			Globals.log_message(
+				"Failed to load settings config: " + str(err), Globals.LogLevel.ERROR
+			)
 		return  # Use defaults if not found or error
 
 	master_volume = config.get_value("audio", "master_volume", master_volume)
@@ -47,7 +49,9 @@ func _save_volumes() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	var err: int = config.load("user://settings.cfg")  # Load existing to preserve other sections
 	if err != OK and err != ERR_FILE_NOT_FOUND:
-		Globals.log_message("Failed to load settings config for save: " + str(err), Globals.LogLevel.ERROR)
+		Globals.log_message(
+			"Failed to load settings config for save: " + str(err), Globals.LogLevel.ERROR
+		)
 		return
 
 	config.set_value("audio", "master_volume", master_volume)
@@ -76,7 +80,8 @@ func _apply_volume_to_bus(bus_name: String, volume: float) -> void:
 	if bus_idx != -1:
 		AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
 		Globals.log_message(
-			"Applied loaded " + bus_name + " volume to AudioServer: " + str(volume), Globals.LogLevel.DEBUG
+			"Applied loaded " + bus_name + " volume to AudioServer: " + str(volume),
+			Globals.LogLevel.DEBUG
 		)
 	else:
 		Globals.log_message(bus_name + " audio bus not found!", Globals.LogLevel.ERROR)

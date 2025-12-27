@@ -38,7 +38,8 @@ func _on_value_changed(value: float) -> void:
 			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
 		)
 		Globals.log_message(
-			"Master Volume Level in AudioManager: " + str(AudioManager.master_volume), Globals.LogLevel.DEBUG
+			"Master Volume Level in AudioManager: " + str(AudioManager.master_volume),
+			Globals.LogLevel.DEBUG
 		)
 	# Music volume
 	if bus_name == AudioManager.BUS_MUSIC:
@@ -47,7 +48,8 @@ func _on_value_changed(value: float) -> void:
 			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
 		)
 		Globals.log_message(
-			"Music Volume Level in AudioManager: " + str(AudioManager.music_volume), Globals.LogLevel.DEBUG
+			"Music Volume Level in AudioManager: " + str(AudioManager.music_volume),
+			Globals.LogLevel.DEBUG
 		)
 	# SFX volume
 	if bus_name == AudioManager.BUS_SFX:
@@ -56,7 +58,8 @@ func _on_value_changed(value: float) -> void:
 			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
 		)
 		Globals.log_message(
-			"SFX Volume Level in AudioManager: " + str(AudioManager.sfx_volume), Globals.LogLevel.DEBUG
+			"SFX Volume Level in AudioManager: " + str(AudioManager.sfx_volume),
+			Globals.LogLevel.DEBUG
 		)
 	# Rotors volume
 	if bus_name == AudioManager.BUS_SFX_ROTORS:
@@ -65,7 +68,8 @@ func _on_value_changed(value: float) -> void:
 			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
 		)
 		Globals.log_message(
-			"Rotors Volume Level in AudioManager: " + str(AudioManager.rotors_volume), Globals.LogLevel.DEBUG
+			"Rotors Volume Level in AudioManager: " + str(AudioManager.rotors_volume),
+			Globals.LogLevel.DEBUG
 		)
 
 	# New: Start/restart debounce timer instead of immediate save

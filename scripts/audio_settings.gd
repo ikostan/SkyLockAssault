@@ -28,11 +28,19 @@ func _ready() -> void:
 	Globals.log_message("Audio menu loaded.", Globals.LogLevel.DEBUG)
 
 	if OS.has_feature("web"):
-		JavaScriptBridge.eval("""
+		(
+			JavaScriptBridge
+			. eval(
+				"""
             document.getElementById('audio-back-button').style.display = 'block';
-		""", true)
+		""",
+				true
+			)
+		)
 		var js_window: JavaScriptObject = JavaScriptBridge.get_interface("window")
-		_audio_back_button_pressed_cb = JavaScriptBridge.create_callback(Callable(self, "_on_audio_back_button_pressed_js"))
+		_audio_back_button_pressed_cb = JavaScriptBridge.create_callback(
+			Callable(self, "_on_audio_back_button_pressed_js")
+		)
 		js_window.backPressed = _audio_back_button_pressed_cb
 
 
@@ -51,9 +59,14 @@ func _on_audio_back_button_pressed() -> void:
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 	if OS.has_feature("web"):
-		JavaScriptBridge.eval("""
+		(
+			JavaScriptBridge
+			. eval(
+				"""
             document.getElementById('audio-back-button').style.display = 'none';
-		""")
+		"""
+			)
+		)
 	queue_free()
 
 
@@ -78,4 +91,6 @@ func _on_tree_exited() -> void:
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
 		if is_instance_valid(prev_menu):
 			prev_menu.visible = true
-			Globals.log_message("Audio menu exited unexpectedly, restored previous menu.", Globals.LogLevel.WARNING)
+			Globals.log_message(
+				"Audio menu exited unexpectedly, restored previous menu.", Globals.LogLevel.WARNING
+			)

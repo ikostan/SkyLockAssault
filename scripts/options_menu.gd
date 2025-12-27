@@ -104,7 +104,9 @@ func _ready() -> void:
 		)
 		js_window.changeDifficulty = _change_difficulty_cb
 
-		_options_back_button_pressed_cb = JavaScriptBridge.create_callback(Callable(self, "_on_options_back_button_pressed_js"))
+		_options_back_button_pressed_cb = JavaScriptBridge.create_callback(
+			Callable(self, "_on_options_back_button_pressed_js")
+		)
 		js_window.backPressed = _options_back_button_pressed_cb
 		Globals.log_message(
 			"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
