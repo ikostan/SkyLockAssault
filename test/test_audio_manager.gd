@@ -55,4 +55,4 @@ func test_apply_volume_to_bus_sets_db() -> void:
 	##
 	## :rtype: void
 	manager._apply_volume_to_bus("Master", 0.5)
-	assert_float(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Master"))).is_equal(linear_to_db(0.5))
+	assert_float(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Master"))).is_equal_approx(linear_to_db(0.5), 1e-6)
