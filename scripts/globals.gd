@@ -52,7 +52,9 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var config: ConfigFile = ConfigFile.new()
 	var err: int = config.load(path)  # Load existing to preserve other sections
 	if err != OK and err != ERR_FILE_NOT_FOUND:
-		log_message("Failed to load settings from " + path + " for save: " + str(err), LogLevel.ERROR)
+		log_message(
+			"Failed to load settings from " + path + " for save: " + str(err), LogLevel.ERROR
+		)
 		return
 
 	config.set_value("Settings", "log_level", current_log_level)
