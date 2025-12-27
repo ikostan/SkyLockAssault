@@ -64,12 +64,12 @@ func _on_options_exited_unexpectedly() -> void:
 	## :rtype: void
 	if options_open:  # Guard: Only log if it was still "open" (unexpected exit)
 		log_message("Options instance exited unexpectedly—resetting flag.", LogLevel.WARNING)
-	
+
 	if not hidden_menus.is_empty():
 		var prev_menu: Node = hidden_menus.pop_back()
 		if is_instance_valid(prev_menu):
 			prev_menu.visible = true
-	
+
 	options_open = false
 	options_instance = null
 
