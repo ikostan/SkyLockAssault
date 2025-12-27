@@ -32,40 +32,40 @@ func _ready() -> void:
 func _on_value_changed(value: float) -> void:
 	AudioServer.set_bus_volume_db(bus_index, linear_to_db(value))
 	# Master volume
-	if bus_name == Globals.BUS_MASTER:
-		Globals.master_volume = value
+	if bus_name == AudioManager.BUS_MASTER:
+		AudioManager.master_volume = value
 		Globals.log_message(
 			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
 		)
 		Globals.log_message(
-			"Master Volume Level in Globals: " + str(Globals.master_volume), Globals.LogLevel.DEBUG
+			"Master Volume Level in AudioManager: " + str(AudioManager.master_volume), Globals.LogLevel.DEBUG
 		)
 	# Music volume
-	if bus_name == Globals.BUS_MUSIC:
-		Globals.music_volume = value
+	if bus_name == AudioManager.BUS_MUSIC:
+		AudioManager.music_volume = value
 		Globals.log_message(
 			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
 		)
 		Globals.log_message(
-			"Music Volume Level in Globals: " + str(Globals.music_volume), Globals.LogLevel.DEBUG
+			"Music Volume Level in AudioManager: " + str(AudioManager.music_volume), Globals.LogLevel.DEBUG
 		)
 	# SFX volume
-	if bus_name == Globals.BUS_SFX:
-		Globals.sfx_volume = value
+	if bus_name == AudioManager.BUS_SFX:
+		AudioManager.sfx_volume = value
 		Globals.log_message(
 			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
 		)
 		Globals.log_message(
-			"SFX Volume Level in Globals: " + str(Globals.sfx_volume), Globals.LogLevel.DEBUG
+			"SFX Volume Level in AudioManager: " + str(AudioManager.sfx_volume), Globals.LogLevel.DEBUG
 		)
 	# Rotors volume
-	if bus_name == Globals.BUS_SFX_ROTORS:
-		Globals.rotors_volume = value
+	if bus_name == AudioManager.BUS_SFX_ROTORS:
+		AudioManager.rotors_volume = value
 		Globals.log_message(
 			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
 		)
 		Globals.log_message(
-			"Rotors Volume Level in Globals: " + str(Globals.rotors_volume), Globals.LogLevel.DEBUG
+			"Rotors Volume Level in AudioManager: " + str(AudioManager.rotors_volume), Globals.LogLevel.DEBUG
 		)
 
 	# New: Start/restart debounce timer instead of immediate save
