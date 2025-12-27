@@ -25,11 +25,11 @@ func before_test() -> void:
 	##
 	## :rtype: void
 	# Mock OS.has_feature("web") to true
-	mock_os = mock(OS)
+	mock_os = mock("OS")
 	do_return(true).on(mock_os).has_feature("web")
 
 	# Mock JavaScriptBridge
-	mock_js_bridge = mock(JavaScriptBridge)
+	mock_js_bridge = mock("JavaScriptBridge")
 	mock_js_window = {"backPressed": null}  # Initial mock window
 	do_return(mock_js_window).on(mock_js_bridge).get_interface("window")
 	do_return(null).on(mock_js_bridge).eval(GdUnitArgumentMatchers.any(), GdUnitArgumentMatchers.any())  # No-op for eval
