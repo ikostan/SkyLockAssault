@@ -91,11 +91,17 @@ func _ready() -> void:
 
 	if os_wrapper.has_feature("web"):
 		# Toggle overlays...
-		js_bridge_wrapper.eval("""
+		(
+			js_bridge_wrapper
+			. eval(
+				"""
 	        document.getElementById('log-level-select').style.display = 'block';
 	        document.getElementById('difficulty-slider').style.display = 'block';
 	        document.getElementById('options-back-button').style.display = 'block';
-		""", true)
+		""",
+				true
+			)
+		)
 
 		# Expose callbacks to JS (store refs to prevent GC)
 		var js_window: JavaScriptObject = js_bridge_wrapper.get_interface("window")
@@ -250,11 +256,16 @@ func _on_options_back_button_pressed() -> void:
 
 	if os_wrapper.has_feature("web"):
 		# Hide options overlays after closing menu
-		js_bridge_wrapper.eval("""
+		(
+			js_bridge_wrapper
+			. eval(
+				"""
 	        document.getElementById('log-level-select').style.display = 'none';
 	        document.getElementById('difficulty-slider').style.display = 'none';
 	        document.getElementById('options-back-button').style.display = 'none';
-		""")
+		"""
+			)
+		)
 
 	Globals.options_open = false  # Reset flag first
 	Globals.options_instance = null  # Optional: Clear ref

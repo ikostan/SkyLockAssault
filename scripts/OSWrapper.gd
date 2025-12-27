@@ -9,6 +9,7 @@ class_name OSWrapper
 
 extends RefCounted
 
+
 func has_feature(feature: String) -> bool:
 	## Checks if the current platform has a specific feature.
 	##
