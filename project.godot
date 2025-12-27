@@ -24,6 +24,7 @@ general/default_playback_type.web=0
 Globals="*res://scripts/globals.gd"
 Settings="*res://scripts/settings.gd"
 AudioManager="*res://scripts/audio_manager.gd"
+AudioConstants="*res://scripts/audio_constants.gd"
 
 [debug]
 

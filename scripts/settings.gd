@@ -194,6 +194,13 @@ func _deserialize_and_add(action: String, serialized: String) -> void:
 ## :rtype: void
 func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
 	var config: ConfigFile = ConfigFile.new()
+	var err: int = config.load(path)  # Load existing to preserve other sections
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		Globals.log_message(
+			"Failed to load input config for save: " + str(err), Globals.LogLevel.ERROR
+		)
+		return
+
 	for action: String in actions:
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
 		var serials: Array[String] = []
@@ -202,4 +209,9 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			if not s.is_empty():
 				serials.append(s)
 		config.set_value("input", action, serials)  # Set even if empty
-	config.save(path)
+
+	err = config.save(path)
+	if err != OK:
+		Globals.log_message("Failed to save input mappings: " + str(err), Globals.LogLevel.ERROR)
+	else:
+		Globals.log_message("Input mappings saved.", Globals.LogLevel.DEBUG)

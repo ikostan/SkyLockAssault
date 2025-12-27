@@ -49,11 +49,20 @@ func _load_settings(config: ConfigFile = ConfigFile.new()) -> void:
 # New: Add _save_settings to globals.gd (move from options_menu.gd if needed)
 func _save_settings() -> void:
 	var config: ConfigFile = ConfigFile.new()
+	var err: int = config.load("user://settings.cfg")  # Load existing to preserve other sections
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		log_message(
+			"Failed to load settings config for save: " + str(err), LogLevel.ERROR
+		)
+		return
 
 	config.set_value("Settings", "log_level", current_log_level)
 	config.set_value("Settings", "difficulty", difficulty)
-	config.save("user://settings.cfg")
-	log_message("Settings saved.", LogLevel.DEBUG)
+	err = config.save("user://settings.cfg")
+	if err != OK:
+		log_message("Failed to save settings: " + str(err), LogLevel.ERROR)
+	else:
+		log_message("Settings saved.", LogLevel.DEBUG)
 
 
 func _on_options_exited_unexpectedly() -> void:

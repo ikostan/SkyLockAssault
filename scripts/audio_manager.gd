@@ -5,13 +5,6 @@
 
 extends Node
 
-# Audio bus constants: Use these everywhere instead of hard-coded strings.
-# This prevents typos and makes renaming buses easy.
-const BUS_MASTER: String = "Master"
-const BUS_MUSIC: String = "Music"
-const BUS_SFX: String = "SFX"
-const BUS_SFX_ROTORS: String = "SFX_Rotors"
-
 @export var master_volume: float = 1.0
 @export var music_volume: float = 1.0
 @export var sfx_volume: float = 1.0
@@ -68,10 +61,10 @@ func _save_volumes() -> void:
 
 # Apply all loaded volumes to AudioServer buses
 func _apply_all_volumes() -> void:
-	_apply_volume_to_bus(BUS_MASTER, master_volume)
-	_apply_volume_to_bus(BUS_MUSIC, music_volume)
-	_apply_volume_to_bus(BUS_SFX, sfx_volume)
-	_apply_volume_to_bus(BUS_SFX_ROTORS, rotors_volume)
+	_apply_volume_to_bus(AudioConstants.BUS_MASTER, master_volume)
+	_apply_volume_to_bus(AudioConstants.BUS_MUSIC, music_volume)
+	_apply_volume_to_bus(AudioConstants.BUS_SFX, sfx_volume)
+	_apply_volume_to_bus(AudioConstants.BUS_SFX_ROTORS, rotors_volume)
 
 
 # Helper to apply a single volume to a named bus

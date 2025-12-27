@@ -32,7 +32,7 @@ func _ready() -> void:
 func _on_value_changed(value: float) -> void:
 	AudioServer.set_bus_volume_db(bus_index, linear_to_db(value))
 	# Master volume
-	if bus_name == AudioManager.BUS_MASTER:
+	if bus_name == AudioConstants.BUS_MASTER:
 		AudioManager.master_volume = value
 		Globals.log_message(
 			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
@@ -42,7 +42,7 @@ func _on_value_changed(value: float) -> void:
 			Globals.LogLevel.DEBUG
 		)
 	# Music volume
-	if bus_name == AudioManager.BUS_MUSIC:
+	if bus_name == AudioConstants.BUS_MUSIC:
 		AudioManager.music_volume = value
 		Globals.log_message(
 			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
@@ -52,7 +52,7 @@ func _on_value_changed(value: float) -> void:
 			Globals.LogLevel.DEBUG
 		)
 	# SFX volume
-	if bus_name == AudioManager.BUS_SFX:
+	if bus_name == AudioConstants.BUS_SFX:
 		AudioManager.sfx_volume = value
 		Globals.log_message(
 			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
@@ -62,7 +62,7 @@ func _on_value_changed(value: float) -> void:
 			Globals.LogLevel.DEBUG
 		)
 	# Rotors volume
-	if bus_name == AudioManager.BUS_SFX_ROTORS:
+	if bus_name == AudioConstants.BUS_SFX_ROTORS:
 		AudioManager.rotors_volume = value
 		Globals.log_message(
 			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
@@ -82,5 +82,5 @@ func _on_value_changed(value: float) -> void:
 
 # New: Called on timer timeout—perform the batched save
 func _on_debounce_timeout() -> void:
-	Globals._save_settings()
+	AudioManager._save_settings()
 	Globals.log_message("Debounced settings save triggered.", Globals.LogLevel.DEBUG)
