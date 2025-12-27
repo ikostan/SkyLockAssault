@@ -1,4 +1,4 @@
-## audio_settings.gd"
+## audio_settings.gd
 ## Audio Settings Script
 ##
 ## Handles back navigation in audio menu.
