@@ -8,20 +8,23 @@
 extends GdUnitTestSuite
 
 var slider: VolumeSlider
-var mock_audio_manager: Node  # Mock for AudioManager
-var mock_globals: Node  # Mock for Globals
 
 
 func before_test() -> void:
-	## Per-test setup: Instantiate slider, mock deps.
+	## Per-test setup: Instantiate slider, reset state.
 	##
 	## :rtype: void
 	slider = auto_free(VolumeSlider.new())
 	slider.bus_name = "Master"  # Test with Master
-	mock_audio_manager = auto_free(load("res://scripts/audio_manager.gd").new())
-	mock_globals = auto_free(load("res://scripts/globals.gd").new())
-	# Assume AudioServer mocked or use real for bus_index
 	add_child(slider)  # Trigger _ready
+	AudioManager.master_volume = 1.0  # Reset for consistent test
+
+
+func after_test() -> void:
+	## Cleanup: Reset volume to avoid pollution.
+	##
+	## :rtype: void
+	AudioManager.master_volume = 1.0
 
 
 func test_ready_sets_value_and_timer() -> void:
@@ -44,19 +47,18 @@ func test_value_changed_updates_volume_and_starts_timer() -> void:
 	slider._on_value_changed(test_value)
 	
 	assert_float(AudioServer.get_bus_volume_db(slider.bus_index)).is_equal_approx(linear_to_db(test_value), 0.0001)
-	assert_float(mock_audio_manager.master_volume).is_equal(test_value)
+	assert_float(AudioManager.master_volume).is_equal(test_value)
 	assert_bool(not slider.save_debounce_timer.is_stopped()).is_true()  # Started
 
 
-# Better version for the test:
 func test_debounce_timeout_saves() -> void:
 	## Tests timeout calls save, logs.
 	##
 	## :rtype: void
-	var spied_manager: Node = spy(mock_audio_manager)  # Spy the object
-	var spied_globals: Node = spy(mock_globals)  # Spy for log
+	var spied_manager: Node = spy(AudioManager)
+	var spied_globals: Node = spy(Globals)
 
 	slider._on_debounce_timeout()
 
 	verify(spied_manager, 1)._save_volumes()  # Verify method called once
-	verify(spied_globals, 1).log_message("Debounced audio settings save triggered.", mock_globals.LogLevel.DEBUG)
+	verify(spied_globals, 1).log_message("Debounced audio settings save triggered.", Globals.LogLevel.DEBUG)
