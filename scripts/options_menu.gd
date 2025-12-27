@@ -259,6 +259,8 @@ func _on_options_back_button_pressed() -> void:
 		"""
 			)
 		)
+	Globals.options_open = false  # Reset flag first
+	Globals.options_instance = null  # Optional: Clear ref
 	queue_free()
 
 
