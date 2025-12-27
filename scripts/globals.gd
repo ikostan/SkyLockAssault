@@ -27,8 +27,9 @@ func _ready() -> void:
 
 # Add these new functions (for consistency with log level persistence)
 # New: Optional param (default new; fixes error)
-func _load_settings(config: ConfigFile = ConfigFile.new()) -> void:
-	var err := config.load("user://settings.cfg")
+func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
+	var config: ConfigFile = ConfigFile.new()
+	var err := config.load(path)
 	if err == OK:
 		current_log_level = config.get_value("Settings", "log_level", LogLevel.INFO)
 		log_message("Loaded saved log level: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
@@ -43,20 +44,20 @@ func _load_settings(config: ConfigFile = ConfigFile.new()) -> void:
 			difficulty = clamp(difficulty, 0.5, 2.0)
 		log_message("Loaded saved difficulty: " + str(difficulty), LogLevel.DEBUG)
 	else:
-		log_message("No saved settings found—using default.", LogLevel.DEBUG)
+		log_message("No saved settings found at " + path + "—using default.", LogLevel.DEBUG)
 
 
 # New: Add _save_settings to globals.gd (move from options_menu.gd if needed)
-func _save_settings() -> void:
+func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var config: ConfigFile = ConfigFile.new()
-	var err: int = config.load("user://settings.cfg")  # Load existing to preserve other sections
+	var err: int = config.load(path)  # Load existing to preserve other sections
 	if err != OK and err != ERR_FILE_NOT_FOUND:
-		log_message("Failed to load settings config for save: " + str(err), LogLevel.ERROR)
+		log_message("Failed to load settings from " + path + " for save: " + str(err), LogLevel.ERROR)
 		return
 
 	config.set_value("Settings", "log_level", current_log_level)
 	config.set_value("Settings", "difficulty", difficulty)
-	err = config.save("user://settings.cfg")
+	err = config.save(path)
 	if err != OK:
 		log_message("Failed to save settings: " + str(err), LogLevel.ERROR)
 	else:

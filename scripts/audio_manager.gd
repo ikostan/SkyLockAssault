@@ -17,9 +17,9 @@ func _ready() -> void:
 
 
 # Load volumes from config (shared with other settings)
-func _load_volumes() -> void:
+func _load_volumes(path: String = Settings.CONFIG_PATH) -> void:
 	var config: ConfigFile = ConfigFile.new()
-	var err: int = config.load("user://settings.cfg")
+	var err: int = config.load(path)
 	if err != OK:
 		if err != ERR_FILE_NOT_FOUND:
 			Globals.log_message(
@@ -38,9 +38,9 @@ func _load_volumes() -> void:
 
 
 # Save volumes to config (shared with other settings)
-func _save_volumes() -> void:
+func _save_volumes(path: String = Settings.CONFIG_PATH) -> void:
 	var config: ConfigFile = ConfigFile.new()
-	var err: int = config.load("user://settings.cfg")  # Load existing to preserve other sections
+	var err: int = config.load(path)  # Load existing to preserve other sections
 	if err != OK and err != ERR_FILE_NOT_FOUND:
 		Globals.log_message(
 			"Failed to load settings config for save: " + str(err), Globals.LogLevel.ERROR
@@ -52,7 +52,7 @@ func _save_volumes() -> void:
 	config.set_value("audio", "sfx_volume", sfx_volume)
 	config.set_value("audio", "rotors_volume", rotors_volume)
 
-	err = config.save("user://settings.cfg")
+	err = config.save(path)
 	if err != OK:
 		Globals.log_message("Failed to save audio settings: " + str(err), Globals.LogLevel.ERROR)
 	else:
