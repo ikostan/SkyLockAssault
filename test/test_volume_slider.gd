@@ -9,7 +9,6 @@ extends GdUnitTestSuite
 
 var slider: VolumeSlider
 
-
 func before_test() -> void:
 	## Per-test setup: Instantiate slider, reset state.
 	##
@@ -55,10 +54,9 @@ func test_debounce_timeout_saves() -> void:
 	## Tests timeout calls save, logs.
 	##
 	## :rtype: void
-	var spied_manager: Node = spy(AudioManager)
 	var spied_globals: Node = spy(Globals)
 
 	slider._on_debounce_timeout()
 
-	verify(spied_manager, 1)._save_volumes()  # Verify method called once
-	verify(spied_globals, 1).log_message("Debounced audio settings save triggered.", Globals.LogLevel.DEBUG)
+	verify(spied_globals, 1)._save_settings()  # Verify method called once (corrected from AudioManager)
+	verify(spied_globals, 1).log_message("Debounced settings save triggered.", Globals.LogLevel.DEBUG)
