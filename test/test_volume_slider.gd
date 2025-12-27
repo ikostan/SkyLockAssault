@@ -57,9 +57,10 @@ func test_debounce_timeout_saves() -> void:
 	var original_globals: Node = get_tree().root.get_node("Globals")
 	assert_object(original_globals).is_not_null()  # Safety check
 
-	# Load the script and create spy instance
+	# Load the script, create a new instance, THEN spy on the instance (fixes GdUnit4 spy error)
 	var globals_script: Resource = load("res://scripts/globals.gd")
-	var spied_globals: Node = spy(globals_script)
+	var globals_instance: Node = globals_script.new()
+	var spied_globals: Node = spy(globals_instance)
 
 	# Copy relevant state to avoid side effects or inconsistencies during spy execution
 	spied_globals.current_log_level = original_globals.current_log_level
@@ -81,3 +82,6 @@ func test_debounce_timeout_saves() -> void:
 	get_tree().root.remove_child(spied_globals)
 	original_globals.name = "Globals"
 	get_tree().root.add_child(original_globals)
+	
+	# Cleanup the spied instance to avoid memory leaks (good practice in tests)
+	globals_instance.free()
