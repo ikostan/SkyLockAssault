@@ -4,12 +4,17 @@
 ##
 ## Supports web overlays, ignores pause mode.
 ##
+## Saves/restores previous JS back callback on web.
+##
 ## :vartype _audio_back_button_pressed_cb: JavaScriptObject
+## :vartype _previous_back_pressed_cb: JavaScriptObject
 ## :vartype audio_back_button: Button
 
 extends Control
 
 var _audio_back_button_pressed_cb: JavaScriptObject
+var _previous_back_pressed_cb: JavaScriptObject
+var js_window: JavaScriptObject
 
 @onready var audio_back_button: Button = $Panel/OptionsVBoxContainer/AudioBackButton
 
@@ -32,16 +37,17 @@ func _ready() -> void:
 			JavaScriptBridge
 			. eval(
 				"""
-            document.getElementById('audio-back-button').style.display = 'block';
-		""",
+            	document.getElementById('audio-back-button').style.display = 'block';
+				""",
 				true
 			)
 		)
-		var js_window: JavaScriptObject = JavaScriptBridge.get_interface("window")
+		js_window = JavaScriptBridge.get_interface("window")
 		_audio_back_button_pressed_cb = JavaScriptBridge.create_callback(
 			Callable(self, "_on_audio_back_button_pressed_js")
 		)
-		js_window.backPressed = _audio_back_button_pressed_cb
+		_previous_back_pressed_cb = js_window.backPressed  # Save previous before overwrite
+		js_window.backPressed = _audio_back_button_pressed_cb  # Set audio callback
 
 
 func _on_audio_back_button_pressed() -> void:
@@ -59,12 +65,13 @@ func _on_audio_back_button_pressed() -> void:
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 	if OS.has_feature("web"):
+		js_window.backPressed = _previous_back_pressed_cb  # Restore previous callback
 		(
 			JavaScriptBridge
 			. eval(
 				"""
-            document.getElementById('audio-back-button').style.display = 'none';
-		"""
+            	document.getElementById('audio-back-button').style.display = 'none';
+				"""
 			)
 		)
 	queue_free()
@@ -91,6 +98,17 @@ func _on_tree_exited() -> void:
 	## Restores previous menu if not already handled.
 	##
 	## :rtype: void
+	if OS.has_feature("web"):
+		js_window.backPressed = _previous_back_pressed_cb  # Restore previous callback
+		(
+			JavaScriptBridge
+			. eval(
+				"""
+            	document.getElementById('audio-back-button').style.display = 'none';
+				"""
+			)
+		)
+
 	if not Globals.hidden_menus.is_empty():
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
 		if is_instance_valid(prev_menu):
