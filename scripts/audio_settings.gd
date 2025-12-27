@@ -12,9 +12,9 @@
 
 extends Control
 
+var js_window: JavaScriptObject
 var _audio_back_button_pressed_cb: JavaScriptObject
 var _previous_back_pressed_cb: JavaScriptObject
-var js_window: JavaScriptObject
 
 @onready var audio_back_button: Button = $Panel/OptionsVBoxContainer/AudioBackButton
 
@@ -37,7 +37,7 @@ func _ready() -> void:
 			JavaScriptBridge
 			. eval(
 				"""
-            	document.getElementById('audio-back-button').style.display = 'block';
+				document.getElementById('audio-back-button').style.display = 'block';
 				""",
 				true
 			)
@@ -70,7 +70,7 @@ func _on_audio_back_button_pressed() -> void:
 			JavaScriptBridge
 			. eval(
 				"""
-            	document.getElementById('audio-back-button').style.display = 'none';
+				document.getElementById('audio-back-button').style.display = 'none';
 				"""
 			)
 		)
@@ -104,7 +104,7 @@ func _on_tree_exited() -> void:
 			JavaScriptBridge
 			. eval(
 				"""
-            	document.getElementById('audio-back-button').style.display = 'none';
+				document.getElementById('audio-back-button').style.display = 'none';
 				"""
 			)
 		)
