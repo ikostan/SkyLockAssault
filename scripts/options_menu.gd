@@ -21,7 +21,7 @@ var log_level_display_to_enum: Dictionary = {
 	"ERROR": Globals.LogLevel.ERROR,
 	"NONE": Globals.LogLevel.NONE
 }
-
+var audio_scene: PackedScene = preload("res://scenes/audio_settings.tscn")  # New: Top-level preload for efficiency
 var _change_log_level_cb: JavaScriptObject
 var _change_difficulty_cb: JavaScriptObject
 var _options_back_button_pressed_cb: JavaScriptObject
@@ -278,8 +278,7 @@ func _on_options_back_button_pressed_js(args: Array) -> void:
 ## :rtype: void
 func _on_audio_settings_button_pressed() -> void:
 	Globals.log_message("Audio button pressed.", Globals.LogLevel.DEBUG)
-	var audio_scene: PackedScene = preload("res://scenes/audio_settings.tscn")
-	var audio_instance: Control = audio_scene.instantiate()
+	var audio_instance: Control = audio_scene.instantiate()  # Use the preloaded var
 	get_tree().root.add_child(audio_instance)
 	Globals.hidden_menus.push_back(self)
 	self.visible = false

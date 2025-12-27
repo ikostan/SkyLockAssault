@@ -78,6 +78,10 @@ func _on_audio_back_button_pressed_js(args: Array) -> void:
 	## :param args: Unused array from JS.
 	## :type args: Array
 	## :rtype: void
+	Globals.log_message(
+		"JS _audio_back_button_pressed_cb callback called with args: " + str(args),
+		Globals.LogLevel.DEBUG
+	)
 	_on_audio_back_button_pressed()
 
 
