@@ -57,19 +57,22 @@ func test_debounce_timeout_saves() -> void:
 	var original_globals: Node = get_tree().root.get_node("Globals")
 	assert_object(original_globals).is_not_null()  # Safety check
 
-	# Load the script, create a new instance, THEN spy on the instance (fixes GdUnit4 spy error)
+	# Load the script, create a new instance with auto_free, THEN spy on the instance
 	var globals_script: Resource = load("res://scripts/globals.gd")
-	var globals_instance: Node = globals_script.new()
+	var globals_instance: Node = auto_free(globals_script.new())
 	var spied_globals: Node = spy(globals_instance)
 
 	# Copy relevant state to avoid side effects or inconsistencies during spy execution
 	spied_globals.current_log_level = original_globals.current_log_level
 	spied_globals.difficulty = original_globals.difficulty
 
-	# Temporarily replace the autoload with the spy
-	get_tree().root.remove_child(original_globals)
+	# Temporarily replace the autoload with the spy (including singleton registration)
+	var root: Window = get_tree().root
+	root.remove_child(original_globals)
+	Engine.unregister_singleton("Globals")
 	spied_globals.name = "Globals"
-	get_tree().root.add_child(spied_globals)
+	root.add_child(spied_globals)
+	Engine.register_singleton("Globals", spied_globals)
 
 	# Perform the call
 	slider._on_debounce_timeout()
@@ -79,9 +82,8 @@ func test_debounce_timeout_saves() -> void:
 	verify(spied_globals, 1).log_message("Debounced settings save triggered.", Globals.LogLevel.DEBUG)
 
 	# Restore original autoload
-	get_tree().root.remove_child(spied_globals)
+	root.remove_child(spied_globals)
+	Engine.unregister_singleton("Globals")
 	original_globals.name = "Globals"
-	get_tree().root.add_child(original_globals)
-	
-	# Cleanup the spied instance to avoid memory leaks (good practice in tests)
-	globals_instance.free()
+	root.add_child(original_globals)
+	Engine.register_singleton("Globals", original_globals)
