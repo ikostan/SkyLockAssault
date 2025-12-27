@@ -21,7 +21,7 @@ var log_level_display_to_enum: Dictionary = {
 	"ERROR": Globals.LogLevel.ERROR,
 	"NONE": Globals.LogLevel.NONE
 }
-var audio_scene: PackedScene = preload("res://scenes/audio_settings.tscn")  # New: Top-level preload for efficiency
+var audio_scene: PackedScene = preload("res://scenes/audio_settings.tscn")
 var _change_log_level_cb: JavaScriptObject
 var _change_difficulty_cb: JavaScriptObject
 var _options_back_button_pressed_cb: JavaScriptObject
