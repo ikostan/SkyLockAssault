@@ -7,6 +7,7 @@
 ##
 ## Saves/restores previous JS back callback on web.
 ##
+## :vartype js_window: Variant
 ## :vartype _audio_back_button_pressed_cb: Variant
 ## :vartype _previous_back_pressed_cb: Variant
 ## :vartype audio_back_button: Button
@@ -14,7 +15,7 @@
 extends Control
 
 # global
-var js_window: JavaScriptObject
+var js_window: Variant
 var os_wrapper: OSWrapper = OSWrapper.new()
 var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
 # local
