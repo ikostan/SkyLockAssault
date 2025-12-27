@@ -23,23 +23,23 @@ func eval(code: String, global_exec: bool = false) -> Variant:
 	return JavaScriptBridge.eval(code, global_exec)
 
 
-func get_interface(interface: String) -> JavaScriptObject:
+func get_interface(interface: String) -> Variant:
 	## Gets a JavaScript interface.
 	##
 	## Mirrors JavaScriptBridge.get_interface.
 	##
 	## :param interface: The interface name (e.g., "window").
 	## :type interface: String
-	## :rtype: JavaScriptObject
+	## :rtype: Variant
 	return JavaScriptBridge.get_interface(interface)
 
 
-func create_callback(callable: Callable) -> JavaScriptObject:
+func create_callback(callable: Callable) -> Variant:
 	## Creates a JavaScript callback from a GDScript callable.
 	##
 	## Mirrors JavaScriptBridge.create_callback.
 	##
 	## :param callable: The GDScript callable to wrap.
 	## :type callable: Callable
-	## :rtype: JavaScriptObject
+	## :rtype: Variant
 	return JavaScriptBridge.create_callback(callable)

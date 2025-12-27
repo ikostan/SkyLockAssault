@@ -7,8 +7,8 @@
 ##
 ## Saves/restores previous JS back callback on web.
 ##
-## :vartype _audio_back_button_pressed_cb: JavaScriptObject
-## :vartype _previous_back_pressed_cb: JavaScriptObject
+## :vartype _audio_back_button_pressed_cb: Variant
+## :vartype _previous_back_pressed_cb: Variant
 ## :vartype audio_back_button: Button
 
 extends Control
@@ -18,8 +18,8 @@ var js_window: JavaScriptObject
 var os_wrapper: OSWrapper = OSWrapper.new()
 var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
 # local
-var _audio_back_button_pressed_cb: JavaScriptObject
-var _previous_back_pressed_cb: JavaScriptObject
+var _audio_back_button_pressed_cb: Variant
+var _previous_back_pressed_cb: Variant
 
 @onready var audio_back_button: Button = $Panel/OptionsVBoxContainer/AudioBackButton
 
