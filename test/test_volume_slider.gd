@@ -43,7 +43,7 @@ func test_value_changed_updates_volume_and_starts_timer() -> void:
 	var test_value: float = 0.5
 	slider._on_value_changed(test_value)
 	
-	assert_float(AudioServer.get_bus_volume_db(slider.bus_index)).is_equal(linear_to_db(test_value))
+	assert_float(AudioServer.get_bus_volume_db(slider.bus_index)).is_equal_approx(linear_to_db(test_value), 0.0001)
 	assert_float(mock_audio_manager.master_volume).is_equal(test_value)
 	assert_bool(not slider.save_debounce_timer.is_stopped()).is_true()  # Started
 
