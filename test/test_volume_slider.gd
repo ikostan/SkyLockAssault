@@ -54,9 +54,30 @@ func test_debounce_timeout_saves() -> void:
 	## Tests timeout calls save, logs.
 	##
 	## :rtype: void
-	var spied_globals: Node = spy(Globals)
+	var original_globals: Node = get_tree().root.get_node("Globals")
+	assert_object(original_globals).is_not_null()  # Safety check
 
+	# Load the script and create spy instance
+	var globals_script: Resource = load("res://scripts/globals.gd")
+	var spied_globals: Node = spy(globals_script)
+
+	# Copy relevant state to avoid side effects or inconsistencies during spy execution
+	spied_globals.current_log_level = original_globals.current_log_level
+	spied_globals.difficulty = original_globals.difficulty
+
+	# Temporarily replace the autoload with the spy
+	get_tree().root.remove_child(original_globals)
+	spied_globals.name = "Globals"
+	get_tree().root.add_child(spied_globals)
+
+	# Perform the call
 	slider._on_debounce_timeout()
 
-	verify(spied_globals, 1)._save_settings()  # Verify method called once (corrected from AudioManager)
+	# Verify interactions
+	verify(spied_globals, 1)._save_settings()
 	verify(spied_globals, 1).log_message("Debounced settings save triggered.", Globals.LogLevel.DEBUG)
+
+	# Restore original autoload
+	get_tree().root.remove_child(spied_globals)
+	original_globals.name = "Globals"
+	get_tree().root.add_child(original_globals)
