@@ -1,3 +1,4 @@
+## audio_settings.gd"
 ## Audio Settings Script
 ##
 ## Handles back navigation in audio menu.
@@ -18,6 +19,9 @@ var _previous_back_pressed_cb: JavaScriptObject
 
 @onready var audio_back_button: Button = $Panel/OptionsVBoxContainer/AudioBackButton
 
+var os_wrapper: OSWrapper = OSWrapper.new()
+var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
+
 
 func _ready() -> void:
 	## Initializes audio menu.
@@ -32,9 +36,9 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Globals.log_message("Audio menu loaded.", Globals.LogLevel.DEBUG)
 
-	if OS.has_feature("web"):
+	if os_wrapper.has_feature("web"):
 		(
-			JavaScriptBridge
+			js_bridge_wrapper
 			. eval(
 				"""
 				document.getElementById('audio-back-button').style.display = 'block';
@@ -42,8 +46,8 @@ func _ready() -> void:
 				true
 			)
 		)
-		js_window = JavaScriptBridge.get_interface("window")
-		_audio_back_button_pressed_cb = JavaScriptBridge.create_callback(
+		js_window = js_bridge_wrapper.get_interface("window")
+		_audio_back_button_pressed_cb = js_bridge_wrapper.create_callback(
 			Callable(self, "_on_audio_back_button_pressed_js")
 		)
 		_previous_back_pressed_cb = js_window.backPressed  # Save previous before overwrite
@@ -64,10 +68,10 @@ func _on_audio_back_button_pressed() -> void:
 		if is_instance_valid(prev_menu):
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
-	if OS.has_feature("web"):
+	if os_wrapper.has_feature("web"):
 		js_window.backPressed = _previous_back_pressed_cb  # Restore previous callback
 		(
-			JavaScriptBridge
+			js_bridge_wrapper
 			. eval(
 				"""
 				document.getElementById('audio-back-button').style.display = 'none';
@@ -98,10 +102,10 @@ func _on_tree_exited() -> void:
 	## Restores previous menu if not already handled.
 	##
 	## :rtype: void
-	if OS.has_feature("web"):
+	if os_wrapper.has_feature("web"):
 		js_window.backPressed = _previous_back_pressed_cb  # Restore previous callback
 		(
-			JavaScriptBridge
+			js_bridge_wrapper
 			. eval(
 				"""
 				document.getElementById('audio-back-button').style.display = 'none';

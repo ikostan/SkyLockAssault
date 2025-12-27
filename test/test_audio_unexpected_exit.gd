@@ -16,9 +16,9 @@ var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 var audio_scene: PackedScene = preload("res://scenes/audio_settings.tscn")
 var options_instance: CanvasLayer
 var audio_instance: Control
-var mock_js_bridge: Variant  # GdUnit spy
+var mock_js_bridge: Variant  # GdUnit mock
 var mock_js_window: MockJSWindow  # Mock object for JS window
-var mock_os: Variant  # GdUnit spy
+var mock_os: Variant  # GdUnit mock
 var options_cb_called: bool = false
 var options_cb: Callable  # Mock options callback
 
@@ -27,16 +27,16 @@ func before_test() -> void:
 	## Per-test setup: Mock web, instantiate menus, reset Globals.
 	##
 	## :rtype: void
-	# Spy OS and stub has_feature("web") to true
-	mock_os = spy(OS)
+	# Mock OSWrapper
+	mock_os = mock(OSWrapper)
 	do_return(true).on(mock_os).has_feature("web")
 
-	# Spy JavaScriptBridge
-	mock_js_bridge = spy(JavaScriptBridge)
+	# Mock JavaScriptBridgeWrapper
+	mock_js_bridge = mock(JavaScriptBridgeWrapper)
 	mock_js_window = MockJSWindow.new()
 	do_return(mock_js_window).on(mock_js_bridge).get_interface("window")
 	do_return(null).on(mock_js_bridge).eval(GdUnitArgumentMatchers.any(), GdUnitArgumentMatchers.any())  # No-op for eval
-	do_return(func(cb: Callable) -> Variant: return cb).on(mock_js_bridge).create_callback(GdUnitArgumentMatchers.any())  # Return callable as mock "JSObject"
+	do_return(func(cb: Callable) -> Variant: return cb).on(mock_js_bridge).create_callback(GdUnitArgumentMatchers.any())  # Return callable as "JSObject"
 
 	# Reset Globals
 	Globals.hidden_menus = []
@@ -80,6 +80,8 @@ func test_unexpected_audio_exit_restores_callback() -> void:
 
 	# Instantiate audio (simulates opening from options)
 	audio_instance = auto_free(audio_scene.instantiate())
+	audio_instance.os_wrapper = mock_os
+	audio_instance.js_bridge_wrapper = mock_js_bridge
 	add_child(audio_instance)
 	Globals.hidden_menus.push_back(options_instance)
 	options_instance.visible = false
