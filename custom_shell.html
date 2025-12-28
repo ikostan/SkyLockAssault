@@ -96,6 +96,15 @@
             height: 50px;
             transform: translate(-50%, -50%);
         }
+        /* Add to <style> */
+        #options-back-button {
+            display: none;
+            top: 90%; /* Adjust to match options back button position */
+            left: 50%;
+            width: 200px;
+            height: 50px;
+            transform: translate(-50%, -50%);
+        }
     </style>
 <!-- Removed favicon link to avoid 404 -->
 </head>
@@ -114,6 +123,7 @@
     </div>
 
     <!-- Main Menu Buttons (invisible overlays) -->
+    <button id="options-back-button">Back</button>
     <button id="audio-back-button">Back</button>
     <button id="start-button" style="top: 40%;">START</button>
     <button id="options-button" style="top: 50%;">OPTIONS</button>
