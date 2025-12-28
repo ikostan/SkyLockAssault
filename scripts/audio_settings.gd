@@ -1,4 +1,5 @@
-## audio_settings.gd
+## audio_settings.gd (add null checks)
+##
 ## Audio Settings Script
 ##
 ## Handles back navigation in audio menu.
@@ -51,11 +52,12 @@ func _ready() -> void:
 			)
 		)
 		js_window = js_bridge_wrapper.get_interface("window")
-		_audio_back_button_pressed_cb = js_bridge_wrapper.create_callback(
-			Callable(self, "_on_audio_back_button_pressed_js")
-		)
-		_previous_back_pressed_cb = js_window.backPressed  # Save previous before overwrite
-		js_window.backPressed = _audio_back_button_pressed_cb  # Set audio callback
+		if js_window:  # New: Null check
+			_audio_back_button_pressed_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_audio_back_button_pressed_js")
+			)
+			_previous_back_pressed_cb = js_window.backPressed  # Save previous before overwrite
+			js_window.backPressed = _audio_back_button_pressed_cb  # Set audio callback
 
 
 func _on_audio_back_button_pressed() -> void:
@@ -73,7 +75,8 @@ func _on_audio_back_button_pressed() -> void:
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 	if os_wrapper.has_feature("web"):
-		js_window.backPressed = _previous_back_pressed_cb  # Restore previous callback
+		if js_window:  # New: Null check
+			js_window.backPressed = _previous_back_pressed_cb  # Restore previous callback
 		(
 			js_bridge_wrapper
 			. eval(
@@ -110,7 +113,8 @@ func _on_tree_exited() -> void:
 	if _intentional_exit:
 		return
 	if os_wrapper.has_feature("web"):
-		js_window.backPressed = _previous_back_pressed_cb  # Restore previous callback
+		if js_window:  # New: Null check
+			js_window.backPressed = _previous_back_pressed_cb  # Restore previous callback
 		(
 			js_bridge_wrapper
 			. eval(
