@@ -1,0 +1,50 @@
+## test_volume_slider.gd
+## Unit tests for volume_slider.gd.
+##
+## Covers initialization, value changes, and debounce.
+##
+## Uses GdUnitTestSuite for assertions.
+
+extends GdUnitTestSuite
+
+var slider: VolumeSlider
+
+func before_test() -> void:
+	## Per-test setup: Instantiate slider, reset state.
+	##
+	## :rtype: void
+	slider = auto_free(VolumeSlider.new())
+	slider.bus_name = "Master"  # Test with Master
+	add_child(slider)  # Trigger _ready
+	AudioManager.master_volume = 1.0  # Reset for consistent test
+
+
+func after_test() -> void:
+	## Cleanup: Reset volume to avoid pollution.
+	##
+	## :rtype: void
+	AudioManager.master_volume = 1.0
+
+
+func test_ready_sets_value_and_timer() -> void:
+	## Tests _ready gets index, sets value, connects, creates timer.
+	##
+	## :rtype: void
+	assert_int(slider.bus_index).is_equal(AudioServer.get_bus_index("Master"))
+	assert_float(slider.value).is_equal(db_to_linear(AudioServer.get_bus_volume_db(slider.bus_index)))
+	assert_bool(slider.value_changed.is_connected(slider._on_value_changed)).is_true()
+	assert_object(slider.save_debounce_timer).is_not_null()
+	assert_float(slider.save_debounce_timer.wait_time).is_equal(0.5)
+	assert_bool(slider.save_debounce_timer.one_shot).is_true()
+
+
+func test_value_changed_updates_volume_and_starts_timer() -> void:
+	## Tests value change sets db, updates manager, starts timer.
+	##
+	## :rtype: void
+	var test_value: float = 0.5
+	slider._on_value_changed(test_value)
+	
+	assert_float(AudioServer.get_bus_volume_db(slider.bus_index)).is_equal_approx(linear_to_db(test_value), 0.0001)
+	assert_float(AudioManager.master_volume).is_equal(test_value)
+	assert_bool(not slider.save_debounce_timer.is_stopped()).is_true()  # Started

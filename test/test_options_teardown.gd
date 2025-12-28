@@ -4,14 +4,14 @@
 ##
 ## Uses GdUnitTestSuite for assertions and lifecycle hooks.
 ##
-## :vartype orig_hidden_menu: Node
+## :vartype orig_hidden_menus: Array[Node]
 ## :vartype orig_options_open: bool
 ## :vartype orig_options_instance: CanvasLayer
 ## :vartype orig_options_scene: PackedScene
 
 extends GdUnitTestSuite
 
-var orig_hidden_menu: Node
+var orig_hidden_menus: Array[Node]
 var orig_options_open: bool
 var orig_options_instance: CanvasLayer
 var orig_options_scene: PackedScene  # Extra for consistency
@@ -20,12 +20,12 @@ func before_test() -> void:
 	## Saves and resets globals before each test.
 	##
 	## :rtype: void
-	orig_hidden_menu = Globals.hidden_menu
+	orig_hidden_menus = Globals.hidden_menus.duplicate()
 	orig_options_open = Globals.options_open
 	orig_options_instance = Globals.options_instance
 	orig_options_scene = Globals.options_scene
 	
-	Globals.hidden_menu = null
+	Globals.hidden_menus = []
 	Globals.options_open = false
 	Globals.options_instance = null
 	# No mutation here, but reset if needed
@@ -34,7 +34,7 @@ func after_test() -> void:
 	## Restores original globals after each test.
 	##
 	## :rtype: void
-	Globals.hidden_menu = orig_hidden_menu
+	Globals.hidden_menus = orig_hidden_menus.duplicate()
 	Globals.options_open = orig_options_open
 	Globals.options_instance = orig_options_instance
 	Globals.options_scene = orig_options_scene
@@ -44,15 +44,14 @@ func test_options_open_cleared_on_exit() -> void:
 	##
 	## :rtype: void
 	# Mock hidden menu (null for this test)
-	Globals.load_options(null)  # Triggers instantiation and add_child; sets flag
+	Globals.load_options(null)  # Loads options, sets flag/refs (no hide)
 	
-	await await_idle_frame()  # Await init
+	assert_bool(Globals.options_open).is_true()  # Set early in load_options
 	
-	assert_bool(Globals.options_open).is_true()  # Set in load_options
-	
-	# Simulate free (triggers _exit_tree)
+	# Simulate free
 	Globals.options_instance.queue_free()
-	await await_idle_frame()  # Await exit
+	
+	await await_idle_frame()
 	
 	assert_bool(Globals.options_open).is_false()  # Cleared in _exit_tree
 
@@ -73,7 +72,7 @@ func test_hidden_menu_restored_on_exit() -> void:
 	await await_idle_frame()
 	
 	assert_bool(mock_hidden.visible).is_true()  # Restored in _exit_tree
-	assert_object(Globals.hidden_menu).is_null()  # Cleared
+	assert_array(Globals.hidden_menus).is_empty()  # Cleared
 
 func test_unexpected_exit_resets_flag() -> void:
 	## Tests if handler resets flag on unexpected exit (e.g., if normal teardown fails).

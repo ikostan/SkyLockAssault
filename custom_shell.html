@@ -88,6 +88,23 @@
             margin-top: 20px;
             display: none; /* Hidden initially */
         }
+        #audio-back-button {
+            display: none;
+            top: 80%;
+            left: 50%;
+            width: 200px;
+            height: 50px;
+            transform: translate(-50%, -50%);
+        }
+        /* Add to <style> */
+        #options-back-button {
+            display: none;
+            top: 90%; /* Adjust to match options back button position */
+            left: 50%;
+            width: 200px;
+            height: 50px;
+            transform: translate(-50%, -50%);
+        }
     </style>
 <!-- Removed favicon link to avoid 404 -->
 </head>
@@ -106,6 +123,8 @@
     </div>
 
     <!-- Main Menu Buttons (invisible overlays) -->
+    <button id="options-back-button">Back</button>
+    <button id="audio-back-button">Back</button>
     <button id="start-button" style="top: 40%;">START</button>
     <button id="options-button" style="top: 50%;">OPTIONS</button>
     <button id="quit-button" style="top: 60%;">QUIT</button>
@@ -164,7 +183,9 @@
         document.getElementById('difficulty-slider').onchange = (e) => window.changeDifficulty([parseFloat(e.target.value)]);
         document.getElementById('back-button').onclick = () => window.backPressed([]);
         document.getElementById('log-level-select').onchange = (e) => window.changeLogLevel([e.target.selectedIndex]);
-    </script>
+        document.getElementById('options-back-button').onclick = () => window.backPressed([]);  // Add this for options back
+        document.getElementById('audio-back-button').onclick = () => window.backPressed([]);  // Add this for audio back
+</script>
 
 <div class="ime" contenteditable="true" style="background: none; opacity: 0; position: fixed; text-align: left; font-size: 1px; left: 0px; top: 0px; width: 100%; height: 40px; pointer-events: none; display: none;"></div>
 </body>

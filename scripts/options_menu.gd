@@ -13,6 +13,13 @@
 
 extends CanvasLayer
 
+## The wrappers (like JavaScriptBridgeWrapper and presumably OSWrapper)
+## are designed to abstract away direct singleton calls, making the code
+## easier to unit test by allowing mocks/stubs without relying on the
+## actual engine singletons.
+var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
+var os_wrapper: OSWrapper = OSWrapper.new()  # Assuming OSWrapper is defined similarly
+
 # Explicit mapping from display names to enum values
 var log_level_display_to_enum: Dictionary = {
 	"DEBUG": Globals.LogLevel.DEBUG,
@@ -21,21 +28,22 @@ var log_level_display_to_enum: Dictionary = {
 	"ERROR": Globals.LogLevel.ERROR,
 	"NONE": Globals.LogLevel.NONE
 }
-
+var audio_scene: PackedScene = preload("res://scenes/audio_settings.tscn")
 var _change_log_level_cb: JavaScriptObject
 var _change_difficulty_cb: JavaScriptObject
-var _back_pressed_cb: JavaScriptObject
+var _options_back_button_pressed_cb: JavaScriptObject
 
 @onready var log_lvl_option: OptionButton = get_node(
 	"Panel/OptionsVBoxContainer/LogLevelContainer/LogLevelOptionButton"
 )
-@onready var back_button: Button = $Panel/OptionsVBoxContainer/BackButton
+@onready var options_back_button: Button = $Panel/OptionsVBoxContainer/OptionsBackButton
 @onready var difficulty_slider: HSlider = get_node(
 	"Panel/OptionsVBoxContainer/DifficultyLevelContainer/DifficultyHSlider"
 )
 @onready var difficulty_label: Label = get_node(
 	"Panel/OptionsVBoxContainer/DifficultyLevelContainer/DifficultyValueLabel"
 )
+@onready var audio_settings_button: Button = $Panel/OptionsVBoxContainer/AudioSettingsButton
 
 
 func _ready() -> void:
@@ -66,7 +74,12 @@ func _ready() -> void:
 	# Connect signals to type-specific handlers (change: separate from JS callbacks)
 	log_lvl_option.item_selected.connect(_on_log_level_item_selected)
 	difficulty_slider.value_changed.connect(_on_difficulty_value_changed)
-	back_button.pressed.connect(_on_back_pressed)
+
+	if not options_back_button.pressed.is_connected(_on_options_back_button_pressed):
+		options_back_button.pressed.connect(_on_options_back_button_pressed)
+
+	if not audio_settings_button.pressed.is_connected(_on_audio_settings_button_pressed):
+		audio_settings_button.pressed.connect(_on_audio_settings_button_pressed)
 
 	# Set initial difficulty label (sync with global)
 	difficulty_slider.value = Globals.difficulty
@@ -76,34 +89,36 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignore pause
 	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
 
-	if OS.has_feature("web"):
-		# Toggle overlays visible (layout only; opacity=0)
+	if os_wrapper.has_feature("web"):
+		# Toggle overlays...
 		(
-			JavaScriptBridge
+			js_bridge_wrapper
 			. eval(
 				"""
-			document.getElementById('log-level-select').style.display = 'block';
-			document.getElementById('difficulty-slider').style.display = 'block';
-			document.getElementById('back-button').style.display = 'block';
-		""",
+				document.getElementById('log-level-select').style.display = 'block';
+				document.getElementById('difficulty-slider').style.display = 'block';
+				document.getElementById('options-back-button').style.display = 'block';
+				""",
 				true
 			)
-		)  # 'true' = allow JS execution in editor (for testing)
+		)
 
 		# Expose callbacks to JS (store refs to prevent GC)
-		var js_window: JavaScriptObject = JavaScriptBridge.get_interface("window")
-		_change_log_level_cb = JavaScriptBridge.create_callback(
+		var js_window: JavaScriptObject = js_bridge_wrapper.get_interface("window")
+		_change_log_level_cb = js_bridge_wrapper.create_callback(
 			Callable(self, "_on_change_log_level_js")
 		)
 		js_window.changeLogLevel = _change_log_level_cb
 
-		_change_difficulty_cb = JavaScriptBridge.create_callback(
+		_change_difficulty_cb = js_bridge_wrapper.create_callback(
 			Callable(self, "_on_change_difficulty_js")
 		)
 		js_window.changeDifficulty = _change_difficulty_cb
 
-		_back_pressed_cb = JavaScriptBridge.create_callback(Callable(self, "_on_back_pressed_js"))
-		js_window.backPressed = _back_pressed_cb
+		_options_back_button_pressed_cb = js_bridge_wrapper.create_callback(
+			Callable(self, "_on_options_back_button_pressed_js")
+		)
+		js_window.backPressed = _options_back_button_pressed_cb
 		Globals.log_message(
 			"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
 		)
@@ -122,19 +137,20 @@ func _input(event: InputEvent) -> void:
 		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
 
 
-# New: Centralized teardown helper
 func _teardown() -> void:
-	## Central teardown: Restores hidden menu, clears flags/refs.
+	## Cleans up on options close.
 	##
-	## Idempotent—safe for multiple calls.
+	## Shows previous menu from stack, resets globals.
 	##
 	## :rtype: void
-	if Globals.hidden_menu and is_instance_valid(Globals.hidden_menu):
-		Globals.hidden_menu.visible = true
-		Globals.log_message("Showing menu: " + Globals.hidden_menu.name, Globals.LogLevel.DEBUG)
-	Globals.hidden_menu = null  # Always clear
+	if not Globals.hidden_menus.is_empty():
+		var prev_menu: Node = Globals.hidden_menus.pop_back()
+		if is_instance_valid(prev_menu):
+			prev_menu.visible = true
+			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 	Globals.options_open = false
 	Globals.options_instance = null
+	Globals.log_message("Options menu exited.", Globals.LogLevel.DEBUG)
 
 
 func _exit_tree() -> void:
@@ -228,33 +244,36 @@ func _on_change_difficulty_js(args: Array) -> void:
 
 
 # Change: Signal handler (no arg)
-func _on_back_pressed() -> void:
+func _on_options_back_button_pressed() -> void:
 	## Handles the Back button press from the signal.
 	##
 	## Shows hidden menu if valid, logs the action, removes the options menu,
 	## and hides web overlays if on web.
 	##
 	## :rtype: void
-	Globals.log_message("Back button pressed.", Globals.LogLevel.DEBUG)
+	Globals.log_message("Options Back button pressed.", Globals.LogLevel.DEBUG)
 	_teardown()  # Centralized cleanup
 
-	if OS.has_feature("web"):
+	if os_wrapper.has_feature("web"):
 		# Hide options overlays after closing menu
 		(
-			JavaScriptBridge
+			js_bridge_wrapper
 			. eval(
 				"""
-			document.getElementById('log-level-select').style.display = 'none';
-			document.getElementById('difficulty-slider').style.display = 'none';
-			document.getElementById('back-button').style.display = 'none';
-		"""
+				document.getElementById('log-level-select').style.display = 'none';
+				document.getElementById('difficulty-slider').style.display = 'none';
+				document.getElementById('options-back-button').style.display = 'none';
+				"""
 			)
 		)
+
+	Globals.options_open = false  # Reset flag first
+	Globals.options_instance = null  # Optional: Clear ref
 	queue_free()
 
 
 # New: JS-specific callback (exactly one Array arg, no default)
-func _on_back_pressed_js(args: Array) -> void:
+func _on_options_back_button_pressed_js(args: Array) -> void:
 	## JS callback for back button press.
 	##
 	## Routes to the signal handler (ignores args).
@@ -265,4 +284,15 @@ func _on_back_pressed_js(args: Array) -> void:
 	Globals.log_message(
 		"JS back_pressed callback called with args: " + str(args), Globals.LogLevel.DEBUG
 	)
-	_on_back_pressed()
+	_on_options_back_button_pressed()
+
+
+## Handles Audio button press.
+## Hides options menu, loads audio settings.
+## :rtype: void
+func _on_audio_settings_button_pressed() -> void:
+	Globals.log_message("Audio button pressed.", Globals.LogLevel.DEBUG)
+	var audio_instance: Control = audio_scene.instantiate()  # Use the preloaded var
+	get_tree().root.add_child(audio_instance)
+	Globals.hidden_menus.push_back(self)
+	self.visible = false

@@ -4,24 +4,14 @@ extends Node
 # Access from any script as Globals.log_message("message").
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 
-# Audio bus constants: Use these everywhere instead of hard-coded strings.
-# This prevents typos and makes renaming buses easy.
-const BUS_MASTER: String = "Master"
-const BUS_MUSIC: String = "Music"
-const BUS_SFX: String = "SFX"
-const BUS_SFX_ROTORS: String = "SFX_Rotors"
-
 @export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
 @export var enable_debug_logging: bool = false  # Toggle in Inspector or settings
 @export var difficulty: float = 1.0  # Multiplier: 1.0=Normal, <1=Easy, >1=Hard
-@export var master_volume: float = 1.0
-@export var music_volume: float = 1.0
-@export var sfx_volume: float = 1.0
-@export var rotors_volume: float = 1.0
 
 # In globals.gd (add after @export vars)
 var options_instance: CanvasLayer = null
-var hidden_menu: Node = null
+# var hidden_menu: Node = null
+var hidden_menus: Array[Node] = []
 var options_open: bool = false
 var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
 var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
@@ -34,42 +24,13 @@ func _ready() -> void:
 	log_message("Log level set to: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
 	_load_settings()  # Load persisted settings first
 
-	# Apply loaded volumes to AudioServer buses (using new helper)
-	_apply_volume_to_bus(BUS_MASTER, master_volume)
-	_apply_volume_to_bus(BUS_MUSIC, music_volume)
-	_apply_volume_to_bus(BUS_SFX, sfx_volume)
-	_apply_volume_to_bus(BUS_SFX_ROTORS, rotors_volume)
-
-
-# New: Helper to apply volume to a named bus (extracted from _ready)
-func _apply_volume_to_bus(bus_name: String, volume: float) -> void:
-	var bus_idx: int = AudioServer.get_bus_index(bus_name)
-	if bus_idx != -1:
-		AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
-		log_message(
-			"Applied loaded " + bus_name + " volume to AudioServer: " + str(volume), LogLevel.DEBUG
-		)
-	else:
-		log_message(bus_name + " audio bus not found!", LogLevel.ERROR)
-
 
 # Add these new functions (for consistency with log level persistence)
 # New: Optional param (default new; fixes error)
-func _load_settings(config: ConfigFile = ConfigFile.new()) -> void:
-	var err := config.load("user://settings.cfg")
+func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
+	var config: ConfigFile = ConfigFile.new()
+	var err := config.load(path)
 	if err == OK:
-		master_volume = config.get_value("Settings", "master_volume", 1.0)
-		log_message("Loaded master_volume level: " + str(master_volume), LogLevel.DEBUG)
-
-		music_volume = config.get_value("Settings", "music_volume", 1.0)
-		log_message("Loaded music_volume level: " + str(music_volume), LogLevel.DEBUG)
-
-		sfx_volume = config.get_value("Settings", "sfx_volume", 1.0)
-		log_message("Loaded sfx_volume level: " + str(sfx_volume), LogLevel.DEBUG)
-
-		rotors_volume = config.get_value("Settings", "rotors_volume", 1.0)
-		log_message("Loaded rotors_volume level: " + str(rotors_volume), LogLevel.DEBUG)
-
 		current_log_level = config.get_value("Settings", "log_level", LogLevel.INFO)
 		log_message("Loaded saved log level: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
 
@@ -83,22 +44,26 @@ func _load_settings(config: ConfigFile = ConfigFile.new()) -> void:
 			difficulty = clamp(difficulty, 0.5, 2.0)
 		log_message("Loaded saved difficulty: " + str(difficulty), LogLevel.DEBUG)
 	else:
-		log_message("No saved settings found—using default.", LogLevel.DEBUG)
+		log_message("No saved settings found at " + path + "—using default.", LogLevel.DEBUG)
 
 
 # New: Add _save_settings to globals.gd (move from options_menu.gd if needed)
-func _save_settings() -> void:
+func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var config: ConfigFile = ConfigFile.new()
+	var err: int = config.load(path)  # Load existing to preserve other sections
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		log_message(
+			"Failed to load settings from " + path + " for save: " + str(err), LogLevel.ERROR
+		)
+		return
 
 	config.set_value("Settings", "log_level", current_log_level)
 	config.set_value("Settings", "difficulty", difficulty)
-	config.set_value("Settings", "master_volume", master_volume)
-	config.set_value("Settings", "music_volume", music_volume)
-	config.set_value("Settings", "sfx_volume", sfx_volume)
-	config.set_value("Settings", "rotors_volume", rotors_volume)
-
-	config.save("user://settings.cfg")
-	log_message("Settings saved.", LogLevel.DEBUG)
+	err = config.save(path)
+	if err != OK:
+		log_message("Failed to save settings: " + str(err), LogLevel.ERROR)
+	else:
+		log_message("Settings saved.", LogLevel.DEBUG)
 
 
 func _on_options_exited_unexpectedly() -> void:
@@ -107,13 +72,18 @@ func _on_options_exited_unexpectedly() -> void:
 	## Resets flag if stuck open; cleans ref.
 	##
 	## :rtype: void
-	if Globals.options_open:  # Guard against redundant calls
+	if options_open:  # Guard: Only log if it was still "open" (unexpected exit)
 		log_message("Options instance exited unexpectedly—resetting flag.", LogLevel.WARNING)
-		Globals.options_open = false
-		Globals.options_instance = null
+
+	if not hidden_menus.is_empty():
+		var prev_menu: Node = hidden_menus.pop_back()
+		if is_instance_valid(prev_menu):
+			prev_menu.visible = true
+
+	options_open = false
+	options_instance = null
 
 
-# Modified load_options with guards
 func load_options(menu_to_hide: Node) -> void:
 	## Loads options menu and hides the caller menu (if valid).
 	##
@@ -134,20 +104,22 @@ func load_options(menu_to_hide: Node) -> void:
 			LogLevel.WARNING
 		)
 	else:
-		hidden_menu = menu_to_hide
-		hidden_menu.visible = false
+		hidden_menus.push_back(menu_to_hide)
+		menu_to_hide.visible = false
 		log_message("Hiding menu: " + menu_to_hide.name, LogLevel.DEBUG)
 
 	if options_scene:
 		## Set flag before adding child to block pause immediately.
-		Globals.options_open = true  # Set early as before
+		options_open = true  # Set early as before
 
 		options_instance = options_scene.instantiate()
 		if options_instance == null:
 			log_message("Failed to instantiate options scene—resetting flag.", LogLevel.ERROR)
-			Globals.options_open = false  # Reset to avoid stuck state
-			if hidden_menu and is_instance_valid(hidden_menu):
-				hidden_menu.visible = true  # Restore if we bailed
+			options_open = false  # Reset to avoid stuck state
+			if not hidden_menus.is_empty():
+				var prev_menu: Node = hidden_menus.pop_back()
+				if is_instance_valid(prev_menu):
+					prev_menu.visible = true  # Restore if we bailed
 			return
 
 		# Optional: Connect to tree_exited for unexpected free (extra safety)
@@ -155,10 +127,11 @@ func load_options(menu_to_hide: Node) -> void:
 		get_tree().root.add_child(options_instance)
 	else:
 		log_message("Error: Options scene not found!", LogLevel.ERROR)
-		if hidden_menu and is_instance_valid(hidden_menu):
-			hidden_menu.visible = true
-			log_message("Restored visibility of menu: " + hidden_menu.name, LogLevel.WARNING)
-		hidden_menu = null
+		if not hidden_menus.is_empty():
+			var prev_menu: Node = hidden_menus.pop_back()
+			if is_instance_valid(prev_menu):
+				prev_menu.visible = true
+				log_message("Restored visibility of menu: " + prev_menu.name, LogLevel.WARNING)
 
 
 # Custom logging function with timestamp and level filtering.
