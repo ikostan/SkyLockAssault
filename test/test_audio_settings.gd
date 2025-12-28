@@ -1,5 +1,4 @@
-## test_audio_settings.gd (updated to avoid re-calling _ready and handle mocks properly)
-## 
+## test_audio_settings.gd
 ## Unit tests for audio_settings.gd functionality.
 ##
 ## Covers initialization, back handling, and unexpected exits.
@@ -8,7 +7,6 @@
 
 extends GdUnitTestSuite
 
-var audio_menu: Control
 var mock_js_bridge: Variant  # GdUnit mock for JavaScriptBridgeWrapper
 var mock_os: Variant  # GdUnit mock for OSWrapper
 var mock_js_window: Dictionary  # Mock for js_window
@@ -27,16 +25,14 @@ func before_test() -> void:
 	mock_js_bridge = mock(JavaScriptBridgeWrapper)
 	do_return(null).on(mock_js_bridge).eval(GdUnitArgumentMatchers.any(), GdUnitArgumentMatchers.any())  # No-op for eval
 	do_return(null).on(mock_js_bridge).create_callback(GdUnitArgumentMatchers.any())  # No-op for callbacks
-	mock_js_window = {}  # Dictionary to mock JavaScriptObject
+	mock_js_window = {"backPressed": null}  # Non-empty dict to be truthy
 	do_return(mock_js_window).on(mock_js_bridge).get_interface("window")
 	
 
 func after_test() -> void:
-	## Per-test cleanup: Free menu if exists, reset Globals and mocks.
+	## Per-test cleanup: Reset Globals and mocks.
 	##
 	## :rtype: void
-	if is_instance_valid(audio_menu):
-		audio_menu.queue_free()
 	Globals.hidden_menus = []  # Clean up
 	reset(mock_os)
 	reset(mock_js_bridge)
@@ -47,7 +43,7 @@ func test_ready_non_web() -> void:
 	##
 	## :rtype: void
 	do_return(false).on(mock_os).has_feature("web")
-	audio_menu = auto_free(load("res://scenes/audio_settings.tscn").instantiate())
+	var audio_menu: Control = auto_free(load("res://scenes/audio_settings.tscn").instantiate())
 	audio_menu.os_wrapper = mock_os
 	audio_menu.js_bridge_wrapper = mock_js_bridge
 	add_child(audio_menu)  # Triggers _ready
@@ -64,7 +60,7 @@ func test_ready_web() -> void:
 	##
 	## :rtype: void
 	do_return(true).on(mock_os).has_feature("web")
-	audio_menu = auto_free(load("res://scenes/audio_settings.tscn").instantiate())
+	var audio_menu: Control = auto_free(load("res://scenes/audio_settings.tscn").instantiate())
 	audio_menu.os_wrapper = mock_os
 	audio_menu.js_bridge_wrapper = mock_js_bridge
 	add_child(audio_menu)  # Triggers _ready
@@ -80,8 +76,8 @@ func test_back_button_pops_and_frees() -> void:
 	## Tests back handler pops menu, shows prev, frees.
 	##
 	## :rtype: void
-	do_return(false).on(mock_os).has_feature("web")  # Or true if need web path
-	audio_menu = auto_free(load("res://scenes/audio_settings.tscn").instantiate())
+	do_return(false).on(mock_os).has_feature("web")
+	var audio_menu: Control = auto_free(load("res://scenes/audio_settings.tscn").instantiate())
 	audio_menu.os_wrapper = mock_os
 	audio_menu.js_bridge_wrapper = mock_js_bridge
 	add_child(audio_menu)
@@ -93,34 +89,24 @@ func test_back_button_pops_and_frees() -> void:
 	
 	assert_bool(Globals.hidden_menus.is_empty()).is_true()
 	assert_bool(mock_prev.visible).is_true()
+	# Assert queue_free called (via spy or check freed post-await)
 	await await_idle_frame()
-	assert_bool(not is_instance_valid(audio_menu)).is_true()
-	assert_bool(Globals.hidden_menus.is_empty()).is_true()
-
-
-func test_ready_connects_signals() -> void:
-	## Tests _ready connects signals and sets mode, with web mocks.
-	##
-	## :rtype: void
-	# Test non-web path
-	do_return(false).on(mock_os).has_feature("web")
-	audio_menu._ready()  # Re-call if needed, but since in before_test, already run
-	assert_bool(audio_menu.audio_back_button.pressed.is_connected(audio_menu._on_audio_back_button_pressed)).is_true()
-	assert_bool(audio_menu.tree_exited.is_connected(audio_menu._on_tree_exited)).is_true()
-	assert_int(audio_menu.process_mode).is_equal(Node.PROCESS_MODE_ALWAYS)
-	
-	# Test web path
-	do_return(true).on(mock_os).has_feature("web")
-	audio_menu._ready()
-	verify(mock_js_bridge, 1).eval(GdUnitArgumentMatchers.by_type(TYPE_STRING), true)  # For show overlays
-	verify(mock_js_bridge, 1).get_interface("window")
-	verify(mock_js_bridge, 1).create_callback(GdUnitArgumentMatchers.any())  # For backPressed
+	assert_bool(not is_instance_valid(audio_menu)).is_true()  # Freed
+	# Additional asserts for no double-pop: after full exit, hidden_menus still empty (no extra pop)
+	assert_bool(Globals.hidden_menus.is_empty()).is_true()  # No double-pop occurred
+	# If there was another menu, it wouldn't be shown; but since stack is empty, just confirm no extra show
+	# (For extra assurance, could add a second mock_prev2 and assert it's not shown, but since pop only once, it's fine)
 
 
 func test_tree_exited_restores_if_stuck() -> void:
 	## Tests unexpected exit restores menu.
 	##
 	## :rtype: void
+	do_return(false).on(mock_os).has_feature("web")
+	var audio_menu: Control = auto_free(load("res://scenes/audio_settings.tscn").instantiate())
+	audio_menu.os_wrapper = mock_os
+	audio_menu.js_bridge_wrapper = mock_js_bridge
+	add_child(audio_menu)
 	var mock_prev: Control = auto_free(Control.new())
 	mock_prev.visible = false
 	Globals.hidden_menus.push_back(mock_prev)
@@ -138,6 +124,11 @@ func test_double_pop_prevented() -> void:
 	## Simulates back press, awaits exit, asserts single pop and show.
 	##
 	## :rtype: void
+	do_return(false).on(mock_os).has_feature("web")
+	var audio_menu: Control = auto_free(load("res://scenes/audio_settings.tscn").instantiate())
+	audio_menu.os_wrapper = mock_os
+	audio_menu.js_bridge_wrapper = mock_js_bridge
+	add_child(audio_menu)
 	var mock_prev: Control = auto_free(Control.new())
 	mock_prev.visible = false
 	Globals.hidden_menus.push_back(mock_prev)
@@ -162,9 +153,9 @@ func test_double_pop_prevented() -> void:
 	Globals.hidden_menus.push_back(mock_prev)
 	
 	# Re-instantiate audio_menu for this sub-test
-	if is_instance_valid(audio_menu):
-		audio_menu.queue_free()
 	audio_menu = auto_free(load("res://scenes/audio_settings.tscn").instantiate())
+	audio_menu.os_wrapper = mock_os
+	audio_menu.js_bridge_wrapper = mock_js_bridge
 	add_child(audio_menu)
 	
 	# Simulate back press again
