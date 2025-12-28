@@ -95,10 +95,10 @@ func _ready() -> void:
 			js_bridge_wrapper
 			. eval(
 				"""
-	        document.getElementById('log-level-select').style.display = 'block';
-	        document.getElementById('difficulty-slider').style.display = 'block';
-	        document.getElementById('options-back-button').style.display = 'block';
-		""",
+				document.getElementById('log-level-select').style.display = 'block';
+				document.getElementById('difficulty-slider').style.display = 'block';
+				document.getElementById('options-back-button').style.display = 'block';
+				""",
 				true
 			)
 		)
@@ -260,10 +260,10 @@ func _on_options_back_button_pressed() -> void:
 			js_bridge_wrapper
 			. eval(
 				"""
-	        document.getElementById('log-level-select').style.display = 'none';
-	        document.getElementById('difficulty-slider').style.display = 'none';
-	        document.getElementById('options-back-button').style.display = 'none';
-		"""
+				document.getElementById('log-level-select').style.display = 'none';
+				document.getElementById('difficulty-slider').style.display = 'none';
+				document.getElementById('options-back-button').style.display = 'none';
+				"""
 			)
 		)
 
