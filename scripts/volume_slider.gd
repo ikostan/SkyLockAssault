@@ -82,5 +82,5 @@ func _on_value_changed(value: float) -> void:
 
 # New: Called on timer timeout—perform the batched save
 func _on_debounce_timeout() -> void:
-	AudioManager._save_volumes()
+	AudioManager.save_volumes()
 	Globals.log_message("Debounced settings save triggered.", Globals.LogLevel.DEBUG)
