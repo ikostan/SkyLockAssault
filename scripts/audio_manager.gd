@@ -8,8 +8,11 @@ extends Node
 @export var master_volume: float = 1.0
 @export var music_volume: float = 1.0
 @export var sfx_volume: float = 1.0
+@export var weapon_volume: float = 1.0
 @export var rotors_volume: float = 1.0
 
+var master_muted: bool
+var master_previous_volume: float
 
 func _ready() -> void:
 	load_volumes()  # Load persisted volumes
@@ -34,10 +37,12 @@ func load_volumes(path: String = Settings.CONFIG_PATH) -> void:
 	music_volume = config.get_value("audio", "music_volume", music_volume)
 	sfx_volume = config.get_value("audio", "sfx_volume", sfx_volume)
 	rotors_volume = config.get_value("audio", "rotors_volume", rotors_volume)
+	weapon_volume = config.get_value("audio", "weapon_volume", weapon_volume)
 	Globals.log_message("Loaded saved master_volume: " + str(master_volume), Globals.LogLevel.DEBUG)
 	Globals.log_message("Loaded saved music_volume: " + str(music_volume), Globals.LogLevel.DEBUG)
 	Globals.log_message("Loaded saved sfx_volume: " + str(sfx_volume), Globals.LogLevel.DEBUG)
 	Globals.log_message("Loaded saved rotors_volume: " + str(rotors_volume), Globals.LogLevel.DEBUG)
+	Globals.log_message("Loaded saved weapon_volume: " + str(weapon_volume), Globals.LogLevel.DEBUG)
 
 
 ## Save volumes to config (shared with other settings)
@@ -57,6 +62,7 @@ func save_volumes(path: String = Settings.CONFIG_PATH) -> void:
 	config.set_value("audio", "music_volume", music_volume)
 	config.set_value("audio", "sfx_volume", sfx_volume)
 	config.set_value("audio", "rotors_volume", rotors_volume)
+	config.set_value("audio", "weapon_volume", weapon_volume)
 
 	err = config.save(path)
 	if err != OK:
@@ -72,6 +78,7 @@ func apply_all_volumes() -> void:
 	apply_volume_to_bus(AudioConstants.BUS_MUSIC, music_volume)
 	apply_volume_to_bus(AudioConstants.BUS_SFX, sfx_volume)
 	apply_volume_to_bus(AudioConstants.BUS_SFX_ROTORS, rotors_volume)
+	apply_volume_to_bus(AudioConstants.BUS_SFX_WEAPON, weapon_volume)
 
 
 ## Helper to apply a single volume to a named bus

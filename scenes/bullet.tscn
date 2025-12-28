@@ -11,7 +11,7 @@ texture_filter = 1
 script = ExtResource("1_mkf8s")
 
 [node name="ShotSFX" type="AudioStreamPlayer2D" parent="."]
-bus = &"SFX"
+bus = &"SFX_Weapon"
 
 [node name="Area2D" type="Area2D" parent="."]
 

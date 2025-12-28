@@ -1,0 +1,23 @@
+[gd_scene load_steps=2 format=3 uid="uid://bo5ooohvfu7u6"]
+
+[ext_resource type="Script" uid="uid://8hd1kvmb5bt1" path="res://scripts/volume_slider.gd" id="1_38mso"]
+
+[node name="SFXWeaponVolumeControl" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HSlider" type="HSlider" parent="."]
+layout_direction = 2
+layout_mode = 0
+offset_right = 180.0
+offset_bottom = 16.0
+max_value = 1.0
+step = 0.001
+tick_count = 16
+ticks_on_borders = true
+script = ExtResource("1_38mso")
+bus_name = "SFX_Weapon"

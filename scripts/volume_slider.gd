@@ -71,6 +71,17 @@ func _on_value_changed(value: float) -> void:
 			"Rotors Volume Level in AudioManager: " + str(AudioManager.rotors_volume),
 			Globals.LogLevel.DEBUG
 		)
+	
+	# Weapon volume
+	if bus_name == AudioConstants.BUS_SFX_WEAPON:
+		AudioManager.weapon_volume = value
+		Globals.log_message(
+			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
+		)
+		Globals.log_message(
+			"Weapon Volume Level in AudioManager: " + str(AudioManager.weapon_volume),
+			Globals.LogLevel.DEBUG
+		)
 
 	# New: Start/restart debounce timer instead of immediate save
 	if save_debounce_timer.is_stopped():
