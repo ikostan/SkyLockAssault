@@ -17,9 +17,9 @@ extends Node
 @export var sfx_volume: float = 1.0
 @export var sfx_muted: bool = false  # New default
 @export var weapon_volume: float = 1.0
-@export var weapon_muted: bool
+@export var weapon_muted: bool = false  # New default
 @export var rotors_volume: float = 1.0
-@export var rotors_muted: bool
+@export var rotors_muted: bool = false  # New default
 
 
 func _ready() -> void:
@@ -58,9 +58,11 @@ func load_volumes(path: String = Settings.CONFIG_PATH) -> void:
 	# SFX Rotors
 	rotors_volume = config.get_value("audio", "rotors_volume", rotors_volume)
 	Globals.log_message("Loaded saved rotors_volume: " + str(rotors_volume), Globals.LogLevel.DEBUG)
-	# SFX 
+	# SFX Weapon
 	weapon_volume = config.get_value("audio", "weapon_volume", weapon_volume)
+	weapon_muted = config.get_value("audio", "weapon_muted", weapon_muted)  # New
 	Globals.log_message("Loaded saved weapon_volume: " + str(weapon_volume), Globals.LogLevel.DEBUG)
+	Globals.log_message("Loaded saved weapon_muted: " + str(weapon_muted), Globals.LogLevel.DEBUG)
 
 
 ## Save volumes to config (shared with other settings)
@@ -88,6 +90,7 @@ func save_volumes(path: String = Settings.CONFIG_PATH) -> void:
 	config.set_value("audio", "rotors_volume", rotors_volume)
 	# SFX Weapon
 	config.set_value("audio", "weapon_volume", weapon_volume)
+	config.set_value("audio", "weapon_muted", weapon_muted)  # New
 
 	err = config.save(path)
 	if err != OK:
@@ -102,8 +105,8 @@ func apply_all_volumes() -> void:
 	apply_volume_to_bus(AudioConstants.BUS_MASTER, master_volume, master_muted)
 	apply_volume_to_bus(AudioConstants.BUS_MUSIC, music_volume, music_muted)
 	apply_volume_to_bus(AudioConstants.BUS_SFX, sfx_volume, sfx_muted)
-	apply_volume_to_bus(AudioConstants.BUS_SFX_ROTORS, rotors_volume)
-	apply_volume_to_bus(AudioConstants.BUS_SFX_WEAPON, weapon_volume)
+	apply_volume_to_bus(AudioConstants.BUS_SFX_WEAPON, weapon_volume, weapon_muted)
+	apply_volume_to_bus(AudioConstants.BUS_SFX_ROTORS, rotors_volume, rotors_muted)
 
 
 ## Helper to apply a single volume to a named bus

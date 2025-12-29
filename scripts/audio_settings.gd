@@ -40,10 +40,9 @@ var _intentional_exit: bool = false
 @onready var rotor_slider: HSlider = $Panel/OptionsVBoxContainer/VolumeControls/SFXRotors/SFXRotorsVolumeControl/HSlider
 @onready var mute_rotor: CheckButton = $Panel/OptionsVBoxContainer/VolumeControls/SFXRotors/Mute
 #Other UI elements
-@onready var warning_dialog: AcceptDialog = $WarningDialog
+@onready var master_warning_dialog: AcceptDialog = $MasterWarningDialog
+@onready var sfx_warning_dialog: AcceptDialog = $SFXWarningDialog
 @onready var audio_back_button: Button = $Panel/OptionsVBoxContainer/AudioBackButton
-
-var all_sliders_and_mutes: Array
 
 
 func _ready() -> void:
@@ -57,8 +56,10 @@ func _ready() -> void:
 	##
 
 	# Warning popup message
-	warning_dialog.title = "Warning"
-	warning_dialog.dialog_text = "To adjust this volume, please unmute the Master volume first."
+	master_warning_dialog.title = "Warning"
+	master_warning_dialog.dialog_text = "To adjust this volume, please unmute the Master volume first."
+	sfx_warning_dialog.title = "Warning"
+	sfx_warning_dialog.dialog_text = "To adjust this volume, please unmute the SFX volume first."
 
 	# Master Mute toggle master_slider
 	if not mute_master.toggled.is_connected(_on_master_mute_toggled):
@@ -88,6 +89,15 @@ func _ready() -> void:
 	if not mute_sfx.gui_input.is_connected(_on_sfx_mute_gui_input):
 		mute_sfx.gui_input.connect(_on_sfx_mute_gui_input)
 	
+	# Weapon (New)
+	if not mute_weapon.toggled.is_connected(_on_weapon_mute_toggled):
+		mute_weapon.toggled.connect(_on_weapon_mute_toggled)
+	mute_weapon.button_pressed = not AudioManager.weapon_muted
+	if not weapon_slider.gui_input.is_connected(_on_weapon_volume_control_gui_input):
+		weapon_slider.gui_input.connect(_on_weapon_volume_control_gui_input)
+	if not mute_weapon.gui_input.is_connected(_on_weapon_mute_gui_input):
+		mute_weapon.gui_input.connect(_on_weapon_mute_gui_input)
+	
 	# Back buttom
 	if not audio_back_button.pressed.is_connected(_on_audio_back_button_pressed):
 		audio_back_button.pressed.connect(_on_audio_back_button_pressed)
@@ -95,6 +105,8 @@ func _ready() -> void:
 	tree_exited.connect(_on_tree_exited)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Globals.log_message("Audio menu loaded.", Globals.LogLevel.DEBUG)
+	# Apply initial UI state for others based on master (New)
+	_update_other_controls_ui()
 
 	if os_wrapper.has_feature("web"):
 		(
@@ -113,25 +125,7 @@ func _ready() -> void:
 			)
 			_previous_back_pressed_cb = js_window.backPressed  # Save previous before overwrite
 			js_window.backPressed = _audio_back_button_pressed_cb  # Set audio callback
-			
-	all_sliders_and_mutes = [
-		[music_slider, mute_music, AudioManager.music_muted], 
-		[sfx_slider, mute_sfx, AudioManager.sfx_muted], 
-		[weapon_slider, mute_weapon, AudioManager.weapon_muted], 
-		[rotor_slider, mute_rotor, AudioManager.rotors_muted]
-	]
-	
-	if AudioManager.master_muted:
-		for pair: Array in all_sliders_and_mutes:
-			var slider: HSlider = pair[0]
-			var mute: CheckButton = pair[1]
-			
-			if slider:
-				slider.editable = not AudioManager.master_muted
-			
-			if mute:
-				mute.disabled = AudioManager.master_muted
-		
+
 
 func _on_master_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.master_muted = not toggled_on  # Set directly to button state (instead of toggle)
@@ -161,13 +155,26 @@ func _on_music_mute_toggled(toggled_on: bool) -> void:
 func _on_sfx_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.sfx_muted = not toggled_on
 	sfx_slider.editable = not AudioManager.sfx_muted
+	_update_sfx_controls_ui()
 
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_SFX, AudioManager.sfx_volume, AudioManager.sfx_muted
 	)
 	AudioManager.save_volumes()
-	_update_sfx_controls_ui()
 	Globals.log_message("SFX mute button toggled to: " + str(toggled_on), Globals.LogLevel.DEBUG)
+
+
+# New: Weapon toggle
+func _on_weapon_mute_toggled(toggled_on: bool) -> void:
+	AudioManager.weapon_muted = not toggled_on
+	weapon_slider.editable = not AudioManager.weapon_muted
+	_update_sfx_controls_ui()
+
+	AudioManager.apply_volume_to_bus(
+		AudioConstants.BUS_SFX_WEAPON, AudioManager.weapon_volume, AudioManager.weapon_muted
+	)
+	AudioManager.save_volumes()
+	Globals.log_message("Weapon mute button toggled to: " + str(toggled_on), Globals.LogLevel.DEBUG)
 
 
 # New: Update UI for other controls based on master muted
@@ -179,17 +186,12 @@ func _update_other_controls_ui() -> void:
 	# SFX
 	mute_sfx.disabled = is_master_muted
 	sfx_slider.editable = not is_master_muted and not AudioManager.sfx_muted
-	# Weapon
-	mute_weapon.disabled = is_master_muted
-	weapon_slider.editable = not is_master_muted and not AudioManager.weapon_muted
-	# Rotors
-	mute_rotor.disabled = is_master_muted
-	rotor_slider.editable = not is_master_muted and not AudioManager.rotors_muted
+	_update_sfx_controls_ui()
 	
 
 # New: Update UI for SFX sub-controls based on master muted
 func _update_sfx_controls_ui() -> void:
-	var is_master_muted: bool = AudioManager.sfx_muted
+	var is_master_muted: bool = AudioManager.sfx_muted or AudioManager.master_muted
 	# Weapon
 	mute_weapon.disabled = is_master_muted
 	weapon_slider.editable = not is_master_muted and not AudioManager.weapon_muted
@@ -296,7 +298,7 @@ func _on_music_volume_control_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		# Display warning message when pressed and master volume disabled/muted
 		if AudioManager.master_muted:
-			warning_dialog.popup_centered()
+			master_warning_dialog.popup_centered()
 			get_viewport().set_input_as_handled()
 		# Unmute when pressed and music is muted and master is unmuted
 		elif not AudioManager.master_muted and AudioManager.music_muted:
@@ -308,7 +310,7 @@ func _on_music_volume_control_gui_input(event: InputEvent) -> void:
 # New: Music mute button gui input (show warning if master muted)
 func _on_music_mute_gui_input(event: InputEvent) -> void:
 	if AudioManager.master_muted and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		warning_dialog.popup_centered()
+		master_warning_dialog.popup_centered()
 		get_viewport().set_input_as_handled()
 
 
@@ -317,7 +319,7 @@ func _on_sfx_volume_control_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		# Display warning message when pressed and master volume disabled/muted
 		if AudioManager.master_muted:
-			warning_dialog.popup_centered()
+			master_warning_dialog.popup_centered()
 			get_viewport().set_input_as_handled()
 		# Unmute when pressed and SFX is muted and master is unmuted
 		elif not AudioManager.master_muted and AudioManager.sfx_muted:
@@ -331,5 +333,34 @@ func _on_sfx_volume_control_gui_input(event: InputEvent) -> void:
 func _on_sfx_mute_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if AudioManager.master_muted:
-			warning_dialog.popup_centered()
+			master_warning_dialog.popup_centered()
+			get_viewport().set_input_as_handled()
+
+
+# New: Weapon slider gui input
+func _on_weapon_volume_control_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		# Show warning about Master volume muted
+		if AudioManager.master_muted:
+			master_warning_dialog.popup_centered()
+			get_viewport().set_input_as_handled()
+		# Show warning about SFX master muted
+		elif not AudioManager.master_muted and AudioManager.sfx_muted:
+			sfx_warning_dialog.popup_centered()
+			get_viewport().set_input_as_handled()
+		# Unmute if muted
+		elif AudioManager.weapon_muted:
+				_on_weapon_mute_toggled(true)
+				mute_weapon.button_pressed = true
+				get_viewport().set_input_as_handled()
+
+
+# New: Weapon mute button gui input
+func _on_weapon_mute_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if AudioManager.master_muted:
+			master_warning_dialog.popup_centered()
+			get_viewport().set_input_as_handled()
+		elif not AudioManager.master_muted and AudioManager.sfx_muted:
+			sfx_warning_dialog.popup_centered()
 			get_viewport().set_input_as_handled()

@@ -71,7 +71,6 @@ func _on_value_changed(value: float) -> void:
 			"Rotors Volume Level in AudioManager: " + str(AudioManager.rotors_volume),
 			Globals.LogLevel.DEBUG
 		)
-	
 	# Weapon volume
 	if bus_name == AudioConstants.BUS_SFX_WEAPON:
 		AudioManager.weapon_volume = value

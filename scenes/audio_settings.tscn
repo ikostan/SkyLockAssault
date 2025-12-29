@@ -246,7 +246,9 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_a0ntd")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_w6v8r")
 text = "{BACK}"
 
-[node name="WarningDialog" type="AcceptDialog" parent="."]
+[node name="MasterWarningDialog" type="AcceptDialog" parent="."]
+
+[node name="SFXWarningDialog" type="AcceptDialog" parent="."]
 
 [connection signal="gui_input" from="Panel/OptionsVBoxContainer/VolumeControls/MasterVolume/MasterVolumeControl" to="." method="_on_master_volume_control_gui_input"]
 [connection signal="toggled" from="Panel/OptionsVBoxContainer/VolumeControls/MasterVolume/Mute" to="." method="_on_master_mute_toggled"]
