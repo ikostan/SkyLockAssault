@@ -39,7 +39,8 @@ var _intentional_exit: bool = false
 # SFX Rotor Volume Controls
 @onready var rotor_slider: HSlider = $Panel/OptionsVBoxContainer/VolumeControls/SFXRotors/SFXRotorsVolumeControl/HSlider
 @onready var mute_rotor: CheckButton = $Panel/OptionsVBoxContainer/VolumeControls/SFXRotors/Mute
-
+#Other UI elements
+@onready var warning_dialog: AcceptDialog = $WarningDialog
 @onready var audio_back_button: Button = $Panel/OptionsVBoxContainer/AudioBackButton
 
 var all_sliders_and_mutes: Array
@@ -54,6 +55,11 @@ func _ready() -> void:
 	##
 	## :rtype: void
 	##
+
+	# Warning popup message
+	warning_dialog.title = "Warning"
+	warning_dialog.dialog_text = "To adjust this volume, please unmute the Master volume first."
+
 	# Master Mute toggle master_slider
 	if not mute_master.toggled.is_connected(_on_master_mute_toggled):
 		mute_master.toggled.connect(_on_master_mute_toggled)  # Use toggled for CheckButton state
@@ -63,6 +69,15 @@ func _ready() -> void:
 	if not master_slider.gui_input.is_connected(_on_master_volume_control_gui_input):
 		master_slider.gui_input.connect(_on_master_volume_control_gui_input)
 	master_slider.editable = not AudioManager.master_muted  # Initial state
+	
+	# Music (New)
+	if not mute_music.toggled.is_connected(_on_music_mute_toggled):
+		mute_music.toggled.connect(_on_music_mute_toggled)
+	mute_music.button_pressed = not AudioManager.music_muted
+	if not music_slider.gui_input.is_connected(_on_music_volume_control_gui_input):
+		music_slider.gui_input.connect(_on_music_volume_control_gui_input)
+	if not mute_music.gui_input.is_connected(_on_music_mute_gui_input):
+		mute_music.gui_input.connect(_on_music_mute_gui_input)
 	
 	# Back buttom
 	if not audio_back_button.pressed.is_connected(_on_audio_back_button_pressed):
@@ -118,10 +133,19 @@ func _on_master_mute_toggled(toggled_on: bool) -> void:
 		AudioConstants.BUS_MASTER, AudioManager.master_volume, AudioManager.master_muted
 	)
 	AudioManager.save_volumes()
-	# Optional: If you want to move slider to 0 visually when muted (but remember, we keep it for restore)
-	# var master_slider = $Panel/OptionsVBoxContainer/VolumeControls/MasterVolume/MasterVolumeControl
-	# master_slider.value = 0 if toggled_on else AudioManager.master_volume
 	Globals.log_message("Master mute button toggled to: " + str(toggled_on), Globals.LogLevel.DEBUG)
+
+
+# New: Music toggle
+func _on_music_mute_toggled(toggled_on: bool) -> void:
+	AudioManager.music_muted = not toggled_on
+	music_slider.editable = not AudioManager.music_muted
+	
+	AudioManager.apply_volume_to_bus(
+		AudioConstants.BUS_MUSIC, AudioManager.music_volume, AudioManager.music_muted
+	)
+	AudioManager.save_volumes()
+	Globals.log_message("Music mute button toggled to: " + str(toggled_on), Globals.LogLevel.DEBUG)
 
 
 # New: Update UI for other controls based on master muted
@@ -243,3 +267,24 @@ func _on_master_volume_control_gui_input(event: InputEvent) -> void:
 			Globals.log_message(
 				"Master Volume Slider is enabled now.", Globals.LogLevel.DEBUG
 			)
+
+
+# New: Music slider gui input (show warning if master muted)
+func _on_music_volume_control_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		# Display warning message when pressed and master volume disabled/muted
+		if AudioManager.master_muted:
+			warning_dialog.popup_centered()
+			get_viewport().set_input_as_handled()
+		# Unmute when pressed and music is muted and master is unmuted
+		elif not AudioManager.master_muted and AudioManager.music_muted:
+			_on_music_mute_toggled(true)
+			mute_music.button_pressed = true
+			get_viewport().set_input_as_handled()
+
+
+# New: Music mute button gui input (show warning if master muted)
+func _on_music_mute_gui_input(event: InputEvent) -> void:
+	if AudioManager.master_muted and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		warning_dialog.popup_centered()
+		get_viewport().set_input_as_handled()

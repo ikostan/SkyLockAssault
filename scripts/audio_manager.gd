@@ -11,7 +11,7 @@ extends Node
 
 @export_category("Music Volume")
 @export var music_volume: float = 1.0
-@export var music_muted: bool
+@export var music_muted: bool = false
 
 @export_category("SFX Volume")
 @export var sfx_volume: float = 1.0
@@ -47,7 +47,9 @@ func load_volumes(path: String = Settings.CONFIG_PATH) -> void:
 	Globals.log_message("Loaded saved master_muted: " + str(master_muted), Globals.LogLevel.DEBUG)
 	# Music Volume
 	music_volume = config.get_value("audio", "music_volume", music_volume)
+	music_muted = config.get_value("audio", "music_muted", music_muted)  # New
 	Globals.log_message("Loaded saved music_volume: " + str(music_volume), Globals.LogLevel.DEBUG)
+	Globals.log_message("Loaded saved music_muted: " + str(music_muted), Globals.LogLevel.DEBUG)
 	# SFX
 	sfx_volume = config.get_value("audio", "sfx_volume", sfx_volume)
 	rotors_volume = config.get_value("audio", "rotors_volume", rotors_volume)
@@ -69,11 +71,13 @@ func save_volumes(path: String = Settings.CONFIG_PATH) -> void:
 			"Failed to load settings config for save: " + str(err), Globals.LogLevel.ERROR
 		)
 		return
-
+	# Master Volume
 	config.set_value("audio", "master_volume", master_volume)
 	config.set_value("audio", "master_muted", master_muted)
-	
+	# Music Volume
 	config.set_value("audio", "music_volume", music_volume)
+	config.set_value("audio", "music_muted", music_muted)  # New
+	# SFX Volume
 	config.set_value("audio", "sfx_volume", sfx_volume)
 	config.set_value("audio", "rotors_volume", rotors_volume)
 	config.set_value("audio", "weapon_volume", weapon_volume)
@@ -89,7 +93,7 @@ func save_volumes(path: String = Settings.CONFIG_PATH) -> void:
 ## :rtype: void
 func apply_all_volumes() -> void:
 	apply_volume_to_bus(AudioConstants.BUS_MASTER, master_volume, master_muted)
-	apply_volume_to_bus(AudioConstants.BUS_MUSIC, music_volume)
+	apply_volume_to_bus(AudioConstants.BUS_MUSIC, music_volume, music_muted)
 	apply_volume_to_bus(AudioConstants.BUS_SFX, sfx_volume)
 	apply_volume_to_bus(AudioConstants.BUS_SFX_ROTORS, rotors_volume)
 	apply_volume_to_bus(AudioConstants.BUS_SFX_WEAPON, weapon_volume)
