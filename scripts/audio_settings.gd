@@ -33,8 +33,7 @@ var master_slider: HSlider = $Panel/OptionsContainer/VolumeControls/Master/Maste
 var music_slider: HSlider = $Panel/OptionsContainer/VolumeControls/Music/MusicControl/HSlider
 @onready var mute_music: CheckButton = $Panel/OptionsContainer/VolumeControls/Music/Mute
 # SFX Volume Controls
-@onready
-var sfx_slider: HSlider = $Panel/OptionsContainer/VolumeControls/SFX/SFXControl/HSlider
+@onready var sfx_slider: HSlider = $Panel/OptionsContainer/VolumeControls/SFX/SFXControl/HSlider
 @onready var mute_sfx: CheckButton = $Panel/OptionsContainer/VolumeControls/SFX/Mute
 # SFX Weapon Volume Controls
 @onready
