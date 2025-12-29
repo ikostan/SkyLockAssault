@@ -118,7 +118,7 @@ func apply_all_volumes() -> void:
 ## :param volume: Volume level (0.0 to 1.0).
 ## :type volume: float
 ## :rtype: void
-func apply_volume_to_bus(bus_name: String, volume: float, muted: bool = false) -> void:
+func apply_volume_to_bus(bus_name: String, volume: float, muted: bool) -> void:
 	var bus_idx: int = AudioServer.get_bus_index(bus_name)
 	if bus_idx != -1:
 		# Always set the volume level (so it's ready when unmuted)
