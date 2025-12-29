@@ -79,6 +79,15 @@ func _ready() -> void:
 	if not mute_music.gui_input.is_connected(_on_music_mute_gui_input):
 		mute_music.gui_input.connect(_on_music_mute_gui_input)
 	
+	# SFX (New)
+	if not mute_sfx.toggled.is_connected(_on_sfx_mute_toggled):
+		mute_sfx.toggled.connect(_on_sfx_mute_toggled)
+	mute_sfx.button_pressed = not AudioManager.sfx_muted
+	if not sfx_slider.gui_input.is_connected(_on_sfx_volume_control_gui_input):
+		sfx_slider.gui_input.connect(_on_sfx_volume_control_gui_input)
+	if not mute_sfx.gui_input.is_connected(_on_sfx_mute_gui_input):
+		mute_sfx.gui_input.connect(_on_sfx_mute_gui_input)
+	
 	# Back buttom
 	if not audio_back_button.pressed.is_connected(_on_audio_back_button_pressed):
 		audio_back_button.pressed.connect(_on_audio_back_button_pressed)
@@ -146,6 +155,19 @@ func _on_music_mute_toggled(toggled_on: bool) -> void:
 	)
 	AudioManager.save_volumes()
 	Globals.log_message("Music mute button toggled to: " + str(toggled_on), Globals.LogLevel.DEBUG)
+
+
+# New: SFX toggle
+func _on_sfx_mute_toggled(toggled_on: bool) -> void:
+	AudioManager.sfx_muted = not toggled_on
+	sfx_slider.editable = not AudioManager.sfx_muted
+
+	AudioManager.apply_volume_to_bus(
+		AudioConstants.BUS_SFX, AudioManager.sfx_volume, AudioManager.sfx_muted
+	)
+	AudioManager.save_volumes()
+	_update_sfx_controls_ui()
+	Globals.log_message("SFX mute button toggled to: " + str(toggled_on), Globals.LogLevel.DEBUG)
 
 
 # New: Update UI for other controls based on master muted
@@ -288,3 +310,26 @@ func _on_music_mute_gui_input(event: InputEvent) -> void:
 	if AudioManager.master_muted and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		warning_dialog.popup_centered()
 		get_viewport().set_input_as_handled()
+
+
+# New: SFX slider gui input
+func _on_sfx_volume_control_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		# Display warning message when pressed and master volume disabled/muted
+		if AudioManager.master_muted:
+			warning_dialog.popup_centered()
+			get_viewport().set_input_as_handled()
+		# Unmute when pressed and SFX is muted and master is unmuted
+		elif not AudioManager.master_muted and AudioManager.sfx_muted:
+			_on_sfx_mute_toggled(true)
+			mute_sfx.button_pressed = true
+			_update_sfx_controls_ui()
+			get_viewport().set_input_as_handled()
+
+
+# New: SFX mute button gui input
+func _on_sfx_mute_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if AudioManager.master_muted:
+			warning_dialog.popup_centered()
+			get_viewport().set_input_as_handled()
