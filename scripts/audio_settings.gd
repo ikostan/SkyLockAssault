@@ -25,24 +25,29 @@ var _audio_back_button_pressed_cb: Variant
 var _previous_back_pressed_cb: Variant
 var _intentional_exit: bool = false
 # Master Volume Controls
-@onready var master_slider: HSlider = $Panel/OptionsVBoxContainer/VolumeControls/MasterVolume/MasterVolumeControl/HSlider
-@onready var mute_master: CheckButton = $Panel/OptionsVBoxContainer/VolumeControls/MasterVolume/Mute
+@onready
+var master_slider: HSlider = $Panel/OptionsContainer/VolumeControls/Master/MasterControl/HSlider
+@onready var mute_master: CheckButton = $Panel/OptionsContainer/VolumeControls/Master/Mute
 # Music Volume Controls
-@onready var music_slider: HSlider = $Panel/OptionsVBoxContainer/VolumeControls/MusicVolume/MusicVolumeControl/HSlider
-@onready var mute_music: CheckButton = $Panel/OptionsVBoxContainer/VolumeControls/MusicVolume/Mute
+@onready
+var music_slider: HSlider = $Panel/OptionsContainer/VolumeControls/Music/MusicControl/HSlider
+@onready var mute_music: CheckButton = $Panel/OptionsContainer/VolumeControls/Music/Mute
 # SFX Volume Controls
-@onready var sfx_slider: HSlider = $Panel/OptionsVBoxContainer/VolumeControls/SFXVolume/SFXVolumeControl/HSlider
-@onready var mute_sfx: CheckButton = $Panel/OptionsVBoxContainer/VolumeControls/SFXVolume/Mute
+@onready
+var sfx_slider: HSlider = $Panel/OptionsContainer/VolumeControls/SFX/SFXControl/HSlider
+@onready var mute_sfx: CheckButton = $Panel/OptionsContainer/VolumeControls/SFX/Mute
 # SFX Weapon Volume Controls
-@onready var weapon_slider: HSlider = $Panel/OptionsVBoxContainer/VolumeControls/SFXWeapon/SFXWeaponVolumeControl/HSlider
-@onready var mute_weapon: CheckButton = $Panel/OptionsVBoxContainer/VolumeControls/SFXWeapon/Mute
+@onready
+var weapon_slider: HSlider = $Panel/OptionsContainer/VolumeControls/SFXWeapon/WeaponControl/HSlider
+@onready var mute_weapon: CheckButton = $Panel/OptionsContainer/VolumeControls/SFXWeapon/Mute
 # SFX Rotor Volume Controls
-@onready var rotor_slider: HSlider = $Panel/OptionsVBoxContainer/VolumeControls/SFXRotors/SFXRotorsVolumeControl/HSlider
-@onready var mute_rotor: CheckButton = $Panel/OptionsVBoxContainer/VolumeControls/SFXRotors/Mute
+@onready
+var rotor_slider: HSlider = $Panel/OptionsContainer/VolumeControls/SFXRotors/RotorsControl/HSlider
+@onready var mute_rotor: CheckButton = $Panel/OptionsContainer/VolumeControls/SFXRotors/Mute
 #Other UI elements
 @onready var master_warning_dialog: AcceptDialog = $MasterWarningDialog
 @onready var sfx_warning_dialog: AcceptDialog = $SFXWarningDialog
-@onready var audio_back_button: Button = $Panel/OptionsVBoxContainer/AudioBackButton
+@onready var audio_back_button: Button = $Panel/OptionsContainer/AudioBackButton
 
 
 func _ready() -> void:
@@ -70,7 +75,7 @@ func _ready() -> void:
 	if not master_slider.gui_input.is_connected(_on_master_volume_control_gui_input):
 		master_slider.gui_input.connect(_on_master_volume_control_gui_input)
 	master_slider.editable = not AudioManager.master_muted  # Initial state
-	
+
 	# Music (New)
 	if not mute_music.toggled.is_connected(_on_music_mute_toggled):
 		mute_music.toggled.connect(_on_music_mute_toggled)
@@ -79,7 +84,7 @@ func _ready() -> void:
 		music_slider.gui_input.connect(_on_music_volume_control_gui_input)
 	if not mute_music.gui_input.is_connected(_on_music_mute_gui_input):
 		mute_music.gui_input.connect(_on_music_mute_gui_input)
-	
+
 	# SFX (New)
 	if not mute_sfx.toggled.is_connected(_on_sfx_mute_toggled):
 		mute_sfx.toggled.connect(_on_sfx_mute_toggled)
@@ -88,7 +93,7 @@ func _ready() -> void:
 		sfx_slider.gui_input.connect(_on_sfx_volume_control_gui_input)
 	if not mute_sfx.gui_input.is_connected(_on_sfx_mute_gui_input):
 		mute_sfx.gui_input.connect(_on_sfx_mute_gui_input)
-	
+
 	# Weapon (New)
 	if not mute_weapon.toggled.is_connected(_on_weapon_mute_toggled):
 		mute_weapon.toggled.connect(_on_weapon_mute_toggled)
@@ -97,7 +102,7 @@ func _ready() -> void:
 		weapon_slider.gui_input.connect(_on_weapon_volume_control_gui_input)
 	if not mute_weapon.gui_input.is_connected(_on_weapon_mute_gui_input):
 		mute_weapon.gui_input.connect(_on_weapon_mute_gui_input)
-		
+
 	# Rotors (New)
 	if not mute_rotor.toggled.is_connected(_on_rotor_mute_toggled):
 		mute_rotor.toggled.connect(_on_rotor_mute_toggled)
@@ -106,11 +111,11 @@ func _ready() -> void:
 		rotor_slider.gui_input.connect(_on_rotor_volume_control_gui_input)
 	if not mute_rotor.gui_input.is_connected(_on_rotor_mute_gui_input):
 		mute_rotor.gui_input.connect(_on_rotor_mute_gui_input)
-	
+
 	# Back buttom
 	if not audio_back_button.pressed.is_connected(_on_audio_back_button_pressed):
 		audio_back_button.pressed.connect(_on_audio_back_button_pressed)
-	
+
 	tree_exited.connect(_on_tree_exited)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Globals.log_message("Audio menu loaded.", Globals.LogLevel.DEBUG)
@@ -140,7 +145,7 @@ func _on_master_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.master_muted = not toggled_on  # Set directly to button state (instead of toggle)
 	master_slider.editable = not AudioManager.master_muted
 	_update_other_controls_ui()
-	
+
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_MASTER, AudioManager.master_volume, AudioManager.master_muted
 	)
@@ -152,7 +157,7 @@ func _on_master_mute_toggled(toggled_on: bool) -> void:
 func _on_music_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.music_muted = not toggled_on
 	music_slider.editable = not AudioManager.music_muted
-	
+
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_MUSIC, AudioManager.music_volume, AudioManager.music_muted
 	)
@@ -191,7 +196,7 @@ func _on_rotor_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.rotors_muted = not toggled_on
 	rotor_slider.editable = not AudioManager.rotors_muted
 	_update_sfx_controls_ui()
-	
+
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_SFX_ROTORS, AudioManager.rotors_volume, AudioManager.rotors_muted
 	)
@@ -209,7 +214,7 @@ func _update_other_controls_ui() -> void:
 	mute_sfx.disabled = is_master_muted
 	sfx_slider.editable = not is_master_muted and not AudioManager.sfx_muted
 	_update_sfx_controls_ui()
-	
+
 
 # New: Update UI for SFX sub-controls based on master muted
 func _update_sfx_controls_ui() -> void:
@@ -286,7 +291,6 @@ func _on_tree_exited() -> void:
 			)
 		)
 
-
 	if not Globals.hidden_menus.is_empty():
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
 		if is_instance_valid(prev_menu):
@@ -310,9 +314,7 @@ func _on_master_volume_control_gui_input(event: InputEvent) -> void:
 			_on_master_mute_toggled(true)
 			mute_master.button_pressed = true  # Set button to pressed (unmuted) state visually
 			get_viewport().set_input_as_handled()  # Consume the event to prevent further propagation
-			Globals.log_message(
-				"Master Volume Slider is enabled now.", Globals.LogLevel.DEBUG
-			)
+			Globals.log_message("Master Volume Slider is enabled now.", Globals.LogLevel.DEBUG)
 
 
 # New: Music slider gui input (show warning if master muted)
@@ -331,7 +333,12 @@ func _on_music_volume_control_gui_input(event: InputEvent) -> void:
 
 # New: Music mute button gui input (show warning if master muted)
 func _on_music_mute_gui_input(event: InputEvent) -> void:
-	if AudioManager.master_muted and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+	if (
+		AudioManager.master_muted
+		and event is InputEventMouseButton
+		and event.pressed
+		and event.button_index == MOUSE_BUTTON_LEFT
+	):
 		master_warning_dialog.popup_centered()
 		get_viewport().set_input_as_handled()
 
@@ -372,9 +379,9 @@ func _on_weapon_volume_control_gui_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		# Unmute if muted
 		elif AudioManager.weapon_muted:
-				_on_weapon_mute_toggled(true)
-				mute_weapon.button_pressed = true
-				get_viewport().set_input_as_handled()
+			_on_weapon_mute_toggled(true)
+			mute_weapon.button_pressed = true
+			get_viewport().set_input_as_handled()
 
 
 # New: Rotor slider gui input
@@ -390,9 +397,9 @@ func _on_rotor_volume_control_gui_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		# Unmute if muted
 		elif AudioManager.rotors_muted:
-				_on_rotor_mute_toggled(true)
-				mute_rotor.button_pressed = true
-				get_viewport().set_input_as_handled()
+			_on_rotor_mute_toggled(true)
+			mute_rotor.button_pressed = true
+			get_viewport().set_input_as_handled()
 
 
 # New: Weapon mute button gui input
