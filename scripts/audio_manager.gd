@@ -57,7 +57,9 @@ func load_volumes(path: String = Settings.CONFIG_PATH) -> void:
 	Globals.log_message("Loaded saved sfx_muted: " + str(sfx_muted), Globals.LogLevel.DEBUG)
 	# SFX Rotors
 	rotors_volume = config.get_value("audio", "rotors_volume", rotors_volume)
+	rotors_muted = config.get_value("audio", "rotors_muted", rotors_muted)  # New
 	Globals.log_message("Loaded saved rotors_volume: " + str(rotors_volume), Globals.LogLevel.DEBUG)
+	Globals.log_message("Loaded saved rotors_muted: " + str(rotors_muted), Globals.LogLevel.DEBUG)
 	# SFX Weapon
 	weapon_volume = config.get_value("audio", "weapon_volume", weapon_volume)
 	weapon_muted = config.get_value("audio", "weapon_muted", weapon_muted)  # New
@@ -88,6 +90,7 @@ func save_volumes(path: String = Settings.CONFIG_PATH) -> void:
 	config.set_value("audio", "sfx_muted", sfx_muted)  # New
 	# SFX Rotors
 	config.set_value("audio", "rotors_volume", rotors_volume)
+	config.set_value("audio", "rotors_muted", rotors_muted)  # New
 	# SFX Weapon
 	config.set_value("audio", "weapon_volume", weapon_volume)
 	config.set_value("audio", "weapon_muted", weapon_muted)  # New

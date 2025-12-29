@@ -97,6 +97,15 @@ func _ready() -> void:
 		weapon_slider.gui_input.connect(_on_weapon_volume_control_gui_input)
 	if not mute_weapon.gui_input.is_connected(_on_weapon_mute_gui_input):
 		mute_weapon.gui_input.connect(_on_weapon_mute_gui_input)
+		
+	# Rotors (New)
+	if not mute_rotor.toggled.is_connected(_on_rotor_mute_toggled):
+		mute_rotor.toggled.connect(_on_rotor_mute_toggled)
+	mute_rotor.button_pressed = not AudioManager.rotors_muted
+	if not rotor_slider.gui_input.is_connected(_on_rotor_volume_control_gui_input):
+		rotor_slider.gui_input.connect(_on_rotor_volume_control_gui_input)
+	if not mute_rotor.gui_input.is_connected(_on_rotor_mute_gui_input):
+		mute_rotor.gui_input.connect(_on_rotor_mute_gui_input)
 	
 	# Back buttom
 	if not audio_back_button.pressed.is_connected(_on_audio_back_button_pressed):
@@ -175,6 +184,19 @@ func _on_weapon_mute_toggled(toggled_on: bool) -> void:
 	)
 	AudioManager.save_volumes()
 	Globals.log_message("Weapon mute button toggled to: " + str(toggled_on), Globals.LogLevel.DEBUG)
+
+
+# New: Rotor toggle
+func _on_rotor_mute_toggled(toggled_on: bool) -> void:
+	AudioManager.rotors_muted = not toggled_on
+	rotor_slider.editable = not AudioManager.rotors_muted
+	_update_sfx_controls_ui()
+	
+	AudioManager.apply_volume_to_bus(
+		AudioConstants.BUS_SFX_ROTORS, AudioManager.rotors_volume, AudioManager.rotors_muted
+	)
+	AudioManager.save_volumes()
+	Globals.log_message("Rotors mute button toggled to: " + str(toggled_on), Globals.LogLevel.DEBUG)
 
 
 # New: Update UI for other controls based on master muted
@@ -355,8 +377,37 @@ func _on_weapon_volume_control_gui_input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 
 
+# New: Rotor slider gui input
+func _on_rotor_volume_control_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		# Show warning about Master volume muted
+		if AudioManager.master_muted:
+			master_warning_dialog.popup_centered()
+			get_viewport().set_input_as_handled()
+		# Show warning about SFX master muted
+		elif not AudioManager.master_muted and AudioManager.sfx_muted:
+			sfx_warning_dialog.popup_centered()
+			get_viewport().set_input_as_handled()
+		# Unmute if muted
+		elif AudioManager.rotors_muted:
+				_on_rotor_mute_toggled(true)
+				mute_rotor.button_pressed = true
+				get_viewport().set_input_as_handled()
+
+
 # New: Weapon mute button gui input
 func _on_weapon_mute_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if AudioManager.master_muted:
+			master_warning_dialog.popup_centered()
+			get_viewport().set_input_as_handled()
+		elif not AudioManager.master_muted and AudioManager.sfx_muted:
+			sfx_warning_dialog.popup_centered()
+			get_viewport().set_input_as_handled()
+
+
+# New: Rotor mute button gui input
+func _on_rotor_mute_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if AudioManager.master_muted:
 			master_warning_dialog.popup_centered()
