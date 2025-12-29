@@ -24,8 +24,25 @@ var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
 var _audio_back_button_pressed_cb: Variant
 var _previous_back_pressed_cb: Variant
 var _intentional_exit: bool = false
+# Master Volume Controls
+@onready var master_slider: HSlider = $Panel/OptionsVBoxContainer/VolumeControls/MasterVolume/MasterVolumeControl/HSlider
+@onready var mute_master: CheckButton = $Panel/OptionsVBoxContainer/VolumeControls/MasterVolume/Mute
+# Music Volume Controls
+@onready var music_slider: HSlider = $Panel/OptionsVBoxContainer/VolumeControls/MusicVolume/MusicVolumeControl/HSlider
+@onready var mute_music: CheckButton = $Panel/OptionsVBoxContainer/VolumeControls/MusicVolume/Mute
+# SFX Volume Controls
+@onready var sfx_slider: HSlider = $Panel/OptionsVBoxContainer/VolumeControls/SFXVolume/SFXVolumeControl/HSlider
+@onready var mute_sfx: CheckButton = $Panel/OptionsVBoxContainer/VolumeControls/SFXVolume/Mute
+# SFX Weapon Volume Controls
+@onready var weapon_slider: HSlider = $Panel/OptionsVBoxContainer/VolumeControls/SFXWeapon/SFXWeaponVolumeControl/HSlider
+@onready var mute_weapon: CheckButton = $Panel/OptionsVBoxContainer/VolumeControls/SFXWeapon/Mute
+# SFX Rotor Volume Controls
+@onready var rotor_slider: HSlider = $Panel/OptionsVBoxContainer/VolumeControls/SFXRotors/SFXRotorsVolumeControl/HSlider
+@onready var mute_rotor: CheckButton = $Panel/OptionsVBoxContainer/VolumeControls/SFXRotors/Mute
 
 @onready var audio_back_button: Button = $Panel/OptionsVBoxContainer/AudioBackButton
+
+var all_sliders_and_mutes: Array
 
 
 func _ready() -> void:
@@ -36,7 +53,21 @@ func _ready() -> void:
 	## Toggles web overlays if on web.
 	##
 	## :rtype: void
-	audio_back_button.pressed.connect(_on_audio_back_button_pressed)
+	##
+	# Master Mute toggle master_slider
+	if not mute_master.toggled.is_connected(_on_master_mute_toggled):
+		mute_master.toggled.connect(_on_master_mute_toggled)  # Use toggled for CheckButton state
+	mute_master.button_pressed = not AudioManager.master_muted  # Direct sync (checked = muted)
+
+	# Master slider input for unmute on click
+	if not master_slider.gui_input.is_connected(_on_master_volume_control_gui_input):
+		master_slider.gui_input.connect(_on_master_volume_control_gui_input)
+	master_slider.editable = not AudioManager.master_muted  # Initial state
+	
+	# Back buttom
+	if not audio_back_button.pressed.is_connected(_on_audio_back_button_pressed):
+		audio_back_button.pressed.connect(_on_audio_back_button_pressed)
+	
 	tree_exited.connect(_on_tree_exited)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Globals.log_message("Audio menu loaded.", Globals.LogLevel.DEBUG)
@@ -58,6 +89,67 @@ func _ready() -> void:
 			)
 			_previous_back_pressed_cb = js_window.backPressed  # Save previous before overwrite
 			js_window.backPressed = _audio_back_button_pressed_cb  # Set audio callback
+			
+	all_sliders_and_mutes = [
+		[music_slider, mute_music, AudioManager.music_muted], 
+		[sfx_slider, mute_sfx, AudioManager.sfx_muted], 
+		[weapon_slider, mute_weapon, AudioManager.weapon_muted], 
+		[rotor_slider, mute_rotor, AudioManager.rotors_muted]
+	]
+	
+	if AudioManager.master_muted:
+		for pair: Array in all_sliders_and_mutes:
+			var slider: HSlider = pair[0]
+			var mute: CheckButton = pair[1]
+			
+			if slider:
+				slider.editable = not AudioManager.master_muted
+			
+			if mute:
+				mute.disabled = AudioManager.master_muted
+		
+
+func _on_master_mute_toggled(toggled_on: bool) -> void:
+	AudioManager.master_muted = not toggled_on  # Set directly to button state (instead of toggle)
+	master_slider.editable = not AudioManager.master_muted
+	_update_other_controls_ui()
+	
+	AudioManager.apply_volume_to_bus(
+		AudioConstants.BUS_MASTER, AudioManager.master_volume, AudioManager.master_muted
+	)
+	AudioManager.save_volumes()
+	# Optional: If you want to move slider to 0 visually when muted (but remember, we keep it for restore)
+	# var master_slider = $Panel/OptionsVBoxContainer/VolumeControls/MasterVolume/MasterVolumeControl
+	# master_slider.value = 0 if toggled_on else AudioManager.master_volume
+	Globals.log_message("Master mute button toggled to: " + str(toggled_on), Globals.LogLevel.DEBUG)
+
+
+# New: Update UI for other controls based on master muted
+func _update_other_controls_ui() -> void:
+	var is_master_muted: bool = AudioManager.master_muted
+	# Music
+	mute_music.disabled = is_master_muted
+	music_slider.editable = not is_master_muted and not AudioManager.music_muted
+	# SFX
+	mute_sfx.disabled = is_master_muted
+	sfx_slider.editable = not is_master_muted and not AudioManager.sfx_muted
+	# Weapon
+	mute_weapon.disabled = is_master_muted
+	weapon_slider.editable = not is_master_muted and not AudioManager.weapon_muted
+	# Rotors
+	mute_rotor.disabled = is_master_muted
+	rotor_slider.editable = not is_master_muted and not AudioManager.rotors_muted
+	
+
+# New: Update UI for SFX sub-controls based on master muted
+func _update_sfx_controls_ui() -> void:
+	var is_master_muted: bool = AudioManager.sfx_muted
+	# Weapon
+	mute_weapon.disabled = is_master_muted
+	weapon_slider.editable = not is_master_muted and not AudioManager.weapon_muted
+	# Rotors
+	mute_rotor.disabled = is_master_muted
+	rotor_slider.editable = not is_master_muted and not AudioManager.rotors_muted
 
 
 func _on_audio_back_button_pressed() -> void:
@@ -124,10 +216,30 @@ func _on_tree_exited() -> void:
 			)
 		)
 
+
 	if not Globals.hidden_menus.is_empty():
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
 		if is_instance_valid(prev_menu):
 			prev_menu.visible = true
 			Globals.log_message(
 				"Audio menu exited unexpectedly, restored previous menu.", Globals.LogLevel.WARNING
+			)
+
+
+func _on_master_volume_control_gui_input(event: InputEvent) -> void:
+	## Handles GUI input on master volume control.
+	##
+	## Unmutes and enables slider if muted and clicked.
+	##
+	## :param event: The input event.
+	## :type event: InputEvent
+	## :rtype: void
+	# Check if the event is a mouse button click
+	if event is InputEventMouseButton and event.pressed and AudioManager.master_muted:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			_on_master_mute_toggled(true)
+			mute_master.button_pressed = true  # Set button to pressed (unmuted) state visually
+			get_viewport().set_input_as_handled()  # Consume the event to prevent further propagation
+			Globals.log_message(
+				"Master Volume Slider is enabled now.", Globals.LogLevel.DEBUG
 			)

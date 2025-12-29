@@ -57,10 +57,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -200.0
-offset_top = -200.0
-offset_right = 200.0
-offset_bottom = 200.0
+offset_left = -215.0
+offset_top = -210.0
+offset_right = 215.0
+offset_bottom = 210.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 4
@@ -74,13 +74,13 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -180.0
-offset_top = -175.0
-offset_right = 180.0
-offset_bottom = 175.0
+offset_left = -185.0
+offset_top = -195.0
+offset_right = 185.0
+offset_bottom = 195.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 15
+theme_override_constants/separation = 20
 
 [node name="Label" type="Label" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
@@ -108,20 +108,34 @@ horizontal_alignment = 1
 layout_mode = 2
 size_flags_vertical = 3
 tooltip_text = "Master Volum Control"
+theme_override_constants/separation = 20
 
 [node name="MasterLabel" type="Label" parent="Panel/OptionsVBoxContainer/VolumeControls/MasterVolume"]
 layout_mode = 2
 size_flags_horizontal = 0
+size_flags_vertical = 1
 theme_override_fonts/font = ExtResource("1_j3be7")
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 20
 text = "{MASTER}"
 
 [node name="MasterVolumeControl" parent="Panel/OptionsVBoxContainer/VolumeControls/MasterVolume" instance=ExtResource("3_6jtyf")]
 layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+
+[node name="Mute" type="CheckButton" parent="Panel/OptionsVBoxContainer/VolumeControls/MasterVolume"]
+layout_mode = 2
+size_flags_horizontal = 10
+tooltip_text = "Mute All"
+button_pressed = true
+icon_alignment = 2
+vertical_icon_alignment = 0
+expand_icon = true
 
 [node name="MusicVolume" type="HBoxContainer" parent="Panel/OptionsVBoxContainer/VolumeControls"]
 layout_mode = 2
 tooltip_text = "Music Volum Control"
+theme_override_constants/separation = 55
 
 [node name="MusicLabel" type="Label" parent="Panel/OptionsVBoxContainer/VolumeControls/MusicVolume"]
 layout_mode = 2
@@ -133,10 +147,20 @@ text = "{MUSIC}"
 [node name="MusicVolumeControl" parent="Panel/OptionsVBoxContainer/VolumeControls/MusicVolume" instance=ExtResource("4_73bp5")]
 layout_mode = 2
 
+[node name="Mute" type="CheckButton" parent="Panel/OptionsVBoxContainer/VolumeControls/MusicVolume"]
+layout_mode = 2
+size_flags_horizontal = 10
+tooltip_text = "Mute All"
+button_pressed = true
+icon_alignment = 2
+vertical_icon_alignment = 0
+expand_icon = true
+
 [node name="SFXVolume" type="HBoxContainer" parent="Panel/OptionsVBoxContainer/VolumeControls"]
 layout_mode = 2
 size_flags_vertical = 3
 tooltip_text = "SFX Volum Controls"
+theme_override_constants/separation = 73
 
 [node name="SFXLabel" type="Label" parent="Panel/OptionsVBoxContainer/VolumeControls/SFXVolume"]
 layout_mode = 2
@@ -148,10 +172,20 @@ text = "{SFX}"
 [node name="SFXVolumeControl" parent="Panel/OptionsVBoxContainer/VolumeControls/SFXVolume" instance=ExtResource("5_j3be7")]
 layout_mode = 2
 
+[node name="Mute" type="CheckButton" parent="Panel/OptionsVBoxContainer/VolumeControls/SFXVolume"]
+layout_mode = 2
+size_flags_horizontal = 10
+tooltip_text = "Mute All"
+button_pressed = true
+icon_alignment = 2
+vertical_icon_alignment = 0
+expand_icon = true
+
 [node name="SFXWeapon" type="HBoxContainer" parent="Panel/OptionsVBoxContainer/VolumeControls"]
 layout_mode = 2
 size_flags_vertical = 3
 tooltip_text = "SFX Weapon Volum Control"
+theme_override_constants/separation = 32
 
 [node name="SFXWeapon" type="Label" parent="Panel/OptionsVBoxContainer/VolumeControls/SFXWeapon"]
 layout_mode = 2
@@ -164,10 +198,20 @@ text = "{WEAPON}"
 [node name="SFXWeaponVolumeControl" parent="Panel/OptionsVBoxContainer/VolumeControls/SFXWeapon" instance=ExtResource("6_yonr6")]
 layout_mode = 2
 
+[node name="Mute" type="CheckButton" parent="Panel/OptionsVBoxContainer/VolumeControls/SFXWeapon"]
+layout_mode = 2
+size_flags_horizontal = 10
+tooltip_text = "Mute All"
+button_pressed = true
+icon_alignment = 2
+vertical_icon_alignment = 0
+expand_icon = true
+
 [node name="SFXRotors" type="HBoxContainer" parent="Panel/OptionsVBoxContainer/VolumeControls"]
 layout_mode = 2
 size_flags_vertical = 3
 tooltip_text = "SFX Rotors Volum Control"
+theme_override_constants/separation = 30
 
 [node name="SFXLabel" type="Label" parent="Panel/OptionsVBoxContainer/VolumeControls/SFXRotors"]
 layout_mode = 2
@@ -178,6 +222,15 @@ text = "{ROTORS}"
 
 [node name="SFXRotorsVolumeControl" parent="Panel/OptionsVBoxContainer/VolumeControls/SFXRotors" instance=ExtResource("7_koe27")]
 layout_mode = 2
+
+[node name="Mute" type="CheckButton" parent="Panel/OptionsVBoxContainer/VolumeControls/SFXRotors"]
+layout_mode = 2
+size_flags_horizontal = 10
+tooltip_text = "Mute All"
+button_pressed = true
+icon_alignment = 2
+vertical_icon_alignment = 0
+expand_icon = true
 
 [node name="AudioBackButton" type="Button" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
@@ -192,3 +245,6 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_koe27")
 theme_override_styles/hover = SubResource("StyleBoxFlat_a0ntd")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_w6v8r")
 text = "{BACK}"
+
+[connection signal="gui_input" from="Panel/OptionsVBoxContainer/VolumeControls/MasterVolume/MasterVolumeControl" to="." method="_on_master_volume_control_gui_input"]
+[connection signal="toggled" from="Panel/OptionsVBoxContainer/VolumeControls/MasterVolume/Mute" to="." method="_on_master_mute_toggled"]

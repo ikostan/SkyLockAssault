@@ -5,14 +5,22 @@
 
 extends Node
 
+@export_category("Master Volume")
 @export var master_volume: float = 1.0
-@export var music_volume: float = 1.0
-@export var sfx_volume: float = 1.0
-@export var weapon_volume: float = 1.0
-@export var rotors_volume: float = 1.0
+@export var master_muted: bool = false
 
-var master_muted: bool
-var master_previous_volume: float
+@export_category("Music Volume")
+@export var music_volume: float = 1.0
+@export var music_muted: bool
+
+@export_category("SFX Volume")
+@export var sfx_volume: float = 1.0
+@export var sfx_muted: bool
+@export var weapon_volume: float = 1.0
+@export var weapon_muted: bool
+@export var rotors_volume: float = 1.0
+@export var rotors_muted: bool
+
 
 func _ready() -> void:
 	load_volumes()  # Load persisted volumes
@@ -32,14 +40,18 @@ func load_volumes(path: String = Settings.CONFIG_PATH) -> void:
 				"Failed to load settings config: " + str(err), Globals.LogLevel.ERROR
 			)
 		return  # Use defaults if not found or error
-
+	# Master Volume
 	master_volume = config.get_value("audio", "master_volume", master_volume)
+	master_muted = config.get_value("audio", "master_muted", master_muted)
+	Globals.log_message("Loaded saved master_volume: " + str(master_volume), Globals.LogLevel.DEBUG)
+	Globals.log_message("Loaded saved master_muted: " + str(master_muted), Globals.LogLevel.DEBUG)
+	# Music Volume
 	music_volume = config.get_value("audio", "music_volume", music_volume)
+	Globals.log_message("Loaded saved music_volume: " + str(music_volume), Globals.LogLevel.DEBUG)
+	# SFX
 	sfx_volume = config.get_value("audio", "sfx_volume", sfx_volume)
 	rotors_volume = config.get_value("audio", "rotors_volume", rotors_volume)
 	weapon_volume = config.get_value("audio", "weapon_volume", weapon_volume)
-	Globals.log_message("Loaded saved master_volume: " + str(master_volume), Globals.LogLevel.DEBUG)
-	Globals.log_message("Loaded saved music_volume: " + str(music_volume), Globals.LogLevel.DEBUG)
 	Globals.log_message("Loaded saved sfx_volume: " + str(sfx_volume), Globals.LogLevel.DEBUG)
 	Globals.log_message("Loaded saved rotors_volume: " + str(rotors_volume), Globals.LogLevel.DEBUG)
 	Globals.log_message("Loaded saved weapon_volume: " + str(weapon_volume), Globals.LogLevel.DEBUG)
@@ -59,6 +71,8 @@ func save_volumes(path: String = Settings.CONFIG_PATH) -> void:
 		return
 
 	config.set_value("audio", "master_volume", master_volume)
+	config.set_value("audio", "master_muted", master_muted)
+	
 	config.set_value("audio", "music_volume", music_volume)
 	config.set_value("audio", "sfx_volume", sfx_volume)
 	config.set_value("audio", "rotors_volume", rotors_volume)
@@ -74,7 +88,7 @@ func save_volumes(path: String = Settings.CONFIG_PATH) -> void:
 ## Apply all loaded volumes to AudioServer buses
 ## :rtype: void
 func apply_all_volumes() -> void:
-	apply_volume_to_bus(AudioConstants.BUS_MASTER, master_volume)
+	apply_volume_to_bus(AudioConstants.BUS_MASTER, master_volume, master_muted)
 	apply_volume_to_bus(AudioConstants.BUS_MUSIC, music_volume)
 	apply_volume_to_bus(AudioConstants.BUS_SFX, sfx_volume)
 	apply_volume_to_bus(AudioConstants.BUS_SFX_ROTORS, rotors_volume)
@@ -87,13 +101,20 @@ func apply_all_volumes() -> void:
 ## :param volume: Volume level (0.0 to 1.0).
 ## :type volume: float
 ## :rtype: void
-func apply_volume_to_bus(bus_name: String, volume: float) -> void:
+func apply_volume_to_bus(bus_name: String, volume: float, muted: bool = false) -> void:
 	var bus_idx: int = AudioServer.get_bus_index(bus_name)
 	if bus_idx != -1:
+		# Always set the volume level (so it's ready when unmuted)
 		AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
-		Globals.log_message(
-			"Applied loaded " + bus_name + " volume to AudioServer: " + str(volume),
-			Globals.LogLevel.DEBUG
-		)
+		# Set mute flag separately for full silence
+		AudioServer.set_bus_mute(bus_idx, muted)
+		# Logs
+		if muted:
+			Globals.log_message(bus_name + " is muted.", Globals.LogLevel.DEBUG)
+		else:
+			Globals.log_message(
+				"Applied loaded " + bus_name + " volume to AudioServer: " + str(volume),
+				Globals.LogLevel.DEBUG
+			)
 	else:
 		Globals.log_message(bus_name + " audio bus not found!", Globals.LogLevel.ERROR)
