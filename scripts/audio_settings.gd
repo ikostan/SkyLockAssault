@@ -68,7 +68,7 @@ func _ready() -> void:
 	# Master Mute toggle master_slider
 	if not mute_master.toggled.is_connected(_on_master_mute_toggled):
 		mute_master.toggled.connect(_on_master_mute_toggled)  # Use toggled for CheckButton state
-	mute_master.button_pressed = not AudioManager.master_muted  # Direct sync (checked = muted)
+	mute_master.button_pressed = not AudioManager.master_muted  # Direct sync (checked = unmuted)
 
 	# Master slider input for unmute on click
 	if not master_slider.gui_input.is_connected(_on_master_volume_control_gui_input):
