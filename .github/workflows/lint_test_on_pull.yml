@@ -27,7 +27,7 @@ jobs:
     with:
       config-path: ".github/workflows/*.yml"
   gdunit4_tests:
-    name: "Godot Unit Tests"
+    name: "GDUnit4 Unit Tests"
     uses: "./.github/workflows/gdunit4_tests.yml"
     needs:
       - "gdlint"
