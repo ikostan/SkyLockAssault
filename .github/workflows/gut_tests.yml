@@ -1,6 +1,4 @@
-# gut_tests.yml - GitHub Actions workflow for running GUT unit tests in CI/CD.
-# Calls from main pipelines (e.g., lint_test_deploy.yml).
-
+---
 name: "GUT Unit Tests"  # Workflow name for CI display.
 
 on:  # Trigger when called by other jobs.
