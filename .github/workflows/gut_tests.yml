@@ -1,20 +1,22 @@
----
-name: "GUT Unit Tests"
+# gut_tests.yml - GitHub Actions workflow for running GUT unit tests in CI/CD.
+# Calls from main pipelines (e.g., lint_test_deploy.yml).
 
-on:
+name: "GUT Unit Tests"  # Workflow name for CI display.
+
+on:  # Trigger when called by other jobs.
   workflow_call:
-    secrets:
+    secrets:  # Required secrets for Codecov.
       CODECOV_TOKEN:
-        description: "Codecov requires a token to authenticate"
-        required: true
+        description: "Codecov requires a token to authenticate"  # Token desc.
+        required: true  # Mandatory for upload.
 
-jobs:
-  unit-test:
-    runs-on: "ubuntu-latest"
-    timeout-minutes: 10
-    permissions:
-      checks: write
-    steps:
+jobs:  # Define jobs.
+  unit-test:  # Job name.
+    runs-on: "ubuntu-latest"  # Run on latest Ubuntu VM.
+    timeout-minutes: 10  # Timeout after 10 min.
+    permissions:  # Grant permissions.
+      checks: write  # Allow writing test checks.
+    steps:  # Sequence of steps.
       - uses: "actions/checkout@v4.1.7"
       - name: "Download Godot Binary"
         run: |
@@ -31,19 +33,19 @@ jobs:
       - name: "Import Resources"
         run: |
           ./godot --headless --path . --import --quit
-      - name: "Run GUT Tests with Coverage"
+      - name: "Run GUT Tests"
         run: |
-          ./godot --headless --path . -s addons/gut/gut_cmdln.gd --config res://gut_config.json --coverage
-      - name: "Find Latest Coverage Report"
+          ./godot --headless --path . -s addons/gut/gut_cmdln.gd --config res://gut_config.json
+      - name: "Find Latest Report Directory"
         id: find_report
         run: |
-          LATEST_REPORT=$(ls -td coverage/* | head -1 || echo "")
+          LATEST_REPORT=$(ls -td gut-reports/* | head -1 || echo "")
           if [ -z "$LATEST_REPORT" ]; then
-            echo "No coverage report found."
+            echo "No report directory found; tests may not have generated reports."
             exit 1
           fi
-          echo "latest_report=$LATEST_REPORT" >> $GITHUB_OUTPUT
-      - name: "List Coverage Reports"
+          echo "latest_report=$LATEST_REPORT" >> $GITHUB_OUTPUT  # Set output.
+      - name: "List Reports"
         run: |
           ls -la ${{ steps.find_report.outputs.latest_report }}/
       - name: "Upload Test Reports Artifacts"
@@ -51,12 +53,12 @@ jobs:
         uses: "actions/upload-artifact@v4.4.3"
         with:
           name: gut-reports
-          path: coverage/**
+          path: gut-reports/**
           retention-days: 5
       - name: "Upload Coverage to Codecov"
         uses: "codecov/codecov-action@v4"
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage/**/*.json  # Adjust if your GUT coverage format is different (e.g., .lcov)
+          files: gut-reports/**/*.json
           flags: unittests
           verbose: true

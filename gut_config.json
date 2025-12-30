@@ -1,31 +1,31 @@
 {
-  "dirs": [
-    "res://test/gut/"  // Scan for test scripts here (e.g., test_audio_settings.gd)
+  "dirs": [  // Directories to scan for test scripts.
+    "res://test/"  // Base test dir for your audio/volume tests.
   ],
-  "include_subdirs": true,  // Recursively scan subfolders in dirs
-  "prefix": "test_",  // Only run scripts starting with "test_" (your naming convention)
-  "suffix": ".gd",  // Only GDScript files
-  "post_run_script": "",  // Optional: Script to run after tests (e.g., for custom reports)
-  "pre_run_script": "",  // Optional: Script before tests (e.g., setup mocks)
-  "test_timeout": 5,  // Max seconds per test before timeout (useful for debounce timer tests)
-  "log_level": 1,  // 0=errors, 1=warnings+errors, 2=info+warnings+errors, 3=debug+all
-  "opacity": 0.8,  // GUI opacity in editor (for visual comfort)
-  "hide_orphans": true,  // Hide orphan node warnings during tests
-  "yield_between": {  // Control yielding in tests for async (e.g., await timers)
+  "include_subdirs": true,  // Recurse subfolders for full coverage.
+  "prefix": "test_",  // Run only "test_*.gd" files.
+  "suffix": ".gd",  // GDScript only.
+  "post_run_script": "",  // Script after tests (empty for now).
+  "pre_run_script": "",  // Script before tests (empty for now).
+  "test_timeout": 5,  // 5s max per test to prevent hangs.
+  "log_level": 2,  // Info + warnings + errors for CI balance.
+  "opacity": 0.8,  // Editor panel opacity.
+  "hide_orphans": true,  // Suppress orphan warnings in tests.
+  "yield_between": {  // Yield for async (e.g., await in debounce tests).
     "after_x_tests": 5,
     "ms": 100
   },
-  "native_script_classes": [],  // If using GDExtension, list here
-  "cmdline": {  // For CI/headless runs like your workflow
-    "color": true,  // Enable colored output in console
-    "exit_on_success": true  // Exit with code 0 on pass (good for CI)
+  "native_script_classes": [],  // Empty for no GDExtension.
+  "cmdline": {  // CI-specific.
+    "color": true,  // Colored console output.
+    "exit_on_success": true  // Exit 0 on pass for CI success.
   },
-  "panel": {  // Editor panel settings
+  "panel": {  // Editor UI.
     "font_name": "CourierPrime",
     "font_size": 16,
     "background_color": "#000000ff"
   },
-  "settings": {  // Miscellaneous
+  "settings": {  // Misc.
     "show_help": false
   }
 }
