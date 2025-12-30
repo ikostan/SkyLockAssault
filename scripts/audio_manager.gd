@@ -21,6 +21,8 @@ extends Node
 @export var rotors_volume: float = 1.0
 @export var rotors_muted: bool = false  # New default
 
+var current_config_path: String = Settings.CONFIG_PATH
+
 
 func _ready() -> void:
 	load_volumes()  # Load persisted volumes
@@ -32,6 +34,7 @@ func _ready() -> void:
 ## :type path: String
 ## :rtype: void
 func load_volumes(path: String = Settings.CONFIG_PATH) -> void:
+	current_config_path = path
 	var config: ConfigFile = ConfigFile.new()
 	var err: int = config.load(path)
 	if err != OK:
@@ -71,7 +74,9 @@ func load_volumes(path: String = Settings.CONFIG_PATH) -> void:
 ## :param path: Path to config file.
 ## :type path: String
 ## :rtype: void
-func save_volumes(path: String = Settings.CONFIG_PATH) -> void:
+func save_volumes(path: String = "") -> void:
+	if path == "":
+		path = current_config_path
 	var config: ConfigFile = ConfigFile.new()
 	var err: int = config.load(path)  # Load existing to preserve other sections
 	if err != OK and err != ERR_FILE_NOT_FOUND:
