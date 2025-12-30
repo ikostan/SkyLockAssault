@@ -1,20 +1,20 @@
 ---
 name: "GUT Unit Tests"  # Workflow name for CI display.
 
-on:  # Trigger when called by other jobs.
+on:
   workflow_call:
-    secrets:  # Required secrets for Codecov.
+    secrets:
       CODECOV_TOKEN:
-        description: "Codecov requires a token to authenticate"  # Token desc.
-        required: true  # Mandatory for upload.
+        description: "Codecov requires a token to authenticate"
+        required: true
 
-jobs:  # Define jobs.
-  unit-test:  # Job name.
-    runs-on: "ubuntu-latest"  # Run on latest Ubuntu VM.
-    timeout-minutes: 10  # Timeout after 10 min.
-    permissions:  # Grant permissions.
-      checks: write  # Allow writing test checks.
-    steps:  # Sequence of steps.
+jobs:
+  unit-test:
+    runs-on: "ubuntu-latest"
+    timeout-minutes: 10
+    permissions:
+      checks: write
+    steps:
       - uses: "actions/checkout@v4.1.7"
       - name: "Download Godot Binary"
         run: |
@@ -33,7 +33,7 @@ jobs:  # Define jobs.
           ./godot --headless --path . --import --quit
       - name: "Run GUT Tests"
         run: |
-          ./godot --headless --path . -s addons/gut/gut_cmdln.gd --config res://gut_config.json
+          ./godot --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json
       - name: "Find Latest Report Directory"
         id: find_report
         run: |
