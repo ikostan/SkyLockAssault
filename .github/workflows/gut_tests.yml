@@ -14,6 +14,8 @@ jobs:
     timeout-minutes: 10
     permissions:
       checks: write
+    strategy:
+      fail-fast: true  # Fail job immediately on step failure.
     steps:
       - uses: "actions/checkout@v4.1.7"
       - name: "Download Godot Binary"
@@ -32,8 +34,9 @@ jobs:
         run: |
           ./godot --headless --path . --import --quit
       - name: "Run GUT Tests"
+        continue-on-error: false  # Explicit no continue on error (default, but for clarity).
         run: |
-          ./godot --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json
+          ./godot --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json  # Runs tests; fails job on error.
       - name: "Find Latest Report Directory"
         if: success()  # Only if tests pass.
         id: find_report
@@ -45,17 +48,18 @@ jobs:
           fi
           echo "latest_report=$LATEST_REPORT" >> $GITHUB_OUTPUT  # Set output.
       - name: "List Reports"
-        if: success()  # Only if tests pass.
+        if: success()  # Only if previous succeed.
         run: |
           ls -la ${{ steps.find_report.outputs.latest_report }}/
       - name: "Upload Test Reports Artifacts"
-        if: success()
+        if: success()  # Only on success; propagates failure.
         uses: "actions/upload-artifact@v4.4.3"
         with:
           name: gut-reports
           path: gut-reports/**
           retention-days: 5
       - name: "Upload Coverage to Codecov"
+        if: success()  # Only on success.
         uses: "codecov/codecov-action@v4"
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
