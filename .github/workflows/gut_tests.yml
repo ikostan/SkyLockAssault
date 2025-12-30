@@ -35,6 +35,7 @@ jobs:
         run: |
           ./godot --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json
       - name: "Find Latest Report Directory"
+        if: success()  # Only if tests pass.
         id: find_report
         run: |
           LATEST_REPORT=$(ls -td gut-reports/* | head -1 || echo "")
@@ -44,6 +45,7 @@ jobs:
           fi
           echo "latest_report=$LATEST_REPORT" >> $GITHUB_OUTPUT  # Set output.
       - name: "List Reports"
+        if: success()  # Only if tests pass.
         run: |
           ls -la ${{ steps.find_report.outputs.latest_report }}/
       - name: "Upload Test Reports Artifacts"
