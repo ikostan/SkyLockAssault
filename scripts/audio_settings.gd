@@ -329,7 +329,6 @@ func _on_music_volume_control_gui_input(event: InputEvent) -> void:
 		AudioManager.master_muted,
 		false,
 		AudioManager.music_muted,
-		Callable(self, "_on_music_mute_toggled"),
 		mute_music,
 		master_warning_dialog,
 		sfx_warning_dialog
@@ -353,7 +352,6 @@ func _on_sfx_volume_control_gui_input(event: InputEvent) -> void:
 		AudioManager.master_muted,
 		false,
 		AudioManager.sfx_muted,
-		Callable(self, "_on_sfx_mute_toggled"),
 		mute_sfx,
 		master_warning_dialog,
 		sfx_warning_dialog
@@ -386,7 +384,6 @@ func _on_rotor_volume_control_gui_input(event: InputEvent) -> void:
 		AudioManager.master_muted,
 		AudioManager.sfx_muted,
 		AudioManager.rotors_muted,
-		Callable(self, "_on_rotor_mute_toggled"),
 		mute_rotor,
 		master_warning_dialog,
 		sfx_warning_dialog
@@ -400,7 +397,6 @@ func _on_weapon_volume_control_gui_input(event: InputEvent) -> void:
 		AudioManager.master_muted,
 		AudioManager.sfx_muted,
 		AudioManager.weapon_muted,
-		Callable(self, "_on_weapon_mute_toggled"),
 		mute_weapon,
 		master_warning_dialog,
 		sfx_warning_dialog
@@ -441,7 +437,6 @@ func _handle_slider_gui_input(
 	master_muted: bool,
 	sfx_muted: bool,
 	bus_muted: bool,
-	toggle_func: Callable,
 	mute_button: CheckButton,
 	master_dialog: AcceptDialog,
 	sfx_dialog: AcceptDialog
@@ -454,7 +449,7 @@ func _handle_slider_gui_input(
 			sfx_dialog.popup_centered()
 			get_viewport().set_input_as_handled()
 		elif bus_muted:
-			# Removed direct call to toggle_func.call(true). 
+			# Removed direct call to toggle_func.call(true).
 			# Now only sets mute_button.button_pressed = true, emitting signal to handler.
 			# Prevents double toggle execution.
 			# toggle_func.call(true)
