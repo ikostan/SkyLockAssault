@@ -310,7 +310,11 @@ func _on_master_volume_control_gui_input(event: InputEvent) -> void:
 	# Check if the event is a mouse button click
 	if event is InputEventMouseButton and event.pressed and AudioManager.master_muted:
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			_on_master_mute_toggled(true)
+			# Removed direct call to _on_master_mute_toggled(true).
+			# Now only sets mute_master.button_pressed = true,
+			# which emits toggled signal to invoke handler.
+			# Prevents double toggle execution.
+			# _on_master_mute_toggled(true)
 			mute_master.button_pressed = true  # Set button to pressed (unmuted) state visually
 			get_viewport().set_input_as_handled()  # Consume the event to prevent further propagation
 			Globals.log_message("Master Volume Slider is enabled now.", Globals.LogLevel.DEBUG)
@@ -450,7 +454,10 @@ func _handle_slider_gui_input(
 			sfx_dialog.popup_centered()
 			get_viewport().set_input_as_handled()
 		elif bus_muted:
-			toggle_func.call(true)
+			# Removed direct call to toggle_func.call(true). 
+			# Now only sets mute_button.button_pressed = true, emitting signal to handler.
+			# Prevents double toggle execution.
+			# toggle_func.call(true)
 			mute_button.button_pressed = true
 			# No consume - allow slide
 
