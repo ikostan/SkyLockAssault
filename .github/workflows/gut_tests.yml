@@ -25,9 +25,9 @@ jobs:
       - name: "Install GUT"
         run: |
           mkdir -p addons
-          wget https://github.com/bitwes/Gut/releases/download/v9.5.0/gut-9.5.0.zip
-          unzip gut-9.5.0.zip -d addons
-          mv addons/addons/gut addons/gut
+          wget https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip
+          unzip v9.5.0.zip -d addons
+          mv addons/Gut-9.5.0/addons/gut addons/gut
       - name: "Import Resources"
         run: |
           ./godot --headless --path . --import --quit
