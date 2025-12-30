@@ -317,107 +317,167 @@ func _on_master_volume_control_gui_input(event: InputEvent) -> void:
 
 
 # New: Music slider gui input (show warning if master muted)
+# Music slider gui input (no SFX dependency)
 func _on_music_volume_control_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		# Display warning message when pressed and master volume disabled/muted
-		if AudioManager.master_muted:
-			master_warning_dialog.popup_centered()
-			get_viewport().set_input_as_handled()
-		# Unmute when pressed and music is muted and master is unmuted
-		elif not AudioManager.master_muted and AudioManager.music_muted:
-			_on_music_mute_toggled(true)
-			mute_music.button_pressed = true
-			get_viewport().set_input_as_handled()
+	# sfx_muted=false as placeholder
+	_handle_slider_gui_input(
+		event,
+		AudioManager.master_muted,
+		false,
+		AudioManager.music_muted,
+		Callable(self, "_on_music_mute_toggled"),
+		mute_music,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
 
 
 # New: Music mute button gui input (show warning if master muted)
+# Music mute button gui input (no SFX)
 func _on_music_mute_gui_input(event: InputEvent) -> void:
-	if (
-		AudioManager.master_muted
-		and event is InputEventMouseButton
-		and event.pressed
-		and event.button_index == MOUSE_BUTTON_LEFT
-	):
-		master_warning_dialog.popup_centered()
-		get_viewport().set_input_as_handled()
+	_handle_mute_gui_input(
+		event, AudioManager.master_muted, false, master_warning_dialog, sfx_warning_dialog
+	)
 
 
 # New: SFX slider gui input
+# SFX slider gui input (self as SFX)
 func _on_sfx_volume_control_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		# Display warning message when pressed and master volume disabled/muted
-		if AudioManager.master_muted:
-			master_warning_dialog.popup_centered()
-			get_viewport().set_input_as_handled()
-		# Unmute when pressed and SFX is muted and master is unmuted
-		elif not AudioManager.master_muted and AudioManager.sfx_muted:
-			_on_sfx_mute_toggled(true)
-			mute_sfx.button_pressed = true
-			_update_sfx_controls_ui()
-			get_viewport().set_input_as_handled()
+	# sfx_muted=false for self-check
+	_handle_slider_gui_input(
+		event,
+		AudioManager.master_muted,
+		false,
+		AudioManager.sfx_muted,
+		Callable(self, "_on_sfx_mute_toggled"),
+		mute_sfx,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
 
 
 # New: SFX mute button gui input
+# SFX mute button gui input (no SFX check for self)
 func _on_sfx_mute_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		if AudioManager.master_muted:
-			master_warning_dialog.popup_centered()
-			get_viewport().set_input_as_handled()
-
-
-# New: Weapon slider gui input
-func _on_weapon_volume_control_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		# Show warning about Master volume muted
-		if AudioManager.master_muted:
-			master_warning_dialog.popup_centered()
-			get_viewport().set_input_as_handled()
-		# Show warning about SFX master muted
-		elif not AudioManager.master_muted and AudioManager.sfx_muted:
-			sfx_warning_dialog.popup_centered()
-			get_viewport().set_input_as_handled()
-		# Unmute if muted
-		elif AudioManager.weapon_muted:
-			_on_weapon_mute_toggled(true)
-			mute_weapon.button_pressed = true
-			get_viewport().set_input_as_handled()
-
-
-# New: Rotor slider gui input
-func _on_rotor_volume_control_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		# Show warning about Master volume muted
-		if AudioManager.master_muted:
-			master_warning_dialog.popup_centered()
-			get_viewport().set_input_as_handled()
-		# Show warning about SFX master muted
-		elif not AudioManager.master_muted and AudioManager.sfx_muted:
-			sfx_warning_dialog.popup_centered()
-			get_viewport().set_input_as_handled()
-		# Unmute if muted
-		elif AudioManager.rotors_muted:
-			_on_rotor_mute_toggled(true)
-			mute_rotor.button_pressed = true
-			get_viewport().set_input_as_handled()
-
-
-# New: Weapon mute button gui input
-func _on_weapon_mute_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		if AudioManager.master_muted:
-			master_warning_dialog.popup_centered()
-			get_viewport().set_input_as_handled()
-		elif not AudioManager.master_muted and AudioManager.sfx_muted:
-			sfx_warning_dialog.popup_centered()
-			get_viewport().set_input_as_handled()
+	_handle_mute_gui_input(
+		event, AudioManager.master_muted, false, master_warning_dialog, sfx_warning_dialog
+	)
 
 
 # New: Rotor mute button gui input
 func _on_rotor_mute_gui_input(event: InputEvent) -> void:
+	_handle_mute_gui_input(
+		event,
+		AudioManager.master_muted,
+		AudioManager.sfx_muted,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
+
+
+# New: Rotor slider gui input
+func _on_rotor_volume_control_gui_input(event: InputEvent) -> void:
+	_handle_slider_gui_input(
+		event,
+		AudioManager.master_muted,
+		AudioManager.sfx_muted,
+		AudioManager.rotors_muted,
+		Callable(self, "_on_rotor_mute_toggled"),
+		mute_rotor,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
+
+
+# New: Weapon slider gui input
+func _on_weapon_volume_control_gui_input(event: InputEvent) -> void:
+	_handle_slider_gui_input(
+		event,
+		AudioManager.master_muted,
+		AudioManager.sfx_muted,
+		AudioManager.weapon_muted,
+		Callable(self, "_on_weapon_mute_toggled"),
+		mute_weapon,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
+
+
+# New: Weapon mute button gui input
+func _on_weapon_mute_gui_input(event: InputEvent) -> void:
+	_handle_mute_gui_input(
+		event,
+		AudioManager.master_muted,
+		AudioManager.sfx_muted,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
+
+
+## Handles common slider GUI input logic for warnings and unmute.
+## :param event: The input event.
+## :type event: InputEvent
+## :param master_muted: Master's muted state.
+## :type master_muted: bool
+## :param sfx_muted: SFX's muted state (for SFX children).
+## :type sfx_muted: bool
+## :param bus_muted: Specific bus muted state.
+## :type bus_muted: bool
+## :param toggle_func: Callable for unmute toggle.
+## :type toggle_func: Callable
+## :param mute_button: The mute CheckButton.
+## :type mute_button: CheckButton
+## :param master_dialog: Master warning dialog.
+## :type master_dialog: AcceptDialog
+## :param sfx_dialog: SFX warning dialog.
+## :type sfx_dialog: AcceptDialog
+## :rtype: void
+func _handle_slider_gui_input(
+	event: InputEvent,
+	master_muted: bool,
+	sfx_muted: bool,
+	bus_muted: bool,
+	toggle_func: Callable,
+	mute_button: CheckButton,
+	master_dialog: AcceptDialog,
+	sfx_dialog: AcceptDialog
+) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		if AudioManager.master_muted:
-			master_warning_dialog.popup_centered()
+		if master_muted:
+			master_dialog.popup_centered()
 			get_viewport().set_input_as_handled()
-		elif not AudioManager.master_muted and AudioManager.sfx_muted:
-			sfx_warning_dialog.popup_centered()
+		elif sfx_muted:
+			sfx_dialog.popup_centered()
+			get_viewport().set_input_as_handled()
+		elif bus_muted:
+			toggle_func.call(true)
+			mute_button.button_pressed = true
+			# No consume - allow slide
+
+
+## Handles common mute button GUI input logic for warnings.
+## :param event: The input event.
+## :type event: InputEvent
+## :param master_muted: Master's muted state.
+## :type master_muted: bool
+## :param sfx_muted: SFX's muted state (for SFX children).
+## :type sfx_muted: bool
+## :param master_dialog: Master warning dialog.
+## :type master_dialog: AcceptDialog
+## :param sfx_dialog: SFX warning dialog.
+## :type sfx_dialog: AcceptDialog
+## :rtype: void
+func _handle_mute_gui_input(
+	event: InputEvent,
+	master_muted: bool,
+	sfx_muted: bool,
+	master_dialog: AcceptDialog,
+	sfx_dialog: AcceptDialog
+) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if master_muted:
+			master_dialog.popup_centered()
+			get_viewport().set_input_as_handled()
+		elif sfx_muted:
+			sfx_dialog.popup_centered()
 			get_viewport().set_input_as_handled()
