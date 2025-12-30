@@ -1,0 +1,62 @@
+---
+name: "GUT Unit Tests"
+
+on:
+  workflow_call:
+    secrets:
+      CODECOV_TOKEN:
+        description: "Codecov requires a token to authenticate"
+        required: true
+
+jobs:
+  unit-test:
+    runs-on: "ubuntu-latest"
+    timeout-minutes: 10
+    permissions:
+      checks: write
+    steps:
+      - uses: "actions/checkout@v4.1.7"
+      - name: "Download Godot Binary"
+        run: |
+          wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip Godot_v4.3-stable_linux.x86_64.zip
+          mv Godot_v4.3-stable_linux.x86_64 godot
+          chmod +x godot
+      - name: "Install GUT"
+        run: |
+          mkdir -p addons
+          wget https://github.com/bitwes/Gut/releases/download/v8.0.0/gut-8.0.0.zip
+          unzip gut-8.0.0.zip -d addons
+          mv addons/addons/gut addons/gut
+      - name: "Import Resources"
+        run: |
+          ./godot --headless --path . --import --quit
+      - name: "Run GUT Tests with Coverage"
+        run: |
+          ./godot --headless --path . -s addons/gut/gut_cmdln.gd --config res://gut_config.json --coverage
+      - name: "Find Latest Coverage Report"
+        id: find_report
+        run: |
+          LATEST_REPORT=$(ls -td coverage/* | head -1 || echo "")
+          if [ -z "$LATEST_REPORT" ]; then
+            echo "No coverage report found."
+            exit 1
+          fi
+          echo "latest_report=$LATEST_REPORT" >> $GITHUB_OUTPUT
+      - name: "List Coverage Reports"
+        run: |
+          ls -la ${{ steps.find_report.outputs.latest_report }}/
+      - name: "Upload Test Reports Artifacts"
+        if: always()
+        uses: "actions/upload-artifact@v4.4.3"
+        with:
+          name: gut-reports
+          path: coverage/**
+          retention-days: 5
+      - name: "Upload Coverage to Codecov"
+        uses: "codecov/codecov-action@v4"
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/**/*.json  # Adjust if your GUT coverage format is different (e.g., .lcov)
+          flags: unittests
+          verbose: true
