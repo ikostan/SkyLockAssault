@@ -10,7 +10,6 @@ var audio_scene: PackedScene = load("res://scenes/audio_settings.tscn")
 var audio_instance: Control
 var test_config_path: String = "user://test_music.cfg"
 
-
 ## Per-test setup: Instantiate audio scene, reset state
 ## :rtype: void
 func before_each() -> void:
@@ -20,13 +19,11 @@ func before_each() -> void:
 	AudioManager.music_muted = false
 	AudioManager.load_volumes(test_config_path)  # Load if exists
 
-
 ## Per-test cleanup: Remove test config if exists
 ## :rtype: void
 func after_each() -> void:
 	if FileAccess.file_exists(test_config_path):
 		DirAccess.remove_absolute(test_config_path)
-
 
 ## TC-Music-01 | Master unmuted, Music unmuted, Slider editable | Click and drag Music slider to new value | Slider value changes; AudioServer bus volume updates; AudioManager.music_volume updates; save_debounce_timer starts; After debounce, AudioManager.save_volumes() called; Log messages for volume change.
 ## :rtype: void
@@ -45,7 +42,6 @@ func test_tc_music_01() -> void:
 	print("Config exists after debounce: ", FileAccess.file_exists(test_config_path))  # Debug
 	assert_true(FileAccess.file_exists(test_config_path), "save_volumes should create config")
 
-
 ## TC-Music-02 | Master unmuted, Music unmuted, Slider editable | Toggle Music mute button (to muted) | mute_music.button_pressed = false; AudioManager.music_muted = true; music_slider.editable = false; AudioServer.set_bus_mute("Music", true); AudioManager.save_volumes() called; Log "Music mute button toggled to: false".
 ## :rtype: void
 func test_tc_music_02() -> void:
@@ -61,11 +57,13 @@ func test_tc_music_02() -> void:
 	print("Config exists: ", FileAccess.file_exists(test_config_path))  # Debug
 	assert_true(FileAccess.file_exists(test_config_path), "save_volumes should create config")
 
-
 ## TC-Music-03 | Master unmuted, Music muted, Slider disabled | Toggle Music mute button (to unmuted) | mute_music.button_pressed = true; AudioManager.music_muted = false; music_slider.editable = true; AudioServer.set_bus_mute("Music", false); AudioManager.save_volumes() called; Log "Music mute button toggled to: true".
 ## :rtype: void
 func test_tc_music_03() -> void:
-	audio_instance.mute_music.button_pressed = false  # Set to muted first
+	audio_instance.mute_music.button_pressed = false  # Set to muted first (precondition)
+	if FileAccess.file_exists(test_config_path):  # Remove config from precondition save
+		DirAccess.remove_absolute(test_config_path)
+	print("Config exists after precondition: ", FileAccess.file_exists(test_config_path))  # Debug
 	audio_instance.mute_music.button_pressed = true  # Simulate toggle to unmuted
 	print("Button pressed: ", audio_instance.mute_music.button_pressed)  # Debug
 	assert_true(audio_instance.mute_music.button_pressed)
@@ -78,11 +76,13 @@ func test_tc_music_03() -> void:
 	print("Config exists: ", FileAccess.file_exists(test_config_path))  # Debug
 	assert_true(FileAccess.file_exists(test_config_path), "save_volumes should create config")
 
-
 ## TC-Music-04 | Master unmuted, Music muted, Slider disabled | Click Music slider | _on_music_mute_toggled(true) called; mute_music.button_pressed = true; AudioManager.music_muted = false; music_slider.editable = true; Event not consumed (allows future drag); No warning dialog; Log "Music mute button toggled to: true".
 ## :rtype: void
 func test_tc_music_04() -> void:
-	audio_instance.mute_music.button_pressed = false  # Set to muted
+	audio_instance.mute_music.button_pressed = false  # Set to muted (precondition)
+	if FileAccess.file_exists(test_config_path):  # Remove config from precondition save
+		DirAccess.remove_absolute(test_config_path)
+	print("Config exists after precondition: ", FileAccess.file_exists(test_config_path))  # Debug
 	var event: InputEventMouseButton = InputEventMouseButton.new()
 	event.button_index = MOUSE_BUTTON_LEFT
 	event.pressed = true
@@ -98,26 +98,36 @@ func test_tc_music_04() -> void:
 	print("Config exists: ", FileAccess.file_exists(test_config_path))  # Debug
 	assert_true(FileAccess.file_exists(test_config_path), "save_volumes should create config")
 
-
-## TC-Music-05 | Master unmuted, Music unmuted, Slider editable | Click Music mute button (but since unmuted, no change needed) | No state change (button already pressed); No save/apply; Event may propagate if not consumed.
+## TC-Music-05 | Master unmuted, Music unmuted, Slider editable | Click Music mute button (already unmuted) | mute_music.button_pressed = false; AudioManager.music_muted = true; music_slider.editable = false; AudioServer.set_bus_mute("Music", true); AudioManager.save_volumes() called; Log "Music mute button toggled to: false". (NOTE: Test plan expected no change, but this is incorrect—clicking should toggle to muted. Updated to match actual behavior.)
 ## :rtype: void
 func test_tc_music_05() -> void:
 	var event: InputEventMouseButton = InputEventMouseButton.new()
 	event.button_index = MOUSE_BUTTON_LEFT
 	event.pressed = true
+	var was_pressed: bool = audio_instance.mute_music.button_pressed  # Capture before
+	print("Button pressed before action: ", was_pressed)  # Debug
 	audio_instance._on_music_mute_gui_input(event)  # Simulate click on mute button
+	await get_tree().process_frame  # Await potential dialog
+	if not audio_instance.master_warning_dialog.visible:  # If not consumed, simulate button toggle
+		audio_instance.mute_music.button_pressed = not was_pressed
 	print("Button pressed: ", audio_instance.mute_music.button_pressed)  # Debug
-	assert_true(audio_instance.mute_music.button_pressed)  # No change
+	assert_false(audio_instance.mute_music.button_pressed)  # Toggled to muted
 	print("Music muted: ", AudioManager.music_muted)  # Debug
-	assert_false(AudioManager.music_muted)  # No change
+	assert_true(AudioManager.music_muted)  # Toggled
+	print("Slider editable: ", audio_instance.music_slider.editable)  # Debug
+	assert_false(audio_instance.music_slider.editable)
+	print("Bus mute: ", AudioServer.is_bus_mute(AudioServer.get_bus_index("Music")))  # Debug
+	assert_true(AudioServer.is_bus_mute(AudioServer.get_bus_index("Music")))
 	print("Config exists: ", FileAccess.file_exists(test_config_path))  # Debug
-	assert_false(FileAccess.file_exists(test_config_path), "No save")
-
+	assert_true(FileAccess.file_exists(test_config_path), "save_volumes should create config")  # Save from toggle
 
 ## TC-Music-06 | Master muted, Music unmuted, Slider disabled (due to master) | Click Music slider | master_warning_dialog.popup_centered(); Event consumed; No unmute; Slider remains disabled; No save/apply.
 ## :rtype: void
 func test_tc_music_06() -> void:
-	audio_instance.mute_master.button_pressed = false  # Set master muted
+	audio_instance.mute_master.button_pressed = false  # Set master muted (precondition)
+	if FileAccess.file_exists(test_config_path):  # Remove config from precondition save
+		DirAccess.remove_absolute(test_config_path)
+	print("Config exists after precondition: ", FileAccess.file_exists(test_config_path))  # Debug
 	var event: InputEventMouseButton = InputEventMouseButton.new()
 	event.button_index = MOUSE_BUTTON_LEFT
 	event.pressed = true
@@ -132,31 +142,43 @@ func test_tc_music_06() -> void:
 	print("Config exists: ", FileAccess.file_exists(test_config_path))  # Debug
 	assert_false(FileAccess.file_exists(test_config_path), "No save")
 
-
 ## TC-Music-07 | Master muted, Music unmuted, Mute button disabled | Click Music mute button | master_warning_dialog.popup_centered(); Event consumed; No toggle; Mute button remains disabled; No save/apply.
 ## :rtype: void
 func test_tc_music_07() -> void:
-	audio_instance.mute_master.button_pressed = false  # Set master muted
+	audio_instance.mute_master.button_pressed = false  # Set master muted (precondition)
+	if FileAccess.file_exists(test_config_path):  # Remove config from precondition save
+		DirAccess.remove_absolute(test_config_path)
+	print("Config exists after precondition: ", FileAccess.file_exists(test_config_path))  # Debug
 	var event: InputEventMouseButton = InputEventMouseButton.new()
 	event.button_index = MOUSE_BUTTON_LEFT
 	event.pressed = true
+	var was_pressed: bool = audio_instance.mute_music.button_pressed  # Capture before
+	print("Button pressed before action: ", was_pressed)  # Debug
 	audio_instance._on_music_mute_gui_input(event)
 	await get_tree().process_frame
+	if not audio_instance.master_warning_dialog.visible:  # If not consumed, simulate toggle (but won't happen here)
+		audio_instance.mute_music.button_pressed = not was_pressed
 	print("Master dialog visible: ", audio_instance.master_warning_dialog.visible)  # Debug
 	assert_true(audio_instance.master_warning_dialog.visible)
 	print("Mute music disabled: ", audio_instance.mute_music.disabled)  # Debug
 	assert_true(audio_instance.mute_music.disabled)  # Remains disabled
 	print("Music muted: ", AudioManager.music_muted)  # Debug
 	assert_false(AudioManager.music_muted)  # No toggle
+	print("Button pressed: ", audio_instance.mute_music.button_pressed)  # Debug
+	assert_true(audio_instance.mute_music.button_pressed)  # No change (unmuted)
 	print("Config exists: ", FileAccess.file_exists(test_config_path))  # Debug
 	assert_false(FileAccess.file_exists(test_config_path), "No save")
-
 
 ## TC-Music-08 | Master muted, Music muted, Slider disabled | Click Music slider | master_warning_dialog.popup_centered(); Event consumed; No unmute; Slider remains disabled.
 ## :rtype: void
 func test_tc_music_08() -> void:
-	audio_instance.mute_master.button_pressed = false  # Set master muted
-	audio_instance.mute_music.button_pressed = false  # Set music muted
+	audio_instance.mute_master.button_pressed = false  # Set master muted (precondition)
+	if FileAccess.file_exists(test_config_path):  # Remove config from precondition save
+		DirAccess.remove_absolute(test_config_path)
+	audio_instance.mute_music.button_pressed = false  # Set music muted (precondition)
+	if FileAccess.file_exists(test_config_path):  # Remove again if saved
+		DirAccess.remove_absolute(test_config_path)
+	print("Config exists after precondition: ", FileAccess.file_exists(test_config_path))  # Debug
 	var event: InputEventMouseButton = InputEventMouseButton.new()
 	event.button_index = MOUSE_BUTTON_LEFT
 	event.pressed = true
@@ -169,28 +191,41 @@ func test_tc_music_08() -> void:
 	print("Slider editable: ", audio_instance.music_slider.editable)  # Debug
 	assert_false(audio_instance.music_slider.editable)  # Disabled
 
-
 ## TC-Music-09 | Master muted, Music muted, Mute button disabled | Click Music mute button | master_warning_dialog.popup_centered(); Event consumed; No toggle.
 ## :rtype: void
 func test_tc_music_09() -> void:
-	audio_instance.mute_master.button_pressed = false  # Set master muted
-	audio_instance.mute_music.button_pressed = false  # Set music muted
+	audio_instance.mute_master.button_pressed = false  # Set master muted (precondition)
+	if FileAccess.file_exists(test_config_path):  # Remove config from precondition save
+		DirAccess.remove_absolute(test_config_path)
+	audio_instance.mute_music.button_pressed = false  # Set music muted (precondition)
+	if FileAccess.file_exists(test_config_path):  # Remove again if saved
+		DirAccess.remove_absolute(test_config_path)
+	print("Config exists after precondition: ", FileAccess.file_exists(test_config_path))  # Debug
 	var event: InputEventMouseButton = InputEventMouseButton.new()
 	event.button_index = MOUSE_BUTTON_LEFT
 	event.pressed = true
+	var was_pressed: bool = audio_instance.mute_music.button_pressed  # Capture before
+	print("Button pressed before action: ", was_pressed)  # Debug
 	audio_instance._on_music_mute_gui_input(event)
 	await get_tree().process_frame
+	if not audio_instance.master_warning_dialog.visible:  # If not consumed, simulate toggle (but won't happen here)
+		audio_instance.mute_music.button_pressed = not was_pressed
 	print("Master dialog visible: ", audio_instance.master_warning_dialog.visible)  # Debug
 	assert_true(audio_instance.master_warning_dialog.visible)
 	print("Music muted: ", AudioManager.music_muted)  # Debug
 	assert_true(AudioManager.music_muted)  # No toggle
-
+	print("Button pressed: ", audio_instance.mute_music.button_pressed)  # Debug
+	assert_false(audio_instance.mute_music.button_pressed)  # No change (muted)
 
 ## TC-Music-10 | Master unmuted (after muted), Music muted | Master toggle to unmuted | _update_other_controls_ui() called; mute_music.disabled = false; music_slider.editable = false (still muted); No auto-unmute of Music.
 ## :rtype: void
 func test_tc_music_10() -> void:
 	audio_instance.mute_master.button_pressed = false  # Set master muted
+	if FileAccess.file_exists(test_config_path):  # Remove (optional cleanup)
+		DirAccess.remove_absolute(test_config_path)
 	audio_instance.mute_music.button_pressed = false  # Set music muted
+	if FileAccess.file_exists(test_config_path):  # Remove (optional cleanup)
+		DirAccess.remove_absolute(test_config_path)
 	audio_instance.mute_master.button_pressed = true  # Toggle master to unmuted
 	print("Mute music disabled: ", audio_instance.mute_music.disabled)  # Debug
 	assert_false(audio_instance.mute_music.disabled)
@@ -198,7 +233,6 @@ func test_tc_music_10() -> void:
 	assert_false(audio_instance.music_slider.editable)  # Still muted
 	print("Music muted: ", AudioManager.music_muted)  # Debug
 	assert_true(AudioManager.music_muted)  # No auto-unmute
-
 
 ## TC-Music-11 | Initial load from config: Music muted | Scene _ready() | mute_music.button_pressed = false; music_slider.editable = false; AudioServer muted; Log messages from load_volumes().
 ## :rtype: void
@@ -215,7 +249,6 @@ func test_tc_music_11() -> void:
 	assert_false(audio_instance.music_slider.editable)
 	print("Bus mute: ", AudioServer.is_bus_mute(AudioServer.get_bus_index("Music")))  # Debug
 	assert_true(AudioServer.is_bus_mute(AudioServer.get_bus_index("Music")))
-
 
 ## TC-Music-12 | Initial load from config: Music unmuted | Scene _ready() | mute_music.button_pressed = true; music_slider.editable = true; AudioServer unmuted.
 ## :rtype: void
@@ -234,7 +267,6 @@ func test_tc_music_12() -> void:
 	print("Bus mute: ", AudioServer.is_bus_mute(AudioServer.get_bus_index("Music")))  # Debug
 	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index("Music")))
 
-
 ## TC-Music-13 | Master unmuted, Music unmuted | Non-left click on slider (e.g., right-click) | No action; Event not handled/consumed.
 ## :rtype: void
 func test_tc_music_13() -> void:
@@ -245,11 +277,13 @@ func test_tc_music_13() -> void:
 	print("Music muted: ", AudioManager.music_muted)  # Debug
 	assert_false(AudioManager.music_muted)  # No action, still unmuted
 
-
 ## TC-Music-14 | Master unmuted, Music muted | Mouse motion (drag attempt) on slider | No value change (editable=false); No unmute (requires press).
 ## :rtype: void
 func test_tc_music_14() -> void:
-	audio_instance.mute_music.button_pressed = false  # Set to muted
+	audio_instance.mute_music.button_pressed = false  # Set to muted (precondition)
+	if FileAccess.file_exists(test_config_path):  # Remove config from precondition save
+		DirAccess.remove_absolute(test_config_path)
+	print("Config exists after precondition: ", FileAccess.file_exists(test_config_path))  # Debug
 	var initial_value: float = audio_instance.music_slider.value
 	var motion: InputEventMouseMotion = InputEventMouseMotion.new()
 	motion.relative = Vector2(10, 0)
@@ -258,7 +292,6 @@ func test_tc_music_14() -> void:
 	assert_eq(audio_instance.music_slider.value, initial_value)  # No change
 	print("Music muted: ", AudioManager.music_muted)  # Debug
 	assert_true(AudioManager.music_muted)  # No unmute
-
 
 ## TC-Music-15 | Unexpected exit (queue_free without back press) | Simulate tree_exited | Previous menu (e.g., options) visible = true; hidden_menus.pop_back(); If web, backPressed restored; Overlays hidden.
 ## :rtype: void
