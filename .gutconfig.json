@@ -12,20 +12,20 @@
   "opacity": 0.8,
   "hide_orphans": true,
   "yield_between": {
-    "after_x_tests": 5,
-    "ms": 100
+	"after_x_tests": 5,
+	"ms": 100
   },
   "native_script_classes": [],
   "cmdline": {
-    "color": true,
-    "exit_on_success": true
+	"color": true,
+	"exit_on_success": true
   },
   "panel": {
-    "font_name": "CourierPrime",
-    "font_size": 16,
-    "background_color": "#000000ff"
+	"font_name": "CourierPrime",
+	"font_size": 16,
+	"background_color": "#000000ff"
   },
   "settings": {
-    "show_help": false
+	"show_help": false
   }
 }
