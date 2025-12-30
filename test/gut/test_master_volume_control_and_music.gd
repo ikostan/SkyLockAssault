@@ -29,16 +29,16 @@ func test_tc_music_01() -> void:
 	var new_value: float = 0.5
 	audio_instance.music_slider.value = new_value  # Simulate drag
 	assert_eq(audio_instance.music_slider.value, new_value)
-	assert_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Music")), linear_to_db(new_value))
+	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Music")), linear_to_db(new_value), 0.0001)  # Fixed: use almost eq for floats
 	assert_eq(AudioManager.music_volume, new_value)
 	assert_false(audio_instance.music_slider.save_debounce_timer.is_stopped())
 	await get_tree().create_timer(0.6).timeout  # Await debounce
-	# Assert save_volumes called - spy on AudioManager if needed, or assume from logic
-	# Log messages - spy on Globals.log_message if needed
+	# Assert save_volumes called - spy if needed
+	# Log messages - spy if needed
 
-func test_tc_music_02()  -> void:
+func test_tc_music_02() -> void:
 	# TC-Music-02 | Master unmuted, Music unmuted, Slider editable | Toggle Music mute button (to muted) | mute_music.button_pressed = false; AudioManager.music_muted = true; music_slider.editable = false; AudioServer.set_bus_mute("Music", true); AudioManager.save_volumes() called; Log "Music mute button toggled to: false".
-	audio_instance.mute_music.button_pressed = false  # Simulate toggle to muted
+	audio_instance._on_music_mute_toggled(false)  # Simulate toggle to muted (call handler directly)
 	assert_false(audio_instance.mute_music.button_pressed)
 	assert_true(AudioManager.music_muted)
 	assert_false(audio_instance.music_slider.editable)
@@ -49,7 +49,7 @@ func test_tc_music_02()  -> void:
 func test_tc_music_03() -> void:
 	# TC-Music-03 | Master unmuted, Music muted, Slider disabled | Toggle Music mute button (to unmuted) | mute_music.button_pressed = true; AudioManager.music_muted = false; music_slider.editable = true; AudioServer.set_bus_mute("Music", false); AudioManager.save_volumes() called; Log "Music mute button toggled to: true".
 	AudioManager.music_muted = true
-	audio_instance.mute_music.button_pressed = true  # Simulate toggle to unmuted
+	audio_instance._on_music_mute_toggled(true)  # Simulate toggle to unmuted
 	assert_true(audio_instance.mute_music.button_pressed)
 	assert_false(AudioManager.music_muted)
 	assert_true(audio_instance.music_slider.editable)
@@ -63,11 +63,11 @@ func test_tc_music_04() -> void:
 	var event: = InputEventMouseButton.new()
 	event.button_index = MOUSE_BUTTON_LEFT
 	event.pressed = true
-	audio_instance.music_slider.gui_input(event)  # Simulate click
+	audio_instance._on_music_volume_control_gui_input(event)  # Call handler directly (since gui_input is signal handler)
 	assert_true(audio_instance.mute_music.button_pressed)
 	assert_false(AudioManager.music_muted)
 	assert_true(audio_instance.music_slider.editable)
-	# Assert no warning dialog popup
+	# Assert no warning dialog
 	# Assert log message
 
 func test_tc_music_05() -> void:
@@ -75,7 +75,7 @@ func test_tc_music_05() -> void:
 	var event: = InputEventMouseButton.new()
 	event.button_index = MOUSE_BUTTON_LEFT
 	event.pressed = true
-	audio_instance.mute_music.gui_input(event)  # Simulate click
+	audio_instance._on_music_mute_gui_input(event)  # Call handler directly
 	assert_true(audio_instance.mute_music.button_pressed)  # No change
 	assert_false(AudioManager.music_muted)  # No change
 	# Assert no save/apply
@@ -86,9 +86,9 @@ func test_tc_music_06() -> void:
 	var event: = InputEventMouseButton.new()
 	event.button_index = MOUSE_BUTTON_LEFT
 	event.pressed = true
-	audio_instance.music_slider.gui_input(event)
-	# Assert master_warning_dialog.popup_centered called
-	# Assert event consumed
+	audio_instance._on_music_volume_control_gui_input(event)
+	# Assert master_warning_dialog.popup_centered called (spy if needed)
+	# Assert event consumed (spy on viewport)
 	assert_true(AudioManager.music_muted)  # No unmute
 	assert_false(audio_instance.music_slider.editable)  # Disabled
 	# Assert no save/apply
@@ -99,7 +99,7 @@ func test_tc_music_07() -> void:
 	var event: = InputEventMouseButton.new()
 	event.button_index = MOUSE_BUTTON_LEFT
 	event.pressed = true
-	audio_instance.mute_music.gui_input(event)
+	audio_instance._on_music_mute_gui_input(event)
 	# Assert master_warning_dialog.popup_centered called
 	# Assert event consumed
 	assert_true(audio_instance.mute_music.disabled)  # Remains disabled
@@ -113,7 +113,7 @@ func test_tc_music_08() -> void:
 	var event: = InputEventMouseButton.new()
 	event.button_index = MOUSE_BUTTON_LEFT
 	event.pressed = true
-	audio_instance.music_slider.gui_input(event)
+	audio_instance._on_music_volume_control_gui_input(event)
 	# Assert master_warning_dialog.popup_centered called
 	# Assert event consumed
 	assert_true(AudioManager.music_muted)  # No unmute
@@ -126,7 +126,7 @@ func test_tc_music_09() -> void:
 	var event: = InputEventMouseButton.new()
 	event.button_index = MOUSE_BUTTON_LEFT
 	event.pressed = true
-	audio_instance.mute_music.gui_input(event)
+	audio_instance._on_music_mute_gui_input(event)
 	# Assert master_warning_dialog.popup_centered called
 	# Assert event consumed
 	# No toggle
@@ -135,7 +135,7 @@ func test_tc_music_10() -> void:
 	# TC-Music-10 | Master unmuted (after muted), Music muted | Master toggle to unmuted | _update_other_controls_ui() called; mute_music.disabled = false; music_slider.editable = false (still muted); No auto-unmute of Music.
 	AudioManager.master_muted = true
 	AudioManager.music_muted = true
-	audio_instance.mute_master.button_pressed = true  # Simulate toggle to unmuted
+	audio_instance._on_master_mute_toggled(true)  # To unmuted
 	assert_false(audio_instance.mute_music.disabled)
 	assert_false(audio_instance.music_slider.editable)  # Still muted
 	assert_true(AudioManager.music_muted)  # No auto-unmute
@@ -170,7 +170,7 @@ func test_tc_music_13() -> void:
 	var event: = InputEventMouseButton.new()
 	event.button_index = MOUSE_BUTTON_RIGHT
 	event.pressed = true
-	audio_instance.music_slider.gui_input(event)
+	audio_instance._on_music_volume_control_gui_input(event)
 	# Assert no action (e.g., no unmute, no dialog)
 	# Assert not consumed
 
@@ -179,13 +179,13 @@ func test_tc_music_14() -> void:
 	AudioManager.music_muted = true
 	var motion: = InputEventMouseMotion.new()
 	motion.relative = Vector2(10, 0)
-	audio_instance.music_slider.gui_input(motion)
+	audio_instance._on_music_volume_control_gui_input(motion)
 	assert_eq(audio_instance.music_slider.value, db_to_linear(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Music"))))  # No change
 	assert_true(AudioManager.music_muted)  # No unmute
 
 func test_tc_music_15() -> void:
 	# TC-Music-15 | Unexpected exit (queue_free without back press) | Simulate tree_exited | Previous menu (e.g., options) visible = true; hidden_menus.pop_back(); If web, backPressed restored; Overlays hidden.
-	var prev_menu: Control = Control.new()
+	var prev_menu: = Control.new()
 	prev_menu.visible = false
 	Globals.hidden_menus = [prev_menu]
 	audio_instance.queue_free()
