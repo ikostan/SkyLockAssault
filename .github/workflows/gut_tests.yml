@@ -36,7 +36,7 @@ jobs:
       - name: "Run GUT Tests"
         continue-on-error: false  # Explicit no continue on error (default, but for clarity).
         run: |
-          ./godot --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json  # Runs tests; fails job on error.
+          ./godot --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gexit
       - name: "Find Latest Report Directory"
         if: success()  # Only if tests pass.
         id: find_report
