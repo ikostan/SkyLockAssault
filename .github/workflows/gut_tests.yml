@@ -33,7 +33,7 @@ jobs:
           ./godot --headless --path . --import --quit
       - name: "Run GUT Tests"
         run: |
-          ./godot --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json
+          ./godot --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=res://gutconfig.json
       - name: "Find Latest Report Directory"
         id: find_report
         run: |
