@@ -1,31 +1,31 @@
 {
-  "dirs": [  // Directories to scan for test scripts.
-    "res://test/"  // Base test dir for your audio/volume tests.
+  "dirs": [
+    "res://test/gut/"
   ],
-  "include_subdirs": true,  // Recurse subfolders for full coverage.
-  "prefix": "test_",  // Run only "test_*.gd" files.
-  "suffix": ".gd",  // GDScript only.
-  "post_run_script": "",  // Script after tests (empty for now).
-  "pre_run_script": "",  // Script before tests (empty for now).
-  "test_timeout": 5,  // 5s max per test to prevent hangs.
-  "log_level": 2,  // Info + warnings + errors for CI balance.
-  "opacity": 0.8,  // Editor panel opacity.
-  "hide_orphans": true,  // Suppress orphan warnings in tests.
-  "yield_between": {  // Yield for async (e.g., await in debounce tests).
+  "include_subdirs": true,
+  "prefix": "test_",
+  "suffix": ".gd",
+  "post_run_script": "",
+  "pre_run_script": "",
+  "test_timeout": 5,
+  "log_level": 1,
+  "opacity": 0.8,
+  "hide_orphans": true,
+  "yield_between": {
     "after_x_tests": 5,
     "ms": 100
   },
-  "native_script_classes": [],  // Empty for no GDExtension.
-  "cmdline": {  // CI-specific.
-    "color": true,  // Colored console output.
-    "exit_on_success": true  // Exit 0 on pass for CI success.
+  "native_script_classes": [],
+  "cmdline": {
+    "color": true,
+    "exit_on_success": true
   },
-  "panel": {  // Editor UI.
+  "panel": {
     "font_name": "CourierPrime",
     "font_size": 16,
     "background_color": "#000000ff"
   },
-  "settings": {  // Misc.
+  "settings": {
     "show_help": false
   }
 }
