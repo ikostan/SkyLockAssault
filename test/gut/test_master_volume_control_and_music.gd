@@ -13,24 +13,29 @@ var test_config_path: String = "user://test_music.cfg"
 ## Per-test setup: Instantiate audio scene, reset state
 ## :rtype: void
 func before_each() -> void:
+	if FileAccess.file_exists(test_config_path):
+		DirAccess.remove_absolute(test_config_path)
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
 	AudioManager.master_muted = false
 	AudioManager.music_muted = false
-	AudioManager.load_volumes(test_config_path)  # Load if exists
+	AudioManager.load_volumes(test_config_path)  # Load if exists (should be defaults now)
 	# Add audio buses if not exist
+	if AudioServer.get_bus_index("Master") == -1:
+		AudioServer.add_bus(0)
+		AudioServer.set_bus_name(0, "Master")
 	if AudioServer.get_bus_index("Music") == -1:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, "Music")
 	if AudioServer.get_bus_index("SFX") == -1:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, "SFX")
-	if AudioServer.get_bus_index("SFXRotors") == -1:
+	if AudioServer.get_bus_index("SFX_Rotors") == -1:
 		AudioServer.add_bus()
-		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, "SFXRotors")
-	if AudioServer.get_bus_index("SFXWeapon") == -1:
+		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, "SFX_Rotors")
+	if AudioServer.get_bus_index("SFX_Weapon") == -1:
 		AudioServer.add_bus()
-		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, "SFXWeapon")
+		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, "SFX_Weapon")
 
 ## Per-test cleanup: Remove test config if exists
 ## :rtype: void
@@ -138,6 +143,8 @@ func test_tc_music_05() -> void:
 ## TC-Music-06 | Master muted, Music unmuted, Slider disabled (due to master) | Click Music slider | master_warning_dialog.popup_centered(); Event consumed; No unmute; Slider remains disabled; No save/apply.
 ## :rtype: void
 func test_tc_music_06() -> void:
+	print("Initial music muted: ", AudioManager.music_muted)  # Extra debug
+	print("Initial mute music button pressed: ", audio_instance.mute_music.button_pressed)  # Extra debug
 	audio_instance.mute_master.button_pressed = false  # Set master muted (precondition)
 	if FileAccess.file_exists(test_config_path):  # Remove config from precondition save
 		DirAccess.remove_absolute(test_config_path)
@@ -158,6 +165,8 @@ func test_tc_music_06() -> void:
 ## TC-Music-07 | Master muted, Music unmuted, Mute button disabled | Click Music mute button | master_warning_dialog.popup_centered(); Event consumed; No toggle; Mute button remains disabled; No save/apply.
 ## :rtype: void
 func test_tc_music_07() -> void:
+	print("Initial music muted: ", AudioManager.music_muted)  # Extra debug
+	print("Initial mute music button pressed: ", audio_instance.mute_music.button_pressed)  # Extra debug
 	audio_instance.mute_master.button_pressed = false  # Set master muted (precondition)
 	if FileAccess.file_exists(test_config_path):  # Remove config from precondition save
 		DirAccess.remove_absolute(test_config_path)
