@@ -15,7 +15,7 @@ jobs:
     permissions:
       checks: write
     steps:
-      - uses: "actions/checkout@v4.1.7"
+      - uses: "actions/checkout@v6"
       - name: "Download Godot Binary"
         run: |
           wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
@@ -38,7 +38,7 @@ jobs:
           mkdir -p $REPORT_DIR
           ./godot --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gjunit_xml_file=$REPORT_DIR/gut_junit.xml -gexit
       - name: "Install Codecov CLI"
-        if: always()
+        if: success()  # Only if tests pass.
         run: |
           curl -Os https://cli.codecov.io/latest/linux/codecov
           chmod +x codecov
@@ -58,23 +58,16 @@ jobs:
           ls -la ${{ steps.find_report.outputs.latest_report }}/
       - name: "Upload Test Reports Artifacts"
         if: always()
-        uses: "actions/upload-artifact@v4.4.3"
+        uses: "actions/upload-artifact@v6"
         with:
           name: gut-reports
           path: gut-reports/**
           retention-days: 5
-      - name: "Upload Test Reports Artifacts"
-        if: always()
-        uses: "actions/upload-artifact@v4.4.3"
-        with:
-          name: gut-reports
-          path: gut-reports/**
-          retention-days: 5
-      - name: "Upload Coverage to Codecov"  # Uncomment when coverage files are generated
-        if: always()
-        uses: "codecov/codecov-action@v4"
+      - name: "Upload Coverage to Codecov"
+        if: success()  # Only if tests pass.
+        uses: "codecov/codecov-action@v5"
         with:
            token: ${{ secrets.CODECOV_TOKEN }}
-           files: coverage/lcov.info  # Update to match your coverage output
-           flags: unittests
+           directory: ./gut-reports/
+           files: ./gut_junit.xml
            verbose: true
