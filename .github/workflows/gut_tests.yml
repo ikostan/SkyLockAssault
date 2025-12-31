@@ -66,4 +66,4 @@ jobs:
       - name: "Upload Test Report to Codecov"  # Last step for uploading JUnit XML as test report
         if: success()  # Only if tests pass.
         run: |
-          ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} ${{ steps.find_report.outputs.latest_report }}/gut_junit.xml --name "GUT Test Report" --flag GUT
+          ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f ${{ steps.find_report.outputs.latest_report }}/gut_junit.xml --name "GUT Test Report" --flag GUT
