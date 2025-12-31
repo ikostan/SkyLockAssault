@@ -121,7 +121,7 @@ jobs:
                   continue;
                 }
                 const scriptPath = entry.url && entry.url.startsWith('http://localhost:8080/')
-                  ? entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web/'))
+                  ? entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web_thread_off/''))
                   : 'export/web/index.js';  // Map anonymous to real file
                 const options = entry.source ? { source: entry.source } : {};
                 try {
@@ -139,7 +139,8 @@ jobs:
             "
             counter=$((counter + 1))
           done
-          npx nyc report --reporter=lcov --report-dir coverage/lcov --all --include=export/web/*.js  # Merge with --all for 0% on untested
+          npx nyc report --reporter=lcov --report-dir coverage/lcov --all --include=export/web_thread_off/*.js  # Merge with --all for 0% on untested
+
       - name: "Upload LCOV Artifact"
         if: always()
         uses: "actions/upload-artifact@v6"
@@ -147,6 +148,7 @@ jobs:
           name: lcov-report
           path: "./coverage/lcov/lcov.info"
           retention-days: 5
+
       - name: "Test Report"
         run: |
           if [ -f junit.xml ]; then
@@ -164,12 +166,14 @@ jobs:
           else
             echo "No junit.xml found—tests may not have run."
           fi
+
       - name: "Upload Test Report Artifact"
         if: always()
         uses: "actions/upload-artifact@v6"
         with:
-          name: test-report
+          # name: test-report
           path: junit.xml
+
       - name: "Upload Screenshot and Coverage Artifacts"
         if: always()
         uses: "actions/upload-artifact@v6"
@@ -178,6 +182,7 @@ jobs:
           path: |
             main_menu.png
             coverage_*.json
+
       - name: "Upload Coverage to Codecov"
         if: ${{ !cancelled() }}
         uses: "codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de"
@@ -187,4 +192,15 @@ jobs:
           fail_ci_if_error: false  # Non-blocking on 0%
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
-          directory: export/web
+          directory: export/web_thread_off
+
+      - name: "Install Codecov CLI"
+        if: success()
+        run: |
+          curl -Os https://cli.codecov.io/latest/linux/codecov
+          chmod +x codecov
+
+      - name: "Upload Test Report to Codecov"
+        if: success()
+        run: |
+          ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} ./junit.xml --name "Playwright Browser Test Report" --flag playwright --report-type test_results
