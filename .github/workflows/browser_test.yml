@@ -122,7 +122,7 @@ jobs:
                 }
                 const scriptPath = entry.url && entry.url.startsWith('http://localhost:8080/')
                   ? entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web_thread_off/''))
-                  : 'export/web/index.js';  // Map anonymous to real file
+                  : 'export/web_thread_off/index.js';  // Map anonymous to real file
                 const options = entry.source ? { source: entry.source } : {};
                 try {
                   const converter = new V8ToIstanbul(scriptPath, 0, options);
