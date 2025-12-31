@@ -140,17 +140,6 @@ jobs:
             counter=$((counter + 1))
           done
           npx nyc report --reporter=lcov --report-dir coverage/lcov --all --include=export/web/*.js  # Merge with --all for 0% on untested
-
-      - name: "Upload Coverage to Codecov"
-        if: ${{ !cancelled() }}
-        uses: "codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de"
-        with:
-          files: ./coverage/lcov/lcov.info
-          flags: playwright
-          fail_ci_if_error: false  # Non-blocking on 0%
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-          directory: export/web
       - name: "Upload LCOV Artifact"
         if: always()
         uses: "actions/upload-artifact@v6"
@@ -158,16 +147,6 @@ jobs:
           name: lcov-report
           path: "./coverage/lcov/lcov.info"
           retention-days: 5
-      - name: "Upload Coverage to Codecov"
-        if: ${{ !cancelled() }}
-        uses: "codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de"
-        with:
-          files: ./coverage/lcov/lcov.info  # Upload the generated LCOV
-          flags: playwright
-          fail_ci_if_error: true
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-          directory: export/web  # New: Set root for path matching
       - name: "Test Report"
         run: |
           if [ -f junit.xml ]; then
@@ -199,3 +178,13 @@ jobs:
           path: |
             main_menu.png
             coverage_*.json
+      - name: "Upload Coverage to Codecov"
+        if: ${{ !cancelled() }}
+        uses: "codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de"
+        with:
+          files: ./coverage/lcov/lcov.info, ./test-report/junit.xml
+          flags: playwright
+          fail_ci_if_error: false  # Non-blocking on 0%
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: export/web

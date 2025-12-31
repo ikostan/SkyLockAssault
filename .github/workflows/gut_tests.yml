@@ -71,3 +71,4 @@ jobs:
            directory: ./gut-reports/
            files: ./gut_junit.xml
            verbose: true
+           flags: GUT
