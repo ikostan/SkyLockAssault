@@ -221,15 +221,15 @@ func _update_other_controls_ui() -> void:
 	_update_sfx_controls_ui()
 
 
-# New: Update UI for SFX sub-controls based on master muted
+# New: Update UI for SFX sub-controls based on SFX/master mute state
 func _update_sfx_controls_ui() -> void:
-	var is_master_muted: bool = AudioManager.sfx_muted or AudioManager.master_muted
+	var sfx_controls_locked: bool = AudioManager.sfx_muted or AudioManager.master_muted
 	# Weapon
-	mute_weapon.disabled = is_master_muted
-	weapon_slider.editable = not is_master_muted and not AudioManager.weapon_muted
+	mute_weapon.disabled = sfx_controls_locked
+	weapon_slider.editable = not sfx_controls_locked and not AudioManager.weapon_muted
 	# Rotors
-	mute_rotor.disabled = is_master_muted
-	rotor_slider.editable = not is_master_muted and not AudioManager.rotors_muted
+	mute_rotor.disabled = sfx_controls_locked
+	rotor_slider.editable = not sfx_controls_locked and not AudioManager.rotors_muted
 
 
 func _on_audio_back_button_pressed() -> void:
