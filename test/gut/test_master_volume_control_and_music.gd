@@ -15,11 +15,15 @@ var test_config_path: String = "user://test_music.cfg"
 func before_each() -> void:
 	if FileAccess.file_exists(test_config_path):
 		DirAccess.remove_absolute(test_config_path)
-	audio_instance = audio_scene.instantiate() as Control
-	add_child_autofree(audio_instance)
 	AudioManager.master_muted = false
 	AudioManager.music_muted = false
-	AudioManager.load_volumes(test_config_path)  # Load if exists (should be defaults now)
+	AudioManager.sfx_muted = false
+	AudioManager.rotors_muted = false
+	AudioManager.weapon_muted = false
+	AudioManager.apply_all_volumes()  # Sync buses early
+	AudioManager.load_volumes(test_config_path)  # Load if exists (should be defaults)
+	audio_instance = audio_scene.instantiate() as Control
+	add_child_autofree(audio_instance)
 	# Add audio buses if not exist
 	if AudioServer.get_bus_index("Master") == -1:
 		AudioServer.add_bus(0)
