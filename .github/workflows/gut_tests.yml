@@ -51,11 +51,6 @@ jobs:
         if: always()
         run: |
           ls -la ${{ steps.find_report.outputs.latest_report }}/
-      - name: "Install Codecov CLI"
-        if: success()  # Only if tests pass.
-        run: |
-          curl -Os https://cli.codecov.io/latest/linux/codecov
-          chmod +x codecov
       - name: "Upload Test Reports Artifacts"
         if: always()
         uses: "actions/upload-artifact@v6"
@@ -63,6 +58,11 @@ jobs:
           name: gut-reports
           path: gut-reports/**
           retention-days: 5
+      - name: "Install Codecov CLI"
+        if: success()  # Only if tests pass.
+        run: |
+          curl -Os https://cli.codecov.io/latest/linux/codecov
+          chmod +x codecov
       - name: "Upload Test Report to Codecov"  # Last step for uploading JUnit XML as test report
         if: success()  # Only if tests pass.
         run: |
