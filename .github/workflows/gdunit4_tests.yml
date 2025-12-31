@@ -57,7 +57,12 @@ jobs:
           name: gdunit-reports
           path: reports/**
           retention-days: 5
+      - name: "Install Codecov CLI"
+        if: success()  # Only if tests pass.
+        run: |
+          curl -Os https://cli.codecov.io/latest/linux/codecov
+          chmod +x codecov
       - name: "Upload Test Report to Codecov"  # Last step for uploading JUnit XML as test report
         if: success()  # Only if tests pass.
         run: |
-          ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} ${{ steps.find_report.outputs.latest_report }}/gut_junit.xml --name "GUT Test Report" --flag GDUnit4
+          ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} ${{ steps.find_report.outputs.latest_report }}//test-report.xml --name "GDUnit4 Test Report" --flag GDUnit4 --report-type test_results
