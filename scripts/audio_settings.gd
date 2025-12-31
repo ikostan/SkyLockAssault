@@ -1,4 +1,4 @@
-## audio_settings.gd (add null checks)
+## audio_settings.gd (updated with flags for testing warning popups)
 ##
 ## Audio Settings Script
 ##
@@ -20,10 +20,16 @@ extends Control
 var js_window: Variant
 var os_wrapper: OSWrapper = OSWrapper.new()
 var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
+
+# Test flags for warning popups (to reliably test in CI/headless)
+var master_warning_shown: bool = false
+var sfx_warning_shown: bool = false
+
 # local
 var _audio_back_button_pressed_cb: Variant
 var _previous_back_pressed_cb: Variant
 var _intentional_exit: bool = false
+
 # Master Volume Controls
 @onready
 var master_slider: HSlider = $Panel/OptionsContainer/VolumeControls/Master/MasterControl/HSlider
@@ -310,11 +316,6 @@ func _on_master_volume_control_gui_input(event: InputEvent) -> void:
 	# Check if the event is a mouse button click
 	if event is InputEventMouseButton and event.pressed and AudioManager.master_muted:
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			# Removed direct call to _on_master_mute_toggled(true).
-			# Now only sets mute_master.button_pressed = true,
-			# which emits toggled signal to invoke handler.
-			# Prevents double toggle execution.
-			# _on_master_mute_toggled(true)
 			mute_master.button_pressed = true  # Set button to pressed (unmuted) state visually
 			get_viewport().set_input_as_handled()  # Consume the event to prevent further propagation
 			Globals.log_message("Master Volume Slider is enabled now.", Globals.LogLevel.DEBUG)
@@ -423,8 +424,6 @@ func _on_weapon_mute_gui_input(event: InputEvent) -> void:
 ## :type sfx_muted: bool
 ## :param bus_muted: Specific bus muted state.
 ## :type bus_muted: bool
-## :param toggle_func: Callable for unmute toggle.
-## :type toggle_func: Callable
 ## :param mute_button: The mute CheckButton.
 ## :type mute_button: CheckButton
 ## :param master_dialog: Master warning dialog.
@@ -444,15 +443,13 @@ func _handle_slider_gui_input(
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if master_muted:
 			master_dialog.popup_centered()
+			master_warning_shown = true
 			get_viewport().set_input_as_handled()
 		elif sfx_muted:
 			sfx_dialog.popup_centered()
+			sfx_warning_shown = true
 			get_viewport().set_input_as_handled()
 		elif bus_muted:
-			# Removed direct call to toggle_func.call(true).
-			# Now only sets mute_button.button_pressed = true, emitting signal to handler.
-			# Prevents double toggle execution.
-			# toggle_func.call(true)
 			mute_button.button_pressed = true
 			# No consume - allow slide
 
@@ -479,7 +476,9 @@ func _handle_mute_gui_input(
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if master_muted:
 			master_dialog.popup_centered()
+			master_warning_shown = true
 			get_viewport().set_input_as_handled()
 		elif sfx_muted:
 			sfx_dialog.popup_centered()
+			sfx_warning_shown = true
 			get_viewport().set_input_as_handled()
