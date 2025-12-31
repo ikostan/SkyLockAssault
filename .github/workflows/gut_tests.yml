@@ -37,11 +37,6 @@ jobs:
           REPORT_DIR="gut-reports/$(date +%Y%m%d_%H%M%S)"
           mkdir -p $REPORT_DIR
           ./godot --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gjunit_xml_file=$REPORT_DIR/gut_junit.xml -gexit
-      - name: "Install Codecov CLI"
-        if: success()  # Only if tests pass.
-        run: |
-          curl -Os https://cli.codecov.io/latest/linux/codecov
-          chmod +x codecov
       - name: "Find Latest Report Directory"
         if: always()
         id: find_report
@@ -56,6 +51,11 @@ jobs:
         if: always()
         run: |
           ls -la ${{ steps.find_report.outputs.latest_report }}/
+      - name: "Install Codecov CLI"
+        if: success()  # Only if tests pass.
+        run: |
+          curl -Os https://cli.codecov.io/latest/linux/codecov
+          chmod +x codecov
       - name: "Upload Test Reports Artifacts"
         if: always()
         uses: "actions/upload-artifact@v6"
@@ -66,4 +66,4 @@ jobs:
       - name: "Upload Test Report to Codecov"  # Last step for uploading JUnit XML as test report
         if: success()  # Only if tests pass.
         run: |
-          ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f ${{ steps.find_report.outputs.latest_report }}/gut_junit.xml --name "GUT Test Report" --flag GUT
+          ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f ${{ steps.find_report.outputs.latest_report }}/gut_junit.xml --name "GUT Test Report" --flag GUT --report-type test_results
