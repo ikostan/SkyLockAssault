@@ -14,8 +14,6 @@ jobs:
     timeout-minutes: 10
     permissions:
       checks: write
-    strategy:
-      fail-fast: true  # Fail job immediately on step failure.
     steps:
       - uses: "actions/checkout@v4.1.7"
       - name: "Download Godot Binary"
@@ -36,7 +34,9 @@ jobs:
       - name: "Run GUT Tests"
         continue-on-error: false  # Explicit no continue on error (default, but for clarity).
         run: |
-          ./godot --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gexit
+          REPORT_DIR="gut-reports/$(date +%Y%m%d_%H%M%S)"
+          mkdir -p $REPORT_DIR
+          ./godot --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gjunit_xml_file=$REPORT_DIR/gut_junit.xml -gexit
       - name: "Find Latest Report Directory"
         if: always()
         id: find_report
@@ -58,11 +58,3 @@ jobs:
           name: gut-reports
           path: gut-reports/**
           retention-days: 5
-      - name: "Upload Coverage to Codecov"
-        if: always()
-        uses: "codecov/codecov-action@v4"
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: gut-reports/**/*.json
-          flags: unittests
-          verbose: true
