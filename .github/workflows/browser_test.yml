@@ -208,4 +208,4 @@ jobs:
       - name: "Upload Test Report to Codecov"
         if: success()
         run: |
-          ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} ./junit.xml --name "Playwright Browser Test Report" --flag PLAYWRIGHT --report-type test_results
+          ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f ./junit.xml --name "Playwright Browser Test Report" --flag PLAYWRIGHT --report-type test_results
