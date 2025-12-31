@@ -126,7 +126,7 @@ jobs:
                   continue;
                 }
                 const scriptPath = entry.url && entry.url.startsWith('http://localhost:8080/')
-                  ? entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web_thread_off/''))
+                  ? entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web_thread_off/'))
                   : 'export/web_thread_off/index.js';  // Map anonymous to real file
                 const options = entry.source ? { source: entry.source } : {};
                 try {
