@@ -71,6 +71,16 @@ func _ready() -> void:
 	sfx_warning_dialog.title = "Warning"
 	sfx_warning_dialog.dialog_text = "To adjust this volume, please unmute the SFX volume first."
 
+	# Connect dialog close signals for flag reset
+	if not master_warning_dialog.confirmed.is_connected(_reset_master_warning_shown):
+		master_warning_dialog.confirmed.connect(_reset_master_warning_shown)
+	if not master_warning_dialog.canceled.is_connected(_reset_master_warning_shown):
+		master_warning_dialog.canceled.connect(_reset_master_warning_shown)
+	if not sfx_warning_dialog.confirmed.is_connected(_reset_sfx_warning_shown):
+		sfx_warning_dialog.confirmed.connect(_reset_sfx_warning_shown)
+	if not sfx_warning_dialog.canceled.is_connected(_reset_sfx_warning_shown):
+		sfx_warning_dialog.canceled.connect(_reset_sfx_warning_shown)
+
 	# Master Mute toggle master_slider
 	if not mute_master.toggled.is_connected(_on_master_mute_toggled):
 		mute_master.toggled.connect(_on_master_mute_toggled)  # Use toggled for CheckButton state
@@ -482,3 +492,15 @@ func _handle_mute_gui_input(
 			sfx_dialog.popup_centered()
 			sfx_warning_shown = true
 			get_viewport().set_input_as_handled()
+
+
+## Resets master_warning_shown flag.
+## :rtype: void
+func _reset_master_warning_shown() -> void:
+	master_warning_shown = false
+
+
+## Resets sfx_warning_shown flag.
+## :rtype: void
+func _reset_sfx_warning_shown() -> void:
+	sfx_warning_shown = false
