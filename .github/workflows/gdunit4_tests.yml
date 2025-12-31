@@ -15,7 +15,7 @@ jobs:
     permissions:
       checks: write
     steps:
-      - uses: actions/checkout@v6.0.1
+      - uses: "actions/checkout@v6.0.1"
       - name: "Download Godot Binary"
         run: |
           wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
@@ -50,11 +50,14 @@ jobs:
       - name: "List Coverage Reports"
         run: |
           ls -la ${{ steps.find_report.outputs.latest_report }}/
-
       - name: "Upload Test Reports Artifacts"
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: "actions/upload-artifact@v6"
         with:
           name: gdunit-reports
           path: reports/**
           retention-days: 5
+      - name: "Upload Test Report to Codecov"  # Last step for uploading JUnit XML as test report
+        if: success()  # Only if tests pass.
+        run: |
+          ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} ${{ steps.find_report.outputs.latest_report }}/gut_junit.xml --name "GUT Test Report" --flag GDUnit4
