@@ -67,8 +67,8 @@ jobs:
         if: success()  # Only if tests pass.
         uses: "codecov/codecov-action@v5"
         with:
-           token: ${{ secrets.CODECOV_TOKEN }}
-           directory: ./gut-reports/
-           files: ./gut_junit.xml
-           verbose: true
-           flags: GUT
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./gut-reports/
+          files: ./gut_junit.xml
+          verbose: true
+          flags: GUT
