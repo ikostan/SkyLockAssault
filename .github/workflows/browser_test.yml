@@ -55,6 +55,7 @@ jobs:
           python-version: "3.12"
       - name: "Cache PIP Dependencies"
         uses: "actions/cache@v5"
+        id: cache
         with:
           path: "~/.cache/pip"
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
@@ -171,7 +172,7 @@ jobs:
         if: always()
         uses: "actions/upload-artifact@v6"
         with:
-          # name: test-report
+          name: test-report
           path: junit.xml
 
       - name: "Upload Screenshot and Coverage Artifacts"
@@ -187,7 +188,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: "codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de"
         with:
-          files: ./coverage/lcov/lcov.info, ./test-report/junit.xml
+          files: ./coverage/lcov/lcov.info
           flags: playwright
           fail_ci_if_error: false  # Non-blocking on 0%
           verbose: true
