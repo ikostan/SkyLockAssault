@@ -63,12 +63,7 @@ jobs:
           name: gut-reports
           path: gut-reports/**
           retention-days: 5
-      - name: "Upload Coverage to Codecov"
+      - name: "Upload Test Report to Codecov"  # Last step for uploading JUnit XML as test report
         if: success()  # Only if tests pass.
-        uses: "codecov/codecov-action@v5"
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          directory: ./gut-reports/
-          files: ./gut_junit.xml
-          verbose: true
-          flags: GUT
+        run: |
+          ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} ${{ steps.find_report.outputs.latest_report }}/gut_junit.xml --name "GUT Test Report" --flag GUT
