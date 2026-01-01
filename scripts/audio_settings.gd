@@ -81,7 +81,7 @@ func _ready() -> void:
 	if not sfx_warning_dialog.canceled.is_connected(_reset_sfx_warning_shown):
 		sfx_warning_dialog.canceled.connect(_reset_sfx_warning_shown)
 
-	# Master: Set state BEFORE connecting 
+	# Master: Set state BEFORE connecting
 	# Sync UI to loaded state (checked = unmuted)
 	mute_master.button_pressed = not AudioManager.master_muted
 	# Assuming slider is 0-100; adjust if needed
