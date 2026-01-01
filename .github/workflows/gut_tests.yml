@@ -1,5 +1,5 @@
 ---
-name: "GDUnit4 Unit Tests"
+name: "GUT Unit Tests"  # Workflow name for CI display.
 
 on:
   workflow_call:
@@ -15,47 +15,48 @@ jobs:
     permissions:
       checks: write
     steps:
-      - uses: "actions/checkout@v6.0.1"
+      - uses: "actions/checkout@v6"
       - name: "Download Godot Binary"
         run: |
           wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
           unzip Godot_v4.5-stable_linux.x86_64.zip
           mv Godot_v4.5-stable_linux.x86_64 godot
           chmod +x godot
-      - name: "Install GDUnit4"
+      - name: "Install GUT"
         run: |
           mkdir -p addons
-          wget https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.0.0.zip
-          unzip v6.0.0.zip -d addons
-          mv addons/gdUnit4-6.0.0/addons/gdUnit4 addons/gdUnit4
-          rm -rf addons/gdUnit4-6.0.0
+          wget https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip
+          unzip v9.5.0.zip -d addons
+          mv addons/Gut-9.5.0/addons/gut addons/gut
       - name: "Import Resources"
         run: |
           ./godot --headless --path . --import --quit
-      - name: "Run GDUnit4 Tests"
+      - name: "Run GUT Tests"
+        continue-on-error: false  # Explicit no continue on error (default, but for clarity).
         run: |
-          ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
-            --verbose \
-            --ignoreHeadlessMode \
-            --add res://test
+          REPORT_DIR="gut-reports/$(date +%Y%m%d_%H%M%S)"
+          mkdir -p $REPORT_DIR
+          ./godot --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gjunit_xml_file=$REPORT_DIR/gut_junit.xml -gexit
       - name: "Find Latest Report Directory"
+        if: always()
         id: find_report
         run: |
-          LATEST_REPORT=$(ls -td reports/report_* | head -1 || echo "")
+          LATEST_REPORT=$(ls -td gut-reports/* | head -1 || echo "")
           if [ -z "$LATEST_REPORT" ]; then
             echo "No report directory found; tests may not have generated reports."
             exit 1
           fi
-          echo "latest_report=$LATEST_REPORT" >> $GITHUB_OUTPUT
-      - name: "List Coverage Reports"
+          echo "latest_report=$LATEST_REPORT" >> $GITHUB_OUTPUT  # Set output.
+      - name: "List Reports"
+        if: always()
         run: |
           ls -la ${{ steps.find_report.outputs.latest_report }}/
       - name: "Upload Test Reports Artifacts"
         if: always()
         uses: "actions/upload-artifact@v6"
         with:
-          name: gdunit-reports
-          path: reports/**
+          name: gut-reports
+          path: gut-reports/**
           retention-days: 5
       - name: "Install Codecov CLI"
         if: success()  # Only if tests pass.
@@ -65,4 +66,4 @@ jobs:
       - name: "Upload Test Report to Codecov"  # Last step for uploading JUnit XML as test report
         if: success()  # Only if tests pass.
         run: |
-          ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f ${{ steps.find_report.outputs.latest_report }}/test-report.xml --name "GDUnit4 Test Report" --flag GDUnit4 --report-type test_results
+          ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f ${{ steps.find_report.outputs.latest_report }}/gut_junit.xml --name "GUT Test Report" --flag GUT --report-type test_results

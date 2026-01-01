@@ -59,7 +59,7 @@ func play_sfx_with_volume() -> void:
 
 	var sfx_player := AudioStreamPlayer2D.new()
 	sfx_player.stream = shot_sound
-	sfx_player.bus = "SFX"  # Critical: assign to SFX bus
+	sfx_player.bus = AudioConstants.BUS_SFX_WEAPON  # Critical: assign to SFX bus
 	sfx_player.volume_db = 0.0  # Base volume (will be scaled by bus)
 
 	# Add to root to avoid being freed with bullet

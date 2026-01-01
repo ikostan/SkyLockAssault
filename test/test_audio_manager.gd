@@ -42,7 +42,7 @@ func test_save_and_load_volumes() -> void:
 ## Tests apply sets db if bus exists.
 ## :rtype: void
 func test_apply_volume_to_bus_sets_db() -> void:
-	manager.apply_volume_to_bus("Master", 0.5)
+	manager.apply_volume_to_bus("Master", 0.5, false)
 	assert_float(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Master"))).is_equal_approx(linear_to_db(0.5), 1e-6)
 
 ## Tests audio save preserves unrelated sections (e.g., "Settings").

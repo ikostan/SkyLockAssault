@@ -36,11 +36,21 @@ jobs:
       - "yamllint"
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+  gut_tests:
+    name: "GUT Unit Tests"
+    uses: "./.github/workflows/gut_tests.yml"
+    needs:
+      - "gdlint"
+      - "readmelint"
+      - "yamllint"
+    secrets:
+      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
   browser_tests:
     name: "Browser Functional Tests"
     uses: "./.github/workflows/browser_test.yml"
     needs:
       - "gdunit4_tests"
+      - "gut_tests"
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
   codeql:
