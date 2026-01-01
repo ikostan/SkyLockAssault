@@ -329,18 +329,17 @@ func _on_tree_exited() -> void:
 			)
 
 
+## Handles GUI input on master volume control.
+##
+## Unmutes and enables slider if muted and clicked.
+##
+## :param event: The input event.
+## :type event: InputEvent
+## :rtype: void
 func _on_master_volume_control_gui_input(event: InputEvent) -> void:
-	## Handles GUI input on master volume control.
-	##
-	## Unmutes and enables slider if muted and clicked.
-	##
-	## :param event: The input event.
-	## :type event: InputEvent
-	## :rtype: void
-	# Check if the event is a mouse button click
 	if event is InputEventMouseButton and event.pressed and AudioManager.master_muted:
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			mute_master.button_pressed = true  # Set button to pressed (unmuted) state visually
+			_on_master_mute_toggled(true)  # Unmute and update state
 			get_viewport().set_input_as_handled()  # Consume the event to prevent further propagation
 			Globals.log_message("Master Volume Slider is enabled now.", Globals.LogLevel.DEBUG)
 
