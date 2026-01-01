@@ -81,39 +81,7 @@ func _ready() -> void:
 	if not sfx_warning_dialog.canceled.is_connected(_reset_sfx_warning_shown):
 		sfx_warning_dialog.canceled.connect(_reset_sfx_warning_shown)
 
-<<<<<<< HEAD
-	# Master: Set state BEFORE connecting
-	# Sync UI to loaded state (checked = unmuted)
-	mute_master.button_pressed = not AudioManager.master_muted
-	# Assuming slider is 0-100; adjust if needed
-	master_slider.value = AudioManager.master_volume * 100
-	# Initial editability
-	master_slider.editable = not AudioManager.master_muted
-
-	# Music: Same pattern
-	mute_music.button_pressed = not AudioManager.music_muted
-	music_slider.value = AudioManager.music_volume * 100
-	music_slider.editable = not AudioManager.music_muted
-
-	# SFX: Same pattern
-	mute_sfx.button_pressed = not AudioManager.sfx_muted
-	sfx_slider.value = AudioManager.sfx_volume * 100
-	sfx_slider.editable = not AudioManager.sfx_muted
-
-	# Weapon: Same pattern
-	mute_weapon.button_pressed = not AudioManager.weapon_muted
-	weapon_slider.value = AudioManager.weapon_volume * 100
-	weapon_slider.editable = not AudioManager.weapon_muted
-
-	# Rotors: Same pattern
-	mute_rotor.button_pressed = not AudioManager.rotors_muted
-	rotor_slider.value = AudioManager.rotors_volume * 100
-	rotor_slider.editable = not AudioManager.rotors_muted
-
-	# Now connect toggled signals (after initial state set)
-=======
 	# Master Mute toggle master_slider
->>>>>>> parent of c3594ca (issue (bug_risk): Auto-unmuting via bus_muted branch only flips the button state but does not propagate to AudioManager or buses.)
 	if not mute_master.toggled.is_connected(_on_master_mute_toggled):
 		mute_master.toggled.connect(_on_master_mute_toggled)  # Use toggled for CheckButton state
 	mute_master.button_pressed = not AudioManager.master_muted  # Direct sync (checked = unmuted)
@@ -174,11 +142,7 @@ func _ready() -> void:
 			js_bridge_wrapper
 			. eval(
 				"""
-<<<<<<< HEAD
-                document.getElementById('audio-back-button').style.display = 'block';
-=======
 				document.getElementById('audio-back-button').style.display = 'block';
->>>>>>> parent of c3594ca (issue (bug_risk): Auto-unmuting via bus_muted branch only flips the button state but does not propagate to AudioManager or buses.)
 				""",
 				true
 			)
@@ -351,17 +315,18 @@ func _on_tree_exited() -> void:
 			)
 
 
-## Handles GUI input on master volume control.
-##
-## Unmutes and enables slider if muted and clicked.
-##
-## :param event: The input event.
-## :type event: InputEvent
-## :rtype: void
 func _on_master_volume_control_gui_input(event: InputEvent) -> void:
+	## Handles GUI input on master volume control.
+	##
+	## Unmutes and enables slider if muted and clicked.
+	##
+	## :param event: The input event.
+	## :type event: InputEvent
+	## :rtype: void
+	# Check if the event is a mouse button click
 	if event is InputEventMouseButton and event.pressed and AudioManager.master_muted:
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			_on_master_mute_toggled(true)  # Unmute and update state
+			mute_master.button_pressed = true  # Set button to pressed (unmuted) state visually
 			get_viewport().set_input_as_handled()  # Consume the event to prevent further propagation
 			Globals.log_message("Master Volume Slider is enabled now.", Globals.LogLevel.DEBUG)
 
