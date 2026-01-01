@@ -81,53 +81,64 @@ func _ready() -> void:
 	if not sfx_warning_dialog.canceled.is_connected(_reset_sfx_warning_shown):
 		sfx_warning_dialog.canceled.connect(_reset_sfx_warning_shown)
 
-	# Master Mute toggle master_slider
+	# Master: Set state BEFORE connecting signal
+	mute_master.button_pressed = not AudioManager.master_muted  # Sync UI to loaded state (checked = unmuted)
+	master_slider.value = AudioManager.master_volume * 100  # Assuming slider is 0-100; adjust if needed
+	master_slider.editable = not AudioManager.master_muted  # Initial editability
+
+	# Music: Same pattern
+	mute_music.button_pressed = not AudioManager.music_muted
+	music_slider.value = AudioManager.music_volume * 100
+	music_slider.editable = not AudioManager.music_muted
+
+	# SFX: Same pattern
+	mute_sfx.button_pressed = not AudioManager.sfx_muted
+	sfx_slider.value = AudioManager.sfx_volume * 100
+	sfx_slider.editable = not AudioManager.sfx_muted
+
+	# Weapon: Same pattern
+	mute_weapon.button_pressed = not AudioManager.weapon_muted
+	weapon_slider.value = AudioManager.weapon_volume * 100
+	weapon_slider.editable = not AudioManager.weapon_muted
+
+	# Rotors: Same pattern
+	mute_rotor.button_pressed = not AudioManager.rotors_muted
+	rotor_slider.value = AudioManager.rotors_volume * 100
+	rotor_slider.editable = not AudioManager.rotors_muted
+
+	# Now connect toggled signals (after initial state set)
 	if not mute_master.toggled.is_connected(_on_master_mute_toggled):
-		mute_master.toggled.connect(_on_master_mute_toggled)  # Use toggled for CheckButton state
-	mute_master.button_pressed = not AudioManager.master_muted  # Direct sync (checked = unmuted)
-
-	# Master slider input for unmute on click
-	if not master_slider.gui_input.is_connected(_on_master_volume_control_gui_input):
-		master_slider.gui_input.connect(_on_master_volume_control_gui_input)
-	master_slider.editable = not AudioManager.master_muted  # Initial state
-
-	# Music (New)
+		mute_master.toggled.connect(_on_master_mute_toggled)
 	if not mute_music.toggled.is_connected(_on_music_mute_toggled):
 		mute_music.toggled.connect(_on_music_mute_toggled)
-	mute_music.button_pressed = not AudioManager.music_muted
+	if not mute_sfx.toggled.is_connected(_on_sfx_mute_toggled):
+		mute_sfx.toggled.connect(_on_sfx_mute_toggled)
+	if not mute_weapon.toggled.is_connected(_on_weapon_mute_toggled):
+		mute_weapon.toggled.connect(_on_weapon_mute_toggled)
+	if not mute_rotor.toggled.is_connected(_on_rotor_mute_toggled):
+		mute_rotor.toggled.connect(_on_rotor_mute_toggled)
+
+	# Connect gui_input for sliders and mutes (these don't trigger on init)
+	if not master_slider.gui_input.is_connected(_on_master_volume_control_gui_input):
+		master_slider.gui_input.connect(_on_master_volume_control_gui_input)
 	if not music_slider.gui_input.is_connected(_on_music_volume_control_gui_input):
 		music_slider.gui_input.connect(_on_music_volume_control_gui_input)
 	if not mute_music.gui_input.is_connected(_on_music_mute_gui_input):
 		mute_music.gui_input.connect(_on_music_mute_gui_input)
-
-	# SFX (New)
-	if not mute_sfx.toggled.is_connected(_on_sfx_mute_toggled):
-		mute_sfx.toggled.connect(_on_sfx_mute_toggled)
-	mute_sfx.button_pressed = not AudioManager.sfx_muted
 	if not sfx_slider.gui_input.is_connected(_on_sfx_volume_control_gui_input):
 		sfx_slider.gui_input.connect(_on_sfx_volume_control_gui_input)
 	if not mute_sfx.gui_input.is_connected(_on_sfx_mute_gui_input):
 		mute_sfx.gui_input.connect(_on_sfx_mute_gui_input)
-
-	# Weapon (New)
-	if not mute_weapon.toggled.is_connected(_on_weapon_mute_toggled):
-		mute_weapon.toggled.connect(_on_weapon_mute_toggled)
-	mute_weapon.button_pressed = not AudioManager.weapon_muted
 	if not weapon_slider.gui_input.is_connected(_on_weapon_volume_control_gui_input):
 		weapon_slider.gui_input.connect(_on_weapon_volume_control_gui_input)
 	if not mute_weapon.gui_input.is_connected(_on_weapon_mute_gui_input):
 		mute_weapon.gui_input.connect(_on_weapon_mute_gui_input)
-
-	# Rotors (New)
-	if not mute_rotor.toggled.is_connected(_on_rotor_mute_toggled):
-		mute_rotor.toggled.connect(_on_rotor_mute_toggled)
-	mute_rotor.button_pressed = not AudioManager.rotors_muted
 	if not rotor_slider.gui_input.is_connected(_on_rotor_volume_control_gui_input):
 		rotor_slider.gui_input.connect(_on_rotor_volume_control_gui_input)
 	if not mute_rotor.gui_input.is_connected(_on_rotor_mute_gui_input):
 		mute_rotor.gui_input.connect(_on_rotor_mute_gui_input)
 
-	# Back buttom
+	# Back button
 	if not audio_back_button.pressed.is_connected(_on_audio_back_button_pressed):
 		audio_back_button.pressed.connect(_on_audio_back_button_pressed)
 
@@ -140,9 +151,9 @@ func _ready() -> void:
 	if os_wrapper.has_feature("web"):
 		(
 			js_bridge_wrapper
-			. eval(
-				"""
-				document.getElementById('audio-back-button').style.display = 'block';
+			.eval(
+                """
+                document.getElementById('audio-back-button').style.display = 'block';
 				""",
 				true
 			)
