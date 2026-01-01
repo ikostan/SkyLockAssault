@@ -81,6 +81,7 @@ func _ready() -> void:
 	if not sfx_warning_dialog.canceled.is_connected(_reset_sfx_warning_shown):
 		sfx_warning_dialog.canceled.connect(_reset_sfx_warning_shown)
 
+<<<<<<< HEAD
 	# Master: Set state BEFORE connecting
 	# Sync UI to loaded state (checked = unmuted)
 	mute_master.button_pressed = not AudioManager.master_muted
@@ -110,38 +111,55 @@ func _ready() -> void:
 	rotor_slider.editable = not AudioManager.rotors_muted
 
 	# Now connect toggled signals (after initial state set)
+=======
+	# Master Mute toggle master_slider
+>>>>>>> parent of c3594ca (issue (bug_risk): Auto-unmuting via bus_muted branch only flips the button state but does not propagate to AudioManager or buses.)
 	if not mute_master.toggled.is_connected(_on_master_mute_toggled):
-		mute_master.toggled.connect(_on_master_mute_toggled)
-	if not mute_music.toggled.is_connected(_on_music_mute_toggled):
-		mute_music.toggled.connect(_on_music_mute_toggled)
-	if not mute_sfx.toggled.is_connected(_on_sfx_mute_toggled):
-		mute_sfx.toggled.connect(_on_sfx_mute_toggled)
-	if not mute_weapon.toggled.is_connected(_on_weapon_mute_toggled):
-		mute_weapon.toggled.connect(_on_weapon_mute_toggled)
-	if not mute_rotor.toggled.is_connected(_on_rotor_mute_toggled):
-		mute_rotor.toggled.connect(_on_rotor_mute_toggled)
+		mute_master.toggled.connect(_on_master_mute_toggled)  # Use toggled for CheckButton state
+	mute_master.button_pressed = not AudioManager.master_muted  # Direct sync (checked = unmuted)
 
-	# Connect gui_input for sliders and mutes (these don't trigger on init)
+	# Master slider input for unmute on click
 	if not master_slider.gui_input.is_connected(_on_master_volume_control_gui_input):
 		master_slider.gui_input.connect(_on_master_volume_control_gui_input)
+	master_slider.editable = not AudioManager.master_muted  # Initial state
+
+	# Music (New)
+	if not mute_music.toggled.is_connected(_on_music_mute_toggled):
+		mute_music.toggled.connect(_on_music_mute_toggled)
+	mute_music.button_pressed = not AudioManager.music_muted
 	if not music_slider.gui_input.is_connected(_on_music_volume_control_gui_input):
 		music_slider.gui_input.connect(_on_music_volume_control_gui_input)
 	if not mute_music.gui_input.is_connected(_on_music_mute_gui_input):
 		mute_music.gui_input.connect(_on_music_mute_gui_input)
+
+	# SFX (New)
+	if not mute_sfx.toggled.is_connected(_on_sfx_mute_toggled):
+		mute_sfx.toggled.connect(_on_sfx_mute_toggled)
+	mute_sfx.button_pressed = not AudioManager.sfx_muted
 	if not sfx_slider.gui_input.is_connected(_on_sfx_volume_control_gui_input):
 		sfx_slider.gui_input.connect(_on_sfx_volume_control_gui_input)
 	if not mute_sfx.gui_input.is_connected(_on_sfx_mute_gui_input):
 		mute_sfx.gui_input.connect(_on_sfx_mute_gui_input)
+
+	# Weapon (New)
+	if not mute_weapon.toggled.is_connected(_on_weapon_mute_toggled):
+		mute_weapon.toggled.connect(_on_weapon_mute_toggled)
+	mute_weapon.button_pressed = not AudioManager.weapon_muted
 	if not weapon_slider.gui_input.is_connected(_on_weapon_volume_control_gui_input):
 		weapon_slider.gui_input.connect(_on_weapon_volume_control_gui_input)
 	if not mute_weapon.gui_input.is_connected(_on_weapon_mute_gui_input):
 		mute_weapon.gui_input.connect(_on_weapon_mute_gui_input)
+
+	# Rotors (New)
+	if not mute_rotor.toggled.is_connected(_on_rotor_mute_toggled):
+		mute_rotor.toggled.connect(_on_rotor_mute_toggled)
+	mute_rotor.button_pressed = not AudioManager.rotors_muted
 	if not rotor_slider.gui_input.is_connected(_on_rotor_volume_control_gui_input):
 		rotor_slider.gui_input.connect(_on_rotor_volume_control_gui_input)
 	if not mute_rotor.gui_input.is_connected(_on_rotor_mute_gui_input):
 		mute_rotor.gui_input.connect(_on_rotor_mute_gui_input)
 
-	# Back button
+	# Back buttom
 	if not audio_back_button.pressed.is_connected(_on_audio_back_button_pressed):
 		audio_back_button.pressed.connect(_on_audio_back_button_pressed)
 
@@ -156,7 +174,11 @@ func _ready() -> void:
 			js_bridge_wrapper
 			. eval(
 				"""
+<<<<<<< HEAD
                 document.getElementById('audio-back-button').style.display = 'block';
+=======
+				document.getElementById('audio-back-button').style.display = 'block';
+>>>>>>> parent of c3594ca (issue (bug_risk): Auto-unmuting via bus_muted branch only flips the button state but does not propagate to AudioManager or buses.)
 				""",
 				true
 			)
