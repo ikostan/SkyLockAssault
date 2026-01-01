@@ -81,10 +81,13 @@ func _ready() -> void:
 	if not sfx_warning_dialog.canceled.is_connected(_reset_sfx_warning_shown):
 		sfx_warning_dialog.canceled.connect(_reset_sfx_warning_shown)
 
-	# Master: Set state BEFORE connecting signal
-	mute_master.button_pressed = not AudioManager.master_muted  # Sync UI to loaded state (checked = unmuted)
-	master_slider.value = AudioManager.master_volume * 100  # Assuming slider is 0-100; adjust if needed
-	master_slider.editable = not AudioManager.master_muted  # Initial editability
+	# Master: Set state BEFORE connecting 
+	# Sync UI to loaded state (checked = unmuted)
+	mute_master.button_pressed = not AudioManager.master_muted
+	# Assuming slider is 0-100; adjust if needed
+	master_slider.value = AudioManager.master_volume * 100
+	# Initial editability
+	master_slider.editable = not AudioManager.master_muted
 
 	# Music: Same pattern
 	mute_music.button_pressed = not AudioManager.music_muted
@@ -151,8 +154,8 @@ func _ready() -> void:
 	if os_wrapper.has_feature("web"):
 		(
 			js_bridge_wrapper
-			.eval(
-                """
+			. eval(
+				"""
                 document.getElementById('audio-back-button').style.display = 'block';
 				""",
 				true
