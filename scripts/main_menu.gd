@@ -125,8 +125,7 @@ func _on_start_pressed(_args: Array = []) -> void:
 	## :rtype: void
 	# Stub; later: get_tree().change_scene_to_file("res://game_scene.tscn")
 	Globals.log_message("Start Game menu button pressed.", Globals.LogLevel.DEBUG)
-	Globals.next_scene = "res://scenes/main_scene.tscn"
-	get_tree().change_scene_to_file("res://scenes/loading_screen.tscn")
+	Globals.load_scene_with_loading("res://scenes/main_scene.tscn")
 
 
 func _on_options_button_pressed(_args: Array = []) -> void:

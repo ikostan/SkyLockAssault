@@ -159,3 +159,16 @@ func _notification(what: int) -> void:
 
 		# After cleanup, let the quit proceed (optional on desktop; auto on web).
 		get_tree().quit()
+
+
+func load_scene_with_loading(target_path: String) -> void:
+	# Queues a scene change via the loading screen.
+	# Sets next_scene and transitions to loading_screen.tscn.
+	# Handles empty/invalid paths gracefully.
+
+	if target_path == "":
+		log_message("Cannot load empty scene path.", LogLevel.ERROR)
+		return
+	
+	next_scene = target_path
+	get_tree().change_scene_to_file("res://scenes/loading_screen.tscn")

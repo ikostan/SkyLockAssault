@@ -61,7 +61,6 @@ func _process(_delta: float) -> void:
 		if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 			if progress_array.size() > 0:
 				real_progress = progress_array[0] * 100.0  # Convert to percentage.
-				Globals.log_message("Real progress: " + str(real_progress), Globals.LogLevel.DEBUG)
 			else:
 				Globals.log_message(
 					"Progress array empty during IN_PROGRESS.", Globals.LogLevel.WARNING

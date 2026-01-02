@@ -82,9 +82,7 @@ func _on_back_to_main_button_pressed() -> void:
 	Globals.log_message("Back To Main Menu button pressed.", Globals.LogLevel.DEBUG)
 	get_tree().paused = false
 	visible = false
-	# get_tree().change_scene_to_packed(main_menu_scene)
-	Globals.next_scene = "res://scenes/main_menu.tscn"
-	get_tree().change_scene_to_file("res://scenes/loading_screen.tscn")
+	Globals.load_scene_with_loading("res://scenes/main_menu.tscn")
 
 
 func _on_options_button_pressed() -> void:
