@@ -25,9 +25,6 @@ var load_failed: bool = false  # Flag if loading request failed.
 # Starts threaded loading of the next scene from Globals.
 func _ready() -> void:
 	load_start_time = Time.get_ticks_msec() / 1000.0
-	Globals.log_message(
-		"Loading screen ready. Next scene: " + Globals.next_scene, Globals.LogLevel.DEBUG
-	)
 
 	if Globals.next_scene == "":
 		Globals.log_message("Next scene path is empty!", Globals.LogLevel.ERROR)
@@ -50,11 +47,6 @@ func _process(_delta: float) -> void:
 
 	# Get loading status.
 	var status: int = ResourceLoader.load_threaded_get_status(Globals.next_scene)
-	Globals.log_message(
-		"Loading status: " + str(status) + " | Elapsed: " + str(elapsed_time),
-		Globals.LogLevel.DEBUG
-	)  # Debug log
-
 	var real_progress: float = 0.0
 
 	if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
