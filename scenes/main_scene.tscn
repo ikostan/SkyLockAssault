@@ -94,15 +94,18 @@ corner_radius_top_left = 10
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
+corner_detail = 10
 shadow_color = Color(0.5137255, 0.5137255, 0.5137255, 0.47058824)
 shadow_size = 1
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rt2n2"]
 bg_color = Color(0.09411765, 0.5019608, 0.81960785, 0.49019608)
+border_blend = true
 corner_radius_top_left = 10
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
+corner_detail = 10
 shadow_color = Color(0, 0, 0, 0.3882353)
 shadow_size = 1
 

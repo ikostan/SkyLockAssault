@@ -15,6 +15,7 @@ var hidden_menus: Array[Node] = []
 var options_open: bool = false
 var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
 var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
+var next_scene: String = ""  # Path to the next scene to load via loading screen.
 
 
 func _ready() -> void:
@@ -158,3 +159,16 @@ func _notification(what: int) -> void:
 
 		# After cleanup, let the quit proceed (optional on desktop; auto on web).
 		get_tree().quit()
+
+
+func load_scene_with_loading(target_path: String) -> void:
+	# Queues a scene change via the loading screen.
+	# Sets next_scene and transitions to loading_screen.tscn.
+	# Handles empty/invalid paths gracefully.
+
+	if target_path == "":
+		log_message("Cannot load empty scene path.", LogLevel.ERROR)
+		return
+
+	next_scene = target_path
+	get_tree().change_scene_to_file("res://scenes/loading_screen.tscn")
