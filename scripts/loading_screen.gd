@@ -101,7 +101,10 @@ func _process(_delta: float) -> void:
 		var target_path: String = Globals.next_scene  # Cache the path.
 		Globals.next_scene = ""  # Reset to avoid stale values.
 		
-		if load_failed:
+		if target_path == "":
+			Globals.log_message("Empty next_scene - returning to main menu.", Globals.LogLevel.ERROR)
+			get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+		elif load_failed:
 			# Fallback to direct load on failure
 			Globals.log_message("Fallback: Loading scene directly.", Globals.LogLevel.WARNING)
 			get_tree().change_scene_to_file(target_path)
