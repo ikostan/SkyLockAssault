@@ -61,6 +61,7 @@ func _process(_delta: float) -> void:
 		if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 			if progress_array.size() > 0:
 				real_progress = progress_array[0] * 100.0  # Convert to percentage.
+				Globals.log_message("Real progress: " + str(real_progress), Globals.LogLevel.DEBUG)
 			else:
 				Globals.log_message(
 					"Progress array empty during IN_PROGRESS.", Globals.LogLevel.WARNING
@@ -93,13 +94,13 @@ func _process(_delta: float) -> void:
 	# Proceed only when both loaded (or failed fallback) and minimum time elapsed.
 	if (is_scene_loaded or load_failed) and elapsed_time >= min_load_time and not transitioning:
 		transitioning = true  # Lock to prevent re-entry.
-
+		
 		# Optional delay at 100%.
 		await get_tree().create_timer(0.5).timeout
-
+		
 		var target_path: String = Globals.next_scene  # Cache the path.
 		Globals.next_scene = ""  # Reset to avoid stale values.
-
+		
 		if load_failed:
 			# Fallback to direct load on failure
 			Globals.log_message("Fallback: Loading scene directly.", Globals.LogLevel.WARNING)
