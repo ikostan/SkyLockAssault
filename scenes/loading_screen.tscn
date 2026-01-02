@@ -11,19 +11,19 @@ bg_color = Color(3.829657e-06, 1.1488971e-05, 6.537616e-05, 0.5294118)
 bg_color = Color(0.9607843, 0.9607843, 0.050980393, 0.5372549)
 border_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 border_blend = true
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
 corner_detail = 12
 shadow_size = 1
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ku3bi"]
 bg_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
 corner_detail = 12
 shadow_size = 3
 
@@ -60,13 +60,13 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -166.5
+offset_left = -151.5
 offset_top = -64.0
-offset_right = 166.5
+offset_right = 151.5
 offset_bottom = 64.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 11
 
 [node name="Label" type="Label" parent="Panel/Container"]
 layout_mode = 2
@@ -74,13 +74,13 @@ size_flags_horizontal = 4
 theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_shadow_color = Color(0.29586652, 0.2958665, 0.2958665, 0)
 theme_override_fonts/font = ExtResource("2_ku3bi")
-theme_override_font_sizes/font_size = 55
+theme_override_font_sizes/font_size = 50
 text = "{LOADING...}"
 
 [node name="ProgressBar" type="ProgressBar" parent="Panel/Container"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.32915837, 0.3291584, 0.32915837, 1)
-theme_override_font_sizes/font_size = 31
+theme_override_font_sizes/font_size = 17
 theme_override_styles/background = SubResource("StyleBoxFlat_hprjd")
 theme_override_styles/fill = SubResource("StyleBoxFlat_ku3bi")
 step = 1.0
