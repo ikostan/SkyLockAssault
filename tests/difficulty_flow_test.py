@@ -175,10 +175,33 @@ def test_difficulty_flow(page: Page) -> None:
         # Start game
         page.click("#start-button", force=True)
         page.wait_for_timeout(10000)  # Wait for game load
+
+        # Poll for loading start log to confirm transition to loading screen
+        start_time = time.time()
+        while time.time() - start_time < 30:
+            if any("loading started successfully." in log["text"].lower() for log in logs):
+                break
+            time.sleep(0.5)
+        else:
+            raise TimeoutError("Loading screen did not start")
+
         assert any(
             "start game menu button pressed." in log["text"].lower() for log in logs), "Start Game button not found"
         assert any(
-            "loading main game scene..." in log["text"].lower() for log in logs), "Game scene not found"
+            "initializing main scene..." in log["text"].lower() for log in logs), "Game scene not found"
+
+        # Poll for scene loaded log from loading_screen.gd
+        start_time = time.time()
+        while time.time() - start_time < 30:
+            if any("scene loaded successfully." in log["text"].lower() for log in logs):
+                break
+            time.sleep(0.5)
+        else:
+            raise TimeoutError("Main scene not loaded")
+
+        # Refocus canvas to ensure input capture
+        page.click("canvas")
+        page.wait_for_timeout(1000)  # Short wait for focus and any init
 
         # Simulate fire (press Space)
         page.keyboard.press("Space")
