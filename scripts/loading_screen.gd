@@ -41,19 +41,24 @@ func _ready() -> void:
 
 
 # Polls loading status and updates UI. Changes scene when loaded.
+# Polls loading status and updates UI. Changes scene when loaded.
 func _process(_delta: float) -> void:
 	var elapsed_time: float = (Time.get_ticks_msec() / 1000.0) - load_start_time
 	var fake_progress: float = clamp((elapsed_time / min_load_time) * 100.0, 0.0, 100.0)
 
-	# Get loading status.
-	var status: int = ResourceLoader.load_threaded_get_status(Globals.next_scene)
+	# Get loading status and progress in one call.
+	var progress_array: Array = []
+	var status: int = ResourceLoader.load_threaded_get_status(Globals.next_scene, progress_array)
+	Globals.log_message("Loading status: " + str(status) + " | Elapsed: " + str(elapsed_time), Globals.LogLevel.DEBUG)  # Optional: Add if not already present for debugging.
+
 	var real_progress: float = 0.0
 
 	if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
-		var progress_array: Array = []
-		ResourceLoader.load_threaded_get_status(Globals.next_scene, progress_array)
-		real_progress = progress_array[0] * 100.0  # Convert to percentage.
-		Globals.log_message("Real progress: " + str(real_progress), Globals.LogLevel.DEBUG)
+		if progress_array.size() > 0:
+			real_progress = progress_array[0] * 100.0  # Convert to percentage.
+			Globals.log_message("Real progress: " + str(real_progress), Globals.LogLevel.DEBUG)
+		else:
+			Globals.log_message("Progress array empty during IN_PROGRESS.", Globals.LogLevel.WARNING)
 
 	elif status == ResourceLoader.THREAD_LOAD_LOADED:
 		real_progress = 100.0
