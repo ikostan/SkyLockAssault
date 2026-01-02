@@ -26,7 +26,6 @@ const QUIT_DIALOG_DEFAULT_PATH: String = "VideoStreamPlayer/Panel/VBoxContainer/
 
 # Reference to the quit dialog node, assigned in setup_quit_dialog or _ready()
 var quit_dialog: ConfirmationDialog
-var game_scene: PackedScene = preload("res://scenes/main_scene.tscn")
 var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 
 @onready var ui_panel: Panel = $VideoStreamPlayer/Panel
@@ -126,14 +125,8 @@ func _on_start_pressed(_args: Array = []) -> void:
 	## :rtype: void
 	# Stub; later: get_tree().change_scene_to_file("res://game_scene.tscn")
 	Globals.log_message("Start Game menu button pressed.", Globals.LogLevel.DEBUG)
-
-	if game_scene:
-		Globals.log_message("Loading main game scene...", Globals.LogLevel.DEBUG)
-		# get_tree().change_scene_to_packed(game_scene)
-		Globals.next_scene = "res://scenes/main_scene.tscn"
-		get_tree().change_scene_to_file("res://scenes/loading_screen.tscn")
-	else:
-		Globals.log_message("Error: Game scene not set!", Globals.LogLevel.ERROR)
+	Globals.next_scene = "res://scenes/main_scene.tscn"
+	get_tree().change_scene_to_file("res://scenes/loading_screen.tscn")
 
 
 func _on_options_button_pressed(_args: Array = []) -> void:

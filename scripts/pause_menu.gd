@@ -82,14 +82,9 @@ func _on_back_to_main_button_pressed() -> void:
 	Globals.log_message("Back To Main Menu button pressed.", Globals.LogLevel.DEBUG)
 	get_tree().paused = false
 	visible = false
-	var main_menu_scene: PackedScene = load("res://scenes/main_menu.tscn")
-	if main_menu_scene:
-		Globals.log_message("Switch back to Main menu scene.", Globals.LogLevel.DEBUG)
-		# get_tree().change_scene_to_packed(main_menu_scene)
-		Globals.next_scene = "res://scenes/main_menu.tscn"
-		get_tree().change_scene_to_file("res://scenes/loading_screen.tscn")
-	else:
-		Globals.log_message("Error: Main menu scene not set!", Globals.LogLevel.ERROR)
+	# get_tree().change_scene_to_packed(main_menu_scene)
+	Globals.next_scene = "res://scenes/main_menu.tscn"
+	get_tree().change_scene_to_file("res://scenes/loading_screen.tscn")
 
 
 func _on_options_button_pressed() -> void:
