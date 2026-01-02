@@ -90,11 +90,14 @@ func _process(_delta: float) -> void:
 	if (is_scene_loaded or load_failed) and elapsed_time >= min_load_time:
 		# Optional delay at 100%.
 		await get_tree().create_timer(0.5).timeout
-
+		
+		var target_path: String = Globals.next_scene  # Cache the path.
+		Globals.next_scene = ""  # Reset immediately after caching.
+		
 		if load_failed:
 			# Fallback to direct load on failure
 			Globals.log_message("Fallback: Loading scene directly.", Globals.LogLevel.WARNING)
-			get_tree().change_scene_to_file(Globals.next_scene)
+			get_tree().change_scene_to_file(target_path)
 		else:
 			# Change scene.
 			get_tree().change_scene_to_packed(scene)
