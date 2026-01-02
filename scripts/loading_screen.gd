@@ -61,7 +61,6 @@ func _process(_delta: float) -> void:
 		if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 			if progress_array.size() > 0:
 				real_progress = progress_array[0] * 100.0  # Convert to percentage.
-				Globals.log_message("Real progress: " + str(real_progress), Globals.LogLevel.DEBUG)
 			else:
 				Globals.log_message(
 					"Progress array empty during IN_PROGRESS.", Globals.LogLevel.WARNING
@@ -72,9 +71,6 @@ func _process(_delta: float) -> void:
 			if not is_scene_loaded:
 				is_scene_loaded = true
 				scene = ResourceLoader.load_threaded_get(Globals.next_scene)
-				Globals.log_message(
-					"Real progress: " + str(progress_array[0] * 100.0), Globals.LogLevel.DEBUG
-				)
 				Globals.log_message("Scene loaded successfully.", Globals.LogLevel.DEBUG)
 
 		elif (
