@@ -169,6 +169,6 @@ func load_scene_with_loading(target_path: String) -> void:
 	if target_path == "":
 		log_message("Cannot load empty scene path.", LogLevel.ERROR)
 		return
-	
+
 	next_scene = target_path
 	get_tree().change_scene_to_file("res://scenes/loading_screen.tscn")
