@@ -17,6 +17,7 @@ var load_start_time: float = 0.0  # Timestamp when loading starts.
 var is_scene_loaded: bool = false  # Flag to track if the scene is fully loaded.
 var scene: PackedScene = null  # Holder for the loaded scene.
 var load_failed: bool = false  # Flag if loading request failed.
+var transitioning: bool = false  # Flag to prevent multiple scene changes.
 
 @onready var progress_bar: ProgressBar = $Panel/Container/ProgressBar  # Progress bar UI element.
 @onready var label: Label = $Panel/Container/Label  # Label for displaying loading status.
@@ -94,13 +95,15 @@ func _process(_delta: float) -> void:
 	progress_bar.value = loader_progress
 
 	# Proceed only when both loaded (or failed fallback) and minimum time elapsed.
-	if (is_scene_loaded or load_failed) and elapsed_time >= min_load_time:
+	if (is_scene_loaded or load_failed) and elapsed_time >= min_load_time and not transitioning:
+		transitioning = true  # Lock to prevent re-entry.
+		
 		# Optional delay at 100%.
 		await get_tree().create_timer(0.5).timeout
-
+		
 		var target_path: String = Globals.next_scene  # Cache the path.
 		Globals.next_scene = ""  # Reset to avoid stale values.
-
+		
 		if load_failed:
 			# Fallback to direct load on failure
 			Globals.log_message("Fallback: Loading scene directly.", Globals.LogLevel.WARNING)
