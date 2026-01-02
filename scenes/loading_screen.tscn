@@ -1,0 +1,86 @@
+[gd_scene load_steps=7 format=3 uid="uid://c7v7wvpn01fpp"]
+
+[ext_resource type="Script" uid="uid://dppkco4l3vw86" path="res://scripts/loading_screen.gd" id="1_hprjd"]
+[ext_resource type="Texture2D" uid="uid://d3fr7qvmvb6rc" path="res://files/img/2001-Model_7.png" id="2_5phy8"]
+[ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="2_ku3bi"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5phy8"]
+bg_color = Color(3.829657e-06, 1.1488971e-05, 6.537616e-05, 0.5294118)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hprjd"]
+bg_color = Color(0.9607843, 0.9607843, 0.050980393, 0.5372549)
+border_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+border_blend = true
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+corner_detail = 12
+shadow_size = 1
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ku3bi"]
+bg_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+corner_detail = 12
+shadow_size = 3
+
+[node name="LoadingScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+script = ExtResource("1_hprjd")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(640, 360)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("2_5phy8")
+flip_h = true
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_5phy8")
+
+[node name="Container" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -166.5
+offset_top = -64.0
+offset_right = 166.5
+offset_bottom = 64.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="Label" type="Label" parent="Panel/Container"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_colors/font_shadow_color = Color(0.29586652, 0.2958665, 0.2958665, 0)
+theme_override_fonts/font = ExtResource("2_ku3bi")
+theme_override_font_sizes/font_size = 55
+text = "{LOADING...}"
+
+[node name="ProgressBar" type="ProgressBar" parent="Panel/Container"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.32915837, 0.3291584, 0.32915837, 1)
+theme_override_font_sizes/font_size = 31
+theme_override_styles/background = SubResource("StyleBoxFlat_hprjd")
+theme_override_styles/fill = SubResource("StyleBoxFlat_ku3bi")
+step = 1.0

@@ -15,6 +15,7 @@ var hidden_menus: Array[Node] = []
 var options_open: bool = false
 var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
 var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
+var next_scene: String = ""  # Path to the next scene to load via loading screen.
 
 
 func _ready() -> void:

@@ -129,7 +129,9 @@ func _on_start_pressed(_args: Array = []) -> void:
 
 	if game_scene:
 		Globals.log_message("Loading main game scene...", Globals.LogLevel.DEBUG)
-		get_tree().change_scene_to_packed(game_scene)
+		# get_tree().change_scene_to_packed(game_scene)
+		Globals.next_scene = "res://scenes/main_scene.tscn"
+		get_tree().change_scene_to_file("res://scenes/loading_screen.tscn")
 	else:
 		Globals.log_message("Error: Game scene not set!", Globals.LogLevel.ERROR)
 
