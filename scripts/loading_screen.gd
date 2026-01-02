@@ -49,7 +49,10 @@ func _process(_delta: float) -> void:
 	# Get loading status and progress in one call.
 	var progress_array: Array = []
 	var status: int = ResourceLoader.load_threaded_get_status(Globals.next_scene, progress_array)
-	Globals.log_message("Loading status: " + str(status) + " | Elapsed: " + str(elapsed_time), Globals.LogLevel.DEBUG)  # Optional: Add if not already present for debugging.
+	Globals.log_message(
+		"Loading status: " + str(status) + " | Elapsed: " + str(elapsed_time),
+		Globals.LogLevel.DEBUG
+	)  # Optional: Add if not already present for debugging.
 
 	var real_progress: float = 0.0
 
@@ -58,7 +61,9 @@ func _process(_delta: float) -> void:
 			real_progress = progress_array[0] * 100.0  # Convert to percentage.
 			Globals.log_message("Real progress: " + str(real_progress), Globals.LogLevel.DEBUG)
 		else:
-			Globals.log_message("Progress array empty during IN_PROGRESS.", Globals.LogLevel.WARNING)
+			Globals.log_message(
+				"Progress array empty during IN_PROGRESS.", Globals.LogLevel.WARNING
+			)
 
 	elif status == ResourceLoader.THREAD_LOAD_LOADED:
 		real_progress = 100.0
@@ -90,10 +95,10 @@ func _process(_delta: float) -> void:
 	if (is_scene_loaded or load_failed) and elapsed_time >= min_load_time:
 		# Optional delay at 100%.
 		await get_tree().create_timer(0.5).timeout
-		
+
 		var target_path: String = Globals.next_scene  # Cache the path.
 		Globals.next_scene = ""  # Reset immediately after caching.
-		
+
 		if load_failed:
 			# Fallback to direct load on failure
 			Globals.log_message("Fallback: Loading scene directly.", Globals.LogLevel.WARNING)
