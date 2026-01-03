@@ -64,7 +64,7 @@ func _ready() -> void:
 	log_lvl_option.add_item("NONE")  # Manual for title case
 
 	# Game version
-	version_label.text = "Version: " + Globals.game_version
+	version_label.text = "Version: " + Globals.get_game_version()
 	Globals.log_message("Updated label to: " + version_label.text, Globals.LogLevel.DEBUG)
 
 	# Set to current log level (find index by enum value)
