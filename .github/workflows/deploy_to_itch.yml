@@ -3,6 +3,12 @@ name: "Deploy to itch.io"
 
 on:  # yamllint disable-line rule:truthy
   workflow_call:  # Reusable
+    inputs:
+      version:
+        description: "The version to inject (e.g., v0.6.1)"
+        type: string
+        required: true
+        # default: "dev"  # Fallback for local/dev builds
     secrets:
       ITCHIO_API_KEY:
         description: "Itch.io API key"
@@ -17,6 +23,21 @@ jobs:
     steps:
       - name: "Checkout code"
         uses: "actions/checkout@v6.0.1"
+      - name: "Inject Version into project.godot"
+        run: |
+          VERSION="${{ inputs.version }}"
+          # Escape special chars for sed: \, &, /
+          ESCAPED_VERSION=$(printf '%s' "$VERSION" | sed 's/[\\\\/&]/\\\\&/g')
+          # If config/version exists, update it in place
+          if grep -q '^config/version="' project.godot; then
+            sed -i "s/^config\/version=\".*\"$/config\/version=\"$ESCAPED_VERSION\"/g" project.godot
+          # Otherwise, if [application] section exists, append config/version to it
+          elif grep -q '^\[application\]' project.godot; then
+            sed -i "/^\[application\]/a config\/version=\"$ESCAPED_VERSION\"" project.godot
+          # If there is no [application] section, append a new one with config/version
+          else
+            printf '\n[application]\nconfig/version="%s"\n' "$ESCAPED_VERSION" >> project.godot
+          fi
       - name: "Create Export Directories"
         run: |
           mkdir -p export/web
@@ -75,7 +96,7 @@ jobs:
       - name: "Deploy to itch.io with Butler"
         run: |
           butler --version
-          butler push ${{ steps.export.outputs.archive_directory }}/Web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion ${{ github.ref_name }}
+          butler push ${{ steps.export.outputs.archive_directory }}/Web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion "${{ inputs.version }}"
           butler status ikostan/sky-lock-assault:main
         # yamllint enable rule:line-length
         env:

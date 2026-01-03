@@ -71,19 +71,21 @@ jobs:
     needs:
       - "browser_tests"
     uses: "./.github/workflows/trivy.yml"
-  deploy-itch:
-    name: "Deploy to itch.io"
+  release_drafter:
+    name: "Release Drafter"
     needs:
       - "codeql"
       - "snyk"
       - "trivy"
-    uses: "./.github/workflows/deploy_to_itch.yml"
-    secrets:
-      ITCHIO_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"
-  release_drafter:
-    name: "Release Drafter"
-    needs:
-      - "deploy-itch"  # Runs only after successful deploy
     uses: "./.github/workflows/release_drafter.yml"
     secrets:
       AUTH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+  deploy-itch:
+    name: "Deploy to itch.io"
+    needs:
+      - "release_drafter"
+    uses: "./.github/workflows/deploy_to_itch.yml"
+    with:
+      version: ${{ needs.release_drafter.outputs.release_tag }}
+    secrets:
+      ITCHIO_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"

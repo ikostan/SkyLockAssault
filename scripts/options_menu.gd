@@ -44,6 +44,7 @@ var _options_back_button_pressed_cb: JavaScriptObject
 	"Panel/OptionsVBoxContainer/DifficultyLevelContainer/DifficultyValueLabel"
 )
 @onready var audio_settings_button: Button = $Panel/OptionsVBoxContainer/AudioSettingsButton
+@onready var version_label: Label = $Panel/OptionsVBoxContainer/VersionLabel
 
 
 func _ready() -> void:
@@ -61,6 +62,10 @@ func _ready() -> void:
 		if level != "NONE":  # Skip auto-add NONE; add manually as "None"
 			log_lvl_option.add_item(level)  # "Debug", "Info", etc.
 	log_lvl_option.add_item("NONE")  # Manual for title case
+
+	# Game version
+	version_label.text = "Version: " + Globals.get_game_version()
+	Globals.log_message("Updated label to: " + version_label.text, Globals.LogLevel.DEBUG)
 
 	# Set to current log level (find index by enum value)
 	var current_value: int = Globals.current_log_level

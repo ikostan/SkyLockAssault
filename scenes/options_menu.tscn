@@ -309,6 +309,11 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_2f1bn")
 theme_override_styles/hover = SubResource("StyleBoxFlat_7txom")
 theme_override_styles/focus = SubResource("StyleBoxFlat_binsn")
 
+[node name="VersionLabel" type="Label" parent="Panel/OptionsVBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Version: "
+
 [node name="OptionsBackButton" type="Button" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
