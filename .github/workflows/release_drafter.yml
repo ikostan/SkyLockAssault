@@ -8,6 +8,10 @@ on:  # yamllint disable-line rule:truthy
       AUTH_TOKEN:
         description: "Auth GITHUB Token"
         required: true
+    outputs:
+      release_tag:
+        description: "The resolved release tag (e.g., v0.6.1)"
+        value: "${{ jobs.update_release_draft.outputs.tag_name }}"
 
 permissions:
   contents: "read"
@@ -18,9 +22,12 @@ jobs:
       contents: "write"
       pull-requests: "write"
     runs-on: "ubuntu-latest"
+    outputs:
+      tag_name: "${{ steps.drafter.outputs.tag_name }}"  # Expose from step
     steps:
       # yamllint disable-line rule:line-length
       - uses: "release-drafter/release-drafter@b1476f6e6eb133afa41ed8589daba6dc69b4d3f5"  # Pinned to v6.1.0 commit SHA
+        id: drafter  # Add ID to access outputs
         with:
           config-name: "release-drafter.yml"  # Explicitly point to your config
         env:
