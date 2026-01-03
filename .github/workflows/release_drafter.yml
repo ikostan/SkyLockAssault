@@ -32,3 +32,9 @@ jobs:
           config-name: "release-drafter.yml"  # Explicitly point to your config
         env:
           GITHUB_TOKEN: "${{ secrets.AUTH_TOKEN }}"
+      - name: "Validate release tag from release-drafter"
+        run: |
+          if [[ -z "${{ steps.drafter.outputs.tag_name }}" ]]; then
+            echo "Error: release-drafter did not produce a tag_name"
+            exit 1
+          fi
