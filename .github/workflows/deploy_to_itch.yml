@@ -26,16 +26,9 @@ jobs:
       - name: "Inject Version into project.godot"
         run: |
           VERSION="${{ inputs.version }}"
-          python3 -c "
-          import configparser
-          config = configparser.ConfigParser()
-          config.read('project.godot')
-          if 'application' not in config:
-              config['application'] = {}
-          config['application']['config/version'] = '$VERSION'
-          with open('project.godot', 'w') as configfile:
-              config.write(configfile)
-          "
+          # Use sed for simple, line-oriented replacement
+          sed -i '/^\[application\]$/a config\/version="'$VERSION'"' project.godot || \
+          echo -e "\n[application]\nconfig/version=\"$VERSION\"" >> project.godot
       - name: "Create Export Directories"
         run: |
           mkdir -p export/web
