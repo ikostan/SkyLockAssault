@@ -65,6 +65,7 @@ func _ready() -> void:
 
 	# Game version
 	version_label.text = "Version: " + Globals.game_version
+	Globals.log_message("Updated label to: " + version_label.text, Globals.LogLevel.DEBUG)  # Debug: Did it set?
 
 	# Set to current log level (find index by enum value)
 	var current_value: int = Globals.current_log_level
