@@ -39,7 +39,7 @@ jobs:
             printf '
             [application]
             config/version="%s"
-            ' "$VERSION" >> project.godot
+            ' "$ESCAPED_VERSION" >> project.godot
           fi
       - name: "Create Export Directories"
         run: |
