@@ -11,7 +11,8 @@ var options_instance: CanvasLayer
 ## Per-test setup: Instantiate options scene, reset ProjectSettings.
 ## :rtype: void
 func before_each() -> void:
-	ProjectSettings.set_setting("application/config/version", null)  # Clear for default test
+	ProjectSettings.clear("application/config/version")  # Unset to trigger default
+	Globals.game_version = ProjectSettings.get_setting("application/config/version", "n/a") as String
 	options_instance = options_scene.instantiate() as CanvasLayer
 	add_child_autofree(options_instance)
 
