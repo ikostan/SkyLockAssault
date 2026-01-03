@@ -3,6 +3,12 @@ name: "Deploy to itch.io"
 
 on:  # yamllint disable-line rule:truthy
   workflow_call:  # Reusable
+    inputs:
+      version:
+        description: "The version to inject (e.g., v0.6.1)"
+        type: string
+        required: false
+        default: "dev"  # Fallback for local/dev builds
     secrets:
       ITCHIO_API_KEY:
         description: "Itch.io API key"
@@ -17,6 +23,19 @@ jobs:
     steps:
       - name: "Checkout code"
         uses: "actions/checkout@v6.0.1"
+      - name: "Inject Version into project.godot"
+        run: |
+          VERSION="${{ inputs.version }}"
+          python3 -c "
+          import configparser
+          config = configparser.ConfigParser()
+          config.read('project.godot')
+          if 'application' not in config:
+              config['application'] = {}
+          config['application']['config/version'] = '$VERSION'
+          with open('project.godot', 'w') as configfile:
+              config.write(configfile)
+          "
       - name: "Create Export Directories"
         run: |
           mkdir -p export/web
