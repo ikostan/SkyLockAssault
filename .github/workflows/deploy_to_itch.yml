@@ -36,10 +36,7 @@ jobs:
             sed -i "/^\[application\]/a config\/version=\"$ESCAPED_VERSION\"" project.godot
           # If there is no [application] section, append a new one with config/version
           else
-            printf '
-            [application]
-            config/version="%s"
-            ' "$ESCAPED_VERSION" >> project.godot
+            printf '\n[application]\nconfig/version="%s"\n' "$ESCAPED_VERSION" >> project.godot
           fi
       - name: "Create Export Directories"
         run: |
