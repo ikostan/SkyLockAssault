@@ -94,7 +94,7 @@ jobs:
       - name: "Deploy to itch.io with Butler"
         run: |
           butler --version
-          butler push ${{ steps.export.outputs.archive_directory }}/Web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion ${{ github.ref_name }}
+          butler push ${{ steps.export.outputs.archive_directory }}/Web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion "${{ inputs.version }}"
           butler status ikostan/sky-lock-assault:main
         # yamllint enable rule:line-length
         env:
