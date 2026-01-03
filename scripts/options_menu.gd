@@ -62,7 +62,7 @@ func _ready() -> void:
 		if level != "NONE":  # Skip auto-add NONE; add manually as "None"
 			log_lvl_option.add_item(level)  # "Debug", "Info", etc.
 	log_lvl_option.add_item("NONE")  # Manual for title case
-	
+
 	# Game version
 	version_label.text = "Version: " + Globals.game_version
 

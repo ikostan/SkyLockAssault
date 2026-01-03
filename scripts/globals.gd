@@ -18,7 +18,9 @@ var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 var next_scene: String = ""  # Path to the next scene to load via loading screen.
 
 # Game version
-@onready var game_version: String = ProjectSettings.get_setting("application/config/version", "n/a") as String
+@onready var game_version: String = (
+	ProjectSettings.get_setting("application/config/version", "n/a") as String
+)
 
 
 func _ready() -> void:
