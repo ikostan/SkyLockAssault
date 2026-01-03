@@ -18,9 +18,9 @@ jobs:
       - uses: "actions/checkout@v6"
       - name: "Download Godot Binary"
         run: |
-          wget https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_server_linux_x86_64.zip
-          unzip Godot_v4.5-stable_server_linux_x86_64.zip
-          mv Godot_v4.5-stable_server_linux_x86_64 godot
+          wget https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_linux.x86_64.zip
+          unzip Godot_v4.5.1-stable_linux.x86_64.zip
+          mv Godot_v4.5.1-stable_linux.x86_64 godot
           chmod +x godot
       - name: "Install GUT"
         run: |
@@ -36,7 +36,7 @@ jobs:
         run: |
           REPORT_DIR="gut-reports/$(date +%Y%m%d_%H%M%S)"
           mkdir -p $REPORT_DIR
-          ./godot --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gjunit_xml_file=$REPORT_DIR/gut_junit.xml -gexit
+          ./godot --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gjunit_xml_file=$REPORT_DIR/gut_junit.xml -gexit
       - name: "Find Latest Report Directory"
         if: always()
         id: find_report

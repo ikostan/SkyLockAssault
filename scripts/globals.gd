@@ -183,7 +183,6 @@ static func get_game_version() -> String:
 
 # For tests only—avoids direct writes in prod
 static func set_game_version_for_tests(value: String) -> void:
-	if not (Engine.is_editor_hint() or OS.has_feature("server")):
+	if not (Engine.is_editor_hint() or OS.has_feature("standalone")):
 		push_warning("set_game_version_for_tests called outside editor/server—ignored for safety.")
-		return
-	ProjectSettings.set_setting("application/config/version", value)
+	return ProjectSettings.set_setting("application/config/version", value)
