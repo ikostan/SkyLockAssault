@@ -183,7 +183,7 @@ static func get_game_version() -> String:
 
 # For tests only—avoids direct writes in prod
 static func set_game_version_for_tests(value: String) -> void:
-	if not (Engine.is_editor_hint() or OS.has_feature("headless")):
+	if not (Engine.is_editor_hint() or OS.has_feature("headless") or OS.has_feature("server")):
 		push_warning(
 			"set_game_version_for_tests called outside editor/headless—ignored for safety."
 		)
