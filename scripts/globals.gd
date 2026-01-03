@@ -17,13 +17,16 @@ var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
 var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 var next_scene: String = ""  # Path to the next scene to load via loading screen.
 
+# Game version
+@onready var game_version: String = ProjectSettings.get_setting("application/config/version", "n/a") as String
+
 
 func _ready() -> void:
 	if Engine.is_editor_hint() or enable_debug_logging:
 		current_log_level = LogLevel.DEBUG
-
 	log_message("Log level set to: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
 	_load_settings()  # Load persisted settings first
+	log_message("Raw version from settings: " + game_version, LogLevel.DEBUG)
 
 
 # Add these new functions (for consistency with log level persistence)
