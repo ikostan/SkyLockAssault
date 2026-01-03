@@ -8,7 +8,7 @@ on:  # yamllint disable-line rule:truthy
         description: "The version to inject (e.g., v0.6.1)"
         type: string
         required: true
-        default: "dev"  # Fallback for local/dev builds
+        # default: "dev"  # Fallback for local/dev builds
     secrets:
       ITCHIO_API_KEY:
         description: "Itch.io API key"
