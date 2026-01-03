@@ -26,9 +26,17 @@ jobs:
       - name: "Inject Version into project.godot"
         run: |
           VERSION="${{ inputs.version }}"
-          # Use sed for simple, line-oriented replacement
-          sed -i '/^\[application\]$/a config\/version="'$VERSION'"' project.godot || \
-          echo -e "\n[application]\nconfig/version=\"$VERSION\"" >> project.godot
+
+          # If config/version exists, update it in place
+          if grep -q '^config/version="' project.godot; then
+            sed -i 's/^config\/version=".*"$/config\/version="'$VERSION'"/' project.godot
+          # Otherwise, if [application] section exists, append config/version there
+          elif grep -q '^\[application\]$' project.godot; then
+            sed -i '/^\[application\]$/a config\/version="'$VERSION'"' project.godot
+          # If there is no [application] section, append a new one with config/version
+          else
+            echo -e "\n[application]\nconfig/version=\"$VERSION\"" >> project.godot
+          fi
       - name: "Create Export Directories"
         run: |
           mkdir -p export/web
