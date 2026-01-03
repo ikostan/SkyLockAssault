@@ -1,5 +1,5 @@
 ---
-name: "GUT Unit Tests"  # Workflow name for CI display.
+name: "GUT Unit Tests"
 
 on:
   workflow_call:
@@ -18,9 +18,9 @@ jobs:
       - uses: "actions/checkout@v6"
       - name: "Download Godot Binary"
         run: |
-          wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
-          unzip Godot_v4.5-stable_linux.x86_64.zip
-          mv Godot_v4.5-stable_linux.x86_64 godot
+          wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_server_linux_x86_64.zip
+          unzip Godot_v4.5-stable_server_linux_x86_64.zip
+          mv Godot_v4.5-stable_server_linux_x86_64 godot
           chmod +x godot
       - name: "Install GUT"
         run: |
@@ -30,13 +30,13 @@ jobs:
           mv addons/Gut-9.5.0/addons/gut addons/gut
       - name: "Import Resources"
         run: |
-          ./godot --headless --path . --import --quit
+          ./godot --path . --import --quit
       - name: "Run GUT Tests"
-        continue-on-error: false  # Explicit no continue on error (default, but for clarity).
+        continue-on-error: false
         run: |
           REPORT_DIR="gut-reports/$(date +%Y%m%d_%H%M%S)"
           mkdir -p $REPORT_DIR
-          ./godot --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gjunit_xml_file=$REPORT_DIR/gut_junit.xml -gexit
+          ./godot --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gjunit_xml_file=$REPORT_DIR/gut_junit.xml -gexit
       - name: "Find Latest Report Directory"
         if: always()
         id: find_report
@@ -46,7 +46,7 @@ jobs:
             echo "No report directory found; tests may not have generated reports."
             exit 1
           fi
-          echo "latest_report=$LATEST_REPORT" >> $GITHUB_OUTPUT  # Set output.
+          echo "latest_report=$LATEST_REPORT" >> $GITHUB_OUTPUT
       - name: "List Reports"
         if: always()
         run: |
@@ -59,11 +59,11 @@ jobs:
           path: gut-reports/**
           retention-days: 5
       - name: "Install Codecov CLI"
-        if: success()  # Only if tests pass.
+        if: success()
         run: |
           curl -Os https://cli.codecov.io/latest/linux/codecov
           chmod +x codecov
-      - name: "Upload Test Report to Codecov"  # Last step for uploading JUnit XML as test report
-        if: success()  # Only if tests pass.
+      - name: "Upload Test Report to Codecov"
+        if: success()
         run: |
           ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f ${{ steps.find_report.outputs.latest_report }}/gut_junit.xml --name "GUT Test Report" --flag GUT --report-type test_results
