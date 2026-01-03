@@ -31,6 +31,7 @@ func test_tc_version_01() -> void:
 ## TC-Version-02 | Set version | Equals set value.
 ## :rtype: void
 func test_tc_version_02() -> void:
+	print(OS.has_feature("server"))
 	Globals.set_game_version_for_tests("v1.0.0")
 	assert_eq(Globals.get_game_version(), "v1.0.0")
 
@@ -38,6 +39,7 @@ func test_tc_version_02() -> void:
 ## TC-Version-03 | Default in menu.
 ## :rtype: void
 func test_tc_version_03() -> void:
+	print(OS.has_feature("server"))
 	options_instance = options_scene.instantiate() as CanvasLayer
 	add_child_autofree(options_instance)
 	await get_tree().process_frame
@@ -48,6 +50,7 @@ func test_tc_version_03() -> void:
 ## TC-Version-04 | Custom in menu.
 ## :rtype: void
 func test_tc_version_04() -> void:
+	print(OS.has_feature("server"))
 	Globals.set_game_version_for_tests("v1.1.1")
 	options_instance = options_scene.instantiate() as CanvasLayer
 	add_child_autofree(options_instance)
@@ -60,5 +63,6 @@ func test_tc_version_04() -> void:
 ## TC-Version-05 | Empty string | Equals "".
 ## :rtype: void
 func test_tc_version_05() -> void:
+	print(OS.has_feature("server"))
 	Globals.set_game_version_for_tests("")
 	assert_eq(Globals.get_game_version(), "")
