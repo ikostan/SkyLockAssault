@@ -85,5 +85,7 @@ jobs:
     needs:
       - "release_drafter"
     uses: "./.github/workflows/deploy_to_itch.yml"
+    with:
+      version: ${{ needs.release_drafter.outputs.release_tag }}
     secrets:
       ITCHIO_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"

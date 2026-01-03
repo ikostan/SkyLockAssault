@@ -7,7 +7,7 @@ on:  # yamllint disable-line rule:truthy
       version:
         description: "The version to inject (e.g., v0.6.1)"
         type: string
-        required: false
+        required: true
         default: "dev"  # Fallback for local/dev builds
     secrets:
       ITCHIO_API_KEY:
