@@ -67,3 +67,4 @@ jobs:
         if: success()  # Only if tests pass.
         run: |
           ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f ${{ steps.find_report.outputs.latest_report }}/gut_junit.xml --name "GUT Test Report" --flag GUT --report-type test_results
+      
