@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: "actions/checkout@v6"
       - name: "Download Godot Binary"
-        run: |          
+        run: |
           wget https://github.com/godotengine/godot/releases/download/4.5.1-stable/Godot_v4.5.1-stable_server_linux_x86_64.zip
           unzip Godot_v4.5-stable_server_linux_x86_64.zip
           mv Godot_v4.5-stable_server_linux_x86_64 godot
