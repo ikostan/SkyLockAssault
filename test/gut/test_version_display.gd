@@ -50,11 +50,12 @@ func test_tc_version_03() -> void:
 ## TC-Version-04 | Custom version set | Options menu _ready | VersionLabel.text = "Version: v1.0.0".
 ## :rtype: void
 func test_tc_version_04() -> void:
-	ProjectSettings.set_setting("application/config/version", "v1.0.0")
+	ProjectSettings.set_setting("application/config/version", "v1.1.1")
 	Globals.game_version = ProjectSettings.get_setting("application/config/version", "n/a") as String
 	await get_tree().process_frame  # Await _ready
 	var version_label: Label = options_instance.get_node("Panel/OptionsVBoxContainer/VersionLabel")
-	assert_eq(version_label.text, "Version: v1.0.0")
+	assert_eq(Globals.game_version, "v1.1.1")
+	assert_eq(version_label.text, "Version: v1.1.1")
 
 
 ## TC-Version-05 | Empty string in ProjectSettings | Load globals.game_version | Equals "" (overrides default).
