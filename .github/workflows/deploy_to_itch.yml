@@ -26,13 +26,14 @@ jobs:
       - name: "Inject Version into project.godot"
         run: |
           VERSION="${{ inputs.version }}"
-
+          # Escape special chars for sed: \, &, /
+          ESCAPED_VERSION=$(printf '%s' "$VERSION" | sed 's/[\\\\/&]/\\\\&/g')
           # If config/version exists, update it in place
           if grep -q '^config/version="' project.godot; then
-            sed -i 's/^config\/version=".*"$/config\/version="'$VERSION'"/' project.godot
-          # Otherwise, if [application] section exists, append config/version there
-          elif grep -q '^\[application\]$' project.godot; then
-            sed -i '/^\[application\]$/a config\/version="'$VERSION'"' project.godot
+            sed -i "s/^config\/version=\".*\"$/config\/version=\"$ESCAPED_VERSION\"/g" project.godot
+          # Otherwise, if [application] section exists, append config/version to it
+          elif grep -q '^\[application\]' project.godot; then
+            sed -i "/^\[application\]/a config\/version=\"$ESCAPED_VERSION\"" project.godot
           # If there is no [application] section, append a new one with config/version
           else
             printf '
