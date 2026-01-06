@@ -139,7 +139,7 @@ func _ready() -> void:
 	tree_exited.connect(_on_tree_exited)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Globals.log_message("Audio menu loaded.", Globals.LogLevel.DEBUG)
-	
+
 	_sync_ui_from_manager()
 	# Apply initial UI state for others based on master (New)
 	# _update_other_controls_ui()
