@@ -45,10 +45,7 @@ func _init_to_defaults() -> void:
 ## :type bus_name: String
 ## :rtype: Dictionary
 func get_bus_state(bus_name: String) -> Dictionary:
-	return {
-		"volume": get_volume(bus_name),
-		"muted": get_muted(bus_name)
-	}
+	return {"volume": get_volume(bus_name), "muted": get_muted(bus_name)}
 
 
 ## Set state for a bus
