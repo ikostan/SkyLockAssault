@@ -63,7 +63,13 @@ func load_volumes(path: String = Settings.CONFIG_PATH) -> void:
 ## :param path: Path to config file.
 ## :type path: String
 ## :rtype: void
+## Save volumes to config (shared with other settings)
+## :param path: Path to config file.
+## :type path: String
+## :rtype: void
 func save_volumes(path: String = "") -> void:
+	if path == "":
+		path = current_config_path  # Fall back to the last loaded path if empty
 	var config: ConfigFile = ConfigFile.new()
 	var err: Error = config.load(path)
 	if err != OK and err != ERR_FILE_NOT_FOUND:
