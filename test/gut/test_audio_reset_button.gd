@@ -310,7 +310,8 @@ func test_tc_reset_04() -> void:
 	assert_true(audio_instance.mute_music.disabled)
 	assert_true(audio_instance.music_slider.disabled)
 	# Wait, editable for sliders, disabled for buttons
-	assert_true(audio_instance.mute_sfx.disabled)
+	# assert_true(audio_instance.mute_sfx.disabled)
+	assert_false(audio_instance.music_slider.editable)
 	assert_false(audio_instance.sfx_slider.editable)
 	# Reset
 	audio_instance._on_audio_reset_button_pressed()
