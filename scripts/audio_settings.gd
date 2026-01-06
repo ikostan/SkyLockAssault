@@ -517,6 +517,7 @@ func _reset_sfx_warning_shown() -> void:
 func _sync_ui_from_manager() -> void:
 	mute_master.set_pressed_no_signal(not AudioManager.master_muted)
 	master_slider.set_value_no_signal(AudioManager.master_volume)
+	master_slider.editable = mute_master.button_pressed
 	mute_music.set_pressed_no_signal(not AudioManager.music_muted)
 	music_slider.set_value_no_signal(AudioManager.music_volume)
 	mute_sfx.set_pressed_no_signal(not AudioManager.sfx_muted)
