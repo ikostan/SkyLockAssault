@@ -29,21 +29,21 @@ func before_each() -> void:
 	AudioManager.apply_all_volumes()  # Sync buses early
 	AudioManager.load_volumes(test_config_path)  # Load if exists (should be defaults)
 	# Add audio buses if not exist
-	if AudioServer.get_bus_index("Master") == -1:
+	if AudioServer.get_bus_index(AudioConstants.BUS_MASTER) == -1:
 		AudioServer.add_bus(0)
-		AudioServer.set_bus_name(0, "Master")
-	if AudioServer.get_bus_index("Music") == -1:
+		AudioServer.set_bus_name(0, AudioConstants.BUS_MASTER)
+	if AudioServer.get_bus_index(AudioConstants.BUS_MUSIC) == -1:
 		AudioServer.add_bus()
-		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, "Music")
-	if AudioServer.get_bus_index("SFX") == -1:
+		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, AudioConstants.BUS_MUSIC)
+	if AudioServer.get_bus_index(AudioConstants.BUS_SFX) == -1:
 		AudioServer.add_bus()
-		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, "SFX")
-	if AudioServer.get_bus_index("SFX_Weapon") == -1:
+		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, AudioConstants.BUS_SFX)
+	if AudioServer.get_bus_index(AudioConstants.BUS_SFX_WEAPON) == -1:
 		AudioServer.add_bus()
-		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, "SFX_Weapon")
-	if AudioServer.get_bus_index("SFX_Rotors") == -1:
+		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, AudioConstants.BUS_SFX_WEAPON)
+	if AudioServer.get_bus_index(AudioConstants.BUS_SFX_ROTORS) == -1:
 		AudioServer.add_bus()
-		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, "SFX_Rotors")
+		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, AudioConstants.BUS_SFX_ROTORS)
 
 
 ## Per-test cleanup: Remove test config if exists
@@ -90,16 +90,16 @@ func test_tc_reset_01() -> void:
 	assert_eq(AudioManager.weapon_volume, 1.0)
 	assert_eq(AudioManager.rotors_volume, 1.0)
 	# Check AudioServer
-	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index("Master")))
-	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Master")), linear_to_db(1.0), 0.0001)
-	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index("Music")))
-	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Music")), linear_to_db(1.0), 0.0001)
-	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index("SFX")))
-	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("SFX")), linear_to_db(1.0), 0.0001)
-	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index("SFX_Weapon")))
-	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("SFX_Weapon")), linear_to_db(1.0), 0.0001)
-	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index("SFX_Rotors")))
-	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("SFX_Rotors")), linear_to_db(1.0), 0.0001)
+	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index(AudioConstants.BUS_MASTER)))
+	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(AudioConstants.BUS_MASTER)), linear_to_db(1.0), 0.0001)
+	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index(AudioConstants.BUS_MUSIC)))
+	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(AudioConstants.BUS_MUSIC)), linear_to_db(1.0), 0.0001)
+	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index(AudioConstants.BUS_SFX)))
+	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(AudioConstants.BUS_SFX)), linear_to_db(1.0), 0.0001)
+	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index(AudioConstants.BUS_SFX_WEAPON)))
+	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(AudioConstants.BUS_SFX_WEAPON)), linear_to_db(1.0), 0.0001)
+	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index(AudioConstants.BUS_SFX_ROTORS)))
+	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(AudioConstants.BUS_SFX_ROTORS)), linear_to_db(1.0), 0.0001)
 	# Check save called (file exists)
 	assert_true(FileAccess.file_exists(test_config_path))
 	# Check UI updated
@@ -166,8 +166,8 @@ func test_tc_reset_02() -> void:
 	assert_eq(AudioManager.sfx_volume, 1.0)
 	assert_eq(AudioManager.weapon_volume, 1.0)
 	assert_eq(AudioManager.rotors_volume, 1.0)
-	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index("Master")))
-	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Master")), linear_to_db(1.0), 0.0001)
+	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index(AudioConstants.BUS_MASTER)))
+	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(AudioConstants.BUS_MASTER)), linear_to_db(1.0), 0.0001)
 	assert_true(FileAccess.file_exists(test_config_path))
 	assert_true(audio_instance.mute_master.button_pressed)
 	assert_eq(audio_instance.master_slider.value, 1.0)
@@ -193,8 +193,8 @@ func test_tc_reset_03() -> void:
 	# Still same
 	assert_false(AudioManager.master_muted)
 	assert_eq(AudioManager.master_volume, 1.0)
-	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index("Master")))
-	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Master")), linear_to_db(1.0), 0.0001)
+	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index(AudioConstants.BUS_MASTER)))
+	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(AudioConstants.BUS_MASTER)), linear_to_db(1.0), 0.0001)
 	assert_true(FileAccess.file_exists(test_config_path))
 	assert_true(audio_instance.mute_master.button_pressed)
 	assert_eq(audio_instance.master_slider.value, 1.0)
