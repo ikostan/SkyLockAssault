@@ -10,10 +10,11 @@ extends GdUnitTestSuite
 var manager: Node
 var test_path: String = "user://test_audio.cfg"  # Temp for isolation
 
-## Per-test setup: Instantiate manager.
+## Per-test setup: Instantiate manager and init defaults.
 ## :rtype: void
 func before_test() -> void:
 	manager = auto_free(load("res://scripts/audio_manager.gd").new())
+	manager._init_to_defaults()  # Manually set defaults (since _ready() not called in isolation)
 
 ## Per-test cleanup: Remove test file.
 ## :rtype: void
@@ -25,19 +26,27 @@ func after_test() -> void:
 ## :rtype: void
 func test_load_volumes_defaults_on_missing() -> void:
 	manager.load_volumes(test_path)  # Isolated path (assumed missing)
-	assert_float(manager.master_volume).is_equal(1.0)
-	# Similar for others
+	assert_float(manager.get_volume(AudioConstants.BUS_MASTER)).is_equal(1.0)
+	assert_bool(manager.get_muted(AudioConstants.BUS_MASTER)).is_false()
+	assert_float(manager.get_volume(AudioConstants.BUS_MUSIC)).is_equal(1.0)
+	assert_bool(manager.get_muted(AudioConstants.BUS_MUSIC)).is_false()
+	assert_float(manager.get_volume(AudioConstants.BUS_SFX)).is_equal(1.0)
+	assert_bool(manager.get_muted(AudioConstants.BUS_SFX)).is_false()
+	assert_float(manager.get_volume(AudioConstants.BUS_SFX_WEAPON)).is_equal(1.0)
+	assert_bool(manager.get_muted(AudioConstants.BUS_SFX_WEAPON)).is_false()
+	assert_float(manager.get_volume(AudioConstants.BUS_SFX_ROTORS)).is_equal(1.0)
+	assert_bool(manager.get_muted(AudioConstants.BUS_SFX_ROTORS)).is_false()
 
 ## Tests save/load round-trip.
 ## :rtype: void
 func test_save_and_load_volumes() -> void:
-	manager.master_volume = 0.5
+	manager.set_volume(AudioConstants.BUS_MASTER, 0.5)
 	manager.save_volumes(test_path)
 	assert_bool(FileAccess.file_exists(test_path)).is_true()
 	
-	manager.master_volume = 1.0  # Reset
+	manager.set_volume(AudioConstants.BUS_MASTER, 1.0)  # Reset
 	manager.load_volumes(test_path)
-	assert_float(manager.master_volume).is_equal(0.5)
+	assert_float(manager.get_volume(AudioConstants.BUS_MASTER)).is_equal(0.5)
 
 ## Tests apply sets db if bus exists.
 ## :rtype: void
@@ -54,7 +63,7 @@ func test_save_volumes_preserves_other_sections() -> void:
 	config.save(test_path)
 	
 	# Save audio
-	manager.master_volume = 0.7
+	manager.set_volume(AudioConstants.BUS_MASTER, 0.7)
 	manager.save_volumes(test_path)
 	
 	# Reload and check both sections preserved
@@ -74,5 +83,5 @@ func test_load_volumes_with_other_sections() -> void:
 	
 	# Load and verify audio loaded, others ignored
 	manager.load_volumes(test_path)
-	assert_float(manager.music_volume).is_equal(0.4)
+	assert_float(manager.get_volume(AudioConstants.BUS_MUSIC)).is_equal(0.4)
 	# No assert on input, as it's not loaded here
