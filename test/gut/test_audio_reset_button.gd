@@ -307,10 +307,10 @@ func test_tc_reset_04() -> void:
 	assert_false(audio_instance.mute_master.button_pressed)
 	# assert_false(audio_instance.master_slider.editable)  # Assuming disabled when muted
 	assert_true(audio_instance.mute_music.disabled)  # master muted, others disabled
-	assert_false(audio_instance.mute_music.disabled)  # Wait, if master muted, others disabled
+	# assert_false(audio_instance.mute_music.disabled)  # Wait, if master muted, others disabled
 	# Assume _update_other_controls_ui disables all if master muted
 	assert_true(audio_instance.mute_music.disabled)
-	assert_true(audio_instance.music_slider.disabled)
+	# assert_true(audio_instance.music_slider.disabled)
 	# Wait, editable for sliders, disabled for buttons
 	# assert_true(audio_instance.mute_sfx.disabled)
 	assert_false(audio_instance.music_slider.editable)
