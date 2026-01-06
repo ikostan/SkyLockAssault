@@ -144,19 +144,24 @@ func apply_volume_to_bus(bus_name: String, volume: float, muted: bool) -> void:
 
 # In audio_manager.gd, add:
 ## Reset all volumes and mute flags to defaults
-## Applies and saves changes
-## :rtype: void
 func reset_volumes() -> void:
-	master_volume = 1.0
-	master_muted = false
-	music_volume = 1.0
-	music_muted = false
-	sfx_volume = 1.0
-	sfx_muted = false
-	weapon_volume = 1.0
-	weapon_muted = false
-	rotors_volume = 1.0
-	rotors_muted = false
+	for bus: String in AudioConstants.DEFAULT_VOLUMES.keys():
+		match bus:
+			AudioConstants.BUS_MASTER:
+				master_volume = AudioConstants.DEFAULT_VOLUMES[bus]["volume"]
+				master_muted = AudioConstants.DEFAULT_VOLUMES[bus]["muted"]
+			AudioConstants.BUS_MUSIC:
+				music_volume = AudioConstants.DEFAULT_VOLUMES[bus]["volume"]
+				music_muted = AudioConstants.DEFAULT_VOLUMES[bus]["muted"]
+			AudioConstants.BUS_SFX:
+				sfx_volume = AudioConstants.DEFAULT_VOLUMES[bus]["volume"]
+				sfx_muted = AudioConstants.DEFAULT_VOLUMES[bus]["muted"]
+			AudioConstants.BUS_SFX_WEAPON:
+				weapon_volume = AudioConstants.DEFAULT_VOLUMES[bus]["volume"]
+				weapon_muted = AudioConstants.DEFAULT_VOLUMES[bus]["muted"]
+			AudioConstants.BUS_SFX_ROTORS:
+				rotors_volume = AudioConstants.DEFAULT_VOLUMES[bus]["volume"]
+				rotors_muted = AudioConstants.DEFAULT_VOLUMES[bus]["muted"]
 	apply_all_volumes()
 	save_volumes()
 	Globals.log_message("Audio volumes reset to defaults.", Globals.LogLevel.DEBUG)
