@@ -25,6 +25,8 @@ var current_config_path: String = Settings.CONFIG_PATH
 
 
 func _ready() -> void:
+	## Initializes to defaults and loads/applies volumes.
+	## :rtype: void
 	_init_to_defaults()  # Set to defaults from AudioConstants
 	load_volumes()  # Load persisted volumes (overrides defaults if saved)
 	apply_all_volumes()  # Apply to AudioServer buses
@@ -35,8 +37,31 @@ func _ready() -> void:
 func _init_to_defaults() -> void:
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
 		var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
-		set_volume(bus, config_data["default_volume"])
-		set_muted(bus, config_data["default_muted"])
+		set_bus_state(bus, config_data["default_volume"], config_data["default_muted"])
+
+
+## Get state for a bus
+## :param bus_name: Name of the bus.
+## :type bus_name: String
+## :rtype: Dictionary
+func get_bus_state(bus_name: String) -> Dictionary:
+	return {
+		"volume": get_volume(bus_name),
+		"muted": get_muted(bus_name)
+	}
+
+
+## Set state for a bus
+## :param bus_name: Name of the bus.
+## :type bus_name: String
+## :param volume: Volume level (0.0 to 1.0).
+## :type volume: float
+## :param muted: Mute flag.
+## :type muted: bool
+## :rtype: void
+func set_bus_state(bus_name: String, volume: float, muted: bool) -> void:
+	set_volume(bus_name, volume)
+	set_muted(bus_name, muted)
 
 
 ## Get volume for a bus
@@ -139,8 +164,12 @@ func load_volumes(path: String = Settings.CONFIG_PATH) -> void:
 		return  # Use defaults on not found or error
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
 		var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
-		set_volume(bus, config.get_value("audio", config_data["volume_var"], get_volume(bus)))
-		set_muted(bus, config.get_value("audio", config_data["muted_var"], get_muted(bus)))
+		var state: Dictionary = get_bus_state(bus)
+		set_bus_state(
+			bus,
+			config.get_value("audio", config_data["volume_var"], state["volume"]),
+			config.get_value("audio", config_data["muted_var"], state["muted"])
+		)
 	Globals.log_message("Loaded volumes from config.", Globals.LogLevel.DEBUG)
 
 
@@ -158,8 +187,9 @@ func save_volumes(path: String = "") -> void:
 		return
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
 		var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
-		config.set_value("audio", config_data["volume_var"], get_volume(bus))
-		config.set_value("audio", config_data["muted_var"], get_muted(bus))
+		var state: Dictionary = get_bus_state(bus)
+		config.set_value("audio", config_data["volume_var"], state["volume"])
+		config.set_value("audio", config_data["muted_var"], state["muted"])
 	err = config.save(path)
 	if err == OK:
 		Globals.log_message("Saved volumes to config.", Globals.LogLevel.DEBUG)
@@ -171,7 +201,8 @@ func save_volumes(path: String = "") -> void:
 ## :rtype: void
 func apply_all_volumes() -> void:
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
-		apply_volume_to_bus(bus, get_volume(bus), get_muted(bus))
+		var state: Dictionary = get_bus_state(bus)
+		apply_volume_to_bus(bus, state["volume"], state["muted"])
 
 
 ## Helper to apply a single volume to a named bus
@@ -206,8 +237,7 @@ func apply_volume_to_bus(bus_name: String, volume: float, muted: bool) -> void:
 func reset_volumes() -> void:
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
 		var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
-		set_volume(bus, config_data["default_volume"])
-		set_muted(bus, config_data["default_muted"])
+		set_bus_state(bus, config_data["default_volume"], config_data["default_muted"])
 	apply_all_volumes()
 	save_volumes()
 	Globals.log_message("Audio volumes reset to defaults.", Globals.LogLevel.DEBUG)
