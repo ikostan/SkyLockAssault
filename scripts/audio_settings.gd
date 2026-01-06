@@ -512,49 +512,30 @@ func _reset_sfx_warning_shown() -> void:
 
 
 # Reset button functionality
+# In audio_settings.gd, update _on_audio_reset_button_pressed:
 func _on_audio_reset_button_pressed() -> void:
-	# Reset all mute flags to false (unmuted)
-	AudioManager.master_muted = false
-	AudioManager.music_muted = false
-	AudioManager.sfx_muted = false
-	AudioManager.weapon_muted = false
-	AudioManager.rotors_muted = false
-
-	# Reset all volumes to maximum (1.0)
-	AudioManager.master_volume = 1.0
-	AudioManager.music_volume = 1.0
-	AudioManager.sfx_volume = 1.0
-	AudioManager.weapon_volume = 1.0
-	AudioManager.rotors_volume = 1.0
-
-	# Apply the changes to AudioServer
-	AudioManager.apply_all_volumes()
-
-	# Save the reset settings
-	AudioManager.save_volumes()
-
+	AudioManager.reset_volumes()
+	
 	# Update UI elements to reflect resets
-	mute_master.button_pressed = true  # Unmuted
-	master_slider.value = 1.0
+	mute_master.button_pressed = not AudioManager.master_muted
+	master_slider.value = AudioManager.master_volume
 	master_slider.editable = true
-
-	mute_music.button_pressed = true
-	music_slider.value = 1.0
+	
+	mute_music.button_pressed = not AudioManager.music_muted
+	music_slider.value = AudioManager.music_volume
 	music_slider.editable = true
-
-	mute_sfx.button_pressed = true
-	sfx_slider.value = 1.0
+	
+	mute_sfx.button_pressed = not AudioManager.sfx_muted
+	sfx_slider.value = AudioManager.sfx_volume
 	sfx_slider.editable = true
-
-	mute_weapon.button_pressed = true
-	weapon_slider.value = 1.0
+	
+	mute_weapon.button_pressed = not AudioManager.weapon_muted
+	weapon_slider.value = AudioManager.weapon_volume
 	weapon_slider.editable = true
-
-	mute_rotor.button_pressed = true
-	rotor_slider.value = 1.0
+	
+	mute_rotor.button_pressed = not AudioManager.rotors_muted
+	rotor_slider.value = AudioManager.rotors_volume
 	rotor_slider.editable = true
-
+	
 	# Update dependent UI states
 	_update_other_controls_ui()
-
-	Globals.log_message("Audio settings reset to defaults.", Globals.LogLevel.DEBUG)

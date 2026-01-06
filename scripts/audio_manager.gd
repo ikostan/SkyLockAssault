@@ -140,3 +140,23 @@ func apply_volume_to_bus(bus_name: String, volume: float, muted: bool) -> void:
 			)
 	else:
 		Globals.log_message(bus_name + " audio bus not found!", Globals.LogLevel.ERROR)
+
+
+# In audio_manager.gd, add:
+## Reset all volumes and mute flags to defaults
+## Applies and saves changes
+## :rtype: void
+func reset_volumes() -> void:
+	master_volume = 1.0
+	master_muted = false
+	music_volume = 1.0
+	music_muted = false
+	sfx_volume = 1.0
+	sfx_muted = false
+	weapon_volume = 1.0
+	weapon_muted = false
+	rotors_volume = 1.0
+	rotors_muted = false
+	apply_all_volumes()
+	save_volumes()
+	Globals.log_message("Audio volumes reset to defaults.", Globals.LogLevel.DEBUG)
