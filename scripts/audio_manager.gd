@@ -41,7 +41,7 @@ func _ready() -> void:
 ## :param path: Path to config file.
 ## :type path: String
 ## :rtype: void
-func load_volumes(path: String = Settings.CONFIG_PATH) -> void:
+func load_volumes(path: String = "") -> void:
 	current_config_path = path
 	var config: ConfigFile = ConfigFile.new()
 	var err: int = config.load(path)
