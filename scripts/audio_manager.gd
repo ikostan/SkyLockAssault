@@ -104,37 +104,54 @@ func load_volumes(path: String = Settings.CONFIG_PATH) -> void:
 ## :param path: Path to config file.
 ## :type path: String
 ## :rtype: void
-func save_volumes(path: String = "") -> void:
-	if path == "":
-		path = current_config_path
+func save_volumes(path: String = current_config_path) -> void:
 	var config: ConfigFile = ConfigFile.new()
-	var err: int = config.load(path)  # Load existing to preserve other sections
-	if err != OK and err != ERR_FILE_NOT_FOUND:
-		Globals.log_message(
-			"Failed to load settings config for save: " + str(err), Globals.LogLevel.ERROR
-		)
-		return
-	# Master Volume
-	config.set_value("audio", "master_volume", master_volume)
-	config.set_value("audio", "master_muted", master_muted)
-	# Music Volume
-	config.set_value("audio", "music_volume", music_volume)
-	config.set_value("audio", "music_muted", music_muted)  # New
-	# SFX Master Volume
-	config.set_value("audio", "sfx_volume", sfx_volume)
-	config.set_value("audio", "sfx_muted", sfx_muted)  # New
-	# SFX Rotors
-	config.set_value("audio", "rotors_volume", rotors_volume)
-	config.set_value("audio", "rotors_muted", rotors_muted)  # New
-	# SFX Weapon
-	config.set_value("audio", "weapon_volume", weapon_volume)
-	config.set_value("audio", "weapon_muted", weapon_muted)  # New
-
-	err = config.save(path)
-	if err != OK:
-		Globals.log_message("Failed to save audio settings: " + str(err), Globals.LogLevel.ERROR)
+	for bus: String in volume_map.keys():
+		var vars: Dictionary = volume_map[bus]
+		config.set_value("audio", vars["volume_var"], get(vars["volume_var"]))
+		config.set_value("audio", vars["muted_var"], get(vars["muted_var"]))
+	var err: int = config.save(path)
+	if err == OK:
+		Globals.log_message("Saved volumes to config.", Globals.LogLevel.DEBUG)
 	else:
-		Globals.log_message("Audio settings saved.", Globals.LogLevel.DEBUG)
+		Globals.log_message("Failed to save config: " + str(err), Globals.LogLevel.ERROR)
+
+
+## Save volumes to config (shared with other settings)
+## :param path: Path to config file.
+## :type path: String
+## :rtype: void
+#func save_volumes(path: String = "") -> void:
+#	if path == "":
+#		path = current_config_path
+#	var config: ConfigFile = ConfigFile.new()
+#	var err: int = config.load(path)  # Load existing to preserve other sections
+#	if err != OK and err != ERR_FILE_NOT_FOUND:
+#		Globals.log_message(
+#			"Failed to load settings config for save: " + str(err), Globals.LogLevel.ERROR
+#		)
+#		return
+#	# Master Volume
+#	config.set_value("audio", "master_volume", master_volume)
+#	config.set_value("audio", "master_muted", master_muted)
+#	# Music Volume
+#	config.set_value("audio", "music_volume", music_volume)
+#	config.set_value("audio", "music_muted", music_muted)  # New
+#	# SFX Master Volume
+#	config.set_value("audio", "sfx_volume", sfx_volume)
+#	config.set_value("audio", "sfx_muted", sfx_muted)  # New
+#	# SFX Rotors
+#	config.set_value("audio", "rotors_volume", rotors_volume)
+#	config.set_value("audio", "rotors_muted", rotors_muted)  # New
+#	# SFX Weapon
+#	config.set_value("audio", "weapon_volume", weapon_volume)
+#	config.set_value("audio", "weapon_muted", weapon_muted)  # New
+#
+#	err = config.save(path)
+#	if err != OK:
+#		Globals.log_message("Failed to save audio settings: " + str(err), Globals.LogLevel.ERROR)
+#	else:
+#		Globals.log_message("Audio settings saved.", Globals.LogLevel.DEBUG)
 
 
 ## Apply all loaded volumes to AudioServer buses
