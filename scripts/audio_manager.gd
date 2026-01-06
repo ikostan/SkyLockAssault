@@ -31,6 +31,7 @@ var volume_map: Dictionary = {
 	AudioConstants.BUS_SFX_ROTORS: {"volume_var": "rotors_volume", "muted_var": "rotors_muted"},
 }
 
+
 func _ready() -> void:
 	load_volumes()  # Load persisted volumes
 	apply_all_volumes()  # Apply to AudioServer buses
@@ -50,7 +51,10 @@ func load_volumes(path: String = Settings.CONFIG_PATH) -> void:
 		return  # Use defaults on not found or error
 	for bus: String in volume_map.keys():
 		var vars: Dictionary = volume_map[bus]
-		set(vars["volume_var"], config.get_value("audio", vars["volume_var"], get(vars["volume_var"])))
+		set(
+			vars["volume_var"],
+			config.get_value("audio", vars["volume_var"], get(vars["volume_var"]))
+		)
 		set(vars["muted_var"], config.get_value("audio", vars["muted_var"], get(vars["muted_var"])))
 	Globals.log_message("Loaded volumes from config.", Globals.LogLevel.DEBUG)
 
