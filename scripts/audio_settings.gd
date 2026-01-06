@@ -515,27 +515,27 @@ func _reset_sfx_warning_shown() -> void:
 # In audio_settings.gd, update _on_audio_reset_button_pressed:
 func _on_audio_reset_button_pressed() -> void:
 	AudioManager.reset_volumes()
-	
+
 	# Update UI elements to reflect resets
 	mute_master.button_pressed = not AudioManager.master_muted
 	master_slider.value = AudioManager.master_volume
 	master_slider.editable = true
-	
+
 	mute_music.button_pressed = not AudioManager.music_muted
 	music_slider.value = AudioManager.music_volume
 	music_slider.editable = true
-	
+
 	mute_sfx.button_pressed = not AudioManager.sfx_muted
 	sfx_slider.value = AudioManager.sfx_volume
 	sfx_slider.editable = true
-	
+
 	mute_weapon.button_pressed = not AudioManager.weapon_muted
 	weapon_slider.value = AudioManager.weapon_volume
 	weapon_slider.editable = true
-	
+
 	mute_rotor.button_pressed = not AudioManager.rotors_muted
 	rotor_slider.value = AudioManager.rotors_volume
 	rotor_slider.editable = true
-	
+
 	# Update dependent UI states
 	_update_other_controls_ui()
