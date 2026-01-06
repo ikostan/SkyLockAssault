@@ -52,7 +52,8 @@ var rotor_slider: HSlider = $Panel/OptionsContainer/VolumeControls/SFXRotors/Rot
 #Other UI elements
 @onready var master_warning_dialog: AcceptDialog = $MasterWarningDialog
 @onready var sfx_warning_dialog: AcceptDialog = $SFXWarningDialog
-@onready var audio_back_button: Button = $Panel/OptionsContainer/AudioBackButton
+@onready var audio_back_button: Button = $Panel/OptionsContainer/BtnContainer/AudioBackButton
+@onready var audio_reset_button: Button = $Panel/OptionsContainer/BtnContainer/AudioResetButton
 
 
 func _ready() -> void:
@@ -131,11 +132,17 @@ func _ready() -> void:
 	if not audio_back_button.pressed.is_connected(_on_audio_back_button_pressed):
 		audio_back_button.pressed.connect(_on_audio_back_button_pressed)
 
+	# Reset button listener
+	if not audio_reset_button.pressed.is_connected(_on_audio_reset_button_pressed):
+		audio_reset_button.pressed.connect(_on_audio_reset_button_pressed)
+
 	tree_exited.connect(_on_tree_exited)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Globals.log_message("Audio menu loaded.", Globals.LogLevel.DEBUG)
+
+	_sync_ui_from_manager()
 	# Apply initial UI state for others based on master (New)
-	_update_other_controls_ui()
+	# _update_other_controls_ui()
 
 	if os_wrapper.has_feature("web"):
 		(
@@ -504,3 +511,36 @@ func _reset_master_warning_shown() -> void:
 ## :rtype: void
 func _reset_sfx_warning_shown() -> void:
 	sfx_warning_shown = false
+
+
+## Reset button functionality
+## Sync all UI controls from AudioManager states without emitting signals
+## :rtype: void
+func _sync_ui_from_manager() -> void:
+	mute_master.set_pressed_no_signal(not AudioManager.master_muted)
+	master_slider.set_value_no_signal(AudioManager.master_volume)
+	master_slider.editable = not AudioManager.master_muted
+
+	mute_music.set_pressed_no_signal(not AudioManager.music_muted)
+	music_slider.set_value_no_signal(AudioManager.music_volume)
+	music_slider.editable = not AudioManager.music_muted
+
+	mute_sfx.set_pressed_no_signal(not AudioManager.sfx_muted)
+	sfx_slider.set_value_no_signal(AudioManager.sfx_volume)
+	sfx_slider.editable = not AudioManager.sfx_muted
+
+	mute_weapon.set_pressed_no_signal(not AudioManager.weapon_muted)
+	weapon_slider.set_value_no_signal(AudioManager.weapon_volume)
+	weapon_slider.editable = not AudioManager.weapon_muted
+
+	mute_rotor.set_pressed_no_signal(not AudioManager.rotors_muted)
+	rotor_slider.set_value_no_signal(AudioManager.rotors_volume)
+	rotor_slider.editable = not AudioManager.rotors_muted
+
+	_update_other_controls_ui()
+
+
+## Update _on_audio_reset_button_pressed:
+func _on_audio_reset_button_pressed() -> void:
+	AudioManager.reset_volumes()
+	_sync_ui_from_manager()

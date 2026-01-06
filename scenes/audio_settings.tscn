@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://r8xidy68s04r"]
+[gd_scene load_steps=14 format=3 uid="uid://r8xidy68s04r"]
 
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_j3be7"]
 [ext_resource type="Script" uid="uid://c2u0utdi762fi" path="res://scripts/audio_settings.gd" id="1_yonr6"]
@@ -36,7 +36,9 @@ corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
 shadow_size = 5
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_w6v8r"]
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_koe27"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_a0ntd"]
 
 [node name="AudioSettings" type="Control"]
 layout_mode = 3
@@ -58,9 +60,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -215.0
-offset_top = -210.0
+offset_top = -220.0
 offset_right = 215.0
-offset_bottom = 210.0
+offset_bottom = 220.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 4
@@ -232,19 +234,38 @@ icon_alignment = 2
 vertical_icon_alignment = 0
 expand_icon = true
 
-[node name="AudioBackButton" type="Button" parent="Panel/OptionsContainer"]
+[node name="BtnContainer" type="HBoxContainer" parent="Panel/OptionsContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="AudioBackButton" type="Button" parent="Panel/OptionsContainer/BtnContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
-theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("1_j3be7")
 theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_yonr6")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_koe27")
 theme_override_styles/hover = SubResource("StyleBoxFlat_a0ntd")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_w6v8r")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_koe27")
 text = "{BACK}"
+
+[node name="AudioResetButton" type="Button" parent="Panel/OptionsContainer/BtnContainer"]
+layout_mode = 2
+size_flags_horizontal = 10
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
+theme_override_colors/font_focus_color = Color(1, 0.19607843, 0.2784314, 0.98039216)
+theme_override_colors/font_pressed_color = Color(0.9607843, 0.9607843, 0.050980393, 0.9019608)
+theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("1_j3be7")
+theme_override_font_sizes/font_size = 35
+theme_override_styles/normal = SubResource("StyleBoxFlat_yonr6")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_koe27")
+theme_override_styles/hover = SubResource("StyleBoxFlat_a0ntd")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_a0ntd")
+text = "{RESET}"
 
 [node name="MasterWarningDialog" type="AcceptDialog" parent="."]
 

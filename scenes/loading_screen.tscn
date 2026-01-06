@@ -1,7 +1,7 @@
 [gd_scene load_steps=7 format=3 uid="uid://c7v7wvpn01fpp"]
 
-[ext_resource type="Script" uid="uid://dppkco4l3vw86" path="res://scripts/loading_screen.gd" id="1_hprjd"]
-[ext_resource type="Texture2D" uid="uid://d3fr7qvmvb6rc" path="res://files/img/2001-Model_7.png" id="2_5phy8"]
+[ext_resource type="Script" uid="uid://cq2tlsh4o7fda" path="res://scripts/loading_screen.gd" id="1_hprjd"]
+[ext_resource type="Texture2D" uid="uid://duosg5kjn4lgb" path="res://files/img/2001-Model_7.png" id="2_5phy8"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="2_ku3bi"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5phy8"]
