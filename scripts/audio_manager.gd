@@ -22,7 +22,14 @@ extends Node
 @export var rotors_muted: bool = false  # New default
 
 var current_config_path: String = Settings.CONFIG_PATH
-
+# Mapping defaults as a class var
+var volume_map: Dictionary = {
+	AudioConstants.BUS_MASTER: {"volume_var": "master_volume", "muted_var": "master_muted"},
+	AudioConstants.BUS_MUSIC: {"volume_var": "music_volume", "muted_var": "music_muted"},
+	AudioConstants.BUS_SFX: {"volume_var": "sfx_volume", "muted_var": "sfx_muted"},
+	AudioConstants.BUS_SFX_WEAPON: {"volume_var": "weapon_volume", "muted_var": "weapon_muted"},
+	AudioConstants.BUS_SFX_ROTORS: {"volume_var": "rotors_volume", "muted_var": "rotors_muted"},
+}
 
 func _ready() -> void:
 	load_volumes()  # Load persisted volumes
@@ -39,35 +46,54 @@ func load_volumes(path: String = Settings.CONFIG_PATH) -> void:
 	var err: int = config.load(path)
 	if err != OK:
 		if err != ERR_FILE_NOT_FOUND:
-			Globals.log_message(
-				"Failed to load settings config: " + str(err), Globals.LogLevel.ERROR
-			)
-		return  # Use defaults if not found or error
-	# Master Volume
-	master_volume = config.get_value("audio", "master_volume", master_volume)
-	master_muted = config.get_value("audio", "master_muted", master_muted)
-	Globals.log_message("Loaded saved master_volume: " + str(master_volume), Globals.LogLevel.DEBUG)
-	Globals.log_message("Loaded saved master_muted: " + str(master_muted), Globals.LogLevel.DEBUG)
-	# Music Volume
-	music_volume = config.get_value("audio", "music_volume", music_volume)
-	music_muted = config.get_value("audio", "music_muted", music_muted)  # New
-	Globals.log_message("Loaded saved music_volume: " + str(music_volume), Globals.LogLevel.DEBUG)
-	Globals.log_message("Loaded saved music_muted: " + str(music_muted), Globals.LogLevel.DEBUG)
-	# SFX Master
-	sfx_volume = config.get_value("audio", "sfx_volume", sfx_volume)
-	sfx_muted = config.get_value("audio", "sfx_muted", sfx_muted)  # New
-	Globals.log_message("Loaded saved sfx_volume: " + str(sfx_volume), Globals.LogLevel.DEBUG)
-	Globals.log_message("Loaded saved sfx_muted: " + str(sfx_muted), Globals.LogLevel.DEBUG)
-	# SFX Rotors
-	rotors_volume = config.get_value("audio", "rotors_volume", rotors_volume)
-	rotors_muted = config.get_value("audio", "rotors_muted", rotors_muted)  # New
-	Globals.log_message("Loaded saved rotors_volume: " + str(rotors_volume), Globals.LogLevel.DEBUG)
-	Globals.log_message("Loaded saved rotors_muted: " + str(rotors_muted), Globals.LogLevel.DEBUG)
-	# SFX Weapon
-	weapon_volume = config.get_value("audio", "weapon_volume", weapon_volume)
-	weapon_muted = config.get_value("audio", "weapon_muted", weapon_muted)  # New
-	Globals.log_message("Loaded saved weapon_volume: " + str(weapon_volume), Globals.LogLevel.DEBUG)
-	Globals.log_message("Loaded saved weapon_muted: " + str(weapon_muted), Globals.LogLevel.DEBUG)
+			Globals.log_message("Failed to load config: " + str(err), Globals.LogLevel.ERROR)
+		return  # Use defaults on not found or error
+	for bus: String in volume_map.keys():
+		var vars: Dictionary = volume_map[bus]
+		set(vars["volume_var"], config.get_value("audio", vars["volume_var"], get(vars["volume_var"])))
+		set(vars["muted_var"], config.get_value("audio", vars["muted_var"], get(vars["muted_var"])))
+	Globals.log_message("Loaded volumes from config.", Globals.LogLevel.DEBUG)
+
+
+## Load volumes from config (shared with other settings)
+## :param path: Path to config file.
+## :type path: String
+## :rtype: void
+#func load_volumes(path: String = Settings.CONFIG_PATH) -> void:
+#	current_config_path = path
+#	var config: ConfigFile = ConfigFile.new()
+#	var err: int = config.load(path)
+#	if err != OK:
+#		if err != ERR_FILE_NOT_FOUND:
+#			Globals.log_message(
+#				"Failed to load settings config: " + str(err), Globals.LogLevel.ERROR
+#			)
+#		return  # Use defaults if not found or error
+#	# Master Volume
+#	master_volume = config.get_value("audio", "master_volume", master_volume)
+#	master_muted = config.get_value("audio", "master_muted", master_muted)
+#	Globals.log_message("Loaded saved master_volume: " + str(master_volume), Globals.LogLevel.DEBUG)
+#	Globals.log_message("Loaded saved master_muted: " + str(master_muted), Globals.LogLevel.DEBUG)
+#	# Music Volume
+#	music_volume = config.get_value("audio", "music_volume", music_volume)
+#	music_muted = config.get_value("audio", "music_muted", music_muted)  # New
+#	Globals.log_message("Loaded saved music_volume: " + str(music_volume), Globals.LogLevel.DEBUG)
+#	Globals.log_message("Loaded saved music_muted: " + str(music_muted), Globals.LogLevel.DEBUG)
+#	# SFX Master
+#	sfx_volume = config.get_value("audio", "sfx_volume", sfx_volume)
+#	sfx_muted = config.get_value("audio", "sfx_muted", sfx_muted)  # New
+#	Globals.log_message("Loaded saved sfx_volume: " + str(sfx_volume), Globals.LogLevel.DEBUG)
+#	Globals.log_message("Loaded saved sfx_muted: " + str(sfx_muted), Globals.LogLevel.DEBUG)
+#	# SFX Rotors
+#	rotors_volume = config.get_value("audio", "rotors_volume", rotors_volume)
+#	rotors_muted = config.get_value("audio", "rotors_muted", rotors_muted)  # New
+#	Globals.log_message("Loaded saved rotors_volume: " + str(rotors_volume), Globals.LogLevel.DEBUG)
+#	Globals.log_message("Loaded saved rotors_muted: " + str(rotors_muted), Globals.LogLevel.DEBUG)
+#	# SFX Weapon
+#	weapon_volume = config.get_value("audio", "weapon_volume", weapon_volume)
+#	weapon_muted = config.get_value("audio", "weapon_muted", weapon_muted)  # New
+#	Globals.log_message("Loaded saved weapon_volume: " + str(weapon_volume), Globals.LogLevel.DEBUG)
+#	Globals.log_message("Loaded saved weapon_muted: " + str(weapon_muted), Globals.LogLevel.DEBUG)
 
 
 ## Save volumes to config (shared with other settings)
@@ -145,22 +171,10 @@ func apply_volume_to_bus(bus_name: String, volume: float, muted: bool) -> void:
 ## Reset all volumes and mute flags to defaults
 func reset_volumes() -> void:
 	for bus: String in AudioConstants.DEFAULT_VOLUMES.keys():
-		match bus:
-			AudioConstants.BUS_MASTER:
-				master_volume = AudioConstants.DEFAULT_VOLUMES[bus]["volume"]
-				master_muted = AudioConstants.DEFAULT_VOLUMES[bus]["muted"]
-			AudioConstants.BUS_MUSIC:
-				music_volume = AudioConstants.DEFAULT_VOLUMES[bus]["volume"]
-				music_muted = AudioConstants.DEFAULT_VOLUMES[bus]["muted"]
-			AudioConstants.BUS_SFX:
-				sfx_volume = AudioConstants.DEFAULT_VOLUMES[bus]["volume"]
-				sfx_muted = AudioConstants.DEFAULT_VOLUMES[bus]["muted"]
-			AudioConstants.BUS_SFX_WEAPON:
-				weapon_volume = AudioConstants.DEFAULT_VOLUMES[bus]["volume"]
-				weapon_muted = AudioConstants.DEFAULT_VOLUMES[bus]["muted"]
-			AudioConstants.BUS_SFX_ROTORS:
-				rotors_volume = AudioConstants.DEFAULT_VOLUMES[bus]["volume"]
-				rotors_muted = AudioConstants.DEFAULT_VOLUMES[bus]["muted"]
+		var defaults: Dictionary = AudioConstants.DEFAULT_VOLUMES[bus]
+		var vars: Dictionary = volume_map[bus]
+		set(vars["volume_var"], defaults["volume"])
+		set(vars["muted_var"], defaults["muted"])
 	apply_all_volumes()
 	save_volumes()
 	Globals.log_message("Audio volumes reset to defaults.", Globals.LogLevel.DEBUG)
