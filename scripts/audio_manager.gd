@@ -142,7 +142,6 @@ func apply_volume_to_bus(bus_name: String, volume: float, muted: bool) -> void:
 		Globals.log_message(bus_name + " audio bus not found!", Globals.LogLevel.ERROR)
 
 
-# In audio_manager.gd, add:
 ## Reset all volumes and mute flags to defaults
 func reset_volumes() -> void:
 	for bus: String in AudioConstants.DEFAULT_VOLUMES.keys():
