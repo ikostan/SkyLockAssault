@@ -137,7 +137,7 @@ func _ready() -> void:
 	Globals.log_message("Audio menu loaded.", Globals.LogLevel.DEBUG)
 	# Apply initial UI state for others based on master (New)
 	_update_other_controls_ui()
-	
+
 	# Reset button listener
 	if not audio_reset_button.pressed.is_connected(_on_audio_reset_button_pressed):
 		audio_reset_button.pressed.connect(_on_audio_reset_button_pressed)
@@ -519,42 +519,42 @@ func _on_audio_reset_button_pressed() -> void:
 	AudioManager.sfx_muted = false
 	AudioManager.weapon_muted = false
 	AudioManager.rotors_muted = false
-	
+
 	# Reset all volumes to maximum (1.0)
 	AudioManager.master_volume = 1.0
 	AudioManager.music_volume = 1.0
 	AudioManager.sfx_volume = 1.0
 	AudioManager.weapon_volume = 1.0
 	AudioManager.rotors_volume = 1.0
-	
+
 	# Apply the changes to AudioServer
 	AudioManager.apply_all_volumes()
-	
+
 	# Save the reset settings
 	AudioManager.save_volumes()
-	
+
 	# Update UI elements to reflect resets
 	mute_master.button_pressed = true  # Unmuted
 	master_slider.value = 1.0
 	master_slider.editable = true
-	
+
 	mute_music.button_pressed = true
 	music_slider.value = 1.0
 	music_slider.editable = true
-	
+
 	mute_sfx.button_pressed = true
 	sfx_slider.value = 1.0
 	sfx_slider.editable = true
-	
+
 	mute_weapon.button_pressed = true
 	weapon_slider.value = 1.0
 	weapon_slider.editable = true
-	
+
 	mute_rotor.button_pressed = true
 	rotor_slider.value = 1.0
 	rotor_slider.editable = true
-	
+
 	# Update dependent UI states
 	_update_other_controls_ui()
-	
+
 	Globals.log_message("Audio settings reset to defaults.", Globals.LogLevel.DEBUG)
