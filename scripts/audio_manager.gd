@@ -22,14 +22,6 @@ extends Node
 @export var rotors_muted: bool = false  # New default
 
 var current_config_path: String = Settings.CONFIG_PATH
-# Mapping defaults as a class var
-var volume_map: Dictionary = {
-	AudioConstants.BUS_MASTER: {"volume_var": "master_volume", "muted_var": "master_muted"},
-	AudioConstants.BUS_MUSIC: {"volume_var": "music_volume", "muted_var": "music_muted"},
-	AudioConstants.BUS_SFX: {"volume_var": "sfx_volume", "muted_var": "sfx_muted"},
-	AudioConstants.BUS_SFX_WEAPON: {"volume_var": "weapon_volume", "muted_var": "weapon_muted"},
-	AudioConstants.BUS_SFX_ROTORS: {"volume_var": "rotors_volume", "muted_var": "rotors_muted"},
-}
 
 
 func _ready() -> void:
