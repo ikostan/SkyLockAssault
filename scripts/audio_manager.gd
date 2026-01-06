@@ -106,11 +106,15 @@ func load_volumes(path: String = Settings.CONFIG_PATH) -> void:
 ## :rtype: void
 func save_volumes(path: String = current_config_path) -> void:
 	var config: ConfigFile = ConfigFile.new()
+	var err: Error = config.load(path)
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		Globals.log_message("Failed to load config for save: " + str(err), Globals.LogLevel.ERROR)
+		return
 	for bus: String in volume_map.keys():
 		var vars: Dictionary = volume_map[bus]
 		config.set_value("audio", vars["volume_var"], get(vars["volume_var"]))
 		config.set_value("audio", vars["muted_var"], get(vars["muted_var"]))
-	var err: int = config.save(path)
+	err = config.save(path)
 	if err == OK:
 		Globals.log_message("Saved volumes to config.", Globals.LogLevel.DEBUG)
 	else:
