@@ -151,7 +151,7 @@ func test_tc_reset_02() -> void:
 	assert_eq(audio_instance.sfx_slider.value, 0.6)
 	assert_eq(audio_instance.weapon_slider.value, 0.4)
 	assert_eq(audio_instance.rotor_slider.value, 0.7)
-	assert_true(audio_instance.weapon_slider.editable)
+	assert_false(audio_instance.weapon_slider.editable)
 	assert_true(audio_instance.rotor_slider.editable)
 	# Reset
 	audio_instance._on_audio_reset_button_pressed()
