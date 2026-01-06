@@ -15,11 +15,11 @@ extends Node
 
 @export_category("SFX Volume")
 @export var sfx_volume: float = 1.0
-@export var sfx_muted: bool = false  # New default
+@export var sfx_muted: bool = false
 @export var weapon_volume: float = 1.0
-@export var weapon_muted: bool = false  # New default
+@export var weapon_muted: bool = false
 @export var rotors_volume: float = 1.0
-@export var rotors_muted: bool = false  # New default
+@export var rotors_muted: bool = false
 
 var current_config_path: String = Settings.CONFIG_PATH
 
@@ -41,20 +41,19 @@ func load_volumes(path: String = Settings.CONFIG_PATH) -> void:
 		if err != ERR_FILE_NOT_FOUND:
 			Globals.log_message("Failed to load config: " + str(err), Globals.LogLevel.ERROR)
 		return  # Use defaults on not found or error
-	for bus: String in volume_map.keys():
-		var vars: Dictionary = volume_map[bus]
+	for bus: String in AudioConstants.BUS_CONFIG.keys():
+		var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
 		set(
-			vars["volume_var"],
-			config.get_value("audio", vars["volume_var"], get(vars["volume_var"]))
+			config_data["volume_var"],
+			config.get_value("audio", config_data["volume_var"], get(config_data["volume_var"]))
 		)
-		set(vars["muted_var"], config.get_value("audio", vars["muted_var"], get(vars["muted_var"])))
+		set(
+			config_data["muted_var"],
+			config.get_value("audio", config_data["muted_var"], get(config_data["muted_var"]))
+		)
 	Globals.log_message("Loaded volumes from config.", Globals.LogLevel.DEBUG)
 
 
-## Save volumes to config (shared with other settings)
-## :param path: Path to config file.
-## :type path: String
-## :rtype: void
 ## Save volumes to config (shared with other settings)
 ## :param path: Path to config file.
 ## :type path: String
@@ -67,10 +66,10 @@ func save_volumes(path: String = "") -> void:
 	if err != OK and err != ERR_FILE_NOT_FOUND:
 		Globals.log_message("Failed to load config for save: " + str(err), Globals.LogLevel.ERROR)
 		return
-	for bus: String in volume_map.keys():
-		var vars: Dictionary = volume_map[bus]
-		config.set_value("audio", vars["volume_var"], get(vars["volume_var"]))
-		config.set_value("audio", vars["muted_var"], get(vars["muted_var"]))
+	for bus: String in AudioConstants.BUS_CONFIG.keys():
+		var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
+		config.set_value("audio", config_data["volume_var"], get(config_data["volume_var"]))
+		config.set_value("audio", config_data["muted_var"], get(config_data["muted_var"]))
 	err = config.save(path)
 	if err == OK:
 		Globals.log_message("Saved volumes to config.", Globals.LogLevel.DEBUG)
@@ -81,11 +80,9 @@ func save_volumes(path: String = "") -> void:
 ## Apply all loaded volumes to AudioServer buses
 ## :rtype: void
 func apply_all_volumes() -> void:
-	apply_volume_to_bus(AudioConstants.BUS_MASTER, master_volume, master_muted)
-	apply_volume_to_bus(AudioConstants.BUS_MUSIC, music_volume, music_muted)
-	apply_volume_to_bus(AudioConstants.BUS_SFX, sfx_volume, sfx_muted)
-	apply_volume_to_bus(AudioConstants.BUS_SFX_WEAPON, weapon_volume, weapon_muted)
-	apply_volume_to_bus(AudioConstants.BUS_SFX_ROTORS, rotors_volume, rotors_muted)
+	for bus: String in AudioConstants.BUS_CONFIG.keys():
+		var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
+		apply_volume_to_bus(bus, get(config_data["volume_var"]), get(config_data["muted_var"]))
 
 
 ## Helper to apply a single volume to a named bus
@@ -93,6 +90,8 @@ func apply_all_volumes() -> void:
 ## :type bus_name: String
 ## :param volume: Volume level (0.0 to 1.0).
 ## :type volume: float
+## :param muted: Mute flag.
+## :type muted: bool
 ## :rtype: void
 func apply_volume_to_bus(bus_name: String, volume: float, muted: bool) -> void:
 	var bus_idx: int = AudioServer.get_bus_index(bus_name)
@@ -114,12 +113,12 @@ func apply_volume_to_bus(bus_name: String, volume: float, muted: bool) -> void:
 
 
 ## Reset all volumes and mute flags to defaults
+## :rtype: void
 func reset_volumes() -> void:
-	for bus: String in AudioConstants.DEFAULT_VOLUMES.keys():
-		var defaults: Dictionary = AudioConstants.DEFAULT_VOLUMES[bus]
-		var vars: Dictionary = volume_map[bus]
-		set(vars["volume_var"], defaults["volume"])
-		set(vars["muted_var"], defaults["muted"])
+	for bus: String in AudioConstants.BUS_CONFIG.keys():
+		var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
+		set(config_data["volume_var"], config_data["default_volume"])
+		set(config_data["muted_var"], config_data["default_muted"])
 	apply_all_volumes()
 	save_volumes()
 	Globals.log_message("Audio volumes reset to defaults.", Globals.LogLevel.DEBUG)
