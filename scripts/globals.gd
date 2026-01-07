@@ -28,26 +28,37 @@ func _ready() -> void:
 	# log_message("Raw version from settings: " + game_version, LogLevel.DEBUG)
 
 
-# Add these new functions (for consistency with log level persistence)
-# New: Optional param (default new; fixes error)
+## Loads persisted settings from config if valid types; skips invalid/missing to keep current.
+## :param path: Config file path (default: Settings.CONFIG_PATH).
+## :type path: String
+## :rtype: void
 func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var config: ConfigFile = ConfigFile.new()
-	var err := config.load(path)
+	var err: int = config.load(path)
 	if err == OK:
-		current_log_level = config.get_value("Settings", "log_level", LogLevel.INFO)
-		log_message("Loaded saved log level: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
-
-		difficulty = config.get_value("Settings", "difficulty", 1.0)
-		# New: Validate and clamp difficulty to slider range (0.5-2.0)
-		if difficulty < 0.5 or difficulty > 2.0:
-			log_message(
-				"Invalid difficulty loaded (" + str(difficulty) + ")—clamping to valid range.",
-				LogLevel.WARNING
-			)
-			difficulty = clamp(difficulty, 0.5, 2.0)
-		log_message("Loaded saved difficulty: " + str(difficulty), LogLevel.DEBUG)
+		var loaded_log_level: Variant = config.get_value("Settings", "log_level")
+		if loaded_log_level is int and loaded_log_level >= LogLevel.DEBUG and loaded_log_level <= LogLevel.NONE:
+			current_log_level = loaded_log_level
+			log_message("Loaded saved log level: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
+		elif loaded_log_level != null:
+			log_message("Invalid type or value for log_level: " + str(typeof(loaded_log_level)), LogLevel.WARNING)
+		var loaded_difficulty: Variant = config.get_value("Settings", "difficulty")
+		if loaded_difficulty is float:
+			difficulty = loaded_difficulty
+			# Validate and clamp difficulty to slider range (0.5-2.0)
+			if difficulty < 0.5 or difficulty > 2.0:
+				log_message(
+					"Invalid difficulty loaded (" + str(difficulty) + ")-clamping to valid range.",
+					LogLevel.WARNING
+				)
+				difficulty = clamp(difficulty, 0.5, 2.0)
+			log_message("Loaded saved difficulty: " + str(difficulty), LogLevel.DEBUG)
+		elif loaded_difficulty != null:
+			log_message("Invalid type for difficulty: " + str(typeof(loaded_difficulty)), LogLevel.WARNING)
+	elif err == ERR_FILE_NOT_FOUND:
+		log_message("No settings config found, using defaults.", LogLevel.DEBUG)
 	else:
-		log_message("No saved settings found at " + path + "—using default.", LogLevel.DEBUG)
+		log_message("Failed to load settings config: " + str(err), LogLevel.ERROR)
 
 
 # New: Add _save_settings to globals.gd (move from options_menu.gd if needed)
