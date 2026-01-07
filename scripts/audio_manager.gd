@@ -158,16 +158,20 @@ func load_volumes(path: String = current_config_path) -> void:
 	if err == OK:
 		for bus: String in AudioConstants.BUS_CONFIG.keys():
 			var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
-			var loaded_volume: = config.get_value("audio", config_data["volume_var"])
-			if loaded_volume is float:
-				self[config_data["volume_var"]] = loaded_volume
-			elif loaded_volume != null:
-				Globals.log_message("Invalid type for " + config_data["volume_var"] + ": " + str(typeof(loaded_volume)), Globals.LogLevel.WARNING)
-			var loaded_muted: = config.get_value("audio", config_data["muted_var"])
-			if loaded_muted is bool:
-				self[config_data["muted_var"]] = loaded_muted
-			elif loaded_muted != null:
-				Globals.log_message("Invalid type for " + config_data["muted_var"] + ": " + str(typeof(loaded_muted)), Globals.LogLevel.WARNING)
+			var volume_key: String = config_data["volume_var"]
+			if config.has_section_key("audio", volume_key):
+				var loaded_volume: Variant = config.get_value("audio", volume_key)
+				if loaded_volume is float:
+					self[volume_key] = loaded_volume
+				else:
+					Globals.log_message("Invalid type for " + volume_key + ": " + str(typeof(loaded_volume)), Globals.LogLevel.WARNING)
+			var muted_key: String = config_data["muted_var"]
+			if config.has_section_key("audio", muted_key):
+				var loaded_muted: Variant = config.get_value("audio", muted_key)
+				if loaded_muted is bool:
+					self[muted_key] = loaded_muted
+				else:
+					Globals.log_message("Invalid type for " + muted_key + ": " + str(typeof(loaded_muted)), Globals.LogLevel.WARNING)
 		Globals.log_message("Loaded volumes from config.", Globals.LogLevel.DEBUG)
 	elif err == ERR_FILE_NOT_FOUND:
 		Globals.log_message("No audio config file found, using defaults.", Globals.LogLevel.DEBUG)
