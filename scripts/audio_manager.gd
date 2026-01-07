@@ -167,8 +167,8 @@ func load_volumes(path: String = current_config_path) -> void:
 			var muted: bool = get_muted(bus)
 
 			# Load volume if present and valid
-			var loaded_volume: Variant = config.get_value("audio", volume_key, null)
-			if loaded_volume != null:
+			if config.has_section_key("audio", volume_key):
+				var loaded_volume: Variant = config.get_value("audio", volume_key)
 				if loaded_volume is float:
 					volume = loaded_volume
 				else:
@@ -178,8 +178,8 @@ func load_volumes(path: String = current_config_path) -> void:
 					)
 
 			# Load muted if present and valid
-			var loaded_muted: Variant = config.get_value("audio", muted_key, null)
-			if loaded_muted != null:
+			if config.has_section_key("audio", muted_key):
+				var loaded_muted: Variant = config.get_value("audio", muted_key)
 				if loaded_muted is bool:
 					muted = loaded_muted
 				else:
