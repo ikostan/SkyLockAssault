@@ -160,25 +160,37 @@ func load_volumes(path: String = current_config_path) -> void:
 		for bus: String in AudioConstants.BUS_CONFIG.keys():
 			var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
 			var volume_key: String = config_data["volume_var"]
-			if config.has_section_key("audio", volume_key):
-				var loaded_volume: Variant = config.get_value("audio", volume_key)
+			var muted_key: String = config_data["muted_var"]
+
+			# Start with current values (defaults if not yet overridden)
+			var volume: float = get_volume(bus)
+			var muted: bool = get_muted(bus)
+
+			# Load volume if present and valid
+			var loaded_volume: Variant = config.get_value("audio", volume_key, null)
+			if loaded_volume != null:
 				if loaded_volume is float:
-					self[volume_key] = loaded_volume
+					volume = loaded_volume
 				else:
 					Globals.log_message(
 						"Invalid type for " + volume_key + ": " + str(typeof(loaded_volume)),
 						Globals.LogLevel.WARNING
 					)
-			var muted_key: String = config_data["muted_var"]
-			if config.has_section_key("audio", muted_key):
-				var loaded_muted: Variant = config.get_value("audio", muted_key)
+
+			# Load muted if present and valid
+			var loaded_muted: Variant = config.get_value("audio", muted_key, null)
+			if loaded_muted != null:
 				if loaded_muted is bool:
-					self[muted_key] = loaded_muted
+					muted = loaded_muted
 				else:
 					Globals.log_message(
 						"Invalid type for " + muted_key + ": " + str(typeof(loaded_muted)),
 						Globals.LogLevel.WARNING
 					)
+
+			# Apply via setter for encapsulation
+			set_bus_state(bus, volume, muted)
+
 		Globals.log_message("Loaded volumes from config.", Globals.LogLevel.DEBUG)
 	elif err == ERR_FILE_NOT_FOUND:
 		Globals.log_message("No audio config file found, using defaults.", Globals.LogLevel.DEBUG)
