@@ -173,7 +173,12 @@ func load_volumes(path: String = current_config_path) -> void:
 					volume = float(loaded_volume)
 				else:
 					Globals.log_message(
-						"Invalid type for " + volume_key + ": " + type_string(typeof(loaded_volume)),
+						(
+							"Invalid type for "
+							+ volume_key
+							+ ": "
+							+ type_string(typeof(loaded_volume))
+						),
 						Globals.LogLevel.WARNING
 					)
 
