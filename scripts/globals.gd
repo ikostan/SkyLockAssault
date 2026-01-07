@@ -55,7 +55,7 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 
 		if config.has_section_key("Settings", "difficulty"):
 			var loaded_difficulty: Variant = config.get_value("Settings", "difficulty")
-			if loaded_difficulty is float:
+			if (loaded_difficulty is float) or (loaded_difficulty is int):
 				difficulty = loaded_difficulty
 				# Validate and clamp difficulty to slider range (0.5-2.0)
 				if difficulty < 0.5 or difficulty > 2.0:
