@@ -208,4 +208,9 @@ jobs:
       - name: "Upload Test Report to Codecov"
         if: success()
         run: |
-          ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f ./junit.xml --name "Playwright Browser Test Report" --flag PLAYWRIGHT --report-type test_results
+          REPORT_FILE="./junit.xml"
+          if [ -f "$REPORT_FILE" ]; then
+            ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f "$REPORT_FILE" --name "Playwright Browser Test Report" --flag PLAYWRIGHT --report-type test_results
+          else
+            echo "No Playwright JUnit XML found, skipping upload."
+          fi

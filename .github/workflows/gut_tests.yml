@@ -63,7 +63,12 @@ jobs:
         run: |
           curl -Os https://cli.codecov.io/latest/linux/codecov
           chmod +x codecov
-      - name: "Upload Test Report to Codecov"  # Last step for uploading JUnit XML as test report
-        if: success()  # Only if tests pass.
+      - name: "Upload Test Report to Codecov"
+        if: success()
         run: |
-          ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f ${{ steps.find_report.outputs.latest_report }}/gut_junit.xml --name "GUT Test Report" --flag GUT --report-type test_results
+          REPORT_FILE="${{ steps.find_report.outputs.latest_report }}/gut_junit.xml"
+          if [ -f "$REPORT_FILE" ]; then
+            ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f "$REPORT_FILE" --name "GUT Test Report" --flag GUT --report-type test_results
+          else
+            echo "No GUT JUnit XML found, skipping upload."
+          fi
