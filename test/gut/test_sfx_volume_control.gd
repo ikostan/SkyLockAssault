@@ -23,6 +23,7 @@ func before_each() -> void:
 	AudioManager.weapon_muted = false
 	AudioManager.apply_all_volumes()  # Sync buses early
 	AudioManager.load_volumes(test_config_path)  # Load if exists (should be defaults)
+	AudioManager.current_config_path = test_config_path  # <--- ADD THIS LINE HERE
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
 	# Add audio buses if not exist
