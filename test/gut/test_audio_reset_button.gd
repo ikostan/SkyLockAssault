@@ -28,6 +28,7 @@ func before_each() -> void:
 	AudioManager.rotors_volume = 1.0
 	AudioManager.apply_all_volumes()  # Sync buses early
 	AudioManager.load_volumes(test_config_path)  # Load if exists (should be defaults)
+	AudioManager.current_config_path = test_config_path  # Add this line
 	# Add audio buses if not exist
 	if AudioServer.get_bus_index(AudioConstants.BUS_MASTER) == -1:
 		AudioServer.add_bus(0)
