@@ -36,7 +36,7 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var config: ConfigFile = ConfigFile.new()
 	var err: int = config.load(path)
 	if err == OK:
-		var loaded_log_level: Variant = config.get_value("Settings", "log_level")
+		var loaded_log_level: Variant = config.get_value("Settings", "log_level", null)
 		if (
 			loaded_log_level is int
 			and loaded_log_level >= LogLevel.DEBUG
@@ -51,14 +51,14 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 				"Invalid type or value for log_level: " + str(typeof(loaded_log_level)),
 				LogLevel.WARNING
 			)
-		var loaded_difficulty: Variant = config.get_value("Settings", "difficulty")
+		var loaded_difficulty: Variant = config.get_value("Settings", "difficulty", null)
 		if loaded_difficulty is float:
 			difficulty = loaded_difficulty
 			# Validate and clamp difficulty to slider range (0.5-2.0)
 			if difficulty < 0.5 or difficulty > 2.0:
 				log_message(
 					(
-						"Invalid difficulty loaded ("
+                        "Invalid difficulty loaded ("
 						+ str(difficulty)
 						+ ") - clamping to valid range."
 					),
