@@ -58,7 +58,7 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 			if difficulty < 0.5 or difficulty > 2.0:
 				log_message(
 					(
-                        "Invalid difficulty loaded ("
+						"Invalid difficulty loaded ("
 						+ str(difficulty)
 						+ ") - clamping to valid range."
 					),
