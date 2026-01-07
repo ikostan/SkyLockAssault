@@ -153,6 +153,7 @@ func set_muted(bus_name: String, muted: bool) -> void:
 ## :type path: String
 ## :rtype: void
 func load_volumes(path: String = current_config_path) -> void:
+	current_config_path = path  # Update to keep in sync with the path used
 	var config: ConfigFile = ConfigFile.new()
 	var err: int = config.load(path)
 	if err == OK:
@@ -193,6 +194,7 @@ func load_volumes(path: String = current_config_path) -> void:
 func save_volumes(path: String = "") -> void:
 	if path == "":
 		path = current_config_path  # Fall back to the last loaded path if empty
+	current_config_path = path  # Update to keep in sync with the path used
 	var config: ConfigFile = ConfigFile.new()
 	var err: Error = config.load(path)
 	if err != OK and err != ERR_FILE_NOT_FOUND:
