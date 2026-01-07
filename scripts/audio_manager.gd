@@ -169,11 +169,11 @@ func load_volumes(path: String = current_config_path) -> void:
 			# Load volume if present and valid
 			if config.has_section_key("audio", volume_key):
 				var loaded_volume: Variant = config.get_value("audio", volume_key)
-				if loaded_volume is float:
-					volume = loaded_volume
+				if loaded_volume is float or loaded_volume is int:
+					volume = float(loaded_volume)
 				else:
 					Globals.log_message(
-						"Invalid type for " + volume_key + ": " + str(typeof(loaded_volume)),
+						"Invalid type for " + volume_key + ": " + type_string(typeof(loaded_volume)),
 						Globals.LogLevel.WARNING
 					)
 
