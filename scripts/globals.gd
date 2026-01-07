@@ -37,11 +37,20 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var err: int = config.load(path)
 	if err == OK:
 		var loaded_log_level: Variant = config.get_value("Settings", "log_level")
-		if loaded_log_level is int and loaded_log_level >= LogLevel.DEBUG and loaded_log_level <= LogLevel.NONE:
+		if (
+			loaded_log_level is int
+			and loaded_log_level >= LogLevel.DEBUG
+			and loaded_log_level <= LogLevel.NONE
+		):
 			current_log_level = loaded_log_level
-			log_message("Loaded saved log level: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
+			log_message(
+				"Loaded saved log level: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG
+			)
 		elif loaded_log_level != null:
-			log_message("Invalid type or value for log_level: " + str(typeof(loaded_log_level)), LogLevel.WARNING)
+			log_message(
+				"Invalid type or value for log_level: " + str(typeof(loaded_log_level)),
+				LogLevel.WARNING
+			)
 		var loaded_difficulty: Variant = config.get_value("Settings", "difficulty")
 		if loaded_difficulty is float:
 			difficulty = loaded_difficulty
@@ -54,7 +63,9 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 				difficulty = clamp(difficulty, 0.5, 2.0)
 			log_message("Loaded saved difficulty: " + str(difficulty), LogLevel.DEBUG)
 		elif loaded_difficulty != null:
-			log_message("Invalid type for difficulty: " + str(typeof(loaded_difficulty)), LogLevel.WARNING)
+			log_message(
+				"Invalid type for difficulty: " + str(typeof(loaded_difficulty)), LogLevel.WARNING
+			)
 	elif err == ERR_FILE_NOT_FOUND:
 		log_message("No settings config found, using defaults.", LogLevel.DEBUG)
 	else:

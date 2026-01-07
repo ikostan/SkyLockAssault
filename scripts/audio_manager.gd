@@ -164,14 +164,20 @@ func load_volumes(path: String = current_config_path) -> void:
 				if loaded_volume is float:
 					self[volume_key] = loaded_volume
 				else:
-					Globals.log_message("Invalid type for " + volume_key + ": " + str(typeof(loaded_volume)), Globals.LogLevel.WARNING)
+					Globals.log_message(
+						"Invalid type for " + volume_key + ": " + str(typeof(loaded_volume)),
+						Globals.LogLevel.WARNING
+					)
 			var muted_key: String = config_data["muted_var"]
 			if config.has_section_key("audio", muted_key):
 				var loaded_muted: Variant = config.get_value("audio", muted_key)
 				if loaded_muted is bool:
 					self[muted_key] = loaded_muted
 				else:
-					Globals.log_message("Invalid type for " + muted_key + ": " + str(typeof(loaded_muted)), Globals.LogLevel.WARNING)
+					Globals.log_message(
+						"Invalid type for " + muted_key + ": " + str(typeof(loaded_muted)),
+						Globals.LogLevel.WARNING
+					)
 		Globals.log_message("Loaded volumes from config.", Globals.LogLevel.DEBUG)
 	elif err == ERR_FILE_NOT_FOUND:
 		Globals.log_message("No audio config file found, using defaults.", Globals.LogLevel.DEBUG)
