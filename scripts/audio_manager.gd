@@ -147,27 +147,33 @@ func set_muted(bus_name: String, muted: bool) -> void:
 			Globals.log_message("Unknown bus for set_muted: " + bus_name, Globals.LogLevel.WARNING)
 
 
-## Load volumes from config (shared with other settings)
-## :param path: Path to config file.
+## load_volumes
+## Loads persisted volumes from config if valid types; skips invalid/missing to keep current.
+## :param path: Config file path (default: current_config_path).
 ## :type path: String
 ## :rtype: void
-func load_volumes(path: String = Settings.CONFIG_PATH) -> void:
-	current_config_path = path
+func load_volumes(path: String = current_config_path) -> void:
 	var config: ConfigFile = ConfigFile.new()
 	var err: int = config.load(path)
-	if err != OK:
-		if err != ERR_FILE_NOT_FOUND:
-			Globals.log_message("Failed to load config: " + str(err), Globals.LogLevel.ERROR)
-		return  # Use defaults on not found or error
-	for bus: String in AudioConstants.BUS_CONFIG.keys():
-		var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
-		var state: Dictionary = get_bus_state(bus)
-		set_bus_state(
-			bus,
-			config.get_value("audio", config_data["volume_var"], state["volume"]),
-			config.get_value("audio", config_data["muted_var"], state["muted"])
-		)
-	Globals.log_message("Loaded volumes from config.", Globals.LogLevel.DEBUG)
+	if err == OK:
+		for bus: String in AudioConstants.BUS_CONFIG.keys():
+			var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
+			var loaded_volume: = config.get_value("audio", config_data["volume_var"])
+			if loaded_volume is float:
+				self[config_data["volume_var"]] = loaded_volume
+			elif loaded_volume != null:
+				Globals.log_message("Invalid type for " + config_data["volume_var"] + ": " + str(typeof(loaded_volume)), Globals.LogLevel.WARNING)
+			var loaded_muted: = config.get_value("audio", config_data["muted_var"])
+			if loaded_muted is bool:
+				self[config_data["muted_var"]] = loaded_muted
+			elif loaded_muted != null:
+				Globals.log_message("Invalid type for " + config_data["muted_var"] + ": " + str(typeof(loaded_muted)), Globals.LogLevel.WARNING)
+		Globals.log_message("Loaded volumes from config.", Globals.LogLevel.DEBUG)
+	elif err == ERR_FILE_NOT_FOUND:
+		Globals.log_message("No audio config file found, using defaults.", Globals.LogLevel.DEBUG)
+	else:
+		Globals.log_message("Failed to load audio config: " + str(err), Globals.LogLevel.ERROR)
+	apply_all_volumes()
 
 
 ## Save volumes to config (shared with other settings)
