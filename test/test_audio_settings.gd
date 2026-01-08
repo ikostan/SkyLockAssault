@@ -67,7 +67,7 @@ func test_ready_web() -> void:
 	assert_bool(audio_menu.audio_back_button.pressed.is_connected(audio_menu._on_audio_back_button_pressed)).is_true()
 	assert_bool(audio_menu.tree_exited.is_connected(audio_menu._on_tree_exited)).is_true()
 	assert_int(audio_menu.process_mode).is_equal(Node.PROCESS_MODE_ALWAYS)
-	verify(mock_js_bridge, 1).eval(GdUnitArgumentMatchers.by_type(TYPE_STRING), true)  # For show overlays
+	verify(mock_js_bridge, 11).eval(GdUnitArgumentMatchers.by_type(TYPE_STRING), true)  # For show overlays
 	verify(mock_js_bridge, 1).get_interface("window")
 	verify(mock_js_bridge, 12).create_callback(GdUnitArgumentMatchers.any())  # For backPressed
 
