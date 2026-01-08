@@ -217,7 +217,7 @@ func _ready() -> void:
 				Callable(self, "_on_toggle_mute_weapon_js")
 			)
 			js_window.toggleMuteWeapon = _toggle_mute_weapon_cb
-			# Mute Rototors
+			# Mute Rotors
 			_toggle_mute_rotors_cb = js_bridge_wrapper.create_callback(
 				Callable(self, "_on_toggle_mute_rotors_js")
 			)
