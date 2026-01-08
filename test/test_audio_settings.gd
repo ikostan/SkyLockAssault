@@ -7,7 +7,6 @@
 
 extends GdUnitTestSuite
 
-
 ## Custom matcher for string contains check.
 class ContainsMatcher extends GdUnitArgumentMatcher:
 	## Substring to check for.
@@ -16,6 +15,7 @@ class ContainsMatcher extends GdUnitArgumentMatcher:
 	## Initializes matcher.
 	## :param substring: Text to match.
 	## :type substring: String
+	## :rtype: void
 	func _init(substring: String) -> void:
 		_substring = substring
 	
@@ -33,7 +33,6 @@ class ContainsMatcher extends GdUnitArgumentMatcher:
 	func _to_string() -> String:
 		return "contains('%s')" % _substring
 
-
 ## Custom matcher for value/checked patterns.
 class ValueOrCheckedMatcher extends GdUnitArgumentMatcher:
 	## Matches if value contains "value =" or "checked =".
@@ -50,11 +49,9 @@ class ValueOrCheckedMatcher extends GdUnitArgumentMatcher:
 	func _to_string() -> String:
 		return "contains('value =') or contains('checked =')"
 
-
 var mock_js_bridge: Variant  # GdUnit mock for JavaScriptBridgeWrapper
 var mock_os: Variant  # GdUnit mock for OSWrapper
 var mock_js_window: Dictionary  # Mock for js_window
-
 
 func before_test() -> void:
 	## Per-test setup: Mock wrappers, reset Globals state.
@@ -132,7 +129,7 @@ func test_ready_web() -> void:
 	)  # For visibility toggle
 
 	verify(mock_js_bridge, 10).eval(
-		ContainsMatcher.new("document.getElementById"),
+		ValueOrCheckedMatcher.new(),
 		false
 	)  # For UI sync
 	
