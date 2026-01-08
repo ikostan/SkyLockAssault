@@ -129,6 +129,21 @@
     <button id="options-button" style="top: 50%;">OPTIONS</button>
     <button id="quit-button" style="top: 60%;">QUIT</button>
 
+    <!-- Audio Menu Elements (invisible overlays) -->
+    <input id="master-slider" type="range" min="0" max="1" step="0.01" value="1.0" style="top: 30%; width: 200px; display: none;">
+    <input id="music-slider" type="range" min="0" max="1" step="0.01" value="1.0" style="top: 40%; width: 200px; display: none;">
+    <input id="sfx-slider" type="range" min="0" max="1" step="0.01" value="1.0" style="top: 50%; width: 200px; display: none;">
+    <input id="weapon-slider" type="range" min="0" max="1" step="0.01" value="1.0" style="top: 60%; width: 200px; display: none;">
+    <input id="rotors-slider" type="range" min="0" max="1" step="0.01" value="1.0" style="top: 70%; width: 200px; display: none;">
+
+    <input id="mute-master" type="checkbox" checked style="top: 30%; left: 60%; width: 50px; height: 50px; display: none;">
+    <input id="mute-music" type="checkbox" checked style="top: 40%; left: 60%; width: 50px; height: 50px; display: none;">
+    <input id="mute-sfx" type="checkbox" checked style="top: 50%; left: 60%; width: 50px; height: 50px; display: none;">
+    <input id="mute-weapon" type="checkbox" checked style="top: 60%; left: 60%; width: 50px; height: 50px; display: none;">
+    <input id="mute-rotors" type="checkbox" checked style="top: 70%; left: 60%; width: 50px; height: 50px; display: none;">
+
+    <button id="audio-reset-button" style="top: 80%; width: 150px; display: none;">Reset</button>
+
     <!-- Options Menu Elements (invisible overlays, shown when menu loads) -->
     <select id="log-level-select" style="top: 55%;">
         <option>DEBUG</option>
