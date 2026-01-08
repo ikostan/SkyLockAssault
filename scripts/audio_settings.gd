@@ -31,19 +31,19 @@ var _previous_back_pressed_cb: Variant
 var _intentional_exit: bool = false
 
 # Volume controls
-var _change_master_volume_cb: JavaScriptObject
-var _change_music_volume_cb: JavaScriptObject
-var _change_sfx_volume_cb: JavaScriptObject
-var _change_weapon_volume_cb: JavaScriptObject
-var _change_rotors_volume_cb: JavaScriptObject
+var _change_master_volume_cb: Variant
+var _change_music_volume_cb: Variant
+var _change_sfx_volume_cb: Variant
+var _change_weapon_volume_cb: Variant
+var _change_rotors_volume_cb: Variant
 # Mute toggle
-var _toggle_mute_master_cb: JavaScriptObject
-var _toggle_mute_music_cb: JavaScriptObject
-var _toggle_mute_sfx_cb: JavaScriptObject
-var _toggle_mute_weapon_cb: JavaScriptObject
-var _toggle_mute_rotors_cb: JavaScriptObject
+var _toggle_mute_master_cb: Variant
+var _toggle_mute_music_cb: Variant
+var _toggle_mute_sfx_cb: Variant
+var _toggle_mute_weapon_cb: Variant
+var _toggle_mute_rotors_cb: Variant
 # Reset button
-var _audio_reset_cb: JavaScriptObject
+var _audio_reset_cb: Variant
 
 # Master Volume Controls
 @onready
