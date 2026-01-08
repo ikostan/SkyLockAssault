@@ -300,26 +300,34 @@ func _on_master_mute_toggled(toggled_on: bool) -> void:
 ## :type args: Array
 ## :rtype: void
 func _on_change_master_volume_js(args: Array) -> void:
-	if args.size() > 0:
-		var value: float = float(args[0][0])
-		# AudioManager.set_volume(AudioConstants.BUS_MASTER, value)
-		AudioManager.master_volume = value
-		master_slider.set_value_no_signal(value)
-		AudioManager.apply_volume_to_bus(
-			AudioConstants.BUS_MASTER, value, AudioManager.master_muted
-		)
-		Globals.log_message("Master volume changed to: " + str(value), Globals.LogLevel.DEBUG)
-		AudioManager.save_volumes()  # Call save directly (no debounce in this scope)
-		_sync_dom_ui()
+	if args.is_empty() or args[0].is_empty() or typeof(args[0][0]) != TYPE_FLOAT:
+		Globals.log_message("Invalid args in _on_change_master_volume_js: " + str(args), Globals.LogLevel.ERROR)
+		return
+
+	# if args.size() > 0:
+	var value: float = float(args[0][0])
+	# AudioManager.set_volume(AudioConstants.BUS_MASTER, value)
+	AudioManager.master_volume = value
+	master_slider.set_value_no_signal(value)
+	AudioManager.apply_volume_to_bus(
+		AudioConstants.BUS_MASTER, value, AudioManager.master_muted
+	)
+	Globals.log_message("Master volume changed to: " + str(value), Globals.LogLevel.DEBUG)
+	AudioManager.save_volumes()  # Call save directly (no debounce in this scope)
+	_sync_dom_ui()
 
 
 func _on_toggle_mute_master_js(args: Array) -> void:
-	if args.size() > 0:
-		var checked: bool = bool(args[0][0])
-		# print("checked: " + str(checked))
-		mute_master.button_pressed = checked
-		# _on_master_mute_toggled(checked)  # Adjust to your toggled func
-		# _sync_dom_ui()
+	if args.is_empty() or args[0].is_empty() or typeof(args[0][0]) != TYPE_FLOAT:
+		Globals.log_message("Invalid args in _on_toggle_mute_master_js: " + str(args), Globals.LogLevel.ERROR)
+		return
+
+	# if args.size() > 0:
+	var checked: bool = bool(args[0][0])
+	# print("checked: " + str(checked))
+	mute_master.button_pressed = checked
+	# _on_master_mute_toggled(checked)  # Adjust to your toggled func
+	# _sync_dom_ui()
 
 
 ## MUSIC VOLUME
@@ -364,7 +372,7 @@ func _on_music_mute_gui_input(event: InputEvent) -> void:
 ## :type args: Array
 ## :rtype: void
 func _on_change_music_volume_js(args: Array) -> void:
-	if args.is_empty() or typeof(args[0][0]) != TYPE_FLOAT:
+	if args.is_empty() or args[0].is_empty() or typeof(args[0][0]) != TYPE_FLOAT:
 		Globals.log_message("Invalid args in _on_change_music_volume_js: " + str(args), Globals.LogLevel.ERROR)
 		return
 	
@@ -395,7 +403,7 @@ func _on_change_music_volume_js(args: Array) -> void:
 
 
 func _on_toggle_mute_music_js(args: Array) -> void:
-	if args.is_empty() or (typeof(args[0][0]) != TYPE_BOOL or typeof(args[0][0]) != TYPE_INT):
+	if args.is_empty() or args[0].is_empty() or (typeof(args[0][0]) != TYPE_BOOL and typeof(args[0][0]) != TYPE_INT):
 		Globals.log_message("Invalid args in _on_toggle_mute_music_js: " + str(args), Globals.LogLevel.ERROR)
 		return
 
@@ -449,7 +457,7 @@ func _on_sfx_mute_gui_input(event: InputEvent) -> void:
 ## :type args: Array
 ## :rtype: void
 func _on_change_sfx_volume_js(args: Array) -> void:
-	if args.is_empty() or typeof(args[0][0]) != TYPE_FLOAT:
+	if args.is_empty() or args[0].is_empty() or typeof(args[0][0]) != TYPE_FLOAT:
 		Globals.log_message("Invalid args in _on_change_sfx_volume_js: " + str(args), Globals.LogLevel.ERROR)
 		return
 
@@ -482,7 +490,7 @@ func _on_change_sfx_volume_js(args: Array) -> void:
 
 
 func _on_toggle_mute_sfx_js(args: Array) -> void:
-	if args.is_empty() or (typeof(args[0][0]) != TYPE_BOOL or typeof(args[0][0]) != TYPE_INT):
+	if args.is_empty() or args[0].is_empty() or (typeof(args[0][0]) != TYPE_BOOL and typeof(args[0][0]) != TYPE_INT):
 		Globals.log_message("Invalid args in _on_toggle_mute_sfx_js: " + str(args), Globals.LogLevel.ERROR)
 		return
 	
@@ -537,7 +545,7 @@ func _on_weapon_mute_gui_input(event: InputEvent) -> void:
 ## :type args: Array
 ## :rtype: void
 func _on_change_weapon_volume_js(args: Array) -> void:
-	if args.is_empty() or typeof(args[0][0]) != TYPE_FLOAT:
+	if args.is_empty() or args[0].is_empty() or typeof(args[0][0]) != TYPE_FLOAT:
 		Globals.log_message("Invalid args in _on_change_weapon_volume_js: " + str(args), Globals.LogLevel.ERROR)
 		return
 
@@ -572,7 +580,7 @@ func _on_change_weapon_volume_js(args: Array) -> void:
 
 
 func _on_toggle_mute_weapon_js(args: Array) -> void:
-	if args.is_empty() or (typeof(args[0][0]) != TYPE_BOOL or typeof(args[0][0]) != TYPE_INT):
+	if args.is_empty() or args[0].is_empty() or (typeof(args[0][0]) != TYPE_BOOL and typeof(args[0][0]) != TYPE_INT):
 		Globals.log_message("Invalid args in _on_toggle_mute_weapon_js: " + str(args), Globals.LogLevel.ERROR)
 		return
 
@@ -627,7 +635,7 @@ func _on_rotor_mute_gui_input(event: InputEvent) -> void:
 ## :type args: Array
 ## :rtype: void
 func _on_change_rotors_volume_js(args: Array) -> void:
-	if args.is_empty() or typeof(args[0][0]) != TYPE_FLOAT:
+	if args.is_empty() or args[0].is_empty() or typeof(args[0][0]) != TYPE_FLOAT:
 		Globals.log_message("Invalid args in _on_change_rotors_volume_js: " + str(args), Globals.LogLevel.ERROR)
 		return
 
@@ -661,7 +669,7 @@ func _on_change_rotors_volume_js(args: Array) -> void:
 
 
 func _on_toggle_mute_rotors_js(args: Array) -> void:
-	if args.is_empty() or (typeof(args[0][0]) != TYPE_BOOL or typeof(args[0][0]) != TYPE_INT):
+	if args.is_empty() or args[0].is_empty() or (typeof(args[0][0]) != TYPE_BOOL and typeof(args[0][0]) != TYPE_INT):
 		Globals.log_message("Invalid args in _on_toggle_mute_rotors_js: " + str(args), Globals.LogLevel.ERROR)
 		return
 
