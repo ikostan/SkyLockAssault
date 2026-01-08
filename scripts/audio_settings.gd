@@ -160,27 +160,7 @@ func _ready() -> void:
 	# _update_other_controls_ui()
 
 	if os_wrapper.has_feature("web"):
-		(
-			js_bridge_wrapper
-			. eval(
-				"""
-				document.getElementById('audio-back-button').style.display = 'block';
-				document.getElementById('master-slider').style.display = 'block';
-				document.getElementById('music-slider').style.display = 'block';
-				document.getElementById('sfx-slider').style.display = 'block';
-				document.getElementById('weapon-slider').style.display = 'block';
-				document.getElementById('rotors-slider').style.display = 'block';
-				document.getElementById('mute-master').style.display = 'block';
-				document.getElementById('mute-music').style.display = 'block';
-				document.getElementById('mute-sfx').style.display = 'block';
-				document.getElementById('mute-weapon').style.display = 'block';
-				document.getElementById('mute-rotors').style.display = 'block';
-				document.getElementById('audio-reset-button').style.display = 'block';
-				""",
-				true
-			)
-		)
-
+		_toggle_audio_dom_visibility("block")
 		js_window = js_bridge_wrapper.get_interface("window")
 		if js_window:  # New: Null check
 			_audio_back_button_pressed_cb = js_bridge_wrapper.create_callback(
@@ -710,25 +690,7 @@ func _on_audio_back_button_pressed() -> void:
 	if os_wrapper.has_feature("web"):
 		if js_window:  # New: Null check
 			js_window.backPressed = _previous_back_pressed_cb  # Restore previous callback
-		(
-			js_bridge_wrapper
-			. eval(
-				"""
-				document.getElementById('audio-back-button').style.display = 'none';
-				document.getElementById('master-slider').style.display = 'none';
-				document.getElementById('music-slider').style.display = 'none';
-				document.getElementById('sfx-slider').style.display = 'none';
-				document.getElementById('weapon-slider').style.display = 'none';
-				document.getElementById('rotors-slider').style.display = 'none';
-				document.getElementById('mute-master').style.display = 'none';
-				document.getElementById('mute-music').style.display = 'none';
-				document.getElementById('mute-sfx').style.display = 'none';
-				document.getElementById('mute-weapon').style.display = 'none';
-				document.getElementById('mute-rotors').style.display = 'none';
-				document.getElementById('audio-reset-button').style.display = 'none';
-				"""
-			)
-		)
+		_toggle_audio_dom_visibility("none")
 	_intentional_exit = true
 	queue_free()
 
@@ -759,25 +721,7 @@ func _on_tree_exited() -> void:
 	if os_wrapper.has_feature("web"):
 		if js_window:  # New: Null check
 			js_window.backPressed = _previous_back_pressed_cb  # Restore previous callback
-		(
-			js_bridge_wrapper
-			. eval(
-				"""
-				document.getElementById('audio-back-button').style.display = 'none';
-				document.getElementById('master-slider').style.display = 'none';
-				document.getElementById('music-slider').style.display = 'none';
-				document.getElementById('sfx-slider').style.display = 'none';
-				document.getElementById('weapon-slider').style.display = 'none';
-				document.getElementById('rotors-slider').style.display = 'none';
-				document.getElementById('mute-master').style.display = 'none';
-				document.getElementById('mute-music').style.display = 'none';
-				document.getElementById('mute-sfx').style.display = 'none';
-				document.getElementById('mute-weapon').style.display = 'none';
-				document.getElementById('mute-rotors').style.display = 'none';
-				document.getElementById('audio-reset-button').style.display = 'none';
-				"""
-			)
-		)
+		_toggle_audio_dom_visibility("none")
 
 	if not Globals.hidden_menus.is_empty():
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
@@ -894,3 +838,45 @@ func _sync_ui_from_manager() -> void:
 	rotor_slider.editable = not AudioManager.rotors_muted
 
 	_update_other_controls_ui()
+
+
+func _toggle_audio_dom_visibility(visibility: String) -> void:
+	## Toggles visibility of all audio DOM overlays.
+	## :param visibility: "block" or "none".
+	## :type visibility: String
+	## :rtype: void
+	(
+		js_bridge_wrapper
+		. eval(
+			(
+				"""
+		document.getElementById('audio-back-button').style.display = '%s';
+		document.getElementById('audio-reset-button').style.display = '%s';
+		document.getElementById('master-slider').style.display = '%s';
+		document.getElementById('music-slider').style.display = '%s';
+		document.getElementById('sfx-slider').style.display = '%s';
+		document.getElementById('weapon-slider').style.display = '%s';
+		document.getElementById('rotors-slider').style.display = '%s';
+		document.getElementById('mute-master').style.display = '%s';
+		document.getElementById('mute-music').style.display = '%s';
+		document.getElementById('mute-sfx').style.display = '%s';
+		document.getElementById('mute-weapon').style.display = '%s';
+		document.getElementById('mute-rotors').style.display = '%s';
+	"""
+				% [
+					visibility,
+					visibility,
+					visibility,
+					visibility,
+					visibility,
+					visibility,
+					visibility,
+					visibility,
+					visibility,
+					visibility,
+					visibility,
+					visibility
+				]
+			)
+		)
+	)
