@@ -644,6 +644,7 @@ func _on_toggle_mute_rotors_js(args: Array) -> void:
 func _on_audio_reset_button_pressed() -> void:
 	AudioManager.reset_volumes()
 	_sync_ui_from_manager()
+	_sync_dom_ui()
 
 
 func _on_audio_reset_js(_args: Array) -> void:
