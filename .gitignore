@@ -44,7 +44,6 @@ report.xml
 artifacts/
 artifacts/main_menu.png
 artifacts/main_menu.png
-report.xml
 v8_coverage_*.json
 tests/refactor/__pycache__/
 report.html
