@@ -30,6 +30,21 @@ var _audio_back_button_pressed_cb: Variant
 var _previous_back_pressed_cb: Variant
 var _intentional_exit: bool = false
 
+# Volume controls
+var _change_master_volume_cb: JavaScriptObject
+var _change_music_volume_cb: JavaScriptObject
+var _change_sfx_volume_cb: JavaScriptObject
+var _change_weapon_volume_cb: JavaScriptObject
+var _change_rotors_volume_cb: JavaScriptObject
+# Mute toggle
+var _toggle_mute_master_cb: JavaScriptObject
+var _toggle_mute_music_cb: JavaScriptObject
+var _toggle_mute_sfx_cb: JavaScriptObject
+var _toggle_mute_weapon_cb: JavaScriptObject
+var _toggle_mute_rotors_cb: JavaScriptObject
+# Reset button
+var _audio_reset_cb: JavaScriptObject
+
 # Master Volume Controls
 @onready
 var master_slider: HSlider = $Panel/OptionsContainer/VolumeControls/Master/MasterControl/HSlider
@@ -150,10 +165,22 @@ func _ready() -> void:
 			. eval(
 				"""
 				document.getElementById('audio-back-button').style.display = 'block';
+				document.getElementById('master-slider').style.display = 'block';
+				document.getElementById('music-slider').style.display = 'block';
+				document.getElementById('sfx-slider').style.display = 'block';
+				document.getElementById('weapon-slider').style.display = 'block';
+				document.getElementById('rotors-slider').style.display = 'block';
+				document.getElementById('mute-master').style.display = 'block';
+				document.getElementById('mute-music').style.display = 'block';
+				document.getElementById('mute-sfx').style.display = 'block';
+				document.getElementById('mute-weapon').style.display = 'block';
+				document.getElementById('mute-rotors').style.display = 'block';
+				document.getElementById('audio-reset-button').style.display = 'block';
 				""",
 				true
 			)
 		)
+
 		js_window = js_bridge_wrapper.get_interface("window")
 		if js_window:  # New: Null check
 			_audio_back_button_pressed_cb = js_bridge_wrapper.create_callback(
@@ -161,6 +188,82 @@ func _ready() -> void:
 			)
 			_previous_back_pressed_cb = js_window.backPressed  # Save previous before overwrite
 			js_window.backPressed = _audio_back_button_pressed_cb  # Set audio callback
+			##
+			# Expose callbacks for changing volume
+			# Master Volume
+			_change_master_volume_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_change_master_volume_js")
+			)
+			js_window.changeMasterVolume = _change_master_volume_cb
+			# Music Volume
+			_change_music_volume_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_change_music_volume_js")
+			)
+			js_window.changeMusicVolume = _change_music_volume_cb
+			# SFX Volume
+			_change_sfx_volume_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_change_sfx_volume_js")
+			)
+			js_window.changeSfxVolume = _change_sfx_volume_cb
+			# Weapon Volume
+			_change_weapon_volume_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_change_weapon_volume_js")
+			)
+			js_window.changeWeaponVolume = _change_weapon_volume_cb
+			# Rotors Volume
+			_change_rotors_volume_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_change_rotors_volume_js")
+			)
+			js_window.changeRotorsVolume = _change_rotors_volume_cb
+			##
+			# Expose callbacks for mute
+			# Mute Master
+			_toggle_mute_master_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_toggle_mute_master_js")
+			)
+			js_window.toggleMuteMaster = _toggle_mute_master_cb
+			# Mute Music
+			_toggle_mute_music_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_toggle_mute_music_js")
+			)
+			js_window.toggleMuteMusic = _toggle_mute_music_cb
+			# Mute SFX
+			_toggle_mute_sfx_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_toggle_mute_sfx_js")
+			)
+			js_window.toggleMuteSfx = _toggle_mute_sfx_cb
+			# Mute Weapon
+			_toggle_mute_weapon_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_toggle_mute_weapon_js")
+			)
+			js_window.toggleMuteWeapon = _toggle_mute_weapon_cb
+			# Mute Rototors
+			_toggle_mute_rotors_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_toggle_mute_rotors_js")
+			)
+			js_window.toggleMuteRotors = _toggle_mute_rotors_cb
+			# Expose callbacks for Reset button
+			_audio_reset_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_audio_reset_js")
+			)
+			js_window.audioReset = _audio_reset_cb
+
+
+## MASTER VOLUME
+func _on_master_volume_control_gui_input(event: InputEvent) -> void:
+	## Handles GUI input on master volume control.
+	##
+	## Unmutes and enables slider if muted and clicked.
+	##
+	## :param event: The input event.
+	## :type event: InputEvent
+	## :rtype: void
+	# Check if the event is a mouse button click
+	if event is InputEventMouseButton and event.pressed and AudioManager.master_muted:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			mute_master.button_pressed = true  # Set button to pressed (unmuted) state visually
+			get_viewport().set_input_as_handled()  # Consume the event to prevent further propagation
+			Globals.log_message("Master Volume Slider is enabled now.", Globals.LogLevel.DEBUG)
 
 
 func _on_master_mute_toggled(toggled_on: bool) -> void:
@@ -175,6 +278,43 @@ func _on_master_mute_toggled(toggled_on: bool) -> void:
 	Globals.log_message("Master mute button toggled to: " + str(toggled_on), Globals.LogLevel.DEBUG)
 
 
+# New: JS callback for master volume
+## :param args: Array with volume value.
+## :type args: Array
+## :rtype: void
+func _on_change_master_volume_js(args: Array) -> void:
+	if args.size() > 0:
+		var value: float = float(args[0][0])
+		AudioManager.set_volume(AudioConstants.BUS_MASTER, value)
+		AudioManager.apply_volume_to_bus(
+			AudioConstants.BUS_MASTER, value, AudioManager.master_muted
+		)
+		Globals.log_message("Master volume changed to: " + str(value), Globals.LogLevel.DEBUG)
+		AudioManager.save_volumes()  # Call save directly (no debounce in this scope)
+
+
+func _on_toggle_mute_master_js(args: Array) -> void:
+	if args.size() > 0:
+		var checked: bool = bool(args[0][0])
+		_on_master_mute_toggled(checked)  # Adjust to your toggled func
+
+
+## MUSIC VOLUME
+# New: Music slider gui input (show warning if master muted)
+# Music slider gui input (no SFX dependency)
+func _on_music_volume_control_gui_input(event: InputEvent) -> void:
+	# sfx_muted=false as placeholder
+	_handle_slider_gui_input(
+		event,
+		AudioManager.master_muted,
+		false,
+		AudioManager.music_muted,
+		mute_music,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
+
+
 # New: Music toggle
 func _on_music_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.music_muted = not toggled_on
@@ -185,6 +325,66 @@ func _on_music_mute_toggled(toggled_on: bool) -> void:
 	)
 	AudioManager.save_volumes()
 	Globals.log_message("Music mute button toggled to: " + str(toggled_on), Globals.LogLevel.DEBUG)
+
+
+# New: Music mute button gui input (show warning if master muted)
+# Music mute button gui input (no SFX)
+func _on_music_mute_gui_input(event: InputEvent) -> void:
+	_handle_mute_gui_input(
+		event, AudioManager.master_muted, false, master_warning_dialog, sfx_warning_dialog
+	)
+
+
+# New: JS callback for music volume
+## :param args: Array with volume value (e.g., [[0.5]]).
+## :type args: Array
+## :rtype: void
+func _on_change_music_volume_js(args: Array) -> void:
+	if args.size() > 0:
+		var value: float = float(args[0][0])  # Parse the float from JS array
+		# Clamp value to valid range (0.0-1.0) for safety
+		value = clamp(value, 0.0, 1.0)
+
+		# Update AudioManager (sets music_volume)
+		AudioManager.set_volume(AudioConstants.BUS_MUSIC, value)
+
+		# Apply to AudioServer bus (handles db conversion and mute check)
+		AudioManager.apply_volume_to_bus(AudioConstants.BUS_MUSIC, value, AudioManager.music_muted)
+
+		# Log for debugging (visible in Godot console or browser logs)
+		Globals.log_message("Music volume changed to: " + str(value), Globals.LogLevel.DEBUG)
+		Globals.log_message(
+			"Music Volume Level in AudioManager: " + str(AudioManager.music_volume),
+			Globals.LogLevel.DEBUG
+		)
+
+		# Save changes to config (persistent across sessions)
+		AudioManager.save_volumes()
+
+		# Sync UI (update slider value without emitting signals, keep editable state)
+		music_slider.set_value_no_signal(value)
+
+
+func _on_toggle_mute_music_js(args: Array) -> void:
+	if args.size() > 0:
+		var checked: bool = bool(args[0][0])  # true if button is checked (unmuted)
+		_on_music_mute_toggled(checked)
+
+
+## SFX VOLUME
+# New: SFX slider gui input
+# SFX slider gui input (self as SFX)
+func _on_sfx_volume_control_gui_input(event: InputEvent) -> void:
+	# sfx_muted=false for self-check
+	_handle_slider_gui_input(
+		event,
+		AudioManager.master_muted,
+		false,
+		AudioManager.sfx_muted,
+		mute_sfx,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
 
 
 # New: SFX toggle
@@ -200,6 +400,67 @@ func _on_sfx_mute_toggled(toggled_on: bool) -> void:
 	Globals.log_message("SFX mute button toggled to: " + str(toggled_on), Globals.LogLevel.DEBUG)
 
 
+# New: SFX mute button gui input
+# SFX mute button gui input (no SFX check for self)
+func _on_sfx_mute_gui_input(event: InputEvent) -> void:
+	_handle_mute_gui_input(
+		event, AudioManager.master_muted, false, master_warning_dialog, sfx_warning_dialog
+	)
+
+
+# New: JS callback for SFX volume
+## Directly updates AudioManager and UI, mimicking volume_slider.gd logic.
+## :param args: Array with volume value (e.g., [[0.5]]).
+## :type args: Array
+## :rtype: void
+func _on_change_sfx_volume_js(args: Array) -> void:
+	if args.size() > 0:
+		var value: float = float(args[0][0])  # Parse from JS array
+		value = clamp(value, 0.0, 1.0)  # Safety: Prevent invalid values (e.g., from test scripts)
+
+		# Update AudioManager (sets sfx_volume)
+		AudioManager.set_volume(AudioConstants.BUS_SFX, value)
+
+		# Apply to AudioServer bus (handles db conversion and mute check)
+		AudioManager.apply_volume_to_bus(AudioConstants.BUS_SFX, value, AudioManager.sfx_muted)
+
+		# Log the change (matches your DEBUG logs in audio_manager.gd)
+		Globals.log_message("SFX volume level changed: " + str(value), Globals.LogLevel.DEBUG)
+		Globals.log_message(
+			"SFX Volume Level in AudioManager: " + str(AudioManager.sfx_volume),
+			Globals.LogLevel.DEBUG
+		)
+
+		# Save settings (direct call, persistent across runs)
+		AudioManager.save_volumes()
+
+		# Sync UI without emitting signals (updates slider visually)
+		sfx_slider.set_value_no_signal(value)
+
+		# Update dependent controls (e.g., enables/disables weapon/rotor if SFX mute affects them)
+		_update_other_controls_ui()
+
+
+func _on_toggle_mute_sfx_js(args: Array) -> void:
+	if args.size() > 0:
+		var checked: bool = bool(args[0][0])  # true if button is checked (unmuted)
+		_on_sfx_mute_toggled(checked)
+
+
+## WEAPON VOLUME
+# New: Weapon slider gui input
+func _on_weapon_volume_control_gui_input(event: InputEvent) -> void:
+	_handle_slider_gui_input(
+		event,
+		AudioManager.master_muted,
+		AudioManager.sfx_muted,
+		AudioManager.weapon_muted,
+		mute_weapon,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
+
+
 # New: Weapon toggle
 func _on_weapon_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.weapon_muted = not toggled_on
@@ -213,6 +474,72 @@ func _on_weapon_mute_toggled(toggled_on: bool) -> void:
 	Globals.log_message("Weapon mute button toggled to: " + str(toggled_on), Globals.LogLevel.DEBUG)
 
 
+# New: Weapon mute button gui input
+func _on_weapon_mute_gui_input(event: InputEvent) -> void:
+	_handle_mute_gui_input(
+		event,
+		AudioManager.master_muted,
+		AudioManager.sfx_muted,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
+
+
+# New: JS callback for Weapon volume
+## Directly updates AudioManager and UI, mimicking volume_slider.gd logic.
+## :param args: Array with volume value (e.g., [[0.5]]).
+## :type args: Array
+## :rtype: void
+func _on_change_weapon_volume_js(args: Array) -> void:
+	if args.size() > 0:
+		var value: float = float(args[0][0])  # Parse from JS array
+		value = clamp(value, 0.0, 1.0)  # Safety: Prevent invalid values (e.g., from test scripts)
+
+		# Update AudioManager (sets sfx_volume)
+		AudioManager.set_volume(AudioConstants.BUS_SFX_WEAPON, value)
+
+		# Apply to AudioServer bus (handles db conversion and mute check)
+		AudioManager.apply_volume_to_bus(
+			AudioConstants.BUS_SFX_WEAPON, value, AudioManager.weapon_muted
+		)
+
+		# Log the change (matches your DEBUG logs in audio_manager.gd)
+		Globals.log_message("Weapon volume level changed: " + str(value), Globals.LogLevel.DEBUG)
+		Globals.log_message(
+			"Weapon Volume Level in AudioManager: " + str(AudioManager.weapon_volume),
+			Globals.LogLevel.DEBUG
+		)
+
+		# Save settings (direct call, persistent across runs)
+		AudioManager.save_volumes()
+
+		# Sync UI without emitting signals (updates slider visually)
+		weapon_slider.set_value_no_signal(value)
+
+		# Update dependent controls (e.g., enables/disables weapon/rotor if SFX mute affects them)
+		_update_other_controls_ui()
+
+
+func _on_toggle_mute_weapon_js(args: Array) -> void:
+	if args.size() > 0:
+		var checked: bool = bool(args[0][0])  # true if button is checked (unmuted)
+		_on_weapon_mute_toggled(checked)
+
+
+## ROTORS VOLUME
+# New: Rotor slider gui input
+func _on_rotor_volume_control_gui_input(event: InputEvent) -> void:
+	_handle_slider_gui_input(
+		event,
+		AudioManager.master_muted,
+		AudioManager.sfx_muted,
+		AudioManager.rotors_muted,
+		mute_rotor,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
+
+
 # New: Rotor toggle
 func _on_rotor_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.rotors_muted = not toggled_on
@@ -224,6 +551,69 @@ func _on_rotor_mute_toggled(toggled_on: bool) -> void:
 	)
 	AudioManager.save_volumes()
 	Globals.log_message("Rotors mute button toggled to: " + str(toggled_on), Globals.LogLevel.DEBUG)
+
+
+# New: Rotor mute button gui input
+func _on_rotor_mute_gui_input(event: InputEvent) -> void:
+	_handle_mute_gui_input(
+		event,
+		AudioManager.master_muted,
+		AudioManager.sfx_muted,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
+
+
+# New: JS callback for Rotors volume
+## Directly updates AudioManager and UI, mimicking volume_slider.gd logic.
+## :param args: Array with volume value (e.g., [[0.5]]).
+## :type args: Array
+## :rtype: void
+func _on_change_rotors_volume_js(args: Array) -> void:
+	if args.size() > 0:
+		var value: float = float(args[0][0])  # Parse from JS array
+		value = clamp(value, 0.0, 1.0)  # Safety: Prevent invalid values (e.g., from test scripts)
+
+		# Update AudioManager (sets sfx_volume)
+		AudioManager.set_volume(AudioConstants.BUS_SFX_ROTORS, value)
+
+		# Apply to AudioServer bus (handles db conversion and mute check)
+		AudioManager.apply_volume_to_bus(
+			AudioConstants.BUS_SFX_ROTORS, value, AudioManager.rotors_muted
+		)
+
+		# Log the change (matches your DEBUG logs in audio_manager.gd)
+		Globals.log_message("Rotors volume level changed: " + str(value), Globals.LogLevel.DEBUG)
+		Globals.log_message(
+			"Rotors Volume Level in AudioManager: " + str(AudioManager.rotors_volume),
+			Globals.LogLevel.DEBUG
+		)
+
+		# Save settings (direct call, persistent across runs)
+		AudioManager.save_volumes()
+
+		# Sync UI without emitting signals (updates slider visually)
+		rotor_slider.set_value_no_signal(value)
+
+		# Update dependent controls (e.g., enables/disables weapon/rotor if SFX mute affects them)
+		_update_other_controls_ui()
+
+
+func _on_toggle_mute_rotors_js(args: Array) -> void:
+	if args.size() > 0:
+		var checked: bool = bool(args[0][0])  # true if button is checked (unmuted)
+		_on_rotor_mute_toggled(checked)
+
+
+## RESET BUTTON
+## Update _on_audio_reset_button_pressed:
+func _on_audio_reset_button_pressed() -> void:
+	AudioManager.reset_volumes()
+	_sync_ui_from_manager()
+
+
+func _on_audio_reset_js(_args: Array) -> void:
+	_on_audio_reset_button_pressed()
 
 
 # New: Update UI for other controls based on master muted
@@ -271,6 +661,17 @@ func _on_audio_back_button_pressed() -> void:
 			. eval(
 				"""
 				document.getElementById('audio-back-button').style.display = 'none';
+				document.getElementById('master-slider').style.display = 'none';
+				document.getElementById('music-slider').style.display = 'none';
+				document.getElementById('sfx-slider').style.display = 'none';
+				document.getElementById('weapon-slider').style.display = 'none';
+				document.getElementById('rotors-slider').style.display = 'none';
+				document.getElementById('mute-master').style.display = 'none';
+				document.getElementById('mute-music').style.display = 'none';
+				document.getElementById('mute-sfx').style.display = 'none';
+				document.getElementById('mute-weapon').style.display = 'none';
+				document.getElementById('mute-rotors').style.display = 'none';
+				document.getElementById('audio-reset-button').style.display = 'none';
 				"""
 			)
 		)
@@ -309,6 +710,17 @@ func _on_tree_exited() -> void:
 			. eval(
 				"""
 				document.getElementById('audio-back-button').style.display = 'none';
+				document.getElementById('master-slider').style.display = 'none';
+				document.getElementById('music-slider').style.display = 'none';
+				document.getElementById('sfx-slider').style.display = 'none';
+				document.getElementById('weapon-slider').style.display = 'none';
+				document.getElementById('rotors-slider').style.display = 'none';
+				document.getElementById('mute-master').style.display = 'none';
+				document.getElementById('mute-music').style.display = 'none';
+				document.getElementById('mute-sfx').style.display = 'none';
+				document.getElementById('mute-weapon').style.display = 'none';
+				document.getElementById('mute-rotors').style.display = 'none';
+				document.getElementById('audio-reset-button').style.display = 'none';
 				"""
 			)
 		)
@@ -320,116 +732,6 @@ func _on_tree_exited() -> void:
 			Globals.log_message(
 				"Audio menu exited unexpectedly, restored previous menu.", Globals.LogLevel.WARNING
 			)
-
-
-func _on_master_volume_control_gui_input(event: InputEvent) -> void:
-	## Handles GUI input on master volume control.
-	##
-	## Unmutes and enables slider if muted and clicked.
-	##
-	## :param event: The input event.
-	## :type event: InputEvent
-	## :rtype: void
-	# Check if the event is a mouse button click
-	if event is InputEventMouseButton and event.pressed and AudioManager.master_muted:
-		if event.button_index == MOUSE_BUTTON_LEFT:
-			mute_master.button_pressed = true  # Set button to pressed (unmuted) state visually
-			get_viewport().set_input_as_handled()  # Consume the event to prevent further propagation
-			Globals.log_message("Master Volume Slider is enabled now.", Globals.LogLevel.DEBUG)
-
-
-# New: Music slider gui input (show warning if master muted)
-# Music slider gui input (no SFX dependency)
-func _on_music_volume_control_gui_input(event: InputEvent) -> void:
-	# sfx_muted=false as placeholder
-	_handle_slider_gui_input(
-		event,
-		AudioManager.master_muted,
-		false,
-		AudioManager.music_muted,
-		mute_music,
-		master_warning_dialog,
-		sfx_warning_dialog
-	)
-
-
-# New: Music mute button gui input (show warning if master muted)
-# Music mute button gui input (no SFX)
-func _on_music_mute_gui_input(event: InputEvent) -> void:
-	_handle_mute_gui_input(
-		event, AudioManager.master_muted, false, master_warning_dialog, sfx_warning_dialog
-	)
-
-
-# New: SFX slider gui input
-# SFX slider gui input (self as SFX)
-func _on_sfx_volume_control_gui_input(event: InputEvent) -> void:
-	# sfx_muted=false for self-check
-	_handle_slider_gui_input(
-		event,
-		AudioManager.master_muted,
-		false,
-		AudioManager.sfx_muted,
-		mute_sfx,
-		master_warning_dialog,
-		sfx_warning_dialog
-	)
-
-
-# New: SFX mute button gui input
-# SFX mute button gui input (no SFX check for self)
-func _on_sfx_mute_gui_input(event: InputEvent) -> void:
-	_handle_mute_gui_input(
-		event, AudioManager.master_muted, false, master_warning_dialog, sfx_warning_dialog
-	)
-
-
-# New: Rotor mute button gui input
-func _on_rotor_mute_gui_input(event: InputEvent) -> void:
-	_handle_mute_gui_input(
-		event,
-		AudioManager.master_muted,
-		AudioManager.sfx_muted,
-		master_warning_dialog,
-		sfx_warning_dialog
-	)
-
-
-# New: Rotor slider gui input
-func _on_rotor_volume_control_gui_input(event: InputEvent) -> void:
-	_handle_slider_gui_input(
-		event,
-		AudioManager.master_muted,
-		AudioManager.sfx_muted,
-		AudioManager.rotors_muted,
-		mute_rotor,
-		master_warning_dialog,
-		sfx_warning_dialog
-	)
-
-
-# New: Weapon slider gui input
-func _on_weapon_volume_control_gui_input(event: InputEvent) -> void:
-	_handle_slider_gui_input(
-		event,
-		AudioManager.master_muted,
-		AudioManager.sfx_muted,
-		AudioManager.weapon_muted,
-		mute_weapon,
-		master_warning_dialog,
-		sfx_warning_dialog
-	)
-
-
-# New: Weapon mute button gui input
-func _on_weapon_mute_gui_input(event: InputEvent) -> void:
-	_handle_mute_gui_input(
-		event,
-		AudioManager.master_muted,
-		AudioManager.sfx_muted,
-		master_warning_dialog,
-		sfx_warning_dialog
-	)
 
 
 ## Handles common slider GUI input logic for warnings and unmute.
@@ -538,9 +840,3 @@ func _sync_ui_from_manager() -> void:
 	rotor_slider.editable = not AudioManager.rotors_muted
 
 	_update_other_controls_ui()
-
-
-## Update _on_audio_reset_button_pressed:
-func _on_audio_reset_button_pressed() -> void:
-	AudioManager.reset_volumes()
-	_sync_ui_from_manager()
