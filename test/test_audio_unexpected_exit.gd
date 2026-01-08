@@ -36,8 +36,10 @@ func before_test() -> void:
 	mock_js_window = MockJSWindow.new()
 	do_return(mock_js_window).on(mock_js_bridge).get_interface("window")
 	do_return(null).on(mock_js_bridge).eval(GdUnitArgumentMatchers.any(), GdUnitArgumentMatchers.any())  # No-op for eval
-	do_return(func(cb: Callable) -> Variant: return cb).on(mock_js_bridge).create_callback(GdUnitArgumentMatchers.any())  # Return callable as "JSObject"
-
+	# do_return(func(cb: Callable) -> Variant: return cb).on(mock_js_bridge).create_callback(GdUnitArgumentMatchers.any())  # Return callable as "JSObject"
+	# Add this line (replace the old create_callback mock)
+	do_return(mock(JavaScriptObject)).on(mock_js_bridge).create_callback(GdUnitArgumentMatchers.any())
+	
 	# Reset Globals
 	Globals.hidden_menus = []
 	Globals.options_open = false

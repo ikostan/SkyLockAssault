@@ -69,7 +69,7 @@ func test_ready_web() -> void:
 	assert_int(audio_menu.process_mode).is_equal(Node.PROCESS_MODE_ALWAYS)
 	verify(mock_js_bridge, 1).eval(GdUnitArgumentMatchers.by_type(TYPE_STRING), true)  # For show overlays
 	verify(mock_js_bridge, 1).get_interface("window")
-	verify(mock_js_bridge, 1).create_callback(GdUnitArgumentMatchers.any())  # For backPressed
+	verify(mock_js_bridge, 12).create_callback(GdUnitArgumentMatchers.any())  # For backPressed
 
 
 func test_back_button_pops_and_frees() -> void:
