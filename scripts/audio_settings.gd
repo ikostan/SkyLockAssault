@@ -160,9 +160,9 @@ func _ready() -> void:
 	# _update_other_controls_ui()
 
 	if os_wrapper.has_feature("web"):
-		_toggle_audio_dom_visibility("block")
 		js_window = js_bridge_wrapper.get_interface("window")
 		if js_window:  # New: Null check
+			_toggle_audio_dom_visibility("block")
 			_audio_back_button_pressed_cb = js_bridge_wrapper.create_callback(
 				Callable(self, "_on_audio_back_button_pressed_js")
 			)
