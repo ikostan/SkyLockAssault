@@ -2,7 +2,7 @@
 
 # Set variables
 PROJECT_DIR="/project"
-EXPORT_DIR="$PROJECT_DIR/export/web"
+EXPORT_DIR="$PROJECT_DIR/export/web_thread_off"
 SERVER_PORT=8080
 PW_TIMEOUT=10000  # Default timeout in ms; adjustable
 
@@ -54,7 +54,7 @@ echo "Exporting Godot Project to Web..."
 mkdir -p $EXPORT_DIR
 
 # Simulate firebelley/godot-export action: Run Godot export to HTML5
-godot --headless --path $PROJECT_DIR --export-release "Web" $EXPORT_DIR/index.html
+godot --headless --path $PROJECT_DIR --export-release "Web_thread_off" $EXPORT_DIR/index.html
 check_exit "Godot Web Export"
 
 # Start web server in background
