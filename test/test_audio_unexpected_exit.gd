@@ -17,7 +17,7 @@ var audio_scene: PackedScene = preload("res://scenes/audio_settings.tscn")
 var options_instance: CanvasLayer
 var audio_instance: Control
 var mock_js_bridge: Variant  # GdUnit mock
-var mock_js_window: MockJSWindow  # Mock object for JS window
+var mock_js_window: Dictionary = {}  # Changed to Dictionary for dynamic properties
 var mock_os: Variant  # GdUnit mock
 var options_cb_called: bool = false
 var options_cb: Callable  # Mock options callback
@@ -33,12 +33,10 @@ func before_test() -> void:
 
 	# Mock JavaScriptBridgeWrapper
 	mock_js_bridge = mock(JavaScriptBridgeWrapper)
-	mock_js_window = MockJSWindow.new()
+	mock_js_window = {"backPressed": null}  # Dictionary allows dynamic keys like changeMasterVolume
 	do_return(mock_js_window).on(mock_js_bridge).get_interface("window")
 	do_return(null).on(mock_js_bridge).eval(GdUnitArgumentMatchers.any(), GdUnitArgumentMatchers.any())  # No-op for eval
-	# do_return(func(cb: Callable) -> Variant: return cb).on(mock_js_bridge).create_callback(GdUnitArgumentMatchers.any())  # Return callable as "JSObject"
-	# Add this line (replace the old create_callback mock)
-	do_return(mock(JavaScriptObject)).on(mock_js_bridge).create_callback(GdUnitArgumentMatchers.any())
+	do_return({}).on(mock_js_bridge).create_callback(GdUnitArgumentMatchers.any())  # Return empty dict as mock JSObject
 	
 	# Reset Globals
 	Globals.hidden_menus = []
@@ -54,7 +52,7 @@ func before_test() -> void:
 
 	# Simulate options setting its callback
 	options_cb = Callable(self, "_mock_options_back_cb")
-	mock_js_window.backPressed = options_cb
+	mock_js_window["backPressed"] = options_cb  # Use dict key
 	Globals.log_message("Initial backPressed set to options_cb.", Globals.LogLevel.DEBUG)
 
 
@@ -78,7 +76,7 @@ func test_unexpected_audio_exit_restores_callback() -> void:
 	Globals.log_message("Starting unexpected exit test.", Globals.LogLevel.DEBUG)
 
 	# Log initial callback
-	Globals.log_message("Initial backPressed: " + str(mock_js_window.backPressed), Globals.LogLevel.DEBUG)
+	Globals.log_message("Initial backPressed: " + str(mock_js_window["backPressed"]), Globals.LogLevel.DEBUG)  # Dict key
 
 	# Instantiate audio (simulates opening from options)
 	audio_instance = auto_free(audio_scene.instantiate())
@@ -89,16 +87,16 @@ func test_unexpected_audio_exit_restores_callback() -> void:
 	options_instance.visible = false
 
 	# Log after audio _ready, backPressed should be audio's cb
-	Globals.log_message("After audio _ready, backPressed: " + str(mock_js_window.backPressed), Globals.LogLevel.DEBUG)
-	assert_that(mock_js_window.backPressed).is_not_equal(options_cb)  # Overwritten by audio
+	Globals.log_message("After audio _ready, backPressed: " + str(mock_js_window["backPressed"]), Globals.LogLevel.DEBUG)  # Dict key
+	assert_that(mock_js_window["backPressed"]).is_not_equal(options_cb)  # Overwritten by audio
 
 	# Simulate unexpected exit
 	audio_instance.queue_free()
 	await get_tree().process_frame  # Wait for tree exit
 
 	# Verify restoration
-	assert_that(mock_js_window.backPressed).is_equal(options_cb)
-	Globals.log_message("After exit, backPressed: " + str(mock_js_window.backPressed), Globals.LogLevel.DEBUG)
+	assert_that(mock_js_window["backPressed"]).is_equal(options_cb)
+	Globals.log_message("After exit, backPressed: " + str(mock_js_window["backPressed"]), Globals.LogLevel.DEBUG)  # Dict key
 
 	# Verify menu visibility and stack
 	assert_bool(options_instance.visible).is_true()
@@ -106,7 +104,7 @@ func test_unexpected_audio_exit_restores_callback() -> void:
 
 	# Simulate call to verify correct callback is restored and functional
 	options_cb_called = false  # Reset flag
-	mock_js_window.backPressed.call([])
+	mock_js_window["backPressed"].call([])  # Dict key
 	assert_bool(options_cb_called).is_true()  # Verify it was called
 
 
