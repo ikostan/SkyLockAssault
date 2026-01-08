@@ -35,6 +35,7 @@ UI_ELEMENTS: dict[str, dict[str, int]] = {
     "back_button": {"x": 647, "y": 625},
 }
 
+
 @pytest.fixture(scope="function")
 def page(playwright: Playwright) -> Page:
     """
