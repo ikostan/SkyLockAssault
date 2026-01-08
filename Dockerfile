@@ -37,9 +37,6 @@ RUN pip install pytest-html pytest-timeout
 # Install markdownlint-cli2 via npm (Node.js tool)
 RUN npm install -g markdownlint-cli2
 
-# Install Playwright MCP and Node Playwright (for AI-driven test generation)
-RUN npm install -g @playwright/test playwright-mcp
-
 # Download Godot v4.5 binary and export templates
 RUN wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip \
     && unzip Godot_v4.5-stable_linux.x86_64.zip \
@@ -70,9 +67,6 @@ RUN pip install playwright pytest-playwright pytest-asyncio \
 
 # Switch to non-root user (fixes DS002; all subsequent commands run as godotuser)
 USER godotuser
-
-# Install Node Playwright browsers (as godotuser; system deps already handled by Python install)
-RUN npx playwright install chromium
 
 # Install Playwright browsers (as godotuser, to place in user's cache)
 RUN playwright install
