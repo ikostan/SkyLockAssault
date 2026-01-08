@@ -77,7 +77,7 @@ fi
 
 # Run Playwright tests
 echo "Running Playwright Browser Tests..."
-pytest tests/difficulty_persistence_test.py -v --junitxml=$PROJECT_DIR/report.xml
+pytest tests/ --ignore=tests/refactor -v --junitxml=$PROJECT_DIR/report.xml
 check_exit "Playwright Tests"
 
 # Generate test report summary
