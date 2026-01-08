@@ -696,6 +696,7 @@ func _on_change_rotors_volume_js(args: Array) -> void:
 
 	# Update dependent controls (e.g., enables/disables weapon/rotor if SFX mute affects them)
 	_update_other_controls_ui()
+	_sync_dom_ui()
 
 
 func _on_toggle_mute_rotors_js(args: Array) -> void:
