@@ -48,4 +48,3 @@ report.xml
 v8_coverage_*.json
 tests/refactor/__pycache__/
 report.html
-report.html
