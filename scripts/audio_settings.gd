@@ -255,16 +255,34 @@ func _ready() -> void:
 func _sync_dom_ui() -> void:
 	if not os_wrapper.has_feature("web"):
 		return
-	js_bridge_wrapper.eval("document.getElementById('master-slider').value = " + str(master_slider.value))
-	js_bridge_wrapper.eval("document.getElementById('music-slider').value = " + str(music_slider.value))
+	js_bridge_wrapper.eval(
+		"document.getElementById('master-slider').value = " + str(master_slider.value)
+	)
+	js_bridge_wrapper.eval(
+		"document.getElementById('music-slider').value = " + str(music_slider.value)
+	)
 	js_bridge_wrapper.eval("document.getElementById('sfx-slider').value = " + str(sfx_slider.value))
-	js_bridge_wrapper.eval("document.getElementById('weapon-slider').value = " + str(weapon_slider.value))
-	js_bridge_wrapper.eval("document.getElementById('rotors-slider').value = " + str(rotor_slider.value))
-	js_bridge_wrapper.eval("document.getElementById('mute-master').checked = " + str(mute_master.button_pressed))
-	js_bridge_wrapper.eval("document.getElementById('mute-music').checked = " + str(mute_music.button_pressed))
-	js_bridge_wrapper.eval("document.getElementById('mute-sfx').checked = " + str(mute_sfx.button_pressed))
-	js_bridge_wrapper.eval("document.getElementById('mute-weapon').checked = " + str(mute_weapon.button_pressed))
-	js_bridge_wrapper.eval("document.getElementById('mute-rotors').checked = " + str(mute_rotor.button_pressed))
+	js_bridge_wrapper.eval(
+		"document.getElementById('weapon-slider').value = " + str(weapon_slider.value)
+	)
+	js_bridge_wrapper.eval(
+		"document.getElementById('rotors-slider').value = " + str(rotor_slider.value)
+	)
+	js_bridge_wrapper.eval(
+		"document.getElementById('mute-master').checked = " + str(mute_master.button_pressed)
+	)
+	js_bridge_wrapper.eval(
+		"document.getElementById('mute-music').checked = " + str(mute_music.button_pressed)
+	)
+	js_bridge_wrapper.eval(
+		"document.getElementById('mute-sfx').checked = " + str(mute_sfx.button_pressed)
+	)
+	js_bridge_wrapper.eval(
+		"document.getElementById('mute-weapon').checked = " + str(mute_weapon.button_pressed)
+	)
+	js_bridge_wrapper.eval(
+		"document.getElementById('mute-rotors').checked = " + str(mute_rotor.button_pressed)
+	)
 
 
 ## MASTER VOLUME
