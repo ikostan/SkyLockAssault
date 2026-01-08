@@ -199,7 +199,19 @@
         document.getElementById('back-button').onclick = () => window.backPressed([]);
         document.getElementById('log-level-select').onchange = (e) => window.changeLogLevel([e.target.selectedIndex]);
         document.getElementById('options-back-button').onclick = () => window.backPressed([]);  // Add this for options back
-        document.getElementById('audio-back-button').onclick = () => window.backPressed([]);  // Add this for audio back
+        document.getElementById('audio-back-button').onclick = () => window.audioBackPressed([]);  // Add this for audio back
+        document.getElementById('audio-reset-button').onclick = () => window.audioResetPressed([]);  // Add for reset
+        document.getElementById('master-slider').onchange = (e) => window.changeMasterVolume([parseFloat(e.target.value)]);
+        document.getElementById('music-slider').onchange = (e) => window.changeMusicVolume([parseFloat(e.target.value)]);
+        document.getElementById('sfx-slider').onchange = (e) => window.changeSfxVolume([parseFloat(e.target.value)]);
+        document.getElementById('weapon-slider').onchange = (e) => window.changeWeaponVolume([parseFloat(e.target.value)]);
+        document.getElementById('rotors-slider').onchange = (e) => window.changeRotorsVolume([parseFloat(e.target.value)]);
+        document.getElementById('mute-master').onchange = (e) => window.toggleMuteMaster([e.target.checked]);
+        document.getElementById('mute-music').onchange = (e) => window.toggleMuteMusic([e.target.checked]);
+        document.getElementById('mute-sfx').onchange = (e) => window.toggleMuteSfx([e.target.checked]);
+        document.getElementById('mute-weapon').onchange = (e) => window.toggleMuteWeapon([e.target.checked]);
+        document.getElementById('mute-rotors').onchange = (e) => window.toggleMuteRotors([e.target.checked]);
+    </script>
 </script>
 
 <div class="ime" contenteditable="true" style="background: none; opacity: 0; position: fixed; text-align: left; font-size: 1px; left: 0px; top: 0px; width: 100%; height: 40px; pointer-events: none; display: none;"></div>
