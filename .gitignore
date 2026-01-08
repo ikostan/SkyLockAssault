@@ -46,8 +46,4 @@ artifacts/main_menu.png
 artifacts/main_menu.png
 report.xml
 v8_coverage_*.json
-tests/refactor/__pycache__/weapon_firing_test.cpython-312-pytest-9.0.1.pyc
-tests/refactor/__pycache__/difficulty_integration_test.cpython-312-pytest-9.0.1.pyc
-tests/refactor/__pycache__/fuel_depletion_test.cpython-312-pytest-9.0.1.pyc
-tests/refactor/__pycache__/load_main_menu_test.cpython-312-pytest-9.0.1.pyc
-tests/refactor/__pycache__/log_level_test.cpython-312-pytest-9.0.1.pyc
+tests/refactor/__pycache__/
