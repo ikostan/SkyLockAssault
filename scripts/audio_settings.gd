@@ -152,8 +152,6 @@ func _ready() -> void:
 	Globals.log_message("Audio menu loaded.", Globals.LogLevel.DEBUG)
 
 	_sync_ui_from_manager()
-	# Apply initial UI state for others based on master (New)
-	# _update_other_controls_ui()
 
 	if os_wrapper.has_feature("web"):
 		js_window = js_bridge_wrapper.get_interface("window")
@@ -307,11 +305,9 @@ func _on_change_master_volume_js(args: Array) -> void:
 		)
 		return
 
-	# if args.size() > 0:
 	var value: float = float(args[0][0])
-	# AudioManager.set_volume(AudioConstants.BUS_MASTER, value)
 	value = clamp(value, 0.0, 1.0)
-	AudioManager.master_volume = value
+	AudioManager.set_volume(AudioConstants.BUS_MASTER, value)
 	master_slider.set_value_no_signal(value)
 	AudioManager.apply_volume_to_bus(AudioConstants.BUS_MASTER, value, AudioManager.master_muted)
 	Globals.log_message("Master volume changed to: " + str(value), Globals.LogLevel.DEBUG)
@@ -335,12 +331,8 @@ func _on_toggle_mute_master_js(args: Array) -> void:
 		)
 		return
 
-	# if args.size() > 0:
 	var checked: bool = bool(args[0][0])
-	# print("checked: " + str(checked))
 	mute_master.button_pressed = checked
-	# _on_master_mute_toggled(checked)  # Adjust to your toggled func
-	# _sync_dom_ui()
 
 
 ## MUSIC VOLUME
@@ -380,7 +372,7 @@ func _on_music_mute_gui_input(event: InputEvent) -> void:
 	)
 
 
-# New: JS callback for music volume
+## New: JS callback for music volume
 ## :param args: Array with volume value (e.g., [[0.5]]).
 ## :type args: Array
 ## :rtype: void
@@ -396,7 +388,6 @@ func _on_change_music_volume_js(args: Array) -> void:
 		)
 		return
 
-	# if args.size() > 0:
 	var value: float = float(args[0][0])  # Parse the float from JS array
 	# Clamp value to valid range (0.0-1.0) for safety
 	value = clamp(value, 0.0, 1.0)
@@ -438,9 +429,7 @@ func _on_toggle_mute_music_js(args: Array) -> void:
 		)
 		return
 
-	# if args.size() > 0:
 	var checked: bool = bool(args[0][0])  # true if button is checked (unmuted)
-	# _on_music_mute_toggled(checked)
 	mute_music.button_pressed = checked
 
 
@@ -499,7 +488,6 @@ func _on_change_sfx_volume_js(args: Array) -> void:
 		)
 		return
 
-	# if args.size() > 0:
 	var value: float = float(args[0][0])  # Parse from JS array
 	value = clamp(value, 0.0, 1.0)  # Safety: Prevent invalid values (e.g., from test scripts)
 
@@ -542,9 +530,7 @@ func _on_toggle_mute_sfx_js(args: Array) -> void:
 		)
 		return
 
-	# if args.size() > 0:
 	var checked: bool = bool(args[0][0])  # true if button is checked (unmuted)
-	# _on_sfx_mute_toggled(checked)
 	mute_sfx.button_pressed = checked
 
 
@@ -604,7 +590,6 @@ func _on_change_weapon_volume_js(args: Array) -> void:
 		)
 		return
 
-	# if args.size() > 0:
 	var value: float = float(args[0][0])  # Parse from JS array
 	value = clamp(value, 0.0, 1.0)  # Safety: Prevent invalid values (e.g., from test scripts)
 
@@ -650,9 +635,7 @@ func _on_toggle_mute_weapon_js(args: Array) -> void:
 		)
 		return
 
-	# if args.size() > 0:
 	var checked: bool = bool(args[0][0])  # true if button is checked (unmuted)
-	# _on_weapon_mute_toggled(checked)
 	mute_weapon.button_pressed = checked
 
 
@@ -712,7 +695,6 @@ func _on_change_rotors_volume_js(args: Array) -> void:
 		)
 		return
 
-	# if args.size() > 0:
 	var value: float = float(args[0][0])  # Parse from JS array
 	value = clamp(value, 0.0, 1.0)  # Safety: Prevent invalid values (e.g., from test scripts)
 
@@ -758,9 +740,7 @@ func _on_toggle_mute_rotors_js(args: Array) -> void:
 		)
 		return
 
-	# if args.size() > 0:
 	var checked: bool = bool(args[0][0])  # true if button is checked (unmuted)
-	# _on_rotor_mute_toggled(checked)
 	mute_rotor.button_pressed = checked
 
 
