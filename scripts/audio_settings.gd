@@ -971,38 +971,22 @@ func _toggle_audio_dom_visibility(visibility: String) -> void:
 	## :param visibility: "block" or "none".
 	## :type visibility: String
 	## :rtype: void
-	(
-		js_bridge_wrapper
-		. eval(
-			(
-				"""
-		document.getElementById('audio-back-button').style.display = '%s';
-		document.getElementById('audio-reset-button').style.display = '%s';
-		document.getElementById('master-slider').style.display = '%s';
-		document.getElementById('music-slider').style.display = '%s';
-		document.getElementById('sfx-slider').style.display = '%s';
-		document.getElementById('weapon-slider').style.display = '%s';
-		document.getElementById('rotors-slider').style.display = '%s';
-		document.getElementById('mute-master').style.display = '%s';
-		document.getElementById('mute-music').style.display = '%s';
-		document.getElementById('mute-sfx').style.display = '%s';
-		document.getElementById('mute-weapon').style.display = '%s';
-		document.getElementById('mute-rotors').style.display = '%s';
-	"""
-				% [
-					visibility,
-					visibility,
-					visibility,
-					visibility,
-					visibility,
-					visibility,
-					visibility,
-					visibility,
-					visibility,
-					visibility,
-					visibility,
-					visibility
-				]
-			)
+	var ids: Array = [
+		"audio-back-button",
+		"audio-reset-button",
+		"master-slider",
+		"music-slider",
+		"sfx-slider",
+		"weapon-slider",
+		"rotors-slider",
+		"mute-master",
+		"mute-music",
+		"mute-sfx",
+		"mute-weapon",
+		"mute-rotors"
+	]
+
+	for id: String in ids:
+		js_bridge_wrapper.eval(
+			"document.getElementById('%s').style.display = '%s';" % [id, visibility]
 		)
-	)
