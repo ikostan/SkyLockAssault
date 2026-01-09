@@ -123,7 +123,7 @@ func test_ready_web() -> void:
 	assert_bool(audio_menu.tree_exited.is_connected(audio_menu._on_tree_exited)).is_true()
 	assert_int(audio_menu.process_mode).is_equal(Node.PROCESS_MODE_ALWAYS)
 	
-	verify(mock_js_bridge, 1).eval(
+	verify(mock_js_bridge, 12).eval(
 		ContainsMatcher.new("style.display = 'block'"),
 		false
 	)  # For visibility toggle
