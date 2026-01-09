@@ -1,24 +1,45 @@
-[gd_scene load_steps=2 format=3 uid="uid://4cavnb0mmtn8"]
+[gd_scene load_steps=3 format=3 uid="uid://b5gng6qabe5s"]
 
-[ext_resource type="Script" uid="uid://8hd1kvmb5bt1" path="res://scripts/volume_slider.gd" id="1_ks6b7"]
+[ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_xrowc"]
+[ext_resource type="Script" uid="uid://8hd1kvmb5bt1" path="res://scripts/volume_slider.gd" id="2_xrowc"]
 
-[node name="MasterVolumeControl" type="Control"]
+[node name="Master" type="Control"]
 layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+anchors_preset = 0
+offset_right = 400.0
+offset_bottom = 24.0
+tooltip_text = "Master Volum Control"
+
+[node name="MasterLabel" type="Label" parent="."]
+layout_mode = 0
+size_flags_horizontal = 0
+size_flags_vertical = 1
+theme_override_fonts/font = ExtResource("1_xrowc")
+theme_override_font_sizes/font_size = 18
+text = "{MASTER}"
 
 [node name="HSlider" type="HSlider" parent="."]
 layout_direction = 2
 layout_mode = 0
-offset_right = 180.0
-offset_bottom = 16.0
+offset_left = 125.0
+offset_right = 345.0
+offset_bottom = 24.0
 tooltip_text = "Slide to control master volume."
 max_value = 1.0
 step = 0.001
 tick_count = 16
 ticks_on_borders = true
-script = ExtResource("1_ks6b7")
+script = ExtResource("2_xrowc")
 bus_name = "Master"
+
+[node name="Mute" type="CheckButton" parent="."]
+layout_mode = 0
+offset_left = 360.0
+offset_right = 404.0
+offset_bottom = 24.0
+size_flags_horizontal = 10
+tooltip_text = "Mute All"
+button_pressed = true
+icon_alignment = 2
+vertical_icon_alignment = 0
+expand_icon = true

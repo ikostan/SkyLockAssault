@@ -1,24 +1,49 @@
-[gd_scene load_steps=2 format=3 uid="uid://eb04pytcq5xc"]
+[gd_scene load_steps=3 format=3 uid="uid://cotnw0o3axyd6"]
 
-[ext_resource type="Script" uid="uid://8hd1kvmb5bt1" path="res://scripts/volume_slider.gd" id="1_t0uy8"]
+[ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_ami7e"]
+[ext_resource type="Script" uid="uid://8hd1kvmb5bt1" path="res://scripts/volume_slider.gd" id="2_ami7e"]
 
-[node name="MusicVolumeControl" type="Control"]
+[node name="Music" type="Control"]
 layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+anchors_preset = 0
+offset_right = 400.0
+offset_bottom = 24.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+tooltip_text = "Music Volum Control"
+
+[node name="MusicLabel" type="Label" parent="."]
+layout_mode = 0
+offset_top = 3.0
+offset_right = 77.0
+offset_bottom = 21.0
+size_flags_horizontal = 0
+theme_override_fonts/font = ExtResource("1_ami7e")
+theme_override_font_sizes/font_size = 18
+text = "{MUSIC}"
 
 [node name="HSlider" type="HSlider" parent="."]
 layout_direction = 2
 layout_mode = 0
-offset_right = 180.0
-offset_bottom = 16.0
+offset_left = 125.0
+offset_right = 345.0
+offset_bottom = 24.0
 tooltip_text = "Slide to control music volume."
 max_value = 1.0
 step = 0.001
 tick_count = 16
 ticks_on_borders = true
-script = ExtResource("1_t0uy8")
+script = ExtResource("2_ami7e")
 bus_name = "Music"
+
+[node name="Mute" type="CheckButton" parent="."]
+layout_mode = 0
+offset_left = 360.0
+offset_right = 404.0
+offset_bottom = 24.0
+size_flags_horizontal = 10
+tooltip_text = "Mute Music"
+button_pressed = true
+icon_alignment = 2
+vertical_icon_alignment = 0
+expand_icon = true

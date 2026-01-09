@@ -47,28 +47,28 @@ var _audio_reset_cb: Variant
 
 # Master Volume Controls
 @onready
-var master_slider: HSlider = $Panel/OptionsContainer/VolumeControls/Master/MasterControl/HSlider
-@onready var mute_master: CheckButton = $Panel/OptionsContainer/VolumeControls/Master/Mute
+var master_slider: HSlider = $Panel/VolumeControls/Master/HSlider
+@onready var mute_master: CheckButton = $Panel/VolumeControls/Master/Mute
 # Music Volume Controls
 @onready
-var music_slider: HSlider = $Panel/OptionsContainer/VolumeControls/Music/MusicControl/HSlider
-@onready var mute_music: CheckButton = $Panel/OptionsContainer/VolumeControls/Music/Mute
+var music_slider: HSlider = $Panel/VolumeControls/Music/HSlider
+@onready var mute_music: CheckButton = $Panel/VolumeControls/Music/Mute
 # SFX Volume Controls
-@onready var sfx_slider: HSlider = $Panel/OptionsContainer/VolumeControls/SFX/SFXControl/HSlider
-@onready var mute_sfx: CheckButton = $Panel/OptionsContainer/VolumeControls/SFX/Mute
+@onready var sfx_slider: HSlider = $Panel/VolumeControls/SFX/HSlider
+@onready var mute_sfx: CheckButton = $Panel/VolumeControls/SFX/Mute
 # SFX Weapon Volume Controls
 @onready
-var weapon_slider: HSlider = $Panel/OptionsContainer/VolumeControls/SFXWeapon/WeaponControl/HSlider
-@onready var mute_weapon: CheckButton = $Panel/OptionsContainer/VolumeControls/SFXWeapon/Mute
+var weapon_slider: HSlider = $Panel/VolumeControls/SFXWeapon/HSlider
+@onready var mute_weapon: CheckButton = $Panel/VolumeControls/SFXWeapon/Mute
 # SFX Rotor Volume Controls
 @onready
-var rotor_slider: HSlider = $Panel/OptionsContainer/VolumeControls/SFXRotors/HSlider
-@onready var mute_rotor: CheckButton = $Panel/OptionsContainer/VolumeControls/SFXRotors/Mute
+var rotor_slider: HSlider = $Panel/VolumeControls/SFXRotors/HSlider
+@onready var mute_rotor: CheckButton = $Panel/VolumeControls/SFXRotors/Mute
 #Other UI elements
 @onready var master_warning_dialog: AcceptDialog = $MasterWarningDialog
 @onready var sfx_warning_dialog: AcceptDialog = $SFXWarningDialog
-@onready var audio_back_button: Button = $Panel/OptionsContainer/BtnContainer/AudioBackButton
-@onready var audio_reset_button: Button = $Panel/OptionsContainer/BtnContainer/AudioResetButton
+@onready var audio_back_button: Button = $Panel/BtnContainer/AudioBackButton
+@onready var audio_reset_button: Button = $Panel/BtnContainer/AudioResetButton
 
 
 func _ready() -> void:
