@@ -8,7 +8,7 @@ layout_mode = 3
 anchors_preset = 0
 offset_right = 400.0
 offset_bottom = 24.0
-tooltip_text = "Master Volum Control"
+tooltip_text = "Master Volume Control"
 
 [node name="MasterLabel" type="Label" parent="."]
 layout_mode = 0
