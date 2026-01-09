@@ -328,7 +328,11 @@ func _on_toggle_mute_master_js(args: Array) -> void:
 		args.is_empty()
 		or typeof(args[0]) != TYPE_ARRAY
 		or args[0].is_empty()
-		or (typeof(args[0][0]) != TYPE_BOOL and typeof(args[0][0]) != TYPE_INT and typeof(args[0][0]) != TYPE_FLOAT)
+		or (
+			typeof(args[0][0]) != TYPE_BOOL
+			and typeof(args[0][0]) != TYPE_INT
+			and typeof(args[0][0]) != TYPE_FLOAT
+		)
 	):
 		Globals.log_message(
 			"Invalid args in _on_toggle_mute_master_js: " + str(args), Globals.LogLevel.ERROR
@@ -427,7 +431,11 @@ func _on_toggle_mute_music_js(args: Array) -> void:
 		args.is_empty()
 		or typeof(args[0]) != TYPE_ARRAY
 		or args[0].is_empty()
-		or (typeof(args[0][0]) != TYPE_BOOL and typeof(args[0][0]) != TYPE_INT and typeof(args[0][0]) != TYPE_FLOAT)
+		or (
+			typeof(args[0][0]) != TYPE_BOOL
+			and typeof(args[0][0]) != TYPE_INT
+			and typeof(args[0][0]) != TYPE_FLOAT
+		)
 	):
 		Globals.log_message(
 			"Invalid args in _on_toggle_mute_music_js: " + str(args), Globals.LogLevel.ERROR
@@ -527,7 +535,11 @@ func _on_toggle_mute_sfx_js(args: Array) -> void:
 		args.is_empty()
 		or typeof(args[0]) != TYPE_ARRAY
 		or args[0].is_empty()
-		or (typeof(args[0][0]) != TYPE_BOOL and typeof(args[0][0]) != TYPE_INT and typeof(args[0][0]) != TYPE_FLOAT)
+		or (
+			typeof(args[0][0]) != TYPE_BOOL
+			and typeof(args[0][0]) != TYPE_INT
+			and typeof(args[0][0]) != TYPE_FLOAT
+		)
 	):
 		Globals.log_message(
 			"Invalid args in _on_toggle_mute_sfx_js: " + str(args), Globals.LogLevel.ERROR
@@ -631,7 +643,11 @@ func _on_toggle_mute_weapon_js(args: Array) -> void:
 		args.is_empty()
 		or typeof(args[0]) != TYPE_ARRAY
 		or args[0].is_empty()
-		or (typeof(args[0][0]) != TYPE_BOOL and typeof(args[0][0]) != TYPE_INT and typeof(args[0][0]) != TYPE_FLOAT)
+		or (
+			typeof(args[0][0]) != TYPE_BOOL
+			and typeof(args[0][0]) != TYPE_INT
+			and typeof(args[0][0]) != TYPE_FLOAT
+		)
 	):
 		Globals.log_message(
 			"Invalid args in _on_toggle_mute_weapon_js: " + str(args), Globals.LogLevel.ERROR
@@ -735,7 +751,11 @@ func _on_toggle_mute_rotors_js(args: Array) -> void:
 		args.is_empty()
 		or typeof(args[0]) != TYPE_ARRAY
 		or args[0].is_empty()
-		or (typeof(args[0][0]) != TYPE_BOOL and typeof(args[0][0]) != TYPE_INT and typeof(args[0][0]) != TYPE_FLOAT)
+		or (
+			typeof(args[0][0]) != TYPE_BOOL
+			and typeof(args[0][0]) != TYPE_INT
+			and typeof(args[0][0]) != TYPE_FLOAT
+		)
 	):
 		Globals.log_message(
 			"Invalid args in _on_toggle_mute_rotors_js: " + str(args), Globals.LogLevel.ERROR
