@@ -304,7 +304,7 @@ func _on_change_master_volume_js(args: Array) -> void:
 		args.is_empty()
 		or typeof(args[0]) != TYPE_ARRAY
 		or args[0].is_empty()
-		or (typeof(args[0][0]) != TYPE_BOOL and typeof(args[0][0]) != TYPE_INT)
+		or (typeof(args[0][0]) != TYPE_FLOAT and typeof(args[0][0]) != TYPE_INT)
 	):
 		Globals.log_message(
 			"Invalid args in _on_change_master_volume_js: " + str(args), Globals.LogLevel.ERROR
@@ -314,6 +314,7 @@ func _on_change_master_volume_js(args: Array) -> void:
 	# if args.size() > 0:
 	var value: float = float(args[0][0])
 	# AudioManager.set_volume(AudioConstants.BUS_MASTER, value)
+	value = clamp(value, 0.0, 1.0)
 	AudioManager.master_volume = value
 	master_slider.set_value_no_signal(value)
 	AudioManager.apply_volume_to_bus(AudioConstants.BUS_MASTER, value, AudioManager.master_muted)
