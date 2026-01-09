@@ -62,7 +62,7 @@ var weapon_slider: HSlider = $Panel/OptionsContainer/VolumeControls/SFXWeapon/We
 @onready var mute_weapon: CheckButton = $Panel/OptionsContainer/VolumeControls/SFXWeapon/Mute
 # SFX Rotor Volume Controls
 @onready
-var rotor_slider: HSlider = $Panel/OptionsContainer/VolumeControls/SFXRotors/RotorsControl/HSlider
+var rotor_slider: HSlider = $Panel/OptionsContainer/VolumeControls/SFXRotors/HSlider
 @onready var mute_rotor: CheckButton = $Panel/OptionsContainer/VolumeControls/SFXRotors/Mute
 #Other UI elements
 @onready var master_warning_dialog: AcceptDialog = $MasterWarningDialog

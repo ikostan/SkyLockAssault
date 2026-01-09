@@ -1,0 +1,29 @@
+[gd_scene load_steps=3 format=3 uid="uid://ckgawrkjfsld5"]
+
+[ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_xwfir"]
+[ext_resource type="PackedScene" uid="uid://bo5ooohvfu7u6" path="res://scenes/volume_controls/sfx_weapon_control.tscn" id="2_8yoka"]
+
+[node name="SFXWeapon" type="HBoxContainer"]
+size_flags_vertical = 3
+tooltip_text = "SFX Weapon Volum Control"
+theme_override_constants/separation = 32
+
+[node name="SFXWeapon" type="Label" parent="."]
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 0
+theme_override_fonts/font = ExtResource("1_xwfir")
+theme_override_font_sizes/font_size = 18
+text = "{WEAPON}"
+
+[node name="WeaponControl" parent="." instance=ExtResource("2_8yoka")]
+layout_mode = 2
+
+[node name="Mute" type="CheckButton" parent="."]
+layout_mode = 2
+size_flags_horizontal = 10
+tooltip_text = "Mute Weapon"
+button_pressed = true
+icon_alignment = 2
+vertical_icon_alignment = 0
+expand_icon = true

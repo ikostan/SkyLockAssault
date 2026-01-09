@@ -2,11 +2,11 @@
 
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_j3be7"]
 [ext_resource type="Script" uid="uid://c2u0utdi762fi" path="res://scripts/audio_settings.gd" id="1_yonr6"]
-[ext_resource type="PackedScene" uid="uid://4cavnb0mmtn8" path="res://scenes/volume_controls/master_volume_control.tscn" id="3_6jtyf"]
-[ext_resource type="PackedScene" uid="uid://eb04pytcq5xc" path="res://scenes/volume_controls/music_volume_control.tscn" id="4_73bp5"]
-[ext_resource type="PackedScene" uid="uid://6npyx3vjw3wg" path="res://scenes/volume_controls/sfx_volume_control.tscn" id="5_j3be7"]
-[ext_resource type="PackedScene" uid="uid://bo5ooohvfu7u6" path="res://scenes/volume_controls/sfx_weapon_control.tscn" id="6_yonr6"]
-[ext_resource type="PackedScene" uid="uid://cwcx54enfythj" path="res://scenes/volume_controls/sfx_rotors_volume_control.tscn" id="7_koe27"]
+[ext_resource type="PackedScene" uid="uid://b5gng6qabe5s" path="res://scenes/volume_controls/master_control.tscn" id="3_koe27"]
+[ext_resource type="PackedScene" uid="uid://cotnw0o3axyd6" path="res://scenes/volume_controls/music_control.tscn" id="4_a0ntd"]
+[ext_resource type="PackedScene" uid="uid://ckj1bkdiy65dd" path="res://scenes/volume_controls/sfx_control.tscn" id="5_w6v8r"]
+[ext_resource type="PackedScene" uid="uid://ckgawrkjfsld5" path="res://scenes/volume_controls/weapon_control.tscn" id="6_axthr"]
+[ext_resource type="PackedScene" uid="uid://nrunltyo5m58" path="res://scenes/volume_controls/sfx_rotors_volume_control.tscn" id="7_ut8uj"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_j3be7"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
@@ -47,6 +47,8 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
+offset_top = -12.0
+offset_bottom = 12.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 4
@@ -59,10 +61,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -215.0
-offset_top = -220.0
-offset_right = 215.0
-offset_bottom = 220.0
+offset_left = -225.0
+offset_top = -225.0
+offset_right = 225.0
+offset_bottom = 225.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 4
@@ -76,13 +78,13 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -185.0
+offset_left = -190.0
 offset_top = -195.0
-offset_right = 185.0
+offset_right = 190.0
 offset_bottom = 195.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 26
 
 [node name="Label" type="Label" parent="Panel/OptionsContainer"]
 layout_mode = 2
@@ -95,6 +97,7 @@ text = "{OPTIONS}"
 
 [node name="VolumeControls" type="VBoxContainer" parent="Panel/OptionsContainer"]
 layout_mode = 2
+size_flags_vertical = 4
 tooltip_text = "Volume Controls"
 theme_override_constants/separation = 20
 
@@ -106,133 +109,20 @@ theme_override_font_sizes/font_size = 25
 text = "{VOLUME=CONTROLS}"
 horizontal_alignment = 1
 
-[node name="Master" type="HBoxContainer" parent="Panel/OptionsContainer/VolumeControls"]
-layout_mode = 2
-size_flags_vertical = 3
-tooltip_text = "Master Volum Control"
-theme_override_constants/separation = 20
-
-[node name="MasterLabel" type="Label" parent="Panel/OptionsContainer/VolumeControls/Master"]
-layout_mode = 2
-size_flags_horizontal = 0
-size_flags_vertical = 1
-theme_override_fonts/font = ExtResource("1_j3be7")
-theme_override_font_sizes/font_size = 20
-text = "{MASTER}"
-
-[node name="MasterControl" parent="Panel/OptionsContainer/VolumeControls/Master" instance=ExtResource("3_6jtyf")]
-layout_mode = 2
-size_flags_horizontal = 0
-size_flags_vertical = 0
-
-[node name="Mute" type="CheckButton" parent="Panel/OptionsContainer/VolumeControls/Master"]
-layout_mode = 2
-size_flags_horizontal = 10
-tooltip_text = "Mute All"
-button_pressed = true
-icon_alignment = 2
-vertical_icon_alignment = 0
-expand_icon = true
-
-[node name="Music" type="HBoxContainer" parent="Panel/OptionsContainer/VolumeControls"]
-layout_mode = 2
-tooltip_text = "Music Volum Control"
-theme_override_constants/separation = 55
-
-[node name="MusicLabel" type="Label" parent="Panel/OptionsContainer/VolumeControls/Music"]
-layout_mode = 2
-size_flags_horizontal = 0
-theme_override_fonts/font = ExtResource("1_j3be7")
-theme_override_font_sizes/font_size = 18
-text = "{MUSIC}"
-
-[node name="MusicControl" parent="Panel/OptionsContainer/VolumeControls/Music" instance=ExtResource("4_73bp5")]
+[node name="Master" parent="Panel/OptionsContainer/VolumeControls" instance=ExtResource("3_koe27")]
 layout_mode = 2
 
-[node name="Mute" type="CheckButton" parent="Panel/OptionsContainer/VolumeControls/Music"]
-layout_mode = 2
-size_flags_horizontal = 10
-tooltip_text = "Mute Music"
-button_pressed = true
-icon_alignment = 2
-vertical_icon_alignment = 0
-expand_icon = true
-
-[node name="SFX" type="HBoxContainer" parent="Panel/OptionsContainer/VolumeControls"]
-layout_mode = 2
-size_flags_vertical = 3
-tooltip_text = "SFX Volum Controls"
-theme_override_constants/separation = 73
-
-[node name="SFXLabel" type="Label" parent="Panel/OptionsContainer/VolumeControls/SFX"]
-layout_mode = 2
-size_flags_horizontal = 0
-theme_override_fonts/font = ExtResource("1_j3be7")
-theme_override_font_sizes/font_size = 18
-text = "{SFX}"
-
-[node name="SFXControl" parent="Panel/OptionsContainer/VolumeControls/SFX" instance=ExtResource("5_j3be7")]
+[node name="Music" parent="Panel/OptionsContainer/VolumeControls" instance=ExtResource("4_a0ntd")]
 layout_mode = 2
 
-[node name="Mute" type="CheckButton" parent="Panel/OptionsContainer/VolumeControls/SFX"]
-layout_mode = 2
-size_flags_horizontal = 10
-tooltip_text = "Mute SFX"
-button_pressed = true
-icon_alignment = 2
-vertical_icon_alignment = 0
-expand_icon = true
-
-[node name="SFXWeapon" type="HBoxContainer" parent="Panel/OptionsContainer/VolumeControls"]
-layout_mode = 2
-size_flags_vertical = 3
-tooltip_text = "SFX Weapon Volum Control"
-theme_override_constants/separation = 32
-
-[node name="SFXWeapon" type="Label" parent="Panel/OptionsContainer/VolumeControls/SFXWeapon"]
-layout_mode = 2
-size_flags_horizontal = 0
-mouse_filter = 0
-theme_override_fonts/font = ExtResource("1_j3be7")
-theme_override_font_sizes/font_size = 18
-text = "{WEAPON}"
-
-[node name="WeaponControl" parent="Panel/OptionsContainer/VolumeControls/SFXWeapon" instance=ExtResource("6_yonr6")]
+[node name="SFX" parent="Panel/OptionsContainer/VolumeControls" instance=ExtResource("5_w6v8r")]
 layout_mode = 2
 
-[node name="Mute" type="CheckButton" parent="Panel/OptionsContainer/VolumeControls/SFXWeapon"]
-layout_mode = 2
-size_flags_horizontal = 10
-tooltip_text = "Mute Weapon"
-button_pressed = true
-icon_alignment = 2
-vertical_icon_alignment = 0
-expand_icon = true
-
-[node name="SFXRotors" type="HBoxContainer" parent="Panel/OptionsContainer/VolumeControls"]
-layout_mode = 2
-size_flags_vertical = 3
-tooltip_text = "SFX Rotors Volum Control"
-theme_override_constants/separation = 30
-
-[node name="SFXLabel" type="Label" parent="Panel/OptionsContainer/VolumeControls/SFXRotors"]
-layout_mode = 2
-size_flags_horizontal = 0
-theme_override_fonts/font = ExtResource("1_j3be7")
-theme_override_font_sizes/font_size = 18
-text = "{ROTORS}"
-
-[node name="RotorsControl" parent="Panel/OptionsContainer/VolumeControls/SFXRotors" instance=ExtResource("7_koe27")]
+[node name="SFXWeapon" parent="Panel/OptionsContainer/VolumeControls" instance=ExtResource("6_axthr")]
 layout_mode = 2
 
-[node name="Mute" type="CheckButton" parent="Panel/OptionsContainer/VolumeControls/SFXRotors"]
+[node name="SFXRotors" parent="Panel/OptionsContainer/VolumeControls" instance=ExtResource("7_ut8uj")]
 layout_mode = 2
-size_flags_horizontal = 10
-tooltip_text = "Mute Rotors"
-button_pressed = true
-icon_alignment = 2
-vertical_icon_alignment = 0
-expand_icon = true
 
 [node name="BtnContainer" type="HBoxContainer" parent="Panel/OptionsContainer"]
 layout_mode = 2
@@ -270,6 +160,3 @@ text = "{RESET}"
 [node name="MasterWarningDialog" type="AcceptDialog" parent="."]
 
 [node name="SFXWarningDialog" type="AcceptDialog" parent="."]
-
-[connection signal="gui_input" from="Panel/OptionsContainer/VolumeControls/Master/MasterControl" to="." method="_on_master_volume_control_gui_input"]
-[connection signal="toggled" from="Panel/OptionsContainer/VolumeControls/Master/Mute" to="." method="_on_master_mute_toggled"]

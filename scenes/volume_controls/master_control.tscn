@@ -1,0 +1,31 @@
+[gd_scene load_steps=3 format=3 uid="uid://b5gng6qabe5s"]
+
+[ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_xrowc"]
+[ext_resource type="PackedScene" uid="uid://4cavnb0mmtn8" path="res://scenes/volume_controls/master_volume_control.tscn" id="2_uygp8"]
+
+[node name="Master" type="HBoxContainer"]
+size_flags_vertical = 3
+tooltip_text = "Master Volum Control"
+theme_override_constants/separation = 20
+
+[node name="MasterLabel" type="Label" parent="."]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 1
+theme_override_fonts/font = ExtResource("1_xrowc")
+theme_override_font_sizes/font_size = 20
+text = "{MASTER}"
+
+[node name="MasterControl" parent="." instance=ExtResource("2_uygp8")]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+
+[node name="Mute" type="CheckButton" parent="."]
+layout_mode = 2
+size_flags_horizontal = 10
+tooltip_text = "Mute All"
+button_pressed = true
+icon_alignment = 2
+vertical_icon_alignment = 0
+expand_icon = true
