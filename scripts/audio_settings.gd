@@ -46,23 +46,19 @@ var _toggle_mute_rotors_cb: Variant
 var _audio_reset_cb: Variant
 
 # Master Volume Controls
-@onready
-var master_slider: HSlider = $Panel/VolumeControls/Master/HSlider
+@onready var master_slider: HSlider = $Panel/VolumeControls/Master/HSlider
 @onready var mute_master: CheckButton = $Panel/VolumeControls/Master/Mute
 # Music Volume Controls
-@onready
-var music_slider: HSlider = $Panel/VolumeControls/Music/HSlider
+@onready var music_slider: HSlider = $Panel/VolumeControls/Music/HSlider
 @onready var mute_music: CheckButton = $Panel/VolumeControls/Music/Mute
 # SFX Volume Controls
 @onready var sfx_slider: HSlider = $Panel/VolumeControls/SFX/HSlider
 @onready var mute_sfx: CheckButton = $Panel/VolumeControls/SFX/Mute
 # SFX Weapon Volume Controls
-@onready
-var weapon_slider: HSlider = $Panel/VolumeControls/SFXWeapon/HSlider
+@onready var weapon_slider: HSlider = $Panel/VolumeControls/SFXWeapon/HSlider
 @onready var mute_weapon: CheckButton = $Panel/VolumeControls/SFXWeapon/Mute
 # SFX Rotor Volume Controls
-@onready
-var rotor_slider: HSlider = $Panel/VolumeControls/SFXRotors/HSlider
+@onready var rotor_slider: HSlider = $Panel/VolumeControls/SFXRotors/HSlider
 @onready var mute_rotor: CheckButton = $Panel/VolumeControls/SFXRotors/Mute
 #Other UI elements
 @onready var master_warning_dialog: AcceptDialog = $MasterWarningDialog
