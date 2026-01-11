@@ -67,7 +67,7 @@ offset_bottom = 270.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 4
-tooltip_text = "Volune Controls"
+tooltip_text = "Volume Controls"
 theme_override_styles/panel = SubResource("StyleBoxFlat_j3be7")
 
 [node name="VolumeControls" type="VBoxContainer" parent="Panel"]
@@ -104,7 +104,6 @@ horizontal_alignment = 1
 
 [node name="Master" parent="Panel/VolumeControls" instance=ExtResource("3_koe27")]
 layout_mode = 2
-size_flags_vertical = 3
 
 [node name="Music" parent="Panel/VolumeControls" instance=ExtResource("4_a0ntd")]
 layout_mode = 2
