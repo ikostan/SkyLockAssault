@@ -243,19 +243,19 @@ func _sync_dom_ui() -> void:
 		"document.getElementById('rotors-slider').value = " + str(rotor_slider.value)
 	)
 	js_bridge_wrapper.eval(
-		"document.getElementById('mute-master').checked = " + str(mute_master.button_pressed)
+		"document.getElementById('mute-master').checked = " + str(mute_master.button_pressed).to_lower()
 	)
 	js_bridge_wrapper.eval(
-		"document.getElementById('mute-music').checked = " + str(mute_music.button_pressed)
+		"document.getElementById('mute-music').checked = " + str(mute_music.button_pressed).to_lower()
 	)
 	js_bridge_wrapper.eval(
-		"document.getElementById('mute-sfx').checked = " + str(mute_sfx.button_pressed)
+		"document.getElementById('mute-sfx').checked = " + str(mute_sfx.button_pressed).to_lower()
 	)
 	js_bridge_wrapper.eval(
-		"document.getElementById('mute-weapon').checked = " + str(mute_weapon.button_pressed)
+		"document.getElementById('mute-weapon').checked = " + str(mute_weapon.button_pressed).to_lower()
 	)
 	js_bridge_wrapper.eval(
-		"document.getElementById('mute-rotors').checked = " + str(mute_rotor.button_pressed)
+		"document.getElementById('mute-rotors').checked = " + str(mute_rotor.button_pressed).to_lower()
 	)
 
 
