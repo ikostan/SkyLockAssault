@@ -593,7 +593,7 @@ func _on_change_weapon_volume_js(args: Array) -> void:
 	var value: float = float(args[0][0])  # Parse from JS array
 	value = clamp(value, 0.0, 1.0)  # Safety: Prevent invalid values (e.g., from test scripts)
 
-	# Update AudioManager (sets sfx_volume)
+	# Update AudioManager (sets weapon_volume)
 	AudioManager.set_volume(AudioConstants.BUS_SFX_WEAPON, value)
 
 	# Apply to AudioServer bus (handles db conversion and mute check)
