@@ -826,10 +826,10 @@ func _toggle_audio_dom_visibility(visibility: String) -> void:
 	## :type visibility: String
 	## :rtype: void
 	if not os_wrapper.has_feature("web"):
-		Globals.log_message("os_wrapper has no feature web" + visibility, Globals.LogLevel.ERROR)
+		Globals.log_message("os_wrapper has no feature web", Globals.LogLevel.ERROR)
 		return
 	if not js_window:
-		Globals.log_message("js_window is NULL" + visibility, Globals.LogLevel.ERROR)
+		Globals.log_message("js_window is NULL", Globals.LogLevel.ERROR)
 		return
 	if visibility != "block" and visibility != "none":
 		Globals.log_message("Invalid visibility: " + visibility, Globals.LogLevel.ERROR)
