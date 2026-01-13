@@ -157,72 +157,45 @@ func _ready() -> void:
 		js_window = js_bridge_wrapper.get_interface("window")
 		if js_window:  # New: Null check
 			_toggle_audio_dom_visibility("block")
-			#_audio_back_button_pressed_cb = js_bridge_wrapper.create_callback(
-			#	Callable(self, "_on_audio_back_button_pressed_js")
-			#)
-			# _previous_back_pressed_cb = js_window.backPressed  # Save previous before overwrite
-			#js_window.audioBackPressed = _audio_back_button_pressed_cb  # Set audio callback
-			_audio_back_button_pressed_cb = _register_js_callback("_on_audio_back_button_pressed_js", "audioBackPressed")
-			##
+			# JS Callbacks
+			_audio_back_button_pressed_cb = _register_js_callback(
+				"_on_audio_back_button_pressed_js", "audioBackPressed"
+			)  # Expose callbacks for back button
 			# Expose callbacks for changing volume
-			# Master Volume
-			#_change_master_volume_cb = js_bridge_wrapper.create_callback(
-			#	Callable(self, "_on_change_master_volume_js")
-			#)
-			#js_window.changeMasterVolume = _change_master_volume_cb
-			_change_master_volume_cb = _register_js_callback("_on_change_master_volume_js", "changeMasterVolume")
-			# Music Volume
-			_change_music_volume_cb = js_bridge_wrapper.create_callback(
-				Callable(self, "_on_change_music_volume_js")
-			)
-			js_window.changeMusicVolume = _change_music_volume_cb
-			# SFX Volume
-			_change_sfx_volume_cb = js_bridge_wrapper.create_callback(
-				Callable(self, "_on_change_sfx_volume_js")
-			)
-			js_window.changeSfxVolume = _change_sfx_volume_cb
-			# Weapon Volume
-			_change_weapon_volume_cb = js_bridge_wrapper.create_callback(
-				Callable(self, "_on_change_weapon_volume_js")
-			)
-			js_window.changeWeaponVolume = _change_weapon_volume_cb
-			# Rotors Volume
-			_change_rotors_volume_cb = js_bridge_wrapper.create_callback(
-				Callable(self, "_on_change_rotors_volume_js")
-			)
-			js_window.changeRotorsVolume = _change_rotors_volume_cb
-			##
+			_change_master_volume_cb = _register_js_callback(
+				"_on_change_master_volume_js", "changeMasterVolume"
+			)  # Master Volume
+			_change_music_volume_cb = _register_js_callback(
+				"_on_change_music_volume_js", "changeMusicVolume"
+			)  # Music Volume
+			_change_sfx_volume_cb = _register_js_callback(
+				"_on_change_sfx_volume_js", "changeSfxVolume"
+			)  # SFX Volume
+			_change_weapon_volume_cb = _register_js_callback(
+				"_on_change_weapon_volume_js", "changeWeaponVolume"
+			)  # Weapon Volume
+			_change_rotors_volume_cb = _register_js_callback(
+				"_on_change_rotors_volume_js", "changeRotorsVolume"
+			)  # Rotors Volume
 			# Expose callbacks for mute
-			# Mute Master
-			_toggle_mute_master_cb = js_bridge_wrapper.create_callback(
-				Callable(self, "_on_toggle_mute_master_js")
-			)
-			js_window.toggleMuteMaster = _toggle_mute_master_cb
-			# Mute Music
-			_toggle_mute_music_cb = js_bridge_wrapper.create_callback(
-				Callable(self, "_on_toggle_mute_music_js")
-			)
-			js_window.toggleMuteMusic = _toggle_mute_music_cb
-			# Mute SFX
-			_toggle_mute_sfx_cb = js_bridge_wrapper.create_callback(
-				Callable(self, "_on_toggle_mute_sfx_js")
-			)
-			js_window.toggleMuteSfx = _toggle_mute_sfx_cb
-			# Mute Weapon
-			_toggle_mute_weapon_cb = js_bridge_wrapper.create_callback(
-				Callable(self, "_on_toggle_mute_weapon_js")
-			)
-			js_window.toggleMuteWeapon = _toggle_mute_weapon_cb
-			# Mute Rotors
-			_toggle_mute_rotors_cb = js_bridge_wrapper.create_callback(
-				Callable(self, "_on_toggle_mute_rotors_js")
-			)
-			js_window.toggleMuteRotors = _toggle_mute_rotors_cb
-			# Expose callbacks for Reset button
-			_audio_reset_cb = js_bridge_wrapper.create_callback(
-				Callable(self, "_on_audio_reset_js")
-			)
-			js_window.audioResetPressed = _audio_reset_cb
+			_toggle_mute_master_cb = _register_js_callback(
+				"_on_toggle_mute_master_js", "toggleMuteMaster"
+			)  # Mute Master
+			_toggle_mute_music_cb = _register_js_callback(
+				"_on_toggle_mute_music_js", "toggleMuteMusic"
+			)  # Mute Music
+			_toggle_mute_sfx_cb = _register_js_callback(
+				"_on_toggle_mute_sfx_js", "toggleMuteSfx"
+			)  # Mute SFX
+			_toggle_mute_weapon_cb = _register_js_callback(
+				"_on_toggle_mute_weapon_js", "toggleMuteWeapon"
+			)  # Mute Weapon
+			_toggle_mute_rotors_cb = _register_js_callback(
+				"_on_toggle_mute_rotors_js", "toggleMuteRotors"
+			)  # Mute Rotors
+			_audio_reset_cb = _register_js_callback(
+				"_on_audio_reset_js", "audioResetPressed"
+			)  # Expose callbacks for Reset button
 		_sync_dom_ui()
 
 
@@ -313,9 +286,7 @@ func _on_change_master_volume_js(args: Array) -> void:
 		or typeof(args[0]) != TYPE_OBJECT
 		or (typeof(args[0][0]) != TYPE_FLOAT and typeof(args[0][0]) != TYPE_INT)
 	):
-		Globals.log_message(
-			"Invalid args in _on_change_master_volume_js", Globals.LogLevel.ERROR
-		)
+		Globals.log_message("Invalid args in _on_change_master_volume_js", Globals.LogLevel.ERROR)
 		return
 
 	var value: float = float(args[0][0])
@@ -338,9 +309,7 @@ func _on_toggle_mute_master_js(args: Array) -> void:
 			and typeof(args[0][0]) != TYPE_FLOAT
 		)
 	):
-		Globals.log_message(
-			"Invalid args in _on_toggle_mute_master_js", Globals.LogLevel.ERROR
-		)
+		Globals.log_message("Invalid args in _on_toggle_mute_master_js", Globals.LogLevel.ERROR)
 		return
 
 	var checked: bool = bool(args[0][0])
@@ -394,9 +363,7 @@ func _on_change_music_volume_js(args: Array) -> void:
 		or typeof(args[0]) != TYPE_OBJECT
 		or (typeof(args[0][0]) != TYPE_FLOAT and typeof(args[0][0]) != TYPE_INT)
 	):
-		Globals.log_message(
-			"Invalid args in _on_change_music_volume_js", Globals.LogLevel.ERROR
-		)
+		Globals.log_message("Invalid args in _on_change_music_volume_js", Globals.LogLevel.ERROR)
 		return
 
 	var value: float = float(args[0][0])  # Parse the float from JS array
@@ -434,9 +401,7 @@ func _on_toggle_mute_music_js(args: Array) -> void:
 			and typeof(args[0][0]) != TYPE_FLOAT
 		)
 	):
-		Globals.log_message(
-			"Invalid args in _on_toggle_mute_music_js", Globals.LogLevel.ERROR
-		)
+		Globals.log_message("Invalid args in _on_toggle_mute_music_js", Globals.LogLevel.ERROR)
 		return
 
 	var checked: bool = bool(args[0][0])  # true if button is checked (unmuted)
@@ -492,9 +457,7 @@ func _on_change_sfx_volume_js(args: Array) -> void:
 		or typeof(args[0]) != TYPE_OBJECT
 		or (typeof(args[0][0]) != TYPE_FLOAT and typeof(args[0][0]) != TYPE_INT)
 	):
-		Globals.log_message(
-			"Invalid args in _on_change_sfx_volume_js", Globals.LogLevel.ERROR
-		)
+		Globals.log_message("Invalid args in _on_change_sfx_volume_js", Globals.LogLevel.ERROR)
 		return
 
 	var value: float = float(args[0][0])  # Parse from JS array
@@ -533,9 +496,7 @@ func _on_toggle_mute_sfx_js(args: Array) -> void:
 			and typeof(args[0][0]) != TYPE_FLOAT
 		)
 	):
-		Globals.log_message(
-			"Invalid args in _on_toggle_mute_sfx_js", Globals.LogLevel.ERROR
-		)
+		Globals.log_message("Invalid args in _on_toggle_mute_sfx_js", Globals.LogLevel.ERROR)
 		return
 
 	var checked: bool = bool(args[0][0])  # true if button is checked (unmuted)
@@ -592,9 +553,7 @@ func _on_change_weapon_volume_js(args: Array) -> void:
 		or typeof(args[0]) != TYPE_OBJECT
 		or (typeof(args[0][0]) != TYPE_FLOAT and typeof(args[0][0]) != TYPE_INT)
 	):
-		Globals.log_message(
-			"Invalid args in _on_change_weapon_volume_js", Globals.LogLevel.ERROR
-		)
+		Globals.log_message("Invalid args in _on_change_weapon_volume_js", Globals.LogLevel.ERROR)
 		return
 
 	var value: float = float(args[0][0])  # Parse from JS array
@@ -636,9 +595,7 @@ func _on_toggle_mute_weapon_js(args: Array) -> void:
 			and typeof(args[0][0]) != TYPE_FLOAT
 		)
 	):
-		Globals.log_message(
-			"Invalid args in _on_toggle_mute_weapon_js", Globals.LogLevel.ERROR
-		)
+		Globals.log_message("Invalid args in _on_toggle_mute_weapon_js", Globals.LogLevel.ERROR)
 		return
 
 	var checked: bool = bool(args[0][0])  # true if button is checked (unmuted)
@@ -695,9 +652,7 @@ func _on_change_rotors_volume_js(args: Array) -> void:
 		or typeof(args[0]) != TYPE_OBJECT
 		or (typeof(args[0][0]) != TYPE_FLOAT and typeof(args[0][0]) != TYPE_INT)
 	):
-		Globals.log_message(
-			"Invalid args in _on_change_rotors_volume_js", Globals.LogLevel.ERROR
-		)
+		Globals.log_message("Invalid args in _on_change_rotors_volume_js", Globals.LogLevel.ERROR)
 		return
 
 	var value: float = float(args[0][0])  # Parse from JS array
@@ -739,9 +694,7 @@ func _on_toggle_mute_rotors_js(args: Array) -> void:
 			and typeof(args[0][0]) != TYPE_FLOAT
 		)
 	):
-		Globals.log_message(
-			"Invalid args in _on_toggle_mute_rotors_js", Globals.LogLevel.ERROR
-		)
+		Globals.log_message("Invalid args in _on_toggle_mute_rotors_js", Globals.LogLevel.ERROR)
 		return
 
 	var checked: bool = bool(args[0][0])  # true if button is checked (unmuted)
