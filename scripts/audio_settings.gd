@@ -157,18 +157,20 @@ func _ready() -> void:
 		js_window = js_bridge_wrapper.get_interface("window")
 		if js_window:  # New: Null check
 			_toggle_audio_dom_visibility("block")
-			_audio_back_button_pressed_cb = js_bridge_wrapper.create_callback(
-				Callable(self, "_on_audio_back_button_pressed_js")
-			)
+			#_audio_back_button_pressed_cb = js_bridge_wrapper.create_callback(
+			#	Callable(self, "_on_audio_back_button_pressed_js")
+			#)
 			# _previous_back_pressed_cb = js_window.backPressed  # Save previous before overwrite
-			js_window.audioBackPressed = _audio_back_button_pressed_cb  # Set audio callback
+			#js_window.audioBackPressed = _audio_back_button_pressed_cb  # Set audio callback
+			_audio_back_button_pressed_cb = _register_js_callback("_on_audio_back_button_pressed_js", "audioBackPressed")
 			##
 			# Expose callbacks for changing volume
 			# Master Volume
-			_change_master_volume_cb = js_bridge_wrapper.create_callback(
-				Callable(self, "_on_change_master_volume_js")
-			)
-			js_window.changeMasterVolume = _change_master_volume_cb
+			#_change_master_volume_cb = js_bridge_wrapper.create_callback(
+			#	Callable(self, "_on_change_master_volume_js")
+			#)
+			#js_window.changeMasterVolume = _change_master_volume_cb
+			_change_master_volume_cb = _register_js_callback("_on_change_master_volume_js", "changeMasterVolume")
 			# Music Volume
 			_change_music_volume_cb = js_bridge_wrapper.create_callback(
 				Callable(self, "_on_change_music_volume_js")
@@ -308,12 +310,11 @@ func _on_master_mute_toggled(toggled_on: bool) -> void:
 func _on_change_master_volume_js(args: Array) -> void:
 	if (
 		args.is_empty()
-		or typeof(args[0]) != TYPE_ARRAY
-		or args[0].is_empty()
+		or typeof(args[0]) != TYPE_OBJECT
 		or (typeof(args[0][0]) != TYPE_FLOAT and typeof(args[0][0]) != TYPE_INT)
 	):
 		Globals.log_message(
-			"Invalid args in _on_change_master_volume_js: " + str(args), Globals.LogLevel.ERROR
+			"Invalid args in _on_change_master_volume_js", Globals.LogLevel.ERROR
 		)
 		return
 
@@ -330,8 +331,7 @@ func _on_change_master_volume_js(args: Array) -> void:
 func _on_toggle_mute_master_js(args: Array) -> void:
 	if (
 		args.is_empty()
-		or typeof(args[0]) != TYPE_ARRAY
-		or args[0].is_empty()
+		or typeof(args[0]) != TYPE_OBJECT
 		or (
 			typeof(args[0][0]) != TYPE_BOOL
 			and typeof(args[0][0]) != TYPE_INT
@@ -339,7 +339,7 @@ func _on_toggle_mute_master_js(args: Array) -> void:
 		)
 	):
 		Globals.log_message(
-			"Invalid args in _on_toggle_mute_master_js: " + str(args), Globals.LogLevel.ERROR
+			"Invalid args in _on_toggle_mute_master_js", Globals.LogLevel.ERROR
 		)
 		return
 
@@ -391,12 +391,11 @@ func _on_music_mute_gui_input(event: InputEvent) -> void:
 func _on_change_music_volume_js(args: Array) -> void:
 	if (
 		args.is_empty()
-		or typeof(args[0]) != TYPE_ARRAY
-		or args[0].is_empty()
+		or typeof(args[0]) != TYPE_OBJECT
 		or (typeof(args[0][0]) != TYPE_FLOAT and typeof(args[0][0]) != TYPE_INT)
 	):
 		Globals.log_message(
-			"Invalid args in _on_change_music_volume_js: " + str(args), Globals.LogLevel.ERROR
+			"Invalid args in _on_change_music_volume_js", Globals.LogLevel.ERROR
 		)
 		return
 
@@ -428,8 +427,7 @@ func _on_change_music_volume_js(args: Array) -> void:
 func _on_toggle_mute_music_js(args: Array) -> void:
 	if (
 		args.is_empty()
-		or typeof(args[0]) != TYPE_ARRAY
-		or args[0].is_empty()
+		or typeof(args[0]) != TYPE_OBJECT
 		or (
 			typeof(args[0][0]) != TYPE_BOOL
 			and typeof(args[0][0]) != TYPE_INT
@@ -437,7 +435,7 @@ func _on_toggle_mute_music_js(args: Array) -> void:
 		)
 	):
 		Globals.log_message(
-			"Invalid args in _on_toggle_mute_music_js: " + str(args), Globals.LogLevel.ERROR
+			"Invalid args in _on_toggle_mute_music_js", Globals.LogLevel.ERROR
 		)
 		return
 
@@ -491,12 +489,11 @@ func _on_sfx_mute_gui_input(event: InputEvent) -> void:
 func _on_change_sfx_volume_js(args: Array) -> void:
 	if (
 		args.is_empty()
-		or typeof(args[0]) != TYPE_ARRAY
-		or args[0].is_empty()
+		or typeof(args[0]) != TYPE_OBJECT
 		or (typeof(args[0][0]) != TYPE_FLOAT and typeof(args[0][0]) != TYPE_INT)
 	):
 		Globals.log_message(
-			"Invalid args in _on_change_sfx_volume_js: " + str(args), Globals.LogLevel.ERROR
+			"Invalid args in _on_change_sfx_volume_js", Globals.LogLevel.ERROR
 		)
 		return
 
@@ -529,8 +526,7 @@ func _on_change_sfx_volume_js(args: Array) -> void:
 func _on_toggle_mute_sfx_js(args: Array) -> void:
 	if (
 		args.is_empty()
-		or typeof(args[0]) != TYPE_ARRAY
-		or args[0].is_empty()
+		or typeof(args[0]) != TYPE_OBJECT
 		or (
 			typeof(args[0][0]) != TYPE_BOOL
 			and typeof(args[0][0]) != TYPE_INT
@@ -538,7 +534,7 @@ func _on_toggle_mute_sfx_js(args: Array) -> void:
 		)
 	):
 		Globals.log_message(
-			"Invalid args in _on_toggle_mute_sfx_js: " + str(args), Globals.LogLevel.ERROR
+			"Invalid args in _on_toggle_mute_sfx_js", Globals.LogLevel.ERROR
 		)
 		return
 
@@ -593,12 +589,11 @@ func _on_weapon_mute_gui_input(event: InputEvent) -> void:
 func _on_change_weapon_volume_js(args: Array) -> void:
 	if (
 		args.is_empty()
-		or typeof(args[0]) != TYPE_ARRAY
-		or args[0].is_empty()
+		or typeof(args[0]) != TYPE_OBJECT
 		or (typeof(args[0][0]) != TYPE_FLOAT and typeof(args[0][0]) != TYPE_INT)
 	):
 		Globals.log_message(
-			"Invalid args in _on_change_weapon_volume_js: " + str(args), Globals.LogLevel.ERROR
+			"Invalid args in _on_change_weapon_volume_js", Globals.LogLevel.ERROR
 		)
 		return
 
@@ -634,8 +629,7 @@ func _on_change_weapon_volume_js(args: Array) -> void:
 func _on_toggle_mute_weapon_js(args: Array) -> void:
 	if (
 		args.is_empty()
-		or typeof(args[0]) != TYPE_ARRAY
-		or args[0].is_empty()
+		or typeof(args[0]) != TYPE_OBJECT
 		or (
 			typeof(args[0][0]) != TYPE_BOOL
 			and typeof(args[0][0]) != TYPE_INT
@@ -643,7 +637,7 @@ func _on_toggle_mute_weapon_js(args: Array) -> void:
 		)
 	):
 		Globals.log_message(
-			"Invalid args in _on_toggle_mute_weapon_js: " + str(args), Globals.LogLevel.ERROR
+			"Invalid args in _on_toggle_mute_weapon_js", Globals.LogLevel.ERROR
 		)
 		return
 
@@ -698,12 +692,11 @@ func _on_rotor_mute_gui_input(event: InputEvent) -> void:
 func _on_change_rotors_volume_js(args: Array) -> void:
 	if (
 		args.is_empty()
-		or typeof(args[0]) != TYPE_ARRAY
-		or args[0].is_empty()
+		or typeof(args[0]) != TYPE_OBJECT
 		or (typeof(args[0][0]) != TYPE_FLOAT and typeof(args[0][0]) != TYPE_INT)
 	):
 		Globals.log_message(
-			"Invalid args in _on_change_rotors_volume_js: " + str(args), Globals.LogLevel.ERROR
+			"Invalid args in _on_change_rotors_volume_js", Globals.LogLevel.ERROR
 		)
 		return
 
@@ -739,8 +732,7 @@ func _on_change_rotors_volume_js(args: Array) -> void:
 func _on_toggle_mute_rotors_js(args: Array) -> void:
 	if (
 		args.is_empty()
-		or typeof(args[0]) != TYPE_ARRAY
-		or args[0].is_empty()
+		or typeof(args[0]) != TYPE_OBJECT
 		or (
 			typeof(args[0][0]) != TYPE_BOOL
 			and typeof(args[0][0]) != TYPE_INT
@@ -748,7 +740,7 @@ func _on_toggle_mute_rotors_js(args: Array) -> void:
 		)
 	):
 		Globals.log_message(
-			"Invalid args in _on_toggle_mute_rotors_js: " + str(args), Globals.LogLevel.ERROR
+			"Invalid args in _on_toggle_mute_rotors_js", Globals.LogLevel.ERROR
 		)
 		return
 
@@ -982,3 +974,15 @@ func _toggle_audio_dom_visibility(visibility: String) -> void:
 		js_bridge_wrapper.eval(
 			"document.getElementById('%s').style.display = '%s';" % [id, visibility]
 		)
+
+
+## Registers a JS callback by creating and assigning it to window property.
+## :param callback_method: Name of the GDScript method to call.
+## :type callback_method: String
+## :param window_property: Name of the JS window property to assign.
+## :type window_property: String
+## :rtype: Variant
+func _register_js_callback(callback_method: String, window_property: String) -> Variant:
+	var callback: Variant = js_bridge_wrapper.create_callback(Callable(self, callback_method))
+	js_window[window_property] = callback
+	return callback
