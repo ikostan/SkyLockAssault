@@ -134,6 +134,7 @@ text = "{START=GAME}"
 [node name="OptionsButton" type="Button" parent="VideoStreamPlayer/Panel/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+tooltip_text = "Options button"
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
 theme_override_colors/font_focus_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
@@ -148,6 +149,7 @@ text = "{OPTIONS}"
 [node name="QuitButton" type="Button" parent="VideoStreamPlayer/Panel/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+tooltip_text = "Quit button"
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
 theme_override_colors/font_focus_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)

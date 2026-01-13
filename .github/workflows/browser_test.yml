@@ -93,7 +93,7 @@ jobs:
 
       - name: "Run Tests"
         run: |
-          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/difficulty_flow_test.py -v --junitxml=junit.xml -o junit_family=legacy
+          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/ -v --ignore=tests/refactor --junitxml=junit.xml -o junit_family=legacy
 
       - name: "List Coverage Reports"
         run: |

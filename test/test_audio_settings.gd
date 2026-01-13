@@ -7,10 +7,51 @@
 
 extends GdUnitTestSuite
 
+## Custom matcher for string contains check.
+class ContainsMatcher extends GdUnitArgumentMatcher:
+	## Substring to check for.
+	var _substring: String
+	
+	## Initializes matcher.
+	## :param substring: Text to match.
+	## :type substring: String
+	## :rtype: void
+	func _init(substring: String) -> void:
+		_substring = substring
+	
+	## Matches if value contains substring.
+	## :param value: Argument value.
+	## :type value: Variant
+	## :rtype: bool
+	func is_match(value: Variant) -> bool:
+		if value is String:
+			return value.contains(_substring)
+		return false
+	
+	## Returns matcher description.
+	## :rtype: String
+	func _to_string() -> String:
+		return "contains('%s')" % _substring
+
+## Custom matcher for value/checked patterns.
+class ValueOrCheckedMatcher extends GdUnitArgumentMatcher:
+	## Matches if value contains "value =" or "checked =".
+	## :param value: Argument value.
+	## :type value: Variant
+	## :rtype: bool
+	func is_match(value: Variant) -> bool:
+		if value is String:
+			return value.contains("value =") or value.contains("checked =")
+		return false
+	
+	## Returns matcher description.
+	## :rtype: String
+	func _to_string() -> String:
+		return "contains('value =') or contains('checked =')"
+
 var mock_js_bridge: Variant  # GdUnit mock for JavaScriptBridgeWrapper
 var mock_os: Variant  # GdUnit mock for OSWrapper
 var mock_js_window: Dictionary  # Mock for js_window
-
 
 func before_test() -> void:
 	## Per-test setup: Mock wrappers, reset Globals state.
@@ -36,6 +77,20 @@ func after_test() -> void:
 	Globals.hidden_menus = []  # Clean up
 	reset(mock_os)
 	reset(mock_js_bridge)
+
+
+## Tests DOM UI sync evals match expected patterns.
+## :rtype: void
+func test_sync_dom_ui_matching() -> void:
+	do_return(true).on(mock_os).has_feature("web")
+	var audio_menu: Control = auto_free(load("res://scenes/audio_settings.tscn").instantiate())
+	audio_menu.os_wrapper = mock_os
+	audio_menu.js_bridge_wrapper = mock_js_bridge
+	add_child(audio_menu)
+	verify(mock_js_bridge, 10).eval(
+		ValueOrCheckedMatcher.new(),
+		false
+	)
 
 
 func test_ready_non_web() -> void:
@@ -67,9 +122,19 @@ func test_ready_web() -> void:
 	assert_bool(audio_menu.audio_back_button.pressed.is_connected(audio_menu._on_audio_back_button_pressed)).is_true()
 	assert_bool(audio_menu.tree_exited.is_connected(audio_menu._on_tree_exited)).is_true()
 	assert_int(audio_menu.process_mode).is_equal(Node.PROCESS_MODE_ALWAYS)
-	verify(mock_js_bridge, 1).eval(GdUnitArgumentMatchers.by_type(TYPE_STRING), true)  # For show overlays
+	
+	verify(mock_js_bridge, 12).eval(
+		ContainsMatcher.new("style.display = 'block'"),
+		false
+	)  # For visibility toggle
+
+	verify(mock_js_bridge, 10).eval(
+		ValueOrCheckedMatcher.new(),
+		false
+	)  # For UI sync
+	
 	verify(mock_js_bridge, 1).get_interface("window")
-	verify(mock_js_bridge, 1).create_callback(GdUnitArgumentMatchers.any())  # For backPressed
+	verify(mock_js_bridge, 12).create_callback(GdUnitArgumentMatchers.any())  # For backPressed + volumes + mutes + reset
 
 
 func test_back_button_pops_and_frees() -> void:

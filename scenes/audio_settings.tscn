@@ -2,11 +2,11 @@
 
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_j3be7"]
 [ext_resource type="Script" uid="uid://c2u0utdi762fi" path="res://scripts/audio_settings.gd" id="1_yonr6"]
-[ext_resource type="PackedScene" uid="uid://4cavnb0mmtn8" path="res://scenes/volume_controls/master_volume_control.tscn" id="3_6jtyf"]
-[ext_resource type="PackedScene" uid="uid://eb04pytcq5xc" path="res://scenes/volume_controls/music_volume_control.tscn" id="4_73bp5"]
-[ext_resource type="PackedScene" uid="uid://6npyx3vjw3wg" path="res://scenes/volume_controls/sfx_volume_control.tscn" id="5_j3be7"]
-[ext_resource type="PackedScene" uid="uid://bo5ooohvfu7u6" path="res://scenes/volume_controls/sfx_weapon_control.tscn" id="6_yonr6"]
-[ext_resource type="PackedScene" uid="uid://cwcx54enfythj" path="res://scenes/volume_controls/sfx_rotors_volume_control.tscn" id="7_koe27"]
+[ext_resource type="PackedScene" uid="uid://b5gng6qabe5s" path="res://scenes/volume_controls/master_volume_control.tscn" id="3_koe27"]
+[ext_resource type="PackedScene" uid="uid://cotnw0o3axyd6" path="res://scenes/volume_controls/music_volume_control.tscn" id="4_a0ntd"]
+[ext_resource type="PackedScene" uid="uid://ckj1bkdiy65dd" path="res://scenes/volume_controls/sfx_volume_control.tscn" id="5_w6v8r"]
+[ext_resource type="PackedScene" uid="uid://ckgawrkjfsld5" path="res://scenes/volume_controls/sfx_weapon_volume_control.tscn" id="6_axthr"]
+[ext_resource type="PackedScene" uid="uid://nrunltyo5m58" path="res://scenes/volume_controls/sfx_rotors_volume_control.tscn" id="7_ut8uj"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_j3be7"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
@@ -30,6 +30,7 @@ corner_radius_bottom_left = 40
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_a0ntd"]
 bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+border_color = Color(0.20784314, 0.20784314, 0.20784314, 1)
 corner_radius_top_left = 40
 corner_radius_top_right = 40
 corner_radius_bottom_right = 40
@@ -59,189 +60,88 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -215.0
-offset_top = -220.0
-offset_right = 215.0
-offset_bottom = 220.0
+offset_left = -225.0
+offset_top = -250.0
+offset_right = 225.0
+offset_bottom = 270.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 4
-tooltip_text = "Volune Controls"
+tooltip_text = "Volume Controls"
 theme_override_styles/panel = SubResource("StyleBoxFlat_j3be7")
 
-[node name="OptionsContainer" type="VBoxContainer" parent="Panel"]
+[node name="VolumeControls" type="VBoxContainer" parent="Panel"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -185.0
-offset_top = -195.0
-offset_right = 185.0
-offset_bottom = 195.0
+offset_left = -197.5
+offset_top = -230.0
+offset_right = 197.5
+offset_bottom = 151.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 27
 
-[node name="Label" type="Label" parent="Panel/OptionsContainer"]
+[node name="MainLabel" type="Label" parent="Panel/VolumeControls"]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 6
 theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("1_j3be7")
-theme_override_font_sizes/font_size = 50
+theme_override_font_sizes/font_size = 55
 text = "{OPTIONS}"
 
-[node name="VolumeControls" type="VBoxContainer" parent="Panel/OptionsContainer"]
-layout_mode = 2
-tooltip_text = "Volume Controls"
-theme_override_constants/separation = 20
-
-[node name="Label" type="Label" parent="Panel/OptionsContainer/VolumeControls"]
+[node name="SubLabel" type="Label" parent="Panel/VolumeControls"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("1_j3be7")
-theme_override_font_sizes/font_size = 25
+theme_override_font_sizes/font_size = 28
 text = "{VOLUME=CONTROLS}"
 horizontal_alignment = 1
 
-[node name="Master" type="HBoxContainer" parent="Panel/OptionsContainer/VolumeControls"]
+[node name="Master" parent="Panel/VolumeControls" instance=ExtResource("3_koe27")]
 layout_mode = 2
+
+[node name="Music" parent="Panel/VolumeControls" instance=ExtResource("4_a0ntd")]
+layout_mode = 2
+
+[node name="SFX" parent="Panel/VolumeControls" instance=ExtResource("5_w6v8r")]
+layout_mode = 2
+size_flags_horizontal = 1
+
+[node name="SFXWeapon" parent="Panel/VolumeControls" instance=ExtResource("6_axthr")]
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 2
+
+[node name="SFXRotors" parent="Panel/VolumeControls" instance=ExtResource("7_ut8uj")]
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 2
+
+[node name="BtnContainer" type="HBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 25.0
+offset_top = -80.0
+offset_right = -25.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
 size_flags_vertical = 3
-tooltip_text = "Master Volum Control"
 theme_override_constants/separation = 20
 
-[node name="MasterLabel" type="Label" parent="Panel/OptionsContainer/VolumeControls/Master"]
+[node name="AudioBackButton" type="Button" parent="Panel/BtnContainer"]
 layout_mode = 2
-size_flags_horizontal = 0
-size_flags_vertical = 1
-theme_override_fonts/font = ExtResource("1_j3be7")
-theme_override_font_sizes/font_size = 20
-text = "{MASTER}"
-
-[node name="MasterControl" parent="Panel/OptionsContainer/VolumeControls/Master" instance=ExtResource("3_6jtyf")]
-layout_mode = 2
-size_flags_horizontal = 0
-size_flags_vertical = 0
-
-[node name="Mute" type="CheckButton" parent="Panel/OptionsContainer/VolumeControls/Master"]
-layout_mode = 2
-size_flags_horizontal = 10
-tooltip_text = "Mute All"
-button_pressed = true
-icon_alignment = 2
-vertical_icon_alignment = 0
-expand_icon = true
-
-[node name="Music" type="HBoxContainer" parent="Panel/OptionsContainer/VolumeControls"]
-layout_mode = 2
-tooltip_text = "Music Volum Control"
-theme_override_constants/separation = 55
-
-[node name="MusicLabel" type="Label" parent="Panel/OptionsContainer/VolumeControls/Music"]
-layout_mode = 2
-size_flags_horizontal = 0
-theme_override_fonts/font = ExtResource("1_j3be7")
-theme_override_font_sizes/font_size = 18
-text = "{MUSIC}"
-
-[node name="MusicControl" parent="Panel/OptionsContainer/VolumeControls/Music" instance=ExtResource("4_73bp5")]
-layout_mode = 2
-
-[node name="Mute" type="CheckButton" parent="Panel/OptionsContainer/VolumeControls/Music"]
-layout_mode = 2
-size_flags_horizontal = 10
-tooltip_text = "Mute Music"
-button_pressed = true
-icon_alignment = 2
-vertical_icon_alignment = 0
-expand_icon = true
-
-[node name="SFX" type="HBoxContainer" parent="Panel/OptionsContainer/VolumeControls"]
-layout_mode = 2
-size_flags_vertical = 3
-tooltip_text = "SFX Volum Controls"
-theme_override_constants/separation = 73
-
-[node name="SFXLabel" type="Label" parent="Panel/OptionsContainer/VolumeControls/SFX"]
-layout_mode = 2
-size_flags_horizontal = 0
-theme_override_fonts/font = ExtResource("1_j3be7")
-theme_override_font_sizes/font_size = 18
-text = "{SFX}"
-
-[node name="SFXControl" parent="Panel/OptionsContainer/VolumeControls/SFX" instance=ExtResource("5_j3be7")]
-layout_mode = 2
-
-[node name="Mute" type="CheckButton" parent="Panel/OptionsContainer/VolumeControls/SFX"]
-layout_mode = 2
-size_flags_horizontal = 10
-tooltip_text = "Mute SFX"
-button_pressed = true
-icon_alignment = 2
-vertical_icon_alignment = 0
-expand_icon = true
-
-[node name="SFXWeapon" type="HBoxContainer" parent="Panel/OptionsContainer/VolumeControls"]
-layout_mode = 2
-size_flags_vertical = 3
-tooltip_text = "SFX Weapon Volum Control"
-theme_override_constants/separation = 32
-
-[node name="SFXWeapon" type="Label" parent="Panel/OptionsContainer/VolumeControls/SFXWeapon"]
-layout_mode = 2
-size_flags_horizontal = 0
-mouse_filter = 0
-theme_override_fonts/font = ExtResource("1_j3be7")
-theme_override_font_sizes/font_size = 18
-text = "{WEAPON}"
-
-[node name="WeaponControl" parent="Panel/OptionsContainer/VolumeControls/SFXWeapon" instance=ExtResource("6_yonr6")]
-layout_mode = 2
-
-[node name="Mute" type="CheckButton" parent="Panel/OptionsContainer/VolumeControls/SFXWeapon"]
-layout_mode = 2
-size_flags_horizontal = 10
-tooltip_text = "Mute Weapon"
-button_pressed = true
-icon_alignment = 2
-vertical_icon_alignment = 0
-expand_icon = true
-
-[node name="SFXRotors" type="HBoxContainer" parent="Panel/OptionsContainer/VolumeControls"]
-layout_mode = 2
-size_flags_vertical = 3
-tooltip_text = "SFX Rotors Volum Control"
-theme_override_constants/separation = 30
-
-[node name="SFXLabel" type="Label" parent="Panel/OptionsContainer/VolumeControls/SFXRotors"]
-layout_mode = 2
-size_flags_horizontal = 0
-theme_override_fonts/font = ExtResource("1_j3be7")
-theme_override_font_sizes/font_size = 18
-text = "{ROTORS}"
-
-[node name="RotorsControl" parent="Panel/OptionsContainer/VolumeControls/SFXRotors" instance=ExtResource("7_koe27")]
-layout_mode = 2
-
-[node name="Mute" type="CheckButton" parent="Panel/OptionsContainer/VolumeControls/SFXRotors"]
-layout_mode = 2
-size_flags_horizontal = 10
-tooltip_text = "Mute Rotors"
-button_pressed = true
-icon_alignment = 2
-vertical_icon_alignment = 0
-expand_icon = true
-
-[node name="BtnContainer" type="HBoxContainer" parent="Panel/OptionsContainer"]
-layout_mode = 2
-size_flags_vertical = 4
-
-[node name="AudioBackButton" type="Button" parent="Panel/OptionsContainer/BtnContainer"]
-layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
+theme_override_colors/font_focus_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
+theme_override_colors/font_pressed_color = Color(0.9607843, 0.9607843, 0.050980393, 0.9019608)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("1_j3be7")
 theme_override_font_sizes/font_size = 35
@@ -251,9 +151,9 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_a0ntd")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_koe27")
 text = "{BACK}"
 
-[node name="AudioResetButton" type="Button" parent="Panel/OptionsContainer/BtnContainer"]
+[node name="AudioResetButton" type="Button" parent="Panel/BtnContainer"]
 layout_mode = 2
-size_flags_horizontal = 10
+size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
 theme_override_colors/font_focus_color = Color(1, 0.19607843, 0.2784314, 0.98039216)
@@ -270,6 +170,3 @@ text = "{RESET}"
 [node name="MasterWarningDialog" type="AcceptDialog" parent="."]
 
 [node name="SFXWarningDialog" type="AcceptDialog" parent="."]
-
-[connection signal="gui_input" from="Panel/OptionsContainer/VolumeControls/Master/MasterControl" to="." method="_on_master_volume_control_gui_input"]
-[connection signal="toggled" from="Panel/OptionsContainer/VolumeControls/Master/Mute" to="." method="_on_master_mute_toggled"]

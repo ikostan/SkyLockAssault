@@ -129,6 +129,21 @@
     <button id="options-button" style="top: 50%;">OPTIONS</button>
     <button id="quit-button" style="top: 60%;">QUIT</button>
 
+    <!-- Audio Menu Elements (invisible overlays) -->
+    <input id="master-slider" type="range" min="0" max="1" step="0.01" value="1.0" style="top: 30%; width: 200px; display: none;">
+    <input id="music-slider" type="range" min="0" max="1" step="0.01" value="1.0" style="top: 40%; width: 200px; display: none;">
+    <input id="sfx-slider" type="range" min="0" max="1" step="0.01" value="1.0" style="top: 50%; width: 200px; display: none;">
+    <input id="weapon-slider" type="range" min="0" max="1" step="0.01" value="1.0" style="top: 60%; width: 200px; display: none;">
+    <input id="rotors-slider" type="range" min="0" max="1" step="0.01" value="1.0" style="top: 70%; width: 200px; display: none;">
+
+    <input id="mute-master" type="checkbox" checked style="top: 30%; left: 60%; width: 50px; height: 50px; display: none;">
+    <input id="mute-music" type="checkbox" checked style="top: 40%; left: 60%; width: 50px; height: 50px; display: none;">
+    <input id="mute-sfx" type="checkbox" checked style="top: 50%; left: 60%; width: 50px; height: 50px; display: none;">
+    <input id="mute-weapon" type="checkbox" checked style="top: 60%; left: 60%; width: 50px; height: 50px; display: none;">
+    <input id="mute-rotors" type="checkbox" checked style="top: 70%; left: 60%; width: 50px; height: 50px; display: none;">
+
+    <button id="audio-reset-button" style="top: 80%; width: 150px; display: none;">Reset</button>
+
     <!-- Options Menu Elements (invisible overlays, shown when menu loads) -->
     <select id="log-level-select" style="top: 55%;">
         <option>DEBUG</option>
@@ -183,10 +198,20 @@
         document.getElementById('difficulty-slider').onchange = (e) => window.changeDifficulty([parseFloat(e.target.value)]);
         document.getElementById('back-button').onclick = () => window.backPressed([]);
         document.getElementById('log-level-select').onchange = (e) => window.changeLogLevel([e.target.selectedIndex]);
+        document.getElementById('master-slider').onchange = (e) => window.changeMasterVolume([parseFloat(e.target.value)]);
+        document.getElementById('music-slider').onchange = (e) => window.changeMusicVolume([parseFloat(e.target.value)]);
+        document.getElementById('sfx-slider').onchange = (e) => window.changeSfxVolume([parseFloat(e.target.value)]);
+        document.getElementById('weapon-slider').onchange = (e) => window.changeWeaponVolume([parseFloat(e.target.value)]);
+        document.getElementById('rotors-slider').onchange = (e) => window.changeRotorsVolume([parseFloat(e.target.value)]);
+        document.getElementById('mute-master').onchange = (e) => window.toggleMuteMaster([e.target.checked]);
+        document.getElementById('mute-music').onchange = (e) => window.toggleMuteMusic([e.target.checked]);
+        document.getElementById('mute-sfx').onchange = (e) => window.toggleMuteSfx([e.target.checked]);
+        document.getElementById('mute-weapon').onchange = (e) => window.toggleMuteWeapon([e.target.checked]);
+        document.getElementById('mute-rotors').onchange = (e) => window.toggleMuteRotors([e.target.checked]);
         document.getElementById('options-back-button').onclick = () => window.backPressed([]);  // Add this for options back
-        document.getElementById('audio-back-button').onclick = () => window.backPressed([]);  // Add this for audio back
-</script>
-
+        document.getElementById('audio-back-button').onclick = () => window.audioBackPressed([]);  // Add this for audio back
+        document.getElementById('audio-reset-button').onclick = () => window.audioResetPressed([]);  // Add for reset
+    </script>
 <div class="ime" contenteditable="true" style="background: none; opacity: 0; position: fixed; text-align: left; font-size: 1px; left: 0px; top: 0px; width: 100%; height: 40px; pointer-events: none; display: none;"></div>
 </body>
 </html>

@@ -35,7 +35,6 @@ jobs:
       - name: "Run GDUnit4 Tests"
         run: |
           ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
-            --verbose \
             --ignoreHeadlessMode \
             --add res://test
       - name: "Find Latest Report Directory"

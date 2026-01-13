@@ -1,3 +1,4 @@
+# player.gd
 extends Node2D
 
 ## Player controller for P-38 Lightning in SkyLockAssault.

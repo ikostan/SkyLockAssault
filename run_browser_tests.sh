@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PROJECT_DIR="/project"
-EXPORT_DIR="$PROJECT_DIR/export/web"
+EXPORT_DIR="$PROJECT_DIR/export/web_thread_off"
 SERVER_PORT=8080
 PW_TIMEOUT=10000
 
@@ -18,7 +18,7 @@ echo "Exporting Godot Project to Web..."
 mkdir -p $EXPORT_DIR
 
 # Simulate firebelley/godot-export action: Run Godot export to HTML5
-godot --headless --path $PROJECT_DIR --export-release "Web" $EXPORT_DIR/index.html
+godot --headless --path $PROJECT_DIR --export-release "Web_thread_off" $EXPORT_DIR/index.html
 check_exit "Godot Web Export"
 
 # Start web server in background
@@ -43,7 +43,7 @@ fi
 echo "Running Playwright Browser Tests..."
 mkdir -p $PROJECT_DIR/artifacts  # No chown
 source /opt/venv/bin/activate
-xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" pytest tests/log_level_test.py -v --timeout=$PW_TIMEOUT --capture=no --html=$PROJECT_DIR/report.html --self-contained-html --junitxml=$PROJECT_DIR/report.xml
+xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" pytest tests/ -v --timeout=$PW_TIMEOUT --ignore=tests/refactor --capture=no --html=$PROJECT_DIR/report.html --self-contained-html --junitxml=$PROJECT_DIR/report.xml
 check_exit "Playwright Tests"
 
 # Generate test report summary
