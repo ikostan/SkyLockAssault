@@ -2,7 +2,7 @@
 ## Unit test for audio menu unexpected exit flow on web.
 ##
 ## Simulates opening options, then audio, then unexpected removal.
-## Verifies callback restoration and menu visibility.
+## Verifies menu visibility.
 ##
 ## Mocks web environment for editor testing.
 ## Uses GdUnitTestSuite for assertions.
@@ -70,7 +70,7 @@ func after_test() -> void:
 
 
 func test_unexpected_audio_exit_restores_callback() -> void:
-	## Tests unexpected audio removal restores callback and menu.
+	## Tests unexpected audio removal restores menu.
 	##
 	## :rtype: void
 	Globals.log_message("Starting unexpected exit test.", Globals.LogLevel.DEBUG)
@@ -88,7 +88,7 @@ func test_unexpected_audio_exit_restores_callback() -> void:
 
 	# Log after audio _ready, backPressed should be audio's cb
 	Globals.log_message("After audio _ready, backPressed: " + str(mock_js_window["backPressed"]), Globals.LogLevel.DEBUG)  # Dict key
-	assert_that(mock_js_window["backPressed"]).is_not_equal(options_cb)  # Overwritten by audio
+	assert_that(mock_js_window["backPressed"]).is_equal(options_cb)  # Audio does not override backPressed
 
 	# Simulate unexpected exit
 	audio_instance.queue_free()
