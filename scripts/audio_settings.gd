@@ -199,7 +199,7 @@ func _ready() -> void:
 ## Sync DOM overlays from Godot UI.
 ## :rtype: void
 func _sync_dom_ui() -> void:
-	if not os_wrapper.has_feature("web"):
+	if not os_wrapper.has_feature("web") or not js_window:
 		return
 	js_bridge_wrapper.eval(
 		"document.getElementById('master-slider').value = " + str(master_slider.value)
