@@ -883,3 +883,4 @@ func _unset_audio_window_callbacks() -> void:
 	js_window.toggleMuteWeapon = null
 	js_window.toggleMuteRotors = null
 	js_window.audioResetPressed = null
+	js_window.audioBackPressed = null
