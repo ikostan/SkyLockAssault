@@ -138,7 +138,7 @@ func _ready() -> void:
 	if not mute_rotor.gui_input.is_connected(_on_rotor_mute_gui_input):
 		mute_rotor.gui_input.connect(_on_rotor_mute_gui_input)
 
-	# Back buttom
+	# Back button
 	if not audio_back_button.pressed.is_connected(_on_audio_back_button_pressed):
 		audio_back_button.pressed.connect(_on_audio_back_button_pressed)
 
@@ -670,7 +670,7 @@ func _on_audio_back_button_pressed() -> void:
 		if is_instance_valid(prev_menu):
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
-	if os_wrapper.has_feature("web"):
+	if os_wrapper.has_feature("web") and js_window:
 		_toggle_audio_dom_visibility("none")
 		_unset_audio_window_callbacks()
 	_intentional_exit = true
@@ -700,7 +700,7 @@ func _on_tree_exited() -> void:
 	## :rtype: void
 	if _intentional_exit:
 		return
-	if os_wrapper.has_feature("web"):
+	if os_wrapper.has_feature("web") and js_window:
 		_toggle_audio_dom_visibility("none")
 
 	if not Globals.hidden_menus.is_empty():
