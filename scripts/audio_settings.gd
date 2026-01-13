@@ -27,7 +27,6 @@ var sfx_warning_shown: bool = false
 
 # local
 var _audio_back_button_pressed_cb: Variant
-var _previous_back_pressed_cb: Variant
 var _intentional_exit: bool = false
 
 # Volume controls
@@ -194,7 +193,7 @@ func _ready() -> void:
 			)  # Mute Rotors
 			# Expose callbacks for Reset button
 			_audio_reset_cb = _register_js_callback("_on_audio_reset_js", "audioResetPressed")
-		_sync_dom_ui()
+			_sync_dom_ui()
 
 
 ## Sync DOM overlays from Godot UI.
@@ -749,9 +748,8 @@ func _on_audio_back_button_pressed() -> void:
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 	if os_wrapper.has_feature("web"):
-		if js_window:  # New: Null check
-			js_window.backPressed = _previous_back_pressed_cb  # Restore previous callback
 		_toggle_audio_dom_visibility("none")
+		_unset_audio_window_callbacks()
 	_intentional_exit = true
 	queue_free()
 
@@ -780,8 +778,6 @@ func _on_tree_exited() -> void:
 	if _intentional_exit:
 		return
 	if os_wrapper.has_feature("web"):
-		if js_window:  # New: Null check
-			js_window.backPressed = _previous_back_pressed_cb  # Restore previous callback
 		_toggle_audio_dom_visibility("none")
 
 	if not Globals.hidden_menus.is_empty():
@@ -937,3 +933,20 @@ func _register_js_callback(callback_method: String, window_property: String) -> 
 	var callback: Variant = js_bridge_wrapper.create_callback(Callable(self, callback_method))
 	js_window[window_property] = callback
 	return callback
+
+
+func _unset_audio_window_callbacks() -> void:
+	if not os_wrapper.has_feature("web") or not js_window:
+		return
+	# Prevent JS from calling into a freed audio_settings.gd instance.
+	js_window.changeMasterVolume = null
+	js_window.changeMusicVolume = null
+	js_window.changeSfxVolume = null
+	js_window.changeWeaponVolume = null
+	js_window.changeRotorsVolume = null
+	js_window.toggleMuteMaster = null
+	js_window.toggleMuteMusic = null
+	js_window.toggleMuteSfx = null
+	js_window.toggleMuteWeapon = null
+	js_window.toggleMuteRotors = null
+	js_window.audioReset = null
