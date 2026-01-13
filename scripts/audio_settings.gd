@@ -273,44 +273,55 @@ func _on_master_mute_toggled(toggled_on: bool) -> void:
 	_sync_dom_ui()
 
 
-# New: JS callback for master volume
-## :param args: Array with volume value.
-## :type args: Array
-## :rtype: void
-func _on_change_master_volume_js(args: Array) -> void:
+## Validates volume callback args. Returns -1.0 on invalid, else the value.
+func _validate_volume_args(args: Array, callback_name: String) -> float:
 	if (
 		args.is_empty()
 		or typeof(args[0]) != TYPE_OBJECT
 		or (typeof(args[0][0]) != TYPE_FLOAT and typeof(args[0][0]) != TYPE_INT)
 	):
-		Globals.log_message("Invalid args in _on_change_master_volume_js", Globals.LogLevel.ERROR)
-		return
+		Globals.log_message("Invalid args in " + callback_name, Globals.LogLevel.ERROR)
+		return -1.0
+	# Clamp value to valid range (0.0-1.0) for safety
+	return clamp(float(args[0][0]), 0.0, 1.0)
 
-	var value: float = float(args[0][0])
-	value = clamp(value, 0.0, 1.0)
+
+## Validates mute toggle callback args. Returns null on invalid.
+func _validate_mute_args(args: Array, callback_name: String) -> Variant:
+	if (
+		args.is_empty()
+		or typeof(args[0]) != TYPE_OBJECT
+		or (typeof(args[0][0]) != TYPE_BOOL and typeof(args[0][0]) != TYPE_INT and typeof(args[0][0]) != TYPE_FLOAT)
+	):
+		Globals.log_message("Invalid args in " + callback_name, Globals.LogLevel.ERROR)
+		return null
+	return bool(args[0][0])
+
+
+# New: JS callback for master volume
+## :param args: Array with volume value.
+## :type args: Array
+## :rtype: void
+func _on_change_master_volume_js(args: Array) -> void:
+	var value := _validate_volume_args(args, "_on_change_master_volume_js")
+	if value < 0.0:
+		return
+	# Update AudioManager (sets music_volume)
 	AudioManager.set_volume(AudioConstants.BUS_MASTER, value)
 	master_slider.set_value_no_signal(value)
+	# Apply to AudioServer bus (handles db conversion and mute check)
 	AudioManager.apply_volume_to_bus(AudioConstants.BUS_MASTER, value, AudioManager.master_muted)
+	# Log for debugging (visible in Godot console or browser logs)
 	Globals.log_message("Master volume changed to: " + str(value), Globals.LogLevel.DEBUG)
 	AudioManager.save_volumes()  # Call save directly (no debounce in this scope)
 	_sync_dom_ui()
 
 
 func _on_toggle_mute_master_js(args: Array) -> void:
-	if (
-		args.is_empty()
-		or typeof(args[0]) != TYPE_OBJECT
-		or (
-			typeof(args[0][0]) != TYPE_BOOL
-			and typeof(args[0][0]) != TYPE_INT
-			and typeof(args[0][0]) != TYPE_FLOAT
-		)
-	):
-		Globals.log_message("Invalid args in _on_toggle_mute_master_js", Globals.LogLevel.ERROR)
+	var checked: Variant = _validate_mute_args(args, "_on_toggle_mute_master_js")
+	if checked == null:
 		return
-
-	var checked: bool = bool(args[0][0])
-	mute_master.button_pressed = checked
+	mute_master.button_pressed = bool(checked)
 
 
 ## MUSIC VOLUME
@@ -355,54 +366,31 @@ func _on_music_mute_gui_input(event: InputEvent) -> void:
 ## :type args: Array
 ## :rtype: void
 func _on_change_music_volume_js(args: Array) -> void:
-	if (
-		args.is_empty()
-		or typeof(args[0]) != TYPE_OBJECT
-		or (typeof(args[0][0]) != TYPE_FLOAT and typeof(args[0][0]) != TYPE_INT)
-	):
-		Globals.log_message("Invalid args in _on_change_music_volume_js", Globals.LogLevel.ERROR)
+	var value := _validate_volume_args(args, "_on_change_music_volume_js")
+	if value < 0.0:
 		return
-
-	var value: float = float(args[0][0])  # Parse the float from JS array
-	# Clamp value to valid range (0.0-1.0) for safety
-	value = clamp(value, 0.0, 1.0)
-
 	# Update AudioManager (sets music_volume)
 	AudioManager.set_volume(AudioConstants.BUS_MUSIC, value)
-
 	# Apply to AudioServer bus (handles db conversion and mute check)
 	AudioManager.apply_volume_to_bus(AudioConstants.BUS_MUSIC, value, AudioManager.music_muted)
-
 	# Log for debugging (visible in Godot console or browser logs)
 	Globals.log_message("Music volume changed to: " + str(value), Globals.LogLevel.DEBUG)
 	Globals.log_message(
 		"Music Volume Level in AudioManager: " + str(AudioManager.music_volume),
 		Globals.LogLevel.DEBUG
 	)
-
 	# Save changes to config (persistent across sessions)
 	AudioManager.save_volumes()
-
 	# Sync UI (update slider value without emitting signals, keep editable state)
 	music_slider.set_value_no_signal(value)
 	_sync_dom_ui()
 
 
 func _on_toggle_mute_music_js(args: Array) -> void:
-	if (
-		args.is_empty()
-		or typeof(args[0]) != TYPE_OBJECT
-		or (
-			typeof(args[0][0]) != TYPE_BOOL
-			and typeof(args[0][0]) != TYPE_INT
-			and typeof(args[0][0]) != TYPE_FLOAT
-		)
-	):
-		Globals.log_message("Invalid args in _on_toggle_mute_music_js", Globals.LogLevel.ERROR)
+	var checked: Variant = _validate_mute_args(args, "_on_toggle_mute_music_js")
+	if checked == null:
 		return
-
-	var checked: bool = bool(args[0][0])  # true if button is checked (unmuted)
-	mute_music.button_pressed = checked
+	mute_music.button_pressed = bool(checked)
 
 
 ## SFX VOLUME
@@ -449,55 +437,32 @@ func _on_sfx_mute_gui_input(event: InputEvent) -> void:
 ## :type args: Array
 ## :rtype: void
 func _on_change_sfx_volume_js(args: Array) -> void:
-	if (
-		args.is_empty()
-		or typeof(args[0]) != TYPE_OBJECT
-		or (typeof(args[0][0]) != TYPE_FLOAT and typeof(args[0][0]) != TYPE_INT)
-	):
-		Globals.log_message("Invalid args in _on_change_sfx_volume_js", Globals.LogLevel.ERROR)
+	var value := _validate_volume_args(args, "_on_change_sfx_volume_js")
+	if value < 0.0:
 		return
-
-	var value: float = float(args[0][0])  # Parse from JS array
-	value = clamp(value, 0.0, 1.0)  # Safety: Prevent invalid values (e.g., from test scripts)
-
 	# Update AudioManager (sets sfx_volume)
 	AudioManager.set_volume(AudioConstants.BUS_SFX, value)
-
 	# Apply to AudioServer bus (handles db conversion and mute check)
 	AudioManager.apply_volume_to_bus(AudioConstants.BUS_SFX, value, AudioManager.sfx_muted)
-
 	# Log the change (matches your DEBUG logs in audio_manager.gd)
 	Globals.log_message("SFX volume level changed: " + str(value), Globals.LogLevel.DEBUG)
 	Globals.log_message(
 		"SFX Volume Level in AudioManager: " + str(AudioManager.sfx_volume), Globals.LogLevel.DEBUG
 	)
-
 	# Save settings (direct call, persistent across runs)
 	AudioManager.save_volumes()
-
 	# Sync UI without emitting signals (updates slider visually)
 	sfx_slider.set_value_no_signal(value)
-
 	# Update dependent controls (e.g., enables/disables weapon/rotor if SFX mute affects them)
 	_update_other_controls_ui()
 	_sync_dom_ui()
 
 
 func _on_toggle_mute_sfx_js(args: Array) -> void:
-	if (
-		args.is_empty()
-		or typeof(args[0]) != TYPE_OBJECT
-		or (
-			typeof(args[0][0]) != TYPE_BOOL
-			and typeof(args[0][0]) != TYPE_INT
-			and typeof(args[0][0]) != TYPE_FLOAT
-		)
-	):
-		Globals.log_message("Invalid args in _on_toggle_mute_sfx_js", Globals.LogLevel.ERROR)
+	var checked: Variant = _validate_mute_args(args, "_on_toggle_mute_sfx_js")
+	if checked == null:
 		return
-
-	var checked: bool = bool(args[0][0])  # true if button is checked (unmuted)
-	mute_sfx.button_pressed = checked
+	mute_sfx.button_pressed = bool(checked)
 
 
 ## WEAPON VOLUME
@@ -545,58 +510,35 @@ func _on_weapon_mute_gui_input(event: InputEvent) -> void:
 ## :type args: Array
 ## :rtype: void
 func _on_change_weapon_volume_js(args: Array) -> void:
-	if (
-		args.is_empty()
-		or typeof(args[0]) != TYPE_OBJECT
-		or (typeof(args[0][0]) != TYPE_FLOAT and typeof(args[0][0]) != TYPE_INT)
-	):
-		Globals.log_message("Invalid args in _on_change_weapon_volume_js", Globals.LogLevel.ERROR)
+	var value := _validate_volume_args(args, "_on_change_weapon_volume_js")
+	if value < 0.0:
 		return
-
-	var value: float = float(args[0][0])  # Parse from JS array
-	value = clamp(value, 0.0, 1.0)  # Safety: Prevent invalid values (e.g., from test scripts)
-
 	# Update AudioManager (sets weapon_volume)
 	AudioManager.set_volume(AudioConstants.BUS_SFX_WEAPON, value)
-
 	# Apply to AudioServer bus (handles db conversion and mute check)
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_SFX_WEAPON, value, AudioManager.weapon_muted
 	)
-
 	# Log the change (matches your DEBUG logs in audio_manager.gd)
 	Globals.log_message("Weapon volume level changed: " + str(value), Globals.LogLevel.DEBUG)
 	Globals.log_message(
 		"Weapon Volume Level in AudioManager: " + str(AudioManager.weapon_volume),
 		Globals.LogLevel.DEBUG
 	)
-
 	# Save settings (direct call, persistent across runs)
 	AudioManager.save_volumes()
-
 	# Sync UI without emitting signals (updates slider visually)
 	weapon_slider.set_value_no_signal(value)
-
 	# Update dependent controls (e.g., enables/disables weapon/rotor if SFX mute affects them)
 	_update_other_controls_ui()
 	_sync_dom_ui()
 
 
 func _on_toggle_mute_weapon_js(args: Array) -> void:
-	if (
-		args.is_empty()
-		or typeof(args[0]) != TYPE_OBJECT
-		or (
-			typeof(args[0][0]) != TYPE_BOOL
-			and typeof(args[0][0]) != TYPE_INT
-			and typeof(args[0][0]) != TYPE_FLOAT
-		)
-	):
-		Globals.log_message("Invalid args in _on_toggle_mute_weapon_js", Globals.LogLevel.ERROR)
+	var checked: Variant = _validate_mute_args(args, "_on_toggle_mute_weapon_js")
+	if checked == null:
 		return
-
-	var checked: bool = bool(args[0][0])  # true if button is checked (unmuted)
-	mute_weapon.button_pressed = checked
+	mute_weapon.button_pressed = bool(checked)
 
 
 ## ROTORS VOLUME
@@ -644,58 +586,35 @@ func _on_rotor_mute_gui_input(event: InputEvent) -> void:
 ## :type args: Array
 ## :rtype: void
 func _on_change_rotors_volume_js(args: Array) -> void:
-	if (
-		args.is_empty()
-		or typeof(args[0]) != TYPE_OBJECT
-		or (typeof(args[0][0]) != TYPE_FLOAT and typeof(args[0][0]) != TYPE_INT)
-	):
-		Globals.log_message("Invalid args in _on_change_rotors_volume_js", Globals.LogLevel.ERROR)
+	var value := _validate_volume_args(args, "_on_change_rotors_volume_js")
+	if value < 0.0:
 		return
-
-	var value: float = float(args[0][0])  # Parse from JS array
-	value = clamp(value, 0.0, 1.0)  # Safety: Prevent invalid values (e.g., from test scripts)
-
 	# Update AudioManager (sets rotors_volume)
 	AudioManager.set_volume(AudioConstants.BUS_SFX_ROTORS, value)
-
 	# Apply to AudioServer bus (handles db conversion and mute check)
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_SFX_ROTORS, value, AudioManager.rotors_muted
 	)
-
 	# Log the change (matches your DEBUG logs in audio_manager.gd)
 	Globals.log_message("Rotors volume level changed: " + str(value), Globals.LogLevel.DEBUG)
 	Globals.log_message(
 		"Rotors Volume Level in AudioManager: " + str(AudioManager.rotors_volume),
 		Globals.LogLevel.DEBUG
 	)
-
 	# Save settings (direct call, persistent across runs)
 	AudioManager.save_volumes()
-
 	# Sync UI without emitting signals (updates slider visually)
 	rotor_slider.set_value_no_signal(value)
-
 	# Update dependent controls (e.g., enables/disables weapon/rotor if SFX mute affects them)
 	_update_other_controls_ui()
 	_sync_dom_ui()
 
 
 func _on_toggle_mute_rotors_js(args: Array) -> void:
-	if (
-		args.is_empty()
-		or typeof(args[0]) != TYPE_OBJECT
-		or (
-			typeof(args[0][0]) != TYPE_BOOL
-			and typeof(args[0][0]) != TYPE_INT
-			and typeof(args[0][0]) != TYPE_FLOAT
-		)
-	):
-		Globals.log_message("Invalid args in _on_toggle_mute_rotors_js", Globals.LogLevel.ERROR)
+	var checked: Variant = _validate_mute_args(args, "_on_toggle_mute_rotors_js")
+	if checked == null:
 		return
-
-	var checked: bool = bool(args[0][0])  # true if button is checked (unmuted)
-	mute_rotor.button_pressed = checked
+	mute_rotor.button_pressed = bool(checked)
 
 
 ## RESET BUTTON
