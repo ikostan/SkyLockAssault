@@ -184,14 +184,16 @@ func _ready() -> void:
 			_toggle_mute_music_cb = _register_js_callback(
 				"_on_toggle_mute_music_js", "toggleMuteMusic"
 			)  # Mute Music
-			_toggle_mute_sfx_cb = _register_js_callback("_on_toggle_mute_sfx_js", "toggleMuteSfx")  # Mute SFX
+			# Mute SFX
+			_toggle_mute_sfx_cb = _register_js_callback("_on_toggle_mute_sfx_js", "toggleMuteSfx")
 			_toggle_mute_weapon_cb = _register_js_callback(
 				"_on_toggle_mute_weapon_js", "toggleMuteWeapon"
 			)  # Mute Weapon
 			_toggle_mute_rotors_cb = _register_js_callback(
 				"_on_toggle_mute_rotors_js", "toggleMuteRotors"
 			)  # Mute Rotors
-			_audio_reset_cb = _register_js_callback("_on_audio_reset_js", "audioResetPressed")  # Expose callbacks for Reset button
+			# Expose callbacks for Reset button
+			_audio_reset_cb = _register_js_callback("_on_audio_reset_js", "audioResetPressed")
 		_sync_dom_ui()
 
 
