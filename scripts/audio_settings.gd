@@ -702,6 +702,7 @@ func _on_tree_exited() -> void:
 		return
 	if os_wrapper.has_feature("web") and js_window:
 		_toggle_audio_dom_visibility("none")
+		_unset_audio_window_callbacks()
 
 	if not Globals.hidden_menus.is_empty():
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
