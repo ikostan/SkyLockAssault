@@ -54,6 +54,7 @@ def page(playwright: Playwright) -> Page:
     context = browser.new_context(viewport={"width": 1280, "height": 720})
     page = context.new_page()
     yield page
+    context.close()
     browser.close()
 
 
