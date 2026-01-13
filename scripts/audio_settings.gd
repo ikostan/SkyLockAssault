@@ -160,8 +160,8 @@ func _ready() -> void:
 			_audio_back_button_pressed_cb = js_bridge_wrapper.create_callback(
 				Callable(self, "_on_audio_back_button_pressed_js")
 			)
-			_previous_back_pressed_cb = js_window.backPressed  # Save previous before overwrite
-			js_window.backPressed = _audio_back_button_pressed_cb  # Set audio callback
+			# _previous_back_pressed_cb = js_window.backPressed  # Save previous before overwrite
+			js_window.audioBackPressed = _audio_back_button_pressed_cb  # Set audio callback
 			##
 			# Expose callbacks for changing volume
 			# Master Volume
@@ -220,7 +220,7 @@ func _ready() -> void:
 			_audio_reset_cb = js_bridge_wrapper.create_callback(
 				Callable(self, "_on_audio_reset_js")
 			)
-			js_window.audioReset = _audio_reset_cb
+			js_window.audioResetPressed = _audio_reset_cb
 		_sync_dom_ui()
 
 
