@@ -56,6 +56,7 @@ def page(playwright: Playwright) -> Page:
     yield page
     browser.close()
 
+
 def test_navigation_to_audio(page: Page) -> None:
     """
     Main test suite for navigation to audio settings using DOM overlays and coordinates.
