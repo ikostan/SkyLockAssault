@@ -291,7 +291,11 @@ func _validate_mute_args(args: Array, callback_name: String) -> Variant:
 	if (
 		args.is_empty()
 		or typeof(args[0]) != TYPE_OBJECT
-		or (typeof(args[0][0]) != TYPE_BOOL and typeof(args[0][0]) != TYPE_INT and typeof(args[0][0]) != TYPE_FLOAT)
+		or (
+			typeof(args[0][0]) != TYPE_BOOL
+			and typeof(args[0][0]) != TYPE_INT
+			and typeof(args[0][0]) != TYPE_FLOAT
+		)
 	):
 		Globals.log_message("Invalid args in " + callback_name, Globals.LogLevel.ERROR)
 		return null
@@ -830,7 +834,7 @@ func _toggle_audio_dom_visibility(visibility: String) -> void:
 	if visibility != "block" and visibility != "none":
 		Globals.log_message("Invalid visibility: " + visibility, Globals.LogLevel.ERROR)
 		return
-	
+
 	var ids: Array = [
 		"audio-back-button",
 		"audio-reset-button",
