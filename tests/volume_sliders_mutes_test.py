@@ -94,14 +94,14 @@ def test_volume_sliders_mutes(page: Page) -> None:
         page.wait_for_timeout(3000)
         assert any(
             "log level changed to: debug" in log["text"].lower() for log in logs), "Failed to set log level to DEBUG"
+        assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
 
         # Navigate to audio sub-menu (use coordinates for Godot-rendered button)
         canvas = page.locator("canvas")
         box: dict[str, float] | None = canvas.bounding_box()
         assert box is not None, "Canvas not found"
-        audio_x: float = box['x'] + UI_ELEMENTS["audio_settings_button"]["x"]
-        audio_y: float = box['y'] + UI_ELEMENTS["audio_settings_button"]["y"]
-        page.mouse.click(audio_x, audio_y)
+        # Open audio
+        page.click("#audio-button", force=True)
         page.wait_for_timeout(5000)  # Wait for audio scene load
         audio_display: str = page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display")
         assert audio_display == 'block', "Audio menu not loaded (master-slider not displayed)"

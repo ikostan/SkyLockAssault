@@ -100,19 +100,19 @@ def test_navigation_to_audio(page: Page) -> None:
         page.wait_for_timeout(3000)
         options_display: str = page.evaluate("window.getComputedStyle(document.getElementById('difficulty-slider')).display")
         assert options_display == 'block', "Options menu not loaded (difficulty-slider not displayed)"
+        assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
 
         # NAV-03: Set log level to DEBUG
         page.evaluate("window.changeLogLevel([0])")  # Index 0 for DEBUG
         page.wait_for_timeout(3000)
         assert any("log level changed to: debug" in log["text"].lower() for log in logs), "Failed to set log level to DEBUG"
 
-        # NAV-04: Navigate to audio sub-menu (use coordinates for Godot-rendered button)
+        # NAV-04: Navigate to audio sub-menu
         canvas = page.locator("canvas")
         box: dict[str, float] | None = canvas.bounding_box()
         assert box is not None, "Canvas not found"
-        audio_x: float = box['x'] + UI_ELEMENTS["audio_settings_button"]["x"]
-        audio_y: float = box['y'] + UI_ELEMENTS["audio_settings_button"]["y"]
-        page.mouse.click(audio_x, audio_y)
+        # Open audio
+        page.click("#audio-button", force=True)
         page.wait_for_timeout(5000)  # Wait for audio scene load and JS eval
         audio_display: str = page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display")
         assert audio_display == 'block', "Audio menu not loaded (master-slider not displayed)"

@@ -32,6 +32,7 @@ var audio_scene: PackedScene = preload("res://scenes/audio_settings.tscn")
 var _change_log_level_cb: JavaScriptObject
 var _change_difficulty_cb: JavaScriptObject
 var _options_back_button_pressed_cb: JavaScriptObject
+var _audio_pressed_cb: JavaScriptObject
 
 @onready var log_lvl_option: OptionButton = get_node(
 	"Panel/OptionsVBoxContainer/LogLevelContainer/LogLevelOptionButton"
@@ -100,6 +101,7 @@ func _ready() -> void:
 			js_bridge_wrapper
 			. eval(
 				"""
+				document.getElementById('audio-button').style.display = 'block';
 				document.getElementById('log-level-select').style.display = 'block';
 				document.getElementById('difficulty-slider').style.display = 'block';
 				document.getElementById('options-back-button').style.display = 'block';
@@ -110,23 +112,30 @@ func _ready() -> void:
 
 		# Expose callbacks to JS (store refs to prevent GC)
 		var js_window: JavaScriptObject = js_bridge_wrapper.get_interface("window")
-		_change_log_level_cb = js_bridge_wrapper.create_callback(
-			Callable(self, "_on_change_log_level_js")
-		)
-		js_window.changeLogLevel = _change_log_level_cb
+		if js_window:
+			_change_log_level_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_change_log_level_js")
+			)
+			js_window.changeLogLevel = _change_log_level_cb
 
-		_change_difficulty_cb = js_bridge_wrapper.create_callback(
-			Callable(self, "_on_change_difficulty_js")
-		)
-		js_window.changeDifficulty = _change_difficulty_cb
+			_change_difficulty_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_change_difficulty_js")
+			)
+			js_window.changeDifficulty = _change_difficulty_cb
 
-		_options_back_button_pressed_cb = js_bridge_wrapper.create_callback(
-			Callable(self, "_on_options_back_button_pressed_js")
-		)
-		js_window.backPressed = _options_back_button_pressed_cb
-		Globals.log_message(
-			"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
-		)
+			_options_back_button_pressed_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_options_back_button_pressed_js")
+			)
+			js_window.optionsBackPressed = _options_back_button_pressed_cb
+
+			_audio_pressed_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_audio_pressed_js")
+			)
+			js_window.audioPressed = _audio_pressed_cb
+			
+			Globals.log_message(
+				"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
+			)
 
 
 func _input(event: InputEvent) -> void:
@@ -194,6 +203,18 @@ func _on_log_level_item_selected(index: int) -> void:
 	# Temporary raw print to bypass log_message
 	Globals.log_message("Log level changed to: " + selected_name, Globals.LogLevel.DEBUG)
 	Globals._save_settings()
+
+
+# New: JS callback for audio button
+func _on_audio_pressed_js(args: Array) -> void:
+	## JS callback for audio button press.
+	##
+	## Routes to signal handler.
+	##
+	## :param args: Unused array from JS.
+	## :type args: Array
+	## :rtype: void
+	_on_audio_settings_button_pressed()
 
 
 # New: JS-specific callback (exactly one Array arg, no default)
@@ -265,6 +286,7 @@ func _on_options_back_button_pressed() -> void:
 			js_bridge_wrapper
 			. eval(
 				"""
+				document.getElementById('audio-button').style.display = 'none'
 				document.getElementById('log-level-select').style.display = 'none';
 				document.getElementById('difficulty-slider').style.display = 'none';
 				document.getElementById('options-back-button').style.display = 'none';
@@ -301,3 +323,5 @@ func _on_audio_settings_button_pressed() -> void:
 	get_tree().root.add_child(audio_instance)
 	Globals.hidden_menus.push_back(self)
 	self.visible = false
+	if os_wrapper.has_feature("web") and js_bridge_wrapper:
+		js_bridge_wrapper.eval("document.getElementById('audio-button').style.display = 'none';", true)
