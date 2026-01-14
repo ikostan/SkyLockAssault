@@ -81,20 +81,19 @@ def test_volume_sliders_mutes(page: Page) -> None:
 
     page.on("console", on_console)
     try:
-        page.goto("http://localhost:8080/index.html", wait_until="networkidle")
-        page.wait_for_timeout(10000)  # Wait for load
-        page.wait_for_function("() => window.godotInitialized", timeout=90000)
+        page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=5000)
+        page.wait_for_function("() => window.godotInitialized", timeout=5000)
 
         # Navigate to options menu
-        page.click("#options-button", force=True)
-        page.wait_for_timeout(3000)
+        page.wait_for_selector('#options-button', state='visible', timeout=1000)
+        page.click("#options-button", force=True, timeout=1000)
 
         # Set log level to DEBUG
         page.evaluate("window.changeLogLevel([0])")  # Index 0 for DEBUG
-        page.wait_for_timeout(3000)
+        page.wait_for_selector('#audio-button', state='visible', timeout=1000)
+        assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
         assert any(
             "log level changed to: debug" in log["text"].lower() for log in logs), "Failed to set log level to DEBUG"
-        assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
 
         # Navigate to audio sub-menu (use coordinates for Godot-rendered button)
         canvas = page.locator("canvas")

@@ -105,9 +105,8 @@ def test_audio_flow(page: Page) -> None:
         cdp_session.send("Profiler.enable")
         cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
 
-        page.goto("http://localhost:8080/index.html", wait_until="networkidle")
-        page.wait_for_timeout(10000)
-        page.wait_for_function("() => window.godotInitialized", timeout=90000)
+        page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=5000)
+        page.wait_for_function("() => window.godotInitialized", timeout=5000)
 
         # Verify canvas
         canvas = page.locator("canvas")
@@ -117,27 +116,27 @@ def test_audio_flow(page: Page) -> None:
         assert "SkyLockAssault" in page.title(), "Title not found"
 
         # Open options
+        page.wait_for_selector('#options-button', state='visible', timeout=1000)
         page.click("#options-button", force=True)
-        page.wait_for_timeout(3000)
         options_display: str = page.evaluate("window.getComputedStyle(document.getElementById('log-level-select')).display")
         assert options_display == 'block', "Options menu not loaded (difficulty-slider not displayed)"
 
         # Set log level DEBUG
         page.evaluate("window.changeLogLevel([0])")
-        page.wait_for_timeout(3000)
+        page.wait_for_timeout(1000)
         assert any("log level changed to: debug" in log["text"].lower() for log in logs)
         assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
 
         # Open audio
+        page.wait_for_selector('#audio-button', state='visible', timeout=1000)
         page.click("#audio-button", force=True)
-        page.wait_for_timeout(5000)
+        page.wait_for_timeout(1000)
         assert page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display") == 'block'
         assert any("audio button pressed" in log["text"].lower() for log in logs)
 
         # Get initial values
         initial_sfx: str = page.evaluate("document.getElementById('sfx-slider').value")
         initial_weapon: str = page.evaluate("document.getElementById('weapon-slider').value")
-        initial_music: str = page.evaluate("document.getElementById('music-slider').value")
 
         # WARN-01: Master muted → attempt sub-volume adjust (SFX)
         page.evaluate("window.toggleMuteMaster([0])")  # Mute
