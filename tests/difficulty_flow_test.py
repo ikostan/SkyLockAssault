@@ -34,7 +34,6 @@ import time
 import json
 import pytest
 from playwright.sync_api import Page, Playwright
-from .ui_elements_coords import UI_ELEMENTS  # Import the coordinates dictionary (unused after ID switch)
 
 
 @pytest.fixture(scope="function")

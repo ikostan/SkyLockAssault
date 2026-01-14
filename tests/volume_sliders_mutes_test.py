@@ -28,12 +28,6 @@ import time
 import pytest
 from playwright.sync_api import Page, Playwright
 
-# Define UI coordinates relative to canvas top-left (extended from ui_elements_coords.py)
-UI_ELEMENTS: dict[str, dict[str, int]] = {
-    "options_button": {"x": 635, "y": 355},
-    "audio_settings_button": {"x": 640, "y": 150},  # Estimated; adjust based on actual UI position
-}
-
 
 @pytest.fixture(scope="function")
 def page(playwright: Playwright) -> Page:
