@@ -132,7 +132,7 @@ func _ready() -> void:
 				Callable(self, "_on_audio_pressed_js")
 			)
 			js_window.audioPressed = _audio_pressed_cb
-			
+
 			Globals.log_message(
 				"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
 			)
@@ -324,4 +324,6 @@ func _on_audio_settings_button_pressed() -> void:
 	Globals.hidden_menus.push_back(self)
 	self.visible = false
 	if os_wrapper.has_feature("web") and js_bridge_wrapper:
-		js_bridge_wrapper.eval("document.getElementById('audio-button').style.display = 'none';", true)
+		js_bridge_wrapper.eval(
+			"document.getElementById('audio-button').style.display = 'none';", true
+		)
