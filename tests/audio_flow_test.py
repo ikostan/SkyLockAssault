@@ -40,7 +40,7 @@ def page(playwright: Playwright) -> Page:
     :return: The configured page object.
     :rtype: Page
     """
-    browser: playwright.sync_api.Browser = playwright.chromium.launch(headless=False, args=[
+    browser: playwright.sync_api.Browser = playwright.chromium.launch(headless=True, args=[
         "--enable-unsafe-swiftshader",
         "--disable-gpu",
         "--use-gl=swiftshader",
