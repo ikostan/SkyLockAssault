@@ -206,7 +206,7 @@ func _on_log_level_item_selected(index: int) -> void:
 
 
 # New: JS callback for audio button
-func _on_audio_pressed_js(args: Array) -> void:
+func _on_audio_pressed_js(_args: Array) -> void:
 	## JS callback for audio button press.
 	##
 	## Routes to signal handler.
