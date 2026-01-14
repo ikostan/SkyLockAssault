@@ -90,7 +90,7 @@ func _ready() -> void:
 			js_window.quitPressed = JavaScriptBridge.create_callback(
 				Callable(self, "_on_quit_pressed")
 			)
-			
+
 			Globals.log_message(
 				"Exposed main menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
 			)
