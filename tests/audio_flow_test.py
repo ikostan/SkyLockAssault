@@ -151,12 +151,13 @@ def test_audio_flow(page: Page) -> None:
 
         # Additional: Master muted → attempt sub-volume adjust (Music)
         # Attempt to change music while Master is still muted
-        page.evaluate("""
-            const slider = document.getElementById('music-slider');
-            slider.value = 0.3;
-            slider.dispatchEvent(new Event('input'));
-            slider.dispatchEvent(new Event('change'));
-        """)
+        #page.evaluate("""
+        #    const slider = document.getElementById('music-slider');
+        #    slider.value = 0.3;
+        #    slider.dispatchEvent(new Event('input'));
+        #    slider.dispatchEvent(new Event('change'));
+        #""")
+        page.evaluate("window.changeMusicVolume([0.3])")
         page.wait_for_timeout(1500)
         assert page.evaluate(
             "document.getElementById('music-slider').value") == initial_music, "Music value changed unexpectedly under Master mute"
@@ -165,12 +166,13 @@ def test_audio_flow(page: Page) -> None:
 
         # Additional: Master muted → attempt sub-volume adjust (Rotors)
         # Assuming Rotors is affected by Master mute (as a deeper sub-volume)
-        page.evaluate("""
-            const slider = document.getElementById('rotors-slider');
-            slider.value = 0.4;
-            slider.dispatchEvent(new Event('input'));
-            slider.dispatchEvent(new Event('change'));
-        """)
+        #page.evaluate("""
+        #    const slider = document.getElementById('rotors-slider');
+        #    slider.value = 0.4;
+        #    slider.dispatchEvent(new Event('input'));
+        #    slider.dispatchEvent(new Event('change'));
+        #""")
+        page.evaluate("window.changeRotorsVolume([0.4])")
         page.wait_for_timeout(1500)
         assert page.evaluate(
             "document.getElementById('rotors-slider').value") == initial_rotors, "Rotors value changed unexpectedly under Master mute"
@@ -192,12 +194,13 @@ def test_audio_flow(page: Page) -> None:
             "warning dialog" in log["text"].lower() for log in logs)
 
         # Additional: SFX muted → attempt rotors adjust (assuming Rotors under SFX)
-        page.evaluate("""
-            const slider = document.getElementById('rotors-slider');
-            slider.value = 0.5;
-            slider.dispatchEvent(new Event('input'));
-            slider.dispatchEvent(new Event('change'));
-        """)
+        #page.evaluate("""
+        #    const slider = document.getElementById('rotors-slider');
+        #    slider.value = 0.5;
+        #    slider.dispatchEvent(new Event('input'));
+        #    slider.dispatchEvent(new Event('change'));
+        #""")
+        page.evaluate("window.changeRotorsVolume([0.5])")
         page.wait_for_timeout(1500)
         assert page.evaluate(
             "document.getElementById('rotors-slider').value") == initial_rotors, "Rotors value changed unexpectedly under SFX mute"
@@ -212,12 +215,13 @@ def test_audio_flow(page: Page) -> None:
         # Capture logs before the change to isolate new ones (good for debugging in Godot tests)
         pre_change_log_count = len(logs)
 
-        page.evaluate("""
-            const slider = document.getElementById('music-slider');
-            slider.value = 0.6;
-            slider.dispatchEvent(new Event('input'));
-            slider.dispatchEvent(new Event('change'));
-        """)
+        #page.evaluate("""
+        #    const slider = document.getElementById('music-slider');
+        #    slider.value = 0.6;
+        #    slider.dispatchEvent(new Event('input'));
+        #    slider.dispatchEvent(new Event('change'));
+        #""")
+        page.evaluate("window.changeMusicVolume([0.6])")
         page.wait_for_timeout(1500)
 
         # Verify the value changed (as expected, no mute constraint)
