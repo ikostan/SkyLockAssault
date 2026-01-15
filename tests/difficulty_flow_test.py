@@ -195,6 +195,7 @@ def test_difficulty_flow(page: Page) -> None:
             raise TimeoutError("Main scene not loaded")
 
         # Refocus canvas to ensure input capture
+        page.wait_for_selector("canvas", state="visible", timeout=5000)
         page.click("canvas", timeout=1500)
 
         # Simulate fire (press Space)
