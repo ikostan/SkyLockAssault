@@ -168,13 +168,13 @@ def test_audio_flow(page: Page) -> None:
             "warning dialog" in log["text"].lower() for log in new_logs)
 
         # Unmute Master for next tests
-        pre_change_log_count = len(logs)
         page.evaluate("window.toggleMuteMaster([1])")
         page.wait_for_timeout(1500)
 
         # WARN-02: SFX muted → attempt weapon adjust
         page.evaluate("window.toggleMuteSfx([0])")  # Mute
         page.wait_for_timeout(1500)
+        pre_change_log_count = len(logs)
         page.evaluate("window.changeWeaponVolume([0])")
         page.wait_for_timeout(1500)
         assert page.evaluate(
