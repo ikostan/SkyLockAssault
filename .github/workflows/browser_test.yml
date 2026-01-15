@@ -25,11 +25,11 @@ jobs:
       - name: "Create Export Directories"
         run: |
           mkdir -p export/web_thread_off
+
       - name: "Export Godot to Web"
         id: "export"
         uses: "firebelley/godot-export@930577654862a320eef793f399ee911b4479efb9"
         with:
-          # yamllint disable rule:line-length
           godot_executable_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip"
           godot_export_templates_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz"
           relative_project_path: "./"
@@ -39,7 +39,6 @@ jobs:
           verbose: true
           presets_to_export: "Web_thread_off"
           use_preset_export_path: true  # Move exports to the directory defined in export_presets.cfg
-          # yamllint enable rule:line-length
       - name: "Flatten Export Directory"
         run: |
           bash ./.github/scripts/flatten_export.sh "export/web_thread_off" "Web_thread_off"
@@ -59,8 +58,7 @@ jobs:
         with:
           path: "~/.cache/pip"
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          restore-keys: ${{ runner.os }}-pip-
       - name: "Install Playwright"
         run: |
           sudo apt-get update && sudo apt-get install -y libxml2-utils
@@ -74,7 +72,8 @@ jobs:
 
       - name: "Install Playwright Browsers"
         if: steps.cache.outputs.cache-hit != 'true'  # Only install if not cached
-        run: playwright install --with-deps chromium
+        run: |
+          playwright install --with-deps chromium
 
       - name: "Start WEB Server"
         run: |
@@ -214,3 +213,4 @@ jobs:
           else
             echo "No Playwright JUnit XML found, skipping upload."
           fi
+  # yamllint enable rule:line-length
