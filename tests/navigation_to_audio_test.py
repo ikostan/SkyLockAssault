@@ -113,11 +113,30 @@ def test_navigation_to_audio(page: Page) -> None:
         assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
 
         # Open audio
-        page.click("#audio-button", force=True)
+        page.click("#audio-button", force=True, timeout=1500)
         page.wait_for_timeout(5000)  # Wait for audio scene load and JS eval
+
         audio_display: str = page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display")
         assert audio_display == 'block', "Audio menu not loaded (master-slider not displayed)"
         assert any("audio button pressed." in log["text"].lower() for log in logs), "Audio navigation log not found"
+
+        # Navigate back from audio menu
+        page.wait_for_selector('#audio-back-button', state='visible', timeout=1500)
+        # page.click("#audio-back-button", force=True, timeout=1500)
+        page.evaluate("window.audioBackPressed([])")
+        page.wait_for_timeout(2000)  # Wait for audio overlay to hide and main/options overlays to re-show
+
+        # Assert audio overlay is hidden again
+        audio_display_after_back: str = page.evaluate(
+            "window.getComputedStyle(document.getElementById('master-slider')).display"
+        )
+        assert audio_display_after_back == 'none', "Audio menu still visible after navigating back from audio menu"
+
+        # Assert main/options overlays are restored
+        options_overlay_display: str = page.evaluate(
+            "window.getComputedStyle(document.getElementById('difficulty-slider')).display"
+        )
+        assert options_overlay_display == 'block', "Options overlay not restored after exiting audio menu"
 
     except Exception as e:
         print(f"Test suite failed: {str(e)}")
