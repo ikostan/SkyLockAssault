@@ -77,6 +77,7 @@ def page(playwright: Playwright) -> Page:
             cdp_session.send("Profiler.disable")
         except Exception as e:
             print(f"Failed to save coverage: {e}")
+    context.close()
     browser.close()
 
 
