@@ -169,8 +169,9 @@ def test_difficulty_flow(page: Page) -> None:
         assert any("back button pressed." in log["text"].lower() for log in logs), "Back button not found"
 
         # Start game
-        page.wait_for_selector('#options-button', state='visible', timeout=1500)
+        page.wait_for_selector('#start-button', state='visible', timeout=1500)
         page.click("#start-button", force=True, timeout=1500)
+        page.wait_for_timeout(5000)  # Sometimes it takes longer time to pass the loading screen
 
         # Poll for loading start log to confirm transition to loading screen
         start_time = time.time()
