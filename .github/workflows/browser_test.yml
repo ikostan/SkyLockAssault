@@ -116,7 +116,10 @@ jobs:
             const fs = require('fs');
             const path = require('path');
             const V8ToIstanbul = require('v8-to-istanbul');
-            const coverage = JSON.parse(fs.readFileSync('$file', 'utf8'));
+            // Read and parse coverage file
+            const rawCoverage = JSON.parse(fs.readFileSync('$file', 'utf8'));
+            // Extract array from result if present, else use directly
+            const coverage = rawCoverage.result ? rawCoverage.result : rawCoverage;
             (async () => {
               let localCounter = 0;
               for (const entry of coverage) {
