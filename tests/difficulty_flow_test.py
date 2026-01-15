@@ -110,13 +110,13 @@ def test_difficulty_flow(page: Page) -> None:
         cdp_session.send("Profiler.enable")
         cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
 
-        page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=5000)
+        page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=3000)
         # Wait for Godot engine init (ensures 'godot' object is defined)
-        page.wait_for_function("() => window.godotInitialized", timeout=5000)
+        page.wait_for_function("() => window.godotInitialized", timeout=3000)
 
         # Verify canvas and title to ensure game is initialized
         canvas = page.locator("canvas")
-        page.wait_for_selector("canvas", state="visible", timeout=5000)
+        page.wait_for_selector("canvas", state="visible", timeout=3000)
         box: dict[str, float] | None = canvas.bounding_box()
         assert box is not None, "Canvas not found on page"
         assert "SkyLockAssault" in page.title(), "Title not found"
@@ -124,7 +124,7 @@ def test_difficulty_flow(page: Page) -> None:
         # Wait for Godot engine init (ensures 'godot' object is defined)
         page.wait_for_function("() => window.godotInitialized", timeout=5000)
         # Check element present
-        page.wait_for_selector('#options-button', state='visible', timeout=1000)
+        page.wait_for_selector('#options-button', state='visible', timeout=1500)
         assert page.evaluate("document.getElementById('options-button') !== null")
 
         # Check invisible (opacity 0)
@@ -140,15 +140,14 @@ def test_difficulty_flow(page: Page) -> None:
         page.wait_for_function("() => document.getElementById('options-button') !== null",
                                timeout=5000)  # Longer for stalls
         # Open options menu
-        page.click("#options-button", force=True)
-        page.wait_for_timeout(1000)
+        page.click("#options-button", force=True, timeout=1500)
         display_style = page.evaluate("window.getComputedStyle(document.getElementById('log-level-select')).display")
         assert display_style == 'block', "Options menu not loaded (display not set to block)"
 
         # Set log level to DEBUG (index 0) - directly call the exposed callback
         # (bypasses event for reliability in automation)
         page.evaluate("window.changeLogLevel([0])")
-        page.wait_for_timeout(3000)
+        page.wait_for_timeout(1500)
         assert any("Log level changed to: DEBUG" in log["text"] for log in logs), "Failed to set log level to DEBUG"
 
         assert any(
@@ -158,7 +157,7 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Set difficulty to 2.0 - directly call the exposed callback (bypasses event for reliability in automation)
         page.evaluate("window.changeDifficulty([2.0])")
-        page.wait_for_timeout(3000)
+        page.wait_for_timeout(1500)
         assert any(
             "difficulty changed to: 2.0" in log["text"].lower() for log in logs), "Failed to set difficulty to 2.0"
         assert any(
@@ -166,13 +165,12 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Back to main menu
         page.evaluate("window.optionsBackPressed([])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         assert any("back button pressed." in log["text"].lower() for log in logs), "Back button not found"
 
         # Start game
-        page.wait_for_selector('#options-button', state='visible', timeout=1000)
-        page.click("#start-button", force=True)
-        page.wait_for_timeout(5000)  # Wait for game load
+        page.wait_for_selector('#options-button', state='visible', timeout=1500)
+        page.click("#start-button", force=True, timeout=1500)
 
         # Poll for loading start log to confirm transition to loading screen
         start_time = time.time()
@@ -198,8 +196,7 @@ def test_difficulty_flow(page: Page) -> None:
             raise TimeoutError("Main scene not loaded")
 
         # Refocus canvas to ensure input capture
-        page.click("canvas")
-        page.wait_for_timeout(1000)  # Short wait for focus and any init
+        page.click("canvas", timeout=1500)
 
         # Simulate fire (press Space)
         page.keyboard.press("Space")
