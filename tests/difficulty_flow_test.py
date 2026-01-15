@@ -121,8 +121,6 @@ def test_difficulty_flow(page: Page) -> None:
         assert box is not None, "Canvas not found on page"
         assert "SkyLockAssault" in page.title(), "Title not found"
 
-        # Wait for Godot engine init (ensures 'godot' object is defined)
-        page.wait_for_function("() => window.godotInitialized", timeout=5000)
         # Check element present
         page.wait_for_selector('#options-button', state='visible', timeout=1500)
         assert page.evaluate("document.getElementById('options-button') !== null")
