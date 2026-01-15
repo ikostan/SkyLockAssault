@@ -101,17 +101,21 @@ def test_audio_flow(page: Page) -> None:
         assert options_display == 'block', "Options menu not loaded (difficulty-slider not displayed)"
 
         # Set log level DEBUG
+        pre_change_log_count = len(logs)
         page.evaluate("window.changeLogLevel([0])")
         page.wait_for_timeout(1000)
-        assert any("log level changed to: debug" in log["text"].lower() for log in logs)
+        new_logs = logs[pre_change_log_count:]
+        assert any("log level changed to: debug" in log["text"].lower() for log in new_logs)
         assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
 
         # Open audio
+        pre_change_log_count = len(logs)
         page.wait_for_selector('#audio-button', state='visible', timeout=1500)
         page.click("#audio-button", force=True)
         page.wait_for_timeout(1500)
         assert page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display") == 'block'
-        assert any("audio button pressed" in log["text"].lower() for log in logs)
+        new_logs = logs[pre_change_log_count:]
+        assert any("audio button pressed" in log["text"].lower() for log in new_logs)
 
         # Get initial values
         initial_sfx: str = page.evaluate("document.getElementById('sfx-slider').value")
@@ -120,15 +124,20 @@ def test_audio_flow(page: Page) -> None:
         initial_rotors: str = page.evaluate("document.getElementById('rotors-slider').value")
 
         # WARN-01: Master muted → attempt sub-volume adjust (SFX)
+        pre_change_log_count = len(logs)
         page.evaluate("window.toggleMuteMaster([0])")  # Mute
         page.wait_for_timeout(1500)
-        assert any("master is muted" in log["text"].lower() for log in logs)
+        new_logs = logs[pre_change_log_count:]
+        assert any("master is muted" in log["text"].lower() for log in new_logs)
+        # Change SFX Volume when Master is muted
+        pre_change_log_count = len(logs)
         page.evaluate("window.changeSfxVolume([0])")
         page.wait_for_timeout(1500)
         assert page.evaluate(
             "document.getElementById('sfx-slider').value") == initial_sfx, "SFX value changed unexpectedly"
-        assert any("master muted, cannot adjust sub-volume" in log["text"].lower() for log in logs) or any(
-            "warning dialog" in log["text"].lower() for log in logs)
+        new_logs = logs[pre_change_log_count:]
+        assert any("master muted, cannot adjust sub-volume" in log["text"].lower() for log in new_logs) or any(
+            "warning dialog" in log["text"].lower() for log in new_logs)
 
         # Additional: Master muted → attempt sub-volume adjust (Music)
         # Attempt to change music while Master is still muted
@@ -138,23 +147,28 @@ def test_audio_flow(page: Page) -> None:
         #    slider.dispatchEvent(new Event('input'));
         #    slider.dispatchEvent(new Event('change'));
         # """)
+        pre_change_log_count = len(logs)
         page.evaluate("window.changeMusicVolume([0.3])")
         page.wait_for_timeout(1500)
         assert page.evaluate(
             "document.getElementById('music-slider').value") == initial_music, "Music value changed unexpectedly under Master mute"
-        assert any("master muted, cannot adjust sub-volume" in log["text"].lower() for log in logs) or any(
-            "warning dialog" in log["text"].lower() for log in logs)
+        new_logs = logs[pre_change_log_count:]
+        assert any("master muted, cannot adjust sub-volume" in log["text"].lower() for log in new_logs) or any(
+            "warning dialog" in log["text"].lower() for log in new_logs)
 
         # Additional: Master muted → attempt sub-volume adjust (Rotors)
         # Assuming Rotors is affected by Master mute (as a deeper sub-volume)
+        pre_change_log_count = len(logs)
         page.evaluate("window.changeRotorsVolume([0.4])")
         page.wait_for_timeout(1500)
         assert page.evaluate(
             "document.getElementById('rotors-slider').value") == initial_rotors, "Rotors value changed unexpectedly under Master mute"
-        assert any("master muted, cannot adjust sub-volume" in log["text"].lower() for log in logs) or any(
-            "warning dialog" in log["text"].lower() for log in logs)
+        new_logs = logs[pre_change_log_count:]
+        assert any("master muted, cannot adjust sub-volume" in log["text"].lower() for log in new_logs) or any(
+            "warning dialog" in log["text"].lower() for log in new_logs)
 
         # Unmute Master for next tests
+        pre_change_log_count = len(logs)
         page.evaluate("window.toggleMuteMaster([1])")
         page.wait_for_timeout(1500)
 
@@ -165,24 +179,27 @@ def test_audio_flow(page: Page) -> None:
         page.wait_for_timeout(1500)
         assert page.evaluate(
             "document.getElementById('weapon-slider').value") == initial_weapon, "Weapon value changed unexpectedly"
-        assert any("sfx muted, cannot adjust" in log["text"].lower() for log in logs) or any(
-            "warning dialog" in log["text"].lower() for log in logs)
+        new_logs = logs[pre_change_log_count:]
+        assert any("sfx muted, cannot adjust" in log["text"].lower() for log in new_logs) or any(
+            "warning dialog" in log["text"].lower() for log in new_logs)
 
         # Additional: SFX muted → attempt rotors adjust (assuming Rotors under SFX)
+        pre_change_log_count = len(logs)
         page.evaluate("window.changeRotorsVolume([0.5])")
         page.wait_for_timeout(1500)
         assert page.evaluate(
             "document.getElementById('rotors-slider').value") == initial_rotors, "Rotors value changed unexpectedly under SFX mute"
-        assert any("sfx muted, cannot adjust" in log["text"].lower() for log in logs) or any(
-            "warning dialog" in log["text"].lower() for log in logs)
+        new_logs = logs[pre_change_log_count:]
+        assert any("sfx muted, cannot adjust" in log["text"].lower() for log in new_logs) or any(
+            "warning dialog" in log["text"].lower() for log in new_logs)
 
         # Unmute SFX
+        pre_change_log_count = len(logs)
         page.evaluate("window.toggleMuteSfx([1])")
         page.wait_for_timeout(1500)
 
         # WARN-03: Master unmuted → adjust sub-volume (Music)
         # Capture logs before the change to isolate new ones (good for debugging in Godot tests)
-        pre_change_log_count = len(logs)
         page.evaluate("window.changeMusicVolume([0.6])")
         page.wait_for_timeout(1500)
 
