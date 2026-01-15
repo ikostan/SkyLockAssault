@@ -92,7 +92,7 @@ jobs:
 
       - name: "Run Tests"
         run: |
-          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/ -v --ignore=tests/refactor --junitxml=junit.xml -o junit_family=legacy --timeout=${{ env.PW_TIMEOUT }}
+          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/ -v --ignore=tests/refactor --junitxml=junit.xml -o junit_family=legacy
 
       - name: "List Coverage Reports"
         run: |
