@@ -25,52 +25,8 @@ v8_coverage_audio_flow_test.json, artifacts/test_audio_failure_*.png/txt
 
 import os
 import time
-import json
-import pytest
-from playwright.sync_api import Page, Playwright
-
-
-@pytest.fixture(scope="function")
-def page(playwright: Playwright) -> Page:
-    """
-    Fixture for browser page setup with CDP for coverage.
-
-    :param playwright: The Playwright instance.
-    :type playwright: Playwright
-    :return: The configured page object.
-    :rtype: Page
-    """
-    browser: playwright.sync_api.Browser = playwright.chromium.launch(headless=True, args=[
-        "--enable-unsafe-swiftshader",
-        "--disable-gpu",
-        "--use-gl=swiftshader",
-    ])
-    context: playwright.sync_api.BrowserContext = browser.new_context(
-        viewport={"width": 1280, "height": 720},
-        record_har_path="artifacts/har.har"  # Optional network trace
-    )
-    page: Page = context.new_page()
-    # CDP for V8 coverage
-    cdp_session = None  # type: playwright.sync_api.CDPSession | None
-    try:
-        cdp_session = context.new_cdp_session(page)
-        cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": False, "detailed": True})
-    except:
-        pass
-    yield page
-    # Save coverage on teardown
-    if cdp_session:
-        try:
-            coverage: dict = cdp_session.send("Profiler.takePreciseCoverage")
-            coverage_path: str = os.path.join("artifacts", "v8_coverage_audio_flow_test.json")
-            with open(coverage_path, "w") as f:
-                json.dump(coverage, f, indent=4)
-            cdp_session.send("Profiler.stopPreciseCoverage")
-            cdp_session.send("Profiler.disable")
-        except Exception as e:
-            print(f"Failed to save coverage: {e}")
-    browser.close()
+import playwright
+from playwright.sync_api import Page
 
 
 def test_audio_flow(page: Page) -> None:
@@ -85,9 +41,9 @@ def test_audio_flow(page: Page) -> None:
     :rtype: None
     """
     logs: list[dict[str, str]] = []
-    cdp_session = None
+    cdp_session = None  # type: playwright.sync_api.CDPSession | None
 
-    def on_console(msg) -> None:
+    def on_console(msg: playwright.sync_api.ConsoleMessage) -> None:
         """
         Console message handler.
 
@@ -100,11 +56,6 @@ def test_audio_flow(page: Page) -> None:
 
     page.on("console", on_console)
     try:
-        # Start CDP session
-        cdp_session = page.context.new_cdp_session(page)
-        cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
-
         page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=5000)
         page.wait_for_function("() => window.godotInitialized", timeout=5000)
 
@@ -203,9 +154,4 @@ def test_audio_flow(page: Page) -> None:
             f.write(page.content())
         raise
     finally:
-        if cdp_session:
-            coverage: dict = cdp_session.send("Profiler.takePreciseCoverage")['result']
-            cdp_session.send("Profiler.stopPreciseCoverage")
-            cdp_session.send("Profiler.disable")
-            with open("v8_coverage_audio_flow_test.json", "w") as f:
-                json.dump(coverage, f)
+        pass  # Fixture handles CDP teardown
