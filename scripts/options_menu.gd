@@ -206,13 +206,14 @@ func _on_log_level_item_selected(index: int) -> void:
 
 
 # New: JS callback for audio button
+# warning-ignore:unused_argument
 func _on_audio_pressed_js(_args: Array) -> void:
 	## JS callback for audio button press.
 	##
 	## Routes to signal handler.
 	##
-	## :param args: Unused array from JS.
-	## :type args: Array
+	## :param _args: Unused array from JS.
+	## :type _args: Array
 	## :rtype: void
 	_on_audio_settings_button_pressed()
 
