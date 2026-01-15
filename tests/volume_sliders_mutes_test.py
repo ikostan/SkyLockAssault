@@ -20,11 +20,12 @@ pytest -k volume_sliders_mutes -q
 
 Artifacts
 ---------
-artifacts/test_volume_failure_*.png/txt
+v8_coverage_volume_sliders_mutes_test.json, artifacts/test_volume_failure_*.png/txt
 """
 
 import os
 import time
+import json
 import pytest
 from playwright.sync_api import Page, Playwright
 
@@ -32,7 +33,7 @@ from playwright.sync_api import Page, Playwright
 @pytest.fixture(scope="function")
 def page(playwright: Playwright) -> Page:
     """
-    Fixture for browser page setup.
+    Fixture for browser page setup with CDP for coverage.
 
     :param playwright: The Playwright instance.
     :type playwright: Playwright
@@ -46,7 +47,26 @@ def page(playwright: Playwright) -> Page:
     ])
     context = browser.new_context(viewport={"width": 1280, "height": 720})
     page = context.new_page()
+    # CDP for V8 coverage
+    cdp_session = None  # Initialize to None outside try
+    try:
+        cdp_session = context.new_cdp_session(page)
+        cdp_session.send("Profiler.enable")
+        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": False, "detailed": True})
+    except:
+        pass
     yield page
+    # Save coverage on teardown
+    if cdp_session:
+        try:
+            coverage: dict = cdp_session.send("Profiler.takePreciseCoverage")
+            # coverage_path = os.path.join("artifacts", "v8_coverage_volume_sliders_mutes_test.json")
+            with open("v8_coverage_volume_sliders_mutes_test.json", "w") as f:
+                json.dump(coverage, f, indent=4)
+            cdp_session.send("Profiler.stopPreciseCoverage")
+            cdp_session.send("Profiler.disable")
+        except Exception as e:
+            print(f"Failed to save coverage: {e}")
     context.close()
     browser.close()
 
@@ -62,6 +82,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
     :rtype: None
     """
     logs: list[dict[str, str]] = []
+    cdp_session = None
 
     def on_console(msg) -> None:
         """
@@ -75,6 +96,11 @@ def test_volume_sliders_mutes(page: Page) -> None:
 
     page.on("console", on_console)
     try:
+        # Start CDP session for V8 JS coverage (workaround for Python Playwright lacking native coverage API)
+        cdp_session = page.context.new_cdp_session(page)
+        cdp_session.send("Profiler.enable")
+        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+
         page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=5000)
         page.wait_for_function("() => window.godotInitialized", timeout=5000)
 
@@ -221,3 +247,11 @@ def test_volume_sliders_mutes(page: Page) -> None:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
         raise
+    finally:
+        if cdp_session:
+            # Stop V8 coverage and save to file (even on failure)
+            coverage = cdp_session.send("Profiler.takePreciseCoverage")['result']
+            cdp_session.send("Profiler.stopPreciseCoverage")
+            cdp_session.send("Profiler.disable")
+            with open("v8_coverage_volume_sliders_mutes_test.json", "w") as f:
+                json.dump(coverage, f)

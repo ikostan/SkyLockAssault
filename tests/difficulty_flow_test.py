@@ -69,9 +69,9 @@ def page(playwright: Playwright) -> Page:
     # Save coverage on teardown
     if cdp_session:
         try:
-            coverage = cdp_session.send("Profiler.takePreciseCoverage")
-            coverage_path = os.path.join("artifacts", "v8_coverage_difficulty_flow_test.json")
-            with open(coverage_path, "w") as f:
+            coverage: dict = cdp_session.send("Profiler.takePreciseCoverage")
+            # coverage_path = os.path.join("artifacts", "v8_coverage_difficulty_flow_test.json")
+            with open("v8_coverage_difficulty_flow_test.json", "w") as f:
                 json.dump(coverage, f, indent=4)
             cdp_session.send("Profiler.stopPreciseCoverage")
             cdp_session.send("Profiler.disable")
