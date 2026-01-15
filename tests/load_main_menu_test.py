@@ -65,8 +65,8 @@ def page(playwright: Playwright) -> Page:
         cdp_session = context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
         cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
-    except:
-        pass
+    except Exception as e:
+        print(f"CDP session setup failed (coverage disabled): {e}")
     yield page
     # Save coverage on teardown
     if cdp_session:
