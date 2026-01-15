@@ -171,5 +171,3 @@ def test_audio_flow(page: Page) -> None:
         with open(f"artifacts/test_audio_failure_html_{timestamp}.html", "w") as f:
             f.write(page.content())
         raise
-    finally:
-        pass  # Fixture handles CDP teardown
