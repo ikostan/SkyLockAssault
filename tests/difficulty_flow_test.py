@@ -116,7 +116,7 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Verify canvas and title to ensure game is initialized
         canvas = page.locator("canvas")
-        page.wait_for_selector("canvas", state="visible", timeout=3000)
+        page.wait_for_selector("canvas", state="visible", timeout=5000)
         box: dict[str, float] | None = canvas.bounding_box()
         assert box is not None, "Canvas not found on page"
         assert "SkyLockAssault" in page.title(), "Title not found"

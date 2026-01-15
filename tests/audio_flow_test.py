@@ -81,7 +81,7 @@ def test_audio_flow(page: Page) -> None:
 
         # Verify canvas
         canvas = page.locator("canvas")
-        page.wait_for_selector("canvas", state="visible", timeout=7000)
+        page.wait_for_selector("canvas", state="visible", timeout=5000)
         box: dict[str, float] | None = canvas.bounding_box()
         assert box is not None, "Canvas not found"
         assert "SkyLockAssault" in page.title(), "Title not found"

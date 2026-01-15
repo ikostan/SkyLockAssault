@@ -78,6 +78,13 @@ def test_volume_sliders_mutes(page: Page) -> None:
         page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=5000)
         page.wait_for_function("() => window.godotInitialized", timeout=5000)
 
+        # Verify canvas
+        canvas = page.locator("canvas")
+        page.wait_for_selector("canvas", state="visible", timeout=5000)
+        box: dict[str, float] | None = canvas.bounding_box()
+        assert box is not None, "Canvas not found"
+        assert "SkyLockAssault" in page.title(), "Title not found"
+
         # Navigate to options menu
         page.wait_for_selector('#options-button', state='visible', timeout=1500)
         page.click("#options-button", force=True, timeout=1500)
