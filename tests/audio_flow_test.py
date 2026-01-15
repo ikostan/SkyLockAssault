@@ -194,12 +194,12 @@ def test_audio_flow(page: Page) -> None:
             "warning dialog" in log["text"].lower() for log in new_logs)
 
         # Unmute SFX
-        pre_change_log_count = len(logs)
         page.evaluate("window.toggleMuteSfx([1])")
         page.wait_for_timeout(1500)
 
         # WARN-03: Master unmuted → adjust sub-volume (Music)
         # Capture logs before the change to isolate new ones (good for debugging in Godot tests)
+        pre_change_log_count = len(logs)
         page.evaluate("window.changeMusicVolume([0.6])")
         page.wait_for_timeout(1500)
 
