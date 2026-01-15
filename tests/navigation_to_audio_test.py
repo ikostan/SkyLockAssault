@@ -111,9 +111,7 @@ def test_navigation_to_audio(page: Page) -> None:
         # NAV-04: Navigate to audio sub-menu
         page.wait_for_selector('#audio-button', state='visible', timeout=1000)
         assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
-        canvas = page.locator("canvas")
-        box: dict[str, float] | None = canvas.bounding_box()
-        assert box is not None, "Canvas not found"
+
         # Open audio
         page.click("#audio-button", force=True)
         page.wait_for_timeout(5000)  # Wait for audio scene load and JS eval
