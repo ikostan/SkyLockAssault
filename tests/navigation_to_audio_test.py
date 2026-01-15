@@ -20,26 +20,20 @@ pytest -k navigation_to_audio -q
 
 Artifacts
 ---------
-artifacts/test_navigation_failure_*.png/txt
+v8_coverage_navigation_to_audio_test.json, artifacts/test_navigation_failure_*.png/txt
 """
 
 import os
 import time
+import json
 import pytest
 from playwright.sync_api import Page, Playwright
-
-# Define UI coordinates relative to canvas top-left (extended from ui_elements_coords.py)
-UI_ELEMENTS: dict[str, dict[str, int]] = {
-    "options_button": {"x": 635, "y": 355},
-    "audio_settings_button": {"x": 640, "y": 150},  # Estimated; adjust based on actual UI position from image/screenshot
-    "back_button": {"x": 647, "y": 625},
-}
 
 
 @pytest.fixture(scope="function")
 def page(playwright: Playwright) -> Page:
     """
-    Fixture for browser page setup.
+    Fixture for browser page setup with CDP for coverage.
 
     :param playwright: The Playwright instance.
     :type playwright: Playwright
@@ -69,6 +63,7 @@ def test_navigation_to_audio(page: Page) -> None:
     :rtype: None
     """
     logs: list[dict[str, str]] = []
+    cdp_session = None
 
     def on_console(msg) -> None:
         """
@@ -82,13 +77,27 @@ def test_navigation_to_audio(page: Page) -> None:
 
     page.on("console", on_console)
     try:
-        page.goto("http://localhost:8080/index.html", wait_until="networkidle")
-        page.wait_for_timeout(10000)  # Wait for load
-        page.wait_for_function("() => window.godotInitialized", timeout=90000)
+        # Start CDP session for V8 JS coverage (workaround for Python Playwright lacking native coverage API)
+        cdp_session = page.context.new_cdp_session(page)
+        cdp_session.send("Profiler.enable")
+        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+
+        page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=5000)
+        page.wait_for_function("() => window.godotInitialized", timeout=5000)
+
+        # Verify canvas
+        canvas = page.locator("canvas")
+        page.wait_for_selector("canvas", state="visible", timeout=5000)
+        box: dict[str, float] | None = canvas.bounding_box()
+        assert box is not None, "Canvas not found"
+        assert "SkyLockAssault" in page.title(), "Title not found"
 
         # NAV-01: Verify main menu overlays exist and are configured
+        page.wait_for_selector('#start-button', state='visible', timeout=1500)
         assert page.evaluate("document.getElementById('start-button') !== null")
+        page.wait_for_selector('#options-button', state='visible', timeout=1500)
         assert page.evaluate("document.getElementById('options-button') !== null")
+        page.wait_for_selector('#quit-button', state='visible', timeout=1500)
         assert page.evaluate("document.getElementById('quit-button') !== null")
         opacity: str = page.evaluate("window.getComputedStyle(document.getElementById('options-button')).opacity")
         assert opacity == '0', f"Expected opacity 0, got {opacity}"
@@ -106,17 +115,35 @@ def test_navigation_to_audio(page: Page) -> None:
         page.wait_for_timeout(3000)
         assert any("log level changed to: debug" in log["text"].lower() for log in logs), "Failed to set log level to DEBUG"
 
-        # NAV-04: Navigate to audio sub-menu (use coordinates for Godot-rendered button)
-        canvas = page.locator("canvas")
-        box: dict[str, float] | None = canvas.bounding_box()
-        assert box is not None, "Canvas not found"
-        audio_x: float = box['x'] + UI_ELEMENTS["audio_settings_button"]["x"]
-        audio_y: float = box['y'] + UI_ELEMENTS["audio_settings_button"]["y"]
-        page.mouse.click(audio_x, audio_y)
+        # NAV-04: Navigate to audio sub-menu
+        page.wait_for_selector('#audio-button', state='visible', timeout=1000)
+        assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
+
+        # Open audio
+        page.click("#audio-button", force=True, timeout=1500)
         page.wait_for_timeout(5000)  # Wait for audio scene load and JS eval
+
         audio_display: str = page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display")
         assert audio_display == 'block', "Audio menu not loaded (master-slider not displayed)"
         assert any("audio button pressed." in log["text"].lower() for log in logs), "Audio navigation log not found"
+
+        # Navigate back from audio menu
+        page.wait_for_selector('#audio-back-button', state='visible', timeout=1500)
+        # page.click("#audio-back-button", force=True, timeout=1500)
+        page.evaluate("window.audioBackPressed([])")
+        page.wait_for_timeout(2000)  # Wait for audio overlay to hide and main/options overlays to re-show
+
+        # Assert audio overlay is hidden again
+        audio_display_after_back: str = page.evaluate(
+            "window.getComputedStyle(document.getElementById('master-slider')).display"
+        )
+        assert audio_display_after_back == 'none', "Audio menu still visible after navigating back from audio menu"
+
+        # Assert main/options overlays are restored
+        options_overlay_display: str = page.evaluate(
+            "window.getComputedStyle(document.getElementById('difficulty-slider')).display"
+        )
+        assert options_overlay_display == 'block', "Options overlay not restored after exiting audio menu"
 
     except Exception as e:
         print(f"Test suite failed: {str(e)}")
@@ -127,3 +154,11 @@ def test_navigation_to_audio(page: Page) -> None:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
         raise
+    finally:
+        if cdp_session:
+            # Stop V8 coverage and save to file (even on failure)
+            coverage = cdp_session.send("Profiler.takePreciseCoverage")['result']
+            cdp_session.send("Profiler.stopPreciseCoverage")
+            cdp_session.send("Profiler.disable")
+            with open("v8_coverage_navigation_to_audio_test.json", "w") as f:
+                json.dump(coverage, f)

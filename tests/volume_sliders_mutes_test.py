@@ -20,25 +20,20 @@ pytest -k volume_sliders_mutes -q
 
 Artifacts
 ---------
-artifacts/test_volume_failure_*.png/txt
+v8_coverage_volume_sliders_mutes_test.json, artifacts/test_volume_failure_*.png/txt
 """
 
 import os
 import time
+import json
 import pytest
 from playwright.sync_api import Page, Playwright
-
-# Define UI coordinates relative to canvas top-left (extended from ui_elements_coords.py)
-UI_ELEMENTS: dict[str, dict[str, int]] = {
-    "options_button": {"x": 635, "y": 355},
-    "audio_settings_button": {"x": 640, "y": 150},  # Estimated; adjust based on actual UI position
-}
 
 
 @pytest.fixture(scope="function")
 def page(playwright: Playwright) -> Page:
     """
-    Fixture for browser page setup.
+    Fixture for browser page setup with CDP for coverage.
 
     :param playwright: The Playwright instance.
     :type playwright: Playwright
@@ -68,6 +63,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
     :rtype: None
     """
     logs: list[dict[str, str]] = []
+    cdp_session = None
 
     def on_console(msg) -> None:
         """
@@ -81,17 +77,29 @@ def test_volume_sliders_mutes(page: Page) -> None:
 
     page.on("console", on_console)
     try:
-        page.goto("http://localhost:8080/index.html", wait_until="networkidle")
-        page.wait_for_timeout(10000)  # Wait for load
-        page.wait_for_function("() => window.godotInitialized", timeout=90000)
+        # Start CDP session for V8 JS coverage (workaround for Python Playwright lacking native coverage API)
+        cdp_session = page.context.new_cdp_session(page)
+        cdp_session.send("Profiler.enable")
+        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+
+        page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=5000)
+        page.wait_for_function("() => window.godotInitialized", timeout=5000)
+
+        # Verify canvas
+        canvas = page.locator("canvas")
+        page.wait_for_selector("canvas", state="visible", timeout=5000)
+        box: dict[str, float] | None = canvas.bounding_box()
+        assert box is not None, "Canvas not found"
+        assert "SkyLockAssault" in page.title(), "Title not found"
 
         # Navigate to options menu
-        page.click("#options-button", force=True)
-        page.wait_for_timeout(3000)
+        page.wait_for_selector('#options-button', state='visible', timeout=1500)
+        page.click("#options-button", force=True, timeout=1500)
 
         # Set log level to DEBUG
         page.evaluate("window.changeLogLevel([0])")  # Index 0 for DEBUG
-        page.wait_for_timeout(3000)
+        page.wait_for_selector('#audio-button', state='visible', timeout=1500)
+        assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
         assert any(
             "log level changed to: debug" in log["text"].lower() for log in logs), "Failed to set log level to DEBUG"
 
@@ -99,16 +107,15 @@ def test_volume_sliders_mutes(page: Page) -> None:
         canvas = page.locator("canvas")
         box: dict[str, float] | None = canvas.bounding_box()
         assert box is not None, "Canvas not found"
-        audio_x: float = box['x'] + UI_ELEMENTS["audio_settings_button"]["x"]
-        audio_y: float = box['y'] + UI_ELEMENTS["audio_settings_button"]["y"]
-        page.mouse.click(audio_x, audio_y)
+        # Open audio
+        page.click("#audio-button", force=True)
         page.wait_for_timeout(5000)  # Wait for audio scene load
         audio_display: str = page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display")
         assert audio_display == 'block', "Audio menu not loaded (master-slider not displayed)"
 
         # VOL-01: Adjust Master volume slider
         page.evaluate("window.changeMasterVolume([0.5])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         assert any("master volume changed to: 0.5" in log["text"].lower() for log in logs), "Master volume change log not found"
         value = page.evaluate("document.getElementById('master-slider').value")
         assert value == '0.5', f"Master slider value not set to 0.5, got {value}"
@@ -116,13 +123,13 @@ def test_volume_sliders_mutes(page: Page) -> None:
         # VOL-02: Mute / unmute Master
         # MUTE
         page.evaluate("window.toggleMuteMaster([0])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         assert any("master is muted" in log["text"].lower() for log in logs), "Master mute log not found"
         checked = page.evaluate("document.getElementById('mute-master').checked")
         assert not checked, "Master mute not toggled to muted"
         # UNMUTE
         page.evaluate("window.toggleMuteMaster([1])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         assert any("applied loaded master volume to audioserver: 0.5" in log["text"].lower() for log in logs), "Master mute log not found"
         checked = page.evaluate("document.getElementById('mute-master').checked")
         assert checked, "Master mute not toggled to unmuted"
@@ -130,7 +137,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
 
         # VOL-03: Adjust Music volume slider
         page.evaluate("window.changeMusicVolume([0.3])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         value = page.evaluate("document.getElementById('music-slider').value")
         assert value == '0.3', f"Music slider value not set to 0.3, got {value}"
         assert any("music volume changed to: 0.3" in log["text"].lower() for log in logs), "Music volume change log not found"
@@ -138,47 +145,47 @@ def test_volume_sliders_mutes(page: Page) -> None:
         # VOL-04: Mute / unmute Music
         # MUTE
         page.evaluate("window.toggleMuteMusic([0])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         checked = page.evaluate("document.getElementById('mute-music').checked")
         assert not checked, "Music mute not toggled to muted"
         # UNMUTE
         page.evaluate("window.toggleMuteMusic([1])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         checked = page.evaluate("document.getElementById('mute-music').checked")
         assert checked, "Music mute not toggled to unmuted"
 
         # VOL-05: Adjust SFX volume slider
         page.evaluate("window.changeSfxVolume([0.8])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         value = page.evaluate("document.getElementById('sfx-slider').value")
         assert value == '0.8', f"SFX slider value not set to 0.8, got {value}"
 
         # VOL-06: Mute / unmute SFX
         # MUTE
         page.evaluate("window.toggleMuteSfx([0])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         checked = page.evaluate("document.getElementById('mute-sfx').checked")
         assert not checked, "SFX mute not toggled to muted"
         # UNMUTE
         page.evaluate("window.toggleMuteSfx([1])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         checked = page.evaluate("document.getElementById('mute-sfx').checked")
         assert checked, "SFX mute not toggled to unmuted"
 
         # VOL-07: Adjust Weapon volume slider
         page.evaluate("window.changeWeaponVolume([0.2])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         value = page.evaluate("document.getElementById('weapon-slider').value")
         assert value == '0.2', f"Weapon slider value not set to 0.2, got {value}"
 
         # VOL-08: Mute / unmute Weapon
         page.evaluate("window.toggleMuteWeapon([0])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         checked = page.evaluate("document.getElementById('mute-weapon').checked")
         assert not checked, "Weapon mute not toggled to muted"
 
         page.evaluate("window.toggleMuteWeapon([1])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         checked = page.evaluate("document.getElementById('mute-weapon').checked")
         assert checked, "Weapon mute not toggled to unmuted"
 
@@ -189,7 +196,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
             slider.dispatchEvent(new Event('input'));
             slider.dispatchEvent(new Event('change'));
         """)
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         value = page.evaluate("document.getElementById('rotors-slider').value")
         assert value == '0.9', f"Rotors slider value not set to 0.9, got {value}"
 
@@ -199,7 +206,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
             checkbox.checked = false;
             checkbox.dispatchEvent(new Event('change'));
         """)
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         checked = page.evaluate("document.getElementById('mute-rotors').checked")
         assert not checked, "Rotors mute not toggled to muted"
 
@@ -208,7 +215,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
             checkbox.checked = true;
             checkbox.dispatchEvent(new Event('change'));
         """)
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         checked = page.evaluate("document.getElementById('mute-rotors').checked")
         assert checked, "Rotors mute not toggled to unmuted"
 
@@ -221,3 +228,11 @@ def test_volume_sliders_mutes(page: Page) -> None:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
         raise
+    finally:
+        if cdp_session:
+            # Stop V8 coverage and save to file (even on failure)
+            coverage = cdp_session.send("Profiler.takePreciseCoverage")['result']
+            cdp_session.send("Profiler.stopPreciseCoverage")
+            cdp_session.send("Profiler.disable")
+            with open("v8_coverage_volume_sliders_mutes_test.json", "w") as f:
+                json.dump(coverage, f)

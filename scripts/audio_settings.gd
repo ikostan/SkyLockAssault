@@ -373,6 +373,9 @@ func _on_change_music_volume_js(args: Array) -> void:
 	var value := _validate_volume_args(args, "_on_change_music_volume_js")
 	if value < 0.0:
 		return
+	if AudioManager.get_muted(AudioConstants.BUS_MASTER):
+		Globals.log_message("Master muted, cannot adjust sub-volume", Globals.LogLevel.DEBUG)
+		return
 	# Update AudioManager (sets music_volume)
 	AudioManager.set_volume(AudioConstants.BUS_MUSIC, value)
 	# Apply to AudioServer bus (handles db conversion and mute check)
@@ -443,6 +446,9 @@ func _on_sfx_mute_gui_input(event: InputEvent) -> void:
 func _on_change_sfx_volume_js(args: Array) -> void:
 	var value := _validate_volume_args(args, "_on_change_sfx_volume_js")
 	if value < 0.0:
+		return
+	if AudioManager.get_muted(AudioConstants.BUS_MASTER):
+		Globals.log_message("Master muted, cannot adjust sub-volume", Globals.LogLevel.DEBUG)
 		return
 	# Update AudioManager (sets sfx_volume)
 	AudioManager.set_volume(AudioConstants.BUS_SFX, value)
@@ -516,6 +522,12 @@ func _on_weapon_mute_gui_input(event: InputEvent) -> void:
 func _on_change_weapon_volume_js(args: Array) -> void:
 	var value := _validate_volume_args(args, "_on_change_weapon_volume_js")
 	if value < 0.0:
+		return
+	if AudioManager.get_muted(AudioConstants.BUS_MASTER):
+		Globals.log_message("Master muted, cannot adjust sub-volume", Globals.LogLevel.DEBUG)
+		return
+	if AudioManager.get_muted(AudioConstants.BUS_SFX):
+		Globals.log_message("SFX muted, cannot adjust sub-volume", Globals.LogLevel.DEBUG)
 		return
 	# Update AudioManager (sets weapon_volume)
 	AudioManager.set_volume(AudioConstants.BUS_SFX_WEAPON, value)
@@ -592,6 +604,12 @@ func _on_rotor_mute_gui_input(event: InputEvent) -> void:
 func _on_change_rotors_volume_js(args: Array) -> void:
 	var value := _validate_volume_args(args, "_on_change_rotors_volume_js")
 	if value < 0.0:
+		return
+	if AudioManager.get_muted(AudioConstants.BUS_MASTER):
+		Globals.log_message("Master muted, cannot adjust sub-volume", Globals.LogLevel.DEBUG)
+		return
+	if AudioManager.get_muted(AudioConstants.BUS_SFX):
+		Globals.log_message("SFX muted, cannot adjust sub-volume", Globals.LogLevel.DEBUG)
 		return
 	# Update AudioManager (sets rotors_volume)
 	AudioManager.set_volume(AudioConstants.BUS_SFX_ROTORS, value)

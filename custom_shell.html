@@ -38,7 +38,7 @@
             width: 250px; /* Match your Godot slider width */
         }
         /* Hide options elements initially (still invisible when shown) */
-        #difficulty-slider, #back-button, #log-level-select {
+        #difficulty-slider, #log-level-select {
             display: none;
         }
         /* Loading UI styles (moved from inline for maintainability) */
@@ -123,8 +123,6 @@
     </div>
 
     <!-- Main Menu Buttons (invisible overlays) -->
-    <button id="options-back-button">Back</button>
-    <button id="audio-back-button">Back</button>
     <button id="start-button" style="top: 40%;">START</button>
     <button id="options-button" style="top: 50%;">OPTIONS</button>
     <button id="quit-button" style="top: 60%;">QUIT</button>
@@ -142,9 +140,11 @@
     <input id="mute-weapon" type="checkbox" checked style="top: 60%; left: 60%; width: 50px; height: 50px; display: none;">
     <input id="mute-rotors" type="checkbox" checked style="top: 70%; left: 60%; width: 50px; height: 50px; display: none;">
 
-    <button id="audio-reset-button" style="top: 80%; width: 150px; display: none;">Reset</button>
+    <button id="audio-reset-button" style="top: 80%; width: 150px;">Reset</button>
+    <button id="audio-back-button">Back</button>
 
     <!-- Options Menu Elements (invisible overlays, shown when menu loads) -->
+    <button id="audio-button" style="top: 21%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 50px; display: none;">AUDIO</button>
     <select id="log-level-select" style="top: 55%;">
         <option>DEBUG</option>
         <option>INFO</option>
@@ -153,7 +153,7 @@
         <option>NONE</option>
     </select>
     <input id="difficulty-slider" type="range" min="0.5" max="2.0" step="0.1" value="1.0" style="top: 45%;">
-    <button id="back-button" style="top: 65%;">BACK</button>
+    <button id="options-back-button">Back</button>
 
     <script src="$GODOT_URL"></script> <!-- Godot replaces with actual JS file, e.g., tmp_js_export.js -->
     <script>
@@ -192,11 +192,11 @@
         };
 
         // Hook buttons/sliders to exposed Godot functions
+        document.getElementById('audio-button').onclick = () => window.audioPressed([]);
         document.getElementById('start-button').onclick = () => window.startPressed([]);
         document.getElementById('options-button').onclick = () => window.optionsPressed([]);
         document.getElementById('quit-button').onclick = () => window.quitPressed([]);
         document.getElementById('difficulty-slider').onchange = (e) => window.changeDifficulty([parseFloat(e.target.value)]);
-        document.getElementById('back-button').onclick = () => window.backPressed([]);
         document.getElementById('log-level-select').onchange = (e) => window.changeLogLevel([e.target.selectedIndex]);
         document.getElementById('master-slider').onchange = (e) => window.changeMasterVolume([parseFloat(e.target.value)]);
         document.getElementById('music-slider').onchange = (e) => window.changeMusicVolume([parseFloat(e.target.value)]);
@@ -208,7 +208,7 @@
         document.getElementById('mute-sfx').onchange = (e) => window.toggleMuteSfx([e.target.checked]);
         document.getElementById('mute-weapon').onchange = (e) => window.toggleMuteWeapon([e.target.checked]);
         document.getElementById('mute-rotors').onchange = (e) => window.toggleMuteRotors([e.target.checked]);
-        document.getElementById('options-back-button').onclick = () => window.backPressed([]);  // Add this for options back
+        document.getElementById('options-back-button').onclick = () => window.optionsBackPressed([]);  // Add this for options back
         document.getElementById('audio-back-button').onclick = () => window.audioBackPressed([]);  // Add this for audio back
         document.getElementById('audio-reset-button').onclick = () => window.audioResetPressed([]);  // Add for reset
     </script>
