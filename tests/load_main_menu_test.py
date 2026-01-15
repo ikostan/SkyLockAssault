@@ -104,6 +104,16 @@ def test_load_main_menu(page: Page) -> None:
         assert box is not None, "Canvas not found on page"
         assert "SkyLockAssault" in page.title(), "Title not found"
 
+        # Since the DOM overlays are now central to the web flow,
+        # consider also asserting that the main-menu overlay elements are present
+        # and visible (similar to navigation_to_audio_test):
+        page.wait_for_selector('#start-button', state='visible', timeout=1500)
+        assert page.evaluate("document.getElementById('start-button') !== null")
+        page.wait_for_selector('#options-button', state='visible', timeout=1500)
+        assert page.evaluate("document.getElementById('options-button') !== null")
+        page.wait_for_selector('#quit-button', state='visible', timeout=1500)
+        assert page.evaluate("document.getElementById('quit-button') !== null")
+
     except Exception as e:
         print(f"Test: 'test_load_main_menu' failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
