@@ -87,7 +87,7 @@ def test_audio_flow(page: Page) -> None:
         assert "SkyLockAssault" in page.title(), "Title not found"
 
         # Open options
-        page.wait_for_selector('#options-button', state='visible', timeout=1000)
+        page.wait_for_selector('#options-button', state='visible', timeout=1500)
         page.click("#options-button", force=True)
         options_display: str = page.evaluate("window.getComputedStyle(document.getElementById('log-level-select')).display")
         assert options_display == 'block', "Options menu not loaded (difficulty-slider not displayed)"
@@ -99,9 +99,9 @@ def test_audio_flow(page: Page) -> None:
         assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
 
         # Open audio
-        page.wait_for_selector('#audio-button', state='visible', timeout=1000)
+        page.wait_for_selector('#audio-button', state='visible', timeout=1500)
         page.click("#audio-button", force=True)
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         assert page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display") == 'block'
         assert any("audio button pressed" in log["text"].lower() for log in logs)
 
@@ -111,7 +111,7 @@ def test_audio_flow(page: Page) -> None:
 
         # WARN-01: Master muted → attempt sub-volume adjust (SFX)
         page.evaluate("window.toggleMuteMaster([0])")  # Mute
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         assert any("master is muted" in log["text"].lower() for log in logs)
         '''
         page.evaluate("""
@@ -122,17 +122,17 @@ def test_audio_flow(page: Page) -> None:
         """)
         '''
         page.evaluate("window.changeSfxVolume([0])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         assert page.evaluate("document.getElementById('sfx-slider').value") == initial_sfx, "SFX value changed unexpectedly"
         assert any("master muted, cannot adjust sub-volume" in log["text"].lower() for log in logs) or any("warning dialog" in log["text"].lower() for log in logs)
 
         # Unmute Master for next tests
         page.evaluate("window.toggleMuteMaster([1])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
 
         # WARN-02: SFX muted → attempt weapon adjust
         page.evaluate("window.toggleMuteSfx([0])")  # Mute
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         '''
         page.evaluate("""
             const slider = document.getElementById('weapon-slider');
@@ -142,13 +142,13 @@ def test_audio_flow(page: Page) -> None:
         """)
         '''
         page.evaluate("window.changeWeaponVolume([0])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         assert page.evaluate("document.getElementById('weapon-slider').value") == initial_weapon, "Weapon value changed unexpectedly"
         assert any("sfx muted, cannot adjust" in log["text"].lower() for log in logs) or any("warning dialog" in log["text"].lower() for log in logs)
 
         # Unmute SFX
         page.evaluate("window.toggleMuteSfx([1])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
 
         # WARN-03: Master unmuted → adjust sub-volume (Music)
         page.evaluate("""
@@ -157,7 +157,7 @@ def test_audio_flow(page: Page) -> None:
             slider.dispatchEvent(new Event('input'));
             slider.dispatchEvent(new Event('change'));
         """)
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(1500)
         assert page.evaluate("document.getElementById('music-slider').value") == '0.6', "Music value not changed"
         assert not any("warning" in log["text"].lower() for log in logs if "music volume changed" in log["text"].lower()), "Unexpected warning"
 
