@@ -57,26 +57,7 @@ def page(playwright: Playwright) -> Page:
         record_har_path="artifacts/har.har"  # Optional network trace
     )
     page = context.new_page()
-    # CDP for V8 coverage
-    cdp_session = None  # Initialize to None outside try
-    try:
-        cdp_session = context.new_cdp_session(page)
-        cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": False, "detailed": True})
-    except:
-        pass
     yield page
-    # Save coverage on teardown
-    if cdp_session:
-        try:
-            coverage: dict = cdp_session.send("Profiler.takePreciseCoverage")
-            # coverage_path = os.path.join("artifacts", "v8_coverage_difficulty_flow_test.json")
-            with open("v8_coverage_difficulty_flow_test.json", "w") as f:
-                json.dump(coverage, f, indent=4)
-            cdp_session.send("Profiler.stopPreciseCoverage")
-            cdp_session.send("Profiler.disable")
-        except Exception as e:
-            print(f"Failed to save coverage: {e}")
     context.close()
     browser.close()
 
