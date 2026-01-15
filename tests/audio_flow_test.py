@@ -135,6 +135,8 @@ def test_audio_flow(page: Page) -> None:
         # Get initial values
         initial_sfx: str = page.evaluate("document.getElementById('sfx-slider').value")
         initial_weapon: str = page.evaluate("document.getElementById('weapon-slider').value")
+        initial_music: str = page.evaluate("document.getElementById('music-slider').value")
+        initial_rotors: str = page.evaluate("document.getElementById('rotors-slider').value")
 
         # WARN-01: Master muted → attempt sub-volume adjust (SFX)
         page.evaluate("window.toggleMuteMaster([0])")  # Mute
@@ -144,6 +146,34 @@ def test_audio_flow(page: Page) -> None:
         page.wait_for_timeout(1500)
         assert page.evaluate(
             "document.getElementById('sfx-slider').value") == initial_sfx, "SFX value changed unexpectedly"
+        assert any("master muted, cannot adjust sub-volume" in log["text"].lower() for log in logs) or any(
+            "warning dialog" in log["text"].lower() for log in logs)
+
+        # Additional: Master muted → attempt sub-volume adjust (Music)
+        # Attempt to change music while Master is still muted
+        page.evaluate("""
+            const slider = document.getElementById('music-slider');
+            slider.value = 0.3;
+            slider.dispatchEvent(new Event('input'));
+            slider.dispatchEvent(new Event('change'));
+        """)
+        page.wait_for_timeout(1500)
+        assert page.evaluate(
+            "document.getElementById('music-slider').value") == initial_music, "Music value changed unexpectedly under Master mute"
+        assert any("master muted, cannot adjust sub-volume" in log["text"].lower() for log in logs) or any(
+            "warning dialog" in log["text"].lower() for log in logs)
+
+        # Additional: Master muted → attempt sub-volume adjust (Rotors)
+        # Assuming Rotors is affected by Master mute (as a deeper sub-volume)
+        page.evaluate("""
+            const slider = document.getElementById('rotors-slider');
+            slider.value = 0.4;
+            slider.dispatchEvent(new Event('input'));
+            slider.dispatchEvent(new Event('change'));
+        """)
+        page.wait_for_timeout(1500)
+        assert page.evaluate(
+            "document.getElementById('rotors-slider').value") == initial_rotors, "Rotors value changed unexpectedly under Master mute"
         assert any("master muted, cannot adjust sub-volume" in log["text"].lower() for log in logs) or any(
             "warning dialog" in log["text"].lower() for log in logs)
 
@@ -158,6 +188,19 @@ def test_audio_flow(page: Page) -> None:
         page.wait_for_timeout(1500)
         assert page.evaluate(
             "document.getElementById('weapon-slider').value") == initial_weapon, "Weapon value changed unexpectedly"
+        assert any("sfx muted, cannot adjust" in log["text"].lower() for log in logs) or any(
+            "warning dialog" in log["text"].lower() for log in logs)
+
+        # Additional: SFX muted → attempt rotors adjust (assuming Rotors under SFX)
+        page.evaluate("""
+            const slider = document.getElementById('rotors-slider');
+            slider.value = 0.5;
+            slider.dispatchEvent(new Event('input'));
+            slider.dispatchEvent(new Event('change'));
+        """)
+        page.wait_for_timeout(1500)
+        assert page.evaluate(
+            "document.getElementById('rotors-slider').value") == initial_rotors, "Rotors value changed unexpectedly under SFX mute"
         assert any("sfx muted, cannot adjust" in log["text"].lower() for log in logs) or any(
             "warning dialog" in log["text"].lower() for log in logs)
 
