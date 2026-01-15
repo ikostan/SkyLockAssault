@@ -98,7 +98,7 @@ def test_audio_flow(page: Page) -> None:
         page.click("#options-button", force=True)
         options_display: str = page.evaluate(
             "window.getComputedStyle(document.getElementById('log-level-select')).display")
-        assert options_display == 'block', "Options menu not loaded (difficulty-slider not displayed)"
+        assert options_display == 'block', "Options menu not loaded (selected log level not displayed)"
 
         # Set log level DEBUG
         pre_change_log_count = len(logs)
