@@ -197,7 +197,7 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Refocus canvas to ensure input capture
         page.wait_for_selector("canvas", state="visible", timeout=5000)
-        page.click("canvas", timeout=1500)
+        page.click("canvas")
 
         # Simulate fire (press Space)
         page.keyboard.press("Space")
