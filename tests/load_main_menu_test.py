@@ -64,14 +64,14 @@ def page(playwright: Playwright) -> Page:
     try:
         cdp_session = context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
-    except Exception as e:
-        print(f"CDP session setup failed (coverage disabled): {e}")
+        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": False, "detailed": True})
+    except:
+        pass
     yield page
     # Save coverage on teardown
     if cdp_session:
         try:
-            coverage = cdp_session.send("Profiler.takePreciseCoverage")['result']
+            coverage = cdp_session.send("Profiler.takePreciseCoverage")
             coverage_path = os.path.join("artifacts", "v8_coverage_load_main_menu_test.json")
             with open(coverage_path, "w") as f:
                 json.dump(coverage, f, indent=4)
@@ -94,18 +94,24 @@ def test_load_main_menu(page: Page) -> None:
     :rtype: None
     """
     logs: list[dict[str, str]] = []
+    cdp_session = None
 
     def on_console(msg) -> None:
         """
         Console message handler.
+
         :param msg: The console message.
-        :type msg: Any
         :rtype: None
         """
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
     try:
+        # Start CDP session for V8 JS coverage (workaround for Python Playwright lacking native coverage API)
+        cdp_session = page.context.new_cdp_session(page)
+        cdp_session.send("Profiler.enable")
+        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+
         page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=5000)
         # Wait for Godot engine init (ensures 'godot' object is defined)
         page.wait_for_function("() => window.godotInitialized", timeout=5000)
@@ -135,3 +141,10 @@ def test_load_main_menu(page: Page) -> None:
 
         print(f"Failure logs: artifacts/test_load_main_menu_failure_console_logs_{timestamp}.txt. Error: {e}")
         raise
+    finally:
+        if cdp_session:
+            coverage = cdp_session.send("Profiler.takePreciseCoverage")['result']
+            cdp_session.send("Profiler.stopPreciseCoverage")
+            cdp_session.send("Profiler.disable")
+            with open("v8_coverage_load_main_menu_test.json", "w") as f:
+                json.dump(coverage, f)
