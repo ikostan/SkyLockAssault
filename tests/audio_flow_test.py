@@ -25,8 +25,30 @@ v8_coverage_audio_flow_test.json, artifacts/test_audio_failure_*.png/txt
 
 import os
 import time
-import playwright
-from playwright.sync_api import Page
+import pytest
+from playwright.sync_api import Page, Playwright
+
+
+@pytest.fixture(scope="function")
+def page(playwright: Playwright) -> Page:
+    """
+    Fixture for browser page setup.
+
+    :param playwright: The Playwright instance.
+    :type playwright: Playwright
+    :return: The configured page object.
+    :rtype: Page
+    """
+    browser = playwright.chromium.launch(headless=True, args=[
+        "--enable-unsafe-swiftshader",
+        "--disable-gpu",
+        "--use-gl=swiftshader",
+    ])
+    context = browser.new_context(viewport={"width": 1280, "height": 720})
+    page = context.new_page()
+    yield page
+    context.close()
+    browser.close()
 
 
 def test_audio_flow(page: Page) -> None:
@@ -41,15 +63,13 @@ def test_audio_flow(page: Page) -> None:
     :rtype: None
     """
     logs: list[dict[str, str]] = []
-    cdp_session = None  # type: playwright.sync_api.CDPSession | None
 
-    def on_console(msg: playwright.sync_api.ConsoleMessage) -> None:
+    def on_console(msg) -> None:
         """
         Console message handler.
 
         :param msg: The console message.
-        :type msg: playwright.sync_api.ConsoleMessage
-        :return: None
+        :type msg: Any
         :rtype: None
         """
         logs.append({"type": msg.type, "text": msg.text})
