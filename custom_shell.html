@@ -123,9 +123,9 @@
     </div>
 
     <!-- Main Menu Buttons (invisible overlays) -->
-    <button id="start-button" style="top: 40%;">START</button>
-    <button id="options-button" style="top: 50%;">OPTIONS</button>
-    <button id="quit-button" style="top: 60%;">QUIT</button>
+    <button id="start-button" style="top: 40%; display: none;">START</button>
+    <button id="options-button" style="top: 50%; display: none;">OPTIONS</button>
+    <button id="quit-button" style="top: 60%; display: none;">QUIT</button>
 
     <!-- Audio Menu Elements (invisible overlays) -->
     <input id="master-slider" type="range" min="0" max="1" step="0.01" value="1.0" style="top: 30%; width: 200px; display: none;">
@@ -141,7 +141,7 @@
     <input id="mute-rotors" type="checkbox" checked style="top: 70%; left: 60%; width: 50px; height: 50px; display: none;">
 
     <button id="audio-reset-button" style="top: 80%; width: 150px; display: none;">Reset</button>
-    <button id="audio-back-button">Back</button>
+    <button id="audio-back-button" style="display: none;">Back</button>
 
     <!-- Options Menu Elements (invisible overlays, shown when menu loads) -->
     <button id="audio-button" style="top: 21%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 50px; display: none;">AUDIO</button>
@@ -153,7 +153,7 @@
         <option>NONE</option>
     </select>
     <input id="difficulty-slider" type="range" min="0.5" max="2.0" step="0.1" value="1.0" style="top: 45%;">
-    <button id="options-back-button">Back</button>
+    <button id="options-back-button" style="display:display: none;">Back</button>
 
     <script src="$GODOT_URL"></script> <!-- Godot replaces with actual JS file, e.g., tmp_js_export.js -->
     <script>
