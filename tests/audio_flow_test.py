@@ -89,7 +89,8 @@ def test_audio_flow(page: Page) -> None:
         # Open options
         page.wait_for_selector('#options-button', state='visible', timeout=1500)
         page.click("#options-button", force=True)
-        options_display: str = page.evaluate("window.getComputedStyle(document.getElementById('log-level-select')).display")
+        options_display: str = page.evaluate(
+            "window.getComputedStyle(document.getElementById('log-level-select')).display")
         assert options_display == 'block', "Options menu not loaded (difficulty-slider not displayed)"
 
         # Set log level DEBUG
@@ -113,18 +114,12 @@ def test_audio_flow(page: Page) -> None:
         page.evaluate("window.toggleMuteMaster([0])")  # Mute
         page.wait_for_timeout(1500)
         assert any("master is muted" in log["text"].lower() for log in logs)
-        '''
-        page.evaluate("""
-            const slider = document.getElementById('sfx-slider');
-            slider.value = 0.0;
-            slider.dispatchEvent(new Event('input'));
-            slider.dispatchEvent(new Event('change'));
-        """)
-        '''
         page.evaluate("window.changeSfxVolume([0])")
         page.wait_for_timeout(1500)
-        assert page.evaluate("document.getElementById('sfx-slider').value") == initial_sfx, "SFX value changed unexpectedly"
-        assert any("master muted, cannot adjust sub-volume" in log["text"].lower() for log in logs) or any("warning dialog" in log["text"].lower() for log in logs)
+        assert page.evaluate(
+            "document.getElementById('sfx-slider').value") == initial_sfx, "SFX value changed unexpectedly"
+        assert any("master muted, cannot adjust sub-volume" in log["text"].lower() for log in logs) or any(
+            "warning dialog" in log["text"].lower() for log in logs)
 
         # Unmute Master for next tests
         page.evaluate("window.toggleMuteMaster([1])")
@@ -133,24 +128,21 @@ def test_audio_flow(page: Page) -> None:
         # WARN-02: SFX muted → attempt weapon adjust
         page.evaluate("window.toggleMuteSfx([0])")  # Mute
         page.wait_for_timeout(1500)
-        '''
-        page.evaluate("""
-            const slider = document.getElementById('weapon-slider');
-            slider.value = 0.0;
-            slider.dispatchEvent(new Event('input'));
-            slider.dispatchEvent(new Event('change'));
-        """)
-        '''
         page.evaluate("window.changeWeaponVolume([0])")
         page.wait_for_timeout(1500)
-        assert page.evaluate("document.getElementById('weapon-slider').value") == initial_weapon, "Weapon value changed unexpectedly"
-        assert any("sfx muted, cannot adjust" in log["text"].lower() for log in logs) or any("warning dialog" in log["text"].lower() for log in logs)
+        assert page.evaluate(
+            "document.getElementById('weapon-slider').value") == initial_weapon, "Weapon value changed unexpectedly"
+        assert any("sfx muted, cannot adjust" in log["text"].lower() for log in logs) or any(
+            "warning dialog" in log["text"].lower() for log in logs)
 
         # Unmute SFX
         page.evaluate("window.toggleMuteSfx([1])")
         page.wait_for_timeout(1500)
 
         # WARN-03: Master unmuted → adjust sub-volume (Music)
+        # Capture logs before the change to isolate new ones (good for debugging in Godot tests)
+        pre_change_log_count = len(logs)
+
         page.evaluate("""
             const slider = document.getElementById('music-slider');
             slider.value = 0.6;
@@ -158,8 +150,14 @@ def test_audio_flow(page: Page) -> None:
             slider.dispatchEvent(new Event('change'));
         """)
         page.wait_for_timeout(1500)
+
+        # Verify the value changed (as expected, no mute constraint)
         assert page.evaluate("document.getElementById('music-slider').value") == '0.6', "Music value not changed"
-        assert not any("warning" in log["text"].lower() for log in logs if "music volume changed" in log["text"].lower()), "Unexpected warning"
+
+        # Check only new logs for no warnings (stronger assertion, catches unrelated warnings)
+        new_logs = logs[pre_change_log_count:]
+        assert not any(
+            "warning" in log["text"].lower() for log in new_logs), "Unexpected warning after music volume change"
 
     except Exception as e:
         print(f"Test: 'test_audio_flow' failed: {str(e)}")
