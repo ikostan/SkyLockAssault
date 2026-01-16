@@ -181,7 +181,9 @@ def test_volume_sliders_mutes(page: Page) -> None:
         new_logs = logs[pre_change_log_count:]
         value = page.evaluate("document.getElementById('sfx-slider').value")
         assert value == '0.8', f"SFX slider value not set to 0.8, got {value}"
-        assert any("sfx volume changed to: 0.8" in log["text"].lower() for log in new_logs), "SFX volume change log not found"
+        assert any("sfx volume level changed: 0.8" in log["text"].lower() for log in new_logs), "SFX volume change log not found"
+        assert any("SFX Volume Level in AudioManager: 0.8" in log["text"] for log in new_logs), "SFX volume change log not found"
+        assert any("saved volumes to config" in log["text"].lower() for log in new_logs), "SFX volume change log not found"
 
         # VOL-06: Mute / unmute SFX
         # MUTE
@@ -209,7 +211,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
         new_logs = logs[pre_change_log_count:]
         value = page.evaluate("document.getElementById('weapon-slider').value")
         assert value == '0.2', f"Weapon slider value not set to 0.2, got {value}"
-        assert any("weapon volume changed to: 0.2" in log["text"].lower() for log in new_logs), "Weapon volume change log not found"
+        assert any("weapon volume level changed: 0.2" in log["text"].lower() for log in new_logs), "Weapon volume change log not found"
 
         # VOL-08: Mute / unmute Weapon
         pre_change_log_count = len(logs)
@@ -223,7 +225,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
         page.evaluate("window.toggleMuteWeapon([1])")
         page.wait_for_timeout(1500)
         new_logs = logs[pre_change_log_count:]
-        assert any("applied loaded weapon volume to audioserver: 0.2" in log["text"].lower() for log in new_logs), "Weapon unmute log not found"
+        assert any("applied loaded sfx_weapon volume to audioserver: 0.2" in log["text"].lower() for log in new_logs), "Weapon unmute log not found"
         checked = page.evaluate("document.getElementById('mute-weapon').checked")
         assert checked, "Weapon mute not toggled to unmuted"
         assert any("weapon mute button toggled to: true" in log["text"].lower() for log in new_logs), "Weapon unmute log not found"
@@ -235,7 +237,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
         new_logs = logs[pre_change_log_count:]
         value = page.evaluate("document.getElementById('rotors-slider').value")
         assert value == '0.9', f"Rotors slider value not set to 0.9, got {value}"
-        assert any("rotors volume changed to: 0.9" in log["text"].lower() for log in new_logs), "Rotors volume change log not found"
+        assert any("rotors volume level changed: 0.9" in log["text"].lower() for log in new_logs), "Rotors volume change log not found"
 
         # VOL-10: Mute / unmute Rotors
         pre_change_log_count = len(logs)
@@ -249,7 +251,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
         page.evaluate("window.toggleMuteRotors([1])")
         page.wait_for_timeout(1500)
         new_logs = logs[pre_change_log_count:]
-        assert any("applied loaded rotors volume to audioserver: 0.9" in log["text"].lower() for log in new_logs), "Rotors unmute log not found"
+        assert any("applied loaded sfx_rotors volume to audioserver: 0.9" in log["text"].lower() for log in new_logs), "Rotors unmute log not found"
         checked = page.evaluate("document.getElementById('mute-rotors').checked")
         assert checked, "Rotors mute not toggled to unmuted"
         assert any("rotors mute button toggled to: true" in log["text"].lower() for log in new_logs), "Rotors unmute log not found"
