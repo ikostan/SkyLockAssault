@@ -182,7 +182,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
         value = page.evaluate("document.getElementById('sfx-slider').value")
         assert value == '0.8', f"SFX slider value not set to 0.8, got {value}"
         assert any("sfx volume level changed: 0.8" in log["text"].lower() for log in new_logs), "SFX volume change log not found"
-        assert any("SFX Volume Level in AudioManager: 0.8" in log["text"] for log in new_logs), "SFX volume change log not found"
+        assert any("sfx volume level in audiomanager: 0.8" in log["text"].lower() for log in new_logs), "SFX volume change log not found"
         assert any("saved volumes to config" in log["text"].lower() for log in new_logs), "SFX volume change log not found"
 
         # VOL-06: Mute / unmute SFX
