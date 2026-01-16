@@ -642,10 +642,7 @@ func _on_toggle_mute_rotors_js(args: Array) -> void:
 ## RESET BUTTON
 ## Update _on_audio_reset_button_pressed:
 func _on_audio_reset_button_pressed() -> void:
-	Globals.log_message(
-		"Audio reset pressed.",
-		Globals.LogLevel.DEBUG
-	)
+	Globals.log_message("Audio reset pressed.", Globals.LogLevel.DEBUG)
 	AudioManager.reset_volumes()
 	_sync_ui_from_manager()
 	_sync_dom_ui()
