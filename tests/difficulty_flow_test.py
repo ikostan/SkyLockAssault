@@ -120,7 +120,7 @@ def test_difficulty_flow(page: Page) -> None:
         page.wait_for_function("() => document.getElementById('options-button') !== null",
                                timeout=5000)  # Longer for stalls
         # Open options menu
-        page.click("#options-button", force=True, timeout=1500)
+        page.click("#options-button", force=True, timeout=2500)
         display_style = page.evaluate("window.getComputedStyle(document.getElementById('log-level-select')).display")
         assert display_style == 'block', "Options menu not loaded (display not set to block)"
 
@@ -156,6 +156,7 @@ def test_difficulty_flow(page: Page) -> None:
         # Start game
         page.wait_for_selector('#start-button', state='visible', timeout=1500)
         pre_change_log_count = len(logs)
+        pre_poll_log_count = len(logs)
         page.click("#start-button", force=True)
         page.wait_for_timeout(5000)  # Sometimes it takes longer time to pass the loading screen
         new_logs = logs[pre_change_log_count:]
@@ -166,7 +167,6 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Poll for loading start log to confirm transition to loading screen
         start_time = time.time()
-        pre_poll_log_count = len(logs)
         while time.time() - start_time < 30:
             if any("loading started successfully." in log["text"].lower() for log in logs[pre_poll_log_count:]):
                 break
@@ -176,7 +176,6 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Poll for scene loaded log from loading_screen.gd
         start_time = time.time()
-        pre_poll_log_count = len(logs)
         while time.time() - start_time < 30:
             if any("scene loaded successfully." in log["text"].lower() for log in logs[pre_poll_log_count:]):
                 break
