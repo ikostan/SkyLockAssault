@@ -126,51 +126,59 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Set log level to DEBUG (index 0) - directly call the exposed callback
         # (bypasses event for reliability in automation)
+        pre_change_log_count = len(logs)
         page.evaluate("window.changeLogLevel([0])")
         page.wait_for_timeout(1500)
-        assert any("Log level changed to: DEBUG" in log["text"] for log in logs), "Failed to set log level to DEBUG"
-
+        new_logs = logs[pre_change_log_count:]
+        assert any("Log level changed to: DEBUG" in log["text"] for log in new_logs), "Failed to set log level to DEBUG"
         assert any(
-            "log level changed to: debug" in log["text"].lower() for log in logs), "Failed to set log level to DEBUG"
+            "log level changed to: debug" in log["text"].lower() for log in new_logs), "Failed to set log level to DEBUG"
         assert any(
-            "settings saved" in log["text"].lower() for log in logs), "Failed to save the settings"
+            "settings saved" in log["text"].lower() for log in new_logs), "Failed to save the settings"
 
         # Set difficulty to 2.0 - directly call the exposed callback (bypasses event for reliability in automation)
+        pre_change_log_count = len(logs)
         page.evaluate("window.changeDifficulty([2.0])")
         page.wait_for_timeout(1500)
+        new_logs = logs[pre_change_log_count:]
         assert any(
-            "difficulty changed to: 2.0" in log["text"].lower() for log in logs), "Failed to set difficulty to 2.0"
+            "difficulty changed to: 2.0" in log["text"].lower() for log in new_logs), "Failed to set difficulty to 2.0"
         assert any(
-            "settings saved" in log["text"].lower() for log in logs), "Failed to save the settings"
+            "settings saved" in log["text"].lower() for log in new_logs), "Failed to save the settings"
 
         # Back to main menu
+        pre_change_log_count = len(logs)
         page.evaluate("window.optionsBackPressed([])")
         page.wait_for_timeout(1500)
-        assert any("back button pressed." in log["text"].lower() for log in logs), "Back button not found"
+        new_logs = logs[pre_change_log_count:]
+        assert any("back button pressed." in log["text"].lower() for log in new_logs), "Back button not found"
 
         # Start game
         page.wait_for_selector('#start-button', state='visible', timeout=1500)
+        pre_change_log_count = len(logs)
         page.click("#start-button", force=True)
         page.wait_for_timeout(5000)  # Sometimes it takes longer time to pass the loading screen
+        new_logs = logs[pre_change_log_count:]
+        assert any(
+            "start game menu button pressed." in log["text"].lower() for log in new_logs), "Start Game button not found"
+        assert any(
+            "initializing main scene..." in log["text"].lower() for log in new_logs), "Game scene not found"
 
         # Poll for loading start log to confirm transition to loading screen
         start_time = time.time()
+        pre_poll_log_count = len(logs)
         while time.time() - start_time < 30:
-            if any("loading started successfully." in log["text"].lower() for log in logs):
+            if any("loading started successfully." in log["text"].lower() for log in logs[pre_poll_log_count:]):
                 break
             time.sleep(0.5)
         else:
             raise TimeoutError("Loading screen did not start")
 
-        assert any(
-            "start game menu button pressed." in log["text"].lower() for log in logs), "Start Game button not found"
-        assert any(
-            "initializing main scene..." in log["text"].lower() for log in logs), "Game scene not found"
-
         # Poll for scene loaded log from loading_screen.gd
         start_time = time.time()
+        pre_poll_log_count = len(logs)
         while time.time() - start_time < 30:
-            if any("scene loaded successfully." in log["text"].lower() for log in logs):
+            if any("scene loaded successfully." in log["text"].lower() for log in logs[pre_poll_log_count:]):
                 break
             time.sleep(0.5)
         else:
@@ -181,11 +189,13 @@ def test_difficulty_flow(page: Page) -> None:
         page.click("canvas")
 
         # Simulate fire (press Space)
+        pre_change_log_count = len(logs)
         page.keyboard.press("Space")
         page.wait_for_timeout(3000)
+        new_logs = logs[pre_change_log_count:]
         # Verify scaled cooldown in logs (fire_rate 0.15 * 2.0 = 0.3)
         assert any("firing with scaled cooldown: 0.3" in log["text"].lower() for log in
-                   logs), "Scaled cooldown not found in logs"
+                   new_logs), "Scaled cooldown not found in logs"
 
     except Exception as e:
         print(f"Test: 'test_difficulty_flow' failed: {str(e)}")
