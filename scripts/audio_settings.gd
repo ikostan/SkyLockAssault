@@ -676,7 +676,7 @@ func _update_sfx_controls_ui() -> void:
 
 
 func _on_audio_back_button_pressed() -> void:
-	## Handles Back button press.
+		## Handles Back button press.
 	##
 	## Shows previous menu from stack, removes audio menu.
 	##
@@ -691,12 +691,13 @@ func _on_audio_back_button_pressed() -> void:
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 			hidden_menu_found = true
-	# Always clean up DOM if on web, regardless of hidden menu
-	if os_wrapper.has_feature("web") and js_window and js_bridge_wrapper:
-		_toggle_audio_dom_visibility("none")
-		_unset_audio_window_callbacks()
-		# Set AUDIO button visible in DOM
-		if hidden_menu_found:
+	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
+	if os_wrapper.has_feature("web") and js_window:
+		if js_bridge_wrapper:  # Only toggle DOM if bridge is available (for eval)
+			_toggle_audio_dom_visibility("none")
+		_unset_audio_window_callbacks()  # Always unset callbacks, no bridge needed
+		# Set AUDIO button visible in DOM (if bridge available for eval)
+		if hidden_menu_found and js_bridge_wrapper:
 			js_bridge_wrapper.eval(
 				"document.getElementById('audio-button').style.display = 'block';", true
 			)
