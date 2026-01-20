@@ -642,6 +642,7 @@ func _on_toggle_mute_rotors_js(args: Array) -> void:
 ## RESET BUTTON
 ## Update _on_audio_reset_button_pressed:
 func _on_audio_reset_button_pressed() -> void:
+	Globals.log_message("Audio reset pressed.", Globals.LogLevel.DEBUG)
 	AudioManager.reset_volumes()
 	_sync_ui_from_manager()
 	_sync_dom_ui()
@@ -683,14 +684,25 @@ func _on_audio_back_button_pressed() -> void:
 	##
 	## :rtype: void
 	Globals.log_message("Back (audio_back_button) button pressed in audio.", Globals.LogLevel.DEBUG)
+	var hidden_menu_found: bool = false
 	if not Globals.hidden_menus.is_empty():
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
 		if is_instance_valid(prev_menu):
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
+			hidden_menu_found = true
+	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
 	if os_wrapper.has_feature("web") and js_window:
-		_toggle_audio_dom_visibility("none")
-		_unset_audio_window_callbacks()
+		if js_bridge_wrapper:  # Only toggle DOM if bridge is available (for eval)
+			_toggle_audio_dom_visibility("none")
+		_unset_audio_window_callbacks()  # Always unset callbacks, no bridge needed
+		# Set AUDIO button visible in DOM (if bridge available for eval)
+		if hidden_menu_found and js_bridge_wrapper:
+			js_bridge_wrapper.eval(
+				"document.getElementById('audio-button').style.display = 'block';", true
+			)
+	if not hidden_menu_found:
+		Globals.log_message("No hidden menu to show.", Globals.LogLevel.INFO)
 	_intentional_exit = true
 	queue_free()
 
