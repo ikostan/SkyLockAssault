@@ -701,7 +701,7 @@ func _on_audio_back_button_pressed() -> void:
 				"document.getElementById('audio-button').style.display = 'block';", true
 			)
 	if not hidden_menu_found:
-		Globals.log_message("No hidden menu to show.", Globals.LogLevel.ERROR)
+		Globals.log_message("No hidden menu to show.", Globals.LogLevel.INFO)
 	_intentional_exit = true
 	queue_free()
 
