@@ -89,9 +89,6 @@ func get_volume(bus_name: String) -> float:
 ## :type vol: float
 ## :rtype: void
 func set_volume(bus_name: String, vol: float) -> void:
-	Globals.log_message(
-		str(bus_name) + " volume level changed: " + str(vol), Globals.LogLevel.DEBUG
-	)
 	match bus_name:
 		AudioConstants.BUS_MASTER:
 			master_volume = vol
