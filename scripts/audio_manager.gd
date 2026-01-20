@@ -96,31 +96,31 @@ func set_volume(bus_name: String, vol: float) -> void:
 		AudioConstants.BUS_MASTER:
 			master_volume = vol
 			Globals.log_message(
-				"Master Volume Level in AudioManager: " + str(AudioManager.master_volume),
+				"Master Volume Level in AudioManager: " + str(vol),
 				Globals.LogLevel.DEBUG
 			)
 		AudioConstants.BUS_MUSIC:
 			music_volume = vol
 			Globals.log_message(
-				"Music Volume Level in AudioManager: " + str(AudioManager.music_volume),
+				"Music Volume Level in AudioManager: " + str(vol),
 				Globals.LogLevel.DEBUG
 			)
 		AudioConstants.BUS_SFX:
 			sfx_volume = vol
 			Globals.log_message(
-				"SFX Volume Level in AudioManager: " + str(AudioManager.sfx_volume),
+				"SFX Volume Level in AudioManager: " + str(vol),
 				Globals.LogLevel.DEBUG
 			)
 		AudioConstants.BUS_SFX_WEAPON:
 			weapon_volume = vol
 			Globals.log_message(
-				"Weapon Volume Level in AudioManager: " + str(AudioManager.weapon_volume),
+				"Weapon Volume Level in AudioManager: " + str(vol),
 				Globals.LogLevel.DEBUG
 			)
 		AudioConstants.BUS_SFX_ROTORS:
 			rotors_volume = vol
 			Globals.log_message(
-				"Rotors Volume Level in AudioManager: " + str(AudioManager.rotors_volume),
+				"Rotors Volume Level in AudioManager: " + str(vol),
 				Globals.LogLevel.DEBUG
 			)
 		_:
