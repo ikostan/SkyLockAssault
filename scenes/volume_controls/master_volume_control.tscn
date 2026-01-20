@@ -1,7 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://b5gng6qabe5s"]
+[gd_scene load_steps=4 format=3 uid="uid://b5gng6qabe5s"]
 
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_xrowc"]
 [ext_resource type="Script" uid="uid://8hd1kvmb5bt1" path="res://scripts/volume_slider.gd" id="2_xrowc"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_e871p"]
 
 [node name="Master" type="Control"]
 layout_mode = 3
@@ -41,6 +43,7 @@ offset_right = 404.0
 offset_bottom = 24.0
 size_flags_horizontal = 10
 tooltip_text = "Mute all"
+theme_override_styles/focus = SubResource("StyleBoxEmpty_e871p")
 button_pressed = true
 icon_alignment = 2
 vertical_icon_alignment = 0
