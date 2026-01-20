@@ -69,18 +69,29 @@ func _on_controls_back_button_pressed() -> void:
 	if os_wrapper.has_feature("web") and js_window:
 		js_window.controlsBackPressed = null
 		# Set AUDIO & CONTROLS button visible in DOM (if bridge available for eval)
-		if hidden_menu_found and js_bridge_wrapper:
+		# Hide controls-back-button even when no hidden menu is found.
+		if js_bridge_wrapper:
 			(
 				js_bridge_wrapper
 				. eval(
 					"""
-					document.getElementById('audio-button').style.display = 'block';
-					document.getElementById('controls-button').style.display = 'block';
 					document.getElementById('controls-back-button').style.display = 'none';
 					""",
 					true
 				)
 			)
+			# Only showing audio/controls when a previous menu exists.
+			if hidden_menu_found:
+				(
+					js_bridge_wrapper
+					. eval(
+						"""
+						document.getElementById('audio-button').style.display = 'block';
+						document.getElementById('controls-button').style.display = 'block';
+						""",
+						true
+					)
+				)
 	if not hidden_menu_found:
 		Globals.log_message("No hidden menu to show.", Globals.LogLevel.INFO)
 	_intentional_exit = true
