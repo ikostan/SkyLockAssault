@@ -26,30 +26,7 @@ v8_coverage_volume_sliders_mutes_test.json, artifacts/test_volume_failure_*.png/
 import os
 import time
 import json
-import pytest
-from playwright.sync_api import Page, Playwright
-
-
-@pytest.fixture(scope="function")
-def page(playwright: Playwright) -> Page:
-    """
-    Fixture for browser page setup with CDP for coverage.
-
-    :param playwright: The Playwright instance.
-    :type playwright: Playwright
-    :return: The configured page object.
-    :rtype: Page
-    """
-    browser = playwright.chromium.launch(headless=True, args=[
-        "--enable-unsafe-swiftshader",
-        "--disable-gpu",
-        "--use-gl=swiftshader",
-    ])
-    context = browser.new_context(viewport={"width": 1280, "height": 720})
-    page = context.new_page()
-    yield page
-    context.close()
-    browser.close()
+from playwright.sync_api import Page
 
 
 def test_volume_sliders_mutes(page: Page) -> None:
