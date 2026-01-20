@@ -89,6 +89,9 @@ func get_volume(bus_name: String) -> float:
 ## :type vol: float
 ## :rtype: void
 func set_volume(bus_name: String, vol: float) -> void:
+	if not AudioConstants.BUS_CONFIG.has(bus_name):
+		Globals.log_message("Unknown bus for set_volume: " + bus_name, Globals.LogLevel.WARNING)
+		return
 	match bus_name:
 		AudioConstants.BUS_MASTER:
 			master_volume = vol
@@ -115,8 +118,6 @@ func set_volume(bus_name: String, vol: float) -> void:
 			Globals.log_message(
 				"Rotors Volume Level in AudioManager: " + str(vol), Globals.LogLevel.DEBUG
 			)
-		_:
-			Globals.log_message("Unknown bus for set_volume: " + bus_name, Globals.LogLevel.WARNING)
 
 
 ## Get muted state for a bus
