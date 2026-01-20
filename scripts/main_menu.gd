@@ -34,26 +34,7 @@ var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 @onready var options_button: Button = $VideoStreamPlayer/Panel/VBoxContainer/OptionsButton
 @onready var quit_button: Button = $VideoStreamPlayer/Panel/VBoxContainer/QuitButton
 @onready var background_music: AudioStreamPlayer2D = $AudioStreamPlayer2D
-
-
-func _input(event: InputEvent) -> void:
-	## Handles input events for the main menu.
-	##
-	## Logs mouse clicks and unlocks audio on web platforms upon user gesture.
-	##
-	## :param event: The input event to process.
-	## :type event: InputEvent
-	## :rtype: void
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var pos: Vector2 = event.position  # Explicitly type as Vector2
-		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
-
-	# New: Unlock audio on first qualifying gesture (click or key press)
-	if OS.get_name() == "Web" and not background_music.playing:
-		background_music.play()
-		Globals.log_message(
-			"User gesture detected—starting background music.", Globals.LogLevel.DEBUG
-		)
+@onready var menu: Panel = $VideoStreamPlayer/Panel
 
 
 func _ready() -> void:
@@ -64,6 +45,20 @@ func _ready() -> void:
 	##
 	## :rtype: void
 	Globals.log_message("Initializing main menu...", Globals.LogLevel.DEBUG)
+	# Prepare menu for fade-in: Make visible but fully transparent
+	menu.visible = true
+	menu.modulate.a = 0.0  # Start invisible (alpha 0)
+	# Wait for 3 seconds (adjust as needed)
+	await get_tree().create_timer(3.0).timeout
+	# Optional: Play a fade-in animation if you have an AnimationPlayer
+	# Fade in the main panel over 1 second (smooth easing)
+	var panel_tween := create_tween()
+	panel_tween.tween_property(
+		menu, 
+		"modulate:a",  # Property to animate (alpha channel)
+		1.0,           # End value (fully opaque)
+		1.0            # Duration in seconds
+	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)  # Smooth curve (eases out, quadratic)
 
 	# Connect START button signal
 	@warning_ignore("return_value_discarded")
@@ -94,6 +89,26 @@ func _ready() -> void:
 			Globals.log_message(
 				"Exposed main menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
 			)
+
+
+func _input(event: InputEvent) -> void:
+	## Handles input events for the main menu.
+	##
+	## Logs mouse clicks and unlocks audio on web platforms upon user gesture.
+	##
+	## :param event: The input event to process.
+	## :type event: InputEvent
+	## :rtype: void
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var pos: Vector2 = event.position  # Explicitly type as Vector2
+		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
+
+	# New: Unlock audio on first qualifying gesture (click or key press)
+	if OS.get_name() == "Web" and not background_music.playing:
+		background_music.play()
+		Globals.log_message(
+			"User gesture detected—starting background music.", Globals.LogLevel.DEBUG
+		)
 
 
 func setup_quit_dialog() -> void:

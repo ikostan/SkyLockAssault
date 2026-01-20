@@ -78,16 +78,17 @@ autoplay = true
 loop = true
 
 [node name="Panel" type="Panel" parent="VideoStreamPlayer"]
+visible = false
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -180.0
-offset_top = -115.0
-offset_right = 180.0
-offset_bottom = 115.0
+offset_left = -195.0
+offset_top = -140.0
+offset_right = 195.0
+offset_bottom = 140.0
 grow_horizontal = 2
 grow_vertical = 2
 tooltip_text = "Main Menu Panel"
@@ -100,20 +101,22 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -160.0
-offset_top = -100.0
-offset_right = 160.0
-offset_bottom = 100.0
+offset_left = -170.0
+offset_top = -110.0
+offset_right = 170.0
+offset_bottom = 110.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 10
 
 [node name="Label" type="Label" parent="VideoStreamPlayer/Panel/VBoxContainer"]
 visible = false
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_font_sizes/font_size = 45
-text = "Sky Lock Assault"
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("3_bqqt6")
+theme_override_font_sizes/font_size = 30
+text = "{SKY=LOCK=ASSAULT}"
 horizontal_alignment = 1
 vertical_alignment = 1
 
