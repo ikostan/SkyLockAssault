@@ -676,7 +676,7 @@ func _update_sfx_controls_ui() -> void:
 
 
 func _on_audio_back_button_pressed() -> void:
-		## Handles Back button press.
+	## Handles Back button press.
 	##
 	## Shows previous menu from stack, removes audio menu.
 	##
