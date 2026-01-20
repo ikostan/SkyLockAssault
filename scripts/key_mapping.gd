@@ -9,8 +9,10 @@ var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
 var _controls_back_button_pressed_cb: Variant
 var _intentional_exit: bool = false
 
-@onready var controls_back_button: Button = $Panel/OptionsVBoxContainer/BtnContainer/ControlsBackButton
-@onready var controls_reset_button: Button = $Panel/OptionsVBoxContainer/BtnContainer/ControlResetButton
+@onready
+var controls_back_button: Button = $Panel/OptionsVBoxContainer/BtnContainer/ControlsBackButton
+@onready
+var controls_reset_button: Button = $Panel/OptionsVBoxContainer/BtnContainer/ControlResetButton
 
 
 func _ready() -> void:
