@@ -684,20 +684,23 @@ func _on_audio_back_button_pressed() -> void:
 	##
 	## :rtype: void
 	Globals.log_message("Back (audio_back_button) button pressed in audio.", Globals.LogLevel.DEBUG)
+	var hidden_menu_found: bool = false
 	if not Globals.hidden_menus.is_empty():
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
 		if is_instance_valid(prev_menu):
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
-		# Reset DOM
-		if os_wrapper.has_feature("web") and js_window and js_bridge_wrapper:
-			_toggle_audio_dom_visibility("none")
-			_unset_audio_window_callbacks()
-			# Set AUDIO button visible in DOM
+			hidden_menu_found = true
+	# Always clean up DOM if on web, regardless of hidden menu
+	if os_wrapper.has_feature("web") and js_window and js_bridge_wrapper:
+		_toggle_audio_dom_visibility("none")
+		_unset_audio_window_callbacks()
+		# Set AUDIO button visible in DOM
+		if hidden_menu_found:
 			js_bridge_wrapper.eval(
-				"document.getElementById('audio-button').style.display = 'block';", true
-			)
-	else:
+					"document.getElementById('audio-button').style.display = 'block';", true
+				)
+	if not hidden_menu_found:
 		Globals.log_message("No hidden menu to show.", Globals.LogLevel.ERROR)
 	_intentional_exit = true
 	queue_free()
