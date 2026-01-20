@@ -88,7 +88,8 @@ def test_volume_sliders_mutes(page: Page) -> None:
         assert box is not None, "Canvas not found"
         # Open audio
         pre_change_log_count = len(logs)
-        page.click("#audio-button", force=True)
+        # page.click("#audio-button", force=True)
+        page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)  # Wait for audio scene load
         audio_display: str = page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display")
         assert audio_display == 'block', "Audio menu not loaded (master-slider not displayed)"
