@@ -31,9 +31,6 @@ func _ready() -> void:
 # change bus value/volume
 func _on_value_changed(value: float) -> void:
 	AudioServer.set_bus_volume_db(bus_index, linear_to_db(value))
-	Globals.log_message(
-		str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
-	)
 	AudioManager.set_volume(bus_name, value)
 	# New: Start/restart debounce timer instead of immediate save
 	if save_debounce_timer.is_stopped():
