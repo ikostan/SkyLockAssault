@@ -204,21 +204,28 @@ def test_reset_flow(page: Page) -> None:
         assert float(page.evaluate("document.getElementById('weapon-slider').value")) == 1.0
         assert float(page.evaluate("document.getElementById('rotors-slider').value")) == 1.0
 
-        # Mutes should retain their default unchecked state after reload
+        # Mutes should retain their default checked state after reload
         assert page.evaluate("document.getElementById('mute-master').checked")
         assert page.evaluate("document.getElementById('mute-music').checked")
         assert page.evaluate("document.getElementById('mute-sfx').checked")
         assert page.evaluate("document.getElementById('mute-weapon').checked")
         assert page.evaluate("document.getElementById('mute-rotors').checked")
 
-        # STATE-02: Reset doesn’t affect other menus
+        # STATE-02: Reset doesn't affect other menus
         # Preconditions: Reset in Audio
         # Steps: Navigate other menus
         # Expected: Other menus unaffected
+        # Navigate back to options menu to access difficulty-slider
+        page.evaluate("window.audioBackPressed([])")
+        page.wait_for_timeout(2000)
         # Cache the initial difficulty value to avoid depending on a hardcoded default
         initial_difficulty_value = float(page.evaluate("document.getElementById('difficulty-slider').value"))
         pre_change_log_count = len(logs)
         assert initial_difficulty_value == 1.0, "Unexpected initial difficulty default"
+        # Navigate back to audio menu to test reset isolation
+        page.wait_for_selector('#audio-button', state='visible', timeout=1500)
+        page.click("#audio-button", force=True)
+        page.wait_for_timeout(5000)
         page.evaluate("window.audioResetPressed([])")
         page.wait_for_timeout(1500)
         new_logs = logs[pre_change_log_count:]
