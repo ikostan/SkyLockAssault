@@ -215,7 +215,10 @@ def test_reset_flow(page: Page) -> None:
         # Preconditions: Reset in Audio
         # Steps: Navigate other menus
         # Expected: Other menus unaffected
+        # Cache the initial difficulty value to avoid depending on a hardcoded default
+        initial_difficulty_value = float(page.evaluate("document.getElementById('difficulty-slider').value"))
         pre_change_log_count = len(logs)
+        assert initial_difficulty_value == 1.0, "Unexpected initial difficulty default"
         page.evaluate("window.audioResetPressed([])")
         page.wait_for_timeout(1500)
         new_logs = logs[pre_change_log_count:]
@@ -223,9 +226,10 @@ def test_reset_flow(page: Page) -> None:
         assert any("audio volumes reset to defaults" in log["text"].lower() for log in new_logs), "Reset log not found"
         page.evaluate("window.audioBackPressed([])")
         page.wait_for_timeout(2000)
-        # Check options menu (e.g., difficulty unchanged)
-        assert float(page.evaluate("document.getElementById('difficulty-slider').value")) == 1.0, "Reset affected other menus"
-
+        # Later, after audio reset and navigating back to the difficulty menu,
+        # assert the difficulty slider has not changed from its initial value.
+        assert float(page.evaluate(
+            "document.getElementById('difficulty-slider').value")) == initial_difficulty_value, "Difficulty reset unexpectedly"
     except Exception as e:
         print(f"Test suite failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
