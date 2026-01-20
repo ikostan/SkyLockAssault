@@ -86,7 +86,7 @@ func _ready() -> void:
 
 	if not options_back_button.pressed.is_connected(_on_options_back_button_pressed):
 		options_back_button.pressed.connect(_on_options_back_button_pressed)
-		
+
 	if not key_mapping_button.pressed.is_connected(_on_key_mapping_button_pressed):
 		key_mapping_button.pressed.connect(_on_key_mapping_button_pressed)
 
@@ -350,11 +350,15 @@ func _on_audio_settings_button_pressed() -> void:
 	Globals.hidden_menus.push_back(self)
 	self.visible = false
 	if os_wrapper.has_feature("web") and js_bridge_wrapper:
-		js_bridge_wrapper.eval(
-			"""
+		(
+			js_bridge_wrapper
+			. eval(
+				"""
 			document.getElementById('audio-button').style.display = 'none';
 			document.getElementById('controls-button').style.display = 'none';
-			""", true
+			""",
+				true
+			)
 		)
 
 
@@ -368,9 +372,13 @@ func _on_key_mapping_button_pressed() -> void:
 	Globals.hidden_menus.push_back(self)
 	self.visible = false
 	if os_wrapper.has_feature("web") and js_bridge_wrapper:
-		js_bridge_wrapper.eval(
-			"""
+		(
+			js_bridge_wrapper
+			. eval(
+				"""
 			document.getElementById('audio-button').style.display = 'none';
 			document.getElementById('controls-button').style.display = 'none';
-			""", true
+			""",
+				true
+			)
 		)
