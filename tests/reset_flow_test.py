@@ -180,13 +180,15 @@ def test_reset_flow(page: Page) -> None:
         # STATE-01: Reset button state persists in config
         # Preconditions: After Reset + Save
         # Steps: Reload game/settings
-        # Expected: Defaults retained (if config system commits on Reset)
+        # Expected: Defaults retained for all sliders and mutes
         pre_change_log_count = len(logs)
         page.evaluate("window.audioResetPressed([])")
         page.wait_for_timeout(1500)
         new_logs = logs[pre_change_log_count:]
         assert any("audio reset pressed" in log["text"].lower() for log in new_logs), "Reset log not found"
         assert any("audio volumes reset to defaults" in log["text"].lower() for log in new_logs), "Reset log not found"
+
+        # Reload and validate persisted defaults for all audio controls
         page.reload()
         page.wait_for_function("() => window.godotInitialized", timeout=5000)
         page.wait_for_selector('#options-button', state='visible', timeout=3000)
@@ -194,7 +196,20 @@ def test_reset_flow(page: Page) -> None:
         page.wait_for_selector('#audio-button', state='visible', timeout=3000)
         page.click("#audio-button", force=True)
         page.wait_for_timeout(5000)
-        assert float(page.evaluate("document.getElementById('master-slider').value")) == 1.0, "Defaults not persisted on reload"
+
+        # Sliders should all be at default volume (mirroring RESET-01 expectations)
+        assert float(page.evaluate("document.getElementById('master-slider').value")) == 1.0
+        assert float(page.evaluate("document.getElementById('music-slider').value")) == 1.0
+        assert float(page.evaluate("document.getElementById('sfx-slider').value")) == 1.0
+        assert float(page.evaluate("document.getElementById('weapon-slider').value")) == 1.0
+        assert float(page.evaluate("document.getElementById('rotors-slider').value")) == 1.0
+
+        # Mutes should retain their default unchecked state after reload
+        assert page.evaluate("document.getElementById('mute-master').checked")
+        assert page.evaluate("document.getElementById('mute-music').checked")
+        assert page.evaluate("document.getElementById('mute-sfx').checked")
+        assert page.evaluate("document.getElementById('mute-weapon').checked")
+        assert page.evaluate("document.getElementById('mute-rotors').checked")
 
         # STATE-02: Reset doesn’t affect other menus
         # Preconditions: Reset in Audio
