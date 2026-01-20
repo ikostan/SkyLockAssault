@@ -118,6 +118,11 @@ func set_volume(bus_name: String, vol: float) -> void:
 			Globals.log_message(
 				"Rotors Volume Level in AudioManager: " + str(vol), Globals.LogLevel.DEBUG
 			)
+		_:
+			Globals.log_message(
+				"Unsupported bus in set_volume match (check config drift): " + bus_name,
+				Globals.LogLevel.ERROR
+			)
 
 
 ## Get muted state for a bus
