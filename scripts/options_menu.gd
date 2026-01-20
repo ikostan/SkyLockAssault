@@ -138,11 +138,12 @@ func _ready() -> void:
 			_controls_pressed_cb = js_bridge_wrapper.create_callback(
 				Callable(self, "_on_controls_pressed_js")
 			)
+			js_window.controlsPressed = _controls_pressed_cb
 
 			_audio_pressed_cb = js_bridge_wrapper.create_callback(
 				Callable(self, "_on_audio_pressed_js")
 			)
-			js_window.controlsPressed = _audio_pressed_cb
+			js_window.audioPressed = _audio_pressed_cb
 
 			Globals.log_message(
 				"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
