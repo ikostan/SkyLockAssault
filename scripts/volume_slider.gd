@@ -31,57 +31,10 @@ func _ready() -> void:
 # change bus value/volume
 func _on_value_changed(value: float) -> void:
 	AudioServer.set_bus_volume_db(bus_index, linear_to_db(value))
-	# Master volume
-	if bus_name == AudioConstants.BUS_MASTER:
-		AudioManager.master_volume = value
-		Globals.log_message(
-			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
-		)
-		Globals.log_message(
-			"Master Volume Level in AudioManager: " + str(AudioManager.master_volume),
-			Globals.LogLevel.DEBUG
-		)
-	# Music volume
-	if bus_name == AudioConstants.BUS_MUSIC:
-		AudioManager.music_volume = value
-		Globals.log_message(
-			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
-		)
-		Globals.log_message(
-			"Music Volume Level in AudioManager: " + str(AudioManager.music_volume),
-			Globals.LogLevel.DEBUG
-		)
-	# SFX volume
-	if bus_name == AudioConstants.BUS_SFX:
-		AudioManager.sfx_volume = value
-		Globals.log_message(
-			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
-		)
-		Globals.log_message(
-			"SFX Volume Level in AudioManager: " + str(AudioManager.sfx_volume),
-			Globals.LogLevel.DEBUG
-		)
-	# Rotors volume
-	if bus_name == AudioConstants.BUS_SFX_ROTORS:
-		AudioManager.rotors_volume = value
-		Globals.log_message(
-			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
-		)
-		Globals.log_message(
-			"Rotors Volume Level in AudioManager: " + str(AudioManager.rotors_volume),
-			Globals.LogLevel.DEBUG
-		)
-	# Weapon volume
-	if bus_name == AudioConstants.BUS_SFX_WEAPON:
-		AudioManager.weapon_volume = value
-		Globals.log_message(
-			str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
-		)
-		Globals.log_message(
-			"Weapon Volume Level in AudioManager: " + str(AudioManager.weapon_volume),
-			Globals.LogLevel.DEBUG
-		)
-
+	Globals.log_message(
+		str(bus_name) + " volume level changed: " + str(value), Globals.LogLevel.DEBUG
+	)
+	AudioManager.set_volume(bus_name, value)
 	# New: Start/restart debounce timer instead of immediate save
 	if save_debounce_timer.is_stopped():
 		save_debounce_timer.start()

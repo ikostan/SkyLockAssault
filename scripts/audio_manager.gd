@@ -92,14 +92,34 @@ func set_volume(bus_name: String, vol: float) -> void:
 	match bus_name:
 		AudioConstants.BUS_MASTER:
 			master_volume = vol
+			Globals.log_message(
+				"Master Volume Level in AudioManager: " + str(AudioManager.master_volume),
+				Globals.LogLevel.DEBUG
+			)
 		AudioConstants.BUS_MUSIC:
 			music_volume = vol
+			Globals.log_message(
+				"Music Volume Level in AudioManager: " + str(AudioManager.music_volume),
+				Globals.LogLevel.DEBUG
+			)
 		AudioConstants.BUS_SFX:
 			sfx_volume = vol
+			Globals.log_message(
+				"SFX Volume Level in AudioManager: " + str(AudioManager.sfx_volume),
+				Globals.LogLevel.DEBUG
+			)
 		AudioConstants.BUS_SFX_WEAPON:
 			weapon_volume = vol
+			Globals.log_message(
+				"Weapon Volume Level in AudioManager: " + str(AudioManager.weapon_volume),
+				Globals.LogLevel.DEBUG
+			)
 		AudioConstants.BUS_SFX_ROTORS:
 			rotors_volume = vol
+			Globals.log_message(
+				"Rotors Volume Level in AudioManager: " + str(AudioManager.rotors_volume),
+				Globals.LogLevel.DEBUG
+			)
 		_:
 			Globals.log_message("Unknown bus for set_volume: " + bus_name, Globals.LogLevel.WARNING)
 
