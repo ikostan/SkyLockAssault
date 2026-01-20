@@ -220,11 +220,6 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_2f1bn")
 theme_override_styles/hover = SubResource("StyleBoxFlat_7txom")
 theme_override_styles/focus = SubResource("StyleBoxFlat_binsn")
 
-[node name="VersionLabel" type="Label" parent="Panel/OptionsVBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 4
-text = "Version: "
-
 [node name="OptionsBackButton" type="Button" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
@@ -238,6 +233,11 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_ijpji")
 theme_override_styles/hover = SubResource("StyleBoxFlat_hm4m4")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_lfjc7")
 text = "{BACK}"
+
+[node name="VersionLabel" type="Label" parent="Panel/OptionsVBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Version: "
 
 [connection signal="pressed" from="Panel/OptionsVBoxContainer/KeyMappingButton" to="." method="_on_key_mapping_button_pressed"]
 [connection signal="pressed" from="Panel/OptionsVBoxContainer/AudioSettingsButton" to="." method="_on_audio_settings_button_pressed"]
