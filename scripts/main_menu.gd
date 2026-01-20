@@ -53,8 +53,9 @@ func _ready() -> void:
 	# Optional: Play a fade-in animation if you have an AnimationPlayer
 	# Fade in the main panel over 1 second (smooth easing)
 	var panel_tween := create_tween()
+	# Property to animate (alpha channel)  # End value (fully opaque)  # Duration in seconds
 	panel_tween.tween_property(menu, "modulate:a", 1.0, 1.0).set_ease(Tween.EASE_OUT).set_trans(
-		Tween.TRANS_QUAD  # Property to animate (alpha channel)  # End value (fully opaque)  # Duration in seconds
+		Tween.TRANS_QUAD  
 	)  # Smooth curve (eases out, quadratic)
 
 	# Connect START button signal
