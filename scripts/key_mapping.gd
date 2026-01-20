@@ -35,8 +35,8 @@ func _ready() -> void:
 				js_bridge_wrapper
 				. eval(
 					"""
-				document.getElementById('controls-back-button').style.display = 'block';
-				""",
+					document.getElementById('controls-back-button').style.display = 'block';
+					""",
 					true
 				)
 			)
@@ -74,10 +74,10 @@ func _on_controls_back_button_pressed() -> void:
 				js_bridge_wrapper
 				. eval(
 					"""
-				document.getElementById('audio-button').style.display = 'block';
-        		document.getElementById('controls-button').style.display = 'block';
-				document.getElementById('controls-back-button').style.display = 'none';
-				""",
+					document.getElementById('audio-button').style.display = 'block';
+					document.getElementById('controls-button').style.display = 'block';
+					document.getElementById('controls-back-button').style.display = 'none';
+					""",
 					true
 				)
 			)
