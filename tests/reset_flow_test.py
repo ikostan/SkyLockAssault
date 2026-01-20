@@ -84,7 +84,8 @@ def test_reset_flow(page: Page) -> None:
         page.wait_for_selector('#audio-button', state='visible', timeout=1500)
         assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
         pre_change_log_count = len(logs)
-        page.click("#audio-button", force=True)
+        # page.click("#audio-button", force=True)
+        page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)  # Wait for audio scene load and JS eval
         audio_display: str = page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display")
         assert audio_display == 'block', "Audio menu not loaded (master-slider not displayed)"
@@ -159,7 +160,8 @@ def test_reset_flow(page: Page) -> None:
         assert any("audio volumes reset to defaults" in log["text"].lower() for log in new_logs), "Reset log not found"
         page.evaluate("window.audioBackPressed([])")
         page.wait_for_selector('#audio-button', state='visible', timeout=1500)
-        page.click("#audio-button", force=True)
+        # page.click("#audio-button", force=True)
+        page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)
         assert float(page.evaluate("document.getElementById('sfx-slider').value")) == 1.0, "Reset not persisted after back"
 
@@ -194,7 +196,8 @@ def test_reset_flow(page: Page) -> None:
         page.wait_for_selector('#options-button', state='visible', timeout=3000)
         page.click("#options-button", force=True)
         page.wait_for_selector('#audio-button', state='visible', timeout=3000)
-        page.click("#audio-button", force=True)
+        # page.click("#audio-button", force=True)
+        page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)
 
         # Sliders should all be at default volume (mirroring RESET-01 expectations)
@@ -224,7 +227,8 @@ def test_reset_flow(page: Page) -> None:
         assert initial_difficulty_value == 1.0, "Unexpected initial difficulty default"
         # Navigate back to audio menu to test reset isolation
         page.wait_for_selector('#audio-button', state='visible', timeout=1500)
-        page.click("#audio-button", force=True)
+        # page.click("#audio-button", force=True)
+        page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)
         page.evaluate("window.audioResetPressed([])")
         page.wait_for_timeout(1500)

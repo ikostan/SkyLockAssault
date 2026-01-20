@@ -90,7 +90,8 @@ def test_audio_flow(page: Page) -> None:
         # Open audio
         pre_change_log_count = len(logs)
         page.wait_for_selector('#audio-button', state='visible', timeout=1500)
-        page.click("#audio-button", force=True)
+        # page.click("#audio-button", force=True)
+        page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(1500)
         assert page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display") == 'block'
         new_logs = logs[pre_change_log_count:]

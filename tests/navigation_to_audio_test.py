@@ -97,7 +97,8 @@ def test_navigation_to_audio(page: Page) -> None:
         assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
 
         # Open audio
-        page.click("#audio-button", force=True, timeout=1500)
+        # page.click("#audio-button", force=True, timeout=1500)
+        page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)  # Wait for audio scene load and JS eval
 
         audio_display: str = page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display")

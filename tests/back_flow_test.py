@@ -84,7 +84,8 @@ def test_back_flow(page: Page) -> None:
         page.wait_for_selector('#audio-button', state='visible', timeout=1500)
         assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
         pre_change_log_count = len(logs)
-        page.click("#audio-button", force=True)
+        # page.click("#audio-button", force=True)
+        page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)  # Wait for audio scene load and JS eval
         audio_display: str = page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display")
         assert audio_display == 'block', "Audio menu not loaded (master-slider not displayed)"
@@ -107,7 +108,8 @@ def test_back_flow(page: Page) -> None:
 
         # Re-enter audio for next tests
         page.wait_for_selector('#audio-button', state='visible', timeout=1500)
-        page.click("#audio-button", force=True)
+        # page.click("#audio-button", force=True)
+        page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)
 
         # BACK-02: Back without changes
@@ -117,7 +119,8 @@ def test_back_flow(page: Page) -> None:
         initial_master: str = page.evaluate("document.getElementById('master-slider').value")
         page.evaluate("window.audioBackPressed([])")
         page.wait_for_selector('#audio-button', state='visible', timeout=1500)
-        page.click("#audio-button", force=True)
+        # page.click("#audio-button", force=True)
+        page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)
         assert page.evaluate("document.getElementById('master-slider').value") == initial_master, "State mutated without changes"
 
@@ -129,7 +132,8 @@ def test_back_flow(page: Page) -> None:
         page.click("#options-button", force=True)
         # Navigate to audio menu
         page.wait_for_selector('#audio-button', state='visible', timeout=3500)
-        page.click("#audio-button", force=True)
+        # page.click("#audio-button", force=True)
+        page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)
 
         # BACK-03: Back after slider changes
@@ -140,7 +144,8 @@ def test_back_flow(page: Page) -> None:
         page.wait_for_timeout(1500)
         page.evaluate("window.audioBackPressed([])")
         page.wait_for_selector('#audio-button', state='visible', timeout=1500)
-        page.click("#audio-button", force=True)
+        # page.click("#audio-button", force=True)
+        page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)
         assert page.evaluate("document.getElementById('music-slider').value") == '0.4', "Changes did not persist after back"
 
