@@ -144,7 +144,8 @@
     <button id="audio-back-button">Back</button>
 
     <!-- Options Menu Elements (invisible overlays, shown when menu loads) -->
-    <button id="audio-button" style="top: 21%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 50px; display: none;">AUDIO</button>
+    <button id="controls-button" style="top: 21%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 50px; display: none;">CONTROLS</button>
+    <button id="audio-button" style="top: 31%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 50px; display: none;">AUDIO</button>
     <select id="log-level-select" style="top: 55%;">
         <option>DEBUG</option>
         <option>INFO</option>
@@ -154,6 +155,7 @@
     </select>
     <input id="difficulty-slider" type="range" min="0.5" max="2.0" step="0.1" value="1.0" style="top: 45%;">
     <button id="options-back-button">Back</button>
+    <button id="controls-back-button">Back</button>
 
     <script src="$GODOT_URL"></script> <!-- Godot replaces with actual JS file, e.g., tmp_js_export.js -->
     <script>
@@ -192,6 +194,7 @@
         };
 
         // Hook buttons/sliders to exposed Godot functions
+        document.getElementById('controls-button').onclick = () => window.controlsPressed([]);
         document.getElementById('audio-button').onclick = () => window.audioPressed([]);
         document.getElementById('start-button').onclick = () => window.startPressed([]);
         document.getElementById('options-button').onclick = () => window.optionsPressed([]);
@@ -209,6 +212,7 @@
         document.getElementById('mute-weapon').onchange = (e) => window.toggleMuteWeapon([e.target.checked]);
         document.getElementById('mute-rotors').onchange = (e) => window.toggleMuteRotors([e.target.checked]);
         document.getElementById('options-back-button').onclick = () => window.optionsBackPressed([]);  // Add this for options back
+        document.getElementById('controls-back-button').onclick = () => window.controlsBackPressed([]);  // Add this for audio back
         document.getElementById('audio-back-button').onclick = () => window.audioBackPressed([]);  // Add this for audio back
         document.getElementById('audio-reset-button').onclick = () => window.audioResetPressed([]);  // Add for reset
     </script>

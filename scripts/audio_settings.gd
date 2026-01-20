@@ -699,7 +699,10 @@ func _on_audio_back_button_pressed() -> void:
 		# Set AUDIO button visible in DOM (if bridge available for eval)
 		if hidden_menu_found and js_bridge_wrapper:
 			js_bridge_wrapper.eval(
-				"document.getElementById('audio-button').style.display = 'block';", true
+				"""
+				document.getElementById('controls-button').style.display = 'block';
+				document.getElementById('audio-button').style.display = 'block';
+				""", true
 			)
 	if not hidden_menu_found:
 		Globals.log_message("No hidden menu to show.", Globals.LogLevel.INFO)
