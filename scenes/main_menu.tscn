@@ -67,6 +67,7 @@ grow_vertical = 2
 script = ExtResource("1_l6cm7")
 
 [node name="VideoStreamPlayer" type="VideoStreamPlayer" parent="."]
+visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -78,7 +79,6 @@ autoplay = true
 loop = true
 
 [node name="Panel" type="Panel" parent="VideoStreamPlayer"]
-visible = false
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
