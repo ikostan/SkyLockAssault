@@ -60,6 +60,7 @@ def test_back_flow(page: Page) -> None:
         cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
 
         page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=5000)
+        page.wait_for_timeout(3000)
         page.wait_for_function("() => window.godotInitialized", timeout=5000)
 
         # Verify canvas
