@@ -36,8 +36,6 @@ def page(playwright: Playwright, request) -> Page:
             "--enable-unsafe-swiftshader",
             "--disable-gpu",
             "--use-gl=swiftshader",
-            "--disable - software - rasterizer",
-            "--enable-webgl-software-rendering",  # Add this for Godot WebGL fallback
         ]
     )
     context = browser.new_context(
