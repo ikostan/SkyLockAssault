@@ -36,11 +36,13 @@ def page(playwright: Playwright, request) -> Page:
             "--enable-unsafe-swiftshader",
             "--disable-gpu",
             "--use-gl=swiftshader",
+            "--disable - software - rasterizer",
+            "--enable-webgl-software-rendering",  # Add this for Godot WebGL fallback
         ]
     )
     context = browser.new_context(
         viewport={"width": 1280, "height": 720},
-        record_har_path=str(har_path) if har_path else None  # Network trace for debugging (optional)
+        record_har_path=str(har_path) if har_path else None,  # Network trace for debugging (optional)
     )
     page = context.new_page()
     yield page

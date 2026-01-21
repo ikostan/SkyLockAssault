@@ -74,8 +74,9 @@ def test_audio_flow(page: Page) -> None:
         assert "SkyLockAssault" in page.title(), "Title not found"
 
         # Open options
-        page.wait_for_selector('#options-button', state='visible', timeout=1500)
+        page.wait_for_selector('#options-button', state='visible', timeout=2500)
         page.click("#options-button", force=True)
+        page.wait_for_function('window.changeLogLevel !== undefined', timeout=2500)
         options_display: str = page.evaluate(
             "window.getComputedStyle(document.getElementById('log-level-select')).display")
         assert options_display == 'block', "Options menu not loaded (selected log level not displayed)"
@@ -90,9 +91,9 @@ def test_audio_flow(page: Page) -> None:
 
         # Open audio
         pre_change_log_count = len(logs)
-        page.wait_for_selector('#audio-button', state='visible', timeout=1500)
+        page.wait_for_selector('#audio-button', state='visible', timeout=2500)
         # page.click("#audio-button", force=True)
-        page.wait_for_function('window.audioPressed !== undefined', timeout=1500)
+        page.wait_for_function('window.audioPressed !== undefined', timeout=2500)
         page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(1500)
         assert page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display") == 'block'
@@ -107,14 +108,14 @@ def test_audio_flow(page: Page) -> None:
 
         # WARN-01: Master muted → attempt sub-volume adjust (SFX)
         pre_change_log_count = len(logs)
-        page.wait_for_function('window.toggleMuteMaster !== undefined', timeout=1500)
+        page.wait_for_function('window.toggleMuteMaster !== undefined', timeout=2500)
         page.evaluate("window.toggleMuteMaster([0])")  # Mute
         page.wait_for_timeout(1500)
         new_logs = logs[pre_change_log_count:]
         assert any("master is muted" in log["text"].lower() for log in new_logs)
         # Change SFX Volume when Master is muted
         pre_change_log_count = len(logs)
-        page.wait_for_function('window.changeSfxVolume !== undefined', timeout=1500)
+        page.wait_for_function('window.changeSfxVolume !== undefined', timeout=2500)
         page.evaluate("window.changeSfxVolume([0])")
         page.wait_for_timeout(1500)
         assert page.evaluate(

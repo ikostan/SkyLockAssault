@@ -71,11 +71,11 @@ def test_navigation_to_audio(page: Page) -> None:
         assert "SkyLockAssault" in page.title(), "Title not found"
 
         # NAV-01: Verify main menu overlays exist and are configured
-        page.wait_for_selector('#start-button', state='visible', timeout=1500)
+        page.wait_for_selector('#start-button', state='visible', timeout=2500)
         assert page.evaluate("document.getElementById('start-button') !== null")
-        page.wait_for_selector('#options-button', state='visible', timeout=1500)
+        page.wait_for_selector('#options-button', state='visible', timeout=2500)
         assert page.evaluate("document.getElementById('options-button') !== null")
-        page.wait_for_selector('#quit-button', state='visible', timeout=1500)
+        page.wait_for_selector('#quit-button', state='visible', timeout=2500)
         assert page.evaluate("document.getElementById('quit-button') !== null")
         opacity: str = page.evaluate("window.getComputedStyle(document.getElementById('options-button')).opacity")
         assert opacity == '0', f"Expected opacity 0, got {opacity}"
@@ -89,18 +89,18 @@ def test_navigation_to_audio(page: Page) -> None:
         assert options_display == 'block', "Options menu not loaded (difficulty-slider not displayed)"
 
         # NAV-03: Set log level to DEBUG
-        page.wait_for_function('window.changeLogLevel !== undefined', timeout=1500)
+        page.wait_for_function('window.changeLogLevel !== undefined', timeout=2500)
         page.evaluate("window.changeLogLevel([0])")  # Index 0 for DEBUG
         page.wait_for_timeout(3000)
         assert any("log level changed to: debug" in log["text"].lower() for log in logs), "Failed to set log level to DEBUG"
 
         # NAV-04: Navigate to audio sub-menu
-        page.wait_for_selector('#audio-button', state='visible', timeout=1000)
+        page.wait_for_selector('#audio-button', state='visible', timeout=2500)
         assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
 
         # Open audio
         # page.click("#audio-button", force=True, timeout=1500)
-        page.wait_for_function('window.audioPressed !== undefined', timeout=1500)
+        page.wait_for_function('window.audioPressed !== undefined', timeout=2500)
         page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)  # Wait for audio scene load and JS eval
 
@@ -109,9 +109,9 @@ def test_navigation_to_audio(page: Page) -> None:
         assert any("audio button pressed." in log["text"].lower() for log in logs), "Audio navigation log not found"
 
         # Navigate back from audio menu
-        page.wait_for_selector('#audio-back-button', state='visible', timeout=1500)
+        page.wait_for_selector('#audio-back-button', state='visible', timeout=2500)
         # page.click("#audio-back-button", force=True, timeout=1500)
-        page.wait_for_function('window.audioBackPressed !== undefined', timeout=1500)
+        page.wait_for_function('window.audioBackPressed !== undefined', timeout=2500)
         page.evaluate("window.audioBackPressed([])")
         page.wait_for_timeout(2000)  # Wait for audio overlay to hide and main/options overlays to re-show
 

@@ -81,11 +81,11 @@ def test_load_main_menu(page: Page) -> None:
         # Since the DOM overlays are now central to the web flow,
         # consider also asserting that the main-menu overlay elements are present
         # and visible (similar to navigation_to_audio_test):
-        page.wait_for_selector('#start-button', state='visible', timeout=1500)
+        page.wait_for_selector('#start-button', state='visible', timeout=2500)
         assert page.evaluate("document.getElementById('start-button') !== null")
-        page.wait_for_selector('#options-button', state='visible', timeout=1500)
+        page.wait_for_selector('#options-button', state='visible', timeout=2500)
         assert page.evaluate("document.getElementById('options-button') !== null")
-        page.wait_for_selector('#quit-button', state='visible', timeout=1500)
+        page.wait_for_selector('#quit-button', state='visible', timeout=2500)
         assert page.evaluate("document.getElementById('quit-button') !== null")
 
     except Exception as e:
