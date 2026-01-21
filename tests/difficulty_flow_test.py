@@ -95,6 +95,7 @@ def test_difficulty_flow(page: Page) -> None:
                                timeout=5000)  # Longer for stalls
         # Open options menu
         page.click("#options-button", force=True, timeout=2500)
+        page.wait_for_function('window.changeLogLevel !== undefined', timeout=2500)
         display_style = page.evaluate("window.getComputedStyle(document.getElementById('log-level-select')).display")
         assert display_style == 'block', "Options menu not loaded (display not set to block)"
 

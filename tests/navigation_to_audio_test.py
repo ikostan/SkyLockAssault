@@ -85,6 +85,7 @@ def test_navigation_to_audio(page: Page) -> None:
         # NAV-02: Navigate to options menu
         page.click("#options-button", force=True)
         page.wait_for_timeout(3000)
+        page.wait_for_function('window.changeDifficulty!== undefined', timeout=2500)
         options_display: str = page.evaluate("window.getComputedStyle(document.getElementById('difficulty-slider')).display")
         assert options_display == 'block', "Options menu not loaded (difficulty-slider not displayed)"
 
