@@ -76,6 +76,7 @@ def test_back_flow(page: Page) -> None:
 
         # Set log level to DEBUG
         pre_change_log_count = len(logs)
+        page.wait_for_function('window.changeLogLevel !== undefined', timeout=1500)
         page.evaluate("window.changeLogLevel([0])")  # Index 0 for DEBUG
         page.wait_for_timeout(3000)
         new_logs = logs[pre_change_log_count:]
@@ -86,6 +87,7 @@ def test_back_flow(page: Page) -> None:
         assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
         pre_change_log_count = len(logs)
         # page.click("#audio-button", force=True)
+        page.wait_for_function('window.audioPressed !== undefined', timeout=1500)
         page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)  # Wait for audio scene load and JS eval
         audio_display: str = page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display")
@@ -98,6 +100,7 @@ def test_back_flow(page: Page) -> None:
         # Steps: Press Back
         # Expected: Options menu visible
         pre_change_log_count = len(logs)
+        page.wait_for_function('window.audioBackPressed !== undefined', timeout=1500)
         page.evaluate("window.audioBackPressed([])")
         page.wait_for_timeout(2000)
         options_display: str = page.evaluate("window.getComputedStyle(document.getElementById('difficulty-slider')).display")
@@ -110,6 +113,7 @@ def test_back_flow(page: Page) -> None:
         # Re-enter audio for next tests
         page.wait_for_selector('#audio-button', state='visible', timeout=1500)
         # page.click("#audio-button", force=True)
+        page.wait_for_function('window.audioPressed !== undefined', timeout=1500)
         page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)
 
@@ -118,9 +122,11 @@ def test_back_flow(page: Page) -> None:
         # Steps: Press Back
         # Expected: Back to Options; no state mutation
         initial_master: str = page.evaluate("document.getElementById('master-slider').value")
+        page.wait_for_function('window.audioBackPressed !== undefined', timeout=1500)
         page.evaluate("window.audioBackPressed([])")
         page.wait_for_selector('#audio-button', state='visible', timeout=1500)
         # page.click("#audio-button", force=True)
+        page.wait_for_function('window.audioPressed !== undefined', timeout=1500)
         page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)
         assert page.evaluate("document.getElementById('master-slider').value") == initial_master, "State mutated without changes"
@@ -135,6 +141,7 @@ def test_back_flow(page: Page) -> None:
         # Navigate to audio menu
         page.wait_for_selector('#audio-button', state='visible', timeout=5000)
         # page.click("#audio-button", force=True)
+        page.wait_for_function('window.audioPressed !== undefined', timeout=1500)
         page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)
 
@@ -142,11 +149,14 @@ def test_back_flow(page: Page) -> None:
         # Preconditions: Sliders adjusted but not Reset
         # Steps: Press Back
         # Expected: Return; previous changes persist until Reset
+        page.wait_for_function('window.changeMusicVolume !== undefined', timeout=1500)
         page.evaluate("window.changeMusicVolume([0.4])")
         page.wait_for_timeout(1500)
+        page.wait_for_function('window.audioBackPressed !== undefined', timeout=1500)
         page.evaluate("window.audioBackPressed([])")
         page.wait_for_selector('#audio-button', state='visible', timeout=1500)
         # page.click("#audio-button", force=True)
+        page.wait_for_function('window.audioPressed !== undefined', timeout=1500)
         page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)
         assert page.evaluate("document.getElementById('music-slider').value") == '0.4', "Changes did not persist after back"
@@ -163,6 +173,7 @@ def test_back_flow(page: Page) -> None:
             slider.dispatchEvent(new Event('input'));  // Mid-drag
         """)
         page.wait_for_timeout(500)
+        page.wait_for_function('window.audioBackPressed !== undefined', timeout=1500)
         page.evaluate("window.audioBackPressed([])")
         page.wait_for_timeout(2000)
         new_logs = logs[pre_change_log_count:]

@@ -101,6 +101,7 @@ def test_difficulty_flow(page: Page) -> None:
         # Set log level to DEBUG (index 0) - directly call the exposed callback
         # (bypasses event for reliability in automation)
         pre_change_log_count = len(logs)
+        page.wait_for_function('window.changeLogLevel !== undefined', timeout=1500)
         page.evaluate("window.changeLogLevel([0])")
         page.wait_for_timeout(1500)
         new_logs = logs[pre_change_log_count:]
@@ -112,6 +113,7 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Set difficulty to 2.0 - directly call the exposed callback (bypasses event for reliability in automation)
         pre_change_log_count = len(logs)
+        page.wait_for_function('window.changeDifficulty !== undefined', timeout=1500)
         page.evaluate("window.changeDifficulty([2.0])")
         page.wait_for_timeout(1500)
         new_logs = logs[pre_change_log_count:]
@@ -122,6 +124,7 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Back to main menu
         pre_change_log_count = len(logs)
+        page.wait_for_function('window.optionsBackPressed !== undefined', timeout=1500)
         page.evaluate("window.optionsBackPressed([])")
         page.wait_for_timeout(1500)
         new_logs = logs[pre_change_log_count:]

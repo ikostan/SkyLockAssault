@@ -92,6 +92,7 @@ def test_audio_flow(page: Page) -> None:
         pre_change_log_count = len(logs)
         page.wait_for_selector('#audio-button', state='visible', timeout=1500)
         # page.click("#audio-button", force=True)
+        page.wait_for_function('window.audioPressed !== undefined', timeout=1500)
         page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(1500)
         assert page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display") == 'block'
@@ -106,12 +107,14 @@ def test_audio_flow(page: Page) -> None:
 
         # WARN-01: Master muted → attempt sub-volume adjust (SFX)
         pre_change_log_count = len(logs)
+        page.wait_for_function('window.toggleMuteMaster !== undefined', timeout=1500)
         page.evaluate("window.toggleMuteMaster([0])")  # Mute
         page.wait_for_timeout(1500)
         new_logs = logs[pre_change_log_count:]
         assert any("master is muted" in log["text"].lower() for log in new_logs)
         # Change SFX Volume when Master is muted
         pre_change_log_count = len(logs)
+        page.wait_for_function('window.changeSfxVolume !== undefined', timeout=1500)
         page.evaluate("window.changeSfxVolume([0])")
         page.wait_for_timeout(1500)
         assert page.evaluate(
@@ -129,6 +132,7 @@ def test_audio_flow(page: Page) -> None:
         #    slider.dispatchEvent(new Event('change'));
         # """)
         pre_change_log_count = len(logs)
+        page.wait_for_function('window.changeMusicVolume !== undefined', timeout=1500)
         page.evaluate("window.changeMusicVolume([0.3])")
         page.wait_for_timeout(1500)
         assert page.evaluate(
@@ -140,6 +144,7 @@ def test_audio_flow(page: Page) -> None:
         # Additional: Master muted → attempt sub-volume adjust (Rotors)
         # Assuming Rotors is affected by Master mute (as a deeper sub-volume)
         pre_change_log_count = len(logs)
+        page.wait_for_function('window.changeRotorsVolume !== undefined', timeout=1500)
         page.evaluate("window.changeRotorsVolume([0.4])")
         page.wait_for_timeout(1500)
         assert page.evaluate(
@@ -149,13 +154,16 @@ def test_audio_flow(page: Page) -> None:
             "warning dialog" in log["text"].lower() for log in new_logs)
 
         # Unmute Master for next tests
+        page.wait_for_function('window.toggleMuteMaster !== undefined', timeout=1500)
         page.evaluate("window.toggleMuteMaster([1])")
         page.wait_for_timeout(1500)
 
         # WARN-02: SFX muted → attempt weapon adjust
+        page.wait_for_function('window.toggleMuteSfx !== undefined', timeout=1500)
         page.evaluate("window.toggleMuteSfx([0])")  # Mute
         page.wait_for_timeout(1500)
         pre_change_log_count = len(logs)
+        page.wait_for_function('window.changeWeaponVolume !== undefined', timeout=1500)
         page.evaluate("window.changeWeaponVolume([0])")
         page.wait_for_timeout(1500)
         assert page.evaluate(
@@ -166,6 +174,7 @@ def test_audio_flow(page: Page) -> None:
 
         # Additional: SFX muted → attempt rotors adjust (assuming Rotors under SFX)
         pre_change_log_count = len(logs)
+        page.wait_for_function('window.changeRotorsVolume !== undefined', timeout=1500)
         page.evaluate("window.changeRotorsVolume([0.5])")
         page.wait_for_timeout(1500)
         assert page.evaluate(
@@ -175,12 +184,14 @@ def test_audio_flow(page: Page) -> None:
             "warning dialog" in log["text"].lower() for log in new_logs)
 
         # Unmute SFX
+        page.wait_for_function('window.toggleMuteSfx !== undefined', timeout=1500)
         page.evaluate("window.toggleMuteSfx([1])")
         page.wait_for_timeout(1500)
 
         # WARN-03: Master unmuted → adjust sub-volume (Music)
         # Capture logs before the change to isolate new ones (good for debugging in Godot tests)
         pre_change_log_count = len(logs)
+        page.wait_for_function('window.changeMusicVolume !== undefined', timeout=1500)
         page.evaluate("window.changeMusicVolume([0.6])")
         page.wait_for_timeout(1500)
 

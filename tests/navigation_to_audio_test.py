@@ -89,6 +89,7 @@ def test_navigation_to_audio(page: Page) -> None:
         assert options_display == 'block', "Options menu not loaded (difficulty-slider not displayed)"
 
         # NAV-03: Set log level to DEBUG
+        page.wait_for_function('window.changeLogLevel !== undefined', timeout=1500)
         page.evaluate("window.changeLogLevel([0])")  # Index 0 for DEBUG
         page.wait_for_timeout(3000)
         assert any("log level changed to: debug" in log["text"].lower() for log in logs), "Failed to set log level to DEBUG"
@@ -99,6 +100,7 @@ def test_navigation_to_audio(page: Page) -> None:
 
         # Open audio
         # page.click("#audio-button", force=True, timeout=1500)
+        page.wait_for_function('window.audioPressed !== undefined', timeout=1500)
         page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)  # Wait for audio scene load and JS eval
 
@@ -109,6 +111,7 @@ def test_navigation_to_audio(page: Page) -> None:
         # Navigate back from audio menu
         page.wait_for_selector('#audio-back-button', state='visible', timeout=1500)
         # page.click("#audio-back-button", force=True, timeout=1500)
+        page.wait_for_function('window.audioBackPressed !== undefined', timeout=1500)
         page.evaluate("window.audioBackPressed([])")
         page.wait_for_timeout(2000)  # Wait for audio overlay to hide and main/options overlays to re-show
 
