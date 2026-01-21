@@ -40,7 +40,7 @@ def page(playwright: Playwright, request) -> Page:
     )
     context = browser.new_context(
         viewport={"width": 1280, "height": 720},
-        record_har_path=str(har_path) if har_path else None  # Network trace for debugging (optional)
+        record_har_path=str(har_path) if har_path else None,  # Network trace for debugging (optional)
     )
     page = context.new_page()
     yield page

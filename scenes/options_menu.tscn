@@ -1,9 +1,8 @@
-[gd_scene load_steps=16 format=3 uid="uid://cl4m4q2eurcn0"]
+[gd_scene load_steps=15 format=3 uid="uid://cl4m4q2eurcn0"]
 
 [ext_resource type="Script" uid="uid://cajq8hf84eplh" path="res://scripts/options_menu.gd" id="1_ijpji"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_liyum"]
 [ext_resource type="Theme" uid="uid://caiajgnblwnqt" path="res://files/themes/difficulty_slider.tres" id="3_hm4m4"]
-[ext_resource type="Script" uid="uid://t5guwag0bdjc" path="res://scripts/input_remap_button.gd" id="7_k61yy"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lfjc7"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
@@ -124,6 +123,20 @@ theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 50
 text = "{OPTIONS}"
 
+[node name="KeyMappingButton" type="Button" parent="Panel/OptionsVBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("1_liyum")
+theme_override_font_sizes/font_size = 35
+theme_override_styles/normal = SubResource("StyleBoxFlat_liyum")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_ijpji")
+theme_override_styles/hover = SubResource("StyleBoxFlat_hm4m4")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_lfjc7")
+text = "{CONTROLS}"
+
 [node name="AudioSettingsButton" type="Button" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
@@ -174,108 +187,6 @@ theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 20
 text = "{0.0}"
 
-[node name="KeyMapVBoxContainer" type="VBoxContainer" parent="Panel/OptionsVBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="KeyMappingLabel" type="Label" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
-theme_override_fonts/font = ExtResource("1_liyum")
-theme_override_font_sizes/font_size = 21
-text = "{KEY=MAPPING}"
-horizontal_alignment = 1
-
-[node name="KeyMappingSpeedUp" type="HBoxContainer" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer"]
-layout_mode = 2
-tooltip_text = "Key mapping for forward button"
-
-[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer/KeyMappingSpeedUp"]
-layout_mode = 2
-theme_override_fonts/font = ExtResource("1_liyum")
-text = "{SPEED=UP:}"
-
-[node name="SpeedUpInputRemapButton" type="Button" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer/KeyMappingSpeedUp"]
-layout_direction = 3
-layout_mode = 2
-theme_override_font_sizes/font_size = 18
-script = ExtResource("7_k61yy")
-action = "speed_up"
-
-[node name="KeyMappingSpeedDown" type="HBoxContainer" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer"]
-layout_mode = 2
-tooltip_text = "Key mapping for backward button"
-
-[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer/KeyMappingSpeedDown"]
-layout_mode = 2
-theme_override_fonts/font = ExtResource("1_liyum")
-text = "{SPEED=DOWN:}"
-
-[node name="SpeedDownInputRemapButton" type="Button" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer/KeyMappingSpeedDown"]
-layout_mode = 2
-script = ExtResource("7_k61yy")
-action = "speed_down"
-
-[node name="KeyMappingLeft" type="HBoxContainer" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer"]
-layout_mode = 2
-tooltip_text = "Key mapping for move left button"
-
-[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer/KeyMappingLeft"]
-layout_mode = 2
-theme_override_fonts/font = ExtResource("1_liyum")
-text = "{MOVE=LEFT:}"
-
-[node name="LeftInputRemapButton" type="Button" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer/KeyMappingLeft"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 18
-script = ExtResource("7_k61yy")
-action = "move_left"
-
-[node name="KeyMappingRight" type="HBoxContainer" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer"]
-layout_mode = 2
-tooltip_text = "Key mapping for move right button"
-
-[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer/KeyMappingRight"]
-layout_mode = 2
-theme_override_fonts/font = ExtResource("1_liyum")
-text = "{MOVE=RIGHT:}"
-
-[node name="RightInputRemapButton" type="Button" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer/KeyMappingRight"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 18
-script = ExtResource("7_k61yy")
-action = "move_right"
-
-[node name="KeyMappingFire" type="HBoxContainer" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer"]
-layout_mode = 2
-tooltip_text = "Key mapping for fire button"
-
-[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer/KeyMappingFire"]
-layout_mode = 2
-theme_override_fonts/font = ExtResource("1_liyum")
-text = "{FIRE:}"
-
-[node name="FireInputRemapButton" type="Button" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer/KeyMappingFire"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 18
-script = ExtResource("7_k61yy")
-action = "fire"
-
-[node name="KeyMappingNextWeapon" type="HBoxContainer" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer"]
-layout_mode = 2
-tooltip_text = "Key mapping for next weapon button"
-
-[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer/KeyMappingNextWeapon"]
-layout_mode = 2
-theme_override_fonts/font = ExtResource("1_liyum")
-text = "{NEXT=WEAPON:}"
-
-[node name="NextWeaponInputRemapButton" type="Button" parent="Panel/OptionsVBoxContainer/KeyMapVBoxContainer/KeyMappingNextWeapon"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 18
-script = ExtResource("7_k61yy")
-action = "next_weapon"
-
 [node name="LogLevelContainer" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 6
@@ -309,11 +220,6 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_2f1bn")
 theme_override_styles/hover = SubResource("StyleBoxFlat_7txom")
 theme_override_styles/focus = SubResource("StyleBoxFlat_binsn")
 
-[node name="VersionLabel" type="Label" parent="Panel/OptionsVBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 4
-text = "Version: "
-
 [node name="OptionsBackButton" type="Button" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
@@ -328,4 +234,10 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_hm4m4")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_lfjc7")
 text = "{BACK}"
 
+[node name="VersionLabel" type="Label" parent="Panel/OptionsVBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Version: "
+
+[connection signal="pressed" from="Panel/OptionsVBoxContainer/KeyMappingButton" to="." method="_on_key_mapping_button_pressed"]
 [connection signal="pressed" from="Panel/OptionsVBoxContainer/AudioSettingsButton" to="." method="_on_audio_settings_button_pressed"]

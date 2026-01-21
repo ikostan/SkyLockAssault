@@ -1,7 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://ckj1bkdiy65dd"]
+[gd_scene load_steps=4 format=3 uid="uid://ckj1bkdiy65dd"]
 
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_56yif"]
 [ext_resource type="Script" uid="uid://8hd1kvmb5bt1" path="res://scripts/volume_slider.gd" id="1_sfbgc"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_56yif"]
 
 [node name="SFX" type="Control"]
 layout_mode = 3
@@ -46,6 +48,7 @@ offset_right = 404.0
 offset_bottom = 24.0
 size_flags_horizontal = 8
 tooltip_text = "Mute SFX"
+theme_override_styles/focus = SubResource("StyleBoxEmpty_56yif")
 button_pressed = true
 icon_alignment = 2
 vertical_icon_alignment = 0

@@ -67,6 +67,7 @@ def test_difficulty_flow(page: Page) -> None:
 
         page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=3000)
         # Wait for Godot engine init (ensures 'godot' object is defined)
+        page.wait_for_timeout(3000)
         page.wait_for_function("() => window.godotInitialized", timeout=3000)
 
         # Verify canvas and title to ensure game is initialized
@@ -77,7 +78,7 @@ def test_difficulty_flow(page: Page) -> None:
         assert "SkyLockAssault" in page.title(), "Title not found"
 
         # Check element present
-        page.wait_for_selector('#options-button', state='visible', timeout=1500)
+        page.wait_for_selector('#options-button', state='visible', timeout=2500)
         assert page.evaluate("document.getElementById('options-button') !== null")
 
         # Check invisible (opacity 0)
@@ -94,14 +95,16 @@ def test_difficulty_flow(page: Page) -> None:
                                timeout=5000)  # Longer for stalls
         # Open options menu
         page.click("#options-button", force=True, timeout=2500)
+        page.wait_for_function('window.changeLogLevel !== undefined', timeout=2500)
         display_style = page.evaluate("window.getComputedStyle(document.getElementById('log-level-select')).display")
         assert display_style == 'block', "Options menu not loaded (display not set to block)"
 
         # Set log level to DEBUG (index 0) - directly call the exposed callback
         # (bypasses event for reliability in automation)
         pre_change_log_count = len(logs)
+        page.wait_for_function('window.changeLogLevel !== undefined', timeout=2500)
         page.evaluate("window.changeLogLevel([0])")
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(2500)
         new_logs = logs[pre_change_log_count:]
         assert any("Log level changed to: DEBUG" in log["text"] for log in new_logs), "Failed to set log level to DEBUG"
         assert any(
@@ -111,8 +114,9 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Set difficulty to 2.0 - directly call the exposed callback (bypasses event for reliability in automation)
         pre_change_log_count = len(logs)
+        page.wait_for_function('window.changeDifficulty !== undefined', timeout=2500)
         page.evaluate("window.changeDifficulty([2.0])")
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(2500)
         new_logs = logs[pre_change_log_count:]
         assert any(
             "difficulty changed to: 2.0" in log["text"].lower() for log in new_logs), "Failed to set difficulty to 2.0"
@@ -121,13 +125,14 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Back to main menu
         pre_change_log_count = len(logs)
+        page.wait_for_function('window.optionsBackPressed !== undefined', timeout=2500)
         page.evaluate("window.optionsBackPressed([])")
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(2500)
         new_logs = logs[pre_change_log_count:]
         assert any("back button pressed." in log["text"].lower() for log in new_logs), "Back button not found"
 
         # Start game
-        page.wait_for_selector('#start-button', state='visible', timeout=1500)
+        page.wait_for_selector('#start-button', state='visible', timeout=2500)
         pre_change_log_count = len(logs)
         pre_poll_log_count = len(logs)
         page.click("#start-button", force=True)

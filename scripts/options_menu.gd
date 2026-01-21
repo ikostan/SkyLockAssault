@@ -29,9 +29,11 @@ var log_level_display_to_enum: Dictionary = {
 	"NONE": Globals.LogLevel.NONE
 }
 var audio_scene: PackedScene = preload("res://scenes/audio_settings.tscn")
+var controls_scene: PackedScene = preload("res://scenes/key_mapping_menu.tscn")
 var _change_log_level_cb: JavaScriptObject
 var _change_difficulty_cb: JavaScriptObject
 var _options_back_button_pressed_cb: JavaScriptObject
+var _controls_pressed_cb: JavaScriptObject
 var _audio_pressed_cb: JavaScriptObject
 
 @onready var log_lvl_option: OptionButton = get_node(
@@ -45,6 +47,7 @@ var _audio_pressed_cb: JavaScriptObject
 	"Panel/OptionsVBoxContainer/DifficultyLevelContainer/DifficultyValueLabel"
 )
 @onready var audio_settings_button: Button = $Panel/OptionsVBoxContainer/AudioSettingsButton
+@onready var key_mapping_button: Button = $Panel/OptionsVBoxContainer/KeyMappingButton
 @onready var version_label: Label = $Panel/OptionsVBoxContainer/VersionLabel
 
 
@@ -84,6 +87,9 @@ func _ready() -> void:
 	if not options_back_button.pressed.is_connected(_on_options_back_button_pressed):
 		options_back_button.pressed.connect(_on_options_back_button_pressed)
 
+	if not key_mapping_button.pressed.is_connected(_on_key_mapping_button_pressed):
+		key_mapping_button.pressed.connect(_on_key_mapping_button_pressed)
+
 	if not audio_settings_button.pressed.is_connected(_on_audio_settings_button_pressed):
 		audio_settings_button.pressed.connect(_on_audio_settings_button_pressed)
 
@@ -101,6 +107,7 @@ func _ready() -> void:
 			js_bridge_wrapper
 			. eval(
 				"""
+				document.getElementById('controls-button').style.display = 'block';
 				document.getElementById('audio-button').style.display = 'block';
 				document.getElementById('log-level-select').style.display = 'block';
 				document.getElementById('difficulty-slider').style.display = 'block';
@@ -127,6 +134,11 @@ func _ready() -> void:
 				Callable(self, "_on_options_back_button_pressed_js")
 			)
 			js_window.optionsBackPressed = _options_back_button_pressed_cb
+
+			_controls_pressed_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_controls_pressed_js")
+			)
+			js_window.controlsPressed = _controls_pressed_cb
 
 			_audio_pressed_cb = js_bridge_wrapper.create_callback(
 				Callable(self, "_on_audio_pressed_js")
@@ -218,6 +230,19 @@ func _on_audio_pressed_js(_args: Array) -> void:
 	_on_audio_settings_button_pressed()
 
 
+# New: JS callback for controls button
+# warning-ignore:unused_argument
+func _on_controls_pressed_js(_args: Array) -> void:
+	## JS callback for controls button press.
+	##
+	## Routes to signal handler.
+	##
+	## :param _args: Unused array from JS.
+	## :type _args: Array
+	## :rtype: void
+	_on_key_mapping_button_pressed()
+
+
 # New: JS-specific callback (exactly one Array arg, no default)
 func _on_change_log_level_js(args: Array) -> void:
 	## JS callback for changing log level.
@@ -287,7 +312,8 @@ func _on_options_back_button_pressed() -> void:
 			js_bridge_wrapper
 			. eval(
 				"""
-				document.getElementById('audio-button').style.display = 'none'
+				document.getElementById('audio-button').style.display = 'none';
+				document.getElementById('controls-button').style.display = 'none';
 				document.getElementById('log-level-select').style.display = 'none';
 				document.getElementById('difficulty-slider').style.display = 'none';
 				document.getElementById('options-back-button').style.display = 'none';
@@ -325,6 +351,35 @@ func _on_audio_settings_button_pressed() -> void:
 	Globals.hidden_menus.push_back(self)
 	self.visible = false
 	if os_wrapper.has_feature("web") and js_bridge_wrapper:
-		js_bridge_wrapper.eval(
-			"document.getElementById('audio-button').style.display = 'none';", true
+		(
+			js_bridge_wrapper
+			. eval(
+				"""
+			document.getElementById('audio-button').style.display = 'none';
+			document.getElementById('controls-button').style.display = 'none';
+			""",
+				true
+			)
+		)
+
+
+## Handles Controls button press.
+## Hides options menu, loads Key Mappings settings.
+## :rtype: void
+func _on_key_mapping_button_pressed() -> void:
+	Globals.log_message("Controls button pressed.", Globals.LogLevel.DEBUG)
+	var controls_instance: CanvasLayer = controls_scene.instantiate()  # Use the preloaded var
+	get_tree().root.add_child(controls_instance)
+	Globals.hidden_menus.push_back(self)
+	self.visible = false
+	if os_wrapper.has_feature("web") and js_bridge_wrapper:
+		(
+			js_bridge_wrapper
+			. eval(
+				"""
+			document.getElementById('audio-button').style.display = 'none';
+			document.getElementById('controls-button').style.display = 'none';
+			""",
+				true
+			)
 		)
