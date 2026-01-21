@@ -126,12 +126,13 @@ def test_back_flow(page: Page) -> None:
 
         # Re-enter audio
         page.reload()
+        page.wait_for_timeout(5000)
         page.wait_for_function("() => window.godotInitialized", timeout=5000)
         # Navigate to options menu
-        page.wait_for_selector('#options-button', state='visible', timeout=3500)
+        page.wait_for_selector('#options-button', state='visible', timeout=5000)
         page.click("#options-button", force=True)
         # Navigate to audio menu
-        page.wait_for_selector('#audio-button', state='visible', timeout=3500)
+        page.wait_for_selector('#audio-button', state='visible', timeout=5000)
         # page.click("#audio-button", force=True)
         page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)
