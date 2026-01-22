@@ -167,7 +167,7 @@ vertical_alignment = 1
 
 [node name="KeyMappingSpeedUp" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/PlayerKeyMap"]
 layout_mode = 2
-tooltip_text = "Key mapping for forward button"
+tooltip_text = "Key mapping for \"speed up\" button"
 theme_override_constants/separation = 8
 
 [node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp"]
@@ -185,7 +185,7 @@ action = "speed_up"
 
 [node name="KeyMappingSpeedDown" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/PlayerKeyMap"]
 layout_mode = 2
-tooltip_text = "Key mapping for backward button"
+tooltip_text = "Key mapping for \"speed down\" button"
 theme_override_constants/separation = 8
 
 [node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedDown"]
@@ -284,7 +284,7 @@ vertical_alignment = 1
 
 [node name="KeyMappingPause" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
 layout_mode = 2
-tooltip_text = "Key mapping for next weapon button"
+tooltip_text = "Key mapping for pause button"
 theme_override_constants/separation = 8
 
 [node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingPause"]
@@ -301,7 +301,7 @@ action = "pause"
 
 [node name="KeyMappingAccept" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
 layout_mode = 2
-tooltip_text = "Key mapping for next weapon button"
+tooltip_text = "Key mapping for accept button"
 theme_override_constants/separation = 8
 
 [node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingAccept"]
@@ -318,7 +318,7 @@ action = "ui_accept"
 
 [node name="KeyMappingMenuUp" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
 layout_mode = 2
-tooltip_text = "Key mapping for next weapon button"
+tooltip_text = "Key mapping for menu navigation \"move up\" button"
 theme_override_constants/separation = 8
 
 [node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuUp"]
@@ -335,7 +335,7 @@ action = "ui_up"
 
 [node name="KeyMappingMenuDown" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
 layout_mode = 2
-tooltip_text = "Key mapping for next weapon button"
+tooltip_text = "Key mapping for menu navigation \"move down\" button"
 theme_override_constants/separation = 8
 
 [node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuDown"]
@@ -352,7 +352,7 @@ action = "ui_down"
 
 [node name="KeyMappingMenuLeft" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
 layout_mode = 2
-tooltip_text = "Key mapping for next weapon button"
+tooltip_text = "Key mapping for menu navigation \"move left\" button"
 theme_override_constants/separation = 8
 
 [node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuLeft"]
@@ -369,7 +369,7 @@ action = "ui_left"
 
 [node name="KeyMappingMenuRight" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
 layout_mode = 2
-tooltip_text = "Key mapping for next weapon button"
+tooltip_text = "Key mapping for menu navigation \"move right\" button"
 theme_override_constants/separation = 8
 
 [node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuRight"]
@@ -393,6 +393,7 @@ theme_override_constants/separation = 20
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+tooltip_text = "Back button"
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
 theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
@@ -408,6 +409,7 @@ text = "{BACK}"
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+tooltip_text = "Reste button"
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
 theme_override_colors/font_focus_color = Color(1, 0.19607843, 0.2784314, 0.98039216)
 theme_override_colors/font_pressed_color = Color(0.9607843, 0.9607843, 0.050980393, 0.9019608)
