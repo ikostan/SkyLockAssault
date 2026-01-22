@@ -1,6 +1,6 @@
-# test_settings.gd (updated for new features: multi-event, joypad button/motion, backward compat, defaults)
-# Uses GdUnit4 (assume installed; install via AssetLib if not).
-# Run via GdUnit Inspector or command line.
+## test_settings.gd (updated for new features: multi-event, joypad button/motion, backward compat, defaults)
+## Uses GdUnit4 (assume installed; install via AssetLib if not).
+## Run via GdUnit Inspector or command line.
 extends GdUnitTestSuite
 
 @warning_ignore("unused_parameter")
@@ -159,41 +159,39 @@ func test_backward_compat_old_format() -> void:
 	assert_that(events[0] is InputEventKey).is_true()
 	assert_int(events[0].physical_keycode).is_equal(KEY_Q)
 
-# Test default key fallback if no saved data for action
+# Test default fallback when no file
 func test_default_key_fallback() -> void:
-	var test_path: String = "user://test_settings.cfg"
+	var test_path: String = "user://default_test.cfg"
 	var test_actions: Array[String] = ["speed_up"]
 	
-	# Backup original
-	var original_events: Array[InputEvent] = InputMap.action_get_events("speed_up")
-	
-	# Create empty config (no key for action)
-	var config: ConfigFile = ConfigFile.new()
-	config.save(test_path)
-	
-	assert_bool(FileAccess.file_exists(test_path)).is_true()
-	
-	# Erase and load (should add default KEY_W since no saved)
+	# No file—load should add defaults where missing (but speed_up empty initially)
 	InputMap.action_erase_events("speed_up")
 	Settings.load_input_mappings(test_path, test_actions)
 	
-	# Verify default added
+	# Verify defaults added (key and joy for speed_up)
 	var events: Array[InputEvent] = InputMap.action_get_events("speed_up")
-	assert_int(events.size()).is_equal(1)
-	assert_that(events[0] is InputEventKey).is_true()
-	assert_int(events[0].physical_keycode).is_equal(KEY_W)
+	assert_int(events.size()).is_equal(2)
 	
-	# Restore original
-	InputMap.action_erase_events("speed_up")
-	for ev: InputEvent in original_events:
-		InputMap.action_add_event("speed_up", ev)
+	var key_found: bool = false
+	var joy_found: bool = false
+	for ev: InputEvent in events:
+		if ev is InputEventKey:
+			assert_int(ev.physical_keycode).is_equal(KEY_W)
+			key_found = true
+		elif ev is InputEventJoypadMotion:
+			assert_int(ev.axis).is_equal(JOY_AXIS_TRIGGER_RIGHT)
+			assert_float(ev.axis_value).is_equal(1.0)
+			assert_int(ev.device).is_equal(-1)
+			joy_found = true
+	assert_bool(key_found).is_true()
+	assert_bool(joy_found).is_true()
 
-# Test unbound action save/load (empty array)
+# Test unbound persistence (empty array saved/loaded)
 func test_unbound_action_persistence() -> void:
-	var test_path: String = "user://test_settings.cfg"
+	var test_path: String = "user://unbound_test.cfg"
 	var test_actions: Array[String] = ["test_action"]
 	
-	# Unbind
+	# Set unbound (erase events)
 	InputMap.action_erase_events("test_action")
 	
 	# Save (should save empty array)
@@ -201,16 +199,19 @@ func test_unbound_action_persistence() -> void:
 	
 	assert_bool(FileAccess.file_exists(test_path)).is_true()
 	
-	# Load (should load empty, no default for test_action)
+	# Add temp event, then load (should erase to unbound)
+	var temp_event: InputEventKey = InputEventKey.new()
+	temp_event.physical_keycode = KEY_B
+	InputMap.action_add_event("test_action", temp_event)
 	Settings.load_input_mappings(test_path, test_actions)
 	
 	# Verify empty
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(0)
 
-# Test multi-action persistence (updated for array)
+# Test multi-action persistence
 func test_multi_action_persistence() -> void:
-	var test_path: String = "user://multi_test.cfg"
+	var test_path: String = "user://multi_action.cfg"
 	var test_actions: Array[String] = ["test_action1", "test_action2"]
 	
 	# Set action1 with key, action2 unbound

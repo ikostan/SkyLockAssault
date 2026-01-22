@@ -106,7 +106,7 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 		var has_saved: bool = config.has_section_key("input", action)
 		if has_saved:
 			var value: Variant = config.get_value("input", action)
-			var serialized_events: Array[String] = []
+			var serialized_events: Array = []
 
 			if value is Array:
 				serialized_events = value as Array[String]  # Modern format—assume strings

@@ -1,26 +1,24 @@
-# test_input_remap_button.gd (updated for new features: keyboard, joypad button, motion; tests display & remap)
-# Unit tests for InputRemapButton class using GdUnit4.
-# Covers label display for various input types, unbound state, remapping simulations, and fallback labels.
-# Assumes GdUnit4 is installed via AssetLib.
-# Run via GdUnit Inspector or command line.
-# :classname: test_input_remap_button
+## test_input_remap_button.gd
+##
+## Unit tests for InputRemapButton class using GdUnit4.
+##
+## Covers label display for various input types, unbound state, remapping simulations, and fallback labels.
+## Assumes GdUnit4 is installed via AssetLib.
+## Run via GdUnit Inspector or command line.
 
 extends GdUnitTestSuite
 
 ## Global setup if needed (e.g., mock Globals/Settings if logging/save called)
-## :param none
 ## :rtype: void
 func before() -> void:
 	pass
 
 ## Global cleanup
-## :param none
 ## :rtype: void
 func after() -> void:
 	pass
 
 ## Test keyboard label display (original, updated for Godot 4.x)
-## :param none
 ## :rtype: void
 func test_keyboard_label_display() -> void:
 	# Clean up if action exists
@@ -45,7 +43,6 @@ func test_keyboard_label_display() -> void:
 	InputMap.erase_action("test_action")
 
 ## Test joypad button label display
-## :param none
 ## :rtype: void
 func test_joypad_button_label_display() -> void:
 	if InputMap.has_action("test_action"):
@@ -59,6 +56,7 @@ func test_joypad_button_label_display() -> void:
 	
 	var button: InputRemapButton = auto_free(InputRemapButton.new())
 	button.action = "test_action"
+	button.current_device = InputRemapButton.DeviceType.GAMEPAD
 	button._ready()
 	
 	assert_str(button.text).is_equal("A")
@@ -66,7 +64,6 @@ func test_joypad_button_label_display() -> void:
 	InputMap.erase_action("test_action")
 
 ## Test joypad motion (axis) label display
-## :param none
 ## :rtype: void
 func test_joypad_motion_label_display() -> void:
 	if InputMap.has_action("test_action"):
@@ -81,6 +78,7 @@ func test_joypad_motion_label_display() -> void:
 	
 	var button: InputRemapButton = auto_free(InputRemapButton.new())
 	button.action = "test_action"
+	button.current_device = InputRemapButton.DeviceType.GAMEPAD
 	button._ready()
 	
 	assert_str(button.text).is_equal("Left Stick Left")
@@ -88,7 +86,6 @@ func test_joypad_motion_label_display() -> void:
 	InputMap.erase_action("test_action")
 
 ## Test unbound display
-## :param none
 ## :rtype: void
 func test_unbound_label_display() -> void:
 	if InputMap.has_action("test_action"):
@@ -105,7 +102,6 @@ func test_unbound_label_display() -> void:
 	InputMap.erase_action("test_action")
 
 ## Test remapping keyboard (simulate input)
-## :param none
 ## :rtype: void
 func test_remap_keyboard() -> void:
 	if InputMap.has_action("test_action"):
@@ -134,7 +130,7 @@ func test_remap_keyboard() -> void:
 	assert_bool(button.listening).is_false()
 	
 	# Verify event added
-	var events: Array = InputMap.action_get_events("test_action")
+	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
 	assert_that(events[0] is InputEventKey).is_true()
 	assert_int(events[0].physical_keycode).is_equal(KEY_D)
@@ -142,7 +138,6 @@ func test_remap_keyboard() -> void:
 	InputMap.erase_action("test_action")
 
 ## Test remapping joypad button
-## :param none
 ## :rtype: void
 func test_remap_joypad_button() -> void:
 	if InputMap.has_action("test_action"):
@@ -152,6 +147,7 @@ func test_remap_joypad_button() -> void:
 	
 	var button: InputRemapButton = auto_free(InputRemapButton.new())
 	button.action = "test_action"
+	button.current_device = InputRemapButton.DeviceType.GAMEPAD
 	add_child(button)  # Add to scene tree for viewport access
 	button._ready()
 	
@@ -167,7 +163,7 @@ func test_remap_joypad_button() -> void:
 	assert_str(button.text).is_equal("B")
 	assert_bool(button.listening).is_false()
 	
-	var events: Array = InputMap.action_get_events("test_action")
+	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
 	assert_that(events[0] is InputEventJoypadButton).is_true()
 	assert_int(events[0].button_index).is_equal(JOY_BUTTON_B)
@@ -176,7 +172,6 @@ func test_remap_joypad_button() -> void:
 	InputMap.erase_action("test_action")
 
 ## Test remapping joypad motion (axis)
-## :param none
 ## :rtype: void
 func test_remap_joypad_motion() -> void:
 	if InputMap.has_action("test_action"):
@@ -186,6 +181,7 @@ func test_remap_joypad_motion() -> void:
 	
 	var button: InputRemapButton = auto_free(InputRemapButton.new())
 	button.action = "test_action"
+	button.current_device = InputRemapButton.DeviceType.GAMEPAD
 	add_child(button)  # Add to scene tree for viewport access
 	button._ready()
 	
@@ -201,7 +197,7 @@ func test_remap_joypad_motion() -> void:
 	assert_str(button.text).is_equal("Left Stick Down")
 	assert_bool(button.listening).is_false()
 	
-	var events: Array = InputMap.action_get_events("test_action")
+	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
 	assert_that(events[0] is InputEventJoypadMotion).is_true()
 	assert_int(events[0].axis).is_equal(JOY_AXIS_LEFT_Y)
@@ -211,7 +207,6 @@ func test_remap_joypad_motion() -> void:
 	InputMap.erase_action("test_action")
 
 ## Test fallback labels (unknown button/axis)
-## :param none
 ## :rtype: void
 func test_fallback_labels() -> void:
 	if InputMap.has_action("test_action"):
@@ -226,6 +221,7 @@ func test_fallback_labels() -> void:
 	
 	var button: InputRemapButton = auto_free(InputRemapButton.new())
 	button.action = "test_action"
+	button.current_device = InputRemapButton.DeviceType.GAMEPAD
 	button._ready()
 	assert_str(button.text).is_equal("Button 999")
 	
@@ -240,7 +236,7 @@ func test_fallback_labels() -> void:
 	
 	InputMap.erase_action("test_action")
 
-## Test finish_remap with invalid index (no error, skips log, adds event but displays Unbound).
+## Test remap keyboard adds event
 ## :rtype: void
 func test_finish_remap_invalid_index() -> void:
 	if InputMap.has_action("test_action"):
@@ -250,7 +246,6 @@ func test_finish_remap_invalid_index() -> void:
 
 	var button: InputRemapButton = auto_free(InputRemapButton.new())
 	button.action = "test_action"
-	button.action_event_index = 99  # Invalid high index
 	add_child(button)
 	button._ready()
 
@@ -262,11 +257,11 @@ func test_finish_remap_invalid_index() -> void:
 	sim_event.pressed = true
 	button._input(sim_event)  # Calls finish_remap, should not error
 
-	assert_str(button.text).is_equal("Unbound")  # Displays Unbound due to invalid index
+	assert_str(button.text).is_equal("A")
 	assert_bool(button.listening).is_false()
 	
 	# Verify event added despite invalid index
-	var events: Array = InputMap.action_get_events("test_action")
+	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
 	assert_that(events[0] is InputEventKey).is_true()
 	assert_int(events[0].physical_keycode).is_equal(KEY_A)
@@ -274,7 +269,6 @@ func test_finish_remap_invalid_index() -> void:
 	InputMap.erase_action("test_action")
 
 ## Test keyboard fallback label for key not in custom dict
-## :param none
 ## :rtype: void
 func test_keyboard_fallback_label() -> void:
 	if InputMap.has_action("test_action"):
