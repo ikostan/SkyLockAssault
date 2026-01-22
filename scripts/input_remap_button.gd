@@ -142,7 +142,8 @@ func _input(event: InputEvent) -> void:
 	# Device-specific filtering: Skip if event doesn't match current device
 	if current_device == DeviceType.KEYBOARD and not event is InputEventKey:
 		return
-	elif (
+	
+	if (
 		current_device == DeviceType.GAMEPAD
 		and not (event is InputEventJoypadButton or event is InputEventJoypadMotion)
 	):
@@ -219,7 +220,8 @@ func get_matching_event() -> InputEvent:
 	for ev: InputEvent in events:
 		if current_device == DeviceType.KEYBOARD and ev is InputEventKey:
 			return ev
-		elif (
+		
+		if (
 			current_device == DeviceType.GAMEPAD
 			and (ev is InputEventJoypadButton or ev is InputEventJoypadMotion)
 		):
