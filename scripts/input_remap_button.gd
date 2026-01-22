@@ -15,6 +15,12 @@ class_name InputRemapButton
 
 extends Button
 
+# Enum for clean Inspector dropdown + match
+enum DeviceType {
+	KEYBOARD,
+	GAMEPAD,
+}
+
 const KEY_LABELS: Dictionary = {
 	Key.KEY_W: "W",
 	Key.KEY_S: "S",
@@ -29,6 +35,20 @@ const KEY_LABELS: Dictionary = {
 	Key.KEY_DOWN: "Down",
 	Key.KEY_ESCAPE: "Esc"
 	# Add more as needed for arrow keys, etc.
+}
+
+# New: Custom labels for mouse buttons
+const MOUSE_BUTTON_LABELS: Dictionary = {
+	MOUSE_BUTTON_LEFT: "Left Mouse",
+	MOUSE_BUTTON_RIGHT: "Right Mouse",
+	MOUSE_BUTTON_MIDDLE: "Middle Mouse",
+	MOUSE_BUTTON_WHEEL_UP: "Wheel Up",
+	MOUSE_BUTTON_WHEEL_DOWN: "Wheel Down",
+	MOUSE_BUTTON_WHEEL_LEFT: "Wheel Left",
+	MOUSE_BUTTON_WHEEL_RIGHT: "Wheel Right",
+	MOUSE_BUTTON_XBUTTON1: "Mouse Back",
+	MOUSE_BUTTON_XBUTTON2: "Mouse Forward"
+	# Add more if needed (Godot supports up to MOUSE_BUTTON_MASK_MB_XBUTTON2)
 }
 
 # Custom labels for joypad buttons (replaces removed Input.get_joy_button_string)
@@ -64,8 +84,7 @@ const JOY_AXIS_BASE_LABELS: Dictionary = {
 	JOY_AXIS_RIGHT_X: "Right Stick X",
 	JOY_AXIS_RIGHT_Y: "Right Stick Y",
 	JOY_AXIS_TRIGGER_LEFT: "Left Trigger",
-	JOY_AXIS_TRIGGER_RIGHT: "Right Trigger"
-	# Add more axes if your game uses them
+	JOY_AXIS_TRIGGER_RIGHT: "Right Trigger",
 }
 
 # Custom labels for common joypad axes/directions (for nice display)

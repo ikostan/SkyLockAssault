@@ -6,9 +6,11 @@
 extends Node
 
 const CONFIG_PATH: String = "user://settings.cfg"
+
 const ACTIONS: Array[String] = [
 	"speed_up", "speed_down", "move_left", "move_right", "fire", "next_weapon", "pause"
 ]
+
 const DEFAULT_KEYS: Dictionary = {
 	"speed_up": KEY_W,
 	"speed_down": KEY_X,
@@ -17,6 +19,12 @@ const DEFAULT_KEYS: Dictionary = {
 	"fire": KEY_SPACE,
 	"next_weapon": KEY_Q,
 	"pause": KEY_ESCAPE,
+	"ui_up": KEY_UP,
+	"ui_down": KEY_DOWN,
+	"ui_left": KEY_LEFT,
+	"ui_right": KEY_RIGHT,
+	"ui_accept": KEY_ENTER,
+	"ui_focus_next": KEY_TAB
 }
 
 var _needs_migration: bool = false  # Flag for old-format upgrade

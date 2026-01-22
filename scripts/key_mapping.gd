@@ -10,10 +10,12 @@ var _controls_back_button_pressed_cb: Variant
 var _intentional_exit: bool = false
 
 @onready
-var controls_back_button: Button = $Panel/OptionsVBoxContainer/BtnContainer/ControlsBackButton
+var controls_back_button: Button = $Panel/Options/BtnContainer/ControlsBackButton
 @onready
-var controls_reset_button: Button = $Panel/OptionsVBoxContainer/BtnContainer/ControlResetButton
-
+var controls_reset_button: Button = $Panel/Options/BtnContainer/ControlResetButton
+# NEW: Onreadys for device switcher
+@onready var keyboard: CheckButton = $Panel/Options/DeviceTypeContainer/Keyboard
+@onready var gamepad: CheckButton = $Panel/Options/DeviceTypeContainer/Gamepad
 
 func _ready() -> void:
 	## Initializes controls menu.
@@ -27,6 +29,12 @@ func _ready() -> void:
 	# Back button
 	if not controls_back_button.pressed.is_connected(_on_controls_back_button_pressed):
 		controls_back_button.pressed.connect(_on_controls_back_button_pressed)
+		
+	# NEW: Reset button connect (add if not there—resets to defaults)
+	if not controls_reset_button.pressed.is_connected(_on_reset_pressed):
+		controls_reset_button.pressed.connect(_on_reset_pressed)
+		
+	# NEW: Populate OptionButton from DeviceType enum
 
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Globals.log_message("Controls menu loaded.", Globals.LogLevel.DEBUG)
@@ -48,6 +56,11 @@ func _ready() -> void:
 				Callable(self, "_on_controls_back_button_pressed_js")
 			)
 			js_window.controlsBackPressed = _controls_back_button_pressed_cb
+
+
+# NEW: Reset button handler—resets InputMap to defaults and updates buttons
+func _on_reset_pressed() -> void:
+	Globals.log_message("Reset controls pressed.", Globals.LogLevel.DEBUG)
 
 
 func _on_controls_back_button_pressed() -> void:
@@ -114,3 +127,11 @@ func _on_controls_back_button_pressed_js(args: Array) -> void:
 		Globals.LogLevel.DEBUG
 	)
 	_on_controls_back_button_pressed()
+
+
+func _on_keyboard_toggled(toggled_on: bool) -> void:
+	gamepad.button_pressed = not toggled_on
+
+
+func _on_gamepad_toggled(toggled_on: bool) -> void:
+	keyboard.button_pressed = not toggled_on
