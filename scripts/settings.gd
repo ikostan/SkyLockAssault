@@ -21,8 +21,8 @@ const ACTIONS: Array[String] = [
 	"ui_right",
 	"ui_accept",
 ]
-
-const DEFAULT_KEYS: Dictionary = {
+# New: Default keyboard mappings.
+const DEFAULT_KEYBOARD: Dictionary = {
 	"speed_up": KEY_W,
 	"speed_down": KEY_X,
 	"move_left": KEY_A,
@@ -35,7 +35,21 @@ const DEFAULT_KEYS: Dictionary = {
 	"ui_left": KEY_LEFT,
 	"ui_right": KEY_RIGHT,
 	"ui_accept": KEY_ENTER,
-	"ui_focus_next": KEY_TAB
+}
+# New: Default gamepad mappings (assumes Xbox layout; adjust if needed).
+const DEFAULT_GAMEPAD: Dictionary = {
+	"speed_up": {"type": "axis", "axis": JOY_AXIS_TRIGGER_RIGHT, "value": 1.0},  # Throttle up.
+	"speed_down": {"type": "axis", "axis": JOY_AXIS_TRIGGER_LEFT, "value": 1.0},  # Throttle down.
+	"move_left": {"type": "axis", "axis": JOY_AXIS_LEFT_X, "value": -1.0},
+	"move_right": {"type": "axis", "axis": JOY_AXIS_LEFT_X, "value": 1.0},
+	"fire": {"type": "button", "button": JOY_BUTTON_A},
+	"next_weapon": {"type": "button", "button": JOY_BUTTON_Y},
+	"pause": {"type": "button", "button": JOY_BUTTON_START},
+	"ui_accept": {"type": "button", "button": JOY_BUTTON_A},
+	"ui_up": {"type": "button", "button": JOY_BUTTON_DPAD_UP},
+	"ui_down": {"type": "button", "button": JOY_BUTTON_DPAD_DOWN},
+	"ui_left": {"type": "button", "button": JOY_BUTTON_DPAD_LEFT},
+	"ui_right": {"type": "button", "button": JOY_BUTTON_DPAD_RIGHT},
 }
 
 var _needs_migration: bool = false  # Flag for old-format upgrade
@@ -68,7 +82,7 @@ func serialize_event(ev: InputEvent) -> String:
 
 ## Loads input mappings from config, overriding project defaults only if saved.
 ## Handles old int keycode format for backward compat.
-## Skips if no saved data (preserves project key+joypad bindings).
+## Proceeds even if no file to add defaults where events missing.
 ## :param path: Config file path (default: CONFIG_PATH).
 ## :type path: String
 ## :param actions: Actions to load (default: ACTIONS).
@@ -77,52 +91,55 @@ func serialize_event(ev: InputEvent) -> String:
 func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
 	var config: ConfigFile = ConfigFile.new()
 	var err: int = config.load(path)
-	if err == ERR_FILE_NOT_FOUND:  # NEW: Specific check for file missing
-		Globals.log_message(
-			"No settings file found at " + path + "—using project defaults.", Globals.LogLevel.INFO
-		)
-		return
-
-	if err != OK:  # NEW: Handle other errors (e.g., parse error, permissions)
+	if err != OK and err != ERR_FILE_NOT_FOUND:  # Handle errors except missing file
 		Globals.log_message(
 			"Error loading settings file at " + path + ": " + str(err), Globals.LogLevel.ERROR
 		)
 		return
+	if err == ERR_FILE_NOT_FOUND:
+		Globals.log_message(
+			"No settings file found at " + path + "—adding defaults where missing.",
+			Globals.LogLevel.INFO
+		)
 
 	for action: String in actions:
 		var has_saved: bool = config.has_section_key("input", action)
 		if has_saved:
-			InputMap.action_erase_events(action)  # Only erase if we're overriding with saved data
-			var value: Variant = config.get_value("input", action)
-			var serials: Array[String] = []
-			if value is int:  # Old format: single keycode int
-				_needs_migration = true
-				serials = ["key:" + str(value)]
-			elif value is Array:  # New format
-				for item: String in value:
-					if typeof(item) == TYPE_STRING:
-						serials.append(item)
-					else:
-						Globals.log_message(
-							"Non-string item in input array for " + action + ": skipping item.",
-							Globals.LogLevel.WARNING
-						)
-			else:
-				Globals.log_message(
-					"Invalid saved value for " + action + ": skipping.", Globals.LogLevel.WARNING
-				)
-				continue
-			for s: String in serials:
-				_deserialize_and_add(action, s)
-		# After loading (or skipping), check if empty and add default key if needed
+			var serialized_events: Array = config.get_value("input", action)
+			InputMap.action_erase_events(action)
+			for serialized: String in serialized_events:
+				_deserialize_and_add(action, serialized)
+
+	for action: String in actions:
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
-		if events.is_empty() and DEFAULT_KEYS.has(action):
-			var keycode: int = DEFAULT_KEYS[action]
-			if keycode != -1:
-				var nev: InputEventKey = InputEventKey.new()
-				nev.physical_keycode = keycode
+		var has_key_event: bool = false
+		var has_joy_event: bool = false
+		for ev: InputEvent in events:
+			if ev is InputEventKey:
+				has_key_event = true
+			elif ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
+				has_joy_event = true
+		if not has_key_event and DEFAULT_KEYBOARD.has(action):
+			var nev: InputEventKey = InputEventKey.new()
+			nev.physical_keycode = DEFAULT_KEYBOARD[action]
+			InputMap.action_add_event(action, nev)
+			Globals.log_message(
+				"Added default keyboard event for " + action, Globals.LogLevel.DEBUG
+			)
+		if not has_joy_event and DEFAULT_GAMEPAD.has(action):
+			var def: Dictionary = DEFAULT_GAMEPAD[action]
+			if def["type"] == "button":
+				var nev: InputEventJoypadButton = InputEventJoypadButton.new()
+				nev.button_index = def["button"]
+				nev.device = -1
 				InputMap.action_add_event(action, nev)
-				Globals.log_message("Added default key for " + action, Globals.LogLevel.DEBUG)
+			elif def["type"] == "axis":
+				var nev: InputEventJoypadMotion = InputEventJoypadMotion.new()
+				nev.axis = def["axis"]
+				nev.axis_value = def["value"]
+				nev.device = -1
+				InputMap.action_add_event(action, nev)
+			Globals.log_message("Added default gamepad event for " + action, Globals.LogLevel.DEBUG)
 
 
 ## Deserializes string to event and adds to action.
@@ -234,3 +251,40 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 		Globals.log_message("Failed to save input mappings: " + str(err), Globals.LogLevel.ERROR)
 	else:
 		Globals.log_message("Input mappings saved.", Globals.LogLevel.DEBUG)
+
+
+## Resets mappings to defaults for device type.
+## :param device_type: "keyboard" or "gamepad"
+## :type device_type: String
+## :rtype: void
+func reset_to_defaults(device_type: String) -> void:
+	if device_type not in ["keyboard", "gamepad"]:
+		return
+	for action: String in ACTIONS:
+		var events: Array[InputEvent] = InputMap.action_get_events(action).duplicate()
+		for ev: InputEvent in events:
+			if device_type == "keyboard" and ev is InputEventKey:
+				InputMap.action_erase_event(action, ev)
+			elif (
+				device_type == "gamepad"
+				and (ev is InputEventJoypadButton or ev is InputEventJoypadMotion)
+			):
+				InputMap.action_erase_event(action, ev)
+		if device_type == "keyboard" and DEFAULT_KEYBOARD.has(action):
+			var nev: InputEventKey = InputEventKey.new()
+			nev.physical_keycode = DEFAULT_KEYBOARD[action]
+			InputMap.action_add_event(action, nev)
+		elif device_type == "gamepad" and DEFAULT_GAMEPAD.has(action):
+			var def: Dictionary = DEFAULT_GAMEPAD[action]
+			if def["type"] == "button":
+				var nev: InputEventJoypadButton = InputEventJoypadButton.new()
+				nev.button_index = def["button"]  # FIX: Use "button" instead of "index"
+				nev.device = -1
+				InputMap.action_add_event(action, nev)
+			elif def["type"] == "axis":
+				var nev: InputEventJoypadMotion = InputEventJoypadMotion.new()
+				nev.axis = def["axis"]
+				nev.axis_value = def["value"]
+				nev.device = -1
+				InputMap.action_add_event(action, nev)
+	save_input_mappings()

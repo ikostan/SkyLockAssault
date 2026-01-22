@@ -33,7 +33,8 @@ const KEY_LABELS: Dictionary = {
 	Key.KEY_RIGHT: "Right",
 	Key.KEY_UP: "Up",
 	Key.KEY_DOWN: "Down",
-	Key.KEY_ESCAPE: "Esc"
+	Key.KEY_ESCAPE: "Esc",
+	Key.KEY_ENTER: "Enter",
 	# Add more as needed for arrow keys, etc.
 }
 
@@ -103,8 +104,8 @@ const AXIS_DEADZONE_THRESHOLD: float = 0.5
 # Value to normalize axis direction to (e.g., +1.0 or -1.0)
 const AXIS_NORMALIZED_VALUE: float = 1.0
 
+@export var current_device: DeviceType = DeviceType.KEYBOARD
 @export var action: String = ""
-@export var action_event_index: int = 0
 
 var listening: bool = false
 
@@ -112,6 +113,7 @@ var listening: bool = false
 # Ready: Setup toggle, text, connect pressed.
 # :rtype: void
 func _ready() -> void:
+	add_to_group("remap_buttons")
 	toggle_mode = true
 	update_button_text()
 	if not pressed.is_connected(_on_pressed):
@@ -132,38 +134,63 @@ func _on_pressed() -> void:
 # :param event: Input event.
 # :type event: InputEvent
 # :rtype: void
+# In input_remap_button.gd (full updated _input function)
 func _input(event: InputEvent) -> void:
 	if not listening:
 		return
 
+	# Device-specific filtering: Skip if event doesn't match current device
+	if current_device == DeviceType.KEYBOARD and not event is InputEventKey:
+		return
+	elif (
+		current_device == DeviceType.GAMEPAD
+		and not (event is InputEventJoypadButton or event is InputEventJoypadMotion)
+	):
+		return
+
 	# Handle keyboard key press
 	if event is InputEventKey and event.pressed:
-		erase_old_event()
-		var new_event := InputEventKey.new()
+		erase_old_event()  # Remove the old matching event for this device
+		var new_event := InputEventKey.new()  # Consistent name: new_event
 		new_event.physical_keycode = event.physical_keycode
-		InputMap.action_add_event(action, new_event)
-		finish_remap()
+		InputMap.action_add_event(action, new_event)  # Add the new event
+		# Log the remap right here, using get_event_label on the new event
+		Globals.log_message(
+			"User remapped action '" + action + "' to '" + get_event_label(new_event) + "'",
+			Globals.LogLevel.DEBUG
+		)
+		finish_remap()  # Wrap up: update text, stop listening, save, etc.
 		return
 
-	# Handle joypad button press
+	# Handle gamepad (joypad) button press
 	if event is InputEventJoypadButton and event.pressed:
-		erase_old_event()
-		var new_event := InputEventJoypadButton.new()
+		erase_old_event()  # Remove the old matching event for this device
+		var new_event := InputEventJoypadButton.new()  # Consistent name: new_event
 		new_event.button_index = event.button_index
 		new_event.device = -1  # All devices
-		InputMap.action_add_event(action, new_event)
-		finish_remap()
+		InputMap.action_add_event(action, new_event)  # Add the new event
+		# Log the remap right here, using get_event_label on the new event
+		Globals.log_message(
+			"User remapped action '" + action + "' to '" + get_event_label(new_event) + "'",
+			Globals.LogLevel.DEBUG
+		)
+		finish_remap()  # Wrap up
 		return
 
-	# Handle joypad axis motion (if moved past deadzone)
+	# Handle gamepad (joypad) axis motion (if moved past deadzone)
 	if event is InputEventJoypadMotion and abs(event.axis_value) > AXIS_DEADZONE_THRESHOLD:
-		erase_old_event()
-		var new_event := InputEventJoypadMotion.new()
+		erase_old_event()  # Remove the old matching event for this device
+		var new_event := InputEventJoypadMotion.new()  # Consistent name: new_event
 		new_event.axis = event.axis
 		new_event.axis_value = get_normalized_axis_direction(event.axis_value)  # Normalize to +1 or -1
 		new_event.device = -1  # All devices
-		InputMap.action_add_event(action, new_event)
-		finish_remap()
+		InputMap.action_add_event(action, new_event)  # Add the new event
+		# Log the remap right here, using get_event_label on the new event
+		Globals.log_message(
+			"User remapped action '" + action + "' to '" + get_event_label(new_event) + "'",
+			Globals.LogLevel.DEBUG
+		)
+		finish_remap()  # Wrap up
 		return
 
 
@@ -180,9 +207,24 @@ func get_normalized_axis_direction(axis_value: float) -> float:
 # Erase old event at index.
 # :rtype: void
 func erase_old_event() -> void:
-	var events := InputMap.action_get_events(action)
-	if events.size() > action_event_index:
-		InputMap.action_erase_event(action, events[action_event_index])
+	var old_ev: InputEvent = get_matching_event()
+	if old_ev:
+		InputMap.action_erase_event(action, old_ev)
+
+
+## Gets matching event for current device.
+## :rtype: InputEvent|null
+func get_matching_event() -> InputEvent:
+	var events: Array[InputEvent] = InputMap.action_get_events(action)
+	for ev: InputEvent in events:
+		if current_device == DeviceType.KEYBOARD and ev is InputEventKey:
+			return ev
+		elif (
+			current_device == DeviceType.GAMEPAD
+			and (ev is InputEventJoypadButton or ev is InputEventJoypadMotion)
+		):
+			return ev
+	return null
 
 
 # In input_remap_button.gd, inside finish_remap() func (before Settings.save_input_mappings())
@@ -192,26 +234,15 @@ func finish_remap() -> void:
 	update_button_text()
 	button_pressed = false
 	listening = false
-	# Log remap at DEBUG if index valid (uses get_event_label for new binding)
-	var events: Array[InputEvent] = InputMap.action_get_events(action)
-	if events.size() > action_event_index:
-		var new_label: String = get_event_label(events[action_event_index])
-		Globals.log_message(
-			"User remapped action '" + action + "' to '" + new_label + "'", Globals.LogLevel.DEBUG
-		)
-	Settings.save_input_mappings()
-	get_viewport().set_input_as_handled()
+	Settings.save_input_mappings()  # Save the changes
+	get_viewport().set_input_as_handled()  # Prevent further input propagation
 
 
 # Updated to display key, joypad button, or axis label
 # :rtype: void
 func update_button_text() -> void:
-	var events := InputMap.action_get_events(action)
-	if events.size() > action_event_index:
-		var event := events[action_event_index]
-		text = get_event_label(event)
-	else:
-		text = "Unbound"
+	var ev: InputEvent = get_matching_event()
+	text = get_event_label(ev) if ev else "Unbound"
 
 
 # Get display label for any event type (uses custom dicts only)

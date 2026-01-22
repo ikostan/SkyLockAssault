@@ -38,6 +38,7 @@ func _ready() -> void:
 	keyboard.button_group = device_group
 	gamepad.button_group = device_group
 	keyboard.button_pressed = true  # Default: Keyboard
+	update_all_remap_buttons()
 
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Globals.log_message("Controls menu loaded.", Globals.LogLevel.DEBUG)
@@ -61,24 +62,43 @@ func _ready() -> void:
 			js_window.controlsBackPressed = _controls_back_button_pressed_cb
 
 
+## Updates all remap buttons.
+## :rtype: void
+func update_all_remap_buttons() -> void:
+	var current: InputRemapButton.DeviceType = (
+		InputRemapButton.DeviceType.KEYBOARD
+		if keyboard.button_pressed
+		else InputRemapButton.DeviceType.GAMEPAD
+	)
+	var buttons: Array[Node] = get_tree().get_nodes_in_group("remap_buttons")
+	for btn: InputRemapButton in buttons:
+		btn.current_device = current
+		btn.update_button_text()
+
+
 # NEW: Reset button handler—resets InputMap to defaults and updates buttons
 func _on_reset_pressed() -> void:
-	if keyboard.button_pressed:
-		Globals.log_message("Reseting keyboard controls.", Globals.LogLevel.DEBUG)
-	elif gamepad.button_pressed:
-		Globals.log_message("Reseting gamepad controls.", Globals.LogLevel.DEBUG)
+	# Function resets only the selected device type (keyboard or gamepad)
+	var device_type: String = "keyboard" if keyboard.button_pressed else "gamepad"
+	Settings.reset_to_defaults(device_type)
+	update_all_remap_buttons()
+	Globals.log_message("Resetting " + device_type + " controls.", Globals.LogLevel.DEBUG)
 
 
 func _on_keyboard_toggled(toggled_on: bool) -> void:
-	Globals.log_message(
-		"_on_keyboard_toggled control pressed: " + str(toggled_on), Globals.LogLevel.DEBUG
-	)
+	if toggled_on:
+		Globals.log_message(
+			"_on_keyboard_toggled control pressed: " + str(toggled_on), Globals.LogLevel.DEBUG
+		)
+		update_all_remap_buttons()
 
 
 func _on_gamepad_toggled(toggled_on: bool) -> void:
-	Globals.log_message(
-		"_on_gamepad_toggled control pressed: " + str(toggled_on), Globals.LogLevel.DEBUG
-	)
+	if toggled_on:
+		Globals.log_message(
+			"_on_gamepad_toggled control pressed: " + str(toggled_on), Globals.LogLevel.DEBUG
+		)
+		update_all_remap_buttons()
 
 
 func _on_controls_back_button_pressed() -> void:
