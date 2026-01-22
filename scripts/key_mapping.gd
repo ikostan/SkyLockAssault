@@ -9,13 +9,12 @@ var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
 var _controls_back_button_pressed_cb: Variant
 var _intentional_exit: bool = false
 
-@onready
-var controls_back_button: Button = $Panel/Options/BtnContainer/ControlsBackButton
-@onready
-var controls_reset_button: Button = $Panel/Options/BtnContainer/ControlResetButton
+@onready var controls_back_button: Button = $Panel/Options/BtnContainer/ControlsBackButton
+@onready var controls_reset_button: Button = $Panel/Options/BtnContainer/ControlResetButton
 # NEW: Onreadys for device switcher
 @onready var keyboard: CheckButton = $Panel/Options/DeviceTypeContainer/Keyboard
 @onready var gamepad: CheckButton = $Panel/Options/DeviceTypeContainer/Gamepad
+
 
 func _ready() -> void:
 	## Initializes controls menu.
@@ -29,11 +28,11 @@ func _ready() -> void:
 	# Back button
 	if not controls_back_button.pressed.is_connected(_on_controls_back_button_pressed):
 		controls_back_button.pressed.connect(_on_controls_back_button_pressed)
-		
+
 	# NEW: Reset button connect (add if not there—resets to defaults)
 	if not controls_reset_button.pressed.is_connected(_on_reset_pressed):
 		controls_reset_button.pressed.connect(_on_reset_pressed)
-		
+
 	# NEW: Populate OptionButton from DeviceType enum
 
 	process_mode = Node.PROCESS_MODE_ALWAYS
