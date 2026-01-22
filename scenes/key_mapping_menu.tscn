@@ -120,6 +120,7 @@ vertical_alignment = 1
 [node name="Keyboard" type="CheckButton" parent="Panel/Options/DeviceTypeContainer"]
 layout_mode = 2
 size_flags_horizontal = 6
+tooltip_text = "Keyboard"
 theme_override_colors/font_color = Color(0.60784316, 0.60784316, 0.60784316, 1)
 theme_override_colors/font_focus_color = Color(0.60784316, 0.60784316, 0.60784316, 0.92156863)
 theme_override_colors/font_pressed_color = Color(0, 0.8784314, 0.007843138, 1)
@@ -135,6 +136,7 @@ text = "{KEYBOARD}"
 [node name="Gamepad" type="CheckButton" parent="Panel/Options/DeviceTypeContainer"]
 layout_mode = 2
 size_flags_horizontal = 8
+tooltip_text = "Gamepad"
 theme_override_colors/font_color = Color(0.60784316, 0.60784316, 0.60784316, 1)
 theme_override_colors/font_focus_color = Color(0.60784316, 0.60784316, 0.60784316, 0.92156863)
 theme_override_colors/font_pressed_color = Color(0, 0.8784314, 0.007843138, 1)
