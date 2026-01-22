@@ -106,7 +106,6 @@ text = "{KEY=MAPPING=OPTIONS}"
 
 [node name="DeviceTypeContainer" type="HBoxContainer" parent="Panel/Options"]
 layout_mode = 2
-theme_override_constants/separation = 49
 alignment = 1
 
 [node name="DeviceTypeLabel" type="Label" parent="Panel/Options/DeviceTypeContainer"]

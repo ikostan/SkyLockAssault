@@ -14,6 +14,7 @@ var _intentional_exit: bool = false
 # NEW: Onreadys for device switcher
 @onready var keyboard: CheckButton = $Panel/Options/DeviceTypeContainer/Keyboard
 @onready var gamepad: CheckButton = $Panel/Options/DeviceTypeContainer/Gamepad
+@onready var device_group: ButtonGroup = ButtonGroup.new()  # Mutual exclusivity
 
 
 func _ready() -> void:
@@ -33,7 +34,10 @@ func _ready() -> void:
 	if not controls_reset_button.pressed.is_connected(_on_reset_pressed):
 		controls_reset_button.pressed.connect(_on_reset_pressed)
 
-	# NEW: Populate OptionButton from DeviceType enum
+	# NEW: Assign ButtonGroup for exclusivity
+	keyboard.button_group = device_group
+	gamepad.button_group = device_group
+	keyboard.button_pressed = true  # Default: Keyboard
 
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Globals.log_message("Controls menu loaded.", Globals.LogLevel.DEBUG)
@@ -129,8 +133,8 @@ func _on_controls_back_button_pressed_js(args: Array) -> void:
 
 
 func _on_keyboard_toggled(toggled_on: bool) -> void:
-	gamepad.button_pressed = not toggled_on
+	Globals.log_message("_on_keyboard_toggled control pressed: " + str(toggled_on), Globals.LogLevel.DEBUG)
 
 
 func _on_gamepad_toggled(toggled_on: bool) -> void:
-	keyboard.button_pressed = not toggled_on
+	Globals.log_message("_on_gamepad_toggled control pressed: " + str(toggled_on), Globals.LogLevel.DEBUG)
