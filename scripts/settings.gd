@@ -8,7 +8,18 @@ extends Node
 const CONFIG_PATH: String = "user://settings.cfg"
 
 const ACTIONS: Array[String] = [
-	"speed_up", "speed_down", "move_left", "move_right", "fire", "next_weapon", "pause"
+	"speed_up",
+	"speed_down",
+	"move_left",
+	"move_right",
+	"fire",
+	"next_weapon",
+	"pause",
+	"ui_up",
+	"ui_down",
+	"ui_left",
+	"ui_right",
+	"ui_accept",
 ]
 
 const DEFAULT_KEYS: Dictionary = {

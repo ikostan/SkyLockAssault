@@ -63,7 +63,22 @@ func _ready() -> void:
 
 # NEW: Reset button handler—resets InputMap to defaults and updates buttons
 func _on_reset_pressed() -> void:
-	Globals.log_message("Reset controls pressed.", Globals.LogLevel.DEBUG)
+	if keyboard.button_pressed:
+		Globals.log_message("Reseting keyboard controls.", Globals.LogLevel.DEBUG)
+	elif gamepad.button_pressed:
+		Globals.log_message("Reseting gamepad controls.", Globals.LogLevel.DEBUG)
+
+
+func _on_keyboard_toggled(toggled_on: bool) -> void:
+	Globals.log_message(
+		"_on_keyboard_toggled control pressed: " + str(toggled_on), Globals.LogLevel.DEBUG
+	)
+
+
+func _on_gamepad_toggled(toggled_on: bool) -> void:
+	Globals.log_message(
+		"_on_gamepad_toggled control pressed: " + str(toggled_on), Globals.LogLevel.DEBUG
+	)
 
 
 func _on_controls_back_button_pressed() -> void:
@@ -130,11 +145,3 @@ func _on_controls_back_button_pressed_js(args: Array) -> void:
 		Globals.LogLevel.DEBUG
 	)
 	_on_controls_back_button_pressed()
-
-
-func _on_keyboard_toggled(toggled_on: bool) -> void:
-	Globals.log_message("_on_keyboard_toggled control pressed: " + str(toggled_on), Globals.LogLevel.DEBUG)
-
-
-func _on_gamepad_toggled(toggled_on: bool) -> void:
-	Globals.log_message("_on_gamepad_toggled control pressed: " + str(toggled_on), Globals.LogLevel.DEBUG)

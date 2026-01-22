@@ -97,10 +97,6 @@ func _input(event: InputEvent) -> void:
 	## :param event: The input event to process.
 	## :type event: InputEvent
 	## :rtype: void
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var pos: Vector2 = event.position  # Explicitly type as Vector2
-		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
-
 	# New: Unlock audio on first qualifying gesture (click or key press)
 	if OS.get_name() == "Web" and not background_music.playing:
 		background_music.play()

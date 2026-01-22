@@ -314,7 +314,7 @@ text = "{ACCEPT:}"
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 script = ExtResource("2_5b0ek")
-action = "accept"
+action = "ui_accept"
 
 [node name="KeyMappingMenuUp" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
 layout_mode = 2
@@ -331,7 +331,7 @@ text = "{MENU=UP:}"
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 script = ExtResource("2_5b0ek")
-action = "meu_up"
+action = "ui_up"
 
 [node name="KeyMappingMenuDown" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
 layout_mode = 2
@@ -348,7 +348,7 @@ text = "{MENU=DOWN:}"
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 script = ExtResource("2_5b0ek")
-action = "menu_down"
+action = "ui_down"
 
 [node name="KeyMappingMenuLeft" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
 layout_mode = 2
@@ -365,7 +365,7 @@ text = "{MENU=LEFT:}"
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 script = ExtResource("2_5b0ek")
-action = "menu_left"
+action = "ui_left"
 
 [node name="KeyMappingMenuRight" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
 layout_mode = 2
@@ -382,7 +382,7 @@ text = "{MENU=RIGHT:}"
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 script = ExtResource("2_5b0ek")
-action = "menu_right"
+action = "ui_right"
 
 [node name="BtnContainer" type="HBoxContainer" parent="Panel/Options"]
 layout_mode = 2
