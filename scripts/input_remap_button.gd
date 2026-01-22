@@ -38,20 +38,6 @@ const KEY_LABELS: Dictionary = {
 	# Add more as needed for arrow keys, etc.
 }
 
-# New: Custom labels for mouse buttons
-const MOUSE_BUTTON_LABELS: Dictionary = {
-	MOUSE_BUTTON_LEFT: "Left Mouse",
-	MOUSE_BUTTON_RIGHT: "Right Mouse",
-	MOUSE_BUTTON_MIDDLE: "Middle Mouse",
-	MOUSE_BUTTON_WHEEL_UP: "Wheel Up",
-	MOUSE_BUTTON_WHEEL_DOWN: "Wheel Down",
-	MOUSE_BUTTON_WHEEL_LEFT: "Wheel Left",
-	MOUSE_BUTTON_WHEEL_RIGHT: "Wheel Right",
-	MOUSE_BUTTON_XBUTTON1: "Mouse Back",
-	MOUSE_BUTTON_XBUTTON2: "Mouse Forward"
-	# Add more if needed (Godot supports up to MOUSE_BUTTON_MASK_MB_XBUTTON2)
-}
-
 # Custom labels for joypad buttons (replaces removed Input.get_joy_button_string)
 const JOY_BUTTON_LABELS: Dictionary = {
 	JOY_BUTTON_A: "A",
