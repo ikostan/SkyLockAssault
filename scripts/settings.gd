@@ -105,7 +105,24 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 	for action: String in actions:
 		var has_saved: bool = config.has_section_key("input", action)
 		if has_saved:
-			var serialized_events: Array = config.get_value("input", action)
+			var value: Variant = config.get_value("input", action)
+			var serialized_events: Array[String] = []
+
+			if value is Array:
+				serialized_events = value as Array[String]  # Modern format—assume strings
+			elif value is int:
+				serialized_events = ["key:" + str(value)]  # Old int keycode—migrate to key format
+				_needs_migration = true
+			elif value is String:
+				serialized_events = [value]  # Old string—could be "key:87" or plain "87"
+				_needs_migration = true
+			else:
+				Globals.log_message(
+					"Unexpected type for action '" + action + "': " + str(typeof(value)),
+					Globals.LogLevel.WARNING
+				)
+				# Fallback: Treat as empty to avoid errors
+
 			InputMap.action_erase_events(action)
 			for serialized: String in serialized_events:
 				_deserialize_and_add(action, serialized)
@@ -217,6 +234,12 @@ func _deserialize_and_add(action: String, serialized: String) -> void:
 				Globals.LogLevel.WARNING
 			)
 			return
+	elif serialized.is_valid_int():
+		var kc: int = int(serialized)
+		var nev: InputEventKey = InputEventKey.new()
+		nev.physical_keycode = kc
+		InputMap.action_add_event(action, nev)
+		_needs_migration = true  # Ensure save if we hit this old case
 	else:
 		Globals.log_message("Unknown serialized prefix: " + serialized, Globals.LogLevel.WARNING)
 		return
