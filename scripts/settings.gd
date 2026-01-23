@@ -55,6 +55,8 @@ const DEFAULT_GAMEPAD: Dictionary = {
 var _needs_migration: bool = false  # Flag for old-format upgrade
 
 
+## Initializes the settings by loading input mappings.
+## If migration is needed, saves the updated mappings.
 func _ready() -> void:
 	load_input_mappings()
 	if _needs_migration:
@@ -81,7 +83,7 @@ func serialize_event(ev: InputEvent) -> String:
 
 
 ## Loads input mappings from config, overriding project defaults only if saved.
-## Handles old int keycode format for backward compat.
+## Handles various formats for backward compatibility and adds defaults if necessary.
 ## Proceeds even if no file to add defaults where events missing.
 ## :param path: Config file path (default: CONFIG_PATH).
 ## :type path: String
@@ -106,10 +108,18 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 		var has_saved: bool = config.has_section_key("input", action)
 		if has_saved:
 			var value: Variant = config.get_value("input", action)
-			var serialized_events: Array = []
+			var serialized_events: Array[String] = []
 
 			if value is Array:
-				serialized_events = value as Array[String]  # Modern format—assume strings
+				var temp: Array = value
+				for item: Variant in temp:
+					if item is String:
+						serialized_events.append(item)
+					else:
+						Globals.log_message(
+							"Non-string item in array for action '" + action + "': skipped",
+							Globals.LogLevel.WARNING
+						)
 			elif value is int:
 				serialized_events = ["key:" + str(value)]  # Old int keycode—migrate to key format
 				_needs_migration = true
@@ -159,8 +169,8 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			Globals.log_message("Added default gamepad event for " + action, Globals.LogLevel.DEBUG)
 
 
-## Deserializes string to event and adds to action.
-## Handles device for joy events (-1 if omitted or empty).
+## Deserializes a string to an InputEvent and adds it to the specified action.
+## Handles various serialized formats and logs warnings for invalid data.
 ## Skips and warns on malformed serialized strings, including invalid int/float values,
 ## with robust error handling.
 ## :param action: Target action.
@@ -276,7 +286,7 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 		Globals.log_message("Input mappings saved.", Globals.LogLevel.DEBUG)
 
 
-## Resets mappings to defaults for device type.
+## Resets input mappings to defaults for the specified device type.
 ## :param device_type: "keyboard" or "gamepad"
 ## :type device_type: String
 ## :rtype: void
