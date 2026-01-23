@@ -26,12 +26,12 @@ fi
 
 # Optional: Import resources (uncomment if needed; runs Godot headless to import)
 echo "Importing Resources..."
-$GODOT --headless --path "$PROJECT_DIR" --import --quit
+"$GODOT" --headless --path "$PROJECT_DIR" --import --quit
 if [ $? -ne 0 ]; then echo "Resource import failed."; exit 1; fi
 
 # Run GUT tests
 echo "Running GUT Unit Tests..."
-$GODOT --headless --verbose --path "$PROJECT_DIR" -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gdir=res://test -ginclude_subdirs=true -gexit
+"$GODOT" --headless --verbose --path "$PROJECT_DIR" -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gdir=res://test -ginclude_subdirs=true -gexit
 if [ $? -ne 0 ]; then echo "Unit tests failed."; exit 1; fi
 
 # Optional: Handle reports (GUT can generate JUnit XML or other reports based on config)
