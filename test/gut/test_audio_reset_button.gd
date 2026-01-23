@@ -45,13 +45,26 @@ func before_each() -> void:
 	if AudioServer.get_bus_index(AudioConstants.BUS_SFX_ROTORS) == -1:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, AudioConstants.BUS_SFX_ROTORS)
+	
+	audio_instance = audio_scene.instantiate() as Control
+	add_child_autofree(audio_instance)
+	await get_tree().process_frame
 
 
 ## Per-test cleanup: Remove test config if exists
 ## :rtype: void
 func after_each() -> void:
+	if is_instance_valid(audio_instance):
+		if is_instance_valid(audio_instance.master_warning_dialog):
+			audio_instance.master_warning_dialog.hide()
+		if is_instance_valid(audio_instance.sfx_warning_dialog):
+			audio_instance.sfx_warning_dialog.hide()
+		remove_child(audio_instance)  # If not already
+		audio_instance.queue_free()
+	audio_instance = null
 	if FileAccess.file_exists(test_config_path):
 		DirAccess.remove_absolute(test_config_path)
+	await get_tree().process_frame  # Wait for free to process
 
 
 ## TC-Reset-01 | All audio buses muted; All volumes set to 0.5; UI reflects this. | Click the Reset button. | All muted flags false; All volumes 1.0; apply_all_volumes/save_volumes called; UI updated: all mute buttons pressed, all sliders 1.0 and editable; _update_other_controls_ui called; Log message.

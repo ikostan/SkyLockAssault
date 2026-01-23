@@ -44,11 +44,21 @@ func before_each() -> void:
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, "SFX_Weapon")
 
 
-## Per-test cleanup: Remove test config if exists
+## Per-test cleanup: Free audio_instance safely.
 ## :rtype: void
 func after_each() -> void:
+	var audio_instance: Control = self.audio_instance  # Typed ref
+	if is_instance_valid(audio_instance):
+		if is_instance_valid(audio_instance.master_warning_dialog):
+			audio_instance.master_warning_dialog.hide()
+		if is_instance_valid(audio_instance.sfx_warning_dialog):
+			audio_instance.sfx_warning_dialog.hide()
+		remove_child(audio_instance)
+		audio_instance.queue_free()
+	self.audio_instance = null
 	if FileAccess.file_exists(test_config_path):
 		DirAccess.remove_absolute(test_config_path)
+	await get_tree().process_frame
 
 
 ## TC-SFX-01 | Master unmuted, SFX unmuted, Slider editable, Children unmuted | Click and drag SFX slider to new value | Slider value changes; AudioServer bus volume updates; AudioManager.sfx_volume updates; save_debounce_timer starts; After debounce, AudioManager.save_volumes() called; Log messages for volume change.
@@ -312,3 +322,4 @@ func test_tc_sfx_15() -> void:
 	await get_tree().process_frame
 	assert_true(prev_menu.visible)
 	assert_true(Globals.hidden_menus.is_empty())
+	prev_menu.queue_free()

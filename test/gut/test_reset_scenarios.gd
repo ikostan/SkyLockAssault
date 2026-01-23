@@ -40,12 +40,21 @@ func before_each() -> void:
 	Globals.difficulty = 1.0
 
 
-## Per-test cleanup: Free instance if exists.
+## Per-test cleanup: Free audio_instance safely.
 ## :rtype: void
 func after_each() -> void:
+	var audio_instance: Control = self.audio_instance  # Typed ref
 	if is_instance_valid(audio_instance):
+		if is_instance_valid(audio_instance.master_warning_dialog):
+			audio_instance.master_warning_dialog.hide()
+		if is_instance_valid(audio_instance.sfx_warning_dialog):
+			audio_instance.sfx_warning_dialog.hide()
+		remove_child(audio_instance)
 		audio_instance.queue_free()
-		await get_tree().process_frame
+	self.audio_instance = null
+	if FileAccess.file_exists(test_config_path):
+		DirAccess.remove_absolute(test_config_path)
+	await get_tree().process_frame
 
 
 ## TC-SL-16 | Config with all; Non-audio changed (e.g., difficulty=2.0). | Call AudioManager.reset_volumes() | Only "audio" reset to defaults and saved; "Settings" difficulty unchanged; "input" preserved; Log "Audio volumes reset to defaults."; apply_all_volumes() called.
