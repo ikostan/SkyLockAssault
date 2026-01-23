@@ -104,14 +104,14 @@ func test_tc_sl_25() -> void:
 	# Verify upgraded
 	config = ConfigFile.new()
 	config.load(test_config_path)
-	assert_eq(config.get_value("input", "speed_up"), ["key:87"])
+	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:5:1.0:-1"])
 	# Save audio after
 	AudioManager.master_volume = 0.5
 	AudioManager.save_volumes(test_config_path)
 	# Verify preserves upgraded inputs
 	config = ConfigFile.new()
 	config.load(test_config_path)
-	assert_eq(config.get_value("input", "speed_up"), ["key:87"])
+	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:5:1.0:-1"])
 	assert_eq(config.get_value("audio", "master_volume"), 0.5)
 	# No re-migration
 	assert_false(Settings._needs_migration)

@@ -89,18 +89,14 @@ func _ready() -> void:
 			)
 
 
-func _input(event: InputEvent) -> void:
+func _input(_event: InputEvent) -> void:
 	## Handles input events for the main menu.
 	##
 	## Logs mouse clicks and unlocks audio on web platforms upon user gesture.
 	##
-	## :param event: The input event to process.
-	## :type event: InputEvent
+	## :param _event: The input event to process.
+	## :type _event: InputEvent
 	## :rtype: void
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var pos: Vector2 = event.position  # Explicitly type as Vector2
-		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
-
 	# New: Unlock audio on first qualifying gesture (click or key press)
 	if OS.get_name() == "Web" and not background_music.playing:
 		background_music.play()

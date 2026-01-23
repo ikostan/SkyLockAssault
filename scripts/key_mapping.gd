@@ -9,10 +9,12 @@ var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
 var _controls_back_button_pressed_cb: Variant
 var _intentional_exit: bool = false
 
-@onready
-var controls_back_button: Button = $Panel/OptionsVBoxContainer/BtnContainer/ControlsBackButton
-@onready
-var controls_reset_button: Button = $Panel/OptionsVBoxContainer/BtnContainer/ControlResetButton
+@onready var controls_back_button: Button = $Panel/Options/BtnContainer/ControlsBackButton
+@onready var controls_reset_button: Button = $Panel/Options/BtnContainer/ControlResetButton
+# NEW: Onreadys for device switcher
+@onready var keyboard: CheckButton = $Panel/Options/DeviceTypeContainer/Keyboard
+@onready var gamepad: CheckButton = $Panel/Options/DeviceTypeContainer/Gamepad
+@onready var device_group: ButtonGroup = ButtonGroup.new()  # Mutual exclusivity
 
 
 func _ready() -> void:
@@ -27,6 +29,16 @@ func _ready() -> void:
 	# Back button
 	if not controls_back_button.pressed.is_connected(_on_controls_back_button_pressed):
 		controls_back_button.pressed.connect(_on_controls_back_button_pressed)
+
+	# NEW: Reset button connect (add if not there—resets to defaults)
+	if not controls_reset_button.pressed.is_connected(_on_reset_pressed):
+		controls_reset_button.pressed.connect(_on_reset_pressed)
+
+	# NEW: Assign ButtonGroup for exclusivity
+	keyboard.button_group = device_group
+	gamepad.button_group = device_group
+	keyboard.button_pressed = true  # Default: Keyboard
+	update_all_remap_buttons()
 
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Globals.log_message("Controls menu loaded.", Globals.LogLevel.DEBUG)
@@ -48,6 +60,45 @@ func _ready() -> void:
 				Callable(self, "_on_controls_back_button_pressed_js")
 			)
 			js_window.controlsBackPressed = _controls_back_button_pressed_cb
+
+
+## Updates all remap buttons.
+## :rtype: void
+func update_all_remap_buttons() -> void:
+	var current: InputRemapButton.DeviceType = (
+		InputRemapButton.DeviceType.KEYBOARD
+		if keyboard.button_pressed
+		else InputRemapButton.DeviceType.GAMEPAD
+	)
+	var buttons: Array[Node] = get_tree().get_nodes_in_group("remap_buttons")
+	for btn: InputRemapButton in buttons:
+		btn.current_device = current
+		btn.update_button_text()
+
+
+# NEW: Reset button handler—resets InputMap to defaults and updates buttons
+func _on_reset_pressed() -> void:
+	# Function resets only the selected device type (keyboard or gamepad)
+	var device_type: String = "keyboard" if keyboard.button_pressed else "gamepad"
+	Settings.reset_to_defaults(device_type)
+	update_all_remap_buttons()
+	Globals.log_message("Resetting " + device_type + " controls.", Globals.LogLevel.DEBUG)
+
+
+func _on_keyboard_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		Globals.log_message(
+			"_on_keyboard_toggled control pressed: " + str(toggled_on), Globals.LogLevel.DEBUG
+		)
+		update_all_remap_buttons()
+
+
+func _on_gamepad_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		Globals.log_message(
+			"_on_gamepad_toggled control pressed: " + str(toggled_on), Globals.LogLevel.DEBUG
+		)
+		update_all_remap_buttons()
 
 
 func _on_controls_back_button_pressed() -> void:

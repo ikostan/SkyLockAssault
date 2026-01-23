@@ -51,7 +51,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	## :rtype: void
 	if not visible and Globals.options_open:
 		return
-	if event.is_action_pressed("ui_cancel"):
+	if event.is_action_pressed("pause"):
 		toggle_pause()
 
 

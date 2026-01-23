@@ -39,7 +39,7 @@ func before_each() -> void:
 	# Reset InputMap to defaults
 	for action: String in Settings.ACTIONS:
 		InputMap.action_erase_events(action)
-		var default_key: int = Settings.DEFAULT_KEYS[action]
+		var default_key: int = Settings.DEFAULT_KEYBOARD[action]
 		var ev: InputEventKey = InputEventKey.new()
 		ev.physical_keycode = default_key
 		InputMap.action_add_event(action, ev)
@@ -66,11 +66,15 @@ func test_tc_sl_11() -> void:
 	# Verify Audio
 	assert_almost_eq(AudioManager.master_volume, 0.5, 0.01)
 	assert_true(AudioManager.master_muted)
-	# Verify Inputs (e.g., speed_up is KEY_W=87)
+	# Verify Inputs (e.g., speed_up is KEY_W=87, plus added default gamepad)
 	var events: Array = InputMap.action_get_events("speed_up")
-	assert_eq(events.size(), 1)
+	assert_eq(events.size(), 2)
 	assert_true(events[0] is InputEventKey)
 	assert_eq(events[0].physical_keycode, 87)
+	assert_true(events[1] is InputEventJoypadMotion)
+	assert_eq(events[1].axis, JOY_AXIS_TRIGGER_RIGHT)
+	assert_eq(events[1].axis_value, 1.0)
+	assert_eq(events[1].device, -1)
 	# Verify Globals
 	assert_eq(Globals.current_log_level, Globals.LogLevel.WARNING)
 	assert_eq(Globals.difficulty, 1.5)
@@ -119,13 +123,17 @@ func test_tc_sl_13() -> void:
 		Settings._needs_migration = false
 	# Verify migrated in InputMap
 	var events: Array = InputMap.action_get_events("speed_up")
-	assert_eq(events.size(), 1)
+	assert_eq(events.size(), 2)
 	assert_true(events[0] is InputEventKey)
 	assert_eq(events[0].physical_keycode, 87)
+	assert_true(events[1] is InputEventJoypadMotion)
+	assert_eq(events[1].axis, JOY_AXIS_TRIGGER_RIGHT)
+	assert_eq(events[1].axis_value, 1.0)
+	assert_eq(events[1].device, -1)
 	# Config upgraded
 	config = ConfigFile.new()
 	config.load(test_config_path)
-	assert_eq(config.get_value("input", "speed_up"), ["key:87"])  # Upgraded to array string
+	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:5:1.0:-1"])  # Upgraded to array string with added gamepad default
 	# Now save audio changes
 	AudioManager.master_volume = 0.5
 	AudioManager.save_volumes(test_config_path)
@@ -133,7 +141,7 @@ func test_tc_sl_13() -> void:
 	config = ConfigFile.new()
 	config.load(test_config_path)
 	assert_almost_eq(config.get_value("audio", "master_volume"), 0.5, 0.01)
-	assert_eq(config.get_value("input", "speed_up"), ["key:87"])
+	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:5:1.0:-1"])
 
 
 ## TC-SL-14 | Multiple saves: Config with all; Change audio, save; Change settings, save; Change inputs, save. | Sequence of saves from different managers | Each save loads existing, updates own section, saves; All sections preserved across calls; No data loss.
@@ -161,7 +169,8 @@ func test_tc_sl_14() -> void:
 	assert_almost_eq(config.get_value("audio", "master_volume"), 0.5, 0.01)
 	assert_eq(config.get_value("Settings", "difficulty"), 2.0)
 	assert_eq(config.get_value("input", "speed_up"), ["key:87"])
-	# Change inputs and save (e.g., add another event)
+	# Change inputs and save (e.g., replace event to simulate remap)
+	InputMap.action_erase_events("speed_up")
 	var ev: InputEventKey = InputEventKey.new()
 	ev.physical_keycode = KEY_UP
 	InputMap.action_add_event("speed_up", ev)
@@ -171,9 +180,8 @@ func test_tc_sl_14() -> void:
 	assert_almost_eq(config.get_value("audio", "master_volume"), 0.5, 0.01)
 	assert_eq(config.get_value("Settings", "difficulty"), 2.0)
 	var serials: Array = config.get_value("input", "speed_up")
-	assert_eq(serials.size(), 2)
-	assert_eq(serials[0], "key:87")
-	assert_eq(serials[1], "key:4194320")  # KEY_UP=4194320
+	assert_eq(serials.size(), 1)
+	assert_eq(serials[0], "key:4194320")
 
 
 ## TC-SL-15 | Concurrent-like: Simulate rapid saves from audio then globals. | Call AudioManager.save_volumes(); Immediately Globals._save_settings() | No race (Godot single-threaded), but verify final config has both updates; No overwrites.

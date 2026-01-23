@@ -40,20 +40,22 @@ func before_each() -> void:
 	# Reset Globals settings
 	Globals.current_log_level = Globals.LogLevel.INFO
 	Globals.difficulty = 1.0
+			
 
-
-## Per-test cleanup: Restore config backup, free instance.
+## Per-test cleanup: Free audio_instance safely.
 ## :rtype: void
 func after_each() -> void:
 	if is_instance_valid(audio_instance):
+		if is_instance_valid(audio_instance.master_warning_dialog):
+			audio_instance.master_warning_dialog.hide()
+		if is_instance_valid(audio_instance.sfx_warning_dialog):
+			audio_instance.sfx_warning_dialog.hide()
+		remove_child(audio_instance)
 		audio_instance.queue_free()
-		await get_tree().process_frame
-	if FileAccess.file_exists(backup_path):
-		DirAccess.copy_absolute(backup_path, test_config_path)
-		DirAccess.remove_absolute(backup_path)
-	else:
-		if FileAccess.file_exists(test_config_path):
-			DirAccess.remove_absolute(test_config_path)
+	audio_instance = null
+	if FileAccess.file_exists(test_config_path):
+		DirAccess.remove_absolute(test_config_path)
+	await get_tree().process_frame
 
 
 ## TC-SL-06 | Config exists with "input" section (e.g., speed_up=["key:87"]); "Settings" (log_level=1, difficulty=1.5); No "audio". | Call AudioManager.save_volumes() with changes (e.g., sfx_volume=0.6) | "audio" section added with changes; "input" and "Settings" unchanged; Log "Saved volumes to config."
