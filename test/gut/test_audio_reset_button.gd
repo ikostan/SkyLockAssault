@@ -45,10 +45,6 @@ func before_each() -> void:
 	if AudioServer.get_bus_index(AudioConstants.BUS_SFX_ROTORS) == -1:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, AudioConstants.BUS_SFX_ROTORS)
-	
-	audio_instance = audio_scene.instantiate() as Control
-	add_child_autofree(audio_instance)
-	await get_tree().process_frame
 
 
 ## Per-test cleanup: Remove test config if exists
