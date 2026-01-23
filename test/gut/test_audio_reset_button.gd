@@ -55,7 +55,8 @@ func after_each() -> void:
 			audio_instance.master_warning_dialog.hide()
 		if is_instance_valid(audio_instance.sfx_warning_dialog):
 			audio_instance.sfx_warning_dialog.hide()
-		remove_child(audio_instance)  # If not already
+		if audio_instance.get_parent() == self:
+			remove_child(audio_instance)  # If not already
 		audio_instance.queue_free()
 	audio_instance = null
 	if FileAccess.file_exists(test_config_path):
