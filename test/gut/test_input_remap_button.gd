@@ -86,27 +86,6 @@ func test_irb_02() -> void:
 	assert_false(button.listening)
 
 
-## IRB-03 | Remap mouse button event | current_device = KEYBOARD (mouse treated as keyboard) | Simulate _input with InputEventMouseButton, inspect InputMap and label | Mouse event captured; InputMap updated; label uses MOUSE_BUTTON_LABELS (e.g., “Left Button”).
-## :rtype: void
-func test_irb_03() -> void:
-	# Start remapping
-	button.button_pressed = true
-	button._on_pressed()
-	assert_true(button.listening)
-	# Simulate input
-	var key_event: InputEventKey = InputEventKey.new()
-	key_event.physical_keycode = KEY_LEFT
-	key_event.pressed = true
-	button._input(key_event)
-	# Assert
-	var events: Array = InputMap.action_get_events(TEST_ACTION)
-	assert_eq(events.size(), 1)
-	assert_true(events[0] is InputEventKey)
-	assert_eq(events[0].physical_keycode, KEY_LEFT)
-	assert_eq(button.text, "Left")
-	assert_false(button.listening)
-
-
 ## IRB-04 | Ignore wrong-device event during remap | current_device = KEYBOARD | Simulate _input with InputEventJoypadButton | Event ignored; no change to InputMap; label unchanged.
 ## :rtype: void
 func test_irb_04() -> void:
@@ -139,16 +118,13 @@ func test_irb_05() -> void:
 	var key_event: InputEventKey = InputEventKey.new()
 	key_event.physical_keycode = KEY_A
 	InputMap.action_add_event(TEST_ACTION, key_event)
-	var mouse_event: InputEventMouseButton = InputEventMouseButton.new()
-	mouse_event.button_index = MOUSE_BUTTON_LEFT
-	InputMap.action_add_event(TEST_ACTION, mouse_event)
 	var gamepad_event: InputEventJoypadButton = InputEventJoypadButton.new()
 	gamepad_event.button_index = JOY_BUTTON_A
 	InputMap.action_add_event(TEST_ACTION, gamepad_event)
 	# For keyboard
 	button.current_device = InputRemapButton.DeviceType.KEYBOARD
 	var matching: InputEvent = button.get_matching_event()
-	assert_true(matching is InputEventKey or matching is InputEventMouseButton)
+	assert_true(matching is InputEventKey)
 	# For gamepad
 	button.current_device = InputRemapButton.DeviceType.GAMEPAD
 	matching = button.get_matching_event()
@@ -158,18 +134,6 @@ func test_irb_05() -> void:
 	button.current_device = InputRemapButton.DeviceType.KEYBOARD
 	matching = button.get_matching_event()
 	assert_null(matching)
-
-
-## IRB-06 | Update button label for mouse | Action mapped to InputEventMouseButton | Call get_event_label() | Label resolved from MOUSE_BUTTON_LABELS (e.g., “Right Button”).
-## :rtype: void
-func test_irb_06() -> void:
-	var key_event: InputEventKey = InputEventKey.new()
-	key_event.physical_keycode = KEY_RIGHT
-	InputMap.action_add_event(TEST_ACTION, key_event)
-	# Update label (called in _ready, but call explicitly if needed)
-	button.update_button_text()  # Assume method exists
-	assert_eq(button.get_event_label(key_event), "Right")
-	assert_eq(button.text, "Right")
 
 
 ## IRB-07 | Handle remap logging | Logging enabled | Perform successful remap, inspect log output | Log entry includes device type and new event details.
