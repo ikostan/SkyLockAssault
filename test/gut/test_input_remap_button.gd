@@ -43,14 +43,14 @@ func test_irb_01() -> void:
 	prior_gamepad.button_index = JOY_BUTTON_A
 	InputMap.action_add_event(TEST_ACTION, prior_gamepad)
 	# Start remapping
-	button.button_pressed = true
-	button._on_pressed()
+	button.pressed.emit()
 	assert_true(button.listening)
 	# Simulate input
 	var new_key: InputEventKey = InputEventKey.new()
 	new_key.physical_keycode = KEY_B
 	new_key.pressed = true
-	button._input(new_key)
+	button.get_viewport().push_input(new_key)
+	await get_tree().process_frame
 	# Assert
 	var events: Array = InputMap.action_get_events(TEST_ACTION)
 	assert_eq(events.size(), 2)
@@ -69,14 +69,14 @@ func test_irb_02() -> void:
 	prior_key.physical_keycode = KEY_A
 	InputMap.action_add_event(TEST_ACTION, prior_key)
 	# Start remapping
-	button.button_pressed = true
-	button._on_pressed()
+	button.pressed.emit()
 	assert_true(button.listening)
 	# Simulate input
 	var new_gamepad: InputEventJoypadButton = InputEventJoypadButton.new()
 	new_gamepad.button_index = JOY_BUTTON_B
 	new_gamepad.pressed = true
-	button._input(new_gamepad)
+	button.get_viewport().push_input(new_gamepad)
+	await get_tree().process_frame
 	# Assert
 	var events: Array = InputMap.action_get_events(TEST_ACTION)
 	assert_eq(events.size(), 2)
@@ -94,15 +94,15 @@ func test_irb_04() -> void:
 	prior_key.physical_keycode = KEY_A
 	InputMap.action_add_event(TEST_ACTION, prior_key)
 	# Start remapping
-	button.button_pressed = true
-	button._on_pressed()
+	button.pressed.emit()
 	assert_true(button.listening)
 	var listening_text: String = button.text
 	# Simulate wrong input
 	var gamepad_event: InputEventJoypadButton = InputEventJoypadButton.new()
 	gamepad_event.button_index = JOY_BUTTON_A
 	gamepad_event.pressed = true
-	button._input(gamepad_event)
+	button.get_viewport().push_input(gamepad_event)
+	await get_tree().process_frame
 	# Assert
 	var events: Array = InputMap.action_get_events(TEST_ACTION)
 	assert_eq(events.size(), 1)
@@ -142,12 +142,12 @@ func test_irb_05() -> void:
 func test_irb_07() -> void:
 	# Note: Assuming Globals.log_info is called; use spy if available.
 	# For simplicity, perform remap (logging happens internally).
-	button.button_pressed = true
-	button._on_pressed()
+	button.pressed.emit()
 	var new_key: InputEventKey = InputEventKey.new()
 	new_key.physical_keycode = KEY_C
 	new_key.pressed = true
-	button._input(new_key)
+	button.get_viewport().push_input(new_key)
+	await get_tree().process_frame
 	# Assert remap happened, assume log is printed (no direct assert on print).
 	var events: Array = InputMap.action_get_events(TEST_ACTION)
 	assert_eq(events.size(), 1)
@@ -159,14 +159,14 @@ func test_irb_07() -> void:
 func test_irb_08() -> void:
 	InputMap.action_erase_events(TEST_ACTION)
 	# Start remapping
-	button.button_pressed = true
-	button._on_pressed()
+	button.pressed.emit()
 	assert_true(button.listening)
 	# Simulate input
 	var new_key: InputEventKey = InputEventKey.new()
 	new_key.physical_keycode = KEY_D
 	new_key.pressed = true
-	button._input(new_key)
+	button.get_viewport().push_input(new_key)
+	await get_tree().process_frame
 	# Assert
 	var events: Array = InputMap.action_get_events(TEST_ACTION)
 	assert_eq(events.size(), 1)
