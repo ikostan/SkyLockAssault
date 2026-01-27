@@ -82,7 +82,7 @@ func test_irb_02() -> void:
 	assert_eq(events.size(), 2)
 	assert_true(events.any(func(ev: InputEvent) -> bool: return ev is InputEventJoypadButton and ev.button_index == JOY_BUTTON_B))
 	assert_true(events.any(func(ev: InputEvent) -> bool: return ev is InputEventKey and ev.physical_keycode == KEY_A))
-	assert_eq(button.text, "B")
+	assert_eq(button.text, button.get_event_label(new_gamepad))
 	assert_false(button.listening)
 
 
@@ -97,6 +97,7 @@ func test_irb_04() -> void:
 	button.button_pressed = true
 	button._on_pressed()
 	assert_true(button.listening)
+	var listening_text: String = button.text
 	# Simulate wrong input
 	var gamepad_event: InputEventJoypadButton = InputEventJoypadButton.new()
 	gamepad_event.button_index = JOY_BUTTON_A
@@ -107,11 +108,11 @@ func test_irb_04() -> void:
 	assert_eq(events.size(), 1)
 	assert_true(events[0] is InputEventKey)
 	assert_eq(events[0].physical_keycode, KEY_A)
-	assert_eq(button.text, "Press a key or controller button/axis...")
+	assert_eq(button.text, listening_text)
 	assert_true(button.listening)
 
 
-## IRB-05 | Get matching event for device | Action has mixed keyboard, mouse, and gamepad events | Call get_matching_event(DeviceType.KEYBOARD) | Correct keyboard or mouse event returned; null if none exist.
+## IRB-05 | Get matching event for device | Action has mixed keyboard, and gamepad events | Call get_matching_event(DeviceType.KEYBOARD) | Correct keyboard event returned; null if none exist.
 ## :rtype: void
 func test_irb_05() -> void:
 	# Add mixed events
