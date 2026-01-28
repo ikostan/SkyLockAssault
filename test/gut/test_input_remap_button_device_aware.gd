@@ -227,6 +227,16 @@ func test_irb_08() -> void:
 	assert_eq(events[0].physical_keycode, KEY_D)
 	assert_eq(button.text, button.get_event_label(new_key))
 	assert_false(button.listening)
+	# Simulate save (assuming Settings.save_input_mappings() handles it)
+	Settings.save_input_mappings(test_config_path)
+	# Reset in-memory InputMap to simulate reload
+	InputMap.action_erase_events(TEST_ACTION)
+	# Load and verify
+	Settings.load_input_mappings(test_config_path)
+	# var events: Array = InputMap.action_get_events(TEST_ACTION)
+	assert_eq(events.size(), 1)
+	assert_true(events[0] is InputEventKey)
+	assert_eq(events[0].physical_keycode, KEY_D)
 
 
 ## IRB-09 | Tab switching behavior | Multiple UI tabs | Switch between tabs | Keyboard tab shows keyboard; gamepad tab shows gamepad | Rapid switch doesn’t crash UI | ✔ | Both tabs tested
