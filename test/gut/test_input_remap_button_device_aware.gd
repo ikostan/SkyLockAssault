@@ -241,11 +241,10 @@ func test_irb_08() -> void:
 	InputMap.action_erase_events(TEST_ACTION)
 	# Load and verify
 	Settings.load_input_mappings(test_config_path)
-	# var events: Array = InputMap.action_get_events(TEST_ACTION)
+	events = InputMap.action_get_events(TEST_ACTION)
 	assert_eq(events.size(), 1)
 	assert_true(events[0] is InputEventKey)
 	assert_eq(events[0].physical_keycode, KEY_D)
-
 
 ## IRB-09 | Tab switching behavior | Multiple UI tabs | Switch between tabs | Keyboard tab shows keyboard; gamepad tab shows gamepad | Rapid switch doesn’t crash UI | ✔ | Both tabs tested
 ## :rtype: void
