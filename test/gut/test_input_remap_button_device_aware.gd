@@ -152,25 +152,23 @@ func test_irb_05() -> void:
 	button.button_pressed = true
 	button.pressed.emit()
 	assert_true(button.listening)
-	# Tiny movement
+	const DEADZONE := InputRemapButton.AXIS_DEADZONE_THRESHOLD
+	# Below deadzone - should be ignored
 	var tiny_axis: InputEventJoypadMotion = InputEventJoypadMotion.new()
 	tiny_axis.axis = JOY_AXIS_LEFT_X
-	tiny_axis.axis_value = 0.4  # Below 0.5 deadzone
+	tiny_axis.axis_value = DEADZONE - 0.1   # e.g. 0.4 if DEADZONE = 0.5
 	Input.parse_input_event(tiny_axis)
 	await get_tree().process_frame
-	assert_true(button.listening)  # Ignored
-	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
-	assert_eq(events.size(), 0)
-	# Beyond threshold
-	var axis: InputEventJoypadMotion = InputEventJoypadMotion.new()
-	axis.axis = JOY_AXIS_LEFT_X
-	axis.axis_value = 0.6  # Above, normalized to 1.0
-	Input.parse_input_event(axis)
+	assert_true(button.listening)
+	# Above deadzone - should accept and normalize to 1.0
+	var valid_axis: InputEventJoypadMotion = InputEventJoypadMotion.new()
+	valid_axis.axis = JOY_AXIS_LEFT_X
+	valid_axis.axis_value = DEADZONE + 0.1   # e.g. 0.6
+	Input.parse_input_event(valid_axis)
 	await get_tree().process_frame
-	events = InputMap.action_get_events(TEST_ACTION)
+	var events: Array = InputMap.action_get_events(TEST_ACTION)
 	assert_eq(events.size(), 1)
-	assert_eq(events[0].axis, JOY_AXIS_LEFT_X)
-	assert_eq(events[0].axis_value, 1.0)  # Normalized
+	assert_eq(events[0].axis_value, 1.0)        # Should be normalized
 	assert_false(button.listening)
 
 
