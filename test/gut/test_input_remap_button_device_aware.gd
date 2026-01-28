@@ -156,14 +156,14 @@ func test_irb_04() -> void:
 ## :rtype: void
 func test_irb_05() -> void:
 	button.current_device = InputRemapButton.DeviceType.GAMEPAD
-	const DEADZONE_THRESHOLD: float = 0.5
+	var deadzone_threshold: float = InputRemapButton.AXIS_DEADZONE_THRESHOLD
 	button.button_pressed = true
 	button.pressed.emit()
 	assert_true(button.listening)
 	# Below threshold
 	var low_axis: InputEventJoypadMotion = InputEventJoypadMotion.new()
 	low_axis.axis = JOY_AXIS_LEFT_X
-	low_axis.axis_value = DEADZONE_THRESHOLD - 0.01
+	low_axis.axis_value = deadzone_threshold - 0.01
 	Input.parse_input_event(low_axis)
 	await get_tree().process_frame
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
@@ -172,7 +172,7 @@ func test_irb_05() -> void:
 	# Beyond threshold
 	var axis: InputEventJoypadMotion = InputEventJoypadMotion.new()
 	axis.axis = JOY_AXIS_LEFT_X
-	axis.axis_value = DEADZONE_THRESHOLD + 0.01
+	axis.axis_value = deadzone_threshold + 0.01
 	Input.parse_input_event(axis)
 	await get_tree().process_frame
 	events = InputMap.action_get_events(TEST_ACTION)
