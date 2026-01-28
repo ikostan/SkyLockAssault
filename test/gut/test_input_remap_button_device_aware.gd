@@ -25,6 +25,7 @@ func before_each() -> void:
 	button = InputRemapButton.new()
 	button.action = TEST_ACTION
 	button.current_device = InputRemapButton.DeviceType.KEYBOARD
+	button.set_process_input(true)
 	add_child_autofree(button)
 
 
@@ -46,14 +47,18 @@ func _start_listening() -> void:
 	button.pressed.emit()
 	await get_tree().process_frame
 	await get_tree().process_frame
+	await get_tree().process_frame
+	await get_tree().process_frame
 	assert_true(button.listening)
 
 
-## Helper to send event during remap (direct _input call).
+## Helper to send event during remap.
 ## :param event: InputEvent to send.
 ## :rtype: void
 func _send_event(event: InputEvent) -> void:
-	button._input(event)
+	Input.parse_input_event(event)
+	await get_tree().process_frame
+	await get_tree().process_frame
 	await get_tree().process_frame
 	await get_tree().process_frame
 
@@ -204,13 +209,16 @@ func test_irb_06() -> void:
 ## :rtype: void
 func test_irb_07() -> void:
 	button.update_button_text()
+	await get_tree().process_frame
 	assert_eq(button.text, "Unbound")
 	button.current_device = InputRemapButton.DeviceType.GAMEPAD
 	button.update_button_text()
+	await get_tree().process_frame
 	assert_eq(button.text, "Unbound")
 	# No crash: call on empty
 	InputMap.action_erase_events(TEST_ACTION)
 	button.update_button_text()
+	await get_tree().process_frame
 	assert_eq(button.text, "Unbound")
 
 
@@ -238,6 +246,8 @@ func test_irb_08() -> void:
 	InputMap.action_erase_events(TEST_ACTION)
 	# Load and verify
 	Settings.load_input_mappings(test_config_path)
+	await get_tree().process_frame
+	await get_tree().process_frame
 	events = InputMap.action_get_events(TEST_ACTION)
 	assert_eq(events.size(), 1)
 	assert_true(events[0] is InputEventKey)
@@ -257,15 +267,18 @@ func test_irb_09() -> void:
 	# Keyboard tab
 	button.current_device = InputRemapButton.DeviceType.KEYBOARD
 	button.update_button_text()
+	await get_tree().process_frame
 	assert_eq(button.text, "A")
 	# Switch to gamepad
 	button.current_device = InputRemapButton.DeviceType.GAMEPAD
 	button.update_button_text()
+	await get_tree().process_frame
 	assert_eq(button.text, "A")
 	# Rapid switch: repeat multiple times
 	for i: int in range(5):
 		button.current_device = InputRemapButton.DeviceType.KEYBOARD if i % 2 == 0 else InputRemapButton.DeviceType.GAMEPAD
 		button.update_button_text()
+		await get_tree().process_frame
 	assert_not_null(button.text)  # No crash
 
 
