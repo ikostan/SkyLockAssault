@@ -110,6 +110,11 @@ We value your input to improve Sky Lock Assault! Share your thoughts via:
 For details on reporting vulnerabilities and our disclosure process, see
 [SECURITY.md](/.github/SECURITY.md).
 
+## License
+
+This project is licensed under the GNU General Public License v3.0 (GPLv3).
+For commercial use inquiries, contact me.
+
 ### Play Instructions
 
 - **In Godot Editor**: Open the project > Press F5 to run the main scene
