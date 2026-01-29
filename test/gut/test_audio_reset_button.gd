@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_audio_reset_button.gd
 ## GUT unit tests for audio_settings.gd reset button functionality.
 ## Covers TC-Reset-01 to TC-Reset-06 from test plan.

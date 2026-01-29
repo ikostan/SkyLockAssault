@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_input_remap_button.gd
 ##
 ## Unit tests for InputRemapButton class using GdUnit4.

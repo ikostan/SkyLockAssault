@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_preserve_other_sections.gd
 ## GUT unit tests for AudioManager save/load preserving other config sections.
 ## Covers TC-SL-06 to TC-SL-10 from test plan.

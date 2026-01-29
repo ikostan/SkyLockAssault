@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_version_display.gd
 ## GUT unit tests for version display in options_menu.gd and globals.gd.
 ## Covers loading and displaying game version from ProjectSettings.

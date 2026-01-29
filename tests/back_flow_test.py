@@ -1,3 +1,5 @@
+# Copyright (C) 2025 Egor Kostan
+# SPDX-License-Identifier: GPL-3.0-or-later
 # tests/back_flow_test.py
 """
 Back Navigation Test Suite (Playwright + UI Automation with DOM Overlays)

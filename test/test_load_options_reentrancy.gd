@@ -1,4 +1,7 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## Test script: test_load_options_reentrancy.gd (updated for hidden_menus array)
+
 extends GdUnitTestSuite
 
 var orig_options_scene: PackedScene

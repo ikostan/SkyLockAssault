@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright (C) 2025 Egor Kostan
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 # This script runs GUT unit tests locally on Windows 10 using Godot 4.4/4.5.
 # Assumptions:

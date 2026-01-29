@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_audio_settings.gd
 ## Unit tests for audio_settings.gd functionality.
 ##

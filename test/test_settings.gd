@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_settings.gd (updated for new features: multi-event, joypad button/motion, backward compat, defaults)
 ## Uses GdUnit4 (assume installed; install via AssetLib if not).
 ## Run via GdUnit Inspector or command line.

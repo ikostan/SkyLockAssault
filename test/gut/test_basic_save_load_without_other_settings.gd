@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_basic_save_load_without_other_settings.gd
 ## GUT unit tests for AudioManager save/load functionality without other settings.
 ## Covers TC-SL-01 to TC-SL-05 from test plan.

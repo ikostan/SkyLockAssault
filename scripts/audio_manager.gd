@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## audio_manager.gd
 ## Autoload singleton for audio-related globals and logic.
 ## Handles volume variables, bus constants, loading/saving volumes, and applying to AudioServer.
