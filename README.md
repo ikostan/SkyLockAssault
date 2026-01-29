@@ -127,6 +127,8 @@ alternatives without GPL requirements, a separate license is available upon requ
 - **Contact**: For custom licenses, trademark use (e.g., "Sky Lock Assault"),
   or inquiries, reach out via GitHub issues or X @EgorKostan.
 
+---
+
 ### Play Instructions
 
 - **In Godot Editor**: Open the project > Press F5 to run the main scene
