@@ -110,6 +110,28 @@ We value your input to improve Sky Lock Assault! Share your thoughts via:
 For details on reporting vulnerabilities and our disclosure process, see
 [SECURITY.md](/.github/SECURITY.md).
 
+---
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 or
+later (GPL-3.0-or-later) - see the [LICENSE](LICENSE) file for details.
+
+Commercial use is allowed under GPLv3 terms, which require that any
+distributed derivatives or combined works remain open source and provide
+source code to users. For closed-source commercial alternatives without
+these GPL requirements, a separate license is available upon request.
+
+### Key Terms
+- **Open Source**: You can view, modify, and distribute the code freely,
+  as long as derivatives remain under GPLv3.
+- **Commercial Use**: Allowed under GPLv3 (with source code obligations
+  for distributions). Closed-source commercial use requires a separate license.
+- **Contact**: For custom licenses, trademark use (e.g., "Sky Lock Assault"),
+  or inquiries, reach out via GitHub issues or X @EgorKostan.
+
+---
+
 ### Play Instructions
 
 - **In Godot Editor**: Open the project > Press F5 to run the main scene

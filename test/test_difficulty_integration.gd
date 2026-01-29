@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 # test_difficulty_integration.gd (extends GdUnitTestSuite) - FIXED: fire() + bullet timer path/math
 # Updated for speed-scaled fuel depletion (issue: outdated fixed assert)
 

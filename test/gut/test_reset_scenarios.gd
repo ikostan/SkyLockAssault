@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_reset_scenarios.gd
 ## GUT unit tests for AudioManager reset functionality preserving other sections.
 ## Covers TC-SL-16 to TC-SL-20 from test plan.

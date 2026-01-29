@@ -1,6 +1,9 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
+
 extends GdUnitTestSuite
 
-var bullet_scene: = preload("res://scenes/bullet.tscn")
+var bullet_scene := preload("res://scenes/bullet.tscn")
 
 func test_bullet_collision() -> void:
 	# New: auto_free for cleanup (prevents leaks/orphans)
@@ -15,7 +18,7 @@ func test_bullet_collision() -> void:
 	# Simulate a hit body with take_damage method
 	# New: auto_free for dummy cleanup
 	var dummy: Node2D = auto_free(Node2D.new())
-	var script: = GDScript.new()
+	var script := GDScript.new()
 	script.source_code = """
 extends Node2D
 

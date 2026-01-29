@@ -1,3 +1,5 @@
+# Copyright (C) 2025 Egor Kostan
+# SPDX-License-Identifier: GPL-3.0-or-later
 # tests/load_main_menu_test.py
 """
 Main Menu Load Test (Playwright + UI Automation with DOM Overlays)

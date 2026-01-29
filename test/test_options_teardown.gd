@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## Test Options Teardown Script
 ##
 ## Unit tests for options menu teardown logic, including flag and menu restoration.

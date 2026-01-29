@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## JavaScriptBridgeWrapper.gd
 ## Wrapper for JavaScriptBridge singleton methods to enable mocking in unit tests.
 ##

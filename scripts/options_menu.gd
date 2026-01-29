@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## Options Menu Script
 ##
 ## Handles log level selection, difficulty adjustment, and back navigation

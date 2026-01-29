@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 # New: Register as global class for testing and reuse
 class_name VolumeSlider
 
