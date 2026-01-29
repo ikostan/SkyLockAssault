@@ -111,7 +111,7 @@ func _ready() -> void:
 func _on_pressed() -> void:
 	listening = button_pressed
 	if listening:
-		text = "Press a key or controller button/axis..."
+		text = Globals.REMAP_PROMPT_TEXT  # Use the shared constant
 	else:
 		update_button_text()
 
