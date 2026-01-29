@@ -29,7 +29,6 @@ func before_each() -> void:
 	keyboard_btn.button_pressed = true
 	# Default to keyboard (as in _ready)
 	keyboard_btn.button_pressed = true
-	# _ready() is called automatically by add_child(); no manual call needed
 
 
 func after_each() -> void:
@@ -82,8 +81,9 @@ func test_ui_03_reset_in_keyboard() -> void:
 	# Simulate a temporary non-default remap, then reset
 	var speed_up_btn: Button = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
 	speed_up_btn.button_pressed = true
+	# Note: Directly calling private methods (_on_pressed, _input) for simulation due to complexity of full input event mocking in GUT unit tests.
+	# Consider refactoring to helper methods or integration tests if implementation changes frequently.
 	speed_up_btn._on_pressed()  # Manually trigger the pressed handler to start listening
-	#
 	var temp_event := InputEventKey.new()
 	temp_event.physical_keycode = Key.KEY_Z  # Non-default
 	temp_event.pressed = true  # Ensure pressed for the condition in _input
