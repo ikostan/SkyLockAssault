@@ -3,7 +3,7 @@
 
 extends GdUnitTestSuite
 
-var bullet_scene: = preload("res://scenes/bullet.tscn")
+var bullet_scene := preload("res://scenes/bullet.tscn")
 
 func test_bullet_collision() -> void:
 	# New: auto_free for cleanup (prevents leaks/orphans)
