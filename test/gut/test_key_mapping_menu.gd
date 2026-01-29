@@ -27,8 +27,6 @@ func before_each() -> void:
 	remap_buttons = menu.get_tree().get_nodes_in_group("remap_buttons") as Array[InputRemapButton]
 	# Default to keyboard (as in _ready)
 	keyboard_btn.button_pressed = true
-	# Default to keyboard (as in _ready)
-	keyboard_btn.button_pressed = true
 
 
 func after_each() -> void:
