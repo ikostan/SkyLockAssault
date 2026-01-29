@@ -122,7 +122,7 @@ func test_ui_05_label_update_after_remapping() -> void:
 	left_btn.button_pressed = true
 	# Note: Directly calling private methods (_on_pressed, _input) for simulation due to complexity of full input event mocking in GUT unit tests.
 	left_btn._on_pressed()  # Manually trigger the pressed handler to start listening
-	assert_eq(left_btn.text, "Press a key or controller button/axis...")
+	assert_eq(left_btn.text, Globals.REMAP_PROMPT_TEXT)
 	var key_event := InputEventKey.new()
 	key_event.physical_keycode = Key.KEY_A
 	key_event.pressed = true

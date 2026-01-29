@@ -2,7 +2,11 @@ extends Node
 
 # Global utilities singleton: Provides shared functions like logging.
 # Access from any script as Globals.log_message("message").
+
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
+
+# Shared constants
+const REMAP_PROMPT_TEXT: String = "Press a key or controller button/axis..."
 
 @export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
 @export var enable_debug_logging: bool = false  # Toggle in Inspector or settings
@@ -16,8 +20,6 @@ var options_open: bool = false
 var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
 var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 var next_scene: String = ""  # Path to the next scene to load via loading screen.
-# Game version (move @onready here, but use helper)
-# @onready var game_version: String = get_game_version()
 
 
 func _ready() -> void:
