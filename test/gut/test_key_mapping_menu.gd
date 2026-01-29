@@ -20,14 +20,11 @@ var remap_buttons: Array = []
 func before_each() -> void:
 	menu = load("res://scenes/key_mapping_menu.tscn").instantiate()  # Adjust path if needed
 	add_child(menu)
-	
 	# Get UI references
 	keyboard_btn = menu.get_node("Panel/Options/DeviceTypeContainer/Keyboard")
 	gamepad_btn = menu.get_node("Panel/Options/DeviceTypeContainer/Gamepad")
 	reset_btn = menu.get_node("Panel/Options/BtnContainer/ControlResetButton")
-	
 	remap_buttons = menu.get_tree().get_nodes_in_group("remap_buttons") as Array[InputRemapButton]
-	
 	# Default to keyboard (as in _ready)
 	keyboard_btn.button_pressed = true
 	# Default to keyboard (as in _ready)
@@ -43,7 +40,12 @@ func after_each() -> void:
 # UI-01: Switch to keyboard settings
 func test_ui_01_switch_to_keyboard() -> void:
 	gut.p("UI-01: Keyboard switch updates all remap_buttons to KEYBOARD device.")
+	# First switch to gamepad to ensure we're testing a real transition
+	gamepad_btn.button_pressed = true
+	gamepad_btn.toggled.emit(true)
+	# Now switch back to keyboard
 	keyboard_btn.button_pressed = true
+	keyboard_btn.toggled.emit(true)
 	# Verify keyboard device active, gamepad inactive
 	assert_true(keyboard_btn.button_pressed, "Keyboard CheckButton should be pressed")
 	assert_false(gamepad_btn.button_pressed, "Gamepad CheckButton should be inactive")
