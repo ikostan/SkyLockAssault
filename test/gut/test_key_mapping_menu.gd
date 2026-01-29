@@ -69,6 +69,10 @@ func test_ui_02_switch_to_gamepad() -> void:
 	var speed_up_btn: Button = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
 	assert_true(speed_up_btn.text.contains("Stick") or speed_up_btn.text.contains("Button") or speed_up_btn.text.length() > 1,
 		"Gamepad label should be descriptive (not a single key char)")
+	# Verify it's not showing a keyboard key (single letter) and has meaningful gamepad text
+	assert_false(speed_up_btn.text.length() == 1 and speed_up_btn.text.to_upper() == speed_up_btn.text,
+		"Gamepad label should not be a single keyboard key character")
+	assert_ne(speed_up_btn.text, "Unbound", "Gamepad should have a default binding")
 
 
 # UI-03: Reset button in keyboard mode
