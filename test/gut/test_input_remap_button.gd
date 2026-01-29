@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_input_remap_button.gd
 ## GUT unit tests for input_remap_button.gd.
 ## Covers IRB-01 to IRB-08 from test plan.

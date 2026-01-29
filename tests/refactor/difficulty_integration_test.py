@@ -1,3 +1,5 @@
+# Copyright (C) 2025 Egor Kostan
+# SPDX-License-Identifier: GPL-3.0-or-later
 # tests/difficulty_integration_test.py
 """
 Difficulty Integration Test (Playwright, Python)

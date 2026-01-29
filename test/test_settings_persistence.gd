@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 # test_settings_persistence.gd (extends GdUnitTestSuite)
 extends GdUnitTestSuite
 

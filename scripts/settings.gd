@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 # settings.gd
 # Input settings singleton: Loads/saves InputMap events to preserve custom mappings.
 # Supports keys, joypad buttons, and joypad axes (serialized).

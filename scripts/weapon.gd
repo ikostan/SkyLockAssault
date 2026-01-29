@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 # weapon.gd - FIXED with debug logs for null current_weapon
 extends Node2D
 

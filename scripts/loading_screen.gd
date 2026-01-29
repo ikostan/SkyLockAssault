@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## Loading Screen Script
 ##
 ## Manages background loading of the next scene with a smooth progress bar.

@@ -1,3 +1,6 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
+
 extends GdUnitTestSuite
 
 var bullet_scene: = preload("res://scenes/bullet.tscn")

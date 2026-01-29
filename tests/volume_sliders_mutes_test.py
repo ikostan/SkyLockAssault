@@ -1,3 +1,5 @@
+# Copyright (C) 2025 Egor Kostan
+# SPDX-License-Identifier: GPL-3.0-or-later
 # tests/volume_sliders_mutes_test.py
 """
 Volume Sliders & Mute Toggles Test Suite (Playwright + UI Automation with DOM Overlays)

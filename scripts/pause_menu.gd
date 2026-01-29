@@ -1,6 +1,8 @@
 ## pause_menu.gd
 ##
 ## Pause menu overlay: Toggles with ESC, pauses the game tree, and handles resume/back to menu.
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## Use for exiting game levels back to main menu without quitting.
 
 extends CanvasLayer

@@ -1,3 +1,5 @@
+# Copyright (C) 2025 Egor Kostan
+# SPDX-License-Identifier: GPL-3.0-or-later
 # tests/reset_flow_test.py
 """
 Reset Functionality Test Suite (Playwright + UI Automation with DOM Overlays)

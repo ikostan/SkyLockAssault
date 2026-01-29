@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 # test_player.gd
 # Unit tests for player.gd using GdUnit4 in Godot 4.4
 # All tests now use manual scene instantiation (no GdUnitSceneRunner)

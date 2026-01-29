@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## Test script: test_menu_visibility.gd
 ##
 ## GDUnit test suite for menu visibility logic in Globals.load_options and back behavior.

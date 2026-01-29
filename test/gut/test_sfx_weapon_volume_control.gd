@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_sfx_weapon_volume_control.gd
 ## GUT unit tests for audio_settings.gd SFX and Weapon functionality.
 ## Covers TC-Weapon-01 to TC-Weapon-15 from test plan.

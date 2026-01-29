@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 # test_difficulty.gd (extends GdUnitTestSuite)
 # Unit tests for difficulty scaling in player.gd using GdUnit4.
 

@@ -112,8 +112,17 @@ For details on reporting vulnerabilities and our disclosure process, see
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0 (GPLv3).
-For commercial use inquiries, contact me.
+This project is licensed under the GNU General Public License v3.0 (GPLv3) - see the
+[LICENSE](LICENSE) file for details.
+
+### Key Terms
+- **Open Source**: You can view, modify, and distribute the code freely,
+  as long as derivatives remain under GPLv3.
+- **Commercial Use**: Allowed, but any distributed modifications or combined
+  works must be open source under GPLv3. Closed-source commercial use requires
+  a separate license.
+- **Contact**: For custom licenses, trademark use (e.g., "Sky Lock Assault"),
+  or inquiries, reach out via GitHub issues or X @EgorKostan.
 
 ### Play Instructions
 
