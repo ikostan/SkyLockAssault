@@ -30,7 +30,9 @@ func before_each() -> void:
 	
 	# Default to keyboard (as in _ready)
 	keyboard_btn.button_pressed = true
-	menu._ready()  # Ensure signals & updates run
+	# Default to keyboard (as in _ready)
+	keyboard_btn.button_pressed = true
+	# _ready() is called automatically by add_child(); no manual call needed
 
 
 func after_each() -> void:
