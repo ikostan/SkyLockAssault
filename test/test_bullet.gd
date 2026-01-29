@@ -18,7 +18,7 @@ func test_bullet_collision() -> void:
 	# Simulate a hit body with take_damage method
 	# New: auto_free for dummy cleanup
 	var dummy: Node2D = auto_free(Node2D.new())
-	var script: = GDScript.new()
+	var script := GDScript.new()
 	script.source_code = """
 extends Node2D
 
