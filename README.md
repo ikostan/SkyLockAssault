@@ -112,8 +112,8 @@ For details on reporting vulnerabilities and our disclosure process, see
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0 (GPLv3) -
-see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License v3.0 or later
+(GPL-3.0-or-later) - see the [LICENSE](LICENSE) file for details.
 
 ### Key Terms
 - **Open Source**: You can view, modify, and distribute the code freely,
