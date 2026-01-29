@@ -82,11 +82,11 @@ func test_ui_03_reset_in_keyboard() -> void:
 	var speed_up_btn: Button = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
 	speed_up_btn.button_pressed = true
 	# Note: Directly calling private methods (_on_pressed, _input) for simulation due to complexity of full input event mocking in GUT unit tests.
-	# Consider refactoring to helper methods or integration tests if implementation changes frequently.
 	speed_up_btn._on_pressed()  # Manually trigger the pressed handler to start listening
 	var temp_event := InputEventKey.new()
 	temp_event.physical_keycode = Key.KEY_Z  # Non-default
 	temp_event.pressed = true  # Ensure pressed for the condition in _input
+	# Note: Directly calling private method (_input) for simulation due to complexity of full input event mocking in GUT unit tests.
 	speed_up_btn._input(temp_event)
 	reset_btn.pressed.emit()  # Triggers _on_reset_pressed("keyboard") + update_all_remap_buttons
 	# Keyboard actions should now reflect defaults (not the temp "Z")
@@ -102,13 +102,13 @@ func test_ui_04_reset_in_gamepad() -> void:
 	# Temporary remap
 	var fire_btn: Button = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingFire/FireInputRemap")
 	fire_btn.button_pressed = true
+	# Note: Directly calling private methods (_on_pressed, _input) for simulation due to complexity of full input event mocking in GUT unit tests.
 	fire_btn._on_pressed()  # Manually trigger the pressed handler to start listening
-	#
 	var temp_event := InputEventJoypadButton.new()
 	temp_event.button_index = JOY_BUTTON_B
 	temp_event.pressed = true  # Ensure pressed for the condition in _input
+	# Note: Directly calling private method (_input) for simulation due to complexity of full input event mocking in GUT unit tests.
 	fire_btn._input(temp_event)
-	#
 	reset_btn.pressed.emit()
 	# Assertions
 	assert_ne(fire_btn.text, "B", "Gamepad reset should restore default")
@@ -122,12 +122,13 @@ func test_ui_05_label_update_after_remapping() -> void:
 	keyboard_btn.button_pressed = true
 	var left_btn: Button = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingLeft/LeftInputRemap")
 	left_btn.button_pressed = true
+	# Note: Directly calling private methods (_on_pressed, _input) for simulation due to complexity of full input event mocking in GUT unit tests.
 	left_btn._on_pressed()  # Manually trigger the pressed handler to start listening
 	assert_eq(left_btn.text, "Press a key or controller button/axis...")
-	#
 	var key_event := InputEventKey.new()
 	key_event.physical_keycode = Key.KEY_A
 	key_event.pressed = true
+	# Note: Directly calling private method (_input) for simulation due to complexity of full input event mocking in GUT unit tests.
 	left_btn._input(key_event)
 	# Assertions
 	assert_false(left_btn.listening)
@@ -135,11 +136,12 @@ func test_ui_05_label_update_after_remapping() -> void:
 	# Gamepad remap
 	gamepad_btn.button_pressed = true
 	left_btn.button_pressed = true
+	# Note: Directly calling private methods (_on_pressed, _input) for simulation due to complexity of full input event mocking in GUT unit tests.
 	left_btn._on_pressed()  # Manually trigger the pressed handler to start listening
-	#
 	var joy_event := InputEventJoypadButton.new()
 	joy_event.button_index = JOY_BUTTON_DPAD_LEFT
 	joy_event.pressed = true
 	joy_event.device = -1
+	# Note: Directly calling private method (_input) for simulation due to complexity of full input event mocking in GUT unit tests.
 	left_btn._input(joy_event)
 	assert_eq(left_btn.text, "D-Pad Left", "Gamepad remap should update button text to new joypad label")
