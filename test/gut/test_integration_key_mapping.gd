@@ -61,7 +61,7 @@ func test_int_01_load_to_ui() -> void:
 	Settings.load_input_mappings()
 	# Verify InputMap loaded correctly
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
-	var key_events: Array[InputEventKey] = events.filter(func(ev: InputEvent) -> bool: return ev is InputEventKey)
+	var key_events: Array[InputEventKey] = events.filter(func(ev: InputEvent) -> bool: return ev is InputEventKey) as Array[InputEventKey]
 	assert_eq(key_events.size(), 1, "Should have one keyboard event after load")
 	var key_ev: InputEventKey = key_events[0]
 	assert_eq(key_ev.physical_keycode, KEY_Z_CODE, "Loaded keycode should match config")
@@ -100,7 +100,7 @@ func test_int_02_remap_persist() -> void:
 	# Verify immediate UI/InputMap update
 	assert_eq(speed_up_btn.text, "Z", "UI label should update to new key 'Z'")
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
-	var key_events: Array[InputEventKey] = events.filter(func(ev: InputEvent) -> bool: return ev is InputEventKey)
+	var key_events: Array[InputEventKey] = events.filter(func(ev: InputEvent) -> bool: return ev is InputEventKey) as Array[InputEventKey]
 	assert_eq(key_events.size(), 1, "Should have one keyboard event after remap")
 	var key_ev: InputEventKey = key_events[0]
 	assert_eq(key_ev.physical_keycode, KEY_Z_CODE, "InputMap should have new keycode")
@@ -117,7 +117,7 @@ func test_int_02_remap_persist() -> void:
 	speed_up_btn.update_button_text()  # Or reinstantiate, but update suffices
 	assert_eq(speed_up_btn.text, "Z", "UI should restore loaded mapping after reload")
 	events = InputMap.action_get_events(TEST_ACTION)
-	key_events = events.filter(func(ev: InputEvent) -> bool: return ev is InputEventKey)
+	key_events = events.filter(func(ev: InputEvent) -> bool: return ev is InputEventKey) as Array[InputEventKey]
 	assert_eq(key_events.size(), 1, "Should have one keyboard event after reload")
 	key_ev = key_events[0]
 	assert_eq(key_ev.physical_keycode, KEY_Z_CODE, "InputMap restored from disk")
@@ -143,7 +143,7 @@ func test_int_03_reset_via_ui() -> void:
 	# Verify UI/InputMap reset to default
 	assert_eq(speed_up_btn.text, "W", "UI label should reset to default 'W'")
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
-	var key_events: Array[InputEventKey] = events.filter(func(ev: InputEvent) -> bool: return ev is InputEventKey)
+	var key_events: Array[InputEventKey] = events.filter(func(ev: InputEvent) -> bool: return ev is InputEventKey) as Array[InputEventKey]
 	assert_eq(key_events.size(), 1, "Should have one keyboard event after reset")
 	var key_ev: InputEventKey = key_events[0]
 	assert_eq(key_ev.physical_keycode, KEY_W_CODE, "InputMap should reset to default keycode")
