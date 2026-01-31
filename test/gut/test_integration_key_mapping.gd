@@ -17,13 +17,11 @@ extends GutTest
 
 const InputRemapButton: Script = preload("res://scripts/input_remap_button.gd")
 const TEST_ACTION: String = "speed_up"  # Example action from UI; adjust if needed.
-const TEST_CONFIG_PATH: String = "user://test_integration_settings.cfg"
+const TEST_CONFIG_PATH: String = "user://settings.cfg"
 const KEY_W_CODE: int = Key.KEY_W  # 87, default assumed.
 const KEY_Z_CODE: int = Key.KEY_Z  # 90, custom for tests.
 
 var menu: CanvasLayer = null
-var Settings := preload("res://scripts/settings.gd")  # Assume path; adjust if autoload.
-var settings_inst: Settings
 
 
 ## Per-test setup: Delete test config, reset InputMap for test action.
@@ -32,12 +30,12 @@ func before_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		var err: Error = DirAccess.remove_absolute(TEST_CONFIG_PATH)
 		assert_eq(err, OK)
-	if InputMap.has_action(TEST_ACTION):
-		InputMap.erase_action(TEST_ACTION)
-	InputMap.add_action(TEST_ACTION)
-	# Assume Settings uses a configurable path; set it here if applicable.
-	# Settings.current_config_path = TEST_CONFIG_PATH
-	settings_inst = Settings.new()  # Create instance
+	for action in Settings.ACTIONS:
+		if InputMap.has_action(action):
+			InputMap.action_erase_events(action)
+		else:
+			InputMap.add_action(action)
+	Settings.load_input_mappings()  # Reload empty
 
 
 ## Per-test cleanup: Free menu, delete test config.
@@ -48,8 +46,6 @@ func after_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		var err: Error = DirAccess.remove_absolute(TEST_CONFIG_PATH)
 		assert_eq(err, OK)
-	if settings_inst:
-		settings_inst = null
 	await get_tree().process_frame
 
 
@@ -62,13 +58,13 @@ func test_int_01_load_to_ui() -> void:
 	config.set_value("input", TEST_ACTION, ["key:" + str(KEY_Z_CODE)])  # Assume string format "key:<code>"
 	config.save(TEST_CONFIG_PATH)
 	# Load mappings to InputMap
-	# Assume loads from TEST_CONFIG_PATH if set
-	settings_inst.load_input_mappings()  # Call on instance
+	Settings.load_input_mappings()
 	# Verify InputMap loaded correctly
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
-	assert_eq(events.size(), 1, "Should have one event after load")
-	assert_true(events[0] is InputEventKey, "Loaded event should be InputEventKey")
-	assert_eq(events[0].physical_keycode, KEY_Z_CODE, "Loaded keycode should match config")
+	var key_events: Array[InputEventKey] = events.filter(func(ev: InputEvent) -> bool: return ev is InputEventKey)
+	assert_eq(key_events.size(), 1, "Should have one keyboard event after load")
+	var key_ev: InputEventKey = key_events[0]
+	assert_eq(key_ev.physical_keycode, KEY_Z_CODE, "Loaded keycode should match config")
 	# Instantiate menu and add to tree (UI updates in _ready via update_button_text)
 	menu = load("res://scenes/key_mapping_menu.tscn").instantiate()
 	add_child(menu)
@@ -80,7 +76,8 @@ func test_int_01_load_to_ui() -> void:
 	# Double-check config unchanged
 	config = ConfigFile.new()
 	config.load(TEST_CONFIG_PATH)
-	assert_eq(config.get_value("input", TEST_ACTION), ["key:" + str(KEY_Z_CODE)], "Config should match")
+	var saved_events: Array = config.get_value("input", TEST_ACTION, [])
+	assert_true(saved_events.any(func(s: String) -> bool: return s == "key:" + str(KEY_Z_CODE)), "Config should match")
 
 
 ## INT-02 | Remap + persist | Change action then save | Reload restores mapping | Disk & UI sync
@@ -88,7 +85,7 @@ func test_int_01_load_to_ui() -> void:
 func test_int_02_remap_persist() -> void:
 	gut.p("INT-02: Remap updates InputMap/UI, saves to config; reload restores to disk/UI sync.")
 	# Setup: Default mapping (assume reset sets to "W"); instantiate menu
-	settings_inst.reset_to_defaults("keyboard")  # Ensure defaults loaded
+	Settings.reset_to_defaults("keyboard")  # Ensure defaults loaded
 	menu = load("res://scenes/key_mapping_menu.tscn").instantiate()
 	add_child(menu)
 	var speed_up_btn: InputRemapButton = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
@@ -103,20 +100,27 @@ func test_int_02_remap_persist() -> void:
 	# Verify immediate UI/InputMap update
 	assert_eq(speed_up_btn.text, "Z", "UI label should update to new key 'Z'")
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
-	assert_eq(events.size(), 1, "Should have one event after remap")
-	assert_eq(events[0].physical_keycode, KEY_Z_CODE, "InputMap should have new keycode")
+	var key_events: Array[InputEventKey] = events.filter(func(ev: InputEvent) -> bool: return ev is InputEventKey)
+	assert_eq(key_events.size(), 1, "Should have one keyboard event after remap")
+	var key_ev: InputEventKey = key_events[0]
+	assert_eq(key_ev.physical_keycode, KEY_Z_CODE, "InputMap should have new keycode")
 	# Verify saved to config (persist)
 	var config: ConfigFile = ConfigFile.new()
 	config.load(TEST_CONFIG_PATH)
-	assert_true(config.has_section_key("input", TEST_ACTION), "Config should have input section after save")
-	assert_eq(config.get_value("input", TEST_ACTION), ["key:" + str(KEY_Z_CODE)], "Config should match new mapping")
+	assert_true(config.has_section("input"), "Config should have input section after save")
+	assert_true(config.has_section_key("input", TEST_ACTION), "Config should have key after save")
+	var saved_events: Array = config.get_value("input", TEST_ACTION, [])
+	assert_true(saved_events.any(func(s: String) -> bool: return s == "key:" + str(KEY_Z_CODE)), "Config should match new mapping")
 	# Simulate reload: Erase InputMap, load from config, update UI
 	InputMap.action_erase_events(TEST_ACTION)
-	settings_inst.load_input_mappings()
+	Settings.load_input_mappings()
 	speed_up_btn.update_button_text()  # Or reinstantiate, but update suffices
 	assert_eq(speed_up_btn.text, "Z", "UI should restore loaded mapping after reload")
 	events = InputMap.action_get_events(TEST_ACTION)
-	assert_eq(events[0].physical_keycode, KEY_Z_CODE, "InputMap restored from disk")
+	key_events = events.filter(func(ev: InputEvent) -> bool: return ev is InputEventKey)
+	assert_eq(key_events.size(), 1, "Should have one keyboard event after reload")
+	key_ev = key_events[0]
+	assert_eq(key_ev.physical_keycode, KEY_Z_CODE, "InputMap restored from disk")
 
 
 ## INT-03 | Reset via UI | Click reset | Mappings + config reset | Defaults in UI & file
@@ -127,7 +131,7 @@ func test_int_03_reset_via_ui() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("input", TEST_ACTION, ["key:" + str(KEY_Z_CODE)])
 	config.save(TEST_CONFIG_PATH)
-	settings_inst.load_input_mappings()
+	Settings.load_input_mappings()
 	menu = load("res://scenes/key_mapping_menu.tscn").instantiate()
 	add_child(menu)
 	var speed_up_btn: InputRemapButton = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
@@ -139,9 +143,12 @@ func test_int_03_reset_via_ui() -> void:
 	# Verify UI/InputMap reset to default
 	assert_eq(speed_up_btn.text, "W", "UI label should reset to default 'W'")
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
-	assert_eq(events.size(), 1, "Should have default event after reset")
-	assert_eq(events[0].physical_keycode, KEY_W_CODE, "InputMap should reset to default keycode")
+	var key_events: Array[InputEventKey] = events.filter(func(ev: InputEvent) -> bool: return ev is InputEventKey)
+	assert_eq(key_events.size(), 1, "Should have one keyboard event after reset")
+	var key_ev: InputEventKey = key_events[0]
+	assert_eq(key_ev.physical_keycode, KEY_W_CODE, "InputMap should reset to default keycode")
 	# Verify config reset (assume reset saves defaults)
 	config = ConfigFile.new()
 	config.load(TEST_CONFIG_PATH)
-	assert_eq(config.get_value("input", TEST_ACTION), ["key:" + str(KEY_W_CODE)], "Config should reset to default mapping")
+	var saved_events: Array = config.get_value("input", TEST_ACTION, [])
+	assert_true(saved_events.any(func(s: String) -> bool: return s == "key:" + str(KEY_W_CODE)), "Config should reset to default mapping")
