@@ -30,13 +30,10 @@ func before_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		var err: Error = DirAccess.remove_absolute(TEST_CONFIG_PATH)
 		assert_eq(err, OK)
-	for action in Settings.ACTIONS:
-		if InputMap.has_action(action):
-			InputMap.action_erase_events(action)
-		else:
-			InputMap.add_action(action)
-	Settings.load_input_mappings()  # Reload empty
-
+	if InputMap.has_action(TEST_ACTION):
+		InputMap.erase_action(TEST_ACTION)
+	InputMap.add_action(TEST_ACTION)
+	settings_inst = Settings.new()  # Create instance
 
 ## Per-test cleanup: Free menu, delete test config.
 ## :rtype: void
