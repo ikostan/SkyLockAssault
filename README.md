@@ -175,8 +175,6 @@ these GPL requirements, a separate license is available upon request.
     caution, red/dark red danger), and low/over-speed blinking warnings
     (PR #275 and #288).
   - Rotor SFX/animation with volume sliders and zero-fuel stopping (prior PRs).
-
-- **In Progress (Milestone 8: Advanced Features, Maintenance and Bug Fixes)**:
   - Refactor player movement integrations
     (e.g., speed-based fuel drain, UI sync) – Issue #169.
   - Add procedural random parallax background for speed-based
