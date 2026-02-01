@@ -33,7 +33,7 @@ func before_each() -> void:
 	if InputMap.has_action(TEST_ACTION):
 		InputMap.erase_action(TEST_ACTION)
 	InputMap.add_action(TEST_ACTION)
-	settings_inst = Settings.new()  # Create instance
+	Settings.new()  # Create instance
 
 ## Per-test cleanup: Free menu, delete test config.
 ## :rtype: void
