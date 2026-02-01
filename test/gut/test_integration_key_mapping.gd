@@ -24,6 +24,15 @@ const KEY_Z_CODE: int = Key.KEY_Z  # 90, custom for tests.
 var menu: CanvasLayer = null
 
 
+## Suite-wide setup: Backup production config if exists to preserve user settings.
+## :rtype: void
+func before_all() -> void:
+	var backup_path: String = "user://settings_backup.cfg"
+	if FileAccess.file_exists(TEST_CONFIG_PATH):
+		var err: Error = DirAccess.copy_absolute(TEST_CONFIG_PATH, backup_path)
+		assert_eq(err, OK, "Failed to backup config: " + str(err))
+
+
 ## Per-test setup: Delete test config, reset InputMap for test action.
 ## :rtype: void
 func before_each() -> void:
@@ -47,6 +56,20 @@ func after_each() -> void:
 		var err: Error = DirAccess.remove_absolute(TEST_CONFIG_PATH)
 		assert_eq(err, OK)
 	await get_tree().process_frame
+
+
+## Suite-wide cleanup: Restore production config from backup if it existed.
+## :rtype: void
+func after_all() -> void:
+	var backup_path: String = "user://settings_backup.cfg"
+	if FileAccess.file_exists(backup_path):
+		if FileAccess.file_exists(TEST_CONFIG_PATH):
+			var err: Error = DirAccess.remove_absolute(TEST_CONFIG_PATH)
+			assert_eq(err, OK)
+		var err: Error = DirAccess.copy_absolute(backup_path, TEST_CONFIG_PATH)
+		assert_eq(err, OK, "Failed to restore config: " + str(err))
+		err = DirAccess.remove_absolute(backup_path)
+		assert_eq(err, OK)
 
 
 ## INT-01 | Load mappings → UI | Pre-saved config | UI shows correct mappings | Matches config file
