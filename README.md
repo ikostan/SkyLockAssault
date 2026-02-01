@@ -132,21 +132,10 @@ these GPL requirements, a separate license is available upon request.
 
 ---
 
-### Play Instructions
+## 🟡 Current Development Status
 
-- **In Godot Editor**: Open the project > Press F5 to run the main scene
-  (`main_menu.tscn`). Use keyboard/mouse for navigation.
-- **Local Web Testing**: After exporting to HTML5 (see Setup),
-  cd to `infra/` in `PowerShell` > `docker compose up -d` >
-  Open <http://localhost:9090> in browser. Click "Run game" iframe;
-  use fullscreen for immersion (ignore desktop console warnings).
-- **Online on itch.io**:
-  1. Visit [ikostan.itch.io/sky-lock-assault](https://ikostan.itch.io/sky-lock-assault)
-  2. Click "Run game".
-- The game supports browser play; mobile-friendly with landscape orientation.
-
-For learning: Test quit handling (platform-specific) and log levels in options
-menu during play.
+**Milestone:** UI & Input Improvements, Testing & Docs (Milestone 10)  
+**Active Focus:** Input remapping tests, Settings + UI sync, documentation updates.
 
 ### Current features
 
@@ -186,8 +175,6 @@ menu during play.
     caution, red/dark red danger), and low/over-speed blinking warnings
     (PR #275 and #288).
   - Rotor SFX/animation with volume sliders and zero-fuel stopping (prior PRs).
-
-- **In Progress (Milestone 8: Advanced Features, Maintenance and Bug Fixes)**:
   - Refactor player movement integrations
     (e.g., speed-based fuel drain, UI sync) – Issue #169.
   - Add procedural random parallax background for speed-based
@@ -224,7 +211,27 @@ Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milest
 - Placeholder level lacks mechanics—work in progress.
 - Report new issues on [GitHub](https://github.com/ikostan/SkyLockAssault/issues).
 
-### How to Contribute
+---
+
+### Play Instructions
+
+- **In Godot Editor**: Open the project > Press F5 to run the main scene
+  (`main_menu.tscn`). Use keyboard/mouse for navigation.
+- **Local Web Testing**: After exporting to HTML5 (see Setup),
+  cd to `infra/` in `PowerShell` > `docker compose up -d` >
+  Open <http://localhost:9090> in browser. Click "Run game" iframe;
+  use fullscreen for immersion (ignore desktop console warnings).
+- **Online on itch.io**:
+  1. Visit [ikostan.itch.io/sky-lock-assault](https://ikostan.itch.io/sky-lock-assault)
+  2. Click "Run game".
+- The game supports browser play; mobile-friendly with landscape orientation.
+
+For learning: Test quit handling (platform-specific) and log levels in options
+menu during play.
+
+---
+
+### 🙌 How to Contribute
 
 - Fork the repo and create a branch for your changes.
 - Follow GDScript best practices; test in editor and web export.
@@ -232,6 +239,16 @@ Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milest
 - See [CONTRIBUTING.md](/CONTRIBUTING.md) for full guidelines.
 - **Join the Discussions**: Chat about ideas, ask questions on web exports, or suggest
   features at [GitHub Discussions](https://github.com/ikostan/SkyLockAssault/discussions).
+
+We use the following labels to organize contributions:
+
+- `good first issue` — beginner friendly
+- `documentation` — improvements to docs
+- `feature` — gameplay or UI work
+
+Please create a branch per issue and reference the issue number in your PR title.
+
+---
 
 ### Contributors
 
