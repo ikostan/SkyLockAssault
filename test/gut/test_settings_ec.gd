@@ -8,6 +8,22 @@ extends "res://addons/gut/test.gd"
 const TEST_ACTION: String = "speed_up"
 var test_config_path: String = "user://test_settings_ec.cfg"
 var invalid_path: String = "res://invalid/unwritable.cfg"  # Simulate permission/disk-full
+var original_input_map: Dictionary = {}
+
+
+func before_all() -> void:
+	for act: String in InputMap.get_actions():
+		original_input_map[act] = InputMap.action_get_events(act)
+
+
+func after_all() -> void:
+	for act in InputMap.get_actions():
+		InputMap.action_erase_events(act)
+	for act: String in original_input_map:
+		if not InputMap.has_action(act):
+			InputMap.add_action(act)
+		for ev: InputEvent in original_input_map[act]:
+			InputMap.action_add_event(act, ev)
 
 
 func before_each() -> void:
