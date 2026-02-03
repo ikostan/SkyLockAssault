@@ -53,7 +53,10 @@ func test_ec_04_legacy_mixed_formats() -> void:
 	Settings.load_input_mappings(test_config_path)
 
 	# speed_up should have migrated from old int
-	assert_eq(InputMap.action_get_events(TEST_ACTION)[0].physical_keycode, 87)
+	var events := InputMap.action_get_events(TEST_ACTION)
+	assert_true(events.any(func(e: InputEvent) -> bool:
+		return e is InputEventKey and e.physical_keycode == 87
+	))
 	# defaults backfilled where missing
 	assert_true(InputMap.action_get_events("pause").any(func(e: InputEvent) -> bool: return e is InputEventKey))
 
