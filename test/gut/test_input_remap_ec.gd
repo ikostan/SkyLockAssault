@@ -82,7 +82,7 @@ func test_ec_08_unexpected_event_flags() -> void:
 	# Axis below deadzone
 	var low_axis := InputEventJoypadMotion.new()
 	low_axis.axis = JOY_AXIS_LEFT_X
-	low_axis.axis_value = 0.3
+	low_axis.axis_value = InputRemapButton.AXIS_DEADZONE_THRESHOLD - 0.001
 	Input.parse_input_event(low_axis)
 	await get_tree().process_frame
 
