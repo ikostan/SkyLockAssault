@@ -49,7 +49,6 @@ func test_ec_04_legacy_mixed_formats() -> void:
 	cfg.set_value("input", "fire", ["joybtn:0:-1"])            # new format
 	cfg.set_value("input", "move_left", ["key:65", "key:66"])  # valid new
 	cfg.save(test_config_path)
-
 	Settings.load_input_mappings(test_config_path)
 
 	# speed_up should have migrated from old int
