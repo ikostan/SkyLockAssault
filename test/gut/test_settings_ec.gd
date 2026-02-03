@@ -78,7 +78,6 @@ func test_ec_05_corrupt_parse_error() -> void:
 
 ## EC-06 | Save fails | Disk full / permission denied | Report error, no crash
 func test_ec_06_save_fails_gracefully() -> void:
-	var original_path := Settings.CONFIG_PATH
 	# Force failure path
 	Settings.save_input_mappings(invalid_path)
 
