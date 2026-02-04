@@ -11,6 +11,7 @@ extends GutTest
 const TEST_ACTION_SPEED_UP: String = "speed_up"
 const TEST_ACTION_MOVE_LEFT: String = "move_left"
 const TEST_CONFIG_PATH: String = "user://test_key_mapping_device_aware.cfg"
+const TEST_BACKUP_PATH: String = "user://test_backup_device_aware.cfg"
 const DEFAULT_CONFIG_BACKUP: String = "user://settings_backup.cfg"
 
 var menu: CanvasLayer = null
@@ -24,15 +25,8 @@ var move_left_btn: InputRemapButton = null
 
 ## Per-suite backup of production config (preserve real user settings).
 func before_all() -> void:
-	var backup_path: String = "user://test_backup_device_aware.cfg"
-	if FileAccess.file_exists(TEST_CONFIG_PATH):
-		# DirAccess.copy_absolute(TEST_CONFIG_PATH, backup_path)
-		var err := DirAccess.copy_absolute(TEST_CONFIG_PATH, backup_path)
-		assert_eq(err, OK, "Failed to backup test config")
-	if FileAccess.file_exists(Settings.CONFIG_PATH):
-		# DirAccess.copy_absolute(Settings.CONFIG_PATH, DEFAULT_CONFIG_BACKUP)
-		var err := DirAccess.copy_absolute(Settings.CONFIG_PATH, DEFAULT_CONFIG_BACKUP)
-		assert_eq(err, OK, "Failed to backup production config")
+	_backup_config(TEST_CONFIG_PATH, TEST_BACKUP_PATH)
+	_backup_config(Settings.CONFIG_PATH, DEFAULT_CONFIG_BACKUP)
 
 
 ## Per-test: Clean config, reset InputMap, instantiate menu (default = keyboard).
@@ -70,12 +64,12 @@ func before_each() -> void:
 	keyboard_btn = menu.get_node("Panel/Options/DeviceTypeContainer/Keyboard")
 	gamepad_btn = menu.get_node("Panel/Options/DeviceTypeContainer/Gamepad")
 	reset_btn = menu.get_node("Panel/Options/BtnContainer/ControlResetButton")
-	var all_nodes: Array[Node] = menu.get_tree().get_nodes_in_group("remap_buttons")
+	var nodes: Array[Node] = menu.get_tree().get_nodes_in_group("remap_buttons")
 	remap_buttons = []
-	for node: Node in all_nodes:
-		if node is InputRemapButton and menu.is_ancestor_of(node):
+	for node: Node in nodes:
+		if node is InputRemapButton:
 			remap_buttons.append(node as InputRemapButton)
-	assert_eq(remap_buttons.size(), all_nodes.size(), "Some nodes in 'remap_buttons' group are not InputRemapButton")
+	assert_eq(remap_buttons.size(), nodes.size(), "Some nodes in 'remap_buttons' group are not InputRemapButton")
 	speed_up_btn = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
 	move_left_btn = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingLeft/LeftInputRemap")
 
@@ -95,17 +89,8 @@ func after_each() -> void:
 
 ## Per-suite restore.
 func after_all() -> void:
-	var backup_path: String = "user://test_backup_device_aware.cfg"
-	if FileAccess.file_exists(backup_path):
-		if FileAccess.file_exists(TEST_CONFIG_PATH):
-			DirAccess.remove_absolute(TEST_CONFIG_PATH)
-		DirAccess.copy_absolute(backup_path, TEST_CONFIG_PATH)
-		DirAccess.remove_absolute(backup_path)
-	if FileAccess.file_exists(DEFAULT_CONFIG_BACKUP):
-		if FileAccess.file_exists(Settings.CONFIG_PATH):
-			DirAccess.remove_absolute(Settings.CONFIG_PATH)
-		DirAccess.copy_absolute(DEFAULT_CONFIG_BACKUP, Settings.CONFIG_PATH)
-		DirAccess.remove_absolute(DEFAULT_CONFIG_BACKUP)
+	_restore_config(TEST_BACKUP_PATH, TEST_CONFIG_PATH)
+	_restore_config(DEFAULT_CONFIG_BACKUP, Settings.CONFIG_PATH)
 
 
 ## Helper: Simulate remap on a button (keyboard or gamepad).
@@ -125,6 +110,21 @@ func _remap_button(btn: InputRemapButton, event: InputEvent, value: Variant) -> 
 		event.pressed = true
 	btn._input(event)
 	assert_false(btn.listening)
+
+
+## Helper: Backup a config file if it exists.
+func _backup_config(source_path: String, backup_path: String) -> void:
+	if FileAccess.file_exists(source_path):
+		DirAccess.copy_absolute(source_path, backup_path)
+
+
+## Helper: Restore a config file from backup if it exists, and clean up the backup.
+func _restore_config(backup_path: String, target_path: String) -> void:
+	if FileAccess.file_exists(backup_path):
+		if FileAccess.file_exists(target_path):
+			DirAccess.remove_absolute(target_path)
+		DirAccess.copy_absolute(backup_path, target_path)
+		DirAccess.remove_absolute(backup_path)
 
 
 ## KM-01 | Toggle keyboard device
@@ -184,16 +184,13 @@ func test_km_04_update_remap_buttons() -> void:
 func test_km_05_reset_current_device() -> void:
 	# Remap keyboard to Z, gamepad to D-Pad Left
 	keyboard_btn.button_pressed = true
-	keyboard_btn.toggled.emit(true)
 	_remap_button(speed_up_btn, InputEventKey.new(), KEY_Z)
 	assert_eq(speed_up_btn.text, "Z")
 	gamepad_btn.button_pressed = true
-	gamepad_btn.toggled.emit(true)
 	_remap_button(speed_up_btn, InputEventJoypadButton.new(), JOY_BUTTON_DPAD_LEFT)
 	assert_eq(speed_up_btn.text, "D-Pad Left")
 	# Reset keyboard only
 	keyboard_btn.button_pressed = true
-	keyboard_btn.toggled.emit(true)
 	reset_btn.pressed.emit()
 	assert_eq(speed_up_btn.text, "W")  # Keyboard restored
 	# Switch to gamepad — custom still present
@@ -232,10 +229,8 @@ func test_km_08_logging_behavior() -> void:
 func test_km_09_persistence() -> void:
 	# Remap both devices
 	keyboard_btn.button_pressed = true
-	keyboard_btn.toggled.emit(true)
 	_remap_button(speed_up_btn, InputEventKey.new(), KEY_Z)
 	gamepad_btn.button_pressed = true
-	gamepad_btn.toggled.emit(true)
 	_remap_button(speed_up_btn, InputEventJoypadButton.new(), JOY_BUTTON_DPAD_LEFT)
 	# Save happened automatically in finish_remap (to default), but we also save to test path
 	Settings.save_input_mappings(TEST_CONFIG_PATH)
@@ -281,9 +276,7 @@ func test_km_11_rapid_toggle_stress() -> void:
 		menu.update_all_remap_buttons()
 		assert_true(keyboard_btn.button_pressed or gamepad_btn.button_pressed)
 		assert_false(keyboard_btn.button_pressed and gamepad_btn.button_pressed)
-	# assert_eq(speed_up_btn.current_device, InputRemapButton.DeviceType.GAMEPAD if 19 % 2 == 1 else InputRemapButton.DeviceType.KEYBOARD)
-	# After 20 iterations (0-19), last iteration is i=19 (odd), so gamepad is active
-	assert_eq(speed_up_btn.current_device, InputRemapButton.DeviceType.GAMEPAD)
+	assert_eq(speed_up_btn.current_device, InputRemapButton.DeviceType.GAMEPAD if 19 % 2 == 1 else InputRemapButton.DeviceType.KEYBOARD)
 
 
 ## KM-12 | UI label sync on device switch
@@ -302,7 +295,6 @@ func test_km_12_ui_label_sync() -> void:
 func test_km_13_reset_with_defaults() -> void:
 	# Already defaults
 	keyboard_btn.button_pressed = true
-	keyboard_btn.toggled.emit(true)
 	reset_btn.pressed.emit()
 	assert_eq(speed_up_btn.text, "W")  # No change
 	# Gamepad
