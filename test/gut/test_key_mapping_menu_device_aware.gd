@@ -180,13 +180,16 @@ func test_km_04_update_remap_buttons() -> void:
 func test_km_05_reset_current_device() -> void:
 	# Remap keyboard to Z, gamepad to D-Pad Left
 	keyboard_btn.button_pressed = true
+	keyboard_btn.toggled.emit(true)
 	_remap_button(speed_up_btn, InputEventKey.new(), KEY_Z)
 	assert_eq(speed_up_btn.text, "Z")
 	gamepad_btn.button_pressed = true
+	gamepad_btn.toggled.emit(true)
 	_remap_button(speed_up_btn, InputEventJoypadButton.new(), JOY_BUTTON_DPAD_LEFT)
 	assert_eq(speed_up_btn.text, "D-Pad Left")
 	# Reset keyboard only
 	keyboard_btn.button_pressed = true
+	keyboard_btn.toggled.emit(true)
 	reset_btn.pressed.emit()
 	assert_eq(speed_up_btn.text, "W")  # Keyboard restored
 	# Switch to gamepad — custom still present
