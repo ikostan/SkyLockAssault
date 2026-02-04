@@ -294,6 +294,7 @@ func test_km_12_ui_label_sync() -> void:
 func test_km_13_reset_with_defaults() -> void:
 	# Already defaults
 	keyboard_btn.button_pressed = true
+	keyboard_btn.toggled.emit(true)
 	reset_btn.pressed.emit()
 	assert_eq(speed_up_btn.text, "W")  # No change
 	# Gamepad
