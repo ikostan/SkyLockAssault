@@ -70,12 +70,17 @@ func before_each() -> void:
 	keyboard_btn = menu.get_node("Panel/Options/DeviceTypeContainer/Keyboard")
 	gamepad_btn = menu.get_node("Panel/Options/DeviceTypeContainer/Gamepad")
 	reset_btn = menu.get_node("Panel/Options/BtnContainer/ControlResetButton")
-	var nodes: Array[Node] = menu.get_tree().get_nodes_in_group("remap_buttons")
+	# var nodes: Array[Node] = menu.get_tree().get_nodes_in_group("remap_buttons")
+	# remap_buttons = []
+	# for node: Node in nodes:
+	#	if node is InputRemapButton:
+	#		remap_buttons.append(node as InputRemapButton)
+	var all_nodes: Array[Node] = menu.get_tree().get_nodes_in_group("remap_buttons")
 	remap_buttons = []
-	for node: Node in nodes:
-		if node is InputRemapButton:
+	for node: Node in all_nodes:
+		if node is InputRemapButton and menu.is_ancestor_of(node):
 			remap_buttons.append(node as InputRemapButton)
-	assert_eq(remap_buttons.size(), nodes.size(), "Some nodes in 'remap_buttons' group are not InputRemapButton")
+	assert_eq(remap_buttons.size(), all_nodes.size(), "Some nodes in 'remap_buttons' group are not InputRemapButton")
 	speed_up_btn = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
 	move_left_btn = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingLeft/LeftInputRemap")
 
