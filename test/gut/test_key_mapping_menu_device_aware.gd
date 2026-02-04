@@ -70,11 +70,6 @@ func before_each() -> void:
 	keyboard_btn = menu.get_node("Panel/Options/DeviceTypeContainer/Keyboard")
 	gamepad_btn = menu.get_node("Panel/Options/DeviceTypeContainer/Gamepad")
 	reset_btn = menu.get_node("Panel/Options/BtnContainer/ControlResetButton")
-	# var nodes: Array[Node] = menu.get_tree().get_nodes_in_group("remap_buttons")
-	# remap_buttons = []
-	# for node: Node in nodes:
-	#	if node is InputRemapButton:
-	#		remap_buttons.append(node as InputRemapButton)
 	var all_nodes: Array[Node] = menu.get_tree().get_nodes_in_group("remap_buttons")
 	remap_buttons = []
 	for node: Node in all_nodes:
@@ -286,7 +281,9 @@ func test_km_11_rapid_toggle_stress() -> void:
 		menu.update_all_remap_buttons()
 		assert_true(keyboard_btn.button_pressed or gamepad_btn.button_pressed)
 		assert_false(keyboard_btn.button_pressed and gamepad_btn.button_pressed)
-	assert_eq(speed_up_btn.current_device, InputRemapButton.DeviceType.GAMEPAD if 19 % 2 == 1 else InputRemapButton.DeviceType.KEYBOARD)
+	# assert_eq(speed_up_btn.current_device, InputRemapButton.DeviceType.GAMEPAD if 19 % 2 == 1 else InputRemapButton.DeviceType.KEYBOARD)
+	# After 20 iterations (0-19), last iteration is i=19 (odd), so gamepad is active
+	assert_eq(speed_up_btn.current_device, InputRemapButton.DeviceType.GAMEPAD)
 
 
 ## KM-12 | UI label sync on device switch
