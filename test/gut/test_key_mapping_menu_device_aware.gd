@@ -26,9 +26,13 @@ var move_left_btn: InputRemapButton = null
 func before_all() -> void:
 	var backup_path: String = "user://test_backup_device_aware.cfg"
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
-		DirAccess.copy_absolute(TEST_CONFIG_PATH, backup_path)
+		# DirAccess.copy_absolute(TEST_CONFIG_PATH, backup_path)
+		var err := DirAccess.copy_absolute(TEST_CONFIG_PATH, backup_path)
+		assert_eq(err, OK, "Failed to backup test config")
 	if FileAccess.file_exists(Settings.CONFIG_PATH):
-		DirAccess.copy_absolute(Settings.CONFIG_PATH, DEFAULT_CONFIG_BACKUP)
+		# DirAccess.copy_absolute(Settings.CONFIG_PATH, DEFAULT_CONFIG_BACKUP)
+		var err := DirAccess.copy_absolute(Settings.CONFIG_PATH, DEFAULT_CONFIG_BACKUP)
+		assert_eq(err, OK, "Failed to backup production config")
 
 
 ## Per-test: Clean config, reset InputMap, instantiate menu (default = keyboard).
