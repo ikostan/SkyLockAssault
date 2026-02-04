@@ -228,8 +228,10 @@ func test_km_08_logging_behavior() -> void:
 func test_km_09_persistence() -> void:
 	# Remap both devices
 	keyboard_btn.button_pressed = true
+	keyboard_btn.toggled.emit(true)
 	_remap_button(speed_up_btn, InputEventKey.new(), KEY_Z)
 	gamepad_btn.button_pressed = true
+	gamepad_btn.toggled.emit(true)
 	_remap_button(speed_up_btn, InputEventJoypadButton.new(), JOY_BUTTON_DPAD_LEFT)
 	# Save happened automatically in finish_remap (to default), but we also save to test path
 	Settings.save_input_mappings(TEST_CONFIG_PATH)
