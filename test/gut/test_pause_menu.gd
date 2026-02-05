@@ -13,10 +13,6 @@ extends GutTest
 
 var PauseMenuScene: PackedScene = preload("res://scenes/pause_menu.tscn")
 var pause_menu: CanvasLayer = null
-var original_globals: Node = null
-var original_paused: bool = false
-var original_input_map: Dictionary = {}  # action: [events]
-
 
 ## Mock for Globals autoload to avoid errors in button handlers.
 class MockGlobals extends Node:
@@ -29,17 +25,22 @@ class MockGlobals extends Node:
 	func load_options(_node: Node) -> void:
 		load_options_called = true
 
+var original_globals: Node = null
+var original_paused: bool = false
+var original_input_map: Dictionary = {}  # action: [events]
 
+## Sets up suite-wide state capture.
+## Captures original InputMap.
+## :rtype: void
 func before_all() -> void:
-	# Capture original InputMap for all actions
 	for action: String in InputMap.get_actions():
 		original_input_map[action] = InputMap.action_get_events(action)
 
-
+## Sets up per-test state.
+## Captures/restores Globals, paused; instantiates menu; ensures "pause" action.
+## :rtype: void
 func before_each() -> void:
-	# Capture prior paused
 	original_paused = get_tree().paused
-	# Capture/remove existing Globals if any
 	if get_tree().root.has_node("Globals"):
 		original_globals = get_tree().root.get_node("Globals")
 		get_tree().root.remove_child(original_globals)
@@ -48,16 +49,15 @@ func before_each() -> void:
 	get_tree().root.add_child(mock_globals)
 	pause_menu = PauseMenuScene.instantiate()
 	get_tree().root.add_child(pause_menu)
-	# Ensure initially hidden and unpaused
 	pause_menu.visible = false
 	get_tree().paused = false
-	# Ensure "pause" action exists (add if missing for isolation)
+	var added_pause: bool = false
 	if not InputMap.has_action("pause"):
+		added_pause = true
 		InputMap.add_action("pause")
 		var ev: InputEventKey = InputEventKey.new()
 		ev.physical_keycode = KEY_ESCAPE
 		InputMap.action_add_event("pause", ev)
-
 
 ## Helper to create a simulated pause event based on current InputMap.
 ## :rtype: InputEventKey
@@ -73,7 +73,9 @@ func create_pause_event() -> InputEventKey:
 	sim_ev.pressed = true
 	return sim_ev
 
-
+## Cleans up per-test state.
+## Frees menu/mock; restores Globals/paused; erases added actions.
+## :rtype: void
 func after_each() -> void:
 	if is_instance_valid(pause_menu):
 		pause_menu.queue_free()
@@ -83,107 +85,86 @@ func after_each() -> void:
 	if original_globals:
 		get_tree().root.add_child(original_globals)
 		original_globals = null
-	get_tree().paused = original_paused  # Restore prior paused
+	get_tree().paused = original_paused
 
-
+## Restores suite-wide state.
+## Erases extra actions; restores original actions/events.
+## :rtype: void
 func after_all() -> void:
-	# Restore full InputMap
-	for action: String in InputMap.get_actions():
-		InputMap.action_erase_events(action)
+	for action: String in InputMap.get_actions().duplicate():
+		if not original_input_map.has(action):
+			InputMap.erase_action(action)
 	for action: String in original_input_map:
 		if not InputMap.has_action(action):
 			InputMap.add_action(action)
+		InputMap.action_erase_events(action)
 		for ev: InputEvent in original_input_map[action]:
 			InputMap.action_add_event(action, ev)
-
 
 ## PM-01 | pause_menu.gd | Game running, input map loaded | Trigger Pause via configured pause action | Game enters paused state | Unit (GUT) | New – required by #353
 func test_pm_01_trigger_pause_action() -> void:
 	gut.p("PM-01: Triggering 'pause' action pauses the game and shows menu.")
-	# Preconditions: Game "running" (unpaused, menu hidden)
 	assert_false(get_tree().paused)
 	assert_false(pause_menu.visible)
-	# Action: Simulate pause input directly
 	var pause_event: InputEventKey = create_pause_event()
 	pause_menu._unhandled_input(pause_event)
-	# Expected: Paused and visible
 	assert_true(get_tree().paused, "Tree should be paused after pause action")
 	assert_true(pause_menu.visible, "Pause menu should be visible after pause action")
-
 
 ## PM-02 | pause_menu.gd | Game running | Trigger deprecated ui_cancel action | Pause menu does not open | Unit (GUT) | Regression guard
 func test_pm_02_trigger_ui_cancel_no_pause() -> void:
 	gut.p("PM-02: Triggering 'ui_cancel' (if exists) does not pause (regression guard).")
-	# Add ui_cancel if not present (for test isolation; assumes script ignores it)
 	var added_ui_cancel: bool = false
 	if not InputMap.has_action("ui_cancel"):
 		added_ui_cancel = true
 		InputMap.add_action("ui_cancel")
 		var ev: InputEventKey = InputEventKey.new()
-		ev.physical_keycode = KEY_ENTER  # Use different key to avoid conflict
+		ev.physical_keycode = KEY_ENTER
 		InputMap.action_add_event("ui_cancel", ev)
-	# Preconditions: Unpaused
 	assert_false(get_tree().paused)
 	assert_false(pause_menu.visible)
-	# Action: Simulate ui_cancel
 	var cancel_event: InputEventKey = InputEventKey.new()
 	cancel_event.physical_keycode = KEY_ENTER
 	cancel_event.pressed = true
 	pause_menu._unhandled_input(cancel_event)
-	# Expected: No pause (script checks "pause", not ui_cancel)
 	assert_false(get_tree().paused, "Tree should remain unpaused after ui_cancel")
 	assert_false(pause_menu.visible, "Pause menu should remain hidden after ui_cancel")
-	# Cleanup (erase only if added)
 	if added_ui_cancel and InputMap.has_action("ui_cancel"):
 		InputMap.erase_action("ui_cancel")
-
 
 ## PM-03 | pause_menu.gd | Game paused | Resume game from pause menu | Game resumes correctly | Unit (GUT) | Likely not covered yet
 func test_pm_03_resume_from_paused() -> void:
 	gut.p("PM-03: Resuming from paused state unpauses and hides menu.")
-	# Preconditions: Manually pause
 	pause_menu.toggle_pause()
 	assert_true(get_tree().paused)
 	assert_true(pause_menu.visible)
-	# Action: Simulate resume button press
 	var resume_btn: Button = pause_menu.resume_button
 	resume_btn.pressed.emit()
-	# Expected: Unpaused and hidden
 	assert_false(get_tree().paused, "Tree should be unpaused after resume")
 	assert_false(pause_menu.visible, "Pause menu should be hidden after resume")
-
 
 ## PM-04 | pause_menu.gd | Game paused | Pause toggled twice rapidly | No crash, stable pause state | Unit (GUT) | Edge-case
 func test_pm_04_rapid_toggle_stable() -> void:
 	gut.p("PM-04: Rapid pause toggles result in stable state without crash.")
-	# Preconditions: Start unpaused
 	assert_false(get_tree().paused)
 	assert_false(pause_menu.visible)
-	# Action: Toggle twice
-	pause_menu.toggle_pause()  # First: pause
-	pause_menu.toggle_pause()  # Second: unpause
-	# Expected: Ends unpaused (even toggles), no crash (implicit pass if reaches here)
+	pause_menu.toggle_pause()
+	pause_menu.toggle_pause()
 	assert_false(get_tree().paused, "After even rapid toggles, should be unpaused")
 	assert_false(pause_menu.visible, "Menu should be hidden after even toggles")
-	# Extra: Odd toggles (start over, toggle three times)
-	pause_menu.toggle_pause()  # 1: pause
-	pause_menu.toggle_pause()  # 2: unpause
-	pause_menu.toggle_pause()  # 3: pause
+	pause_menu.toggle_pause()
+	pause_menu.toggle_pause()
+	pause_menu.toggle_pause()
 	assert_true(get_tree().paused, "After odd rapid toggles, should be paused")
 	assert_true(pause_menu.visible, "Menu should be visible after odd toggles")
-
 
 ## PM-05 | pause_menu.gd | Game paused | Pause invoked while already paused | No duplicate pause logic executed | Unit (GUT) | Defensive test
 func test_pm_05_pause_while_paused_no_duplicate() -> void:
 	gut.p("PM-05: Invoking pause while paused keeps state without duplicates.")
-	# Preconditions: Paused
 	pause_menu.toggle_pause()
 	assert_true(get_tree().paused)
 	assert_true(pause_menu.visible)
-	# Action: Simulate another pause input
 	var pause_event: InputEventKey = create_pause_event()
 	pause_menu._unhandled_input(pause_event)
-	# Expected: Toggles to unpaused (no guard in current script)
 	assert_false(get_tree().paused, "Second pause should toggle to unpaused")
 	assert_false(pause_menu.visible, "Menu should hide on second pause")
-	# If guard added later, adjust asserts to remain paused.
