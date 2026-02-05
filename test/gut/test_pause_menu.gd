@@ -70,17 +70,13 @@ func before_each() -> void:
 		InputMap.action_add_event("pause", ev)
 
 
-## Helper to create a simulated pause event based on current InputMap.
-## :rtype: InputEventKey
-func create_pause_event() -> InputEventKey:
-	var events: Array[InputEvent] = InputMap.action_get_events("pause")
-	if events.is_empty() or not events[0] is InputEventKey:
-		var ev: InputEventKey = InputEventKey.new()
-		ev.physical_keycode = KEY_ESCAPE
-		return ev
-	var key_ev: InputEventKey = events[0] as InputEventKey
-	var sim_ev: InputEventKey = InputEventKey.new()
-	sim_ev.physical_keycode = key_ev.physical_keycode
+## Helper to create a simulated action event.
+## :param action: Action name.
+## :type action: String
+## :rtype: InputEventAction
+func create_action_event(action: String) -> InputEventAction:
+	var sim_ev: InputEventAction = InputEventAction.new()
+	sim_ev.action = action
 	sim_ev.pressed = true
 	return sim_ev
 
@@ -136,7 +132,7 @@ func test_pm_01_trigger_pause_action() -> void:
 	gut.p("PM-01: Triggering 'pause' action pauses the game and shows menu.")
 	assert_false(get_tree().paused)
 	assert_false(pause_menu.visible)
-	var pause_event: InputEventKey = create_pause_event()
+	var pause_event: InputEventAction = create_action_event("pause")
 	pause_menu._unhandled_input(pause_event)
 	assert_true(get_tree().paused, "Tree should be paused after pause action")
 	assert_true(pause_menu.visible, "Pause menu should be visible after pause action")
@@ -157,9 +153,7 @@ func test_pm_02_trigger_ui_cancel_no_pause() -> void:
 		InputMap.action_add_event("ui_cancel", ev)
 	assert_false(get_tree().paused)
 	assert_false(pause_menu.visible)
-	var cancel_event: InputEventKey = InputEventKey.new()
-	cancel_event.physical_keycode = KEY_ENTER
-	cancel_event.pressed = true
+	var cancel_event: InputEventAction = create_action_event("ui_cancel")
 	pause_menu._unhandled_input(cancel_event)
 	assert_false(get_tree().paused, "Tree should remain unpaused after ui_cancel")
 	assert_false(pause_menu.visible, "Pause menu should remain hidden after ui_cancel")
@@ -199,7 +193,7 @@ func test_pm_05_pause_while_paused_no_duplicate() -> void:
 	pause_menu.toggle_pause()
 	assert_true(get_tree().paused)
 	assert_true(pause_menu.visible)
-	var pause_event: InputEventKey = create_pause_event()
+	var pause_event: InputEventAction = create_action_event("pause")
 	pause_menu._unhandled_input(pause_event)
 	assert_false(get_tree().paused, "Second pause should toggle to unpaused")
 	assert_false(pause_menu.visible, "Menu should hide on second pause")
