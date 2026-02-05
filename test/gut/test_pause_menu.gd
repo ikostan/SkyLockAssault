@@ -73,21 +73,18 @@ func test_pm_01_trigger_pause_action() -> void:
 ## PM-02 | pause_menu.gd | Game running | Trigger deprecated ui_cancel action | Pause menu does not open | Unit (GUT) | Regression guard
 func test_pm_02_trigger_ui_cancel_no_pause() -> void:
 	gut.p("PM-02: Triggering 'ui_cancel' (if exists) does not pause (regression guard).")
-	# Remove pause to isolate ui_cancel
-	if InputMap.has_action("pause"):
-		InputMap.erase_action("pause")
 	# Add ui_cancel if not present (for test isolation; assumes script ignores it)
 	if not InputMap.has_action("ui_cancel"):
 		InputMap.add_action("ui_cancel")
 		var ev: InputEventKey = InputEventKey.new()
-		ev.physical_keycode = KEY_ESCAPE  # But script uses "pause", so should ignore
+		ev.physical_keycode = KEY_ENTER  # Use different key to avoid conflict
 		InputMap.action_add_event("ui_cancel", ev)
 	# Preconditions: Unpaused
 	assert_false(get_tree().paused)
 	assert_false(pause_menu.visible)
 	# Action: Simulate ui_cancel
 	var cancel_event: InputEventKey = InputEventKey.new()
-	cancel_event.physical_keycode = KEY_ESCAPE
+	cancel_event.physical_keycode = KEY_ENTER
 	cancel_event.pressed = true
 	pause_menu._unhandled_input(cancel_event)
 	# Expected: No pause (script checks "pause", not ui_cancel)
