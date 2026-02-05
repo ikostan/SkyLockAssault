@@ -13,6 +13,9 @@ extends GutTest
 
 var PauseMenuScene: PackedScene = preload("res://scenes/pause_menu.tscn")
 var pause_menu: CanvasLayer = null
+var original_globals: Node = null
+var original_paused: bool = false
+var original_input_map: Dictionary = {}  # action: [events]
 
 
 ## Mock for Globals autoload to avoid errors in button handlers.
@@ -25,10 +28,6 @@ class MockGlobals extends Node:
 		load_scene_with_loading_called = true
 	func load_options(_node: Node) -> void:
 		load_options_called = true
-
-var original_globals: Node = null
-var original_paused: bool = false
-var original_input_map: Dictionary = {}  # action: [events]
 
 
 func before_all() -> void:
@@ -60,11 +59,24 @@ func before_each() -> void:
 		InputMap.action_add_event("pause", ev)
 
 
+## Helper to create a simulated pause event based on current InputMap.
+## :rtype: InputEventKey
+func create_pause_event() -> InputEventKey:
+	var events: Array[InputEvent] = InputMap.action_get_events("pause")
+	if events.is_empty() or not events[0] is InputEventKey:
+		var ev: InputEventKey = InputEventKey.new()
+		ev.physical_keycode = KEY_ESCAPE
+		return ev
+	var key_ev: InputEventKey = events[0] as InputEventKey
+	var sim_ev: InputEventKey = InputEventKey.new()
+	sim_ev.physical_keycode = key_ev.physical_keycode
+	sim_ev.pressed = true
+	return sim_ev
+
+
 func after_each() -> void:
 	if is_instance_valid(pause_menu):
 		pause_menu.queue_free()
-	# if get_tree().root.has_node("Globals"):
-	#	get_tree().root.get_node("Globals").queue_free()
 	var mock_globals: Node = get_tree().root.get_node_or_null("Globals")
 	if mock_globals != null:
 		mock_globals.queue_free()
@@ -92,9 +104,7 @@ func test_pm_01_trigger_pause_action() -> void:
 	assert_false(get_tree().paused)
 	assert_false(pause_menu.visible)
 	# Action: Simulate pause input directly
-	var pause_event: InputEventKey = InputEventKey.new()
-	pause_event.physical_keycode = KEY_ESCAPE
-	pause_event.pressed = true
+	var pause_event: InputEventKey = create_pause_event()
 	pause_menu._unhandled_input(pause_event)
 	# Expected: Paused and visible
 	assert_true(get_tree().paused, "Tree should be paused after pause action")
@@ -171,10 +181,9 @@ func test_pm_05_pause_while_paused_no_duplicate() -> void:
 	assert_true(get_tree().paused)
 	assert_true(pause_menu.visible)
 	# Action: Simulate another pause input
-	var pause_event: InputEventKey = InputEventKey.new()
-	pause_event.physical_keycode = KEY_ESCAPE
-	pause_event.pressed = true
+	var pause_event: InputEventKey = create_pause_event()
 	pause_menu._unhandled_input(pause_event)
 	# Expected: Toggles to unpaused (no guard in current script)
 	assert_false(get_tree().paused, "Second pause should toggle to unpaused")
 	assert_false(pause_menu.visible, "Menu should hide on second pause")
+	# If guard added later, adjust asserts to remain paused.
