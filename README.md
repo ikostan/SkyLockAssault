@@ -42,7 +42,8 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
   - `PyCharm 2024.1.7 (Community Edition)` for file editing
   - `Windows PowerShell` for running Docker commands
 - **Supported Browsers**: Chrome 90+, Firefox 88+, Edge 90+ (WebGL 2.0 required)
-- **Known Limitations**: Mobile touch controls experimental; fullscreen may not persist on iOS Safari
+- **Known Limitations**: Mobile touch controls experimental; fullscreen may not
+  persist on iOS Safari
 - **Goal**: Build a playable top-down shooter with web deployment in mind—export
   to HTML5/Web, test locally, deploy to itch.io.
 
