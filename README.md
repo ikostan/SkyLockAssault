@@ -17,7 +17,6 @@
 ![Open Issues](https://img.shields.io/github/issues/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=red)
 [![Known Vulnerabilities](https://snyk.io/test/github/ikostan/SkyLockAssault/badge.svg)](https://snyk.io/test/github/ikostan/SkyLockAssault)
 [![All Contributors](https://img.shields.io/github/all-contributors/ikostan/SkyLockAssault?color=ee8449&style=flat-square)](#contributors)
-<!-- markdownlint-enable line-length -->
 
 ## A top-down online web browser game built with Godot 4.5
 
@@ -42,6 +41,9 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
   - `GitHub Desktop v3.5` for repo management
   - `PyCharm 2024.1.7 (Community Edition)` for file editing
   - `Windows PowerShell` for running Docker commands
+- **Supported Browsers**: Chrome 90+, Firefox 88+, Edge 90+ (WebGL 2.0 required)
+- **Known Limitations**: Mobile touch controls are experimental; fullscreen may not
+  persist on iOS Safari
 - **Goal**: Build a playable top-down shooter with web deployment in mind—export
   to HTML5/Web, test locally, deploy to itch.io.
 
@@ -52,13 +54,11 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 - [Assets Free Laser Bullets Pack 2020](https://wenrexa.itch.io/laser2020)
 - Csaba Felvegi aka "chabull" free assets collection, [see here](https://opengameart.org/users/chabull)
 - [Pixabay: royalty free stock](https://pixabay.com/)
-<!-- markdownlint-disable line-length -->
 - Music:
   - [Battle Epic](https://pixabay.com/music/main-title-battle-epic-241575/) by [Hot_Dope](https://pixabay.com/users/hot_dope-27442149/)
   - [Retro laser 1](https://pixabay.com/sound-effects/retro-laser-1-236669/) by [Driken5482](https://pixabay.com/users/driken5482-45721595/)
 
 ## Documentation
-<!-- markdownlint-disable line-length -->
 
 1. [Guide to Implementing Versioning](/files/docs/Guide_to_Implementing_Versioning.md)
 2. [Godot v4.5 Docs](https://docs.godotengine.org/en/stable/index.html)
