@@ -68,6 +68,9 @@ func before_each() -> void:
 		var ev: InputEventKey = InputEventKey.new()
 		ev.physical_keycode = KEY_ESCAPE
 		InputMap.action_add_event("pause", ev)
+	# Reset ui_cancel vars
+	added_ui_cancel = false
+	original_ui_cancel_events = []
 
 
 ## Helper to create a simulated action event.
