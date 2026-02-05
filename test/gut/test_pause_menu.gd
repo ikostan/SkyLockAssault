@@ -63,8 +63,11 @@ func before_each() -> void:
 func after_each() -> void:
 	if is_instance_valid(pause_menu):
 		pause_menu.queue_free()
-	if get_tree().root.has_node("Globals"):
-		get_tree().root.get_node("Globals").queue_free()
+	# if get_tree().root.has_node("Globals"):
+	#	get_tree().root.get_node("Globals").queue_free()
+	var mock_globals: Node = get_tree().root.get_node_or_null("Globals")
+	if mock_globals != null:
+		mock_globals.queue_free()
 	if original_globals:
 		get_tree().root.add_child(original_globals)
 		original_globals = null
