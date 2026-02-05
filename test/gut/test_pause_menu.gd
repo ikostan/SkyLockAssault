@@ -58,19 +58,56 @@ func before_each() -> void:
 	pause_menu.visible = false
 	get_tree().paused = false
 	# Ensure "pause" action exists (add if missing for isolation)
-	original_pause_events = []
-	added_pause = false
-	if InputMap.has_action("pause"):
-		original_pause_events = InputMap.action_get_events("pause")
-	else:
-		added_pause = true
-		InputMap.add_action("pause")
-		var ev: InputEventKey = InputEventKey.new()
-		ev.physical_keycode = KEY_ESCAPE
-		InputMap.action_add_event("pause", ev)
+	ensure_action("pause", KEY_ESCAPE, "added_pause", "original_pause_events")
 	# Reset ui_cancel vars
 	added_ui_cancel = false
 	original_ui_cancel_events = []
+
+
+## Helper to ensure an action exists, capturing state for restoration.
+## :param action_name: Action to ensure.
+## :type action_name: String
+## :param default_key: Default physical keycode if adding.
+## :type default_key: int
+## :param added_var_name: Name of the added flag var.
+## :type added_var_name: String
+## :param events_var_name: Name of the original events var.
+## :type events_var_name: String
+## :rtype: void
+func ensure_action(action_name: String, default_key: int = -1, added_var_name: String = "", events_var_name: String = "") -> void:
+	if added_var_name == "" or events_var_name == "":
+		# Default to pause vars if not specified
+		added_var_name = "added_pause"
+		events_var_name = "original_pause_events"
+	set(events_var_name, [])
+	set(added_var_name, false)
+	if InputMap.has_action(action_name):
+		set(events_var_name, InputMap.action_get_events(action_name))
+	else:
+		set(added_var_name, true)
+		InputMap.add_action(action_name)
+		if default_key != -1:
+			var ev: InputEventKey = InputEventKey.new()
+			ev.physical_keycode = default_key
+			InputMap.action_add_event(action_name, ev)
+
+
+## Helper to restore an action to original state.
+## :param action_name: Action to restore.
+## :type action_name: String
+## :param added_var_name: Name of the added flag var.
+## :type added_var_name: String
+## :param events_var_name: Name of the original events var.
+## :type events_var_name: String
+## :rtype: void
+func restore_action(action_name: String, added_var_name: String, events_var_name: String) -> void:
+	if InputMap.has_action(action_name):
+		if get(added_var_name):
+			InputMap.erase_action(action_name)
+		else:
+			InputMap.action_erase_events(action_name)
+			for ev: InputEvent in get(events_var_name):
+				InputMap.action_add_event(action_name, ev)
 
 
 ## Helper to create a simulated action event.
@@ -98,21 +135,9 @@ func after_each() -> void:
 		original_globals = null
 	get_tree().paused = original_paused
 	# Restore "pause" action
-	if InputMap.has_action("pause"):
-		if added_pause:
-			InputMap.erase_action("pause")
-		else:
-			InputMap.action_erase_events("pause")
-			for ev: InputEvent in original_pause_events:
-				InputMap.action_add_event("pause", ev)
+	restore_action("pause", "added_pause", "original_pause_events")
 	# Restore "ui_cancel" action if modified
-	if InputMap.has_action("ui_cancel"):
-		if added_ui_cancel:
-			InputMap.erase_action("ui_cancel")
-		else:
-			InputMap.action_erase_events("ui_cancel")
-			for ev: InputEvent in original_ui_cancel_events:
-				InputMap.action_add_event("ui_cancel", ev)
+	restore_action("ui_cancel", "added_ui_cancel", "original_ui_cancel_events")
 
 
 ## Restores suite-wide state.
@@ -144,16 +169,7 @@ func test_pm_01_trigger_pause_action() -> void:
 ## PM-02 | pause_menu.gd | Game running | Trigger deprecated ui_cancel action | Pause menu does not open | Unit (GUT) | Regression guard
 func test_pm_02_trigger_ui_cancel_no_pause() -> void:
 	gut.p("PM-02: Triggering 'ui_cancel' (if exists) does not pause (regression guard).")
-	original_ui_cancel_events = []
-	added_ui_cancel = false
-	if InputMap.has_action("ui_cancel"):
-		original_ui_cancel_events = InputMap.action_get_events("ui_cancel")
-	else:
-		added_ui_cancel = true
-		InputMap.add_action("ui_cancel")
-		var ev: InputEventKey = InputEventKey.new()
-		ev.physical_keycode = KEY_ENTER
-		InputMap.action_add_event("ui_cancel", ev)
+	ensure_action("ui_cancel", KEY_ENTER, "added_ui_cancel", "original_ui_cancel_events")
 	assert_false(get_tree().paused)
 	assert_false(pause_menu.visible)
 	var cancel_event: InputEventAction = create_action_event("ui_cancel")
