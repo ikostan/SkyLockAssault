@@ -18,6 +18,8 @@ var original_paused: bool = false
 var original_input_map: Dictionary = {}  # action: [events]
 var added_pause: bool = false
 var original_pause_events: Array[InputEvent] = []
+var added_ui_cancel: bool = false
+var original_ui_cancel_events: Array[InputEvent] = []
 
 
 ## Mock for Globals autoload to avoid errors in button handlers.
@@ -66,6 +68,9 @@ func before_each() -> void:
 		var ev: InputEventKey = InputEventKey.new()
 		ev.physical_keycode = KEY_ESCAPE
 		InputMap.action_add_event("pause", ev)
+	# Reset ui_cancel vars
+	added_ui_cancel = false
+	original_ui_cancel_events = []
 
 
 ## Helper to create a simulated pause event based on current InputMap.
@@ -104,6 +109,14 @@ func after_each() -> void:
 			InputMap.action_erase_events("pause")
 			for ev: InputEvent in original_pause_events:
 				InputMap.action_add_event("pause", ev)
+	# Restore "ui_cancel" action if modified
+	if InputMap.has_action("ui_cancel"):
+		if added_ui_cancel:
+			InputMap.erase_action("ui_cancel")
+		else:
+			InputMap.action_erase_events("ui_cancel")
+			for ev: InputEvent in original_ui_cancel_events:
+				InputMap.action_add_event("ui_cancel", ev)
 
 
 ## Restores suite-wide state.
@@ -135,8 +148,11 @@ func test_pm_01_trigger_pause_action() -> void:
 ## PM-02 | pause_menu.gd | Game running | Trigger deprecated ui_cancel action | Pause menu does not open | Unit (GUT) | Regression guard
 func test_pm_02_trigger_ui_cancel_no_pause() -> void:
 	gut.p("PM-02: Triggering 'ui_cancel' (if exists) does not pause (regression guard).")
-	var added_ui_cancel: bool = false
-	if not InputMap.has_action("ui_cancel"):
+	original_ui_cancel_events = []
+	added_ui_cancel = false
+	if InputMap.has_action("ui_cancel"):
+		original_ui_cancel_events = InputMap.action_get_events("ui_cancel")
+	else:
 		added_ui_cancel = true
 		InputMap.add_action("ui_cancel")
 		var ev: InputEventKey = InputEventKey.new()
@@ -150,8 +166,6 @@ func test_pm_02_trigger_ui_cancel_no_pause() -> void:
 	pause_menu._unhandled_input(cancel_event)
 	assert_false(get_tree().paused, "Tree should remain unpaused after ui_cancel")
 	assert_false(pause_menu.visible, "Pause menu should remain hidden after ui_cancel")
-	if added_ui_cancel and InputMap.has_action("ui_cancel"):
-		InputMap.erase_action("ui_cancel")
 
 
 ## PM-03 | pause_menu.gd | Game paused | Resume game from pause menu | Game resumes correctly | Unit (GUT) | Likely not covered yet
