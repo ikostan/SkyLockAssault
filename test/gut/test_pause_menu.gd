@@ -146,7 +146,7 @@ func test_pm_03_resume_from_paused() -> void:
 	assert_true(get_tree().paused)
 	assert_true(pause_menu.visible)
 	# Action: Simulate resume button press
-	var resume_btn: Button = pause_menu.get_node("VBoxContainer/ResumeButton")
+	var resume_btn: Button = pause_menu.resume_button
 	resume_btn.pressed.emit()
 	# Expected: Unpaused and hidden
 	assert_false(get_tree().paused, "Tree should be unpaused after resume")
