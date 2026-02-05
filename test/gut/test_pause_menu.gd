@@ -26,8 +26,24 @@ class MockGlobals extends Node:
 	func load_options(_node: Node) -> void:
 		load_options_called = true
 
+var original_globals: Node = null
+var original_paused: bool = false
+var original_input_map: Dictionary = {}  # action: [events]
+
+
+func before_all() -> void:
+	# Capture original InputMap for all actions
+	for action: String in InputMap.get_actions():
+		original_input_map[action] = InputMap.action_get_events(action)
+
 
 func before_each() -> void:
+	# Capture prior paused
+	original_paused = get_tree().paused
+	# Capture/remove existing Globals if any
+	if get_tree().root.has_node("Globals"):
+		original_globals = get_tree().root.get_node("Globals")
+		get_tree().root.remove_child(original_globals)
 	var mock_globals: MockGlobals = MockGlobals.new()
 	mock_globals.name = "Globals"
 	get_tree().root.add_child(mock_globals)
@@ -49,9 +65,21 @@ func after_each() -> void:
 		pause_menu.queue_free()
 	if get_tree().root.has_node("Globals"):
 		get_tree().root.get_node("Globals").queue_free()
-	get_tree().paused = false  # Reset pause state
-	if InputMap.has_action("pause"):
-		InputMap.erase_action("pause")  # Clean up if added
+	if original_globals:
+		get_tree().root.add_child(original_globals)
+		original_globals = null
+	get_tree().paused = original_paused  # Restore prior paused
+
+
+func after_all() -> void:
+	# Restore full InputMap
+	for action: String in InputMap.get_actions():
+		InputMap.action_erase_events(action)
+	for action: String in original_input_map:
+		if not InputMap.has_action(action):
+			InputMap.add_action(action)
+		for ev: InputEvent in original_input_map[action]:
+			InputMap.action_add_event(action, ev)
 
 
 ## PM-01 | pause_menu.gd | Game running, input map loaded | Trigger Pause via configured pause action | Game enters paused state | Unit (GUT) | New – required by #353
@@ -74,7 +102,9 @@ func test_pm_01_trigger_pause_action() -> void:
 func test_pm_02_trigger_ui_cancel_no_pause() -> void:
 	gut.p("PM-02: Triggering 'ui_cancel' (if exists) does not pause (regression guard).")
 	# Add ui_cancel if not present (for test isolation; assumes script ignores it)
+	var added_ui_cancel: bool = false
 	if not InputMap.has_action("ui_cancel"):
+		added_ui_cancel = true
 		InputMap.add_action("ui_cancel")
 		var ev: InputEventKey = InputEventKey.new()
 		ev.physical_keycode = KEY_ENTER  # Use different key to avoid conflict
@@ -90,8 +120,8 @@ func test_pm_02_trigger_ui_cancel_no_pause() -> void:
 	# Expected: No pause (script checks "pause", not ui_cancel)
 	assert_false(get_tree().paused, "Tree should remain unpaused after ui_cancel")
 	assert_false(pause_menu.visible, "Pause menu should remain hidden after ui_cancel")
-	# Cleanup
-	if InputMap.has_action("ui_cancel"):
+	# Cleanup (erase only if added)
+	if added_ui_cancel and InputMap.has_action("ui_cancel"):
 		InputMap.erase_action("ui_cancel")
 
 
