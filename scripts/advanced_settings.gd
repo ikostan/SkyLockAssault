@@ -168,7 +168,7 @@ func _on_advanced_back_button_pressed_js(args: Array) -> void:
 	## :type args: Array
 	## :rtype: void
 	Globals.log_message(
-		"JS _audio_back_button_pressed_cb callback called with args: " + str(args),
+		"JS _advanced_back_button_pressed_cb callback called with args: " + str(args),
 		Globals.LogLevel.DEBUG
 	)
 	_on_advanced_back_button_pressed()
