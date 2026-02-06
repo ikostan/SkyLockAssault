@@ -147,7 +147,7 @@ func _on_advanced_back_button_pressed() -> void:
 					// Hide Advanced Settings overlays
 					document.getElementById('log-level-select').style.display = 'none';
 					document.getElementById('advanced-back-button').style.display = 'none';
-					document.getElementById('advanced-reset-button').style.display = 'none';  // Optional: If added to HTML
+					document.getElementById('advanced-reset-button').style.display = 'none';
 					""",
 					true
 				)
