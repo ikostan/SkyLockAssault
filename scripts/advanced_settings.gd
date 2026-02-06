@@ -196,7 +196,7 @@ func _on_log_level_item_selected(index: int) -> void:
 		selected_name, Globals.LogLevel.INFO
 	)
 	Globals.current_log_level = selected_enum
-	log_lvl_option.selected = Globals.current_log_level
+	log_lvl_option.selected = Globals.LogLevel.values().find(selected_enum)
 	# Temporary raw print to bypass log_message
 	Globals.log_message("Log level changed to: " + selected_name, Globals.LogLevel.DEBUG)
 	Globals._save_settings()
