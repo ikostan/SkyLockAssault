@@ -52,6 +52,7 @@ func _ready() -> void:
 				"""
 				document.getElementById('log-level-select').style.display = 'block';
 				document.getElementById('advanced-back-button').style.display = 'block';
+				document.getElementById('advanced-recet-button').style.display = 'block';
 				""",
 				true
 			)
@@ -103,7 +104,10 @@ func _register_js_callback(callback_method: String, window_property: String) -> 
 ## Update _on_audio_reset_button_pressed:
 func _on_advanced_reset_button_pressed() -> void:
 	Globals.log_message("Advanced Settings reset pressed.", Globals.LogLevel.DEBUG)
-	#TODO: log level should be reset to INFO
+	# Log level should be reset to INFO
+	Globals.current_log_level = Globals.LogLevel.INFO
+	log_lvl_option.selected = 1
+	Globals._save_settings()
 
 
 func _on_advanced_reset_js(_args: Array) -> void:
