@@ -82,7 +82,7 @@ func _ready() -> void:
 				"_on_advanced_back_button_pressed_js", "advancedBackPressed"
 			)
 			# Expose callbacks for Reset button
-			_advanced_reset_cb = _register_js_callback("_on_audio_reset_js", "advancedResetPressed")
+			_advanced_reset_cb = _register_js_callback("_on_advanced_reset_js", "advancedResetPressed")
 		
 	Globals.log_message("Advanced Settings menu loaded.", Globals.LogLevel.DEBUG)
 
