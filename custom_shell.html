@@ -141,7 +141,6 @@
     <input id="mute-rotors" type="checkbox" checked style="top: 70%; left: 60%; width: 50px; height: 50px; display: none;">
 
     <button id="audio-reset-button" style="top: 80%; width: 150px;">Reset</button>
-    <button id="advanced-reset-button" style="top: 80%; width: 150px;">Reset</button>
     <button id="audio-back-button">Back</button>
 
     <!-- Options Menu Elements (invisible overlays, shown when menu loads) -->
@@ -158,7 +157,8 @@
     <input id="difficulty-slider" type="range" min="0.5" max="2.0" step="0.1" value="1.0" style="top: 45%;">
     <button id="options-back-button">Back</button>
     <button id="controls-back-button">Back</button>
-    <button id="advanced-back-button">Back</button>
+    <button id="advanced-back-button" style="display: none; top: 80%; left: 25%; width: 200px; height: 50px; transform: translate(-50%, -50%);"></button>
+    <button id="advanced-reset-button" style="display: none; top: 80%; left: 75%; width: 200px; height: 50px; transform: translate(-50%, -50%);"></button>
 
     <script src="$GODOT_URL"></script> <!-- Godot replaces with actual JS file, e.g., tmp_js_export.js -->
     <script>
@@ -221,7 +221,6 @@
         document.getElementById('audio-reset-button').onclick = () => window.audioResetPressed([]);  // Add for reset
         document.getElementById('advanced-back-button').onclick = () => window.advancedBackPressed([]);  // Add this for advanced back
         document.getElementById('advanced-reset-button').onclick = () => window.advancedResetPressed([]);  // Add for reset
-    </script>
     </script>
 <div class="ime" contenteditable="true" style="background: none; opacity: 0; position: fixed; text-align: left; font-size: 1px; left: 0px; top: 0px; width: 100%; height: 40px; pointer-events: none; display: none;"></div>
 </body>

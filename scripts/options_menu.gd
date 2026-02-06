@@ -340,10 +340,10 @@ func _on_advanced_settings_button_pressed() -> void:
 			js_bridge_wrapper
 			. eval(
 				"""
-			document.getElementById('audio-button').style.display = 'none';
-			document.getElementById('advanced-button').style.display = 'none';
-			document.getElementById('controls-button').style.display = 'none';
-			""",
+				document.getElementById('audio-button').style.display = 'none';
+				document.getElementById('advanced-button').style.display = 'none';
+				document.getElementById('controls-button').style.display = 'none';
+				""",
 				true
 			)
 		)

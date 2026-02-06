@@ -27,6 +27,7 @@ var _intentional_exit: bool = false
 
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	# Populate Log level with all LogLevel enum values
 	for level: String in Globals.LogLevel.keys():
 		if level != "NONE":  # Skip auto-add NONE; add manually as "None"
@@ -105,7 +106,7 @@ func _on_advanced_reset_button_pressed() -> void:
 	Globals.log_message("Advanced Settings reset pressed.", Globals.LogLevel.DEBUG)
 	# Log level should be reset to INFO
 	Globals.current_log_level = Globals.LogLevel.INFO
-	log_lvl_option.selected = 1
+	log_lvl_option.selected = Globals.LogLevel.values().find(Globals.LogLevel.INFO)
 	Globals._save_settings()
 
 
