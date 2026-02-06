@@ -51,7 +51,7 @@ func _ready() -> void:
 			. eval(
 				"""
 				document.getElementById('log-level-select').style.display = 'block';
-				document.getElementById('advanced-options-back-button').style.display = 'block';
+				document.getElementById('advanced-back-button').style.display = 'block';
 				""",
 				true
 			)
