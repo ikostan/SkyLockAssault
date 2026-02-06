@@ -3,7 +3,7 @@ extends Control
 var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
 var os_wrapper: OSWrapper = OSWrapper.new()  # Assuming OSWrapper is defined similarly
 
-var js_window: Variant
+var js_window: JavaScriptObject
 # Explicit mapping from display names to enum values
 var log_level_display_to_enum: Dictionary = {
 	"DEBUG": Globals.LogLevel.DEBUG,
@@ -52,14 +52,14 @@ func _ready() -> void:
 				"""
 				document.getElementById('log-level-select').style.display = 'block';
 				document.getElementById('advanced-back-button').style.display = 'block';
-				document.getElementById('advanced-recet-button').style.display = 'block';
+				document.getElementById('advanced-reset-button').style.display = 'block';
 				""",
 				true
 			)
 		)
 	
 	# Expose callbacks to JS (store refs to prevent GC)
-	var js_window: JavaScriptObject = js_bridge_wrapper.get_interface("window")
+	js_window = js_bridge_wrapper.get_interface("window") as JavaScriptObject
 	if js_window:
 		_change_log_level_cb = js_bridge_wrapper.create_callback(
 			Callable(self, "_on_change_log_level_js")
@@ -75,7 +75,6 @@ func _ready() -> void:
 		advanced_reset_button.pressed.connect(_on_advanced_reset_button_pressed)
 	
 	if os_wrapper.has_feature("web"):
-		js_window = js_bridge_wrapper.get_interface("window")
 		if js_window:  # New: Null check
 			# JS Callbacks
 			# Expose callbacks for back button
