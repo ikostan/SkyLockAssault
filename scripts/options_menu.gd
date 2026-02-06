@@ -21,26 +21,15 @@ extends CanvasLayer
 ## actual engine singletons.
 var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
 var os_wrapper: OSWrapper = OSWrapper.new()  # Assuming OSWrapper is defined similarly
-
-# Explicit mapping from display names to enum values
-var log_level_display_to_enum: Dictionary = {
-	"DEBUG": Globals.LogLevel.DEBUG,
-	"INFO": Globals.LogLevel.INFO,
-	"WARNING": Globals.LogLevel.WARNING,
-	"ERROR": Globals.LogLevel.ERROR,
-	"NONE": Globals.LogLevel.NONE
-}
 var audio_scene: PackedScene = preload("res://scenes/audio_settings.tscn")
 var controls_scene: PackedScene = preload("res://scenes/key_mapping_menu.tscn")
-var _change_log_level_cb: JavaScriptObject
+var advanced_scene: PackedScene = preload("res://scenes/advanced_settings.tscn")
 var _change_difficulty_cb: JavaScriptObject
 var _options_back_button_pressed_cb: JavaScriptObject
 var _controls_pressed_cb: JavaScriptObject
 var _audio_pressed_cb: JavaScriptObject
+var _advanced_pressed_cb: JavaScriptObject
 
-@onready var log_lvl_option: OptionButton = get_node(
-	"Panel/OptionsVBoxContainer/LogLevelContainer/LogLevelOptionButton"
-)
 @onready var options_back_button: Button = $Panel/OptionsVBoxContainer/OptionsBackButton
 @onready var difficulty_slider: HSlider = get_node(
 	"Panel/OptionsVBoxContainer/DifficultyLevelContainer/DifficultyHSlider"
@@ -63,27 +52,12 @@ func _ready() -> void:
 	## Exposes functions to JS for web overlays if on web.
 	##
 	## :rtype: void
-	# Populate OptionButton with all LogLevel enum values
-	for level: String in Globals.LogLevel.keys():
-		if level != "NONE":  # Skip auto-add NONE; add manually as "None"
-			log_lvl_option.add_item(level)  # "Debug", "Info", etc.
-	log_lvl_option.add_item("NONE")  # Manual for title case
+
 
 	# Game version
 	version_label.text = "Version: " + Globals.get_game_version()
 	Globals.log_message("Updated label to: " + version_label.text, Globals.LogLevel.DEBUG)
 
-	# Set to current log level (find index by enum value)
-	var current_value: int = Globals.current_log_level
-	var index: int = Globals.LogLevel.values().find(current_value)
-	if index != -1:
-		log_lvl_option.selected = index
-	else:
-		log_lvl_option.selected = 1  # Fallback to INFO (index 1)
-		Globals.log_message("Invalid saved log level—reset to INFO.", Globals.LogLevel.WARNING)
-
-	# Connect signals to type-specific handlers (change: separate from JS callbacks)
-	log_lvl_option.item_selected.connect(_on_log_level_item_selected)
 	difficulty_slider.value_changed.connect(_on_difficulty_value_changed)
 
 	if not options_back_button.pressed.is_connected(_on_options_back_button_pressed):
@@ -111,7 +85,7 @@ func _ready() -> void:
 				"""
 				document.getElementById('controls-button').style.display = 'block';
 				document.getElementById('audio-button').style.display = 'block';
-				document.getElementById('log-level-select').style.display = 'block';
+				document.getElementById('advanced-button').style.display = 'block';
 				document.getElementById('difficulty-slider').style.display = 'block';
 				document.getElementById('options-back-button').style.display = 'block';
 				""",
@@ -122,11 +96,6 @@ func _ready() -> void:
 		# Expose callbacks to JS (store refs to prevent GC)
 		var js_window: JavaScriptObject = js_bridge_wrapper.get_interface("window")
 		if js_window:
-			_change_log_level_cb = js_bridge_wrapper.create_callback(
-				Callable(self, "_on_change_log_level_js")
-			)
-			js_window.changeLogLevel = _change_log_level_cb
-
 			_change_difficulty_cb = js_bridge_wrapper.create_callback(
 				Callable(self, "_on_change_difficulty_js")
 			)
@@ -146,6 +115,11 @@ func _ready() -> void:
 				Callable(self, "_on_audio_pressed_js")
 			)
 			js_window.audioPressed = _audio_pressed_cb
+			
+			_advanced_pressed_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_advanced_pressed_js")
+			)
+			js_window.advancedPressed = _advanced_pressed_cb
 
 			Globals.log_message(
 				"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
@@ -191,34 +165,6 @@ func _exit_tree() -> void:
 	Globals.log_message("Options menu exited.", Globals.LogLevel.DEBUG)
 
 
-func get_log_level_index() -> int:
-	## Retrieves the index of the current log level in the enum values.
-	##
-	## :returns: The index of the current log level.
-	## :rtype: int
-	return Globals.LogLevel.values().find(Globals.current_log_level)
-
-
-# Change: Separate handler for signal (int index)
-func _on_log_level_item_selected(index: int) -> void:
-	## Handles log level selection from the OptionButton signal.
-	##
-	## Updates global log level, logs the change, and saves settings.
-	##
-	## :param index: The selected item index.
-	## :type index: int
-	## :rtype: void
-	var selected_name: String = log_lvl_option.get_item_text(index)
-	var selected_enum: Globals.LogLevel = log_level_display_to_enum.get(
-		selected_name, Globals.LogLevel.INFO
-	)
-	Globals.current_log_level = selected_enum
-	log_lvl_option.selected = Globals.current_log_level
-	# Temporary raw print to bypass log_message
-	Globals.log_message("Log level changed to: " + selected_name, Globals.LogLevel.DEBUG)
-	Globals._save_settings()
-
-
 # New: JS callback for audio button
 # warning-ignore:unused_argument
 func _on_audio_pressed_js(_args: Array) -> void:
@@ -232,6 +178,19 @@ func _on_audio_pressed_js(_args: Array) -> void:
 	_on_audio_settings_button_pressed()
 
 
+# New: JS callback for advanced button
+# warning-ignore:unused_argument
+func _on_advanced_pressed_js(_args: Array) -> void:
+	## JS callback for advanced button press.
+	##
+	## Routes to signal handler.
+	##
+	## :param _args: Unused array from JS.
+	## :type _args: Array
+	## :rtype: void
+	_on_advanced_settings_button_pressed()
+
+
 # New: JS callback for controls button
 # warning-ignore:unused_argument
 func _on_controls_pressed_js(_args: Array) -> void:
@@ -243,25 +202,6 @@ func _on_controls_pressed_js(_args: Array) -> void:
 	## :type _args: Array
 	## :rtype: void
 	_on_key_mapping_button_pressed()
-
-
-# New: JS-specific callback (exactly one Array arg, no default)
-func _on_change_log_level_js(args: Array) -> void:
-	## JS callback for changing log level.
-	##
-	## Routes to the signal handler.
-	##
-	## :param args: Array containing the index (from JS).
-	## :type args: Array
-	## :rtype: void
-	Globals.log_message(
-		"JS change_log_level callback called with args: " + str(args[0][0]), Globals.LogLevel.DEBUG
-	)
-	if args.size() > 0:
-		# var js_array: Variant = args[0]  # The JS array passed from evaluate
-		# var arg_value: Variant = js_array[0]  # Access first element with []
-		var index: int = int(args[0][0])
-		_on_log_level_item_selected(index)
 
 
 # Change: Separate handler for signal (float value)
@@ -316,7 +256,7 @@ func _on_options_back_button_pressed() -> void:
 				"""
 				document.getElementById('audio-button').style.display = 'none';
 				document.getElementById('controls-button').style.display = 'none';
-				document.getElementById('log-level-select').style.display = 'none';
+				document.getElementById('advanced-button').style.display = 'none';
 				document.getElementById('difficulty-slider').style.display = 'none';
 				document.getElementById('options-back-button').style.display = 'none';
 				"""
@@ -358,6 +298,7 @@ func _on_audio_settings_button_pressed() -> void:
 			. eval(
 				"""
 			document.getElementById('audio-button').style.display = 'none';
+			document.getElementById('advanced-button').style.display = 'none';
 			document.getElementById('controls-button').style.display = 'none';
 			""",
 				true
@@ -380,6 +321,27 @@ func _on_key_mapping_button_pressed() -> void:
 			. eval(
 				"""
 			document.getElementById('audio-button').style.display = 'none';
+			document.getElementById('advanced-button').style.display = 'none';
+			document.getElementById('controls-button').style.display = 'none';
+			""",
+				true
+			)
+		)
+
+
+func _on_advanced_settings_button_pressed() -> void:
+	Globals.log_message("Advanced Settings button pressed.", Globals.LogLevel.DEBUG)
+	var advanced_instance: Control = advanced_scene.instantiate()  # Use the preloaded var
+	get_tree().root.add_child(advanced_instance)
+	Globals.hidden_menus.push_back(self)
+	self.visible = false
+	if os_wrapper.has_feature("web") and js_bridge_wrapper:
+		(
+			js_bridge_wrapper
+			. eval(
+				"""
+			document.getElementById('audio-button').style.display = 'none';
+			document.getElementById('advanced-button').style.display = 'none';
 			document.getElementById('controls-button').style.display = 'none';
 			""",
 				true
