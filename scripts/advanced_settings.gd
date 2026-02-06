@@ -21,9 +21,8 @@ var _intentional_exit: bool = false
 
 @onready var advanced_back_button: Button = $Panel/Controls/BtnContainer/BackButton
 @onready var advanced_reset_button: Button = $Panel/Controls/BtnContainer/ResetButton
-@onready var log_lvl_option: OptionButton = get_node(
-	"Panel/Controls/LogLevelContainer/LogLevelOptionButton"
-)
+@onready
+var log_lvl_option: OptionButton = get_node("Panel/Controls/LogLevelContainer/LogLevelOptionButton")
 
 
 func _ready() -> void:
@@ -44,7 +43,7 @@ func _ready() -> void:
 
 	# Connect signals to type-specific handlers (change: separate from JS callbacks)
 	log_lvl_option.item_selected.connect(_on_log_level_item_selected)
-	
+
 	if os_wrapper.has_feature("web"):
 		# Toggle overlays...
 		(
@@ -58,7 +57,7 @@ func _ready() -> void:
 				true
 			)
 		)
-	
+
 	# Expose callbacks to JS (store refs to prevent GC)
 	js_window = js_bridge_wrapper.get_interface("window") as JavaScriptObject
 	if js_window:
@@ -66,7 +65,7 @@ func _ready() -> void:
 			Callable(self, "_on_change_log_level_js")
 		)
 		js_window.changeLogLevel = _change_log_level_cb
-	
+
 	# Back button
 	if not advanced_back_button.pressed.is_connected(_on_advanced_back_button_pressed):
 		advanced_back_button.pressed.connect(_on_advanced_back_button_pressed)
@@ -74,7 +73,7 @@ func _ready() -> void:
 	# Reset button listener
 	if not advanced_reset_button.pressed.is_connected(_on_advanced_reset_button_pressed):
 		advanced_reset_button.pressed.connect(_on_advanced_reset_button_pressed)
-	
+
 	if os_wrapper.has_feature("web"):
 		if js_window:  # New: Null check
 			# JS Callbacks
@@ -83,8 +82,10 @@ func _ready() -> void:
 				"_on_advanced_back_button_pressed_js", "advancedBackPressed"
 			)
 			# Expose callbacks for Reset button
-			_advanced_reset_cb = _register_js_callback("_on_advanced_reset_js", "advancedResetPressed")
-		
+			_advanced_reset_cb = _register_js_callback(
+				"_on_advanced_reset_js", "advancedResetPressed"
+			)
+
 	Globals.log_message("Advanced Settings menu loaded.", Globals.LogLevel.DEBUG)
 
 
@@ -136,7 +137,7 @@ func _on_advanced_back_button_pressed() -> void:
 		if hidden_menu_found and js_bridge_wrapper:
 			(
 				js_bridge_wrapper
-				.eval(
+				. eval(
 					"""
 					// Show Options menu overlays
 					document.getElementById('controls-button').style.display = 'block';

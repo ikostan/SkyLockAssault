@@ -53,7 +53,6 @@ func _ready() -> void:
 	##
 	## :rtype: void
 
-
 	# Game version
 	version_label.text = "Version: " + Globals.get_game_version()
 	Globals.log_message("Updated label to: " + version_label.text, Globals.LogLevel.DEBUG)
@@ -115,7 +114,7 @@ func _ready() -> void:
 				Callable(self, "_on_audio_pressed_js")
 			)
 			js_window.audioPressed = _audio_pressed_cb
-			
+
 			_advanced_pressed_cb = js_bridge_wrapper.create_callback(
 				Callable(self, "_on_advanced_pressed_js")
 			)
