@@ -93,7 +93,7 @@ offset_bottom = 155.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 4
-tooltip_text = "Volume Controls"
+tooltip_text = "Advanced Settings"
 theme_override_styles/panel = SubResource("StyleBoxFlat_j3be7")
 
 [node name="Controls" type="VBoxContainer" parent="Panel"]
