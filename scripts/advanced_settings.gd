@@ -102,7 +102,7 @@ func _register_js_callback(callback_method: String, window_property: String) -> 
 
 
 ## RESET BUTTON
-## Update _on_audio_reset_button_pressed:
+## Handles Advanced Settings reset button press.
 func _on_advanced_reset_button_pressed() -> void:
 	Globals.log_message("Advanced Settings reset pressed.", Globals.LogLevel.DEBUG)
 	# Log level should be reset to INFO
