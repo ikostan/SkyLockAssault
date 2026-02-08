@@ -2,7 +2,6 @@ extends Control
 
 var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
 var os_wrapper: OSWrapper = OSWrapper.new()  # Assuming OSWrapper is defined similarly
-
 var js_window: JavaScriptObject
 # Explicit mapping from display names to enum values
 var log_level_display_to_enum: Dictionary = {
@@ -42,6 +41,7 @@ func _ready() -> void:
 		Globals.log_message("Invalid saved log level—reset to INFO.", Globals.LogLevel.WARNING)
 
 	# Connect signals to type-specific handlers (change: separate from JS callbacks)
+	tree_exited.connect(_on_tree_exited)
 	log_lvl_option.item_selected.connect(_on_log_level_item_selected)
 
 	if os_wrapper.has_feature("web"):
@@ -57,7 +57,7 @@ func _ready() -> void:
 				true
 			)
 		)
-
+	
 	# Expose callbacks to JS (store refs to prevent GC)
 	js_window = js_bridge_wrapper.get_interface("window") as JavaScriptObject
 	if js_window:
@@ -101,6 +101,30 @@ func _register_js_callback(callback_method: String, window_property: String) -> 
 	return callback
 
 
+func _on_tree_exited() -> void:
+	if _intentional_exit:
+		return
+	if os_wrapper.has_feature("web") and js_window:
+		_unset_advanced_window_callbacks()
+	if not Globals.hidden_menus.is_empty():
+		var prev_menu: Node = Globals.hidden_menus.pop_back()
+		if is_instance_valid(prev_menu):
+			prev_menu.visible = true
+			Globals.log_message(
+				"Advanced menu exited unexpectedly, restored previous menu.",
+				Globals.LogLevel.WARNING
+			)
+
+
+## A cleanup function
+func _unset_advanced_window_callbacks() -> void:
+	if not os_wrapper.has_feature("web") or not js_window:
+		return
+	js_window.changeLogLevel = null
+	js_window.advancedBackPressed = null
+	js_window.advancedResetPressed = null
+
+
 ## RESET BUTTON
 ## Handles Advanced Settings reset button press.
 func _on_advanced_reset_button_pressed() -> void:
@@ -133,6 +157,7 @@ func _on_advanced_back_button_pressed() -> void:
 			hidden_menu_found = true
 	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
 	if os_wrapper.has_feature("web") and js_window:
+		_unset_advanced_window_callbacks()
 		# Set Options menu buttons visible in DOM (if bridge available for eval)
 		if hidden_menu_found and js_bridge_wrapper:
 			(
