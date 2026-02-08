@@ -44,7 +44,7 @@ func _ready() -> void:
 	tree_exited.connect(_on_tree_exited)
 	log_lvl_option.item_selected.connect(_on_log_level_item_selected)
 
-	if os_wrapper.has_feature("web"):
+	if js_bridge_wrapper and os_wrapper.has_feature("web"):
 		# Toggle overlays...
 		(
 			js_bridge_wrapper
