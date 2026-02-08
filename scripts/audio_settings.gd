@@ -432,15 +432,15 @@ func _on_sfx_mute_toggled(toggled_on: bool) -> void:
 	_sync_dom_ui()
 
 
-# New: SFX mute button gui input
-# SFX mute button gui input (no SFX check for self)
+## New: SFX mute button gui input
+## SFX mute button gui input (no SFX check for self)
 func _on_sfx_mute_gui_input(event: InputEvent) -> void:
 	_handle_mute_gui_input(
 		event, AudioManager.master_muted, false, master_warning_dialog, sfx_warning_dialog
 	)
 
 
-# New: JS callback for SFX volume
+## New: JS callback for SFX volume
 ## Directly updates AudioManager and UI, mimicking volume_slider.gd logic.
 ## :param args: Array with volume value (e.g., [[0.5]]).
 ## :type args: Array
@@ -478,7 +478,7 @@ func _on_toggle_mute_sfx_js(args: Array) -> void:
 
 
 ## WEAPON VOLUME
-# New: Weapon slider gui input
+## New: Weapon slider gui input
 func _on_weapon_volume_control_gui_input(event: InputEvent) -> void:
 	_handle_slider_gui_input(
 		event,
@@ -491,7 +491,7 @@ func _on_weapon_volume_control_gui_input(event: InputEvent) -> void:
 	)
 
 
-# New: Weapon toggle
+## New: Weapon toggle
 func _on_weapon_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.weapon_muted = not toggled_on
 	weapon_slider.editable = not AudioManager.weapon_muted
@@ -505,7 +505,7 @@ func _on_weapon_mute_toggled(toggled_on: bool) -> void:
 	_sync_dom_ui()
 
 
-# New: Weapon mute button gui input
+## New: Weapon mute button gui input
 func _on_weapon_mute_gui_input(event: InputEvent) -> void:
 	_handle_mute_gui_input(
 		event,
@@ -516,7 +516,7 @@ func _on_weapon_mute_gui_input(event: InputEvent) -> void:
 	)
 
 
-# New: JS callback for Weapon volume
+## New: JS callback for Weapon volume
 ## Directly updates AudioManager and UI, mimicking volume_slider.gd logic.
 ## :param args: Array with volume value (e.g., [[0.5]]).
 ## :type args: Array
@@ -560,7 +560,7 @@ func _on_toggle_mute_weapon_js(args: Array) -> void:
 
 
 ## ROTORS VOLUME
-# New: Rotor slider gui input
+## New: Rotor slider gui input
 func _on_rotor_volume_control_gui_input(event: InputEvent) -> void:
 	_handle_slider_gui_input(
 		event,
@@ -573,7 +573,7 @@ func _on_rotor_volume_control_gui_input(event: InputEvent) -> void:
 	)
 
 
-# New: Rotor toggle
+## New: Rotor toggle
 func _on_rotor_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.rotors_muted = not toggled_on
 	rotor_slider.editable = not AudioManager.rotors_muted
@@ -587,7 +587,7 @@ func _on_rotor_mute_toggled(toggled_on: bool) -> void:
 	_sync_dom_ui()
 
 
-# New: Rotor mute button gui input
+## New: Rotor mute button gui input
 func _on_rotor_mute_gui_input(event: InputEvent) -> void:
 	_handle_mute_gui_input(
 		event,
@@ -598,7 +598,7 @@ func _on_rotor_mute_gui_input(event: InputEvent) -> void:
 	)
 
 
-# New: JS callback for Rotors volume
+## New: JS callback for Rotors volume
 ## Directly updates AudioManager and UI, mimicking volume_slider.gd logic.
 ## :param args: Array with volume value (e.g., [[0.5]]).
 ## :type args: Array
@@ -704,9 +704,12 @@ func _on_audio_back_button_pressed() -> void:
 				js_bridge_wrapper
 				. eval(
 					"""
-				document.getElementById('controls-button').style.display = 'block';
-				document.getElementById('audio-button').style.display = 'block';
-				""",
+					document.getElementById('controls-button').style.display = 'block';
+					document.getElementById('audio-button').style.display = 'block';
+					document.getElementById('advanced-button').style.display = 'block';
+					document.getElementById('difficulty-slider').style.display = 'block';
+					document.getElementById('options-back-button').style.display = 'block';
+					""",
 					true
 				)
 			)

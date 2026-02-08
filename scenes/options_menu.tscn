@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://cl4m4q2eurcn0"]
+[gd_scene load_steps=11 format=3 uid="uid://cl4m4q2eurcn0"]
 
 [ext_resource type="Script" uid="uid://cajq8hf84eplh" path="res://scripts/options_menu.gd" id="1_ijpji"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_liyum"]
@@ -50,37 +50,6 @@ corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 shadow_size = 3
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dhn0l"]
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-expand_margin_left = 20.0
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2f1bn"]
-bg_color = Color(0.49803922, 0.49803922, 0.49803922, 0.5882353)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-expand_margin_left = 20.0
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7txom"]
-bg_color = Color(0.6, 0.6, 0.6, 0.39215687)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-expand_margin_left = 20.0
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_binsn"]
-bg_color = Color(0.6, 0.6, 0.6, 0.39215687)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-expand_margin_left = 20.0
-
 [node name="OptionsMenu" type="CanvasLayer"]
 script = ExtResource("1_ijpji")
 
@@ -91,9 +60,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -190.0
-offset_top = -315.0
+offset_top = -300.0
 offset_right = 190.0
-offset_bottom = 315.0
+offset_bottom = 300.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 4
@@ -107,9 +76,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -170.0
-offset_top = -300.0
+offset_top = -285.0
 offset_right = 170.0
-offset_bottom = 300.0
+offset_bottom = 285.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 10
@@ -123,7 +92,7 @@ theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 50
 text = "{OPTIONS}"
 
-[node name="KeyMappingButton" type="Button" parent="Panel/OptionsVBoxContainer"]
+[node name="AdvancedSettingsButton" type="Button" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
@@ -135,7 +104,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_liyum")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_ijpji")
 theme_override_styles/hover = SubResource("StyleBoxFlat_hm4m4")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_lfjc7")
-text = "{CONTROLS}"
+text = "{ADVANCED}"
 
 [node name="AudioSettingsButton" type="Button" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
@@ -150,6 +119,20 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_ijpji")
 theme_override_styles/hover = SubResource("StyleBoxFlat_hm4m4")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_lfjc7")
 text = "{AUDIO}"
+
+[node name="KeyMappingButton" type="Button" parent="Panel/OptionsVBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("1_liyum")
+theme_override_font_sizes/font_size = 35
+theme_override_styles/normal = SubResource("StyleBoxFlat_liyum")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_ijpji")
+theme_override_styles/hover = SubResource("StyleBoxFlat_hm4m4")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_lfjc7")
+text = "{CONTROLS}"
 
 [node name="DifficultyLevelContainer" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
@@ -187,39 +170,6 @@ theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 20
 text = "{0.0}"
 
-[node name="LogLevelContainer" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 6
-theme_override_constants/separation = 35
-
-[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/LogLevelContainer"]
-layout_mode = 2
-size_flags_horizontal = 0
-theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
-theme_override_fonts/font = ExtResource("1_liyum")
-theme_override_font_sizes/font_size = 20
-text = "{LOG=LEVEL}"
-
-[node name="LogLevelOptionButton" type="OptionButton" parent="Panel/OptionsVBoxContainer/LogLevelContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 4
-theme_override_colors/font_color = Color(0.24840015, 0.24840018, 0.24840012, 1)
-theme_override_colors/font_focus_color = Color(0.24705882, 0.24705882, 0.24705882, 1)
-theme_override_colors/font_pressed_color = Color(0.24705882, 0.24705882, 0.24705882, 1)
-theme_override_colors/font_hover_color = Color(0.972549, 0.972549, 0.972549, 1)
-theme_override_colors/font_hover_pressed_color = Color(0.24705882, 0.24705882, 0.24705882, 1)
-theme_override_colors/font_disabled_color = Color(0.24705882, 0.24705882, 0.24705882, 1)
-theme_override_colors/icon_normal_color = Color(0.24705882, 0.24705882, 0.24705882, 1)
-theme_override_colors/icon_focus_color = Color(0.24705882, 0.24705882, 0.24705882, 1)
-theme_override_colors/icon_pressed_color = Color(0.24705882, 0.24705882, 0.24705882, 1)
-theme_override_colors/icon_hover_color = Color(0.972549, 0.972549, 0.972549, 1)
-theme_override_font_sizes/font_size = 13
-theme_override_styles/normal = SubResource("StyleBoxFlat_dhn0l")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_2f1bn")
-theme_override_styles/hover = SubResource("StyleBoxFlat_7txom")
-theme_override_styles/focus = SubResource("StyleBoxFlat_binsn")
-
 [node name="OptionsBackButton" type="Button" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
@@ -239,5 +189,6 @@ layout_mode = 2
 size_flags_horizontal = 4
 text = "Version: "
 
-[connection signal="pressed" from="Panel/OptionsVBoxContainer/KeyMappingButton" to="." method="_on_key_mapping_button_pressed"]
+[connection signal="pressed" from="Panel/OptionsVBoxContainer/AdvancedSettingsButton" to="." method="_on_advanced_settings_button_pressed"]
 [connection signal="pressed" from="Panel/OptionsVBoxContainer/AudioSettingsButton" to="." method="_on_audio_settings_button_pressed"]
+[connection signal="pressed" from="Panel/OptionsVBoxContainer/KeyMappingButton" to="." method="_on_key_mapping_button_pressed"]
