@@ -57,7 +57,7 @@ func _ready() -> void:
 				true
 			)
 		)
-	
+
 	# Expose callbacks to JS (store refs to prevent GC)
 	js_window = js_bridge_wrapper.get_interface("window") as JavaScriptObject
 	if js_window:
