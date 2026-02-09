@@ -240,7 +240,7 @@ func _on_change_log_level_js(args: Array) -> void:
 		Globals.log_message("JS change_log_level callback received empty args—skipping.", Globals.LogLevel.WARNING)
 		return
 	
-	var first_arg: Array = args[0]
+	var first_arg: Variant = args[0]
 	if typeof(first_arg) != TYPE_ARRAY or first_arg.size() == 0:
 		Globals.log_message("JS change_log_level callback received invalid first arg (not a non-empty array): " + str(args), Globals.LogLevel.WARNING)
 		return
