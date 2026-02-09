@@ -236,9 +236,24 @@ func _on_change_log_level_js(args: Array) -> void:
 	## :param args: Array containing the index (from JS).
 	## :type args: Array
 	## :rtype: void
-	if args.size() > 0:
-		var index: int = int(args[0][0])
-		Globals.log_message(
-			"JS change_log_level callback called with args: " + str(index), Globals.LogLevel.DEBUG
-		)
-		_on_log_level_item_selected(index)
+	if args.size() == 0:
+		Globals.log_message("JS change_log_level callback received empty args—skipping.", Globals.LogLevel.WARNING)
+		return
+	
+	var first_arg: Array = args[0]
+	if typeof(first_arg) != TYPE_ARRAY or first_arg.size() == 0:
+		Globals.log_message("JS change_log_level callback received invalid first arg (not a non-empty array): " + str(args), Globals.LogLevel.WARNING)
+		return
+	
+	var potential_index: Variant = first_arg[0]
+	if typeof(potential_index) != TYPE_INT and typeof(potential_index) != TYPE_FLOAT and typeof(potential_index) != TYPE_STRING:
+		Globals.log_message("JS change_log_level callback received non-convertible index value: " + str(args), Globals.LogLevel.WARNING)
+		return
+	
+	var index: int = int(potential_index)
+	if index < 0 or index >= log_lvl_option.item_count:  # Optional: Bounds check against actual options
+		Globals.log_message("JS change_log_level callback received out-of-bounds index: " + str(index) + " (args: " + str(args) + ")", Globals.LogLevel.WARNING)
+		return
+	
+	Globals.log_message("JS change_log_level callback called with valid index: " + str(index), Globals.LogLevel.DEBUG)
+	_on_log_level_item_selected(index)
