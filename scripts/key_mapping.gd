@@ -137,14 +137,17 @@ func _on_controls_back_button_pressed() -> void:
 					true
 				)
 			)
-			# Only showing audio/controls when a previous menu exists.
+			# Only showing all five when a previous menu exists.
 			if hidden_menu_found:
 				(
 					js_bridge_wrapper
 					. eval(
 						"""
 						document.getElementById('audio-button').style.display = 'block';
+						document.getElementById('advanced-button').style.display = 'block';
 						document.getElementById('controls-button').style.display = 'block';
+						document.getElementById('difficulty-slider').style.display = 'block';
+						document.getElementById('options-back-button').style.display = 'block';
 						""",
 						true
 					)
