@@ -266,7 +266,8 @@ func _on_change_log_level_js(args: Array) -> void:
 		return
 
 	var index: int = int(potential_index)
-	if index < 0 or index >= log_lvl_option.item_count:  # Optional: Bounds check against actual options
+	# Optional: Bounds check against actual options
+	if index < 0 or index >= log_lvl_option.item_count:
 		Globals.log_message(
 			(
 				"JS change_log_level callback received out-of-bounds index: "
