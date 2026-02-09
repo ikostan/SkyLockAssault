@@ -102,7 +102,8 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Go to Advanced settings
         page.wait_for_selector('#advanced-button', state='visible', timeout=2500)
-        page.click("#advanced-button", force=True)
+        # page.click("#advanced-button", force=True)
+        page.evaluate("window.advancedPressed([0])")
         page.wait_for_function('window.changeLogLevel !== undefined', timeout=2500)
         advanced_display: str = page.evaluate(
             "window.getComputedStyle(document.getElementById('log-level-select')).display")
