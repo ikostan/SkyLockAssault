@@ -299,6 +299,8 @@ func _on_audio_settings_button_pressed() -> void:
 			document.getElementById('audio-button').style.display = 'none';
 			document.getElementById('advanced-button').style.display = 'none';
 			document.getElementById('controls-button').style.display = 'none';
+			document.getElementById('difficulty-slider').style.display = 'none';
+			document.getElementById('options-back-button').style.display = 'none';
 			""",
 				true
 			)
@@ -322,6 +324,8 @@ func _on_key_mapping_button_pressed() -> void:
 			document.getElementById('audio-button').style.display = 'none';
 			document.getElementById('advanced-button').style.display = 'none';
 			document.getElementById('controls-button').style.display = 'none';
+			document.getElementById('difficulty-slider').style.display = 'none';
+			document.getElementById('options-back-button').style.display = 'none';
 			""",
 				true
 			)
@@ -342,6 +346,8 @@ func _on_advanced_settings_button_pressed() -> void:
 				document.getElementById('audio-button').style.display = 'none';
 				document.getElementById('advanced-button').style.display = 'none';
 				document.getElementById('controls-button').style.display = 'none';
+				document.getElementById('difficulty-slider').style.display = 'none';
+				document.getElementById('options-back-button').style.display = 'none';
 				""",
 				true
 			)
