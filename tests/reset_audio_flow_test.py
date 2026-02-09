@@ -72,17 +72,31 @@ def test_reset_flow(page: Page) -> None:
         assert box is not None, "Canvas not found"
         assert "SkyLockAssault" in page.title(), "Title not found"
 
-        # Navigate to options menu
+        # Open options
         page.wait_for_selector('#options-button', state='visible', timeout=2500)
-        page.click("#options-button", force=True, timeout=2500)
+        page.click("#options-button", force=True)
 
-        # Set log level to DEBUG
-        pre_change_log_count = len(logs)
+        # Go to Advanced settings
+        page.wait_for_selector('#advanced-button', state='visible', timeout=2500)
+        # page.click("#advanced-button", force=True)
+        page.evaluate("window.advancedPressed([0])")
         page.wait_for_function('window.changeLogLevel !== undefined', timeout=2500)
-        page.evaluate("window.changeLogLevel([0])")  # Index 0 for DEBUG
-        page.wait_for_timeout(3000)
+        advanced_display: str = page.evaluate(
+            "window.getComputedStyle(document.getElementById('log-level-select')).display")
+        assert advanced_display == 'block', "Advanced menu not loaded (selected log level not displayed)"
+
+        # Set log level DEBUG
+        pre_change_log_count = len(logs)
+        page.evaluate("window.changeLogLevel([0])")
+        page.wait_for_timeout(1000)
         new_logs = logs[pre_change_log_count:]
-        assert any("log level changed to: debug" in log["text"].lower() for log in new_logs), "Failed to set log level to DEBUG"
+        assert any("log level changed to: debug" in log["text"].lower() for log in new_logs)
+        assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
+
+        # Go back to Options menu
+        page.wait_for_selector('#advanced-back-button', state='visible', timeout=2500)
+        # page.click("#advanced-back-button", force=True)
+        page.evaluate("window.advancedBackPressed([0])")
 
         # Navigate to audio sub-menu
         page.wait_for_selector('#audio-button', state='visible', timeout=2500)

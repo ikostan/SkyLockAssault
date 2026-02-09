@@ -78,10 +78,15 @@ def test_audio_flow(page: Page) -> None:
         # Open options
         page.wait_for_selector('#options-button', state='visible', timeout=2500)
         page.click("#options-button", force=True)
+
+        # Go to Advanced settings
+        page.wait_for_selector('#advanced-button', state='visible', timeout=2500)
+        # page.click("#advanced-button", force=True)
+        page.evaluate("window.advancedPressed([0])")
         page.wait_for_function('window.changeLogLevel !== undefined', timeout=2500)
-        options_display: str = page.evaluate(
+        advanced_display: str = page.evaluate(
             "window.getComputedStyle(document.getElementById('log-level-select')).display")
-        assert options_display == 'block', "Options menu not loaded (selected log level not displayed)"
+        assert advanced_display == 'block', "Advanced menu not loaded (selected log level not displayed)"
 
         # Set log level DEBUG
         pre_change_log_count = len(logs)
@@ -90,6 +95,11 @@ def test_audio_flow(page: Page) -> None:
         new_logs = logs[pre_change_log_count:]
         assert any("log level changed to: debug" in log["text"].lower() for log in new_logs)
         assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
+
+        # Go back to Options menu
+        page.wait_for_selector('#advanced-back-button', state='visible', timeout=2500)
+        # page.click("#advanced-back-button", force=True)
+        page.evaluate("window.advancedBackPressed([0])")
 
         # Open audio
         pre_change_log_count = len(logs)

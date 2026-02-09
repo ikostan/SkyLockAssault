@@ -95,24 +95,37 @@ def test_difficulty_flow(page: Page) -> None:
         # Wait main menu (function check for ID)
         page.wait_for_function("() => document.getElementById('options-button') !== null",
                                timeout=5000)  # Longer for stalls
-        # Open options menu
-        page.click("#options-button", force=True, timeout=2500)
-        page.wait_for_function('window.changeLogLevel !== undefined', timeout=2500)
-        display_style = page.evaluate("window.getComputedStyle(document.getElementById('log-level-select')).display")
-        assert display_style == 'block', "Options menu not loaded (display not set to block)"
 
-        # Set log level to DEBUG (index 0) - directly call the exposed callback
-        # (bypasses event for reliability in automation)
-        pre_change_log_count = len(logs)
+        # Open options
+        page.wait_for_selector('#options-button', state='visible', timeout=2500)
+        page.click("#options-button", force=True)
+
+        # Go to Advanced settings
+        page.wait_for_selector('#advanced-button', state='visible', timeout=2500)
+        # page.click("#advanced-button", force=True)
+        page.evaluate("window.advancedPressed([0])")
         page.wait_for_function('window.changeLogLevel !== undefined', timeout=2500)
+        advanced_display: str = page.evaluate(
+            "window.getComputedStyle(document.getElementById('log-level-select')).display")
+        assert advanced_display == 'block', "Advanced menu not loaded (selected log level not displayed)"
+
+        # Set log level DEBUG
+        pre_change_log_count = len(logs)
         page.evaluate("window.changeLogLevel([0])")
-        page.wait_for_timeout(2500)
+        page.wait_for_timeout(1000)
         new_logs = logs[pre_change_log_count:]
+        assert any("log level changed to: debug" in log["text"].lower() for log in new_logs)
+        assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
         assert any("Log level changed to: DEBUG" in log["text"] for log in new_logs), "Failed to set log level to DEBUG"
         assert any(
             "log level changed to: debug" in log["text"].lower() for log in new_logs), "Failed to set log level to DEBUG"
         assert any(
             "settings saved" in log["text"].lower() for log in new_logs), "Failed to save the settings"
+
+        # Go back to Options menu
+        page.wait_for_selector('#advanced-back-button', state='visible', timeout=2500)
+        # page.click("#advanced-back-button", force=True)
+        page.evaluate("window.advancedBackPressed([0])")
 
         # Set difficulty to 2.0 - directly call the exposed callback (bypasses event for reliability in automation)
         pre_change_log_count = len(logs)
