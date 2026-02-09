@@ -104,8 +104,8 @@ func _register_js_callback(callback_method: String, window_property: String) -> 
 func _on_tree_exited() -> void:
 	if _intentional_exit:
 		return
-	if os_wrapper.has_feature("web") and js_window:
-		_unset_advanced_window_callbacks()
+	
+	var hidden_menu_found: bool = false
 	if not Globals.hidden_menus.is_empty():
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
 		if is_instance_valid(prev_menu):
@@ -114,6 +114,29 @@ func _on_tree_exited() -> void:
 				"Advanced menu exited unexpectedly, restored previous menu.",
 				Globals.LogLevel.WARNING
 			)
+			hidden_menu_found = true
+	
+	if os_wrapper.has_feature("web") and js_window:
+		_unset_advanced_window_callbacks()
+		if hidden_menu_found and js_bridge_wrapper:
+			js_bridge_wrapper.eval(
+				"""
+				// Show Options menu overlays
+				document.getElementById('controls-button').style.display = 'block';
+				document.getElementById('audio-button').style.display = 'block';
+				document.getElementById('advanced-button').style.display = 'block';
+				document.getElementById('difficulty-slider').style.display = 'block';
+				document.getElementById('options-back-button').style.display = 'block';
+				// Hide Advanced Settings overlays
+				document.getElementById('log-level-select').style.display = 'none';
+				document.getElementById('advanced-back-button').style.display = 'none';
+				document.getElementById('advanced-reset-button').style.display = 'none';
+				""",
+				true
+			)
+	
+	if not hidden_menu_found:
+		Globals.log_message("No hidden menu to show on unexpected exit.", Globals.LogLevel.INFO)
 
 
 ## A cleanup function
