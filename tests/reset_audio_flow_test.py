@@ -230,6 +230,7 @@ def test_reset_flow(page: Page) -> None:
         page.wait_for_timeout(5000)
         page.wait_for_function("() => window.godotInitialized", timeout=5000)
         page.wait_for_selector('#options-button', state='visible', timeout=5000)
+        page.wait_for_function('window.optionsPressed !== undefined', timeout=5000)
         # page.click("#options-button", force=True)
         page.evaluate("window.optionsPressed([])")
         page.wait_for_selector('#audio-button', state='visible', timeout=5000)
