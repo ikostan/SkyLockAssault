@@ -236,7 +236,7 @@ def test_reset_flow(page: Page) -> None:
         page.wait_for_selector('#audio-button', state='visible', timeout=5000)
         # page.click("#audio-button", force=True)
         page.wait_for_function('window.audioPressed !== undefined', timeout=2500)
-        page.evaluate("window.audioPressed([0])")
+        page.evaluate("window.audioPressed([])")
         page.wait_for_timeout(5000)
 
         # Sliders should all be at default volume (mirroring RESET-01 expectations)
@@ -269,7 +269,7 @@ def test_reset_flow(page: Page) -> None:
         page.wait_for_selector('#audio-button', state='visible', timeout=2500)
         # page.click("#audio-button", force=True)
         page.wait_for_function('window.audioPressed !== undefined', timeout=2500)
-        page.evaluate("window.audioPressed([0])")
+        page.evaluate("window.audioPressed([])")
         page.wait_for_timeout(5000)
         page.wait_for_function('window.audioResetPressed !== undefined', timeout=2500)
         page.evaluate("window.audioResetPressed([])")

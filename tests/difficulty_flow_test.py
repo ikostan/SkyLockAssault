@@ -149,8 +149,8 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Reset gameplay settings back to defaults via the gameplay reset action
         pre_reset_log_count = len(logs)
-        page.wait_for_function('window.resetGameplaySettings !== undefined', timeout=2500)
-        page.evaluate("window.resetGameplaySettings([])")
+        page.wait_for_function('window.gameplayResetPressed !== undefined', timeout=2500)
+        page.evaluate("window.gameplayResetPressed([])")
         page.wait_for_timeout(2500)
         reset_logs = logs[pre_reset_log_count:]
         # Verify that difficulty was reset to the expected default
