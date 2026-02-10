@@ -127,6 +127,11 @@ def test_difficulty_flow(page: Page) -> None:
         # page.click("#advanced-back-button", force=True)
         page.evaluate("window.advancedBackPressed([0])")
 
+        # Go to Gameplay Settings
+        page.wait_for_selector('#gameplay-button', state='visible', timeout=2500)
+        # page.click("#advanced-back-button", force=True)
+        page.evaluate("window.gameplayPressed([0])")
+
         # Set difficulty to 2.0 - directly call the exposed callback (bypasses event for reliability in automation)
         pre_change_log_count = len(logs)
         page.wait_for_function('window.changeDifficulty !== undefined', timeout=2500)
@@ -140,11 +145,17 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Back to main menu
         pre_change_log_count = len(logs)
-        page.wait_for_function('window.optionsBackPressed !== undefined', timeout=2500)
-        page.evaluate("window.optionsBackPressed([])")
+        page.wait_for_function('window.gameplayBackPressed !== undefined', timeout=2500)
+        page.evaluate("window.gameplayBackPressed([])")
         page.wait_for_timeout(2500)
         new_logs = logs[pre_change_log_count:]
         assert any("back button pressed." in log["text"].lower() for log in new_logs), "Back button not found"
+
+        # Back to Main menu
+        # Check element present
+        page.wait_for_selector('#options-back-button', state='visible', timeout=2500)
+        assert page.evaluate("document.getElementById('options-back-button') !== null")
+        page.evaluate("window.optionsBackPressed([0])")
 
         # Start game
         page.wait_for_selector('#start-button', state='visible', timeout=2500)

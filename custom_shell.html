@@ -147,6 +147,7 @@
     <button id="controls-button" style="top: 21%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 50px; display: none;">CONTROLS</button>
     <button id="audio-button" style="top: 31%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 50px; display: none;">AUDIO</button>
     <button id="advanced-button" style="top: 41%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 50px; display: none;">ADVANCED</button>
+    <button id="gameplay-button" style="top: 51%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 50px; display: none;">ADVANCED</button>
     <select id="log-level-select" style="top: 55%;">
         <option>DEBUG</option>
         <option>INFO</option>
@@ -203,6 +204,7 @@
         document.getElementById('audio-button').onclick = () => window.audioPressed([]);
         document.getElementById('start-button').onclick = () => window.startPressed([]);
         document.getElementById('options-button').onclick = () => window.optionsPressed([]);
+        document.getElementById('gameplay-button').onclick = () => window.gameplayPressed([]);
         document.getElementById('advanced-button').onclick = () => window.advancedPressed([]);
         document.getElementById('quit-button').onclick = () => window.quitPressed([]);
         document.getElementById('difficulty-slider').onchange = (e) => window.changeDifficulty([parseFloat(e.target.value)]);

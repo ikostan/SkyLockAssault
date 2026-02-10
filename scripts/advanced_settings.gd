@@ -127,7 +127,7 @@ func _on_tree_exited() -> void:
 				document.getElementById('controls-button').style.display = 'block';
 				document.getElementById('audio-button').style.display = 'block';
 				document.getElementById('advanced-button').style.display = 'block';
-				document.getElementById('difficulty-slider').style.display = 'block';
+				document.getElementById('gameplay-button').style.display = 'block';
 				document.getElementById('options-back-button').style.display = 'block';
 				// Hide Advanced Settings overlays
 				document.getElementById('log-level-select').style.display = 'none';
@@ -194,7 +194,7 @@ func _on_advanced_back_button_pressed() -> void:
 					document.getElementById('controls-button').style.display = 'block';
 					document.getElementById('audio-button').style.display = 'block';
 					document.getElementById('advanced-button').style.display = 'block';
-					document.getElementById('difficulty-slider').style.display = 'block';
+					document.getElementById('gameplay-button').style.display = 'block';
 					document.getElementById('options-back-button').style.display = 'block';
 					// Hide Advanced Settings overlays
 					document.getElementById('log-level-select').style.display = 'none';

@@ -707,7 +707,7 @@ func _on_audio_back_button_pressed() -> void:
 					document.getElementById('controls-button').style.display = 'block';
 					document.getElementById('audio-button').style.display = 'block';
 					document.getElementById('advanced-button').style.display = 'block';
-					document.getElementById('difficulty-slider').style.display = 'block';
+					document.getElementById('gameplay-button').style.display = 'block';
 					document.getElementById('options-back-button').style.display = 'block';
 					""",
 					true
