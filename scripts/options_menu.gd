@@ -24,21 +24,17 @@ var os_wrapper: OSWrapper = OSWrapper.new()  # Assuming OSWrapper is defined sim
 var audio_scene: PackedScene = preload("res://scenes/audio_settings.tscn")
 var controls_scene: PackedScene = preload("res://scenes/key_mapping_menu.tscn")
 var advanced_scene: PackedScene = preload("res://scenes/advanced_settings.tscn")
-var _change_difficulty_cb: JavaScriptObject
+var gameplay_settings_scene: PackedScene = preload("res://scenes/gameplay_settings.tscn")
 var _options_back_button_pressed_cb: JavaScriptObject
 var _controls_pressed_cb: JavaScriptObject
 var _audio_pressed_cb: JavaScriptObject
 var _advanced_pressed_cb: JavaScriptObject
+var _gameplay_settings_pressed_cb: JavaScriptObject
 
 @onready var options_back_button: Button = $Panel/OptionsVBoxContainer/OptionsBackButton
-@onready var difficulty_slider: HSlider = get_node(
-	"Panel/OptionsVBoxContainer/DifficultyLevelContainer/DifficultyHSlider"
-)
-@onready var difficulty_label: Label = get_node(
-	"Panel/OptionsVBoxContainer/DifficultyLevelContainer/DifficultyValueLabel"
-)
 @onready var audio_settings_button: Button = $Panel/OptionsVBoxContainer/AudioSettingsButton
 @onready var key_mapping_button: Button = $Panel/OptionsVBoxContainer/KeyMappingButton
+@onready var gameplay_settings_button: Button = $Panel/OptionsVBoxContainer/GameplaySettingsButton
 @onready var version_label: Label = $Panel/OptionsVBoxContainer/VersionLabel
 
 
@@ -57,8 +53,6 @@ func _ready() -> void:
 	version_label.text = "Version: " + Globals.get_game_version()
 	Globals.log_message("Updated label to: " + version_label.text, Globals.LogLevel.DEBUG)
 
-	difficulty_slider.value_changed.connect(_on_difficulty_value_changed)
-
 	if not options_back_button.pressed.is_connected(_on_options_back_button_pressed):
 		options_back_button.pressed.connect(_on_options_back_button_pressed)
 
@@ -68,9 +62,8 @@ func _ready() -> void:
 	if not audio_settings_button.pressed.is_connected(_on_audio_settings_button_pressed):
 		audio_settings_button.pressed.connect(_on_audio_settings_button_pressed)
 
-	# Set initial difficulty label (sync with global)
-	difficulty_slider.value = Globals.difficulty
-	difficulty_label.text = "{" + str(Globals.difficulty) + "}"
+	if not gameplay_settings_button.pressed.is_connected(_on_gameplay_settings_button_pressed):
+		gameplay_settings_button.pressed.connect(_on_gameplay_settings_button_pressed)
 
 	# Configure for web overlays (invisible but positioned)
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignore pause
@@ -85,7 +78,7 @@ func _ready() -> void:
 				document.getElementById('controls-button').style.display = 'block';
 				document.getElementById('audio-button').style.display = 'block';
 				document.getElementById('advanced-button').style.display = 'block';
-				document.getElementById('difficulty-slider').style.display = 'block';
+				document.getElementById('gameplay-button').style.display = 'block';
 				document.getElementById('options-back-button').style.display = 'block';
 				""",
 				true
@@ -95,11 +88,6 @@ func _ready() -> void:
 		# Expose callbacks to JS (store refs to prevent GC)
 		var js_window: JavaScriptObject = js_bridge_wrapper.get_interface("window")
 		if js_window:
-			_change_difficulty_cb = js_bridge_wrapper.create_callback(
-				Callable(self, "_on_change_difficulty_js")
-			)
-			js_window.changeDifficulty = _change_difficulty_cb
-
 			_options_back_button_pressed_cb = js_bridge_wrapper.create_callback(
 				Callable(self, "_on_options_back_button_pressed_js")
 			)
@@ -119,6 +107,11 @@ func _ready() -> void:
 				Callable(self, "_on_advanced_pressed_js")
 			)
 			js_window.advancedPressed = _advanced_pressed_cb
+			
+			_gameplay_settings_pressed_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_gameplay_settings_pressed_js")
+			)
+			js_window.gameplayPressed = _gameplay_settings_pressed_cb
 
 			Globals.log_message(
 				"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
@@ -190,6 +183,19 @@ func _on_advanced_pressed_js(_args: Array) -> void:
 	_on_advanced_settings_button_pressed()
 
 
+# New: JS callback for gameplay settings button
+# warning-ignore:unused_argument
+func _on_gameplay_settings_pressed_js(_args: Array) -> void:
+	## JS callback for gameplay settings button press.
+	##
+	## Routes to signal handler.
+	##
+	## :param _args: Unused array from JS.
+	## :type _args: Array
+	## :rtype: void
+	_on_gameplay_settings_button_pressed()
+
+
 # New: JS callback for controls button
 # warning-ignore:unused_argument
 func _on_controls_pressed_js(_args: Array) -> void:
@@ -201,39 +207,6 @@ func _on_controls_pressed_js(_args: Array) -> void:
 	## :type _args: Array
 	## :rtype: void
 	_on_key_mapping_button_pressed()
-
-
-# Change: Separate handler for signal (float value)
-func _on_difficulty_value_changed(value: float) -> void:
-	## Handles changes to the difficulty slider from the signal.
-	##
-	## Updates global difficulty, label text, logs the change, and saves settings.
-	##
-	## :param value: The new slider value.
-	## :type value: float
-	## :rtype: void
-	Globals.difficulty = value
-	difficulty_slider.value = Globals.difficulty
-	difficulty_label.text = "{" + str(value) + "}"
-	Globals.log_message("Difficulty changed to: " + str(value), Globals.LogLevel.DEBUG)
-	Globals._save_settings()
-
-
-# New: JS-specific callback (exactly one Array arg, no default)
-func _on_change_difficulty_js(args: Array) -> void:
-	## JS callback for changing difficulty.
-	##
-	## Routes to the signal handler.
-	##
-	## :param args: Array containing the value (from JS).
-	## :type args: Array
-	## :rtype: void
-	if args.size() > 0:
-		Globals.log_message(
-			"JS difficulty callback called with args: " + str(args[0][0]), Globals.LogLevel.DEBUG
-		)
-		var value: float = float(args[0][0])
-		_on_difficulty_value_changed(value)
 
 
 # Change: Signal handler (no arg)
@@ -256,7 +229,7 @@ func _on_options_back_button_pressed() -> void:
 				document.getElementById('audio-button').style.display = 'none';
 				document.getElementById('controls-button').style.display = 'none';
 				document.getElementById('advanced-button').style.display = 'none';
-				document.getElementById('difficulty-slider').style.display = 'none';
+				document.getElementById('gameplay-button').style.display = 'none';
 				document.getElementById('options-back-button').style.display = 'none';
 				"""
 			)
@@ -299,7 +272,7 @@ func _on_audio_settings_button_pressed() -> void:
 			document.getElementById('audio-button').style.display = 'none';
 			document.getElementById('advanced-button').style.display = 'none';
 			document.getElementById('controls-button').style.display = 'none';
-			document.getElementById('difficulty-slider').style.display = 'none';
+			document.getElementById('gameplay-button').style.display = 'none';
 			document.getElementById('options-back-button').style.display = 'none';
 			""",
 				true
@@ -324,7 +297,7 @@ func _on_key_mapping_button_pressed() -> void:
 			document.getElementById('audio-button').style.display = 'none';
 			document.getElementById('advanced-button').style.display = 'none';
 			document.getElementById('controls-button').style.display = 'none';
-			document.getElementById('difficulty-slider').style.display = 'none';
+			document.getElementById('gameplay-button').style.display = 'none';
 			document.getElementById('options-back-button').style.display = 'none';
 			""",
 				true
@@ -346,7 +319,29 @@ func _on_advanced_settings_button_pressed() -> void:
 				document.getElementById('audio-button').style.display = 'none';
 				document.getElementById('advanced-button').style.display = 'none';
 				document.getElementById('controls-button').style.display = 'none';
-				document.getElementById('difficulty-slider').style.display = 'none';
+				document.getElementById('gameplay-button').style.display = 'none';
+				document.getElementById('options-back-button').style.display = 'none';
+				""",
+				true
+			)
+		)
+
+
+func _on_gameplay_settings_button_pressed() -> void:
+	Globals.log_message("Gameplay Settings button pressed.", Globals.LogLevel.DEBUG)
+	var gameplay_instance: Control = gameplay_settings_scene.instantiate()  # Use the preloaded var
+	get_tree().root.add_child(gameplay_instance)
+	Globals.hidden_menus.push_back(self)
+	self.visible = false
+	if os_wrapper.has_feature("web") and js_bridge_wrapper:
+		(
+			js_bridge_wrapper
+			. eval(
+				"""
+				document.getElementById('audio-button').style.display = 'none';
+				document.getElementById('advanced-button').style.display = 'none';
+				document.getElementById('controls-button').style.display = 'none';
+				document.getElementById('gameplay-button').style.display = 'none';
 				document.getElementById('options-back-button').style.display = 'none';
 				""",
 				true
