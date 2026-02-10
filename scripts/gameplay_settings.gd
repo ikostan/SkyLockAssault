@@ -9,6 +9,7 @@ var os_wrapper: OSWrapper = OSWrapper.new()
 var js_window: JavaScriptObject
 var _change_difficulty_cb: JavaScriptObject
 var _gameplay_back_button_pressed_cb: JavaScriptObject
+var _gameplay_reset_cb: JavaScriptObject
 var _intentional_exit: bool = false
 var _default_difficulty: float = 1.0
 
@@ -62,6 +63,11 @@ func _ready() -> void:
 				Callable(self, "_on_gameplay_back_button_pressed_js")
 			)
 			js_window.gameplayBackPressed = _gameplay_back_button_pressed_cb
+
+			_gameplay_reset_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_gameplay_reset_js")
+			)
+			js_window.gameplayResetPressed = _gameplay_reset_cb
 
 			Globals.log_message(
 				"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
