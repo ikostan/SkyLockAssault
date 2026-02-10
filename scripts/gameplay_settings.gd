@@ -37,6 +37,8 @@ func _ready() -> void:
 	# Reset button listener
 	if not gameplay_reset_button.pressed.is_connected(_on_gameplay_reset_button_pressed):
 		gameplay_reset_button.pressed.connect(_on_gameplay_reset_button_pressed)
+	# NEW: Attach tree_exited for unexpected removal cleanup (like other settings scripts)
+	tree_exited.connect(_on_tree_exited)
 
 	if os_wrapper.has_feature("web"):
 		# Toggle overlays...
@@ -75,6 +77,68 @@ func _ready() -> void:
 			)
 	# Menu is loaded
 	Globals.log_message("Gameplay Settings menu loaded.", Globals.LogLevel.DEBUG)
+
+
+func _on_tree_exited() -> void:
+	## Cleanup on unexpected tree exit (e.g. parent removed without calling back button).
+	## Disconnects signals, restores previous menu if not intentional, clears JS/DOM state.
+	## :rtype: void
+	Globals.log_message("Gameplay Settings _on_tree_exited called.", Globals.LogLevel.DEBUG)
+
+	# Disconnect Godot signals if still connected
+	if difficulty_slider.value_changed.is_connected(_on_difficulty_value_changed):
+		difficulty_slider.value_changed.disconnect(_on_difficulty_value_changed)
+	if gameplay_back_button.pressed.is_connected(_on_gameplay_back_button_pressed):
+		gameplay_back_button.pressed.disconnect(_on_gameplay_back_button_pressed)
+	if gameplay_reset_button.pressed.is_connected(_on_gameplay_reset_button_pressed):
+		gameplay_reset_button.pressed.disconnect(_on_gameplay_reset_button_pressed)
+
+	# Clean up JS callbacks on window object
+	_unset_gameplay_settings_window_callbacks()
+
+	# Null out stored callback references
+	_change_difficulty_cb = null
+	_gameplay_back_button_pressed_cb = null
+	_gameplay_reset_cb = null
+
+	# Web overlay cleanup + optional menu restore
+	if os_wrapper.has_feature("web") and js_window and js_bridge_wrapper:
+		# Hide gameplay overlays (same DOM elements shown in _ready)
+		var hide_gameplay: String = """
+			document.getElementById('difficulty-slider').style.display = 'none';
+			document.getElementById('gameplay-back-button').style.display = 'none';
+			document.getElementById('gameplay-reset-button').style.display = 'none';
+			"""
+
+		if not _intentional_exit and not Globals.hidden_menus.is_empty():
+			# Unexpected exit → restore previous menu and options overlays
+			var prev_menu: Node = Globals.hidden_menus.pop_back()
+			if is_instance_valid(prev_menu):
+				prev_menu.visible = true
+				Globals.log_message(
+					"tree_exited: Restored menu: " + prev_menu.name, Globals.LogLevel.DEBUG
+				)
+
+			(
+				js_bridge_wrapper
+				. eval(
+					(
+						"""
+						// Show Options menu overlays
+						document.getElementById('controls-button').style.display = 'block';
+						document.getElementById('audio-button').style.display = 'block';
+						document.getElementById('advanced-button').style.display = 'block';
+						document.getElementById('gameplay-button').style.display = 'block';
+						document.getElementById('options-back-button').style.display = 'block';
+						"""
+						+ hide_gameplay
+					),
+					true
+				)
+			)
+		else:
+			# Intentional exit or no previous menu → just hide gameplay overlays
+			js_bridge_wrapper.eval(hide_gameplay, true)
 
 
 ## A cleanup function
