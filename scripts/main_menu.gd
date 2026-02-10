@@ -29,6 +29,9 @@ const QUIT_DIALOG_DEFAULT_PATH: String = "VideoStreamPlayer/Panel/VBoxContainer/
 # Reference to the quit dialog node, assigned in setup_quit_dialog or _ready()
 var quit_dialog: ConfirmationDialog
 var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
+var _start_pressed_cb: JavaScriptObject
+var _options_pressed_cb: JavaScriptObject
+var _quit_pressed_cb: JavaScriptObject
 
 @onready var ui_panel: Panel = $VideoStreamPlayer/Panel
 @onready var ui_container: VBoxContainer = $VideoStreamPlayer/Panel/VBoxContainer
@@ -59,7 +62,6 @@ func _ready() -> void:
 	panel_tween.tween_property(menu, "modulate:a", 1.0, 1.0).set_ease(Tween.EASE_OUT).set_trans(
 		Tween.TRANS_QUAD
 	)  # Smooth curve (eases out, quadratic)
-
 	# Connect START button signal
 	@warning_ignore("return_value_discarded")
 	start_button.pressed.connect(_on_start_pressed)
@@ -69,23 +71,26 @@ func _ready() -> void:
 	# Connect QUIT button signal
 	@warning_ignore("return_value_discarded")
 	quit_button.pressed.connect(_on_quit_pressed)
-
 	# Setup quit dialog
 	setup_quit_dialog()
-
+	# To prevent garbage collection of JavaScriptObject callbacks in Godot's JS bindings,
+	# which can break the references and cause calls like window.optionsPressed([]) to fail
+	# silently, leading to issues like the test timeout on waiting for visible elements
+	# (e.g., #audio-button remains hidden because options menu _ready() doesn't run).
+	# Storing them as member variables ensures they persist.
 	if OS.get_name() == "Web":
 		var js_window := JavaScriptBridge.get_interface("window")
 		if js_window:
-			js_window.startPressed = JavaScriptBridge.create_callback(
+			_start_pressed_cb = JavaScriptBridge.create_callback(
 				Callable(self, "_on_start_pressed")
 			)
-			js_window.optionsPressed = JavaScriptBridge.create_callback(
+			js_window.startPressed = _start_pressed_cb
+			_options_pressed_cb = JavaScriptBridge.create_callback(
 				Callable(self, "_on_options_button_pressed")
 			)
-			js_window.quitPressed = JavaScriptBridge.create_callback(
-				Callable(self, "_on_quit_pressed")
-			)
-
+			js_window.optionsPressed = _options_pressed_cb
+			_quit_pressed_cb = JavaScriptBridge.create_callback(Callable(self, "_on_quit_pressed"))
+			js_window.quitPressed = _quit_pressed_cb
 			Globals.log_message(
 				"Exposed main menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
 			)
