@@ -154,10 +154,7 @@ func _unset_gameplay_settings_window_callbacks() -> void:
 ## Handles Gameplay Settings reset button press.
 func _on_gameplay_reset_button_pressed() -> void:
 	Globals.log_message("Gameplay Settings reset pressed.", Globals.LogLevel.DEBUG)
-	# Set initial default label
-	difficulty_slider.value = _default_difficulty
-	difficulty_label.text = "{" + str(_default_difficulty) + "}"
-	Globals._save_settings()
+	_on_difficulty_value_changed(_default_difficulty)
 
 
 func _on_gameplay_reset_js(_args: Array) -> void:
