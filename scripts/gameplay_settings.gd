@@ -73,8 +73,8 @@ func _ready() -> void:
 				"Exposed gameplay settings callbacks to JS for web overlays.",
 				Globals.LogLevel.DEBUG
 			)
-		# Menu is loaded
-		Globals.log_message("Gameplay Settings menu loaded.", Globals.LogLevel.DEBUG)
+	# Menu is loaded
+	Globals.log_message("Gameplay Settings menu loaded.", Globals.LogLevel.DEBUG)
 
 
 ## A cleanup function
