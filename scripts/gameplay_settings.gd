@@ -227,20 +227,6 @@ func _on_gameplay_back_button_pressed_js(args: Array) -> void:
 	_on_gameplay_back_button_pressed()
 
 
-func _teardown() -> void:
-	## Cleans up on options close.
-	##
-	## Shows previous menu from stack, resets globals.
-	##
-	## :rtype: void
-	if not Globals.hidden_menus.is_empty():
-		var prev_menu: Node = Globals.hidden_menus.pop_back()
-		if is_instance_valid(prev_menu):
-			prev_menu.visible = true
-			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
-	Globals.log_message("Gameplay Settings menu exited.", Globals.LogLevel.DEBUG)
-
-
 # Change: Separate handler for signal (float value)
 func _on_difficulty_value_changed(value: float) -> void:
 	## Handles changes to the difficulty slider from the signal.
