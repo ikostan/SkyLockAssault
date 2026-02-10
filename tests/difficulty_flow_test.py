@@ -135,7 +135,7 @@ def test_difficulty_flow(page: Page) -> None:
         # Assert gameplay settings overlay is shown and options overlay is hidden
         page.wait_for_selector('#difficulty-slider', state='visible', timeout=2500)
         page.wait_for_selector('#options-overlay', state='hidden', timeout=2500)
-        
+
         # Set difficulty to 2.0 - directly call the exposed callback (bypasses event for reliability in automation)
         pre_change_log_count = len(logs)
         page.wait_for_function('window.changeDifficulty !== undefined', timeout=2500)
@@ -148,7 +148,7 @@ def test_difficulty_flow(page: Page) -> None:
         assert any(
             "settings saved" in log["text"].lower() for log in new_logs), "Failed to save the settings"
 
-        # Back to main menu
+        # Back to Main menu
         pre_change_log_count = len(logs)
         page.wait_for_function('window.gameplayBackPressed !== undefined', timeout=2500)
         page.evaluate("window.gameplayBackPressed([])")
@@ -156,11 +156,26 @@ def test_difficulty_flow(page: Page) -> None:
         new_logs = logs[pre_change_log_count:]
         assert any("back button pressed." in log["text"].lower() for log in new_logs), "Back button not found"
 
-        # Back to Main menu
+        # After gameplayBackPressed([]), the options overlay should be visible again
+        # and gameplay-specific elements should be hidden.
+        # Options overlay visible
+        page.wait_for_selector('#options-overlay', state='visible', timeout=2500)
+        assert page.evaluate("document.getElementById('options-overlay') !== null")
+        # Gameplay UI hidden
+        page.wait_for_selector('#gameplay-container', state='hidden', timeout=2500)
+        assert page.evaluate("document.getElementById('gameplay-container') === null || document.getElementById('gameplay-container').offsetParent === null")
+
         # Check element present
         page.wait_for_selector('#options-back-button', state='visible', timeout=2500)
         assert page.evaluate("document.getElementById('options-back-button') !== null")
-        page.evaluate("window.optionsBackPressed([0])")
+        page.evaluate("window.optionsBackPressed([])")
+
+        # After optionsBackPressed([]), we should be back on the main menu:
+        # main-menu elements visible and options elements hidden.
+        page.wait_for_selector('#start-button', state='visible', timeout=2500)
+        assert page.evaluate("document.getElementById('start-button') !== null")
+        page.wait_for_selector('#options-overlay', state='hidden', timeout=2500)
+        assert page.evaluate("document.getElementById('options-overlay') === null || document.getElementById('options-overlay').offsetParent === null")
 
         # Start game
         page.wait_for_selector('#start-button', state='visible', timeout=2500)
