@@ -175,8 +175,10 @@ def test_difficulty_flow(page: Page) -> None:
         # After gameplayBackPressed([]), the options overlay should be visible again
         # and gameplay-specific elements should be hidden.
         # Options overlay visible
-        page.wait_for_selector('#options-overlay', state='visible', timeout=2500)
-        assert page.evaluate("document.getElementById('options-overlay') !== null")
+        page.wait_for_selector('#options-back-button', state='visible', timeout=2500)
+        assert page.evaluate("document.getElementById('options-back-button') !== null")
+        # page.wait_for_selector('#options-overlay', state='visible', timeout=2500)
+        # assert page.evaluate("document.getElementById('options-overlay') !== null")
         # Gameplay UI hidden
         page.wait_for_selector('#gameplay-container', state='hidden', timeout=2500)
         assert page.evaluate("document.getElementById('gameplay-container') === null || document.getElementById('gameplay-container').offsetParent === null")
