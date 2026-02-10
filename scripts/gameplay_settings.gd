@@ -80,7 +80,7 @@ func _unset_gameplay_settings_window_callbacks() -> void:
 
 
 ## RESET BUTTON
-## Handles Advanced Settings reset button press.
+## Handles Gameplay Settings reset button press.
 func _on_gameplay_reset_button_pressed() -> void:
 	Globals.log_message("Gameplay Settings reset pressed.", Globals.LogLevel.DEBUG)
 	# Set initial default label
