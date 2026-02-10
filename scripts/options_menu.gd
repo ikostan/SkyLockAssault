@@ -107,7 +107,7 @@ func _ready() -> void:
 				Callable(self, "_on_advanced_pressed_js")
 			)
 			js_window.advancedPressed = _advanced_pressed_cb
-			
+
 			_gameplay_settings_pressed_cb = js_bridge_wrapper.create_callback(
 				Callable(self, "_on_gameplay_settings_pressed_js")
 			)
