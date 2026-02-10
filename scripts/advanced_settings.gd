@@ -269,7 +269,12 @@ func _on_change_log_level_js(args: Array) -> void:
 		return
 
 	var first_arg: Variant = args[0]
-	if typeof(first_arg) != TYPE_ARRAY or first_arg.is_empty():
+	if (
+		first_arg is not JavaScriptObject
+		and typeof(first_arg) != TYPE_ARRAY
+		and first_arg.size() == 0
+		and first_arg.is_empty()
+	):
 		Globals.log_message(
 			(
 				"JS change_log_level callback received invalid first arg (not a non-empty array): "
