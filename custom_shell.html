@@ -147,6 +147,7 @@
     <button id="controls-button" style="top: 21%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 50px; display: none;">CONTROLS</button>
     <button id="audio-button" style="top: 31%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 50px; display: none;">AUDIO</button>
     <button id="advanced-button" style="top: 41%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 50px; display: none;">ADVANCED</button>
+    <button id="gameplay-button" style="top: 51%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 50px; display: none;">GAMEPLAY SETTINGS</button>
     <select id="log-level-select" style="top: 55%;">
         <option>DEBUG</option>
         <option>INFO</option>
@@ -159,6 +160,8 @@
     <button id="controls-back-button">Back</button>
     <button id="advanced-back-button" style="display: none; top: 80%; left: 25%; width: 200px; height: 50px; transform: translate(-50%, -50%);">Back</button>
     <button id="advanced-reset-button" style="display: none; top: 80%; left: 75%; width: 200px; height: 50px; transform: translate(-50%, -50%);">Reset</button>
+    <button id="gameplay-back-button" style="display: none; top: 80%; left: 25%; width: 200px; height: 50px; transform: translate(-50%, -50%);">Back</button>
+    <button id="gameplay-reset-button" style="display: none; top: 80%; left: 75%; width: 200px; height: 50px; transform: translate(-50%, -50%);">Reset</button>
 
     <script src="$GODOT_URL"></script> <!-- Godot replaces with actual JS file, e.g., tmp_js_export.js -->
     <script>
@@ -201,6 +204,7 @@
         document.getElementById('audio-button').onclick = () => window.audioPressed([]);
         document.getElementById('start-button').onclick = () => window.startPressed([]);
         document.getElementById('options-button').onclick = () => window.optionsPressed([]);
+        document.getElementById('gameplay-button').onclick = () => window.gameplayPressed([]);
         document.getElementById('advanced-button').onclick = () => window.advancedPressed([]);
         document.getElementById('quit-button').onclick = () => window.quitPressed([]);
         document.getElementById('difficulty-slider').onchange = (e) => window.changeDifficulty([parseFloat(e.target.value)]);
@@ -221,6 +225,8 @@
         document.getElementById('audio-reset-button').onclick = () => window.audioResetPressed([]);  // Add for reset
         document.getElementById('advanced-back-button').onclick = () => window.advancedBackPressed([]);  // Add this for advanced back
         document.getElementById('advanced-reset-button').onclick = () => window.advancedResetPressed([]);  // Add for reset
+        document.getElementById('gameplay-back-button').onclick = () => window.gameplayBackPressed([]);  // Add this for advanced back
+        document.getElementById('gameplay-reset-button').onclick = () => window.gameplayResetPressed([]);  // Add for reset
     </script>
 <div class="ime" contenteditable="true" style="background: none; opacity: 0; position: fixed; text-align: left; font-size: 1px; left: 0px; top: 0px; width: 100%; height: 40px; pointer-events: none; display: none;"></div>
 </body>

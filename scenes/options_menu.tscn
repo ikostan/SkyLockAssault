@@ -1,8 +1,7 @@
-[gd_scene load_steps=11 format=3 uid="uid://cl4m4q2eurcn0"]
+[gd_scene load_steps=8 format=3 uid="uid://cl4m4q2eurcn0"]
 
 [ext_resource type="Script" uid="uid://cajq8hf84eplh" path="res://scripts/options_menu.gd" id="1_ijpji"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_liyum"]
-[ext_resource type="Theme" uid="uid://caiajgnblwnqt" path="res://files/themes/difficulty_slider.tres" id="3_hm4m4"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lfjc7"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
@@ -34,22 +33,6 @@ shadow_size = 5
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_lfjc7"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3xsyx"]
-bg_color = Color(0.89411765, 0.13725491, 0.14117648, 1)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-shadow_size = 3
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_k61yy"]
-bg_color = Color(0.8928188, 0.13756049, 0.13942105, 1)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-shadow_size = 3
-
 [node name="OptionsMenu" type="CanvasLayer"]
 script = ExtResource("1_ijpji")
 
@@ -59,10 +42,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -190.0
-offset_top = -300.0
-offset_right = 190.0
-offset_bottom = 300.0
+offset_left = -175.0
+offset_top = -240.0
+offset_right = 175.0
+offset_bottom = 240.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 4
@@ -75,10 +58,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -170.0
-offset_top = -285.0
-offset_right = 170.0
-offset_bottom = 285.0
+offset_left = -140.0
+offset_top = -215.0
+offset_right = 140.0
+offset_bottom = 215.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 10
@@ -134,41 +117,19 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_hm4m4")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_lfjc7")
 text = "{CONTROLS}"
 
-[node name="DifficultyLevelContainer" type="HBoxContainer" parent="Panel/OptionsVBoxContainer"]
+[node name="GameplaySettingsButton" type="Button" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/separation = 10
-
-[node name="Label" type="Label" parent="Panel/OptionsVBoxContainer/DifficultyLevelContainer"]
-layout_mode = 2
-size_flags_horizontal = 0
-theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("1_liyum")
-theme_override_font_sizes/font_size = 20
-text = "{DIFFICULTY}"
-
-[node name="DifficultyHSlider" type="HSlider" parent="Panel/OptionsVBoxContainer/DifficultyLevelContainer"]
-custom_minimum_size = Vector2(120, 51)
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 1
-theme = ExtResource("3_hm4m4")
-theme_override_styles/grabber_area = SubResource("StyleBoxFlat_3xsyx")
-theme_override_styles/grabber_area_highlight = SubResource("StyleBoxFlat_k61yy")
-min_value = 0.5
-max_value = 2.0
-step = 0.1
-value = 0.5
-tick_count = 16
-ticks_on_borders = true
-
-[node name="DifficultyValueLabel" type="Label" parent="Panel/OptionsVBoxContainer/DifficultyLevelContainer"]
-layout_mode = 2
-size_flags_horizontal = 10
-theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
-theme_override_fonts/font = ExtResource("1_liyum")
-theme_override_font_sizes/font_size = 20
-text = "{0.0}"
+theme_override_font_sizes/font_size = 35
+theme_override_styles/normal = SubResource("StyleBoxFlat_liyum")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_ijpji")
+theme_override_styles/hover = SubResource("StyleBoxFlat_hm4m4")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_lfjc7")
+text = "{GAMEPLAY}"
 
 [node name="OptionsBackButton" type="Button" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2

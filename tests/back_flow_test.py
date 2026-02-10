@@ -118,7 +118,7 @@ def test_back_flow(page: Page) -> None:
         page.wait_for_function('window.audioBackPressed !== undefined', timeout=2500)
         page.evaluate("window.audioBackPressed([])")
         page.wait_for_timeout(2500)
-        options_display: str = page.evaluate("window.getComputedStyle(document.getElementById('difficulty-slider')).display")
+        options_display: str = page.evaluate("window.getComputedStyle(document.getElementById('gameplay-button')).display")
         assert options_display == 'block', "Did not return to options menu"
         audio_display_after: str = page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display")
         assert audio_display_after == 'none', "Audio menu still visible after back"

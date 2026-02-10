@@ -1,3 +1,4 @@
+
 # Copyright (C) 2025 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 # tests/difficulty_flow_test.py
@@ -34,6 +35,7 @@ v8_coverage_difficulty_flow_test.json, artifacts/test_difficulty_failure_*.png/t
 import os
 import time
 import json
+from typing import Any, Dict, List, Optional
 from playwright.sync_api import Page
 
 
@@ -48,10 +50,10 @@ def test_difficulty_flow(page: Page) -> None:
     :type page: Page
     :rtype: None
     """
-    logs: list[dict[str, str]] = []
-    cdp_session = None
+    logs: List[Dict[str, str]] = []
+    cdp_session: Optional[Any] = None
 
-    def on_console(msg) -> None:
+    def on_console(msg: Any) -> None:
         """
         Console message handler.
         :param msg: The console message.
@@ -75,7 +77,7 @@ def test_difficulty_flow(page: Page) -> None:
         # Verify canvas and title to ensure game is initialized
         canvas = page.locator("canvas")
         page.wait_for_selector("canvas", state="visible", timeout=5000)
-        box: dict[str, float] | None = canvas.bounding_box()
+        box: Optional[Dict[str, float]] = canvas.bounding_box()
         assert box is not None, "Canvas not found on page"
         assert "SkyLockAssault" in page.title(), "Title not found"
 
@@ -103,17 +105,17 @@ def test_difficulty_flow(page: Page) -> None:
         # Go to Advanced settings
         page.wait_for_selector('#advanced-button', state='visible', timeout=2500)
         # page.click("#advanced-button", force=True)
-        page.evaluate("window.advancedPressed([0])")
+        page.evaluate("window.advancedPressed([])")
         page.wait_for_function('window.changeLogLevel !== undefined', timeout=2500)
         advanced_display: str = page.evaluate(
             "window.getComputedStyle(document.getElementById('log-level-select')).display")
         assert advanced_display == 'block', "Advanced menu not loaded (selected log level not displayed)"
 
         # Set log level DEBUG
-        pre_change_log_count = len(logs)
+        pre_change_log_count: int = len(logs)
         page.evaluate("window.changeLogLevel([0])")
         page.wait_for_timeout(1000)
-        new_logs = logs[pre_change_log_count:]
+        new_logs: List[Dict[str, str]] = logs[pre_change_log_count:]
         assert any("log level changed to: debug" in log["text"].lower() for log in new_logs)
         assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
         assert any("Log level changed to: DEBUG" in log["text"] for log in new_logs), "Failed to set log level to DEBUG"
@@ -125,7 +127,16 @@ def test_difficulty_flow(page: Page) -> None:
         # Go back to Options menu
         page.wait_for_selector('#advanced-back-button', state='visible', timeout=2500)
         # page.click("#advanced-back-button", force=True)
-        page.evaluate("window.advancedBackPressed([0])")
+        page.evaluate("window.advancedBackPressed([])")
+
+        # Go to Gameplay Settings
+        page.wait_for_selector('#gameplay-button', state='visible', timeout=2500)
+        # page.click("#advanced-back-button", force=True)
+        page.evaluate("window.gameplayPressed([])")
+
+        # Assert gameplay settings overlay is shown and options overlay is hidden
+        page.wait_for_selector('#difficulty-slider', state='visible', timeout=2500)
+        page.wait_for_selector('#options-back-button', state='hidden', timeout=2500)
 
         # Set difficulty to 2.0 - directly call the exposed callback (bypasses event for reliability in automation)
         pre_change_log_count = len(logs)
@@ -138,18 +149,56 @@ def test_difficulty_flow(page: Page) -> None:
         assert any(
             "settings saved" in log["text"].lower() for log in new_logs), "Failed to save the settings"
 
-        # Back to main menu
+        # Reset gameplay settings back to defaults via the gameplay reset action
+        pre_reset_log_count: int = len(logs)
+        page.wait_for_function('window.gameplayResetPressed !== undefined', timeout=2500)
+        page.evaluate("window.gameplayResetPressed([])")
+        page.wait_for_timeout(2500)
+        reset_logs: List[Dict[str, str]] = logs[pre_reset_log_count:]
+        # Verify that difficulty was reset to the expected default
+        assert any(
+            "difficulty" in log["text"].lower()
+            and ("default" in log["text"].lower() or "1.0" in log["text"])
+            for log in reset_logs
+        ), "Difficulty reset to default was not observed in logs"
+
+        # Set difficulty to 2.0 again
+        page.evaluate("window.changeDifficulty([2.0])")
+        page.wait_for_timeout(2500)
+
+        # Back to Main menu
         pre_change_log_count = len(logs)
-        page.wait_for_function('window.optionsBackPressed !== undefined', timeout=2500)
-        page.evaluate("window.optionsBackPressed([])")
+        page.wait_for_function('window.gameplayBackPressed !== undefined', timeout=2500)
+        page.evaluate("window.gameplayBackPressed([])")
         page.wait_for_timeout(2500)
         new_logs = logs[pre_change_log_count:]
         assert any("back button pressed." in log["text"].lower() for log in new_logs), "Back button not found"
 
+        # After gameplayBackPressed([]), the options overlay should be visible again
+        # and gameplay-specific elements should be hidden.
+        # Options overlay visible
+        page.wait_for_selector('#options-back-button', state='visible', timeout=2500)
+        assert page.evaluate("document.getElementById('options-back-button') !== null")
+        # Gameplay UI hidden
+        page.wait_for_selector('#difficulty-slider', state='hidden', timeout=2500)
+        assert page.evaluate("document.getElementById('difficulty-slider') === null || document.getElementById('difficulty-slider').offsetParent === null")
+
+        # Check element present
+        page.wait_for_selector('#options-back-button', state='visible', timeout=2500)
+        assert page.evaluate("document.getElementById('options-back-button') !== null")
+        page.evaluate("window.optionsBackPressed([])")
+
+        # After optionsBackPressed([]), we should be back on the main menu:
+        # main-menu elements visible and options elements hidden.
+        page.wait_for_selector('#start-button', state='visible', timeout=2500)
+        assert page.evaluate("document.getElementById('start-button') !== null")
+        page.wait_for_selector('#options-back-button', state='hidden', timeout=2500)
+        assert page.evaluate("document.getElementById('options-back-button') === null || document.getElementById('options-back-button').offsetParent === null")
+
         # Start game
         page.wait_for_selector('#start-button', state='visible', timeout=2500)
         pre_change_log_count = len(logs)
-        pre_poll_log_count = len(logs)
+        pre_poll_log_count: int = len(logs)
         page.click("#start-button", force=True)
         page.wait_for_timeout(5000)  # Sometimes it takes longer time to pass the loading screen
         new_logs = logs[pre_change_log_count:]
@@ -159,7 +208,7 @@ def test_difficulty_flow(page: Page) -> None:
             "initializing main scene..." in log["text"].lower() for log in new_logs), "Game scene not found"
 
         # Poll for loading start log to confirm transition to loading screen
-        start_time = time.time()
+        start_time: float = time.time()
         while time.time() - start_time < 30:
             if any("loading started successfully." in log["text"].lower() for log in logs[pre_poll_log_count:]):
                 break
@@ -193,7 +242,7 @@ def test_difficulty_flow(page: Page) -> None:
         print(f"Test: 'test_difficulty_flow' failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         # Artifact on failure
-        timestamp = int(time.time())
+        timestamp: int = int(time.time())
         page.screenshot(path=f"artifacts/test_difficulty_failure_screenshot_{timestamp}.png")
 
         log_file: str = f"artifacts/test_difficulty_failure_console_logs_{timestamp}.txt"
@@ -210,7 +259,7 @@ def test_difficulty_flow(page: Page) -> None:
     finally:
         if cdp_session:
             # Stop V8 coverage and save to file (even on failure)
-            coverage = cdp_session.send("Profiler.takePreciseCoverage")['result']
+            coverage: Dict[str, Any] = cdp_session.send("Profiler.takePreciseCoverage")['result']
             cdp_session.send("Profiler.stopPreciseCoverage")
             cdp_session.send("Profiler.disable")
             with open("v8_coverage_difficulty_flow_test.json", "w") as f:

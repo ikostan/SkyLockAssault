@@ -123,17 +123,17 @@ func _on_tree_exited() -> void:
 				js_bridge_wrapper
 				. eval(
 					"""
-				// Show Options menu overlays
-				document.getElementById('controls-button').style.display = 'block';
-				document.getElementById('audio-button').style.display = 'block';
-				document.getElementById('advanced-button').style.display = 'block';
-				document.getElementById('difficulty-slider').style.display = 'block';
-				document.getElementById('options-back-button').style.display = 'block';
-				// Hide Advanced Settings overlays
-				document.getElementById('log-level-select').style.display = 'none';
-				document.getElementById('advanced-back-button').style.display = 'none';
-				document.getElementById('advanced-reset-button').style.display = 'none';
-				""",
+					// Show Options menu overlays
+					document.getElementById('controls-button').style.display = 'block';
+					document.getElementById('audio-button').style.display = 'block';
+					document.getElementById('advanced-button').style.display = 'block';
+					document.getElementById('gameplay-button').style.display = 'block';
+					document.getElementById('options-back-button').style.display = 'block';
+					// Hide Advanced Settings overlays
+					document.getElementById('log-level-select').style.display = 'none';
+					document.getElementById('advanced-back-button').style.display = 'none';
+					document.getElementById('advanced-reset-button').style.display = 'none';
+					""",
 					true
 				)
 			)
@@ -194,7 +194,7 @@ func _on_advanced_back_button_pressed() -> void:
 					document.getElementById('controls-button').style.display = 'block';
 					document.getElementById('audio-button').style.display = 'block';
 					document.getElementById('advanced-button').style.display = 'block';
-					document.getElementById('difficulty-slider').style.display = 'block';
+					document.getElementById('gameplay-button').style.display = 'block';
 					document.getElementById('options-back-button').style.display = 'block';
 					// Hide Advanced Settings overlays
 					document.getElementById('log-level-select').style.display = 'none';
@@ -262,7 +262,7 @@ func _on_change_log_level_js(args: Array) -> void:
 	## :param args: Array containing the index (from JS).
 	## :type args: Array
 	## :rtype: void
-	if args.size() == 0:
+	if args.is_empty():
 		Globals.log_message(
 			"JS change_log_level callback received empty args—skipping.", Globals.LogLevel.WARNING
 		)
@@ -273,6 +273,7 @@ func _on_change_log_level_js(args: Array) -> void:
 		first_arg is not JavaScriptObject
 		and typeof(first_arg) != TYPE_ARRAY
 		and first_arg.size() == 0
+		and first_arg.is_empty()
 	):
 		Globals.log_message(
 			(
@@ -296,7 +297,6 @@ func _on_change_log_level_js(args: Array) -> void:
 		return
 
 	var index: int = int(potential_index)
-	# Optional: Bounds check against actual options
 	if index < 0 or index >= log_lvl_option.item_count:
 		Globals.log_message(
 			(

@@ -70,7 +70,6 @@ def test_load_main_menu(page: Page) -> None:
 
         page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=5000)
         # Wait for Godot engine init (ensures 'godot' object is defined)
-        page.wait_for_timeout(3000)
         page.wait_for_function("() => window.godotInitialized", timeout=5000)
 
         # Verify canvas and title to ensure game is initialized
