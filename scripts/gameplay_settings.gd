@@ -74,7 +74,7 @@ func _ready() -> void:
 func _unset_gameplay_settings_window_callbacks() -> void:
 	if not os_wrapper.has_feature("web") or not js_window:
 		return
-	js_window.changeDifficultyLevel = null
+	js_window.changeDifficulty = null
 	js_window.gameplayBackPressed = null
 	js_window.gameplayResetPressed = null
 
