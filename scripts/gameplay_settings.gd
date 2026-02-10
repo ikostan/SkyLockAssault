@@ -102,7 +102,6 @@ func _on_gameplay_back_button_pressed() -> void:
 	##
 	## :rtype: void
 	Globals.log_message("Gameplay Settings Back button pressed.", Globals.LogLevel.DEBUG)
-	_teardown()  # Centralized cleanup
 
 	var hidden_menu_found: bool = false
 	if not Globals.hidden_menus.is_empty():
