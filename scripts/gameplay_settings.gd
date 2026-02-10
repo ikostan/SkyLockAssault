@@ -64,7 +64,7 @@ func _ready() -> void:
 			js_window.gameplayBackPressed = _gameplay_back_button_pressed_cb
 
 			Globals.log_message(
-				"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
+				"Exposed gameplay settings callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
 			)
 		# Menu is loaded
 		Globals.log_message("Gameplay Settings menu loaded.", Globals.LogLevel.DEBUG)
