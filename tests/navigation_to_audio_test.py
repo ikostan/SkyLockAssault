@@ -122,6 +122,12 @@ def test_navigation_to_audio(page: Page) -> None:
         page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)  # Wait for audio scene load and JS eval
 
+        # Assert gameplay/options UI is hidden while audio menu is open
+        gameplay_button_display_in_audio: str = page.evaluate(
+            "window.getComputedStyle(document.getElementById('gameplay-button')).display"
+        )
+        assert gameplay_button_display_in_audio == 'none', "Gameplay button should be hidden while audio menu is open"
+
         audio_display: str = page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display")
         assert audio_display == 'block', "Audio menu not loaded (master-slider not displayed)"
         assert any("audio button pressed." in log["text"].lower() for log in logs), "Audio navigation log not found"
