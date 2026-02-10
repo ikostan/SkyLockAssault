@@ -103,7 +103,7 @@ def test_difficulty_flow(page: Page) -> None:
         # Go to Advanced settings
         page.wait_for_selector('#advanced-button', state='visible', timeout=2500)
         # page.click("#advanced-button", force=True)
-        page.evaluate("window.advancedPressed([0])")
+        page.evaluate("window.advancedPressed([])")
         page.wait_for_function('window.changeLogLevel !== undefined', timeout=2500)
         advanced_display: str = page.evaluate(
             "window.getComputedStyle(document.getElementById('log-level-select')).display")
@@ -125,16 +125,21 @@ def test_difficulty_flow(page: Page) -> None:
         # Go back to Options menu
         page.wait_for_selector('#advanced-back-button', state='visible', timeout=2500)
         # page.click("#advanced-back-button", force=True)
-        page.evaluate("window.advancedBackPressed([0])")
+        page.evaluate("window.advancedBackPressed([])")
 
         # Go to Gameplay Settings
         page.wait_for_selector('#gameplay-button', state='visible', timeout=2500)
         # page.click("#advanced-back-button", force=True)
-        page.evaluate("window.gameplayPressed([0])")
+        page.evaluate("window.gameplayPressed([])")
 
+        # Assert gameplay settings overlay is shown and options overlay is hidden
+        page.wait_for_selector('#difficulty-slider', state='visible', timeout=2500)
+        page.wait_for_selector('#options-overlay', state='hidden', timeout=2500)
+        
         # Set difficulty to 2.0 - directly call the exposed callback (bypasses event for reliability in automation)
         pre_change_log_count = len(logs)
         page.wait_for_function('window.changeDifficulty !== undefined', timeout=2500)
+
         page.evaluate("window.changeDifficulty([2.0])")
         page.wait_for_timeout(2500)
         new_logs = logs[pre_change_log_count:]
