@@ -252,9 +252,50 @@ func _on_change_difficulty_js(args: Array) -> void:
 	## :param args: Array containing the value (from JS).
 	## :type args: Array
 	## :rtype: void
-	if args.size() > 0:
+	if args.is_empty():
 		Globals.log_message(
-			"JS difficulty callback called with args: " + str(args[0][0]), Globals.LogLevel.DEBUG
+			"JS difficulty callback received empty args—skipping.", Globals.LogLevel.WARNING
 		)
-		var value: float = float(args[0][0])
-		_on_difficulty_value_changed(value)
+		return
+
+	var first_arg: Variant = args[0]
+	if typeof(first_arg) != TYPE_ARRAY or first_arg.is_empty():
+		Globals.log_message(
+			(
+				"JS difficulty callback received invalid first arg (not a non-empty array): "
+				+ str(args)
+			),
+			Globals.LogLevel.WARNING
+		)
+		return
+
+	var potential_value: Variant = first_arg[0]
+	if (
+		typeof(potential_value) != TYPE_INT
+		and typeof(potential_value) != TYPE_FLOAT
+		and typeof(potential_value) != TYPE_STRING
+	):
+		Globals.log_message(
+			"JS difficulty callback received non-convertible value: " + str(args),
+			Globals.LogLevel.WARNING
+		)
+		return
+
+	var value: float = float(potential_value)
+	if value < difficulty_slider.min_value or value > difficulty_slider.max_value:
+		Globals.log_message(
+			(
+				"JS difficulty callback received out-of-bounds value: "
+				+ str(value)
+				+ " (args: "
+				+ str(args)
+				+ ")"
+			),
+			Globals.LogLevel.WARNING
+		)
+		return
+
+	Globals.log_message(
+		"JS difficulty callback called with valid value: " + str(value), Globals.LogLevel.DEBUG
+	)
+	_on_difficulty_value_changed(value)
