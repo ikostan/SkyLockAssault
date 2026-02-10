@@ -141,7 +141,7 @@ def test_navigation_to_audio(page: Page) -> None:
 
         # Assert main/options overlays are restored
         options_overlay_display: str = page.evaluate(
-            "window.getComputedStyle(document.getElementById('difficulty-slider')).display"
+            "window.getComputedStyle(document.getElementById('gameplay-button')).display"
         )
         assert options_overlay_display == 'block', "Options overlay not restored after exiting audio menu"
 
