@@ -139,7 +139,6 @@ def test_difficulty_flow(page: Page) -> None:
         # Set difficulty to 2.0 - directly call the exposed callback (bypasses event for reliability in automation)
         pre_change_log_count = len(logs)
         page.wait_for_function('window.changeDifficulty !== undefined', timeout=2500)
-
         page.evaluate("window.changeDifficulty([2.0])")
         page.wait_for_timeout(2500)
         new_logs = logs[pre_change_log_count:]
@@ -147,6 +146,23 @@ def test_difficulty_flow(page: Page) -> None:
             "difficulty changed to: 2.0" in log["text"].lower() for log in new_logs), "Failed to set difficulty to 2.0"
         assert any(
             "settings saved" in log["text"].lower() for log in new_logs), "Failed to save the settings"
+
+        # Reset gameplay settings back to defaults via the gameplay reset action
+        pre_reset_log_count = len(logs)
+        page.wait_for_function('window.resetGameplaySettings !== undefined', timeout=2500)
+        page.evaluate("window.resetGameplaySettings([])")
+        page.wait_for_timeout(2500)
+        reset_logs = logs[pre_reset_log_count:]
+        # Verify that difficulty was reset to the expected default
+        assert any(
+            "difficulty" in log["text"].lower()
+            and ("default" in log["text"].lower() or "1.0" in log["text"])
+            for log in reset_logs
+        ), "Difficulty reset to default was not observed in logs"
+
+        # Set difficulty to 2.0 again
+        page.evaluate("window.changeDifficulty([2.0])")
+        page.wait_for_timeout(2500)
 
         # Back to Main menu
         pre_change_log_count = len(logs)
