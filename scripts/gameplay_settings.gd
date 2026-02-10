@@ -51,7 +51,7 @@ func _ready() -> void:
 			)
 		)
 		# Expose callbacks to JS (store refs to prevent GC)
-		var js_window: JavaScriptObject = js_bridge_wrapper.get_interface("window")
+		js_window = js_bridge_wrapper.get_interface("window")
 		if js_window:
 			_change_difficulty_cb = js_bridge_wrapper.create_callback(
 				Callable(self, "_on_change_difficulty_js")
