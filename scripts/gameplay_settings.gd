@@ -70,7 +70,8 @@ func _ready() -> void:
 			js_window.gameplayResetPressed = _gameplay_reset_cb
 
 			Globals.log_message(
-				"Exposed gameplay settings callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
+				"Exposed gameplay settings callbacks to JS for web overlays.",
+				Globals.LogLevel.DEBUG
 			)
 		# Menu is loaded
 		Globals.log_message("Gameplay Settings menu loaded.", Globals.LogLevel.DEBUG)
