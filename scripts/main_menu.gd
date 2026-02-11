@@ -62,6 +62,12 @@ func _ready() -> void:
 	panel_tween.tween_property(menu, "modulate:a", 1.0, 1.0).set_ease(Tween.EASE_OUT).set_trans(
 		Tween.TRANS_QUAD
 	)  # Smooth curve (eases out, quadratic)
+	# Wait only if tween is good and started
+	if panel_tween and panel_tween.is_valid() and panel_tween.is_running():
+		await panel_tween.finished
+	# Fallback: Grab focus immediately if tween isn't running (e.g., error or instant)
+	# Give keyboard focus to the first button after the fade-in completes
+	start_button.call_deferred("grab_focus")
 	# Connect START button signal
 	@warning_ignore("return_value_discarded")
 	start_button.pressed.connect(_on_start_pressed)
@@ -71,9 +77,6 @@ func _ready() -> void:
 	# Connect QUIT button signal
 	@warning_ignore("return_value_discarded")
 	quit_button.pressed.connect(_on_quit_pressed)
-	# Give keyboard focus to the first button after the fade-in completes
-	await panel_tween.finished
-	start_button.call_deferred("grab_focus")
 	# Setup quit dialog
 	setup_quit_dialog()
 	# To prevent garbage collection of JavaScriptObject callbacks in Godot's JS bindings,
