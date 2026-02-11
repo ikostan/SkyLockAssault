@@ -241,4 +241,5 @@ func _on_quit_dialog_canceled() -> void:
 			"Restored focus to: " + last_focused_button.name, Globals.LogLevel.DEBUG
 		)
 	else:
-		quit_button.call_deferred("grab_focus")  # Fallback to default
+		if is_instance_valid(quit_button):
+			quit_button.call_deferred("grab_focus")  # Fallback to default
