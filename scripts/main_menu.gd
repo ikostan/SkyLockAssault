@@ -67,8 +67,7 @@ func _ready() -> void:
 	if panel_tween and panel_tween.is_valid():
 		# Race tween completion against a 2-second safety timeout
 		var finished: bool = false
-		var _on_done := func(_arg: Variant = null) -> void:
-			finished = true
+		var _on_done := func(_arg: Variant = null) -> void: finished = true
 		panel_tween.finished.connect(_on_done, CONNECT_ONE_SHOT)
 		get_tree().create_timer(2.0).timeout.connect(_on_done, CONNECT_ONE_SHOT)
 		while not finished:
