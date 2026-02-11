@@ -29,6 +29,7 @@ const QUIT_DIALOG_DEFAULT_PATH: String = "VideoStreamPlayer/Panel/VBoxContainer/
 # Reference to the quit dialog node, assigned in setup_quit_dialog or _ready()
 var quit_dialog: ConfirmationDialog
 var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
+var last_focused_button: Button  # Tracks which button opened the dialog
 var _start_pressed_cb: JavaScriptObject
 var _options_pressed_cb: JavaScriptObject
 var _quit_pressed_cb: JavaScriptObject
@@ -185,6 +186,7 @@ func _on_quit_pressed(_args: Array = []) -> void:
 	## :rtype: void
 	# Show confirmation dialog
 	if is_instance_valid(quit_dialog):
+		last_focused_button = quit_button  # ← ADD THIS: Remember the opener
 		quit_dialog.show()
 		Globals.log_message("Attempting to show QuitDialog.", Globals.LogLevel.DEBUG)
 		quit_dialog.popup_centered()  # Sets visible=true internally
@@ -218,4 +220,10 @@ func _on_quit_dialog_canceled() -> void:
 	quit_dialog.hide()
 	Globals.log_message("Quit canceled.", Globals.LogLevel.DEBUG)
 	# Return focus to the button that opened the dialog
-	quit_button.call_deferred("grab_focus")
+	if is_instance_valid(last_focused_button):  # Safety check
+		last_focused_button.call_deferred("grab_focus")  # Restore to original opener
+		Globals.log_message(
+			"Restored focus to: " + last_focused_button.name, Globals.LogLevel.DEBUG
+		)
+	else:
+		quit_button.call_deferred("grab_focus")  # Fallback to default
