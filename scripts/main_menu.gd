@@ -71,8 +71,9 @@ func _ready() -> void:
 	# Connect QUIT button signal
 	@warning_ignore("return_value_discarded")
 	quit_button.pressed.connect(_on_quit_pressed)
-	# Give keyboard focus to the first button (after the fade-in so it feels natural)
-	start_button.grab_focus.call_deferred()
+	# Give keyboard focus to the first button after the fade-in completes
+	await panel_tween.finished
+	start_button.grab_focus()
 	# Setup quit dialog
 	setup_quit_dialog()
 	# To prevent garbage collection of JavaScriptObject callbacks in Godot's JS bindings,
