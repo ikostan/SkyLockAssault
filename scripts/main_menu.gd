@@ -65,6 +65,10 @@ func _ready() -> void:
 	# Wait only if tween is good and started
 	if panel_tween and panel_tween.is_valid() and panel_tween.is_running():
 		await panel_tween.finished
+	else:
+		Globals.log_message(
+			"Tween not running—grabbing focus immediately.", Globals.LogLevel.WARNING
+		)
 	# Fallback: Grab focus immediately if tween isn't running (e.g., error or instant)
 	# Give keyboard focus to the first button after the fade-in completes
 	start_button.call_deferred("grab_focus")
