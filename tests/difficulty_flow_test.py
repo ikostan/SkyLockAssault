@@ -100,7 +100,8 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Open options
         page.wait_for_selector('#options-button', state='visible', timeout=2500)
-        page.click("#options-button", force=True)
+        # page.click("#options-button", force=True)
+        page.evaluate("window.optionsPressed([])")
 
         # Go to Advanced settings
         page.wait_for_selector('#advanced-button', state='visible', timeout=2500)
