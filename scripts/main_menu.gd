@@ -75,8 +75,6 @@ func _ready() -> void:
 		Globals.log_message("Fade-in done or timed out—granting focus.", Globals.LogLevel.DEBUG)
 	else:
 		Globals.log_message("Invalid tween—grabbing focus immediately.", Globals.LogLevel.WARNING)
-	# Give keyboard focus to the first button after the fade-in completes
-	start_button.call_deferred("grab_focus")
 	# Fallback: Grab focus immediately if tween isn't running (e.g., error or instant)
 	# Give keyboard focus to the first button after the fade-in completes
 	start_button.call_deferred("grab_focus")
