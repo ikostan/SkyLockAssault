@@ -29,7 +29,7 @@ const QUIT_DIALOG_DEFAULT_PATH: String = "VideoStreamPlayer/Panel/VBoxContainer/
 # Reference to the quit dialog node, assigned in setup_quit_dialog or _ready()
 var quit_dialog: ConfirmationDialog
 var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
-var last_focused_button: Button  # Tracks which button opened the dialog
+var last_focused_button: Button = null  # Tracks which button opened the dialog
 var _start_pressed_cb: JavaScriptObject
 var _options_pressed_cb: JavaScriptObject
 var _quit_pressed_cb: JavaScriptObject
