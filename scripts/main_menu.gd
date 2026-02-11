@@ -186,7 +186,7 @@ func _on_quit_pressed(_args: Array = []) -> void:
 	## :rtype: void
 	# Show confirmation dialog
 	if is_instance_valid(quit_dialog):
-		last_focused_button = quit_button  # ← ADD THIS: Remember the opener
+		last_focused_button = quit_button  # Remember the opener
 		quit_dialog.show()
 		Globals.log_message("Attempting to show QuitDialog.", Globals.LogLevel.DEBUG)
 		quit_dialog.popup_centered()  # Sets visible=true internally
