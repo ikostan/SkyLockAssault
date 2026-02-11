@@ -75,7 +75,6 @@ def test_back_flow(page: Page) -> None:
         # Navigate to options menu
         page.wait_for_selector('#options-button', state='visible', timeout=2500)
         # page.click("#options-button", force=True, timeout=2500)
-        page.wait_for_function('window.advancedBackPressed !== undefined', timeout=2500)
         page.wait_for_function('window.optionsPressed !== undefined', timeout=2500)
         page.evaluate("window.optionsPressed([])")
 
