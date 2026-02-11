@@ -71,6 +71,8 @@ func _ready() -> void:
 	# Connect QUIT button signal
 	@warning_ignore("return_value_discarded")
 	quit_button.pressed.connect(_on_quit_pressed)
+	# Give keyboard focus to the first button (after the fade-in so it feels natural)
+	start_button.grab_focus.call_deferred()
 	# Setup quit dialog
 	setup_quit_dialog()
 	# To prevent garbage collection of JavaScriptObject callbacks in Godot's JS bindings,
@@ -202,4 +204,5 @@ func _on_quit_dialog_canceled() -> void:
 	# Optional: Handle cancel (e.g., play sound or log)
 	quit_dialog.hide()
 	Globals.log_message("Quit canceled.", Globals.LogLevel.DEBUG)
-	# Dialog auto-hides on cancel, no extra code needed
+	# Return focus to the button that opened the dialog
+	quit_button.grab_focus.call_deferred()

@@ -35,7 +35,13 @@ corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
 shadow_size = 5
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ekxnf"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tbmy8"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bqqt6"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
@@ -44,7 +50,13 @@ corner_radius_top_right = 40
 corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_bqqt6"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_jk1qb"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wu84c"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
@@ -53,7 +65,13 @@ corner_radius_top_right = 40
 corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_wu84c"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5dd4i"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
 
 [node name="Control" type="Control"]
 layout_mode = 3
@@ -122,45 +140,52 @@ vertical_alignment = 1
 [node name="StartButton" type="Button" parent="VideoStreamPlayer/Panel/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+tooltip_text = "Start game"
+focus_neighbor_top = NodePath("../QuitButton")
+focus_neighbor_bottom = NodePath("../OptionsButton")
 theme_override_colors/font_color = Color(0.9913891, 0.21623385, 0.27923363, 1)
-theme_override_colors/font_focus_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("3_bqqt6")
 theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_rtw2f")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_ekxnf")
 theme_override_styles/hover = SubResource("StyleBoxFlat_8ln24")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_ekxnf")
+theme_override_styles/focus = SubResource("StyleBoxFlat_tbmy8")
 text = "{START=GAME}"
 
 [node name="OptionsButton" type="Button" parent="VideoStreamPlayer/Panel/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-tooltip_text = "Options button"
+tooltip_text = "Options"
+focus_neighbor_top = NodePath("../StartButton")
+focus_neighbor_bottom = NodePath("../QuitButton")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
-theme_override_colors/font_focus_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("3_bqqt6")
 theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_bqqt6")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_ekxnf")
 theme_override_styles/hover = SubResource("StyleBoxFlat_8ln24")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_bqqt6")
+theme_override_styles/focus = SubResource("StyleBoxFlat_jk1qb")
 text = "{OPTIONS}"
 
 [node name="QuitButton" type="Button" parent="VideoStreamPlayer/Panel/VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
-tooltip_text = "Quit button"
+tooltip_text = "Quit"
+focus_neighbor_top = NodePath("../OptionsButton")
+focus_neighbor_bottom = NodePath("../StartButton")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
-theme_override_colors/font_focus_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("3_bqqt6")
 theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_wu84c")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_ekxnf")
 theme_override_styles/hover = SubResource("StyleBoxFlat_8ln24")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_wu84c")
+theme_override_styles/focus = SubResource("StyleBoxFlat_5dd4i")
 text = "{QUIT}"
 
 [node name="QuitDialog" type="ConfirmationDialog" parent="VideoStreamPlayer/Panel/VBoxContainer"]
