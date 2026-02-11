@@ -138,7 +138,6 @@ func setup_quit_dialog() -> void:
 	## Hides the dialog initially.
 	##
 	## :rtype: void
-	## Sets up the quit confirmation dialog.
 	quit_dialog = get_node_or_null(quit_dialog_path)
 	if is_instance_valid(quit_dialog):
 		# Confirmed = user wants to quit
