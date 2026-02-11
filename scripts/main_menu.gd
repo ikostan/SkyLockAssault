@@ -63,16 +63,11 @@ func _ready() -> void:
 	panel_tween.tween_property(menu, "modulate:a", 1.0, 1.0).set_ease(Tween.EASE_OUT).set_trans(
 		Tween.TRANS_QUAD
 	)  # Smooth curve (eases out, quadratic)
-	# Wait only if tween is valid (drop is_running() to avoid race)
+	# Wait only if tween is valid
 	if panel_tween and panel_tween.is_valid():
-		# Race tween completion against a 2-second safety timeout
-		var finished: bool = false
-		var is_done := func(_arg: Variant = null) -> void: finished = true
-		panel_tween.finished.connect(is_done, CONNECT_ONE_SHOT)
-		get_tree().create_timer(2.0).timeout.connect(is_done, CONNECT_ONE_SHOT)
-		while not finished:
-			await get_tree().process_frame
-		Globals.log_message("Fade-in done or timed out—granting focus.", Globals.LogLevel.DEBUG)
+		Globals.log_message("Waiting for fade-in tween to finish.", Globals.LogLevel.DEBUG)
+		await panel_tween.finished  # Non-blocking await; resumes after signal
+		Globals.log_message("Fade-in complete—granting focus.", Globals.LogLevel.DEBUG)
 	else:
 		Globals.log_message("Invalid tween—grabbing focus immediately.", Globals.LogLevel.WARNING)
 	# Fallback: Grab focus immediately if tween isn't running (e.g., error or instant)
