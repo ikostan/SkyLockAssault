@@ -65,18 +65,19 @@ func _ready() -> void:
 	)  # Smooth curve (eases out, quadratic)
 	# Wait only if tween is valid (drop is_running() to avoid race)
 	if panel_tween and panel_tween.is_valid():
-		# Await with a safety timeout (parallel race: tween finish vs. 2s timer)
-		var timeout_timer := get_tree().create_timer(2.0)  # Longer than tween duration
-		# Wait for first to complete
-		await promise_any([panel_tween.finished, timeout_timer.timeout])
-		if timeout_timer.time_left > 0:
-			Globals.log_message("Tween finished normally.", Globals.LogLevel.DEBUG)
-		else:
-			Globals.log_message(
-				"Tween await timed out—grabbing focus anyway.", Globals.LogLevel.WARNING
-			)
+		# Race tween completion against a 2-second safety timeout
+		var finished: bool = false
+		var _on_done := func(_arg: Variant = null) -> void:
+			finished = true
+		panel_tween.finished.connect(_on_done, CONNECT_ONE_SHOT)
+		get_tree().create_timer(2.0).timeout.connect(_on_done, CONNECT_ONE_SHOT)
+		while not finished:
+			await get_tree().process_frame
+		Globals.log_message("Fade-in done or timed out—granting focus.", Globals.LogLevel.DEBUG)
 	else:
 		Globals.log_message("Invalid tween—grabbing focus immediately.", Globals.LogLevel.WARNING)
+	# Give keyboard focus to the first button after the fade-in completes
+	start_button.call_deferred("grab_focus")
 	# Fallback: Grab focus immediately if tween isn't running (e.g., error or instant)
 	# Give keyboard focus to the first button after the fade-in completes
 	start_button.call_deferred("grab_focus")
@@ -112,14 +113,6 @@ func _ready() -> void:
 			Globals.log_message(
 				"Exposed main menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
 			)
-
-
-# Helper: Await the first of multiple awaitables (signals/timers)
-func promise_any(awaitables: Array) -> Variant:
-	for awaitable: Variant in awaitables:
-		await awaitable
-		return awaitable  # Return the winner (optional, we don't need it here)
-	return null
 
 
 func _input(_event: InputEvent) -> void:
