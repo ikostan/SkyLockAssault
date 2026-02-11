@@ -74,12 +74,15 @@ def test_reset_flow(page: Page) -> None:
 
         # Open options
         page.wait_for_selector('#options-button', state='visible', timeout=2500)
-        page.click("#options-button", force=True)
+        # page.click("#options-button", force=True)
+        page.wait_for_function('window.optionsPressed !== undefined', timeout=2500)
+        page.evaluate("window.optionsPressed([])")
 
         # Go to Advanced settings
         page.wait_for_selector('#advanced-button', state='visible', timeout=2500)
         # page.click("#advanced-button", force=True)
-        page.evaluate("window.advancedPressed([0])")
+        page.wait_for_function('window.advancedPressed !== undefined', timeout=2500)
+        page.evaluate("window.advancedPressed([])")
         page.wait_for_function('window.changeLogLevel !== undefined', timeout=2500)
         advanced_display: str = page.evaluate(
             "window.getComputedStyle(document.getElementById('log-level-select')).display")
@@ -96,7 +99,8 @@ def test_reset_flow(page: Page) -> None:
         # Go back to Options menu
         page.wait_for_selector('#advanced-back-button', state='visible', timeout=2500)
         # page.click("#advanced-back-button", force=True)
-        page.evaluate("window.advancedBackPressed([0])")
+        page.wait_for_function('window.advancedBackPressed !== undefined', timeout=2500)
+        page.evaluate("window.advancedBackPressed([])")
 
         # Navigate to audio sub-menu
         page.wait_for_selector('#audio-button', state='visible', timeout=2500)
@@ -104,7 +108,7 @@ def test_reset_flow(page: Page) -> None:
         pre_change_log_count = len(logs)
         # page.click("#audio-button", force=True)
         page.wait_for_function('window.audioPressed !== undefined', timeout=2500)
-        page.evaluate("window.audioPressed([0])")
+        page.evaluate("window.audioPressed([])")
         page.wait_for_timeout(5000)  # Wait for audio scene load and JS eval
         audio_display: str = page.evaluate("window.getComputedStyle(document.getElementById('master-slider')).display")
         assert audio_display == 'block', "Audio menu not loaded (master-slider not displayed)"

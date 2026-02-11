@@ -29,6 +29,7 @@ const QUIT_DIALOG_DEFAULT_PATH: String = "VideoStreamPlayer/Panel/VBoxContainer/
 # Reference to the quit dialog node, assigned in setup_quit_dialog or _ready()
 var quit_dialog: ConfirmationDialog
 var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
+var last_focused_button: Button = null  # Tracks which button opened the dialog
 var _start_pressed_cb: JavaScriptObject
 var _options_pressed_cb: JavaScriptObject
 var _quit_pressed_cb: JavaScriptObject
@@ -62,6 +63,16 @@ func _ready() -> void:
 	panel_tween.tween_property(menu, "modulate:a", 1.0, 1.0).set_ease(Tween.EASE_OUT).set_trans(
 		Tween.TRANS_QUAD
 	)  # Smooth curve (eases out, quadratic)
+	# Wait only if tween is valid
+	if panel_tween and panel_tween.is_valid():
+		Globals.log_message("Waiting for fade-in tween to finish.", Globals.LogLevel.DEBUG)
+		await panel_tween.finished  # Non-blocking await; resumes after signal
+		Globals.log_message("Fade-in complete—granting focus.", Globals.LogLevel.DEBUG)
+	else:
+		Globals.log_message("Invalid tween—grabbing focus immediately.", Globals.LogLevel.WARNING)
+	# Fallback: Grab focus immediately if tween isn't running (e.g., error or instant)
+	# Give keyboard focus to the first button after the fade-in completes
+	start_button.call_deferred("grab_focus")
 	# Connect START button signal
 	@warning_ignore("return_value_discarded")
 	start_button.pressed.connect(_on_start_pressed)
@@ -121,13 +132,17 @@ func setup_quit_dialog() -> void:
 	## :rtype: void
 	quit_dialog = get_node_or_null(quit_dialog_path)
 	if is_instance_valid(quit_dialog):
-		# Connect 'confirmed' signal only if not already connected to avoid errors
+		# Confirmed = user wants to quit
 		if not quit_dialog.confirmed.is_connected(_on_quit_dialog_confirmed):
 			quit_dialog.confirmed.connect(_on_quit_dialog_confirmed)
-		# Connect 'canceled' signal only if not already connected to avoid errors
+		# Canceled = Cancel button or Esc
 		if not quit_dialog.canceled.is_connected(_on_quit_dialog_canceled):
 			quit_dialog.canceled.connect(_on_quit_dialog_canceled)
-		quit_dialog.hide()  # Ensure initially hidden
+		# Close button (×) in title bar or other "just hide" cases
+		if not quit_dialog.close_requested.is_connected(_on_quit_dialog_canceled):
+			quit_dialog.close_requested.connect(_on_quit_dialog_canceled)
+		# Ensure initially hidden
+		quit_dialog.hide()
 		Globals.log_message("QuitDialog signals connected.", Globals.LogLevel.DEBUG)
 	else:
 		Globals.log_message(
@@ -170,6 +185,7 @@ func _on_quit_pressed(_args: Array = []) -> void:
 	## :rtype: void
 	# Show confirmation dialog
 	if is_instance_valid(quit_dialog):
+		last_focused_button = quit_button  # Remember the opener
 		quit_dialog.show()
 		Globals.log_message("Attempting to show QuitDialog.", Globals.LogLevel.DEBUG)
 		quit_dialog.popup_centered()  # Sets visible=true internally
@@ -202,4 +218,12 @@ func _on_quit_dialog_canceled() -> void:
 	# Optional: Handle cancel (e.g., play sound or log)
 	quit_dialog.hide()
 	Globals.log_message("Quit canceled.", Globals.LogLevel.DEBUG)
-	# Dialog auto-hides on cancel, no extra code needed
+	# Return focus to the button that opened the dialog
+	if is_instance_valid(last_focused_button):  # Safety check
+		last_focused_button.call_deferred("grab_focus")  # Restore to original opener
+		Globals.log_message(
+			"Restored focus to: " + last_focused_button.name, Globals.LogLevel.DEBUG
+		)
+	else:
+		if is_instance_valid(quit_button):
+			quit_button.call_deferred("grab_focus")  # Fallback to default
