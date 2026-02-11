@@ -122,15 +122,20 @@ func setup_quit_dialog() -> void:
 	## Hides the dialog initially.
 	##
 	## :rtype: void
+	## Sets up the quit confirmation dialog.
 	quit_dialog = get_node_or_null(quit_dialog_path)
 	if is_instance_valid(quit_dialog):
-		# Connect 'confirmed' signal only if not already connected to avoid errors
+		# Confirmed = user wants to quit
 		if not quit_dialog.confirmed.is_connected(_on_quit_dialog_confirmed):
 			quit_dialog.confirmed.connect(_on_quit_dialog_confirmed)
-		# Connect 'canceled' signal only if not already connected to avoid errors
+		# Canceled = Cancel button or Esc
 		if not quit_dialog.canceled.is_connected(_on_quit_dialog_canceled):
 			quit_dialog.canceled.connect(_on_quit_dialog_canceled)
-		quit_dialog.hide()  # Ensure initially hidden
+		# Close button (×) in title bar or other "just hide" cases
+		if not quit_dialog.close_requested.is_connected(_on_quit_dialog_canceled):
+			quit_dialog.close_requested.connect(_on_quit_dialog_canceled)
+		# Ensure initially hidden
+		quit_dialog.hide()
 		Globals.log_message("QuitDialog signals connected.", Globals.LogLevel.DEBUG)
 	else:
 		Globals.log_message(
