@@ -75,11 +75,14 @@ def test_back_flow(page: Page) -> None:
         # Navigate to options menu
         page.wait_for_selector('#options-button', state='visible', timeout=2500)
         # page.click("#options-button", force=True, timeout=2500)
+        page.wait_for_function('window.advancedBackPressed !== undefined', timeout=2500)
+        page.wait_for_function('window.optionsPressed !== undefined', timeout=2500)
         page.evaluate("window.optionsPressed([])")
 
         # Go to Advanced settings
         page.wait_for_selector('#advanced-button', state='visible', timeout=2500)
         # page.click("#advanced-button", force=True)
+        page.wait_for_function('window.advancedPressed !== undefined', timeout=2500)
         page.evaluate("window.advancedPressed([])")
         page.wait_for_function('window.changeLogLevel !== undefined', timeout=2500)
         advanced_display: str = page.evaluate(
@@ -97,6 +100,7 @@ def test_back_flow(page: Page) -> None:
         # Go back to Options menu
         page.wait_for_selector('#advanced-back-button', state='visible', timeout=2500)
         # page.click("#advanced-back-button", force=True)
+        page.wait_for_function('window.advancedBackPressed !== undefined', timeout=2500)
         page.evaluate("window.advancedBackPressed([])")
         # Navigate to audio sub-menu
         page.wait_for_selector('#audio-button', state='visible', timeout=2500)
