@@ -145,17 +145,21 @@ func _teardown() -> void:
 
 			var options_btn: Button = null
 
-			if prev_menu.name == "Panel":                                   # Main Menu case
+			if prev_menu.name == "Panel":  # Main Menu case
 				options_btn = prev_menu.get_node("VBoxContainer/OptionsButton")
 				if is_instance_valid(options_btn):
 					options_btn.grab_focus()
-					Globals.log_message("Grabbed focus on OPTIONS button from MAIN menu", Globals.LogLevel.DEBUG)
+					Globals.log_message(
+						"Grabbed focus on OPTIONS button from MAIN menu", Globals.LogLevel.DEBUG
+					)
 
-			elif prev_menu.get_script() == load("res://scripts/pause_menu.gd"):   # Pause Menu case
+			elif prev_menu.get_script() == load("res://scripts/pause_menu.gd"):  # Pause Menu case
 				options_btn = prev_menu.get_node("VBoxContainer/OptionsButton")
 				if is_instance_valid(options_btn):
 					options_btn.grab_focus()
-					Globals.log_message("Grabbed focus on OPTIONS button from PAUSE menu...", Globals.LogLevel.DEBUG)
+					Globals.log_message(
+						"Grabbed focus on OPTIONS button from PAUSE menu...", Globals.LogLevel.DEBUG
+					)
 
 	Globals.options_open = false
 	Globals.options_instance = null
