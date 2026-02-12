@@ -73,7 +73,7 @@ corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
 shadow_size = 5
 
-[node name="Control" type="Control" groups=["MenuWithOptions"]]
+[node name="Control" type="Control"]
 layout_mode = 3
 anchors_preset = 8
 anchor_left = 0.5
@@ -95,7 +95,7 @@ stream = ExtResource("2_wu84c")
 autoplay = true
 loop = true
 
-[node name="Panel" type="Panel" parent="VideoStreamPlayer"]
+[node name="Panel" type="Panel" parent="VideoStreamPlayer" groups=["MenuWithOptions"]]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5

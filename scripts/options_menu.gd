@@ -144,11 +144,10 @@ func _teardown() -> void:
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 
-			# Debug: Check if group is detected
+			# Unified check using the "MenuWithOptions" group you added in Editor
 			if prev_menu.is_in_group("MenuWithOptions"):
-				Globals.log_message("MenuWithOptions group detected on " + prev_menu.name, Globals.LogLevel.DEBUG)
-				# Log context for debug (pause vs main, using script path)
-				var log_context: String = "from " + ("PAUSE menu" if "pause_menu" in prev_menu.get_script().resource_path else "MAIN menu")
+				# Log context for debug (pause vs main, using node name)
+				var log_context: String = "from " + ("PAUSE menu" if prev_menu.name == "PauseMenu" else "MAIN menu")
 				_grab_options_focus(prev_menu, log_context)
 			else:
 				Globals.log_message("No MenuWithOptions group on " + prev_menu.name + " - skipping focus grab", Globals.LogLevel.DEBUG)
