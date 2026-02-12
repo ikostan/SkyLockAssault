@@ -144,11 +144,14 @@ func _teardown() -> void:
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 
-			# Unified check using the "MenuWithOptions" group you added in Editor
+			# Debug: Check if group is detected
 			if prev_menu.is_in_group("MenuWithOptions"):
-				# Log context for debug (pause vs main, using script for specificity)
+				Globals.log_message("MenuWithOptions group detected on " + prev_menu.name, Globals.LogLevel.DEBUG)
+				# Log context for debug (pause vs main, using script path)
 				var log_context: String = "from " + ("PAUSE menu" if "pause_menu" in prev_menu.get_script().resource_path else "MAIN menu")
 				_grab_options_focus(prev_menu, log_context)
+			else:
+				Globals.log_message("No MenuWithOptions group on " + prev_menu.name + " - skipping focus grab", Globals.LogLevel.DEBUG)
 
 	Globals.options_open = false
 	Globals.options_instance = null
@@ -167,10 +170,10 @@ func _grab_options_focus(menu_node: Node, log_context: String) -> void:
 	## :rtype: void
 	var options_btn: Button = menu_node.get_node("VBoxContainer/OptionsButton")
 	if is_instance_valid(options_btn):
-		options_btn.grab_focus()
+		options_btn.call_deferred("grab_focus")  # Deferred to ensure after visibility change
 		Globals.log_message("Grabbed focus on OPTIONS button " + log_context + "...", Globals.LogLevel.DEBUG)
 	else:
-		Globals.log_message("OptionsButton not found in " + menu_node.name + "—check path!", Globals.LogLevel.ERROR)
+		Globals.log_message("OptionsButton not found in " + menu_node.name + " - check path or scene structure!", Globals.LogLevel.ERROR)
 
 
 func _exit_tree() -> void:
