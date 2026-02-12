@@ -30,7 +30,7 @@ var _controls_pressed_cb: JavaScriptObject
 var _audio_pressed_cb: JavaScriptObject
 var _advanced_pressed_cb: JavaScriptObject
 var _gameplay_settings_pressed_cb: JavaScriptObject
-var _torn_down: bool = false # Guard against multiple teardown calls
+var _torn_down: bool = false  # Guard against multiple teardown calls
 
 @onready var options_back_button: Button = $Panel/OptionsVBoxContainer/OptionsBackButton
 @onready var audio_settings_button: Button = $Panel/OptionsVBoxContainer/AudioSettingsButton
