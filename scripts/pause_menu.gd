@@ -65,7 +65,7 @@ func toggle_pause() -> void:
 	## :rtype: void
 	visible = not visible
 	get_tree().paused = visible
-	if visible:
+	if visible and is_instance_valid(resume_button):
 		resume_button.grab_focus()
 
 
