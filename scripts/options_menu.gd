@@ -176,7 +176,7 @@ func _grab_options_focus(menu_node: Node, log_context: String) -> void:
 	## :param log_context: Debug context (e.g., "from MAIN menu").
 	## :type log_context: String
 	## :rtype: void
-	var options_btn: Button = menu_node.get_node("VBoxContainer/OptionsButton")
+	var options_btn: Button = menu_node.get_node_or_null("VBoxContainer/OptionsButton")
 	if is_instance_valid(options_btn):
 		options_btn.call_deferred("grab_focus")  # Deferred to ensure after visibility change
 		Globals.log_message(
@@ -187,7 +187,6 @@ func _grab_options_focus(menu_node: Node, log_context: String) -> void:
 			"OptionsButton not found in " + menu_node.name + " - check path or scene structure!",
 			Globals.LogLevel.ERROR
 		)
-
 
 func _exit_tree() -> void:
 	## Handles node exit from scene tree.
