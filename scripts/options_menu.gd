@@ -30,6 +30,7 @@ var _controls_pressed_cb: JavaScriptObject
 var _audio_pressed_cb: JavaScriptObject
 var _advanced_pressed_cb: JavaScriptObject
 var _gameplay_settings_pressed_cb: JavaScriptObject
+var _torn_down: bool = false  # Guard against multiple teardown calls
 
 @onready var options_back_button: Button = $Panel/OptionsVBoxContainer/OptionsBackButton
 @onready var audio_settings_button: Button = $Panel/OptionsVBoxContainer/AudioSettingsButton
@@ -116,6 +117,7 @@ func _ready() -> void:
 			Globals.log_message(
 				"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
 			)
+	_torn_down = false  # Reset guard on ready
 
 
 func _input(event: InputEvent) -> void:
@@ -134,17 +136,58 @@ func _input(event: InputEvent) -> void:
 func _teardown() -> void:
 	## Cleans up on options close.
 	##
-	## Shows previous menu from stack, resets globals.
+	## Shows previous menu from stack, resets globals,
+	## and restores focus to the Options button if it's a menu with the group.
 	##
 	## :rtype: void
+	if _torn_down:
+		return
+	_torn_down = true
 	if not Globals.hidden_menus.is_empty():
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
 		if is_instance_valid(prev_menu):
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
+
+			# Unified check using the "MenuWithOptions" group you added in Editor
+			if prev_menu.is_in_group("MenuWithOptions"):
+				# Log context for debug (pause vs main, using node name)
+				var log_context: String = (
+					"from " + ("PAUSE menu" if prev_menu.name == "PauseMenu" else "MAIN menu")
+				)
+				_grab_options_focus(prev_menu, log_context)
+			else:
+				Globals.log_message(
+					"No MenuWithOptions group on " + prev_menu.name + " - skipping focus grab",
+					Globals.LogLevel.DEBUG
+				)
+
 	Globals.options_open = false
 	Globals.options_instance = null
 	Globals.log_message("Options menu exited.", Globals.LogLevel.DEBUG)
+
+
+func _grab_options_focus(menu_node: Node, log_context: String) -> void:
+	## Helper to grab focus on OptionsButton.
+	##
+	## Validates and logs for easy debugging.
+	##
+	## :param menu_node: Menu node with the button.
+	## :type menu_node: Node
+	## :param log_context: Debug context (e.g., "from MAIN menu").
+	## :type log_context: String
+	## :rtype: void
+	var options_btn: Button = menu_node.get_node_or_null("VBoxContainer/OptionsButton")
+	if is_instance_valid(options_btn):
+		options_btn.call_deferred("grab_focus")  # Deferred to ensure after visibility change
+		Globals.log_message(
+			"Grabbed focus on OPTIONS button " + log_context + "...", Globals.LogLevel.DEBUG
+		)
+	else:
+		Globals.log_message(
+			"OptionsButton not found in " + menu_node.name + " - check path or scene structure!",
+			Globals.LogLevel.ERROR
+		)
 
 
 func _exit_tree() -> void:
