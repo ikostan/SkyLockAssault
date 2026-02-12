@@ -57,7 +57,7 @@ corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
 shadow_size = 5
 
-[node name="Control" type="CanvasLayer"]
+[node name="Control" type="CanvasLayer" groups=["MenuWithOptions"]]
 process_mode = 3
 script = ExtResource("1_n87rw")
 

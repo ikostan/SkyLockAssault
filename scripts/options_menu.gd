@@ -134,7 +134,8 @@ func _input(event: InputEvent) -> void:
 func _teardown() -> void:
 	## Cleans up on options close.
 	##
-	## Shows previous menu from stack, resets globals.
+	## Shows previous menu from stack, resets globals,
+	## and restores focus to the Options button of the menu we came from.
 	##
 	## :rtype: void
 	if not Globals.hidden_menus.is_empty():
@@ -143,27 +144,31 @@ func _teardown() -> void:
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 
-			var options_btn: Button = null
-
-			if prev_menu.name == "Panel":  # Main Menu case
-				options_btn = prev_menu.get_node("VBoxContainer/OptionsButton")
-				if is_instance_valid(options_btn):
-					options_btn.grab_focus()
-					Globals.log_message(
-						"Grabbed focus on OPTIONS button from MAIN menu", Globals.LogLevel.DEBUG
-					)
-
-			elif prev_menu.get_script() == load("res://scripts/pause_menu.gd"):  # Pause Menu case
-				options_btn = prev_menu.get_node("VBoxContainer/OptionsButton")
-				if is_instance_valid(options_btn):
-					options_btn.grab_focus()
-					Globals.log_message(
-						"Grabbed focus on OPTIONS button from PAUSE menu...", Globals.LogLevel.DEBUG
-					)
+			# Check if this is a menu with an Options button (via the group you added)
+			if prev_menu.is_in_group("MenuWithOptions"):
+				# Determine context for logging (based on script for specificity)
+				var log_context: String = "from " + ("PAUSE menu" if prev_menu.get_script() == load("res://scripts/pause_menu.gd") else "MAIN menu")
+				_grab_options_focus(prev_menu, log_context)
 
 	Globals.options_open = false
 	Globals.options_instance = null
 	Globals.log_message("Options menu exited.", Globals.LogLevel.DEBUG)
+
+
+func _grab_options_focus(menu_node: Node, log_context: String) -> void:
+	## Helper to grab focus on the Options button in a menu node.
+	##
+	## Validates the button and logs the action with context.
+	##
+	## :param menu_node: The menu node containing the OptionsButton.
+	## :type menu_node: Node
+	## :param log_context: Context for logging (e.g., "from PAUSE menu").
+	## :type log_context: String
+	## :rtype: void
+	var options_btn: Button = menu_node.get_node("VBoxContainer/OptionsButton")
+	if is_instance_valid(options_btn):
+		options_btn.grab_focus()
+		Globals.log_message("Grabbed focus on OPTIONS button " + log_context + "...", Globals.LogLevel.DEBUG)
 
 
 func _exit_tree() -> void:

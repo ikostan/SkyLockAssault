@@ -73,7 +73,7 @@ corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
 shadow_size = 5
 
-[node name="Control" type="Control"]
+[node name="Control" type="Control" groups=["MenuWithOptions"]]
 layout_mode = 3
 anchors_preset = 8
 anchor_left = 0.5
