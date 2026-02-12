@@ -135,7 +135,7 @@ func _teardown() -> void:
 	## Cleans up on options close.
 	##
 	## Shows previous menu from stack, resets globals,
-	## and restores focus to the Options button of the menu we came from.
+	## and restores focus to the Options button if it's a menu with the group.
 	##
 	## :rtype: void
 	if not Globals.hidden_menus.is_empty():
@@ -144,10 +144,10 @@ func _teardown() -> void:
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 
-			# Check if this is a menu with an Options button (via the group you added)
+			# Unified check using the "MenuWithOptions" group you added in Editor
 			if prev_menu.is_in_group("MenuWithOptions"):
-				# Determine context for logging (based on script for specificity)
-				var log_context: String = "from " + ("PAUSE menu" if prev_menu.get_script() == load("res://scripts/pause_menu.gd") else "MAIN menu")
+				# Log context for debug (pause vs main, using script for specificity)
+				var log_context: String = "from " + ("PAUSE menu" if "pause_menu" in prev_menu.get_script().resource_path else "MAIN menu")
 				_grab_options_focus(prev_menu, log_context)
 
 	Globals.options_open = false
@@ -156,19 +156,21 @@ func _teardown() -> void:
 
 
 func _grab_options_focus(menu_node: Node, log_context: String) -> void:
-	## Helper to grab focus on the Options button in a menu node.
+	## Helper to grab focus on OptionsButton.
 	##
-	## Validates the button and logs the action with context.
+	## Validates and logs for easy debugging.
 	##
-	## :param menu_node: The menu node containing the OptionsButton.
+	## :param menu_node: Menu node with the button.
 	## :type menu_node: Node
-	## :param log_context: Context for logging (e.g., "from PAUSE menu").
+	## :param log_context: Debug context (e.g., "from MAIN menu").
 	## :type log_context: String
 	## :rtype: void
 	var options_btn: Button = menu_node.get_node("VBoxContainer/OptionsButton")
 	if is_instance_valid(options_btn):
 		options_btn.grab_focus()
 		Globals.log_message("Grabbed focus on OPTIONS button " + log_context + "...", Globals.LogLevel.DEBUG)
+	else:
+		Globals.log_message("OptionsButton not found in " + menu_node.name + "—check path!", Globals.LogLevel.ERROR)
 
 
 func _exit_tree() -> void:
