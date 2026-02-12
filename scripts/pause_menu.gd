@@ -60,9 +60,13 @@ func _unhandled_input(event: InputEvent) -> void:
 func toggle_pause() -> void:
 	## Toggles pause menu visibility and pause state.
 	##
+	## Grabs focus on resume button when shown for keyboard/D-pad navigation.
+	##
 	## :rtype: void
 	visible = not visible
 	get_tree().paused = visible
+	if visible:
+		resume_button.grab_focus()
 
 
 func _on_resume_button_pressed() -> void:
