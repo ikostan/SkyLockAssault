@@ -188,6 +188,7 @@ func _grab_options_focus(menu_node: Node, log_context: String) -> void:
 			Globals.LogLevel.ERROR
 		)
 
+
 func _exit_tree() -> void:
 	## Handles node exit from scene tree.
 	##
