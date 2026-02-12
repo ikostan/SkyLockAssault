@@ -30,6 +30,7 @@ var _controls_pressed_cb: JavaScriptObject
 var _audio_pressed_cb: JavaScriptObject
 var _advanced_pressed_cb: JavaScriptObject
 var _gameplay_settings_pressed_cb: JavaScriptObject
+var _torn_down: bool = false
 
 @onready var options_back_button: Button = $Panel/OptionsVBoxContainer/OptionsBackButton
 @onready var audio_settings_button: Button = $Panel/OptionsVBoxContainer/AudioSettingsButton
@@ -138,6 +139,9 @@ func _teardown() -> void:
 	## and restores focus to the Options button if it's a menu with the group.
 	##
 	## :rtype: void
+	if _torn_down:
+		return
+	_torn_down = true
 	if not Globals.hidden_menus.is_empty():
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
 		if is_instance_valid(prev_menu):
