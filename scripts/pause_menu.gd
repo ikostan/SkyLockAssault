@@ -66,7 +66,7 @@ func toggle_pause() -> void:
 	visible = not visible
 	get_tree().paused = visible
 	if visible and is_instance_valid(resume_button):
-		resume_button.grab_focus()
+		resume_button.call_deferred("grab_focus")
 
 
 func _on_resume_button_pressed() -> void:
