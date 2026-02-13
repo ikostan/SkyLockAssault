@@ -285,9 +285,8 @@ func _on_options_back_button_pressed() -> void:
 	Globals.log_message("Options Back button pressed.", Globals.LogLevel.DEBUG)
 	_teardown()  # Centralized cleanup
 
-	if os_wrapper.has_feature("web"):
-		# Hide options overlays after closing menu
-		_hide_web_overlays()
+	# Hide options overlays after closing menu
+	_hide_web_overlays()
 
 	Globals.options_open = false  # Reset flag first
 	Globals.options_instance = null  # Optional: Clear ref
