@@ -137,7 +137,9 @@ func _grab_first_button_focus() -> void:
 			child.grab_focus()
 			Globals.log_message("Grabbed initial focus on: " + child.name, Globals.LogLevel.DEBUG)
 			return
-	Globals.log_message("No Button found in OptionsVBoxContainer for initial focus!", Globals.LogLevel.WARNING)
+	Globals.log_message(
+		"No Button found in OptionsVBoxContainer for initial focus!", Globals.LogLevel.WARNING
+	)
 
 
 func _input(event: InputEvent) -> void:
