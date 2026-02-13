@@ -133,7 +133,7 @@ func _grab_first_button_focus() -> void:
 	##
 	## :rtype: void
 	for child in options_vbox.get_children():
-		if child is Button:
+		if child is Button and child.visible and not child.disabled:
 			child.grab_focus()
 			Globals.log_message("Grabbed initial focus on: " + child.name, Globals.LogLevel.DEBUG)
 			return
