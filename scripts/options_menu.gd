@@ -270,18 +270,7 @@ func _on_options_back_button_pressed() -> void:
 
 	if os_wrapper.has_feature("web"):
 		# Hide options overlays after closing menu
-		(
-			js_bridge_wrapper
-			. eval(
-				"""
-				document.getElementById('audio-button').style.display = 'none';
-				document.getElementById('controls-button').style.display = 'none';
-				document.getElementById('advanced-button').style.display = 'none';
-				document.getElementById('gameplay-button').style.display = 'none';
-				document.getElementById('options-back-button').style.display = 'none';
-				"""
-			)
-		)
+		_hide_web_overlays()
 
 	Globals.options_open = false  # Reset flag first
 	Globals.options_instance = null  # Optional: Clear ref
@@ -303,95 +292,64 @@ func _on_options_back_button_pressed_js(args: Array) -> void:
 	_on_options_back_button_pressed()
 
 
-## Handles Audio button press.
-## Hides options menu, loads audio settings.
-## :rtype: void
-func _on_audio_settings_button_pressed() -> void:
-	Globals.log_message("Audio button pressed.", Globals.LogLevel.DEBUG)
-	var audio_instance: Control = audio_scene.instantiate()  # Use the preloaded var
-	get_tree().root.add_child(audio_instance)
-	Globals.hidden_menus.push_back(self)
-	self.visible = false
+func _hide_web_overlays() -> void:
+	## Hides web overlays for options menu buttons.
+	##
+	## Executes JS to set display none for specific elements.
+	##
+	## :rtype: void
 	if os_wrapper.has_feature("web") and js_bridge_wrapper:
 		(
 			js_bridge_wrapper
 			. eval(
 				"""
-			document.getElementById('audio-button').style.display = 'none';
-			document.getElementById('advanced-button').style.display = 'none';
-			document.getElementById('controls-button').style.display = 'none';
-			document.getElementById('gameplay-button').style.display = 'none';
-			document.getElementById('options-back-button').style.display = 'none';
-			""",
+				document.getElementById('audio-button').style.display = 'none';
+				document.getElementById('advanced-button').style.display = 'none';
+				document.getElementById('controls-button').style.display = 'none';
+				document.getElementById('gameplay-button').style.display = 'none';
+				document.getElementById('options-back-button').style.display = 'none';
+				""",
 				true
 			)
 		)
+
+
+func _open_sub_menu(scene: PackedScene, log_msg: String) -> void:
+	## Opens a sub-menu by instantiating and adding the scene.
+	##
+	## Logs the action, adds instance to root, hides current menu,
+	## and hides web overlays if applicable.
+	##
+	## :param scene: The PackedScene to instantiate.
+	## :type scene: PackedScene
+	## :param log_msg: The message to log.
+	## :type log_msg: String
+	## :rtype: void
+	Globals.log_message(log_msg, Globals.LogLevel.DEBUG)
+	var instance: Node = scene.instantiate()
+	get_tree().root.add_child(instance)
+	Globals.hidden_menus.push_back(self)
+	self.visible = false
+	_hide_web_overlays()
+
+
+## Handles Audio button press.
+## Hides options menu, loads audio settings.
+## :rtype: void
+func _on_audio_settings_button_pressed() -> void:
+	_open_sub_menu(audio_scene, "Audio button pressed.")
 
 
 ## Handles Controls button press.
 ## Hides options menu, loads Key Mappings settings.
 ## :rtype: void
 func _on_key_mapping_button_pressed() -> void:
-	Globals.log_message("Controls button pressed.", Globals.LogLevel.DEBUG)
-	var controls_instance: CanvasLayer = controls_scene.instantiate()  # Use the preloaded var
-	get_tree().root.add_child(controls_instance)
-	Globals.hidden_menus.push_back(self)
-	self.visible = false
-	if os_wrapper.has_feature("web") and js_bridge_wrapper:
-		(
-			js_bridge_wrapper
-			. eval(
-				"""
-			document.getElementById('audio-button').style.display = 'none';
-			document.getElementById('advanced-button').style.display = 'none';
-			document.getElementById('controls-button').style.display = 'none';
-			document.getElementById('gameplay-button').style.display = 'none';
-			document.getElementById('options-back-button').style.display = 'none';
-			""",
-				true
-			)
-		)
+	_open_sub_menu(controls_scene, "Controls button pressed.")
 
 
 func _on_advanced_settings_button_pressed() -> void:
-	Globals.log_message("Advanced Settings button pressed.", Globals.LogLevel.DEBUG)
-	var advanced_instance: Control = advanced_scene.instantiate()  # Use the preloaded var
-	get_tree().root.add_child(advanced_instance)
-	Globals.hidden_menus.push_back(self)
-	self.visible = false
-	if os_wrapper.has_feature("web") and js_bridge_wrapper:
-		(
-			js_bridge_wrapper
-			. eval(
-				"""
-				document.getElementById('audio-button').style.display = 'none';
-				document.getElementById('advanced-button').style.display = 'none';
-				document.getElementById('controls-button').style.display = 'none';
-				document.getElementById('gameplay-button').style.display = 'none';
-				document.getElementById('options-back-button').style.display = 'none';
-				""",
-				true
-			)
-		)
+	_open_sub_menu(advanced_scene, "Advanced Settings button pressed.")
 
 
 func _on_gameplay_settings_button_pressed() -> void:
-	Globals.log_message("Gameplay Settings button pressed.", Globals.LogLevel.DEBUG)
-	var gameplay_instance: Control = gameplay_settings_scene.instantiate()  # Use the preloaded var
-	get_tree().root.add_child(gameplay_instance)
-	Globals.hidden_menus.push_back(self)
-	self.visible = false
-	if os_wrapper.has_feature("web") and js_bridge_wrapper:
-		(
-			js_bridge_wrapper
-			. eval(
-				"""
-				document.getElementById('audio-button').style.display = 'none';
-				document.getElementById('advanced-button').style.display = 'none';
-				document.getElementById('controls-button').style.display = 'none';
-				document.getElementById('gameplay-button').style.display = 'none';
-				document.getElementById('options-back-button').style.display = 'none';
-				""",
-				true
-			)
-		)
+	_open_sub_menu(gameplay_settings_scene, "Gameplay Settings button pressed.")
