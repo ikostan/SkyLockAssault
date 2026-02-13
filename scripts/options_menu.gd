@@ -66,7 +66,7 @@ func _ready() -> void:
 
 	if not gameplay_settings_button.pressed.is_connected(_on_gameplay_settings_button_pressed):
 		gameplay_settings_button.pressed.connect(_on_gameplay_settings_button_pressed)
-		
+
 	if not advanced_settings_button.pressed.is_connected(_on_advanced_settings_button_pressed):
 		advanced_settings_button.pressed.connect(_on_advanced_settings_button_pressed)
 
