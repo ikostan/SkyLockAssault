@@ -36,6 +36,7 @@ var _torn_down: bool = false  # Guard against multiple teardown calls
 @onready var audio_settings_button: Button = $Panel/OptionsVBoxContainer/AudioSettingsButton
 @onready var key_mapping_button: Button = $Panel/OptionsVBoxContainer/KeyMappingButton
 @onready var gameplay_settings_button: Button = $Panel/OptionsVBoxContainer/GameplaySettingsButton
+@onready var advanced_settings_button: Button = $Panel/OptionsVBoxContainer/AdvancedSettingsButton
 @onready var version_label: Label = $Panel/OptionsVBoxContainer/VersionLabel
 
 
@@ -65,6 +66,9 @@ func _ready() -> void:
 
 	if not gameplay_settings_button.pressed.is_connected(_on_gameplay_settings_button_pressed):
 		gameplay_settings_button.pressed.connect(_on_gameplay_settings_button_pressed)
+		
+	if not advanced_settings_button.pressed.is_connected(_on_advanced_settings_button_pressed):
+		advanced_settings_button.pressed.connect(_on_advanced_settings_button_pressed)
 
 	# Configure for web overlays (invisible but positioned)
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignore pause
@@ -118,6 +122,7 @@ func _ready() -> void:
 				"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
 			)
 	_torn_down = false  # Reset guard on ready
+	advanced_settings_button.grab_focus()  # Start at the top button
 
 
 func _input(event: InputEvent) -> void:
