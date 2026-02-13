@@ -38,6 +38,7 @@ var _torn_down: bool = false  # Guard against multiple teardown calls
 @onready var gameplay_settings_button: Button = $Panel/OptionsVBoxContainer/GameplaySettingsButton
 @onready var advanced_settings_button: Button = $Panel/OptionsVBoxContainer/AdvancedSettingsButton
 @onready var version_label: Label = $Panel/OptionsVBoxContainer/VersionLabel
+@onready var options_vbox: VBoxContainer = $Panel/OptionsVBoxContainer
 
 
 func _ready() -> void:
@@ -122,7 +123,21 @@ func _ready() -> void:
 				"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
 			)
 	_torn_down = false  # Reset guard on ready
-	advanced_settings_button.grab_focus()  # Start at the top button
+	_grab_first_button_focus()  # Dynamically grab focus on the first button
+
+
+func _grab_first_button_focus() -> void:
+	## Dynamically grabs focus on the first Button child in the OptionsVBoxContainer.
+	##
+	## Skips non-Button nodes like Labels.
+	##
+	## :rtype: void
+	for child in options_vbox.get_children():
+		if child is Button:
+			child.grab_focus()
+			Globals.log_message("Grabbed initial focus on: " + child.name, Globals.LogLevel.DEBUG)
+			return
+	Globals.log_message("No Button found in OptionsVBoxContainer for initial focus!", Globals.LogLevel.WARNING)
 
 
 func _input(event: InputEvent) -> void:
