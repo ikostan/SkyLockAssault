@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://cl4m4q2eurcn0"]
+[gd_scene load_steps=12 format=3 uid="uid://cl4m4q2eurcn0"]
 
 [ext_resource type="Script" uid="uid://cajq8hf84eplh" path="res://scripts/options_menu.gd" id="1_ijpji"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_liyum"]
@@ -31,7 +31,45 @@ corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
 shadow_size = 5
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_lfjc7"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3xsyx"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dhn0l"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_k61yy"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7txom"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_binsn"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
 
 [node name="OptionsMenu" type="CanvasLayer"]
 script = ExtResource("1_ijpji")
@@ -78,71 +116,81 @@ text = "{OPTIONS}"
 [node name="AdvancedSettingsButton" type="Button" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+focus_neighbor_top = NodePath("../OptionsBackButton")
+focus_neighbor_bottom = NodePath("../AudioSettingsButton")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
-theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_liyum")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_ijpji")
 theme_override_styles/hover = SubResource("StyleBoxFlat_hm4m4")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_lfjc7")
+theme_override_styles/focus = SubResource("StyleBoxFlat_3xsyx")
 text = "{ADVANCED}"
 
 [node name="AudioSettingsButton" type="Button" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+focus_neighbor_top = NodePath("../AdvancedSettingsButton")
+focus_neighbor_bottom = NodePath("../KeyMappingButton")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
-theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_liyum")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_ijpji")
 theme_override_styles/hover = SubResource("StyleBoxFlat_hm4m4")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_lfjc7")
+theme_override_styles/focus = SubResource("StyleBoxFlat_dhn0l")
 text = "{AUDIO}"
 
 [node name="KeyMappingButton" type="Button" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+focus_neighbor_top = NodePath("../AudioSettingsButton")
+focus_neighbor_bottom = NodePath("../GameplaySettingsButton")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
-theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_liyum")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_ijpji")
 theme_override_styles/hover = SubResource("StyleBoxFlat_hm4m4")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_lfjc7")
+theme_override_styles/focus = SubResource("StyleBoxFlat_k61yy")
 text = "{CONTROLS}"
 
 [node name="GameplaySettingsButton" type="Button" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+focus_neighbor_top = NodePath("../KeyMappingButton")
+focus_neighbor_bottom = NodePath("../OptionsBackButton")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
-theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_liyum")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_ijpji")
 theme_override_styles/hover = SubResource("StyleBoxFlat_hm4m4")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_lfjc7")
+theme_override_styles/focus = SubResource("StyleBoxFlat_7txom")
 text = "{GAMEPLAY}"
 
 [node name="OptionsBackButton" type="Button" parent="Panel/OptionsVBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+focus_neighbor_top = NodePath("../GameplaySettingsButton")
+focus_neighbor_bottom = NodePath("../AdvancedSettingsButton")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
-theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("1_liyum")
 theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_liyum")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_ijpji")
 theme_override_styles/hover = SubResource("StyleBoxFlat_hm4m4")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_lfjc7")
+theme_override_styles/focus = SubResource("StyleBoxFlat_binsn")
 text = "{BACK}"
 
 [node name="VersionLabel" type="Label" parent="Panel/OptionsVBoxContainer"]
