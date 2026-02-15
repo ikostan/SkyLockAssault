@@ -147,12 +147,11 @@ func _grab_first_button_focus() -> void:
 				gameplay_settings_button,
 				options_back_button
 			],
-            "Options Menu"
+			"Options Menu"
 		)
 	else:
 		Globals.log_message(
-			"No Button found in OptionsVBoxContainer for initial focus!",
-			Globals.LogLevel.WARNING
+			"No Button found in OptionsVBoxContainer for initial focus!", Globals.LogLevel.WARNING
 		)
 
 
