@@ -65,10 +65,10 @@ func toggle_pause() -> void:
 	## :rtype: void
 	visible = not visible
 	get_tree().paused = visible
-	# Replace the old focus block with:
-	Globals.ensure_initial_focus(
-		resume_button, [back_to_main_button, options_button, resume_button], "Pause Menu"
-	)
+	if visible:
+		Globals.ensure_initial_focus(
+			resume_button, [back_to_main_button, options_button, resume_button], "Pause Menu"
+		)
 
 
 func _on_resume_button_pressed() -> void:
