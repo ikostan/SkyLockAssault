@@ -133,9 +133,13 @@ func _grab_first_button_focus() -> void:
 	##
 	## :rtype: void
 	for child in options_vbox.get_children():
-		if child is Button and child.visible and not child.disabled:
-			child.grab_focus()
-			Globals.log_message("Grabbed initial focus on: " + child.name, Globals.LogLevel.DEBUG)
+		if get_viewport().gui_get_focus_owner() == null:
+			if child is Button and child.visible and not child.disabled:
+				child.grab_focus()
+				Globals.log_message("Grabbed initial focus on: " + child.name, Globals.LogLevel.DEBUG)
+				return
+		else:
+			Globals.log_message("Focus already set—skipping initial grab.", Globals.LogLevel.DEBUG)
 			return
 	Globals.log_message(
 		"No Button found in OptionsVBoxContainer for initial focus!", Globals.LogLevel.WARNING

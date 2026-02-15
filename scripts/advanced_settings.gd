@@ -87,11 +87,15 @@ func _ready() -> void:
 			)
 	# Give keyboard focus to the log level slider
 	if is_instance_valid(log_lvl_option):
-		log_lvl_option.call_deferred("grab_focus")
+		if get_viewport().gui_get_focus_owner() == null:
+			log_lvl_option.call_deferred("grab_focus")
+		else:
+			Globals.log_message("Focus already set—skipping initial grab.", Globals.LogLevel.DEBUG)
 	else:
 		Globals.log_message(
 			"Log level OptionButton not found—skipping focus.", Globals.LogLevel.WARNING
 		)
+
 	Globals.log_message("Advanced Settings menu loaded.", Globals.LogLevel.DEBUG)
 
 
@@ -188,7 +192,7 @@ func _on_advanced_back_button_pressed() -> void:
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 			hidden_menu_found = true
 
-# Focus on AdvancedSettingsButton
+			# Focus on AdvancedSettingsButton
 			var advanced_btn: Button = null
 			if prev_menu is OptionsMenu:
 				advanced_btn = prev_menu.advanced_settings_button
