@@ -323,3 +323,56 @@ func reset_to_defaults(device_type: String) -> void:
 				nev.device = -1
 				InputMap.action_add_event(action, nev)
 	save_input_mappings()
+
+
+## Ensures default keyboard and gamepad mappings are present in InputMap.
+## If any defaults were missing, they are added and the config is saved.
+## Called after load_input_mappings() to guarantee a complete first-run state.
+func _ensure_defaults_saved() -> void:
+	var changed: bool = false
+
+	for action: String in ACTIONS:
+		var events: Array[InputEvent] = InputMap.action_get_events(action)
+
+		var has_keyboard: bool = false
+		var has_gamepad: bool = false
+
+		for ev: InputEvent in events:
+			if ev is InputEventKey:
+				has_keyboard = true
+			elif ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
+				has_gamepad = true
+
+		# === Keyboard defaults ===
+		if not has_keyboard and DEFAULT_KEYBOARD.has(action):
+			var nev := InputEventKey.new()
+			nev.physical_keycode = DEFAULT_KEYBOARD[action]
+			InputMap.action_add_event(action, nev)
+			changed = true
+			Globals.log_message(
+				"Added missing default keyboard mapping for " + action, Globals.LogLevel.DEBUG
+			)
+
+		# === Gamepad defaults ===
+		if not has_gamepad and DEFAULT_GAMEPAD.has(action):
+			var def: Dictionary = DEFAULT_GAMEPAD[action]
+			var nev: InputEvent
+
+			if def["type"] == "button":
+				nev = InputEventJoypadButton.new()
+				(nev as InputEventJoypadButton).button_index = def["button"]
+			elif def["type"] == "axis":
+				nev = InputEventJoypadMotion.new()
+				(nev as InputEventJoypadMotion).axis = def["axis"]
+				(nev as InputEventJoypadMotion).axis_value = def["value"]
+
+			(nev as InputEventJoypadButton if nev is InputEventJoypadButton else nev as InputEventJoypadMotion).device = -1
+			InputMap.action_add_event(action, nev)
+			changed = true
+			Globals.log_message(
+				"Added missing default gamepad mapping for " + action, Globals.LogLevel.DEBUG
+			)
+
+	if changed:
+		save_input_mappings()
+		Globals.log_message("Defaults were missing → saved to settings.cfg", Globals.LogLevel.INFO)
