@@ -89,7 +89,7 @@ func _ready() -> void:
 	Globals.ensure_initial_focus(
 		log_lvl_option,
 		[log_lvl_option, advanced_back_button, advanced_reset_button],
-	    "Advanced Settings"
+		"Advanced Settings"
 	)
 
 	Globals.log_message("Advanced Settings menu loaded.", Globals.LogLevel.DEBUG)
