@@ -12,9 +12,8 @@
 ## :vartype back_button: Button
 ## :vartype difficulty_slider: HSlider
 ## :vartype difficulty_label: Label
-
-extends CanvasLayer
 class_name OptionsMenu
+extends CanvasLayer
 
 ## The wrappers (like JavaScriptBridgeWrapper and presumably OSWrapper)
 ## are designed to abstract away direct singleton calls, making the code
