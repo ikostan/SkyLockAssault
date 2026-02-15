@@ -133,14 +133,31 @@ func _grab_first_button_focus() -> void:
 	##
 	## :rtype: void
 	for child in options_vbox.get_children():
-		if get_viewport().gui_get_focus_owner() == null:
+		var focus_owner := get_viewport().gui_get_focus_owner()
+
+		var already_has_focus := false
+		if is_instance_valid(focus_owner):
+			# Only skip if focus is already on one of our own interactive controls
+			if (
+				focus_owner == advanced_settings_button
+				or focus_owner == audio_settings_button
+				or focus_owner == key_mapping_button
+				or focus_owner == gameplay_settings_button
+				or focus_owner == key_mapping_button
+			):
+				already_has_focus = true
+
+		if not already_has_focus:
 			if child is Button and child.visible and not child.disabled:
 				child.grab_focus()
-				Globals.log_message("Grabbed initial focus on: " + child.name, Globals.LogLevel.DEBUG)
+				Globals.log_message(
+					"Grabbed initial focus on: " + child.name, Globals.LogLevel.DEBUG
+				)
 				return
 		else:
 			Globals.log_message("Focus already set—skipping initial grab.", Globals.LogLevel.DEBUG)
 			return
+
 	Globals.log_message(
 		"No Button found in OptionsVBoxContainer for initial focus!", Globals.LogLevel.WARNING
 	)

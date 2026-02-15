@@ -66,9 +66,21 @@ func toggle_pause() -> void:
 	visible = not visible
 	get_tree().paused = visible
 	if visible and is_instance_valid(resume_button):
-		if get_viewport().gui_get_focus_owner() == null:
+		var focus_owner := get_viewport().gui_get_focus_owner()
+
+		var already_has_focus := false
+		if is_instance_valid(focus_owner):
+			# Only skip if focus is already on one of our own interactive controls
+			if (
+				focus_owner == back_to_main_button
+				or focus_owner == options_button
+				or focus_owner == resume_button
+			):
+				already_has_focus = true
+
+		if not already_has_focus:
 			resume_button.call_deferred("grab_focus")
-			Globals.log_message("Grabbed initial focus on: resume_button" , Globals.LogLevel.DEBUG)
+			Globals.log_message("Grabbed initial focus on: resume_button", Globals.LogLevel.DEBUG)
 		else:
 			Globals.log_message("Focus already set—skipping initial grab.", Globals.LogLevel.DEBUG)
 			return

@@ -85,12 +85,29 @@ func _ready() -> void:
 			_advanced_reset_cb = _register_js_callback(
 				"_on_advanced_reset_js", "advancedResetPressed"
 			)
-	# Give keyboard focus to the log level slider
+	# Give keyboard focus to the log level slider (only if nothing in this menu already has focus)
 	if is_instance_valid(log_lvl_option):
-		if get_viewport().gui_get_focus_owner() == null:
+		var focus_owner := get_viewport().gui_get_focus_owner()
+
+		var already_has_focus := false
+		if is_instance_valid(focus_owner):
+			# Only skip if focus is already on one of our own interactive controls
+			if (
+				focus_owner == log_lvl_option
+				or focus_owner == advanced_back_button
+				or focus_owner == advanced_reset_button
+			):
+				already_has_focus = true
+
+		if not already_has_focus:
 			log_lvl_option.call_deferred("grab_focus")
+			Globals.log_message(
+				"Grabbed initial focus on LogLevel OptionButton", Globals.LogLevel.DEBUG
+			)
 		else:
-			Globals.log_message("Focus already set—skipping initial grab.", Globals.LogLevel.DEBUG)
+			Globals.log_message(
+				"Focus already on a menu control — skipping initial grab.", Globals.LogLevel.DEBUG
+			)
 	else:
 		Globals.log_message(
 			"Log level OptionButton not found—skipping focus.", Globals.LogLevel.WARNING
