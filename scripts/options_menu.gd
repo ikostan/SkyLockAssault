@@ -143,7 +143,7 @@ func _grab_first_button_focus() -> void:
 				or focus_owner == audio_settings_button
 				or focus_owner == key_mapping_button
 				or focus_owner == gameplay_settings_button
-				or focus_owner == key_mapping_button
+				or focus_owner == options_back_button
 			):
 				already_has_focus = true
 
