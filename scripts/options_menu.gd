@@ -14,6 +14,7 @@
 ## :vartype difficulty_label: Label
 
 extends CanvasLayer
+class_name OptionsMenu
 
 ## The wrappers (like JavaScriptBridgeWrapper and presumably OSWrapper)
 ## are designed to abstract away direct singleton calls, making the code

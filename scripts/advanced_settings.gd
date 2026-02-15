@@ -189,9 +189,9 @@ func _on_advanced_back_button_pressed() -> void:
 			hidden_menu_found = true
 
 			# Focus on AdvancedSettingsButton
-			var advanced_btn: Button = prev_menu.get_node_or_null(
-				"Panel/OptionsVBoxContainer/AdvancedSettingsButton"
-			)
+			var advanced_btn: Button = null
+			if prev_menu is OptionsMenu:
+				advanced_btn = prev_menu.advanced_settings_button
 			if is_instance_valid(advanced_btn):
 				advanced_btn.call_deferred("grab_focus")
 				Globals.log_message(
