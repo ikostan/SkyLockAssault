@@ -85,7 +85,8 @@ func _ready() -> void:
 			_advanced_reset_cb = _register_js_callback(
 				"_on_advanced_reset_js", "advancedResetPressed"
 			)
-
+	# Give keyboard focus to the log level slider
+	log_lvl_option.call_deferred("grab_focus")
 	Globals.log_message("Advanced Settings menu loaded.", Globals.LogLevel.DEBUG)
 
 
@@ -181,6 +182,13 @@ func _on_advanced_back_button_pressed() -> void:
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 			hidden_menu_found = true
+			
+			# Focus on AdvancedSettingsButton
+			var advanced_btn: Button = prev_menu.get_node("Panel/OptionsVBoxContainer/AdvancedSettingsButton")
+			if is_instance_valid(advanced_btn):
+				advanced_btn.call_deferred("grab_focus")
+				Globals.log_message("Focused on AdvancedSettingsButton after back.", Globals.LogLevel.DEBUG)
+			
 	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
 	if os_wrapper.has_feature("web") and js_window:
 		_unset_advanced_window_callbacks()
