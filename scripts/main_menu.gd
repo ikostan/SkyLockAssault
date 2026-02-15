@@ -87,9 +87,7 @@ func _ready() -> void:
 
 		if not already_has_focus:
 			start_button.call_deferred("grab_focus")
-			Globals.log_message(
-				"Grabbed initial focus on start_button", Globals.LogLevel.DEBUG
-			)		
+			Globals.log_message("Grabbed initial focus on start_button", Globals.LogLevel.DEBUG)
 		else:
 			Globals.log_message("Focus already set—skipping initial grab.", Globals.LogLevel.DEBUG)
 	else:
