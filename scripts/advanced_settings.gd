@@ -188,19 +188,19 @@ func _on_advanced_back_button_pressed() -> void:
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 			hidden_menu_found = true
 
-			# Focus on AdvancedSettingsButton
+# Focus on AdvancedSettingsButton
 			var advanced_btn: Button = null
 			if prev_menu is OptionsMenu:
 				advanced_btn = prev_menu.advanced_settings_button
-			if is_instance_valid(advanced_btn):
-				advanced_btn.call_deferred("grab_focus")
-				Globals.log_message(
-					"Focused on AdvancedSettingsButton after back.", Globals.LogLevel.DEBUG
-				)
-			else:
-				Globals.log_message(
-					"AdvancedSettingsButton not found—skipping focus.", Globals.LogLevel.WARNING
-				)
+				if is_instance_valid(advanced_btn):
+					advanced_btn.call_deferred("grab_focus")
+					Globals.log_message(
+						"Focused on AdvancedSettingsButton after back.", Globals.LogLevel.DEBUG
+					)
+				else:
+					Globals.log_message(
+						"AdvancedSettingsButton not found—skipping focus.", Globals.LogLevel.WARNING
+					)
 
 	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
 	if os_wrapper.has_feature("web") and js_window:
