@@ -86,7 +86,12 @@ func _ready() -> void:
 				"_on_advanced_reset_js", "advancedResetPressed"
 			)
 	# Give keyboard focus to the log level slider
-	log_lvl_option.call_deferred("grab_focus")
+	if is_instance_valid(log_lvl_option):
+		log_lvl_option.call_deferred("grab_focus")
+	else:
+		Globals.log_message(
+			"Log level OptionButton not found—skipping focus.", Globals.LogLevel.WARNING
+		)
 	Globals.log_message("Advanced Settings menu loaded.", Globals.LogLevel.DEBUG)
 
 
