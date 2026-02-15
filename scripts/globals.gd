@@ -33,6 +33,51 @@ func _ready() -> void:
 	# log_message("Raw version from settings: " + game_version, LogLevel.DEBUG)
 
 
+## Centralized "ensure initial focus" helper.
+## Checks whether keyboard/controller focus is already inside this menu.
+## If it isn't, defers grab_focus() on the candidate and logs the action.
+## If it is, logs the skip (so you can still see what happened).
+##
+## :param candidate: The control that should receive focus by default.
+## :param allowed_controls: All interactive controls that belong to this menu.
+##                          If focus is already on any of them we do nothing.
+## :param context: Optional string that appears in the log (e.g. "Pause Menu").
+func ensure_initial_focus(
+	candidate: Control,
+	allowed_controls: Array[Control] = [],
+	context: String = ""
+) -> void:
+	if not is_instance_valid(candidate):
+		log_message(
+			"ensure_initial_focus: Candidate is null or freed - skipping.",
+			LogLevel.WARNING
+		)
+		return
+
+	var focus_owner: Control = get_tree().root.get_viewport().gui_get_focus_owner()
+
+	var already_has_focus := false
+	if is_instance_valid(focus_owner):
+		for ctrl: Control in allowed_controls:
+			if focus_owner == ctrl:
+				already_has_focus = true
+				break
+
+	var ctx: String = " (" + context + ")" if not context.is_empty() else ""
+
+	if not already_has_focus:
+		candidate.call_deferred("grab_focus")
+		log_message(
+			"Grabbed initial focus on " + candidate.name + ctx,
+			LogLevel.DEBUG
+		)
+	else:
+		log_message(
+			"Focus already on a menu control" + ctx + " — skipping initial grab.",
+			LogLevel.DEBUG
+		)
+
+
 ## Loads persisted settings from config if valid types; skips invalid/missing to keep current.
 ## :param path: Config file path (default: Settings.CONFIG_PATH).
 ## :type path: String

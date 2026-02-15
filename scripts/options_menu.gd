@@ -127,39 +127,33 @@ func _ready() -> void:
 
 
 func _grab_first_button_focus() -> void:
-	## Dynamically grabs focus on the first Button child in the OptionsVBoxContainer.
-	##
-	## Skips non-Button nodes like Labels.
-	##
-	## :rtype: void
-	var focus_owner := get_viewport().gui_get_focus_owner()
-	var already_has_focus := false
-	if is_instance_valid(focus_owner):
-		# Only skip if focus is already on one of our own interactive controls
-		if (
-			focus_owner == advanced_settings_button
-			or focus_owner == audio_settings_button
-			or focus_owner == key_mapping_button
-			or focus_owner == gameplay_settings_button
-			or focus_owner == options_back_button
-		):
-			already_has_focus = true
+	## Finds the first visible/enabled Button in the container and hands it
+	## to the centralized focus helper. The helper will decide whether to
+	## actually grab focus or skip (and log accordingly).
 
-	if not already_has_focus:
-		for child in options_vbox.get_children():
-			if child is Button and child.visible and not child.disabled:
-				child.grab_focus()
-				Globals.log_message(
-					"Grabbed initial focus on: " + child.name, Globals.LogLevel.DEBUG
-				)
-				return
+	var candidate: Button = null
+	for child in options_vbox.get_children():
+		if child is Button and child.visible and not child.disabled:
+			candidate = child
+			break
+
+	if candidate:
+		Globals.ensure_initial_focus(
+			candidate,
+			[
+				advanced_settings_button,
+				audio_settings_button,
+				key_mapping_button,
+				gameplay_settings_button,
+				options_back_button
+			],
+            "Options Menu"
+		)
 	else:
-		Globals.log_message("Focus already set—skipping initial grab.", Globals.LogLevel.DEBUG)
-		return
-
-	Globals.log_message(
-		"No Button found in OptionsVBoxContainer for initial focus!", Globals.LogLevel.WARNING
-	)
+		Globals.log_message(
+			"No Button found in OptionsVBoxContainer for initial focus!",
+			Globals.LogLevel.WARNING
+		)
 
 
 func _input(event: InputEvent) -> void:
