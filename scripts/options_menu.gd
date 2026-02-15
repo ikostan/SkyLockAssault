@@ -132,9 +132,7 @@ func _grab_first_button_focus() -> void:
 	## Skips non-Button nodes like Labels.
 	##
 	## :rtype: void
-	
 	var focus_owner := get_viewport().gui_get_focus_owner()
-
 	var already_has_focus := false
 	if is_instance_valid(focus_owner):
 		# Only skip if focus is already on one of our own interactive controls
