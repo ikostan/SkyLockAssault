@@ -34,12 +34,18 @@ corner_radius_bottom_left = 10
 expand_margin_left = 20.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6dctt"]
-bg_color = Color(0.6, 0.6, 0.6, 0.39215687)
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
 corner_radius_top_left = 10
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 expand_margin_left = 20.0
+shadow_color = Color(0.7647059, 0.8156863, 0.03137255, 0.33333334)
+shadow_size = 2
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_yonr6"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
@@ -63,9 +69,21 @@ corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
 shadow_size = 5
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_koe27"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cfdt5"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_a0ntd"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_itopb"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
 
 [node name="AdvancedSettings" type="Control"]
 layout_mode = 3
@@ -146,6 +164,10 @@ text = "{LOG=LEVEL}"
 custom_minimum_size = Vector2(175, 0)
 layout_mode = 2
 size_flags_vertical = 4
+focus_neighbor_top = NodePath("../../BtnContainer/ResetButton")
+focus_neighbor_bottom = NodePath("../../BtnContainer/BackButton")
+focus_next = NodePath("../../BtnContainer/BackButton")
+focus_previous = NodePath("../../BtnContainer/ResetButton")
 theme_override_colors/font_color = Color(0.24840015, 0.24840018, 0.24840012, 1)
 theme_override_colors/font_focus_color = Color(0.24705882, 0.24705882, 0.24705882, 1)
 theme_override_colors/font_pressed_color = Color(0.24705882, 0.24705882, 0.24705882, 1)
@@ -171,8 +193,12 @@ theme_override_constants/separation = 5
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+focus_neighbor_top = NodePath("../../LogLevelContainer/LogLevelOptionButton")
+focus_neighbor_bottom = NodePath("../ResetButton")
+focus_next = NodePath("../ResetButton")
+focus_previous = NodePath("../../LogLevelContainer/LogLevelOptionButton")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
-theme_override_colors/font_focus_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_pressed_color = Color(0.9607843, 0.9607843, 0.050980393, 0.9019608)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("2_vw8ml")
@@ -180,15 +206,19 @@ theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_yonr6")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_koe27")
 theme_override_styles/hover = SubResource("StyleBoxFlat_a0ntd")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_koe27")
+theme_override_styles/focus = SubResource("StyleBoxFlat_cfdt5")
 text = "{BACK}"
 
 [node name="ResetButton" type="Button" parent="Panel/Controls/BtnContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+focus_neighbor_top = NodePath("../BackButton")
+focus_neighbor_bottom = NodePath("../../LogLevelContainer/LogLevelOptionButton")
+focus_next = NodePath("../../LogLevelContainer/LogLevelOptionButton")
+focus_previous = NodePath("../BackButton")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
-theme_override_colors/font_focus_color = Color(1, 0.19607843, 0.2784314, 0.98039216)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_pressed_color = Color(0.9607843, 0.9607843, 0.050980393, 0.9019608)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("2_vw8ml")
@@ -196,5 +226,5 @@ theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_yonr6")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_koe27")
 theme_override_styles/hover = SubResource("StyleBoxFlat_a0ntd")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_a0ntd")
+theme_override_styles/focus = SubResource("StyleBoxFlat_itopb")
 text = "{RESET}"

@@ -12,7 +12,7 @@
 ## :vartype back_button: Button
 ## :vartype difficulty_slider: HSlider
 ## :vartype difficulty_label: Label
-
+class_name OptionsMenu
 extends CanvasLayer
 
 ## The wrappers (like JavaScriptBridgeWrapper and presumably OSWrapper)
@@ -127,19 +127,32 @@ func _ready() -> void:
 
 
 func _grab_first_button_focus() -> void:
-	## Dynamically grabs focus on the first Button child in the OptionsVBoxContainer.
-	##
-	## Skips non-Button nodes like Labels.
-	##
-	## :rtype: void
+	## Finds the first visible/enabled Button in the container and hands it
+	## to the centralized focus helper. The helper will decide whether to
+	## actually grab focus or skip (and log accordingly).
+
+	var candidate: Button = null
 	for child in options_vbox.get_children():
 		if child is Button and child.visible and not child.disabled:
-			child.grab_focus()
-			Globals.log_message("Grabbed initial focus on: " + child.name, Globals.LogLevel.DEBUG)
-			return
-	Globals.log_message(
-		"No Button found in OptionsVBoxContainer for initial focus!", Globals.LogLevel.WARNING
-	)
+			candidate = child
+			break
+
+	if candidate:
+		Globals.ensure_initial_focus(
+			candidate,
+			[
+				advanced_settings_button,
+				audio_settings_button,
+				key_mapping_button,
+				gameplay_settings_button,
+				options_back_button
+			],
+			"Options Menu"
+		)
+	else:
+		Globals.log_message(
+			"No Button found in OptionsVBoxContainer for initial focus!", Globals.LogLevel.WARNING
+		)
 
 
 func _input(event: InputEvent) -> void:

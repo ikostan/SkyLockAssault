@@ -72,7 +72,10 @@ func _ready() -> void:
 		Globals.log_message("Invalid tween—grabbing focus immediately.", Globals.LogLevel.WARNING)
 	# Fallback: Grab focus immediately if tween isn't running (e.g., error or instant)
 	# Give keyboard focus to the first button after the fade-in completes
-	start_button.call_deferred("grab_focus")
+	Globals.ensure_initial_focus(
+		start_button, [start_button, options_button, quit_button], "Main Menu"
+	)
+
 	# Connect START button signal
 	@warning_ignore("return_value_discarded")
 	start_button.pressed.connect(_on_start_pressed)

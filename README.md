@@ -132,10 +132,23 @@ these GPL requirements, a separate license is available upon request.
 
 ---
 
-## 🟡 Current Development Status
+## Architecture Highlights
 
-**Milestone:** UI & Input Improvements, Testing & Docs (Milestone 10)  
-**Active Focus:** Input remapping tests, Settings + UI sync, documentation updates.
+- Separation of gameplay logic and UI state
+- Centralized stat tracking (fuel/speed dictionaries)
+- Speed-based gameplay scaling
+- Modular audio system with buses
+- CI/CD-driven deployment workflow
+- Test-driven improvements with GUT
+
+---
+
+## 🟢 Current Development Status
+
+**Milestone:** Milestone 11 – UI & Input Improvements (Completed)  
+**Status:** Stable gameplay loop with synced UI systems and GUT-based unit testing.
+
+**Active Focus:** Gameplay expansion (AI enemies, multiplayer, levels).
 
 ### Current features
 
@@ -164,6 +177,15 @@ these GPL requirements, a separate license is available upon request.
 - Speed system with progress bar, dynamic color changes (green normal, yellow caution,
   red/dark red danger based on thresholds), and low/over-speed blinking warnings.
 - Centralized fuel/speed tracking via dictionaries for gameplay and UI integration.
+- Fully synchronized Input Remapping system:
+  - UI reflects saved bindings
+  - Conflict-safe remapping logic
+  - Persistent across sessions
+- Improved Options Menu behavior:
+  - Shared between Main Menu and Pause Menu
+  - Live updates to audio and gameplay settings
+- UI state consistency across scene transitions
+
 
 ### Features Roadmap
 
@@ -208,8 +230,42 @@ Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milest
 
 - Harmless console warning on desktop fullscreen
   (NotSupportedError for orientation lock—ignored as non-fatal; doesn't affect gameplay).
-- Placeholder level lacks mechanics—work in progress.
+- Placeholder level lacks mechanics—work in progress:
+  - Core gameplay loop functional (movement, fuel, speed, audio)
+  - Enemy AI and combat progression are upcoming.
 - Report new issues on [GitHub](https://github.com/ikostan/SkyLockAssault/issues).
+
+---
+
+## DevOps & Automation
+
+- GitHub Actions CI/CD pipeline
+- Automated HTML5 build & Itch.io deployment
+- Codecov integration
+- Snyk security scanning
+- Docker-based local web testing
+- Release Drafter for automated changelogs
+
+---
+
+## Testing
+
+Sky Lock Assault uses **GUT (Godot Unit Test)** framework for automated testing.
+
+- Unit tests cover:
+  - Input remapping logic
+  - Fuel system behavior
+  - Speed system thresholds & UI sync
+  - Player movement constraints
+- Tests run locally and in CI via GitHub Actions.
+- Coverage is tracked with Codecov.
+
+Run tests locally:
+- Open Godot
+- Use GUT Test Runner
+- Or run via CI pipeline
+
+Testing is a core part of development and required for gameplay logic changes.
 
 ---
 

@@ -85,6 +85,12 @@ func _ready() -> void:
 			_advanced_reset_cb = _register_js_callback(
 				"_on_advanced_reset_js", "advancedResetPressed"
 			)
+	# Give keyboard focus to the log level slider (only if nothing in this menu already has focus)
+	Globals.ensure_initial_focus(
+		log_lvl_option,
+		[log_lvl_option, advanced_back_button, advanced_reset_button],
+		"Advanced Settings"
+	)
 
 	Globals.log_message("Advanced Settings menu loaded.", Globals.LogLevel.DEBUG)
 
@@ -166,21 +172,33 @@ func _on_advanced_reset_js(_args: Array) -> void:
 
 
 func _on_advanced_back_button_pressed() -> void:
-	## Handles Back button press.
+	## Handles advanced back button press.
 	##
-	## Shows previous menu from stack, removes advanced menu.
-	##
-	## Hides web overlays if on web.
+	## Logs action, restores previous menu if available, performs web cleanup if applicable,
+	## and frees self. Uses focus helper for consistency on restore.
 	##
 	## :rtype: void
-	Globals.log_message("Back button pressed in advanced settings.", Globals.LogLevel.DEBUG)
+	Globals.log_message("Advanced Back button pressed.", Globals.LogLevel.DEBUG)
+
 	var hidden_menu_found: bool = false
 	if not Globals.hidden_menus.is_empty():
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
 		if is_instance_valid(prev_menu):
 			prev_menu.visible = true
-			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 			hidden_menu_found = true
+			# Restore focus using helper for consistency
+			var advanced_btn: Button = prev_menu.get_node(
+				"OptionsVBoxContainer/AdvancedSettingsButton"
+			)
+			if is_instance_valid(advanced_btn):
+				Globals.ensure_initial_focus(
+					advanced_btn, [advanced_btn], "Options Menu - Advanced Button"
+				)
+			else:
+				Globals.log_message(
+					"AdvancedSettingsButton not found—skipping focus.", Globals.LogLevel.WARNING
+				)
+
 	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
 	if os_wrapper.has_feature("web") and js_window:
 		_unset_advanced_window_callbacks()

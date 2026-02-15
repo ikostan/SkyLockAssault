@@ -13,25 +13,12 @@ extends GutTest
 
 var PauseMenuScene: PackedScene = preload("res://scenes/pause_menu.tscn")
 var pause_menu: CanvasLayer = null
-var original_globals: Node = null
 var original_paused: bool = false
 var original_input_map: Dictionary = {}  # action: [events]
 var added_pause: bool = false
 var original_pause_events: Array[InputEvent] = []
 var added_ui_cancel: bool = false
 var original_ui_cancel_events: Array[InputEvent] = []
-
-
-## Mock for Globals autoload to avoid errors in button handlers.
-class MockGlobals extends Node:
-	var load_scene_with_loading_called: bool = false
-	var load_options_called: bool = false
-	func log_message(_msg: String, _lvl: int) -> void:
-		pass
-	func load_scene_with_loading(_path: String) -> void:
-		load_scene_with_loading_called = true
-	func load_options(_node: Node) -> void:
-		load_options_called = true
 
 
 ## Sets up suite-wide state capture.
@@ -43,16 +30,14 @@ func before_all() -> void:
 
 
 ## Sets up per-test state.
-## Captures/restores Globals, paused; instantiates menu; ensures "pause" action.
+## Captures/restores paused; instantiates menu; ensures "pause" action.
+## Stubs Globals methods to prevent side effects.
 ## :rtype: void
 func before_each() -> void:
 	original_paused = get_tree().paused
-	if get_tree().root.has_node("Globals"):
-		original_globals = get_tree().root.get_node("Globals")
-		get_tree().root.remove_child(original_globals)
-	var mock_globals: MockGlobals = MockGlobals.new()
-	mock_globals.name = "Globals"
-	get_tree().root.add_child(mock_globals)
+	stub(Globals, 'log_message').to_do_nothing()
+	stub(Globals, 'load_scene_with_loading').to_do_nothing()
+	stub(Globals, 'load_options').to_do_nothing()
 	pause_menu = PauseMenuScene.instantiate()
 	get_tree().root.add_child(pause_menu)
 	pause_menu.visible = false
@@ -122,17 +107,11 @@ func create_action_event(action: String) -> InputEventAction:
 
 
 ## Cleans up per-test state.
-## Frees menu/mock; restores Globals/paused; erases added actions.
+## Frees menu; restores paused; erases added actions.
 ## :rtype: void
 func after_each() -> void:
 	if is_instance_valid(pause_menu):
 		pause_menu.queue_free()
-	var mock_globals: Node = get_tree().root.get_node_or_null("Globals")
-	if mock_globals != null:
-		mock_globals.queue_free()
-	if original_globals:
-		get_tree().root.add_child(original_globals)
-		original_globals = null
 	get_tree().paused = original_paused
 	# Restore "pause" action
 	restore_action("pause", "added_pause", "original_pause_events")
