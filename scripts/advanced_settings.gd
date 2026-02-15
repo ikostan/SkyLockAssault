@@ -188,7 +188,7 @@ func _on_advanced_back_button_pressed() -> void:
 			hidden_menu_found = true
 			# Restore focus using helper for consistency
 			var advanced_btn: Button = prev_menu.get_node(
-				"OptionsVBoxContainer/AdvancedSettingsButton"
+				"Panel/OptionsVBoxContainer/AdvancedSettingsButton"
 			)
 			if is_instance_valid(advanced_btn):
 				Globals.ensure_initial_focus(
