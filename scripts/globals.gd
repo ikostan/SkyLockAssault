@@ -43,14 +43,11 @@ func _ready() -> void:
 ##                          If focus is already on any of them we do nothing.
 ## :param context: Optional string that appears in the log (e.g. "Pause Menu").
 func ensure_initial_focus(
-	candidate: Control,
-	allowed_controls: Array[Control] = [],
-	context: String = ""
+	candidate: Control, allowed_controls: Array[Control] = [], context: String = ""
 ) -> void:
 	if not is_instance_valid(candidate):
 		log_message(
-			"ensure_initial_focus: Candidate is null or freed - skipping.",
-			LogLevel.WARNING
+			"ensure_initial_focus: Candidate is null or freed - skipping.", LogLevel.WARNING
 		)
 		return
 
@@ -67,14 +64,10 @@ func ensure_initial_focus(
 
 	if not already_has_focus:
 		candidate.call_deferred("grab_focus")
-		log_message(
-			"Grabbed initial focus on " + candidate.name + ctx,
-			LogLevel.DEBUG
-		)
+		log_message("Grabbed initial focus on " + candidate.name + ctx, LogLevel.DEBUG)
 	else:
 		log_message(
-			"Focus already on a menu control" + ctx + " — skipping initial grab.",
-			LogLevel.DEBUG
+			"Focus already on a menu control" + ctx + " — skipping initial grab.", LogLevel.DEBUG
 		)
 
 
