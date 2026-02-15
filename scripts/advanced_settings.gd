@@ -85,7 +85,7 @@ func _ready() -> void:
 			_advanced_reset_cb = _register_js_callback(
 				"_on_advanced_reset_js", "advancedResetPressed"
 			)
-	# Give keyboard focus to the log level slider
+	# Give keyboard focus to the log level OptionButton
 	if is_instance_valid(log_lvl_option):
 		if get_viewport().gui_get_focus_owner() == null:
 			log_lvl_option.call_deferred("grab_focus")
