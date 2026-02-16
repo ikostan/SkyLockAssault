@@ -1,7 +1,6 @@
 # Free Web Browser Game Deployment Platforms
 
-## Summary of zero-cost publishing platforms for Godot v4.5
-HTML5/WebGL games (Feb 2026)
+## Summary of zero-cost publishing platforms for Godot v4.5 HTML5/WebGL games
 
 ## Project Context
 
@@ -86,15 +85,18 @@ but it's maintenance work.
 ## Recommended Workflow for SkyLockAssault (Your Learning Path)
 
 ### Phase 1: 100% Automatic (Do This First)
+
 1. **itch.io** — Set up butler + GitHub Actions (you already did this ✅)
 2. **Poki** — Add poki-cli (high traffic + official Godot support)
 3. **Viverse** — Add VIVERSE CLI (modern 3D/WebXR bonus)
 
 ### Phase 2: Semi-Auto Bonus (Playwright)
+
 - **iDev.games** + **GameMonetize** (easiest forms)
 - Update every 2–4 weeks via one shared script
 
 ### Phase 3: Manual Once + Occasional Updates
+
 - CrazyGames, Y8, GameDistribution, GamePix, Newgrounds, SoftGames, Game Jolt
 
 **Goal:** Push to `main` → 10+ platforms updated automatically.
