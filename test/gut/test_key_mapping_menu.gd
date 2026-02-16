@@ -119,25 +119,39 @@ func test_ui_04_reset_in_gamepad() -> void:
 # :rtype: void
 func test_ui_05_label_update_after_remapping() -> void:
 	gut.p("UI-05: Remapping updates UI text to reflect new InputEvent for both keyboard and gamepad tabs.")
-	# Keyboard remap
+	
+	# ── Keyboard remap ──
 	keyboard_btn.button_pressed = true
 	var left_btn: Button = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingLeft/LeftInputRemap")
 	left_btn.button_pressed = true
 	left_btn._on_pressed()
-	assert_eq(left_btn.text, Globals.REMAP_PROMPT_KEYBOARD)  # updated
+	assert_eq(left_btn.text, Globals.REMAP_PROMPT_KEYBOARD, "Should show keyboard prompt while listening")
+	
 	var key_event := InputEventKey.new()
 	key_event.physical_keycode = Key.KEY_A
 	key_event.pressed = true
 	left_btn._input(key_event)
-	assert_false(left_btn.listening)
-	assert_eq(left_btn.text, "A")
-	# Gamepad remap (no prompt assert needed here)
+	await get_tree().process_frame
+	
+	assert_false(left_btn.listening, "Listening should stop after valid input")
+	assert_eq(left_btn.text, "A", "Keyboard label should update to new key")
+	
+	# ── Gamepad remap ──
 	gamepad_btn.button_pressed = true
+	gamepad_btn.toggled.emit(true)
+	await get_tree().process_frame
+	
 	left_btn.button_pressed = true
 	left_btn._on_pressed()
+	assert_eq(left_btn.text, Globals.REMAP_PROMPT_GAMEPAD, "Should show gamepad prompt while listening")
+	
+	# Use JOY_BUTTON_MISC1 — safe choice (not used in DEFAULT_GAMEPAD → no conflict)
 	var joy_event := InputEventJoypadButton.new()
-	joy_event.button_index = JOY_BUTTON_DPAD_LEFT
+	joy_event.button_index = JOY_BUTTON_MISC1
 	joy_event.pressed = true
 	joy_event.device = -1
 	left_btn._input(joy_event)
-	assert_eq(left_btn.text, "D-Pad Left")
+	await get_tree().process_frame
+	
+	assert_false(left_btn.listening, "Listening should stop after valid gamepad input")
+	assert_eq(left_btn.text, "Misc 1", "Gamepad label should update to new button (from JOY_BUTTON_LABELS)")
