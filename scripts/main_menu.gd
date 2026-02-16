@@ -153,6 +153,8 @@ func setup_quit_dialog() -> void:
 		)
 
 
+## Called when Start Game is pressed.
+## Checks for unbound critical actions and shows warning if needed.
 func _on_start_pressed(_args: Array = []) -> void:
 	## Handles the Start button press.
 	##
@@ -161,9 +163,30 @@ func _on_start_pressed(_args: Array = []) -> void:
 	## :param _args: Optional arguments from web overlays (unused).
 	## :type _args: Array
 	## :rtype: void
-	# Stub; later: get_tree().change_scene_to_file("res://game_scene.tscn")
 	Globals.log_message("Start Game menu button pressed.", Globals.LogLevel.DEBUG)
-	Globals.load_scene_with_loading("res://scenes/main_scene.tscn")
+	if Settings.has_unbound_critical_actions():
+		# Show warning dialog (create once or use existing ConfirmationDialog)
+		var dialog: ConfirmationDialog = ConfirmationDialog.new()
+		dialog.title = "Unbound Controls"
+		dialog.dialog_text = "Some critical controls are unbound.\nGo to Key Mapping to fix?"
+		dialog.get_ok_button().text = "Open Key Mapping"
+		dialog.get_cancel_button().text = "Start Anyway"
+		add_child(dialog)
+		# Continue to Key Mapping menu
+		dialog.confirmed.connect(
+			func() -> void:
+				Globals.load_key_mapping(ui_panel)  # same as options menu
+				dialog.queue_free()
+		)
+		# Open the gameplay anyway
+		dialog.canceled.connect(
+			func() -> void:
+				Globals.load_scene_with_loading("res://scenes/main_scene.tscn")
+				dialog.queue_free()
+		)
+		dialog.popup_centered()
+	else:
+		Globals.load_scene_with_loading("res://scenes/main_scene.tscn")
 
 
 func _on_options_button_pressed(_args: Array = []) -> void:

@@ -9,6 +9,11 @@ extends Node
 
 const CONFIG_PATH: String = "user://settings.cfg"
 
+## Critical actions that must be bound for playable game.
+const CRITICAL_ACTIONS: Array[String] = [
+	"fire", "speed_up", "speed_down", "move_left", "move_right", "next_weapon", "pause"
+]
+
 const ACTIONS: Array[String] = [
 	"speed_up",
 	"speed_down",
@@ -65,6 +70,15 @@ func _ready() -> void:
 	if _needs_migration:
 		save_input_mappings()  # Only save if upgrade needed (old format detected)
 		_needs_migration = false
+
+
+## Returns true if any critical action has zero events.
+## :rtype: bool
+func has_unbound_critical_actions() -> bool:
+	for action: String in CRITICAL_ACTIONS:
+		if InputMap.action_get_events(action).is_empty():
+			return true
+	return false
 
 
 ## Serializes an InputEvent to string for ConfigFile storage.

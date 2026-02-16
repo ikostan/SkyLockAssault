@@ -116,7 +116,10 @@ func _on_conflict_confirmed() -> void:
 	InputMap.action_add_event(current_remap_button.action, current_pending_event)
 
 	Globals.log_message(
-		"Remapped %s (unbound %d conflicts)" % [current_remap_button.action, current_conflicts.size()],
+		(
+			"Remapped %s (unbound %d conflicts)"
+			% [current_remap_button.action, current_conflicts.size()]
+		),
 		Globals.LogLevel.DEBUG
 	)
 
@@ -208,11 +211,19 @@ func _on_controls_back_button_pressed() -> void:
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 			hidden_menu_found = true
-
 			# NEW: When returning from Key Mapping menu → focus the Key Mapping button in Options
-			# This uses the safe ensure_initial_focus helper so we don't fight existing controller focus
 			if prev_menu is OptionsMenu:
 				(prev_menu as OptionsMenu).grab_focus_on_key_mapping_button()
+			# NEW: When returning to Main Menu → focus Start Game button
+			elif prev_menu.name == "Panel" or prev_menu is Panel:  # ← this is the fix
+				var start_button: Button = prev_menu.get_node_or_null("VBoxContainer/StartButton")
+				if is_instance_valid(start_button):
+					# Triple-deferred to be 100% sure after visibility change
+					start_button.call_deferred("call_deferred", "call_deferred", "grab_focus")
+					Globals.log_message(
+						"Focus restored to Start Game button (triple deferred)",
+						Globals.LogLevel.DEBUG
+					)
 
 	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
 	if os_wrapper.has_feature("web") and js_window:

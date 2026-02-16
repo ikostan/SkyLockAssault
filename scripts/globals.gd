@@ -23,6 +23,8 @@ var options_instance: CanvasLayer = null
 # var hidden_menu: Node = null
 var hidden_menus: Array[Node] = []
 var options_open: bool = false
+## Key Mapping scene for direct loading from warning dialogs.
+var key_mapping_scene: PackedScene = preload("res://scenes/key_mapping_menu.tscn")
 var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
 var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 var next_scene: String = ""  # Path to the next scene to load via loading screen.
@@ -72,6 +74,27 @@ func ensure_initial_focus(
 		log_message(
 			"Focus already on a menu control" + ctx + " — skipping initial grab.", LogLevel.DEBUG
 		)
+
+
+## Loads Key Mapping menu directly while keeping background video visible.
+## :param menu_to_hide: Usually the UI Panel (not the root Control).
+## :type menu_to_hide: Node
+## :rtype: void
+func load_key_mapping(menu_to_hide: Node) -> void:
+	if is_instance_valid(menu_to_hide):
+		hidden_menus.push_back(menu_to_hide)
+		menu_to_hide.visible = false
+
+		# Robust video lookup (works for both Panel and root Control)
+		var video: VideoStreamPlayer = menu_to_hide.get_node_or_null("../VideoStreamPlayer")
+		if not is_instance_valid(video):
+			video = menu_to_hide.get_node_or_null("VideoStreamPlayer")
+		if is_instance_valid(video):
+			video.visible = true
+			video.process_mode = Node.PROCESS_MODE_ALWAYS  # keep playing
+
+	var km_instance: CanvasLayer = key_mapping_scene.instantiate()
+	get_tree().root.add_child(km_instance)
 
 
 ## Loads persisted settings from config if valid types; skips invalid/missing to keep current.
