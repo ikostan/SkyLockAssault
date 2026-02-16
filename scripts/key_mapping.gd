@@ -84,6 +84,12 @@ func _ready() -> void:
 			)
 			js_window.controlsBackPressed = _controls_back_button_pressed_cb
 
+	# Load and apply the last selected device (so it remembers across sessions)
+	Settings.load_last_input_device()
+	keyboard.button_pressed = (Globals.current_input_device == "keyboard")
+	gamepad.button_pressed = (Globals.current_input_device == "gamepad")
+	update_all_remap_buttons()
+
 
 ## Called from InputRemapButton when a duplicate binding is detected.
 func show_conflict_dialog(
@@ -173,22 +179,6 @@ func _on_reset_pressed() -> void:
 	Settings.reset_to_defaults(device_type)
 	update_all_remap_buttons()
 	Globals.log_message("Resetting " + device_type + " controls.", Globals.LogLevel.DEBUG)
-
-
-func _on_keyboard_toggled(toggled_on: bool) -> void:
-	if toggled_on:
-		Globals.log_message(
-			"_on_keyboard_toggled control pressed: " + str(toggled_on), Globals.LogLevel.DEBUG
-		)
-		update_all_remap_buttons()
-
-
-func _on_gamepad_toggled(toggled_on: bool) -> void:
-	if toggled_on:
-		Globals.log_message(
-			"_on_gamepad_toggled control pressed: " + str(toggled_on), Globals.LogLevel.DEBUG
-		)
-		update_all_remap_buttons()
 
 
 func _on_controls_back_button_pressed() -> void:
@@ -290,3 +280,19 @@ func _grab_initial_focus() -> void:
 			allowed_controls.append(btn)
 
 	Globals.ensure_initial_focus(keyboard, allowed_controls, "Key Mapping Menu")  # candidate
+
+
+func _on_keyboard_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		Globals.current_input_device = "keyboard"
+		Settings.save_last_input_device("keyboard")
+		update_all_remap_buttons()
+		Globals.log_message("Current input device set to: keyboard", Globals.LogLevel.DEBUG)
+
+
+func _on_gamepad_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		Globals.current_input_device = "gamepad"
+		Settings.save_last_input_device("gamepad")
+		update_all_remap_buttons()
+		Globals.log_message("Current input device set to: gamepad", Globals.LogLevel.DEBUG)

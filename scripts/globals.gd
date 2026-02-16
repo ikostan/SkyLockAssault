@@ -28,7 +28,9 @@ var key_mapping_scene: PackedScene = preload("res://scenes/key_mapping_menu.tscn
 var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
 var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 var next_scene: String = ""  # Path to the next scene to load via loading screen.
-
+## Last selected input device for UI messages and labels.
+## Updated when player toggles Keyboard/Gamepad in Key Mapping.
+var current_input_device: String = "keyboard"  # "keyboard" or "gamepad"
 
 func _ready() -> void:
 	if Engine.is_editor_hint() or enable_debug_logging:

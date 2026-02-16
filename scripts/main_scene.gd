@@ -6,6 +6,7 @@
 extends Node2D
 
 var _showing_unbound_warning: bool = false
+var _showing_unbound_key_message: bool = false
 
 @onready var player: Node2D = $Player
 @onready var stats_panel: Panel = $PlayerStatsPanel
@@ -32,6 +33,32 @@ func _ready() -> void:
 
 	# Setup decor layer with random instances
 	setup_decor_layer(viewport_size)
+
+
+# 2. Detect when player presses a key/button that has NO binding at all
+func _input(event: InputEvent) -> void:
+	if event.is_echo():
+		return
+
+	if not (
+		event is InputEventKey or event is InputEventJoypadButton or event is InputEventJoypadMotion
+	):
+		return
+
+	# Player pressed a completely unbound key/button/axis
+	if not Settings.is_event_bound(event) and not _showing_unbound_key_message:
+		_showing_unbound_key_message = true
+
+		# Detect which physical device was used for this press
+		var device_type: String = Settings.get_event_device_type(event)
+		var pause_label: String = Settings.get_pause_binding_label_for_device(device_type)
+
+		show_message(
+			"{UNBOUND=KEY=PRESSED}\n{PRESS='" + pause_label + "'=AND=GO=TO='CONTROLS'=TO=FIX}"
+		)
+
+		await get_tree().create_timer(4.0).timeout
+		_showing_unbound_key_message = false
 
 
 ## Sets up a parallax layer for tiling and mirroring.
@@ -150,11 +177,14 @@ func _process(delta: float) -> void:
 	background.scroll_offset.y += scroll_speed
 	if player.fuel["fuel"] <= 0:
 		background.scroll_offset = Vector2(0, 0)
-	
-	# === Unbound controls warning (show only once) ===
-	if Settings.has_unbound_critical_actions() and not _showing_unbound_warning:
+
+	# 1. Critical unbound controls warning (shown once per session)
+	if Settings.has_unbound_critical_actions_for_current_device() and not _showing_unbound_warning:
 		_showing_unbound_warning = true
-		show_message("{SOME=CONTROLS=ARE=UNBOUND.=PRESS=ESC=AND=GO=TO='CONTROLS'=TO=FIX.}")
+		var pause_key: String = Settings.get_pause_binding_label()
+		show_message(
+			"{SOME=CONTROLS=ARE=UNBOUND}\n{PRESS='" + pause_key + "'=AND=GO=TO='CONTROLS'=TO=FIX}"
+		)
 
 
 ## Shows a temporary on-screen message (non-blocking).
@@ -164,10 +194,10 @@ func _process(delta: float) -> void:
 func show_message(text: String) -> void:
 	if not is_instance_valid(message_label):
 		return
-	
+
 	message_label.text = text
 	message_label.visible = true
-	
+
 	# Auto-hide after 4 seconds and reset flag
 	await get_tree().create_timer(4.0).timeout
 	if is_instance_valid(message_label):

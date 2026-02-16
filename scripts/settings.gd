@@ -81,6 +81,46 @@ func has_unbound_critical_actions() -> bool:
 	return false
 
 
+## Returns the pause binding label in ALL CAPS.
+## Strictly follows the last selected device in Key Mapping menu.
+func get_pause_binding_label() -> String:
+	var preferred: String = Globals.current_input_device
+	var events: Array[InputEvent] = InputMap.action_get_events("pause")
+
+	if events.is_empty():
+		return "UNBOUND"
+
+	for ev: InputEvent in events:
+		if (
+			(preferred == "keyboard" and ev is InputEventKey)
+			or (
+				preferred == "gamepad"
+				and (ev is InputEventJoypadButton or ev is InputEventJoypadMotion)
+			)
+		):
+			var temp: Button = InputRemapButton.new()
+			var label: String = temp.get_event_label(ev)
+			temp.queue_free()
+			return label.to_upper()
+
+	# Fallback
+	var temp: Button = InputRemapButton.new()
+	var label: String = temp.get_event_label(events[0])
+	temp.queue_free()
+	return label.to_upper()
+
+
+## Returns true if the given event is bound to any action.
+## :param event: Input event to check.
+## :type event: InputEvent
+## :rtype: bool
+func is_event_bound(event: InputEvent) -> bool:
+	for action: String in ACTIONS:
+		if InputMap.event_is_action(event, action):
+			return true
+	return false
+
+
 ## Serializes an InputEvent to string for ConfigFile storage.
 ## Handles Key (no device), JoypadButton, and JoypadMotion (with device).
 ## :param ev: The event to serialize.
@@ -455,3 +495,84 @@ func get_conflicting_actions(event: InputEvent, exclude_action: String = "") -> 
 				conflicts.append(action)
 				break  # one match per action is enough
 	return conflicts
+
+
+## Saves the last selected input device to config.
+func save_last_input_device(device: String) -> void:
+	if device not in ["keyboard", "gamepad"]:
+		return
+	var config: ConfigFile = ConfigFile.new()
+	config.load(CONFIG_PATH)
+	config.set_value("input", "last_input_device", device)
+	config.save(CONFIG_PATH)
+
+
+## Loads the last selected input device (defaults to keyboard).
+func load_last_input_device() -> void:
+	var config: ConfigFile = ConfigFile.new()
+	if config.load(CONFIG_PATH) == OK and config.has_section_key("input", "last_input_device"):
+		Globals.current_input_device = config.get_value("input", "last_input_device")
+	else:
+		Globals.current_input_device = "keyboard"
+
+
+## Returns "keyboard" or "gamepad" based on the type of the event.
+func get_event_device_type(event: InputEvent) -> String:
+	if event is InputEventKey:
+		return "keyboard"
+	if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+		return "gamepad"
+	return "unknown"
+
+
+## Returns the pause binding label (ALL CAPS) for the specific device that was just used.
+func get_pause_binding_label_for_device(device_type: String) -> String:
+	var events: Array[InputEvent] = InputMap.action_get_events("pause")
+	if events.is_empty():
+		return "UNBOUND"
+
+	for ev: InputEvent in events:
+		if (
+			(device_type == "keyboard" and ev is InputEventKey)
+			or (
+				device_type == "gamepad"
+				and (ev is InputEventJoypadButton or ev is InputEventJoypadMotion)
+			)
+		):
+			var temp: Button = InputRemapButton.new()
+			var label: String = temp.get_event_label(ev)
+			temp.queue_free()
+			return label.to_upper()
+
+	# Fallback
+	var temp: Button = InputRemapButton.new()
+	var label: String = temp.get_event_label(events[0])
+	temp.queue_free()
+	return label.to_upper()
+
+
+## Returns true if there is at least one unbound critical action for the currently selected device.
+## This respects Globals.current_input_device.
+func has_unbound_critical_actions_for_current_device() -> bool:
+	var preferred: String = Globals.current_input_device
+	for action: String in CRITICAL_ACTIONS:
+		var events: Array[InputEvent] = InputMap.action_get_events(action)
+		if events.is_empty():
+			continue  # action is unbound, but we check per device
+
+		var has_binding_for_device: bool = false
+		for ev: InputEvent in events:
+			if (
+				(preferred == "keyboard" and ev is InputEventKey)
+				or (
+					preferred == "gamepad"
+					and (ev is InputEventJoypadButton or ev is InputEventJoypadMotion)
+				)
+			):
+				has_binding_for_device = true
+				break
+
+		if not has_binding_for_device:
+			return true  # unbound for the current device
+
+	return false
