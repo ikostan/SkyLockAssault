@@ -44,6 +44,8 @@ func _ready() -> void:
 	update_all_remap_buttons()
 
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# NEW: Default focus on "Keyboard" when the menu opens
+	_grab_initial_focus()
 	Globals.log_message("Controls menu loaded.", Globals.LogLevel.DEBUG)
 
 	if os_wrapper.has_feature("web"):
@@ -109,6 +111,8 @@ func _on_controls_back_button_pressed() -> void:
 	##
 	## Shows previous menu from stack, removes controls menu.
 	##
+	## Restores focus to the "Key Mapping" button in OptionsMenu when returning.
+	##
 	## Hides web overlays if on web.
 	##
 	## :rtype: void
@@ -122,6 +126,12 @@ func _on_controls_back_button_pressed() -> void:
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 			hidden_menu_found = true
+
+			# NEW: When returning from Key Mapping menu → focus the Key Mapping button in Options
+			# This uses the safe ensure_initial_focus helper so we don't fight existing controller focus
+			if prev_menu is OptionsMenu:
+				(prev_menu as OptionsMenu).grab_focus_on_key_mapping_button()
+
 	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
 	if os_wrapper.has_feature("web") and js_window:
 		js_window.controlsBackPressed = null
@@ -171,3 +181,19 @@ func _on_controls_back_button_pressed_js(args: Array) -> void:
 		Globals.LogLevel.DEBUG
 	)
 	_on_controls_back_button_pressed()
+
+
+## Ensures "Keyboard" gets focus by default when the menu opens.
+## Uses the same safe logic as OptionsMenu so we don't fight controller navigation.
+func _grab_initial_focus() -> void:
+	var allowed_controls: Array[Control] = [
+		keyboard, gamepad, controls_back_button, controls_reset_button
+	]
+
+	# Add every remap button so the helper knows what's "inside" the menu
+	var remap_buttons: Array[Node] = get_tree().get_nodes_in_group("remap_buttons")
+	for btn: Node in remap_buttons:
+		if btn is Control:
+			allowed_controls.append(btn)
+
+	Globals.ensure_initial_focus(keyboard, allowed_controls, "Key Mapping Menu")  # candidate
