@@ -9,7 +9,10 @@ extends Node
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 
 # Shared constants
-const REMAP_PROMPT_TEXT: String = "Press a key or controller button/axis..."
+## Device-specific remap prompts to avoid layout shift.
+# const REMAP_PROMPT_TEXT: String = "Press a key or controller button/axis..."
+const REMAP_PROMPT_KEYBOARD: String = "Press a key..."
+const REMAP_PROMPT_GAMEPAD: String = "Press a gamepad button/axis..."
 
 @export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
 @export var enable_debug_logging: bool = false  # Toggle in Inspector or settings

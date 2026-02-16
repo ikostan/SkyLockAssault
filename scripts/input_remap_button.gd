@@ -108,12 +108,18 @@ func _ready() -> void:
 		pressed.connect(_on_pressed)
 
 
-# Pressed: Toggle listening, update text.
-# :rtype: void
+## Handles button press to start remapping.
+## Sets device-specific prompt text.
+## :rtype: void
 func _on_pressed() -> void:
 	listening = button_pressed
 	if listening:
-		text = Globals.REMAP_PROMPT_TEXT  # Use the shared constant
+		# Use tailored prompt based on current device (no layout expansion)
+		text = (
+			Globals.REMAP_PROMPT_KEYBOARD
+			if current_device == DeviceType.KEYBOARD
+			else Globals.REMAP_PROMPT_GAMEPAD
+		)
 	else:
 		update_button_text()
 
