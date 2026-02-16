@@ -31,20 +31,20 @@ new platforms as "Deployed: ✅ Yes").
 ## Platform Comparison (Feb 2026)
 
 <!-- markdownlint-disable line-length -->
-| Platform              | Free Publish | Official Automation | Playwright Feasible? | Traffic / Reach          | Godot v4.5 Win10 Tip                   | Deployed     | Priority for You |
-|-----------------------|--------------|---------------------|----------------------|--------------------------|----------------------------------------|--------------|------------------|
-| **itch.io**           | Yes         | ✅ butler CLI       | Not needed          | Indie + discovery       | Native Godot + godot-ci Actions        | ✅ Yes      | ★★★★★ (Start here) |
-| **Poki**              | Yes         | ✅ poki-cli         | Not needed          | Massive casual          | Official Godot plugin + CLI in Actions | ❌ No       | ★★★★★ (High traffic) |
-| **Viverse**           | Yes         | ✅ VIVERSE CLI      | Not needed          | 3D/WebXR focus          | Godot WebGL + npm CLI (2026 update)    | ❌ No       | ★★★★ (Future-proof) |
-| **Game Jolt**         | Yes         | ✅ CLI              | Not needed          | Indie community         | Simple ZIP upload script               | ❌ No       | ★★★★ |
-| **iDev.games**        | Yes         | ❌ No               | ✅ Very easy        | Instant publish         | Simplest form → Playwright target      | ❌ No       | ★★★★ (Bonus) |
-| **GameMonetize**      | Yes         | ❌ No               | ✅ Easy             | Ad network              | ZIP drop in dashboard                  | ❌ No       | ★★★★ (Revenue) |
-| **CrazyGames**        | Yes         | ❌ No               | ✅ Possible         | Huge casual             | CAPTCHA risk → manual safer            | ❌ No       | ★★★ (Risky) |
-| **Y8.com**            | Yes         | ❌ No               | ✅ Possible         | Classic portal          | Basic form                             | ❌ No       | ★★★ |
-| **GameDistribution**  | Yes         | ❌ No               | ✅ Possible         | B2B distribution        | SDK mandatory first                    | ❌ No       | ★★★ |
-| **GamePix**           | Yes         | ❌ No               | ✅ Possible         | Global partners         | Dashboard ZIP                          | ❌ No       | ★★★ |
-| **Newgrounds**        | Yes         | ❌ No               | ✅ Partial          | Community               | Manual + API for scores only           | ❌ No       | ★★ |
-| **SoftGames**         | Yes         | ❌ No               | ✅ Possible         | Messenger games         | Submit form                            | ❌ No       | ★★ (Low priority) |
+| Platform             | Free Publish | Official Automation | Playwright Feasible? | Traffic / Reach   | Godot v4.5 Win10 Tip                   | Deployed | Priority for You     |
+|----------------------|--------------|---------------------|----------------------|-------------------|----------------------------------------|----------|----------------------|
+| **itch.io**          | Yes          | ✅ butler CLI        | Not needed           | Indie + discovery | Native Godot + godot-ci Actions        | ✅ Yes    | ★★★★★ (Start here)   |
+| **Poki**             | Yes          | ✅ poki-cli          | Not needed           | Massive casual    | Official Godot plugin + CLI in Actions | ❌ No     | ★★★★★ (High traffic) |
+| **Viverse**          | Yes          | ✅ VIVERSE CLI       | Not needed           | 3D/WebXR focus    | Godot WebGL + npm CLI (2026 update)    | ❌ No     | ★★★★ (Future-proof)  |
+| **Game Jolt**        | Yes          | ✅ CLI               | Not needed           | Indie community   | Simple ZIP upload script               | ❌ No     | ★★★★                 |
+| **iDev.games**       | Yes          | ❌ No                | ✅ Very easy          | Instant publish   | Simplest form → Playwright target      | ❌ No     | ★★★★ (Bonus)         |
+| **GameMonetize**     | Yes          | ❌ No                | ✅ Easy               | Ad network        | ZIP drop in dashboard                  | ❌ No     | ★★★★ (Revenue)       |
+| **CrazyGames**       | Yes          | ❌ No                | ✅ Possible           | Huge casual       | CAPTCHA risk → manual safer            | ❌ No     | ★★★ (Risky)          |
+| **Y8.com**           | Yes          | ❌ No                | ✅ Possible           | Classic portal    | Basic form                             | ❌ No     | ★★★                  |
+| **GameDistribution** | Yes          | ❌ No                | ✅ Possible           | B2B distribution  | SDK mandatory first                    | ❌ No     | ★★★                  |
+| **GamePix**          | Yes          | ❌ No                | ✅ Possible           | Global partners   | Dashboard ZIP                          | ❌ No     | ★★★                  |
+| **Newgrounds**       | Yes          | ❌ No                | ✅ Partial            | Community         | Manual + API for scores only           | ❌ No     | ★★                   |
+| **SoftGames**        | Yes          | ❌ No                | ✅ Possible           | Messenger games   | Submit form                            | ❌ No     | ★★ (Low priority)    |
 <!-- markdownlint-enable line-length -->
 
 ---
@@ -55,16 +55,16 @@ All "❌ No" platforms require **manual moderation** to fight spam/low-quality
 uploads. Here's the exact reason from their docs/portals (Feb 2026):
 
 <!-- markdownlint-disable line-length -->
-| Platform              | Reason for No Publish API/CLI |
-|-----------------------|-------------------------------|
-| **iDev.games**        | API only for in-game data (Game DB / shop). Upload is manual for "instant publish + later verification". |
-| **CrazyGames**        | Portal is ZIP + form + manual review. SDK only for ads. UI changes often → bots break. |
-| **Y8.com**            | Simple upload form → human approval step for quality. |
-| **GameMonetize**      | You integrate SDK, then manual ZIP in admin dashboard. They handle distribution. |
-| **GameDistribution**  | SDK mandatory for stats/ads → portal upload only. |
-| **Newgrounds**        | Project system is manual. In-game API (medals/scores) exists, but upload API is a long-open feature request. |
-| **GamePix**           | Dashboard submit after SDK. No automation. |
-| **SoftGames**         | Pure submit form + manual review. |
+| Platform             | Reason for No Publish API/CLI                                                                                |
+|----------------------|--------------------------------------------------------------------------------------------------------------|
+| **iDev.games**       | API only for in-game data (Game DB / shop). Upload is manual for "instant publish + later verification".     |
+| **CrazyGames**       | Portal is ZIP + form + manual review. SDK only for ads. UI changes often → bots break.                       |
+| **Y8.com**           | Simple upload form → human approval step for quality.                                                        |
+| **GameMonetize**     | You integrate SDK, then manual ZIP in admin dashboard. They handle distribution.                             |
+| **GameDistribution** | SDK mandatory for stats/ads → portal upload only.                                                            |
+| **Newgrounds**       | Project system is manual. In-game API (medals/scores) exists, but upload API is a long-open feature request. |
+| **GamePix**          | Dashboard submit after SDK. No automation.                                                                   |
+| **SoftGames**        | Pure submit form + manual review.                                                                            |
 <!-- markdownlint-enable line-length -->
 
 **Core reason across all**: Manual moderation prevents spam and low-quality content.
