@@ -392,3 +392,32 @@ func _ensure_defaults_saved() -> void:
 	if changed:
 		save_input_mappings()
 		Globals.log_message("Defaults were missing → saved to settings.cfg", Globals.LogLevel.INFO)
+
+
+## Returns true if two events are exactly the same binding.
+func _events_match(a: InputEvent, b: InputEvent) -> bool:
+	if a.get_class() != b.get_class():
+		return false
+	if a is InputEventKey:
+		return a.physical_keycode == b.physical_keycode
+	if a is InputEventJoypadButton:
+		return a.button_index == b.button_index and a.device == b.device
+	if a is InputEventJoypadMotion:
+		return a.axis == b.axis and a.axis_value == b.axis_value and a.device == b.device
+	return false
+
+
+## Finds every other action that already uses this exact event.
+## :param event: The new event the player just pressed.
+## :param exclude_action: The action we are currently remapping (ignored).
+## :rtype: Array[String]  # e.g. ["fire"] or ["next_weapon", "pause"]
+func get_conflicting_actions(event: InputEvent, exclude_action: String = "") -> Array[String]:
+	var conflicts: Array[String] = []
+	for action: String in ACTIONS:
+		if action == exclude_action:
+			continue
+		for ev: InputEvent in InputMap.action_get_events(action):
+			if _events_match(ev, event):
+				conflicts.append(action)
+				break  # one match per action is enough
+	return conflicts

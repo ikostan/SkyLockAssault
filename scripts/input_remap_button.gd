@@ -97,6 +97,9 @@ const AXIS_NORMALIZED_VALUE: float = 1.0
 
 var listening: bool = false
 
+## Reference to KeyMappingMenu for conflict dialog.
+@onready var key_mapping_menu: Node = get_tree().get_first_node_in_group("key_mapping_menu")
+
 
 # Ready: Setup toggle, text, connect pressed.
 # :rtype: void
@@ -124,11 +127,11 @@ func _on_pressed() -> void:
 		update_button_text()
 
 
+# In input_remap_button.gd (full updated _input function)
 # Input: Handle remap for key/button/motion if listening.
 # :param event: Input event.
 # :type event: InputEvent
 # :rtype: void
-# In input_remap_button.gd (full updated _input function)
 func _input(event: InputEvent) -> void:
 	if not listening:
 		return
@@ -143,50 +146,57 @@ func _input(event: InputEvent) -> void:
 	):
 		return
 
+	var new_event: InputEvent = null
+
 	# Handle keyboard key press
 	if event is InputEventKey and event.pressed:
-		erase_old_event()  # Remove the old matching event for this device
-		var new_event := InputEventKey.new()  # Consistent name: new_event
+		new_event = InputEventKey.new()
 		new_event.physical_keycode = event.physical_keycode
-		InputMap.action_add_event(action, new_event)  # Add the new event
-		# Log the remap right here, using get_event_label on the new event
-		Globals.log_message(
-			"User remapped action '" + action + "' to '" + get_event_label(new_event) + "'",
-			Globals.LogLevel.DEBUG
-		)
-		finish_remap()  # Wrap up: update text, stop listening, save, etc.
-		return
 
 	# Handle gamepad (joypad) button press
-	if event is InputEventJoypadButton and event.pressed:
-		erase_old_event()  # Remove the old matching event for this device
-		var new_event := InputEventJoypadButton.new()  # Consistent name: new_event
+	elif event is InputEventJoypadButton and event.pressed:
+		new_event = InputEventJoypadButton.new()
 		new_event.button_index = event.button_index
-		new_event.device = -1  # All devices
-		InputMap.action_add_event(action, new_event)  # Add the new event
-		# Log the remap right here, using get_event_label on the new event
-		Globals.log_message(
-			"User remapped action '" + action + "' to '" + get_event_label(new_event) + "'",
-			Globals.LogLevel.DEBUG
-		)
-		finish_remap()  # Wrap up
-		return
+		new_event.device = -1
 
 	# Handle gamepad (joypad) axis motion (if moved past deadzone)
-	if event is InputEventJoypadMotion and abs(event.axis_value) > AXIS_DEADZONE_THRESHOLD:
-		erase_old_event()  # Remove the old matching event for this device
-		var new_event := InputEventJoypadMotion.new()  # Consistent name: new_event
+	elif event is InputEventJoypadMotion and abs(event.axis_value) > AXIS_DEADZONE_THRESHOLD:
+		new_event = InputEventJoypadMotion.new()
 		new_event.axis = event.axis
-		new_event.axis_value = get_normalized_axis_direction(event.axis_value)  # Normalize to +1 or -1
-		new_event.device = -1  # All devices
-		InputMap.action_add_event(action, new_event)  # Add the new event
-		# Log the remap right here, using get_event_label on the new event
-		Globals.log_message(
-			"User remapped action '" + action + "' to '" + get_event_label(new_event) + "'",
-			Globals.LogLevel.DEBUG
-		)
-		finish_remap()  # Wrap up
+		new_event.axis_value = get_normalized_axis_direction(event.axis_value)
+		new_event.device = -1
+
+	if new_event == null:
 		return
+
+	# ── CONFLICT CHECK ───────────────────────────────────────────────
+	# Checks if new_event is already used by another action.
+	# :rtype: void
+	var conflicts: Array[String] = Settings.get_conflicting_actions(new_event, action)
+
+	# Skip dialog if this is the same binding we already have.
+	if not conflicts.is_empty() and not Settings._events_match(new_event, get_matching_event()):
+		# Fetch fresh every time (fixes ready-order null reference)
+		var km_menu: Node = get_tree().get_first_node_in_group("key_mapping_menu")
+		if is_instance_valid(km_menu) and km_menu.has_method("show_conflict_dialog"):
+			km_menu.show_conflict_dialog(self, new_event.duplicate(), conflicts)
+		else:
+			Globals.log_message("key_mapping_menu missing or no show_conflict_dialog method", Globals.LogLevel.ERROR)
+			# Fallback: still allow remap if dialog system fails
+			erase_old_event()
+			InputMap.action_add_event(action, new_event)
+			Globals.log_message("Remapped (fallback - no dialog)", Globals.LogLevel.DEBUG)
+			finish_remap()
+		return
+
+	# ── No conflict → normal remap ───────────────────────────────────
+	erase_old_event()
+	InputMap.action_add_event(action, new_event)
+	Globals.log_message(
+		"Remapped '%s' to '%s'" % [action, get_event_label(new_event)],
+		Globals.LogLevel.DEBUG
+	)
+	finish_remap()
 
 
 # New helper function: Normalizes axis value to a direction (+1.0 or -1.0)

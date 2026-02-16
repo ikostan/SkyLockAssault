@@ -7,7 +7,11 @@ extends CanvasLayer
 var js_window: Variant
 var os_wrapper: OSWrapper = OSWrapper.new()
 var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
-
+# ── Conflict dialog (created in code – no scene edit needed) ─────
+var conflict_dialog: ConfirmationDialog
+var current_remap_button: InputRemapButton = null
+var current_pending_event: InputEvent = null
+var current_conflicts: Array[String] = []
 # local
 var _controls_back_button_pressed_cb: Variant
 var _intentional_exit: bool = false
@@ -46,6 +50,20 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	# NEW: Default focus on "Keyboard" when the menu opens
 	_grab_initial_focus()
+	
+	# Conflicting key remap functionality/setup
+	add_to_group("key_mapping_menu")  # so buttons can find us
+	# Create the conflict dialog once
+	conflict_dialog = ConfirmationDialog.new()
+	conflict_dialog.title = "Input Already Used"
+	conflict_dialog.exclusive = true                     # blocks background input
+	conflict_dialog.get_ok_button().text = "Reassign (unbind other)"
+	conflict_dialog.get_cancel_button().text = "Cancel"
+	add_child(conflict_dialog)
+
+	conflict_dialog.confirmed.connect(_on_conflict_confirmed)
+	conflict_dialog.canceled.connect(_on_conflict_canceled)
+	
 	Globals.log_message("Controls menu loaded.", Globals.LogLevel.DEBUG)
 
 	if os_wrapper.has_feature("web"):
@@ -65,6 +83,68 @@ func _ready() -> void:
 				Callable(self, "_on_controls_back_button_pressed_js")
 			)
 			js_window.controlsBackPressed = _controls_back_button_pressed_cb
+
+
+## Called from InputRemapButton when a duplicate binding is detected.
+func show_conflict_dialog(btn: InputRemapButton, new_event: InputEvent, conflicts: Array[String]) -> void:
+	current_remap_button = btn
+	current_pending_event = new_event
+	current_conflicts = conflicts
+
+	var txt: String = "The input you just pressed is already used by:\n\n"
+	for c in conflicts:
+		txt += "• " + c.to_upper().replace("_", " ") + "\n"
+	txt += "\nReassign anyway? The conflicting mapping(s) will be set to Unbound."
+
+	conflict_dialog.dialog_text = txt
+	conflict_dialog.popup_centered()
+
+
+func _on_conflict_confirmed() -> void:
+	if not current_remap_button or not current_pending_event:
+		return
+
+	# 1. Unbind every conflicting action
+	for act in current_conflicts:
+		for ev in InputMap.action_get_events(act):
+			if Settings._events_match(ev, current_pending_event):
+				InputMap.action_erase_event(act, ev)
+				Globals.log_message("Unbound conflicting input from " + act, Globals.LogLevel.DEBUG)
+				break
+
+	# 2. Apply the new binding to the button we are remapping
+	current_remap_button.erase_old_event()
+	InputMap.action_add_event(current_remap_button.action, current_pending_event)
+
+	Globals.log_message(
+		"Remapped %s (unbound %d conflicts)" % [current_remap_button.action, current_conflicts.size()],
+		Globals.LogLevel.DEBUG
+	)
+
+	# 3. Finish the remap (updates text + saves)
+	current_remap_button.finish_remap()
+
+	# 4. Refresh ALL buttons so the unbound one shows “Unbound”
+	update_all_remap_buttons()
+
+	# Cleanup
+	_clear_conflict_state()
+
+
+func _on_conflict_canceled() -> void:
+	if not current_remap_button:
+		return
+	# Just stop listening – original binding stays
+	current_remap_button.button_pressed = false
+	current_remap_button.listening = false
+	current_remap_button.update_button_text()
+	_clear_conflict_state()
+
+
+func _clear_conflict_state() -> void:
+	current_remap_button = null
+	current_pending_event = null
+	current_conflicts.clear()
 
 
 ## Updates all remap buttons.
