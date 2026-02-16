@@ -236,3 +236,24 @@ region_rect = Rect2(128, 128, 128, 128)
 [node name="Sprite2D" type="Sprite2D" parent="Background/Bushes"]
 texture_filter = 1
 texture = ExtResource("5_rt2n2")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="MessageLabel" type="Label" parent="HUD"]
+top_level = true
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -11.5
+offset_right = 20.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 6
+size_flags_vertical = 6
+theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
+theme_override_fonts/font = ExtResource("2_pu3yx")
+theme_override_font_sizes/font_size = 25

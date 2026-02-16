@@ -5,12 +5,16 @@
 
 extends Node2D
 
+var _showing_unbound_warning: bool = false
+
 @onready var player: Node2D = $Player
 @onready var stats_panel: Panel = $PlayerStatsPanel
 @onready var background: ParallaxBackground = $Background
 @onready var bushes_layer: ParallaxLayer = $Background/Bushes  # Reference to the bushes layer
 @onready var decor_layer: ParallaxLayer = $Background/Decor  # Reference to the decor layer
 @onready var texture_preloader: ResourcePreloader = $ResourcePreloader  # Reference to preloader
+@onready var hud: CanvasLayer = $HUD
+@onready var message_label: Label = $HUD/MessageLabel
 
 
 func _ready() -> void:
@@ -142,7 +146,30 @@ func setup_decor_layer(viewport: Vector2) -> void:
 
 
 func _process(delta: float) -> void:
-	var scroll_speed: float = player.speed["speed"] * delta * Globals.difficulty * 0.8  # Slowed down
-	background.scroll_offset.y += scroll_speed  # Downward scroll
+	var scroll_speed: float = player.speed["speed"] * delta * Globals.difficulty * 0.8
+	background.scroll_offset.y += scroll_speed
 	if player.fuel["fuel"] <= 0:
 		background.scroll_offset = Vector2(0, 0)
+	
+	# === Unbound controls warning (show only once) ===
+	if Settings.has_unbound_critical_actions() and not _showing_unbound_warning:
+		_showing_unbound_warning = true
+		show_message("{SOME=CONTROLS=ARE=UNBOUND.=PRESS=ESC=AND=GO=TO='CONTROLS'=TO=FIX.}")
+
+
+## Shows a temporary on-screen message (non-blocking).
+## :param text: Message to display.
+## :type text: String
+## :rtype: void
+func show_message(text: String) -> void:
+	if not is_instance_valid(message_label):
+		return
+	
+	message_label.text = text
+	message_label.visible = true
+	
+	# Auto-hide after 4 seconds and reset flag
+	await get_tree().create_timer(4.0).timeout
+	if is_instance_valid(message_label):
+		message_label.visible = false
+	_showing_unbound_warning = false
