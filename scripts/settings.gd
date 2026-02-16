@@ -167,9 +167,9 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			var value: Variant = config.get_value("input", action)
 			var serialized_events: Array[String] = []
 
-			if value is Array:
-				var temp: Array = value
-				for item: Variant in temp:
+			# ── ROBUST ARRAY HANDLING (FIX FOR PackedStringArray) ─────────────────────
+			if value is Array or value is PackedStringArray:
+				for item: Variant in value:
 					if item is String:
 						serialized_events.append(item)
 					else:
@@ -178,24 +178,22 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 							Globals.LogLevel.WARNING
 						)
 			elif value is int:
-				serialized_events = ["key:" + str(value)]  # Old int keycode—migrate to key format
+				serialized_events = ["key:" + str(value)]  # Old int keycode—migrate
 				_needs_migration = true
 			elif value is String:
-				serialized_events = [value]  # Old string—could be "key:87" or plain "87"
+				serialized_events = [value]  # Old string format
 				_needs_migration = true
 			else:
 				Globals.log_message(
 					"Unexpected type for action '" + action + "': " + str(typeof(value)),
 					Globals.LogLevel.WARNING
 				)
-				# Fallback: Treat as empty to avoid errors
 
 			InputMap.action_erase_events(action)
 			for serialized: String in serialized_events:
 				_deserialize_and_add(action, serialized)
 
-	## After loading saved events, add defaults ONLY when appropriate.
-	## Respect explicit [] = "user wants this unbound".
+	# ── Add defaults ONLY for devices that are NOT explicitly unbound ──
 	for action: String in actions:
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
 		var has_key_event: bool = false
@@ -206,15 +204,24 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			elif ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
 				has_joy_event = true
 
-		# NEW: Check if this action was explicitly saved as empty array (unbound)
-		var explicitly_unbound: bool = false
+		# Device-specific "explicitly unbound" check
+		var explicitly_unbound_keyboard: bool = false
+		var explicitly_unbound_gamepad: bool = false
 		if config.has_section_key("input", action):
 			var saved_val: Variant = config.get_value("input", action)
-			if saved_val is Array and saved_val.is_empty():
-				explicitly_unbound = true
+			if saved_val is Array or saved_val is PackedStringArray:
+				var has_saved_key: bool = false
+				var has_saved_joy: bool = false
+				for s: String in saved_val:
+					if s.begins_with("key:"):
+						has_saved_key = true
+					elif s.begins_with("joybtn:") or s.begins_with("joyaxis:"):
+						has_saved_joy = true
+				explicitly_unbound_keyboard = not has_saved_key
+				explicitly_unbound_gamepad = not has_saved_joy
 
 		# === Keyboard defaults ===
-		if not has_key_event and DEFAULT_KEYBOARD.has(action) and not explicitly_unbound:
+		if not has_key_event and DEFAULT_KEYBOARD.has(action) and not explicitly_unbound_keyboard:
 			var nev: InputEventKey = InputEventKey.new()
 			nev.physical_keycode = DEFAULT_KEYBOARD[action]
 			InputMap.action_add_event(action, nev)
@@ -223,7 +230,7 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			)
 
 		# === Gamepad defaults ===
-		if not has_joy_event and DEFAULT_GAMEPAD.has(action) and not explicitly_unbound:
+		if not has_joy_event and DEFAULT_GAMEPAD.has(action) and not explicitly_unbound_gamepad:
 			var def: Dictionary = DEFAULT_GAMEPAD[action]
 			if def["type"] == "button":
 				var nev: InputEventJoypadButton = InputEventJoypadButton.new()
@@ -398,35 +405,38 @@ func reset_to_defaults(device_type: String) -> void:
 ## Called after load_input_mappings() to guarantee a complete first-run state.
 func _ensure_defaults_saved() -> void:
 	var config: ConfigFile = ConfigFile.new()
-	var err: int = config.load(CONFIG_PATH)  # we need the saved [] entries
-	if err != OK and err != ERR_FILE_NOT_FOUND:
-		Globals.log_message(
-			"Failed to load config in _ensure_defaults_saved", Globals.LogLevel.WARNING
-		)
+	config.load(CONFIG_PATH)
 
 	var changed: bool = false
 
 	for action: String in ACTIONS:
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
-
 		var has_keyboard: bool = false
 		var has_gamepad: bool = false
-
 		for ev: InputEvent in events:
 			if ev is InputEventKey:
 				has_keyboard = true
 			elif ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
 				has_gamepad = true
 
-		# NEW: Respect explicit empty array saved to config
-		var explicitly_unbound: bool = false
+		# Device-specific unbound check (same as load)
+		var explicitly_unbound_keyboard: bool = false
+		var explicitly_unbound_gamepad: bool = false
 		if config.has_section_key("input", action):
 			var saved_val: Variant = config.get_value("input", action)
-			if saved_val is Array and saved_val.is_empty():
-				explicitly_unbound = true
+			if saved_val is Array or saved_val is PackedStringArray:
+				var has_saved_key: bool = false
+				var has_saved_joy: bool = false
+				for s: String in saved_val:
+					if s.begins_with("key:"):
+						has_saved_key = true
+					elif s.begins_with("joybtn:") or s.begins_with("joyaxis:"):
+						has_saved_joy = true
+				explicitly_unbound_keyboard = not has_saved_key
+				explicitly_unbound_gamepad = not has_saved_joy
 
 		# === Keyboard defaults ===
-		if not has_keyboard and DEFAULT_KEYBOARD.has(action) and not explicitly_unbound:
+		if not has_keyboard and DEFAULT_KEYBOARD.has(action) and not explicitly_unbound_keyboard:
 			var nev := InputEventKey.new()
 			nev.physical_keycode = DEFAULT_KEYBOARD[action]
 			InputMap.action_add_event(action, nev)
@@ -436,36 +446,31 @@ func _ensure_defaults_saved() -> void:
 			)
 
 		# === Gamepad defaults ===
-		if not has_gamepad and DEFAULT_GAMEPAD.has(action) and not explicitly_unbound:
+		if not has_gamepad and DEFAULT_GAMEPAD.has(action) and not explicitly_unbound_gamepad:
 			var def: Dictionary = DEFAULT_GAMEPAD[action]
 			var nev: InputEvent = null
-
 			match def.get("type"):
 				"button":
 					var button := InputEventJoypadButton.new()
 					button.button_index = def["button"]
 					button.device = -1
 					nev = button
-
 				"axis":
 					var motion := InputEventJoypadMotion.new()
 					motion.axis = def["axis"]
 					motion.axis_value = def["value"]
 					motion.device = -1
 					nev = motion
-
-				_:
-					continue
-
-			InputMap.action_add_event(action, nev)
-			changed = true
-			Globals.log_message(
-				"Added missing default gamepad mapping for " + action, Globals.LogLevel.DEBUG
-			)
+			if nev:
+				InputMap.action_add_event(action, nev)
+				changed = true
+				Globals.log_message(
+					"Added missing default gamepad mapping for " + action, Globals.LogLevel.DEBUG
+				)
 
 	if changed:
 		save_input_mappings()
-		Globals.log_message("Defaults were missing → saved to settings.cfg", Globals.LogLevel.INFO)
+		Globals.log_message("Defaults filled → saved", Globals.LogLevel.INFO)
 
 
 ## Returns true if two events are exactly the same binding.

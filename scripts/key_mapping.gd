@@ -112,30 +112,29 @@ func _on_conflict_confirmed() -> void:
 	if not current_remap_button or not current_pending_event:
 		return
 
-	# 1. COMPLETELY unbind every conflicting action (this was the missing piece)
+	# 1. Unbind ONLY the conflicting event of the SAME DEVICE (keyboard or gamepad)
 	for act in current_conflicts:
-		InputMap.action_erase_events(act)  # Removes ALL events for that action
-		Globals.log_message("Completely unbound action: " + act, Globals.LogLevel.DEBUG)
+		for ev: InputEvent in InputMap.action_get_events(act):
+			if Settings._events_match(ev, current_pending_event):  # exact same binding
+				InputMap.action_erase_event(act, ev)
+				Globals.log_message(
+					"Unbound specific device event for " + act, Globals.LogLevel.DEBUG
+				)
+				break  # only one match per device
 
 	# 2. Apply the new binding
 	current_remap_button.erase_old_event()
 	InputMap.action_add_event(current_remap_button.action, current_pending_event)
 
 	Globals.log_message(
-		(
-			"Remapped %s (unbound %d conflicts)"
-			% [current_remap_button.action, current_conflicts.size()]
-		),
-		Globals.LogLevel.DEBUG
+		"Remapped %s (device-specific unbind)" % current_remap_button.action, Globals.LogLevel.DEBUG
 	)
 
-	# 3. Save ALL changes to disk (including the now-empty actions)
+	# 3. Save (now only the right device is affected)
 	Settings.save_input_mappings()
 
-	# 4. Finish the remap for the button we changed
+	# 4. Finish UI
 	current_remap_button.finish_remap()
-
-	# 5. Refresh UI
 	update_all_remap_buttons()
 
 	# Cleanup
