@@ -52,7 +52,7 @@ const DEFAULT_GAMEPAD: Dictionary = {
 	"fire": {"type": "button", "button": JOY_BUTTON_A},
 	"next_weapon": {"type": "button", "button": JOY_BUTTON_Y},
 	"pause": {"type": "button", "button": JOY_BUTTON_START},
-	"ui_accept": {"type": "button", "button": JOY_BUTTON_A},
+	"ui_accept": {"type": "button", "button": JOY_BUTTON_B},
 	"ui_up": {"type": "button", "button": JOY_BUTTON_DPAD_UP},
 	"ui_down": {"type": "button", "button": JOY_BUTTON_DPAD_DOWN},
 	"ui_left": {"type": "button", "button": JOY_BUTTON_DPAD_LEFT},
