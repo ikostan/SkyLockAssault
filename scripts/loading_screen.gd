@@ -1,10 +1,9 @@
 ## Copyright (C) 2025 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
-## Loading Screen Script
+## Loading Screen Script: loading_screen.gd
 ##
-## Manages background loading of the next scene with a smooth progress bar.
+## Manages background loading of the next scene with smooth progress bar.
 ## Uses Godot's ResourceLoader for threaded loading.
-##
 ## Transitions to the loaded scene upon completion.
 ##
 ## :vartype progress_bar: ProgressBar
@@ -29,13 +28,17 @@ var transitioning: bool = false  # Flag to prevent multiple scene changes.
 func _ready() -> void:
 	load_start_time = Time.get_ticks_msec() / 1000.0
 
+	# Give more breathing room on Web (threaded progress unreliable per Godot 4.5).
+	if OS.has_feature("web"):
+		min_load_time = 3.0
+
 	if Globals.next_scene == "":
 		Globals.log_message("Next scene path is empty!", Globals.LogLevel.ERROR)
 		load_failed = true
 		return
 
-	# Start background loading.
-	var err: int = ResourceLoader.load_threaded_request(Globals.next_scene)
+	# Start background loading with sub-threads to fix 50% quirk.
+	var err: int = ResourceLoader.load_threaded_request(Globals.next_scene, "", true)
 	if err != OK:
 		Globals.log_message("Failed to start loading: " + str(err), Globals.LogLevel.ERROR)
 		load_failed = true
@@ -44,9 +47,9 @@ func _ready() -> void:
 
 
 # Polls loading status and updates UI. Changes scene when loaded.
+# Eliminated fake_progress; relies on real ResourceLoader progress.
 func _process(_delta: float) -> void:
 	var elapsed_time: float = (Time.get_ticks_msec() / 1000.0) - load_start_time
-	var fake_progress: float = clamp((elapsed_time / min_load_time) * 100.0, 0.0, 100.0)
 
 	var real_progress: float = 0.0
 	if is_scene_loaded:
@@ -82,10 +85,11 @@ func _process(_delta: float) -> void:
 			Globals.log_message("Loading failed or invalid.", Globals.LogLevel.ERROR)
 			load_failed = true
 
-	# If load failed, use full fake progress to avoid stuck screen.
-	var display_progress: float = (
-		fake_progress if load_failed else min(fake_progress, real_progress)
-	)
+	# Use real progress only (eliminates fake_progress process).
+	# Sub-threads + Web min_load_time fix 50% quirk and give breathing room.
+	var display_progress: float = real_progress
+	if load_failed:
+		display_progress = 100.0  # Force end on failure.
 
 	# Smooth progress with lerp.
 	loader_progress = lerp(loader_progress, display_progress, 0.1)
