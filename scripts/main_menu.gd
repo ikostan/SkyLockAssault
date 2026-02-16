@@ -155,6 +155,7 @@ func setup_quit_dialog() -> void:
 
 ## Called when Start Game is pressed.
 ## Checks for unbound critical actions and shows warning if needed.
+## Warning now appears only for the currently selected device (keyboard/gamepad).
 func _on_start_pressed(_args: Array = []) -> void:
 	## Handles the Start button press.
 	##
@@ -164,7 +165,7 @@ func _on_start_pressed(_args: Array = []) -> void:
 	## :type _args: Array
 	## :rtype: void
 	Globals.log_message("Start Game menu button pressed.", Globals.LogLevel.DEBUG)
-	if Settings.has_unbound_critical_actions():
+	if Settings.has_unbound_critical_actions_for_current_device():  # ← FIXED
 		# Show warning dialog (create once or use existing ConfirmationDialog)
 		var dialog: ConfirmationDialog = ConfirmationDialog.new()
 		dialog.title = "Unbound Controls"
