@@ -1,7 +1,8 @@
 ## Copyright (C) 2025 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
-# Main scene script for SkyLockAssault.
-# Handles player positioning, stats visibility, and parallax background setup.
+## main_scene.gd
+## Main scene script for SkyLockAssault.
+## Handles player positioning, stats visibility, and parallax background setup.
 
 extends Node2D
 
@@ -36,12 +37,25 @@ func _ready() -> void:
 
 
 # 2. Detect when player presses a key/button that has NO binding at all
+# Only significant inputs (axes above deadzone) are checked to prevent false positives from stick jitter.
 func _input(event: InputEvent) -> void:
 	if event.is_echo():
 		return
 
 	if not (
 		event is InputEventKey or event is InputEventJoypadButton or event is InputEventJoypadMotion
+	):
+		return
+
+	# ────────────────────────────────────────────────────────────────
+	# Ignore tiny axis movements (perpendicular stick noise when
+	# you use split-stick mapping, e.g. Left Stick X + Right Stick Y).
+	# We use the exact same threshold that the remap buttons use.
+	# Matches AXIS_DEADZONE_THRESHOLD from input_remap_button.gd.
+	# ────────────────────────────────────────────────────────────────
+	if (
+		event is InputEventJoypadMotion
+		and abs(event.axis_value) < InputRemapButton.AXIS_DEADZONE_THRESHOLD
 	):
 		return
 
@@ -52,7 +66,6 @@ func _input(event: InputEvent) -> void:
 		# Detect which physical device was used for this press
 		var device_type: String = Settings.get_event_device_type(event)
 		var pause_label: String = Settings.get_pause_binding_label_for_device(device_type)
-
 		show_message(
 			"{UNBOUND=KEY=PRESSED}\n{PRESS='" + pause_label + "'=AND=GO=TO='CONTROLS'=TO=FIX}"
 		)
