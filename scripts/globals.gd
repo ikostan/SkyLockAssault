@@ -1,10 +1,10 @@
 ## Copyright (C) 2025 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
+## globals.gd
+## Global utilities singleton: Provides shared functions like logging.
+## Access from any script as Globals.log_message("message").
 
 extends Node
-
-# Global utilities singleton: Provides shared functions like logging.
-# Access from any script as Globals.log_message("message").
 
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 
@@ -38,7 +38,9 @@ func _ready() -> void:
 		current_log_level = LogLevel.DEBUG
 	log_message("Log level set to: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
 	_load_settings()  # Load persisted settings first
-	# log_message("Raw version from settings: " + game_version, LogLevel.DEBUG)
+	# Load last input device early to fix unbound warning on first load when gamepad is saved preference.
+	# Ensures has_unbound_critical_actions_for_current_device() uses correct device from config.
+	Settings.load_last_input_device()
 
 
 ## Centralized "ensure initial focus" helper.
