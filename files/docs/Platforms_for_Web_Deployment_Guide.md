@@ -1,16 +1,18 @@
 # Free Web Browser Game Deployment Platforms
 
-## Summary of zero-cost publishing platforms for Godot v4.5 HTML5/WebGL games (Feb 2026)
+## Summary of zero-cost publishing platforms for Godot v4.5
+HTML5/WebGL games (Feb 2026)
 
 **Project Context** 
 
-We're building **SkyLockAssault** — a totally free-to-play browser game in **Godot v4.5**
-on **Windows 10 64-bit**. This is our learning journey into game dev, so we're keeping
-everything practical, low-friction, and focused on **automatic deploys** via
-GitHub Actions + CI/CD where possible.
+We're building **SkyLockAssault** — a totally free-to-play browser
+game in **Godot v4.5** on **Windows 10 64-bit**. This is our learning
+journey into game dev, so we're keeping everything practical,
+low-friction, and focused on **automatic deploys** via GitHub Actions
++ CI/CD where possible.
 
-This `.md` file is your living playbook. Update it as you go (e.g. mark new platforms as
-"Deployed: ✅ Yes").
+This `.md` file is your living playbook. Update it as you go (e.g. mark
+new platforms as "Deployed: ✅ Yes").
 
 **Target**: Automatic GitHub Actions deploys where possible.
 
@@ -49,8 +51,8 @@ This `.md` file is your living playbook. Update it as you go (e.g. mark new plat
 
 ## Why Most Platforms Refuse Official Automation (Deep Dive)
 
-All "❌ No" platforms require **manual moderation** to fight spam/low-quality uploads.
-Here's the exact reason from their docs/portals (Feb 2026):
+All "❌ No" platforms require **manual moderation** to fight spam/low-quality
+uploads. Here's the exact reason from their docs/portals (Feb 2026):
 
 <!-- markdownlint-disable line-length -->
 | Platform              | Reason for No Publish API/CLI |
@@ -76,7 +78,8 @@ but it's maintenance work.
 
 - 100% Auto: itch.io, Poki, Viverse, Game Jolt
 - Playwright Auto: iDev.games, GameMonetize (easiest)
-- Manual + Occasional: CrazyGames, Y8, GameDistribution, GamePix, Newgrounds, SoftGames
+- Manual + Occasional: CrazyGames, Y8, GameDistribution, GamePix, Newgrounds,
+  SoftGames
 
 ---
 
@@ -114,16 +117,21 @@ Always include `index.html` at ZIP root.
 ## Automation Setup Quick Starts
 
 ### itch.io (Already Done)
+
 Use `butler` + godot-ci GitHub Action.
 
 ### Poki (Next)
+
+<!-- markdownlint-disable line-length -->
 ```yaml
 # .github/workflows/poki.yml
 - uses: actions/setup-node@v4
 - run: npx @poki/cli upload --game-id YOUR_ID --token ${{ secrets.POKI_TOKEN }} build.zip
 ```
+<!-- markdownlint-enable line-length -->
 
 ### Viverse (2026 CLI)
+
 ```bash
 npm install -g @viverse/cli
 viverse-cli publish --app-id YOUR_APP --file skylockassault.zip
