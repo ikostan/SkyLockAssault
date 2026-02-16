@@ -30,7 +30,7 @@ new platforms as "Deployed: ✅ Yes").
 
 ## Platform Comparison (Feb 2026)
 
-<!-- markdownlint-disable line-length -->
+<!-- markdownlint-disable line-length MD060 -->
 | Platform             | Free Publish | Official Automation      | Playwright Feasible? | Traffic / Reach     | Godot v4.5 Win10 Tip                     | Deployed | Priority for You       |
 |----------------------|--------------|--------------------------|----------------------|---------------------|------------------------------------------|----------|------------------------|
 | **itch.io**          | Yes          | ✅ butler CLI             | Not needed           | Indie + discovery   | Native Godot + godot-ci Actions          | ✅ Yes    | ★★★★★ (Start here)     |
@@ -45,7 +45,7 @@ new platforms as "Deployed: ✅ Yes").
 | **GamePix**          | Yes          | ❌ No                     | ✅ Possible           | Global partners     | Dashboard ZIP                            | ❌ No     | ★★★                    |
 | **Newgrounds**       | Yes          | ❌ No                     | ✅ Partial            | Community           | Manual + API for scores only             | ❌ No     | ★★                     |
 | **SoftGames**        | Yes          | ❌ No                     | ✅ Possible           | Messenger games     | Submit form                              | ❌ No     | ★★ (Low priority)      |
-<!-- markdownlint-enable line-length -->
+<!-- markdownlint-enable line-length MD060 -->
 
 ---
 
