@@ -77,8 +77,9 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
    - [Release Drafter](https://github.com/release-drafter/release-drafter?tab=readme-ov-file#readme)
    - [Close Stale Issues and PRs](https://github.com/actions/stale)
    - [AllContributors GitHub App](https://allcontributors.org/docs/en/bot/installation)
-
+9. [Free Web Browser Game Deployment Platforms](files/docs/Platforms_for_Web_Deployment_Guide.md)
 <!-- markdownlint-enable line-length -->
+
 ## Roadmap
 
 Here's a high-level plan for upcoming features. Contributions welcome!
