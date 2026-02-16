@@ -38,7 +38,8 @@ func _ready() -> void:
 		current_log_level = LogLevel.DEBUG
 	log_message("Log level set to: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
 	_load_settings()  # Load persisted settings first
-	# Load last input device early to fix unbound warning on first load when gamepad is saved preference.
+	# Load last input device early to fix unbound warning on first load when
+	# gamepad is saved preference.
 	# Ensures has_unbound_critical_actions_for_current_device() uses correct device from config.
 	Settings.load_last_input_device()
 

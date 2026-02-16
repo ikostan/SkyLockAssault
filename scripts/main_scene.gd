@@ -37,7 +37,8 @@ func _ready() -> void:
 
 
 # 2. Detect when player presses a key/button that has NO binding at all
-# Only significant inputs (axes above deadzone) are checked to prevent false positives from stick jitter.
+# Only significant inputs (axes above deadzone) are checked to prevent
+# false positives from stick jitter.
 func _input(event: InputEvent) -> void:
 	if event.is_echo():
 		return
