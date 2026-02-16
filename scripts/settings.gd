@@ -475,6 +475,8 @@ func _ensure_defaults_saved() -> void:
 
 ## Returns true if two events are exactly the same binding.
 func _events_match(a: InputEvent, b: InputEvent) -> bool:
+	if a == null or b == null:
+		return false  # treat null as "no match"
 	if a.get_class() != b.get_class():
 		return false
 	if a is InputEventKey:
