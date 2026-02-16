@@ -357,25 +357,34 @@ func _ensure_defaults_saved() -> void:
 		# === Gamepad defaults ===
 		if not has_gamepad and DEFAULT_GAMEPAD.has(action):
 			var def: Dictionary = DEFAULT_GAMEPAD[action]
-			var nev: InputEvent
+			var nev: InputEvent = null
 
-			if def["type"] == "button":
-				nev = InputEventJoypadButton.new()
-				(nev as InputEventJoypadButton).button_index = def["button"]
-			elif def["type"] == "axis":
-				nev = InputEventJoypadMotion.new()
-				(nev as InputEventJoypadMotion).axis = def["axis"]
-				(nev as InputEventJoypadMotion).axis_value = def["value"]
+			match def.get("type"):
+				"button":
+					var button := InputEventJoypadButton.new()
+					button.button_index = def["button"]
+					button.device = -1
+					nev = button
 
-			if nev is InputEventJoypadButton:
-				(nev as InputEventJoypadButton).device = -1
-			elif nev is InputEventJoypadMotion:
-				(nev as InputEventJoypadMotion).device = -1
+				"axis":
+					var motion := InputEventJoypadMotion.new()
+					motion.axis = def["axis"]
+					motion.axis_value = def["value"]
+					motion.device = -1
+					nev = motion
+
+				_:
+					Globals.log_message(
+						"Unknown gamepad type in DEFAULT_GAMEPAD for action '%s': %s" % [action, def.get("type")],
+						Globals.LogLevel.WARNING
+					)
+					continue  # skip this action, don't crash
 
 			InputMap.action_add_event(action, nev)
 			changed = true
 			Globals.log_message(
-				"Added missing default gamepad mapping for " + action, Globals.LogLevel.DEBUG
+				"Added missing default gamepad mapping for " + action,
+				Globals.LogLevel.DEBUG
 			)
 
 	if changed:
