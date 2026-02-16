@@ -375,7 +375,10 @@ func _ensure_defaults_saved() -> void:
 
 				_:
 					Globals.log_message(
-						"Unknown gamepad type in DEFAULT_GAMEPAD for action '%s': %s" % [action, def.get("type")],
+						(
+							"Unknown gamepad type in DEFAULT_GAMEPAD for action '%s': %s"
+							% [action, def.get("type")]
+						),
 						Globals.LogLevel.WARNING
 					)
 					continue  # skip this action, don't crash
@@ -383,8 +386,7 @@ func _ensure_defaults_saved() -> void:
 			InputMap.action_add_event(action, nev)
 			changed = true
 			Globals.log_message(
-				"Added missing default gamepad mapping for " + action,
-				Globals.LogLevel.DEBUG
+				"Added missing default gamepad mapping for " + action, Globals.LogLevel.DEBUG
 			)
 
 	if changed:
