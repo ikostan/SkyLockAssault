@@ -3,7 +3,7 @@
 ## Summary of zero-cost publishing platforms for Godot v4.5
 HTML5/WebGL games (Feb 2026)
 
-**Project Context** 
+## Project Context
 
 We're building **SkyLockAssault** — a totally free-to-play browser
 game in **Godot v4.5** on **Windows 10 64-bit**. This is our learning
