@@ -3,8 +3,7 @@
 ## test_combined_multi_manager_loads.gd
 ## GUT unit tests for combined/multi-manager config loads/saves.
 ## Covers TC-SL-11 to TC-SL-15 from test plan.
-## Test Plan:
-## https://github.com/ikostan/SkyLockAssault/issues/295
+## Test Plan: https://github.com/ikostan/SkyLockAssault/issues/295
 
 extends "res://addons/gut/test.gd"
 
@@ -49,13 +48,14 @@ func before_each() -> void:
 
 
 ## TC-SL-11 | Config with all sections (non-default audio, inputs, settings). | Call AudioManager.load_volumes(); Then Settings.load_input_mappings(); Then Globals._load_settings() | Each loads their section without affecting others; AudioManager gets "audio"; Settings gets "input"; Globals gets "Settings"; All apply correctly; No cross-overwrites.
+## Updated for per-device unbound: partial input ["key:87"] loads keyboard only (gamepad unbound).
 ## :rtype: void
 func test_tc_sl_11() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	# Audio
 	config.set_value("audio", "master_volume", 0.5)
 	config.set_value("audio", "master_muted", true)
-	# Inputs
+	# Inputs: Partial (keyboard only) - tests new per-device unbound (no auto-gamepad)
 	config.set_value("input", "speed_up", ["key:87"])
 	# Settings
 	config.set_value("Settings", "log_level", Globals.LogLevel.WARNING)
@@ -68,15 +68,11 @@ func test_tc_sl_11() -> void:
 	# Verify Audio
 	assert_almost_eq(AudioManager.master_volume, 0.5, 0.01)
 	assert_true(AudioManager.master_muted)
-	# Verify Inputs (e.g., speed_up is KEY_W=87, plus added default gamepad)
-	var events: Array = InputMap.action_get_events("speed_up")
-	assert_eq(events.size(), 2)
+	# Verify Inputs: Only saved key (no gamepad - per-device unbound)
+	var events: Array[InputEvent] = InputMap.action_get_events("speed_up")
+	assert_eq(events.size(), 1)
 	assert_true(events[0] is InputEventKey)
 	assert_eq(events[0].physical_keycode, 87)
-	assert_true(events[1] is InputEventJoypadMotion)
-	assert_eq(events[1].axis, JOY_AXIS_TRIGGER_RIGHT)
-	assert_eq(events[1].axis_value, 1.0)
-	assert_eq(events[1].device, -1)
 	# Verify Globals
 	assert_eq(Globals.current_log_level, Globals.LogLevel.WARNING)
 	assert_eq(Globals.difficulty, 1.5)
