@@ -50,20 +50,20 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	# NEW: Default focus on "Keyboard" when the menu opens
 	_grab_initial_focus()
-	
+
 	# Conflicting key remap functionality/setup
 	add_to_group("key_mapping_menu")  # so buttons can find us
 	# Create the conflict dialog once
 	conflict_dialog = ConfirmationDialog.new()
 	conflict_dialog.title = "Input Already Used"
-	conflict_dialog.exclusive = true                     # blocks background input
+	conflict_dialog.exclusive = true  # blocks background input
 	conflict_dialog.get_ok_button().text = "Reassign (unbind other)"
 	conflict_dialog.get_cancel_button().text = "Cancel"
 	add_child(conflict_dialog)
 
 	conflict_dialog.confirmed.connect(_on_conflict_confirmed)
 	conflict_dialog.canceled.connect(_on_conflict_canceled)
-	
+
 	Globals.log_message("Controls menu loaded.", Globals.LogLevel.DEBUG)
 
 	if os_wrapper.has_feature("web"):
@@ -86,7 +86,9 @@ func _ready() -> void:
 
 
 ## Called from InputRemapButton when a duplicate binding is detected.
-func show_conflict_dialog(btn: InputRemapButton, new_event: InputEvent, conflicts: Array[String]) -> void:
+func show_conflict_dialog(
+	btn: InputRemapButton, new_event: InputEvent, conflicts: Array[String]
+) -> void:
 	current_remap_button = btn
 	current_pending_event = new_event
 	current_conflicts = conflicts
@@ -117,7 +119,10 @@ func _on_conflict_confirmed() -> void:
 	InputMap.action_add_event(current_remap_button.action, current_pending_event)
 
 	Globals.log_message(
-		"Remapped %s (unbound %d conflicts)" % [current_remap_button.action, current_conflicts.size()],
+		(
+			"Remapped %s (unbound %d conflicts)"
+			% [current_remap_button.action, current_conflicts.size()]
+		),
 		Globals.LogLevel.DEBUG
 	)
 
