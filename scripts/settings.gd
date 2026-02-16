@@ -367,7 +367,11 @@ func _ensure_defaults_saved() -> void:
 				(nev as InputEventJoypadMotion).axis = def["axis"]
 				(nev as InputEventJoypadMotion).axis_value = def["value"]
 
-			(nev as InputEventJoypadButton if nev is InputEventJoypadButton else nev as InputEventJoypadMotion).device = -1
+			if nev is InputEventJoypadButton:
+				(nev as InputEventJoypadButton).device = -1
+			elif nev is InputEventJoypadMotion:
+				(nev as InputEventJoypadMotion).device = -1
+			
 			InputMap.action_add_event(action, nev)
 			changed = true
 			Globals.log_message(
