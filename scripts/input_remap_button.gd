@@ -181,7 +181,9 @@ func _input(event: InputEvent) -> void:
 		if is_instance_valid(km_menu) and km_menu.has_method("show_conflict_dialog"):
 			km_menu.show_conflict_dialog(self, new_event.duplicate(), conflicts)
 		else:
-			Globals.log_message("key_mapping_menu missing or no show_conflict_dialog method", Globals.LogLevel.ERROR)
+			Globals.log_message(
+				"key_mapping_menu missing or no show_conflict_dialog method", Globals.LogLevel.ERROR
+			)
 			# Fallback: still allow remap if dialog system fails
 			erase_old_event()
 			InputMap.action_add_event(action, new_event)
@@ -193,8 +195,7 @@ func _input(event: InputEvent) -> void:
 	erase_old_event()
 	InputMap.action_add_event(action, new_event)
 	Globals.log_message(
-		"Remapped '%s' to '%s'" % [action, get_event_label(new_event)],
-		Globals.LogLevel.DEBUG
+		"Remapped '%s' to '%s'" % [action, get_event_label(new_event)], Globals.LogLevel.DEBUG
 	)
 	finish_remap()
 
