@@ -247,8 +247,8 @@ text = "{MOVE=LEFT:}"
 
 [node name="LeftInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingLeft"]
 layout_mode = 2
-focus_neighbor_left = NodePath("../../../MenuKeyMap/KeyMappingMenuUp/MenuUpInputRemap")
 focus_neighbor_top = NodePath("../../KeyMappingSpeedDown/SpeedDownInputRemap")
+focus_neighbor_right = NodePath("../../../MenuKeyMap/KeyMappingMenuUp/MenuUpInputRemap")
 focus_neighbor_bottom = NodePath("../../KeyMappingRight/RightInputRemap")
 focus_next = NodePath("../../KeyMappingRight/RightInputRemap")
 focus_previous = NodePath("../../KeyMappingSpeedDown/SpeedDownInputRemap")
