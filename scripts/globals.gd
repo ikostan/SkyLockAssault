@@ -32,6 +32,7 @@ var next_scene: String = ""  # Path to the next scene to load via loading screen
 ## Updated when player toggles Keyboard/Gamepad in Key Mapping.
 var current_input_device: String = "keyboard"  # "keyboard" or "gamepad"
 
+
 func _ready() -> void:
 	if Engine.is_editor_hint() or enable_debug_logging:
 		current_log_level = LogLevel.DEBUG
