@@ -115,33 +115,29 @@ func test_ui_04_reset_in_gamepad() -> void:
 	assert_ne(fire_btn.text, "Unbound")
 
 
-# UI-05: Label update after remapping action (test both devices)
+# test_ui_05_label_update_after_remapping
+# :rtype: void
 func test_ui_05_label_update_after_remapping() -> void:
 	gut.p("UI-05: Remapping updates UI text to reflect new InputEvent for both keyboard and gamepad tabs.")
 	# Keyboard remap
 	keyboard_btn.button_pressed = true
 	var left_btn: Button = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingLeft/LeftInputRemap")
 	left_btn.button_pressed = true
-	# Note: Directly calling private methods (_on_pressed, _input) for simulation due to complexity of full input event mocking in GUT unit tests.
-	left_btn._on_pressed()  # Manually trigger the pressed handler to start listening
-	assert_eq(left_btn.text, Globals.REMAP_PROMPT_TEXT)
+	left_btn._on_pressed()
+	assert_eq(left_btn.text, Globals.REMAP_PROMPT_KEYBOARD)  # updated
 	var key_event := InputEventKey.new()
 	key_event.physical_keycode = Key.KEY_A
 	key_event.pressed = true
-	# Note: Directly calling private method (_input) for simulation due to complexity of full input event mocking in GUT unit tests.
 	left_btn._input(key_event)
-	# Assertions
 	assert_false(left_btn.listening)
-	assert_eq(left_btn.text, "A", "Keyboard remap should update button text to new key label")
-	# Gamepad remap
+	assert_eq(left_btn.text, "A")
+	# Gamepad remap (no prompt assert needed here)
 	gamepad_btn.button_pressed = true
 	left_btn.button_pressed = true
-	# Note: Directly calling private methods (_on_pressed, _input) for simulation due to complexity of full input event mocking in GUT unit tests.
-	left_btn._on_pressed()  # Manually trigger the pressed handler to start listening
+	left_btn._on_pressed()
 	var joy_event := InputEventJoypadButton.new()
 	joy_event.button_index = JOY_BUTTON_DPAD_LEFT
 	joy_event.pressed = true
 	joy_event.device = -1
-	# Note: Directly calling private method (_input) for simulation due to complexity of full input event mocking in GUT unit tests.
 	left_btn._input(joy_event)
-	assert_eq(left_btn.text, "D-Pad Left", "Gamepad remap should update button text to new joypad label")
+	assert_eq(left_btn.text, "D-Pad Left")
