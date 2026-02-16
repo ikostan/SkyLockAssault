@@ -106,30 +106,27 @@ func _on_conflict_confirmed() -> void:
 	if not current_remap_button or not current_pending_event:
 		return
 
-	# 1. Unbind every conflicting action
+	# 1. COMPLETELY unbind every conflicting action (this was the missing piece)
 	for act in current_conflicts:
-		for ev in InputMap.action_get_events(act):
-			if Settings._events_match(ev, current_pending_event):
-				InputMap.action_erase_event(act, ev)
-				Globals.log_message("Unbound conflicting input from " + act, Globals.LogLevel.DEBUG)
-				break
+		InputMap.action_erase_events(act)  # Removes ALL events for that action
+		Globals.log_message("Completely unbound action: " + act, Globals.LogLevel.DEBUG)
 
-	# 2. Apply the new binding to the button we are remapping
+	# 2. Apply the new binding
 	current_remap_button.erase_old_event()
 	InputMap.action_add_event(current_remap_button.action, current_pending_event)
 
 	Globals.log_message(
-		(
-			"Remapped %s (unbound %d conflicts)"
-			% [current_remap_button.action, current_conflicts.size()]
-		),
+		"Remapped %s (unbound %d conflicts)" % [current_remap_button.action, current_conflicts.size()],
 		Globals.LogLevel.DEBUG
 	)
 
-	# 3. Finish the remap (updates text + saves)
+	# 3. Save ALL changes to disk (including the now-empty actions)
+	Settings.save_input_mappings()
+
+	# 4. Finish the remap for the button we changed
 	current_remap_button.finish_remap()
 
-	# 4. Refresh ALL buttons so the unbound one shows “Unbound”
+	# 5. Refresh UI
 	update_all_remap_buttons()
 
 	# Cleanup

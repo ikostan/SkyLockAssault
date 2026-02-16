@@ -140,6 +140,8 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			for serialized: String in serialized_events:
 				_deserialize_and_add(action, serialized)
 
+	## After loading saved events, add defaults ONLY when appropriate.
+	## Respect explicit [] = "user wants this unbound".
 	for action: String in actions:
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
 		var has_key_event: bool = false
@@ -149,14 +151,25 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				has_key_event = true
 			elif ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
 				has_joy_event = true
-		if not has_key_event and DEFAULT_KEYBOARD.has(action):
+
+		# NEW: Check if this action was explicitly saved as empty array (unbound)
+		var explicitly_unbound: bool = false
+		if config.has_section_key("input", action):
+			var saved_val: Variant = config.get_value("input", action)
+			if saved_val is Array and saved_val.is_empty():
+				explicitly_unbound = true
+
+		# === Keyboard defaults ===
+		if not has_key_event and DEFAULT_KEYBOARD.has(action) and not explicitly_unbound:
 			var nev: InputEventKey = InputEventKey.new()
 			nev.physical_keycode = DEFAULT_KEYBOARD[action]
 			InputMap.action_add_event(action, nev)
 			Globals.log_message(
 				"Added default keyboard event for " + action, Globals.LogLevel.DEBUG
 			)
-		if not has_joy_event and DEFAULT_GAMEPAD.has(action):
+
+		# === Gamepad defaults ===
+		if not has_joy_event and DEFAULT_GAMEPAD.has(action) and not explicitly_unbound:
 			var def: Dictionary = DEFAULT_GAMEPAD[action]
 			if def["type"] == "button":
 				var nev: InputEventJoypadButton = InputEventJoypadButton.new()
@@ -327,9 +340,16 @@ func reset_to_defaults(device_type: String) -> void:
 
 
 ## Ensures default keyboard and gamepad mappings are present in InputMap.
-## If any defaults were missing, they are added and the config is saved.
+## Now respects explicit [] = "user wants this unbound".
 ## Called after load_input_mappings() to guarantee a complete first-run state.
 func _ensure_defaults_saved() -> void:
+	var config: ConfigFile = ConfigFile.new()
+	var err: int = config.load(CONFIG_PATH)  # we need the saved [] entries
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		Globals.log_message(
+			"Failed to load config in _ensure_defaults_saved", Globals.LogLevel.WARNING
+		)
+
 	var changed: bool = false
 
 	for action: String in ACTIONS:
@@ -344,8 +364,15 @@ func _ensure_defaults_saved() -> void:
 			elif ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
 				has_gamepad = true
 
+		# NEW: Respect explicit empty array saved to config
+		var explicitly_unbound: bool = false
+		if config.has_section_key("input", action):
+			var saved_val: Variant = config.get_value("input", action)
+			if saved_val is Array and saved_val.is_empty():
+				explicitly_unbound = true
+
 		# === Keyboard defaults ===
-		if not has_keyboard and DEFAULT_KEYBOARD.has(action):
+		if not has_keyboard and DEFAULT_KEYBOARD.has(action) and not explicitly_unbound:
 			var nev := InputEventKey.new()
 			nev.physical_keycode = DEFAULT_KEYBOARD[action]
 			InputMap.action_add_event(action, nev)
@@ -355,7 +382,7 @@ func _ensure_defaults_saved() -> void:
 			)
 
 		# === Gamepad defaults ===
-		if not has_gamepad and DEFAULT_GAMEPAD.has(action):
+		if not has_gamepad and DEFAULT_GAMEPAD.has(action) and not explicitly_unbound:
 			var def: Dictionary = DEFAULT_GAMEPAD[action]
 			var nev: InputEvent = null
 
@@ -374,14 +401,7 @@ func _ensure_defaults_saved() -> void:
 					nev = motion
 
 				_:
-					Globals.log_message(
-						(
-							"Unknown gamepad type in DEFAULT_GAMEPAD for action '%s': %s"
-							% [action, def.get("type")]
-						),
-						Globals.LogLevel.WARNING
-					)
-					continue  # skip this action, don't crash
+					continue
 
 			InputMap.action_add_event(action, nev)
 			changed = true
