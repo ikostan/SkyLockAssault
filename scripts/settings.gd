@@ -169,7 +169,8 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 
 			# ── ROBUST ARRAY HANDLING (FIX FOR PackedStringArray) ─────────────────────
 			# FIXED: Explicit type guard to skip non-string items (e.g. int 999 from EC-01 test).
-			# This prevents crash on corrupted/malformed config files (real-world case: disk errors, manual edits).
+			# This prevents crash on corrupted/malformed config files
+			# (real-world case: disk errors, manual edits).
 			# Log warning for visibility in console/tests.
 			# Keeps defaults backfill intact (as asserted in EC-01).
 			# Minimal change: only affects invalid data paths, no impact on normal saves.
