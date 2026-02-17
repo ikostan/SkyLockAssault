@@ -69,21 +69,26 @@ func test_ui_02_switch_to_gamepad() -> void:
 	# ROBUST GAMEPAD LABEL CHECK (replaces brittle != "Unbound")
 	# Checks for typical gamepad label patterns (from JOY_BUTTON_LABELS / JOY_AXIS_LABELS)
 	# Allows "Right Trigger", "D-Pad Left", "Misc 1", etc.
-	# Still rejects "Unbound", single-key keyboard labels, or empty.
+	# Explicitly rejects "Unbound" (the bug the reviewer caught)
+	# Still rejects single-key keyboard labels.
 	var speed_up_btn: Button = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
+
+	# Explicit reject "Unbound" (this was missing — test was too loose)
+	assert_ne(speed_up_btn.text, "Unbound", "Gamepad should have a default binding (not Unbound)")
+
 	assert_true(
 		speed_up_btn.text.contains("Trigger") or 
 		speed_up_btn.text.contains("Stick") or 
 		speed_up_btn.text.contains("D-Pad") or 
 		speed_up_btn.text.contains("Button") or 
 		speed_up_btn.text.length() > 5,  # e.g. "Right Trigger", "Left Stick Left"
-		"Gamepad label should be descriptive (not a single key char or 'Unbound')"
+	    "Gamepad label should be descriptive (not a single key char or 'Unbound')"
 	)
-	
+
 	# Still reject obvious keyboard-style labels (single uppercase letter)
 	assert_false(
 		speed_up_btn.text.length() == 1 and speed_up_btn.text.to_upper() == speed_up_btn.text,
-		"Gamepad label should not be a single keyboard key character"
+	    "Gamepad label should not be a single keyboard key character"
 	)
 
 
