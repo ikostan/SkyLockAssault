@@ -44,7 +44,7 @@ func before_each() -> void:
 		var ev: InputEventKey = InputEventKey.new()
 		ev.physical_keycode = default_key
 		InputMap.action_add_event(action, ev)
-	Settings._needs_migration = false  # Reset migration flag
+	Settings._needs_save = false  # Reset migration flag
 
 
 ## TC-SL-11 | Config with all sections (non-default audio, inputs, settings). | Call AudioManager.load_volumes(); Then Settings.load_input_mappings(); Then Globals._load_settings() | Each loads their section without affecting others; AudioManager gets "audio"; Settings gets "input"; Globals gets "Settings"; All apply correctly; No cross-overwrites.
@@ -107,18 +107,18 @@ func test_tc_sl_12() -> void:
 	assert_eq(loaded_config.get_value("Settings", "log_level"), "invalid")
 
 
-## TC-SL-13 | Config with old-format inputs (int keycodes); No audio. | Call Settings.load_input_mappings() (sets _needs_migration=true, saves upgraded); Then AudioManager.save_volumes() | Inputs upgraded and saved; Then audio added without re-overwriting inputs; Config has upgraded "input" and new "audio".
+## TC-SL-13 | Config with old-format inputs (int keycodes); No audio. | Call Settings.load_input_mappings() (sets _needs_save=true, saves upgraded); Then AudioManager.save_volumes() | Inputs upgraded and saved; Then audio added without re-overwriting inputs; Config has upgraded "input" and new "audio".
 ## :rtype: void
 func test_tc_sl_13() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("input", "speed_up", 87)  # Old int format
 	config.save(test_config_path)
-	# Load inputs (should set _needs_migration)
+	# Load inputs (should set _needs_save)
 	Settings.load_input_mappings(test_config_path)
 	# Manually save if migration needed (since _ready() not re-called in test)
-	if Settings._needs_migration:
+	if Settings._needs_save:
 		Settings.save_input_mappings(test_config_path)
-		Settings._needs_migration = false
+		Settings._needs_save = false
 	# Verify migrated in InputMap
 	var events: Array = InputMap.action_get_events("speed_up")
 	assert_eq(events.size(), 2)

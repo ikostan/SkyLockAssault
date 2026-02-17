@@ -59,17 +59,17 @@ const DEFAULT_GAMEPAD: Dictionary = {
 	"ui_right": {"type": "button", "button": JOY_BUTTON_DPAD_RIGHT},
 }
 
-var _needs_migration: bool = false  # Flag for old-format upgrade
+# Flag for legacy upgrade OR missing defaults (first-run, new actions)
+var _needs_save: bool = false
 
 
 ## Initializes the settings by loading input mappings.
-## If migration is needed, saves the updated mappings.
+## Triggers save if defaults were backfilled or legacy migration occurred.
 func _ready() -> void:
 	load_input_mappings()
-	_ensure_defaults_saved()
-	if _needs_migration:
-		save_input_mappings()  # Only save if upgrade needed (old format detected)
-		_needs_migration = false
+	if _needs_save:  # Renamed for clarity
+		save_input_mappings()
+		_needs_save = false
 
 
 ## Shared helper: Adds missing keyboard/gamepad defaults to InputMap.
@@ -265,10 +265,10 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 						)
 			elif value is int:
 				serialized_events = ["key:" + str(value)]  # Old int keycode—migrate
-				_needs_migration = true
+				_needs_save = true
 			elif value is String:
 				serialized_events = [value]  # Old string format
-				_needs_migration = true
+				_needs_save = true
 			else:
 				Globals.log_message(
 					"Unexpected type for action '" + action + "': " + str(typeof(value)),
@@ -287,7 +287,7 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 	var defaults_config: ConfigFile = ConfigFile.new()
 	defaults_config.load(path)
 	if _add_missing_defaults(defaults_config):
-		_needs_migration = true
+		_needs_save = true
 
 
 ## Deserializes a string to an InputEvent and adds it to the specified action.
@@ -370,7 +370,7 @@ func _deserialize_and_add(action: String, serialized: String) -> void:
 		var nev: InputEventKey = InputEventKey.new()
 		nev.physical_keycode = kc
 		InputMap.action_add_event(action, nev)
-		_needs_migration = true  # Ensure save if we hit this old case
+		_needs_save = true  # Ensure save if we hit this old case
 	else:
 		Globals.log_message("Unknown serialized prefix: " + serialized, Globals.LogLevel.WARNING)
 		return
@@ -442,19 +442,6 @@ func reset_to_defaults(device_type: String) -> void:
 				nev.device = -1
 				InputMap.action_add_event(action, nev)
 	save_input_mappings()
-
-
-## Ensures default keyboard and gamepad mappings are present in InputMap.
-## Now the *single source* of truth for defaults (after load_input_mappings()).
-## Respects explicit [] = "user wants this unbound".
-## Saves to config if anything was added (first-run, new actions, etc.).
-func _ensure_defaults_saved() -> void:
-	var config: ConfigFile = ConfigFile.new()
-	config.load(CONFIG_PATH)
-
-	if _add_missing_defaults(config):
-		save_input_mappings()
-		Globals.log_message("Defaults filled → saved", Globals.LogLevel.INFO)
 
 
 ## Returns true if two events are exactly the same binding.
