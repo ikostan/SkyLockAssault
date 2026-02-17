@@ -492,10 +492,14 @@ func save_last_input_device(device: String) -> void:
 
 
 ## Loads the last selected input device (defaults to keyboard).
+## Validates against ["keyboard", "gamepad"] to prevent corrupted config values.
+## Mirrors save_last_input_device() for consistency.
+## :rtype: void
 func load_last_input_device() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	if config.load(CONFIG_PATH) == OK and config.has_section_key("input", "last_input_device"):
-		Globals.current_input_device = config.get_value("input", "last_input_device")
+		var device: String = config.get_value("input", "last_input_device")
+		Globals.current_input_device = device if device in ["keyboard", "gamepad"] else "keyboard"
 	else:
 		Globals.current_input_device = "keyboard"
 

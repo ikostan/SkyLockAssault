@@ -179,3 +179,38 @@ func test_ec_08_conflict_unbind_persists_after_reload() -> void:
 	)
 
 	Globals.log_message("EC-08 PASSED – unbound FIRE persisted, RESET works", Globals.LogLevel.DEBUG)
+
+
+## EC-09 | Last device validation | Corrupted "last_input_device" in config | Falls back to "keyboard"
+## Prevents bad config from breaking device state.
+## Uses the REAL config path to match load_last_input_device().
+func test_ec_09_last_input_device_validation() -> void:
+	# Use real config path (function hardcodes CONFIG_PATH)
+	var real_config_path: String = Settings.CONFIG_PATH
+	if FileAccess.file_exists(real_config_path):
+		DirAccess.remove_absolute(real_config_path)
+	
+	# Corrupted case
+	var cfg := ConfigFile.new()
+	cfg.set_value("input", "last_input_device", "mouse")  # Invalid!
+	cfg.save(real_config_path)
+	
+	Settings.load_last_input_device()
+	assert_eq(Globals.current_input_device, "keyboard", "Corrupted device must default to keyboard")
+	
+	# Valid case
+	cfg.set_value("input", "last_input_device", "gamepad")
+	cfg.save(real_config_path)
+	Settings.load_last_input_device()
+	assert_eq(Globals.current_input_device, "gamepad", "Valid device must load")
+	
+	# Missing key
+	cfg.erase_section_key("input", "last_input_device")
+	cfg.save(real_config_path)
+	Settings.load_last_input_device()
+	assert_eq(Globals.current_input_device, "keyboard", "Missing key must default")
+	
+	# Cleanup (leave no trace)
+	DirAccess.remove_absolute(real_config_path)
+	
+	Globals.log_message("EC-09 PASSED – device validation works", Globals.LogLevel.DEBUG)
