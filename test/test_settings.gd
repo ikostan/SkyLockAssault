@@ -311,13 +311,13 @@ func test_migration_save_only_on_old() -> void:
 	Settings.load_input_mappings(test_path, ["test_action"])
 	
 	# Simulate _ready() save logic—check if flag triggers save
-	assert_bool(Settings._needs_migration).is_true()  # Flag set
+	assert_bool(Settings._needs_save).is_true()  # Flag set
 	Settings.save_input_mappings(test_path, ["test_action"])  # Would save in new format
 	
 	# Reload to verify upgraded, no flag next time
-	Settings._needs_migration = false  # Reset
+	Settings._needs_save = false  # Reset
 	Settings.load_input_mappings(test_path, ["test_action"])
-	assert_bool(Settings._needs_migration).is_false()  # No old format now
+	assert_bool(Settings._needs_save).is_false()  # No old format now
 
 # Test no save on new-format or no config
 func test_no_migration_on_new() -> void:
@@ -329,7 +329,7 @@ func test_no_migration_on_new() -> void:
 	config.save(test_path)
 	
 	Settings.load_input_mappings(test_path, ["test_action"])
-	assert_bool(Settings._needs_migration).is_false()  # No flag
+	assert_bool(Settings._needs_save).is_false()  # No flag
 
 
 # Test type-safe load for new-format array
