@@ -95,7 +95,7 @@ func _add_missing_defaults(config: ConfigFile) -> bool:
 		var explicitly_unbound_gamepad: bool = false
 		if config.has_section_key("input", action):
 			var saved_val: Variant = config.get_value("input", action)
-			if (saved_val is Array or saved_val is PackedStringArray):
+			if saved_val is Array or saved_val is PackedStringArray:
 				if saved_val.is_empty():
 					explicitly_unbound_keyboard = true
 					explicitly_unbound_gamepad = true
@@ -117,7 +117,9 @@ func _add_missing_defaults(config: ConfigFile) -> bool:
 			nev.physical_keycode = DEFAULT_KEYBOARD[action]
 			InputMap.action_add_event(action, nev)
 			changed = true
-			Globals.log_message("Added missing default keyboard for " + action, Globals.LogLevel.DEBUG)
+			Globals.log_message(
+				"Added missing default keyboard for " + action, Globals.LogLevel.DEBUG
+			)
 
 		# === Gamepad defaults ===
 		if not has_gamepad and DEFAULT_GAMEPAD.has(action) and not explicitly_unbound_gamepad:
@@ -138,7 +140,9 @@ func _add_missing_defaults(config: ConfigFile) -> bool:
 			if nev:
 				InputMap.action_add_event(action, nev)
 				changed = true
-				Globals.log_message("Added missing default gamepad for " + action, Globals.LogLevel.DEBUG)
+				Globals.log_message(
+					"Added missing default gamepad for " + action, Globals.LogLevel.DEBUG
+				)
 
 	return changed
 
