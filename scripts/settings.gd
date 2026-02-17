@@ -451,7 +451,7 @@ func reset_to_defaults(device_type: String) -> void:
 
 
 ## Returns true if two events are exactly the same binding.
-func _events_match(a: InputEvent, b: InputEvent) -> bool:
+func events_match(a: InputEvent, b: InputEvent) -> bool:
 	if a == null or b == null:
 		return false  # treat null as "no match"
 	if a.get_class() != b.get_class():
@@ -475,7 +475,7 @@ func get_conflicting_actions(event: InputEvent, exclude_action: String = "") -> 
 		if action == exclude_action:
 			continue
 		for ev: InputEvent in InputMap.action_get_events(action):
-			if _events_match(ev, event):
+			if events_match(ev, event):
 				conflicts.append(action)
 				break  # one match per action is enough
 	return conflicts

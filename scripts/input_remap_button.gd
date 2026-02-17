@@ -172,7 +172,7 @@ func _input(event: InputEvent) -> void:
 	var conflicts: Array[String] = Settings.get_conflicting_actions(new_event, action)
 
 	# Skip dialog if this is the same binding we already have.
-	if not conflicts.is_empty() and not Settings._events_match(new_event, get_matching_event()):
+	if not conflicts.is_empty() and not Settings.events_match(new_event, get_matching_event()):
 		# Fetch fresh every time (fixes ready-order null reference)
 		var km_menu: Node = get_tree().get_first_node_in_group("key_mapping_menu")
 		if is_instance_valid(km_menu) and km_menu.has_method("show_conflict_dialog"):

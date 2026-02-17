@@ -115,7 +115,7 @@ func _on_conflict_confirmed() -> void:
 	# 1. Unbind ONLY the conflicting event of the SAME DEVICE (keyboard or gamepad)
 	for act in current_conflicts:
 		for ev: InputEvent in InputMap.action_get_events(act):
-			if Settings._events_match(ev, current_pending_event):  # exact same binding
+			if Settings.events_match(ev, current_pending_event):  # exact same binding
 				InputMap.action_erase_event(act, ev)
 				Globals.log_message(
 					"Unbound specific device event for " + act, Globals.LogLevel.DEBUG
