@@ -39,6 +39,9 @@ func before_each() -> void:
 func after_each() -> void:
 	if is_instance_valid(menu):
 		menu.queue_free()
+	# Restore default bindings so remaps from this test don't leak
+	Settings.reset_to_defaults("keyboard")
+	Settings.reset_to_defaults("gamepad")
 
 
 # UI-01: Switch to keyboard settings
