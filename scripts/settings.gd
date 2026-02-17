@@ -7,6 +7,8 @@
 
 extends Node
 
+# Change to v3 if you add another migration etc...
+const LEGACY_MIGRATION_KEY: String = "settings_migrated_v2"
 const CONFIG_PATH: String = "user://settings.cfg"
 
 ## Critical actions that must be bound for playable game.
@@ -67,7 +69,18 @@ var _needs_save: bool = false
 ## Triggers save if defaults were backfilled or legacy migration occurred.
 func _ready() -> void:
 	load_input_mappings()
-	if _needs_save:  # Renamed for clarity
+
+	# ONE-TIME MIGRATION: Fix legacy unbound/empty states from old saves (PR#409)
+	# Runs only on first load after the unbound refactor.
+	if not Globals.has_meta(LEGACY_MIGRATION_KEY):
+		_migrate_legacy_unbound_states()
+		Globals.set_meta(LEGACY_MIGRATION_KEY, true)
+		Globals.log_message(
+			"Legacy settings migration completed (first run after unbound refactor)",
+			Globals.LogLevel.INFO
+		)
+
+	if _needs_save:
 		save_input_mappings()
 		_needs_save = false
 
@@ -565,3 +578,54 @@ func has_unbound_critical_actions_for_current_device() -> bool:
 			return true  # unbound for the current device
 
 	return false
+
+
+## One-time migration for legacy configs.
+## Forces defaults for CRITICAL_ACTIONS that are unbound/empty.
+## Ensures "Unbound" labels appear correctly for UI actions.
+## Sets the meta flag to prevent re-run (works even if called directly in tests).
+## :rtype: void
+func _migrate_legacy_unbound_states() -> void:
+	var changed: bool = false
+	for action: String in CRITICAL_ACTIONS:
+		if InputMap.action_get_events(action).is_empty():
+			# Force keyboard default
+			if DEFAULT_KEYBOARD.has(action):
+				var nev: InputEventKey = InputEventKey.new()
+				nev.physical_keycode = DEFAULT_KEYBOARD[action]
+				InputMap.action_add_event(action, nev)
+				changed = true
+				Globals.log_message(
+					"Migrated legacy unbound: " + action + " (keyboard default)",
+					Globals.LogLevel.INFO
+				)
+
+			# Force gamepad default
+			if DEFAULT_GAMEPAD.has(action):
+				var def: Dictionary = DEFAULT_GAMEPAD[action]
+				var nev: InputEvent = null
+				match def.get("type"):
+					"button":
+						var button := InputEventJoypadButton.new()
+						button.button_index = def["button"]
+						button.device = -1
+						nev = button
+					"axis":
+						var motion := InputEventJoypadMotion.new()
+						motion.axis = def["axis"]
+						motion.axis_value = def["value"]
+						motion.device = -1
+						nev = motion
+				if nev:
+					InputMap.action_add_event(action, nev)
+					changed = true
+					Globals.log_message(
+						"Migrated legacy unbound: " + action + " (gamepad default)",
+						Globals.LogLevel.INFO
+					)
+
+	if changed:
+		save_input_mappings()  # Persist the migration
+	
+	# Set the meta flag HERE (so direct calls in tests work, and _ready() is consistent)
+	Globals.set_meta(LEGACY_MIGRATION_KEY, true)

@@ -214,3 +214,31 @@ func test_ec_09_last_input_device_validation() -> void:
 	DirAccess.remove_absolute(real_config_path)
 	
 	Globals.log_message("EC-09 PASSED – device validation works", Globals.LogLevel.DEBUG)
+
+
+## EC-10 | Legacy migration | Old config with empty critical actions | Forces defaults once | "Unbound" labels fixed.
+## :rtype: void
+func test_ec_10_legacy_migration() -> void:
+	# Simulate old config with unbound critical (FIRE = [])
+	var cfg: ConfigFile = ConfigFile.new()
+	cfg.set_value("input", "fire", [])  # Legacy unbound
+	cfg.save(test_config_path)
+	
+	# Load the [] into InputMap (critical step)
+	Settings.load_input_mappings(test_config_path)
+	
+	# Force migration (bypass has_meta)
+	Globals.remove_meta(Settings.LEGACY_MIGRATION_KEY)
+	Settings._migrate_legacy_unbound_states()
+	
+	# FIRE now has default (migration worked)
+	var fire_events: Array[InputEvent] = InputMap.action_get_events("fire")
+	assert_true(
+		fire_events.any(func(e: InputEvent) -> bool: return e is InputEventKey and e.physical_keycode == Settings.DEFAULT_KEYBOARD["fire"]),
+		"Migration must force FIRE=Space"
+	)
+	
+	# Flag set (won't re-run) -- now inside the helper
+	assert_true(Globals.has_meta(Settings.LEGACY_MIGRATION_KEY))
+	
+	Globals.log_message("EC-10 PASSED – legacy migration forces defaults", Globals.LogLevel.DEBUG)
