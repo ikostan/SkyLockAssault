@@ -177,6 +177,7 @@ func _input(event: InputEvent) -> void:
 		var km_menu: Node = get_tree().get_first_node_in_group("key_mapping_menu")
 		if is_instance_valid(km_menu) and km_menu.has_method("show_conflict_dialog"):
 			km_menu.show_conflict_dialog(self, new_event.duplicate(), conflicts)
+			get_viewport().set_input_as_handled()
 		else:
 			Globals.log_message(
 				"key_mapping_menu missing or no show_conflict_dialog method", Globals.LogLevel.ERROR
