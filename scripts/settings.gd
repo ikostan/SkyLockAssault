@@ -403,7 +403,7 @@ func reset_to_defaults(device_type: String) -> void:
 				and (ev is InputEventJoypadButton or ev is InputEventJoypadMotion)
 			):
 				InputMap.action_erase_event(action, ev)
-		
+
 		# Add fresh defaults
 		if device_type == "keyboard" and DEFAULT_KEYBOARD.has(action):
 			var nev: InputEventKey = InputEventKey.new()
@@ -422,9 +422,11 @@ func reset_to_defaults(device_type: String) -> void:
 				nev.axis_value = def["value"]
 				nev.device = -1
 				InputMap.action_add_event(action, nev)
-	
+
 	save_input_mappings()
-	Globals.log_message("🔄 Full RESET for " + device_type + " — defaults forced!", Globals.LogLevel.INFO)
+	Globals.log_message(
+		"🔄 Full RESET for " + device_type + " — defaults forced!", Globals.LogLevel.INFO
+	)
 
 
 ## Returns true if two events are exactly the same binding.
