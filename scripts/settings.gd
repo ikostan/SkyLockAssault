@@ -73,11 +73,12 @@ func _ready() -> void:
 
 
 ## Shared helper: Adds missing keyboard/gamepad defaults to InputMap.
-## Respects explicit unbounds (e.g. user saved [] for a device).
+## ALWAYS backfills if a device is missing bindings (no more "stuck unbound").
+## Ignores legacy "explicitly unbound" — defaults win for playability.
 ## Returns true if anything was added (so caller can save).
-## :param config: Loaded ConfigFile for unbound checks.
+## :param config: Loaded ConfigFile (kept for compatibility, ignored now).
 ## :rtype: bool
-func _add_missing_defaults(config: ConfigFile) -> bool:
+func _add_missing_defaults(_config: ConfigFile) -> bool:  # _config param kept for call sites
 	var changed: bool = false
 
 	for action: String in ACTIONS:
@@ -90,32 +91,8 @@ func _add_missing_defaults(config: ConfigFile) -> bool:
 			elif ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
 				has_gamepad = true
 
-		# Device-specific "explicitly unbound" check (copied from both old blocks,
-		# with your robust type guard from load_input_mappings())
-		var explicitly_unbound_keyboard: bool = false
-		var explicitly_unbound_gamepad: bool = false
-		if config.has_section_key("input", action):
-			var saved_val: Variant = config.get_value("input", action)
-			if saved_val is Array or saved_val is PackedStringArray:
-				var has_saved_key: bool = false
-				var has_saved_joy: bool = false
-				for item: Variant in saved_val:
-					if item is String:
-						var s: String = item
-						if s.begins_with("key:"):
-							has_saved_key = true
-						elif s.begins_with("joybtn:") or s.begins_with("joyaxis:"):
-							has_saved_joy = true
-					else:
-						Globals.log_message(
-							"Non-string item in unbound check for action '" + action + "': skipped",
-							Globals.LogLevel.WARNING
-						)
-				explicitly_unbound_keyboard = not has_saved_key
-				explicitly_unbound_gamepad = not has_saved_joy
-
-		# === Keyboard defaults ===
-		if not has_keyboard and DEFAULT_KEYBOARD.has(action) and not explicitly_unbound_keyboard:
+		# === Keyboard defaults (always add if missing) ===
+		if not has_keyboard and DEFAULT_KEYBOARD.has(action):
 			var nev: InputEventKey = InputEventKey.new()
 			nev.physical_keycode = DEFAULT_KEYBOARD[action]
 			InputMap.action_add_event(action, nev)
@@ -124,8 +101,8 @@ func _add_missing_defaults(config: ConfigFile) -> bool:
 				"Added missing default keyboard mapping for " + action, Globals.LogLevel.DEBUG
 			)
 
-		# === Gamepad defaults (unified with match, like in _ensure) ===
-		if not has_gamepad and DEFAULT_GAMEPAD.has(action) and not explicitly_unbound_gamepad:
+		# === Gamepad defaults (always add if missing) ===
+		if not has_gamepad and DEFAULT_GAMEPAD.has(action):
 			var def: Dictionary = DEFAULT_GAMEPAD[action]
 			var nev: InputEvent = null
 			match def.get("type"):
@@ -286,7 +263,7 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 	# Idempotent with _ensure_defaults_saved().
 	var defaults_config: ConfigFile = ConfigFile.new()
 	defaults_config.load(path)
-	if _add_missing_defaults(defaults_config):
+	if _add_missing_defaults(defaults_config):  # Still pass it (harmless)
 		_needs_save = true
 
 
@@ -408,6 +385,7 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 
 
 ## Resets input mappings to defaults for the specified device type.
+## Now fully erases ALL events for the device + forces defaults (fixes duplicates).
 ## :param device_type: "keyboard" or "gamepad"
 ## :type device_type: String
 ## :rtype: void
@@ -415,6 +393,7 @@ func reset_to_defaults(device_type: String) -> void:
 	if device_type not in ["keyboard", "gamepad"]:
 		return
 	for action: String in ACTIONS:
+		# FULL erase for the device (prevents cross-action duplicates like Space on FIRE + NEXT_WEAPON)
 		var events: Array[InputEvent] = InputMap.action_get_events(action).duplicate()
 		for ev: InputEvent in events:
 			if device_type == "keyboard" and ev is InputEventKey:
@@ -424,6 +403,8 @@ func reset_to_defaults(device_type: String) -> void:
 				and (ev is InputEventJoypadButton or ev is InputEventJoypadMotion)
 			):
 				InputMap.action_erase_event(action, ev)
+		
+		# Add fresh defaults
 		if device_type == "keyboard" and DEFAULT_KEYBOARD.has(action):
 			var nev: InputEventKey = InputEventKey.new()
 			nev.physical_keycode = DEFAULT_KEYBOARD[action]
@@ -432,7 +413,7 @@ func reset_to_defaults(device_type: String) -> void:
 			var def: Dictionary = DEFAULT_GAMEPAD[action]
 			if def["type"] == "button":
 				var nev: InputEventJoypadButton = InputEventJoypadButton.new()
-				nev.button_index = def["button"]  # FIX: Use "button" instead of "index"
+				nev.button_index = def["button"]
 				nev.device = -1
 				InputMap.action_add_event(action, nev)
 			elif def["type"] == "axis":
@@ -441,7 +422,9 @@ func reset_to_defaults(device_type: String) -> void:
 				nev.axis_value = def["value"]
 				nev.device = -1
 				InputMap.action_add_event(action, nev)
+	
 	save_input_mappings()
+	Globals.log_message("🔄 Full RESET for " + device_type + " — defaults forced!", Globals.LogLevel.INFO)
 
 
 ## Returns true if two events are exactly the same binding.
