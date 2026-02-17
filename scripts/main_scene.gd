@@ -190,7 +190,9 @@ func _process(delta: float) -> void:
 	if player.fuel["fuel"] <= 0:
 		background.scroll_offset = Vector2(0, 0)
 
-	# 1. Critical unbound controls warning (shown once per session)
+	# 1. Critical unbound controls warning (shown ONCE per session)
+	# Flag stays true until player fixes bindings (e.g., in key_mapping.gd after remap).
+	# Do NOT reset here — that would make it repeat every 4s (bug fixed).
 	if Settings.has_unbound_critical_actions_for_current_device() and not _showing_unbound_warning:
 		_showing_unbound_warning = true
 		var pause_key: String = Settings.get_pause_binding_label()
@@ -220,7 +222,9 @@ func show_message(text: String, type: MessageType = MessageType.CRITICAL_UNBOUND
 
 	# Reset the right flag based on message type
 	match type:
-		MessageType.CRITICAL_UNBOUND:
-			_showing_unbound_warning = false
 		MessageType.KEY_PRESS_UNBOUND:
 			_showing_unbound_key_message = false
+		# CRITICAL_UNBOUND: Do NOT reset here (once-per-session intent)
+		# Reset only when bindings are fixed
+		# (e.g., in key_mapping.gd _on_conflict_confirmed or reset)
+		# _showing_unbound_warning = false  # ← commented out

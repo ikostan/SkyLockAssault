@@ -19,6 +19,10 @@ var reset_btn: Button = null
 var remap_buttons: Array = []
 
 
+func before_all() -> void:
+	Settings._add_missing_defaults(ConfigFile.new())  # Force backfill defaults (keyboard/gamepad)
+
+
 func before_each() -> void:
 	menu = load("res://scenes/key_mapping_menu.tscn").instantiate()  # Adjust path if needed
 	add_child(menu)
