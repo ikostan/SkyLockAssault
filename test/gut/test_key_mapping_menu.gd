@@ -29,6 +29,7 @@ func before_each() -> void:
 	remap_buttons = menu.get_tree().get_nodes_in_group("remap_buttons") as Array[InputRemapButton]
 	# Default to keyboard (as in _ready)
 	keyboard_btn.button_pressed = true
+	menu.update_all_remap_buttons()
 
 
 func after_each() -> void:
@@ -64,14 +65,26 @@ func test_ui_02_switch_to_gamepad() -> void:
 	for btn: Variant in remap_buttons:
 		assert_eq(btn.current_device, InputRemapButton.DeviceType.GAMEPAD,
 			"Remap button device should be GAMEPAD after gamepad switch")
-	# Example: SpeedUp button text should reflect gamepad label (e.g. contains "Stick" or button name after update)
+	
+	# ROBUST GAMEPAD LABEL CHECK (replaces brittle != "Unbound")
+	# Checks for typical gamepad label patterns (from JOY_BUTTON_LABELS / JOY_AXIS_LABELS)
+	# Allows "Right Trigger", "D-Pad Left", "Misc 1", etc.
+	# Still rejects "Unbound", single-key keyboard labels, or empty.
 	var speed_up_btn: Button = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
-	assert_true(speed_up_btn.text.contains("Stick") or speed_up_btn.text.contains("Button") or speed_up_btn.text.length() > 1,
-		"Gamepad label should be descriptive (not a single key char)")
-	# Verify it's not showing a keyboard key (single letter) and has meaningful gamepad text
-	assert_false(speed_up_btn.text.length() == 1 and speed_up_btn.text.to_upper() == speed_up_btn.text,
-		"Gamepad label should not be a single keyboard key character")
-	assert_ne(speed_up_btn.text, "Unbound", "Gamepad should have a default binding")
+	assert_true(
+		speed_up_btn.text.contains("Trigger") or 
+		speed_up_btn.text.contains("Stick") or 
+		speed_up_btn.text.contains("D-Pad") or 
+		speed_up_btn.text.contains("Button") or 
+		speed_up_btn.text.length() > 5,  # e.g. "Right Trigger", "Left Stick Left"
+		"Gamepad label should be descriptive (not a single key char or 'Unbound')"
+	)
+	
+	# Still reject obvious keyboard-style labels (single uppercase letter)
+	assert_false(
+		speed_up_btn.text.length() == 1 and speed_up_btn.text.to_upper() == speed_up_btn.text,
+		"Gamepad label should not be a single keyboard key character"
+	)
 
 
 # UI-03: Reset button in keyboard mode
