@@ -6,9 +6,10 @@
 
 extends Node2D
 
+enum MessageType { CRITICAL_UNBOUND, KEY_PRESS_UNBOUND }
+
 var _showing_unbound_warning: bool = false
 var _showing_unbound_key_message: bool = false
-enum MessageType { CRITICAL_UNBOUND, KEY_PRESS_UNBOUND }
 
 @onready var player: Node2D = $Player
 @onready var stats_panel: Panel = $PlayerStatsPanel
