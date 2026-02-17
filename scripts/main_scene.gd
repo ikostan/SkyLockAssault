@@ -4,6 +4,7 @@
 ## Main scene script for SkyLockAssault.
 ## Handles player positioning, stats visibility, and parallax background setup.
 
+class_name MainScene
 extends Node2D
 
 enum MessageType { CRITICAL_UNBOUND, KEY_PRESS_UNBOUND }
@@ -228,3 +229,8 @@ func show_message(text: String, type: MessageType = MessageType.CRITICAL_UNBOUND
 		# Reset only when bindings are fixed
 		# (e.g., in key_mapping.gd _on_conflict_confirmed or reset)
 		# _showing_unbound_warning = false  # ← commented out
+
+
+## Public: Clears the unbound warning flag after fixes.
+func clear_unbound_warning() -> void:
+	_showing_unbound_warning = false
