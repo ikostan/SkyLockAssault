@@ -141,7 +141,7 @@ func _on_conflict_confirmed() -> void:
 	_clear_conflict_state()
 
 	# NEW: Clear critical warning flag when player fixes unbound (once-per-session)
-	var main: = get_tree().current_scene
+	var main := get_tree().current_scene
 	if main and main is MainScene:
 		main.clear_unbound_warning()
 
@@ -184,7 +184,7 @@ func _on_reset_pressed() -> void:
 	update_all_remap_buttons()
 	Globals.log_message("Resetting " + device_type + " controls.", Globals.LogLevel.DEBUG)
 	# NEW: Clear critical warning flag when player fixes unbound (once-per-session)
-	var main: = get_tree().current_scene
+	var main := get_tree().current_scene
 	if main and main is MainScene:
 		main.clear_unbound_warning()
 
