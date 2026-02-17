@@ -79,7 +79,7 @@ func _ready() -> void:
 ## :rtype: bool
 func _add_missing_defaults(config: ConfigFile) -> bool:
 	var changed: bool = false
-	
+
 	for action: String in ACTIONS:
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
 		var has_keyboard: bool = false
@@ -89,7 +89,7 @@ func _add_missing_defaults(config: ConfigFile) -> bool:
 				has_keyboard = true
 			elif ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
 				has_gamepad = true
-		
+
 		# Device-specific "explicitly unbound" check (copied from both old blocks,
 		# with your robust type guard from load_input_mappings())
 		var explicitly_unbound_keyboard: bool = false
@@ -113,7 +113,7 @@ func _add_missing_defaults(config: ConfigFile) -> bool:
 						)
 				explicitly_unbound_keyboard = not has_saved_key
 				explicitly_unbound_gamepad = not has_saved_joy
-		
+
 		# === Keyboard defaults ===
 		if not has_keyboard and DEFAULT_KEYBOARD.has(action) and not explicitly_unbound_keyboard:
 			var nev: InputEventKey = InputEventKey.new()
@@ -123,7 +123,7 @@ func _add_missing_defaults(config: ConfigFile) -> bool:
 			Globals.log_message(
 				"Added missing default keyboard mapping for " + action, Globals.LogLevel.DEBUG
 			)
-		
+
 		# === Gamepad defaults (unified with match, like in _ensure) ===
 		if not has_gamepad and DEFAULT_GAMEPAD.has(action) and not explicitly_unbound_gamepad:
 			var def: Dictionary = DEFAULT_GAMEPAD[action]
@@ -146,7 +146,7 @@ func _add_missing_defaults(config: ConfigFile) -> bool:
 				Globals.log_message(
 					"Added missing default gamepad mapping for " + action, Globals.LogLevel.DEBUG
 				)
-	
+
 	return changed
 
 
@@ -234,7 +234,7 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 		)
 		# Do not return: proceed to defaults for corrupt files (EC-05).
 		# Ensures fallback to defaults on parse errors.
-	
+
 	if err == ERR_FILE_NOT_FOUND:
 		Globals.log_message(
 			"No settings file found at " + path + "—adding defaults where missing.",
@@ -451,7 +451,7 @@ func reset_to_defaults(device_type: String) -> void:
 func _ensure_defaults_saved() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.load(CONFIG_PATH)
-	
+
 	if _add_missing_defaults(config):
 		save_input_mappings()
 		Globals.log_message("Defaults filled → saved", Globals.LogLevel.INFO)
