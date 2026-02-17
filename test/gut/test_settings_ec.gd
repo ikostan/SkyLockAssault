@@ -117,3 +117,65 @@ func test_ec_07_extra_unknown_keys_ignored() -> void:
 	cfg.load(test_config_path)
 	assert_true(cfg.has_section("other_section"))  # preserved
 	assert_false(InputMap.has_action("non_existent_action"))  # ignored
+
+
+## EC-08 | Conflict unbind | FIRE unbound via conflict → saved as [] → reload → stays unbound | NEXT_WEAPON keeps Space.
+## Catches PR#409 regression: unbound must persist across restarts.
+## :rtype: void
+func test_ec_08_conflict_unbind_persists_after_reload() -> void:
+	# Clean defaults (before_each already did this, but we keep it explicit)
+	Settings.load_input_mappings(test_config_path)
+
+	# Simulate conflict: unbind FIRE (erase its keyboard event)
+	var fire_events: Array[InputEvent] = InputMap.action_get_events("fire")
+	for ev: InputEvent in fire_events:
+		if ev is InputEventKey and ev.physical_keycode == Settings.DEFAULT_KEYBOARD["fire"]:
+			InputMap.action_erase_event("fire", ev)
+			break
+
+	# Bind the conflicting event to NEXT_WEAPON (Space)
+	var space_key: InputEventKey = InputEventKey.new()
+	space_key.physical_keycode = KEY_SPACE
+	InputMap.action_add_event("next_weapon", space_key)
+
+	# Force the unbound state into the config file (this is the exact case we must protect)
+	# This replaces the normal save_input_mappings so we 100% guarantee [] for FIRE
+	var cfg: ConfigFile = ConfigFile.new()
+	cfg.load(test_config_path)
+	cfg.set_value("input", "fire", [])  # <-- explicit unbound
+
+	# NEXT_WEAPON now has its original Q + the new Space
+	var next_serials: Array[String] = []
+	for ev: InputEvent in InputMap.action_get_events("next_weapon"):
+		next_serials.append(Settings.serialize_event(ev))
+	cfg.set_value("input", "next_weapon", next_serials)
+
+	cfg.save(test_config_path)
+
+	# Reload (exact game-restart simulation)
+	Settings.load_input_mappings(test_config_path)
+
+	# FIRE must stay unbound (no events at all)
+	var fire_after: Array[InputEvent] = InputMap.action_get_events("fire")
+	assert_eq(fire_after.size(), 0, "FIRE must stay unbound after reload (no keyboard event)")
+
+	# NEXT_WEAPON must keep the Space we gave it
+	var next_weapon_after: Array[InputEvent] = InputMap.action_get_events("next_weapon")
+	assert_true(
+		next_weapon_after.any(
+			func(e: InputEvent) -> bool: return e is InputEventKey and e.physical_keycode == KEY_SPACE
+		),
+		"NEXT_WEAPON must keep Space"
+	)
+
+	# Bonus: RESET must restore defaults (it bypasses the unbound flag)
+	Settings.reset_to_defaults("keyboard")
+	var fire_reset: Array[InputEvent] = InputMap.action_get_events("fire")
+	assert_true(
+		fire_reset.any(
+			func(e: InputEvent) -> bool: return e is InputEventKey and e.physical_keycode == Settings.DEFAULT_KEYBOARD["fire"]
+		),
+		"RESET must restore FIRE=Space"
+	)
+
+	Globals.log_message("EC-08 PASSED – unbound FIRE persisted, RESET works", Globals.LogLevel.DEBUG)

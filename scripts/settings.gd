@@ -73,12 +73,11 @@ func _ready() -> void:
 
 
 ## Shared helper: Adds missing keyboard/gamepad defaults to InputMap.
-## ALWAYS backfills if a device is missing bindings (no more "stuck unbound").
-## Ignores legacy "explicitly unbound" — defaults win for playability.
-## Returns true if anything was added (so caller can save).
-## :param config: Loaded ConfigFile (kept for compatibility, ignored now).
+## Respects explicit user unbind (saved as [] in config) — so conflict-unbind stays unbound.
+## Empty array = unbound.
+## :param config: Loaded ConfigFile for unbound checks.
 ## :rtype: bool
-func _add_missing_defaults(_config: ConfigFile) -> bool:  # _config param kept for call sites
+func _add_missing_defaults(config: ConfigFile) -> bool:
 	var changed: bool = false
 
 	for action: String in ACTIONS:
@@ -91,18 +90,37 @@ func _add_missing_defaults(_config: ConfigFile) -> bool:  # _config param kept f
 			elif ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
 				has_gamepad = true
 
-		# === Keyboard defaults (always add if missing) ===
-		if not has_keyboard and DEFAULT_KEYBOARD.has(action):
+		# ── Explicitly unbound check (handles [] and non-empty) ──
+		var explicitly_unbound_keyboard: bool = false
+		var explicitly_unbound_gamepad: bool = false
+		if config.has_section_key("input", action):
+			var saved_val: Variant = config.get_value("input", action)
+			if (saved_val is Array or saved_val is PackedStringArray):
+				if saved_val.is_empty():
+					explicitly_unbound_keyboard = true
+					explicitly_unbound_gamepad = true
+				else:
+					var has_saved_key: bool = false
+					var has_saved_joy: bool = false
+					for item: Variant in saved_val:
+						if item is String:
+							if item.begins_with("key:"):
+								has_saved_key = true
+							elif item.begins_with("joybtn:") or item.begins_with("joyaxis:"):
+								has_saved_joy = true
+					explicitly_unbound_keyboard = not has_saved_key
+					explicitly_unbound_gamepad = not has_saved_joy
+
+		# === Keyboard defaults ===
+		if not has_keyboard and DEFAULT_KEYBOARD.has(action) and not explicitly_unbound_keyboard:
 			var nev: InputEventKey = InputEventKey.new()
 			nev.physical_keycode = DEFAULT_KEYBOARD[action]
 			InputMap.action_add_event(action, nev)
 			changed = true
-			Globals.log_message(
-				"Added missing default keyboard mapping for " + action, Globals.LogLevel.DEBUG
-			)
+			Globals.log_message("Added missing default keyboard for " + action, Globals.LogLevel.DEBUG)
 
-		# === Gamepad defaults (always add if missing) ===
-		if not has_gamepad and DEFAULT_GAMEPAD.has(action):
+		# === Gamepad defaults ===
+		if not has_gamepad and DEFAULT_GAMEPAD.has(action) and not explicitly_unbound_gamepad:
 			var def: Dictionary = DEFAULT_GAMEPAD[action]
 			var nev: InputEvent = null
 			match def.get("type"):
@@ -120,9 +138,7 @@ func _add_missing_defaults(_config: ConfigFile) -> bool:  # _config param kept f
 			if nev:
 				InputMap.action_add_event(action, nev)
 				changed = true
-				Globals.log_message(
-					"Added missing default gamepad mapping for " + action, Globals.LogLevel.DEBUG
-				)
+				Globals.log_message("Added missing default gamepad for " + action, Globals.LogLevel.DEBUG)
 
 	return changed
 
