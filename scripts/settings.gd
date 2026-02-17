@@ -626,6 +626,6 @@ func _migrate_legacy_unbound_states() -> void:
 
 	if changed:
 		save_input_mappings()  # Persist the migration
-	
+
 	# Set the meta flag HERE (so direct calls in tests work, and _ready() is consistent)
 	Globals.set_meta(LEGACY_MIGRATION_KEY, true)
