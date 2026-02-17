@@ -168,6 +168,11 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			var serialized_events: Array[String] = []
 
 			# ── ROBUST ARRAY HANDLING (FIX FOR PackedStringArray) ─────────────────────
+			# FIXED: Explicit type guard to skip non-string items (e.g. int 999 from EC-01 test).
+			# This prevents crash on corrupted/malformed config files (real-world case: disk errors, manual edits).
+			# Log warning for visibility in console/tests.
+			# Keeps defaults backfill intact (as asserted in EC-01).
+			# Minimal change: only affects invalid data paths, no impact on normal saves.
 			if value is Array or value is PackedStringArray:
 				for item: Variant in value:
 					if item is String:
@@ -193,6 +198,7 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			for serialized: String in serialized_events:
 				_deserialize_and_add(action, serialized)
 
+
 	# ── Add defaults ONLY for devices that are NOT explicitly unbound ──
 	for action: String in actions:
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
@@ -205,6 +211,11 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				has_joy_event = true
 
 		# Device-specific "explicitly unbound" check
+		# FIXED: Type guard to skip non-string items (e.g. 999 int from EC-01 test).
+		# Prevents crash on corrupted configs (real-world: disk errors, manual edits).
+		# Log warning for test visibility.
+		# Keeps unbound logic intact for valid strings only.
+		# Minimal change: only affects invalid data paths.
 		var explicitly_unbound_keyboard: bool = false
 		var explicitly_unbound_gamepad: bool = false
 		if config.has_section_key("input", action):
@@ -212,11 +223,18 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			if saved_val is Array or saved_val is PackedStringArray:
 				var has_saved_key: bool = false
 				var has_saved_joy: bool = false
-				for s: String in saved_val:
-					if s.begins_with("key:"):
-						has_saved_key = true
-					elif s.begins_with("joybtn:") or s.begins_with("joyaxis:"):
-						has_saved_joy = true
+				for item: Variant in saved_val:
+					if item is String:
+						var s: String = item
+						if s.begins_with("key:"):
+							has_saved_key = true
+						elif s.begins_with("joybtn:") or s.begins_with("joyaxis:"):
+							has_saved_joy = true
+					else:
+						Globals.log_message(
+							"Non-string item in unbound check for action '" + action + "': skipped",
+							Globals.LogLevel.WARNING
+						)
 				explicitly_unbound_keyboard = not has_saved_key
 				explicitly_unbound_gamepad = not has_saved_joy
 
