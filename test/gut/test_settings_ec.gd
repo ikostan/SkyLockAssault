@@ -29,17 +29,32 @@ func after_all() -> void:
 func before_each() -> void:
 	if FileAccess.file_exists(test_config_path):
 		DirAccess.remove_absolute(test_config_path)
-	for act in Settings.ACTIONS:
+	for act: String in Settings.ACTIONS:
 		if InputMap.has_action(act):
 			InputMap.action_erase_events(act)
 		else:
 			InputMap.add_action(act)
-	Settings.load_input_mappings(test_config_path)  # ensure clean defaults
+	Settings.load_input_mappings(test_config_path)
+	
+	# NEW: Backup real config before EC-09 (if exists)
+	var real_path: String = Settings.CONFIG_PATH
+	if FileAccess.file_exists(real_path):
+		var backup_path: String = "user://settings_backup.cfg"
+		DirAccess.copy_absolute(real_path, backup_path)
+	else:
+		var backup_path: String = ""  # No backup if missing
 
 
 func after_each() -> void:
 	if FileAccess.file_exists(test_config_path):
 		DirAccess.remove_absolute(test_config_path)
+	
+	# NEW: Restore real config after EC-09
+	var real_path: String = Settings.CONFIG_PATH
+	var backup_path: String = "user://settings_backup.cfg"
+	if FileAccess.file_exists(backup_path):
+		DirAccess.copy_absolute(backup_path, real_path)
+		DirAccess.remove_absolute(backup_path)
 
 
 ## EC-01 | Invalid config values | Corrupted entry in file | Use defaults | Log warning
@@ -183,35 +198,49 @@ func test_ec_08_conflict_unbind_persists_after_reload() -> void:
 
 ## EC-09 | Last device validation | Corrupted "last_input_device" in config | Falls back to "keyboard"
 ## Prevents bad config from breaking device state.
-## Uses the REAL config path to match load_last_input_device().
+## Uses test_config_path + backup/restore of real config to avoid mutation.
+## :rtype: void
 func test_ec_09_last_input_device_validation() -> void:
-	# Use real config path (function hardcodes CONFIG_PATH)
-	var real_config_path: String = Settings.CONFIG_PATH
-	if FileAccess.file_exists(real_config_path):
-		DirAccess.remove_absolute(real_config_path)
+	# Backup real config (protects your local settings.cfg)
+	var real_path: String = Settings.CONFIG_PATH
+	var backup_path: String = "user://settings_backup.cfg"
+	if FileAccess.file_exists(real_path):
+		DirAccess.copy_absolute(real_path, backup_path)
+	
+	# Use test_config_path for isolation
+	if FileAccess.file_exists(test_config_path):
+		DirAccess.remove_absolute(test_config_path)
 	
 	# Corrupted case
 	var cfg := ConfigFile.new()
 	cfg.set_value("input", "last_input_device", "mouse")  # Invalid!
-	cfg.save(real_config_path)
+	cfg.save(test_config_path)
 	
+	# Copy test config to real path for load (temp override)
+	DirAccess.copy_absolute(test_config_path, real_path)
 	Settings.load_last_input_device()
 	assert_eq(Globals.current_input_device, "keyboard", "Corrupted device must default to keyboard")
 	
 	# Valid case
 	cfg.set_value("input", "last_input_device", "gamepad")
-	cfg.save(real_config_path)
+	cfg.save(test_config_path)
+	DirAccess.copy_absolute(test_config_path, real_path)
 	Settings.load_last_input_device()
 	assert_eq(Globals.current_input_device, "gamepad", "Valid device must load")
 	
 	# Missing key
 	cfg.erase_section_key("input", "last_input_device")
-	cfg.save(real_config_path)
+	cfg.save(test_config_path)
+	DirAccess.copy_absolute(test_config_path, real_path)
 	Settings.load_last_input_device()
 	assert_eq(Globals.current_input_device, "keyboard", "Missing key must default")
 	
-	# Cleanup (leave no trace)
-	DirAccess.remove_absolute(real_config_path)
+	# Restore original config
+	if FileAccess.file_exists(backup_path):
+		DirAccess.copy_absolute(backup_path, real_path)
+		DirAccess.remove_absolute(backup_path)
+	else:
+		DirAccess.remove_absolute(real_path)  # No original existed
 	
 	Globals.log_message("EC-09 PASSED – device validation works", Globals.LogLevel.DEBUG)
 
