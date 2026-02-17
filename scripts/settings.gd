@@ -198,7 +198,6 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			for serialized: String in serialized_events:
 				_deserialize_and_add(action, serialized)
 
-
 	# ── Add defaults ONLY for devices that are NOT explicitly unbound ──
 	for action: String in actions:
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
