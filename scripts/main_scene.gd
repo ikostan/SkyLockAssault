@@ -8,6 +8,7 @@ extends Node2D
 
 var _showing_unbound_warning: bool = false
 var _showing_unbound_key_message: bool = false
+enum MessageType { CRITICAL_UNBOUND, KEY_PRESS_UNBOUND }
 
 @onready var player: Node2D = $Player
 @onready var stats_panel: Panel = $PlayerStatsPanel
@@ -63,16 +64,12 @@ func _input(event: InputEvent) -> void:
 	# Player pressed a completely unbound key/button/axis
 	if not Settings.is_event_bound(event) and not _showing_unbound_key_message:
 		_showing_unbound_key_message = true
-
-		# Detect which physical device was used for this press
 		var device_type: String = Settings.get_event_device_type(event)
 		var pause_label: String = Settings.get_pause_binding_label_for_device(device_type)
 		show_message(
-			"{UNBOUND=KEY=PRESSED}\n{PRESS='" + pause_label + "'=AND=GO=TO='CONTROLS'=TO=FIX}"
+			"{UNBOUND=KEY=PRESSED}\n{PRESS='" + pause_label + "'=AND=GO=TO='CONTROLS'=TO=FIX}",
+			MessageType.KEY_PRESS_UNBOUND  # explicit
 		)
-
-		await get_tree().create_timer(4.0).timeout
-		_showing_unbound_key_message = false
 
 
 ## Sets up a parallax layer for tiling and mirroring.
@@ -197,23 +194,32 @@ func _process(delta: float) -> void:
 		_showing_unbound_warning = true
 		var pause_key: String = Settings.get_pause_binding_label()
 		show_message(
-			"{SOME=CONTROLS=ARE=UNBOUND}\n{PRESS='" + pause_key + "'=AND=GO=TO='CONTROLS'=TO=FIX}"
+			"{SOME=CONTROLS=ARE=UNBOUND}\n{PRESS='" + pause_key + "'=AND=GO=TO='CONTROLS'=TO=FIX}",
+			MessageType.CRITICAL_UNBOUND  # explicit
 		)
 
 
 ## Shows a temporary on-screen message (non-blocking).
+## Centralizes timer + flag reset to prevent races.
 ## :param text: Message to display.
-## :type text: String
+## :param type: Which flag to manage (defaults to CRITICAL for backward compat).
+## :type type: MessageType
 ## :rtype: void
-func show_message(text: String) -> void:
+func show_message(text: String, type: MessageType = MessageType.CRITICAL_UNBOUND) -> void:
 	if not is_instance_valid(message_label):
 		return
 
 	message_label.text = text
 	message_label.visible = true
 
-	# Auto-hide after 4 seconds and reset flag
+	# Auto-hide after 4 seconds and reset the *correct* flag
 	await get_tree().create_timer(4.0).timeout
 	if is_instance_valid(message_label):
 		message_label.visible = false
-	_showing_unbound_warning = false
+	
+	# Reset the right flag based on message type
+	match type:
+		MessageType.CRITICAL_UNBOUND:
+			_showing_unbound_warning = false
+		MessageType.KEY_PRESS_UNBOUND:
+			_showing_unbound_key_message = false
