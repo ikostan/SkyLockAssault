@@ -216,7 +216,7 @@ func show_message(text: String, type: MessageType = MessageType.CRITICAL_UNBOUND
 	await get_tree().create_timer(4.0).timeout
 	if is_instance_valid(message_label):
 		message_label.visible = false
-	
+
 	# Reset the right flag based on message type
 	match type:
 		MessageType.CRITICAL_UNBOUND:
