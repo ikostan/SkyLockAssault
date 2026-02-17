@@ -97,9 +97,6 @@ const AXIS_NORMALIZED_VALUE: float = 1.0
 
 var listening: bool = false
 
-## Reference to KeyMappingMenu for conflict dialog.
-@onready var key_mapping_menu: Node = get_tree().get_first_node_in_group("key_mapping_menu")
-
 
 # Ready: Setup toggle, text, connect pressed.
 # :rtype: void
