@@ -393,7 +393,8 @@ func reset_to_defaults(device_type: String) -> void:
 	if device_type not in ["keyboard", "gamepad"]:
 		return
 	for action: String in ACTIONS:
-		# FULL erase for the device (prevents cross-action duplicates like Space on FIRE + NEXT_WEAPON)
+		# FULL erase for the device
+		# (prevents cross-action duplicates like Space on FIRE + NEXT_WEAPON)
 		var events: Array[InputEvent] = InputMap.action_get_events(action).duplicate()
 		for ev: InputEvent in events:
 			if device_type == "keyboard" and ev is InputEventKey:
@@ -521,7 +522,8 @@ func has_unbound_critical_actions_for_current_device() -> bool:
 	for action: String in CRITICAL_ACTIONS:
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
 		if events.is_empty():
-			continue  # action is unbound, but we check per device
+			# continue  # action is unbound, but we check per device
+			return true  # unbound for all devices, including current
 
 		var has_binding_for_device: bool = false
 		for ev: InputEvent in events:
