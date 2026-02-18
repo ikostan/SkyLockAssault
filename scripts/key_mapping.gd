@@ -84,8 +84,7 @@ func _ready() -> void:
 			)
 			js_window.controlsBackPressed = _controls_back_button_pressed_cb
 
-	# Load and apply the last selected device (so it remembers across sessions)
-	Settings.load_last_input_device()
+	# Apply the last selected device (Globals has already loaded it in _ready)
 	keyboard.button_pressed = (Globals.current_input_device == "keyboard")
 	gamepad.button_pressed = (Globals.current_input_device == "gamepad")
 	update_all_remap_buttons()
