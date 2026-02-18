@@ -69,7 +69,10 @@ var _needs_save: bool = false
 ## Triggers save if defaults were backfilled or legacy migration occurred.
 func _ready() -> void:
 	load_input_mappings()
-
+	# Load last input device early to fix unbound warning on first load when
+	# gamepad is saved preference.
+	# Ensures has_unbound_critical_actions_for_current_device() uses correct device from config.
+	load_last_input_device()
 	# ONE-TIME MIGRATION: Fix legacy unbound/empty states from old saves (PR#409)
 	# Runs only on first load after the unbound refactor.
 	if not Globals.has_meta(LEGACY_MIGRATION_KEY):

@@ -41,7 +41,7 @@ func _ready() -> void:
 	# Load last input device early to fix unbound warning on first load when
 	# gamepad is saved preference.
 	# Ensures has_unbound_critical_actions_for_current_device() uses correct device from config.
-	Settings.load_last_input_device()
+	# Settings.load_last_input_device()
 
 
 ## Centralized "ensure initial focus" helper.
