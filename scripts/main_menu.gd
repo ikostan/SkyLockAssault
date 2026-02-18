@@ -120,28 +120,39 @@ func _setup_unbound_dialog() -> void:
 	unbound_dialog.dialog_text = "Some critical controls are unbound.\nGo to Key Mapping to fix?"
 	unbound_dialog.get_ok_button().text = "Open Key Mapping"
 	unbound_dialog.get_cancel_button().text = "Start Anyway"
+	# Make the dialog modal to prevent clicks outside or propagation issues
+	unbound_dialog.exclusive = true
 	add_child(unbound_dialog)  # Add to the scene tree so it can be shown
 	unbound_dialog.hide()  # Start hidden
 
-	# Connect signals (these run when OK or Cancel is pressed)
+	# Connect confirmed (OK button or Enter): Load key mapping and hide
 	unbound_dialog.confirmed.connect(
 		func() -> void:
 			Globals.load_key_mapping(ui_panel)
 			unbound_dialog.hide()
-			start_button.disabled = false  # Re-enable Start button
-	)
-	unbound_dialog.canceled.connect(
-		func() -> void:
-			Globals.load_scene_with_loading("res://scenes/main_scene.tscn")
-			unbound_dialog.hide()
-			start_button.disabled = false  # Re-enable Start button
 	)
 
-	# Optional: Connect to handle close button (X) or Esc key, treating it like Cancel
-	unbound_dialog.close_requested.connect(
+	# Connect only to cancel button pressed (click "Start Anyway"): Hide then load scene
+	var cancel_button: Button = unbound_dialog.get_cancel_button()
+	cancel_button.pressed.connect(
 		func() -> void:
 			unbound_dialog.hide()
-			start_button.disabled = false  # Re-enable Start button
+			Globals.load_scene_with_loading("res://scenes/main_scene.tscn")
+	)
+
+	# Handle close button (X): Just hide
+	unbound_dialog.close_requested.connect(
+		func() -> void:
+			Globals.log_message("Close requested triggered.", Globals.LogLevel.DEBUG)
+			unbound_dialog.hide()
+	)
+
+	# Re-enable and focus Start button after fully hidden (handles all non-load cases safely)
+	unbound_dialog.visibility_changed.connect(
+		func() -> void:
+			if not unbound_dialog.visible and is_instance_valid(start_button):
+				start_button.disabled = false
+				start_button.call_deferred("grab_focus")
 	)
 
 
