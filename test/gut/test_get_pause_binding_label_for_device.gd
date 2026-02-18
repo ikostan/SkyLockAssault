@@ -39,15 +39,15 @@ func test_pause_label_returns_unbound_when_keyboard_not_bound() -> void:
 
 
 # ============================================================
-# JOYPAD TESTS
+# JOYPAD (gamepad) TESTS
 # ============================================================
 
-func test_pause_label_returns_joypad_button_name() -> void:
+func test_pause_label_returns_gamepad_button_name() -> void:
 	var event := InputEventJoypadButton.new()
 	event.button_index = JOY_BUTTON_START
 	event.device = 0
 	InputMap.action_add_event("pause", event)
-	var label: String = settings.get_pause_binding_label_for_device("joypad")
+	var label: String = settings.get_pause_binding_label_for_device("gamepad")
 	assert_true(label is String)
 	assert_true(label.length() > 0)
 
@@ -66,14 +66,14 @@ func test_pause_label_falls_back_when_no_matching_device() -> void:
 
 
 
-func test_pause_label_ignores_other_joypad_devices() -> void:
+func test_pause_label_ignores_other_gamepad_devices() -> void:
 	var event := InputEventJoypadButton.new()
 	event.button_index = JOY_BUTTON_START
 	event.device = 1
 	InputMap.action_add_event("pause", event)
 	# If your implementation filters by device id internally,
 	# this ensures it does not accidentally match wrong device.
-	var label: String = settings.get_pause_binding_label_for_device("joypad")
+	var label: String = settings.get_pause_binding_label_for_device("gamepad")
 	# Depending on your logic, adjust if needed
 	assert_true(label == "" or label.length() > 0)
 
