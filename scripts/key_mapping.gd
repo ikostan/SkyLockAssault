@@ -45,7 +45,6 @@ func _ready() -> void:
 	keyboard.button_group = device_group
 	gamepad.button_group = device_group
 	keyboard.button_pressed = true  # Default: Keyboard
-	update_all_remap_buttons()
 
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	# NEW: Default focus on "Keyboard" when the menu opens

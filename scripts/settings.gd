@@ -294,9 +294,7 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 	# For corrupt/no-file: config empty → add defaults.
 	# Sets _needs_migration=true if added → triggers save in _ready() (first-run/repair).
 	# Idempotent with _ensure_defaults_saved().
-	var defaults_config: ConfigFile = ConfigFile.new()
-	defaults_config.load(path)
-	if _add_missing_defaults(defaults_config):  # Still pass it (harmless)
+	if _add_missing_defaults(config):
 		_needs_save = true
 
 
