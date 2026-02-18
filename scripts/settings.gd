@@ -172,30 +172,7 @@ func has_unbound_critical_actions() -> bool:
 ## Returns the pause binding label in ALL CAPS.
 ## Strictly follows the last selected device in Key Mapping menu.
 func get_pause_binding_label() -> String:
-	var preferred: String = Globals.current_input_device
-	var events: Array[InputEvent] = InputMap.action_get_events("pause")
-
-	if events.is_empty():
-		return "UNBOUND"
-
-	for ev: InputEvent in events:
-		if (
-			(preferred == "keyboard" and ev is InputEventKey)
-			or (
-				preferred == "gamepad"
-				and (ev is InputEventJoypadButton or ev is InputEventJoypadMotion)
-			)
-		):
-			var temp: Button = InputRemapButton.new()
-			var label: String = temp.get_event_label(ev)
-			temp.queue_free()
-			return label.to_upper()
-
-	# Fallback
-	var temp: Button = InputRemapButton.new()
-	var label: String = temp.get_event_label(events[0])
-	temp.queue_free()
-	return label.to_upper()
+	return get_pause_binding_label_for_device(Globals.current_input_device)
 
 
 ## Returns true if the given event is bound to any action.
