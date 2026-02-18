@@ -28,6 +28,8 @@ const QUIT_DIALOG_DEFAULT_PATH: String = "VideoStreamPlayer/Panel/VBoxContainer/
 
 # Reference to the quit dialog node, assigned in setup_quit_dialog or _ready()
 var quit_dialog: ConfirmationDialog
+# The unbound controls warning dialog
+var unbound_dialog: ConfirmationDialog
 var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 var last_focused_button: Button = null  # Tracks which button opened the dialog
 var _start_pressed_cb: JavaScriptObject
@@ -86,12 +88,13 @@ func _ready() -> void:
 	@warning_ignore("return_value_discarded")
 	quit_button.pressed.connect(_on_quit_pressed)
 	# Setup quit dialog
-	setup_quit_dialog()
+	_setup_quit_dialog()
 	# To prevent garbage collection of JavaScriptObject callbacks in Godot's JS bindings,
 	# which can break the references and cause calls like window.optionsPressed([]) to fail
 	# silently, leading to issues like the test timeout on waiting for visible elements
 	# (e.g., #audio-button remains hidden because options menu _ready() doesn't run).
 	# Storing them as member variables ensures they persist.
+	_setup_unbound_dialog()
 	if OS.get_name() == "Web":
 		var js_window := JavaScriptBridge.get_interface("window")
 		if js_window:
@@ -110,6 +113,38 @@ func _ready() -> void:
 			)
 
 
+func _setup_unbound_dialog() -> void:
+	# Create and configure the unbound controls warning dialog once
+	unbound_dialog = ConfirmationDialog.new()
+	unbound_dialog.title = "Unbound Controls"
+	unbound_dialog.dialog_text = "Some critical controls are unbound.\nGo to Key Mapping to fix?"
+	unbound_dialog.get_ok_button().text = "Open Key Mapping"
+	unbound_dialog.get_cancel_button().text = "Start Anyway"
+	add_child(unbound_dialog)  # Add to the scene tree so it can be shown
+	unbound_dialog.hide()  # Start hidden
+
+	# Connect signals (these run when OK or Cancel is pressed)
+	unbound_dialog.confirmed.connect(
+		func() -> void:
+			Globals.load_key_mapping(ui_panel)
+			unbound_dialog.hide()
+			start_button.disabled = false  # Re-enable Start button
+	)
+	unbound_dialog.canceled.connect(
+		func() -> void:
+			Globals.load_scene_with_loading("res://scenes/main_scene.tscn")
+			unbound_dialog.hide()
+			start_button.disabled = false  # Re-enable Start button
+	)
+
+	# Optional: Connect to handle close button (X) or Esc key, treating it like Cancel
+	unbound_dialog.close_requested.connect(
+		func() -> void:
+			unbound_dialog.hide()
+			start_button.disabled = false  # Re-enable Start button
+	)
+
+
 func _input(_event: InputEvent) -> void:
 	## Handles input events for the main menu.
 	##
@@ -126,7 +161,7 @@ func _input(_event: InputEvent) -> void:
 		)
 
 
-func setup_quit_dialog() -> void:
+func _setup_quit_dialog() -> void:
 	## Sets up the quit confirmation dialog.
 	##
 	## Finds the dialog node and connects signals if not already connected.
@@ -165,27 +200,10 @@ func _on_start_pressed(_args: Array = []) -> void:
 	## :type _args: Array
 	## :rtype: void
 	Globals.log_message("Start Game menu button pressed.", Globals.LogLevel.DEBUG)
-	if Settings.has_unbound_critical_actions_for_current_device():  # ← FIXED
-		# Show warning dialog (create once or use existing ConfirmationDialog)
-		var dialog: ConfirmationDialog = ConfirmationDialog.new()
-		dialog.title = "Unbound Controls"
-		dialog.dialog_text = "Some critical controls are unbound.\nGo to Key Mapping to fix?"
-		dialog.get_ok_button().text = "Open Key Mapping"
-		dialog.get_cancel_button().text = "Start Anyway"
-		add_child(dialog)
-		# Continue to Key Mapping menu
-		dialog.confirmed.connect(
-			func() -> void:
-				Globals.load_key_mapping(ui_panel)  # same as options menu
-				dialog.queue_free()
-		)
-		# Open the gameplay anyway
-		dialog.canceled.connect(
-			func() -> void:
-				Globals.load_scene_with_loading("res://scenes/main_scene.tscn")
-				dialog.queue_free()
-		)
-		dialog.popup_centered()
+	if Settings.has_unbound_critical_actions_for_current_device():
+		# Guard: Disable button to prevent spamming while dialog is open
+		start_button.disabled = true
+		unbound_dialog.popup_centered()  # Show the reused dialog
 	else:
 		Globals.load_scene_with_loading("res://scenes/main_scene.tscn")
 
