@@ -611,32 +611,55 @@ func _migrate_legacy_unbound_states() -> void:
 static func get_event_label(ev: InputEvent) -> String:
 	if ev is InputEventKey:
 		return OS.get_keycode_string(ev.physical_keycode)
-	elif ev is InputEventJoypadButton:
+	if ev is InputEventJoypadButton:
 		match ev.button_index:
-			JOY_BUTTON_A: return "A / X"
-			JOY_BUTTON_B: return "B / Circle"
-			JOY_BUTTON_X: return "X / Square"
-			JOY_BUTTON_Y: return "Y / Triangle"
-			JOY_BUTTON_BACK: return "Back / Share"
-			JOY_BUTTON_GUIDE: return "Guide / PS"
-			JOY_BUTTON_START: return "Start / Options"
-			JOY_BUTTON_LEFT_STICK: return "LS Press"
-			JOY_BUTTON_RIGHT_STICK: return "RS Press"
-			JOY_BUTTON_LEFT_SHOULDER: return "LB / L1"
-			JOY_BUTTON_RIGHT_SHOULDER: return "RB / R1"
-			JOY_BUTTON_DPAD_UP: return "D-Pad Up"
-			JOY_BUTTON_DPAD_DOWN: return "D-Pad Down"
-			JOY_BUTTON_DPAD_LEFT: return "D-Pad Left"
-			JOY_BUTTON_DPAD_RIGHT: return "D-Pad Right"
-			_: return "Button " + str(ev.button_index)
-	elif ev is InputEventJoypadMotion:
+			JOY_BUTTON_A:
+				return "A / X"
+			JOY_BUTTON_B:
+				return "B / Circle"
+			JOY_BUTTON_X:
+				return "X / Square"
+			JOY_BUTTON_Y:
+				return "Y / Triangle"
+			JOY_BUTTON_BACK:
+				return "Back / Share"
+			JOY_BUTTON_GUIDE:
+				return "Guide / PS"
+			JOY_BUTTON_START:
+				return "Start / Options"
+			JOY_BUTTON_LEFT_STICK:
+				return "LS Press"
+			JOY_BUTTON_RIGHT_STICK:
+				return "RS Press"
+			JOY_BUTTON_LEFT_SHOULDER:
+				return "LB / L1"
+			JOY_BUTTON_RIGHT_SHOULDER:
+				return "RB / R1"
+			JOY_BUTTON_DPAD_UP:
+				return "D-Pad Up"
+			JOY_BUTTON_DPAD_DOWN:
+				return "D-Pad Down"
+			JOY_BUTTON_DPAD_LEFT:
+				return "D-Pad Left"
+			JOY_BUTTON_DPAD_RIGHT:
+				return "D-Pad Right"
+			_:
+				return "Button " + str(ev.button_index)
+	if ev is InputEventJoypadMotion:
 		var dir: String = " (+)" if ev.axis_value > 0 else " (-)"
 		match ev.axis:
-			JOY_AXIS_LEFT_X: return "Left Stick (Right)" if ev.axis_value > 0 else "Left Stick (Left)"
-			JOY_AXIS_LEFT_Y: return "Left Stick (Down)" if ev.axis_value > 0 else "Left Stick (Up)"
-			JOY_AXIS_RIGHT_X: return "Right Stick (Right)" if ev.axis_value > 0 else "Right Stick (Left)"
-			JOY_AXIS_RIGHT_Y: return "Right Stick (Down)" if ev.axis_value > 0 else "Right Stick (Up)"
-			JOY_AXIS_TRIGGER_LEFT: return "LT" + dir
-			JOY_AXIS_TRIGGER_RIGHT: return "RT" + dir
-			_: return "Axis " + str(ev.axis) + dir
+			JOY_AXIS_LEFT_X:
+				return "Left Stick (Right)" if ev.axis_value > 0 else "Left Stick (Left)"
+			JOY_AXIS_LEFT_Y:
+				return "Left Stick (Down)" if ev.axis_value > 0 else "Left Stick (Up)"
+			JOY_AXIS_RIGHT_X:
+				return "Right Stick (Right)" if ev.axis_value > 0 else "Right Stick (Left)"
+			JOY_AXIS_RIGHT_Y:
+				return "Right Stick (Down)" if ev.axis_value > 0 else "Right Stick (Up)"
+			JOY_AXIS_TRIGGER_LEFT:
+				return "LT" + dir
+			JOY_AXIS_TRIGGER_RIGHT:
+				return "RT" + dir
+			_:
+				return "Axis " + str(ev.axis) + dir
 	return "Unknown"
