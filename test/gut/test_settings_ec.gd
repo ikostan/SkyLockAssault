@@ -325,11 +325,11 @@ func test_ec_14_pause_binding_label_for_device() -> void:
 	# Keyboard
 	Globals.current_input_device = "keyboard"
 	print("actual ev: " + Settings.get_pause_binding_label_for_device("keyboard"))
-	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "ESC", "Keyboard pause label 'ESC'")
+	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "ESCAPE", "Keyboard pause label 'ESC'")
 	# Gamepad
 	Globals.current_input_device = "gamepad"
 	print("actual ev: " + Settings.get_pause_binding_label_for_device("gamepad"))
-	assert_eq(Settings.get_pause_binding_label_for_device("gamepad"), "START", "Gamepad pause label correct")
+	assert_eq(Settings.get_pause_binding_label_for_device("gamepad"), "START / OPTIONS", "Gamepad pause label correct")
 	# Unbound case (erase pause events)
 	InputMap.action_erase_events("pause")
 	print("actual ev: " + Settings.get_pause_binding_label_for_device("pause"))
