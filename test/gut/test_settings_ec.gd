@@ -55,6 +55,7 @@ func after_each() -> void:
 	if FileAccess.file_exists(backup_path):
 		DirAccess.copy_absolute(backup_path, real_path)
 		DirAccess.remove_absolute(backup_path)
+	await get_tree().process_frame
 
 
 ## EC-01 | Invalid config values | Corrupted entry in file | Use defaults | Log warning
@@ -271,3 +272,65 @@ func test_ec_10_legacy_migration() -> void:
 	assert_true(Globals.has_meta(Settings.LEGACY_MIGRATION_KEY))
 	
 	Globals.log_message("EC-10 PASSED – legacy migration forces defaults", Globals.LogLevel.DEBUG)
+
+
+## EC-11 | Event labels | Keyboard keys | Correct string (e.g., "SPACE")
+## :rtype: void
+func test_ec_11_keyboard_event_label() -> void:
+	var ev: InputEventKey = InputEventKey.new()
+	# 1
+	ev.physical_keycode = KEY_SPACE
+	print("expected ev: " + str(ev.physical_keycode) + " actual ev: " + Settings.get_event_label(ev))
+	assert_eq(Settings.get_event_label(ev), "Space", "Keyboard label must be 'Space'")
+	# 2
+	ev.physical_keycode = KEY_ESCAPE
+	print("expected ev: " + str(ev.physical_keycode) + " actual ev: " + Settings.get_event_label(ev))
+	assert_eq(Settings.get_event_label(ev), "Escape", "Keyboard label must be 'Escape'")  # Adjust if your logic uses short form
+
+
+## EC-12 | Event labels | Gamepad buttons | Cross-platform (e.g., "A / X")
+## :rtype: void
+func test_ec_12_gamepad_button_label() -> void:
+	var ev: InputEventJoypadButton = InputEventJoypadButton.new()
+	# 1
+	ev.button_index = JOY_BUTTON_A
+	print("expected ev: " + str(ev.button_index) + " actual ev: " + Settings.get_event_label(ev))
+	assert_eq(Settings.get_event_label(ev), "A / X", "Button A must be 'A / X'")
+	# 2
+	ev.button_index = JOY_BUTTON_START
+	print("expected ev: " + str(ev.button_index) + " actual ev: " + Settings.get_event_label(ev))
+	assert_eq(Settings.get_event_label(ev), "Start / Options", "Start button label correct")
+
+
+## EC-13 | Event labels | Gamepad axes | Direction-aware (e.g., "RT (+)")
+## :rtype: void
+func test_ec_13_gamepad_axis_label() -> void:
+	var ev: InputEventJoypadMotion = InputEventJoypadMotion.new()
+	# 1
+	ev.axis = JOY_AXIS_TRIGGER_RIGHT
+	ev.axis_value = 1.0
+	assert_eq(Settings.get_event_label(ev), "RT (+)", "Positive RT axis label correct")
+	# 2
+	ev.axis_value = -1.0
+	assert_eq(Settings.get_event_label(ev), "RT (-)", "Negative RT axis label correct")
+	# 3
+	ev.axis = JOY_AXIS_LEFT_X
+	ev.axis_value = 1.0
+	assert_eq(Settings.get_event_label(ev), "Left Stick (Right)", "Left Stick right label correct")
+
+
+## EC-14 | Pause label | Per device | Uppercase, unbound fallback
+## :rtype: void
+func test_ec_14_pause_binding_label_for_device() -> void:
+	# Keyboard
+	Globals.current_input_device = "keyboard"
+	print("actual ev: " + Settings.get_pause_binding_label_for_device("keyboard"))
+	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "ESC", "Keyboard pause label 'ESC'")
+	# Gamepad
+	Globals.current_input_device = "gamepad"
+	print("actual ev: " + Settings.get_pause_binding_label_for_device("gamepad"))
+	assert_eq(Settings.get_pause_binding_label_for_device("gamepad"), "START", "Gamepad pause label correct")
+	# Unbound case (erase pause events)
+	InputMap.action_erase_events("pause")
+	print("actual ev: " + Settings.get_pause_binding_label_for_device("pause"))
+	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "UNBOUND", "Unbound fallback 'UNBOUND'")

@@ -505,6 +505,7 @@ func get_event_device_type(event: InputEvent) -> String:
 
 
 ## Returns the pause binding label (ALL CAPS) for the specific device that was just used.
+## Returns the pause binding label (ALL CAPS) for the specific device that was just used.
 func get_pause_binding_label_for_device(device_type: String) -> String:
 	var events: Array[InputEvent] = InputMap.action_get_events("pause")
 	if events.is_empty():
@@ -518,16 +519,10 @@ func get_pause_binding_label_for_device(device_type: String) -> String:
 				and (ev is InputEventJoypadButton or ev is InputEventJoypadMotion)
 			)
 		):
-			var temp: Button = InputRemapButton.new()
-			var label: String = temp.get_event_label(ev)
-			temp.queue_free()
-			return label.to_upper()
+			return get_event_label(ev).to_upper()
 
 	# Fallback
-	var temp: Button = InputRemapButton.new()
-	var label: String = temp.get_event_label(events[0])
-	temp.queue_free()
-	return label.to_upper()
+	return get_event_label(events[0]).to_upper()
 
 
 ## Returns true if there is at least one unbound critical action for the currently selected device.
@@ -607,3 +602,41 @@ func _migrate_legacy_unbound_states() -> void:
 
 	# Set the meta flag HERE (so direct calls in tests work, and _ready() is consistent)
 	Globals.set_meta(LEGACY_MIGRATION_KEY, true)
+
+
+## Static helper: Returns human-readable label for an InputEvent (e.g., "SPACE", "A", "RT").
+## Supports keys, joypad buttons (Xbox/PS labels), and axes (e.g., "LT (+)", "Left Stick (Right)").
+## :param ev: The event to label.
+## :rtype: String
+static func get_event_label(ev: InputEvent) -> String:
+	if ev is InputEventKey:
+		return OS.get_keycode_string(ev.physical_keycode)
+	elif ev is InputEventJoypadButton:
+		match ev.button_index:
+			JOY_BUTTON_A: return "A / X"
+			JOY_BUTTON_B: return "B / Circle"
+			JOY_BUTTON_X: return "X / Square"
+			JOY_BUTTON_Y: return "Y / Triangle"
+			JOY_BUTTON_BACK: return "Back / Share"
+			JOY_BUTTON_GUIDE: return "Guide / PS"
+			JOY_BUTTON_START: return "Start / Options"
+			JOY_BUTTON_LEFT_STICK: return "LS Press"
+			JOY_BUTTON_RIGHT_STICK: return "RS Press"
+			JOY_BUTTON_LEFT_SHOULDER: return "LB / L1"
+			JOY_BUTTON_RIGHT_SHOULDER: return "RB / R1"
+			JOY_BUTTON_DPAD_UP: return "D-Pad Up"
+			JOY_BUTTON_DPAD_DOWN: return "D-Pad Down"
+			JOY_BUTTON_DPAD_LEFT: return "D-Pad Left"
+			JOY_BUTTON_DPAD_RIGHT: return "D-Pad Right"
+			_: return "Button " + str(ev.button_index)
+	elif ev is InputEventJoypadMotion:
+		var dir: String = " (+)" if ev.axis_value > 0 else " (-)"
+		match ev.axis:
+			JOY_AXIS_LEFT_X: return "Left Stick (Right)" if ev.axis_value > 0 else "Left Stick (Left)"
+			JOY_AXIS_LEFT_Y: return "Left Stick (Down)" if ev.axis_value > 0 else "Left Stick (Up)"
+			JOY_AXIS_RIGHT_X: return "Right Stick (Right)" if ev.axis_value > 0 else "Right Stick (Left)"
+			JOY_AXIS_RIGHT_Y: return "Right Stick (Down)" if ev.axis_value > 0 else "Right Stick (Up)"
+			JOY_AXIS_TRIGGER_LEFT: return "LT" + dir
+			JOY_AXIS_TRIGGER_RIGHT: return "RT" + dir
+			_: return "Axis " + str(ev.axis) + dir
+	return "Unknown"
