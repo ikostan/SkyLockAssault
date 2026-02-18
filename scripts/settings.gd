@@ -178,12 +178,12 @@ func get_pause_binding_label() -> String:
 	return get_pause_binding_label_for_device(Globals.current_input_device)
 
 
-## Returns true if the given event is bound to any action.
+## Returns true if the given event is bound to any action in InputMap.
 ## :param event: Input event to check.
 ## :type event: InputEvent
 ## :rtype: bool
 func is_event_bound(event: InputEvent) -> bool:
-	for action: String in ACTIONS:
+	for action: String in InputMap.get_actions():
 		if InputMap.event_is_action(event, action):
 			return true
 	return false
