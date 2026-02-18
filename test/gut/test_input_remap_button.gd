@@ -35,6 +35,8 @@ func after_each() -> void:
 
 
 ## IRB-01 | Remap keyboard event | current_device = KEYBOARD; action exists with prior events | Instantiate, simulate _input with Key, inspect InputMap | Only keyboard event added; old erased; button label updated; remap logged.
+## FIXED: Direct button._input() call (bypasses parse_input_event queue for reliable test execution in GUT).
+## Uses KEY_Z (conflict-free). 
 ## :rtype: void
 func test_irb_01() -> void:
 	# Add prior events
@@ -48,18 +50,18 @@ func test_irb_01() -> void:
 	button.button_pressed = true
 	button.pressed.emit()
 	assert_true(button.listening)
-	# Simulate input
+	# Simulate input directly on button (KEY_Z: safe, no conflict with defaults)
 	var new_key: InputEventKey = InputEventKey.new()
-	new_key.physical_keycode = KEY_B
+	new_key.physical_keycode = KEY_Z
 	new_key.pressed = true
-	Input.parse_input_event(new_key)
+	button._input(new_key)  # Direct call for sync execution in tests
 	await get_tree().process_frame
 	# Assert
 	var events: Array = InputMap.action_get_events(TEST_ACTION)
 	assert_eq(events.size(), 2)
-	assert_true(events.any(func(ev: InputEvent) -> bool: return ev is InputEventKey and ev.physical_keycode == KEY_B))
+	assert_true(events.any(func(ev: InputEvent) -> bool: return ev is InputEventKey and ev.physical_keycode == KEY_Z))
 	assert_true(events.any(func(ev: InputEvent) -> bool: return ev is InputEventJoypadButton and ev.button_index == JOY_BUTTON_A))
-	assert_eq(button.text, button.get_event_label(new_key))
+	assert_eq(button.text, "Z")  # Updated for KEY_Z label (via get_event_label fallback)
 	assert_false(button.listening)
 
 
