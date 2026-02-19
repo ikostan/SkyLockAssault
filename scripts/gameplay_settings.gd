@@ -178,8 +178,8 @@ func _on_gameplay_back_button_pressed() -> void:
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 			hidden_menu_found = true
-
-			# NEW: When returning from Key Mapping menu → focus the Key Mapping button in Options
+			# NEW: When returning from Gameplay Settings menu →
+			# → focus the Gameplay Settings button in Options
 			if prev_menu is OptionsMenu:
 				(prev_menu as OptionsMenu).grab_focus_on_gameplay_settings_button()
 
