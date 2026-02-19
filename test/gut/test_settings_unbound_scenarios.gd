@@ -34,6 +34,7 @@ func before_all() -> void:
 func before_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
+
 	for action: String in Settings.ACTIONS:
 		if InputMap.has_action(action):
 			InputMap.action_erase_events(action)
@@ -258,6 +259,7 @@ func test_scn_16_migration_flag_persists() -> void:
 	var config := ConfigFile.new()
 	config.load(Settings.CONFIG_PATH)
 	assert_true(config.get_value("meta", Settings.LEGACY_MIGRATION_KEY, false))
+	FileAccess.open(Settings.CONFIG_PATH, FileAccess.WRITE).close()
 
 
 ## SCN-17 | Unbound critical stays unbound after restart simulation.
