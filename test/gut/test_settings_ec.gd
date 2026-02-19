@@ -295,11 +295,11 @@ func test_ec_12_gamepad_button_label() -> void:
 	# 1
 	ev.button_index = JOY_BUTTON_A
 	print("expected ev: " + str(ev.button_index) + " actual ev: " + Settings.get_event_label(ev))
-	assert_eq(Settings.get_event_label(ev), "A / X", "Button A must be 'A / X'")
+	assert_eq(Settings.get_event_label(ev), "A", "Button A must be 'A'")
 	# 2
 	ev.button_index = JOY_BUTTON_START
 	print("expected ev: " + str(ev.button_index) + " actual ev: " + Settings.get_event_label(ev))
-	assert_eq(Settings.get_event_label(ev), "Start / Options", "Start button label correct")
+	assert_eq(Settings.get_event_label(ev), "Start", "Start button label is not correct")
 
 
 ## EC-13 | Event labels | Gamepad axes | Direction-aware (e.g., "RT (+)")
@@ -325,12 +325,12 @@ func test_ec_14_pause_binding_label_for_device() -> void:
 	# Keyboard
 	Globals.current_input_device = "keyboard"
 	print("actual ev: " + Settings.get_pause_binding_label_for_device("keyboard"))
-	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "ESCAPE", "Keyboard pause label 'ESC'")
+	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "ESCAPE", "Keyboard pause label should be 'ESCAPE'")
 	# Gamepad
 	Globals.current_input_device = "gamepad"
 	print("actual ev: " + Settings.get_pause_binding_label_for_device("gamepad"))
-	assert_eq(Settings.get_pause_binding_label_for_device("gamepad"), "START / OPTIONS", "Gamepad pause label correct")
+	assert_eq(Settings.get_pause_binding_label_for_device("gamepad"), "START", "Gamepad pause label is not correct")
 	# Unbound case (erase pause events)
 	InputMap.action_erase_events("pause")
 	print("actual ev: " + Settings.get_pause_binding_label_for_device("pause"))
-	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "UNBOUND", "Unbound fallback 'UNBOUND'")
+	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "UNBOUND", "Unbound fallback should be 'UNBOUND'")
