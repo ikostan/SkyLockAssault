@@ -568,12 +568,6 @@ func has_unbound_critical_actions_for_current_device() -> bool:
 ## Ensures "Unbound" labels appear correctly for UI actions.
 ## Sets the meta flag to prevent re-run (works even if called directly in tests).
 ## :rtype: void
-## One-time migration for legacy configs.
-## Forces defaults for critical actions if device binding missing (legacy bug).
-## :rtype: void
-## One-time migration for legacy configs.
-## Forces defaults for critical actions if device binding missing (legacy bug).
-## :rtype: void
 func _migrate_legacy_unbound_states() -> void:
 	var changed: bool = false
 	for action: String in CRITICAL_ACTIONS:
