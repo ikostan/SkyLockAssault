@@ -317,5 +317,5 @@ func _grab_initial_focus() -> void:
 	Globals.ensure_initial_focus(
 		difficulty_slider,
 		[difficulty_slider, gameplay_back_button, gameplay_reset_button],
-        "Gameplay Settings Menu"
+		"Gameplay Settings Menu"
 	)
