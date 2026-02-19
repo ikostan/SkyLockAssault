@@ -621,8 +621,9 @@ func _migrate_legacy_unbound_states() -> void:
 
 
 ## Static helper: Returns human-readable label for an InputEvent (e.g., "SPACE", "A", "RT").
-## Supports keys, joypad buttons (Xbox/PS labels), and axes (e.g., "LT (+)", "Left Stick (Right)").
+## Supports keys, joypad buttons (simplified labels), and axes (e.g., "LT (+)", "Left Stick (Right)").
 ## :param ev: The event to label.
+## :type ev: InputEvent
 ## :rtype: String
 static func get_event_label(ev: InputEvent) -> String:
 	if ev is InputEventKey:
@@ -630,27 +631,27 @@ static func get_event_label(ev: InputEvent) -> String:
 	if ev is InputEventJoypadButton:
 		match ev.button_index:
 			JOY_BUTTON_A:
-				return "A / X"
+				return "A"
 			JOY_BUTTON_B:
-				return "B / Circle"
+				return "B"
 			JOY_BUTTON_X:
-				return "X / Square"
+				return "X"
 			JOY_BUTTON_Y:
-				return "Y / Triangle"
+				return "Y"
 			JOY_BUTTON_BACK:
-				return "Back / Share"
+				return "Back"
 			JOY_BUTTON_GUIDE:
-				return "Guide / PS"
+				return "Guide"
 			JOY_BUTTON_START:
-				return "Start / Options"
+				return "Start"  # Already simplified.
 			JOY_BUTTON_LEFT_STICK:
 				return "LS Press"
 			JOY_BUTTON_RIGHT_STICK:
 				return "RS Press"
 			JOY_BUTTON_LEFT_SHOULDER:
-				return "LB / L1"
+				return "LB"
 			JOY_BUTTON_RIGHT_SHOULDER:
-				return "RB / R1"
+				return "RB"
 			JOY_BUTTON_DPAD_UP:
 				return "D-Pad Up"
 			JOY_BUTTON_DPAD_DOWN:

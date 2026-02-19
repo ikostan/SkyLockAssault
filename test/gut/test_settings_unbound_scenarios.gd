@@ -270,3 +270,20 @@ func test_scn_14_updated_partial_adds_missing_critical() -> void:
 	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, true)
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
 	assert_eq(events.size(), 2, "Updated: adds missing for critical")
+
+
+## SCN-15 | Joypad labels simplified without " / ".
+func test_scn_15_joypad_labels_simplified() -> void:
+	var ev: InputEventJoypadButton = InputEventJoypadButton.new()
+	ev.button_index = JOY_BUTTON_A
+	assert_eq(Settings.get_event_label(ev), "A", "Simplified A")
+	ev.button_index = JOY_BUTTON_B
+	assert_eq(Settings.get_event_label(ev), "B", "Simplified B")
+	ev.button_index = JOY_BUTTON_X
+	assert_eq(Settings.get_event_label(ev), "X", "Simplified X")
+	ev.button_index = JOY_BUTTON_Y
+	assert_eq(Settings.get_event_label(ev), "Y", "Simplified Y")
+	ev.button_index = JOY_BUTTON_LEFT_SHOULDER
+	assert_eq(Settings.get_event_label(ev), "LB", "Simplified LB")
+	ev.button_index = JOY_BUTTON_RIGHT_SHOULDER
+	assert_eq(Settings.get_event_label(ev), "RB", "Simplified RB")
