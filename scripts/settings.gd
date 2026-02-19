@@ -590,7 +590,9 @@ func _migrate_legacy_unbound_states() -> void:
 			nev.physical_keycode = DEFAULT_KEYBOARD[action]
 			InputMap.action_add_event(action, nev)
 			changed = true
-			Globals.log_message("Migrated legacy unbound: " + action + " (keyboard default)", Globals.LogLevel.INFO)
+			Globals.log_message(
+				"Migrated legacy unbound: " + action + " (keyboard default)", Globals.LogLevel.INFO
+			)
 		if not has_gamepad and DEFAULT_GAMEPAD.has(action):
 			var def: Dictionary = DEFAULT_GAMEPAD[action]
 			var nev: InputEvent = null
@@ -609,7 +611,10 @@ func _migrate_legacy_unbound_states() -> void:
 			if nev:
 				InputMap.action_add_event(action, nev)
 				changed = true
-				Globals.log_message("Migrated legacy unbound: " + action + " (gamepad default)", Globals.LogLevel.INFO)
+				Globals.log_message(
+					"Migrated legacy unbound: " + action + " (gamepad default)",
+					Globals.LogLevel.INFO
+				)
 	if changed:
 		save_input_mappings()  # Persist the migration
 	Globals.set_meta(LEGACY_MIGRATION_KEY, true)
