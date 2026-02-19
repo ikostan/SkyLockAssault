@@ -621,7 +621,8 @@ func _migrate_legacy_unbound_states() -> void:
 
 
 ## Static helper: Returns human-readable label for an InputEvent (e.g., "SPACE", "A", "RT").
-## Supports keys, joypad buttons (simplified labels), and axes (e.g., "LT (+)", "Left Stick (Right)").
+## Supports keys, joypad buttons (simplified labels), and axes (e.g., "LT (+)",
+## "Left Stick (Right)").
 ## :param ev: The event to label.
 ## :type ev: InputEvent
 ## :rtype: String
