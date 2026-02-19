@@ -43,7 +43,8 @@ func after_each() -> void:
 	await get_tree().process_frame
 
 
-## EC-02 | No device events | Remap triggered without input | Do nothing | UI unchanged
+# EC-02 | No device events | Remap triggered without input | Do nothing | UI unchanged
+# :rtype: void
 func test_ec_02_remap_cancelled_no_input() -> void:
 	var prior_ev := InputEventKey.new()
 	prior_ev.physical_keycode = KEY_A
@@ -51,11 +52,10 @@ func test_ec_02_remap_cancelled_no_input() -> void:
 	var prior_text := button.get_event_label(prior_ev)
 
 	button.button_pressed = true
-	button.pressed.emit()                 # start listening
+	button.pressed.emit()
 	assert_true(button.listening)
-	assert_eq(button.text, Globals.REMAP_PROMPT_TEXT)
+	assert_eq(button.text, Globals.REMAP_PROMPT_KEYBOARD)  # updated
 
-	# Cancel by toggling button again (no input event)
 	button.button_pressed = false
 	button.pressed.emit()
 
