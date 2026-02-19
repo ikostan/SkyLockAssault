@@ -135,7 +135,8 @@ func test_scn_05_invalid_entries_skip() -> void:
 	config.set_value("input", TEST_ACTION, ["invalid:event"])
 	config.save(TEST_CONFIG_PATH)
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
-	# Skip invalid → unbound if non-critical.
+	# "invalid:event" has no recognised prefix ("key:", "joybtn:", "joyaxis:"),
+	# so _add_missing_defaults treats it as an explicit unbind for both devices — no defaults added.
 	assert_true(InputMap.action_get_events(TEST_ACTION).is_empty())
 	# GUI: "Unbound"
 	menu.update_all_remap_buttons()
