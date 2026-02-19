@@ -7,7 +7,11 @@ extends CanvasLayer
 var js_window: Variant
 var os_wrapper: OSWrapper = OSWrapper.new()
 var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
-
+# ── Conflict dialog (created in code – no scene edit needed) ─────
+var conflict_dialog: ConfirmationDialog
+var current_remap_button: InputRemapButton = null
+var current_pending_event: InputEvent = null
+var current_conflicts: Array[String] = []
 # local
 var _controls_back_button_pressed_cb: Variant
 var _intentional_exit: bool = false
@@ -41,9 +45,24 @@ func _ready() -> void:
 	keyboard.button_group = device_group
 	gamepad.button_group = device_group
 	keyboard.button_pressed = true  # Default: Keyboard
-	update_all_remap_buttons()
 
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# NEW: Default focus on "Keyboard" when the menu opens
+	_grab_initial_focus()
+
+	# Conflicting key remap functionality/setup
+	add_to_group("key_mapping_menu")  # so buttons can find us
+	# Create the conflict dialog once
+	conflict_dialog = ConfirmationDialog.new()
+	conflict_dialog.title = "Input Already Used"
+	conflict_dialog.exclusive = true  # blocks background input
+	conflict_dialog.get_ok_button().text = "Reassign (unbind other)"
+	conflict_dialog.get_cancel_button().text = "Cancel"
+	add_child(conflict_dialog)
+
+	conflict_dialog.confirmed.connect(_on_conflict_confirmed)
+	conflict_dialog.canceled.connect(_on_conflict_canceled)
+
 	Globals.log_message("Controls menu loaded.", Globals.LogLevel.DEBUG)
 
 	if os_wrapper.has_feature("web"):
@@ -63,6 +82,82 @@ func _ready() -> void:
 				Callable(self, "_on_controls_back_button_pressed_js")
 			)
 			js_window.controlsBackPressed = _controls_back_button_pressed_cb
+
+	# Apply the last selected device (Globals has already loaded it in _ready)
+	keyboard.button_pressed = (Globals.current_input_device == "keyboard")
+	gamepad.button_pressed = (Globals.current_input_device == "gamepad")
+	update_all_remap_buttons()
+
+
+## Called from InputRemapButton when a duplicate binding is detected.
+func show_conflict_dialog(
+	btn: InputRemapButton, new_event: InputEvent, conflicts: Array[String]
+) -> void:
+	current_remap_button = btn
+	current_pending_event = new_event
+	current_conflicts = conflicts
+
+	var txt: String = "The input you just pressed is already used by:\n\n"
+	for c in conflicts:
+		txt += "• " + c.to_upper().replace("_", " ") + "\n"
+	txt += "\nReassign anyway? The conflicting mapping(s) will be set to Unbound."
+
+	conflict_dialog.dialog_text = txt
+	conflict_dialog.popup_centered()
+
+
+func _on_conflict_confirmed() -> void:
+	if not current_remap_button or not current_pending_event:
+		return
+
+	# 1. Unbind ONLY the conflicting event of the SAME DEVICE (keyboard or gamepad)
+	for act in current_conflicts:
+		for ev: InputEvent in InputMap.action_get_events(act):
+			if Settings.events_match(ev, current_pending_event):  # exact same binding
+				InputMap.action_erase_event(act, ev)
+				Globals.log_message(
+					"Unbound specific device event for " + act, Globals.LogLevel.DEBUG
+				)
+				break  # only one match per device
+
+	# 2. Apply the new binding
+	current_remap_button.erase_old_event()
+	InputMap.action_add_event(current_remap_button.action, current_pending_event)
+
+	Globals.log_message(
+		"Remapped %s (device-specific unbind)" % current_remap_button.action, Globals.LogLevel.DEBUG
+	)
+
+	# 3. Save (now only the right device is affected)
+	Settings.save_input_mappings()
+
+	# 4. Finish UI
+	current_remap_button.finish_remap()
+	update_all_remap_buttons()
+
+	# Cleanup
+	_clear_conflict_state()
+
+	# NEW: Clear critical warning flag when player fixes unbound (once-per-session)
+	var main := get_tree().current_scene
+	if main and main is MainScene:
+		main.clear_unbound_warning()
+
+
+func _on_conflict_canceled() -> void:
+	if not current_remap_button:
+		return
+	# Just stop listening – original binding stays
+	current_remap_button.button_pressed = false
+	current_remap_button.listening = false
+	current_remap_button.update_button_text()
+	_clear_conflict_state()
+
+
+func _clear_conflict_state() -> void:
+	current_remap_button = null
+	current_pending_event = null
+	current_conflicts.clear()
 
 
 ## Updates all remap buttons.
@@ -86,28 +181,18 @@ func _on_reset_pressed() -> void:
 	Settings.reset_to_defaults(device_type)
 	update_all_remap_buttons()
 	Globals.log_message("Resetting " + device_type + " controls.", Globals.LogLevel.DEBUG)
-
-
-func _on_keyboard_toggled(toggled_on: bool) -> void:
-	if toggled_on:
-		Globals.log_message(
-			"_on_keyboard_toggled control pressed: " + str(toggled_on), Globals.LogLevel.DEBUG
-		)
-		update_all_remap_buttons()
-
-
-func _on_gamepad_toggled(toggled_on: bool) -> void:
-	if toggled_on:
-		Globals.log_message(
-			"_on_gamepad_toggled control pressed: " + str(toggled_on), Globals.LogLevel.DEBUG
-		)
-		update_all_remap_buttons()
+	# NEW: Clear critical warning flag when player fixes unbound (once-per-session)
+	var main := get_tree().current_scene
+	if main and main is MainScene:
+		main.clear_unbound_warning()
 
 
 func _on_controls_back_button_pressed() -> void:
 	## Handles Back button press.
 	##
 	## Shows previous menu from stack, removes controls menu.
+	##
+	## Restores focus to the "Key Mapping" button in OptionsMenu when returning.
 	##
 	## Hides web overlays if on web.
 	##
@@ -122,6 +207,20 @@ func _on_controls_back_button_pressed() -> void:
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 			hidden_menu_found = true
+			# NEW: When returning from Key Mapping menu → focus the Key Mapping button in Options
+			if prev_menu is OptionsMenu:
+				(prev_menu as OptionsMenu).grab_focus_on_key_mapping_button()
+			# NEW: When returning to Main Menu → focus Start Game button
+			elif prev_menu.name == "Panel" or prev_menu is Panel:  # ← this is the fix
+				var start_button: Button = prev_menu.get_node_or_null("VBoxContainer/StartButton")
+				if is_instance_valid(start_button):
+					# Triple-deferred to be 100% sure after visibility change
+					start_button.call_deferred("call_deferred", "call_deferred", "grab_focus")
+					Globals.log_message(
+						"Focus restored to Start Game button (triple deferred)",
+						Globals.LogLevel.DEBUG
+					)
+
 	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
 	if os_wrapper.has_feature("web") and js_window:
 		js_window.controlsBackPressed = null
@@ -171,3 +270,35 @@ func _on_controls_back_button_pressed_js(args: Array) -> void:
 		Globals.LogLevel.DEBUG
 	)
 	_on_controls_back_button_pressed()
+
+
+## Ensures "Keyboard" gets focus by default when the menu opens.
+## Uses the same safe logic as OptionsMenu so we don't fight controller navigation.
+func _grab_initial_focus() -> void:
+	var allowed_controls: Array[Control] = [
+		keyboard, gamepad, controls_back_button, controls_reset_button
+	]
+
+	# Add every remap button so the helper knows what's "inside" the menu
+	var remap_buttons: Array[Node] = get_tree().get_nodes_in_group("remap_buttons")
+	for btn: Node in remap_buttons:
+		if btn is Control:
+			allowed_controls.append(btn)
+
+	Globals.ensure_initial_focus(keyboard, allowed_controls, "Key Mapping Menu")  # candidate
+
+
+func _on_keyboard_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		Globals.current_input_device = "keyboard"
+		Settings.save_last_input_device("keyboard")
+		update_all_remap_buttons()
+		Globals.log_message("Current input device set to: keyboard", Globals.LogLevel.DEBUG)
+
+
+func _on_gamepad_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		Globals.current_input_device = "gamepad"
+		Settings.save_last_input_device("gamepad")
+		update_all_remap_buttons()
+		Globals.log_message("Current input device set to: gamepad", Globals.LogLevel.DEBUG)

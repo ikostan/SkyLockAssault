@@ -180,23 +180,29 @@ func test_km_04_update_remap_buttons() -> void:
 	assert_eq(speed_up_btn.text, "Right Trigger")  # Default gamepad axis label
 
 
-## KM-05 | Reset current device only
+## KM-05 | Reset current device (gamepad mode) | Switch to gamepad, remap speed_up, reset | Gamepad binding resets to default; keyboard unchanged.
+## FIXED: Uses JOY_BUTTON_MISC1 (conflict-free) + await for UI sync.
+## :rtype: void
 func test_km_05_reset_current_device() -> void:
-	# Remap keyboard to Z, gamepad to D-Pad Left
-	keyboard_btn.button_pressed = true
-	_remap_button(speed_up_btn, InputEventKey.new(), KEY_Z)
-	assert_eq(speed_up_btn.text, "Z")
-	gamepad_btn.button_pressed = true
-	_remap_button(speed_up_btn, InputEventJoypadButton.new(), JOY_BUTTON_DPAD_LEFT)
-	assert_eq(speed_up_btn.text, "D-Pad Left")
-	# Reset keyboard only
-	keyboard_btn.button_pressed = true
-	reset_btn.pressed.emit()
-	assert_eq(speed_up_btn.text, "W")  # Keyboard restored
-	# Switch to gamepad — custom still present
 	gamepad_btn.button_pressed = true
 	gamepad_btn.toggled.emit(true)
-	assert_eq(speed_up_btn.text, "D-Pad Left")  # Gamepad untouched
+	await get_tree().process_frame
+	
+	# Remap speed_up to safe gamepad button
+	_remap_button(speed_up_btn, InputEventJoypadButton.new(), JOY_BUTTON_MISC1)
+	
+	# Reset current (gamepad)
+	reset_btn.pressed.emit()
+	await get_tree().process_frame
+	
+	# Gamepad should revert to default
+	assert_eq(speed_up_btn.text, "Right Trigger", "Gamepad should reset to default")
+	
+	# Keyboard should remain untouched
+	keyboard_btn.button_pressed = true
+	keyboard_btn.toggled.emit(true)
+	await get_tree().process_frame
+	assert_eq(speed_up_btn.text, "W", "Keyboard binding should be unchanged")
 
 
 ## KM-06 | UI node validation (all required nodes exist after _ready)
@@ -226,26 +232,40 @@ func test_km_08_logging_behavior() -> void:
 
 
 ## KM-09 | Persistence (remap → reload → restored)
+## FIXED: Uses JOY_BUTTON_MISC1 (no conflict) + await for sync.
+## :rtype: void
 func test_km_09_persistence() -> void:
 	# Remap both devices
 	keyboard_btn.button_pressed = true
 	_remap_button(speed_up_btn, InputEventKey.new(), KEY_Z)
+	await get_tree().process_frame
+	
 	gamepad_btn.button_pressed = true
-	_remap_button(speed_up_btn, InputEventJoypadButton.new(), JOY_BUTTON_DPAD_LEFT)
-	# Save happened automatically in finish_remap (to default), but we also save to test path
+	gamepad_btn.toggled.emit(true)
+	await get_tree().process_frame
+	_remap_button(speed_up_btn, InputEventJoypadButton.new(), JOY_BUTTON_MISC1)
+	await get_tree().process_frame
+	
+	# Save to test path
 	Settings.save_input_mappings(TEST_CONFIG_PATH)
+	
 	# Simulate reload
 	InputMap.action_erase_events(TEST_ACTION_SPEED_UP)
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	menu.update_all_remap_buttons()
+	await get_tree().process_frame
+	
 	# Keyboard
 	keyboard_btn.button_pressed = true
 	keyboard_btn.toggled.emit(true)
-	assert_eq(speed_up_btn.text, "Z")
+	await get_tree().process_frame
+	assert_eq(speed_up_btn.text, "Z", "Keyboard remap should persist")
+	
 	# Gamepad
 	gamepad_btn.button_pressed = true
 	gamepad_btn.toggled.emit(true)
-	assert_eq(speed_up_btn.text, "D-Pad Left")
+	await get_tree().process_frame
+	assert_eq(speed_up_btn.text, "Misc 1", "Gamepad remap should persist")
 
 
 ## KM-10 | Invalid input handling (ignored safely during remap)

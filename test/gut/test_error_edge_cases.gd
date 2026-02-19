@@ -40,7 +40,7 @@ func before_each() -> void:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, AudioConstants.BUS_SFX_ROTORS)
 	# Reset migration flag
-	Settings._needs_migration = false
+	Settings._needs_save = false
 
 
 ## TC-SL-21 | Config path invalid/unwritable (simulate via temp path or mock). | Call AudioManager.save_volumes() | Error logged (e.g., "Failed to save config"); No crash; AudioManager unchanged.
@@ -100,9 +100,9 @@ func test_tc_sl_25() -> void:
 	# Load inputs (migrate)
 	Settings.load_input_mappings(test_config_path)
 	# Manually save if migration (since no _ready in test)
-	if Settings._needs_migration:
+	if Settings._needs_save:
 		Settings.save_input_mappings(test_config_path)
-		Settings._needs_migration = false
+		Settings._needs_save = false
 	# Verify upgraded
 	config = ConfigFile.new()
 	config.load(test_config_path)
@@ -116,4 +116,4 @@ func test_tc_sl_25() -> void:
 	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:5:1.0:-1"])
 	assert_eq(config.get_value("audio", "master_volume"), 0.5)
 	# No re-migration
-	assert_false(Settings._needs_migration)
+	assert_false(Settings._needs_save)

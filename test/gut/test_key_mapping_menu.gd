@@ -19,6 +19,10 @@ var reset_btn: Button = null
 var remap_buttons: Array = []
 
 
+func before_all() -> void:
+	Settings._add_missing_defaults(ConfigFile.new())  # Force backfill defaults (keyboard/gamepad)
+
+
 func before_each() -> void:
 	menu = load("res://scenes/key_mapping_menu.tscn").instantiate()  # Adjust path if needed
 	add_child(menu)
@@ -29,11 +33,15 @@ func before_each() -> void:
 	remap_buttons = menu.get_tree().get_nodes_in_group("remap_buttons") as Array[InputRemapButton]
 	# Default to keyboard (as in _ready)
 	keyboard_btn.button_pressed = true
+	menu.update_all_remap_buttons()
 
 
 func after_each() -> void:
 	if is_instance_valid(menu):
 		menu.queue_free()
+	# Restore default bindings so remaps from this test don't leak
+	Settings.reset_to_defaults("keyboard")
+	Settings.reset_to_defaults("gamepad")
 
 
 # UI-01: Switch to keyboard settings
@@ -64,14 +72,31 @@ func test_ui_02_switch_to_gamepad() -> void:
 	for btn: Variant in remap_buttons:
 		assert_eq(btn.current_device, InputRemapButton.DeviceType.GAMEPAD,
 			"Remap button device should be GAMEPAD after gamepad switch")
-	# Example: SpeedUp button text should reflect gamepad label (e.g. contains "Stick" or button name after update)
+	
+	# ROBUST GAMEPAD LABEL CHECK (replaces brittle != "Unbound")
+	# Checks for typical gamepad label patterns (from JOY_BUTTON_LABELS / JOY_AXIS_LABELS)
+	# Allows "Right Trigger", "D-Pad Left", "Misc 1", etc.
+	# Explicitly rejects "Unbound" (the bug the reviewer caught)
+	# Still rejects single-key keyboard labels.
 	var speed_up_btn: Button = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
-	assert_true(speed_up_btn.text.contains("Stick") or speed_up_btn.text.contains("Button") or speed_up_btn.text.length() > 1,
-		"Gamepad label should be descriptive (not a single key char)")
-	# Verify it's not showing a keyboard key (single letter) and has meaningful gamepad text
-	assert_false(speed_up_btn.text.length() == 1 and speed_up_btn.text.to_upper() == speed_up_btn.text,
-		"Gamepad label should not be a single keyboard key character")
-	assert_ne(speed_up_btn.text, "Unbound", "Gamepad should have a default binding")
+
+	# Explicit reject "Unbound" (this was missing — test was too loose)
+	assert_ne(speed_up_btn.text, "Unbound", "Gamepad should have a default binding (not Unbound)")
+
+	assert_true(
+		speed_up_btn.text.contains("Trigger") or 
+		speed_up_btn.text.contains("Stick") or 
+		speed_up_btn.text.contains("D-Pad") or 
+		speed_up_btn.text.contains("Button") or 
+		speed_up_btn.text.length() > 5,  # e.g. "Right Trigger", "Left Stick Left"
+	    "Gamepad label should be descriptive (not a single key char or 'Unbound')"
+	)
+
+	# Still reject obvious keyboard-style labels (single uppercase letter)
+	assert_false(
+		speed_up_btn.text.length() == 1 and speed_up_btn.text.to_upper() == speed_up_btn.text,
+	    "Gamepad label should not be a single keyboard key character"
+	)
 
 
 # UI-03: Reset button in keyboard mode
@@ -115,33 +140,43 @@ func test_ui_04_reset_in_gamepad() -> void:
 	assert_ne(fire_btn.text, "Unbound")
 
 
-# UI-05: Label update after remapping action (test both devices)
+# test_ui_05_label_update_after_remapping
+# :rtype: void
 func test_ui_05_label_update_after_remapping() -> void:
 	gut.p("UI-05: Remapping updates UI text to reflect new InputEvent for both keyboard and gamepad tabs.")
-	# Keyboard remap
+	
+	# ── Keyboard remap ──
 	keyboard_btn.button_pressed = true
 	var left_btn: Button = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingLeft/LeftInputRemap")
 	left_btn.button_pressed = true
-	# Note: Directly calling private methods (_on_pressed, _input) for simulation due to complexity of full input event mocking in GUT unit tests.
-	left_btn._on_pressed()  # Manually trigger the pressed handler to start listening
-	assert_eq(left_btn.text, Globals.REMAP_PROMPT_TEXT)
+	left_btn._on_pressed()
+	assert_eq(left_btn.text, Globals.REMAP_PROMPT_KEYBOARD, "Should show keyboard prompt while listening")
+	
 	var key_event := InputEventKey.new()
 	key_event.physical_keycode = Key.KEY_A
 	key_event.pressed = true
-	# Note: Directly calling private method (_input) for simulation due to complexity of full input event mocking in GUT unit tests.
 	left_btn._input(key_event)
-	# Assertions
-	assert_false(left_btn.listening)
-	assert_eq(left_btn.text, "A", "Keyboard remap should update button text to new key label")
-	# Gamepad remap
+	await get_tree().process_frame
+	
+	assert_false(left_btn.listening, "Listening should stop after valid input")
+	assert_eq(left_btn.text, "A", "Keyboard label should update to new key")
+	
+	# ── Gamepad remap ──
 	gamepad_btn.button_pressed = true
+	gamepad_btn.toggled.emit(true)
+	await get_tree().process_frame
+	
 	left_btn.button_pressed = true
-	# Note: Directly calling private methods (_on_pressed, _input) for simulation due to complexity of full input event mocking in GUT unit tests.
-	left_btn._on_pressed()  # Manually trigger the pressed handler to start listening
+	left_btn._on_pressed()
+	assert_eq(left_btn.text, Globals.REMAP_PROMPT_GAMEPAD, "Should show gamepad prompt while listening")
+	
+	# Use JOY_BUTTON_MISC1 — safe choice (not used in DEFAULT_GAMEPAD → no conflict)
 	var joy_event := InputEventJoypadButton.new()
-	joy_event.button_index = JOY_BUTTON_DPAD_LEFT
+	joy_event.button_index = JOY_BUTTON_MISC1
 	joy_event.pressed = true
 	joy_event.device = -1
-	# Note: Directly calling private method (_input) for simulation due to complexity of full input event mocking in GUT unit tests.
 	left_btn._input(joy_event)
-	assert_eq(left_btn.text, "D-Pad Left", "Gamepad remap should update button text to new joypad label")
+	await get_tree().process_frame
+	
+	assert_false(left_btn.listening, "Listening should stop after valid gamepad input")
+	assert_eq(left_btn.text, "Misc 1", "Gamepad label should update to new button (from JOY_BUTTON_LABELS)")

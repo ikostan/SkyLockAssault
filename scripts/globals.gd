@@ -1,15 +1,18 @@
 ## Copyright (C) 2025 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
+## globals.gd
+## Global utilities singleton: Provides shared functions like logging.
+## Access from any script as Globals.log_message("message").
 
 extends Node
-
-# Global utilities singleton: Provides shared functions like logging.
-# Access from any script as Globals.log_message("message").
 
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 
 # Shared constants
-const REMAP_PROMPT_TEXT: String = "Press a key or controller button/axis..."
+## Device-specific remap prompts to avoid layout shift.
+# const REMAP_PROMPT_TEXT: String = "Press a key or controller button/axis..."
+const REMAP_PROMPT_KEYBOARD: String = "Press a key..."
+const REMAP_PROMPT_GAMEPAD: String = "Press a gamepad button/axis..."
 
 @export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
 @export var enable_debug_logging: bool = false  # Toggle in Inspector or settings
@@ -20,9 +23,14 @@ var options_instance: CanvasLayer = null
 # var hidden_menu: Node = null
 var hidden_menus: Array[Node] = []
 var options_open: bool = false
+## Key Mapping scene for direct loading from warning dialogs.
+var key_mapping_scene: PackedScene = preload("res://scenes/key_mapping_menu.tscn")
 var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
 var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 var next_scene: String = ""  # Path to the next scene to load via loading screen.
+## Last selected input device for UI messages and labels.
+## Updated when player toggles Keyboard/Gamepad in Key Mapping.
+var current_input_device: String = "keyboard"  # "keyboard" or "gamepad"
 
 
 func _ready() -> void:
@@ -30,7 +38,10 @@ func _ready() -> void:
 		current_log_level = LogLevel.DEBUG
 	log_message("Log level set to: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
 	_load_settings()  # Load persisted settings first
-	# log_message("Raw version from settings: " + game_version, LogLevel.DEBUG)
+	# Load last input device early to fix unbound warning on first load when
+	# gamepad is saved preference.
+	# Ensures has_unbound_critical_actions_for_current_device() uses correct device from config.
+	# Settings.load_last_input_device()
 
 
 ## Centralized "ensure initial focus" helper.
@@ -69,6 +80,27 @@ func ensure_initial_focus(
 		log_message(
 			"Focus already on a menu control" + ctx + " — skipping initial grab.", LogLevel.DEBUG
 		)
+
+
+## Loads Key Mapping menu directly while keeping background video visible.
+## :param menu_to_hide: Usually the UI Panel (not the root Control).
+## :type menu_to_hide: Node
+## :rtype: void
+func load_key_mapping(menu_to_hide: Node) -> void:
+	if is_instance_valid(menu_to_hide):
+		hidden_menus.push_back(menu_to_hide)
+		menu_to_hide.visible = false
+
+		# Robust video lookup (works for both Panel and root Control)
+		var video: VideoStreamPlayer = menu_to_hide.get_node_or_null("../VideoStreamPlayer")
+		if not is_instance_valid(video):
+			video = menu_to_hide.get_node_or_null("VideoStreamPlayer")
+		if is_instance_valid(video):
+			video.visible = true
+			video.process_mode = Node.PROCESS_MODE_ALWAYS  # keep playing
+
+	var km_instance: CanvasLayer = key_mapping_scene.instantiate()
+	get_tree().root.add_child(km_instance)
 
 
 ## Loads persisted settings from config if valid types; skips invalid/missing to keep current.
