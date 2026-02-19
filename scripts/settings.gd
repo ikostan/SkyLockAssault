@@ -10,6 +10,7 @@ extends Node
 # Change to v3 if you add another migration etc...
 const LEGACY_MIGRATION_KEY: String = "settings_migrated_v2"
 const CONFIG_PATH: String = "user://settings.cfg"
+
 ## Critical actions that must be bound for playable game.
 const CRITICAL_ACTIONS: Array[String] = [
 	"fire",
@@ -571,54 +572,52 @@ func has_unbound_critical_actions_for_current_device() -> bool:
 func _migrate_legacy_unbound_states() -> void:
 	var changed: bool = false
 	for action: String in CRITICAL_ACTIONS:
-		var events: Array[InputEvent] = InputMap.action_get_events(action)
-		var has_keyboard: bool = false
-		var has_gamepad: bool = false
-		for ev: InputEvent in events:
-			if ev is InputEventKey:
-				has_keyboard = true
-			elif ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
-				has_gamepad = true
-		if not has_keyboard and DEFAULT_KEYBOARD.has(action):
-			var nev: InputEventKey = InputEventKey.new()
-			nev.physical_keycode = DEFAULT_KEYBOARD[action]
-			InputMap.action_add_event(action, nev)
-			changed = true
-			Globals.log_message(
-				"Migrated legacy unbound: " + action + " (keyboard default)", Globals.LogLevel.INFO
-			)
-		if not has_gamepad and DEFAULT_GAMEPAD.has(action):
-			var def: Dictionary = DEFAULT_GAMEPAD[action]
-			var nev: InputEvent = null
-			match def.get("type"):
-				"button":
-					var button := InputEventJoypadButton.new()
-					button.button_index = def["button"]
-					button.device = -1
-					nev = button
-				"axis":
-					var motion := InputEventJoypadMotion.new()
-					motion.axis = def["axis"]
-					motion.axis_value = def["value"]
-					motion.device = -1
-					nev = motion
-			if nev:
+		if InputMap.action_get_events(action).is_empty():
+			# Force keyboard default
+			if DEFAULT_KEYBOARD.has(action):
+				var nev: InputEventKey = InputEventKey.new()
+				nev.physical_keycode = DEFAULT_KEYBOARD[action]
 				InputMap.action_add_event(action, nev)
 				changed = true
 				Globals.log_message(
-					"Migrated legacy unbound: " + action + " (gamepad default)",
+					"Migrated legacy unbound: " + action + " (keyboard default)",
 					Globals.LogLevel.INFO
 				)
+
+			# Force gamepad default
+			if DEFAULT_GAMEPAD.has(action):
+				var def: Dictionary = DEFAULT_GAMEPAD[action]
+				var nev: InputEvent = null
+				match def.get("type"):
+					"button":
+						var button := InputEventJoypadButton.new()
+						button.button_index = def["button"]
+						button.device = -1
+						nev = button
+					"axis":
+						var motion := InputEventJoypadMotion.new()
+						motion.axis = def["axis"]
+						motion.axis_value = def["value"]
+						motion.device = -1
+						nev = motion
+				if nev:
+					InputMap.action_add_event(action, nev)
+					changed = true
+					Globals.log_message(
+						"Migrated legacy unbound: " + action + " (gamepad default)",
+						Globals.LogLevel.INFO
+					)
+
 	if changed:
 		save_input_mappings()  # Persist the migration
+
+	# Set the meta flag HERE (so direct calls in tests work, and _ready() is consistent)
 	Globals.set_meta(LEGACY_MIGRATION_KEY, true)
 
 
 ## Static helper: Returns human-readable label for an InputEvent (e.g., "SPACE", "A", "RT").
-## Supports keys, joypad buttons (simplified labels), and axes (e.g., "LT (+)",
-## "Left Stick (Right)").
+## Supports keys, joypad buttons (Xbox/PS labels), and axes (e.g., "LT (+)", "Left Stick (Right)").
 ## :param ev: The event to label.
-## :type ev: InputEvent
 ## :rtype: String
 static func get_event_label(ev: InputEvent) -> String:
 	if ev is InputEventKey:
@@ -638,7 +637,7 @@ static func get_event_label(ev: InputEvent) -> String:
 			JOY_BUTTON_GUIDE:
 				return "Guide"
 			JOY_BUTTON_START:
-				return "Start"  # Already simplified.
+				return "Start"
 			JOY_BUTTON_LEFT_STICK:
 				return "LS Press"
 			JOY_BUTTON_RIGHT_STICK:

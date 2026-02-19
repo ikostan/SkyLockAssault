@@ -235,31 +235,6 @@ func test_scn_11_new_menu_critical_actions() -> void:
 	assert_eq(Settings.CRITICAL_ACTIONS.size(), 12, "Total critical actions")
 
 
-## SCN-12 | Updated migration: partial binding adds missing device default for critical.
-func test_scn_12_updated_partial_adds_missing_critical() -> void:
-	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, false)
-	# Config with keyboard only for critical.
-	config.set_value("input", CRITICAL_ACTION, ["key:" + str(Settings.DEFAULT_KEYBOARD[CRITICAL_ACTION])])
-	config.save(TEST_CONFIG_PATH)
-	Settings.load_input_mappings(TEST_CONFIG_PATH)
-	Settings._migrate_legacy_unbound_states()  # Manual.
-	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, true)
-	var events: Array[InputEvent] = InputMap.action_get_events(CRITICAL_ACTION)
-	assert_eq(events.size(), 2, "Updated: adds missing gamepad for critical")
-
-
-## SCN-14 | Updated migration: partial binding adds missing for critical.
-func test_scn_14_updated_partial_adds_missing_critical() -> void:
-	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, false)
-	config.set_value("input", TEST_ACTION, ["key:" + str(Settings.DEFAULT_KEYBOARD[TEST_ACTION])])
-	config.save(TEST_CONFIG_PATH)
-	Settings.load_input_mappings(TEST_CONFIG_PATH)
-	Settings._migrate_legacy_unbound_states()
-	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, true)
-	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
-	assert_eq(events.size(), 2, "Updated: adds missing for critical")
-
-
 ## SCN-15 | Joypad labels simplified without " / ".
 func test_scn_15_joypad_labels_simplified() -> void:
 	var ev: InputEventJoypadButton = InputEventJoypadButton.new()
@@ -275,3 +250,19 @@ func test_scn_15_joypad_labels_simplified() -> void:
 	assert_eq(Settings.get_event_label(ev), "LB", "Simplified LB")
 	ev.button_index = JOY_BUTTON_RIGHT_SHOULDER
 	assert_eq(Settings.get_event_label(ev), "RB", "Simplified RB")
+
+
+## SCN-16 | Migration flag persists in config.
+func test_scn_16_migration_flag_persists() -> void:
+	Settings._migrate_legacy_unbound_states()
+	var config := ConfigFile.new()
+	config.load(Settings.CONFIG_PATH)
+	assert_true(config.get_value("meta", Settings.LEGACY_MIGRATION_KEY, false))
+
+
+## SCN-17 | Unbound critical stays unbound after restart simulation.
+func test_scn_17_unbound_critical_persists() -> void:
+	InputMap.action_erase_events(CRITICAL_ACTION)
+	Settings.save_input_mappings(TEST_CONFIG_PATH)
+	Settings.load_input_mappings(TEST_CONFIG_PATH)
+	assert_true(InputMap.action_get_events(CRITICAL_ACTION).is_empty(), "Unbound persists")
