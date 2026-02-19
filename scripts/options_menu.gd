@@ -142,6 +142,22 @@ func grab_focus_on_key_mapping_button() -> void:
 	)
 
 
+## Called when returning from the Gameplay menu.
+## Focuses the Key Mapping button using the same safe helper as everywhere else.
+func grab_focus_on_gameplay_settings_button() -> void:
+	Globals.ensure_initial_focus(
+		gameplay_settings_button,
+		[
+			advanced_settings_button,
+			audio_settings_button,
+			key_mapping_button,
+			gameplay_settings_button,
+			options_back_button
+		],
+		"Options Menu (returned from Gameplay)"
+	)
+
+
 func _grab_first_button_focus() -> void:
 	## Finds the first visible/enabled Button in the container and hands it
 	## to the centralized focus helper. The helper will decide whether to
