@@ -16,7 +16,7 @@ jobs:
         uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # Pinned to SHA for v5.0.0 (latest as of 2025-10-28)
 
       - name: "Run Trivy vulnerability scanner"
-        uses: "aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284"  # Pinned to SHA for v0.33.1 (latest as of 2025-10-28)
+        uses: "aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284"  # Pinned to SHA for v0.34.0
         env:  # Suppress version check notification
           TRIVY_SKIP_VERSION_CHECK: 'true'
         with:
