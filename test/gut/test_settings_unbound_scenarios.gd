@@ -247,20 +247,7 @@ func test_scn_12_updated_partial_adds_missing_critical() -> void:
 	assert_eq(events.size(), 2, "Updated: adds missing gamepad for critical")
 
 
-## SCN-13 | Updated migration: partial binding adds missing device default for critical.
-func test_scn_13_updated_partial_adds_missing_critical() -> void:
-	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, false)
-	# Config with keyboard only for critical.
-	config.set_value("input", CRITICAL_ACTION, ["key:" + str(Settings.DEFAULT_KEYBOARD[CRITICAL_ACTION])])
-	config.save(TEST_CONFIG_PATH)
-	Settings.load_input_mappings(TEST_CONFIG_PATH)
-	Settings._migrate_legacy_unbound_states()  # Manual.
-	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, true)
-	var events: Array[InputEvent] = InputMap.action_get_events(CRITICAL_ACTION)
-	assert_eq(events.size(), 2, "Updated: adds missing gamepad for critical")
-
-
-## SCN-14 | Updated migration: partial binding adds missing for critical.
+## SCN-13 | Updated migration: partial binding adds missing for critical.
 func test_scn_14_updated_partial_adds_missing_critical() -> void:
 	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, false)
 	config.set_value("input", TEST_ACTION, ["key:" + str(Settings.DEFAULT_KEYBOARD[TEST_ACTION])])
@@ -272,7 +259,7 @@ func test_scn_14_updated_partial_adds_missing_critical() -> void:
 	assert_eq(events.size(), 2, "Updated: adds missing for critical")
 
 
-## SCN-15 | Joypad labels simplified without " / ".
+## SCN-14 | Joypad labels simplified without " / ".
 func test_scn_15_joypad_labels_simplified() -> void:
 	var ev: InputEventJoypadButton = InputEventJoypadButton.new()
 	ev.button_index = JOY_BUTTON_A
