@@ -249,3 +249,5 @@ func finish_remap() -> void:
 func update_button_text() -> void:
 	var ev: InputEvent = get_matching_event()
 	text = Settings.get_event_label(ev).strip_edges() if ev else "Unbound"
+	# Remove NBSP (common cause of “looks like a space” failures) + trim.
+	text = text.replace("\u00A0", " ").strip_edges()
