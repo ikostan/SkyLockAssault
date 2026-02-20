@@ -446,6 +446,10 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			"Failed to load input config for save: " + str(err), Globals.LogLevel.ERROR
 		)
 		return
+		
+	# Persist legacy migration flag for next runs/tests.
+	if Globals.has_meta(LEGACY_MIGRATION_KEY) and bool(Globals.get_meta(LEGACY_MIGRATION_KEY)) == true:
+		config.set_value("meta", LEGACY_MIGRATION_KEY, true)
 
 	for action: String in actions:
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
