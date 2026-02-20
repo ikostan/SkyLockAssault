@@ -5,6 +5,11 @@
 ## Run via GdUnit Inspector or command line.
 extends GdUnitTestSuite
 
+## Stores original InputMap events for all Settings.ACTIONS so tests can run isolated.
+## Key: action name (String), Value: Array of InputEvent currently assigned to that action.
+var _saved_action_events: Dictionary = {}
+
+
 @warning_ignore("unused_parameter")
 func before() -> void:
 	# Global setup: Ensure test actions exist (erase events)
@@ -12,6 +17,7 @@ func before() -> void:
 		if not InputMap.has_action(action):
 			InputMap.add_action(action)
 		InputMap.action_erase_events(action)
+
 
 @warning_ignore("unused_parameter")
 func after() -> void:
