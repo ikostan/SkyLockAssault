@@ -234,8 +234,7 @@ func test_fallback_labels() -> void:
 	axis_event.axis_value = -1.0
 	InputMap.action_add_event("test_action", axis_event)
 	button.update_button_text()
-	# assert_str(button.text).is_equal("Left Trigger (-)")
-	assert_str(button.text.strip_edges()).is_equal("Left Trigger (-)")
+	assert_str(button.text).is_equal("Left Trigger (-)")
 	
 	InputMap.erase_action("test_action")
 
