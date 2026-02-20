@@ -58,8 +58,10 @@ const DEFAULT_KEYBOARD: Dictionary = {
 }
 # New: Default gamepad mappings (assumes Xbox layout; adjust if needed).
 const DEFAULT_GAMEPAD: Dictionary = {
-	"speed_up": {"type": "axis", "axis": JOY_AXIS_TRIGGER_RIGHT, "value": 1.0},  # Throttle up.
-	"speed_down": {"type": "axis", "axis": JOY_AXIS_TRIGGER_LEFT, "value": 1.0},  # Throttle down.
+	# "speed_up": {"type": "axis", "axis": JOY_AXIS_TRIGGER_RIGHT, "value": 1.0},  # Throttle up.
+	# "speed_down": {"type": "axis", "axis": JOY_AXIS_TRIGGER_LEFT, "value": 1.0},  # Throttle down.
+	"speed_up": {"type": "axis", "axis": JOY_AXIS_RIGHT_Y, "value": -1.0},   # Right Stick (Up)
+	"speed_down": {"type": "axis", "axis": JOY_AXIS_RIGHT_Y, "value": 1.0}, # Right Stick (Down)
 	"move_left": {"type": "axis", "axis": JOY_AXIS_LEFT_X, "value": -1.0},
 	"move_right": {"type": "axis", "axis": JOY_AXIS_LEFT_X, "value": 1.0},
 	"fire": {"type": "button", "button": JOY_BUTTON_A},
@@ -299,12 +301,30 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 						),
 						Globals.LogLevel.WARNING
 					)
-					continue
+					#continue
+					# prefer the loaded mapping and remove it from conflicting actions
+					# (for the same device type), then mark _needs_save
+					_remove_event_from_conflicts(ev, conflicts)
+					_needs_save = true
 
 				InputMap.action_add_event(action, ev)
 
 	# ── Backfill missing defaults (after loading/erasing) ─────────────────────────
 	_needs_save = _add_missing_defaults(config) or _needs_save
+
+
+## Removes `event` from all actions listed in `conflicts`.
+## Used on load to preserve the loaded mapping and unbind duplicates elsewhere.
+## :param event: The event to remove from conflicting actions.
+## :param conflicts: Action names that currently contain the same event.
+## :rtype: void
+func _remove_event_from_conflicts(event: InputEvent, conflicts: Array[String]) -> void:
+	for other_action: String in conflicts:
+		var events: Array[InputEvent] = InputMap.action_get_events(other_action)
+		for existing: InputEvent in events:
+			if events_match(existing, event):
+				InputMap.action_erase_event(other_action, existing)
+				break
 
 
 ## Deserializes a string back to InputEvent.
