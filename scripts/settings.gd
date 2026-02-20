@@ -221,6 +221,7 @@ func serialize_event(ev: InputEvent) -> String:
 ## Loads input mappings from config, overriding project defaults only if saved.
 ## Handles various formats for backward compatibility and adds defaults if necessary.
 ## Proceeds even if no file to add defaults where events missing.
+## Skips adding deserialized event if it matches any existing in other actions (per device).
 ## :param path: Config file path (default: CONFIG_PATH).
 ## :type path: String
 ## :param actions: Actions to load (default: ACTIONS).
@@ -264,29 +265,80 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 							"Non-string item in array for action '" + action + "': skipped",
 							Globals.LogLevel.WARNING
 						)
-			elif value is int:
-				serialized_events = ["key:" + str(value)]  # Old int keycode—migrate
-				_needs_save = true
+
+			# ── Backward compatibility: Scalar string or int → single serialized ─────
 			elif value is String:
-				serialized_events = [value]  # Old string format
-				_needs_save = true
-			else:
-				Globals.log_message(
-					"Unexpected type for action '" + action + "': " + str(typeof(value)),
-					Globals.LogLevel.WARNING
-				)
+				serialized_events = [value]  # Treat as one serialized event
+			elif value is int:
+				serialized_events = ["key:" + str(value)]  # Legacy keycode scalar
 
+			# ── Deserialize and add ───────────────────────────────────────────────────
+			# Erase project defaults first (to avoid mixing with saved).
 			InputMap.action_erase_events(action)
-			for serialized: String in serialized_events:
-				_deserialize_and_add(action, serialized)
 
-	# ── SHARED DEFAULTS BACKFILL (DRY: used by _add_missing_defaults + _ensure_defaults_saved) ──
-	# Ensures EC-01, EC-04, EC-05 pass when load_input_mappings() called directly (tests).
-	# For corrupt/no-file: config empty → add defaults.
-	# Sets _needs_migration=true if added → triggers save in _ready() (first-run/repair).
-	# Idempotent with _ensure_defaults_saved().
-	if _add_missing_defaults(config):
-		_needs_save = true
+			for serialized: String in serialized_events:
+				var ev: InputEvent = deserialize_event(serialized)
+				if ev == null:
+					Globals.log_message(
+						"Invalid serialized event for " + action + ": " + serialized,
+						Globals.LogLevel.WARNING
+					)
+					continue
+
+				# ── NEW: Skip if duplicate in other actions (per device) ──────────────
+				# Prevents cross-action duplicates from corrupted config.
+				var conflicts: Array[String] = get_conflicting_actions(ev, action)
+				if not conflicts.is_empty():
+					Globals.log_message(
+						"Skipping duplicate event for " + action + " (conflicts: " + str(conflicts) + ")",
+						Globals.LogLevel.WARNING
+					)
+					continue
+
+				InputMap.action_add_event(action, ev)
+
+	# ── Backfill missing defaults (after loading/erasing) ─────────────────────────
+	_needs_save = _add_missing_defaults(config) or _needs_save
+
+
+## Deserializes a string back to InputEvent.
+## Handles "key:code", "joybtn:index:device", "joyaxis:axis:value:device".
+## :param serialized: The string to deserialize.
+## :type serialized: String
+## :rtype: InputEvent|null
+func deserialize_event(serialized: String) -> InputEvent:
+	var parts: PackedStringArray = serialized.split(":", true)
+	if parts.is_empty():
+		return null
+
+	match parts[0]:
+		"key":
+			if parts.size() == 2:
+				var code: int = parts[1].to_int()
+				if code > 0:
+					var ev: InputEventKey = InputEventKey.new()
+					ev.physical_keycode = code
+					return ev
+		"joybtn":
+			if parts.size() == 3:
+				var index: int = parts[1].to_int()
+				var device: int = parts[2].to_int()
+				var ev: InputEventJoypadButton = InputEventJoypadButton.new()
+				ev.button_index = index
+				ev.device = device
+				return ev
+		"joyaxis":
+			if parts.size() == 4:
+				var axis: int = parts[1].to_int()
+				var value: float = parts[2].to_float()
+				var device: int = parts[3].to_int()
+				var ev: InputEventJoypadMotion = InputEventJoypadMotion.new()
+				ev.axis = axis
+				ev.axis_value = value
+				ev.device = device
+				return ev
+	return null
+
 
 
 ## Deserializes a string to an InputEvent and adds it to the specified action.
