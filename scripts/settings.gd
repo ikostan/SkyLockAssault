@@ -290,7 +290,13 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				var conflicts: Array[String] = get_conflicting_actions(ev, action)
 				if not conflicts.is_empty():
 					Globals.log_message(
-						"Skipping duplicate event for " + action + " (conflicts: " + str(conflicts) + ")",
+						(
+							"Skipping duplicate event for "
+							+ action
+							+ " (conflicts: "
+							+ str(conflicts)
+							+ ")"
+						),
 						Globals.LogLevel.WARNING
 					)
 					continue
@@ -338,7 +344,6 @@ func deserialize_event(serialized: String) -> InputEvent:
 				ev.device = device
 				return ev
 	return null
-
 
 
 ## Deserializes a string to an InputEvent and adds it to the specified action.
