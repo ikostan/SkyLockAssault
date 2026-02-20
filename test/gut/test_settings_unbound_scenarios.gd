@@ -35,6 +35,10 @@ func before_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
 
+	# Reset legacy-migration meta so tests are independent.
+	if Globals.has_meta(Settings.LEGACY_MIGRATION_KEY):
+		Globals.remove_meta(Settings.LEGACY_MIGRATION_KEY)
+
 	for action: String in Settings.ACTIONS:
 		if InputMap.has_action(action):
 			InputMap.action_erase_events(action)
