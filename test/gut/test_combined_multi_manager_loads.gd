@@ -126,12 +126,12 @@ func test_tc_sl_13() -> void:
 	assert_eq(events[0].physical_keycode, 87)
 	assert_true(events[1] is InputEventJoypadMotion)
 	assert_eq(events[1].axis, JOY_AXIS_RIGHT_Y)
-	assert_eq(events[1].axis_value, 1.0)
+	assert_eq(events[1].axis_value, - 1.0)
 	assert_eq(events[1].device, -1)
 	# Config upgraded
 	config = ConfigFile.new()
 	config.load(test_config_path)
-	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:5:1.0:-1"])  # Upgraded to array string with added gamepad default
+	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:3:-1.0:-1"])  # Upgraded to array string with added gamepad default
 	# Now save audio changes
 	AudioManager.master_volume = 0.5
 	AudioManager.save_volumes(test_config_path)
@@ -139,7 +139,7 @@ func test_tc_sl_13() -> void:
 	config = ConfigFile.new()
 	config.load(test_config_path)
 	assert_almost_eq(config.get_value("audio", "master_volume"), 0.5, 0.01)
-	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:5:1.0:-1"])
+	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:3:-1.0:-1"])
 
 
 ## TC-SL-14 | Multiple saves: Config with all; Change audio, save; Change settings, save; Change inputs, save. | Sequence of saves from different managers | Each save loads existing, updates own section, saves; All sections preserved across calls; No data loss.
