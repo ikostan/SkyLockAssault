@@ -685,7 +685,20 @@ func _migrate_legacy_unbound_states() -> void:
 ## :rtype: String
 static func get_event_label(ev: InputEvent) -> String:
 	if ev is InputEventKey:
-		return OS.get_keycode_string(ev.physical_keycode)
+		# Prefer physical_keycode (layout-independent),
+		# but it can be 0 for project defaults/migration.
+		var code: int = int(ev.physical_keycode)
+		if code == 0:
+			code = int(ev.keycode)
+
+		# Migration / project-default case:
+		# physical_keycode == 0 but keycode is valid
+		# Avoid returning OS.get_keycode_string(0) == "" (blank label).
+		if code == 0:
+			return "Unbound"
+
+		return OS.get_keycode_string(code)
+
 	if ev is InputEventJoypadButton:
 		match ev.button_index:
 			JOY_BUTTON_A:
