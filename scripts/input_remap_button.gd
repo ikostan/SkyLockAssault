@@ -193,7 +193,8 @@ func _input(event: InputEvent) -> void:
 	erase_old_event()
 	InputMap.action_add_event(action, new_event)
 	Globals.log_message(
-		"Remapped '%s' to '%s'" % [action, Settings.get_event_label(new_event)], Globals.LogLevel.DEBUG
+		"Remapped '%s' to '%s'" % [action, Settings.get_event_label(new_event)],
+		Globals.LogLevel.DEBUG
 	)
 	finish_remap()
 
