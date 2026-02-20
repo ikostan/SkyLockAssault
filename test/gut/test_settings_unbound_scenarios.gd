@@ -16,8 +16,8 @@ const TEST_ACTION: String = "speed_up"  # Real action from Settings.ACTIONS.
 const CRITICAL_ACTION: String = "fire"  # Real critical from Settings.CRITICAL_ACTIONS.
 const DEFAULT_KEY_CODE: int = KEY_W  # From Settings.DEFAULT_KEYBOARD[speed_up].
 const DEFAULT_GAMEPAD_TYPE: String = "axis"  # From Settings.DEFAULT_GAMEPAD[speed_up].
-const DEFAULT_GAMEPAD_AXIS: int = JOY_AXIS_TRIGGER_RIGHT
-const DEFAULT_GAMEPAD_VALUE: float = 1.0
+const DEFAULT_GAMEPAD_AXIS: int = JOY_AXIS_RIGHT_Y
+const DEFAULT_GAMEPAD_VALUE: float = -1.0
 
 var menu: CanvasLayer = null
 var config: ConfigFile = ConfigFile.new()
