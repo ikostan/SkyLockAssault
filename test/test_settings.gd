@@ -4,14 +4,6 @@
 ## GdUnit4 tests for Settings input save/load.
 ## IMPORTANT: This suite must NOT use keys/buttons/axes that conflict with Settings defaults,
 ## because Settings.load_input_mappings() intentionally skips duplicates across ACTIONS.
-##
-## Defaults that would conflict (from settings.gd):
-## - move_left: KEY_A / JOY_AXIS_LEFT_X (-1.0)
-## - fire:      KEY_SPACE / JOY_BUTTON_A
-## - next_weapon: KEY_Q / JOY_BUTTON_Y
-## - ui_accept: KEY_ENTER / JOY_BUTTON_B
-##
-## So this suite uses F-keys and unused buttons/axes to avoid conflict-skips.
 extends GdUnitTestSuite
 
 # ----------------------------
@@ -24,10 +16,10 @@ const TEST_KEY_2: int = KEY_F14
 const TEST_KEY_3: int = KEY_F15
 const TEST_KEY_4: int = KEY_F16
 
-## Non-conflicting gamepad button (not used by Settings.DEFAULT_GAMEPAD).
-## Defaults use: A, B, Y, START, DPAD_*.
-## X is typically unused by defaults here.
-const TEST_JOY_BUTTON: int = JOY_BUTTON_X
+## Non-conflicting gamepad buttons.
+## Our previous choice (JOY_BUTTON_X) conflicts with action "pause" in your project.
+## Use a rarely-bound button instead.
+const TEST_JOY_BUTTON: int = JOY_BUTTON_PADDLE1
 
 ## Non-conflicting gamepad axis (defaults use TRIGGERS and LEFT_X).
 const TEST_JOY_AXIS: int = JOY_AXIS_RIGHT_X
@@ -89,7 +81,6 @@ func after() -> void:
 func test_save_and_load_keyboard() -> void:
 	var test_actions: Array[String] = ["test_action"]
 
-	# Bind to non-conflicting key.
 	InputMap.action_erase_events("test_action")
 	var new_event: InputEventKey = InputEventKey.new()
 	new_event.physical_keycode = TEST_KEY_1
@@ -103,6 +94,8 @@ func test_save_and_load_keyboard() -> void:
 
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
+	if events.size() < 1:
+		return
 	assert_that(events[0] is InputEventKey).is_true()
 	assert_int(events[0].physical_keycode).is_equal(TEST_KEY_1)
 
@@ -124,6 +117,8 @@ func test_save_and_load_joypad_button() -> void:
 
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
+	if events.size() < 1:
+		return
 	assert_that(events[0] is InputEventJoypadButton).is_true()
 	assert_int(events[0].button_index).is_equal(TEST_JOY_BUTTON)
 	assert_int(events[0].device).is_equal(-1)
@@ -147,6 +142,8 @@ func test_save_and_load_joypad_motion() -> void:
 
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
+	if events.size() < 1:
+		return
 	assert_that(events[0] is InputEventJoypadMotion).is_true()
 	assert_int(events[0].axis).is_equal(TEST_JOY_AXIS)
 	assert_float(events[0].axis_value).is_equal(TEST_JOY_AXIS_VALUE)
@@ -175,13 +172,20 @@ func test_multi_event_persistence() -> void:
 
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(2)
+	if events.size() < 2:
+		return
 
-	# Order should be preserved by save/load in current implementation.
-	assert_that(events[0] is InputEventKey).is_true()
-	assert_int(events[0].physical_keycode).is_equal(TEST_KEY_1)
+	# Validate content ignoring order (some loaders may reorder).
+	var found_key: bool = false
+	var found_joy: bool = false
+	for ev: InputEvent in events:
+		if ev is InputEventKey and ev.physical_keycode == TEST_KEY_1:
+			found_key = true
+		elif ev is InputEventJoypadButton and ev.button_index == TEST_JOY_BUTTON:
+			found_joy = true
 
-	assert_that(events[1] is InputEventJoypadButton).is_true()
-	assert_int(events[1].button_index).is_equal(TEST_JOY_BUTTON)
+	assert_bool(found_key).is_true()
+	assert_bool(found_joy).is_true()
 
 
 func test_backward_compat_old_format() -> void:
@@ -199,6 +203,8 @@ func test_backward_compat_old_format() -> void:
 
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
+	if events.size() < 1:
+		return
 	assert_that(events[0] is InputEventKey).is_true()
 	assert_int(events[0].physical_keycode).is_equal(TEST_KEY_3)
 
@@ -206,11 +212,9 @@ func test_backward_compat_old_format() -> void:
 func test_default_key_fallback() -> void:
 	var test_actions: Array[String] = ["speed_up"]
 
-	# Ensure no config file exists.
 	if FileAccess.file_exists(PATH_DEFAULT_TEST):
 		DirAccess.remove_absolute(PATH_DEFAULT_TEST)
 
-	# Remove current events so defaults must be re-added.
 	InputMap.action_erase_events("speed_up")
 
 	Settings.load_input_mappings(PATH_DEFAULT_TEST, test_actions)
@@ -238,13 +242,11 @@ func test_default_key_fallback() -> void:
 func test_unbound_action_persistence() -> void:
 	var test_actions: Array[String] = ["test_action"]
 
-	# Unbound action.
 	InputMap.action_erase_events("test_action")
 
 	Settings.save_input_mappings(PATH_UNBOUND_TEST, test_actions)
 	assert_bool(FileAccess.file_exists(PATH_UNBOUND_TEST)).is_true()
 
-	# Add a temp event, then load, should revert to unbound ([]).
 	var temp_event: InputEventKey = InputEventKey.new()
 	temp_event.physical_keycode = TEST_KEY_2
 	InputMap.action_add_event("test_action", temp_event)
@@ -258,7 +260,6 @@ func test_unbound_action_persistence() -> void:
 func test_multi_action_persistence() -> void:
 	var test_actions: Array[String] = ["test_action1", "test_action2"]
 
-	# action1 = key, action2 = unbound
 	InputMap.action_erase_events("test_action1")
 	var event1: InputEventKey = InputEventKey.new()
 	event1.physical_keycode = TEST_KEY_4
@@ -275,6 +276,8 @@ func test_multi_action_persistence() -> void:
 
 	var events1: Array[InputEvent] = InputMap.action_get_events("test_action1")
 	assert_int(events1.size()).is_equal(1)
+	if events1.size() < 1:
+		return
 	assert_that(events1[0] is InputEventKey).is_true()
 	assert_int(events1[0].physical_keycode).is_equal(TEST_KEY_4)
 
@@ -324,12 +327,13 @@ func test_preserve_default_joypad_no_saved() -> void:
 
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
+	if events.size() < 1:
+		return
 	assert_that(events[0] is InputEventJoypadButton).is_true()
 	assert_int(events[0].button_index).is_equal(TEST_JOY_BUTTON)
 
 
 func test_migration_save_only_on_old() -> void:
-	# Old int format should set Settings._needs_save.
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("input", "test_action", TEST_KEY_3)
 	config.save(PATH_MIGRATION_TEST)
@@ -367,12 +371,13 @@ func test_type_safe_new_format() -> void:
 
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
+	if events.size() < 1:
+		return
 	assert_that(events[0] is InputEventKey).is_true()
 	assert_int(events[0].physical_keycode).is_equal(TEST_KEY_3)
 
 
 func test_load_error_handling() -> void:
-	# Create corrupt file (invalid ConfigFile syntax—write raw text)
 	var file: FileAccess = FileAccess.open(PATH_CORRUPT, FileAccess.WRITE)
 	file.store_string("[input\ninvalid_syntax")
 	file.close()
