@@ -60,8 +60,8 @@ const DEFAULT_KEYBOARD: Dictionary = {
 const DEFAULT_GAMEPAD: Dictionary = {
 	# "speed_up": {"type": "axis", "axis": JOY_AXIS_TRIGGER_RIGHT, "value": 1.0},  # Throttle up.
 	# "speed_down": {"type": "axis", "axis": JOY_AXIS_TRIGGER_LEFT, "value": 1.0},  # Throttle down.
-	"speed_up": {"type": "axis", "axis": JOY_AXIS_RIGHT_Y, "value": -1.0},   # Right Stick (Up)
-	"speed_down": {"type": "axis", "axis": JOY_AXIS_RIGHT_Y, "value": 1.0}, # Right Stick (Down)
+	"speed_up": {"type": "axis", "axis": JOY_AXIS_RIGHT_Y, "value": -1.0},  # Right Stick (Up)
+	"speed_down": {"type": "axis", "axis": JOY_AXIS_RIGHT_Y, "value": 1.0},  # Right Stick (Down)
 	"move_left": {"type": "axis", "axis": JOY_AXIS_LEFT_X, "value": -1.0},
 	"move_right": {"type": "axis", "axis": JOY_AXIS_LEFT_X, "value": 1.0},
 	"fire": {"type": "button", "button": JOY_BUTTON_A},
@@ -765,16 +765,10 @@ static func get_event_label(ev: InputEvent) -> String:
 			JOY_AXIS_RIGHT_Y:
 				return "Right Stick (Down)" if ev.axis_value > 0 else "Right Stick (Up)"
 			JOY_AXIS_TRIGGER_LEFT:
-				Globals.log_message(
-						"Left Trigger dir: " + str(dir),
-						Globals.LogLevel.DEBUG
-					)
+				Globals.log_message("Left Trigger dir: " + str(dir), Globals.LogLevel.DEBUG)
 				return ("Left Trigger" + dir).strip_edges()
 			JOY_AXIS_TRIGGER_RIGHT:
-				Globals.log_message(
-						"Right Trigger dir: " + str(dir),
-						Globals.LogLevel.DEBUG
-					)
+				Globals.log_message("Right Trigger dir: " + str(dir), Globals.LogLevel.DEBUG)
 				return ("Right Trigger" + dir).strip_edges()
 			_:
 				# return "Axis " + str(ev.axis) + dir
