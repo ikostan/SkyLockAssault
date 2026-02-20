@@ -294,10 +294,10 @@ func test_ec_13_gamepad_axis_label() -> void:
 	# 1
 	ev.axis = JOY_AXIS_TRIGGER_RIGHT
 	ev.axis_value = 1.0
-	assert_eq(Settings.get_event_label(ev), "RT (+)", "Positive RT axis label correct")
+	assert_eq(Settings.get_event_label(ev), "Right Trigger (+)", "Positive RT axis label correct")
 	# 2
 	ev.axis_value = -1.0
-	assert_eq(Settings.get_event_label(ev), "RT (-)", "Negative RT axis label correct")
+	assert_eq(Settings.get_event_label(ev), "Right Trigger (-)", "Negative RT axis label correct")
 	# 3
 	ev.axis = JOY_AXIS_LEFT_X
 	ev.axis_value = 1.0
