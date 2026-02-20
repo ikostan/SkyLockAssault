@@ -125,7 +125,7 @@ func test_tc_sl_13() -> void:
 	assert_true(events[0] is InputEventKey)
 	assert_eq(events[0].physical_keycode, 87)
 	assert_true(events[1] is InputEventJoypadMotion)
-	assert_eq(events[1].axis, JOY_AXIS_TRIGGER_RIGHT)
+	assert_eq(events[1].axis, JOY_AXIS_RIGHT_Y)
 	assert_eq(events[1].axis_value, 1.0)
 	assert_eq(events[1].device, -1)
 	# Config upgraded
