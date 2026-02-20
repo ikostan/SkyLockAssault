@@ -259,11 +259,18 @@ func test_scn_15_joypad_labels_simplified() -> void:
 
 ## SCN-16 | Migration flag persists in config.
 func test_scn_16_migration_flag_persists() -> void:
+	# Run migration against TEST config
+	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	Settings._migrate_legacy_unbound_states()
-	var config := ConfigFile.new()
-	config.load(Settings.CONFIG_PATH)
-	assert_true(config.get_value("meta", Settings.LEGACY_MIGRATION_KEY, false))
-	FileAccess.open(Settings.CONFIG_PATH, FileAccess.WRITE).close()
+	Settings.save_input_mappings(TEST_CONFIG_PATH)
+
+	var cfg := ConfigFile.new()
+	cfg.load(TEST_CONFIG_PATH)
+
+	assert_true(
+		cfg.get_value("meta", Settings.LEGACY_MIGRATION_KEY, false),
+		"Migration flag must persist in test config"
+	)
 
 
 ## SCN-17 | Unbound critical stays unbound after restart simulation.
