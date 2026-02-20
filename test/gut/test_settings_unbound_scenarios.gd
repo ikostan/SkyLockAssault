@@ -209,7 +209,7 @@ func test_scn_08_legacy_menu_unbound_defaults() -> void:
 	assert_eq(menu_right_btn.text, "Right", "Menu Right should default to Right")
 	# Pause remains bound.
 	var pause_btn: InputRemapButton = menu.get_node("Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingPause/PauseInputRemap")
-	assert_eq(pause_btn.text, "Esc", "Pause remains Esc")
+	assert_eq(pause_btn.text, "Escape", "Pause remains Esc")
 	# Sample player bound.
 	assert_eq(speed_up_btn.text, "W", "Speed Up remains W")
 
