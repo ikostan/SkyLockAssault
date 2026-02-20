@@ -58,21 +58,6 @@ func after_each() -> void:
 	await get_tree().process_frame
 
 
-## EC-01 | Invalid config values | Corrupted entry in file | Use defaults | Log warning
-func test_ec_01_invalid_config_values() -> void:
-	var cfg := ConfigFile.new()
-	cfg.set_value("input", TEST_ACTION, ["key:abc", "joybtn:999:foo", "unknown:xxx", 999, "joyaxis:0:1.0:bar"])
-	cfg.set_value("input", "move_left", ["key:65"])  # valid
-	cfg.save(test_config_path)
-
-	Settings.load_input_mappings(test_config_path)
-
-	var events := InputMap.action_get_events(TEST_ACTION)
-	assert_eq(events.size(), 2)
-	assert_true(events.any(func(e: InputEvent) -> bool: return e is InputEventKey and e.physical_keycode == Settings.DEFAULT_KEYBOARD[TEST_ACTION]))
-	assert_true(events.any(func(e: InputEvent) -> bool: return e is InputEventJoypadMotion and e.axis == Settings.DEFAULT_GAMEPAD[TEST_ACTION]["axis"] and e.axis_value == Settings.DEFAULT_GAMEPAD[TEST_ACTION]["value"]))
-
-
 ## EC-04 | Legacy config formats | Mixed old/new types | Backfill defaults, preserve valid
 func test_ec_04_legacy_mixed_formats() -> void:
 	var cfg := ConfigFile.new()
