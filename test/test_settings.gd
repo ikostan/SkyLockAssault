@@ -230,8 +230,10 @@ func test_default_key_fallback() -> void:
 			assert_int(ev.physical_keycode).is_equal(KEY_W)
 			key_found = true
 		elif ev is InputEventJoypadMotion:
-			assert_int(ev.axis).is_equal(JOY_AXIS_RIGHT_Y)
-			assert_float(ev.axis_value).is_equal(1.0)
+			var d: Dictionary = Settings.DEFAULT_GAMEPAD["speed_up"]
+			assert_str(d.get("type", "")).is_equal("axis")
+			assert_int(ev.axis).is_equal(int(d["axis"]))
+			assert_float(ev.axis_value).is_equal(float(d["value"]))
 			assert_int(ev.device).is_equal(-1)
 			joy_found = true
 
