@@ -248,4 +248,4 @@ func finish_remap() -> void:
 # :rtype: void
 func update_button_text() -> void:
 	var ev: InputEvent = get_matching_event()
-	text = Settings.get_event_label(ev) if ev else "Unbound"
+	text = Settings.get_event_label(ev).strip_edges() if ev else "Unbound"
