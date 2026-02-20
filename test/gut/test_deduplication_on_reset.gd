@@ -36,6 +36,5 @@ func test_dedup_03_reset_with_duplicates() -> void:
 	reset_btn.pressed.emit()
 	await get_tree().process_frame
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
-	# var key_events: Array = events.filter(func(ev): return ev is InputEventKey)
-	var key_events: Array[InputEvent] = events.filter(func(ev: InputEvent) -> bool: return ev is InputEvent)
+	var key_events: Array[InputEvent] = events.filter(func(ev: InputEvent) -> bool: return ev is InputEventKey)
 	assert_eq(key_events.size(), 1, "Reset should dedup to single default key")
