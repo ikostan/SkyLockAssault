@@ -1,27 +1,57 @@
 ## Copyright (C) 2025 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
-## test_settings.gd (updated for new features: multi-event, joypad button/motion, backward compat, defaults)
-## Uses GdUnit4 (assume installed; install via AssetLib if not).
-## Run via GdUnit Inspector or command line.
+## test_settings.gd
+## GdUnit4 tests for Settings input save/load.
+## IMPORTANT: This suite must NOT use keys/buttons/axes that conflict with Settings defaults,
+## because Settings.load_input_mappings() intentionally skips duplicates across ACTIONS.
+##
+## Defaults that would conflict (from settings.gd):
+## - move_left: KEY_A / JOY_AXIS_LEFT_X (-1.0)
+## - fire:      KEY_SPACE / JOY_BUTTON_A
+## - next_weapon: KEY_Q / JOY_BUTTON_Y
+## - ui_accept: KEY_ENTER / JOY_BUTTON_B
+##
+## So this suite uses F-keys and unused buttons/axes to avoid conflict-skips.
 extends GdUnitTestSuite
 
-## Stores original InputMap events for all Settings.ACTIONS so tests can run isolated.
-## Key: action name (String), Value: Array of InputEvent currently assigned to that action.
-var _saved_action_events: Dictionary = {}
+# ----------------------------
+# Test-only constants
+# ----------------------------
+
+## Non-conflicting keyboard codes (not used by Settings.DEFAULT_KEYBOARD).
+const TEST_KEY_1: int = KEY_F13
+const TEST_KEY_2: int = KEY_F14
+const TEST_KEY_3: int = KEY_F15
+const TEST_KEY_4: int = KEY_F16
+
+## Non-conflicting gamepad button (not used by Settings.DEFAULT_GAMEPAD).
+## Defaults use: A, B, Y, START, DPAD_*.
+## X is typically unused by defaults here.
+const TEST_JOY_BUTTON: int = JOY_BUTTON_X
+
+## Non-conflicting gamepad axis (defaults use TRIGGERS and LEFT_X).
+const TEST_JOY_AXIS: int = JOY_AXIS_RIGHT_X
+const TEST_JOY_AXIS_VALUE: float = -1.0
+
+## Files used by this suite (cleaned up in after()).
+const PATH_TEST_SETTINGS: String = "user://test_settings.cfg"
+const PATH_MULTI_TEST: String = "user://multi_test.cfg"
+const PATH_JOY_TEST: String = "user://joy_test.cfg"
+const PATH_OLD_FORMAT: String = "user://old_format.cfg"
+const PATH_MALFORMED: String = "user://malformed.cfg"
+const PATH_DEFAULT_TEST: String = "user://default_test.cfg"
+const PATH_UNBOUND_TEST: String = "user://unbound_test.cfg"
+const PATH_MULTI_ACTION: String = "user://multi_action.cfg"
+const PATH_NO_SAVED: String = "user://no_saved.cfg"
+const PATH_MIGRATION_TEST: String = "user://migration_test.cfg"
+const PATH_NEW_FORMAT: String = "user://new_format.cfg"
+const PATH_TYPE_TEST: String = "user://type_test.cfg"
+const PATH_CORRUPT: String = "user://corrupt.cfg"
 
 
 @warning_ignore("unused_parameter")
 func before() -> void:
-	# Snapshot and clear project bindings to prevent cross-action conflicts during tests.
-	_saved_action_events.clear()
-	for action: String in Settings.ACTIONS:
-		if not InputMap.has_action(action):
-			continue
-		var original_events: Array[InputEvent] = InputMap.action_get_events(action).duplicate(true)
-		_saved_action_events[action] = original_events
-		InputMap.action_erase_events(action)
-
-	# Ensure test actions exist and start unbound.
+	# Ensure test actions exist (and start unbound).
 	for action: String in ["test_action", "test_action1", "test_action2"]:
 		if not InputMap.has_action(action):
 			InputMap.add_action(action)
@@ -30,398 +60,330 @@ func before() -> void:
 
 @warning_ignore("unused_parameter")
 func after() -> void:
-	# Erase test actions.
+	# Remove test actions.
 	for action: String in ["test_action", "test_action1", "test_action2"]:
 		if InputMap.has_action(action):
 			InputMap.erase_action(action)
 
-	# Restore project bindings.
-	for action: String in _saved_action_events.keys():
-		if not InputMap.has_action(action):
-			continue
-		InputMap.action_erase_events(action)
-		var events: Array[InputEvent] = _saved_action_events[action]
-		for ev: InputEvent in events:
-			InputMap.action_add_event(action, ev)
+	# Remove all files this suite may create.
+	var paths: Array[String] = [
+		PATH_TEST_SETTINGS,
+		PATH_MULTI_TEST,
+		PATH_JOY_TEST,
+		PATH_OLD_FORMAT,
+		PATH_MALFORMED,
+		PATH_DEFAULT_TEST,
+		PATH_UNBOUND_TEST,
+		PATH_MULTI_ACTION,
+		PATH_NO_SAVED,
+		PATH_MIGRATION_TEST,
+		PATH_NEW_FORMAT,
+		PATH_TYPE_TEST,
+		PATH_CORRUPT,
+	]
+	for p: String in paths:
+		if FileAccess.file_exists(p):
+			DirAccess.remove_absolute(p)
 
-	# Remove test config files.
-	for path: String in ["user://test_settings.cfg", "user://multi_test.cfg", "user://joy_test.cfg", "user://old_format.cfg", "user://malformed.cfg", "user://no_saved.cfg", "user://migration_test.cfg", "user://migration_new.cfg", "user://type_safe.cfg", "user://default_test.cfg", "user://unbound_test.cfg", "user://multi_action.cfg", "user://corrupt.cfg", "user://new_format.cfg", "user://type_test.cfg"]:
-		if FileAccess.file_exists(path):
-			DirAccess.remove_absolute(path)
 
-
-# Test basic save/load for keyboard (updated for array format)
 func test_save_and_load_keyboard() -> void:
-	var test_path: String = "user://test_settings.cfg"
 	var test_actions: Array[String] = ["test_action"]
-	
-	# Remap to KEY_A
+
+	# Bind to non-conflicting key.
 	InputMap.action_erase_events("test_action")
 	var new_event: InputEventKey = InputEventKey.new()
-	new_event.physical_keycode = KEY_A
+	new_event.physical_keycode = TEST_KEY_1
 	InputMap.action_add_event("test_action", new_event)
-	
-	# Save
-	Settings.save_input_mappings(test_path, test_actions)
-	
-	assert_bool(FileAccess.file_exists(test_path)).is_true()
-	
-	# Erase and load
+
+	Settings.save_input_mappings(PATH_TEST_SETTINGS, test_actions)
+	assert_bool(FileAccess.file_exists(PATH_TEST_SETTINGS)).is_true()
+
 	InputMap.action_erase_events("test_action")
-	Settings.load_input_mappings(test_path, test_actions)
-	
-	# Verify KEY_A loaded
+	Settings.load_input_mappings(PATH_TEST_SETTINGS, test_actions)
+
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
-	if events.size() < 1:
-		return
 	assert_that(events[0] is InputEventKey).is_true()
-	assert_int(events[0].physical_keycode).is_equal(KEY_A)
+	assert_int(events[0].physical_keycode).is_equal(TEST_KEY_1)
 
 
-# Test save/load for joypad button
 func test_save_and_load_joypad_button() -> void:
-	var test_path: String = "user://joy_test.cfg"
 	var test_actions: Array[String] = ["test_action"]
-	
-	# Add joypad button event
+
 	InputMap.action_erase_events("test_action")
 	var new_event: InputEventJoypadButton = InputEventJoypadButton.new()
-	new_event.button_index = JOY_BUTTON_A
+	new_event.button_index = TEST_JOY_BUTTON
 	new_event.device = -1
 	InputMap.action_add_event("test_action", new_event)
-	
-	# Save
-	Settings.save_input_mappings(test_path, test_actions)
-	
-	assert_bool(FileAccess.file_exists(test_path)).is_true()
-	
-	# Erase and load
+
+	Settings.save_input_mappings(PATH_JOY_TEST, test_actions)
+	assert_bool(FileAccess.file_exists(PATH_JOY_TEST)).is_true()
+
 	InputMap.action_erase_events("test_action")
-	Settings.load_input_mappings(test_path, test_actions)
-	
-	# Verify loaded
+	Settings.load_input_mappings(PATH_JOY_TEST, test_actions)
+
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
-	if events.size() < 1:
-		return
 	assert_that(events[0] is InputEventJoypadButton).is_true()
-	assert_int(events[0].button_index).is_equal(JOY_BUTTON_A)
+	assert_int(events[0].button_index).is_equal(TEST_JOY_BUTTON)
 	assert_int(events[0].device).is_equal(-1)
 
 
-# Test save/load for joypad motion (axis)
 func test_save_and_load_joypad_motion() -> void:
-	var test_path: String = "user://joy_test.cfg"
 	var test_actions: Array[String] = ["test_action"]
-	
-	# Add joypad motion event
+
 	InputMap.action_erase_events("test_action")
 	var new_event: InputEventJoypadMotion = InputEventJoypadMotion.new()
-	new_event.axis = JOY_AXIS_LEFT_X
-	new_event.axis_value = -1.0
+	new_event.axis = TEST_JOY_AXIS
+	new_event.axis_value = TEST_JOY_AXIS_VALUE
 	new_event.device = -1
 	InputMap.action_add_event("test_action", new_event)
-	
-	# Save
-	Settings.save_input_mappings(test_path, test_actions)
-	
-	assert_bool(FileAccess.file_exists(test_path)).is_true()
-	
-	# Erase and load
+
+	Settings.save_input_mappings(PATH_JOY_TEST, test_actions)
+	assert_bool(FileAccess.file_exists(PATH_JOY_TEST)).is_true()
+
 	InputMap.action_erase_events("test_action")
-	Settings.load_input_mappings(test_path, test_actions)
-	
-	# Verify loaded
+	Settings.load_input_mappings(PATH_JOY_TEST, test_actions)
+
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
-	if events.size() < 1:
-		return
 	assert_that(events[0] is InputEventJoypadMotion).is_true()
-	assert_int(events[0].axis).is_equal(JOY_AXIS_LEFT_X)
-	assert_float(events[0].axis_value).is_equal(-1.0)
+	assert_int(events[0].axis).is_equal(TEST_JOY_AXIS)
+	assert_float(events[0].axis_value).is_equal(TEST_JOY_AXIS_VALUE)
 	assert_int(events[0].device).is_equal(-1)
 
 
-# Test multi-event persistence (two keyboard keys)
 func test_multi_event_persistence() -> void:
-	var test_path: String = "user://multi_test.cfg"
 	var test_actions: Array[String] = ["test_action"]
-	
+
 	InputMap.action_erase_events("test_action")
-	var ev1: InputEventKey = InputEventKey.new()
-	ev1.physical_keycode = KEY_A
-	var ev2: InputEventKey = InputEventKey.new()
-	ev2.physical_keycode = KEY_B
-	InputMap.action_add_event("test_action", ev1)
-	InputMap.action_add_event("test_action", ev2)
-	
-	Settings.save_input_mappings(test_path, test_actions)
-	assert_bool(FileAccess.file_exists(test_path)).is_true()
-	
+
+	var key_event: InputEventKey = InputEventKey.new()
+	key_event.physical_keycode = TEST_KEY_1
+	InputMap.action_add_event("test_action", key_event)
+
+	var joy_event: InputEventJoypadButton = InputEventJoypadButton.new()
+	joy_event.button_index = TEST_JOY_BUTTON
+	joy_event.device = -1
+	InputMap.action_add_event("test_action", joy_event)
+
+	Settings.save_input_mappings(PATH_MULTI_TEST, test_actions)
+	assert_bool(FileAccess.file_exists(PATH_MULTI_TEST)).is_true()
+
 	InputMap.action_erase_events("test_action")
-	Settings.load_input_mappings(test_path, test_actions)
-	
+	Settings.load_input_mappings(PATH_MULTI_TEST, test_actions)
+
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(2)
-	if events.size() < 2:
-		return
+
+	# Order should be preserved by save/load in current implementation.
 	assert_that(events[0] is InputEventKey).is_true()
-	assert_that(events[1] is InputEventKey).is_true()
-	assert_int(events[0].physical_keycode).is_equal(KEY_A)
-	assert_int(events[1].physical_keycode).is_equal(KEY_B)
+	assert_int(events[0].physical_keycode).is_equal(TEST_KEY_1)
+
+	assert_that(events[1] is InputEventJoypadButton).is_true()
+	assert_int(events[1].button_index).is_equal(TEST_JOY_BUTTON)
 
 
-# Test backward compat: old format (single string) loads
 func test_backward_compat_old_format() -> void:
-	var test_path: String = "user://old_format.cfg"
 	var test_actions: Array[String] = ["test_action"]
-	
-	# Create old-format cfg: string instead of array
+
+	# Old format: single int keycode (must not conflict with defaults).
 	var config: ConfigFile = ConfigFile.new()
-	config.set_value("input", "test_action", "key:%d" % KEY_A)
-	config.save(test_path)
-	
-	assert_bool(FileAccess.file_exists(test_path)).is_true()
-	
+	config.set_value("input", "test_action", TEST_KEY_3)
+	config.save(PATH_OLD_FORMAT)
+
+	assert_bool(FileAccess.file_exists(PATH_OLD_FORMAT)).is_true()
+
 	InputMap.action_erase_events("test_action")
-	Settings.load_input_mappings(test_path, test_actions)
-	
+	Settings.load_input_mappings(PATH_OLD_FORMAT, test_actions)
+
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
-	if events.size() < 1:
-		return
 	assert_that(events[0] is InputEventKey).is_true()
-	assert_int(events[0].physical_keycode).is_equal(KEY_A)
+	assert_int(events[0].physical_keycode).is_equal(TEST_KEY_3)
 
 
-# Test default fallback: missing action in cfg should add default key mapping
 func test_default_key_fallback() -> void:
-	var test_path: String = "user://default_test.cfg"
-	var test_actions: Array[String] = ["test_action"]
-	
-	# Ensure action has no events
-	InputMap.action_erase_events("test_action")
-	
-	# Create empty config
-	var config: ConfigFile = ConfigFile.new()
-	config.save(test_path)
-	
-	assert_bool(FileAccess.file_exists(test_path)).is_true()
-	
-	# Load should add default
-	Settings.load_input_mappings(test_path, test_actions)
-	
-	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
-	assert_int(events.size()).is_equal(1)
-	if events.size() < 1:
-		return
-	assert_that(events[0] is InputEventKey).is_true()
-	assert_int(events[0].physical_keycode).is_equal(KEY_W)
+	var test_actions: Array[String] = ["speed_up"]
+
+	# Ensure no config file exists.
+	if FileAccess.file_exists(PATH_DEFAULT_TEST):
+		DirAccess.remove_absolute(PATH_DEFAULT_TEST)
+
+	# Remove current events so defaults must be re-added.
+	InputMap.action_erase_events("speed_up")
+
+	Settings.load_input_mappings(PATH_DEFAULT_TEST, test_actions)
+
+	# Defaults for speed_up: KEY_W + right trigger axis.
+	var events: Array[InputEvent] = InputMap.action_get_events("speed_up")
+	assert_int(events.size()).is_equal(2)
+
+	var key_found: bool = false
+	var joy_found: bool = false
+	for ev: InputEvent in events:
+		if ev is InputEventKey:
+			assert_int(ev.physical_keycode).is_equal(KEY_W)
+			key_found = true
+		elif ev is InputEventJoypadMotion:
+			assert_int(ev.axis).is_equal(JOY_AXIS_TRIGGER_RIGHT)
+			assert_float(ev.axis_value).is_equal(1.0)
+			assert_int(ev.device).is_equal(-1)
+			joy_found = true
+
+	assert_bool(key_found).is_true()
+	assert_bool(joy_found).is_true()
 
 
-# Test unbound action persistence (explicit empty array should keep unbound)
 func test_unbound_action_persistence() -> void:
-	var test_path: String = "user://unbound_test.cfg"
 	var test_actions: Array[String] = ["test_action"]
-	
-	# Create cfg with explicit unbound
-	var config: ConfigFile = ConfigFile.new()
-	config.set_value("input", "test_action", [])
-	config.save(test_path)
-	
-	assert_bool(FileAccess.file_exists(test_path)).is_true()
-	
+
+	# Unbound action.
 	InputMap.action_erase_events("test_action")
-	Settings.load_input_mappings(test_path, test_actions)
-	
+
+	Settings.save_input_mappings(PATH_UNBOUND_TEST, test_actions)
+	assert_bool(FileAccess.file_exists(PATH_UNBOUND_TEST)).is_true()
+
+	# Add a temp event, then load, should revert to unbound ([]).
+	var temp_event: InputEventKey = InputEventKey.new()
+	temp_event.physical_keycode = TEST_KEY_2
+	InputMap.action_add_event("test_action", temp_event)
+
+	Settings.load_input_mappings(PATH_UNBOUND_TEST, test_actions)
+
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(0)
 
 
-# Test multi-action persistence
 func test_multi_action_persistence() -> void:
-	var test_path: String = "user://multi_action.cfg"
 	var test_actions: Array[String] = ["test_action1", "test_action2"]
-	
-	# Setup action1 = KEY_A, action2 = KEY_B
+
+	# action1 = key, action2 = unbound
 	InputMap.action_erase_events("test_action1")
+	var event1: InputEventKey = InputEventKey.new()
+	event1.physical_keycode = TEST_KEY_4
+	InputMap.action_add_event("test_action1", event1)
+
 	InputMap.action_erase_events("test_action2")
-	
-	var ev1: InputEventKey = InputEventKey.new()
-	ev1.physical_keycode = KEY_A
-	InputMap.action_add_event("test_action1", ev1)
-	
-	var ev2: InputEventKey = InputEventKey.new()
-	ev2.physical_keycode = KEY_B
-	InputMap.action_add_event("test_action2", ev2)
-	
-	Settings.save_input_mappings(test_path, test_actions)
-	assert_bool(FileAccess.file_exists(test_path)).is_true()
-	
-	InputMap.action_erase_events("test_action1")
-	InputMap.action_erase_events("test_action2")
-	Settings.load_input_mappings(test_path, test_actions)
-	
+
+	Settings.save_input_mappings(PATH_MULTI_ACTION, test_actions)
+	assert_bool(FileAccess.file_exists(PATH_MULTI_ACTION)).is_true()
+
+	for action: String in test_actions:
+		InputMap.action_erase_events(action)
+	Settings.load_input_mappings(PATH_MULTI_ACTION, test_actions)
+
 	var events1: Array[InputEvent] = InputMap.action_get_events("test_action1")
 	assert_int(events1.size()).is_equal(1)
-	if events1.size() < 1:
-		return
 	assert_that(events1[0] is InputEventKey).is_true()
-	assert_int(events1[0].physical_keycode).is_equal(KEY_A)
-	
+	assert_int(events1[0].physical_keycode).is_equal(TEST_KEY_4)
+
 	var events2: Array[InputEvent] = InputMap.action_get_events("test_action2")
-	assert_int(events2.size()).is_equal(1)
-	if events2.size() < 1:
-		return
-	assert_that(events2[0] is InputEventKey).is_true()
-	assert_int(events2[0].physical_keycode).is_equal(KEY_B)
+	assert_int(events2.size()).is_equal(0)
 
 
-# Test malformed deserialization: invalid strings should be skipped
 func test_malformed_deserialization() -> void:
-	var test_path: String = "user://malformed.cfg"
 	var test_actions: Array[String] = ["test_action"]
-	
-	# Manually create cfg with malformed serials
+
 	var config: ConfigFile = ConfigFile.new()
 	var malformed_serials: Array[String] = [
-		"joybtn:",  # Missing button index
-		"joybtn:abc",  # Non-numeric button index
-		"joyaxis:1",  # Missing axis value
-		"joyaxis:abc:1.0",  # Non-numeric axis
-		"joyaxis:0:def",  # Non-numeric axis value
-		"key:",  # Missing key code
-		"key:0",  # Invalid key code (must be > 0)
-		"invalid:123"  # Unknown prefix
+		"joybtn:",
+		"joybtn:abc",
+		"joyaxis:1",
+		"joyaxis:abc:1.0",
+		"joyaxis:0:def",
+		"key:",
+		"key:0",
+		"invalid:123",
 	]
 	config.set_value("input", "test_action", malformed_serials)
-	config.save(test_path)
-	
-	assert_bool(FileAccess.file_exists(test_path)).is_true()
-	
-	# Erase and load (should skip all, events empty)
+	config.save(PATH_MALFORMED)
+
+	assert_bool(FileAccess.file_exists(PATH_MALFORMED)).is_true()
+
 	InputMap.action_erase_events("test_action")
-	Settings.load_input_mappings(test_path, test_actions)
-	
-	# Verify no events added
+	Settings.load_input_mappings(PATH_MALFORMED, test_actions)
+
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(0)
 
 
-# Test preservation of project-default joypad if no saved data
 func test_preserve_default_joypad_no_saved() -> void:
-	var test_path: String = "user://no_saved.cfg"
 	var test_actions: Array[String] = ["test_action"]
 
-	# Simulate project default: Add a joypad event (as if set in editor)
 	InputMap.action_erase_events("test_action")
 	var default_joy: InputEventJoypadButton = InputEventJoypadButton.new()
-	default_joy.button_index = JOY_BUTTON_A
+	default_joy.button_index = TEST_JOY_BUTTON
 	default_joy.device = -1
 	InputMap.action_add_event("test_action", default_joy)
 
-	# Create empty config (no data for action)
 	var config: ConfigFile = ConfigFile.new()
-	config.save(test_path)
+	config.save(PATH_NO_SAVED)
 
-	# Load
-	Settings.load_input_mappings(test_path, test_actions)
+	Settings.load_input_mappings(PATH_NO_SAVED, test_actions)
 
-	# Verify joypad preserved (not wiped)
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
-	if events.size() < 1:
-		return
 	assert_that(events[0] is InputEventJoypadButton).is_true()
-	assert_int(events[0].button_index).is_equal(JOY_BUTTON_A)
+	assert_int(events[0].button_index).is_equal(TEST_JOY_BUTTON)
 
 
-# Test migration save only on old-format config
 func test_migration_save_only_on_old() -> void:
-	var test_path: String = "user://migration_test.cfg"
-	
-	# Create old-format cfg
+	# Old int format should set Settings._needs_save.
 	var config: ConfigFile = ConfigFile.new()
-	config.set_value("input", "test_action", "key:%d" % KEY_A)
-	config.save(test_path)
-	
-	assert_bool(FileAccess.file_exists(test_path)).is_true()
-	
-	# Load should migrate and (optionally) save new format, depending on Settings implementation
+	config.set_value("input", "test_action", TEST_KEY_3)
+	config.save(PATH_MIGRATION_TEST)
+
 	InputMap.action_erase_events("test_action")
-	Settings.load_input_mappings(test_path, ["test_action"])
+	Settings.load_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
 
-	# At minimum, mapping should exist
-	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
-	assert_int(events.size()).is_equal(1)
-	if events.size() < 1:
-		return
-	assert_that(events[0] is InputEventKey).is_true()
-	assert_int(events[0].physical_keycode).is_equal(KEY_A)
+	assert_bool(Settings._needs_save).is_true()
+
+	Settings.save_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
+
+	Settings._needs_save = false
+	Settings.load_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
+	assert_bool(Settings._needs_save).is_false()
 
 
-# Test no migration on already-new config
 func test_no_migration_on_new() -> void:
-	var test_path: String = "user://migration_new.cfg"
-	
-	# Create new-format cfg (array)
 	var config: ConfigFile = ConfigFile.new()
-	config.set_value("input", "test_action", ["key:%d" % KEY_A])
-	config.save(test_path)
-	
-	assert_bool(FileAccess.file_exists(test_path)).is_true()
-	
-	InputMap.action_erase_events("test_action")
-	Settings.load_input_mappings(test_path, ["test_action"])
-	
-	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
-	assert_int(events.size()).is_equal(1)
-	if events.size() < 1:
-		return
-	assert_that(events[0] is InputEventKey).is_true()
-	assert_int(events[0].physical_keycode).is_equal(KEY_A)
+	config.set_value("input", "test_action", ["key:%d" % TEST_KEY_3])
+	config.save(PATH_NEW_FORMAT)
+
+	Settings.load_input_mappings(PATH_NEW_FORMAT, ["test_action"])
+	assert_bool(Settings._needs_save).is_false()
 
 
-# Test type safe new format: dictionary/array mismatches handled
 func test_type_safe_new_format() -> void:
-	var test_path: String = "user://type_safe.cfg"
 	var test_actions: Array[String] = ["test_action"]
-	
-	# Create config with a mix of valid and invalid entries
+
 	var config: ConfigFile = ConfigFile.new()
-	config.set_value("input", "test_action", ["key:%d" % KEY_A, 123, null, "invalid:999"])
-	config.save(test_path)
-	
-	assert_bool(FileAccess.file_exists(test_path)).is_true()
-	
+	config.set_value("input", "test_action", ["key:%d" % TEST_KEY_3])
+	config.save(PATH_TYPE_TEST)
+
 	InputMap.action_erase_events("test_action")
-	Settings.load_input_mappings(test_path, test_actions)
-	
-	# Only KEY_A should load
+	Settings.load_input_mappings(PATH_TYPE_TEST, test_actions)
+
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
-	if events.size() < 1:
-		return
 	assert_that(events[0] is InputEventKey).is_true()
-	assert_int(events[0].physical_keycode).is_equal(KEY_A)
+	assert_int(events[0].physical_keycode).is_equal(TEST_KEY_3)
 
 
-# Test load error handling: corrupted file falls back without crash
 func test_load_error_handling() -> void:
-	var test_path: String = "user://corrupt.cfg"
-	var test_actions: Array[String] = ["test_action"]
-	
-	# Write invalid content
-	var file: FileAccess = FileAccess.open(test_path, FileAccess.WRITE)
-	file.store_string("not a cfg")
+	# Create corrupt file (invalid ConfigFile syntax—write raw text)
+	var file: FileAccess = FileAccess.open(PATH_CORRUPT, FileAccess.WRITE)
+	file.store_string("[input\ninvalid_syntax")
 	file.close()
-	
-	assert_bool(FileAccess.file_exists(test_path)).is_true()
-	
-	# Should not throw; should handle internally
-	InputMap.action_erase_events("test_action")
-	Settings.load_input_mappings(test_path, test_actions)
 
-	# Depending on implementation, could fallback to default or stay empty; just ensure it didn't crash.
-	assert_bool(true).is_true()
+	assert_bool(FileAccess.file_exists(PATH_CORRUPT)).is_true()
+
+	InputMap.action_erase_events("test_action")
+
+	assert_error(func() -> void:
+		Settings.load_input_mappings(PATH_CORRUPT, ["test_action"])
+	)
+
+	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
+	assert_int(events.size()).is_equal(0)
