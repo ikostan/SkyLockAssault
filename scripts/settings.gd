@@ -745,8 +745,16 @@ static func get_event_label(ev: InputEvent) -> String:
 			JOY_AXIS_RIGHT_Y:
 				return "Right Stick (Down)" if ev.axis_value > 0 else "Right Stick (Up)"
 			JOY_AXIS_TRIGGER_LEFT:
+				Globals.log_message(
+						"Left Trigger dir: " + str(dir),
+						Globals.LogLevel.DEBUG
+					)
 				return ("Left Trigger" + dir).strip_edges()
 			JOY_AXIS_TRIGGER_RIGHT:
+				Globals.log_message(
+						"Right Trigger dir: " + str(dir),
+						Globals.LogLevel.DEBUG
+					)
 				return ("Right Trigger" + dir).strip_edges()
 			_:
 				# return "Axis " + str(ev.axis) + dir
