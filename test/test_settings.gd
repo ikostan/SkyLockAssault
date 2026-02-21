@@ -289,7 +289,6 @@ func test_multi_action_persistence() -> void:
 
 func test_malformed_deserialization() -> void:
 	var test_actions: Array[String] = ["test_action"]
-
 	var config: ConfigFile = ConfigFile.new()
 	var malformed_serials: Array[String] = [
 		"joybtn:",
@@ -391,8 +390,7 @@ func test_load_error_handling() -> void:
 	# FIXED: Chain the assertion to verify an error was pushed/logged
 	assert_error(func() -> void:
 		Settings.load_input_mappings(PATH_CORRUPT, ["test_action"])
-	).is_success() # Use .is_success() if the logic handles the error internally 
-				   # or .is_push_error() if it explicitly pushes an engine error.
+	).is_runtime_error() # This will pass if the ConfigFile parser throws its error
 
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(0)
