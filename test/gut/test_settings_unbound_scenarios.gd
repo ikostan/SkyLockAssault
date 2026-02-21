@@ -75,7 +75,12 @@ func test_scn_01_first_load_missing_defaults() -> void:
 	Settings.load_input_mappings(TEST_CONFIG_PATH)  # Non-existent path.
 	# InputMap: defaults added.
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
+	# 1. Assert the size
 	assert_eq(events.size(), 2, "Defaults: key + gamepad")
+	# 2. THE GUARD: Stop here if the above assertion failed
+	if events.size() < 2:
+		return
+	# 3. Now it is safe to access index [0]
 	var key_ev: InputEvent = events.filter(func(ev: InputEvent) -> bool: return ev is InputEventKey)[0]
 	assert_eq(key_ev.physical_keycode, DEFAULT_KEY_CODE)
 	var motion_ev: InputEvent = events.filter(func(ev: InputEvent) -> bool: return ev is InputEventJoypadMotion)[0]
