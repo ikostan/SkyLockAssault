@@ -193,7 +193,8 @@ func _input(event: InputEvent) -> void:
 	erase_old_event()
 	InputMap.action_add_event(action, new_event)
 	Globals.log_message(
-		"Remapped '%s' to '%s'" % [action, get_event_label(new_event)], Globals.LogLevel.DEBUG
+		"Remapped '%s' to '%s'" % [action, Settings.get_event_label(new_event)],
+		Globals.LogLevel.DEBUG
 	)
 	finish_remap()
 
@@ -247,32 +248,6 @@ func finish_remap() -> void:
 # :rtype: void
 func update_button_text() -> void:
 	var ev: InputEvent = get_matching_event()
-	text = get_event_label(ev) if ev else "Unbound"
-
-
-# Get display label for any event type (uses custom dicts only)
-# Get label for event (key/button/axis).
-# :param event: Input event.
-# :type event: InputEvent
-# :rtype: String
-func get_event_label(event: InputEvent) -> String:
-	if event is InputEventKey:
-		# FIX: Use physical_keycode for layout-agnostic labels (QWERTY-based).
-		# This replaces the invalid 'key_label' and ensures consistency with your dict lookups.
-		# OS.get_keycode_string() converts the enum (e.g., KEY_SPACE) to a string like "Space".
-		return KEY_LABELS.get(event.physical_keycode, OS.get_keycode_string(event.physical_keycode))
-
-	if event is InputEventJoypadButton:
-		return JOY_BUTTON_LABELS.get(event.button_index, "Button " + str(event.button_index))
-
-	if event is InputEventJoypadMotion:
-		var axis_labels: Dictionary = JOY_AXIS_LABELS.get(event.axis, {})
-		var dir_key: float = event.axis_value  # +1 or -1
-		return axis_labels.get(
-			dir_key,
-			(
-				JOY_AXIS_BASE_LABELS.get(event.axis, "Axis " + str(event.axis))
-				+ (" +" if dir_key > 0 else " -")
-			)
-		)
-	return "Unbound"
+	text = Settings.get_event_label(ev).strip_edges() if ev else "Unbound"
+	# Remove NBSP (common cause of “looks like a space” failures) + trim.
+	text = text.replace("\u00A0", " ").strip_edges()

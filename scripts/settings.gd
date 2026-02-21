@@ -13,7 +13,18 @@ const CONFIG_PATH: String = "user://settings.cfg"
 
 ## Critical actions that must be bound for playable game.
 const CRITICAL_ACTIONS: Array[String] = [
-	"fire", "speed_up", "speed_down", "move_left", "move_right", "next_weapon", "pause"
+	"fire",
+	"speed_up",
+	"speed_down",
+	"move_left",
+	"move_right",
+	"next_weapon",
+	"pause",
+	"ui_accept",
+	"ui_up",
+	"ui_down",
+	"ui_left",
+	"ui_right"
 ]
 
 const ACTIONS: Array[String] = [
@@ -47,8 +58,10 @@ const DEFAULT_KEYBOARD: Dictionary = {
 }
 # New: Default gamepad mappings (assumes Xbox layout; adjust if needed).
 const DEFAULT_GAMEPAD: Dictionary = {
-	"speed_up": {"type": "axis", "axis": JOY_AXIS_TRIGGER_RIGHT, "value": 1.0},  # Throttle up.
-	"speed_down": {"type": "axis", "axis": JOY_AXIS_TRIGGER_LEFT, "value": 1.0},  # Throttle down.
+	# "speed_up": {"type": "axis", "axis": JOY_AXIS_TRIGGER_RIGHT, "value": 1.0},  # Throttle up.
+	# "speed_down": {"type": "axis", "axis": JOY_AXIS_TRIGGER_LEFT, "value": 1.0},  # Throttle down.
+	"speed_up": {"type": "axis", "axis": JOY_AXIS_RIGHT_Y, "value": -1.0},  # Right Stick (Up)
+	"speed_down": {"type": "axis", "axis": JOY_AXIS_RIGHT_Y, "value": 1.0},  # Right Stick (Down)
 	"move_left": {"type": "axis", "axis": JOY_AXIS_LEFT_X, "value": -1.0},
 	"move_right": {"type": "axis", "axis": JOY_AXIS_LEFT_X, "value": 1.0},
 	"fire": {"type": "button", "button": JOY_BUTTON_A},
@@ -210,6 +223,7 @@ func serialize_event(ev: InputEvent) -> String:
 ## Loads input mappings from config, overriding project defaults only if saved.
 ## Handles various formats for backward compatibility and adds defaults if necessary.
 ## Proceeds even if no file to add defaults where events missing.
+## Skips adding deserialized event if it matches any existing in other actions (per device).
 ## :param path: Config file path (default: CONFIG_PATH).
 ## :type path: String
 ## :param actions: Actions to load (default: ACTIONS).
@@ -253,29 +267,115 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 							"Non-string item in array for action '" + action + "': skipped",
 							Globals.LogLevel.WARNING
 						)
-			elif value is int:
-				serialized_events = ["key:" + str(value)]  # Old int keycode—migrate
-				_needs_save = true
+
+			# ── Backward compatibility: Scalar string or int → single serialized ─────
 			elif value is String:
-				serialized_events = [value]  # Old string format
-				_needs_save = true
-			else:
-				Globals.log_message(
-					"Unexpected type for action '" + action + "': " + str(typeof(value)),
-					Globals.LogLevel.WARNING
-				)
+				serialized_events = [value]  # Treat as one serialized event
+			elif value is int:
+				serialized_events = ["key:" + str(value)]  # Legacy keycode scalar
 
+			# ── Deserialize and add ───────────────────────────────────────────────────
+			# Erase project defaults first (to avoid mixing with saved).
 			InputMap.action_erase_events(action)
-			for serialized: String in serialized_events:
-				_deserialize_and_add(action, serialized)
 
-	# ── SHARED DEFAULTS BACKFILL (DRY: used by _add_missing_defaults + _ensure_defaults_saved) ──
-	# Ensures EC-01, EC-04, EC-05 pass when load_input_mappings() called directly (tests).
-	# For corrupt/no-file: config empty → add defaults.
-	# Sets _needs_migration=true if added → triggers save in _ready() (first-run/repair).
-	# Idempotent with _ensure_defaults_saved().
-	if _add_missing_defaults(config):
-		_needs_save = true
+			for serialized: String in serialized_events:
+				var ev: InputEvent = deserialize_event(serialized)
+				if ev == null:
+					Globals.log_message(
+						"Invalid serialized event for " + action + ": " + serialized,
+						Globals.LogLevel.WARNING
+					)
+					continue
+
+				var already_present := false
+				for existing_ev in InputMap.action_get_events(action):
+					if events_match(existing_ev, ev):
+						already_present = true
+						break
+
+				if already_present:
+					Globals.log_message(
+						"Skipping intra-action duplicate for " + action, Globals.LogLevel.DEBUG
+					)
+					continue  # It's already in this action, skip to the next one
+
+				# ── NEW: Skip if duplicate in other actions (per device) ──────────────
+				# Prevents cross-action duplicates from corrupted config.
+				var conflicts: Array[String] = get_conflicting_actions(ev, action)
+				if not conflicts.is_empty():
+					Globals.log_message(
+						(
+							"Skipping duplicate event for "
+							+ action
+							+ " (conflicts: "
+							+ str(conflicts)
+							+ ")"
+						),
+						Globals.LogLevel.WARNING
+					)
+					#continue
+					# prefer the loaded mapping and remove it from conflicting actions
+					# (for the same device type), then mark _needs_save
+					_remove_event_from_conflicts(ev, conflicts)
+					_needs_save = true
+
+				InputMap.action_add_event(action, ev)
+
+	# ── Backfill missing defaults (after loading/erasing) ─────────────────────────
+	_needs_save = _add_missing_defaults(config) or _needs_save
+
+
+## Removes `event` from all actions listed in `conflicts`.
+## Used on load to preserve the loaded mapping and unbind duplicates elsewhere.
+## :param event: The event to remove from conflicting actions.
+## :param conflicts: Action names that currently contain the same event.
+## :rtype: void
+func _remove_event_from_conflicts(event: InputEvent, conflicts: Array[String]) -> void:
+	for other_action: String in conflicts:
+		var events: Array[InputEvent] = InputMap.action_get_events(other_action)
+		for existing: InputEvent in events:
+			if events_match(existing, event):
+				InputMap.action_erase_event(other_action, existing)
+				break
+
+
+## Deserializes a string back to InputEvent.
+## Handles "key:code", "joybtn:index:device", "joyaxis:axis:value:device".
+## :param serialized: The string to deserialize.
+## :type serialized: String
+## :rtype: InputEvent|null
+func deserialize_event(serialized: String) -> InputEvent:
+	var parts: PackedStringArray = serialized.split(":", true)
+	if parts.is_empty():
+		return null
+
+	match parts[0]:
+		"key":
+			if parts.size() == 2:
+				var code: int = parts[1].to_int()
+				if code > 0:
+					var ev: InputEventKey = InputEventKey.new()
+					ev.physical_keycode = code
+					return ev
+		"joybtn":
+			if parts.size() == 3:
+				var index: int = parts[1].to_int()
+				var device: int = parts[2].to_int()
+				var ev: InputEventJoypadButton = InputEventJoypadButton.new()
+				ev.button_index = index
+				ev.device = device
+				return ev
+		"joyaxis":
+			if parts.size() == 4:
+				var axis: int = parts[1].to_int()
+				var value: float = parts[2].to_float()
+				var device: int = parts[3].to_int()
+				var ev: InputEventJoypadMotion = InputEventJoypadMotion.new()
+				ev.axis = axis
+				ev.axis_value = value
+				ev.device = device
+				return ev
+	return null
 
 
 ## Deserializes a string to an InputEvent and adds it to the specified action.
@@ -378,6 +478,13 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			"Failed to load input config for save: " + str(err), Globals.LogLevel.ERROR
 		)
 		return
+
+	# Persist legacy migration flag for next runs/tests.
+	if (
+		Globals.has_meta(LEGACY_MIGRATION_KEY)
+		and bool(Globals.get_meta(LEGACY_MIGRATION_KEY)) == true
+	):
+		config.set_value("meta", LEGACY_MIGRATION_KEY, true)
 
 	for action: String in actions:
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
@@ -610,31 +717,44 @@ func _migrate_legacy_unbound_states() -> void:
 ## :rtype: String
 static func get_event_label(ev: InputEvent) -> String:
 	if ev is InputEventKey:
-		return OS.get_keycode_string(ev.physical_keycode)
+		# Prefer physical_keycode (layout-independent),
+		# but it can be 0 for project defaults/migration.
+		var code: int = int(ev.physical_keycode)
+		if code == 0:
+			code = int(ev.keycode)
+
+		# Migration / project-default case:
+		# physical_keycode == 0 but keycode is valid
+		# Avoid returning OS.get_keycode_string(0) == "" (blank label).
+		if code == 0:
+			return "Unbound"
+
+		return OS.get_keycode_string(code)
+
 	if ev is InputEventJoypadButton:
 		match ev.button_index:
 			JOY_BUTTON_A:
-				return "A / X"
+				return "A"
 			JOY_BUTTON_B:
-				return "B / Circle"
+				return "B"
 			JOY_BUTTON_X:
-				return "X / Square"
+				return "X"
 			JOY_BUTTON_Y:
-				return "Y / Triangle"
+				return "Y"
 			JOY_BUTTON_BACK:
-				return "Back / Share"
+				return "Back"
 			JOY_BUTTON_GUIDE:
-				return "Guide / PS"
+				return "Guide"
 			JOY_BUTTON_START:
-				return "Start / Options"
+				return "Start"
 			JOY_BUTTON_LEFT_STICK:
 				return "LS Press"
 			JOY_BUTTON_RIGHT_STICK:
 				return "RS Press"
 			JOY_BUTTON_LEFT_SHOULDER:
-				return "LB / L1"
+				return "LB"
 			JOY_BUTTON_RIGHT_SHOULDER:
-				return "RB / R1"
+				return "RB"
 			JOY_BUTTON_DPAD_UP:
 				return "D-Pad Up"
 			JOY_BUTTON_DPAD_DOWN:
@@ -657,9 +777,13 @@ static func get_event_label(ev: InputEvent) -> String:
 			JOY_AXIS_RIGHT_Y:
 				return "Right Stick (Down)" if ev.axis_value > 0 else "Right Stick (Up)"
 			JOY_AXIS_TRIGGER_LEFT:
-				return "LT" + dir
+				Globals.log_message("Left Trigger dir: " + str(dir), Globals.LogLevel.DEBUG)
+				return ("Left Trigger" + dir).strip_edges()
 			JOY_AXIS_TRIGGER_RIGHT:
-				return "RT" + dir
+				Globals.log_message("Right Trigger dir: " + str(dir), Globals.LogLevel.DEBUG)
+				return ("Right Trigger" + dir).strip_edges()
 			_:
-				return "Axis " + str(ev.axis) + dir
+				# return "Axis " + str(ev.axis) + dir
+				# normalize the non-trigger fallback line:
+				return ("Axis " + str(ev.axis) + dir).strip_edges()
 	return "Unknown"

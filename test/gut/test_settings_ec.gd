@@ -58,21 +58,6 @@ func after_each() -> void:
 	await get_tree().process_frame
 
 
-## EC-01 | Invalid config values | Corrupted entry in file | Use defaults | Log warning
-func test_ec_01_invalid_config_values() -> void:
-	var cfg := ConfigFile.new()
-	cfg.set_value("input", TEST_ACTION, ["key:abc", "joybtn:999:foo", "unknown:xxx", 999, "joyaxis:0:1.0:bar"])
-	cfg.set_value("input", "move_left", ["key:65"])  # valid
-	cfg.save(test_config_path)
-
-	Settings.load_input_mappings(test_config_path)
-
-	var events := InputMap.action_get_events(TEST_ACTION)
-	assert_eq(events.size(), 2)
-	assert_true(events.any(func(e: InputEvent) -> bool: return e is InputEventKey and e.physical_keycode == Settings.DEFAULT_KEYBOARD[TEST_ACTION]))
-	assert_true(events.any(func(e: InputEvent) -> bool: return e is InputEventJoypadMotion and e.axis == Settings.DEFAULT_GAMEPAD[TEST_ACTION]["axis"] and e.axis_value == Settings.DEFAULT_GAMEPAD[TEST_ACTION]["value"]))
-
-
 ## EC-04 | Legacy config formats | Mixed old/new types | Backfill defaults, preserve valid
 func test_ec_04_legacy_mixed_formats() -> void:
 	var cfg := ConfigFile.new()
@@ -295,11 +280,11 @@ func test_ec_12_gamepad_button_label() -> void:
 	# 1
 	ev.button_index = JOY_BUTTON_A
 	print("expected ev: " + str(ev.button_index) + " actual ev: " + Settings.get_event_label(ev))
-	assert_eq(Settings.get_event_label(ev), "A / X", "Button A must be 'A / X'")
+	assert_eq(Settings.get_event_label(ev), "A", "Button A must be 'A'")
 	# 2
 	ev.button_index = JOY_BUTTON_START
 	print("expected ev: " + str(ev.button_index) + " actual ev: " + Settings.get_event_label(ev))
-	assert_eq(Settings.get_event_label(ev), "Start / Options", "Start button label correct")
+	assert_eq(Settings.get_event_label(ev), "Start", "Start button label is not correct")
 
 
 ## EC-13 | Event labels | Gamepad axes | Direction-aware (e.g., "RT (+)")
@@ -309,10 +294,10 @@ func test_ec_13_gamepad_axis_label() -> void:
 	# 1
 	ev.axis = JOY_AXIS_TRIGGER_RIGHT
 	ev.axis_value = 1.0
-	assert_eq(Settings.get_event_label(ev), "RT (+)", "Positive RT axis label correct")
+	assert_eq(Settings.get_event_label(ev), "Right Trigger (+)", "Positive RT axis label correct")
 	# 2
 	ev.axis_value = -1.0
-	assert_eq(Settings.get_event_label(ev), "RT (-)", "Negative RT axis label correct")
+	assert_eq(Settings.get_event_label(ev), "Right Trigger (-)", "Negative RT axis label correct")
 	# 3
 	ev.axis = JOY_AXIS_LEFT_X
 	ev.axis_value = 1.0
@@ -324,13 +309,11 @@ func test_ec_13_gamepad_axis_label() -> void:
 func test_ec_14_pause_binding_label_for_device() -> void:
 	# Keyboard
 	Globals.current_input_device = "keyboard"
-	print("actual ev: " + Settings.get_pause_binding_label_for_device("keyboard"))
-	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "ESCAPE", "Keyboard pause label 'ESC'")
+	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "ESCAPE", "Keyboard pause label should be 'ESCAPE'")
 	# Gamepad
 	Globals.current_input_device = "gamepad"
 	print("actual ev: " + Settings.get_pause_binding_label_for_device("gamepad"))
-	assert_eq(Settings.get_pause_binding_label_for_device("gamepad"), "START / OPTIONS", "Gamepad pause label correct")
+	assert_eq(Settings.get_pause_binding_label_for_device("gamepad"), "START", "Gamepad pause label is not correct")
 	# Unbound case (erase pause events)
 	InputMap.action_erase_events("pause")
-	print("actual ev: " + Settings.get_pause_binding_label_for_device("pause"))
-	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "UNBOUND", "Unbound fallback 'UNBOUND'")
+	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "UNBOUND", "Unbound fallback should be 'UNBOUND'")

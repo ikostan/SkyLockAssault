@@ -16,7 +16,7 @@ jobs:
         uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # Pinned to SHA for v5.0.0 (latest as of 2025-10-28)
 
       - name: "Run Trivy vulnerability scanner"
-        uses: "aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8"  # Pinned to SHA for v0.33.1 (latest as of 2025-10-28)
+        uses: "aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284"  # Pinned to SHA for v0.34.0
         env:  # Suppress version check notification
           TRIVY_SKIP_VERSION_CHECK: 'true'
         with:
@@ -31,7 +31,7 @@ jobs:
           ignore-unfixed: true  # Ignore vulns without fixes available
 
       - name: "Upload Trivy scan results to GitHub Security tab"
-        uses: "github/codeql-action/upload-sarif@45cbd0c69e560cd9e7cd7f8c32362050c9b7ded2"  # Pinned to SHA for v4.32.2 (latest stable as of 2026-02-09)
+        uses: "github/codeql-action/upload-sarif@ef618feace3c4838ae42b239ab86e8fb46437508"  # Pinned to SHA for v4.32.2
         if: always()  # Upload even if scan fails
         with:
           sarif_file: 'trivy-results.sarif'

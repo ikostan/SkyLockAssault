@@ -76,6 +76,7 @@ func _ready() -> void:
 				Globals.LogLevel.DEBUG
 			)
 	# Menu is loaded
+	_grab_initial_focus()
 	Globals.log_message("Gameplay Settings menu loaded.", Globals.LogLevel.DEBUG)
 
 
@@ -178,6 +179,10 @@ func _on_gameplay_back_button_pressed() -> void:
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 			hidden_menu_found = true
+			# When returning from Gameplay Settings menu → restore focus to the
+			# Gameplay Settings button in Options
+			if prev_menu is OptionsMenu:
+				(prev_menu as OptionsMenu).grab_focus_on_gameplay_settings_button()
 
 	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
 	if os_wrapper.has_feature("web") and js_window:
@@ -301,3 +306,16 @@ func _on_change_difficulty_js(args: Array) -> void:
 		"JS difficulty callback called with valid value: " + str(value), Globals.LogLevel.DEBUG
 	)
 	_on_difficulty_value_changed(value)
+
+
+## Grabs initial focus on the difficulty slider using the global helper.
+## Ensures the slider is focused when the menu opens.
+## Falls back to other controls if needed.
+##
+## :rtype: void
+func _grab_initial_focus() -> void:
+	Globals.ensure_initial_focus(
+		difficulty_slider,
+		[difficulty_slider, gameplay_back_button, gameplay_reset_button],
+		"Gameplay Settings Menu"
+	)
