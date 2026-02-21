@@ -17,13 +17,18 @@ var button: InputRemapButton
 ## Per-test: Setup button with listening.
 func before_each() -> void:
 	InputMap.action_erase_events(TEST_ACTION)
-	InputMap.add_action(TEST_ACTION)
+	if not InputMap.has_action(TEST_ACTION):
+		InputMap.add_action(TEST_ACTION)
 	button = InputRemapButton.new()
 	button.action = TEST_ACTION
 	button.current_device = InputRemapButton.DeviceType.KEYBOARD
 	add_child_autofree(button)
 	button.button_pressed = true
 	button._on_pressed()
+
+
+func after_each() -> void:
+	InputMap.action_erase_events(TEST_ACTION)
 
 
 ## DEDUP-07 | Device switch mid-remap → input on new device, no dup on old | Correct event, no extras
