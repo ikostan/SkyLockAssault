@@ -21,7 +21,7 @@ const TEST_KEY_4: int = KEY_F16
 ## Use a rarely-bound button instead.
 const TEST_JOY_BUTTON: int = JOY_BUTTON_PADDLE1
 
-## Non-conflicting gamepad axis (defaults use TRIGGERS and LEFT_X).
+## Non-conflicting gamepad axis (defaults use RIGHT_Y and LEFT_X; RIGHT_X is free).
 const TEST_JOY_AXIS: int = JOY_AXIS_RIGHT_X
 const TEST_JOY_AXIS_VALUE: float = -1.0
 
