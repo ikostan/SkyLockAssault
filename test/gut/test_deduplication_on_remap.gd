@@ -17,6 +17,8 @@ var button: InputRemapButton
 ## Per-test: Setup button with existing event.
 func before_each() -> void:
 	InputMap.action_erase_events(TEST_ACTION)
+	if not InputMap.has_action(TEST_ACTION):
+		InputMap.add_action(TEST_ACTION)
 	InputMap.add_action(TEST_ACTION)
 	var existing_ev: InputEventKey = InputEventKey.new()
 	existing_ev.physical_keycode = KEY_W
