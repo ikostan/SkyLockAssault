@@ -29,6 +29,10 @@ func before_each() -> void:
 	add_child_autofree(button)
 
 
+func after_each() -> void:
+	InputMap.action_erase_events(TEST_ACTION)
+
+
 ## DEDUP-02 | Remap to same existing event → no duplicate | Size remains 1
 func test_dedup_02_remap_to_existing() -> void:
 	button.button_pressed = true
