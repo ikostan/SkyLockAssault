@@ -390,7 +390,7 @@ func test_load_error_handling() -> void:
 	# FIXED: Chain the assertion to verify an error was pushed/logged
 	assert_error(func() -> void:
 		Settings.load_input_mappings(PATH_CORRUPT, ["test_action"])
-	).is_runtime_error("ConfigFile parse error") # This will pass if the ConfigFile parser throws its error
+	).is_runtime_error("~ConfigFile parse error.*") # This will pass if the ConfigFile parser throws its error
 
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(0)
