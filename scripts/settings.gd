@@ -287,6 +287,20 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 					)
 					continue
 
+				# --- ADD THIS NEW SHIT HERE ---
+				var already_present := false
+				for existing_ev in InputMap.action_get_events(action):
+					if events_match(existing_ev, ev):
+						already_present = true
+						break
+
+				if already_present:
+					Globals.log_message(
+						"Skipping intra-action duplicate for " + action, Globals.LogLevel.DEBUG
+					)
+					continue  # It's already in this action, skip to the next one
+				# ------------------------------
+
 				# ── NEW: Skip if duplicate in other actions (per device) ──────────────
 				# Prevents cross-action duplicates from corrupted config.
 				var conflicts: Array[String] = get_conflicting_actions(ev, action)
