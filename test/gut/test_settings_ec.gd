@@ -309,7 +309,6 @@ func test_ec_13_gamepad_axis_label() -> void:
 func test_ec_14_pause_binding_label_for_device() -> void:
 	# Keyboard
 	Globals.current_input_device = "keyboard"
-	print("actual ev: " + Settings.get_pause_binding_label_for_device("keyboard"))
 	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "ESCAPE", "Keyboard pause label should be 'ESCAPE'")
 	# Gamepad
 	Globals.current_input_device = "gamepad"
@@ -317,5 +316,4 @@ func test_ec_14_pause_binding_label_for_device() -> void:
 	assert_eq(Settings.get_pause_binding_label_for_device("gamepad"), "START", "Gamepad pause label is not correct")
 	# Unbound case (erase pause events)
 	InputMap.action_erase_events("pause")
-	print("actual ev: " + Settings.get_pause_binding_label_for_device("pause"))
 	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "UNBOUND", "Unbound fallback should be 'UNBOUND'")
