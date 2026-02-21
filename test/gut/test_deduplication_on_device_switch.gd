@@ -42,4 +42,5 @@ func test_dedup_07_device_switch_mid_remap() -> void:
 	button._input(gp_ev)
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
 	assert_eq(events.size(), 1, "Switch mid-remap should add only new, no dup")
-	assert_true(events[0] is InputEventJoypadButton)
+	if events.size() > 0:
+		assert_true(events[0] is InputEventJoypadButton, "Event should be InputEventJoypadButton, not keyboard event")
