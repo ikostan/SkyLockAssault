@@ -25,6 +25,8 @@ func before_each() -> void:
 func after_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
+	# Restore fire bindings so subsequent tests see clean state.
+	Settings.load_input_mappings(Settings.CONFIG_PATH, [TEST_ACTION])
 
 
 ## DEDUP-01 | Config with duplicate keys → load dedups | Unique events in InputMap
