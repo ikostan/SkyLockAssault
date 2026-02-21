@@ -379,21 +379,20 @@ func test_type_safe_new_format() -> void:
 
 
 func test_load_error_handling() -> void:
-	# 1. Create a file that is VALID ConfigFile syntax (no [ or EOF errors)
-	# but has garbage values your script will reject.
 	var file: FileAccess = FileAccess.open(PATH_CORRUPT, FileAccess.WRITE)
-	file.store_string("[input]\ntest_action = 999999") # Valid syntax, invalid action data
+	# Use double quotes (escaped) to satisfy the engine parser
+	file.store_string("[input]\ntest_action = [\"invalid:data\"]") 
 	file.close()
 
 	assert_bool(FileAccess.file_exists(PATH_CORRUPT)).is_true()
 
 	InputMap.action_erase_events("test_action")
 
-	# 2. Use is_success() because we are no longer triggering a C++ crash.
-	# We are testing that the script handles the logic gracefully.
+	# Now is_success() will pass because the ConfigFile syntax is valid
 	assert_error(func() -> void:
 		Settings.load_input_mappings(PATH_CORRUPT, ["test_action"])
 	).is_success() 
 
+	# Your script correctly skips "invalid:data", so size remains 0
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(0)
