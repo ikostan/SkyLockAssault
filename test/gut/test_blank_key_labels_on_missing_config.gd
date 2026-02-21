@@ -7,8 +7,8 @@
 ## If the project-default InputEventKey has physical_keycode == 0 (but keycode set),
 ## InputRemapButton.get_event_label() returns "" and the Key Mapping menu shows an empty value.
 ##
-## Keyboard tests are expected to FAIL until a fix is implemented.
-## Gamepad tests are EXPECTED TO PASS (they are regression guards) because the blank-label bug
+## Keyboard tests should PASS once the fix is in place; failures indicate regression.
+## Gamepad tests are regression guards because the blank-label bug
 ## is specific to keyboard physical_keycode usage.
 ##
 ## References:
