@@ -17,11 +17,16 @@ var button: InputRemapButton
 ## Per-test: Setup button.
 func before_each() -> void:
 	InputMap.action_erase_events(TEST_ACTION)
-	InputMap.add_action(TEST_ACTION)
+	if not InputMap.has_action(TEST_ACTION):
+		InputMap.add_action(TEST_ACTION)
 	button = InputRemapButton.new()
 	button.action = TEST_ACTION
 	button.current_device = InputRemapButton.DeviceType.KEYBOARD
 	add_child_autofree(button)
+
+
+func after_each() -> void:
+	InputMap.action_erase_events(TEST_ACTION)
 
 
 ## DEDUP-06 | Rapid remaps to same event → dedup, size 1
