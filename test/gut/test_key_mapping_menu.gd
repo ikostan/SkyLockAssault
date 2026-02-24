@@ -179,4 +179,4 @@ func test_ui_05_label_update_after_remapping() -> void:
 	await get_tree().process_frame
 	
 	assert_false(left_btn.listening, "Listening should stop after valid gamepad input")
-	assert_eq(left_btn.text, "Misc 1", "Gamepad label should update to new button (from JOY_BUTTON_LABELS)")
+	assert_eq(left_btn.text, "Button 15", "Gamepad label should update to new button (from JOY_BUTTON_LABELS)")
