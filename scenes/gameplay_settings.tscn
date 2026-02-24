@@ -25,7 +25,7 @@ corner_radius_top_left = 10
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
-shadow_size = 3
+shadow_size = 5
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_yonr6"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
@@ -49,9 +49,21 @@ corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
 shadow_size = 5
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_koe27"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avrtf"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_a0ntd"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5utqr"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
 
 [node name="GameplaySettings" type="Control"]
 layout_mode = 3
@@ -133,6 +145,8 @@ custom_minimum_size = Vector2(130, 51)
 layout_mode = 2
 size_flags_horizontal = 10
 size_flags_vertical = 1
+focus_neighbor_bottom = NodePath("../../BtnContainer/BackButton")
+focus_next = NodePath("../../BtnContainer/BackButton")
 theme = ExtResource("3_avrtf")
 theme_override_styles/grabber_area = SubResource("StyleBoxFlat_6yhol")
 theme_override_styles/grabber_area_highlight = SubResource("StyleBoxFlat_y4xfu")
@@ -160,8 +174,11 @@ theme_override_constants/separation = 5
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+focus_neighbor_left = NodePath("../ResetButton")
+focus_neighbor_top = NodePath("../../DifficultyLevelContainer/DifficultyHSlider")
+focus_next = NodePath("../ResetButton")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
-theme_override_colors/font_focus_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_pressed_color = Color(0.9607843, 0.9607843, 0.050980393, 0.9019608)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("2_avrtf")
@@ -169,15 +186,18 @@ theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_yonr6")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_koe27")
 theme_override_styles/hover = SubResource("StyleBoxFlat_a0ntd")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_koe27")
+theme_override_styles/focus = SubResource("StyleBoxFlat_avrtf")
 text = "{BACK}"
 
 [node name="ResetButton" type="Button" parent="Panel/Controls/BtnContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+focus_neighbor_top = NodePath("../../DifficultyLevelContainer/DifficultyHSlider")
+focus_neighbor_right = NodePath("../BackButton")
+focus_next = NodePath("../../DifficultyLevelContainer/DifficultyHSlider")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
-theme_override_colors/font_focus_color = Color(1, 0.19607843, 0.2784314, 0.98039216)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_pressed_color = Color(0.9607843, 0.9607843, 0.050980393, 0.9019608)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("2_avrtf")
@@ -185,5 +205,5 @@ theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_yonr6")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_koe27")
 theme_override_styles/hover = SubResource("StyleBoxFlat_a0ntd")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_a0ntd")
+theme_override_styles/focus = SubResource("StyleBoxFlat_5utqr")
 text = "{RESET}"

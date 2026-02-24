@@ -83,7 +83,7 @@ func test_joypad_motion_label_display() -> void:
 	button.current_device = InputRemapButton.DeviceType.GAMEPAD
 	button._ready()
 	
-	assert_str(button.text).is_equal("Left Stick Left")
+	assert_str(button.text).is_equal("Left Stick (Left)")
 	
 	InputMap.erase_action("test_action")
 
@@ -196,7 +196,7 @@ func test_remap_joypad_motion() -> void:
 	sim_event.axis_value = 1.0  # Down (abs > 0.5)
 	button._input(sim_event)
 	
-	assert_str(button.text).is_equal("Left Stick Down")
+	assert_str(button.text).is_equal("Left Stick (Down)")
 	assert_bool(button.listening).is_false()
 	
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
@@ -234,7 +234,7 @@ func test_fallback_labels() -> void:
 	axis_event.axis_value = -1.0
 	InputMap.action_add_event("test_action", axis_event)
 	button.update_button_text()
-	assert_str(button.text).is_equal("Left Trigger -")
+	assert_str(button.text).is_equal("Left Trigger (-)")
 	
 	InputMap.erase_action("test_action")
 

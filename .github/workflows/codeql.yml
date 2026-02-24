@@ -57,7 +57,7 @@ jobs:
         run: |
           bash ./.github/scripts/patch_index_js.sh "export/web"
       - name: "Initialize CodeQL"
-        uses: "github/codeql-action/init@v4.32.2"
+        uses: "github/codeql-action/init@v4.32.3"
         with:
           # yamllint disable rule:quoted-strings
           languages: ${{ matrix.language }}
@@ -69,10 +69,10 @@ jobs:
           debug: "false"
 
       - name: "Autobuild (optional for JS but included for completeness)"
-        uses: "github/codeql-action/autobuild@v4.32.2"
+        uses: "github/codeql-action/autobuild@v4.32.3"
 
       - name: "Perform CodeQL Analysis"
-        uses: "github/codeql-action/analyze@v4.32.2"
+        uses: "github/codeql-action/analyze@v4.32.3"
 
       - name: "Post-scan summary (optional)"
         if: "always()"  # Run even if previous steps fail
