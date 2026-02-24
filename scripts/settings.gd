@@ -380,7 +380,11 @@ func deserialize_event(serialized: String) -> InputEvent:
 				return ev
 		"joyaxis":
 			if parts.size() == 4:
-				if not parts[1].is_valid_int() or not parts[2].is_valid_float() or not parts[3].is_valid_int():
+				if (
+					not parts[1].is_valid_int()
+					or not parts[2].is_valid_float()
+					or not parts[3].is_valid_int()
+				):
 					return null
 				var axis: int = parts[1].to_int()
 				var value: float = parts[2].to_float()
