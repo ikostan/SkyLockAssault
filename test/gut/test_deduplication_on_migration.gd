@@ -32,6 +32,11 @@ func before_each() -> void:
 func after_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
+
+	InputMap.action_erase_events(TEST_ACTION)
+	if Globals.has_meta(Settings.LEGACY_MIGRATION_KEY):
+		Globals.remove_meta(Settings.LEGACY_MIGRATION_KEY)
+
 	await get_tree().process_frame
 
 
