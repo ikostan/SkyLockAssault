@@ -361,6 +361,8 @@ func deserialize_event(serialized: String) -> InputEvent:
 	match parts[0]:
 		"key":
 			if parts.size() == 2:
+				if not parts[1].is_valid_int():
+					return null
 				var code: int = parts[1].to_int()
 				if code > 0:
 					var ev: InputEventKey = InputEventKey.new()
@@ -368,6 +370,8 @@ func deserialize_event(serialized: String) -> InputEvent:
 					return ev
 		"joybtn":
 			if parts.size() == 3:
+				if not parts[1].is_valid_int() or not parts[2].is_valid_int():
+					return null
 				var index: int = parts[1].to_int()
 				var device: int = parts[2].to_int()
 				var ev: InputEventJoypadButton = InputEventJoypadButton.new()
@@ -376,6 +380,8 @@ func deserialize_event(serialized: String) -> InputEvent:
 				return ev
 		"joyaxis":
 			if parts.size() == 4:
+				if not parts[1].is_valid_int() or not parts[2].is_valid_float() or not parts[3].is_valid_int():
+					return null
 				var axis: int = parts[1].to_int()
 				var value: float = parts[2].to_float()
 				var device: int = parts[3].to_int()
