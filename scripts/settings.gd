@@ -350,51 +350,41 @@ func _remove_event_from_conflicts(event: InputEvent, conflicts: Array[String]) -
 
 ## Deserializes a string back to InputEvent.
 ## Handles "key:code", "joybtn:index:device", "joyaxis:axis:value:device".
-## :param serialized: The string to deserialize.
-## :type serialized: String
-## :rtype: InputEvent|null
 func deserialize_event(serialized: String) -> InputEvent:
+	var res: InputEvent = null
 	var parts: PackedStringArray = serialized.split(":", true)
+
 	if parts.is_empty():
 		return null
 
 	match parts[0]:
 		"key":
-			if parts.size() == 2:
-				if not parts[1].is_valid_int():
-					return null
+			if parts.size() == 2 and parts[1].is_valid_int():
 				var code: int = parts[1].to_int()
 				if code > 0:
-					var ev: InputEventKey = InputEventKey.new()
+					var ev := InputEventKey.new()
 					ev.physical_keycode = code
-					return ev
+					res = ev
 		"joybtn":
-			if parts.size() == 3:
-				if not parts[1].is_valid_int() or not parts[2].is_valid_int():
-					return null
-				var index: int = parts[1].to_int()
-				var device: int = parts[2].to_int()
-				var ev: InputEventJoypadButton = InputEventJoypadButton.new()
-				ev.button_index = index
-				ev.device = device
-				return ev
+			if parts.size() == 3 and parts[1].is_valid_int() and parts[2].is_valid_int():
+				var ev := InputEventJoypadButton.new()
+				ev.button_index = parts[1].to_int()
+				ev.device = parts[2].to_int()
+				res = ev
 		"joyaxis":
-			if parts.size() == 4:
-				if (
-					not parts[1].is_valid_int()
-					or not parts[2].is_valid_float()
-					or not parts[3].is_valid_int()
-				):
-					return null
-				var axis: int = parts[1].to_int()
-				var value: float = parts[2].to_float()
-				var device: int = parts[3].to_int()
-				var ev: InputEventJoypadMotion = InputEventJoypadMotion.new()
-				ev.axis = axis
-				ev.axis_value = value
-				ev.device = device
-				return ev
-	return null
+			if (
+				parts.size() == 4
+				and parts[1].is_valid_int()
+				and parts[2].is_valid_float()
+				and parts[3].is_valid_int()
+			):
+				var ev := InputEventJoypadMotion.new()
+				ev.axis = parts[1].to_int()
+				ev.axis_value = parts[2].to_float()
+				ev.device = parts[3].to_int()
+				res = ev
+
+	return res
 
 
 ## Deserializes a string to an InputEvent and adds it to the specified action.
