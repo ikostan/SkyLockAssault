@@ -245,6 +245,15 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			Globals.LogLevel.INFO
 		)
 
+	# NEW: Restore migration metadata
+	if config.has_section_key("meta", LEGACY_MIGRATION_KEY):
+		var migrated: bool = config.get_value("meta", LEGACY_MIGRATION_KEY, false)
+		if migrated:
+			Globals.set_meta(LEGACY_MIGRATION_KEY, true)
+			Globals.log_message(
+				"Restored legacy migration flag from config.", Globals.LogLevel.DEBUG
+			)
+
 	for action: String in actions:
 		var has_saved: bool = config.has_section_key("input", action)
 		if has_saved:
