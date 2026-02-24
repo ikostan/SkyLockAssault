@@ -43,6 +43,9 @@ const PATH_CORRUPT: String = "user://corrupt.cfg"
 
 @warning_ignore("unused_parameter")
 func before() -> void:
+	# Reset global singleton state for determinism
+	Settings._needs_save = false
+	
 	# Ensure test actions exist (and start unbound).
 	for action: String in ["test_action", "test_action1", "test_action2"]:
 		if not InputMap.has_action(action):
@@ -52,6 +55,9 @@ func before() -> void:
 
 @warning_ignore("unused_parameter")
 func after() -> void:
+	# Reset state to avoid leaking into other test suites
+	Settings._needs_save = false
+
 	# Remove test actions.
 	for action: String in ["test_action", "test_action1", "test_action2"]:
 		if InputMap.has_action(action):
