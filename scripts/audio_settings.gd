@@ -196,6 +196,17 @@ func _ready() -> void:
 			# Expose callbacks for Reset button
 			_audio_reset_cb = _register_js_callback("_on_audio_reset_js", "audioResetPressed")
 			_sync_dom_ui()
+	
+	# Define which controls are part of this menu to prevent focus stealing
+	var menu_controls: Array[Control] = [
+		master_slider, mute_master, 
+		music_slider, mute_music,
+		sfx_slider, mute_sfx,
+		weapon_slider, mute_weapon,audio_back_button,
+		rotor_slider, mute_rotor,
+		audio_back_button, audio_reset_button
+	]
+	Globals.ensure_initial_focus(master_slider, menu_controls, "Audio Settings")
 
 
 ## Sync DOM overlays from Godot UI.
@@ -693,6 +704,19 @@ func _on_audio_back_button_pressed() -> void:
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 			hidden_menu_found = true
+			# NEW: When returning from Key Mapping menu → focus the Key Mapping button in Options
+			if prev_menu is OptionsMenu:
+				(prev_menu as OptionsMenu).grab_focus_on_audio_settings_button()
+			# NEW: When returning to Main Menu → focus Start Game button
+			elif prev_menu.name == "Panel" or prev_menu is Panel:  # ← this is the fix
+				var start_button: Button = prev_menu.get_node_or_null("VBoxContainer/StartButton")
+				if is_instance_valid(start_button):
+					# Triple-deferred to be 100% sure after visibility change
+					start_button.call_deferred("call_deferred", "call_deferred", "grab_focus")
+					Globals.log_message(
+						"Focus restored to Start Game button (triple deferred)",
+						Globals.LogLevel.DEBUG
+					)
 	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
 	if os_wrapper.has_feature("web") and js_window:
 		if js_bridge_wrapper:  # Only toggle DOM if bridge is available (for eval)

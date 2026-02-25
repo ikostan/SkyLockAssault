@@ -3,7 +3,12 @@
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_ami7e"]
 [ext_resource type="Script" uid="uid://8hd1kvmb5bt1" path="res://scripts/volume_slider.gd" id="2_ami7e"]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_xvh43"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xvh43"]
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+shadow_size = 5
 
 [node name="Music" type="Control"]
 layout_mode = 3
@@ -47,7 +52,7 @@ offset_bottom = 24.0
 size_flags_horizontal = 10
 tooltip_text = "Mute Music"
 focus_neighbor_left = NodePath("../HSlider")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_xvh43")
+theme_override_styles/focus = SubResource("StyleBoxFlat_xvh43")
 button_pressed = true
 icon_alignment = 2
 vertical_icon_alignment = 0
