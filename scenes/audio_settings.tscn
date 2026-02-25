@@ -119,6 +119,7 @@ layout_mode = 2
 focus_neighbor_top = NodePath("../../BtnContainer/AudioBackButton")
 focus_neighbor_bottom = NodePath("../Music")
 focus_next = NodePath("../Music")
+focus_previous = NodePath("../../BtnContainer/AudioBackButton")
 
 [node name="Music" parent="Panel/VolumeControls" instance=ExtResource("4_a0ntd")]
 layout_mode = 2
