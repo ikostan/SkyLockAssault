@@ -117,16 +117,16 @@ horizontal_alignment = 1
 [node name="Master" parent="Panel/VolumeControls" instance=ExtResource("3_koe27")]
 layout_mode = 2
 focus_neighbor_top = NodePath("../../BtnContainer/AudioBackButton")
-focus_neighbor_bottom = NodePath("../Music")
-focus_next = NodePath("../Music")
+focus_neighbor_bottom = NodePath("../Music/HSlider")
+focus_next = NodePath("../Music/HSlider")
 focus_previous = NodePath("../../BtnContainer/AudioBackButton")
 
 [node name="Music" parent="Panel/VolumeControls" instance=ExtResource("4_a0ntd")]
 layout_mode = 2
-focus_neighbor_top = NodePath("../Master")
+focus_neighbor_top = NodePath("../Master/Mute")
 focus_neighbor_bottom = NodePath("../SFX")
 focus_next = NodePath("../SFX")
-focus_previous = NodePath("../Master")
+focus_previous = NodePath("../Master/Mute")
 
 [node name="SFX" parent="Panel/VolumeControls" instance=ExtResource("5_w6v8r")]
 layout_mode = 2

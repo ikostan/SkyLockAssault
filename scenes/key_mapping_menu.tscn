@@ -178,7 +178,8 @@ theme_override_constants/separation = 90
 
 [node name="PlayerKeyMap" type="VBoxContainer" parent="Panel/Options/KeyMapContainer"]
 layout_mode = 2
-theme_override_constants/separation = 20
+size_flags_vertical = 0
+theme_override_constants/separation = 8
 
 [node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/PlayerKeyMap"]
 layout_mode = 2
@@ -324,7 +325,7 @@ action = "next_weapon"
 
 [node name="MenuKeyMap" type="VBoxContainer" parent="Panel/Options/KeyMapContainer"]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 8
 
 [node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
 layout_mode = 2
@@ -461,12 +462,56 @@ text = "{MENU=RIGHT:}"
 layout_mode = 2
 focus_neighbor_left = NodePath("../../../PlayerKeyMap/KeyMappingNextWeapon/NextWeaponInputRemap")
 focus_neighbor_top = NodePath("../../KeyMappingMenuLeft/MenuLeftInputRemap")
-focus_neighbor_bottom = NodePath("../../../../BtnContainer/ControlResetButton")
-focus_next = NodePath("../../../../BtnContainer/ControlsBackButton")
+focus_neighbor_bottom = NodePath("../../KeyMappingMenuNext/MenuNextInputRemap")
+focus_next = NodePath("../../KeyMappingMenuNext/MenuNextInputRemap")
 focus_previous = NodePath("../../KeyMappingMenuLeft/MenuLeftInputRemap")
 theme_override_font_sizes/font_size = 18
 script = ExtResource("2_5b0ek")
 action = "ui_right"
+
+[node name="KeyMappingMenuNext" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
+layout_mode = 2
+tooltip_text = "Key mapping for menu navigation \"move right\" button"
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuNext"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 18
+text = "{MENU=NEXT:}"
+
+[node name="MenuNextInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuNext"]
+layout_mode = 2
+focus_neighbor_left = NodePath("../../../PlayerKeyMap/KeyMappingNextWeapon/NextWeaponInputRemap")
+focus_neighbor_top = NodePath("../../KeyMappingMenuLeft/MenuLeftInputRemap")
+focus_neighbor_bottom = NodePath("../../KeyMappingMenuPrev/MenuPrevInputRemap")
+focus_next = NodePath("../../KeyMappingMenuPrev/MenuPrevInputRemap")
+focus_previous = NodePath("../../KeyMappingMenuRight/MenuRightInputRemap")
+theme_override_font_sizes/font_size = 18
+script = ExtResource("2_5b0ek")
+action = "ui_focus_next"
+
+[node name="KeyMappingMenuPrev" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
+layout_mode = 2
+tooltip_text = "Key mapping for menu navigation \"move right\" button"
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuPrev"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 18
+text = "{MENU=PREV:}"
+
+[node name="MenuPrevInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuPrev"]
+layout_mode = 2
+focus_neighbor_left = NodePath("../../../PlayerKeyMap/KeyMappingNextWeapon/NextWeaponInputRemap")
+focus_neighbor_top = NodePath("../../KeyMappingMenuNext/MenuNextInputRemap")
+focus_neighbor_bottom = NodePath("../../../../BtnContainer/ControlResetButton")
+focus_next = NodePath("../../../../BtnContainer/ControlsBackButton")
+focus_previous = NodePath("../../KeyMappingMenuNext/MenuNextInputRemap")
+theme_override_font_sizes/font_size = 18
+script = ExtResource("2_5b0ek")
+action = "ui_focus_prev"
 
 [node name="BtnContainer" type="HBoxContainer" parent="Panel/Options"]
 layout_mode = 2
@@ -499,10 +544,10 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 tooltip_text = "Reset button"
 focus_neighbor_left = NodePath("../ControlsBackButton")
-focus_neighbor_top = NodePath("../../KeyMapContainer/MenuKeyMap/KeyMappingMenuRight/MenuRightInputRemap")
+focus_neighbor_top = NodePath("../../KeyMapContainer/MenuKeyMap/KeyMappingMenuPrev/MenuPrevInputRemap")
 focus_neighbor_right = NodePath("../ControlsBackButton")
 focus_next = NodePath("../ControlsBackButton")
-focus_previous = NodePath("../ControlsBackButton")
+focus_previous = NodePath("../../KeyMapContainer/MenuKeyMap/KeyMappingMenuPrev/MenuPrevInputRemap")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
 theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
