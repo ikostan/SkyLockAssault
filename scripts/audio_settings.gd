@@ -196,15 +196,22 @@ func _ready() -> void:
 			# Expose callbacks for Reset button
 			_audio_reset_cb = _register_js_callback("_on_audio_reset_js", "audioResetPressed")
 			_sync_dom_ui()
-	
+
 	# Define which controls are part of this menu to prevent focus stealing
 	var menu_controls: Array[Control] = [
-		master_slider, mute_master, 
-		music_slider, mute_music,
-		sfx_slider, mute_sfx,
-		weapon_slider, mute_weapon,audio_back_button,
-		rotor_slider, mute_rotor,
-		audio_back_button, audio_reset_button
+		master_slider,
+		mute_master,
+		music_slider,
+		mute_music,
+		sfx_slider,
+		mute_sfx,
+		weapon_slider,
+		mute_weapon,
+		audio_back_button,
+		rotor_slider,
+		mute_rotor,
+		audio_back_button,
+		audio_reset_button
 	]
 	Globals.ensure_initial_focus(master_slider, menu_controls, "Audio Settings")
 
