@@ -228,12 +228,16 @@ func _process(_delta: float) -> void:
 func _update_label_colors() -> void:
 	var yellow := Color("f5f50d")
 	var white := Color("ffffff")
-	
+
 	# Check each row: if either the slider OR the mute button has focus, turn yellow
-	master_label.modulate = yellow if (master_slider.has_focus() or mute_master.has_focus()) else white
+	master_label.modulate = (
+		yellow if (master_slider.has_focus() or mute_master.has_focus()) else white
+	)
 	music_label.modulate = yellow if (music_slider.has_focus() or mute_music.has_focus()) else white
 	sfx_label.modulate = yellow if (sfx_slider.has_focus() or mute_sfx.has_focus()) else white
-	weapon_label.modulate = yellow if (weapon_slider.has_focus() or mute_weapon.has_focus()) else white
+	weapon_label.modulate = (
+		yellow if (weapon_slider.has_focus() or mute_weapon.has_focus()) else white
+	)
 	rotor_label.modulate = yellow if (rotor_slider.has_focus() or mute_rotor.has_focus()) else white
 
 
@@ -833,10 +837,12 @@ func _handle_slider_gui_input(
 	sfx_dialog: AcceptDialog
 ) -> void:
 	# Keep existing mouse check
-	var is_mouse_click: bool = event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	var is_mouse_click: bool = (
+		event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	)
 	# ADD: Check for keyboard/joypad "Accept" button
 	var is_ui_accept: bool = event.is_action_pressed("ui_accept")
-	
+
 	if is_mouse_click or is_ui_accept:
 		if master_muted:
 			master_dialog.popup_centered()
@@ -870,7 +876,9 @@ func _handle_mute_gui_input(
 	master_dialog: AcceptDialog,
 	sfx_dialog: AcceptDialog
 ) -> void:
-	var is_mouse_click: bool = event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	var is_mouse_click: bool = (
+		event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	)
 	var is_ui_accept: bool = event.is_action_pressed("ui_accept")
 
 	if is_mouse_click or is_ui_accept:
