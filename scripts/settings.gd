@@ -779,8 +779,8 @@ static func get_event_label(ev: InputEvent) -> String:
 		var key_name: String = OS.get_keycode_string(code)
 		if modifiers.is_empty():
 			return key_name
-		else:
-			return "+".join(modifiers) + "+" + key_name
+		
+		return "+".join(modifiers) + "+" + key_name
 
 	if ev is InputEventJoypadButton:
 		match ev.button_index:
