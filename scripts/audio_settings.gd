@@ -207,7 +207,6 @@ func _ready() -> void:
 		mute_sfx,
 		weapon_slider,
 		mute_weapon,
-		audio_back_button,
 		rotor_slider,
 		mute_rotor,
 		audio_back_button,
