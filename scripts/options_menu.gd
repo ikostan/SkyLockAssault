@@ -174,7 +174,6 @@ func grab_focus_on_audio_settings_button() -> void:
 	)
 
 
-
 func _grab_first_button_focus() -> void:
 	## Finds the first visible/enabled Button in the container and hands it
 	## to the centralized focus helper. The helper will decide whether to
