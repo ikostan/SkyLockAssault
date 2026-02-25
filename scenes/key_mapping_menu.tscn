@@ -471,7 +471,7 @@ action = "ui_right"
 
 [node name="KeyMappingMenuNext" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
 layout_mode = 2
-tooltip_text = "Key mapping for menu navigation \"move right\" button"
+tooltip_text = "Key mapping for menu navigation \"focus next\" button."
 theme_override_constants/separation = 8
 
 [node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuNext"]
@@ -493,7 +493,7 @@ action = "ui_focus_next"
 
 [node name="KeyMappingMenuPrev" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
 layout_mode = 2
-tooltip_text = "Key mapping for menu navigation \"move right\" button"
+tooltip_text = "Key mapping for menu navigation \"focus prev\" button."
 theme_override_constants/separation = 8
 
 [node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuPrev"]
