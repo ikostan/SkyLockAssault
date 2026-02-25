@@ -58,7 +58,7 @@ const DEFAULT_KEYBOARD: Dictionary = {
 	"ui_right": KEY_RIGHT,
 	"ui_accept": KEY_ENTER,
 	"ui_focus_next": KEY_TAB,
-	"ui_focus_prev": {"keycode": KEY_TAB, "shift": true}, # Store as a sub-dictionary
+	"ui_focus_prev": {"keycode": KEY_TAB, "shift": true},  # Store as a sub-dictionary
 }
 # New: Default gamepad mappings (assumes Xbox layout; adjust if needed).
 const DEFAULT_GAMEPAD: Dictionary = {
@@ -150,14 +150,14 @@ func _add_missing_defaults(config: ConfigFile) -> bool:
 		if not has_keyboard and DEFAULT_KEYBOARD.has(action) and not explicitly_unbound_keyboard:
 			var def: Variant = DEFAULT_KEYBOARD[action]
 			var nev: InputEventKey = InputEventKey.new()
-			
+
 			if def is Dictionary:
 				nev.physical_keycode = def["keycode"]
 				nev.shift_pressed = def.get("shift", false)
-				nev.ctrl_pressed = def.get("ctrl", false) # Matches your serialization format
+				nev.ctrl_pressed = def.get("ctrl", false)  # Matches your serialization format
 			else:
 				nev.physical_keycode = def
-				
+
 			InputMap.action_add_event(action, nev)
 			changed = true
 			Globals.log_message(
@@ -224,8 +224,10 @@ func is_event_bound(event: InputEvent) -> bool:
 func serialize_event(ev: InputEvent) -> String:
 	if ev is InputEventKey:
 		var s: String = "key:" + str(ev.physical_keycode)
-		if ev.shift_pressed: s += ":shift"
-		if ev.ctrl_pressed: s += ":ctrl"
+		if ev.shift_pressed:
+			s += ":shift"
+		if ev.ctrl_pressed:
+			s += ":ctrl"
 		return s
 
 	if ev is InputEventJoypadButton:
@@ -380,8 +382,10 @@ func deserialize_event(serialized: String) -> InputEvent:
 				var ev := InputEventKey.new()
 				ev.physical_keycode = parts[1].to_int()
 				# Check if modifiers were appended to the string
-				if "shift" in parts: ev.shift_pressed = true
-				if "ctrl" in parts: ev.ctrl_pressed = true
+				if "shift" in parts:
+					ev.shift_pressed = true
+				if "ctrl" in parts:
+					ev.ctrl_pressed = true
 				return ev
 		"joybtn":
 			if parts.size() == 3 and parts[1].is_valid_int() and parts[2].is_valid_int():
@@ -586,14 +590,16 @@ func events_match(a: InputEvent, b: InputEvent) -> bool:
 		return false
 	if a.get_class() != b.get_class():
 		return false
-	
+
 	if a is InputEventKey:
 		# FIXED: Must compare modifiers to distinguish between Tab and Shift+Tab
-		return a.physical_keycode == b.physical_keycode and \
-			   a.shift_pressed == b.shift_pressed and \
-			   a.ctrl_pressed == b.ctrl_pressed and \
-			   a.alt_pressed == b.alt_pressed
-			
+		return (
+			a.physical_keycode == b.physical_keycode
+			and a.shift_pressed == b.shift_pressed
+			and a.ctrl_pressed == b.ctrl_pressed
+			and a.alt_pressed == b.alt_pressed
+		)
+
 	if a is InputEventJoypadButton:
 		return a.button_index == b.button_index and a.device == b.device
 	if a is InputEventJoypadMotion:
@@ -756,15 +762,20 @@ func _migrate_legacy_unbound_states() -> void:
 static func get_event_label(ev: InputEvent) -> String:
 	if ev is InputEventKey:
 		var modifiers: Array[String] = []
-		if ev.ctrl_pressed: modifiers.append("Ctrl")
-		if ev.alt_pressed: modifiers.append("Alt")
-		if ev.shift_pressed: modifiers.append("Shift")
-		if ev.meta_pressed: modifiers.append("Meta")
+		if ev.ctrl_pressed:
+			modifiers.append("Ctrl")
+		if ev.alt_pressed:
+			modifiers.append("Alt")
+		if ev.shift_pressed:
+			modifiers.append("Shift")
+		if ev.meta_pressed:
+			modifiers.append("Meta")
 		# Prefer physical_keycode (layout-independent),
 		# but it can be 0 for project defaults/migration.
 		var code: int = int(ev.physical_keycode) if ev.physical_keycode != 0 else int(ev.keycode)
-		if code == 0: return "Unbound"
-	
+		if code == 0:
+			return "Unbound"
+
 		var key_name: String = OS.get_keycode_string(code)
 		if modifiers.is_empty():
 			return key_name

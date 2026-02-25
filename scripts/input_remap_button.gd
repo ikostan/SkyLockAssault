@@ -138,7 +138,10 @@ func _input(event: InputEvent) -> void:
 	# Device-specific filtering
 	if current_device == DeviceType.KEYBOARD and not event is InputEventKey:
 		return
-	if current_device == DeviceType.GAMEPAD and not (event is InputEventJoypadButton or event is InputEventJoypadMotion):
+	if (
+		current_device == DeviceType.GAMEPAD
+		and not (event is InputEventJoypadButton or event is InputEventJoypadMotion)
+	):
 		return
 
 	var new_event: InputEvent = null
@@ -179,17 +182,17 @@ func _input(event: InputEvent) -> void:
 		if is_instance_valid(km_menu) and km_menu.has_method("show_conflict_dialog"):
 			km_menu.show_conflict_dialog(self, new_event.duplicate(), conflicts)
 			get_viewport().set_input_as_handled()
-			return # Wait for user to confirm or cancel via dialog
+			return  # Wait for user to confirm or cancel via dialog
 
 	# ── APPLY MAPPING ──
 	erase_old_event()
 	InputMap.action_add_event(action, new_event)
-	
+
 	Globals.log_message(
 		"Remapped '%s' to '%s'" % [action, Settings.get_event_label(new_event)],
 		Globals.LogLevel.DEBUG
 	)
-	
+
 	finish_remap()
 
 
