@@ -66,6 +66,12 @@ var _audio_reset_cb: Variant
 @onready var sfx_warning_dialog: AcceptDialog = $SFXWarningDialog
 @onready var audio_back_button: Button = $Panel/BtnContainer/AudioBackButton
 @onready var audio_reset_button: Button = $Panel/BtnContainer/AudioResetButton
+# Labels
+@onready var master_label: Label = $Panel/VolumeControls/Master/MasterLabel
+@onready var music_label: Label = $Panel/VolumeControls/Music/MusicLabel
+@onready var sfx_label: Label = $Panel/VolumeControls/SFX/SFXLabel
+@onready var weapon_label: Label = $Panel/VolumeControls/SFXWeapon/SFXWeaponLabel
+@onready var rotor_label: Label = $Panel/VolumeControls/SFXRotors/SFXRotorsLabel
 
 
 func _ready() -> void:
@@ -213,6 +219,22 @@ func _ready() -> void:
 		audio_reset_button
 	]
 	Globals.ensure_initial_focus(master_slider, menu_controls, "Audio Settings")
+
+
+func _process(_delta: float) -> void:
+	_update_label_colors()
+
+
+func _update_label_colors() -> void:
+	var yellow := Color("f5f50d")
+	var white := Color("ffffff")
+	
+	# Check each row: if either the slider OR the mute button has focus, turn yellow
+	master_label.modulate = yellow if (master_slider.has_focus() or mute_master.has_focus()) else white
+	music_label.modulate = yellow if (music_slider.has_focus() or mute_music.has_focus()) else white
+	sfx_label.modulate = yellow if (sfx_slider.has_focus() or mute_sfx.has_focus()) else white
+	weapon_label.modulate = yellow if (weapon_slider.has_focus() or mute_weapon.has_focus()) else white
+	rotor_label.modulate = yellow if (rotor_slider.has_focus() or mute_rotor.has_focus()) else white
 
 
 ## Sync DOM overlays from Godot UI.

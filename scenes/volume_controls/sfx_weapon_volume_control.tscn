@@ -20,7 +20,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 tooltip_text = "SFX Weapon Volum Control"
 
-[node name="SFXWeapon" type="Label" parent="."]
+[node name="SFXWeaponLabel" type="Label" parent="."]
 layout_mode = 0
 offset_top = 3.0
 offset_right = 99.0

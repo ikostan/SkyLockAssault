@@ -4,7 +4,6 @@
 [ext_resource type="Script" uid="uid://8hd1kvmb5bt1" path="res://scripts/volume_slider.gd" id="1_sfbgc"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_56yif"]
-bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
 corner_radius_top_left = 20
 corner_radius_top_right = 20
 corner_radius_bottom_right = 20
