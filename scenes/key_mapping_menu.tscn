@@ -483,7 +483,7 @@ text = "{MENU=NEXT:}"
 [node name="MenuNextInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuNext"]
 layout_mode = 2
 focus_neighbor_left = NodePath("../../../PlayerKeyMap/KeyMappingNextWeapon/NextWeaponInputRemap")
-focus_neighbor_top = NodePath("../../KeyMappingMenuLeft/MenuLeftInputRemap")
+focus_neighbor_top = NodePath("../../KeyMappingMenuRight/MenuRightInputRemap")
 focus_neighbor_bottom = NodePath("../../KeyMappingMenuPrev/MenuPrevInputRemap")
 focus_next = NodePath("../../KeyMappingMenuPrev/MenuPrevInputRemap")
 focus_previous = NodePath("../../KeyMappingMenuRight/MenuRightInputRemap")
