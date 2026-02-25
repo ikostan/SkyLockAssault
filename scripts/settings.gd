@@ -561,6 +561,7 @@ func reset_to_defaults(device_type: String) -> void:
 			if def is Dictionary:
 				nev.physical_keycode = def["keycode"]
 				nev.shift_pressed = def.get("shift", false)
+				nev.ctrl_pressed = def.get("ctrl", false)
 			else:
 				nev.physical_keycode = def
 			InputMap.action_add_event(action, nev)
