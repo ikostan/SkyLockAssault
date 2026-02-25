@@ -832,7 +832,12 @@ func _handle_slider_gui_input(
 	master_dialog: AcceptDialog,
 	sfx_dialog: AcceptDialog
 ) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+	# Keep existing mouse check
+	var is_mouse_click: bool = event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	# ADD: Check for keyboard/joypad "Accept" button
+	var is_ui_accept: bool = event.is_action_pressed("ui_accept")
+	
+	if is_mouse_click or is_ui_accept:
 		if master_muted:
 			master_dialog.popup_centered()
 			master_warning_shown = true
@@ -865,7 +870,10 @@ func _handle_mute_gui_input(
 	master_dialog: AcceptDialog,
 	sfx_dialog: AcceptDialog
 ) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+	var is_mouse_click: bool = event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	var is_ui_accept: bool = event.is_action_pressed("ui_accept")
+
+	if is_mouse_click or is_ui_accept:
 		if master_muted:
 			master_dialog.popup_centered()
 			master_warning_shown = true
