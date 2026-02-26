@@ -28,9 +28,9 @@ jobs:
           wget https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip
           unzip v9.5.0.zip -d addons
           mv addons/Gut-9.5.0/addons/gut addons/gut
-      - name: "Import Resources"
+      - name: "Initialize Project and UIDs"
         run: |
-          ./godot --headless --path . --import --quit
+          ./godot --headless --editor --quit --path .
       - name: "Run GUT Tests"
         continue-on-error: false  # Explicit no continue on error (default, but for clarity).
         run: |

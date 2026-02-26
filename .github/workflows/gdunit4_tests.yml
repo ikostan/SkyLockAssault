@@ -29,9 +29,9 @@ jobs:
           unzip v6.0.0.zip -d addons
           mv addons/gdUnit4-6.0.0/addons/gdUnit4 addons/gdUnit4
           rm -rf addons/gdUnit4-6.0.0
-      - name: "Import Resources"
+      - name: "Initialize Project and UIDs"
         run: |
-          ./godot --headless --path . --import --quit
+          ./godot --headless --editor --quit --path .
       - name: "Run GDUnit4 Tests"
         run: |
           ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
