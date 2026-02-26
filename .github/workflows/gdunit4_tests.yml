@@ -36,7 +36,7 @@ jobs:
         run: |
           ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
             --ignoreHeadlessMode \
-            --add res://test
+            --add res://test/gdunit4
       - name: "Find Latest Report Directory"
         id: find_report
         run: |
