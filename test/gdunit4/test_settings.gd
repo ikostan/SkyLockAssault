@@ -303,7 +303,8 @@ func test_malformed_deserialization() -> void:
 		"joyaxis:abc:1.0",
 		"joyaxis:0:def",
 		"key:",
-		"key:0",
+		# Change the expectations in test_settings.gd to account for the fact that key:0 is now a valid (though conflicting) mapping
+		# "key:0", 
 		"invalid:123",
 	]
 	config.set_value("input", "test_action", malformed_serials)
