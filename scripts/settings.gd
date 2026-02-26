@@ -1,9 +1,9 @@
 ## Copyright (C) 2025 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
-# settings.gd
-# Input settings singleton: Loads/saves InputMap events to preserve custom mappings.
-# Supports keys, joypad buttons, and joypad axes (serialized).
-# Autoload as "Settings".
+## settings.gd
+## Input settings singleton: Loads/saves InputMap events to preserve custom mappings.
+## Supports keys, joypad buttons, and joypad axes (serialized).
+## Autoload as "Settings".
 
 extends Node
 
@@ -11,7 +11,7 @@ extends Node
 const LEGACY_MIGRATION_KEY: String = "settings_migrated_v2"
 const CONFIG_PATH: String = "user://settings.cfg"
 
-## Critical actions that must be bound for playable game.
+# Critical actions that must be bound for playable game.
 const CRITICAL_ACTIONS: Array[String] = [
 	"fire",
 	"speed_up",
@@ -40,6 +40,8 @@ const ACTIONS: Array[String] = [
 	"ui_left",
 	"ui_right",
 	"ui_accept",
+	"ui_focus_next",
+	"ui_focus_prev",
 ]
 # New: Default keyboard mappings.
 const DEFAULT_KEYBOARD: Dictionary = {
@@ -55,11 +57,11 @@ const DEFAULT_KEYBOARD: Dictionary = {
 	"ui_left": KEY_LEFT,
 	"ui_right": KEY_RIGHT,
 	"ui_accept": KEY_ENTER,
+	"ui_focus_next": KEY_TAB,
+	"ui_focus_prev": {"keycode": KEY_TAB, "shift": true},  # Store as a sub-dictionary
 }
 # New: Default gamepad mappings (assumes Xbox layout; adjust if needed).
 const DEFAULT_GAMEPAD: Dictionary = {
-	# "speed_up": {"type": "axis", "axis": JOY_AXIS_TRIGGER_RIGHT, "value": 1.0},  # Throttle up.
-	# "speed_down": {"type": "axis", "axis": JOY_AXIS_TRIGGER_LEFT, "value": 1.0},  # Throttle down.
 	"speed_up": {"type": "axis", "axis": JOY_AXIS_RIGHT_Y, "value": -1.0},  # Right Stick (Up)
 	"speed_down": {"type": "axis", "axis": JOY_AXIS_RIGHT_Y, "value": 1.0},  # Right Stick (Down)
 	"move_left": {"type": "axis", "axis": JOY_AXIS_LEFT_X, "value": -1.0},
@@ -72,6 +74,8 @@ const DEFAULT_GAMEPAD: Dictionary = {
 	"ui_down": {"type": "button", "button": JOY_BUTTON_DPAD_DOWN},
 	"ui_left": {"type": "button", "button": JOY_BUTTON_DPAD_LEFT},
 	"ui_right": {"type": "button", "button": JOY_BUTTON_DPAD_RIGHT},
+	"ui_focus_next": {"type": "button", "button": JOY_BUTTON_RIGHT_SHOULDER},
+	"ui_focus_prev": {"type": "button", "button": JOY_BUTTON_LEFT_SHOULDER},
 }
 
 # Flag for legacy upgrade OR missing defaults (first-run, new actions)
@@ -142,8 +146,16 @@ func _add_missing_defaults(config: ConfigFile) -> bool:
 
 		# === Keyboard defaults ===
 		if not has_keyboard and DEFAULT_KEYBOARD.has(action) and not explicitly_unbound_keyboard:
+			var def: Variant = DEFAULT_KEYBOARD[action]
 			var nev: InputEventKey = InputEventKey.new()
-			nev.physical_keycode = DEFAULT_KEYBOARD[action]
+
+			if def is Dictionary:
+				nev.physical_keycode = def["keycode"]
+				nev.shift_pressed = def.get("shift", false)
+				nev.ctrl_pressed = def.get("ctrl", false)  # Matches your serialization format
+			else:
+				nev.physical_keycode = def
+
 			InputMap.action_add_event(action, nev)
 			changed = true
 			Globals.log_message(
@@ -209,7 +221,16 @@ func is_event_bound(event: InputEvent) -> bool:
 ## :rtype: String
 func serialize_event(ev: InputEvent) -> String:
 	if ev is InputEventKey:
-		return "key:" + str(ev.physical_keycode)
+		var s: String = "key:" + str(ev.physical_keycode)
+		if ev.shift_pressed:
+			s += ":shift"
+		if ev.ctrl_pressed:
+			s += ":ctrl"
+		if ev.alt_pressed:  # NEW: Persist Alt
+			s += ":alt"
+		if ev.meta_pressed:  # NEW: Persist Meta/Cmd
+			s += ":meta"
+		return s
 
 	if ev is InputEventJoypadButton:
 		return "joybtn:" + str(ev.button_index) + ":" + str(ev.device)
@@ -351,26 +372,39 @@ func _remove_event_from_conflicts(event: InputEvent, conflicts: Array[String]) -
 ## Deserializes a string back to InputEvent.
 ## Handles "key:code", "joybtn:index:device", "joyaxis:axis:value:device".
 func deserialize_event(serialized: String) -> InputEvent:
-	var res: InputEvent = null
-	var parts: PackedStringArray = serialized.split(":", true)
+	# 1. Reject plain integers or empty strings immediately
+	if not (
+		serialized.begins_with("key:")
+		or serialized.begins_with("joybtn:")
+		or serialized.begins_with("joyaxis:")
+	):
+		return null
 
-	if parts.is_empty():
+	var parts: PackedStringArray = serialized.split(":", true)
+	if parts.size() < 2:
 		return null
 
 	match parts[0]:
 		"key":
-			if parts.size() == 2 and parts[1].is_valid_int():
-				var code: int = parts[1].to_int()
-				if code > 0:
-					var ev := InputEventKey.new()
-					ev.physical_keycode = code
-					res = ev
+			if parts[1].is_valid_int():
+				var ev := InputEventKey.new()
+				ev.physical_keycode = parts[1].to_int()
+				# Logic for combinations (Shift + Tab etc)
+				if "shift" in parts:
+					ev.shift_pressed = true
+				if "ctrl" in parts:
+					ev.ctrl_pressed = true
+				if "alt" in parts:  # NEW: Restore Alt
+					ev.alt_pressed = true
+				if "meta" in parts:  # NEW: Restore Meta
+					ev.meta_pressed = true
+				return ev
 		"joybtn":
 			if parts.size() == 3 and parts[1].is_valid_int() and parts[2].is_valid_int():
 				var ev := InputEventJoypadButton.new()
 				ev.button_index = parts[1].to_int()
 				ev.device = parts[2].to_int()
-				res = ev
+				return ev
 		"joyaxis":
 			if (
 				parts.size() == 4
@@ -382,9 +416,9 @@ func deserialize_event(serialized: String) -> InputEvent:
 				ev.axis = parts[1].to_int()
 				ev.axis_value = parts[2].to_float()
 				ev.device = parts[3].to_int()
-				res = ev
+				return ev
 
-	return res
+	return null
 
 
 ## Deserializes a string to an InputEvent and adds it to the specified action.
@@ -397,80 +431,17 @@ func deserialize_event(serialized: String) -> InputEvent:
 ## :type serialized: String
 ## :rtype: void
 func _deserialize_and_add(action: String, serialized: String) -> void:
-	if serialized.begins_with("key:"):
-		var kc_str: String = serialized.substr(4)
-		if kc_str.is_empty() or not kc_str.is_valid_int():
-			Globals.log_message("Invalid key serialized: " + serialized, Globals.LogLevel.WARNING)
-			return
-		var kc: int = int(kc_str)
-		var nev: InputEventKey = InputEventKey.new()
-		nev.physical_keycode = kc
-		InputMap.action_add_event(action, nev)
-	elif serialized.begins_with("joybtn:"):
-		var parts: PackedStringArray = serialized.split(":")
-		var error: String = ""
-		if parts.size() < 2:
-			error = "insufficient parts"
-		elif not parts[1].is_valid_int():
-			error = "invalid button index"
-		else:
-			var btn: int = int(parts[1])
-			var dev: int = -1
-			if parts.size() >= 3:
-				if not parts[2].is_empty():
-					if not parts[2].is_valid_int():
-						error = "invalid device"
-					else:
-						dev = int(parts[2])
-			if error == "":
-				var nev: InputEventJoypadButton = InputEventJoypadButton.new()
-				nev.button_index = btn
-				nev.device = dev
-				InputMap.action_add_event(action, nev)
-		if error != "":
-			Globals.log_message(
-				"Invalid joybtn serialized: " + serialized + " (" + error + ")",
-				Globals.LogLevel.WARNING
-			)
-			return
-	elif serialized.begins_with("joyaxis:"):
-		var parts: PackedStringArray = serialized.split(":")
-		var error: String = ""
-		if parts.size() < 3:
-			error = "insufficient parts"
-		elif not parts[1].is_valid_int() or not parts[2].is_valid_float():
-			error = "invalid axis or axis_value"
-		else:
-			var axis: int = int(parts[1])
-			var aval: float = float(parts[2])
-			var dev: int = -1
-			if parts.size() >= 4:
-				if not parts[3].is_empty():
-					if not parts[3].is_valid_int():
-						error = "invalid device"
-					else:
-						dev = int(parts[3])
-			if error == "":
-				var nev: InputEventJoypadMotion = InputEventJoypadMotion.new()
-				nev.axis = axis
-				nev.axis_value = aval
-				nev.device = dev
-				InputMap.action_add_event(action, nev)
-		if error != "":
-			Globals.log_message(
-				"Invalid joyaxis serialized: " + serialized + " (" + error + ")",
-				Globals.LogLevel.WARNING
-			)
-			return
-	elif serialized.is_valid_int():
-		var kc: int = int(serialized)
-		var nev: InputEventKey = InputEventKey.new()
-		nev.physical_keycode = kc
-		InputMap.action_add_event(action, nev)
-		_needs_save = true  # Ensure save if we hit this old case
+	# Use the shared logic from deserialize_event
+	var ev: InputEvent = deserialize_event(serialized)
+
+	if ev != null:
+		InputMap.action_add_event(action, ev)
 	else:
-		Globals.log_message("Unknown serialized prefix: " + serialized, Globals.LogLevel.WARNING)
-		return
+		# If it's not a valid prefixed string, it fails here.
+		# No more "elif serialized.is_valid_int()" legacy fallback.
+		Globals.log_message(
+			"Invalid or unknown serialized format: " + serialized, Globals.LogLevel.WARNING
+		)
 
 
 ## Saves current InputMap events to config (all per action as array).
@@ -534,8 +505,14 @@ func reset_to_defaults(device_type: String) -> void:
 
 		# Add fresh defaults
 		if device_type == "keyboard" and DEFAULT_KEYBOARD.has(action):
+			var def: Variant = DEFAULT_KEYBOARD[action]
 			var nev: InputEventKey = InputEventKey.new()
-			nev.physical_keycode = DEFAULT_KEYBOARD[action]
+			if def is Dictionary:
+				nev.physical_keycode = def["keycode"]
+				nev.shift_pressed = def.get("shift", false)
+				nev.ctrl_pressed = def.get("ctrl", false)
+			else:
+				nev.physical_keycode = def
 			InputMap.action_add_event(action, nev)
 		elif device_type == "gamepad" and DEFAULT_GAMEPAD.has(action):
 			var def: Dictionary = DEFAULT_GAMEPAD[action]
@@ -560,11 +537,19 @@ func reset_to_defaults(device_type: String) -> void:
 ## Returns true if two events are exactly the same binding.
 func events_match(a: InputEvent, b: InputEvent) -> bool:
 	if a == null or b == null:
-		return false  # treat null as "no match"
+		return false
 	if a.get_class() != b.get_class():
 		return false
+
 	if a is InputEventKey:
-		return a.physical_keycode == b.physical_keycode
+		# FIXED: Must compare modifiers to distinguish between Tab and Shift+Tab
+		return (
+			a.physical_keycode == b.physical_keycode
+			and a.shift_pressed == b.shift_pressed
+			and a.ctrl_pressed == b.ctrl_pressed
+			and a.alt_pressed == b.alt_pressed
+		)
+
 	if a is InputEventJoypadButton:
 		return a.button_index == b.button_index and a.device == b.device
 	if a is InputEventJoypadMotion:
@@ -726,19 +711,26 @@ func _migrate_legacy_unbound_states() -> void:
 ## :rtype: String
 static func get_event_label(ev: InputEvent) -> String:
 	if ev is InputEventKey:
+		var modifiers: Array[String] = []
+		if ev.ctrl_pressed:
+			modifiers.append("Ctrl")
+		if ev.alt_pressed:
+			modifiers.append("Alt")
+		if ev.shift_pressed:
+			modifiers.append("Shift")
+		if ev.meta_pressed:
+			modifiers.append("Meta")
 		# Prefer physical_keycode (layout-independent),
 		# but it can be 0 for project defaults/migration.
-		var code: int = int(ev.physical_keycode)
-		if code == 0:
-			code = int(ev.keycode)
-
-		# Migration / project-default case:
-		# physical_keycode == 0 but keycode is valid
-		# Avoid returning OS.get_keycode_string(0) == "" (blank label).
+		var code: int = int(ev.physical_keycode) if ev.physical_keycode != 0 else int(ev.keycode)
 		if code == 0:
 			return "Unbound"
 
-		return OS.get_keycode_string(code)
+		var key_name: String = OS.get_keycode_string(code)
+		if modifiers.is_empty():
+			return key_name
+
+		return "+".join(modifiers) + "+" + key_name
 
 	if ev is InputEventJoypadButton:
 		match ev.button_index:

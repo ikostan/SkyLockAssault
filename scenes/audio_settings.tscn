@@ -37,9 +37,21 @@ corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
 shadow_size = 5
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_koe27"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_w6v8r"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_a0ntd"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_axthr"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
 
 [node name="AudioSettings" type="Control"]
 layout_mode = 3
@@ -104,21 +116,41 @@ horizontal_alignment = 1
 
 [node name="Master" parent="Panel/VolumeControls" instance=ExtResource("3_koe27")]
 layout_mode = 2
+focus_neighbor_top = NodePath("../../BtnContainer/AudioBackButton")
+focus_neighbor_bottom = NodePath("../Music/HSlider")
+focus_next = NodePath("../Music/HSlider")
+focus_previous = NodePath("../../BtnContainer/AudioBackButton")
 
 [node name="Music" parent="Panel/VolumeControls" instance=ExtResource("4_a0ntd")]
 layout_mode = 2
+focus_neighbor_top = NodePath("../Master/Mute")
+focus_neighbor_bottom = NodePath("../SFX")
+focus_next = NodePath("../SFX")
+focus_previous = NodePath("../Master/Mute")
 
 [node name="SFX" parent="Panel/VolumeControls" instance=ExtResource("5_w6v8r")]
 layout_mode = 2
 size_flags_horizontal = 1
+focus_neighbor_top = NodePath("../Music")
+focus_neighbor_bottom = NodePath("../SFXWeapon")
+focus_next = NodePath("../SFXWeapon")
+focus_previous = NodePath("../Music")
 
 [node name="SFXWeapon" parent="Panel/VolumeControls" instance=ExtResource("6_axthr")]
 custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
+focus_neighbor_top = NodePath("../SFX")
+focus_neighbor_bottom = NodePath("../SFXRotors")
+focus_next = NodePath("../SFXRotors")
+focus_previous = NodePath("../SFX")
 
 [node name="SFXRotors" parent="Panel/VolumeControls" instance=ExtResource("7_ut8uj")]
 custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
+focus_neighbor_top = NodePath("../SFXWeapon")
+focus_neighbor_bottom = NodePath("../../BtnContainer/AudioBackButton")
+focus_next = NodePath("../../BtnContainer/AudioBackButton")
+focus_previous = NodePath("../SFXWeapon")
 
 [node name="BtnContainer" type="HBoxContainer" parent="Panel"]
 layout_mode = 1
@@ -139,8 +171,13 @@ theme_override_constants/separation = 20
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+focus_neighbor_top = NodePath("../../VolumeControls/SFXRotors")
+focus_neighbor_right = NodePath("../AudioResetButton")
+focus_neighbor_bottom = NodePath("../../VolumeControls/Master")
+focus_next = NodePath("../AudioResetButton")
+focus_previous = NodePath("../../VolumeControls/SFXRotors")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
-theme_override_colors/font_focus_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_pressed_color = Color(0.9607843, 0.9607843, 0.050980393, 0.9019608)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("1_j3be7")
@@ -148,15 +185,20 @@ theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_yonr6")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_koe27")
 theme_override_styles/hover = SubResource("StyleBoxFlat_a0ntd")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_koe27")
+theme_override_styles/focus = SubResource("StyleBoxFlat_w6v8r")
 text = "{BACK}"
 
 [node name="AudioResetButton" type="Button" parent="Panel/BtnContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+focus_neighbor_left = NodePath("../AudioBackButton")
+focus_neighbor_top = NodePath("../../VolumeControls/SFXRotors")
+focus_neighbor_bottom = NodePath("../../VolumeControls/Master")
+focus_next = NodePath("../../VolumeControls/Master")
+focus_previous = NodePath("../AudioBackButton")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
-theme_override_colors/font_focus_color = Color(1, 0.19607843, 0.2784314, 0.98039216)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_pressed_color = Color(0.9607843, 0.9607843, 0.050980393, 0.9019608)
 theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("1_j3be7")
@@ -164,9 +206,11 @@ theme_override_font_sizes/font_size = 35
 theme_override_styles/normal = SubResource("StyleBoxFlat_yonr6")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_koe27")
 theme_override_styles/hover = SubResource("StyleBoxFlat_a0ntd")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_a0ntd")
+theme_override_styles/focus = SubResource("StyleBoxFlat_axthr")
 text = "{RESET}"
 
 [node name="MasterWarningDialog" type="AcceptDialog" parent="."]
+oversampling_override = 1.0
 
 [node name="SFXWarningDialog" type="AcceptDialog" parent="."]
+oversampling_override = 1.0

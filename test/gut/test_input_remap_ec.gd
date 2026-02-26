@@ -49,7 +49,7 @@ func test_ec_02_remap_cancelled_no_input() -> void:
 	var prior_ev := InputEventKey.new()
 	prior_ev.physical_keycode = KEY_A
 	InputMap.action_add_event(TEST_ACTION, prior_ev)
-	var prior_text := button.get_event_label(prior_ev)
+	var prior_text: String = Settings.get_event_label(prior_ev)
 
 	button.button_pressed = true
 	button.pressed.emit()

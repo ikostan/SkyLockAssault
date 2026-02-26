@@ -40,11 +40,20 @@ func before_each() -> void:
 	# Reset InputMap to defaults
 	for action: String in Settings.ACTIONS:
 		InputMap.action_erase_events(action)
-		var default_key: int = Settings.DEFAULT_KEYBOARD[action]
+		var def: Variant = Settings.DEFAULT_KEYBOARD[action]
 		var ev: InputEventKey = InputEventKey.new()
-		ev.physical_keycode = default_key
+		
+		# Handle both legacy int and new Dictionary format
+		if def is Dictionary:
+			ev.physical_keycode = def["keycode"]
+			ev.shift_pressed = def.get("shift", false)
+			ev.ctrl_pressed = def.get("ctrl", false)
+		else:
+			ev.physical_keycode = def
+			
 		InputMap.action_add_event(action, ev)
-	Settings._needs_save = false  # Reset migration flag
+	
+	Settings._needs_save = false
 
 
 ## TC-SL-11 | Config with all sections (non-default audio, inputs, settings). | Call AudioManager.load_volumes(); Then Settings.load_input_mappings(); Then Globals._load_settings() | Each loads their section without affecting others; AudioManager gets "audio"; Settings gets "input"; Globals gets "Settings"; All apply correctly; No cross-overwrites.

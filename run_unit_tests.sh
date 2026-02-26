@@ -12,7 +12,7 @@ godot --headless --path $PROJECT_DIR --import --quit
 if [ $? -ne 0 ]; then echo "Resource import failed."; exit 1; fi
 
 echo "Running GDUnit4 Tests..."
-godot --headless --path $PROJECT_DIR -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode --add res://test
+godot --headless --path $PROJECT_DIR -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --ignoreHeadlessMode --add res://test/gdunit4
 if [ $? -ne 0 ]; then echo "Unit tests failed."; exit 1; fi
 
 # Simulate artifact: Copy reports

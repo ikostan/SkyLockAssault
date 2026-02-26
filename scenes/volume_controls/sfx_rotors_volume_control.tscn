@@ -3,7 +3,12 @@
 [ext_resource type="Script" uid="uid://8hd1kvmb5bt1" path="res://scripts/volume_slider.gd" id="1_1upbq"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_y238m"]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_y238m"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_y238m"]
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+shadow_size = 5
 
 [node name="SFXRotors" type="Control"]
 custom_minimum_size = Vector2(385, 24)
@@ -15,7 +20,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 tooltip_text = "SFX Rotors Volume Control"
 
-[node name="SFXLabel" type="Label" parent="."]
+[node name="SFXRotorsLabel" type="Label" parent="."]
 layout_mode = 0
 offset_top = 3.0
 offset_right = 100.0
@@ -34,8 +39,10 @@ offset_bottom = 24.0
 size_flags_horizontal = 3
 size_flags_vertical = 1
 tooltip_text = "Slide to control rotors volume."
+focus_neighbor_right = NodePath("../Mute")
+focus_next = NodePath("../Mute")
 max_value = 1.0
-step = 0.001
+step = 0.05
 tick_count = 16
 ticks_on_borders = true
 script = ExtResource("1_1upbq")
@@ -49,7 +56,9 @@ offset_right = 404.0
 offset_bottom = 24.0
 size_flags_horizontal = 8
 tooltip_text = "Mute Rotors"
-theme_override_styles/focus = SubResource("StyleBoxEmpty_y238m")
+focus_neighbor_left = NodePath("../HSlider")
+focus_previous = NodePath("../HSlider")
+theme_override_styles/focus = SubResource("StyleBoxFlat_y238m")
 button_pressed = true
 icon_alignment = 2
 vertical_icon_alignment = 0

@@ -37,6 +37,8 @@ const KEY_LABELS: Dictionary = {
 	Key.KEY_DOWN: "Down",
 	Key.KEY_ESCAPE: "Esc",
 	Key.KEY_ENTER: "Enter",
+	Key.KEY_TAB: "Tab",
+	Key.KEY_SHIFT: "Shift",
 	# Add more as needed for arrow keys, etc.
 }
 
@@ -133,10 +135,9 @@ func _input(event: InputEvent) -> void:
 	if not listening:
 		return
 
-	# Device-specific filtering: Skip if event doesn't match current device
+	# Device-specific filtering
 	if current_device == DeviceType.KEYBOARD and not event is InputEventKey:
 		return
-
 	if (
 		current_device == DeviceType.GAMEPAD
 		and not (event is InputEventJoypadButton or event is InputEventJoypadMotion)
@@ -145,18 +146,26 @@ func _input(event: InputEvent) -> void:
 
 	var new_event: InputEvent = null
 
-	# Handle keyboard key press
+	# ── KEYBOARD HANDLING ──
 	if event is InputEventKey and event.pressed:
+		# Do not bind "pure" modifiers alone (Shift/Ctrl/Alt/Meta) if you want to support combinations.
+		# This waits for the "main" key (like Tab) to be pressed while the modifier is held.
+		if event.keycode in [KEY_SHIFT, KEY_CTRL, KEY_ALT, KEY_META]:
+			return
+
 		new_event = InputEventKey.new()
 		new_event.physical_keycode = event.physical_keycode
+		# CRITICAL: Transfer modifier states to the new event (including Meta for Meta-based shortcuts)
+		new_event.shift_pressed = event.shift_pressed
+		new_event.ctrl_pressed = event.ctrl_pressed
+		new_event.alt_pressed = event.alt_pressed
+		new_event.meta_pressed = event.meta_pressed
 
-	# Handle gamepad (joypad) button press
+	# ── GAMEPAD HANDLING ──
 	elif event is InputEventJoypadButton and event.pressed:
 		new_event = InputEventJoypadButton.new()
 		new_event.button_index = event.button_index
 		new_event.device = -1
-
-	# Handle gamepad (joypad) axis motion (if moved past deadzone)
 	elif event is InputEventJoypadMotion and abs(event.axis_value) > AXIS_DEADZONE_THRESHOLD:
 		new_event = InputEventJoypadMotion.new()
 		new_event.axis = event.axis
@@ -166,36 +175,25 @@ func _input(event: InputEvent) -> void:
 	if new_event == null:
 		return
 
-	# ── CONFLICT CHECK ───────────────────────────────────────────────
-	# Checks if new_event is already used by another action.
-	# :rtype: void
+	# ── CONFLICT CHECK ──
 	var conflicts: Array[String] = Settings.get_conflicting_actions(new_event, action)
 
-	# Skip dialog if this is the same binding we already have.
 	if not conflicts.is_empty() and not Settings.events_match(new_event, get_matching_event()):
-		# Fetch fresh every time (fixes ready-order null reference)
 		var km_menu: Node = get_tree().get_first_node_in_group("key_mapping_menu")
 		if is_instance_valid(km_menu) and km_menu.has_method("show_conflict_dialog"):
 			km_menu.show_conflict_dialog(self, new_event.duplicate(), conflicts)
 			get_viewport().set_input_as_handled()
-		else:
-			Globals.log_message(
-				"key_mapping_menu missing or no show_conflict_dialog method", Globals.LogLevel.ERROR
-			)
-			# Fallback: still allow remap if dialog system fails
-			erase_old_event()
-			InputMap.action_add_event(action, new_event)
-			Globals.log_message("Remapped (fallback - no dialog)", Globals.LogLevel.DEBUG)
-			finish_remap()
-		return
+			return  # Wait for user to confirm or cancel via dialog
 
-	# ── No conflict → normal remap ───────────────────────────────────
+	# ── APPLY MAPPING ──
 	erase_old_event()
 	InputMap.action_add_event(action, new_event)
+
 	Globals.log_message(
 		"Remapped '%s' to '%s'" % [action, Settings.get_event_label(new_event)],
 		Globals.LogLevel.DEBUG
 	)
+
 	finish_remap()
 
 

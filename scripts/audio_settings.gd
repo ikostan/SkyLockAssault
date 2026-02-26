@@ -66,6 +66,12 @@ var _audio_reset_cb: Variant
 @onready var sfx_warning_dialog: AcceptDialog = $SFXWarningDialog
 @onready var audio_back_button: Button = $Panel/BtnContainer/AudioBackButton
 @onready var audio_reset_button: Button = $Panel/BtnContainer/AudioResetButton
+# Labels
+@onready var master_label: Label = $Panel/VolumeControls/Master/MasterLabel
+@onready var music_label: Label = $Panel/VolumeControls/Music/MusicLabel
+@onready var sfx_label: Label = $Panel/VolumeControls/SFX/SFXLabel
+@onready var weapon_label: Label = $Panel/VolumeControls/SFXWeapon/SFXWeaponLabel
+@onready var rotor_label: Label = $Panel/VolumeControls/SFXRotors/SFXRotorsLabel
 
 
 func _ready() -> void:
@@ -196,6 +202,43 @@ func _ready() -> void:
 			# Expose callbacks for Reset button
 			_audio_reset_cb = _register_js_callback("_on_audio_reset_js", "audioResetPressed")
 			_sync_dom_ui()
+
+	# Define which controls are part of this menu to prevent focus stealing
+	var menu_controls: Array[Control] = [
+		master_slider,
+		mute_master,
+		music_slider,
+		mute_music,
+		sfx_slider,
+		mute_sfx,
+		weapon_slider,
+		mute_weapon,
+		rotor_slider,
+		mute_rotor,
+		audio_back_button,
+		audio_reset_button
+	]
+	Globals.ensure_initial_focus(master_slider, menu_controls, "Audio Settings")
+
+
+func _process(_delta: float) -> void:
+	_update_label_colors()
+
+
+func _update_label_colors() -> void:
+	var yellow := Color("f5f50d")
+	var white := Color("ffffff")
+
+	# Check each row: if either the slider OR the mute button has focus, turn yellow
+	master_label.modulate = (
+		yellow if (master_slider.has_focus() or mute_master.has_focus()) else white
+	)
+	music_label.modulate = yellow if (music_slider.has_focus() or mute_music.has_focus()) else white
+	sfx_label.modulate = yellow if (sfx_slider.has_focus() or mute_sfx.has_focus()) else white
+	weapon_label.modulate = (
+		yellow if (weapon_slider.has_focus() or mute_weapon.has_focus()) else white
+	)
+	rotor_label.modulate = yellow if (rotor_slider.has_focus() or mute_rotor.has_focus()) else white
 
 
 ## Sync DOM overlays from Godot UI.
@@ -693,6 +736,19 @@ func _on_audio_back_button_pressed() -> void:
 			prev_menu.visible = true
 			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 			hidden_menu_found = true
+			# NEW: When returning from Key Mapping menu → focus the Key Mapping button in Options
+			if prev_menu is OptionsMenu:
+				(prev_menu as OptionsMenu).grab_focus_on_audio_settings_button()
+			# NEW: When returning to Main Menu → focus Start Game button
+			elif prev_menu.name == "Panel" or prev_menu is Panel:  # ← this is the fix
+				var start_button: Button = prev_menu.get_node_or_null("VBoxContainer/StartButton")
+				if is_instance_valid(start_button):
+					# Triple-deferred to be 100% sure after visibility change
+					start_button.call_deferred("call_deferred", "call_deferred", "grab_focus")
+					Globals.log_message(
+						"Focus restored to Start Game button (triple deferred)",
+						Globals.LogLevel.DEBUG
+					)
 	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
 	if os_wrapper.has_feature("web") and js_window:
 		if js_bridge_wrapper:  # Only toggle DOM if bridge is available (for eval)
@@ -780,7 +836,14 @@ func _handle_slider_gui_input(
 	master_dialog: AcceptDialog,
 	sfx_dialog: AcceptDialog
 ) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+	# Keep existing mouse check
+	var is_mouse_click: bool = (
+		event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	)
+	# ADD: Check for keyboard/joypad "Accept" button
+	var is_ui_accept: bool = event.is_action_pressed("ui_accept")
+
+	if is_mouse_click or is_ui_accept:
 		if master_muted:
 			master_dialog.popup_centered()
 			master_warning_shown = true
@@ -813,7 +876,12 @@ func _handle_mute_gui_input(
 	master_dialog: AcceptDialog,
 	sfx_dialog: AcceptDialog
 ) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+	var is_mouse_click: bool = (
+		event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	)
+	var is_ui_accept: bool = event.is_action_pressed("ui_accept")
+
+	if is_mouse_click or is_ui_accept:
 		if master_muted:
 			master_dialog.popup_centered()
 			master_warning_shown = true

@@ -40,23 +40,40 @@ func before_each() -> void:
 			InputMap.add_action(action)
 	# Manually add defaults (without saving)
 	for action: String in Settings.ACTIONS:
+		# 1. HANDLE KEYBOARD DEFAULTS
 		if Settings.DEFAULT_KEYBOARD.has(action):
-			var ev: InputEventKey = InputEventKey.new()
-			ev.physical_keycode = Settings.DEFAULT_KEYBOARD[action]
-			InputMap.action_add_event(action, ev)
+			var def_kb: Variant = Settings.DEFAULT_KEYBOARD[action]
+			var ev_kb := InputEventKey.new() # Scoped to this block
+			
+			if def_kb is Dictionary:
+				ev_kb.physical_keycode = def_kb["keycode"]
+				ev_kb.shift_pressed = def_kb.get("shift", false)
+				ev_kb.ctrl_pressed = def_kb.get("ctrl", false)
+			else:
+				ev_kb.physical_keycode = def_kb
+				
+			InputMap.action_add_event(action, ev_kb)
+
+		# 2. HANDLE GAMEPAD DEFAULTS
 		if Settings.DEFAULT_GAMEPAD.has(action):
-			var def: Dictionary = Settings.DEFAULT_GAMEPAD[action]
-			if def["type"] == "button":
-				var ev: InputEventJoypadButton = InputEventJoypadButton.new()
-				ev.button_index = def["button"]
-				ev.device = -1
-				InputMap.action_add_event(action, ev)
-			elif def["type"] == "axis":
-				var ev: InputEventJoypadMotion = InputEventJoypadMotion.new()
-				ev.axis = def["axis"]
-				ev.axis_value = def["value"]
-				ev.device = -1
-				InputMap.action_add_event(action, ev)
+			var def_gp: Dictionary = Settings.DEFAULT_GAMEPAD[action]
+			var ev_gp: InputEvent = null # Scoped to this block
+			
+			match def_gp.get("type"):
+				"button":
+					var btn := InputEventJoypadButton.new()
+					btn.button_index = def_gp["button"]
+					btn.device = -1
+					ev_gp = btn
+				"axis":
+					var axis := InputEventJoypadMotion.new()
+					axis.axis = def_gp["axis"]
+					axis.axis_value = def_gp["value"]
+					axis.device = -1
+					ev_gp = axis
+			
+			if ev_gp:
+				InputMap.action_add_event(action, ev_gp)
 
 	menu = load("res://scenes/key_mapping_menu.tscn").instantiate()
 	add_child(menu)
