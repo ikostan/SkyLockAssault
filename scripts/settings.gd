@@ -371,9 +371,11 @@ func _remove_event_from_conflicts(event: InputEvent, conflicts: Array[String]) -
 ## Handles "key:code", "joybtn:index:device", "joyaxis:axis:value:device".
 func deserialize_event(serialized: String) -> InputEvent:
 	# 1. Reject plain integers or empty strings immediately
-	if not (serialized.begins_with("key:") or \
-			serialized.begins_with("joybtn:") or \
-			serialized.begins_with("joyaxis:")):
+	if not (
+		serialized.begins_with("key:")
+		or serialized.begins_with("joybtn:")
+		or serialized.begins_with("joyaxis:")
+	):
 		return null
 
 	var parts: PackedStringArray = serialized.split(":", true)
@@ -398,8 +400,12 @@ func deserialize_event(serialized: String) -> InputEvent:
 				ev.device = parts[2].to_int()
 				return ev
 		"joyaxis":
-			if parts.size() == 4 and parts[1].is_valid_int() and \
-			   parts[2].is_valid_float() and parts[3].is_valid_int():
+			if (
+				parts.size() == 4
+				and parts[1].is_valid_int()
+				and parts[2].is_valid_float()
+				and parts[3].is_valid_int()
+			):
 				var ev := InputEventJoypadMotion.new()
 				ev.axis = parts[1].to_int()
 				ev.axis_value = parts[2].to_float()
@@ -419,80 +425,17 @@ func deserialize_event(serialized: String) -> InputEvent:
 ## :type serialized: String
 ## :rtype: void
 func _deserialize_and_add(action: String, serialized: String) -> void:
-	if serialized.begins_with("key:"):
-		var kc_str: String = serialized.substr(4)
-		if kc_str.is_empty() or not kc_str.is_valid_int():
-			Globals.log_message("Invalid key serialized: " + serialized, Globals.LogLevel.WARNING)
-			return
-		var kc: int = int(kc_str)
-		var nev: InputEventKey = InputEventKey.new()
-		nev.physical_keycode = kc
-		InputMap.action_add_event(action, nev)
-	elif serialized.begins_with("joybtn:"):
-		var parts: PackedStringArray = serialized.split(":")
-		var error: String = ""
-		if parts.size() < 2:
-			error = "insufficient parts"
-		elif not parts[1].is_valid_int():
-			error = "invalid button index"
-		else:
-			var btn: int = int(parts[1])
-			var dev: int = -1
-			if parts.size() >= 3:
-				if not parts[2].is_empty():
-					if not parts[2].is_valid_int():
-						error = "invalid device"
-					else:
-						dev = int(parts[2])
-			if error == "":
-				var nev: InputEventJoypadButton = InputEventJoypadButton.new()
-				nev.button_index = btn
-				nev.device = dev
-				InputMap.action_add_event(action, nev)
-		if error != "":
-			Globals.log_message(
-				"Invalid joybtn serialized: " + serialized + " (" + error + ")",
-				Globals.LogLevel.WARNING
-			)
-			return
-	elif serialized.begins_with("joyaxis:"):
-		var parts: PackedStringArray = serialized.split(":")
-		var error: String = ""
-		if parts.size() < 3:
-			error = "insufficient parts"
-		elif not parts[1].is_valid_int() or not parts[2].is_valid_float():
-			error = "invalid axis or axis_value"
-		else:
-			var axis: int = int(parts[1])
-			var aval: float = float(parts[2])
-			var dev: int = -1
-			if parts.size() >= 4:
-				if not parts[3].is_empty():
-					if not parts[3].is_valid_int():
-						error = "invalid device"
-					else:
-						dev = int(parts[3])
-			if error == "":
-				var nev: InputEventJoypadMotion = InputEventJoypadMotion.new()
-				nev.axis = axis
-				nev.axis_value = aval
-				nev.device = dev
-				InputMap.action_add_event(action, nev)
-		if error != "":
-			Globals.log_message(
-				"Invalid joyaxis serialized: " + serialized + " (" + error + ")",
-				Globals.LogLevel.WARNING
-			)
-			return
-	elif serialized.is_valid_int():
-		var kc: int = int(serialized)
-		var nev: InputEventKey = InputEventKey.new()
-		nev.physical_keycode = kc
-		InputMap.action_add_event(action, nev)
-		_needs_save = true  # Ensure save if we hit this old case
+	# Use the shared logic from deserialize_event
+	var ev: InputEvent = deserialize_event(serialized)
+
+	if ev != null:
+		InputMap.action_add_event(action, ev)
 	else:
-		Globals.log_message("Unknown serialized prefix: " + serialized, Globals.LogLevel.WARNING)
-		return
+		# If it's not a valid prefixed string, it fails here.
+		# No more "elif serialized.is_valid_int()" legacy fallback.
+		Globals.log_message(
+			"Invalid or unknown serialized format: " + serialized, Globals.LogLevel.WARNING
+		)
 
 
 ## Saves current InputMap events to config (all per action as array).
