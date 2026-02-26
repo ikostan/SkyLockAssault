@@ -3,6 +3,7 @@
 ## Shared test helpers for SkyLockAssault unit tests.
 ## Contains utility functions for calculations.
 
+class_name TestHelpers
 extends RefCounted
 
 ## Calculates expected fuel depletion based on current formula.

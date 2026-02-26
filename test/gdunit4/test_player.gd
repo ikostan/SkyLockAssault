@@ -7,7 +7,7 @@
 
 extends GdUnitTestSuite
 
-const TestHelpers = preload("res://test/test_helpers.gd")
+const TestHelpers = preload("res://test/gdunit4/test_helpers.gd")
 
 @warning_ignore("unused_parameter")
 @warning_ignore("return_value_discarded")
