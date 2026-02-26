@@ -148,17 +148,18 @@ func _input(event: InputEvent) -> void:
 
 	# ── KEYBOARD HANDLING ──
 	if event is InputEventKey and event.pressed:
-		# Do not bind "pure" modifiers alone if you want to support combinations.
-		# This waits for the "main" key (like Tab) to be pressed while Shift is held.
+		# Do not bind "pure" modifiers alone (Shift/Ctrl/Alt/Meta) if you want to support combinations.
+		# This waits for the "main" key (like Tab) to be pressed while the modifier is held.
 		if event.keycode in [KEY_SHIFT, KEY_CTRL, KEY_ALT, KEY_META]:
 			return
 
 		new_event = InputEventKey.new()
 		new_event.physical_keycode = event.physical_keycode
-		# CRITICAL: Transfer modifier states to the new event
+		# CRITICAL: Transfer modifier states to the new event (including Meta for Meta-based shortcuts)
 		new_event.shift_pressed = event.shift_pressed
 		new_event.ctrl_pressed = event.ctrl_pressed
 		new_event.alt_pressed = event.alt_pressed
+		new_event.meta_pressed = event.meta_pressed
 
 	# ── GAMEPAD HANDLING ──
 	elif event is InputEventJoypadButton and event.pressed:
