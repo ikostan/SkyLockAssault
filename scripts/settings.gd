@@ -370,18 +370,22 @@ func _remove_event_from_conflicts(event: InputEvent, conflicts: Array[String]) -
 ## Deserializes a string back to InputEvent.
 ## Handles "key:code", "joybtn:index:device", "joyaxis:axis:value:device".
 func deserialize_event(serialized: String) -> InputEvent:
-	var res: InputEvent = null
-	var parts: PackedStringArray = serialized.split(":", true)
+	# 1. Reject plain integers or empty strings immediately
+	if not (serialized.begins_with("key:") or \
+			serialized.begins_with("joybtn:") or \
+			serialized.begins_with("joyaxis:")):
+		return null
 
-	if parts.is_empty():
+	var parts: PackedStringArray = serialized.split(":", true)
+	if parts.size() < 2:
 		return null
 
 	match parts[0]:
 		"key":
-			if parts.size() >= 2 and parts[1].is_valid_int():
+			if parts[1].is_valid_int():
 				var ev := InputEventKey.new()
 				ev.physical_keycode = parts[1].to_int()
-				# Check if modifiers were appended to the string
+				# Logic for combinations (Shift + Tab etc)
 				if "shift" in parts:
 					ev.shift_pressed = true
 				if "ctrl" in parts:
@@ -392,21 +396,17 @@ func deserialize_event(serialized: String) -> InputEvent:
 				var ev := InputEventJoypadButton.new()
 				ev.button_index = parts[1].to_int()
 				ev.device = parts[2].to_int()
-				res = ev
+				return ev
 		"joyaxis":
-			if (
-				parts.size() == 4
-				and parts[1].is_valid_int()
-				and parts[2].is_valid_float()
-				and parts[3].is_valid_int()
-			):
+			if parts.size() == 4 and parts[1].is_valid_int() and \
+			   parts[2].is_valid_float() and parts[3].is_valid_int():
 				var ev := InputEventJoypadMotion.new()
 				ev.axis = parts[1].to_int()
 				ev.axis_value = parts[2].to_float()
 				ev.device = parts[3].to_int()
-				res = ev
+				return ev
 
-	return res
+	return null
 
 
 ## Deserializes a string to an InputEvent and adds it to the specified action.
