@@ -6,7 +6,7 @@ venv/
 
 # Godot-specific ignores (older .import for compat)
 .import/
-*.import
+# *.import
 
 # Imported asset reimport files
 *.reimport
@@ -16,7 +16,7 @@ venv/
 Thumbs.db
 
 # Exclude editor metadata UIDs
-*.uid
+# *.uid
 
 # Editor-specific files
 *.tmp
