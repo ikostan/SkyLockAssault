@@ -1,9 +1,9 @@
 ## Copyright (C) 2025 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
-# settings.gd
-# Input settings singleton: Loads/saves InputMap events to preserve custom mappings.
-# Supports keys, joypad buttons, and joypad axes (serialized).
-# Autoload as "Settings".
+## settings.gd
+## Input settings singleton: Loads/saves InputMap events to preserve custom mappings.
+## Supports keys, joypad buttons, and joypad axes (serialized).
+## Autoload as "Settings".
 
 extends Node
 
@@ -11,7 +11,7 @@ extends Node
 const LEGACY_MIGRATION_KEY: String = "settings_migrated_v2"
 const CONFIG_PATH: String = "user://settings.cfg"
 
-## Critical actions that must be bound for playable game.
+# Critical actions that must be bound for playable game.
 const CRITICAL_ACTIONS: Array[String] = [
 	"fire",
 	"speed_up",
@@ -62,8 +62,6 @@ const DEFAULT_KEYBOARD: Dictionary = {
 }
 # New: Default gamepad mappings (assumes Xbox layout; adjust if needed).
 const DEFAULT_GAMEPAD: Dictionary = {
-	# "speed_up": {"type": "axis", "axis": JOY_AXIS_TRIGGER_RIGHT, "value": 1.0},  # Throttle up.
-	# "speed_down": {"type": "axis", "axis": JOY_AXIS_TRIGGER_LEFT, "value": 1.0},  # Throttle down.
 	"speed_up": {"type": "axis", "axis": JOY_AXIS_RIGHT_Y, "value": -1.0},  # Right Stick (Up)
 	"speed_down": {"type": "axis", "axis": JOY_AXIS_RIGHT_Y, "value": 1.0},  # Right Stick (Down)
 	"move_left": {"type": "axis", "axis": JOY_AXIS_LEFT_X, "value": -1.0},
