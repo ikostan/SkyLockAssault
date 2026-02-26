@@ -226,6 +226,10 @@ func serialize_event(ev: InputEvent) -> String:
 			s += ":shift"
 		if ev.ctrl_pressed:
 			s += ":ctrl"
+		if ev.alt_pressed:    # NEW: Persist Alt
+			s += ":alt"
+		if ev.meta_pressed:   # NEW: Persist Meta/Cmd
+			s += ":meta"
 		return s
 
 	if ev is InputEventJoypadButton:
@@ -390,6 +394,10 @@ func deserialize_event(serialized: String) -> InputEvent:
 					ev.shift_pressed = true
 				if "ctrl" in parts:
 					ev.ctrl_pressed = true
+				if "alt" in parts:    # NEW: Restore Alt
+					ev.alt_pressed = true
+				if "meta" in parts:   # NEW: Restore Meta
+					ev.meta_pressed = true
 				return ev
 		"joybtn":
 			if parts.size() == 3 and parts[1].is_valid_int() and parts[2].is_valid_int():
