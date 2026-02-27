@@ -118,8 +118,8 @@ func _on_pressed() -> void:
 	if listening:
 		# FIXED: Check the actual current_device to return the correct prompt
 		text = (
-			Globals.settings.remap_prompt_keyboard 
-			if current_device == DeviceType.KEYBOARD 
+			Globals.settings.remap_prompt_keyboard
+			if current_device == DeviceType.KEYBOARD
 			else Globals.settings.remap_prompt_gamepad
 		)
 	else:
