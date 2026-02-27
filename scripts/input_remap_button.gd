@@ -120,7 +120,7 @@ func _on_pressed() -> void:
 		text = (
 			Globals.settings.remap_prompt_gamepad
 			if current_device == DeviceType.KEYBOARD
-			else Globals.REMAP_PROMPT_GAMEPAD
+			else Globals.settings.remap_prompt_gamepad
 		)
 	else:
 		update_button_text()
