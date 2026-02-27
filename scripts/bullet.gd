@@ -42,7 +42,7 @@ func fire() -> void:
 		return
 	can_fire = false
 
-	var scaled_cooldown: float = fire_rate * Globals.difficulty
+	var scaled_cooldown: float = fire_rate * Globals.settings.difficulty
 	timer.start(scaled_cooldown)
 
 	# LOG
