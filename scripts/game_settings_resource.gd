@@ -12,7 +12,7 @@ extends Resource
 
 @export_group("Logging")
 # Current log level: 0=DEBUG, 1=INFO, 2=WARNING, 3=ERROR, 4=NONE
-@export var current_log_level: int = 1
+@export_range(0, 4, 1) var current_log_level: int = 1
 @export var enable_debug_logging: bool = false
 
 @export_group("Gameplay")
