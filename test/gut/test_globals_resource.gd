@@ -47,12 +47,16 @@ func test_logging_persistence() -> void:
 
 func test_difficulty_clamping() -> void:
 	gut.p("Testing: Difficulty should respect valid range (0.5 to 2.0).")
-	# We simulate the _load_settings logic that handles validation [cite: 19, 20]
-	Globals.settings.difficulty = 5.0 
-	# Manually trigger validation logic (ensure your new Globals handles this)
-	Globals._load_settings(TEST_RESOURCE_PATH) 
+	# Setup a ConfigFile with an invalid high value
+	var config := ConfigFile.new()
+	config.set_value("Settings", "difficulty", 5.0)
+	config.save(TEST_RESOURCE_PATH)
 	
-	assert_between(Globals.settings.difficulty, 0.5, 2.0, "Difficulty should be clamped to valid range")
+	# Load it via Globals logic
+	Globals._load_settings(TEST_RESOURCE_PATH)
+	
+	# Assert it was clamped by the setter in GameSettingsResource
+	assert_eq(Globals.settings.difficulty, 2.0, "Difficulty should clamp to max (2.0)")
 
 # --- 3. UI & Scenes Resource Tests ---
 
