@@ -5,7 +5,7 @@ name = "python"
 enabled = true
 
   [analyzers.meta]
-  runtime_version = "3.12"
+  runtime_version = "3.x.x"
   # Path to your Playwright tests
   test_patterns = ["tests/**/*.py", "**/test_*.py"]
 
