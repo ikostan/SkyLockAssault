@@ -123,7 +123,8 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 			):
 				settings.current_log_level = loaded_log_level
 				log_message(
-					"Loaded saved log level: " + LogLevel.keys()[settings.current_log_level], LogLevel.DEBUG
+					"Loaded saved log level: " + LogLevel.keys()[settings.current_log_level],
+					LogLevel.DEBUG
 				)
 			else:
 				log_message(
