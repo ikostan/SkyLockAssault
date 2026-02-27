@@ -1,6 +1,14 @@
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## game_settings_resource.gd
-extends Resource
+##
+## DATA CONTAINER: This Resource serves as the central "Source of Truth" for game configuration.
+## It decouples static data (difficulty, paths, log levels) from logic found in Globals.gd.
+## By using a Resource instead of hard-coded variables, settings can be swapped at runtime
+## or modified visually via the Godot Inspector without touching the codebase.
+
 class_name GameSettingsResource
+extends Resource
 
 @export_group("Logging")
 # Current log level: 0=DEBUG, 1=INFO, 2=WARNING, 3=ERROR, 4=NONE
