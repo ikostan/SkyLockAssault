@@ -4,7 +4,7 @@ class_name GameSettingsResource
 
 @export_group("Logging")
 # Current log level: 0=DEBUG, 1=INFO, 2=WARNING, 3=ERROR, 4=NONE
-@export var current_log_level: int = 1 
+@export var current_log_level: int = 1
 @export var enable_debug_logging: bool = false
 
 @export_group("Gameplay")
@@ -13,7 +13,7 @@ class_name GameSettingsResource
 # game_settings_resource.gd
 @export var difficulty: float = 1.0:
 	set(value):
-		difficulty = clamp(value, 0.5, 2.0) # Use a setter to force clamping ALWAYS
+		difficulty = clamp(value, 0.5, 2.0)  # Use a setter to force clamping ALWAYS
 
 @export_group("UI & Scenes")
 @export var remap_prompt_keyboard: String = "Press a key..."
