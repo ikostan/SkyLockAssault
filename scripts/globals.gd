@@ -102,6 +102,13 @@ func load_key_mapping(menu_to_hide: Node) -> void:
 			video.visible = true
 			video.process_mode = Node.PROCESS_MODE_ALWAYS  # keep playing
 	# FIX: We must call .instantiate() on the PackedScene inside settings
+	if settings.key_mapping_scene == null:
+		log_message("Error: Key mapping scene not configured.", LogLevel.ERROR)
+		if not hidden_menus.is_empty():
+			var prev_menu: Node = hidden_menus.pop_back()
+			if is_instance_valid(prev_menu):
+				prev_menu.visible = true
+		return
 	var km_instance: CanvasLayer = settings.key_mapping_scene.instantiate()
 	get_tree().root.add_child(km_instance)
 
