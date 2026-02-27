@@ -118,7 +118,7 @@ func _on_pressed() -> void:
 	if listening:
 		# Use tailored prompt based on current device (no layout expansion)
 		text = (
-			Globals.REMAP_PROMPT_KEYBOARD
+			Globals.settings.remap_prompt_gamepad
 			if current_device == DeviceType.KEYBOARD
 			else Globals.REMAP_PROMPT_GAMEPAD
 		)
