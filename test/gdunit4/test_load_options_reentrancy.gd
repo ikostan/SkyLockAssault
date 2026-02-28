@@ -43,7 +43,7 @@ func test_load_options_guards_reentrancy() -> void:
 	assert_array(Globals.hidden_menus).is_empty()  # Cleaned up after pop
 	
 	# Simulate open instance
-	Globals.settings.options_instance = auto_free(CanvasLayer.new())  # Mock valid instance
+	Globals.options_instance = auto_free(CanvasLayer.new())  # Mock valid instance
 	Globals.load_options(mock_menu)
 	# Assert no change (guard fired)
 	assert_bool(mock_menu.visible).is_true()  # Not hidden
