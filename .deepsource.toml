@@ -5,17 +5,15 @@ name = "python"
 enabled = true
 
   [analyzers.meta]
-  runtime_version = "3.12.3"
-  # Path to your Playwright tests
+  # FIX: Use "3.x.x" exactly. Specific versions like 3.12 are unsupported here.
+  runtime_version = "3.x.x"
   test_patterns = ["tests/**/*.py", "**/test_*.py"]
 
 [[analyzers]]
 name = "javascript"
 enabled = true
 
-[[analyzers]]
-name = "html"
-enabled = true
+# The "html" analyzer was removed as it is not a valid standalone core analyzer.
 
 [[transformers]]
 name = "black"
