@@ -13,7 +13,7 @@ func before_test() -> void:
 	original_difficulty = Globals.difficulty  # Snapshot before each test
 
 func after_test() -> void:
-	Globals.difficulty = original_difficulty  # Restore after each test
+	Globals.settings.difficulty = original_difficulty  # Restore after each test
 
 func test_difficulty_scales_fuel_and_weapon() -> void:
 	# Setup: Load main_scene for full context (PlayerStatsPanel for fuel_bar path)
@@ -29,7 +29,7 @@ func test_difficulty_scales_fuel_and_weapon() -> void:
 	assert_object(weapon).is_not_null()
 	
 	var original_difficulty: float = Globals.difficulty
-	Globals.difficulty = 2.0
+	Globals.settings.difficulty = 2.0
 
 	# TEST 1: Fuel depletion scales (derive from constants)
 	player.fuel["fuel"] = 100.0
@@ -45,4 +45,4 @@ func test_difficulty_scales_fuel_and_weapon() -> void:
 	var cooldown_timer: Timer = bullet_firer.get_node("CooldownTimer")
 	assert_float(cooldown_timer.wait_time).is_equal_approx(0.30, 0.001)  # Tolerance for float
 
-	Globals.difficulty = original_difficulty
+	Globals.settings.difficulty = original_difficulty
