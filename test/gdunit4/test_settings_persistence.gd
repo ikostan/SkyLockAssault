@@ -24,7 +24,7 @@ func test_settings_persistence() -> void:
 	
 	# Reload to verify save
 	Globals._load_settings(test_path)
-	assert_float(Globals.difficulty).is_equal(2.0)  # Saved and loaded
+	assert_float(Globals.settings.difficulty).is_equal(2.0)  # Saved and loaded
 
 func after_test() -> void:
 	## Cleans test file.
