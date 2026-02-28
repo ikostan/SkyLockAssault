@@ -10,7 +10,7 @@ const TestHelpers = preload("res://test/gdunit4/test_helpers.gd")
 var original_difficulty: float  # Snapshot holder
 
 func before_test() -> void:
-	original_difficulty = Globals.difficulty  # Snapshot before each test
+	original_difficulty = Globals.settings.difficulty  # Snapshot before each test
 
 func after_test() -> void:
 	Globals.settings.difficulty = original_difficulty  # Restore after each test
@@ -28,13 +28,13 @@ func test_difficulty_scales_fuel_and_weapon() -> void:
 	var weapon: Node2D = player.get_node("CharacterBody2D/Weapon")
 	assert_object(weapon).is_not_null()
 	
-	var original_difficulty: float = Globals.difficulty
+	var original_difficulty: float = Globals.settings.difficulty
 	Globals.settings.difficulty = 2.0
 
 	# TEST 1: Fuel depletion scales (derive from constants)
 	player.fuel["fuel"] = 100.0
 	var normalized_speed: float = player.speed["speed"] / player.MAX_SPEED
-	var expected_depletion: float = player.base_fuel_drain * normalized_speed * Globals.difficulty
+	var expected_depletion: float = player.base_fuel_drain * normalized_speed * Globals.settings.difficulty
 	player._on_fuel_timer_timeout()
 	var expected_fuel: float = 100.0 - expected_depletion
 	assert_float(player.fuel["fuel"]).is_equal_approx(expected_fuel, 0.01)  # Larger delta for precision
