@@ -5,15 +5,13 @@ name = "python"
 enabled = true
 
   [analyzers.meta]
-  # Use "3.10" or "3.11" as a stable fallback if "3.x.x" is rejected by your current runner
-  runtime_version = "3.10"
+  # If 3.x.x is rejected, "3" is the most stable alias for the latest 3.x runtime.
+  runtime_version = "3"
   test_patterns = ["tests/**/*.py", "**/test_*.py"]
 
 [[analyzers]]
 name = "javascript"
 enabled = true
-
-# IMPORTANT: The "html" analyzer MUST be removed; it is not a standalone DeepSource core analyzer.
 
 [[transformers]]
 name = "black"
