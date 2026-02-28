@@ -53,6 +53,6 @@ func test_load_settings_with_other_sections() -> void:
 	config.save(test_path)
 	
 	# Load and verify settings loaded, others ignored
-	globals.settings._load_settings(test_path)
+	globals._load_settings(test_path)
 	assert_float(globals.difficulty).is_equal(0.8)
 	# No assert on audio, as it's not loaded here
