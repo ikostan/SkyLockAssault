@@ -398,7 +398,7 @@ func test_fuel_depletion() -> void:
 	
 	# Simulate one timer tick (derive expected from constants)
 	var normalized_speed: float = player_root.speed["speed"] / player_root.MAX_SPEED
-	var expected_depletion: float = player_root.base_fuel_drain * normalized_speed * Globals.difficulty
+	var expected_depletion: float = player_root.base_fuel_drain * normalized_speed * Globals.settings.difficulty
 	player_root._on_fuel_timer_timeout()
 	assert_float(player_root.fuel["fuel"]).is_equal_approx(player_root.fuel["max"] - expected_depletion, 0.1)  # Larger delta for float precision
 	assert_float(player_root.fuel["bar"].value).is_equal_approx(100.0 - expected_depletion, 0.1)  # Normalized to percent
