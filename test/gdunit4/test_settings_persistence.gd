@@ -19,7 +19,7 @@ func test_settings_persistence() -> void:
 	Globals._load_settings(test_path)
 	assert_float(Globals.difficulty).is_equal(1.5)  # Loaded
 	
-	Globals.difficulty = 2.0
+	Globals.settings.difficulty = 2.0
 	Globals._save_settings(test_path)
 	
 	# Reload to verify save
