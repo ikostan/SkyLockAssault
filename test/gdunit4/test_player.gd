@@ -32,7 +32,7 @@ func test_shared_depletion_helper() -> void:
 	Globals.settings.difficulty = 2.0
 	
 	var expected: float = player_root.base_fuel_drain * (player_root.speed["speed"] / player_root.MAX_SPEED) * Globals.settings.difficulty
-	assert_float(TestHelpers.calculate_expected_depletion(player_root, Globals.difficulty)).is_equal_approx(expected, 0.001)
+	assert_float(TestHelpers.calculate_expected_depletion(player_root, Globals.settings.difficulty)).is_equal_approx(expected, 0.001)
 
 
 # Test: Player node exists and is visible
