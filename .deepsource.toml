@@ -5,15 +5,15 @@ name = "python"
 enabled = true
 
   [analyzers.meta]
-  # FIX: Use "3.x.x" exactly. Specific versions like 3.12 are unsupported here.
-  runtime_version = "3.x.x"
+  # Use "3.10" or "3.11" as a stable fallback if "3.x.x" is rejected by your current runner
+  runtime_version = "3.10"
   test_patterns = ["tests/**/*.py", "**/test_*.py"]
 
 [[analyzers]]
 name = "javascript"
 enabled = true
 
-# The "html" analyzer was removed as it is not a valid standalone core analyzer.
+# IMPORTANT: The "html" analyzer MUST be removed; it is not a standalone DeepSource core analyzer.
 
 [[transformers]]
 name = "black"
