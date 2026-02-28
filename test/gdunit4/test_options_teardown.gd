@@ -25,7 +25,7 @@ func before_test() -> void:
 	orig_hidden_menus = Globals.hidden_menus.duplicate()
 	orig_options_open = Globals.options_open
 	orig_options_instance = Globals.options_instance
-	orig_options_scene = Globals.options_scene
+	orig_options_scene = Globals.settings.options_scene
 	
 	Globals.hidden_menus = []
 	Globals.options_open = false
@@ -39,7 +39,7 @@ func after_test() -> void:
 	Globals.hidden_menus = orig_hidden_menus.duplicate()
 	Globals.options_open = orig_options_open
 	Globals.options_instance = orig_options_instance
-	Globals.options_scene = orig_options_scene
+	Globals.settings.options_scene = orig_options_scene
 
 func test_options_open_cleared_on_exit() -> void:
 	## Tests if options_open is set on load_options and cleared on exit_tree.
