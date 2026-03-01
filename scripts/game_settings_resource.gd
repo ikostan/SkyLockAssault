@@ -21,10 +21,14 @@ extends Resource
 # game_settings_resource.gd
 @export var difficulty: float = 1.0:
 	set(value):
-		difficulty = clamp(value, 0.5, 2.0)  # Use a setter to force clamping ALWAYS
+		_difficulty = clamp(value, 0.5, 2.0)
+	get:
+		return _difficulty
 
 @export_group("UI & Scenes")
 @export var remap_prompt_keyboard: String = "Press a key..."
 @export var remap_prompt_gamepad: String = "Press a gamepad button/axis..."
 @export var key_mapping_scene: PackedScene = preload("res://scenes/key_mapping_menu.tscn")
 @export var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
+
+var _difficulty: float = 1.0
