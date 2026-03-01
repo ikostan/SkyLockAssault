@@ -54,7 +54,7 @@ func test_ec_02_remap_cancelled_no_input() -> void:
 	button.button_pressed = true
 	button.pressed.emit()
 	assert_true(button.listening)
-	assert_eq(button.text, Globals.REMAP_PROMPT_KEYBOARD)  # updated
+	assert_eq(button.text, Globals.settings.remap_prompt_keyboard)  # updated
 
 	button.button_pressed = false
 	button.pressed.emit()

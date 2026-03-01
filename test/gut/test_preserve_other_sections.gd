@@ -40,8 +40,8 @@ func before_each() -> void:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, AudioConstants.BUS_SFX_ROTORS)
 	# Reset Globals settings
-	Globals.current_log_level = Globals.LogLevel.INFO
-	Globals.difficulty = 1.0
+	Globals.settings.current_log_level = Globals.LogLevel.INFO
+	Globals.settings.difficulty = 1.0
 			
 
 ## Per-test cleanup: Free audio_instance safely.
@@ -96,8 +96,8 @@ func test_tc_sl_07() -> void:
 	config.set_value("audio", "master_muted", true)
 	config.save(test_config_path)
 	# Set Globals to different values
-	Globals.current_log_level = Globals.LogLevel.DEBUG
-	Globals.difficulty = 2.0
+	Globals.settings.current_log_level = Globals.LogLevel.DEBUG
+	Globals.settings.difficulty = 2.0
 	# Load audio only
 	AudioManager.load_volumes()
 	AudioManager.apply_all_volumes()
@@ -105,8 +105,8 @@ func test_tc_sl_07() -> void:
 	assert_almost_eq(AudioManager.master_volume, 0.4, 0.01)
 	assert_true(AudioManager.master_muted)
 	# Globals unchanged (not loaded here)
-	assert_eq(Globals.current_log_level, Globals.LogLevel.DEBUG)
-	assert_eq(Globals.difficulty, 2.0)
+	assert_eq(Globals.settings.current_log_level, Globals.LogLevel.DEBUG)
+	assert_eq(Globals.settings.difficulty, 2.0)
 	# Config unchanged
 	config = ConfigFile.new()
 	config.load(test_config_path)
@@ -134,7 +134,7 @@ func test_tc_sl_08() -> void:
 	assert_eq(config.get_value("Settings", "log_level"), 1)
 	assert_eq(config.get_value("Settings", "difficulty"), 1.5)
 	# Change Globals
-	Globals.difficulty = 2.0
+	Globals.settings.difficulty = 2.0
 	Globals._save_settings()
 	# Verify after second save
 	config = ConfigFile.new()
@@ -183,7 +183,7 @@ func test_tc_sl_10() -> void:
 	config.set_value("audio", "master_volume", 0.4)
 	config.save(test_config_path)
 	# Change Globals
-	Globals.current_log_level = Globals.LogLevel.WARNING
+	Globals.settings.current_log_level = Globals.LogLevel.WARNING
 	Globals._save_settings()
 	# Verify after first save
 	config = ConfigFile.new()

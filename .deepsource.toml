@@ -5,16 +5,12 @@ name = "python"
 enabled = true
 
   [analyzers.meta]
-  runtime_version = "3.12"
-  # Path to your Playwright tests
+  # If 3.x.x is rejected, "3" is the most stable alias for the latest 3.x runtime.
+  runtime_version = "3"
   test_patterns = ["tests/**/*.py", "**/test_*.py"]
 
 [[analyzers]]
 name = "javascript"
-enabled = true
-
-[[analyzers]]
-name = "html"
 enabled = true
 
 [[transformers]]

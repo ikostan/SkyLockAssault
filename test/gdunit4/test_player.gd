@@ -15,10 +15,10 @@ const TestHelpers = preload("res://test/gdunit4/test_helpers.gd")
 var original_difficulty: float  # Snapshot holder
 
 func before_test() -> void:
-	original_difficulty = Globals.difficulty  # Snapshot before each test
+	original_difficulty = Globals.settings.difficulty  # Snapshot before each test
 
 func after_test() -> void:
-	Globals.difficulty = original_difficulty  # Restore after each test
+	Globals.settings.difficulty = original_difficulty  # Restore after each test
 
 
 ## Tests shared helper calculates depletion correctly.
@@ -29,10 +29,10 @@ func test_shared_depletion_helper() -> void:
 	await await_idle_frame()
 	
 	var player_root: Node = main_scene.get_node("Player")
-	Globals.difficulty = 2.0
+	Globals.settings.difficulty = 2.0
 	
-	var expected: float = player_root.base_fuel_drain * (player_root.speed["speed"] / player_root.MAX_SPEED) * Globals.difficulty
-	assert_float(TestHelpers.calculate_expected_depletion(player_root, Globals.difficulty)).is_equal_approx(expected, 0.001)
+	var expected: float = player_root.base_fuel_drain * (player_root.speed["speed"] / player_root.MAX_SPEED) * Globals.settings.difficulty
+	assert_float(TestHelpers.calculate_expected_depletion(player_root, Globals.settings.difficulty)).is_equal_approx(expected, 0.001)
 
 
 # Test: Player node exists and is visible
@@ -398,7 +398,7 @@ func test_fuel_depletion() -> void:
 	
 	# Simulate one timer tick (derive expected from constants)
 	var normalized_speed: float = player_root.speed["speed"] / player_root.MAX_SPEED
-	var expected_depletion: float = player_root.base_fuel_drain * normalized_speed * Globals.difficulty
+	var expected_depletion: float = player_root.base_fuel_drain * normalized_speed * Globals.settings.difficulty
 	player_root._on_fuel_timer_timeout()
 	assert_float(player_root.fuel["fuel"]).is_equal_approx(player_root.fuel["max"] - expected_depletion, 0.1)  # Larger delta for float precision
 	assert_float(player_root.fuel["bar"].value).is_equal_approx(100.0 - expected_depletion, 0.1)  # Normalized to percent

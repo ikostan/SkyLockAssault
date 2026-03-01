@@ -32,7 +32,7 @@ func _ready() -> void:
 			log_lvl_option.add_item(level)  # "Debug", "Info", etc.
 	log_lvl_option.add_item("NONE")  # Manual for title case
 	# Set to current log level (find index by enum value)
-	var current_value: int = Globals.current_log_level
+	var current_value: int = Globals.settings.current_log_level
 	var index: int = Globals.LogLevel.values().find(current_value)
 	if index != -1:
 		log_lvl_option.selected = index
@@ -162,7 +162,7 @@ func _unset_advanced_window_callbacks() -> void:
 func _on_advanced_reset_button_pressed() -> void:
 	Globals.log_message("Advanced Settings reset pressed.", Globals.LogLevel.DEBUG)
 	# Log level should be reset to INFO
-	Globals.current_log_level = Globals.LogLevel.INFO
+	Globals.settings.current_log_level = Globals.LogLevel.INFO
 	log_lvl_option.selected = Globals.LogLevel.values().find(Globals.LogLevel.INFO)
 	Globals._save_settings()
 
@@ -264,7 +264,7 @@ func _on_log_level_item_selected(index: int) -> void:
 	var selected_enum: Globals.LogLevel = log_level_display_to_enum.get(
 		selected_name, Globals.LogLevel.INFO
 	)
-	Globals.current_log_level = selected_enum
+	Globals.settings.current_log_level = selected_enum
 	log_lvl_option.selected = Globals.LogLevel.values().find(selected_enum)
 	# Temporary raw print to bypass log_message
 	Globals.log_message("Log level changed to: " + selected_name, Globals.LogLevel.DEBUG)

@@ -33,7 +33,7 @@ func test_save_settings_preserves_other_sections() -> void:
 	config.save(test_path)
 	
 	# Save settings
-	globals.difficulty = 1.2
+	globals.settings.difficulty = 1.2
 	globals._save_settings(test_path)
 	
 	# Reload and check both preserved
@@ -54,5 +54,5 @@ func test_load_settings_with_other_sections() -> void:
 	
 	# Load and verify settings loaded, others ignored
 	globals._load_settings(test_path)
-	assert_float(globals.difficulty).is_equal(0.8)
+	assert_float(globals.settings.difficulty).is_equal(0.8)
 	# No assert on audio, as it's not loaded here

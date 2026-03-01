@@ -68,7 +68,7 @@ func test_tc_sl_23() -> void:
 	assert_eq(config.get_value("audio", "master_volume"), 0.6)
 	assert_eq(config.get_value("random", "unknown_key"), "value")
 	# Similar for other saves
-	Globals.difficulty = 2.0
+	Globals.settings.difficulty = 2.0
 	Globals._save_settings()
 	config = ConfigFile.new()
 	config.load(test_config_path)
@@ -81,14 +81,14 @@ func test_tc_sl_24() -> void:
 	assert_false(FileAccess.file_exists(test_config_path))
 	# Change to non-defaults to check keep on NOT_FOUND
 	AudioManager.master_volume = 0.5
-	Globals.difficulty = 2.0
+	Globals.settings.difficulty = 2.0
 	# Load all
 	AudioManager.load_volumes()
 	Settings.load_input_mappings(test_config_path)
 	Globals._load_settings(test_config_path)
 	# Verify keeps current (per updated code: skips on NOT_FOUND)
 	assert_eq(AudioManager.master_volume, 0.5)
-	assert_eq(Globals.difficulty, 2.0)
+	assert_eq(Globals.settings.difficulty, 2.0)
 
 
 ## TC-SL-25 | Migration needed (old inputs); Save audio after. | Load inputs (migrate and save); Then save_volumes() | Migration saves upgraded inputs; Audio save preserves them; No re-migration.
