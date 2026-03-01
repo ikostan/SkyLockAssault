@@ -42,6 +42,8 @@ func test_logging_persistence() -> void:
 	var config := ConfigFile.new()
 	var err := config.load(TEST_RESOURCE_PATH)
 	assert_eq(err, OK, "ConfigFile should load successfully")
+	
+	# Matches the key used in globals.gd line 241 
 	assert_eq(config.get_value("Settings", "log_level"), 0, "Saved value check")
 
 # --- 2. Gameplay Resource Tests ---
