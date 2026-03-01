@@ -23,7 +23,7 @@ jobs:
 
       - name: "Run Trivy FS Scan"
         run: |
-          trivy fs --format sarif --output trivy-results.sarif --severity CRITICAL,HIGH --ignore-unfixed .
+          trivy fs --format sarif -exit-code 1 --output trivy-results.sarif --severity CRITICAL,HIGH --ignore-unfixed .
       - name: "Upload Trivy scan results to GitHub Security tab"
         uses: "github/codeql-action/upload-sarif@ef618feace3c4838ae42b239ab86e8fb46437508"  # Pinned to SHA for v4.32.2
         if: always()  # Upload even if scan fails
