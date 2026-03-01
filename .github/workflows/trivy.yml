@@ -15,7 +15,7 @@ jobs:
       - name: "Checkout repository"
         uses: "actions/checkout@v6.0.1"
         with:
-          fetch-depth: 0 # Fetches all history for all branches and tags
+          fetch-depth: 0  # Fetches all history for all branches and tags
           persist-credentials: false
       - name: "Run Trivy vulnerability scanner"
         uses: "aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284"  # Pinned to SHA for v0.34.0
