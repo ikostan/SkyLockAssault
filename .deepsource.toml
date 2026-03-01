@@ -5,7 +5,6 @@ name = "python"
 enabled = true
 
   [analyzers.meta]
-  # If 3.x.x is rejected, "3" is the most stable alias for the latest 3.x runtime.
   runtime_version = "3.x.x"
   test_patterns = ["tests/**/*.py", "**/test_*.py"]
 
