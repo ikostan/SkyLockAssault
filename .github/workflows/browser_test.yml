@@ -22,38 +22,49 @@ jobs:
       PW_TIMEOUT: "${{ inputs.pw_timeout }}"
     steps:
       - uses: "actions/checkout@v6.0.1"
+      - name: "Create Export Directories"
+        run: |
+          mkdir -p export/web_thread_off
+
       - name: "Export Godot to Web"
         id: "export"
         uses: "firebelley/godot-export@930577654862a320eef793f399ee911b4479efb9"
         with:
-          # yamllint disable rule:line-length
           godot_executable_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip"
           godot_export_templates_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz"
           relative_project_path: "./"
-          relative_export_path: "./export/web"
-          archive_output: true
-          cache: true
-          # yamllint enable rule:line-length
+          relative_export_path: "./export/web_thread_off"
+          archive_output: false
+          cache: false
+          verbose: true
+          presets_to_export: "Web_thread_off"
+          use_preset_export_path: true  # Move exports to the directory defined in export_presets.cfg
+      - name: "Flatten Export Directory"
+        run: |
+          bash ./.github/scripts/flatten_export.sh "export/web_thread_off" "Web_thread_off"
       - name: "List Export Directory Contents"
         run: |
-          ls -la export/web
+          ls -la export/web_thread_off
+      - name: "Patch index.js for security"
+        run: |
+          bash ./.github/scripts/patch_index_js.sh "export/web_thread_off"
       - name: "Set up Python"
         uses: "actions/setup-python@v6"
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: "Cache PIP Dependencies"
-        uses: "actions/cache@v4"
+        uses: "actions/cache@v5"
+        id: cache
         with:
           path: "~/.cache/pip"
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          restore-keys: ${{ runner.os }}-pip-
       - name: "Install Playwright"
         run: |
           sudo apt-get update && sudo apt-get install -y libxml2-utils
           pip install playwright pytest-playwright pytest-asyncio
       - name: "Cache Playwright Browsers"
-        uses: "actions/cache@v4"
+        uses: "actions/cache@v5"
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('**/requirements.txt') }}  # Or your dependency file
@@ -61,10 +72,13 @@ jobs:
 
       - name: "Install Playwright Browsers"
         if: steps.cache.outputs.cache-hit != 'true'  # Only install if not cached
-        run: playwright install --with-deps chromium
+        run: |
+          playwright install --with-deps chromium
+
       - name: "Start WEB Server"
         run: |
-          python -m http.server 8080 --directory export/web &
+          python -m http.server 8080 --directory export/web_thread_off &
+
       - name: "Wait For WEB Server Response"
         run: |
           for i in {1..20}; do
@@ -75,9 +89,11 @@ jobs:
             sleep 1
           done
           if [ $i -eq 20 ]; then exit 1; fi
+
       - name: "Run Tests"
         run: |
-          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/difficulty_flow_test.py -v --junitxml=junit.xml -o junit_family=legacy
+          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/ -v --ignore=tests/refactor --junitxml=junit.xml -o junit_family=legacy
+
       - name: "List Coverage Reports"
         run: |
           ls -la v8_coverage_*.json || echo "No v8_coverage_*.json found"
@@ -100,7 +116,10 @@ jobs:
             const fs = require('fs');
             const path = require('path');
             const V8ToIstanbul = require('v8-to-istanbul');
-            const coverage = JSON.parse(fs.readFileSync('$file', 'utf8'));
+            // Read and parse coverage file
+            const rawCoverage = JSON.parse(fs.readFileSync('$file', 'utf8'));
+            // Extract array from result if present, else use directly
+            const coverage = rawCoverage.result ? rawCoverage.result : rawCoverage;
             (async () => {
               let localCounter = 0;
               for (const entry of coverage) {
@@ -109,8 +128,8 @@ jobs:
                   continue;
                 }
                 const scriptPath = entry.url && entry.url.startsWith('http://localhost:8080/')
-                  ? entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web/'))
-                  : 'export/web/index.js';  // Map anonymous to real file
+                  ? entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web_thread_off/'))
+                  : 'export/web_thread_off/index.js';  // Map anonymous to real file
                 const options = entry.source ? { source: entry.source } : {};
                 try {
                   const converter = new V8ToIstanbul(scriptPath, 0, options);
@@ -127,18 +146,8 @@ jobs:
             "
             counter=$((counter + 1))
           done
-          npx nyc report --reporter=lcov --report-dir coverage/lcov --all --include=export/web/*.js  # Merge with --all for 0% on untested
+          npx nyc report --reporter=lcov --report-dir coverage/lcov --all --include=export/web_thread_off/*.js  # Merge with --all for 0% on untested
 
-      - name: "Upload Coverage to Codecov"
-        if: ${{ !cancelled() }}
-        uses: "codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de"
-        with:
-          files: ./coverage/lcov/lcov.info
-          flags: playwright
-          fail_ci_if_error: false  # Non-blocking on 0%
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-          directory: export/web
       - name: "Upload LCOV Artifact"
         if: always()
         uses: "actions/upload-artifact@v6"
@@ -146,16 +155,7 @@ jobs:
           name: lcov-report
           path: "./coverage/lcov/lcov.info"
           retention-days: 5
-      - name: "Upload Coverage to Codecov"
-        if: ${{ !cancelled() }}
-        uses: "codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de"
-        with:
-          files: ./coverage/lcov/lcov.info  # Upload the generated LCOV
-          flags: playwright
-          fail_ci_if_error: true
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-          directory: export/web  # New: Set root for path matching
+
       - name: "Test Report"
         run: |
           if [ -f junit.xml ]; then
@@ -173,12 +173,14 @@ jobs:
           else
             echo "No junit.xml found—tests may not have run."
           fi
+
       - name: "Upload Test Report Artifact"
         if: always()
         uses: "actions/upload-artifact@v6"
         with:
           name: test-report
           path: junit.xml
+
       - name: "Upload Screenshot and Coverage Artifacts"
         if: always()
         uses: "actions/upload-artifact@v6"
@@ -187,3 +189,31 @@ jobs:
           path: |
             main_menu.png
             coverage_*.json
+
+      - name: "Upload Coverage to Codecov"
+        if: ${{ !cancelled() }}
+        uses: "codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de"
+        with:
+          files: ./coverage/lcov/lcov.info
+          flags: playwright
+          fail_ci_if_error: false  # Non-blocking on 0%
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: export/web_thread_off
+
+      - name: "Install Codecov CLI"
+        if: success()
+        run: |
+          curl -Os https://cli.codecov.io/latest/linux/codecov
+          chmod +x codecov
+
+      - name: "Upload Test Report to Codecov"
+        if: success()
+        run: |
+          REPORT_FILE="./junit.xml"
+          if [ -f "$REPORT_FILE" ]; then
+            ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f "$REPORT_FILE" --name "Playwright Browser Test Report" --flag PLAYWRIGHT --report-type test_results
+          else
+            echo "No Playwright JUnit XML found, skipping upload."
+          fi
+  # yamllint enable rule:line-length

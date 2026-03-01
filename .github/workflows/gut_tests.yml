@@ -1,0 +1,74 @@
+---
+name: "GUT Unit Tests"  # Workflow name for CI display.
+
+on:
+  workflow_call:
+    secrets:
+      CODECOV_TOKEN:
+        description: "Codecov requires a token to authenticate"
+        required: true
+
+jobs:
+  unit-test:
+    runs-on: "ubuntu-latest"
+    timeout-minutes: 10
+    permissions:
+      checks: write
+    steps:
+      - uses: "actions/checkout@v6"
+      - name: "Download Godot Binary"
+        run: |
+          wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
+          unzip Godot_v4.5-stable_linux.x86_64.zip
+          mv Godot_v4.5-stable_linux.x86_64 godot
+          chmod +x godot
+      - name: "Install GUT"
+        run: |
+          mkdir -p addons
+          wget https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip
+          unzip v9.5.0.zip -d addons
+          mv addons/Gut-9.5.0/addons/gut addons/gut
+      - name: "Initialize Project and UIDs"
+        run: |
+          ./godot --headless --editor --quit --path .
+      - name: "Run GUT Tests"
+        continue-on-error: false  # Explicit no continue on error (default, but for clarity).
+        run: |
+          REPORT_DIR="gut-reports/$(date +%Y%m%d_%H%M%S)"
+          mkdir -p $REPORT_DIR
+          ./godot --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gjunit_xml_file=$REPORT_DIR/gut_junit.xml -gexit
+      - name: "Find Latest Report Directory"
+        if: always()
+        id: find_report
+        run: |
+          LATEST_REPORT=$(ls -td gut-reports/* | head -1 || echo "")
+          if [ -z "$LATEST_REPORT" ]; then
+            echo "No report directory found; tests may not have generated reports."
+            exit 1
+          fi
+          echo "latest_report=$LATEST_REPORT" >> $GITHUB_OUTPUT  # Set output.
+      - name: "List Reports"
+        if: always()
+        run: |
+          ls -la ${{ steps.find_report.outputs.latest_report }}/
+      - name: "Upload Test Reports Artifacts"
+        if: always()
+        uses: "actions/upload-artifact@v6"
+        with:
+          name: gut-reports
+          path: gut-reports/**
+          retention-days: 5
+      - name: "Install Codecov CLI"
+        if: success()  # Only if tests pass.
+        run: |
+          curl -Os https://cli.codecov.io/latest/linux/codecov
+          chmod +x codecov
+      - name: "Upload Test Report to Codecov"
+        if: success()
+        run: |
+          REPORT_FILE="${{ steps.find_report.outputs.latest_report }}/gut_junit.xml"
+          if [ -f "$REPORT_FILE" ]; then
+            ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f "$REPORT_FILE" --name "GUT Test Report" --flag GUT --report-type test_results
+          else
+            echo "No GUT JUnit XML found, skipping upload."
+          fi

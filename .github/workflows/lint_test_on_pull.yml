@@ -27,8 +27,17 @@ jobs:
     with:
       config-path: ".github/workflows/*.yml"
   gdunit4_tests:
-    name: "Godot Unit Tests"
+    name: "GDUnit4 Unit Tests"
     uses: "./.github/workflows/gdunit4_tests.yml"
+    needs:
+      - "gdlint"
+      - "readmelint"
+      - "yamllint"
+    secrets:
+      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+  gut_tests:
+    name: "GUT Unit Tests"
+    uses: "./.github/workflows/gut_tests.yml"
     needs:
       - "gdlint"
       - "readmelint"
@@ -40,5 +49,6 @@ jobs:
     uses: "./.github/workflows/browser_test.yml"
     needs:
       - "gdunit4_tests"
+      - "gut_tests"
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"

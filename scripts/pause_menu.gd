@@ -1,7 +1,9 @@
+## SPDX-License-Identifier: GPL-3.0-or-later
+## Use for exiting game levels back to main menu without quitting.
 ## pause_menu.gd
 ##
 ## Pause menu overlay: Toggles with ESC, pauses the game tree, and handles resume/back to menu.
-## Use for exiting game levels back to main menu without quitting.
+## Copyright (C) 2025 Egor Kostan
 
 extends CanvasLayer
 
@@ -51,16 +53,22 @@ func _unhandled_input(event: InputEvent) -> void:
 	## :rtype: void
 	if not visible and Globals.options_open:
 		return
-	if event.is_action_pressed("ui_cancel"):
+	if event.is_action_pressed("pause"):
 		toggle_pause()
 
 
 func toggle_pause() -> void:
 	## Toggles pause menu visibility and pause state.
 	##
+	## Grabs focus on resume button when shown for keyboard/D-pad navigation.
+	##
 	## :rtype: void
 	visible = not visible
 	get_tree().paused = visible
+	if visible:
+		Globals.ensure_initial_focus(
+			resume_button, [back_to_main_button, options_button, resume_button], "Pause Menu"
+		)
 
 
 func _on_resume_button_pressed() -> void:
@@ -82,12 +90,7 @@ func _on_back_to_main_button_pressed() -> void:
 	Globals.log_message("Back To Main Menu button pressed.", Globals.LogLevel.DEBUG)
 	get_tree().paused = false
 	visible = false
-	var main_menu_scene: PackedScene = load("res://scenes/main_menu.tscn")
-	if main_menu_scene:
-		Globals.log_message("Switch back to Main menu scene.", Globals.LogLevel.DEBUG)
-		get_tree().change_scene_to_packed(main_menu_scene)
-	else:
-		Globals.log_message("Error: Main menu scene not set!", Globals.LogLevel.ERROR)
+	Globals.load_scene_with_loading("res://scenes/main_menu.tscn")
 
 
 func _on_options_button_pressed() -> void:

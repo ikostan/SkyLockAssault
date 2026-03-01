@@ -15,7 +15,7 @@ jobs:
     permissions:
       checks: write
     steps:
-      - uses: actions/checkout@v6.0.1
+      - uses: "actions/checkout@v6.0.1"
       - name: "Download Godot Binary"
         run: |
           wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
@@ -29,15 +29,14 @@ jobs:
           unzip v6.0.0.zip -d addons
           mv addons/gdUnit4-6.0.0/addons/gdUnit4 addons/gdUnit4
           rm -rf addons/gdUnit4-6.0.0
-      - name: "Import Resources"
+      - name: "Initialize Project and UIDs"
         run: |
-          ./godot --headless --path . --import --quit
+          ./godot --headless --editor --quit --path .
       - name: "Run GDUnit4 Tests"
         run: |
           ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
-            --verbose \
             --ignoreHeadlessMode \
-            --add res://test
+            --add res://test/gdunit4
       - name: "Find Latest Report Directory"
         id: find_report
         run: |
@@ -50,11 +49,24 @@ jobs:
       - name: "List Coverage Reports"
         run: |
           ls -la ${{ steps.find_report.outputs.latest_report }}/
-
       - name: "Upload Test Reports Artifacts"
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: "actions/upload-artifact@v6"
         with:
           name: gdunit-reports
           path: reports/**
           retention-days: 5
+      - name: "Install Codecov CLI"
+        if: success()  # Only if tests pass.
+        run: |
+          curl -Os https://cli.codecov.io/latest/linux/codecov
+          chmod +x codecov
+      - name: "Upload Test Report to Codecov"
+        if: success()
+        run: |
+          REPORT_FILE="${{ steps.find_report.outputs.latest_report }}/test-report.xml"
+          if [ -f "$REPORT_FILE" ]; then
+            ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f "$REPORT_FILE" --name "GDUnit4 Test Report" --flag GDUnit4 --report-type test_results
+          else
+            echo "No GDUnit4 test-report XML found, skipping upload."
+          fi

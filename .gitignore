@@ -6,7 +6,7 @@ venv/
 
 # Godot-specific ignores (older .import for compat)
 .import/
-*.import
+# *.import
 
 # Imported asset reimport files
 *.reimport
@@ -16,7 +16,7 @@ venv/
 Thumbs.db
 
 # Exclude editor metadata UIDs
-*.uid
+# *.uid
 
 # Editor-specific files
 *.tmp
@@ -26,7 +26,8 @@ Thumbs.db
 *.meta  # Unity-like, but sometimes from imports
 
 # Build/export folders (ignore exports; commit presets.cfg)
-export/*
+export/web/**
+export/web_thread_off/**
 !export/export_presets.cfg  # Keep your export settings
 
 # Temp files from tools/Docker
@@ -43,5 +44,6 @@ report.xml
 artifacts/
 artifacts/main_menu.png
 artifacts/main_menu.png
-report.xml
 v8_coverage_*.json
+tests/refactor/__pycache__/
+report.html

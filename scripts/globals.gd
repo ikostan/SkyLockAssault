@@ -1,94 +1,198 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
+## globals.gd
+## Global utilities singleton: Provides shared functions like logging.
+## Access from any script as Globals.log_message("message").
+
 extends Node
 
-# Global utilities singleton: Provides shared functions like logging.
-# Access from any script as Globals.log_message("message").
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 
-@export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
-@export var enable_debug_logging: bool = false  # Toggle in Inspector or settings
-@export var difficulty: float = 1.0  # Multiplier: 1.0=Normal, <1=Easy, >1=Hard
-@export var master_volume: float = 1.0
-@export var music_volume: float = 1.0
-@export var sfx_volume: float = 1.0
+# Shared constants
+## Device-specific remap prompts to avoid layout shift.
+# const REMAP_PROMPT_TEXT: String = "Press a key or controller button/axis..."
+# const REMAP_PROMPT_KEYBOARD: String = "Press a key..."
+# const REMAP_PROMPT_GAMEPAD: String = "Press a gamepad button/axis..."
+
+# @export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
+# @export var enable_debug_logging: bool = false  # Toggle in Inspector or settings
+# @export var difficulty: float = 1.0  # Multiplier: 1.0=Normal, <1=Easy, >1=Hard
+
+# Add the resource reference here
+@export var settings: GameSettingsResource = preload("res://settings/default_settings.tres")
 
 # In globals.gd (add after @export vars)
 var options_instance: CanvasLayer = null
-var hidden_menu: Node = null
+# var hidden_menu: Node = null
+var hidden_menus: Array[Node] = []
 var options_open: bool = false
+## Key Mapping scene for direct loading from warning dialogs.
+# var key_mapping_scene: PackedScene = preload("res://scenes/key_mapping_menu.tscn")
 var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
-var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
+# var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
+var next_scene: String = ""  # Path to the next scene to load via loading screen.
+## Last selected input device for UI messages and labels.
+## Updated when player toggles Keyboard/Gamepad in Key Mapping.
+var current_input_device: String = "keyboard"  # "keyboard" or "gamepad"
 
 
 func _ready() -> void:
-	if Engine.is_editor_hint() or enable_debug_logging:
-		current_log_level = LogLevel.DEBUG
-
-	log_message("Log level set to: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
+	if Engine.is_editor_hint() or settings.enable_debug_logging:
+		settings.current_log_level = LogLevel.DEBUG
+	log_message("Log level set to: " + LogLevel.keys()[settings.current_log_level], LogLevel.DEBUG)
 	_load_settings()  # Load persisted settings first
+	# Load last input device early to fix unbound warning on first load when
+	# gamepad is saved preference.
+	# Ensures has_unbound_critical_actions_for_current_device() uses correct device from config.
+	# Settings.load_last_input_device()
 
-	# Apply loaded volumes to AudioServer buses (using new helper)
-	_apply_volume_to_bus("Master", master_volume)
-	_apply_volume_to_bus("Music", music_volume)
-	_apply_volume_to_bus("SFX", sfx_volume)
 
-
-# New: Helper to apply volume to a named bus (extracted from _ready)
-func _apply_volume_to_bus(bus_name: String, volume: float) -> void:
-	var bus_idx: int = AudioServer.get_bus_index(bus_name)
-	if bus_idx != -1:
-		AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
+## Centralized "ensure initial focus" helper.
+## Checks whether keyboard/controller focus is already inside this menu.
+## If it isn't, defers grab_focus() on the candidate and logs the action.
+## If it is, logs the skip (so you can still see what happened).
+##
+## :param candidate: The control that should receive focus by default.
+## :param allowed_controls: All interactive controls that belong to this menu.
+##                          If focus is already on any of them we do nothing.
+## :param context: Optional string that appears in the log (e.g. "Pause Menu").
+func ensure_initial_focus(
+	candidate: Control, allowed_controls: Array[Control] = [], context: String = ""
+) -> void:
+	if not is_instance_valid(candidate):
 		log_message(
-			"Applied loaded " + bus_name + " volume to AudioServer: " + str(volume), LogLevel.DEBUG
+			"ensure_initial_focus: Candidate is null or freed - skipping.", LogLevel.WARNING
 		)
+		return
+
+	var focus_owner: Control = get_tree().root.get_viewport().gui_get_focus_owner()
+
+	var already_has_focus := false
+	if is_instance_valid(focus_owner):
+		for ctrl: Control in allowed_controls:
+			if focus_owner == ctrl:
+				already_has_focus = true
+				break
+
+	var ctx: String = " (" + context + ")" if not context.is_empty() else ""
+
+	if not already_has_focus:
+		candidate.call_deferred("grab_focus")
+		log_message("Grabbed initial focus on " + candidate.name + ctx, LogLevel.DEBUG)
 	else:
-		log_message(bus_name + " audio bus not found!", LogLevel.ERROR)
+		log_message(
+			"Focus already on a menu control" + ctx + " — skipping initial grab.", LogLevel.DEBUG
+		)
 
 
-# Add these new functions (for consistency with log level persistence)
-# New: Optional param (default new; fixes error)
-func _load_settings(config: ConfigFile = ConfigFile.new()) -> void:
-	var err := config.load("user://settings.cfg")
+## Loads Key Mapping menu directly while keeping background video visible.
+## :param menu_to_hide: Usually the UI Panel (not the root Control).
+## :type menu_to_hide: Node
+## :rtype: void
+func load_key_mapping(menu_to_hide: Node) -> void:
+	if is_instance_valid(menu_to_hide):
+		hidden_menus.push_back(menu_to_hide)
+		menu_to_hide.visible = false
+
+		# Robust video lookup (works for both Panel and root Control)
+		var video: VideoStreamPlayer = menu_to_hide.get_node_or_null("../VideoStreamPlayer")
+		if not is_instance_valid(video):
+			video = menu_to_hide.get_node_or_null("VideoStreamPlayer")
+		if is_instance_valid(video):
+			video.visible = true
+			video.process_mode = Node.PROCESS_MODE_ALWAYS  # keep playing
+	# FIX: We must call .instantiate() on the PackedScene inside settings
+	if settings.key_mapping_scene == null:
+		log_message("Error: Key mapping scene not configured.", LogLevel.ERROR)
+		if not hidden_menus.is_empty():
+			var prev_menu: Node = hidden_menus.pop_back()
+			if is_instance_valid(prev_menu):
+				prev_menu.visible = true
+		return
+	var km_instance: CanvasLayer = settings.key_mapping_scene.instantiate()
+	get_tree().root.add_child(km_instance)
+
+
+## Loads persisted settings from config if valid types; skips invalid/missing to keep current.
+## :param path: Config file path (default: Settings.CONFIG_PATH).
+## :type path: String
+## :rtype: void
+func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
+	var config: ConfigFile = ConfigFile.new()
+	var err: int = config.load(path)
 	if err == OK:
-		master_volume = config.get_value("Settings", "master_volume", 1.0)
-		log_message("Loaded master_volume level: " + str(master_volume), LogLevel.DEBUG)
+		if config.has_section_key("Settings", "log_level"):
+			var loaded_log_level: Variant = config.get_value("Settings", "log_level")
+			if (
+				loaded_log_level is int
+				and loaded_log_level >= LogLevel.DEBUG
+				and loaded_log_level <= LogLevel.NONE
+			):
+				settings.current_log_level = loaded_log_level
+				log_message(
+					"Loaded saved log level: " + LogLevel.keys()[settings.current_log_level],
+					LogLevel.DEBUG
+				)
+			else:
+				log_message(
+					"Invalid type or value for log_level: " + str(typeof(loaded_log_level)),
+					LogLevel.WARNING
+				)
 
-		music_volume = config.get_value("Settings", "music_volume", 1.0)
-		log_message("Loaded music_volume level: " + str(music_volume), LogLevel.DEBUG)
-
-		sfx_volume = config.get_value("Settings", "sfx_volume", 1.0)
-		log_message("Loaded sfx_volume level: " + str(sfx_volume), LogLevel.DEBUG)
-
-		current_log_level = config.get_value("Settings", "log_level", LogLevel.INFO)
-		log_message("Loaded saved log level: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
-
-		difficulty = config.get_value("Settings", "difficulty", 1.0)
-		# New: Validate and clamp difficulty to slider range (0.5-2.0)
-		if difficulty < 0.5 or difficulty > 2.0:
-			log_message(
-				"Invalid difficulty loaded (" + str(difficulty) + ")—clamping to valid range.",
-				LogLevel.WARNING
-			)
-			difficulty = clamp(difficulty, 0.5, 2.0)
-		log_message("Loaded saved difficulty: " + str(difficulty), LogLevel.DEBUG)
+		if config.has_section_key("Settings", "difficulty"):
+			var loaded_difficulty: Variant = config.get_value("Settings", "difficulty")
+			if (loaded_difficulty is float) or (loaded_difficulty is int):
+				# Validate and clamp difficulty to slider range (0.5-2.0)
+				settings.difficulty = loaded_difficulty
+				log_message("Loaded saved difficulty: " + str(settings.difficulty), LogLevel.DEBUG)
+			else:
+				log_message(
+					"Invalid type for difficulty: " + str(typeof(loaded_difficulty)),
+					LogLevel.WARNING
+				)
+	elif err == ERR_FILE_NOT_FOUND:
+		log_message("No settings config found, using defaults.", LogLevel.DEBUG)
 	else:
-		log_message("No saved settings found—using default.", LogLevel.DEBUG)
+		log_message("Failed to load settings config: " + str(err), LogLevel.ERROR)
 
 
 # New: Add _save_settings to globals.gd (move from options_menu.gd if needed)
-func _save_settings() -> void:
+func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var config: ConfigFile = ConfigFile.new()
+	var err: int = config.load(path)  # Load existing to preserve other sections
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		log_message(
+			"Failed to load settings from " + path + " for save: " + str(err), LogLevel.ERROR
+		)
+		return
 
-	config.set_value("Settings", "log_level", current_log_level)
-	config.set_value("Settings", "difficulty", difficulty)
-	config.set_value("Settings", "master_volume", master_volume)
-	config.set_value("Settings", "music_volume", music_volume)
-	config.set_value("Settings", "sfx_volume", sfx_volume)
+	config.set_value("Settings", "log_level", settings.current_log_level)
+	config.set_value("Settings", "difficulty", settings.difficulty)
+	err = config.save(path)
+	if err != OK:
+		log_message("Failed to save settings: " + str(err), LogLevel.ERROR)
+	else:
+		log_message("Settings saved.", LogLevel.DEBUG)
 
-	config.save("user://settings.cfg")
-	log_message("Settings saved.", LogLevel.DEBUG)
+
+func _on_options_exited_unexpectedly() -> void:
+	## Handles unexpected tree exit of options_instance.
+	##
+	## Resets flag if stuck open; cleans ref.
+	##
+	## :rtype: void
+	if options_open:  # Guard: Only log if it was still "open" (unexpected exit)
+		log_message("Options instance exited unexpectedly—resetting flag.", LogLevel.WARNING)
+
+	if not hidden_menus.is_empty():
+		var prev_menu: Node = hidden_menus.pop_back()
+		if is_instance_valid(prev_menu):
+			prev_menu.visible = true
+
+	options_open = false
+	options_instance = null
 
 
-# Modified load_options with guards
 func load_options(menu_to_hide: Node) -> void:
 	## Loads options menu and hides the caller menu (if valid).
 	##
@@ -109,26 +213,41 @@ func load_options(menu_to_hide: Node) -> void:
 			LogLevel.WARNING
 		)
 	else:
-		hidden_menu = menu_to_hide
-		hidden_menu.visible = false
+		hidden_menus.push_back(menu_to_hide)
+		menu_to_hide.visible = false
 		log_message("Hiding menu: " + menu_to_hide.name, LogLevel.DEBUG)
 
-	if options_scene:
-		options_instance = options_scene.instantiate()
+	if settings.options_scene:
+		## Set flag before adding child to block pause immediately.
+		options_open = true  # Set early as before
+		# FIX: Assign the instance to the global variable
+		options_instance = settings.options_scene.instantiate()
+		if options_instance == null:
+			log_message("Failed to instantiate options scene—resetting flag.", LogLevel.ERROR)
+			options_open = false  # Reset to avoid stuck state
+			if not hidden_menus.is_empty():
+				var prev_menu: Node = hidden_menus.pop_back()
+				if is_instance_valid(prev_menu):
+					prev_menu.visible = true  # Restore if we bailed
+			return
+
+		# Optional: Connect to tree_exited for unexpected free (extra safety)
+		options_instance.tree_exited.connect(_on_options_exited_unexpectedly)
 		get_tree().root.add_child(options_instance)
 	else:
 		log_message("Error: Options scene not found!", LogLevel.ERROR)
-		if hidden_menu and is_instance_valid(hidden_menu):
-			hidden_menu.visible = true
-			log_message("Restored visibility of menu: " + hidden_menu.name, LogLevel.WARNING)
-		hidden_menu = null
+		if not hidden_menus.is_empty():
+			var prev_menu: Node = hidden_menus.pop_back()
+			if is_instance_valid(prev_menu):
+				prev_menu.visible = true
+				log_message("Restored visibility of menu: " + prev_menu.name, LogLevel.WARNING)
 
 
 # Custom logging function with timestamp and level filtering.
 # @param message: The string message to log.
 # @param level: The log level (default INFO).
 func log_message(message: String, level: LogLevel = LogLevel.INFO) -> void:
-	if level < current_log_level:
+	if level < settings.current_log_level:
 		return  # Skip if below threshold
 	var level_str: String = LogLevel.keys()[level]  # Converts enum to string: "INFO", etc.
 	var timestamp: String = Time.get_datetime_string_from_system()
@@ -148,3 +267,26 @@ func _notification(what: int) -> void:
 
 		# After cleanup, let the quit proceed (optional on desktop; auto on web).
 		get_tree().quit()
+
+
+func load_scene_with_loading(target_path: String) -> void:
+	# Queues a scene change via the loading screen.
+	# Sets next_scene and transitions to loading_screen.tscn.
+	# Handles empty/invalid paths gracefully.
+
+	if target_path == "":
+		log_message("Cannot load empty scene path.", LogLevel.ERROR)
+		return
+
+	next_scene = target_path
+	get_tree().change_scene_to_file("res://scenes/loading_screen.tscn")
+
+
+# Static helpers for version (add after _ready())
+static func get_game_version() -> String:
+	return ProjectSettings.get_setting("application/config/version", "n/a") as String
+
+
+# For tests only—avoids direct writes in prod
+static func set_game_version_for_tests(value: String) -> void:
+	ProjectSettings.set_setting("application/config/version", value)

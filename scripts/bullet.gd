@@ -1,4 +1,6 @@
-# bullet.gd - FIXED for Web SFX Volume Control
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
+## bullet.gd - FIXED for Web SFX Volume Control
 extends Node2D
 
 @export var fire_rate: float = 0.15
@@ -18,8 +20,7 @@ var timer: Timer
 
 # NO @onready for ShotSFX — we’ll create players dynamically
 func _ready() -> void:
-	Globals.log_message("BulletFirer _ready: Script loaded.", Globals.LogLevel.DEBUG)
-
+	# Globals.log_message("BulletFirer _ready: Script loaded.", Globals.LogLevel.DEBUG)
 	# Set Texture Filter to Nearest
 	get_viewport().canvas_item_default_texture_filter = (
 		Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
@@ -41,7 +42,7 @@ func fire() -> void:
 		return
 	can_fire = false
 
-	var scaled_cooldown: float = fire_rate * Globals.difficulty
+	var scaled_cooldown: float = fire_rate * Globals.settings.difficulty
 	timer.start(scaled_cooldown)
 
 	# LOG
@@ -60,7 +61,7 @@ func play_sfx_with_volume() -> void:
 
 	var sfx_player := AudioStreamPlayer2D.new()
 	sfx_player.stream = shot_sound
-	sfx_player.bus = "SFX"  # Critical: assign to SFX bus
+	sfx_player.bus = AudioConstants.BUS_SFX_WEAPON  # Critical: assign to SFX bus
 	sfx_player.volume_db = 0.0  # Base volume (will be scaled by bus)
 
 	# Add to root to avoid being freed with bullet
@@ -69,8 +70,7 @@ func play_sfx_with_volume() -> void:
 	# Play and auto-cleanup
 	sfx_player.play()
 	sfx_player.finished.connect(func() -> void: sfx_player.queue_free())
-
-	Globals.log_message("SFX played on Web with bus volume control.", Globals.LogLevel.DEBUG)
+	# Globals.log_message("SFX played on Web with bus volume control.", Globals.LogLevel.DEBUG)
 
 
 func spawn_projectile() -> void:
@@ -89,13 +89,14 @@ func spawn_projectile() -> void:
 			Globals.log_message("Projectile hit: " + body.name, Globals.LogLevel.DEBUG)
 			if body.has_method("take_damage"):
 				body.take_damage(damage)  # Apply damage to enemy
-			proj.queue_free()  # Destroy on hit
+			if is_instance_valid(proj):  # Safe check (handles any rare race)
+				proj.queue_free()  # Destroy on hit
 	)
 
 	# Sprite for visuals – drag texture in Inspector
 	var sprite: Sprite2D = Sprite2D.new()
 	sprite.texture = projectile_texture
-	sprite.scale = Vector2(0.5, 0.5)  # Scale for bullet size – tweak
+	sprite.scale = Vector2(0.25, 0.25)  # Scale for bullet size – tweak
 	proj.add_child(sprite)
 
 	# Collision shape – rectangle for bullet hitbox (learning: match sprite size)
@@ -109,4 +110,8 @@ func spawn_projectile() -> void:
 	proj.add_to_group("bullets")  # Group for cleanup/query (e.g., count bullets)
 
 	# Timer destroy – prevents off-screen leaks (learning: memory management)
-	get_tree().create_timer(projectile_lifetime).timeout.connect(func() -> void: proj.queue_free())
+	var lifetime_timer: Timer = Timer.new()
+	lifetime_timer.one_shot = true  # Only fire once (like create_timer)
+	proj.add_child(lifetime_timer)
+	lifetime_timer.timeout.connect(proj.queue_free)  # Bound callable: safe, no lambda/capture
+	lifetime_timer.start(projectile_lifetime)

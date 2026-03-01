@@ -1,0 +1,64 @@
+[gd_scene load_steps=4 format=3 uid="uid://ckj1bkdiy65dd"]
+
+[ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_56yif"]
+[ext_resource type="Script" uid="uid://8hd1kvmb5bt1" path="res://scripts/volume_slider.gd" id="1_sfbgc"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_56yif"]
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+shadow_size = 5
+
+[node name="SFX" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 400.0
+offset_bottom = 24.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+tooltip_text = "SFX Volume Controls"
+
+[node name="SFXLabel" type="Label" parent="."]
+layout_mode = 0
+offset_top = 3.0
+offset_right = 58.0
+offset_bottom = 21.0
+size_flags_horizontal = 0
+theme_override_fonts/font = ExtResource("1_56yif")
+theme_override_font_sizes/font_size = 18
+text = "{SFX}"
+
+[node name="HSlider" type="HSlider" parent="."]
+layout_direction = 2
+layout_mode = 0
+offset_left = 125.0
+offset_right = 345.0
+offset_bottom = 24.0
+size_flags_horizontal = 3
+size_flags_vertical = 1
+tooltip_text = "Slide to control SFX volume."
+focus_neighbor_right = NodePath("../Mute")
+focus_next = NodePath("../Mute")
+max_value = 1.0
+step = 0.05
+tick_count = 16
+ticks_on_borders = true
+script = ExtResource("1_sfbgc")
+bus_name = "SFX"
+
+[node name="Mute" type="CheckButton" parent="."]
+layout_direction = 1
+layout_mode = 0
+offset_left = 360.0
+offset_right = 404.0
+offset_bottom = 24.0
+size_flags_horizontal = 8
+tooltip_text = "Mute SFX"
+focus_neighbor_left = NodePath("../HSlider")
+focus_previous = NodePath("../HSlider")
+theme_override_styles/focus = SubResource("StyleBoxFlat_56yif")
+button_pressed = true
+icon_alignment = 2
+vertical_icon_alignment = 0
+expand_icon = true

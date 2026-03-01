@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## Main Menu Script
 ##
 ## Handles initialization, button connections, and platform-specific behaviors
@@ -26,8 +28,13 @@ const QUIT_DIALOG_DEFAULT_PATH: String = "VideoStreamPlayer/Panel/VBoxContainer/
 
 # Reference to the quit dialog node, assigned in setup_quit_dialog or _ready()
 var quit_dialog: ConfirmationDialog
-var game_scene: PackedScene = preload("res://scenes/main_scene.tscn")
+# The unbound controls warning dialog
+var unbound_dialog: ConfirmationDialog
 var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
+var last_focused_button: Button = null  # Tracks which button opened the dialog
+var _start_pressed_cb: JavaScriptObject
+var _options_pressed_cb: JavaScriptObject
+var _quit_pressed_cb: JavaScriptObject
 
 @onready var ui_panel: Panel = $VideoStreamPlayer/Panel
 @onready var ui_container: VBoxContainer = $VideoStreamPlayer/Panel/VBoxContainer
@@ -35,26 +42,7 @@ var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 @onready var options_button: Button = $VideoStreamPlayer/Panel/VBoxContainer/OptionsButton
 @onready var quit_button: Button = $VideoStreamPlayer/Panel/VBoxContainer/QuitButton
 @onready var background_music: AudioStreamPlayer2D = $AudioStreamPlayer2D
-
-
-func _input(event: InputEvent) -> void:
-	## Handles input events for the main menu.
-	##
-	## Logs mouse clicks and unlocks audio on web platforms upon user gesture.
-	##
-	## :param event: The input event to process.
-	## :type event: InputEvent
-	## :rtype: void
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var pos: Vector2 = event.position  # Explicitly type as Vector2
-		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
-
-	# New: Unlock audio on first qualifying gesture (click or key press)
-	if OS.get_name() == "Web" and not background_music.playing:
-		background_music.play()
-		Globals.log_message(
-			"User gesture detected—starting background music.", Globals.LogLevel.DEBUG
-		)
+@onready var menu: Panel = $VideoStreamPlayer/Panel
 
 
 func _ready() -> void:
@@ -65,6 +53,30 @@ func _ready() -> void:
 	##
 	## :rtype: void
 	Globals.log_message("Initializing main menu...", Globals.LogLevel.DEBUG)
+	# Prepare menu for fade-in: Make visible but fully transparent
+	menu.visible = true
+	menu.modulate.a = 0.0  # Start invisible (alpha 0)
+	# Wait for 3 seconds (adjust as needed)
+	await get_tree().create_timer(3.0).timeout
+	# Optional: Play a fade-in animation if you have an AnimationPlayer
+	# Fade in the main panel over 1 second (smooth easing)
+	var panel_tween := create_tween()
+	# Property to animate (alpha channel)  # End value (fully opaque)  # Duration in seconds
+	panel_tween.tween_property(menu, "modulate:a", 1.0, 1.0).set_ease(Tween.EASE_OUT).set_trans(
+		Tween.TRANS_QUAD
+	)  # Smooth curve (eases out, quadratic)
+	# Wait only if tween is valid
+	if panel_tween and panel_tween.is_valid():
+		Globals.log_message("Waiting for fade-in tween to finish.", Globals.LogLevel.DEBUG)
+		await panel_tween.finished  # Non-blocking await; resumes after signal
+		Globals.log_message("Fade-in complete—granting focus.", Globals.LogLevel.DEBUG)
+	else:
+		Globals.log_message("Invalid tween—grabbing focus immediately.", Globals.LogLevel.WARNING)
+	# Fallback: Grab focus immediately if tween isn't running (e.g., error or instant)
+	# Give keyboard focus to the first button after the fade-in completes
+	Globals.ensure_initial_focus(
+		start_button, [start_button, options_button, quit_button], "Main Menu"
+	)
 
 	# Connect START button signal
 	@warning_ignore("return_value_discarded")
@@ -75,25 +87,92 @@ func _ready() -> void:
 	# Connect QUIT button signal
 	@warning_ignore("return_value_discarded")
 	quit_button.pressed.connect(_on_quit_pressed)
-
 	# Setup quit dialog
-	setup_quit_dialog()
-
+	_setup_quit_dialog()
+	# To prevent garbage collection of JavaScriptObject callbacks in Godot's JS bindings,
+	# which can break the references and cause calls like window.optionsPressed([]) to fail
+	# silently, leading to issues like the test timeout on waiting for visible elements
+	# (e.g., #audio-button remains hidden because options menu _ready() doesn't run).
+	# Storing them as member variables ensures they persist.
+	_setup_unbound_dialog()
 	if OS.get_name() == "Web":
 		var js_window := JavaScriptBridge.get_interface("window")
-		js_window.startPressed = JavaScriptBridge.create_callback(
-			Callable(self, "_on_start_pressed")
-		)
-		js_window.optionsPressed = JavaScriptBridge.create_callback(
-			Callable(self, "_on_options_button_pressed")
-		)
-		js_window.quitPressed = JavaScriptBridge.create_callback(Callable(self, "_on_quit_pressed"))
+		if js_window:
+			_start_pressed_cb = JavaScriptBridge.create_callback(
+				Callable(self, "_on_start_pressed")
+			)
+			js_window.startPressed = _start_pressed_cb
+			_options_pressed_cb = JavaScriptBridge.create_callback(
+				Callable(self, "_on_options_button_pressed")
+			)
+			js_window.optionsPressed = _options_pressed_cb
+			_quit_pressed_cb = JavaScriptBridge.create_callback(Callable(self, "_on_quit_pressed"))
+			js_window.quitPressed = _quit_pressed_cb
+			Globals.log_message(
+				"Exposed main menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
+			)
+
+
+func _setup_unbound_dialog() -> void:
+	# Create and configure the unbound controls warning dialog once
+	unbound_dialog = ConfirmationDialog.new()
+	unbound_dialog.title = "Unbound Controls"
+	unbound_dialog.dialog_text = "Some critical controls are unbound.\nGo to Key Mapping to fix?"
+	unbound_dialog.get_ok_button().text = "Open Key Mapping"
+	unbound_dialog.get_cancel_button().text = "Start Anyway"
+	# Make the dialog modal to prevent clicks outside or propagation issues
+	unbound_dialog.exclusive = true
+	add_child(unbound_dialog)  # Add to the scene tree so it can be shown
+	unbound_dialog.hide()  # Start hidden
+
+	# Connect confirmed (OK button or Enter): Load key mapping and hide
+	unbound_dialog.confirmed.connect(
+		func() -> void:
+			Globals.load_key_mapping(ui_panel)
+			unbound_dialog.hide()
+	)
+
+	# Connect only to cancel button pressed (click "Start Anyway"): Hide then load scene
+	var cancel_button: Button = unbound_dialog.get_cancel_button()
+	cancel_button.pressed.connect(
+		func() -> void:
+			unbound_dialog.hide()
+			Globals.load_scene_with_loading("res://scenes/main_scene.tscn")
+	)
+
+	# Handle close button (X): Just hide
+	unbound_dialog.close_requested.connect(
+		func() -> void:
+			Globals.log_message("Close requested triggered.", Globals.LogLevel.DEBUG)
+			unbound_dialog.hide()
+	)
+
+	# Re-enable and focus Start button after fully hidden (handles all non-load cases safely)
+	unbound_dialog.visibility_changed.connect(
+		func() -> void:
+			if not unbound_dialog.visible and is_instance_valid(start_button):
+				start_button.disabled = false
+				start_button.call_deferred("grab_focus")
+	)
+
+
+func _input(_event: InputEvent) -> void:
+	## Handles input events for the main menu.
+	##
+	## Logs mouse clicks and unlocks audio on web platforms upon user gesture.
+	##
+	## :param _event: The input event to process.
+	## :type _event: InputEvent
+	## :rtype: void
+	# New: Unlock audio on first qualifying gesture (click or key press)
+	if OS.get_name() == "Web" and not background_music.playing:
+		background_music.play()
 		Globals.log_message(
-			"Exposed main menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
+			"User gesture detected—starting background music.", Globals.LogLevel.DEBUG
 		)
 
 
-func setup_quit_dialog() -> void:
+func _setup_quit_dialog() -> void:
 	## Sets up the quit confirmation dialog.
 	##
 	## Finds the dialog node and connects signals if not already connected.
@@ -102,13 +181,17 @@ func setup_quit_dialog() -> void:
 	## :rtype: void
 	quit_dialog = get_node_or_null(quit_dialog_path)
 	if is_instance_valid(quit_dialog):
-		# Connect 'confirmed' signal only if not already connected to avoid errors
+		# Confirmed = user wants to quit
 		if not quit_dialog.confirmed.is_connected(_on_quit_dialog_confirmed):
 			quit_dialog.confirmed.connect(_on_quit_dialog_confirmed)
-		# Connect 'canceled' signal only if not already connected to avoid errors
+		# Canceled = Cancel button or Esc
 		if not quit_dialog.canceled.is_connected(_on_quit_dialog_canceled):
 			quit_dialog.canceled.connect(_on_quit_dialog_canceled)
-		quit_dialog.hide()  # Ensure initially hidden
+		# Close button (×) in title bar or other "just hide" cases
+		if not quit_dialog.close_requested.is_connected(_on_quit_dialog_canceled):
+			quit_dialog.close_requested.connect(_on_quit_dialog_canceled)
+		# Ensure initially hidden
+		quit_dialog.hide()
 		Globals.log_message("QuitDialog signals connected.", Globals.LogLevel.DEBUG)
 	else:
 		Globals.log_message(
@@ -116,6 +199,9 @@ func setup_quit_dialog() -> void:
 		)
 
 
+## Called when Start Game is pressed.
+## Checks for unbound critical actions and shows warning if needed.
+## Warning now appears only for the currently selected device (keyboard/gamepad).
 func _on_start_pressed(_args: Array = []) -> void:
 	## Handles the Start button press.
 	##
@@ -124,14 +210,13 @@ func _on_start_pressed(_args: Array = []) -> void:
 	## :param _args: Optional arguments from web overlays (unused).
 	## :type _args: Array
 	## :rtype: void
-	# Stub; later: get_tree().change_scene_to_file("res://game_scene.tscn")
 	Globals.log_message("Start Game menu button pressed.", Globals.LogLevel.DEBUG)
-
-	if game_scene:
-		Globals.log_message("Loading main game scene...", Globals.LogLevel.DEBUG)
-		get_tree().change_scene_to_packed(game_scene)
+	if Settings.has_unbound_critical_actions_for_current_device():
+		# Guard: Disable button to prevent spamming while dialog is open
+		start_button.disabled = true
+		unbound_dialog.popup_centered()  # Show the reused dialog
 	else:
-		Globals.log_message("Error: Game scene not set!", Globals.LogLevel.ERROR)
+		Globals.load_scene_with_loading("res://scenes/main_scene.tscn")
 
 
 func _on_options_button_pressed(_args: Array = []) -> void:
@@ -156,6 +241,7 @@ func _on_quit_pressed(_args: Array = []) -> void:
 	## :rtype: void
 	# Show confirmation dialog
 	if is_instance_valid(quit_dialog):
+		last_focused_button = quit_button  # Remember the opener
 		quit_dialog.show()
 		Globals.log_message("Attempting to show QuitDialog.", Globals.LogLevel.DEBUG)
 		quit_dialog.popup_centered()  # Sets visible=true internally
@@ -188,4 +274,12 @@ func _on_quit_dialog_canceled() -> void:
 	# Optional: Handle cancel (e.g., play sound or log)
 	quit_dialog.hide()
 	Globals.log_message("Quit canceled.", Globals.LogLevel.DEBUG)
-	# Dialog auto-hides on cancel, no extra code needed
+	# Return focus to the button that opened the dialog
+	if is_instance_valid(last_focused_button):  # Safety check
+		last_focused_button.call_deferred("grab_focus")  # Restore to original opener
+		Globals.log_message(
+			"Restored focus to: " + last_focused_button.name, Globals.LogLevel.DEBUG
+		)
+	else:
+		if is_instance_valid(quit_button):
+			quit_button.call_deferred("grab_focus")  # Fallback to default

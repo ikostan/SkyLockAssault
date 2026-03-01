@@ -1,12 +1,28 @@
-extends Button
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
+# input_remap_button.gd (full updated script - removes Godot 3.x methods, uses custom dicts only)
+# Extends to handle joypad remapping and display (keys, buttons, axes).
+# Use device = -1 for "all controllers".
+# Handles listening, updating text, saving. Extends Button.
+# :vartype action: String
+# :vartype action_event_index: int
+# :vartype KEY_LABELS: Dictionary
+# :vartype JOY_BUTTON_LABELS: Dictionary
+# :vartype JOY_AXIS_BASE_LABELS: Dictionary
+# :vartype JOY_AXIS_LABELS: Dictionary
+# :vartype listening: bool
 
 # gdlint:ignore = class-definitions-order
 class_name InputRemapButton
 
-@export var action: String
-@export var action_event_index: int = 0
+extends Button
 
-# gdlint:ignore = class-definitions-order
+# Enum for clean Inspector dropdown + match
+enum DeviceType {
+	KEYBOARD,
+	GAMEPAD,
+}
+
 const KEY_LABELS: Dictionary = {
 	Key.KEY_W: "W",
 	Key.KEY_S: "S",
@@ -14,60 +30,222 @@ const KEY_LABELS: Dictionary = {
 	Key.KEY_A: "A",
 	Key.KEY_D: "D",
 	Key.KEY_SPACE: "Space",
-	Key.KEY_Q: "Q"
+	Key.KEY_Q: "Q",
+	Key.KEY_LEFT: "Left",
+	Key.KEY_RIGHT: "Right",
+	Key.KEY_UP: "Up",
+	Key.KEY_DOWN: "Down",
+	Key.KEY_ESCAPE: "Esc",
+	Key.KEY_ENTER: "Enter",
+	Key.KEY_TAB: "Tab",
+	Key.KEY_SHIFT: "Shift",
+	# Add more as needed for arrow keys, etc.
 }
+
+# Custom labels for joypad buttons (replaces removed Input.get_joy_button_string)
+const JOY_BUTTON_LABELS: Dictionary = {
+	JOY_BUTTON_A: "A",
+	JOY_BUTTON_B: "B",
+	JOY_BUTTON_X: "X",
+	JOY_BUTTON_Y: "Y",
+	JOY_BUTTON_BACK: "Back",
+	JOY_BUTTON_GUIDE: "Guide",
+	JOY_BUTTON_START: "Start",
+	JOY_BUTTON_LEFT_STICK: "Left Stick",
+	JOY_BUTTON_RIGHT_STICK: "Right Stick",
+	JOY_BUTTON_LEFT_SHOULDER: "L1",
+	JOY_BUTTON_RIGHT_SHOULDER: "R1",
+	JOY_BUTTON_DPAD_UP: "D-Pad Up",
+	JOY_BUTTON_DPAD_DOWN: "D-Pad Down",
+	JOY_BUTTON_DPAD_LEFT: "D-Pad Left",
+	JOY_BUTTON_DPAD_RIGHT: "D-Pad Right",
+	JOY_BUTTON_MISC1: "Misc 1",
+	JOY_BUTTON_PADDLE1: "Paddle 1",
+	JOY_BUTTON_PADDLE2: "Paddle 2",
+	JOY_BUTTON_PADDLE3: "Paddle 3",
+	JOY_BUTTON_PADDLE4: "Paddle 4",
+	JOY_BUTTON_TOUCHPAD: "Touchpad"
+	# Add more from Godot docs if needed (e.g., for PS/Xbox specifics)
+}
+
+# Custom base labels for axes (replaces removed Input.get_joy_axis_string)
+const JOY_AXIS_BASE_LABELS: Dictionary = {
+	JOY_AXIS_LEFT_X: "Left Stick X",
+	JOY_AXIS_LEFT_Y: "Left Stick Y",
+	JOY_AXIS_RIGHT_X: "Right Stick X",
+	JOY_AXIS_RIGHT_Y: "Right Stick Y",
+	JOY_AXIS_TRIGGER_LEFT: "Left Trigger",
+	JOY_AXIS_TRIGGER_RIGHT: "Right Trigger",
+}
+
+# Custom labels for common joypad axes/directions (for nice display)
+const JOY_AXIS_LABELS: Dictionary = {
+	JOY_AXIS_LEFT_X: {-1.0: "Left Stick Left", 1.0: "Left Stick Right"},
+	JOY_AXIS_LEFT_Y: {-1.0: "Left Stick Up", 1.0: "Left Stick Down"},
+	JOY_AXIS_RIGHT_X: {-1.0: "Right Stick Left", 1.0: "Right Stick Right"},
+	JOY_AXIS_RIGHT_Y: {-1.0: "Right Stick Up", 1.0: "Right Stick Down"},
+	JOY_AXIS_TRIGGER_LEFT: {1.0: "Left Trigger"},
+	JOY_AXIS_TRIGGER_RIGHT: {1.0: "Right Trigger"}
+}
+
+# Add these new constants here for clarity and easy tweaking
+# Minimum axis value to consider for remapping (avoids jitter)
+const AXIS_DEADZONE_THRESHOLD: float = 0.5
+# Value to normalize axis direction to (e.g., +1.0 or -1.0)
+const AXIS_NORMALIZED_VALUE: float = 1.0
+
+@export var current_device: DeviceType = DeviceType.KEYBOARD
+@export var action: String = ""
 
 var listening: bool = false
 
 
+# Ready: Setup toggle, text, connect pressed.
+# :rtype: void
 func _ready() -> void:
+	add_to_group("remap_buttons")
 	toggle_mode = true
 	update_button_text()
 	if not pressed.is_connected(_on_pressed):
-		# Safe: Only connect if not already
 		pressed.connect(_on_pressed)
 
 
+## Handles button press to start remapping.
+## Sets device-specific prompt text.
+## :rtype: void
 func _on_pressed() -> void:
 	listening = button_pressed
 	if listening:
-		text = "Press a key..."
+		# FIXED: Check the actual current_device to return the correct prompt
+		text = (
+			Globals.settings.remap_prompt_keyboard
+			if current_device == DeviceType.KEYBOARD
+			else Globals.settings.remap_prompt_gamepad
+		)
 	else:
 		update_button_text()
 
 
+# In input_remap_button.gd (full updated _input function)
+# Input: Handle remap for key/button/motion if listening.
+# :param event: Input event.
+# :type event: InputEvent
+# :rtype: void
 func _input(event: InputEvent) -> void:
-	if listening and event is InputEventKey and event.pressed:
-		# Erase old event
-		var events := InputMap.action_get_events(action)
-		if events.size() > action_event_index:
-			InputMap.action_erase_event(action, events[action_event_index])
+	if not listening:
+		return
 
-		# Add new event (physical_keycode for cross-layout)
-		var new_event := InputEventKey.new()
+	# Device-specific filtering
+	if current_device == DeviceType.KEYBOARD and not event is InputEventKey:
+		return
+	if (
+		current_device == DeviceType.GAMEPAD
+		and not (event is InputEventJoypadButton or event is InputEventJoypadMotion)
+	):
+		return
+
+	var new_event: InputEvent = null
+
+	# ── KEYBOARD HANDLING ──
+	if event is InputEventKey and event.pressed:
+		# Do not bind "pure" modifiers alone (Shift/Ctrl/Alt/Meta) if you want to support combinations.
+		# This waits for the "main" key (like Tab) to be pressed while the modifier is held.
+		if event.keycode in [KEY_SHIFT, KEY_CTRL, KEY_ALT, KEY_META]:
+			return
+
+		new_event = InputEventKey.new()
 		new_event.physical_keycode = event.physical_keycode
-		InputMap.action_add_event(action, new_event)
+		# CRITICAL: Transfer modifier states to the new event (including Meta for Meta-based shortcuts)
+		new_event.shift_pressed = event.shift_pressed
+		new_event.ctrl_pressed = event.ctrl_pressed
+		new_event.alt_pressed = event.alt_pressed
+		new_event.meta_pressed = event.meta_pressed
 
-		# Update display and stop listening
-		update_button_text()
-		button_pressed = false
-		listening = false
+	# ── GAMEPAD HANDLING ──
+	elif event is InputEventJoypadButton and event.pressed:
+		new_event = InputEventJoypadButton.new()
+		new_event.button_index = event.button_index
+		new_event.device = -1
+	elif event is InputEventJoypadMotion and abs(event.axis_value) > AXIS_DEADZONE_THRESHOLD:
+		new_event = InputEventJoypadMotion.new()
+		new_event.axis = event.axis
+		new_event.axis_value = get_normalized_axis_direction(event.axis_value)
+		new_event.device = -1
 
-		# Save changes
-		Settings.save_input_mappings()
+	if new_event == null:
+		return
 
-		get_viewport().set_input_as_handled()
+	# ── CONFLICT CHECK ──
+	var conflicts: Array[String] = Settings.get_conflicting_actions(new_event, action)
+
+	if not conflicts.is_empty() and not Settings.events_match(new_event, get_matching_event()):
+		var km_menu: Node = get_tree().get_first_node_in_group("key_mapping_menu")
+		if is_instance_valid(km_menu) and km_menu.has_method("show_conflict_dialog"):
+			km_menu.show_conflict_dialog(self, new_event.duplicate(), conflicts)
+			get_viewport().set_input_as_handled()
+			return  # Wait for user to confirm or cancel via dialog
+
+	# ── APPLY MAPPING ──
+	erase_old_event()
+	InputMap.action_add_event(action, new_event)
+
+	Globals.log_message(
+		"Remapped '%s' to '%s'" % [action, Settings.get_event_label(new_event)],
+		Globals.LogLevel.DEBUG
+	)
+
+	finish_remap()
 
 
+# New helper function: Normalizes axis value to a direction (+1.0 or -1.0)
+# This keeps the logic clean and reusable if you add more axis features later.
+# :param axis_value: The raw axis value from the event.
+# :type axis_value: float
+# :rtype: float
+func get_normalized_axis_direction(axis_value: float) -> float:
+	return sign(axis_value) * AXIS_NORMALIZED_VALUE
+
+
+# Helper to erase old event at index
+# Erase old event at index.
+# :rtype: void
+func erase_old_event() -> void:
+	var old_ev: InputEvent = get_matching_event()
+	if old_ev:
+		InputMap.action_erase_event(action, old_ev)
+
+
+## Gets matching event for current device.
+## :rtype: InputEvent|null
+func get_matching_event() -> InputEvent:
+	var events: Array[InputEvent] = InputMap.action_get_events(action)
+	for ev: InputEvent in events:
+		if current_device == DeviceType.KEYBOARD and ev is InputEventKey:
+			return ev
+
+		if (
+			current_device == DeviceType.GAMEPAD
+			and (ev is InputEventJoypadButton or ev is InputEventJoypadMotion)
+		):
+			return ev
+	return null
+
+
+# In input_remap_button.gd, inside finish_remap() func (before Settings.save_input_mappings())
+# Finish remap: update display, stop listening, save
+# :rtype: void
+func finish_remap() -> void:
+	update_button_text()
+	button_pressed = false
+	listening = false
+	Settings.save_input_mappings()  # Save the changes
+	get_viewport().set_input_as_handled()  # Prevent further input propagation
+
+
+# Updated to display key, joypad button, or axis label
+# :rtype: void
 func update_button_text() -> void:
-	var events := InputMap.action_get_events(action)
-	if events.size() > action_event_index:
-		var event := events[action_event_index]
-		if event is InputEventKey:
-			# Web-safe: key_label gives printable string ("W", "Space") on all platforms
-			var label: String = KEY_LABELS.get(
-				event.physical_keycode, OS.get_keycode_string(event.key_label)
-			)
-			text = label if label != "" else "Unbound"
-	else:
-		text = "Unbound"
+	var ev: InputEvent = get_matching_event()
+	text = Settings.get_event_label(ev).strip_edges() if ev else "Unbound"
+	# Remove NBSP (common cause of “looks like a space” failures) + trim.
+	text = text.replace("\u00A0", " ").strip_edges()

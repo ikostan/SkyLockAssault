@@ -1,3 +1,5 @@
+## Copyright (C) 2025 Egor Kostan
+## SPDX-License-Identifier: GPL-3.0-or-later
 ## Options Menu Script
 ##
 ## Handles log level selection, difficulty adjustment, and back navigation
@@ -10,32 +12,195 @@
 ## :vartype back_button: Button
 ## :vartype difficulty_slider: HSlider
 ## :vartype difficulty_label: Label
-
+class_name OptionsMenu
 extends CanvasLayer
 
-# Explicit mapping from display names to enum values
-var log_level_display_to_enum: Dictionary = {
-	"DEBUG": Globals.LogLevel.DEBUG,
-	"INFO": Globals.LogLevel.INFO,
-	"WARNING": Globals.LogLevel.WARNING,
-	"ERROR": Globals.LogLevel.ERROR,
-	"NONE": Globals.LogLevel.NONE
-}
+## The wrappers (like JavaScriptBridgeWrapper and presumably OSWrapper)
+## are designed to abstract away direct singleton calls, making the code
+## easier to unit test by allowing mocks/stubs without relying on the
+## actual engine singletons.
+var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
+var os_wrapper: OSWrapper = OSWrapper.new()  # Assuming OSWrapper is defined similarly
+var audio_scene: PackedScene = preload("res://scenes/audio_settings.tscn")
+var controls_scene: PackedScene = preload("res://scenes/key_mapping_menu.tscn")
+var advanced_scene: PackedScene = preload("res://scenes/advanced_settings.tscn")
+var gameplay_settings_scene: PackedScene = preload("res://scenes/gameplay_settings.tscn")
+var _options_back_button_pressed_cb: JavaScriptObject
+var _controls_pressed_cb: JavaScriptObject
+var _audio_pressed_cb: JavaScriptObject
+var _advanced_pressed_cb: JavaScriptObject
+var _gameplay_settings_pressed_cb: JavaScriptObject
+var _torn_down: bool = false  # Guard against multiple teardown calls
 
-var _change_log_level_cb: JavaScriptObject
-var _change_difficulty_cb: JavaScriptObject
-var _back_pressed_cb: JavaScriptObject
+@onready var options_back_button: Button = $Panel/OptionsVBoxContainer/OptionsBackButton
+@onready var audio_settings_button: Button = $Panel/OptionsVBoxContainer/AudioSettingsButton
+@onready var key_mapping_button: Button = $Panel/OptionsVBoxContainer/KeyMappingButton
+@onready var gameplay_settings_button: Button = $Panel/OptionsVBoxContainer/GameplaySettingsButton
+@onready var advanced_settings_button: Button = $Panel/OptionsVBoxContainer/AdvancedSettingsButton
+@onready var version_label: Label = $Panel/OptionsVBoxContainer/VersionLabel
+@onready var options_vbox: VBoxContainer = $Panel/OptionsVBoxContainer
 
-@onready var log_lvl_option: OptionButton = get_node(
-	"Panel/OptionsVBoxContainer/LogLevelContainer/LogLevelOptionButton"
-)
-@onready var back_button: Button = $Panel/OptionsVBoxContainer/BackButton
-@onready var difficulty_slider: HSlider = get_node(
-	"Panel/OptionsVBoxContainer/DifficultyLevelContainer/DifficultyHSlider"
-)
-@onready var difficulty_label: Label = get_node(
-	"Panel/OptionsVBoxContainer/DifficultyLevelContainer/DifficultyValueLabel"
-)
+
+func _ready() -> void:
+	## Initializes the options menu when the node enters the scene tree.
+	##
+	## Populates the log level options, sets initial values, connects signals,
+	## and configures process mode.
+	##
+	## Toggles web overlays to visible layout (but still invisible visually) if on web.
+	## Exposes functions to JS for web overlays if on web.
+	##
+	## :rtype: void
+
+	# Game version
+	version_label.text = "Version: " + Globals.get_game_version()
+	Globals.log_message("Updated label to: " + version_label.text, Globals.LogLevel.DEBUG)
+
+	if not options_back_button.pressed.is_connected(_on_options_back_button_pressed):
+		options_back_button.pressed.connect(_on_options_back_button_pressed)
+
+	if not key_mapping_button.pressed.is_connected(_on_key_mapping_button_pressed):
+		key_mapping_button.pressed.connect(_on_key_mapping_button_pressed)
+
+	if not audio_settings_button.pressed.is_connected(_on_audio_settings_button_pressed):
+		audio_settings_button.pressed.connect(_on_audio_settings_button_pressed)
+
+	if not gameplay_settings_button.pressed.is_connected(_on_gameplay_settings_button_pressed):
+		gameplay_settings_button.pressed.connect(_on_gameplay_settings_button_pressed)
+
+	if not advanced_settings_button.pressed.is_connected(_on_advanced_settings_button_pressed):
+		advanced_settings_button.pressed.connect(_on_advanced_settings_button_pressed)
+
+	# Configure for web overlays (invisible but positioned)
+	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignore pause
+	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
+
+	if os_wrapper.has_feature("web"):
+		# Toggle overlays...
+		(
+			js_bridge_wrapper
+			. eval(
+				"""
+				document.getElementById('controls-button').style.display = 'block';
+				document.getElementById('audio-button').style.display = 'block';
+				document.getElementById('advanced-button').style.display = 'block';
+				document.getElementById('gameplay-button').style.display = 'block';
+				document.getElementById('options-back-button').style.display = 'block';
+				""",
+				true
+			)
+		)
+
+		# Expose callbacks to JS (store refs to prevent GC)
+		var js_window: JavaScriptObject = js_bridge_wrapper.get_interface("window")
+		if js_window:
+			_options_back_button_pressed_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_options_back_button_pressed_js")
+			)
+			js_window.optionsBackPressed = _options_back_button_pressed_cb
+
+			_controls_pressed_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_controls_pressed_js")
+			)
+			js_window.controlsPressed = _controls_pressed_cb
+
+			_audio_pressed_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_audio_pressed_js")
+			)
+			js_window.audioPressed = _audio_pressed_cb
+
+			_advanced_pressed_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_advanced_pressed_js")
+			)
+			js_window.advancedPressed = _advanced_pressed_cb
+
+			_gameplay_settings_pressed_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_gameplay_settings_pressed_js")
+			)
+			js_window.gameplayPressed = _gameplay_settings_pressed_cb
+
+			Globals.log_message(
+				"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
+			)
+	_torn_down = false  # Reset guard on ready
+	_grab_first_button_focus()  # Dynamically grab focus on the first button
+
+
+## Called when returning from the Key Mapping menu.
+## Focuses the Key Mapping button using the same safe helper as everywhere else.
+func grab_focus_on_key_mapping_button() -> void:
+	Globals.ensure_initial_focus(
+		key_mapping_button,
+		[
+			advanced_settings_button,
+			audio_settings_button,
+			key_mapping_button,
+			gameplay_settings_button,
+			options_back_button
+		],
+		"Options Menu (returned from Key Mapping)"
+	)
+
+
+## Called when returning from the Gameplay menu.
+## Focuses the Gameplay Settings button using the same safe helper as everywhere else.
+func grab_focus_on_gameplay_settings_button() -> void:
+	Globals.ensure_initial_focus(
+		gameplay_settings_button,
+		[
+			advanced_settings_button,
+			audio_settings_button,
+			key_mapping_button,
+			gameplay_settings_button,
+			options_back_button
+		],
+		"Options Menu (returned from Gameplay)"
+	)
+
+
+## Called when returning from the Audio Settings menu.
+## Focuses the Audio Settings button using the same safe helper as everywhere else.
+func grab_focus_on_audio_settings_button() -> void:
+	Globals.ensure_initial_focus(
+		audio_settings_button,
+		[
+			advanced_settings_button,
+			audio_settings_button,
+			key_mapping_button,
+			gameplay_settings_button,
+			options_back_button
+		],
+		"Options Menu (returned from Audio Options)"
+	)
+
+
+func _grab_first_button_focus() -> void:
+	## Finds the first visible/enabled Button in the container and hands it
+	## to the centralized focus helper. The helper will decide whether to
+	## actually grab focus or skip (and log accordingly).
+
+	var candidate: Button = null
+	for child in options_vbox.get_children():
+		if child is Button and child.visible and not child.disabled:
+			candidate = child
+			break
+
+	if candidate:
+		Globals.ensure_initial_focus(
+			candidate,
+			[
+				advanced_settings_button,
+				audio_settings_button,
+				key_mapping_button,
+				gameplay_settings_button,
+				options_back_button
+			],
+			"Options Menu"
+		)
+	else:
+		Globals.log_message(
+			"No Button found in OptionsVBoxContainer for initial focus!", Globals.LogLevel.WARNING
+		)
 
 
 func _input(event: InputEvent) -> void:
@@ -51,91 +216,61 @@ func _input(event: InputEvent) -> void:
 		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
 
 
-func _ready() -> void:
-	## Initializes the options menu when the node enters the scene tree.
-	##
-	## Populates the log level options, sets initial values, connects signals,
-	## and configures process mode.
-	##
-	## Toggles web overlays to visible layout (but still invisible visually) if on web.
-	## Exposes functions to JS for web overlays if on web.
-	##
-	## :rtype: void
-	# Populate OptionButton with all LogLevel enum values
-	for level: String in Globals.LogLevel.keys():
-		if level != "NONE":  # Skip auto-add NONE; add manually as "None"
-			log_lvl_option.add_item(level)  # "Debug", "Info", etc.
-	log_lvl_option.add_item("NONE")  # Manual for title case
-
-	# Set to current log level (find index by enum value)
-	var current_value: int = Globals.current_log_level
-	var index: int = Globals.LogLevel.values().find(current_value)
-	if index != -1:
-		log_lvl_option.selected = index
-	else:
-		log_lvl_option.selected = 1  # Fallback to INFO (index 1)
-		Globals.log_message("Invalid saved log level—reset to INFO.", Globals.LogLevel.WARNING)
-
-	# Connect signals to type-specific handlers (change: separate from JS callbacks)
-	log_lvl_option.item_selected.connect(_on_log_level_item_selected)
-	difficulty_slider.value_changed.connect(_on_difficulty_value_changed)
-	back_button.pressed.connect(_on_back_pressed)
-
-	# Set initial difficulty label (sync with global)
-	difficulty_slider.value = Globals.difficulty
-	difficulty_label.text = "{" + str(Globals.difficulty) + "}"
-
-	# Configure for web overlays (invisible but positioned)
-	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignore pause
-	Globals.options_open = true  # Set flag on load
-	Globals.log_message("Options menu loaded.", Globals.LogLevel.DEBUG)
-
-	if OS.has_feature("web"):
-		# Toggle overlays visible (layout only; opacity=0)
-		(
-			JavaScriptBridge
-			. eval(
-				"""
-			document.getElementById('log-level-select').style.display = 'block';
-			document.getElementById('difficulty-slider').style.display = 'block';
-			document.getElementById('back-button').style.display = 'block';
-		""",
-				true
-			)
-		)  # 'true' = allow JS execution in editor (for testing)
-
-		# Expose callbacks to JS (store refs to prevent GC)
-		var js_window: JavaScriptObject = JavaScriptBridge.get_interface("window")
-		_change_log_level_cb = JavaScriptBridge.create_callback(
-			Callable(self, "_on_change_log_level_js")
-		)
-		js_window.changeLogLevel = _change_log_level_cb
-
-		_change_difficulty_cb = JavaScriptBridge.create_callback(
-			Callable(self, "_on_change_difficulty_js")
-		)
-		js_window.changeDifficulty = _change_difficulty_cb
-
-		_back_pressed_cb = JavaScriptBridge.create_callback(Callable(self, "_on_back_pressed_js"))
-		js_window.backPressed = _back_pressed_cb
-		Globals.log_message(
-			"Exposed options menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
-		)
-
-
-# New: Centralized teardown helper
 func _teardown() -> void:
-	## Central teardown: Restores hidden menu, clears flags/refs.
+	## Cleans up on options close.
 	##
-	## Idempotent—safe for multiple calls.
+	## Shows previous menu from stack, resets globals,
+	## and restores focus to the Options button if it's a menu with the group.
 	##
 	## :rtype: void
-	if Globals.hidden_menu and is_instance_valid(Globals.hidden_menu):
-		Globals.hidden_menu.visible = true
-		Globals.log_message("Showing menu: " + Globals.hidden_menu.name, Globals.LogLevel.DEBUG)
-	Globals.hidden_menu = null  # Always clear
+	if _torn_down:
+		return
+	_torn_down = true
+	if not Globals.hidden_menus.is_empty():
+		var prev_menu: Node = Globals.hidden_menus.pop_back()
+		if is_instance_valid(prev_menu):
+			prev_menu.visible = true
+			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
+
+			# Unified check using the "MenuWithOptions" group you added in Editor
+			if prev_menu.is_in_group("MenuWithOptions"):
+				# Log context for debug (pause vs main, using node name)
+				var log_context: String = (
+					"from " + ("PAUSE menu" if prev_menu.name == "PauseMenu" else "MAIN menu")
+				)
+				_grab_options_focus(prev_menu, log_context)
+			else:
+				Globals.log_message(
+					"No MenuWithOptions group on " + prev_menu.name + " - skipping focus grab",
+					Globals.LogLevel.DEBUG
+				)
+
 	Globals.options_open = false
 	Globals.options_instance = null
+	Globals.log_message("Options menu exited.", Globals.LogLevel.DEBUG)
+
+
+func _grab_options_focus(menu_node: Node, log_context: String) -> void:
+	## Helper to grab focus on OptionsButton.
+	##
+	## Validates and logs for easy debugging.
+	##
+	## :param menu_node: Menu node with the button.
+	## :type menu_node: Node
+	## :param log_context: Debug context (e.g., "from MAIN menu").
+	## :type log_context: String
+	## :rtype: void
+	var options_btn: Button = menu_node.get_node_or_null("VBoxContainer/OptionsButton")
+	if is_instance_valid(options_btn):
+		options_btn.call_deferred("grab_focus")  # Deferred to ensure after visibility change
+		Globals.log_message(
+			"Grabbed focus on OPTIONS button " + log_context + "...", Globals.LogLevel.DEBUG
+		)
+	else:
+		Globals.log_message(
+			"OptionsButton not found in " + menu_node.name + " - check path or scene structure!",
+			Globals.LogLevel.ERROR
+		)
 
 
 func _exit_tree() -> void:
@@ -148,114 +283,79 @@ func _exit_tree() -> void:
 	Globals.log_message("Options menu exited.", Globals.LogLevel.DEBUG)
 
 
-func get_log_level_index() -> int:
-	## Retrieves the index of the current log level in the enum values.
+# New: JS callback for audio button
+# warning-ignore:unused_argument
+func _on_audio_pressed_js(_args: Array) -> void:
+	## JS callback for audio button press.
 	##
-	## :returns: The index of the current log level.
-	## :rtype: int
-	return Globals.LogLevel.values().find(Globals.current_log_level)
-
-
-# Change: Separate handler for signal (int index)
-func _on_log_level_item_selected(index: int) -> void:
-	## Handles log level selection from the OptionButton signal.
+	## Routes to signal handler.
 	##
-	## Updates global log level, logs the change, and saves settings.
-	##
-	## :param index: The selected item index.
-	## :type index: int
+	## :param _args: Unused array from JS.
+	## :type _args: Array
 	## :rtype: void
-	var selected_name: String = log_lvl_option.get_item_text(index)
-	var selected_enum: Globals.LogLevel = log_level_display_to_enum.get(
-		selected_name, Globals.LogLevel.INFO
-	)
-	Globals.current_log_level = selected_enum
-	log_lvl_option.selected = Globals.current_log_level
-	# Temporary raw print to bypass log_message
-	Globals.log_message("Log level changed to: " + selected_name, Globals.LogLevel.DEBUG)
-	Globals._save_settings()
+	_on_audio_settings_button_pressed()
 
 
-# New: JS-specific callback (exactly one Array arg, no default)
-func _on_change_log_level_js(args: Array) -> void:
-	## JS callback for changing log level.
+# New: JS callback for advanced button
+# warning-ignore:unused_argument
+func _on_advanced_pressed_js(_args: Array) -> void:
+	## JS callback for advanced button press.
 	##
-	## Routes to the signal handler.
+	## Routes to signal handler.
 	##
-	## :param args: Array containing the index (from JS).
-	## :type args: Array
+	## :param _args: Unused array from JS.
+	## :type _args: Array
 	## :rtype: void
-	Globals.log_message(
-		"JS change_log_level callback called with args: " + str(args[0][0]), Globals.LogLevel.DEBUG
-	)
-	if args.size() > 0:
-		# var js_array: Variant = args[0]  # The JS array passed from evaluate
-		# var arg_value: Variant = js_array[0]  # Access first element with []
-		var index: int = int(args[0][0])
-		_on_log_level_item_selected(index)
+	_on_advanced_settings_button_pressed()
 
 
-# Change: Separate handler for signal (float value)
-func _on_difficulty_value_changed(value: float) -> void:
-	## Handles changes to the difficulty slider from the signal.
+# New: JS callback for gameplay settings button
+# warning-ignore:unused_argument
+func _on_gameplay_settings_pressed_js(_args: Array) -> void:
+	## JS callback for gameplay settings button press.
 	##
-	## Updates global difficulty, label text, logs the change, and saves settings.
+	## Routes to signal handler.
 	##
-	## :param value: The new slider value.
-	## :type value: float
+	## :param _args: Unused array from JS.
+	## :type _args: Array
 	## :rtype: void
-	Globals.difficulty = value
-	difficulty_slider.value = Globals.difficulty
-	difficulty_label.text = "{" + str(value) + "}"
-	Globals.log_message("Difficulty changed to: " + str(value), Globals.LogLevel.DEBUG)
-	Globals._save_settings()
+	_on_gameplay_settings_button_pressed()
 
 
-# New: JS-specific callback (exactly one Array arg, no default)
-func _on_change_difficulty_js(args: Array) -> void:
-	## JS callback for changing difficulty.
+# New: JS callback for controls button
+# warning-ignore:unused_argument
+func _on_controls_pressed_js(_args: Array) -> void:
+	## JS callback for controls button press.
 	##
-	## Routes to the signal handler.
+	## Routes to signal handler.
 	##
-	## :param args: Array containing the value (from JS).
-	## :type args: Array
+	## :param _args: Unused array from JS.
+	## :type _args: Array
 	## :rtype: void
-	if args.size() > 0:
-		Globals.log_message(
-			"JS difficulty callback called with args: " + str(args[0][0]), Globals.LogLevel.DEBUG
-		)
-		var value: float = float(args[0][0])
-		_on_difficulty_value_changed(value)
+	_on_key_mapping_button_pressed()
 
 
 # Change: Signal handler (no arg)
-func _on_back_pressed() -> void:
+func _on_options_back_button_pressed() -> void:
 	## Handles the Back button press from the signal.
 	##
 	## Shows hidden menu if valid, logs the action, removes the options menu,
 	## and hides web overlays if on web.
 	##
 	## :rtype: void
-	Globals.log_message("Back button pressed.", Globals.LogLevel.DEBUG)
+	Globals.log_message("Options Back button pressed.", Globals.LogLevel.DEBUG)
 	_teardown()  # Centralized cleanup
 
-	if OS.has_feature("web"):
-		# Hide options overlays after closing menu
-		(
-			JavaScriptBridge
-			. eval(
-				"""
-			document.getElementById('log-level-select').style.display = 'none';
-			document.getElementById('difficulty-slider').style.display = 'none';
-			document.getElementById('back-button').style.display = 'none';
-		"""
-			)
-		)
+	# Hide options overlays after closing menu
+	_hide_web_overlays()
+
+	Globals.options_open = false  # Reset flag first
+	Globals.options_instance = null  # Optional: Clear ref
 	queue_free()
 
 
 # New: JS-specific callback (exactly one Array arg, no default)
-func _on_back_pressed_js(args: Array) -> void:
+func _on_options_back_button_pressed_js(args: Array) -> void:
 	## JS callback for back button press.
 	##
 	## Routes to the signal handler (ignores args).
@@ -266,4 +366,67 @@ func _on_back_pressed_js(args: Array) -> void:
 	Globals.log_message(
 		"JS back_pressed callback called with args: " + str(args), Globals.LogLevel.DEBUG
 	)
-	_on_back_pressed()
+	_on_options_back_button_pressed()
+
+
+func _hide_web_overlays() -> void:
+	## Hides web overlays for options menu buttons.
+	##
+	## Executes JS to set display none for specific elements.
+	##
+	## :rtype: void
+	if os_wrapper.has_feature("web") and js_bridge_wrapper:
+		(
+			js_bridge_wrapper
+			. eval(
+				"""
+				document.getElementById('audio-button').style.display = 'none';
+				document.getElementById('advanced-button').style.display = 'none';
+				document.getElementById('controls-button').style.display = 'none';
+				document.getElementById('gameplay-button').style.display = 'none';
+				document.getElementById('options-back-button').style.display = 'none';
+				""",
+				true
+			)
+		)
+
+
+func _open_sub_menu(scene: PackedScene, log_msg: String) -> void:
+	## Opens a sub-menu by instantiating and adding the scene.
+	##
+	## Logs the action, adds instance to root, hides current menu,
+	## and hides web overlays if applicable.
+	##
+	## :param scene: The PackedScene to instantiate.
+	## :type scene: PackedScene
+	## :param log_msg: The message to log.
+	## :type log_msg: String
+	## :rtype: void
+	Globals.log_message(log_msg, Globals.LogLevel.DEBUG)
+	var instance: Node = scene.instantiate()
+	get_tree().root.add_child(instance)
+	Globals.hidden_menus.push_back(self)
+	self.visible = false
+	_hide_web_overlays()
+
+
+## Handles Audio button press.
+## Hides options menu, loads audio settings.
+## :rtype: void
+func _on_audio_settings_button_pressed() -> void:
+	_open_sub_menu(audio_scene, "Audio button pressed.")
+
+
+## Handles Controls button press.
+## Hides options menu, loads Key Mappings settings.
+## :rtype: void
+func _on_key_mapping_button_pressed() -> void:
+	_open_sub_menu(controls_scene, "Controls button pressed.")
+
+
+func _on_advanced_settings_button_pressed() -> void:
+	_open_sub_menu(advanced_scene, "Advanced Settings button pressed.")
+
+
+func _on_gameplay_settings_button_pressed() -> void:
+	_open_sub_menu(gameplay_settings_scene, "Gameplay Settings button pressed.")

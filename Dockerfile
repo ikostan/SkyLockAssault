@@ -1,3 +1,5 @@
+# Copyright (C) 2025 Egor Kostan
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Use Ubuntu 24.04 as base (matches GitHub Actions runner)
 FROM ubuntu:24.04
 

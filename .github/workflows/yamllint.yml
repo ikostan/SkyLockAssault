@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: "actions/checkout@v6.0.1"
       - name: "Cache PIP Dependencies"
-        uses: "actions/cache@v4"
+        uses: "actions/cache@v5"
         with:
           path: "~/.cache/pip"
           key: "${{ runner.os }}-pip-yamllint"

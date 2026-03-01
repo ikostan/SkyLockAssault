@@ -1,0 +1,563 @@
+[gd_scene load_steps=15 format=3 uid="uid://dxep4xm1sl8im"]
+
+[ext_resource type="Script" uid="uid://cxlfe85bvd0mx" path="res://scripts/key_mapping.gd" id="1_5b0ek"]
+[ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_rbr5m"]
+[ext_resource type="Script" uid="uid://t5guwag0bdjc" path="res://scripts/input_remap_button.gd" id="2_5b0ek"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_312xi"]
+bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4k3vu"]
+bg_color = Color(0.6, 0.6, 0.6, 0.39215687)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mxrmg"]
+bg_color = Color(0.6, 0.6, 0.6, 0.39215687)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tmees"]
+bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ookuy"]
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kgm0p"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rhvir"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5b0ek"]
+bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7mufp"]
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0yqio"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+border_color = Color(0.20784314, 0.20784314, 0.20784314, 1)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hh2p6"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
+
+[node name="KeyMappingMenu" type="CanvasLayer"]
+script = ExtResource("1_5b0ek")
+
+[node name="Panel" type="Panel" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -450.0
+offset_top = -340.0
+offset_right = 450.0
+offset_bottom = 340.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_312xi")
+
+[node name="Options" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -362.5
+offset_top = -310.0
+offset_right = 362.5
+offset_bottom = 310.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 40
+
+[node name="MainLabel" type="Label" parent="Panel/Options"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 55
+text = "{KEY=MAPPING=OPTIONS}"
+
+[node name="DeviceTypeContainer" type="HBoxContainer" parent="Panel/Options"]
+layout_mode = 2
+alignment = 1
+
+[node name="DeviceTypeLabel" type="Label" parent="Panel/Options/DeviceTypeContainer"]
+layout_mode = 2
+size_flags_horizontal = 2
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 30
+text = "{DEVICE=TYPE}"
+vertical_alignment = 1
+
+[node name="Keyboard" type="CheckButton" parent="Panel/Options/DeviceTypeContainer"]
+layout_mode = 2
+size_flags_horizontal = 6
+tooltip_text = "Keyboard"
+focus_neighbor_right = NodePath("../Gamepad")
+focus_neighbor_bottom = NodePath("../../KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
+focus_next = NodePath("../../KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
+theme_override_colors/font_color = Color(0.60784316, 0.60784316, 0.60784316, 1)
+theme_override_colors/font_pressed_color = Color(0, 0.8784314, 0.007843138, 0.9019608)
+theme_override_colors/font_disabled_color = Color(0.60784316, 0.60784316, 0.60784316, 1)
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 20
+theme_override_styles/focus = SubResource("StyleBoxFlat_4k3vu")
+button_pressed = true
+text = "{KEYBOARD}"
+
+[node name="Gamepad" type="CheckButton" parent="Panel/Options/DeviceTypeContainer"]
+layout_mode = 2
+size_flags_horizontal = 8
+tooltip_text = "Gamepad"
+focus_neighbor_left = NodePath("../Keyboard")
+focus_neighbor_bottom = NodePath("../../KeyMapContainer/MenuKeyMap/KeyMappingPause/PauseInputRemap")
+focus_next = NodePath("../../KeyMapContainer/MenuKeyMap/KeyMappingPause/PauseInputRemap")
+focus_previous = NodePath("../Keyboard")
+theme_override_colors/font_color = Color(0.60784316, 0.60784316, 0.60784316, 1)
+theme_override_colors/font_pressed_color = Color(0, 0.8784314, 0.007843138, 1)
+theme_override_colors/font_disabled_color = Color(0.60784316, 0.60784316, 0.60784316, 1)
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 20
+theme_override_styles/focus = SubResource("StyleBoxFlat_mxrmg")
+text = "{GAMEPAD}"
+
+[node name="KeyMapContainer" type="HBoxContainer" parent="Panel/Options"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 90
+
+[node name="PlayerKeyMap" type="VBoxContainer" parent="Panel/Options/KeyMapContainer"]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/PlayerKeyMap"]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 6
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 30
+text = "{PLAYER=CONTROLS}"
+vertical_alignment = 1
+
+[node name="KeyMappingSpeedUp" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/PlayerKeyMap"]
+layout_mode = 2
+tooltip_text = "Key mapping for \"speed up\" button"
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 18
+text = "{SPEED=UP:}"
+
+[node name="SpeedUpInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp"]
+layout_direction = 3
+layout_mode = 2
+focus_neighbor_top = NodePath("../../../../DeviceTypeContainer/Keyboard")
+focus_neighbor_right = NodePath("../../../MenuKeyMap/KeyMappingPause/PauseInputRemap")
+focus_neighbor_bottom = NodePath("../../KeyMappingSpeedDown/SpeedDownInputRemap")
+focus_next = NodePath("../../KeyMappingSpeedDown/SpeedDownInputRemap")
+theme_override_font_sizes/font_size = 18
+script = ExtResource("2_5b0ek")
+action = "speed_up"
+
+[node name="KeyMappingSpeedDown" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/PlayerKeyMap"]
+layout_mode = 2
+tooltip_text = "Key mapping for \"speed down\" button"
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedDown"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 18
+text = "{SPEED=DOWN:}"
+
+[node name="SpeedDownInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedDown"]
+layout_mode = 2
+focus_neighbor_top = NodePath("../../KeyMappingSpeedUp/SpeedUpInputRemap")
+focus_neighbor_right = NodePath("../../../MenuKeyMap/KeyMappingAccept/AcceptInputRemap")
+focus_neighbor_bottom = NodePath("../../KeyMappingLeft/LeftInputRemap")
+focus_next = NodePath("../../KeyMappingLeft/LeftInputRemap")
+focus_previous = NodePath("../../KeyMappingSpeedUp/SpeedUpInputRemap")
+theme_override_font_sizes/font_size = 18
+script = ExtResource("2_5b0ek")
+action = "speed_down"
+
+[node name="KeyMappingLeft" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/PlayerKeyMap"]
+layout_mode = 2
+tooltip_text = "Key mapping for move left button"
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingLeft"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 18
+text = "{MOVE=LEFT:}"
+
+[node name="LeftInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingLeft"]
+layout_mode = 2
+focus_neighbor_top = NodePath("../../KeyMappingSpeedDown/SpeedDownInputRemap")
+focus_neighbor_right = NodePath("../../../MenuKeyMap/KeyMappingMenuUp/MenuUpInputRemap")
+focus_neighbor_bottom = NodePath("../../KeyMappingRight/RightInputRemap")
+focus_next = NodePath("../../KeyMappingRight/RightInputRemap")
+focus_previous = NodePath("../../KeyMappingSpeedDown/SpeedDownInputRemap")
+theme_override_font_sizes/font_size = 18
+script = ExtResource("2_5b0ek")
+action = "move_left"
+
+[node name="KeyMappingRight" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/PlayerKeyMap"]
+layout_mode = 2
+tooltip_text = "Key mapping for move right button"
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingRight"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 18
+text = "{MOVE=RIGHT:}"
+
+[node name="RightInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingRight"]
+layout_mode = 2
+focus_neighbor_top = NodePath("../../KeyMappingLeft/LeftInputRemap")
+focus_neighbor_right = NodePath("../../../MenuKeyMap/KeyMappingMenuDown/MenuDownInputRemap")
+focus_neighbor_bottom = NodePath("../../KeyMappingFire/FireInputRemap")
+focus_next = NodePath("../../KeyMappingFire/FireInputRemap")
+focus_previous = NodePath("../../KeyMappingLeft/LeftInputRemap")
+theme_override_font_sizes/font_size = 18
+script = ExtResource("2_5b0ek")
+action = "move_right"
+
+[node name="KeyMappingFire" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/PlayerKeyMap"]
+layout_mode = 2
+tooltip_text = "Key mapping for fire button"
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingFire"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 18
+text = "{FIRE:}"
+
+[node name="FireInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingFire"]
+layout_mode = 2
+focus_neighbor_top = NodePath("../../KeyMappingRight/RightInputRemap")
+focus_neighbor_right = NodePath("../../../MenuKeyMap/KeyMappingMenuLeft/MenuLeftInputRemap")
+focus_neighbor_bottom = NodePath("../../KeyMappingNextWeapon/NextWeaponInputRemap")
+focus_next = NodePath("../../KeyMappingNextWeapon/NextWeaponInputRemap")
+focus_previous = NodePath("../../KeyMappingRight/RightInputRemap")
+theme_override_font_sizes/font_size = 18
+script = ExtResource("2_5b0ek")
+action = "fire"
+
+[node name="KeyMappingNextWeapon" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/PlayerKeyMap"]
+layout_mode = 2
+tooltip_text = "Key mapping for next weapon button"
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingNextWeapon"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 18
+text = "{NEXT=WEAPON:}"
+
+[node name="NextWeaponInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingNextWeapon"]
+layout_mode = 2
+focus_neighbor_top = NodePath("../../KeyMappingFire/FireInputRemap")
+focus_neighbor_right = NodePath("../../../MenuKeyMap/KeyMappingMenuRight/MenuRightInputRemap")
+focus_neighbor_bottom = NodePath("../../../../BtnContainer/ControlsBackButton")
+focus_next = NodePath("../../../MenuKeyMap/KeyMappingPause/PauseInputRemap")
+focus_previous = NodePath("../../KeyMappingFire/FireInputRemap")
+theme_override_font_sizes/font_size = 18
+script = ExtResource("2_5b0ek")
+action = "next_weapon"
+
+[node name="MenuKeyMap" type="VBoxContainer" parent="Panel/Options/KeyMapContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 6
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 30
+text = "{MENU=CONTROLS}"
+vertical_alignment = 1
+
+[node name="KeyMappingPause" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
+layout_mode = 2
+tooltip_text = "Key mapping for pause button"
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingPause"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 18
+text = "{PAUSE:}"
+
+[node name="PauseInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingPause"]
+layout_mode = 2
+focus_neighbor_left = NodePath("../../../PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
+focus_neighbor_top = NodePath("../../../../DeviceTypeContainer/Gamepad")
+focus_neighbor_bottom = NodePath("../../KeyMappingAccept/AcceptInputRemap")
+focus_next = NodePath("../../KeyMappingAccept/AcceptInputRemap")
+focus_previous = NodePath("../../../PlayerKeyMap/KeyMappingNextWeapon/NextWeaponInputRemap")
+theme_override_font_sizes/font_size = 18
+script = ExtResource("2_5b0ek")
+action = "pause"
+
+[node name="KeyMappingAccept" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
+layout_mode = 2
+tooltip_text = "Key mapping for accept button"
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingAccept"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 18
+text = "{ACCEPT:}"
+
+[node name="AcceptInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingAccept"]
+layout_mode = 2
+focus_neighbor_left = NodePath("../../../PlayerKeyMap/KeyMappingSpeedDown/SpeedDownInputRemap")
+focus_neighbor_top = NodePath("../../KeyMappingPause/PauseInputRemap")
+focus_neighbor_bottom = NodePath("../../KeyMappingMenuUp/MenuUpInputRemap")
+focus_next = NodePath("../../KeyMappingMenuUp/MenuUpInputRemap")
+focus_previous = NodePath("../../KeyMappingPause/PauseInputRemap")
+theme_override_font_sizes/font_size = 18
+script = ExtResource("2_5b0ek")
+action = "ui_accept"
+
+[node name="KeyMappingMenuUp" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
+layout_mode = 2
+tooltip_text = "Key mapping for menu navigation \"move up\" button"
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuUp"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 18
+text = "{MENU=UP:}"
+
+[node name="MenuUpInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuUp"]
+layout_mode = 2
+focus_neighbor_left = NodePath("../../../PlayerKeyMap/KeyMappingLeft/LeftInputRemap")
+focus_neighbor_top = NodePath("../../KeyMappingAccept/AcceptInputRemap")
+focus_neighbor_bottom = NodePath("../../KeyMappingMenuDown/MenuDownInputRemap")
+focus_next = NodePath("../../KeyMappingMenuDown/MenuDownInputRemap")
+focus_previous = NodePath("../../KeyMappingAccept/AcceptInputRemap")
+theme_override_font_sizes/font_size = 18
+script = ExtResource("2_5b0ek")
+action = "ui_up"
+
+[node name="KeyMappingMenuDown" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
+layout_mode = 2
+tooltip_text = "Key mapping for menu navigation \"move down\" button"
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuDown"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 18
+text = "{MENU=DOWN:}"
+
+[node name="MenuDownInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuDown"]
+layout_mode = 2
+focus_neighbor_left = NodePath("../../../PlayerKeyMap/KeyMappingRight/RightInputRemap")
+focus_neighbor_top = NodePath("../../KeyMappingMenuUp/MenuUpInputRemap")
+focus_neighbor_bottom = NodePath("../../KeyMappingMenuLeft/MenuLeftInputRemap")
+focus_next = NodePath("../../KeyMappingMenuLeft/MenuLeftInputRemap")
+focus_previous = NodePath("../../KeyMappingMenuUp/MenuUpInputRemap")
+theme_override_font_sizes/font_size = 18
+script = ExtResource("2_5b0ek")
+action = "ui_down"
+
+[node name="KeyMappingMenuLeft" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
+layout_mode = 2
+tooltip_text = "Key mapping for menu navigation \"move left\" button"
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuLeft"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 18
+text = "{MENU=LEFT:}"
+
+[node name="MenuLeftInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuLeft"]
+layout_mode = 2
+focus_neighbor_left = NodePath("../../../PlayerKeyMap/KeyMappingFire/FireInputRemap")
+focus_neighbor_top = NodePath("../../KeyMappingMenuDown/MenuDownInputRemap")
+focus_neighbor_bottom = NodePath("../../KeyMappingMenuRight/MenuRightInputRemap")
+focus_next = NodePath("../../KeyMappingMenuRight/MenuRightInputRemap")
+focus_previous = NodePath("../../KeyMappingMenuDown/MenuDownInputRemap")
+theme_override_font_sizes/font_size = 18
+script = ExtResource("2_5b0ek")
+action = "ui_left"
+
+[node name="KeyMappingMenuRight" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
+layout_mode = 2
+tooltip_text = "Key mapping for menu navigation \"move right\" button"
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuRight"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 18
+text = "{MENU=RIGHT:}"
+
+[node name="MenuRightInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuRight"]
+layout_mode = 2
+focus_neighbor_left = NodePath("../../../PlayerKeyMap/KeyMappingNextWeapon/NextWeaponInputRemap")
+focus_neighbor_top = NodePath("../../KeyMappingMenuLeft/MenuLeftInputRemap")
+focus_neighbor_bottom = NodePath("../../KeyMappingMenuNext/MenuNextInputRemap")
+focus_next = NodePath("../../KeyMappingMenuNext/MenuNextInputRemap")
+focus_previous = NodePath("../../KeyMappingMenuLeft/MenuLeftInputRemap")
+theme_override_font_sizes/font_size = 18
+script = ExtResource("2_5b0ek")
+action = "ui_right"
+
+[node name="KeyMappingMenuNext" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
+layout_mode = 2
+tooltip_text = "Key mapping for menu navigation \"focus next\" button."
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuNext"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 18
+text = "{MENU=NEXT:}"
+
+[node name="MenuNextInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuNext"]
+layout_mode = 2
+focus_neighbor_left = NodePath("../../../PlayerKeyMap/KeyMappingNextWeapon/NextWeaponInputRemap")
+focus_neighbor_top = NodePath("../../KeyMappingMenuRight/MenuRightInputRemap")
+focus_neighbor_bottom = NodePath("../../KeyMappingMenuPrev/MenuPrevInputRemap")
+focus_next = NodePath("../../KeyMappingMenuPrev/MenuPrevInputRemap")
+focus_previous = NodePath("../../KeyMappingMenuRight/MenuRightInputRemap")
+theme_override_font_sizes/font_size = 18
+script = ExtResource("2_5b0ek")
+action = "ui_focus_next"
+
+[node name="KeyMappingMenuPrev" type="HBoxContainer" parent="Panel/Options/KeyMapContainer/MenuKeyMap"]
+layout_mode = 2
+tooltip_text = "Key mapping for menu navigation \"focus prev\" button."
+theme_override_constants/separation = 8
+
+[node name="Label" type="Label" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuPrev"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 18
+text = "{MENU=PREV:}"
+
+[node name="MenuPrevInputRemap" type="Button" parent="Panel/Options/KeyMapContainer/MenuKeyMap/KeyMappingMenuPrev"]
+layout_mode = 2
+focus_neighbor_left = NodePath("../../../PlayerKeyMap/KeyMappingNextWeapon/NextWeaponInputRemap")
+focus_neighbor_top = NodePath("../../KeyMappingMenuNext/MenuNextInputRemap")
+focus_neighbor_bottom = NodePath("../../../../BtnContainer/ControlResetButton")
+focus_next = NodePath("../../../../BtnContainer/ControlsBackButton")
+focus_previous = NodePath("../../KeyMappingMenuNext/MenuNextInputRemap")
+theme_override_font_sizes/font_size = 18
+script = ExtResource("2_5b0ek")
+action = "ui_focus_prev"
+
+[node name="BtnContainer" type="HBoxContainer" parent="Panel/Options"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 20
+
+[node name="ControlsBackButton" type="Button" parent="Panel/Options/BtnContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+tooltip_text = "Back button"
+focus_neighbor_top = NodePath("../../KeyMapContainer/PlayerKeyMap/KeyMappingNextWeapon/NextWeaponInputRemap")
+focus_neighbor_right = NodePath("../ControlResetButton")
+focus_next = NodePath("../ControlResetButton")
+focus_previous = NodePath("../../KeyMapContainer/PlayerKeyMap/KeyMappingNextWeapon/NextWeaponInputRemap")
+theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 35
+theme_override_styles/normal = SubResource("StyleBoxFlat_tmees")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_ookuy")
+theme_override_styles/hover = SubResource("StyleBoxFlat_kgm0p")
+theme_override_styles/focus = SubResource("StyleBoxFlat_rhvir")
+text = "{BACK}"
+
+[node name="ControlResetButton" type="Button" parent="Panel/Options/BtnContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+tooltip_text = "Reset button"
+focus_neighbor_left = NodePath("../ControlsBackButton")
+focus_neighbor_top = NodePath("../../KeyMapContainer/MenuKeyMap/KeyMappingMenuPrev/MenuPrevInputRemap")
+focus_neighbor_right = NodePath("../ControlsBackButton")
+focus_next = NodePath("../ControlsBackButton")
+focus_previous = NodePath("../../KeyMapContainer/MenuKeyMap/KeyMappingMenuPrev/MenuPrevInputRemap")
+theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("1_rbr5m")
+theme_override_font_sizes/font_size = 35
+theme_override_styles/normal = SubResource("StyleBoxFlat_5b0ek")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_7mufp")
+theme_override_styles/hover = SubResource("StyleBoxFlat_0yqio")
+theme_override_styles/focus = SubResource("StyleBoxFlat_hh2p6")
+text = "{RESET}"
+
+[connection signal="toggled" from="Panel/Options/DeviceTypeContainer/Keyboard" to="." method="_on_keyboard_toggled"]
+[connection signal="toggled" from="Panel/Options/DeviceTypeContainer/Gamepad" to="." method="_on_gamepad_toggled"]

@@ -1,0 +1,209 @@
+[gd_scene load_steps=12 format=3 uid="uid://djs6nvuxygqv5"]
+
+[ext_resource type="Script" uid="uid://bsnarmiscmko0" path="res://scripts/gameplay_settings.gd" id="1_avrtf"]
+[ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="2_avrtf"]
+[ext_resource type="Theme" uid="uid://caiajgnblwnqt" path="res://files/themes/difficulty_slider.tres" id="3_avrtf"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_j3be7"]
+bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6yhol"]
+bg_color = Color(0.89411765, 0.13725491, 0.14117648, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_size = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_y4xfu"]
+bg_color = Color(0.8928188, 0.13756049, 0.13942105, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_size = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_yonr6"]
+bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_koe27"]
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_a0ntd"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+border_color = Color(0.20784314, 0.20784314, 0.20784314, 1)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_avrtf"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5utqr"]
+bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
+corner_radius_top_left = 40
+corner_radius_top_right = 40
+corner_radius_bottom_right = 40
+corner_radius_bottom_left = 40
+shadow_size = 5
+
+[node name="GameplaySettings" type="Control"]
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+script = ExtResource("1_avrtf")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -215.0
+offset_top = -155.0
+offset_right = 215.0
+offset_bottom = 155.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+tooltip_text = "Gameplay Settings"
+theme_override_styles/panel = SubResource("StyleBoxFlat_j3be7")
+
+[node name="Controls" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -190.0
+offset_top = -125.0
+offset_right = 190.0
+offset_bottom = 125.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 15
+
+[node name="MainLabel" type="Label" parent="Panel/Controls"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 6
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("2_avrtf")
+theme_override_font_sizes/font_size = 55
+text = "{OPTIONS}"
+
+[node name="SubLabel" type="Label" parent="Panel/Controls"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("2_avrtf")
+theme_override_font_sizes/font_size = 28
+text = "{GAMEPLAY=SETTINGS}"
+horizontal_alignment = 1
+
+[node name="DifficultyLevelContainer" type="HBoxContainer" parent="Panel/Controls"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="Label" type="Label" parent="Panel/Controls/DifficultyLevelContainer"]
+layout_mode = 2
+size_flags_horizontal = 8
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("2_avrtf")
+theme_override_font_sizes/font_size = 20
+text = "{DIFFICULTY}"
+
+[node name="DifficultyHSlider" type="HSlider" parent="Panel/Controls/DifficultyLevelContainer"]
+custom_minimum_size = Vector2(130, 51)
+layout_mode = 2
+size_flags_horizontal = 10
+size_flags_vertical = 1
+focus_neighbor_bottom = NodePath("../../BtnContainer/BackButton")
+focus_next = NodePath("../../BtnContainer/BackButton")
+theme = ExtResource("3_avrtf")
+theme_override_styles/grabber_area = SubResource("StyleBoxFlat_6yhol")
+theme_override_styles/grabber_area_highlight = SubResource("StyleBoxFlat_y4xfu")
+min_value = 0.5
+max_value = 2.0
+step = 0.1
+value = 0.5
+tick_count = 16
+ticks_on_borders = true
+
+[node name="DifficultyValueLabel" type="Label" parent="Panel/Controls/DifficultyLevelContainer"]
+layout_mode = 2
+size_flags_horizontal = 2
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("2_avrtf")
+theme_override_font_sizes/font_size = 20
+text = "{0.0}"
+
+[node name="BtnContainer" type="HBoxContainer" parent="Panel/Controls"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 5
+
+[node name="BackButton" type="Button" parent="Panel/Controls/BtnContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+focus_neighbor_left = NodePath("../ResetButton")
+focus_neighbor_top = NodePath("../../DifficultyLevelContainer/DifficultyHSlider")
+focus_next = NodePath("../ResetButton")
+theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_colors/font_pressed_color = Color(0.9607843, 0.9607843, 0.050980393, 0.9019608)
+theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("2_avrtf")
+theme_override_font_sizes/font_size = 35
+theme_override_styles/normal = SubResource("StyleBoxFlat_yonr6")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_koe27")
+theme_override_styles/hover = SubResource("StyleBoxFlat_a0ntd")
+theme_override_styles/focus = SubResource("StyleBoxFlat_avrtf")
+text = "{BACK}"
+
+[node name="ResetButton" type="Button" parent="Panel/Controls/BtnContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+focus_neighbor_top = NodePath("../../DifficultyLevelContainer/DifficultyHSlider")
+focus_neighbor_right = NodePath("../BackButton")
+focus_next = NodePath("../../DifficultyLevelContainer/DifficultyHSlider")
+theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
+theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_colors/font_pressed_color = Color(0.9607843, 0.9607843, 0.050980393, 0.9019608)
+theme_override_colors/font_hover_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("2_avrtf")
+theme_override_font_sizes/font_size = 35
+theme_override_styles/normal = SubResource("StyleBoxFlat_yonr6")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_koe27")
+theme_override_styles/hover = SubResource("StyleBoxFlat_a0ntd")
+theme_override_styles/focus = SubResource("StyleBoxFlat_5utqr")
+text = "{RESET}"
