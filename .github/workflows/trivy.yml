@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: "Run Trivy vulnerability scanner"
-        uses: "aquasecurity/trivy-action@0.69.2"
+        uses: "aquasecurity/trivy-action@v0.69.2"
         # uses: "aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284"  # Pinned to SHA for v0.34.0
         env:  # Suppress version check notification
           TRIVY_SKIP_VERSION_CHECK: 'true'
