@@ -186,7 +186,7 @@ func setup_decor_layer(viewport: Vector2) -> void:
 
 
 func _process(delta: float) -> void:
-	var scroll_speed: float = player.speed["speed"] * delta * Globals.difficulty * 0.8
+	var scroll_speed: float = player.speed["speed"] * delta * Globals.settings.difficulty * 0.8
 	background.scroll_offset.y += scroll_speed
 	if player.fuel["fuel"] <= 0:
 		background.scroll_offset = Vector2(0, 0)

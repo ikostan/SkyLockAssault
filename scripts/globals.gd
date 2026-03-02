@@ -11,12 +11,15 @@ enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 # Shared constants
 ## Device-specific remap prompts to avoid layout shift.
 # const REMAP_PROMPT_TEXT: String = "Press a key or controller button/axis..."
-const REMAP_PROMPT_KEYBOARD: String = "Press a key..."
-const REMAP_PROMPT_GAMEPAD: String = "Press a gamepad button/axis..."
+# const REMAP_PROMPT_KEYBOARD: String = "Press a key..."
+# const REMAP_PROMPT_GAMEPAD: String = "Press a gamepad button/axis..."
 
-@export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
-@export var enable_debug_logging: bool = false  # Toggle in Inspector or settings
-@export var difficulty: float = 1.0  # Multiplier: 1.0=Normal, <1=Easy, >1=Hard
+# @export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
+# @export var enable_debug_logging: bool = false  # Toggle in Inspector or settings
+# @export var difficulty: float = 1.0  # Multiplier: 1.0=Normal, <1=Easy, >1=Hard
+
+# Add the resource reference here
+@export var settings: GameSettingsResource = preload("res://settings/default_settings.tres")
 
 # In globals.gd (add after @export vars)
 var options_instance: CanvasLayer = null
@@ -24,9 +27,9 @@ var options_instance: CanvasLayer = null
 var hidden_menus: Array[Node] = []
 var options_open: bool = false
 ## Key Mapping scene for direct loading from warning dialogs.
-var key_mapping_scene: PackedScene = preload("res://scenes/key_mapping_menu.tscn")
+# var key_mapping_scene: PackedScene = preload("res://scenes/key_mapping_menu.tscn")
 var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
-var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
+# var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 var next_scene: String = ""  # Path to the next scene to load via loading screen.
 ## Last selected input device for UI messages and labels.
 ## Updated when player toggles Keyboard/Gamepad in Key Mapping.
@@ -34,9 +37,9 @@ var current_input_device: String = "keyboard"  # "keyboard" or "gamepad"
 
 
 func _ready() -> void:
-	if Engine.is_editor_hint() or enable_debug_logging:
-		current_log_level = LogLevel.DEBUG
-	log_message("Log level set to: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG)
+	if Engine.is_editor_hint() or settings.enable_debug_logging:
+		settings.current_log_level = LogLevel.DEBUG
+	log_message("Log level set to: " + LogLevel.keys()[settings.current_log_level], LogLevel.DEBUG)
 	_load_settings()  # Load persisted settings first
 	# Load last input device early to fix unbound warning on first load when
 	# gamepad is saved preference.
@@ -98,8 +101,15 @@ func load_key_mapping(menu_to_hide: Node) -> void:
 		if is_instance_valid(video):
 			video.visible = true
 			video.process_mode = Node.PROCESS_MODE_ALWAYS  # keep playing
-
-	var km_instance: CanvasLayer = key_mapping_scene.instantiate()
+	# FIX: We must call .instantiate() on the PackedScene inside settings
+	if settings.key_mapping_scene == null:
+		log_message("Error: Key mapping scene not configured.", LogLevel.ERROR)
+		if not hidden_menus.is_empty():
+			var prev_menu: Node = hidden_menus.pop_back()
+			if is_instance_valid(prev_menu):
+				prev_menu.visible = true
+		return
+	var km_instance: CanvasLayer = settings.key_mapping_scene.instantiate()
 	get_tree().root.add_child(km_instance)
 
 
@@ -118,9 +128,10 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 				and loaded_log_level >= LogLevel.DEBUG
 				and loaded_log_level <= LogLevel.NONE
 			):
-				current_log_level = loaded_log_level
+				settings.current_log_level = loaded_log_level
 				log_message(
-					"Loaded saved log level: " + LogLevel.keys()[current_log_level], LogLevel.DEBUG
+					"Loaded saved log level: " + LogLevel.keys()[settings.current_log_level],
+					LogLevel.DEBUG
 				)
 			else:
 				log_message(
@@ -131,19 +142,9 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 		if config.has_section_key("Settings", "difficulty"):
 			var loaded_difficulty: Variant = config.get_value("Settings", "difficulty")
 			if (loaded_difficulty is float) or (loaded_difficulty is int):
-				difficulty = loaded_difficulty
 				# Validate and clamp difficulty to slider range (0.5-2.0)
-				if difficulty < 0.5 or difficulty > 2.0:
-					log_message(
-						(
-							"Invalid difficulty loaded ("
-							+ str(difficulty)
-							+ ") - clamping to valid range."
-						),
-						LogLevel.WARNING
-					)
-					difficulty = clamp(difficulty, 0.5, 2.0)
-				log_message("Loaded saved difficulty: " + str(difficulty), LogLevel.DEBUG)
+				settings.difficulty = loaded_difficulty
+				log_message("Loaded saved difficulty: " + str(settings.difficulty), LogLevel.DEBUG)
 			else:
 				log_message(
 					"Invalid type for difficulty: " + str(typeof(loaded_difficulty)),
@@ -165,8 +166,8 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 		)
 		return
 
-	config.set_value("Settings", "log_level", current_log_level)
-	config.set_value("Settings", "difficulty", difficulty)
+	config.set_value("Settings", "log_level", settings.current_log_level)
+	config.set_value("Settings", "difficulty", settings.difficulty)
 	err = config.save(path)
 	if err != OK:
 		log_message("Failed to save settings: " + str(err), LogLevel.ERROR)
@@ -216,11 +217,11 @@ func load_options(menu_to_hide: Node) -> void:
 		menu_to_hide.visible = false
 		log_message("Hiding menu: " + menu_to_hide.name, LogLevel.DEBUG)
 
-	if options_scene:
+	if settings.options_scene:
 		## Set flag before adding child to block pause immediately.
 		options_open = true  # Set early as before
-
-		options_instance = options_scene.instantiate()
+		# FIX: Assign the instance to the global variable
+		options_instance = settings.options_scene.instantiate()
 		if options_instance == null:
 			log_message("Failed to instantiate options scene—resetting flag.", LogLevel.ERROR)
 			options_open = false  # Reset to avoid stuck state
@@ -246,7 +247,7 @@ func load_options(menu_to_hide: Node) -> void:
 # @param message: The string message to log.
 # @param level: The log level (default INFO).
 func log_message(message: String, level: LogLevel = LogLevel.INFO) -> void:
-	if level < current_log_level:
+	if level < settings.current_log_level:
 		return  # Skip if below threshold
 	var level_str: String = LogLevel.keys()[level]  # Converts enum to string: "INFO", etc.
 	var timestamp: String = Time.get_datetime_string_from_system()

@@ -12,15 +12,20 @@ jobs:
       contents: read  # For checkout
       security-events: write  # For uploading SARIF to Security tab
     steps:
-      - name: "Checkout code"
-        uses: "actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8"  # Pinned to SHA for v5.0.0 (latest as of 2025-10-28)
-
-      - name: "Run Trivy vulnerability scanner"
-        uses: "aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284"  # Pinned to SHA for v0.34.0
+      - name: "Checkout repository"
+        uses: "actions/checkout@v6"
+        with:
+          # This explicitly tells the runner to use the branch that triggered the workflow
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: "Run Trivy FS Scan"
+        uses: "aquasecurity/trivy-action@master"
+        # uses: "aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284"  # Pinned to SHA for v0.34.0
         env:  # Suppress version check notification
           TRIVY_SKIP_VERSION_CHECK: 'true'
         with:
-          version: 'latest'
+          version: 'v0.69.2'
           scan-type: 'fs'  # Scans the filesystem (your repo after checkout)
           scanners: 'vuln,secret,misconfig,license'  # Vulns, secrets, configs, licenses
           hide-progress: false

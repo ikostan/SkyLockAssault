@@ -35,8 +35,8 @@ func before_each() -> void:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, AudioConstants.BUS_SFX_ROTORS)
 	# Reset Globals
-	Globals.current_log_level = Globals.LogLevel.INFO
-	Globals.difficulty = 1.0
+	Globals.settings.current_log_level = Globals.LogLevel.INFO
+	Globals.settings.difficulty = 1.0
 	# Reset InputMap to defaults
 	for action: String in Settings.ACTIONS:
 		InputMap.action_erase_events(action)
@@ -83,8 +83,8 @@ func test_tc_sl_11() -> void:
 	assert_true(events[0] is InputEventKey)
 	assert_eq(events[0].physical_keycode, 87)
 	# Verify Globals
-	assert_eq(Globals.current_log_level, Globals.LogLevel.WARNING)
-	assert_eq(Globals.difficulty, 1.5)
+	assert_eq(Globals.settings.current_log_level, Globals.LogLevel.WARNING)
+	assert_eq(Globals.settings.difficulty, 1.5)
 	# Config unchanged (no saves)
 	var loaded_config: ConfigFile = ConfigFile.new()
 	loaded_config.load(test_config_path)
@@ -102,11 +102,11 @@ func test_tc_sl_12() -> void:
 	config.set_value("Settings", "difficulty", 1.5)
 	config.save(test_config_path)
 	# Initial Globals
-	Globals.current_log_level = Globals.LogLevel.DEBUG
+	Globals.settings.current_log_level = Globals.LogLevel.DEBUG
 	# Load Globals first (should fallback for invalid log_level)
 	Globals._load_settings(test_config_path)
-	assert_eq(Globals.current_log_level, Globals.LogLevel.DEBUG)  # Keeps current or default? Code likely skips invalid, keeps current
-	assert_eq(Globals.difficulty, 1.5)
+	assert_eq(Globals.settings.current_log_level, Globals.LogLevel.DEBUG)  # Keeps current or default? Code likely skips invalid, keeps current
+	assert_eq(Globals.settings.difficulty, 1.5)
 	# Then load Audio
 	AudioManager.load_volumes(test_config_path)
 	assert_almost_eq(AudioManager.music_volume, 0.7, 0.01)
@@ -169,7 +169,7 @@ func test_tc_sl_14() -> void:
 	assert_eq(config.get_value("Settings", "difficulty"), 1.5)
 	assert_eq(config.get_value("input", "speed_up"), ["key:87"])
 	# Change settings and save
-	Globals.difficulty = 2.0
+	Globals.settings.difficulty = 2.0
 	Globals._save_settings(test_config_path)
 	config = ConfigFile.new()
 	config.load(test_config_path)
@@ -204,7 +204,7 @@ func test_tc_sl_15() -> void:
 	AudioManager.master_volume = 0.5
 	AudioManager.save_volumes(test_config_path)
 	# Immediately change and save globals
-	Globals.difficulty = 2.0
+	Globals.settings.difficulty = 2.0
 	Globals._save_settings(test_config_path)
 	# Verify final config
 	config = ConfigFile.new()

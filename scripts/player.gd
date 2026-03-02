@@ -359,7 +359,7 @@ func _on_fuel_timer_timeout() -> void:
 	# to avoid excessive drain at out-of-range speeds
 	var normalized_speed: float = clamp(speed["speed"] / MAX_SPEED, 0.0, 1.0)
 	var fuel_left: float = (
-		fuel["fuel"] - ((base_fuel_drain * normalized_speed) * Globals.difficulty)
+		fuel["fuel"] - ((base_fuel_drain * normalized_speed) * Globals.settings.difficulty)
 	)
 	#
 	# Clamp and update current_fuel first

@@ -17,14 +17,14 @@ func test_settings_persistence() -> void:
 		fail("Failed to save test config: " + str(err))
 	
 	Globals._load_settings(test_path)
-	assert_float(Globals.difficulty).is_equal(1.5)  # Loaded
+	assert_float(Globals.settings.difficulty).is_equal(1.5)  # Loaded
 	
-	Globals.difficulty = 2.0
+	Globals.settings.difficulty = 2.0
 	Globals._save_settings(test_path)
 	
 	# Reload to verify save
 	Globals._load_settings(test_path)
-	assert_float(Globals.difficulty).is_equal(2.0)  # Saved and loaded
+	assert_float(Globals.settings.difficulty).is_equal(2.0)  # Saved and loaded
 
 func after_test() -> void:
 	## Cleans test file.

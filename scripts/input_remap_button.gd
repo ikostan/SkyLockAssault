@@ -116,11 +116,11 @@ func _ready() -> void:
 func _on_pressed() -> void:
 	listening = button_pressed
 	if listening:
-		# Use tailored prompt based on current device (no layout expansion)
+		# FIXED: Check the actual current_device to return the correct prompt
 		text = (
-			Globals.REMAP_PROMPT_KEYBOARD
+			Globals.settings.remap_prompt_keyboard
 			if current_device == DeviceType.KEYBOARD
-			else Globals.REMAP_PROMPT_GAMEPAD
+			else Globals.settings.remap_prompt_gamepad
 		)
 	else:
 		update_button_text()

@@ -150,7 +150,7 @@ func test_ui_05_label_update_after_remapping() -> void:
 	var left_btn: Button = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingLeft/LeftInputRemap")
 	left_btn.button_pressed = true
 	left_btn._on_pressed()
-	assert_eq(left_btn.text, Globals.REMAP_PROMPT_KEYBOARD, "Should show keyboard prompt while listening")
+	assert_eq(left_btn.text, Globals.settings.remap_prompt_keyboard, "Should show keyboard prompt while listening")
 	
 	var key_event := InputEventKey.new()
 	key_event.physical_keycode = Key.KEY_A
@@ -168,7 +168,7 @@ func test_ui_05_label_update_after_remapping() -> void:
 	
 	left_btn.button_pressed = true
 	left_btn._on_pressed()
-	assert_eq(left_btn.text, Globals.REMAP_PROMPT_GAMEPAD, "Should show gamepad prompt while listening")
+	assert_eq(left_btn.text, Globals.settings.remap_prompt_gamepad, "Should show gamepad prompt while listening")
 	
 	# Use JOY_BUTTON_MISC1 — safe choice (not used in DEFAULT_GAMEPAD → no conflict)
 	var joy_event := InputEventJoypadButton.new()

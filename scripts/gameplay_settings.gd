@@ -29,8 +29,8 @@ func _ready() -> void:
 
 	difficulty_slider.value_changed.connect(_on_difficulty_value_changed)
 	# Set initial difficulty label (sync with global)
-	difficulty_slider.value = Globals.difficulty
-	difficulty_label.text = "{" + str(Globals.difficulty) + "}"
+	difficulty_slider.value = Globals.settings.difficulty
+	difficulty_label.text = "{" + str(Globals.settings.difficulty) + "}"
 	# Back button
 	if not gameplay_back_button.pressed.is_connected(_on_gameplay_back_button_pressed):
 		gameplay_back_button.pressed.connect(_on_gameplay_back_button_pressed)
@@ -238,8 +238,8 @@ func _on_difficulty_value_changed(value: float) -> void:
 	## :param value: The new slider value.
 	## :type value: float
 	## :rtype: void
-	Globals.difficulty = value
-	difficulty_slider.value = Globals.difficulty
+	Globals.settings.difficulty = value
+	difficulty_slider.value = Globals.settings.difficulty
 	difficulty_label.text = "{" + str(value) + "}"
 	Globals.log_message("Difficulty changed to: " + str(value), Globals.LogLevel.DEBUG)
 	Globals._save_settings()
