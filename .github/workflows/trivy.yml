@@ -19,13 +19,13 @@ jobs:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
           persist-credentials: false
-      - name: "Run Trivy vulnerability scanner"
-        uses: "aquasecurity/trivy-action@v0.69.2"
+      - name: "Run Trivy FS Scan"
+        uses: "aquasecurity/trivy-action@master"
         # uses: "aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284"  # Pinned to SHA for v0.34.0
         env:  # Suppress version check notification
           TRIVY_SKIP_VERSION_CHECK: 'true'
         with:
-          version: 'latest'
+          version: 'v0.69.2'
           scan-type: 'fs'  # Scans the filesystem (your repo after checkout)
           scanners: 'vuln,secret,misconfig,license'  # Vulns, secrets, configs, licenses
           hide-progress: false
