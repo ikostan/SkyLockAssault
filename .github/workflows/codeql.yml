@@ -24,7 +24,12 @@ jobs:
 
     steps:
       - name: "Checkout repository"
-        uses: "actions/checkout@v6.0.1"
+        uses: "actions/checkout@v6"
+        with:
+          # This explicitly tells the runner to use the branch that triggered the workflow
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: "Create Export Directories"
         run: |
