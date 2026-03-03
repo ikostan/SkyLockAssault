@@ -42,7 +42,7 @@ func _ready() -> void:
 		# Use push_error since Globals logging might not be ready
 		push_error("CRITICAL: 'GameSettingsResource' failed to load at path.")
 		return
-	
+
 	if Engine.is_editor_hint() or settings.enable_debug_logging:
 		settings.current_log_level = LogLevel.DEBUG
 	log_message("Log level set to: " + LogLevel.keys()[settings.current_log_level], LogLevel.DEBUG)
