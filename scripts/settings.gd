@@ -387,7 +387,7 @@ func deserialize_event(serialized: String) -> InputEvent:
 	match parts[0]:
 		"key":
 			if parts.size() >= 2 and parts[1].is_valid_int():
-			# if parts[1].is_valid_int():
+				# if parts[1].is_valid_int():
 				var ev := InputEventKey.new()
 				# You saved as physical_keycode, so you MUST load as physical_keycode
 				ev.physical_keycode = parts[1].to_int()
