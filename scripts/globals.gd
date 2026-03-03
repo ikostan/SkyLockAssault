@@ -19,8 +19,7 @@ enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 # @export var difficulty: float = 1.0  # Multiplier: 1.0=Normal, <1=Easy, >1=Hard
 
 # Add the resource reference here
-@export var settings: GameSettingsResource = preload("res://settings/default_settings.tres")
-
+@export var settings: GameSettingsResource
 # In globals.gd (add after @export vars)
 var options_instance: CanvasLayer = null
 # var hidden_menu: Node = null
@@ -37,6 +36,13 @@ var current_input_device: String = "keyboard"  # "keyboard" or "gamepad"
 
 
 func _ready() -> void:
+	# Load the resource here instead of preloading at the top
+	settings = load("res://config_resources/default_settings.tres")
+	if not settings:
+		# Use push_error since Globals logging might not be ready
+		push_error("CRITICAL: 'GameSettingsResource' failed to load at path.")
+		return
+	
 	if Engine.is_editor_hint() or settings.enable_debug_logging:
 		settings.current_log_level = LogLevel.DEBUG
 	log_message("Log level set to: " + LogLevel.keys()[settings.current_log_level], LogLevel.DEBUG)

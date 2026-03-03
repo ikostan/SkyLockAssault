@@ -386,10 +386,16 @@ func deserialize_event(serialized: String) -> InputEvent:
 
 	match parts[0]:
 		"key":
-			if parts[1].is_valid_int():
+			if parts.size() >= 2 and parts[1].is_valid_int():
+			# if parts[1].is_valid_int():
 				var ev := InputEventKey.new()
+				# You saved as physical_keycode, so you MUST load as physical_keycode
 				ev.physical_keycode = parts[1].to_int()
+				if ev.physical_keycode == 0:
+					return
+				# print("DEBUG: Deserializing '", serialized, "' -> keycode: ", ev.physical_keycode)
 				# Logic for combinations (Shift + Tab etc)
+				# Modifiers must be checked explicitly in the 'parts' array
 				if "shift" in parts:
 					ev.shift_pressed = true
 				if "ctrl" in parts:
