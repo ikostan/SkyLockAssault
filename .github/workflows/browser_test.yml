@@ -150,7 +150,7 @@ jobs:
 
       - name: "Upload LCOV Artifact"
         if: always()
-        uses: "actions/upload-artifact@v6"
+        uses: "actions/upload-artifact@v7"
         with:
           name: lcov-report
           path: "./coverage/lcov/lcov.info"
@@ -176,14 +176,14 @@ jobs:
 
       - name: "Upload Test Report Artifact"
         if: always()
-        uses: "actions/upload-artifact@v6"
+        uses: "actions/upload-artifact@v7"
         with:
           name: test-report
           path: junit.xml
 
       - name: "Upload Screenshot and Coverage Artifacts"
         if: always()
-        uses: "actions/upload-artifact@v6"
+        uses: "actions/upload-artifact@v7"
         with:
           name: test-screenshots
           path: |
