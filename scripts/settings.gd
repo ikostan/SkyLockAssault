@@ -372,7 +372,9 @@ func _remove_event_from_conflicts(event: InputEvent, conflicts: Array[String]) -
 ## Deserializes a string back to InputEvent.
 ## Handles "key:code", "joybtn:index:device", "joyaxis:axis:value:device".
 func deserialize_event(serialized: String) -> InputEvent:
-	# 1. Reject plain integers or empty strings immediately
+	var event_to_return: InputEvent = null
+
+	# 1. Reject invalid prefixes immediately
 	if not (
 		serialized.begins_with("key:")
 		or serialized.begins_with("joybtn:")
@@ -387,30 +389,21 @@ func deserialize_event(serialized: String) -> InputEvent:
 	match parts[0]:
 		"key":
 			if parts.size() >= 2 and parts[1].is_valid_int():
-				# if parts[1].is_valid_int():
 				var ev := InputEventKey.new()
-				# You saved as physical_keycode, so you MUST load as physical_keycode
 				ev.physical_keycode = parts[1].to_int()
-				if ev.physical_keycode == 0:
-					return
-				# print("DEBUG: Deserializing '", serialized, "' -> keycode: ", ev.physical_keycode)
-				# Logic for combinations (Shift + Tab etc)
-				# Modifiers must be checked explicitly in the 'parts' array
-				if "shift" in parts:
-					ev.shift_pressed = true
-				if "ctrl" in parts:
-					ev.ctrl_pressed = true
-				if "alt" in parts:  # NEW: Restore Alt
-					ev.alt_pressed = true
-				if "meta" in parts:  # NEW: Restore Meta
-					ev.meta_pressed = true
-				return ev
+
+				if ev.physical_keycode != 0:
+					ev.shift_pressed = "shift" in parts
+					ev.ctrl_pressed = "ctrl" in parts
+					ev.alt_pressed = "alt" in parts
+					ev.meta_pressed = "meta" in parts
+					event_to_return = ev
 		"joybtn":
 			if parts.size() == 3 and parts[1].is_valid_int() and parts[2].is_valid_int():
 				var ev := InputEventJoypadButton.new()
 				ev.button_index = parts[1].to_int()
 				ev.device = parts[2].to_int()
-				return ev
+				event_to_return = ev
 		"joyaxis":
 			if (
 				parts.size() == 4
@@ -422,9 +415,9 @@ func deserialize_event(serialized: String) -> InputEvent:
 				ev.axis = parts[1].to_int()
 				ev.axis_value = parts[2].to_float()
 				ev.device = parts[3].to_int()
-				return ev
+				event_to_return = ev
 
-	return null
+	return event_to_return
 
 
 ## Deserializes a string to an InputEvent and adds it to the specified action.
