@@ -118,17 +118,14 @@ func _on_pressed() -> void:
 	if listening:
 		# Safely check if Globals and settings are ready
 		if is_instance_valid(Globals) and Globals.settings:
-		# FIXED: Check the actual current_device to return the correct prompt
+			# FIXED: Check the actual current_device to return the correct prompt
 			text = (
 				Globals.settings.remap_prompt_keyboard
 				if current_device == DeviceType.KEYBOARD
 				else Globals.settings.remap_prompt_gamepad
 			)
 		else:
-			Globals.log_message(
-				"'Globals.settings' resource is NULL'",
-				Globals.LogLevel.ERROR
-			)
+			Globals.log_message("'Globals.settings' resource is NULL'", Globals.LogLevel.ERROR)
 	else:
 		update_button_text()
 
