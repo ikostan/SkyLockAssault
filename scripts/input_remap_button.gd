@@ -125,7 +125,8 @@ func _on_pressed() -> void:
 				else Globals.settings.remap_prompt_gamepad
 			)
 		else:
-			Globals.log_message("'Globals.settings' resource is NULL'", Globals.LogLevel.ERROR)
+			# Globals.log_message("'Globals.settings' resource is NULL", Globals.LogLevel.ERROR)
+			push_error("ERROR: 'Globals.settings' resource is NULL")
 	else:
 		update_button_text()
 
