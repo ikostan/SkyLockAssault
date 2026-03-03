@@ -128,11 +128,7 @@ func _on_pressed() -> void:
 			# Globals.log_message("'Globals.settings' resource is NULL", Globals.LogLevel.ERROR)
 			push_error("ERROR: 'Globals.settings' resource is NULL")
 			# Fallback prompt so the UI still reflects that we are listening
-			text = (
-				"Press a key"
-				if current_device == DeviceType.KEYBOARD
-				else "Press a button"
-			)
+			text = ("Press a key" if current_device == DeviceType.KEYBOARD else "Press a button")
 	else:
 		update_button_text()
 
