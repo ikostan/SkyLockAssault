@@ -37,11 +37,13 @@ var current_input_device: String = "keyboard"  # "keyboard" or "gamepad"
 
 func _ready() -> void:
 	# Load the resource here instead of preloading at the top
-	settings = load("res://config_resources/default_settings.tres")
-	if not settings:
+	settings = load("res://config_resources/default_settings.tres") as GameSettingsResource
+	if settings == null:
 		# Use push_error since Globals logging might not be ready
 		push_error("CRITICAL: 'GameSettingsResource' failed to load at path.")
-		return
+		# Fallback to in-memory defaults so Globals remains operational
+		settings = GameSettingsResource.new()
+		settings.current_log_level = LogLevel.WARNING
 
 	if Engine.is_editor_hint() or settings.enable_debug_logging:
 		settings.current_log_level = LogLevel.DEBUG
