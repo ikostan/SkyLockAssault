@@ -21,9 +21,6 @@ extends Resource
 # game_settings_resource.gd
 @export var difficulty: float = 1.0:
 	set(value):
-		if value < 0.5 or value > 2.0:
-			# BREAK THE CYCLE: Use push_warning instead of Globals.log_message
-			push_warning("Invalid difficulty loaded (" + str(value) + ") - clamping.")
 		_difficulty = clamp(value, 0.5, 2.0)
 	get:
 		return _difficulty
