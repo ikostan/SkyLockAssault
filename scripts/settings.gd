@@ -389,15 +389,23 @@ func deserialize_event(serialized: String) -> InputEvent:
 	match parts[0]:
 		"key":
 			if parts.size() >= 2 and parts[1].is_valid_int():
-				var ev := InputEventKey.new()
-				ev.physical_keycode = parts[1].to_int()
+				var code := parts[1].to_int()
 
-				if ev.physical_keycode != 0:
-					ev.shift_pressed = "shift" in parts
-					ev.ctrl_pressed = "ctrl" in parts
-					ev.alt_pressed = "alt" in parts
-					ev.meta_pressed = "meta" in parts
-					event_to_return = ev
+				# OPINION: Explicitly reject 0 to prevent "silent drops"
+				# as suggested by Sourcery.
+				if code == 0:
+					Globals.log_message(
+						"Ignoring key event with keycode 0", Globals.LogLevel.WARNING
+					)
+					return null
+
+				var ev := InputEventKey.new()
+				ev.physical_keycode = code
+				ev.shift_pressed = "shift" in parts
+				ev.ctrl_pressed = "ctrl" in parts
+				ev.alt_pressed = "alt" in parts
+				ev.meta_pressed = "meta" in parts
+				event_to_return = ev
 		"joybtn":
 			if parts.size() == 3 and parts[1].is_valid_int() and parts[2].is_valid_int():
 				var ev := InputEventJoypadButton.new()
