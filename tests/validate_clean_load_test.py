@@ -56,19 +56,19 @@ def test_no_critical_errors_on_load(page: Page) -> None:
             log["text"]
             for log in logs
             if log["type"] in ["error", "warning"]  # Filter by type first
-               and (
-                       log["type"] == "error"  # All error types are critical
-                       or any(
-                   pattern in log["text"]
-                   for pattern in [
-                       "SCRIPT ERROR",
-                       "Compile Error",
-                       "Parse Error",
-                       "Failed to load script",
-                       "Uncaught (in promise)",
-                   ]
-               )
-               )
+            and (
+                log["type"] == "error"  # All error types are critical
+                or any(
+                    pattern in log["text"]
+                    for pattern in [
+                        "SCRIPT ERROR",
+                        "Compile Error",
+                        "Parse Error",
+                        "Failed to load script",
+                        "Uncaught (in promise)",
+                    ]
+                )
+            )
         ]
 
         # 4. Detailed assertion
