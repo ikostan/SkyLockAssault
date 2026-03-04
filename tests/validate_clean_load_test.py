@@ -18,9 +18,10 @@ Test Flow
 - Fail if any critical engine or script errors are detected.
 """
 
+import json
 import os
 import time
-import json
+
 from playwright.sync_api import Page
 
 
@@ -42,28 +43,36 @@ def test_no_critical_errors_on_load(page: Page) -> None:
 
     try:
         # 1. Navigate to the game
-        page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=5000)
+        page.goto(
+            "http://localhost:8080/index.html", wait_until="networkidle", timeout=5000
+        )
 
         # 2. Wait for the engine's ready signal
         page.wait_for_function("() => window.godotInitialized", timeout=5000)
 
         # 3. Analyze captured logs for the specific patterns seen in the screenshot
         critical_errors = [
-            log["text"] for log in logs
-            if log["type"] == "error" or
-               any(pattern in log["text"] for pattern in [
-                   "SCRIPT ERROR",
-                   "Compile Error",
-                   "Parse Error",
-                   "Failed to load script",
-                   "Uncaught (in promise)"
-               ])
+            log["text"]
+            for log in logs
+            if log["type"] == "error"
+            or any(
+                pattern in log["text"]
+                for pattern in [
+                    "SCRIPT ERROR",
+                    "Compile Error",
+                    "Parse Error",
+                    "Failed to load script",
+                    "Uncaught (in promise)",
+                ]
+            )
         ]
 
         # 4. Detailed assertion
         if critical_errors:
             error_summary = "\n".join([f" - {err}" for err in critical_errors])
-            assert not critical_errors, f"Critical errors detected during load:\n{error_summary}"
+            assert (
+                not critical_errors
+            ), f"Critical errors detected during load:\n{error_summary}"
 
     except Exception as e:
         print(f"Load validation failed: {str(e)}")
