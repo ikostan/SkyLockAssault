@@ -18,9 +18,10 @@ Test Flow
 - Assert that no logs with type="error" exist.
 """
 
+import json
 import os
 import time
-import json
+
 from playwright.sync_api import Page
 
 
@@ -46,10 +47,14 @@ def test_no_error_logs_after_load(page: Page) -> None:
         # Start CDP session for coverage (consistent with your other tests)
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+        cdp_session.send(
+            "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
+        )
 
         # Navigate and wait for the game to initialize
-        page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=5000)
+        page.goto(
+            "http://localhost:8080/index.html", wait_until="networkidle", timeout=5000
+        )
         page.wait_for_function("() => window.godotInitialized", timeout=5000)
 
         # Allow a short buffer for any delayed post-load errors
@@ -59,8 +64,12 @@ def test_no_error_logs_after_load(page: Page) -> None:
         error_logs = [log for log in logs if log["type"] == "error"]
 
         # Detailed assertion message for easier debugging
-        error_details = "\n".join([f"[{err['type']}] {err['text']}" for err in error_logs])
-        assert len(error_logs) == 0, f"Found {len(error_logs)} error(s) in console:\n{error_details}"
+        error_details = "\n".join(
+            [f"[{err['type']}] {err['text']}" for err in error_logs]
+        )
+        assert (
+            len(error_logs) == 0
+        ), f"Found {len(error_logs)} error(s) in console:\n{error_details}"
 
     except Exception as e:
         print(f"Test: 'test_no_error_logs_after_load' failed: {str(e)}")
@@ -75,7 +84,7 @@ def test_no_error_logs_after_load(page: Page) -> None:
         raise
     finally:
         if cdp_session:
-            coverage = cdp_session.send("Profiler.takePreciseCoverage")['result']
+            coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
             cdp_session.send("Profiler.stopPreciseCoverage")
             cdp_session.send("Profiler.disable")
             with open("v8_coverage_no_error_logs_test.json", "w") as f:
