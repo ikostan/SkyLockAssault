@@ -19,7 +19,7 @@ enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 # @export var difficulty: float = 1.0  # Multiplier: 1.0=Normal, <1=Easy, >1=Hard
 
 # Add the resource reference here
-@export var settings: GameSettingsResource
+var settings: GameSettingsResource
 # In globals.gd (add after @export vars)
 var options_instance: CanvasLayer = null
 # var hidden_menu: Node = null
