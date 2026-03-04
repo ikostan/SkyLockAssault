@@ -63,14 +63,11 @@ def test_no_error_logs_after_load(page: Page) -> None:
         page.goto(
             "http://localhost:8080/index.html",
             wait_until="networkidle",
-            timeout=DEFAULT_TIMEOUT
+            timeout=DEFAULT_TIMEOUT,
         )
 
         # Wait for the custom Godot initialization flag
-        page.wait_for_function(
-            "() => window.godotInitialized",
-            timeout=DEFAULT_TIMEOUT
-        )
+        page.wait_for_function("() => window.godotInitialized", timeout=DEFAULT_TIMEOUT)
 
         # Allow a short buffer for any delayed post-load errors
         page.wait_for_timeout(BUFFER_TIMEOUT)
