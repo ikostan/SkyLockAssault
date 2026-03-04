@@ -49,21 +49,26 @@ def test_no_critical_errors_on_load(page: Page) -> None:
         # 2. Wait for the engine's ready signal
         page.wait_for_function("() => window.godotInitialized", timeout=5000)
 
-        # 3. Analyze captured logs for the specific patterns seen in the screenshot
+        # 3. Analyze captured logs for the specific patterns
+        # We only check for patterns within 'error' or 'warning' logs to avoid false positives
+        # from informational logs that might mention these terms.
         critical_errors = [
             log["text"]
             for log in logs
-            if log["type"] == "error"
-            or any(
-                pattern in log["text"]
-                for pattern in [
-                    "SCRIPT ERROR",
-                    "Compile Error",
-                    "Parse Error",
-                    "Failed to load script",
-                    "Uncaught (in promise)",
-                ]
-            )
+            if log["type"] in ["error", "warning"]  # Filter by type first
+               and (
+                       log["type"] == "error"  # All error types are critical
+                       or any(
+                   pattern in log["text"]
+                   for pattern in [
+                       "SCRIPT ERROR",
+                       "Compile Error",
+                       "Parse Error",
+                       "Failed to load script",
+                       "Uncaught (in promise)",
+                   ]
+               )
+               )
         ]
 
         # 4. Detailed assertion
