@@ -80,9 +80,9 @@ def test_no_error_logs_after_load(page: Page) -> None:
 
         # Save logs for inspection
         with open(
-                f"artifacts/test_error_logs_console_{timestamp}.txt",
-                "w",
-                encoding="utf-8",
+            f"artifacts/test_error_logs_console_{timestamp}.txt",
+            "w",
+            encoding="utf-8",
         ) as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
@@ -92,5 +92,7 @@ def test_no_error_logs_after_load(page: Page) -> None:
             coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
             cdp_session.send("Profiler.stopPreciseCoverage")
             cdp_session.send("Profiler.disable")
-            with open("v8_coverage_no_error_logs_test.json", "w", encoding="utf-8") as f:
+            with open(
+                "v8_coverage_no_error_logs_test.json", "w", encoding="utf-8"
+            ) as f:
                 json.dump(coverage, f)
