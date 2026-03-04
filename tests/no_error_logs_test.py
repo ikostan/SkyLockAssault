@@ -21,6 +21,7 @@ Test Flow
 import json
 import os
 import time
+
 from playwright.sync_api import Page
 
 # Configuration for stability in different environments
@@ -78,11 +79,13 @@ def test_no_error_logs_after_load(page: Page) -> None:
         error_logs = [log for log in logs if log["type"] == "error"]
 
         # Combine errors for a comprehensive assertion
-        all_errors = [f"[{err['type']}] {err['text']}" for err in error_logs] + page_errors
+        all_errors = [
+            f"[{err['type']}] {err['text']}" for err in error_logs
+        ] + page_errors
         error_details = "\n".join(all_errors)
 
         assert (
-                len(all_errors) == 0
+            len(all_errors) == 0
         ), f"Found {len(all_errors)} error(s) during load:\n{error_details}"
 
     except Exception as e:
@@ -93,9 +96,9 @@ def test_no_error_logs_after_load(page: Page) -> None:
 
         # Save all captured logs and exceptions for inspection
         with open(
-                f"artifacts/test_error_logs_console_{timestamp}.txt",
-                "w",
-                encoding="utf-8",
+            f"artifacts/test_error_logs_console_{timestamp}.txt",
+            "w",
+            encoding="utf-8",
         ) as f:
             f.write("--- CONSOLE LOGS ---\n")
             for log in logs:
@@ -111,6 +114,6 @@ def test_no_error_logs_after_load(page: Page) -> None:
             cdp_session.send("Profiler.stopPreciseCoverage")
             cdp_session.send("Profiler.disable")
             with open(
-                    "v8_coverage_no_error_logs_test.json", "w", encoding="utf-8"
+                "v8_coverage_no_error_logs_test.json", "w", encoding="utf-8"
             ) as f:
                 json.dump(coverage, f)
