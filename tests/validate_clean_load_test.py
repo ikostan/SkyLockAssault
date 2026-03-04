@@ -74,7 +74,6 @@ def test_no_critical_errors_on_load(page: Page) -> None:
             ), f"Critical errors detected during load:\n{error_summary}"
 
     except Exception as e:
-        # print(f"Load validation failed: {str(e)}")
         print(f"Load validation failed: {e!s}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time())

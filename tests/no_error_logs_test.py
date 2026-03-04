@@ -72,7 +72,6 @@ def test_no_error_logs_after_load(page: Page) -> None:
         ), f"Found {len(error_logs)} error(s) in console:\n{error_details}"
 
     except Exception as e:
-        # print(f"Test: 'test_no_error_logs_after_load' failed: {str(e)}")
         print(f"Test: 'test_no_error_logs_after_load' failed: {e!s}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time())
