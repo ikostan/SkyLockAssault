@@ -105,6 +105,23 @@
             height: 50px;
             transform: translate(-50%, -50%);
         }
+        /*LOGO*/
+        .logo-container {
+            display: flex;
+            flex-direction: column; /* Stack them vertically */
+            align-items: center;
+            gap: 20px; /* Space between the two logos */
+            margin-bottom: 30px;
+        }
+        .splash-img {
+             max-width: 40%; /* Godot logo size */
+             height: auto;
+        }
+        .custom-logo {
+             max-width: 150px; /* Your logo size */
+             height: auto;
+             filter: invert(1); /* Turns your black logo white for visibility */
+        }
     </style>
 <!-- Removed favicon link to avoid 404 -->
 </head>
@@ -113,6 +130,7 @@
 
     <!-- Loading screen with progress bar (updated for better ARIA labeling) -->
     <div id="loading">
+        <img src="ikostan_logo_bg_removed.png" alt="ikostan logo" class="custom-logo">
         <img src="$GODOT_SPLASH" alt="Loading...">
         <!-- Added aria-labelledby to reference #status, providing a dynamic accessible name like "Loading: X%" for screen readers -->
         <div id="progress-bar" role="progressbar" aria-labelledby="status" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
