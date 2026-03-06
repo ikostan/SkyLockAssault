@@ -69,6 +69,7 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 7. [Signing Setup for GitHub Desktop](/files/docs/Signing_Setup_GitHub_Desktop.md)
 8. BOTS:
    - [Dependabot](https://docs.github.com/en/code-security/dependabot)
+   - [Coderabbitai](https://github.com/coderabbitai)
    - [Snyk](https://docs.snyk.io/)
    - [Sourcery AI](https://docs.sourcery.ai/)
    - [CodeRabbit AI](https://github.com/coderabbitai)
@@ -207,6 +208,27 @@ these GPL requirements, a separate license is available upon request.
   - Version tagging in CI/CD – Issue #285.
   - Dynamic speed bar color changes (partially merged in PR #275/#288,
     but full threshold logic ongoing) – Issue #286.
+  - Improve input mappings with conflict handling and unbound warnings:
+    - Conflict detection + confirmation dialog when assigning already-used inputs.
+    - Per-device tracking, last-used device persistence, and device-aware remap prompts.
+    - HUD warnings for unbound critical controls during gameplay.
+    - Support opening key-mapping menu directly from other menus.
+    - Expanded tests for input remap and settings behaviors.
+  - Ensure menu navigation bindings & legacy input migration:
+    - Guaranteed binding of core navigation actions (ui_accept, ui_up, etc.).
+    - Initial focus management for gameplay/options menus and restored focus flows.
+    - Improved keyboard/gamepad input label generation and legacy config migration.
+    - Updated default gamepad throttle mappings to match expectations.
+    - Expanded test coverage around menu navigation and input handling.
+  - Enable keyboard & d-pad navigation for audio settings and key mappings:
+    - Full keyboard + gamepad navigation support for audio settings.
+    - Focus highlighting on volume rows and unified accept action for slider/toggle.
+    - Better modifier key handling (Ctrl/Shift/Alt/Meta) in remapping UI.
+    - Refined conflict handling in key remapping logic and focus restoration
+      from audio → main menu.
+    - CI/tooling version bumps and asset import config additions.
+
+---
 
 - **Planned (Milestone 9: Expansions and Polish)**:
   - Mobile exports (Android/iOS) with touch controls and
