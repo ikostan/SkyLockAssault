@@ -1,6 +1,6 @@
 ## Copyright (C) 2025 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
-## Splashing Screen Script: splashing_screen.gd
+## Splash Screen Script: splash_screen.gd
 ##
 ## Manages background splashing of the next scene with smooth progress bar.
 ## Uses Godot's ResourceLoader for threaded splashing.
