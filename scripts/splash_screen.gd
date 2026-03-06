@@ -1,6 +1,6 @@
 ## Copyright (C) 2025 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
-## Splashing Screen Script: splashing_screen.gd
+## Splash Screen Script: splash_screen.gd
 ##
 ## Manages background splashing of the next scene with smooth progress bar.
 ## Uses Godot's ResourceLoader for threaded splashing.
@@ -101,6 +101,9 @@ func _process(_delta: float) -> void:
 	# Proceed only when both loaded (or failed fallback) and minimum time elapsed.
 	if (is_scene_loaded or load_failed) and elapsed_time >= min_load_time and not transitioning:
 		transitioning = true  # Lock to prevent re-entry.
+		loader_progress = 100.0
+		progress_bar.value = 100.0
+		label.text = label_text + "100%"
 
 		# Optional delay at 100%.
 		await get_tree().create_timer(1.5).timeout
