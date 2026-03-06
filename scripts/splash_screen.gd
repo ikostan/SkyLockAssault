@@ -22,7 +22,7 @@ var transitioning: bool = false  # Flag to prevent multiple scene changes.
 var label_text: String = "Loading: "
 
 @onready var progress_bar: ProgressBar = $ProgressBar  # Progress bar UI element.
-@onready var label: Label = $Label # Label for displaying loading status.
+@onready var label: Label = $Label  # Label for displaying loading status.
 
 
 # Starts threaded loading of the next scene from Globals.
