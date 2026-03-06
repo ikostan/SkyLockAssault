@@ -70,8 +70,9 @@ def test_difficulty_flow(page: Page) -> None:
         cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
 
         page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=3000)
+        # 1. Wait for the engine to actually start the splash scene
+        page.wait_for_timeout(5000)
         # Wait for Godot engine init (ensures 'godot' object is defined)
-        page.wait_for_timeout(3000)
         page.wait_for_function("() => window.godotInitialized", timeout=3000)
 
         # Verify canvas and title to ensure game is initialized
