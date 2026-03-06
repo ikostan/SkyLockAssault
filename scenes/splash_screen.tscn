@@ -1,0 +1,70 @@
+[gd_scene load_steps=5 format=3 uid="uid://di3kdwlspwjbt"]
+
+[ext_resource type="Script" uid="uid://dm26g1kkq7f3w" path="res://scripts/splash_screen.gd" id="1_hsxvm"]
+[ext_resource type="Texture2D" uid="uid://b7jpd8lq6kokg" path="res://assets/ikostan_logo_bg_removed.png" id="1_n4g2v"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hsxvm"]
+bg_color = Color(0.25929382, 0.25929365, 0.2592937, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+shadow_size = 1
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4gp4q"]
+bg_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[node name="SplashScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_hsxvm")
+
+[node name="IkostanLogoBgRemoved" type="Sprite2D" parent="."]
+position = Vector2(630, 287)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("1_n4g2v")
+
+[node name="ProgressBar" type="ProgressBar" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -350.0
+offset_top = -220.0
+offset_right = 350.0
+offset_bottom = -193.0
+grow_horizontal = 2
+grow_vertical = 0
+size_flags_vertical = 6
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_styles/background = SubResource("StyleBoxFlat_hsxvm")
+theme_override_styles/fill = SubResource("StyleBoxFlat_4gp4q")
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -35.0
+offset_top = -170.0
+offset_right = 35.0
+offset_bottom = -147.0
+grow_horizontal = 2
+grow_vertical = 0
+size_flags_horizontal = 4
+size_flags_vertical = 6
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 25
+text = "Loading: "
