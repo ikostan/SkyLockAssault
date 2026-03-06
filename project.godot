@@ -14,7 +14,7 @@ config/name="SkyLockAssault"
 config/description="Combat top-down airplane game with fuel management, multiple weapons, multi-level, and adjustable difficulty. Made with Godot."
 run/main_scene="uid://brpckgp7j86jp"
 config/features=PackedStringArray("4.5", "GL Compatibility")
-boot_splash/bg_color=Color(0.18000486, 0.18000486, 0.18000486, 1)
+boot_splash/bg_color=Color(0.23921569, 0.23921569, 0.23921569, 1)
 boot_splash/image="uid://b7jpd8lq6kokg"
 config/icon="res://icon.svg"
 
