@@ -13,7 +13,7 @@
 extends Control
 
 var loader_progress: float = 0.0  # Current smoothed progress value.
-var min_load_time: float = 1.0  # Minimum splashing time in seconds for visibility (adjust as needed).
+var min_load_time: float = 1.0  # Minimum splashing time in seconds for visibility.
 var load_start_time: float = 0.0  # Timestamp when splashing starts.
 var is_scene_loaded: bool = false  # Flag to track if the scene is fully loaded.
 var scene: PackedScene = null  # Holder for the loaded scene.
