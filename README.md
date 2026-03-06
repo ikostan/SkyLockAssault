@@ -210,7 +210,8 @@ these GPL requirements, a separate license is available upon request.
     but full threshold logic ongoing) – Issue #286.
   - Improve input mappings with conflict handling and unbound warnings:
     - Conflict detection + confirmation dialog when assigning already-used inputs.
-    - Per-device tracking, last-used device persistence, and device-aware remap prompts.
+    - Per-device tracking, last-used device persistence, and device-aware
+      remap prompts.
     - HUD warnings for unbound critical controls during gameplay.
     - Support opening key-mapping menu directly from other menus.
     - Expanded tests for input remap and settings behaviors.
