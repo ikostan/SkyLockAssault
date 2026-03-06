@@ -231,24 +231,46 @@ these GPL requirements, a separate license is available upon request.
 
 ---
 
-- **Planned (Milestone 9: Expansions and Polish)**:
-  - Mobile exports (Android/iOS) with touch controls and
-    optimizations – Issues #35, #41, #43.
-  - Multiplayer (co-op/competitive) using Godot's High-Level Multiplayer API,
-    with security/testing – Issues #34, #36, #42.
-  - AI enemies with pathfinding (NavigationServer) and behavior
-    trees – Issues #40, #44.
-  - Refactor fuel/speed dictionaries to dedicated StatManager class – Issue #276.
-  - Add signals for fuel, speed, and weapons in player.gd – Issues #278, #279, #280.
-  - Convert hard-coded fuel elements to Godot Resources – Issue #281.
-  - Multi-level progression with scenes – Issue #21.
-  - Optimize performance (e.g., web-specific) – Issues #27, #37.
-  - Asset management/polish, bug fixes, feedback
-    guides – Issues #29, #31, #33, #38, #86, #90.
-  - Audio enhancements (e.g., refactor duplicated SFX volume logic) – Issue #267.
-  - Particle effects for explosions/weapons.
+## Milestones
+
+## Input & Navigation Improvements (Milestone 12)
+
+Milestone 12 focused on making the game more navigable and responsive
+to user input devices:
+
+### Input Remapping
+- Conflict detection dialog when assigning existing bindings
+- Per-device last input selection persists between sessions
+- Critical control warnings if actions are unbound
+- Remap menu accessible from all relevant UI paths
+
+### Menu Navigation
+- Keyboard + gamepad (D-Pad) support for all menu flows
+- Guaranteed core navigation actions remain bound
+- Focus restoration when leaving submenus (Audio → Options → Main)
+- Modifier key respect (Ctrl/Shift/Alt/Meta) in remapping UI
+
+### Audio Settings Controls
+- Use keyboard/gamepad accept action for sliders and toggles
+- Focus highlighting for better visual feedback
+- Unified UI interactions without relying on the mouse
+
+### Godot Resource Migration
+- Replaced hard-coded globals with a `GameSettingsResource`
+- Easier inspector-based editing and persistence
+- Safer loading with fallback on corrupted configs
+
+### Known Limitations
+
+* Some complex menu flows may still rely on mouse until additional
+  focus neighbors are defined.
+* Modifier-aware remapping requires explicit key+modifier press for
+  unique bindings.
+
 
 Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milestones).
+
+---
 
 ### Known Issues
 
