@@ -33,9 +33,10 @@ Artifacts
 v8_coverage_load_main_menu_test.json, artifacts/test_load_main_menu_failure_*.png/txt
 """
 
+import json
 import os
 import time
-import json
+
 from playwright.sync_api import Page
 
 
@@ -66,9 +67,13 @@ def test_load_main_menu(page: Page) -> None:
         # Start CDP session for V8 JS coverage (workaround for Python Playwright lacking native coverage API)
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+        cdp_session.send(
+            "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
+        )
 
-        page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=5000)
+        page.goto(
+            "http://localhost:8080/index.html", wait_until="networkidle", timeout=5000
+        )
         # 1. Wait for the engine to actually start the splash scene
         page.wait_for_timeout(5000)
         # Wait for Godot engine init (ensures 'godot' object is defined)
@@ -84,11 +89,11 @@ def test_load_main_menu(page: Page) -> None:
         # Since the DOM overlays are now central to the web flow,
         # consider also asserting that the main-menu overlay elements are present
         # and visible (similar to navigation_to_audio_test):
-        page.wait_for_selector('#start-button', state='visible', timeout=2500)
+        page.wait_for_selector("#start-button", state="visible", timeout=2500)
         assert page.evaluate("document.getElementById('start-button') !== null")
-        page.wait_for_selector('#options-button', state='visible', timeout=2500)
+        page.wait_for_selector("#options-button", state="visible", timeout=2500)
         assert page.evaluate("document.getElementById('options-button') !== null")
-        page.wait_for_selector('#quit-button', state='visible', timeout=2500)
+        page.wait_for_selector("#quit-button", state="visible", timeout=2500)
         assert page.evaluate("document.getElementById('quit-button') !== null")
 
     except Exception as e:
@@ -96,22 +101,30 @@ def test_load_main_menu(page: Page) -> None:
         os.makedirs("artifacts", exist_ok=True)
         # Artifact on failure
         timestamp = int(time.time())
-        page.screenshot(path=f"artifacts/test_load_main_menu_failure_screenshot_{timestamp}.png")
+        page.screenshot(
+            path=f"artifacts/test_load_main_menu_failure_screenshot_{timestamp}.png"
+        )
 
-        log_file: str = f"artifacts/test_load_main_menu_failure_console_logs_{timestamp}.txt"
+        log_file: str = (
+            f"artifacts/test_load_main_menu_failure_console_logs_{timestamp}.txt"
+        )
         with open(log_file, "w") as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
             print(f"Console logs saved to {log_file}")
 
-        with open(f"artifacts/test_load_main_menu_failure_html_{timestamp}.html", "w") as f:
+        with open(
+            f"artifacts/test_load_main_menu_failure_html_{timestamp}.html", "w"
+        ) as f:
             f.write(page.content())
 
-        print(f"Failure logs: artifacts/test_load_main_menu_failure_console_logs_{timestamp}.txt. Error: {e}")
+        print(
+            f"Failure logs: artifacts/test_load_main_menu_failure_console_logs_{timestamp}.txt. Error: {e}"
+        )
         raise
     finally:
         if cdp_session:
-            coverage = cdp_session.send("Profiler.takePreciseCoverage")['result']
+            coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
             cdp_session.send("Profiler.stopPreciseCoverage")
             cdp_session.send("Profiler.disable")
             with open("v8_coverage_load_main_menu_test.json", "w") as f:
