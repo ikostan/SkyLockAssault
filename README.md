@@ -69,7 +69,6 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 7. [Signing Setup for GitHub Desktop](/files/docs/Signing_Setup_GitHub_Desktop.md)
 8. BOTS:
    - [Dependabot](https://docs.github.com/en/code-security/dependabot)
-   - [Coderabbit AI](https://github.com/coderabbitai)
    - [Snyk](https://docs.snyk.io/)
    - [Sourcery AI](https://docs.sourcery.ai/)
    - [CodeRabbit AI](https://github.com/coderabbitai)
