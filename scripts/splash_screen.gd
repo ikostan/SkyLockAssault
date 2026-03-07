@@ -40,7 +40,7 @@ func _ready() -> void:
 	#	Globals.log_message("Next scene path is empty!", Globals.LogLevel.ERROR)
 	#	load_failed = true
 	#	return
-	
+
 	# Resolve a startup target instead of treating cold starts as load failures.
 	resolved_next_scene = (
 		Globals.next_scene if Globals.next_scene != "" else DEFAULT_STARTUP_SCENE
