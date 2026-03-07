@@ -262,7 +262,7 @@ to user input devices:
 
 ### Known Limitations
 
-* Some complex menu flows may still rely on mouse until additional
+* Some complex menu flows may still rely on the mouse until additional
   focus neighbors are defined.
 * Modifier-aware remapping requires explicit key+modifier press for
   unique bindings.
