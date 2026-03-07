@@ -12,6 +12,9 @@
 
 extends Control
 
+const DEFAULT_STARTUP_SCENE := "res://scenes/main_menu.tscn"
+
+var resolved_next_scene: String = ""
 var loader_progress: float = 0.0  # Current smoothed progress value.
 var min_load_time: float = 1.0  # Minimum splashing time in seconds for visibility.
 var load_start_time: float = 0.0  # Timestamp when splashing starts.
@@ -33,13 +36,19 @@ func _ready() -> void:
 	if OS.has_feature("web"):
 		min_load_time = 3.0
 
-	if Globals.next_scene == "":
-		Globals.log_message("Next scene path is empty!", Globals.LogLevel.ERROR)
-		load_failed = true
-		return
+	#if Globals.next_scene == "":
+	#	Globals.log_message("Next scene path is empty!", Globals.LogLevel.ERROR)
+	#	load_failed = true
+	#	return
+	
+	# Resolve a startup target instead of treating cold starts as load failures.
+	resolved_next_scene = (
+		Globals.next_scene if Globals.next_scene != "" else DEFAULT_STARTUP_SCENE
+	)
 
 	# Start background loading with sub-threads to fix 50% quirk.
-	var err: int = ResourceLoader.load_threaded_request(Globals.next_scene, "", true)
+	# var err: int = ResourceLoader.load_threaded_request(Globals.next_scene, "", true)
+	var err: int = ResourceLoader.load_threaded_request(resolved_next_scene, "", true)
 	if err != OK:
 		Globals.log_message("Failed to start splashing screen: " + str(err), Globals.LogLevel.ERROR)
 		load_failed = true
