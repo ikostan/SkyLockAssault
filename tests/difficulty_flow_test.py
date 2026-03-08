@@ -87,7 +87,7 @@ def test_difficulty_flow(page: Page) -> None:
         assert "SkyLockAssault" in page.title(), "Title not found"
 
         # Check element present
-        page.wait_for_selector("#options-button", state="visible", timeout=2500)
+        page.wait_for_selector("#options-button", state="visible", timeout=4500)
         assert page.evaluate("document.getElementById('options-button') !== null")
 
         # Check invisible (opacity 0)

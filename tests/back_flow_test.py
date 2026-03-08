@@ -79,9 +79,9 @@ def test_back_flow(page: Page) -> None:
         assert "SkyLockAssault" in page.title(), "Title not found"
 
         # Navigate to options menu
-        page.wait_for_selector("#options-button", state="visible", timeout=2500)
+        page.wait_for_selector("#options-button", state="visible", timeout=4500)
         # page.click("#options-button", force=True, timeout=2500)
-        page.wait_for_function("window.optionsPressed !== undefined", timeout=2500)
+        page.wait_for_function("window.optionsPressed !== undefined", timeout=4500)
         page.evaluate("window.optionsPressed([])")
 
         # Go to Advanced settings

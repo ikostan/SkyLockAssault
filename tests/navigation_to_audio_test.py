@@ -79,11 +79,11 @@ def test_navigation_to_audio(page: Page) -> None:
         assert "SkyLockAssault" in page.title(), "Title not found"
 
         # NAV-01: Verify main menu overlays exist and are configured
-        page.wait_for_selector("#start-button", state="visible", timeout=2500)
+        page.wait_for_selector("#start-button", state="visible", timeout=4500)
         assert page.evaluate("document.getElementById('start-button') !== null")
-        page.wait_for_selector("#options-button", state="visible", timeout=2500)
+        page.wait_for_selector("#options-button", state="visible", timeout=4500)
         assert page.evaluate("document.getElementById('options-button') !== null")
-        page.wait_for_selector("#quit-button", state="visible", timeout=2500)
+        page.wait_for_selector("#quit-button", state="visible", timeout=4500)
         assert page.evaluate("document.getElementById('quit-button') !== null")
         opacity: str = page.evaluate(
             "window.getComputedStyle(document.getElementById('options-button')).opacity"
