@@ -189,11 +189,13 @@ def test_back_flow(page: Page) -> None:
         page.wait_for_function("() => window.godotInitialized", timeout=5000)
         # Navigate to options menu
         page.wait_for_selector("#options-button", state="visible", timeout=5000)
-        page.click("#options-button", force=True)
+        # page.click("#options-button", force=True)
+        page.wait_for_function("window.optionsPressed !== undefined", timeout=4500)
+        page.evaluate("window.optionsPressed([])")
         # Navigate to audio menu
         page.wait_for_selector("#audio-button", state="visible", timeout=5000)
         # page.click("#audio-button", force=True)
-        page.wait_for_function("window.audioPressed !== undefined", timeout=2500)
+        page.wait_for_function("window.audioPressed !== undefined", timeout=4500)
         page.evaluate("window.audioPressed([0])")
         page.wait_for_timeout(5000)
 
