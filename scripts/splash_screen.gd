@@ -28,34 +28,6 @@ var label_text: String = "Loading: "
 @onready var label: Label = $Label  # Label for displaying loading status.
 
 
-# Starts threaded loading of the next scene from Globals.
-func _ready() -> void:
-	load_start_time = Time.get_ticks_msec() / 1000.0
-
-	# Give more breathing room on Web (threaded progress unreliable per Godot 4.5).
-	if OS.has_feature("web"):
-		min_load_time = 3.0
-
-	#if Globals.next_scene == "":
-	#	Globals.log_message("Next scene path is empty!", Globals.LogLevel.ERROR)
-	#	load_failed = true
-	#	return
-
-	# Resolve a startup target instead of treating cold starts as load failures.
-	resolved_next_scene = (
-		Globals.next_scene if Globals.next_scene != "" else DEFAULT_STARTUP_SCENE
-	)
-
-	# Start background loading with sub-threads to fix 50% quirk.
-	# var err: int = ResourceLoader.load_threaded_request(Globals.next_scene, "", true)
-	var err: int = ResourceLoader.load_threaded_request(resolved_next_scene, "", true)
-	if err != OK:
-		Globals.log_message("Failed to start splashing screen: " + str(err), Globals.LogLevel.ERROR)
-		load_failed = true
-	else:
-		Globals.log_message("Splashing screen started successfully.", Globals.LogLevel.DEBUG)
-
-
 # Polls loading status and updates UI. Changes scene when loaded.
 # Eliminated fake_progress; relies on real ResourceLoader progress.
 func _process(_delta: float) -> void:
