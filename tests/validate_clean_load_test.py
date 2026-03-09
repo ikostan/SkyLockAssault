@@ -45,6 +45,8 @@ def test_no_critical_errors_on_load(page: Page) -> None:
         page.goto(
             "http://localhost:8080/index.html", wait_until="networkidle", timeout=5000
         )
+        # 1.5. Wait for the engine to actually start the splash scene
+        page.wait_for_timeout(5000)
 
         # 2. Wait for the engine's ready signal
         page.wait_for_function("() => window.godotInitialized", timeout=5000)

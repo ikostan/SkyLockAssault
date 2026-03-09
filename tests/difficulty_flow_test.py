@@ -1,4 +1,3 @@
-
 # Copyright (C) 2025 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 # tests/difficulty_flow_test.py
@@ -32,10 +31,11 @@ Artifacts
 v8_coverage_difficulty_flow_test.json, artifacts/test_difficulty_failure_*.png/txt
 """
 
+import json
 import os
 import time
-import json
 from typing import Any, Dict, List, Optional
+
 from playwright.sync_api import Page
 
 
@@ -67,12 +67,17 @@ def test_difficulty_flow(page: Page) -> None:
         # Start CDP session for V8 JS coverage (workaround for Python Playwright lacking native coverage API)
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+        cdp_session.send(
+            "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
+        )
 
-        page.goto("http://localhost:8080/index.html", wait_until="networkidle", timeout=3000)
+        page.goto(
+            "http://localhost:8080/index.html", wait_until="networkidle", timeout=5000
+        )
+        # 1. Wait for the engine to actually start the splash scene
+        page.wait_for_timeout(5000)
         # Wait for Godot engine init (ensures 'godot' object is defined)
-        page.wait_for_timeout(3000)
-        page.wait_for_function("() => window.godotInitialized", timeout=3000)
+        page.wait_for_function("() => window.godotInitialized", timeout=5000)
 
         # Verify canvas and title to ensure game is initialized
         canvas = page.locator("canvas")
@@ -82,81 +87,102 @@ def test_difficulty_flow(page: Page) -> None:
         assert "SkyLockAssault" in page.title(), "Title not found"
 
         # Check element present
-        page.wait_for_selector('#options-button', state='visible', timeout=2500)
+        page.wait_for_selector("#options-button", state="visible", timeout=4500)
         assert page.evaluate("document.getElementById('options-button') !== null")
 
         # Check invisible (opacity 0)
-        opacity: str = page.evaluate("window.getComputedStyle(document.getElementById('options-button')).opacity")
-        assert opacity == '0', f"Expected opacity 0, got {opacity}"
+        opacity: str = page.evaluate(
+            "window.getComputedStyle(document.getElementById('options-button')).opacity"
+        )
+        assert opacity == "0", f"Expected opacity 0, got {opacity}"
 
         # Check pointer-events none
         pointer_events: str = page.evaluate(
-            "window.getComputedStyle(document.getElementById('options-button')).pointerEvents")
-        assert pointer_events == 'none', f"Expected pointer-events none, got {pointer_events}"
+            "window.getComputedStyle(document.getElementById('options-button')).pointerEvents"
+        )
+        assert (
+            pointer_events == "none"
+        ), f"Expected pointer-events none, got {pointer_events}"
 
         # Wait main menu (function check for ID)
-        page.wait_for_function("() => document.getElementById('options-button') !== null",
-                               timeout=5000)  # Longer for stalls
+        page.wait_for_function(
+            "() => document.getElementById('options-button') !== null", timeout=5000
+        )  # Longer for stalls
 
         # Open options
-        page.wait_for_selector('#options-button', state='visible', timeout=2500)
+        page.wait_for_selector("#options-button", state="visible", timeout=2500)
         # page.click("#options-button", force=True)
-        page.wait_for_function('window.optionsPressed !== undefined', timeout=2500)
+        page.wait_for_function("window.optionsPressed !== undefined", timeout=2500)
         page.evaluate("window.optionsPressed([])")
 
         # Go to Advanced settings
-        page.wait_for_selector('#advanced-button', state='visible', timeout=2500)
+        page.wait_for_selector("#advanced-button", state="visible", timeout=2500)
         # page.click("#advanced-button", force=True)
-        page.wait_for_function('window.advancedPressed !== undefined', timeout=2500)
+        page.wait_for_function("window.advancedPressed !== undefined", timeout=2500)
         page.evaluate("window.advancedPressed([])")
-        page.wait_for_function('window.changeLogLevel !== undefined', timeout=2500)
+        page.wait_for_function("window.changeLogLevel !== undefined", timeout=2500)
         advanced_display: str = page.evaluate(
-            "window.getComputedStyle(document.getElementById('log-level-select')).display")
-        assert advanced_display == 'block', "Advanced menu not loaded (selected log level not displayed)"
+            "window.getComputedStyle(document.getElementById('log-level-select')).display"
+        )
+        assert (
+            advanced_display == "block"
+        ), "Advanced menu not loaded (selected log level not displayed)"
 
         # Set log level DEBUG
         pre_change_log_count: int = len(logs)
         page.evaluate("window.changeLogLevel([0])")
         page.wait_for_timeout(1000)
         new_logs: List[Dict[str, str]] = logs[pre_change_log_count:]
-        assert any("log level changed to: debug" in log["text"].lower() for log in new_logs)
-        assert page.evaluate("document.getElementById('audio-button') !== null"), "Audio button not found/displayed"
-        assert any("Log level changed to: DEBUG" in log["text"] for log in new_logs), "Failed to set log level to DEBUG"
         assert any(
-            "log level changed to: debug" in log["text"].lower() for log in new_logs), "Failed to set log level to DEBUG"
+            "log level changed to: debug" in log["text"].lower() for log in new_logs
+        )
+        assert page.evaluate(
+            "document.getElementById('audio-button') !== null"
+        ), "Audio button not found/displayed"
         assert any(
-            "settings saved" in log["text"].lower() for log in new_logs), "Failed to save the settings"
+            "Log level changed to: DEBUG" in log["text"] for log in new_logs
+        ), "Failed to set log level to DEBUG"
+        assert any(
+            "log level changed to: debug" in log["text"].lower() for log in new_logs
+        ), "Failed to set log level to DEBUG"
+        assert any(
+            "settings saved" in log["text"].lower() for log in new_logs
+        ), "Failed to save the settings"
 
         # Go back to Options menu
-        page.wait_for_selector('#advanced-back-button', state='visible', timeout=2500)
+        page.wait_for_selector("#advanced-back-button", state="visible", timeout=2500)
         # page.click("#advanced-back-button", force=True)
-        page.wait_for_function('window.advancedBackPressed !== undefined', timeout=2500)
+        page.wait_for_function("window.advancedBackPressed !== undefined", timeout=2500)
         page.evaluate("window.advancedBackPressed([])")
 
         # Go to Gameplay Settings
-        page.wait_for_selector('#gameplay-button', state='visible', timeout=2500)
+        page.wait_for_selector("#gameplay-button", state="visible", timeout=2500)
         # page.click("#advanced-back-button", force=True)
-        page.wait_for_function('window.gameplayPressed !== undefined', timeout=2500)
+        page.wait_for_function("window.gameplayPressed !== undefined", timeout=2500)
         page.evaluate("window.gameplayPressed([])")
 
         # Assert gameplay settings overlay is shown and options overlay is hidden
-        page.wait_for_selector('#difficulty-slider', state='visible', timeout=2500)
-        page.wait_for_selector('#options-back-button', state='hidden', timeout=2500)
+        page.wait_for_selector("#difficulty-slider", state="visible", timeout=2500)
+        page.wait_for_selector("#options-back-button", state="hidden", timeout=2500)
 
         # Set difficulty to 2.0 - directly call the exposed callback (bypasses event for reliability in automation)
         pre_change_log_count = len(logs)
-        page.wait_for_function('window.changeDifficulty !== undefined', timeout=2500)
+        page.wait_for_function("window.changeDifficulty !== undefined", timeout=2500)
         page.evaluate("window.changeDifficulty([2.0])")
         page.wait_for_timeout(2500)
         new_logs = logs[pre_change_log_count:]
         assert any(
-            "difficulty changed to: 2.0" in log["text"].lower() for log in new_logs), "Failed to set difficulty to 2.0"
+            "difficulty changed to: 2.0" in log["text"].lower() for log in new_logs
+        ), "Failed to set difficulty to 2.0"
         assert any(
-            "settings saved" in log["text"].lower() for log in new_logs), "Failed to save the settings"
+            "settings saved" in log["text"].lower() for log in new_logs
+        ), "Failed to save the settings"
 
         # Reset gameplay settings back to defaults via the gameplay reset action
         pre_reset_log_count: int = len(logs)
-        page.wait_for_function('window.gameplayResetPressed !== undefined', timeout=2500)
+        page.wait_for_function(
+            "window.gameplayResetPressed !== undefined", timeout=2500
+        )
         page.evaluate("window.gameplayResetPressed([])")
         page.wait_for_timeout(2500)
         reset_logs: List[Dict[str, str]] = logs[pre_reset_log_count:]
@@ -173,49 +199,62 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Back to Main menu
         pre_change_log_count = len(logs)
-        page.wait_for_function('window.gameplayBackPressed !== undefined', timeout=2500)
+        page.wait_for_function("window.gameplayBackPressed !== undefined", timeout=2500)
         page.evaluate("window.gameplayBackPressed([])")
         page.wait_for_timeout(2500)
         new_logs = logs[pre_change_log_count:]
-        assert any("back button pressed." in log["text"].lower() for log in new_logs), "Back button not found"
+        assert any(
+            "back button pressed." in log["text"].lower() for log in new_logs
+        ), "Back button not found"
 
         # After gameplayBackPressed([]), the options overlay should be visible again
         # and gameplay-specific elements should be hidden.
         # Options overlay visible
-        page.wait_for_selector('#options-back-button', state='visible', timeout=2500)
+        page.wait_for_selector("#options-back-button", state="visible", timeout=2500)
         assert page.evaluate("document.getElementById('options-back-button') !== null")
         # Gameplay UI hidden
-        page.wait_for_selector('#difficulty-slider', state='hidden', timeout=2500)
-        assert page.evaluate("document.getElementById('difficulty-slider') === null || document.getElementById('difficulty-slider').offsetParent === null")
+        page.wait_for_selector("#difficulty-slider", state="hidden", timeout=2500)
+        assert page.evaluate(
+            "document.getElementById('difficulty-slider') === null || document.getElementById('difficulty-slider').offsetParent === null"
+        )
 
         # Check element present
-        page.wait_for_selector('#options-back-button', state='visible', timeout=2500)
+        page.wait_for_selector("#options-back-button", state="visible", timeout=2500)
         assert page.evaluate("document.getElementById('options-back-button') !== null")
         page.evaluate("window.optionsBackPressed([])")
 
         # After optionsBackPressed([]), we should be back on the main menu:
         # main-menu elements visible and options elements hidden.
-        page.wait_for_selector('#start-button', state='visible', timeout=2500)
+        page.wait_for_selector("#start-button", state="visible", timeout=2500)
         assert page.evaluate("document.getElementById('start-button') !== null")
-        page.wait_for_selector('#options-back-button', state='hidden', timeout=2500)
-        assert page.evaluate("document.getElementById('options-back-button') === null || document.getElementById('options-back-button').offsetParent === null")
+        page.wait_for_selector("#options-back-button", state="hidden", timeout=2500)
+        assert page.evaluate(
+            "document.getElementById('options-back-button') === null || document.getElementById('options-back-button').offsetParent === null"
+        )
 
         # Start game
-        page.wait_for_selector('#start-button', state='visible', timeout=2500)
+        page.wait_for_selector("#start-button", state="visible", timeout=2500)
         pre_change_log_count = len(logs)
         pre_poll_log_count: int = len(logs)
         page.click("#start-button", force=True)
-        page.wait_for_timeout(5000)  # Sometimes it takes longer time to pass the loading screen
+        page.wait_for_timeout(
+            5000
+        )  # Sometimes it takes longer time to pass the loading screen
         new_logs = logs[pre_change_log_count:]
         assert any(
-            "start game menu button pressed." in log["text"].lower() for log in new_logs), "Start Game button not found"
+            "start game menu button pressed." in log["text"].lower() for log in new_logs
+        ), "Start Game button not found"
         assert any(
-            "initializing main scene..." in log["text"].lower() for log in new_logs), "Game scene not found"
+            "initializing main scene..." in log["text"].lower() for log in new_logs
+        ), "Game scene not found"
 
         # Poll for loading start log to confirm transition to loading screen
         start_time: float = time.time()
         while time.time() - start_time < 30:
-            if any("loading started successfully." in log["text"].lower() for log in logs[pre_poll_log_count:]):
+            if any(
+                "loading started successfully." in log["text"].lower()
+                for log in logs[pre_poll_log_count:]
+            ):
                 break
             time.sleep(0.5)
         else:
@@ -224,7 +263,10 @@ def test_difficulty_flow(page: Page) -> None:
         # Poll for scene loaded log from loading_screen.gd
         start_time = time.time()
         while time.time() - start_time < 30:
-            if any("scene loaded successfully." in log["text"].lower() for log in logs[pre_poll_log_count:]):
+            if any(
+                "scene loaded successfully." in log["text"].lower()
+                for log in logs[pre_poll_log_count:]
+            ):
                 break
             time.sleep(0.5)
         else:
@@ -240,17 +282,23 @@ def test_difficulty_flow(page: Page) -> None:
         page.wait_for_timeout(3000)
         new_logs = logs[pre_change_log_count:]
         # Verify scaled cooldown in logs (fire_rate 0.15 * 2.0 = 0.3)
-        assert any("firing with scaled cooldown: 0.3" in log["text"].lower() for log in
-                   new_logs), "Scaled cooldown not found in logs"
+        assert any(
+            "firing with scaled cooldown: 0.3" in log["text"].lower()
+            for log in new_logs
+        ), "Scaled cooldown not found in logs"
 
     except Exception as e:
         print(f"Test: 'test_difficulty_flow' failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         # Artifact on failure
         timestamp: int = int(time.time())
-        page.screenshot(path=f"artifacts/test_difficulty_failure_screenshot_{timestamp}.png")
+        page.screenshot(
+            path=f"artifacts/test_difficulty_failure_screenshot_{timestamp}.png"
+        )
 
-        log_file: str = f"artifacts/test_difficulty_failure_console_logs_{timestamp}.txt"
+        log_file: str = (
+            f"artifacts/test_difficulty_failure_console_logs_{timestamp}.txt"
+        )
         with open(log_file, "w") as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
@@ -259,12 +307,16 @@ def test_difficulty_flow(page: Page) -> None:
         with open(f"artifacts/test_difficulty_failure_html_{timestamp}.html", "w") as f:
             f.write(page.content())
 
-        print(f"Failure logs: artifacts/test_difficulty_failure_console_logs_{timestamp}.txt. Error: {e}")
+        print(
+            f"Failure logs: artifacts/test_difficulty_failure_console_logs_{timestamp}.txt. Error: {e}"
+        )
         raise
     finally:
         if cdp_session:
             # Stop V8 coverage and save to file (even on failure)
-            coverage: Dict[str, Any] = cdp_session.send("Profiler.takePreciseCoverage")['result']
+            coverage: Dict[str, Any] = cdp_session.send("Profiler.takePreciseCoverage")[
+                "result"
+            ]
             cdp_session.send("Profiler.stopPreciseCoverage")
             cdp_session.send("Profiler.disable")
             with open("v8_coverage_difficulty_flow_test.json", "w") as f:

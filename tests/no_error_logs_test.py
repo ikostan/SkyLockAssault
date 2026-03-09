@@ -65,6 +65,8 @@ def test_no_error_logs_after_load(page: Page) -> None:
             wait_until="networkidle",
             timeout=DEFAULT_TIMEOUT,
         )
+        # 1. Wait for the engine to actually start the splash scene
+        page.wait_for_timeout(5000)
 
         # Wait for the custom Godot initialization flag
         page.wait_for_function("() => window.godotInitialized", timeout=DEFAULT_TIMEOUT)
