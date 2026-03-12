@@ -51,7 +51,7 @@ jobs:
           ls -la ${{ steps.find_report.outputs.latest_report }}/
       - name: "Upload Test Reports Artifacts"
         if: always()
-        uses: "actions/upload-artifact@v6"
+        uses: "actions/upload-artifact@v7"
         with:
           name: gdunit-reports
           path: reports/**

@@ -10,11 +10,15 @@ extends GdUnitTestSuite
 var globals: Node
 var test_path: String = "user://test_globals.cfg"  # Temp for isolation
 
+
 func before_test() -> void:
-	## Per-test setup: Instantiate globals.
-	##
-	## :rtype: void
+	# Instantiate the script
 	globals = auto_free(load("res://scripts/globals.gd").new())
+	
+	# FIX: Manually initialize the settings resource 
+	# because _ready() hasn't run yet.
+	globals.settings = GameSettingsResource.new()
+
 
 func after_test() -> void:
 	## Per-test cleanup: Remove test file.
@@ -22,6 +26,7 @@ func after_test() -> void:
 	## :rtype: void
 	if FileAccess.file_exists(test_path):
 		DirAccess.remove_absolute(test_path)
+
 
 func test_save_settings_preserves_other_sections() -> void:
 	## Tests settings save preserves unrelated sections (e.g., "audio").
@@ -41,6 +46,7 @@ func test_save_settings_preserves_other_sections() -> void:
 	config.load(test_path)
 	assert_float(config.get_value("Settings", "difficulty", 1.0)).is_equal(1.2)
 	assert_float(config.get_value("audio", "master_volume", 1.0)).is_equal(0.6)
+
 
 func test_load_settings_with_other_sections() -> void:
 	## Tests load ignores/preserves other sections.
