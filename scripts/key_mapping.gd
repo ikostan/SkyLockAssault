@@ -179,6 +179,7 @@ func _on_reset_pressed() -> void:
 	# Function resets only the selected device type (keyboard or gamepad)
 	var device_type: String = "keyboard" if keyboard.button_pressed else "gamepad"
 	Settings.reset_to_defaults(device_type)
+	# You must update the UI buttons so they show the new defaults!
 	update_all_remap_buttons()
 	Globals.log_message("Resetting " + device_type + " controls.", Globals.LogLevel.DEBUG)
 	# NEW: Clear critical warning flag when player fixes unbound (once-per-session)

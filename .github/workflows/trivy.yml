@@ -21,7 +21,7 @@ jobs:
           persist-credentials: false
       - name: "Run Trivy FS Scan"
         uses: "aquasecurity/trivy-action@master"
-        # uses: "aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284"  # Pinned to SHA for v0.34.0
+        # uses: "aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284"
         env:  # Suppress version check notification
           TRIVY_SKIP_VERSION_CHECK: 'true'
         with:
@@ -36,7 +36,7 @@ jobs:
           ignore-unfixed: true  # Ignore vulns without fixes available
 
       - name: "Upload Trivy scan results to GitHub Security tab"
-        uses: "github/codeql-action/upload-sarif@ef618feace3c4838ae42b239ab86e8fb46437508"  # Pinned to SHA for v4.32.2
+        uses: "github/codeql-action/upload-sarif@0ec47d036c68ae0cf94c629009b1029407111281"  # Pinned to SHA for v4.32.2
         if: always()  # Upload even if scan fails
         with:
           sarif_file: 'trivy-results.sarif'
