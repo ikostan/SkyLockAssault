@@ -39,7 +39,7 @@ func _ready() -> void:
 		gameplay_reset_button.pressed.connect(_on_gameplay_reset_button_pressed)
 	# NEW: Attach tree_exited for unexpected removal cleanup (like other settings scripts)
 	tree_exited.connect(_on_tree_exited)
-	
+
 	# NEW: The UI now observes the resource for external changes
 	Globals.settings.setting_changed.connect(_on_external_setting_changed)
 
