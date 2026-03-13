@@ -41,7 +41,8 @@ func _ready() -> void:
 	tree_exited.connect(_on_tree_exited)
 
 	# NEW: The UI now observes the resource for external changes
-	Globals.settings.setting_changed.connect(_on_external_setting_changed)
+	if not Globals.settings.setting_changed.is_connected(_on_external_setting_changed):
+		Globals.settings.setting_changed.connect(_on_external_setting_changed)
 
 	if os_wrapper.has_feature("web"):
 		# Toggle overlays...
