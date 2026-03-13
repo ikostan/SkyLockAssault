@@ -17,10 +17,13 @@ signal setting_changed(setting_name: String, new_value: Variant)
 
 @export_group("Logging")
 # Current log level: 0=DEBUG, 1=INFO, 2=WARNING, 3=ERROR, 4=NONE
+var _current_log_level := 1
 @export_range(0, 4, 1) var current_log_level: int = 1:
 	set(value):
-		current_log_level = value
+		_current_log_level = value
 		setting_changed.emit("current_log_level", value)
+	get:
+		return _current_log_level
 
 @export var enable_debug_logging: bool = false:
 	set(value):
