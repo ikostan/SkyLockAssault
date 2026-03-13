@@ -9,15 +9,14 @@ extends Resource
 
 ## SIGNAL: setting_changed(setting_name: String, new_value: Variant)
 ##
-## This signal is the core of the Observer Pattern for game settings[cite: 111].
-## It is automatically emitted by property setters whenever a value is updated[cite: 148].
-## This allows external systems (like Globals.gd) to react to data changes
-## without the UI having to explicitly call persistence or logging methods[cite: 146].
+## This signal is the core of the Observer Pattern for game settings.
+## It is automatically emitted by property setters whenever a value is updated.
+## This allows external systems (like Globals.gd) to react to data changes 
+## without the UI having to explicitly call persistence or logging methods.
 signal setting_changed(setting_name: String, new_value: Variant)
 
 @export_group("Logging")
 # Current log level: 0=DEBUG, 1=INFO, 2=WARNING, 3=ERROR, 4=NONE
-var _current_log_level := 1
 @export_range(0, 4, 1) var current_log_level: int = 1:
 	set(value):
 		_current_log_level = value
@@ -45,4 +44,6 @@ var _current_log_level := 1
 @export var key_mapping_scene: PackedScene = preload("res://scenes/key_mapping_menu.tscn")
 @export var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 
+# Private member variables moved to bottom to satisfy class-definitions-order
+var _current_log_level: int = 1
 var _difficulty: float = 1.0
