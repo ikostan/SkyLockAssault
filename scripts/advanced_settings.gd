@@ -264,11 +264,12 @@ func _on_log_level_item_selected(index: int) -> void:
 	var selected_enum: Globals.LogLevel = log_level_display_to_enum.get(
 		selected_name, Globals.LogLevel.INFO
 	)
+	# Only update the resource; the Observer handles the rest
 	Globals.settings.current_log_level = selected_enum
 	log_lvl_option.selected = Globals.LogLevel.values().find(selected_enum)
 	# Temporary raw print to bypass log_message
 	Globals.log_message("Log level changed to: " + selected_name, Globals.LogLevel.DEBUG)
-	Globals._save_settings()
+	# Globals._save_settings()
 
 
 # New: JS-specific callback (exactly one Array arg, no default)

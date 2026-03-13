@@ -49,10 +49,22 @@ func _ready() -> void:
 		settings.current_log_level = LogLevel.DEBUG
 	log_message("Log level set to: " + LogLevel.keys()[settings.current_log_level], LogLevel.DEBUG)
 	_load_settings()  # Load persisted settings first
-	# Load last input device early to fix unbound warning on first load when
-	# gamepad is saved preference.
-	# Ensures has_unbound_critical_actions_for_current_device() uses correct device from config.
-	# Settings.load_last_input_device()
+	
+	# Connect to the resource signal to centralize side effects [cite: 151]
+	if settings:
+		settings.setting_changed.connect(_on_setting_changed)
+
+
+## Reactive handler for the Observer Pattern [cite: 141]
+func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
+	# FIX: Ensure we are comparing String to String or using correct types 
+	var log_msg: String = "Setting '%s' updated to: %s" % [setting_name, str(new_value)]
+	
+	# Automatically log the change [cite: 59]
+	log_message(log_msg, LogLevel.DEBUG)
+	
+	# Automatically persist to disk [cite: 53]
+	_save_settings()
 
 
 ## Centralized "ensure initial focus" helper.

@@ -39,6 +39,9 @@ func _ready() -> void:
 		gameplay_reset_button.pressed.connect(_on_gameplay_reset_button_pressed)
 	# NEW: Attach tree_exited for unexpected removal cleanup (like other settings scripts)
 	tree_exited.connect(_on_tree_exited)
+	
+	# NEW: The UI now observes the resource for external changes
+	Globals.settings.setting_changed.connect(_on_external_setting_changed)
 
 	if os_wrapper.has_feature("web"):
 		# Toggle overlays...
@@ -78,6 +81,13 @@ func _ready() -> void:
 	# Menu is loaded
 	_grab_initial_focus()
 	Globals.log_message("Gameplay Settings menu loaded.", Globals.LogLevel.DEBUG)
+
+
+func _on_external_setting_changed(setting_name: String, new_value: Variant) -> void:
+	if setting_name == "difficulty":
+		# Update UI without triggering a circular signal loop
+		difficulty_slider.set_value_no_signal(new_value)
+		difficulty_label.text = "{" + str(new_value) + "}"
 
 
 func _on_tree_exited() -> void:
@@ -238,11 +248,12 @@ func _on_difficulty_value_changed(value: float) -> void:
 	## :param value: The new slider value.
 	## :type value: float
 	## :rtype: void
+	## Update the resource; Globals will handle logging/saving automatically
 	Globals.settings.difficulty = value
 	difficulty_slider.value = Globals.settings.difficulty
 	difficulty_label.text = "{" + str(value) + "}"
 	Globals.log_message("Difficulty changed to: " + str(value), Globals.LogLevel.DEBUG)
-	Globals._save_settings()
+	# Globals._save_settings()
 
 
 # New: JS-specific callback (exactly one Array arg, no default)
