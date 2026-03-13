@@ -11,7 +11,7 @@ extends Resource
 ##
 ## This signal is the core of the Observer Pattern for game settings.
 ## It is automatically emitted by property setters whenever a value is updated.
-## This allows external systems (like Globals.gd) to react to data changes 
+## This allows external systems (like Globals.gd) to react to data changes
 ## without the UI having to explicitly call persistence or logging methods.
 signal setting_changed(setting_name: String, new_value: Variant)
 
