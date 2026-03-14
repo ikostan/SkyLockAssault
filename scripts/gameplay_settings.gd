@@ -249,12 +249,14 @@ func _on_difficulty_value_changed(value: float) -> void:
 	## :param value: The new slider value.
 	## :type value: float
 	## :rtype: void
-	## Update the resource; Globals will handle logging/saving automatically
+	# Update the resource first (this triggers clamping in the setter)
 	Globals.settings.difficulty = value
-	var clamped_value: float = Globals.settings.difficulty
-	difficulty_slider.value = clamped_value
-	difficulty_label.text = "{" + str(clamped_value) + "}"
-	Globals.log_message("Difficulty changed to: " + str(value), Globals.LogLevel.DEBUG)
+	# Update the UI components using the ALREADY CLAMPED value from the resource
+	difficulty_slider.value = Globals.settings.difficulty
+	difficulty_label.text = "{" + str(Globals.settings.difficulty) + "}"
+	Globals.log_message(
+		"Difficulty updated to: " + str(Globals.settings.difficulty), Globals.LogLevel.DEBUG
+	)
 
 
 # New: JS-specific callback (exactly one Array arg, no default)
