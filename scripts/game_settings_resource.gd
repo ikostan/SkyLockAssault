@@ -26,8 +26,10 @@ signal setting_changed(setting_name: String, new_value: Variant)
 
 @export var enable_debug_logging: bool = false:
 	set(value):
-		enable_debug_logging = value
+		_enable_debug_logging = value
 		setting_changed.emit("enable_debug_logging", value)
+	get:
+		return _enable_debug_logging
 
 @export_group("Gameplay")
 # Multiplier: 1.0=Normal, <1=Easy, >1=Hard
@@ -47,3 +49,4 @@ signal setting_changed(setting_name: String, new_value: Variant)
 # Private member variables moved to bottom to satisfy class-definitions-order
 var _current_log_level: int = 1
 var _difficulty: float = 1.0
+var _enable_debug_logging: bool = false
