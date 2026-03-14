@@ -251,10 +251,10 @@ func _on_difficulty_value_changed(value: float) -> void:
 	## :rtype: void
 	## Update the resource; Globals will handle logging/saving automatically
 	Globals.settings.difficulty = value
-	difficulty_slider.value = Globals.settings.difficulty
-	difficulty_label.text = "{" + str(value) + "}"
+	var clamped_value: float = Globals.settings.difficulty
+	difficulty_slider.value = clamped_value
+	difficulty_label.text = "{" + str(clamped_value) + "}"
 	Globals.log_message("Difficulty changed to: " + str(value), Globals.LogLevel.DEBUG)
-	# Globals._save_settings()
 
 
 # New: JS-specific callback (exactly one Array arg, no default)
