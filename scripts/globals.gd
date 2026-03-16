@@ -33,6 +33,7 @@ var next_scene: String = ""  # Path to the next scene to load via loading screen
 ## Last selected input device for UI messages and labels.
 ## Updated when player toggles Keyboard/Gamepad in Key Mapping.
 var current_input_device: String = "keyboard"  # "keyboard" or "gamepad"
+var _is_loading_settings: bool = false  # Guard flag
 
 
 func _ready() -> void:
@@ -57,6 +58,10 @@ func _ready() -> void:
 
 ## Reactive handler for the Observer Pattern [cite: 141]
 func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
+	# Skip persistence and logging if we are in a bulk-loading state
+	if _is_loading_settings:
+		return
+
 	# FIX: Ensure we are comparing String to String or using correct types
 	var log_msg: String = "Setting '%s' updated to: %s" % [setting_name, str(new_value)]
 
@@ -141,6 +146,9 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var config: ConfigFile = ConfigFile.new()
 	var err: int = config.load(path)
 	if err == OK:
+		# Enable the guard before starting bulk updates
+		_is_loading_settings = true
+
 		if config.has_section_key("Settings", "log_level"):
 			var loaded_log_level: Variant = config.get_value("Settings", "log_level")
 			if (
@@ -180,6 +188,10 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 					"Loaded saved debug logging: " + str(settings.enable_debug_logging),
 					LogLevel.DEBUG
 				)
+
+		# Disable the guard and log a single summary instead
+		_is_loading_settings = false
+		log_message("All settings loaded and synchronized.", LogLevel.DEBUG)
 
 	elif err == ERR_FILE_NOT_FOUND:
 		log_message("No settings config found, using defaults.", LogLevel.DEBUG)
