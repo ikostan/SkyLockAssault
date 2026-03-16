@@ -260,9 +260,6 @@ func _on_difficulty_value_changed(value: float) -> void:
 	# Update the UI components using the ALREADY CLAMPED value from the resource
 	difficulty_slider.value = Globals.settings.difficulty
 	difficulty_label.text = "{" + str(Globals.settings.difficulty) + "}"
-	Globals.log_message(
-		"Difficulty updated to: " + str(Globals.settings.difficulty), Globals.LogLevel.DEBUG
-	)
 
 
 # New: JS-specific callback (exactly one Array arg, no default)
