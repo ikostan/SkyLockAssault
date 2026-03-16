@@ -17,7 +17,7 @@ signal setting_changed(setting_name: String, new_value: Variant)
 
 @export_group("Logging")
 # Current log level: 0=DEBUG, 1=INFO, 2=WARNING, 3=ERROR, 4=NONE
-`@export_range`(0, 4, 1) var current_log_level: int = 1:
+@export_range(0, 4, 1) var current_log_level: int = 1:
 	set(value):
 		var new_value: int = clampi(value, 0, 4)
 		if _current_log_level == new_value:
