@@ -3,25 +3,49 @@
 ## game_settings_resource.gd
 ##
 ## DATA CONTAINER: This Resource serves as the central "Source of Truth" for game configuration.
-## It decouples static data (difficulty, paths, log levels) from logic found in Globals.gd.
-## By using a Resource instead of hard-coded variables, settings can be swapped at runtime
-## or modified visually via the Godot Inspector without touching the codebase.
-
+## It decouples static data from logic found in Globals.gd.
 class_name GameSettingsResource
 extends Resource
 
+## SIGNAL: setting_changed(setting_name: String, new_value: Variant)
+##
+## This signal is the core of the Observer Pattern for game settings.
+## It is automatically emitted by property setters whenever a value is updated.
+## This allows external systems (like Globals.gd) to react to data changes
+## without the UI having to explicitly call persistence or logging methods.
+signal setting_changed(setting_name: String, new_value: Variant)
+
 @export_group("Logging")
 # Current log level: 0=DEBUG, 1=INFO, 2=WARNING, 3=ERROR, 4=NONE
-@export_range(0, 4, 1) var current_log_level: int = 1
-@export var enable_debug_logging: bool = false
+@export_range(0, 4, 1) var current_log_level: int = 1:
+	set(value):
+		var new_value: int = clampi(value, 0, 4)
+		if _current_log_level == new_value:
+			return
+		_current_log_level = new_value
+		setting_changed.emit("current_log_level", new_value)
+	get:
+		return _current_log_level
+
+@export var enable_debug_logging: bool = false:
+	set(value):
+		var new_value: bool = bool(value)
+		if _enable_debug_logging == new_value:
+			return
+		_enable_debug_logging = new_value
+		setting_changed.emit("enable_debug_logging", new_value)
+	get:
+		return _enable_debug_logging
 
 @export_group("Gameplay")
 # Multiplier: 1.0=Normal, <1=Easy, >1=Hard
-# In globals.gd, change the difficulty variable in the Resource script:
-# game_settings_resource.gd
 @export var difficulty: float = 1.0:
 	set(value):
-		_difficulty = clamp(value, 0.5, 2.0)
+		var new_val: float = clamp(value, 0.5, 2.0)
+		if _difficulty == new_val:
+			return  # Break the recursion here
+		_difficulty = new_val
+		setting_changed.emit("difficulty", _difficulty)
 	get:
 		return _difficulty
 
@@ -31,4 +55,7 @@ extends Resource
 @export var key_mapping_scene: PackedScene = preload("res://scenes/key_mapping_menu.tscn")
 @export var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 
+# Private member variables moved to bottom to satisfy class-definitions-order
+var _current_log_level: int = 1
 var _difficulty: float = 1.0
+var _enable_debug_logging: bool = false

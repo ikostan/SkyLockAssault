@@ -172,7 +172,8 @@ def test_difficulty_flow(page: Page) -> None:
         page.wait_for_timeout(2500)
         new_logs = logs[pre_change_log_count:]
         assert any(
-            "difficulty changed to: 2.0" in log["text"].lower() for log in new_logs
+            "setting 'difficulty' updated to: 2.0" in log["text"].lower()
+            for log in new_logs
         ), "Failed to set difficulty to 2.0"
         assert any(
             "settings saved" in log["text"].lower() for log in new_logs
