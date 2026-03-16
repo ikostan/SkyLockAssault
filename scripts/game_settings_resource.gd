@@ -29,8 +29,11 @@ signal setting_changed(setting_name: String, new_value: Variant)
 
 @export var enable_debug_logging: bool = false:
 	set(value):
-		_enable_debug_logging = value
-		setting_changed.emit("enable_debug_logging", value)
+		var new_value: bool = bool(value)
+		if _enable_debug_logging == new_value:
+			return
+		_enable_debug_logging = new_value
+		setting_changed.emit("enable_debug_logging", new_value)
 	get:
 		return _enable_debug_logging
 
