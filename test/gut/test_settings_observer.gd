@@ -118,3 +118,39 @@ func test_ui_slider_syncs_with_resource() -> void:
 	
 	Globals.settings.difficulty = 1.8 # Change resource directly
 	assert_eq(gameplay_menu.difficulty_slider.value, 1.8, "UI Slider should update automatically.")
+
+
+## PHASE 6: Debug Logging Persistence
+func test_enable_debug_logging_emits_signal() -> void:
+	watch_signals(_resource)
+	_resource.enable_debug_logging = true
+	
+	assert_signal_emitted_with_parameters(_resource, "setting_changed", ["enable_debug_logging", true], 0)
+
+func test_enable_debug_logging_persists_to_disk() -> void:
+	# Connect signal to the test path for verification
+	_resource.setting_changed.connect(
+		func(_k: String, _v: Variant) -> void: 
+			Globals._save_settings(_test_config_path)
+	)
+	
+	# Act: Toggle the flag
+	_resource.enable_debug_logging = true
+	
+	# Assert: Verify file contents
+	var config := ConfigFile.new()
+	var err := config.load(_test_config_path)
+	assert_eq(err, OK, "Config file should be created for debug_logging change.")
+	assert_eq(config.get_value("Settings", "enable_debug_logging"), true, "Flag should persist as true.")
+
+func test_enable_debug_logging_restores_from_disk() -> void:
+	# Setup: Manually create a config with the flag enabled
+	var config := ConfigFile.new()
+	config.set_value("Settings", "enable_debug_logging", true)
+	config.save(_test_config_path)
+	
+	# Act: Load via Globals logic
+	Globals._load_settings(_test_config_path)
+	
+	# Assert: Resource should now match the disk state
+	assert_eq(_resource.enable_debug_logging, true, "Resource should reflect loaded debug flag.")

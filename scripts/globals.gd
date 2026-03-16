@@ -170,6 +170,17 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 					"Invalid type for difficulty: " + str(typeof(loaded_difficulty)),
 					LogLevel.WARNING
 				)
+
+		# NEW: Load the debug logging flag
+		if config.has_section_key("Settings", "enable_debug_logging"):
+			var loaded_debug: Variant = config.get_value("Settings", "enable_debug_logging")
+			if loaded_debug is bool:
+				settings.enable_debug_logging = loaded_debug
+				log_message(
+					"Loaded saved debug logging: " + str(settings.enable_debug_logging),
+					LogLevel.DEBUG
+				)
+
 	elif err == ERR_FILE_NOT_FOUND:
 		log_message("No settings config found, using defaults.", LogLevel.DEBUG)
 	else:
@@ -188,6 +199,8 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 
 	config.set_value("Settings", "log_level", settings.current_log_level)
 	config.set_value("Settings", "difficulty", settings.difficulty)
+	# NEW: Persist the debug logging flag
+	config.set_value("Settings", "enable_debug_logging", settings.enable_debug_logging)
 	err = config.save(path)
 	if err != OK:
 		log_message("Failed to save settings: " + str(err), LogLevel.ERROR)
