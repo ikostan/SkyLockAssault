@@ -37,7 +37,7 @@ signal setting_changed(setting_name: String, new_value: Variant)
 	set(value):
 		var new_val: float = clamp(value, 0.5, 2.0)
 		if _difficulty == new_val:
-			return # Break the recursion here
+			return  # Break the recursion here
 		_difficulty = new_val
 		setting_changed.emit("difficulty", _difficulty)
 	get:
