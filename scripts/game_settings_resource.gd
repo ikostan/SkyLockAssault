@@ -35,7 +35,10 @@ signal setting_changed(setting_name: String, new_value: Variant)
 # Multiplier: 1.0=Normal, <1=Easy, >1=Hard
 @export var difficulty: float = 1.0:
 	set(value):
-		_difficulty = clamp(value, 0.5, 2.0)
+		var new_val: float = clamp(value, 0.5, 2.0)
+		if _difficulty == new_val:
+			return # Break the recursion here
+		_difficulty = new_val
 		setting_changed.emit("difficulty", _difficulty)
 	get:
 		return _difficulty
