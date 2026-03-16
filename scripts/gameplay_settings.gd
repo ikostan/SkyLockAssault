@@ -89,6 +89,10 @@ func _on_external_setting_changed(setting_name: String, new_value: Variant) -> v
 		# Prevent Circular Updates in the UI
 		if difficulty_slider.value != float(new_value):
 			Globals.settings.difficulty = float(new_value)
+		# Update UI without triggering a circular signal loop
+		# Use set_value_no_signal to avoid re-triggering _on_difficulty_value_changed
+		difficulty_slider.set_value_no_signal(new_value)
+		difficulty_label.text = "{" + str(new_value) + "}"
 
 
 func _on_tree_exited() -> void:
