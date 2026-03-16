@@ -98,6 +98,10 @@ func _on_tree_exited() -> void:
 	## Disconnects signals, restores previous menu if not intentional, clears JS/DOM state.
 	## :rtype: void
 	Globals.log_message("Gameplay Settings _on_tree_exited called.", Globals.LogLevel.DEBUG)
+	
+	# Disconnect the global resource observer to prevent stale references
+	if Globals.settings.setting_changed.is_connected(_on_external_setting_changed):
+		Globals.settings.setting_changed.disconnect(_on_external_setting_changed)
 
 	# Disconnect Godot signals if still connected
 	if difficulty_slider.value_changed.is_connected(_on_difficulty_value_changed):
