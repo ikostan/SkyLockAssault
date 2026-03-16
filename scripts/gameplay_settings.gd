@@ -86,12 +86,10 @@ func _ready() -> void:
 
 func _on_external_setting_changed(setting_name: String, new_value: Variant) -> void:
 	if setting_name == "difficulty":
-		# Prevent Circular Updates in the UI
-		if difficulty_slider.value != float(new_value):
-			Globals.settings.difficulty = float(new_value)
-		# Update UI without triggering a circular signal loop
-		# Use set_value_no_signal to avoid re-triggering _on_difficulty_value_changed
-		difficulty_slider.set_value_no_signal(new_value)
+		# SYNC UI ONLY:
+		# The resource has already been updated, so we only need to update the UI components.
+		# Use set_value_no_signal to prevent re-triggering the local _on_difficulty_value_changed handler.
+		difficulty_slider.set_value_no_signal(float(new_value))
 		difficulty_label.text = "{" + str(new_value) + "}"
 
 
