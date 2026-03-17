@@ -310,8 +310,8 @@ Sky Lock Assault uses **GUT (Godot Unit Test)** framework for automated testing.
   - Player movement constraints
 - Tests run locally and in CI via GitHub Actions.
 - Coverage is tracked with Codecov.
-- Settings Observer Tests: Dedicated GUT test suite validates signal emission, value clamping
-  (e.g., difficulty limits), and successful serialization to the user's disk.
+- Settings Observer Tests: Dedicated GUT test suite validates signal emission, value
+  clamping (e.g., difficulty limits), and successful serialization to the user's disk.
 
 Run tests locally:
 - Open Godot
