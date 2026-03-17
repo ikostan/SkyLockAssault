@@ -43,7 +43,7 @@ jobs:
         continue-on-error: true
 
       - name: "Upload Snyk Code SARIF to GitHub"
-        uses: "github/codeql-action/upload-sarif@d1a65275e8dac7b2cc72bb121bf58f0ee7b0f92d"
+        uses: "github/codeql-action/upload-sarif@7dd76e6bf79d24133aa649887a6ee01d8b063816"
         if: "always() && hashFiles('snyk-code.sarif') != ''"
         with:
           sarif_file: "snyk-code.sarif"
@@ -54,7 +54,7 @@ jobs:
         continue-on-error: true
 
       - name: "Upload Snyk Open Source SARIF to GitHub"
-        uses: "github/codeql-action/upload-sarif@d1a65275e8dac7b2cc72bb121bf58f0ee7b0f92d"
+        uses: "github/codeql-action/upload-sarif@7dd76e6bf79d24133aa649887a6ee01d8b063816"
         if: "always() && hashFiles('snyk-os.sarif') != ''"
         with:
           sarif_file: "snyk-os.sarif"
