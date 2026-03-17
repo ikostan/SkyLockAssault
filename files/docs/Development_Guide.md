@@ -84,7 +84,8 @@ else:
 
 ### Working with Game Settings
 
-The project now uses an Observer Pattern for configuration. When adding a new setting:
+The project now uses an Observer Pattern for configuration.
+When adding a new setting:
 
 1. Define the Property: Add the property to `scripts/game_settings_resource.gd` with
    a proper setter that emits the setting_changed signal.
