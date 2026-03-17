@@ -118,13 +118,13 @@ use the following signature:
 
 #### 2. Core Files Reference
 
-| Component                 | File Path                                 | Responsibility                                                                    |
-|---------------------------|-------------------------------------------|-----------------------------------------------------------------------------------|
-| **Data Source (Subject)** | `res://scripts/game_settings_resource.gd` | Defines properties (difficulty, log level), performs clamping, and emits signals. |
-| **Logic Observer** | `res://scripts/globals.gd` | Connects to the resource to trigger centralized logging and `_save_settings()`. |
-| **UI Observer (Gameplay)** | `res://scripts/gameplay_settings.gd` | Syncs sliders and labels with the resource state using `set_value_no_signal`. |
-| **UI Observer (Advanced)** | `res://scripts/advanced_settings.gd` | Syncs log level dropdowns and handles web-specific JavaScript callbacks. |
-| **Persistence Settings** | `res://scripts/settings.gd` | Manages low-level `InputMap` serialization and legacy migration logic. |
+| Component                  | File Path                                 | Responsibility                                                                    |
+|----------------------------|-------------------------------------------|-----------------------------------------------------------------------------------|
+| **Data Source (Subject)**  | `res://scripts/game_settings_resource.gd` | Defines properties (difficulty, log level), performs clamping, and emits signals. |
+| **Logic Observer**         | `res://scripts/globals.gd`                | Connects to the resource to trigger centralized logging and `_save_settings()`.   |
+| **UI Observer (Gameplay)** | `res://scripts/gameplay_settings.gd`      | Syncs sliders and labels with the resource state using `set_value_no_signal`.     |
+| **UI Observer (Advanced)** | `res://scripts/advanced_settings.gd`      | Syncs log level dropdowns and handles web-specific JavaScript callbacks.          |
+| **Persistence Settings**   | `res://scripts/settings.gd`               | Manages low-level `InputMap` serialization and legacy migration logic.            |
 
 #### 3. Connection Example for UI
 
