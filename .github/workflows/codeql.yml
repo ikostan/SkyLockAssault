@@ -61,7 +61,6 @@ jobs:
       - name: "Patch index.js for security"
         run: |
           bash ./.github/scripts/patch_index_js.sh "export/web"
-      
       - name: "Initialize CodeQL"
         # Pinned to v4.33.0 SHA
         uses: "github/codeql-action/init@b197992a7e71f980164e29f8c6792330a8c27e85"
