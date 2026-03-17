@@ -1,4 +1,3 @@
----
 name: "CodeQL Scan on Web Export"
 
 on:  # yamllint disable-line rule:truthy
@@ -61,8 +60,10 @@ jobs:
       - name: "Patch index.js for security"
         run: |
           bash ./.github/scripts/patch_index_js.sh "export/web"
+      
       - name: "Initialize CodeQL"
-        uses: "github/codeql-action/init@v4.33.0"
+        # Pinned to v4.33.0 SHA
+        uses: "github/codeql-action/init@b197992a7e71f980164e29f8c6792330a8c27e85"
         with:
           # yamllint disable rule:quoted-strings
           languages: ${{ matrix.language }}
@@ -74,10 +75,12 @@ jobs:
           debug: "false"
 
       - name: "Autobuild (optional for JS but included for completeness)"
-        uses: "github/codeql-action/autobuild@v4.33.0"
+        # Pinned to v4.33.0 SHA
+        uses: "github/codeql-action/autobuild@b197992a7e71f980164e29f8c6792330a8c27e85"
 
       - name: "Perform CodeQL Analysis"
-        uses: "github/codeql-action/analyze@v4.33.0"
+        # Pinned to v4.33.0 SHA
+        uses: "github/codeql-action/analyze@b197992a7e71f980164e29f8c6792330a8c27e85"
 
       - name: "Post-scan summary (optional)"
         if: "always()"  # Run even if previous steps fail
