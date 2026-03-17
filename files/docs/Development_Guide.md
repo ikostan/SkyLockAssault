@@ -87,8 +87,9 @@ else:
 The project now uses an Observer Pattern for configuration.
 When adding a new setting:
 
-1. Define the Property: Add the property to `scripts/game_settings_resource.gd` with
-   a proper setter that emits the setting_changed signal.
+1. Define the Property: Add the property to
+   `scripts/game_settings_resource.gd` with
+   a proper setter that emits the `setting_changed` signal.
 2. Update Globals: Add the new property to the `_save_settings()` and
    `_load_settings()` functions in globals.gd to ensure persistence.
 3. UI Integration: Connect your UI elements to the `Globals.settings.setting_changed`
