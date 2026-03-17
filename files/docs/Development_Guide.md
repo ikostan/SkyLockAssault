@@ -133,11 +133,11 @@ To prevent infinite recursion, UI handlers should always check for equality or u
 ```gdscript
 # Example from gameplay_settings.gd
 func _ready() -> void:
-    [cite_start]Globals.settings.setting_changed.connect(_on_external_setting_changed) # [cite: 29]
+    [cite_start]Globals.settings.setting_changed.connect(_on_external_setting_changed)
 
 func _on_external_setting_changed(setting_name: String, new_value: Variant) -> void:
     if setting_name == "difficulty":
-        [cite_start]difficulty_slider.set_value_no_signal(float(new_value)) # [cite: 30]
+        [cite_start]difficulty_slider.set_value_no_signal(float(new_value))
 
 ```
 <!-- markdownlint-enable line-length -->
