@@ -100,8 +100,13 @@ func _on_tree_exited() -> void:
 	Globals.log_message("Gameplay Settings _on_tree_exited called.", Globals.LogLevel.DEBUG)
 
 	# Disconnect the global resource observer to prevent stale references
-	if Globals.settings.setting_changed.is_connected(_on_external_setting_changed):
-		Globals.settings.setting_changed.disconnect(_on_external_setting_changed)
+	# GUARD: Ensure Globals and the settings resource are still valid before disconnecting
+	# Use a local variable to safely check and access the settings resource
+	var settings_res := Globals.settings if is_instance_valid(Globals) else null
+
+	if is_instance_valid(settings_res):
+		if settings_res.setting_changed.is_connected(_on_external_setting_changed):
+			settings_res.setting_changed.disconnect(_on_external_setting_changed)
 
 	# Disconnect Godot signals if still connected
 	if difficulty_slider.value_changed.is_connected(_on_difficulty_value_changed):
