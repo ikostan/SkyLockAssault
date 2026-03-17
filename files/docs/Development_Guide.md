@@ -52,7 +52,6 @@ func _physics_process(delta: float) -> void:
     velocity = direction * speed
     move_and_slide()
 ```
-<!-- markdownlint-enable line-length -->
 
 - Tip: Add boundaries with clamp() to prevent off-screen movement.
 - Test: Run scene, use arrows/WASD.
@@ -97,6 +96,61 @@ When adding a new setting:
    memory leaks and stale observers.
 4. No Manual Saves: Do not call save functions directly from the UI; changing the
    resource value is sufficient to trigger a save.
+
+### The technical documentation for the "Working with Game Settings" section.
+
+This documentation explicitly defines the signal signature and the specific
+files responsible for the **Observer Pattern** architecture.
+
+To modify or observe game settings, interact with the `GameSettingsResource`.
+The system uses a decoupled architecture where the UI only modifies data,
+and a centralized observer handles persistence and logging.
+
+#### 1. Signal Signature: `setting_changed`
+
+When connecting a UI element or a new system to the settings resource,
+use the following signature:
+
+* **Signal Name**: `setting_changed`
+* **Parameters**:
+  * `setting_name`: **String** (The name of the property that changed, e.g., "difficulty") 
+  * `new_value`: **Variant** (The newly assigned, clamped value) 
+
+#### 2. Core Files Reference
+
+| Component                 | File Path                                 | Responsibility                                                                    |
+|---------------------------|-------------------------------------------|-----------------------------------------------------------------------------------|
+| **Data Source (Subject)** | `res://scripts/game_settings_resource.gd` | Defines properties (difficulty, log level), performs clamping, and emits signals. |
+
+|
+| **Logic Observer** | `res://scripts/globals.gd` | Connects to the resource to trigger centralized logging and `_save_settings()`. 
+
+ |
+| **UI Observer (Gameplay)** | `res://scripts/gameplay_settings.gd` | Syncs sliders and labels with the resource state using `set_value_no_signal`. 
+
+ |
+| **UI Observer (Advanced)** | `res://scripts/advanced_settings.gd` | Syncs log level dropdowns and handles web-specific JavaScript callbacks. 
+
+ |
+| **Persistence Settings** | `res://scripts/settings.gd` | Manages low-level `InputMap` serialization and legacy migration logic. 
+
+ |
+
+#### 3. Connection Example for UI
+
+To prevent infinite recursion, UI handlers should always check for equality or use `no_signal` methods when responding to the resource:
+
+```gdscript
+# Example from gameplay_settings.gd
+func _ready() -> void:
+    [cite_start]Globals.settings.setting_changed.connect(_on_external_setting_changed) # [cite: 29]
+
+func _on_external_setting_changed(setting_name: String, new_value: Variant) -> void:
+    if setting_name == "difficulty":
+        [cite_start]difficulty_slider.set_value_no_signal(float(new_value)) # [cite: 30]
+
+```
+<!-- markdownlint-enable line-length -->
 
 ### Global Utilities (Globals.gd)
 
