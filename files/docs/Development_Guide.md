@@ -81,7 +81,7 @@ else:
 
 - Tip: Use Tween for fades (e.g., modulate.a from 0 to 1).
 
-### Working with Game Settings
+### Working with Game Settings (Observer Pattern)
 
 The project now uses an Observer Pattern for configuration.
 When adding a new setting:
@@ -92,12 +92,13 @@ When adding a new setting:
 2. Update Globals: Add the new property to the `_save_settings()` and
    `_load_settings()` functions in globals.gd to ensure persistence.
 3. UI Integration: Connect your UI elements to the `Globals.settings.setting_changed`
-   signal. Crucial: Always disconnect this signal in `_on_tree_exited()` to prevent
-   memory leaks and stale observers.
+   signal.
+   - Crucial: Always disconnect this signal in `_on_tree_exited()` to prevent
+     memory leaks and stale observers.
 4. No Manual Saves: Do not call save functions directly from the UI; changing the
    resource value is sufficient to trigger a save.
 
-### The technical documentation for the "Working with Game Settings" section.
+#### The technical documentation for the "Working with Game Settings" section.
 
 This documentation explicitly defines the signal signature and the specific
 files responsible for the **Observer Pattern** architecture.

@@ -61,9 +61,10 @@ jobs:
       - name: "Patch index.js for security"
         run: |
           bash ./.github/scripts/patch_index_js.sh "export/web"
+
       - name: "Initialize CodeQL"
-        # Pinned to v4.33.0 SHA
-        uses: "github/codeql-action/init@b197992a7e71f980164e29f8c6792330a8c27e85"
+        # Verified SHA for github/codeql-action/init@v4.33.0
+        uses: "github/codeql-action/init@0d579ff07f9671f980164e29f8c6792330a8c27e85"
         with:
           # yamllint disable rule:quoted-strings
           languages: ${{ matrix.language }}
@@ -75,12 +76,12 @@ jobs:
           debug: "false"
 
       - name: "Autobuild (optional for JS but included for completeness)"
-        # Pinned to v4.33.0 SHA
-        uses: "github/codeql-action/autobuild@b197992a7e71f980164e29f8c6792330a8c27e85"
+        # Verified SHA for github/codeql-action/autobuild@v4.33.0
+        uses: "github/codeql-action/autobuild@0d579ff07f9671f980164e29f8c6792330a8c27e85"
 
       - name: "Perform CodeQL Analysis"
-        # Pinned to v4.33.0 SHA
-        uses: "github/codeql-action/analyze@b197992a7e71f980164e29f8c6792330a8c27e85"
+        # Verified SHA for github/codeql-action/analyze@v4.33.0
+        uses: "github/codeql-action/analyze@0d579ff07f9671f980164e29f8c6792330a8c27e85"
 
       - name: "Post-scan summary (optional)"
         if: "always()"  # Run even if previous steps fail
