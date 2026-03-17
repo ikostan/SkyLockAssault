@@ -141,14 +141,15 @@ these GPL requirements, a separate license is available upon request.
 - Modular audio system with buses
 - CI/CD-driven deployment workflow
 - Test-driven improvements with GUT
+- Observer-based Settings System: Centralized GameSettingsResource that handles
+  automatic persistence and UI synchronization through signals.
 
 ---
 
 ## 🟢 Current Development Status
 
-**Milestone:** Milestone 11 – UI & Input Improvements (Completed)  
+**Milestone:** Milestone 14
 **Status:** Stable gameplay loop with synced UI systems and GUT-based unit testing.
-
 **Active Focus:** Gameplay expansion (AI enemies, multiplayer, levels).
 
 ### Current features
@@ -186,6 +187,11 @@ these GPL requirements, a separate license is available upon request.
   - Shared between Main Menu and Pause Menu
   - Live updates to audio and gameplay settings
 - UI state consistency across scene transitions
+- Automatic Settings Persistence: Settings (including log levels, difficulty, and
+  debug flags) auto-save to disk via Globals.gd whenever a change is detected in
+  the resource.
+- Real-time UI Synchronization: UI components dynamically observe the settings resource,
+  ensuring that any external changes are immediately reflected in the menus.
 
 
 ### Features Roadmap
@@ -304,6 +310,8 @@ Sky Lock Assault uses **GUT (Godot Unit Test)** framework for automated testing.
   - Player movement constraints
 - Tests run locally and in CI via GitHub Actions.
 - Coverage is tracked with Codecov.
+- Settings Observer Tests: Dedicated GUT test suite validates signal emission, value clamping
+  (e.g., difficulty limits), and successful serialization to the user's disk.
 
 Run tests locally:
 - Open Godot

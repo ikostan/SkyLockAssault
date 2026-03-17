@@ -82,6 +82,20 @@ else:
 
 - Tip: Use Tween for fades (e.g., modulate.a from 0 to 1).
 
+### Working with Game Settings
+
+The project now uses an Observer Pattern for configuration. When adding a new setting:
+
+1. Define the Property: Add the property to `scripts/game_settings_resource.gd` with
+   a proper setter that emits the setting_changed signal.
+2. Update Globals: Add the new property to the `_save_settings()` and `_load_settings()`
+   functions in globals.gd to ensure persistence.
+3. UI Integration: Connect your UI elements to the `Globals.settings.setting_changed`
+   signal. Crucial: Always disconnect this signal in `_on_tree_exited()` to prevent
+   memory leaks and stale observers.
+4. No Manual Saves: Do not call save functions directly from the UI; changing the
+   resource value is sufficient to trigger a save.
+
 ### Global Utilities (Globals.gd)
 
 Autoload for shared logic (e.g., logging):
