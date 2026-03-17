@@ -1,3 +1,4 @@
+---
 name: "CodeQL Scan on Web Export"
 
 on:  # yamllint disable-line rule:truthy
