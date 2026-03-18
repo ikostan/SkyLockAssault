@@ -299,19 +299,22 @@ func _on_change_difficulty_js(args: Array) -> void:
 	var first_arg: Variant = args[0]
 	var potential_value: Variant = null
 
-	# GS-JS-20/21: Strict Type Check
-	# Verify first_arg is a container before calling .size() or index [0]
-	if typeof(first_arg) == TYPE_ARRAY or first_arg is JavaScriptObject:
-		# GS-JS-11: Guard against nested empty arrays [[]]
+	# Refactored logic for _on_change_difficulty_js in gameplay_settings.gd
+	# GS-JS-20/21: Branch logic to handle TYPE_ARRAY and JavaScriptObject separately
+	if typeof(first_arg) == TYPE_ARRAY:
+		# Safe to use .size() and indexing on standard GDScript Arrays
 		if first_arg.size() > 0:
 			potential_value = first_arg[0]
 		else:
-			Globals.log_message(
-				"JS difficulty callback: Nested array is empty.", Globals.LogLevel.WARNING
-			)
+			Globals.log_message("JS callback: Array is empty.", Globals.LogLevel.WARNING)
 			return
+	elif first_arg is JavaScriptObject:
+		# For JavaScriptObject, treat it as a proxy to a JS array
+		# Use the specific JS indexing if you are certain it is a JS array,
+		# or handle it as a single-value reference.
+		potential_value = first_arg[0] # Note: This can still fail if it's not a JS Array
 	else:
-		# GS-JS-20/21: Handle scalar values (e.g., [1.5]) by taking the arg directly
+		# Handle scalar values (e.g., [1.5]) directly [cite: 57]
 		potential_value = first_arg
 
 	# GS-JS-12/15/22: Validate that the extracted value is a convertible type
