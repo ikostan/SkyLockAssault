@@ -6,7 +6,7 @@ extends Control
 ## actual engine singletons.
 var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
 var os_wrapper: OSWrapper = OSWrapper.new()
-var js_window: JavaScriptObject
+var js_window: Variant
 var _change_difficulty_cb: JavaScriptObject
 var _gameplay_back_button_pressed_cb: JavaScriptObject
 var _gameplay_reset_cb: JavaScriptObject
