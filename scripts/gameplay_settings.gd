@@ -312,7 +312,7 @@ func _on_change_difficulty_js(args: Array) -> void:
 		# For JavaScriptObject, treat it as a proxy to a JS array
 		# Use the specific JS indexing if you are certain it is a JS array,
 		# or handle it as a single-value reference.
-		potential_value = first_arg[0]  # Note: This can still fail if it's not a JS Array
+		potential_value = first_arg
 	else:
 		# Handle scalar values (e.g., [1.5]) directly [cite: 57]
 		potential_value = first_arg
