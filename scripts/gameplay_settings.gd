@@ -345,11 +345,11 @@ func _on_change_difficulty_js(args: Array) -> void:
 		Globals.log_message(
 			"JS difficulty callback: Slider node is invalid/freed.", Globals.LogLevel.WARNING
 		)
-		
+
 		# FIX: Safely check for Globals and Settings before falling back
 		var settings_res := Globals.settings if is_instance_valid(Globals) else null
 		if is_instance_valid(settings_res):
-			settings_res.difficulty = value # Update resource even if UI is gone 
+			settings_res.difficulty = value  # Update resource even if UI is gone
 		return
 
 	# GS-JS-04/05: Validate bounds against the UI constraints
