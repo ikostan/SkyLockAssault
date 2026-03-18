@@ -96,7 +96,7 @@ func _on_external_setting_changed(setting_name: String, new_value: Variant) -> v
 		# FIX: Guard against 'previously freed' errors during teardown/unit tests
 		if not is_instance_valid(difficulty_slider) or not is_instance_valid(difficulty_label):
 			return
-			
+
 		# Use set_value_no_signal to prevent re-triggering local handlers [cite: 198, 199]
 		difficulty_slider.set_value_no_signal(float(new_value))
 		difficulty_label.text = "{" + str(new_value) + "}"
@@ -120,11 +120,11 @@ func _on_tree_exited() -> void:
 	if is_instance_valid(difficulty_slider):
 		if difficulty_slider.value_changed.is_connected(_on_difficulty_value_changed):
 			difficulty_slider.value_changed.disconnect(_on_difficulty_value_changed)
-			
+
 	if is_instance_valid(gameplay_back_button):
 		if gameplay_back_button.pressed.is_connected(_on_gameplay_back_button_pressed):
 			gameplay_back_button.pressed.disconnect(_on_gameplay_back_button_pressed)
-			
+
 	if is_instance_valid(gameplay_reset_button):
 		if gameplay_reset_button.pressed.is_connected(_on_gameplay_reset_button_pressed):
 			gameplay_reset_button.pressed.disconnect(_on_gameplay_reset_button_pressed)
@@ -134,7 +134,7 @@ func _on_tree_exited() -> void:
 	_change_difficulty_cb = null
 	_gameplay_back_button_pressed_cb = null
 	_gameplay_reset_cb = null
-	
+
 	# Web overlay cleanup + optional menu restore
 	if os_wrapper.has_feature("web") and js_window and js_bridge_wrapper:
 		# Hide gameplay overlays (same DOM elements shown in _ready)
@@ -282,32 +282,33 @@ func _on_difficulty_value_changed(value: float) -> void:
 func _on_change_difficulty_js(args: Array) -> void:
 	## JS callback for changing difficulty.
 	##
-	## Routes to the signal handler after performing strict type and 
+	## Routes to the signal handler after performing strict type and
 	## bounds validation to prevent engine crashes on malformed JS input. [cite: 209]
 	##
 	## :param args: Array containing the value (from JS). [cite: 210]
 	## :type args: Array
 	## :rtype: void
-	
+
 	# GS-JS-10: Guard against entirely empty arguments from the bridge
 	if args.is_empty():
 		Globals.log_message(
-			"JS difficulty callback received empty args—skipping.", 
-			Globals.LogLevel.WARNING
+			"JS difficulty callback received empty args—skipping.", Globals.LogLevel.WARNING
 		)
 		return
 
 	var first_arg: Variant = args[0]
 	var potential_value: Variant = null
 
-	# GS-JS-20/21: Strict Type Check 
+	# GS-JS-20/21: Strict Type Check
 	# Verify first_arg is a container before calling .size() or index [0]
 	if typeof(first_arg) == TYPE_ARRAY or first_arg is JavaScriptObject:
 		# GS-JS-11: Guard against nested empty arrays [[]]
 		if first_arg.size() > 0:
 			potential_value = first_arg[0]
 		else:
-			Globals.log_message("JS difficulty callback: Nested array is empty.", Globals.LogLevel.WARNING)
+			Globals.log_message(
+				"JS difficulty callback: Nested array is empty.", Globals.LogLevel.WARNING
+			)
 			return
 	else:
 		# GS-JS-20/21: Handle scalar values (e.g., [1.5]) by taking the arg directly
@@ -335,10 +336,12 @@ func _on_change_difficulty_js(args: Array) -> void:
 		return
 
 	var value: float = float(potential_value)
-	
+
 	# GS-JS-30: Guard against missing UI nodes during callback
 	if not is_instance_valid(difficulty_slider):
-		Globals.log_message("JS difficulty callback: Slider node is invalid/freed.", Globals.LogLevel.WARNING)
+		Globals.log_message(
+			"JS difficulty callback: Slider node is invalid/freed.", Globals.LogLevel.WARNING
+		)
 		# We still update the resource even if the UI is gone
 		Globals.settings.difficulty = value
 		return
@@ -353,10 +356,9 @@ func _on_change_difficulty_js(args: Array) -> void:
 		# return
 
 	Globals.log_message(
-		"JS difficulty callback called with valid value: " + str(value), 
-		Globals.LogLevel.DEBUG
+		"JS difficulty callback called with valid value: " + str(value), Globals.LogLevel.DEBUG
 	)
-	
+
 	# Pass the validated value to the standard handler
 	_on_difficulty_value_changed(value)
 
