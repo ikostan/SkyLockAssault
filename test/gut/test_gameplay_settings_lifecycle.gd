@@ -21,22 +21,22 @@ func before_each() -> void:
 ## GS-LIFE-01 | Cleanup on tree exit nullifies callbacks
 func test_gs_life_01_cleanup_on_exit() -> void:
 	# Trigger exit
-	gameplay_menu._on_tree_exited() # [cite: 201]
+	gameplay_menu._on_tree_exited()
 	
-	# Verify JS callbacks are cleared to prevent memory leaks [cite: 200]
+	# Verify JS callbacks are cleared to prevent memory leaks
 	assert_null(gameplay_menu._change_difficulty_cb, "Difficulty callback should be null")
 	assert_null(gameplay_menu._gameplay_back_button_pressed_cb, "Back button callback should be null")
 
 
 ## GS-LIFE-02 | Back button restores previous menu from stack
 func test_gs_life_02_back_button_restoration() -> void:
-	# Mock a previous menu [cite: 204]
+	# Mock a previous menu
 	var mock_prev: Control = Control.new()
 	mock_prev.name = "MockOptionsMenu"
 	mock_prev.visible = false
 	Globals.hidden_menus.push_back(mock_prev)
 	
-	gameplay_menu._on_gameplay_back_button_pressed() # [cite: 204]
+	gameplay_menu._on_gameplay_back_button_pressed()
 	
 	assert_true(mock_prev.visible, "Previous menu should be visible again")
 	assert_true(gameplay_menu.is_queued_for_deletion(), "Menu should be freed")
@@ -68,6 +68,13 @@ func test_gs_life_08_web_overlay_cleanup() -> void:
 
 ## GS-LIFE-05 | Cleanup handles null Globals gracefully
 func test_gs_life_05_null_globals_safety() -> void:
-	# Success is a lack of crash during teardown [cite: 200]
+	# Set a dummy callback to verify it gets cleared. 
+	# FIX: Added '-> void' to satisfy strict return type requirements.
+	var dummy_callable := func(_args: Array) -> void: pass
+	gameplay_menu._change_difficulty_cb = JavaScriptBridge.create_callback(dummy_callable)
+	
+	# Act: Call the cleanup function directly [cite: 8]
 	gameplay_menu._on_tree_exited()
-	assert_true(true, "Cleanup handled references safely")
+	
+	# Assert: Verify the side effects of the cleanup logic
+	assert_null(gameplay_menu._change_difficulty_cb, "Callback must be nullified even if Globals are shaky")
