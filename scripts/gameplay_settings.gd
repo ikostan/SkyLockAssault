@@ -89,10 +89,15 @@ func _ready() -> void:
 
 
 func _on_external_setting_changed(setting_name: String, new_value: Variant) -> void:
+	## SYNC UI ONLY:
+	## This observer reacts to changes from the resource.
+	## We must ensure the UI nodes are still valid before updating them.
 	if setting_name == "difficulty":
-		# SYNC UI ONLY:
-		# The resource has already been updated, so we only need to update the UI components.
-		# Use set_value_no_signal to prevent re-triggering the local _on_difficulty_value_changed handler.
+		# FIX: Guard against 'previously freed' errors during teardown/unit tests
+		if not is_instance_valid(difficulty_slider) or not is_instance_valid(difficulty_label):
+			return
+			
+		# Use set_value_no_signal to prevent re-triggering local handlers [cite: 198, 199]
 		difficulty_slider.set_value_no_signal(float(new_value))
 		difficulty_label.text = "{" + str(new_value) + "}"
 
@@ -101,33 +106,35 @@ func _on_tree_exited() -> void:
 	## Cleanup on unexpected tree exit (e.g. parent removed without calling back button).
 	## Disconnects signals, restores previous menu if not intentional, clears JS/DOM state.
 	## :rtype: void
+	## Cleanup on unexpected tree exit.
 	Globals.log_message("Gameplay Settings _on_tree_exited called.", Globals.LogLevel.DEBUG)
 
-	# Disconnect the global resource observer to prevent stale references
-	# GUARD: Ensure Globals and the settings resource are still valid before disconnecting
-	# Use a local variable to safely check and access the settings resource
+	# 1. Safe Global Resource Disconnection
 	var settings_res := Globals.settings if is_instance_valid(Globals) else null
-
 	if is_instance_valid(settings_res):
 		if settings_res.setting_changed.is_connected(_on_external_setting_changed):
 			settings_res.setting_changed.disconnect(_on_external_setting_changed)
 
-	# Disconnect Godot signals if still connected
-	if difficulty_slider.value_changed.is_connected(_on_difficulty_value_changed):
-		difficulty_slider.value_changed.disconnect(_on_difficulty_value_changed)
-	if gameplay_back_button.pressed.is_connected(_on_gameplay_back_button_pressed):
-		gameplay_back_button.pressed.disconnect(_on_gameplay_back_button_pressed)
-	if gameplay_reset_button.pressed.is_connected(_on_gameplay_reset_button_pressed):
-		gameplay_reset_button.pressed.disconnect(_on_gameplay_reset_button_pressed)
+	# 2. FIX: Guarded Local Disconnections
+	# We must check if the nodes still exist before accessing 'value_changed' or 'pressed'
+	if is_instance_valid(difficulty_slider):
+		if difficulty_slider.value_changed.is_connected(_on_difficulty_value_changed):
+			difficulty_slider.value_changed.disconnect(_on_difficulty_value_changed)
+			
+	if is_instance_valid(gameplay_back_button):
+		if gameplay_back_button.pressed.is_connected(_on_gameplay_back_button_pressed):
+			gameplay_back_button.pressed.disconnect(_on_gameplay_back_button_pressed)
+			
+	if is_instance_valid(gameplay_reset_button):
+		if gameplay_reset_button.pressed.is_connected(_on_gameplay_reset_button_pressed):
+			gameplay_reset_button.pressed.disconnect(_on_gameplay_reset_button_pressed)
 
-	# Clean up JS callbacks on window object
+	# 3. Clean up JS/Web state
 	_unset_gameplay_settings_window_callbacks()
-
-	# Null out stored callback references
 	_change_difficulty_cb = null
 	_gameplay_back_button_pressed_cb = null
 	_gameplay_reset_cb = null
-
+	
 	# Web overlay cleanup + optional menu restore
 	if os_wrapper.has_feature("web") and js_window and js_bridge_wrapper:
 		# Hide gameplay overlays (same DOM elements shown in _ready)
@@ -275,62 +282,82 @@ func _on_difficulty_value_changed(value: float) -> void:
 func _on_change_difficulty_js(args: Array) -> void:
 	## JS callback for changing difficulty.
 	##
-	## Routes to the signal handler.
+	## Routes to the signal handler after performing strict type and 
+	## bounds validation to prevent engine crashes on malformed JS input. [cite: 209]
 	##
-	## :param args: Array containing the value (from JS).
+	## :param args: Array containing the value (from JS). [cite: 210]
 	## :type args: Array
 	## :rtype: void
+	
+	# GS-JS-10: Guard against entirely empty arguments from the bridge
 	if args.is_empty():
 		Globals.log_message(
-			"JS difficulty callback received empty args—skipping.", Globals.LogLevel.WARNING
-		)
-		return
-
-	var first_arg: Variant = args[0]
-	if (
-		first_arg is not JavaScriptObject
-		and typeof(first_arg) != TYPE_ARRAY
-		and first_arg.size() == 0
-		and first_arg.is_empty()
-	):
-		Globals.log_message(
-			(
-				"JS difficulty callback received invalid first arg (not a non-empty array): "
-				+ str(args)
-			),
+			"JS difficulty callback received empty args—skipping.", 
 			Globals.LogLevel.WARNING
 		)
 		return
 
-	var potential_value: Variant = first_arg[0]
+	var first_arg: Variant = args[0]
+	var potential_value: Variant = null
+
+	# GS-JS-20/21: Strict Type Check 
+	# Verify first_arg is a container before calling .size() or index [0]
+	if typeof(first_arg) == TYPE_ARRAY or first_arg is JavaScriptObject:
+		# GS-JS-11: Guard against nested empty arrays [[]]
+		if first_arg.size() > 0:
+			potential_value = first_arg[0]
+		else:
+			Globals.log_message("JS difficulty callback: Nested array is empty.", Globals.LogLevel.WARNING)
+			return
+	else:
+		# GS-JS-20/21: Handle scalar values (e.g., [1.5]) by taking the arg directly
+		potential_value = first_arg
+
+	# GS-JS-12/15/22: Validate that the extracted value is a convertible type
 	if (
 		typeof(potential_value) != TYPE_INT
 		and typeof(potential_value) != TYPE_FLOAT
 		and typeof(potential_value) != TYPE_STRING
 	):
 		Globals.log_message(
-			"JS difficulty callback received non-convertible value: " + str(args),
+			"JS difficulty callback received non-convertible value: " + str(potential_value),
+			Globals.LogLevel.WARNING
+		)
+		return
+
+	# GS-JS-03: Coerce to float (e.g., "1.5" becomes 1.5)
+	# FIX: Ensure strings are numeric before conversion to prevent 0.0/clamping reset
+	if typeof(potential_value) == TYPE_STRING and not potential_value.is_valid_float():
+		Globals.log_message(
+			"JS difficulty callback: Rejected non-numeric string: " + str(potential_value),
 			Globals.LogLevel.WARNING
 		)
 		return
 
 	var value: float = float(potential_value)
-	if value < difficulty_slider.min_value or value > difficulty_slider.max_value:
-		Globals.log_message(
-			(
-				"JS difficulty callback received out-of-bounds value: "
-				+ str(value)
-				+ " (args: "
-				+ str(args)
-				+ ")"
-			),
-			Globals.LogLevel.WARNING
-		)
+	
+	# GS-JS-30: Guard against missing UI nodes during callback
+	if not is_instance_valid(difficulty_slider):
+		Globals.log_message("JS difficulty callback: Slider node is invalid/freed.", Globals.LogLevel.WARNING)
+		# We still update the resource even if the UI is gone
+		Globals.settings.difficulty = value
 		return
 
+	# GS-JS-04/05: Validate bounds against the UI constraints
+	if value < difficulty_slider.min_value or value > difficulty_slider.max_value:
+		Globals.log_message(
+			"JS difficulty callback received out-of-bounds value: " + str(value),
+			Globals.LogLevel.WARNING
+		)
+		# REMOVE 'return' to allow the value to reach the resource for clamping
+		# return
+
 	Globals.log_message(
-		"JS difficulty callback called with valid value: " + str(value), Globals.LogLevel.DEBUG
+		"JS difficulty callback called with valid value: " + str(value), 
+		Globals.LogLevel.DEBUG
 	)
+	
+	# Pass the validated value to the standard handler
 	_on_difficulty_value_changed(value)
 
 
