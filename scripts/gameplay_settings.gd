@@ -27,7 +27,10 @@ func _ready() -> void:
 	# Configure for web overlays (invisible but positioned)
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignore pause
 
-	difficulty_slider.value_changed.connect(_on_difficulty_value_changed)
+	# ADD GUARDS HERE:
+	if not difficulty_slider.value_changed.is_connected(_on_difficulty_value_changed):
+		difficulty_slider.value_changed.connect(_on_difficulty_value_changed)
+
 	# Set initial difficulty label (sync with global)
 	difficulty_slider.value = Globals.settings.difficulty
 	difficulty_label.text = "{" + str(Globals.settings.difficulty) + "}"
@@ -38,7 +41,8 @@ func _ready() -> void:
 	if not gameplay_reset_button.pressed.is_connected(_on_gameplay_reset_button_pressed):
 		gameplay_reset_button.pressed.connect(_on_gameplay_reset_button_pressed)
 	# NEW: Attach tree_exited for unexpected removal cleanup (like other settings scripts)
-	tree_exited.connect(_on_tree_exited)
+	if not tree_exited.is_connected(_on_tree_exited):
+		tree_exited.connect(_on_tree_exited)
 
 	# NEW: The UI now observes the resource for external changes
 	if not Globals.settings.setting_changed.is_connected(_on_external_setting_changed):
