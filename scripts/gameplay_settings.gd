@@ -40,6 +40,10 @@ func _ready() -> void:
 	# NEW: Attach tree_exited for unexpected removal cleanup (like other settings scripts)
 	tree_exited.connect(_on_tree_exited)
 
+	# NEW: The UI now observes the resource for external changes
+	if not Globals.settings.setting_changed.is_connected(_on_external_setting_changed):
+		Globals.settings.setting_changed.connect(_on_external_setting_changed)
+
 	if os_wrapper.has_feature("web"):
 		# Toggle overlays...
 		(
@@ -80,11 +84,29 @@ func _ready() -> void:
 	Globals.log_message("Gameplay Settings menu loaded.", Globals.LogLevel.DEBUG)
 
 
+func _on_external_setting_changed(setting_name: String, new_value: Variant) -> void:
+	if setting_name == "difficulty":
+		# SYNC UI ONLY:
+		# The resource has already been updated, so we only need to update the UI components.
+		# Use set_value_no_signal to prevent re-triggering the local _on_difficulty_value_changed handler.
+		difficulty_slider.set_value_no_signal(float(new_value))
+		difficulty_label.text = "{" + str(new_value) + "}"
+
+
 func _on_tree_exited() -> void:
 	## Cleanup on unexpected tree exit (e.g. parent removed without calling back button).
 	## Disconnects signals, restores previous menu if not intentional, clears JS/DOM state.
 	## :rtype: void
 	Globals.log_message("Gameplay Settings _on_tree_exited called.", Globals.LogLevel.DEBUG)
+
+	# Disconnect the global resource observer to prevent stale references
+	# GUARD: Ensure Globals and the settings resource are still valid before disconnecting
+	# Use a local variable to safely check and access the settings resource
+	var settings_res := Globals.settings if is_instance_valid(Globals) else null
+
+	if is_instance_valid(settings_res):
+		if settings_res.setting_changed.is_connected(_on_external_setting_changed):
+			settings_res.setting_changed.disconnect(_on_external_setting_changed)
 
 	# Disconnect Godot signals if still connected
 	if difficulty_slider.value_changed.is_connected(_on_difficulty_value_changed):
@@ -238,11 +260,11 @@ func _on_difficulty_value_changed(value: float) -> void:
 	## :param value: The new slider value.
 	## :type value: float
 	## :rtype: void
+	# Update the resource first (this triggers clamping in the setter)
 	Globals.settings.difficulty = value
+	# Update the UI components using the ALREADY CLAMPED value from the resource
 	difficulty_slider.value = Globals.settings.difficulty
-	difficulty_label.text = "{" + str(value) + "}"
-	Globals.log_message("Difficulty changed to: " + str(value), Globals.LogLevel.DEBUG)
-	Globals._save_settings()
+	difficulty_label.text = "{" + str(Globals.settings.difficulty) + "}"
 
 
 # New: JS-specific callback (exactly one Array arg, no default)
