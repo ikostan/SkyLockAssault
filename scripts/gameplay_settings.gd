@@ -97,7 +97,7 @@ func _on_external_setting_changed(setting_name: String, new_value: Variant) -> v
 		if not is_instance_valid(difficulty_slider) or not is_instance_valid(difficulty_label):
 			return
 
-		# Use set_value_no_signal to prevent re-triggering local handlers [cite: 198, 199]
+		# Use set_value_no_signal to prevent re-triggering local handlers
 		difficulty_slider.set_value_no_signal(float(new_value))
 		difficulty_label.text = "{" + str(new_value) + "}"
 
@@ -283,9 +283,9 @@ func _on_change_difficulty_js(args: Array) -> void:
 	## JS callback for changing difficulty.
 	##
 	## Routes to the signal handler after performing strict type and
-	## bounds validation to prevent engine crashes on malformed JS input. [cite: 209]
+	## bounds validation to prevent engine crashes on malformed JS input.
 	##
-	## :param args: Array containing the value (from JS). [cite: 210]
+	## :param args: Array containing the value (from JS).
 	## :type args: Array
 	## :rtype: void
 
@@ -314,7 +314,7 @@ func _on_change_difficulty_js(args: Array) -> void:
 		# or handle it as a single-value reference.
 		potential_value = first_arg
 	else:
-		# Handle scalar values (e.g., [1.5]) directly [cite: 57]
+		# Handle scalar values (e.g., [1.5]) directly
 		potential_value = first_arg
 
 	# GS-JS-12/15/22: Validate that the extracted value is a convertible type
@@ -345,8 +345,11 @@ func _on_change_difficulty_js(args: Array) -> void:
 		Globals.log_message(
 			"JS difficulty callback: Slider node is invalid/freed.", Globals.LogLevel.WARNING
 		)
-		# We still update the resource even if the UI is gone
-		Globals.settings.difficulty = value
+		
+		# FIX: Safely check for Globals and Settings before falling back
+		var settings_res := Globals.settings if is_instance_valid(Globals) else null
+		if is_instance_valid(settings_res):
+			settings_res.difficulty = value # Update resource even if UI is gone 
 		return
 
 	# GS-JS-04/05: Validate bounds against the UI constraints
