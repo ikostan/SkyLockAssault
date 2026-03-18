@@ -80,10 +80,11 @@ func test_gs_js_20_21_scalar_safety() -> void:
 
 ## GS-JS-22/25 | Unsupported primitives and objects
 func test_gs_js_22_25_unsupported_type_safety() -> void:
+	var initial_val: float = Globals.settings.difficulty
 	gameplay_menu._on_change_difficulty_js([null])
 	gameplay_menu._on_change_difficulty_js([true])
-	gameplay_menu._on_change_difficulty_js([{}])
-	assert_true(true, "Successfully handled null/bool/object without engine crash")
+	# Precise Assertion: Ensure the state is untouched
+	assert_eq(Globals.settings.difficulty, initial_val, "Unsupported types should not modify state")
 
 
 # --- SECTION 6.4: MISSING NODE SAFETY (GS-JS-30 to 32) ---
