@@ -129,3 +129,5 @@ func test_gs_ready_06_safe_init_non_web() -> void:
 	
 	assert_true(is_instance_valid(menu.difficulty_slider), "Slider should be valid when initialized from scene")
 	assert_true(true, "Menu initialized safely in non-web environment")
+	assert_null(menu._change_difficulty_cb, "JS callbacks should NOT be created in non-web env")
+	assert_false(menu.js_window != null, "JS window interface should remain null")
