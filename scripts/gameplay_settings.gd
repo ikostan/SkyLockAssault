@@ -312,7 +312,13 @@ func _on_change_difficulty_js(args: Array) -> void:
 		# For JavaScriptObject, treat it as a proxy to a JS array
 		# Use the specific JS indexing if you are certain it is a JS array,
 		# or handle it as a single-value reference.
-		potential_value = first_arg
+		# JS-FIX: If we receive a JS Object (like from Playwright), 
+		# we must index it to get the raw value before the type check.
+		if first_arg.length > 0:
+			potential_value = first_arg[0]
+		else:
+			Globals.log_message("JS callback: JavaScriptObject is empty.", Globals.LogLevel.WARNING)
+			return
 	else:
 		# Handle scalar values (e.g., [1.5]) directly
 		potential_value = first_arg
