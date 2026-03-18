@@ -68,11 +68,14 @@ func test_gs_js_12_14_malformed_string_safety() -> void:
 
 ## GS-JS-20/21 | SCALAR REGRESSION - CRITICAL FIX FOR ISSUE #471
 func test_gs_js_20_21_scalar_safety() -> void:
-	# This test specifically ensures that calling .size() or .is_empty() 
-	# on a float or string scalar (args[0]) does not crash the engine. 
+	var initial_val: float = Globals.settings.difficulty
 	gameplay_menu._on_change_difficulty_js([1.5]) 
-	gameplay_menu._on_change_difficulty_js(["1.5"])
-	assert_true(true, "Successfully handled scalar inputs without engine crash")
+	# Precise Assertion: The value should be accepted, not just "not crash"
+	assert_eq(Globals.settings.difficulty, 1.5, "Scalar float should be accepted")
+
+	gameplay_menu._on_change_difficulty_js(["invalid"])
+	# Precise Assertion: Malformed scalar should be rejected, leaving value at 1.5
+	assert_eq(Globals.settings.difficulty, 1.5, "Malformed scalar string should be rejected")
 
 
 ## GS-JS-22/25 | Unsupported primitives and objects
