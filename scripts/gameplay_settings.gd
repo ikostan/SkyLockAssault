@@ -34,12 +34,14 @@ func _ready() -> void:
 		difficulty_slider.value_changed.connect(_on_difficulty_value_changed)
 
 	# Set initial difficulty label (sync with global if available)
+	# FIX: Use the local reference for consistency
 	if is_instance_valid(settings_res):
-		difficulty_slider.value = Globals.settings.difficulty
-		difficulty_label.text = "{" + str(Globals.settings.difficulty) + "}"
+		difficulty_slider.value = settings_res.difficulty # Was Globals.settings.difficulty
+		difficulty_label.text = "{" + str(settings_res.difficulty) + "}" # Was Globals.settings.difficulty
 	else:
 		difficulty_slider.value = _default_difficulty
 		difficulty_label.text = "{" + str(_default_difficulty) + "}"
+	
 	# Back button
 	if not gameplay_back_button.pressed.is_connected(_on_gameplay_back_button_pressed):
 		gameplay_back_button.pressed.connect(_on_gameplay_back_button_pressed)
@@ -288,15 +290,16 @@ func _on_difficulty_value_changed(value: float) -> void:
 	#difficulty_slider.value = Globals.settings.difficulty
 	#difficulty_label.text = "{" + str(Globals.settings.difficulty) + "}"
 	var settings_res := Globals.settings if is_instance_valid(Globals) else null
+	
+	# FIX: Use the local reference exclusively
 	if not is_instance_valid(settings_res):
 		Globals.log_message(
-			"Gameplay Settings: Globals.settings unavailable; skipping difficulty update.",
+			"Gameplay Settings: settings_res unavailable; skipping difficulty update.",
 			Globals.LogLevel.WARNING
 		)
 		return
-	# Update the resource first (this triggers clamping in the setter)
+
 	settings_res.difficulty = value
-	# Update the UI components using the ALREADY CLAMPED value from the resource
 	difficulty_slider.value = settings_res.difficulty
 	difficulty_label.text = "{" + str(settings_res.difficulty) + "}"
 
