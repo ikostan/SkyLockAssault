@@ -394,7 +394,8 @@ func _extract_js_difficulty(args: Array) -> Variant:
 	if first_arg is JavaScriptObject:
 		# BUG RISK FIX: Validate the 'length' property exists and is numeric
 		# before treating the object as an array.
-		var js_length: Variant = first_arg.get("length")
+		# Note: Must use dot notation, as .get() attempts to call a JS method.
+		var js_length: Variant = first_arg.length
 
 		if js_length != null and typeof(js_length) in [TYPE_INT, TYPE_FLOAT] and js_length > 0:
 			# JS-FIX: If we receive a JS Object (like from Playwright),
