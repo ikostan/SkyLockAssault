@@ -27,13 +27,19 @@ func _ready() -> void:
 	# Configure for web overlays (invisible but positioned)
 	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignore pause
 
+	var settings_res := Globals.settings if is_instance_valid(Globals) else null
+
 	# ADD GUARDS HERE:
 	if not difficulty_slider.value_changed.is_connected(_on_difficulty_value_changed):
 		difficulty_slider.value_changed.connect(_on_difficulty_value_changed)
 
-	# Set initial difficulty label (sync with global)
-	difficulty_slider.value = Globals.settings.difficulty
-	difficulty_label.text = "{" + str(Globals.settings.difficulty) + "}"
+	# Set initial difficulty label (sync with global if available)
+	if is_instance_valid(settings_res):
+		difficulty_slider.value = Globals.settings.difficulty
+		difficulty_label.text = "{" + str(Globals.settings.difficulty) + "}"
+	else:
+		difficulty_slider.value = _default_difficulty
+		difficulty_label.text = "{" + str(_default_difficulty) + "}"
 	# Back button
 	if not gameplay_back_button.pressed.is_connected(_on_gameplay_back_button_pressed):
 		gameplay_back_button.pressed.connect(_on_gameplay_back_button_pressed)
@@ -45,8 +51,13 @@ func _ready() -> void:
 		tree_exited.connect(_on_tree_exited)
 
 	# NEW: The UI now observes the resource for external changes
-	if not Globals.settings.setting_changed.is_connected(_on_external_setting_changed):
-		Globals.settings.setting_changed.connect(_on_external_setting_changed)
+	# if not Globals.settings.setting_changed.is_connected(_on_external_setting_changed):
+	#	Globals.settings.setting_changed.connect(_on_external_setting_changed)
+	if (
+		is_instance_valid(settings_res)
+		and not settings_res.setting_changed.is_connected(_on_external_setting_changed)
+	):
+		settings_res.setting_changed.connect(_on_external_setting_changed)
 
 	if os_wrapper.has_feature("web"):
 		# Toggle overlays...
@@ -272,10 +283,22 @@ func _on_difficulty_value_changed(value: float) -> void:
 	## :type value: float
 	## :rtype: void
 	# Update the resource first (this triggers clamping in the setter)
-	Globals.settings.difficulty = value
+	#Globals.settings.difficulty = value
 	# Update the UI components using the ALREADY CLAMPED value from the resource
-	difficulty_slider.value = Globals.settings.difficulty
-	difficulty_label.text = "{" + str(Globals.settings.difficulty) + "}"
+	#difficulty_slider.value = Globals.settings.difficulty
+	#difficulty_label.text = "{" + str(Globals.settings.difficulty) + "}"
+	var settings_res := Globals.settings if is_instance_valid(Globals) else null
+	if not is_instance_valid(settings_res):
+		Globals.log_message(
+			"Gameplay Settings: Globals.settings unavailable; skipping difficulty update.",
+			Globals.LogLevel.WARNING
+		)
+		return
+	# Update the resource first (this triggers clamping in the setter)
+	settings_res.difficulty = value
+	# Update the UI components using the ALREADY CLAMPED value from the resource
+	difficulty_slider.value = settings_res.difficulty
+	difficulty_label.text = "{" + str(settings_res.difficulty) + "}"
 
 
 # New: JS-specific callback (exactly one Array arg, no default)
