@@ -120,7 +120,7 @@ func _on_tree_exited() -> void:
 	## Disconnects signals, restores previous menu if not intentional, clears JS/DOM state.
 	## :rtype: void
 	## Cleanup on unexpected tree exit.
-	
+
 	# FIX: Guard the initial log message against a torn-down Globals singleton
 	if is_instance_valid(Globals):
 		Globals.log_message("Gameplay Settings _on_tree_exited called.", Globals.LogLevel.DEBUG)
@@ -161,7 +161,11 @@ func _on_tree_exited() -> void:
 			"""
 
 		# FIX: Guard the hidden_menus array check against a torn-down Globals singleton
-		if not _intentional_exit and is_instance_valid(Globals) and not Globals.hidden_menus.is_empty():
+		if (
+			not _intentional_exit
+			and is_instance_valid(Globals)
+			and not Globals.hidden_menus.is_empty()
+		):
 			# Unexpected exit → restore previous menu and options overlays
 			var prev_menu: Node = Globals.hidden_menus.pop_back()
 			if is_instance_valid(prev_menu):
