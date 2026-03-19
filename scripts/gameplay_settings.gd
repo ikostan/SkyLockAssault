@@ -300,8 +300,10 @@ func _on_difficulty_value_changed(value: float) -> void:
 		return
 
 	settings_res.difficulty = value
-	difficulty_slider.value = settings_res.difficulty
-	difficulty_label.text = "{" + str(settings_res.difficulty) + "}"
+	if is_instance_valid(difficulty_slider):
+		difficulty_slider.set_value_no_signal(settings_res.difficulty)
+	if is_instance_valid(difficulty_label):
+		difficulty_label.text = "{" + str(settings_res.difficulty) + "}"
 
 
 # New: JS-specific callback (exactly one Array arg, no default)
