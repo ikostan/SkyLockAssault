@@ -43,6 +43,7 @@ func test_gs_life_01_cleanup_on_exit() -> void:
 func test_gs_life_02_back_button_restoration() -> void:
 	# Mock a previous menu
 	var mock_prev: Control = Control.new()
+	autofree(mock_prev)  # Ensures cleanup even on test failure
 	mock_prev.name = "MockOptionsMenu"
 	mock_prev.visible = false
 	Globals.hidden_menus.push_back(mock_prev)
@@ -51,7 +52,6 @@ func test_gs_life_02_back_button_restoration() -> void:
 	
 	assert_true(mock_prev.visible, "Previous menu should be visible again")
 	assert_true(gameplay_menu.is_queued_for_deletion(), "Menu should be freed")
-	mock_prev.free()
 
 
 ## GS-LIFE-08 | Web overlay visibility cleanup
@@ -79,10 +79,9 @@ func test_gs_life_08_web_overlay_cleanup() -> void:
 
 ## GS-LIFE-05 | Cleanup handles null Globals gracefully
 func test_gs_life_05_null_globals_safety() -> void:
-	# Set a dummy callback to verify it gets cleared. 
-	# FIX: Added '-> void' to satisfy strict return type requirements.
+	# Set a non-null callback to verify cleanup actually nullifies it.
 	var dummy_callable := func(_args: Array) -> void: pass
-	gameplay_menu._change_difficulty_cb = JavaScriptBridge.create_callback(dummy_callable)
+	gameplay_menu._change_difficulty_cb = dummy_callable
 	
 	# Act: Call the cleanup function directly
 	gameplay_menu._on_tree_exited()
