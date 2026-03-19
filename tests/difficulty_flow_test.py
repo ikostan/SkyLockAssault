@@ -33,6 +33,7 @@ v8_coverage_difficulty_flow_test.json, artifacts/test_difficulty_failure_*.png/t
 
 import json
 import os
+import re
 import time
 from typing import Any, Dict, List, Optional
 
