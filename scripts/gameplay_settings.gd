@@ -400,7 +400,7 @@ func _extract_js_difficulty(args: Array) -> Variant:
 			# JS-FIX: If we receive a JS Object (like from Playwright),
 			# we must index it to get the raw value before the type check.
 			return first_arg[0]
-		
+
 		# It is a generic JS object or a non-array; treat as a scalar reference
 		return first_arg
 
