@@ -315,46 +315,10 @@ func _on_change_difficulty_js(args: Array) -> void:
 	## :type args: Array
 	## :rtype: void
 
-	# GS-JS-10: Guard against entirely empty arguments from the bridge
-	if args.is_empty():
-		Globals.log_message(
-			"JS difficulty callback received empty args—skipping.", Globals.LogLevel.WARNING
-		)
+	var potential_value: Variant = _extract_js_difficulty(args)
+	
+	if potential_value == null:
 		return
-
-	var first_arg: Variant = args[0]
-	var potential_value: Variant = null
-
-	# Refactored logic for _on_change_difficulty_js in gameplay_settings.gd
-	# GS-JS-20/21: Branch logic to handle TYPE_ARRAY and JavaScriptObject separately
-	if typeof(first_arg) == TYPE_ARRAY:
-		# Safe to use .size() and indexing on standard GDScript Arrays
-		if first_arg.size() > 0:
-			potential_value = first_arg[0]
-		else:
-			Globals.log_message("JS callback: Array is empty.", Globals.LogLevel.WARNING)
-			return
-	# gameplay_settings.gd refactored logic for GS-JS-20/21
-	elif first_arg is JavaScriptObject:
-		# For JavaScriptObject, treat it as a proxy to a JS array
-		# Use the specific JS indexing if you are certain it is a JS array,
-		# or handle it as a single-value reference.
-		# JS-FIX: If we receive a JS Object (like from Playwright),
-		# we must index it to get the raw value before the type check.
-		# BUG RISK FIX: Validate the 'length' property exists and is numeric
-		# before treating the object as an array.
-		var js_length: int = first_arg.get("length")
-
-		if js_length != null and typeof(js_length) in [TYPE_INT, TYPE_FLOAT] and js_length > 0:
-			# It is likely an array-like object; safe to index [0]
-			potential_value = first_arg[0]
-		else:
-			# It is a generic JS object or a non-array; treat as a scalar reference
-			# or handle specific properties (e.g., potential_value = first_arg.get("value"))
-			potential_value = first_arg
-	else:
-		# Handle scalar values (e.g., [1.5]) directly
-		potential_value = first_arg
 
 	# GS-JS-12/15/22: Validate that the extracted value is a convertible type
 	if (
@@ -397,8 +361,6 @@ func _on_change_difficulty_js(args: Array) -> void:
 			"JS difficulty callback received out-of-bounds value: " + str(value),
 			Globals.LogLevel.WARNING
 		)
-		# REMOVE 'return' to allow the value to reach the resource for clamping
-		# return
 
 	Globals.log_message(
 		"JS difficulty callback called with valid value: " + str(value), Globals.LogLevel.DEBUG
@@ -406,6 +368,44 @@ func _on_change_difficulty_js(args: Array) -> void:
 
 	# Pass the validated value to the standard handler
 	_on_difficulty_value_changed(value)
+
+
+## GS-JS: Helper to extract a potential value from diverse JS bridge payloads.
+## Isolates branching logic for standard Arrays, JavaScriptObjects, and scalars.
+func _extract_js_difficulty(args: Array) -> Variant:
+	# GS-JS-10: Guard against entirely empty arguments from the bridge
+	if args.is_empty():
+		Globals.log_message(
+			"JS difficulty callback received empty args—skipping.", Globals.LogLevel.WARNING
+		)
+		return null
+
+	var first_arg: Variant = args[0]
+
+	# GS-JS-20/21: Branch logic to handle TYPE_ARRAY and JavaScriptObject separately
+	if typeof(first_arg) == TYPE_ARRAY:
+		# Safe to use .size() and indexing on standard GDScript Arrays
+		if first_arg.size() > 0:
+			return first_arg[0]
+		else:
+			Globals.log_message("JS callback: Array is empty.", Globals.LogLevel.WARNING)
+			return null
+
+	elif first_arg is JavaScriptObject:
+		# BUG RISK FIX: Validate the 'length' property exists and is numeric
+		# before treating the object as an array.
+		var js_length: Variant = first_arg.get("length")
+
+		if js_length != null and typeof(js_length) in [TYPE_INT, TYPE_FLOAT] and js_length > 0:
+			# JS-FIX: If we receive a JS Object (like from Playwright),
+			# we must index it to get the raw value before the type check.
+			return first_arg[0]
+		else:
+			# It is a generic JS object or a non-array; treat as a scalar reference
+			return first_arg
+	
+	# Handle scalar values (e.g., [1.5]) directly
+	return first_arg
 
 
 ## Grabs initial focus on the difficulty slider using the global helper.
