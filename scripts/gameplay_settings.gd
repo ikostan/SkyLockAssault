@@ -331,17 +331,24 @@ func _on_change_difficulty_js(args: Array) -> void:
 		else:
 			Globals.log_message("JS callback: Array is empty.", Globals.LogLevel.WARNING)
 			return
+	# gameplay_settings.gd refactored logic for GS-JS-20/21
 	elif first_arg is JavaScriptObject:
 		# For JavaScriptObject, treat it as a proxy to a JS array
 		# Use the specific JS indexing if you are certain it is a JS array,
 		# or handle it as a single-value reference.
 		# JS-FIX: If we receive a JS Object (like from Playwright),
 		# we must index it to get the raw value before the type check.
-		if first_arg.length > 0:
+		# BUG RISK FIX: Validate the 'length' property exists and is numeric 
+		# before treating the object as an array.
+		var js_length: int = first_arg.get("length")
+	
+		if js_length != null and typeof(js_length) in [TYPE_INT, TYPE_FLOAT] and js_length > 0:
+			# It is likely an array-like object; safe to index [0]
 			potential_value = first_arg[0]
 		else:
-			Globals.log_message("JS callback: JavaScriptObject is empty.", Globals.LogLevel.WARNING)
-			return
+			# It is a generic JS object or a non-array; treat as a scalar reference
+			# or handle specific properties (e.g., potential_value = first_arg.get("value"))
+			potential_value = first_arg
 	else:
 		# Handle scalar values (e.g., [1.5]) directly
 		potential_value = first_arg
