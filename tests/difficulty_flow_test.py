@@ -31,9 +31,9 @@ Artifacts
 v8_coverage_difficulty_flow_test.json, artifacts/test_difficulty_failure_*.png/txt
 """
 
-import re
 import json
 import os
+import re
 import time
 from typing import Any, Dict, List, Optional
 
@@ -193,7 +193,9 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Verify that difficulty was reset to the expected default
         assert any(
-            re.search(r"setting 'difficulty' updated to:\s*1(?![\d.])", log["text"].lower())
+            re.search(
+                r"setting 'difficulty' updated to:\s*1(?![\d.])", log["text"].lower()
+            )
             for log in reset_logs
         ), "Resource did not reset difficulty to 1.0 after reset button press"
 
