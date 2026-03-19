@@ -96,4 +96,9 @@ func test_gs_js_30_missing_node_safety() -> void:
 	
 	# Function should check 'is_instance_valid' before accessing slider properties
 	gameplay_menu._on_change_difficulty_js([[1.2]])
-	assert_true(true, "Handled missing node reference safely without crash")
+	# assert_true(true, "Handled missing node reference safely without crash")
+	assert_eq(
+		Globals.settings.difficulty,
+		1.2,
+		"When slider is missing, callback should still update resource via fallback path"
+	)
