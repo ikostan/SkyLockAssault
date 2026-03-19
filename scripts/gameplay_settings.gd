@@ -36,8 +36,8 @@ func _ready() -> void:
 	# Set initial difficulty label (sync with global if available)
 	# FIX: Use the local reference for consistency
 	if is_instance_valid(settings_res):
-		difficulty_slider.value = settings_res.difficulty  # Was Globals.settings.difficulty
-		difficulty_label.text = "{" + str(settings_res.difficulty) + "}"  # Was Globals.settings.difficulty
+		difficulty_slider.value = settings_res.difficulty
+		difficulty_label.text = "{" + str(settings_res.difficulty) + "}"
 	else:
 		difficulty_slider.value = _default_difficulty
 		difficulty_label.text = "{" + str(_default_difficulty) + "}"
@@ -387,11 +387,11 @@ func _extract_js_difficulty(args: Array) -> Variant:
 		# Safe to use .size() and indexing on standard GDScript Arrays
 		if first_arg.size() > 0:
 			return first_arg[0]
-		else:
-			Globals.log_message("JS callback: Array is empty.", Globals.LogLevel.WARNING)
-			return null
 
-	elif first_arg is JavaScriptObject:
+		Globals.log_message("JS callback: Array is empty.", Globals.LogLevel.WARNING)
+		return null
+
+	if first_arg is JavaScriptObject:
 		# BUG RISK FIX: Validate the 'length' property exists and is numeric
 		# before treating the object as an array.
 		var js_length: Variant = first_arg.get("length")
@@ -400,9 +400,9 @@ func _extract_js_difficulty(args: Array) -> Variant:
 			# JS-FIX: If we receive a JS Object (like from Playwright),
 			# we must index it to get the raw value before the type check.
 			return first_arg[0]
-		else:
-			# It is a generic JS object or a non-array; treat as a scalar reference
-			return first_arg
+		
+		# It is a generic JS object or a non-array; treat as a scalar reference
+		return first_arg
 
 	# Handle scalar values (e.g., [1.5]) directly
 	return first_arg
