@@ -68,10 +68,9 @@ func test_gs_life_08_web_overlay_cleanup() -> void:
 
 ## GS-LIFE-05 | Cleanup handles null Globals gracefully
 func test_gs_life_05_null_globals_safety() -> void:
-	# Set a dummy callback to verify it gets cleared. 
-	# FIX: Added '-> void' to satisfy strict return type requirements.
+	# Set a non-null callback to verify cleanup actually nullifies it.
 	var dummy_callable := func(_args: Array) -> void: pass
-	gameplay_menu._change_difficulty_cb = JavaScriptBridge.create_callback(dummy_callable)
+	gameplay_menu._change_difficulty_cb = dummy_callable
 	
 	# Act: Call the cleanup function directly [cite: 8]
 	gameplay_menu._on_tree_exited()
