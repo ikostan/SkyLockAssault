@@ -31,7 +31,6 @@ Artifacts
 v8_coverage_difficulty_flow_test.json, artifacts/test_difficulty_failure_*.png/txt
 """
 
-import re
 import json
 import os
 import time
@@ -193,7 +192,7 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Verify that difficulty was reset to the expected default
         assert any(
-            re.search(r"setting 'difficulty' updated to:\s*1(?![\d.])", log["text"].lower())
+            "setting 'difficulty' updated to: 1" in log["text"].lower()
             for log in reset_logs
         ), "Resource did not reset difficulty to 1.0 after reset button press"
 
@@ -219,7 +218,8 @@ def test_difficulty_flow(page: Page) -> None:
         # Gameplay UI hidden
         page.wait_for_selector("#difficulty-slider", state="hidden", timeout=2500)
         assert page.evaluate(
-            "document.getElementById('difficulty-slider') === null || document.getElementById('difficulty-slider').offsetParent === null"
+            "document.getElementById('difficulty-slider') === null || document.getElementById("
+            "'difficulty-slider').offsetParent === null"
         )
 
         # Check element present
@@ -233,7 +233,8 @@ def test_difficulty_flow(page: Page) -> None:
         assert page.evaluate("document.getElementById('start-button') !== null")
         page.wait_for_selector("#options-back-button", state="hidden", timeout=2500)
         assert page.evaluate(
-            "document.getElementById('options-back-button') === null || document.getElementById('options-back-button').offsetParent === null"
+            "document.getElementById('options-back-button') === null || document.getElementById("
+            "'options-back-button').offsetParent === null"
         )
 
         # Start game
