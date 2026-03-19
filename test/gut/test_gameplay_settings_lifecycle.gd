@@ -18,14 +18,25 @@ func before_each() -> void:
 
 # --- SECTION 7: LIFECYCLE AND CLEANUP TESTS ---
 
-## GS-LIFE-01 | Cleanup on tree exit nullifies callbacks
+## GS-LIFE-01 | Cleanup on tree exit verifies signals and ALL callbacks
 func test_gs_life_01_cleanup_on_exit() -> void:
-	# Trigger exit
+	# 1. Setup: Ensure everything is connected first
+	assert_true(Globals.settings.setting_changed.is_connected(gameplay_menu._on_external_setting_changed))
+	assert_true(gameplay_menu.difficulty_slider.value_changed.is_connected(gameplay_menu._on_difficulty_value_changed))
+	
+	# 2. Act: Trigger exit
 	gameplay_menu._on_tree_exited()
 	
-	# Verify JS callbacks are cleared to prevent memory leaks
-	assert_null(gameplay_menu._change_difficulty_cb, "Difficulty callback should be null")
-	assert_null(gameplay_menu._gameplay_back_button_pressed_cb, "Back button callback should be null")
+	# 3. Assert Signal Disconnections (The missing piece)
+	assert_false(Globals.settings.setting_changed.is_connected(gameplay_menu._on_external_setting_changed), 
+		"Global resource signal should be disconnected")
+	assert_false(gameplay_menu.difficulty_slider.value_changed.is_connected(gameplay_menu._on_difficulty_value_changed), 
+		"Local UI signals should be disconnected")
+	
+	# 4. Assert ALL Callbacks (Including the missing reset callback)
+	assert_null(gameplay_menu._change_difficulty_cb, "Difficulty callback nullified")
+	assert_null(gameplay_menu._gameplay_back_button_pressed_cb, "Back button callback nullified")
+	assert_null(gameplay_menu._gameplay_reset_cb, "Reset callback nullified")
 
 
 ## GS-LIFE-02 | Back button restores previous menu from stack
