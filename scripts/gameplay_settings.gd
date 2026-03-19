@@ -36,12 +36,12 @@ func _ready() -> void:
 	# Set initial difficulty label (sync with global if available)
 	# FIX: Use the local reference for consistency
 	if is_instance_valid(settings_res):
-		difficulty_slider.value = settings_res.difficulty # Was Globals.settings.difficulty
-		difficulty_label.text = "{" + str(settings_res.difficulty) + "}" # Was Globals.settings.difficulty
+		difficulty_slider.value = settings_res.difficulty  # Was Globals.settings.difficulty
+		difficulty_label.text = "{" + str(settings_res.difficulty) + "}"  # Was Globals.settings.difficulty
 	else:
 		difficulty_slider.value = _default_difficulty
 		difficulty_label.text = "{" + str(_default_difficulty) + "}"
-	
+
 	# Back button
 	if not gameplay_back_button.pressed.is_connected(_on_gameplay_back_button_pressed):
 		gameplay_back_button.pressed.connect(_on_gameplay_back_button_pressed)
@@ -290,7 +290,7 @@ func _on_difficulty_value_changed(value: float) -> void:
 	#difficulty_slider.value = Globals.settings.difficulty
 	#difficulty_label.text = "{" + str(Globals.settings.difficulty) + "}"
 	var settings_res := Globals.settings if is_instance_valid(Globals) else null
-	
+
 	# FIX: Use the local reference exclusively
 	if not is_instance_valid(settings_res):
 		Globals.log_message(
@@ -316,7 +316,7 @@ func _on_change_difficulty_js(args: Array) -> void:
 	## :rtype: void
 
 	var potential_value: Variant = _extract_js_difficulty(args)
-	
+
 	if potential_value == null:
 		return
 
@@ -403,7 +403,7 @@ func _extract_js_difficulty(args: Array) -> Variant:
 		else:
 			# It is a generic JS object or a non-array; treat as a scalar reference
 			return first_arg
-	
+
 	# Handle scalar values (e.g., [1.5]) directly
 	return first_arg
 
