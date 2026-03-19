@@ -65,13 +65,13 @@ func test_difficulty_clamping() -> void:
 
 func test_scene_resource_validity() -> void:
 	gut.p("Testing: PackedScenes in Resource are valid and preloaded.")
-	# Verifies that migrating paths to Resources doesn't break preloading [cite: 4]
+	# Verifies that migrating paths to Resources doesn't break preloading
 	assert_not_null(Globals.settings.key_mapping_scene, "Key mapping scene must be assigned in Resource")
 	assert_true(Globals.settings.key_mapping_scene is PackedScene, "Key mapping should be a PackedScene")
 
 func test_remap_prompt_strings() -> void:
 	gut.p("Testing: Remap prompt strings are correctly retrieved from Resource.")
-	# Verifies migration of hard-coded constants [cite: 3]
+	# Verifies migration of hard-coded constants
 	assert_eq(Globals.settings.remap_prompt_keyboard, "Press a key...", "Keyboard prompt mismatch")
 	assert_string_contains(Globals.settings.remap_prompt_gamepad, "gamepad", "Gamepad prompt should mention device")
 

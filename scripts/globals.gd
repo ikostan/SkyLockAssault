@@ -51,12 +51,12 @@ func _ready() -> void:
 	log_message("Log level set to: " + LogLevel.keys()[settings.current_log_level], LogLevel.DEBUG)
 	_load_settings()  # Load persisted settings first
 
-	# Connect to the resource signal to centralize side effects [cite: 151]
+	# Connect to the resource signal to centralize side effects
 	if settings:
 		settings.setting_changed.connect(_on_setting_changed)
 
 
-## Reactive handler for the Observer Pattern [cite: 141]
+## Reactive handler for the Observer Pattern
 func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	# Skip persistence and logging if we are in a bulk-loading state
 	if _is_loading_settings:
@@ -65,10 +65,10 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	# FIX: Ensure we are comparing String to String or using correct types
 	var log_msg: String = "Setting '%s' updated to: %s" % [setting_name, str(new_value)]
 
-	# Automatically log the change [cite: 59]
+	# Automatically log the change
 	log_message(log_msg, LogLevel.DEBUG)
 
-	# Automatically persist to disk [cite: 53]
+	# Automatically persist to disk
 	_save_settings()
 
 

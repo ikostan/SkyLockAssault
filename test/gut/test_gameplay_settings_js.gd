@@ -24,7 +24,7 @@ func before_each() -> void:
 
 ## GS-JS-01/02 | Valid nested array extraction
 func test_gs_js_01_02_nested_array_success() -> void:
-	# Standard JS Bridge format: [ [value] ] [cite: 209]
+	# Standard JS Bridge format: [ [value] ]
 	gameplay_menu._on_change_difficulty_js([[1.5]])
 	assert_eq(Globals.settings.difficulty, 1.5, "Should extract 1.5 from nested array")
 	
@@ -34,7 +34,7 @@ func test_gs_js_01_02_nested_array_success() -> void:
 
 ## GS-JS-03 | Nested numeric string coercion
 func test_gs_js_03_numeric_string_coercion() -> void:
-	# Test if "1.5" is correctly cast to float 1.5 [cite: 210]
+	# Test if "1.5" is correctly cast to float 1.5
 	gameplay_menu._on_change_difficulty_js([["1.5"]])
 	assert_eq(Globals.settings.difficulty, 1.5, "Should coerce numeric string to float")
 
@@ -53,7 +53,7 @@ func test_gs_js_04_05_out_of_range_clamping() -> void:
 ## GS-JS-10/11 | Handle empty arrays safely
 func test_gs_js_10_11_empty_array_safety() -> void:
 	var initial_val: float = Globals.settings.difficulty
-	gameplay_menu._on_change_difficulty_js([]) # [cite: 210]
+	gameplay_menu._on_change_difficulty_js([])
 	gameplay_menu._on_change_difficulty_js([[]])
 	assert_eq(Globals.settings.difficulty, initial_val, "Empty arrays should not change state or crash")
 

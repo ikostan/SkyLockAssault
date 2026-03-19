@@ -84,8 +84,53 @@ func test_gs_life_05_null_globals_safety() -> void:
 	var dummy_callable := func(_args: Array) -> void: pass
 	gameplay_menu._change_difficulty_cb = JavaScriptBridge.create_callback(dummy_callable)
 	
-	# Act: Call the cleanup function directly [cite: 8]
+	# Act: Call the cleanup function directly
 	gameplay_menu._on_tree_exited()
 	
 	# Assert: Verify the side effects of the cleanup logic
 	assert_null(gameplay_menu._change_difficulty_cb, "Callback must be nullified even if Globals are shaky")
+	
+
+## GS-LIFE-09 | Unexpected removal (unintentional exit) restores previous menu
+func test_gs_life_09_unexpected_removal_restoration() -> void:
+	# 1. Setup: Create fresh instance but do not parent yet
+	var test_menu: Control = load("res://scenes/gameplay_settings.tscn").instantiate()
+	
+	# 2. Mock a previous menu in the stack
+	var mock_prev: Control = Control.new()
+	mock_prev.name = "MockOptionsMenu"
+	mock_prev.visible = false
+	Globals.hidden_menus.push_back(mock_prev)
+	
+	# 3. Inject Mock Wrappers
+	var mock_js_bridge: Variant = double(JavaScriptBridgeWrapper).new()
+	var mock_os: Variant = double(OSWrapper).new()
+	stub(mock_os, "has_feature").to_return(true)
+	
+	# 4. Use a Dictionary for the JS window mock to allow property setting
+	var mock_window: Dictionary = {"valid": true} 
+	stub(mock_js_bridge, "get_interface").to_return(mock_window)
+	
+	test_menu.os_wrapper = mock_os
+	test_menu.js_bridge_wrapper = mock_js_bridge
+	
+	# 5. Add to tree to trigger _ready()
+	add_child_autofree(test_menu)
+	await get_tree().process_frame
+	
+	# --- THE CRITICAL FIX ---
+	# Manually force the script's internal 'js_window' to our mock.
+	# This ensures the 'if js_window' check in _on_tree_exited passes.
+	test_menu.js_window = mock_window 
+	# ------------------------
+
+	# 6. Act: Trigger unexpected exit directly (_intentional_exit remains false)
+	test_menu._on_tree_exited()
+	
+	# 7. Assertions
+	assert_true(mock_prev.visible, "Unexpected exit must restore previous menu visibility")
+	assert_null(test_menu._change_difficulty_cb, "Callbacks must still be nullified on unexpected exit")
+	assert_called(mock_js_bridge, "eval")
+	
+	# Cleanup mock menu
+	mock_prev.free()
