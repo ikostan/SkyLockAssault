@@ -18,7 +18,7 @@ offset_right = 400.0
 offset_bottom = 24.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
-tooltip_text = "SFX Rotors Volume Control"
+tooltip_text = "SFX Menu Volume Control"
 
 [node name="SFXMenuLabel" type="Label" parent="."]
 layout_mode = 0
