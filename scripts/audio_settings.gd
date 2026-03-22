@@ -10,11 +10,6 @@
 ##
 ## Saves/restores previous JS back callback on web.
 ##
-## :vartype js_window: Variant
-## :vartype _audio_back_button_pressed_cb: Variant
-## :vartype _previous_back_pressed_cb: Variant
-## :vartype audio_back_button: Button
-## :vartype _intentional_exit: bool
 
 extends Control
 
