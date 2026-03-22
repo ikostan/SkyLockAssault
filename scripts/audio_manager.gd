@@ -22,6 +22,8 @@ extends Node
 @export var weapon_muted: bool
 @export var rotors_volume: float
 @export var rotors_muted: bool
+@export var menu_volume: float
+@export var menu_muted: bool
 
 var current_config_path: String = Settings.CONFIG_PATH
 
@@ -79,6 +81,8 @@ func get_volume(bus_name: String) -> float:
 			return weapon_volume
 		AudioConstants.BUS_SFX_ROTORS:
 			return rotors_volume
+		AudioConstants.BUS_SFX_MENU:
+			return menu_volume
 		_:
 			Globals.log_message("Unknown bus for get_volume: " + bus_name, Globals.LogLevel.WARNING)
 			return 0.0
@@ -120,6 +124,11 @@ func set_volume(bus_name: String, vol: float) -> void:
 			Globals.log_message(
 				"Rotors Volume Level in AudioManager: " + str(vol), Globals.LogLevel.DEBUG
 			)
+		AudioConstants.BUS_SFX_MENU:
+			menu_volume = vol
+			Globals.log_message(
+				"Menu Volume Level in AudioManager: " + str(vol), Globals.LogLevel.DEBUG
+			)
 		_:
 			Globals.log_message(
 				"Unsupported bus in set_volume match (check config drift): " + bus_name,
@@ -143,6 +152,8 @@ func get_muted(bus_name: String) -> bool:
 			return weapon_muted
 		AudioConstants.BUS_SFX_ROTORS:
 			return rotors_muted
+		AudioConstants.BUS_SFX_MENU:
+			return menu_muted
 		_:
 			Globals.log_message("Unknown bus for get_muted: " + bus_name, Globals.LogLevel.WARNING)
 			return false
@@ -166,6 +177,8 @@ func set_muted(bus_name: String, muted: bool) -> void:
 			weapon_muted = muted
 		AudioConstants.BUS_SFX_ROTORS:
 			rotors_muted = muted
+		AudioConstants.BUS_SFX_MENU:
+			menu_muted = muted
 		_:
 			Globals.log_message("Unknown bus for set_muted: " + bus_name, Globals.LogLevel.WARNING)
 

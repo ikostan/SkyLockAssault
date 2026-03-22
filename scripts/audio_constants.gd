@@ -12,6 +12,7 @@ const BUS_MUSIC: String = "Music"
 const BUS_SFX: String = "SFX"
 const BUS_SFX_ROTORS: String = "SFX_Rotors"
 const BUS_SFX_WEAPON: String = "SFX_Weapon"
+const BUS_SFX_MENU: String = "SFX_Menu"
 
 # Centralized config with defaults and var mappings
 const BUS_CONFIG: Dictionary = {
@@ -47,6 +48,13 @@ const BUS_CONFIG: Dictionary = {
 	{
 		"volume_var": "rotors_volume",
 		"muted_var": "rotors_muted",
+		"default_volume": 1.0,
+		"default_muted": false
+	},
+	BUS_SFX_MENU:
+	{
+		"volume_var": "menu_volume",
+		"muted_var": "menu_muted",
 		"default_volume": 1.0,
 		"default_muted": false
 	}

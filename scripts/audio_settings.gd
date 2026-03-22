@@ -37,12 +37,14 @@ var _change_music_volume_cb: Variant
 var _change_sfx_volume_cb: Variant
 var _change_weapon_volume_cb: Variant
 var _change_rotors_volume_cb: Variant
+var _change_menu_volume_cb: Variant
 # Mute toggle
 var _toggle_mute_master_cb: Variant
 var _toggle_mute_music_cb: Variant
 var _toggle_mute_sfx_cb: Variant
 var _toggle_mute_weapon_cb: Variant
 var _toggle_mute_rotors_cb: Variant
+var _toggle_mute_menu_cb: Variant
 # Reset button
 var _audio_reset_cb: Variant
 
@@ -61,6 +63,9 @@ var _audio_reset_cb: Variant
 # SFX Rotor Volume Controls
 @onready var rotor_slider: HSlider = $Panel/VolumeControls/SFXRotors/HSlider
 @onready var mute_rotor: CheckButton = $Panel/VolumeControls/SFXRotors/Mute
+# SFX Menu Volume Controls
+@onready var menu_slider: HSlider = $Panel/VolumeControls/SFXMenu/HSlider
+@onready var mute_menu: CheckButton = $Panel/VolumeControls/SFXMenu/Mute
 #Other UI elements
 @onready var master_warning_dialog: AcceptDialog = $MasterWarningDialog
 @onready var sfx_warning_dialog: AcceptDialog = $SFXWarningDialog
@@ -72,6 +77,7 @@ var _audio_reset_cb: Variant
 @onready var sfx_label: Label = $Panel/VolumeControls/SFX/SFXLabel
 @onready var weapon_label: Label = $Panel/VolumeControls/SFXWeapon/SFXWeaponLabel
 @onready var rotor_label: Label = $Panel/VolumeControls/SFXRotors/SFXRotorsLabel
+@onready var menu_label: Label = $Panel/VolumeControls/SFXMenu/SFXMenuLabel
 
 
 func _ready() -> void:
@@ -146,6 +152,15 @@ func _ready() -> void:
 	if not mute_rotor.gui_input.is_connected(_on_rotor_mute_gui_input):
 		mute_rotor.gui_input.connect(_on_rotor_mute_gui_input)
 
+	# Menu (New)
+	if not mute_menu.toggled.is_connected(_on_menu_mute_toggled):
+		mute_menu.toggled.connect(_on_menu_mute_toggled)
+	mute_menu.button_pressed = not AudioManager.menu_muted
+	if not menu_slider.gui_input.is_connected(_on_menu_volume_control_gui_input):
+		menu_slider.gui_input.connect(_on_menu_volume_control_gui_input)
+	if not mute_menu.gui_input.is_connected(_on_menu_mute_gui_input):
+		mute_menu.gui_input.connect(_on_menu_mute_gui_input)
+
 	# Back button
 	if not audio_back_button.pressed.is_connected(_on_audio_back_button_pressed):
 		audio_back_button.pressed.connect(_on_audio_back_button_pressed)
@@ -184,6 +199,9 @@ func _ready() -> void:
 			_change_rotors_volume_cb = _register_js_callback(
 				"_on_change_rotors_volume_js", "changeRotorsVolume"
 			)  # Rotors Volume
+			_change_menu_volume_cb = _register_js_callback(
+				"_on_change_menu_volume_js", "changeMenuVolume"
+			)  # Menu Volume
 			# Expose callbacks for mute
 			_toggle_mute_master_cb = _register_js_callback(
 				"_on_toggle_mute_master_js", "toggleMuteMaster"
@@ -199,6 +217,9 @@ func _ready() -> void:
 			_toggle_mute_rotors_cb = _register_js_callback(
 				"_on_toggle_mute_rotors_js", "toggleMuteRotors"
 			)  # Mute Rotors
+			_toggle_mute_menu_cb = _register_js_callback(
+				"_on_toggle_mute_menu_js", "toggleMuteMenu"
+			)  # Mute Menu
 			# Expose callbacks for Reset button
 			_audio_reset_cb = _register_js_callback("_on_audio_reset_js", "audioResetPressed")
 			_sync_dom_ui()
@@ -215,6 +236,8 @@ func _ready() -> void:
 		mute_weapon,
 		rotor_slider,
 		mute_rotor,
+		menu_slider,
+		mute_menu,
 		audio_back_button,
 		audio_reset_button
 	]
@@ -260,6 +283,9 @@ func _sync_dom_ui() -> void:
 		"document.getElementById('rotors-slider').value = " + str(rotor_slider.value)
 	)
 	js_bridge_wrapper.eval(
+		"document.getElementById('menu-slider').value = " + str(menu_slider.value)
+	)
+	js_bridge_wrapper.eval(
 		(
 			"document.getElementById('mute-master').checked = "
 			+ str(mute_master.button_pressed).to_lower()
@@ -285,6 +311,9 @@ func _sync_dom_ui() -> void:
 			"document.getElementById('mute-rotors').checked = "
 			+ str(mute_rotor.button_pressed).to_lower()
 		)
+	)
+	js_bridge_wrapper.eval(
+		"document.getElementById('mute-menu').checked = " + str(mute_menu.button_pressed).to_lower()
 	)
 
 
@@ -684,6 +713,92 @@ func _on_toggle_mute_rotors_js(args: Array) -> void:
 	mute_rotor.button_pressed = bool(checked)
 
 
+##############
+
+
+## MENU VOLUME
+## New: Menu slider gui input
+func _on_menu_volume_control_gui_input(event: InputEvent) -> void:
+	_handle_slider_gui_input(
+		event,
+		AudioManager.master_muted,
+		AudioManager.sfx_muted,
+		AudioManager.rotors_muted,
+		mute_menu,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
+
+
+## New: Menu toggle
+func _on_menu_mute_toggled(toggled_on: bool) -> void:
+	AudioManager.menu_muted = not toggled_on
+	menu_slider.editable = not AudioManager.menu_muted
+	_update_sfx_controls_ui()
+
+	AudioManager.apply_volume_to_bus(
+		AudioConstants.BUS_SFX_MENU, AudioManager.menu_volume, AudioManager.menu_muted
+	)
+	AudioManager.save_volumes()
+	Globals.log_message("Menu mute button toggled to: " + str(toggled_on), Globals.LogLevel.DEBUG)
+	_sync_dom_ui()
+
+
+## New: Menu mute button gui input
+func _on_menu_mute_gui_input(event: InputEvent) -> void:
+	_handle_mute_gui_input(
+		event,
+		AudioManager.master_muted,
+		AudioManager.sfx_muted,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
+
+
+## New: JS callback for Menu volume
+## Directly updates AudioManager and UI, mimicking volume_slider.gd logic.
+## :param args: Array with volume value (e.g., [[0.5]]).
+## :type args: Array
+## :rtype: void
+func _on_change_menu_volume_js(args: Array) -> void:
+	var value := _validate_volume_args(args, "_on_change_menu_volume_js")
+	if value < 0.0:
+		return
+	if AudioManager.get_muted(AudioConstants.BUS_MASTER):
+		Globals.log_message("Master muted, cannot adjust sub-volume", Globals.LogLevel.DEBUG)
+		return
+	if AudioManager.get_muted(AudioConstants.BUS_SFX):
+		Globals.log_message("SFX muted, cannot adjust sub-volume", Globals.LogLevel.DEBUG)
+		return
+	# Update AudioManager (sets rotors_volume)
+	AudioManager.set_volume(AudioConstants.BUS_SFX_MENU, value)
+	# Apply to AudioServer bus (handles db conversion and mute check)
+	AudioManager.apply_volume_to_bus(AudioConstants.BUS_SFX_MENU, value, AudioManager.menu_muted)
+	# Log the change (matches your DEBUG logs in audio_manager.gd)
+	Globals.log_message("Menu volume level changed: " + str(value), Globals.LogLevel.DEBUG)
+	Globals.log_message(
+		"Menu Volume Level in AudioManager: " + str(AudioManager.menu_volume),
+		Globals.LogLevel.DEBUG
+	)
+	# Save settings (direct call, persistent across runs)
+	AudioManager.save_volumes()
+	# Sync UI without emitting signals (updates slider visually)
+	menu_slider.set_value_no_signal(value)
+	# Update dependent controls (e.g., enables/disables weapon/rotor if SFX mute affects them)
+	_update_other_controls_ui()
+	_sync_dom_ui()
+
+
+func _on_toggle_mute_menu_js(args: Array) -> void:
+	var checked: Variant = _validate_mute_args(args, "_on_toggle_mute_menu_js")
+	if checked == null:
+		return
+	mute_menu.button_pressed = bool(checked)
+
+
+######
+
+
 ## RESET BUTTON
 ## Update _on_audio_reset_button_pressed:
 func _on_audio_reset_button_pressed() -> void:
@@ -718,6 +833,9 @@ func _update_sfx_controls_ui() -> void:
 	# Rotors
 	mute_rotor.disabled = sfx_controls_locked
 	rotor_slider.editable = not sfx_controls_locked and not AudioManager.rotors_muted
+	# Menu
+	mute_menu.disabled = sfx_controls_locked
+	menu_slider.editable = not sfx_controls_locked and not AudioManager.menu_muted
 
 
 func _on_audio_back_button_pressed() -> void:
@@ -928,6 +1046,10 @@ func _sync_ui_from_manager() -> void:
 	rotor_slider.set_value_no_signal(AudioManager.rotors_volume)
 	rotor_slider.editable = not AudioManager.rotors_muted
 
+	mute_menu.set_pressed_no_signal(not AudioManager.menu_muted)
+	menu_slider.set_value_no_signal(AudioManager.menu_volume)
+	menu_slider.editable = not AudioManager.menu_muted
+
 	_update_other_controls_ui()
 
 
@@ -954,11 +1076,13 @@ func _toggle_audio_dom_visibility(visibility: String) -> void:
 		"sfx-slider",
 		"weapon-slider",
 		"rotors-slider",
+		"menu-slider",
 		"mute-master",
 		"mute-music",
 		"mute-sfx",
 		"mute-weapon",
-		"mute-rotors"
+		"mute-rotors",
+		"mute-menu",
 	]
 
 	for id: String in ids:
@@ -988,10 +1112,12 @@ func _unset_audio_window_callbacks() -> void:
 	js_window.changeSfxVolume = null
 	js_window.changeWeaponVolume = null
 	js_window.changeRotorsVolume = null
+	js_window.changeMenuVolume = null
 	js_window.toggleMuteMaster = null
 	js_window.toggleMuteMusic = null
 	js_window.toggleMuteSfx = null
 	js_window.toggleMuteWeapon = null
 	js_window.toggleMuteRotors = null
+	js_window.toggleMuteMenu = null
 	js_window.audioResetPressed = null
 	js_window.audioBackPressed = null
