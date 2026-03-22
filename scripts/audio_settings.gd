@@ -718,7 +718,7 @@ func _on_menu_volume_control_gui_input(event: InputEvent) -> void:
 		event,
 		AudioManager.master_muted,
 		AudioManager.sfx_muted,
-		AudioManager.rotors_muted,
+		AudioManager.menu_muted,
 		mute_menu,
 		master_warning_dialog,
 		sfx_warning_dialog
