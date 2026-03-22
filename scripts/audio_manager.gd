@@ -71,7 +71,7 @@ func set_bus_state(bus_name: String, volume: float, muted: bool) -> void:
 ## :rtype: float
 func get_volume(bus_name: String) -> float:
 	var current_vol: float = 0.0
-	
+
 	match bus_name:
 		AudioConstants.BUS_MASTER:
 			current_vol = master_volume
@@ -87,7 +87,7 @@ func get_volume(bus_name: String) -> float:
 			current_vol = menu_volume
 		_:
 			Globals.log_message("Unknown bus for get_volume: " + bus_name, Globals.LogLevel.WARNING)
-			
+
 	return current_vol
 
 
@@ -145,7 +145,7 @@ func set_volume(bus_name: String, vol: float) -> void:
 ## :rtype: bool
 func get_muted(bus_name: String) -> bool:
 	var is_muted: bool = false
-	
+
 	match bus_name:
 		AudioConstants.BUS_MASTER:
 			is_muted = master_muted
@@ -161,7 +161,7 @@ func get_muted(bus_name: String) -> bool:
 			is_muted = menu_muted
 		_:
 			Globals.log_message("Unknown bus for get_muted: " + bus_name, Globals.LogLevel.WARNING)
-			
+
 	return is_muted
 
 
