@@ -257,6 +257,7 @@ func _update_label_colors() -> void:
 		yellow if (weapon_slider.has_focus() or mute_weapon.has_focus()) else white
 	)
 	rotor_label.modulate = yellow if (rotor_slider.has_focus() or mute_rotor.has_focus()) else white
+	menu_label.modulate = yellow if (menu_slider.has_focus() or mute_menu.has_focus()) else white
 
 
 ## Sync DOM overlays from Godot UI.
