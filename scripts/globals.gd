@@ -8,15 +8,8 @@ extends Node
 
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 
-# Shared constants
-## Device-specific remap prompts to avoid layout shift.
-# const REMAP_PROMPT_TEXT: String = "Press a key or controller button/axis..."
-# const REMAP_PROMPT_KEYBOARD: String = "Press a key..."
-# const REMAP_PROMPT_GAMEPAD: String = "Press a gamepad button/axis..."
-
-# @export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
-# @export var enable_debug_logging: bool = false  # Toggle in Inspector or settings
-# @export var difficulty: float = 1.0  # Multiplier: 1.0=Normal, <1=Easy, >1=Hard
+## Path to the navigation sound file
+const UI_NAV_SOUND_PATH: String = "res://files/sounds/sfx/ui_navigation.wav"
 
 # Add the resource reference here
 var settings: GameSettingsResource
@@ -37,9 +30,6 @@ var _is_loading_settings: bool = false  # Guard flag
 
 ## Preloaded stream to prevent disk I/O lag during fast menu navigation.
 var _ui_nav_stream: AudioStream = preload(UI_NAV_SOUND_PATH)
-
-## Path to the navigation sound file
-const UI_NAV_SOUND_PATH: String = "res://files/sounds/sfx/ui_navigation.wav"
 
 
 func _ready() -> void:
