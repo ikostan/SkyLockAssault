@@ -22,6 +22,8 @@ extends Node
 @export var weapon_muted: bool
 @export var rotors_volume: float
 @export var rotors_muted: bool
+@export var menu_volume: float
+@export var menu_muted: bool
 
 var current_config_path: String = Settings.CONFIG_PATH
 
@@ -68,20 +70,25 @@ func set_bus_state(bus_name: String, volume: float, muted: bool) -> void:
 ## :type bus_name: String
 ## :rtype: float
 func get_volume(bus_name: String) -> float:
+	var current_vol: float = 0.0
+
 	match bus_name:
 		AudioConstants.BUS_MASTER:
-			return master_volume
+			current_vol = master_volume
 		AudioConstants.BUS_MUSIC:
-			return music_volume
+			current_vol = music_volume
 		AudioConstants.BUS_SFX:
-			return sfx_volume
+			current_vol = sfx_volume
 		AudioConstants.BUS_SFX_WEAPON:
-			return weapon_volume
+			current_vol = weapon_volume
 		AudioConstants.BUS_SFX_ROTORS:
-			return rotors_volume
+			current_vol = rotors_volume
+		AudioConstants.BUS_SFX_MENU:
+			current_vol = menu_volume
 		_:
 			Globals.log_message("Unknown bus for get_volume: " + bus_name, Globals.LogLevel.WARNING)
-			return 0.0
+
+	return current_vol
 
 
 ## Set volume for a bus
@@ -120,6 +127,11 @@ func set_volume(bus_name: String, vol: float) -> void:
 			Globals.log_message(
 				"Rotors Volume Level in AudioManager: " + str(vol), Globals.LogLevel.DEBUG
 			)
+		AudioConstants.BUS_SFX_MENU:
+			menu_volume = vol
+			Globals.log_message(
+				"Menu Volume Level in AudioManager: " + str(vol), Globals.LogLevel.DEBUG
+			)
 		_:
 			Globals.log_message(
 				"Unsupported bus in set_volume match (check config drift): " + bus_name,
@@ -132,20 +144,25 @@ func set_volume(bus_name: String, vol: float) -> void:
 ## :type bus_name: String
 ## :rtype: bool
 func get_muted(bus_name: String) -> bool:
+	var is_muted: bool = false
+
 	match bus_name:
 		AudioConstants.BUS_MASTER:
-			return master_muted
+			is_muted = master_muted
 		AudioConstants.BUS_MUSIC:
-			return music_muted
+			is_muted = music_muted
 		AudioConstants.BUS_SFX:
-			return sfx_muted
+			is_muted = sfx_muted
 		AudioConstants.BUS_SFX_WEAPON:
-			return weapon_muted
+			is_muted = weapon_muted
 		AudioConstants.BUS_SFX_ROTORS:
-			return rotors_muted
+			is_muted = rotors_muted
+		AudioConstants.BUS_SFX_MENU:
+			is_muted = menu_muted
 		_:
 			Globals.log_message("Unknown bus for get_muted: " + bus_name, Globals.LogLevel.WARNING)
-			return false
+
+	return is_muted
 
 
 ## Set muted state for a bus
@@ -166,6 +183,8 @@ func set_muted(bus_name: String, muted: bool) -> void:
 			weapon_muted = muted
 		AudioConstants.BUS_SFX_ROTORS:
 			rotors_muted = muted
+		AudioConstants.BUS_SFX_MENU:
+			menu_muted = muted
 		_:
 			Globals.log_message("Unknown bus for set_muted: " + bus_name, Globals.LogLevel.WARNING)
 

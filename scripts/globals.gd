@@ -8,15 +8,8 @@ extends Node
 
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 
-# Shared constants
-## Device-specific remap prompts to avoid layout shift.
-# const REMAP_PROMPT_TEXT: String = "Press a key or controller button/axis..."
-# const REMAP_PROMPT_KEYBOARD: String = "Press a key..."
-# const REMAP_PROMPT_GAMEPAD: String = "Press a gamepad button/axis..."
-
-# @export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
-# @export var enable_debug_logging: bool = false  # Toggle in Inspector or settings
-# @export var difficulty: float = 1.0  # Multiplier: 1.0=Normal, <1=Easy, >1=Hard
+## Path to the navigation sound file
+const UI_NAV_SOUND_PATH: String = "res://files/sounds/sfx/ui_navigation.wav"
 
 # Add the resource reference here
 var settings: GameSettingsResource
@@ -34,6 +27,9 @@ var next_scene: String = ""  # Path to the next scene to load via loading screen
 ## Updated when player toggles Keyboard/Gamepad in Key Mapping.
 var current_input_device: String = "keyboard"  # "keyboard" or "gamepad"
 var _is_loading_settings: bool = false  # Guard flag
+
+## Preloaded stream to prevent disk I/O lag during fast menu navigation.
+var _ui_nav_stream: AudioStream = preload(UI_NAV_SOUND_PATH)
 
 
 func _ready() -> void:
@@ -335,3 +331,35 @@ static func get_game_version() -> String:
 # For tests only—avoids direct writes in prod
 static func set_game_version_for_tests(value: String) -> void:
 	ProjectSettings.set_setting("application/config/version", value)
+
+
+## Use _unhandled_input to intercept navigation events not consumed by the GUI. [cite: 139]
+## This ensures the sound plays only when a movement actually occurs.
+func _unhandled_input(event: InputEvent) -> void:
+	# Target Actions: ui_up, ui_down, ui_left, ui_right, ui_focus_next, ui_focus_prev.
+	if (
+		event.is_action_pressed("ui_up")
+		or event.is_action_pressed("ui_down")
+		or event.is_action_pressed("ui_left")
+		or event.is_action_pressed("ui_right")
+		or event.is_action_pressed("ui_focus_next")
+		or event.is_action_pressed("ui_focus_prev")
+	):
+		_play_ui_navigation_sfx()
+
+
+## Internal helper to play the navigation sound through the dedicated Menu SFX bus.
+func _play_ui_navigation_sfx() -> void:
+	# Create a temporary player for the one-shot sound
+	var sfx_player := AudioStreamPlayer.new()
+	add_child(sfx_player)
+
+	sfx_player.stream = _ui_nav_stream
+
+	# Route to BUS_SFX_MENU to respect the player's Menu volume settings. [cite: 104, 114]
+	sfx_player.bus = AudioConstants.BUS_SFX_MENU
+
+	sfx_player.play()
+
+	# Memory management: Clean up the node once the sound finishes playing.
+	sfx_player.finished.connect(sfx_player.queue_free)
