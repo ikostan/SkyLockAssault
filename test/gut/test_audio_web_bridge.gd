@@ -35,7 +35,10 @@ func _create_active_bridge() -> Node:
 	
 	# 2. Mock JavaScriptBridgeWrapper and Window
 	var mock_js_bridge: Variant = double(JavaScriptBridgeWrapper).new()
-	var mock_window: Dictionary = {} # Dictionary acts as the JS window object
+	
+	# FIX: An empty dictionary {} evaluates to false in Godot 4!
+	# We must include a dummy key so 'if not js_window:' evaluates to true.
+	var mock_window: Dictionary = {"is_valid_mock": true} 
 	stub(mock_js_bridge, "get_interface").to_return(mock_window)
 	
 	# Stub the create_callback to just return a dummy string indicating success
@@ -56,7 +59,9 @@ func _create_spy_bridge() -> Variant:
 	bridge.os_wrapper = mock_os
 	
 	var mock_js_bridge: Variant = double(JavaScriptBridgeWrapper).new()
-	var mock_window: Dictionary = {} 
+	
+	# FIX: Make the mock truthy
+	var mock_window: Dictionary = {"is_valid_mock": true} 
 	stub(mock_js_bridge, "get_interface").to_return(mock_window)
 	stub(mock_js_bridge, "create_callback").to_return("mock_callback")
 	bridge.js_bridge_wrapper = mock_js_bridge
@@ -123,9 +128,9 @@ func test_tc_awb_04_toggle_dom_visibility_false() -> void:
 	var bridge: Node = _create_active_bridge()
 	bridge.toggle_dom_visibility(false)
 	
-	# Verify eval was executed exactly 14 times (once for each element)
-	assert_call_count(bridge.js_bridge_wrapper, "eval", 14)
-	assert_called(bridge.js_bridge_wrapper, "eval", ["document.getElementById('master-slider').style.display = 'none';"])
+	# Verify eval was executed exactly 14 times
+	assert_called_count(bridge.js_bridge_wrapper.eval, 14)
+	assert_called(bridge.js_bridge_wrapper.eval.bind("document.getElementById('master-slider').style.display = 'none';", false))
 
 
 func test_tc_awb_05_toggle_dom_visibility_true() -> void:
@@ -136,8 +141,8 @@ func test_tc_awb_05_toggle_dom_visibility_true() -> void:
 	bridge.toggle_dom_visibility(true)
 	
 	# 14 UI elements toggled to 'block' + 6 Bus Volumes Synced + 6 Bus Mutes Synced = 26 evals
-	assert_call_count(bridge.js_bridge_wrapper, "eval", 26)
-	assert_called(bridge.js_bridge_wrapper, "eval", ["document.getElementById('master-slider').style.display = 'block';"])
+	assert_called_count(bridge.js_bridge_wrapper.eval, 26)
+	assert_called(bridge.js_bridge_wrapper.eval.bind("document.getElementById('master-slider').style.display = 'block';", false))
 
 # ==========================================
 # GODOT -> JS TESTS
@@ -150,7 +155,7 @@ func test_tc_awb_06_godot_to_js_volume_changed() -> void:
 	var bridge: Node = _create_active_bridge()
 	
 	AudioManager.volume_changed.emit(AudioConstants.BUS_MUSIC, 0.5)
-	assert_called(bridge.js_bridge_wrapper, "eval", ["document.getElementById('music-slider').value = 0.5"])
+	assert_called(bridge.js_bridge_wrapper.eval.bind("document.getElementById('music-slider').value = 0.5", false))
 
 
 func test_tc_awb_07_godot_to_js_mute_toggled() -> void:
@@ -160,7 +165,7 @@ func test_tc_awb_07_godot_to_js_mute_toggled() -> void:
 	var bridge: Node = _create_active_bridge()
 	
 	AudioManager.mute_toggled.emit(AudioConstants.BUS_SFX, true)
-	assert_called(bridge.js_bridge_wrapper, "eval", ["document.getElementById('mute-sfx').checked = false"])
+	assert_called(bridge.js_bridge_wrapper.eval.bind("document.getElementById('mute-sfx').checked = false", false))
 
 # ==========================================
 # JS -> GODOT TESTS
