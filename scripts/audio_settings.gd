@@ -66,12 +66,48 @@ func _ready() -> void:
 		sfx_warning_dialog.canceled.connect(_reset_sfx_warning_shown)
 
 	# --- Connect UI Signals ---
-	_connect_bus_ui(mute_master, master_slider, _on_master_mute_toggled, _on_master_volume_control_gui_input, AudioManager.master_muted)
-	_connect_bus_ui(mute_music, music_slider, _on_music_mute_toggled, _on_music_volume_control_gui_input, AudioManager.music_muted)
-	_connect_bus_ui(mute_sfx, sfx_slider, _on_sfx_mute_toggled, _on_sfx_volume_control_gui_input, AudioManager.sfx_muted)
-	_connect_bus_ui(mute_weapon, weapon_slider, _on_weapon_mute_toggled, _on_weapon_volume_control_gui_input, AudioManager.weapon_muted)
-	_connect_bus_ui(mute_rotor, rotor_slider, _on_rotor_mute_toggled, _on_rotor_volume_control_gui_input, AudioManager.rotors_muted)
-	_connect_bus_ui(mute_menu, menu_slider, _on_menu_mute_toggled, _on_menu_volume_control_gui_input, AudioManager.menu_muted)
+	_connect_bus_ui(
+		mute_master,
+		master_slider,
+		_on_master_mute_toggled,
+		_on_master_volume_control_gui_input,
+		AudioManager.master_muted
+	)
+	_connect_bus_ui(
+		mute_music,
+		music_slider,
+		_on_music_mute_toggled,
+		_on_music_volume_control_gui_input,
+		AudioManager.music_muted
+	)
+	_connect_bus_ui(
+		mute_sfx,
+		sfx_slider,
+		_on_sfx_mute_toggled,
+		_on_sfx_volume_control_gui_input,
+		AudioManager.sfx_muted
+	)
+	_connect_bus_ui(
+		mute_weapon,
+		weapon_slider,
+		_on_weapon_mute_toggled,
+		_on_weapon_volume_control_gui_input,
+		AudioManager.weapon_muted
+	)
+	_connect_bus_ui(
+		mute_rotor,
+		rotor_slider,
+		_on_rotor_mute_toggled,
+		_on_rotor_volume_control_gui_input,
+		AudioManager.rotors_muted
+	)
+	_connect_bus_ui(
+		mute_menu,
+		menu_slider,
+		_on_menu_mute_toggled,
+		_on_menu_volume_control_gui_input,
+		AudioManager.menu_muted
+	)
 
 	# Connect specific mute button warning interceptors
 	mute_music.gui_input.connect(_on_music_mute_gui_input)
@@ -86,9 +122,9 @@ func _ready() -> void:
 
 	tree_exited.connect(_on_tree_exited)
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	
+
 	_sync_ui_from_manager()
-	
+
 	# --- WEB BRIDGE INTEGRATION ---
 	if has_node("/root/AudioWebBridge"):
 		var web_bridge := get_node("/root/AudioWebBridge")
@@ -97,11 +133,32 @@ func _ready() -> void:
 		web_bridge.web_reset_requested.connect(_on_audio_reset_button_pressed)
 
 	# Initial Focus
-	var menu_controls: Array[Control] = [master_slider, mute_master, music_slider, mute_music, sfx_slider, mute_sfx, weapon_slider, mute_weapon, rotor_slider, mute_rotor, menu_slider, mute_menu, audio_back_button, audio_reset_button]
+	var menu_controls: Array[Control] = [
+		master_slider,
+		mute_master,
+		music_slider,
+		mute_music,
+		sfx_slider,
+		mute_sfx,
+		weapon_slider,
+		mute_weapon,
+		rotor_slider,
+		mute_rotor,
+		menu_slider,
+		mute_menu,
+		audio_back_button,
+		audio_reset_button
+	]
 	Globals.ensure_initial_focus(master_slider, menu_controls, "Audio Settings")
 
 
-func _connect_bus_ui(mute_btn: CheckButton, slider: HSlider, mute_callback: Callable, gui_callback: Callable, is_muted: bool) -> void:
+func _connect_bus_ui(
+	mute_btn: CheckButton,
+	slider: HSlider,
+	mute_callback: Callable,
+	gui_callback: Callable,
+	is_muted: bool
+) -> void:
 	if not mute_btn.toggled.is_connected(mute_callback):
 		mute_btn.toggled.connect(mute_callback)
 	mute_btn.button_pressed = not is_muted
@@ -117,10 +174,14 @@ func _update_label_colors() -> void:
 	var yellow := Color("f5f50d")
 	var white := Color("ffffff")
 
-	master_label.modulate = yellow if (master_slider.has_focus() or mute_master.has_focus()) else white
+	master_label.modulate = (
+		yellow if (master_slider.has_focus() or mute_master.has_focus()) else white
+	)
 	music_label.modulate = yellow if (music_slider.has_focus() or mute_music.has_focus()) else white
 	sfx_label.modulate = yellow if (sfx_slider.has_focus() or mute_sfx.has_focus()) else white
-	weapon_label.modulate = yellow if (weapon_slider.has_focus() or mute_weapon.has_focus()) else white
+	weapon_label.modulate = (
+		yellow if (weapon_slider.has_focus() or mute_weapon.has_focus()) else white
+	)
 	rotor_label.modulate = yellow if (rotor_slider.has_focus() or mute_rotor.has_focus()) else white
 	menu_label.modulate = yellow if (menu_slider.has_focus() or mute_menu.has_focus()) else white
 
@@ -131,14 +192,17 @@ func _update_label_colors() -> void:
 func _on_master_volume_control_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and AudioManager.master_muted:
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			mute_master.button_pressed = true 
-			get_viewport().set_input_as_handled() 
+			mute_master.button_pressed = true
+			get_viewport().set_input_as_handled()
+
 
 func _on_master_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.set_muted(AudioConstants.BUS_MASTER, not toggled_on)
 	master_slider.editable = not AudioManager.master_muted
 	_update_other_controls_ui()
-	AudioManager.apply_volume_to_bus(AudioConstants.BUS_MASTER, AudioManager.master_volume, AudioManager.master_muted)
+	AudioManager.apply_volume_to_bus(
+		AudioConstants.BUS_MASTER, AudioManager.master_volume, AudioManager.master_muted
+	)
 	AudioManager.save_volumes()
 
 
@@ -146,90 +210,174 @@ func _on_master_mute_toggled(toggled_on: bool) -> void:
 # MUSIC VOLUME
 # ==========================================
 func _on_music_volume_control_gui_input(event: InputEvent) -> void:
-	_handle_slider_gui_input(event, AudioManager.master_muted, false, AudioManager.music_muted, mute_music, master_warning_dialog, sfx_warning_dialog)
+	_handle_slider_gui_input(
+		event,
+		AudioManager.master_muted,
+		false,
+		AudioManager.music_muted,
+		mute_music,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
+
 
 func _on_music_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.set_muted(AudioConstants.BUS_MUSIC, not toggled_on)
 	music_slider.editable = not AudioManager.music_muted
-	AudioManager.apply_volume_to_bus(AudioConstants.BUS_MUSIC, AudioManager.music_volume, AudioManager.music_muted)
+	AudioManager.apply_volume_to_bus(
+		AudioConstants.BUS_MUSIC, AudioManager.music_volume, AudioManager.music_muted
+	)
 	AudioManager.save_volumes()
 
+
 func _on_music_mute_gui_input(event: InputEvent) -> void:
-	_handle_mute_gui_input(event, AudioManager.master_muted, false, master_warning_dialog, sfx_warning_dialog)
+	_handle_mute_gui_input(
+		event, AudioManager.master_muted, false, master_warning_dialog, sfx_warning_dialog
+	)
 
 
 # ==========================================
 # SFX VOLUME
 # ==========================================
 func _on_sfx_volume_control_gui_input(event: InputEvent) -> void:
-	_handle_slider_gui_input(event, AudioManager.master_muted, false, AudioManager.sfx_muted, mute_sfx, master_warning_dialog, sfx_warning_dialog)
+	_handle_slider_gui_input(
+		event,
+		AudioManager.master_muted,
+		false,
+		AudioManager.sfx_muted,
+		mute_sfx,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
+
 
 func _on_sfx_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.set_muted(AudioConstants.BUS_SFX, not toggled_on)
 	sfx_slider.editable = not AudioManager.sfx_muted
 	_update_sfx_controls_ui()
-	AudioManager.apply_volume_to_bus(AudioConstants.BUS_SFX, AudioManager.sfx_volume, AudioManager.sfx_muted)
+	AudioManager.apply_volume_to_bus(
+		AudioConstants.BUS_SFX, AudioManager.sfx_volume, AudioManager.sfx_muted
+	)
 	AudioManager.save_volumes()
 
+
 func _on_sfx_mute_gui_input(event: InputEvent) -> void:
-	_handle_mute_gui_input(event, AudioManager.master_muted, false, master_warning_dialog, sfx_warning_dialog)
+	_handle_mute_gui_input(
+		event, AudioManager.master_muted, false, master_warning_dialog, sfx_warning_dialog
+	)
 
 
 # ==========================================
 # WEAPON VOLUME
 # ==========================================
 func _on_weapon_volume_control_gui_input(event: InputEvent) -> void:
-	_handle_slider_gui_input(event, AudioManager.master_muted, AudioManager.sfx_muted, AudioManager.weapon_muted, mute_weapon, master_warning_dialog, sfx_warning_dialog)
+	_handle_slider_gui_input(
+		event,
+		AudioManager.master_muted,
+		AudioManager.sfx_muted,
+		AudioManager.weapon_muted,
+		mute_weapon,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
+
 
 func _on_weapon_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.set_muted(AudioConstants.BUS_SFX_WEAPON, not toggled_on)
 	weapon_slider.editable = not AudioManager.weapon_muted
-	AudioManager.apply_volume_to_bus(AudioConstants.BUS_SFX_WEAPON, AudioManager.weapon_volume, AudioManager.weapon_muted)
+	AudioManager.apply_volume_to_bus(
+		AudioConstants.BUS_SFX_WEAPON, AudioManager.weapon_volume, AudioManager.weapon_muted
+	)
 	AudioManager.save_volumes()
 
+
 func _on_weapon_mute_gui_input(event: InputEvent) -> void:
-	_handle_mute_gui_input(event, AudioManager.master_muted, AudioManager.sfx_muted, master_warning_dialog, sfx_warning_dialog)
+	_handle_mute_gui_input(
+		event,
+		AudioManager.master_muted,
+		AudioManager.sfx_muted,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
 
 
 # ==========================================
 # ROTORS VOLUME
 # ==========================================
 func _on_rotor_volume_control_gui_input(event: InputEvent) -> void:
-	_handle_slider_gui_input(event, AudioManager.master_muted, AudioManager.sfx_muted, AudioManager.rotors_muted, mute_rotor, master_warning_dialog, sfx_warning_dialog)
+	_handle_slider_gui_input(
+		event,
+		AudioManager.master_muted,
+		AudioManager.sfx_muted,
+		AudioManager.rotors_muted,
+		mute_rotor,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
+
 
 func _on_rotor_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.set_muted(AudioConstants.BUS_SFX_ROTORS, not toggled_on)
 	rotor_slider.editable = not AudioManager.rotors_muted
-	AudioManager.apply_volume_to_bus(AudioConstants.BUS_SFX_ROTORS, AudioManager.rotors_volume, AudioManager.rotors_muted)
+	AudioManager.apply_volume_to_bus(
+		AudioConstants.BUS_SFX_ROTORS, AudioManager.rotors_volume, AudioManager.rotors_muted
+	)
 	AudioManager.save_volumes()
 
+
 func _on_rotor_mute_gui_input(event: InputEvent) -> void:
-	_handle_mute_gui_input(event, AudioManager.master_muted, AudioManager.sfx_muted, master_warning_dialog, sfx_warning_dialog)
+	_handle_mute_gui_input(
+		event,
+		AudioManager.master_muted,
+		AudioManager.sfx_muted,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
 
 
 # ==========================================
 # MENU VOLUME
 # ==========================================
 func _on_menu_volume_control_gui_input(event: InputEvent) -> void:
-	_handle_slider_gui_input(event, AudioManager.master_muted, AudioManager.sfx_muted, AudioManager.menu_muted, mute_menu, master_warning_dialog, sfx_warning_dialog)
+	_handle_slider_gui_input(
+		event,
+		AudioManager.master_muted,
+		AudioManager.sfx_muted,
+		AudioManager.menu_muted,
+		mute_menu,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
+
 
 func _on_menu_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.set_muted(AudioConstants.BUS_SFX_MENU, not toggled_on)
 	menu_slider.editable = not AudioManager.menu_muted
-	AudioManager.apply_volume_to_bus(AudioConstants.BUS_SFX_MENU, AudioManager.menu_volume, AudioManager.menu_muted)
+	AudioManager.apply_volume_to_bus(
+		AudioConstants.BUS_SFX_MENU, AudioManager.menu_volume, AudioManager.menu_muted
+	)
 	AudioManager.save_volumes()
 
+
 func _on_menu_mute_gui_input(event: InputEvent) -> void:
-	_handle_mute_gui_input(event, AudioManager.master_muted, AudioManager.sfx_muted, master_warning_dialog, sfx_warning_dialog)
+	_handle_mute_gui_input(
+		event,
+		AudioManager.master_muted,
+		AudioManager.sfx_muted,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
 
 
 # ==========================================
 # UI UPDATES & NAVIGATION
 # ==========================================
 
+
 func _on_audio_reset_button_pressed() -> void:
 	AudioManager.reset_volumes()
 	_sync_ui_from_manager()
+
 
 func _update_other_controls_ui() -> void:
 	var is_master_muted: bool = AudioManager.master_muted
@@ -239,6 +387,7 @@ func _update_other_controls_ui() -> void:
 	sfx_slider.editable = not is_master_muted and not AudioManager.sfx_muted
 	_update_sfx_controls_ui()
 
+
 func _update_sfx_controls_ui() -> void:
 	var sfx_controls_locked: bool = AudioManager.sfx_muted or AudioManager.master_muted
 	mute_weapon.disabled = sfx_controls_locked
@@ -247,6 +396,7 @@ func _update_sfx_controls_ui() -> void:
 	rotor_slider.editable = not sfx_controls_locked and not AudioManager.rotors_muted
 	mute_menu.disabled = sfx_controls_locked
 	menu_slider.editable = not sfx_controls_locked and not AudioManager.menu_muted
+
 
 func _sync_ui_from_manager() -> void:
 	mute_master.set_pressed_no_signal(not AudioManager.master_muted)
@@ -275,6 +425,7 @@ func _sync_ui_from_manager() -> void:
 
 	_update_other_controls_ui()
 
+
 func _on_audio_back_button_pressed() -> void:
 	var hidden_menu_found: bool = false
 	if not Globals.hidden_menus.is_empty():
@@ -284,21 +435,22 @@ func _on_audio_back_button_pressed() -> void:
 			hidden_menu_found = true
 			if prev_menu.has_method("grab_focus_on_audio_settings_button"):
 				prev_menu.call("grab_focus_on_audio_settings_button")
-			elif prev_menu.name == "Panel" or prev_menu is Panel: 
+			elif prev_menu.name == "Panel" or prev_menu is Panel:
 				var start_button: Button = prev_menu.get_node_or_null("VBoxContainer/StartButton")
 				if is_instance_valid(start_button):
 					start_button.call_deferred("call_deferred", "call_deferred", "grab_focus")
-					
+
 	if has_node("/root/AudioWebBridge"):
 		get_node("/root/AudioWebBridge").toggle_dom_visibility(false)
-		
+
 	_intentional_exit = true
 	queue_free()
+
 
 func _on_tree_exited() -> void:
 	if _intentional_exit:
 		return
-		
+
 	if has_node("/root/AudioWebBridge"):
 		get_node("/root/AudioWebBridge").toggle_dom_visibility(false)
 
@@ -312,8 +464,19 @@ func _on_tree_exited() -> void:
 # WARNING DIALOG HELPERS
 # ==========================================
 
-func _handle_slider_gui_input(event: InputEvent, master_muted: bool, sfx_muted: bool, bus_muted: bool, mute_button: CheckButton, master_dialog: AcceptDialog, sfx_dialog: AcceptDialog) -> void:
-	var is_mouse_click: bool = (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT)
+
+func _handle_slider_gui_input(
+	event: InputEvent,
+	master_muted: bool,
+	sfx_muted: bool,
+	bus_muted: bool,
+	mute_button: CheckButton,
+	master_dialog: AcceptDialog,
+	sfx_dialog: AcceptDialog
+) -> void:
+	var is_mouse_click: bool = (
+		event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	)
 	var is_ui_accept: bool = event.is_action_pressed("ui_accept")
 
 	if is_mouse_click or is_ui_accept:
@@ -329,8 +492,16 @@ func _handle_slider_gui_input(event: InputEvent, master_muted: bool, sfx_muted: 
 			mute_button.button_pressed = true
 
 
-func _handle_mute_gui_input(event: InputEvent, master_muted: bool, sfx_muted: bool, master_dialog: AcceptDialog, sfx_dialog: AcceptDialog) -> void:
-	var is_mouse_click: bool = (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT)
+func _handle_mute_gui_input(
+	event: InputEvent,
+	master_muted: bool,
+	sfx_muted: bool,
+	master_dialog: AcceptDialog,
+	sfx_dialog: AcceptDialog
+) -> void:
+	var is_mouse_click: bool = (
+		event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	)
 	var is_ui_accept: bool = event.is_action_pressed("ui_accept")
 
 	if is_mouse_click or is_ui_accept:
@@ -343,8 +514,10 @@ func _handle_mute_gui_input(event: InputEvent, master_muted: bool, sfx_muted: bo
 			sfx_warning_shown = true
 			get_viewport().set_input_as_handled()
 
+
 func _reset_master_warning_shown() -> void:
 	master_warning_shown = false
+
 
 func _reset_sfx_warning_shown() -> void:
 	sfx_warning_shown = false
