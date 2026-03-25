@@ -35,11 +35,12 @@ func _create_active_bridge() -> Node:
 	
 	# 2. Mock JavaScriptBridgeWrapper and Window
 	var mock_js_bridge := mock(JavaScriptBridgeWrapper)
-	var mock_window = {} # Dictionary acts as the JS window object
+	var mock_window := {} # Dictionary acts as the JS window object
 	do_return(mock_window).on(mock_js_bridge).get_interface("window")
 	
 	# Stub the create_callback to just return a dummy string indicating success
-	do_return("mock_callback").on(mock_js_bridge).create_callback(any_class(Callable))
+	# do_return("mock_callback").on(mock_js_bridge).create_callback(any_class(Callable))
+	do_return("mock_callback").on(mock_js_bridge).create_callback(any())
 	
 	bridge.js_bridge_wrapper = mock_js_bridge
 	
