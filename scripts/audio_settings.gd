@@ -133,7 +133,7 @@ func _ready() -> void:
 		_web_bridge.toggle_dom_visibility(true)
 		_web_bridge.web_back_requested.connect(_on_audio_back_button_pressed)
 		_web_bridge.web_reset_requested.connect(_on_audio_reset_button_pressed)
-	
+
 	# Initial Focus
 	var menu_controls: Array[Control] = [
 		master_slider,
@@ -444,7 +444,7 @@ func _on_audio_back_button_pressed() -> void:
 
 	if is_instance_valid(_web_bridge):
 		_web_bridge.toggle_dom_visibility(false)
-		
+
 	_intentional_exit = true
 	queue_free()
 
@@ -452,7 +452,7 @@ func _on_audio_back_button_pressed() -> void:
 func _on_tree_exited() -> void:
 	if _intentional_exit:
 		return
-		
+
 	if is_instance_valid(_web_bridge):
 		_web_bridge.toggle_dom_visibility(false)
 
