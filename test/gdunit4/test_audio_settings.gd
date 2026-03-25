@@ -10,8 +10,10 @@ extends GdUnitTestSuite
 
 var audio_menu: Control
 
+
 func before_test() -> void:
 	Globals.hidden_menus = []
+
 
 func after_test() -> void:
 	if is_instance_valid(audio_menu):
