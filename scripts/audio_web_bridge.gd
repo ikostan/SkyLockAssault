@@ -410,20 +410,15 @@ func _validate_mute_args(args: Array) -> Variant:
 ## :type bus_name: String
 ## :rtype: String
 func _get_slider_id_for_bus(bus_name: String) -> String:
-	match bus_name:
-		AudioConstants.BUS_MASTER:
-			return "master-slider"
-		AudioConstants.BUS_MUSIC:
-			return "music-slider"
-		AudioConstants.BUS_SFX:
-			return "sfx-slider"
-		AudioConstants.BUS_SFX_WEAPON:
-			return "weapon-slider"
-		AudioConstants.BUS_SFX_ROTORS:
-			return "rotors-slider"
-		AudioConstants.BUS_SFX_MENU:
-			return "menu-slider"
-	return ""
+	var mapping: Dictionary = {
+		AudioConstants.BUS_MASTER: "master-slider",
+		AudioConstants.BUS_MUSIC: "music-slider",
+		AudioConstants.BUS_SFX: "sfx-slider",
+		AudioConstants.BUS_SFX_WEAPON: "weapon-slider",
+		AudioConstants.BUS_SFX_ROTORS: "rotors-slider",
+		AudioConstants.BUS_SFX_MENU: "menu-slider"
+	}
+	return mapping.get(bus_name, "")
 
 
 ## Maps an internal Godot bus name to its corresponding HTML checkbox element ID.
@@ -431,17 +426,12 @@ func _get_slider_id_for_bus(bus_name: String) -> String:
 ## :type bus_name: String
 ## :rtype: String
 func _get_mute_id_for_bus(bus_name: String) -> String:
-	match bus_name:
-		AudioConstants.BUS_MASTER:
-			return "mute-master"
-		AudioConstants.BUS_MUSIC:
-			return "mute-music"
-		AudioConstants.BUS_SFX:
-			return "mute-sfx"
-		AudioConstants.BUS_SFX_WEAPON:
-			return "mute-weapon"
-		AudioConstants.BUS_SFX_ROTORS:
-			return "mute-rotors"
-		AudioConstants.BUS_SFX_MENU:
-			return "mute-menu"
-	return ""
+	var mapping: Dictionary = {
+		AudioConstants.BUS_MASTER: "mute-master",
+		AudioConstants.BUS_MUSIC: "mute-music",
+		AudioConstants.BUS_SFX: "mute-sfx",
+		AudioConstants.BUS_SFX_WEAPON: "mute-weapon",
+		AudioConstants.BUS_SFX_ROTORS: "mute-rotors",
+		AudioConstants.BUS_SFX_MENU: "mute-menu"
+	}
+	return mapping.get(bus_name, "")
