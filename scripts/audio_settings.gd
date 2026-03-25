@@ -13,6 +13,8 @@ var master_warning_shown: bool = false
 var sfx_warning_shown: bool = false
 
 var _intentional_exit: bool = false
+# Web Bridge Reference
+var _web_bridge: Node = null
 
 # Master Volume Controls
 @onready var master_slider: HSlider = $Panel/VolumeControls/Master/HSlider
@@ -126,12 +128,12 @@ func _ready() -> void:
 	_sync_ui_from_manager()
 
 	# --- WEB BRIDGE INTEGRATION ---
-	if has_node("/root/AudioWebBridge"):
-		var web_bridge := get_node("/root/AudioWebBridge")
-		web_bridge.toggle_dom_visibility(true)
-		web_bridge.web_back_requested.connect(_on_audio_back_button_pressed)
-		web_bridge.web_reset_requested.connect(_on_audio_reset_button_pressed)
-
+	if is_inside_tree() and has_node("/root/AudioWebBridge"):
+		_web_bridge = get_node("/root/AudioWebBridge")
+		_web_bridge.toggle_dom_visibility(true)
+		_web_bridge.web_back_requested.connect(_on_audio_back_button_pressed)
+		_web_bridge.web_reset_requested.connect(_on_audio_reset_button_pressed)
+	
 	# Initial Focus
 	var menu_controls: Array[Control] = [
 		master_slider,
@@ -440,9 +442,9 @@ func _on_audio_back_button_pressed() -> void:
 				if is_instance_valid(start_button):
 					start_button.call_deferred("call_deferred", "call_deferred", "grab_focus")
 
-	if has_node("/root/AudioWebBridge"):
-		get_node("/root/AudioWebBridge").toggle_dom_visibility(false)
-
+	if is_instance_valid(_web_bridge):
+		_web_bridge.toggle_dom_visibility(false)
+		
 	_intentional_exit = true
 	queue_free()
 
@@ -450,9 +452,9 @@ func _on_audio_back_button_pressed() -> void:
 func _on_tree_exited() -> void:
 	if _intentional_exit:
 		return
-
-	if has_node("/root/AudioWebBridge"):
-		get_node("/root/AudioWebBridge").toggle_dom_visibility(false)
+		
+	if is_instance_valid(_web_bridge):
+		_web_bridge.toggle_dom_visibility(false)
 
 	if not Globals.hidden_menus.is_empty():
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
