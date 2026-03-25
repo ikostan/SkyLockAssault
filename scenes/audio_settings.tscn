@@ -149,12 +149,16 @@ focus_previous = NodePath("../SFX")
 custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 focus_neighbor_top = NodePath("../SFXWeapon")
-focus_neighbor_bottom = NodePath("../../BtnContainer/AudioBackButton")
-focus_next = NodePath("../../BtnContainer/AudioBackButton")
+focus_neighbor_bottom = NodePath("../SFXMenu")
+focus_next = NodePath("../SFXMenu")
 focus_previous = NodePath("../SFXWeapon")
 
 [node name="SFXMenu" parent="Panel/VolumeControls" instance=ExtResource("8_a0ntd")]
 layout_mode = 2
+focus_neighbor_top = NodePath("../SFXRotors")
+focus_neighbor_bottom = NodePath("../../BtnContainer/AudioBackButton")
+focus_next = NodePath("../../BtnContainer/AudioBackButton")
+focus_previous = NodePath("../SFXRotors")
 
 [node name="BtnContainer" type="HBoxContainer" parent="Panel"]
 layout_mode = 1
