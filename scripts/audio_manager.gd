@@ -106,7 +106,7 @@ func set_volume(bus_name: String, vol: float) -> void:
 	if not AudioConstants.BUS_CONFIG.has(bus_name):
 		Globals.log_message("Unknown bus for set_volume: " + bus_name, Globals.LogLevel.WARNING)
 		return
-		
+
 	var success: bool = true
 	match bus_name:
 		AudioConstants.BUS_MASTER:
@@ -145,7 +145,7 @@ func set_volume(bus_name: String, vol: float) -> void:
 				Globals.LogLevel.ERROR
 			)
 			success = false
-			
+
 	# NEW: Emit the signal if the volume was successfully updated
 	if success:
 		volume_changed.emit(bus_name, vol)
@@ -201,7 +201,7 @@ func set_muted(bus_name: String, muted: bool) -> void:
 		_:
 			Globals.log_message("Unknown bus for set_muted: " + bus_name, Globals.LogLevel.WARNING)
 			success = false
-			
+
 	# NEW: Emit the signal if the mute state was successfully updated
 	if success:
 		mute_toggled.emit(bus_name, muted)
