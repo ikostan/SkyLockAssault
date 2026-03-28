@@ -152,42 +152,41 @@ func _ready() -> void:
 		audio_reset_button
 	]
 	Globals.ensure_initial_focus(master_slider, menu_controls, "Audio Settings")
-	
+
 	# 1. Listen for changes coming from Playwright/Web
 	AudioManager.volume_changed.connect(_on_global_volume_changed)
 	AudioManager.mute_toggled.connect(_on_global_mute_toggled)
-	
+
 	# Apply the hierarchy locks immediately when the menu opens
 	_update_ui_interactivity()
-
 
 
 ## Syncs the disabled/editable state of all UI elements based on the hierarchy rules
 func _update_ui_interactivity() -> void:
 	var is_master_muted: bool = AudioManager.master_muted
-	
+
 	# 1. MASTER HIERARCHY
 	master_slider.editable = not is_master_muted
-	
+
 	# 2. LEVEL 1 CHILDREN (Music & SFX)
 	# Mute buttons are disabled if Master is muted.
 	# Sliders are disabled if Master is muted OR their own bus is muted.
 	mute_music.disabled = is_master_muted
 	music_slider.editable = not (is_master_muted or AudioManager.music_muted)
-	
+
 	mute_sfx.disabled = is_master_muted
 	sfx_slider.editable = not (is_master_muted or AudioManager.sfx_muted)
-	
+
 	# 3. LEVEL 2 CHILDREN (SFX Sub-buses: Weapon, Rotors, Menu)
 	var is_sfx_hierarchy_muted: bool = is_master_muted or AudioManager.sfx_muted
-	
+
 	mute_weapon.disabled = is_sfx_hierarchy_muted
 	weapon_slider.editable = not (is_sfx_hierarchy_muted or AudioManager.weapon_muted)
-	
+
 	# Note: Double check your @onready var name for the rotors mute button (mute_rotors vs mute_rotor)
 	mute_rotor.disabled = is_sfx_hierarchy_muted
 	rotor_slider.editable = not (is_sfx_hierarchy_muted or AudioManager.rotors_muted)
-	
+
 	mute_menu.disabled = is_sfx_hierarchy_muted
 	menu_slider.editable = not (is_sfx_hierarchy_muted or AudioManager.menu_muted)
 
@@ -212,8 +211,8 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 ## Updates the visual Godot CheckButtons when Playwright mutes the AudioManager
 func _on_global_mute_toggled(bus_name: String, is_muted: bool) -> void:
 	# In your Godot UI, if a button is "pressed", it means the audio is UNMUTED.
-	var is_pressed: bool = not is_muted 
-	
+	var is_pressed: bool = not is_muted
+
 	match bus_name:
 		AudioConstants.BUS_MASTER:
 			mute_master.set_pressed_no_signal(is_pressed)
@@ -227,7 +226,7 @@ func _on_global_mute_toggled(bus_name: String, is_muted: bool) -> void:
 			mute_rotor.set_pressed_no_signal(is_pressed)
 		AudioConstants.BUS_SFX_MENU:
 			mute_menu.set_pressed_no_signal(is_pressed)
-			
+
 	# Refresh the UI locks after applying the new mute state
 	_update_ui_interactivity()
 
