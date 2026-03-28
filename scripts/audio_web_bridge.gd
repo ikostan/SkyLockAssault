@@ -204,6 +204,14 @@ func _on_toggle_mute_js(args: Array, bus_name: String) -> void:
 		return
 
 	var is_muted: bool = not bool(checked)  # Checkbox checked = unmuted
+
+	# --- RESTORED UI LOGGING ---
+	var log_name: String = bus_name.to_lower().replace("sfx_", "")
+	Globals.log_message(
+		"%s mute button toggled to: %s" % [log_name, str(bool(checked)).to_lower()],
+		Globals.LogLevel.DEBUG
+	)
+
 	AudioManager.set_muted(bus_name, is_muted)
 	AudioManager.apply_volume_to_bus(bus_name, AudioManager.get_volume(bus_name), is_muted)
 	AudioManager.save_volumes()
