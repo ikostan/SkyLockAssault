@@ -166,6 +166,9 @@ func _on_change_volume_js(args: Array, bus_name: String) -> void:
 
 	# Check parent mute states before allowing sub-bus adjustments
 	if bus_name != AudioConstants.BUS_MASTER and AudioManager.master_muted:
+		Globals.log_message(
+			"Warning dialog: Master muted, cannot adjust sub-volume", Globals.LogLevel.WARNING
+		)
 		return
 	if (
 		(
@@ -178,6 +181,9 @@ func _on_change_volume_js(args: Array, bus_name: String) -> void:
 		)
 		and AudioManager.sfx_muted
 	):
+		Globals.log_message(
+			"Warning dialog: SFX muted, cannot adjust sub-volume", Globals.LogLevel.WARNING
+		)
 		return
 
 	AudioManager.set_volume(bus_name, value)
