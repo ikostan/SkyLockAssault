@@ -143,7 +143,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
         page.wait_for_timeout(2500)
         new_logs = logs[pre_change_log_count:]
         assert any(
-            "master volume changed to: 0.5" in log["text"].lower() for log in new_logs
+            "applied loaded master volume to audioserver: 0.5" in log["text"].lower() for log in new_logs
         ), "Master volume change log not found"
         value = page.evaluate("document.getElementById('master-slider').value")
         assert value == "0.5", f"Master slider value not set to 0.5, got {value}"
@@ -186,7 +186,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
         value = page.evaluate("document.getElementById('music-slider').value")
         assert value == "0.3", f"Music slider value not set to 0.3, got {value}"
         assert any(
-            "music volume changed to: 0.3" in log["text"].lower() for log in new_logs
+            "applied loaded music volume to audioserver: 0.3" in log["text"].lower() for log in new_logs
         ), "Music volume change log not found"
 
         # VOL-04: Mute / unmute Music
@@ -227,7 +227,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
         value = page.evaluate("document.getElementById('sfx-slider').value")
         assert value == "0.8", f"SFX slider value not set to 0.8, got {value}"
         assert any(
-            "sfx volume level changed: 0.8" in log["text"].lower() for log in new_logs
+            "applied loaded sfx volume to audioserver: 0.8" in log["text"].lower() for log in new_logs
         ), "SFX volume change log not found"
         assert any(
             "sfx volume level in audiomanager: 0.8" in log["text"].lower()
@@ -275,7 +275,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
         value = page.evaluate("document.getElementById('weapon-slider').value")
         assert value == "0.2", f"Weapon slider value not set to 0.2, got {value}"
         assert any(
-            "weapon volume level changed: 0.2" in log["text"].lower()
+            "applied loaded sfx_weapon volume to audioserver: 0.2" in log["text"].lower()
             for log in new_logs
         ), "Weapon volume change log not found"
 
@@ -316,7 +316,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
         value = page.evaluate("document.getElementById('rotors-slider').value")
         assert value == "0.9", f"Rotors slider value not set to 0.9, got {value}"
         assert any(
-            "rotors volume level changed: 0.9" in log["text"].lower()
+            "applied loaded sfx_rotors volume to audioserver: 0.9" in log["text"].lower()
             for log in new_logs
         ), "Rotors volume change log not found"
 
@@ -347,6 +347,47 @@ def test_volume_sliders_mutes(page: Page) -> None:
             "rotors mute button toggled to: true" in log["text"].lower()
             for log in new_logs
         ), "Rotors unmute log not found"
+
+        # VOL-11: Adjust Menu volume slider
+        pre_change_log_count = len(logs)
+        page.wait_for_function("window.changeMenuVolume !== undefined", timeout=2500)
+        page.evaluate("window.changeMenuVolume([0.9])")
+        page.wait_for_timeout(2500)
+        new_logs = logs[pre_change_log_count:]
+        value = page.evaluate("document.getElementById('menu-slider').value")
+        assert value == "0.9", f"Menu slider value not set to 0.9, got {value}"
+        assert any(
+            "applied loaded sfx_menu volume to audioserver: 0.9" in log["text"].lower()
+            for log in new_logs
+        ), "Menu volume change log not found"
+
+        # VOL-12: Mute / unmute Menu
+        pre_change_log_count = len(logs)
+        page.wait_for_function("window.toggleMuteMenu !== undefined", timeout=2500)
+        page.evaluate("window.toggleMuteMenu([0])")
+        page.wait_for_timeout(2500)
+        new_logs = logs[pre_change_log_count:]
+        assert any(
+            "menu is muted" in log["text"].lower() for log in new_logs
+        ), "Menu mute log not found"
+        checked = page.evaluate("document.getElementById('mute-menu').checked")
+        assert not checked, "Menu mute not toggled to muted"
+        pre_change_log_count = len(logs)
+        page.wait_for_function("window.toggleMuteMenu !== undefined", timeout=2500)
+        page.evaluate("window.toggleMuteMenu([1])")
+        page.wait_for_timeout(2500)
+        new_logs = logs[pre_change_log_count:]
+        assert any(
+            "applied loaded sfx_menu volume to audioserver: 0.9"
+            in log["text"].lower()
+            for log in new_logs
+        ), "Menu unmute log not found"
+        checked = page.evaluate("document.getElementById('mute-menu').checked")
+        assert checked, "Menu mute not toggled to unmuted"
+        assert any(
+            "menu mute button toggled to: true" in log["text"].lower()
+            for log in new_logs
+        ), "Menu unmute log not found"
 
     except Exception as e:
         print(f"Test suite failed: {str(e)}")
