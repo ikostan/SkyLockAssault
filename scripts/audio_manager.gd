@@ -7,6 +7,11 @@
 
 extends Node
 
+# --- NEW SIGNALS FOR WEB BRIDGE & UI SYNC ---
+signal volume_changed(bus_name: String, volume: float)
+signal mute_toggled(bus_name: String, is_muted: bool)
+# --------------------------------------------
+
 @export_category("Master Volume")
 @export var master_volume: float
 @export var master_muted: bool
@@ -101,6 +106,8 @@ func set_volume(bus_name: String, vol: float) -> void:
 	if not AudioConstants.BUS_CONFIG.has(bus_name):
 		Globals.log_message("Unknown bus for set_volume: " + bus_name, Globals.LogLevel.WARNING)
 		return
+
+	var success: bool = true
 	match bus_name:
 		AudioConstants.BUS_MASTER:
 			master_volume = vol
@@ -137,6 +144,11 @@ func set_volume(bus_name: String, vol: float) -> void:
 				"Unsupported bus in set_volume match (check config drift): " + bus_name,
 				Globals.LogLevel.ERROR
 			)
+			success = false
+
+	# NEW: Emit the signal if the volume was successfully updated
+	if success:
+		volume_changed.emit(bus_name, vol)
 
 
 ## Get muted state for a bus
@@ -172,6 +184,7 @@ func get_muted(bus_name: String) -> bool:
 ## :type muted: bool
 ## :rtype: void
 func set_muted(bus_name: String, muted: bool) -> void:
+	var success: bool = true
 	match bus_name:
 		AudioConstants.BUS_MASTER:
 			master_muted = muted
@@ -187,6 +200,11 @@ func set_muted(bus_name: String, muted: bool) -> void:
 			menu_muted = muted
 		_:
 			Globals.log_message("Unknown bus for set_muted: " + bus_name, Globals.LogLevel.WARNING)
+			success = false
+
+	# NEW: Emit the signal if the mute state was successfully updated
+	if success:
+		mute_toggled.emit(bus_name, muted)
 
 
 ## load_volumes

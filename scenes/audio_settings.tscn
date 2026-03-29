@@ -149,12 +149,16 @@ focus_previous = NodePath("../SFX")
 custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 focus_neighbor_top = NodePath("../SFXWeapon")
-focus_neighbor_bottom = NodePath("../../BtnContainer/AudioBackButton")
-focus_next = NodePath("../../BtnContainer/AudioBackButton")
+focus_neighbor_bottom = NodePath("../SFXMenu")
+focus_next = NodePath("../SFXMenu")
 focus_previous = NodePath("../SFXWeapon")
 
 [node name="SFXMenu" parent="Panel/VolumeControls" instance=ExtResource("8_a0ntd")]
 layout_mode = 2
+focus_neighbor_top = NodePath("../SFXRotors")
+focus_neighbor_bottom = NodePath("../../BtnContainer/AudioBackButton")
+focus_next = NodePath("../../BtnContainer/AudioBackButton")
+focus_previous = NodePath("../SFXRotors")
 
 [node name="BtnContainer" type="HBoxContainer" parent="Panel"]
 layout_mode = 1
@@ -175,11 +179,11 @@ theme_override_constants/separation = 20
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-focus_neighbor_top = NodePath("../../VolumeControls/SFXRotors")
+focus_neighbor_top = NodePath("../../VolumeControls/SFXMenu")
 focus_neighbor_right = NodePath("../AudioResetButton")
 focus_neighbor_bottom = NodePath("../../VolumeControls/Master")
 focus_next = NodePath("../AudioResetButton")
-focus_previous = NodePath("../../VolumeControls/SFXRotors")
+focus_previous = NodePath("../../VolumeControls/SFXMenu")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
 theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_pressed_color = Color(0.9607843, 0.9607843, 0.050980393, 0.9019608)
@@ -197,7 +201,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 focus_neighbor_left = NodePath("../AudioBackButton")
-focus_neighbor_top = NodePath("../../VolumeControls/SFXRotors")
+focus_neighbor_top = NodePath("../../VolumeControls/SFXMenu")
 focus_neighbor_bottom = NodePath("../../VolumeControls/Master")
 focus_next = NodePath("../../VolumeControls/Master")
 focus_previous = NodePath("../AudioBackButton")

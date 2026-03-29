@@ -30,6 +30,10 @@ var _is_loading_settings: bool = false  # Guard flag
 
 ## Preloaded stream to prevent disk I/O lag during fast menu navigation.
 var _ui_nav_stream: AudioStream = preload(UI_NAV_SOUND_PATH)
+# List of actions that should trigger the navigation sound
+var _nav_actions: Array[String] = [
+	"ui_up", "ui_down", "ui_left", "ui_right", "ui_focus_next", "ui_focus_prev"
+]
 
 
 func _ready() -> void:
@@ -333,19 +337,12 @@ static func set_game_version_for_tests(value: String) -> void:
 	ProjectSettings.set_setting("application/config/version", value)
 
 
-## Use _unhandled_input to intercept navigation events not consumed by the GUI. [cite: 139]
-## This ensures the sound plays only when a movement actually occurs.
-func _unhandled_input(event: InputEvent) -> void:
-	# Target Actions: ui_up, ui_down, ui_left, ui_right, ui_focus_next, ui_focus_prev.
-	if (
-		event.is_action_pressed("ui_up")
-		or event.is_action_pressed("ui_down")
-		or event.is_action_pressed("ui_left")
-		or event.is_action_pressed("ui_right")
-		or event.is_action_pressed("ui_focus_next")
-		or event.is_action_pressed("ui_focus_prev")
-	):
-		_play_ui_navigation_sfx()
+## Use _input instead of _unhandled_input to catch events BEFORE the UI consumes them. [cite: 177]
+func _input(event: InputEvent) -> void:
+	for action in _nav_actions:
+		if event.is_action_pressed(action):
+			_play_ui_navigation_sfx()
+			return  # Exit once sound is triggered to avoid double-plays
 
 
 ## Internal helper to play the navigation sound through the dedicated Menu SFX bus.
@@ -358,7 +355,7 @@ func _play_ui_navigation_sfx() -> void:
 
 	# Route to BUS_SFX_MENU to respect the player's Menu volume settings. [cite: 104, 114]
 	sfx_player.bus = AudioConstants.BUS_SFX_MENU
-
+	log_message("Playing UI nav sound...", LogLevel.DEBUG)
 	sfx_player.play()
 
 	# Memory management: Clean up the node once the sound finishes playing.

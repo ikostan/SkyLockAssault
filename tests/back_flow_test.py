@@ -149,7 +149,7 @@ def test_back_flow(page: Page) -> None:
         assert audio_display_after == "none", "Audio menu still visible after back"
         new_logs = logs[pre_change_log_count:]
         assert any(
-            "back (audio_back_button) button pressed in audio" in log["text"].lower()
+            "audio settings: back button pressed" in log["text"].lower()
             for log in new_logs
         ), "Back log not found"
 
@@ -214,13 +214,11 @@ def test_back_flow(page: Page) -> None:
         # Expected: Navigation ok, no JS exceptions
         # Simulate mid-drag by setting value without full change event, then back
         pre_change_log_count = len(logs)
-        page.evaluate(
-            """
+        page.evaluate("""
             const slider = document.getElementById('sfx-slider');
             slider.value = 0.6;
             slider.dispatchEvent(new Event('input'));  // Mid-drag
-        """
-        )
+        """)
         page.wait_for_timeout(500)
         page.wait_for_function("window.audioBackPressed !== undefined", timeout=2500)
         page.evaluate("window.audioBackPressed([])")

@@ -15,10 +15,15 @@ func before_test() -> void:
 	## Per-test setup: Instantiate slider, reset state.
 	##
 	## :rtype: void
+	
+	# 1. Reset state BEFORE triggering _ready()
+	AudioManager.master_volume = 1.0
+	AudioManager.apply_all_volumes() # Ensure AudioServer matches the manager
+	
+	# 2. Instantiate and add to tree
 	slider = auto_free(VolumeSlider.new())
 	slider.bus_name = "Master"  # Test with Master
 	add_child(slider)  # Trigger _ready
-	AudioManager.master_volume = 1.0  # Reset for consistent test
 
 
 func after_test() -> void:
@@ -26,6 +31,7 @@ func after_test() -> void:
 	##
 	## :rtype: void
 	AudioManager.master_volume = 1.0
+	AudioManager.apply_all_volumes()
 
 
 func test_ready_sets_value_and_timer() -> void:
