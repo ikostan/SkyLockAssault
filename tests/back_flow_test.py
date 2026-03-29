@@ -149,7 +149,7 @@ def test_back_flow(page: Page) -> None:
         assert audio_display_after == "none", "Audio menu still visible after back"
         new_logs = logs[pre_change_log_count:]
         assert any(
-            "back (audio_back_button) button pressed in audio" in log["text"].lower()
+            "audio settings: back button pressed" in log["text"].lower()
             for log in new_logs
         ), "Back log not found"
 
