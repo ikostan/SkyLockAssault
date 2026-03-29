@@ -150,7 +150,7 @@ func _ready() -> void:
 	# Apply the hierarchy locks immediately when the menu opens
 	_update_ui_interactivity()
 
-	# --- ADD THIS WEB BRIDGE CONNECTION ---
+	# --- WEB BRIDGE CONNECTIONS ---
 	var web_bridge: Node = get_node_or_null("/root/AudioWebBridge")
 	if web_bridge:
 		# Show the HTML overlays when the menu opens
@@ -159,6 +159,10 @@ func _ready() -> void:
 		# Listen for the browser's Back button!
 		if not web_bridge.web_back_requested.is_connected(_on_back_button_pressed):
 			web_bridge.web_back_requested.connect(_on_back_button_pressed)
+
+		# Listen for the browser's Reset button!
+		if not web_bridge.web_reset_requested.is_connected(_on_audio_reset_button_pressed):
+			web_bridge.web_reset_requested.connect(_on_audio_reset_button_pressed)
 
 
 func _on_back_button_pressed() -> void:
@@ -500,8 +504,46 @@ func _on_menu_mute_gui_input(event: InputEvent) -> void:
 
 
 func _on_audio_reset_button_pressed() -> void:
+	Globals.log_message("Audio reset pressed.", Globals.LogLevel.DEBUG)
 	AudioManager.reset_volumes()
+
+	# Force the UI to visually sync with the newly reset AudioManager
 	_sync_ui_from_manager()
+	# 1. Sync The Face (Godot UI)
+	_sync_all_sliders_and_mutes()
+	_update_ui_interactivity()
+
+	# 2. Sync The Ghost (HTML DOM overlays for Playwright)
+	var web_bridge: Node = get_node_or_null("/root/AudioWebBridge")
+	if web_bridge and web_bridge.has_method("sync_all_to_dom"):
+		web_bridge.sync_all_to_dom()
+
+
+## Manually syncs all visual UI elements to match the current AudioManager state
+func _sync_all_sliders_and_mutes() -> void:
+	# Master
+	_on_global_volume_changed(AudioConstants.BUS_MASTER, AudioManager.master_volume)
+	_on_global_mute_toggled(AudioConstants.BUS_MASTER, AudioManager.master_muted)
+
+	# Music
+	_on_global_volume_changed(AudioConstants.BUS_MUSIC, AudioManager.music_volume)
+	_on_global_mute_toggled(AudioConstants.BUS_MUSIC, AudioManager.music_muted)
+
+	# SFX
+	_on_global_volume_changed(AudioConstants.BUS_SFX, AudioManager.sfx_volume)
+	_on_global_mute_toggled(AudioConstants.BUS_SFX, AudioManager.sfx_muted)
+
+	# Weapon
+	_on_global_volume_changed(AudioConstants.BUS_SFX_WEAPON, AudioManager.weapon_volume)
+	_on_global_mute_toggled(AudioConstants.BUS_SFX_WEAPON, AudioManager.weapon_muted)
+
+	# Rotors
+	_on_global_volume_changed(AudioConstants.BUS_SFX_ROTORS, AudioManager.rotors_volume)
+	_on_global_mute_toggled(AudioConstants.BUS_SFX_ROTORS, AudioManager.rotors_muted)
+
+	# Menu
+	_on_global_volume_changed(AudioConstants.BUS_SFX_MENU, AudioManager.menu_volume)
+	_on_global_mute_toggled(AudioConstants.BUS_SFX_MENU, AudioManager.menu_muted)
 
 
 func _update_other_controls_ui() -> void:
