@@ -137,6 +137,29 @@ func _on_godot_mute_toggled(bus_name: String, is_muted: bool) -> void:
 		)
 
 
+## Forces all HTML DOM elements to match the current AudioManager state.
+## Call this after a global reset so Playwright reads the correct values.
+func sync_all_to_dom() -> void:
+	if not js_window:
+		return
+
+	# Push all volumes to DOM
+	_on_godot_volume_changed(AudioConstants.BUS_MASTER, AudioManager.master_volume)
+	_on_godot_volume_changed(AudioConstants.BUS_MUSIC, AudioManager.music_volume)
+	_on_godot_volume_changed(AudioConstants.BUS_SFX, AudioManager.sfx_volume)
+	_on_godot_volume_changed(AudioConstants.BUS_SFX_WEAPON, AudioManager.weapon_volume)
+	_on_godot_volume_changed(AudioConstants.BUS_SFX_ROTORS, AudioManager.rotors_volume)
+	_on_godot_volume_changed(AudioConstants.BUS_SFX_MENU, AudioManager.menu_volume)
+
+	# Push all mute states to DOM
+	_on_godot_mute_toggled(AudioConstants.BUS_MASTER, AudioManager.master_muted)
+	_on_godot_mute_toggled(AudioConstants.BUS_MUSIC, AudioManager.music_muted)
+	_on_godot_mute_toggled(AudioConstants.BUS_SFX, AudioManager.sfx_muted)
+	_on_godot_mute_toggled(AudioConstants.BUS_SFX_WEAPON, AudioManager.weapon_muted)
+	_on_godot_mute_toggled(AudioConstants.BUS_SFX_ROTORS, AudioManager.rotors_muted)
+	_on_godot_mute_toggled(AudioConstants.BUS_SFX_MENU, AudioManager.menu_muted)
+
+
 ## Iterates through all audio buses and forces a DOM update for sliders and checkboxes.
 ## Keeps the web UI perfectly in sync with Godot's internal state.
 ## :rtype: void
