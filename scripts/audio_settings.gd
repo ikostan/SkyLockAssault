@@ -11,10 +11,7 @@ extends Control
 # Test flags for warning popups
 var master_warning_shown: bool = false
 var sfx_warning_shown: bool = false
-
 var _intentional_exit: bool = false
-# Web Bridge Reference
-var _web_bridge: Node = null
 
 # Master Volume Controls
 @onready var master_slider: HSlider = $Panel/VolumeControls/Master/HSlider
@@ -127,13 +124,6 @@ func _ready() -> void:
 
 	_sync_ui_from_manager()
 
-	# --- WEB BRIDGE INTEGRATION ---
-	if is_inside_tree() and has_node("/root/AudioWebBridge"):
-		_web_bridge = get_node("/root/AudioWebBridge")
-		_web_bridge.toggle_dom_visibility(true)
-		_web_bridge.web_back_requested.connect(_on_audio_back_button_pressed)
-		_web_bridge.web_reset_requested.connect(_on_audio_reset_button_pressed)
-
 	# Initial Focus
 	var menu_controls: Array[Control] = [
 		master_slider,
@@ -159,6 +149,47 @@ func _ready() -> void:
 
 	# Apply the hierarchy locks immediately when the menu opens
 	_update_ui_interactivity()
+
+	# --- ADD THIS WEB BRIDGE CONNECTION ---
+	var web_bridge: Node = get_node_or_null("/root/AudioWebBridge")
+	if web_bridge:
+		# Show the HTML overlays when the menu opens
+		web_bridge.toggle_dom_visibility(true)
+
+		# Listen for the browser's Back button!
+		if not web_bridge.web_back_requested.is_connected(_on_back_button_pressed):
+			web_bridge.web_back_requested.connect(_on_back_button_pressed)
+
+
+func _on_back_button_pressed() -> void:
+	Globals.log_message("Audio Settings: Back button pressed.", Globals.LogLevel.DEBUG)
+	_intentional_exit = true
+
+	# 1. Safely hide the Audio HTML DOM
+	var web_bridge: Node = get_node_or_null("/root/AudioWebBridge")
+	if web_bridge:
+		web_bridge.toggle_dom_visibility(false)
+
+	# 2. Restore the previous menu AND its HTML DOM
+	if Globals.hidden_menus.size() > 0:
+		var prev_menu: Node = Globals.hidden_menus.pop_back()
+		if is_instance_valid(prev_menu):
+			prev_menu.show()
+
+			# Force the previous menu to wake up its HTML overlays
+			if prev_menu.has_method("toggle_dom_visibility"):
+				prev_menu.toggle_dom_visibility(true)
+			else:
+				# Fallback just in case Options Menu has its own Web Bridge Autoload
+				var options_bridge: Node = get_node_or_null("/root/OptionsWebBridge")
+				if options_bridge and options_bridge.has_method("toggle_dom_visibility"):
+					options_bridge.toggle_dom_visibility(true)
+	else:
+		# Ultimate fallback if your game uses scene changes instead of overlays
+		if Globals.previous_scene != "":
+			get_tree().change_scene_to_file(Globals.previous_scene)
+
+	queue_free()
 
 
 ## Syncs the disabled/editable state of all UI elements based on the hierarchy rules
@@ -519,9 +550,6 @@ func _on_audio_back_button_pressed() -> void:
 				if is_instance_valid(start_button):
 					start_button.call_deferred("call_deferred", "call_deferred", "grab_focus")
 
-	if is_instance_valid(_web_bridge):
-		_web_bridge.toggle_dom_visibility(false)
-
 	_intentional_exit = true
 	queue_free()
 
@@ -529,9 +557,6 @@ func _on_audio_back_button_pressed() -> void:
 func _on_tree_exited() -> void:
 	if _intentional_exit:
 		return
-
-	if is_instance_valid(_web_bridge):
-		_web_bridge.toggle_dom_visibility(false)
 
 	if not Globals.hidden_menus.is_empty():
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
