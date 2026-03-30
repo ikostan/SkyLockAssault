@@ -179,6 +179,7 @@ func _on_advanced_back_button_pressed() -> void:
 	##
 	## :rtype: void
 	Globals.log_message("Advanced Back button pressed.", Globals.LogLevel.DEBUG)
+	_intentional_exit = true
 
 	var hidden_menu_found: bool = false
 	if not Globals.hidden_menus.is_empty():
@@ -203,17 +204,11 @@ func _on_advanced_back_button_pressed() -> void:
 	if os_wrapper.has_feature("web") and js_window:
 		_unset_advanced_window_callbacks()
 		# Set Options menu buttons visible in DOM (if bridge available for eval)
-		if hidden_menu_found and js_bridge_wrapper:
+		if js_bridge_wrapper:
 			(
 				js_bridge_wrapper
 				. eval(
 					"""
-					// Show Options menu overlays
-					document.getElementById('controls-button').style.display = 'block';
-					document.getElementById('audio-button').style.display = 'block';
-					document.getElementById('advanced-button').style.display = 'block';
-					document.getElementById('gameplay-button').style.display = 'block';
-					document.getElementById('options-back-button').style.display = 'block';
 					// Hide Advanced Settings overlays
 					document.getElementById('log-level-select').style.display = 'none';
 					document.getElementById('advanced-back-button').style.display = 'none';
@@ -222,9 +217,27 @@ func _on_advanced_back_button_pressed() -> void:
 					true
 				)
 			)
+			if hidden_menu_found:
+				(
+					js_bridge_wrapper
+					. eval(
+						"""
+						// Show Options menu overlays
+						document.getElementById('controls-button').style.display = 'block';
+						document.getElementById('audio-button').style.display = 'block';
+						document.getElementById('advanced-button').style.display = 'block';
+						document.getElementById('gameplay-button').style.display = 'block';
+						document.getElementById('options-back-button').style.display = 'block';
+						""",
+						true
+					)
+				)
+			
 	if not hidden_menu_found:
 		Globals.log_message("No hidden menu to show.", Globals.LogLevel.INFO)
-	_intentional_exit = true
+		if Globals.previous_scene != "":
+			get_tree().change_scene_to_file(Globals.previous_scene)
+
 	queue_free()
 
 
