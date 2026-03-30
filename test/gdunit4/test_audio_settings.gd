@@ -13,12 +13,16 @@ var audio_menu: Control
 
 func before_test() -> void:
 	Globals.hidden_menus = []
-
+	# Reset AudioManager to a known clean state before each test
+	AudioManager._init_to_defaults()
+	AudioManager.apply_all_volumes()
 
 func after_test() -> void:
 	if is_instance_valid(audio_menu):
 		audio_menu.queue_free()
 	Globals.hidden_menus = []
+	# Clean up any stray states
+	AudioManager._init_to_defaults()
 
 
 func test_ui_sync_on_ready() -> void:
