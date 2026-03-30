@@ -228,7 +228,6 @@ func _on_advanced_back_button_pressed() -> void:
 	queue_free()
 
 
-
 func _on_advanced_back_button_pressed_js(args: Array) -> void:
 	## JS callback for back press.
 	##
