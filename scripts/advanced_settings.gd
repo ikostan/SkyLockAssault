@@ -232,7 +232,7 @@ func _on_advanced_back_button_pressed() -> void:
 						true
 					)
 				)
-			
+
 	if not hidden_menu_found:
 		Globals.log_message("No hidden menu to show.", Globals.LogLevel.INFO)
 		if Globals.previous_scene != "":
