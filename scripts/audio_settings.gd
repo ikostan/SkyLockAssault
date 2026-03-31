@@ -574,10 +574,10 @@ func _on_tree_exited() -> void:
 	# --- CLEANUP: Disconnect from Autoloads to prevent memory leaks/errors ---
 	if AudioManager.volume_changed.is_connected(_on_global_volume_changed):
 		AudioManager.volume_changed.disconnect(_on_global_volume_changed)
-	
+
 	if AudioManager.mute_toggled.is_connected(_on_global_mute_toggled):
 		AudioManager.mute_toggled.disconnect(_on_global_mute_toggled)
-		
+
 	var web_bridge: Node = get_node_or_null("/root/AudioWebBridge")
 	if web_bridge:
 		if web_bridge.web_back_requested.is_connected(_on_back_button_pressed):
