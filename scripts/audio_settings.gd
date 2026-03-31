@@ -119,7 +119,7 @@ func _ready() -> void:
 	# To this:
 	if not audio_back_button.pressed.is_connected(_on_back_button_pressed):
 		audio_back_button.pressed.connect(_on_back_button_pressed)
-	
+
 	if not audio_reset_button.pressed.is_connected(_on_audio_reset_button_pressed):
 		audio_reset_button.pressed.connect(_on_audio_reset_button_pressed)
 
@@ -183,7 +183,7 @@ func _on_back_button_pressed() -> void:
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
 		if is_instance_valid(prev_menu):
 			prev_menu.show()
-			
+
 			# --- Focus Restoration (Moved here from the old function!) ---
 			if prev_menu.has_method("grab_focus_on_audio_settings_button"):
 				prev_menu.call("grab_focus_on_audio_settings_button")

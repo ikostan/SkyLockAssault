@@ -472,3 +472,16 @@ func _get_mute_id_for_bus(bus_name: String) -> String:
 		AudioConstants.BUS_SFX_MENU: "mute-menu"
 	}
 	return mapping.get(bus_name, "")
+
+
+## Fallback to restore the Options Menu DOM elements.
+func restore_options_menu_dom() -> void:
+	if not js_window:
+		return
+
+	var ids: Array[String] = [
+		"gameplay-button", "audio-button", "advanced-button", "options-back-button"
+	]
+
+	for id: String in ids:
+		js_bridge_wrapper.eval("document.getElementById('%s').style.display = 'block';" % id)
