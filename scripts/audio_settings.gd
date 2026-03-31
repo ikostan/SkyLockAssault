@@ -31,13 +31,11 @@ var _intentional_exit: bool = false
 # SFX Menu Volume Controls
 @onready var menu_slider: HSlider = $Panel/VolumeControls/SFXMenu/HSlider
 @onready var mute_menu: CheckButton = $Panel/VolumeControls/SFXMenu/Mute
-
 # Other UI elements
 @onready var master_warning_dialog: AcceptDialog = $MasterWarningDialog
 @onready var sfx_warning_dialog: AcceptDialog = $SFXWarningDialog
 @onready var audio_back_button: Button = $Panel/BtnContainer/AudioBackButton
 @onready var audio_reset_button: Button = $Panel/BtnContainer/AudioResetButton
-
 # Labels
 @onready var master_label: Label = $Panel/VolumeControls/Master/MasterLabel
 @onready var music_label: Label = $Panel/VolumeControls/Music/MusicLabel
@@ -573,6 +571,21 @@ func _sync_ui_from_manager() -> void:
 
 
 func _on_tree_exited() -> void:
+	# --- CLEANUP: Disconnect from Autoloads to prevent memory leaks/errors ---
+	if AudioManager.volume_changed.is_connected(_on_global_volume_changed):
+		AudioManager.volume_changed.disconnect(_on_global_volume_changed)
+	
+	if AudioManager.mute_toggled.is_connected(_on_global_mute_toggled):
+		AudioManager.mute_toggled.disconnect(_on_global_mute_toggled)
+		
+	var web_bridge: Node = get_node_or_null("/root/AudioWebBridge")
+	if web_bridge:
+		if web_bridge.web_back_requested.is_connected(_on_back_button_pressed):
+			web_bridge.web_back_requested.disconnect(_on_back_button_pressed)
+		if web_bridge.web_reset_requested.is_connected(_on_audio_reset_button_pressed):
+			web_bridge.web_reset_requested.disconnect(_on_audio_reset_button_pressed)
+	# -------------------------------------------------------------------------
+
 	if _intentional_exit:
 		return
 
