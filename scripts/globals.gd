@@ -51,12 +51,12 @@ func _ready() -> void:
 	log_message("Log level set to: " + LogLevel.keys()[settings.current_log_level], LogLevel.DEBUG)
 	_load_settings()  # Load persisted settings first
 
-	# Connect to the resource signal to centralize side effects [cite: 151]
+	# Connect to the resource signal to centralize side effects
 	if settings:
 		settings.setting_changed.connect(_on_setting_changed)
 
 
-## Reactive handler for the Observer Pattern [cite: 141]
+## Reactive handler for the Observer Pattern
 func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	# Skip persistence and logging if we are in a bulk-loading state
 	if _is_loading_settings:
@@ -65,10 +65,10 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	# FIX: Ensure we are comparing String to String or using correct types
 	var log_msg: String = "Setting '%s' updated to: %s" % [setting_name, str(new_value)]
 
-	# Automatically log the change [cite: 59]
+	# Automatically log the change
 	log_message(log_msg, LogLevel.DEBUG)
 
-	# Automatically persist to disk [cite: 53]
+	# Automatically persist to disk
 	_save_settings()
 
 
@@ -337,10 +337,20 @@ static func set_game_version_for_tests(value: String) -> void:
 	ProjectSettings.set_setting("application/config/version", value)
 
 
-## Use _input instead of _unhandled_input to catch events BEFORE the UI consumes them. [cite: 177]
+## Use _input instead of _unhandled_input to catch events BEFORE the UI consumes them.
 func _input(event: InputEvent) -> void:
-	for action in _nav_actions:
-		if event.is_action_pressed(action):
+	# Gate 1: Only play UI sounds if we are actually in a menu context.
+	# We assume menus are active if the tree is paused, the options menu is open, 
+	# or there are hidden menus on the stack (meaning a sub-menu is open).
+	var is_menu_context: bool = get_tree().paused or options_open or not hidden_menus.is_empty()
+	
+	if not is_menu_context:
+		return
+		
+	for action: String in _nav_actions:
+		# Gate 2: Use is_action_just_pressed to prevent rapid-fire 
+		# sound spam when the player holds down a navigation key.
+		if event.is_action_pressed(action) and not event.is_echo():
 			_play_ui_navigation_sfx()
 			return  # Exit once sound is triggered to avoid double-plays
 
