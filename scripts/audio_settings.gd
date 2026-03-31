@@ -578,7 +578,13 @@ func _on_tree_exited() -> void:
 	if AudioManager.mute_toggled.is_connected(_on_global_mute_toggled):
 		AudioManager.mute_toggled.disconnect(_on_global_mute_toggled)
 
-	var web_bridge: Node = get_node_or_null("/root/AudioWebBridge")
+	# FIX: Safely grab the web bridge during teardown without absolute path crashing
+	var web_bridge: Node = null
+	if is_inside_tree():
+		web_bridge = get_node_or_null("/root/AudioWebBridge")
+	elif Engine.get_main_loop() is SceneTree:  # Ultimate fallback for tests
+		web_bridge = (Engine.get_main_loop() as SceneTree).root.get_node_or_null("AudioWebBridge")
+
 	if web_bridge:
 		if web_bridge.web_back_requested.is_connected(_on_back_button_pressed):
 			web_bridge.web_back_requested.disconnect(_on_back_button_pressed)
