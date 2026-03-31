@@ -327,7 +327,7 @@ func _on_master_volume_control_gui_input(event: InputEvent) -> void:
 
 func _on_master_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.set_muted(AudioConstants.BUS_MASTER, not toggled_on)
-	master_slider.editable = not AudioManager.master_muted
+	_update_ui_interactivity()  # Single source of truth updates everything
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_MASTER, AudioManager.master_volume, AudioManager.master_muted
 	)
@@ -351,7 +351,7 @@ func _on_music_volume_control_gui_input(event: InputEvent) -> void:
 
 func _on_music_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.set_muted(AudioConstants.BUS_MUSIC, not toggled_on)
-	music_slider.editable = not AudioManager.music_muted
+	_update_ui_interactivity()
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_MUSIC, AudioManager.music_volume, AudioManager.music_muted
 	)
@@ -381,7 +381,7 @@ func _on_sfx_volume_control_gui_input(event: InputEvent) -> void:
 
 func _on_sfx_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.set_muted(AudioConstants.BUS_SFX, not toggled_on)
-	sfx_slider.editable = not AudioManager.sfx_muted
+	_update_ui_interactivity()
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_SFX, AudioManager.sfx_volume, AudioManager.sfx_muted
 	)
@@ -411,7 +411,7 @@ func _on_weapon_volume_control_gui_input(event: InputEvent) -> void:
 
 func _on_weapon_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.set_muted(AudioConstants.BUS_SFX_WEAPON, not toggled_on)
-	weapon_slider.editable = not AudioManager.weapon_muted
+	_update_ui_interactivity()
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_SFX_WEAPON, AudioManager.weapon_volume, AudioManager.weapon_muted
 	)
@@ -445,7 +445,7 @@ func _on_rotor_volume_control_gui_input(event: InputEvent) -> void:
 
 func _on_rotor_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.set_muted(AudioConstants.BUS_SFX_ROTORS, not toggled_on)
-	rotor_slider.editable = not AudioManager.rotors_muted
+	_update_ui_interactivity()
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_SFX_ROTORS, AudioManager.rotors_volume, AudioManager.rotors_muted
 	)
@@ -479,7 +479,7 @@ func _on_menu_volume_control_gui_input(event: InputEvent) -> void:
 
 func _on_menu_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.set_muted(AudioConstants.BUS_SFX_MENU, not toggled_on)
-	menu_slider.editable = not AudioManager.menu_muted
+	_update_ui_interactivity()
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_SFX_MENU, AudioManager.menu_volume, AudioManager.menu_muted
 	)
@@ -547,27 +547,24 @@ func _sync_all_sliders_and_mutes() -> void:
 func _sync_ui_from_manager() -> void:
 	mute_master.set_pressed_no_signal(not AudioManager.master_muted)
 	master_slider.set_value_no_signal(AudioManager.master_volume)
-	master_slider.editable = not AudioManager.master_muted
 
 	mute_music.set_pressed_no_signal(not AudioManager.music_muted)
 	music_slider.set_value_no_signal(AudioManager.music_volume)
-	music_slider.editable = not AudioManager.music_muted
 
 	mute_sfx.set_pressed_no_signal(not AudioManager.sfx_muted)
 	sfx_slider.set_value_no_signal(AudioManager.sfx_volume)
-	sfx_slider.editable = not AudioManager.sfx_muted
 
 	mute_weapon.set_pressed_no_signal(not AudioManager.weapon_muted)
 	weapon_slider.set_value_no_signal(AudioManager.weapon_volume)
-	weapon_slider.editable = not AudioManager.weapon_muted
 
 	mute_rotor.set_pressed_no_signal(not AudioManager.rotors_muted)
 	rotor_slider.set_value_no_signal(AudioManager.rotors_volume)
-	rotor_slider.editable = not AudioManager.rotors_muted
 
 	mute_menu.set_pressed_no_signal(not AudioManager.menu_muted)
 	menu_slider.set_value_no_signal(AudioManager.menu_volume)
-	menu_slider.editable = not AudioManager.menu_muted
+
+	# Delegate all lock/unlock hierarchy logic to the single source of truth
+	_update_ui_interactivity()
 
 
 func _on_audio_back_button_pressed() -> void:
