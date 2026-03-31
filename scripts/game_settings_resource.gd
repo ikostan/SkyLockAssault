@@ -52,8 +52,10 @@ signal setting_changed(setting_name: String, new_value: Variant)
 @export_group("UI & Scenes")
 @export var remap_prompt_keyboard: String = "Press a key..."
 @export var remap_prompt_gamepad: String = "Press a gamepad button/axis..."
-@export var key_mapping_scene: PackedScene = preload("res://scenes/key_mapping_menu.tscn")
-@export var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
+
+# Use type-hinting without forced preloading to break circular dependencies
+@export var key_mapping_scene: PackedScene
+@export var options_scene: PackedScene
 
 # Private member variables moved to bottom to satisfy class-definitions-order
 var _current_log_level: int = 1
