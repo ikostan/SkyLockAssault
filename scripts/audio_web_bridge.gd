@@ -215,7 +215,7 @@ func _on_change_volume_js(args: Array, bus_name: String) -> void:
 
 
 ## Generic handler for when an HTML mute checkbox is toggled.
-## Validates the input and updates the AudioManager.
+## Validates the input, checks parent mute states, and updates the AudioManager.
 ## :param args: Raw arguments passed from JavaScript.
 ## :type args: Array
 ## :param bus_name: The target audio bus.
@@ -225,6 +225,35 @@ func _on_toggle_mute_js(args: Array, bus_name: String) -> void:
 	var checked: Variant = _validate_mute_args(args)
 	if checked == null:
 		return
+
+	# --- NEW: Parent-Mute Guard ---
+	# Check parent mute states before allowing sub-bus adjustments
+	if bus_name != AudioConstants.BUS_MASTER and AudioManager.master_muted:
+		Globals.log_message(
+			"Warning dialog: Master muted, cannot adjust sub-mute state", Globals.LogLevel.WARNING
+		)
+		# Force the HTML DOM checkbox to revert to its previous (muted) state
+		_on_godot_mute_toggled(bus_name, AudioManager.get_muted(bus_name))
+		return
+
+	if (
+		(
+			bus_name
+			in [
+				AudioConstants.BUS_SFX_WEAPON,
+				AudioConstants.BUS_SFX_ROTORS,
+				AudioConstants.BUS_SFX_MENU
+			]
+		)
+		and AudioManager.sfx_muted
+	):
+		Globals.log_message(
+			"Warning dialog: SFX muted, cannot adjust sub-mute state", Globals.LogLevel.WARNING
+		)
+		# Force the HTML DOM checkbox to revert to its previous (muted) state
+		_on_godot_mute_toggled(bus_name, AudioManager.get_muted(bus_name))
+		return
+	# ------------------------------
 
 	var is_muted: bool = not bool(checked)  # Checkbox checked = unmuted
 
