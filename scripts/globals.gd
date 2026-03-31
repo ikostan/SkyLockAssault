@@ -380,4 +380,3 @@ func _play_ui_navigation_sfx() -> void:
 	# If the sound is already playing (e.g., from rapid button presses),
 	# restart it from the beginning to feel responsive.
 	_nav_sfx_player.play()
-	log_message("Playing UI nav sound...", LogLevel.DEBUG)
