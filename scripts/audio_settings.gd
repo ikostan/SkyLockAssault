@@ -328,7 +328,6 @@ func _on_master_volume_control_gui_input(event: InputEvent) -> void:
 func _on_master_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.set_muted(AudioConstants.BUS_MASTER, not toggled_on)
 	master_slider.editable = not AudioManager.master_muted
-	_update_other_controls_ui()
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_MASTER, AudioManager.master_volume, AudioManager.master_muted
 	)
@@ -383,7 +382,6 @@ func _on_sfx_volume_control_gui_input(event: InputEvent) -> void:
 func _on_sfx_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.set_muted(AudioConstants.BUS_SFX, not toggled_on)
 	sfx_slider.editable = not AudioManager.sfx_muted
-	_update_sfx_controls_ui()
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_SFX, AudioManager.sfx_volume, AudioManager.sfx_muted
 	)
@@ -546,25 +544,6 @@ func _sync_all_sliders_and_mutes() -> void:
 	_on_global_mute_toggled(AudioConstants.BUS_SFX_MENU, AudioManager.menu_muted)
 
 
-func _update_other_controls_ui() -> void:
-	var is_master_muted: bool = AudioManager.master_muted
-	mute_music.disabled = is_master_muted
-	music_slider.editable = not is_master_muted and not AudioManager.music_muted
-	mute_sfx.disabled = is_master_muted
-	sfx_slider.editable = not is_master_muted and not AudioManager.sfx_muted
-	_update_sfx_controls_ui()
-
-
-func _update_sfx_controls_ui() -> void:
-	var sfx_controls_locked: bool = AudioManager.sfx_muted or AudioManager.master_muted
-	mute_weapon.disabled = sfx_controls_locked
-	weapon_slider.editable = not sfx_controls_locked and not AudioManager.weapon_muted
-	mute_rotor.disabled = sfx_controls_locked
-	rotor_slider.editable = not sfx_controls_locked and not AudioManager.rotors_muted
-	mute_menu.disabled = sfx_controls_locked
-	menu_slider.editable = not sfx_controls_locked and not AudioManager.menu_muted
-
-
 func _sync_ui_from_manager() -> void:
 	mute_master.set_pressed_no_signal(not AudioManager.master_muted)
 	master_slider.set_value_no_signal(AudioManager.master_volume)
@@ -589,8 +568,6 @@ func _sync_ui_from_manager() -> void:
 	mute_menu.set_pressed_no_signal(not AudioManager.menu_muted)
 	menu_slider.set_value_no_signal(AudioManager.menu_volume)
 	menu_slider.editable = not AudioManager.menu_muted
-
-	_update_other_controls_ui()
 
 
 func _on_audio_back_button_pressed() -> void:
