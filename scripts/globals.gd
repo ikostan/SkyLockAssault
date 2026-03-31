@@ -351,7 +351,7 @@ static func set_game_version_for_tests(value: String) -> void:
 
 
 ## Use _input instead of _unhandled_input to catch events BEFORE the UI consumes them.
-func _input(event: InputEvent) -> void:
+func _input(_event: InputEvent) -> void:
 	# The Ultimate Menu Check: Does a UI element currently have keyboard/gamepad focus?
 	var ui_has_focus: bool = is_instance_valid(get_viewport().gui_get_focus_owner())
 
