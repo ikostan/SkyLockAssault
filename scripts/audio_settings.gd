@@ -190,7 +190,8 @@ func _on_back_button_pressed() -> void:
 			elif prev_menu.name == "Panel" or prev_menu is Panel:
 				var start_button: Button = prev_menu.get_node_or_null("VBoxContainer/StartButton")
 				if is_instance_valid(start_button):
-					start_button.call_deferred("call_deferred", "call_deferred", "grab_focus")
+					# FIX: Changed from triple-nested call_deferred to a single call
+					start_button.call_deferred("grab_focus")
 
 			# --- HTML DOM Restoration ---
 			if prev_menu.has_method("toggle_dom_visibility"):
