@@ -37,6 +37,8 @@ var _nav_actions: Array[String] = [
 
 
 func _ready() -> void:
+	# Keep processing inputs even when the game is paused!
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	# Load the resource here instead of preloading at the top
 	settings = load("res://config_resources/default_settings.tres") as GameSettingsResource
 	if settings == null:
