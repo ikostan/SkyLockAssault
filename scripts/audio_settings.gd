@@ -293,6 +293,7 @@ func _connect_bus_ui(
 ) -> void:
 	if not mute_btn.toggled.is_connected(mute_callback):
 		mute_btn.toggled.connect(mute_callback)
+	# FIX: Use set_pressed_no_signal so it doesn't trigger the callback during setup
 	mute_btn.set_pressed_no_signal(not is_muted)
 	if not slider.gui_input.is_connected(gui_callback):
 		slider.gui_input.connect(gui_callback)
