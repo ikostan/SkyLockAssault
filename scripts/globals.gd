@@ -365,7 +365,7 @@ func _input(event: InputEvent) -> void:
 
 	for action: String in _nav_actions:
 		# Gate 2: Prevent rapid-fire sound spam when holding down keys or analog sticks
-		# We use the global Input singleton here because it perfectly handles 
+		# We use the global Input singleton here because it perfectly handles
 		# analog joystick deadzone debouncing, which event.is_echo() misses.
 		if Input.is_action_just_pressed(action):
 			_play_ui_navigation_sfx()
