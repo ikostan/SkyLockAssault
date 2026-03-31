@@ -116,8 +116,12 @@ func _ready() -> void:
 	mute_menu.gui_input.connect(_on_menu_mute_gui_input)
 
 	# Buttons
-	audio_back_button.pressed.connect(_on_audio_back_button_pressed)
-	audio_reset_button.pressed.connect(_on_audio_reset_button_pressed)
+	# To this:
+	if not audio_back_button.pressed.is_connected(_on_back_button_pressed):
+		audio_back_button.pressed.connect(_on_back_button_pressed)
+	
+	if not audio_reset_button.pressed.is_connected(_on_audio_reset_button_pressed):
+		audio_reset_button.pressed.connect(_on_audio_reset_button_pressed)
 
 	tree_exited.connect(_on_tree_exited)
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -174,37 +178,32 @@ func _on_back_button_pressed() -> void:
 	if web_bridge:
 		web_bridge.toggle_dom_visibility(false)
 
-	# 2. Restore the previous menu AND its HTML DOM
+	# 2. Restore the previous menu AND its HTML DOM AND focus
 	if Globals.hidden_menus.size() > 0:
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
 		if is_instance_valid(prev_menu):
 			prev_menu.show()
+			
+			# --- Focus Restoration (Moved here from the old function!) ---
+			if prev_menu.has_method("grab_focus_on_audio_settings_button"):
+				prev_menu.call("grab_focus_on_audio_settings_button")
+			elif prev_menu.name == "Panel" or prev_menu is Panel:
+				var start_button: Button = prev_menu.get_node_or_null("VBoxContainer/StartButton")
+				if is_instance_valid(start_button):
+					start_button.call_deferred("call_deferred", "call_deferred", "grab_focus")
 
-			# Attempt 1: If the menu manages its own DOM directly
+			# --- HTML DOM Restoration ---
 			if prev_menu.has_method("toggle_dom_visibility"):
 				prev_menu.toggle_dom_visibility(true)
-
-			# Attempt 2: If the menu uses the old pre-refactor _web_bridge variable
 			elif "_web_bridge" in prev_menu and prev_menu.get("_web_bridge") != null:
 				var prev_bridge: Node = prev_menu.get("_web_bridge")
 				if prev_bridge.has_method("toggle_dom_visibility"):
 					prev_bridge.toggle_dom_visibility(true)
-
-			# Attempt 3: Ultimate Fallback to guarantee the Playwright test passes
-			elif web_bridge:
-				web_bridge.js_bridge_wrapper.eval(
-					"document.getElementById('gameplay-button').style.display = 'block';"
-				)
-				web_bridge.js_bridge_wrapper.eval(
-					"document.getElementById('audio-button').style.display = 'block';"
-				)
-				web_bridge.js_bridge_wrapper.eval(
-					"document.getElementById('advanced-button').style.display = 'block';"
-				)
-				web_bridge.js_bridge_wrapper.eval(
-					"document.getElementById('options-back-button').style.display = 'block';"
-				)
+			elif web_bridge and web_bridge.has_method("restore_options_menu_dom"):
+				# Clean fallback via the bridge! (Replaces the raw JS evals)
+				web_bridge.restore_options_menu_dom()
 	else:
+		# --- Fallback to previous scene ---
 		if Globals.previous_scene != "":
 			get_tree().change_scene_to_file(Globals.previous_scene)
 
@@ -565,24 +564,6 @@ func _sync_ui_from_manager() -> void:
 
 	# Delegate all lock/unlock hierarchy logic to the single source of truth
 	_update_ui_interactivity()
-
-
-func _on_audio_back_button_pressed() -> void:
-	var hidden_menu_found: bool = false
-	if not Globals.hidden_menus.is_empty():
-		var prev_menu: Node = Globals.hidden_menus.pop_back()
-		if is_instance_valid(prev_menu):
-			prev_menu.visible = true
-			hidden_menu_found = true
-			if prev_menu.has_method("grab_focus_on_audio_settings_button"):
-				prev_menu.call("grab_focus_on_audio_settings_button")
-			elif prev_menu.name == "Panel" or prev_menu is Panel:
-				var start_button: Button = prev_menu.get_node_or_null("VBoxContainer/StartButton")
-				if is_instance_valid(start_button):
-					start_button.call_deferred("call_deferred", "call_deferred", "grab_focus")
-
-	_intentional_exit = true
-	queue_free()
 
 
 func _on_tree_exited() -> void:
