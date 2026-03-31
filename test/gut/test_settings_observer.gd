@@ -105,7 +105,7 @@ func test_difficulty_persists_to_config_file() -> void:
 
 ## PHASE 4: UI Synchronization (Mocking the UI Layer)
 func test_ui_logic_can_update_resource_without_globals_call() -> void:
-	# This simulates what advanced_settings.gd or gameplay_settings.gd will do [cite: 14, 33]
+	# This simulates what advanced_settings.gd or gameplay_settings.gd will do
 	# The goal is to verify that setting the value is the ONLY thing the UI needs to do.
 	_resource.difficulty = 1.2
 	assert_eq(_resource.difficulty, 1.2, "UI should successfully update the resource state.")
