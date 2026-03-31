@@ -61,3 +61,11 @@ signal setting_changed(setting_name: String, new_value: Variant)
 var _current_log_level: int = 1
 var _difficulty: float = 1.0
 var _enable_debug_logging: bool = false
+
+
+func _init() -> void:
+	# This only runs if the values aren't already set (like in a .new() call)
+	if not key_mapping_scene:
+		key_mapping_scene = load("res://scenes/key_mapping_menu.tscn")
+	if not options_scene:
+		options_scene = load("res://scenes/options_menu.tscn")
