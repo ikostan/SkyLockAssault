@@ -341,17 +341,19 @@ static func set_game_version_for_tests(value: String) -> void:
 
 ## Use _input instead of _unhandled_input to catch events BEFORE the UI consumes them.
 func _input(event: InputEvent) -> void:
-	# Gate 1: Only play UI sounds if we are actually in a menu context.
-	# We assume menus are active if the tree is paused, the options menu is open,
-	# or there are hidden menus on the stack (meaning a sub-menu is open).
-	var is_menu_context: bool = get_tree().paused or options_open or not hidden_menus.is_empty()
+	# The Ultimate Menu Check: Does a UI element currently have keyboard/gamepad focus?
+	var ui_has_focus: bool = is_instance_valid(get_viewport().gui_get_focus_owner())
+
+	# Gate 1: Only play UI sounds if a UI element is focused OR we are in a known menu state
+	var is_menu_context: bool = (
+		get_tree().paused or options_open or not hidden_menus.is_empty() or ui_has_focus
+	)
 
 	if not is_menu_context:
 		return
 
 	for action: String in _nav_actions:
-		# Gate 2: Use is_action_just_pressed to prevent rapid-fire
-		# sound spam when the player holds down a navigation key.
+		# Gate 2: Prevent rapid-fire sound spam when holding down keys
 		if event.is_action_pressed(action) and not event.is_echo():
 			_play_ui_navigation_sfx()
 			return  # Exit once sound is triggered to avoid double-plays
