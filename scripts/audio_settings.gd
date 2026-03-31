@@ -109,11 +109,16 @@ func _ready() -> void:
 	)
 
 	# Connect specific mute button warning interceptors
-	mute_music.gui_input.connect(_on_music_mute_gui_input)
-	mute_sfx.gui_input.connect(_on_sfx_mute_gui_input)
-	mute_weapon.gui_input.connect(_on_weapon_mute_gui_input)
-	mute_rotor.gui_input.connect(_on_rotor_mute_gui_input)
-	mute_menu.gui_input.connect(_on_menu_mute_gui_input)
+	if not mute_music.gui_input.is_connected(_on_music_mute_gui_input):
+		mute_music.gui_input.connect(_on_music_mute_gui_input)
+	if not mute_sfx.gui_input.is_connected(_on_sfx_mute_gui_input):
+		mute_sfx.gui_input.connect(_on_sfx_mute_gui_input)
+	if not mute_weapon.gui_input.is_connected(_on_weapon_mute_gui_input):
+		mute_weapon.gui_input.connect(_on_weapon_mute_gui_input)
+	if not mute_rotor.gui_input.is_connected(_on_rotor_mute_gui_input):
+		mute_rotor.gui_input.connect(_on_rotor_mute_gui_input)
+	if not mute_menu.gui_input.is_connected(_on_menu_mute_gui_input):
+		mute_menu.gui_input.connect(_on_menu_mute_gui_input)
 
 	# Buttons
 	# To this:
