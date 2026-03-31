@@ -24,11 +24,9 @@ func after_each() -> void:
 func test_logging_default_level() -> void:
 	gut.p("Testing: Log level should default to INFO (1).")
 	
-	# Instead of forcing the value, we re-initialize the Resource to its default state.
-	# This ensures we are testing the actual default defined in your Resource script.
-	Globals.settings = GameSettingsResource.new() 
+	# FIX: Load the actual resource file instead of creating a blank .new()
+	Globals.settings = load("res://config_resources/default_settings.tres") 
 	
-	# Accessing settings via the new Resource reference
 	assert_eq(Globals.settings.current_log_level, 1, "Default log level must be INFO (1)")
 
 
@@ -65,13 +63,13 @@ func test_difficulty_clamping() -> void:
 
 func test_scene_resource_validity() -> void:
 	gut.p("Testing: PackedScenes in Resource are valid and preloaded.")
-	# Verifies that migrating paths to Resources doesn't break preloading [cite: 4]
+	# Verifies that migrating paths to Resources doesn't break preloading
 	assert_not_null(Globals.settings.key_mapping_scene, "Key mapping scene must be assigned in Resource")
 	assert_true(Globals.settings.key_mapping_scene is PackedScene, "Key mapping should be a PackedScene")
 
 func test_remap_prompt_strings() -> void:
 	gut.p("Testing: Remap prompt strings are correctly retrieved from Resource.")
-	# Verifies migration of hard-coded constants [cite: 3]
+	# Verifies migration of hard-coded constants
 	assert_eq(Globals.settings.remap_prompt_keyboard, "Press a key...", "Keyboard prompt mismatch")
 	assert_string_contains(Globals.settings.remap_prompt_gamepad, "gamepad", "Gamepad prompt should mention device")
 

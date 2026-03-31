@@ -171,10 +171,12 @@ def test_difficulty_flow(page: Page) -> None:
         page.evaluate("window.changeDifficulty([2.0])")
         page.wait_for_timeout(2500)
         new_logs = logs[pre_change_log_count:]
+
         assert any(
-            "setting 'difficulty' updated to: 2.0" in log["text"].lower()
+            "js difficulty callback called with valid value: 2.0" in log["text"].lower()
             for log in new_logs
-        ), "Failed to set difficulty to 2.0"
+        ), "Failed to extract/validate difficulty 2.0 from JS payload"
+
         assert any(
             "settings saved" in log["text"].lower() for log in new_logs
         ), "Failed to save the settings"
@@ -187,12 +189,12 @@ def test_difficulty_flow(page: Page) -> None:
         page.evaluate("window.gameplayResetPressed([])")
         page.wait_for_timeout(2500)
         reset_logs: List[Dict[str, str]] = logs[pre_reset_log_count:]
+
         # Verify that difficulty was reset to the expected default
         assert any(
-            "difficulty" in log["text"].lower()
-            and ("default" in log["text"].lower() or "1.0" in log["text"])
+            "setting 'difficulty' updated to: 1" in log["text"].lower()
             for log in reset_logs
-        ), "Difficulty reset to default was not observed in logs"
+        ), "Resource did not reset difficulty to 1.0 after reset button press"
 
         # Set difficulty to 2.0 again
         page.evaluate("window.changeDifficulty([2.0])")
@@ -216,7 +218,8 @@ def test_difficulty_flow(page: Page) -> None:
         # Gameplay UI hidden
         page.wait_for_selector("#difficulty-slider", state="hidden", timeout=2500)
         assert page.evaluate(
-            "document.getElementById('difficulty-slider') === null || document.getElementById('difficulty-slider').offsetParent === null"
+            "document.getElementById('difficulty-slider') === null || document.getElementById("
+            "'difficulty-slider').offsetParent === null"
         )
 
         # Check element present
@@ -230,7 +233,8 @@ def test_difficulty_flow(page: Page) -> None:
         assert page.evaluate("document.getElementById('start-button') !== null")
         page.wait_for_selector("#options-back-button", state="hidden", timeout=2500)
         assert page.evaluate(
-            "document.getElementById('options-back-button') === null || document.getElementById('options-back-button').offsetParent === null"
+            "document.getElementById('options-back-button') === null || document.getElementById("
+            "'options-back-button').offsetParent === null"
         )
 
         # Start game
