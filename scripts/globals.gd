@@ -30,6 +30,10 @@ var _is_loading_settings: bool = false  # Guard flag
 
 ## Preloaded stream to prevent disk I/O lag during fast menu navigation.
 var _ui_nav_stream: AudioStream = preload(UI_NAV_SOUND_PATH)
+
+# NEW: The persistent audio player to prevent node churn
+var _nav_sfx_player: AudioStreamPlayer
+
 # List of actions that should trigger the navigation sound
 var _nav_actions: Array[String] = [
 	"ui_up", "ui_down", "ui_left", "ui_right", "ui_focus_next", "ui_focus_prev"
@@ -39,6 +43,13 @@ var _nav_actions: Array[String] = [
 func _ready() -> void:
 	# Keep processing inputs even when the game is paused!
 	process_mode = Node.PROCESS_MODE_ALWAYS
+
+	# --- NEW: Initialize the permanent SFX player ---
+	_nav_sfx_player = AudioStreamPlayer.new()
+	_nav_sfx_player.stream = _ui_nav_stream
+	_nav_sfx_player.bus = AudioConstants.BUS_SFX_MENU
+	add_child(_nav_sfx_player)
+
 	# Load the resource here instead of preloading at the top
 	settings = load("res://config_resources/default_settings.tres") as GameSettingsResource
 	if settings == null:
@@ -361,16 +372,10 @@ func _input(event: InputEvent) -> void:
 
 ## Internal helper to play the navigation sound through the dedicated Menu SFX bus.
 func _play_ui_navigation_sfx() -> void:
-	# Create a temporary player for the one-shot sound
-	var sfx_player := AudioStreamPlayer.new()
-	add_child(sfx_player)
+	if not is_instance_valid(_nav_sfx_player):
+		return
 
-	sfx_player.stream = _ui_nav_stream
-
-	# Route to BUS_SFX_MENU to respect the player's Menu volume settings. [cite: 104, 114]
-	sfx_player.bus = AudioConstants.BUS_SFX_MENU
+	# If the sound is already playing (e.g., from rapid button presses),
+	# restart it from the beginning to feel responsive.
+	_nav_sfx_player.play()
 	log_message("Playing UI nav sound...", LogLevel.DEBUG)
-	sfx_player.play()
-
-	# Memory management: Clean up the node once the sound finishes playing.
-	sfx_player.finished.connect(sfx_player.queue_free)
