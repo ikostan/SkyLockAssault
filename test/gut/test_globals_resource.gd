@@ -65,7 +65,7 @@ func test_difficulty_clamping() -> void:
 
 func test_scene_resource_validity() -> void:
 	gut.p("Testing: PackedScenes in Resource are valid and preloaded.")
-	# Verifies that migrating paths to Resources doesn't break preloading [cite: 4]
+	# Verifies that migrating paths to Resources doesn't break preloading
 	assert_not_null(Globals.settings.key_mapping_scene, "Key mapping scene must be assigned in Resource")
 	assert_true(Globals.settings.key_mapping_scene is PackedScene, "Key mapping should be a PackedScene")
 
