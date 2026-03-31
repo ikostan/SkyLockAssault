@@ -192,6 +192,8 @@ func _on_change_volume_js(args: Array, bus_name: String) -> void:
 		Globals.log_message(
 			"Warning dialog: Master muted, cannot adjust sub-volume", Globals.LogLevel.WARNING
 		)
+		# Resync DOM to actual Godot value
+		_on_godot_volume_changed(bus_name, AudioManager.get_volume(bus_name))
 		return
 	if (
 		(
@@ -207,6 +209,8 @@ func _on_change_volume_js(args: Array, bus_name: String) -> void:
 		Globals.log_message(
 			"Warning dialog: SFX muted, cannot adjust sub-volume", Globals.LogLevel.WARNING
 		)
+		# Resync DOM to actual Godot value
+		_on_godot_volume_changed(bus_name, AudioManager.get_volume(bus_name))
 		return
 
 	AudioManager.set_volume(bus_name, value)
