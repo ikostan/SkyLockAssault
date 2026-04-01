@@ -16,7 +16,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       # yamllint disable-line rule:line-length
-      - uses: "release-drafter/release-drafter@3a7fb5c85b80b1dda66e1ccb94009adbbd32fce3"
+      - uses: "release-drafter/release-drafter@139054aeaa9adc52ab36ddf67437541f039b88e2"
         with:
           config-name: "release-drafter.yml"  # Your existing config
         env:
