@@ -34,9 +34,16 @@ func before_each() -> void:
 	if AudioServer.get_bus_index(AudioConstants.BUS_SFX_ROTORS) == -1:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, AudioConstants.BUS_SFX_ROTORS)
+	# ADDED: Initialize the Menu bus for headless testing
+	if AudioServer.get_bus_index(AudioConstants.BUS_SFX_MENU) == -1:
+		AudioServer.add_bus()
+		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, AudioConstants.BUS_SFX_MENU)
 
 
-## TC-SL-01 | Config file does not exist; AudioManager volumes/mutes at defaults (all 1.0, false); No other settings. | Call AudioManager.save_volumes() | Config file created with only "audio" section; All audio keys set to defaults; No other sections (e.g., no "input" or "Settings"); Log "Saved volumes to config."
+## TC-SL-01 |
+## Config file does not exist; AudioManager volumes/mutes at defaults (all 1.0, false); No other settings. | Call AudioManager.save_volumes() |
+## Config file created with only "audio" section; All audio keys set to defaults;
+## No other sections (e.g., no "input" or "Settings"); Log "Saved volumes to config."
 ## :rtype: void
 func test_tc_sl_01() -> void:
 	assert_false(FileAccess.file_exists(test_config_path))
@@ -49,7 +56,10 @@ func test_tc_sl_01() -> void:
 	assert_eq(sections.size(), 1)
 	assert_eq(sections[0], "audio")
 	var keys: Array = config.get_section_keys("audio")
-	assert_eq(keys.size(), 10)  # 5 volumes + 5 mutes
+	
+	# UPDATED: Changed from 10 to 12 (6 volumes + 6 mutes)
+	assert_eq(keys.size(), 12)  
+	
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
 		var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
 		assert_almost_eq(config.get_value("audio", config_data["volume_var"]), 1.0, 0.01)
