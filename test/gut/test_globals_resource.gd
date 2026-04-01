@@ -24,11 +24,9 @@ func after_each() -> void:
 func test_logging_default_level() -> void:
 	gut.p("Testing: Log level should default to INFO (1).")
 	
-	# Instead of forcing the value, we re-initialize the Resource to its default state.
-	# This ensures we are testing the actual default defined in your Resource script.
-	Globals.settings = GameSettingsResource.new() 
+	# FIX: Load the actual resource file instead of creating a blank .new()
+	Globals.settings = load("res://config_resources/default_settings.tres") 
 	
-	# Accessing settings via the new Resource reference
 	assert_eq(Globals.settings.current_log_level, 1, "Default log level must be INFO (1)")
 
 

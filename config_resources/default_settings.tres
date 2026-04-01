@@ -6,4 +6,6 @@
 
 [resource]
 script = ExtResource("3_qb8m4")
+key_mapping_scene = ExtResource("1_qho2n")
+options_scene = ExtResource("2_b4w4u")
 metadata/_custom_type_script = "uid://cgtk0ximoo5ty"

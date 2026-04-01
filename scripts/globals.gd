@@ -8,15 +8,8 @@ extends Node
 
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 
-# Shared constants
-## Device-specific remap prompts to avoid layout shift.
-# const REMAP_PROMPT_TEXT: String = "Press a key or controller button/axis..."
-# const REMAP_PROMPT_KEYBOARD: String = "Press a key..."
-# const REMAP_PROMPT_GAMEPAD: String = "Press a gamepad button/axis..."
-
-# @export var current_log_level: LogLevel = LogLevel.INFO  # Default: Show INFO and above
-# @export var enable_debug_logging: bool = false  # Toggle in Inspector or settings
-# @export var difficulty: float = 1.0  # Multiplier: 1.0=Normal, <1=Easy, >1=Hard
+## Path to the navigation sound file
+const UI_NAV_SOUND_PATH: String = "res://files/sounds/sfx/ui_navigation.wav"
 
 # Add the resource reference here
 var settings: GameSettingsResource
@@ -35,8 +28,28 @@ var next_scene: String = ""  # Path to the next scene to load via loading screen
 var current_input_device: String = "keyboard"  # "keyboard" or "gamepad"
 var _is_loading_settings: bool = false  # Guard flag
 
+## Preloaded stream to prevent disk I/O lag during fast menu navigation.
+var _ui_nav_stream: AudioStream = preload(UI_NAV_SOUND_PATH)
+
+# NEW: The persistent audio player to prevent node churn
+var _nav_sfx_player: AudioStreamPlayer
+
+# List of actions that should trigger the navigation sound
+var _nav_actions: Array[String] = [
+	"ui_up", "ui_down", "ui_left", "ui_right", "ui_focus_next", "ui_focus_prev"
+]
+
 
 func _ready() -> void:
+	# Keep processing inputs even when the game is paused!
+	process_mode = Node.PROCESS_MODE_ALWAYS
+
+	# --- NEW: Initialize the permanent SFX player ---
+	_nav_sfx_player = AudioStreamPlayer.new()
+	_nav_sfx_player.stream = _ui_nav_stream
+	_nav_sfx_player.bus = AudioConstants.BUS_SFX_MENU
+	add_child(_nav_sfx_player)
+
 	# Load the resource here instead of preloading at the top
 	settings = load("res://config_resources/default_settings.tres") as GameSettingsResource
 	if settings == null:
@@ -335,3 +348,35 @@ static func get_game_version() -> String:
 # For tests only—avoids direct writes in prod
 static func set_game_version_for_tests(value: String) -> void:
 	ProjectSettings.set_setting("application/config/version", value)
+
+
+## Use _input instead of _unhandled_input to catch events BEFORE the UI consumes them.
+func _input(_event: InputEvent) -> void:
+	# The Ultimate Menu Check: Does a UI element currently have keyboard/gamepad focus?
+	var ui_has_focus: bool = is_instance_valid(get_viewport().gui_get_focus_owner())
+
+	# Gate 1: Only play UI sounds if a UI element is focused OR we are in a known menu state
+	var is_menu_context: bool = (
+		get_tree().paused or options_open or not hidden_menus.is_empty() or ui_has_focus
+	)
+
+	if not is_menu_context:
+		return
+
+	for action: String in _nav_actions:
+		# Gate 2: Prevent rapid-fire sound spam when holding down keys or analog sticks
+		# We use the global Input singleton here because it perfectly handles
+		# analog joystick deadzone debouncing, which event.is_echo() misses.
+		if Input.is_action_just_pressed(action):
+			_play_ui_navigation_sfx()
+			return  # Exit once sound is triggered to avoid double-plays
+
+
+## Internal helper to play the navigation sound through the dedicated Menu SFX bus.
+func _play_ui_navigation_sfx() -> void:
+	if not is_instance_valid(_nav_sfx_player):
+		return
+
+	# If the sound is already playing (e.g., from rapid button presses),
+	# restart it from the beginning to feel responsive.
+	_nav_sfx_player.play()
