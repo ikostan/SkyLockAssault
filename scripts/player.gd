@@ -42,8 +42,8 @@ const BLINK_INTERVAL: float = 0.5  # Seconds between blinks
 @export var acceleration: float = 200.0
 @export var deceleration: float = 100.0
 # Base fuel consumption
-@export var base_fuel_drain: float = 1.0
-var current_fuel: float
+# OLD: @export var base_fuel_drain: float = 1.0
+# OLD: var current_fuel: float
 
 # Regular vars for computed boundaries (no export needed if set in code)
 var screen_size: Vector2
@@ -139,7 +139,9 @@ func _ready() -> void:
 	# Initialize fuel bar style
 	fuel_bar_fill_style = StyleBoxFlat.new()
 	set_bar_fill_style(fuel_bar, fuel_bar_fill_style)
-	fuel_bar.max_value = MAX_FUEL
+	# OLD: fuel_bar.max_value = MAX_FUEL
+	# NEW: Ensure the UI max capacity pulls directly from the centralized GameSettingsResource.
+	fuel_bar.max_value = Globals.settings.max_fuel
 
 	# Initialize speed bar style and value
 	speed_bar_fill_style = StyleBoxFlat.new()
@@ -147,9 +149,14 @@ func _ready() -> void:
 	speed_bar.max_value = MAX_SPEED
 
 	# Initialize fuel bar style and value
-	current_fuel = MAX_FUEL
+	# OLD: current_fuel = MAX_FUEL
 	fuel_timer.timeout.connect(_on_fuel_timer_timeout)
 	fuel_timer.start()
+	
+	# NEW: Connect to the global fuel_depleted signal to handle engine failure.
+	Globals.settings.fuel_depleted.connect(_on_player_out_of_fuel)
+	# NEW: Connect to the global setting_changed signal so the UI reacts to refuels/drains automatically.
+	Globals.settings.setting_changed.connect(_on_setting_changed)
 
 	speed = {
 		"speed": 250.0,  # Initial speed value (mph); was current_speed
@@ -167,11 +174,11 @@ func _ready() -> void:
 	}
 
 	fuel = {
-		"fuel": current_fuel,
+		# OLD: "fuel": current_fuel,
 		"factor": 0.0,
 		"timer": fuel_label_blink_timer,
 		"label": fuel_label,
-		"max": MAX_FUEL,
+		# OLD: "max": MAX_FUEL,
 		"bar": fuel_bar,
 		"bar style": fuel_bar_fill_style,
 		"blinking": false,
@@ -208,6 +215,21 @@ func _ready() -> void:
 		)
 	else:
 		push_error("Weapon node not found! Check player.tscn scene tree for $Weapon child.")
+
+
+# NEW: Observer pattern handler to react when GameSettingsResource properties (like fuel) are updated externally.
+func _on_setting_changed(setting_name: String, _value: Variant) -> void:
+	if setting_name == "current_fuel":
+		update_fuel_bar()
+		check_fuel_warning()
+
+
+# NEW: Handler for engine failure triggered by the global fuel_depleted signal from the resource.
+func _on_player_out_of_fuel() -> void:
+	Globals.log_message("Player is out of fuel! Engine flameout.", Globals.LogLevel.WARNING)
+	rotor_stop(rotor_right, rotor_right_sfx)
+	rotor_stop(rotor_left, rotor_left_sfx)
+	fuel_timer.stop()
 
 
 ## Retrieves the effective text color of a Label, considering theme overrides.
@@ -284,8 +306,15 @@ func rotor_stop(rotor: Node2D, rotor_sfx: AudioStreamPlayer2D) -> void:
 
 
 func update_fuel_bar() -> void:
-	fuel["bar"].value = fuel["fuel"]
-	var fuel_percent: float = (fuel["fuel"] / fuel["max"]) * 100.0
+	# OLD: fuel["bar"].value = fuel["fuel"]
+	# OLD: var fuel_percent: float = (fuel["fuel"] / fuel["max"]) * 100.0
+
+	# NEW: Explicitly read current and max fuel from the global settings resource.
+	var cur_fuel: float = Globals.settings.current_fuel
+	var m_fuel: float = Globals.settings.max_fuel
+	
+	fuel["bar"].value = cur_fuel
+	var fuel_percent: float = (cur_fuel / m_fuel) * 100.0
 
 	if fuel_percent > HIGH_FUEL_THRESHOLD:
 		fuel["factor"] = 0.0  # Reset for consistency, though not used here
@@ -355,33 +384,45 @@ func update_speed_bar() -> void:
 
 # Connect Timer's timeout signal
 func _on_fuel_timer_timeout() -> void:
-	# Scale base rate with clamped normalized speed
-	# to avoid excessive drain at out-of-range speeds
+	# OLD: # Scale base rate with clamped normalized speed
+	# OLD: # to avoid excessive drain at out-of-range speeds
+	# OLD: var normalized_speed: float = clamp(speed["speed"] / MAX_SPEED, 0.0, 1.0)
+	# OLD: var fuel_left: float = (
+	# OLD: 	fuel["fuel"] - ((base_fuel_drain * normalized_speed) * Globals.settings.difficulty)
+	# OLD: )
+	# OLD: #
+	# OLD: # Clamp and update current_fuel first
+	# OLD: fuel["fuel"] = clamp(fuel_left, 0, fuel["max"])
+	# OLD: 
+	# OLD: if fuel["fuel"] <= 0:
+	# OLD: 	speed["speed"] = 0.0  # Or game over logic
+	# OLD: 	fuel_timer.stop()
+	# OLD: 	rotor_stop(rotor_right, rotor_right_sfx)
+	# OLD: 	rotor_stop(rotor_left, rotor_left_sfx)
+	# OLD: 
+	# OLD: # Update UI from the clamped value
+	# OLD: update_fuel_bar()
+	# OLD: # Check fuel level and start/stop blinking
+	# OLD: check_fuel_warning()
+	# OLD: Globals.log_message("Fuel left: " + str(fuel["fuel"]), Globals.LogLevel.DEBUG)
+
+	# NEW: Calculate depletion based on Global settings and update the resource directly.
+	# NEW: Game over logic is now handled by _on_player_out_of_fuel via the fuel_depleted signal.
+	# NEW: UI updates are handled automatically via the setting_changed signal.
 	var normalized_speed: float = clamp(speed["speed"] / MAX_SPEED, 0.0, 1.0)
-	var fuel_left: float = (
-		fuel["fuel"] - ((base_fuel_drain * normalized_speed) * Globals.settings.difficulty)
-	)
-	#
-	# Clamp and update current_fuel first
-	fuel["fuel"] = clamp(fuel_left, 0, fuel["max"])
-
-	if fuel["fuel"] <= 0:
-		speed["speed"] = 0.0  # Or game over logic
-		fuel_timer.stop()
-		rotor_stop(rotor_right, rotor_right_sfx)
-		rotor_stop(rotor_left, rotor_left_sfx)
-
-	# Update UI from the clamped value
-	update_fuel_bar()
-	# Check fuel level and start/stop blinking
-	check_fuel_warning()
-	Globals.log_message("Fuel left: " + str(fuel["fuel"]), Globals.LogLevel.DEBUG)
+	var consumption: float = Globals.settings.base_consumption_rate * normalized_speed * Globals.settings.difficulty
+	Globals.settings.current_fuel -= consumption
+	Globals.log_message("Fuel left: " + str(Globals.settings.current_fuel), Globals.LogLevel.DEBUG)
 
 
 func check_fuel_warning() -> void:
-	if fuel["fuel"] <= LOW_FUEL_THRESHOLD and not fuel["blinking"]:
+	# OLD: if fuel["fuel"] <= LOW_FUEL_THRESHOLD and not fuel["blinking"]:
+	# NEW: Read from global resource instead of local dictionary
+	if Globals.settings.current_fuel <= LOW_FUEL_THRESHOLD and not fuel["blinking"]:
 		start_blinking(fuel)
-	elif fuel["fuel"] > LOW_FUEL_THRESHOLD and fuel["blinking"]:
+	# OLD: elif fuel["fuel"] > LOW_FUEL_THRESHOLD and fuel["blinking"]:
+	# NEW: Read from global resource instead of local dictionary
+	elif Globals.settings.current_fuel > LOW_FUEL_THRESHOLD and fuel["blinking"]:
 		stop_blinking(fuel)
 
 
@@ -435,29 +476,44 @@ func _toggle_label(param: Dictionary) -> void:
 
 func _physics_process(_delta: float) -> void:
 	# Speed changes allowed only if fuel > 0
-	if Input.is_action_pressed("speed_up") and fuel["fuel"] > 0:
+	# OLD: if Input.is_action_pressed("speed_up") and fuel["fuel"] > 0:
+	# NEW: Check global resource fuel instead of local dictionary
+	if Input.is_action_pressed("speed_up") and Globals.settings.current_fuel > 0:
 		speed["speed"] += speed["acceleration"] * _delta
-	if Input.is_action_pressed("speed_down") and fuel["fuel"] > 0:
+		
+	# OLD: if Input.is_action_pressed("speed_down") and fuel["fuel"] > 0:
+	# NEW: Check global resource fuel instead of local dictionary
+	if Input.is_action_pressed("speed_down") and Globals.settings.current_fuel > 0:
 		speed["speed"] -= speed["deceleration"] * _delta
+		
 	# Clamp current_speed between MIN_SPEED and MAX_SPEED
-	if fuel["fuel"] == 0:
+	# OLD: if fuel["fuel"] == 0:
+	# NEW: Check global resource fuel instead of local dictionary
+	if Globals.settings.current_fuel == 0:
 		# No fuel left, airplane can't fly
 		speed["speed"] = clamp(speed["speed"], 0, speed["max"])
 	else:
 		speed["speed"] = clamp(speed["speed"], speed["min"], speed["max"])
+		
 	# Left/Right movement
 	var lateral_input: float = Input.get_axis("move_left", "move_right")
+	
 	# Left/Right movement, only allowed when fuel > 0 and the player is moving
-	if lateral_input and fuel["fuel"] > 0 and speed["speed"] > 0:
+	# OLD: if lateral_input and fuel["fuel"] > 0 and speed["speed"] > 0:
+	# NEW: Check global resource fuel instead of local dictionary
+	if lateral_input and Globals.settings.current_fuel > 0 and speed["speed"] > 0:
 		player.velocity.x = lateral_input * speed["lateral_speed"]
 	# Reset lateral velocity if no input
 	else:
 		player.velocity.x = 0.0
+		
 	# Clamp player position within allowed ranged of coords
 	player.position.x = clamp(player.position.x, player_x_min, player_x_max)
 	player.position.y = clamp(player.position.y, player_y_min, player_y_max)
+	
 	# Update UI
 	update_speed_bar()
 	check_speed_warning()
+	
 	# Perform player movement
 	player.move_and_slide()

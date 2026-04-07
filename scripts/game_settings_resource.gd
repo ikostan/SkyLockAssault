@@ -15,6 +15,32 @@ extends Resource
 ## without the UI having to explicitly call persistence or logging methods.
 signal setting_changed(setting_name: String, new_value: Variant)
 
+## SIGNAL: fuel_depleted
+##
+## Emitted when current_fuel reaches exactly 0.0.
+## External systems (like the Player or UI) can connect to this to trigger
+## game-over states or low-fuel warnings without polling every frame.
+signal fuel_depleted
+
+@export_group("Fuel System")
+## Maximum fuel capacity.
+@export var max_fuel: float = 100.0:
+	set(value):
+		max_fuel = max(0.0, value)
+		setting_changed.emit("max_fuel", max_fuel)
+
+## Current fuel level. Clamped between 0.0 and max_fuel.
+@export var current_fuel: float = 100.0:
+	set(value):
+		var old_value: float = current_fuel
+		current_fuel = clamp(value, 0.0, max_fuel)
+		if old_value > 0.0 and current_fuel == 0.0:
+			fuel_depleted.emit()
+		setting_changed.emit("current_fuel", current_fuel)
+
+## Base rate of fuel consumption per second.
+@export var base_consumption_rate: float = 1.0
+
 @export_group("Logging")
 # Current log level: 0=DEBUG, 1=INFO, 2=WARNING, 3=ERROR, 4=NONE
 @export_range(0, 4, 1) var current_log_level: int = 1:
@@ -69,3 +95,9 @@ func _init() -> void:
 		key_mapping_scene = load("res://scenes/key_mapping_menu.tscn")
 	if not options_scene:
 		options_scene = load("res://scenes/options_menu.tscn")
+
+## Helper method to increase fuel safely.
+## Increases fuel level by specified amount, clamped to max_fuel.
+func refuel(amount: float) -> void:
+	if amount > 0:
+		current_fuel += amount
