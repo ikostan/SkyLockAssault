@@ -96,6 +96,7 @@ func _init() -> void:
 	if not options_scene:
 		options_scene = load("res://scenes/options_menu.tscn")
 
+
 ## Helper method to increase fuel safely.
 ## Increases fuel level by specified amount, clamped to max_fuel.
 func refuel(amount: float) -> void:
