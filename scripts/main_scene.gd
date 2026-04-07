@@ -188,8 +188,15 @@ func setup_decor_layer(viewport: Vector2) -> void:
 func _process(delta: float) -> void:
 	var scroll_speed: float = player.speed["speed"] * delta * Globals.settings.difficulty * 0.8
 	background.scroll_offset.y += scroll_speed
-	if player.fuel["fuel"] <= 0:
+
+	# OLD: if player.fuel["fuel"] <= 0:
+	# NEW: Check the global settings resource for current fuel,
+	# since the local dictionary key was removed.
+	if Globals.settings.current_fuel <= 0:
 		background.scroll_offset = Vector2(0, 0)
+
+	# 1. Critical unbound controls warning (shown ONCE per session)
+	# Flag stays true until player fixes bindings (e.g., in key_mapping.gd after remap).
 
 	# 1. Critical unbound controls warning (shown ONCE per session)
 	# Flag stays true until player fixes bindings (e.g., in key_mapping.gd after remap).
