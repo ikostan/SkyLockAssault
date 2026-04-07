@@ -155,7 +155,8 @@ func _ready() -> void:
 
 	# NEW: Connect to the global fuel_depleted signal to handle engine failure.
 	Globals.settings.fuel_depleted.connect(_on_player_out_of_fuel)
-	# NEW: Connect to the global setting_changed signal so the UI reacts to refuels/drains automatically.
+	# NEW: Connect to the global setting_changed signal so the UI
+	# reacts to refuels/drains automatically.
 	Globals.settings.setting_changed.connect(_on_setting_changed)
 
 	speed = {
@@ -217,7 +218,8 @@ func _ready() -> void:
 		push_error("Weapon node not found! Check player.tscn scene tree for $Weapon child.")
 
 
-# NEW: Observer pattern handler to react when GameSettingsResource properties (like fuel) are updated externally.
+# NEW: Observer pattern handler to react when GameSettingsResource
+# properties (like fuel) are updated externally.
 func _on_setting_changed(setting_name: String, _value: Variant) -> void:
 	if setting_name == "current_fuel":
 		update_fuel_bar()
