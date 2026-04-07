@@ -10,5 +10,8 @@ extends RefCounted
 ## @param player: The player node instance.
 ## @param difficulty: The difficulty level to use.
 ## @return: The expected depletion amount.
-static func calculate_expected_depletion(player: Node, difficulty: float) -> float:
-	return player.base_fuel_drain * (player.speed["speed"] / player.MAX_SPEED) * difficulty
+static func calculate_expected_depletion(player_root: Node, difficulty: float) -> float:
+	var normalized_speed: float = player_root.speed["speed"] / player_root.MAX_SPEED
+	# OLD: return player_root.base_fuel_drain * normalized_speed * difficulty
+	# NEW: Fetch the consumption rate from the new global resource since the local drain variable was removed
+	return Globals.settings.base_consumption_rate * normalized_speed * difficulty

@@ -234,6 +234,11 @@ func _on_setting_changed(setting_name: String, _value: Variant) -> void:
 # NEW: Handler for engine failure triggered by the global fuel_depleted signal from the resource.
 func _on_player_out_of_fuel() -> void:
 	Globals.log_message("Player is out of fuel! Engine flameout.", Globals.LogLevel.WARNING)
+
+	# OLD: speed["speed"] = 0.0 (This was previously inside _on_fuel_timer_timeout)
+	# NEW: Migrated the speed reset to ensure the plane actually stops flying when fuel hits 0
+	speed["speed"] = 0.0
+
 	rotor_stop(rotor_right, rotor_right_sfx)
 	rotor_stop(rotor_left, rotor_left_sfx)
 	fuel_timer.stop()
