@@ -30,23 +30,50 @@ func test_fuel_depletion_with_difficulty() -> void:
 	var original_difficulty: float = Globals.settings.difficulty
 	
 	# Reset fuel before each sim for independent tests
-	player_inst.fuel["fuel"] = 100.0
+	# OLD: player_inst.fuel["fuel"] = 100.0
+	# NEW: Reset the global fuel resource instead of the local dictionary
+	Globals.settings.current_fuel = 100.0
 	Globals.settings.difficulty = 1.0
 	var normalized_speed: float = player_inst.speed["speed"] / player_inst.MAX_SPEED
-	var dep_1: float = player_inst.base_fuel_drain * normalized_speed * Globals.settings.difficulty
-	player_inst._on_fuel_timer_timeout()
-	assert_float(player_inst.fuel["fuel"]).is_equal_approx(100.0 - dep_1, 0.01)  # Larger delta for precision
 	
-	player_inst.fuel["fuel"] = 100.0
+	# OLD: var dep_1: float = player_inst.base_fuel_drain * normalized_speed * Globals.settings.difficulty
+	# NEW: Use the global base_consumption_rate instead of the removed local base_fuel_drain
+	var dep_1: float = Globals.settings.base_consumption_rate * normalized_speed * Globals.settings.difficulty
+	
+	player_inst._on_fuel_timer_timeout()
+	
+	# OLD: assert_float(player_inst.fuel["fuel"]).is_equal_approx(100.0 - dep_1, 0.01)  # Larger delta for precision
+	# NEW: Assert against the global fuel resource instead of the local dictionary
+	assert_float(Globals.settings.current_fuel).is_equal_approx(100.0 - dep_1, 0.01)
+	
+	# OLD: player_inst.fuel["fuel"] = 100.0
+	# NEW: Reset the global fuel resource for the second test
+	Globals.settings.current_fuel = 100.0
 	Globals.settings.difficulty = 2.0
 	normalized_speed = player_inst.speed["speed"] / player_inst.MAX_SPEED  # Re-derive
-	var dep_2: float = player_inst.base_fuel_drain * normalized_speed * Globals.settings.difficulty
-	player_inst._on_fuel_timer_timeout()
-	assert_float(player_inst.fuel["fuel"]).is_equal_approx(100.0 - dep_2, 0.01)
 	
-	player_inst.fuel["fuel"] = 100.0
+	# OLD: var dep_2: float = player_inst.base_fuel_drain * normalized_speed * Globals.settings.difficulty
+	# NEW: Use the global base_consumption_rate instead of the removed local base_fuel_drain
+	var dep_2: float = Globals.settings.base_consumption_rate * normalized_speed * Globals.settings.difficulty
+	
+	player_inst._on_fuel_timer_timeout()
+	
+	# OLD: assert_float(player_inst.fuel["fuel"]).is_equal_approx(100.0 - dep_2, 0.01)
+	# NEW: Assert against the global fuel resource
+	assert_float(Globals.settings.current_fuel).is_equal_approx(100.0 - dep_2, 0.01)
+	
+	# OLD: player_inst.fuel["fuel"] = 100.0
+	# NEW: Reset the global fuel resource for the third test
+	Globals.settings.current_fuel = 100.0
 	Globals.settings.difficulty = 0.5
 	normalized_speed = player_inst.speed["speed"] / player_inst.MAX_SPEED
-	var dep_05: float = player_inst.base_fuel_drain * normalized_speed * Globals.settings.difficulty
+	
+	# OLD: var dep_05: float = player_inst.base_fuel_drain * normalized_speed * Globals.settings.difficulty
+	# NEW: Use the global base_consumption_rate instead of the removed local base_fuel_drain
+	var dep_05: float = Globals.settings.base_consumption_rate * normalized_speed * Globals.settings.difficulty
+	
 	player_inst._on_fuel_timer_timeout()
-	assert_float(player_inst.fuel["fuel"]).is_equal_approx(100.0 - dep_05, 0.01)
+	
+	# OLD: assert_float(player_inst.fuel["fuel"]).is_equal_approx(100.0 - dep_05, 0.01)
+	# NEW: Assert against the global fuel resource
+	assert_float(Globals.settings.current_fuel).is_equal_approx(100.0 - dep_05, 0.01)
