@@ -140,8 +140,13 @@ func _ready() -> void:
 	fuel_bar_fill_style = StyleBoxFlat.new()
 	set_bar_fill_style(fuel_bar, fuel_bar_fill_style)
 	# OLD: fuel_bar.max_value = MAX_FUEL
-	# NEW: Ensure the UI max capacity pulls directly from the centralized GameSettingsResource.
+	# NEW: Ensure the UI max capacity pulls directly from
+	# the centralized GameSettingsResource.
 	fuel_bar.max_value = Globals.settings.max_fuel
+
+	# NEW: Reset the fuel to maximum every time the player spawns
+	# so a new game always starts with a full tank.
+	Globals.settings.current_fuel = Globals.settings.max_fuel
 
 	# Initialize speed bar style and value
 	speed_bar_fill_style = StyleBoxFlat.new()
