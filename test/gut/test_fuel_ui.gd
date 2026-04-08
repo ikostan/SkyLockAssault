@@ -6,6 +6,14 @@ extends "res://addons/gut/test.gd"
 
 ## test_ui_updates_on_fuel_change_signal | Validate UI reacts to fuel updates
 ## :rtype: void
+var original_fuel: float
+
+func before_each() -> void:
+	original_fuel = Globals.settings.current_fuel
+
+func after_each() -> void:
+	Globals.settings.current_fuel = original_fuel
+
 func test_ui_updates_on_fuel_change_signal() -> void:
 	gut.p("Testing: UI Progressbar reflects resource value via signal.")
 	var fuel_bar: ProgressBar = ProgressBar.new()
