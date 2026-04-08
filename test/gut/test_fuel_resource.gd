@@ -9,14 +9,19 @@ extends "res://addons/gut/test.gd"
 var fuel_res: GameSettingsResource
 const TOLERANCE: float = 0.0001
 
+
 ## Per-test setup: Instantiate a fresh resource.
 ## :rtype: void
 func before_each() -> void:
 	fuel_res = GameSettingsResource.new()
-	# These must be defined in GameSettingsResource to avoid the 'Invalid assignment' error
-	fuel_res.max_fuel = 100.0
-	fuel_res.current_fuel = 100.0
-	fuel_res.base_consumption_rate = 1.0
+	
+	# OLD: 
+	# fuel_res.max_fuel = 100.0
+	# fuel_res.current_fuel = 100.0
+	# fuel_res.base_consumption_rate = 1.0
+	
+	# NEW: Removed the manual property assignments. This ensures test_fuel_initialization()
+	# genuinely verifies the default values hardcoded within the GameSettingsResource script.
 
 # --- 1. Initialization Tests ---
 
