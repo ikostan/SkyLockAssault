@@ -229,6 +229,12 @@ func _on_setting_changed(setting_name: String, _value: Variant) -> void:
 	if setting_name == "current_fuel":
 		update_fuel_bar()
 		check_fuel_warning()
+	elif setting_name == "max_fuel":
+		# Keep the UI fuel bar max in sync with the GameSettingsResource.
+		fuel_bar.max_value = Globals.settings.max_fuel
+		# Re-run the standard UI update so the current fuel is represented correctly
+		# relative to the new maximum.
+		update_fuel_bar()
 
 
 # NEW: Handler for engine failure triggered by the global fuel_depleted signal from the resource.
