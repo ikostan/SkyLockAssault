@@ -24,9 +24,11 @@ signal fuel_depleted
 
 @export_group("Fuel System")
 ## Maximum fuel capacity.
-@export var max_fuel: float = 100.0:
+`@export` var max_fuel: float = 100.0:
 	set(value):
 		max_fuel = max(0.0, value)
+		if current_fuel > max_fuel:
+			current_fuel = max_fuel
 		setting_changed.emit("max_fuel", max_fuel)
 
 ## Current fuel level. Clamped between 0.0 and max_fuel.
