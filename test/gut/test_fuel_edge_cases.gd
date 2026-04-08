@@ -11,7 +11,10 @@ const TEST_CONFIG_PATH: String = "user://test_fuel_edge_cases.cfg"
 
 ## Per-test setup: Isolate the filesystem and ensure a clean memory state.
 ## :rtype: void
+var original_settings: GameSettingsResource
+
 func before_each() -> void:
+	original_settings = Globals.settings
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
 	
@@ -25,6 +28,7 @@ func before_each() -> void:
 ## Per-test cleanup: Remove temporary configuration files.
 ## :rtype: void
 func after_each() -> void:
+	Globals.settings = original_settings
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
 
