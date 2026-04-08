@@ -355,7 +355,7 @@ func _notification(what: int) -> void:
 		# OLD: # save_game_state()  # Uncomment and implement as needed.
 		# NEW: Explicitly save all settings (including current_fuel) right before the game quits
 		_save_settings()
-		
+
 		# After cleanup, let the quit proceed (optional on desktop; auto on web).
 		get_tree().quit()
 
