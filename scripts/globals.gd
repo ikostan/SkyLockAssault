@@ -79,10 +79,16 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	var log_msg: String = "Setting '%s' updated to: %s" % [setting_name, str(new_value)]
 
 	# Automatically log the change
-	log_message(log_msg, LogLevel.DEBUG)
+	# OLD: log_message(log_msg, LogLevel.DEBUG)
+	# NEW: Prevent log spam by filtering out high-frequency runtime changes like fuel ticks
+	if setting_name != "current_fuel":
+		log_message(log_msg, LogLevel.DEBUG)
 
 	# Automatically persist to disk
-	_save_settings()
+	# OLD: _save_settings()
+	# NEW: Prevent disk I/O lag by stopping current_fuel from triggering a file save on every frame/timer tick
+	if setting_name != "current_fuel":
+		_save_settings()
 
 
 ## Centralized "ensure initial focus" helper.
@@ -151,7 +157,8 @@ func load_key_mapping(menu_to_hide: Node) -> void:
 	get_tree().root.add_child(km_instance)
 
 
-## Loads persisted settings from config if valid types; skips invalid/missing to keep current.
+## Loads persisted settings from config if valid types;
+## skips invalid/missing to keep current.
 ## :param path: Config file path (default: Settings.CONFIG_PATH).
 ## :type path: String
 ## :rtype: void
@@ -345,8 +352,10 @@ func _notification(what: int) -> void:
 
 		# Example: Save game state if you have a save system.
 		# Replace with your actual save function, e.g., from a save_manager.gd.
-		# save_game_state()  # Uncomment and implement as needed.
-
+		# OLD: # save_game_state()  # Uncomment and implement as needed.
+		# NEW: Explicitly save all settings (including current_fuel) right before the game quits
+		_save_settings()
+		
 		# After cleanup, let the quit proceed (optional on desktop; auto on web).
 		get_tree().quit()
 
