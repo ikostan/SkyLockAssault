@@ -1,6 +1,6 @@
 ## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
-## test_fuel_resource_gut.gd
+## test_fuel_resource.gd
 ## GUT unit tests for Fuel System core logic in GameSettingsResource.
 ##
 ## Covers initialization, deterministic consumption, and clamping.
