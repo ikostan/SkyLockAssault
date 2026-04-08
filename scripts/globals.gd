@@ -86,7 +86,8 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 
 	# Automatically persist to disk
 	# OLD: _save_settings()
-	# NEW: Prevent disk I/O lag by stopping current_fuel from triggering a file save on every frame/timer tick
+	# NEW: Prevent disk I/O lag by stopping current_fuel from
+	# triggering a file save on every frame/timer tick
 	if setting_name != "current_fuel":
 		_save_settings()
 
