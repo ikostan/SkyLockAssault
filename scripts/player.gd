@@ -326,7 +326,7 @@ func update_fuel_bar() -> void:
 	var m_fuel: float = Globals.settings.max_fuel
 
 	fuel["bar"].value = cur_fuel
-	var fuel_percent: float = (cur_fuel / m_fuel) * 100.0
+	var fuel_percent: float = 0.0 if m_fuel <= 0.0 else (cur_fuel / m_fuel) * 100.0
 
 	if fuel_percent > HIGH_FUEL_THRESHOLD:
 		fuel["factor"] = 0.0  # Reset for consistency, though not used here
