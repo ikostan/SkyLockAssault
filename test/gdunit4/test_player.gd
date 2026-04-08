@@ -4,7 +4,6 @@
 # Unit tests for player.gd using GdUnit4 in Godot 4.4
 # All tests now use manual scene instantiation (no GdUnitSceneRunner)
 # This avoids version-specific API issues and gives full control.
-
 extends GdUnitTestSuite
 
 const TestHelpers = preload("res://test/gdunit4/test_helpers.gd")
@@ -31,7 +30,6 @@ func test_shared_depletion_helper() -> void:
 	var player_root: Node = main_scene.get_node("Player")
 	Globals.settings.difficulty = 2.0
 	
-	# OLD: var expected: float = player_root.base_fuel_drain * (player_root.speed["speed"] / player_root.MAX_SPEED) * Globals.settings.difficulty
 	# NEW: Read the base consumption rate from the global settings since it was removed from player.gd.
 	var expected: float = Globals.settings.base_consumption_rate * (player_root.speed["speed"] / player_root.MAX_SPEED) * Globals.settings.difficulty
 	assert_float(TestHelpers.calculate_expected_depletion(player_root, Globals.settings.difficulty)).is_equal_approx(expected, 0.001)
@@ -47,6 +45,7 @@ func test_player_present() -> void:
 	assert_object(player_root).is_not_null()
 	assert_bool(player_root.visible).is_true()
 	assert_bool(player_root.is_inside_tree()).is_true()
+
 
 # Test: Screen boundary clamping
 # test_player.gd - Fixed clamping test: use float asserts with approx + epsilon
@@ -83,20 +82,18 @@ func test_fuel_colors() -> void:
 	var fuel_bar : ProgressBar = player_root.fuel["bar"]
 	
 	# High fuel → Green
-	# OLD: player_root.fuel["fuel"] = 95.0
-	# NEW: Update the global resource so the player's UI reacts properly.
-	Globals.settings.current_fuel = 95.0
+	# NEW: Calculate 95% relative to the dynamic max_fuel
+	Globals.settings.current_fuel = Globals.settings.max_fuel * 0.95
 	player_root.update_fuel_bar()
 	var style_1 : StyleBoxFlat = fuel_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(style_1.bg_color).is_equal(Color.GREEN)
 		
 	# Low fuel → Dark Red (consistent with gradual depletion)
-	# OLD: player_root.fuel["fuel"] = 10.0
-	# NEW: Update the global resource so the player's UI reacts properly.
-	Globals.settings.current_fuel = 10.0
+	# NEW: Calculate 10% relative to the dynamic max_fuel
+	Globals.settings.current_fuel = Globals.settings.max_fuel * 0.10
 	player_root.update_fuel_bar()
 	var style_2 : StyleBoxFlat = fuel_bar.get_theme_stylebox("fill").duplicate()
-	assert_that(style_2.bg_color).is_equal(Color(0.5, 0, 0, 1.0))  # Or Color(0.5, 0.0, 0.0) if using floats
+	assert_that(style_2.bg_color).is_equal(Color(0.5, 0, 0, 1.0))
 
 
 # Test: Smooth color lerp between thresholds
@@ -109,20 +106,19 @@ func test_fuel_colors_fixed() -> void:
 	var fuel_bar : ProgressBar = player_root.fuel["bar"]
 	
 	# Still full → Green
-	# OLD: player_root.fuel["fuel"] = 95.0
-	# NEW: Setting the fuel value in the global settings resource instead.
-	Globals.settings.current_fuel = 95.0
+	# NEW: Calculate 95% relative to max_fuel
+	Globals.settings.current_fuel = Globals.settings.max_fuel * 0.95
 	player_root.update_fuel_bar()
 	var style : StyleBoxFlat =  player_root.fuel["bar"].get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(Color.GREEN)
 	
 	# Between 90% and 50% → Lerp green → yellow
-	# OLD: player_root.fuel["fuel"] = 70.0
-	# NEW: Setting the fuel value in the global settings resource instead.
-	Globals.settings.current_fuel = 70.0
+	# NEW: Calculate 70% relative to max_fuel
+	Globals.settings.current_fuel = Globals.settings.max_fuel * 0.70
 	player_root.update_fuel_bar()
 	style = fuel_bar.get_theme_stylebox("fill").duplicate()
-	var expected := Color.GREEN.lerp(Color.YELLOW, (90.0 - 70.0) / (90.0 - 50.0))
+	# Update the math here to rely on percentages rather than absolute 100-tank units
+	var expected := Color.GREEN.lerp(Color.YELLOW, (0.90 - 0.70) / (0.90 - 0.50))
 	assert_bool(style.bg_color.is_equal_approx(expected)).is_true()
 
 
@@ -135,25 +131,19 @@ func test_fuel_gradual_depletion_colors() -> void:
 	var player_root: Node = main_scene.get_node("Player")
 	
 	# Start at 30% (should be red)
-	# OLD: player_root.fuel["fuel"] = 30.0
-	# NEW: Route the test update through the global settings resource.
-	Globals.settings.current_fuel = 30.0
+	Globals.settings.current_fuel = Globals.settings.max_fuel * 0.30
 	player_root.update_fuel_bar()
 	var style: StyleBoxFlat = player_root.fuel["bar"].get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(Color.RED)
 	
 	# Drop to 15% (dark red)
-	# OLD: player_root.fuel["fuel"] = 15.0
-	# NEW: Route the test update through the global settings resource.
-	Globals.settings.current_fuel = 15.0
+	Globals.settings.current_fuel = Globals.settings.max_fuel * 0.15
 	player_root.update_fuel_bar()
 	style = player_root.fuel["bar"].get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(Color(0.5, 0, 0))
 	
 	# Drop to 10% (still dark red)
-	# OLD: player_root.fuel["fuel"] = 10.0
-	# NEW: Route the test update through the global settings resource.
-	Globals.settings.current_fuel = 10.0
+	Globals.settings.current_fuel = Globals.settings.max_fuel * 0.10
 	player_root.update_fuel_bar()
 	style = player_root.fuel["bar"].get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(Color(0.5, 0, 0))
@@ -183,7 +173,6 @@ func test_rotor_null_sfx() -> void:
 
 
 # Test: Independent blinking for fuel and speed labels
-# Test: Independent blinking for fuel and speed labels
 func test_independent_blinking() -> void:
 	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
 	add_child(main_scene)
@@ -192,9 +181,8 @@ func test_independent_blinking() -> void:
 	var player_root: Node = main_scene.get_node("Player")
 	
 	# Force low fuel and high speed to trigger both
-	# OLD: player_root.fuel["fuel"] = 10.0
-	# NEW: Modify the global resource fuel state.
-	Globals.settings.current_fuel = 10.0
+	# NEW: Calculate 10% relative to max_fuel
+	Globals.settings.current_fuel = Globals.settings.max_fuel * 0.10
 	player_root.speed["speed"] = player_root.speed["max"] * 0.95
 	player_root.check_fuel_warning()
 	player_root.check_speed_warning()
@@ -240,7 +228,6 @@ func test_get_label_text_color_override() -> void:
 	assert_that(player_root.get_label_text_color(fuel_label)).is_equal(initial_color)
 
 
-# Test: rotor_start/stop logs warning on missing AnimatedSprite2D
 # Test: rotor_start/stop logs warning on missing AnimatedSprite2D
 func test_rotor_missing_anim_sprite() -> void:
 	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
@@ -411,28 +398,23 @@ func test_fuel_depletion() -> void:
 	var player_root: Node = main_scene.get_node("Player")
 	
 	# Initial state
-	# OLD: assert_float(player_root.fuel["fuel"]).is_equal(player_root.fuel["max"])
-	# NEW: Compare against the global resources for current and max fuel.
 	assert_float(Globals.settings.current_fuel).is_equal(Globals.settings.max_fuel)
-	assert_float(player_root.fuel["bar"].value).is_equal(100.0)
+	# NEW: Bar value should assert against max_fuel directly instead of assuming 100.0
+	assert_float(player_root.fuel["bar"].value).is_equal(Globals.settings.max_fuel)
 	
 	# Simulate one timer tick (derive expected from constants)
 	var normalized_speed: float = player_root.speed["speed"] / player_root.MAX_SPEED
 	
-	# OLD: var expected_depletion: float = player_root.base_fuel_drain * normalized_speed * Globals.settings.difficulty
-	# NEW: Use the global base_consumption_rate since the local drain variable was removed.
+	# Use the global base_consumption_rate since the local drain variable was removed.
 	var expected_depletion: float = Globals.settings.base_consumption_rate * normalized_speed * Globals.settings.difficulty
 	
 	player_root._on_fuel_timer_timeout()
 	
-	# OLD: assert_float(player_root.fuel["fuel"]).is_equal_approx(player_root.fuel["max"] - expected_depletion, 0.1)  # Larger delta for float precision
-	# NEW: Validate the global resource changed correctly instead of the local dictionary.
-	assert_float(Globals.settings.current_fuel).is_equal_approx(Globals.settings.max_fuel - expected_depletion, 0.1)  # Larger delta for float precision
-	assert_float(player_root.fuel["bar"].value).is_equal_approx(100.0 - expected_depletion, 0.1)  # Normalized to percent
+	assert_float(Globals.settings.current_fuel).is_equal_approx(Globals.settings.max_fuel - expected_depletion, 0.1)
+	# NEW: Bar value subtracts depletion from dynamic max_fuel rather than 100.0
+	assert_float(player_root.fuel["bar"].value).is_equal_approx(Globals.settings.max_fuel - expected_depletion, 0.1) 
 	
 	# Force zero fuel
-	# OLD: player_root.fuel["fuel"] = 0.0
-	# NEW: Zero out the global resource.
 	Globals.settings.current_fuel = 0.0
 	
 	player_root._on_fuel_timer_timeout()
