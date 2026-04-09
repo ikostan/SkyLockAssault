@@ -145,8 +145,10 @@ func _ready() -> void:
 	# NEW: Ensure the UI max capacity pulls directly from the centralized GameSettingsResource.
 	fuel_bar.max_value = Globals.settings.max_fuel
 
-	# NEW: Reset the fuel to maximum every time the player spawns
-	# so a new game always starts with a full tank.
+	# OLD: Removed unconditional fuel reset to respect persisted save states. 
+	# OLD: Refilling the tank for a new run should be handled by the "New Game" button in the UI.
+	# NEW: Restored the unconditional fuel reset. Since the game doesn't use mid-run resumes, 
+	# the player MUST spawn with a full tank to prevent infinite death loops from previous 0-fuel saves.
 	Globals.settings.current_fuel = Globals.settings.max_fuel
 
 	# Initialize speed bar style and value
