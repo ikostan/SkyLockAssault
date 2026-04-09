@@ -3,14 +3,9 @@
 ## test_fuel_persistence_integration.gd
 ## GUT unit tests covering fuel system persistence, fallback behaviors, and UI reactivity.
 
-extends "res://addons/gut/test.gd"
-
-const TEST_CONFIG_PATH: String = "user://test_fuel_integration_settings.cfg"
-
 ## Per-test setup: Isolate the filesystem and ensure a clean memory state.
 ## :rtype: void
 extends "res://addons/gut/test.gd"
-
 const TEST_CONFIG_PATH: String = "user://test_fuel_integration_settings.cfg"
 var _previous_settings: GameSettingsResource
 
