@@ -78,7 +78,7 @@ func _ready() -> void:
 
 	if not is_instance_valid(_settings):
 		push_error("Player initialized without valid GameSettingsResource!")
-		# You could return early here, but at minimum, this prevents silent failures
+		return  # Ensure we completely abort initialization if settings are missing
 
 	# Auto-start rotors (overrides editor if needed)
 	rotor_left_sfx = rotor_left.get_node("AudioStreamPlayer2D")
@@ -138,13 +138,13 @@ func _ready() -> void:
 	# Initialize fuel bar style
 	fuel_bar_fill_style = StyleBoxFlat.new()
 	set_bar_fill_style(fuel_bar, fuel_bar_fill_style)
-	# NEW: Ensure the UI max capacity pulls directly from the centralized GameSettingsResource.
-	fuel_bar.max_value = Globals.settings.max_fuel
+	# NEW: Using cached _settings as single source of truth
+	fuel_bar.max_value = _settings.max_fuel
 
 	# NEW: Restored the unconditional fuel reset. Since the game doesn't use mid-run resumes,
 	# the player MUST spawn with a full tank to prevent infinite death loops from
 	# previous 0-fuel saves.
-	Globals.settings.current_fuel = Globals.settings.max_fuel
+	_settings.current_fuel = _settings.max_fuel
 
 	# Initialize speed bar style and value
 	speed_bar_fill_style = StyleBoxFlat.new()
@@ -156,10 +156,10 @@ func _ready() -> void:
 	fuel_timer.start()
 
 	# NEW: Connect to the global fuel_depleted signal to handle engine failure.
-	Globals.settings.fuel_depleted.connect(_on_player_out_of_fuel)
+	_settings.fuel_depleted.connect(_on_player_out_of_fuel)
 	# NEW: Connect to the global setting_changed signal so the UI
 	# reacts to refuels/drains automatically.
-	Globals.settings.setting_changed.connect(_on_setting_changed)
+	_settings.setting_changed.connect(_on_setting_changed)
 
 	# Initialize speed dictionary
 	# (Speed is still local to the player's physics, so it keeps its state here)
@@ -179,7 +179,7 @@ func _ready() -> void:
 	}
 
 	# Initialize fuel dictionary
-	# (Fuel state now lives in Globals.settings. This dict is ONLY for UI.)
+	# (Fuel state now lives in _settings. This dict is ONLY for UI.)
 	fuel = {
 		"factor": 0.0,
 		"timer": fuel_label_blink_timer,
@@ -225,23 +225,26 @@ func _ready() -> void:
 # NEW: Defensive cleanup to prevent dangling signal connections
 # when the player is removed from the scene tree or reloaded.
 func _exit_tree() -> void:
-	if Globals.settings != null:
-		if Globals.settings.setting_changed.is_connected(_on_setting_changed):
-			Globals.settings.setting_changed.disconnect(_on_setting_changed)
+	if is_instance_valid(_settings):
+		if _settings.setting_changed.is_connected(_on_setting_changed):
+			_settings.setting_changed.disconnect(_on_setting_changed)
 
-		if Globals.settings.fuel_depleted.is_connected(_on_player_out_of_fuel):
-			Globals.settings.fuel_depleted.disconnect(_on_player_out_of_fuel)
+		if _settings.fuel_depleted.is_connected(_on_player_out_of_fuel):
+			_settings.fuel_depleted.disconnect(_on_player_out_of_fuel)
 
 
 # NEW: Observer pattern handler to react when GameSettingsResource
 # properties (like fuel) are updated externally.
 func _on_setting_changed(setting_name: String, _value: Variant) -> void:
+	if not is_instance_valid(_settings):
+		return
+
 	if setting_name == "current_fuel":
 		update_fuel_bar()
 		check_fuel_warning()
 	elif setting_name == "max_fuel":
 		# Keep the UI fuel bar max in sync with the GameSettingsResource.
-		fuel_bar.max_value = Globals.settings.max_fuel
+		fuel_bar.max_value = _settings.max_fuel
 		# Re-run the standard UI update so the current fuel is represented correctly
 		# relative to the new maximum.
 		update_fuel_bar()
@@ -264,7 +267,6 @@ func _on_player_out_of_fuel() -> void:
 ## @return: The effective font color.
 func get_label_text_color(label: Label) -> Color:
 	if label.has_theme_color_override("font_color"):
-		# return label.get_theme_color("font_color", "")
 		return label.get("theme_override_colors/font_color")
 	return label.get_theme_color("font_color", "Label")
 
@@ -287,7 +289,6 @@ func set_bar_fill_style(bar: ProgressBar, bar_fill_style: StyleBoxFlat) -> void:
 func _input(event: InputEvent) -> void:
 	# Fire weapon
 	if event.is_action_pressed("fire"):
-		# Globals.log_message("Fire input pressed → calling weapon.fire()", Globals.LogLevel.DEBUG)
 		if weapon and weapon.has_method("fire"):
 			weapon.fire()
 		get_viewport().set_input_as_handled()
@@ -333,18 +334,21 @@ func rotor_stop(rotor: Node2D, rotor_sfx: AudioStreamPlayer2D) -> void:
 
 
 func update_fuel_bar() -> void:
+	if not is_instance_valid(_settings):
+		return
+
 	# Explicitly read current and max fuel from the global settings resource.
-	var cur_fuel: float = Globals.settings.current_fuel
-	var m_fuel: float = Globals.settings.max_fuel
+	var cur_fuel: float = _settings.current_fuel
+	var m_fuel: float = _settings.max_fuel
 
 	fuel["bar"].value = cur_fuel
 	var fuel_percent: float = 0.0 if m_fuel <= 0.0 else (cur_fuel / m_fuel) * 100.0
 
 	# Cache thresholds locally to keep the logic clean and readable
-	var high: float = Globals.settings.high_fuel_threshold
-	var medium: float = Globals.settings.medium_fuel_threshold
-	var low: float = Globals.settings.low_fuel_threshold
-	var no_fuel: float = Globals.settings.no_fuel_threshold
+	var high: float = _settings.high_fuel_threshold
+	var medium: float = _settings.medium_fuel_threshold
+	var low: float = _settings.low_fuel_threshold
+	var no_fuel: float = _settings.no_fuel_threshold
 
 	if fuel_percent > high:
 		fuel["factor"] = 0.0  # Reset for consistency
@@ -416,27 +420,35 @@ func update_speed_bar() -> void:
 
 # Connect Timer's timeout signal
 func _on_fuel_timer_timeout() -> void:
+	if not is_instance_valid(_settings):
+		return
+
 	# NEW: Calculate depletion based on Global settings and update the resource directly.
 	# NEW: Game over logic is now handled by _on_player_out_of_fuel via the fuel_depleted signal.
 	# NEW: UI updates are handled automatically via the setting_changed signal.
 	var normalized_speed: float = clamp(speed["speed"] / MAX_SPEED, 0.0, 1.0)
 	var consumption: float = (
-		Globals.settings.base_consumption_rate * normalized_speed * Globals.settings.difficulty
+		_settings.base_consumption_rate * normalized_speed * _settings.difficulty
 	)
-	Globals.settings.current_fuel -= consumption
-	Globals.log_message("Fuel left: " + str(Globals.settings.current_fuel), Globals.LogLevel.DEBUG)
+	_settings.current_fuel -= consumption
+	# Keep Globals.log_message since it is a static utility, not the state object itself
+	Globals.log_message("Fuel left: " + str(_settings.current_fuel), Globals.LogLevel.DEBUG)
 
 
 func check_fuel_warning() -> void:
+	if not is_instance_valid(_settings):
+		return
+
 	# NEW: Calculate the fuel percentage first to ensure consistency with the UI bar colors
-	var cur_fuel: float = Globals.settings.current_fuel
-	var m_fuel: float = Globals.settings.max_fuel
+	var cur_fuel: float = _settings.current_fuel
+	var m_fuel: float = _settings.max_fuel
 	var fuel_percent: float = 0.0 if m_fuel <= 0.0 else (cur_fuel / m_fuel) * 100.0
+
 	# NEW: Compare the calculated percentage against the threshold
-	if fuel_percent <= Globals.settings.low_fuel_threshold and not fuel["blinking"]:
+	if fuel_percent <= _settings.low_fuel_threshold and not fuel["blinking"]:
 		start_blinking(fuel)
 	# NEW: Compare the calculated percentage against the threshold
-	elif fuel_percent > Globals.settings.low_fuel_threshold and fuel["blinking"]:
+	elif fuel_percent > _settings.low_fuel_threshold and fuel["blinking"]:
 		stop_blinking(fuel)
 
 
