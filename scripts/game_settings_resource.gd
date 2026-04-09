@@ -159,7 +159,7 @@ var _current_fuel: float = 100.0
 var _current_log_level: int = 1
 var _difficulty: float = 1.0
 var _enable_debug_logging: bool = false
-# NEW: Add backing fields (ensure these are declared BEFORE the export vars at the top of your script)
+# NEW: Add backing fields
 var _high_fuel_threshold: float = 90.0
 var _medium_fuel_threshold: float = 50.0
 var _low_fuel_threshold: float = 30.0
