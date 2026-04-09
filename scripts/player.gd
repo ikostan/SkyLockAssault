@@ -344,7 +344,7 @@ func update_fuel_bar() -> void:
 	# OLD: elif fuel_percent >= MEDIUM_FUEL_THRESHOLD:
 	# NEW: Compare against the dynamic global resource threshold
 	elif fuel_percent >= Globals.settings.medium_fuel_threshold:
-		# OLD: fuel["factor"] = 
+		# OLD: fuel["factor"] =
 		# ((HIGH_FUEL_THRESHOLD - fuel_percent) / (HIGH_FUEL_THRESHOLD - MEDIUM_FUEL_THRESHOLD))
 		# NEW: Use global thresholds for the lerp calculation
 		fuel["factor"] = (
@@ -356,7 +356,7 @@ func update_fuel_bar() -> void:
 	# OLD: elif fuel_percent >= LOW_FUEL_THRESHOLD:
 	# NEW: Compare against the dynamic global resource threshold
 	elif fuel_percent >= Globals.settings.low_fuel_threshold:
-		# OLD: fuel["factor"] = 
+		# OLD: fuel["factor"] =
 		# ((MEDIUM_FUEL_THRESHOLD - fuel_percent) / (MEDIUM_FUEL_THRESHOLD - LOW_FUEL_THRESHOLD))
 		# NEW: Use global thresholds for the lerp calculation
 		fuel["factor"] = (
@@ -368,7 +368,7 @@ func update_fuel_bar() -> void:
 	# OLD: elif fuel_percent >= NO_FUEL_THRESHOLD:
 	# NEW: Compare against the dynamic global resource threshold
 	elif fuel_percent >= Globals.settings.no_fuel_threshold:
-		# OLD: fuel["factor"] = 
+		# OLD: fuel["factor"] =
 		# ((LOW_FUEL_THRESHOLD - fuel_percent) / (LOW_FUEL_THRESHOLD - NO_FUEL_THRESHOLD))
 		# NEW: Use global thresholds for the lerp calculation
 		fuel["factor"] = (
