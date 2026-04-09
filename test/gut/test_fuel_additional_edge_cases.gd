@@ -7,6 +7,8 @@ extends "res://addons/gut/test.gd"
 
 var main_scene: Node
 var player_root: Node2D
+# NEW: Declare the member variable to prevent "Identifier not found" script errors
+var _previous_settings: GameSettingsResource
 
 ## Per-test setup: Instantiate a fresh environment and resource.
 ## :rtype: void
@@ -15,15 +17,8 @@ func before_each() -> void:
 	# NEW: Reset global settings to a fresh instance to prevent state leakage between tests.
 	Globals.settings = GameSettingsResource.new()
 
-
 func after_each() -> void:
 	Globals.settings = _previous_settings
-	
-	# OLD: main_scene = autofree(load("res://scenes/main_scene.tscn").instantiate())
-	# OLD: add_child(main_scene)
-	# OLD: player_root = main_scene.get_node("Player")
-	# NEW: Instantiating the scene here caused orphans in tests that didn't even use it.
-	# Scene instantiation is now moved directly into the specific test that needs it.
 
 
 ## test_fuel_consumption_with_scaling | Integration | Verify speed increases fuel consumption
