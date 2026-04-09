@@ -340,34 +340,37 @@ func update_fuel_bar() -> void:
 	if fuel_percent > Globals.settings.high_fuel_threshold:
 		fuel["factor"] = 0.0  # Reset for consistency, though not used here
 		fuel["bar style"].bg_color = Color.GREEN
-		
+
 	# OLD: elif fuel_percent >= MEDIUM_FUEL_THRESHOLD:
 	# NEW: Compare against the dynamic global resource threshold
 	elif fuel_percent >= Globals.settings.medium_fuel_threshold:
 		# OLD: fuel["factor"] = ((HIGH_FUEL_THRESHOLD - fuel_percent) / (HIGH_FUEL_THRESHOLD - MEDIUM_FUEL_THRESHOLD))
 		# NEW: Use global thresholds for the lerp calculation
 		fuel["factor"] = (
-			(Globals.settings.high_fuel_threshold - fuel_percent) / (Globals.settings.high_fuel_threshold - Globals.settings.medium_fuel_threshold)
+			(Globals.settings.high_fuel_threshold - fuel_percent)
+			/ (Globals.settings.high_fuel_threshold - Globals.settings.medium_fuel_threshold)
 		)
 		fuel["bar style"].bg_color = Color.GREEN.lerp(Color.YELLOW, fuel["factor"])
-		
+
 	# OLD: elif fuel_percent >= LOW_FUEL_THRESHOLD:
 	# NEW: Compare against the dynamic global resource threshold
 	elif fuel_percent >= Globals.settings.low_fuel_threshold:
 		# OLD: fuel["factor"] = ((MEDIUM_FUEL_THRESHOLD - fuel_percent) / (MEDIUM_FUEL_THRESHOLD - LOW_FUEL_THRESHOLD))
 		# NEW: Use global thresholds for the lerp calculation
 		fuel["factor"] = (
-			(Globals.settings.medium_fuel_threshold - fuel_percent) / (Globals.settings.medium_fuel_threshold - Globals.settings.low_fuel_threshold)
+			(Globals.settings.medium_fuel_threshold - fuel_percent)
+			/ (Globals.settings.medium_fuel_threshold - Globals.settings.low_fuel_threshold)
 		)
 		fuel["bar style"].bg_color = Color.YELLOW.lerp(Color.RED, fuel["factor"])
-		
+
 	# OLD: elif fuel_percent >= NO_FUEL_THRESHOLD:
 	# NEW: Compare against the dynamic global resource threshold
 	elif fuel_percent >= Globals.settings.no_fuel_threshold:
 		# OLD: fuel["factor"] = ((LOW_FUEL_THRESHOLD - fuel_percent) / (LOW_FUEL_THRESHOLD - NO_FUEL_THRESHOLD))
 		# NEW: Use global thresholds for the lerp calculation
 		fuel["factor"] = (
-			(Globals.settings.low_fuel_threshold - fuel_percent) / (Globals.settings.low_fuel_threshold - Globals.settings.no_fuel_threshold)
+			(Globals.settings.low_fuel_threshold - fuel_percent)
+			/ (Globals.settings.low_fuel_threshold - Globals.settings.no_fuel_threshold)
 		)
 		fuel["bar style"].bg_color = Color.RED.lerp(Color(0.5, 0, 0), fuel["factor"])
 	else:
@@ -456,7 +459,10 @@ func _on_fuel_timer_timeout() -> void:
 func check_fuel_warning() -> void:
 	# OLD: if fuel["fuel"] <= LOW_FUEL_THRESHOLD and not fuel["blinking"]:
 	# NEW: Read from global resource and use global low_fuel_threshold
-	if Globals.settings.current_fuel <= Globals.settings.low_fuel_threshold and not fuel["blinking"]:
+	if (
+		Globals.settings.current_fuel <= Globals.settings.low_fuel_threshold
+		and not fuel["blinking"]
+	):
 		start_blinking(fuel)
 	# OLD: elif fuel["fuel"] > LOW_FUEL_THRESHOLD and fuel["blinking"]:
 	# NEW: Read from global resource and use global low_fuel_threshold
