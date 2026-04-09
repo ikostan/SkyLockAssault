@@ -107,10 +107,12 @@ func test_ui_updates_on_fuel_change_signal() -> void:
 	
 	# 2. Define a local lambda to act as the Observer pattern UI handler
 	var _on_setting_changed := func(setting_name: String, new_value: Variant) -> void:
-		if setting_name == "current_fuel":
-			progress_bar.value = new_value
-		elif setting_name == "max_fuel":
-			progress_bar.max_value = new_value
+		# NEW: Add a safety check to ensure the lambda doesn't try to access a freed node
+		if is_instance_valid(progress_bar):
+			if setting_name == "current_fuel":
+				progress_bar.value = new_value
+			elif setting_name == "max_fuel":
+				progress_bar.max_value = new_value
 			
 	# 3. Connect the signal
 	Globals.settings.setting_changed.connect(_on_setting_changed)
@@ -122,3 +124,8 @@ func test_ui_updates_on_fuel_change_signal() -> void:
 	# 5. Assert the UI element automatically synchronized with the backend data
 	assert_eq(progress_bar.max_value, 200.0, "ProgressBar max_value should react automatically to the max_fuel signal.")
 	assert_eq(progress_bar.value, 150.0, "ProgressBar value should react automatically to the current_fuel signal.")
+
+	# NEW: Explicitly disconnect the signal at the end of the test.
+	# This prevents the lambda from becoming a "ghost" listener that crashes subsequent tests.
+	if Globals.settings.setting_changed.is_connected(_on_setting_changed):
+		Globals.settings.setting_changed.disconnect(_on_setting_changed)
