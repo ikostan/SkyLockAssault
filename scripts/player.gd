@@ -148,7 +148,8 @@ func _ready() -> void:
 	# OLD: Removed unconditional fuel reset to respect persisted save states.
 	# OLD: Refilling the tank for a new run should be handled by the "New Game" button in the UI.
 	# NEW: Restored the unconditional fuel reset. Since the game doesn't use mid-run resumes,
-	# the player MUST spawn with a full tank to prevent infinite death loops from previous 0-fuel saves.
+	# the player MUST spawn with a full tank to prevent infinite death loops from
+	# previous 0-fuel saves.
 	Globals.settings.current_fuel = Globals.settings.max_fuel
 
 	# Initialize speed bar style and value
