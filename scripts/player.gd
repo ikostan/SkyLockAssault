@@ -145,9 +145,9 @@ func _ready() -> void:
 	# NEW: Ensure the UI max capacity pulls directly from the centralized GameSettingsResource.
 	fuel_bar.max_value = Globals.settings.max_fuel
 
-	# OLD: Removed unconditional fuel reset to respect persisted save states. 
+	# OLD: Removed unconditional fuel reset to respect persisted save states.
 	# OLD: Refilling the tank for a new run should be handled by the "New Game" button in the UI.
-	# NEW: Restored the unconditional fuel reset. Since the game doesn't use mid-run resumes, 
+	# NEW: Restored the unconditional fuel reset. Since the game doesn't use mid-run resumes,
 	# the player MUST spawn with a full tank to prevent infinite death loops from previous 0-fuel saves.
 	Globals.settings.current_fuel = Globals.settings.max_fuel
 
@@ -226,13 +226,13 @@ func _ready() -> void:
 		push_error("Weapon node not found! Check player.tscn scene tree for $Weapon child.")
 
 
-# NEW: Defensive cleanup to prevent dangling signal connections 
+# NEW: Defensive cleanup to prevent dangling signal connections
 # when the player is removed from the scene tree or reloaded.
 func _exit_tree() -> void:
 	if Globals.settings != null:
 		if Globals.settings.setting_changed.is_connected(_on_setting_changed):
 			Globals.settings.setting_changed.disconnect(_on_setting_changed)
-			
+
 		if Globals.settings.fuel_depleted.is_connected(_on_player_out_of_fuel):
 			Globals.settings.fuel_depleted.disconnect(_on_player_out_of_fuel)
 
