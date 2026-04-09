@@ -49,6 +49,9 @@ var corner_radius: int = 10
 var fuel: Dictionary
 var speed: Dictionary
 
+# Cache the global settings to avoid singleton lookups in hot paths
+var _settings: GameSettingsResource = null
+
 # Onreadys next
 @onready var rotor_right: Node2D = $CharacterBody2D/RotorRight
 @onready var rotor_left: Node2D = $CharacterBody2D/RotorLeft
@@ -67,9 +70,6 @@ var speed_label_blink_timer: Timer = $"../PlayerStatsPanel/Stats/Speed/SpeedLabe
 @onready var speed_bar: ProgressBar = $"../PlayerStatsPanel/Stats/Speed/SpeedBar"
 @onready var speed_bar_fill_style: StyleBoxFlat = speed_bar.get_theme_stylebox("fill")
 @onready var weapon: Node2D = $CharacterBody2D/Weapon  # Path to your WeaponManager node
-
-# Cache the global settings to avoid singleton lookups in hot paths
-var _settings: GameSettingsResource = null
 
 
 func _ready() -> void:
