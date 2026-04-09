@@ -226,6 +226,17 @@ func _ready() -> void:
 		push_error("Weapon node not found! Check player.tscn scene tree for $Weapon child.")
 
 
+# NEW: Defensive cleanup to prevent dangling signal connections 
+# when the player is removed from the scene tree or reloaded.
+func _exit_tree() -> void:
+	if Globals.settings != null:
+		if Globals.settings.setting_changed.is_connected(_on_setting_changed):
+			Globals.settings.setting_changed.disconnect(_on_setting_changed)
+			
+		if Globals.settings.fuel_depleted.is_connected(_on_player_out_of_fuel):
+			Globals.settings.fuel_depleted.disconnect(_on_player_out_of_fuel)
+
+
 # NEW: Observer pattern handler to react when GameSettingsResource
 # properties (like fuel) are updated externally.
 func _on_setting_changed(setting_name: String, _value: Variant) -> void:
