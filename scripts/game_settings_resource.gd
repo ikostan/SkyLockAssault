@@ -23,28 +23,26 @@ signal setting_changed(setting_name: String, new_value: Variant)
 signal fuel_depleted
 
 @export_group("Fuel System")
+
 ## Maximum fuel capacity.
 @export var max_fuel: float = 100.0:
 	set(value):
-		# OLD: max_fuel = max(0.0, value)
-		# OLD: if current_fuel > max_fuel:
-		# OLD: 	current_fuel = max_fuel
-		# OLD: setting_changed.emit("max_fuel", max_fuel)
+		# NEW: Enforce a logical minimum capacity of 1.0. This prevents a misconfigured
+		# save file or options slider from shrinking the tank to 0.0 and
+		# accidentally triggering a runtime "Game Over" flameout.
+		var new_max: float = max(1.0, value)
 
-		# NEW: Use private backing field to completely avoid infinite recursion loops
-		var new_max: float = max(0.0, value)
 		if _max_fuel == new_max:
 			return
 		_max_fuel = new_max
 
-		# NEW: Use the backing field for comparisons, but trigger the public
+		# Use the backing field for comparisons, but trigger the public
 		# setter for current_fuel if needed
 		if _current_fuel > _max_fuel:
 			self.current_fuel = _max_fuel
 
 		setting_changed.emit("max_fuel", _max_fuel)
 	get:
-		# NEW: Return the backing field
 		return _max_fuel
 
 ## Current fuel level. Clamped between 0.0 and max_fuel.
