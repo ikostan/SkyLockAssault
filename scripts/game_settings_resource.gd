@@ -26,10 +26,26 @@ signal fuel_depleted
 ## Maximum fuel capacity.
 @export var max_fuel: float = 100.0:
 	set(value):
-		max_fuel = max(0.0, value)
-		if current_fuel > max_fuel:
-			current_fuel = max_fuel
-		setting_changed.emit("max_fuel", max_fuel)
+		# OLD: max_fuel = max(0.0, value)
+		# OLD: if current_fuel > max_fuel:
+		# OLD: 	current_fuel = max_fuel
+		# OLD: setting_changed.emit("max_fuel", max_fuel)
+
+		# NEW: Use private backing field to completely avoid infinite recursion loops
+		var new_max: float = max(0.0, value)
+		if _max_fuel == new_max:
+			return
+		_max_fuel = new_max
+
+		# NEW: Use the backing field for comparisons, but trigger the public
+		# setter for current_fuel if needed
+		if _current_fuel > _max_fuel:
+			self.current_fuel = _max_fuel
+
+		setting_changed.emit("max_fuel", _max_fuel)
+	get:
+		# NEW: Return the backing field
+		return _max_fuel
 
 ## Current fuel level. Clamped between 0.0 and max_fuel.
 @export var current_fuel: float = 100.0:
@@ -107,6 +123,12 @@ signal fuel_depleted
 @export var options_scene: PackedScene
 
 # Private member variables moved to bottom to satisfy class-definitions-order
+# NEW: GDScript requires backing fields to be declared BEFORE
+# the properties that reference them.
+# Moved these from the bottom of the script to the top to resolve
+# the "Identifier not declared" scope error.
+var _max_fuel: float = 100.0
+var _current_fuel: float = 100.0
 var _current_log_level: int = 1
 var _difficulty: float = 1.0
 var _enable_debug_logging: bool = false
