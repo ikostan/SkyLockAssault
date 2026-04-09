@@ -170,7 +170,7 @@ func _init() -> void:
 		key_mapping_scene = load("res://scenes/key_mapping_menu.tscn")
 	if not options_scene:
 		options_scene = load("res://scenes/options_menu.tscn")
-	# NEW: Safely enforce the invariant that a brand new resource 
+	# NEW: Safely enforce the invariant that a brand new resource
 	# always starts with a full tank, without bypassing the validation setters.
 	_current_fuel = _max_fuel
 
