@@ -244,16 +244,20 @@ func _on_setting_changed(setting_name: String, _value: Variant) -> void:
 	if setting_name == "current_fuel":
 		update_fuel_bar()
 		check_fuel_warning()
-	elif setting_name in [
-		"max_fuel",
-		"high_fuel_threshold",
-		"medium_fuel_threshold",
-		"low_fuel_threshold",
-		"no_fuel_threshold"
-	]:
+	elif (
+		setting_name
+		in [
+			"max_fuel",
+			"high_fuel_threshold",
+			"medium_fuel_threshold",
+			"low_fuel_threshold",
+			"no_fuel_threshold"
+		]
+	):
 		fuel_bar.max_value = _settings.max_fuel
 		update_fuel_bar()
 		check_fuel_warning()
+
 
 # NEW: Handler for engine failure triggered by the global fuel_depleted signal from the resource.
 func _on_player_out_of_fuel() -> void:
