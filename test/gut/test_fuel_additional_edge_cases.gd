@@ -31,6 +31,7 @@ func test_fuel_consumption_with_scaling() -> void:
 	main_scene = load("res://scenes/main_scene.tscn").instantiate()
 	add_child_autoqfree(main_scene)
 	player_root = main_scene.get_node("Player")
+	player_root.fuel_timer.stop()
 	
 	# NEW: Establish a clean baseline for fuel and difficulty.
 	Globals.settings.current_fuel = 100.0
