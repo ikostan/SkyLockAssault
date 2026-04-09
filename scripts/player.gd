@@ -474,16 +474,21 @@ func _on_fuel_timer_timeout() -> void:
 
 
 func check_fuel_warning() -> void:
-	# OLD: if fuel["fuel"] <= LOW_FUEL_THRESHOLD and not fuel["blinking"]:
-	# NEW: Read from global resource and use global low_fuel_threshold
-	if (
-		Globals.settings.current_fuel <= Globals.settings.low_fuel_threshold
-		and not fuel["blinking"]
-	):
+	# NEW: Calculate the fuel percentage first to ensure consistency with the UI bar colors
+	var cur_fuel: float = Globals.settings.current_fuel
+	var m_fuel: float = Globals.settings.max_fuel
+	var fuel_percent: float = 0.0 if m_fuel <= 0.0 else (cur_fuel / m_fuel) * 100.0
+	# OLD:
+	# if (
+	# Globals.settings.current_fuel <= Globals.settings.low_fuel_threshold and not fuel["blinking"]
+	# ):
+	# NEW: Compare the calculated percentage against the threshold
+	if fuel_percent <= Globals.settings.low_fuel_threshold and not fuel["blinking"]:
 		start_blinking(fuel)
-	# OLD: elif fuel["fuel"] > LOW_FUEL_THRESHOLD and fuel["blinking"]:
-	# NEW: Read from global resource and use global low_fuel_threshold
-	elif Globals.settings.current_fuel > Globals.settings.low_fuel_threshold and fuel["blinking"]:
+	# OLD:
+	# elif Globals.settings.current_fuel > Globals.settings.low_fuel_threshold and fuel["blinking"]:
+	# NEW: Compare the calculated percentage against the threshold
+	elif fuel_percent > Globals.settings.low_fuel_threshold and fuel["blinking"]:
 		stop_blinking(fuel)
 
 
