@@ -11,8 +11,13 @@ var player_root: Node2D
 ## Per-test setup: Instantiate a fresh environment and resource.
 ## :rtype: void
 func before_each() -> void:
+	_previous_settings = Globals.settings
 	# NEW: Reset global settings to a fresh instance to prevent state leakage between tests.
 	Globals.settings = GameSettingsResource.new()
+
+
+func after_each() -> void:
+	Globals.settings = _previous_settings
 	
 	# OLD: main_scene = autofree(load("res://scenes/main_scene.tscn").instantiate())
 	# OLD: add_child(main_scene)
