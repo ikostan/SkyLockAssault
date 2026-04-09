@@ -68,8 +68,18 @@ var speed_label_blink_timer: Timer = $"../PlayerStatsPanel/Stats/Speed/SpeedLabe
 @onready var speed_bar_fill_style: StyleBoxFlat = speed_bar.get_theme_stylebox("fill")
 @onready var weapon: Node2D = $CharacterBody2D/Weapon  # Path to your WeaponManager node
 
+# Cache the global settings to avoid singleton lookups in hot paths
+var _settings: GameSettingsResource = null
+
 
 func _ready() -> void:
+	# Safely cache the settings resource
+	_settings = Globals.settings if is_instance_valid(Globals) else null
+
+	if not is_instance_valid(_settings):
+		push_error("Player initialized without valid GameSettingsResource!")
+		# You could return early here, but at minimum, this prevents silent failures
+
 	# Auto-start rotors (overrides editor if needed)
 	rotor_left_sfx = rotor_left.get_node("AudioStreamPlayer2D")
 	rotor_right_sfx = rotor_right.get_node("AudioStreamPlayer2D")
@@ -479,18 +489,19 @@ func _toggle_label(param: Dictionary) -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	# NEW: Guard against null references during teardown or tests
+	if not is_instance_valid(_settings):
+		return
+
 	# Speed changes allowed only if fuel > 0
-	# NEW: Check global resource fuel instead of local dictionary
-	if Input.is_action_pressed("speed_up") and Globals.settings.current_fuel > 0:
+	if Input.is_action_pressed("speed_up") and _settings.current_fuel > 0:
 		speed["speed"] += speed["acceleration"] * _delta
 
-	# NEW: Check global resource fuel instead of local dictionary
-	if Input.is_action_pressed("speed_down") and Globals.settings.current_fuel > 0:
+	if Input.is_action_pressed("speed_down") and _settings.current_fuel > 0:
 		speed["speed"] -= speed["deceleration"] * _delta
 
 	# Clamp current_speed between MIN_SPEED and MAX_SPEED
-	# NEW: Check global resource fuel instead of local dictionary
-	if Globals.settings.current_fuel == 0:
+	if _settings.current_fuel == 0:
 		# No fuel left, airplane can't fly
 		speed["speed"] = clamp(speed["speed"], 0, speed["max"])
 	else:
@@ -500,8 +511,7 @@ func _physics_process(_delta: float) -> void:
 	var lateral_input: float = Input.get_axis("move_left", "move_right")
 
 	# Left/Right movement, only allowed when fuel > 0 and the player is moving
-	# NEW: Check global resource fuel instead of local dictionary
-	if lateral_input and Globals.settings.current_fuel > 0 and speed["speed"] > 0:
+	if lateral_input and _settings.current_fuel > 0 and speed["speed"] > 0:
 		player.velocity.x = lateral_input * speed["lateral_speed"]
 	# Reset lateral velocity if no input
 	else:
