@@ -71,25 +71,48 @@ signal fuel_depleted
 @export var base_consumption_rate: float = 1.0
 
 # NEW: Migrated thresholds from player.gd to centralize all fuel configuration
+# NEW: Add backing fields (ensure these are declared BEFORE the export vars at the top of your script)
+var _high_fuel_threshold: float = 90.0
+var _medium_fuel_threshold: float = 50.0
+var _low_fuel_threshold: float = 30.0
+var _no_fuel_threshold: float = 15.0
+
+# NEW: Migrated thresholds using backing fields to prevent infinite recursion
 @export var high_fuel_threshold: float = 90.0:
 	set(value):
-		high_fuel_threshold = value
-		setting_changed.emit("high_fuel_threshold", value)
+		if _high_fuel_threshold == value:
+			return
+		_high_fuel_threshold = value
+		setting_changed.emit("high_fuel_threshold", _high_fuel_threshold)
+	get:
+		return _high_fuel_threshold
 
 @export var medium_fuel_threshold: float = 50.0:
 	set(value):
-		medium_fuel_threshold = value
-		setting_changed.emit("medium_fuel_threshold", value)
+		if _medium_fuel_threshold == value:
+			return
+		_medium_fuel_threshold = value
+		setting_changed.emit("medium_fuel_threshold", _medium_fuel_threshold)
+	get:
+		return _medium_fuel_threshold
 
 @export var low_fuel_threshold: float = 30.0:
 	set(value):
-		low_fuel_threshold = value
-		setting_changed.emit("low_fuel_threshold", value)
+		if _low_fuel_threshold == value:
+			return
+		_low_fuel_threshold = value
+		setting_changed.emit("low_fuel_threshold", _low_fuel_threshold)
+	get:
+		return _low_fuel_threshold
 
 @export var no_fuel_threshold: float = 15.0:
 	set(value):
-		no_fuel_threshold = value
-		setting_changed.emit("no_fuel_threshold", value)
+		if _no_fuel_threshold == value:
+			return
+		_no_fuel_threshold = value
+		setting_changed.emit("no_fuel_threshold", _no_fuel_threshold)
+	get:
+		return _no_fuel_threshold
 
 @export_group("Logging")
 # Current log level: 0=DEBUG, 1=INFO, 2=WARNING, 3=ERROR, 4=NONE
