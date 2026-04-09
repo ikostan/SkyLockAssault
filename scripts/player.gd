@@ -77,7 +77,7 @@ func _ready() -> void:
 	_settings = Globals.settings if is_instance_valid(Globals) else null
 
 	if not is_instance_valid(_settings):
-		# NEW: Log the error, but generate a fallback resource so the player 
+		# NEW: Log the error, but generate a fallback resource so the player
 		# fully initializes and doesn't become a game-crashing "zombie" node.
 		push_error("Player couldn't find Globals.settings! Using fallback defaults.")
 		_settings = GameSettingsResource.new()
