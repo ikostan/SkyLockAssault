@@ -153,7 +153,7 @@ signal fuel_depleted
 # Moved these from the bottom of the script to the top to resolve
 # the "Identifier not declared" scope error.
 var _max_fuel: float = 100.0
-var _current_fuel: float = 100.0
+var _current_fuel: float = _max_fuel  # ← Automatically syncs to whatever max_fuel is
 var _current_log_level: int = 1
 var _difficulty: float = 1.0
 var _enable_debug_logging: bool = false
