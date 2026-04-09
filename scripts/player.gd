@@ -6,9 +6,6 @@ extends Node2D
 ## Player controller for P-38 Lightning in SkyLockAssault.
 ## Manages movement, fuel, bounds, rotors (anim/sound), weapons.
 
-# Fuel color thresholds (percentages)
-# NEW: All fuel thresholds have been migrated to Globals.settings (GameSettingsResource)
-
 # Bounds hitbox scale (quarter texture = tight margin for top-down plane)
 const HITBOX_SCALE: float = 0.25
 
@@ -326,44 +323,39 @@ func rotor_stop(rotor: Node2D, rotor_sfx: AudioStreamPlayer2D) -> void:
 
 
 func update_fuel_bar() -> void:
-	# NEW: Explicitly read current and max fuel from the global settings resource.
+	# Explicitly read current and max fuel from the global settings resource.
 	var cur_fuel: float = Globals.settings.current_fuel
 	var m_fuel: float = Globals.settings.max_fuel
 
 	fuel["bar"].value = cur_fuel
 	var fuel_percent: float = 0.0 if m_fuel <= 0.0 else (cur_fuel / m_fuel) * 100.0
 
-	# NEW: Compare against the dynamic global resource threshold
-	if fuel_percent > Globals.settings.high_fuel_threshold:
-		fuel["factor"] = 0.0  # Reset for consistency, though not used here
+	# Cache thresholds locally to keep the logic clean and readable
+	var high: float = Globals.settings.high_fuel_threshold
+	var medium: float = Globals.settings.medium_fuel_threshold
+	var low: float = Globals.settings.low_fuel_threshold
+	var no_fuel: float = Globals.settings.no_fuel_threshold
+
+	if fuel_percent > high:
+		fuel["factor"] = 0.0  # Reset for consistency
 		fuel["bar style"].bg_color = Color.GREEN
 
-	# NEW: Compare against the dynamic global resource threshold
-	elif fuel_percent >= Globals.settings.medium_fuel_threshold:
-		# NEW: Use global thresholds for the lerp calculation
-		fuel["factor"] = (
-			(Globals.settings.high_fuel_threshold - fuel_percent)
-			/ (Globals.settings.high_fuel_threshold - Globals.settings.medium_fuel_threshold)
-		)
+	elif fuel_percent >= medium:
+		var span: float = high - medium
+		# Guard against division by zero or negative spans
+		fuel["factor"] = 1.0 if span <= 0.0 else clamp((high - fuel_percent) / span, 0.0, 1.0)
 		fuel["bar style"].bg_color = Color.GREEN.lerp(Color.YELLOW, fuel["factor"])
 
-	# NEW: Compare against the dynamic global resource threshold
-	elif fuel_percent >= Globals.settings.low_fuel_threshold:
-		# NEW: Use global thresholds for the lerp calculation
-		fuel["factor"] = (
-			(Globals.settings.medium_fuel_threshold - fuel_percent)
-			/ (Globals.settings.medium_fuel_threshold - Globals.settings.low_fuel_threshold)
-		)
+	elif fuel_percent >= low:
+		var span: float = medium - low
+		fuel["factor"] = 1.0 if span <= 0.0 else clamp((medium - fuel_percent) / span, 0.0, 1.0)
 		fuel["bar style"].bg_color = Color.YELLOW.lerp(Color.RED, fuel["factor"])
 
-	# NEW: Compare against the dynamic global resource threshold
-	elif fuel_percent >= Globals.settings.no_fuel_threshold:
-		# NEW: Use global thresholds for the lerp calculation
-		fuel["factor"] = (
-			(Globals.settings.low_fuel_threshold - fuel_percent)
-			/ (Globals.settings.low_fuel_threshold - Globals.settings.no_fuel_threshold)
-		)
+	elif fuel_percent >= no_fuel:
+		var span: float = low - no_fuel
+		fuel["factor"] = 1.0 if span <= 0.0 else clamp((low - fuel_percent) / span, 0.0, 1.0)
 		fuel["bar style"].bg_color = Color.RED.lerp(Color(0.5, 0, 0), fuel["factor"])
+
 	else:
 		fuel["factor"] = 1.0  # Explicitly set to max lerp (full dark red)
 		fuel["bar style"].bg_color = Color.RED.lerp(Color(0.5, 0, 0), fuel["factor"])
