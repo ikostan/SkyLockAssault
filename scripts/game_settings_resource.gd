@@ -43,6 +43,27 @@ signal fuel_depleted
 ## Base rate of fuel consumption per second.
 @export var base_consumption_rate: float = 1.0
 
+# NEW: Migrated thresholds from player.gd to centralize all fuel configuration
+@export var high_fuel_threshold: float = 90.0:
+	set(value):
+		high_fuel_threshold = value
+		setting_changed.emit("high_fuel_threshold", value)
+
+@export var medium_fuel_threshold: float = 50.0:
+	set(value):
+		medium_fuel_threshold = value
+		setting_changed.emit("medium_fuel_threshold", value)
+
+@export var low_fuel_threshold: float = 30.0:
+	set(value):
+		low_fuel_threshold = value
+		setting_changed.emit("low_fuel_threshold", value)
+
+@export var no_fuel_threshold: float = 15.0:
+	set(value):
+		no_fuel_threshold = value
+		setting_changed.emit("no_fuel_threshold", value)
+
 @export_group("Logging")
 # Current log level: 0=DEBUG, 1=INFO, 2=WARNING, 3=ERROR, 4=NONE
 @export_range(0, 4, 1) var current_log_level: int = 1:
