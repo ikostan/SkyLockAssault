@@ -53,15 +53,15 @@ signal fuel_depleted
 		# NEW: Use private backing field to safely clamp and check values without recursion
 		var old_value: float = _current_fuel
 		var new_fuel: float = clamp(value, 0.0, _max_fuel)
-		
+
 		if _current_fuel == new_fuel:
 			return
-			
+
 		_current_fuel = new_fuel
-		
+
 		if old_value > 0.0 and _current_fuel == 0.0:
 			fuel_depleted.emit()
-			
+
 		setting_changed.emit("current_fuel", _current_fuel)
 	get:
 		# NEW: Return the backing field
