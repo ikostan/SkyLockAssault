@@ -154,10 +154,10 @@ func _ready() -> void:
 	# reacts to refuels/drains automatically.
 	Globals.settings.setting_changed.connect(_on_setting_changed)
 
-	# Initialize speed dictionary 
+	# Initialize speed dictionary
 	# (Speed is still local to the player's physics, so it keeps its state here)
 	speed = {
-		"speed": 250.0,  
+		"speed": 250.0,
 		"lateral_speed": lateral_speed,
 		"acceleration": acceleration,
 		"deceleration": deceleration,
@@ -171,7 +171,7 @@ func _ready() -> void:
 		"blinking": false,
 	}
 
-	# Initialize fuel dictionary 
+	# Initialize fuel dictionary
 	# (Fuel state now lives in Globals.settings. This dict is ONLY for UI.)
 	fuel = {
 		"factor": 0.0,
