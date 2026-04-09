@@ -9,7 +9,15 @@ const TEST_CONFIG_PATH: String = "user://test_fuel_integration_settings.cfg"
 
 ## Per-test setup: Isolate the filesystem and ensure a clean memory state.
 ## :rtype: void
+extends "res://addons/gut/test.gd"
+
+const TEST_CONFIG_PATH: String = "user://test_fuel_integration_settings.cfg"
+var _previous_settings: GameSettingsResource
+
+## Per-test setup: Isolate the filesystem and ensure a clean memory state.
+## :rtype: void
 func before_each() -> void:
+	_previous_settings = Globals.settings
 	# Ensure a clean slate by deleting any leftover test config files
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
@@ -23,6 +31,7 @@ func before_each() -> void:
 func after_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
+	Globals.settings = _previous_settings
 
 
 ## test_fuel_persistence | Config Save/Load | Verify valid current_fuel and max_fuel persist correctly
