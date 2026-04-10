@@ -220,16 +220,6 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 					"Invalid type for max_fuel: " + str(typeof(loaded_max)), LogLevel.WARNING
 				)
 
-		if config.has_section_key("Settings", "current_fuel"):
-			var loaded_current: Variant = config.get_value("Settings", "current_fuel")
-			if loaded_current is float or loaded_current is int:
-				settings.current_fuel = float(loaded_current)
-			else:
-				log_message(
-					"Invalid type for current_fuel: " + str(typeof(loaded_current)),
-					LogLevel.WARNING
-				)
-
 		# Disable the guard and log a single summary instead
 		_is_loading_settings = false
 		log_message("All settings loaded and synchronized.", LogLevel.DEBUG)
@@ -256,8 +246,7 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	config.set_value("Settings", "enable_debug_logging", settings.enable_debug_logging)
 	# NEW: Persist the fuel settings
 	config.set_value("Settings", "max_fuel", settings.max_fuel)
-	config.set_value("Settings", "current_fuel", settings.current_fuel)
-
+	
 	err = config.save(path)
 	if err != OK:
 		log_message("Failed to save settings: " + str(err), LogLevel.ERROR)
