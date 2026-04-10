@@ -457,7 +457,7 @@ func _on_fuel_timer_timeout() -> void:
 	)
 	_settings.current_fuel -= consumption
 	# Keep Globals.log_message since it is a static utility, not the state object itself
-	Globals.log_message("Fuel left: " + str(_settings.current_fuel), Globals.LogLevel.DEBUG)
+	# Globals.log_message("Fuel left: " + str(_settings.current_fuel), Globals.LogLevel.DEBUG)
 
 
 func check_fuel_warning() -> void:
