@@ -242,13 +242,24 @@ func _exit_tree() -> void:
 
 # NEW: Observer pattern handler to react when GameSettingsResource
 # properties (like fuel) are updated externally.
-func _on_setting_changed(setting_name: String, _value: Variant) -> void:
+func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	if not is_instance_valid(_settings):
 		return
 
 	if setting_name == "current_fuel":
+		# NEW: Check if the engine was previously dead (timer stopped) and we just got refueled
+		if float(new_value) > 0.0 and fuel_timer.is_stopped():
+			# Reignite the engine: restart the consumption timer and spin up the rotors!
+			fuel_timer.start()
+			rotor_start(rotor_right, rotor_right_sfx)
+			rotor_start(rotor_left, rotor_left_sfx)
+			Globals.log_message(
+				"Engine reignited! Rotors and fuel consumption resumed.", Globals.LogLevel.INFO
+			)
+
 		update_fuel_bar()
 		check_fuel_warning()
+
 	elif (
 		setting_name
 		in [
