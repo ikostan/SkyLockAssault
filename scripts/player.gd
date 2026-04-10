@@ -81,6 +81,11 @@ func _ready() -> void:
 		# fully initializes and doesn't become a game-crashing "zombie" node.
 		push_error("Player couldn't find Globals.settings! Using fallback defaults.")
 		_settings = GameSettingsResource.new()
+		# NEW: Fix the "Split Brain" problem! 
+		# If the Globals singleton exists, give it our new fallback resource 
+		# so the rest of the game (like main_scene) shares the exact same data.
+		if is_instance_valid(Globals):
+			Globals.settings = _settings
 
 	# Auto-start rotors (overrides editor if needed)
 	rotor_left_sfx = rotor_left.get_node("AudioStreamPlayer2D")
