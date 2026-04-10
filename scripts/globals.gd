@@ -342,8 +342,7 @@ func _notification(what: int) -> void:
 
 		# Example: Save game state if you have a save system.
 		# Replace with your actual save function, e.g., from a save_manager.gd.
-		# OLD: # save_game_state()  # Uncomment and implement as needed.
-		# NEW: Explicitly save all settings (including current_fuel) right before the game quits
+		# NEW: Explicitly save all settings right before the game quits
 		_save_settings()
 
 		# After cleanup, let the quit proceed (optional on desktop; auto on web).
