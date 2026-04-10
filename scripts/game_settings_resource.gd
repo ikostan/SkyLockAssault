@@ -71,36 +71,40 @@ signal fuel_depleted
 # NEW: Migrated thresholds from player.gd to centralize all fuel configuration
 @export var high_fuel_threshold: float = 90.0:
 	set(value):
-		if _high_fuel_threshold == value:
+		var new_val: float = max(value, _medium_fuel_threshold + 1.0)  # Must be greater than medium
+		if _high_fuel_threshold == new_val:
 			return
-		_high_fuel_threshold = value
+		_high_fuel_threshold = new_val
 		setting_changed.emit("high_fuel_threshold", _high_fuel_threshold)
 	get:
 		return _high_fuel_threshold
 
 @export var medium_fuel_threshold: float = 50.0:
 	set(value):
-		if _medium_fuel_threshold == value:
+		var new_val: float = clamp(value, _low_fuel_threshold + 1.0, _high_fuel_threshold - 1.0)
+		if _medium_fuel_threshold == new_val:
 			return
-		_medium_fuel_threshold = value
+		_medium_fuel_threshold = new_val
 		setting_changed.emit("medium_fuel_threshold", _medium_fuel_threshold)
 	get:
 		return _medium_fuel_threshold
 
 @export var low_fuel_threshold: float = 30.0:
 	set(value):
-		if _low_fuel_threshold == value:
+		var new_val: float = clamp(value, _no_fuel_threshold + 1.0, _medium_fuel_threshold - 1.0)
+		if _low_fuel_threshold == new_val:
 			return
-		_low_fuel_threshold = value
+		_low_fuel_threshold = new_val
 		setting_changed.emit("low_fuel_threshold", _low_fuel_threshold)
 	get:
 		return _low_fuel_threshold
 
 @export var no_fuel_threshold: float = 15.0:
 	set(value):
-		if _no_fuel_threshold == value:
+		var new_val: float = min(value, _low_fuel_threshold - 1.0)  # Must be lower than low
+		if _no_fuel_threshold == new_val:
 			return
-		_no_fuel_threshold = value
+		_no_fuel_threshold = new_val
 		setting_changed.emit("no_fuel_threshold", _no_fuel_threshold)
 	get:
 		return _no_fuel_threshold
