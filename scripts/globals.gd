@@ -246,7 +246,7 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	config.set_value("Settings", "enable_debug_logging", settings.enable_debug_logging)
 	# NEW: Persist the fuel settings
 	config.set_value("Settings", "max_fuel", settings.max_fuel)
-	
+
 	err = config.save(path)
 	if err != OK:
 		log_message("Failed to save settings: " + str(err), LogLevel.ERROR)
