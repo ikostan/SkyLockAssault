@@ -188,7 +188,9 @@ func setup_decor_layer(viewport: Vector2) -> void:
 func _process(delta: float) -> void:
 	# NEW: Safely grab the settings resource and guard against null crashes
 	# during scene transitions, engine shutdown, or isolated GUT tests.
-	var settings_res: GameSettingsResource = Globals.settings if is_instance_valid(Globals) else null
+	var settings_res: GameSettingsResource = (
+		Globals.settings if is_instance_valid(Globals) else null
+	)
 	if not is_instance_valid(settings_res):
 		return
 
