@@ -8,12 +8,24 @@ extends GdUnitTestSuite
 const TestHelpers = preload("res://test/gdunit4/test_helpers.gd")
 
 var original_difficulty: float  # Snapshot holder
+# NEW: Added snapshot holders for global fuel state to prevent test leakage
+var original_current_fuel: float
+var original_max_fuel: float
+
 
 func before_test() -> void:
 	original_difficulty = Globals.settings.difficulty  # Snapshot before each test
+	# NEW: Snapshot fuel state
+	original_current_fuel = Globals.settings.current_fuel
+	original_max_fuel = Globals.settings.max_fuel
+
 
 func after_test() -> void:
 	Globals.settings.difficulty = original_difficulty  # Restore after each test
+	# NEW: Restore fuel state so other tests start clean
+	Globals.settings.max_fuel = original_max_fuel
+	Globals.settings.current_fuel = original_current_fuel
+
 
 func test_difficulty_scales_fuel_and_weapon() -> void:
 	# Setup: Load main_scene for full context (PlayerStatsPanel for fuel_bar path)
@@ -31,13 +43,25 @@ func test_difficulty_scales_fuel_and_weapon() -> void:
 	var original_difficulty: float = Globals.settings.difficulty
 	Globals.settings.difficulty = 2.0
 
+	# NEW: Derive the starting baseline dynamically to avoid clamping issues if max_fuel changed
+	var start_fuel: float = Globals.settings.max_fuel
+
 	# TEST 1: Fuel depletion scales (derive from constants)
-	player.fuel["fuel"] = 100.0
+	# OLD: player.fuel["fuel"] = 100.0
+	# NEW: Set the fuel level using the dynamic baseline instead of hardcoded 100.0
+	Globals.settings.current_fuel = start_fuel
 	var normalized_speed: float = player.speed["speed"] / player.MAX_SPEED
-	var expected_depletion: float = player.base_fuel_drain * normalized_speed * Globals.settings.difficulty
+	
+	# OLD: var expected_depletion: float = player.base_fuel_drain * normalized_speed * Globals.settings.difficulty
+	# NEW: Reference base_consumption_rate from the global resource since it was removed from the player script
+	var expected_depletion: float = Globals.settings.base_consumption_rate * normalized_speed * Globals.settings.difficulty
+	
 	player._on_fuel_timer_timeout()
-	var expected_fuel: float = 100.0 - expected_depletion
-	assert_float(player.fuel["fuel"]).is_equal_approx(expected_fuel, 0.01)  # Larger delta for precision
+	var expected_fuel: float = start_fuel - expected_depletion
+	
+	# OLD: assert_float(player.fuel["fuel"]).is_equal_approx(expected_fuel, 0.01)  # Larger delta for precision
+	# NEW: Verify the depletion amount against the global resource current_fuel
+	assert_float(Globals.settings.current_fuel).is_equal_approx(expected_fuel, 0.01)  # Larger delta for precision
 
 	# TEST 2: Weapon cooldown scales (fire_rate 0.15 * 2.0 = 0.30)
 	weapon.fire()  # FIXED: fire() not _fire(); delegates → BulletFirer.fire() → timer.start(0.30)

@@ -1,17 +1,10 @@
 ## Copyright (C) 2025 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
-# player.gd
+## player.gd
 extends Node2D
 
 ## Player controller for P-38 Lightning in SkyLockAssault.
 ## Manages movement, fuel, bounds, rotors (anim/sound), weapons.
-
-# Fuel color thresholds (percentages)
-const HIGH_FUEL_THRESHOLD: float = 90.0  # Starts green lerp
-const MEDIUM_FUEL_THRESHOLD: float = 50.0  # Switches to yellow lerp
-const MAX_FUEL: float = 100.0  # Fully Red Color
-const LOW_FUEL_THRESHOLD: float = 30.0  # Switches to red lerp
-const NO_FUEL_THRESHOLD: float = 15.0  # Fully Red Color
 
 # Bounds hitbox scale (quarter texture = tight margin for top-down plane)
 const HITBOX_SCALE: float = 0.25
@@ -37,13 +30,9 @@ const DARK_RED: Color = Color(0.5, 0.0, 0.0)
 const BLINK_INTERVAL: float = 0.5  # Seconds between blinks
 
 # Exported vars first (for Inspector editing)
-# @export var current_speed: float = 250.0
 @export var lateral_speed: float = 250.0
 @export var acceleration: float = 200.0
 @export var deceleration: float = 100.0
-# Base fuel consumption
-@export var base_fuel_drain: float = 1.0
-var current_fuel: float
 
 # Regular vars for computed boundaries (no export needed if set in code)
 var screen_size: Vector2
@@ -59,6 +48,9 @@ var rotor_right_sfx: AudioStreamPlayer2D
 var corner_radius: int = 10
 var fuel: Dictionary
 var speed: Dictionary
+
+# Cache the global settings to avoid singleton lookups in hot paths
+var _settings: GameSettingsResource = null
 
 # Onreadys next
 @onready var rotor_right: Node2D = $CharacterBody2D/RotorRight
@@ -81,6 +73,20 @@ var speed_label_blink_timer: Timer = $"../PlayerStatsPanel/Stats/Speed/SpeedLabe
 
 
 func _ready() -> void:
+	# Safely cache the settings resource
+	_settings = Globals.settings if is_instance_valid(Globals) else null
+
+	if not is_instance_valid(_settings):
+		# NEW: Log the error, but generate a fallback resource so the player
+		# fully initializes and doesn't become a game-crashing "zombie" node.
+		push_error("Player couldn't find Globals.settings! Using fallback defaults.")
+		_settings = GameSettingsResource.new()
+		# NEW: Fix the "Split Brain" problem!
+		# If the Globals singleton exists, give it our new fallback resource
+		# so the rest of the game (like main_scene) shares the exact same data.
+		if is_instance_valid(Globals):
+			Globals.settings = _settings
+
 	# Auto-start rotors (overrides editor if needed)
 	rotor_left_sfx = rotor_left.get_node("AudioStreamPlayer2D")
 	rotor_right_sfx = rotor_right.get_node("AudioStreamPlayer2D")
@@ -139,7 +145,13 @@ func _ready() -> void:
 	# Initialize fuel bar style
 	fuel_bar_fill_style = StyleBoxFlat.new()
 	set_bar_fill_style(fuel_bar, fuel_bar_fill_style)
-	fuel_bar.max_value = MAX_FUEL
+	# NEW: Using cached _settings as single source of truth
+	fuel_bar.max_value = _settings.max_fuel
+
+	# NEW: Restored the unconditional fuel reset. Since the game doesn't use mid-run resumes,
+	# the player MUST spawn with a full tank to prevent infinite death loops from
+	# previous 0-fuel saves.
+	_settings.current_fuel = _settings.max_fuel
 
 	# Initialize speed bar style and value
 	speed_bar_fill_style = StyleBoxFlat.new()
@@ -147,12 +159,19 @@ func _ready() -> void:
 	speed_bar.max_value = MAX_SPEED
 
 	# Initialize fuel bar style and value
-	current_fuel = MAX_FUEL
 	fuel_timer.timeout.connect(_on_fuel_timer_timeout)
 	fuel_timer.start()
 
+	# NEW: Connect to the global fuel_depleted signal to handle engine failure.
+	_settings.fuel_depleted.connect(_on_player_out_of_fuel)
+	# NEW: Connect to the global setting_changed signal so the UI
+	# reacts to refuels/drains automatically.
+	_settings.setting_changed.connect(_on_setting_changed)
+
+	# Initialize speed dictionary
+	# (Speed is still local to the player's physics, so it keeps its state here)
 	speed = {
-		"speed": 250.0,  # Initial speed value (mph); was current_speed
+		"speed": 250.0,
 		"lateral_speed": lateral_speed,
 		"acceleration": acceleration,
 		"deceleration": deceleration,
@@ -166,12 +185,12 @@ func _ready() -> void:
 		"blinking": false,
 	}
 
+	# Initialize fuel dictionary
+	# (Fuel state now lives in _settings. This dict is ONLY for UI.)
 	fuel = {
-		"fuel": current_fuel,
 		"factor": 0.0,
 		"timer": fuel_label_blink_timer,
 		"label": fuel_label,
-		"max": MAX_FUEL,
 		"bar": fuel_bar,
 		"bar style": fuel_bar_fill_style,
 		"blinking": false,
@@ -210,12 +229,69 @@ func _ready() -> void:
 		push_error("Weapon node not found! Check player.tscn scene tree for $Weapon child.")
 
 
+# NEW: Defensive cleanup to prevent dangling signal connections
+# when the player is removed from the scene tree or reloaded.
+func _exit_tree() -> void:
+	if is_instance_valid(_settings):
+		if _settings.setting_changed.is_connected(_on_setting_changed):
+			_settings.setting_changed.disconnect(_on_setting_changed)
+
+		if _settings.fuel_depleted.is_connected(_on_player_out_of_fuel):
+			_settings.fuel_depleted.disconnect(_on_player_out_of_fuel)
+
+
+# NEW: Observer pattern handler to react when GameSettingsResource
+# properties (like fuel) are updated externally.
+func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
+	if not is_instance_valid(_settings):
+		return
+
+	if setting_name == "current_fuel":
+		# NEW: Check if the engine was previously dead (timer stopped) and we just got refueled
+		if float(new_value) > 0.0 and fuel_timer.is_stopped():
+			# Reignite the engine: restart the consumption timer and spin up the rotors!
+			fuel_timer.start()
+			rotor_start(rotor_right, rotor_right_sfx)
+			rotor_start(rotor_left, rotor_left_sfx)
+			Globals.log_message(
+				"Engine reignited! Rotors and fuel consumption resumed.", Globals.LogLevel.INFO
+			)
+
+		update_fuel_bar()
+		check_fuel_warning()
+
+	elif (
+		setting_name
+		in [
+			"max_fuel",
+			"high_fuel_threshold",
+			"medium_fuel_threshold",
+			"low_fuel_threshold",
+			"no_fuel_threshold"
+		]
+	):
+		fuel_bar.max_value = _settings.max_fuel
+		update_fuel_bar()
+		check_fuel_warning()
+
+
+# NEW: Handler for engine failure triggered by the global fuel_depleted signal from the resource.
+func _on_player_out_of_fuel() -> void:
+	Globals.log_message("Player is out of fuel! Engine flameout.", Globals.LogLevel.WARNING)
+
+	# NEW: Migrated the speed reset to ensure the plane actually stops flying when fuel hits 0
+	speed["speed"] = 0.0
+
+	rotor_stop(rotor_right, rotor_right_sfx)
+	rotor_stop(rotor_left, rotor_left_sfx)
+	fuel_timer.stop()
+
+
 ## Retrieves the effective text color of a Label, considering theme overrides.
 ## @param label: The Label node to query.
 ## @return: The effective font color.
 func get_label_text_color(label: Label) -> Color:
 	if label.has_theme_color_override("font_color"):
-		# return label.get_theme_color("font_color", "")
 		return label.get("theme_override_colors/font_color")
 	return label.get_theme_color("font_color", "Label")
 
@@ -238,7 +314,6 @@ func set_bar_fill_style(bar: ProgressBar, bar_fill_style: StyleBoxFlat) -> void:
 func _input(event: InputEvent) -> void:
 	# Fire weapon
 	if event.is_action_pressed("fire"):
-		# Globals.log_message("Fire input pressed → calling weapon.fire()", Globals.LogLevel.DEBUG)
 		if weapon and weapon.has_method("fire"):
 			weapon.fire()
 		get_viewport().set_input_as_handled()
@@ -284,27 +359,42 @@ func rotor_stop(rotor: Node2D, rotor_sfx: AudioStreamPlayer2D) -> void:
 
 
 func update_fuel_bar() -> void:
-	fuel["bar"].value = fuel["fuel"]
-	var fuel_percent: float = (fuel["fuel"] / fuel["max"]) * 100.0
+	if not is_instance_valid(_settings):
+		return
 
-	if fuel_percent > HIGH_FUEL_THRESHOLD:
-		fuel["factor"] = 0.0  # Reset for consistency, though not used here
+	# Explicitly read current and max fuel from the global settings resource.
+	var cur_fuel: float = _settings.current_fuel
+	var m_fuel: float = _settings.max_fuel
+
+	fuel["bar"].value = cur_fuel
+	var fuel_percent: float = 0.0 if m_fuel <= 0.0 else (cur_fuel / m_fuel) * 100.0
+
+	# Cache thresholds locally to keep the logic clean and readable
+	var high: float = _settings.high_fuel_threshold
+	var medium: float = _settings.medium_fuel_threshold
+	var low: float = _settings.low_fuel_threshold
+	var no_fuel: float = _settings.no_fuel_threshold
+
+	if fuel_percent > high:
+		fuel["factor"] = 0.0  # Reset for consistency
 		fuel["bar style"].bg_color = Color.GREEN
-	elif fuel_percent >= MEDIUM_FUEL_THRESHOLD:
-		fuel["factor"] = (
-			(HIGH_FUEL_THRESHOLD - fuel_percent) / (HIGH_FUEL_THRESHOLD - MEDIUM_FUEL_THRESHOLD)
-		)
+
+	elif fuel_percent >= medium:
+		var span: float = high - medium
+		# Guard against division by zero or negative spans
+		fuel["factor"] = 1.0 if span <= 0.0 else clamp((high - fuel_percent) / span, 0.0, 1.0)
 		fuel["bar style"].bg_color = Color.GREEN.lerp(Color.YELLOW, fuel["factor"])
-	elif fuel_percent >= LOW_FUEL_THRESHOLD:
-		fuel["factor"] = (
-			(MEDIUM_FUEL_THRESHOLD - fuel_percent) / (MEDIUM_FUEL_THRESHOLD - LOW_FUEL_THRESHOLD)
-		)
+
+	elif fuel_percent >= low:
+		var span: float = medium - low
+		fuel["factor"] = 1.0 if span <= 0.0 else clamp((medium - fuel_percent) / span, 0.0, 1.0)
 		fuel["bar style"].bg_color = Color.YELLOW.lerp(Color.RED, fuel["factor"])
-	elif fuel_percent >= NO_FUEL_THRESHOLD:
-		fuel["factor"] = (
-			(LOW_FUEL_THRESHOLD - fuel_percent) / (LOW_FUEL_THRESHOLD - NO_FUEL_THRESHOLD)
-		)
+
+	elif fuel_percent >= no_fuel:
+		var span: float = low - no_fuel
+		fuel["factor"] = 1.0 if span <= 0.0 else clamp((low - fuel_percent) / span, 0.0, 1.0)
 		fuel["bar style"].bg_color = Color.RED.lerp(Color(0.5, 0, 0), fuel["factor"])
+
 	else:
 		fuel["factor"] = 1.0  # Explicitly set to max lerp (full dark red)
 		fuel["bar style"].bg_color = Color.RED.lerp(Color(0.5, 0, 0), fuel["factor"])
@@ -355,33 +445,35 @@ func update_speed_bar() -> void:
 
 # Connect Timer's timeout signal
 func _on_fuel_timer_timeout() -> void:
-	# Scale base rate with clamped normalized speed
-	# to avoid excessive drain at out-of-range speeds
+	if not is_instance_valid(_settings):
+		return
+
+	# NEW: Calculate depletion based on Global settings and update the resource directly.
+	# NEW: Game over logic is now handled by _on_player_out_of_fuel via the fuel_depleted signal.
+	# NEW: UI updates are handled automatically via the setting_changed signal.
 	var normalized_speed: float = clamp(speed["speed"] / MAX_SPEED, 0.0, 1.0)
-	var fuel_left: float = (
-		fuel["fuel"] - ((base_fuel_drain * normalized_speed) * Globals.settings.difficulty)
+	var consumption: float = (
+		_settings.base_consumption_rate * normalized_speed * _settings.difficulty
 	)
-	#
-	# Clamp and update current_fuel first
-	fuel["fuel"] = clamp(fuel_left, 0, fuel["max"])
-
-	if fuel["fuel"] <= 0:
-		speed["speed"] = 0.0  # Or game over logic
-		fuel_timer.stop()
-		rotor_stop(rotor_right, rotor_right_sfx)
-		rotor_stop(rotor_left, rotor_left_sfx)
-
-	# Update UI from the clamped value
-	update_fuel_bar()
-	# Check fuel level and start/stop blinking
-	check_fuel_warning()
-	Globals.log_message("Fuel left: " + str(fuel["fuel"]), Globals.LogLevel.DEBUG)
+	_settings.current_fuel -= consumption
+	# Keep Globals.log_message since it is a static utility, not the state object itself
+	# Globals.log_message("Fuel left: " + str(_settings.current_fuel), Globals.LogLevel.DEBUG)
 
 
 func check_fuel_warning() -> void:
-	if fuel["fuel"] <= LOW_FUEL_THRESHOLD and not fuel["blinking"]:
+	if not is_instance_valid(_settings):
+		return
+
+	# NEW: Calculate the fuel percentage first to ensure consistency with the UI bar colors
+	var cur_fuel: float = _settings.current_fuel
+	var m_fuel: float = _settings.max_fuel
+	var fuel_percent: float = 0.0 if m_fuel <= 0.0 else (cur_fuel / m_fuel) * 100.0
+
+	# NEW: Compare the calculated percentage against the threshold
+	if fuel_percent <= _settings.low_fuel_threshold and not fuel["blinking"]:
 		start_blinking(fuel)
-	elif fuel["fuel"] > LOW_FUEL_THRESHOLD and fuel["blinking"]:
+	# NEW: Compare the calculated percentage against the threshold
+	elif fuel_percent > _settings.low_fuel_threshold and fuel["blinking"]:
 		stop_blinking(fuel)
 
 
@@ -434,30 +526,41 @@ func _toggle_label(param: Dictionary) -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	# NEW: Guard against null references during teardown or tests
+	if not is_instance_valid(_settings):
+		return
+
 	# Speed changes allowed only if fuel > 0
-	if Input.is_action_pressed("speed_up") and fuel["fuel"] > 0:
+	if Input.is_action_pressed("speed_up") and _settings.current_fuel > 0:
 		speed["speed"] += speed["acceleration"] * _delta
-	if Input.is_action_pressed("speed_down") and fuel["fuel"] > 0:
+
+	if Input.is_action_pressed("speed_down") and _settings.current_fuel > 0:
 		speed["speed"] -= speed["deceleration"] * _delta
+
 	# Clamp current_speed between MIN_SPEED and MAX_SPEED
-	if fuel["fuel"] == 0:
+	if _settings.current_fuel == 0:
 		# No fuel left, airplane can't fly
 		speed["speed"] = clamp(speed["speed"], 0, speed["max"])
 	else:
 		speed["speed"] = clamp(speed["speed"], speed["min"], speed["max"])
+
 	# Left/Right movement
 	var lateral_input: float = Input.get_axis("move_left", "move_right")
+
 	# Left/Right movement, only allowed when fuel > 0 and the player is moving
-	if lateral_input and fuel["fuel"] > 0 and speed["speed"] > 0:
+	if lateral_input and _settings.current_fuel > 0 and speed["speed"] > 0:
 		player.velocity.x = lateral_input * speed["lateral_speed"]
 	# Reset lateral velocity if no input
 	else:
 		player.velocity.x = 0.0
+
 	# Clamp player position within allowed ranged of coords
 	player.position.x = clamp(player.position.x, player_x_min, player_x_max)
 	player.position.y = clamp(player.position.y, player_y_min, player_y_max)
+
 	# Update UI
 	update_speed_bar()
 	check_speed_warning()
+
 	# Perform player movement
 	player.move_and_slide()

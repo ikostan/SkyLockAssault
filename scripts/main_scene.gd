@@ -186,9 +186,20 @@ func setup_decor_layer(viewport: Vector2) -> void:
 
 
 func _process(delta: float) -> void:
-	var scroll_speed: float = player.speed["speed"] * delta * Globals.settings.difficulty * 0.8
+	# NEW: Safely grab the settings resource and guard against null crashes
+	# during scene transitions, engine shutdown, or isolated GUT tests.
+	var settings_res: GameSettingsResource = (
+		Globals.settings if is_instance_valid(Globals) else null
+	)
+	if not is_instance_valid(settings_res):
+		return
+
+	# Use the safe local reference for difficulty
+	var scroll_speed: float = player.speed["speed"] * delta * settings_res.difficulty * 0.8
 	background.scroll_offset.y += scroll_speed
-	if player.fuel["fuel"] <= 0:
+
+	# Use the safe local reference for current_fuel
+	if settings_res.current_fuel <= 0:
 		background.scroll_offset = Vector2(0, 0)
 
 	# 1. Critical unbound controls warning (shown ONCE per session)

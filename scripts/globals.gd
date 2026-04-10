@@ -79,10 +79,17 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	var log_msg: String = "Setting '%s' updated to: %s" % [setting_name, str(new_value)]
 
 	# Automatically log the change
-	log_message(log_msg, LogLevel.DEBUG)
+	# OLD: log_message(log_msg, LogLevel.DEBUG)
+	# NEW: Prevent log spam by filtering out high-frequency runtime changes like fuel ticks
+	if setting_name != "current_fuel":
+		log_message(log_msg, LogLevel.DEBUG)
 
 	# Automatically persist to disk
-	_save_settings()
+	# OLD: _save_settings()
+	# NEW: Prevent disk I/O lag by stopping current_fuel from
+	# triggering a file save on every frame/timer tick
+	if setting_name != "current_fuel":
+		_save_settings()
 
 
 ## Centralized "ensure initial focus" helper.
@@ -151,7 +158,8 @@ func load_key_mapping(menu_to_hide: Node) -> void:
 	get_tree().root.add_child(km_instance)
 
 
-## Loads persisted settings from config if valid types; skips invalid/missing to keep current.
+## Loads persisted settings from config if valid types;
+## skips invalid/missing to keep current.
 ## :param path: Config file path (default: Settings.CONFIG_PATH).
 ## :type path: String
 ## :rtype: void
@@ -202,6 +210,16 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 					LogLevel.DEBUG
 				)
 
+		# NEW: Load the fuel related settings
+		if config.has_section_key("Settings", "max_fuel"):
+			var loaded_max: Variant = config.get_value("Settings", "max_fuel")
+			if loaded_max is float or loaded_max is int:
+				settings.max_fuel = float(loaded_max)
+			else:
+				log_message(
+					"Invalid type for max_fuel: " + str(typeof(loaded_max)), LogLevel.WARNING
+				)
+
 		# Disable the guard and log a single summary instead
 		_is_loading_settings = false
 		log_message("All settings loaded and synchronized.", LogLevel.DEBUG)
@@ -226,6 +244,9 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	config.set_value("Settings", "difficulty", settings.difficulty)
 	# NEW: Persist the debug logging flag
 	config.set_value("Settings", "enable_debug_logging", settings.enable_debug_logging)
+	# NEW: Persist the fuel settings
+	config.set_value("Settings", "max_fuel", settings.max_fuel)
+
 	err = config.save(path)
 	if err != OK:
 		log_message("Failed to save settings: " + str(err), LogLevel.ERROR)
@@ -321,7 +342,8 @@ func _notification(what: int) -> void:
 
 		# Example: Save game state if you have a save system.
 		# Replace with your actual save function, e.g., from a save_manager.gd.
-		# save_game_state()  # Uncomment and implement as needed.
+		# NEW: Explicitly save all settings right before the game quits
+		_save_settings()
 
 		# After cleanup, let the quit proceed (optional on desktop; auto on web).
 		get_tree().quit()
