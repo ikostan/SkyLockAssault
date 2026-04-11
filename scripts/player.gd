@@ -6,6 +6,9 @@ extends Node2D
 ## Player controller for P-38 Lightning in SkyLockAssault.
 ## Manages movement, fuel, bounds, rotors (anim/sound), weapons.
 
+## Emitted when the player's forward speed changes.
+signal speed_changed(new_speed: float)
+
 # Bounds hitbox scale (quarter texture = tight margin for top-down plane)
 const HITBOX_SCALE: float = 0.25
 
@@ -213,6 +216,9 @@ func _ready() -> void:
 		speed["timer"].wait_time = BLINK_INTERVAL
 		speed["timer"].one_shot = false  # Repeat indefinitely
 		speed["timer"].timeout.connect(_on_speed_blink_timer_timeout)
+	
+	# Connect speed signal
+	speed_changed.connect(_on_speed_changed)
 
 	# Init speed bar
 	speed["bar"].max_value = speed["max"]  # Set max speed value
@@ -229,6 +235,11 @@ func _ready() -> void:
 		push_error("Weapon node not found! Check player.tscn scene tree for $Weapon child.")
 
 
+func _on_speed_changed(_new_speed: float) -> void:
+	update_speed_bar()
+	check_speed_warning()
+
+
 # NEW: Defensive cleanup to prevent dangling signal connections
 # when the player is removed from the scene tree or reloaded.
 func _exit_tree() -> void:
@@ -238,6 +249,9 @@ func _exit_tree() -> void:
 
 		if _settings.fuel_depleted.is_connected(_on_player_out_of_fuel):
 			_settings.fuel_depleted.disconnect(_on_player_out_of_fuel)
+			
+		if speed_changed.is_connected(_on_speed_changed):
+			speed_changed.disconnect(_on_speed_changed)
 
 
 # NEW: Observer pattern handler to react when GameSettingsResource
@@ -280,7 +294,11 @@ func _on_player_out_of_fuel() -> void:
 	Globals.log_message("Player is out of fuel! Engine flameout.", Globals.LogLevel.WARNING)
 
 	# NEW: Migrated the speed reset to ensure the plane actually stops flying when fuel hits 0
+	var old_speed: float = speed["speed"]
 	speed["speed"] = 0.0
+	
+	if old_speed != speed["speed"]:
+		speed_changed.emit(speed["speed"])
 
 	rotor_stop(rotor_right, rotor_right_sfx)
 	rotor_stop(rotor_left, rotor_left_sfx)
@@ -529,6 +547,9 @@ func _physics_process(_delta: float) -> void:
 	# NEW: Guard against null references during teardown or tests
 	if not is_instance_valid(_settings):
 		return
+	
+	# Track speed to emit signal on change
+	var old_speed: float = speed["speed"]
 
 	# Speed changes allowed only if fuel > 0
 	if Input.is_action_pressed("speed_up") and _settings.current_fuel > 0:
@@ -543,6 +564,10 @@ func _physics_process(_delta: float) -> void:
 		speed["speed"] = clamp(speed["speed"], 0, speed["max"])
 	else:
 		speed["speed"] = clamp(speed["speed"], speed["min"], speed["max"])
+		
+	# Emit signal if speed actually changed
+	if old_speed != speed["speed"]:
+		speed_changed.emit(speed["speed"])
 
 	# Left/Right movement
 	var lateral_input: float = Input.get_axis("move_left", "move_right")
