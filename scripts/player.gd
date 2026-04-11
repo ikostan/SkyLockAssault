@@ -216,7 +216,7 @@ func _ready() -> void:
 		speed["timer"].wait_time = BLINK_INTERVAL
 		speed["timer"].one_shot = false  # Repeat indefinitely
 		speed["timer"].timeout.connect(_on_speed_blink_timer_timeout)
-	
+
 	# Connect speed signal
 	speed_changed.connect(_on_speed_changed)
 
@@ -249,7 +249,7 @@ func _exit_tree() -> void:
 
 		if _settings.fuel_depleted.is_connected(_on_player_out_of_fuel):
 			_settings.fuel_depleted.disconnect(_on_player_out_of_fuel)
-			
+
 		if speed_changed.is_connected(_on_speed_changed):
 			speed_changed.disconnect(_on_speed_changed)
 
@@ -296,7 +296,7 @@ func _on_player_out_of_fuel() -> void:
 	# NEW: Migrated the speed reset to ensure the plane actually stops flying when fuel hits 0
 	var old_speed: float = speed["speed"]
 	speed["speed"] = 0.0
-	
+
 	if old_speed != speed["speed"]:
 		speed_changed.emit(speed["speed"])
 
@@ -547,7 +547,7 @@ func _physics_process(_delta: float) -> void:
 	# NEW: Guard against null references during teardown or tests
 	if not is_instance_valid(_settings):
 		return
-	
+
 	# Track speed to emit signal on change
 	var old_speed: float = speed["speed"]
 
@@ -564,7 +564,7 @@ func _physics_process(_delta: float) -> void:
 		speed["speed"] = clamp(speed["speed"], 0, speed["max"])
 	else:
 		speed["speed"] = clamp(speed["speed"], speed["min"], speed["max"])
-		
+
 	# Emit signal if speed actually changed
 	if old_speed != speed["speed"]:
 		speed_changed.emit(speed["speed"])
