@@ -97,7 +97,7 @@ func test_ui_updates_on_speed_signal() -> void:
 	_player.speed["speed"] = 500.0 # Force local sync
 	
 	# Fire the signal explicitly as the engine would
-	_player.speed_changed.emit(500.0)
+	_player.speed_changed.emit(500.0, _player.speed["max"])
 	
 	assert_eq(_player.speed_bar.value, 500.0, "Progress bar must sync tightly with speed_changed.")
 
