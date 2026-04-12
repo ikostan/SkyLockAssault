@@ -7,7 +7,11 @@ extends Node2D
 ## Manages movement, fuel, bounds, rotors (anim/sound), weapons.
 
 ## Emitted when the player's forward speed changes.
-signal speed_changed(new_speed: float)
+signal speed_changed(new_speed: float, max_speed: float)
+## Emitted when speed falls below the safe threshold.
+signal speed_low(threshold: float)
+## Emitted when the plane hits maximum velocity.
+signal speed_maxed()
 
 # Bounds hitbox scale (quarter texture = tight margin for top-down plane)
 const HITBOX_SCALE: float = 0.25
@@ -75,6 +79,10 @@ var speed_label_blink_timer: Timer = $"../PlayerStatsPanel/Stats/Speed/SpeedLabe
 @onready var weapon: Node2D = $CharacterBody2D/Weapon  # Path to your WeaponManager node
 
 
+## Called when the node enters the scene tree for the first time.
+## Initializes the player state, calculates screen boundaries, binds UI references,
+## and connects core signals for the fuel and speed systems.
+## @return: void
 func _ready() -> void:
 	# Safely cache the settings resource
 	_settings = Globals.settings if is_instance_valid(Globals) else null
@@ -235,13 +243,19 @@ func _ready() -> void:
 		push_error("Weapon node not found! Check player.tscn scene tree for $Weapon child.")
 
 
-func _on_speed_changed(_new_speed: float) -> void:
+## Callback triggered when the player's speed changes.
+## Updates the speed UI bar and checks for proximity to minimum/maximum limits.
+## @param _new_speed: The current forward speed of the player.
+## @param _max_speed: The absolute maximum speed limit.
+## @return: void
+func _on_speed_changed(_new_speed: float, _max_speed: float) -> void:
 	update_speed_bar()
 	check_speed_warning()
 
 
-# NEW: Defensive cleanup to prevent dangling signal connections
-# when the player is removed from the scene tree or reloaded.
+## Lifecycle callback triggered right before the node is removed from the tree.
+## Safely disconnects global resource signals to prevent dangling references and memory leaks.
+## @return: void
 func _exit_tree() -> void:
 	if is_instance_valid(_settings):
 		if _settings.setting_changed.is_connected(_on_setting_changed):
@@ -254,8 +268,11 @@ func _exit_tree() -> void:
 			speed_changed.disconnect(_on_speed_changed)
 
 
-# NEW: Observer pattern handler to react when GameSettingsResource
-# properties (like fuel) are updated externally.
+## Observer pattern callback to react to updates from the global settings resource.
+## Re-ignites engines if refueled, or updates UI limits when settings change.
+## @param setting_name: The name of the property that was modified.
+## @param new_value: The updated value of the property.
+## @return: void
 func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	if not is_instance_valid(_settings):
 		return
@@ -289,7 +306,9 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 		check_fuel_warning()
 
 
-# NEW: Handler for engine failure triggered by the global fuel_depleted signal from the resource.
+## Signal handler for engine failure triggered by the global fuel_depleted signal.
+## Stops the plane, halts rotors, and broadcasts the flameout state to the UI.
+## @return: void
 func _on_player_out_of_fuel() -> void:
 	Globals.log_message("Player is out of fuel! Engine flameout.", Globals.LogLevel.WARNING)
 
@@ -298,7 +317,8 @@ func _on_player_out_of_fuel() -> void:
 	speed["speed"] = 0.0
 
 	if old_speed != speed["speed"]:
-		speed_changed.emit(speed["speed"])
+		speed_changed.emit(speed["speed"], speed["max"])
+		speed_low.emit(LOW_YELLOW_THRESHOLD)
 
 	rotor_stop(rotor_right, rotor_right_sfx)
 	rotor_stop(rotor_left, rotor_left_sfx)
@@ -314,6 +334,10 @@ func get_label_text_color(label: Label) -> Color:
 	return label.get_theme_color("font_color", "Label")
 
 
+## Applies a dynamic font color override to a specified label.
+## @param label: The Label node to modify.
+## @param new_color: The target Color to apply.
+## @return: void
 func set_label_text_color(label: Label, new_color: Color) -> void:
 	if label:
 		# Apply the color as a theme override
@@ -321,6 +345,10 @@ func set_label_text_color(label: Label, new_color: Color) -> void:
 		Globals.log_message("Label text color set to: " + str(new_color), Globals.LogLevel.DEBUG)
 
 
+## Applies standard corner radiuses and assigns a custom stylebox to a ProgressBar.
+## @param bar: The ProgressBar node to style.
+## @param bar_fill_style: The StyleBoxFlat to configure and apply.
+## @return: void
 func set_bar_fill_style(bar: ProgressBar, bar_fill_style: StyleBoxFlat) -> void:
 	bar_fill_style.corner_radius_bottom_left = corner_radius
 	bar_fill_style.corner_radius_top_left = corner_radius
@@ -329,6 +357,9 @@ func set_bar_fill_style(bar: ProgressBar, bar_fill_style: StyleBoxFlat) -> void:
 	bar.add_theme_stylebox_override("fill", bar_fill_style)
 
 
+## Captures core input events for the player, specifically weapon firing and swapping.
+## @param event: The input event detected by the engine.
+## @return: void
 func _input(event: InputEvent) -> void:
 	# Fire weapon
 	if event.is_action_pressed("fire"):
@@ -376,6 +407,9 @@ func rotor_stop(rotor: Node2D, rotor_sfx: AudioStreamPlayer2D) -> void:
 		rotor_sfx.stop()
 
 
+## Updates the fuel bar's visual fill and color based on the current fuel level.
+## Transitions through Green, Yellow, and Red depending on configured resource thresholds.
+## @return: void
 func update_fuel_bar() -> void:
 	if not is_instance_valid(_settings):
 		return
@@ -461,7 +495,9 @@ func update_speed_bar() -> void:
 	speed["factor"] = factor  # Always store the updated value
 
 
-# Connect Timer's timeout signal
+## Timer callback triggered every tick of the fuel timer.
+## Calculates dynamic fuel consumption based on current speed and game difficulty.
+## @return: void
 func _on_fuel_timer_timeout() -> void:
 	if not is_instance_valid(_settings):
 		return
@@ -478,6 +514,9 @@ func _on_fuel_timer_timeout() -> void:
 	# Globals.log_message("Fuel left: " + str(_settings.current_fuel), Globals.LogLevel.DEBUG)
 
 
+## Checks if the current fuel has dropped below the low-fuel threshold.
+## Activates or deactivates the UI warning blinker accordingly.
+## @return: void
 func check_fuel_warning() -> void:
 	if not is_instance_valid(_settings):
 		return
@@ -512,6 +551,9 @@ func check_speed_warning() -> void:
 		stop_blinking(speed)
 
 
+## Initiates the blinking effect for a specific UI parameter dictionary (e.g., fuel or speed).
+## @param param: A dictionary containing the target 'label', 'timer', and state flags.
+## @return: void
 func start_blinking(param: Dictionary) -> void:
 	if param["label"] and param["timer"]:
 		param["blinking"] = true
@@ -519,6 +561,9 @@ func start_blinking(param: Dictionary) -> void:
 		_toggle_label(param)  # Immediate first toggle
 
 
+## Halts the blinking effect for a specific UI parameter dictionary and restores its base color.
+## @param param: A dictionary containing the target 'label', 'timer', and state flags.
+## @return: void
 func stop_blinking(param: Dictionary) -> void:
 	if param["label"] and param["timer"]:
 		param["blinking"] = false
@@ -526,16 +571,23 @@ func stop_blinking(param: Dictionary) -> void:
 		set_label_text_color(param["label"], param["base_color"])
 
 
+## Timer callback that toggles the visual state of the fuel warning label.
+## @return: void
 func _on_fuel_blink_timer_timeout() -> void:
 	if fuel["blinking"] and fuel["label"]:
 		_toggle_label(fuel)
 
 
+## Timer callback that toggles the visual state of the speed warning label.
+## @return: void
 func _on_speed_blink_timer_timeout() -> void:
 	if speed["blinking"] and speed["label"]:
 		_toggle_label(speed)
 
 
+## Swaps the text color of the given UI dictionary's label between its base and warning colors.
+## @param param: The UI dictionary containing 'label', 'base_color', and 'warning_color'.
+## @return: void
 func _toggle_label(param: Dictionary) -> void:
 	if get_label_text_color(param["label"]) == param["base_color"]:
 		set_label_text_color(param["label"], param["warning_color"])
@@ -543,6 +595,11 @@ func _toggle_label(param: Dictionary) -> void:
 		set_label_text_color(param["label"], param["base_color"])
 
 
+## The main physics loop for the player.
+## Handles forward acceleration/deceleration, lateral movement, boundary constraints,
+## and broadcasts speed state changes to external observers.
+## @param _delta: The time elapsed since the last physics frame.
+## @return: void
 func _physics_process(_delta: float) -> void:
 	# NEW: Guard against null references during teardown or tests
 	if not is_instance_valid(_settings):
@@ -565,9 +622,18 @@ func _physics_process(_delta: float) -> void:
 	else:
 		speed["speed"] = clamp(speed["speed"], speed["min"], speed["max"])
 
-	# Emit signal if speed actually changed
+	# Emit signals if speed actually changed
 	if old_speed != speed["speed"]:
-		speed_changed.emit(speed["speed"])
+		# 1. Fixed the missing max_speed argument so the UI actually updates!
+		speed_changed.emit(speed["speed"], speed["max"])
+		
+		# 2. Emit when we hit maximum speed
+		if speed["speed"] >= speed["max"]:
+			speed_maxed.emit()
+			
+		# 3. Emit when we fall below the safe threshold
+		if speed["speed"] <= LOW_YELLOW_THRESHOLD:
+			speed_low.emit(LOW_YELLOW_THRESHOLD)
 
 	# Left/Right movement
 	var lateral_input: float = Input.get_axis("move_left", "move_right")
@@ -583,9 +649,7 @@ func _physics_process(_delta: float) -> void:
 	player.position.x = clamp(player.position.x, player_x_min, player_x_max)
 	player.position.y = clamp(player.position.y, player_y_min, player_y_max)
 
-	# Update UI
-	update_speed_bar()
-	check_speed_warning()
+	# REMOVED: update_speed_bar() and check_speed_warning() from here!
 
 	# Perform player movement
 	player.move_and_slide()
