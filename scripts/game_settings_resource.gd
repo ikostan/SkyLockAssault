@@ -91,7 +91,6 @@ signal fuel_depleted
 	get:
 		return _low_yellow_fraction
 
-
 @export_group("Fuel System")
 
 ## Maximum fuel capacity.
