@@ -11,7 +11,7 @@ signal speed_changed(new_speed: float, max_speed: float)
 ## Emitted when speed falls below the safe threshold.
 signal speed_low(threshold: float)
 ## Emitted when the plane hits maximum velocity.
-signal speed_maxed()
+signal speed_maxed
 
 # Bounds hitbox scale (quarter texture = tight margin for top-down plane)
 const HITBOX_SCALE: float = 0.25
@@ -626,11 +626,11 @@ func _physics_process(_delta: float) -> void:
 	if old_speed != speed["speed"]:
 		# 1. Fixed the missing max_speed argument so the UI actually updates!
 		speed_changed.emit(speed["speed"], speed["max"])
-		
+
 		# 2. Emit when we hit maximum speed
 		if speed["speed"] >= speed["max"]:
 			speed_maxed.emit()
-			
+
 		# 3. Emit when we fall below the safe threshold
 		if speed["speed"] <= LOW_YELLOW_THRESHOLD:
 			speed_low.emit(LOW_YELLOW_THRESHOLD)
