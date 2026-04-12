@@ -108,7 +108,9 @@ func test_speed_clamps_to_max_and_min() -> void:
 	
 	Globals.settings.current_fuel = 100.0
 	var max_cap: float = _player.speed["max"]
+	var min_cap: float = _player.speed["min"]
 	
+	# --- 1. Test MAX Clamp ---
 	_player.speed["speed"] = max_cap - 5.0
 	
 	Input.action_press("speed_up")
@@ -116,6 +118,17 @@ func test_speed_clamps_to_max_and_min() -> void:
 	_player._physics_process(10.0) 
 	
 	assert_eq(float(_player.speed["speed"]), max_cap, "Speed must not exceed configured MAX_SPEED.")
+	Input.action_release("speed_up") # Release the key for the next test phase
+	
+	# --- 2. Test MIN Clamp ---
+	_player.speed["speed"] = min_cap + 5.0
+	
+	Input.action_press("speed_down")
+	# Force an extreme deceleration delta
+	_player._physics_process(10.0)
+	
+	assert_eq(float(_player.speed["speed"]), min_cap, "Speed must not fall below configured MIN_SPEED.")
+	Input.action_release("speed_down") # Clean up
 
 # ==========================================
 # MOCK BUILDER HELPER
