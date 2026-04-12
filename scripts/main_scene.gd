@@ -13,7 +13,8 @@ var _showing_unbound_warning: bool = false
 var _showing_unbound_key_message: bool = false
 
 @onready var player: Node2D = $Player
-@onready var stats_panel: Panel = $PlayerStatsPanel
+# @onready var stats_panel: Panel = $PlayerStatsPanel
+@onready var stats_panel: Variant = $PlayerStatsPanel
 @onready var background: ParallaxBackground = $Background
 @onready var bushes_layer: ParallaxLayer = $Background/Bushes  # Reference to the bushes layer
 @onready var decor_layer: ParallaxLayer = $Background/Decor  # Reference to the decor layer
@@ -28,6 +29,15 @@ func _ready() -> void:
 	player.position = Vector2(viewport_size.x / 2, viewport_size.y / 1.2)
 	stats_panel.visible = true
 	Globals.log_message("Initializing main scene...", Globals.LogLevel.DEBUG)
+	
+	# =========================================================
+	# THIS IS THE MISSING LINK THAT WAKES UP YOUR HUD!
+	# It passes the Player directly to the HUD script so the bars work.
+	# =========================================================
+	if stats_panel.has_method("setup_hud"):
+		stats_panel.setup_hud(player)
+	else:
+		push_error("HUD Script is missing! Make sure 'hud.gd' is attached to the 'PlayerStatsPanel' node.")
 
 	# Setup ground layer with tiling
 	setup_parallax_layer($Background/Sand/Sprite2D, viewport_size, 2.0)  # Sand layer

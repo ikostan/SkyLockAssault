@@ -22,6 +22,76 @@ signal setting_changed(setting_name: String, new_value: Variant)
 ## game-over states or low-fuel warnings without polling every frame.
 signal fuel_depleted
 
+@export_group("Speed System")
+
+@export var max_speed: float = 713.0:
+	set(value):
+		var new_val: float = max(1.0, value)
+		if _max_speed == new_val:
+			return
+		_max_speed = new_val
+		setting_changed.emit("max_speed", _max_speed)
+	get:
+		return _max_speed
+
+@export var min_speed: float = 95.0:
+	set(value):
+		var new_val: float = max(0.0, value)
+		if _min_speed == new_val:
+			return
+		_min_speed = new_val
+		setting_changed.emit("min_speed", _min_speed)
+	get:
+		return _min_speed
+
+@export var lateral_speed: float = 250.0:
+	set(value):
+		if _lateral_speed == value:
+			return
+		_lateral_speed = value
+		setting_changed.emit("lateral_speed", _lateral_speed)
+	get:
+		return _lateral_speed
+
+@export var acceleration: float = 200.0:
+	set(value):
+		if _acceleration == value:
+			return
+		_acceleration = value
+		setting_changed.emit("acceleration", _acceleration)
+	get:
+		return _acceleration
+
+@export var deceleration: float = 100.0:
+	set(value):
+		if _deceleration == value:
+			return
+		_deceleration = value
+		setting_changed.emit("deceleration", _deceleration)
+	get:
+		return _deceleration
+
+@export var high_yellow_fraction: float = 0.80:
+	set(value):
+		var new_val: float = clamp(value, 0.0, 1.0)
+		if _high_yellow_fraction == new_val:
+			return
+		_high_yellow_fraction = new_val
+		setting_changed.emit("high_yellow_fraction", _high_yellow_fraction)
+	get:
+		return _high_yellow_fraction
+
+@export var low_yellow_fraction: float = 0.10:
+	set(value):
+		var new_val: float = clamp(value, 0.0, 1.0)
+		if _low_yellow_fraction == new_val:
+			return
+		_low_yellow_fraction = new_val
+		setting_changed.emit("low_yellow_fraction", _low_yellow_fraction)
+	get:
+		return _low_yellow_fraction
+
+
 @export_group("Fuel System")
 
 ## Maximum fuel capacity.
@@ -166,6 +236,15 @@ var _high_fuel_threshold: float = 90.0
 var _medium_fuel_threshold: float = 50.0
 var _low_fuel_threshold: float = 30.0
 var _no_fuel_threshold: float = 15.0
+
+# Speed Backing Fields
+var _max_speed: float = 713.0
+var _min_speed: float = 95.0
+var _lateral_speed: float = 250.0
+var _acceleration: float = 200.0
+var _deceleration: float = 100.0
+var _high_yellow_fraction: float = 0.80
+var _low_yellow_fraction: float = 0.10
 
 
 func _init() -> void:
