@@ -53,8 +53,10 @@ func _ready() -> void:
 	_settings = Globals.settings if is_instance_valid(Globals) else null
 
 	if not is_instance_valid(_settings):
-		push_error("HUD couldn't find Globals.settings! UI may not update correctly.")
-		return
+		push_warning("HUD couldn't find Globals.settings! Creating fallback settings resource.")
+		_settings = GameSettingsResource.new()
+		if is_instance_valid(Globals):
+			Globals.settings = _settings
 
 	# Connect to global settings to automatically react to fuel updates
 	_settings.setting_changed.connect(_on_setting_changed)
