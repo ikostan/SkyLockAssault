@@ -416,3 +416,55 @@ func set_bar_fill_style(bar: ProgressBar, bar_fill_style: StyleBoxFlat) -> void:
 	bar_fill_style.corner_radius_bottom_right = corner_radius
 	bar_fill_style.corner_radius_top_right = corner_radius
 	bar.add_theme_stylebox_override("fill", bar_fill_style)
+
+# ==========================================
+# PUBLIC ACCESSORS (TESTING & EXTERNAL QUERY)
+# ==========================================
+
+## Retrieves the current forward speed cached by the HUD.
+## @return: float - The player's current speed value.
+func get_current_speed() -> float:
+	return _current_speed
+
+
+## Retrieves the active game settings resource driving the HUD's logic.
+## @return: GameSettingsResource - The global settings data container.
+func get_settings() -> GameSettingsResource:
+	return _settings
+
+
+## Retrieves the current computed background color of the fuel progress bar.
+## Useful for verifying threshold lerping logic in unit tests.
+## @return: Color - The current StyleBoxFlat background color, or Color.TRANSPARENT if uninitialized.
+func get_fuel_bar_color() -> Color:
+	if _fuel_bar_style:
+		return _fuel_bar_style.bg_color
+	return Color.TRANSPARENT
+
+
+## Retrieves the current computed background color of the speed progress bar.
+## Useful for verifying threshold lerping logic in unit tests.
+## @return: Color - The current StyleBoxFlat background color, or Color.TRANSPARENT if uninitialized.
+func get_speed_bar_color() -> Color:
+	if _speed_bar_style:
+		return _speed_bar_style.bg_color
+	return Color.TRANSPARENT
+
+
+## Checks if the fuel warning label is currently in a blinking state.
+## @return: bool - True if the fuel warning is active and blinking, false otherwise.
+func is_fuel_warning_active() -> bool:
+	return _fuel_state.get("blinking", false)
+
+
+## Checks if the speed warning label is currently in a blinking state.
+## @return: bool - True if the speed warning is active and blinking, false otherwise.
+func is_speed_warning_active() -> bool:
+	return _speed_state.get("blinking", false)
+
+
+## Verifies if the underlying SceneTree Timer for the speed blinker is actively running.
+## @return: bool - True if the timer node is valid and not stopped, false otherwise.
+func is_speed_timer_running() -> bool:
+	var timer: Timer = _speed_state.get("timer")
+	return is_instance_valid(timer) and not timer.is_stopped()
