@@ -26,17 +26,24 @@ signal fuel_depleted
 
 @export var max_speed: float = 713.0:
 	set(value):
-		var new_val: float = max(max(1.0, value), _min_speed)
+		var new_val: float = max(1.0, value)
 		if _max_speed == new_val:
 			return
 		_max_speed = new_val
+
+		# NEW FIX: Enforce invariant - push min_speed down if max_speed drops below it
+		if _min_speed > _max_speed:
+			self.min_speed = _max_speed
+
 		setting_changed.emit("max_speed", _max_speed)
 	get:
 		return _max_speed
 
 @export var min_speed: float = 95.0:
 	set(value):
+		# NEW FIX: Clamp new min_speed so it cannot exceed the current max_speed
 		var new_val: float = clamp(value, 0.0, _max_speed)
+
 		if _min_speed == new_val:
 			return
 		_min_speed = new_val
