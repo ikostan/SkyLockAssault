@@ -30,8 +30,8 @@ func test_shared_depletion_helper() -> void:
 	var player_root: Node = main_scene.get_node("Player")
 	Globals.settings.difficulty = 2.0
 	
-	# NEW: Read the base consumption rate from the global settings since it was removed from player.gd.
-	var expected: float = Globals.settings.base_consumption_rate * (player_root.speed["speed"] / player_root.MAX_SPEED) * Globals.settings.difficulty
+	# NEW: Use global max_speed
+	var expected: float = Globals.settings.base_consumption_rate * (player_root.speed["speed"] / Globals.settings.max_speed) * Globals.settings.difficulty
 	assert_float(TestHelpers.calculate_expected_depletion(player_root, Globals.settings.difficulty)).is_equal_approx(expected, 0.001)
 
 
@@ -47,10 +47,6 @@ func test_player_present() -> void:
 	assert_bool(player_root.is_inside_tree()).is_true()
 
 
-# Test: Screen boundary clamping
-# test_player.gd - Fixed clamping test: use float asserts with approx + epsilon
-# test_player.gd - Final fix for test_clamping: use approx comparison for floats
-# test_player.gd - Fixed is_equal_approx() error in test_clamping
 func test_clamping() -> void:
 	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
 	add_child(main_scene)
@@ -78,21 +74,18 @@ func test_fuel_colors() -> void:
 	add_child(main_scene)
 	await await_idle_frame()
 	
-	var player_root : Node = main_scene.get_node("Player")
-	var fuel_bar : ProgressBar = player_root.fuel["bar"]
+	var hud: Panel = main_scene.get_node("PlayerStatsPanel")
 	
 	# High fuel → Green
-	# NEW: Calculate 95% relative to the dynamic max_fuel
 	Globals.settings.current_fuel = Globals.settings.max_fuel * 0.95
-	player_root.update_fuel_bar()
-	var style_1 : StyleBoxFlat = fuel_bar.get_theme_stylebox("fill").duplicate()
+	hud.update_fuel_bar()
+	var style_1 : StyleBoxFlat = hud.fuel_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(style_1.bg_color).is_equal(Color.GREEN)
 		
-	# Low fuel → Dark Red (consistent with gradual depletion)
-	# NEW: Calculate 10% relative to the dynamic max_fuel
+	# Low fuel → Dark Red
 	Globals.settings.current_fuel = Globals.settings.max_fuel * 0.10
-	player_root.update_fuel_bar()
-	var style_2 : StyleBoxFlat = fuel_bar.get_theme_stylebox("fill").duplicate()
+	hud.update_fuel_bar()
+	var style_2 : StyleBoxFlat = hud.fuel_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(style_2.bg_color).is_equal(Color(0.5, 0, 0, 1.0))
 
 
@@ -102,22 +95,18 @@ func test_fuel_colors_fixed() -> void:
 	add_child(main_scene)
 	await await_idle_frame()
 	
-	var player_root : Node = main_scene.get_node("Player")
-	var fuel_bar : ProgressBar = player_root.fuel["bar"]
+	var hud: Panel = main_scene.get_node("PlayerStatsPanel")
 	
 	# Still full → Green
-	# NEW: Calculate 95% relative to max_fuel
 	Globals.settings.current_fuel = Globals.settings.max_fuel * 0.95
-	player_root.update_fuel_bar()
-	var style : StyleBoxFlat =  player_root.fuel["bar"].get_theme_stylebox("fill").duplicate()
+	hud.update_fuel_bar()
+	var style : StyleBoxFlat =  hud.fuel_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(Color.GREEN)
 	
 	# Between 90% and 50% → Lerp green → yellow
-	# NEW: Calculate 70% relative to max_fuel
 	Globals.settings.current_fuel = Globals.settings.max_fuel * 0.70
-	player_root.update_fuel_bar()
-	style = fuel_bar.get_theme_stylebox("fill").duplicate()
-	# Update the math here to rely on percentages rather than absolute 100-tank units
+	hud.update_fuel_bar()
+	style = hud.fuel_bar.get_theme_stylebox("fill").duplicate()
 	var expected := Color.GREEN.lerp(Color.YELLOW, (0.90 - 0.70) / (0.90 - 0.50))
 	assert_bool(style.bg_color.is_equal_approx(expected)).is_true()
 
@@ -128,24 +117,24 @@ func test_fuel_gradual_depletion_colors() -> void:
 	add_child(main_scene)
 	await await_idle_frame()
 	
-	var player_root: Node = main_scene.get_node("Player")
+	var hud: Panel = main_scene.get_node("PlayerStatsPanel")
 	
 	# Start at 30% (should be red)
 	Globals.settings.current_fuel = Globals.settings.max_fuel * 0.30
-	player_root.update_fuel_bar()
-	var style: StyleBoxFlat = player_root.fuel["bar"].get_theme_stylebox("fill").duplicate()
+	hud.update_fuel_bar()
+	var style: StyleBoxFlat = hud.fuel_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(Color.RED)
 	
 	# Drop to 15% (dark red)
 	Globals.settings.current_fuel = Globals.settings.max_fuel * 0.15
-	player_root.update_fuel_bar()
-	style = player_root.fuel["bar"].get_theme_stylebox("fill").duplicate()
+	hud.update_fuel_bar()
+	style = hud.fuel_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(Color(0.5, 0, 0))
 	
 	# Drop to 10% (still dark red)
 	Globals.settings.current_fuel = Globals.settings.max_fuel * 0.10
-	player_root.update_fuel_bar()
-	style = player_root.fuel["bar"].get_theme_stylebox("fill").duplicate()
+	hud.update_fuel_bar()
+	style = hud.fuel_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(Color(0.5, 0, 0))
 
 
@@ -178,40 +167,37 @@ func test_independent_blinking() -> void:
 	add_child(main_scene)
 	await await_idle_frame()
 	
-	var player_root: Node = main_scene.get_node("Player")
+	var hud: Panel = main_scene.get_node("PlayerStatsPanel")
 	
 	# Force low fuel and high speed to trigger both
-	# NEW: Calculate 10% relative to max_fuel
 	Globals.settings.current_fuel = Globals.settings.max_fuel * 0.10
-	player_root.speed["speed"] = player_root.speed["max"] * 0.95
-	player_root.check_fuel_warning()
-	player_root.check_speed_warning()
+	hud._current_speed = Globals.settings.max_speed * 0.95
+	hud.check_fuel_warning()
+	hud.check_speed_warning()
 	
 	# Assert both are now at warning color after initial blink start
-	assert_that(player_root.get_label_text_color(player_root.fuel["label"])).is_equal(player_root.fuel["warning_color"])
-	assert_that(player_root.get_label_text_color(player_root.speed["label"])).is_equal(player_root.speed["warning_color"])
+	assert_that(hud.get_label_text_color(hud.fuel_label)).is_equal(hud._fuel_state["warning_color"])
+	assert_that(hud.get_label_text_color(hud.speed_label)).is_equal(hud._speed_state["warning_color"])
 	
 	# Toggle one, other unchanged
-	player_root._toggle_label(player_root.fuel)
-	assert_that(player_root.get_label_text_color(player_root.fuel["label"])).is_equal(player_root.fuel["base_color"])
-	assert_that(player_root.get_label_text_color(player_root.speed["label"])).is_equal(player_root.speed["warning_color"])
+	hud._toggle_label(hud._fuel_state)
+	assert_that(hud.get_label_text_color(hud.fuel_label)).is_equal(hud._fuel_state["base_color"])
+	assert_that(hud.get_label_text_color(hud.speed_label)).is_equal(hud._speed_state["warning_color"])
 
 
-# Test: get_label_text_color returns override if set, else theme default
 # Test: get_label_text_color_override returns override if set, else theme default
 func test_get_label_text_color_override() -> void:
 	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
 	add_child(main_scene)
 	await await_idle_frame()
 	
-	var player_root: Node = main_scene.get_node("Player")
-	var fuel_label: Label = player_root.fuel["label"]
+	var hud: Panel = main_scene.get_node("PlayerStatsPanel")
+	var fuel_label: Label = hud.fuel_label
 	
 	# Clear any editor-set override to test from clean theme default
 	fuel_label.remove_theme_color_override("font_color")
 	
-	# Assume initial is theme default (not black transparent)
-	var initial_color: Color = player_root.get_label_text_color(fuel_label)
+	var initial_color: Color = hud.get_label_text_color(fuel_label)
 	assert_bool(initial_color.is_equal_approx(Color(0, 0, 0, 0))).is_false()
 	
 	# Set override
@@ -219,13 +205,13 @@ func test_get_label_text_color_override() -> void:
 	fuel_label.add_theme_color_override("font_color", override_color)
 	
 	# Assert returns override
-	assert_that(player_root.get_label_text_color(fuel_label)).is_equal(override_color)
+	assert_that(hud.get_label_text_color(fuel_label)).is_equal(override_color)
 	
 	# Remove override
 	fuel_label.remove_theme_color_override("font_color")
 	
 	# Assert back to initial
-	assert_that(player_root.get_label_text_color(fuel_label)).is_equal(initial_color)
+	assert_that(hud.get_label_text_color(fuel_label)).is_equal(initial_color)
 
 
 # Test: rotor_start/stop logs warning on missing AnimatedSprite2D
@@ -258,42 +244,42 @@ func test_speed_blinking_thresholds() -> void:
 	add_child(main_scene)
 	await await_idle_frame()
 	
-	var player_root: Node = main_scene.get_node("Player")
+	var hud: Panel = main_scene.get_node("PlayerStatsPanel")
 	
 	# Normal speed: no blink
-	player_root.speed["speed"] = (player_root.speed["min"] + player_root.HIGH_YELLOW_THRESHOLD) / 2.0
-	player_root.check_speed_warning()
-	assert_bool(player_root.speed["blinking"]).is_false()
+	hud._current_speed = (Globals.settings.min_speed + hud.HIGH_YELLOW_THRESHOLD) / 2.0
+	hud.check_speed_warning()
+	assert_bool(hud._speed_state["blinking"]).is_false()
 	
 	# Low yellow: start blink
-	player_root.speed["speed"] = player_root.LOW_YELLOW_THRESHOLD - 10.0
-	player_root.check_speed_warning()
-	assert_bool(player_root.speed["blinking"]).is_true()
+	hud._current_speed = hud.LOW_YELLOW_THRESHOLD - 10.0
+	hud.check_speed_warning()
+	assert_bool(hud._speed_state["blinking"]).is_true()
 	
 	# Low red: remains blinking
-	player_root.speed["speed"] = player_root.speed["min"] - 1.0
-	player_root.check_speed_warning()
-	assert_bool(player_root.speed["blinking"]).is_true()
+	hud._current_speed = Globals.settings.min_speed - 1.0
+	hud.check_speed_warning()
+	assert_bool(hud._speed_state["blinking"]).is_true()
 	
 	# Back to normal: stop blink
-	player_root.speed["speed"] = (player_root.LOW_YELLOW_THRESHOLD + player_root.HIGH_YELLOW_THRESHOLD) / 2.0
-	player_root.check_speed_warning()
-	assert_bool(player_root.speed["blinking"]).is_false()
+	hud._current_speed = (hud.LOW_YELLOW_THRESHOLD + hud.HIGH_YELLOW_THRESHOLD) / 2.0
+	hud.check_speed_warning()
+	assert_bool(hud._speed_state["blinking"]).is_false()
 	
 	# High yellow: start blink
-	player_root.speed["speed"] = player_root.HIGH_YELLOW_THRESHOLD + 10.0
-	player_root.check_speed_warning()
-	assert_bool(player_root.speed["blinking"]).is_true()
+	hud._current_speed = hud.HIGH_YELLOW_THRESHOLD + 10.0
+	hud.check_speed_warning()
+	assert_bool(hud._speed_state["blinking"]).is_true()
 	
 	# High red: remains blinking
-	player_root.speed["speed"] = player_root.HIGH_RED_THRESHOLD + 10.0
-	player_root.check_speed_warning()
-	assert_bool(player_root.speed["blinking"]).is_true()
+	hud._current_speed = hud.HIGH_RED_THRESHOLD + 10.0
+	hud.check_speed_warning()
+	assert_bool(hud._speed_state["blinking"]).is_true()
 	
 	# Back to normal: stop blink
-	player_root.speed["speed"] = (player_root.LOW_YELLOW_THRESHOLD + player_root.HIGH_YELLOW_THRESHOLD) / 2.0
-	player_root.check_speed_warning()
-	assert_bool(player_root.speed["blinking"]).is_false()
+	hud._current_speed = (hud.LOW_YELLOW_THRESHOLD + hud.HIGH_YELLOW_THRESHOLD) / 2.0
+	hud.check_speed_warning()
+	assert_bool(hud._speed_state["blinking"]).is_false()
 
 
 # Test: Player movement with input actions (updated for lateral-only refactor)
@@ -342,51 +328,51 @@ func test_depletion_helper_difficulties() -> void:
 	assert_float(dep_05).is_equal_approx(0.175315, 0.001)  # 1 * (250/713) * 0.5
 
 
-# Test: Speed bar colors at various thresholds (fix Color.DARK_RED to custom)
+# Test: Speed bar colors at various thresholds
 func test_speed_colors() -> void:
 	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
 	add_child(main_scene)
 	await await_idle_frame()
 	
-	var player_root: Node = main_scene.get_node("Player")
-	var speed_bar: ProgressBar = player_root.speed["bar"]
+	var hud: Panel = main_scene.get_node("PlayerStatsPanel")
+	var speed_bar: ProgressBar = hud.speed_bar
 	
-	# Normal (green) - derive mid-safe speed from min/max
-	player_root.speed["speed"] = (player_root.speed["min"] + player_root.speed["max"]) / 2.0
-	player_root.update_speed_bar()
+	# Normal (green) - derive mid-safe speed 
+	hud._current_speed = (Globals.settings.min_speed + Globals.settings.max_speed) / 2.0
+	hud.update_speed_bar()
 	var style: StyleBoxFlat = speed_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(Color.GREEN)
 	
-	# Approaching high (yellow lerp) - derive thresholds from fractions
-	var high_yellow: float = player_root.MAX_SPEED * player_root.HIGH_YELLOW_FRACTION
-	var high_red: float = player_root.MAX_SPEED * player_root.HIGH_RED_FRACTION
-	var mid_high_yellow: float = high_yellow + (high_red - high_yellow) / 2.0  # Derive mid-point
-	player_root.speed["speed"] = mid_high_yellow
-	player_root.update_speed_bar()
+	# Approaching high (yellow lerp)
+	var high_yellow: float = Globals.settings.max_speed * hud.HIGH_YELLOW_FRACTION
+	var high_red: float = Globals.settings.max_speed * hud.HIGH_RED_FRACTION
+	var mid_high_yellow: float = high_yellow + (high_red - high_yellow) / 2.0 
+	hud._current_speed = mid_high_yellow
+	hud.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate()
 	assert_bool(style.bg_color.is_equal_approx(Color.GREEN.lerp(Color.YELLOW, 0.5))).is_true()
 	
-	# Overspeed (red lerp) - derive from max
-	var mid_high_red: float = high_red + (player_root.speed["max"] - high_red) / 2.0  # Derive mid-point
-	player_root.speed["speed"] = mid_high_red
-	player_root.update_speed_bar()
+	# Overspeed (red lerp)
+	var mid_high_red: float = high_red + (Globals.settings.max_speed - high_red) / 2.0
+	hud._current_speed = mid_high_red
+	hud.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate()
-	assert_bool(style.bg_color.is_equal_approx(Color.YELLOW.lerp(player_root.DARK_RED, 0.5))).is_true()
+	assert_bool(style.bg_color.is_equal_approx(Color.YELLOW.lerp(hud.DARK_RED, 0.5))).is_true()
 	
-	# Approaching low (yellow lerp) - derive low thresholds from fractions
-	var low_yellow: float = player_root.MIN_SPEED + (player_root.MAX_SPEED - player_root.MIN_SPEED) * player_root.LOW_YELLOW_FRACTION
-	var low_red: float = player_root.MIN_SPEED
-	var mid_low_yellow: float = low_yellow - (low_yellow - low_red) / 2.0  # Derive mid-point
-	player_root.speed["speed"] = mid_low_yellow
-	player_root.update_speed_bar()
+	# Approaching low (yellow lerp)
+	var low_yellow: float = Globals.settings.min_speed + (Globals.settings.max_speed - Globals.settings.min_speed) * hud.LOW_YELLOW_FRACTION
+	var low_red: float = Globals.settings.min_speed
+	var mid_low_yellow: float = low_yellow - (low_yellow - low_red) / 2.0
+	hud._current_speed = mid_low_yellow
+	hud.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate()
 	assert_bool(style.bg_color.is_equal_approx(Color.GREEN.lerp(Color.YELLOW, 0.5))).is_true()
 	
 	# Low red at min
-	player_root.speed["speed"] = player_root.MIN_SPEED
-	player_root.update_speed_bar()
+	hud._current_speed = Globals.settings.min_speed
+	hud.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate()
-	assert_that(style.bg_color).is_equal(player_root.DARK_RED)
+	assert_that(style.bg_color).is_equal(hud.DARK_RED)
 
 
 # Test: Fuel initialization and depletion logic
@@ -396,23 +382,20 @@ func test_fuel_depletion() -> void:
 	await await_idle_frame()
 	
 	var player_root: Node = main_scene.get_node("Player")
+	var hud: Panel = main_scene.get_node("PlayerStatsPanel")
 	
 	# Initial state
 	assert_float(Globals.settings.current_fuel).is_equal(Globals.settings.max_fuel)
-	# NEW: Bar value should assert against max_fuel directly instead of assuming 100.0
-	assert_float(player_root.fuel["bar"].value).is_equal(Globals.settings.max_fuel)
+	assert_float(hud.fuel_bar.value).is_equal(Globals.settings.max_fuel)
 	
-	# Simulate one timer tick (derive expected from constants)
-	var normalized_speed: float = player_root.speed["speed"] / player_root.MAX_SPEED
-	
-	# Use the global base_consumption_rate since the local drain variable was removed.
+	# Simulate one timer tick
+	var normalized_speed: float = player_root.speed["speed"] / Globals.settings.max_speed
 	var expected_depletion: float = Globals.settings.base_consumption_rate * normalized_speed * Globals.settings.difficulty
 	
 	player_root._on_fuel_timer_timeout()
 	
 	assert_float(Globals.settings.current_fuel).is_equal_approx(Globals.settings.max_fuel - expected_depletion, 0.1)
-	# NEW: Bar value subtracts depletion from dynamic max_fuel rather than 100.0
-	assert_float(player_root.fuel["bar"].value).is_equal_approx(Globals.settings.max_fuel - expected_depletion, 0.1) 
+	assert_float(hud.fuel_bar.value).is_equal_approx(Globals.settings.max_fuel - expected_depletion, 0.1) 
 	
 	# Force zero fuel
 	Globals.settings.current_fuel = 0.0
