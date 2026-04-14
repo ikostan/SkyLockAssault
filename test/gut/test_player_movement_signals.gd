@@ -12,6 +12,7 @@ var _player: Variant # CHANGED: Use Variant to allow dynamic property access to 
 var _original_settings: GameSettingsResource
 var _added_actions: Array[String] = []
 
+
 ## Per-test setup: Isolate memory and establish mock hierarchy.
 ## :rtype: void
 func before_each() -> void:
@@ -29,6 +30,7 @@ func before_each() -> void:
 	add_child_autoqfree(_mock_root)
 	_player = _mock_root.get_node("Player")
 
+
 ## Per-test cleanup.
 ## :rtype: void
 func after_each() -> void:
@@ -40,6 +42,7 @@ func after_each() -> void:
 	# Force-release simulated inputs to prevent test leakage
 	Input.action_release("speed_up")
 	Input.action_release("speed_down")
+
 
 ## test_physics_emits_speed_changed_on_acceleration | Signal Behavior
 ## :rtype: void
@@ -57,6 +60,7 @@ func test_physics_emits_speed_changed_on_acceleration() -> void:
 	assert_signal_emitted(_player, "speed_changed", "Signal must fire when speed up increases value.")
 	assert_gt(float(_player.speed["speed"]), 100.0, "Speed logic should have increased current speed.")
 
+
 ## test_physics_does_not_spam_speed_changed | Signal Efficiency
 ## :rtype: void
 func test_physics_does_not_spam_speed_changed() -> void:
@@ -73,6 +77,7 @@ func test_physics_does_not_spam_speed_changed() -> void:
 	
 	assert_signal_emit_count(_player, "speed_changed", 0, "Signal must not emit when speed is unchanged.")
 
+
 ## test_flameout_resets_speed_and_emits_signal | Edge Cases
 ## :rtype: void
 func test_flameout_resets_speed_and_emits_signal() -> void:
@@ -81,11 +86,15 @@ func test_flameout_resets_speed_and_emits_signal() -> void:
 	
 	_player.speed["speed"] = 300.0
 	
+	# NEW FIX: Actually empty the mock fuel tank so _set_speed() allows a 0.0 value!
+	Globals.settings.current_fuel = 0.0 
+	
 	# Manually trigger the flameout handler
 	_player._on_player_out_of_fuel()
 	
 	assert_eq(float(_player.speed["speed"]), 0.0, "Speed must forcibly reset to 0.0 on zero fuel.")
 	assert_signal_emitted(_player, "speed_changed", "Flameout must broadcast the speed halt to UI.")
+
 
 ## test_ui_updates_on_speed_signal | UI Reactivity
 ## :rtype: void
@@ -103,6 +112,7 @@ func test_ui_updates_on_speed_signal() -> void:
 	_player.speed_changed.emit(500.0, Globals.settings.max_speed)
 	
 	assert_eq(hud_panel.speed_bar.value, 500.0, "Progress bar must sync tightly with speed_changed.")
+
 
 ## test_speed_clamps_to_max_and_min | Constraints
 ## :rtype: void
