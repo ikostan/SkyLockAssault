@@ -2,14 +2,13 @@
 ## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_player_movement_signals.gd
 ## GUT unit tests for Player movement and the decoupled speed_changed signal.
-
 extends "res://addons/gut/test.gd"
 
 # UPDATE THIS PATH if player.gd is located in a different folder
 const PLAYER_SCRIPT_PATH: String = "res://scripts/player.gd"
 
 var _mock_root: Node
-var _player: Node2D
+var _player: Variant # CHANGED: Use Variant to allow dynamic property access to player.gd variables
 var _original_settings: GameSettingsResource
 var _added_actions: Array[String] = []
 
@@ -93,13 +92,17 @@ func test_flameout_resets_speed_and_emits_signal() -> void:
 func test_ui_updates_on_speed_signal() -> void:
 	gut.p("Testing: Target UI updates instantly when speed_changed fires.")
 	
-	_player.speed_bar.value = 0.0
+	# NEW: Get the extracted HUD panel and explicitly wire it to the Player
+	var hud_panel: Variant = _mock_root.get_node("PlayerStatsPanel")
+	hud_panel.setup_hud(_player)
+	
+	hud_panel.speed_bar.value = 0.0
 	_player.speed["speed"] = 500.0 # Force local sync
 	
-	# Fire the signal explicitly as the engine would
-	_player.speed_changed.emit(500.0, _player.speed["max"])
+	# NEW: Fire the signal explicitly using the Global Resource setting
+	_player.speed_changed.emit(500.0, Globals.settings.max_speed)
 	
-	assert_eq(_player.speed_bar.value, 500.0, "Progress bar must sync tightly with speed_changed.")
+	assert_eq(hud_panel.speed_bar.value, 500.0, "Progress bar must sync tightly with speed_changed.")
 
 ## test_speed_clamps_to_max_and_min | Constraints
 ## :rtype: void
@@ -107,8 +110,10 @@ func test_speed_clamps_to_max_and_min() -> void:
 	gut.p("Testing: Speed values obey MIN and MAX constraints.")
 	
 	Globals.settings.current_fuel = 100.0
-	var max_cap: float = _player.speed["max"]
-	var min_cap: float = _player.speed["min"]
+	
+	# NEW: Pull speed constraints directly from the Resource
+	var max_cap: float = Globals.settings.max_speed
+	var min_cap: float = Globals.settings.min_speed
 	
 	# --- 1. Test MAX Clamp ---
 	_player.speed["speed"] = max_cap - 5.0
@@ -173,6 +178,12 @@ func _build_mock_player_scene() -> Node:
 	stats.add_child(fuel)
 	stats.add_child(speed)
 	panel.add_child(stats)
+	
+	# NEW: Assign the extracted hud.gd script directly to the mock panel
+	var hud_script := load("res://scripts/hud.gd")
+	if hud_script:
+		panel.set_script(hud_script)
+		
 	root.add_child(panel)
 	
 	# --- Core Player ---
@@ -190,13 +201,10 @@ func _build_mock_player_scene() -> Node:
 		sfx.name = "AudioStreamPlayer2D"
 		var anim: AnimatedSprite2D = AnimatedSprite2D.new()
 		anim.name = "AnimatedSprite2D"
-		# var frames: SpriteFrames = SpriteFrames.new()
-		# frames.add_animation("default")
-		# anim.sprite_frames = frames
 		
+		# NEW: Godot 4 automatically adds a "default" animation when you instantiate SpriteFrames.
+		# Removed the crash-causing frames.add_animation("default") call.
 		var frames: SpriteFrames = SpriteFrames.new()
-		frames.add_animation("default")
-		# Add a dummy frame so play() actually engages and is_playing() returns true
 		var dummy_tex: PlaceholderTexture2D = PlaceholderTexture2D.new()
 		frames.add_frame("default", dummy_tex)
 		anim.sprite_frames = frames
@@ -209,8 +217,6 @@ func _build_mock_player_scene() -> Node:
 	sprite.name = "Sprite2D"
 	var coll: CollisionPolygon2D = CollisionPolygon2D.new()
 	coll.name = "CollisionPolygon2D"
-	# var weapon: Node2D = Node2D.new()
-	# weapon.name = "Weapon"
 	
 	var weapon: Node2D = Node2D.new()
 	weapon.name = "Weapon"

@@ -31,17 +31,26 @@ func before_each() -> void:
 ## :rtype: void
 func after_each() -> void:
 	Globals.settings = _original_settings
+	
+	# NEW: Ensure ALL mocked actions are explicitly released to prevent test leakage
+	for action: String in ["speed_up", "speed_down", "move_left", "move_right"]:
+		if Input.is_action_pressed(action):
+			Input.action_release(action)
+			
 	for action: String in _added_actions:
 		InputMap.erase_action(action)
 	_added_actions.clear()
-	Input.action_release("move_left")
 
 ## test_ui_updates_automatically_on_resource_change | Observer Pattern
 ## :rtype: void
 func test_ui_updates_automatically_on_resource_change() -> void:
 	gut.p("Testing: Player UI responds seamlessly to external fuel updates.")
 	
-	var fuel_bar: ProgressBar = _player.fuel_bar
+	# NEW: Get the extracted HUD panel and explicitly wire it to the Player
+	var hud_panel: Variant = _mock_root.get_node("PlayerStatsPanel")
+	hud_panel.setup_hud(_player)
+	
+	var fuel_bar: ProgressBar = hud_panel.fuel_bar
 	
 	Globals.settings.max_fuel = 200.0
 	# Because of the resource setter, current_fuel modification fires 'setting_changed' automatically
@@ -136,6 +145,12 @@ func _build_mock_player_scene() -> Node:
 	stats.add_child(fuel)
 	stats.add_child(speed)
 	panel.add_child(stats)
+	
+	# NEW: Assign the extracted hud.gd script directly to the mock panel
+	var hud_script := load("res://scripts/hud.gd")
+	if hud_script:
+		panel.set_script(hud_script)
+		
 	root.add_child(panel)
 	
 	var PlayerScript := load(PLAYER_SCRIPT_PATH)
@@ -152,13 +167,10 @@ func _build_mock_player_scene() -> Node:
 		sfx.name = "AudioStreamPlayer2D"
 		var anim: AnimatedSprite2D = AnimatedSprite2D.new()
 		anim.name = "AnimatedSprite2D"
-		# var frames: SpriteFrames = SpriteFrames.new()
-		# frames.add_animation("default")
-		# anim.sprite_frames = frames
 		
+		# NEW: Godot 4 automatically adds a "default" animation when you instantiate SpriteFrames.
+		# Removed the crash-causing frames.add_animation("default") call.
 		var frames: SpriteFrames = SpriteFrames.new()
-		frames.add_animation("default")
-		# Add a dummy frame so play() actually engages and is_playing() returns true
 		var dummy_tex: PlaceholderTexture2D = PlaceholderTexture2D.new()
 		frames.add_frame("default", dummy_tex)
 		anim.sprite_frames = frames
@@ -171,8 +183,6 @@ func _build_mock_player_scene() -> Node:
 	sprite.name = "Sprite2D"
 	var coll: CollisionPolygon2D = CollisionPolygon2D.new()
 	coll.name = "CollisionPolygon2D"
-	#var weapon: Node2D = Node2D.new()
-	#weapon.name = "Weapon"
 	
 	var weapon: Node2D = Node2D.new()
 	weapon.name = "Weapon"
