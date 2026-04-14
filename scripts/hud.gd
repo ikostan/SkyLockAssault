@@ -23,6 +23,7 @@ var _speed_state: Dictionary = {}
 
 var _fuel_bar_style: StyleBoxFlat
 var _speed_bar_style: StyleBoxFlat
+var _connected_player: Node2D = null  # NEW: Track the player for clean disconnects
 
 # --- Node References ---
 # Paths assume this script is attached directly to "PlayerStatsPanel"
@@ -117,9 +118,16 @@ func setup_hud(player_node: Node2D) -> void:
 		push_error("HUD setup failed: Invalid player node.")
 		return
 
+	# NEW FIX: Safely disconnect the old player if we are hot-swapping nodes
+	if is_instance_valid(_connected_player) and _connected_player != player_node:
+		if _connected_player.speed_changed.is_connected(_on_player_speed_changed):
+			_connected_player.speed_changed.disconnect(_on_player_speed_changed)
+
+	_connected_player = player_node
+
 	# Connection guard for external wiring
-	if not player_node.speed_changed.is_connected(_on_player_speed_changed):
-		player_node.speed_changed.connect(_on_player_speed_changed)
+	if not _connected_player.speed_changed.is_connected(_on_player_speed_changed):
+		_connected_player.speed_changed.connect(_on_player_speed_changed)
 
 	Globals.log_message("HUD successfully wired to Player signals.", Globals.LogLevel.DEBUG)
 
@@ -128,6 +136,11 @@ func setup_hud(player_node: Node2D) -> void:
 ## Safely disconnects global resource signals to prevent memory leaks.
 ## @return: void
 func _exit_tree() -> void:
+	# NEW FIX: Explicitly sever the connection to the player
+	if is_instance_valid(_connected_player):
+		if _connected_player.speed_changed.is_connected(_on_player_speed_changed):
+			_connected_player.speed_changed.disconnect(_on_player_speed_changed)
+
 	if is_instance_valid(_settings):
 		if _settings.setting_changed.is_connected(_on_setting_changed):
 			_settings.setting_changed.disconnect(_on_setting_changed)
