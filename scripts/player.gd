@@ -130,22 +130,45 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 			)
 
 
+## NEW: Centralized helper to clamp speed and emit state changes.
+## Resolves PR duplication feedback.
+func _set_speed(target_speed: float) -> void:
+	if not is_instance_valid(_settings):
+		return
+
+	var old_speed: float = speed["speed"]
+
+	# Clamp current_speed based on fuel state
+	if _settings.current_fuel == 0:
+		speed["speed"] = clamp(target_speed, 0.0, _settings.max_speed)
+	else:
+		speed["speed"] = clamp(target_speed, _settings.min_speed, _settings.max_speed)
+
+	# Emit signals if speed actually changed
+	if old_speed != speed["speed"]:
+		speed_changed.emit(speed["speed"], _settings.max_speed)
+
+		# Check for maximum speed limit
+		if speed["speed"] >= _settings.max_speed:
+			speed_maxed.emit()
+
+		# Check for low speed warning
+		var low_yellow_thresh: float = (
+			_settings.min_speed
+			+ (_settings.max_speed - _settings.min_speed) * _settings.low_yellow_fraction
+		)
+		if speed["speed"] <= low_yellow_thresh:
+			speed_low.emit(low_yellow_thresh)
+
+
 ## Signal handler for engine failure triggered by the global fuel_depleted signal.
 ## Stops the plane, halts rotors, and broadcasts the flameout state.
 ## @return: void
 func _on_player_out_of_fuel() -> void:
 	Globals.log_message("Player is out of fuel! Engine flameout.", Globals.LogLevel.WARNING)
 
-	var old_speed: float = speed["speed"]
-	speed["speed"] = 0.0
-
-	if old_speed != speed["speed"]:
-		speed_changed.emit(speed["speed"], _settings.max_speed)
-		var low_yellow_thresh: float = (
-			_settings.min_speed
-			+ (_settings.max_speed - _settings.min_speed) * _settings.low_yellow_fraction
-		)
-		speed_low.emit(low_yellow_thresh)
+	# Use the new centralized helper
+	_set_speed(0.0)
 
 	rotor_stop(rotor_right, rotor_right_sfx)
 	rotor_stop(rotor_left, rotor_left_sfx)
@@ -215,36 +238,17 @@ func _physics_process(_delta: float) -> void:
 	if not is_instance_valid(_settings):
 		return
 
-	var old_speed: float = speed["speed"]
+	var target_speed: float = speed["speed"]
 
 	# Speed changes allowed only if fuel > 0
 	if Input.is_action_pressed("speed_up") and _settings.current_fuel > 0:
-		speed["speed"] += _settings.acceleration * _delta
+		target_speed += _settings.acceleration * _delta
 
 	if Input.is_action_pressed("speed_down") and _settings.current_fuel > 0:
-		speed["speed"] -= _settings.deceleration * _delta
+		target_speed -= _settings.deceleration * _delta
 
-	# Clamp current_speed between MIN_SPEED and MAX_SPEED
-	if _settings.current_fuel == 0:
-		speed["speed"] = clamp(speed["speed"], 0.0, _settings.max_speed)
-	else:
-		speed["speed"] = clamp(speed["speed"], _settings.min_speed, _settings.max_speed)
-
-	# Emit signals if speed actually changed
-	if old_speed != speed["speed"]:
-		speed_changed.emit(speed["speed"], _settings.max_speed)
-
-		# Check for maximum speed limit
-		if speed["speed"] >= _settings.max_speed:
-			speed_maxed.emit()
-
-		# Check for low speed warning
-		var low_yellow_thresh: float = (
-			_settings.min_speed
-			+ (_settings.max_speed - _settings.min_speed) * _settings.low_yellow_fraction
-		)
-		if speed["speed"] <= low_yellow_thresh:
-			speed_low.emit(low_yellow_thresh)
+	# Let the helper handle clamping and signal emission
+	_set_speed(target_speed)
 
 	# Left/Right movement
 	var lateral_input: float = Input.get_axis("move_left", "move_right")
