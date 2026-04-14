@@ -51,7 +51,7 @@ signal fuel_depleted
 	get:
 		return _min_speed
 
-`@export` var lateral_speed: float = 250.0:
+@export var lateral_speed: float = 250.0:
 	set(value):
 		var new_val: float = max(0.0, value)
 		if _lateral_speed == new_val:
@@ -61,7 +61,7 @@ signal fuel_depleted
 	get:
 		return _lateral_speed
 
-`@export` var acceleration: float = 200.0:
+@export var acceleration: float = 200.0:
 	set(value):
 		var new_val: float = max(0.0, value)
 		if _acceleration == new_val:
@@ -71,7 +71,7 @@ signal fuel_depleted
 	get:
 		return _acceleration
 
-`@export` var deceleration: float = 100.0:
+@export var deceleration: float = 100.0:
 	set(value):
 		var new_val: float = max(0.0, value)
 		if _deceleration == new_val:
