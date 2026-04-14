@@ -177,6 +177,7 @@ func _on_setting_changed(setting_name: String, _new_value: Variant) -> void:
 	if not is_instance_valid(_settings):
 		return
 
+	# --- Handle Fuel Updates ---
 	if (
 		setting_name
 		in [
@@ -193,6 +194,15 @@ func _on_setting_changed(setting_name: String, _new_value: Variant) -> void:
 
 		update_fuel_bar()
 		check_fuel_warning()
+
+	# --- Handle Speed Updates ---
+	# NEW FIX: React immediately to dynamic threshold or speed limit changes
+	elif setting_name in ["max_speed", "min_speed", "high_yellow_fraction", "low_yellow_fraction"]:
+		if setting_name == "max_speed":
+			speed_bar.max_value = _settings.max_speed
+
+		update_speed_bar()
+		check_speed_warning()
 
 
 ## Signal handler for global engine failure.
