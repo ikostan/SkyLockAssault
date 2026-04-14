@@ -417,9 +417,11 @@ func set_bar_fill_style(bar: ProgressBar, bar_fill_style: StyleBoxFlat) -> void:
 	bar_fill_style.corner_radius_top_right = corner_radius
 	bar.add_theme_stylebox_override("fill", bar_fill_style)
 
+
 # ==========================================
 # PUBLIC ACCESSORS (TESTING & EXTERNAL QUERY)
 # ==========================================
+
 
 ## Retrieves the current forward speed cached by the HUD.
 ## @return: float - The player's current speed value.
