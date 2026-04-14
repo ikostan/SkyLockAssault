@@ -437,7 +437,8 @@ func get_settings() -> GameSettingsResource:
 
 ## Retrieves the current computed background color of the fuel progress bar.
 ## Useful for verifying threshold lerping logic in unit tests.
-## @return: Color - The current StyleBoxFlat background color, or Color.TRANSPARENT if uninitialized.
+## @return: Color - The current StyleBoxFlat background color, or Color.
+## TRANSPARENT if uninitialized.
 func get_fuel_bar_color() -> Color:
 	if _fuel_bar_style:
 		return _fuel_bar_style.bg_color
@@ -446,7 +447,8 @@ func get_fuel_bar_color() -> Color:
 
 ## Retrieves the current computed background color of the speed progress bar.
 ## Useful for verifying threshold lerping logic in unit tests.
-## @return: Color - The current StyleBoxFlat background color, or Color.TRANSPARENT if uninitialized.
+## @return: Color - The current StyleBoxFlat background color, or Color.
+## TRANSPARENT if uninitialized.
 func get_speed_bar_color() -> Color:
 	if _speed_bar_style:
 		return _speed_bar_style.bg_color
