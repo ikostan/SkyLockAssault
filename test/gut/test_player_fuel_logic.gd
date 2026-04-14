@@ -4,7 +4,7 @@
 ## GUT unit tests for Player fuel consumption, engine states, and UI Reactivity.
 extends "res://addons/gut/test.gd"
 
-const PLAYER_SCRIPT_PATH: String = "res://scripts/player.gd"
+const GutTestHelper = preload("res://test/gut/gut_test_helper.gd")
 
 var _mock_root: Node
 var _player: Variant # CHANGED: Use Variant to allow dynamic property access to player.gd variables
@@ -23,7 +23,8 @@ func before_each() -> void:
 			InputMap.add_action(action)
 			_added_actions.append(action)
 			
-	_mock_root = _build_mock_player_scene()
+	# NEW: Call the shared static builder
+	_mock_root = GutTestHelper.build_mock_player_scene()
 	add_child_autoqfree(_mock_root)
 	_player = _mock_root.get_node("Player")
 
@@ -32,7 +33,7 @@ func before_each() -> void:
 func after_each() -> void:
 	Globals.settings = _original_settings
 	
-	# NEW: Ensure ALL mocked actions are explicitly released to prevent test leakage
+	# Ensure ALL mocked actions are explicitly released to prevent test leakage
 	for action: String in ["speed_up", "speed_down", "move_left", "move_right"]:
 		if Input.is_action_pressed(action):
 			Input.action_release(action)
@@ -46,14 +47,12 @@ func after_each() -> void:
 func test_ui_updates_automatically_on_resource_change() -> void:
 	gut.p("Testing: Player UI responds seamlessly to external fuel updates.")
 	
-	# NEW: Get the extracted HUD panel and explicitly wire it to the Player
 	var hud_panel: Variant = _mock_root.get_node("PlayerStatsPanel")
 	hud_panel.setup_hud(_player)
 	
 	var fuel_bar: ProgressBar = hud_panel.fuel_bar
 	
 	Globals.settings.max_fuel = 200.0
-	# Because of the resource setter, current_fuel modification fires 'setting_changed' automatically
 	Globals.settings.current_fuel = 150.0 
 	
 	assert_eq(fuel_bar.max_value, 200.0, "Fuel Bar max_value must sync with Resource max.")
@@ -102,116 +101,3 @@ func test_lateral_movement_blocked_without_fuel() -> void:
 	_player._physics_process(0.1)
 	
 	assert_eq(float(_player.player.velocity.x), 0.0, "Plane must not turn without fuel, ignoring inputs.")
-
-# ==========================================
-# MOCK BUILDER HELPER
-# ==========================================
-# Note: You can optionally extract this into a shared res://tests/test_helpers.gd base class later!
-## Dynamically constructs the node hierarchy required by player.gd.
-## :rtype: Node
-func _build_mock_player_scene() -> Node:
-	var root: Node = Node.new()
-	root.name = "MockLevel"
-	
-	var panel: Panel = Panel.new()
-	panel.name = "PlayerStatsPanel"
-	var stats: Control = Control.new()
-	stats.name = "Stats"
-	
-	var fuel: Control = Control.new()
-	fuel.name = "Fuel"
-	var fuel_bar: ProgressBar = ProgressBar.new()
-	fuel_bar.name = "FuelBar"
-	var fuel_label: Label = Label.new()
-	fuel_label.name = "FuelLabel"
-	var f_timer: Timer = Timer.new()
-	f_timer.name = "BlinkTimer"
-	fuel_label.add_child(f_timer)
-	fuel.add_child(fuel_bar)
-	fuel.add_child(fuel_label)
-	
-	var speed: Control = Control.new()
-	speed.name = "Speed"
-	var speed_bar: ProgressBar = ProgressBar.new()
-	speed_bar.name = "SpeedBar"
-	var speed_label: Label = Label.new()
-	speed_label.name = "SpeedLabel"
-	var s_timer: Timer = Timer.new()
-	s_timer.name = "BlinkTimer"
-	speed_label.add_child(s_timer)
-	speed.add_child(speed_bar)
-	speed.add_child(speed_label)
-	
-	stats.add_child(fuel)
-	stats.add_child(speed)
-	panel.add_child(stats)
-	
-	# NEW: Assign the extracted hud.gd script directly to the mock panel
-	var hud_script := load("res://scripts/hud.gd")
-	if hud_script:
-		panel.set_script(hud_script)
-		
-	root.add_child(panel)
-	
-	var PlayerScript := load(PLAYER_SCRIPT_PATH)
-	var p_node: Variant = PlayerScript.new()
-	p_node.name = "Player"
-	
-	var cb2d: CharacterBody2D = CharacterBody2D.new()
-	cb2d.name = "CharacterBody2D"
-	
-	for rotor_name: String in ["RotorRight", "RotorLeft"]:
-		var rotor: Node2D = Node2D.new()
-		rotor.name = rotor_name
-		var sfx: AudioStreamPlayer2D = AudioStreamPlayer2D.new()
-		sfx.name = "AudioStreamPlayer2D"
-		var anim: AnimatedSprite2D = AnimatedSprite2D.new()
-		anim.name = "AnimatedSprite2D"
-		
-		# NEW: Godot 4 automatically adds a "default" animation when you instantiate SpriteFrames.
-		# Removed the crash-causing frames.add_animation("default") call.
-		var frames: SpriteFrames = SpriteFrames.new()
-		var dummy_tex: PlaceholderTexture2D = PlaceholderTexture2D.new()
-		frames.add_frame("default", dummy_tex)
-		anim.sprite_frames = frames
-		
-		rotor.add_child(anim)
-		rotor.add_child(sfx)
-		cb2d.add_child(rotor)
-		
-	var sprite: Sprite2D = Sprite2D.new()
-	sprite.name = "Sprite2D"
-	var coll: CollisionPolygon2D = CollisionPolygon2D.new()
-	coll.name = "CollisionPolygon2D"
-	
-	var weapon: Node2D = Node2D.new()
-	weapon.name = "Weapon"
-	
-	# Create a dummy script so player.gd's _ready() and _input() don't crash
-	var mock_weapon_script: GDScript = GDScript.new()
-	mock_weapon_script.source_code = """
-extends Node2D
-var weapon_types: Array = []
-var current_index: int = 0
-func fire() -> void: 
-	pass
-func get_num_weapons() -> int: 
-	return 1
-func switch_to(idx: int) -> void: 
-	pass
-"""
-	mock_weapon_script.reload()
-	weapon.set_script(mock_weapon_script)
-	
-	cb2d.add_child(sprite)
-	cb2d.add_child(coll)
-	cb2d.add_child(weapon)
-	
-	var fuel_timer: Timer = Timer.new()
-	fuel_timer.name = "FuelTimer"
-	
-	p_node.add_child(cb2d)
-	p_node.add_child(fuel_timer)
-	root.add_child(p_node)
-	
-	return root
