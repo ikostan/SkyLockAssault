@@ -9,19 +9,8 @@
 extends Panel
 
 # --- Speed Constants ---
-# Moved from player.gd. These define the visual limits of the speed bar.
-const MAX_SPEED: float = 713.0  # mph
-const MIN_SPEED: float = 95.0  # mph
-
-const HIGH_YELLOW_FRACTION: float = 0.80
+# Fraction constants that are strictly visual can remain local.
 const HIGH_RED_FRACTION: float = 0.90
-const LOW_YELLOW_FRACTION: float = 0.10
-
-const HIGH_RED_THRESHOLD: float = MAX_SPEED * HIGH_RED_FRACTION
-const HIGH_YELLOW_THRESHOLD: float = MAX_SPEED * HIGH_YELLOW_FRACTION
-const LOW_YELLOW_THRESHOLD: float = MIN_SPEED + (MAX_SPEED - MIN_SPEED) * LOW_YELLOW_FRACTION
-const LOW_RED_THRESHOLD: float = MIN_SPEED
-
 const DARK_RED: Color = Color(0.5, 0.0, 0.0)
 const BLINK_INTERVAL: float = 0.5
 
@@ -83,7 +72,7 @@ func _ready() -> void:
 	# --- Speed UI Setup ---
 	_speed_bar_style = StyleBoxFlat.new()
 	set_bar_fill_style(speed_bar, _speed_bar_style)
-	speed_bar.max_value = MAX_SPEED
+	speed_bar.max_value = _settings.max_speed # Pull directly from resource!
 
 	_speed_state = {
 		"label": speed_label,
@@ -114,11 +103,6 @@ func setup_hud(player_node: Node2D) -> void:
 
 	# Connect to the decoupled player signals
 	player_node.speed_changed.connect(_on_player_speed_changed)
-
-	# Optional: Connect to the threshold signals if you want custom HUD behavior
-	# like screen shakes or global alarms when limits are reached.
-	# player_node.speed_maxed.connect(...)
-	# player_node.speed_low.connect(...)
 
 	Globals.log_message("HUD successfully wired to Player signals.", Globals.LogLevel.DEBUG)
 
@@ -229,26 +213,37 @@ func update_fuel_bar() -> void:
 ## Updates the speed bar value and color based on current speed.
 ## @return: void
 func update_speed_bar() -> void:
+	if not is_instance_valid(_settings):
+		return
+		
 	speed_bar.value = _current_speed
 	var factor: float = 0.0
+	
+	# Dynamically calculate thresholds from the Resource
+	var max_s: float = _settings.max_speed
+	var min_s: float = _settings.min_speed
+	var high_red_thresh: float = max_s * HIGH_RED_FRACTION
+	var high_yellow_thresh: float = max_s * _settings.high_yellow_fraction
+	var low_yellow_thresh: float = min_s + (max_s - min_s) * _settings.low_yellow_fraction
+	var low_red_thresh: float = min_s
 
-	if _current_speed >= HIGH_RED_THRESHOLD:
+	if _current_speed >= high_red_thresh:
 		factor = clamp(
-			(_current_speed - HIGH_RED_THRESHOLD) / (MAX_SPEED - HIGH_RED_THRESHOLD), 0.0, 1.0
+			(_current_speed - high_red_thresh) / (max_s - high_red_thresh), 0.0, 1.0
 		)
 		_speed_bar_style.bg_color = Color.YELLOW.lerp(DARK_RED, factor)
-	elif _current_speed >= HIGH_YELLOW_THRESHOLD:
+	elif _current_speed >= high_yellow_thresh:
 		factor = clamp(
-			(_current_speed - HIGH_YELLOW_THRESHOLD) / (HIGH_RED_THRESHOLD - HIGH_YELLOW_THRESHOLD),
+			(_current_speed - high_yellow_thresh) / (high_red_thresh - high_yellow_thresh),
 			0.0,
 			1.0
 		)
 		_speed_bar_style.bg_color = Color.GREEN.lerp(Color.YELLOW, factor)
-	elif _current_speed <= LOW_RED_THRESHOLD:
+	elif _current_speed <= low_red_thresh:
 		_speed_bar_style.bg_color = DARK_RED
-	elif _current_speed <= LOW_YELLOW_THRESHOLD:
+	elif _current_speed <= low_yellow_thresh:
 		factor = clamp(
-			(LOW_YELLOW_THRESHOLD - _current_speed) / (LOW_YELLOW_THRESHOLD - LOW_RED_THRESHOLD),
+			(low_yellow_thresh - _current_speed) / (low_yellow_thresh - low_red_thresh),
 			0.0,
 			1.0
 		)
@@ -282,13 +277,20 @@ func check_fuel_warning() -> void:
 ## Checks speed and starts/stops label blinking if approaching or exceeding limits.
 ## @return: void
 func check_speed_warning() -> void:
+	if not is_instance_valid(_settings):
+		return
+		
+	# Dynamically calculate thresholds from the Resource
+	var high_yellow_thresh: float = _settings.max_speed * _settings.high_yellow_fraction
+	var low_yellow_thresh: float = _settings.min_speed + (_settings.max_speed - _settings.min_speed) * _settings.low_yellow_fraction
+
 	if (
-		(_current_speed < LOW_YELLOW_THRESHOLD or _current_speed > HIGH_YELLOW_THRESHOLD)
+		(_current_speed < low_yellow_thresh or _current_speed > high_yellow_thresh)
 		and not _speed_state["blinking"]
 	):
 		start_blinking(_speed_state)
 	elif (
-		(LOW_YELLOW_THRESHOLD <= _current_speed and _current_speed <= HIGH_YELLOW_THRESHOLD)
+		(low_yellow_thresh <= _current_speed and _current_speed <= high_yellow_thresh)
 		and _speed_state["blinking"]
 	):
 		stop_blinking(_speed_state)
