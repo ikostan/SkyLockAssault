@@ -246,13 +246,20 @@ func test_speed_blinking_thresholds() -> void:
 	
 	var hud: Panel = main_scene.get_node("PlayerStatsPanel")
 	
+	# NEW: Calculate thresholds dynamically using the Resource
+	var max_s: float = Globals.settings.max_speed
+	var min_s: float = Globals.settings.min_speed
+	var high_yellow_thresh: float = max_s * Globals.settings.high_yellow_fraction
+	var high_red_thresh: float = max_s * hud.HIGH_RED_FRACTION
+	var low_yellow_thresh: float = min_s + (max_s - min_s) * Globals.settings.low_yellow_fraction
+	
 	# Normal speed: no blink
-	hud._current_speed = (Globals.settings.min_speed + hud.HIGH_YELLOW_THRESHOLD) / 2.0
+	hud._current_speed = (Globals.settings.min_speed + high_yellow_thresh) / 2.0
 	hud.check_speed_warning()
 	assert_bool(hud._speed_state["blinking"]).is_false()
 	
 	# Low yellow: start blink
-	hud._current_speed = hud.LOW_YELLOW_THRESHOLD - 10.0
+	hud._current_speed = low_yellow_thresh - 10.0
 	hud.check_speed_warning()
 	assert_bool(hud._speed_state["blinking"]).is_true()
 	
@@ -262,22 +269,22 @@ func test_speed_blinking_thresholds() -> void:
 	assert_bool(hud._speed_state["blinking"]).is_true()
 	
 	# Back to normal: stop blink
-	hud._current_speed = (hud.LOW_YELLOW_THRESHOLD + hud.HIGH_YELLOW_THRESHOLD) / 2.0
+	hud._current_speed = (low_yellow_thresh + high_yellow_thresh) / 2.0
 	hud.check_speed_warning()
 	assert_bool(hud._speed_state["blinking"]).is_false()
 	
 	# High yellow: start blink
-	hud._current_speed = hud.HIGH_YELLOW_THRESHOLD + 10.0
+	hud._current_speed = high_yellow_thresh + 10.0
 	hud.check_speed_warning()
 	assert_bool(hud._speed_state["blinking"]).is_true()
 	
 	# High red: remains blinking
-	hud._current_speed = hud.HIGH_RED_THRESHOLD + 10.0
+	hud._current_speed = high_red_thresh + 10.0
 	hud.check_speed_warning()
 	assert_bool(hud._speed_state["blinking"]).is_true()
 	
 	# Back to normal: stop blink
-	hud._current_speed = (hud.LOW_YELLOW_THRESHOLD + hud.HIGH_YELLOW_THRESHOLD) / 2.0
+	hud._current_speed = (low_yellow_thresh + high_yellow_thresh) / 2.0
 	hud.check_speed_warning()
 	assert_bool(hud._speed_state["blinking"]).is_false()
 
@@ -337,15 +344,19 @@ func test_speed_colors() -> void:
 	var hud: Panel = main_scene.get_node("PlayerStatsPanel")
 	var speed_bar: ProgressBar = hud.speed_bar
 	
+	# NEW: Calculate thresholds dynamically using the Resource
+	var max_s: float = Globals.settings.max_speed
+	var min_s: float = Globals.settings.min_speed
+	
 	# Normal (green) - derive mid-safe speed 
-	hud._current_speed = (Globals.settings.min_speed + Globals.settings.max_speed) / 2.0
+	hud._current_speed = (min_s + max_s) / 2.0
 	hud.update_speed_bar()
 	var style: StyleBoxFlat = speed_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(Color.GREEN)
 	
 	# Approaching high (yellow lerp)
-	var high_yellow: float = Globals.settings.max_speed * hud.HIGH_YELLOW_FRACTION
-	var high_red: float = Globals.settings.max_speed * hud.HIGH_RED_FRACTION
+	var high_yellow: float = max_s * Globals.settings.high_yellow_fraction
+	var high_red: float = max_s * hud.HIGH_RED_FRACTION
 	var mid_high_yellow: float = high_yellow + (high_red - high_yellow) / 2.0 
 	hud._current_speed = mid_high_yellow
 	hud.update_speed_bar()
@@ -353,15 +364,15 @@ func test_speed_colors() -> void:
 	assert_bool(style.bg_color.is_equal_approx(Color.GREEN.lerp(Color.YELLOW, 0.5))).is_true()
 	
 	# Overspeed (red lerp)
-	var mid_high_red: float = high_red + (Globals.settings.max_speed - high_red) / 2.0
+	var mid_high_red: float = high_red + (max_s - high_red) / 2.0
 	hud._current_speed = mid_high_red
 	hud.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate()
 	assert_bool(style.bg_color.is_equal_approx(Color.YELLOW.lerp(hud.DARK_RED, 0.5))).is_true()
 	
 	# Approaching low (yellow lerp)
-	var low_yellow: float = Globals.settings.min_speed + (Globals.settings.max_speed - Globals.settings.min_speed) * hud.LOW_YELLOW_FRACTION
-	var low_red: float = Globals.settings.min_speed
+	var low_yellow: float = min_s + (max_s - min_s) * Globals.settings.low_yellow_fraction
+	var low_red: float = min_s
 	var mid_low_yellow: float = low_yellow - (low_yellow - low_red) / 2.0
 	hud._current_speed = mid_low_yellow
 	hud.update_speed_bar()
@@ -369,7 +380,7 @@ func test_speed_colors() -> void:
 	assert_bool(style.bg_color.is_equal_approx(Color.GREEN.lerp(Color.YELLOW, 0.5))).is_true()
 	
 	# Low red at min
-	hud._current_speed = Globals.settings.min_speed
+	hud._current_speed = min_s
 	hud.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate()
 	assert_that(style.bg_color).is_equal(hud.DARK_RED)
