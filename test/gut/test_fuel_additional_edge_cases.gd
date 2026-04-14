@@ -37,16 +37,16 @@ func test_fuel_consumption_with_scaling() -> void:
 	Globals.settings.current_fuel = 100.0
 	Globals.settings.difficulty = 1.0
 	
-	# NEW: Simulate consumption at normal (minimum) speed.
-	player_root.speed["speed"] = player_root.MIN_SPEED
+	# NEW: Simulate consumption at normal (minimum) speed using the updated Resource.
+	player_root.speed["speed"] = Globals.settings.min_speed
 	player_root._on_fuel_timer_timeout()
 	var base_depletion: float = 100.0 - Globals.settings.current_fuel
 	
 	# NEW: Reset the fuel tank for the second measurement.
 	Globals.settings.current_fuel = 100.0
 	
-	# NEW: Simulate consumption at an increased-consumption state (maximum speed).
-	player_root.speed["speed"] = player_root.MAX_SPEED
+	# NEW: Simulate consumption at an increased-consumption state (maximum speed) using the updated Resource.
+	player_root.speed["speed"] = Globals.settings.max_speed
 	player_root._on_fuel_timer_timeout()
 	var high_speed_depletion: float = 100.0 - Globals.settings.current_fuel
 	

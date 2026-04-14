@@ -50,7 +50,9 @@ func test_difficulty_scales_fuel_and_weapon() -> void:
 	# OLD: player.fuel["fuel"] = 100.0
 	# NEW: Set the fuel level using the dynamic baseline instead of hardcoded 100.0
 	Globals.settings.current_fuel = start_fuel
-	var normalized_speed: float = player.speed["speed"] / player.MAX_SPEED
+	
+	# NEW: Calculate normalized speed using the global max_speed, as MAX_SPEED was removed from player.gd
+	var normalized_speed: float = player.speed["speed"] / Globals.settings.max_speed
 	
 	# OLD: var expected_depletion: float = player.base_fuel_drain * normalized_speed * Globals.settings.difficulty
 	# NEW: Reference base_consumption_rate from the global resource since it was removed from the player script

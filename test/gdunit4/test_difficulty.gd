@@ -47,7 +47,9 @@ func test_fuel_depletion_with_difficulty() -> void:
 	# NEW: Reset the global fuel resource instead of the local dictionary using the dynamic baseline
 	Globals.settings.current_fuel = start_fuel
 	Globals.settings.difficulty = 1.0
-	var normalized_speed: float = player_inst.speed["speed"] / player_inst.MAX_SPEED
+	
+	# NEW: Use Globals.settings.max_speed instead of the removed player_inst.MAX_SPEED
+	var normalized_speed: float = player_inst.speed["speed"] / Globals.settings.max_speed
 	
 	# OLD: var dep_1: float = player_inst.base_fuel_drain * normalized_speed * Globals.settings.difficulty
 	# NEW: Use the global base_consumption_rate instead of the removed local base_fuel_drain
@@ -63,7 +65,9 @@ func test_fuel_depletion_with_difficulty() -> void:
 	# NEW: Reset the global fuel resource for the second test
 	Globals.settings.current_fuel = start_fuel
 	Globals.settings.difficulty = 2.0
-	normalized_speed = player_inst.speed["speed"] / player_inst.MAX_SPEED  # Re-derive
+	
+	# NEW: Use Globals.settings.max_speed instead of the removed player_inst.MAX_SPEED
+	normalized_speed = player_inst.speed["speed"] / Globals.settings.max_speed
 	
 	# OLD: var dep_2: float = player_inst.base_fuel_drain * normalized_speed * Globals.settings.difficulty
 	# NEW: Use the global base_consumption_rate instead of the removed local base_fuel_drain
@@ -79,7 +83,9 @@ func test_fuel_depletion_with_difficulty() -> void:
 	# NEW: Reset the global fuel resource for the third test
 	Globals.settings.current_fuel = start_fuel
 	Globals.settings.difficulty = 0.5
-	normalized_speed = player_inst.speed["speed"] / player_inst.MAX_SPEED
+	
+	# NEW: Use Globals.settings.max_speed instead of the removed player_inst.MAX_SPEED
+	normalized_speed = player_inst.speed["speed"] / Globals.settings.max_speed
 	
 	# OLD: var dep_05: float = player_inst.base_fuel_drain * normalized_speed * Globals.settings.difficulty
 	# NEW: Use the global base_consumption_rate instead of the removed local base_fuel_drain
