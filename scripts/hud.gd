@@ -44,10 +44,15 @@ func _ready() -> void:
 	if not is_instance_valid(_settings):
 		# FIX 1: Use Globals logger or print to bypass GUT engine-level warning captures
 		if is_instance_valid(Globals):
-			Globals.log_message("HUD couldn't find Globals.settings! Creating fallback settings resource.", Globals.LogLevel.WARNING)
+			Globals.log_message(
+				"HUD couldn't find Globals.settings! Creating fallback settings resource.",
+				Globals.LogLevel.WARNING
+			)
 		else:
-			print("WARNING: HUD couldn't find Globals.settings! Creating fallback settings resource.")
-			
+			print(
+				"WARNING: HUD couldn't find Globals.settings! Creating fallback settings resource."
+			)
+
 		_settings = GameSettingsResource.new()
 		if is_instance_valid(Globals):
 			Globals.settings = _settings
@@ -81,7 +86,7 @@ func _ready() -> void:
 	# --- Speed UI Setup ---
 	_speed_bar_style = StyleBoxFlat.new()
 	set_bar_fill_style(speed_bar, _speed_bar_style)
-	speed_bar.max_value = _settings.max_speed # Pull directly from resource!
+	speed_bar.max_value = _settings.max_speed  # Pull directly from resource!
 
 	_speed_state = {
 		"label": speed_label,
@@ -227,10 +232,10 @@ func update_fuel_bar() -> void:
 func update_speed_bar() -> void:
 	if not is_instance_valid(_settings):
 		return
-		
+
 	speed_bar.value = _current_speed
 	var factor: float = 0.0
-	
+
 	# Dynamically calculate thresholds from the Resource
 	var max_s: float = _settings.max_speed
 	var min_s: float = _settings.min_speed
@@ -240,24 +245,18 @@ func update_speed_bar() -> void:
 	var low_red_thresh: float = min_s
 
 	if _current_speed >= high_red_thresh:
-		factor = clamp(
-			(_current_speed - high_red_thresh) / (max_s - high_red_thresh), 0.0, 1.0
-		)
+		factor = clamp((_current_speed - high_red_thresh) / (max_s - high_red_thresh), 0.0, 1.0)
 		_speed_bar_style.bg_color = Color.YELLOW.lerp(DARK_RED, factor)
 	elif _current_speed >= high_yellow_thresh:
 		factor = clamp(
-			(_current_speed - high_yellow_thresh) / (high_red_thresh - high_yellow_thresh),
-			0.0,
-			1.0
+			(_current_speed - high_yellow_thresh) / (high_red_thresh - high_yellow_thresh), 0.0, 1.0
 		)
 		_speed_bar_style.bg_color = Color.GREEN.lerp(Color.YELLOW, factor)
 	elif _current_speed <= low_red_thresh:
 		_speed_bar_style.bg_color = DARK_RED
 	elif _current_speed <= low_yellow_thresh:
 		factor = clamp(
-			(low_yellow_thresh - _current_speed) / (low_yellow_thresh - low_red_thresh),
-			0.0,
-			1.0
+			(low_yellow_thresh - _current_speed) / (low_yellow_thresh - low_red_thresh), 0.0, 1.0
 		)
 		_speed_bar_style.bg_color = Color.GREEN.lerp(Color.YELLOW, factor)
 	else:
@@ -291,10 +290,13 @@ func check_fuel_warning() -> void:
 func check_speed_warning() -> void:
 	if not is_instance_valid(_settings):
 		return
-		
+
 	# Dynamically calculate thresholds from the Resource
 	var high_yellow_thresh: float = _settings.max_speed * _settings.high_yellow_fraction
-	var low_yellow_thresh: float = _settings.min_speed + (_settings.max_speed - _settings.min_speed) * _settings.low_yellow_fraction
+	var low_yellow_thresh: float = (
+		_settings.min_speed
+		+ (_settings.max_speed - _settings.min_speed) * _settings.low_yellow_fraction
+	)
 
 	if (
 		(_current_speed < low_yellow_thresh or _current_speed > high_yellow_thresh)
