@@ -82,8 +82,10 @@ func test_flameout_resets_speed_and_emits_signal() -> void:
 	
 	_player.speed["speed"] = 300.0
 	
-	# Actually empty the mock fuel tank so _set_speed() allows a 0.0 value!
-	Globals.settings.current_fuel = 0.0 
+	# NEW FIX: Use the private backing field `_current_fuel` to bypass the public setter.
+	# This sets up the empty tank condition without automatically triggering the fuel_depleted signal,
+	# ensuring our manual call below is actually what we are testing!
+	Globals.settings._current_fuel = 0.0 
 	
 	# Manually trigger the flameout handler
 	_player._on_player_out_of_fuel()
