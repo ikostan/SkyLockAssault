@@ -32,14 +32,15 @@ func before_each() -> void:
 ## Per-test cleanup.
 ## :rtype: void
 func after_each() -> void:
+	# Force-release simulated inputs to prevent test leakage
+	Input.action_release("speed_up")
+	Input.action_release("speed_down")
+	
 	Globals.settings = _original_settings
 	for action: String in _added_actions:
 		InputMap.erase_action(action)
 	_added_actions.clear()
-	
-	# Force-release simulated inputs to prevent test leakage
-	Input.action_release("speed_up")
-	Input.action_release("speed_down")
+
 
 ## test_physics_emits_speed_changed_on_acceleration | Signal Behavior
 ## :rtype: void
