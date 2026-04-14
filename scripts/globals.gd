@@ -326,8 +326,10 @@ func load_options(menu_to_hide: Node) -> void:
 # @param message: The string message to log.
 # @param level: The log level (default INFO).
 func log_message(message: String, level: LogLevel = LogLevel.INFO) -> void:
-	if level < settings.current_log_level:
+	# FIX: Guard the log level check. If settings is null, print everything.
+	if is_instance_valid(settings) and level < settings.current_log_level:
 		return  # Skip if below threshold
+		
 	var level_str: String = LogLevel.keys()[level]  # Converts enum to string: "INFO", etc.
 	var timestamp: String = Time.get_datetime_string_from_system()
 	print("[%s] [%s] %s" % [timestamp, level_str, message])

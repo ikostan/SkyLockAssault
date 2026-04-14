@@ -42,14 +42,21 @@ func _ready() -> void:
 	_settings = Globals.settings if is_instance_valid(Globals) else null
 
 	if not is_instance_valid(_settings):
-		push_warning("HUD couldn't find Globals.settings! Creating fallback settings resource.")
+		# FIX 1: Use Globals logger or print to bypass GUT engine-level warning captures
+		if is_instance_valid(Globals):
+			Globals.log_message("HUD couldn't find Globals.settings! Creating fallback settings resource.", Globals.LogLevel.WARNING)
+		else:
+			print("WARNING: HUD couldn't find Globals.settings! Creating fallback settings resource.")
+			
 		_settings = GameSettingsResource.new()
 		if is_instance_valid(Globals):
 			Globals.settings = _settings
 
-	# Connect to global settings to automatically react to fuel updates
-	_settings.setting_changed.connect(_on_setting_changed)
-	_settings.fuel_depleted.connect(_on_player_out_of_fuel)
+	# FIX 2: Add connection guards to prevent ERR_INVALID_PARAMETER if _ready runs multiple times
+	if not _settings.setting_changed.is_connected(_on_setting_changed):
+		_settings.setting_changed.connect(_on_setting_changed)
+	if not _settings.fuel_depleted.is_connected(_on_player_out_of_fuel):
+		_settings.fuel_depleted.connect(_on_player_out_of_fuel)
 
 	# --- Fuel UI Setup ---
 	_fuel_bar_style = StyleBoxFlat.new()
@@ -67,12 +74,14 @@ func _ready() -> void:
 	if fuel_blink_timer:
 		fuel_blink_timer.wait_time = BLINK_INTERVAL
 		fuel_blink_timer.one_shot = false
-		fuel_blink_timer.timeout.connect(_on_fuel_blink_timer_timeout)
+		# FIX 2: Connection guard
+		if not fuel_blink_timer.timeout.is_connected(_on_fuel_blink_timer_timeout):
+			fuel_blink_timer.timeout.connect(_on_fuel_blink_timer_timeout)
 
 	# --- Speed UI Setup ---
 	_speed_bar_style = StyleBoxFlat.new()
 	set_bar_fill_style(speed_bar, _speed_bar_style)
-	speed_bar.max_value = _settings.max_speed  # Pull directly from resource!
+	speed_bar.max_value = _settings.max_speed # Pull directly from resource!
 
 	_speed_state = {
 		"label": speed_label,
@@ -85,7 +94,9 @@ func _ready() -> void:
 	if speed_blink_timer:
 		speed_blink_timer.wait_time = BLINK_INTERVAL
 		speed_blink_timer.one_shot = false
-		speed_blink_timer.timeout.connect(_on_speed_blink_timer_timeout)
+		# FIX 2: Connection guard
+		if not speed_blink_timer.timeout.is_connected(_on_speed_blink_timer_timeout):
+			speed_blink_timer.timeout.connect(_on_speed_blink_timer_timeout)
 
 	# Initial UI Draw
 	update_fuel_bar()
@@ -101,8 +112,9 @@ func setup_hud(player_node: Node2D) -> void:
 		push_error("HUD setup failed: Invalid player node.")
 		return
 
-	# Connect to the decoupled player signals
-	player_node.speed_changed.connect(_on_player_speed_changed)
+	# Connection guard for external wiring
+	if not player_node.speed_changed.is_connected(_on_player_speed_changed):
+		player_node.speed_changed.connect(_on_player_speed_changed)
 
 	Globals.log_message("HUD successfully wired to Player signals.", Globals.LogLevel.DEBUG)
 
@@ -215,10 +227,10 @@ func update_fuel_bar() -> void:
 func update_speed_bar() -> void:
 	if not is_instance_valid(_settings):
 		return
-
+		
 	speed_bar.value = _current_speed
 	var factor: float = 0.0
-
+	
 	# Dynamically calculate thresholds from the Resource
 	var max_s: float = _settings.max_speed
 	var min_s: float = _settings.min_speed
@@ -228,18 +240,24 @@ func update_speed_bar() -> void:
 	var low_red_thresh: float = min_s
 
 	if _current_speed >= high_red_thresh:
-		factor = clamp((_current_speed - high_red_thresh) / (max_s - high_red_thresh), 0.0, 1.0)
+		factor = clamp(
+			(_current_speed - high_red_thresh) / (max_s - high_red_thresh), 0.0, 1.0
+		)
 		_speed_bar_style.bg_color = Color.YELLOW.lerp(DARK_RED, factor)
 	elif _current_speed >= high_yellow_thresh:
 		factor = clamp(
-			(_current_speed - high_yellow_thresh) / (high_red_thresh - high_yellow_thresh), 0.0, 1.0
+			(_current_speed - high_yellow_thresh) / (high_red_thresh - high_yellow_thresh),
+			0.0,
+			1.0
 		)
 		_speed_bar_style.bg_color = Color.GREEN.lerp(Color.YELLOW, factor)
 	elif _current_speed <= low_red_thresh:
 		_speed_bar_style.bg_color = DARK_RED
 	elif _current_speed <= low_yellow_thresh:
 		factor = clamp(
-			(low_yellow_thresh - _current_speed) / (low_yellow_thresh - low_red_thresh), 0.0, 1.0
+			(low_yellow_thresh - _current_speed) / (low_yellow_thresh - low_red_thresh),
+			0.0,
+			1.0
 		)
 		_speed_bar_style.bg_color = Color.GREEN.lerp(Color.YELLOW, factor)
 	else:
@@ -273,13 +291,10 @@ func check_fuel_warning() -> void:
 func check_speed_warning() -> void:
 	if not is_instance_valid(_settings):
 		return
-
+		
 	# Dynamically calculate thresholds from the Resource
 	var high_yellow_thresh: float = _settings.max_speed * _settings.high_yellow_fraction
-	var low_yellow_thresh: float = (
-		_settings.min_speed
-		+ (_settings.max_speed - _settings.min_speed) * _settings.low_yellow_fraction
-	)
+	var low_yellow_thresh: float = _settings.min_speed + (_settings.max_speed - _settings.min_speed) * _settings.low_yellow_fraction
 
 	if (
 		(_current_speed < low_yellow_thresh or _current_speed > high_yellow_thresh)
