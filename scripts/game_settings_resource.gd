@@ -87,13 +87,20 @@ signal fuel_depleted
 		if _high_yellow_fraction == new_val:
 			return
 		_high_yellow_fraction = new_val
+
+		# NEW FIX: Enforce invariant - push low_yellow down if high_yellow drops below it
+		if _low_yellow_fraction > _high_yellow_fraction:
+			self.low_yellow_fraction = _high_yellow_fraction
+
 		setting_changed.emit("high_yellow_fraction", _high_yellow_fraction)
 	get:
 		return _high_yellow_fraction
 
 @export var low_yellow_fraction: float = 0.10:
 	set(value):
-		var new_val: float = clamp(value, 0.0, 1.0)
+		# NEW FIX: Clamp new low_yellow so it cannot exceed the current high_yellow
+		var new_val: float = clamp(value, 0.0, _high_yellow_fraction)
+
 		if _low_yellow_fraction == new_val:
 			return
 		_low_yellow_fraction = new_val
