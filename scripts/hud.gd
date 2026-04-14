@@ -118,7 +118,12 @@ func setup_hud(player_node: Node2D) -> void:
 		push_error("HUD setup failed: Invalid player node.")
 		return
 
-	# NEW FIX: Safely disconnect the old player if we are hot-swapping nodes
+	# NEW FIX: Verify the signal actually exists before attempting to access it!
+	if not player_node.has_signal("speed_changed"):
+		push_error("HUD setup failed: Provided node lacks 'speed_changed' signal.")
+		return
+
+	# Safely disconnect the old player if we are hot-swapping nodes
 	if is_instance_valid(_connected_player) and _connected_player != player_node:
 		if _connected_player.speed_changed.is_connected(_on_player_speed_changed):
 			_connected_player.speed_changed.disconnect(_on_player_speed_changed)
