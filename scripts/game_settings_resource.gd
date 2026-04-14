@@ -24,7 +24,7 @@ signal fuel_depleted
 
 @export_group("Speed System")
 
-`@export` var max_speed: float = 713.0:
+@export var max_speed: float = 713.0:
 	set(value):
 		var new_val: float = max(max(1.0, value), _min_speed)
 		if _max_speed == new_val:
@@ -34,7 +34,7 @@ signal fuel_depleted
 	get:
 		return _max_speed
 
-`@export` var min_speed: float = 95.0:
+@export var min_speed: float = 95.0:
 	set(value):
 		var new_val: float = clamp(value, 0.0, _max_speed)
 		if _min_speed == new_val:
