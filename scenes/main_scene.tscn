@@ -1,10 +1,10 @@
-[gd_scene load_steps=81 format=3 uid="uid://nnnc0qhx07i8"]
+[gd_scene load_steps=82 format=3 uid="uid://nnnc0qhx07i8"]
 
 [ext_resource type="Script" uid="uid://ctm7qg12s2swt" path="res://scripts/main_scene.gd" id="1_7ykc4"]
 [ext_resource type="PackedScene" uid="uid://cb4n4cqkuddqg" path="res://scenes/pause_menu.tscn" id="1_w2twt"]
 [ext_resource type="Texture2D" uid="uid://ce63ga8f5mua7" path="res://files/trees/tree_01.png" id="2_fm3ay"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="2_pu3yx"]
-[ext_resource type="PackedScene" uid="uid://37rarq1yywmc" path="res://scenes/player.tscn" id="2_pw63i"]
+[ext_resource type="PackedScene" uid="uid://37rarq1yywmc" path="res://scenes/Player.tscn" id="2_pw63i"]
 [ext_resource type="Script" uid="uid://csdce7ynrpivs" path="res://scripts/resource_preloader.gd" id="3_c1pb6"]
 [ext_resource type="Texture2D" uid="uid://bsmbcgovcph7p" path="res://files/trees/tree_02.png" id="3_sgkfd"]
 [ext_resource type="Texture2D" uid="uid://syw5eae1ebna" path="res://files/trees/tree_11.png" id="4_qj6t7"]
@@ -76,6 +76,7 @@
 [ext_resource type="Texture2D" uid="uid://btyfigdtk3x88" path="res://files/random_decor/crates_4.png" id="68_f3krf"]
 [ext_resource type="Texture2D" uid="uid://bvxu5x1awjrjv" path="res://files/random_decor/dirt_001.png" id="69_7tyuc"]
 [ext_resource type="Texture2D" uid="uid://f4hxu68qa4fi" path="res://files/random_decor/dirt_002.png" id="70_isor2"]
+[ext_resource type="Script" uid="uid://blu5qujicfa7e" path="res://scripts/hud.gd" id="72_sgkfd"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pu3yx"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
@@ -123,6 +124,7 @@ offset_right = 1270.0
 offset_bottom = 120.0
 tooltip_text = "Player Status Panel"
 theme_override_styles/panel = SubResource("StyleBoxFlat_pu3yx")
+script = ExtResource("72_sgkfd")
 metadata/_edit_use_anchors_ = true
 
 [node name="Stats" type="VBoxContainer" parent="PlayerStatsPanel"]
