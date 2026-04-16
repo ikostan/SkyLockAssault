@@ -35,7 +35,8 @@ func test_teardown_memory_sync() -> void:
 	main_scene.setup_bushes_layer(viewport_mock)
 	main_scene.setup_decor_layer(viewport_mock)
 	
-	# CRITICAL: Flush the frame to allow queue_free() to complete its cleanup
+	# Flush a frame before teardown so any queued engine work settles.
+	# Note: child cleanup itself is synchronous (child.free()), so this is a safety margin, not a requirement.
 	await get_tree().process_frame
 	
 	# Free the scene explicitly to test teardown
