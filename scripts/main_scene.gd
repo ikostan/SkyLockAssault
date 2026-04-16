@@ -118,14 +118,15 @@ func setup_bushes_layer(viewport: Vector2) -> void:
 
 	# Clear existing children
 	for child in bushes_layer.get_children():
-		bushes_layer.remove_child(child)
-		child.queue_free()
+		# bushes_layer.remove_child(child)
+		if is_instance_valid(child):
+			child.free()
 
 	# Get bush IDs from preloader (Array[String])
 	var bush_ids: Array = Array(texture_preloader.get_resource_list()).filter(
 		func(id: String) -> bool: return id.begins_with("bush_")
 	)
-	print("Loaded ", bush_ids.size(), " bush textures")
+	# print("Loaded ", bush_ids.size(), " bush textures")
 
 	if bush_ids.is_empty():
 		return
@@ -161,14 +162,15 @@ func setup_decor_layer(viewport: Vector2) -> void:
 
 	# Clear existing children
 	for child in decor_layer.get_children():
-		decor_layer.remove_child(child)
-		child.queue_free()
+		# decor_layer.remove_child(child)
+		if is_instance_valid(child):
+			child.free()
 
 	# Get decor IDs from preloader (Array[String])
 	var decor_ids: Array = Array(texture_preloader.get_resource_list()).filter(
 		func(id: String) -> bool: return id.begins_with("decor_")
 	)
-	print("Loaded ", decor_ids.size(), " decor textures")
+	# print("Loaded ", decor_ids.size(), " decor textures")
 
 	if decor_ids.is_empty():
 		return
