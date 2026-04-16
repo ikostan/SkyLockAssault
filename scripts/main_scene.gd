@@ -150,14 +150,14 @@ func setup_bushes_layer(viewport: Vector2) -> void:
 	bushes_layer.motion_mirroring = Vector2(0, layer_height)
 
 
-## Sets up the decor layer with random X positions, sizes, textures, and rotations.
+## Sets up the decor layer with random X positions, sizes, textures, rotations, and flips.
 ## @param viewport: Vector2 - The viewport size.
 ## @return: void
 func setup_decor_layer(viewport: Vector2) -> void:
 	if not decor_layer:
 		return
 
-	# Clear existing children
+	# Clear existing children (Instantly detach, then safely queue)
 	for child in decor_layer.get_children():
 		decor_layer.remove_child(child)
 		child.queue_free()
@@ -172,6 +172,9 @@ func setup_decor_layer(viewport: Vector2) -> void:
 
 	var num_decors: int = decor_ids.size()
 	var layer_height: float = viewport.y * 4
+	
+	# Define strict rotation angles (0, 90, 180, -90 degrees)
+	var allowed_rotations: Array[float] = [0.0, 90.0, 180.0, -90.0]
 
 	for i in range(num_decors):
 		var decor: Sprite2D = Sprite2D.new()
@@ -180,11 +183,17 @@ func setup_decor_layer(viewport: Vector2) -> void:
 		decor.texture = texture_preloader.get_resource(id)
 		decor.centered = false
 
-		var scale_factor: float = randf_range(0.5, 1.0)
+		# SCALING TRICK 1: Wider scale range (0.5 to 1.5) for more size variance
+		var scale_factor: float = randf_range(0.5, 1.5)
 		decor.scale = Vector2(scale_factor, scale_factor)
 		
-		# NEW: Apply random rotation to organic decor (include crates and barrels)
-		decor.rotation = randf_range(0.0, TAU) # TAU is 2*PI radians (360 degrees)
+		# SCALING TRICK 2: Randomly mirror the sprite horizontally and/or vertically
+		decor.flip_h = [true, false].pick_random()
+		decor.flip_v = [true, false].pick_random()
+		
+		# Apply random cardinal rotation to ALL decor sprites
+		var random_degrees: float = allowed_rotations.pick_random()
+		decor.rotation = deg_to_rad(random_degrees)
 
 		decor.position.x = randf_range(0, viewport.x - (decor.texture.get_width() * scale_factor))
 		decor.position.y = randf_range(
