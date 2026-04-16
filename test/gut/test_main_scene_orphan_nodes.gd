@@ -11,13 +11,28 @@ var main_scene: MainScene
 var viewport_mock: Vector2 = Vector2(1920, 1080)
 
 
-## Per-test setup: Instantiate MainScene and allow it to initialize.
+## Per-test setup: Flush global garbage, instantiate MainScene, and initialize.
 ## :rtype: void
 func before_each() -> void:
+	# CRITICAL ISOLATION: Flush the frame *before* spawning our scene to ensure
+	# any delayed queue_free() calls from completely unrelated test scripts
+	# have finished resolving before we take our baseline orphan count.
+	await get_tree().process_frame
+	
 	main_scene = preload("res://scenes/main_scene.tscn").instantiate()
 	add_child_autofree(main_scene)
 	
 	# Allow the scene to initialize (_ready, etc.) before running tests
+	await get_tree().process_frame
+
+
+## Per-test teardown: Ensure aggressive cleanup to protect subsequent tests.
+## :rtype: void
+func after_each() -> void:
+	# If the test didn't already queue the scene for deletion, GUT's autofree will.
+	# We force two frame flushes here to guarantee that the SceneTree is 
+	# completely swept clean of this test's garbage before the next test begins.
+	await get_tree().process_frame
 	await get_tree().process_frame
 
 
