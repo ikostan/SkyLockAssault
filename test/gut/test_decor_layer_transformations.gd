@@ -97,10 +97,10 @@ func test_decor_sprites_have_valid_scale_ranges() -> void:
 
 
 ## test_decor_sprites_have_boolean_flips |
-## Verifies that flip_h and flip_v properties are actively being assigned.
+## Verifies that flip_h and flip_v properties are actively being randomized.
 ## :rtype: void
 func test_decor_sprites_have_boolean_flips() -> void:
-	gut.p("Testing: Decor sprites should successfully assign horizontal and vertical flips.")
+	gut.p("Testing: Decor sprites should successfully randomize horizontal and vertical flips.")
 	
 	main_scene.setup_decor_layer(viewport_mock)
 	
@@ -108,12 +108,26 @@ func test_decor_sprites_have_boolean_flips() -> void:
 		func(c: Node) -> bool: return not c.is_queued_for_deletion()
 	)
 	
-	var null_flips_found: int = 0
+	var found_h_true: bool = false
+	var found_h_false: bool = false
+	var found_v_true: bool = false
+	var found_v_false: bool = false
 	
 	for node in active_sprites:
 		var sprite := node as Sprite2D
-		# Verify the properties are valid booleans and not null/undefined
-		if typeof(sprite.flip_h) != TYPE_BOOL or typeof(sprite.flip_v) != TYPE_BOOL:
-			null_flips_found += 1
+		
+		# Track horizontal flip states
+		if sprite.flip_h:
+			found_h_true = true
+		else:
+			found_h_false = true
 			
-	assert_eq(null_flips_found, 0, "All decor sprites must have valid boolean flip states.")
+		# Track vertical flip states
+		if sprite.flip_v:
+			found_v_true = true
+		else:
+			found_v_false = true
+			
+	# Assert that our generation loop produced at least one of every state
+	assert_true(found_h_true and found_h_false, "Expected a randomized mix of true and false for horizontal flips.")
+	assert_true(found_v_true and found_v_false, "Expected a randomized mix of true and false for vertical flips.")
