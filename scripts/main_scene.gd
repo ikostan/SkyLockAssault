@@ -183,9 +183,8 @@ func setup_decor_layer(viewport: Vector2) -> void:
 		var scale_factor: float = randf_range(0.5, 1.0)
 		decor.scale = Vector2(scale_factor, scale_factor)
 		
-		# NEW: Apply random rotation to organic decor (exclude crates and barrels)
-		if not ("barrel" in id or "crate" in id):
-			decor.rotation = randf_range(0.0, TAU) # TAU is 2*PI radians (360 degrees)
+		# NEW: Apply random rotation to organic decor (include crates and barrels)
+		decor.rotation = randf_range(0.0, TAU) # TAU is 2*PI radians (360 degrees)
 
 		decor.position.x = randf_range(0, viewport.x - (decor.texture.get_width() * scale_factor))
 		decor.position.y = randf_range(
