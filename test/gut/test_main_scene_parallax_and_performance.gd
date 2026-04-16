@@ -17,6 +17,7 @@ func before_each() -> void:
 	await get_tree().process_frame
 	main_scene = preload("res://scenes/main_scene.tscn").instantiate()
 	add_child_autofree(main_scene)
+	# Allow the scene to initialize (_ready, etc.) before running tests
 	await get_tree().process_frame
 
 
@@ -117,4 +118,73 @@ func test_process_script_execution_time() -> void:
 		average_time_per_frame_usec, 
 		1000.0, 
 		"MainScene._process is taking too long to execute. Look for expensive operations."
+	)
+
+## test_bushes_layer_chunk_size_and_density |
+## Verify the bushes layer mirrors at exactly 8 screens tall and spawns 2x the sprites.
+## :rtype: void
+func test_bushes_layer_chunk_size_and_density() -> void:
+	gut.p("Testing: Bushes layer should use an 8-screen chunk size and 2x density.")
+
+	# 1. Re-run setup to use our specific mock viewport
+	main_scene.setup_bushes_layer(viewport_mock)
+
+	# 2. Verify Chunk Size (Height)
+	var expected_height: float = viewport_mock.y * 8.0
+	assert_eq(
+		main_scene.bushes_layer.motion_mirroring.y, 
+		expected_height, 
+		"Bushes layer mirroring should be exactly 8 screens tall."
+	)
+
+	# 3. Calculate Expected Density based on the Preloader
+	var bush_ids: Array = Array(main_scene.texture_preloader.get_resource_list()).filter(
+		func(id: String) -> bool: return id.begins_with("bush_")
+	)
+	var expected_count: int = bush_ids.size() * 2
+
+	# 4. Count only active nodes (filtering out anything queued for deletion from the _ready call)
+	var active_children: int = main_scene.bushes_layer.get_children().filter(
+		func(c: Node) -> bool: return not c.is_queued_for_deletion()
+	).size()
+	
+	assert_eq(
+		active_children, 
+		expected_count, 
+		"Bushes layer should spawn exactly 2 times the number of available bush sprites."
+	)
+
+
+## test_decor_layer_chunk_size_and_density |
+## Verify the decor layer mirrors at exactly 8 screens tall and spawns 2x the sprites.
+## :rtype: void
+func test_decor_layer_chunk_size_and_density() -> void:
+	gut.p("Testing: Decor layer should use an 8-screen chunk size and 2x density.")
+
+	# 1. Re-run setup
+	main_scene.setup_decor_layer(viewport_mock)
+
+	# 2. Verify Chunk Size (Height)
+	var expected_height: float = viewport_mock.y * 8.0
+	assert_eq(
+		main_scene.decor_layer.motion_mirroring.y, 
+		expected_height, 
+		"Decor layer mirroring should be exactly 8 screens tall."
+	)
+
+	# 3. Calculate Expected Density based on the Preloader
+	var decor_ids: Array = Array(main_scene.texture_preloader.get_resource_list()).filter(
+		func(id: String) -> bool: return id.begins_with("decor_")
+	)
+	var expected_count: int = decor_ids.size() * 2
+
+	# 4. Filter out queued nodes
+	var active_children: int = main_scene.decor_layer.get_children().filter(
+		func(c: Node) -> bool: return not c.is_queued_for_deletion()
+	).size()
+	
+	assert_eq(
+		active_children, 
+		expected_count, 
+		"Decor layer should spawn exactly 2 times the number of available decor sprites."
 	)
