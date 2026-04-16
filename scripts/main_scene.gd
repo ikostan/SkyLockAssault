@@ -128,13 +128,13 @@ func setup_bushes_layer(viewport: Vector2) -> void:
 	if bush_ids.is_empty():
 		return
 
-	# INCREASE THESE VALUES:
-	# Make the repeating block 20 screens tall instead of 4
-	var screens_tall: float = 20.0
+	# THE GOLDILOCKS ZONE:
+	# 8 screens is the sweet spot for infinite illusion vs CPU overhead
+	var screens_tall: float = 8.0
 	var layer_height: float = viewport.y * screens_tall
 
-	# Multiply the number of bushes so the density stays the same over the larger area
-	var num_bushes: int = bush_ids.size() * 5
+	# Drop density multiplier to match
+	var num_bushes: int = bush_ids.size() * 2
 
 	for i in range(num_bushes):
 		var bush: Sprite2D = Sprite2D.new()
@@ -175,13 +175,13 @@ func setup_decor_layer(viewport: Vector2) -> void:
 	if decor_ids.is_empty():
 		return
 
-	# INCREASE THESE VALUES:
-	# Match the bushes layer height so they loop at the same scale
-	var screens_tall: float = 20.0
+	# THE GOLDILOCKS ZONE:
+	# Match the bushes layer height
+	var screens_tall: float = 8.0
 	var layer_height: float = viewport.y * screens_tall
 
-	# Multiply the number of decors to maintain density
-	var num_decors: int = decor_ids.size() * 5
+	# Drop density multiplier to match
+	var num_decors: int = decor_ids.size() * 2
 
 	# Define strict rotation angles (0, 90, 180, -90 degrees)
 	var allowed_rotations: Array[float] = [0.0, 90.0, 180.0, -90.0]
