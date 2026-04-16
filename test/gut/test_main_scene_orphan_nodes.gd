@@ -4,16 +4,10 @@
 
 extends "res://addons/gut/test.gd"
 
+const GutHelper = preload("res://test/gut/gut_test_helper.gd")
+
 var main_scene: MainScene
 var viewport_mock: Vector2 = Vector2(1920, 1080)
-
-## Standardized safe free to eliminate orphan windows and double-frees
-func safe_hard_free(node: Node) -> void:
-	if not is_instance_valid(node) or node.is_queued_for_deletion():
-		return
-	if node.is_inside_tree():
-		node.get_parent().remove_child(node)
-	node.free()
 
 func before_each() -> void:
 	await get_tree().process_frame
@@ -22,9 +16,9 @@ func before_each() -> void:
 	await get_tree().process_frame
 
 func after_each() -> void:
-	# CRITICAL: If the test already freed the scene, this skips gracefully
+	# Use the helper's static method
 	if is_instance_valid(main_scene):
-		safe_hard_free(main_scene)
+		GutHelper.safe_hard_free(main_scene)
 	await get_tree().process_frame
 
 func verify_no_orphan_leaks(baseline_orphans: int, context: String) -> void:
@@ -40,7 +34,7 @@ func test_teardown_memory_sync() -> void:
 	await get_tree().process_frame
 	
 	# FIX: Free manually AND nullify so after_each ignores it
-	safe_hard_free(main_scene)
+	GutHelper.safe_hard_free(main_scene)
 	main_scene = null 
 	
 	await get_tree().process_frame
@@ -86,7 +80,7 @@ func test_scene_reload_lifecycle() -> void:
 	var baseline_orphans: int = Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)
 	
 	# FIX: Use safe_hard_free and nullify baseline scene
-	safe_hard_free(main_scene)
+	GutHelper.safe_hard_free(main_scene)
 	main_scene = null
 	await get_tree().process_frame
 	
@@ -96,7 +90,7 @@ func test_scene_reload_lifecycle() -> void:
 	await get_tree().process_frame
 	
 	# Clean up the reloaded instance manually too
-	safe_hard_free(reloaded_scene)
+	GutHelper.safe_hard_free(reloaded_scene)
 	await get_tree().process_frame
 	verify_no_orphan_leaks(baseline_orphans, "Clean teardown after reload.")
 
