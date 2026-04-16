@@ -15,18 +15,19 @@ func before_each() -> void:
 	original_settings = Globals.settings
 	Globals.settings = GameSettingsResource.new()
 
-## Per-test cleanup: Restore global state.
+## Per-test cleanup: Restore global state and aggressively free the scene.
 ## :rtype: void
 func after_each() -> void:
 	Globals.settings = original_settings
 	
-	# NEW: Reverted to a hard free(). 
-	# queue_free() delays deletion, causing GUT to falsely report the entire scene as orphans.
-	# A hard free() executes instantly, ensuring 0 lingering scene nodes when GUT checks memory.
+	# Use a hard free() instead of queue_free().
+	# This instantly incinerates the scene, ensuring 0 lingering orphan nodes 
+	# without needing to artificially pad the test time with frame flushes.
 	if is_instance_valid(main_scene):
 		main_scene.free()
 
-## test_exit_tree_disconnects_signals | Lifecycle | Verify clean signal severing
+## test_exit_tree_disconnects_signals |
+## Lifecycle | Verify clean signal severing without breaking the SceneTree
 ## :rtype: void
 func test_exit_tree_disconnects_signals() -> void:
 	gut.p("Testing: Player _exit_tree properly disconnects global signals.")
@@ -45,20 +46,26 @@ func test_exit_tree_disconnects_signals() -> void:
 		"fuel_depleted must be connected after player enters the tree."
 	)
 	
-	# NEW: 2. Instead of remove_child() (which breaks the tree), manually call the lifecycle function
+	# 2. CRITICAL FIX: Manually trigger the lifecycle function instead of using remove_child().
 	player_root._exit_tree()
 	
 	# 3. Assert the signals were cleanly severed
 	assert_false(
 		Globals.settings.setting_changed.is_connected(player_root._on_setting_changed), 
-		"setting_changed must be completely disconnected after player leaves the tree."
+		"setting_changed must be completely disconnected after _exit_tree is called."
 	)
 	assert_false(
 		Globals.settings.fuel_depleted.is_connected(player_root._on_player_out_of_fuel), 
-		"fuel_depleted must be completely disconnected after player leaves the tree."
+		"fuel_depleted must be completely disconnected after _exit_tree is called."
 	)
+	
+	# 4. CRITICAL FIX: Flush the frame before GUT checks for orphans.
+	# This allows the queue_free() calls triggered during MainScene._ready() 
+	# to finish sweeping the detached parallax sprites.
+	await get_tree().process_frame
 
-## test_exit_tree_safe_without_globals | Safety | Verify no crashes on early exit
+## test_exit_tree_safe_without_globals |
+## Safety | Verify no crashes on early exit
 ## :rtype: void
 func test_exit_tree_safe_without_globals() -> void:
 	gut.p("Testing: Player _exit_tree does not crash if Globals.settings is null.")
@@ -69,6 +76,7 @@ func test_exit_tree_safe_without_globals() -> void:
 	main_scene = load("res://scenes/main_scene.tscn").instantiate()
 	player_root = main_scene.get_node("Player")
 	
+	# Safely call _exit_tree in isolation
 	player_root._exit_tree()
 	
 	assert_true(true, "_exit_tree handled a null Globals.settings state gracefully.")
