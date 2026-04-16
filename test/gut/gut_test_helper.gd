@@ -6,6 +6,19 @@ extends RefCounted
 
 const PLAYER_SCRIPT_PATH: String = "res://scripts/player.gd"
 
+
+## Helper to safely hard-free a node without causing engine crashes.
+## Asserts the node is valid and safe to instantly destroy.
+static func safe_hard_free(node: Node) -> void:
+	if not is_instance_valid(node) or node.is_queued_for_deletion():
+		return
+	
+	if node.is_inside_tree():
+		node.get_parent().remove_child(node)
+	
+	node.free()
+
+
 ## Dynamically constructs the node hierarchy required by player.gd.
 ## :rtype: Node
 static func build_mock_player_scene() -> Node:
