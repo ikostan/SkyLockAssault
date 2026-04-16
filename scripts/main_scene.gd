@@ -13,7 +13,6 @@ var _showing_unbound_warning: bool = false
 var _showing_unbound_key_message: bool = false
 
 @onready var player: Node2D = $Player
-# @onready var stats_panel: Panel = $PlayerStatsPanel
 @onready var stats_panel: Variant = $PlayerStatsPanel
 @onready var background: ParallaxBackground = $Background
 @onready var bushes_layer: ParallaxLayer = $Background/Bushes  # Reference to the bushes layer
@@ -124,7 +123,6 @@ func setup_bushes_layer(viewport: Vector2) -> void:
 	var bush_ids: Array = Array(texture_preloader.get_resource_list()).filter(
 		func(id: String) -> bool: return id.begins_with("bush_")
 	)
-	# print("Loaded ", bush_ids.size(), " bush textures")
 
 	if bush_ids.is_empty():
 		return
@@ -166,7 +164,6 @@ func setup_decor_layer(viewport: Vector2) -> void:
 	var decor_ids: Array = Array(texture_preloader.get_resource_list()).filter(
 		func(id: String) -> bool: return id.begins_with("decor_")
 	)
-	# print("Loaded ", decor_ids.size(), " decor textures")
 
 	if decor_ids.is_empty():
 		return
@@ -246,10 +243,6 @@ func show_message(text: String, type: MessageType = MessageType.CRITICAL_UNBOUND
 	match type:
 		MessageType.KEY_PRESS_UNBOUND:
 			_showing_unbound_key_message = false
-		# CRITICAL_UNBOUND: Do NOT reset here (once-per-session intent)
-		# Reset only when bindings are fixed
-		# (e.g., in key_mapping.gd _on_conflict_confirmed or reset)
-		# _showing_unbound_warning = false  # ← commented out
 
 
 ## Public: Clears the unbound warning flag after fixes.
