@@ -115,10 +115,10 @@ func setup_bushes_layer(viewport: Vector2) -> void:
 	if not bushes_layer:
 		return
 
-	# Clear existing children
+	# Clear existing children (Safely detach first, then instantly destroy)
 	for child in bushes_layer.get_children():
 		bushes_layer.remove_child(child)
-		child.queue_free()
+		child.free()
 
 	# Get bush IDs from preloader (Array[String])
 	var bush_ids: Array = Array(texture_preloader.get_resource_list()).filter(
@@ -162,10 +162,10 @@ func setup_decor_layer(viewport: Vector2) -> void:
 	if not decor_layer:
 		return
 
-	# Clear existing children (Instantly detach, then safely queue)
+	# Clear existing children (Safely detach first, then instantly destroy)
 	for child in decor_layer.get_children():
 		decor_layer.remove_child(child)
-		child.queue_free()
+		child.free()
 
 	# Get decor IDs from preloader (Array[String])
 	var decor_ids: Array = Array(texture_preloader.get_resource_list()).filter(
