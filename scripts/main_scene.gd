@@ -150,7 +150,7 @@ func setup_bushes_layer(viewport: Vector2) -> void:
 	bushes_layer.motion_mirroring = Vector2(0, layer_height)
 
 
-## Sets up the decor layer with random X positions, sizes, and textures.
+## Sets up the decor layer with random X positions, sizes, textures, and rotations.
 ## @param viewport: Vector2 - The viewport size.
 ## @return: void
 func setup_decor_layer(viewport: Vector2) -> void:
@@ -182,6 +182,10 @@ func setup_decor_layer(viewport: Vector2) -> void:
 
 		var scale_factor: float = randf_range(0.5, 1.0)
 		decor.scale = Vector2(scale_factor, scale_factor)
+		
+		# NEW: Apply random rotation to organic decor (exclude crates and barrels)
+		if not ("barrel" in id or "crate" in id):
+			decor.rotation = randf_range(0.0, TAU) # TAU is 2*PI radians (360 degrees)
 
 		decor.position.x = randf_range(0, viewport.x - (decor.texture.get_width() * scale_factor))
 		decor.position.y = randf_range(
