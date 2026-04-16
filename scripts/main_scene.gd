@@ -9,6 +9,9 @@ extends Node2D
 
 enum MessageType { CRITICAL_UNBOUND, KEY_PRESS_UNBOUND }
 
+# At the top of main_scene.gd
+@export var parallax_screens_tall: float = 8.0
+
 var _showing_unbound_warning: bool = false
 var _showing_unbound_key_message: bool = false
 
@@ -130,8 +133,7 @@ func setup_bushes_layer(viewport: Vector2) -> void:
 
 	# THE GOLDILOCKS ZONE:
 	# 8 screens is the sweet spot for infinite illusion vs CPU overhead
-	var screens_tall: float = 8.0
-	var layer_height: float = viewport.y * screens_tall
+	var layer_height: float = viewport.y * parallax_screens_tall
 
 	# Drop density multiplier to match
 	var num_bushes: int = bush_ids.size() * 2
@@ -177,8 +179,7 @@ func setup_decor_layer(viewport: Vector2) -> void:
 
 	# THE GOLDILOCKS ZONE:
 	# Match the bushes layer height
-	var screens_tall: float = 8.0
-	var layer_height: float = viewport.y * screens_tall
+	var layer_height: float = viewport.y * parallax_screens_tall
 
 	# Drop density multiplier to match
 	var num_decors: int = decor_ids.size() * 2
