@@ -118,9 +118,7 @@ func setup_bushes_layer(viewport: Vector2) -> void:
 
 	# Clear existing children
 	for child in bushes_layer.get_children():
-		# bushes_layer.remove_child(child)
-		if is_instance_valid(child):
-			child.free()
+		child.queue_free()
 
 	# Get bush IDs from preloader (Array[String])
 	var bush_ids: Array = Array(texture_preloader.get_resource_list()).filter(
@@ -162,9 +160,7 @@ func setup_decor_layer(viewport: Vector2) -> void:
 
 	# Clear existing children
 	for child in decor_layer.get_children():
-		# decor_layer.remove_child(child)
-		if is_instance_valid(child):
-			child.free()
+		child.queue_free()
 
 	# Get decor IDs from preloader (Array[String])
 	var decor_ids: Array = Array(texture_preloader.get_resource_list()).filter(
