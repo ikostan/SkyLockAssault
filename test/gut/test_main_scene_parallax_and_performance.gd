@@ -10,22 +10,24 @@ extends "res://addons/gut/test.gd"
 var main_scene: MainScene
 var viewport_mock: Vector2 = Vector2(1920, 1080)
 
+## Standardized safe free to eliminate orphan windows and double-frees
+func safe_hard_free(node: Node) -> void:
+	if not is_instance_valid(node) or node.is_queued_for_deletion():
+		return
+	if node.is_inside_tree():
+		node.get_parent().remove_child(node)
+	node.free()
 
-## Per-test setup: Isolate state and initialize scene.
-## :rtype: void
 func before_each() -> void:
 	await get_tree().process_frame
 	main_scene = preload("res://scenes/main_scene.tscn").instantiate()
-	add_child_autofree(main_scene)
-	# Allow the scene to initialize (_ready, etc.) before running tests
+	add_child(main_scene)
 	await get_tree().process_frame
 
-
-## Per-test teardown: Aggressive memory cleanup.
-## :rtype: void
 func after_each() -> void:
+	# CRITICAL: If the test already freed the scene, this skips gracefully
 	if is_instance_valid(main_scene):
-		main_scene.free()
+		safe_hard_free(main_scene)
 	await get_tree().process_frame
 
 

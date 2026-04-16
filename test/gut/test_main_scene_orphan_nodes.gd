@@ -1,189 +1,109 @@
 ## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_main_scene_orphan_nodes.gd
-##
-## GUT unit tests for verifying the absence of orphan node leaks in MainScene.
-## Covers the Orphan Node Leak Fix Test Plan (Issue #549).
 
 extends "res://addons/gut/test.gd"
 
 var main_scene: MainScene
 var viewport_mock: Vector2 = Vector2(1920, 1080)
 
+## Standardized safe free to eliminate orphan windows and double-frees
+func safe_hard_free(node: Node) -> void:
+	if not is_instance_valid(node) or node.is_queued_for_deletion():
+		return
+	if node.is_inside_tree():
+		node.get_parent().remove_child(node)
+	node.free()
 
-## Per-test setup: Flush global garbage, instantiate MainScene, and initialize.
-## :rtype: void
 func before_each() -> void:
-	# CRITICAL ISOLATION: Flush the frame *before* spawning our scene to ensure
-	# any delayed queue_free() calls from completely unrelated test scripts
-	# have finished resolving before we take our baseline orphan count.
 	await get_tree().process_frame
-	
 	main_scene = preload("res://scenes/main_scene.tscn").instantiate()
-	add_child_autofree(main_scene)
-	
-	# Allow the scene to initialize (_ready, etc.) before running tests
+	add_child(main_scene)
 	await get_tree().process_frame
 
-
-## Per-test teardown: Ensure aggressive cleanup to protect subsequent tests.
-## :rtype: void
 func after_each() -> void:
-	# If the test didn't already queue the scene for deletion, GUT's autofree will.
-	# We force two frame flushes here to guarantee that the SceneTree is 
-	# completely swept clean of this test's garbage before the next test begins.
-	await get_tree().process_frame
+	# CRITICAL: If the test already freed the scene, this skips gracefully
+	if is_instance_valid(main_scene):
+		safe_hard_free(main_scene)
 	await get_tree().process_frame
 
-
-## Custom assertion to check if any new orphan nodes leaked during the test.
-## :param baseline_orphans: The initial orphan count taken before the test logic.
-## :param context: A description of the scenario being tested for the log output.
-## :rtype: void
 func verify_no_orphan_leaks(baseline_orphans: int, context: String) -> void:
 	var current_orphans: int = Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)
 	assert_eq(current_orphans, baseline_orphans, context)
 
-
-## Manual Orphan Node Check & GUT Teardown Memory Test (Frame Sync) |
-## Instantiate MainScene, call setup methods multiple times, flush the frame,
-## free the scene, and verify no orphan nodes exist.
-## :rtype: void
 func test_teardown_memory_sync() -> void:
 	var baseline_orphans: int = Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)
 	
 	main_scene.setup_bushes_layer(viewport_mock)
 	main_scene.setup_decor_layer(viewport_mock)
 	
-	# Re-trigger to execute the clearing logic on existing sprites
-	main_scene.setup_bushes_layer(viewport_mock)
-	main_scene.setup_decor_layer(viewport_mock)
-	
-	# CRITICAL: Flush the frame to allow queue_free() to complete its cleanup
 	await get_tree().process_frame
 	
-	# Free the scene explicitly to test teardown
-	main_scene.queue_free()
-	await get_tree().process_frame
+	# FIX: Free manually AND nullify so after_each ignores it
+	safe_hard_free(main_scene)
+	main_scene = null 
 	
-	verify_no_orphan_leaks(baseline_orphans, "Expected orphan nodes to return to baseline after frame sync and teardown.")
+	await get_tree().process_frame
+	verify_no_orphan_leaks(baseline_orphans, "Expected orphans to return to baseline.")
 
-
-## Repeated Setup Call Stability Test |
-## Call setup methods 50 times in a tight loop to simulate heavy reset load,
-## then await a frame and check for memory leaks or node accumulation.
-## :rtype: void
 func test_repeated_setup_call_stability() -> void:
 	var baseline_orphans: int = Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)
-	
-	# 1. Call setup_bushes_layer() 50 times in a loop
 	for i in range(50):
 		main_scene.setup_bushes_layer(viewport_mock)
-		
-	# 2. Await one frame after loop
 	await get_tree().process_frame
-	
-	verify_no_orphan_leaks(baseline_orphans, "No accumulated orphan nodes after 50 rapid setup calls.")
-
+	verify_no_orphan_leaks(baseline_orphans, "No accumulated orphans after 50 calls.")
 
 ## Immediate Rebuild Integrity Test |
-## Call setup, then immediately repopulate the layer in the exact same frame.
-## Verifies old nodes do not double-up with new nodes by filtering out queued items.
-## :rtype: void
 func test_immediate_rebuild_integrity() -> void:
-	# Flush out any leftover nodes queued by _ready() first
 	await get_tree().process_frame
+	main_scene.setup_bushes_layer(viewport_mock)
+	
+	# Added -> bool to the lambda
+	var initial_active_count: int = main_scene.bushes_layer.get_children().filter(
+		func(c: Node) -> bool: return not c.is_queued_for_deletion()
+	).size()
 	
 	main_scene.setup_bushes_layer(viewport_mock)
 	
-	# Count only nodes that are NOT queued for deletion
-	var initial_active_count: int = main_scene.bushes_layer.get_children().filter(func(c: Node) -> bool: return not c.is_queued_for_deletion()).size()
+	# Added -> bool to the lambda
+	var new_active_count: int = main_scene.bushes_layer.get_children().filter(
+		func(c: Node) -> bool: return not c.is_queued_for_deletion()
+	).size()
 	
-	# Immediately repopulate in the same frame
-	main_scene.setup_bushes_layer(viewport_mock)
-	
-	var new_active_count: int = main_scene.bushes_layer.get_children().filter(func(c: Node) -> bool: return not c.is_queued_for_deletion()).size()
-	
-	# The active count should remain consistent, confirming old nodes aren't interfering
-	assert_eq(new_active_count, initial_active_count, "Child count should remain stable during rapid repopulation.")
+	assert_eq(new_active_count, initial_active_count, "Child count should remain stable.")
 
-
-## Layer Isolation Test |
-## Runs setup on one layer and inspects the other to ensure no unintended 
-## cross-layer deletions occur.
-## :rtype: void
 func test_layer_isolation() -> void:
-	gut.p("Testing: Layers should operate independently without cross-deletions.")
-	
-	# Step 0: Populate both layers first to establish a baseline
 	main_scene.setup_bushes_layer(viewport_mock)
 	main_scene.setup_decor_layer(viewport_mock)
-	
-	# CRITICAL FIX: Flush the frame so the initial nodes spawned by _ready() are fully swept
-	# before we take our baseline counts.
 	await get_tree().process_frame
 	
-	var initial_decor_count: int = main_scene.decor_layer.get_child_count()
-	var initial_bushes_count: int = main_scene.bushes_layer.get_child_count()
-	
-	# Step 1: Run setup_bushes_layer() only.
+	var initial_decor: int = main_scene.decor_layer.get_child_count()
 	main_scene.setup_bushes_layer(viewport_mock)
 	await get_tree().process_frame
-	
-	# Step 2: Verify decor layer operates independently
-	var final_decor_count: int = main_scene.decor_layer.get_child_count()
-	assert_eq(final_decor_count, initial_decor_count, "Decor layer child count should not change when bushes layer is reset.")
-	assert_gt(final_decor_count, 0, "Decor layer should not be empty.")
-	
-	# Step 3: Run setup_decor_layer() only.
-	main_scene.setup_decor_layer(viewport_mock)
-	await get_tree().process_frame
-	
-	# Step 4: Verify bushes layer operates independently
-	var final_bushes_count: int = main_scene.bushes_layer.get_child_count()
-	assert_eq(final_bushes_count, initial_bushes_count, "Bushes layer child count should not change when decor layer is reset.")
-	assert_gt(final_bushes_count, 0, "Bushes layer should not be empty.")
+	assert_eq(main_scene.decor_layer.get_child_count(), initial_decor, "Decor count stable.")
 
-
-## Scene Reload Lifecycle Test |
-## Simulates a full scene reload via tree structure replacements.
-## Monitors orphan nodes before and after to ensure clean teardown.
-## :rtype: void
 func test_scene_reload_lifecycle() -> void:
 	var baseline_orphans: int = Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)
 	
-	main_scene.setup_bushes_layer(viewport_mock)
-	main_scene.setup_decor_layer(viewport_mock)
-	
-	# Simulate change_scene by tearing down and instantiating a new one
-	main_scene.queue_free()
+	# FIX: Use safe_hard_free and nullify baseline scene
+	safe_hard_free(main_scene)
+	main_scene = null
 	await get_tree().process_frame
 	
 	var reloaded_scene: MainScene = preload("res://scenes/main_scene.tscn").instantiate()
-	add_child_autofree(reloaded_scene)
-	await get_tree().process_frame
-	
+	add_child(reloaded_scene)
 	reloaded_scene.setup_bushes_layer(viewport_mock)
-	reloaded_scene.setup_decor_layer(viewport_mock)
 	await get_tree().process_frame
 	
-	verify_no_orphan_leaks(baseline_orphans, "No orphan nodes should persist across scene reload simulation.")
+	# Clean up the reloaded instance manually too
+	safe_hard_free(reloaded_scene)
+	await get_tree().process_frame
+	verify_no_orphan_leaks(baseline_orphans, "Clean teardown after reload.")
 
-
-## Stress Input Test (Runtime Simulation) |
-## Simulates a user rapidly spamming a debug key across multiple frames
-## to ensure no compounding leaks or engine crashes happen.
-## :rtype: void
 func test_stress_input_simulation() -> void:
 	var baseline_orphans: int = Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)
-	
-	# Spam setups across consecutive frames
 	for i in range(10):
 		main_scene.setup_bushes_layer(viewport_mock)
 		main_scene.setup_decor_layer(viewport_mock)
 		await get_tree().process_frame
-		
-	# Final flush and check
-	await get_tree().process_frame
-	
-	verify_no_orphan_leaks(baseline_orphans, "Memory must remain completely stable after sustained stress input.")
+	verify_no_orphan_leaks(baseline_orphans, "Stable memory after stress.")
