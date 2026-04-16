@@ -20,14 +20,11 @@ func before_each() -> void:
 func after_each() -> void:
 	Globals.settings = original_settings
 	
-	# CRITICAL FIX: Use a hard free() instead of queue_free() or GUT's autofree.
+	# Use a hard free() instead of queue_free().
 	# This instantly incinerates the scene, ensuring 0 lingering orphan nodes 
-	# are left behind to pollute subsequent tests.
+	# without needing to artificially pad the test time with frame flushes.
 	if is_instance_valid(main_scene):
 		main_scene.free()
-		
-	# Flush the frame just to be absolutely certain the tree is stable for the next test
-	await get_tree().process_frame
 
 ## test_exit_tree_disconnects_signals |
 ## Lifecycle | Verify clean signal severing without breaking the SceneTree
@@ -50,8 +47,6 @@ func test_exit_tree_disconnects_signals() -> void:
 	)
 	
 	# 2. CRITICAL FIX: Manually trigger the lifecycle function instead of using remove_child().
-	# remove_child() instantly orphans the node and triggers cascading tree updates
-	# that cause false-positive memory leaks during testing.
 	player_root._exit_tree()
 	
 	# 3. Assert the signals were cleanly severed
@@ -63,6 +58,11 @@ func test_exit_tree_disconnects_signals() -> void:
 		Globals.settings.fuel_depleted.is_connected(player_root._on_player_out_of_fuel), 
 		"fuel_depleted must be completely disconnected after _exit_tree is called."
 	)
+	
+	# 4. CRITICAL FIX: Flush the frame before GUT checks for orphans.
+	# This allows the queue_free() calls triggered during MainScene._ready() 
+	# to finish sweeping the detached parallax sprites.
+	await get_tree().process_frame
 
 ## test_exit_tree_safe_without_globals |
 ## Safety | Verify no crashes on early exit
