@@ -198,8 +198,8 @@ func setup_decor_layer(viewport: Vector2) -> void:
 		decor.scale = Vector2(scale_factor, scale_factor)
 
 		# SCALING TRICK 2: Randomly mirror the sprite horizontally and/or vertically
-		decor.flip_h = [true, false].pick_random()
-		decor.flip_v = [true, false].pick_random()
+		decor.flip_h = randf() < 0.5
+		decor.flip_v = randf() < 0.5
 
 		# Apply random cardinal rotation to ALL decor sprites
 		var random_degrees: float = allowed_rotations.pick_random()
