@@ -1,4 +1,4 @@
-## Copyright (C) 2025 Egor Kostan
+## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
 ## main_scene.gd
 ## Main scene script for SkyLockAssault.
@@ -51,6 +51,12 @@ func _ready() -> void:
 
 	# Setup decor layer with random instances
 	setup_decor_layer(viewport_size)
+
+	# Wire up the signal architecture for the parallax background
+	if player.has_signal("speed_changed") and background.has_method("_on_player_speed_changed"):
+		player.speed_changed.connect(background._on_player_speed_changed)
+		# Prime the background with the player's initial starting speed
+		background._on_player_speed_changed(player.speed["speed"], 0.0)
 
 
 # 2. Detect when player presses a key/button that has NO binding at all
@@ -227,12 +233,12 @@ func _process(delta: float) -> void:
 		return
 
 	# Use the safe local reference for difficulty
-	var scroll_speed: float = player.speed["speed"] * delta * settings_res.difficulty * 0.8
-	background.scroll_offset.y += scroll_speed
+	# var scroll_speed: float = player.speed["speed"] * delta * settings_res.difficulty * 0.8
+	# background.scroll_offset.y += scroll_speed
 
 	# Use the safe local reference for current_fuel
-	if settings_res.current_fuel <= 0:
-		background.scroll_offset = Vector2(0, 0)
+	# if settings_res.current_fuel <= 0:
+	#	background.scroll_offset = Vector2(0, 0)
 
 	# 1. Critical unbound controls warning (shown ONCE per session)
 	# Flag stays true until player fixes bindings (e.g., in key_mapping.gd after remap).
