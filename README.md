@@ -192,7 +192,10 @@ these GPL requirements, a separate license is available upon request.
   the resource.
 - Real-time UI Synchronization: UI components dynamically observe the settings resource,
   ensuring that any external changes are immediately reflected in the menus.
-
+- UI navigation sounds integrated with a dedicated Menu SFX bus.
+- Hardened JavaScript bridge (`AudioWebBridge` and gameplay settings bridge)
+  to ensure robust communication between the Godot engine and the web browser
+  environment.
 
 ### Features Roadmap
 
@@ -233,6 +236,12 @@ these GPL requirements, a separate license is available upon request.
     - Refined conflict handling in key remapping logic and focus restoration
       from audio → main menu.
     - CI/tooling version bumps and asset import config additions.
+  - Documented the observer-based settings system and pinned CI actions for
+    pipeline stability (PR #488).
+  - Hardened the gameplay settings JavaScript bridge and added comprehensive GUT
+    test coverage (PR #500).
+  - Integrated UI navigation sounds, a dedicated Menu SFX bus, and the
+    `AudioWebBridge` (PR #479).
 
 ---
 
@@ -259,6 +268,9 @@ to user input devices:
 - Use keyboard/gamepad accept action for sliders and toggles
 - Focus highlighting for better visual feedback
 - Unified UI interactions without relying on the mouse
+- Modular audio system with dedicated buses (including a specific
+  Menu SFX bus) and an `AudioWebBridge` for seamless web environment
+  synchronization.
 
 ### Godot Resource Migration
 - Replaced hard-coded globals with a `GameSettingsResource`
@@ -313,6 +325,7 @@ Sky Lock Assault uses **GUT (Godot Unit Test)** framework for automated testing.
 - Settings Observer Tests: Dedicated GUT test suite validates signal emission, value
   clamping (e.g., difficulty limits), and successful serialization to the user's
   disk.
+- JavaScript bridge communication and web integration reliability
 
 Run tests locally:
 

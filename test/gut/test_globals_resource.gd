@@ -69,7 +69,7 @@ func test_scene_resource_validity() -> void:
 
 func test_remap_prompt_strings() -> void:
 	gut.p("Testing: Remap prompt strings are correctly retrieved from Resource.")
-	# Verifies migration of hard-coded constants [cite: 3]
+	# Verifies migration of hard-coded constants
 	assert_eq(Globals.settings.remap_prompt_keyboard, "Press a key...", "Keyboard prompt mismatch")
 	assert_string_contains(Globals.settings.remap_prompt_gamepad, "gamepad", "Gamepad prompt should mention device")
 

@@ -9,6 +9,9 @@ extends Node2D
 
 enum MessageType { CRITICAL_UNBOUND, KEY_PRESS_UNBOUND }
 
+# At the top of main_scene.gd
+@export var parallax_screens_tall: float = 8.0
+
 var _showing_unbound_warning: bool = false
 var _showing_unbound_key_message: bool = false
 
@@ -28,6 +31,17 @@ func _ready() -> void:
 	player.position = Vector2(viewport_size.x / 2, viewport_size.y / 1.2)
 	stats_panel.visible = true
 	Globals.log_message("Initializing main scene...", Globals.LogLevel.DEBUG)
+
+	# =========================================================
+	# THIS IS THE MISSING LINK THAT WAKES UP YOUR HUD!
+	# It passes the Player directly to the HUD script so the bars work.
+	# =========================================================
+	if stats_panel.has_method("setup_hud"):
+		stats_panel.setup_hud(player)
+	else:
+		push_error(
+			"HUD Script is missing! Make sure 'hud.gd' is attached to the 'PlayerStatsPanel' node."
+		)
 
 	# Setup ground layer with tiling
 	setup_parallax_layer($Background/Sand/Sprite2D, viewport_size, 2.0)  # Sand layer
@@ -104,22 +118,25 @@ func setup_bushes_layer(viewport: Vector2) -> void:
 	if not bushes_layer:
 		return
 
-	# Clear existing children
+	# Clear existing children (Safely detach first, then instantly destroy)
 	for child in bushes_layer.get_children():
 		bushes_layer.remove_child(child)
-		child.queue_free()
+		child.free()
 
 	# Get bush IDs from preloader (Array[String])
 	var bush_ids: Array = Array(texture_preloader.get_resource_list()).filter(
 		func(id: String) -> bool: return id.begins_with("bush_")
 	)
-	print("Loaded ", bush_ids.size(), " bush textures")
 
 	if bush_ids.is_empty():
 		return
 
-	var num_bushes: int = bush_ids.size()
-	var layer_height: float = viewport.y * 4
+	# THE GOLDILOCKS ZONE:
+	# 8 screens is the sweet spot for infinite illusion vs CPU overhead
+	var layer_height: float = viewport.y * parallax_screens_tall
+
+	# Drop density multiplier to match
+	var num_bushes: int = bush_ids.size() * 2
 
 	for i in range(num_bushes):
 		var bush: Sprite2D = Sprite2D.new()
@@ -140,29 +157,35 @@ func setup_bushes_layer(viewport: Vector2) -> void:
 	bushes_layer.motion_mirroring = Vector2(0, layer_height)
 
 
-## Sets up the decor layer with random X positions, sizes, and textures.
+## Sets up the decor layer with random X positions, sizes, textures, rotations, and flips.
 ## @param viewport: Vector2 - The viewport size.
 ## @return: void
 func setup_decor_layer(viewport: Vector2) -> void:
 	if not decor_layer:
 		return
 
-	# Clear existing children
+	# Clear existing children (Safely detach first, then instantly destroy)
 	for child in decor_layer.get_children():
 		decor_layer.remove_child(child)
-		child.queue_free()
+		child.free()
 
 	# Get decor IDs from preloader (Array[String])
 	var decor_ids: Array = Array(texture_preloader.get_resource_list()).filter(
 		func(id: String) -> bool: return id.begins_with("decor_")
 	)
-	print("Loaded ", decor_ids.size(), " decor textures")
 
 	if decor_ids.is_empty():
 		return
 
-	var num_decors: int = decor_ids.size()
-	var layer_height: float = viewport.y * 4
+	# THE GOLDILOCKS ZONE:
+	# Match the bushes layer height
+	var layer_height: float = viewport.y * parallax_screens_tall
+
+	# Drop density multiplier to match
+	var num_decors: int = decor_ids.size() * 2
+
+	# Define strict rotation angles (0, 90, 180, -90 degrees)
+	var allowed_rotations: Array[float] = [0.0, 90.0, 180.0, -90.0]
 
 	for i in range(num_decors):
 		var decor: Sprite2D = Sprite2D.new()
@@ -171,8 +194,17 @@ func setup_decor_layer(viewport: Vector2) -> void:
 		decor.texture = texture_preloader.get_resource(id)
 		decor.centered = false
 
-		var scale_factor: float = randf_range(0.5, 1.0)
+		# SCALING TRICK 1: Wider scale range (0.5 to 1.5) for more size variance
+		var scale_factor: float = randf_range(0.5, 1.5)
 		decor.scale = Vector2(scale_factor, scale_factor)
+
+		# SCALING TRICK 2: Randomly mirror the sprite horizontally and/or vertically
+		decor.flip_h = randf() < 0.5
+		decor.flip_v = randf() < 0.5
+
+		# Apply random cardinal rotation to ALL decor sprites
+		var random_degrees: float = allowed_rotations.pick_random()
+		decor.rotation = deg_to_rad(random_degrees)
 
 		decor.position.x = randf_range(0, viewport.x - (decor.texture.get_width() * scale_factor))
 		decor.position.y = randf_range(
@@ -186,9 +218,20 @@ func setup_decor_layer(viewport: Vector2) -> void:
 
 
 func _process(delta: float) -> void:
-	var scroll_speed: float = player.speed["speed"] * delta * Globals.settings.difficulty * 0.8
+	# NEW: Safely grab the settings resource and guard against null crashes
+	# during scene transitions, engine shutdown, or isolated GUT tests.
+	var settings_res: GameSettingsResource = (
+		Globals.settings if is_instance_valid(Globals) else null
+	)
+	if not is_instance_valid(settings_res):
+		return
+
+	# Use the safe local reference for difficulty
+	var scroll_speed: float = player.speed["speed"] * delta * settings_res.difficulty * 0.8
 	background.scroll_offset.y += scroll_speed
-	if player.fuel["fuel"] <= 0:
+
+	# Use the safe local reference for current_fuel
+	if settings_res.current_fuel <= 0:
 		background.scroll_offset = Vector2(0, 0)
 
 	# 1. Critical unbound controls warning (shown ONCE per session)
@@ -225,10 +268,6 @@ func show_message(text: String, type: MessageType = MessageType.CRITICAL_UNBOUND
 	match type:
 		MessageType.KEY_PRESS_UNBOUND:
 			_showing_unbound_key_message = false
-		# CRITICAL_UNBOUND: Do NOT reset here (once-per-session intent)
-		# Reset only when bindings are fixed
-		# (e.g., in key_mapping.gd _on_conflict_confirmed or reset)
-		# _showing_unbound_warning = false  # ← commented out
 
 
 ## Public: Clears the unbound warning flag after fixes.
