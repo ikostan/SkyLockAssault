@@ -223,7 +223,7 @@ func setup_decor_layer(viewport: Vector2) -> void:
 	decor_layer.motion_mirroring = Vector2(0, layer_height)
 
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	# NEW: Safely grab the settings resource and guard against null crashes
 	# during scene transitions, engine shutdown, or isolated GUT tests.
 	var settings_res: GameSettingsResource = (
@@ -231,14 +231,6 @@ func _process(delta: float) -> void:
 	)
 	if not is_instance_valid(settings_res):
 		return
-
-	# Use the safe local reference for difficulty
-	# var scroll_speed: float = player.speed["speed"] * delta * settings_res.difficulty * 0.8
-	# background.scroll_offset.y += scroll_speed
-
-	# Use the safe local reference for current_fuel
-	# if settings_res.current_fuel <= 0:
-	#	background.scroll_offset = Vector2(0, 0)
 
 	# 1. Critical unbound controls warning (shown ONCE per session)
 	# Flag stays true until player fixes bindings (e.g., in key_mapping.gd after remap).
