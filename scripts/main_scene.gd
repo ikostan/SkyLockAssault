@@ -67,8 +67,10 @@ func _ready() -> void:
 	elif not background.has_method("_on_player_speed_changed"):
 		push_warning(
 			(
-				"Parallax background not wired: background is missing `_on_player_speed_changed` method. "
-				+ "Ensure the background script implements `_on_player_speed_changed(speed: float, delta: float)`."
+				"Parallax background not wired: background is missing"
+				+ " `_on_player_speed_changed` method. "
+				+ "Ensure the background script implements "
+				+ " `_on_player_speed_changed(speed: float, delta: float)`."
 			)
 		)
 
