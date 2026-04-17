@@ -58,11 +58,19 @@ func _ready() -> void:
 		# Prime the background with the player's initial starting speed
 		background._on_player_speed_changed(player.speed["speed"], 0.0)
 	elif not player.has_signal("speed_changed"):
-		push_warning("Parallax background not wired: player is missing the `speed_changed` signal. "
-			+ "Verify that the Player node defines and emits `speed_changed`.")
+		push_warning(
+			(
+				"Parallax background not wired: player is missing the `speed_changed` signal. "
+				+ "Verify that the Player node defines and emits `speed_changed`."
+			)
+		)
 	elif not background.has_method("_on_player_speed_changed"):
-		push_warning("Parallax background not wired: background is missing `_on_player_speed_changed` method. "
-			+ "Ensure the background script implements `_on_player_speed_changed(speed: float, delta: float)`.")
+		push_warning(
+			(
+				"Parallax background not wired: background is missing `_on_player_speed_changed` method. "
+				+ "Ensure the background script implements `_on_player_speed_changed(speed: float, delta: float)`."
+			)
+		)
 
 
 # 2. Detect when player presses a key/button that has NO binding at all
