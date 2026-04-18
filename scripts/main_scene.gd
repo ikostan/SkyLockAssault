@@ -70,13 +70,15 @@ func _ready() -> void:
 
 	# Wire up the signal architecture for the parallax background
 	if player.has_signal("speed_changed") and background.has_method("_on_player_speed_changed"):
-		player.speed_changed.connect(background._on_player_speed_changed)
+		# 1. Guard against duplicate connections
+		if not player.speed_changed.is_connected(background._on_player_speed_changed):
+			player.speed_changed.connect(background._on_player_speed_changed)
 
-		# Prime the background with the player's initial starting speed and actual max speed
-		var initial_max_speed: float = (
-			settings_res.max_speed if is_instance_valid(settings_res) else 800.0
-		)
-		background._on_player_speed_changed(player.speed["speed"], initial_max_speed)
+		# 2. Prime the background securely via a public method
+		if background.has_method("prime_speed"):
+			background.prime_speed(player.speed["speed"])
+		else:
+			push_warning("Parallax background is missing the `prime_speed` method.")
 
 	elif not player.has_signal("speed_changed"):
 		push_warning(
