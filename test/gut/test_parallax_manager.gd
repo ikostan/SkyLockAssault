@@ -19,6 +19,9 @@ func before_each() -> void:
 	
 	_parallax_manager = ParallaxManager.new()
 	add_child_autofree(_parallax_manager)
+	
+	# NEW: Inject the test settings into the manager
+	_parallax_manager.setup(Globals.settings)
 
 
 ## Post-test cleanup: Restores global state to prevent test leakage.

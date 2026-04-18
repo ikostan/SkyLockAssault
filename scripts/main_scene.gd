@@ -53,6 +53,20 @@ func _ready() -> void:
 	setup_decor_layer(viewport_size)
 
 	# Wire up the signal architecture for the parallax background
+# =========================================================
+	# DEPENDENCY INJECTION: Parallax Background
+	# =========================================================
+	if background.has_method("setup"):
+		var settings_res: GameSettingsResource = (
+			Globals.settings if is_instance_valid(Globals) else null
+		)
+		background.setup(settings_res)
+	else:
+		push_warning(
+			"Parallax background is missing the `setup` method. Settings injection failed."
+		)
+
+	# Wire up the signal architecture for the parallax background
 	if player.has_signal("speed_changed") and background.has_method("_on_player_speed_changed"):
 		player.speed_changed.connect(background._on_player_speed_changed)
 		# Prime the background with the player's initial starting speed
