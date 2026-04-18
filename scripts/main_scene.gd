@@ -57,9 +57,9 @@ func _ready() -> void:
 	# =========================================================
 	# Wire up the signal architecture for the parallax background
 	# Safely extract settings once to use for both injection and priming
-	var settings_res: GameSettingsResource = (
-		Globals.settings if is_instance_valid(Globals) else null
-	)
+	# Note: Because background.setup(settings_res) already has its own internal
+	# if not is_instance_valid(settings): return check, this is perfectly safe
+	var settings_res: GameSettingsResource = Globals.settings
 
 	if background.has_method("setup"):
 		background.setup(settings_res)
@@ -263,11 +263,10 @@ func setup_decor_layer(viewport: Vector2) -> void:
 
 
 func _process(_delta: float) -> void:
-	# NEW: Safely grab the settings resource and guard against null crashes
+	# Safely grab the settings resource and guard against null crashes
 	# during scene transitions, engine shutdown, or isolated GUT tests.
-	var settings_res: GameSettingsResource = (
-		Globals.settings if is_instance_valid(Globals) else null
-	)
+	var settings_res: GameSettingsResource = Globals.settings
+	
 	if not is_instance_valid(settings_res):
 		return
 
