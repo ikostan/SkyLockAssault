@@ -52,14 +52,16 @@ func _ready() -> void:
 	# Setup decor layer with random instances
 	setup_decor_layer(viewport_size)
 
-	# Wire up the signal architecture for the parallax background
-# =========================================================
+	# =========================================================
 	# DEPENDENCY INJECTION: Parallax Background
 	# =========================================================
+	# Wire up the signal architecture for the parallax background
+	# Safely extract settings once to use for both injection and priming
+	var settings_res: GameSettingsResource = (
+		Globals.settings if is_instance_valid(Globals) else null
+	)
+
 	if background.has_method("setup"):
-		var settings_res: GameSettingsResource = (
-			Globals.settings if is_instance_valid(Globals) else null
-		)
 		background.setup(settings_res)
 	else:
 		push_warning(
@@ -69,8 +71,13 @@ func _ready() -> void:
 	# Wire up the signal architecture for the parallax background
 	if player.has_signal("speed_changed") and background.has_method("_on_player_speed_changed"):
 		player.speed_changed.connect(background._on_player_speed_changed)
-		# Prime the background with the player's initial starting speed
-		background._on_player_speed_changed(player.speed["speed"], 0.0)
+
+		# Prime the background with the player's initial starting speed and actual max speed
+		var initial_max_speed: float = (
+			settings_res.max_speed if is_instance_valid(settings_res) else 800.0
+		)
+		background._on_player_speed_changed(player.speed["speed"], initial_max_speed)
+
 	elif not player.has_signal("speed_changed"):
 		push_warning(
 			(
