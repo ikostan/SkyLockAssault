@@ -16,6 +16,7 @@ func before_each() -> void:
 	_original_settings = Globals.settings
 	Globals.settings = GameSettingsResource.new()
 	Globals.settings.difficulty = 1.0
+	Globals.settings.current_fuel = 100.0  # Ensure scroll is not gated by flameout reset
 	
 	_parallax_manager = ParallaxManager.new()
 	add_child_autofree(_parallax_manager)
@@ -97,6 +98,21 @@ func test_zero_speed_stops_scroll() -> void:
 		_parallax_manager.scroll_offset.y, 
 		initial_offset, 
 		"Scroll offset must remain completely unchanged when speed is zero."
+	)
+
+
+## test_flameout_resets_offset | State Management
+## :rtype: void
+func test_flameout_resets_offset() -> void:
+	gut.p("Testing: current_fuel <= 0 resets scroll_offset to Vector2.ZERO.")
+	Globals.settings.current_fuel = 0.0
+	_parallax_manager._current_speed = 100.0
+	_parallax_manager.scroll_offset = Vector2(42.0, 125.5)
+	_parallax_manager._process(0.5)
+	assert_eq(
+		_parallax_manager.scroll_offset,
+		Vector2.ZERO,
+		"Offset must reset to ZERO when fuel is depleted."
 	)
 
 
