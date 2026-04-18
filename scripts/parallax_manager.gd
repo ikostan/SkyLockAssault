@@ -21,13 +21,20 @@ func _on_player_speed_changed(new_speed: float, _max_speed: float) -> void:
 
 ## Called every physics/rendering frame. Updates the vertical scroll offset
 ## based on the cached player speed and current game difficulty.
+## Explicitly resets the scroll offset to zero if the player runs out of fuel.
 ## @param delta: float - The elapsed time since the previous frame.
 ## @return: void
 func _process(delta: float) -> void:
 	var difficulty: float = 1.0
+	var current_fuel: float = 1.0  # Default to > 0 to prevent accidental resets if Globals is null
 
 	if is_instance_valid(Globals) and is_instance_valid(Globals.settings):
 		difficulty = Globals.settings.difficulty
+		current_fuel = Globals.settings.current_fuel
 
-	var scroll_amount: float = _current_speed * delta * difficulty * 0.8
-	scroll_offset.y += scroll_amount
+	# Enforce the legacy behavior: reset offset immediately on flameout
+	if current_fuel <= 0.0:
+		scroll_offset = Vector2.ZERO
+	else:
+		var scroll_amount: float = _current_speed * delta * difficulty * 0.8
+		scroll_offset.y += scroll_amount
