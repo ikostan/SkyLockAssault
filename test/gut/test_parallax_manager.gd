@@ -20,6 +20,7 @@ func before_each() -> void:
 	
 	_parallax_manager = ParallaxManager.new()
 	add_child_autofree(_parallax_manager)
+	_parallax_manager.set_process(false)  # Only run _process explicitly from tests
 	
 	# NEW: Inject the test settings into the manager
 	_parallax_manager.setup(Globals.settings)
