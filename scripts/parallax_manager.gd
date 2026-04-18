@@ -29,6 +29,14 @@ func setup(settings: GameSettingsResource) -> void:
 		settings.fuel_depleted.connect(_on_fuel_depleted)
 
 
+## Public method to prime the background's initial speed.
+## Keeps private signal handlers properly encapsulated.
+## @param initial_speed: float - The starting forward speed.
+## @return: void
+func prime_speed(initial_speed: float) -> void:
+	_current_speed = initial_speed
+
+
 ## Observer callback triggered when the player's speed changes.
 ## @param new_speed: float - The new forward speed of the player.
 ## @param _max_speed: float - The maximum speed threshold (unused).
