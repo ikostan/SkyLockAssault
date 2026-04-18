@@ -266,7 +266,7 @@ func _process(_delta: float) -> void:
 	# Safely grab the settings resource and guard against null crashes
 	# during scene transitions, engine shutdown, or isolated GUT tests.
 	var settings_res: GameSettingsResource = Globals.settings
-	
+
 	if not is_instance_valid(settings_res):
 		return
 
