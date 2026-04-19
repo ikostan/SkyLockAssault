@@ -16,7 +16,7 @@ var test_path: String = "user://test_audio.cfg"  # Temp for isolation
 ## Per-test setup: Instantiate manager and init defaults.
 ## :rtype: void
 func before_test() -> void:
-	manager = auto_free(load("res://scripts/audio_manager.gd").new())
+	manager = auto_free(load("res://scripts/managers/audio_manager.gd").new())
 	manager._init_to_defaults()  # Manually set defaults (since _ready() not called in isolation)
 
 
