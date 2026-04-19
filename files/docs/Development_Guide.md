@@ -98,7 +98,7 @@ When adding a new setting:
 4. No Manual Saves: Do not call save functions directly from the UI; changing the
    resource value is sufficient to trigger a save.
 
-#### The technical documentation for the "Working with Game Settings" section.
+#### The technical documentation for the "Working with Game Settings" section
 
 This documentation explicitly defines the signal signature and the specific
 files responsible for the **Observer Pattern** architecture.
@@ -112,10 +112,10 @@ and a centralized observer handles persistence and logging.
 When connecting a UI element or a new system to the settings resource,
 use the following signature:
 
-* **Signal Name**: `setting_changed`
-* **Parameters**:
-  * `setting_name`: **String** (The name of the property that changed, e.g., "difficulty") 
-  * `new_value`: **Variant** (The newly assigned, clamped value) 
+- **Signal Name**: `setting_changed`
+- **Parameters**:
+  - `setting_name`: **String** (The name of the property that changed, e.g., "difficulty")
+  - `new_value`: **Variant** (The newly assigned, clamped value)
 
 #### 2. Core Files Reference
 

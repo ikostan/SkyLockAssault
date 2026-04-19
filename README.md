@@ -124,6 +124,7 @@ source code to users. For closed-source commercial alternatives without
 these GPL requirements, a separate license is available upon request.
 
 ### Key Terms
+
 - **Open Source**: You can view, modify, and distribute the code freely,
   as long as derivatives remain under GPLv3.
 - **Commercial Use**: Allowed under GPLv3 (with source code obligations
@@ -253,18 +254,21 @@ Milestone 12 focused on making the game more navigable and responsive
 to user input devices:
 
 ### Input Remapping
+
 - Conflict detection dialog when assigning existing bindings
 - Per-device last input selection persists between sessions
 - Critical control warnings if actions are unbound
 - Remap menu accessible from all relevant UI paths
 
 ### Menu Navigation
+
 - Keyboard + gamepad (D-Pad) support for all menu flows
 - Guaranteed core navigation actions remain bound
 - Focus restoration when leaving submenus (Audio → Options → Main)
 - Modifier key respect (Ctrl/Shift/Alt/Meta) in remapping UI
 
 ### Audio Settings Controls
+
 - Use keyboard/gamepad accept action for sliders and toggles
 - Focus highlighting for better visual feedback
 - Unified UI interactions without relying on the mouse
@@ -273,17 +277,17 @@ to user input devices:
   synchronization.
 
 ### Godot Resource Migration
+
 - Replaced hard-coded globals with a `GameSettingsResource`
 - Easier inspector-based editing and persistence
 - Safer loading with fallback on corrupted configs
 
 ### Known Limitations
 
-* Some complex menu flows may still rely on the mouse until additional
+- Some complex menu flows may still rely on the mouse until additional
   focus neighbors are defined.
-* Modifier-aware remapping requires explicit key+modifier press for
+- Modifier-aware remapping requires explicit key+modifier press for
   unique bindings.
-
 
 Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milestones).
 
