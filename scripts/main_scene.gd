@@ -58,8 +58,14 @@ func _ready() -> void:
 	# Safely extract settings once to use for both injection and priming.
 	# The is_instance_valid(Globals) guard prevents hard crashes during
 	# isolated GUT tests where Autoloads may not be fully initialized.
+	# Also guard against a null or freed Globals.settings so background.setup
+	# only ever receives a valid GameSettingsResource or null.
 	var settings_res: GameSettingsResource = (
-		Globals.settings if is_instance_valid(Globals) else null
+		Globals.settings
+		if is_instance_valid(Globals)
+		and Globals.settings != null
+		and is_instance_valid(Globals.settings)
+		else null
 	)
 
 	if background.has_method("setup"):
