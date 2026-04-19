@@ -47,3 +47,4 @@ artifacts/main_menu.png
 v8_coverage_*.json
 tests/refactor/__pycache__/
 report.html
+scan_project.py
