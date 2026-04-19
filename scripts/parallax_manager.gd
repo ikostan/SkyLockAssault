@@ -75,7 +75,8 @@ func _on_fuel_depleted() -> void:
 
 
 ## Called every physics/rendering frame.
-## Updates scroll offset based entirely on cached local variables and wraps to preserve float precision.
+## Updates scroll offset based entirely on cached local variables
+## and wraps to preserve float precision.
 ## @param delta: float - The elapsed time since the previous frame.
 ## @return: void
 func _process(delta: float) -> void:
