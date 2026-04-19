@@ -117,6 +117,47 @@ func test_flameout_resets_offset() -> void:
 	)
 
 
+## test_flameout_recovery_resumes_scroll | State Management
+## Tests the exact recovery path of the ParallaxManager after a flameout event.
+## Verifies that pushing a positive fuel value via the global Observer pattern 
+## successfully flips the internal `_out_of_fuel` boolean back to false, allowing 
+## the `_process` loop to seamlessly resume parallax scrolling without needing a scene reload.
+## :rtype: void
+func test_flameout_recovery_resumes_scroll() -> void:
+	gut.p("Testing: Refueling after a flameout clears the _out_of_fuel state and resumes scrolling.")
+	
+	# 1. Setup initial speed and force the flameout state
+	_parallax_manager.prime_speed(100.0)
+	_parallax_manager._on_fuel_depleted() # Simulates the global fuel_depleted signal
+	
+	# Verify the background is hard-stopped (Baseline Assertion)
+	_parallax_manager._process(1.0)
+	assert_eq(
+		_parallax_manager.scroll_offset.y, 
+		0.0, 
+		"PRE-CONDITION: Scroll must be completely locked to ZERO during a flameout."
+	)
+	
+	# 2. Simulate Refueling via the Observer Pattern
+	# This mimics `main_scene.gd` or `player.gd` updating the global resource.
+	# It triggers the specific `elif` branch in `_on_setting_changed` to clear `_out_of_fuel`.
+	_parallax_manager._on_setting_changed("current_fuel", 50.0)
+	
+	# 3. Simulate the next physics frame post-refuel
+	_parallax_manager._process(1.0)
+	
+	# 4. Verify the math resumed correctly
+	# Expected math: speed(100.0) * delta(1.0) * diff(1.0) * multiplier(0.8) = 80.0
+	var expected_offset: float = 100.0 * 1.0 * 1.0 * 0.8
+	
+	assert_almost_eq(
+		_parallax_manager.scroll_offset.y, 
+		expected_offset, 
+		0.01, 
+		"POST-CONDITION: Scroll offset must resume incrementing seamlessly once fuel is restored."
+	)
+
+
 # ==========================================
 # SAFETY & EDGE CASE TESTS
 # ==========================================
