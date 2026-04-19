@@ -13,7 +13,7 @@ var test_path: String = "user://test_globals.cfg"  # Temp for isolation
 
 func before_test() -> void:
 	# Instantiate the script
-	globals = auto_free(load("res://scripts/globals.gd").new())
+	globals = auto_free(load("res://scripts/core/globals.gd").new())
 	
 	# FIX: Manually initialize the settings resource 
 	# because _ready() hasn't run yet.
