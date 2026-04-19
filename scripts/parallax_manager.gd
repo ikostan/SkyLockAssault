@@ -51,11 +51,12 @@ func set_wrap_period(period: float) -> void:
 	wrap_period = period
 
 
-## Observer callback triggered when the player's speed changes.
-## @param new_speed: float - The new forward speed of the player.
-## @param _max_speed: float - The maximum speed threshold (unused).
+## Public method to update the scrolling speed.
+## Designed to be safely connected to external speed_changed signals.
+## @param new_speed: float - The new forward speed.
+## @param _max_speed: float - The maximum speed threshold (unused, defaults to 0.0).
 ## @return: void
-func _on_player_speed_changed(new_speed: float, _max_speed: float) -> void:
+func update_speed(new_speed: float, _max_speed: float = 0.0) -> void:
 	_current_speed = new_speed
 
 

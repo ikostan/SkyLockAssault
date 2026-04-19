@@ -42,7 +42,7 @@ func test_speed_update_from_signal() -> void:
 	gut.p("Testing: ParallaxManager correctly caches speed from the player's signal.")
 	
 	# Simulate the Player broadcasting a new speed of 250.0
-	_parallax_manager._on_player_speed_changed(250.0, 500.0)
+	_parallax_manager.update_speed(250.0, 500.0)
 	
 	assert_eq(
 		_parallax_manager._current_speed, 

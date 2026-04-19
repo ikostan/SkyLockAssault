@@ -52,7 +52,7 @@ func _ready() -> void:
 	# Setup decor layer with random instances
 	setup_decor_layer(viewport_size)
 
-# =========================================================
+	# =========================================================
 	# DEPENDENCY INJECTION: Parallax Background
 	# =========================================================
 	# Safely extract settings once to use for both injection and priming.
@@ -70,10 +70,10 @@ func _ready() -> void:
 		)
 
 	# Wire up the signal architecture for the parallax background
-	if player.has_signal("speed_changed") and background.has_method("_on_player_speed_changed"):
+	if player.has_signal("speed_changed") and background.has_method("update_speed"):
 		# 1. Guard against duplicate connections
-		if not player.speed_changed.is_connected(background._on_player_speed_changed):
-			player.speed_changed.connect(background._on_player_speed_changed)
+		if not player.speed_changed.is_connected(background.update_speed):
+			player.speed_changed.connect(background.update_speed)
 
 		# 2. Prime the background securely via a public method
 		if background.has_method("prime_speed"):
@@ -88,13 +88,13 @@ func _ready() -> void:
 				+ "Verify that the Player node defines and emits `speed_changed`."
 			)
 		)
-	elif not background.has_method("_on_player_speed_changed"):
+	elif not background.has_method("update_speed"):
 		push_warning(
 			(
 				"Parallax background not wired: background is missing"
-				+ " `_on_player_speed_changed` method. "
+				+ " `update_speed` method. "
 				+ "Ensure the background script implements "
-				+ " `_on_player_speed_changed(speed: float, delta: float)`."
+				+ " `update_speed(speed: float, max_speed: float)`."
 			)
 		)
 	# =========================================================
