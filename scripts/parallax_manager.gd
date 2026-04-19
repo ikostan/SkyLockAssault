@@ -62,7 +62,17 @@ func auto_calculate_wrap_period() -> void:
 				if period > max_period:
 					max_period = period
 
-	wrap_period = max_period
+	# 1. Only overwrite the exported wrap_period if we successfully calculated a new one.
+	# This protects values set manually via the Godot Inspector.
+	if max_period > 0.0:
+		wrap_period = max_period
+	
+	# 2. Warn the developer if the background is scrolling forever with no safeguard
+	if wrap_period <= 0.0:
+		push_warning(
+			"ParallaxManager: No valid wrap limit calculated or set. " +
+			"Float precision degradation may occur during long sessions."
+		)
 
 
 ## Public method to update the scrolling speed.
