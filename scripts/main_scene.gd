@@ -100,17 +100,10 @@ func _ready() -> void:
 	# =========================================================
 	# FLOAT DEGRADATION SAFEGUARD
 	# =========================================================
-	# Calculate global wrap period based on the tallest layer to prevent float degradation.
-	# Formula: motion_mirroring.y / motion_scale.y
-	# Dynamically derived from the layer properties to prevent fragile magic numbers.
-	var bg_motion_scale: float = 0.5  # Safe fallback
-	if is_instance_valid(bushes_layer) and bushes_layer.motion_scale.y > 0.0:
-		bg_motion_scale = bushes_layer.motion_scale.y
-
-	var global_bushes_period: float = (viewport_size.y * parallax_screens_tall) / bg_motion_scale
-
-	if background.has_method("set_wrap_period"):
-		background.set_wrap_period(global_bushes_period)
+	# Delegate wrap period calculation entirely to the ParallaxManager.
+	# This preserves encapsulation so main_scene doesn't need to know layer specifics.
+	if background.has_method("auto_calculate_wrap_period"):
+		background.auto_calculate_wrap_period()
 
 
 # 2. Detect when player presses a key/button that has NO binding at all

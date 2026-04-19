@@ -44,11 +44,25 @@ func prime_speed(initial_speed: float) -> void:
 	_current_speed = initial_speed
 
 
-## Public method to dynamically set the wrap limit to prevent float precision loss.
-## @param period: float - The calculated period to wrap the offset around.
+## Public method to dynamically calculate the optimal wrap limit
+## based on the properties of its ParallaxLayer children.
+## Must be called after all layers have had their mirroring and scale set.
 ## @return: void
-func set_wrap_period(period: float) -> void:
-	wrap_period = period
+func auto_calculate_wrap_period() -> void:
+	var max_period: float = 0.0
+
+	# Iterate through all children to find the longest required wrap period
+	for child in get_children():
+		if child is ParallaxLayer:
+			var layer_scale: float = child.motion_scale.y
+			var layer_mirror: float = child.motion_mirroring.y
+
+			if layer_scale > 0.0 and layer_mirror > 0.0:
+				var period: float = layer_mirror / layer_scale
+				if period > max_period:
+					max_period = period
+
+	wrap_period = max_period
 
 
 ## Public method to update the scrolling speed.
