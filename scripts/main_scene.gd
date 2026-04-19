@@ -77,7 +77,7 @@ func _ready() -> void:
 
 		# 2. Prime the background securely via a public method
 		if background.has_method("prime_speed"):
-			background.prime_speed(player.speed["speed"])
+			background.prime_speed(player.current_speed)
 		else:
 			push_warning("Parallax background is missing the `prime_speed` method.")
 
