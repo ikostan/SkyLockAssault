@@ -52,13 +52,15 @@ func _ready() -> void:
 	# Setup decor layer with random instances
 	setup_decor_layer(viewport_size)
 
-	# =========================================================
+# =========================================================
 	# DEPENDENCY INJECTION: Parallax Background
 	# =========================================================
-	# Wire up the signal architecture for the parallax background
-	# Safely extract settings once to use for both injection and priming
-	# Note: Because background.setup(settings_res) already has its own internal
-	var settings_res: GameSettingsResource = Globals.settings
+	# Safely extract settings once to use for both injection and priming.
+	# The is_instance_valid(Globals) guard prevents hard crashes during
+	# isolated GUT tests where Autoloads may not be fully initialized.
+	var settings_res: GameSettingsResource = (
+		Globals.settings if is_instance_valid(Globals) else null
+	)
 
 	if background.has_method("setup"):
 		background.setup(settings_res)
