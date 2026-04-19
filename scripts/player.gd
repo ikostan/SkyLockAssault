@@ -27,7 +27,10 @@ var rotor_left_sfx: AudioStreamPlayer2D
 var rotor_right_sfx: AudioStreamPlayer2D
 
 # Local state container for physics
-var speed: Dictionary = {"speed": 250.0}
+# var speed: Dictionary = {"speed": 250.0}
+
+## The player's current forward speed.
+var current_speed: float = 250.0
 
 # Cache the global settings to avoid singleton lookups in hot paths
 var _settings: GameSettingsResource = null
@@ -136,20 +139,20 @@ func _set_speed(target_speed: float) -> void:
 	if not is_instance_valid(_settings):
 		return
 
-	var old_speed: float = speed["speed"]
+	var old_speed: float = current_speed
 
 	# Clamp current_speed based on fuel state
 	if _settings.current_fuel == 0:
-		speed["speed"] = clamp(target_speed, 0.0, _settings.max_speed)
+		current_speed = clamp(target_speed, 0.0, _settings.max_speed)
 	else:
-		speed["speed"] = clamp(target_speed, _settings.min_speed, _settings.max_speed)
+		current_speed = clamp(target_speed, _settings.min_speed, _settings.max_speed)
 
 	# Emit signals if speed actually changed
-	if old_speed != speed["speed"]:
-		speed_changed.emit(speed["speed"], _settings.max_speed)
+	if old_speed != current_speed:
+		speed_changed.emit(current_speed, _settings.max_speed)
 
 		# Check for maximum speed limit
-		if speed["speed"] >= _settings.max_speed:
+		if current_speed >= _settings.max_speed:
 			speed_maxed.emit()
 
 		# Check for low speed warning
@@ -157,7 +160,7 @@ func _set_speed(target_speed: float) -> void:
 			_settings.min_speed
 			+ (_settings.max_speed - _settings.min_speed) * _settings.low_yellow_fraction
 		)
-		if speed["speed"] <= low_yellow_thresh:
+		if current_speed <= low_yellow_thresh:
 			speed_low.emit(low_yellow_thresh)
 
 
@@ -222,7 +225,7 @@ func _on_fuel_timer_timeout() -> void:
 	if not is_instance_valid(_settings):
 		return
 
-	var normalized_speed: float = clamp(speed["speed"] / _settings.max_speed, 0.0, 1.0)
+	var normalized_speed: float = clamp(current_speed / _settings.max_speed, 0.0, 1.0)
 	var consumption: float = (
 		_settings.base_consumption_rate * normalized_speed * _settings.difficulty
 	)
@@ -238,7 +241,7 @@ func _physics_process(_delta: float) -> void:
 	if not is_instance_valid(_settings):
 		return
 
-	var target_speed: float = speed["speed"]
+	var target_speed: float = current_speed
 
 	# Speed changes allowed only if fuel > 0
 	if Input.is_action_pressed("speed_up") and _settings.current_fuel > 0:
@@ -253,7 +256,7 @@ func _physics_process(_delta: float) -> void:
 	# Left/Right movement
 	var lateral_input: float = Input.get_axis("move_left", "move_right")
 
-	if lateral_input and _settings.current_fuel > 0 and speed["speed"] > 0:
+	if lateral_input and _settings.current_fuel > 0 and current_speed > 0:
 		player.velocity.x = lateral_input * _settings.lateral_speed
 	else:
 		player.velocity.x = 0.0
