@@ -50,6 +50,14 @@ godot --headless --path $PROJECT_DIR -s res://addons/gdUnit4/bin/GdUnitCmdTool.g
 check_exit "GDUnit4 Tests"
 
 # 5. GUT Unit Tests
+# Install GUT v9.5.0
+RUN mkdir -p /project/addons \
+    && wget https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip \
+    && unzip v9.5.0.zip -d /project/addons \
+    && mv /project/addons/Gut-9.5.0/addons/gut /project/addons/gut \
+    && rm -rf /project/addons/Gut-9.5.0 v9.5.0.zip \
+    && chown -R godotuser:godotuser /project
+
 echo "Running GUT Unit Tests..."
 godot --headless --verbose --path $PROJECT_DIR -s res://addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gdir=res://test -ginclude_subdirs=true -gexit
 check_exit "GUT Unit Tests"
