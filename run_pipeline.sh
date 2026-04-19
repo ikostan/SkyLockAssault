@@ -47,11 +47,17 @@ echo "Running GDUnit4 Tests..."
 godot --headless --path $PROJECT_DIR -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --verbose --ignoreHeadlessMode --add res://test
 check_exit "GDUnit4 Tests"
 
+# 5. GUT Unit Tests
+# Added from run_gut_unit_tests.sh
+echo "Running GUT Unit Tests..."
+godot --headless --verbose --path $PROJECT_DIR -s res://addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gdir=res://test -ginclude_subdirs=true -gexit
+check_exit "GUT Unit Tests"
+
 # Upload reports (simulate artifact upload by copying to a reports dir)
 mkdir -p $PROJECT_DIR/reports
 cp -r reports/** $PROJECT_DIR/reports || true
 
-# 5. Browser Functional Tests
+# 6. Browser Functional Tests
 echo "Exporting Godot Project to Web..."
 mkdir -p $EXPORT_DIR
 
