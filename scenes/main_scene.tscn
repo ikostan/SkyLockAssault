@@ -5,7 +5,7 @@
 [ext_resource type="Texture2D" uid="uid://ce63ga8f5mua7" path="res://files/trees/tree_01.png" id="2_fm3ay"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="2_pu3yx"]
 [ext_resource type="PackedScene" uid="uid://37rarq1yywmc" path="res://scenes/Player.tscn" id="2_pw63i"]
-[ext_resource type="Script" uid="uid://csdce7ynrpivs" path="res://scripts/resource_preloader.gd" id="3_c1pb6"]
+[ext_resource type="Script" uid="uid://csdce7ynrpivs" path="res://scripts/managers/resource_preloader.gd" id="3_c1pb6"]
 [ext_resource type="Texture2D" uid="uid://bsmbcgovcph7p" path="res://files/trees/tree_02.png" id="3_sgkfd"]
 [ext_resource type="Texture2D" uid="uid://syw5eae1ebna" path="res://files/trees/tree_11.png" id="4_qj6t7"]
 [ext_resource type="Texture2D" uid="uid://grifp8c6vrgt" path="res://files/trees/tree_12.png" id="5_k78mq"]
