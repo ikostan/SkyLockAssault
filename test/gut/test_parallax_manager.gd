@@ -197,6 +197,7 @@ func test_process_uses_default_values_without_setup() -> void:
 	# 1. Create a fresh manager without calling setup()
 	var uninitialized_manager: ParallaxManager = ParallaxManager.new()
 	add_child_autofree(uninitialized_manager)
+	uninitialized_manager.set_process(false)  # Only run _process explicitly from tests
 	
 	uninitialized_manager.prime_speed(100.0)
 	uninitialized_manager.scroll_offset.y = 0.0
