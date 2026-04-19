@@ -49,7 +49,6 @@ godot --headless --path $PROJECT_DIR -s res://addons/gdUnit4/bin/GdUnitCmdTool.g
 check_exit "GDUnit4 Tests"
 
 # 5. GUT Unit Tests
-# FIXED: Replaced RUN instruction with proper bash conditional
 echo "Ensuring GUT is installed in addons/..."
 if [ ! -d "$PROJECT_DIR/addons/gut" ]; then
   mkdir -p "$PROJECT_DIR/addons"
@@ -60,12 +59,10 @@ if [ ! -d "$PROJECT_DIR/addons/gut" ]; then
 fi
 
 echo "Running GUT Unit Tests..."
-# FIXED: Isolated to res://test/gut to prevent discovery of GDUnit tests
+# FIXED: Removed -gdir and -ginclude_subdirs to let .gutconfig.json govern discovery
 godot --headless --verbose --path $PROJECT_DIR \
   -s res://addons/gut/gut_cmdln.gd \
   -gconfig=res://.gutconfig.json \
-  -gdir=res://test/gut \
-  -ginclude_subdirs=true \
   -gexit
 check_exit "GUT Unit Tests"
 
