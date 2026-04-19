@@ -121,28 +121,56 @@ func test_flameout_resets_offset() -> void:
 # SAFETY & EDGE CASE TESTS
 # ==========================================
 
-## test_process_safe_without_globals | Safety Constraint
+## test_process_safe_with_null_globals_after_setup | Safety Constraint
 ## :rtype: void
-func test_process_safe_without_globals() -> void:
-	gut.p("Testing: ParallaxManager defaults to difficulty 1.0 if Globals.settings is missing.")
+func test_process_safe_with_null_globals_after_setup() -> void:
+	gut.p("Testing: ParallaxManager continues using cached state and does not crash if Globals drop.")
 	
 	# 1. Force a null state (simulating scene transition or engine shutdown)
 	Globals.settings = null
 	
-	_parallax_manager._current_speed = 100.0
+	_parallax_manager.prime_speed(100.0)
 	_parallax_manager.scroll_offset.y = 0.0
 	
 	# 2. Simulate processing frame
 	var delta: float = 1.0
 	_parallax_manager._process(delta)
 	
-	# 3. Verify the math defaulted safely
-	# Expected math: speed(100.0) * delta(1.0) * diff(1.0 fallback) * multiplier(0.8) = 80.0
+	# 3. Verify the math used the cached difficulty (1.0 from before_each)
+	# Expected math: speed(100.0) * delta(1.0) * cached_diff(1.0) * multiplier(0.8) = 80.0
 	var expected_offset: float = 100.0 * 1.0 * 1.0 * 0.8
 	
 	assert_almost_eq(
 		_parallax_manager.scroll_offset.y, 
 		expected_offset, 
 		0.01, 
-		"Process must fall back to a 1.0 difficulty multiplier without throwing null instance errors."
+		"Process must use cached difficulty and avoid null instance errors when Globals are missing."
+	)
+
+
+## test_process_uses_default_values_without_setup | Initialization
+## :rtype: void
+func test_process_uses_default_values_without_setup() -> void:
+	gut.p("Testing: ParallaxManager uses safe default values (difficulty 1.0) if setup() is never called.")
+	
+	# 1. Create a fresh manager without calling setup()
+	var uninitialized_manager: ParallaxManager = ParallaxManager.new()
+	add_child_autofree(uninitialized_manager)
+	
+	uninitialized_manager.prime_speed(100.0)
+	uninitialized_manager.scroll_offset.y = 0.0
+	
+	# 2. Simulate processing frame
+	var delta: float = 1.0
+	uninitialized_manager._process(delta)
+	
+	# 3. Verify the math used the default initialized difficulty of 1.0
+	# Expected math: speed(100.0) * delta(1.0) * default_diff(1.0) * multiplier(0.8) = 80.0
+	var expected_offset: float = 100.0 * 1.0 * 1.0 * 0.8
+	
+	assert_almost_eq(
+		uninitialized_manager.scroll_offset.y, 
+		expected_offset, 
+		0.01, 
+		"Process must use its baseline difficulty of 1.0 if dependency injection never occurs."
 	)
