@@ -27,8 +27,6 @@ check_exit "GDScript Lint"
 
 # 2. Markdown Lint
 echo "Running Markdown Lint..."
-# --yes: skips the interactive install prompt
-# !venv/**: prevents the linter from scanning your virtual environment
 npx --yes markdownlint-cli2@0.12.1 "**/*.md" "!venv/**" --config .markdownlint-cli2.yaml --fix
 check_exit "Markdown Lint"
 
@@ -46,20 +44,29 @@ godot --headless --path $PROJECT_DIR --import --quit
 check_exit "Resource Import"
 
 echo "Running GDUnit4 Tests..."
-godot --headless --path $PROJECT_DIR -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --verbose --ignoreHeadlessMode --add res://test
+# Specific directory to avoid GUT conflicts
+godot --headless --path $PROJECT_DIR -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --verbose --ignoreHeadlessMode --add res://test/gdunit4
 check_exit "GDUnit4 Tests"
 
 # 5. GUT Unit Tests
-# Install GUT v9.5.0
-RUN mkdir -p /project/addons \
-    && wget https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip \
-    && unzip v9.5.0.zip -d /project/addons \
-    && mv /project/addons/Gut-9.5.0/addons/gut /project/addons/gut \
-    && rm -rf /project/addons/Gut-9.5.0 v9.5.0.zip \
-    && chown -R godotuser:godotuser /project
+# FIXED: Replaced RUN instruction with proper bash conditional
+echo "Ensuring GUT is installed in addons/..."
+if [ ! -d "$PROJECT_DIR/addons/gut" ]; then
+  mkdir -p "$PROJECT_DIR/addons"
+  wget https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip
+  unzip v9.5.0.zip -d "$PROJECT_DIR/addons"
+  mv "$PROJECT_DIR/addons/Gut-9.5.0/addons/gut" "$PROJECT_DIR/addons/gut"
+  rm -rf "$PROJECT_DIR/addons/Gut-9.5.0" v9.5.0.zip
+fi
 
 echo "Running GUT Unit Tests..."
-godot --headless --verbose --path $PROJECT_DIR -s res://addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gdir=res://test -ginclude_subdirs=true -gexit
+# FIXED: Isolated to res://test/gut to prevent discovery of GDUnit tests
+godot --headless --verbose --path $PROJECT_DIR \
+  -s res://addons/gut/gut_cmdln.gd \
+  -gconfig=res://.gutconfig.json \
+  -gdir=res://test/gut \
+  -ginclude_subdirs=true \
+  -gexit
 check_exit "GUT Unit Tests"
 
 mkdir -p $PROJECT_DIR/reports
