@@ -63,6 +63,8 @@ func _lcm(a: int, b: int) -> int:
 ## Public method to dynamically calculate the optimal wrap limit
 ## based on the properties of its ParallaxLayer children.
 ## Uses the Least Common Multiple (LCM) to ensure non-commensurate layers don't jump.
+## IMPORTANT: For flawless wrapping, (motion_mirroring.y / motion_scale.y) MUST result
+## in a whole number. Fractional periods will be rounded and may cause visual drift over time.
 ## Must be called after all layers have had their mirroring and scale set.
 ## @return: void
 func auto_calculate_wrap_period() -> void:
@@ -77,7 +79,24 @@ func auto_calculate_wrap_period() -> void:
 
 			if layer_scale > 0.0 and layer_mirror > 0.0:
 				var period: float = layer_mirror / layer_scale
-				periods.append(roundi(period))
+				var rounded_period: int = roundi(period)
+
+				# Drift Safeguard: Warn if the period is not a clean integer
+				if not is_equal_approx(period, float(rounded_period)):
+					push_warning(
+						(
+							"ParallaxManager: Layer '"
+							+ child.name
+							+ "' has a fractional wrap period ("
+							+ str(period)
+							+ "). Rounding to "
+							+ str(rounded_period)
+							+ " may cause visual drift. "
+							+ "Ensure (motion_mirroring.y / motion_scale.y) yields a whole number."
+						)
+					)
+
+				periods.append(rounded_period)
 
 	# 2. Calculate the universal LCM of all collected periods
 	if periods.size() > 0:
