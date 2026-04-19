@@ -7,6 +7,9 @@
 class_name ParallaxManager
 extends ParallaxBackground
 
+## Base multiplier applied to the final scroll math to scale the speed visually.
+const SCROLL_MULTIPLIER: float = 0.8
+
 ## Optional wrap limit to prevent float32 precision degradation over long sessions.
 ## Should be a common multiple of the layers' (motion_mirroring.y / motion_scale.y).
 @export var wrap_period: float = 0.0
@@ -83,7 +86,7 @@ func _process(delta: float) -> void:
 	if _out_of_fuel:
 		scroll_offset = Vector2.ZERO
 	else:
-		var scroll_amount: float = _current_speed * delta * _difficulty * 0.8
+		var scroll_amount: float = _current_speed * delta * _difficulty * SCROLL_MULTIPLIER
 		scroll_offset.y += scroll_amount
 
 		# Prevent float precision degradation by wrapping modulo the period
