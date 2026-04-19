@@ -58,7 +58,6 @@ func _ready() -> void:
 	# Wire up the signal architecture for the parallax background
 	# Safely extract settings once to use for both injection and priming
 	# Note: Because background.setup(settings_res) already has its own internal
-	# if not is_instance_valid(settings): return check, this is perfectly safe
 	var settings_res: GameSettingsResource = Globals.settings
 
 	if background.has_method("setup"):
@@ -96,6 +95,14 @@ func _ready() -> void:
 				+ " `_on_player_speed_changed(speed: float, delta: float)`."
 			)
 		)
+	# =========================================================
+	# FLOAT DEGRADATION SAFEGUARD
+	# =========================================================
+	# Calculate global wrap period based on the tallest layer to prevent float degradation
+	# Formula: motion_mirroring.y / motion_scale.y
+	var global_bushes_period: float = (viewport_size.y * parallax_screens_tall) / 0.5 
+	if background.has_method("set_wrap_period"):
+		background.set_wrap_period(global_bushes_period)
 
 
 # 2. Detect when player presses a key/button that has NO binding at all

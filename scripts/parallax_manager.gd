@@ -7,6 +7,10 @@
 class_name ParallaxManager
 extends ParallaxBackground
 
+## Optional wrap limit to prevent float32 precision degradation over long sessions.
+## Should be a common multiple of the layers' (motion_mirroring.y / motion_scale.y).
+@export var wrap_period: float = 0.0
+
 var _current_speed: float = 0.0
 var _difficulty: float = 1.0
 var _out_of_fuel: bool = false
@@ -37,6 +41,13 @@ func prime_speed(initial_speed: float) -> void:
 	_current_speed = initial_speed
 
 
+## Public method to dynamically set the wrap limit to prevent float precision loss.
+## @param period: float - The calculated period to wrap the offset around.
+## @return: void
+func set_wrap_period(period: float) -> void:
+	wrap_period = period
+
+
 ## Observer callback triggered when the player's speed changes.
 ## @param new_speed: float - The new forward speed of the player.
 ## @param _max_speed: float - The maximum speed threshold (unused).
@@ -64,7 +75,7 @@ func _on_fuel_depleted() -> void:
 
 
 ## Called every physics/rendering frame.
-## Updates scroll offset based entirely on cached local variables.
+## Updates scroll offset based entirely on cached local variables and wraps to preserve float precision.
 ## @param delta: float - The elapsed time since the previous frame.
 ## @return: void
 func _process(delta: float) -> void:
@@ -73,3 +84,7 @@ func _process(delta: float) -> void:
 	else:
 		var scroll_amount: float = _current_speed * delta * _difficulty * 0.8
 		scroll_offset.y += scroll_amount
+
+		# Prevent float precision degradation by wrapping modulo the period
+		if wrap_period > 0.0:
+			scroll_offset.y = wrapf(scroll_offset.y, 0.0, wrap_period)
