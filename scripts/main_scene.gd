@@ -62,9 +62,11 @@ func _ready() -> void:
 	# only ever receives a valid GameSettingsResource or null.
 	var settings_res: GameSettingsResource = (
 		Globals.settings
-		if is_instance_valid(Globals)
-		and Globals.settings != null
-		and is_instance_valid(Globals.settings)
+		if (
+			is_instance_valid(Globals)
+			and Globals.settings != null
+			and is_instance_valid(Globals.settings)
+		)
 		else null
 	)
 
