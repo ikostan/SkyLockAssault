@@ -100,7 +100,7 @@ func _ready() -> void:
 	# =========================================================
 	# Calculate global wrap period based on the tallest layer to prevent float degradation
 	# Formula: motion_mirroring.y / motion_scale.y
-	var global_bushes_period: float = (viewport_size.y * parallax_screens_tall) / 0.5 
+	var global_bushes_period: float = (viewport_size.y * parallax_screens_tall) / 0.5
 	if background.has_method("set_wrap_period"):
 		background.set_wrap_period(global_bushes_period)
 
