@@ -44,14 +44,32 @@ func prime_speed(initial_speed: float) -> void:
 	_current_speed = initial_speed
 
 
+## Helper to find the Greatest Common Divisor for LCM calculations.
+func _gcd(a: int, b: int) -> int:
+	while b != 0:
+		var temp: int = b
+		b = a % b
+		a = temp
+	return a
+
+
+## Helper to find the Least Common Multiple to sync disparate layer periods.
+func _lcm(a: int, b: int) -> int:
+	if a == 0 or b == 0:
+		return 0
+	return absi((a * b) / _gcd(a, b))
+
+
 ## Public method to dynamically calculate the optimal wrap limit
 ## based on the properties of its ParallaxLayer children.
+## Uses the Least Common Multiple (LCM) to ensure non-commensurate layers don't jump.
 ## Must be called after all layers have had their mirroring and scale set.
 ## @return: void
 func auto_calculate_wrap_period() -> void:
-	var max_period: float = 0.0
+	var computed_lcm: int = 1
+	var periods: Array[int] = []
 
-	# Iterate through all children to find the longest required wrap period
+	# 1. Collect all valid layer periods as integers (pixels)
 	for child in get_children():
 		if child is ParallaxLayer:
 			var layer_scale: float = child.motion_scale.y
@@ -59,15 +77,20 @@ func auto_calculate_wrap_period() -> void:
 
 			if layer_scale > 0.0 and layer_mirror > 0.0:
 				var period: float = layer_mirror / layer_scale
-				if period > max_period:
-					max_period = period
+				periods.append(roundi(period))
 
-	# 1. Only overwrite the exported wrap_period if we successfully calculated a new one.
+	# 2. Calculate the universal LCM of all collected periods
+	if periods.size() > 0:
+		computed_lcm = periods[0]
+		for i in range(1, periods.size()):
+			computed_lcm = _lcm(computed_lcm, periods[i])
+
+	# 3. Only overwrite the exported wrap_period if we successfully calculated a valid LCM.
 	# This protects values set manually via the Godot Inspector.
-	if max_period > 0.0:
-		wrap_period = max_period
+	if computed_lcm > 1:
+		wrap_period = float(computed_lcm)
 
-	# 2. Warn the developer if the background is scrolling forever with no safeguard
+	# 4. Warn the developer if the background is scrolling forever with no safeguard
 	if wrap_period <= 0.0:
 		push_warning(
 			(
