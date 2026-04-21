@@ -6,7 +6,7 @@
 PROJECT_DIR="/project"
 EXPORT_DIR="$PROJECT_DIR/export/web_thread_off"
 SERVER_PORT=8080
-PW_TIMEOUT=10000
+PW_TIMEOUT=10 # Value is in SECONDS for pytest-timeout compatibility
 
 # Function to check if a step failed
 check_exit() {
