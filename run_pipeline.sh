@@ -27,6 +27,7 @@ check_exit "GDScript Lint"
 
 # 2. Markdown Lint
 echo "Running Markdown Lint..."
+# --yes: skips interactive prompt | !venv/**: excludes virtual environment
 npx --yes markdownlint-cli2@0.12.1 "**/*.md" "!venv/**" --config .markdownlint-cli2.yaml --fix
 check_exit "Markdown Lint"
 
@@ -44,7 +45,6 @@ godot --headless --path $PROJECT_DIR --import --quit
 check_exit "Resource Import"
 
 echo "Running GDUnit4 Tests..."
-# Specific directory to avoid GUT conflicts
 godot --headless --path $PROJECT_DIR -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --verbose --ignoreHeadlessMode --add res://test/gdunit4
 check_exit "GDUnit4 Tests"
 
@@ -59,7 +59,7 @@ if [ ! -d "$PROJECT_DIR/addons/gut" ]; then
 fi
 
 echo "Running GUT Unit Tests..."
-# FIXED: Removed -gdir and -ginclude_subdirs to let .gutconfig.json govern discovery
+# Let .gutconfig.json govern discovery; removed -gdir overrides
 godot --headless --verbose --path $PROJECT_DIR \
   -s res://addons/gut/gut_cmdln.gd \
   -gconfig=res://.gutconfig.json \
@@ -96,18 +96,24 @@ echo "Running Playwright Browser Tests..."
 pytest tests/ --ignore=tests/refactor -v --junitxml=$PROJECT_DIR/report.xml
 check_exit "Playwright Tests"
 
+# 7. Report Summary & Failure Check
 if [ -f $PROJECT_DIR/report.xml ]; then
   total=$(xmllint --xpath 'count(//testcase)' $PROJECT_DIR/report.xml)
   failures=$(xmllint --xpath 'count(//testcase/failure)' $PROJECT_DIR/report.xml)
   errors=$(xmllint --xpath 'count(//testcase/error)' $PROJECT_DIR/report.xml)
   skipped=$(xmllint --xpath 'count(//testcase/skipped)' $PROJECT_DIR/report.xml)
   passed=$((total - failures - errors - skipped))
+
   echo "Test Report Summary:"
   echo "- Total tests: $total"
   echo "- Passed: $passed"
   echo "- Failed: $failures"
   echo "- Errors: $errors"
   echo "- Skipped: $skipped"
+else
+  echo "CRITICAL ERROR: report.xml not found! Playwright tests failed to generate results."
+  kill $SERVER_PID
+  exit 1
 fi
 
 kill $SERVER_PID
