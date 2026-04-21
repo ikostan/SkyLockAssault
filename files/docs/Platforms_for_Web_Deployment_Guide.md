@@ -98,7 +98,7 @@ but it's maintenance work.
 
 ### Phase 3: Manual Once + Occasional Updates
 
-+ CrazyGames, Y8, GameDistribution, GamePix, Newgrounds, SoftGames, Game Jolt
++ CrazyGames, Y8, GameDistribution, GamePix, Newgrounds, SoftGames
 
 **Goal:** Push to `main` → 10+ platforms updated automatically.
 
