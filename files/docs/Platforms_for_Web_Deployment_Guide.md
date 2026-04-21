@@ -4,17 +4,17 @@
 
 ## Project Context
 
-We're building **SkyLockAssault** — a totally free-to-play browser
+- We're building **SkyLockAssault** — a totally free-to-play browser
 game in **Godot v4.5** on **Windows 10 64-bit**. This is our learning
 journey into game dev, so we're keeping everything practical,
 low-friction, and focused on **automatic deploys** via GitHub Actions
 
-+ CI/CD where possible.
+- CI/CD where possible.
 
-This `.md` file is your living playbook. Update it as you go (e.g. mark
+- This `.md` file is your living playbook. Update it as you go (e.g. mark
 new platforms as "Deployed: ✅ Yes").
 
-**Target**: Automatic GitHub Actions deploys where possible.
+- **Target**: Automatic GitHub Actions deploys where possible.
 
 ---
 
