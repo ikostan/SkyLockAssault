@@ -37,7 +37,7 @@ RUN pip install yamllint
 RUN pip install pytest-html pytest-timeout
 
 # Install markdownlint-cli2 via npm (Node.js tool)
-RUN npm install -g markdownlint-cli2
+RUN npm install -g markdownlint-cli2@0.12.1
 
 # Download Godot v4.5 binary and export templates
 RUN wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip \

@@ -27,8 +27,8 @@ check_exit "GDScript Lint"
 
 # 2. Markdown Lint
 echo "Running Markdown Lint..."
-# --yes: skips interactive prompt | !venv/**: excludes virtual environment
-npx --yes markdownlint-cli2@0.12.1 "**/*.md" "!venv/**" --config .markdownlint-cli2.yaml --fix
+# Now using the version pre-installed in the Docker image
+markdownlint-cli2 "**/*.md" "!venv/**" --config .markdownlint-cli2.yaml --fix
 check_exit "Markdown Lint"
 
 # 3. YAML Lint
