@@ -98,7 +98,7 @@ if [ "$server_ready" != true ]; then
 fi
 
 echo "Running Playwright Browser Tests..."
-pytest tests/ --ignore=tests/refactor -v --junitxml=$PROJECT_DIR/report.xml
+pytest tests/ --ignore=tests/refactor -v --timeout=$PW_TIMEOUT --junitxml=$PROJECT_DIR/report.xml
 check_exit "Playwright Tests"
 
 # 7. Report Summary & Failure Check
