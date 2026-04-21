@@ -81,15 +81,17 @@ check_exit "Godot Web Export"
 python3 -m http.server $SERVER_PORT --directory $EXPORT_DIR &
 SERVER_PID=$!
 
+server_ready=false
 for i in {1..20}; do
   if curl -f http://localhost:$SERVER_PORT/index.html >/dev/null 2>&1; then
     echo "Web server ready"
+    server_ready=true
     break
   fi
   sleep 1
 done
 
-if [ $i -eq 20 ]; then
+if [ "$server_ready" != true ]; then
   echo "Web server failed to start"
   kill $SERVER_PID
   exit 1
