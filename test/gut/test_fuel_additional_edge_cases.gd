@@ -26,7 +26,7 @@ func after_each() -> void:
 func test_fuel_consumption_with_scaling() -> void:
 	gut.p("Testing: Fuel consumption scales up when moving at a higher speed.")
 	
-	# NEW: Instantiate the main scene locally and use GUT's add_child_autoqfree(). 
+	# NEW: Instantiate the main scene locally and use GUT's add_child_autoqfree().
 	# This ensures the scene and all its dynamically generated Sprite2D children are safely queued for deletion.
 	main_scene = load("res://scenes/main_scene.tscn").instantiate()
 	add_child_autoqfree(main_scene)
@@ -37,16 +37,16 @@ func test_fuel_consumption_with_scaling() -> void:
 	Globals.settings.current_fuel = 100.0
 	Globals.settings.difficulty = 1.0
 	
-	# NEW: Simulate consumption at normal (minimum) speed using the updated Resource.
-	player_root.speed["speed"] = Globals.settings.min_speed
+	# CHANGED: Use current_speed instead of speed["speed"]
+	player_root.current_speed = Globals.settings.min_speed
 	player_root._on_fuel_timer_timeout()
 	var base_depletion: float = 100.0 - Globals.settings.current_fuel
 	
 	# NEW: Reset the fuel tank for the second measurement.
 	Globals.settings.current_fuel = 100.0
 	
-	# NEW: Simulate consumption at an increased-consumption state (maximum speed) using the updated Resource.
-	player_root.speed["speed"] = Globals.settings.max_speed
+	# CHANGED: Use current_speed instead of speed["speed"]
+	player_root.current_speed = Globals.settings.max_speed
 	player_root._on_fuel_timer_timeout()
 	var high_speed_depletion: float = 100.0 - Globals.settings.current_fuel
 	

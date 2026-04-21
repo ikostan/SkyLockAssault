@@ -94,7 +94,7 @@ func test_lateral_movement_blocked_without_fuel() -> void:
 	gut.p("Testing: Lateral turning is disabled if fuel is completely empty.")
 	
 	Globals.settings.current_fuel = 0.0
-	_player.speed["speed"] = 150.0 
+	_player.current_speed = 150.0 
 	_player.player.velocity.x = 0.0
 	
 	Input.action_press("move_left")

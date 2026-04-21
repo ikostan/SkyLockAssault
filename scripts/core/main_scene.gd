@@ -1,4 +1,4 @@
-## Copyright (C) 2025 Egor Kostan
+## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
 ## main_scene.gd
 ## Main scene script for SkyLockAssault.
@@ -51,6 +51,67 @@ func _ready() -> void:
 
 	# Setup decor layer with random instances
 	setup_decor_layer(viewport_size)
+
+	# =========================================================
+	# DEPENDENCY INJECTION: Parallax Background
+	# =========================================================
+	# Safely extract settings once to use for both injection and priming.
+	# The is_instance_valid(Globals) guard prevents hard crashes during
+	# isolated GUT tests where Autoloads may not be fully initialized.
+	# Also guard against a null or freed Globals.settings so background.setup
+	# only ever receives a valid GameSettingsResource or null.
+	var settings_res: GameSettingsResource = (
+		Globals.settings
+		if (
+			is_instance_valid(Globals)
+			and Globals.settings != null
+			and is_instance_valid(Globals.settings)
+		)
+		else null
+	)
+
+	if background.has_method("setup"):
+		background.setup(settings_res)
+	else:
+		push_warning(
+			"Parallax background is missing the `setup` method. Settings injection failed."
+		)
+
+	# Wire up the signal architecture for the parallax background
+	if player.has_signal("speed_changed") and background.has_method("update_speed"):
+		# 1. Guard against duplicate connections
+		if not player.speed_changed.is_connected(background.update_speed):
+			player.speed_changed.connect(background.update_speed)
+
+		# 2. Prime the background securely via a public method
+		if background.has_method("prime_speed"):
+			background.prime_speed(player.current_speed)
+		else:
+			push_warning("Parallax background is missing the `prime_speed` method.")
+
+	elif not player.has_signal("speed_changed"):
+		push_warning(
+			(
+				"Parallax background not wired: player is missing the `speed_changed` signal. "
+				+ "Verify that the Player node defines and emits `speed_changed`."
+			)
+		)
+	elif not background.has_method("update_speed"):
+		push_warning(
+			(
+				"Parallax background not wired: background is missing"
+				+ " `update_speed` method. "
+				+ "Ensure the background script implements "
+				+ " `update_speed(speed: float, max_speed: float)`."
+			)
+		)
+	# =========================================================
+	# FLOAT DEGRADATION SAFEGUARD
+	# =========================================================
+	# Delegate wrap period calculation entirely to the ParallaxManager.
+	# This preserves encapsulation so main_scene doesn't need to know layer specifics.
+	if background.has_method("auto_calculate_wrap_period"):
+		background.auto_calculate_wrap_period()
 
 
 # 2. Detect when player presses a key/button that has NO binding at all
@@ -217,23 +278,7 @@ func setup_decor_layer(viewport: Vector2) -> void:
 	decor_layer.motion_mirroring = Vector2(0, layer_height)
 
 
-func _process(delta: float) -> void:
-	# NEW: Safely grab the settings resource and guard against null crashes
-	# during scene transitions, engine shutdown, or isolated GUT tests.
-	var settings_res: GameSettingsResource = (
-		Globals.settings if is_instance_valid(Globals) else null
-	)
-	if not is_instance_valid(settings_res):
-		return
-
-	# Use the safe local reference for difficulty
-	var scroll_speed: float = player.speed["speed"] * delta * settings_res.difficulty * 0.8
-	background.scroll_offset.y += scroll_speed
-
-	# Use the safe local reference for current_fuel
-	if settings_res.current_fuel <= 0:
-		background.scroll_offset = Vector2(0, 0)
-
+func _process(_delta: float) -> void:
 	# 1. Critical unbound controls warning (shown ONCE per session)
 	# Flag stays true until player fixes bindings (e.g., in key_mapping.gd after remap).
 	# Do NOT reset here — that would make it repeat every 4s (bug fixed).
