@@ -37,7 +37,7 @@ RUN pip install yamllint
 RUN pip install pytest-html pytest-timeout
 
 # Install markdownlint-cli2 via npm (Node.js tool)
-RUN npm install -g markdownlint-cli2
+RUN npm install -g markdownlint-cli2@0.12.1
 
 # Download Godot v4.5 binary and export templates
 RUN wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip \
@@ -61,6 +61,14 @@ RUN mkdir -p /project/addons \
     && mv /project/addons/gdUnit4-6.0.0/addons/gdUnit4 /project/addons/gdUnit4 \
     && rm -rf /project/addons/gdUnit4-6.0.0 v6.0.0.zip \
     && chown -R godotuser:godotuser /project  # Make project dir accessible
+
+# Install GUT v9.5.0
+RUN mkdir -p /project/addons \
+    && wget https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip \
+    && unzip v9.5.0.zip -d /project/addons \
+    && mv /project/addons/Gut-9.5.0/addons/gut /project/addons/gut \
+    && rm -rf /project/addons/Gut-9.5.0 v9.5.0.zip \
+    && chown -R godotuser:godotuser /project
 
 # Install Playwright Python packages and system deps (as root)
 RUN pip install playwright pytest-playwright pytest-asyncio \

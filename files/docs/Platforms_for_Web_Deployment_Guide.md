@@ -4,26 +4,27 @@
 
 ## Project Context
 
-We're building **SkyLockAssault** — a totally free-to-play browser
+- We're building **SkyLockAssault** — a totally free-to-play browser
 game in **Godot v4.5** on **Windows 10 64-bit**. This is our learning
 journey into game dev, so we're keeping everything practical,
 low-friction, and focused on **automatic deploys** via GitHub Actions
-+ CI/CD where possible.
 
-This `.md` file is your living playbook. Update it as you go (e.g. mark
+- CI/CD where possible.
+
+- This `.md` file is your living playbook. Update it as you go (e.g. mark
 new platforms as "Deployed: ✅ Yes").
 
-**Target**: Automatic GitHub Actions deploys where possible.
+- **Target**: Automatic GitHub Actions deploys where possible.
 
 ---
 
 ## Why Web Platforms for a Free F2P Godot Game?
 
-- **Zero cost to publish** (no Steam $100 fee)
-- **Instant browser play** (Godot WebGL export = one ZIP)
-- **High traffic** for casual games like SkyLockAssault
-- **Ad revenue or donations** without forcing monetization
-- **GitHub Actions** = push → auto-deploy (your dream workflow)
++ **Zero cost to publish** (no Steam $100 fee)
++ **Instant browser play** (Godot WebGL export = one ZIP)
++ **High traffic** for casual games like SkyLockAssault
++ **Ad revenue or donations** without forcing monetization
++ **GitHub Actions** = push → auto-deploy (your dream workflow)
 
 ---
 
@@ -75,9 +76,9 @@ but it's maintenance work.
 
 ## Automation Strategy
 
-- 100% Auto: itch.io, Poki, Viverse, Game Jolt
-- Playwright Auto: iDev.games, GameMonetize (easiest)
-- Manual + Occasional: CrazyGames, Y8, GameDistribution, GamePix, Newgrounds,
++ 100% Auto: itch.io, Poki, Viverse, Game Jolt
++ Playwright Auto: iDev.games, GameMonetize (easiest)
++ Manual + Occasional: CrazyGames, Y8, GameDistribution, GamePix, Newgrounds,
   SoftGames
 
 ---
@@ -92,12 +93,12 @@ but it's maintenance work.
 
 ### Phase 2: Semi-Auto Bonus (Playwright)
 
-- **iDev.games** + **GameMonetize** (easiest forms)
-- Update every 2–4 weeks via one shared script
++ **iDev.games** + **GameMonetize** (easiest forms)
++ Update every 2–4 weeks via one shared script
 
 ### Phase 3: Manual Once + Occasional Updates
 
-- CrazyGames, Y8, GameDistribution, GamePix, Newgrounds, SoftGames, Game Jolt
++ CrazyGames, Y8, GameDistribution, GamePix, Newgrounds, SoftGames
 
 **Goal:** Push to `main` → 10+ platforms updated automatically.
 

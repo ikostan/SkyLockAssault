@@ -24,10 +24,10 @@ general/default_playback_type.web=0
 
 [autoload]
 
-Globals="*res://scripts/globals.gd"
-Settings="*res://scripts/settings.gd"
+Globals="*res://scripts/core/globals.gd"
+Settings="*res://scripts/core/settings.gd"
 AudioConstants="*res://scripts/audio_constants.gd"
-AudioManager="*res://scripts/audio_manager.gd"
+AudioManager="*res://scripts/managers/audio_manager.gd"
 AudioWebBridge="*res://scripts/audio_web_bridge.gd"
 
 [debug]
