@@ -38,7 +38,10 @@ check_exit "YAML Lint"
 
 # 4. Godot Unit Tests (GDUnit4 v6)
 echo "Ensuring GDUnit4 addons are present..."
-cp -r /project/addons/gdUnit4 $PROJECT_DIR/addons/ || true
+if [ ! -d "$PROJECT_DIR/addons/gdUnit4" ]; then
+  echo "GDUnit4 addon missing at $PROJECT_DIR/addons/gdUnit4"
+  exit 1
+fi
 
 echo "Importing Resources..."
 godot --headless --path $PROJECT_DIR --import --quit
