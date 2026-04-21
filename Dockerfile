@@ -62,6 +62,14 @@ RUN mkdir -p /project/addons \
     && rm -rf /project/addons/gdUnit4-6.0.0 v6.0.0.zip \
     && chown -R godotuser:godotuser /project  # Make project dir accessible
 
+# Install GUT v9.5.0
+RUN mkdir -p /project/addons \
+    && wget https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip \
+    && unzip v9.5.0.zip -d /project/addons \
+    && mv /project/addons/Gut-9.5.0/addons/gut /project/addons/gut \
+    && rm -rf /project/addons/Gut-9.5.0 v9.5.0.zip \
+    && chown -R godotuser:godotuser /project
+
 # Install Playwright Python packages and system deps (as root)
 RUN pip install playwright pytest-playwright pytest-asyncio \
     && playwright install-deps \

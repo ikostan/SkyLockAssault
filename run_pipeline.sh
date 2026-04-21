@@ -52,17 +52,16 @@ godot --headless --path $PROJECT_DIR -s res://addons/gdUnit4/bin/GdUnitCmdTool.g
 check_exit "GDUnit4 Tests"
 
 # 5. GUT Unit Tests
-echo "Ensuring GUT is installed in addons/..."
+# FIXED: Replaced download/unpack logic with existence check
+echo "Checking for GUT installation..."
 if [ ! -d "$PROJECT_DIR/addons/gut" ]; then
-  mkdir -p "$PROJECT_DIR/addons"
-  wget https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip
-  unzip v9.5.0.zip -d "$PROJECT_DIR/addons"
-  mv "$PROJECT_DIR/addons/Gut-9.5.0/addons/gut" "$PROJECT_DIR/addons/gut"
-  rm -rf "$PROJECT_DIR/addons/Gut-9.5.0" v9.5.0.zip
+  echo "GUT not found at '$PROJECT_DIR/addons/gut'."
+  echo "CRITICAL: GUT must be pre-installed in the Docker image or cached volume."
+  exit 1
 fi
 
 echo "Running GUT Unit Tests..."
-# Let .gutconfig.json govern discovery; removed -gdir overrides
+# Let .gutconfig.json govern discovery
 godot --headless --verbose --path $PROJECT_DIR \
   -s res://addons/gut/gut_cmdln.gd \
   -gconfig=res://.gutconfig.json \
