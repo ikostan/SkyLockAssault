@@ -6,7 +6,7 @@
 
 extends "res://addons/gut/test.gd"
 
-const GameplaySettings = preload("res://scripts/gameplay_settings.gd")
+const GameplaySettings = preload("res://scripts/ui/menus/gameplay_settings.gd")
 var gameplay_menu: Control
 
 func before_each() -> void:
