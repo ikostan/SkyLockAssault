@@ -118,7 +118,7 @@ use the following signature:
   - `new_value`: **Variant** (The newly assigned, clamped value)
 
 #### 2. Core Files Reference
-
+<!-- markdownlint-disable MD033 -->
 | Component                           | File Path                                           | Responsibility                                                                             |
 |-------------------------------------|-----------------------------------------------------|--------------------------------------------------------------------------------------------|
 | **Data Source (Subject)**           | `res://scripts/resources/game_settings_resource.gd` | Defines properties (difficulty, log level), performs clamping, and emits signals.          |
@@ -126,7 +126,7 @@ use the following signature:
 | **UI Observer (Gameplay)**          | `res://scripts/ui/gameplay_settings.gd`             | Syncs sliders and labels with the resource state using `set_value_no_signal`.              |
 | **UI Observer (Advanced)**          | `res://scripts/menus/advanced_settings.gd`          | Syncs log level dropdowns and handles web-specific JavaScript callbacks.                   |
 | <del>**Persistence Settings**</del> | <del>`res://scripts/settings.gd`</del>              | <del>Manages low-level `InputMap` serialization and legacy migration logic.</del>          |
-
+<!-- markdownlint-enable MD033 -->
 #### 3. Connection Example for UI
 
 To prevent infinite recursion, UI handlers should always check for equality or use `no_signal` methods when responding to the resource:
