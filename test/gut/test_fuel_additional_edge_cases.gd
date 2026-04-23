@@ -28,7 +28,7 @@ func test_fuel_consumption_with_scaling() -> void:
 	
 	# NEW: Instantiate the main scene locally and use GUT's add_child_autoqfree().
 	# This ensures the scene and all its dynamically generated Sprite2D children are safely queued for deletion.
-	main_scene = load("res://scenes/main_scene.tscn").instantiate()
+	main_scene = load(GamePaths.MAIN_SCENE).instantiate()
 	add_child_autoqfree(main_scene)
 	player_root = main_scene.get_node("Player")
 	player_root.fuel_timer.stop()

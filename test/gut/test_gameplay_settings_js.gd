@@ -7,13 +7,13 @@
 
 extends "res://addons/gut/test.gd"
 
-const GameplaySettings = preload("res://scripts/gameplay_settings.gd")
+const GameplaySettings = preload(GamePaths.GAMEPLAY_SETTINGS)
 var gameplay_menu: Control
 
 func before_each() -> void:
 	# Fresh resource to isolate state
 	Globals.settings = GameSettingsResource.new()
-	gameplay_menu = load("res://scenes/gameplay_settings.tscn").instantiate()
+	gameplay_menu = load(GamePaths.GAMEPLAY_SETTINGS_SCENE).instantiate()
 	# Inject mock wrapper to simulate web environment
 	gameplay_menu.os_wrapper = OSWrapper.new() 
 	add_child_autofree(gameplay_menu)

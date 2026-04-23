@@ -33,7 +33,7 @@ func test_exit_tree_disconnects_signals() -> void:
 	gut.p("Testing: Player _exit_tree properly disconnects global signals.")
 	
 	# 1. Instantiate and add to tree to trigger _ready() and the signal connections
-	main_scene = load("res://scenes/main_scene.tscn").instantiate()
+	main_scene = load(GamePaths.MAIN_SCENE).instantiate()
 	add_child(main_scene)
 	player_root = main_scene.get_node("Player")
 	
@@ -73,7 +73,7 @@ func test_exit_tree_safe_without_globals() -> void:
 	Globals.settings = null
 	
 	# Instantiate manually without adding to the tree (bypasses _ready)
-	main_scene = load("res://scenes/main_scene.tscn").instantiate()
+	main_scene = load(GamePaths.MAIN_SCENE).instantiate()
 	player_root = main_scene.get_node("Player")
 	
 	# Safely call _exit_tree in isolation

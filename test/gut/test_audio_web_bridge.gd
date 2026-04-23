@@ -7,7 +7,7 @@
 
 extends "res://addons/gut/test.gd"
 
-const AudioWebBridge = preload("res://scripts/audio_web_bridge.gd")
+const AudioWebBridge = preload(GamePaths.AUDIO_WEB_BRIDGE)
 
 func before_each() -> void:
 	# Reset AudioManager to a known clean state before each test

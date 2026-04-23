@@ -6,7 +6,7 @@
 
 extends "res://addons/gut/test.gd"
 
-var options_scene: PackedScene = load("res://scenes/options_menu.tscn")  # Options scene preload.
+var options_scene: PackedScene = load(GamePaths.OPTIONS_MENU_SCENE)  # Options scene preload.
 var options_instance: CanvasLayer  # Options instance.
 
 ## Per-test setup: Clear setting for default.

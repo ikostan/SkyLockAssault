@@ -44,7 +44,7 @@ func before_each() -> void:
 			InputMap.action_erase_events(action)
 		else:
 			InputMap.add_action(action)
-	menu = load("res://scenes/key_mapping_menu.tscn").instantiate()
+	menu = load(GamePaths.KEY_MAPPING_SCENE).instantiate()
 	add_child(menu)
 	speed_up_btn = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
 	# Default keyboard

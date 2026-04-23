@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://dxep4xm1sl8im" path="res://scenes/key_mapping_menu.tscn" id="1_qho2n"]
 [ext_resource type="PackedScene" uid="uid://cl4m4q2eurcn0" path="res://scenes/options_menu.tscn" id="2_b4w4u"]
-[ext_resource type="Script" uid="uid://cgtk0ximoo5ty" path="res://scripts/game_settings_resource.gd" id="3_qb8m4"]
+[ext_resource type="Script" uid="uid://cgtk0ximoo5ty" path="res://scripts/resources/game_settings_resource.gd" id="3_qb8m4"]
 
 [resource]
 script = ExtResource("3_qb8m4")

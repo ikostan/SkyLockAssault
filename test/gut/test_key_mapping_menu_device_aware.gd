@@ -75,7 +75,7 @@ func before_each() -> void:
 			if ev_gp:
 				InputMap.action_add_event(action, ev_gp)
 
-	menu = load("res://scenes/key_mapping_menu.tscn").instantiate()
+	menu = load(GamePaths.KEY_MAPPING_SCENE).instantiate()
 	add_child(menu)
 
 	keyboard_btn = menu.get_node("Panel/Options/DeviceTypeContainer/Keyboard")

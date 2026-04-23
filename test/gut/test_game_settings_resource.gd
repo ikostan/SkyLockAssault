@@ -10,7 +10,7 @@
 
 extends "res://addons/gut/test.gd"
 
-const GameplaySettings = preload("res://scripts/gameplay_settings.gd")
+const GameplaySettings = preload(GamePaths.GAMEPLAY_SETTINGS)
 var gameplay_menu: Control
 var _resource: GameSettingsResource
 
@@ -20,7 +20,7 @@ func before_each() -> void:
 	Globals.settings = _resource
 	
 	# Instantiate the menu for initialization tests
-	gameplay_menu = load("res://scenes/gameplay_settings.tscn").instantiate()
+	gameplay_menu = load(GamePaths.GAMEPLAY_SETTINGS_SCENE).instantiate()
 	# Inject mock wrapper to avoid real JS/OS calls during unit tests
 	gameplay_menu.os_wrapper = OSWrapper.new() 
 	
@@ -74,7 +74,7 @@ func test_gs_ready_01_02_ui_initialization_sync() -> void:
 	var test_difficulty: float = 1.7
 	_resource.difficulty = test_difficulty
 	
-	var new_menu: Variant = load("res://scenes/gameplay_settings.tscn").instantiate()
+	var new_menu: Variant = load(GamePaths.GAMEPLAY_SETTINGS_SCENE).instantiate()
 	add_child_autofree(new_menu)
 	await get_tree().process_frame
 	
@@ -121,7 +121,7 @@ func test_gs_ready_06_safe_init_non_web() -> void:
 	stub(mock_os, "has_feature").to_return(false)
 	
 	# FIX: Instantiate from the SCENE, not just the script
-	var menu: Control = load("res://scenes/gameplay_settings.tscn").instantiate()
+	var menu: Control = load(GamePaths.GAMEPLAY_SETTINGS_SCENE).instantiate()
 	menu.os_wrapper = mock_os
 	
 	add_child_autofree(menu)
