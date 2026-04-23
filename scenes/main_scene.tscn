@@ -76,8 +76,8 @@
 [ext_resource type="Texture2D" uid="uid://btyfigdtk3x88" path="res://files/random_decor/crates_4.png" id="68_f3krf"]
 [ext_resource type="Texture2D" uid="uid://bvxu5x1awjrjv" path="res://files/random_decor/dirt_001.png" id="69_7tyuc"]
 [ext_resource type="Texture2D" uid="uid://f4hxu68qa4fi" path="res://files/random_decor/dirt_002.png" id="70_isor2"]
-[ext_resource type="Script" uid="uid://blu5qujicfa7e" path="res://scripts/hud.gd" id="72_sgkfd"]
-[ext_resource type="Script" uid="uid://b5x2ehdthhrla" path="res://scripts/parallax_manager.gd" id="76_qj6t7"]
+[ext_resource type="Script" uid="uid://blu5qujicfa7e" path="res://scripts/ui/hud.gd" id="72_sgkfd"]
+[ext_resource type="Script" uid="uid://b5x2ehdthhrla" path="res://scripts/managers/parallax_manager.gd" id="76_qj6t7"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pu3yx"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)

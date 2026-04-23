@@ -8,7 +8,7 @@
 
 extends "res://addons/gut/test.gd"
 
-var audio_scene: PackedScene = load("res://scenes/audio_settings.tscn")
+var audio_scene: PackedScene = load(GamePaths.AUDIO_SETTINGS_SCENE)
 var audio_instance: Control
 var test_config_path: String = "user://test_sfx_weapon.cfg"
 

@@ -9,7 +9,7 @@
 extends "res://addons/gut/test.gd"
 
 var test_config_path: String = "user://test_reset.cfg"
-var audio_scene: PackedScene = load("res://scenes/audio_settings.tscn")
+var audio_scene: PackedScene = load(GamePaths.AUDIO_SETTINGS_SCENE)
 var audio_instance: Control
 
 
@@ -37,9 +37,11 @@ func before_each() -> void:
 	if AudioServer.get_bus_index(AudioConstants.BUS_SFX_ROTORS) == -1:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, AudioConstants.BUS_SFX_ROTORS)
-	# Reset Globals
-	Globals.current_log_level = Globals.LogLevel.INFO
-	Globals.difficulty = 1.0
+	# Reset Globals via the GameSettingsResource safely
+	Globals._is_loading_settings = true
+	Globals.settings.current_log_level = Globals.LogLevel.INFO
+	Globals.settings.difficulty = 1.0
+	Globals._is_loading_settings = false
 
 
 ## Per-test cleanup: Free audio_instance safely.

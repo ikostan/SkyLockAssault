@@ -2,6 +2,7 @@
 ## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_fuel_integration_gut.gd
 ## GUT integration tests for Fuel System signals and persistence.
+
 extends "res://addons/gut/test.gd"
 
 const TEST_CONFIG_PATH: String = "user://test_fuel_persistence.cfg"

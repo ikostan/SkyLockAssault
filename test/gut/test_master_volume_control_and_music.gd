@@ -8,7 +8,7 @@
 
 extends "res://addons/gut/test.gd"
 
-var audio_scene: PackedScene = load("res://scenes/audio_settings.tscn")
+var audio_scene: PackedScene = load(GamePaths.AUDIO_SETTINGS_SCENE)
 var audio_instance: Control
 var test_config_path: String = "user://test_music.cfg"
 
@@ -347,10 +347,16 @@ func test_tc_music_14() -> void:
 	assert_true(AudioManager.music_muted)  # No unmute
 
 
-## TC-Music-15 | Unexpected exit (queue_free without back press) | Simulate tree_exited | Previous menu (e.g., options) visible = true; hidden_menus.pop_back(); If web, backPressed restored; Overlays hidden.
+## TC-Music-15 | Unexpected exit (queue_free without back press) | Simulate tree_exited | Previous menu (e.g., options) visible = true; hidden_menus.pop_back();
+## If web, backPressed restored; Overlays hidden.
 ## :rtype: void
 func test_tc_music_15() -> void:
-	var prev_menu: Control = Control.new()
+	# var prev_menu: Control = Control.new()
+	# FIX: Wrap the newly created Control in GUT's autofree() to prevent it from becoming an orphan memory leak.
+	# Since this node is only used to simulate a hidden menu and is never added to the scene tree, 
+	# it requires explicit lifecycle management which autofree() handles for us.
+	var prev_menu: Control = autofree(Control.new())
+	
 	prev_menu.visible = false
 	Globals.hidden_menus = [prev_menu]
 	audio_instance.queue_free()
