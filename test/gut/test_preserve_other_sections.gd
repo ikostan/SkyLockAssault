@@ -111,7 +111,7 @@ func test_tc_sl_07() -> void:
 	assert_almost_eq(AudioManager.master_volume, 0.4, 0.01)
 	assert_true(AudioManager.master_muted)
 	
-	# Globals unchanged (not loaded here)
+	# Globals unchanged by AudioManager.load_volumes() (still DEBUG / 2.0 set above)
 	assert_eq(Globals.settings.current_log_level, Globals.LogLevel.DEBUG)
 	assert_eq(Globals.settings.difficulty, 2.0)
 	
