@@ -151,7 +151,7 @@ these GPL requirements, a separate license is available upon request.
 
 Post-Refactor Phase 4 (PR `#582`), the root `scripts/` directory has been fully
 reorganised into purpose-specific sub-directories:
-
+<!-- markdownlint-disable MD013 -->
 | Directory            | Contents                                                                                                                                                                                     |
 |----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `scripts/core/`      | Foundational systems: `game_paths.gd` (centralised path registry), `globals.gd`, `main_scene.gd`, `settings.gd`                                                                              |
@@ -160,7 +160,7 @@ reorganised into purpose-specific sub-directories:
 | `scripts/system/`    | Platform wrappers & integrations: `audio_web_bridge.gd`, `JavaScriptBridgeWrapper.gd`, `OSWrapper.gd`                                                                                        |
 | `scripts/managers/`  | Game-loop managers: `audio_manager.gd`, `parallax_manager.gd`, `resource_preloader.gd`                                                                                                       |
 | `scripts/ui/`        | Interface layer: `hud.gd`; sub-dirs `menus/` (main, pause, options, audio, gameplay, key-mapping, advanced), `screens/` (splash, loading), `components/` (volume slider, input remap button) |
-
+<!-- markdownlint-enable MD013 -->
 ---
 
 ## 🟢 Current Development Status
