@@ -39,9 +39,11 @@ func before_each() -> void:
 	if AudioServer.get_bus_index(AudioConstants.BUS_SFX_ROTORS) == -1:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, AudioConstants.BUS_SFX_ROTORS)
-	# Reset Globals settings
+	# Reset Globals via the GameSettingsResource safely to prevent auto-save disk I/O
+	Globals._is_loading_settings = true
 	Globals.settings.current_log_level = Globals.LogLevel.INFO
 	Globals.settings.difficulty = 1.0
+	Globals._is_loading_settings = false
 			
 
 ## Per-test cleanup: Free audio_instance safely.
