@@ -77,6 +77,7 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
    - [Release Drafter](https://github.com/release-drafter/release-drafter?tab=readme-ov-file#readme)
    - [Close Stale Issues and PRs](https://github.com/actions/stale)
    - [AllContributors GitHub App](https://allcontributors.org/docs/en/bot/installation)
+   - [Deepsource](https://github.com/deepsource)
 9. [Free Web Browser Game Deployment Platforms](files/docs/Platforms_for_Web_Deployment_Guide.md)
 <!-- markdownlint-enable line-length -->
 
@@ -144,6 +145,21 @@ these GPL requirements, a separate license is available upon request.
 - Test-driven improvements with GUT
 - Observer-based Settings System: Centralized GameSettingsResource that handles
   automatic persistence and UI synchronization through signals.
+
+
+### Project Structure (`scripts/`)
+
+Post-Refactor Phase 4 (PR `#582`), the root `scripts/` directory has been fully
+reorganised into purpose-specific sub-directories:
+
+| Directory            | Contents                                                                                                                                                                                     |
+|----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `scripts/core/`      | Foundational systems: `game_paths.gd` (centralised path registry), `globals.gd`, `main_scene.gd`, `settings.gd`                                                                              |
+| `scripts/resources/` | Data containers & configuration: `game_settings_resource.gd`, `audio_constants.gd`                                                                                                           |
+| `scripts/entities/`  | Game objects: `player.gd`, `bullet.gd`, `weapon.gd`                                                                                                                                          |
+| `scripts/system/`    | Platform wrappers & integrations: `audio_web_bridge.gd`, `JavaScriptBridgeWrapper.gd`, `OSWrapper.gd`                                                                                        |
+| `scripts/managers/`  | Game-loop managers: `audio_manager.gd`, `parallax_manager.gd`, `resource_preloader.gd`                                                                                                       |
+| `scripts/ui/`        | Interface layer: `hud.gd`; sub-dirs `menus/` (main, pause, options, audio, gameplay, key-mapping, advanced), `screens/` (splash, loading), `components/` (volume slider, input remap button) |
 
 ---
 
@@ -288,6 +304,19 @@ to user input devices:
   focus neighbors are defined.
 - Modifier-aware remapping requires explicit key+modifier press for
   unique bindings.
+
+###  Milestone 14
+
+**Status:** Stable gameplay loop with synced UI systems and GUT-based
+unit testing.
+**Active Focus:** Gameplay expansion (AI enemies, multiplayer, levels).
+**Version:** v0.9.18
+
+### Milestone 16
+
+**Status:** Stable gameplay loop with fully refactored scripts architecture, 
+synced UI systems, and GUT-based unit testing.
+**Active Focus:** Gameplay expansion (AI enemies, multiplayer, levels).
 
 Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milestones).
 
