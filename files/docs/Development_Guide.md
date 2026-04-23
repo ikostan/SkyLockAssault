@@ -81,22 +81,25 @@ else:
 
 - Tip: Use Tween for fades (e.g., modulate.a from 0 to 1).
 
-### Working with Game Settings (Observer Pattern)
+### Adding a New Game Setting
+To introduce a new global setting (e.g., `difficulty`), follow this pattern:
 
-The project now uses an Observer Pattern for configuration.
-When adding a new setting:
+1. **Define the Property**: Add the variable to 
+   `res://scripts/resources/game_settings_resource.gd` with an `@export` 
+   annotation so it can be edited in the Godot inspector. Update the custom 
+   `_to_string` method. This resource holds the active state and emits a 
+   `setting_changed` signal upon modification.
+2. **Persist the Value**: Persistence is exclusively managed by `globals.gd`. 
+   Update `_save_settings()` and `_load_settings()` in `globals.gd` 
+   to ensure the new property from `game_settings_resource.gd` is read from 
+   and written to `user://settings.cfg` using `ConfigFile`.
 
-1. Define the Property: Add the property to
-   `scripts/game_settings_resource.gd` with
-   a proper setter that emits the `setting_changed` signal.
-2. Update Globals: Add the new property to the `_save_settings()` and
-   `_load_settings()` functions in globals.gd to ensure persistence.
-3. UI Integration: Connect your UI elements to the `Globals.settings.setting_changed`
-   signal.
-   - Crucial: Always disconnect this signal in `_on_tree_exited()` to prevent
-     memory leaks and stale observers.
-4. No Manual Saves: Do not call save functions directly from the UI; changing the
-   resource value is sufficient to trigger a save.
+| Step               | File                                                | Action                                                                                          |
+|:-------------------|:----------------------------------------------------|:------------------------------------------------------------------------------------------------|
+| 1. Definition      | `res://scripts/resources/game_settings_resource.gd` | Add `@export var property_name: Type = DefaultValue` and update `_to_string()`                  |
+| 2. Persistence     | `globals.gd`                                        | Add to ConfigFile `.set_value()` in `_save_settings()` and `.get_value()` in `_load_settings()` |
+| 3. Observer Signal | `globals.gd`                                        | Add the variable name to `_on_setting_changed` to filter log spam or prevent excessive disk I/O |
+| 4. UI Binding      | `res://scenes/options_menu.tscn`                    | Create slider/toggle and connect signals to update `Globals.settings.property_name`             |
 
 #### The technical documentation for the "Working with Game Settings" section
 
