@@ -6,12 +6,12 @@
 
 extends "res://addons/gut/test.gd"
 
-const GameplaySettings = preload("res://scripts/ui/menus/gameplay_settings.gd")
+const GameplaySettings = preload(GamePaths.GAMEPLAY_SETTINGS)
 var gameplay_menu: Control
 
 func before_each() -> void:
 	Globals.settings = GameSettingsResource.new()
-	gameplay_menu = load("res://scenes/gameplay_settings.tscn").instantiate()
+	gameplay_menu = load(GamePaths.GAMEPLAY_SETTINGS_SCENE).instantiate()
 	gameplay_menu.os_wrapper = OSWrapper.new() 
 	add_child_autofree(gameplay_menu)
 	await get_tree().process_frame
@@ -56,7 +56,7 @@ func test_gs_life_02_back_button_restoration() -> void:
 
 ## GS-LIFE-08 | Web overlay visibility cleanup
 func test_gs_life_08_web_overlay_cleanup() -> void:
-	var test_menu: Control = load("res://scenes/gameplay_settings.tscn").instantiate()
+	var test_menu: Control = load(GamePaths.GAMEPLAY_SETTINGS_SCENE).instantiate()
 	var mock_js_bridge: Variant = double(JavaScriptBridgeWrapper).new()
 	var mock_os: Variant = double(OSWrapper).new()
 	
@@ -93,7 +93,7 @@ func test_gs_life_05_null_globals_safety() -> void:
 ## GS-LIFE-09 | Unexpected removal (unintentional exit) restores previous menu
 func test_gs_life_09_unexpected_removal_restoration() -> void:
 	# 1. Setup: Create fresh instance but do not parent yet
-	var test_menu: Control = load("res://scenes/gameplay_settings.tscn").instantiate()
+	var test_menu: Control = load(GamePaths.GAMEPLAY_SETTINGS_SCENE).instantiate()
 	
 	# 2. Mock a previous menu in the stack
 	var mock_prev: Control = Control.new()

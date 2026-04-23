@@ -15,7 +15,7 @@
 
 extends GutTest
 
-const InputRemapButton: Script = preload("res://scripts/input_remap_button.gd")
+const InputRemapButton: Script = preload(GamePaths.INPUT_REMAP_BUTTON)
 const TEST_ACTION: String = "speed_up"  # Example action from UI; adjust if needed.
 const TEST_CONFIG_PATH: String = "user://settings.cfg"
 const KEY_W_CODE: int = Key.KEY_W  # 87, default assumed.
@@ -92,7 +92,7 @@ func test_int_01_load_to_ui() -> void:
 	var key_ev: InputEventKey = key_events[0]
 	assert_eq(key_ev.physical_keycode, KEY_Z_CODE, "Loaded keycode should match config")
 	# Instantiate menu and add to tree (UI updates in _ready via update_button_text)
-	menu = load("res://scenes/key_mapping_menu.tscn").instantiate()
+	menu = load(GamePaths.KEY_MAPPING_SCENE).instantiate()
 	add_child(menu)
 	# Get specific remap button for test action (keyboard default)
 	var speed_up_btn: InputRemapButton = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
@@ -112,7 +112,7 @@ func test_int_02_remap_persist() -> void:
 	gut.p("INT-02: Remap updates InputMap/UI, saves to config; reload restores to disk/UI sync.")
 	# Setup: Default mapping (assume reset sets to "W"); instantiate menu
 	Settings.reset_to_defaults("keyboard")  # Ensure defaults loaded
-	menu = load("res://scenes/key_mapping_menu.tscn").instantiate()
+	menu = load(GamePaths.KEY_MAPPING_SCENE).instantiate()
 	add_child(menu)
 	var speed_up_btn: InputRemapButton = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
 	assert_eq(speed_up_btn.text, "W", "Should start with default 'W'")
@@ -164,7 +164,7 @@ func test_int_03_reset_via_ui() -> void:
 	config.set_value("input", TEST_ACTION, ["key:" + str(KEY_Z_CODE)])
 	config.save(TEST_CONFIG_PATH)
 	Settings.load_input_mappings()
-	menu = load("res://scenes/key_mapping_menu.tscn").instantiate()
+	menu = load(GamePaths.KEY_MAPPING_SCENE).instantiate()
 	add_child(menu)
 	var speed_up_btn: InputRemapButton = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
 	assert_eq(speed_up_btn.text, "Z", "Should start with custom 'Z'")

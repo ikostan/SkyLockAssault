@@ -7,7 +7,7 @@
 
 extends "res://addons/gut/test.gd"
 
-const GameplaySettings = preload("res://scripts/ui/menus/gameplay_settings.gd")
+const GameplaySettings = preload(GamePaths.GAMEPLAY_SETTINGS)
 var gameplay_menu: Control
 var _resource: GameSettingsResource
 
@@ -16,7 +16,7 @@ func before_each() -> void:
 	_resource = GameSettingsResource.new()
 	Globals.settings = _resource
 	
-	gameplay_menu = load("res://scenes/gameplay_settings.tscn").instantiate()
+	gameplay_menu = load(GamePaths.GAMEPLAY_SETTINGS_SCENE).instantiate()
 	# Inject mock wrapper to bypass real web/OS calls
 	gameplay_menu.os_wrapper = OSWrapper.new() 
 	

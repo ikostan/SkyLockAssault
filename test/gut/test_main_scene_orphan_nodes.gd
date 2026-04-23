@@ -11,7 +11,7 @@ var viewport_mock: Vector2 = Vector2(1920, 1080)
 
 func before_each() -> void:
 	await get_tree().process_frame
-	main_scene = preload("res://scenes/main_scene.tscn").instantiate()
+	main_scene = preload(GamePaths.MAIN_SCENE).instantiate()
 	add_child(main_scene)
 	await get_tree().process_frame
 
@@ -84,7 +84,7 @@ func test_scene_reload_lifecycle() -> void:
 	main_scene = null
 	await get_tree().process_frame
 	
-	var reloaded_scene: MainScene = preload("res://scenes/main_scene.tscn").instantiate()
+	var reloaded_scene: MainScene = preload(GamePaths.MAIN_SCENE).instantiate()
 	add_child(reloaded_scene)
 	reloaded_scene.setup_bushes_layer(viewport_mock)
 	await get_tree().process_frame

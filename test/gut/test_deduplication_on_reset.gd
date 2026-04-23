@@ -20,7 +20,7 @@ func before_each() -> void:
 	def_ev.physical_keycode = KEY_W
 	InputMap.action_add_event(TEST_ACTION, def_ev)
 	InputMap.action_add_event(TEST_ACTION, def_ev.duplicate())  # Duplicate
-	menu = load("res://scenes/key_mapping_menu.tscn").instantiate()
+	menu = load(GamePaths.KEY_MAPPING_SCENE).instantiate()
 	add_child(menu)
 	menu.keyboard.button_pressed = true  # Keyboard mode
 

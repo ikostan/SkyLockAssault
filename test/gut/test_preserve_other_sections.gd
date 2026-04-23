@@ -10,7 +10,7 @@ extends "res://addons/gut/test.gd"
 
 var test_config_path: String = "user://settings.cfg"
 var backup_path: String = "user://settings.backup.cfg"
-var audio_scene: PackedScene = load("res://scenes/audio_settings.tscn")
+var audio_scene: PackedScene = load(GamePaths.AUDIO_SETTINGS_SCENE)
 var audio_instance: Control
 
 
@@ -85,7 +85,8 @@ func test_tc_sl_06() -> void:
 	assert_eq(config.get_value("Settings", "difficulty"), 1.5)
 
 
-## TC-SL-07 | Config with "input", "Settings", and "audio" (old audio values). | Call AudioManager.load_volumes() | Only audio vars updated from "audio" section; "input"/"Settings" ignored by AudioManager; Globals.current_log_level/difficulty unchanged; apply_all_volumes() called.
+## TC-SL-07 | Config with "input", "Settings", and "audio" (old audio values). | Call AudioManager.load_volumes() | Only audio vars updated from "audio" section;
+## "input"/"Settings" ignored by AudioManager; Globals.current_log_level/difficulty unchanged; apply_all_volumes() called.
 ## :rtype: void
 func test_tc_sl_07() -> void:
 	var config: ConfigFile = ConfigFile.new()
@@ -95,18 +96,25 @@ func test_tc_sl_07() -> void:
 	config.set_value("audio", "master_volume", 0.4)
 	config.set_value("audio", "master_muted", true)
 	config.save(test_config_path)
-	# Set Globals to different values
+	
+	# Guard the Globals changes so they don't trigger an automatic _save_settings() to disk
+	Globals._is_loading_settings = true
 	Globals.settings.current_log_level = Globals.LogLevel.DEBUG
 	Globals.settings.difficulty = 2.0
+	Globals._is_loading_settings = false
+	
 	# Load audio only
 	AudioManager.load_volumes()
 	AudioManager.apply_all_volumes()
+	
 	# Audio updated
 	assert_almost_eq(AudioManager.master_volume, 0.4, 0.01)
 	assert_true(AudioManager.master_muted)
+	
 	# Globals unchanged (not loaded here)
 	assert_eq(Globals.settings.current_log_level, Globals.LogLevel.DEBUG)
 	assert_eq(Globals.settings.difficulty, 2.0)
+	
 	# Config unchanged
 	config = ConfigFile.new()
 	config.load(test_config_path)

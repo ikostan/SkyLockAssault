@@ -4,7 +4,7 @@
 ## Shared helper functions and mock builders for GUT unit tests.
 extends RefCounted
 
-const PLAYER_SCRIPT_PATH: String = "res://scripts/entities/player.gd"
+const PLAYER_SCRIPT_PATH: String = GamePaths.PLAYER
 
 
 ## Helper to safely hard-free a node without causing engine crashes.
@@ -60,7 +60,7 @@ static func build_mock_player_scene() -> Node:
 	panel.add_child(stats)
 	
 	# Assign the extracted hud.gd script directly to the mock panel
-	var hud_script := load("res://scripts/ui/hud.gd")
+	var hud_script := load(GamePaths.HUD)
 	if hud_script:
 		panel.set_script(hud_script)
 		

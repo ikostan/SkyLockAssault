@@ -17,7 +17,7 @@
 
 extends GutTest
 
-const InputRemapButton := preload("res://scripts/input_remap_button.gd")
+const InputRemapButton := preload(GamePaths.INPUT_REMAP_BUTTON)
 
 const TEST_CONFIG_MISSING_PATH: String = "user://test_blank_missing.cfg"
 const TEST_CONFIG_PARTIAL_PATH: String = "user://test_blank_partial.cfg"

@@ -8,7 +8,7 @@
 
 extends "res://addons/gut/test.gd"
 
-var audio_scene: PackedScene = load("res://scenes/audio_settings.tscn")
+var audio_scene: PackedScene = load(GamePaths.AUDIO_SETTINGS_SCENE)
 var audio_instance: Control
 var test_config_path: String = "user://test_sfx_rotor.cfg"
 
@@ -281,10 +281,13 @@ func test_tc_rotor_14() -> void:
 ## TC-Rotor-15 | Unexpected exit | Simulate tree_exited | Previous menu visible = true; hidden_menus.pop_back(); If web, backPressed restored; Overlays hidden.
 ## :rtype: void
 func test_tc_rotor_15() -> void:
-	var prev_menu: Control = Control.new()
+	# FIX: Wrap in autofree() to prevent the orphan memory leak
+	var prev_menu: Control = autofree(Control.new())
+	
 	prev_menu.visible = false
 	Globals.hidden_menus = [prev_menu]
 	audio_instance.queue_free()
 	await get_tree().process_frame
+	
 	assert_true(prev_menu.visible)
 	assert_true(Globals.hidden_menus.is_empty())

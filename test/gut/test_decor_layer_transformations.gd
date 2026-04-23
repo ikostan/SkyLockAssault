@@ -15,7 +15,7 @@ var viewport_mock: Vector2 = Vector2(1920, 1080)
 
 func before_each() -> void:
 	await get_tree().process_frame
-	main_scene = preload("res://scenes/main_scene.tscn").instantiate()
+	main_scene = preload(GamePaths.MAIN_SCENE).instantiate()
 	add_child(main_scene)
 	await get_tree().process_frame
 

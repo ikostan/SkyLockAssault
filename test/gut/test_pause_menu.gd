@@ -11,7 +11,7 @@
 
 extends GutTest
 
-var PauseMenuScene: PackedScene = preload("res://scenes/pause_menu.tscn")
+var PauseMenuScene: PackedScene = preload(GamePaths.PAUSE_MENU_SCENE)
 var pause_menu: CanvasLayer = null
 var original_paused: bool = false
 var original_input_map: Dictionary = {}  # action: [events]
@@ -31,13 +31,13 @@ func before_all() -> void:
 
 ## Sets up per-test state.
 ## Captures/restores paused; instantiates menu; ensures "pause" action.
-## Stubs Globals methods to prevent side effects.
 ## :rtype: void
 func before_each() -> void:
 	original_paused = get_tree().paused
-	stub(Globals, 'log_message').to_do_nothing()
-	stub(Globals, 'load_scene_with_loading').to_do_nothing()
-	stub(Globals, 'load_options').to_do_nothing()
+	
+	# Removed stub() calls here. GUT cannot directly stub Autoload instances, 
+	# and these methods are not invoked by the PM-01 to PM-05 pause/resume flows anyway.
+	
 	pause_menu = PauseMenuScene.instantiate()
 	get_tree().root.add_child(pause_menu)
 	pause_menu.visible = false

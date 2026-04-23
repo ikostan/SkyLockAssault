@@ -24,7 +24,7 @@ func before_all() -> void:
 
 
 func before_each() -> void:
-	menu = load("res://scenes/key_mapping_menu.tscn").instantiate()  # Adjust path if needed
+	menu = load(GamePaths.KEY_MAPPING_SCENE).instantiate()  # Adjust path if needed
 	add_child(menu)
 	# Get UI references
 	keyboard_btn = menu.get_node("Panel/Options/DeviceTypeContainer/Keyboard")
