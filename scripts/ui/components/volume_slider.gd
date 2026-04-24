@@ -114,23 +114,23 @@ func _handle_slider_sfx(new_value: float) -> void:
 	# Guard 1: Only play if the value actually changed (float-safe delta check)
 	if is_equal_approx(new_value, _previous_value):
 		return
-	
+
 	# Guard 2: Only play if user is actively interacting (Mouse Drag or Keyboard Focus)
 	var is_mouse_active: bool = _is_dragging
 	var is_keyboard_active: bool = has_focus()
-	
+
 	if not (is_mouse_active or is_keyboard_active):
 		return
-		
+
 	# Guard 3: Rate limit to prevent audio spam during rapid drags
 	var current_time: int = Time.get_ticks_msec()
 	if current_time - _last_sfx_time < SFX_COOLDOWN_MS:
 		return
-		
+
 	# Commit state only after all guards pass
 	_last_sfx_time = current_time
 	_previous_value = new_value
-	
+
 	# NO MORE MAGIC STRINGS!
 	AudioManager.play_sfx(AudioConstants.SFX_SLIDER)
 
