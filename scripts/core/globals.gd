@@ -393,12 +393,11 @@ func _input(_event: InputEvent) -> void:
 		# We use the global Input singleton here because it perfectly handles
 		# analog joystick deadzone debouncing, which event.is_echo() misses.
 		if Input.is_action_just_pressed(action):
-			
 			# NEW: Prevent double-audio when adjusting sliders.
 			# If a slider has focus, left/right adjusts the value instead of navigating.
 			if focus_owner is Slider and (action == "ui_left" or action == "ui_right"):
-				return 
-				
+				return
+
 			_play_ui_navigation_sfx()
 			return  # Exit once sound is triggered to avoid double-plays
 
