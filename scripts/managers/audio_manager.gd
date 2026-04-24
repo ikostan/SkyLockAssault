@@ -364,7 +364,9 @@ func play_sfx(
 		if stream:
 			_sfx_cache[sfx_name] = stream
 		else:
-			Globals.log_message("SFX file not found or failed to load: " + full_path, Globals.LogLevel.WARNING)
+			Globals.log_message(
+				"SFX file not found or failed to load: " + full_path, Globals.LogLevel.WARNING
+			)
 			return
 
 	# 2. Instantiate and Configure the Player
