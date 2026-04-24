@@ -364,14 +364,16 @@ func play_sfx(
 	if not _sfx_cache.has(sfx_name):
 		var full_path: String = SFX_DIR_PATH + sfx_name + ".wav"
 		var stream: AudioStream = load(full_path)
-		
+
 		if stream:
 			# Eviction strategy: If cache is full, remove the oldest (first) entry
 			if _sfx_cache.size() >= MAX_SFX_CACHE_SIZE:
 				var oldest_key: String = _sfx_cache.keys()[0]
 				_sfx_cache.erase(oldest_key)
-				Globals.log_message("SFX cache full. Evicted: " + oldest_key, Globals.LogLevel.DEBUG)
-				
+				Globals.log_message(
+					"SFX cache full. Evicted: " + oldest_key, Globals.LogLevel.DEBUG
+				)
+
 			_sfx_cache[sfx_name] = stream
 		else:
 			Globals.log_message(
