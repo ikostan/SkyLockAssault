@@ -52,6 +52,9 @@ func _ready() -> void:
 	# Now connect signal for future changes
 	value_changed.connect(_on_value_changed)
 
+	# Safely track input without overriding the base _gui_input virtual method
+	gui_input.connect(_on_gui_input)
+
 	# Initialize debounce timer (0.5s delay, one-shot)
 	save_debounce_timer = Timer.new()
 	save_debounce_timer.wait_time = 0.5
@@ -76,7 +79,7 @@ func set_value_programmatically(new_value: float) -> void:
 ## :param event: The input event passed by the UI system.
 ## :type event: InputEvent
 ## :rtype: void
-func _gui_input(event: InputEvent) -> void:
+func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		_is_dragging = event.pressed
 
