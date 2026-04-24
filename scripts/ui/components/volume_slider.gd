@@ -33,7 +33,7 @@ var _previous_value: float = -1.0
 ## Tracks whether the user is actively holding the mouse button down over the slider.
 var _is_dragging: bool = false
 
-## Guard flag to explicitly mute SFX during programmatic value updates (e.g., loading presets).
+## Guard flag to explicitly mute SFX and prevent saves during programmatic value updates.
 var _is_programmatic_change: bool = false
 
 
@@ -63,7 +63,7 @@ func _ready() -> void:
 	add_child(save_debounce_timer)
 
 
-## Safe method for external scripts to update the slider without triggering SFX.
+## Safe method for external scripts to update the slider without triggering SFX or saves.
 ## Use this instead of modifying `value` directly when restoring settings.
 ## :param new_value: The target volume (0.0 to 1.0).
 ## :type new_value: float
@@ -95,8 +95,10 @@ func _on_value_changed(new_value: float) -> void:
 	# Attempt to play interaction feedback
 	_handle_slider_sfx(new_value)
 
-	# Godot automatically restarts an active timer when start() is called
-	save_debounce_timer.start()
+	# Prevent disk I/O spam during programmatic updates (like initial load or presets)
+	if not _is_programmatic_change:
+		# Godot automatically restarts an active timer when start() is called
+		save_debounce_timer.start()
 
 
 ## Guards SFX playback against programmatic changes, redundant values, and rapid spam.
