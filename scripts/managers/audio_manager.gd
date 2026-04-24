@@ -360,15 +360,11 @@ func play_sfx(
 	# 1. Resolve and Cache the AudioStream
 	if not _sfx_cache.has(sfx_name):
 		var full_path: String = SFX_DIR_PATH + sfx_name + ".wav"
-		if not FileAccess.file_exists(full_path):
-			Globals.log_message("SFX file not found: " + full_path, Globals.LogLevel.WARNING)
-			return
-
 		var stream: AudioStream = load(full_path)
 		if stream:
 			_sfx_cache[sfx_name] = stream
 		else:
-			Globals.log_message("Failed to load SFX stream: " + sfx_name, Globals.LogLevel.ERROR)
+			Globals.log_message("SFX file not found or failed to load: " + full_path, Globals.LogLevel.WARNING)
 			return
 
 	# 2. Instantiate and Configure the Player
