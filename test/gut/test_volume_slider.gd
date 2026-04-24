@@ -27,11 +27,17 @@ func before_each() -> void:
 # INITIALIZATION & PROGRAMMATIC GUARDS
 # ==========================================
 
+## WHY: Verifies that the component starts in a clean, predictable state.
+## WHAT: Checks if the debounce timer is instantiated but not active.
+## EXPECTED: Timer is not null and is currently stopped.
 func test_initialization() -> void:
 	assert_not_null(_slider.save_debounce_timer, "Debounce timer should be created on _ready")
 	assert_true(_slider.save_debounce_timer.is_stopped(), "Timer should not be running immediately after initialization")
 
 
+## WHY: Proves that programmatic updates (e.g., from Web Bridge or Init) are decoupled.
+## WHAT: Updates the slider value using the set_value_programmatically() helper.
+## EXPECTED: The value reflects the update, but the save timer remains stopped to prevent disk I/O spam.
 func test_programmatic_change_blocks_debounce_timer() -> void:
 	_slider.set_value_programmatically(0.5)
 	
@@ -42,6 +48,9 @@ func test_programmatic_change_blocks_debounce_timer() -> void:
 	)
 
 
+## WHY: Ensures that intentional user interaction correctly schedules a save operation.
+## WHAT: Directly modifies the slider 'value' property to simulate a manual change event.
+## EXPECTED: The save_debounce_timer is started to handle the persistence.
 func test_manual_value_change_starts_debounce_timer() -> void:
 	# Simulate a standard UI value change 
 	_slider.value = 0.8
@@ -52,6 +61,9 @@ func test_manual_value_change_starts_debounce_timer() -> void:
 	)
 
 
+## WHY: Confirms that non-interactive updates do not inadvertently flip interaction flags.
+## WHAT: Performs a programmatic update and checks the internal _is_dragging state.
+## EXPECTED: The _is_dragging flag remains false.
 func test_programmatic_change_does_not_alter_drag_state() -> void:
 	_slider.set_value_programmatically(0.2)
 	assert_false(_slider._is_dragging, "Programmatic changes should not affect the _is_dragging state")
@@ -61,6 +73,9 @@ func test_programmatic_change_does_not_alter_drag_state() -> void:
 # SFX UX GUARDS
 # ==========================================
 
+## WHY: Prevents audio spam when a slider event fires without a meaningful value change.
+## WHAT: Attempts to trigger SFX logic using a value identical to the previous state.
+## EXPECTED: Guard 1 blocks the playback; _last_sfx_time is not updated.
 func test_sfx_guard_blocks_identical_values() -> void:
 	# Setup: Set an initial value and simulate an interaction
 	_slider.value = 0.5
@@ -75,6 +90,9 @@ func test_sfx_guard_blocks_identical_values() -> void:
 	assert_eq(_slider._last_sfx_time, initial_sfx_time, "SFX must be blocked if the value hasn't actually changed.")
 
 
+## WHY: Restricts SFX playback strictly to active user engagement.
+## WHAT: Changes the value while the slider is neither being dragged nor focused.
+## EXPECTED: Guard 2 blocks playback; _last_sfx_time remains at its initial value.
 func test_sfx_guard_blocks_no_interaction() -> void:
 	# Setup: New value, but NO interaction (not dragging, no focus)
 	_slider.value = 0.5
@@ -90,6 +108,9 @@ func test_sfx_guard_blocks_no_interaction() -> void:
 	assert_eq(_slider._last_sfx_time, initial_sfx_time, "SFX must be blocked if the user isn't actively interacting.")
 
 
+## WHY: Validates the "Happy Path" for manual interaction audio feedback.
+## WHAT: Simulates a manual drag interaction accompanied by a value delta.
+## EXPECTED: All guards pass; _last_sfx_time is updated and _previous_value is committed.
 func test_sfx_guard_allows_valid_interaction() -> void:
 	# Setup: Different value AND active interaction
 	_slider._previous_value = 0.2
@@ -104,6 +125,9 @@ func test_sfx_guard_allows_valid_interaction() -> void:
 	assert_eq(_slider._previous_value, 0.5, "Previous value should be updated after successful SFX trigger.")
 
 
+## WHY: Protects the user from ear-piercing noise during rapid mouse movements.
+## WHAT: Attempts to trigger a second SFX trigger immediately after a successful one.
+## EXPECTED: Guard 3 (Rate Limiter) blocks the second trigger based on SFX_COOLDOWN_MS.
 func test_sfx_guard_enforces_rate_limiting() -> void:
 	# Setup: Valid interaction, but we JUST played a sound
 	_slider._previous_value = 0.2
