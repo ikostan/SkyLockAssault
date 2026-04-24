@@ -9,15 +9,15 @@
 class_name VolumeSlider
 extends HSlider
 
-@export var bus_name: String
-var bus_index: int
+const SFX_COOLDOWN_MS: int = 60
 
+@export var bus_name: String
+
+var bus_index: int
 ## Debounce timer for saving settings to avoid disk I/O spam
 var save_debounce_timer: Timer
-
 # --- SFX Rate Limiting and State ---
 var _last_sfx_time: int = 0
-const SFX_COOLDOWN_MS: int = 60
 var _previous_value: float = -1.0
 var _is_dragging: bool = false
 
@@ -59,10 +59,10 @@ func _gui_input(event: InputEvent) -> void:
 func _on_value_changed(new_value: float) -> void:
 	AudioServer.set_bus_volume_db(bus_index, linear_to_db(new_value))
 	AudioManager.set_volume(bus_name, new_value)
-	
+
 	# Attempt to play interaction feedback
 	_handle_slider_sfx(new_value)
-	
+
 	# Godot automatically restarts an active timer when start() is called
 	save_debounce_timer.start()
 
@@ -76,23 +76,23 @@ func _handle_slider_sfx(new_value: float) -> void:
 	# Guard 1: Only play if the value actually changed (float-safe delta check)
 	if is_equal_approx(new_value, _previous_value):
 		return
-	
+
 	# Guard 2: Only play if user is actively interacting
 	var is_mouse_active: bool = _is_dragging
 	var is_keyboard_active: bool = has_focus()
-	
+
 	if not (is_mouse_active or is_keyboard_active):
 		return
-		
+
 	# Guard 3: Rate limit to prevent audio spam during rapid drags
 	var current_time: int = Time.get_ticks_msec()
 	if current_time - _last_sfx_time < SFX_COOLDOWN_MS:
 		return
-		
+
 	# Commit state only after all guards pass
 	_last_sfx_time = current_time
 	_previous_value = new_value
-	
+
 	AudioManager.play_sfx("slider")
 
 
