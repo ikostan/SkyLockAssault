@@ -48,7 +48,7 @@ func _ready() -> void:
 
 	# Now connect signal for future changes
 	value_changed.connect(_on_value_changed)
-	
+
 	# Safely track input without overriding the base _gui_input virtual method
 	gui_input.connect(_on_gui_input)
 
@@ -68,11 +68,11 @@ func _ready() -> void:
 func set_value_programmatically(new_value: float) -> void:
 	# Godot 4 native method: updates visual value without emitting 'value_changed'
 	set_value_no_signal(new_value)
-	
+
 	# Explicitly sync the audio backend, since the signal was bypassed
 	AudioServer.set_bus_volume_db(bus_index, linear_to_db(new_value))
 	AudioManager.set_volume(bus_name, new_value)
-	
+
 	# Sync the delta tracker so the next manual interaction calculates correctly
 	_previous_value = new_value
 
@@ -94,10 +94,10 @@ func _on_gui_input(event: InputEvent) -> void:
 func _on_value_changed(new_value: float) -> void:
 	AudioServer.set_bus_volume_db(bus_index, linear_to_db(new_value))
 	AudioManager.set_volume(bus_name, new_value)
-	
+
 	# Attempt to play interaction feedback
 	_handle_slider_sfx(new_value)
-	
+
 	# Godot automatically restarts an active timer when start() is called
 	save_debounce_timer.start()
 
@@ -111,25 +111,25 @@ func _handle_slider_sfx(new_value: float) -> void:
 	# Guard 1: Only play if the value actually changed (float-safe delta check)
 	if is_equal_approx(new_value, _previous_value):
 		return
-		
+
 	# Commit the value tracker early so delta checks stay accurate even if rate-limited
 	_previous_value = new_value
-	
+
 	# Guard 2: Only play if user is actively interacting (Mouse Drag or Keyboard Focus)
 	var is_mouse_active: bool = _is_dragging
 	var is_keyboard_active: bool = has_focus()
-	
+
 	if not (is_mouse_active or is_keyboard_active):
 		return
-		
+
 	# Guard 3: Rate limit to prevent audio spam during rapid drags
 	var current_time: int = Time.get_ticks_msec()
 	if current_time - _last_sfx_time < SFX_COOLDOWN_MS:
 		return
-		
+
 	# Commit time state only after all guards pass
 	_last_sfx_time = current_time
-	
+
 	AudioManager.play_sfx(AudioConstants.SFX_SLIDER)
 
 
