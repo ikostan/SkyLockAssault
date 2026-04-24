@@ -314,7 +314,7 @@ unit testing.
 
 ### Milestone 16
 
-**Status:** Stable gameplay loop with fully refactored scripts architecture, 
+**Status:** Stable gameplay loop with fully refactored script architecture, 
 synced UI systems, and GUT-based unit testing.
 **Active Focus:** Gameplay expansion (AI enemies, multiplayer, levels).
 
