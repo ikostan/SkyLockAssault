@@ -4,24 +4,42 @@
 ##
 ## Handles the volume control slider UI component.
 ## Sends volume updates to AudioManager and handles debounced saving.
-## Plays rate-limited SFX exclusively on manual user interactions.
+## Plays rate-limited SFX exclusively on manual user interactions,
+## safely ignoring programmatic volume changes to prevent audio spam.
 
 class_name VolumeSlider
 extends HSlider
 
+## The cooldown in milliseconds to prevent audio spam during rapid slider drags.
 const SFX_COOLDOWN_MS: int = 60
 
+## The name of the audio bus this slider controls (e.g., "Master", "Music").
 @export var bus_name: String
 
+## The internal index of the audio bus, resolved at runtime.
 var bus_index: int
-## Debounce timer for saving settings to avoid disk I/O spam
+
+## Debounce timer for saving settings to avoid disk I/O spam during continuous sliding.
 var save_debounce_timer: Timer
+
 # --- SFX Rate Limiting and State ---
+
+## Timestamp of the last played SFX to enforce the cooldown.
 var _last_sfx_time: int = 0
+
+## Tracks the previous value to ensure SFX only plays on actual deltas.
 var _previous_value: float = -1.0
+
+## Tracks whether the user is actively holding the mouse button down over the slider.
 var _is_dragging: bool = false
 
+## Guard flag to explicitly mute SFX during programmatic value updates (e.g., loading presets).
+var _is_programmatic_change: bool = false
 
+
+## Initializes the slider, resolves the bus index, syncs the initial value without
+## triggering signals, and sets up the debounce timer.
+## :rtype: void
 func _ready() -> void:
 	# Get bus id by name
 	bus_index = AudioServer.get_bus_index(bus_name)
@@ -39,7 +57,18 @@ func _ready() -> void:
 	save_debounce_timer.wait_time = 0.5
 	save_debounce_timer.one_shot = true
 	save_debounce_timer.timeout.connect(_on_debounce_timeout)
-	add_child(save_debounce_timer)  # Add to scene tree for auto-processing
+	add_child(save_debounce_timer)
+
+
+## Safe method for external scripts to update the slider without triggering SFX.
+## Use this instead of modifying `value` directly when restoring settings.
+## :param new_value: The target volume (0.0 to 1.0).
+## :type new_value: float
+## :rtype: void
+func set_value_programmatically(new_value: float) -> void:
+	_is_programmatic_change = true
+	value = new_value
+	_is_programmatic_change = false
 
 
 ## Tracks mouse drag state for accurate interaction gating, even if the cursor
@@ -73,11 +102,15 @@ func _on_value_changed(new_value: float) -> void:
 ## :type new_value: float
 ## :rtype: void
 func _handle_slider_sfx(new_value: float) -> void:
+	# Guard 0: Ignore explicitly marked programmatic changes (e.g. from UI syncs)
+	if _is_programmatic_change:
+		return
+
 	# Guard 1: Only play if the value actually changed (float-safe delta check)
 	if is_equal_approx(new_value, _previous_value):
 		return
 
-	# Guard 2: Only play if user is actively interacting
+	# Guard 2: Only play if user is actively interacting (Mouse Drag or Keyboard Focus)
 	var is_mouse_active: bool = _is_dragging
 	var is_keyboard_active: bool = has_focus()
 
