@@ -16,6 +16,9 @@ signal mute_toggled(bus_name: String, is_muted: bool)
 ## Base path for all UI sound effects.
 const SFX_DIR_PATH: String = "res://files/sounds/sfx/"
 
+## Hard cap for cached SFX streams to prevent unbounded memory growth.
+const MAX_SFX_CACHE_SIZE: int = 20
+
 @export_category("Master Volume")
 @export var master_volume: float
 @export var master_muted: bool
@@ -343,7 +346,7 @@ func reset_volumes() -> void:
 
 
 ## Centralized SFX Playback API (Issue #565)
-## Handles non-positional audio with caching and auto-cleanup.
+## Handles non-positional audio with LRU caching and auto-cleanup.
 ## :param sfx_name: The filename without extension (e.g., "slider").
 ## :param bus_name: Target audio bus (defaults to SFX_Menu).
 ## :param pitch_scale: Pitch override for variety.
@@ -357,17 +360,30 @@ func play_sfx(
 	if sfx_name.is_empty():
 		return
 
-	# 1. Resolve and Cache the AudioStream
+	# 1. Resolve and Cache the AudioStream (with LRU Eviction)
 	if not _sfx_cache.has(sfx_name):
 		var full_path: String = SFX_DIR_PATH + sfx_name + ".wav"
 		var stream: AudioStream = load(full_path)
+		
 		if stream:
+			# Eviction strategy: If cache is full, remove the oldest (first) entry
+			if _sfx_cache.size() >= MAX_SFX_CACHE_SIZE:
+				var oldest_key: String = _sfx_cache.keys()[0]
+				_sfx_cache.erase(oldest_key)
+				Globals.log_message("SFX cache full. Evicted: " + oldest_key, Globals.LogLevel.DEBUG)
+				
 			_sfx_cache[sfx_name] = stream
 		else:
 			Globals.log_message(
 				"SFX file not found or failed to load: " + full_path, Globals.LogLevel.WARNING
 			)
 			return
+	else:
+		# LRU Update: Godot 4 Dictionaries preserve insertion order.
+		# By erasing and re-inserting, we push this active sound to the "newest" end of the dictionary.
+		var stream: AudioStream = _sfx_cache[sfx_name]
+		_sfx_cache.erase(sfx_name)
+		_sfx_cache[sfx_name] = stream
 
 	# 2. Instantiate and Configure the Player
 	var player := AudioStreamPlayer.new()
