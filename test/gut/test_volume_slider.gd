@@ -142,3 +142,51 @@ func test_sfx_guard_enforces_rate_limiting() -> void:
 	
 	# Assert: It should have been blocked by the SFX_COOLDOWN_MS guard
 	assert_eq(_slider._last_sfx_time, current_time, "Rate limiter MUST block sounds requested faster than the cooldown window.")
+
+
+# ==========================================
+# INVALID BUS GUARDS (Bug Risk)
+# ==========================================
+
+## WHY: Ensures the game doesn't crash and fully locks out inputs if an audio bus name is typoed.
+## WHAT: Initializes a new slider with a fake bus name.
+## EXPECTED: The slider detects the -1 index, logs the error to Globals, disables itself, drops focus/mouse handling, and aborts safely.
+func test_invalid_bus_disables_slider() -> void:
+	var bad_slider: VolumeSlider = VolumeSlider.new()
+	bad_slider.bus_name = "NonExistentBus123"
+	
+	# Add to tree to trigger _ready()
+	add_child_autoqfree(bad_slider)
+	
+	assert_false(bad_slider.editable, "Slider must disable itself if the audio bus is invalid.")
+	assert_eq(bad_slider.mouse_filter, Control.MOUSE_FILTER_IGNORE, "Slider must ignore mouse events if invalid.")
+	assert_eq(bad_slider.focus_mode, Control.FOCUS_NONE, "Slider must drop keyboard/controller focus if invalid.")
+	assert_null(bad_slider.save_debounce_timer, "Initialization should abort early, leaving the timer null.")
+
+
+## WHY: Prevents external scripts from forcing updates on a broken slider.
+## WHAT: Attempts to programmatically set the value of an invalid slider.
+## EXPECTED: The guard clause blocks the update, leaving state trackers at their default values.
+func test_invalid_bus_blocks_programmatic_updates() -> void:
+	var bad_slider: VolumeSlider = VolumeSlider.new()
+	bad_slider.bus_name = "AnotherFakeBus"
+	add_child_autoqfree(bad_slider)
+	
+	# Act: Try to force a value update
+	bad_slider.set_value_programmatically(0.8)
+	
+	# Assert: The values should remain at their uninitialized defaults
+	assert_eq(bad_slider._previous_value, -1.0, "The delta tracker should not update for an invalid bus.")
+	assert_eq(bad_slider.value, 0.0, "The visual slider value should not update for an invalid bus.")
+
+
+## WHY: Guarantees no SFX or volume updates can occur from user interaction on a dead slider.
+## WHAT: Verifies the signal connections are bypassed during a failed initialization.
+## EXPECTED: value_changed and gui_input signals are never connected to their respective handlers.
+func test_invalid_bus_prevents_signal_connections() -> void:
+	var bad_slider: VolumeSlider = VolumeSlider.new()
+	bad_slider.bus_name = "GhostBus"
+	add_child_autoqfree(bad_slider)
+	
+	assert_false(bad_slider.value_changed.is_connected(bad_slider._on_value_changed), "Value changed signal must remain disconnected.")
+	assert_false(bad_slider.gui_input.is_connected(bad_slider._on_gui_input), "GUI input signal must remain disconnected.")

@@ -41,6 +41,19 @@ func _ready() -> void:
 	# Get bus id by name
 	bus_index = AudioServer.get_bus_index(bus_name)
 
+	# Guard against invalid audio bus names to avoid runtime errors
+	if bus_index == -1:
+		var err_msg: String = (
+			"VolumeSlider Error: Invalid audio bus name '%s'. Disabling slider." % bus_name
+		)
+		Globals.log_message(err_msg, Globals.LogLevel.ERROR)
+
+		# Kill all interactions on this dead component
+		editable = false
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		focus_mode = Control.FOCUS_NONE
+		return
+
 	# Set current bus volume value first (without triggering signal yet)
 	var initial_val: float = db_to_linear(AudioServer.get_bus_volume_db(bus_index))
 	_previous_value = initial_val
@@ -66,6 +79,10 @@ func _ready() -> void:
 ## :type new_value: float
 ## :rtype: void
 func set_value_programmatically(new_value: float) -> void:
+	# Guard against external updates if the bus is invalid
+	if bus_index == -1:
+		return
+
 	# Godot 4 native method: updates visual value without emitting 'value_changed'
 	set_value_no_signal(new_value)
 
