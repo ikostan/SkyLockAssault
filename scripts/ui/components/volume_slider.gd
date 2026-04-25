@@ -83,15 +83,18 @@ func set_value_programmatically(new_value: float) -> void:
 	if bus_index == -1:
 		return
 
+	# Clamp to the slider's configured range to avoid UI/backend divergence
+	var clamped_value := clamp(new_value, min_value, max_value)
+
 	# Godot 4 native method: updates visual value without emitting 'value_changed'
-	set_value_no_signal(new_value)
+	set_value_no_signal(clamped_value)
 
 	# Explicitly sync the audio backend, since the signal was bypassed
-	AudioServer.set_bus_volume_db(bus_index, linear_to_db(new_value))
-	AudioManager.set_volume(bus_name, new_value)
+	AudioServer.set_bus_volume_db(bus_index, linear_to_db(clamped_value))
+	AudioManager.set_volume(bus_name, clamped_value)
 
 	# Sync the delta tracker so the next manual interaction calculates correctly
-	_previous_value = new_value
+	_previous_value = clamped_value
 
 
 ## Tracks mouse drag state for accurate interaction gating, even if the cursor
