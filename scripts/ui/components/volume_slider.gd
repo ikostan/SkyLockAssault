@@ -105,6 +105,12 @@ func set_value_programmatically(new_value: float) -> void:
 func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		_is_dragging = event.pressed
+	elif event is InputEventScreenTouch:
+		# Touch down/up should mirror mouse press/release behavior.
+		_is_dragging = event.pressed
+	elif event is InputEventScreenDrag:
+		# Any active drag implies the pointer is currently dragging the slider.
+		_is_dragging = true
 
 
 ## Signal listener for when the slider value changes manually.
