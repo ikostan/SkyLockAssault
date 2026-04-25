@@ -84,7 +84,7 @@ func set_value_programmatically(new_value: float) -> void:
 		return
 
 	# Clamp to the slider's configured range to avoid UI/backend divergence
-	var clamped_value := clamp(new_value, min_value, max_value)
+	var clamped_value: float = clamp(new_value, min_value, max_value)
 
 	# Godot 4 native method: updates visual value without emitting 'value_changed'
 	set_value_no_signal(clamped_value)
