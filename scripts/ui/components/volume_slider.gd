@@ -105,6 +105,11 @@ func set_value_programmatically(new_value: float) -> void:
 func _on_gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		_is_dragging = event.pressed
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_FOCUS_EXIT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		_is_dragging = false
 	elif event is InputEventScreenTouch:
 		# Touch down/up should mirror mouse press/release behavior.
 		_is_dragging = event.pressed
