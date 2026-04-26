@@ -377,7 +377,8 @@ static func set_game_version_for_tests(value: String) -> void:
 ## Use _input instead of _unhandled_input to catch events BEFORE the UI consumes them.
 func _input(_event: InputEvent) -> void:
 	# The Ultimate Menu Check: Does a UI element currently have keyboard/gamepad focus?
-	var ui_has_focus: bool = is_instance_valid(get_viewport().gui_get_focus_owner())
+	var focus_owner: Control = get_viewport().gui_get_focus_owner()
+	var ui_has_focus: bool = is_instance_valid(focus_owner)
 
 	# Gate 1: Only play UI sounds if a UI element is focused OR we are in a known menu state
 	var is_menu_context: bool = (
@@ -392,6 +393,11 @@ func _input(_event: InputEvent) -> void:
 		# We use the global Input singleton here because it perfectly handles
 		# analog joystick deadzone debouncing, which event.is_echo() misses.
 		if Input.is_action_just_pressed(action):
+			# NEW: Prevent double-audio when adjusting sliders.
+			# If a slider has focus, left/right adjusts the value instead of navigating.
+			if focus_owner is Slider and (action == "ui_left" or action == "ui_right"):
+				return
+
 			_play_ui_navigation_sfx()
 			return  # Exit once sound is triggered to avoid double-plays
 

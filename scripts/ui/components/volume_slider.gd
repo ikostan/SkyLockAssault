@@ -1,48 +1,204 @@
 ## Copyright (C) 2025 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
-# New: Register as global class for testing and reuse
-class_name VolumeSlider
+## volume_slider.gd
+##
+## Handles the volume control slider UI component.
+## Sends volume updates to AudioManager and handles debounced saving.
+## Plays rate-limited SFX exclusively on manual user interactions,
+## safely ignoring programmatic volume changes to prevent audio spam.
 
+class_name VolumeSlider
 extends HSlider
 
+## The cooldown in milliseconds to prevent audio spam during rapid slider drags.
+const SFX_COOLDOWN_MS: int = 60
+
+## The name of the audio bus this slider controls (e.g., "Master", "Music").
 @export var bus_name: String
+
+## The internal index of the audio bus, resolved at runtime.
 var bus_index: int
 
-# New: Debounce timer for saving settings
+## Debounce timer for saving settings to avoid disk I/O spam during continuous sliding.
 var save_debounce_timer: Timer
 
+# --- SFX Rate Limiting and State ---
 
+## Timestamp of the last played SFX to enforce the cooldown.
+var _last_sfx_time: int = 0
+
+## Tracks the previous value to ensure SFX only plays on actual deltas.
+var _previous_value: float = -1.0
+
+## Tracks whether the user is actively holding the mouse button down over the slider.
+var _is_dragging: bool = false
+
+
+## Initializes the slider, resolves the bus index, syncs the initial value without
+## triggering signals, and sets up the debounce timer.
+## :rtype: void
 func _ready() -> void:
 	# Get bus id by name
 	bus_index = AudioServer.get_bus_index(bus_name)
 
+	# Guard against invalid audio bus names to avoid runtime errors
+	if bus_index == -1:
+		var err_msg: String = (
+			"VolumeSlider Error: Invalid audio bus name '%s'. Disabling slider." % bus_name
+		)
+		Globals.log_message(err_msg, Globals.LogLevel.ERROR)
+
+		# Kill all interactions on this dead component
+		editable = false
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		focus_mode = Control.FOCUS_NONE
+		return
+
 	# Set current bus volume value first (without triggering signal yet)
-	value = db_to_linear(AudioServer.get_bus_volume_db(bus_index))
+	var initial_val: float = db_to_linear(AudioServer.get_bus_volume_db(bus_index))
+	_previous_value = initial_val
+	value = initial_val
 
 	# Now connect signal for future changes
 	value_changed.connect(_on_value_changed)
 
-	# New: Initialize debounce timer (0.5s delay, one-shot)
+	# Safely track input without overriding the base _gui_input virtual method
+	gui_input.connect(_on_gui_input)
+
+	# Initialize debounce timer (0.5s delay, one-shot)
 	save_debounce_timer = Timer.new()
 	save_debounce_timer.wait_time = 0.5
 	save_debounce_timer.one_shot = true
 	save_debounce_timer.timeout.connect(_on_debounce_timeout)
-	add_child(save_debounce_timer)  # Add to scene tree for auto-processing
+	add_child(save_debounce_timer)
 
 
-# change bus value/volume
-func _on_value_changed(value: float) -> void:
-	AudioServer.set_bus_volume_db(bus_index, linear_to_db(value))
-	AudioManager.set_volume(bus_name, value)
-	# New: Start/restart debounce timer instead of immediate save
-	if save_debounce_timer.is_stopped():
-		save_debounce_timer.start()
-	else:
-		save_debounce_timer.stop()
-		save_debounce_timer.start()
+## Safe method for external scripts to update the slider without triggering SFX or saves.
+## Use this instead of modifying `value` directly when restoring settings.
+## :param new_value: The target volume (0.0 to 1.0).
+## :type new_value: float
+## :rtype: void
+func set_value_programmatically(new_value: float) -> void:
+	# Guard against external updates if the bus is invalid
+	if bus_index == -1:
+		return
+
+	# Clamp to the slider's configured range to avoid UI/backend divergence
+	var clamped_value: float = clamp(new_value, min_value, max_value)
+
+	# Early return: Prevent redundant backend I/O if the value hasn't changed
+	if is_equal_approx(clamped_value, _previous_value):
+		return
+
+	# Godot 4 native method: updates visual value without emitting 'value_changed'
+	set_value_no_signal(clamped_value)
+
+	# Explicitly sync the audio backend, since the signal was bypassed
+	AudioServer.set_bus_volume_db(bus_index, linear_to_db(clamped_value))
+	AudioManager.set_volume(bus_name, clamped_value)
+
+	# Sync the delta tracker so the next manual interaction calculates correctly
+	_previous_value = clamped_value
 
 
-# New: Called on timer timeout—perform the batched save
+## Tracks mouse and touch drag state for accurate interaction gating, even if the cursor
+## leaves the slider's bounding box while dragging.
+## :param event: The input event passed by the UI system.
+## :type event: InputEvent
+## :rtype: void
+func _on_gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		_is_dragging = event.pressed
+	elif event is InputEventScreenTouch:
+		# Touch down/up should mirror mouse press/release behavior.
+		_is_dragging = event.pressed
+	elif event is InputEventScreenDrag:
+		# Any active drag implies the pointer is currently dragging the slider.
+		_is_dragging = true
+
+
+## Catches edge cases where input release events are dropped (e.g., ALT-Tabbing
+## or unexpected focus stealing), preventing the drag state from getting stuck.
+## :param what: The notification ID from the engine.
+## :type what: int
+## :rtype: void
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_FOCUS_EXIT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		_is_dragging = false
+
+
+## Signal listener for when the slider value changes manually.
+## :param new_value: The new volume level from the slider (0.0 to 1.0).
+## :type new_value: float
+## :rtype: void
+func _on_value_changed(new_value: float) -> void:
+	# Early return: Prevent redundant backend I/O and disk saves on float jitter
+	if is_equal_approx(new_value, _previous_value):
+		return
+
+	# Commit the delta tracker immediately
+	_previous_value = new_value
+
+	AudioServer.set_bus_volume_db(bus_index, linear_to_db(new_value))
+	AudioManager.set_volume(bus_name, new_value)
+
+	# Attempt to play interaction feedback
+	_handle_slider_sfx(new_value)
+
+	# Godot automatically restarts an active timer when start() is called
+	save_debounce_timer.start()
+
+
+## Guards SFX playback against rapid spam.
+## Ensures sound only plays during legitimate, rate-limited user interactions.
+## :param new_value: The updated slider value.
+## :type new_value: float
+## :rtype: void
+func _handle_slider_sfx(_new_value: float) -> void:
+	# Guard 1: Only play if user is actively interacting (Mouse Drag or Keyboard Focus)
+	var is_mouse_active: bool = _is_dragging
+	var is_keyboard_active: bool = has_focus()
+
+	if not (is_mouse_active or is_keyboard_active):
+		return
+
+	# Guard 2: Rate limit to prevent audio spam during rapid drags
+	var current_time: int = Time.get_ticks_msec()
+	if current_time - _last_sfx_time < SFX_COOLDOWN_MS:
+		return
+
+	# Commit time state only after all guards pass
+	_last_sfx_time = current_time
+
+	# Use get_node to allow for GUT testing/doubling of the autoload
+	get_node("/root/AudioManager").play_sfx(AudioConstants.SFX_SLIDER)
+
+
+## Called on timer timeout—performs the batched disk save.
+## :rtype: void
 func _on_debounce_timeout() -> void:
 	AudioManager.save_volumes()
 	Globals.log_message("Debounced settings save triggered.", Globals.LogLevel.DEBUG)
+
+
+# ==========================================
+# PUBLIC GETTERS FOR TESTING & VALIDATION
+# ==========================================
+
+
+## Returns the last recorded delta value used for SFX checks.
+## :rtype: float
+func get_previous_value() -> float:
+	return _previous_value
+
+
+## Returns the raw timestamp of the last played interaction sound.
+## :rtype: int
+func get_last_sfx_time() -> int:
+	return _last_sfx_time
+
+
+## Returns whether the user is actively dragging the slider UI.
+## :rtype: bool
+func is_user_dragging() -> bool:
+	return _is_dragging

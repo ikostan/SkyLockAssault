@@ -12,6 +12,16 @@ signal volume_changed(bus_name: String, volume: float)
 signal mute_toggled(bus_name: String, is_muted: bool)
 # --------------------------------------------
 
+# --- NEW: SFX CACHING & MANAGEMENT ---
+## Base path for all UI sound effects.
+const SFX_DIR_PATH: String = "res://files/sounds/sfx/"
+
+## Hard cap for cached SFX streams to prevent unbounded memory growth.
+const MAX_SFX_CACHE_SIZE: int = 20
+
+## Number of reusable AudioStreamPlayers to keep in memory for UI sounds.
+const SFX_POOL_SIZE: int = 8
+
 @export_category("Master Volume")
 @export var master_volume: float
 @export var master_muted: bool
@@ -32,13 +42,28 @@ signal mute_toggled(bus_name: String, is_muted: bool)
 
 var current_config_path: String = Settings.CONFIG_PATH
 
+# --- SFX CACHE STATE ---
+## Dictionary to store preloaded AudioStreams to prevent disk I/O stutter.
+var _sfx_cache: Dictionary = {}
+
+## Dictionary acting as a set to track missing SFX and prevent repeated load attempts/log spam.
+var _missing_sfx_cache: Dictionary = {}
+
+## Array of pre-instantiated AudioStreamPlayers to prevent node instantiation churn.
+var _sfx_pool: Array[AudioStreamPlayer] = []
+
 
 func _ready() -> void:
 	## Initializes to defaults and loads/applies volumes.
-	## :rtype: void
 	_init_to_defaults()  # Set to defaults from AudioConstants
 	load_volumes()  # Load persisted volumes (overrides defaults if saved)
 	apply_all_volumes()  # Apply to AudioServer buses
+
+	# Initialize the SFX object pool
+	for i in range(SFX_POOL_SIZE):
+		var p := AudioStreamPlayer.new()
+		add_child(p)
+		_sfx_pool.append(p)
 
 
 ## Initialize all volumes and mutes to defaults from AudioConstants
@@ -333,3 +358,81 @@ func reset_volumes() -> void:
 	apply_all_volumes()
 	save_volumes()
 	Globals.log_message("Audio volumes reset to defaults.", Globals.LogLevel.DEBUG)
+
+
+## Centralized SFX Playback API (Issue #565)
+## Handles non-positional audio with LRU caching and auto-cleanup.
+## :param sfx_name: The filename without extension (e.g., "slider").
+## :param bus_name: Target audio bus (defaults to SFX_Menu).
+## :param pitch_scale: Pitch override for variety.
+## :param volume_db: Volume offset in decibels.
+func play_sfx(
+	sfx_name: String,
+	bus_name: String = AudioConstants.BUS_SFX_MENU,
+	pitch_scale: float = 1.0,
+	volume_db: float = 0.0
+) -> void:
+	if sfx_name.is_empty():
+		return
+
+	# Short-circuit: If we already know this file is missing, do not attempt to load it again.
+	if _missing_sfx_cache.has(sfx_name):
+		return
+
+	# 1. Resolve and Cache the AudioStream (with LRU Eviction)
+	if not _sfx_cache.has(sfx_name):
+		var full_path: String = SFX_DIR_PATH + sfx_name + ".wav"
+		var stream: AudioStream = load(full_path)
+
+		if stream:
+			# Eviction strategy: If cache is full, remove the oldest (first) entry
+			if _sfx_cache.size() >= MAX_SFX_CACHE_SIZE:
+				var oldest_key: String = _sfx_cache.keys()[0]
+				_sfx_cache.erase(oldest_key)
+				Globals.log_message(
+					"SFX cache full. Evicted: " + oldest_key, Globals.LogLevel.DEBUG
+				)
+
+			_sfx_cache[sfx_name] = stream
+		else:
+			Globals.log_message(
+				"SFX file not found or failed to load: " + full_path, Globals.LogLevel.WARNING
+			)
+			# Cache the failure so we don't spam the disk and logs on subsequent requests
+			_missing_sfx_cache[sfx_name] = true
+			return
+	else:
+		# LRU Update: Godot 4 Dictionaries preserve insertion order.
+		# By erasing and re-inserting, we push this active sound to the "newest" end of the dictionary.
+		var stream: AudioStream = _sfx_cache[sfx_name]
+		_sfx_cache.erase(sfx_name)
+		_sfx_cache[sfx_name] = stream
+
+	# 2. Grab an available player from the object pool
+	var player: AudioStreamPlayer = null
+	for p: AudioStreamPlayer in _sfx_pool:
+		if not p.playing:
+			player = p
+			break
+
+	# Fallback: If all players are busy, hijack the first one in the pool
+	# to prevent dropping the new sound entirely.
+	if player == null:
+		player = _sfx_pool[0]
+
+	player.stream = _sfx_cache[sfx_name]
+	player.pitch_scale = pitch_scale
+	player.volume_db = volume_db
+
+	# 3. Bus Validation & Routing
+	if AudioServer.get_bus_index(bus_name) == -1:
+		Globals.log_message(
+			"Invalid bus '%s' requested for SFX. Falling back to SFX_Menu." % bus_name,
+			Globals.LogLevel.WARNING
+		)
+		player.bus = AudioConstants.BUS_SFX_MENU
+	else:
+		player.bus = bus_name
+
+	# 4. Play (No queue_free needed since we reuse the nodes)
+	player.play()
