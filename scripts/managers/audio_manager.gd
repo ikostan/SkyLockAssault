@@ -38,9 +38,13 @@ const MAX_SFX_CACHE_SIZE: int = 20
 @export var menu_muted: bool
 
 var current_config_path: String = Settings.CONFIG_PATH
+
 # --- NEW: SFX CACHING & MANAGEMENT ---
 ## Dictionary to store preloaded AudioStreams to prevent disk I/O stutter.
 var _sfx_cache: Dictionary = {}
+
+## Dictionary acting as a set to track missing SFX and prevent repeated load attempts/log spam.
+var _missing_sfx_cache: Dictionary = {}
 
 
 func _ready() -> void:
@@ -360,6 +364,10 @@ func play_sfx(
 	if sfx_name.is_empty():
 		return
 
+	# Short-circuit: If we already know this file is missing, do not attempt to load it again.
+	if _missing_sfx_cache.has(sfx_name):
+		return
+
 	# 1. Resolve and Cache the AudioStream (with LRU Eviction)
 	if not _sfx_cache.has(sfx_name):
 		var full_path: String = SFX_DIR_PATH + sfx_name + ".wav"
@@ -379,6 +387,8 @@ func play_sfx(
 			Globals.log_message(
 				"SFX file not found or failed to load: " + full_path, Globals.LogLevel.WARNING
 			)
+			# Cache the failure so we don't spam the disk and logs on subsequent requests
+			_missing_sfx_cache[sfx_name] = true
 			return
 	else:
 		# LRU Update: Godot 4 Dictionaries preserve insertion order.
