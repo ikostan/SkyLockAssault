@@ -39,7 +39,7 @@ const MAX_SFX_CACHE_SIZE: int = 20
 
 var current_config_path: String = Settings.CONFIG_PATH
 
-# --- NEW: SFX CACHING & MANAGEMENT ---
+# --- SFX CACHE STATE ---
 ## Dictionary to store preloaded AudioStreams to prevent disk I/O stutter.
 var _sfx_cache: Dictionary = {}
 
