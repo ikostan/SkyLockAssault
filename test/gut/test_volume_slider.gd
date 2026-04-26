@@ -9,8 +9,20 @@ extends "res://addons/gut/test.gd"
 
 var _slider: VolumeSlider
 
+# Snapshot variables for state isolation
+var _orig_config_path: String
+var _orig_master_volume: float
+const _TEST_CONFIG_PATH: String = "user://test_volume_slider.cfg"
+
 
 func before_each() -> void:
+	# Snapshot global state to prevent cross-suite leakage
+	_orig_config_path = AudioManager.current_config_path
+	_orig_master_volume = AudioManager.master_volume
+	
+	# Isolate the config path so any rogue debounce saves hit a throwaway file
+	AudioManager.current_config_path = _TEST_CONFIG_PATH
+
 	_slider = VolumeSlider.new()
 	_slider.bus_name = AudioConstants.BUS_MASTER
 	
@@ -21,6 +33,16 @@ func before_each() -> void:
 	
 	# Add to the tree to ensure _ready() fires and UI state works
 	add_child_autoqfree(_slider)
+
+
+func after_each() -> void:
+	# Restore global state
+	AudioManager.current_config_path = _orig_config_path
+	AudioManager.master_volume = _orig_master_volume
+	
+	# Clean up any test config generated if the debounce timer fired during CI lag
+	if FileAccess.file_exists(_TEST_CONFIG_PATH):
+		DirAccess.remove_absolute(_TEST_CONFIG_PATH)
 
 
 # ==========================================
