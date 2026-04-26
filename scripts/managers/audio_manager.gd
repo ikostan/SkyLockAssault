@@ -58,7 +58,7 @@ func _ready() -> void:
 	_init_to_defaults()  # Set to defaults from AudioConstants
 	load_volumes()  # Load persisted volumes (overrides defaults if saved)
 	apply_all_volumes()  # Apply to AudioServer buses
-	
+
 	# Initialize the SFX object pool
 	for i in range(SFX_POOL_SIZE):
 		var p := AudioStreamPlayer.new()
@@ -414,8 +414,8 @@ func play_sfx(
 		if not p.playing:
 			player = p
 			break
-			
-	# Fallback: If all players are busy, hijack the first one in the pool 
+
+	# Fallback: If all players are busy, hijack the first one in the pool
 	# to prevent dropping the new sound entirely.
 	if player == null:
 		player = _sfx_pool[0]
