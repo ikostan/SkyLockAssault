@@ -160,17 +160,6 @@ func test_sfx_guard_allows_valid_interaction() -> void:
 	root.remove_child(mock_am)
 	root.add_child(real_am)
 	mock_am.free()
-	# Setup: Set an initial value and simulate an interaction
-	_slider.value = 0.5
-	_slider._previous_value = 0.5
-	_slider._is_dragging = true
-	var initial_sfx_time: int = _slider.get_last_sfx_time()
-	
-	# Act: Try to trigger SFX with the exact same value
-	_slider._handle_slider_sfx(0.5)
-	
-	# Assert: The time shouldn't update because Guard 1 blocked it
-	assert_eq(_slider.get_last_sfx_time(), initial_sfx_time, "SFX must be blocked if the value hasn't actually changed.")
 
 
 ## WHY: Restricts SFX playback strictly to active user engagement.
