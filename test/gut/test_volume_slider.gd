@@ -102,7 +102,7 @@ func test_manual_value_change_starts_debounce_timer() -> void:
 ## EXPECTED: The _is_dragging flag remains false.
 func test_programmatic_change_does_not_alter_drag_state() -> void:
 	_slider.set_value_programmatically(0.2)
-	assert_false(_slider._is_dragging, "Programmatic changes should not affect the _is_dragging state")
+	assert_false(_slider.is_user_dragging(), "Programmatic changes should not affect the _is_dragging state")
 
 
 # ==========================================
@@ -117,13 +117,13 @@ func test_sfx_guard_blocks_identical_values() -> void:
 	_slider.value = 0.5
 	_slider._previous_value = 0.5
 	_slider._is_dragging = true
-	var initial_sfx_time: int = _slider._last_sfx_time
+	var initial_sfx_time: int = _slider.get_last_sfx_time()
 	
 	# Act: Try to trigger SFX with the exact same value
 	_slider._handle_slider_sfx(0.5)
 	
 	# Assert: The time shouldn't update because Guard 1 blocked it
-	assert_eq(_slider._last_sfx_time, initial_sfx_time, "SFX must be blocked if the value hasn't actually changed.")
+	assert_eq(_slider.get_last_sfx_time(), initial_sfx_time, "SFX must be blocked if the value hasn't actually changed.")
 
 
 ## WHY: Restricts SFX playback strictly to active user engagement.
@@ -135,13 +135,13 @@ func test_sfx_guard_blocks_no_interaction() -> void:
 	_slider._previous_value = 0.2
 	_slider._is_dragging = false
 	_slider.release_focus()
-	var initial_sfx_time: int = _slider._last_sfx_time
+	var initial_sfx_time: int = _slider.get_last_sfx_time()
 	
 	# Act: Try to trigger SFX
 	_slider._handle_slider_sfx(0.5)
 	
 	# Assert: The time shouldn't update because Guard 2 blocked it
-	assert_eq(_slider._last_sfx_time, initial_sfx_time, "SFX must be blocked if the user isn't actively interacting.")
+	assert_eq(_slider.get_last_sfx_time(), initial_sfx_time, "SFX must be blocked if the user isn't actively interacting.")
 
 
 ## WHY: Validates the "Happy Path" for manual interaction audio feedback.
@@ -167,8 +167,8 @@ func test_sfx_guard_allows_valid_interaction() -> void:
 	_slider._handle_slider_sfx(0.5)
 	
 	# 4. Assert local state
-	assert_ne(_slider._last_sfx_time, 0, "SFX time should update when a valid, manual value delta occurs.")
-	assert_eq(_slider._previous_value, 0.5, "Previous value should be updated after successful SFX trigger.")
+	assert_ne(_slider.get_last_sfx_time(), 0, "SFX time should update when a valid, manual value delta occurs.")
+	assert_eq(_slider.get_previous_value(), 0.5, "Previous value should be updated after successful SFX trigger.")
 	
 	# 5. Assert the mock received the play_sfx call, proving the guards passed
 	assert_eq(mock_am.played_sfx.size(), 1, "play_sfx should be called exactly once.")
@@ -198,7 +198,7 @@ func test_sfx_guard_enforces_rate_limiting() -> void:
 	
 	# Assert: It should have been blocked by the SFX_COOLDOWN_MS guard
 	assert_eq(
-		_slider._last_sfx_time, 
+		_slider.get_last_sfx_time(), 
 		future_time, 
 		"Rate limiter MUST block sounds requested faster than the cooldown window."
 	)
