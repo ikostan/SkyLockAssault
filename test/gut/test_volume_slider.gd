@@ -133,15 +133,20 @@ func test_sfx_guard_enforces_rate_limiting() -> void:
 	_slider._previous_value = 0.2
 	_slider._is_dragging = true
 	
-	# Force the last sfx time to be right now
-	var current_time: int = Time.get_ticks_msec()
-	_slider._last_sfx_time = current_time
+	# Force the last sfx time into the future to guarantee a deterministic block
+	# regardless of CI thread pauses or garbage collection spikes.
+	var future_time: int = Time.get_ticks_msec() + _slider.SFX_COOLDOWN_MS + 1000
+	_slider._last_sfx_time = future_time
 	
 	# Act: Try to trigger another sound immediately with a new value
 	_slider._handle_slider_sfx(0.6)
 	
 	# Assert: It should have been blocked by the SFX_COOLDOWN_MS guard
-	assert_eq(_slider._last_sfx_time, current_time, "Rate limiter MUST block sounds requested faster than the cooldown window.")
+	assert_eq(
+		_slider._last_sfx_time, 
+		future_time, 
+		"Rate limiter MUST block sounds requested faster than the cooldown window."
+	)
 
 
 # ==========================================
