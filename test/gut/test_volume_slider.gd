@@ -119,6 +119,53 @@ func test_sfx_guard_blocks_identical_values() -> void:
 	_slider._is_dragging = true
 	var initial_sfx_time: int = _slider.get_last_sfx_time()
 	
+	# Act: Try to trigger the full pipeline with the exact same value
+	_slider._on_value_changed(0.5)
+	
+	# Assert: The time shouldn't update because the early return blocked it
+	assert_eq(_slider.get_last_sfx_time(), initial_sfx_time, "SFX must be blocked if the value hasn't actually changed.")
+
+
+## WHY: Validates the "Happy Path" for manual interaction audio feedback.
+## WHAT: Simulates a manual drag interaction accompanied by a value delta.
+## EXPECTED: All guards pass; _last_sfx_time is updated and _previous_value is committed.
+func test_sfx_guard_allows_valid_interaction() -> void:
+	# 1. Setup the manual mock to block real audio I/O
+	var mock_am: MockAudioManager = MockAudioManager.new()
+	
+	# Swap out the real AudioManager in the scene tree
+	var root := get_tree().root
+	var real_am := root.get_node("AudioManager")
+	root.remove_child(real_am)
+	root.add_child(mock_am)
+	mock_am.name = "AudioManager"
+	
+	# 2. Setup slider interaction variables
+	_slider._previous_value = 0.2
+	_slider._is_dragging = true
+	_slider._last_sfx_time = 0 # Ensure no cooldown interference
+	
+	# 3. Act: Trigger the full pipeline
+	_slider._on_value_changed(0.5)
+	
+	# 4. Assert local state
+	assert_ne(_slider.get_last_sfx_time(), 0, "SFX time should update when a valid, manual value delta occurs.")
+	assert_eq(_slider.get_previous_value(), 0.5, "Previous value should be updated after successful SFX trigger.")
+	
+	# 5. Assert the mock received the play_sfx call, proving the guards passed
+	assert_eq(mock_am.played_sfx.size(), 1, "play_sfx should be called exactly once.")
+	assert_eq(mock_am.played_sfx[0], AudioConstants.SFX_SLIDER, "The correct SFX constant should be played.")
+	
+	# 6. Cleanup: Safely restore the original AudioManager
+	root.remove_child(mock_am)
+	root.add_child(real_am)
+	mock_am.free()
+	# Setup: Set an initial value and simulate an interaction
+	_slider.value = 0.5
+	_slider._previous_value = 0.5
+	_slider._is_dragging = true
+	var initial_sfx_time: int = _slider.get_last_sfx_time()
+	
 	# Act: Try to trigger SFX with the exact same value
 	_slider._handle_slider_sfx(0.5)
 	
@@ -142,42 +189,6 @@ func test_sfx_guard_blocks_no_interaction() -> void:
 	
 	# Assert: The time shouldn't update because Guard 2 blocked it
 	assert_eq(_slider.get_last_sfx_time(), initial_sfx_time, "SFX must be blocked if the user isn't actively interacting.")
-
-
-## WHY: Validates the "Happy Path" for manual interaction audio feedback.
-## WHAT: Simulates a manual drag interaction accompanied by a value delta.
-## EXPECTED: All guards pass; _last_sfx_time is updated and _previous_value is committed.
-func test_sfx_guard_allows_valid_interaction() -> void:
-	# 1. Setup the manual mock to block real audio I/O
-	var mock_am: MockAudioManager = MockAudioManager.new()
-	
-	# Swap out the real AudioManager in the scene tree
-	var root := get_tree().root
-	var real_am := root.get_node("AudioManager")
-	root.remove_child(real_am)
-	root.add_child(mock_am)
-	mock_am.name = "AudioManager"
-	
-	# 2. Setup slider interaction variables
-	_slider._previous_value = 0.2
-	_slider._is_dragging = true
-	_slider._last_sfx_time = 0 # Ensure no cooldown interference
-	
-	# 3. Act: Trigger SFX
-	_slider._handle_slider_sfx(0.5)
-	
-	# 4. Assert local state
-	assert_ne(_slider.get_last_sfx_time(), 0, "SFX time should update when a valid, manual value delta occurs.")
-	assert_eq(_slider.get_previous_value(), 0.5, "Previous value should be updated after successful SFX trigger.")
-	
-	# 5. Assert the mock received the play_sfx call, proving the guards passed
-	assert_eq(mock_am.played_sfx.size(), 1, "play_sfx should be called exactly once.")
-	assert_eq(mock_am.played_sfx[0], AudioConstants.SFX_SLIDER, "The correct SFX constant should be played.")
-	
-	# 6. Cleanup: Safely restore the original AudioManager
-	root.remove_child(mock_am)
-	root.add_child(real_am)
-	mock_am.free()
 
 
 ## WHY: Protects the user from ear-piercing noise during rapid mouse movements.

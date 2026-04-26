@@ -128,6 +128,13 @@ func _notification(what: int) -> void:
 ## :type new_value: float
 ## :rtype: void
 func _on_value_changed(new_value: float) -> void:
+	# Early return: Prevent redundant backend I/O and disk saves on float jitter
+	if is_equal_approx(new_value, _previous_value):
+		return
+
+	# Commit the delta tracker immediately
+	_previous_value = new_value
+
 	AudioServer.set_bus_volume_db(bus_index, linear_to_db(new_value))
 	AudioManager.set_volume(bus_name, new_value)
 
@@ -138,28 +145,20 @@ func _on_value_changed(new_value: float) -> void:
 	save_debounce_timer.start()
 
 
-## Guards SFX playback against redundant values and rapid spam.
+## Guards SFX playback against rapid spam.
 ## Ensures sound only plays during legitimate, rate-limited user interactions.
 ## :param new_value: The updated slider value.
 ## :type new_value: float
 ## :rtype: void
-func _handle_slider_sfx(new_value: float) -> void:
-	# Guard 1: Only play if the value actually changed (float-safe delta check)
-	if is_equal_approx(new_value, _previous_value):
-		return
-
-	# Guard 2: Only play if user is actively interacting (Mouse Drag or Keyboard Focus)
+func _handle_slider_sfx(_new_value: float) -> void:
+	# Guard 1: Only play if user is actively interacting (Mouse Drag or Keyboard Focus)
 	var is_mouse_active: bool = _is_dragging
 	var is_keyboard_active: bool = has_focus()
 
 	if not (is_mouse_active or is_keyboard_active):
 		return
 
-	# Commit the value tracker only for valid user interactions.
-	# This ensures rogue programmatic updates don't swallow the next valid SFX delta.
-	_previous_value = new_value
-
-	# Guard 3: Rate limit to prevent audio spam during rapid drags
+	# Guard 2: Rate limit to prevent audio spam during rapid drags
 	var current_time: int = Time.get_ticks_msec()
 	if current_time - _last_sfx_time < SFX_COOLDOWN_MS:
 		return
