@@ -7,6 +7,20 @@
 
 extends "res://addons/gut/test.gd"
 
+# ==========================================
+# MOCKS
+# ==========================================
+
+class MockAudioManager extends Node:
+	var played_sfx: Array[String] = []
+	
+	func play_sfx(sfx_name: String, _bus_name: String = "", _pitch_scale: float = 1.0, _volume_db: float = 0.0) -> void:
+		played_sfx.append(sfx_name)
+
+# ==========================================
+# TESTS
+# ==========================================
+
 var _slider: VolumeSlider
 
 # Snapshot variables for state isolation
@@ -134,17 +148,36 @@ func test_sfx_guard_blocks_no_interaction() -> void:
 ## WHAT: Simulates a manual drag interaction accompanied by a value delta.
 ## EXPECTED: All guards pass; _last_sfx_time is updated and _previous_value is committed.
 func test_sfx_guard_allows_valid_interaction() -> void:
-	# Setup: Different value AND active interaction
+	# 1. Setup the manual mock to block real audio I/O
+	var mock_am: MockAudioManager = MockAudioManager.new()
+	
+	# Swap out the real AudioManager in the scene tree
+	var root := get_tree().root
+	var real_am := root.get_node("AudioManager")
+	root.remove_child(real_am)
+	root.add_child(mock_am)
+	mock_am.name = "AudioManager"
+	
+	# 2. Setup slider interaction variables
 	_slider._previous_value = 0.2
 	_slider._is_dragging = true
 	_slider._last_sfx_time = 0 # Ensure no cooldown interference
 	
-	# Act: Trigger SFX
+	# 3. Act: Trigger SFX
 	_slider._handle_slider_sfx(0.5)
 	
-	# Assert: All guards passed, state was committed
+	# 4. Assert local state
 	assert_ne(_slider._last_sfx_time, 0, "SFX time should update when a valid, manual value delta occurs.")
 	assert_eq(_slider._previous_value, 0.5, "Previous value should be updated after successful SFX trigger.")
+	
+	# 5. Assert the mock received the play_sfx call, proving the guards passed
+	assert_eq(mock_am.played_sfx.size(), 1, "play_sfx should be called exactly once.")
+	assert_eq(mock_am.played_sfx[0], AudioConstants.SFX_SLIDER, "The correct SFX constant should be played.")
+	
+	# 6. Cleanup: Safely restore the original AudioManager
+	root.remove_child(mock_am)
+	root.add_child(real_am)
+	mock_am.free()
 
 
 ## WHY: Protects the user from ear-piercing noise during rapid mouse movements.

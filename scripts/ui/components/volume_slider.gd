@@ -166,7 +166,8 @@ func _handle_slider_sfx(new_value: float) -> void:
 	# Commit time state only after all guards pass
 	_last_sfx_time = current_time
 
-	AudioManager.play_sfx(AudioConstants.SFX_SLIDER)
+	# Use get_node to allow for GUT testing/doubling of the autoload
+	get_node("/root/AudioManager").play_sfx(AudioConstants.SFX_SLIDER)
 
 
 ## Called on timer timeout—performs the batched disk save.
