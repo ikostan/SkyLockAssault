@@ -415,6 +415,6 @@ func play_sfx(
 	else:
 		player.bus = bus_name
 
-	# 4. Play and Auto-Cleanup
+	# 4. Play and Auto-Cleanup (Swapped order to prevent race conditions)
+	player.finished.connect(player.queue_free, CONNECT_ONE_SHOT)
 	player.play()
-	player.finished.connect(player.queue_free)
