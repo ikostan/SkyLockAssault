@@ -13,12 +13,24 @@ var audio_scene: PackedScene = load(GamePaths.AUDIO_SETTINGS_SCENE)
 var audio_instance: Control
 var test_config_path: String = "user://test_audio_sync.cfg"
 
-## Per-test setup: Instantiate audio scene, reset state
+# State snapshot variables to prevent cross-suite leakage
+var _orig_config_path: String
+var _orig_master_volume: float
+var _orig_sfx_volume: float
+
+
+## Per-test setup: Instantiate audio scene, snapshot singleton, and reset state
 ## :rtype: void
 func before_each() -> void:
+	# Capture original AudioManager state
+	_orig_config_path = AudioManager.current_config_path
+	_orig_master_volume = AudioManager.master_volume
+	_orig_sfx_volume = AudioManager.sfx_volume
+	
 	if FileAccess.file_exists(test_config_path):
 		DirAccess.remove_absolute(test_config_path)
 		
+	# Apply isolated test state
 	AudioManager.current_config_path = test_config_path
 	AudioManager.master_volume = 1.0
 	AudioManager.sfx_volume = 1.0
@@ -27,7 +39,7 @@ func before_each() -> void:
 	add_child_autofree(audio_instance)
 
 
-## Per-test cleanup: Free audio_instance safely.
+## Per-test cleanup: Free audio_instance safely and restore singleton state.
 ## :rtype: void
 func after_each() -> void:
 	if is_instance_valid(audio_instance):
@@ -40,6 +52,12 @@ func after_each() -> void:
 	
 	if FileAccess.file_exists(test_config_path):
 		DirAccess.remove_absolute(test_config_path)
+		
+	# Restore original AudioManager state to prevent leakage
+	AudioManager.current_config_path = _orig_config_path
+	AudioManager.master_volume = _orig_master_volume
+	AudioManager.sfx_volume = _orig_sfx_volume
+	
 	await get_tree().process_frame
 
 
