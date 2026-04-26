@@ -154,7 +154,7 @@ reorganised into purpose-specific sub-directories:
 <!-- markdownlint-disable MD013 -->
 | Directory            | Contents                                                                                                                                                                                     |
 |----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `scripts/core/`      | Foundational systems: `game_paths.gd` (centralised path registry), `globals.gd`, `main_scene.gd`, `settings.gd`                                                                              |
+| `scripts/core/`      | Foundational systems: `game_paths.gd` (centralized path registry), `globals.gd`, `main_scene.gd`, `settings.gd`                                                                              |
 | `scripts/resources/` | Data containers & configuration: `game_settings_resource.gd`, `audio_constants.gd`                                                                                                           |
 | `scripts/entities/`  | Game objects: `player.gd`, `bullet.gd`, `weapon.gd`                                                                                                                                          |
 | `scripts/system/`    | Platform wrappers & integrations: `audio_web_bridge.gd`, `JavaScriptBridgeWrapper.gd`, `OSWrapper.gd`                                                                                        |
