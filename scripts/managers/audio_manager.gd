@@ -19,6 +19,9 @@ const SFX_DIR_PATH: String = "res://files/sounds/sfx/"
 ## Hard cap for cached SFX streams to prevent unbounded memory growth.
 const MAX_SFX_CACHE_SIZE: int = 20
 
+## Number of reusable AudioStreamPlayers to keep in memory for UI sounds.
+const SFX_POOL_SIZE: int = 8
+
 @export_category("Master Volume")
 @export var master_volume: float
 @export var master_muted: bool
@@ -46,13 +49,21 @@ var _sfx_cache: Dictionary = {}
 ## Dictionary acting as a set to track missing SFX and prevent repeated load attempts/log spam.
 var _missing_sfx_cache: Dictionary = {}
 
+## Array of pre-instantiated AudioStreamPlayers to prevent node instantiation churn.
+var _sfx_pool: Array[AudioStreamPlayer] = []
+
 
 func _ready() -> void:
 	## Initializes to defaults and loads/applies volumes.
-	## :rtype: void
 	_init_to_defaults()  # Set to defaults from AudioConstants
 	load_volumes()  # Load persisted volumes (overrides defaults if saved)
 	apply_all_volumes()  # Apply to AudioServer buses
+	
+	# Initialize the SFX object pool
+	for i in range(SFX_POOL_SIZE):
+		var p := AudioStreamPlayer.new()
+		add_child(p)
+		_sfx_pool.append(p)
 
 
 ## Initialize all volumes and mutes to defaults from AudioConstants
@@ -397,9 +408,17 @@ func play_sfx(
 		_sfx_cache.erase(sfx_name)
 		_sfx_cache[sfx_name] = stream
 
-	# 2. Instantiate and Configure the Player
-	var player := AudioStreamPlayer.new()
-	add_child(player)
+	# 2. Grab an available player from the object pool
+	var player: AudioStreamPlayer = null
+	for p: AudioStreamPlayer in _sfx_pool:
+		if not p.playing:
+			player = p
+			break
+			
+	# Fallback: If all players are busy, hijack the first one in the pool 
+	# to prevent dropping the new sound entirely.
+	if player == null:
+		player = _sfx_pool[0]
 
 	player.stream = _sfx_cache[sfx_name]
 	player.pitch_scale = pitch_scale
@@ -415,6 +434,5 @@ func play_sfx(
 	else:
 		player.bus = bus_name
 
-	# 4. Play and Auto-Cleanup (Swapped order to prevent race conditions)
-	player.finished.connect(player.queue_free, CONNECT_ONE_SHOT)
+	# 4. Play (No queue_free needed since we reuse the nodes)
 	player.play()
