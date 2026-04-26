@@ -148,15 +148,16 @@ func _handle_slider_sfx(new_value: float) -> void:
 	if is_equal_approx(new_value, _previous_value):
 		return
 
-	# Commit the value tracker early so delta checks stay accurate even if rate-limited
-	_previous_value = new_value
-
 	# Guard 2: Only play if user is actively interacting (Mouse Drag or Keyboard Focus)
 	var is_mouse_active: bool = _is_dragging
 	var is_keyboard_active: bool = has_focus()
 
 	if not (is_mouse_active or is_keyboard_active):
 		return
+
+	# Commit the value tracker only for valid user interactions.
+	# This ensures rogue programmatic updates don't swallow the next valid SFX delta.
+	_previous_value = new_value
 
 	# Guard 3: Rate limit to prevent audio spam during rapid drags
 	var current_time: int = Time.get_ticks_msec()
