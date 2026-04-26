@@ -181,15 +181,18 @@ func _on_debounce_timeout() -> void:
 # PUBLIC GETTERS FOR TESTING & VALIDATION
 # ==========================================
 
+
 ## Returns the last recorded delta value used for SFX checks.
 ## :rtype: float
 func get_previous_value() -> float:
 	return _previous_value
 
+
 ## Returns the raw timestamp of the last played interaction sound.
 ## :rtype: int
 func get_last_sfx_time() -> int:
 	return _last_sfx_time
+
 
 ## Returns whether the user is actively dragging the slider UI.
 ## :rtype: bool
