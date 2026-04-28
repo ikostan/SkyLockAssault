@@ -13,6 +13,9 @@ on:  # yamllint disable-line rule:truthy
       ITCHIO_API_KEY:
         description: "Itch.io API key"
         required: true
+      PRODUCTION_SALT:
+        description: "production salt secret key"
+        required: true
 
 jobs:
   export-and-deploy:
@@ -38,6 +41,19 @@ jobs:
           else
             printf '\n[application]\nconfig/version="%s"\n' "$ESCAPED_VERSION" >> project.godot
           fi
+      - name: "Inject Production Salt into project.godot"
+        run: |
+            SALT="${{ secrets.PRODUCTION_SALT }}"
+            # Check if the custom setting already exists to update it
+            if grep -q '^game/security/save_salt=' project.godot; then
+              sed -i "s|^game/security/save_salt=.*$|game/security/save_salt=\"$SALT\"|g" project.godot
+            # If not, append it to the [application] section
+            elif grep -q '^\[application\]' project.godot; then
+              sed -i "/^\[application\]/a game\/security\/save_salt=\"$SALT\"" project.godot
+            # Fallback: create section if everything is missing
+            else
+              printf '\n[application]\ngame/security/save_salt="%s"\n' "$SALT" >> project.godot
+            fi
       - name: "Create Export Directories"
         run: |
           mkdir -p export/web

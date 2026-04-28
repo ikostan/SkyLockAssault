@@ -11,6 +11,13 @@ enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 ## Path to the navigation sound file
 const UI_NAV_SOUND_PATH: String = "res://files/sounds/sfx/ui_navigation.wav"
 
+# --- TASK #529: Encryption Key Management ---
+## Centralized key for securing local configuration files.
+## This ensures consistent encryption/decryption across different game systems. [cite: 3]
+## Define the variable by pulling from ProjectSettings.
+## If the setting doesn't exist, it falls back to a non-secure string.
+var save_encryption_pass: String = _get_encryption_key()
+
 # Add the resource reference here
 var settings: GameSettingsResource
 # In globals.gd (add after @export vars)
@@ -158,18 +165,22 @@ func load_key_mapping(menu_to_hide: Node) -> void:
 	get_tree().root.add_child(km_instance)
 
 
-## Loads persisted settings from config if valid types;
-## skips invalid/missing to keep current.
+## Loads persisted settings from an encrypted config file.
 ## :param path: Config file path (default: Settings.CONFIG_PATH).
+## skips invalid/missing to keep current.
 ## :type path: String
 ## :rtype: void
 func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var config: ConfigFile = ConfigFile.new()
-	var err: int = config.load(path)
+
+	# NEW: Use load_encrypted_pass with the centralized SAVE_ENCRYPTION_PASS
+	var err: int = config.load_encrypted_pass(path, save_encryption_pass)
+
 	if err == OK:
-		# Enable the guard before starting bulk updates
+		# Enable the guard before starting bulk updates to prevent signal loops [cite: 20]
 		_is_loading_settings = true
 
+		# Load Log Level [cite: 20]
 		if config.has_section_key("Settings", "log_level"):
 			var loaded_log_level: Variant = config.get_value("Settings", "log_level")
 			if (
@@ -184,14 +195,14 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 				)
 			else:
 				log_message(
-					"Invalid type or value for log_level: " + str(typeof(loaded_log_level)),
+					"Invalid type/value for log_level: " + str(typeof(loaded_log_level)),
 					LogLevel.WARNING
 				)
 
+		# Load Difficulty [cite: 20]
 		if config.has_section_key("Settings", "difficulty"):
 			var loaded_difficulty: Variant = config.get_value("Settings", "difficulty")
 			if (loaded_difficulty is float) or (loaded_difficulty is int):
-				# Validate and clamp difficulty to slider range (0.5-2.0)
 				settings.difficulty = loaded_difficulty
 				log_message("Loaded saved difficulty: " + str(settings.difficulty), LogLevel.DEBUG)
 			else:
@@ -200,7 +211,7 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 					LogLevel.WARNING
 				)
 
-		# NEW: Load the debug logging flag
+		# Load Debug Logging Flag
 		if config.has_section_key("Settings", "enable_debug_logging"):
 			var loaded_debug: Variant = config.get_value("Settings", "enable_debug_logging")
 			if loaded_debug is bool:
@@ -210,7 +221,7 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 					LogLevel.DEBUG
 				)
 
-		# NEW: Load the fuel related settings
+		# Load Fuel Settings
 		if config.has_section_key("Settings", "max_fuel"):
 			var loaded_max: Variant = config.get_value("Settings", "max_fuel")
 			if loaded_max is float or loaded_max is int:
@@ -220,38 +231,46 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 					"Invalid type for max_fuel: " + str(typeof(loaded_max)), LogLevel.WARNING
 				)
 
-		# Disable the guard and log a single summary instead
+		# Disable the guard and finalize sync
 		_is_loading_settings = false
-		log_message("All settings loaded and synchronized.", LogLevel.DEBUG)
+		log_message("All encrypted settings loaded and synchronized.", LogLevel.DEBUG)
 
 	elif err == ERR_FILE_NOT_FOUND:
 		log_message("No settings config found, using defaults.", LogLevel.DEBUG)
 	else:
-		log_message("Failed to load settings config: " + str(err), LogLevel.ERROR)
+		# Log error specifically for decryption failure or file corruption
+		log_message(
+			"Failed to decrypt settings config (Key mismatch?): " + str(err), LogLevel.ERROR
+		)
 
 
-# New: Add _save_settings to globals.gd (move from options_menu.gd if needed)
+## New: Add _save_settings to globals.gd (move from options_menu.gd if needed)
+## Persists current settings to an encrypted config file.
+## :param path: Config file path (default: Settings.CONFIG_PATH).
 func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var config: ConfigFile = ConfigFile.new()
-	var err: int = config.load(path)  # Load existing to preserve other sections
+
+	# Load existing file first to preserve other sections not handled here
+	var err: int = config.load_encrypted_pass(path, save_encryption_pass)
 	if err != OK and err != ERR_FILE_NOT_FOUND:
 		log_message(
 			"Failed to load settings from " + path + " for save: " + str(err), LogLevel.ERROR
 		)
 		return
 
+	# Set current values from the settings resource
 	config.set_value("Settings", "log_level", settings.current_log_level)
 	config.set_value("Settings", "difficulty", settings.difficulty)
-	# NEW: Persist the debug logging flag
 	config.set_value("Settings", "enable_debug_logging", settings.enable_debug_logging)
-	# NEW: Persist the fuel settings
 	config.set_value("Settings", "max_fuel", settings.max_fuel)
 
-	err = config.save(path)
+	# NEW: Use encrypted save with the centralized key
+	err = config.save_encrypted_pass(path, save_encryption_pass)
+
 	if err != OK:
-		log_message("Failed to save settings: " + str(err), LogLevel.ERROR)
+		log_message("Failed to save ENCRYPTED settings: " + str(err), LogLevel.ERROR)
 	else:
-		log_message("Settings saved.", LogLevel.DEBUG)
+		log_message("Encrypted settings saved successfully.", LogLevel.DEBUG)
 
 
 func _on_options_exited_unexpectedly() -> void:
@@ -410,3 +429,10 @@ func _play_ui_navigation_sfx() -> void:
 	# If the sound is already playing (e.g., from rapid button presses),
 	# restart it from the beginning to feel responsive.
 	_nav_sfx_player.play()
+
+
+func _get_encryption_key() -> String:
+	# Fetches the salt injected by GitHub Actions or uses the dev fallback
+	var salt: String = ProjectSettings.get_setting("game/security/save_salt", "dev_fallback_salt")
+	# Combines device ID with the salt and hashes it for the final key
+	return (OS.get_unique_id() + salt).sha256_text()
