@@ -252,7 +252,10 @@ func serialize_event(ev: InputEvent) -> String:
 ## :rtype: void
 func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
 	var config: ConfigFile = ConfigFile.new()
-	var err: int = config.load(path)
+
+	# Use encrypted load
+	var err: int = config.load_encrypted_pass(path, Globals.save_encryption_pass)
+
 	if err != OK and err != ERR_FILE_NOT_FOUND:  # Handle errors except missing file
 		Globals.log_message(
 			"Error loading settings file at " + path + ": " + str(err), Globals.LogLevel.ERROR
@@ -343,7 +346,6 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 						),
 						Globals.LogLevel.WARNING
 					)
-					#continue
 					# prefer the loaded mapping and remove it from conflicting actions
 					# (for the same device type), then mark _needs_save
 					_remove_event_from_conflicts(ev, conflicts)
@@ -459,14 +461,15 @@ func _deserialize_and_add(action: String, serialized: String) -> void:
 ## :rtype: void
 func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
 	var config: ConfigFile = ConfigFile.new()
-	var err: int = config.load(path)  # Load existing to preserve other sections
+
+	# UPDATED: Use encrypted load
+	var err: int = config.load_encrypted_pass(path, Globals.save_encryption_pass)
 	if err != OK and err != ERR_FILE_NOT_FOUND:
 		Globals.log_message(
 			"Failed to load input config for save: " + str(err), Globals.LogLevel.ERROR
 		)
 		return
 
-	# Persist legacy migration flag for next runs/tests.
 	if (
 		Globals.has_meta(LEGACY_MIGRATION_KEY)
 		and bool(Globals.get_meta(LEGACY_MIGRATION_KEY)) == true
@@ -482,7 +485,9 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				serials.append(s)
 		config.set_value("input", action, serials)  # Set even if empty
 
-	err = config.save(path)
+	# UPDATED: Use encrypted save
+	err = config.save_encrypted_pass(path, Globals.save_encryption_pass)
+
 	if err != OK:
 		Globals.log_message("Failed to save input mappings: " + str(err), Globals.LogLevel.ERROR)
 	else:
@@ -585,9 +590,10 @@ func save_last_input_device(device: String) -> void:
 	if device not in ["keyboard", "gamepad"]:
 		return
 	var config: ConfigFile = ConfigFile.new()
-	config.load(CONFIG_PATH)
+	# UPDATED: Use encrypted load/save
+	config.load_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
 	config.set_value("input", "last_input_device", device)
-	config.save(CONFIG_PATH)
+	config.save_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
 
 
 ## Loads the last selected input device (defaults to keyboard).
@@ -596,7 +602,11 @@ func save_last_input_device(device: String) -> void:
 ## :rtype: void
 func load_last_input_device() -> void:
 	var config: ConfigFile = ConfigFile.new()
-	if config.load(CONFIG_PATH) == OK and config.has_section_key("input", "last_input_device"):
+	# UPDATED: Use encrypted load
+	if (
+		config.load_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass) == OK
+		and config.has_section_key("input", "last_input_device")
+	):
 		var device: String = config.get_value("input", "last_input_device")
 		Globals.current_input_device = device if device in ["keyboard", "gamepad"] else "keyboard"
 	else:
