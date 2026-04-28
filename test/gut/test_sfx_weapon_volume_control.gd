@@ -228,11 +228,16 @@ func test_tc_weapon_10() -> void:
 func test_tc_weapon_11() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("audio", "weapon_muted", true)
-	config.save(test_config_path)
+	
+	# FIX: Save using the encrypted pass so AudioManager doesn't throw a C++ error
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	AudioManager.load_volumes(test_config_path)
 	AudioManager.apply_all_volumes()  # Apply after load for test
+	
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
+	
 	assert_false(audio_instance.mute_weapon.button_pressed)
 	assert_false(audio_instance.weapon_slider.editable)
 	assert_true(AudioServer.is_bus_mute(AudioServer.get_bus_index("SFX_Weapon")))
@@ -243,12 +248,18 @@ func test_tc_weapon_11() -> void:
 func test_tc_weapon_12() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("audio", "weapon_muted", false)
-	config.save(test_config_path)
+	
+	# FIX: Save using the encrypted pass so AudioManager doesn't throw a C++ error
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	AudioManager.load_volumes(test_config_path)
 	AudioManager.apply_all_volumes()  # Apply after load for test
+	
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
+	
 	await get_tree().process_frame  # Await _ready completion
+	
 	assert_true(audio_instance.mute_weapon.button_pressed)
 	assert_true(audio_instance.weapon_slider.editable)
 	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index("SFX_Weapon")))
