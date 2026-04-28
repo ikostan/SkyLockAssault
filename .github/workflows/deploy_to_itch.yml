@@ -43,17 +43,17 @@ jobs:
           fi
       - name: "Inject Production Salt into project.godot"
         run: |
-            SALT="${{ secrets.PRODUCTION_SALT }}"
-            # Check if the custom setting already exists to update it
-            if grep -q '^game/security/save_salt=' project.godot; then
-              sed -i "s|^game/security/save_salt=.*$|game/security/save_salt=\"$SALT\"|g" project.godot
-            # If not, append it to the [application] section
-            elif grep -q '^\[application\]' project.godot; then
-              sed -i "/^\[application\]/a game\/security\/save_salt=\"$SALT\"" project.godot
-            # Fallback: create section if everything is missing
-            else
-              printf '\n[application]\ngame/security/save_salt="%s"\n' "$SALT" >> project.godot
-            fi
+          SALT="${{ secrets.PRODUCTION_SALT }}"
+          # Check if the specific key already exists to update it
+          if grep -q '^security/save_salt=' project.godot; then
+            sed -i "s|^security/save_salt=.*$|security/save_salt=\"$SALT\"|g" project.godot
+          # If the key doesn't exist but the [game] section does, append it there
+          elif grep -q '^\[game\]' project.godot; then
+            sed -i "/^\[game\]/a security\/save_salt=\"$SALT\"" project.godot
+          # Fallback: create the [game] section and the key if both are missing
+          else
+            printf '\n[game]\nsecurity/save_salt="%s"\n' "$SALT" >> project.godot
+          fi
       - name: "Create Export Directories"
         run: |
           mkdir -p export/web
