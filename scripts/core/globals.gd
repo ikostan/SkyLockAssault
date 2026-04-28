@@ -172,7 +172,7 @@ func load_key_mapping(menu_to_hide: Node) -> void:
 ## :rtype: void
 func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var config: ConfigFile = ConfigFile.new()
-	
+
 	# Ensure the key is ready before we even try
 	if save_encryption_pass.is_empty():
 		save_encryption_pass = _get_encryption_key()
@@ -183,14 +183,17 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 
 	# Step 2: Migration Check
 	# We ONLY fallback if the error is 15 (Invalid Data) or 43 (Corrupt)
-	# because that indicates it might be plaintext. 
+	# because that indicates it might be plaintext.
 	if err == ERR_INVALID_DATA or err == ERR_FILE_CORRUPT:
-		log_message("Encrypted load failed (Code %d). Checking if file is legacy plaintext..." % err, LogLevel.DEBUG)
-		
+		log_message(
+			"Encrypted load failed (Code %d). Checking if file is legacy plaintext..." % err,
+			LogLevel.DEBUG
+		)
+
 		# Reset config object before trying a different load method
-		config = ConfigFile.new() 
+		config = ConfigFile.new()
 		err = config.load(path)
-		
+
 		if err == OK:
 			log_message("Legacy plaintext settings found. Migration required.", LogLevel.INFO)
 			needs_migration = true
@@ -203,7 +206,7 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 		# Load Log Level
 		if config.has_section_key("Settings", "log_level"):
 			var loaded_log_level: Variant = config.get_value("Settings", "log_level")
-			if (loaded_log_level is int and loaded_log_level >= 0 and loaded_log_level <= 4):
+			if loaded_log_level is int and loaded_log_level >= 0 and loaded_log_level <= 4:
 				settings.current_log_level = loaded_log_level
 
 		# Load Difficulty
@@ -231,7 +234,7 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 		if needs_migration:
 			log_message("Upgrading settings file to encrypted format...", LogLevel.INFO)
 			_save_settings(path)
-			
+
 	elif err == ERR_FILE_NOT_FOUND:
 		log_message("No configuration file found; using defaults.", LogLevel.DEBUG)
 	else:
