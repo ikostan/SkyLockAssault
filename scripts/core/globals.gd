@@ -426,8 +426,34 @@ func _play_ui_navigation_sfx() -> void:
 	_nav_sfx_player.play()
 
 
+## Generates a unique, deterministic encryption key for local save files.
+##
+## This function combines the device's hardware ID (`OS.get_unique_id()`) with a
+## project-specific salt retrieved from `ProjectSettings`, returning a SHA-256 hash.
+##
+## Security Guard:
+## In production builds (when neither 'editor' nor 'debug' features are present),
+## this function strictly validates that a secure salt was successfully injected
+## during the CI/CD deployment. If the salt is missing or matches the weak development
+## fallback, it logs a critical error and returns an empty string. This intentionally
+## breaks downstream `load_encrypted_pass` and `save_encrypted_pass` calls to prevent
+## the game from persisting weakly-encrypted user data.
+##
+## :rtype: String (The SHA-256 hashed key, or an empty string if production validation fails)
 func _get_encryption_key() -> String:
 	# Fetches the salt injected by GitHub Actions or uses the dev fallback
 	var salt: String = ProjectSettings.get_setting("game/security/save_salt", "dev_fallback_salt")
-	# Combines device ID with the salt and hashes it for the final key
+
+	# SECURITY GUARD: Prevent silent weak-key fallback in production
+	if not OS.has_feature("editor") and not OS.has_feature("debug"):
+		if salt == "dev_fallback_salt" or salt.is_empty():
+			# Log the critical failure
+			log_message(
+				"CRITICAL SECURITY ERROR: Production build missing injected salt. Refusing to generate weak key.",
+				LogLevel.ERROR
+			)
+			# Returning an empty string ensures load_encrypted_pass and
+			# save_encrypted_pass immediately fail, refusing persistence.
+			return ""
+
 	return (OS.get_unique_id() + salt).sha256_text()
