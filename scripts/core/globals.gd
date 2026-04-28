@@ -449,8 +449,10 @@ func _get_encryption_key() -> String:
 		if salt == "dev_fallback_salt" or salt.is_empty():
 			# Log the critical failure
 			log_message(
-				"CRITICAL SECURITY ERROR: Production build missing injected salt. 
-				Refusing to generate weak key.",
+				(
+					"CRITICAL SECURITY ERROR: Production build missing injected salt. "
+					+ "Refusing to generate weak key."
+				),
 				LogLevel.ERROR
 			)
 			# Returning an empty string ensures load_encrypted_pass and
