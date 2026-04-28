@@ -233,14 +233,15 @@ func set_muted(bus_name: String, muted: bool) -> void:
 
 
 ## load_volumes
-## Loads persisted volumes from config if valid types; skips invalid/missing to keep current.
+## Loads persisted volumes from config if valid types;
+## skips invalid/missing to keep current.
 ## :param path: Config file path (default: current_config_path).
 ## :type path: String
 ## :rtype: void
 func load_volumes(path: String = current_config_path) -> void:
 	current_config_path = path  # Update to keep in sync with the path used
 	var config: ConfigFile = ConfigFile.new()
-	var err: int = config.load(path)
+	var err: int = config.load_encrypted_pass(path, Globals.save_encryption_pass)
 	if err == OK:
 		for bus: String in AudioConstants.BUS_CONFIG.keys():
 			var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
@@ -298,7 +299,7 @@ func save_volumes(path: String = "") -> void:
 		path = current_config_path  # Fall back to the last loaded path if empty
 	current_config_path = path  # Update to keep in sync with the path used
 	var config: ConfigFile = ConfigFile.new()
-	var err: Error = config.load(path)
+	var err: Error = config.load_encrypted_pass(path, Globals.save_encryption_pass)
 	if err != OK and err != ERR_FILE_NOT_FOUND:
 		Globals.log_message("Failed to load config for save: " + str(err), Globals.LogLevel.ERROR)
 		return
@@ -307,7 +308,7 @@ func save_volumes(path: String = "") -> void:
 		var state: Dictionary = get_bus_state(bus)
 		config.set_value("audio", config_data["volume_var"], state["volume"])
 		config.set_value("audio", config_data["muted_var"], state["muted"])
-	err = config.save(path)
+	err = config.save_encrypted_pass(path, Globals.save_encryption_pass)
 	if err == OK:
 		Globals.log_message("Saved volumes to config.", Globals.LogLevel.DEBUG)
 	else:
