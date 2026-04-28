@@ -253,15 +253,37 @@ func serialize_event(ev: InputEvent) -> String:
 func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
 	var config: ConfigFile = ConfigFile.new()
 
-	# Use encrypted load
+	# Step 1: Attempt encrypted load
 	var err: int = config.load_encrypted_pass(path, Globals.save_encryption_pass)
 
-	if err != OK and err != ERR_FILE_NOT_FOUND:  # Handle errors except missing file
+	# Step 2: Migration Check for Legacy Plaintext Files
+	if err == ERR_INVALID_DATA or err == ERR_FILE_CORRUPT:
+		Globals.log_message(
+			"Encrypted load failed (Code %d). Checking if file is legacy plaintext..." % err,
+			Globals.LogLevel.DEBUG
+		)
+
+		# Reset config object before trying legacy load
+		config = ConfigFile.new()
+		err = config.load(path)
+
+		if err == OK:
+			Globals.log_message(
+				"Legacy plaintext input mappings found. Migration required.", Globals.LogLevel.INFO
+			)
+			# Flag the file to be re-saved in the new encrypted format
+			_needs_save = true
+		else:
+			Globals.log_message(
+				"File is not valid plaintext either. Proceeding to defaults.",
+				Globals.LogLevel.ERROR
+			)
+
+	elif err != OK and err != ERR_FILE_NOT_FOUND:
+		# Handle other actual file system errors (permissions, missing drive, etc.)
 		Globals.log_message(
 			"Error loading settings file at " + path + ": " + str(err), Globals.LogLevel.ERROR
 		)
-		# Do not return: proceed to defaults for corrupt files (EC-05).
-		# Ensures fallback to defaults on parse errors.
 
 	if err == ERR_FILE_NOT_FOUND:
 		Globals.log_message(
