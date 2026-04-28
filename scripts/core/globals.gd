@@ -165,83 +165,77 @@ func load_key_mapping(menu_to_hide: Node) -> void:
 	get_tree().root.add_child(km_instance)
 
 
-## Loads persisted settings from an encrypted config file.
+## Loads persisted settings with backward compatibility for plaintext files.
 ## :param path: Config file path (default: Settings.CONFIG_PATH).
 ## skips invalid/missing to keep current.
 ## :type path: String
 ## :rtype: void
 func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var config: ConfigFile = ConfigFile.new()
+	
+	# Ensure the key is ready before we even try
+	if save_encryption_pass.is_empty():
+		save_encryption_pass = _get_encryption_key()
 
-	# NEW: Use load_encrypted_pass with the centralized SAVE_ENCRYPTION_PASS
+	# Step 1: Attempt to load with encryption
 	var err: int = config.load_encrypted_pass(path, save_encryption_pass)
+	var needs_migration: bool = false
+
+	# Step 2: Migration Check
+	# We ONLY fallback if the error is 15 (Invalid Data) or 43 (Corrupt)
+	# because that indicates it might be plaintext. 
+	if err == ERR_INVALID_DATA or err == ERR_FILE_CORRUPT:
+		log_message("Encrypted load failed (Code %d). Checking if file is legacy plaintext..." % err, LogLevel.DEBUG)
+		
+		# Reset config object before trying a different load method
+		config = ConfigFile.new() 
+		err = config.load(path)
+		
+		if err == OK:
+			log_message("Legacy plaintext settings found. Migration required.", LogLevel.INFO)
+			needs_migration = true
+		else:
+			log_message("File is not valid plaintext either. Abandoning load.", LogLevel.ERROR)
 
 	if err == OK:
-		# Enable the guard before starting bulk updates to prevent signal loops [cite: 20]
 		_is_loading_settings = true
 
-		# Load Log Level [cite: 20]
+		# Load Log Level
 		if config.has_section_key("Settings", "log_level"):
 			var loaded_log_level: Variant = config.get_value("Settings", "log_level")
-			if (
-				loaded_log_level is int
-				and loaded_log_level >= LogLevel.DEBUG
-				and loaded_log_level <= LogLevel.NONE
-			):
+			if (loaded_log_level is int and loaded_log_level >= 0 and loaded_log_level <= 4):
 				settings.current_log_level = loaded_log_level
-				log_message(
-					"Loaded saved log level: " + LogLevel.keys()[settings.current_log_level],
-					LogLevel.DEBUG
-				)
-			else:
-				log_message(
-					"Invalid type/value for log_level: " + str(typeof(loaded_log_level)),
-					LogLevel.WARNING
-				)
 
-		# Load Difficulty [cite: 20]
+		# Load Difficulty
 		if config.has_section_key("Settings", "difficulty"):
 			var loaded_difficulty: Variant = config.get_value("Settings", "difficulty")
 			if (loaded_difficulty is float) or (loaded_difficulty is int):
 				settings.difficulty = loaded_difficulty
-				log_message("Loaded saved difficulty: " + str(settings.difficulty), LogLevel.DEBUG)
-			else:
-				log_message(
-					"Invalid type for difficulty: " + str(typeof(loaded_difficulty)),
-					LogLevel.WARNING
-				)
 
 		# Load Debug Logging Flag
 		if config.has_section_key("Settings", "enable_debug_logging"):
 			var loaded_debug: Variant = config.get_value("Settings", "enable_debug_logging")
 			if loaded_debug is bool:
 				settings.enable_debug_logging = loaded_debug
-				log_message(
-					"Loaded saved debug logging: " + str(settings.enable_debug_logging),
-					LogLevel.DEBUG
-				)
 
 		# Load Fuel Settings
 		if config.has_section_key("Settings", "max_fuel"):
 			var loaded_max: Variant = config.get_value("Settings", "max_fuel")
 			if loaded_max is float or loaded_max is int:
 				settings.max_fuel = float(loaded_max)
-			else:
-				log_message(
-					"Invalid type for max_fuel: " + str(typeof(loaded_max)), LogLevel.WARNING
-				)
 
-		# Disable the guard and finalize sync
 		_is_loading_settings = false
-		log_message("All encrypted settings loaded and synchronized.", LogLevel.DEBUG)
+		log_message("Settings synchronization complete.", LogLevel.DEBUG)
 
+		# Step 3: Immediate Upgrade
+		if needs_migration:
+			log_message("Upgrading settings file to encrypted format...", LogLevel.INFO)
+			_save_settings(path)
+			
 	elif err == ERR_FILE_NOT_FOUND:
-		log_message("No settings config found, using defaults.", LogLevel.DEBUG)
+		log_message("No configuration file found; using defaults.", LogLevel.DEBUG)
 	else:
-		# Log error specifically for decryption failure or file corruption
-		log_message(
-			"Failed to decrypt settings config (Key mismatch?): " + str(err), LogLevel.ERROR
-		)
+		log_message("Failed to load settings (Error %d)." % err, LogLevel.ERROR)
 
 
 ## New: Add _save_settings to globals.gd (move from options_menu.gd if needed)
@@ -250,27 +244,25 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var config: ConfigFile = ConfigFile.new()
 
-	# Load existing file first to preserve other sections not handled here
+	# Use the same dual-load logic to ensure we preserve all sections
 	var err: int = config.load_encrypted_pass(path, save_encryption_pass)
 	if err != OK and err != ERR_FILE_NOT_FOUND:
-		log_message(
-			"Failed to load settings from " + path + " for save: " + str(err), LogLevel.ERROR
-		)
-		return
+		# Fallback to plaintext load to ensure we don't overwrite blindly
+		err = config.load(path)
 
-	# Set current values from the settings resource
+	# Update values in the ConfigFile object
 	config.set_value("Settings", "log_level", settings.current_log_level)
 	config.set_value("Settings", "difficulty", settings.difficulty)
 	config.set_value("Settings", "enable_debug_logging", settings.enable_debug_logging)
 	config.set_value("Settings", "max_fuel", settings.max_fuel)
 
-	# NEW: Use encrypted save with the centralized key
+	# Always save using encryption from this point forward
 	err = config.save_encrypted_pass(path, save_encryption_pass)
 
 	if err != OK:
-		log_message("Failed to save ENCRYPTED settings: " + str(err), LogLevel.ERROR)
+		log_message("CRITICAL: Failed to save encrypted settings: " + str(err), LogLevel.ERROR)
 	else:
-		log_message("Encrypted settings saved successfully.", LogLevel.DEBUG)
+		log_message("Encrypted settings persisted successfully.", LogLevel.DEBUG)
 
 
 func _on_options_exited_unexpectedly() -> void:
