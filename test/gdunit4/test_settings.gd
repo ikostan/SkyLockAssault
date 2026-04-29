@@ -360,9 +360,17 @@ func test_preserve_default_joypad_no_saved() -> void:
 func test_no_migration_on_new() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("input", "test_action", ["key:%d" % TEST_KEY_3])
+	
+	# FIX: Explicitly unbind all default actions so _add_missing_defaults 
+	# doesn't automatically backfill them and trigger a save.
+	for action: String in Settings.ACTIONS:
+		config.set_value("input", action, [])
+		
 	config.save_encrypted_pass(PATH_NEW_FORMAT, Globals.save_encryption_pass)
 
 	Settings.load_input_mappings(PATH_NEW_FORMAT, ["test_action"])
+	
+	# Now this will accurately assert that the legacy migration wasn't triggered
 	assert_bool(Settings._needs_save).is_false()
 
 
