@@ -358,10 +358,14 @@ func test_preserve_default_joypad_no_saved() -> void:
 
 
 func test_no_migration_on_new() -> void:
+	# FIX: Reset singleton state manually. Previous tests in the suite 
+	# trigger the defaults backfill, leaving this flag as true.
+	Settings._needs_save = false
+	
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("input", "test_action", ["key:%d" % TEST_KEY_3])
 	
-	# FIX: Explicitly unbind all default actions so _add_missing_defaults 
+	# Explicitly unbind all default actions so _add_missing_defaults 
 	# doesn't automatically backfill them and trigger a save.
 	for action: String in Settings.ACTIONS:
 		config.set_value("input", action, [])
