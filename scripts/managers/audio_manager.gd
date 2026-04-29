@@ -240,6 +240,9 @@ func set_muted(bus_name: String, muted: bool) -> void:
 ## :rtype: void
 func load_volumes(path: String = current_config_path) -> void:
 	current_config_path = path  # Update to keep in sync with the path used
+	# SECURITY GUARD: Ensure encryption key is initialized
+	if Globals.save_encryption_pass.is_empty():
+		Globals.save_encryption_pass = Globals._get_encryption_key()
 
 	var audio_cfg: ConfigFile = ConfigFile.new()
 	var err: int = audio_cfg.load_encrypted_pass(path, Globals.save_encryption_pass)
@@ -332,6 +335,10 @@ func load_volumes(path: String = current_config_path) -> void:
 func save_volumes(path: String = "") -> void:
 	if path == "":
 		path = current_config_path  # Fall back to the last loaded path if empty
+	# SECURITY GUARD: Ensure encryption key is initialized
+	if Globals.save_encryption_pass.is_empty():
+		Globals.save_encryption_pass = Globals._get_encryption_key()
+
 	current_config_path = path  # Update to keep in sync with the path used
 	var config: ConfigFile = ConfigFile.new()
 	var err: Error = config.load_encrypted_pass(path, Globals.save_encryption_pass)

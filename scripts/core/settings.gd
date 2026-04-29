@@ -251,6 +251,10 @@ func serialize_event(ev: InputEvent) -> String:
 ## :type actions: Array[String]
 ## :rtype: void
 func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
+	# SECURITY GUARD: Ensure encryption key is initialized
+	if Globals.save_encryption_pass.is_empty():
+		Globals.save_encryption_pass = Globals._get_encryption_key()
+
 	var config: ConfigFile = ConfigFile.new()
 
 	# Step 1: Attempt encrypted load
@@ -482,6 +486,10 @@ func _deserialize_and_add(action: String, serialized: String) -> void:
 ## :type actions: Array[String]
 ## :rtype: void
 func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
+	# SECURITY GUARD: Ensure encryption key is initialized
+	if Globals.save_encryption_pass.is_empty():
+		Globals.save_encryption_pass = Globals._get_encryption_key()
+
 	var config: ConfigFile = ConfigFile.new()
 
 	# UPDATED: Use encrypted load
@@ -609,6 +617,10 @@ func get_conflicting_actions(event: InputEvent, exclude_action: String = "") -> 
 
 ## Saves the last selected input device to config.
 func save_last_input_device(device: String) -> void:
+	# SECURITY GUARD: Ensure encryption key is initialized
+	if Globals.save_encryption_pass.is_empty():
+		Globals.save_encryption_pass = Globals._get_encryption_key()
+
 	if device not in ["keyboard", "gamepad"]:
 		return
 	var config: ConfigFile = ConfigFile.new()
@@ -623,6 +635,10 @@ func save_last_input_device(device: String) -> void:
 ## Mirrors save_last_input_device() for consistency.
 ## :rtype: void
 func load_last_input_device() -> void:
+	# SECURITY GUARD: Ensure encryption key is initialized
+	if Globals.save_encryption_pass.is_empty():
+		Globals.save_encryption_pass = Globals._get_encryption_key()
+
 	var config: ConfigFile = ConfigFile.new()
 	# UPDATED: Use encrypted load
 	if (
