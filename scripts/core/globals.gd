@@ -252,6 +252,16 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	if err != OK and err != ERR_FILE_NOT_FOUND:
 		# Fallback to plaintext load to ensure we don't overwrite blindly
 		err = config.load(path)
+		
+	# SECURITY GUARD: Prevent overwriting existing files when both loads fail.
+	# If the file exists but we can't read it (corrupted, locked, etc.), 
+	# aborting prevents us from wiping out the audio and input sections.
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		log_message(
+			"CRITICAL: Could not load settings from " + path + ", aborting save to prevent data loss.", 
+			LogLevel.ERROR
+		)
+		return
 
 	# Update values in the ConfigFile object
 	config.set_value("Settings", "log_level", settings.current_log_level)
