@@ -101,6 +101,7 @@ static func build_mock_player_scene() -> Node:
 	sprite.texture = dummy_texture
 	
 	var coll: CollisionPolygon2D = CollisionPolygon2D.new()
+	coll.name = "CollisionPolygon2D" # <--- This is the line I accidentally deleted!
 	
 	var weapon: Node2D = Node2D.new()
 	weapon.name = "Weapon"
