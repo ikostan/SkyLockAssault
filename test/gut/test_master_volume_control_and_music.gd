@@ -287,11 +287,16 @@ func test_tc_music_10() -> void:
 func test_tc_music_11() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("audio", "music_muted", true)
-	config.save(test_config_path)
+	
+	# FIX: Save using encryption to prevent the C++ "magic number" error
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	AudioManager.load_volumes(test_config_path)
 	AudioManager.apply_all_volumes()  # Apply after load for test
+	
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
+	
 	print("Button pressed: ", audio_instance.mute_music.button_pressed)  # Debug
 	assert_false(audio_instance.mute_music.button_pressed)
 	print("Slider editable: ", audio_instance.music_slider.editable)  # Debug
@@ -305,12 +310,17 @@ func test_tc_music_11() -> void:
 func test_tc_music_12() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("audio", "music_muted", false)
-	config.save(test_config_path)
+	
+	# FIX: Save using encryption to prevent the C++ "magic number" error
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	AudioManager.load_volumes(test_config_path)
 	AudioManager.apply_all_volumes()  # Apply after load for test
+	
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
 	await get_tree().process_frame  # Await _ready completion
+	
 	print("Button pressed: ", audio_instance.mute_music.button_pressed)  # Debug
 	assert_true(audio_instance.mute_music.button_pressed)
 	print("Slider editable: ", audio_instance.music_slider.editable)  # Debug
