@@ -12,23 +12,30 @@ const TEST_ACTION: String = "speed_up"
 
 var menu: CanvasLayer
 
+
 ## Per-test: Setup menu with duplicate defaults manually added.
 func before_each() -> void:
+	# FIX: Only add the action if it doesn't already exist, then clear its events.
+	if not InputMap.has_action(TEST_ACTION):
+		InputMap.add_action(TEST_ACTION)
 	InputMap.action_erase_events(TEST_ACTION)
-	InputMap.add_action(TEST_ACTION)
+	
 	var def_ev: InputEventKey = InputEventKey.new()
 	def_ev.physical_keycode = KEY_W
 	InputMap.action_add_event(TEST_ACTION, def_ev)
 	InputMap.action_add_event(TEST_ACTION, def_ev.duplicate())  # Duplicate
+	
 	menu = load(GamePaths.KEY_MAPPING_SCENE).instantiate()
 	add_child(menu)
 	menu.keyboard.button_pressed = true  # Keyboard mode
+
 
 ## Per-test: Free menu.
 func after_each() -> void:
 	if is_instance_valid(menu):
 		menu.queue_free()
 	await get_tree().process_frame
+
 
 ## DEDUP-03 | Reset with existing duplicates → dedups to single default | Size 1 (per device)
 func test_dedup_03_reset_with_duplicates() -> void:
