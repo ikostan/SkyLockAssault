@@ -24,7 +24,8 @@ func before_each() -> void:
 	
 	# FIX: Save using encryption to prevent the C++ "magic number" error 
 	# and allow Settings.load_input_mappings to successfully read the duplicate data.
-	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	var err: int = config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	assert_eq(err, OK, "Precondition failed: could not write encrypted duplicate fixture.")
 
 
 func after_each() -> void:
