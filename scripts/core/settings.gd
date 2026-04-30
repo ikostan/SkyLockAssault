@@ -492,8 +492,19 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 
 	var config: ConfigFile = ConfigFile.new()
 
-	# UPDATED: Use encrypted load
+	# FIX FOR #531: Use encrypted load with plaintext fallback before saving.
+	# This ensures we preserve unrelated sections (like audio) during migration
+	# without aborting if the file hasn't been encrypted yet.
 	var err: int = config.load_encrypted_pass(path, Globals.save_encryption_pass)
+	
+	if err == ERR_INVALID_DATA or err == ERR_FILE_CORRUPT:
+		Globals.log_message(
+			"Save pre-load: Encrypted load failed. Attempting legacy plaintext load to preserve sections...",
+			Globals.LogLevel.DEBUG
+		)
+		config = ConfigFile.new()
+		err = config.load(path)
+
 	if err != OK and err != ERR_FILE_NOT_FOUND:
 		Globals.log_message(
 			"Failed to load input config for save: " + str(err), Globals.LogLevel.ERROR
@@ -623,9 +634,15 @@ func save_last_input_device(device: String) -> void:
 
 	if device not in ["keyboard", "gamepad"]:
 		return
+		
 	var config: ConfigFile = ConfigFile.new()
-	# UPDATED: Use encrypted load/save
-	config.load_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
+	
+	# FIX FOR #531: Dual-load pre-save to avoid wiping legacy files
+	var err: int = config.load_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
+	if err == ERR_INVALID_DATA or err == ERR_FILE_CORRUPT:
+		config = ConfigFile.new()
+		config.load(CONFIG_PATH)
+		
 	config.set_value("input", "last_input_device", device)
 	config.save_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
 
@@ -640,11 +657,14 @@ func load_last_input_device() -> void:
 		Globals.save_encryption_pass = Globals._get_encryption_key()
 
 	var config: ConfigFile = ConfigFile.new()
-	# UPDATED: Use encrypted load
-	if (
-		config.load_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass) == OK
-		and config.has_section_key("input", "last_input_device")
-	):
+	
+	# FIX FOR #531: Dual-load check to read from legacy files before they are migrated
+	var err: int = config.load_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
+	if err == ERR_INVALID_DATA or err == ERR_FILE_CORRUPT:
+		config = ConfigFile.new()
+		err = config.load(CONFIG_PATH)
+		
+	if err == OK and config.has_section_key("input", "last_input_device"):
 		var device: String = config.get_value("input", "last_input_device")
 		Globals.current_input_device = device if device in ["keyboard", "gamepad"] else "keyboard"
 	else:
