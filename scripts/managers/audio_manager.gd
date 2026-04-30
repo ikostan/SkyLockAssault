@@ -239,37 +239,14 @@ func set_muted(bus_name: String, muted: bool) -> void:
 ## :type path: String
 ## :rtype: void
 func load_volumes(path: String = current_config_path) -> void:
-	current_config_path = path  # Update to keep in sync with the path used
-	# SECURITY GUARD: Ensure encryption key is initialized
-	if Globals.save_encryption_pass.is_empty():
-		Globals.save_encryption_pass = Globals._get_encryption_key()
+	current_config_path = path
+	var load_data: Dictionary = Globals.safe_load_config(path)
+	var audio_cfg: ConfigFile = load_data["config"]
+	var err: int = load_data["err"]
+	var needs_migration: bool = load_data["is_legacy"]
 
-	var audio_cfg: ConfigFile = ConfigFile.new()
-	var err: int = audio_cfg.load_encrypted_pass(path, Globals.save_encryption_pass)
-	var needs_migration: bool = false
-
-	# Step 2: Migration Check for Legacy Plaintext Files
-	if err == ERR_INVALID_DATA or err == ERR_FILE_CORRUPT:
-		Globals.log_message(
-			"Encrypted load failed (Code %d). Checking if file is legacy plaintext..." % err,
-			Globals.LogLevel.DEBUG
-		)
-
-		# Reset config object before trying legacy load
-		audio_cfg = ConfigFile.new()
-		err = audio_cfg.load(path)
-
-		if err == OK:
-			Globals.log_message(
-				"Legacy plaintext audio settings found. Migration required.", Globals.LogLevel.INFO
-			)
-			needs_migration = true
-		else:
-			Globals.log_message(
-				"File is not valid plaintext either. Proceeding to defaults.",
-				Globals.LogLevel.ERROR
-			)
-
+	if needs_migration:
+		Globals.log_message("Legacy plaintext audio settings found. Migration required.", Globals.LogLevel.INFO)
 	elif err != OK and err != ERR_FILE_NOT_FOUND:
 		Globals.log_message("Failed to load audio config: " + str(err), Globals.LogLevel.ERROR)
 
@@ -279,47 +256,25 @@ func load_volumes(path: String = current_config_path) -> void:
 			var volume_key: String = config_data["volume_var"]
 			var muted_key: String = config_data["muted_var"]
 
-			# Start with current values (defaults if not yet overridden)
 			var volume: float = get_volume(bus)
 			var muted: bool = get_muted(bus)
 
-			# Load volume if present and valid
 			if audio_cfg.has_section_key("audio", volume_key):
 				var loaded_volume: Variant = audio_cfg.get_value("audio", volume_key)
 				if loaded_volume is float or loaded_volume is int:
 					volume = float(loaded_volume)
-				else:
-					Globals.log_message(
-						(
-							"Invalid type for "
-							+ volume_key
-							+ ": "
-							+ type_string(typeof(loaded_volume))
-						),
-						Globals.LogLevel.WARNING
-					)
 
-			# Load muted if present and valid
 			if audio_cfg.has_section_key("audio", muted_key):
 				var loaded_muted: Variant = audio_cfg.get_value("audio", muted_key)
 				if loaded_muted is bool:
 					muted = loaded_muted
-				else:
-					Globals.log_message(
-						"Invalid type for " + muted_key + ": " + str(typeof(loaded_muted)),
-						Globals.LogLevel.WARNING
-					)
 
-			# Apply via setter for encapsulation
 			set_bus_state(bus, volume, muted)
 
 		Globals.log_message("Loaded volumes from config.", Globals.LogLevel.DEBUG)
 
-		# Execute the migration save
 		if needs_migration:
-			Globals.log_message(
-				"Upgrading audio settings file to encrypted format...", Globals.LogLevel.INFO
-			)
+			Globals.log_message("Upgrading audio settings file to encrypted format...", Globals.LogLevel.INFO)
 			save_volumes(path)
 
 	elif err == ERR_FILE_NOT_FOUND:
@@ -334,40 +289,24 @@ func load_volumes(path: String = current_config_path) -> void:
 ## :rtype: void
 func save_volumes(path: String = "") -> void:
 	if path == "":
-		path = current_config_path  # Fall back to the last loaded path if empty
-	# SECURITY GUARD: Ensure encryption key is initialized
-	if Globals.save_encryption_pass.is_empty():
-		Globals.save_encryption_pass = Globals._get_encryption_key()
+		path = current_config_path
 
-	current_config_path = path  # Update to keep in sync with the path used
-	var config: ConfigFile = ConfigFile.new()
-
-	# FIX FOR #531: Dual-load pre-save to avoid aborting on legacy plaintext files.
-	# This ensures we preserve unrelated sections (like [input]) during migration.
-	var err: int = config.load_encrypted_pass(path, Globals.save_encryption_pass)
-
-	if err == ERR_INVALID_DATA or err == ERR_FILE_CORRUPT:
-		Globals.log_message(
-			(
-				"Audio Save pre-load: Encrypted load failed. "
-				+ "Attempting legacy plaintext load to preserve sections..."
-			),
-			Globals.LogLevel.DEBUG
-		)
-		config = ConfigFile.new()
-		err = config.load(path)
+	var load_data: Dictionary = Globals.safe_load_config(path)
+	var config: ConfigFile = load_data["config"]
+	var err: int = load_data["err"]
 
 	if err != OK and err != ERR_FILE_NOT_FOUND:
 		Globals.log_message("Failed to load config for save: " + str(err), Globals.LogLevel.ERROR)
 		return
-
+		
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
 		var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
 		var state: Dictionary = get_bus_state(bus)
 		config.set_value("audio", config_data["volume_var"], state["volume"])
 		config.set_value("audio", config_data["muted_var"], state["muted"])
-
+		
 	err = config.save_encrypted_pass(path, Globals.save_encryption_pass)
+	
 	if err == OK:
 		Globals.log_message("Saved volumes to config.", Globals.LogLevel.DEBUG)
 	else:

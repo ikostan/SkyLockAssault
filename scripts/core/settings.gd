@@ -641,44 +641,23 @@ func _is_file_encrypted(path: String) -> bool:
 
 ## Loads input mappings from config, overriding project defaults only if saved.
 func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
-	if Globals.save_encryption_pass.is_empty():
-		Globals.save_encryption_pass = Globals._get_encryption_key()
+	# Use our new centralized helper to safely read the file
+	var load_data: Dictionary = Globals.safe_load_config(path)
+	var config: ConfigFile = load_data["config"]
+	var err: int = load_data["err"]
 
-	var config: ConfigFile = ConfigFile.new()
-	var err: int = OK
-
-	# FIX FOR #531 & #532: Safely branch logic by checking file headers first
-	if not FileAccess.file_exists(path):
+	if load_data["is_legacy"]:
 		Globals.log_message(
-			"No settings file found at " + path + "—adding defaults where missing.",
-			Globals.LogLevel.INFO
+			"Legacy plaintext input mappings found. Migration required.", Globals.LogLevel.INFO
 		)
-		err = ERR_FILE_NOT_FOUND
-	elif _is_file_encrypted(path):
-		err = config.load_encrypted_pass(path, Globals.save_encryption_pass)
-	else:
-		Globals.log_message(
-			"Encrypted magic not found. Checking if file is legacy plaintext...",
-			Globals.LogLevel.DEBUG
-		)
-		err = config.load(path)
-		if err == OK:
-			Globals.log_message(
-				"Legacy plaintext input mappings found. Migration required.", Globals.LogLevel.INFO
-			)
-			_needs_save = true
-		else:
-			Globals.log_message(
-				"File is not valid plaintext either. Proceeding to defaults.",
-				Globals.LogLevel.ERROR
-			)
+		_needs_save = true
 
 	if err != OK and err != ERR_FILE_NOT_FOUND:
 		Globals.log_message(
 			"Error loading settings file at " + path + ": " + str(err), Globals.LogLevel.ERROR
 		)
 
-	# NEW: Restore migration metadata
+	# Restore migration metadata
 	if config.has_section_key("meta", LEGACY_MIGRATION_KEY):
 		var migrated: bool = config.get_value("meta", LEGACY_MIGRATION_KEY, false)
 		if migrated:
@@ -748,28 +727,16 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 	if Globals.save_encryption_pass.is_empty():
 		Globals.save_encryption_pass = Globals._get_encryption_key()
 
-	var config: ConfigFile = ConfigFile.new()
-	var err: int = OK
+	# Safely pre-load the config to preserve other sections during the save
+	var load_data: Dictionary = Globals.safe_load_config(path)
+	var config: ConfigFile = load_data["config"]
+	var err: int = load_data["err"]
 
-	# FIX FOR #531 & #532: Pre-load safely without triggering C++ engine errors
-	if FileAccess.file_exists(path):
-		if _is_file_encrypted(path):
-			err = config.load_encrypted_pass(path, Globals.save_encryption_pass)
-		else:
-			(
-				Globals
-				. log_message(
-					"Save pre-load: Legacy plaintext file detected. Using plaintext load to preserve sections...",
-					Globals.LogLevel.DEBUG
-				)
-			)
-			err = config.load(path)
-
-		if err != OK:
-			Globals.log_message(
-				"Failed to load input config for save: " + str(err), Globals.LogLevel.ERROR
-			)
-			return
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		Globals.log_message(
+			"Failed to load input config for save: " + str(err), Globals.LogLevel.ERROR
+		)
+		return
 
 	if (
 		Globals.has_meta(LEGACY_MIGRATION_KEY)
@@ -796,19 +763,15 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 
 ## Saves the last selected input device to config.
 func save_last_input_device(device: String) -> void:
-	if Globals.save_encryption_pass.is_empty():
-		Globals.save_encryption_pass = Globals._get_encryption_key()
-
 	if device not in ["keyboard", "gamepad"]:
 		return
 
-	var config: ConfigFile = ConfigFile.new()
+	if Globals.save_encryption_pass.is_empty():
+		Globals.save_encryption_pass = Globals._get_encryption_key()
 
-	if FileAccess.file_exists(CONFIG_PATH):
-		if _is_file_encrypted(CONFIG_PATH):
-			config.load_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
-		else:
-			config.load(CONFIG_PATH)
+	# Use the helper to safely pre-load
+	var load_data: Dictionary = Globals.safe_load_config(CONFIG_PATH)
+	var config: ConfigFile = load_data["config"]
 
 	config.set_value("input", "last_input_device", device)
 	config.save_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
@@ -816,17 +779,10 @@ func save_last_input_device(device: String) -> void:
 
 ## Loads the last selected input device (defaults to keyboard).
 func load_last_input_device() -> void:
-	if Globals.save_encryption_pass.is_empty():
-		Globals.save_encryption_pass = Globals._get_encryption_key()
-
-	var config: ConfigFile = ConfigFile.new()
-	var err: int = OK
-
-	if FileAccess.file_exists(CONFIG_PATH):
-		if _is_file_encrypted(CONFIG_PATH):
-			err = config.load_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
-		else:
-			err = config.load(CONFIG_PATH)
+	# Use the helper to safely load
+	var load_data: Dictionary = Globals.safe_load_config(CONFIG_PATH)
+	var config: ConfigFile = load_data["config"]
+	var err: int = load_data["err"]
 
 	if err == OK and config.has_section_key("input", "last_input_device"):
 		var device: String = config.get_value("input", "last_input_device")

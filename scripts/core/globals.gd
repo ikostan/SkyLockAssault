@@ -171,57 +171,29 @@ func load_key_mapping(menu_to_hide: Node) -> void:
 ## :type path: String
 ## :rtype: void
 func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
-	var config: ConfigFile = ConfigFile.new()
+	var load_data: Dictionary = safe_load_config(path)
+	var config: ConfigFile = load_data["config"]
+	var err: int = load_data["err"]
+	var needs_migration: bool = load_data["is_legacy"]
 
-	# Ensure the key is ready before we even try
-	if save_encryption_pass.is_empty():
-		save_encryption_pass = _get_encryption_key()
-
-	# Step 1: Attempt to load with encryption
-	var err: int = config.load_encrypted_pass(path, save_encryption_pass)
-	var needs_migration: bool = false
-
-	# Step 2: Migration Check
-	# We ONLY fallback if the error is 15 (Invalid Data) or 43 (Corrupt)
-	# because that indicates it might be plaintext.
-	if err == ERR_INVALID_DATA or err == ERR_FILE_CORRUPT:
-		log_message(
-			"Encrypted load failed (Code %d). Checking if file is legacy plaintext..." % err,
-			LogLevel.DEBUG
-		)
-
-		# Reset config object before trying a different load method
-		config = ConfigFile.new()
-		err = config.load(path)
-
-		if err == OK:
-			log_message("Legacy plaintext settings found. Migration required.", LogLevel.INFO)
-			needs_migration = true
-		else:
-			log_message("File is not valid plaintext either. Abandoning load.", LogLevel.ERROR)
+	if needs_migration:
+		log_message("Legacy plaintext settings found. Migration required.", LogLevel.INFO)
 
 	if err == OK:
 		_is_loading_settings = true
-
-		# Load Log Level
+		
 		if config.has_section_key("Settings", "log_level"):
 			var loaded_log_level: Variant = config.get_value("Settings", "log_level")
 			if loaded_log_level is int and loaded_log_level >= 0 and loaded_log_level <= 4:
 				settings.current_log_level = loaded_log_level
-
-		# Load Difficulty
 		if config.has_section_key("Settings", "difficulty"):
 			var loaded_difficulty: Variant = config.get_value("Settings", "difficulty")
 			if (loaded_difficulty is float) or (loaded_difficulty is int):
 				settings.difficulty = loaded_difficulty
-
-		# Load Debug Logging Flag
 		if config.has_section_key("Settings", "enable_debug_logging"):
 			var loaded_debug: Variant = config.get_value("Settings", "enable_debug_logging")
 			if loaded_debug is bool:
 				settings.enable_debug_logging = loaded_debug
-
-		# Load Fuel Settings
 		if config.has_section_key("Settings", "max_fuel"):
 			var loaded_max: Variant = config.get_value("Settings", "max_fuel")
 			if loaded_max is float or loaded_max is int:
@@ -230,7 +202,6 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 		_is_loading_settings = false
 		log_message("Settings synchronization complete.", LogLevel.DEBUG)
 
-		# Step 3: Immediate Upgrade
 		if needs_migration:
 			log_message("Upgrading settings file to encrypted format...", LogLevel.INFO)
 			_save_settings(path)
@@ -245,35 +216,19 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 ## Persists current settings to an encrypted config file.
 ## :param path: Config file path (default: Settings.CONFIG_PATH).
 func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
-	var config: ConfigFile = ConfigFile.new()
+	var load_data: Dictionary = safe_load_config(path)
+	var config: ConfigFile = load_data["config"]
+	var err: int = load_data["err"]
 
-	# Use the same dual-load logic to ensure we preserve all sections
-	var err: int = config.load_encrypted_pass(path, save_encryption_pass)
 	if err != OK and err != ERR_FILE_NOT_FOUND:
-		# Fallback to plaintext load to ensure we don't overwrite blindly
-		err = config.load(path)
-
-	# SECURITY GUARD: Prevent overwriting existing files when both loads fail.
-	# If the file exists but we can't read it (corrupted, locked, etc.),
-	# aborting prevents us from wiping out the audio and input sections.
-	if err != OK and err != ERR_FILE_NOT_FOUND:
-		log_message(
-			(
-				"CRITICAL: Could not load settings from "
-				+ path
-				+ ", aborting save to prevent data loss."
-			),
-			LogLevel.ERROR
-		)
+		log_message("CRITICAL: Could not load settings from " + path + ", aborting save to prevent data loss.", LogLevel.ERROR)
 		return
 
-	# Update values in the ConfigFile object
 	config.set_value("Settings", "log_level", settings.current_log_level)
 	config.set_value("Settings", "difficulty", settings.difficulty)
 	config.set_value("Settings", "enable_debug_logging", settings.enable_debug_logging)
 	config.set_value("Settings", "max_fuel", settings.max_fuel)
 
-	# Always save using encryption from this point forward
 	err = config.save_encrypted_pass(path, save_encryption_pass)
 
 	if err != OK:
@@ -475,3 +430,45 @@ func _get_encryption_key() -> String:
 			return ""  # Unreachable, but satisfies compiler return type requirements
 
 	return (OS.get_unique_id() + salt).sha256_text()
+
+
+## Helper to determine if a config file is encrypted.
+func is_file_encrypted(path: String) -> bool:
+	if not FileAccess.file_exists(path):
+		return false
+	var f: FileAccess = FileAccess.open(path, FileAccess.READ)
+	if not f:
+		return false
+	if f.get_length() < 4:
+		f.close()
+		return false
+	var magic: int = f.get_32()
+	f.close()
+	# Godot Encrypted File Magic Number: 0x43454447 ("GDEC")
+	return magic == 0x43454447
+
+
+## Safely loads a config file, handling both encrypted and legacy plaintext formats.
+## Returns a Dictionary: {"config": ConfigFile, "err": int, "is_legacy": bool}
+func safe_load_config(path: String) -> Dictionary:
+	if save_encryption_pass.is_empty():
+		save_encryption_pass = _get_encryption_key()
+
+	var config: ConfigFile = ConfigFile.new()
+	var err: int = OK
+	var is_legacy: bool = false
+
+	if not FileAccess.file_exists(path):
+		err = ERR_FILE_NOT_FOUND
+	elif is_file_encrypted(path):
+		err = config.load_encrypted_pass(path, save_encryption_pass)
+	else:
+		err = config.load(path)
+		if err == OK:
+			is_legacy = true
+
+	return {
+		"config": config,
+		"err": err,
+		"is_legacy": is_legacy
+	}
