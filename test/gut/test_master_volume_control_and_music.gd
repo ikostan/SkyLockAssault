@@ -301,6 +301,10 @@ func test_tc_music_11() -> void:
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
 	
+	# FIX: Await one frame so _ready()'s deferred grab_focus calls 
+	# resolve before the test finishes and deletes the node.
+	await get_tree().process_frame
+	
 	print("Button pressed: ", audio_instance.mute_music.button_pressed)  # Debug
 	assert_false(audio_instance.mute_music.button_pressed)
 	print("Slider editable: ", audio_instance.music_slider.editable)  # Debug
