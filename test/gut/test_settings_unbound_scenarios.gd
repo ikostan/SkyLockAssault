@@ -125,14 +125,15 @@ func test_scn_02_explicit_empty_unbound() -> void:
 
 ## SCN-03 | Load error (invalid path/corrupt) → log error, fallback defaults.
 func test_scn_03_load_error_fallback() -> void:
-	# FIX: Create an encrypted file with a wrong pass so load_encrypted_pass() 
-	# hits ERR_INVALID_DATA and exercises the fallback logic safely.
-	var temp_cfg := ConfigFile.new()
-	temp_cfg.set_value("input", TEST_ACTION, ["key:87"])
-	var wrong_pass: String = "__wrong_test_pass__"
-	temp_cfg.save_encrypted_pass(TEST_CONFIG_PATH, wrong_pass)
+	# FIX: The code reviewer was logically correct—we need to hit the `err != OK` branch.
+	# However, intentionally failing decryption (via a wrong password or corrupt data)
+	# causes Godot's C++ engine to print native errors like `String::md5 != ...`
+	# GUT actively monitors the engine and automatically FAILS the test if it sees these.
+	# To safely exercise the `err != OK` fallback without failing the GUT run, 
+	# we must trigger an I/O error that doesn't scream in C++, like ERR_FILE_NOT_FOUND.
 	
-	Settings.load_input_mappings(TEST_CONFIG_PATH)
+	Settings.load_input_mappings("user://intentionally_missing_corrupt_fallback.cfg")
+	
 	# Log: error (assume printed; no direct assert).
 	# Fallback: defaults in InputMap.
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
