@@ -21,7 +21,8 @@ func before_each() -> void:
 	
 	# FIX: Save using encryption to prevent the C++ "magic number" error 
 	# during Settings.load_input_mappings()
-	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	var err: int = config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	assert_eq(err, OK, "Precondition failed: could not write encrypted migration fixture.")
 	
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	
