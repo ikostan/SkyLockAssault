@@ -181,7 +181,7 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 
 	if err == OK:
 		_is_loading_settings = true
-		
+
 		if config.has_section_key("Settings", "log_level"):
 			var loaded_log_level: Variant = config.get_value("Settings", "log_level")
 			if loaded_log_level is int and loaded_log_level >= 0 and loaded_log_level <= 4:
@@ -221,7 +221,14 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var err: int = load_data["err"]
 
 	if err != OK and err != ERR_FILE_NOT_FOUND:
-		log_message("CRITICAL: Could not load settings from " + path + ", aborting save to prevent data loss.", LogLevel.ERROR)
+		log_message(
+			(
+				"CRITICAL: Could not load settings from "
+				+ path
+				+ ", aborting save to prevent data loss."
+			),
+			LogLevel.ERROR
+		)
 		return
 
 	config.set_value("Settings", "log_level", settings.current_log_level)
@@ -467,8 +474,4 @@ func safe_load_config(path: String) -> Dictionary:
 		if err == OK:
 			is_legacy = true
 
-	return {
-		"config": config,
-		"err": err,
-		"is_legacy": is_legacy
-	}
+	return {"config": config, "err": err, "is_legacy": is_legacy}
