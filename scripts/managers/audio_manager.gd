@@ -246,7 +246,9 @@ func load_volumes(path: String = current_config_path) -> void:
 	var needs_migration: bool = load_data["is_legacy"]
 
 	if needs_migration:
-		Globals.log_message("Legacy plaintext audio settings found. Migration required.", Globals.LogLevel.INFO)
+		Globals.log_message(
+			"Legacy plaintext audio settings found. Migration required.", Globals.LogLevel.INFO
+		)
 	elif err != OK and err != ERR_FILE_NOT_FOUND:
 		Globals.log_message("Failed to load audio config: " + str(err), Globals.LogLevel.ERROR)
 
@@ -274,7 +276,9 @@ func load_volumes(path: String = current_config_path) -> void:
 		Globals.log_message("Loaded volumes from config.", Globals.LogLevel.DEBUG)
 
 		if needs_migration:
-			Globals.log_message("Upgrading audio settings file to encrypted format...", Globals.LogLevel.INFO)
+			Globals.log_message(
+				"Upgrading audio settings file to encrypted format...", Globals.LogLevel.INFO
+			)
 			save_volumes(path)
 
 	elif err == ERR_FILE_NOT_FOUND:
@@ -298,15 +302,15 @@ func save_volumes(path: String = "") -> void:
 	if err != OK and err != ERR_FILE_NOT_FOUND:
 		Globals.log_message("Failed to load config for save: " + str(err), Globals.LogLevel.ERROR)
 		return
-		
+
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
 		var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
 		var state: Dictionary = get_bus_state(bus)
 		config.set_value("audio", config_data["volume_var"], state["volume"])
 		config.set_value("audio", config_data["muted_var"], state["muted"])
-		
+
 	err = config.save_encrypted_pass(path, Globals.save_encryption_pass)
-	
+
 	if err == OK:
 		Globals.log_message("Saved volumes to config.", Globals.LogLevel.DEBUG)
 	else:
