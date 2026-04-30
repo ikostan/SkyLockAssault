@@ -7,6 +7,7 @@ extends "res://addons/gut/test.gd"
 const TEST_CONFIG_PATH: String = "user://test_fuel_integration_settings.cfg"
 var _previous_settings: GameSettingsResource
 
+
 ## Per-test setup: Isolate the filesystem and ensure a clean memory state.
 ## :rtype: void
 func before_each() -> void:
@@ -18,12 +19,14 @@ func before_each() -> void:
 	# Reset global settings to a fresh instance to prevent state leakage between tests
 	Globals.settings = GameSettingsResource.new()
 
+
 ## Per-test cleanup: Remove temporary configuration files.
 ## :rtype: void
 func after_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
 	Globals.settings = _previous_settings
+
 
 ## test_fuel_persistence | Config Save/Load | Verify valid max_fuel persists correctly
 ## :rtype: void
@@ -46,6 +49,7 @@ func test_fuel_persistence() -> void:
 	# 4. Assert the values were successfully restored
 	assert_eq(Globals.settings.max_fuel, 150.0, "max_fuel should restore correctly from the config file.")
 
+
 ## test_persistence_invalid_types_fallback | Config Save/Load | Verify corrupted types fall back safely
 ## :rtype: void
 func test_persistence_invalid_types_fallback() -> void:
@@ -54,7 +58,9 @@ func test_persistence_invalid_types_fallback() -> void:
 	# 1. Manually create a corrupted config file with invalid data types
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("Settings", "max_fuel", "invalid_string_data") # Should be float/int
-	config.save(TEST_CONFIG_PATH)
+	
+	# FIX: Save using encryption to prevent the C++ "magic number" error
+	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
 	
 	# 2. Establish known safe baseline defaults in memory
 	Globals.settings.max_fuel = 100.0
@@ -65,6 +71,7 @@ func test_persistence_invalid_types_fallback() -> void:
 	# 4. Assert that the invalid types were rejected and memory remained intact
 	assert_eq(Globals.settings.max_fuel, 100.0, "max_fuel must reject string values and retain the safe memory default.")
 
+
 ## test_persistence_missing_keys_fallback | Config Save/Load | Verify missing keys do not overwrite memory
 ## :rtype: void
 func test_persistence_missing_keys_fallback() -> void:
@@ -73,7 +80,9 @@ func test_persistence_missing_keys_fallback() -> void:
 	# 1. Create a valid config file that completely omits the fuel settings
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("Settings", "difficulty", 2.0) # Include a valid unrelated key
-	config.save(TEST_CONFIG_PATH)
+	
+	# FIX: Save using encryption so the file loads successfully without C++ errors
+	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
 	
 	# 2. Establish a known memory state for the fuel system
 	Globals.settings.max_fuel = 120.0
@@ -85,6 +94,7 @@ func test_persistence_missing_keys_fallback() -> void:
 	# 4. Assert that missing keys did not wipe out the current memory state, but present keys loaded
 	assert_eq(Globals.settings.max_fuel, 120.0, "max_fuel should retain memory default if missing in config file.")
 	assert_eq(Globals.settings.difficulty, 2.0, "Present keys (difficulty) should still load successfully.")
+
 
 ## test_ui_updates_on_fuel_change_signal | Integration | Verify UI elements react to global signals
 ## :rtype: void

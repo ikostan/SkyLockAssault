@@ -69,7 +69,7 @@ func test_save_volumes_preserves_other_sections() -> void:
 	# Pre-create config with non-audio section
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("Settings", "difficulty", 1.5)
-	config.save(test_path)
+	config.save_encrypted_pass(test_path, Globals.save_encryption_pass)
 	
 	# Save audio
 	manager.set_bus_state(AudioConstants.BUS_MASTER, 0.7, false)
@@ -77,7 +77,7 @@ func test_save_volumes_preserves_other_sections() -> void:
 	
 	# Reload and check both sections preserved
 	config = ConfigFile.new()
-	config.load(test_path)
+	config.load_encrypted_pass(test_path, Globals.save_encryption_pass)
 	assert_float(config.get_value("audio", "master_volume", 1.0)).is_equal(0.7)
 	assert_float(config.get_value("Settings", "difficulty", 1.0)).is_equal(1.5)
 
@@ -85,13 +85,17 @@ func test_save_volumes_preserves_other_sections() -> void:
 ## Tests load ignores/preserves other sections.
 ## :rtype: void
 func test_load_volumes_with_other_sections() -> void:
-	# Pre-save mixed config
+	# Pre-save
 	var config: ConfigFile = ConfigFile.new()
-	config.set_value("audio", "music_volume", 0.4)
-	config.set_value("input", "fire", ["key:32"])  # Mock input
-	config.save(test_path)
+	config.set_value("audio", "master_volume", 0.4)
+	config.set_value("Settings", "difficulty", 1.5)
+	config.save_encrypted_pass(test_path, Globals.save_encryption_pass)
 	
-	# Load and verify audio loaded, others ignored
+	# Load via manager
 	manager.load_volumes(test_path)
-	assert_float(manager.get_bus_state(AudioConstants.BUS_MUSIC)["volume"]).is_equal(0.4)
-	# No assert on input, as it's not loaded here
+	assert_float(manager.get_bus_state(AudioConstants.BUS_MASTER)["volume"]).is_equal(0.4)
+	
+	# Settings shouldn't be loaded by audio manager, but file should still have it
+	config = ConfigFile.new()
+	config.load_encrypted_pass(test_path, Globals.save_encryption_pass)
+	assert_float(config.get_value("Settings", "difficulty", 1.0)).is_equal(1.5)

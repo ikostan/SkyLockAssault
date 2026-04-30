@@ -59,19 +59,29 @@ func test_tc_sl_23() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("random", "unknown_key", "value")
 	config.set_value("audio", "master_volume", 0.5)
-	config.save(test_config_path)
+	
+	# FIX: Save using encryption to prevent C++ errors during manager loads
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	# Save audio (should preserve random)
 	AudioManager.master_volume = 0.6
 	AudioManager.save_volumes()
+	
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	# FIX: Load using encryption to verify the newly encrypted file
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	assert_eq(config.get_value("audio", "master_volume"), 0.6)
 	assert_eq(config.get_value("random", "unknown_key"), "value")
+	
 	# Similar for other saves
 	Globals.settings.difficulty = 2.0
 	Globals._save_settings()
+	
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	# FIX: Load using encryption
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	assert_eq(config.get_value("random", "unknown_key"), "value")
 
 
@@ -96,24 +106,36 @@ func test_tc_sl_24() -> void:
 func test_tc_sl_25() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("input", "speed_up", 87)  # Old int
-	config.save(test_config_path)
+	
+	# FIX: Save using encryption
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	# Load inputs (migrate)
 	Settings.load_input_mappings(test_config_path)
+	
 	# Manually save if migration (since no _ready in test)
 	if Settings._needs_save:
 		Settings.save_input_mappings(test_config_path)
 		Settings._needs_save = false
+		
 	# Verify upgraded
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	# FIX: Load using encryption
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:3:-1.0:-1"])
+	
 	# Save audio after
 	AudioManager.master_volume = 0.5
 	AudioManager.save_volumes(test_config_path)
+	
 	# Verify preserves upgraded inputs
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	# FIX: Load using encryption
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:3:-1.0:-1"])
 	assert_eq(config.get_value("audio", "master_volume"), 0.5)
+	
 	# No re-migration
 	assert_false(Settings._needs_save)

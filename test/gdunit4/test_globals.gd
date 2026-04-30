@@ -32,18 +32,18 @@ func test_save_settings_preserves_other_sections() -> void:
 	## Tests settings save preserves unrelated sections (e.g., "audio").
 	##
 	## :rtype: void
-	# Pre-create config with non-settings section
+	# Pre-create config with non-settings section using encryption
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("audio", "master_volume", 0.6)
-	config.save(test_path)
+	config.save_encrypted_pass(test_path, globals.save_encryption_pass)
 	
 	# Save settings
 	globals.settings.difficulty = 1.2
 	globals._save_settings(test_path)
 	
-	# Reload and check both preserved
+	# Reload encrypted file and check both preserved
 	config = ConfigFile.new()
-	config.load(test_path)
+	config.load_encrypted_pass(test_path, globals.save_encryption_pass)
 	assert_float(config.get_value("Settings", "difficulty", 1.0)).is_equal(1.2)
 	assert_float(config.get_value("audio", "master_volume", 1.0)).is_equal(0.6)
 
@@ -52,13 +52,17 @@ func test_load_settings_with_other_sections() -> void:
 	## Tests load ignores/preserves other sections.
 	##
 	## :rtype: void
-	# Pre-save mixed config
+	# Pre-save mixed config using encryption
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("Settings", "difficulty", 0.8)
-	config.set_value("audio", "sfx_volume", 0.9)  # Mock audio
-	config.save(test_path)
+	config.set_value("audio", "master_volume", 0.4)
+	config.save_encrypted_pass(test_path, globals.save_encryption_pass)
 	
-	# Load and verify settings loaded, others ignored
+	# Load via globals
 	globals._load_settings(test_path)
 	assert_float(globals.settings.difficulty).is_equal(0.8)
-	# No assert on audio, as it's not loaded here
+	
+	# Audio settings shouldn't be loaded into Globals.settings, but file should still have it
+	config = ConfigFile.new()
+	config.load_encrypted_pass(test_path, globals.save_encryption_pass)
+	assert_float(config.get_value("audio", "master_volume", 1.0)).is_equal(0.4)

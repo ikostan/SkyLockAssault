@@ -11,6 +11,13 @@ enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 ## Path to the navigation sound file
 const UI_NAV_SOUND_PATH: String = "res://files/sounds/sfx/ui_navigation.wav"
 
+# --- TASK #529: Encryption Key Management ---
+## Centralized key for securing local configuration files.
+## This ensures consistent encryption/decryption across different game systems. [cite: 3]
+## Define the variable by pulling from ProjectSettings.
+## If the setting doesn't exist, it falls back to a non-secure string.
+var save_encryption_pass: String = _get_encryption_key()
+
 # Add the resource reference here
 var settings: GameSettingsResource
 # In globals.gd (add after @export vars)
@@ -158,100 +165,121 @@ func load_key_mapping(menu_to_hide: Node) -> void:
 	get_tree().root.add_child(km_instance)
 
 
-## Loads persisted settings from config if valid types;
-## skips invalid/missing to keep current.
+## Loads persisted settings with backward compatibility for plaintext files.
 ## :param path: Config file path (default: Settings.CONFIG_PATH).
+## skips invalid/missing to keep current.
 ## :type path: String
 ## :rtype: void
 func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var config: ConfigFile = ConfigFile.new()
-	var err: int = config.load(path)
+
+	# Ensure the key is ready before we even try
+	if save_encryption_pass.is_empty():
+		save_encryption_pass = _get_encryption_key()
+
+	# Step 1: Attempt to load with encryption
+	var err: int = config.load_encrypted_pass(path, save_encryption_pass)
+	var needs_migration: bool = false
+
+	# Step 2: Migration Check
+	# We ONLY fallback if the error is 15 (Invalid Data) or 43 (Corrupt)
+	# because that indicates it might be plaintext.
+	if err == ERR_INVALID_DATA or err == ERR_FILE_CORRUPT:
+		log_message(
+			"Encrypted load failed (Code %d). Checking if file is legacy plaintext..." % err,
+			LogLevel.DEBUG
+		)
+
+		# Reset config object before trying a different load method
+		config = ConfigFile.new()
+		err = config.load(path)
+
+		if err == OK:
+			log_message("Legacy plaintext settings found. Migration required.", LogLevel.INFO)
+			needs_migration = true
+		else:
+			log_message("File is not valid plaintext either. Abandoning load.", LogLevel.ERROR)
+
 	if err == OK:
-		# Enable the guard before starting bulk updates
 		_is_loading_settings = true
 
+		# Load Log Level
 		if config.has_section_key("Settings", "log_level"):
 			var loaded_log_level: Variant = config.get_value("Settings", "log_level")
-			if (
-				loaded_log_level is int
-				and loaded_log_level >= LogLevel.DEBUG
-				and loaded_log_level <= LogLevel.NONE
-			):
+			if loaded_log_level is int and loaded_log_level >= 0 and loaded_log_level <= 4:
 				settings.current_log_level = loaded_log_level
-				log_message(
-					"Loaded saved log level: " + LogLevel.keys()[settings.current_log_level],
-					LogLevel.DEBUG
-				)
-			else:
-				log_message(
-					"Invalid type or value for log_level: " + str(typeof(loaded_log_level)),
-					LogLevel.WARNING
-				)
 
+		# Load Difficulty
 		if config.has_section_key("Settings", "difficulty"):
 			var loaded_difficulty: Variant = config.get_value("Settings", "difficulty")
 			if (loaded_difficulty is float) or (loaded_difficulty is int):
-				# Validate and clamp difficulty to slider range (0.5-2.0)
 				settings.difficulty = loaded_difficulty
-				log_message("Loaded saved difficulty: " + str(settings.difficulty), LogLevel.DEBUG)
-			else:
-				log_message(
-					"Invalid type for difficulty: " + str(typeof(loaded_difficulty)),
-					LogLevel.WARNING
-				)
 
-		# NEW: Load the debug logging flag
+		# Load Debug Logging Flag
 		if config.has_section_key("Settings", "enable_debug_logging"):
 			var loaded_debug: Variant = config.get_value("Settings", "enable_debug_logging")
 			if loaded_debug is bool:
 				settings.enable_debug_logging = loaded_debug
-				log_message(
-					"Loaded saved debug logging: " + str(settings.enable_debug_logging),
-					LogLevel.DEBUG
-				)
 
-		# NEW: Load the fuel related settings
+		# Load Fuel Settings
 		if config.has_section_key("Settings", "max_fuel"):
 			var loaded_max: Variant = config.get_value("Settings", "max_fuel")
 			if loaded_max is float or loaded_max is int:
 				settings.max_fuel = float(loaded_max)
-			else:
-				log_message(
-					"Invalid type for max_fuel: " + str(typeof(loaded_max)), LogLevel.WARNING
-				)
 
-		# Disable the guard and log a single summary instead
 		_is_loading_settings = false
-		log_message("All settings loaded and synchronized.", LogLevel.DEBUG)
+		log_message("Settings synchronization complete.", LogLevel.DEBUG)
+
+		# Step 3: Immediate Upgrade
+		if needs_migration:
+			log_message("Upgrading settings file to encrypted format...", LogLevel.INFO)
+			_save_settings(path)
 
 	elif err == ERR_FILE_NOT_FOUND:
-		log_message("No settings config found, using defaults.", LogLevel.DEBUG)
+		log_message("No configuration file found; using defaults.", LogLevel.DEBUG)
 	else:
-		log_message("Failed to load settings config: " + str(err), LogLevel.ERROR)
+		log_message("Failed to load settings (Error %d)." % err, LogLevel.ERROR)
 
 
-# New: Add _save_settings to globals.gd (move from options_menu.gd if needed)
+## New: Add _save_settings to globals.gd (move from options_menu.gd if needed)
+## Persists current settings to an encrypted config file.
+## :param path: Config file path (default: Settings.CONFIG_PATH).
 func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var config: ConfigFile = ConfigFile.new()
-	var err: int = config.load(path)  # Load existing to preserve other sections
+
+	# Use the same dual-load logic to ensure we preserve all sections
+	var err: int = config.load_encrypted_pass(path, save_encryption_pass)
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		# Fallback to plaintext load to ensure we don't overwrite blindly
+		err = config.load(path)
+
+	# SECURITY GUARD: Prevent overwriting existing files when both loads fail.
+	# If the file exists but we can't read it (corrupted, locked, etc.),
+	# aborting prevents us from wiping out the audio and input sections.
 	if err != OK and err != ERR_FILE_NOT_FOUND:
 		log_message(
-			"Failed to load settings from " + path + " for save: " + str(err), LogLevel.ERROR
+			(
+				"CRITICAL: Could not load settings from "
+				+ path
+				+ ", aborting save to prevent data loss."
+			),
+			LogLevel.ERROR
 		)
 		return
 
+	# Update values in the ConfigFile object
 	config.set_value("Settings", "log_level", settings.current_log_level)
 	config.set_value("Settings", "difficulty", settings.difficulty)
-	# NEW: Persist the debug logging flag
 	config.set_value("Settings", "enable_debug_logging", settings.enable_debug_logging)
-	# NEW: Persist the fuel settings
 	config.set_value("Settings", "max_fuel", settings.max_fuel)
 
-	err = config.save(path)
+	# Always save using encryption from this point forward
+	err = config.save_encrypted_pass(path, save_encryption_pass)
+
 	if err != OK:
-		log_message("Failed to save settings: " + str(err), LogLevel.ERROR)
+		log_message("CRITICAL: Failed to save encrypted settings: " + str(err), LogLevel.ERROR)
 	else:
-		log_message("Settings saved.", LogLevel.DEBUG)
+		log_message("Encrypted settings persisted successfully.", LogLevel.DEBUG)
 
 
 func _on_options_exited_unexpectedly() -> void:
@@ -410,3 +438,39 @@ func _play_ui_navigation_sfx() -> void:
 	# If the sound is already playing (e.g., from rapid button presses),
 	# restart it from the beginning to feel responsive.
 	_nav_sfx_player.play()
+
+
+## Generates a unique, deterministic encryption key for local save files.
+##
+## This function combines the device's hardware ID (`OS.get_unique_id()`) with a
+## project-specific salt retrieved from `ProjectSettings`, returning a SHA-256 hash.
+##
+## Security Guard:
+## In production builds (when neither 'editor' nor 'debug' features are present),
+## this function strictly validates that a secure salt was successfully injected
+## during the CI/CD deployment. If the salt is missing or matches the weak development
+## fallback, it logs a critical error and returns an empty string. This intentionally
+## breaks downstream `load_encrypted_pass` and `save_encrypted_pass` calls to prevent
+## the game from persisting weakly-encrypted user data.
+##
+## :rtype: String (The SHA-256 hashed key, or an empty string if production validation fails)
+func _get_encryption_key() -> String:
+	# Fetches the salt injected by GitHub Actions or uses the dev fallback
+	var salt: String = ProjectSettings.get_setting("game/security/save_salt", "dev_fallback_salt")
+
+	# SECURITY GUARD: Prevent silent weak-key fallback in production
+	if not OS.has_feature("editor") and not OS.has_feature("debug"):
+		if salt == "dev_fallback_salt" or salt.is_empty():
+			# Log the critical failure
+			log_message(
+				(
+					"CRITICAL SECURITY ERROR: Production build missing injected salt. "
+					+ "Refusing to generate weak key."
+				),
+				LogLevel.ERROR
+			)
+			# Returning an empty string ensures load_encrypted_pass and
+			# save_encrypted_pass immediately fail, refusing persistence.
+			return ""
+
+	return (OS.get_unique_id() + salt).sha256_text()

@@ -89,3 +89,4 @@ jobs:
       version: ${{ needs.release_drafter.outputs.release_tag }}
     secrets:
       ITCHIO_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"
+      PRODUCTION_SALT: "${{ secrets.PRODUCTION_SALT }}"

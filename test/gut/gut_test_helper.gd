@@ -94,8 +94,13 @@ static func build_mock_player_scene() -> Node:
 		
 	var sprite: Sprite2D = Sprite2D.new()
 	sprite.name = "Sprite2D"
+	
+	# FIX: Create a 1x1 dummy texture to prevent the 
+	# "Player sprite texture missing" warning during _ready()
+	var dummy_texture := ImageTexture.create_from_image(Image.create(1, 1, false, Image.FORMAT_RGBA8))
+	sprite.texture = dummy_texture
+	
 	var coll: CollisionPolygon2D = CollisionPolygon2D.new()
-	coll.name = "CollisionPolygon2D"
 	
 	var weapon: Node2D = Node2D.new()
 	weapon.name = "Weapon"

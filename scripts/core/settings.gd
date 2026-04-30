@@ -251,14 +251,43 @@ func serialize_event(ev: InputEvent) -> String:
 ## :type actions: Array[String]
 ## :rtype: void
 func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
+	# SECURITY GUARD: Ensure encryption key is initialized
+	if Globals.save_encryption_pass.is_empty():
+		Globals.save_encryption_pass = Globals._get_encryption_key()
+
 	var config: ConfigFile = ConfigFile.new()
-	var err: int = config.load(path)
-	if err != OK and err != ERR_FILE_NOT_FOUND:  # Handle errors except missing file
+
+	# Step 1: Attempt encrypted load
+	var err: int = config.load_encrypted_pass(path, Globals.save_encryption_pass)
+
+	# Step 2: Migration Check for Legacy Plaintext Files
+	if err == ERR_INVALID_DATA or err == ERR_FILE_CORRUPT:
+		Globals.log_message(
+			"Encrypted load failed (Code %d). Checking if file is legacy plaintext..." % err,
+			Globals.LogLevel.DEBUG
+		)
+
+		# Reset config object before trying legacy load
+		config = ConfigFile.new()
+		err = config.load(path)
+
+		if err == OK:
+			Globals.log_message(
+				"Legacy plaintext input mappings found. Migration required.", Globals.LogLevel.INFO
+			)
+			# Flag the file to be re-saved in the new encrypted format
+			_needs_save = true
+		else:
+			Globals.log_message(
+				"File is not valid plaintext either. Proceeding to defaults.",
+				Globals.LogLevel.ERROR
+			)
+
+	elif err != OK and err != ERR_FILE_NOT_FOUND:
+		# Handle other actual file system errors (permissions, missing drive, etc.)
 		Globals.log_message(
 			"Error loading settings file at " + path + ": " + str(err), Globals.LogLevel.ERROR
 		)
-		# Do not return: proceed to defaults for corrupt files (EC-05).
-		# Ensures fallback to defaults on parse errors.
 
 	if err == ERR_FILE_NOT_FOUND:
 		Globals.log_message(
@@ -343,7 +372,6 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 						),
 						Globals.LogLevel.WARNING
 					)
-					#continue
 					# prefer the loaded mapping and remove it from conflicting actions
 					# (for the same device type), then mark _needs_save
 					_remove_event_from_conflicts(ev, conflicts)
@@ -458,15 +486,20 @@ func _deserialize_and_add(action: String, serialized: String) -> void:
 ## :type actions: Array[String]
 ## :rtype: void
 func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
+	# SECURITY GUARD: Ensure encryption key is initialized
+	if Globals.save_encryption_pass.is_empty():
+		Globals.save_encryption_pass = Globals._get_encryption_key()
+
 	var config: ConfigFile = ConfigFile.new()
-	var err: int = config.load(path)  # Load existing to preserve other sections
+
+	# UPDATED: Use encrypted load
+	var err: int = config.load_encrypted_pass(path, Globals.save_encryption_pass)
 	if err != OK and err != ERR_FILE_NOT_FOUND:
 		Globals.log_message(
 			"Failed to load input config for save: " + str(err), Globals.LogLevel.ERROR
 		)
 		return
 
-	# Persist legacy migration flag for next runs/tests.
 	if (
 		Globals.has_meta(LEGACY_MIGRATION_KEY)
 		and bool(Globals.get_meta(LEGACY_MIGRATION_KEY)) == true
@@ -482,7 +515,9 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				serials.append(s)
 		config.set_value("input", action, serials)  # Set even if empty
 
-	err = config.save(path)
+	# UPDATED: Use encrypted save
+	err = config.save_encrypted_pass(path, Globals.save_encryption_pass)
+
 	if err != OK:
 		Globals.log_message("Failed to save input mappings: " + str(err), Globals.LogLevel.ERROR)
 	else:
@@ -582,12 +617,17 @@ func get_conflicting_actions(event: InputEvent, exclude_action: String = "") -> 
 
 ## Saves the last selected input device to config.
 func save_last_input_device(device: String) -> void:
+	# SECURITY GUARD: Ensure encryption key is initialized
+	if Globals.save_encryption_pass.is_empty():
+		Globals.save_encryption_pass = Globals._get_encryption_key()
+
 	if device not in ["keyboard", "gamepad"]:
 		return
 	var config: ConfigFile = ConfigFile.new()
-	config.load(CONFIG_PATH)
+	# UPDATED: Use encrypted load/save
+	config.load_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
 	config.set_value("input", "last_input_device", device)
-	config.save(CONFIG_PATH)
+	config.save_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
 
 
 ## Loads the last selected input device (defaults to keyboard).
@@ -595,8 +635,16 @@ func save_last_input_device(device: String) -> void:
 ## Mirrors save_last_input_device() for consistency.
 ## :rtype: void
 func load_last_input_device() -> void:
+	# SECURITY GUARD: Ensure encryption key is initialized
+	if Globals.save_encryption_pass.is_empty():
+		Globals.save_encryption_pass = Globals._get_encryption_key()
+
 	var config: ConfigFile = ConfigFile.new()
-	if config.load(CONFIG_PATH) == OK and config.has_section_key("input", "last_input_device"):
+	# UPDATED: Use encrypted load
+	if (
+		config.load_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass) == OK
+		and config.has_section_key("input", "last_input_device")
+	):
 		var device: String = config.get_value("input", "last_input_device")
 		Globals.current_input_device = device if device in ["keyboard", "gamepad"] else "keyboard"
 	else:
