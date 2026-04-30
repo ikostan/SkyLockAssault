@@ -236,7 +236,9 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	config.set_value("Settings", "enable_debug_logging", settings.enable_debug_logging)
 	config.set_value("Settings", "max_fuel", settings.max_fuel)
 
-	err = config.save_encrypted_pass(path, save_encryption_pass)
+	# Always save using encryption from this point forward
+	# FIX: Use the centralized key ensurer
+	err = config.save_encrypted_pass(path, ensure_encryption_key())
 
 	if err != OK:
 		log_message("CRITICAL: Failed to save encrypted settings: " + str(err), LogLevel.ERROR)
@@ -402,6 +404,14 @@ func _play_ui_navigation_sfx() -> void:
 	_nav_sfx_player.play()
 
 
+## Ensures the encryption key is initialized and returns it.
+## Centralizes the safety check so other scripts don't have to repeat it.
+func ensure_encryption_key() -> String:
+	if save_encryption_pass.is_empty():
+		save_encryption_pass = _get_encryption_key()
+	return save_encryption_pass
+
+
 ## Generates a unique, deterministic encryption key for local save files.
 ##
 ## This function combines the device's hardware ID (`OS.get_unique_id()`) with a
@@ -458,8 +468,8 @@ func is_file_encrypted(path: String) -> bool:
 ## Safely loads a config file, handling both encrypted and legacy plaintext formats.
 ## Returns a Dictionary: {"config": ConfigFile, "err": int, "is_legacy": bool}
 func safe_load_config(path: String) -> Dictionary:
-	if save_encryption_pass.is_empty():
-		save_encryption_pass = _get_encryption_key()
+	# FIX: Delegate to centralized helper
+	var key: String = ensure_encryption_key()
 
 	var config: ConfigFile = ConfigFile.new()
 	var err: int = OK
@@ -468,7 +478,7 @@ func safe_load_config(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		err = ERR_FILE_NOT_FOUND
 	elif is_file_encrypted(path):
-		err = config.load_encrypted_pass(path, save_encryption_pass)
+		err = config.load_encrypted_pass(path, key)
 	else:
 		err = config.load(path)
 		if err == OK:

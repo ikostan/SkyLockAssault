@@ -724,9 +724,6 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 
 ## Saves current InputMap events to config (all per action as array).
 func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
-	if Globals.save_encryption_pass.is_empty():
-		Globals.save_encryption_pass = Globals._get_encryption_key()
-
 	# Safely pre-load the config to preserve other sections during the save
 	var load_data: Dictionary = Globals.safe_load_config(path)
 	var config: ConfigFile = load_data["config"]
@@ -753,7 +750,8 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				serials.append(s)
 		config.set_value("input", action, serials)
 
-	err = config.save_encrypted_pass(path, Globals.save_encryption_pass)
+	# FIX: Use the centralized key helper
+	err = config.save_encrypted_pass(path, Globals.ensure_encryption_key())
 
 	if err != OK:
 		Globals.log_message("Failed to save input mappings: " + str(err), Globals.LogLevel.ERROR)
@@ -766,15 +764,14 @@ func save_last_input_device(device: String) -> void:
 	if device not in ["keyboard", "gamepad"]:
 		return
 
-	if Globals.save_encryption_pass.is_empty():
-		Globals.save_encryption_pass = Globals._get_encryption_key()
-
 	# Use the helper to safely pre-load
 	var load_data: Dictionary = Globals.safe_load_config(CONFIG_PATH)
 	var config: ConfigFile = load_data["config"]
 
 	config.set_value("input", "last_input_device", device)
-	config.save_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
+	
+	# FIX: Use the centralized key helper
+	config.save_encrypted_pass(CONFIG_PATH, Globals.ensure_encryption_key())
 
 
 ## Loads the last selected input device (defaults to keyboard).
