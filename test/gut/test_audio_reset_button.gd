@@ -297,24 +297,34 @@ func test_tc_reset_06() -> void:
 	config.set_value("audio", "sfx_volume", 0.4)
 	config.set_value("audio", "weapon_volume", 0.4)
 	config.set_value("audio", "rotors_volume", 0.4)
-	config.save(test_config_path)
+	
+	# FIX: Save using encryption to prevent C++ core errors during AudioManager.load_volumes
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	AudioManager.load_volumes(test_config_path)
 	AudioManager.apply_all_volumes()
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
 	await get_tree().process_frame
+	
 	# Verify initial from config
 	assert_true(AudioManager.master_muted)
 	assert_eq(AudioManager.master_volume, 0.4)
 	assert_false(audio_instance.mute_master.button_pressed)
 	assert_eq(audio_instance.master_slider.value, 0.4)
+	
 	# Reset
 	audio_instance._on_audio_reset_button_pressed()
+	
 	# Checks
 	assert_false(AudioManager.master_muted)
 	assert_eq(AudioManager.master_volume, 1.0)
+	
 	# Check config overwritten
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	
+	# FIX: Load using encryption because AudioManager saved it securely upon reset
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	assert_false(config.get_value("audio", "master_muted", true))
 	assert_eq(config.get_value("audio", "master_volume", 0.0), 1.0)
