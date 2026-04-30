@@ -125,11 +125,12 @@ func test_scn_02_explicit_empty_unbound() -> void:
 
 ## SCN-03 | Load error (invalid path/corrupt) → log error, fallback defaults.
 func test_scn_03_load_error_fallback() -> void:
-	# FIX: Invalid path (non-existent, but simulate corrupt by writing junk).
-	# Writing plaintext strings via FileAccess will cause a hard C++ decryption crash.
+	# FIX: Create an encrypted file with a wrong pass so load_encrypted_pass() 
+	# hits ERR_INVALID_DATA and exercises the fallback logic safely.
 	var temp_cfg := ConfigFile.new()
-	temp_cfg.set_value("Garbage", "broken", "invalid_config_data")
-	temp_cfg.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	temp_cfg.set_value("input", TEST_ACTION, ["key:87"])
+	var wrong_pass: String = "__wrong_test_pass__"
+	temp_cfg.save_encrypted_pass(TEST_CONFIG_PATH, wrong_pass)
 	
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	# Log: error (assume printed; no direct assert).
