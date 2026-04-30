@@ -18,8 +18,13 @@ func before_each() -> void:
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("input", TEST_ACTION, [])  # Unbound, but we'll add duplicate manually post-load
-	config.save(TEST_CONFIG_PATH)
+	
+	# FIX: Save using encryption to prevent the C++ "magic number" error 
+	# during Settings.load_input_mappings()
+	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
+	
 	# Manually add duplicate before migration
 	var def_ev: InputEventKey = InputEventKey.new()
 	def_ev.physical_keycode = Settings.DEFAULT_KEYBOARD[TEST_ACTION]
