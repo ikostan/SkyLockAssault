@@ -449,11 +449,10 @@ func _play_ui_navigation_sfx() -> void:
 ## In production builds (when neither 'editor' nor 'debug' features are present),
 ## this function strictly validates that a secure salt was successfully injected
 ## during the CI/CD deployment. If the salt is missing or matches the weak development
-## fallback, it logs a critical error and returns an empty string. This intentionally
-## breaks downstream `load_encrypted_pass` and `save_encrypted_pass` calls to prevent
-## the game from persisting weakly-encrypted user data.
+## fallback, it forces an immediate engine crash. This prevents the game from silently
+## encrypting data with a weak/empty key.
 ##
-## :rtype: String (The SHA-256 hashed key, or an empty string if production validation fails)
+## :rtype: String (The SHA-256 hashed key)
 func _get_encryption_key() -> String:
 	# Fetches the salt injected by GitHub Actions or uses the dev fallback
 	var salt: String = ProjectSettings.get_setting("game/security/save_salt", "dev_fallback_salt")
@@ -461,16 +460,18 @@ func _get_encryption_key() -> String:
 	# SECURITY GUARD: Prevent silent weak-key fallback in production
 	if not OS.has_feature("editor") and not OS.has_feature("debug"):
 		if salt == "dev_fallback_salt" or salt.is_empty():
-			# Log the critical failure
-			log_message(
-				(
-					"CRITICAL SECURITY ERROR: Production build missing injected salt. "
-					+ "Refusing to generate weak key."
-				),
-				LogLevel.ERROR
+			# FIX: Break the string to satisfy the 100-character max line length linter rule
+			var error_msg: String = (
+				"CRITICAL SECURITY ERROR: Production build missing injected salt. "
+				+ "Halting to prevent weak encryption."
 			)
-			# Returning an empty string ensures load_encrypted_pass and
-			# save_encrypted_pass immediately fail, refusing persistence.
-			return ""
+			push_error(error_msg)
+
+			# Asserts are stripped in release builds!
+			# We MUST use OS.crash() to guarantee a hard abort in production.
+			# This ensures the game instantly dies before it can ever persist compromised data.
+			OS.crash(error_msg)
+
+			return ""  # Unreachable, but satisfies compiler return type requirements
 
 	return (OS.get_unique_id() + salt).sha256_text()
