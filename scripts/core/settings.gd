@@ -769,7 +769,7 @@ func save_last_input_device(device: String) -> void:
 	var config: ConfigFile = load_data["config"]
 
 	config.set_value("input", "last_input_device", device)
-	
+
 	# FIX: Use the centralized key helper
 	config.save_encrypted_pass(CONFIG_PATH, Globals.ensure_encryption_key())
 
