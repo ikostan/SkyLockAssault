@@ -241,148 +241,6 @@ func serialize_event(ev: InputEvent) -> String:
 	return ""
 
 
-## Loads input mappings from config, overriding project defaults only if saved.
-## Handles various formats for backward compatibility and adds defaults if necessary.
-## Proceeds even if no file to add defaults where events missing.
-## Skips adding deserialized event if it matches any existing in other actions (per device).
-## :param path: Config file path (default: CONFIG_PATH).
-## :type path: String
-## :param actions: Actions to load (default: ACTIONS).
-## :type actions: Array[String]
-## :rtype: void
-func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
-	# SECURITY GUARD: Ensure encryption key is initialized
-	if Globals.save_encryption_pass.is_empty():
-		Globals.save_encryption_pass = Globals._get_encryption_key()
-
-	var config: ConfigFile = ConfigFile.new()
-
-	# Step 1: Attempt encrypted load
-	var err: int = config.load_encrypted_pass(path, Globals.save_encryption_pass)
-
-	# Step 2: Migration Check for Legacy Plaintext Files
-	if err == ERR_INVALID_DATA or err == ERR_FILE_CORRUPT:
-		Globals.log_message(
-			"Encrypted load failed (Code %d). Checking if file is legacy plaintext..." % err,
-			Globals.LogLevel.DEBUG
-		)
-
-		# Reset config object before trying legacy load
-		config = ConfigFile.new()
-		err = config.load(path)
-
-		if err == OK:
-			Globals.log_message(
-				"Legacy plaintext input mappings found. Migration required.", Globals.LogLevel.INFO
-			)
-			# Flag the file to be re-saved in the new encrypted format
-			_needs_save = true
-		else:
-			Globals.log_message(
-				"File is not valid plaintext either. Proceeding to defaults.",
-				Globals.LogLevel.ERROR
-			)
-
-	elif err != OK and err != ERR_FILE_NOT_FOUND:
-		# Handle other actual file system errors (permissions, missing drive, etc.)
-		Globals.log_message(
-			"Error loading settings file at " + path + ": " + str(err), Globals.LogLevel.ERROR
-		)
-
-	if err == ERR_FILE_NOT_FOUND:
-		Globals.log_message(
-			"No settings file found at " + path + "—adding defaults where missing.",
-			Globals.LogLevel.INFO
-		)
-
-	# NEW: Restore migration metadata
-	if config.has_section_key("meta", LEGACY_MIGRATION_KEY):
-		var migrated: bool = config.get_value("meta", LEGACY_MIGRATION_KEY, false)
-		if migrated:
-			Globals.set_meta(LEGACY_MIGRATION_KEY, true)
-			Globals.log_message(
-				"Restored legacy migration flag from config.", Globals.LogLevel.DEBUG
-			)
-
-	for action: String in actions:
-		var has_saved: bool = config.has_section_key("input", action)
-		if has_saved:
-			var value: Variant = config.get_value("input", action)
-			var serialized_events: Array[String] = []
-
-			# ── ROBUST ARRAY HANDLING (FIX FOR PackedStringArray) ─────────────────────
-			# FIXED: Explicit type guard to skip non-string items (e.g. int 999 from EC-01 test).
-			# This prevents crash on corrupted/malformed config files
-			# (real-world case: disk errors, manual edits).
-			# Log warning for visibility in console/tests.
-			# Keeps defaults backfill intact (as asserted in EC-01).
-			# Minimal change: only affects invalid data paths, no impact on normal saves.
-			if value is Array or value is PackedStringArray:
-				for item: Variant in value:
-					if item is String:
-						serialized_events.append(item)
-					else:
-						Globals.log_message(
-							"Non-string item in array for action '" + action + "': skipped",
-							Globals.LogLevel.WARNING
-						)
-
-			# ── Backward compatibility: Scalar string or int → single serialized ─────
-			elif value is String:
-				serialized_events = [value]  # Treat as one serialized event
-			elif value is int:
-				serialized_events = ["key:" + str(value)]  # Legacy keycode scalar
-
-			# ── Deserialize and add ───────────────────────────────────────────────────
-			# Erase project defaults first (to avoid mixing with saved).
-			InputMap.action_erase_events(action)
-
-			for serialized: String in serialized_events:
-				var ev: InputEvent = deserialize_event(serialized)
-				if ev == null:
-					Globals.log_message(
-						"Invalid serialized event for " + action + ": " + serialized,
-						Globals.LogLevel.WARNING
-					)
-					continue
-
-				var already_present := false
-				for existing_ev in InputMap.action_get_events(action):
-					if events_match(existing_ev, ev):
-						already_present = true
-						break
-
-				if already_present:
-					Globals.log_message(
-						"Skipping intra-action duplicate for " + action, Globals.LogLevel.DEBUG
-					)
-					continue  # It's already in this action, skip to the next one
-
-				# ── NEW: Skip if duplicate in other actions (per device) ──────────────
-				# Prevents cross-action duplicates from corrupted config.
-				var conflicts: Array[String] = get_conflicting_actions(ev, action)
-				if not conflicts.is_empty():
-					Globals.log_message(
-						(
-							"Skipping duplicate event for "
-							+ action
-							+ " (conflicts: "
-							+ str(conflicts)
-							+ ")"
-						),
-						Globals.LogLevel.WARNING
-					)
-					# prefer the loaded mapping and remove it from conflicting actions
-					# (for the same device type), then mark _needs_save
-					_remove_event_from_conflicts(ev, conflicts)
-					_needs_save = true
-
-				InputMap.action_add_event(action, ev)
-
-	# ── Backfill missing defaults (after loading/erasing) ─────────────────────────
-	_needs_save = _add_missing_defaults(config) or _needs_save
-
-
 ## Removes `event` from all actions listed in `conflicts`.
 ## Used on load to preserve the loaded mapping and unbind duplicates elsewhere.
 ## :param event: The event to remove from conflicting actions.
@@ -479,62 +337,6 @@ func _deserialize_and_add(action: String, serialized: String) -> void:
 		)
 
 
-## Saves current InputMap events to config (all per action as array).
-## :param path: Config file path (default: CONFIG_PATH).
-## :type path: String
-## :param actions: Actions to save (default: ACTIONS).
-## :type actions: Array[String]
-## :rtype: void
-func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
-	# SECURITY GUARD: Ensure encryption key is initialized
-	if Globals.save_encryption_pass.is_empty():
-		Globals.save_encryption_pass = Globals._get_encryption_key()
-
-	var config: ConfigFile = ConfigFile.new()
-
-	# FIX FOR #531: Use encrypted load with plaintext fallback before saving.
-	# This ensures we preserve unrelated sections (like audio) during migration
-	# without aborting if the file hasn't been encrypted yet.
-	var err: int = config.load_encrypted_pass(path, Globals.save_encryption_pass)
-	
-	if err == ERR_INVALID_DATA or err == ERR_FILE_CORRUPT:
-		Globals.log_message(
-			"Save pre-load: Encrypted load failed. Attempting legacy plaintext load to preserve sections...",
-			Globals.LogLevel.DEBUG
-		)
-		config = ConfigFile.new()
-		err = config.load(path)
-
-	if err != OK and err != ERR_FILE_NOT_FOUND:
-		Globals.log_message(
-			"Failed to load input config for save: " + str(err), Globals.LogLevel.ERROR
-		)
-		return
-
-	if (
-		Globals.has_meta(LEGACY_MIGRATION_KEY)
-		and bool(Globals.get_meta(LEGACY_MIGRATION_KEY)) == true
-	):
-		config.set_value("meta", LEGACY_MIGRATION_KEY, true)
-
-	for action: String in actions:
-		var events: Array[InputEvent] = InputMap.action_get_events(action)
-		var serials: Array[String] = []
-		for ev: InputEvent in events:
-			var s: String = serialize_event(ev)
-			if not s.is_empty():
-				serials.append(s)
-		config.set_value("input", action, serials)  # Set even if empty
-
-	# UPDATED: Use encrypted save
-	err = config.save_encrypted_pass(path, Globals.save_encryption_pass)
-
-	if err != OK:
-		Globals.log_message("Failed to save input mappings: " + str(err), Globals.LogLevel.ERROR)
-	else:
-		Globals.log_message("Input mappings saved.", Globals.LogLevel.DEBUG)
-
-
 ## Resets input mappings to defaults for the specified device type.
 ## Now fully erases ALL events for the device + forces defaults (fixes duplicates).
 ## :param device_type: "keyboard" or "gamepad"
@@ -624,51 +426,6 @@ func get_conflicting_actions(event: InputEvent, exclude_action: String = "") -> 
 				conflicts.append(action)
 				break  # one match per action is enough
 	return conflicts
-
-
-## Saves the last selected input device to config.
-func save_last_input_device(device: String) -> void:
-	# SECURITY GUARD: Ensure encryption key is initialized
-	if Globals.save_encryption_pass.is_empty():
-		Globals.save_encryption_pass = Globals._get_encryption_key()
-
-	if device not in ["keyboard", "gamepad"]:
-		return
-		
-	var config: ConfigFile = ConfigFile.new()
-	
-	# FIX FOR #531: Dual-load pre-save to avoid wiping legacy files
-	var err: int = config.load_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
-	if err == ERR_INVALID_DATA or err == ERR_FILE_CORRUPT:
-		config = ConfigFile.new()
-		config.load(CONFIG_PATH)
-		
-	config.set_value("input", "last_input_device", device)
-	config.save_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
-
-
-## Loads the last selected input device (defaults to keyboard).
-## Validates against ["keyboard", "gamepad"] to prevent corrupted config values.
-## Mirrors save_last_input_device() for consistency.
-## :rtype: void
-func load_last_input_device() -> void:
-	# SECURITY GUARD: Ensure encryption key is initialized
-	if Globals.save_encryption_pass.is_empty():
-		Globals.save_encryption_pass = Globals._get_encryption_key()
-
-	var config: ConfigFile = ConfigFile.new()
-	
-	# FIX FOR #531: Dual-load check to read from legacy files before they are migrated
-	var err: int = config.load_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
-	if err == ERR_INVALID_DATA or err == ERR_FILE_CORRUPT:
-		config = ConfigFile.new()
-		err = config.load(CONFIG_PATH)
-		
-	if err == OK and config.has_section_key("input", "last_input_device"):
-		var device: String = config.get_value("input", "last_input_device")
-		Globals.current_input_device = device if device in ["keyboard", "gamepad"] else "keyboard"
-	else:
-		Globals.current_input_device = "keyboard"
 
 
 ## Returns "keyboard" or "gamepad" based on the type of the event.
@@ -863,3 +620,178 @@ static func get_event_label(ev: InputEvent) -> String:
 				# normalize the non-trigger fallback line:
 				return ("Axis " + str(ev.axis) + dir).strip_edges()
 	return "Unknown"
+
+
+## Helper to determine if a config file is encrypted.
+## Prevents C++ engine errors when attempting to parse plaintext files.
+func _is_file_encrypted(path: String) -> bool:
+	if not FileAccess.file_exists(path):
+		return false
+	var f: FileAccess = FileAccess.open(path, FileAccess.READ)
+	if not f:
+		return false
+	if f.get_length() < 4:
+		f.close()
+		return false
+	var magic: int = f.get_32()
+	f.close()
+	# Godot Encrypted File Magic Number: 0x43454447 ("GDEC")
+	return magic == 0x43454447
+
+
+## Loads input mappings from config, overriding project defaults only if saved.
+func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
+	if Globals.save_encryption_pass.is_empty():
+		Globals.save_encryption_pass = Globals._get_encryption_key()
+
+	var config: ConfigFile = ConfigFile.new()
+	var err: int = OK
+
+	# FIX FOR #531 & #532: Safely branch logic by checking file headers first
+	if not FileAccess.file_exists(path):
+		Globals.log_message("No settings file found at " + path + "—adding defaults where missing.", Globals.LogLevel.INFO)
+		err = ERR_FILE_NOT_FOUND
+	elif _is_file_encrypted(path):
+		err = config.load_encrypted_pass(path, Globals.save_encryption_pass)
+	else:
+		Globals.log_message("Encrypted magic not found. Checking if file is legacy plaintext...", Globals.LogLevel.DEBUG)
+		err = config.load(path)
+		if err == OK:
+			Globals.log_message("Legacy plaintext input mappings found. Migration required.", Globals.LogLevel.INFO)
+			_needs_save = true
+		else:
+			Globals.log_message("File is not valid plaintext either. Proceeding to defaults.", Globals.LogLevel.ERROR)
+
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		Globals.log_message("Error loading settings file at " + path + ": " + str(err), Globals.LogLevel.ERROR)
+
+	# NEW: Restore migration metadata
+	if config.has_section_key("meta", LEGACY_MIGRATION_KEY):
+		var migrated: bool = config.get_value("meta", LEGACY_MIGRATION_KEY, false)
+		if migrated:
+			Globals.set_meta(LEGACY_MIGRATION_KEY, true)
+			Globals.log_message("Restored legacy migration flag from config.", Globals.LogLevel.DEBUG)
+
+	for action: String in actions:
+		var has_saved: bool = config.has_section_key("input", action)
+		if has_saved:
+			var value: Variant = config.get_value("input", action)
+			var serialized_events: Array[String] = []
+
+			if value is Array or value is PackedStringArray:
+				for item: Variant in value:
+					if item is String:
+						serialized_events.append(item)
+					else:
+						Globals.log_message("Non-string item in array for action '" + action + "': skipped", Globals.LogLevel.WARNING)
+			elif value is String:
+				serialized_events = [value]
+			elif value is int:
+				serialized_events = ["key:" + str(value)]
+
+			InputMap.action_erase_events(action)
+
+			for serialized: String in serialized_events:
+				var ev: InputEvent = deserialize_event(serialized)
+				if ev == null:
+					continue
+
+				var already_present := false
+				for existing_ev in InputMap.action_get_events(action):
+					if events_match(existing_ev, ev):
+						already_present = true
+						break
+
+				if already_present:
+					continue
+
+				var conflicts: Array[String] = get_conflicting_actions(ev, action)
+				if not conflicts.is_empty():
+					Globals.log_message("Skipping duplicate event for " + action + " (conflicts: " + str(conflicts) + ")", Globals.LogLevel.WARNING)
+					_remove_event_from_conflicts(ev, conflicts)
+					_needs_save = true
+
+				InputMap.action_add_event(action, ev)
+
+	_needs_save = _add_missing_defaults(config) or _needs_save
+
+
+## Saves current InputMap events to config (all per action as array).
+func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
+	if Globals.save_encryption_pass.is_empty():
+		Globals.save_encryption_pass = Globals._get_encryption_key()
+
+	var config: ConfigFile = ConfigFile.new()
+	var err: int = OK
+
+	# FIX FOR #531 & #532: Pre-load safely without triggering C++ engine errors
+	if FileAccess.file_exists(path):
+		if _is_file_encrypted(path):
+			err = config.load_encrypted_pass(path, Globals.save_encryption_pass)
+		else:
+			Globals.log_message("Save pre-load: Legacy plaintext file detected. Using plaintext load to preserve sections...", Globals.LogLevel.DEBUG)
+			err = config.load(path)
+
+		if err != OK:
+			Globals.log_message("Failed to load input config for save: " + str(err), Globals.LogLevel.ERROR)
+			return
+
+	if Globals.has_meta(LEGACY_MIGRATION_KEY) and bool(Globals.get_meta(LEGACY_MIGRATION_KEY)) == true:
+		config.set_value("meta", LEGACY_MIGRATION_KEY, true)
+
+	for action: String in actions:
+		var events: Array[InputEvent] = InputMap.action_get_events(action)
+		var serials: Array[String] = []
+		for ev: InputEvent in events:
+			var s: String = serialize_event(ev)
+			if not s.is_empty():
+				serials.append(s)
+		config.set_value("input", action, serials)
+
+	err = config.save_encrypted_pass(path, Globals.save_encryption_pass)
+
+	if err != OK:
+		Globals.log_message("Failed to save input mappings: " + str(err), Globals.LogLevel.ERROR)
+	else:
+		Globals.log_message("Input mappings saved.", Globals.LogLevel.DEBUG)
+
+
+## Saves the last selected input device to config.
+func save_last_input_device(device: String) -> void:
+	if Globals.save_encryption_pass.is_empty():
+		Globals.save_encryption_pass = Globals._get_encryption_key()
+
+	if device not in ["keyboard", "gamepad"]:
+		return
+		
+	var config: ConfigFile = ConfigFile.new()
+	
+	if FileAccess.file_exists(CONFIG_PATH):
+		if _is_file_encrypted(CONFIG_PATH):
+			config.load_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
+		else:
+			config.load(CONFIG_PATH)
+		
+	config.set_value("input", "last_input_device", device)
+	config.save_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
+
+
+## Loads the last selected input device (defaults to keyboard).
+func load_last_input_device() -> void:
+	if Globals.save_encryption_pass.is_empty():
+		Globals.save_encryption_pass = Globals._get_encryption_key()
+
+	var config: ConfigFile = ConfigFile.new()
+	var err: int = OK
+	
+	if FileAccess.file_exists(CONFIG_PATH):
+		if _is_file_encrypted(CONFIG_PATH):
+			err = config.load_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
+		else:
+			err = config.load(CONFIG_PATH)
+		
+	if err == OK and config.has_section_key("input", "last_input_device"):
+		var device: String = config.get_value("input", "last_input_device")
+		Globals.current_input_device = device if device in ["keyboard", "gamepad"] else "keyboard"
+	else:
+		Globals.current_input_device = "keyboard"
