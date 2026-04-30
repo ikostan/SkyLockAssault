@@ -347,12 +347,12 @@ func save_volumes(path: String = "") -> void:
 	var err: int = config.load_encrypted_pass(path, Globals.save_encryption_pass)
 
 	if err == ERR_INVALID_DATA or err == ERR_FILE_CORRUPT:
-		(
-			Globals
-			. log_message(
-				"Audio Save pre-load: Encrypted load failed. Attempting legacy plaintext load to preserve sections...",
-				Globals.LogLevel.DEBUG
-			)
+		Globals.log_message(
+			(
+				"Audio Save pre-load: Encrypted load failed. "
+				+ "Attempting legacy plaintext load to preserve sections..."
+			),
+			Globals.LogLevel.DEBUG
 		)
 		config = ConfigFile.new()
 		err = config.load(path)
