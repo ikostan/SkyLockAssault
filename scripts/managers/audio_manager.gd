@@ -341,15 +341,29 @@ func save_volumes(path: String = "") -> void:
 
 	current_config_path = path  # Update to keep in sync with the path used
 	var config: ConfigFile = ConfigFile.new()
-	var err: Error = config.load_encrypted_pass(path, Globals.save_encryption_pass)
+	
+	# FIX FOR #531: Dual-load pre-save to avoid aborting on legacy plaintext files.
+	# This ensures we preserve unrelated sections (like [input]) during migration.
+	var err: int = config.load_encrypted_pass(path, Globals.save_encryption_pass)
+	
+	if err == ERR_INVALID_DATA or err == ERR_FILE_CORRUPT:
+		Globals.log_message(
+			"Audio Save pre-load: Encrypted load failed. Attempting legacy plaintext load to preserve sections...",
+			Globals.LogLevel.DEBUG
+		)
+		config = ConfigFile.new()
+		err = config.load(path)
+
 	if err != OK and err != ERR_FILE_NOT_FOUND:
 		Globals.log_message("Failed to load config for save: " + str(err), Globals.LogLevel.ERROR)
 		return
+		
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
 		var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
 		var state: Dictionary = get_bus_state(bus)
 		config.set_value("audio", config_data["volume_var"], state["volume"])
 		config.set_value("audio", config_data["muted_var"], state["muted"])
+		
 	err = config.save_encrypted_pass(path, Globals.save_encryption_pass)
 	if err == OK:
 		Globals.log_message("Saved volumes to config.", Globals.LogLevel.DEBUG)
