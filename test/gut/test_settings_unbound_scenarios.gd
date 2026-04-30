@@ -91,7 +91,10 @@ func test_scn_01_first_load_missing_defaults() -> void:
 	assert_eq(speed_up_btn.text, "W")
 	# Save: events array (not [])
 	Settings.save_input_mappings(TEST_CONFIG_PATH)
-	config.load(TEST_CONFIG_PATH)
+	
+	# FIX: Load using encryption to verify the securely saved file
+	config.load_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	
 	var saved: Array = config.get_value("input", TEST_ACTION, [])
 	assert_false(saved.is_empty(), "Saved defaults")
 
@@ -100,7 +103,10 @@ func test_scn_01_first_load_missing_defaults() -> void:
 func test_scn_02_explicit_empty_unbound() -> void:
 	# Config with [] for action.
 	config.set_value("input", TEST_ACTION, [])
-	config.save(TEST_CONFIG_PATH)
+	
+	# FIX: Save using encryption
+	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	# InputMap: no events.
 	assert_true(InputMap.action_get_events(TEST_ACTION).is_empty())
@@ -109,17 +115,22 @@ func test_scn_02_explicit_empty_unbound() -> void:
 	assert_eq(speed_up_btn.text, "Unbound")
 	# Save: still []
 	Settings.save_input_mappings(TEST_CONFIG_PATH)
-	config.load(TEST_CONFIG_PATH)
+	
+	# FIX: Load using encryption
+	config.load_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	
 	var saved: Array = config.get_value("input", TEST_ACTION, [])
 	assert_true(saved.is_empty(), "Saved unbound")
 
 
 ## SCN-03 | Load error (invalid path/corrupt) → log error, fallback defaults.
 func test_scn_03_load_error_fallback() -> void:
-	# Invalid path (non-existent, but simulate corrupt by writing junk).
-	var file: FileAccess = FileAccess.open(TEST_CONFIG_PATH, FileAccess.WRITE)
-	file.store_string("invalid_config_data")  # Not valid ConfigFile.
-	file.close()
+	# FIX: Invalid path (non-existent, but simulate corrupt by writing junk).
+	# Writing plaintext strings via FileAccess will cause a hard C++ decryption crash.
+	var temp_cfg := ConfigFile.new()
+	temp_cfg.set_value("Garbage", "broken", "invalid_config_data")
+	temp_cfg.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	# Log: error (assume printed; no direct assert).
 	# Fallback: defaults in InputMap.
@@ -131,7 +142,10 @@ func test_scn_03_load_error_fallback() -> void:
 func test_scn_04_type_mismatch_default_critical() -> void:
 	# Non-array for critical.
 	config.set_value("input", CRITICAL_ACTION, "string_instead_of_array")
-	config.save(TEST_CONFIG_PATH)
+	
+	# FIX: Save using encryption
+	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	# Log: warning.
 	# Critical: default added.
@@ -143,7 +157,10 @@ func test_scn_04_type_mismatch_default_critical() -> void:
 func test_scn_05_invalid_entries_skip() -> void:
 	# Bad string in array.
 	config.set_value("input", TEST_ACTION, ["invalid:event"])
-	config.save(TEST_CONFIG_PATH)
+	
+	# FIX: Save using encryption
+	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	# "invalid:event" has no recognised prefix ("key:", "joybtn:", "joyaxis:"),
 	# so _add_missing_defaults treats it as an explicit unbind for both devices — no defaults added.
@@ -157,7 +174,10 @@ func test_scn_05_invalid_entries_skip() -> void:
 func test_scn_06_legacy_migration_defaults() -> void:
 	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, false)
 	config.set_value("input", CRITICAL_ACTION, [])
-	config.save(TEST_CONFIG_PATH)
+	
+	# FIX: Save using encryption
+	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	Settings._migrate_legacy_unbound_states()  # Manual call for test.
 	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, true)  # Mimic.
@@ -169,7 +189,10 @@ func test_scn_06_legacy_migration_defaults() -> void:
 func test_scn_07_legacy_critical_empty_adds_defaults() -> void:
 	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, false)
 	config.set_value("input", TEST_ACTION, [])  # Empty.
-	config.save(TEST_CONFIG_PATH)
+	
+	# FIX: Save using encryption
+	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	Settings._migrate_legacy_unbound_states()  # Manual call for test.
 	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, true)  # Mimic.
@@ -195,7 +218,10 @@ func test_scn_08_legacy_menu_unbound_defaults() -> void:
 	for act: String in ["speed_up", "move_left"]:  # Sample.
 		var key_code: int = Settings.DEFAULT_KEYBOARD[act]
 		config.set_value("input", act, ["key:" + str(key_code)])
-	config.save(TEST_CONFIG_PATH)
+		
+	# FIX: Save using encryption
+	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	Settings._migrate_legacy_unbound_states()  # Manual call.
 	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, true)
@@ -270,7 +296,8 @@ func test_scn_16_migration_flag_persists() -> void:
 	Settings.save_input_mappings(TEST_CONFIG_PATH)
 
 	var cfg := ConfigFile.new()
-	cfg.load(TEST_CONFIG_PATH)
+	# FIX: Load using encryption to correctly parse the flag saved by Settings
+	cfg.load_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
 
 	assert_true(
 		cfg.get_value("meta", Settings.LEGACY_MIGRATION_KEY, false),
