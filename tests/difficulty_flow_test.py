@@ -145,8 +145,9 @@ def test_difficulty_flow(page: Page) -> None:
         assert any(
             "log level changed to: debug" in log["text"].lower() for log in new_logs
         ), "Failed to set log level to DEBUG"
+        # FIX: Look for the new encrypted save log instead of "settings saved"
         assert any(
-            "settings saved" in log["text"].lower() for log in new_logs
+            "encrypted settings persisted successfully" in log["text"].lower() for log in new_logs
         ), "Failed to save the settings"
 
         # Go back to Options menu
@@ -176,9 +177,9 @@ def test_difficulty_flow(page: Page) -> None:
             "js difficulty callback called with valid value: 2.0" in log["text"].lower()
             for log in new_logs
         ), "Failed to extract/validate difficulty 2.0 from JS payload"
-
+        # FIX: Look for the new encrypted save log instead of "settings saved"
         assert any(
-            "settings saved" in log["text"].lower() for log in new_logs
+            "encrypted settings persisted successfully" in log["text"].lower() for log in new_logs
         ), "Failed to save the settings"
 
         # Reset gameplay settings back to defaults via the gameplay reset action
