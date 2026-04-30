@@ -44,6 +44,10 @@ func before_each() -> void:
 	if AudioServer.get_bus_index("SFX_Weapon") == -1:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, "SFX_Weapon")
+		
+	# FIX: Await one frame to allow _ready()'s deferred grab_focus calls 
+	# to resolve safely while the node is still inside the scene tree.
+	await get_tree().process_frame
 
 
 ## Per-test cleanup: Free audio_instance safely.
