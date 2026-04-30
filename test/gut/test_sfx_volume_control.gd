@@ -44,6 +44,10 @@ func before_each() -> void:
 	if AudioServer.get_bus_index("SFX_Weapon") == -1:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, "SFX_Weapon")
+		
+	# FIX: Await one frame to allow _ready()'s deferred grab_focus calls 
+	# to resolve safely while the node is still inside the scene tree.
+	await get_tree().process_frame
 
 
 ## Per-test cleanup: Free audio_instance safely.
@@ -332,11 +336,13 @@ func test_tc_sfx_14() -> void:
 ## TC-SFX-15 | Unexpected exit | Simulate tree_exited | Previous menu visible = true; hidden_menus.pop_back(); If web, backPressed restored; Overlays hidden.
 ## :rtype: void
 func test_tc_sfx_15() -> void:
-	var prev_menu: Control = Control.new()
+	# FIX: Wrap in autofree() to prevent the orphan memory leak
+	var prev_menu: Control = autofree(Control.new())
+	
 	prev_menu.visible = false
 	Globals.hidden_menus = [prev_menu]
 	audio_instance.queue_free()
 	await get_tree().process_frame
+	
 	assert_true(prev_menu.visible)
 	assert_true(Globals.hidden_menus.is_empty())
-	prev_menu.queue_free()
