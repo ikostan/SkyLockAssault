@@ -44,16 +44,68 @@ jobs:
       - name: "Inject Production Salt into project.godot"
         run: |
           SALT="${{ secrets.PRODUCTION_SALT }}"
-          # Check if the specific key already exists to update it
-          if grep -q '^security/save_salt=' project.godot; then
-            sed -i "s|^security/save_salt=.*$|security/save_salt=\"$SALT\"|g" project.godot
-          # If the key doesn't exist but the [game] section does, append it there
-          elif grep -q '^\[game\]' project.godot; then
-            sed -i "/^\[game\]/a security\/save_salt=\"$SALT\"" project.godot
-          # Fallback: create the [game] section and the key if both are missing
-          else
-            printf '\n[game]\nsecurity/save_salt="%s"\n' "$SALT" >> project.godot
-          fi
+
+          # Use a section-aware awk script to update security/save_salt only within the [game] section.
+          # Behavior:
+          # - If [game] exists and security/save_salt is present within it, replace that line.
+          # - If [game] exists but security/save_salt is missing, append it at the end of the [game] section.
+          # - If [game] does not exist, append a new [game] section with security/save_salt at the end of the file.
+          awk '
+            BEGIN {
+              salt = ENVIRON["SALT"]
+              in_game = 0
+              salt_written = 0
+              saw_game_section = 0
+            }
+            {
+              # Detect section headers
+              if ($0 ~ /^\[game\]/) {
+                in_game = 1
+                saw_game_section = 1
+                print
+                next
+              } else if ($0 ~ /^\[/ && $0 !~ /^\[game\]/) {
+                # We are entering another section; if we were in [game] and havent written the salt yet, write it now
+                if (in_game && !salt_written) {
+                  print "security/save_salt=\"" salt "\""
+                  salt_written = 1
+                }
+                in_game = 0
+                print
+                next
+              }
+
+              # Inside [game], look for security/save_salt key (allow leading whitespace)
+              if (in_game && $0 ~ /^[[:space:]]*security\/save_salt[[:space:]]*=/) {
+                if (!salt_written) {
+                  print "security/save_salt=\"" salt "\""
+                  salt_written = 1
+                }
+                # Skip the original line
+                next
+              }
+
+              print
+            }
+            END {
+              # If we were still inside [game] at EOF and haven t written the salt, append it
+              if (in_game && !salt_written) {
+                print "security/save_salt=\"" salt "\""
+                salt_written = 1
+              }
+
+              # If no [game] section existed at all, create it with the salt
+              if (!saw_game_section) {
+                if (NR > 0) {
+                  print ""
+                }
+                print "[game]"
+                print "security/save_salt=\"" salt "\""
+              }
+            }
+          ' project.godot > project.godot.tmp
+
+          mv project.godot.tmp project.godot
       - name: "Create Export Directories"
         run: |
           mkdir -p export/web
