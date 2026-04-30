@@ -28,6 +28,7 @@ func before_each() -> void:
 	AudioManager.current_config_path = test_config_path  # <--- ADD THIS LINE HERE
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
+	
 	# Add audio buses if not exist
 	if AudioServer.get_bus_index("Master") == -1:
 		AudioServer.add_bus(0)
@@ -44,6 +45,10 @@ func before_each() -> void:
 	if AudioServer.get_bus_index("SFX_Weapon") == -1:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, "SFX_Weapon")
+
+	# FIX: Await one frame to allow _ready()'s deferred grab_focus calls 
+	# to resolve safely while the node is still inside the scene tree.
+	await get_tree().process_frame
 
 
 ## Per-test cleanup: Free audio_instance safely.
