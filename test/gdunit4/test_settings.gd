@@ -339,24 +339,6 @@ func test_preserve_default_joypad_no_saved() -> void:
 	assert_int(events[0].button_index).is_equal(TEST_JOY_BUTTON)
 
 
-# Commented out: Testing plaintext fallback triggers a C++ ERR_FILE_UNRECOGNIZED that fails GdUnit4's error monitor.
-# func test_migration_save_only_on_old() -> void:
-# 	var config: ConfigFile = ConfigFile.new()
-# 	config.set_value("input", "test_action", TEST_KEY_3)
-# 	config.save(PATH_MIGRATION_TEST)
-# 
-# 	InputMap.action_erase_events("test_action")
-# 	Settings.load_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
-# 
-# 	assert_bool(Settings._needs_save).is_true()
-# 
-# 	Settings.save_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
-# 
-# 	Settings._needs_save = false
-# 	Settings.load_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
-# 	assert_bool(Settings._needs_save).is_false()
-
-
 func test_no_migration_on_new() -> void:
 	# FIX: Reset singleton state manually. Previous tests in the suite 
 	# trigger the defaults backfill, leaving this flag as true.
@@ -396,22 +378,53 @@ func test_type_safe_new_format() -> void:
 	assert_int(events[0].physical_keycode).is_equal(TEST_KEY_3)
 
 
-# Commented out: Deliberately corrupting the file to test fallback triggers C++ core errors that fail GdUnit4.
-# func test_load_error_handling() -> void:
-# 	var file: FileAccess = FileAccess.open(PATH_CORRUPT, FileAccess.WRITE)
-# 	# Use double quotes (escaped) to satisfy the engine parser
-# 	file.store_string("[input]\ntest_action = [\"invalid:data\"]") 
-# 	file.close()
-# 
-# 	assert_bool(FileAccess.file_exists(PATH_CORRUPT)).is_true()
-# 
-# 	InputMap.action_erase_events("test_action")
-# 
-# 	# Now is_success() will pass because the ConfigFile syntax is valid
-# 	assert_error(func() -> void:
-# 		Settings.load_input_mappings(PATH_CORRUPT, ["test_action"])
-# 	).is_success() 
-# 
-# 	# Your script correctly skips "invalid:data", so size remains 0
-# 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
-# 	assert_int(events.size()).is_equal(0)
+## Tests that legacy plaintext files trigger the _needs_save migration flag,
+## and that subsequent encrypted saves clear the flag.
+func test_migration_save_only_on_old() -> void:
+	Settings._needs_save = false
+	
+	# 1. Manually create a LEGACY PLAINTEXT file
+	var config: ConfigFile = ConfigFile.new()
+	config.set_value("input", "test_action", TEST_KEY_3)
+	config.save(PATH_MIGRATION_TEST)
+
+	InputMap.action_erase_events("test_action")
+	
+	# 2. Execute load. Our safe_load_config helper will detect it's not encrypted,
+	# fall back to a plaintext load, and flag _needs_save = true.
+	Settings.load_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
+	
+	assert_bool(Settings._needs_save).is_true()
+
+	# 3. Save the new encrypted format
+	Settings.save_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
+	Settings._needs_save = false
+	
+	# 4. Verify the newly encrypted file no longer triggers migration
+	Settings.load_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
+	assert_bool(Settings._needs_save).is_false()
+
+
+## Tests that logically corrupt strings inside a validly encrypted file
+## are safely ignored by the parser without crashing.
+func test_load_error_handling() -> void:
+	var config: ConfigFile = ConfigFile.new()
+	# Inject completely invalid strings into a perfectly formatted ConfigFile object
+	config.set_value("input", "test_action", ["invalid:data", "key:not_a_number"])
+	
+	# Save it using proper encryption so the C++ engine doesn't panic on load
+	config.save_encrypted_pass(PATH_CORRUPT, Globals.ensure_encryption_key())
+
+	assert_bool(FileAccess.file_exists(PATH_CORRUPT)).is_true()
+
+	InputMap.action_erase_events("test_action")
+
+	# Now is_success() will pass because the file decrypts properly, 
+	# and our GDScript safely skips the garbage data.
+	assert_error(func() -> void:
+		Settings.load_input_mappings(PATH_CORRUPT, ["test_action"])
+	).is_success() 
+
+	# Your script correctly skips "invalid:data", so size remains 0
+	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
+	assert_int(events.size()).is_equal(0)
