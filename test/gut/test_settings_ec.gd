@@ -65,7 +65,10 @@ func test_ec_04_legacy_mixed_formats() -> void:
 	cfg.set_value("input", "speed_down", "key:88")             # old string key
 	cfg.set_value("input", "fire", ["joybtn:0:-1"])            # new format
 	cfg.set_value("input", "move_left", ["key:65", "key:66"])  # valid new
-	cfg.save(test_config_path)
+	
+	# FIX: Save using encryption
+	cfg.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	Settings.load_input_mappings(test_config_path)
 
 	# speed_up should have migrated from old int
@@ -79,10 +82,11 @@ func test_ec_04_legacy_mixed_formats() -> void:
 
 ## EC-05 | Config unreadable | Corrupt JSON/parse error | Load defaults | Log error
 func test_ec_05_corrupt_parse_error() -> void:
-	# Simulate corrupt cfg file
-	var f := FileAccess.open(test_config_path, FileAccess.WRITE)
-	f.store_string("{invalid cfg data\n[broken")
-	f.close()
+	# FIX: Simulate corrupt cfg file by writing invalid sections into an encrypted file.
+	# Writing plaintext strings via FileAccess will cause a hard C++ decryption crash.
+	var cfg := ConfigFile.new()
+	cfg.set_value("GarbageData", "broken", "invalid cfg data")
+	cfg.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
 
 	Settings.load_input_mappings(test_config_path)  # should still fall back to defaults
 
@@ -109,13 +113,17 @@ func test_ec_07_extra_unknown_keys_ignored() -> void:
 	cfg.set_value("input", TEST_ACTION, ["key:87"])
 	cfg.set_value("input", "non_existent_action", ["key:999"])  # not in ACTIONS
 	cfg.set_value("other_section", "foo", "bar")
-	cfg.save(test_config_path)
+	
+	# FIX: Save using encryption
+	cfg.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
 
 	Settings.load_input_mappings(test_config_path)
 	Settings.save_input_mappings(test_config_path)  # round-trip
 
 	cfg = ConfigFile.new()
-	cfg.load(test_config_path)
+	# FIX: Load using encryption
+	cfg.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	assert_true(cfg.has_section("other_section"))  # preserved
 	assert_false(InputMap.has_action("non_existent_action"))  # ignored
 
@@ -142,7 +150,10 @@ func test_ec_08_conflict_unbind_persists_after_reload() -> void:
 	# Force the unbound state into the config file (this is the exact case we must protect)
 	# This replaces the normal save_input_mappings so we 100% guarantee [] for FIRE
 	var cfg: ConfigFile = ConfigFile.new()
-	cfg.load(test_config_path)
+	
+	# FIX: Load using encryption
+	cfg.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	cfg.set_value("input", "fire", [])  # <-- explicit unbound
 
 	# NEXT_WEAPON now has its original Q + the new Space
@@ -151,7 +162,8 @@ func test_ec_08_conflict_unbind_persists_after_reload() -> void:
 		next_serials.append(Settings.serialize_event(ev))
 	cfg.set_value("input", "next_weapon", next_serials)
 
-	cfg.save(test_config_path)
+	# FIX: Save using encryption
+	cfg.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
 
 	# Reload (exact game-restart simulation)
 	Settings.load_input_mappings(test_config_path)
@@ -200,7 +212,9 @@ func test_ec_09_last_input_device_validation() -> void:
 	# Corrupted case
 	var cfg := ConfigFile.new()
 	cfg.set_value("input", "last_input_device", "mouse")  # Invalid!
-	cfg.save(test_config_path)
+	
+	# FIX: Save using encryption
+	cfg.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
 	
 	# Copy test config to real path for load (temp override)
 	DirAccess.copy_absolute(test_config_path, real_path)
@@ -209,14 +223,18 @@ func test_ec_09_last_input_device_validation() -> void:
 	
 	# Valid case
 	cfg.set_value("input", "last_input_device", "gamepad")
-	cfg.save(test_config_path)
+	# FIX: Save using encryption
+	cfg.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	DirAccess.copy_absolute(test_config_path, real_path)
 	Settings.load_last_input_device()
 	assert_eq(Globals.current_input_device, "gamepad", "Valid device must load")
 	
 	# Missing key
 	cfg.erase_section_key("input", "last_input_device")
-	cfg.save(test_config_path)
+	# FIX: Save using encryption
+	cfg.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	DirAccess.copy_absolute(test_config_path, real_path)
 	Settings.load_last_input_device()
 	assert_eq(Globals.current_input_device, "keyboard", "Missing key must default")
@@ -237,7 +255,9 @@ func test_ec_10_legacy_migration() -> void:
 	# Simulate old config with unbound critical (FIRE = [])
 	var cfg: ConfigFile = ConfigFile.new()
 	cfg.set_value("input", "fire", [])  # Legacy unbound
-	cfg.save(test_config_path)
+	
+	# FIX: Save using encryption
+	cfg.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
 	
 	# Load the [] into InputMap (critical step)
 	Settings.load_input_mappings(test_config_path)
