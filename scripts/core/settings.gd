@@ -649,28 +649,43 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 
 	# FIX FOR #531 & #532: Safely branch logic by checking file headers first
 	if not FileAccess.file_exists(path):
-		Globals.log_message("No settings file found at " + path + "—adding defaults where missing.", Globals.LogLevel.INFO)
+		Globals.log_message(
+			"No settings file found at " + path + "—adding defaults where missing.",
+			Globals.LogLevel.INFO
+		)
 		err = ERR_FILE_NOT_FOUND
 	elif _is_file_encrypted(path):
 		err = config.load_encrypted_pass(path, Globals.save_encryption_pass)
 	else:
-		Globals.log_message("Encrypted magic not found. Checking if file is legacy plaintext...", Globals.LogLevel.DEBUG)
+		Globals.log_message(
+			"Encrypted magic not found. Checking if file is legacy plaintext...",
+			Globals.LogLevel.DEBUG
+		)
 		err = config.load(path)
 		if err == OK:
-			Globals.log_message("Legacy plaintext input mappings found. Migration required.", Globals.LogLevel.INFO)
+			Globals.log_message(
+				"Legacy plaintext input mappings found. Migration required.", Globals.LogLevel.INFO
+			)
 			_needs_save = true
 		else:
-			Globals.log_message("File is not valid plaintext either. Proceeding to defaults.", Globals.LogLevel.ERROR)
+			Globals.log_message(
+				"File is not valid plaintext either. Proceeding to defaults.",
+				Globals.LogLevel.ERROR
+			)
 
 	if err != OK and err != ERR_FILE_NOT_FOUND:
-		Globals.log_message("Error loading settings file at " + path + ": " + str(err), Globals.LogLevel.ERROR)
+		Globals.log_message(
+			"Error loading settings file at " + path + ": " + str(err), Globals.LogLevel.ERROR
+		)
 
 	# NEW: Restore migration metadata
 	if config.has_section_key("meta", LEGACY_MIGRATION_KEY):
 		var migrated: bool = config.get_value("meta", LEGACY_MIGRATION_KEY, false)
 		if migrated:
 			Globals.set_meta(LEGACY_MIGRATION_KEY, true)
-			Globals.log_message("Restored legacy migration flag from config.", Globals.LogLevel.DEBUG)
+			Globals.log_message(
+				"Restored legacy migration flag from config.", Globals.LogLevel.DEBUG
+			)
 
 	for action: String in actions:
 		var has_saved: bool = config.has_section_key("input", action)
@@ -683,7 +698,10 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 					if item is String:
 						serialized_events.append(item)
 					else:
-						Globals.log_message("Non-string item in array for action '" + action + "': skipped", Globals.LogLevel.WARNING)
+						Globals.log_message(
+							"Non-string item in array for action '" + action + "': skipped",
+							Globals.LogLevel.WARNING
+						)
 			elif value is String:
 				serialized_events = [value]
 			elif value is int:
@@ -707,7 +725,16 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 
 				var conflicts: Array[String] = get_conflicting_actions(ev, action)
 				if not conflicts.is_empty():
-					Globals.log_message("Skipping duplicate event for " + action + " (conflicts: " + str(conflicts) + ")", Globals.LogLevel.WARNING)
+					Globals.log_message(
+						(
+							"Skipping duplicate event for "
+							+ action
+							+ " (conflicts: "
+							+ str(conflicts)
+							+ ")"
+						),
+						Globals.LogLevel.WARNING
+					)
 					_remove_event_from_conflicts(ev, conflicts)
 					_needs_save = true
 
@@ -729,14 +756,25 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 		if _is_file_encrypted(path):
 			err = config.load_encrypted_pass(path, Globals.save_encryption_pass)
 		else:
-			Globals.log_message("Save pre-load: Legacy plaintext file detected. Using plaintext load to preserve sections...", Globals.LogLevel.DEBUG)
+			(
+				Globals
+				. log_message(
+					"Save pre-load: Legacy plaintext file detected. Using plaintext load to preserve sections...",
+					Globals.LogLevel.DEBUG
+				)
+			)
 			err = config.load(path)
 
 		if err != OK:
-			Globals.log_message("Failed to load input config for save: " + str(err), Globals.LogLevel.ERROR)
+			Globals.log_message(
+				"Failed to load input config for save: " + str(err), Globals.LogLevel.ERROR
+			)
 			return
 
-	if Globals.has_meta(LEGACY_MIGRATION_KEY) and bool(Globals.get_meta(LEGACY_MIGRATION_KEY)) == true:
+	if (
+		Globals.has_meta(LEGACY_MIGRATION_KEY)
+		and bool(Globals.get_meta(LEGACY_MIGRATION_KEY)) == true
+	):
 		config.set_value("meta", LEGACY_MIGRATION_KEY, true)
 
 	for action: String in actions:
@@ -763,15 +801,15 @@ func save_last_input_device(device: String) -> void:
 
 	if device not in ["keyboard", "gamepad"]:
 		return
-		
+
 	var config: ConfigFile = ConfigFile.new()
-	
+
 	if FileAccess.file_exists(CONFIG_PATH):
 		if _is_file_encrypted(CONFIG_PATH):
 			config.load_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
 		else:
 			config.load(CONFIG_PATH)
-		
+
 	config.set_value("input", "last_input_device", device)
 	config.save_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
 
@@ -783,13 +821,13 @@ func load_last_input_device() -> void:
 
 	var config: ConfigFile = ConfigFile.new()
 	var err: int = OK
-	
+
 	if FileAccess.file_exists(CONFIG_PATH):
 		if _is_file_encrypted(CONFIG_PATH):
 			err = config.load_encrypted_pass(CONFIG_PATH, Globals.save_encryption_pass)
 		else:
 			err = config.load(CONFIG_PATH)
-		
+
 	if err == OK and config.has_section_key("input", "last_input_device"):
 		var device: String = config.get_value("input", "last_input_device")
 		Globals.current_input_device = device if device in ["keyboard", "gamepad"] else "keyboard"
