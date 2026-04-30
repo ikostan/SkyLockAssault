@@ -425,6 +425,7 @@ func ensure_encryption_key() -> String:
 ## encrypting data with a weak/empty key.
 ##
 ## :rtype: String (The SHA-256 hashed key)
+## Generates a unique, deterministic encryption key for local save files.
 func _get_encryption_key() -> String:
 	# Fetches the salt injected by GitHub Actions or uses the dev fallback
 	var salt: String = ProjectSettings.get_setting("game/security/save_salt", "dev_fallback_salt")
@@ -432,21 +433,21 @@ func _get_encryption_key() -> String:
 	# SECURITY GUARD: Prevent silent weak-key fallback in production
 	if not OS.has_feature("editor") and not OS.has_feature("debug"):
 		if salt == "dev_fallback_salt" or salt.is_empty():
-			# FIX: Break the string to satisfy the 100-character max line length linter rule
 			var error_msg: String = (
 				"CRITICAL SECURITY ERROR: Production build missing injected salt. "
 				+ "Halting to prevent weak encryption."
 			)
 			push_error(error_msg)
-
-			# Asserts are stripped in release builds!
-			# We MUST use OS.crash() to guarantee a hard abort in production.
-			# This ensures the game instantly dies before it can ever persist compromised data.
 			OS.crash(error_msg)
+			return ""
 
-			return ""  # Unreachable, but satisfies compiler return type requirements
+	# FIX: OS.get_unique_id() is unavailable on Web
+	# We use a static string for Web platform to avoid C++ engine errors.
+	var device_id: String = "web_platform_fallback"
+	if OS.get_name() != "Web":
+		device_id = OS.get_unique_id()
 
-	return (OS.get_unique_id() + salt).sha256_text()
+	return (device_id + salt).sha256_text()
 
 
 ## Helper to determine if a config file is encrypted.
