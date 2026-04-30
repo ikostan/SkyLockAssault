@@ -69,11 +69,15 @@ func test_tc_sl_11() -> void:
 	# Settings
 	config.set_value("Settings", "log_level", Globals.LogLevel.WARNING)
 	config.set_value("Settings", "difficulty", 1.5)
-	config.save(test_config_path)
+	
+	# FIX: Save using encryption to prevent C++ errors
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	# Load sequence
 	AudioManager.load_volumes(test_config_path)
 	Settings.load_input_mappings(test_config_path)
 	Globals._load_settings(test_config_path)
+	
 	# Verify Audio
 	assert_almost_eq(AudioManager.master_volume, 0.5, 0.01)
 	assert_true(AudioManager.master_muted)
@@ -85,9 +89,12 @@ func test_tc_sl_11() -> void:
 	# Verify Globals
 	assert_eq(Globals.settings.current_log_level, Globals.LogLevel.WARNING)
 	assert_eq(Globals.settings.difficulty, 1.5)
+	
 	# Config unchanged (no saves)
 	var loaded_config: ConfigFile = ConfigFile.new()
-	loaded_config.load(test_config_path)
+	# FIX: Load using encryption to verify
+	loaded_config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	assert_almost_eq(loaded_config.get_value("audio", "master_volume"), 0.5, 0.01)
 	assert_eq(loaded_config.get_value("input", "speed_up"), ["key:87"])
 	assert_eq(loaded_config.get_value("Settings", "log_level"), Globals.LogLevel.WARNING)
@@ -100,19 +107,25 @@ func test_tc_sl_12() -> void:
 	config.set_value("audio", "music_volume", 0.7)
 	config.set_value("Settings", "log_level", "invalid")  # Invalid type/string
 	config.set_value("Settings", "difficulty", 1.5)
-	config.save(test_config_path)
+	
+	# FIX: Save using encryption
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	# Initial Globals
 	Globals.settings.current_log_level = Globals.LogLevel.DEBUG
 	# Load Globals first (should fallback for invalid log_level)
 	Globals._load_settings(test_config_path)
-	assert_eq(Globals.settings.current_log_level, Globals.LogLevel.DEBUG)  # Keeps current or default? Code likely skips invalid, keeps current
+	assert_eq(Globals.settings.current_log_level, Globals.LogLevel.DEBUG)
 	assert_eq(Globals.settings.difficulty, 1.5)
+	
 	# Then load Audio
 	AudioManager.load_volumes(test_config_path)
 	assert_almost_eq(AudioManager.music_volume, 0.7, 0.01)
+	
 	# Config unchanged
 	var loaded_config: ConfigFile = ConfigFile.new()
-	loaded_config.load(test_config_path)
+	# FIX: Load using encryption
+	loaded_config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
 	assert_eq(loaded_config.get_value("Settings", "log_level"), "invalid")
 
 
@@ -121,13 +134,18 @@ func test_tc_sl_12() -> void:
 func test_tc_sl_13() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("input", "speed_up", 87)  # Old int format
-	config.save(test_config_path)
+	
+	# FIX: Save using encryption
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	# Load inputs (should set _needs_save)
 	Settings.load_input_mappings(test_config_path)
+	
 	# Manually save if migration needed (since _ready() not re-called in test)
 	if Settings._needs_save:
 		Settings.save_input_mappings(test_config_path)
 		Settings._needs_save = false
+		
 	# Verify migrated in InputMap
 	var events: Array = InputMap.action_get_events("speed_up")
 	assert_eq(events.size(), 2)
@@ -137,16 +155,21 @@ func test_tc_sl_13() -> void:
 	assert_eq(events[1].axis, JOY_AXIS_RIGHT_Y)
 	assert_eq(events[1].axis_value, - 1.0)
 	assert_eq(events[1].device, -1)
+	
 	# Config upgraded
 	config = ConfigFile.new()
-	config.load(test_config_path)
-	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:3:-1.0:-1"])  # Upgraded to array string with added gamepad default
+	# FIX: Load using encryption
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:3:-1.0:-1"])
+	
 	# Now save audio changes
 	AudioManager.master_volume = 0.5
 	AudioManager.save_volumes(test_config_path)
+	
 	# Verify config has audio added, inputs preserved
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	# FIX: Load using encryption
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
 	assert_almost_eq(config.get_value("audio", "master_volume"), 0.5, 0.01)
 	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:3:-1.0:-1"])
 
@@ -159,23 +182,32 @@ func test_tc_sl_14() -> void:
 	config.set_value("Settings", "log_level", 1)
 	config.set_value("Settings", "difficulty", 1.5)
 	config.set_value("audio", "master_volume", 0.4)
-	config.save(test_config_path)
+	
+	# FIX: Save using encryption
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	# Change audio and save
 	AudioManager.master_volume = 0.5
 	AudioManager.save_volumes(test_config_path)
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	
+	# FIX: Load using encryption
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
 	assert_almost_eq(config.get_value("audio", "master_volume"), 0.5, 0.01)
 	assert_eq(config.get_value("Settings", "difficulty"), 1.5)
 	assert_eq(config.get_value("input", "speed_up"), ["key:87"])
+	
 	# Change settings and save
 	Globals.settings.difficulty = 2.0
 	Globals._save_settings(test_config_path)
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	
+	# FIX: Load using encryption
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
 	assert_almost_eq(config.get_value("audio", "master_volume"), 0.5, 0.01)
 	assert_eq(config.get_value("Settings", "difficulty"), 2.0)
 	assert_eq(config.get_value("input", "speed_up"), ["key:87"])
+	
 	# Change inputs and save (e.g., replace event to simulate remap)
 	InputMap.action_erase_events("speed_up")
 	var ev: InputEventKey = InputEventKey.new()
@@ -183,7 +215,9 @@ func test_tc_sl_14() -> void:
 	InputMap.action_add_event("speed_up", ev)
 	Settings.save_input_mappings(test_config_path)
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	
+	# FIX: Load using encryption
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
 	assert_almost_eq(config.get_value("audio", "master_volume"), 0.5, 0.01)
 	assert_eq(config.get_value("Settings", "difficulty"), 2.0)
 	var serials: Array = config.get_value("input", "speed_up")
@@ -199,16 +233,22 @@ func test_tc_sl_15() -> void:
 	config.set_value("Settings", "log_level", 1)
 	config.set_value("Settings", "difficulty", 1.5)
 	config.set_value("audio", "master_volume", 0.4)
-	config.save(test_config_path)
+	
+	# FIX: Save using encryption
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	# Change audio and save
 	AudioManager.master_volume = 0.5
 	AudioManager.save_volumes(test_config_path)
 	# Immediately change and save globals
 	Globals.settings.difficulty = 2.0
 	Globals._save_settings(test_config_path)
+	
 	# Verify final config
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	# FIX: Load using encryption
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	assert_almost_eq(config.get_value("audio", "master_volume"), 0.5, 0.01)
 	assert_eq(config.get_value("Settings", "difficulty"), 2.0)
 	assert_eq(config.get_value("input", "speed_up"), ["key:87"])
