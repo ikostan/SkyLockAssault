@@ -433,8 +433,9 @@ func ensure_encryption_key() -> String:
 func _get_encryption_key() -> String:
 	var salt: String = ProjectSettings.get_setting("game/security/save_salt", "dev_fallback_salt")
 
-	# SECURITY GUARD: Prevent silent weak-key fallback in production
-	if not OS.has_feature("editor") and not OS.has_feature("debug"):
+	# SECURITY GUARD: Prevent silent weak-key fallback in production.
+	# FIX: Added 'and not OS.has_feature("test")' to allow CI/CD browser tests to run.
+	if not OS.has_feature("editor") and not OS.has_feature("debug") and not OS.has_feature("test"):
 		if salt == "dev_fallback_salt" or salt.is_empty():
 			var error_msg: String = "CRITICAL SECURITY ERROR: Missing salt."
 			push_error(error_msg)

@@ -39,6 +39,7 @@ jobs:
           verbose: true
           presets_to_export: "Web_thread_off"
           use_preset_export_path: true  # Move exports to the directory defined in export_presets.cfg
+          custom_export_features: "test"
       - name: "Flatten Export Directory"
         run: |
           bash ./.github/scripts/flatten_export.sh "export/web_thread_off" "Web_thread_off"
