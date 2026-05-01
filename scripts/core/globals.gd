@@ -75,6 +75,10 @@ func _ready() -> void:
 	if settings:
 		settings.setting_changed.connect(_on_setting_changed)
 
+	# NEW: Signal Playwright that the engine is ready
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.godotInitialized = true")
+
 
 ## Reactive handler for the Observer Pattern
 func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
@@ -427,23 +431,18 @@ func ensure_encryption_key() -> String:
 ## :rtype: String (The SHA-256 hashed key)
 ## Generates a unique, deterministic encryption key for local save files.
 func _get_encryption_key() -> String:
-	# Fetches the salt injected by GitHub Actions or uses the dev fallback
 	var salt: String = ProjectSettings.get_setting("game/security/save_salt", "dev_fallback_salt")
 
 	# SECURITY GUARD: Prevent silent weak-key fallback in production
 	if not OS.has_feature("editor") and not OS.has_feature("debug"):
 		if salt == "dev_fallback_salt" or salt.is_empty():
-			var error_msg: String = (
-				"CRITICAL SECURITY ERROR: Production build missing injected salt. "
-				+ "Halting to prevent weak encryption."
-			)
+			var error_msg: String = "CRITICAL SECURITY ERROR: Missing salt."
 			push_error(error_msg)
 			OS.crash(error_msg)
 			return ""
 
-	# FIX: OS.get_unique_id() is unavailable on Web
-	# We use a static string for Web platform to avoid C++ engine errors.
-	var device_id: String = "web_platform_fallback"
+	# FIX: OS.get_unique_id() crashes on Web
+	var device_id: String = "web_fallback"
 	if OS.get_name() != "Web":
 		device_id = OS.get_unique_id()
 
