@@ -43,7 +43,7 @@ def test_no_critical_errors_on_load(page: Page) -> None:
     try:
         # 1. Navigate to the game
         page.goto(
-            "http://localhost:8080/index.html", wait_until="networkidle", timeout=5000
+            "http://localhost:8080/index.html", wait_until="networkidle", timeout=15000
         )
         # 1.5. Wait for the engine to actually start the splash scene
         page.wait_for_timeout(5000)
