@@ -41,7 +41,8 @@ func test_new_install_creates_encrypted_file() -> void:
 	assert_true(FileAccess.file_exists(TEST_CONFIG_PATH), "Save should create a new config file")
 	
 	# Assert using the file header helper to prevent intentional C++ crash logs in GUT
-	assert_true(Settings._is_file_encrypted(TEST_CONFIG_PATH), "New file should be properly encrypted")
+	# FIX: Point to the centralized Globals helper
+	assert_true(Globals.is_file_encrypted(TEST_CONFIG_PATH), "New file should be properly encrypted")
 	
 	var config := ConfigFile.new()
 	var enc_err: int = config.load_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
@@ -83,7 +84,8 @@ func test_automatic_upgrade_from_plaintext_to_encrypted() -> void:
 		Settings._needs_save = false
 		
 	# Verify the file has been successfully migrated to encrypted
-	assert_true(Settings._is_file_encrypted(TEST_CONFIG_PATH), "After migration, the file should be encrypted")
+	# FIX: Point to the centralized Globals helper
+	assert_true(Globals.is_file_encrypted(TEST_CONFIG_PATH), "After migration, the file should be encrypted")
 	
 	var config := ConfigFile.new()
 	var enc_err: int = config.load_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
@@ -108,7 +110,8 @@ func test_lossless_multi_writer_migration() -> void:
 		Settings._needs_save = false
 
 	# 3. Verify it is now encrypted
-	assert_true(Settings._is_file_encrypted(TEST_CONFIG_PATH), "File should be encrypted after migration")
+	# FIX: Point to the centralized Globals helper
+	assert_true(Globals.is_file_encrypted(TEST_CONFIG_PATH), "File should be encrypted after migration")
 
 	# 4. Verify lossless data preservation via encrypted load
 	var enc_cfg := ConfigFile.new()
