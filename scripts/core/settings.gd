@@ -750,11 +750,25 @@ func save_last_input_device(device: String) -> void:
 	# Use the helper to safely pre-load
 	var load_data: Dictionary = Globals.safe_load_config(CONFIG_PATH)
 	var config: ConfigFile = load_data["config"]
+	var err: int = load_data["err"]
+
+	# GUARD: Prevent overwriting the entire file if it exists but failed to load
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		Globals.log_message(
+			"Failed to load input config for save_last_input_device: " + str(err), 
+			Globals.LogLevel.ERROR
+		)
+		return
 
 	config.set_value("input", "last_input_device", device)
 
-	# FIX: Use the centralized key helper
-	config.save_encrypted_pass(CONFIG_PATH, Globals.ensure_encryption_key())
+	# FIX: Use the centralized key helper and capture the save error
+	err = config.save_encrypted_pass(CONFIG_PATH, Globals.ensure_encryption_key())
+	
+	if err != OK:
+		Globals.log_message("Failed to save last input device: " + str(err), Globals.LogLevel.ERROR)
+	else:
+		Globals.log_message("Last input device saved.", Globals.LogLevel.DEBUG)
 
 
 ## Loads the last selected input device (defaults to keyboard).
