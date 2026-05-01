@@ -26,7 +26,9 @@ from playwright.sync_api import Page
 
 # Configuration for stability in different environments
 # Default to 5000ms, but allow CI to override via environment variable
-DEFAULT_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "30000")) # Fallback to 30s instead of 5s
+DEFAULT_TIMEOUT = int(
+    os.getenv("TEST_TIMEOUT", "30000")
+)  # Fallback to 30s instead of 5s
 BUFFER_TIMEOUT = 1000
 
 
