@@ -115,21 +115,30 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Wait main menu (function check for ID)
         page.wait_for_function(
-            "() => document.getElementById('options-button') !== null", timeout=TEST_TIMEOUT
+            "() => document.getElementById('options-button') !== null",
+            timeout=TEST_TIMEOUT,
         )  # Longer for stalls
 
         # Open options
         page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
         # page.click("#options-button", force=True)
-        page.wait_for_function("window.optionsPressed !== undefined", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "window.optionsPressed !== undefined", timeout=TEST_TIMEOUT
+        )
         page.evaluate("window.optionsPressed([])")
 
         # Go to Advanced settings
-        page.wait_for_selector("#advanced-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector(
+            "#advanced-button", state="visible", timeout=TEST_TIMEOUT
+        )
         # page.click("#advanced-button", force=True)
-        page.wait_for_function("window.advancedPressed !== undefined", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "window.advancedPressed !== undefined", timeout=TEST_TIMEOUT
+        )
         page.evaluate("window.advancedPressed([])")
-        page.wait_for_function("window.changeLogLevel !== undefined", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "window.changeLogLevel !== undefined", timeout=TEST_TIMEOUT
+        )
         advanced_display: str = page.evaluate(
             "window.getComputedStyle(document.getElementById('log-level-select')).display"
         )
@@ -161,24 +170,38 @@ def test_difficulty_flow(page: Page) -> None:
         ), "Failed to save the settings"
 
         # Go back to Options menu
-        page.wait_for_selector("#advanced-back-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector(
+            "#advanced-back-button", state="visible", timeout=TEST_TIMEOUT
+        )
         # page.click("#advanced-back-button", force=True)
-        page.wait_for_function("window.advancedBackPressed !== undefined", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "window.advancedBackPressed !== undefined", timeout=TEST_TIMEOUT
+        )
         page.evaluate("window.advancedBackPressed([])")
 
         # Go to Gameplay Settings
-        page.wait_for_selector("#gameplay-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector(
+            "#gameplay-button", state="visible", timeout=TEST_TIMEOUT
+        )
         # page.click("#advanced-back-button", force=True)
-        page.wait_for_function("window.gameplayPressed !== undefined", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "window.gameplayPressed !== undefined", timeout=TEST_TIMEOUT
+        )
         page.evaluate("window.gameplayPressed([])")
 
         # Assert gameplay settings overlay is shown and options overlay is hidden
-        page.wait_for_selector("#difficulty-slider", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_selector("#options-back-button", state="hidden", timeout=TEST_TIMEOUT)
+        page.wait_for_selector(
+            "#difficulty-slider", state="visible", timeout=TEST_TIMEOUT
+        )
+        page.wait_for_selector(
+            "#options-back-button", state="hidden", timeout=TEST_TIMEOUT
+        )
 
         # Set difficulty to 2.0 - directly call the exposed callback (bypasses event for reliability in automation)
         pre_change_log_count = len(logs)
-        page.wait_for_function("window.changeDifficulty !== undefined", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "window.changeDifficulty !== undefined", timeout=TEST_TIMEOUT
+        )
         page.evaluate("window.changeDifficulty([2.0])")
         page.wait_for_timeout(TEST_TIMEOUT)
         new_logs = logs[pre_change_log_count:]
@@ -214,7 +237,9 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Back to Main menu
         pre_change_log_count = len(logs)
-        page.wait_for_function("window.gameplayBackPressed !== undefined", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "window.gameplayBackPressed !== undefined", timeout=TEST_TIMEOUT
+        )
         page.evaluate("window.gameplayBackPressed([])")
         page.wait_for_timeout(TEST_TIMEOUT)
         new_logs = logs[pre_change_log_count:]
@@ -225,17 +250,23 @@ def test_difficulty_flow(page: Page) -> None:
         # After gameplayBackPressed([]), the options overlay should be visible again
         # and gameplay-specific elements should be hidden.
         # Options overlay visible
-        page.wait_for_selector("#options-back-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector(
+            "#options-back-button", state="visible", timeout=TEST_TIMEOUT
+        )
         assert page.evaluate("document.getElementById('options-back-button') !== null")
         # Gameplay UI hidden
-        page.wait_for_selector("#difficulty-slider", state="hidden", timeout=TEST_TIMEOUT)
+        page.wait_for_selector(
+            "#difficulty-slider", state="hidden", timeout=TEST_TIMEOUT
+        )
         assert page.evaluate(
             "document.getElementById('difficulty-slider') === null || document.getElementById("
             "'difficulty-slider').offsetParent === null"
         )
 
         # Check element present
-        page.wait_for_selector("#options-back-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector(
+            "#options-back-button", state="visible", timeout=TEST_TIMEOUT
+        )
         assert page.evaluate("document.getElementById('options-back-button') !== null")
         page.evaluate("window.optionsBackPressed([])")
 
@@ -243,7 +274,9 @@ def test_difficulty_flow(page: Page) -> None:
         # main-menu elements visible and options elements hidden.
         page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
         assert page.evaluate("document.getElementById('start-button') !== null")
-        page.wait_for_selector("#options-back-button", state="hidden", timeout=TEST_TIMEOUT)
+        page.wait_for_selector(
+            "#options-back-button", state="hidden", timeout=TEST_TIMEOUT
+        )
         assert page.evaluate(
             "document.getElementById('options-back-button') === null || document.getElementById("
             "'options-back-button').offsetParent === null"
