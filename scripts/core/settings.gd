@@ -755,7 +755,7 @@ func save_last_input_device(device: String) -> void:
 	# GUARD: Prevent overwriting the entire file if it exists but failed to load
 	if err != OK and err != ERR_FILE_NOT_FOUND:
 		Globals.log_message(
-			"Failed to load input config for save_last_input_device: " + str(err), 
+			"Failed to load input config for save_last_input_device: " + str(err),
 			Globals.LogLevel.ERROR
 		)
 		return
@@ -764,7 +764,7 @@ func save_last_input_device(device: String) -> void:
 
 	# FIX: Use the centralized key helper and capture the save error
 	err = config.save_encrypted_pass(CONFIG_PATH, Globals.ensure_encryption_key())
-	
+
 	if err != OK:
 		Globals.log_message("Failed to save last input device: " + str(err), Globals.LogLevel.ERROR)
 	else:
