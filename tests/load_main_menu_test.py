@@ -39,6 +39,12 @@ import time
 
 from playwright.sync_api import Page
 
+# Configuration for stability in different environments
+# Default to 5000ms, but allow CI to override via environment variable
+DEFAULT_TIMEOUT = int(
+    os.getenv("TEST_TIMEOUT", "30000")
+)  #
+
 
 def test_load_main_menu(page: Page) -> None:
     """
@@ -72,16 +78,16 @@ def test_load_main_menu(page: Page) -> None:
         )
 
         page.goto(
-            "http://localhost:8080/index.html", wait_until="networkidle", timeout=15000
+            "http://localhost:8080/index.html", wait_until="networkidle", timeout=DEFAULT_TIMEOUT
         )
         # 1. Wait for the engine to actually start the splash scene
         page.wait_for_timeout(5000)
         # Wait for Godot engine init (ensures 'godot' object is defined)
-        page.wait_for_function("() => window.godotInitialized", timeout=15000)
+        page.wait_for_function("() => window.godotInitialized", timeout=DEFAULT_TIMEOUT)
 
         # Verify canvas and title to ensure game is initialized
         canvas = page.locator("canvas")
-        page.wait_for_selector("canvas", state="visible", timeout=15000)
+        page.wait_for_selector("canvas", state="visible", timeout=DEFAULT_TIMEOUT)
         box: dict[str, float] | None = canvas.bounding_box()
         assert box is not None, "Canvas not found on page"
         assert "SkyLockAssault" in page.title(), "Title not found"

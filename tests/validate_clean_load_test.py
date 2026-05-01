@@ -23,6 +23,12 @@ import time
 
 from playwright.sync_api import Page
 
+# Configuration for stability in different environments
+# Default to 5000ms, but allow CI to override via environment variable
+DEFAULT_TIMEOUT = int(
+    os.getenv("TEST_TIMEOUT", "30000")
+)  #
+
 
 def test_no_critical_errors_on_load(page: Page) -> None:
     """
