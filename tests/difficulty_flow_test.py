@@ -78,16 +78,18 @@ def test_difficulty_flow(page: Page) -> None:
         )
 
         page.goto(
-            "http://localhost:8080/index.html", wait_until="networkidle",  timeout=DEFAULT_TIMEOUT
+            "http://localhost:8080/index.html",
+            wait_until="networkidle",
+            timeout=DEFAULT_TIMEOUT,
         )
         # 1. Wait for the engine to actually start the splash scene
         page.wait_for_timeout(5000)
         # Wait for Godot engine init (ensures 'godot' object is defined)
-        page.wait_for_function("() => window.godotInitialized",  timeout=DEFAULT_TIMEOUT)
+        page.wait_for_function("() => window.godotInitialized", timeout=DEFAULT_TIMEOUT)
 
         # Verify canvas and title to ensure game is initialized
         canvas = page.locator("canvas")
-        page.wait_for_selector("canvas", state="visible",  timeout=DEFAULT_TIMEOUT)
+        page.wait_for_selector("canvas", state="visible", timeout=DEFAULT_TIMEOUT)
         box: Optional[Dict[str, float]] = canvas.bounding_box()
         assert box is not None, "Canvas not found on page"
         assert "SkyLockAssault" in page.title(), "Title not found"
