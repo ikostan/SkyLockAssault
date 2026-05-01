@@ -30,6 +30,7 @@ DEFAULT_TIMEOUT = int(
     os.getenv("TEST_TIMEOUT", "30000")
 )  # Fallback to 30s instead of 5s
 BUFFER_TIMEOUT = 1000
+TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "5000"))
 
 
 def test_no_error_logs_after_load(page: Page) -> None:
