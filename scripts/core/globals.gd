@@ -492,3 +492,10 @@ func safe_load_config(path: String) -> Dictionary:
 			is_legacy = true
 
 	return {"config": config, "err": err, "is_legacy": is_legacy}
+
+
+## Overrides the encryption key with a deterministic value for unit tests.
+## This decouples test artifacts from specific hardware IDs so failures are reproducible.
+func set_test_encryption_key(override_key: String = "test_deterministic_key_123") -> void:
+	save_encryption_pass = override_key
+	log_message("Encryption key overridden for testing.", LogLevel.DEBUG)
