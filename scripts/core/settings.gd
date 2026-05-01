@@ -622,23 +622,6 @@ static func get_event_label(ev: InputEvent) -> String:
 	return "Unknown"
 
 
-## Helper to determine if a config file is encrypted.
-## Prevents C++ engine errors when attempting to parse plaintext files.
-func _is_file_encrypted(path: String) -> bool:
-	if not FileAccess.file_exists(path):
-		return false
-	var f: FileAccess = FileAccess.open(path, FileAccess.READ)
-	if not f:
-		return false
-	if f.get_length() < 4:
-		f.close()
-		return false
-	var magic: int = f.get_32()
-	f.close()
-	# Godot Encrypted File Magic Number: 0x43454447 ("GDEC")
-	return magic == 0x43454447
-
-
 ## Loads input mappings from config, overriding project defaults only if saved.
 func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
 	# Use our new centralized helper to safely read the file
