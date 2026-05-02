@@ -43,7 +43,10 @@ jobs:
           fi
       - name: "Inject Production Salt into project.godot"
         run: |
-          SALT="${{ secrets.PRODUCTION_SALT }}"
+          RAW_SALT="${{ secrets.PRODUCTION_SALT }}"
+          
+          # This line safely escapes any quotes or slashes so your config doesn't break!
+          SALT=$(printf '%s' "$RAW_SALT" | sed 's/\\/\\\\/g; s/"/\\"/g')
 
           # Use a section-aware awk script to update security/save_salt only within the [game] section.
           # Behavior:
