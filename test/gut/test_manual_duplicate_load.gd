@@ -21,7 +21,11 @@ func before_each() -> void:
 	var config := ConfigFile.new()
 	var duplicates: Array[String] = ["key:32", "key:32"] # Two Space bars
 	config.set_value("input", TEST_ACTION, duplicates)
-	config.save(TEST_CONFIG_PATH)
+	
+	# FIX: Save using encryption to prevent the C++ "magic number" error 
+	# and allow Settings.load_input_mappings to successfully read the duplicate data.
+	var err: int = config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	assert_eq(err, OK, "Precondition failed: could not write encrypted duplicate fixture.")
 
 
 func after_each() -> void:

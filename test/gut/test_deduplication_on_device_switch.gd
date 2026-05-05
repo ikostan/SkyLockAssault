@@ -8,7 +8,7 @@
 
 extends GutTest
 
-const InputRemapButton: Script = preload("res://scripts/input_remap_button.gd")
+const InputRemapButton: Script = preload(GamePaths.INPUT_REMAP_BUTTON)
 const TEST_ACTION: String = "speed_up"
 
 var button: InputRemapButton

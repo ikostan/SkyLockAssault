@@ -53,25 +53,49 @@ func test_tc_sl_21() -> void:
 	assert_eq(AudioManager.master_volume, 0.5)  # Unchanged
 
 
+## TC-SL-22 | Config validly encrypted but logically corrupt | Call load_volumes() | Corrupted data ignored.
+## RESTORED: Tests that if the file decrypts properly but contains strings instead of floats,
+## the GDScript logic safely ignores the garbage data without crashing.
+func test_tc_sl_22() -> void:
+	var cfg := ConfigFile.new()
+	# Logically corrupt: inject string instead of float for volume
+	cfg.set_value("audio", "master_volume", "potato_string")
+	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
+
+	AudioManager.master_volume = 0.75 # Set known state
+	AudioManager.load_volumes() # Will attempt to read "potato_string"
+
+	# Should reject 'potato_string' and keep the current state
+	assert_eq(AudioManager.master_volume, 0.75, "Should safely ignore logically corrupt string and keep current volume")
+
+
 ## TC-SL-23 | Config with unknown sections/keys (e.g., "random" section). | Call save_volumes() or other saves | Unknown preserved (since load/set/save doesn't touch them); No deletion.
 ## :rtype: void
 func test_tc_sl_23() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("random", "unknown_key", "value")
 	config.set_value("audio", "master_volume", 0.5)
-	config.save(test_config_path)
+	
+	# FIX: Use centralized key helper
+	config.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
+	
 	# Save audio (should preserve random)
 	AudioManager.master_volume = 0.6
 	AudioManager.save_volumes()
+	
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	config.load_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
+	
 	assert_eq(config.get_value("audio", "master_volume"), 0.6)
 	assert_eq(config.get_value("random", "unknown_key"), "value")
+	
 	# Similar for other saves
 	Globals.settings.difficulty = 2.0
 	Globals._save_settings()
+	
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	config.load_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
+	
 	assert_eq(config.get_value("random", "unknown_key"), "value")
 
 
@@ -96,24 +120,34 @@ func test_tc_sl_24() -> void:
 func test_tc_sl_25() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("input", "speed_up", 87)  # Old int
-	config.save(test_config_path)
+	
+	# FIX: Use centralized key helper
+	config.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
+	
 	# Load inputs (migrate)
 	Settings.load_input_mappings(test_config_path)
+	
 	# Manually save if migration (since no _ready in test)
 	if Settings._needs_save:
 		Settings.save_input_mappings(test_config_path)
 		Settings._needs_save = false
+		
 	# Verify upgraded
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	config.load_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
+	
 	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:3:-1.0:-1"])
+	
 	# Save audio after
 	AudioManager.master_volume = 0.5
 	AudioManager.save_volumes(test_config_path)
+	
 	# Verify preserves upgraded inputs
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	config.load_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
+	
 	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:3:-1.0:-1"])
 	assert_eq(config.get_value("audio", "master_volume"), 0.5)
+	
 	# No re-migration
 	assert_false(Settings._needs_save)

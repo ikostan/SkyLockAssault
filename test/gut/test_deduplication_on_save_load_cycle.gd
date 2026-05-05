@@ -16,8 +16,12 @@ const TEST_CONFIG_PATH: String = "user://test_dedup_cycle.cfg"
 func before_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
+		
+	# FIX: Only add the action if it doesn't already exist, then clear its events.
+	if not InputMap.has_action(TEST_ACTION):
+		InputMap.add_action(TEST_ACTION)
 	InputMap.action_erase_events(TEST_ACTION)
-	InputMap.add_action(TEST_ACTION)
+	
 	var ev: InputEventKey = InputEventKey.new()
 	ev.physical_keycode = KEY_W
 	InputMap.action_add_event(TEST_ACTION, ev)

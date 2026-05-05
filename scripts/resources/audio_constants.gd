@@ -7,12 +7,18 @@
 
 extends Node
 
+# --- Audio Bus Names ---
 const BUS_MASTER: String = "Master"
 const BUS_MUSIC: String = "Music"
 const BUS_SFX: String = "SFX"
 const BUS_SFX_ROTORS: String = "SFX_Rotors"
 const BUS_SFX_WEAPON: String = "SFX_Weapon"
 const BUS_SFX_MENU: String = "SFX_Menu"
+
+# --- SFX Asset IDs ---
+const SFX_SLIDER: String = "slider"
+const SFX_MUTE_TOGGLE: String = "mute_toggle"  # For future CheckButton task
+const SFX_UI_NAVIGATION: String = "ui_navigation"
 
 # Centralized config with defaults and var mappings
 const BUS_CONFIG: Dictionary = {
