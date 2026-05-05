@@ -79,7 +79,6 @@ jobs:
                   }
                   next
                 }
-            
                 print
               }
               END {
@@ -87,7 +86,6 @@ jobs:
                   print "security/save_salt=\"" salt "\""
                   salt_written = 1
                 }
-            
                 if (!saw_game_section) {
                   if (NR > 0) {
                     print ""
