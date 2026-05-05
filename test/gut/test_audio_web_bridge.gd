@@ -9,12 +9,20 @@ extends "res://addons/gut/test.gd"
 
 const AudioWebBridge = preload(GamePaths.AUDIO_WEB_BRIDGE)
 
+
 func before_each() -> void:
+	# FIX: Mute the global logger so our intentional negative tests don't spam the console
+	Globals.settings.current_log_level = Globals.LogLevel.NONE
+	
 	# Reset AudioManager to a known clean state before each test
 	AudioManager._init_to_defaults()
 	AudioManager.apply_all_volumes()
 
+
 func after_each() -> void:
+	# Restore the logger so we don't blind other test suites
+	Globals.settings.current_log_level = Globals.LogLevel.DEBUG
+	
 	# Clean up any stray states
 	AudioManager._init_to_defaults()
 

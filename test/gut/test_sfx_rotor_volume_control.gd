@@ -28,6 +28,7 @@ func before_each() -> void:
 	AudioManager.current_config_path = test_config_path  # <--- ADD THIS LINE HERE
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
+	
 	# Add audio buses if not exist
 	if AudioServer.get_bus_index("Master") == -1:
 		AudioServer.add_bus(0)
@@ -44,6 +45,10 @@ func before_each() -> void:
 	if AudioServer.get_bus_index("SFX_Weapon") == -1:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, "SFX_Weapon")
+
+	# FIX: Await one frame to allow _ready()'s deferred grab_focus calls 
+	# to resolve safely while the node is still inside the scene tree.
+	await get_tree().process_frame
 
 
 ## Per-test cleanup: Free audio_instance safely.
@@ -228,11 +233,20 @@ func test_tc_rotor_10() -> void:
 func test_tc_rotor_11() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("audio", "rotors_muted", true)
-	config.save(test_config_path)
+	
+	# FIX: Save using encryption to prevent the C++ "magic number" error
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	AudioManager.load_volumes(test_config_path)
 	AudioManager.apply_all_volumes()  # Apply after load for test
+	
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
+	
+	# FIX: Await one frame so _ready()'s deferred grab_focus calls 
+	# resolve before the test finishes and deletes the node.
+	await get_tree().process_frame
+	
 	assert_false(audio_instance.mute_rotor.button_pressed)
 	assert_false(audio_instance.rotor_slider.editable)
 	assert_true(AudioServer.is_bus_mute(AudioServer.get_bus_index("SFX_Rotors")))
@@ -243,12 +257,17 @@ func test_tc_rotor_11() -> void:
 func test_tc_rotor_12() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("audio", "rotors_muted", false)
-	config.save(test_config_path)
+	
+	# FIX: Save using encryption to prevent the C++ "magic number" error
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	AudioManager.load_volumes(test_config_path)
 	AudioManager.apply_all_volumes()  # Apply after load for test
+	
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
 	await get_tree().process_frame  # Await _ready completion
+	
 	assert_true(audio_instance.mute_rotor.button_pressed)
 	assert_true(audio_instance.rotor_slider.editable)
 	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index("SFX_Rotors")))

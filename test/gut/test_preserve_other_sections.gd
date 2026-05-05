@@ -69,14 +69,21 @@ func test_tc_sl_06() -> void:
 	config.set_value("input", "speed_up", ["key:87"])
 	config.set_value("Settings", "log_level", 1)
 	config.set_value("Settings", "difficulty", 1.5)
-	config.save(test_config_path)
+	
+	# FIX: Save using encryption to prevent C++ errors
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	assert_true(FileAccess.file_exists(test_config_path))
+	
 	# Change AudioManager
 	AudioManager.sfx_volume = 0.6
 	AudioManager.save_volumes()
+	
 	# Verify config
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	# FIX: Load using encryption to verify
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	var sections: Array = config.get_sections()
 	assert_eq(sections.size(), 3)
 	assert_true(config.has_section("audio"))
@@ -97,7 +104,9 @@ func test_tc_sl_07() -> void:
 	config.set_value("Settings", "difficulty", 1.5)
 	config.set_value("audio", "master_volume", 0.4)
 	config.set_value("audio", "master_muted", true)
-	config.save(test_config_path)
+	
+	# FIX: Save using encryption
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
 	
 	# Guard the Globals changes so they don't trigger an automatic _save_settings() to disk
 	Globals._is_loading_settings = true
@@ -119,7 +128,9 @@ func test_tc_sl_07() -> void:
 	
 	# Config unchanged
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	# FIX: Load using encryption
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	assert_eq(config.get_value("input", "speed_up"), ["key:87"])
 	assert_eq(config.get_value("Settings", "log_level"), 1)
 	assert_eq(config.get_value("Settings", "difficulty"), 1.5)
@@ -132,23 +143,33 @@ func test_tc_sl_08() -> void:
 	config.set_value("input", "speed_up", ["key:87"])
 	config.set_value("Settings", "log_level", 1)
 	config.set_value("Settings", "difficulty", 1.5)
-	config.save(test_config_path)
+	
+	# FIX: Save using encryption
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	# Change AudioManager
 	AudioManager.sfx_volume = 0.6
 	AudioManager.save_volumes()
+	
 	# Verify after first save
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	# FIX: Load using encryption
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	assert_almost_eq(config.get_value("audio", "sfx_volume"), 0.6, 0.01)
 	assert_eq(config.get_value("input", "speed_up"), ["key:87"])
 	assert_eq(config.get_value("Settings", "log_level"), 1)
 	assert_eq(config.get_value("Settings", "difficulty"), 1.5)
+	
 	# Change Globals
 	Globals.settings.difficulty = 2.0
 	Globals._save_settings()
+	
 	# Verify after second save
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	# FIX: Load using encryption
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	assert_almost_eq(config.get_value("audio", "sfx_volume"), 0.6, 0.01)
 	assert_eq(config.get_value("input", "speed_up"), ["key:87"])
 	assert_eq(config.get_value("Settings", "log_level"), 1)
@@ -163,19 +184,27 @@ func test_tc_sl_09() -> void:
 	config.set_value("Settings", "log_level", 1)
 	config.set_value("Settings", "difficulty", 1.5)
 	config.set_value("audio", "sfx_muted", false)
-	config.save(test_config_path)
+	
+	# FIX: Save using encryption
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	AudioManager.load_volumes()
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
 	await get_tree().process_frame
+	
 	# Simulate toggle to muted: set button_pressed = false (pressed=false means muted)
 	audio_instance.mute_sfx.button_pressed = false
 	await get_tree().process_frame
+	
 	# Verify audio updated
 	assert_true(AudioManager.sfx_muted)
+	
 	# Config updated
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	# FIX: Load using encryption
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	assert_true(config.get_value("audio", "sfx_muted"))
 	# Others unchanged
 	assert_eq(config.get_value("input", "speed_up"), ["key:87"])
@@ -191,22 +220,32 @@ func test_tc_sl_10() -> void:
 	config.set_value("Settings", "log_level", 1)
 	config.set_value("Settings", "difficulty", 1.5)
 	config.set_value("audio", "master_volume", 0.4)
-	config.save(test_config_path)
+	
+	# FIX: Save using encryption
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	# Change Globals
 	Globals.settings.current_log_level = Globals.LogLevel.WARNING
 	Globals._save_settings()
+	
 	# Verify after first save
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	# FIX: Load using encryption
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	assert_eq(config.get_value("Settings", "log_level"), Globals.LogLevel.WARNING)
 	assert_almost_eq(config.get_value("audio", "master_volume"), 0.4, 0.01)
 	assert_eq(config.get_value("input", "speed_up"), ["key:87"])
+	
 	# Change AudioManager slightly
 	AudioManager.master_volume = 0.5
 	AudioManager.save_volumes()
+	
 	# Verify after second save
 	config = ConfigFile.new()
-	config.load(test_config_path)
+	# FIX: Load using encryption
+	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	
 	assert_eq(config.get_value("Settings", "log_level"), Globals.LogLevel.WARNING)
 	assert_almost_eq(config.get_value("audio", "master_volume"), 0.5, 0.01)
 	assert_eq(config.get_value("input", "speed_up"), ["key:87"])

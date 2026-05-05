@@ -79,9 +79,13 @@ func test_int_01_load_to_ui() -> void:
 	# Setup: Create config with custom keyboard mapping (e.g., "Z" instead of default "W")
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("input", TEST_ACTION, ["key:" + str(KEY_Z_CODE)])  # Assume string format "key:<code>"
-	config.save(TEST_CONFIG_PATH)
+	
+	# FIX: Save using encryption to prevent C++ errors during Settings.load_input_mappings()
+	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	
 	# Load mappings to InputMap
 	Settings.load_input_mappings()
+	
 	# Verify InputMap loaded correctly
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
 	var key_events: Array[InputEventKey] = []
@@ -91,17 +95,23 @@ func test_int_01_load_to_ui() -> void:
 	assert_eq(key_events.size(), 1, "Should have one keyboard event after load")
 	var key_ev: InputEventKey = key_events[0]
 	assert_eq(key_ev.physical_keycode, KEY_Z_CODE, "Loaded keycode should match config")
+	
 	# Instantiate menu and add to tree (UI updates in _ready via update_button_text)
 	menu = load(GamePaths.KEY_MAPPING_SCENE).instantiate()
 	add_child(menu)
+	
 	# Get specific remap button for test action (keyboard default)
 	var speed_up_btn: InputRemapButton = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
 	assert_not_null(speed_up_btn, "SpeedUp remap button should exist")
+	
 	# Validation: UI matches config/loaded mapping
 	assert_eq(speed_up_btn.text, "Z", "UI label should show loaded custom key 'Z'")
+	
 	# Double-check config unchanged
 	config = ConfigFile.new()
-	config.load(TEST_CONFIG_PATH)
+	# FIX: Load using encryption to verify the file contents
+	config.load_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	
 	var saved_events: Array = config.get_value("input", TEST_ACTION, [])
 	assert_true(saved_events.any(func(s: String) -> bool: return s == "key:" + str(KEY_Z_CODE)), "Config should match")
 
@@ -114,8 +124,10 @@ func test_int_02_remap_persist() -> void:
 	Settings.reset_to_defaults("keyboard")  # Ensure defaults loaded
 	menu = load(GamePaths.KEY_MAPPING_SCENE).instantiate()
 	add_child(menu)
+	
 	var speed_up_btn: InputRemapButton = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
 	assert_eq(speed_up_btn.text, "W", "Should start with default 'W'")
+	
 	# Simulate remap to "Z" (direct calls as in ref tests)
 	speed_up_btn.button_pressed = true
 	speed_up_btn._on_pressed()  # Start listening
@@ -123,6 +135,7 @@ func test_int_02_remap_persist() -> void:
 	temp_event.physical_keycode = KEY_Z_CODE
 	temp_event.pressed = true
 	speed_up_btn._input(temp_event)  # Triggers erase/add/save
+	
 	# Verify immediate UI/InputMap update
 	assert_eq(speed_up_btn.text, "Z", "UI label should update to new key 'Z'")
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
@@ -133,13 +146,17 @@ func test_int_02_remap_persist() -> void:
 	assert_eq(key_events.size(), 1, "Should have one keyboard event after remap")
 	var key_ev: InputEventKey = key_events[0]
 	assert_eq(key_ev.physical_keycode, KEY_Z_CODE, "InputMap should have new keycode")
+	
 	# Verify saved to config (persist)
 	var config: ConfigFile = ConfigFile.new()
-	config.load(TEST_CONFIG_PATH)
+	# FIX: Load using encryption to verify what Settings securely saved
+	config.load_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	
 	assert_true(config.has_section("input"), "Config should have input section after save")
 	assert_true(config.has_section_key("input", TEST_ACTION), "Config should have key after save")
 	var saved_events: Array = config.get_value("input", TEST_ACTION, [])
 	assert_true(saved_events.any(func(s: String) -> bool: return s == "key:" + str(KEY_Z_CODE)), "Config should match new mapping")
+	
 	# Simulate reload: Erase InputMap, load from config, update UI
 	InputMap.action_erase_events(TEST_ACTION)
 	Settings.load_input_mappings()
@@ -162,16 +179,21 @@ func test_int_03_reset_via_ui() -> void:
 	# Setup: Set custom mapping in config/InputMap, then instantiate menu
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("input", TEST_ACTION, ["key:" + str(KEY_Z_CODE)])
-	config.save(TEST_CONFIG_PATH)
+	
+	# FIX: Save using encryption
+	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	
 	Settings.load_input_mappings()
 	menu = load(GamePaths.KEY_MAPPING_SCENE).instantiate()
 	add_child(menu)
 	var speed_up_btn: InputRemapButton = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
 	assert_eq(speed_up_btn.text, "Z", "Should start with custom 'Z'")
+	
 	# Get reset button
 	var reset_btn: Button = menu.get_node("Panel/Options/BtnContainer/ControlResetButton")
 	# Simulate reset (keyboard mode default)
 	reset_btn.pressed.emit()  # Triggers _on_reset_pressed → Settings.reset_to_defaults("keyboard") → update_all_remap_buttons
+	
 	# Verify UI/InputMap reset to default
 	assert_eq(speed_up_btn.text, "W", "UI label should reset to default 'W'")
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
@@ -182,8 +204,11 @@ func test_int_03_reset_via_ui() -> void:
 	assert_eq(key_events.size(), 1, "Should have one keyboard event after reset")
 	var key_ev: InputEventKey = key_events[0]
 	assert_eq(key_ev.physical_keycode, KEY_W_CODE, "InputMap should reset to default keycode")
+	
 	# Verify config reset (assume reset saves defaults)
 	config = ConfigFile.new()
-	config.load(TEST_CONFIG_PATH)
+	# FIX: Load using encryption to verify
+	config.load_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	
 	var saved_events: Array = config.get_value("input", TEST_ACTION, [])
 	assert_true(saved_events.any(func(s: String) -> bool: return s == "key:" + str(KEY_W_CODE)), "Config should reset to default mapping")
