@@ -15,6 +15,7 @@
 ![Repo Size](https://img.shields.io/github/repo-size/ikostan/SkyLockAssault?style=flat-square)
 ![Closed Issues](https://img.shields.io/github/issues-closed/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=green)
 ![Open Issues](https://img.shields.io/github/issues/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=red)
+[![Known Vulnerabilities](https://snyk.io/test/github/ikostan/SkyLockAssault/badge.svg)](https://snyk.io/test/github/ikostan/SkyLockAssault)
 [![All Contributors](https://img.shields.io/github/all-contributors/ikostan/SkyLockAssault?color=ee8449&style=flat-square)](#contributors)
 
 ## A top-down online web browser game built with Godot 4.5
@@ -76,7 +77,6 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
    - [Release Drafter](https://github.com/release-drafter/release-drafter?tab=readme-ov-file#readme)
    - [Close Stale Issues and PRs](https://github.com/actions/stale)
    - [AllContributors GitHub App](https://allcontributors.org/docs/en/bot/installation)
-   - [DeepSource](https://github.com/deepsource)
 9. [Free Web Browser Game Deployment Platforms](files/docs/Platforms_for_Web_Deployment_Guide.md)
 <!-- markdownlint-enable line-length -->
 
@@ -124,7 +124,6 @@ source code to users. For closed-source commercial alternatives without
 these GPL requirements, a separate license is available upon request.
 
 ### Key Terms
-
 - **Open Source**: You can view, modify, and distribute the code freely,
   as long as derivatives remain under GPLv3.
 - **Commercial Use**: Allowed under GPLv3 (with source code obligations
@@ -145,21 +144,6 @@ these GPL requirements, a separate license is available upon request.
 - Observer-based Settings System: Centralized GameSettingsResource that handles
   automatic persistence and UI synchronization through signals.
 
-
-### Project Structure (`scripts/`)
-
-Post-Refactor Phase 4 (PR `#582`), the root `scripts/` directory has been fully
-reorganised into purpose-specific sub-directories:
-<!-- markdownlint-disable MD013 -->
-| Directory            | Contents                                                                                                                                                                                     |
-|----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `scripts/core/`      | Foundational systems: `game_paths.gd` (centralized path registry), `globals.gd`, `main_scene.gd`, `settings.gd`                                                                              |
-| `scripts/resources/` | Data containers & configuration: `game_settings_resource.gd`, `audio_constants.gd`                                                                                                           |
-| `scripts/entities/`  | Game objects: `player.gd`, `bullet.gd`, `weapon.gd`                                                                                                                                          |
-| `scripts/system/`    | Platform wrappers & integrations: `audio_web_bridge.gd`, `JavaScriptBridgeWrapper.gd`, `OSWrapper.gd`                                                                                        |
-| `scripts/managers/`  | Game-loop managers: `audio_manager.gd`, `parallax_manager.gd`, `resource_preloader.gd`                                                                                                       |
-| `scripts/ui/`        | Interface layer: `hud.gd`; sub-dirs `menus/` (main, pause, options, audio, gameplay, key-mapping, advanced), `screens/` (splash, loading), `components/` (volume slider, input remap button) |
-<!-- markdownlint-enable MD013 -->
 ---
 
 ## 🟢 Current Development Status
@@ -269,21 +253,18 @@ Milestone 12 focused on making the game more navigable and responsive
 to user input devices:
 
 ### Input Remapping
-
 - Conflict detection dialog when assigning existing bindings
 - Per-device last input selection persists between sessions
 - Critical control warnings if actions are unbound
 - Remap menu accessible from all relevant UI paths
 
 ### Menu Navigation
-
 - Keyboard + gamepad (D-Pad) support for all menu flows
 - Guaranteed core navigation actions remain bound
 - Focus restoration when leaving submenus (Audio → Options → Main)
 - Modifier key respect (Ctrl/Shift/Alt/Meta) in remapping UI
 
 ### Audio Settings Controls
-
 - Use keyboard/gamepad accept action for sliders and toggles
 - Focus highlighting for better visual feedback
 - Unified UI interactions without relying on the mouse
@@ -292,30 +273,17 @@ to user input devices:
   synchronization.
 
 ### Godot Resource Migration
-
 - Replaced hard-coded globals with a `GameSettingsResource`
 - Easier inspector-based editing and persistence
 - Safer loading with fallback on corrupted configs
 
 ### Known Limitations
 
-- Some complex menu flows may still rely on the mouse until additional
+* Some complex menu flows may still rely on the mouse until additional
   focus neighbors are defined.
-- Modifier-aware remapping requires explicit key+modifier press for
+* Modifier-aware remapping requires explicit key+modifier press for
   unique bindings.
 
-###  Milestone 14
-
-**Status:** Stable gameplay loop with synced UI systems and GUT-based
-unit testing.
-**Active Focus:** Gameplay expansion (AI enemies, multiplayer, levels).
-**Version:** v0.9.18
-
-### Milestone 16
-
-**Status:** Stable gameplay loop with fully refactored script architecture, 
-synced UI systems, and GUT-based unit testing.
-**Active Focus:** Gameplay expansion (AI enemies, multiplayer, levels).
 
 Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milestones).
 

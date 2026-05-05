@@ -14,7 +14,6 @@ var _hud: Panel
 var _player: Variant
 var _original_settings: GameSettingsResource
 
-
 ## Pre-test setup: Isolates the global resource state and builds the mock scene hierarchy.
 ## :rtype: void
 func before_each() -> void:
@@ -30,7 +29,6 @@ func before_each() -> void:
 	
 	# Wire the HUD to the Player as main_scene.gd would
 	_hud.setup_hud(_player)
-
 
 ## Post-test cleanup: Restores global state to prevent test leakage.
 ## :rtype: void

@@ -1,4 +1,4 @@
-## Copyright (C) 2026 Egor Kostan
+## Copyright (C) 2025 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
 ## main_scene.gd
 ## Main scene script for SkyLockAssault.
@@ -9,14 +9,12 @@ extends Node2D
 
 enum MessageType { CRITICAL_UNBOUND, KEY_PRESS_UNBOUND }
 
-# At the top of main_scene.gd
-@export var parallax_screens_tall: float = 8.0
-
 var _showing_unbound_warning: bool = false
 var _showing_unbound_key_message: bool = false
 
 @onready var player: Node2D = $Player
-@onready var stats_panel: Panel = $PlayerStatsPanel
+# @onready var stats_panel: Panel = $PlayerStatsPanel
+@onready var stats_panel: Variant = $PlayerStatsPanel
 @onready var background: ParallaxBackground = $Background
 @onready var bushes_layer: ParallaxLayer = $Background/Bushes  # Reference to the bushes layer
 @onready var decor_layer: ParallaxLayer = $Background/Decor  # Reference to the decor layer
@@ -51,67 +49,6 @@ func _ready() -> void:
 
 	# Setup decor layer with random instances
 	setup_decor_layer(viewport_size)
-
-	# =========================================================
-	# DEPENDENCY INJECTION: Parallax Background
-	# =========================================================
-	# Safely extract settings once to use for both injection and priming.
-	# The is_instance_valid(Globals) guard prevents hard crashes during
-	# isolated GUT tests where Autoloads may not be fully initialized.
-	# Also guard against a null or freed Globals.settings so background.setup
-	# only ever receives a valid GameSettingsResource or null.
-	var settings_res: GameSettingsResource = (
-		Globals.settings
-		if (
-			is_instance_valid(Globals)
-			and Globals.settings != null
-			and is_instance_valid(Globals.settings)
-		)
-		else null
-	)
-
-	if background.has_method("setup"):
-		background.setup(settings_res)
-	else:
-		push_warning(
-			"Parallax background is missing the `setup` method. Settings injection failed."
-		)
-
-	# Wire up the signal architecture for the parallax background
-	if player.has_signal("speed_changed") and background.has_method("update_speed"):
-		# 1. Guard against duplicate connections
-		if not player.speed_changed.is_connected(background.update_speed):
-			player.speed_changed.connect(background.update_speed)
-
-		# 2. Prime the background securely via a public method
-		if background.has_method("prime_speed"):
-			background.prime_speed(player.current_speed)
-		else:
-			push_warning("Parallax background is missing the `prime_speed` method.")
-
-	elif not player.has_signal("speed_changed"):
-		push_warning(
-			(
-				"Parallax background not wired: player is missing the `speed_changed` signal. "
-				+ "Verify that the Player node defines and emits `speed_changed`."
-			)
-		)
-	elif not background.has_method("update_speed"):
-		push_warning(
-			(
-				"Parallax background not wired: background is missing"
-				+ " `update_speed` method. "
-				+ "Ensure the background script implements "
-				+ " `update_speed(speed: float, max_speed: float)`."
-			)
-		)
-	# =========================================================
-	# FLOAT DEGRADATION SAFEGUARD
-	# =========================================================
-	# Delegate wrap period calculation entirely to the ParallaxManager.
-	# This preserves encapsulation so main_scene doesn't need to know layer specifics.
-	if background.has_method("auto_calculate_wrap_period"):
-		background.auto_calculate_wrap_period()
 
 
 # 2. Detect when player presses a key/button that has NO binding at all
@@ -179,25 +116,22 @@ func setup_bushes_layer(viewport: Vector2) -> void:
 	if not bushes_layer:
 		return
 
-	# Clear existing children (Safely detach first, then instantly destroy)
+	# Clear existing children
 	for child in bushes_layer.get_children():
 		bushes_layer.remove_child(child)
-		child.free()
+		child.queue_free()
 
 	# Get bush IDs from preloader (Array[String])
 	var bush_ids: Array = Array(texture_preloader.get_resource_list()).filter(
 		func(id: String) -> bool: return id.begins_with("bush_")
 	)
+	print("Loaded ", bush_ids.size(), " bush textures")
 
 	if bush_ids.is_empty():
 		return
 
-	# THE GOLDILOCKS ZONE:
-	# 8 screens is the sweet spot for infinite illusion vs CPU overhead
-	var layer_height: float = viewport.y * parallax_screens_tall
-
-	# Drop density multiplier to match
-	var num_bushes: int = bush_ids.size() * 2
+	var num_bushes: int = bush_ids.size()
+	var layer_height: float = viewport.y * 4
 
 	for i in range(num_bushes):
 		var bush: Sprite2D = Sprite2D.new()
@@ -218,35 +152,29 @@ func setup_bushes_layer(viewport: Vector2) -> void:
 	bushes_layer.motion_mirroring = Vector2(0, layer_height)
 
 
-## Sets up the decor layer with random X positions, sizes, textures, rotations, and flips.
+## Sets up the decor layer with random X positions, sizes, and textures.
 ## @param viewport: Vector2 - The viewport size.
 ## @return: void
 func setup_decor_layer(viewport: Vector2) -> void:
 	if not decor_layer:
 		return
 
-	# Clear existing children (Safely detach first, then instantly destroy)
+	# Clear existing children
 	for child in decor_layer.get_children():
 		decor_layer.remove_child(child)
-		child.free()
+		child.queue_free()
 
 	# Get decor IDs from preloader (Array[String])
 	var decor_ids: Array = Array(texture_preloader.get_resource_list()).filter(
 		func(id: String) -> bool: return id.begins_with("decor_")
 	)
+	print("Loaded ", decor_ids.size(), " decor textures")
 
 	if decor_ids.is_empty():
 		return
 
-	# THE GOLDILOCKS ZONE:
-	# Match the bushes layer height
-	var layer_height: float = viewport.y * parallax_screens_tall
-
-	# Drop density multiplier to match
-	var num_decors: int = decor_ids.size() * 2
-
-	# Define strict rotation angles (0, 90, 180, -90 degrees)
-	var allowed_rotations: Array[float] = [0.0, 90.0, 180.0, -90.0]
+	var num_decors: int = decor_ids.size()
+	var layer_height: float = viewport.y * 4
 
 	for i in range(num_decors):
 		var decor: Sprite2D = Sprite2D.new()
@@ -255,17 +183,8 @@ func setup_decor_layer(viewport: Vector2) -> void:
 		decor.texture = texture_preloader.get_resource(id)
 		decor.centered = false
 
-		# SCALING TRICK 1: Wider scale range (0.5 to 1.5) for more size variance
-		var scale_factor: float = randf_range(0.5, 1.5)
+		var scale_factor: float = randf_range(0.5, 1.0)
 		decor.scale = Vector2(scale_factor, scale_factor)
-
-		# SCALING TRICK 2: Randomly mirror the sprite horizontally and/or vertically
-		decor.flip_h = randf() < 0.5
-		decor.flip_v = randf() < 0.5
-
-		# Apply random cardinal rotation to ALL decor sprites
-		var random_degrees: float = allowed_rotations.pick_random()
-		decor.rotation = deg_to_rad(random_degrees)
 
 		decor.position.x = randf_range(0, viewport.x - (decor.texture.get_width() * scale_factor))
 		decor.position.y = randf_range(
@@ -278,7 +197,23 @@ func setup_decor_layer(viewport: Vector2) -> void:
 	decor_layer.motion_mirroring = Vector2(0, layer_height)
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	# NEW: Safely grab the settings resource and guard against null crashes
+	# during scene transitions, engine shutdown, or isolated GUT tests.
+	var settings_res: GameSettingsResource = (
+		Globals.settings if is_instance_valid(Globals) else null
+	)
+	if not is_instance_valid(settings_res):
+		return
+
+	# Use the safe local reference for difficulty
+	var scroll_speed: float = player.speed["speed"] * delta * settings_res.difficulty * 0.8
+	background.scroll_offset.y += scroll_speed
+
+	# Use the safe local reference for current_fuel
+	if settings_res.current_fuel <= 0:
+		background.scroll_offset = Vector2(0, 0)
+
 	# 1. Critical unbound controls warning (shown ONCE per session)
 	# Flag stays true until player fixes bindings (e.g., in key_mapping.gd after remap).
 	# Do NOT reset here — that would make it repeat every 4s (bug fixed).
@@ -313,6 +248,10 @@ func show_message(text: String, type: MessageType = MessageType.CRITICAL_UNBOUND
 	match type:
 		MessageType.KEY_PRESS_UNBOUND:
 			_showing_unbound_key_message = false
+		# CRITICAL_UNBOUND: Do NOT reset here (once-per-session intent)
+		# Reset only when bindings are fixed
+		# (e.g., in key_mapping.gd _on_conflict_confirmed or reset)
+		# _showing_unbound_warning = false  # ← commented out
 
 
 ## Public: Clears the unbound warning flag after fixes.

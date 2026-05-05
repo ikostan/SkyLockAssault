@@ -7,7 +7,7 @@ extends GutTest
 var settings: Node
 
 func before_each() -> void:
-	settings = preload(GamePaths.SETTINGS).new()
+	settings = preload("res://scripts/settings.gd").new()
 	add_child_autofree(settings)
 
 	# Ensure clean input state

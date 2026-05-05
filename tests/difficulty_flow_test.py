@@ -38,13 +38,6 @@ from typing import Any, Dict, List, Optional
 
 from playwright.sync_api import Page
 
-# Configuration for stability in different environments
-# Default to 5000ms, but allow CI to override via environment variable
-DEFAULT_TIMEOUT = int(
-    os.getenv("TEST_TIMEOUT", "30000")
-)  # Fallback to 30s instead of 5s
-TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "5000"))
-
 
 def test_difficulty_flow(page: Page) -> None:
     """
@@ -79,24 +72,22 @@ def test_difficulty_flow(page: Page) -> None:
         )
 
         page.goto(
-            "http://localhost:8080/index.html",
-            wait_until="networkidle",
-            timeout=DEFAULT_TIMEOUT,
+            "http://localhost:8080/index.html", wait_until="networkidle", timeout=5000
         )
         # 1. Wait for the engine to actually start the splash scene
         page.wait_for_timeout(5000)
         # Wait for Godot engine init (ensures 'godot' object is defined)
-        page.wait_for_function("() => window.godotInitialized", timeout=DEFAULT_TIMEOUT)
+        page.wait_for_function("() => window.godotInitialized", timeout=5000)
 
         # Verify canvas and title to ensure game is initialized
         canvas = page.locator("canvas")
-        page.wait_for_selector("canvas", state="visible", timeout=DEFAULT_TIMEOUT)
+        page.wait_for_selector("canvas", state="visible", timeout=5000)
         box: Optional[Dict[str, float]] = canvas.bounding_box()
         assert box is not None, "Canvas not found on page"
         assert "SkyLockAssault" in page.title(), "Title not found"
 
         # Check element present
-        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector("#options-button", state="visible", timeout=4500)
         assert page.evaluate("document.getElementById('options-button') !== null")
 
         # Check invisible (opacity 0)
@@ -115,30 +106,21 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Wait main menu (function check for ID)
         page.wait_for_function(
-            "() => document.getElementById('options-button') !== null",
-            timeout=TEST_TIMEOUT,
+            "() => document.getElementById('options-button') !== null", timeout=5000
         )  # Longer for stalls
 
         # Open options
-        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector("#options-button", state="visible", timeout=2500)
         # page.click("#options-button", force=True)
-        page.wait_for_function(
-            "window.optionsPressed !== undefined", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_function("window.optionsPressed !== undefined", timeout=2500)
         page.evaluate("window.optionsPressed([])")
 
         # Go to Advanced settings
-        page.wait_for_selector(
-            "#advanced-button", state="visible", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_selector("#advanced-button", state="visible", timeout=2500)
         # page.click("#advanced-button", force=True)
-        page.wait_for_function(
-            "window.advancedPressed !== undefined", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_function("window.advancedPressed !== undefined", timeout=2500)
         page.evaluate("window.advancedPressed([])")
-        page.wait_for_function(
-            "window.changeLogLevel !== undefined", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_function("window.changeLogLevel !== undefined", timeout=2500)
         advanced_display: str = page.evaluate(
             "window.getComputedStyle(document.getElementById('log-level-select')).display"
         )
@@ -163,66 +145,49 @@ def test_difficulty_flow(page: Page) -> None:
         assert any(
             "log level changed to: debug" in log["text"].lower() for log in new_logs
         ), "Failed to set log level to DEBUG"
-        # FIX: Look for the new encrypted save log instead of "settings saved"
         assert any(
-            "encrypted" in log["text"].lower() and "settings" in log["text"].lower()
-            for log in new_logs
+            "settings saved" in log["text"].lower() for log in new_logs
         ), "Failed to save the settings"
 
         # Go back to Options menu
-        page.wait_for_selector(
-            "#advanced-back-button", state="visible", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_selector("#advanced-back-button", state="visible", timeout=2500)
         # page.click("#advanced-back-button", force=True)
-        page.wait_for_function(
-            "window.advancedBackPressed !== undefined", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_function("window.advancedBackPressed !== undefined", timeout=2500)
         page.evaluate("window.advancedBackPressed([])")
 
         # Go to Gameplay Settings
-        page.wait_for_selector(
-            "#gameplay-button", state="visible", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_selector("#gameplay-button", state="visible", timeout=2500)
         # page.click("#advanced-back-button", force=True)
-        page.wait_for_function(
-            "window.gameplayPressed !== undefined", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_function("window.gameplayPressed !== undefined", timeout=2500)
         page.evaluate("window.gameplayPressed([])")
 
         # Assert gameplay settings overlay is shown and options overlay is hidden
-        page.wait_for_selector(
-            "#difficulty-slider", state="visible", timeout=TEST_TIMEOUT
-        )
-        page.wait_for_selector(
-            "#options-back-button", state="hidden", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_selector("#difficulty-slider", state="visible", timeout=2500)
+        page.wait_for_selector("#options-back-button", state="hidden", timeout=2500)
 
         # Set difficulty to 2.0 - directly call the exposed callback (bypasses event for reliability in automation)
         pre_change_log_count = len(logs)
-        page.wait_for_function(
-            "window.changeDifficulty !== undefined", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_function("window.changeDifficulty !== undefined", timeout=2500)
         page.evaluate("window.changeDifficulty([2.0])")
-        page.wait_for_timeout(TEST_TIMEOUT)
+        page.wait_for_timeout(2500)
         new_logs = logs[pre_change_log_count:]
 
         assert any(
             "js difficulty callback called with valid value: 2.0" in log["text"].lower()
             for log in new_logs
         ), "Failed to extract/validate difficulty 2.0 from JS payload"
-        # FIX: Look for the new encrypted save log instead of "settings saved"
+
         assert any(
-            "encrypted" in log["text"].lower() and "settings" in log["text"].lower()
-            for log in new_logs
+            "settings saved" in log["text"].lower() for log in new_logs
         ), "Failed to save the settings"
 
         # Reset gameplay settings back to defaults via the gameplay reset action
         pre_reset_log_count: int = len(logs)
         page.wait_for_function(
-            "window.gameplayResetPressed !== undefined", timeout=TEST_TIMEOUT
+            "window.gameplayResetPressed !== undefined", timeout=2500
         )
         page.evaluate("window.gameplayResetPressed([])")
-        page.wait_for_timeout(TEST_TIMEOUT)
+        page.wait_for_timeout(2500)
         reset_logs: List[Dict[str, str]] = logs[pre_reset_log_count:]
 
         # Verify that difficulty was reset to the expected default
@@ -237,11 +202,9 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Back to Main menu
         pre_change_log_count = len(logs)
-        page.wait_for_function(
-            "window.gameplayBackPressed !== undefined", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_function("window.gameplayBackPressed !== undefined", timeout=2500)
         page.evaluate("window.gameplayBackPressed([])")
-        page.wait_for_timeout(TEST_TIMEOUT)
+        page.wait_for_timeout(2500)
         new_logs = logs[pre_change_log_count:]
         assert any(
             "back button pressed." in log["text"].lower() for log in new_logs
@@ -250,40 +213,32 @@ def test_difficulty_flow(page: Page) -> None:
         # After gameplayBackPressed([]), the options overlay should be visible again
         # and gameplay-specific elements should be hidden.
         # Options overlay visible
-        page.wait_for_selector(
-            "#options-back-button", state="visible", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_selector("#options-back-button", state="visible", timeout=2500)
         assert page.evaluate("document.getElementById('options-back-button') !== null")
         # Gameplay UI hidden
-        page.wait_for_selector(
-            "#difficulty-slider", state="hidden", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_selector("#difficulty-slider", state="hidden", timeout=2500)
         assert page.evaluate(
             "document.getElementById('difficulty-slider') === null || document.getElementById("
             "'difficulty-slider').offsetParent === null"
         )
 
         # Check element present
-        page.wait_for_selector(
-            "#options-back-button", state="visible", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_selector("#options-back-button", state="visible", timeout=2500)
         assert page.evaluate("document.getElementById('options-back-button') !== null")
         page.evaluate("window.optionsBackPressed([])")
 
         # After optionsBackPressed([]), we should be back on the main menu:
         # main-menu elements visible and options elements hidden.
-        page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector("#start-button", state="visible", timeout=2500)
         assert page.evaluate("document.getElementById('start-button') !== null")
-        page.wait_for_selector(
-            "#options-back-button", state="hidden", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_selector("#options-back-button", state="hidden", timeout=2500)
         assert page.evaluate(
             "document.getElementById('options-back-button') === null || document.getElementById("
             "'options-back-button').offsetParent === null"
         )
 
         # Start game
-        page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector("#start-button", state="visible", timeout=2500)
         pre_change_log_count = len(logs)
         pre_poll_log_count: int = len(logs)
         page.click("#start-button", force=True)
@@ -323,13 +278,13 @@ def test_difficulty_flow(page: Page) -> None:
             raise TimeoutError("Main scene not loaded")
 
         # Refocus canvas to ensure input capture
-        page.wait_for_selector("canvas", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector("canvas", state="visible", timeout=5000)
         page.click("canvas")
 
         # Simulate fire (press Space)
         pre_change_log_count = len(logs)
         page.keyboard.press("Space")
-        page.wait_for_timeout(TEST_TIMEOUT)
+        page.wait_for_timeout(3000)
         new_logs = logs[pre_change_log_count:]
         # Verify scaled cooldown in logs (fire_rate 0.15 * 2.0 = 0.3)
         assert any(

@@ -20,6 +20,8 @@ func after_test() -> void:
 	Globals.settings.difficulty = original_difficulty  # Restore after each test
 
 
+## Tests shared helper calculates depletion correctly.
+## @return: void
 func test_shared_depletion_helper() -> void:
 	var main_scene: Node = auto_free(load("res://scenes/main_scene.tscn").instantiate())
 	add_child(main_scene)
@@ -28,8 +30,8 @@ func test_shared_depletion_helper() -> void:
 	var player_root: Node = main_scene.get_node("Player")
 	Globals.settings.difficulty = 2.0
 	
-	# CHANGED: Use current_speed instead of speed["speed"]
-	var expected: float = Globals.settings.base_consumption_rate * (player_root.current_speed / Globals.settings.max_speed) * Globals.settings.difficulty
+	# NEW: Use global max_speed
+	var expected: float = Globals.settings.base_consumption_rate * (player_root.speed["speed"] / Globals.settings.max_speed) * Globals.settings.difficulty
 	assert_float(TestHelpers.calculate_expected_depletion(player_root, Globals.settings.difficulty)).is_equal_approx(expected, 0.001)
 
 
@@ -303,11 +305,10 @@ func test_movement() -> void:
 	Input.action_release("move_left")
 	
 	# Speed up (no velocity change, just speed var)
-	# CHANGED: Use current_speed
-	var initial_speed: float = player_root.current_speed
+	var initial_speed: float = player_root.speed["speed"]
 	Input.action_press("speed_up")
 	player_root._physics_process(1.0/60.0)
-	assert_float(player_root.current_speed).is_greater(initial_speed)  # Increases speed var
+	assert_float(player_root.speed["speed"]).is_greater(initial_speed)  # Increases speed var
 	assert_vector(body.velocity).is_equal(Vector2(0.0, 0.0))  # No y velocity
 	Input.action_release("speed_up")
 
@@ -399,8 +400,7 @@ func test_fuel_depletion() -> void:
 	assert_float(hud.fuel_bar.value).is_equal(Globals.settings.max_fuel)
 	
 	# Simulate one timer tick
-	# CHANGED: Use current_speed
-	var normalized_speed: float = player_root.current_speed / Globals.settings.max_speed
+	var normalized_speed: float = player_root.speed["speed"] / Globals.settings.max_speed
 	var expected_depletion: float = Globals.settings.base_consumption_rate * normalized_speed * Globals.settings.difficulty
 	
 	player_root._on_fuel_timer_timeout()
@@ -412,6 +412,5 @@ func test_fuel_depletion() -> void:
 	Globals.settings.current_fuel = 0.0
 	
 	player_root._on_fuel_timer_timeout()
-	# CHANGED: Use current_speed
-	assert_float(player_root.current_speed).is_equal(0.0)
+	assert_float(player_root.speed["speed"]).is_equal(0.0)
 	assert_bool(player_root.fuel_timer.is_stopped()).is_true()

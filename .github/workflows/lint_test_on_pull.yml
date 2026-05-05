@@ -44,6 +44,11 @@ jobs:
       - "yamllint"
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+  ci_scripts_test:
+    name: "Test Deployment Scripts"
+    uses: "./.github/workflows/test_ci_scripts.yml"
+    needs:
+      - "gut_tests"
   browser_tests:
     name: "Browser Functional Tests"
     uses: "./.github/workflows/browser_test.yml"
