@@ -45,10 +45,8 @@ jobs:
         run: |
             # 1. Escape backslashes and quotes for Godot's config format
             ESCAPED_SALT=$(printf '%s' "$RAW_SECRET" | sed 's/\\/\\\\/g; s/"/\\"/g')
-            
             # 2. EXPORT the variable so the awk script's ENVIRON map can read it
             export SALT="$ESCAPED_SALT"
-            
             # Use a section-aware awk script to update security/save_salt only within the [game] section.
             awk '
               BEGIN {
@@ -73,7 +71,6 @@ jobs:
                   print
                   next
                 }
-            
                 # Inside [game], look for security/save_salt key (allow leading whitespace)
                 if (in_game && $0 ~ /^[[:space:]]*security\/save_salt[[:space:]]*=/) {
                   if (!salt_written) {
@@ -100,7 +97,6 @@ jobs:
                 }
               }
             ' project.godot > project.godot.tmp
-            
             mv project.godot.tmp project.godot
       - name: "Create Export Directories"
         run: |
