@@ -66,14 +66,14 @@ jobs:
 
       - name: "Cache Playwright Browsers"
         uses: "actions/cache@v5"
-        id: playwright-cache  # <--- ADDED UNIQUE ID
+        id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: ${{ runner.os }}-playwright-
+          # FIX: Added '-v2-' to force GitHub to build a brand new, healthy cache
+          key: ${{ runner.os }}-playwright-v2-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: ${{ runner.os }}-playwright-v2-
 
       - name: "Install Playwright Browsers"
-        # <--- NOW IT CHECKS THE CORRECT CACHE
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: |
           playwright install --with-deps chromium
