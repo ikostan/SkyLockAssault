@@ -53,7 +53,7 @@ def run_awk_injection(file_path):
     RAW_SECRET = 'my"nasty\\salt123'
 
     # Emulate the sed command: replace \ with \\, and " with \"
-    escaped_salt = RAW_SECRET.replace('\\', '\\\\').replace('"', '\\"')
+    escaped_salt = RAW_SECRET.replace("\\", "\\\\").replace('"', '\\"')
 
     # Load into environment variables for awk
     env = os.environ.copy()
@@ -67,14 +67,18 @@ def run_awk_injection(file_path):
                 env=env,
                 stdout=temp_file,
                 check=True,
-                text=True
+                text=True,
             )
         # Replace original file with the modified tmp file
         os.replace(f"{file_path}.tmp", file_path)
     except FileNotFoundError:
         print("❌ ERROR: 'awk' command not found.")
-        print("Since the GitHub action uses Linux tools, 'awk' must be accessible to Windows.")
-        print("Run this Python script from your VS Code Git Bash terminal instead of PowerShell.")
+        print(
+            "Since the GitHub action uses Linux tools, 'awk' must be accessible to Windows."
+        )
+        print(
+            "Run this Python script from your VS Code Git Bash terminal instead of PowerShell."
+        )
         sys.exit(1)
 
 
@@ -87,7 +91,7 @@ def test_injection():
 
     # TEST 1: No [game] section exists
     with open(dummy_file, "w") as f:
-        f.write("[application]\nname=\"Test\"\n")
+        f.write('[application]\nname="Test"\n')
 
     run_awk_injection(dummy_file)
 
@@ -101,14 +105,16 @@ def test_injection():
 
     # TEST 2: [game] section exists, followed by another section
     with open(dummy_file, "w") as f:
-        f.write("[application]\nname=\"Test\"\n[game]\nsome_setting=1\n[audio]\nbus=1\n")
+        f.write('[application]\nname="Test"\n[game]\nsome_setting=1\n[audio]\nbus=1\n')
 
     run_awk_injection(dummy_file)
 
     with open(dummy_file, "r") as f:
         content = f.read()
         # Check if salt is injected before [audio]
-        if expected_salt_line in content and content.find(expected_salt_line) < content.find("[audio]"):
+        if expected_salt_line in content and content.find(
+            expected_salt_line
+        ) < content.find("[audio]"):
             print("✅ TEST 2 PASS: Injected salt inside existing [game] section.")
         else:
             print(f"❌ TEST 2 FAIL\n{content}")
@@ -116,7 +122,7 @@ def test_injection():
 
     # TEST 3: [game] section exists and already has an old salt (overwrite)
     with open(dummy_file, "w") as f:
-        f.write("[game]\nsecurity/save_salt=\"old_salt\"\nother=2\n")
+        f.write('[game]\nsecurity/save_salt="old_salt"\nother=2\n')
 
     run_awk_injection(dummy_file)
 
