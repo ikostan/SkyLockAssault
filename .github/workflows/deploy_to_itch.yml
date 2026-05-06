@@ -48,12 +48,11 @@ jobs:
         run: |
             # 1. Escape backslashes and quotes for Godot's config format
             ESCAPED_SALT=$(printf '%s' "$RAW_SECRET" | sed 's/\\/\\\\/g; s/"/\\"/g')
-            # 2. EXPORT the variable so the awk script's ENVIRON map can read it
-            export SALT="$ESCAPED_SALT"
-            # Use a section-aware awk script to update security/save_salt only within the [game] section.
-            awk '
+            
+            # 2. Use a section-aware awk script to update security/save_salt only within the [game] section.
+            # Pass the salt directly into awk instead of exporting it as an environment variable.
+            awk -v salt="$ESCAPED_SALT" '
               BEGIN {
-                salt = ENVIRON["SALT"]
                 in_game = 0
                 salt_written = 0
                 saw_game_section = 0
