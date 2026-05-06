@@ -20,6 +20,7 @@ echo "Exporting Godot Project to Web..."
 mkdir -p $EXPORT_DIR
 
 # Simulate firebelley/godot-export action: Run Godot export to HTML5
+# godot --headless --path $PROJECT_DIR --export-release "Web_thread_off" $EXPORT_DIR/index.html
 godot --headless --path $PROJECT_DIR --export-release "Web_thread_off" $EXPORT_DIR/index.html
 check_exit "Godot Web Export"
 

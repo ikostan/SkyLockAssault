@@ -8,7 +8,7 @@
 
 extends "res://addons/gut/test.gd"
 
-const InputRemapButton: Script = preload("res://scripts/input_remap_button.gd")
+const InputRemapButton: Script = preload(GamePaths.INPUT_REMAP_BUTTON)
 
 var button: InputRemapButton
 const TEST_ACTION: String = "test_action"

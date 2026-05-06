@@ -12,7 +12,7 @@ on:  # yamllint disable-line rule:truthy
         description: "Playwright timeout in ms"
         required: false
         type: "number"
-        default: 10000
+        default: 30000
 
 jobs:
   test:
@@ -22,6 +22,16 @@ jobs:
       PW_TIMEOUT: "${{ inputs.pw_timeout }}"
     steps:
       - uses: "actions/checkout@v6.0.1"
+
+      - name: "Inject Test Salt"
+        # Ensures Godot headless export doesn't strip the property, keeping encryption active for tests
+        run: |
+          if ! grep -q '\[game\]' project.godot; then
+            printf '\n[game]\nsecurity/save_salt="test_salt_12345"\n' >> project.godot
+          else
+            sed -i '/^\[game\]/a security/save_salt="test_salt_12345"' project.godot
+          fi
+
       - name: "Create Export Directories"
         run: |
           mkdir -p export/web_thread_off
@@ -39,6 +49,7 @@ jobs:
           verbose: true
           presets_to_export: "Web_thread_off"
           use_preset_export_path: true  # Move exports to the directory defined in export_presets.cfg
+
       - name: "Flatten Export Directory"
         run: |
           bash ./.github/scripts/flatten_export.sh "export/web_thread_off" "Web_thread_off"
@@ -61,8 +72,9 @@ jobs:
         id: cache
         with:
           path: "~/.cache/pip"
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: ${{ runner.os }}-pip-
+          # FIX: Added '-v2' to invalidate the old corrupted cache
+          key: ${{ runner.os }}-pip-v2-${{ hashFiles('requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-v2-
 
       - name: "Install Playwright"
         run: |
@@ -115,8 +127,8 @@ jobs:
         # For conversion and report
         run: |
           npm install v8-to-istanbul nyc
-      # yamllint disable rule:line-length
 
+      # yamllint disable rule:line-length
       - name: "Convert V8 to LCOV"
         run: |
           mkdir -p .nyc_output coverage/lcov

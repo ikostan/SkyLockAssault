@@ -4,7 +4,20 @@
 ## Shared helper functions and mock builders for GUT unit tests.
 extends RefCounted
 
-const PLAYER_SCRIPT_PATH: String = "res://scripts/player.gd"
+const PLAYER_SCRIPT_PATH: String = GamePaths.PLAYER
+
+
+## Helper to safely hard-free a node without causing engine crashes.
+## Asserts the node is valid and safe to instantly destroy.
+static func safe_hard_free(node: Node) -> void:
+	if not is_instance_valid(node) or node.is_queued_for_deletion():
+		return
+	
+	if node.is_inside_tree():
+		node.get_parent().remove_child(node)
+	
+	node.free()
+
 
 ## Dynamically constructs the node hierarchy required by player.gd.
 ## :rtype: Node
@@ -47,7 +60,7 @@ static func build_mock_player_scene() -> Node:
 	panel.add_child(stats)
 	
 	# Assign the extracted hud.gd script directly to the mock panel
-	var hud_script := load("res://scripts/hud.gd")
+	var hud_script := load(GamePaths.HUD)
 	if hud_script:
 		panel.set_script(hud_script)
 		
@@ -81,8 +94,14 @@ static func build_mock_player_scene() -> Node:
 		
 	var sprite: Sprite2D = Sprite2D.new()
 	sprite.name = "Sprite2D"
+	
+	# FIX: Create a 1x1 dummy texture to prevent the 
+	# "Player sprite texture missing" warning during _ready()
+	var dummy_texture := ImageTexture.create_from_image(Image.create(1, 1, false, Image.FORMAT_RGBA8))
+	sprite.texture = dummy_texture
+	
 	var coll: CollisionPolygon2D = CollisionPolygon2D.new()
-	coll.name = "CollisionPolygon2D"
+	coll.name = "CollisionPolygon2D" # <--- This is the line I accidentally deleted!
 	
 	var weapon: Node2D = Node2D.new()
 	weapon.name = "Weapon"

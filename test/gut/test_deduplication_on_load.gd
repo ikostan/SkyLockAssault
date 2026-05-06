@@ -33,9 +33,14 @@ func after_each() -> void:
 func test_dedup_01_load_config_duplicates() -> void:
 	# Setup: Config with duplicates (e.g., "key:87" twice)
 	config.set_value("input", TEST_ACTION, ["key:" + str(KEY_W_CODE), "key:" + str(KEY_W_CODE)])
-	config.save(TEST_CONFIG_PATH)
+	
+	# FIX: Save using encryption so Settings.load_input_mappings doesn't throw a C++ error
+	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	
 	# Load
-	Settings.load_input_mappings(TEST_CONFIG_PATH)
+	# FIX: Explicitly restrict to TEST_ACTION so we don't accidentally load/backfill other actions
+	Settings.load_input_mappings(TEST_CONFIG_PATH, [TEST_ACTION])
+	
 	# Assert: Only one event
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
 	assert_eq(events.size(), 1, "Duplicates should be deduplicated on load")

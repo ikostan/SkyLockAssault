@@ -1,6 +1,6 @@
 [gd_scene load_steps=12 format=3 uid="uid://cl4m4q2eurcn0"]
 
-[ext_resource type="Script" uid="uid://cajq8hf84eplh" path="res://scripts/options_menu.gd" id="1_ijpji"]
+[ext_resource type="Script" uid="uid://cajq8hf84eplh" path="res://scripts/ui/menus/options_menu.gd" id="1_ijpji"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_liyum"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lfjc7"]
