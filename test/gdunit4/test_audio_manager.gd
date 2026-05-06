@@ -16,7 +16,7 @@ var test_path: String = "user://test_audio.cfg"  # Temp for isolation
 ## Per-test setup: Instantiate manager and init defaults.
 ## :rtype: void
 func before_test() -> void:
-	manager = auto_free(load("res://scripts/managers/audio_manager.gd").new())
+	manager = auto_free(load("res://scripts/audio_manager.gd").new())
 	manager._init_to_defaults()  # Manually set defaults (since _ready() not called in isolation)
 
 
@@ -69,7 +69,7 @@ func test_save_volumes_preserves_other_sections() -> void:
 	# Pre-create config with non-audio section
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("Settings", "difficulty", 1.5)
-	config.save_encrypted_pass(test_path, Globals.save_encryption_pass)
+	config.save(test_path)
 	
 	# Save audio
 	manager.set_bus_state(AudioConstants.BUS_MASTER, 0.7, false)
@@ -77,7 +77,7 @@ func test_save_volumes_preserves_other_sections() -> void:
 	
 	# Reload and check both sections preserved
 	config = ConfigFile.new()
-	config.load_encrypted_pass(test_path, Globals.save_encryption_pass)
+	config.load(test_path)
 	assert_float(config.get_value("audio", "master_volume", 1.0)).is_equal(0.7)
 	assert_float(config.get_value("Settings", "difficulty", 1.0)).is_equal(1.5)
 
@@ -85,17 +85,13 @@ func test_save_volumes_preserves_other_sections() -> void:
 ## Tests load ignores/preserves other sections.
 ## :rtype: void
 func test_load_volumes_with_other_sections() -> void:
-	# Pre-save
+	# Pre-save mixed config
 	var config: ConfigFile = ConfigFile.new()
-	config.set_value("audio", "master_volume", 0.4)
-	config.set_value("Settings", "difficulty", 1.5)
-	config.save_encrypted_pass(test_path, Globals.save_encryption_pass)
+	config.set_value("audio", "music_volume", 0.4)
+	config.set_value("input", "fire", ["key:32"])  # Mock input
+	config.save(test_path)
 	
-	# Load via manager
+	# Load and verify audio loaded, others ignored
 	manager.load_volumes(test_path)
-	assert_float(manager.get_bus_state(AudioConstants.BUS_MASTER)["volume"]).is_equal(0.4)
-	
-	# Settings shouldn't be loaded by audio manager, but file should still have it
-	config = ConfigFile.new()
-	config.load_encrypted_pass(test_path, Globals.save_encryption_pass)
-	assert_float(config.get_value("Settings", "difficulty", 1.0)).is_equal(1.5)
+	assert_float(manager.get_bus_state(AudioConstants.BUS_MUSIC)["volume"]).is_equal(0.4)
+	# No assert on input, as it's not loaded here

@@ -8,7 +8,7 @@
 
 extends "res://addons/gut/test.gd"
 
-var audio_scene: PackedScene = load(GamePaths.AUDIO_SETTINGS_SCENE)
+var audio_scene: PackedScene = load("res://scenes/audio_settings.tscn")
 var audio_instance: Control
 var test_config_path: String = "user://test_sfx_weapon.cfg"
 
@@ -44,10 +44,6 @@ func before_each() -> void:
 	if AudioServer.get_bus_index("SFX_Weapon") == -1:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, "SFX_Weapon")
-		
-	# FIX: Await one frame to allow _ready()'s deferred grab_focus calls 
-	# to resolve safely while the node is still inside the scene tree.
-	await get_tree().process_frame
 
 
 ## Per-test cleanup: Free audio_instance safely.
@@ -232,19 +228,11 @@ func test_tc_weapon_10() -> void:
 func test_tc_weapon_11() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("audio", "weapon_muted", true)
-	
-	# FIX: Save using the encrypted pass so AudioManager doesn't throw a C++ error
-	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
-	
+	config.save(test_config_path)
 	AudioManager.load_volumes(test_config_path)
 	AudioManager.apply_all_volumes()  # Apply after load for test
-	
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
-	
-	# FIX: Await one frame so deferred grab_focus calls resolve safely
-	await get_tree().process_frame
-	
 	assert_false(audio_instance.mute_weapon.button_pressed)
 	assert_false(audio_instance.weapon_slider.editable)
 	assert_true(AudioServer.is_bus_mute(AudioServer.get_bus_index("SFX_Weapon")))
@@ -255,18 +243,12 @@ func test_tc_weapon_11() -> void:
 func test_tc_weapon_12() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("audio", "weapon_muted", false)
-	
-	# FIX: Save using the encrypted pass so AudioManager doesn't throw a C++ error
-	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
-	
+	config.save(test_config_path)
 	AudioManager.load_volumes(test_config_path)
 	AudioManager.apply_all_volumes()  # Apply after load for test
-	
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
-	
 	await get_tree().process_frame  # Await _ready completion
-	
 	assert_true(audio_instance.mute_weapon.button_pressed)
 	assert_true(audio_instance.weapon_slider.editable)
 	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index("SFX_Weapon")))
@@ -299,13 +281,10 @@ func test_tc_weapon_14() -> void:
 ## TC-Weapon-15 | Unexpected exit | Simulate tree_exited | Previous menu visible = true; hidden_menus.pop_back(); If web, backPressed restored; Overlays hidden.
 ## :rtype: void
 func test_tc_weapon_15() -> void:
-	# FIX: Wrap in autofree() to prevent the orphan memory leak
-	var prev_menu: Control = autofree(Control.new())
-	
+	var prev_menu: Control = Control.new()
 	prev_menu.visible = false
 	Globals.hidden_menus = [prev_menu]
 	audio_instance.queue_free()
 	await get_tree().process_frame
-	
 	assert_true(prev_menu.visible)
 	assert_true(Globals.hidden_menus.is_empty())

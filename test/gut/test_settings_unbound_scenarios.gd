@@ -44,7 +44,7 @@ func before_each() -> void:
 			InputMap.action_erase_events(action)
 		else:
 			InputMap.add_action(action)
-	menu = load(GamePaths.KEY_MAPPING_SCENE).instantiate()
+	menu = load("res://scenes/key_mapping_menu.tscn").instantiate()
 	add_child(menu)
 	speed_up_btn = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
 	# Default keyboard
@@ -91,10 +91,7 @@ func test_scn_01_first_load_missing_defaults() -> void:
 	assert_eq(speed_up_btn.text, "W")
 	# Save: events array (not [])
 	Settings.save_input_mappings(TEST_CONFIG_PATH)
-	
-	# FIX: Load using encryption to verify the securely saved file
-	config.load_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
-	
+	config.load(TEST_CONFIG_PATH)
 	var saved: Array = config.get_value("input", TEST_ACTION, [])
 	assert_false(saved.is_empty(), "Saved defaults")
 
@@ -103,10 +100,7 @@ func test_scn_01_first_load_missing_defaults() -> void:
 func test_scn_02_explicit_empty_unbound() -> void:
 	# Config with [] for action.
 	config.set_value("input", TEST_ACTION, [])
-	
-	# FIX: Save using encryption
-	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
-	
+	config.save(TEST_CONFIG_PATH)
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	# InputMap: no events.
 	assert_true(InputMap.action_get_events(TEST_ACTION).is_empty())
@@ -115,25 +109,18 @@ func test_scn_02_explicit_empty_unbound() -> void:
 	assert_eq(speed_up_btn.text, "Unbound")
 	# Save: still []
 	Settings.save_input_mappings(TEST_CONFIG_PATH)
-	
-	# FIX: Load using encryption
-	config.load_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
-	
+	config.load(TEST_CONFIG_PATH)
 	var saved: Array = config.get_value("input", TEST_ACTION, [])
 	assert_true(saved.is_empty(), "Saved unbound")
 
 
 ## SCN-03 | Load error (invalid path/corrupt) → log error, fallback defaults.
 func test_scn_03_load_error_fallback() -> void:
-	# FIX: The code reviewer was logically correct—we need to hit the `err != OK` branch.
-	# However, intentionally failing decryption (via a wrong password or corrupt data)
-	# causes Godot's C++ engine to print native errors like `String::md5 != ...`
-	# GUT actively monitors the engine and automatically FAILS the test if it sees these.
-	# To safely exercise the `err != OK` fallback without failing the GUT run, 
-	# we must trigger an I/O error that doesn't scream in C++, like ERR_FILE_NOT_FOUND.
-	
-	Settings.load_input_mappings("user://intentionally_missing_corrupt_fallback.cfg")
-	
+	# Invalid path (non-existent, but simulate corrupt by writing junk).
+	var file: FileAccess = FileAccess.open(TEST_CONFIG_PATH, FileAccess.WRITE)
+	file.store_string("invalid_config_data")  # Not valid ConfigFile.
+	file.close()
+	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	# Log: error (assume printed; no direct assert).
 	# Fallback: defaults in InputMap.
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
@@ -144,10 +131,7 @@ func test_scn_03_load_error_fallback() -> void:
 func test_scn_04_type_mismatch_default_critical() -> void:
 	# Non-array for critical.
 	config.set_value("input", CRITICAL_ACTION, "string_instead_of_array")
-	
-	# FIX: Save using encryption
-	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
-	
+	config.save(TEST_CONFIG_PATH)
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	# Log: warning.
 	# Critical: default added.
@@ -159,10 +143,7 @@ func test_scn_04_type_mismatch_default_critical() -> void:
 func test_scn_05_invalid_entries_skip() -> void:
 	# Bad string in array.
 	config.set_value("input", TEST_ACTION, ["invalid:event"])
-	
-	# FIX: Save using encryption
-	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
-	
+	config.save(TEST_CONFIG_PATH)
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	# "invalid:event" has no recognised prefix ("key:", "joybtn:", "joyaxis:"),
 	# so _add_missing_defaults treats it as an explicit unbind for both devices — no defaults added.
@@ -176,10 +157,7 @@ func test_scn_05_invalid_entries_skip() -> void:
 func test_scn_06_legacy_migration_defaults() -> void:
 	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, false)
 	config.set_value("input", CRITICAL_ACTION, [])
-	
-	# FIX: Save using encryption
-	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
-	
+	config.save(TEST_CONFIG_PATH)
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	Settings._migrate_legacy_unbound_states()  # Manual call for test.
 	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, true)  # Mimic.
@@ -191,10 +169,7 @@ func test_scn_06_legacy_migration_defaults() -> void:
 func test_scn_07_legacy_critical_empty_adds_defaults() -> void:
 	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, false)
 	config.set_value("input", TEST_ACTION, [])  # Empty.
-	
-	# FIX: Save using encryption
-	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
-	
+	config.save(TEST_CONFIG_PATH)
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	Settings._migrate_legacy_unbound_states()  # Manual call for test.
 	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, true)  # Mimic.
@@ -220,10 +195,7 @@ func test_scn_08_legacy_menu_unbound_defaults() -> void:
 	for act: String in ["speed_up", "move_left"]:  # Sample.
 		var key_code: int = Settings.DEFAULT_KEYBOARD[act]
 		config.set_value("input", act, ["key:" + str(key_code)])
-		
-	# FIX: Save using encryption
-	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
-	
+	config.save(TEST_CONFIG_PATH)
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	Settings._migrate_legacy_unbound_states()  # Manual call.
 	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, true)
@@ -298,8 +270,7 @@ func test_scn_16_migration_flag_persists() -> void:
 	Settings.save_input_mappings(TEST_CONFIG_PATH)
 
 	var cfg := ConfigFile.new()
-	# FIX: Load using encryption to correctly parse the flag saved by Settings
-	cfg.load_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	cfg.load(TEST_CONFIG_PATH)
 
 	assert_true(
 		cfg.get_value("meta", Settings.LEGACY_MIGRATION_KEY, false),

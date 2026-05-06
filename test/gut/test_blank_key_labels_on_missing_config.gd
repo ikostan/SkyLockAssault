@@ -17,7 +17,7 @@
 
 extends GutTest
 
-const InputRemapButton := preload(GamePaths.INPUT_REMAP_BUTTON)
+const InputRemapButton := preload("res://scripts/input_remap_button.gd")
 
 const TEST_CONFIG_MISSING_PATH: String = "user://test_blank_missing.cfg"
 const TEST_CONFIG_PARTIAL_PATH: String = "user://test_blank_partial.cfg"
@@ -100,8 +100,7 @@ func _write_partial_config_with_other_action_gamepad(path: String) -> void:
 	# We mirror the same scheme used elsewhere in the project tests.
 	cfg.set_value("input", OTHER_ACTION, ["joy:btn:%d" % JOY_BUTTON_A])
 
-	# FIX: Save using encryption to prevent C++ core errors during load_input_mappings
-	var err: int = cfg.save_encrypted_pass(path, Globals.save_encryption_pass)
+	var err: int = cfg.save(path)
 	assert_eq(err, OK, "Precondition failed: could not write test config.")
 
 
@@ -126,9 +125,7 @@ func test_blank_02_action_key_missing_keeps_project_default_physical_0_keyboard_
 	# Arrange: write config with some other action, but NOT TEST_ACTION.
 	var cfg: ConfigFile = ConfigFile.new()
 	cfg.set_value("input", OTHER_ACTION, ["key:%d" % KEY_DEFAULT])
-	
-	# FIX: Save using encryption to prevent C++ core errors during load_input_mappings
-	var err: int = cfg.save_encrypted_pass(TEST_CONFIG_PARTIAL_PATH, Globals.save_encryption_pass)
+	var err: int = cfg.save(TEST_CONFIG_PARTIAL_PATH)
 	assert_eq(err, OK, "Precondition failed: could not write test config.")
 
 	# Act: load config restricted to TEST_ACTION only. This simulates "action missing in local storage".

@@ -51,15 +51,13 @@ func test_tc_sl_01() -> void:
 	AudioManager.save_volumes()
 	assert_true(FileAccess.file_exists(test_config_path))
 	var config: ConfigFile = ConfigFile.new()
-	
-	# FIX: Load using encryption to correctly verify what AudioManager saved
-	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
-	
+	config.load(test_config_path)
 	var sections: Array = config.get_sections()
 	assert_eq(sections.size(), 1)
 	assert_eq(sections[0], "audio")
 	var keys: Array = config.get_section_keys("audio")
 	
+	# UPDATED: Changed from 10 to 12 (6 volumes + 6 mutes)
 	assert_eq(keys.size(), 12)  
 	
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
@@ -76,10 +74,7 @@ func test_tc_sl_02() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("audio", "master_volume", 0.5)
 	config.set_value("audio", "master_muted", true)
-	
-	# FIX: Save using encryption so AudioManager load succeeds without C++ errors
-	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
-	
+	config.save(test_config_path)
 	assert_true(FileAccess.file_exists(test_config_path))
 	# Verify initial defaults
 	assert_almost_eq(AudioManager.master_volume, 1.0, 0.01)
@@ -95,10 +90,7 @@ func test_tc_sl_02() -> void:
 	assert_true(AudioServer.is_bus_mute(bus_idx))
 	# Config unchanged
 	config = ConfigFile.new()
-	
-	# FIX: Load using encryption to verify
-	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
-	
+	config.load(test_config_path)
 	assert_almost_eq(config.get_value("audio", "master_volume"), 0.5, 0.01)
 	assert_true(config.get_value("audio", "master_muted"))
 	assert_eq(config.get_sections().size(), 1)
@@ -129,10 +121,7 @@ func test_tc_sl_03() -> void:
 	assert_true(AudioServer.is_bus_mute(bus_idx))
 	# Config has changes
 	var config: ConfigFile = ConfigFile.new()
-	
-	# FIX: Load using encryption because AudioManager saved it securely
-	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
-	
+	config.load(test_config_path)
 	assert_almost_eq(config.get_value("audio", "music_volume"), 0.7, 0.01)
 	assert_true(config.get_value("audio", "music_muted"))
 
@@ -143,10 +132,7 @@ func test_tc_sl_04() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("audio", "master_volume", "invalid_string")  # Wrong type
 	config.set_value("audio", "master_muted", 42)  # Wrong type for bool
-	
-	# FIX: Save using encryption to prevent C++ errors during AudioManager load
-	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
-	
+	config.save(test_config_path)
 	assert_true(FileAccess.file_exists(test_config_path))
 	AudioManager.load_volumes(test_config_path)
 	AudioManager.apply_all_volumes()
@@ -163,10 +149,7 @@ func test_tc_sl_04() -> void:
 ## :rtype: void
 func test_tc_sl_05() -> void:
 	var config: ConfigFile = ConfigFile.new()
-	
-	# FIX: Save using encryption to prevent C++ errors during AudioManager load
-	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
-	
+	config.save(test_config_path)  # Empty config
 	assert_true(FileAccess.file_exists(test_config_path))
 	# Set non-defaults
 	AudioManager.sfx_volume = 0.3
