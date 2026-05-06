@@ -12,7 +12,7 @@ on:  # yamllint disable-line rule:truthy
         description: "Playwright timeout in ms"
         required: false
         type: "number"
-        default: 30000
+        default: 10000
 
 jobs:
   test:
@@ -42,16 +42,20 @@ jobs:
       - name: "Flatten Export Directory"
         run: |
           bash ./.github/scripts/flatten_export.sh "export/web_thread_off" "Web_thread_off"
+
       - name: "List Export Directory Contents"
         run: |
           ls -la export/web_thread_off
+
       - name: "Patch index.js for security"
         run: |
           bash ./.github/scripts/patch_index_js.sh "export/web_thread_off"
+
       - name: "Set up Python"
         uses: "actions/setup-python@v6"
         with:
           python-version: "3.12"
+
       - name: "Cache PIP Dependencies"
         uses: "actions/cache@v5"
         id: cache
@@ -59,19 +63,23 @@ jobs:
           path: "~/.cache/pip"
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
           restore-keys: ${{ runner.os }}-pip-
+
       - name: "Install Playwright"
         run: |
           sudo apt-get update && sudo apt-get install -y libxml2-utils
           pip install playwright pytest-playwright pytest-asyncio
+
       - name: "Cache Playwright Browsers"
         uses: "actions/cache@v5"
+        id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/requirements.txt') }}  # Or your dependency file
-          restore-keys: ${{ runner.os }}-playwright-
+          # FIX: Added '-v2-' to force GitHub to build a brand new, healthy cache
+          key: ${{ runner.os }}-playwright-v2-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: ${{ runner.os }}-playwright-v2-
 
       - name: "Install Playwright Browsers"
-        if: steps.cache.outputs.cache-hit != 'true'  # Only install if not cached
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: |
           playwright install --with-deps chromium
 
@@ -102,11 +110,13 @@ jobs:
         uses: "actions/setup-node@v6"
         with:
           node-version: '20'  # Stable for Win10 compat
+
       - name: "Install Conversion Tools"
         # For conversion and report
         run: |
           npm install v8-to-istanbul nyc
       # yamllint disable rule:line-length
+
       - name: "Convert V8 to LCOV"
         run: |
           mkdir -p .nyc_output coverage/lcov
