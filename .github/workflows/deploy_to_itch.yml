@@ -42,7 +42,6 @@ jobs:
         run: |
             # 1. Escape backslashes and quotes for Godot's config format[cite: 14]
             ESCAPED_SALT=$(printf '%s' "$RAW_SECRET" | sed 's/\\/\\\\/g; s/"/\\"/g')
-            
             # 2. Use a section-aware awk script to update security/save_salt[cite: 14]
             # Pass the salt directly into awk to avoid broad environment exposure[cite: 14]
             awk -v salt="$ESCAPED_SALT" '
