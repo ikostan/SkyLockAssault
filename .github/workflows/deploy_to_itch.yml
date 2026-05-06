@@ -96,8 +96,7 @@ jobs:
                   print "security/save_salt=\"" salt "\""
                 }
               }
-            ' project.godot > project.godot.tmp
-            mv project.godot.tmp project.godot
+            ' project.godot > project.godot.tmp && mv project.godot.tmp project.godot
       - name: "Create Export Directories"
         run: |
           mkdir -p export/web
