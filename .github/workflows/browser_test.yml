@@ -226,4 +226,4 @@ jobs:
           else
             echo "No Playwright JUnit XML found, skipping upload."
           fi
-  # yamllint enable rule:line-length
+  # yamllint enable rule:line-length]
