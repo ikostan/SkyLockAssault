@@ -18,6 +18,11 @@ func before_test() -> void:
 	# FIX: Manually initialize the settings resource 
 	# because _ready() hasn't run yet.
 	globals.settings = GameSettingsResource.new()
+	
+	# --- ADD THIS LINE ---
+	# Override the empty project salt with a valid test key 
+	# to ensure saves actually use encryption.
+	globals.set_test_encryption_key()
 
 
 func after_test() -> void:
