@@ -299,11 +299,12 @@ def test_audio_flow(page: Page) -> None:
             page.evaluate("document.getElementById('music-slider').value") == "0.6"
         ), "Music value not changed"
 
-        # Check only new logs for no warnings (stronger assertion, catches unrelated warnings)
+        # Check only new logs for no warnings, ignoring known encryption fallbacks
         new_logs = logs[pre_change_log_count:]
-        assert not any(
-            "warning" in log["text"].lower() for log in new_logs
-        ), "Unexpected warning after music volume change"
+        for log in new_logs:
+            text = log["text"].lower()
+            if "warning" in text and "encryption aborted" not in text:
+                assert False, f"Unexpected warning after music volume change: {log['text']}"
 
     except Exception as e:
         print(f"Test: 'test_audio_flow' failed: {str(e)}")

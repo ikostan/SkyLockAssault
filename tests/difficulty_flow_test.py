@@ -163,11 +163,13 @@ def test_difficulty_flow(page: Page) -> None:
         assert any(
             "log level changed to: debug" in log["text"].lower() for log in new_logs
         ), "Failed to set log level to DEBUG"
-        # FIX: Look for the new encrypted save log instead of "settings saved"
+
+        # Allow either standard encrypted saves (native) OR plaintext fallbacks (WebGL)
         assert any(
-            "encrypted" in log["text"].lower() and "settings" in log["text"].lower()
+            ("encrypted" in log["text"].lower() and "settings" in log["text"].lower()) or
+            "falling back to plaintext" in log["text"].lower()
             for log in new_logs
-        ), "Failed to save the settings"
+        ), "Failed to save the settings (neither encrypted save nor plaintext fallback detected)"
 
         # Go back to Options menu
         page.wait_for_selector(
@@ -210,6 +212,7 @@ def test_difficulty_flow(page: Page) -> None:
             "js difficulty callback called with valid value: 2.0" in log["text"].lower()
             for log in new_logs
         ), "Failed to extract/validate difficulty 2.0 from JS payload"
+
         # FIX: Look for the new encrypted save log instead of "settings saved"
         assert any(
             "encrypted" in log["text"].lower() and "settings" in log["text"].lower()

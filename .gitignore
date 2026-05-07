@@ -48,3 +48,4 @@ v8_coverage_*.json
 tests/refactor/__pycache__/
 report.html
 project_structure.txt
+*.pyc
