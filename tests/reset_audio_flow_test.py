@@ -235,7 +235,11 @@ def test_reset_flow(page: Page) -> None:
         ), "Value changed unexpectedly"
 
         new_logs = logs[pre_reset_logs:]
-        ignored_phrases = ["encryption aborted", "salt is empty", "key generation failed"]
+        ignored_phrases = [
+            "encryption aborted",
+            "salt is empty",
+            "key generation failed",
+        ]
 
         actual_errors = []
         for log in new_logs:
@@ -244,7 +248,9 @@ def test_reset_flow(page: Page) -> None:
                 if not any(ignored in text for ignored in ignored_phrases):
                     actual_errors.append(log["text"])
 
-        assert not actual_errors, f"Unexpected error after reset on defaults: {actual_errors}"
+        assert (
+            not actual_errors
+        ), f"Unexpected error after reset on defaults: {actual_errors}"
 
         # RESET-03: Reset after incomplete changes
         # Preconditions: Only Master & Rotors changed
