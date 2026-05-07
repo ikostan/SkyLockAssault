@@ -304,7 +304,9 @@ def test_audio_flow(page: Page) -> None:
         for log in new_logs:
             text = log["text"].lower()
             if "warning" in text and "encryption aborted" not in text:
-                assert False, f"Unexpected warning after music volume change: {log['text']}"
+                assert (
+                    False
+                ), f"Unexpected warning after music volume change: {log['text']}"
 
     except Exception as e:
         print(f"Test: 'test_audio_flow' failed: {str(e)}")

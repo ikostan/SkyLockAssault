@@ -166,8 +166,8 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Allow either standard encrypted saves (native) OR plaintext fallbacks (WebGL)
         assert any(
-            ("encrypted" in log["text"].lower() and "settings" in log["text"].lower()) or
-            "falling back to plaintext" in log["text"].lower()
+            ("encrypted" in log["text"].lower() and "settings" in log["text"].lower())
+            or "falling back to plaintext" in log["text"].lower()
             for log in new_logs
         ), "Failed to save the settings (neither encrypted save nor plaintext fallback detected)"
 
