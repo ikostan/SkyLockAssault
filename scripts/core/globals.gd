@@ -240,22 +240,31 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	config.set_value("Settings", "enable_debug_logging", settings.enable_debug_logging)
 	config.set_value("Settings", "max_fuel", settings.max_fuel)
 
-	# Always save using encryption from this point forward
-	err = config.save_encrypted_pass(path, ensure_encryption_key())
+	# FIX: Re-added the branch to properly handle the plaintext failsafe
+	var key: String = ensure_encryption_key()
 
-	if err != OK:
-		log_message(
-			(
-				"🚨 CRITICAL ENCRYPTION FAILURE: Failed to save encrypted settings to "
-				+ path
-				+ " (Error: "
-				+ str(err)
-				+ ")"
-			),
-			LogLevel.ERROR
-		)
+	if key.is_empty():
+		err = config.save(path)
+		if err != OK:
+			log_message(
+				"🚨 CRITICAL FAILURE: Failed to save plaintext settings (Error: " + str(err) + ")",
+				LogLevel.ERROR
+			)
+		else:
+			log_message("⚠️ FAILSAFE ACTIVE: Settings saved in PLAINTEXT.", LogLevel.WARNING)
 	else:
-		log_message("🔒 Encrypted settings persisted successfully to " + path, LogLevel.DEBUG)
+		err = config.save_encrypted_pass(path, key)
+		if err != OK:
+			log_message(
+				(
+					"🚨 CRITICAL ENCRYPTION FAILURE: Failed to save encrypted settings (Error: "
+					+ str(err)
+					+ ")"
+				),
+				LogLevel.ERROR
+			)
+		else:
+			log_message("🔒 Encrypted settings persisted successfully.", LogLevel.DEBUG)
 
 
 func _on_options_exited_unexpectedly() -> void:
@@ -447,23 +456,28 @@ func ensure_encryption_key() -> String:
 ## :rtype: String (The SHA-256 hashed key)
 ## Generates a unique, deterministic encryption key for local save files.
 ## Generates a unique, deterministic encryption key for local save files.
+## Generates a unique, deterministic encryption key for local save files.
 func _get_encryption_key() -> String:
 	var salt: String = ProjectSettings.get_setting("game/security/save_salt", "dev_fallback_salt")
 
-	# NEW: Make the game self-aware of Playwright/Puppeteer testing!
+	# 1. FAILSAFE: If the salt is literally empty, always abort to plaintext
+	if salt.is_empty():
+		log_message(
+			"🚨 ENCRYPTION ABORTED: Salt is empty. Falling back to plaintext.", LogLevel.WARNING
+		)
+		return ""
+
 	var is_automated_test: bool = false
 	if OS.has_feature("web"):
 		is_automated_test = JavaScriptBridge.eval("navigator.webdriver") == true
 
-	# SECURITY GUARD: Prevent silent weak-key fallback in production.
-	# We now allow the dev salt if the browser is driven by automated tests.
+	# 2. SECURITY GUARD: Prevent silent weak-key fallback in production.
 	if not OS.has_feature("editor") and not OS.has_feature("debug") and not is_automated_test:
-		if salt == "dev_fallback_salt" or salt.is_empty():
-			var error_msg: String = "CRITICAL SECURITY ERROR: Missing salt."
+		if salt == "dev_fallback_salt":
+			var error_msg: String = "CRITICAL SECURITY ERROR: Missing or weak salt."
 			push_error(error_msg)
 			OS.crash(error_msg)
 			return ""
-
 	# FIX: OS.get_unique_id() crashes on Web
 	var device_id: String = "web_fallback"
 	if OS.get_name() != "Web":

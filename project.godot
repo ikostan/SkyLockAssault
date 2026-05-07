@@ -52,6 +52,10 @@ window/vsync/vsync_mode=0
 
 enabled=PackedStringArray("res://addons/ai_autonomous_agent/plugin.cfg", "res://addons/gut/plugin.cfg")
 
+[game]
+
+security/save_salt=""
+
 [gdunit4]
 
 settings/test/test_discovery=true
