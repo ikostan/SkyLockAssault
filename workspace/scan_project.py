@@ -3,21 +3,21 @@ import os
 
 def generate_tree(startpath, exclude_dirs=None):
     if exclude_dirs is None:
-        exclude_dirs = {'.git', '.godot', '__pycache__', 'node_modules', '.github'}
+        exclude_dirs = {".git", ".godot", "__pycache__", "node_modules", ".github"}
 
     output = []
     for root, dirs, files in os.walk(startpath):
         # Filter out excluded directories
         dirs[:] = [d for d in dirs if d not in exclude_dirs]
 
-        level = root.replace(startpath, '').count(os.sep)
-        indent = ' ' * 4 * (level)
-        output.append(f'{indent}{os.path.basename(root)}/')
+        level = root.replace(startpath, "").count(os.sep)
+        indent = " " * 4 * (level)
+        output.append(f"{indent}{os.path.basename(root)}/")
 
-        sub_indent = ' ' * 4 * (level + 1)
+        sub_indent = " " * 4 * (level + 1)
         for f in files:
             # You can add file extensions to exclude here if needed
-            output.append(f'{sub_indent}{f}')
+            output.append(f"{sub_indent}{f}")
 
     return "\n".join(output)
 
