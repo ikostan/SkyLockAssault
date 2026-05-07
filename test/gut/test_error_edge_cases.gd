@@ -20,9 +20,12 @@ func before_each() -> void:
 		DirAccess.remove_absolute(test_config_path)
 	if FileAccess.file_exists(corrupted_path):
 		DirAccess.remove_absolute(corrupted_path)
+
+	Globals.set_test_encryption_key()
 	AudioManager.current_config_path = test_config_path
 	AudioManager._init_to_defaults()
 	AudioManager.apply_all_volumes()
+	
 	# Add audio buses if not exist
 	if AudioServer.get_bus_index(AudioConstants.BUS_MASTER) == -1:
 		AudioServer.add_bus(0)
@@ -90,8 +93,13 @@ func test_tc_sl_23() -> void:
 	assert_eq(config.get_value("random", "unknown_key"), "value")
 	
 	# Similar for other saves
+	# FIX: Prevent auto-save signal
+	Globals._is_loading_settings = true
 	Globals.settings.difficulty = 2.0
-	Globals._save_settings()
+	Globals._is_loading_settings = false
+	
+	# FIX: Pass test_config_path so it doesn't overwrite user://settings.cfg
+	Globals._save_settings(test_config_path)
 	
 	config = ConfigFile.new()
 	config.load_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
@@ -105,11 +113,17 @@ func test_tc_sl_24() -> void:
 	assert_false(FileAccess.file_exists(test_config_path))
 	# Change to non-defaults to check keep on NOT_FOUND
 	AudioManager.master_volume = 0.5
+	
+	# FIX: Prevent auto-save to production file
+	Globals._is_loading_settings = true
 	Globals.settings.difficulty = 2.0
+	Globals._is_loading_settings = false
+	
 	# Load all
 	AudioManager.load_volumes()
 	Settings.load_input_mappings(test_config_path)
 	Globals._load_settings(test_config_path)
+	
 	# Verify keeps current (per updated code: skips on NOT_FOUND)
 	assert_eq(AudioManager.master_volume, 0.5)
 	assert_eq(Globals.settings.difficulty, 2.0)
