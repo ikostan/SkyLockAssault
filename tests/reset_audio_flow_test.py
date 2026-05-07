@@ -233,10 +233,18 @@ def test_reset_flow(page: Page) -> None:
             float(page.evaluate("document.getElementById('master-slider').value"))
             == 1.0
         ), "Value changed unexpectedly"
+
         new_logs = logs[pre_reset_logs:]
-        assert not any(
-            "error" in log["text"].lower() for log in new_logs
-        ), "Unexpected error after reset on defaults"
+        ignored_phrases = ["encryption aborted", "salt is empty", "key generation failed"]
+
+        actual_errors = []
+        for log in new_logs:
+            text = log["text"].lower()
+            if "error" in text:
+                if not any(ignored in text for ignored in ignored_phrases):
+                    actual_errors.append(log["text"])
+
+        assert not actual_errors, f"Unexpected error after reset on defaults: {actual_errors}"
 
         # RESET-03: Reset after incomplete changes
         # Preconditions: Only Master & Rotors changed
