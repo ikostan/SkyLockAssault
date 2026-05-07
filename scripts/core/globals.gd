@@ -241,13 +241,21 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	config.set_value("Settings", "max_fuel", settings.max_fuel)
 
 	# Always save using encryption from this point forward
-	# FIX: Use the centralized key ensurer
 	err = config.save_encrypted_pass(path, ensure_encryption_key())
 
 	if err != OK:
-		log_message("CRITICAL: Failed to save encrypted settings: " + str(err), LogLevel.ERROR)
+		log_message(
+			(
+				"🚨 CRITICAL ENCRYPTION FAILURE: Failed to save encrypted settings to "
+				+ path
+				+ " (Error: "
+				+ str(err)
+				+ ")"
+			),
+			LogLevel.ERROR
+		)
 	else:
-		log_message("Encrypted settings persisted successfully.", LogLevel.DEBUG)
+		log_message("🔒 Encrypted settings persisted successfully to " + path, LogLevel.DEBUG)
 
 
 func _on_options_exited_unexpectedly() -> void:
@@ -413,6 +421,14 @@ func _play_ui_navigation_sfx() -> void:
 func ensure_encryption_key() -> String:
 	if save_encryption_pass.is_empty():
 		save_encryption_pass = _get_encryption_key()
+		if save_encryption_pass.is_empty():
+			log_message(
+				"🚨 KEY GENERATION FAILED: Generated encryption key is empty!", LogLevel.ERROR
+			)
+		else:
+			log_message(
+				"🔑 Encryption key successfully generated and cached in memory.", LogLevel.DEBUG
+			)
 	return save_encryption_pass
 
 
@@ -475,7 +491,6 @@ func is_file_encrypted(path: String) -> bool:
 ## Safely loads a config file, handling both encrypted and legacy plaintext formats.
 ## Returns a Dictionary: {"config": ConfigFile, "err": int, "is_legacy": bool}
 func safe_load_config(path: String) -> Dictionary:
-	# FIX: Delegate to centralized helper
 	var key: String = ensure_encryption_key()
 
 	var config: ConfigFile = ConfigFile.new()
@@ -484,12 +499,37 @@ func safe_load_config(path: String) -> Dictionary:
 
 	if not FileAccess.file_exists(path):
 		err = ERR_FILE_NOT_FOUND
+		log_message(
+			"Config file not found at: " + path + " (Normal for first-time boot)", LogLevel.DEBUG
+		)
 	elif is_file_encrypted(path):
 		err = config.load_encrypted_pass(path, key)
+		if err != OK:
+			log_message(
+				(
+					"🚨 DECRYPTION FAILED for file: "
+					+ path
+					+ " (Error code: "
+					+ str(err)
+					+ "). Key mismatch or corrupted file!"
+				),
+				LogLevel.ERROR
+			)
+		else:
+			log_message("🔓 Successfully decrypted file: " + path, LogLevel.DEBUG)
 	else:
 		err = config.load(path)
 		if err == OK:
 			is_legacy = true
+			log_message(
+				"⚠️ Loaded unencrypted plaintext file: " + path + ". Migration needed.",
+				LogLevel.WARNING
+			)
+		else:
+			log_message(
+				"Failed to load plaintext file: " + path + " (Error: " + str(err) + ")",
+				LogLevel.ERROR
+			)
 
 	return {"config": config, "err": err, "is_legacy": is_legacy}
 

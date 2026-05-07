@@ -733,15 +733,24 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				serials.append(s)
 		config.set_value("input", action, serials)
 
-	# FIX: Use the centralized key helper
 	err = config.save_encrypted_pass(path, Globals.ensure_encryption_key())
 
 	if err != OK:
-		Globals.log_message("Failed to save input mappings: " + str(err), Globals.LogLevel.ERROR)
+		Globals.log_message(
+			(
+				"🚨 ENCRYPTION FAILURE: Failed to save encrypted input mappings to "
+				+ path
+				+ " (Error: "
+				+ str(err)
+				+ ")"
+			),
+			Globals.LogLevel.ERROR
+		)
 	else:
-		Globals.log_message("Input mappings saved.", Globals.LogLevel.DEBUG)
+		Globals.log_message("🔒 Encrypted input mappings saved to " + path, Globals.LogLevel.DEBUG)
 
 
+## Saves the last selected input device to config.
 ## Saves the last selected input device to config.
 func save_last_input_device(device: String) -> void:
 	if device not in ["keyboard", "gamepad"]:
@@ -766,9 +775,16 @@ func save_last_input_device(device: String) -> void:
 	err = config.save_encrypted_pass(CONFIG_PATH, Globals.ensure_encryption_key())
 
 	if err != OK:
-		Globals.log_message("Failed to save last input device: " + str(err), Globals.LogLevel.ERROR)
+		Globals.log_message(
+			(
+				"🚨 ENCRYPTION FAILURE: Failed to save encrypted last input device (Error: "
+				+ str(err)
+				+ ")"
+			),
+			Globals.LogLevel.ERROR
+		)
 	else:
-		Globals.log_message("Last input device saved.", Globals.LogLevel.DEBUG)
+		Globals.log_message("🔒 Encrypted last input device saved.", Globals.LogLevel.DEBUG)
 
 
 ## Loads the last selected input device (defaults to keyboard).
