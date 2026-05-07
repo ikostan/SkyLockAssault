@@ -16,7 +16,12 @@ func before_each() -> void:
 	_resource = GameSettingsResource.new()
 	# Ensure the Singleton uses our local test resource to avoid 
 	# cross-test contamination and production file overwrites.
-	Globals.settings = _resource 
+	Globals.settings = _resource
+	
+	# --- ADD THIS LINE ---
+	# Override the empty project salt with a valid test key 
+	# to ensure saves actually use encryption.
+	Globals.set_test_encryption_key()
 	
 	if FileAccess.file_exists(_test_config_path):
 		DirAccess.remove_absolute(_test_config_path)

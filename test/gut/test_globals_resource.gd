@@ -11,6 +11,11 @@ func before_each() -> void:
 	if FileAccess.file_exists(TEST_RESOURCE_PATH):
 		DirAccess.remove_absolute(TEST_RESOURCE_PATH)
 	
+	# --- ADD THIS LINE ---
+	# Override the empty project salt with a valid test key 
+	# to ensure saves actually use encryption.
+	Globals.set_test_encryption_key()
+	
 	# REMOVE the double_scene line. It is causing the crash in Image 7.
 	# If you need to stop log spam, just do this:
 	Globals.settings.current_log_level = Globals.LogLevel.NONE
@@ -33,7 +38,14 @@ func test_logging_default_level() -> void:
 
 func test_logging_persistence() -> void:
 	gut.p("Testing: Persistence writes to config file.")
+	
+	# --- UPDATE THIS BLOCK ---
+	# Prevent the signal from triggering an auto-save to the production file
+	Globals._is_loading_settings = true
 	Globals.settings.current_log_level = 0 # DEBUG
+	Globals._is_loading_settings = false
+	
+	# Explicitly save to our isolated test path
 	Globals._save_settings(TEST_RESOURCE_PATH)
 	
 	assert_true(FileAccess.file_exists(TEST_RESOURCE_PATH), "Config file should exist")

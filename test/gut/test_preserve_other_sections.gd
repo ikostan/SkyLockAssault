@@ -20,9 +20,15 @@ func before_each() -> void:
 	if FileAccess.file_exists(test_config_path):
 		DirAccess.copy_absolute(test_config_path, backup_path)
 		DirAccess.remove_absolute(test_config_path)
+	
+	# --- ADD THIS LINE ---
+	# Override the empty project salt with a valid test key 
+	# to ensure saves actually use encryption.
+	Globals.set_test_encryption_key()
 	AudioManager.current_config_path = test_config_path
 	AudioManager._init_to_defaults()
 	AudioManager.apply_all_volumes()
+	
 	# Add audio buses if not exist
 	if AudioServer.get_bus_index(AudioConstants.BUS_MASTER) == -1:
 		AudioServer.add_bus(0)

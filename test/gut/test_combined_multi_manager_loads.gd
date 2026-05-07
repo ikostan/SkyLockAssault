@@ -15,6 +15,12 @@ var test_config_path: String = "user://test_combined.cfg"
 func before_each() -> void:
 	if FileAccess.file_exists(test_config_path):
 		DirAccess.remove_absolute(test_config_path)
+	
+	# --- ADD THIS LINE ---
+	# Overrides the empty project salt with a valid test key 
+	# to ensure Globals._save_settings doesn't fall back to plaintext.
+	Globals.set_test_encryption_key()
+	
 	AudioManager.current_config_path = test_config_path
 	AudioManager._init_to_defaults()
 	AudioManager.apply_all_volumes()
@@ -34,9 +40,13 @@ func before_each() -> void:
 	if AudioServer.get_bus_index(AudioConstants.BUS_SFX_ROTORS) == -1:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, AudioConstants.BUS_SFX_ROTORS)
+	
 	# Reset Globals
+	Globals._is_loading_settings = true
 	Globals.settings.current_log_level = Globals.LogLevel.INFO
 	Globals.settings.difficulty = 1.0
+	Globals._is_loading_settings = false
+	
 	# Reset InputMap to defaults
 	for action: String in Settings.ACTIONS:
 		InputMap.action_erase_events(action)
@@ -112,7 +122,10 @@ func test_tc_sl_12() -> void:
 	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
 	
 	# Initial Globals
+	Globals._is_loading_settings = true
 	Globals.settings.current_log_level = Globals.LogLevel.DEBUG
+	Globals._is_loading_settings = false
+	
 	# Load Globals first (should fallback for invalid log_level)
 	Globals._load_settings(test_config_path)
 	assert_eq(Globals.settings.current_log_level, Globals.LogLevel.DEBUG)
@@ -198,7 +211,9 @@ func test_tc_sl_14() -> void:
 	assert_eq(config.get_value("input", "speed_up"), ["key:87"])
 	
 	# Change settings and save
+	Globals._is_loading_settings = true
 	Globals.settings.difficulty = 2.0
+	Globals._is_loading_settings = false
 	Globals._save_settings(test_config_path)
 	config = ConfigFile.new()
 	
@@ -240,8 +255,11 @@ func test_tc_sl_15() -> void:
 	# Change audio and save
 	AudioManager.master_volume = 0.5
 	AudioManager.save_volumes(test_config_path)
+	
 	# Immediately change and save globals
+	Globals._is_loading_settings = true
 	Globals.settings.difficulty = 2.0
+	Globals._is_loading_settings = false
 	Globals._save_settings(test_config_path)
 	
 	# Verify final config
