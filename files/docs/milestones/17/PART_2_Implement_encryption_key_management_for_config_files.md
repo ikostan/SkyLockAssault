@@ -96,7 +96,7 @@ quality, maintainability, and security:
 
 ### Assessment Against Linked Issues
 
-<!-- markdownlint-disable line-length -->
+<!-- markdownlint-disable line-length table-column-style -->
 | Issue                                                        | Objective                                                                      | Addressed | Explanation                                                                                       |
 |--------------------------------------------------------------|--------------------------------------------------------------------------------|-----------|---------------------------------------------------------------------------------------------------|
 | [#529](https://github.com/ikostan/SkyLockAssault/issues/529) | Introduce centralized deterministic encryption key management in `globals.gd`. | ✅         | Fulfilled via `Globals.save_encryption_pass`, `_get_encryption_key`, and deterministic overrides. |
@@ -111,4 +111,4 @@ quality, maintainability, and security:
 | [#532](https://github.com/ikostan/SkyLockAssault/issues/532) | Add GUT tests for new install encrypted file creation.                         | ✅         | Added to `test_settings_migration.gd`.                                                            |
 | [#532](https://github.com/ikostan/SkyLockAssault/issues/532) | Add GUT tests for legacy plaintext to encrypted migration.                     | ✅         | Added to `test_settings_migration.gd`.                                                            |
 | [#532](https://github.com/ikostan/SkyLockAssault/issues/532) | Add GUT tests validating multi-writer safe coexistence.                        | ✅         | Handled across multi-writer test suites.                                                          |
-<!-- markdownlint-enable line-length -->
+<!-- markdownlint-enable line-length table-column-style -->
