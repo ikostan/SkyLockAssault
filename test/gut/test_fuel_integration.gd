@@ -2,6 +2,7 @@
 ## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_fuel_integration_gut.gd
 ## GUT integration tests for Fuel System signals and persistence.
+
 extends "res://addons/gut/test.gd"
 
 const TEST_CONFIG_PATH: String = "user://test_fuel_persistence.cfg"
@@ -12,8 +13,11 @@ const TEST_CONFIG_PATH: String = "user://test_fuel_persistence.cfg"
 func before_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
-	stub(Globals, 'log_message').to_do_nothing()
+		
+	# FIX: GUT's stub() requires a Double, not a live Autoload/Singleton.
+	# To silence logs during the test, we just set the log level to NONE (4).
 	Globals.settings = GameSettingsResource.new()
+	Globals.settings.current_log_level = 4
 
 
 ## Per-test cleanup: Remove temp config.
@@ -40,7 +44,6 @@ func test_fuel_depletion_signal_emitted_once() -> void:
 	assert_signal_emit_count(Globals.settings, "fuel_depleted", 1, "Signal should not fire twice")
 
 # --- 2. Persistence Tests ---
-
 ## test_persistence_invalid_types_fallback | Ensure robustness against invalid data
 ## :rtype: void
 func test_persistence_invalid_types_fallback() -> void:
@@ -49,7 +52,9 @@ func test_persistence_invalid_types_fallback() -> void:
 	
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("Settings", "max_fuel", "corrupt_string_value")
-	config.save(TEST_CONFIG_PATH)
+	
+	# FIX: Save using encryption to prevent the C++ "magic number" error
+	config.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
 	
 	Globals._load_settings(TEST_CONFIG_PATH)
 	assert_eq(Globals.settings.max_fuel, default_max, "System failed to fallback on invalid type")

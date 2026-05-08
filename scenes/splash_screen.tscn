@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3 uid="uid://di3kdwlspwjbt"]
 
-[ext_resource type="Script" uid="uid://dm26g1kkq7f3w" path="res://scripts/splash_screen.gd" id="1_hsxvm"]
+[ext_resource type="Script" uid="uid://dm26g1kkq7f3w" path="res://scripts/ui/screens/splash_screen.gd" id="1_hsxvm"]
 [ext_resource type="Texture2D" uid="uid://b7jpd8lq6kokg" path="res://assets/ikostan_logo_bg_removed.png" id="1_n4g2v"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hsxvm"]

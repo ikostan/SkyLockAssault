@@ -52,7 +52,7 @@ func test_difficulty_scales_fuel_and_weapon() -> void:
 	Globals.settings.current_fuel = start_fuel
 	
 	# NEW: Calculate normalized speed using the global max_speed, as MAX_SPEED was removed from player.gd
-	var normalized_speed: float = player.speed["speed"] / Globals.settings.max_speed
+	var normalized_speed: float = player.current_speed / Globals.settings.max_speed
 	
 	# OLD: var expected_depletion: float = player.base_fuel_drain * normalized_speed * Globals.settings.difficulty
 	# NEW: Reference base_consumption_rate from the global resource since it was removed from the player script
