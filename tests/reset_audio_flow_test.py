@@ -358,9 +358,7 @@ def test_reset_flow(page: Page) -> None:
                 if not any(ignored in text for ignored in ignored_phrases):
                     actual_errors.append(log["text"])
 
-        assert (
-            not actual_errors
-        ), f"JS errors during rapid reset: {actual_errors}"
+        assert not actual_errors, f"JS errors during rapid reset: {actual_errors}"
 
         # STATE-01: Reset button state persists in config
         # Preconditions: After Reset + Save
