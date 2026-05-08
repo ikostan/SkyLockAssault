@@ -25,6 +25,8 @@ exact contents before and after encryption.
    of the exact paths saved by the engine
    (e.g., `/userfs/godot/app_userdata/SkyLockAssault/settings.cfg`).
 
+<img width="1058" height="628" alt="image" src="https://github.com/user-attachments/assets/1c674051-fea3-47d0-b9fc-fff9769172fe" />
+
 ### How to Read the File Contents
 
 Because IndexedDB stores file contents as raw byte arrays, simply
