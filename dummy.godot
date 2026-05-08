@@ -1,0 +1,5 @@
+[application]
+name="Test"
+
+[game]
+security/save_salt="my"nastysalt123"
