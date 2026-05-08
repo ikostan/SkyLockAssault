@@ -14,6 +14,7 @@ Here is the complete procedure to inspect those files and read their
 exact contents before and after encryption.
 
 ### How to Locate the Virtual File System
+
 1. Open your deployed web game in Google Chrome.
 2. Open Chrome Developer Tools (press **F12** or **Ctrl+Shift+I**).
 3. Navigate to the **Application** tab at the top.
@@ -35,7 +36,7 @@ decode them into a readable format.
 2. **Critical Step:** Locate the Execution Context dropdown at the
    top-left of the Console panel (it defaults to saying **`top`**).
    Click the dropdown and change it from `top` to **`index.html`**
-   (or the specific iframe name running your game). 
+   (or the specific iframe name running your game).
    If you do not change this, the script will return an error because
    it cannot find the database within the top-level page context.
 3. Paste and run the following JavaScript script:

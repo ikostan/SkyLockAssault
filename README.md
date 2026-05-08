@@ -146,7 +146,6 @@ these GPL requirements, a separate license is available upon request.
 - Observer-based Settings System: Centralized GameSettingsResource that handles
   automatic persistence and UI synchronization through signals.
 
-
 ### Project Structure (`scripts/`)
 
 Post-Refactor Phase 4 (PR `#582`), the root `scripts/` directory has been fully
@@ -305,7 +304,7 @@ to user input devices:
 - Modifier-aware remapping requires explicit key+modifier press for
   unique bindings.
 
-###  Milestone 14
+### Milestone 14
 
 **Status:** Stable gameplay loop with synced UI systems and GUT-based
 unit testing.
@@ -314,7 +313,7 @@ unit testing.
 
 ### Milestone 16
 
-**Status:** Stable gameplay loop with fully refactored script architecture, 
+**Status:** Stable gameplay loop with fully refactored script architecture,
 synced UI systems, and GUT-based unit testing.
 **Active Focus:** Gameplay expansion (AI enemies, multiplayer, levels).
 
