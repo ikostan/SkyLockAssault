@@ -1,4 +1,8 @@
 
+# How to inspect the files saved by a Godot web export
+
+## Introduction
+
 To inspect the files saved by a Godot web export, you must look into
 Chrome's IndexedDB. Because browsers cannot write directly to a
 physical hard drive for security reasons, the web exporter uses
