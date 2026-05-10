@@ -88,17 +88,23 @@ echo "=========================================="
 echo "📁 Creating Export Directories..."
 mkdir -p export/web
 
-echo "🎮 Exporting Godot project (Web preset)..."
-# This mimics the firebelley/godot-export action
-$GODOT_CMD --verbose --headless --export-release "Web" export/web/Web.zip
+# 4. Mimic Export & Deployment Steps
+echo ""
+echo "=========================================="
+echo " Executing Build & Export Pipeline"
+echo "=========================================="
 
-if [ ! -f "export/web/Web.zip" ]; then
-    echo "❌ Export failed. Web.zip not found. Ensure your preset is named exactly 'Web'."
+echo "🗑️ Cleaning old ghost files..."
+rm -rf export/web/*
+mkdir -p export/web
+
+echo "🎮 Exporting Godot project (Web preset)..."
+$GODOT_CMD --verbose --headless --export-release "Web" export/web/index.html
+
+if [ ! -f "export/web/index.pck" ]; then
+    echo "❌ Export failed. index.pck not found."
     exit 1
 fi
-
-echo "📦 Unzipping Export Archive..."
-unzip -o export/web/Web.zip -d export/web > /dev/null
 
 echo "🛡️ Patching index.js for security..."
 if [ -f "./.github/scripts/patch_index_js.sh" ]; then
@@ -107,13 +113,7 @@ else
     echo "⚠️ Warning: .github/scripts/patch_index_js.sh not found locally. Skipping."
 fi
 
-echo "🤐 Re-zipping Flattened Export..."
-cd export/web
-zip -r ../Web.zip . > /dev/null
-cd ../..
-
 echo "✅ Build pipeline completed successfully."
-
 
 # 5. Start Local Server
 echo ""
