@@ -480,7 +480,7 @@ func _get_encryption_key() -> String:
 			return ""
 	# FIX: OS.get_unique_id() crashes on Web
 	var device_id: String = "web_fallback"
-	if OS.get_name() != "Web":
+	if not OS.has_feature("web"):
 		device_id = OS.get_unique_id()
 
 	return (device_id + salt).sha256_text()
