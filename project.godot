@@ -54,7 +54,7 @@ enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 
 [game]
 
-security/save_salt=""
+security/save_salt="dev_fallback_salt"
 
 [gdunit4]
 
