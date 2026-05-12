@@ -1,6 +1,17 @@
 #!/bin/bash
 # test_injection.sh
 
+BACKUP_FILE="project.godot.backup"
+
+# Trap function to ensure the file is ALWAYS restored on exit or Ctrl+C
+cleanup() {
+    if [ -f "$BACKUP_FILE" ]; then
+        echo "🧹 Cleaning up: Restoring project.godot from backup..."
+        mv -f "$BACKUP_FILE" project.godot
+    fi
+}
+trap cleanup EXIT INT TERM
+
 GODOT_CMD="godot"
 RAW_SECRET='T3st_S@lt!_2026#"\'
 export PRODUCTION_SALT="$RAW_SECRET"
@@ -14,7 +25,7 @@ if [ ! -f "project.godot" ]; then
     exit 1
 fi
 
-cp project.godot project.godot.backup
+cp project.godot "$BACKUP_FILE"
 
 echo "🗑️ Wiping Windows .godot cache to force a clean Linux build..."
 rm -rf .godot/
