@@ -3,7 +3,6 @@
 
 BACKUP_FILE="project.godot.backup"
 
-# Trap function to ensure the file is ALWAYS restored on exit or Ctrl+C
 cleanup() {
     if [ -f "$BACKUP_FILE" ]; then
         echo "🧹 Cleaning up: Restoring project.godot from backup..."
@@ -32,10 +31,13 @@ rm -rf .godot/
 rm -rf export/web/*
 mkdir -p export/web
 
-echo "⚙️ Injecting secret using production AWK script..."
-ESCAPED_SALT=$(printf '%s' "$PRODUCTION_SALT" | sed 's/\\/\\\\/g; s/"/\\"/g')
-awk -v salt="$ESCAPED_SALT" '
-  BEGIN { in_game = 0; salt_written = 0; saw_game_section = 0 }
+echo "⚙️ Injecting secret using safe ENVIRON AWK script..."
+# 1. Escape for Godot's parser and EXPORT to environment
+export GODOT_ESCAPED=$(printf '%s' "$PRODUCTION_SALT" | sed 's/\\/\\\\/g; s/"/\\"/g')
+
+# 2. Use ENVIRON to prevent awk from stripping our escapes
+awk '
+  BEGIN { salt = ENVIRON["GODOT_ESCAPED"]; in_game = 0; salt_written = 0; saw_game_section = 0 }
   {
     if ($0 ~ /^\[game\]/) { in_game = 1; saw_game_section = 1; print; next }
     else if ($0 ~ /^\[/ && $0 !~ /^\[game\]/) {
@@ -52,7 +54,10 @@ awk -v salt="$ESCAPED_SALT" '
     if (in_game && !salt_written) { print "security/save_salt=\"" salt "\""; salt_written = 1 }
     if (!saw_game_section) { if (NR > 0) { print "" }; print "[game]"; print "security/save_salt=\"" salt "\"" }
   }
-' project.godot > project.godot.tmp && mv project.godot.tmp project.godot
+' project.godot > project.godot.tmp && mv project.godot.tmp project.godot || {
+    echo "❌ ERROR: Failed to inject security/save_salt into project.godot."
+    exit 1
+}
 
 echo "🎮 Exporting Godot project (Web preset)..."
 $GODOT_CMD --verbose --headless --export-release "Web" export/web/index.html
@@ -63,7 +68,10 @@ if [ ! -f "export/web/index.pck" ]; then
 fi
 
 if [ -f "./.github/scripts/patch_index_js.sh" ]; then
-    bash ./.github/scripts/patch_index_js.sh "export/web"
+    bash ./.github/scripts/patch_index_js.sh "export/web" || {
+        echo "❌ ERROR: patch_index_js.sh failed."
+        exit 1
+    }
 fi
 
 echo "✅ Build pipeline completed successfully."
