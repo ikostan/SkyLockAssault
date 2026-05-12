@@ -33,7 +33,8 @@ mkdir -p export/web
 
 echo "⚙️ Injecting secret using safe ENVIRON AWK script..."
 # 1. Escape for Godot's parser and EXPORT to environment
-export GODOT_ESCAPED=$(printf '%s' "$PRODUCTION_SALT" | sed 's/\\/\\\\/g; s/"/\\"/g')
+GODOT_ESCAPED=$(printf '%s' "$PRODUCTION_SALT" | sed 's/\\/\\\\/g; s/"/\\"/g')
+export GODOT_ESCAPED
 
 # 2. Use ENVIRON to prevent awk from stripping our escapes
 awk '
@@ -60,7 +61,29 @@ awk '
 }
 
 echo "🎮 Exporting Godot project (Web preset)..."
-$GODOT_CMD --verbose --headless --export-release "Web" export/web/index.html
+echo "⏳ Rebuilding cache from scratch. This may take 10+ minutes over Docker."
+
+$GODOT_CMD --verbose --headless --export-release "Web" export/web/index.html > export_log.txt 2>&1 &
+GODOT_PID=$!
+
+SECONDS=0
+SPINNER="-\|/"
+i=0
+while kill -0 $GODOT_PID 2>/dev/null; do
+  i=$(( (i+1) % 4 ))
+  printf "\r⚙️ Godot is working... %s (Elapsed Time: %d seconds)" "${SPINNER:$i:1}" "$SECONDS"
+  sleep 1
+done
+
+printf "\r✅ Export process finished! (Total time: %d seconds)                  \n" "$SECONDS"
+
+wait $GODOT_PID
+if [ $? -ne 0 ]; then
+    echo "❌ FATAL: Godot engine crashed during export."
+    echo "📄 Printing the last 20 lines of the crash log:"
+    tail -n 20 export_log.txt
+    exit 1
+fi
 
 if [ ! -f "export/web/index.pck" ]; then
     echo "❌ Export failed. index.pck not found."
