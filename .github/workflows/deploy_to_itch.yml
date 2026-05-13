@@ -36,56 +36,17 @@ jobs:
             printf '\n[application]\nconfig/version="%s"\n' "$ESCAPED_VERSION" >> project.godot
           fi
 
-      - name: "Inject Production Salt into project.godot"
+      - name: "Disable Editor Plugins (Prevent Headless Crash)"
+        run: |
+          sed -i 's/^enabled=PackedStringArray.*/enabled=PackedStringArray()/' project.godot
+
+      - name: "Inject Production Salt into GDScript"
         env:
           RAW_SECRET: ${{ secrets.PRODUCTION_SALT }}
         run: |
-            # 1. Escape backslashes and quotes for Godot's config format[cite: 14]
-            ESCAPED_SALT=$(printf '%s' "$RAW_SECRET" | sed 's/\\/\\\\/g; s/"/\\"/g')
-            # 2. Use a section-aware awk script to update security/save_salt[cite: 14]
-            # Pass the salt directly into awk to avoid broad environment exposure[cite: 14]
-            awk -v salt="$ESCAPED_SALT" '
-              BEGIN {
-                in_game = 0
-                salt_written = 0
-                saw_game_section = 0
-              }
-              {
-                if ($0 ~ /^\[game\]/) {
-                  in_game = 1
-                  saw_game_section = 1
-                  print
-                  next
-                } else if ($0 ~ /^\[/ && $0 !~ /^\[game\]/) {
-                  if (in_game && !salt_written) {
-                    print "security/save_salt=\"" salt "\""
-                    salt_written = 1
-                  }
-                  in_game = 0
-                  print
-                  next
-                }
-                if (in_game && $0 ~ /^[[:space:]]*security\/save_salt[[:space:]]*=/) {
-                  if (!salt_written) {
-                    print "security/save_salt=\"" salt "\""
-                    salt_written = 1
-                  }
-                  next
-                }
-                print
-              }
-              END {
-                if (in_game && !salt_written) {
-                  print "security/save_salt=\"" salt "\""
-                  salt_written = 1
-                }
-                if (!saw_game_section) {
-                  if (NR > 0) { print "" }
-                  print "[game]"
-                  print "security/save_salt=\"" salt "\""
-                }
-              }
-            ' project.godot > project.godot.tmp && mv project.godot.tmp project.godot
+          GODOT_ESCAPED=$(printf '%s' "$RAW_SECRET" | sed 's/\\/\\\\/g; s/"/\\"/g')
+          SED_ESCAPED=$(printf '%s' "$GODOT_ESCAPED" | sed 's/\\/\\\\/g; s/&/\\&/g; s/|/\\|/g')
+          sed -i "s|\"CI_INJECT_SALT_HERE\"|\"$SED_ESCAPED\"|g" scripts/core/globals.gd
 
       - name: "Create Export Directories"
         run: mkdir -p export/web
