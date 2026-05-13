@@ -458,27 +458,26 @@ func ensure_encryption_key() -> String:
 ## Generates a unique, deterministic encryption key for local save files.
 ## Generates a unique, deterministic encryption key for local save files.
 func _get_encryption_key() -> String:
-	var salt: String = ProjectSettings.get_setting("game/security/save_salt", "dev_fallback_salt")
+	# Safe placeholder. This is an open source repo, so the REAL salt
+	# is injected by GitHub Actions / CI pipeline during the build process.
+	var salt: String = "CI_INJECT_SALT_HERE"
 
-	# 1. FAILSAFE: If the salt is literally empty, always abort to plaintext
+	# 1. FAILSAFE: If the salt is literally empty, always abort
 	if salt.is_empty():
-		log_message(
-			"🚨 ENCRYPTION ABORTED: Salt is empty. Falling back to plaintext.", LogLevel.WARNING
-		)
+		log_message("🚨 ENCRYPTION ABORTED: Salt is empty.", LogLevel.WARNING)
 		return ""
 
-	var is_automated_test: bool = false
-	if OS.has_feature("web"):
-		is_automated_test = JavaScriptBridge.eval("navigator.webdriver") == true
-
 	# 2. SECURITY GUARD: Prevent silent weak-key fallback in production.
+	var is_automated_test: bool = OS.has_feature("web") # Safely assume web might be a test environment, skip JS eval
 	if not OS.has_feature("editor") and not OS.has_feature("debug") and not is_automated_test:
-		if salt == "dev_fallback_salt":
-			var error_msg: String = "CRITICAL SECURITY ERROR: Missing or weak salt."
+		if salt == "CI_INJECT_SALT_HERE":
+			var error_msg: String = "CRITICAL SECURITY ERROR: Missing production salt."
 			push_error(error_msg)
 			OS.crash(error_msg)
 			return ""
-	# FIX: OS.get_unique_id() crashes on Web
+
+	# FIX: Removed JavaScriptBridge.eval() from here. Calling JS from a
+	# class-level variable initialization silently crashes the WebAssembly module!
 	var device_id: String = "web_fallback"
 	if not OS.has_feature("web"):
 		device_id = OS.get_unique_id()

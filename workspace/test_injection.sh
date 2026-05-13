@@ -1,12 +1,14 @@
 #!/bin/bash
 # test_injection.sh
 
-BACKUP_FILE="project.godot.backup"
-
 cleanup() {
-    if [ -f "$BACKUP_FILE" ]; then
+    if [ -f "globals.gd.backup" ]; then
+        echo "🧹 Cleaning up: Restoring globals.gd from backup..."
+        mv -f "globals.gd.backup" scripts/core/globals.gd
+    fi
+    if [ -f "project.godot.backup" ]; then
         echo "🧹 Cleaning up: Restoring project.godot from backup..."
-        mv -f "$BACKUP_FILE" project.godot
+        mv -f "project.godot.backup" project.godot
     fi
 }
 trap cleanup EXIT INT TERM
@@ -19,50 +21,29 @@ echo "=========================================="
 echo " Starting Local CI/CD Simulation"
 echo "=========================================="
 
-if [ ! -f "project.godot" ]; then
-    echo "❌ ERROR: project.godot not found in the current directory!"
+if [ ! -f "scripts/core/globals.gd" ] || [ ! -f "project.godot" ]; then
+    echo "❌ ERROR: Required project files not found!"
     exit 1
 fi
 
-cp project.godot "$BACKUP_FILE"
+cp scripts/core/globals.gd globals.gd.backup
+cp project.godot project.godot.backup
 
-echo "🗑️ Wiping Windows .godot cache to force a clean Linux build..."
-rm -rf .godot/
+echo "🗑️ Wiping previous web export files..."
 rm -rf export/web/*
 mkdir -p export/web
 
-echo "⚙️ Injecting secret using safe ENVIRON AWK script..."
-# 1. Escape for Godot's parser and EXPORT to environment
-GODOT_ESCAPED=$(printf '%s' "$PRODUCTION_SALT" | sed 's/\\/\\\\/g; s/"/\\"/g')
-export GODOT_ESCAPED
+echo "🔌 Disabling editor plugins (GUT) to prevent headless crashes..."
+sed -i 's/^enabled=PackedStringArray.*/enabled=PackedStringArray()/' project.godot
 
-# 2. Use ENVIRON to prevent awk from stripping our escapes
-awk '
-  BEGIN { salt = ENVIRON["GODOT_ESCAPED"]; in_game = 0; salt_written = 0; saw_game_section = 0 }
-  {
-    if ($0 ~ /^\[game\]/) { in_game = 1; saw_game_section = 1; print; next }
-    else if ($0 ~ /^\[/ && $0 !~ /^\[game\]/) {
-      if (in_game && !salt_written) { print "security/save_salt=\"" salt "\""; salt_written = 1 }
-      in_game = 0; print; next
-    }
-    if (in_game && $0 ~ /^[[:space:]]*security\/save_salt[[:space:]]*=/) {
-      if (!salt_written) { print "security/save_salt=\"" salt "\""; salt_written = 1 }
-      next
-    }
-    print
-  }
-  END {
-    if (in_game && !salt_written) { print "security/save_salt=\"" salt "\""; salt_written = 1 }
-    if (!saw_game_section) { if (NR > 0) { print "" }; print "[game]"; print "security/save_salt=\"" salt "\"" }
-  }
-' project.godot > project.godot.tmp && mv project.godot.tmp project.godot || {
-    echo "❌ ERROR: Failed to inject security/save_salt into project.godot."
-    exit 1
-}
+echo "⚙️ Injecting secret directly into GDScript bytecode..."
+GODOT_ESCAPED=$(printf '%s' "$PRODUCTION_SALT" | sed 's/\\/\\\\/g; s/"/\\"/g')
+SED_ESCAPED=$(printf '%s' "$GODOT_ESCAPED" | sed 's/\\/\\\\/g; s/&/\\&/g; s/|/\\|/g')
+
+# Replace the safe placeholder with the real secret
+sed -i "s|\"CI_INJECT_SALT_HERE\"|\"$SED_ESCAPED\"|g" scripts/core/globals.gd
 
 echo "🎮 Exporting Godot project (Web preset)..."
-echo "⏳ Rebuilding cache from scratch. This may take 10+ minutes over Docker."
-
 $GODOT_CMD --verbose --headless --export-release "Web" export/web/index.html > export_log.txt 2>&1 &
 GODOT_PID=$!
 
