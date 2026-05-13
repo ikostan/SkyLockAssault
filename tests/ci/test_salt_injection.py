@@ -24,7 +24,12 @@ def run_injection(file_name, raw_secret):
         # By setting cwd=PROJECT_ROOT, bash only deals with relative paths!
         # Example: bash .github/scripts/inject_salt.sh dummy_globals.gd
         # This completely avoids the C:/ vs /c/ Windows Git Bash pathing nightmare.
-        subprocess.run(["bash", INJECT_SCRIPT_REL, file_name], env=env, cwd=PROJECT_ROOT, check=True)
+        subprocess.run(
+            ["bash", INJECT_SCRIPT_REL, file_name],
+            env=env,
+            cwd=PROJECT_ROOT,
+            check=True,
+        )
     except subprocess.CalledProcessError as e:
         print(f"❌ ERROR: Injection script failed with exit code {e.returncode}")
         sys.exit(1)
