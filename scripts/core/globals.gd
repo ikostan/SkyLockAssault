@@ -468,8 +468,9 @@ func _get_encryption_key() -> String:
 		return ""
 
 	# 2. SECURITY GUARD: Prevent silent weak-key fallback in production.
-	# Safely assume web might be a test environment, skip JS eval
-	var is_automated_test: bool = OS.has_feature("web")
+	# We use a custom "ci" feature flag instead of a blanket "web" check 
+	# to keep the production security guard fully active on itch.io.
+	var is_automated_test: bool = OS.has_feature("ci")
 	if not OS.has_feature("editor") and not OS.has_feature("debug") and not is_automated_test:
 		if salt == "CI_INJECT_SALT_HERE":
 			var error_msg: String = "CRITICAL SECURITY ERROR: Missing production salt."
