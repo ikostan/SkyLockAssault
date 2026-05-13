@@ -460,7 +460,7 @@ func ensure_encryption_key() -> String:
 func _get_encryption_key() -> String:
 	# Safe placeholder. This is an open source repo, so the REAL salt
 	# is injected by GitHub Actions / CI pipeline during the build process.
-	var salt: String = 'T3st_S@lt!_2026#"\\'
+	var salt: String = "CI_INJECT_SALT_HERE"
 
 	# 1. FAILSAFE: If the salt is literally empty, always abort
 	if salt.is_empty():
@@ -529,6 +529,13 @@ func safe_load_config(path: String) -> Dictionary:
 				),
 				LogLevel.ERROR
 			)
+			# --- AUTO-RECOVERY FIX ---
+			log_message(
+				"🗑️ Auto-deleting corrupted/orphaned save file to allow clean recovery.",
+				LogLevel.INFO
+			)
+			DirAccess.remove_absolute(path)
+			err = ERR_FILE_NOT_FOUND  # Treat as a first-time boot so the game generates fresh defaults
 		else:
 			log_message("🔓 Successfully decrypted file: " + path, LogLevel.DEBUG)
 	else:
