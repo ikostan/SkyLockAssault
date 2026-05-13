@@ -23,14 +23,14 @@ jobs:
     steps:
       - uses: "actions/checkout@v6.0.1"
 
-      - name: "Inject Test Salt"
-        # Ensures Godot headless export doesn't strip the property, keeping encryption active for tests
+      - name: "Disable Editor Plugins (Prevent Headless Crash)"
         run: |
-          if ! grep -q '\[game\]' project.godot; then
-            printf '\n[game]\nsecurity/save_salt="test_salt_12345"\n' >> project.godot
-          else
-            sed -i '/^\[game\]/a security/save_salt="test_salt_12345"' project.godot
-          fi
+          sed -i 's/^enabled=PackedStringArray.*/enabled=PackedStringArray()/' project.godot
+
+      - name: "Inject Test Salt into GDScript"
+        env:
+          PRODUCTION_SALT: "playwright_dummy_salt_123"
+        run: bash ./.github/scripts/inject_salt.sh "scripts/core/globals.gd"
 
       - name: "Create Export Directories"
         run: |
