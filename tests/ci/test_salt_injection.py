@@ -8,9 +8,7 @@ INJECT_SCRIPT = os.path.join(PROJECT_ROOT, ".github", "scripts", "inject_salt.sh
 
 
 def run_injection(file_path, raw_secret):
-    """
-    Executes the single-source-of-truth bash script.
-    """
+    """Executes the single-source-of-truth bash script."""
     env = os.environ.copy()
     env["PRODUCTION_SALT"] = raw_secret
 
