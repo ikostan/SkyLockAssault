@@ -532,11 +532,29 @@ func safe_load_config(path: String) -> Dictionary:
 			)
 			# --- AUTO-RECOVERY FIX ---
 			log_message(
-				"🗑️ Auto-deleting corrupted/orphaned save file to allow clean recovery.",
+				"🗑️ Attempting to auto-delete corrupted/orphaned save file to allow clean recovery.",
 				LogLevel.INFO
 			)
-			DirAccess.remove_absolute(path)
-			err = ERR_FILE_NOT_FOUND  # Treat as a first-time boot so the game generates fresh defaults
+
+			var remove_err: int = DirAccess.remove_absolute(path)
+			if remove_err == OK:
+				log_message("✅ Corrupted file successfully deleted.", LogLevel.DEBUG)
+				# Treat as a first-time boot so the game generates fresh defaults
+				err = ERR_FILE_NOT_FOUND
+			else:
+				log_message(
+					(
+						"❌ FAILED to delete corrupted file at "
+						+ path
+						+ " (Error: "
+						+ str(remove_err)
+						+ "). Game may be unable to save!"
+					),
+					LogLevel.ERROR
+				)
+				# Notice we DO NOT change 'err' here. We leave it as the original decryption error
+				# (e.g. Error 16)
+				# so the rest of the game knows the file is still fundamentally broken.
 		else:
 			log_message("🔓 Successfully decrypted file: " + path, LogLevel.DEBUG)
 	else:
