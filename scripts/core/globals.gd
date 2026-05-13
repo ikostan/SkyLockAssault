@@ -468,7 +468,8 @@ func _get_encryption_key() -> String:
 		return ""
 
 	# 2. SECURITY GUARD: Prevent silent weak-key fallback in production.
-	var is_automated_test: bool = OS.has_feature("web")  # Safely assume web might be a test environment, skip JS eval
+	# Safely assume web might be a test environment, skip JS eval
+	var is_automated_test: bool = OS.has_feature("web")
 	if not OS.has_feature("editor") and not OS.has_feature("debug") and not is_automated_test:
 		if salt == 'T3st_S@lt!_2026#"\\':
 			var error_msg: String = "CRITICAL SECURITY ERROR: Missing production salt."
