@@ -460,7 +460,7 @@ func ensure_encryption_key() -> String:
 func _get_encryption_key() -> String:
 	# Safe placeholder. This is an open source repo, so the REAL salt
 	# is injected by GitHub Actions / CI pipeline during the build process.
-	var salt: String = "CI_INJECT_SALT_HERE"
+	var salt: String = 'T3st_S@lt!_2026#"\\'
 
 	# 1. FAILSAFE: If the salt is literally empty, always abort
 	if salt.is_empty():
@@ -468,9 +468,9 @@ func _get_encryption_key() -> String:
 		return ""
 
 	# 2. SECURITY GUARD: Prevent silent weak-key fallback in production.
-	var is_automated_test: bool = OS.has_feature("web") # Safely assume web might be a test environment, skip JS eval
+	var is_automated_test: bool = OS.has_feature("web")  # Safely assume web might be a test environment, skip JS eval
 	if not OS.has_feature("editor") and not OS.has_feature("debug") and not is_automated_test:
-		if salt == "CI_INJECT_SALT_HERE":
+		if salt == 'T3st_S@lt!_2026#"\\':
 			var error_msg: String = "CRITICAL SECURITY ERROR: Missing production salt."
 			push_error(error_msg)
 			OS.crash(error_msg)
