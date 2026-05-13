@@ -471,7 +471,7 @@ func _get_encryption_key() -> String:
 	# Safely assume web might be a test environment, skip JS eval
 	var is_automated_test: bool = OS.has_feature("web")
 	if not OS.has_feature("editor") and not OS.has_feature("debug") and not is_automated_test:
-		if salt == 'T3st_S@lt!_2026#"\\':
+		if salt == "CI_INJECT_SALT_HERE":
 			var error_msg: String = "CRITICAL SECURITY ERROR: Missing production salt."
 			push_error(error_msg)
 			OS.crash(error_msg)
