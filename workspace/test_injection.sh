@@ -36,14 +36,17 @@ mkdir -p export/web
 echo "🔌 Disabling editor plugins (GUT) to prevent headless crashes..."
 sed -i 's/^enabled=PackedStringArray.*/enabled=PackedStringArray()/' project.godot
 
-echo "⚙️ Injecting secret directly into GDScript bytecode..."
-GODOT_ESCAPED=$(printf '%s' "$PRODUCTION_SALT" | sed 's/\\/\\\\/g; s/"/\\"/g')
-SED_ESCAPED=$(printf '%s' "$GODOT_ESCAPED" | sed 's/\\/\\\\/g; s/&/\\&/g; s/|/\\|/g')
+echo "🔌 Disabling editor plugins (GUT) to prevent headless crashes..."
+sed -i 's/^enabled=PackedStringArray.*/enabled=PackedStringArray()/' project.godot
 
-# Replace the safe placeholder with the real secret
-sed -i "s|\"CI_INJECT_SALT_HERE\"|\"$SED_ESCAPED\"|g" scripts/core/globals.gd
+# Call the Single Source of Truth script
+bash ./.github/scripts/inject_salt.sh "scripts/core/globals.gd" || {
+    echo "❌ ERROR: Master injection script failed."
+    exit 1
+}
 
 echo "🎮 Exporting Godot project (Web preset)..."
+
 $GODOT_CMD --verbose --headless --export-release "Web" export/web/index.html > export_log.txt 2>&1 &
 GODOT_PID=$!
 

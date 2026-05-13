@@ -42,11 +42,8 @@ jobs:
 
       - name: "Inject Production Salt into GDScript"
         env:
-          RAW_SECRET: ${{ secrets.PRODUCTION_SALT }}
-        run: |
-          GODOT_ESCAPED=$(printf '%s' "$RAW_SECRET" | sed 's/\\/\\\\/g; s/"/\\"/g')
-          SED_ESCAPED=$(printf '%s' "$GODOT_ESCAPED" | sed 's/\\/\\\\/g; s/&/\\&/g; s/|/\\|/g')
-          sed -i "s|\"CI_INJECT_SALT_HERE\"|\"$SED_ESCAPED\"|g" scripts/core/globals.gd
+          PRODUCTION_SALT: ${{ secrets.PRODUCTION_SALT }}
+        run: bash ./.github/scripts/inject_salt.sh "scripts/core/globals.gd"
 
       - name: "Create Export Directories"
         run: mkdir -p export/web

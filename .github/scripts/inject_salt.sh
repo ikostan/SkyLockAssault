@@ -1,53 +1,30 @@
 #!/bin/bash
+# .github/scripts/inject_salt.sh
 
-# $1 is the filename passed from Python (e.g., "dummy.godot")
 TARGET_FILE="$1"
 
 if [ -z "$TARGET_FILE" ]; then
-    echo "Error: No file path provided."
+    echo "❌ ERROR: No target file provided."
     exit 1
 fi
 
-awk '
-BEGIN {
-  salt = ENVIRON["SALT"]
-  in_game = 0
-  salt_written = 0
-  saw_game_section = 0
-}
-{
-  if ($0 ~ /^\[game\]/) {
-    in_game = 1
-    saw_game_section = 1
-    print
-    next
-  } else if ($0 ~ /^\[/ && $0 !~ /^\[game\]/) {
-    if (in_game && !salt_written) {
-      print "security/save_salt=\"" salt "\""
-      salt_written = 1
-    }
-    in_game = 0
-    print
-    next
-  }
-  if (in_game && $0 ~ /^[[:space:]]*security\/save_salt[[:space:]]*=/) {
-    if (!salt_written) {
-      print "security/save_salt=\"" salt "\""
-      salt_written = 1
-    }
-    next
-  }
-  print
-}
-END {
-  if (in_game && !salt_written) {
-    print "security/save_salt=\"" salt "\""
-    salt_written = 1
-  }
-  if (!saw_game_section) {
-    if (NR > 0) { print "" }
-    print "[game]"
-    print "security/save_salt=\"" salt "\""
-  }
-}
-' "$TARGET_FILE" > "${TARGET_FILE}.tmp" && mv "${TARGET_FILE}.tmp" "$TARGET_FILE"
+if [ ! -f "$TARGET_FILE" ]; then
+    echo "❌ ERROR: Target file '$TARGET_FILE' does not exist."
+    exit 1
+fi
+
+if [ -z "$PRODUCTION_SALT" ]; then
+    echo "❌ ERROR: PRODUCTION_SALT environment variable is not set."
+    exit 1
+fi
+
+echo "⚙️ Injecting secret into $TARGET_FILE..."
+
+# 1. Escape for Godot's parser
+GODOT_ESCAPED=$(printf '%s' "$PRODUCTION_SALT" | sed 's/\\/\\\\/g; s/"/\\"/g')
+
+# 2. Escape for sed replacement string
+SED_ESCAPED=$(printf '%s' "$GODOT_ESCAPED" | sed 's/\\/\\\\/g; s/&/\\&/g; s/|/\\|/g')
+
+# 3. Replace the safe placeholder with the real secret
+sed -i "s|\"CI_INJECT_SALT_HERE\"|\"$SED_ESCAPED\"|g" "$TARGET_FILE"
