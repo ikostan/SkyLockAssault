@@ -2,136 +2,74 @@ import os
 import subprocess
 import sys
 
-# The exact AWK script from deploy_to_itch.yml
-AWK_SCRIPT = """
-BEGIN {
-  salt = ENVIRON["SALT"]
-  in_game = 0
-  salt_written = 0
-  saw_game_section = 0
-}
-{
-  if ($0 ~ /^\\[game\\]/) {
-    in_game = 1
-    saw_game_section = 1
-    print
-    next
-  } else if ($0 ~ /^\\[/ && $0 !~ /^\\[game\\]/) {
-    if (in_game && !salt_written) {
-      print "security/save_salt=\\"" salt "\\""
-      salt_written = 1
-    }
-    in_game = 0
-    print
-    next
-  }
-  if (in_game && $0 ~ /^[[:space:]]*security\\/save_salt[[:space:]]*=/) {
-    if (!salt_written) {
-      print "security/save_salt=\\"" salt "\\""
-      salt_written = 1
-    }
-    next
-  }
-  print
-}
-END {
-  if (in_game && !salt_written) {
-    print "security/save_salt=\\"" salt "\\""
-    salt_written = 1
-  }
-  if (!saw_game_section) {
-    if (NR > 0) { print "" }
-    print "[game]"
-    print "security/save_salt=\\"" salt "\\""
-  }
-}
-"""
 
-
-def run_awk_injection(file_path):
-    # 1. Define a nasty test secret with quotes and slashes
-    RAW_SECRET = 'my"nasty\\salt123'
-
-    # Emulate the sed command: replace \ with \\, and " with \"
-    escaped_salt = RAW_SECRET.replace("\\", "\\\\").replace('"', '\\"')
-
-    # Load into environment variables for awk
+def run_sed_injection(file_path, raw_secret):
+    """
+    Emulates the exact bash pipeline used in test_injection.sh and deploy_to_itch.yml.
+    Passes the secret securely via environment variables.
+    """
     env = os.environ.copy()
-    env["SALT"] = escaped_salt
+    env["PRODUCTION_SALT"] = raw_secret
+
+    # The exact sed escaping sequence from our pipeline
+    bash_script = f"""
+    GODOT_ESCAPED=$(printf '%s' "$PRODUCTION_SALT" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    SED_ESCAPED=$(printf '%s' "$GODOT_ESCAPED" | sed 's/\\/\\\\/g; s/&/\\&/g; s/|/\\|/g')
+    sed -i "s|\\"CI_INJECT_SALT_HERE\\"|\\"$SED_ESCAPED\\"|g" {file_path}
+    """
 
     try:
-        # Run the awk script via subprocess
-        with open(f"{file_path}.tmp", "w") as temp_file:
-            subprocess.run(
-                ["awk", AWK_SCRIPT, file_path],
-                env=env,
-                stdout=temp_file,
-                check=True,
-                text=True,
-            )
-        # Replace original file with the modified tmp file
-        os.replace(f"{file_path}.tmp", file_path)
+        # Execute the pipeline using bash
+        subprocess.run(["bash", "-c", bash_script], env=env, check=True)
     except FileNotFoundError:
-        print("❌ ERROR: 'awk' command not found.")
-        print(
-            "Since the GitHub action uses Linux tools, 'awk' must be accessible to Windows."
-        )
-        print(
-            "Run this Python script from your VS Code Git Bash terminal instead of PowerShell."
-        )
+        print("❌ ERROR: 'bash' or 'sed' command not found.")
+        print("Run this Python script from your VS Code Git Bash terminal instead of PowerShell.")
+        sys.exit(1)
+    except subprocess.CalledProcessError as e:
+        print(f"❌ ERROR: sed injection failed with exit code {e.returncode}")
         sys.exit(1)
 
 
 def test_injection():
-    dummy_file = "dummy.godot"
-    expected_salt_line = 'security/save_salt="my\\"nasty\\\\salt123"'
+    dummy_file = "dummy_globals.gd"
 
-    print("Running Salt Injection Tests in Python...")
+    print("Running GDScript Salt Injection Tests in Python...")
     print("-" * 40)
 
-    # TEST 1: No [game] section exists
-    with open(dummy_file, "w") as f:
-        f.write('[application]\nname="Test"\n')
+    # TEST 1: Standard nasty secret with quotes and backslashes
+    raw_secret_1 = 'T3st_S@lt!_2026#"\\'
+    expected_salt_1 = 'T3st_S@lt!_2026#\\"\\\\'
 
-    run_awk_injection(dummy_file)
+    with open(dummy_file, "w") as f:
+        f.write('func _get_encryption_key() -> String:\n\tvar salt: String = "CI_INJECT_SALT_HERE"\n\treturn salt\n')
+
+    run_sed_injection(dummy_file, raw_secret_1)
 
     with open(dummy_file, "r") as f:
         content = f.read()
-        if expected_salt_line in content and "[game]" in content:
-            print("✅ TEST 1 PASS: Created [game] section and injected salt.")
+        if f'var salt: String = "{expected_salt_1}"' in content:
+            print("✅ TEST 1 PASS: Injected standard nasty secret correctly.")
         else:
             print(f"❌ TEST 1 FAIL\n{content}")
             sys.exit(1)
 
-    # TEST 2: [game] section exists, followed by another section
-    with open(dummy_file, "w") as f:
-        f.write('[application]\nname="Test"\n[game]\nsome_setting=1\n[audio]\nbus=1\n')
+    # TEST 2: Secret with sed delimiter characters (| and &)
+    raw_secret_2 = 'My|Secret&Salt'
+    expected_salt_2 = 'My|Secret&Salt'
 
-    run_awk_injection(dummy_file)
+    with open(dummy_file, "w") as f:
+        f.write('func _get_encryption_key() -> String:\n\tvar salt: String = "CI_INJECT_SALT_HERE"\n\treturn salt\n')
+
+    run_sed_injection(dummy_file, raw_secret_2)
 
     with open(dummy_file, "r") as f:
         content = f.read()
-        # Check if salt is injected before [audio]
-        if expected_salt_line in content and content.find(
-            expected_salt_line
-        ) < content.find("[audio]"):
-            print("✅ TEST 2 PASS: Injected salt inside existing [game] section.")
+        # GDScript just sees the raw characters, no extra escaping needed for | and &,
+        # but our sed pipeline must survive injecting them.
+        if f'var salt: String = "{expected_salt_2}"' in content:
+            print("✅ TEST 2 PASS: Injected secret with sed special characters (| and &).")
         else:
             print(f"❌ TEST 2 FAIL\n{content}")
-            sys.exit(1)
-
-    # TEST 3: [game] section exists and already has an old salt (overwrite)
-    with open(dummy_file, "w") as f:
-        f.write('[game]\nsecurity/save_salt="old_salt"\nother=2\n')
-
-    run_awk_injection(dummy_file)
-
-    with open(dummy_file, "r") as f:
-        content = f.read()
-        if expected_salt_line in content and "old_salt" not in content:
-            print("✅ TEST 3 PASS: Overwrote existing salt correctly.")
-        else:
-            print(f"❌ TEST 3 FAIL\n{content}")
             sys.exit(1)
 
     print("-" * 40)
