@@ -15,6 +15,18 @@ check_exit() {
   fi
 }
 
+# 1. Inject a dummy salt so Playwright passes the production security guard
+echo "Injecting dummy salt for Playwright tests..."
+PRODUCTION_SALT="playwright_dummy_salt_123" bash .github/scripts/inject_salt.sh "scripts/core/globals.gd"
+
+# 2. Export the Web build for testing (Your existing export command goes here)
+echo "Exporting Godot Web build..."
+godot --headless --export-release "Web" "export/web/index.html"
+
+# 3. Clean up the repository so you don't accidentally commit the dummy salt
+echo "Restoring globals.gd to pristine state..."
+git restore scripts/core/globals.gd
+
 # Browser Functional Tests
 echo "Exporting Godot Project to Web..."
 mkdir -p $EXPORT_DIR
