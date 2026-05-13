@@ -23,7 +23,9 @@ def run_sed_injection(file_path, raw_secret):
         subprocess.run(["bash", "-c", bash_script], env=env, check=True)
     except FileNotFoundError:
         print("❌ ERROR: 'bash' or 'sed' command not found.")
-        print("Run this Python script from your VS Code Git Bash terminal instead of PowerShell.")
+        print(
+            "Run this Python script from your VS Code Git Bash terminal instead of PowerShell."
+        )
         sys.exit(1)
     except subprocess.CalledProcessError as e:
         print(f"❌ ERROR: sed injection failed with exit code {e.returncode}")
@@ -41,7 +43,9 @@ def test_injection():
     expected_salt_1 = 'T3st_S@lt!_2026#\\"\\\\'
 
     with open(dummy_file, "w") as f:
-        f.write('func _get_encryption_key() -> String:\n\tvar salt: String = "CI_INJECT_SALT_HERE"\n\treturn salt\n')
+        f.write(
+            'func _get_encryption_key() -> String:\n\tvar salt: String = "CI_INJECT_SALT_HERE"\n\treturn salt\n'
+        )
 
     run_sed_injection(dummy_file, raw_secret_1)
 
@@ -54,11 +58,13 @@ def test_injection():
             sys.exit(1)
 
     # TEST 2: Secret with sed delimiter characters (| and &)
-    raw_secret_2 = 'My|Secret&Salt'
-    expected_salt_2 = 'My|Secret&Salt'
+    raw_secret_2 = "My|Secret&Salt"
+    expected_salt_2 = "My|Secret&Salt"
 
     with open(dummy_file, "w") as f:
-        f.write('func _get_encryption_key() -> String:\n\tvar salt: String = "CI_INJECT_SALT_HERE"\n\treturn salt\n')
+        f.write(
+            'func _get_encryption_key() -> String:\n\tvar salt: String = "CI_INJECT_SALT_HERE"\n\treturn salt\n'
+        )
 
     run_sed_injection(dummy_file, raw_secret_2)
 
@@ -67,7 +73,9 @@ def test_injection():
         # GDScript just sees the raw characters, no extra escaping needed for | and &,
         # but our sed pipeline must survive injecting them.
         if f'var salt: String = "{expected_salt_2}"' in content:
-            print("✅ TEST 2 PASS: Injected secret with sed special characters (| and &).")
+            print(
+                "✅ TEST 2 PASS: Injected secret with sed special characters (| and &)."
+            )
         else:
             print(f"❌ TEST 2 FAIL\n{content}")
             sys.exit(1)
