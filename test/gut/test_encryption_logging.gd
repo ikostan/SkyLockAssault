@@ -17,15 +17,10 @@ var _original_salt_value: Variant = null
 var _original_salt_existed: bool = false
 var _original_settings: GameSettingsResource
 
+
 func before_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
-	
-	_original_salt_existed = ProjectSettings.has_setting(SALT_PROPERTY)
-	if _original_salt_existed:
-		_original_salt_value = ProjectSettings.get_setting(SALT_PROPERTY)
-		
-	ProjectSettings.set_setting(SALT_PROPERTY, DUMMY_SALT)
 	
 	# Wipe cached key to force re-generation
 	Globals.save_encryption_pass = ""
@@ -36,14 +31,9 @@ func before_each() -> void:
 	# Force log level to DEBUG so we see everything in the console
 	Globals.settings.current_log_level = Globals.LogLevel.DEBUG
 
+
 func after_each() -> void:
 	Globals.settings = _original_settings
-	
-	if _original_salt_existed:
-		ProjectSettings.set_setting(SALT_PROPERTY, _original_salt_value)
-	else:
-		ProjectSettings.clear(SALT_PROPERTY)
-		
 	Globals.save_encryption_pass = ""
 		
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
