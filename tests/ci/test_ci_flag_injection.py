@@ -64,7 +64,7 @@ def test_inject_ci_flag_missing_key(repo_tmp):
 
     # Separated semantic assertions to avoid brittle newline (\r\n) failures
     assert 'custom_features="ci"' in content
-    assert '[preset.0.options]' in content
+    assert "[preset.0.options]" in content
 
 
 def test_inject_ci_flag_existing_values(repo_tmp):
@@ -75,7 +75,9 @@ def test_inject_ci_flag_existing_values(repo_tmp):
     """
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
-    config.write_text('[preset.0.options]\ncustom_features="debug,test"', encoding="utf-8")
+    config.write_text(
+        '[preset.0.options]\ncustom_features="debug,test"', encoding="utf-8"
+    )
 
     result = run_ci_injection(root)
 
@@ -96,7 +98,9 @@ def test_inject_ci_flag_backup_creation(repo_tmp):
 
     backup = root / "export_presets.cfg.bak"
     assert backup.exists(), "Backup file was not created."
-    assert backup.read_text(encoding="utf-8") == original_content, "Backup contents corrupted."
+    assert (
+        backup.read_text(encoding="utf-8") == original_content
+    ), "Backup contents corrupted."
 
 
 def test_inject_ci_flag_no_config_failure(repo_tmp):
@@ -113,11 +117,12 @@ def test_inject_ci_flag_no_config_failure(repo_tmp):
 
 # --- NEW TESTS ADDED BELOW ---
 
+
 def test_inject_ci_flag_idempotent(repo_tmp):
     """Critical CI test: Running the script twice should not corrupt or duplicate the flag."""
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
-    config.write_text('[preset.0.options]\nother_setting=true', encoding="utf-8")
+    config.write_text("[preset.0.options]\nother_setting=true", encoding="utf-8")
 
     # First run
     first_result = run_ci_injection(root)
