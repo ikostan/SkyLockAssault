@@ -224,4 +224,6 @@ def test_inject_ci_flag_malformed_config(repo_tmp):
     assert content == malformed_content
 
     # Verify rollback safety contract: A backup is created even on a safe no-op
-    assert (root / "export_presets.cfg.bak").exists(), "Backup missing on malformed no-op"
+    assert (
+        root / "export_presets.cfg.bak"
+    ).exists(), "Backup missing on malformed no-op"
