@@ -43,7 +43,9 @@ def test_inject_ci_flag_standard(repo_tmp):
     """Tests injection when custom_features is empty."""
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
-    config.write_text('[preset.0]\ncustom_features=""\n[preset.0.options]\n', encoding="utf-8")
+    config.write_text(
+        '[preset.0]\ncustom_features=""\n[preset.0.options]\n', encoding="utf-8"
+    )
 
     result = run_ci_injection(root)
 
@@ -56,7 +58,10 @@ def test_inject_ci_flag_missing_key(repo_tmp):
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
     # Preset exists but has no features defined
-    config.write_text('[preset.0]\nname="Web"\n[preset.0.options]\nother_setting=true', encoding="utf-8")
+    config.write_text(
+        '[preset.0]\nname="Web"\n[preset.0.options]\nother_setting=true',
+        encoding="utf-8",
+    )
 
     result = run_ci_injection(root)
 
@@ -77,7 +82,8 @@ def test_inject_ci_flag_existing_values(repo_tmp):
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
     config.write_text(
-        '[preset.0]\ncustom_features="debug,test"\n[preset.0.options]\n', encoding="utf-8"
+        '[preset.0]\ncustom_features="debug,test"\n[preset.0.options]\n',
+        encoding="utf-8",
     )
 
     result = run_ci_injection(root)
@@ -165,10 +171,7 @@ def test_inject_ci_flag_multiple_presets(repo_tmp):
     config = root / "export_presets.cfg"
 
     multi_preset_content = (
-        "[preset.0]\n"
-        'name="Web"\n\n'
-        "[preset.1]\n"
-        'custom_features=""\n'
+        "[preset.0]\n" 'name="Web"\n\n' "[preset.1]\n" 'custom_features=""\n'
     )
     config.write_text(multi_preset_content, encoding="utf-8")
 
@@ -224,4 +227,6 @@ def test_inject_ci_flag_malformed_config(repo_tmp):
     assert content == malformed_content
 
     # Verify rollback safety contract: A backup is created even on a safe no-op
-    assert (root / "export_presets.cfg.bak").exists(), "Backup missing on malformed no-op"
+    assert (
+        root / "export_presets.cfg.bak"
+    ).exists(), "Backup missing on malformed no-op"
