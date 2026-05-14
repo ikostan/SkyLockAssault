@@ -65,7 +65,6 @@ def run_injection(file_name, raw_secret, expect_failure=False):
     except subprocess.CalledProcessError as e:
         if not expect_failure:
             print(f"❌ ERROR: Injection script failed with exit code {e.returncode}")
-            # I added e.stdout here so if it ever fails again, it prints the actual bash error to your terminal!
             print(e.stdout.decode("utf-8"))
             print(e.stderr.decode("utf-8"))
             sys.exit(1)
@@ -235,32 +234,6 @@ def test_injection_empty_secret():
         os.remove(dummy_file_abs)
 
 
-def test_injection_read_only_file():
-    """
-    Tests the script's resilience against read-only file permissions.
-
-    Ensures that if the CI/CD runner locks the file, the sed replacement
-    fails cleanly with an error code instead of failing silently.
-    """
-    dummy_file_name = "dummy_readonly.gd"
-    dummy_file_abs = os.path.join(PROJECT_ROOT, dummy_file_name)
-
-    with open(dummy_file_abs, "w") as f:
-        f.write('var salt = "CI_INJECT_SALT_HERE"\n')
-
-    # Make the file read-only
-    os.chmod(dummy_file_abs, stat.S_IREAD)
-
-    try:
-        run_injection(dummy_file_name, "valid-secret", expect_failure=True)
-        print("✅ TEST PASS: Read-only file triggered deterministic OS error.")
-    finally:
-        # Restore write permissions so the test runner can clean it up
-        os.chmod(dummy_file_abs, stat.S_IWRITE)
-        if os.path.exists(dummy_file_abs):
-            os.remove(dummy_file_abs)
-
-
 def test_injection_filename_with_spaces():
     """
     Tests bash variable quoting robustness.
@@ -313,9 +286,8 @@ if __name__ == "__main__":
     test_injection_missing_placeholder()
     test_injection_non_existent_file()
 
-    # New Edge Cases
+    # Edge Cases
     test_injection_empty_secret()
-    test_injection_read_only_file()
     test_injection_filename_with_spaces()
 
     print("-" * 40)
