@@ -18,19 +18,6 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 INJECT_SCRIPT_REL = ".github/scripts/inject_salt.sh"
 
 
-@pytest.fixture
-def repo_tmp():
-    """
-    Creates an isolated temporary directory INSIDE the project root.
-    Yields a relative POSIX path (e.g. 'tmp_xyz') so WSL bash can easily digest
-    it without encountering Windows 'C:\\...' absolute path translation errors.
-    """
-    with tempfile.TemporaryDirectory(dir=PROJECT_ROOT) as tmpdir:
-        # Get relative path and force forward slashes for bash
-        rel_path = os.path.relpath(tmpdir, PROJECT_ROOT).replace("\\", "/")
-        yield rel_path
-
-
 def run_injection(file_path, raw_secret):
     """
     Executes the single-source-of-truth bash script using relative paths.

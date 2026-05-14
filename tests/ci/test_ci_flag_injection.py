@@ -5,23 +5,35 @@ Ensures that 'export_presets.cfg' is correctly modified to include the 'ci'
 feature flag, which is critical for bypassing production security guards
 during automated browser testing.
 """
-
+import os
 import subprocess
-import pytest
+import sys
 from pathlib import Path
 
-# The script we are testing
-INJECT_SCRIPT = ".github/scripts/inject_ci_flag.py"
+# Dynamically locate the project root to find the infrastructure script
+# We need this to build an absolute path so Python can find the script
+# while the test is running inside a temporary directory.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+INJECT_SCRIPT_ABS = PROJECT_ROOT / ".github" / "scripts" / "inject_ci_flag.py"
 
 
-def run_ci_injection(project_root):
-    """Executes the injection script within the provided dummy project root."""
+def run_ci_injection(test_work_dir):
+    """
+    Executes the injection script.
+    Uses the absolute path to the script so it can be found regardless of cwd.
+    """
+    # Force the child process to use UTF-8 via environment variables
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+
     return subprocess.run(
-        ["python3", INJECT_SCRIPT],
-        cwd=str(project_root),
+        [sys.executable, str(INJECT_SCRIPT_ABS)],
+        env=env, # Pass the forced encoding env
+        cwd=str(test_work_dir),
         capture_output=True,
         text=True,
-        timeout=10
+        timeout=10,
+        encoding="utf-8"
     )
 
 
@@ -33,7 +45,7 @@ def test_inject_ci_flag_standard(repo_tmp):
 
     result = run_ci_injection(root)
 
-    assert result.returncode == 0
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
     assert 'custom_features="ci"' in config.read_text()
 
 
@@ -46,7 +58,7 @@ def test_inject_ci_flag_missing_key(repo_tmp):
 
     result = run_ci_injection(root)
 
-    assert result.returncode == 0
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
     content = config.read_text()
     assert 'custom_features="ci"' in content
     assert '[preset.0.options]\ncustom_features="ci"' in content
@@ -60,7 +72,7 @@ def test_inject_ci_flag_existing_values(repo_tmp):
 
     result = run_ci_injection(root)
 
-    assert result.returncode == 0
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
     content = config.read_text()
     assert 'custom_features="ci"' in content
     assert '"debug,test"' not in content
@@ -85,4 +97,4 @@ def test_inject_ci_flag_no_config_failure(repo_tmp):
     result = run_ci_injection(root)
 
     assert result.returncode != 0
-    assert "not found" in result.stdout
+    assert "not found" in result.stdout or "not found" in result.stderr
