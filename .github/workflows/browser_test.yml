@@ -129,7 +129,7 @@ jobs:
                 print('🚀 Security-isolated server starting on port 8080...')
                 httpd.serve_forever()
             " &
-            sleep 5 
+            sleep 5
             curl -I http://localhost:8080/index.html
 
       - name: "Wait For WEB Server Response"
