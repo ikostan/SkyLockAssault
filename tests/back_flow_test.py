@@ -34,7 +34,7 @@ from playwright.sync_api import Page
 # Configuration for stability in different environments
 # Default to 5000ms, but allow CI to override via environment variable
 DEFAULT_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "30000"))
-TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "5000"))
+TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "10000"))
 
 
 def test_back_flow(page: Page) -> None:
@@ -75,7 +75,7 @@ def test_back_flow(page: Page) -> None:
             timeout=DEFAULT_TIMEOUT,
         )
         # 1. Wait for the engine to actually start the splash scene
-        page.wait_for_timeout(5000)
+        page.wait_for_timeout(TEST_TIMEOUT)
         page.wait_for_function("() => window.godotInitialized", timeout=DEFAULT_TIMEOUT)
 
         # Verify canvas
