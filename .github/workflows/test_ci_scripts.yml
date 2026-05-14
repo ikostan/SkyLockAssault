@@ -18,6 +18,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: "Run Salt Injection Test"
-        run: |
-          python tests/ci/test_salt_injection.py
+      - name: "Run Salt Injection Tests"
+        run:
+          pytest tests/ci/test_salt_injection.py -v
