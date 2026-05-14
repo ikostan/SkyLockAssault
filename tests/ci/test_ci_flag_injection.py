@@ -35,6 +35,7 @@ def run_ci_injection(test_work_dir: Path) -> subprocess.CompletedProcess[str]:
         text=True,
         timeout=10,
         encoding="utf-8",
+        check=False,  # Explicitly handle non-zero exit codes manually in our tests
     )
 
 
@@ -116,7 +117,10 @@ def test_inject_ci_flag_no_config_failure(repo_tmp):
 
 
 def test_inject_ci_flag_idempotent(repo_tmp):
-    """Critical CI test: Running the script twice should not corrupt or duplicate the flag."""
+    """
+    Critical CI test: Running the script twice should not
+    corrupt or duplicate the feature flag.
+    """
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
     original_content = "[preset.0.options]\nother_setting=true"
@@ -194,10 +198,13 @@ def test_inject_ci_flag_no_presets(repo_tmp):
     # Ensure greedy regex didn't accidentally inject the flag anywhere
     assert content == original_content
 
+    # Verify rollback safety contract: A backup is created even on a safe no-op
+    assert (root / "export_presets.cfg.bak").exists(), "Backup missing on no-op"
+
 
 def test_inject_ci_flag_malformed_config(repo_tmp):
     """
-    Ensures the script avoids corrupting files with broken section headers.
+    Ensures the script fails gracefully and avoids corrupting broken files.
     Note: We intentionally allow a safe no-op (returncode 0) rather than a hard fail,
     deferring structural validation to the Godot engine during the export step.
     """
@@ -215,3 +222,6 @@ def test_inject_ci_flag_malformed_config(repo_tmp):
 
     # Strictly verify no truncation or corruption occurred
     assert content == malformed_content
+
+    # Verify rollback safety contract: A backup is created even on a safe no-op
+    assert (root / "export_presets.cfg.bak").exists(), "Backup missing on malformed no-op"
