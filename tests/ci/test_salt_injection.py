@@ -56,7 +56,8 @@ def run_injection(file_path, raw_secret):
         capture_output=True,
         text=True,
         encoding="utf-8",
-        timeout=10,  # Hard CI limit to prevent hung/zombie shell processes
+        timeout=10,
+        check=False  # Tells the linter: "I am intentionally handling exit codes manually"
     )
 
 
