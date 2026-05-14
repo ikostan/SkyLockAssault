@@ -25,12 +25,15 @@ jobs:
 
       - name: "Disable Editor Plugins (Prevent Headless Crash)"
         run: |
+          # Prevents Signal 11 crashes during headless export on Ubuntu runners
           sed -i 's/^enabled=PackedStringArray.*/enabled=PackedStringArray()/' project.godot
 
       - name: "Inject Test Salt into GDScript"
         env:
           PRODUCTION_SALT: "playwright_dummy_salt_123"
-        run: bash ./.github/scripts/inject_salt.sh "scripts/core/globals.gd"
+        run: |
+          # Executes the Single Source of Truth script
+          bash ./.github/scripts/inject_salt.sh "scripts/core/globals.gd"
 
       - name: "Create Export Directories"
         run: |
