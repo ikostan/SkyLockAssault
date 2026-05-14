@@ -115,9 +115,6 @@ def test_inject_ci_flag_no_config_failure(repo_tmp):
     assert "not found" in combined_output
 
 
-# --- NEW & UPDATED TESTS ADDED BELOW ---
-
-
 def test_inject_ci_flag_idempotent(repo_tmp):
     """Critical CI test: Running the script twice should not corrupt or duplicate the flag."""
     root = Path(repo_tmp)
@@ -139,6 +136,7 @@ def test_inject_ci_flag_idempotent(repo_tmp):
     # Verify backup stability: The second run should NOT overwrite the backup
     # with the already-mutated content from the first run.
     backup = root / "export_presets.cfg.bak"
+    assert backup.exists(), "Backup file missing during idempotency check."
     assert (
         backup.read_text(encoding="utf-8") == original_content
     ), "Rollback safety destroyed: Backup was overwritten!"
@@ -181,19 +179,39 @@ def test_inject_ci_flag_multiple_presets(repo_tmp):
     assert content.count('custom_features="ci"') == 2
 
 
+def test_inject_ci_flag_no_presets(repo_tmp):
+    """Tests a syntactically valid config file that simply lacks preset sections."""
+    root = Path(repo_tmp)
+    config = root / "export_presets.cfg"
+    original_content = "[general]\nfoo=bar"
+    config.write_text(original_content, encoding="utf-8")
+
+    result = run_ci_injection(root)
+
+    assert result.returncode == 0
+    content = config.read_text(encoding="utf-8")
+
+    # Ensure greedy regex didn't accidentally inject the flag anywhere
+    assert content == original_content
+
+
 def test_inject_ci_flag_malformed_config(repo_tmp):
-    """Ensures the script fails gracefully and avoids corrupting broken files."""
+    """
+    Ensures the script avoids corrupting files with broken section headers.
+    Note: We intentionally allow a safe no-op (returncode 0) rather than a hard fail,
+    deferring structural validation to the Godot engine during the export step.
+    """
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
 
     # Malformed section header (missing closing bracket)
-    malformed_content = "[preset.0.options\ncustom_features=debug"
+    malformed_content = "[preset.0.options\nother_setting=true"
     config.write_text(malformed_content, encoding="utf-8")
 
     result = run_ci_injection(root)
 
-    # The script should exit cleanly (0) but make NO changes,
-    # because the regex safely fails to find a valid preset block.
     assert result.returncode == 0
     content = config.read_text(encoding="utf-8")
-    assert 'custom_features="ci"' not in content
+
+    # Strictly verify no truncation or corruption occurred
+    assert content == malformed_content
