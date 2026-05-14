@@ -523,16 +523,10 @@ func safe_load_config(path: String) -> Dictionary:
 		err = config.load_encrypted_pass(path, key)
 		if err != OK:
 			log_message(
-				(
-					"🚨 DECRYPTION FAILED for file: "
-					+ path
-					+ " (Error code: "
-					+ str(err)
-					+ ")."
-				),
+				"🚨 DECRYPTION FAILED for file: " + path + " (Error code: " + str(err) + ").",
 				LogLevel.ERROR
 			)
-			
+
 			# --- AUTO-RECOVERY FIX: TIGHTENED CONDITIONS ---
 			# Only delete if the file is explicitly corrupted or has invalid data (bad password/hash).
 			if err == ERR_FILE_CORRUPT or err == ERR_INVALID_DATA:
@@ -559,7 +553,10 @@ func safe_load_config(path: String) -> Dictionary:
 					)
 			else:
 				log_message(
-					"⚠️ File is unreadable but NOT explicitly corrupted. Skipping auto-deletion to prevent accidental data loss.", 
+					(
+						"⚠️ File is unreadable but NOT explicitly corrupted. "
+						+ "Skipping auto-deletion to prevent accidental data loss."
+					),
 					LogLevel.WARNING
 				)
 		else:
