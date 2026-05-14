@@ -25,4 +25,4 @@ jobs:
 
       - name: "Run Salt Injection Tests"
         run: |
-          pytest tests/ci/ -v
+          pytest tests/ci/ -v -s
