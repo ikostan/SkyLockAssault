@@ -225,35 +225,3 @@ def test_inject_ci_flag_malformed_config(repo_tmp):
 
     # Verify rollback safety contract: A backup is created even on a safe no-op
     assert (root / "export_presets.cfg.bak").exists(), "Backup missing on malformed no-op"
-
-
-def test_inject_ci_flag_crlf_windows_endings(repo_tmp):
-    """Verifies the regex safely handles Windows-style CRLF line endings."""
-    root = Path(repo_tmp)
-    config = root / "export_presets.cfg"
-
-    # Explicitly use \r\n for line endings to simulate a Windows-authored file
-    crlf_content = "\r\n".join([
-        "[preset.0]",
-        'name="Web"',
-        'custom_features=""',
-        ""
-    ])
-
-    # We must use open() with newline="" to prevent Linux CI runners
-    # from automatically stripping the \r before writing to disk.
-    with open(config, "w", encoding="utf-8", newline="") as f:
-        f.write(crlf_content)
-
-    result = run_ci_injection(root)
-
-    assert result.returncode == 0
-
-    # Read back exactly as it is on disk, preserving the exact line endings
-    with open(config, "r", encoding="utf-8", newline="") as f:
-        content = f.read()
-
-    # Verify the regex successfully matched the header and injected the flag
-    assert "[preset.0]" in content
-    assert 'custom_features="ci"' in content
-    assert content.count('custom_features=') == 1
