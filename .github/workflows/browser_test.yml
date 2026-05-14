@@ -37,18 +37,7 @@ jobs:
 
       - name: "Inject 'ci' feature flag into export_presets.cfg"
         run: |
-          cp export_presets.cfg export_presets.cfg.bak
-          python3 -c "
-          import re
-          with open('export_presets.cfg', 'r') as f:
-              data = f.read()
-          # Inject into existing custom_features or add it if missing
-          data = re.sub(r'custom_features=\"[^\"]*\"', 'custom_features=\"ci\"', data)
-          if 'custom_features=\"ci\"' not in data:
-              data = re.sub(r'(\[preset\.\d+\.options\])', r'\1\ncustom_features=\"ci\"', data)
-          with open('export_presets.cfg', 'w') as f:
-              f.write(data)
-          "
+          python3 .github/scripts/inject_ci_flag.py"
 
       - name: "Create Export Directories"
         run: |
@@ -145,7 +134,7 @@ jobs:
 
       - name: "Run Tests"
         run: |
-          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/ -v pytest --ignore=tests/refactor --ignore=tests/ci --junitxml=junit.xml -o junit_family=legacy
+          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/ -v --ignore=tests/refactor --ignore=tests/ci --junitxml=junit.xml -o junit_family=legacy
 
       - name: "List Coverage Reports"
         run: |

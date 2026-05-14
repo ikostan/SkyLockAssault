@@ -23,18 +23,8 @@ check_exit "Salt Injection"
 # 2. FORCE the "ci" feature flag into export_presets.cfg
 # Godot 4 ignores CLI feature flags, so we must inject it into the preset directly
 echo "⚙️ Injecting 'ci' feature flag into export_presets.cfg..."
-cp export_presets.cfg export_presets.cfg.bak
-python3 -c "
-import re
-with open('export_presets.cfg', 'r') as f:
-    data = f.read()
-# Inject into existing custom_features or add it if missing
-data = re.sub(r'custom_features=\"[^\"]*\"', 'custom_features=\"ci\"', data)
-if 'custom_features=\"ci\"' not in data:
-    data = re.sub(r'(\[preset\.\d+\.options\])', r'\1\ncustom_features=\"ci\"', data)
-with open('export_presets.cfg', 'w') as f:
-    f.write(data)
-"
+python3 .github/scripts/inject_ci_flag.py
+check_exit "CI Flag Injection"
 
 # 3. Export the Web build for functional testing
 echo "🎮 Exporting Godot Project to Web (Web_thread_off)..."
