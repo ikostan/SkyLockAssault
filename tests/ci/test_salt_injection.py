@@ -8,7 +8,6 @@ and special sed characters do not break the final game code.
 
 import os
 import subprocess
-import tempfile
 from pathlib import Path
 
 import pytest
