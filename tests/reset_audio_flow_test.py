@@ -380,7 +380,7 @@ def test_reset_flow(page: Page) -> None:
 
         # Reload and validate persisted defaults for all audio controls
         page.reload()
-        page.wait_for_timeout(TEST_TIMEOUT)
+        page.wait_for_timeout(DEFAULT_TIMEOUT)
         page.wait_for_function("() => window.godotInitialized", timeout=TEST_TIMEOUT)
         page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
         page.wait_for_function(
