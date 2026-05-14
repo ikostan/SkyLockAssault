@@ -32,6 +32,16 @@ def run_injection(file_name, raw_secret, expect_failure=False):
     env = os.environ.copy()
     env["PRODUCTION_SALT"] = raw_secret
 
+    # --- WINDOWS WSL FIX ---
+    # If PowerShell resolves 'bash' to Windows Subsystem for Linux (WSL),
+    # WSL strips all Windows environment variables by default for security.
+    # We must explicitly whitelist PRODUCTION_SALT using the WSLENV variable
+    # so it crosses the boundary. This is safely ignored by Git Bash and Linux runners.
+    if "WSLENV" in env:
+        env["WSLENV"] += ":PRODUCTION_SALT/u"
+    else:
+        env["WSLENV"] = "PRODUCTION_SALT/u"
+
     # Verify the script exists using Python's absolute path
     script_abs_path = os.path.join(PROJECT_ROOT, ".github", "scripts", "inject_salt.sh")
     if not os.path.exists(script_abs_path):
@@ -53,6 +63,8 @@ def run_injection(file_name, raw_secret, expect_failure=False):
     except subprocess.CalledProcessError as e:
         if not expect_failure:
             print(f"❌ ERROR: Injection script failed with exit code {e.returncode}")
+            # I added e.stdout here so if it ever fails again, it prints the actual bash error to your terminal!
+            print(e.stdout.decode("utf-8"))
             print(e.stderr.decode("utf-8"))
             sys.exit(1)
 
