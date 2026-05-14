@@ -1,10 +1,12 @@
 # tests/ci/conftest.py
 import os
-import pytest
 import tempfile
+
+import pytest
 
 # Dynamically locate the project root relative to this file
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
 
 @pytest.fixture
 def repo_tmp():

@@ -5,6 +5,7 @@ Ensures that 'export_presets.cfg' is correctly modified to include the 'ci'
 feature flag, which is critical for bypassing production security guards
 during automated browser testing.
 """
+
 import os
 import subprocess
 import sys
@@ -28,12 +29,12 @@ def run_ci_injection(test_work_dir):
 
     return subprocess.run(
         [sys.executable, str(INJECT_SCRIPT_ABS)],
-        env=env, # Pass the forced encoding env
+        env=env,  # Pass the forced encoding env
         cwd=str(test_work_dir),
         capture_output=True,
         text=True,
         timeout=10,
-        encoding="utf-8"
+        encoding="utf-8",
     )
 
 
@@ -54,7 +55,7 @@ def test_inject_ci_flag_missing_key(repo_tmp):
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
     # Preset exists but has no features defined
-    config.write_text('[preset.0.options]\nother_setting=true', encoding="utf-8")
+    config.write_text("[preset.0.options]\nother_setting=true", encoding="utf-8")
 
     result = run_ci_injection(root)
 
@@ -68,7 +69,9 @@ def test_inject_ci_flag_existing_values(repo_tmp):
     """Tests that existing flags are overwritten by the 'ci' flag."""
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
-    config.write_text('[preset.0.options]\ncustom_features="debug,test"', encoding="utf-8")
+    config.write_text(
+        '[preset.0.options]\ncustom_features="debug,test"', encoding="utf-8"
+    )
 
     result = run_ci_injection(root)
 
