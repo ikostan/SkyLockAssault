@@ -7,7 +7,6 @@ and special sed characters do not break the final game code.
 """
 
 import os
-import stat
 import subprocess
 import sys
 
