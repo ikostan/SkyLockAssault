@@ -53,7 +53,7 @@ def test_no_critical_errors_on_load(page: Page) -> None:
             timeout=DEFAULT_TIMEOUT,
         )
         # 1.5. Wait for the engine to actually start the splash scene
-        page.wait_for_timeout(5000)
+        page.wait_for_timeout(TEST_TIMEOUT)
 
         # 2. Wait for the engine's ready signal
         page.wait_for_function("() => window.godotInitialized", timeout=DEFAULT_TIMEOUT)
