@@ -471,6 +471,8 @@ func _get_encryption_key() -> String:
 	# We use a custom "ci" feature flag instead of a blanket "web" check
 	# to keep the production security guard fully active on itch.io.
 	var is_automated_test: bool = OS.has_feature("ci")
+	log_message("ℹ️ IS_AUTOMATED_TEST: " + str(is_automated_test), Globals.LogLevel.INFO)
+
 	if not OS.has_feature("editor") and not OS.has_feature("debug") and not is_automated_test:
 		if salt == "CI_INJECT_SALT_HERE":
 			var error_msg: String = "CRITICAL SECURITY ERROR: Missing production salt."
