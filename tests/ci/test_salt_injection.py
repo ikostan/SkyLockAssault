@@ -45,7 +45,9 @@ def run_injection(file_path, raw_secret):
         env["WSLENV"] = "PRODUCTION_SALT/u"
 
     script_abs_path = os.path.join(PROJECT_ROOT, INJECT_SCRIPT_REL)
-    assert os.path.exists(script_abs_path), f"Master inject script not found at {script_abs_path}"
+    assert os.path.exists(
+        script_abs_path
+    ), f"Master inject script not found at {script_abs_path}"
 
     return subprocess.run(
         ["bash", INJECT_SCRIPT_REL, str(file_path)],
@@ -54,17 +56,24 @@ def run_injection(file_path, raw_secret):
         capture_output=True,
         text=True,
         encoding="utf-8",
-        timeout=10  # Hard CI limit to prevent hung/zombie shell processes
+        timeout=10,  # Hard CI limit to prevent hung/zombie shell processes
     )
 
 
-@pytest.mark.parametrize("scenario, raw_secret, expected_salt", [
-    ("standard", 'T3st_S@lt!_2026#"\\', 'T3st_S@lt!_2026#\\"\\\\'),
-    ("sed_special", "My|Secret&Salt", "My|Secret&Salt"),
-    ("regex_tokens", r"\1 \2 $HOME", r"\\1 \\2 $HOME"),
-    ("utf8_unicode", "пароль_日本語_🔒", "пароль_日本語_🔒"),
-    ("forward_slash", "path/to/my/secret", "path/to/my/secret")  # Ensures forward slashes don't break sed
-])
+@pytest.mark.parametrize(
+    "scenario, raw_secret, expected_salt",
+    [
+        ("standard", 'T3st_S@lt!_2026#"\\', 'T3st_S@lt!_2026#\\"\\\\'),
+        ("sed_special", "My|Secret&Salt", "My|Secret&Salt"),
+        ("regex_tokens", r"\1 \2 $HOME", r"\\1 \\2 $HOME"),
+        ("utf8_unicode", "пароль_日本語_🔒", "пароль_日本語_🔒"),
+        (
+            "forward_slash",
+            "path/to/my/secret",
+            "path/to/my/secret",
+        ),  # Ensures forward slashes don't break sed
+    ],
+)
 def test_injection_values(repo_tmp, scenario, raw_secret, expected_salt):
     """
     Parametrized test covering standard strings, bash/sed delimiters,
@@ -73,11 +82,16 @@ def test_injection_values(repo_tmp, scenario, raw_secret, expected_salt):
     dummy_rel = f"{repo_tmp}/dummy_{scenario}.gd"
     dummy_abs = Path(PROJECT_ROOT) / dummy_rel
 
-    dummy_abs.write_text('func _get_encryption_key() -> String:\n\tvar salt: String = "CI_INJECT_SALT_HERE"\n\treturn salt\n', encoding="utf-8")
+    dummy_abs.write_text(
+        'func _get_encryption_key() -> String:\n\tvar salt: String = "CI_INJECT_SALT_HERE"\n\treturn salt\n',
+        encoding="utf-8",
+    )
 
     result = run_injection(dummy_rel, raw_secret)
 
-    assert result.returncode == 0, f"Injection failed:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+    assert (
+        result.returncode == 0
+    ), f"Injection failed:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
 
     content = dummy_abs.read_text(encoding="utf-8")
     assert f'var salt: String = "{expected_salt}"' in content
@@ -85,7 +99,9 @@ def test_injection_values(repo_tmp, scenario, raw_secret, expected_salt):
     # Verifies sed did not leave behind macOS/Linux .bak or temp file artifacts
     files_in_dir = list(dummy_abs.parent.iterdir())
     unexpected = [f for f in files_in_dir if f.name != dummy_abs.name]
-    assert not unexpected, f"Artifact pollution detected. Unexpected files found: {unexpected}"
+    assert (
+        not unexpected
+    ), f"Artifact pollution detected. Unexpected files found: {unexpected}"
 
 
 def test_injection_multiple_placeholders(repo_tmp):
@@ -94,10 +110,10 @@ def test_injection_multiple_placeholders(repo_tmp):
     dummy_abs = Path(PROJECT_ROOT) / dummy_rel
 
     dummy_abs.write_text(
-        'extends Node\n'
+        "extends Node\n"
         'var security = {"save_salt": "CI_INJECT_SALT_HERE"}\n'
         'var another = {"save_salt": "CI_INJECT_SALT_HERE"}\n',
-        encoding="utf-8"
+        encoding="utf-8",
     )
 
     result = run_injection(dummy_rel, "multi-placeholder-salt")
