@@ -53,7 +53,8 @@ def run_injection(file_path, raw_secret):
         cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
-        encoding="utf-8"
+        encoding="utf-8",
+        timeout=10  # Hard CI limit to prevent hung/zombie shell processes
     )
 
 
@@ -61,12 +62,13 @@ def run_injection(file_path, raw_secret):
     ("standard", 'T3st_S@lt!_2026#"\\', 'T3st_S@lt!_2026#\\"\\\\'),
     ("sed_special", "My|Secret&Salt", "My|Secret&Salt"),
     ("regex_tokens", r"\1 \2 $HOME", r"\\1 \\2 $HOME"),
-    ("utf8_unicode", "пароль_日本語_🔒", "пароль_日本語_🔒")
+    ("utf8_unicode", "пароль_日本語_🔒", "пароль_日本語_🔒"),
+    ("forward_slash", "path/to/my/secret", "path/to/my/secret")  # Ensures forward slashes don't break sed
 ])
 def test_injection_values(repo_tmp, scenario, raw_secret, expected_salt):
     """
     Parametrized test covering standard strings, bash/sed delimiters,
-    backreferences, and UTF-8 locale handling.
+    backreferences, UTF-8 locale handling, and path-like slashes.
     """
     dummy_rel = f"{repo_tmp}/dummy_{scenario}.gd"
     dummy_abs = Path(PROJECT_ROOT) / dummy_rel
@@ -82,7 +84,8 @@ def test_injection_values(repo_tmp, scenario, raw_secret, expected_salt):
 
     # Verifies sed did not leave behind macOS/Linux .bak or temp file artifacts
     files_in_dir = list(dummy_abs.parent.iterdir())
-    assert len(files_in_dir) == 1, f"Artifact pollution detected. Expected 1 file, found: {files_in_dir}"
+    unexpected = [f for f in files_in_dir if f.name != dummy_abs.name]
+    assert not unexpected, f"Artifact pollution detected. Unexpected files found: {unexpected}"
 
 
 def test_injection_multiple_placeholders(repo_tmp):
@@ -175,6 +178,7 @@ def test_injection_multiline_secret(repo_tmp):
     assert dummy_abs.read_text(encoding="utf-8") == original_content
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX file permission mechanics required")
 def test_injection_readonly_file(repo_tmp):
     """
     Catches CI/container filesystem edge cases.
@@ -217,4 +221,6 @@ def test_idempotency(repo_tmp):
 
     assert second.returncode == 0
     content = dummy_abs.read_text(encoding="utf-8")
-    assert content.count("idempotent-secret") == 1
+
+    # Strict matching to guarantee NO duplicate injection or mangled formatting
+    assert content == 'var salt = "idempotent-secret"\n'
