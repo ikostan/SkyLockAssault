@@ -57,7 +57,7 @@ def run_injection(file_path, raw_secret):
         text=True,
         encoding="utf-8",
         timeout=10,
-        check=False  # Tells the linter: "I am intentionally handling exit codes manually"
+        check=False,  # Tells the linter: "I am intentionally handling exit codes manually"
     )
 
 
