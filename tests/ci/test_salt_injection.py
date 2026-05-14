@@ -9,6 +9,7 @@ and special sed characters do not break the final game code.
 import os
 import subprocess
 import tempfile
+from pathlib import Path
 
 import pytest
 
@@ -44,9 +45,7 @@ def run_injection(file_path, raw_secret):
         env["WSLENV"] = "PRODUCTION_SALT/u"
 
     script_abs_path = os.path.join(PROJECT_ROOT, INJECT_SCRIPT_REL)
-    assert os.path.exists(
-        script_abs_path
-    ), f"Master inject script not found at {script_abs_path}"
+    assert os.path.exists(script_abs_path), f"Master inject script not found at {script_abs_path}"
 
     return subprocess.run(
         ["bash", INJECT_SCRIPT_REL, str(file_path)],
@@ -54,61 +53,54 @@ def run_injection(file_path, raw_secret):
         cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
-        encoding="utf-8",  # CRITICAL: Prevents Windows crash when bash prints UTF-8 emojis
+        encoding="utf-8"
     )
 
 
-@pytest.mark.parametrize(
-    "scenario, raw_secret, expected_salt",
-    [
-        ("standard", 'T3st_S@lt!_2026#"\\', 'T3st_S@lt!_2026#\\"\\\\'),
-        ("sed_special", "My|Secret&Salt", "My|Secret&Salt"),
-        # FIX: Account for the script correctly escaping backslashes to protect sed/GDScript
-        ("regex_tokens", r"\1 \2 $HOME", r"\\1 \\2 $HOME"),
-        ("utf8_unicode", "пароль_日本語_🔒", "пароль_日本語_🔒"),
-    ],
-)
+@pytest.mark.parametrize("scenario, raw_secret, expected_salt", [
+    ("standard", 'T3st_S@lt!_2026#"\\', 'T3st_S@lt!_2026#\\"\\\\'),
+    ("sed_special", "My|Secret&Salt", "My|Secret&Salt"),
+    ("regex_tokens", r"\1 \2 $HOME", r"\\1 \\2 $HOME"),
+    ("utf8_unicode", "пароль_日本語_🔒", "пароль_日本語_🔒")
+])
 def test_injection_values(repo_tmp, scenario, raw_secret, expected_salt):
     """
     Parametrized test covering standard strings, bash/sed delimiters,
     backreferences, and UTF-8 locale handling.
     """
     dummy_rel = f"{repo_tmp}/dummy_{scenario}.gd"
-    dummy_abs = os.path.join(PROJECT_ROOT, dummy_rel)
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
 
-    with open(dummy_abs, "w", encoding="utf-8") as f:
-        f.write(
-            'func _get_encryption_key() -> String:\n\tvar salt: String = "CI_INJECT_SALT_HERE"\n\treturn salt\n'
-        )
+    dummy_abs.write_text('func _get_encryption_key() -> String:\n\tvar salt: String = "CI_INJECT_SALT_HERE"\n\treturn salt\n', encoding="utf-8")
 
     result = run_injection(dummy_rel, raw_secret)
 
-    assert (
-        result.returncode == 0
-    ), f"Injection failed:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+    assert result.returncode == 0, f"Injection failed:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
 
-    with open(dummy_abs, "r", encoding="utf-8") as f:
-        content = f.read()
+    content = dummy_abs.read_text(encoding="utf-8")
     assert f'var salt: String = "{expected_salt}"' in content
+
+    # Verifies sed did not leave behind macOS/Linux .bak or temp file artifacts
+    files_in_dir = list(dummy_abs.parent.iterdir())
+    assert len(files_in_dir) == 1, f"Artifact pollution detected. Expected 1 file, found: {files_in_dir}"
 
 
 def test_injection_multiple_placeholders(repo_tmp):
     """Ensures global replacement updates all occurrences, leaving no partial leftovers."""
     dummy_rel = f"{repo_tmp}/dummy_multi.gd"
-    dummy_abs = os.path.join(PROJECT_ROOT, dummy_rel)
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
 
-    with open(dummy_abs, "w", encoding="utf-8") as f:
-        f.write(
-            "extends Node\n"
-            'var security = {"save_salt": "CI_INJECT_SALT_HERE"}\n'
-            'var another = {"save_salt": "CI_INJECT_SALT_HERE"}\n'
-        )
+    dummy_abs.write_text(
+        'extends Node\n'
+        'var security = {"save_salt": "CI_INJECT_SALT_HERE"}\n'
+        'var another = {"save_salt": "CI_INJECT_SALT_HERE"}\n',
+        encoding="utf-8"
+    )
 
     result = run_injection(dummy_rel, "multi-placeholder-salt")
 
     assert result.returncode == 0
-    with open(dummy_abs, "r", encoding="utf-8") as f:
-        content = f.read()
+    content = dummy_abs.read_text(encoding="utf-8")
     assert "CI_INJECT_SALT_HERE" not in content
     assert content.count("multi-placeholder-salt") == 2
 
@@ -116,47 +108,45 @@ def test_injection_multiple_placeholders(repo_tmp):
 def test_injection_missing_placeholder(repo_tmp):
     """A missing placeholder is a safe no-op. The file must remain untouched."""
     dummy_rel = f"{repo_tmp}/dummy_missing.gd"
-    dummy_abs = os.path.join(PROJECT_ROOT, dummy_rel)
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
     original_content = 'extends Node\nvar security = {"save_salt": "unchanged"}\n'
 
-    with open(dummy_abs, "w", encoding="utf-8") as f:
-        f.write(original_content)
+    dummy_abs.write_text(original_content, encoding="utf-8")
 
     result = run_injection(dummy_rel, "missing-placeholder-salt")
 
     assert result.returncode == 0
-    with open(dummy_abs, "r", encoding="utf-8") as f:
-        content = f.read()
-    assert content == original_content
+    assert dummy_abs.read_text(encoding="utf-8") == original_content
 
 
 def test_injection_empty_secret(repo_tmp):
     """Ensures the bash script guard catches an empty environment variable and aborts."""
     dummy_rel = f"{repo_tmp}/dummy_empty.gd"
-    dummy_abs = os.path.join(PROJECT_ROOT, dummy_rel)
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+    original_content = 'var salt = "CI_INJECT_SALT_HERE"\n'
 
-    with open(dummy_abs, "w", encoding="utf-8") as f:
-        f.write('var salt = "CI_INJECT_SALT_HERE"\n')
+    dummy_abs.write_text(original_content, encoding="utf-8")
 
     result = run_injection(dummy_rel, "")
 
     assert result.returncode != 0
     assert "environment variable is not set" in result.stdout
 
+    # Verify no partial corruption occurred
+    assert dummy_abs.read_text(encoding="utf-8") == original_content
+
 
 def test_injection_filename_with_spaces(repo_tmp):
     """Verifies bash variable quoting robustness against argument splitting."""
     dummy_rel = f"{repo_tmp}/dummy globals spaces.gd"
-    dummy_abs = os.path.join(PROJECT_ROOT, dummy_rel)
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
 
-    with open(dummy_abs, "w", encoding="utf-8") as f:
-        f.write('var salt = "CI_INJECT_SALT_HERE"\n')
+    dummy_abs.write_text('var salt = "CI_INJECT_SALT_HERE"\n', encoding="utf-8")
 
     result = run_injection(dummy_rel, "space-test-secret")
 
     assert result.returncode == 0
-    with open(dummy_abs, "r", encoding="utf-8") as f:
-        content = f.read()
+    content = dummy_abs.read_text(encoding="utf-8")
     assert "space-test-secret" in content
 
 
@@ -170,33 +160,61 @@ def test_injection_non_existent_file():
 def test_injection_multiline_secret(repo_tmp):
     """Validates that multiline secrets safely fail instead of silently corrupting."""
     dummy_rel = f"{repo_tmp}/dummy_multiline.gd"
-    dummy_abs = os.path.join(PROJECT_ROOT, dummy_rel)
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+    original_content = 'var salt = "CI_INJECT_SALT_HERE"\n'
 
-    with open(dummy_abs, "w", encoding="utf-8") as f:
-        f.write('var salt = "CI_INJECT_SALT_HERE"\n')
+    dummy_abs.write_text(original_content, encoding="utf-8")
 
     result = run_injection(dummy_rel, "line1\nline2")
 
-    # sed typically fails when unescaped newlines are passed in the replacement string
+    # Platform agnostic check: It just needs to fail deterministically
     assert result.returncode != 0
-    assert "unterminated `s' command" in result.stderr
+    assert "sed" in result.stderr.lower()
+
+    # Verify the file was not accidentally mangled before failure
+    assert dummy_abs.read_text(encoding="utf-8") == original_content
+
+
+def test_injection_readonly_file(repo_tmp):
+    """
+    Catches CI/container filesystem edge cases.
+    Secures both the file AND the parent directory to prevent
+    Linux 'sed -i' from bypassing read-only file locks via directory rename.
+    """
+    dummy_rel = f"{repo_tmp}/dummy_readonly.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+    original_content = 'var salt = "CI_INJECT_SALT_HERE"\n'
+    dummy_abs.write_text(original_content, encoding="utf-8")
+
+    # Lock file and directory
+    dummy_abs.chmod(0o444)
+    dummy_abs.parent.chmod(0o555)
+
+    try:
+        result = run_injection(dummy_rel, "readonly-secret")
+
+        assert result.returncode != 0
+        assert dummy_abs.read_text(encoding="utf-8") == original_content
+    finally:
+        # MUST restore write permissions, otherwise pytest temporary directory cleanup will crash
+        dummy_abs.parent.chmod(0o777)
+        dummy_abs.chmod(0o666)
 
 
 def test_idempotency(repo_tmp):
     """Running the injection twice should not cause corruption or double-escaping."""
     dummy_rel = f"{repo_tmp}/dummy_idempotent.gd"
-    dummy_abs = os.path.join(PROJECT_ROOT, dummy_rel)
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
 
-    with open(dummy_abs, "w", encoding="utf-8") as f:
-        f.write('var salt = "CI_INJECT_SALT_HERE"\n')
+    dummy_abs.write_text('var salt = "CI_INJECT_SALT_HERE"\n', encoding="utf-8")
 
-    # First run
-    run_injection(dummy_rel, "idempotent-secret")
+    # First run must succeed
+    first = run_injection(dummy_rel, "idempotent-secret")
+    assert first.returncode == 0, "Initial injection failed"
 
-    # Second run
-    result = run_injection(dummy_rel, "idempotent-secret")
+    # Second run must also succeed and leave content uncorrupted
+    second = run_injection(dummy_rel, "idempotent-secret")
 
-    assert result.returncode == 0
-    with open(dummy_abs, "r", encoding="utf-8") as f:
-        content = f.read()
+    assert second.returncode == 0
+    content = dummy_abs.read_text(encoding="utf-8")
     assert content.count("idempotent-secret") == 1
