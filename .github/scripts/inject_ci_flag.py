@@ -25,8 +25,6 @@ def inject_ci_flag():
 
     try:
         if config_path.exists():
-            # FIX: Only create backup if it doesn't exist to prevent overwriting
-            # the pristine original during idempotent (repeated) runs.
             if not backup_path.exists():
                 shutil.copy2(config_path, backup_path)
         else:
@@ -38,12 +36,12 @@ def inject_ci_flag():
         data = config_path.read_text(encoding="utf-8")
 
         # 1. Strip out ANY existing custom_features lines to ensure a clean slate.
-        # (?m) enables multiline mode. ^ matches the start of a line. \r?\n? handles line breaks.
         updated_data = re.sub(r"(?m)^custom_features=.*\r?\n?", "", data)
 
-        # 2. Inject the 'ci' flag directly under EVERY preset options header.
+        # 2. Inject the 'ci' flag directly under EVERY root preset header.
+        # This matches [preset.0], [preset.1] etc., but explicitly avoids [preset.0.options]
         updated_data = re.sub(
-            r"(\[preset\.\d+\.options\])", r'\1\ncustom_features="ci"', updated_data
+            r"(?m)^(\[preset\.\d+\])\s*$", r'\1\ncustom_features="ci"', updated_data
         )
 
         config_path.write_text(updated_data, encoding="utf-8")

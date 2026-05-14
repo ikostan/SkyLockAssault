@@ -35,7 +35,7 @@ def run_ci_injection(test_work_dir: Path) -> subprocess.CompletedProcess[str]:
         text=True,
         timeout=10,
         encoding="utf-8",
-        check=False,  # Explicitly handle non-zero exit codes manually in our tests
+        check=False,  # Tells the linter: "I am intentionally handling exit codes manually"
     )
 
 
@@ -43,7 +43,7 @@ def test_inject_ci_flag_standard(repo_tmp):
     """Tests injection when custom_features is empty."""
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
-    config.write_text('[preset.0.options]\ncustom_features=""', encoding="utf-8")
+    config.write_text('[preset.0]\ncustom_features=""\n[preset.0.options]\n', encoding="utf-8")
 
     result = run_ci_injection(root)
 
@@ -56,7 +56,7 @@ def test_inject_ci_flag_missing_key(repo_tmp):
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
     # Preset exists but has no features defined
-    config.write_text("[preset.0.options]\nother_setting=true", encoding="utf-8")
+    config.write_text('[preset.0]\nname="Web"\n[preset.0.options]\nother_setting=true', encoding="utf-8")
 
     result = run_ci_injection(root)
 
@@ -65,7 +65,7 @@ def test_inject_ci_flag_missing_key(repo_tmp):
 
     # Separated semantic assertions to avoid brittle newline (\r\n) failures
     assert 'custom_features="ci"' in content
-    assert "[preset.0.options]" in content
+    assert "[preset.0]" in content
 
 
 def test_inject_ci_flag_existing_values(repo_tmp):
@@ -77,7 +77,7 @@ def test_inject_ci_flag_existing_values(repo_tmp):
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
     config.write_text(
-        '[preset.0.options]\ncustom_features="debug,test"', encoding="utf-8"
+        '[preset.0]\ncustom_features="debug,test"\n[preset.0.options]\n', encoding="utf-8"
     )
 
     result = run_ci_injection(root)
@@ -92,7 +92,7 @@ def test_inject_ci_flag_backup_creation(repo_tmp):
     """Verifies that a backup file is created and contents are perfectly preserved."""
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
-    original_content = '[preset.0.options]\ncustom_features=""'
+    original_content = '[preset.0]\ncustom_features=""'
     config.write_text(original_content, encoding="utf-8")
 
     run_ci_injection(root)
@@ -123,7 +123,7 @@ def test_inject_ci_flag_idempotent(repo_tmp):
     """
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
-    original_content = "[preset.0.options]\nother_setting=true"
+    original_content = '[preset.0]\nname="Web"'
     config.write_text(original_content, encoding="utf-8")
 
     # First run
@@ -150,7 +150,7 @@ def test_inject_ci_flag_already_exists(repo_tmp):
     """Ensures the script safely handles files where 'ci' is already present."""
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
-    config.write_text('[preset.0.options]\ncustom_features="ci"', encoding="utf-8")
+    config.write_text('[preset.0]\ncustom_features="ci"', encoding="utf-8")
 
     result = run_ci_injection(root)
     assert result.returncode == 0
@@ -165,9 +165,9 @@ def test_inject_ci_flag_multiple_presets(repo_tmp):
     config = root / "export_presets.cfg"
 
     multi_preset_content = (
-        "[preset.0.options]\n"
-        "other_setting=true\n\n"
-        "[preset.1.options]\n"
+        "[preset.0]\n"
+        'name="Web"\n\n'
+        "[preset.1]\n"
         'custom_features=""\n'
     )
     config.write_text(multi_preset_content, encoding="utf-8")
@@ -178,8 +178,8 @@ def test_inject_ci_flag_multiple_presets(repo_tmp):
     content = config.read_text(encoding="utf-8")
 
     # Both preset sections should contain the CI feature flag and remain intact
-    assert "[preset.0.options]" in content
-    assert "[preset.1.options]" in content
+    assert "[preset.0]" in content
+    assert "[preset.1]" in content
     assert content.count('custom_features="ci"') == 2
 
 
@@ -212,7 +212,7 @@ def test_inject_ci_flag_malformed_config(repo_tmp):
     config = root / "export_presets.cfg"
 
     # Malformed section header (missing closing bracket)
-    malformed_content = "[preset.0.options\nother_setting=true"
+    malformed_content = '[preset.0\nname="Web"'
     config.write_text(malformed_content, encoding="utf-8")
 
     result = run_ci_injection(root)
@@ -224,6 +224,4 @@ def test_inject_ci_flag_malformed_config(repo_tmp):
     assert content == malformed_content
 
     # Verify rollback safety contract: A backup is created even on a safe no-op
-    assert (
-        root / "export_presets.cfg.bak"
-    ).exists(), "Backup missing on malformed no-op"
+    assert (root / "export_presets.cfg.bak").exists(), "Backup missing on malformed no-op"

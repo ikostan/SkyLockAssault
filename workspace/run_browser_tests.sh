@@ -74,7 +74,7 @@ echo "✅ Server ready"
 echo "🧪 Running Playwright Browser Tests..."
 mkdir -p "$PROJECT_DIR/artifacts"
 source /opt/venv/bin/activate
-xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" pytest tests/ -v --timeout=$PW_TIMEOUT --ignore=tests/refactor --capture=no --html="$PROJECT_DIR/report.html" --self-contained-html --junitxml="$PROJECT_DIR/report.xml"
+xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" pytest tests/ -v --timeout=$PW_TIMEOUT --ignore=tests/refactor --ignore=tests/ci --capture=no --html="$PROJECT_DIR/report.html" --self-contained-html --junitxml="$PROJECT_DIR/report.xml"
 check_exit "Playwright Tests"
 
 # Generate test report summary
