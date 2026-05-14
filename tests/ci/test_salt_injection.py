@@ -2,14 +2,14 @@
 Test suite for the CI/CD salt injection pipeline.
 
 Validates that the master bash script correctly replaces placeholder strings
-in GDScript files with various complex secrets, ensuring that escape sequences 
+in GDScript files with various complex secrets, ensuring that escape sequences
 and special sed characters do not break the final game code.
 """
 
 import os
+import stat
 import subprocess
 import sys
-import stat
 
 # Dynamically locate the project root
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -58,7 +58,9 @@ def run_injection(file_name, raw_secret, expect_failure=False):
             capture_output=True,  # Suppress bash output during tests unless there's an unexpected error
         )
         if expect_failure:
-            print(f"❌ ERROR: Injection script was expected to fail on '{file_name}' but succeeded.")
+            print(
+                f"❌ ERROR: Injection script was expected to fail on '{file_name}' but succeeded."
+            )
             sys.exit(1)
     except subprocess.CalledProcessError as e:
         if not expect_failure:
@@ -126,7 +128,9 @@ def test_injection_sed_special_characters():
     with open(dummy_file_abs, "r") as f:
         content = f.read()
         if f'var salt: String = "{expected_salt_2}"' in content:
-            print("✅ TEST PASS: Injected secret with sed special characters (| and &).")
+            print(
+                "✅ TEST PASS: Injected secret with sed special characters (| and &)."
+            )
         else:
             print(f"❌ TEST FAIL\n{content}")
             if os.path.exists(dummy_file_abs):
@@ -149,7 +153,7 @@ def test_injection_multiple_placeholders():
 
     with open(dummy_file_abs, "w", encoding="utf-8") as f:
         f.write(
-            'extends Node\n'
+            "extends Node\n"
             'var security = {"save_salt": "CI_INJECT_SALT_HERE"}\n'
             'var another = {"save_salt": "CI_INJECT_SALT_HERE"}\n'
         )
@@ -159,10 +163,15 @@ def test_injection_multiple_placeholders():
     with open(dummy_file_abs, "r", encoding="utf-8") as f:
         content = f.read()
 
-    if "CI_INJECT_SALT_HERE" not in content and content.count("multi-placeholder-salt") == 2:
+    if (
+        "CI_INJECT_SALT_HERE" not in content
+        and content.count("multi-placeholder-salt") == 2
+    ):
         print("✅ TEST PASS: Multiple placeholders replaced deterministically.")
     else:
-        print(f"❌ TEST FAIL: Incomplete replacement in multiple placeholders.\n{content}")
+        print(
+            f"❌ TEST FAIL: Incomplete replacement in multiple placeholders.\n{content}"
+        )
         if os.path.exists(dummy_file_abs):
             os.remove(dummy_file_abs)
         sys.exit(1)
@@ -193,7 +202,9 @@ def test_injection_missing_placeholder():
     if content == original_content:
         print("✅ TEST PASS: Missing placeholder resulted in safe no-op.")
     else:
-        print(f"❌ TEST FAIL: Missing placeholder test unexpectedly mutated the file.\n{content}")
+        print(
+            f"❌ TEST FAIL: Missing placeholder test unexpectedly mutated the file.\n{content}"
+        )
         if os.path.exists(dummy_file_abs):
             os.remove(dummy_file_abs)
         sys.exit(1)
@@ -287,7 +298,9 @@ def test_injection_non_existent_file():
     Ensures the script fails fast with a clear, deterministic error code
     rather than causing silent or downstream pipeline failures.
     """
-    run_injection("this_file_does_not_exist.gd", "non-existent-file-salt", expect_failure=True)
+    run_injection(
+        "this_file_does_not_exist.gd", "non-existent-file-salt", expect_failure=True
+    )
     print("✅ TEST PASS: Non-existent file triggered deterministic error.")
 
 
