@@ -139,7 +139,9 @@ def test_inject_ci_flag_idempotent(repo_tmp):
     # Verify backup stability: The second run should NOT overwrite the backup
     # with the already-mutated content from the first run.
     backup = root / "export_presets.cfg.bak"
-    assert backup.read_text(encoding="utf-8") == original_content, "Rollback safety destroyed: Backup was overwritten!"
+    assert (
+        backup.read_text(encoding="utf-8") == original_content
+    ), "Rollback safety destroyed: Backup was overwritten!"
 
 
 def test_inject_ci_flag_already_exists(repo_tmp):
