@@ -18,7 +18,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 INJECT_SCRIPT_ABS = PROJECT_ROOT / ".github" / "scripts" / "inject_ci_flag.py"
 
 
-def run_ci_injection(test_work_dir: Path) -> subprocess.CompletedProcess:
+def run_ci_injection(test_work_dir: Path) -> subprocess.CompletedProcess[str]:
     """
     Executes the injection script.
     Uses the absolute path to the script so it can be found regardless of cwd.
@@ -115,14 +115,15 @@ def test_inject_ci_flag_no_config_failure(repo_tmp):
     assert "not found" in combined_output
 
 
-# --- NEW TESTS ADDED BELOW ---
+# --- NEW & UPDATED TESTS ADDED BELOW ---
 
 
 def test_inject_ci_flag_idempotent(repo_tmp):
     """Critical CI test: Running the script twice should not corrupt or duplicate the flag."""
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
-    config.write_text("[preset.0.options]\nother_setting=true", encoding="utf-8")
+    original_content = "[preset.0.options]\nother_setting=true"
+    config.write_text(original_content, encoding="utf-8")
 
     # First run
     first_result = run_ci_injection(root)
@@ -134,6 +135,11 @@ def test_inject_ci_flag_idempotent(repo_tmp):
 
     content = config.read_text(encoding="utf-8")
     assert content.count('custom_features="ci"') == 1, "Flag was duplicated!"
+
+    # Verify backup stability: The second run should NOT overwrite the backup
+    # with the already-mutated content from the first run.
+    backup = root / "export_presets.cfg.bak"
+    assert backup.read_text(encoding="utf-8") == original_content, "Rollback safety destroyed: Backup was overwritten!"
 
 
 def test_inject_ci_flag_already_exists(repo_tmp):
@@ -166,5 +172,26 @@ def test_inject_ci_flag_multiple_presets(repo_tmp):
     assert result.returncode == 0
 
     content = config.read_text(encoding="utf-8")
-    # Because of the regex replacement logic, it should inject/overwrite for BOTH presets
+
+    # Both preset sections should contain the CI feature flag and remain intact
+    assert "[preset.0.options]" in content
+    assert "[preset.1.options]" in content
     assert content.count('custom_features="ci"') == 2
+
+
+def test_inject_ci_flag_malformed_config(repo_tmp):
+    """Ensures the script fails gracefully and avoids corrupting broken files."""
+    root = Path(repo_tmp)
+    config = root / "export_presets.cfg"
+
+    # Malformed section header (missing closing bracket)
+    malformed_content = "[preset.0.options\ncustom_features=debug"
+    config.write_text(malformed_content, encoding="utf-8")
+
+    result = run_ci_injection(root)
+
+    # The script should exit cleanly (0) but make NO changes,
+    # because the regex safely fails to find a valid preset block.
+    assert result.returncode == 0
+    content = config.read_text(encoding="utf-8")
+    assert 'custom_features="ci"' not in content

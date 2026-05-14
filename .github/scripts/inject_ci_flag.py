@@ -25,7 +25,10 @@ def inject_ci_flag():
 
     try:
         if config_path.exists():
-            shutil.copy2(config_path, backup_path)
+            # FIX: Only create backup if it doesn't exist to prevent overwriting
+            # the pristine original during idempotent (repeated) runs.
+            if not backup_path.exists():
+                shutil.copy2(config_path, backup_path)
         else:
             print(
                 f"❌ ERROR: {config_path} not found. Ensure you are in the project root."
