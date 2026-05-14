@@ -505,6 +505,8 @@ func is_file_encrypted(path: String) -> bool:
 
 ## Safely loads a config file, handling both encrypted and legacy plaintext formats.
 ## Returns a Dictionary: {"config": ConfigFile, "err": int, "is_legacy": bool}
+## Safely loads a config file, handling both encrypted and legacy plaintext formats.
+## Returns a Dictionary: {"config": ConfigFile, "err": int, "is_legacy": bool}
 func safe_load_config(path: String) -> Dictionary:
 	var key: String = ensure_encryption_key()
 
@@ -526,35 +528,40 @@ func safe_load_config(path: String) -> Dictionary:
 					+ path
 					+ " (Error code: "
 					+ str(err)
-					+ "). Key mismatch or corrupted file!"
+					+ ")."
 				),
 				LogLevel.ERROR
 			)
-			# --- AUTO-RECOVERY FIX ---
-			log_message(
-				"🗑️ Attempting to auto-delete corrupted/orphaned save file to allow clean recovery.",
-				LogLevel.INFO
-			)
+			
+			# --- AUTO-RECOVERY FIX: TIGHTENED CONDITIONS ---
+			# Only delete if the file is explicitly corrupted or has invalid data (bad password/hash).
+			if err == ERR_FILE_CORRUPT or err == ERR_INVALID_DATA:
+				log_message(
+					"🗑️ Attempting to auto-delete corrupted/orphaned save file to allow clean recovery.",
+					LogLevel.INFO
+				)
 
-			var remove_err: int = DirAccess.remove_absolute(path)
-			if remove_err == OK:
-				log_message("✅ Corrupted file successfully deleted.", LogLevel.DEBUG)
-				# Treat as a first-time boot so the game generates fresh defaults
-				err = ERR_FILE_NOT_FOUND
+				var remove_err: int = DirAccess.remove_absolute(path)
+				if remove_err == OK:
+					log_message("✅ Corrupted file successfully deleted.", LogLevel.DEBUG)
+					# Treat as a first-time boot so the game generates fresh defaults
+					err = ERR_FILE_NOT_FOUND
+				else:
+					log_message(
+						(
+							"❌ FAILED to delete corrupted file at "
+							+ path
+							+ " (Error: "
+							+ str(remove_err)
+							+ "). Game may be unable to save!"
+						),
+						LogLevel.ERROR
+					)
 			else:
 				log_message(
-					(
-						"❌ FAILED to delete corrupted file at "
-						+ path
-						+ " (Error: "
-						+ str(remove_err)
-						+ "). Game may be unable to save!"
-					),
-					LogLevel.ERROR
+					"⚠️ File is unreadable but NOT explicitly corrupted. Skipping auto-deletion to prevent accidental data loss.", 
+					LogLevel.WARNING
 				)
-				# Notice we DO NOT change 'err' here. We leave it as the original decryption error
-				# (e.g. Error 16)
-				# so the rest of the game knows the file is still fundamentally broken.
 		else:
 			log_message("🔓 Successfully decrypted file: " + path, LogLevel.DEBUG)
 	else:
