@@ -113,7 +113,7 @@ def test_back_flow(page: Page) -> None:
         # Set log level DEBUG
         pre_change_log_count = len(logs)
         page.evaluate("window.changeLogLevel([0])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(TEST_TIMEOUT)
         new_logs = logs[pre_change_log_count:]
         assert any(
             "log level changed to: debug" in log["text"].lower() for log in new_logs
@@ -208,7 +208,7 @@ def test_back_flow(page: Page) -> None:
 
         # Re-enter audio
         page.reload()
-        page.wait_for_timeout(5000)
+        page.wait_for_timeout(DEFAULT_TIMEOUT)
         page.wait_for_function("() => window.godotInitialized", timeout=TEST_TIMEOUT)
         # Navigate to options menu
         page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
