@@ -34,7 +34,7 @@ rm -rf export/web/*
 mkdir -p export/web
 
 echo "🔌 Disabling editor plugins (GUT) to prevent headless crashes..."
-sed -i 's/^enabled=PackedStringArray.*/enabled=PackedStringArray()/' project.godot
+sed -i '/^\[editor_plugins\]/,/^\[/ s/^enabled=PackedStringArray.*/enabled=PackedStringArray()/' project.godot
 
 # Call the Single Source of Truth script
 bash ./.github/scripts/inject_salt.sh "scripts/core/globals.gd" || {
