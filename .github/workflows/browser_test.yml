@@ -37,7 +37,7 @@ jobs:
 
       - name: "Inject 'ci' feature flag into export_presets.cfg"
         run: |
-          python3 .github/scripts/inject_ci_flag.py"
+          python3 .github/scripts/inject_ci_flag.py
 
       - name: "Create Export Directories"
         run: |
