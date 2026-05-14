@@ -10,11 +10,7 @@ extends GutTest
 
 const TEST_CONFIG_PATH: String = "user://test_encryption_logging.cfg"
 const INVALID_CONFIG_PATH: String = "user://invalid_directory_that_does_not_exist/test.cfg"
-const SALT_PROPERTY: String = "game/security/save_salt"
-const DUMMY_SALT: String = "test_logging_salt_123"
 
-var _original_salt_value: Variant = null
-var _original_salt_existed: bool = false
 var _original_settings: GameSettingsResource
 
 
