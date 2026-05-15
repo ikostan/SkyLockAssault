@@ -175,7 +175,8 @@ def test_injection_multiline_secret(repo_tmp):
 
     # Platform agnostic check: It just needs to fail deterministically
     assert result.returncode != 0
-    assert "sed" in result.stderr.lower()
+    # Ensure an error is reported without coupling to a specific tool name
+    assert result.stderr.strip() != ""
 
     # Verify the file was not accidentally mangled before failure
     assert dummy_abs.read_text(encoding="utf-8") == original_content
