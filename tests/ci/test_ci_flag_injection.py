@@ -43,7 +43,9 @@ def test_inject_ci_flag_standard(repo_tmp):
     """Tests injection when custom_features is empty."""
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
-    config.write_text('[preset.0]\ncustom_features=""\n[preset.0.options]\n', encoding="utf-8")
+    config.write_text(
+        '[preset.0]\ncustom_features=""\n[preset.0.options]\n', encoding="utf-8"
+    )
 
     result = run_ci_injection(root)
 
@@ -56,7 +58,10 @@ def test_inject_ci_flag_missing_key(repo_tmp):
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
     # Preset exists but has no features defined
-    config.write_text('[preset.0]\nname="Web"\n[preset.0.options]\nother_setting=true', encoding="utf-8")
+    config.write_text(
+        '[preset.0]\nname="Web"\n[preset.0.options]\nother_setting=true',
+        encoding="utf-8",
+    )
 
     result = run_ci_injection(root)
 
@@ -77,7 +82,8 @@ def test_inject_ci_flag_existing_values(repo_tmp):
     root = Path(repo_tmp)
     config = root / "export_presets.cfg"
     config.write_text(
-        '[preset.0]\ncustom_features="debug,test"\n[preset.0.options]\n', encoding="utf-8"
+        '[preset.0]\ncustom_features="debug,test"\n[preset.0.options]\n',
+        encoding="utf-8",
     )
 
     result = run_ci_injection(root)
@@ -165,10 +171,7 @@ def test_inject_ci_flag_multiple_presets(repo_tmp):
     config = root / "export_presets.cfg"
 
     multi_preset_content = (
-        "[preset.0]\n"
-        'name="Web"\n\n'
-        "[preset.1]\n"
-        'custom_features=""\n'
+        "[preset.0]\n" 'name="Web"\n\n' "[preset.1]\n" 'custom_features=""\n'
     )
     config.write_text(multi_preset_content, encoding="utf-8")
 
@@ -224,7 +227,9 @@ def test_inject_ci_flag_malformed_config(repo_tmp):
     assert content == malformed_content
 
     # Verify rollback safety contract: A backup is created even on a safe no-op
-    assert (root / "export_presets.cfg.bak").exists(), "Backup missing on malformed no-op"
+    assert (
+        root / "export_presets.cfg.bak"
+    ).exists(), "Backup missing on malformed no-op"
 
 
 def test_inject_ci_flag_crlf_windows_endings(repo_tmp):
@@ -233,12 +238,7 @@ def test_inject_ci_flag_crlf_windows_endings(repo_tmp):
     config = root / "export_presets.cfg"
 
     # Explicitly use \r\n for line endings to simulate a Windows-authored file
-    crlf_content = "\r\n".join([
-        "[preset.0]",
-        'name="Web"',
-        'custom_features=""',
-        ""
-    ])
+    crlf_content = "\r\n".join(["[preset.0]", 'name="Web"', 'custom_features=""', ""])
 
     # We must use open() with newline="" to prevent Linux CI runners
     # from automatically stripping the \r before writing to disk.
@@ -256,4 +256,4 @@ def test_inject_ci_flag_crlf_windows_endings(repo_tmp):
     # Verify the regex successfully matched the header and injected the flag
     assert "[preset.0]" in content
     assert 'custom_features="ci"' in content
-    assert content.count('custom_features=') == 1
+    assert content.count("custom_features=") == 1
