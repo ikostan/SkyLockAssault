@@ -175,6 +175,7 @@ def test_injection_multiline_secret(repo_tmp):
 
     # Platform agnostic check: It just needs to fail deterministically
     assert result.returncode != 0
+
     # Ensure an error is reported without coupling to a specific tool name
     assert result.stderr.strip() != ""
 
