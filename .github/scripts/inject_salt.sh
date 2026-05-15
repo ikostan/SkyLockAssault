@@ -26,5 +26,14 @@ GODOT_ESCAPED=$(printf '%s' "$PRODUCTION_SALT" | sed 's/\\/\\\\/g; s/"/\\"/g')
 # 2. Escape for sed replacement string
 SED_ESCAPED=$(printf '%s' "$GODOT_ESCAPED" | sed 's/\\/\\\\/g; s/&/\\&/g; s/|/\\|/g')
 
+# Cross-platform sed for in-place editing (macOS vs Linux)
+sedi() {
+  if [ "$(uname)" = "Darwin" ]; then
+    sed -i '' "$@"
+  else
+    sed -i "$@"
+  fi
+}
+
 # 3. Replace the safe placeholder with the real secret
-sed -i "s|\"CI_INJECT_SALT_HERE\"|\"$SED_ESCAPED\"|g" "$TARGET_FILE"
+sedi "s|\"CI_INJECT_SALT_HERE\"|\"$SED_ESCAPED\"|g" "$TARGET_FILE"

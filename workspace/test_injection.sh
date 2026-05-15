@@ -23,6 +23,15 @@ GODOT_CMD="godot"
 RAW_SECRET='T3st_S@lt!_2026#"\'
 export PRODUCTION_SALT="$RAW_SECRET"
 
+# Cross-platform sed for in-place editing (macOS vs Linux)
+sedi() {
+  if [ "$(uname)" = "Darwin" ]; then
+    sed -i '' "$@"
+  else
+    sed -i "$@"
+  fi
+}
+
 echo "=========================================="
 echo " Starting Local CI/CD Simulation"
 echo "=========================================="
@@ -41,7 +50,8 @@ rm -rf export/web/*
 mkdir -p export/web
 
 echo "🔌 Disabling editor plugins (GUT) to prevent headless crashes..."
-sed -i '/^\[editor_plugins\]/,/^\[/ s/^enabled=PackedStringArray.*/enabled=PackedStringArray()/' project.godot
+sedi '/^\[editor_plugins\]/,/^\[/ s/^enabled=PackedStringArray.*/enabled=PackedStringArray()/' project.godot
+# sed -i '/^\[editor_plugins\]/,/^\[/ s/^enabled=PackedStringArray.*/enabled=PackedStringArray()/' project.godot
 
 # Call the Single Source of Truth script
 bash ./.github/scripts/inject_salt.sh "scripts/core/globals.gd" || {
