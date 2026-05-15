@@ -289,4 +289,4 @@ def test_inject_ci_flag_cleans_malformed_options(repo_tmp):
 
     # 3. ...but the invalid/orphaned custom_features is successfully scrubbed!
     assert 'custom_features="foo,bar"' not in updated_content
-    assert updated_content.count('custom_features=') == 1
+    assert updated_content.count("custom_features=") == 1
