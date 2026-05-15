@@ -32,15 +32,6 @@ sedi() {
   fi
 }
 
-# Cross-platform sed for in-place editing (macOS vs Linux)
-sedi() {
-  if [ "$(uname)" = "Darwin" ]; then
-    sed -i '' "$@"
-  else
-    sed -i "$@"
-  fi
-}
-
 echo "=========================================="
 echo " Starting Local CI/CD Simulation"
 echo "=========================================="
