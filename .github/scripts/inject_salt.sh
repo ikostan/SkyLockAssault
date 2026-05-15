@@ -27,13 +27,8 @@ GODOT_ESCAPED=$(printf '%s' "$PRODUCTION_SALT" | sed 's/\\/\\\\/g; s/"/\\"/g')
 SED_ESCAPED=$(printf '%s' "$GODOT_ESCAPED" | sed 's/\\/\\\\/g; s/&/\\&/g; s/|/\\|/g')
 
 # Cross-platform sed for in-place editing (macOS vs Linux)
-sedi() {
-  if [ "$(uname)" = "Darwin" ]; then
-    sed -i '' "$@"
-  else
-    sed -i "$@"
-  fi
-}
+# Source the shared utilities
+source "$(dirname "$0")/ci_utils.sh"
 
 # 3. Replace the safe placeholder with the real secret
 sedi "s|\"CI_INJECT_SALT_HERE\"|\"$SED_ESCAPED\"|g" "$TARGET_FILE"

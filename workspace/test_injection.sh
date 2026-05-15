@@ -23,14 +23,18 @@ GODOT_CMD="godot"
 RAW_SECRET='T3st_S@lt!_2026#"\'
 export PRODUCTION_SALT="$RAW_SECRET"
 
-# Cross-platform sed for in-place editing (macOS vs Linux)
-sedi() {
-  if [ "$(uname)" = "Darwin" ]; then
-    sed -i '' "$@"
-  else
-    sed -i "$@"
-  fi
-}
+# Source shared CI utilities
+source .github/scripts/ci_utils.sh
+
+echo "=========================================="
+echo " Checking System Dependencies"
+echo "=========================================="
+for cmd in $GODOT_CMD python3 bash sed; do
+    if ! command -v $cmd >/dev/null 2>&1; then
+        echo "❌ ERROR: Required command '$cmd' is not installed or not in your PATH."
+        exit 1
+    fi
+done
 
 echo "=========================================="
 echo " Starting Local CI/CD Simulation"
@@ -49,9 +53,8 @@ echo "🗑️ Wiping previous web export files..."
 rm -rf export/web/*
 mkdir -p export/web
 
-echo "🔌 Disabling editor plugins (GUT) to prevent headless crashes..."
-sedi '/^\[editor_plugins\]/,/^\[/ s/^enabled=PackedStringArray.*/enabled=PackedStringArray()/' project.godot
-# sed -i '/^\[editor_plugins\]/,/^\[/ s/^enabled=PackedStringArray.*/enabled=PackedStringArray()/' project.godot
+# Disable editor plugins (GUT) to prevent headless crashes
+disable_editor_plugins "project.godot"
 
 # Call the Single Source of Truth script
 bash ./.github/scripts/inject_salt.sh "scripts/core/globals.gd" || {
