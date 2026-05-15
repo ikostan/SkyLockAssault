@@ -257,3 +257,36 @@ def test_inject_ci_flag_crlf_windows_endings(repo_tmp):
     assert "[preset.0]" in content
     assert 'custom_features="ci"' in content
     assert content.count("custom_features=") == 1
+
+
+def test_inject_ci_flag_cleans_malformed_options(repo_tmp):
+    """
+    Ensures orphaned or malformed `custom_features` inside option blocks
+    are safely wiped and not duplicated.
+    """
+    root = Path(repo_tmp)
+    config = root / "export_presets.cfg"
+
+    preset_with_options = (
+        "[preset.0]\n"
+        'custom_features=""\n\n'
+        "[preset.0.options]\n"
+        'custom_features="foo,bar"\n'
+    )
+    config.write_text(preset_with_options, encoding="utf-8")
+
+    result = run_ci_injection(root)
+
+    assert result.returncode == 0
+    updated_content = config.read_text(encoding="utf-8")
+
+    # 1. Root preset successfully gets the CI flag
+    assert "[preset.0]" in updated_content
+    assert 'custom_features="ci"' in updated_content
+
+    # 2. Options section remains intact...
+    assert "[preset.0.options]" in updated_content
+
+    # 3. ...but the invalid/orphaned custom_features is successfully scrubbed!
+    assert 'custom_features="foo,bar"' not in updated_content
+    assert updated_content.count('custom_features=') == 1
