@@ -10,9 +10,15 @@ import shutil
 import sys
 from pathlib import Path
 
-# Force UTF-8 encoding for stdout to prevent crashes on Windows legacy terminals
-if sys.stdout.encoding.lower() != "utf-8":
-    sys.stdout.reconfigure(encoding="utf-8")
+# Force UTF-8 encoding for stdout to prevent crashes on Windows legacy terminals.
+# Safely fallback to "" if stdout is redirected (e.g., in CI) and encoding is None.
+stdout_enc = sys.stdout.encoding or ""
+if stdout_enc.lower() != "utf-8":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        # Proceed safely if reconfigure is unsupported in the current piped environment
+        pass
 
 
 def inject_ci_flag():
