@@ -26,7 +26,7 @@ jobs:
       - name: "Disable Editor Plugins (Prevent Headless Crash)"
         run: |
           # Prevents Signal 11 crashes during headless export on Ubuntu runners
-          sed -i 's/^enabled=PackedStringArray.*/enabled=PackedStringArray()/' project.godot
+          sed -i '/^\[editor_plugins\]/,/^\[/ s/^enabled=PackedStringArray.*/enabled=PackedStringArray()/' project.godot
 
       - name: "Inject Test Salt into GDScript"
         env:
