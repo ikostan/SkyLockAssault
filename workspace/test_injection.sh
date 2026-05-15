@@ -10,6 +10,12 @@ cleanup() {
         echo "🧹 Cleaning up: Restoring project.godot from backup..."
         mv -f "project.godot.backup" project.godot
     fi
+    if [ -f "export_presets.cfg.backup" ]; then
+        echo "🧹 Cleaning up: Restoring export_presets.cfg from backup..."
+        mv -f "export_presets.cfg.backup" export_presets.cfg
+    fi
+    # Clean up the internal artifact created by the Python injection script
+    rm -f export_presets.cfg.bak
 }
 trap cleanup EXIT INT TERM
 
@@ -21,13 +27,14 @@ echo "=========================================="
 echo " Starting Local CI/CD Simulation"
 echo "=========================================="
 
-if [ ! -f "scripts/core/globals.gd" ] || [ ! -f "project.godot" ]; then
+if [ ! -f "scripts/core/globals.gd" ] || [ ! -f "project.godot" ] || [ ! -f "export_presets.cfg" ]; then
     echo "❌ ERROR: Required project files not found!"
     exit 1
 fi
 
 cp scripts/core/globals.gd globals.gd.backup
 cp project.godot project.godot.backup
+cp export_presets.cfg export_presets.cfg.backup
 
 echo "🗑️ Wiping previous web export files..."
 rm -rf export/web/*
@@ -39,6 +46,12 @@ sed -i '/^\[editor_plugins\]/,/^\[/ s/^enabled=PackedStringArray.*/enabled=Packe
 # Call the Single Source of Truth script
 bash ./.github/scripts/inject_salt.sh "scripts/core/globals.gd" || {
     echo "❌ ERROR: Master injection script failed."
+    exit 1
+}
+
+echo "⚙️ Injecting 'ci' feature flag into export_presets.cfg..."
+python3 .github/scripts/inject_ci_flag.py || {
+    echo "❌ ERROR: CI flag injection script failed."
     exit 1
 }
 
