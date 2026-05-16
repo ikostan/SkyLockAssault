@@ -149,6 +149,16 @@ docstring formatting, subprocess.check, line lengths. No manual comments.
 
 Provided concise summary highlighting chores (dependency bumps),
 tests (local CI script), bug fixes (web key selection, AI plugin
-disable, salt handling).  
+disable, salt handling).
+
+**@dependabot:**
+
+Automated project dependency maintenance by opening PRs to keep GitHub
+Actions and Python libraries secure and up to date. Specific version
+bumps merged during this cycle:
+
+- Bumped `DavidAnson/markdownlint-cli2-action` from `23.0.0` to `23.2.0`.
+- Bumped `release-drafter/release-drafter` from `7.2.0` to `7.3.0`.
+- Bumped `urllib3` from `2.6.3` to `2.7.0`.
 
 ---
