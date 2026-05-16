@@ -33,6 +33,12 @@ GODOT_ESCAPED=$(printf '%s' "$CLEAN_SALT" | sed 's/\\/\\\\/g; s/"/\\"/g')
 # 2. Escape for sed replacement string
 SED_ESCAPED=$(printf '%s' "$GODOT_ESCAPED" | sed 's/\\/\\\\/g; s/&/\\&/g; s/|/\\|/g')
 
+# 🛑 2.5. EMPTY SECRET GUARD: Catch secrets that become empty after stripping
+if [ -z "$CLEAN_SALT" ]; then
+    echo "❌ ERROR: PRODUCTION_SALT is empty or contains only newlines."
+    exit 1
+fi
+
 # Source the shared utilities
 source "$(dirname "$0")/ci_utils.sh"
 

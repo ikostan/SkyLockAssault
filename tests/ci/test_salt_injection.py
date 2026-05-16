@@ -241,6 +241,8 @@ def test_idempotency(repo_tmp):
         ("line1\r\nline2", "line1line2"),  # Windows CRLF
         ("\n\nline1\n\nline2\n\n", "line1line2"),  # Multiple leading/trailing newlines
         ("\r\n mixed \n newlines \r\n", " mixed  newlines "),  # Mixed with spaces
+        ("   ", "   "),  # All-whitespace (valid string, tests positive path)
+        ("  \n\n  ", "    "),  # Whitespace split by newlines
     ],
 )
 def test_injection_multiline_secret_stripped(repo_tmp, secret_input, expected_injected):
