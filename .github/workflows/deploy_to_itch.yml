@@ -89,6 +89,7 @@ jobs:
 
       - name: "Deploy to itch.io with Butler"
         run: |
-          butler push ${{ steps.export.outputs.archive_directory }}/Web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion "${{ inputs.version }}"
+          # Push the patched zip file explicitly, bypassing the raw output directory
+          butler push export/Web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion "${{ inputs.version }}"
         env:
           BUTLER_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"
