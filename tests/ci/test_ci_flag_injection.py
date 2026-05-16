@@ -1,0 +1,292 @@
+"""
+Test suite for the CI flag injection utility.
+
+Ensures that 'export_presets.cfg' is correctly modified to include the 'ci'
+feature flag, which is critical for bypassing production security guards
+during automated browser testing.
+"""
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+# Dynamically locate the project root to find the infrastructure script
+# We need this to build an absolute path so Python can find the script
+# while the test is running inside a temporary directory.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+INJECT_SCRIPT_ABS = PROJECT_ROOT / ".github" / "scripts" / "inject_ci_flag.py"
+
+
+def run_ci_injection(test_work_dir: Path) -> subprocess.CompletedProcess[str]:
+    """
+    Executes the injection script.
+    Uses the absolute path to the script so it can be found regardless of cwd.
+    """
+    # Force the child process to use UTF-8 via environment variables
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+
+    return subprocess.run(
+        [sys.executable, str(INJECT_SCRIPT_ABS)],
+        env=env,  # Pass the forced encoding env
+        cwd=str(test_work_dir),
+        capture_output=True,
+        text=True,
+        timeout=10,
+        encoding="utf-8",
+        check=False,  # Tells the linter: "I am intentionally handling exit codes manually"
+    )
+
+
+def test_inject_ci_flag_standard(repo_tmp):
+    """Tests injection when custom_features is empty."""
+    root = Path(repo_tmp)
+    config = root / "export_presets.cfg"
+    config.write_text(
+        '[preset.0]\ncustom_features=""\n[preset.0.options]\n', encoding="utf-8"
+    )
+
+    result = run_ci_injection(root)
+
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+    assert 'custom_features="ci"' in config.read_text(encoding="utf-8")
+
+
+def test_inject_ci_flag_missing_key(repo_tmp):
+    """Tests injection when the custom_features key is entirely missing."""
+    root = Path(repo_tmp)
+    config = root / "export_presets.cfg"
+    # Preset exists but has no features defined
+    config.write_text(
+        '[preset.0]\nname="Web"\n[preset.0.options]\nother_setting=true',
+        encoding="utf-8",
+    )
+
+    result = run_ci_injection(root)
+
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+    content = config.read_text(encoding="utf-8")
+
+    # Separated semantic assertions to avoid brittle newline (\r\n) failures
+    assert 'custom_features="ci"' in content
+    assert "[preset.0]" in content
+
+
+def test_inject_ci_flag_existing_values(repo_tmp):
+    """
+    Ensures existing feature flags are intentionally replaced with CI-only mode.
+    Note: Destructive overwrite is the intended behavior here to ensure
+    the CI environment is perfectly isolated from local developer flags.
+    """
+    root = Path(repo_tmp)
+    config = root / "export_presets.cfg"
+    config.write_text(
+        '[preset.0]\ncustom_features="debug,test"\n[preset.0.options]\n',
+        encoding="utf-8",
+    )
+
+    result = run_ci_injection(root)
+
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+    content = config.read_text(encoding="utf-8")
+    assert 'custom_features="ci"' in content
+    assert '"debug,test"' not in content
+
+
+def test_inject_ci_flag_backup_creation(repo_tmp):
+    """Verifies that a backup file is created and contents are perfectly preserved."""
+    root = Path(repo_tmp)
+    config = root / "export_presets.cfg"
+    original_content = '[preset.0]\ncustom_features=""'
+    config.write_text(original_content, encoding="utf-8")
+
+    run_ci_injection(root)
+
+    backup = root / "export_presets.cfg.bak"
+    assert backup.exists(), "Backup file was not created."
+    assert (
+        backup.read_text(encoding="utf-8") == original_content
+    ), "Backup contents corrupted."
+
+
+def test_inject_ci_flag_no_config_failure(repo_tmp):
+    """Ensures the script fails gracefully if the config file is missing."""
+    root = Path(repo_tmp)
+    # config file NOT created
+
+    result = run_ci_injection(root)
+
+    assert result.returncode != 0
+    combined_output = (result.stdout + result.stderr).lower()
+    assert "not found" in combined_output
+
+
+def test_inject_ci_flag_idempotent(repo_tmp):
+    """
+    Critical CI test: Running the script twice should not
+    corrupt or duplicate the feature flag.
+    """
+    root = Path(repo_tmp)
+    config = root / "export_presets.cfg"
+    original_content = '[preset.0]\nname="Web"'
+    config.write_text(original_content, encoding="utf-8")
+
+    # First run
+    first_result = run_ci_injection(root)
+    assert first_result.returncode == 0
+
+    # Second run
+    second_result = run_ci_injection(root)
+    assert second_result.returncode == 0
+
+    content = config.read_text(encoding="utf-8")
+    assert content.count('custom_features="ci"') == 1, "Flag was duplicated!"
+
+    # Verify backup stability: The second run should NOT overwrite the backup
+    # with the already-mutated content from the first run.
+    backup = root / "export_presets.cfg.bak"
+    assert backup.exists(), "Backup file missing during idempotency check."
+    assert (
+        backup.read_text(encoding="utf-8") == original_content
+    ), "Rollback safety destroyed: Backup was overwritten!"
+
+
+def test_inject_ci_flag_already_exists(repo_tmp):
+    """Ensures the script safely handles files where 'ci' is already present."""
+    root = Path(repo_tmp)
+    config = root / "export_presets.cfg"
+    config.write_text('[preset.0]\ncustom_features="ci"', encoding="utf-8")
+
+    result = run_ci_injection(root)
+    assert result.returncode == 0
+
+    content = config.read_text(encoding="utf-8")
+    assert content.count('custom_features="ci"') == 1
+
+
+def test_inject_ci_flag_multiple_presets(repo_tmp):
+    """Verifies that the script updates all available presets in the file."""
+    root = Path(repo_tmp)
+    config = root / "export_presets.cfg"
+
+    multi_preset_content = (
+        "[preset.0]\n" 'name="Web"\n\n' "[preset.1]\n" 'custom_features=""\n'
+    )
+    config.write_text(multi_preset_content, encoding="utf-8")
+
+    result = run_ci_injection(root)
+    assert result.returncode == 0
+
+    content = config.read_text(encoding="utf-8")
+
+    # Both preset sections should contain the CI feature flag and remain intact
+    assert "[preset.0]" in content
+    assert "[preset.1]" in content
+    assert content.count('custom_features="ci"') == 2
+
+
+def test_inject_ci_flag_no_presets(repo_tmp):
+    """Tests a syntactically valid config file that simply lacks preset sections."""
+    root = Path(repo_tmp)
+    config = root / "export_presets.cfg"
+    original_content = "[general]\nfoo=bar"
+    config.write_text(original_content, encoding="utf-8")
+
+    result = run_ci_injection(root)
+
+    assert result.returncode == 0
+    content = config.read_text(encoding="utf-8")
+
+    # Ensure greedy regex didn't accidentally inject the flag anywhere
+    assert content == original_content
+
+    # Verify rollback safety contract: A backup is created even on a safe no-op
+    assert (root / "export_presets.cfg.bak").exists(), "Backup missing on no-op"
+
+
+def test_inject_ci_flag_malformed_config(repo_tmp):
+    """
+    Ensures the script fails gracefully and avoids corrupting broken files.
+    Note: We intentionally allow a safe no-op (returncode 0) rather than a hard fail,
+    deferring structural validation to the Godot engine during the export step.
+    """
+    root = Path(repo_tmp)
+    config = root / "export_presets.cfg"
+
+    # Malformed section header (missing closing bracket)
+    malformed_content = '[preset.0\nname="Web"'
+    config.write_text(malformed_content, encoding="utf-8")
+
+    result = run_ci_injection(root)
+
+    assert result.returncode == 0
+    content = config.read_text(encoding="utf-8")
+
+    # Strictly verify no truncation or corruption occurred
+    assert content == malformed_content
+
+    # Verify rollback safety contract: A backup is created even on a safe no-op
+    assert (
+        root / "export_presets.cfg.bak"
+    ).exists(), "Backup missing on malformed no-op"
+
+
+def test_inject_ci_flag_crlf_windows_endings(repo_tmp):
+    """Verifies the regex safely handles Windows-style CRLF line endings."""
+    root = Path(repo_tmp)
+    config = root / "export_presets.cfg"
+
+    # Explicitly use \r\n for line endings to simulate a Windows-authored file
+    crlf_content = "\r\n".join(["[preset.0]", 'name="Web"', 'custom_features=""', ""])
+
+    # We must use open() with newline="" to prevent Linux CI runners
+    # from automatically stripping the \r before writing to disk.
+    with open(config, "w", encoding="utf-8", newline="") as f:
+        f.write(crlf_content)
+
+    result = run_ci_injection(root)
+
+    assert result.returncode == 0
+
+    # Read back exactly as it is on disk, preserving the exact line endings
+    with open(config, "r", encoding="utf-8", newline="") as f:
+        content = f.read()
+
+    # Verify the regex successfully matched the header and injected the flag
+    assert "[preset.0]" in content
+    assert 'custom_features="ci"' in content
+    assert content.count("custom_features=") == 1
+
+
+def test_inject_ci_flag_cleans_malformed_options(repo_tmp):
+    """
+    Ensures orphaned or malformed `custom_features` inside option blocks
+    are safely wiped and not duplicated.
+    """
+    root = Path(repo_tmp)
+    config = root / "export_presets.cfg"
+
+    preset_with_options = (
+        "[preset.0]\n"
+        'custom_features=""\n\n'
+        "[preset.0.options]\n"
+        'custom_features="foo,bar"\n'
+    )
+    config.write_text(preset_with_options, encoding="utf-8")
+
+    result = run_ci_injection(root)
+
+    assert result.returncode == 0
+    updated_content = config.read_text(encoding="utf-8")
+
+    # 1. Root preset successfully gets the CI flag
+    assert "[preset.0]" in updated_content
+    assert 'custom_features="ci"' in updated_content
+
+    # 2. Options section remains intact...
+    assert "[preset.0.options]" in updated_content
+
+    # 3. ...but the invalid/orphaned custom_features is successfully scrubbed!
+    assert 'custom_features="foo,bar"' not in updated_content
+    assert updated_content.count("custom_features=") == 1

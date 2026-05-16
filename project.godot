@@ -50,11 +50,11 @@ window/vsync/vsync_mode=0
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/ai_autonomous_agent/plugin.cfg", "res://addons/gut/plugin.cfg")
+enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 
 [game]
 
-security/save_salt=""
+security/save_salt="dev_fallback_salt"
 
 [gdunit4]
 

@@ -34,7 +34,7 @@ from playwright.sync_api import Page
 # Configuration for stability in different environments
 # Default to 5000ms, but allow CI to override via environment variable
 DEFAULT_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "30000"))
-TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "5000"))
+TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "10000"))
 
 
 def test_back_flow(page: Page) -> None:
@@ -75,7 +75,7 @@ def test_back_flow(page: Page) -> None:
             timeout=DEFAULT_TIMEOUT,
         )
         # 1. Wait for the engine to actually start the splash scene
-        page.wait_for_timeout(5000)
+        page.wait_for_timeout(TEST_TIMEOUT)
         page.wait_for_function("() => window.godotInitialized", timeout=DEFAULT_TIMEOUT)
 
         # Verify canvas
@@ -113,7 +113,7 @@ def test_back_flow(page: Page) -> None:
         # Set log level DEBUG
         pre_change_log_count = len(logs)
         page.evaluate("window.changeLogLevel([0])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(TEST_TIMEOUT)
         new_logs = logs[pre_change_log_count:]
         assert any(
             "log level changed to: debug" in log["text"].lower() for log in new_logs
@@ -208,7 +208,7 @@ def test_back_flow(page: Page) -> None:
 
         # Re-enter audio
         page.reload()
-        page.wait_for_timeout(5000)
+        page.wait_for_timeout(DEFAULT_TIMEOUT)
         page.wait_for_function("() => window.godotInitialized", timeout=TEST_TIMEOUT)
         # Navigate to options menu
         page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)

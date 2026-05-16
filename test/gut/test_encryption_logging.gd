@@ -10,22 +10,13 @@ extends GutTest
 
 const TEST_CONFIG_PATH: String = "user://test_encryption_logging.cfg"
 const INVALID_CONFIG_PATH: String = "user://invalid_directory_that_does_not_exist/test.cfg"
-const SALT_PROPERTY: String = "game/security/save_salt"
-const DUMMY_SALT: String = "test_logging_salt_123"
 
-var _original_salt_value: Variant = null
-var _original_salt_existed: bool = false
 var _original_settings: GameSettingsResource
+
 
 func before_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
-	
-	_original_salt_existed = ProjectSettings.has_setting(SALT_PROPERTY)
-	if _original_salt_existed:
-		_original_salt_value = ProjectSettings.get_setting(SALT_PROPERTY)
-		
-	ProjectSettings.set_setting(SALT_PROPERTY, DUMMY_SALT)
 	
 	# Wipe cached key to force re-generation
 	Globals.save_encryption_pass = ""
@@ -36,14 +27,9 @@ func before_each() -> void:
 	# Force log level to DEBUG so we see everything in the console
 	Globals.settings.current_log_level = Globals.LogLevel.DEBUG
 
+
 func after_each() -> void:
 	Globals.settings = _original_settings
-	
-	if _original_salt_existed:
-		ProjectSettings.set_setting(SALT_PROPERTY, _original_salt_value)
-	else:
-		ProjectSettings.clear(SALT_PROPERTY)
-		
 	Globals.save_encryption_pass = ""
 		
 	if FileAccess.file_exists(TEST_CONFIG_PATH):

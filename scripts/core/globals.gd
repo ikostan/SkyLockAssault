@@ -458,29 +458,34 @@ func ensure_encryption_key() -> String:
 ## Generates a unique, deterministic encryption key for local save files.
 ## Generates a unique, deterministic encryption key for local save files.
 func _get_encryption_key() -> String:
-	var salt: String = ProjectSettings.get_setting("game/security/save_salt", "dev_fallback_salt")
+	# Safe placeholder. This is an open source repo, so the REAL salt
+	# is injected by GitHub Actions / CI pipeline during the build process.
+	var salt: String = "CI_INJECT_SALT_HERE"
 
-	# 1. FAILSAFE: If the salt is literally empty, always abort to plaintext
+	# 1. FAILSAFE: If the salt is literally empty, always abort
 	if salt.is_empty():
-		log_message(
-			"🚨 ENCRYPTION ABORTED: Salt is empty. Falling back to plaintext.", LogLevel.WARNING
-		)
+		log_message("🚨 ENCRYPTION ABORTED: Salt is empty.", LogLevel.WARNING)
 		return ""
 
-	var is_automated_test: bool = false
-	if OS.has_feature("web"):
-		is_automated_test = JavaScriptBridge.eval("navigator.webdriver") == true
-
 	# 2. SECURITY GUARD: Prevent silent weak-key fallback in production.
+	# We use a custom "ci" feature flag instead of a blanket "web" check
+	# to keep the production security guard fully active on itch.io.
+	var is_automated_test: bool = OS.has_feature("ci")
+	log_message(
+		"⚙️ ENV CHECK (is_automated_test): " + str(is_automated_test), Globals.LogLevel.DEBUG
+	)
+
 	if not OS.has_feature("editor") and not OS.has_feature("debug") and not is_automated_test:
-		if salt == "dev_fallback_salt":
-			var error_msg: String = "CRITICAL SECURITY ERROR: Missing or weak salt."
+		if salt == "CI_INJECT_SALT_HERE":
+			var error_msg: String = "CRITICAL SECURITY ERROR: Missing production salt."
 			push_error(error_msg)
 			OS.crash(error_msg)
 			return ""
-	# FIX: OS.get_unique_id() crashes on Web
+
+	# FIX: Removed JavaScriptBridge.eval() from here. Calling JS from a
+	# class-level variable initialization silently crashes the WebAssembly module!
 	var device_id: String = "web_fallback"
-	if OS.get_name() != "Web":
+	if not OS.has_feature("web"):
 		device_id = OS.get_unique_id()
 
 	return (device_id + salt).sha256_text()
@@ -504,6 +509,8 @@ func is_file_encrypted(path: String) -> bool:
 
 ## Safely loads a config file, handling both encrypted and legacy plaintext formats.
 ## Returns a Dictionary: {"config": ConfigFile, "err": int, "is_legacy": bool}
+## Safely loads a config file, handling both encrypted and legacy plaintext formats.
+## Returns a Dictionary: {"config": ConfigFile, "err": int, "is_legacy": bool}
 func safe_load_config(path: String) -> Dictionary:
 	var key: String = ensure_encryption_key()
 
@@ -520,15 +527,42 @@ func safe_load_config(path: String) -> Dictionary:
 		err = config.load_encrypted_pass(path, key)
 		if err != OK:
 			log_message(
-				(
-					"🚨 DECRYPTION FAILED for file: "
-					+ path
-					+ " (Error code: "
-					+ str(err)
-					+ "). Key mismatch or corrupted file!"
-				),
+				"🚨 DECRYPTION FAILED for file: " + path + " (Error code: " + str(err) + ").",
 				LogLevel.ERROR
 			)
+
+			# --- AUTO-RECOVERY FIX: TIGHTENED CONDITIONS ---
+			# Only delete if the file is explicitly corrupted or has invalid data (bad password/hash).
+			if err == ERR_FILE_CORRUPT or err == ERR_INVALID_DATA:
+				log_message(
+					"🗑️ Attempting to auto-delete corrupted/orphaned save file to allow clean recovery.",
+					LogLevel.INFO
+				)
+
+				var remove_err: int = DirAccess.remove_absolute(path)
+				if remove_err == OK:
+					log_message("✅ Corrupted file successfully deleted.", LogLevel.DEBUG)
+					# Treat as a first-time boot so the game generates fresh defaults
+					err = ERR_FILE_NOT_FOUND
+				else:
+					log_message(
+						(
+							"❌ FAILED to delete corrupted file at "
+							+ path
+							+ " (Error: "
+							+ str(remove_err)
+							+ "). Game may be unable to save!"
+						),
+						LogLevel.ERROR
+					)
+			else:
+				log_message(
+					(
+						"⚠️ File is unreadable but NOT explicitly corrupted. "
+						+ "Skipping auto-deletion to prevent accidental data loss."
+					),
+					LogLevel.WARNING
+				)
 		else:
 			log_message("🔓 Successfully decrypted file: " + path, LogLevel.DEBUG)
 	else:

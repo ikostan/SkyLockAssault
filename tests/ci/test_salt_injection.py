@@ -1,146 +1,254 @@
-import os
-import subprocess
-import sys
+"""
+Test suite for the CI/CD salt injection pipeline.
 
-# The exact AWK script from deploy_to_itch.yml
-AWK_SCRIPT = """
-BEGIN {
-  salt = ENVIRON["SALT"]
-  in_game = 0
-  salt_written = 0
-  saw_game_section = 0
-}
-{
-  if ($0 ~ /^\\[game\\]/) {
-    in_game = 1
-    saw_game_section = 1
-    print
-    next
-  } else if ($0 ~ /^\\[/ && $0 !~ /^\\[game\\]/) {
-    if (in_game && !salt_written) {
-      print "security/save_salt=\\"" salt "\\""
-      salt_written = 1
-    }
-    in_game = 0
-    print
-    next
-  }
-  if (in_game && $0 ~ /^[[:space:]]*security\\/save_salt[[:space:]]*=/) {
-    if (!salt_written) {
-      print "security/save_salt=\\"" salt "\\""
-      salt_written = 1
-    }
-    next
-  }
-  print
-}
-END {
-  if (in_game && !salt_written) {
-    print "security/save_salt=\\"" salt "\\""
-    salt_written = 1
-  }
-  if (!saw_game_section) {
-    if (NR > 0) { print "" }
-    print "[game]"
-    print "security/save_salt=\\"" salt "\\""
-  }
-}
+Validates that the master bash script correctly replaces placeholder strings
+in GDScript files with various complex secrets, ensuring that escape sequences
+and special sed characters do not break the final game code.
 """
 
+import os
+import subprocess
+from pathlib import Path
 
-def run_awk_injection(file_path):
-    # 1. Define a nasty test secret with quotes and slashes
-    RAW_SECRET = 'my"nasty\\salt123'
+import pytest
 
-    # Emulate the sed command: replace \ with \\, and " with \"
-    escaped_salt = RAW_SECRET.replace("\\", "\\\\").replace('"', '\\"')
+# Dynamically locate the project root
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+INJECT_SCRIPT_REL = ".github/scripts/inject_salt.sh"
 
-    # Load into environment variables for awk
+
+def run_injection(file_path, raw_secret):
+    """
+    Executes the single-source-of-truth bash script using relative paths.
+    Returns the CompletedProcess object for assertion checking.
+    """
     env = os.environ.copy()
-    env["SALT"] = escaped_salt
+    env["PRODUCTION_SALT"] = raw_secret
+
+    if "WSLENV" in env:
+        env["WSLENV"] += ":PRODUCTION_SALT/u"
+    else:
+        env["WSLENV"] = "PRODUCTION_SALT/u"
+
+    script_abs_path = os.path.join(PROJECT_ROOT, INJECT_SCRIPT_REL)
+    assert os.path.exists(
+        script_abs_path
+    ), f"Master inject script not found at {script_abs_path}"
+
+    return subprocess.run(
+        ["bash", INJECT_SCRIPT_REL, str(file_path)],
+        env=env,
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=10,
+        check=False,  # Tells the linter: "I am intentionally handling exit codes manually"
+    )
+
+
+@pytest.mark.parametrize(
+    "scenario, raw_secret, expected_salt",
+    [
+        ("standard", 'T3st_S@lt!_2026#"\\', 'T3st_S@lt!_2026#\\"\\\\'),
+        ("sed_special", "My|Secret&Salt", "My|Secret&Salt"),
+        ("regex_tokens", r"\1 \2 $HOME", r"\\1 \\2 $HOME"),
+        ("utf8_unicode", "пароль_日本語_🔒", "пароль_日本語_🔒"),
+        (
+            "forward_slash",
+            "path/to/my/secret",
+            "path/to/my/secret",
+        ),  # Ensures forward slashes don't break sed
+    ],
+)
+def test_injection_values(repo_tmp, scenario, raw_secret, expected_salt):
+    """
+    Parametrized test covering standard strings, bash/sed delimiters,
+    backreferences, UTF-8 locale handling, and path-like slashes.
+    """
+    dummy_rel = f"{repo_tmp}/dummy_{scenario}.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+
+    dummy_abs.write_text(
+        'func _get_encryption_key() -> String:\n\tvar salt: String = "CI_INJECT_SALT_HERE"\n\treturn salt\n',
+        encoding="utf-8",
+    )
+
+    result = run_injection(dummy_rel, raw_secret)
+
+    assert (
+        result.returncode == 0
+    ), f"Injection failed:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+
+    content = dummy_abs.read_text(encoding="utf-8")
+    assert f'var salt: String = "{expected_salt}"' in content
+
+    # Verifies sed did not leave behind macOS/Linux .bak or temp file artifacts
+    files_in_dir = list(dummy_abs.parent.iterdir())
+    unexpected = [f for f in files_in_dir if f.name != dummy_abs.name]
+    assert (
+        not unexpected
+    ), f"Artifact pollution detected. Unexpected files found: {unexpected}"
+
+
+def test_injection_multiple_placeholders(repo_tmp):
+    """Ensures global replacement updates all occurrences, leaving no partial leftovers."""
+    dummy_rel = f"{repo_tmp}/dummy_multi.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+
+    dummy_abs.write_text(
+        "extends Node\n"
+        'var security = {"save_salt": "CI_INJECT_SALT_HERE"}\n'
+        'var another = {"save_salt": "CI_INJECT_SALT_HERE"}\n',
+        encoding="utf-8",
+    )
+
+    result = run_injection(dummy_rel, "multi-placeholder-salt")
+
+    assert result.returncode == 0
+    content = dummy_abs.read_text(encoding="utf-8")
+    assert "CI_INJECT_SALT_HERE" not in content
+    assert content.count("multi-placeholder-salt") == 2
+
+
+def test_injection_multiple_placeholders_same_line(repo_tmp):
+    """Ensures sed performs a truly global substitution when placeholders repeat on one line."""
+    dummy_rel = f"{repo_tmp}/dummy_multi_same_line.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+
+    dummy_abs.write_text(
+        "extends Node\n"
+        'var security = {"salt1": "CI_INJECT_SALT_HERE", "salt2": "CI_INJECT_SALT_HERE"}\n',
+        encoding="utf-8",
+    )
+
+    result = run_injection(dummy_rel, "multi-placeholder-salt")
+
+    assert result.returncode == 0
+    content = dummy_abs.read_text(encoding="utf-8")
+    assert "CI_INJECT_SALT_HERE" not in content
+    # Both placeholders on the same line must be replaced
+    assert content.count("multi-placeholder-salt") == 2
+
+
+def test_injection_missing_placeholder(repo_tmp):
+    """A missing placeholder is a safe no-op. The file must remain untouched."""
+    dummy_rel = f"{repo_tmp}/dummy_missing.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+    original_content = 'extends Node\nvar security = {"save_salt": "unchanged"}\n'
+
+    dummy_abs.write_text(original_content, encoding="utf-8")
+
+    result = run_injection(dummy_rel, "missing-placeholder-salt")
+
+    assert result.returncode == 0
+    assert dummy_abs.read_text(encoding="utf-8") == original_content
+
+
+def test_injection_empty_secret(repo_tmp):
+    """
+    Ensures the bash script guard catches an empty environment variable and aborts.
+    """
+    dummy_rel = f"{repo_tmp}/dummy_empty.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+    original_content = 'var salt = "CI_INJECT_SALT_HERE"\n'
+    dummy_abs.write_text(original_content, encoding="utf-8")
+    result = run_injection(dummy_rel, "")
+
+    # Non-zero return code indicates the script aborted as expected
+    assert result.returncode != 0
+
+    # Some error output should be produced, but don't depend on exact wording
+    assert (result.stdout + result.stderr).strip() != ""
+
+    # Verify no partial corruption occurred
+    assert dummy_abs.read_text(encoding="utf-8") == original_content
+
+
+def test_injection_filename_with_spaces(repo_tmp):
+    """Verifies bash variable quoting robustness against argument splitting."""
+    dummy_rel = f"{repo_tmp}/dummy globals spaces.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+
+    dummy_abs.write_text('var salt = "CI_INJECT_SALT_HERE"\n', encoding="utf-8")
+
+    result = run_injection(dummy_rel, "space-test-secret")
+
+    assert result.returncode == 0
+    content = dummy_abs.read_text(encoding="utf-8")
+    assert "space-test-secret" in content
+
+
+def test_injection_non_existent_file():
+    """Ensures script fails fast with a deterministic error on bad paths."""
+    result = run_injection("this_file_does_not_exist.gd", "non-existent-file-salt")
+    assert result.returncode != 0
+    assert "does not exist" in result.stdout
+
+
+def test_injection_multiline_secret(repo_tmp):
+    """Validates that multiline secrets safely fail instead of silently corrupting."""
+    dummy_rel = f"{repo_tmp}/dummy_multiline.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+    original_content = 'var salt = "CI_INJECT_SALT_HERE"\n'
+
+    dummy_abs.write_text(original_content, encoding="utf-8")
+
+    result = run_injection(dummy_rel, "line1\nline2")
+
+    # Platform agnostic check: It just needs to fail deterministically
+    assert result.returncode != 0
+
+    # Ensure an error is reported without coupling to a specific tool name
+    assert result.stderr.strip() != ""
+
+    # Verify the file was not accidentally mangled before failure
+    assert dummy_abs.read_text(encoding="utf-8") == original_content
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX file permission mechanics required")
+def test_injection_readonly_file(repo_tmp):
+    """
+    Catches CI/container filesystem edge cases.
+    Secures both the file AND the parent directory to prevent
+    Linux 'sed -i' from bypassing read-only file locks via directory rename.
+    """
+    dummy_rel = f"{repo_tmp}/dummy_readonly.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+    original_content = 'var salt = "CI_INJECT_SALT_HERE"\n'
+    dummy_abs.write_text(original_content, encoding="utf-8")
+
+    # Lock file and directory
+    dummy_abs.chmod(0o444)
+    dummy_abs.parent.chmod(0o555)
 
     try:
-        # Run the awk script via subprocess
-        with open(f"{file_path}.tmp", "w") as temp_file:
-            subprocess.run(
-                ["awk", AWK_SCRIPT, file_path],
-                env=env,
-                stdout=temp_file,
-                check=True,
-                text=True,
-            )
-        # Replace original file with the modified tmp file
-        os.replace(f"{file_path}.tmp", file_path)
-    except FileNotFoundError:
-        print("❌ ERROR: 'awk' command not found.")
-        print(
-            "Since the GitHub action uses Linux tools, 'awk' must be accessible to Windows."
-        )
-        print(
-            "Run this Python script from your VS Code Git Bash terminal instead of PowerShell."
-        )
-        sys.exit(1)
+        result = run_injection(dummy_rel, "readonly-secret")
+
+        assert result.returncode != 0
+        assert dummy_abs.read_text(encoding="utf-8") == original_content
+    finally:
+        # MUST restore write permissions, otherwise pytest temporary directory cleanup will crash
+        dummy_abs.parent.chmod(0o777)
+        dummy_abs.chmod(0o666)
 
 
-def test_injection():
-    dummy_file = "dummy.godot"
-    expected_salt_line = 'security/save_salt="my\\"nasty\\\\salt123"'
+def test_idempotency(repo_tmp):
+    """Running the injection twice should not cause corruption or double-escaping."""
+    dummy_rel = f"{repo_tmp}/dummy_idempotent.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
 
-    print("Running Salt Injection Tests in Python...")
-    print("-" * 40)
+    dummy_abs.write_text('var salt = "CI_INJECT_SALT_HERE"\n', encoding="utf-8")
 
-    # TEST 1: No [game] section exists
-    with open(dummy_file, "w") as f:
-        f.write('[application]\nname="Test"\n')
+    # First run must succeed
+    first = run_injection(dummy_rel, "idempotent-secret")
+    assert first.returncode == 0, "Initial injection failed"
 
-    run_awk_injection(dummy_file)
+    # Second run must also succeed and leave content uncorrupted
+    second = run_injection(dummy_rel, "idempotent-secret")
 
-    with open(dummy_file, "r") as f:
-        content = f.read()
-        if expected_salt_line in content and "[game]" in content:
-            print("✅ TEST 1 PASS: Created [game] section and injected salt.")
-        else:
-            print(f"❌ TEST 1 FAIL\n{content}")
-            sys.exit(1)
+    assert second.returncode == 0
+    content = dummy_abs.read_text(encoding="utf-8")
 
-    # TEST 2: [game] section exists, followed by another section
-    with open(dummy_file, "w") as f:
-        f.write('[application]\nname="Test"\n[game]\nsome_setting=1\n[audio]\nbus=1\n')
-
-    run_awk_injection(dummy_file)
-
-    with open(dummy_file, "r") as f:
-        content = f.read()
-        # Check if salt is injected before [audio]
-        if expected_salt_line in content and content.find(
-            expected_salt_line
-        ) < content.find("[audio]"):
-            print("✅ TEST 2 PASS: Injected salt inside existing [game] section.")
-        else:
-            print(f"❌ TEST 2 FAIL\n{content}")
-            sys.exit(1)
-
-    # TEST 3: [game] section exists and already has an old salt (overwrite)
-    with open(dummy_file, "w") as f:
-        f.write('[game]\nsecurity/save_salt="old_salt"\nother=2\n')
-
-    run_awk_injection(dummy_file)
-
-    with open(dummy_file, "r") as f:
-        content = f.read()
-        if expected_salt_line in content and "old_salt" not in content:
-            print("✅ TEST 3 PASS: Overwrote existing salt correctly.")
-        else:
-            print(f"❌ TEST 3 FAIL\n{content}")
-            sys.exit(1)
-
-    print("-" * 40)
-    print("🎉 ALL INJECTION TESTS PASSED!")
-
-    # Cleanup
-    if os.path.exists(dummy_file):
-        os.remove(dummy_file)
-
-
-if __name__ == "__main__":
-    test_injection()
+    # Strict matching to guarantee NO duplicate injection or mangled formatting
+    assert content == 'var salt = "idempotent-secret"\n'

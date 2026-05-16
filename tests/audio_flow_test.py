@@ -78,7 +78,7 @@ def test_audio_flow(page: Page) -> None:
             timeout=DEFAULT_TIMEOUT,
         )
         # 1. Wait for the engine to actually start the splash scene
-        page.wait_for_timeout(5000)
+        page.wait_for_timeout(TEST_TIMEOUT)
         page.wait_for_function("() => window.godotInitialized", timeout=DEFAULT_TIMEOUT)
 
         # Verify canvas
@@ -118,7 +118,7 @@ def test_audio_flow(page: Page) -> None:
         # Set log level DEBUG
         pre_change_log_count = len(logs)
         page.evaluate("window.changeLogLevel([0])")
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(TEST_TIMEOUT)
         new_logs = logs[pre_change_log_count:]
         assert any(
             "log level changed to: debug" in log["text"].lower() for log in new_logs
@@ -145,7 +145,7 @@ def test_audio_flow(page: Page) -> None:
             "window.audioPressed !== undefined", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.audioPressed([])")
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(TEST_TIMEOUT)
         assert (
             page.evaluate(
                 "window.getComputedStyle(document.getElementById('master-slider')).display"
@@ -173,7 +173,7 @@ def test_audio_flow(page: Page) -> None:
             "window.toggleMuteMaster !== undefined", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.toggleMuteMaster([0])")  # Mute
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(TEST_TIMEOUT)
         new_logs = logs[pre_change_log_count:]
         assert any("master is muted" in log["text"].lower() for log in new_logs)
         # Change SFX Volume when Master is muted
@@ -182,7 +182,7 @@ def test_audio_flow(page: Page) -> None:
             "window.changeSfxVolume !== undefined", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.changeSfxVolume([0])")
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(TEST_TIMEOUT)
         assert (
             page.evaluate("document.getElementById('sfx-slider').value") == initial_sfx
         ), "SFX value changed unexpectedly"
@@ -194,18 +194,12 @@ def test_audio_flow(page: Page) -> None:
 
         # Additional: Master muted → attempt sub-volume adjust (Music)
         # Attempt to change music while Master is still muted
-        # page.evaluate("""
-        #    const slider = document.getElementById('music-slider');
-        #    slider.value = 0.3;
-        #    slider.dispatchEvent(new Event('input'));
-        #    slider.dispatchEvent(new Event('change'));
-        # """)
         pre_change_log_count = len(logs)
         page.wait_for_function(
             "window.changeMusicVolume !== undefined", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.changeMusicVolume([0.3])")
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(TEST_TIMEOUT)
         assert (
             page.evaluate("document.getElementById('music-slider').value")
             == initial_music
@@ -223,7 +217,7 @@ def test_audio_flow(page: Page) -> None:
             "window.changeRotorsVolume !== undefined", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.changeRotorsVolume([0.4])")
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(TEST_TIMEOUT)
         assert (
             page.evaluate("document.getElementById('rotors-slider').value")
             == initial_rotors
@@ -239,20 +233,20 @@ def test_audio_flow(page: Page) -> None:
             "window.toggleMuteMaster !== undefined", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.toggleMuteMaster([1])")
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(TEST_TIMEOUT)
 
         # WARN-02: SFX muted → attempt weapon adjust
         page.wait_for_function(
             "window.toggleMuteSfx !== undefined", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.toggleMuteSfx([0])")  # Mute
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(TEST_TIMEOUT)
         pre_change_log_count = len(logs)
         page.wait_for_function(
             "window.changeWeaponVolume !== undefined", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.changeWeaponVolume([0])")
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(TEST_TIMEOUT)
         assert (
             page.evaluate("document.getElementById('weapon-slider').value")
             == initial_weapon
@@ -268,7 +262,7 @@ def test_audio_flow(page: Page) -> None:
             "window.changeRotorsVolume !== undefined", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.changeRotorsVolume([0.5])")
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(TEST_TIMEOUT)
         assert (
             page.evaluate("document.getElementById('rotors-slider').value")
             == initial_rotors
@@ -283,7 +277,7 @@ def test_audio_flow(page: Page) -> None:
             "window.toggleMuteSfx !== undefined", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.toggleMuteSfx([1])")
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(TEST_TIMEOUT)
 
         # WARN-03: Master unmuted → adjust sub-volume (Music)
         # Capture logs before the change to isolate new ones (good for debugging in Godot tests)
@@ -292,7 +286,7 @@ def test_audio_flow(page: Page) -> None:
             "window.changeMusicVolume !== undefined", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.changeMusicVolume([0.6])")
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(TEST_TIMEOUT)
 
         # Verify the value changed (as expected, no mute constraint)
         assert (

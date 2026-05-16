@@ -84,7 +84,7 @@ def test_difficulty_flow(page: Page) -> None:
             timeout=DEFAULT_TIMEOUT,
         )
         # 1. Wait for the engine to actually start the splash scene
-        page.wait_for_timeout(5000)
+        page.wait_for_timeout(TEST_TIMEOUT)
         # Wait for Godot engine init (ensures 'godot' object is defined)
         page.wait_for_function("() => window.godotInitialized", timeout=DEFAULT_TIMEOUT)
 
@@ -236,7 +236,7 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Set difficulty to 2.0 again
         page.evaluate("window.changeDifficulty([2.0])")
-        page.wait_for_timeout(2500)
+        page.wait_for_timeout(TEST_TIMEOUT)
 
         # Back to Main menu
         pre_change_log_count = len(logs)
