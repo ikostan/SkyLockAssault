@@ -129,6 +129,8 @@ def test_injection_multiple_placeholders_same_line(repo_tmp):
     assert "CI_INJECT_SALT_HERE" not in content
     # Both placeholders on the same line must be replaced
     assert content.count("multi-placeholder-salt") == 2
+
+
 def test_injection_missing_placeholder(repo_tmp):
     """A missing placeholder is a safe no-op. The file must remain untouched."""
     dummy_rel = f"{repo_tmp}/dummy_missing.gd"
