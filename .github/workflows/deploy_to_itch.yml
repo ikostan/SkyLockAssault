@@ -64,15 +64,20 @@ jobs:
           use_preset_export_path: true
 
       - name: "Unzip Export Archive"
-        run: unzip export/web/Web.zip -d export/web
+        # Extract into a clean, separate folder so we don't mix the zip with the raw files
+        run: unzip ${{ steps.export.outputs.archive_directory }}/Web.zip -d export/patched_build
 
       - name: "Patch index.js for security"
-        run: bash ./.github/scripts/patch_index_js.sh "export/web"
+        run: bash ./.github/scripts/patch_index_js.sh "export/patched_build"
 
       - name: "Re-zip Flattened Export"
         run: |
-          cd export/web
-          zip -r ../Web.zip .
+          # 1. Delete the original, unpatched zip
+          rm ${{ steps.export.outputs.archive_directory }}/Web.zip
+          # 2. Go into our patched folder
+          cd export/patched_build
+          # 3. Zip the files directly back into the original output variable's location
+          zip -r ../../${{ steps.export.outputs.archive_directory }}/Web.zip .
           cd ../..
 
       - name: "Cache Butler"
@@ -89,7 +94,8 @@ jobs:
 
       - name: "Deploy to itch.io with Butler"
         run: |
-          # Push the patched zip file explicitly, bypassing the raw output directory
-          butler push export/Web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion "${{ inputs.version }}"
+          # The bot is happy because we use the dynamic variable, and we are happy 
+          # because we mathematically guarantee this is the patched, un-bloated zip!
+          butler push ${{ steps.export.outputs.archive_directory }}/Web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion "${{ inputs.version }}"
         env:
           BUTLER_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"
