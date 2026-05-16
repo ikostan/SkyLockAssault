@@ -1,10 +1,11 @@
 #!/bin/bash
 # .github/scripts/inject_salt.sh
 
-# 🛑 1. STRICT ERROR HANDLING: Force script to fail immediately if ANY command fails
-set -e
+# 🛑 1. STRICT ERROR HANDLING: Fail on errors, unset vars, and pipeline failures
+set -euo pipefail
 
-TARGET_FILE="$1"
+# Use :- to prevent 'unbound variable' crashes on our custom checks
+TARGET_FILE="${1:-}"
 
 if [ -z "$TARGET_FILE" ]; then
     echo "❌ ERROR: No target file provided."
@@ -16,7 +17,7 @@ if [ ! -f "$TARGET_FILE" ]; then
     exit 1
 fi
 
-if [ -z "$PRODUCTION_SALT" ]; then
+if [ -z "${PRODUCTION_SALT:-}" ]; then
     echo "❌ ERROR: PRODUCTION_SALT environment variable is not set."
     exit 1
 fi
@@ -38,7 +39,7 @@ source "$(dirname "$0")/ci_utils.sh"
 # 3. Replace the safe placeholder with the real secret
 sedi "s|\"CI_INJECT_SALT_HERE\"|\"$SED_ESCAPED\"|g" "$TARGET_FILE"
 
-# 🛑 3. EXPLICIT VERIFICATION: Ensure the placeholder was actually removed
+# 🛑 4. EXPLICIT VERIFICATION: Ensure the placeholder was actually removed
 if grep -q "CI_INJECT_SALT_HERE" "$TARGET_FILE"; then
     echo "❌ FATAL: Salt injection failed! Placeholder still exists in $TARGET_FILE."
     exit 1
