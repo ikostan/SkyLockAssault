@@ -111,6 +111,24 @@ def test_injection_multiple_placeholders(repo_tmp):
     assert content.count("multi-placeholder-salt") == 2
 
 
+def test_injection_multiple_placeholders_same_line(repo_tmp):
+    """Ensures sed performs a truly global substitution when placeholders repeat on one line."""
+    dummy_rel = f"{repo_tmp}/dummy_multi_same_line.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+
+    dummy_abs.write_text(
+        "extends Node\n"
+        'var security = {"salt1": "CI_INJECT_SALT_HERE", "salt2": "CI_INJECT_SALT_HERE"}\n',
+        encoding="utf-8",
+    )
+
+    result = run_injection(dummy_rel, "multi-placeholder-salt")
+
+    assert result.returncode == 0
+    content = dummy_abs.read_text(encoding="utf-8")
+    assert "CI_INJECT_SALT_HERE" not in content
+    # Both placeholders on the same line must be replaced
+    assert content.count("multi-placeholder-salt") == 2
 def test_injection_missing_placeholder(repo_tmp):
     """A missing placeholder is a safe no-op. The file must remain untouched."""
     dummy_rel = f"{repo_tmp}/dummy_missing.gd"
