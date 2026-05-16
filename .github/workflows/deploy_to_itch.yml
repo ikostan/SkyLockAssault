@@ -80,6 +80,14 @@ jobs:
           zip -r "../../${{ steps.export.outputs.archive_directory }}/Web.zip" .
           cd ../..
 
+      - name: "Verify export does not contain placeholder"
+        run: |
+          if unzip -p "${{ steps.export.outputs.archive_directory }}/Web.zip" | grep -q "CI_INJECT_SALT_HERE"; then
+            echo "❌ Placeholder detected inside final export archive."
+            exit 1
+          fi
+          echo "✅ Salt verified in source before Godot export."
+
       - name: "Cache Butler"
         id: "cache-butler"
         uses: "actions/cache@v5"
