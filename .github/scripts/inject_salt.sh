@@ -22,7 +22,7 @@ if [ -z "${PRODUCTION_SALT:-}" ]; then
     exit 1
 fi
 
-# 🛑 2. NEWLINE STRIPPING: Remove invisible trailing newlines/carriage returns
+# 🛑 2. NEWLINE STRIPPING: Remove all newlines and carriage returns by design
 CLEAN_SALT=$(printf '%s' "$PRODUCTION_SALT" | tr -d '\r\n')
 
 echo "⚙️ Injecting secret into $TARGET_FILE..."
