@@ -46,7 +46,7 @@ source "$(dirname "$0")/ci_utils.sh"
 sedi "s|\"CI_INJECT_SALT_HERE\"|\"$SED_ESCAPED\"|g" "$TARGET_FILE"
 
 # 🛑 4. EXPLICIT VERIFICATION: Ensure the placeholder was actually removed
-if grep -q -- "CI_INJECT_SALT_HERE" "$TARGET_FILE"; then
+if grep -qF -- '"CI_INJECT_SALT_HERE"' "$TARGET_FILE"; then
     echo "❌ FATAL: Salt injection failed! Placeholder still exists in $TARGET_FILE."
     exit 1
 else
