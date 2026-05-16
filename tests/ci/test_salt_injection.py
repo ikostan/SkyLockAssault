@@ -186,26 +186,6 @@ def test_injection_non_existent_file():
     assert "does not exist" in result.stdout
 
 
-def test_injection_multiline_secret(repo_tmp):
-    """Validates that multiline secrets safely fail instead of silently corrupting."""
-    dummy_rel = f"{repo_tmp}/dummy_multiline.gd"
-    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
-    original_content = 'var salt = "CI_INJECT_SALT_HERE"\n'
-
-    dummy_abs.write_text(original_content, encoding="utf-8")
-
-    result = run_injection(dummy_rel, "line1\nline2")
-
-    # Platform agnostic check: It just needs to fail deterministically
-    assert result.returncode != 0
-
-    # Ensure an error is reported without coupling to a specific tool name
-    assert result.stderr.strip() != ""
-
-    # Verify the file was not accidentally mangled before failure
-    assert dummy_abs.read_text(encoding="utf-8") == original_content
-
-
 @pytest.mark.skipif(os.name == "nt", reason="POSIX file permission mechanics required")
 def test_injection_readonly_file(repo_tmp):
     """
@@ -252,3 +232,23 @@ def test_idempotency(repo_tmp):
 
     # Strict matching to guarantee NO duplicate injection or mangled formatting
     assert content == 'var salt = "idempotent-secret"\n'
+
+
+def test_injection_multiline_secret_stripped(repo_tmp):
+    """Validates that multiline secrets are safely stripped of newlines and injected, rather than failing."""
+    dummy_rel = f"{repo_tmp}/dummy_multiline.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+    original_content = 'var salt = "CI_INJECT_SALT_HERE"\n'
+
+    dummy_abs.write_text(original_content, encoding="utf-8")
+
+    # Pass a secret with a newline
+    result = run_injection(dummy_rel, "line1\nline2")
+
+    # It should now SUCCEED, because `tr -d '\r\n'` sanitizes the input
+    assert result.returncode == 0
+
+    content = dummy_abs.read_text(encoding="utf-8")
+
+    # The newline should be stripped completely from the final injected string
+    assert 'var salt = "line1line2"' in content
