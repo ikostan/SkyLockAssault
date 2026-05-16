@@ -59,7 +59,7 @@ jobs:
           relative_export_path: "./export/web"
           archive_output: true
           verbose: true
-          cache: true
+          cache: false
           presets_to_export: "Web"
           use_preset_export_path: true
 
