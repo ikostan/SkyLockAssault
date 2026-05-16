@@ -94,7 +94,7 @@ jobs:
 
       - name: "Deploy to itch.io with Butler"
         run: |
-          # The bot is happy because we use the dynamic variable, and we are happy 
+          # The bot is happy because we use the dynamic variable, and we are happy
           # because we mathematically guarantee this is the patched, un-bloated zip!
           butler push ${{ steps.export.outputs.archive_directory }}/Web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion "${{ inputs.version }}"
         env:
