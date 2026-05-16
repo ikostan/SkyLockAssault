@@ -25,6 +25,12 @@ def run_injection(file_path, raw_secret):
     env = os.environ.copy()
     env["PRODUCTION_SALT"] = raw_secret
 
+    # NEW: If None is passed, simulate a completely missing/unset environment variable
+    if raw_secret is None:
+        env.pop("PRODUCTION_SALT", None)
+    else:
+        env["PRODUCTION_SALT"] = raw_secret
+
     if "WSLENV" in env:
         env["WSLENV"] += ":PRODUCTION_SALT/u"
     else:
@@ -267,3 +273,29 @@ def test_injection_multiline_secret_stripped(repo_tmp, secret_input, expected_in
     # Strict equality check: guarantees no unexpected whitespace, quotes, or newlines slipped through
     expected_content = f'var salt = "{expected_injected}"\n'
     assert content == expected_content
+
+
+def test_injection_unset_secret(repo_tmp):
+    """
+    Ensures that a completely missing (unset) environment variable
+    is caught gracefully by the bash script without triggering
+    a fatal 'unbound variable' bash crash due to 'set -u'.
+    """
+    dummy_rel = f"{repo_tmp}/dummy_unset.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+    original_content = 'var salt = "CI_INJECT_SALT_HERE"\n'
+    dummy_abs.write_text(original_content, encoding="utf-8")
+
+    # Pass None to completely strip the variable from the test environment
+    result = run_injection(dummy_rel, None)
+
+    # It must fail
+    assert result.returncode != 0
+
+    # It must output our custom error, NOT a standard bash "unbound variable" error
+    combined_output = result.stdout + result.stderr
+    assert "PRODUCTION_SALT environment variable is not set" in combined_output
+    assert "unbound variable" not in combined_output
+
+    # The file must remain completely untouched
+    assert dummy_abs.read_text(encoding="utf-8") == original_content
