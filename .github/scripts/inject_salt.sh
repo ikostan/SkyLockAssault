@@ -46,3 +46,11 @@ if grep -q "CI_INJECT_SALT_HERE" "$TARGET_FILE"; then
 else
     echo "✅ Salt successfully injected into $TARGET_FILE."
 fi
+
+# 🛑 4. EXPLICIT VERIFICATION: Ensure the placeholder was actually removed
+if grep -q "CI_INJECT_SALT_HERE" -- "$TARGET_FILE"; then
+    echo "❌ FATAL: Salt injection failed! Placeholder still exists in $TARGET_FILE."
+    exit 1
+else
+    echo "✅ Salt successfully injected into $TARGET_FILE."
+fi
