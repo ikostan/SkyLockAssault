@@ -234,21 +234,34 @@ def test_idempotency(repo_tmp):
     assert content == 'var salt = "idempotent-secret"\n'
 
 
-def test_injection_multiline_secret_stripped(repo_tmp):
-    """Validates that multiline secrets are safely stripped of newlines and injected, rather than failing."""
-    dummy_rel = f"{repo_tmp}/dummy_multiline.gd"
+@pytest.mark.parametrize(
+    "secret_input, expected_injected",
+    [
+        ("line1\nline2", "line1line2"),  # Standard Linux/macOS LF
+        ("line1\r\nline2", "line1line2"),  # Windows CRLF
+        ("\n\nline1\n\nline2\n\n", "line1line2"),  # Multiple leading/trailing newlines
+        ("\r\n mixed \n newlines \r\n", " mixed  newlines "),  # Mixed with spaces
+    ],
+)
+def test_injection_multiline_secret_stripped(repo_tmp, secret_input, expected_injected):
+    """
+    Validates that multiline secrets (both LF and CRLF) are safely stripped
+    of all newlines and injected, rather than failing or corrupting the file.
+    """
+    dummy_rel = f"{repo_tmp}/dummy_multiline_{hash(secret_input)}.gd"
     dummy_abs = Path(PROJECT_ROOT) / dummy_rel
     original_content = 'var salt = "CI_INJECT_SALT_HERE"\n'
 
     dummy_abs.write_text(original_content, encoding="utf-8")
 
-    # Pass a secret with a newline
-    result = run_injection(dummy_rel, "line1\nline2")
+    # Pass the complex multiline secret
+    result = run_injection(dummy_rel, secret_input)
 
-    # It should now SUCCEED, because `tr -d '\r\n'` sanitizes the input
+    # It must SUCCEED, because `tr -d '\r\n'` sanitizes the input
     assert result.returncode == 0
 
     content = dummy_abs.read_text(encoding="utf-8")
 
-    # The newline should be stripped completely from the final injected string
-    assert 'var salt = "line1line2"' in content
+    # Strict equality check: guarantees no unexpected whitespace, quotes, or newlines slipped through
+    expected_content = f'var salt = "{expected_injected}"\n'
+    assert content == expected_content
