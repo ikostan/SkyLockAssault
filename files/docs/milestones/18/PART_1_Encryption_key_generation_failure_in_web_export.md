@@ -65,6 +65,10 @@ Updates the GitHub Actions workflow for deploying to itch.io so that Godot
 export caching is disabled, ensuring a fresh recompile on each deployment
 and preventing crashes related to a stale production salt.
 
+Improves the CI salt injection script and tests to robustly handle unset
+and multiline PRODUCTION_SALT values while adjusting the itch.io deployment
+workflow to always re-zip a patched export at the expected archive path.
+
 ---
 
 ### File-Level Changes
