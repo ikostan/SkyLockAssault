@@ -39,16 +39,24 @@ if [ -z "$CLEAN_SALT" ]; then
     exit 1
 fi
 
+# ... [keep existing setup code] ...
+
 # Source the shared utilities
 source "$(dirname "$0")/ci_utils.sh"
 
-# Replace the safe placeholder with the real secret
-sedi "s|\"CI_INJECT_SALT_HERE\"|\"$SED_ESCAPED\"|g" "$TARGET_FILE"
+# 1. THE FIX: Target ONLY the variable assignment line
+sedi "s|var salt: String = \"CI_INJECT_SALT_HERE\"|var salt: String = \"$SED_ESCAPED\"|g" "$TARGET_FILE"
 
-# 🛑 EXPLICIT VERIFICATION: Ensure the placeholder was actually removed
-if grep -qF -- '"CI_INJECT_SALT_HERE"' "$TARGET_FILE"; then
-    echo "❌ FATAL: Salt injection failed! Placeholder still exists in $TARGET_FILE."
+# 2. THE HARD GATE: Verify the placeholder was injected
+if grep -qF 'var salt: String = "CI_INJECT_SALT_HERE"' "$TARGET_FILE"; then
+    echo "❌ FATAL: Salt injection failed! Variable assignment still has the placeholder in $TARGET_FILE."
     exit 1
-else
-    echo "✅ Salt successfully injected into $TARGET_FILE."
 fi
+
+# 3. THE SECURITY GUARD: Verify the conditional logic was NOT overwritten
+if ! grep -qF 'if salt == "CI_INJECT_SALT_HERE":' "$TARGET_FILE"; then
+    echo "❌ FATAL: Salt injection corrupted the security guard logic in $TARGET_FILE!"
+    exit 1
+fi
+
+echo "✅ Salt successfully injected and security guards verified in $TARGET_FILE."

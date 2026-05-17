@@ -308,3 +308,37 @@ def test_injection_unset_secret(repo_tmp):
 
     # The file must remain completely untouched
     assert dummy_abs.read_text(encoding="utf-8") == original_content
+
+
+def test_injection_does_not_corrupt_security_guard(repo_tmp):
+    """
+    Ensures the injection script uses targeted replacement to update
+    the variable declaration without overwriting the literal string
+    used in the security guard conditional logic.
+    """
+    dummy_rel = f"{repo_tmp}/dummy_guard.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+
+    original_content = (
+        'func _get_encryption_key() -> String:\n'
+        '\tvar salt: String = "CI_INJECT_SALT_HERE"\n\n'
+        '\t# The security check that must NOT be overwritten\n'
+        '\tif salt == "CI_INJECT_SALT_HERE":\n'
+        '\t\tpush_error("Missing salt")\n'
+        '\treturn salt\n'
+    )
+    dummy_abs.write_text(original_content, encoding="utf-8")
+
+    # Run the injection
+    result = run_injection(dummy_rel, "my-production-secret")
+
+    # The script should exit cleanly
+    assert result.returncode == 0, f"Injection failed:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+
+    content = dummy_abs.read_text(encoding="utf-8")
+
+    # 1. Verify the variable was actually updated
+    assert 'var salt: String = "my-production-secret"' in content, "Variable assignment was not updated!"
+
+    # 2. Verify the security guard conditional remained perfectly intact
+    assert 'if salt == "CI_INJECT_SALT_HERE":' in content, "FATAL: The security guard logic was overwritten by sed!"
