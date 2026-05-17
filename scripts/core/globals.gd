@@ -476,7 +476,8 @@ func _get_encryption_key() -> String:
 	)
 
 	if not OS.has_feature("editor") and not OS.has_feature("debug") and not is_automated_test:
-		# CI only rewrites the 'var salt' declaration; this runtime check must remain unchanged.
+		# CI CONTRACT: The injection pipeline strictly verifies this exact literal string pattern.
+		# Do not alter or split this line without updating the build scripts.
 		if salt == "CI_INJECT_SALT_HERE":
 			var error_msg: String = "CRITICAL SECURITY ERROR: Missing production salt."
 			push_error(error_msg)
