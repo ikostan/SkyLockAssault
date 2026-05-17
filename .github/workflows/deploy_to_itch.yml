@@ -91,17 +91,14 @@ jobs:
       - name: "Verify injected production key is non-empty"
         run: |
           CONTENT=$(unzip -p "${{ steps.export.outputs.archive_directory }}/Web.zip" | strings)
-      
           if echo "$CONTENT" | grep -qF '"CI_INJECT_SALT_HERE"'; then
             echo "❌ Placeholder still present."
             exit 1
           fi
-      
           if echo "$CONTENT" | grep -q 'PRODUCTION_SALT *= *""'; then
             echo "❌ Empty production salt detected."
             exit 1
           fi
-      
           echo "✅ Production salt successfully injected."
 
       - name: "Cache Butler"
