@@ -477,7 +477,7 @@ func _get_encryption_key() -> String:
 
 	if not OS.has_feature("editor") and not OS.has_feature("debug") and not is_automated_test:
 		# Split the string here so 'sed' ignores this line during CI injection
-		if salt == "CI_INJECT_" + "SALT_HERE":
+		if salt == "CI_INJECT_SALT_HERE":
 			var error_msg: String = "CRITICAL SECURITY ERROR: Missing production salt."
 			push_error(error_msg)
 			OS.crash(error_msg)
