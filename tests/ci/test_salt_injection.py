@@ -151,15 +151,25 @@ def test_injection_missing_placeholder(repo_tmp):
     assert dummy_abs.read_text(encoding="utf-8") == original_content
 
 
-def test_injection_empty_secret(repo_tmp):
+@pytest.mark.parametrize(
+    "empty_input",
+    [
+        "",  # Completely empty
+        "\n",  # Single Linux newline
+        "\r\n\r\n",  # Multiple Windows newlines
+    ],
+)
+def test_injection_empty_secret(repo_tmp, empty_input):
     """
-    Ensures the bash script guard catches an empty environment variable and aborts.
+    Ensures the bash script guard catches an empty environment variable
+    (or one that becomes empty after stripping newlines) and aborts.
     """
-    dummy_rel = f"{repo_tmp}/dummy_empty.gd"
+    dummy_rel = f"{repo_tmp}/dummy_empty_{hash(empty_input)}.gd"
     dummy_abs = Path(PROJECT_ROOT) / dummy_rel
     original_content = 'var salt = "CI_INJECT_SALT_HERE"\n'
     dummy_abs.write_text(original_content, encoding="utf-8")
-    result = run_injection(dummy_rel, "")
+
+    result = run_injection(dummy_rel, empty_input)
 
     # Non-zero return code indicates the script aborted as expected
     assert result.returncode != 0
