@@ -91,14 +91,14 @@ jobs:
 
       - name: "Re-zip Flattened Export"
         run: |
+          set -euo pipefail
           ARCHIVE_DIR="${{ steps.export.outputs.archive_directory }}"
 
           # Delete the original, unpatched zip
           rm "$ARCHIVE_DIR/Web.zip"
 
-          # Zip the patched build back into the original location
-          cd "$ARCHIVE_DIR/patched_build"
-          zip -r "$ARCHIVE_DIR/Web.zip" .
+          # Zip the patched build back into the original location securely
+          cd "$ARCHIVE_DIR/patched_build" && zip -r "$ARCHIVE_DIR/Web.zip" .
 
       - name: "Verify export does not contain placeholder"
         run: |
