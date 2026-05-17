@@ -26,6 +26,7 @@ jobs:
 
       - name: "Inject Version into project.godot"
         run: |
+          set -euo pipefail
           VERSION="${{ inputs.version }}"
           ESCAPED_VERSION=$(printf '%s' "$VERSION" | sed 's/[\\\\/&]/\\\\&/g')
           if grep -q '^config/version="' project.godot; then
@@ -38,16 +39,21 @@ jobs:
 
       - name: "Disable Editor Plugins (Prevent Headless Crash)"
         run: |
+          set -euo pipefail
           source .github/scripts/ci_utils.sh
           disable_editor_plugins "project.godot"
 
       - name: "Inject Production Salt into GDScript"
         env:
           PRODUCTION_SALT: ${{ secrets.PRODUCTION_SALT }}
-        run: bash ./.github/scripts/inject_salt.sh "scripts/core/globals.gd"
+        run: |
+          set -euo pipefail
+          bash ./.github/scripts/inject_salt.sh "scripts/core/globals.gd"
 
       - name: "Create Export Directories"
-        run: mkdir -p export/web
+        run: |
+          set -euo pipefail
+          mkdir -p export/web
 
       - name: "Export Godot to Web"
         id: "export"
@@ -64,16 +70,58 @@ jobs:
           use_preset_export_path: true
 
       - name: "Unzip Export Archive"
-        run: unzip export/web/Web.zip -d export/web
+        run: |
+          set -euo pipefail
+          ARCHIVE_DIR="${{ steps.export.outputs.archive_directory }}"
+
+          # Defensive guard: prevent rm -rf from acting on an empty or malformed path
+          if [ -z "$ARCHIVE_DIR" ] || [ "$ARCHIVE_DIR" = "/" ] || [ "$ARCHIVE_DIR" = "." ]; then
+            echo "❌ FATAL: archive_directory output is empty or unsafe."
+            exit 1
+          fi
+          # Defensive hygiene: ensure clean staging directory before unzipping
+          rm -rf "$ARCHIVE_DIR/patched_build"
+          mkdir -p "$ARCHIVE_DIR/patched_build"
+          unzip "$ARCHIVE_DIR/Web.zip" -d "$ARCHIVE_DIR/patched_build"
 
       - name: "Patch index.js for security"
-        run: bash ./.github/scripts/patch_index_js.sh "export/web"
+        run: |
+          set -euo pipefail
+          bash ./.github/scripts/patch_index_js.sh "${{ steps.export.outputs.archive_directory }}/patched_build"
 
       - name: "Re-zip Flattened Export"
         run: |
-          cd export/web
-          zip -r ../Web.zip .
-          cd ../..
+          set -euo pipefail
+
+          # Delete the original, unpatched zip
+          rm "${{ steps.export.outputs.archive_directory }}/Web.zip"
+
+          # Navigate safely into the patched folder
+          pushd "${{ steps.export.outputs.archive_directory }}/patched_build" > /dev/null
+
+          # Zip directly to the absolute workspace path, eliminating relative traversal
+          zip -r "$GITHUB_WORKSPACE/${{ steps.export.outputs.archive_directory }}/Web.zip" .
+
+          # Return to original directory
+          popd > /dev/null
+
+      - name: "Verify export does not contain placeholder"
+        run: |
+          set -euo pipefail
+
+          # Temporarily disable pipefail to prevent SIGPIPE from failing the check
+          # if grep exits early upon finding a match in the unpacked byte stream.
+          set +o pipefail
+
+          if unzip -p "${{ steps.export.outputs.archive_directory }}/Web.zip" | grep -qF "CI_INJECT_SALT_HERE"; then
+            echo "❌ Placeholder detected inside final export archive."
+            exit 1
+          fi
+
+          # Immediately restore strict pipefail for any future commands added to this block
+          set -o pipefail
+
+          echo "✅ Final export archive verified successfully."
 
       - name: "Cache Butler"
         id: "cache-butler"
@@ -84,11 +132,13 @@ jobs:
 
       - name: "Setup Butler"
         run: |
+          set -euo pipefail
           chmod +x butler/butler
           echo "$(pwd)/butler" >> $GITHUB_PATH
 
       - name: "Deploy to itch.io with Butler"
         run: |
-          butler push ${{ steps.export.outputs.archive_directory }}/Web.zip ikostan/sky-lock-assault:${{ github.ref_name }} --userversion "${{ inputs.version }}"
+          set -euo pipefail
+          butler push "${{ steps.export.outputs.archive_directory }}/Web.zip" ikostan/sky-lock-assault:${{ github.ref_name }} --userversion "${{ inputs.version }}"
         env:
           BUTLER_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"

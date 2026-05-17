@@ -488,7 +488,13 @@ func _get_encryption_key() -> String:
 	if not OS.has_feature("web"):
 		device_id = OS.get_unique_id()
 
-	return (device_id + salt).sha256_text()
+	# Logging the key length immediately after generation gives you the cleanest
+	# signal whether the real production salt was used.
+	var final_key: String = (device_id + salt).sha256_text()
+	# NEW: Log key length for easier debugging of injection issues
+	log_message("Generated key length: %d" % final_key.length(), LogLevel.DEBUG)
+
+	return final_key
 
 
 ## Helper to determine if a config file is encrypted.

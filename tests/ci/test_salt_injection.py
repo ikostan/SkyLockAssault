@@ -23,7 +23,12 @@ def run_injection(file_path, raw_secret):
     Returns the CompletedProcess object for assertion checking.
     """
     env = os.environ.copy()
-    env["PRODUCTION_SALT"] = raw_secret
+
+    # NEW: If None is passed, simulate a completely missing/unset environment variable
+    if raw_secret is None:
+        env.pop("PRODUCTION_SALT", None)
+    else:
+        env["PRODUCTION_SALT"] = raw_secret
 
     if "WSLENV" in env:
         env["WSLENV"] += ":PRODUCTION_SALT/u"
@@ -145,15 +150,25 @@ def test_injection_missing_placeholder(repo_tmp):
     assert dummy_abs.read_text(encoding="utf-8") == original_content
 
 
-def test_injection_empty_secret(repo_tmp):
+@pytest.mark.parametrize(
+    "empty_input",
+    [
+        "",  # Completely empty
+        "\n",  # Single Linux newline
+        "\r\n\r\n",  # Multiple Windows newlines
+    ],
+)
+def test_injection_empty_secret(repo_tmp, empty_input):
     """
-    Ensures the bash script guard catches an empty environment variable and aborts.
+    Ensures the bash script guard catches an empty environment variable
+    (or one that becomes empty after stripping newlines) and aborts.
     """
-    dummy_rel = f"{repo_tmp}/dummy_empty.gd"
+    dummy_rel = f"{repo_tmp}/dummy_empty_{hash(empty_input)}.gd"
     dummy_abs = Path(PROJECT_ROOT) / dummy_rel
     original_content = 'var salt = "CI_INJECT_SALT_HERE"\n'
     dummy_abs.write_text(original_content, encoding="utf-8")
-    result = run_injection(dummy_rel, "")
+
+    result = run_injection(dummy_rel, empty_input)
 
     # Non-zero return code indicates the script aborted as expected
     assert result.returncode != 0
@@ -184,26 +199,6 @@ def test_injection_non_existent_file():
     result = run_injection("this_file_does_not_exist.gd", "non-existent-file-salt")
     assert result.returncode != 0
     assert "does not exist" in result.stdout
-
-
-def test_injection_multiline_secret(repo_tmp):
-    """Validates that multiline secrets safely fail instead of silently corrupting."""
-    dummy_rel = f"{repo_tmp}/dummy_multiline.gd"
-    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
-    original_content = 'var salt = "CI_INJECT_SALT_HERE"\n'
-
-    dummy_abs.write_text(original_content, encoding="utf-8")
-
-    result = run_injection(dummy_rel, "line1\nline2")
-
-    # Platform agnostic check: It just needs to fail deterministically
-    assert result.returncode != 0
-
-    # Ensure an error is reported without coupling to a specific tool name
-    assert result.stderr.strip() != ""
-
-    # Verify the file was not accidentally mangled before failure
-    assert dummy_abs.read_text(encoding="utf-8") == original_content
 
 
 @pytest.mark.skipif(os.name == "nt", reason="POSIX file permission mechanics required")
@@ -252,3 +247,64 @@ def test_idempotency(repo_tmp):
 
     # Strict matching to guarantee NO duplicate injection or mangled formatting
     assert content == 'var salt = "idempotent-secret"\n'
+
+
+@pytest.mark.parametrize(
+    "secret_input, expected_injected",
+    [
+        ("line1\nline2", "line1line2"),  # Standard Linux/macOS LF
+        ("line1\r\nline2", "line1line2"),  # Windows CRLF
+        ("\n\nline1\n\nline2\n\n", "line1line2"),  # Multiple leading/trailing newlines
+        ("\r\n mixed \n newlines \r\n", " mixed  newlines "),  # Mixed with spaces
+        ("   ", "   "),  # All-whitespace (valid string, tests positive path)
+        ("  \n\n  ", "    "),  # Whitespace split by newlines
+    ],
+)
+def test_injection_multiline_secret_stripped(repo_tmp, secret_input, expected_injected):
+    """
+    Validates that multiline secrets (both LF and CRLF) are safely stripped
+    of all newlines and injected, rather than failing or corrupting the file.
+    """
+    dummy_rel = f"{repo_tmp}/dummy_multiline_{hash(secret_input)}.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+    original_content = 'var salt = "CI_INJECT_SALT_HERE"\n'
+
+    dummy_abs.write_text(original_content, encoding="utf-8")
+
+    # Pass the complex multiline secret
+    result = run_injection(dummy_rel, secret_input)
+
+    # It must SUCCEED, because `tr -d '\r\n'` sanitizes the input
+    assert result.returncode == 0
+
+    content = dummy_abs.read_text(encoding="utf-8")
+
+    # Strict equality check: guarantees no unexpected whitespace, quotes, or newlines slipped through
+    expected_content = f'var salt = "{expected_injected}"\n'
+    assert content == expected_content
+
+
+def test_injection_unset_secret(repo_tmp):
+    """
+    Ensures that a completely missing (unset) environment variable
+    is caught gracefully by the bash script without triggering
+    a fatal 'unbound variable' bash crash due to 'set -u'.
+    """
+    dummy_rel = f"{repo_tmp}/dummy_unset.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+    original_content = 'var salt = "CI_INJECT_SALT_HERE"\n'
+    dummy_abs.write_text(original_content, encoding="utf-8")
+
+    # Pass None to completely strip the variable from the test environment
+    result = run_injection(dummy_rel, None)
+
+    # It must fail
+    assert result.returncode != 0
+
+    # It must output our custom error, NOT a standard bash "unbound variable" error
+    combined_output = result.stdout + result.stderr
+    assert "PRODUCTION_SALT environment variable is not set" in combined_output
+    assert "unbound variable" not in combined_output
+
+    # The file must remain completely untouched
+    assert dummy_abs.read_text(encoding="utf-8") == original_content
