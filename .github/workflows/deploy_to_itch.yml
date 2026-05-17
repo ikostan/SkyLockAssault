@@ -91,19 +91,14 @@ jobs:
 
       - name: "Re-zip Flattened Export"
         run: |
-          set -euo pipefail
+          ARCHIVE_DIR="${{ steps.export.outputs.archive_directory }}"
 
           # Delete the original, unpatched zip
-          rm "${{ steps.export.outputs.archive_directory }}/Web.zip"
+          rm "$ARCHIVE_DIR/Web.zip"
 
-          # Navigate safely into the patched folder
-          pushd "${{ steps.export.outputs.archive_directory }}/patched_build" > /dev/null
-
-          # Zip directly to the absolute workspace path, eliminating relative traversal
-          zip -r "$GITHUB_WORKSPACE/${{ steps.export.outputs.archive_directory }}/Web.zip" .
-
-          # Return to original directory
-          popd > /dev/null
+          # Zip the patched build back into the original location
+          cd "$ARCHIVE_DIR/patched_build"
+          zip -r "$ARCHIVE_DIR/Web.zip" .
 
       - name: "Verify export does not contain placeholder"
         run: |
