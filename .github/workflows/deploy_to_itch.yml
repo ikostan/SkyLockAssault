@@ -97,9 +97,9 @@ jobs:
       - name: "Verify export does not contain placeholder"
         run: |
           set -euo pipefail
-          # Set +o pipefail temporarily here to prevent SIGPIPE from failing the check 
+          # Set +o pipefail temporarily here to prevent SIGPIPE from failing the check
           # if grep exits early upon finding a match in the unpacked byte stream.
-          set +o pipefail 
+          set +o pipefail
           if unzip -p "${{ steps.export.outputs.archive_directory }}/Web.zip" | grep -qF "CI_INJECT_SALT_HERE"; then
             echo "❌ Placeholder detected inside final export archive."
             exit 1
