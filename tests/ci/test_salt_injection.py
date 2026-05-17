@@ -24,7 +24,7 @@ def get_dummy_content(var_line='var salt: String = "CI_INJECT_SALT_HERE"'):
     security guard logic is always present in the dummy file.
     """
     return (
-        f'{var_line}\n'
+        f"{var_line}\n"
         'if salt == "CI_INJECT_SALT_HERE":\n'
         '\tpush_error("Missing salt")\n'
     )
@@ -121,7 +121,7 @@ def test_injection_targets_only_variable(repo_tmp):
         'var salt: String = "CI_INJECT_SALT_HERE"\n'
         'var other_dict = {"save_salt": "CI_INJECT_SALT_HERE"}\n'
         'if salt == "CI_INJECT_SALT_HERE":\n'
-        '\tpass\n'
+        "\tpass\n"
     )
     dummy_abs.write_text(original_content, encoding="utf-8")
 
