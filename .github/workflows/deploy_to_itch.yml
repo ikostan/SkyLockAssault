@@ -64,21 +64,23 @@ jobs:
           use_preset_export_path: true
 
       - name: "Unzip Export Archive"
-        # Extract into a clean, separate folder so we don't mix the zip with the raw files
-        run: unzip "${{ steps.export.outputs.archive_directory }}/Web.zip" -d export/patched_build
+        # Staging folder is now a direct subfolder of the dynamic archive directory
+        run: unzip "${{ steps.export.outputs.archive_directory }}/Web.zip" -d "${{ steps.export.outputs.archive_directory }}/patched_build"
 
       - name: "Patch index.js for security"
-        run: bash ./.github/scripts/patch_index_js.sh "export/patched_build"
+        run: bash ./.github/scripts/patch_index_js.sh "${{ steps.export.outputs.archive_directory }}/patched_build"
 
       - name: "Re-zip Flattened Export"
         run: |
           # 1. Delete the original, unpatched zip
           rm "${{ steps.export.outputs.archive_directory }}/Web.zip"
-          # 2. Go into our patched folder
-          cd export/patched_build
-          # 3. Zip the files directly back into the original output variable's location
-          zip -r "../../${{ steps.export.outputs.archive_directory }}/Web.zip" .
-          cd ../..
+          
+          # 2. Go into our dynamic patched folder
+          cd "${{ steps.export.outputs.archive_directory }}/patched_build"
+          
+          # 3. Zip files directly back up to the parent directory (archive_directory)
+          # This completely removes the brittle "../../" relative path guessing!
+          zip -r "../Web.zip" .
 
       - name: "Verify export does not contain placeholder"
         run: |
