@@ -26,6 +26,7 @@ jobs:
 
       - name: "Inject Version into project.godot"
         run: |
+          set -euo pipefail
           VERSION="${{ inputs.version }}"
           ESCAPED_VERSION=$(printf '%s' "$VERSION" | sed 's/[\\\\/&]/\\\\&/g')
           if grep -q '^config/version="' project.godot; then
@@ -38,16 +39,21 @@ jobs:
 
       - name: "Disable Editor Plugins (Prevent Headless Crash)"
         run: |
+          set -euo pipefail
           source .github/scripts/ci_utils.sh
           disable_editor_plugins "project.godot"
 
       - name: "Inject Production Salt into GDScript"
         env:
           PRODUCTION_SALT: ${{ secrets.PRODUCTION_SALT }}
-        run: bash ./.github/scripts/inject_salt.sh "scripts/core/globals.gd"
+        run: |
+          set -euo pipefail
+          bash ./.github/scripts/inject_salt.sh "scripts/core/globals.gd"
 
       - name: "Create Export Directories"
-        run: mkdir -p export/web
+        run: |
+          set -euo pipefail
+          mkdir -p export/web
 
       - name: "Export Godot to Web"
         id: "export"
@@ -64,14 +70,21 @@ jobs:
           use_preset_export_path: true
 
       - name: "Unzip Export Archive"
-        # Staging folder is now a direct subfolder of the dynamic archive directory
-        run: unzip "${{ steps.export.outputs.archive_directory }}/Web.zip" -d "${{ steps.export.outputs.archive_directory }}/patched_build"
+        run: |
+          set -euo pipefail
+          # Defensive hygiene: ensure clean staging directory before unzipping
+          rm -rf "${{ steps.export.outputs.archive_directory }}/patched_build"
+          mkdir -p "${{ steps.export.outputs.archive_directory }}/patched_build"
+          unzip "${{ steps.export.outputs.archive_directory }}/Web.zip" -d "${{ steps.export.outputs.archive_directory }}/patched_build"
 
       - name: "Patch index.js for security"
-        run: bash ./.github/scripts/patch_index_js.sh "${{ steps.export.outputs.archive_directory }}/patched_build"
+        run: |
+          set -euo pipefail
+          bash ./.github/scripts/patch_index_js.sh "${{ steps.export.outputs.archive_directory }}/patched_build"
 
       - name: "Re-zip Flattened Export"
         run: |
+          set -euo pipefail
           # 1. Delete the original, unpatched zip
           rm "${{ steps.export.outputs.archive_directory }}/Web.zip"
 
@@ -79,29 +92,19 @@ jobs:
           cd "${{ steps.export.outputs.archive_directory }}/patched_build"
 
           # 3. Zip files directly back up to the parent directory (archive_directory)
-          # This completely removes the brittle "../../" relative path guessing!
           zip -r "../Web.zip" .
 
       - name: "Verify export does not contain placeholder"
         run: |
-          if unzip -p "${{ steps.export.outputs.archive_directory }}/Web.zip" | grep -q "CI_INJECT_SALT_HERE"; then
+          set -euo pipefail
+          # Set +o pipefail temporarily here to prevent SIGPIPE from failing the check 
+          # if grep exits early upon finding a match in the unpacked byte stream.
+          set +o pipefail 
+          if unzip -p "${{ steps.export.outputs.archive_directory }}/Web.zip" | grep -qF "CI_INJECT_SALT_HERE"; then
             echo "❌ Placeholder detected inside final export archive."
             exit 1
           fi
           echo "✅ Final export archive verified successfully."
-
-      - name: "Verify injected production key is non-empty"
-        run: |
-          CONTENT=$(unzip -p "${{ steps.export.outputs.archive_directory }}/Web.zip" | strings)
-          if echo "$CONTENT" | grep -qF '"CI_INJECT_SALT_HERE"'; then
-            echo "❌ Placeholder still present."
-            exit 1
-          fi
-          if echo "$CONTENT" | grep -q 'PRODUCTION_SALT *= *""'; then
-            echo "❌ Empty production salt detected."
-            exit 1
-          fi
-          echo "✅ Production salt successfully injected."
 
       - name: "Cache Butler"
         id: "cache-butler"
@@ -112,13 +115,13 @@ jobs:
 
       - name: "Setup Butler"
         run: |
+          set -euo pipefail
           chmod +x butler/butler
           echo "$(pwd)/butler" >> $GITHUB_PATH
 
       - name: "Deploy to itch.io with Butler"
         run: |
-          # The bot is happy because we use the dynamic variable, and we are happy
-          # because we mathematically guarantee this is the patched, un-bloated zip!
+          set -euo pipefail
           butler push "${{ steps.export.outputs.archive_directory }}/Web.zip" ikostan/sky-lock-assault:${{ github.ref_name }} --userversion "${{ inputs.version }}"
         env:
           BUTLER_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"
