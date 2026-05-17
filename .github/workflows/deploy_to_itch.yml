@@ -123,12 +123,23 @@ jobs:
         uses: "actions/cache@v5"
         with:
           path: "butler"
-          key: "${{ runner.os }}-butler-15.24.0-v2"
+          key: "${{ runner.os }}-butler-15.27.0-v1"
 
-      - name: "Setup Butler"
+      - name: "Download Butler (On Cache Miss)"
+        if: "steps.cache-butler.outputs.cache-hit != 'true'"
+        run: |
+          set -euo pipefail
+          mkdir -p butler
+          curl -L -o butler.zip "https://broth.itch.ovh/butler/linux-amd64/15.27.0/archive/default"
+          unzip butler.zip -d butler
+          rm butler.zip
+
+      - name: "Setup Butler Execution Environment"
         run: |
           set -euo pipefail
           chmod +x butler/butler
+          # Verify version block before placing on path
+          ./butler/butler --version
           echo "$(pwd)/butler" >> $GITHUB_PATH
 
       - name: "Deploy to itch.io with Butler"
