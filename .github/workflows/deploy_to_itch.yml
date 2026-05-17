@@ -72,10 +72,17 @@ jobs:
       - name: "Unzip Export Archive"
         run: |
           set -euo pipefail
+          ARCHIVE_DIR="${{ steps.export.outputs.archive_directory }}"
+          
+          # Defensive guard: prevent rm -rf from acting on an empty or malformed path
+          if [ -z "$ARCHIVE_DIR" ] || [ "$ARCHIVE_DIR" = "/" ] || [ "$ARCHIVE_DIR" = "." ]; then
+            echo "❌ FATAL: archive_directory output is empty or unsafe."
+            exit 1
+          fi
           # Defensive hygiene: ensure clean staging directory before unzipping
-          rm -rf "${{ steps.export.outputs.archive_directory }}/patched_build"
-          mkdir -p "${{ steps.export.outputs.archive_directory }}/patched_build"
-          unzip "${{ steps.export.outputs.archive_directory }}/Web.zip" -d "${{ steps.export.outputs.archive_directory }}/patched_build"
+          rm -rf "$ARCHIVE_DIR/patched_build"
+          mkdir -p "$ARCHIVE_DIR/patched_build"
+          unzip "$ARCHIVE_DIR/Web.zip" -d "$ARCHIVE_DIR/patched_build"
 
       - name: "Patch index.js for security"
         run: |
