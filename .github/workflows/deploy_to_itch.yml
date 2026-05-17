@@ -74,10 +74,10 @@ jobs:
         run: |
           # 1. Delete the original, unpatched zip
           rm "${{ steps.export.outputs.archive_directory }}/Web.zip"
-          
+
           # 2. Go into our dynamic patched folder
           cd "${{ steps.export.outputs.archive_directory }}/patched_build"
-          
+
           # 3. Zip files directly back up to the parent directory (archive_directory)
           # This completely removes the brittle "../../" relative path guessing!
           zip -r "../Web.zip" .
