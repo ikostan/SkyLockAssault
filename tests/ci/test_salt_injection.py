@@ -335,3 +335,52 @@ def test_injection_does_not_corrupt_security_guard(repo_tmp):
     assert (
         'if salt == "CI_INJECT_SALT_HERE":' in content
     ), "FATAL: The security guard logic was overwritten by sed!"
+
+
+def test_injection_fails_when_security_guard_missing(repo_tmp):
+    """
+    When the salt variable exists but the security guard conditional is
+    completely missing, the injection script should abort with a non-zero
+    exit code.
+    """
+    dummy_rel = f"{repo_tmp}/dummy_guard_missing.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+
+    # Contains the target variable but completely omits the security guard
+    original_content = (
+        "func _get_encryption_key() -> String:\n"
+        '\tvar salt: String = "CI_INJECT_SALT_HERE"\n'
+        "\treturn salt\n"
+    )
+    dummy_abs.write_text(original_content, encoding="utf-8")
+
+    result = run_injection(dummy_rel, "injected-salt")
+
+    # Guard verification should fail, causing a non-zero exit code.
+    assert result.returncode != 0
+    assert "FATAL: Salt injection corrupted the security guard logic" in result.stdout
+
+
+def test_injection_fails_when_security_guard_malformed(repo_tmp):
+    """
+    When a security guard is present but does not match the expected literal
+    or format, the injection script should abort.
+    """
+    dummy_rel = f"{repo_tmp}/dummy_guard_malformed.gd"
+    dummy_abs = Path(PROJECT_ROOT) / dummy_rel
+
+    original_content = (
+        "func _get_encryption_key() -> String:\n"
+        '\tvar salt: String = "CI_INJECT_SALT_HERE"\n'
+        "\t# Malformed guard: literal does not match what inject_salt.sh expects.\n"
+        '\tif salt == "WRONG_GUARD_LITERAL":\n'
+        '\t\tpush_error("Missing salt")\n'
+        "\treturn salt\n"
+    )
+    dummy_abs.write_text(original_content, encoding="utf-8")
+
+    result = run_injection(dummy_rel, "injected-salt")
+
+    # The malformed guard should cause the script to abort.
+    assert result.returncode != 0
+    assert "FATAL: Salt injection corrupted the security guard logic" in result.stdout
