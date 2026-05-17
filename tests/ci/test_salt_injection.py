@@ -23,7 +23,6 @@ def run_injection(file_path, raw_secret):
     Returns the CompletedProcess object for assertion checking.
     """
     env = os.environ.copy()
-    env["PRODUCTION_SALT"] = raw_secret
 
     # NEW: If None is passed, simulate a completely missing/unset environment variable
     if raw_secret is None:
