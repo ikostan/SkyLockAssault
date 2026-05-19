@@ -80,6 +80,7 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 9. [Free Web Browser Game Deployment Platforms](files/docs/Platforms_for_Web_Deployment_Guide.md)
 10. [How to inspect the files saved by a Godot web export](files/docs/howto_inspect_the_files_saved_by_a_Godot_web_export.md)
 11. [CI/CD Production Salt Injection & Security Guard Architecture](files/docs/Production_Salt_Injection_&_Security_Guard_Architecture.md)
+12. [Browser DevTools Guide — Verifying Web Save Encryption in Godot 4.5](files/docs/Browser_DevTools_Guide_Verifying_Web_Save_Encryption.md)
 <!-- markdownlint-enable line-length -->
 
 ## Roadmap
