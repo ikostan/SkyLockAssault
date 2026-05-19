@@ -134,7 +134,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p butler
-          curl -L -o butler.zip "https://broth.itch.zone/butler/linux-amd64/${{ env.BUTLER_VERSION }}/archive/default"
+          curl -fL --show-error -o butler.zip "https://broth.itch.zone/butler/linux-amd64/${{ env.BUTLER_VERSION }}/archive/default"
 
           # SECURITY CHECK: Verify binary integrity
           echo "${{ env.BUTLER_SHA256 }}  butler.zip" | sha256sum -c -
