@@ -16,6 +16,9 @@ on:  # yamllint disable-line rule:truthy
         description: "production salt secret key"
         required: true
 
+env:
+  BUTLER_VERSION: "15.27.0"
+
 jobs:
   export-and-deploy:
     runs-on: "ubuntu-latest"
@@ -123,14 +126,14 @@ jobs:
         uses: "actions/cache@v5"
         with:
           path: "butler"
-          key: "${{ runner.os }}-butler-15.27.0-v1"
+          key: "${{ runner.os }}-butler-${{ env.BUTLER_VERSION }}-v1"
 
       - name: "Download Butler (On Cache Miss)"
         if: "steps.cache-butler.outputs.cache-hit != 'true'"
         run: |
           set -euo pipefail
           mkdir -p butler
-          curl -L -o butler.zip "https://broth.itch.ovh/butler/linux-amd64/15.27.0/archive/default"
+          curl -L -o butler.zip "https://broth.itch.ovh/butler/linux-amd64/${{ env.BUTLER_VERSION }}/archive/default"
           unzip butler.zip -d butler
           rm butler.zip
 
