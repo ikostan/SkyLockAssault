@@ -101,7 +101,7 @@ jobs:
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
-          # FIX: Cache key is now strictly tied to the Playwright CLI version
+          # FIX: Cache key is now strictly tied to the installed Playwright package version
           key: ${{ runner.os }}-playwright-v2-${{ steps.playwright-version.outputs.version }}
 
       - name: "Install Playwright Browsers"

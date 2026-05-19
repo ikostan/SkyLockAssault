@@ -1,4 +1,4 @@
-# Browser DevTools Guide — Verifying Web Save Encryption in Godot 4.5**
+# Browser DevTools Guide — Verifying Web Save Encryption in Godot 4.5
 
 This guide explains exactly how to use the provided JavaScript debugging
 scripts inside browser Developer Tools to inspect, validate, and
