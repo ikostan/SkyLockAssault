@@ -1,4 +1,4 @@
-# Browser DevTools Guide — Verifying Web Save Encryption in Godot 4.5
+# Browser DevTools Guide — Verifying Web Save Encryption in Godot 4.5**
 
 This guide explains exactly how to use the provided JavaScript debugging
 scripts inside browser Developer Tools to inspect, validate, and
@@ -7,7 +7,7 @@ of [SkyLockAssault GitHub Repository](https://github.com/ikostan/SkyLockAssault)
 
 ---
 
-# Purpose of These Tests
+## Purpose of These Tests
 
 The JavaScript snippets are designed to verify:
 
@@ -23,7 +23,7 @@ stored in IndexedDB.
 
 ---
 
-# Browser Requirements
+## Browser Requirements
 
 Supported browsers:
 
@@ -35,9 +35,9 @@ to inspect visually.
 
 ---
 
-# Opening Developer Tools
+## Opening Developer Tools
 
-## Chrome
+### Chrome
 
 Open DevTools using:
 
@@ -53,7 +53,7 @@ Ctrl + Shift + I
 
 ---
 
-# CRITICAL — Set Correct JavaScript Execution Context
+### CRITICAL — Set Correct JavaScript Execution Context
 
 This is the most important step.
 
@@ -90,7 +90,7 @@ index.html
 
 ---
 
-# What Happens If Context Is Wrong
+## What Happens If Context Is Wrong
 
 Symptoms include:
 
@@ -110,7 +110,7 @@ The scripts may appear to run successfully while returning no save data.
 
 ---
 
-# Understanding Godot Web Storage
+## Understanding Godot Web Storage
 
 Godot Web exports store files inside:
 
@@ -134,9 +134,9 @@ This file is what the scripts inspect.
 
 ---
 
-# Script 1 — Verify Save File Exists
+## Script 1 — Verify Save File Exists
 
-## Purpose
+### Purpose
 
 Confirms:
 
@@ -148,7 +148,7 @@ This is the first script you should run.
 
 ---
 
-# Script
+### Script
 
 ```javascript
 const request = indexedDB.open('/userfs');
@@ -179,7 +179,7 @@ request.onsuccess = (event) => {
 
 ---
 
-# How to Run It
+### How to Run It
 
 1. Open DevTools
 2. Switch context to `index.html`
@@ -188,7 +188,7 @@ request.onsuccess = (event) => {
 
 ---
 
-# Expected Healthy Output
+### Expected Healthy Output
 
 Example:
 
@@ -204,9 +204,9 @@ This means:
 
 ---
 
-# Bad Output Cases
+### Bad Output Cases
 
-## Missing File
+#### Missing File
 
 ```text
 Save file not found.
@@ -221,7 +221,7 @@ Possible causes:
 
 ---
 
-## Very Small File Size
+#### Very Small File Size
 
 Example:
 
@@ -237,9 +237,9 @@ Usually indicates:
 
 ---
 
-# Script 2 — Detect Hollow Encryption
+## Script 2 — Detect Hollow Encryption
 
-## Purpose
+### Purpose
 
 This is the most important security validation test.
 
@@ -248,7 +248,7 @@ wrapped plaintext using an empty encryption key.
 
 ---
 
-# Why This Happens
+### Why This Happens
 
 If:
 
@@ -269,7 +269,7 @@ This creates “fake encryption.”
 
 ---
 
-# Script
+### Script
 
 ```javascript
 const request = indexedDB.open('/userfs');
@@ -304,9 +304,9 @@ request.onsuccess = (event) => {
 
 ---
 
-# How to Interpret Results
+### How to Interpret Results
 
-## GOOD — Proper Encryption
+#### GOOD — Proper Encryption
 
 Expected output:
 
@@ -324,7 +324,7 @@ This means:
 
 ---
 
-## BAD — Hollow Encryption
+#### BAD — Hollow Encryption
 
 If you see readable settings like:
 
@@ -345,7 +345,7 @@ This means:
 
 ---
 
-# What “GDEC” Means
+### What “GDEC” Means
 
 You may see:
 
@@ -363,9 +363,9 @@ The important part is whether the remaining content is readable.
 
 ---
 
-# Script 3 — Inspect Raw IndexedDB Object
+## Script 3 — Inspect Raw IndexedDB Object
 
-## Purpose
+### Purpose
 
 Allows deep inspection of the actual stored file object.
 
@@ -378,7 +378,7 @@ Useful for debugging:
 
 ---
 
-# Script
+### Script
 
 ```javascript
 const request = indexedDB.open('/userfs');
@@ -400,7 +400,7 @@ request.onsuccess = (event) => {
 
 ---
 
-# Expected Output Structure
+### Expected Output Structure
 
 Example:
 
@@ -414,9 +414,9 @@ Example:
 
 ---
 
-# Important Field
+### Important Field
 
-## `contents`
+#### `contents`
 
 This contains the actual encrypted file bytes.
 
@@ -434,15 +434,15 @@ or empty:
 
 ---
 
-# Script 4 — Force Corruption Recovery Test
+## Script 4 — Force Corruption Recovery Test
 
-## Purpose
+### Purpose
 
 Tests whether the game properly auto-recovers from corrupted encrypted saves.
 
 ---
 
-# WARNING
+### WARNING
 
 This intentionally damages the save file.
 
@@ -450,7 +450,7 @@ Use only in testing environments.
 
 ---
 
-# Script
+### Script
 
 ```javascript
 const request = indexedDB.open('/userfs');
@@ -483,7 +483,7 @@ request.onsuccess = (event) => {
 
 ---
 
-# What This Script Does
+### What This Script Does
 
 This line:
 
@@ -501,7 +501,7 @@ That is enough to:
 
 ---
 
-# Expected Recovery Behavior
+### Expected Recovery Behavior
 
 After corruption:
 
@@ -519,7 +519,7 @@ Expected logs:
 
 ---
 
-# Successful Recovery Indicators
+### Successful Recovery Indicators
 
 After refresh:
 
@@ -530,13 +530,13 @@ After refresh:
 
 ---
 
-# Visual IndexedDB Inspection (Chrome)
+### Visual IndexedDB Inspection (Chrome)
 
 Chrome also allows manual inspection without scripts.
 
 ---
 
-# How to Open IndexedDB Viewer
+### How to Open IndexedDB Viewer
 
 Inside DevTools:
 
@@ -555,9 +555,9 @@ You can manually browse:
 
 ---
 
-# What to Look For
+### What to Look For
 
-## Healthy Save
+#### Healthy Save
 
 * binary `contents`
 * non-trivial file size
@@ -565,7 +565,7 @@ You can manually browse:
 
 ---
 
-## Broken Save
+#### Broken Save
 
 * tiny file size
 * empty contents
@@ -574,7 +574,7 @@ You can manually browse:
 
 ---
 
-# Common Mistakes
+## Common Mistakes
 
 | Problem                | Cause                      |
 |------------------------|----------------------------|
@@ -587,7 +587,7 @@ You can manually browse:
 
 ---
 
-# Recommended Debugging Workflow
+## Recommended Debugging Workflow
 
 Use this exact order:
 
@@ -604,7 +604,7 @@ Use this exact order:
 
 ---
 
-# Final Validation Criteria
+## Final Validation Criteria
 
 The implementation is considered secure and working correctly only if:
 
