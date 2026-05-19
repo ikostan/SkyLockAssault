@@ -129,7 +129,7 @@ jobs:
           key: "${{ runner.os }}-butler-${{ env.BUTLER_VERSION }}-v1"
 
       - name: "Download Butler (On Cache Miss)"
-        if: "steps.cache-butler.outputs.cache-hit != 'true'"
+        if: steps.cache-butler.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           mkdir -p butler
