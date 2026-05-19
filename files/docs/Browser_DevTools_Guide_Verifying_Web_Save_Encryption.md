@@ -136,7 +136,7 @@ This file is what the scripts inspect.
 
 ## Script 1 — Verify Save File Exists
 
-### Purpose
+### Script 1 Purpose
 
 Confirms:
 
@@ -148,32 +148,49 @@ This is the first script you should run.
 
 ---
 
-### Script
+### Script 1
+
+Use this to confirm basic IndexedDB access and check the file size.
 
 ```javascript
 const request = indexedDB.open('/userfs');
 
+// 1. Catches browser-level blocks (e.g., third-party cookies disabled, strict privacy mode)
+request.onerror = (event) => {
+    console.error("❌ IndexedDB failed to open. Check execution context or browser privacy settings.", event.target.error);
+};
+
 request.onsuccess = (event) => {
     const db = event.target.result;
 
-    const store = db
-        .transaction(['FILE_DATA'], 'readonly')
-        .objectStore('FILE_DATA');
+    // 2. Catches cases where the DB exists, but Godot hasn't created the object stores yet
+    try {
+        const store = db
+            .transaction(['FILE_DATA'], 'readonly')
+            .objectStore('FILE_DATA');
 
-    store.get('/userfs/godot/app_userdata/SkyLockAssault/settings.cfg')
-        .onsuccess = (e) => {
+        const getRequest = store.get('/userfs/godot/app_userdata/SkyLockAssault/settings.cfg');
 
-        const data = e.target.result;
+        // 3. Catches failures specific to reading this exact file
+        getRequest.onerror = (e) => {
+             console.error("❌ Failed to read from the FILE_DATA object store:", e.target.error);
+        };
 
-        if (data && data.contents) {
-            console.log(
-                "File size in bytes:",
-                data.contents.byteLength
-            );
-        } else {
-            console.log("Save file not found.");
-        }
-    };
+        getRequest.onsuccess = (e) => {
+            const data = e.target.result;
+
+            if (data && data.contents) {
+                console.log(
+                    "✅ File size in bytes:",
+                    data.contents.byteLength
+                );
+            } else {
+                console.log("⚠️ Save file not found. Game may not have saved yet.");
+            }
+        };
+    } catch (err) {
+        console.error("❌ Failed to open transaction. The Godot file system may not be initialized yet.", err);
+    }
 };
 ```
 
@@ -239,7 +256,7 @@ Usually indicates:
 
 ## Script 2 — Detect Hollow Encryption
 
-### Purpose
+### Script 2 Purpose
 
 This is the most important security validation test.
 
@@ -269,36 +286,45 @@ This creates “fake encryption.”
 
 ---
 
-### Script
+### Script 2
+
+Use this to verify that the CI/CD salt injection worked and the
+data is actually encrypted (unreadable).
 
 ```javascript
 const request = indexedDB.open('/userfs');
 
+request.onerror = (event) => {
+    console.error("❌ IndexedDB failed to open. Check execution context or browser privacy settings.", event.target.error);
+};
+
 request.onsuccess = (event) => {
     const db = event.target.result;
 
-    const store = db
-        .transaction(['FILE_DATA'], 'readonly')
-        .objectStore('FILE_DATA');
+    try {
+        const store = db
+            .transaction(['FILE_DATA'], 'readonly')
+            .objectStore('FILE_DATA');
 
-    store.get('/userfs/godot/app_userdata/SkyLockAssault/settings.cfg')
-        .onsuccess = (e) => {
+        const getRequest = store.get('/userfs/godot/app_userdata/SkyLockAssault/settings.cfg');
 
-        const data = e.target.result;
+        getRequest.onerror = (e) => {
+             console.error("❌ Failed to read from the FILE_DATA object store:", e.target.error);
+        };
 
-        if (data && data.contents) {
+        getRequest.onsuccess = (e) => {
+            const data = e.target.result;
 
-            const decoded = new TextDecoder()
-                .decode(data.contents);
-
-            console.log(
-                "Decoded File Contents:\n\n",
-                decoded
-            );
-        } else {
-            console.log("Save file not found.");
-        }
-    };
+            if (data && data.contents) {
+                const decoded = new TextDecoder().decode(data.contents);
+                console.log("✅ Decoded File Contents:\n\n", decoded);
+            } else {
+                console.log("⚠️ Save file not found. Game may not have saved yet.");
+            }
+        };
+    } catch (err) {
+        console.error("❌ Failed to open transaction. The Godot file system may not be initialized yet.", err);
+    }
 };
 ```
 
@@ -365,7 +391,7 @@ The important part is whether the remaining content is readable.
 
 ## Script 3 — Inspect Raw IndexedDB Object
 
-### Purpose
+### Script 3 Purpose
 
 Allows deep inspection of the actual stored file object.
 
@@ -378,23 +404,44 @@ Useful for debugging:
 
 ---
 
-### Script
+### Script 3
+
+Use this to view the raw Godot file object (timestamp,
+mode, and the raw Uint8Array payload).
 
 ```javascript
 const request = indexedDB.open('/userfs');
 
+request.onerror = (event) => {
+    console.error("❌ IndexedDB failed to open. Check execution context or browser privacy settings.", event.target.error);
+};
+
 request.onsuccess = (event) => {
     const db = event.target.result;
 
-    const store = db
-        .transaction(['FILE_DATA'], 'readonly')
-        .objectStore('FILE_DATA');
+    try {
+        const store = db
+            .transaction(['FILE_DATA'], 'readonly')
+            .objectStore('FILE_DATA');
 
-    store.get('/userfs/godot/app_userdata/SkyLockAssault/settings.cfg')
-        .onsuccess = (e) => {
+        const getRequest = store.get('/userfs/godot/app_userdata/SkyLockAssault/settings.cfg');
 
-        console.log(e.target.result);
-    };
+        getRequest.onerror = (e) => {
+             console.error("❌ Failed to read from the FILE_DATA object store:", e.target.error);
+        };
+
+        getRequest.onsuccess = (e) => {
+            const data = e.target.result;
+
+            if (data) {
+                console.log("✅ Raw IndexedDB Object:\n", data);
+            } else {
+                console.log("⚠️ Save file not found. Game may not have saved yet.");
+            }
+        };
+    } catch (err) {
+        console.error("❌ Failed to open transaction. The Godot file system may not be initialized yet.", err);
+    }
 };
 ```
 
@@ -436,7 +483,7 @@ or empty:
 
 ## Script 4 — Force Corruption Recovery Test
 
-### Purpose
+### Script 4 Purpose
 
 Tests whether the game properly auto-recovers from corrupted encrypted saves.
 
@@ -450,34 +497,56 @@ Use only in testing environments.
 
 ---
 
-### Script
+### Script 4
+
+Use this to intentionally corrupt the file to test Godot's
+auto-recovery system. Note the transaction is set to readwrite here.
 
 ```javascript
 const request = indexedDB.open('/userfs');
 
+request.onerror = (event) => {
+    console.error("❌ IndexedDB failed to open. Check execution context or browser privacy settings.", event.target.error);
+};
+
 request.onsuccess = (event) => {
     const db = event.target.result;
 
-    const transaction = db.transaction(['FILE_DATA'], 'readwrite');
+    try {
+        // Must be 'readwrite' to push the corrupted file back into the database
+        const transaction = db.transaction(['FILE_DATA'], 'readwrite');
+        const store = transaction.objectStore('FILE_DATA');
 
-    const store = transaction.objectStore('FILE_DATA');
+        const getRequest = store.get('/userfs/godot/app_userdata/SkyLockAssault/settings.cfg');
 
-    store.get('/userfs/godot/app_userdata/SkyLockAssault/settings.cfg')
-        .onsuccess = (e) => {
+        getRequest.onerror = (e) => {
+             console.error("❌ Failed to read from the FILE_DATA object store:", e.target.error);
+        };
 
-        const data = e.target.result;
+        getRequest.onsuccess = (e) => {
+            const data = e.target.result;
 
-        if (!data || !data.contents) {
-            console.log("Save file not found.");
-            return;
-        }
+            if (!data || !data.contents) {
+                console.log("⚠️ Save file not found. Cannot perform corruption test.");
+                return;
+            }
 
-        data.contents[10] ^= 255;
+            // Target index 10 to safely skip Godot's 4-byte 'GDEC' header and target the encrypted payload
+            data.contents[10] ^= 255;
 
-        store.put(data);
-
-        console.log("Save file intentionally corrupted.");
-    };
+            const putRequest = store.put(data);
+            
+            putRequest.onsuccess = () => {
+                console.log("☢️ Save file intentionally corrupted. Refresh the page to test recovery.");
+            };
+            
+            putRequest.onerror = (err) => {
+                console.error("❌ Failed to write corrupted data back to IndexedDB.", err.target.error);
+            };
+        };
+    } catch (err) {
+        console.error("❌ Failed to open transaction. The Godot file system may not be initialized yet.", err);
+    }
 };
 ```
 
