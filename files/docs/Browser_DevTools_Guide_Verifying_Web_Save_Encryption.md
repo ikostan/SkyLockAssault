@@ -152,6 +152,7 @@ This is the first script you should run.
 
 Use this to confirm basic IndexedDB access and check the file size.
 
+<!-- markdownlint-disable line-length -->
 ```javascript
 const request = indexedDB.open('/userfs');
 
@@ -193,6 +194,7 @@ request.onsuccess = (event) => {
     }
 };
 ```
+<!-- markdownlint-enable line-length -->
 
 ---
 
@@ -291,6 +293,7 @@ This creates “fake encryption.”
 Use this to verify that the CI/CD salt injection worked and the
 data is actually encrypted (unreadable).
 
+<!-- markdownlint-disable line-length -->
 ```javascript
 const request = indexedDB.open('/userfs');
 
@@ -327,6 +330,7 @@ request.onsuccess = (event) => {
     }
 };
 ```
+<!-- markdownlint-enable line-length -->
 
 ---
 
@@ -409,6 +413,7 @@ Useful for debugging:
 Use this to view the raw Godot file object (timestamp,
 mode, and the raw Uint8Array payload).
 
+<!-- markdownlint-disable line-length -->
 ```javascript
 const request = indexedDB.open('/userfs');
 
@@ -444,6 +449,7 @@ request.onsuccess = (event) => {
     }
 };
 ```
+<!-- markdownlint-enable line-length -->
 
 ---
 
@@ -502,6 +508,7 @@ Use only in testing environments.
 Use this to intentionally corrupt the file to test Godot's
 auto-recovery system. Note the transaction is set to readwrite here.
 
+<!-- markdownlint-disable line-length -->
 ```javascript
 const request = indexedDB.open('/userfs');
 
@@ -549,6 +556,7 @@ request.onsuccess = (event) => {
     }
 };
 ```
+<!-- markdownlint-enable line-length -->
 
 ---
 
