@@ -58,9 +58,7 @@ issues.
 
 ## Contributions
 
-**@ikostan’s Contributions to PR #654**
-
-### Key Contributions:
+### @ikostan’s Key Contributions to PR #654:
 
 * Created the PR, self-assigned it, linked to issue #614, and
   provided full documentation.
