@@ -4,7 +4,7 @@ colorama==0.4.6
 docopt-ng==0.9.0
 gdtoolkit==4.5.0
 greenlet==3.3.1
-idna==3.11
+idna==3.15
 iniconfig==2.3.0
 Jinja2==3.1.6
 lark==1.2.2
