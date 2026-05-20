@@ -11,7 +11,7 @@ lark==1.2.2
 mando==0.8.2
 MarkupSafe==3.0.3
 packaging==26.0
-playwright==1.58.0
+playwright==1.60.0
 pluggy==1.6.0
 pyee==13.0.0
 Pygments==2.20.0
