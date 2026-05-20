@@ -32,6 +32,9 @@ issues.
   downloads the `linux-amd64` payload for an `ubuntu-latest` runner,
   the cache key remains hardcoded to `Linux` to prevent cross-platform
   contamination if the runner OS is ever modified.
+* **Add detailed documentation on using browser DevTools** to inspect and
+  validate encrypted web save data, along with a milestone summary of
+  the CI/CD infrastructure and caching changes.
 
 ---
 
