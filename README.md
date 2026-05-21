@@ -335,6 +335,7 @@ testing architecture.
 * **Hardware-Bound Encryption:** Implemented an automatic encryption key
   generation system (`Globals._get_encryption_key()`) that combines the OS
   name with a hardware-unique ID to securely lock local save data.
+
 #### 🛠️ Architecture & Refactors
 
 * **Centralized Configuration I/O:** Refactored core singletons (`Settings`,
@@ -345,6 +346,9 @@ testing architecture.
   error-handling test suites now construct `ConfigFile` objects entirely
   in-memory, bypassing the disk and permanently eliminating fatal C++ crypto
   layer crashes in the CI/CD pipeline.
+* **Codebase Audit & Technical Debt:** Conducted a comprehensive audit of the
+  core singletons. Verified a warning-free baseline by confirming no syntax
+  errors exist in legacy `settings.gd` fallback calls.
 
 Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milestones).
 
