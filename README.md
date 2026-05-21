@@ -325,6 +325,9 @@ This milestone focused on polishing UI audio feedback, tightening the
 security of local save files, and paying down technical debt in our
 testing architecture.
 
+**Delivery Status:** Milestone 17 is fully complete. There is no
+planned carryover work to future milestones.
+
 #### 🌟 New Features & Polish
 
 * **UI Audio Polish:** Implemented a dedicated `slider.wav` sound effect
