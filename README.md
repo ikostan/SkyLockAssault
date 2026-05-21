@@ -336,6 +336,7 @@ testing architecture.
   generation system (`Globals._get_encryption_key()`) that combines the OS
   name with a hardware-unique ID to securely lock local save data.
 #### 🛠️ Architecture & Refactors
+
 * **Centralized Configuration I/O:** Refactored core singletons (`Settings`,
   `AudioManager`) to route all file operations through a unified
   `Globals.safe_load_config()` helper.
@@ -344,7 +345,6 @@ testing architecture.
   error-handling test suites now construct `ConfigFile` objects entirely
   in-memory, bypassing the disk and permanently eliminating fatal C++ crypto
   layer crashes in the CI/CD pipeline.
-
 
 Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milestones).
 
