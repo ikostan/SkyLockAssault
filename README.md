@@ -326,6 +326,7 @@ security of local save files, and paying down technical debt in our
 testing architecture.
 
 #### 🌟 New Features & Polish
+
 * **UI Audio Polish:** Implemented a dedicated `slider.wav` sound effect
   for audio menus that strictly triggers only upon manual player adjustments,
   cleanly decoupling it from programmatic `value_changed` signals.
@@ -334,7 +335,6 @@ testing architecture.
 * **Hardware-Bound Encryption:** Implemented an automatic encryption key
   generation system (`Globals._get_encryption_key()`) that combines the OS
   name with a hardware-unique ID to securely lock local save data.
-
 #### 🛠️ Architecture & Refactors
 * **Centralized Configuration I/O:** Refactored core singletons (`Settings`,
   `AudioManager`) to route all file operations through a unified
