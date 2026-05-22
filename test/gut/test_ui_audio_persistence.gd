@@ -84,3 +84,44 @@ func test_ui_menu_volume_persistence() -> void:
 		0.001,
 		"The AudioServer bus volume must accurately reflect the loaded volume in decibels"
 	)
+
+
+## TC-Persistence-02 | Verifies that programmatic changes to the Menu/UI mute state persist across save/load cycles
+## and correctly propagate down to the AudioServer buses.
+## :rtype: void
+func test_ui_menu_mute_persistence() -> void:
+	# 1. Configure a dedicated test settings file path.
+	AudioManager.current_config_path = test_config_path
+	
+	# 2. Set the Menu/UI bus mute state to true.
+	AudioManager.set_muted(AudioConstants.BUS_SFX_MENU, true)
+	
+	# 3. Save the current audio settings.
+	AudioManager.save_volumes()
+	
+	# 4. Deliberately overwrite the in-memory mute state.
+	AudioManager.set_muted(AudioConstants.BUS_SFX_MENU, false)
+	
+	# 5. Verify the overwrite was successful.
+	assert_false(
+		AudioManager.get_muted(AudioConstants.BUS_SFX_MENU),
+		"In-memory mute state should be successfully mutated to false"
+	)
+	
+	# 6. Reload audio settings from disk.
+	AudioManager.load_volumes()
+	
+	# 7. Verify the mute state was restored from the configuration file.
+	assert_true(
+		AudioManager.get_muted(AudioConstants.BUS_SFX_MENU),
+		"Mute state should be successfully restored to true from disk"
+	)
+	
+	# 8. Verify the value was applied to the corresponding AudioServer bus.
+	var bus_idx: int = AudioServer.get_bus_index(AudioConstants.BUS_SFX_MENU) 
+	assert_ne(bus_idx, -1, "The Menu/UI audio bus must exist on the AudioServer") 
+	
+	assert_true(
+		AudioServer.is_bus_mute(bus_idx),
+		"The AudioServer bus mute state must accurately reflect the loaded true state"
+	)
