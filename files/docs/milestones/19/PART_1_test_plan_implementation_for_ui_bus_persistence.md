@@ -20,7 +20,7 @@ session for the **SkyLockAssault** project.
 
 ## 📂 Implemented Test Architecture
 
-### 1. Configuration Lifecycle Suite (`res://test/unit/test_ui_audio_persistence.gd`)
+### 1. Configuration Lifecycle Suite (`res://test/gut/test_ui_audio_persistence.gd`)
 
 Manages data serialization validation, storage boundary safety,
 and fallback handling under isolated testing conditions.
@@ -38,7 +38,7 @@ and fallback handling under isolated testing conditions.
   blank file mock to verify the manager gracefully defaults back to
   standard fallback safety states.
 
-### 2. Interface Interlock Suite (`res://test/unit/test_ui_mute_logic.gd`)
+### 2. Interface Interlock Suite (`res://test/gut/test_ui_mute_logic.gd`)
 
 Tracks component hierarchy instantiation, tree interactions, and 
 signal propagation paths.
