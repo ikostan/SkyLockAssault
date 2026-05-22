@@ -215,7 +215,8 @@ func test_ui_menu_missing_configuration_defaults() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	
 	# FIX: Save using encryption to prevent C++ core errors during AudioManager.load_volumes
-	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass) 
+	var save_err: int = config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
+	assert_eq(save_err, OK, "Failed to create encrypted test config fixture")
 	
 	# 3. Load audio settings.
 	AudioManager.load_volumes()
