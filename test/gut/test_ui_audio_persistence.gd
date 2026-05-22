@@ -202,3 +202,39 @@ func test_ui_menu_mute_restoration_applies_to_audioserver() -> void:
 		AudioServer.is_bus_mute(bus_index),
 		"The actual AudioServer bus mute state must automatically resync to muted (true)"
 	)
+
+
+## TC-Persistence-05 | Verifies that loading an empty or incomplete configuration file safely initializes 
+## the Menu/UI audio settings to their default values without generating engine errors.
+## :rtype: void
+func test_ui_menu_missing_configuration_defaults() -> void:
+	# 1. Configure a dedicated test settings file path.
+	AudioManager.current_config_path = test_config_path
+	
+	# 2. Create an empty or incomplete settings file.
+	var config: ConfigFile = ConfigFile.new()
+	
+	# FIX: Save using encryption to prevent C++ core errors during AudioManager.load_volumes
+	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass) 
+	
+	# 3. Load audio settings.
+	AudioManager.load_volumes()
+	
+	# 4. Verify the Menu/UI bus configuration is initialized using default values.
+	var expected_default_volume: float = 1.0
+	var expected_default_mute: bool = false
+	
+	# 5. Assert default volume is correctly assigned.
+	assert_almost_eq(
+		AudioManager.get_volume(AudioConstants.BUS_SFX_MENU),
+		expected_default_volume,
+		0.001,
+		"Menu volume must fallback and initialize to its default value of 1.0 when missing from config"
+	)
+	
+	# 6. Assert default mute state is correctly assigned.
+	assert_eq(
+		AudioManager.get_muted(AudioConstants.BUS_SFX_MENU),
+		expected_default_mute,
+		"Menu mute state must fallback and initialize to its default value of false when missing from config"
+	)
