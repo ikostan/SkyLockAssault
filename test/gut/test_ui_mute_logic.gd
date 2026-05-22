@@ -50,27 +50,32 @@ func test_ui_menu_mute_signal_propagation() -> void:
 	var menu_slider: HSlider = audio_instance.menu_slider as HSlider
 	var mute_toggle: BaseButton = audio_instance.mute_menu as BaseButton
 	
-	# 3. Ensure the Menu/UI slider is initially editable.
+	# 3. Ensure the Menu/UI slider and AudioServer bus are initially unmuted/editable.
 	assert_true(menu_slider.editable, "Menu slider should be initially editable when unmuted.")
 	
+	var bus_index: int = AudioServer.get_bus_index(AudioConstants.BUS_SFX_MENU) 
+	assert_ne(bus_index, -1, "The Menu/UI audio bus must exist on the AudioServer.") 
+	
+	# CORRECT PLACEMENT: Verify backend is unmuted BEFORE we toggle it
+	assert_false(
+		AudioServer.is_bus_mute(bus_index), 
+		"Precondition failed: Menu/UI bus must start unmuted before testing toggle logic."
+	)
+	
 	# 4. Simulate user interaction with the mute control (mute the bus).
-	mute_toggle.button_pressed = false
-	mute_toggle.toggled.emit(false)
-	await get_tree().process_frame
+	mute_toggle.button_pressed = false 
+	mute_toggle.toggled.emit(false) 
+	await get_tree().process_frame 
 	
-	# 5. Retrieve the Menu/UI bus index from AudioServer.
-	var bus_index: int = AudioServer.get_bus_index(AudioConstants.BUS_SFX_MENU)
-	assert_ne(bus_index, -1, "The Menu/UI audio bus must exist on the AudioServer.")
-	
-	# 6. Assertions for the muted state.
+	# 5. Assertions for the muted state.
 	assert_true(AudioServer.is_bus_mute(bus_index), "The AudioServer bus must be muted.")
 	assert_false(menu_slider.editable, "The corresponding Menu/UI slider must become non-editable.")
 	
-	# 7. Simulate user interaction to unmute the control.
+	# 6. Simulate user interaction to unmute the control.
 	mute_toggle.button_pressed = true
 	mute_toggle.toggled.emit(true)
 	await get_tree().process_frame
 	
-	# 8. Assertions for the unmuted state (slider can be re-enabled after unmuting).
+	# 7. Assertions for the unmuted state (slider can be re-enabled after unmuting).
 	assert_false(AudioServer.is_bus_mute(bus_index), "The AudioServer bus must be unmuted.")
 	assert_true(menu_slider.editable, "The slider must become editable again after unmuting.")
