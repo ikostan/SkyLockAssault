@@ -2,16 +2,22 @@
 ## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_ui_audio_persistence.gd
 ##
-## TEST SUITE: Verifies UI/Menu Volume Persistence (Issue #707).
+## TEST SUITE: Verifies UI/Menu Volume, Mute, and AudioServer Persistence (Issue #707, #708, #709, #712).
 
 extends "res://addons/gut/test.gd"
 
+# Test Suite Constants to avoid magic numbers
+const TEST_TOLERANCE: float = 0.001
+const DEFAULT_VOLUME: float = 1.0
+const DEFAULT_MUTE_STATE: bool = false
+
 var test_config_path: String = "user://test_ui_audio_persistence.cfg"
 var _orig_config_path: String
+var _bus_created_by_test: bool = false
 
 
 ## Per-test setup: Snapshot the original configuration path, clear any stale test files, 
-## reset AudioManager to default values, and initialize the Menu bus.
+## reset AudioManager to default values, and initialize the Menu bus if absent.
 ## :rtype: void
 func before_each() -> void:
 	_orig_config_path = AudioManager.current_config_path
@@ -22,19 +28,28 @@ func before_each() -> void:
 	AudioManager._init_to_defaults()
 	AudioManager.apply_all_volumes()
 	
-	# Initialize the Menu bus for headless testing if it doesn't already exist
+	# Dynamically register the Menu bus for headless environments and flag for cleanup
 	if AudioServer.get_bus_index(AudioConstants.BUS_SFX_MENU) == -1:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, AudioConstants.BUS_SFX_MENU)
+		_bus_created_by_test = true
 
 
-## Per-test cleanup: Delete the temporary configuration file and restore the original global state.
+## Per-test cleanup: Delete the temporary configuration file, restore global paths, and tear down test buses.
 ## :rtype: void
 func after_each() -> void:
 	if FileAccess.file_exists(test_config_path):
 		DirAccess.remove_absolute(test_config_path)
 		
 	AudioManager.current_config_path = _orig_config_path
+	
+	# Restore AudioServer bus layout back to its original environment state
+	if _bus_created_by_test:
+		var bus_idx: int = AudioServer.get_bus_index(AudioConstants.BUS_SFX_MENU)
+		if bus_idx != -1:
+			AudioServer.remove_bus(bus_idx)
+		_bus_created_by_test = false
+		
 	await get_tree().process_frame
 
 
@@ -58,7 +73,7 @@ func test_ui_menu_volume_persistence() -> void:
 	assert_almost_eq(
 		AudioManager.get_volume(AudioConstants.BUS_SFX_MENU),
 		0.10,
-		0.001,
+		TEST_TOLERANCE,
 		"In-memory volume should be successfully mutated to 0.10"
 	)
 	
@@ -69,7 +84,7 @@ func test_ui_menu_volume_persistence() -> void:
 	assert_almost_eq(
 		AudioManager.get_volume(AudioConstants.BUS_SFX_MENU),
 		0.75,
-		0.001,
+		TEST_TOLERANCE,
 		"Volume should be successfully restored to 0.75 from disk"
 	)
 	
@@ -81,7 +96,7 @@ func test_ui_menu_volume_persistence() -> void:
 	assert_almost_eq(
 		AudioServer.get_bus_volume_db(bus_idx),
 		expected_db,
-		0.001,
+		TEST_TOLERANCE,
 		"The AudioServer bus volume must accurately reflect the loaded volume in decibels"
 	)
 
@@ -154,7 +169,7 @@ func test_ui_menu_volume_restoration_applies_to_audioserver() -> void:
 	assert_almost_eq(
 		AudioManager.get_volume(AudioConstants.BUS_SFX_MENU),
 		0.60,
-		0.001,
+		TEST_TOLERANCE,
 		"AudioManager's internal runtime state must restore back to 0.60"
 	)
 	
@@ -163,7 +178,7 @@ func test_ui_menu_volume_restoration_applies_to_audioserver() -> void:
 	assert_almost_eq(
 		AudioServer.get_bus_volume_db(bus_index),
 		expected_db,
-		0.001,
+		TEST_TOLERANCE,
 		"The actual AudioServer bus volume must automatically resync to the 0.60 linear equivalent in decibels"
 	)
 
@@ -216,20 +231,20 @@ func test_ui_menu_missing_configuration_defaults() -> void:
 	
 	# FIX: Save using encryption to prevent C++ core errors during AudioManager.load_volumes
 	var save_err: int = config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
-	assert_eq(save_err, OK, "Failed to create encrypted test config fixture")
+	assert_eq(save_err, OK, "Failed to create encrypted test config fixture.")
 	
 	# 3. Load audio settings.
 	AudioManager.load_volumes()
 	
 	# 4. Verify the Menu/UI bus configuration is initialized using default values.
-	var expected_default_volume: float = 1.0
-	var expected_default_mute: bool = false
+	var expected_default_volume: float = DEFAULT_VOLUME
+	var expected_default_mute: bool = DEFAULT_MUTE_STATE
 	
 	# 5. Assert default volume is correctly assigned.
 	assert_almost_eq(
 		AudioManager.get_volume(AudioConstants.BUS_SFX_MENU),
 		expected_default_volume,
-		0.001,
+		TEST_TOLERANCE,
 		"Menu volume must fallback and initialize to its default value of 1.0 when missing from config"
 	)
 	
