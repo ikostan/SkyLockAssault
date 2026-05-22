@@ -125,3 +125,44 @@ func test_ui_menu_mute_persistence() -> void:
 		AudioServer.is_bus_mute(bus_idx),
 		"The AudioServer bus mute state must accurately reflect the loaded true state"
 	)
+
+
+## TC-Persistence-03 | Verifies that reloading settings from disk accurately re-applies the restored volume
+## down to the AudioServer bus level, ensuring complete synchronization between AudioManager and AudioServer.
+## :rtype: void
+func test_ui_menu_volume_restoration_applies_to_audioserver() -> void:
+	# 1. Configure a dedicated test settings file path.
+	AudioManager.current_config_path = test_config_path
+	
+	# 2. Set the Menu/UI bus volume to a known value.
+	AudioManager.set_volume(AudioConstants.BUS_SFX_MENU, 0.60)
+	
+	# 3. Save the current audio settings.
+	AudioManager.save_volumes()
+	
+	# 4. Change the in-memory volume to a different value.
+	AudioManager.set_volume(AudioConstants.BUS_SFX_MENU, 0.20)
+	
+	# 5. Reload settings from disk.
+	AudioManager.load_volumes()
+	
+	# 6. Obtain the Menu/UI bus index.
+	var bus_index: int = AudioServer.get_bus_index(AudioConstants.BUS_SFX_MENU)
+	assert_ne(bus_index, -1, "The Menu/UI audio bus must exist on the AudioServer")
+	
+	# 7. Verify AudioManager volume equals 0.60.
+	assert_almost_eq(
+		AudioManager.get_volume(AudioConstants.BUS_SFX_MENU),
+		0.60,
+		0.001,
+		"AudioManager's internal runtime state must restore back to 0.60"
+	)
+	
+	# 8. Verify the corresponding AudioServer bus volume reflects the loaded value.
+	var expected_db: float = linear_to_db(0.60)
+	assert_almost_eq(
+		AudioServer.get_bus_volume_db(bus_index),
+		expected_db,
+		0.001,
+		"The actual AudioServer bus volume must automatically resync to the 0.60 linear equivalent in decibels"
+	)
