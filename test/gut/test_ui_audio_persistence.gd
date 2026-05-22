@@ -166,3 +166,39 @@ func test_ui_menu_volume_restoration_applies_to_audioserver() -> void:
 		0.001,
 		"The actual AudioServer bus volume must automatically resync to the 0.60 linear equivalent in decibels"
 	)
+
+
+## TC-Persistence-04 | Verifies that reloading settings from disk accurately re-applies the restored mute state
+## down to the AudioServer bus level, ensuring complete configuration-to-runtime synchronization.
+## :rtype: void
+func test_ui_menu_mute_restoration_applies_to_audioserver() -> void:
+	# 1. Configure a dedicated test settings file path.
+	AudioManager.current_config_path = test_config_path
+	
+	# 2. Set the Menu/UI bus mute state to true.
+	AudioManager.set_muted(AudioConstants.BUS_SFX_MENU, true)
+	
+	# 3. Save the current audio settings.
+	AudioManager.save_volumes()
+	
+	# 4. Change the mute state back to false.
+	AudioManager.set_muted(AudioConstants.BUS_SFX_MENU, false)
+	
+	# 5. Reload settings from disk.
+	AudioManager.load_volumes()
+	
+	# 6. Obtain the Menu/UI bus index.
+	var bus_index: int = AudioServer.get_bus_index(AudioConstants.BUS_SFX_MENU)
+	assert_ne(bus_index, -1, "The Menu/UI audio bus must exist on the AudioServer")
+	
+	# 7. Verify AudioManager mute state equals true.
+	assert_true(
+		AudioManager.get_muted(AudioConstants.BUS_SFX_MENU),
+		"AudioManager's internal runtime state must restore back to being muted (true)"
+	)
+	
+	# 8. Verify the corresponding AudioServer bus mute state reflects the loaded value.
+	assert_true(
+		AudioServer.is_bus_mute(bus_index),
+		"The actual AudioServer bus mute state must automatically resync to muted (true)"
+	)
