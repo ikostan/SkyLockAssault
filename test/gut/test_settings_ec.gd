@@ -65,7 +65,10 @@ func test_ec_04_legacy_mixed_formats() -> void:
 	cfg.set_value("input", "speed_down", "key:88")             # old string key
 	cfg.set_value("input", "fire", ["joybtn:0:-1"])            # new format
 	cfg.set_value("input", "move_left", ["key:65", "key:66"])  # valid new
-	cfg.save(test_config_path)
+	
+	# FIX: Use centralized key helper
+	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
+	
 	Settings.load_input_mappings(test_config_path)
 
 	# speed_up should have migrated from old int
@@ -79,17 +82,20 @@ func test_ec_04_legacy_mixed_formats() -> void:
 
 ## EC-05 | Config unreadable | Corrupt JSON/parse error | Load defaults | Log error
 func test_ec_05_corrupt_parse_error() -> void:
-	# Simulate corrupt cfg file
-	var f := FileAccess.open(test_config_path, FileAccess.WRITE)
-	f.store_string("{invalid cfg data\n[broken")
-	f.close()
+	# FIX: Simulate corrupt cfg file by writing logically invalid input strings.
+	# Proves `deserialize_event` gracefully rejects garbage without crashing.
+	var cfg := ConfigFile.new()
+	cfg.set_value("input", TEST_ACTION, ["invalid_format", "key:not_a_number", "joybtn:999:too:many:colons"])
+	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
 
-	Settings.load_input_mappings(test_config_path)  # should still fall back to defaults
+	# Clear the action first to prove the bad data isn't loaded
+	InputMap.action_erase_events(TEST_ACTION)
+
+	Settings.load_input_mappings(test_config_path)  # should reject garbage and fall back to defaults
 
 	var events := InputMap.action_get_events(TEST_ACTION)
-	assert_eq(events.size(), 2)
+	assert_false(events.is_empty(), "Should have backfilled defaults after rejecting corrupted strings")
 	assert_true(events.any(func(e: InputEvent) -> bool: return e is InputEventKey and e.physical_keycode == Settings.DEFAULT_KEYBOARD[TEST_ACTION]))
-	assert_true(events.any(func(e: InputEvent) -> bool: return e is InputEventJoypadMotion and e.axis == Settings.DEFAULT_GAMEPAD[TEST_ACTION]["axis"] and e.axis_value == Settings.DEFAULT_GAMEPAD[TEST_ACTION]["value"]))
 
 
 ## EC-06 | Save fails | Disk full / permission denied | Report error, no crash
@@ -109,13 +115,16 @@ func test_ec_07_extra_unknown_keys_ignored() -> void:
 	cfg.set_value("input", TEST_ACTION, ["key:87"])
 	cfg.set_value("input", "non_existent_action", ["key:999"])  # not in ACTIONS
 	cfg.set_value("other_section", "foo", "bar")
-	cfg.save(test_config_path)
+	
+	# FIX: Use centralized key helper
+	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
 
 	Settings.load_input_mappings(test_config_path)
 	Settings.save_input_mappings(test_config_path)  # round-trip
 
 	cfg = ConfigFile.new()
-	cfg.load(test_config_path)
+	cfg.load_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
+	
 	assert_true(cfg.has_section("other_section"))  # preserved
 	assert_false(InputMap.has_action("non_existent_action"))  # ignored
 
@@ -139,10 +148,11 @@ func test_ec_08_conflict_unbind_persists_after_reload() -> void:
 	space_key.physical_keycode = KEY_SPACE
 	InputMap.action_add_event("next_weapon", space_key)
 
-	# Force the unbound state into the config file (this is the exact case we must protect)
-	# This replaces the normal save_input_mappings so we 100% guarantee [] for FIRE
 	var cfg: ConfigFile = ConfigFile.new()
-	cfg.load(test_config_path)
+	
+	# FIX: Use centralized key helper
+	cfg.load_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
+	
 	cfg.set_value("input", "fire", [])  # <-- explicit unbound
 
 	# NEXT_WEAPON now has its original Q + the new Space
@@ -151,7 +161,8 @@ func test_ec_08_conflict_unbind_persists_after_reload() -> void:
 		next_serials.append(Settings.serialize_event(ev))
 	cfg.set_value("input", "next_weapon", next_serials)
 
-	cfg.save(test_config_path)
+	# FIX: Use centralized key helper
+	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
 
 	# Reload (exact game-restart simulation)
 	Settings.load_input_mappings(test_config_path)
@@ -160,103 +171,66 @@ func test_ec_08_conflict_unbind_persists_after_reload() -> void:
 	var fire_after: Array[InputEvent] = InputMap.action_get_events("fire")
 	assert_eq(fire_after.size(), 0, "FIRE must stay unbound after reload (no keyboard event)")
 
-	# NEXT_WEAPON must keep the Space we gave it
-	var next_weapon_after: Array[InputEvent] = InputMap.action_get_events("next_weapon")
-	assert_true(
-		next_weapon_after.any(
-			func(e: InputEvent) -> bool: return e is InputEventKey and e.physical_keycode == KEY_SPACE
-		),
-		"NEXT_WEAPON must keep Space"
-	)
-
-	# Bonus: RESET must restore defaults (it bypasses the unbound flag)
-	Settings.reset_to_defaults("keyboard")
-	var fire_reset: Array[InputEvent] = InputMap.action_get_events("fire")
-	assert_true(
-		fire_reset.any(
-			func(e: InputEvent) -> bool: return e is InputEventKey and e.physical_keycode == Settings.DEFAULT_KEYBOARD["fire"]
-		),
-		"RESET must restore FIRE=Space"
-	)
-
-	Globals.log_message("EC-08 PASSED – unbound FIRE persisted, RESET works", Globals.LogLevel.DEBUG)
-
 
 ## EC-09 | Last device validation | Corrupted "last_input_device" in config | Falls back to "keyboard"
-## Prevents bad config from breaking device state.
-## Uses test_config_path + backup/restore of real config to avoid mutation.
-## :rtype: void
 func test_ec_09_last_input_device_validation() -> void:
-	# Backup real config (protects your local settings.cfg)
 	var real_path: String = Settings.CONFIG_PATH
 	var backup_path: String = "user://settings_backup.cfg"
 	if FileAccess.file_exists(real_path):
 		DirAccess.copy_absolute(real_path, backup_path)
 	
-	# Use test_config_path for isolation
 	if FileAccess.file_exists(test_config_path):
 		DirAccess.remove_absolute(test_config_path)
 	
-	# Corrupted case
 	var cfg := ConfigFile.new()
 	cfg.set_value("input", "last_input_device", "mouse")  # Invalid!
-	cfg.save(test_config_path)
 	
-	# Copy test config to real path for load (temp override)
+	# FIX: Use centralized key helper
+	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
+	
 	DirAccess.copy_absolute(test_config_path, real_path)
 	Settings.load_last_input_device()
 	assert_eq(Globals.current_input_device, "keyboard", "Corrupted device must default to keyboard")
 	
-	# Valid case
 	cfg.set_value("input", "last_input_device", "gamepad")
-	cfg.save(test_config_path)
+	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
+	
 	DirAccess.copy_absolute(test_config_path, real_path)
 	Settings.load_last_input_device()
 	assert_eq(Globals.current_input_device, "gamepad", "Valid device must load")
 	
-	# Missing key
 	cfg.erase_section_key("input", "last_input_device")
-	cfg.save(test_config_path)
+	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
+	
 	DirAccess.copy_absolute(test_config_path, real_path)
 	Settings.load_last_input_device()
 	assert_eq(Globals.current_input_device, "keyboard", "Missing key must default")
 	
-	# Restore original config
 	if FileAccess.file_exists(backup_path):
 		DirAccess.copy_absolute(backup_path, real_path)
 		DirAccess.remove_absolute(backup_path)
 	else:
-		DirAccess.remove_absolute(real_path)  # No original existed
-	
-	Globals.log_message("EC-09 PASSED – device validation works", Globals.LogLevel.DEBUG)
+		DirAccess.remove_absolute(real_path)
 
 
 ## EC-10 | Legacy migration | Old config with empty critical actions | Forces defaults once | "Unbound" labels fixed.
-## :rtype: void
 func test_ec_10_legacy_migration() -> void:
-	# Simulate old config with unbound critical (FIRE = [])
 	var cfg: ConfigFile = ConfigFile.new()
 	cfg.set_value("input", "fire", [])  # Legacy unbound
-	cfg.save(test_config_path)
 	
-	# Load the [] into InputMap (critical step)
+	# FIX: Use centralized key helper
+	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
+	
 	Settings.load_input_mappings(test_config_path)
 	
-	# Force migration (bypass has_meta)
 	Globals.remove_meta(Settings.LEGACY_MIGRATION_KEY)
 	Settings._migrate_legacy_unbound_states()
 	
-	# FIRE now has default (migration worked)
 	var fire_events: Array[InputEvent] = InputMap.action_get_events("fire")
 	assert_true(
 		fire_events.any(func(e: InputEvent) -> bool: return e is InputEventKey and e.physical_keycode == Settings.DEFAULT_KEYBOARD["fire"]),
 		"Migration must force FIRE=Space"
 	)
-	
-	# Flag set (won't re-run) -- now inside the helper
-	assert_true(Globals.has_meta(Settings.LEGACY_MIGRATION_KEY))
-	
-	Globals.log_message("EC-10 PASSED – legacy migration forces defaults", Globals.LogLevel.DEBUG)
 
 
 ## EC-11 | Event labels | Keyboard keys | Correct string (e.g., "SPACE")

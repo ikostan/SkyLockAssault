@@ -82,16 +82,17 @@ else:
 - Tip: Use Tween for fades (e.g., modulate.a from 0 to 1).
 
 ### Adding a New Game Setting
+
 To introduce a new global setting (e.g., `difficulty`), follow this pattern:
 
-1. **Define the Property**: Add the variable to 
-   `res://scripts/resources/game_settings_resource.gd` with an `@export` 
-   annotation so it can be edited in the Godot inspector. Update the custom 
-   `_to_string` method. This resource holds the active state and emits a 
+1. **Define the Property**: Add the variable to
+   `res://scripts/resources/game_settings_resource.gd` with an `@export`
+   annotation so it can be edited in the Godot inspector. Update the custom
+   `_to_string` method. This resource holds the active state and emits a
    `setting_changed` signal upon modification.
-2. **Persist the Value**: Persistence is exclusively managed by `globals.gd`. 
-   Update `_save_settings()` and `_load_settings()` in `globals.gd` 
-   to ensure the new property from `game_settings_resource.gd` is read from 
+2. **Persist the Value**: Persistence is exclusively managed by `globals.gd`.
+   Update `_save_settings()` and `_load_settings()` in `globals.gd`
+   to ensure the new property from `game_settings_resource.gd` is read from
    and written to `user://settings.cfg` using `ConfigFile`.
 
 | Step               | File                                                | Action                                                                                          |

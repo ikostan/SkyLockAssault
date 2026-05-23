@@ -6,7 +6,12 @@ extends GutTest
 
 var settings: Node
 
+
 func before_each() -> void:
+	# CLEANUP: Prevent dirty state from previous encryption tests in CI/CD
+	if FileAccess.file_exists("user://settings.cfg"):
+		DirAccess.remove_absolute("user://settings.cfg")
+
 	settings = preload(GamePaths.SETTINGS).new()
 	add_child_autofree(settings)
 
@@ -14,8 +19,12 @@ func before_each() -> void:
 	InputMap.erase_action("pause")
 	InputMap.add_action("pause")
 
+
 func after_each() -> void:
 	await get_tree().process_frame
+	# CLEANUP: Leave the virtual environment pristine for the next test
+	if FileAccess.file_exists("user://settings.cfg"):
+		DirAccess.remove_absolute("user://settings.cfg")
 
 # ============================================================
 # KEYBOARD TESTS

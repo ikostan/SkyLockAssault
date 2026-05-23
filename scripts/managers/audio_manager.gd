@@ -233,59 +233,57 @@ func set_muted(bus_name: String, muted: bool) -> void:
 
 
 ## load_volumes
-## Loads persisted volumes from config if valid types; skips invalid/missing to keep current.
+## Loads persisted volumes from config if valid types;
+## skips invalid/missing to keep current.
 ## :param path: Config file path (default: current_config_path).
 ## :type path: String
 ## :rtype: void
 func load_volumes(path: String = current_config_path) -> void:
-	current_config_path = path  # Update to keep in sync with the path used
-	var config: ConfigFile = ConfigFile.new()
-	var err: int = config.load(path)
+	current_config_path = path
+	var load_data: Dictionary = Globals.safe_load_config(path)
+	var audio_cfg: ConfigFile = load_data["config"]
+	var err: int = load_data["err"]
+	var needs_migration: bool = load_data["is_legacy"]
+
+	if needs_migration:
+		Globals.log_message(
+			"Legacy plaintext audio settings found. Migration required.", Globals.LogLevel.INFO
+		)
+	elif err != OK and err != ERR_FILE_NOT_FOUND:
+		Globals.log_message("Failed to load audio config: " + str(err), Globals.LogLevel.ERROR)
+
 	if err == OK:
 		for bus: String in AudioConstants.BUS_CONFIG.keys():
 			var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
 			var volume_key: String = config_data["volume_var"]
 			var muted_key: String = config_data["muted_var"]
 
-			# Start with current values (defaults if not yet overridden)
 			var volume: float = get_volume(bus)
 			var muted: bool = get_muted(bus)
 
-			# Load volume if present and valid
-			if config.has_section_key("audio", volume_key):
-				var loaded_volume: Variant = config.get_value("audio", volume_key)
+			if audio_cfg.has_section_key("audio", volume_key):
+				var loaded_volume: Variant = audio_cfg.get_value("audio", volume_key)
 				if loaded_volume is float or loaded_volume is int:
 					volume = float(loaded_volume)
-				else:
-					Globals.log_message(
-						(
-							"Invalid type for "
-							+ volume_key
-							+ ": "
-							+ type_string(typeof(loaded_volume))
-						),
-						Globals.LogLevel.WARNING
-					)
 
-			# Load muted if present and valid
-			if config.has_section_key("audio", muted_key):
-				var loaded_muted: Variant = config.get_value("audio", muted_key)
+			if audio_cfg.has_section_key("audio", muted_key):
+				var loaded_muted: Variant = audio_cfg.get_value("audio", muted_key)
 				if loaded_muted is bool:
 					muted = loaded_muted
-				else:
-					Globals.log_message(
-						"Invalid type for " + muted_key + ": " + str(typeof(loaded_muted)),
-						Globals.LogLevel.WARNING
-					)
 
-			# Apply via setter for encapsulation
 			set_bus_state(bus, volume, muted)
 
 		Globals.log_message("Loaded volumes from config.", Globals.LogLevel.DEBUG)
+
+		if needs_migration:
+			Globals.log_message(
+				"Upgrading audio settings file to encrypted format...", Globals.LogLevel.INFO
+			)
+			save_volumes(path)
+
 	elif err == ERR_FILE_NOT_FOUND:
 		Globals.log_message("No audio config file found, using defaults.", Globals.LogLevel.DEBUG)
-	else:
-		Globals.log_message("Failed to load audio config: " + str(err), Globals.LogLevel.ERROR)
+
 	apply_all_volumes()
 
 
@@ -295,19 +293,25 @@ func load_volumes(path: String = current_config_path) -> void:
 ## :rtype: void
 func save_volumes(path: String = "") -> void:
 	if path == "":
-		path = current_config_path  # Fall back to the last loaded path if empty
-	current_config_path = path  # Update to keep in sync with the path used
-	var config: ConfigFile = ConfigFile.new()
-	var err: Error = config.load(path)
+		path = current_config_path
+
+	var load_data: Dictionary = Globals.safe_load_config(path)
+	var config: ConfigFile = load_data["config"]
+	var err: int = load_data["err"]
+
 	if err != OK and err != ERR_FILE_NOT_FOUND:
 		Globals.log_message("Failed to load config for save: " + str(err), Globals.LogLevel.ERROR)
 		return
+
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
 		var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
 		var state: Dictionary = get_bus_state(bus)
 		config.set_value("audio", config_data["volume_var"], state["volume"])
 		config.set_value("audio", config_data["muted_var"], state["muted"])
-	err = config.save(path)
+
+	# FIX: Use the centralized key helper
+	err = config.save_encrypted_pass(path, Globals.ensure_encryption_key())
+
 	if err == OK:
 		Globals.log_message("Saved volumes to config.", Globals.LogLevel.DEBUG)
 	else:

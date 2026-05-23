@@ -37,6 +37,10 @@ func before_each() -> void:
 	
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
+	
+	# FIX: Await one frame to allow _ready()'s deferred grab_focus calls 
+	# to resolve safely while the node is still inside the scene tree.
+	await get_tree().process_frame
 
 
 ## Per-test cleanup: Free audio_instance safely and restore singleton state.

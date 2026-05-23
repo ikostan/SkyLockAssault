@@ -16,7 +16,12 @@ func before_each() -> void:
 	_resource = GameSettingsResource.new()
 	# Ensure the Singleton uses our local test resource to avoid 
 	# cross-test contamination and production file overwrites.
-	Globals.settings = _resource 
+	Globals.settings = _resource
+	
+	# --- ADD THIS LINE ---
+	# Override the empty project salt with a valid test key 
+	# to ensure saves actually use encryption.
+	Globals.set_test_encryption_key()
 	
 	if FileAccess.file_exists(_test_config_path):
 		DirAccess.remove_absolute(_test_config_path)
@@ -62,7 +67,9 @@ func test_globals_saves_to_disk_on_signal() -> void:
 	_resource.difficulty = 0.85
 	
 	var config := ConfigFile.new()
-	var err := config.load(_test_config_path)
+	# FIX: Load using encryption, as Globals._save_settings writes an encrypted file
+	var err := config.load_encrypted_pass(_test_config_path, Globals.save_encryption_pass)
+	
 	assert_eq(err, OK, "Config file should be created.")
 	assert_eq(config.get_value("Settings", "difficulty"), 0.85)
 
@@ -81,7 +88,9 @@ func test_globals_saves_when_resource_changes() -> void:
 	
 	# Verify persistence to the test config path
 	var config := ConfigFile.new()
-	var err := config.load(_test_config_path)
+	# FIX: Load using encryption
+	var err := config.load_encrypted_pass(_test_config_path, Globals.save_encryption_pass)
+	
 	assert_eq(err, OK, "Config file should be created by the observer.")
 	assert_eq(config.get_value("Settings", "difficulty"), 0.8, "Value on disk should be updated.")
 
@@ -98,7 +107,9 @@ func test_difficulty_persists_to_config_file() -> void:
 	_resource.difficulty = 0.75 
 	
 	var config := ConfigFile.new()
-	var err := config.load(_test_config_path)
+	# FIX: Load using encryption
+	var err := config.load_encrypted_pass(_test_config_path, Globals.save_encryption_pass)
+	
 	assert_eq(err, OK, "Config file should exist after change.")
 	assert_eq(config.get_value("Settings", "difficulty"), 0.75)
 
@@ -127,6 +138,7 @@ func test_enable_debug_logging_emits_signal() -> void:
 	
 	assert_signal_emitted_with_parameters(_resource, "setting_changed", ["enable_debug_logging", true], 0)
 
+
 func test_enable_debug_logging_persists_to_disk() -> void:
 	# Connect signal to the test path for verification
 	_resource.setting_changed.connect(
@@ -139,15 +151,21 @@ func test_enable_debug_logging_persists_to_disk() -> void:
 	
 	# Assert: Verify file contents
 	var config := ConfigFile.new()
-	var err := config.load(_test_config_path)
+	# FIX: Load using encryption
+	var err := config.load_encrypted_pass(_test_config_path, Globals.save_encryption_pass)
+	
 	assert_eq(err, OK, "Config file should be created for debug_logging change.")
 	assert_eq(config.get_value("Settings", "enable_debug_logging"), true, "Flag should persist as true.")
+
 
 func test_enable_debug_logging_restores_from_disk() -> void:
 	# Setup: Manually create a config with the flag enabled
 	var config := ConfigFile.new()
 	config.set_value("Settings", "enable_debug_logging", true)
-	config.save(_test_config_path)
+	
+	# FIX: Save using encryption to prevent the C++ "magic number" error 
+	# when Globals._load_settings attempts to read it
+	config.save_encrypted_pass(_test_config_path, Globals.save_encryption_pass)
 	
 	# Act: Load via Globals logic
 	Globals._load_settings(_test_config_path)

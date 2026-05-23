@@ -241,120 +241,6 @@ func serialize_event(ev: InputEvent) -> String:
 	return ""
 
 
-## Loads input mappings from config, overriding project defaults only if saved.
-## Handles various formats for backward compatibility and adds defaults if necessary.
-## Proceeds even if no file to add defaults where events missing.
-## Skips adding deserialized event if it matches any existing in other actions (per device).
-## :param path: Config file path (default: CONFIG_PATH).
-## :type path: String
-## :param actions: Actions to load (default: ACTIONS).
-## :type actions: Array[String]
-## :rtype: void
-func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
-	var config: ConfigFile = ConfigFile.new()
-	var err: int = config.load(path)
-	if err != OK and err != ERR_FILE_NOT_FOUND:  # Handle errors except missing file
-		Globals.log_message(
-			"Error loading settings file at " + path + ": " + str(err), Globals.LogLevel.ERROR
-		)
-		# Do not return: proceed to defaults for corrupt files (EC-05).
-		# Ensures fallback to defaults on parse errors.
-
-	if err == ERR_FILE_NOT_FOUND:
-		Globals.log_message(
-			"No settings file found at " + path + "—adding defaults where missing.",
-			Globals.LogLevel.INFO
-		)
-
-	# NEW: Restore migration metadata
-	if config.has_section_key("meta", LEGACY_MIGRATION_KEY):
-		var migrated: bool = config.get_value("meta", LEGACY_MIGRATION_KEY, false)
-		if migrated:
-			Globals.set_meta(LEGACY_MIGRATION_KEY, true)
-			Globals.log_message(
-				"Restored legacy migration flag from config.", Globals.LogLevel.DEBUG
-			)
-
-	for action: String in actions:
-		var has_saved: bool = config.has_section_key("input", action)
-		if has_saved:
-			var value: Variant = config.get_value("input", action)
-			var serialized_events: Array[String] = []
-
-			# ── ROBUST ARRAY HANDLING (FIX FOR PackedStringArray) ─────────────────────
-			# FIXED: Explicit type guard to skip non-string items (e.g. int 999 from EC-01 test).
-			# This prevents crash on corrupted/malformed config files
-			# (real-world case: disk errors, manual edits).
-			# Log warning for visibility in console/tests.
-			# Keeps defaults backfill intact (as asserted in EC-01).
-			# Minimal change: only affects invalid data paths, no impact on normal saves.
-			if value is Array or value is PackedStringArray:
-				for item: Variant in value:
-					if item is String:
-						serialized_events.append(item)
-					else:
-						Globals.log_message(
-							"Non-string item in array for action '" + action + "': skipped",
-							Globals.LogLevel.WARNING
-						)
-
-			# ── Backward compatibility: Scalar string or int → single serialized ─────
-			elif value is String:
-				serialized_events = [value]  # Treat as one serialized event
-			elif value is int:
-				serialized_events = ["key:" + str(value)]  # Legacy keycode scalar
-
-			# ── Deserialize and add ───────────────────────────────────────────────────
-			# Erase project defaults first (to avoid mixing with saved).
-			InputMap.action_erase_events(action)
-
-			for serialized: String in serialized_events:
-				var ev: InputEvent = deserialize_event(serialized)
-				if ev == null:
-					Globals.log_message(
-						"Invalid serialized event for " + action + ": " + serialized,
-						Globals.LogLevel.WARNING
-					)
-					continue
-
-				var already_present := false
-				for existing_ev in InputMap.action_get_events(action):
-					if events_match(existing_ev, ev):
-						already_present = true
-						break
-
-				if already_present:
-					Globals.log_message(
-						"Skipping intra-action duplicate for " + action, Globals.LogLevel.DEBUG
-					)
-					continue  # It's already in this action, skip to the next one
-
-				# ── NEW: Skip if duplicate in other actions (per device) ──────────────
-				# Prevents cross-action duplicates from corrupted config.
-				var conflicts: Array[String] = get_conflicting_actions(ev, action)
-				if not conflicts.is_empty():
-					Globals.log_message(
-						(
-							"Skipping duplicate event for "
-							+ action
-							+ " (conflicts: "
-							+ str(conflicts)
-							+ ")"
-						),
-						Globals.LogLevel.WARNING
-					)
-					#continue
-					# prefer the loaded mapping and remove it from conflicting actions
-					# (for the same device type), then mark _needs_save
-					_remove_event_from_conflicts(ev, conflicts)
-					_needs_save = true
-
-				InputMap.action_add_event(action, ev)
-
-	# ── Backfill missing defaults (after loading/erasing) ─────────────────────────
-	_needs_save = _add_missing_defaults(config) or _needs_save
-
-
 ## Removes `event` from all actions listed in `conflicts`.
 ## Used on load to preserve the loaded mapping and unbind duplicates elsewhere.
 ## :param event: The event to remove from conflicting actions.
@@ -451,44 +337,6 @@ func _deserialize_and_add(action: String, serialized: String) -> void:
 		)
 
 
-## Saves current InputMap events to config (all per action as array).
-## :param path: Config file path (default: CONFIG_PATH).
-## :type path: String
-## :param actions: Actions to save (default: ACTIONS).
-## :type actions: Array[String]
-## :rtype: void
-func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
-	var config: ConfigFile = ConfigFile.new()
-	var err: int = config.load(path)  # Load existing to preserve other sections
-	if err != OK and err != ERR_FILE_NOT_FOUND:
-		Globals.log_message(
-			"Failed to load input config for save: " + str(err), Globals.LogLevel.ERROR
-		)
-		return
-
-	# Persist legacy migration flag for next runs/tests.
-	if (
-		Globals.has_meta(LEGACY_MIGRATION_KEY)
-		and bool(Globals.get_meta(LEGACY_MIGRATION_KEY)) == true
-	):
-		config.set_value("meta", LEGACY_MIGRATION_KEY, true)
-
-	for action: String in actions:
-		var events: Array[InputEvent] = InputMap.action_get_events(action)
-		var serials: Array[String] = []
-		for ev: InputEvent in events:
-			var s: String = serialize_event(ev)
-			if not s.is_empty():
-				serials.append(s)
-		config.set_value("input", action, serials)  # Set even if empty
-
-	err = config.save(path)
-	if err != OK:
-		Globals.log_message("Failed to save input mappings: " + str(err), Globals.LogLevel.ERROR)
-	else:
-		Globals.log_message("Input mappings saved.", Globals.LogLevel.DEBUG)
-
-
 ## Resets input mappings to defaults for the specified device type.
 ## Now fully erases ALL events for the device + forces defaults (fixes duplicates).
 ## :param device_type: "keyboard" or "gamepad"
@@ -578,29 +426,6 @@ func get_conflicting_actions(event: InputEvent, exclude_action: String = "") -> 
 				conflicts.append(action)
 				break  # one match per action is enough
 	return conflicts
-
-
-## Saves the last selected input device to config.
-func save_last_input_device(device: String) -> void:
-	if device not in ["keyboard", "gamepad"]:
-		return
-	var config: ConfigFile = ConfigFile.new()
-	config.load(CONFIG_PATH)
-	config.set_value("input", "last_input_device", device)
-	config.save(CONFIG_PATH)
-
-
-## Loads the last selected input device (defaults to keyboard).
-## Validates against ["keyboard", "gamepad"] to prevent corrupted config values.
-## Mirrors save_last_input_device() for consistency.
-## :rtype: void
-func load_last_input_device() -> void:
-	var config: ConfigFile = ConfigFile.new()
-	if config.load(CONFIG_PATH) == OK and config.has_section_key("input", "last_input_device"):
-		var device: String = config.get_value("input", "last_input_device")
-		Globals.current_input_device = device if device in ["keyboard", "gamepad"] else "keyboard"
-	else:
-		Globals.current_input_device = "keyboard"
 
 
 ## Returns "keyboard" or "gamepad" based on the type of the event.
@@ -795,3 +620,182 @@ static func get_event_label(ev: InputEvent) -> String:
 				# normalize the non-trigger fallback line:
 				return ("Axis " + str(ev.axis) + dir).strip_edges()
 	return "Unknown"
+
+
+## Loads input mappings from config, overriding project defaults only if saved.
+func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
+	# Use our new centralized helper to safely read the file
+	var load_data: Dictionary = Globals.safe_load_config(path)
+	var config: ConfigFile = load_data["config"]
+	var err: int = load_data["err"]
+
+	if load_data["is_legacy"]:
+		Globals.log_message(
+			"Legacy plaintext input mappings found. Migration required.", Globals.LogLevel.INFO
+		)
+		_needs_save = true
+
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		Globals.log_message(
+			"Error loading settings file at " + path + ": " + str(err), Globals.LogLevel.ERROR
+		)
+
+	# Restore migration metadata
+	if config.has_section_key("meta", LEGACY_MIGRATION_KEY):
+		var migrated: bool = config.get_value("meta", LEGACY_MIGRATION_KEY, false)
+		if migrated:
+			Globals.set_meta(LEGACY_MIGRATION_KEY, true)
+			Globals.log_message(
+				"Restored legacy migration flag from config.", Globals.LogLevel.DEBUG
+			)
+
+	for action: String in actions:
+		var has_saved: bool = config.has_section_key("input", action)
+		if has_saved:
+			var value: Variant = config.get_value("input", action)
+			var serialized_events: Array[String] = []
+
+			if value is Array or value is PackedStringArray:
+				for item: Variant in value:
+					if item is String:
+						serialized_events.append(item)
+					else:
+						Globals.log_message(
+							"Non-string item in array for action '" + action + "': skipped",
+							Globals.LogLevel.WARNING
+						)
+			elif value is String:
+				serialized_events = [value]
+			elif value is int:
+				serialized_events = ["key:" + str(value)]
+
+			InputMap.action_erase_events(action)
+
+			for serialized: String in serialized_events:
+				var ev: InputEvent = deserialize_event(serialized)
+				if ev == null:
+					continue
+
+				var already_present := false
+				for existing_ev in InputMap.action_get_events(action):
+					if events_match(existing_ev, ev):
+						already_present = true
+						break
+
+				if already_present:
+					continue
+
+				var conflicts: Array[String] = get_conflicting_actions(ev, action)
+				if not conflicts.is_empty():
+					Globals.log_message(
+						(
+							"Skipping duplicate event for "
+							+ action
+							+ " (conflicts: "
+							+ str(conflicts)
+							+ ")"
+						),
+						Globals.LogLevel.WARNING
+					)
+					_remove_event_from_conflicts(ev, conflicts)
+					_needs_save = true
+
+				InputMap.action_add_event(action, ev)
+
+	_needs_save = _add_missing_defaults(config) or _needs_save
+
+
+## Saves current InputMap events to config (all per action as array).
+func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
+	# Safely pre-load the config to preserve other sections during the save
+	var load_data: Dictionary = Globals.safe_load_config(path)
+	var config: ConfigFile = load_data["config"]
+	var err: int = load_data["err"]
+
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		Globals.log_message(
+			"Failed to load input config for save: " + str(err), Globals.LogLevel.ERROR
+		)
+		return
+
+	if (
+		Globals.has_meta(LEGACY_MIGRATION_KEY)
+		and bool(Globals.get_meta(LEGACY_MIGRATION_KEY)) == true
+	):
+		config.set_value("meta", LEGACY_MIGRATION_KEY, true)
+
+	for action: String in actions:
+		var events: Array[InputEvent] = InputMap.action_get_events(action)
+		var serials: Array[String] = []
+		for ev: InputEvent in events:
+			var s: String = serialize_event(ev)
+			if not s.is_empty():
+				serials.append(s)
+		config.set_value("input", action, serials)
+
+	err = config.save_encrypted_pass(path, Globals.ensure_encryption_key())
+
+	if err != OK:
+		Globals.log_message(
+			(
+				"🚨 ENCRYPTION FAILURE: Failed to save encrypted input mappings to "
+				+ path
+				+ " (Error: "
+				+ str(err)
+				+ ")"
+			),
+			Globals.LogLevel.ERROR
+		)
+	else:
+		Globals.log_message("🔒 Encrypted input mappings saved to " + path, Globals.LogLevel.DEBUG)
+
+
+## Saves the last selected input device to config.
+## Saves the last selected input device to config.
+func save_last_input_device(device: String) -> void:
+	if device not in ["keyboard", "gamepad"]:
+		return
+
+	# Use the helper to safely pre-load
+	var load_data: Dictionary = Globals.safe_load_config(CONFIG_PATH)
+	var config: ConfigFile = load_data["config"]
+	var err: int = load_data["err"]
+
+	# GUARD: Prevent overwriting the entire file if it exists but failed to load
+	if err != OK and err != ERR_FILE_NOT_FOUND:
+		Globals.log_message(
+			"Failed to load input config for save_last_input_device: " + str(err),
+			Globals.LogLevel.ERROR
+		)
+		return
+
+	config.set_value("input", "last_input_device", device)
+
+	# FIX: Use the centralized key helper and capture the save error
+	err = config.save_encrypted_pass(CONFIG_PATH, Globals.ensure_encryption_key())
+
+	if err != OK:
+		Globals.log_message(
+			(
+				"🚨 ENCRYPTION FAILURE: Failed to save encrypted last input device (Error: "
+				+ str(err)
+				+ ")"
+			),
+			Globals.LogLevel.ERROR
+		)
+	else:
+		Globals.log_message("🔒 Encrypted last input device saved.", Globals.LogLevel.DEBUG)
+
+
+## Loads the last selected input device (defaults to keyboard).
+func load_last_input_device() -> void:
+	# Use the helper to safely load
+	var load_data: Dictionary = Globals.safe_load_config(CONFIG_PATH)
+	var config: ConfigFile = load_data["config"]
+	var err: int = load_data["err"]
+
+	if err == OK and config.has_section_key("input", "last_input_device"):
+		var device: String = config.get_value("input", "last_input_device")
+		Globals.current_input_device = device if device in ["keyboard", "gamepad"] else "keyboard"
+	else:
+		Globals.current_input_device = "keyboard"
