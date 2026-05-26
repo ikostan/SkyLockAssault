@@ -248,9 +248,8 @@ func _update_ui_interactivity() -> void:
 # REACTIVE VISUAL AND AUDIO AUTO-MUTE COUPLING
 # ==========================================================================
 
-
 ## Updates the visual Godot HSliders when Playwright or UI components alter the AudioManager state.
-## Features an isolated audio-coupled auto-mute threshold for manual user adjustments.
+## Maintained with balanced auto-mute and auto-unmute thresholds for seamless state tracking.
 func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 	match bus_name:
 		AudioConstants.BUS_MASTER:
@@ -268,17 +267,23 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 
 	# --- AUTO-MUTE ON ZERO VOLUME THRESHOLD ---
 	if volume == 0.0 and not AudioManager.get_muted(bus_name):
-		# Fetch the specific UI widget associated with the current audio channel
 		var active_slider := _get_slider_for_bus(bus_name)
-
-		# SIGNAL ISOLATION CONTROL: Only fire the confirmation audio if the slider is actively
-		# focused or manipulated by a human player. Programmatic updates will bypass this block.
+		
+		# Only play confirmation feedback if the user is actively focusing the control
 		if active_slider and active_slider.has_focus():
 			AudioManager.play_sfx("check")
-
-		# Update the manager state. This automatically triggers _on_global_mute_toggled
-		# to visually flip the corresponding CheckButton widget instantly.
+			
 		AudioManager.set_muted(bus_name, true)
+		
+	# --- AUTO-UNMUTE ON NON-ZERO VOLUME THRESHOLD ---
+	elif volume > 0.0 and AudioManager.get_muted(bus_name):
+		var active_slider := _get_slider_for_bus(bus_name)
+		
+		# Maintain sound-isolation rules: only play audio if manually manipulated
+		if active_slider and active_slider.has_focus():
+			AudioManager.play_sfx("check")
+			
+		AudioManager.set_muted(bus_name, false)
 
 
 ## Auxiliary lookup tool to map string-based audio buses to their respective scene tree sliders.
