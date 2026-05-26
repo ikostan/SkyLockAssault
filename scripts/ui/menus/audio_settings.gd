@@ -343,15 +343,23 @@ func _on_master_volume_control_gui_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 
-## Handles Master Mute toggle mutations.
-## Executes the UI sound feedback immediately before the AudioServer truncates master channel propagation.
+## Handles Master Mute toggle mutations with buffer safety delays.
 func _on_master_mute_toggled(toggled_on: bool) -> void:
-	# CRITICAL TIMING FIX: Play the SFX BEFORE the bus state changes to muted.
-	# If called after set_muted, the sound node plays directly into a dead-silent bus.
+	# Dispatch the audio confirmation effect instantly
 	AudioManager.play_sfx("check")
-
+	
+	# Update internal variables and UI state immediately so the interface feels snappy
 	AudioManager.set_muted(AudioConstants.BUS_MASTER, not toggled_on)
-	_update_ui_interactivity()  # Single source of truth updates slider editable states
+	_update_ui_interactivity()
+	
+	# ENGINE WORKAROUND: If muting (toggled_on is false), defer the hardware bus cutoff 
+	# by 0.15 seconds. This allows the audio mixing thread to stream check.wav to the 
+	# sound card before the Master channel is completely flattened.
+	if not toggled_on:
+		await get_tree().create_timer(0.15).timeout
+		
+	# Apply the volume state to the AudioServer. If the user quickly clicked back 
+	# to unmute during the timer window, this reads the newest state safely.
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_MASTER, AudioManager.master_volume, AudioManager.master_muted
 	)
@@ -374,13 +382,16 @@ func _on_music_volume_control_gui_input(event: InputEvent) -> void:
 
 
 ## Handles Music Mute toggle mutations.
-## Dispatches feedback audio right before the music sub-bus mixer goes dark.
 func _on_music_mute_toggled(toggled_on: bool) -> void:
-	# CRITICAL TIMING FIX: Pre-emptively run audio tracking before changing backend flags.
 	AudioManager.play_sfx("check")
-
 	AudioManager.set_muted(AudioConstants.BUS_MUSIC, not toggled_on)
 	_update_ui_interactivity()
+	
+	# Sub-buses that don't host the UI sound don't strictly require the delay,
+	# but we apply it uniformly for total consistency when silencing channels.
+	if not toggled_on:
+		await get_tree().create_timer(0.15).timeout
+		
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_MUSIC, AudioManager.music_volume, AudioManager.music_muted
 	)
@@ -409,14 +420,16 @@ func _on_sfx_volume_control_gui_input(event: InputEvent) -> void:
 
 
 ## Handles Parent SFX Mute toggle mutations.
-## Dispatches feedback audio before the core weapon, rotor, and menu parent channel drops.
 func _on_sfx_mute_toggled(toggled_on: bool) -> void:
-	# CRITICAL TIMING FIX: Run playback hook before parent bus attenuation finishes.
-	# Even though this is the parent SFX channel, the child players survive long enough to fire.
 	AudioManager.play_sfx("check")
-
 	AudioManager.set_muted(AudioConstants.BUS_SFX, not toggled_on)
 	_update_ui_interactivity()
+	
+	# CRITICAL: Since the UI sound plays on a child of the SFX bus, muting this 
+	# cuts off the sound instantly. The 0.15s delay is mandatory here.
+	if not toggled_on:
+		await get_tree().create_timer(0.15).timeout
+		
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_SFX, AudioManager.sfx_volume, AudioManager.sfx_muted
 	)
@@ -446,11 +459,13 @@ func _on_weapon_volume_control_gui_input(event: InputEvent) -> void:
 
 ## Handles Weapon SFX Mute toggle mutations.
 func _on_weapon_mute_toggled(toggled_on: bool) -> void:
-	# CRITICAL TIMING FIX: Ensure check.wav hits the mixer before weapon effects are isolated.
 	AudioManager.play_sfx("check")
-
 	AudioManager.set_muted(AudioConstants.BUS_SFX_WEAPON, not toggled_on)
 	_update_ui_interactivity()
+	
+	if not toggled_on:
+		await get_tree().create_timer(0.15).timeout
+		
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_SFX_WEAPON, AudioManager.weapon_volume, AudioManager.weapon_muted
 	)
@@ -484,12 +499,13 @@ func _on_rotor_volume_control_gui_input(event: InputEvent) -> void:
 
 ## Handles Rotor SFX Mute toggle mutations.
 func _on_rotor_mute_toggled(toggled_on: bool) -> void:
-	# CRITICAL TIMING FIX: Trigger the sound asset a microsecond before cutting off helicopter rotor effects.
-	# Note: This coordinates cleanly with AudioManager's global rotors_muted flag parameters.
 	AudioManager.play_sfx("check")
-
 	AudioManager.set_muted(AudioConstants.BUS_SFX_ROTORS, not toggled_on)
 	_update_ui_interactivity()
+	
+	if not toggled_on:
+		await get_tree().create_timer(0.15).timeout
+		
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_SFX_ROTORS, AudioManager.rotors_volume, AudioManager.rotors_muted
 	)
@@ -523,11 +539,15 @@ func _on_menu_volume_control_gui_input(event: InputEvent) -> void:
 
 ## Handles Menu UI SFX Mute toggle mutations.
 func _on_menu_mute_toggled(toggled_on: bool) -> void:
-	# CRITICAL TIMING FIX: Play check.wav immediately before sealing the UI/Menu SFX bus channel.
 	AudioManager.play_sfx("check")
-
 	AudioManager.set_muted(AudioConstants.BUS_SFX_MENU, not toggled_on)
 	_update_ui_interactivity()
+	
+	# CRITICAL: This is the exact bus the menu sounds play on. We must delay 
+	# the hardware muting call to guarantee the sound clip plays completely.
+	if not toggled_on:
+		await get_tree().create_timer(0.15).timeout
+		
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_SFX_MENU, AudioManager.menu_volume, AudioManager.menu_muted
 	)
