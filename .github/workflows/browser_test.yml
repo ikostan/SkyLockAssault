@@ -80,8 +80,8 @@ jobs:
         with:
           path: "~/.cache/pip"
           # FIX: Added '-v2' to invalidate the old corrupted cache
-          key: ${{ runner.os }}-pip-v2-${{ hashFiles('requirements.txt') }}
-          restore-keys: ${{ runner.os }}-pip-v2-
+          key: "${{ runner.os }}-pip-v2-${{ hashFiles('requirements.txt') }}"
+          restore-keys: "${{ runner.os }}-pip-v2-"
 
       - name: "Install Playwright"
         run: |
@@ -91,7 +91,7 @@ jobs:
       # NEW STEP: Extract the exact Playwright version to use as a cache key
       # yamllint disable rule:line-length
       - name: "Get Playwright Version"
-        id: playwright-version
+        id: "playwright-version"
         run: |
           # Robustly fetch the version directly from the Python package metadata
           # bypassing any fragile CLI string formatting
@@ -102,9 +102,9 @@ jobs:
         uses: "actions/cache@v5"
         id: "playwright-cache"
         with:
-          path: ~/.cache/ms-playwright
+          path: "~/.cache/ms-playwright"
           # FIX: Cache key is now strictly tied to the installed Playwright package version
-          key: ${{ runner.os }}-playwright-v2-${{ steps.playwright-version.outputs.version }}
+          key: "${{ runner.os }}-playwright-v2-${{ steps.playwright-version.outputs.version }}"
 
       - name: "Install Playwright Browsers"
         if: steps.playwright-cache.outputs.cache-hit != 'true'
