@@ -105,20 +105,15 @@ func _ready() -> void:
 		_on_menu_volume_control_gui_input,
 		AudioManager.menu_muted
 	)
-	
+
 	# =========================================================================
 	# MUTE BUTTON AUDIO FEEDBACK CONNECTIONS
 	# =========================================================================
 	# Collect all category check buttons into a local array for streamlined processing.
 	var mute_buttons: Array[CheckButton] = [
-		mute_master,
-		mute_music,
-		mute_sfx,
-		mute_weapon,
-		mute_rotor,
-		mute_menu
+		mute_master, mute_music, mute_sfx, mute_weapon, mute_rotor, mute_menu
 	]
-	
+
 	# Loop through each button to connect its physical hardware interaction event.
 	for btn in mute_buttons:
 		# Defensive check to ensure we do not duplicate the connection if _ready executes again.
@@ -348,11 +343,11 @@ func _on_master_volume_control_gui_input(event: InputEvent) -> void:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			# Force-unmute the UI element. This programmatically flips the flag.
 			mute_master.button_pressed = true
-			
-			# OPTIMIZATION: Manually play the confirmation sound effect since altering 
+
+			# OPTIMIZATION: Manually play the confirmation sound effect since altering
 			# '.button_pressed' programmatically does not trigger the hardware '.pressed' signal.
 			AudioManager.play_sfx("check")
-			
+
 			# Consume the input event to prevent it from propagating further into the UI tree.
 			get_viewport().set_input_as_handled()
 
@@ -629,7 +624,13 @@ func _handle_slider_gui_input(
 			sfx_warning_shown = true
 			get_viewport().set_input_as_handled()
 		elif bus_muted:
+			# The category itself is muted, but parent layout constraints allow interaction.
+			# Programmatically unmuting updates the state safely.
 			mute_button.button_pressed = true
+
+			# OPTIMIZATION: Trigger audio feedback manually because programmatic changes
+			# to '.button_pressed' skip the standard '.pressed' hardware listener loop.
+			AudioManager.play_sfx("check")
 
 
 func _handle_mute_gui_input(
@@ -676,6 +677,6 @@ func _on_mute_button_pressed() -> void:
 	else:
 		# Fallback warning log in case the global AudioManager singleton is missing or unmapped.
 		Globals.log_message(
-			"Mute Audio Feedback Failed: AudioManager Autoload instance not found.", 
+			"Mute Audio Feedback Failed: AudioManager Autoload instance not found.",
 			Globals.LogLevel.WARNING
 		)
