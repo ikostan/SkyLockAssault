@@ -117,6 +117,7 @@ settings persistence (volume & mute) and signal interlocks for the Menu/UI
 audio bus, including AudioServer synchronization and headless/CI safety.
 
 #### AI/Bot Contributors
+
 - **@sourcery-ai** — Provided detailed PR summaries, Reviewer's Guide,
   file-level analysis, assessment against issue #499 epic, pre-merge checks,
   and code quality feedback.
