@@ -269,9 +269,17 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 	if volume == 0.0 and not AudioManager.get_muted(bus_name):
 		var active_slider := _get_slider_for_bus(bus_name)
 		
-		# Only play confirmation feedback if the user is actively focusing the control
 		if active_slider and active_slider.has_focus():
-			AudioManager.play_sfx("check")
+			if bus_name == AudioConstants.BUS_MASTER:
+				var bus_idx := AudioServer.get_bus_index(bus_name)
+				if bus_idx != -1:
+					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.15))
+				AudioManager.play_sfx("check")
+				await get_tree().create_timer(0.15).timeout
+				if bus_idx != -1:
+					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.0))
+			else:
+				AudioManager.play_sfx("check")
 			
 		AudioManager.set_muted(bus_name, true)
 		
@@ -279,8 +287,12 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 	elif volume > 0.0 and AudioManager.get_muted(bus_name):
 		var active_slider := _get_slider_for_bus(bus_name)
 		
-		# Maintain sound-isolation rules: only play audio if manually manipulated
 		if active_slider and active_slider.has_focus():
+			if bus_name == AudioConstants.BUS_MASTER:
+				var bus_idx := AudioServer.get_bus_index(bus_name)
+				if bus_idx != -1:
+					AudioServer.set_bus_mute(bus_idx, false)
+					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
 			AudioManager.play_sfx("check")
 			
 		AudioManager.set_muted(bus_name, false)
