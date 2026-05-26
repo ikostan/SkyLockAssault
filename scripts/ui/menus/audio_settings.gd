@@ -244,9 +244,13 @@ func _update_ui_interactivity() -> void:
 	menu_slider.editable = not (is_sfx_hierarchy_muted or AudioManager.menu_muted)
 
 
+# ==========================================================================
+# REACTIVE VISUAL AND AUDIO AUTO-MUTE COUPLING
+# ==========================================================================
+
+
 ## Updates the visual Godot HSliders when Playwright or UI components alter the AudioManager state.
-## Injected with an Auto-Mute threshold check to maintain symmetry with the asset's auto-unmute
-## behavior.
+## Features an isolated audio-coupled auto-mute threshold for manual user adjustments.
 func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 	match bus_name:
 		AudioConstants.BUS_MASTER:
@@ -263,12 +267,43 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 			menu_slider.set_value_no_signal(volume)
 
 	# --- AUTO-MUTE ON ZERO VOLUME THRESHOLD ---
-	# If a slider layout is manually dragged or programmatically forced down to absolute 0.0,
-	# the bus is functionally silent. To preserve UX symmetry with the auto-unmute system,
-	# we explicitly push a mute command if the manager has not already flagged it.
-	# This automatically propagates a 'mute_toggled' signal back down to uncheck the button.
 	if volume == 0.0 and not AudioManager.get_muted(bus_name):
+		# Fetch the specific UI widget associated with the current audio channel
+		var active_slider := _get_slider_for_bus(bus_name)
+
+		# SIGNAL ISOLATION CONTROL: Only fire the confirmation audio if the slider is actively
+		# focused or manipulated by a human player. Programmatic updates will bypass this block.
+		if active_slider and active_slider.has_focus():
+			AudioManager.play_sfx("check")
+
+		# Update the manager state. This automatically triggers _on_global_mute_toggled
+		# to visually flip the corresponding CheckButton widget instantly.
 		AudioManager.set_muted(bus_name, true)
+
+
+## Auxiliary lookup tool to map string-based audio buses to their respective scene tree sliders.
+## Refactored with a single exit point to strictly satisfy gdlint max-returns constraints.
+## :param bus_name: The constant identifier name of the audio channel.
+## :type bus_name: String
+## :rtype: HSlider
+func _get_slider_for_bus(bus_name: String) -> HSlider:
+	var target_slider: HSlider = null
+
+	match bus_name:
+		AudioConstants.BUS_MASTER:
+			target_slider = master_slider
+		AudioConstants.BUS_MUSIC:
+			target_slider = music_slider
+		AudioConstants.BUS_SFX:
+			target_slider = sfx_slider
+		AudioConstants.BUS_SFX_WEAPON:
+			target_slider = weapon_slider
+		AudioConstants.BUS_SFX_ROTORS:
+			target_slider = rotor_slider
+		AudioConstants.BUS_SFX_MENU:
+			target_slider = menu_slider
+
+	return target_slider
 
 
 ## Updates the visual Godot CheckButtons when Playwright mutes the AudioManager
