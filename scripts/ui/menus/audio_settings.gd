@@ -244,7 +244,9 @@ func _update_ui_interactivity() -> void:
 	menu_slider.editable = not (is_sfx_hierarchy_muted or AudioManager.menu_muted)
 
 
-## Updates the visual Godot HSliders when Playwright changes the AudioManager
+## Updates the visual Godot HSliders when Playwright or UI components alter the AudioManager state.
+## Injected with an Auto-Mute threshold check to maintain symmetry with the asset's auto-unmute
+## behavior.
 func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 	match bus_name:
 		AudioConstants.BUS_MASTER:
@@ -259,6 +261,14 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 			rotor_slider.set_value_no_signal(volume)
 		AudioConstants.BUS_SFX_MENU:
 			menu_slider.set_value_no_signal(volume)
+
+	# --- AUTO-MUTE ON ZERO VOLUME THRESHOLD ---
+	# If a slider layout is manually dragged or programmatically forced down to absolute 0.0,
+	# the bus is functionally silent. To preserve UX symmetry with the auto-unmute system,
+	# we explicitly push a mute command if the manager has not already flagged it.
+	# This automatically propagates a 'mute_toggled' signal back down to uncheck the button.
+	if volume == 0.0 and not AudioManager.get_muted(bus_name):
+		AudioManager.set_muted(bus_name, true)
 
 
 ## Updates the visual Godot CheckButtons when Playwright mutes the AudioManager
