@@ -12,6 +12,11 @@ jobs:
       issues: write
       pull-requests: write
     steps:
+      # NOTE:
+      # - We pin this action to a specific commit SHA to reduce supply-chain risk.
+      # - Make sure to periodically update this SHA to the latest v10.x patch release,
+      #   either via an automated mechanism (e.g., Dependabot for GitHub Actions)
+      #   or a scheduled maintenance routine documented for this repository.
       - uses: "actions/stale@eb5cf3af3ac0a1aa4c9c45633dd1ae542a27a89"  # v10.3.0
         # yamllint disable rule:line-length
         with:
