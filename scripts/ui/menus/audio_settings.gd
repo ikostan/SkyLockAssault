@@ -106,21 +106,6 @@ func _ready() -> void:
 		AudioManager.menu_muted
 	)
 
-	# =========================================================================
-	# MUTE BUTTON AUDIO FEEDBACK CONNECTIONS
-	# =========================================================================
-	# Collect all category check buttons into a local array for streamlined processing.
-	var mute_buttons: Array[CheckButton] = [
-		mute_master, mute_music, mute_sfx, mute_weapon, mute_rotor, mute_menu
-	]
-
-	# Loop through each button to connect its physical hardware interaction event.
-	for btn in mute_buttons:
-		# Defensive check to ensure we do not duplicate the connection if _ready executes again.
-		if not btn.pressed.is_connected(_on_mute_button_pressed):
-			# Bounding to .pressed ensures silence during programmatic WebBridge sync or init setup.
-			btn.pressed.connect(_on_mute_button_pressed)
-
 	# Connect specific mute button warning interceptors
 	if not mute_music.gui_input.is_connected(_on_music_mute_gui_input):
 		mute_music.gui_input.connect(_on_music_mute_gui_input)
@@ -337,24 +322,36 @@ func _update_label_colors() -> void:
 # ==========================================================================
 # MASTER VOLUME
 # ==========================================================================
+# ==========================================================================
+# INTERACTION INTERCEPTORS (CLEANED UP TO ELIMINATE DUPLICATE AUDIO TRIGGERS)
+# ==========================================================================
+
+
+## Processes input events on the Master volume track control container.
+## Automatically toggles the master checkbox state when a user clicks an inactive slider track.
 func _on_master_volume_control_gui_input(event: InputEvent) -> void:
-	# Check if the incoming event is a mouse click down on a muted master track control.
+	# Evaluate if the incoming interaction is a left-click down on a currently muted track.
+	# [cite: 57]
 	if event is InputEventMouseButton and event.pressed and AudioManager.master_muted:
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			# Force-unmute the UI element. This programmatically flips the flag.
+			# Programmatically forcing '.button_pressed' to true causes Godot to fire the
+			# connected '_on_master_mute_toggled' signal naturally. The sound effect is now
+			# safely handled entirely within that loop, avoiding duplicate audio artifacts.
 			mute_master.button_pressed = true
 
-			# OPTIMIZATION: Manually play the confirmation sound effect since altering
-			# '.button_pressed' programmatically does not trigger the hardware '.pressed' signal.
-			AudioManager.play_sfx("check")
-
-			# Consume the input event to prevent it from propagating further into the UI tree.
+			# Halt input propagation so neighboring layout controls ignore this mouse event click.
 			get_viewport().set_input_as_handled()
 
 
+## Handles Master Mute toggle mutations.
+## Executes the UI sound feedback immediately before the AudioServer truncates master channel propagation.
 func _on_master_mute_toggled(toggled_on: bool) -> void:
+	# CRITICAL TIMING FIX: Play the SFX BEFORE the bus state changes to muted.
+	# If called after set_muted, the sound node plays directly into a dead-silent bus.
+	AudioManager.play_sfx("check")
+
 	AudioManager.set_muted(AudioConstants.BUS_MASTER, not toggled_on)
-	_update_ui_interactivity()  # Single source of truth updates everything
+	_update_ui_interactivity()  # Single source of truth updates slider editable states
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_MASTER, AudioManager.master_volume, AudioManager.master_muted
 	)
@@ -376,7 +373,12 @@ func _on_music_volume_control_gui_input(event: InputEvent) -> void:
 	)
 
 
+## Handles Music Mute toggle mutations.
+## Dispatches feedback audio right before the music sub-bus mixer goes dark.
 func _on_music_mute_toggled(toggled_on: bool) -> void:
+	# CRITICAL TIMING FIX: Pre-emptively run audio tracking before changing backend flags.
+	AudioManager.play_sfx("check")
+
 	AudioManager.set_muted(AudioConstants.BUS_MUSIC, not toggled_on)
 	_update_ui_interactivity()
 	AudioManager.apply_volume_to_bus(
@@ -406,7 +408,13 @@ func _on_sfx_volume_control_gui_input(event: InputEvent) -> void:
 	)
 
 
+## Handles Parent SFX Mute toggle mutations.
+## Dispatches feedback audio before the core weapon, rotor, and menu parent channel drops.
 func _on_sfx_mute_toggled(toggled_on: bool) -> void:
+	# CRITICAL TIMING FIX: Run playback hook before parent bus attenuation finishes.
+	# Even though this is the parent SFX channel, the child players survive long enough to fire.
+	AudioManager.play_sfx("check")
+
 	AudioManager.set_muted(AudioConstants.BUS_SFX, not toggled_on)
 	_update_ui_interactivity()
 	AudioManager.apply_volume_to_bus(
@@ -436,7 +444,11 @@ func _on_weapon_volume_control_gui_input(event: InputEvent) -> void:
 	)
 
 
+## Handles Weapon SFX Mute toggle mutations.
 func _on_weapon_mute_toggled(toggled_on: bool) -> void:
+	# CRITICAL TIMING FIX: Ensure check.wav hits the mixer before weapon effects are isolated.
+	AudioManager.play_sfx("check")
+
 	AudioManager.set_muted(AudioConstants.BUS_SFX_WEAPON, not toggled_on)
 	_update_ui_interactivity()
 	AudioManager.apply_volume_to_bus(
@@ -470,7 +482,12 @@ func _on_rotor_volume_control_gui_input(event: InputEvent) -> void:
 	)
 
 
+## Handles Rotor SFX Mute toggle mutations.
 func _on_rotor_mute_toggled(toggled_on: bool) -> void:
+	# CRITICAL TIMING FIX: Trigger the sound asset a microsecond before cutting off helicopter rotor effects.
+	# Note: This coordinates cleanly with AudioManager's global rotors_muted flag parameters.
+	AudioManager.play_sfx("check")
+
 	AudioManager.set_muted(AudioConstants.BUS_SFX_ROTORS, not toggled_on)
 	_update_ui_interactivity()
 	AudioManager.apply_volume_to_bus(
@@ -504,7 +521,11 @@ func _on_menu_volume_control_gui_input(event: InputEvent) -> void:
 	)
 
 
+## Handles Menu UI SFX Mute toggle mutations.
 func _on_menu_mute_toggled(toggled_on: bool) -> void:
+	# CRITICAL TIMING FIX: Play check.wav immediately before sealing the UI/Menu SFX bus channel.
+	AudioManager.play_sfx("check")
+
 	AudioManager.set_muted(AudioConstants.BUS_SFX_MENU, not toggled_on)
 	_update_ui_interactivity()
 	AudioManager.apply_volume_to_bus(
@@ -600,6 +621,8 @@ func _on_tree_exited() -> void:
 # ==========================================
 
 
+## Evaluates slider track background mouse interactions for all sub-bus category rows.
+## Handles localized warnings for nested locks or updates checkbox focus states programmatically.
 func _handle_slider_gui_input(
 	event: InputEvent,
 	master_muted: bool,
@@ -624,13 +647,10 @@ func _handle_slider_gui_input(
 			sfx_warning_shown = true
 			get_viewport().set_input_as_handled()
 		elif bus_muted:
-			# The category itself is muted, but parent layout constraints allow interaction.
-			# Programmatically unmuting updates the state safely.
+			# The specific sub-bus category is muted, but parent layout constraints are free.
+			# Programmatically changing '.button_pressed' forces the core toggle callback to fire.
+			# The sound effect plays safely from the top of that handler before the bus server mutes.
 			mute_button.button_pressed = true
-
-			# OPTIMIZATION: Trigger audio feedback manually because programmatic changes
-			# to '.button_pressed' skip the standard '.pressed' hardware listener loop.
-			AudioManager.play_sfx("check")
 
 
 func _handle_mute_gui_input(
@@ -662,21 +682,3 @@ func _reset_master_warning_shown() -> void:
 
 func _reset_sfx_warning_shown() -> void:
 	sfx_warning_shown = false
-
-
-## Callback triggered exclusively by explicit physical user interaction with any mute checkbox.
-## This method is unreachable by programmatic updates, preventing audio leaks in automation.
-## :rtype: void
-func _on_mute_button_pressed() -> void:
-	# Verify that the AudioManager Autoload is accessible in the current tree before playing.
-	if AudioManager:
-		# Invoke the high-performance centralized playback API.
-		# Uses 'check' asset which points to res://files/sounds/sfx/check.wav.
-		# Defaults routing to the SFX Menu audio bus.
-		AudioManager.play_sfx("check")
-	else:
-		# Fallback warning log in case the global AudioManager singleton is missing or unmapped.
-		Globals.log_message(
-			"Mute Audio Feedback Failed: AudioManager Autoload instance not found.",
-			Globals.LogLevel.WARNING
-		)
