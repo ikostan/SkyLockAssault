@@ -105,6 +105,26 @@ func _ready() -> void:
 		_on_menu_volume_control_gui_input,
 		AudioManager.menu_muted
 	)
+	
+	# =========================================================================
+	# MUTE BUTTON AUDIO FEEDBACK CONNECTIONS
+	# =========================================================================
+	# Collect all category check buttons into a local array for streamlined processing.
+	var mute_buttons: Array[CheckButton] = [
+		mute_master,
+		mute_music,
+		mute_sfx,
+		mute_weapon,
+		mute_rotor,
+		mute_menu
+	]
+	
+	# Loop through each button to connect its physical hardware interaction event.
+	for btn in mute_buttons:
+		# Defensive check to ensure we do not duplicate the connection if _ready executes again.
+		if not btn.pressed.is_connected(_on_mute_button_pressed):
+			# Bounding to .pressed ensures silence during programmatic WebBridge sync or init setup.
+			btn.pressed.connect(_on_mute_button_pressed)
 
 	# Connect specific mute button warning interceptors
 	if not mute_music.gui_input.is_connected(_on_music_mute_gui_input):
@@ -319,13 +339,21 @@ func _update_label_colors() -> void:
 	menu_label.modulate = yellow if (menu_slider.has_focus() or mute_menu.has_focus()) else white
 
 
-# ==========================================
+# ==========================================================================
 # MASTER VOLUME
-# ==========================================
+# ==========================================================================
 func _on_master_volume_control_gui_input(event: InputEvent) -> void:
+	# Check if the incoming event is a mouse click down on a muted master track control.
 	if event is InputEventMouseButton and event.pressed and AudioManager.master_muted:
 		if event.button_index == MOUSE_BUTTON_LEFT:
+			# Force-unmute the UI element. This programmatically flips the flag.
 			mute_master.button_pressed = true
+			
+			# OPTIMIZATION: Manually play the confirmation sound effect since altering 
+			# '.button_pressed' programmatically does not trigger the hardware '.pressed' signal.
+			AudioManager.play_sfx("check")
+			
+			# Consume the input event to prevent it from propagating further into the UI tree.
 			get_viewport().set_input_as_handled()
 
 
@@ -633,3 +661,21 @@ func _reset_master_warning_shown() -> void:
 
 func _reset_sfx_warning_shown() -> void:
 	sfx_warning_shown = false
+
+
+## Callback triggered exclusively by explicit physical user interaction with any mute checkbox.
+## This method is unreachable by programmatic updates, preventing audio leaks in automation.
+## :rtype: void
+func _on_mute_button_pressed() -> void:
+	# Verify that the AudioManager Autoload is accessible in the current tree before playing.
+	if AudioManager:
+		# Invoke the high-performance centralized playback API.
+		# Uses 'check' asset which points to res://files/sounds/sfx/check.wav.
+		# Defaults routing to the SFX Menu audio bus.
+		AudioManager.play_sfx("check")
+	else:
+		# Fallback warning log in case the global AudioManager singleton is missing or unmapped.
+		Globals.log_message(
+			"Mute Audio Feedback Failed: AudioManager Autoload instance not found.", 
+			Globals.LogLevel.WARNING
+		)
