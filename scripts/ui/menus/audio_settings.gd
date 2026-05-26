@@ -348,11 +348,15 @@ func _update_label_colors() -> void:
 # MASTER VOLUME
 # ==========================================
 func _on_master_volume_control_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and AudioManager.master_muted:
-		if event.button_index == MOUSE_BUTTON_LEFT:
-			mute_master.button_pressed = true
-			get_viewport().set_input_as_handled()
-
+	_handle_slider_gui_input(
+		event,
+		false,
+		false,
+		AudioManager.master_muted,
+		mute_master,
+		master_warning_dialog,
+		sfx_warning_dialog
+	)
 
 # ==========================================================================
 # FIXED MUTE TOGGLE CALLBACKS (WITH BACKGROUND BUFFER DEFERRAL)
