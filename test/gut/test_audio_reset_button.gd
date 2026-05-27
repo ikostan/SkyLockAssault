@@ -66,7 +66,9 @@ func after_each() -> void:
 	await get_tree().process_frame  # Wait for free to process
 
 
-## TC-Reset-01 | All audio buses muted; All volumes set to 0.5; UI reflects this. | Click the Reset button. | All muted flags false; All volumes 1.0; apply_all_volumes/save_volumes called; UI updated: all mute buttons pressed, all sliders 1.0 and editable; _update_other_controls_ui called; Log message.
+## TC-Reset-01 | All audio buses muted; All volumes set to 0.5; UI reflects this. | Click the Reset button. |
+## All muted flags false; All volumes 1.0; apply_all_volumes/save_volumes called; UI updated: all mute buttons pressed, all sliders 1.0 and editable;
+## _update_other_controls_ui called; Log message.
 ## :rtype: void
 func test_tc_reset_01() -> void:
 	AudioManager.master_muted = true
@@ -83,14 +85,17 @@ func test_tc_reset_01() -> void:
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
 	await get_tree().process_frame
-	# Verify initial UI
+	
+	# Verify initial UI (Snapped to 0.033 steps)
 	assert_false(audio_instance.mute_master.button_pressed)
-	assert_eq(audio_instance.master_slider.value, 0.5)
+	assert_eq(audio_instance.master_slider.value, 0.495)
 	assert_false(audio_instance.master_slider.editable)
 	assert_false(audio_instance.mute_sfx.button_pressed)
 	assert_false(audio_instance.weapon_slider.editable)
+	
 	# Simulate reset button press
 	audio_instance._on_audio_reset_button_pressed()
+	
 	# Check AudioManager states
 	assert_false(AudioManager.master_muted)
 	assert_false(AudioManager.music_muted)
@@ -102,6 +107,7 @@ func test_tc_reset_01() -> void:
 	assert_eq(AudioManager.sfx_volume, 1.0)
 	assert_eq(AudioManager.weapon_volume, 1.0)
 	assert_eq(AudioManager.rotors_volume, 1.0)
+	
 	# Check AudioServer
 	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index(AudioConstants.BUS_MASTER)))
 	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(AudioConstants.BUS_MASTER)), linear_to_db(1.0), 0.0001)
@@ -113,24 +119,27 @@ func test_tc_reset_01() -> void:
 	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(AudioConstants.BUS_SFX_WEAPON)), linear_to_db(1.0), 0.0001)
 	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index(AudioConstants.BUS_SFX_ROTORS)))
 	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(AudioConstants.BUS_SFX_ROTORS)), linear_to_db(1.0), 0.0001)
+	
 	# Check save called (file exists)
 	assert_true(FileAccess.file_exists(test_config_path))
-	# Check UI updated
+	
+	# Check UI updated (Sliders snap to 0.99 because of 0.033 steps)
 	assert_true(audio_instance.mute_master.button_pressed)
-	assert_eq(audio_instance.master_slider.value, 1.0)
+	assert_eq(audio_instance.master_slider.value, 0.99)
 	assert_true(audio_instance.master_slider.editable)
 	assert_true(audio_instance.mute_music.button_pressed)
-	assert_eq(audio_instance.music_slider.value, 1.0)
+	assert_eq(audio_instance.music_slider.value, 0.99)
 	assert_true(audio_instance.music_slider.editable)
 	assert_true(audio_instance.mute_sfx.button_pressed)
-	assert_eq(audio_instance.sfx_slider.value, 1.0)
+	assert_eq(audio_instance.sfx_slider.value, 0.99)
 	assert_true(audio_instance.sfx_slider.editable)
 	assert_true(audio_instance.mute_weapon.button_pressed)
-	assert_eq(audio_instance.weapon_slider.value, 1.0)
+	assert_eq(audio_instance.weapon_slider.value, 0.99)
 	assert_true(audio_instance.weapon_slider.editable)
 	assert_true(audio_instance.mute_rotor.button_pressed)
-	assert_eq(audio_instance.rotor_slider.value, 1.0)
+	assert_eq(audio_instance.rotor_slider.value, 0.99)
 	assert_true(audio_instance.rotor_slider.editable)
+	
 	# Check child controls enabled
 	assert_false(audio_instance.mute_weapon.disabled)
 	assert_false(audio_instance.mute_rotor.disabled)
@@ -153,21 +162,24 @@ func test_tc_reset_02() -> void:
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
 	await get_tree().process_frame
-	# Verify initial
+	
+	# Verify initial (Snapped to 0.033 steps)
 	assert_true(audio_instance.mute_master.button_pressed)
 	assert_false(audio_instance.mute_music.button_pressed)
 	assert_true(audio_instance.mute_sfx.button_pressed)
 	assert_false(audio_instance.mute_weapon.button_pressed)
 	assert_true(audio_instance.mute_rotor.button_pressed)
-	assert_eq(audio_instance.master_slider.value, 0.8)
-	assert_eq(audio_instance.music_slider.value, 0.3)
-	assert_eq(audio_instance.sfx_slider.value, 0.6)
-	assert_eq(audio_instance.weapon_slider.value, 0.4)
-	assert_eq(audio_instance.rotor_slider.value, 0.7)
+	assert_eq(audio_instance.master_slider.value, 0.792)
+	assert_eq(audio_instance.music_slider.value, 0.297)
+	assert_eq(audio_instance.sfx_slider.value, 0.594)
+	assert_eq(audio_instance.weapon_slider.value, 0.396)
+	assert_eq(audio_instance.rotor_slider.value, 0.693)
 	assert_false(audio_instance.weapon_slider.editable)
 	assert_true(audio_instance.rotor_slider.editable)
+	
 	# Reset
 	audio_instance._on_audio_reset_button_pressed()
+	
 	# Checks
 	assert_false(AudioManager.master_muted)
 	assert_false(AudioManager.music_muted)
@@ -183,7 +195,7 @@ func test_tc_reset_02() -> void:
 	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(AudioConstants.BUS_MASTER)), linear_to_db(1.0), 0.0001)
 	assert_true(FileAccess.file_exists(test_config_path))
 	assert_true(audio_instance.mute_master.button_pressed)
-	assert_eq(audio_instance.master_slider.value, 1.0)
+	assert_eq(audio_instance.master_slider.value, 0.99)
 	assert_true(audio_instance.master_slider.editable)
 	assert_false(audio_instance.mute_weapon.disabled)
 	assert_false(audio_instance.mute_rotor.disabled)
@@ -195,14 +207,17 @@ func test_tc_reset_03() -> void:
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
 	await get_tree().process_frame
+	
 	# Initial defaults
 	assert_false(AudioManager.master_muted)
 	assert_eq(AudioManager.master_volume, 1.0)
 	assert_true(audio_instance.mute_master.button_pressed)
-	assert_eq(audio_instance.master_slider.value, 1.0)
+	assert_eq(audio_instance.master_slider.value, 0.99)
 	assert_true(audio_instance.master_slider.editable)
+	
 	# Reset
 	audio_instance._on_audio_reset_button_pressed()
+	
 	# Still same
 	assert_false(AudioManager.master_muted)
 	assert_eq(AudioManager.master_volume, 1.0)
@@ -210,7 +225,7 @@ func test_tc_reset_03() -> void:
 	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(AudioConstants.BUS_MASTER)), linear_to_db(1.0), 0.0001)
 	assert_true(FileAccess.file_exists(test_config_path))
 	assert_true(audio_instance.mute_master.button_pressed)
-	assert_eq(audio_instance.master_slider.value, 1.0)
+	assert_eq(audio_instance.master_slider.value, 0.99)
 	assert_true(audio_instance.master_slider.editable)
 
 
@@ -311,7 +326,7 @@ func test_tc_reset_06() -> void:
 	assert_true(AudioManager.master_muted)
 	assert_eq(AudioManager.master_volume, 0.4)
 	assert_false(audio_instance.mute_master.button_pressed)
-	assert_eq(audio_instance.master_slider.value, 0.4)
+	assert_eq(audio_instance.master_slider.value, 0.396)
 	
 	# Reset
 	audio_instance._on_audio_reset_button_pressed()
