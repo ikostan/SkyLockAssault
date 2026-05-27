@@ -12,6 +12,11 @@ extends Control
 var master_warning_shown: bool = false
 var sfx_warning_shown: bool = false
 var _intentional_exit: bool = false
+# A token tracker (_master_zero_token) to the top level of audio_settings.gd.
+# Every time a zero event occurs, we increment this token. When the timer finishes,
+# we check if the token still matches. If the token has changed, it means a newer
+# user action took place, and the old async routine safely aborts.
+var _master_zero_token: int = 0
 
 # Master Volume Controls
 @onready var master_slider: HSlider = $Panel/VolumeControls/Master/HSlider
@@ -271,12 +276,19 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 		
 		if active_slider and active_slider.has_focus():
 			if bus_name == AudioConstants.BUS_MASTER:
+				# Increment token to invalidate any previous concurrent runs
+				_master_zero_token += 1
+				var current_token: int = _master_zero_token
+				
 				var bus_idx := AudioServer.get_bus_index(bus_name)
 				if bus_idx != -1:
 					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.15))
+				
 				AudioManager.play_sfx("check")
 				await get_tree().create_timer(0.15).timeout
-				if bus_idx != -1:
+				
+				# TOKEN GATE: Only apply the zero reset if no newer volume adjustments happened
+				if current_token == _master_zero_token and bus_idx != -1:
 					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.0))
 			else:
 				AudioManager.play_sfx("check")
@@ -289,6 +301,8 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 		
 		if active_slider and active_slider.has_focus():
 			if bus_name == AudioConstants.BUS_MASTER:
+				# Incrementing the token here instantly cancels any sleeping zero-out coroutines
+				_master_zero_token += 1
 				var bus_idx := AudioServer.get_bus_index(bus_name)
 				if bus_idx != -1:
 					AudioServer.set_bus_mute(bus_idx, false)
@@ -362,7 +376,7 @@ func _update_label_colors() -> void:
 func _on_master_volume_control_gui_input(event: InputEvent) -> void:
 	_handle_slider_gui_input(
 		event,
-		false,
+		false, # Prevents Master row from triggering warning dialogs against itself
 		false,
 		AudioManager.master_muted,
 		mute_master,
