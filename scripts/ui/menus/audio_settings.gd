@@ -253,6 +253,7 @@ func _update_ui_interactivity() -> void:
 # SYMMETRIC VISUAL AND AUDIO VOLUME COUPLING
 # ==========================================================================
 
+
 ## Updates the visual Godot HSliders when Playwright or UI components alter the AudioManager state.
 ## Maintained with balanced auto-mute and auto-unmute thresholds for seamless state tracking.
 func _on_global_volume_changed(bus_name: String, volume: float) -> void:
@@ -273,32 +274,32 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 	# --- AUTO-MUTE ON ZERO VOLUME THRESHOLD ---
 	if volume == 0.0 and not AudioManager.get_muted(bus_name):
 		var active_slider := _get_slider_for_bus(bus_name)
-		
+
 		if active_slider and active_slider.has_focus():
 			if bus_name == AudioConstants.BUS_MASTER:
 				# Increment token to invalidate any previous concurrent runs
 				_master_zero_token += 1
 				var current_token: int = _master_zero_token
-				
+
 				var bus_idx := AudioServer.get_bus_index(bus_name)
 				if bus_idx != -1:
 					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.15))
-				
+
 				AudioManager.play_sfx("check")
 				await get_tree().create_timer(0.15).timeout
-				
+
 				# TOKEN GATE: Only apply the zero reset if no newer volume adjustments happened
 				if current_token == _master_zero_token and bus_idx != -1:
 					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.0))
 			else:
 				AudioManager.play_sfx("check")
-			
+
 		AudioManager.set_muted(bus_name, true)
-		
+
 	# --- AUTO-UNMUTE ON NON-ZERO VOLUME THRESHOLD ---
 	elif volume > 0.0 and AudioManager.get_muted(bus_name):
 		var active_slider := _get_slider_for_bus(bus_name)
-		
+
 		if active_slider and active_slider.has_focus():
 			if bus_name == AudioConstants.BUS_MASTER:
 				# Incrementing the token here instantly cancels any sleeping zero-out coroutines
@@ -308,7 +309,7 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 					AudioServer.set_bus_mute(bus_idx, false)
 					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
 			AudioManager.play_sfx("check")
-			
+
 		AudioManager.set_muted(bus_name, false)
 
 
@@ -376,7 +377,7 @@ func _update_label_colors() -> void:
 func _on_master_volume_control_gui_input(event: InputEvent) -> void:
 	_handle_slider_gui_input(
 		event,
-		false, # Prevents Master row from triggering warning dialogs against itself
+		false,  # Prevents Master row from triggering warning dialogs against itself
 		false,
 		AudioManager.master_muted,
 		mute_master,
@@ -384,26 +385,28 @@ func _on_master_volume_control_gui_input(event: InputEvent) -> void:
 		sfx_warning_dialog
 	)
 
+
 # ==========================================================================
 # FIXED MUTE TOGGLE CALLBACKS (WITH BACKGROUND BUFFER DEFERRAL)
 # ==========================================================================
+
 
 ## Handles Master Mute toggle mutations with buffer safety delays.
 func _on_master_mute_toggled(toggled_on: bool) -> void:
 	# Dispatch the audio confirmation effect instantly
 	AudioManager.play_sfx("check")
-	
+
 	# Update internal variables and UI state immediately so the interface feels snappy
 	AudioManager.set_muted(AudioConstants.BUS_MASTER, not toggled_on)
 	_update_ui_interactivity()
-	
-	# ENGINE WORKAROUND: If muting (toggled_on is false), defer the hardware bus cutoff 
-	# by 0.15 seconds. This allows the audio mixing thread to stream check.wav to the 
+
+	# ENGINE WORKAROUND: If muting (toggled_on is false), defer the hardware bus cutoff
+	# by 0.15 seconds. This allows the audio mixing thread to stream check.wav to the
 	# sound card before the Master channel is completely flattened.
 	if not toggled_on:
 		await get_tree().create_timer(0.15).timeout
-		
-	# Apply the volume state to the AudioServer. If the user quickly clicked back 
+
+	# Apply the volume state to the AudioServer. If the user quickly clicked back
 	# to unmute during the timer window, this reads the newest state safely.
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_MASTER, AudioManager.master_volume, AudioManager.master_muted
@@ -431,12 +434,12 @@ func _on_music_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.play_sfx("check")
 	AudioManager.set_muted(AudioConstants.BUS_MUSIC, not toggled_on)
 	_update_ui_interactivity()
-	
+
 	# Sub-buses that don't host the UI sound don't strictly require the delay,
 	# but we apply it uniformly for total consistency when silencing channels.
 	if not toggled_on:
 		await get_tree().create_timer(0.15).timeout
-		
+
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_MUSIC, AudioManager.music_volume, AudioManager.music_muted
 	)
@@ -469,12 +472,12 @@ func _on_sfx_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.play_sfx("check")
 	AudioManager.set_muted(AudioConstants.BUS_SFX, not toggled_on)
 	_update_ui_interactivity()
-	
-	# CRITICAL: Since the UI sound plays on a child of the SFX bus, muting this 
+
+	# CRITICAL: Since the UI sound plays on a child of the SFX bus, muting this
 	# cuts off the sound instantly. The 0.15s delay is mandatory here.
 	if not toggled_on:
 		await get_tree().create_timer(0.15).timeout
-		
+
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_SFX, AudioManager.sfx_volume, AudioManager.sfx_muted
 	)
@@ -507,10 +510,10 @@ func _on_weapon_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.play_sfx("check")
 	AudioManager.set_muted(AudioConstants.BUS_SFX_WEAPON, not toggled_on)
 	_update_ui_interactivity()
-	
+
 	if not toggled_on:
 		await get_tree().create_timer(0.15).timeout
-		
+
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_SFX_WEAPON, AudioManager.weapon_volume, AudioManager.weapon_muted
 	)
@@ -547,10 +550,10 @@ func _on_rotor_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.play_sfx("check")
 	AudioManager.set_muted(AudioConstants.BUS_SFX_ROTORS, not toggled_on)
 	_update_ui_interactivity()
-	
+
 	if not toggled_on:
 		await get_tree().create_timer(0.15).timeout
-		
+
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_SFX_ROTORS, AudioManager.rotors_volume, AudioManager.rotors_muted
 	)
@@ -587,12 +590,12 @@ func _on_menu_mute_toggled(toggled_on: bool) -> void:
 	AudioManager.play_sfx("check")
 	AudioManager.set_muted(AudioConstants.BUS_SFX_MENU, not toggled_on)
 	_update_ui_interactivity()
-	
-	# CRITICAL: This is the exact bus the menu sounds play on. We must delay 
+
+	# CRITICAL: This is the exact bus the menu sounds play on. We must delay
 	# the hardware muting call to guarantee the sound clip plays completely.
 	if not toggled_on:
 		await get_tree().create_timer(0.15).timeout
-		
+
 	AudioManager.apply_volume_to_bus(
 		AudioConstants.BUS_SFX_MENU, AudioManager.menu_volume, AudioManager.menu_muted
 	)
@@ -751,7 +754,7 @@ func _reset_sfx_warning_shown() -> void:
 ## :rtype: HSlider
 func _get_slider_for_bus(bus_name: String) -> HSlider:
 	var target_slider: HSlider = null
-	
+
 	match bus_name:
 		AudioConstants.BUS_MASTER:
 			target_slider = master_slider
@@ -765,5 +768,5 @@ func _get_slider_for_bus(bus_name: String) -> HSlider:
 			target_slider = rotor_slider
 		AudioConstants.BUS_SFX_MENU:
 			target_slider = menu_slider
-			
+
 	return target_slider
