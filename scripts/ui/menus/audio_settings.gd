@@ -273,11 +273,12 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 
 	# --- AUTO-MUTE ON ZERO VOLUME THRESHOLD ---
 	if volume == 0.0 and not AudioManager.get_muted(bus_name):
-		var active_slider := _get_slider_for_bus(bus_name)
+		# CIRCUIT BREAKER: Flip state immediately to stop rapid consecutive frame triggers
+		AudioManager.set_muted(bus_name, true)
 
+		var active_slider := _get_slider_for_bus(bus_name)
 		if active_slider and active_slider.has_focus():
 			if bus_name == AudioConstants.BUS_MASTER:
-				# Increment token to invalidate any previous concurrent runs
 				_master_zero_token += 1
 				var current_token: int = _master_zero_token
 
@@ -288,29 +289,26 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 				AudioManager.play_sfx("check")
 				await get_tree().create_timer(0.15).timeout
 
-				# TOKEN GATE: Only apply the zero reset if no newer volume adjustments happened
+				# TOKEN GATE: Only apply the zero reset if a newer drag didn't interrupt it
 				if current_token == _master_zero_token and bus_idx != -1:
 					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.0))
 			else:
 				AudioManager.play_sfx("check")
 
-		AudioManager.set_muted(bus_name, true)
-
 	# --- AUTO-UNMUTE ON NON-ZERO VOLUME THRESHOLD ---
 	elif volume > 0.0 and AudioManager.get_muted(bus_name):
-		var active_slider := _get_slider_for_bus(bus_name)
+		# CIRCUIT BREAKER: Flip state immediately (CodeRabbit's fix for the unmute path)
+		AudioManager.set_muted(bus_name, false)
 
+		var active_slider := _get_slider_for_bus(bus_name)
 		if active_slider and active_slider.has_focus():
 			if bus_name == AudioConstants.BUS_MASTER:
-				# Incrementing the token here instantly cancels any sleeping zero-out coroutines
 				_master_zero_token += 1
 				var bus_idx := AudioServer.get_bus_index(bus_name)
 				if bus_idx != -1:
 					AudioServer.set_bus_mute(bus_idx, false)
 					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
 			AudioManager.play_sfx("check")
-
-		AudioManager.set_muted(bus_name, false)
 
 
 ## Updates the visual Godot CheckButtons when Playwright mutes the AudioManager
