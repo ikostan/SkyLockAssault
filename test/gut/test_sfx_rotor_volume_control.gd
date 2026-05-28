@@ -71,7 +71,7 @@ func after_each() -> void:
 ## TC-Rotor-01 | Master unmuted, SFX unmuted, Rotor unmuted, Slider editable | Click and drag Rotor slider to new value | Slider value changes; AudioServer bus volume updates; AudioManager.rotors_volume updates; save_debounce_timer starts; After debounce, AudioManager.save_volumes() called; Log messages for volume change.
 ## :rtype: void
 func test_tc_rotor_01() -> void:
-	var new_value: float = 0.5
+	var new_value: float = 0.495  # Snaps perfectly to the 0.033 step configured in the .tscn
 	audio_instance.rotor_slider.value = new_value  # Simulate drag
 	assert_eq(audio_instance.rotor_slider.value, new_value)
 	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("SFX_Rotors")), linear_to_db(new_value), 0.0001)
@@ -85,6 +85,7 @@ func test_tc_rotor_01() -> void:
 ## :rtype: void
 func test_tc_rotor_02() -> void:
 	audio_instance.mute_rotor.button_pressed = false  # Simulate toggle to muted, emits toggled(false)
+	await get_tree().create_timer(0.2).timeout  # Allow the 0.15s background mute safety delay to complete
 	assert_false(audio_instance.mute_rotor.button_pressed)
 	assert_true(AudioManager.rotors_muted)
 	assert_false(audio_instance.rotor_slider.editable)
@@ -135,6 +136,9 @@ func test_tc_rotor_05() -> void:
 	audio_instance._on_rotor_mute_gui_input(event)  # Simulate click on mute button
 	if not AudioManager.master_muted and not AudioManager.sfx_muted:  # If not handled (no warning), simulate propagation to toggle
 		audio_instance.mute_rotor.button_pressed = not was_pressed
+	
+	await get_tree().create_timer(0.2).timeout  # Allow the 0.15s background mute safety delay to complete
+	
 	assert_false(audio_instance.mute_rotor.button_pressed)  # Toggled to muted
 	assert_true(AudioManager.rotors_muted)  # Toggled
 	assert_false(audio_instance.rotor_slider.editable)
