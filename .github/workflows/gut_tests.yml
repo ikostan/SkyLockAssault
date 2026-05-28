@@ -30,7 +30,7 @@ jobs:
           mv addons/Gut-9.5.0/addons/gut addons/gut
       - name: "Initialize Project and UIDs"
         run: |
-          ./godot --headless --editor --quit --path .
+          ./godot --headless --audio-driver Dummy --import --path .
       - name: "Run GUT Tests"
         continue-on-error: false  # Explicit no continue on error (default, but for clarity).
         run: |
