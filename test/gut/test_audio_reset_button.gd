@@ -240,7 +240,9 @@ func test_tc_reset_03() -> void:
 	assert_true(audio_instance.master_slider.editable)
 
 
-## TC-Reset-04 | Master muted, disabling others; Others mixed; Volumes 0.5; UI: master mute unpressed, master slider not editable, others disabled/not editable. | Click the Reset button. | All muted false; All volumes 1.0; apply/save called; UI: all mute pressed, sliders 1.0 editable; child controls enabled; Log message.
+## TC-Reset-04 | Master muted, disabling others; Others mixed; Volumes 0.5; UI: master mute unpressed, master slider not editable, others disabled/not editable. |
+## Click the Reset button. | All muted false; All volumes 1.0; apply/save called; UI: all mute pressed, sliders 1.0 editable;
+## child controls enabled; Log message.
 ## :rtype: void
 func test_tc_reset_04() -> void:
 	AudioManager.master_muted = true
@@ -265,15 +267,12 @@ func test_tc_reset_04() -> void:
 	assert_true(audio_instance.mute_sfx.disabled)
 	assert_false(audio_instance.sfx_slider.editable)
 	
-	# Reset (Temporarily isolate volume signals to prevent headless asset load crashes)
-	if AudioManager.volume_changed.is_connected(audio_instance._on_global_volume_changed):
-		AudioManager.volume_changed.disconnect(audio_instance._on_global_volume_changed)
+	# FIX: Release focus from master_slider to block the focus guard from running play_sfx() headlessly
+	if audio_instance.master_slider.has_focus():
+		audio_instance.master_slider.release_focus()
 		
+	# Reset
 	audio_instance._on_audio_reset_button_pressed()
-	
-	if not AudioManager.volume_changed.is_connected(audio_instance._on_global_volume_changed):
-		AudioManager.volume_changed.connect(audio_instance._on_global_volume_changed)
-	
 	# Checks
 	assert_false(AudioManager.master_muted)
 	assert_true(audio_instance.mute_master.button_pressed)
