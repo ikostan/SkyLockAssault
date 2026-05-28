@@ -42,7 +42,7 @@ jobs:
       - name: "Create Export Directories"
         run: |
           mkdir -p export/web_thread_off
-
+      # yamllint disable rule:line-length
       - name: "Export Godot to Web"
         id: "export"
         uses: "firebelley/godot-export@930577654862a320eef793f399ee911b4479efb9"
@@ -60,7 +60,7 @@ jobs:
       - name: "Flatten Export Directory"
         run: |
           bash ./.github/scripts/flatten_export.sh "export/web_thread_off" "Web_thread_off"
-
+      # yamllint enable rule:line-length
       - name: "List Export Directory Contents"
         run: |
           ls -la export/web_thread_off
