@@ -3,8 +3,7 @@
 ## test_audio_settings_comprehensive.gd
 ##
 ## Comprehensive verification suite for Feature Task #724.
-## Validates the user focus-driven auto-mute threshold loops, 
-## idempotency constraints, and upward unmute state machine cycles.
+## Validates focus-driven auto-mute threshold loops without timing fragility.
 
 extends "res://addons/gut/test.gd"
 
@@ -17,10 +16,10 @@ var audio_instance: Control
 func before_each() -> void:
 	Globals.set_test_encryption_key()
 	
-	# Force baseline reset on all global tracking parameters
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
-		AudioManager.set_volume(bus, 1.0)
-		AudioManager.set_muted(bus, false)
+		var bus_name: String = bus
+		AudioManager.set_volume(bus_name, 1.0)
+		AudioManager.set_muted(bus_name, false)
 	AudioManager.apply_all_volumes()
 	
 	_clear_pool_players()
@@ -43,32 +42,44 @@ func after_each() -> void:
 ## Silences active audio signals and strips streams from the reuse pool
 ## :rtype: void
 func _clear_pool_players() -> void:
-	for player: AudioStreamPlayer in AudioManager._sfx_pool:
-		player.stop()
-		player.stream = null
+	for player in AudioManager._sfx_pool:
+		var p: AudioStreamPlayer = player
+		p.stop()
+		p.stream = null
 
 
 ## Inspects if any object channel within the player pool is actively streaming audio bytes
 ## :rtype: bool
 func _is_sound_playing() -> bool:
-	for player: AudioStreamPlayer in AudioManager._sfx_pool:
-		if player.playing:
+	for player in AudioManager._sfx_pool:
+		var p: AudioStreamPlayer = player
+		if p.playing:
 			return true
 	return false
 
 
+## Helper to dynamically calculate safety wait margins from production script constants
+## :rtype: float
+func _get_safety_wait_time() -> float:
+	var delay: float = audio_instance.MUTE_HARDWARE_DELAY
+	return delay + 0.05
+
+
 # ==========================================================================
-# 1. MANUAL INTERACTION BOUNDS (TC-AM-001 to TC-AM-006)
+# 1. MANUAL INTERACTION BOUNDS WITH EPSILON (TC-AM-001 to TC-AM-006)
 # ==========================================================================
 
 func test_tc_am_001_master_manual_mute() -> void:
 	var slider: HSlider = audio_instance.master_slider
 	var button: CheckButton = audio_instance.mute_master
+	var wait_time: float = _get_safety_wait_time()
 	slider.grab_focus()
 	_clear_pool_players()
 	
-	AudioManager.set_volume(AudioConstants.BUS_MASTER, 0.0)
-	await get_tree().create_timer(0.2).timeout
+	# Test using the exact epsilon boundary instead of absolute 0.0
+	var threshold: float = audio_instance.AUTO_MUTE_VOLUME_THRESHOLD
+	AudioManager.set_volume(AudioConstants.BUS_MASTER, threshold)
+	await get_tree().create_timer(wait_time).timeout
 	
 	assert_true(AudioManager.get_muted(AudioConstants.BUS_MASTER))
 	assert_false(button.button_pressed)
@@ -81,7 +92,8 @@ func test_tc_am_002_music_manual_mute() -> void:
 	slider.grab_focus()
 	_clear_pool_players()
 	
-	AudioManager.set_volume(AudioConstants.BUS_MUSIC, 0.0)
+	var threshold: float = audio_instance.AUTO_MUTE_VOLUME_THRESHOLD
+	AudioManager.set_volume(AudioConstants.BUS_MUSIC, threshold)
 	await get_tree().process_frame
 	
 	assert_true(AudioManager.get_muted(AudioConstants.BUS_MUSIC))
@@ -95,7 +107,8 @@ func test_tc_am_003_sfx_manual_mute() -> void:
 	slider.grab_focus()
 	_clear_pool_players()
 	
-	AudioManager.set_volume(AudioConstants.BUS_SFX, 0.0)
+	var threshold: float = audio_instance.AUTO_MUTE_VOLUME_THRESHOLD
+	AudioManager.set_volume(AudioConstants.BUS_SFX, threshold)
 	await get_tree().process_frame
 	
 	assert_true(AudioManager.get_muted(AudioConstants.BUS_SFX))
@@ -109,7 +122,8 @@ func test_tc_am_004_weapon_manual_mute() -> void:
 	slider.grab_focus()
 	_clear_pool_players()
 	
-	AudioManager.set_volume(AudioConstants.BUS_SFX_WEAPON, 0.0)
+	var threshold: float = audio_instance.AUTO_MUTE_VOLUME_THRESHOLD
+	AudioManager.set_volume(AudioConstants.BUS_SFX_WEAPON, threshold)
 	await get_tree().process_frame
 	
 	assert_true(AudioManager.get_muted(AudioConstants.BUS_SFX_WEAPON))
@@ -123,7 +137,8 @@ func test_tc_am_005_rotors_manual_mute() -> void:
 	slider.grab_focus()
 	_clear_pool_players()
 	
-	AudioManager.set_volume(AudioConstants.BUS_SFX_ROTORS, 0.0)
+	var threshold: float = audio_instance.AUTO_MUTE_VOLUME_THRESHOLD
+	AudioManager.set_volume(AudioConstants.BUS_SFX_ROTORS, threshold)
 	await get_tree().process_frame
 	
 	assert_true(AudioManager.get_muted(AudioConstants.BUS_SFX_ROTORS))
@@ -137,7 +152,8 @@ func test_tc_am_006_menu_manual_mute() -> void:
 	slider.grab_focus()
 	_clear_pool_players()
 	
-	AudioManager.set_volume(AudioConstants.BUS_SFX_MENU, 0.0)
+	var threshold: float = audio_instance.AUTO_MUTE_VOLUME_THRESHOLD
+	AudioManager.set_volume(AudioConstants.BUS_SFX_MENU, threshold)
 	await get_tree().process_frame
 	
 	assert_true(AudioManager.get_muted(AudioConstants.BUS_SFX_MENU))
@@ -152,12 +168,14 @@ func test_tc_am_006_menu_manual_mute() -> void:
 func test_tc_am_007_master_automation_silence() -> void:
 	var slider: HSlider = audio_instance.master_slider
 	var button: CheckButton = audio_instance.mute_master
+	var wait_time: float = _get_safety_wait_time()
 	if slider.has_focus():
 		slider.release_focus()
 	_clear_pool_players()
 	
-	AudioManager.set_volume(AudioConstants.BUS_MASTER, 0.0)
-	await get_tree().create_timer(0.2).timeout
+	var threshold: float = audio_instance.AUTO_MUTE_VOLUME_THRESHOLD
+	AudioManager.set_volume(AudioConstants.BUS_MASTER, threshold)
+	await get_tree().create_timer(wait_time).timeout
 	
 	assert_true(AudioManager.get_muted(AudioConstants.BUS_MASTER))
 	assert_false(button.button_pressed)
@@ -171,7 +189,8 @@ func test_tc_am_008_music_automation_silence() -> void:
 		slider.release_focus()
 	_clear_pool_players()
 	
-	AudioManager.set_volume(AudioConstants.BUS_MUSIC, 0.0)
+	var threshold: float = audio_instance.AUTO_MUTE_VOLUME_THRESHOLD
+	AudioManager.set_volume(AudioConstants.BUS_MUSIC, threshold)
 	await get_tree().process_frame
 	
 	assert_true(AudioManager.get_muted(AudioConstants.BUS_MUSIC))
@@ -186,7 +205,8 @@ func test_tc_am_009_sfx_automation_silence() -> void:
 		slider.release_focus()
 	_clear_pool_players()
 	
-	AudioManager.set_volume(AudioConstants.BUS_SFX, 0.0)
+	var threshold: float = audio_instance.AUTO_MUTE_VOLUME_THRESHOLD
+	AudioManager.set_volume(AudioConstants.BUS_SFX, threshold)
 	await get_tree().process_frame
 	
 	assert_true(AudioManager.get_muted(AudioConstants.BUS_SFX))
@@ -201,7 +221,8 @@ func test_tc_am_010_weapon_automation_silence() -> void:
 		slider.release_focus()
 	_clear_pool_players()
 	
-	AudioManager.set_volume(AudioConstants.BUS_SFX_WEAPON, 0.0)
+	var threshold: float = audio_instance.AUTO_MUTE_VOLUME_THRESHOLD
+	AudioManager.set_volume(AudioConstants.BUS_SFX_WEAPON, threshold)
 	await get_tree().process_frame
 	
 	assert_true(AudioManager.get_muted(AudioConstants.BUS_SFX_WEAPON))
@@ -216,7 +237,8 @@ func test_tc_am_011_rotors_automation_silence() -> void:
 		slider.release_focus()
 	_clear_pool_players()
 	
-	AudioManager.set_volume(AudioConstants.BUS_SFX_ROTORS, 0.0)
+	var threshold: float = audio_instance.AUTO_MUTE_VOLUME_THRESHOLD
+	AudioManager.set_volume(AudioConstants.BUS_SFX_ROTORS, threshold)
 	await get_tree().process_frame
 	
 	assert_true(AudioManager.get_muted(AudioConstants.BUS_SFX_ROTORS))
@@ -231,7 +253,8 @@ func test_tc_am_012_menu_automation_silence() -> void:
 		slider.release_focus()
 	_clear_pool_players()
 	
-	AudioManager.set_volume(AudioConstants.BUS_SFX_MENU, 0.0)
+	var threshold: float = audio_instance.AUTO_MUTE_VOLUME_THRESHOLD
+	AudioManager.set_volume(AudioConstants.BUS_SFX_MENU, threshold)
 	await get_tree().process_frame
 	
 	assert_true(AudioManager.get_muted(AudioConstants.BUS_SFX_MENU))
@@ -245,19 +268,20 @@ func test_tc_am_012_menu_automation_silence() -> void:
 
 func test_tc_am_013_idempotent_zero_update() -> void:
 	var slider: HSlider = audio_instance.master_slider
+	var wait_time: float = _get_safety_wait_time()
 	if slider.has_focus():
 		slider.release_focus()
 		
-	# Initial auto-mute transition
-	AudioManager.set_volume(AudioConstants.BUS_MASTER, 0.0)
-	await get_tree().create_timer(0.2).timeout
+	var threshold: float = audio_instance.AUTO_MUTE_VOLUME_THRESHOLD
+	AudioManager.set_volume(AudioConstants.BUS_MASTER, threshold)
+	await get_tree().create_timer(wait_time).timeout
 	_clear_pool_players()
 	
-	# Emit duplicate/redundant programmatic 0.0 value event payload
+	# Emit duplicate near-zero update
 	AudioManager.volume_changed.emit(AudioConstants.BUS_MASTER, 0.0)
 	await get_tree().process_frame
 	
-	assert_false(_is_sound_playing(), "Redundant zero signals must not fire audio clips.")
+	assert_false(_is_sound_playing(), "Redundant threshold signals must remain silent.")
 
 
 # ==========================================================================
@@ -267,16 +291,18 @@ func test_tc_am_013_idempotent_zero_update() -> void:
 func test_tc_am_014_upward_unmute_transition() -> void:
 	var slider: HSlider = audio_instance.master_slider
 	var button: CheckButton = audio_instance.mute_master
+	var wait_time: float = _get_safety_wait_time()
 	slider.grab_focus()
 	
-	# Drive to absolute zero to trip the initial auto-mute condition
-	AudioManager.set_volume(AudioConstants.BUS_MASTER, 0.0)
-	await get_tree().create_timer(0.2).timeout
+	var threshold: float = audio_instance.AUTO_MUTE_VOLUME_THRESHOLD
+	AudioManager.set_volume(AudioConstants.BUS_MASTER, threshold)
+	await get_tree().create_timer(wait_time).timeout
 	_clear_pool_players()
 	
-	# Slide the tracker back upward past the zero threshold boundary
-	AudioManager.set_volume(AudioConstants.BUS_MASTER, 0.15)
+	# Transition upward clear of the threshold target limit
+	var high_vol: float = threshold + 0.15
+	AudioManager.set_volume(AudioConstants.BUS_MASTER, high_vol)
 	await get_tree().process_frame
 	
-	assert_false(AudioManager.get_muted(AudioConstants.BUS_MASTER), "Upward volume change must naturally unset the mute state.")
-	assert_true(button.button_pressed, "The CheckButton widget must visually toggle back to checked.")
+	assert_false(AudioManager.get_muted(AudioConstants.BUS_MASTER))
+	assert_true(button.button_pressed)
