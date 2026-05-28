@@ -68,10 +68,12 @@ func after_each() -> void:
 
 
 ## TC-Weapon-01 | Master unmuted, SFX unmuted, Weapon unmuted, Slider editable | Click and drag Weapon slider to new value |
-## Slider value changes; AudioServer bus volume updates; AudioManager.weapon_volume updates; save_debounce_timer starts; After debounce, AudioManager.save_volumes() called; Log messages for volume change.
+## Slider value changes; AudioServer bus volume updates; AudioManager.weapon_volume updates; save_debounce_timer starts; After debounce, AudioManager.save_volumes() called;
+## Log messages for volume change.
 ## :rtype: void
 func test_tc_weapon_01() -> void:
 	var new_value: float = 0.495  # Snaps perfectly to the 0.033 step configured in the .tscn
+	audio_instance.weapon_slider.grab_focus()  # Simulate active player interaction by capturing focus
 	audio_instance.weapon_slider.value = new_value  # Simulate drag
 	assert_eq(audio_instance.weapon_slider.value, new_value)
 	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("SFX_Weapon")), linear_to_db(new_value), 0.0001)
