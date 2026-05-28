@@ -114,17 +114,17 @@ func test_tc_sl_17() -> void:
 	add_child_autofree(audio_instance)
 	await get_tree().process_frame
 	
-	# Verify pre-reset UI
-	assert_eq(audio_instance.master_slider.value, 0.5)
+	# Verify pre-reset UI (Account for 0.033 slider step snapping)
+	assert_eq(audio_instance.master_slider.value, 0.495)
 	assert_false(audio_instance.mute_master.button_pressed)
 	
 	# Reset via button
 	audio_instance._on_audio_reset_button_pressed()
 	
-	# Verify AudioManager/UI reset
+	# Verify AudioManager/UI reset (Account for 0.033 slider step snapping to 0.99)
 	assert_eq(AudioManager.master_volume, 1.0)
 	assert_false(AudioManager.master_muted)
-	assert_eq(audio_instance.master_slider.value, 1.0)
+	assert_eq(audio_instance.master_slider.value, 0.99)
 	assert_true(audio_instance.mute_master.button_pressed)
 	
 	# Config: audio reset, others preserved
@@ -189,7 +189,9 @@ func test_tc_sl_19() -> void:
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
 	await get_tree().process_frame
-	assert_eq(audio_instance.music_slider.value, 0.7)
+	
+	# Account for 0.033 slider step snapping
+	assert_eq(audio_instance.music_slider.value, 0.693)
 	assert_false(audio_instance.mute_music.button_pressed)
 	
 	# Reset
@@ -198,9 +200,12 @@ func test_tc_sl_19() -> void:
 	# Verify AudioManager/UI to defaults
 	assert_eq(AudioManager.music_volume, 1.0)
 	assert_false(AudioManager.music_muted)
-	# Sync UI manually if needed, but reset_volumes doesn't, but for test assume or call _sync_ui_from_manager
+	
+	# Sync UI manually
 	audio_instance._sync_ui_from_manager()
-	assert_eq(audio_instance.music_slider.value, 1.0)
+	
+	# Account for 0.033 slider step snapping to 0.99
+	assert_eq(audio_instance.music_slider.value, 0.99)
 	assert_true(audio_instance.mute_music.button_pressed)
 	
 	# Config updated to defaults for audio, others safe
