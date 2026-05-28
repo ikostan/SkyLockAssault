@@ -99,6 +99,11 @@ func test_tc_reset_01() -> void:
 	assert_false(audio_instance.mute_sfx.button_pressed)
 	assert_false(audio_instance.weapon_slider.editable)
 	
+	# FIX: Release focus from the slider so the focus guard blocks 
+	# programmatic reset changes from trying to stream UI sounds headlessly.
+	if audio_instance.master_slider.has_focus():
+		audio_instance.master_slider.release_focus()
+
 	# Simulate reset button press
 	audio_instance._on_audio_reset_button_pressed()
 	
