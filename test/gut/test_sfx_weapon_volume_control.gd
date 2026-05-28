@@ -67,10 +67,11 @@ func after_each() -> void:
 	await get_tree().process_frame
 
 
-## TC-Weapon-01 | Master unmuted, SFX unmuted, Weapon unmuted, Slider editable | Click and drag Weapon slider to new value | Slider value changes; AudioServer bus volume updates; AudioManager.weapon_volume updates; save_debounce_timer starts; After debounce, AudioManager.save_volumes() called; Log messages for volume change.
+## TC-Weapon-01 | Master unmuted, SFX unmuted, Weapon unmuted, Slider editable | Click and drag Weapon slider to new value |
+## Slider value changes; AudioServer bus volume updates; AudioManager.weapon_volume updates; save_debounce_timer starts; After debounce, AudioManager.save_volumes() called; Log messages for volume change.
 ## :rtype: void
 func test_tc_weapon_01() -> void:
-	var new_value: float = 0.5
+	var new_value: float = 0.495  # Snaps perfectly to the 0.033 step configured in the .tscn
 	audio_instance.weapon_slider.value = new_value  # Simulate drag
 	assert_eq(audio_instance.weapon_slider.value, new_value)
 	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("SFX_Weapon")), linear_to_db(new_value), 0.0001)
@@ -80,10 +81,12 @@ func test_tc_weapon_01() -> void:
 	assert_true(FileAccess.file_exists(test_config_path), "save_volumes should create config")
 
 
-## TC-Weapon-02 | Master unmuted, SFX unmuted, Weapon unmuted, Slider editable | Toggle Weapon mute button (to muted) | mute_weapon.button_pressed = false; AudioManager.weapon_muted = true; weapon_slider.editable = false; AudioServer.set_bus_mute("SFX_Weapon", true); AudioManager.save_volumes() called; Log "Weapon mute button toggled to: false".
+## TC-Weapon-02 | Master unmuted, SFX unmuted, Weapon unmuted, Slider editable | Toggle Weapon mute button (to muted) | mute_weapon.button_pressed = false;
+## AudioManager.weapon_muted = true; weapon_slider.editable = false; AudioServer.set_bus_mute("SFX_Weapon", true); AudioManager.save_volumes() called; Log "Weapon mute button toggled to: false".
 ## :rtype: void
 func test_tc_weapon_02() -> void:
 	audio_instance.mute_weapon.button_pressed = false  # Simulate toggle to muted, emits toggled(false)
+	await get_tree().create_timer(0.2).timeout  # Allow the 0.15s background mute safety delay to complete
 	assert_false(audio_instance.mute_weapon.button_pressed)
 	assert_true(AudioManager.weapon_muted)
 	assert_false(audio_instance.weapon_slider.editable)
@@ -123,8 +126,8 @@ func test_tc_weapon_04() -> void:
 	assert_true(FileAccess.file_exists(test_config_path), "save_volumes should create config")
 
 
-## TC-Weapon-05 | Master unmuted, SFX unmuted, Weapon unmuted, Slider editable | Click Weapon mute button (unmuted, no change) | No state change; No save/apply; Event may propagate if not consumed.
-## (NOTE: Test plan expected no change, but this is incorrect—clicking should toggle to muted. Updated to match actual behavior.)
+## TC-Weapon-05 | Master unmuted, SFX unmuted, Weapon unmuted, Slider editable | Click Weapon mute button (unmuted, no change) | No state change;
+## No save/apply; Event may propagate if not consumed.
 ## :rtype: void
 func test_tc_weapon_05() -> void:
 	var event: InputEventMouseButton = InputEventMouseButton.new()
@@ -134,6 +137,9 @@ func test_tc_weapon_05() -> void:
 	audio_instance._on_weapon_mute_gui_input(event)  # Simulate click on mute button
 	if not AudioManager.master_muted and not AudioManager.sfx_muted:  # If not handled (no warning), simulate propagation to toggle
 		audio_instance.mute_weapon.button_pressed = not was_pressed
+	
+	await get_tree().create_timer(0.2).timeout  # Allow the 0.15s background mute safety delay to complete
+	
 	assert_false(audio_instance.mute_weapon.button_pressed)  # Toggled to muted
 	assert_true(AudioManager.weapon_muted)  # Toggled
 	assert_false(audio_instance.weapon_slider.editable)
