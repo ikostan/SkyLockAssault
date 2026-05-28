@@ -653,7 +653,7 @@ func _reset_sfx_warning_shown() -> void:
 
 
 ## Auxiliary lookup tool to map string-based audio buses to their respective scene tree sliders.
-## Refactored with a single exit point to strictly satisfy gdlint max-returns constraints.
+## Refactored with an explicit default fallback branch to capture configuration mismatches early.
 ## :param bus_name: The constant identifier name of the audio channel.
 ## :type bus_name: String
 ## :rtype: HSlider
@@ -673,6 +673,11 @@ func _get_slider_for_bus(bus_name: String) -> HSlider:
 			target_slider = rotor_slider
 		AudioConstants.BUS_SFX_MENU:
 			target_slider = menu_slider
+		_:
+			Globals.log_message(
+				"Unknown bus_name in _get_slider_for_bus: " + bus_name, Globals.LogLevel.WARNING
+			)
+			assert(false, "Unknown audio bus requested for slider lookup: " + bus_name)
 
 	return target_slider
 
@@ -757,8 +762,9 @@ func _on_menu_mute_toggled(toggled_on: bool) -> void:
 	await _execute_bus_mute_toggle(AudioConstants.BUS_SFX_MENU, toggled_on)
 
 
-## Auxiliary lookup tool to map string-based audio buses to their
-## respective scene tree mute buttons.
+## Auxiliary lookup tool to map string-based audio buses to their respective scene
+## tree mute buttons.
+## Refactored with an explicit default fallback branch to capture configuration mismatches early.
 ## :param bus_name: The constant identifier name of the audio channel.
 ## :type bus_name: String
 ## :rtype: CheckButton
@@ -778,5 +784,11 @@ func _get_mute_button_for_bus(bus_name: String) -> CheckButton:
 			target_button = mute_rotor
 		AudioConstants.BUS_SFX_MENU:
 			target_button = mute_menu
+		_:
+			Globals.log_message(
+				"Unknown bus_name in _get_mute_button_for_bus: " + bus_name,
+				Globals.LogLevel.WARNING
+			)
+			assert(false, "Unknown audio bus requested for mute button lookup: " + bus_name)
 
 	return target_button
