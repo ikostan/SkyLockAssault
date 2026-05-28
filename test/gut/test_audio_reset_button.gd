@@ -18,6 +18,11 @@ var test_config_path: String = "user://test_reset.cfg"
 func before_each() -> void:
 	if FileAccess.file_exists(test_config_path):
 		DirAccess.remove_absolute(test_config_path)
+		
+	# FIX: Override the empty project salt with a valid test key 
+	# to ensure encrypted file operations do not trigger core engine errors.
+	Globals.set_test_encryption_key()
+	
 	AudioManager.master_muted = false
 	AudioManager.music_muted = false
 	AudioManager.sfx_muted = false
@@ -30,7 +35,8 @@ func before_each() -> void:
 	AudioManager.rotors_volume = 1.0
 	AudioManager.apply_all_volumes()  # Sync buses early
 	AudioManager.load_volumes(test_config_path)  # Load if exists (should be defaults)
-	AudioManager.current_config_path = test_config_path  # Add this line
+	AudioManager.current_config_path = test_config_path
+	
 	# Add audio buses if not exist
 	if AudioServer.get_bus_index(AudioConstants.BUS_MASTER) == -1:
 		AudioServer.add_bus(0)
