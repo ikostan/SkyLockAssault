@@ -675,8 +675,17 @@ func _get_slider_for_bus(bus_name: String) -> HSlider:
 ## Centralized pipeline handler for all UI bus mute toggles.
 ## Eliminates code duplication and provides a unified hardware safety window.
 func _execute_bus_mute_toggle(bus_name: String, toggled_on: bool) -> void:
-	# Dispatch the audio confirmation effect instantly
-	AudioManager.play_sfx("check")
+	var button: CheckButton = _get_mute_button_for_bus(bus_name)
+	var slider: HSlider = _get_slider_for_bus(bus_name)
+
+	# Focus Gate: Only play audio feedback if the interaction came from a focused UI element
+	# This guarantees that automated background sync operations remain completely silent.
+	var has_user_focus: bool = (
+		(button != null and button.has_focus()) or (slider != null and slider.has_focus())
+	)
+
+	if has_user_focus:
+		AudioManager.play_sfx("check")
 
 	# Update variables and UI locks immediately for snappy interface response
 	AudioManager.set_muted(bus_name, not toggled_on)
@@ -684,7 +693,7 @@ func _execute_bus_mute_toggle(bus_name: String, toggled_on: bool) -> void:
 
 	# ENGINE WORKAROUND: Defer hardware cutoffs slightly when muting
 	# to allow the confirmation click to finish streaming to the audio device.
-	if not toggled_on:
+	if not toggled_on and has_user_focus:
 		await get_tree().create_timer(MUTE_HARDWARE_DELAY).timeout
 
 	# Read the newest states to safely update the backend mixing matrix
@@ -741,3 +750,28 @@ func _on_rotor_mute_toggled(toggled_on: bool) -> void:
 ## :rtype: void
 func _on_menu_mute_toggled(toggled_on: bool) -> void:
 	await _execute_bus_mute_toggle(AudioConstants.BUS_SFX_MENU, toggled_on)
+
+
+## Auxiliary lookup tool to map string-based audio buses to their
+## respective scene tree mute buttons.
+## :param bus_name: The constant identifier name of the audio channel.
+## :type bus_name: String
+## :rtype: CheckButton
+func _get_mute_button_for_bus(bus_name: String) -> CheckButton:
+	var target_button: CheckButton = null
+
+	match bus_name:
+		AudioConstants.BUS_MASTER:
+			target_button = mute_master
+		AudioConstants.BUS_MUSIC:
+			target_button = mute_music
+		AudioConstants.BUS_SFX:
+			target_button = mute_sfx
+		AudioConstants.BUS_SFX_WEAPON:
+			target_button = mute_weapon
+		AudioConstants.BUS_SFX_ROTORS:
+			target_button = mute_rotor
+		AudioConstants.BUS_SFX_MENU:
+			target_button = mute_menu
+
+	return target_button
