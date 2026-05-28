@@ -9,6 +9,7 @@
 extends Control
 
 const MUTE_HARDWARE_DELAY: float = 0.15  # Shared Constant
+const AUTO_MUTE_VOLUME_THRESHOLD: float = 0.001
 
 # Test flags for warning popups
 var master_warning_shown: bool = false
@@ -257,7 +258,13 @@ func _update_ui_interactivity() -> void:
 
 
 ## Updates the visual Godot HSliders when Playwright or UI components alter the AudioManager state.
-## Maintained with balanced auto-mute and auto-unmute thresholds for seamless state tracking.
+## Maintained with balanced near-zero auto-mute and auto-unmute thresholds for seamless
+## state tracking.
+## :param bus_name: The constant identifier name of the audio channel.
+## :type bus_name: String
+## :param volume: The current linear volume scale level (0.0 to 1.0).
+## :type volume: float
+## :rtype: void
 func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 	match bus_name:
 		AudioConstants.BUS_MASTER:
@@ -273,26 +280,24 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 		AudioConstants.BUS_SFX_MENU:
 			menu_slider.set_value_no_signal(volume)
 
-	# --- AUTO-MUTE ON ZERO VOLUME THRESHOLD ---
-	if volume == 0.0 and not AudioManager.get_muted(bus_name):
+	# --- AUTO-MUTE ON NEAR-ZERO VOLUME THRESHOLD ---
+	if volume <= AUTO_MUTE_VOLUME_THRESHOLD and not AudioManager.get_muted(bus_name):
 		# CIRCUIT BREAKER: Flip state immediately to stop rapid consecutive frame triggers
 		AudioManager.set_muted(bus_name, true)
 
-		var active_slider := _get_slider_for_bus(bus_name)
+		var active_slider: HSlider = _get_slider_for_bus(bus_name)
 		if active_slider and active_slider.has_focus():
 			if bus_name == AudioConstants.BUS_MASTER:
 				_master_zero_token += 1
 				var current_token: int = _master_zero_token
 
-				var bus_idx := AudioServer.get_bus_index(bus_name)
+				var bus_idx: int = AudioServer.get_bus_index(bus_name)
 				if bus_idx != -1:
 					# Keep 0.15 here since this is a temporary linear volume level
 					# to let the click sound audibly stream out before flattening to 0.0
 					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.15))
 
 				AudioManager.play_sfx("check")
-
-				# REFACTOR: Use the unified constant for the background timer delay
 				await get_tree().create_timer(MUTE_HARDWARE_DELAY).timeout
 
 				# TOKEN GATE: Only apply the zero reset if a newer drag didn't interrupt it
@@ -302,15 +307,15 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 				AudioManager.play_sfx("check")
 
 	# --- AUTO-UNMUTE ON NON-ZERO VOLUME THRESHOLD ---
-	elif volume > 0.0 and AudioManager.get_muted(bus_name):
+	elif volume > AUTO_MUTE_VOLUME_THRESHOLD and AudioManager.get_muted(bus_name):
 		# CIRCUIT BREAKER: Flip state immediately to short-circuit rapid consecutive frame updates
 		AudioManager.set_muted(bus_name, false)
 
-		var active_slider := _get_slider_for_bus(bus_name)
+		var active_slider: HSlider = _get_slider_for_bus(bus_name)
 		if active_slider and active_slider.has_focus():
 			if bus_name == AudioConstants.BUS_MASTER:
 				_master_zero_token += 1
-				var bus_idx := AudioServer.get_bus_index(bus_name)
+				var bus_idx: int = AudioServer.get_bus_index(bus_name)
 				if bus_idx != -1:
 					AudioServer.set_bus_mute(bus_idx, false)
 					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
