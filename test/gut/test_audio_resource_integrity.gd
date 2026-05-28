@@ -37,14 +37,10 @@ func test_audio_assets_integrity() -> void:
 ## :type dir_path: String
 ## :rtype: void
 func _scan_directory_recursive(dir_path: String) -> void:
-	# SOFT GUARDRAIL: Check directory existence to reduce maintenance brittleness
-	if not DirAccess.dir_exists_absolute(dir_path):
-		print("[SKIPPED] Optional target asset subdirectory is missing or moved: %s" % dir_path)
-		return
-
+	# FIX: Use DirAccess.open directly to verify folder accessibility headlessly
 	var dir: DirAccess = DirAccess.open(dir_path)
 	if not dir:
-		print("[WARNING] Could not open valid directory track path: %s" % dir_path)
+		print("[SKIPPED] Optional target asset subdirectory is missing, moved, or unreachable: %s" % dir_path)
 		return
 		
 	dir.list_dir_begin()
