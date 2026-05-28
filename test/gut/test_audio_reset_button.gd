@@ -264,8 +264,16 @@ func test_tc_reset_04() -> void:
 	assert_false(audio_instance.music_slider.editable)
 	assert_true(audio_instance.mute_sfx.disabled)
 	assert_false(audio_instance.sfx_slider.editable)
-	# Reset
+	
+	# Reset (Temporarily isolate volume signals to prevent headless asset load crashes)
+	if AudioManager.volume_changed.is_connected(audio_instance._on_global_volume_changed):
+		AudioManager.volume_changed.disconnect(audio_instance._on_global_volume_changed)
+		
 	audio_instance._on_audio_reset_button_pressed()
+	
+	if not AudioManager.volume_changed.is_connected(audio_instance._on_global_volume_changed):
+		AudioManager.volume_changed.connect(audio_instance._on_global_volume_changed)
+	
 	# Checks
 	assert_false(AudioManager.master_muted)
 	assert_true(audio_instance.mute_master.button_pressed)
