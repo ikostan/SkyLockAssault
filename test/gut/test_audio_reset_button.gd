@@ -73,7 +73,8 @@ func after_each() -> void:
 
 
 ## TC-Reset-01 | All audio buses muted; All volumes set to 0.5; UI reflects this. | Click the Reset button. |
-## All muted flags false; All volumes 1.0; apply_all_volumes/save_volumes called; UI updated: all mute buttons pressed, all sliders 1.0 and editable;
+## All muted flags false; All volumes 1.0; apply_all_volumes/save_volumes called;
+## UI updated: all mute buttons pressed, all sliders 1.0 and editable;
 ## _update_other_controls_ui called; Log message.
 ## :rtype: void
 func test_tc_reset_01() -> void:
@@ -99,11 +100,10 @@ func test_tc_reset_01() -> void:
 	assert_false(audio_instance.mute_sfx.button_pressed)
 	assert_false(audio_instance.weapon_slider.editable)
 	
-	# FIX: Release focus from the slider so the focus guard blocks 
-	# programmatic reset changes from trying to stream UI sounds headlessly.
-	if audio_instance.master_slider.has_focus():
-		audio_instance.master_slider.release_focus()
-
+	# Clear active viewport focus to short-circuit focus guards during reset
+	if get_viewport().get_focus_owner():
+		get_viewport().get_focus_owner().release_focus()
+		
 	# Simulate reset button press
 	audio_instance._on_audio_reset_button_pressed()
 	
@@ -156,7 +156,8 @@ func test_tc_reset_01() -> void:
 	assert_false(audio_instance.mute_rotor.disabled)
 
 
-## TC-Reset-02 | Mixed states: Master unmuted, Music muted, SFX unmuted, Weapon muted, Rotors unmuted; Volumes varied; UI reflects this. | Click the Reset button. | All muted flags false; All volumes 1.0; apply_all_volumes/save_volumes called; UI updated: all mute buttons pressed, all sliders 1.0 and editable; _update_other_controls_ui called; Log message.
+## TC-Reset-02 | Mixed states: Master unmuted, Music muted, SFX unmuted, Weapon muted, Rotors unmuted; Volumes varied; UI reflects this. | Click the Reset button. | All muted flags false; All volumes 1.0; apply_all_volumes/save_volumes called;
+## UI updated: all mute buttons pressed, all sliders 1.0 and editable; _update_other_controls_ui called; Log message.
 ## :rtype: void
 func test_tc_reset_02() -> void:
 	AudioManager.master_muted = false
@@ -188,6 +189,10 @@ func test_tc_reset_02() -> void:
 	assert_false(audio_instance.weapon_slider.editable)
 	assert_true(audio_instance.rotor_slider.editable)
 	
+	# Clear active viewport focus to short-circuit focus guards during reset
+	if get_viewport().get_focus_owner():
+		get_viewport().get_focus_owner().release_focus()
+		
 	# Reset
 	audio_instance._on_audio_reset_button_pressed()
 	
@@ -212,7 +217,8 @@ func test_tc_reset_02() -> void:
 	assert_false(audio_instance.mute_rotor.disabled)
 
 
-## TC-Reset-03 | All already at defaults: All muted=false, all volumes=1.0; UI reflects this. | Click the Reset button. | No state changes; apply_all_volumes/save_volumes called; UI unchanged; _update_other_controls_ui called; Log message.
+## TC-Reset-03 | All already at defaults: All muted=false, all volumes=1.0; UI reflects this. | Click the Reset button. | No state changes;
+## apply_all_volumes/save_volumes called; UI unchanged; _update_other_controls_ui called; Log message.
 ## :rtype: void
 func test_tc_reset_03() -> void:
 	audio_instance = audio_scene.instantiate() as Control
@@ -226,6 +232,10 @@ func test_tc_reset_03() -> void:
 	assert_eq(audio_instance.master_slider.value, 0.99)
 	assert_true(audio_instance.master_slider.editable)
 	
+	# Clear active viewport focus to short-circuit focus guards during reset
+	if get_viewport().get_focus_owner():
+		get_viewport().get_focus_owner().release_focus()
+		
 	# Reset
 	audio_instance._on_audio_reset_button_pressed()
 	
@@ -241,8 +251,7 @@ func test_tc_reset_03() -> void:
 
 
 ## TC-Reset-04 | Master muted, disabling others; Others mixed; Volumes 0.5; UI: master mute unpressed, master slider not editable, others disabled/not editable. |
-## Click the Reset button. | All muted false; All volumes 1.0; apply/save called; UI: all mute pressed, sliders 1.0 editable;
-## child controls enabled; Log message.
+## Click the Reset button. | All muted false; All volumes 1.0; apply/save called; UI: all mute pressed, sliders 1.0 editable; child controls enabled; Log message.
 ## :rtype: void
 func test_tc_reset_04() -> void:
 	AudioManager.master_muted = true
@@ -267,9 +276,9 @@ func test_tc_reset_04() -> void:
 	assert_true(audio_instance.mute_sfx.disabled)
 	assert_false(audio_instance.sfx_slider.editable)
 	
-	# FIX: Release focus from master_slider to block the focus guard from running play_sfx() headlessly
-	if audio_instance.master_slider.has_focus():
-		audio_instance.master_slider.release_focus()
+	# Clear active viewport focus to short-circuit focus guards during reset
+	if get_viewport().get_focus_owner():
+		get_viewport().get_focus_owner().release_focus()
 		
 	# Reset
 	audio_instance._on_audio_reset_button_pressed()
@@ -281,7 +290,9 @@ func test_tc_reset_04() -> void:
 	assert_true(audio_instance.music_slider.editable)
 
 
-## TC-Reset-05 | SFX muted, disabling weapon/rotors; Master unmuted, Music unmuted; Volumes 0.2; UI: sfx mute unpressed, sfx slider not editable, weapon/rotors disabled/not editable. | Click the Reset button. | All reset to unmuted 1.0; apply/save called; UI enabled; Log message.
+## TC-Reset-05 | SFX muted, disabling weapon/rotors; Master unmuted, Music unmuted; Volumes 0.2;
+## UI: sfx mute unpressed, sfx slider not editable, weapon/rotors disabled/not editable. | Click the Reset button. |
+## All reset to unmuted 1.0; apply/save called; UI enabled; Log message.
 ## :rtype: void
 func test_tc_reset_05() -> void:
 	AudioManager.master_muted = false
@@ -305,6 +316,11 @@ func test_tc_reset_05() -> void:
 	assert_false(audio_instance.weapon_slider.editable)
 	assert_true(audio_instance.mute_rotor.disabled)
 	assert_false(audio_instance.rotor_slider.editable)
+	
+	# Clear active viewport focus to short-circuit focus guards during reset
+	if get_viewport().get_focus_owner():
+		get_viewport().get_focus_owner().release_focus()
+		
 	# Reset
 	audio_instance._on_audio_reset_button_pressed()
 	# Checks
@@ -346,6 +362,10 @@ func test_tc_reset_06() -> void:
 	assert_false(audio_instance.mute_master.button_pressed)
 	assert_eq(audio_instance.master_slider.value, 0.396)
 	
+	# Clear active viewport focus to short-circuit focus guards during reset
+	if get_viewport().get_focus_owner():
+		get_viewport().get_focus_owner().release_focus()
+		
 	# Reset
 	audio_instance._on_audio_reset_button_pressed()
 	
