@@ -8,6 +8,8 @@
 
 extends Control
 
+const MUTE_HARDWARE_DELAY: float = 0.15  # Shared Constant
+
 # Test flags for warning popups
 var master_warning_shown: bool = false
 var sfx_warning_shown: bool = false
@@ -284,10 +286,14 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 
 				var bus_idx := AudioServer.get_bus_index(bus_name)
 				if bus_idx != -1:
+					# Keep 0.15 here since this is a temporary linear volume level
+					# to let the click sound audibly stream out before flattening to 0.0
 					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.15))
 
 				AudioManager.play_sfx("check")
-				await get_tree().create_timer(0.15).timeout
+
+				# REFACTOR: Use the unified constant for the background timer delay
+				await get_tree().create_timer(MUTE_HARDWARE_DELAY).timeout
 
 				# TOKEN GATE: Only apply the zero reset if a newer drag didn't interrupt it
 				if current_token == _master_zero_token and bus_idx != -1:
@@ -297,7 +303,7 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 
 	# --- AUTO-UNMUTE ON NON-ZERO VOLUME THRESHOLD ---
 	elif volume > 0.0 and AudioManager.get_muted(bus_name):
-		# CIRCUIT BREAKER: Flip state immediately (CodeRabbit's fix for the unmute path)
+		# CIRCUIT BREAKER: Flip state immediately to short-circuit rapid consecutive frame updates
 		AudioManager.set_muted(bus_name, false)
 
 		var active_slider := _get_slider_for_bus(bus_name)
@@ -384,34 +390,6 @@ func _on_master_volume_control_gui_input(event: InputEvent) -> void:
 	)
 
 
-# ==========================================================================
-# FIXED MUTE TOGGLE CALLBACKS (WITH BACKGROUND BUFFER DEFERRAL)
-# ==========================================================================
-
-
-## Handles Master Mute toggle mutations with buffer safety delays.
-func _on_master_mute_toggled(toggled_on: bool) -> void:
-	# Dispatch the audio confirmation effect instantly
-	AudioManager.play_sfx("check")
-
-	# Update internal variables and UI state immediately so the interface feels snappy
-	AudioManager.set_muted(AudioConstants.BUS_MASTER, not toggled_on)
-	_update_ui_interactivity()
-
-	# ENGINE WORKAROUND: If muting (toggled_on is false), defer the hardware bus cutoff
-	# by 0.15 seconds. This allows the audio mixing thread to stream check.wav to the
-	# sound card before the Master channel is completely flattened.
-	if not toggled_on:
-		await get_tree().create_timer(0.15).timeout
-
-	# Apply the volume state to the AudioServer. If the user quickly clicked back
-	# to unmute during the timer window, this reads the newest state safely.
-	AudioManager.apply_volume_to_bus(
-		AudioConstants.BUS_MASTER, AudioManager.master_volume, AudioManager.master_muted
-	)
-	AudioManager.save_volumes()
-
-
 # ==========================================
 # MUSIC VOLUME
 # ==========================================
@@ -425,23 +403,6 @@ func _on_music_volume_control_gui_input(event: InputEvent) -> void:
 		master_warning_dialog,
 		sfx_warning_dialog
 	)
-
-
-## Handles Music Mute toggle mutations.
-func _on_music_mute_toggled(toggled_on: bool) -> void:
-	AudioManager.play_sfx("check")
-	AudioManager.set_muted(AudioConstants.BUS_MUSIC, not toggled_on)
-	_update_ui_interactivity()
-
-	# Sub-buses that don't host the UI sound don't strictly require the delay,
-	# but we apply it uniformly for total consistency when silencing channels.
-	if not toggled_on:
-		await get_tree().create_timer(0.15).timeout
-
-	AudioManager.apply_volume_to_bus(
-		AudioConstants.BUS_MUSIC, AudioManager.music_volume, AudioManager.music_muted
-	)
-	AudioManager.save_volumes()
 
 
 func _on_music_mute_gui_input(event: InputEvent) -> void:
@@ -465,23 +426,6 @@ func _on_sfx_volume_control_gui_input(event: InputEvent) -> void:
 	)
 
 
-## Handles Parent SFX Mute toggle mutations.
-func _on_sfx_mute_toggled(toggled_on: bool) -> void:
-	AudioManager.play_sfx("check")
-	AudioManager.set_muted(AudioConstants.BUS_SFX, not toggled_on)
-	_update_ui_interactivity()
-
-	# CRITICAL: Since the UI sound plays on a child of the SFX bus, muting this
-	# cuts off the sound instantly. The 0.15s delay is mandatory here.
-	if not toggled_on:
-		await get_tree().create_timer(0.15).timeout
-
-	AudioManager.apply_volume_to_bus(
-		AudioConstants.BUS_SFX, AudioManager.sfx_volume, AudioManager.sfx_muted
-	)
-	AudioManager.save_volumes()
-
-
 func _on_sfx_mute_gui_input(event: InputEvent) -> void:
 	_handle_mute_gui_input(
 		event, AudioManager.master_muted, false, master_warning_dialog, sfx_warning_dialog
@@ -501,21 +445,6 @@ func _on_weapon_volume_control_gui_input(event: InputEvent) -> void:
 		master_warning_dialog,
 		sfx_warning_dialog
 	)
-
-
-## Handles Weapon SFX Mute toggle mutations.
-func _on_weapon_mute_toggled(toggled_on: bool) -> void:
-	AudioManager.play_sfx("check")
-	AudioManager.set_muted(AudioConstants.BUS_SFX_WEAPON, not toggled_on)
-	_update_ui_interactivity()
-
-	if not toggled_on:
-		await get_tree().create_timer(0.15).timeout
-
-	AudioManager.apply_volume_to_bus(
-		AudioConstants.BUS_SFX_WEAPON, AudioManager.weapon_volume, AudioManager.weapon_muted
-	)
-	AudioManager.save_volumes()
 
 
 func _on_weapon_mute_gui_input(event: InputEvent) -> void:
@@ -543,21 +472,6 @@ func _on_rotor_volume_control_gui_input(event: InputEvent) -> void:
 	)
 
 
-## Handles Rotor SFX Mute toggle mutations.
-func _on_rotor_mute_toggled(toggled_on: bool) -> void:
-	AudioManager.play_sfx("check")
-	AudioManager.set_muted(AudioConstants.BUS_SFX_ROTORS, not toggled_on)
-	_update_ui_interactivity()
-
-	if not toggled_on:
-		await get_tree().create_timer(0.15).timeout
-
-	AudioManager.apply_volume_to_bus(
-		AudioConstants.BUS_SFX_ROTORS, AudioManager.rotors_volume, AudioManager.rotors_muted
-	)
-	AudioManager.save_volumes()
-
-
 func _on_rotor_mute_gui_input(event: InputEvent) -> void:
 	_handle_mute_gui_input(
 		event,
@@ -581,23 +495,6 @@ func _on_menu_volume_control_gui_input(event: InputEvent) -> void:
 		master_warning_dialog,
 		sfx_warning_dialog
 	)
-
-
-## Handles Menu UI SFX Mute toggle mutations.
-func _on_menu_mute_toggled(toggled_on: bool) -> void:
-	AudioManager.play_sfx("check")
-	AudioManager.set_muted(AudioConstants.BUS_SFX_MENU, not toggled_on)
-	_update_ui_interactivity()
-
-	# CRITICAL: This is the exact bus the menu sounds play on. We must delay
-	# the hardware muting call to guarantee the sound clip plays completely.
-	if not toggled_on:
-		await get_tree().create_timer(0.15).timeout
-
-	AudioManager.apply_volume_to_bus(
-		AudioConstants.BUS_SFX_MENU, AudioManager.menu_volume, AudioManager.menu_muted
-	)
-	AudioManager.save_volumes()
 
 
 func _on_menu_mute_gui_input(event: InputEvent) -> void:
@@ -745,6 +642,11 @@ func _reset_sfx_warning_shown() -> void:
 	sfx_warning_shown = false
 
 
+# ==========================================================================
+# FIXED MUTE TOGGLE CALLBACKS (WITH BACKGROUND BUFFER DEFERRAL)
+# ==========================================================================
+
+
 ## Auxiliary lookup tool to map string-based audio buses to their respective scene tree sliders.
 ## Refactored with a single exit point to strictly satisfy gdlint max-returns constraints.
 ## :param bus_name: The constant identifier name of the audio channel.
@@ -768,3 +670,74 @@ func _get_slider_for_bus(bus_name: String) -> HSlider:
 			target_slider = menu_slider
 
 	return target_slider
+
+
+## Centralized pipeline handler for all UI bus mute toggles.
+## Eliminates code duplication and provides a unified hardware safety window.
+func _execute_bus_mute_toggle(bus_name: String, toggled_on: bool) -> void:
+	# Dispatch the audio confirmation effect instantly
+	AudioManager.play_sfx("check")
+
+	# Update variables and UI locks immediately for snappy interface response
+	AudioManager.set_muted(bus_name, not toggled_on)
+	_update_ui_interactivity()
+
+	# ENGINE WORKAROUND: Defer hardware cutoffs slightly when muting
+	# to allow the confirmation click to finish streaming to the audio device.
+	if not toggled_on:
+		await get_tree().create_timer(MUTE_HARDWARE_DELAY).timeout
+
+	# Read the newest states to safely update the backend mixing matrix
+	var current_vol: float = AudioManager.get_volume(bus_name)
+	var is_muted: bool = AudioManager.get_muted(bus_name)
+
+	AudioManager.apply_volume_to_bus(bus_name, current_vol, is_muted)
+	AudioManager.save_volumes()
+
+
+## Handles Master Mute toggle mutations via the centralized pipeline.
+## :param toggled_on: True if the bus is unmuted (button pressed), false if muted.
+## :type toggled_on: bool
+## :rtype: void
+func _on_master_mute_toggled(toggled_on: bool) -> void:
+	await _execute_bus_mute_toggle(AudioConstants.BUS_MASTER, toggled_on)
+
+
+## Handles Music Mute toggle mutations via the centralized pipeline.
+## :param toggled_on: True if the bus is unmuted (button pressed), false if muted.
+## :type toggled_on: bool
+## :rtype: void
+func _on_music_mute_toggled(toggled_on: bool) -> void:
+	await _execute_bus_mute_toggle(AudioConstants.BUS_MUSIC, toggled_on)
+
+
+## Handles Parent SFX Mute toggle mutations via the centralized pipeline.
+## :param toggled_on: True if the bus is unmuted (button pressed), false if muted.
+## :type toggled_on: bool
+## :rtype: void
+func _on_sfx_mute_toggled(toggled_on: bool) -> void:
+	await _execute_bus_mute_toggle(AudioConstants.BUS_SFX, toggled_on)
+
+
+## Handles Weapon SFX Mute toggle mutations via the centralized pipeline.
+## :param toggled_on: True if the bus is unmuted (button pressed), false if muted.
+## :type toggled_on: bool
+## :rtype: void
+func _on_weapon_mute_toggled(toggled_on: bool) -> void:
+	await _execute_bus_mute_toggle(AudioConstants.BUS_SFX_WEAPON, toggled_on)
+
+
+## Handles Rotor SFX Mute toggle mutations via the centralized pipeline.
+## :param toggled_on: True if the bus is unmuted (button pressed), false if muted.
+## :type toggled_on: bool
+## :rtype: void
+func _on_rotor_mute_toggled(toggled_on: bool) -> void:
+	await _execute_bus_mute_toggle(AudioConstants.BUS_SFX_ROTORS, toggled_on)
+
+
+## Handles Menu UI SFX Mute toggle mutations via the centralized pipeline.
+## :param toggled_on: True if the bus is unmuted (button pressed), false if muted.
+## :type toggled_on: bool
+## :rtype: void
+func _on_menu_mute_toggled(toggled_on: bool) -> void:
+	await _execute_bus_mute_toggle(AudioConstants.BUS_SFX_MENU, toggled_on)
