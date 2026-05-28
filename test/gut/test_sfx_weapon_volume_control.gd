@@ -73,8 +73,10 @@ func after_each() -> void:
 ## :rtype: void
 func test_tc_weapon_01() -> void:
 	var new_value: float = 0.495  # Snaps perfectly to the 0.033 step configured in the .tscn
-	audio_instance.weapon_slider.grab_focus()  # Simulate active player interaction by capturing focus
-	audio_instance.weapon_slider.value = new_value  # Simulate drag
+	audio_instance.weapon_slider.grab_focus()  # Request active player focus simulation
+	await get_tree().process_frame             # Allow Godot's Viewport focus tracking to fully resolve
+	
+	audio_instance.weapon_slider.value = new_value  # Simulate drag interaction
 	assert_eq(audio_instance.weapon_slider.value, new_value)
 	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("SFX_Weapon")), linear_to_db(new_value), 0.0001)
 	assert_eq(AudioManager.weapon_volume, new_value)
