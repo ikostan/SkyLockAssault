@@ -675,9 +675,9 @@ func _get_slider_for_bus(bus_name: String) -> HSlider:
 			target_slider = menu_slider
 		_:
 			Globals.log_message(
-				"Unknown bus_name in _get_slider_for_bus: " + bus_name, Globals.LogLevel.WARNING
+				"Critical: Unknown bus_name passed to slider lookup: " + bus_name,
+				Globals.LogLevel.ERROR
 			)
-			assert(false, "Unknown audio bus requested for slider lookup: " + bus_name)
 
 	return target_slider
 
@@ -786,9 +786,8 @@ func _get_mute_button_for_bus(bus_name: String) -> CheckButton:
 			target_button = mute_menu
 		_:
 			Globals.log_message(
-				"Unknown bus_name in _get_mute_button_for_bus: " + bus_name,
-				Globals.LogLevel.WARNING
+				"Critical: Unknown bus_name passed to mute button lookup: " + bus_name,
+				Globals.LogLevel.ERROR
 			)
-			assert(false, "Unknown audio bus requested for mute button lookup: " + bus_name)
 
 	return target_button
