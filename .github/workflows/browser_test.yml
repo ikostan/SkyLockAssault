@@ -42,7 +42,7 @@ jobs:
       - name: "Create Export Directories"
         run: |
           mkdir -p export/web_thread_off
-
+      # yamllint disable rule:line-length
       - name: "Export Godot to Web"
         id: "export"
         uses: "firebelley/godot-export@930577654862a320eef793f399ee911b4479efb9"
@@ -60,7 +60,7 @@ jobs:
       - name: "Flatten Export Directory"
         run: |
           bash ./.github/scripts/flatten_export.sh "export/web_thread_off" "Web_thread_off"
-
+      # yamllint enable rule:line-length
       - name: "List Export Directory Contents"
         run: |
           ls -la export/web_thread_off
@@ -76,12 +76,12 @@ jobs:
 
       - name: "Cache PIP Dependencies"
         uses: "actions/cache@v5"
-        id: cache
+        id: "cache"
         with:
           path: "~/.cache/pip"
           # FIX: Added '-v2' to invalidate the old corrupted cache
-          key: ${{ runner.os }}-pip-v2-${{ hashFiles('requirements.txt') }}
-          restore-keys: ${{ runner.os }}-pip-v2-
+          key: "${{ runner.os }}-pip-v2-${{ hashFiles('requirements.txt') }}"
+          restore-keys: "${{ runner.os }}-pip-v2-"
 
       - name: "Install Playwright"
         run: |
@@ -89,20 +89,22 @@ jobs:
           pip install playwright pytest-playwright pytest-asyncio
 
       # NEW STEP: Extract the exact Playwright version to use as a cache key
+      # yamllint disable rule:line-length
       - name: "Get Playwright Version"
-        id: playwright-version
+        id: "playwright-version"
         run: |
           # Robustly fetch the version directly from the Python package metadata
           # bypassing any fragile CLI string formatting
           echo "version=$(python -c 'from importlib.metadata import version; print(version("playwright"))')" >> $GITHUB_OUTPUT
+      # yamllint enable rule:line-length
 
       - name: "Cache Playwright Browsers"
         uses: "actions/cache@v5"
-        id: playwright-cache
+        id: "playwright-cache"
         with:
-          path: ~/.cache/ms-playwright
+          path: "~/.cache/ms-playwright"
           # FIX: Cache key is now strictly tied to the installed Playwright package version
-          key: ${{ runner.os }}-playwright-v2-${{ steps.playwright-version.outputs.version }}
+          key: "${{ runner.os }}-playwright-v2-${{ steps.playwright-version.outputs.version }}"
 
       - name: "Install Playwright Browsers"
         if: steps.playwright-cache.outputs.cache-hit != 'true'
@@ -139,9 +141,11 @@ jobs:
           done
           if [ $i -eq 20 ]; then exit 1; fi
 
+      # yamllint disable rule:line-length
       - name: "Run Tests"
         run: |
           PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/ -v --ignore=tests/refactor --ignore=tests/ci --junitxml=junit.xml -o junit_family=legacy
+      # yamllint enable rule:line-length
 
       - name: "List Coverage Reports"
         run: |
@@ -198,6 +202,7 @@ jobs:
             counter=$((counter + 1))
           done
           npx nyc report --reporter=lcov --report-dir coverage/lcov --all --include=export/web_thread_off/*.js  # Merge with --all for 0% on untested
+      # yamllint enable rule:line-length
 
       - name: "Upload LCOV Artifact"
         if: always()
@@ -243,7 +248,7 @@ jobs:
 
       - name: "Upload Coverage to Codecov"
         if: ${{ !cancelled() }}
-        uses: "codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2"
+        uses: "codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354"
         with:
           files: ./coverage/lcov/lcov.info
           flags: playwright
@@ -258,6 +263,7 @@ jobs:
           curl -Os https://cli.codecov.io/latest/linux/codecov
           chmod +x codecov
 
+      # yamllint disable rule:line-length
       - name: "Upload Test Report to Codecov"
         if: success()
         run: |
@@ -267,4 +273,4 @@ jobs:
           else
             echo "No Playwright JUnit XML found, skipping upload."
           fi
-  # yamllint enable rule:line-length
+      # yamllint enable rule:line-length

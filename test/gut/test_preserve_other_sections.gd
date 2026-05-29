@@ -201,7 +201,9 @@ func test_tc_sl_09() -> void:
 	
 	# Simulate toggle to muted: set button_pressed = false (pressed=false means muted)
 	audio_instance.mute_sfx.button_pressed = false
-	await get_tree().process_frame
+	
+	# Yield execution to allow the 0.15s background safety timer delay and file write to complete
+	await get_tree().create_timer(0.2).timeout
 	
 	# Verify audio updated
 	assert_true(AudioManager.sfx_muted)

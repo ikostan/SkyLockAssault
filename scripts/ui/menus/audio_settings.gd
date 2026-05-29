@@ -8,10 +8,18 @@
 
 extends Control
 
+const MUTE_HARDWARE_DELAY: float = 0.15  # Shared Constant
+const AUTO_MUTE_VOLUME_THRESHOLD: float = 0.001
+
 # Test flags for warning popups
 var master_warning_shown: bool = false
 var sfx_warning_shown: bool = false
 var _intentional_exit: bool = false
+# A token tracker (_master_zero_token) to the top level of audio_settings.gd.
+# Every time a zero event occurs, we increment this token. When the timer finishes,
+# we check if the token still matches. If the token has changed, it means a newer
+# user action took place, and the old async routine safely aborts.
+var _master_zero_token: int = 0
 
 # Master Volume Controls
 @onready var master_slider: HSlider = $Panel/VolumeControls/Master/HSlider
@@ -244,7 +252,19 @@ func _update_ui_interactivity() -> void:
 	menu_slider.editable = not (is_sfx_hierarchy_muted or AudioManager.menu_muted)
 
 
-## Updates the visual Godot HSliders when Playwright changes the AudioManager
+# ==========================================================================
+# SYMMETRIC VISUAL AND AUDIO VOLUME COUPLING
+# ==========================================================================
+
+
+## Updates the visual Godot HSliders when Playwright or UI components alter the AudioManager state.
+## Maintained with balanced near-zero auto-mute and auto-unmute thresholds for seamless
+## state tracking.
+## :param bus_name: The constant identifier name of the audio channel.
+## :type bus_name: String
+## :param volume: The current linear volume scale level (0.0 to 1.0).
+## :type volume: float
+## :rtype: void
 func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 	match bus_name:
 		AudioConstants.BUS_MASTER:
@@ -259,6 +279,47 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 			rotor_slider.set_value_no_signal(volume)
 		AudioConstants.BUS_SFX_MENU:
 			menu_slider.set_value_no_signal(volume)
+
+	# --- AUTO-MUTE ON NEAR-ZERO VOLUME THRESHOLD ---
+	if volume <= AUTO_MUTE_VOLUME_THRESHOLD and not AudioManager.get_muted(bus_name):
+		# CIRCUIT BREAKER: Flip state immediately to stop rapid consecutive frame triggers
+		AudioManager.set_muted(bus_name, true)
+
+		var active_slider: HSlider = _get_slider_for_bus(bus_name)
+		if active_slider and active_slider.has_focus():
+			if bus_name == AudioConstants.BUS_MASTER:
+				_master_zero_token += 1
+				var current_token: int = _master_zero_token
+
+				var bus_idx: int = AudioServer.get_bus_index(bus_name)
+				if bus_idx != -1:
+					# Keep 0.15 here since this is a temporary linear volume level
+					# to let the click sound audibly stream out before flattening to 0.0
+					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.15))
+
+				AudioManager.play_sfx("check")
+				await get_tree().create_timer(MUTE_HARDWARE_DELAY).timeout
+
+				# TOKEN GATE: Only apply the zero reset if a newer drag didn't interrupt it
+				if current_token == _master_zero_token and bus_idx != -1:
+					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.0))
+			else:
+				AudioManager.play_sfx("check")
+
+	# --- AUTO-UNMUTE ON NON-ZERO VOLUME THRESHOLD ---
+	elif volume > AUTO_MUTE_VOLUME_THRESHOLD and AudioManager.get_muted(bus_name):
+		# CIRCUIT BREAKER: Flip state immediately to short-circuit rapid consecutive frame updates
+		AudioManager.set_muted(bus_name, false)
+
+		var active_slider: HSlider = _get_slider_for_bus(bus_name)
+		if active_slider and active_slider.has_focus():
+			if bus_name == AudioConstants.BUS_MASTER:
+				_master_zero_token += 1
+				var bus_idx: int = AudioServer.get_bus_index(bus_name)
+				if bus_idx != -1:
+					AudioServer.set_bus_mute(bus_idx, false)
+					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
+			AudioManager.play_sfx("check")
 
 
 ## Updates the visual Godot CheckButtons when Playwright mutes the AudioManager
@@ -323,19 +384,15 @@ func _update_label_colors() -> void:
 # MASTER VOLUME
 # ==========================================
 func _on_master_volume_control_gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and AudioManager.master_muted:
-		if event.button_index == MOUSE_BUTTON_LEFT:
-			mute_master.button_pressed = true
-			get_viewport().set_input_as_handled()
-
-
-func _on_master_mute_toggled(toggled_on: bool) -> void:
-	AudioManager.set_muted(AudioConstants.BUS_MASTER, not toggled_on)
-	_update_ui_interactivity()  # Single source of truth updates everything
-	AudioManager.apply_volume_to_bus(
-		AudioConstants.BUS_MASTER, AudioManager.master_volume, AudioManager.master_muted
+	_handle_slider_gui_input(
+		event,
+		false,  # Prevents Master row from triggering warning dialogs against itself
+		false,
+		AudioManager.master_muted,
+		mute_master,
+		master_warning_dialog,
+		sfx_warning_dialog
 	)
-	AudioManager.save_volumes()
 
 
 # ==========================================
@@ -351,15 +408,6 @@ func _on_music_volume_control_gui_input(event: InputEvent) -> void:
 		master_warning_dialog,
 		sfx_warning_dialog
 	)
-
-
-func _on_music_mute_toggled(toggled_on: bool) -> void:
-	AudioManager.set_muted(AudioConstants.BUS_MUSIC, not toggled_on)
-	_update_ui_interactivity()
-	AudioManager.apply_volume_to_bus(
-		AudioConstants.BUS_MUSIC, AudioManager.music_volume, AudioManager.music_muted
-	)
-	AudioManager.save_volumes()
 
 
 func _on_music_mute_gui_input(event: InputEvent) -> void:
@@ -383,15 +431,6 @@ func _on_sfx_volume_control_gui_input(event: InputEvent) -> void:
 	)
 
 
-func _on_sfx_mute_toggled(toggled_on: bool) -> void:
-	AudioManager.set_muted(AudioConstants.BUS_SFX, not toggled_on)
-	_update_ui_interactivity()
-	AudioManager.apply_volume_to_bus(
-		AudioConstants.BUS_SFX, AudioManager.sfx_volume, AudioManager.sfx_muted
-	)
-	AudioManager.save_volumes()
-
-
 func _on_sfx_mute_gui_input(event: InputEvent) -> void:
 	_handle_mute_gui_input(
 		event, AudioManager.master_muted, false, master_warning_dialog, sfx_warning_dialog
@@ -411,15 +450,6 @@ func _on_weapon_volume_control_gui_input(event: InputEvent) -> void:
 		master_warning_dialog,
 		sfx_warning_dialog
 	)
-
-
-func _on_weapon_mute_toggled(toggled_on: bool) -> void:
-	AudioManager.set_muted(AudioConstants.BUS_SFX_WEAPON, not toggled_on)
-	_update_ui_interactivity()
-	AudioManager.apply_volume_to_bus(
-		AudioConstants.BUS_SFX_WEAPON, AudioManager.weapon_volume, AudioManager.weapon_muted
-	)
-	AudioManager.save_volumes()
 
 
 func _on_weapon_mute_gui_input(event: InputEvent) -> void:
@@ -447,15 +477,6 @@ func _on_rotor_volume_control_gui_input(event: InputEvent) -> void:
 	)
 
 
-func _on_rotor_mute_toggled(toggled_on: bool) -> void:
-	AudioManager.set_muted(AudioConstants.BUS_SFX_ROTORS, not toggled_on)
-	_update_ui_interactivity()
-	AudioManager.apply_volume_to_bus(
-		AudioConstants.BUS_SFX_ROTORS, AudioManager.rotors_volume, AudioManager.rotors_muted
-	)
-	AudioManager.save_volumes()
-
-
 func _on_rotor_mute_gui_input(event: InputEvent) -> void:
 	_handle_mute_gui_input(
 		event,
@@ -479,15 +500,6 @@ func _on_menu_volume_control_gui_input(event: InputEvent) -> void:
 		master_warning_dialog,
 		sfx_warning_dialog
 	)
-
-
-func _on_menu_mute_toggled(toggled_on: bool) -> void:
-	AudioManager.set_muted(AudioConstants.BUS_SFX_MENU, not toggled_on)
-	_update_ui_interactivity()
-	AudioManager.apply_volume_to_bus(
-		AudioConstants.BUS_SFX_MENU, AudioManager.menu_volume, AudioManager.menu_muted
-	)
-	AudioManager.save_volumes()
 
 
 func _on_menu_mute_gui_input(event: InputEvent) -> void:
@@ -633,3 +645,149 @@ func _reset_master_warning_shown() -> void:
 
 func _reset_sfx_warning_shown() -> void:
 	sfx_warning_shown = false
+
+
+# ==========================================================================
+# FIXED MUTE TOGGLE CALLBACKS (WITH BACKGROUND BUFFER DEFERRAL)
+# ==========================================================================
+
+
+## Auxiliary lookup tool to map string-based audio buses to their respective scene tree sliders.
+## Refactored with an explicit default fallback branch to capture configuration mismatches early.
+## :param bus_name: The constant identifier name of the audio channel.
+## :type bus_name: String
+## :rtype: HSlider
+func _get_slider_for_bus(bus_name: String) -> HSlider:
+	var target_slider: HSlider = null
+
+	match bus_name:
+		AudioConstants.BUS_MASTER:
+			target_slider = master_slider
+		AudioConstants.BUS_MUSIC:
+			target_slider = music_slider
+		AudioConstants.BUS_SFX:
+			target_slider = sfx_slider
+		AudioConstants.BUS_SFX_WEAPON:
+			target_slider = weapon_slider
+		AudioConstants.BUS_SFX_ROTORS:
+			target_slider = rotor_slider
+		AudioConstants.BUS_SFX_MENU:
+			target_slider = menu_slider
+		_:
+			Globals.log_message(
+				"Critical: Unknown bus_name passed to slider lookup: " + bus_name,
+				Globals.LogLevel.ERROR
+			)
+
+	return target_slider
+
+
+## Centralized pipeline handler for all UI bus mute toggles.
+## Eliminates code duplication and provides a unified hardware safety window.
+func _execute_bus_mute_toggle(bus_name: String, toggled_on: bool) -> void:
+	var button: CheckButton = _get_mute_button_for_bus(bus_name)
+	var slider: HSlider = _get_slider_for_bus(bus_name)
+
+	# Focus Gate: Only play audio feedback if the interaction came from a focused UI element
+	# This guarantees that automated background sync operations remain completely silent.
+	var has_user_focus: bool = (
+		(button != null and button.has_focus()) or (slider != null and slider.has_focus())
+	)
+
+	if has_user_focus:
+		AudioManager.play_sfx("check")
+
+	# Update variables and UI locks immediately for snappy interface response
+	AudioManager.set_muted(bus_name, not toggled_on)
+	_update_ui_interactivity()
+
+	# ENGINE WORKAROUND: Defer hardware cutoffs slightly when muting
+	# to allow the confirmation click to finish streaming to the audio device.
+	if not toggled_on and has_user_focus:
+		await get_tree().create_timer(MUTE_HARDWARE_DELAY).timeout
+
+	# Read the newest states to safely update the backend mixing matrix
+	var current_vol: float = AudioManager.get_volume(bus_name)
+	var is_muted: bool = AudioManager.get_muted(bus_name)
+
+	AudioManager.apply_volume_to_bus(bus_name, current_vol, is_muted)
+	AudioManager.save_volumes()
+
+
+## Handles Master Mute toggle mutations via the centralized pipeline.
+## :param toggled_on: True if the bus is unmuted (button pressed), false if muted.
+## :type toggled_on: bool
+## :rtype: void
+func _on_master_mute_toggled(toggled_on: bool) -> void:
+	await _execute_bus_mute_toggle(AudioConstants.BUS_MASTER, toggled_on)
+
+
+## Handles Music Mute toggle mutations via the centralized pipeline.
+## :param toggled_on: True if the bus is unmuted (button pressed), false if muted.
+## :type toggled_on: bool
+## :rtype: void
+func _on_music_mute_toggled(toggled_on: bool) -> void:
+	await _execute_bus_mute_toggle(AudioConstants.BUS_MUSIC, toggled_on)
+
+
+## Handles Parent SFX Mute toggle mutations via the centralized pipeline.
+## :param toggled_on: True if the bus is unmuted (button pressed), false if muted.
+## :type toggled_on: bool
+## :rtype: void
+func _on_sfx_mute_toggled(toggled_on: bool) -> void:
+	await _execute_bus_mute_toggle(AudioConstants.BUS_SFX, toggled_on)
+
+
+## Handles Weapon SFX Mute toggle mutations via the centralized pipeline.
+## :param toggled_on: True if the bus is unmuted (button pressed), false if muted.
+## :type toggled_on: bool
+## :rtype: void
+func _on_weapon_mute_toggled(toggled_on: bool) -> void:
+	await _execute_bus_mute_toggle(AudioConstants.BUS_SFX_WEAPON, toggled_on)
+
+
+## Handles Rotor SFX Mute toggle mutations via the centralized pipeline.
+## :param toggled_on: True if the bus is unmuted (button pressed), false if muted.
+## :type toggled_on: bool
+## :rtype: void
+func _on_rotor_mute_toggled(toggled_on: bool) -> void:
+	await _execute_bus_mute_toggle(AudioConstants.BUS_SFX_ROTORS, toggled_on)
+
+
+## Handles Menu UI SFX Mute toggle mutations via the centralized pipeline.
+## :param toggled_on: True if the bus is unmuted (button pressed), false if muted.
+## :type toggled_on: bool
+## :rtype: void
+func _on_menu_mute_toggled(toggled_on: bool) -> void:
+	await _execute_bus_mute_toggle(AudioConstants.BUS_SFX_MENU, toggled_on)
+
+
+## Auxiliary lookup tool to map string-based audio buses to their respective scene
+## tree mute buttons.
+## Refactored with an explicit default fallback branch to capture configuration mismatches early.
+## :param bus_name: The constant identifier name of the audio channel.
+## :type bus_name: String
+## :rtype: CheckButton
+func _get_mute_button_for_bus(bus_name: String) -> CheckButton:
+	var target_button: CheckButton = null
+
+	match bus_name:
+		AudioConstants.BUS_MASTER:
+			target_button = mute_master
+		AudioConstants.BUS_MUSIC:
+			target_button = mute_music
+		AudioConstants.BUS_SFX:
+			target_button = mute_sfx
+		AudioConstants.BUS_SFX_WEAPON:
+			target_button = mute_weapon
+		AudioConstants.BUS_SFX_ROTORS:
+			target_button = mute_rotor
+		AudioConstants.BUS_SFX_MENU:
+			target_button = mute_menu
+		_:
+			Globals.log_message(
+				"Critical: Unknown bus_name passed to mute button lookup: " + bus_name,
+				Globals.LogLevel.ERROR
+			)
+
+	return target_button

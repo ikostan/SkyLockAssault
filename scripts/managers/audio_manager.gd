@@ -364,7 +364,7 @@ func reset_volumes() -> void:
 	Globals.log_message("Audio volumes reset to defaults.", Globals.LogLevel.DEBUG)
 
 
-## Centralized SFX Playback API (Issue #565)
+## Centralized SFX Playback API (Issue #570)
 ## Handles non-positional audio with LRU caching and auto-cleanup.
 ## :param sfx_name: The filename without extension (e.g., "slider").
 ## :param bus_name: Target audio bus (defaults to SFX_Menu).
@@ -386,6 +386,16 @@ func play_sfx(
 	# 1. Resolve and Cache the AudioStream (with LRU Eviction)
 	if not _sfx_cache.has(sfx_name):
 		var full_path: String = SFX_DIR_PATH + sfx_name + ".wav"
+
+		# Safety guard against non-existent files to block core engine loader errors from polluting tests
+		if not ResourceLoader.exists(full_path):
+			Globals.log_message(
+				"SFX file not found or failed to load: " + full_path, Globals.LogLevel.WARNING
+			)
+			# Cache the failure so we don't spam the disk and logs on subsequent requests
+			_missing_sfx_cache[sfx_name] = true
+			return
+
 		var stream: AudioStream = load(full_path)
 
 		if stream:
@@ -400,9 +410,9 @@ func play_sfx(
 			_sfx_cache[sfx_name] = stream
 		else:
 			Globals.log_message(
-				"SFX file not found or failed to load: " + full_path, Globals.LogLevel.WARNING
+				"SFX file found but failed to parse correctly: " + full_path,
+				Globals.LogLevel.WARNING
 			)
-			# Cache the failure so we don't spam the disk and logs on subsequent requests
 			_missing_sfx_cache[sfx_name] = true
 			return
 	else:

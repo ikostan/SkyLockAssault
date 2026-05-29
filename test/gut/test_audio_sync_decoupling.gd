@@ -73,7 +73,7 @@ func test_global_volume_changed_bypasses_signals() -> void:
 	assert_true(audio_instance.master_slider.save_debounce_timer.is_stopped(), "Timer should be stopped initially.")
 	
 	# Act: Simulate an incoming Web Bridge sync event
-	var new_volume: float = 0.35
+	var new_volume: float = 0.363 # Aligns with the 0.033 step size in the .tscn
 	audio_instance._on_global_volume_changed(AudioConstants.BUS_MASTER, new_volume)
 	
 	# Assert: The slider visually updated, but the timer (and thus SFX) was NOT triggered
@@ -92,7 +92,7 @@ func test_sync_ui_from_manager_bypasses_signals() -> void:
 	assert_true(audio_instance.sfx_slider.save_debounce_timer.is_stopped(), "Timer should be stopped initially.")
 	
 	# Setup: Change the backend AudioManager state silently
-	var new_sfx_volume: float = 0.8
+	var new_sfx_volume: float = 0.792 # Aligns with the 0.033 step size in the .tscn
 	AudioManager.sfx_volume = new_sfx_volume
 	
 	# Act: Force the UI to pull the latest state

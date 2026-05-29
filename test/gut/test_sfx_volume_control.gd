@@ -67,33 +67,29 @@ func after_each() -> void:
 	await get_tree().process_frame
 
 
-## TC-SFX-01 | Master unmuted, SFX unmuted, Slider editable, Children unmuted | Click and drag SFX slider to new value | Slider value changes; AudioServer bus volume updates; AudioManager.sfx_volume updates; save_debounce_timer starts; After debounce, AudioManager.save_volumes() called; Log messages for volume change.
+## TC-Weapon-01 | Master unmuted, SFX unmuted, Weapon unmuted, Slider editable | Click and drag Weapon slider to new value | Slider value changes; AudioServer bus volume updates; AudioManager.weapon_volume updates; save_debounce_timer starts; After debounce, AudioManager.save_volumes() called; Log messages for volume change.
 ## :rtype: void
-func test_tc_sfx_01() -> void:
-	var new_value: float = 0.5
-	audio_instance.sfx_slider.value = new_value  # Simulate drag
-	assert_eq(audio_instance.sfx_slider.value, new_value)
-	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("SFX")), linear_to_db(new_value), 0.0001)
-	assert_eq(AudioManager.sfx_volume, new_value)
-	assert_false(audio_instance.sfx_slider.save_debounce_timer.is_stopped())
+func test_tc_weapon_01() -> void:
+	var new_value: float = 0.495  # Snaps perfectly to the 0.033 step configured in the .tscn
+	audio_instance.weapon_slider.value = new_value  # Simulate drag
+	assert_eq(audio_instance.weapon_slider.value, new_value)
+	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("SFX_Weapon")), linear_to_db(new_value), 0.0001)
+	assert_eq(AudioManager.weapon_volume, new_value)
+	assert_false(audio_instance.weapon_slider.save_debounce_timer.is_stopped())
 	await get_tree().create_timer(0.6).timeout  # Await debounce
 	assert_true(FileAccess.file_exists(test_config_path), "save_volumes should create config")
 
 
-## TC-SFX-02 | Master unmuted, SFX unmuted, Slider editable | Toggle SFX mute button (to muted) | mute_sfx.button_pressed = false; AudioManager.sfx_muted = true; sfx_slider.editable = false; AudioServer.set_bus_mute("SFX", true); AudioManager.save_volumes() called; Log "SFX mute button toggled to: false"; Call _update_sfx_controls_ui() to disable Weapon/Rotors sliders/buttons.
+## TC-Weapon-02 | Master unmuted, SFX unmuted, Weapon unmuted, Slider editable | Toggle Weapon mute button (to muted) | mute_weapon.button_pressed = false; AudioManager.weapon_muted = true; weapon_slider.editable = false; AudioServer.set_bus_mute("SFX_Weapon", true); AudioManager.save_volumes() called; Log "Weapon mute button toggled to: false".
 ## :rtype: void
-func test_tc_sfx_02() -> void:
-	audio_instance.mute_sfx.button_pressed = false  # Simulate toggle to muted, emits toggled(false)
-	assert_false(audio_instance.mute_sfx.button_pressed)
-	assert_true(AudioManager.sfx_muted)
-	assert_false(audio_instance.sfx_slider.editable)
-	assert_true(AudioServer.is_bus_mute(AudioServer.get_bus_index("SFX")))
-	assert_true(FileAccess.file_exists(test_config_path), "save_volumes should create config")
-	# Check _update_sfx_controls_ui effects
-	assert_true(audio_instance.mute_weapon.disabled)
-	assert_true(audio_instance.mute_rotor.disabled)
+func test_tc_weapon_02() -> void:
+	audio_instance.mute_weapon.button_pressed = false  # Simulate toggle to muted, emits toggled(false)
+	await get_tree().create_timer(0.2).timeout  # Allow the 0.15s background mute safety delay to complete
+	assert_false(audio_instance.mute_weapon.button_pressed)
+	assert_true(AudioManager.weapon_muted)
 	assert_false(audio_instance.weapon_slider.editable)
-	assert_false(audio_instance.rotor_slider.editable)
+	assert_true(AudioServer.is_bus_mute(AudioServer.get_bus_index("SFX_Weapon")))
+	assert_true(FileAccess.file_exists(test_config_path), "save_volumes should create config")
 
 
 ## TC-SFX-03 | Master unmuted, SFX muted, Slider disabled | Toggle SFX mute button (to unmuted) | mute_sfx.button_pressed = true; AudioManager.sfx_muted = false; sfx_slider.editable = true; AudioServer.set_bus_mute("SFX", false); AudioManager.save_volumes() called; Log "SFX mute button toggled to: true"; _update_sfx_controls_ui() enables Weapon/Rotors per their muted states.
@@ -138,21 +134,24 @@ func test_tc_sfx_04() -> void:
 	assert_true(audio_instance.rotor_slider.editable)
 
 
-## TC-SFX-05 | Master unmuted, SFX unmuted, Slider editable | Click SFX mute button (unmuted, no change) | No state change; No save/apply; Event may propagate if not consumed.
+## TC-Weapon-05 | Master unmuted, SFX unmuted, Weapon unmuted, Slider editable | Click Weapon mute button (unmuted, no change) | No state change; No save/apply; Event may propagate if not consumed.
 ## (NOTE: Test plan expected no change, but this is incorrect—clicking should toggle to muted. Updated to match actual behavior.)
 ## :rtype: void
-func test_tc_sfx_05() -> void:
+func test_tc_weapon_05() -> void:
 	var event: InputEventMouseButton = InputEventMouseButton.new()
 	event.button_index = MOUSE_BUTTON_LEFT
 	event.pressed = true
-	var was_pressed: bool = audio_instance.mute_sfx.button_pressed  # Capture before
-	audio_instance._on_sfx_mute_gui_input(event)  # Simulate click on mute button
-	if not AudioManager.master_muted:  # If not handled (no warning), simulate propagation to toggle
-		audio_instance.mute_sfx.button_pressed = not was_pressed
-	assert_false(audio_instance.mute_sfx.button_pressed)  # Toggled to muted
-	assert_true(AudioManager.sfx_muted)  # Toggled
-	assert_false(audio_instance.sfx_slider.editable)
-	assert_true(AudioServer.is_bus_mute(AudioServer.get_bus_index("SFX")))
+	var was_pressed: bool = audio_instance.mute_weapon.button_pressed  # Capture before
+	audio_instance._on_weapon_mute_gui_input(event)  # Simulate click on mute button
+	if not AudioManager.master_muted and not AudioManager.sfx_muted:  # If not handled (no warning), simulate propagation to toggle
+		audio_instance.mute_weapon.button_pressed = not was_pressed
+	
+	await get_tree().create_timer(0.2).timeout  # Allow the 0.15s background mute safety delay to complete
+	
+	assert_false(audio_instance.mute_weapon.button_pressed)  # Toggled to muted
+	assert_true(AudioManager.weapon_muted)  # Toggled
+	assert_false(audio_instance.weapon_slider.editable)
+	assert_true(AudioServer.is_bus_mute(AudioServer.get_bus_index("SFX_Weapon")))
 	assert_false(audio_instance.master_warning_shown, "No warning dialog")
 	assert_false(audio_instance.sfx_warning_shown, "No warning dialog")
 	assert_true(FileAccess.file_exists(test_config_path), "save_volumes should create config")  # Save from toggle

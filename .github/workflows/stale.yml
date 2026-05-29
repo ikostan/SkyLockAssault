@@ -12,19 +12,24 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - uses: "actions/stale@v10.2.0"
+      # NOTE:
+      # - We pin this action to a specific commit SHA to reduce supply-chain risk.
+      # - Make sure to periodically update this SHA to the latest v10.x patch release,
+      #   either via an automated mechanism (e.g., Dependabot for GitHub Actions)
+      #   or a scheduled maintenance routine documented for this repository.
+      - uses: "actions/stale@eb5cf3af3ac0a1aa4c9c45633dd1ae542a27a899"  # v10.3.0
         # yamllint disable rule:line-length
         with:
-          stale-issue-message: "This issue has been inactive for 30 days. It will be marked stale and closed in 5 days unless updated or the stale label is removed."
-          stale-pr-message: "This PR has been inactive for 45 days. It will be marked stale and closed in 10 days unless updated or the stale label is removed."
+          stale-issue-message: "This issue has been inactive for 60 days. It will be marked stale and closed in 10 days unless updated or the stale label is removed."
+          stale-pr-message: "This PR has been inactive for 45 days. It will be marked stale and closed in 15 days unless updated or the stale label is removed."
           close-issue-message: "This issue was closed due to inactivity after being marked stale."
           close-pr-message: "This PR was closed due to inactivity after being marked stale."
-          days-before-stale: 60
-          days-before-close: 7
-          days-before-issue-stale: 30
+          days-before-stale: 90
+          days-before-close: 14
+          days-before-issue-stale: 60
           days-before-pr-stale: 45
-          days-before-issue-close: 5
-          days-before-pr-close: 10
+          days-before-issue-close: 10
+          days-before-pr-close: 15
           stale-issue-label: "stale"
           stale-pr-label: "stale"
           exempt-issue-labels: "in-progress,help wanted"
