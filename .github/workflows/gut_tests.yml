@@ -65,6 +65,8 @@ jobs:
           chmod +x codecov
       - name: "Upload Test Report to Codecov"
         if: success()
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
           REPORT_FILE="${{ steps.find_report.outputs.latest_report }}/gut_junit.xml"
           if [ -f "$REPORT_FILE" ]; then
