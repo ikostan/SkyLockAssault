@@ -1,8 +1,8 @@
 [gd_scene load_steps=15 format=3 uid="uid://dxep4xm1sl8im"]
 
-[ext_resource type="Script" uid="uid://cxlfe85bvd0mx" path="res://scripts/key_mapping.gd" id="1_5b0ek"]
+[ext_resource type="Script" uid="uid://cxlfe85bvd0mx" path="res://scripts/ui/menus/key_mapping.gd" id="1_5b0ek"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_rbr5m"]
-[ext_resource type="Script" uid="uid://t5guwag0bdjc" path="res://scripts/input_remap_button.gd" id="2_5b0ek"]
+[ext_resource type="Script" uid="uid://t5guwag0bdjc" path="res://scripts/ui/components/input_remap_button.gd" id="2_5b0ek"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_312xi"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)

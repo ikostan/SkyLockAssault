@@ -8,7 +8,7 @@
 
 extends GutTest
 
-const InputRemapButton: Script = preload("res://scripts/input_remap_button.gd")
+const InputRemapButton: Script = preload(GamePaths.INPUT_REMAP_BUTTON)
 const TEST_ACTION: String = "speed_up"
 
 var button: InputRemapButton
@@ -16,6 +16,10 @@ var button: InputRemapButton
 
 ## Per-test: Setup button with listening.
 func before_each() -> void:
+	# CLEANUP: Prevent dirty state from previous encryption tests in CI/CD
+	if FileAccess.file_exists("user://settings.cfg"):
+		DirAccess.remove_absolute("user://settings.cfg")
+
 	InputMap.action_erase_events(TEST_ACTION)
 	if not InputMap.has_action(TEST_ACTION):
 		InputMap.add_action(TEST_ACTION)
@@ -29,6 +33,9 @@ func before_each() -> void:
 
 func after_each() -> void:
 	InputMap.action_erase_events(TEST_ACTION)
+	# CLEANUP: Leave the virtual environment pristine for the next test
+	if FileAccess.file_exists("user://settings.cfg"):
+		DirAccess.remove_absolute("user://settings.cfg")
 
 
 ## DEDUP-07 | Device switch mid-remap → input on new device, no dup on old | Correct event, no extras

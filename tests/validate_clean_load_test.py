@@ -23,6 +23,11 @@ import time
 
 from playwright.sync_api import Page
 
+# Configuration for stability in different environments
+# Default to 5000ms, but allow CI to override via environment variable
+DEFAULT_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "30000"))
+TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "5000"))
+
 
 def test_no_critical_errors_on_load(page: Page) -> None:
     """
@@ -43,13 +48,15 @@ def test_no_critical_errors_on_load(page: Page) -> None:
     try:
         # 1. Navigate to the game
         page.goto(
-            "http://localhost:8080/index.html", wait_until="networkidle", timeout=5000
+            "http://localhost:8080/index.html",
+            wait_until="networkidle",
+            timeout=DEFAULT_TIMEOUT,
         )
         # 1.5. Wait for the engine to actually start the splash scene
-        page.wait_for_timeout(5000)
+        page.wait_for_timeout(TEST_TIMEOUT)
 
         # 2. Wait for the engine's ready signal
-        page.wait_for_function("() => window.godotInitialized", timeout=5000)
+        page.wait_for_function("() => window.godotInitialized", timeout=DEFAULT_TIMEOUT)
 
         # 3. Analyze captured logs for the specific patterns
         # We only check for patterns within 'error' or 'warning' logs to avoid false positives

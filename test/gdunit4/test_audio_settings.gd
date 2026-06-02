@@ -26,9 +26,9 @@ func after_test() -> void:
 
 func test_ui_sync_on_ready() -> void:
 	## Verifies that the UI grabs the correct initial state from AudioManager.
-	# Set a specific state in the manager before instancing the UI
+	# Set a specific state in the manager before instancing the UI (aligned with 0.033 slider steps)
 	AudioManager.master_muted = true
-	AudioManager.master_volume = 0.75
+	AudioManager.master_volume = 0.759
 	
 	audio_menu = auto_free(load("res://scenes/audio_settings.tscn").instantiate())
 	add_child(audio_menu)
@@ -37,7 +37,7 @@ func test_ui_sync_on_ready() -> void:
 	# (button_pressed = true means sound is ON).
 	# So if muted is true, pressed is false.
 	assert_bool(audio_menu.mute_master.button_pressed).is_false()
-	assert_float(audio_menu.master_slider.value).is_equal(0.75)
+	assert_float(audio_menu.master_slider.value).is_equal(0.759)
 
 
 func test_back_button_pops_and_frees() -> void:

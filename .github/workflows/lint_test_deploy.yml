@@ -45,12 +45,20 @@ jobs:
       - "yamllint"
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+  ci_script_tests:
+    name: "CI/CD Infrastructure Tests"
+    uses: "./.github/workflows/test_ci_scripts.yml"
+    needs:
+      - "gdlint"
+      - "readmelint"
+      - "yamllint"
   browser_tests:
     name: "Browser Functional Tests"
     uses: "./.github/workflows/browser_test.yml"
     needs:
       - "gdunit4_tests"
       - "gut_tests"
+      - "ci_script_tests"
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
   codeql:
@@ -89,3 +97,4 @@ jobs:
       version: ${{ needs.release_drafter.outputs.release_tag }}
     secrets:
       ITCHIO_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"
+      PRODUCTION_SALT: "${{ secrets.PRODUCTION_SALT }}"

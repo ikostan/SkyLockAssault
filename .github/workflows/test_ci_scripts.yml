@@ -18,6 +18,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: "Run Salt Injection Test"
+      - name: "Install Dependencies"
         run: |
-          python tests/ci/test_salt_injection.py
+          python -m pip install --upgrade pip
+          pip install pytest playwright
+
+      - name: "Run CI Injection Tests"
+        run: |
+          pytest tests/ci/ -v -s

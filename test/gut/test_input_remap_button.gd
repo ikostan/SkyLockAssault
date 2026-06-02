@@ -8,7 +8,7 @@
 
 extends "res://addons/gut/test.gd"
 
-const InputRemapButton = preload("res://scripts/input_remap_button.gd")
+const InputRemapButton = preload(GamePaths.INPUT_REMAP_BUTTON)
 
 var button: InputRemapButton
 const TEST_ACTION: String = "test_action"
@@ -17,6 +17,10 @@ const TEST_ACTION: String = "test_action"
 ## Per-test setup: Reset InputMap for test action, instantiate button.
 ## :rtype: void
 func before_each() -> void:
+	# CLEANUP: Prevent dirty state from previous encryption tests in CI/CD
+	if FileAccess.file_exists("user://settings.cfg"):
+		DirAccess.remove_absolute("user://settings.cfg")
+
 	if InputMap.has_action(TEST_ACTION):
 		InputMap.erase_action(TEST_ACTION)
 	InputMap.add_action(TEST_ACTION)
@@ -32,6 +36,10 @@ func after_each() -> void:
 	if InputMap.has_action(TEST_ACTION):
 		InputMap.erase_action(TEST_ACTION)
 	await get_tree().process_frame
+	
+	# CLEANUP: Leave the virtual environment pristine for the next test
+	if FileAccess.file_exists("user://settings.cfg"):
+		DirAccess.remove_absolute("user://settings.cfg")
 
 
 ## IRB-01 | Remap keyboard event | current_device = KEYBOARD; action exists with prior events | Instantiate, simulate _input with Key, inspect InputMap | Only keyboard event added; old erased; button label updated; remap logged.

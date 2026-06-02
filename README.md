@@ -15,7 +15,6 @@
 ![Repo Size](https://img.shields.io/github/repo-size/ikostan/SkyLockAssault?style=flat-square)
 ![Closed Issues](https://img.shields.io/github/issues-closed/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=green)
 ![Open Issues](https://img.shields.io/github/issues/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=red)
-[![Known Vulnerabilities](https://snyk.io/test/github/ikostan/SkyLockAssault/badge.svg)](https://snyk.io/test/github/ikostan/SkyLockAssault)
 [![All Contributors](https://img.shields.io/github/all-contributors/ikostan/SkyLockAssault?color=ee8449&style=flat-square)](#contributors)
 
 ## A top-down online web browser game built with Godot 4.5
@@ -77,7 +76,11 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
    - [Release Drafter](https://github.com/release-drafter/release-drafter?tab=readme-ov-file#readme)
    - [Close Stale Issues and PRs](https://github.com/actions/stale)
    - [AllContributors GitHub App](https://allcontributors.org/docs/en/bot/installation)
+   - [DeepSource](https://github.com/deepsource)
 9. [Free Web Browser Game Deployment Platforms](files/docs/Platforms_for_Web_Deployment_Guide.md)
+10. [How to inspect the files saved by a Godot web export](files/docs/howto_inspect_the_files_saved_by_a_Godot_web_export.md)
+11. [CI/CD Production Salt Injection & Security Guard Architecture](files/docs/Production_Salt_Injection_&_Security_Guard_Architecture.md)
+12. [Browser DevTools Guide — Verifying Web Save Encryption in Godot 4.5](files/docs/Browser_DevTools_Guide_Verifying_Web_Save_Encryption.md)
 <!-- markdownlint-enable line-length -->
 
 ## Roadmap
@@ -124,6 +127,7 @@ source code to users. For closed-source commercial alternatives without
 these GPL requirements, a separate license is available upon request.
 
 ### Key Terms
+
 - **Open Source**: You can view, modify, and distribute the code freely,
   as long as derivatives remain under GPLv3.
 - **Commercial Use**: Allowed under GPLv3 (with source code obligations
@@ -144,6 +148,20 @@ these GPL requirements, a separate license is available upon request.
 - Observer-based Settings System: Centralized GameSettingsResource that handles
   automatic persistence and UI synchronization through signals.
 
+### Project Structure (`scripts/`)
+
+Post-Refactor Phase 4 (PR `#582`), the root `scripts/` directory has been fully
+reorganised into purpose-specific sub-directories:
+<!-- markdownlint-disable MD013 -->
+| Directory            | Contents                                                                                                                                                                                     |
+|----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `scripts/core/`      | Foundational systems: `game_paths.gd` (centralized path registry), `globals.gd`, `main_scene.gd`, `settings.gd`                                                                              |
+| `scripts/resources/` | Data containers & configuration: `game_settings_resource.gd`, `audio_constants.gd`                                                                                                           |
+| `scripts/entities/`  | Game objects: `player.gd`, `bullet.gd`, `weapon.gd`                                                                                                                                          |
+| `scripts/system/`    | Platform wrappers & integrations: `audio_web_bridge.gd`, `JavaScriptBridgeWrapper.gd`, `OSWrapper.gd`                                                                                        |
+| `scripts/managers/`  | Game-loop managers: `audio_manager.gd`, `parallax_manager.gd`, `resource_preloader.gd`                                                                                                       |
+| `scripts/ui/`        | Interface layer: `hud.gd`; sub-dirs `menus/` (main, pause, options, audio, gameplay, key-mapping, advanced), `screens/` (splash, loading), `components/` (volume slider, input remap button) |
+<!-- markdownlint-enable MD013 -->
 ---
 
 ## 🟢 Current Development Status
@@ -253,18 +271,21 @@ Milestone 12 focused on making the game more navigable and responsive
 to user input devices:
 
 ### Input Remapping
+
 - Conflict detection dialog when assigning existing bindings
 - Per-device last input selection persists between sessions
 - Critical control warnings if actions are unbound
 - Remap menu accessible from all relevant UI paths
 
 ### Menu Navigation
+
 - Keyboard + gamepad (D-Pad) support for all menu flows
 - Guaranteed core navigation actions remain bound
 - Focus restoration when leaving submenus (Audio → Options → Main)
 - Modifier key respect (Ctrl/Shift/Alt/Meta) in remapping UI
 
 ### Audio Settings Controls
+
 - Use keyboard/gamepad accept action for sliders and toggles
 - Focus highlighting for better visual feedback
 - Unified UI interactions without relying on the mouse
@@ -273,17 +294,64 @@ to user input devices:
   synchronization.
 
 ### Godot Resource Migration
+
 - Replaced hard-coded globals with a `GameSettingsResource`
 - Easier inspector-based editing and persistence
 - Safer loading with fallback on corrupted configs
 
 ### Known Limitations
 
-* Some complex menu flows may still rely on the mouse until additional
+- Some complex menu flows may still rely on the mouse until additional
   focus neighbors are defined.
-* Modifier-aware remapping requires explicit key+modifier press for
+- Modifier-aware remapping requires explicit key+modifier press for
   unique bindings.
 
+### Milestone 14
+
+**Status:** Stable gameplay loop with synced UI systems and GUT-based
+unit testing.
+**Active Focus:** Gameplay expansion (AI enemies, multiplayer, levels).
+**Version:** v0.9.18
+
+### Milestone 16
+
+**Status:** Stable gameplay loop with fully refactored script architecture,
+synced UI systems, and GUT-based unit testing.
+**Active Focus:** Gameplay expansion (AI enemies, multiplayer, levels).
+
+### Milestone 17
+
+This milestone focused on polishing UI audio feedback, tightening the
+security of local save files, and paying down technical debt in our
+testing architecture.
+
+**Delivery Status:** Milestone 17 is fully complete. There is no
+planned carryover work to future milestones.
+
+#### 🌟 New Features & Polish
+
+* **UI Audio Polish:** Implemented a dedicated `slider.wav` sound effect
+  for audio menus that strictly triggers only upon manual player adjustments,
+  cleanly decoupling it from programmatic `value_changed` signals.
+* **Encrypted Local Storage:** Transitioned local save configurations
+  (`settings.cfg`) to use Godot's native encrypted `ConfigFile` methods.
+* **Hardware-Bound Encryption:** Implemented an automatic encryption key
+  generation system (`Globals._get_encryption_key()`) that combines the OS
+  name with a hardware-unique ID to securely lock local save data.
+
+#### 🛠️ Architecture & Refactors
+
+* **Centralized Configuration I/O:** Refactored core singletons (`Settings`,
+  `AudioManager`) to route all file operations through a unified
+  `Globals.safe_load_config()` helper.
+* **In-Memory Testing (Separation of Concerns):** Decoupled the config
+  parsing logic from the physical file I/O. Our GUT and GdUnit4
+  error-handling test suites now construct `ConfigFile` objects entirely
+  in-memory, bypassing the disk and permanently eliminating fatal C++ crypto
+  layer crashes in the CI/CD pipeline.
+* **Codebase Audit & Technical Debt:** Conducted a comprehensive audit of the
+  core singletons. Verified a warning-free baseline by confirming no syntax
+  errors exist in legacy `settings.gd` fallback calls.
 
 Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milestones).
 
