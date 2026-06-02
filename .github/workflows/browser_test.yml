@@ -45,7 +45,7 @@ jobs:
       # yamllint disable rule:line-length
       - name: "Export Godot to Web"
         id: "export"
-        uses: "firebelley/godot-export@930577654862a320eef793f399ee911b4479efb9"
+        uses: "firebelley/godot-export@615a6f7afc22d6266bf55c17748fb07447e8bdab"
         with:
           godot_executable_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip"
           godot_export_templates_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz"
