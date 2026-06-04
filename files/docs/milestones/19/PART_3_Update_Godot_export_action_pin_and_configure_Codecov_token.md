@@ -9,7 +9,7 @@ ensure test reports upload correctly to Codecov.
 
 - Bump the pinned SHA of the firebelley/godot-export GitHub Action
   across browser tests, CodeQL analysis, and itch.io deployment workflows.
-- Set the Codecov upload step in GUT tests workflow to use the
+- Set the Codecov upload step in the GUT tests workflow to use the
   `CODECOV_TOKEN` secret for authenticated report uploads.
 
 ### Chores
