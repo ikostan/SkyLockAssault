@@ -49,10 +49,21 @@ management, summarization, and code quality review.
 
 ### Automated Bots & AI Tools
 
-- **@dependabot[bot]**: Initiated and managed the major version bump of `firebelley/godot-export` from 7.0.0 to 8.0.0, including the automated commit and PR creation for the dependency update. This ensured the workflows stayed current with the latest action features and security improvements.
-- **@sourcery-ai**: Generated a clear PR summary and reviewer's guide, highlighting the action version bump across workflows and the Codecov token configuration. Also assisted with title generation and overall review structure.
-- **@coderabbitai**: Provided a focused summary emphasizing CI/CD reliability improvements, security enhancements through proper token handling, and maintenance of build/export automation.
-- **@deepsource-io**: Conducted automated static code analysis and code review on the workflow changes. Provided an overall grade across Security, Reliability, Complexity, and Hygiene categories, along with inline comments and a full review report.
+- **@dependabot[bot]**: Initiated and managed the major version bump of
+  `firebelley/godot-export` from 7.0.0 to 8.0.0, including the automated commit
+  and PR creation for the dependency update. This ensured the workflows stayed
+  current with the latest action features and security improvements.
+- **@sourcery-ai**: Generated a clear PR summary and reviewer's guide,
+  highlighting the action version bump across workflows and the Codecov token
+  configuration. Also assisted with title generation and overall review
+  structure.
+- **@coderabbitai**: Provided a focused summary emphasizing CI/CD reliability
+  improvements, security enhancements through proper token handling, and
+  maintenance of build/export automation.
+- **@deepsource-io**: Conducted automated static code analysis and code review
+  on the workflow changes. Provided an overall grade across Security,
+  Reliability, Complexity, and Hygiene categories, along with inline comments
+  and a full review report.
 
 These tools contributed to better documentation, reviewer guidance,
 dependency security, and code health validation.
