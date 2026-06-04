@@ -36,7 +36,7 @@ The following operations represent intentional human interactions. Each discrete
 1. **Mouse Interaction:** Dragging or clicking the physical `DifficultyHSlider` node bar while the control captures active mouse input.
 2. **Keyboard & Controller Navigation:** Utilizing the D-Pad, arrow keys, or analog controls to shift slider increments while the node possesses viewport layout focus (`has_focus()`).
 3. **Gameplay Reset Button:** Pressing the layout `ResetButton` control element. This bypasses localized focus restrictions by explicitly passing an interactive intent flag to reset variables back to default states (`1.0`).
-4. **Verified JS Overlay Interactions:** Incoming signals from the web-assembly runtime browser layout (`_on_change_difficulty_js()`). These bypass localized viewport check gates using an explicit parameter token override since external DOM nodes cannot hold local Godot UI focus.
+4. **Verified JS Overlay Interactions:** Incoming signals from the WebAssembly runtime browser layout (`_on_change_difficulty_js()`). These bypass localized viewport check gates using an explicit parameter token override since external DOM nodes cannot hold local Godot UI focus.
 
 ### 🔴 Silent Pathways (Absolute Silence)
 
@@ -81,7 +81,7 @@ The sound asset `slider.wav` is flagged as an **actively referenced runtime game
 
 ### Maintenance Directives for Future Contributors:
 
-* **Exclusion from Optimization Sweets:** This file **is unsafe to remove** or exclude during asset compression passes, engine pruning commands, or build export optimization cycles.
+* **Exclusion from Optimization Suites:** This file **is unsafe to remove** or exclude during asset compression passes, engine pruning commands, or build export optimization cycles.
 * **No Direct File Tracing Checks:** Pruning tools checking files strictly via direct script `load()` or `preload()` paths will miss this asset, as it is requested dynamically through an abstraction layer string identifier (`"slider"`). Do not delete this asset based solely on a lack of static reference lines inside the codebase.
 * **Deprecation Protection:** If the Gameplay Settings menu layout is altered in future refactors, this asset must remain preserved in storage unless all focus-gated slider workflows across the option menus are completely eliminated.
 
