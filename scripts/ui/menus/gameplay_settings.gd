@@ -209,7 +209,8 @@ func _unset_gameplay_settings_window_callbacks() -> void:
 ## Handles Gameplay Settings reset button press.
 func _on_gameplay_reset_button_pressed() -> void:
 	Globals.log_message("Gameplay Settings reset pressed.", Globals.LogLevel.DEBUG)
-	_on_difficulty_value_changed(_default_difficulty)
+	# Route through standard handler with explicit interaction override set to true
+	_on_difficulty_value_changed(_default_difficulty, true)
 
 
 func _on_gameplay_reset_js(_args: Array) -> void:
@@ -284,19 +285,19 @@ func _on_gameplay_back_button_pressed_js(args: Array) -> void:
 
 
 # Change: Separate handler for signal (float value)
-func _on_difficulty_value_changed(value: float) -> void:
+func _on_difficulty_value_changed(value: float, is_interactive: bool = false) -> void:
 	## Handles changes to the difficulty slider from the signal.
 	##
 	## Updates global difficulty, label text, logs the change, and saves settings.
+	## Gates slider.wav playback behind UI focus verification or explicit external
+	## interaction overrides.
 	##
 	## :param value: The new slider value.
 	## :type value: float
+	## :param is_interactive: True if the event was triggered by a verified external human
+	## interaction vector.
+	## :type is_interactive: bool
 	## :rtype: void
-	# Update the resource first (this triggers clamping in the setter)
-	#Globals.settings.difficulty = value
-	# Update the UI components using the ALREADY CLAMPED value from the resource
-	#difficulty_slider.value = Globals.settings.difficulty
-	#difficulty_label.text = "{" + str(Globals.settings.difficulty) + "}"
 	var settings_res := Globals.settings if is_instance_valid(Globals) else null
 
 	# FIX: Use the local reference exclusively
@@ -307,11 +308,22 @@ func _on_difficulty_value_changed(value: float) -> void:
 		)
 		return
 
+	# Evaluate focus validation before updating UI structures
+	var slider_has_focus: bool = false
+	if is_instance_valid(difficulty_slider):
+		slider_has_focus = difficulty_slider.has_focus()
+
+	# Gate audio playback on explicit intent token or validated UI focus
+	var should_play_audio: bool = is_interactive or slider_has_focus
+
 	settings_res.difficulty = value
 	if is_instance_valid(difficulty_slider):
 		difficulty_slider.set_value_no_signal(settings_res.difficulty)
 	if is_instance_valid(difficulty_label):
 		difficulty_label.text = "{" + str(settings_res.difficulty) + "}"
+
+	if should_play_audio:
+		_play_slider_sfx()
 
 
 # New: JS-specific callback (exactly one Array arg, no default)
@@ -376,8 +388,8 @@ func _on_change_difficulty_js(args: Array) -> void:
 		"JS difficulty callback called with valid value: " + str(value), Globals.LogLevel.DEBUG
 	)
 
-	# Pass the validated value to the standard handler
-	_on_difficulty_value_changed(value)
+	# Pass the validated value to the standard handler with the interactive flag explicitly overridden
+	_on_difficulty_value_changed(value, true)
 
 
 ## GS-JS: Helper to extract a potential value from diverse JS bridge payloads.
@@ -430,3 +442,17 @@ func _grab_initial_focus() -> void:
 		[difficulty_slider, gameplay_back_button, gameplay_reset_button],
 		"Gameplay Settings Menu"
 	)
+
+
+## Helper to cleanly trigger interactive feedback via the global AudioManager
+## Prevents engine-level environment execution faults during headless unit testing pipelines.
+##
+## :rtype: void
+func _play_slider_sfx() -> void:
+	if is_instance_valid(AudioManager) and AudioManager.has_method("play_sfx"):
+		AudioManager.play_sfx("slider")
+	elif is_instance_valid(Globals):
+		Globals.log_message(
+			"Gameplay Settings: AudioManager unavailable or missing play_sfx method.",
+			Globals.LogLevel.DEBUG
+		)
