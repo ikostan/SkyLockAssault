@@ -36,7 +36,7 @@ The following operations represent intentional human interactions. Each discrete
 1. **Mouse Interaction:** Dragging or clicking the physical `DifficultyHSlider` node bar while the control captures active mouse input.
 2. **Keyboard & Controller Navigation:** Utilizing the D-Pad, arrow keys, or analog controls to shift slider increments while the node possesses viewport layout focus (`has_focus()`).
 3. **Gameplay Reset Button:** Pressing the layout `ResetButton` control element. This bypasses localized focus restrictions by explicitly passing an interactive intent flag to reset variables back to default states (`1.0`).
-4. **Verified JS Overlay Interactions:** Incoming signals from the web-assembly runtime browser layout (`_on_change_difficulty_js()`). These bypass localized viewport check gates using an explicit parameter token override since external DOM nodes cannot hold local Godot UI focus.
+4. **Verified JS Overlay Interactions:** Incoming signals from the WebAssembly runtime browser layout (`_on_change_difficulty_js()`). These bypass localized viewport check gates using an explicit parameter token override since external DOM nodes cannot hold local Godot UI focus.
 
 ### 🔴 Silent Pathways (Absolute Silence)
 
