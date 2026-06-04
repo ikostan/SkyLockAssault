@@ -81,7 +81,7 @@ The sound asset `slider.wav` is flagged as an **actively referenced runtime game
 
 ### Maintenance Directives for Future Contributors:
 
-* **Exclusion from Optimization Sweets:** This file **is unsafe to remove** or exclude during asset compression passes, engine pruning commands, or build export optimization cycles.
+* **Exclusion from Optimization Suites:** This file **is unsafe to remove** or exclude during asset compression passes, engine pruning commands, or build export optimization cycles.
 * **No Direct File Tracing Checks:** Pruning tools checking files strictly via direct script `load()` or `preload()` paths will miss this asset, as it is requested dynamically through an abstraction layer string identifier (`"slider"`). Do not delete this asset based solely on a lack of static reference lines inside the codebase.
 * **Deprecation Protection:** If the Gameplay Settings menu layout is altered in future refactors, this asset must remain preserved in storage unless all focus-gated slider workflows across the option menus are completely eliminated.
 
