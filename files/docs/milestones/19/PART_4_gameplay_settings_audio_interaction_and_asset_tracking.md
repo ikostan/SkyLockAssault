@@ -45,10 +45,20 @@ The following operations represent intentional human interactions. Each
 discrete event must invoke exactly one audio playback event via
 `AudioManager.play_sfx("slider")`:
 
-1. **Mouse Interaction:** Dragging or clicking the physical `DifficultyHSlider` node bar while the control captures active mouse input.
-2. **Keyboard & Controller Navigation:** Utilizing the D-Pad, arrow keys, or analog controls to shift slider increments while the node possesses viewport layout focus (`has_focus()`).
-3. **Gameplay Reset Button:** Pressing the layout `ResetButton` control element. This bypasses localized focus restrictions by explicitly passing an interactive intent flag to reset variables back to default states (`1.0`).
-4. **Verified JS Overlay Interactions:** Incoming signals from the WebAssembly runtime browser layout (`_on_change_difficulty_js()`). These bypass localized viewport check gates using an explicit parameter token override since external DOM nodes cannot hold local Godot UI focus.
+1. **Mouse Interaction:** Dragging or clicking the physical
+   `DifficultyHSlider` node bar while the control captures active mouse
+   input.
+2. **Keyboard & Controller Navigation:** Utilizing the D-Pad, arrow keys,
+   or analog controls to shift slider increments while the node possesses
+   viewport layout focus (`has_focus()`).
+3. **Gameplay Reset Button:** Pressing the layout `ResetButton` control
+   element. This bypasses localized focus restrictions by explicitly passing
+   an interactive intent flag to reset variables back to default states
+   (`1.0`).
+4. **Verified JS Overlay Interactions:** Incoming signals from the
+   WebAssembly runtime browser layout (`_on_change_difficulty_js()`).
+   These bypass localized viewport check gates using an explicit parameter
+   token override since external DOM nodes cannot hold local Godot UI focus.
 
 ### 🔴 Silent Pathways (Absolute Silence)
 
@@ -56,11 +66,21 @@ The following operations represent programmatic synchronization, lifecycle
 state management, or automated testing loops. These blocks **must remain
 completely silent** and are protected against audio leakage:
 
-1. **Menu Initialization:** Instantiating the scene container and executing `_ready()` loops to synchronize variables with global configuration singletons.
-2. **Save & Configuration Synchronization:** Real-time data updates loading from or saving to disk using the `Globals.settings` configuration serialization layer.
-3. **External Observer Reactivity:** When the underlying settings resource broadcasts a `setting_changed` signal, the UI reacting inside `_on_external_setting_changed()` hooks updates layout positions silently.
-4. **Recursive Loop Mitigation:** Programmatic updates applied to UI controls utilize Godot’s native `set_value_no_signal()` method rather than direct property modification, ensuring that layout changes do not trigger duplicate handlers or audio signals.
-5. **Automated Setup Flows:** Headless test runner executions (such as automated GUT unit suites) mocking environment profiles.
+1. **Menu Initialization:** Instantiating the scene container and executing
+   `_ready()` loops to synchronize variables with global configuration
+   singletons.
+2. **Save & Configuration Synchronization:** Real-time data updates loading
+   from or saving to disk using the `Globals.settings` configuration
+   serialization layer.
+3. **External Observer Reactivity:** When the underlying settings resource
+   broadcasts a `setting_changed` signal, the UI reacting inside
+   `_on_external_setting_changed()` hooks updates layout positions silently.
+4. **Recursive Loop Mitigation:** Programmatic updates applied to UI
+   controls utilize Godot’s native `set_value_no_signal()` method rather
+   than direct property modification, ensuring that layout changes do not
+   trigger duplicate handlers or audio signals.
+5. **Automated Setup Flows:** Headless test runner executions (such as
+   automated GUT unit suites) mocking environment profiles.
 
 ---
 
