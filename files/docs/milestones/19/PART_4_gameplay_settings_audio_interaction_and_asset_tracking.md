@@ -19,19 +19,31 @@ Decoupling Pattern**.
 
 ### Core Architectural Axioms:
 
-* **Focus-Gated Control:** Audio playback is strictly decoupled from the low-level data engine layer. Sound effects are never permitted to fire automatically from generic value mutation listeners.
-* **Gated Pathway Verification:** Audio execution triggers only when an explicit, user-driven interaction vector is authenticated via the viewport focus system or a verified external API token.
-* **Pipeline Parity:** External interaction vectors (such as HTML5 browser overlays via JavaScript) do not duplicate or independently mutate state; they route safely into the native internal interaction handling pipeline to maintain identical validation rules.
+* **Focus-Gated Control:** Audio playback is strictly decoupled from the
+  low-level data engine layer. Sound effects are never permitted to fire
+  automatically from generic value mutation listeners.
+* **Gated Pathway Verification:** Audio execution triggers only when an
+  explicit, user-driven interaction vector is authenticated via the viewport
+  focus system or a verified external API token.
+* **Pipeline Parity:** External interaction vectors (such as HTML5 browser
+  overlays via JavaScript) do not duplicate or independently mutate state;
+  they route safely into the native internal interaction handling pipeline
+  to maintain identical validation rules.
 
 ---
 
 ## 🔄 2. Interaction Pipelines: Behavioral Division
 
-To maintain deterministic execution states during tests, configuration restoration, and real-time gameplay updates, the system enforces an absolute separation between **Interactive Pathways** (audible) and **Silent Pathways** (programmatic).
+To maintain deterministic execution states during tests, configuration
+restoration, and real-time gameplay updates, the system enforces an absolute
+separation between **Interactive Pathways** (audible) and **Silent Pathways**
+(programmatic).
 
 ### 🟢 Interactive Pathways (Audible Feedback)
 
-The following operations represent intentional human interactions. Each discrete event must invoke exactly one audio playback event via `AudioManager.play_sfx("slider")`:
+The following operations represent intentional human interactions. Each
+discrete event must invoke exactly one audio playback event via
+`AudioManager.play_sfx("slider")`:
 
 1. **Mouse Interaction:** Dragging or clicking the physical `DifficultyHSlider` node bar while the control captures active mouse input.
 2. **Keyboard & Controller Navigation:** Utilizing the D-Pad, arrow keys, or analog controls to shift slider increments while the node possesses viewport layout focus (`has_focus()`).
@@ -40,7 +52,9 @@ The following operations represent intentional human interactions. Each discrete
 
 ### 🔴 Silent Pathways (Absolute Silence)
 
-The following operations represent programmatic synchronization, lifecycle state management, or automated testing loops. These blocks **must remain completely silent** and are protected against audio leakage:
+The following operations represent programmatic synchronization, lifecycle
+state management, or automated testing loops. These blocks **must remain
+completely silent** and are protected against audio leakage:
 
 1. **Menu Initialization:** Instantiating the scene container and executing `_ready()` loops to synchronize variables with global configuration singletons.
 2. **Save & Configuration Synchronization:** Real-time data updates loading from or saving to disk using the `Globals.settings` configuration serialization layer.
@@ -52,7 +66,10 @@ The following operations represent programmatic synchronization, lifecycle state
 
 ## 📦 3. Explicit Runtime Asset Dependency Registration
 
-To prevent automated pruning tools, resource optimization scripts, or export exclusion whitelists from accidentally dropping required audio assets during project compilation, the explicit relationship mapping below is formally registered:
+To prevent automated pruning tools, resource optimization scripts, or export
+exclusion whitelists from accidentally dropping required audio assets during
+project compilation, the explicit relationship mapping below is formally
+registered:
 
 ### Dependency Mapping Matrix
 
@@ -77,7 +94,8 @@ To prevent automated pruning tools, resource optimization scripts, or export exc
 
 ## 🛡️ 4. Asset Protection & Pruning Safeguards
 
-The sound asset `slider.wav` is flagged as an **actively referenced runtime gameplay UI dependency**.
+The sound asset `slider.wav` is flagged as an **actively referenced
+runtime gameplay UI dependency**.
 
 ### Maintenance Directives for Future Contributors:
 
@@ -89,7 +107,9 @@ The sound asset `slider.wav` is flagged as an **actively referenced runtime game
 
 ## ⚠️ 5. Regression Prevention Notes
 
-When engineering updates or extending features under this layout ecosystem, future developers must respect these defensive constraints to prevent breaking system stability:
+When engineering updates or extending features under this layout ecosystem,
+future developers must respect these defensive constraints to prevent
+breaking system stability:
 
 1. **Why Generic `value_changed` Signals Cannot Play Audio:**
 Attaching an audio hook directly to a standard slider signal creates an immediate architectural loop vulnerability. Because code modifications to a slider's layout re-trigger its `value_changed` signal, programmatic setups (like reading a save file) will cause sound effects to blast during initialization or lock the loop into infinite recursion.
@@ -109,6 +129,7 @@ Automated unit tests running inside headless CI/CD systems run without physical 
 * [x] Explicit dependency mapping to `slider.wav` is recorded.
 * [x] Asset pruning protection notes are added.
 * [x] Documentation reflects actual runtime implementation behavior.
-* [x] Future contributors can identify the dependency relationship without code tracing.
+* [x] Future contributors can identify the dependency relationship without
+  code tracing.
 
 ---
