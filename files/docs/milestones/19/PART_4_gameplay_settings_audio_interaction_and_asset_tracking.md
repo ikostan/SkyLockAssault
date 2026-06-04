@@ -107,8 +107,11 @@ registered:
 ### Resource Metadata Definitions:
 
 * **Asset Path:** `res://files/sounds/sfx/slider.wav`
-* **Import Profile Configuration:** Controlled via tracking metadata at `res://files/sounds/sfx/slider.wav.import`.
-* **Runtime Deployment Target:** Mapped to the `AudioConstants.BUS_SFX_MENU` mixer channel backend through the centralized pool allocation routing configuration.
+* **Import Profile Configuration:** Controlled via tracking metadata
+  at `res://files/sounds/sfx/slider.wav.import`.
+* **Runtime Deployment Target:** Mapped to the
+  `AudioConstants.BUS_SFX_MENU` mixer channel backend through the
+  centralized pool allocation routing configuration.
 
 ---
 
@@ -119,9 +122,18 @@ runtime gameplay UI dependency**.
 
 ### Maintenance Directives for Future Contributors:
 
-* **Exclusion from Optimization Suites:** This file **is unsafe to remove** or exclude during asset compression passes, engine pruning commands, or build export optimization cycles.
-* **No Direct File Tracing Checks:** Pruning tools checking files strictly via direct script `load()` or `preload()` paths will miss this asset, as it is requested dynamically through an abstraction layer string identifier (`"slider"`). Do not delete this asset based solely on a lack of static reference lines inside the codebase.
-* **Deprecation Protection:** If the Gameplay Settings menu layout is altered in future refactors, this asset must remain preserved in storage unless all focus-gated slider workflows across the option menus are completely eliminated.
+* **Exclusion from Optimization Suites:** This file **is unsafe to remove**
+  or exclude during asset compression passes, engine pruning commands, or
+  build export optimization cycles.
+* **No Direct File Tracing Checks:** Pruning tools checking files strictly
+  via direct script `load()` or `preload()` paths will miss this asset, as
+  it is requested dynamically through an abstraction layer string identifier
+  (`"slider"`). Do not delete this asset based solely on a lack of static
+  reference lines inside the codebase.
+* **Deprecation Protection:** If the Gameplay Settings menu layout is
+  altered in future refactors, this asset must remain preserved in storage
+  unless all focus-gated slider workflows across the option menus are
+  completely eliminated.
 
 ---
 
@@ -132,11 +144,23 @@ future developers must respect these defensive constraints to prevent
 breaking system stability:
 
 1. **Why Generic `value_changed` Signals Cannot Play Audio:**
-Attaching an audio hook directly to a standard slider signal creates an immediate architectural loop vulnerability. Because code modifications to a slider's layout re-trigger its `value_changed` signal, programmatic setups (like reading a save file) will cause sound effects to blast during initialization or lock the loop into infinite recursion.
+Attaching an audio hook directly to a standard slider signal creates an
+immediate architectural loop vulnerability. Because code modifications to a
+slider's layout re-trigger its `value_changed` signal, programmatic setups
+(like reading a save file) will cause sound effects to blast during
+initialization or lock the loop into infinite recursion.
 2. **Why JS Overlays Require Explicit Intent Passing:**
-When a game export is displayed in a browser canvas, clicking an HTML overlay button interacts directly with the page DOM, meaning Godot's localized viewport focus tracking returns `false`. By adding `is_interactive: bool = false` parameters, the web overlay can cleanly override the focus gate token, ensuring identical state behavior without splitting the pipeline into separate logic wrappers.
+When a game export is displayed in a browser canvas, clicking an HTML overlay
+button interacts directly with the page DOM, meaning Godot's localized
+viewport focus tracking returns `false`. By adding
+`is_interactive: bool = false` parameters, the web overlay can cleanly
+override the focus gate token, ensuring identical state behavior without
+splitting the pipeline into separate logic wrappers.
 3. **Why Headless Audio Isolation Matters:**
-Automated unit tests running inside headless CI/CD systems run without physical audio server drivers or sound hardware cards. Isolating audio calls into guarded blocks checking for a valid `AudioManager` prevents testing environments from crashing due to null pointer engine executions.
+Automated unit tests running inside headless CI/CD systems run without
+physical audio server drivers or sound hardware cards. Isolating audio calls
+into guarded blocks checking for a valid `AudioManager` prevents testing
+environments from crashing due to null pointer engine executions.
 
 ---
 
