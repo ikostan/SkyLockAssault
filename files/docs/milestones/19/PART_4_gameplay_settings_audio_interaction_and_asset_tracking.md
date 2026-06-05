@@ -215,8 +215,10 @@ interaction architecture and related CI maintenance work.
 
 ### Possibly linked issues
 
-- **#728**: The PR implements the requested focus-gated difficulty slider audio behavior, JS bridge routing, reset handling, and validation/tests.
-- **#728**: PR directly implements the epic’s difficulty slider audio behavior, including focus-gating, JS pathway reuse, and silent sync.
+- **#728**: The PR implements the requested focus-gated difficulty slider
+  audio behavior, JS bridge routing, reset handling, and validation/tests.
+- **#728**: PR directly implements the epic’s difficulty slider audio
+  behavior, including focus-gating, JS pathway reuse, and silent sync.
 
 ---
 
