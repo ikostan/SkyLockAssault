@@ -49,22 +49,16 @@ func after_each() -> void:
 	await get_tree().process_frame
 
 
-## Safely silences all active sound players inside the structural tracking arrays.
+## Safely silences all active sound players via the public manager API.
 ## :rtype: void
 func _clear_pool_players() -> void:
-	for player: AudioStreamPlayer in _audio_manager._sfx_pool:
-		player.stop()
-		player.stream = null
+	_audio_manager.stop_all_sfx()
 
 
 ## Inspects channel layers to check if any active player is streaming audio payloads.
 ## :rtype: bool
 func _is_sound_playing() -> bool:
-	for player: AudioStreamPlayer in _audio_manager._sfx_pool:
-		if player.playing:
-			return true
-
-	return false
+	return _audio_manager.is_any_sfx_playing()
 
 
 # --- Automated Test Cases ---
@@ -128,11 +122,8 @@ func test_reset_button_emits_audio_exactly_once() -> void:
 	assert_eq(gameplay_instance.difficulty_slider.value, 1.0, "Gameplay reset action must restore default configuration bounds.")
 	assert_true(_is_sound_playing(), "Reset interaction pathway must fire audio affirmation.")
 	
-	# Verify that set_value_no_signal optimization prevented duplicate signal tracking loop echoes
-	var active_play_count: int = 0
-	for player: AudioStreamPlayer in _audio_manager._sfx_pool:
-		if player.playing:
-			active_play_count += 1
+	# Verify that the public interface returns exactly 1 active playing channel
+	var active_play_count: int = _audio_manager.get_active_sfx_playback_count()
 	assert_eq(active_play_count, 1, "Reset loop must register exactly one playback instance configuration event.")
 
 
@@ -183,5 +174,18 @@ func test_invalid_js_input_rejection_remains_silent() -> void:
 ## Isolated dummy placeholder class used to prevent null reference errors 
 ## when running tests inside bare environments lacking Autoload initializations.
 class DummyAudioManager:
-	## In-memory storage array matching the native player buffer structure footprint.
-	var _sfx_pool: Array[AudioStreamPlayer] = []
+	
+	## Mock interface matching production playing state evaluation.
+	## :rtype: bool
+	func is_any_sfx_playing() -> bool:
+		return false
+	
+	## Mock interface matching production concurrent playback calculation.
+	## :rtype: int
+	func get_active_sfx_playback_count() -> int:
+		return 0
+	
+	## Mock interface matching production channel teardown routine execution.
+	## :rtype: void
+	func stop_all_sfx() -> void:
+		pass
