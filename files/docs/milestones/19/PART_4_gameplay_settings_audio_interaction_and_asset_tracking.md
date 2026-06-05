@@ -73,8 +73,8 @@ completely silent** and are protected against audio leakage:
    from or saving to disk using the `Globals.settings` configuration
    serialization layer.
 3. **External Observer Reactivity:** When the underlying settings resource
-   broadcasts a `setting_changed` signal, the UI reacting inside
-   `_on_external_setting_changed()` hooks updates layout positions silently.
+   broadcasts a `setting_changed` signal, and the UI reacts inside the
+   `_on_external_setting_changed()` hook, it updates layout positions silently.
 4. **Recursive Loop Mitigation:** Programmatic updates applied to UI
    controls utilize Godot’s native `set_value_no_signal()` method rather
    than direct property modification, ensuring that layout changes do not
