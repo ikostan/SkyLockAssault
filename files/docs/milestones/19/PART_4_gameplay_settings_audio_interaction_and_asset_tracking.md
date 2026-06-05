@@ -153,7 +153,7 @@ initialization or lock the loop into infinite recursion.
 When a game export is displayed in a browser canvas, clicking an HTML overlay
 button interacts directly with the page DOM, meaning Godot's localized
 viewport focus tracking returns `false`. By adding
-`is_interactive: bool = false` parameters, the web overlay can cleanly
+`is_interactive: bool = false` parameter, the web overlay can cleanly
 override the focus gate token, ensuring identical state behavior without
 splitting the pipeline into separate logic wrappers.
 3. **Why Headless Audio Isolation Matters:**
