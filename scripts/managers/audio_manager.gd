@@ -450,3 +450,30 @@ func play_sfx(
 
 	# 4. Play (No queue_free needed since we reuse the nodes)
 	player.play()
+
+
+## Checks if any AudioStreamPlayer node within the pre-allocated pool is currently active.
+## :rtype: bool
+func is_any_sfx_playing() -> bool:
+	for player: AudioStreamPlayer in _sfx_pool:
+		if player.playing:
+			return true
+	return false
+
+
+## Returns the total number of AudioStreamPlayer channels currently active.
+## :rtype: int
+func get_active_sfx_playback_count() -> int:
+	var count: int = 0
+	for player: AudioStreamPlayer in _sfx_pool:
+		if player.playing:
+			count += 1
+	return count
+
+
+## Stops all active audio layers and clears streamed audio resources across the object pool.
+## :rtype: void
+func stop_all_sfx() -> void:
+	for player: AudioStreamPlayer in _sfx_pool:
+		player.stop()
+		player.stream = null
