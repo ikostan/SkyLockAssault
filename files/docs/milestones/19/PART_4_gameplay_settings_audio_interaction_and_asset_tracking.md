@@ -178,7 +178,7 @@ environments from crashing due to null pointer engine executions.
 
 ---
 
-## Reviewer's Guide
+## 🔍 6. Reviewer's Guide
 
 Implements focus-gated audio feedback for the gameplay difficulty slider,
 adds helper APIs on the AudioManager, introduces GUT tests to validate
@@ -222,7 +222,7 @@ interaction architecture and related CI maintenance work.
 
 ---
 
-## Bots/AI Contributions Summary for PR #738
+## 🤖 7. Bots/AI Contributions Summary for PR #738
 
 This PR implements focus-gated audio feedback for the gameplay difficulty
 slider using `slider.wav`, adds supporting utilities to the AudioManager,
