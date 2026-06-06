@@ -13,7 +13,7 @@
     "audio": {
       "symbol": "🔊",
       "description": "Audio contributions (sound effects, UI feedback)",
-      "link": "[🔊](# \"Audio\")"
+      "link": "#audio-<%= contributor.login %>"
     }
   },
   "contributors": [
