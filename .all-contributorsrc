@@ -5,7 +5,41 @@
   "repoHost": "https://github.com",
   "files": ["README.md"],
   "imageSize": 100,
+  "commit": true,
   "contributorsPerLine": 7,
-  "contributors": [],
-  "badgeTemplate": "[<image-card alt=\"All Contributors\" src=\"https://img.shields.io/github/all-contributors/<%= projectOwner %>/<%= projectName %>?color=ee8449&style=flat-square\" ></image-card>](<%= contributorsUrl %>)"
+  "contributorsSortAlphabetically": false,
+  "skipCi": true,
+  "types": {
+    "audio": {
+      "symbol": "🔊",
+      "description": "Audio contributions (sound effects, UI feedback)",
+      "link": "#audio-<%= contributor.login %>"
+    }
+  },
+  "contributors": [
+    {
+      "login": "ikostan",
+      "contributions": ["code", "test", "doc", "infra", "ideas"]
+    },
+    {
+      "login": "espanakosta-jpg",
+      "contributions": ["audio", "design"]
+    },
+    {
+      "login": "dependabot[bot]",
+      "contributions": ["infra", "security", "maintenance"]
+    },
+    {
+      "login": "sourcery-ai",
+      "contributions": ["review", "doc"]
+    },
+    {
+      "login": "coderabbitai",
+      "contributions": ["review", "doc"]
+    },
+    {
+      "login": "deepsource-io",
+      "contributions": ["review", "security"]
+    }
+  ]
 }
