@@ -3,7 +3,9 @@
   "projectOwner": "ikostan",
   "repoType": "github",
   "repoHost": "https://github.com",
-  "files": ["README.md"],
+  "files": [
+    "README.md"
+  ],
   "imageSize": 100,
   "commit": true,
   "contributorsPerLine": 7,
@@ -19,27 +21,52 @@
   "contributors": [
     {
       "login": "ikostan",
-      "contributions": ["code", "test", "doc", "infra", "ideas"]
+      "contributions": [
+        "code",
+        "test",
+        "doc",
+        "infra",
+        "ideas",
+        "design"
+      ]
     },
     {
       "login": "espanakosta-jpg",
-      "contributions": ["audio", "design"]
+      "contributions": [
+        "audio",
+        "design"
+      ]
     },
     {
       "login": "dependabot[bot]",
-      "contributions": ["infra", "security", "maintenance"]
+      "contributions": [
+        "infra",
+        "security",
+        "maintenance"
+      ]
     },
     {
       "login": "sourcery-ai",
-      "contributions": ["review", "doc"]
+      "contributions": [
+        "review",
+        "doc"
+      ]
     },
     {
       "login": "coderabbitai",
-      "contributions": ["review", "doc"]
+      "contributions": [
+        "review",
+        "doc"
+      ]
     },
     {
       "login": "deepsource-io",
-      "contributions": ["review", "security"]
+      "contributions": [
+        "review",
+        "security"
+      ]
     }
-  ]
+  ],
+  "commitType": "docs",
+  "commitConvention": "angular"
 }

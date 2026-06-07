@@ -447,6 +447,18 @@ Please create a branch per issue and reference the issue number in your PR title
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><img src="?s=100" width="100px;" alt="ikostan"/><br /><sub><b>ikostan</b></sub><br /><a href="https://github.com/ikostan/SkyLockAssault/commits?author=ikostan" title="Code">💻</a> <a href="https://github.com/ikostan/SkyLockAssault/commits?author=ikostan" title="Tests">⚠️</a> <a href="https://github.com/ikostan/SkyLockAssault/commits?author=ikostan" title="Documentation">📖</a> <a href="#infra-ikostan" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#ideas-ikostan" title="Ideas, Planning, & Feedback">🤔</a> <a href="#design-ikostan" title="Design">🎨</a></td>
+      <td align="center" valign="top" width="14.28%"><img src="?s=100" width="100px;" alt="espanakosta-jpg"/><br /><sub><b>espanakosta-jpg</b></sub><br /><a href="#audio-espanakosta-jpg" title="Audio contributions (sound effects, UI feedback)">🔊</a> <a href="#design-espanakosta-jpg" title="Design">🎨</a></td>
+      <td align="center" valign="top" width="14.28%"><img src="?s=100" width="100px;" alt="dependabot[bot]"/><br /><sub><b>dependabot[bot]</b></sub><br /><a href="#infra-dependabot[bot]" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#security-dependabot[bot]" title="Security">🛡️</a> <a href="#maintenance-dependabot[bot]" title="Maintenance">🚧</a></td>
+      <td align="center" valign="top" width="14.28%"><img src="?s=100" width="100px;" alt="sourcery-ai"/><br /><sub><b>sourcery-ai</b></sub><br /><a href="https://github.com/ikostan/SkyLockAssault/pulls?q=is%3Apr+reviewed-by%3Asourcery-ai" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/ikostan/SkyLockAssault/commits?author=sourcery-ai" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><img src="?s=100" width="100px;" alt="coderabbitai"/><br /><sub><b>coderabbitai</b></sub><br /><a href="https://github.com/ikostan/SkyLockAssault/pulls?q=is%3Apr+reviewed-by%3Acoderabbitai" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/ikostan/SkyLockAssault/commits?author=coderabbitai" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><img src="?s=100" width="100px;" alt="deepsource-io"/><br /><sub><b>deepsource-io</b></sub><br /><a href="https://github.com/ikostan/SkyLockAssault/pulls?q=is%3Apr+reviewed-by%3Adeepsource-io" title="Reviewed Pull Requests">👀</a> <a href="#security-deepsource-io" title="Security">🛡️</a></td>
+    </tr>
+  </tbody>
+</table>
 
 <!-- markdownlint-restore -->
 <!-- prettier-ignore-end -->
