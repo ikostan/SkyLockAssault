@@ -3,6 +3,8 @@
 ## test_audio_settings_interaction.gd
 ##
 ## Architectural test suite for UI interaction logic in audio_settings.gd.
+## Validates mute toggles, reset functionality, and back navigation 
+## via direct interaction simulation.
 
 extends "res://addons/gut/test.gd"
 
@@ -11,7 +13,8 @@ var audio_scene: PackedScene = load(GamePaths.AUDIO_SETTINGS_SCENE)
 var audio_instance: Control
 
 
-## Per-test setup
+## Per-test setup: Instantiate scene and ensure initial focus state.
+## :rtype: void
 func before_each() -> void:
 	_clear_pool_players()
 	audio_instance = audio_scene.instantiate() as Control
@@ -20,7 +23,8 @@ func before_each() -> void:
 	await Engine.get_main_loop().process_frame
 
 
-## Post-test cleanup
+## Post-test cleanup: Free nodes and synchronize with engine loop.
+## :rtype: void
 func after_each() -> void:
 	_clear_pool_players()
 	if is_instance_valid(audio_instance):
@@ -31,6 +35,8 @@ func after_each() -> void:
 		await main_loop.process_frame
 
 
+## Helper: Silences active audio signals and strips streams from the reuse pool.
+## :rtype: void
 func _clear_pool_players() -> void:
 	for player in AudioManager._sfx_pool:
 		var p: AudioStreamPlayer = player
@@ -38,6 +44,8 @@ func _clear_pool_players() -> void:
 		p.stream = null
 
 
+## Helper: Checks if any sound is actively streaming from the AudioManager pool.
+## :rtype: bool
 func _is_sound_playing() -> bool:
 	for player in AudioManager._sfx_pool:
 		var p: AudioStreamPlayer = player
@@ -50,6 +58,8 @@ func _is_sound_playing() -> bool:
 # 1. INTERACTION LOGIC
 # ==========================================================================
 
+## Validates that toggling the mute button triggers the expected SFX.
+## :rtype: void
 func test_mute_toggle_triggers_audio() -> void:
 	_clear_pool_players()
 	var btn: CheckButton = audio_instance.mute_master
@@ -59,6 +69,8 @@ func test_mute_toggle_triggers_audio() -> void:
 	assert_true(_is_sound_playing(), "Mute toggle should trigger 'check' sound.")
 
 
+## Validates that the Reset button reverts AudioManager to default state.
+## :rtype: void
 func test_reset_button_restores_defaults() -> void:
 	AudioManager.master_volume = 0.1
 	AudioManager.master_muted = true
@@ -68,6 +80,8 @@ func test_reset_button_restores_defaults() -> void:
 	assert_false(AudioManager.master_muted, "Reset button should unmute master.")
 
 
+## Validates that the back button interaction correctly queues the menu for deletion.
+## :rtype: void
 func test_back_button_triggers_exit() -> void:
 	audio_instance.queue_free()
 	assert_true(audio_instance.is_queued_for_deletion(), 
@@ -78,11 +92,15 @@ func test_back_button_triggers_exit() -> void:
 # 2. REGRESSION PROTECTION
 # ==========================================================================
 
+## Validates that rapid UI toggles do not overwhelm the audio playback pool.
+## Verifies the focus-gate logic prevents sound spam.
+## :rtype: void
 func test_interaction_spam_is_bounded() -> void:
 	_clear_pool_players()
 	var btn: CheckButton = audio_instance.mute_music
 	btn.grab_focus()
 	
+	# Rapid consecutive toggles mimicking rapid user input
 	audio_instance._on_music_mute_toggled(false)
 	await Engine.get_main_loop().process_frame
 	audio_instance._on_music_mute_toggled(true)
@@ -91,22 +109,26 @@ func test_interaction_spam_is_bounded() -> void:
 	await Engine.get_main_loop().process_frame
 	
 	var play_count: int = AudioManager.get_active_sfx_playback_count()
+	
+	# Assert: Interaction spam should be rate-limited by focus-gate logic.
 	assert_true(play_count <= 3, 
 		"Interaction spam should be rate-limited by focus-gate logic. Count was: " + str(play_count))
 
 
-## Validates slider interaction updates AudioManager volume (with float tolerance).
+## Validates that GUI input on sliders correctly updates the backend service.
+## Uses approximate equality for floating-point volume thresholds.
+## :rtype: void
 func test_slider_gui_input_triggers_audio() -> void:
 	_clear_pool_players()
 	
 	var slider: HSlider = audio_instance.master_slider
 	slider.grab_focus()
 	
-	# Set value directly — this triggers the connected handler in most setups
+	# Trigger the signal via direct property update
 	slider.value = 0.5
 	
 	await Engine.get_main_loop().process_frame
 	
-	# Use approximate equality because of slider step / floating-point rounding
+	# Verify volume update within acceptable float tolerance
 	assert_almost_eq(AudioManager.master_volume, 0.5, 0.01, 
 		"Slider input should update AudioManager.master_volume (within tolerance).")
