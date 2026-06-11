@@ -17,7 +17,6 @@ var audio_instance: Control
 ## :rtype: void
 func before_each() -> void:
 	_clear_pool_players()
-	# Fixed: Removed double instantiation
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
 	await Engine.get_main_loop().process_frame
@@ -68,6 +67,22 @@ func test_mute_toggle_triggers_audio() -> void:
 	audio_instance._on_master_mute_toggled(false)
 	await Engine.get_main_loop().process_frame
 	assert_true(_is_sound_playing(), "Mute toggle should trigger 'check' sound.")
+
+
+## Validates that mute toggles do NOT emit audio when the element is unfocused.
+## (Addresses GitHub issue #494 focus-gate requirement).
+## :rtype: void
+func test_mute_toggled_unfocused_is_silent() -> void:
+	_clear_pool_players()
+	# Ensure a DIFFERENT element has focus (back button)
+	audio_instance.audio_back_button.grab_focus()
+	
+	# Act: Attempt to toggle mute while unfocused
+	audio_instance._on_master_mute_toggled(false)
+	await Engine.get_main_loop().process_frame
+	
+	# Assert: Should be silent
+	assert_false(_is_sound_playing(), "Mute toggle when unfocused should be silent (focus-gate test).")
 
 
 ## Validates that the Reset button reverts AudioManager to default state.
@@ -140,13 +155,13 @@ func test_slider_extreme_values() -> void:
 	_clear_pool_players()
 	var slider: HSlider = audio_instance.master_slider
 	
-	# Test Lower Boundary
+	# Lower Boundary
 	slider.value = 0.0
 	audio_instance._on_master_slider_value_changed(0.0)
 	await Engine.get_main_loop().process_frame
 	assert_almost_eq(AudioManager.master_volume, 0.0, 0.01)
 	
-	# Test Upper Boundary
+	# Upper Boundary
 	slider.value = 1.0
 	audio_instance._on_master_slider_value_changed(1.0)
 	await Engine.get_main_loop().process_frame
@@ -159,13 +174,13 @@ func test_slider_invalid_input_resilience() -> void:
 	_clear_pool_players()
 	var slider: HSlider = audio_instance.master_slider
 	
-	# Test Under-range
+	# Under-range
 	slider.value = -1.0
 	audio_instance._on_master_slider_value_changed(-1.0)
 	await Engine.get_main_loop().process_frame
 	assert_true(AudioManager.master_volume >= 0.0)
 	
-	# Test Over-range
+	# Over-range
 	slider.value = 999.0
 	audio_instance._on_master_slider_value_changed(999.0)
 	await Engine.get_main_loop().process_frame
