@@ -82,14 +82,6 @@ func test_reset_button_restores_defaults() -> void:
 	assert_false(AudioManager.master_muted, "Reset button should unmute master.")
 
 
-## Validates that the back button interaction correctly queues the menu for deletion.
-## :rtype: void
-func test_back_button_triggers_exit() -> void:
-	audio_instance.queue_free()
-	assert_true(audio_instance.is_queued_for_deletion(), 
-		"Back button should queue_free the menu.")
-
-
 ## Validates that mute toggles do NOT emit audio when unfocused (Focus-Gate).
 ## :rtype: void
 func test_mute_toggled_unfocused_is_silent() -> void:
