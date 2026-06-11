@@ -89,6 +89,19 @@ func test_back_button_triggers_exit() -> void:
 		"Back button should queue_free the menu.")
 
 
+## Validates that mute toggles do NOT emit audio when unfocused (Focus-Gate).
+## :rtype: void
+func test_mute_toggled_unfocused_is_silent() -> void:
+	_clear_pool_players()
+	# Focus something else
+	audio_instance.audio_back_button.grab_focus()
+	
+	audio_instance._on_master_mute_toggled(false)
+	await Engine.get_main_loop().process_frame
+	
+	assert_false(_is_sound_playing(), "Mute toggle when unfocused should be silent.")
+
+
 # ==========================================================================
 # 2. REGRESSION PROTECTION
 # ==========================================================================
@@ -130,7 +143,6 @@ func test_slider_gui_input_triggers_audio() -> void:
 	# Act: Simulate a GUI value change
 	# We invoke the handler directly as it is the controller's public API
 	slider.value = 0.5
-	
 	await Engine.get_main_loop().process_frame
 	
 	# Assert: Check if AudioManager reflects the value change and audio was processed
