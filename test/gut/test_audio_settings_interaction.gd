@@ -47,12 +47,10 @@ func _is_sound_playing() -> bool:
 	return AudioManager.is_sfx_playing()
 
 
-## Helper: Inspects the pool to find the playing stream's resource path.
+## Helper: Inspects the pool via public API to find the playing stream's resource path.
+## @return String
 func _get_playing_stream_path() -> String:
-	for player in AudioManager._sfx_pool:
-		if player.playing and player.stream:
-			return player.stream.resource_path
-	return ""
+	return AudioManager.get_active_sfx_stream_path()
 
 
 # ==========================================================================

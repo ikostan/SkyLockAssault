@@ -486,3 +486,12 @@ func is_sfx_playing() -> bool:
 		if player.playing:
 			return true
 	return false
+
+
+## Public API: Returns the resource path of the currently playing SFX.
+## @return String: Resource path of the active stream, or empty if silent.
+func get_active_sfx_stream_path() -> String:
+	for player in _sfx_pool:
+		if player.playing and player.stream:
+			return player.stream.resource_path
+	return ""
