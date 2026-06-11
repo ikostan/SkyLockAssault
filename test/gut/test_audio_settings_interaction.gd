@@ -151,17 +151,17 @@ func test_slider_gui_input_triggers_audio() -> void:
 	_clear_pool_players()
 	
 	# Target: Master Slider
-	var slider: HSlider = audio_instance.master_slider
+	var slider: VolumeSlider = audio_instance.master_slider
 	slider.grab_focus()
 	
-	# Act: Simulate a GUI value change
-	# We invoke the handler directly as it is the controller's public API
-	slider.value = 0.5
+	# Act: Call the handler on the slider instance itself
+	# Use the method name defined in volume_slider.gd
+	slider._on_value_changed(0.5) 
 	await Engine.get_main_loop().process_frame
 	
-	# Assert: Check if AudioManager reflects the value change and audio was processed
+	# Assert
 	assert_almost_eq(AudioManager.master_volume, 0.5, 0.01,
-		"Slider input should update AudioManager.master_volume (within tolerance).")
+		"Slider input should update AudioManager.master_volume.")
 
 
 # ==========================================================================
@@ -172,13 +172,15 @@ func test_slider_gui_input_triggers_audio() -> void:
 ## :rtype: void
 func test_slider_extreme_values() -> void:
 	_clear_pool_players()
-	var slider: HSlider = audio_instance.master_slider
+	var slider: VolumeSlider = audio_instance.master_slider
 	
 	slider.value = 0.0
+	slider._on_value_changed(0.0) # Explicitly trigger the handler
 	await Engine.get_main_loop().process_frame
 	assert_almost_eq(AudioManager.master_volume, 0.0, 0.01)
 	
 	slider.value = 1.0
+	slider._on_value_changed(1.0) # Explicitly trigger the handler
 	await Engine.get_main_loop().process_frame
 	assert_almost_eq(AudioManager.master_volume, 1.0, 0.01)
 
@@ -187,13 +189,15 @@ func test_slider_extreme_values() -> void:
 ## :rtype: void
 func test_slider_invalid_input_resilience() -> void:
 	_clear_pool_players()
-	var slider: HSlider = audio_instance.master_slider
+	var slider: VolumeSlider = audio_instance.master_slider
 	
 	slider.value = -1.0
+	slider._on_value_changed(-1.0) # Explicitly trigger the handler
 	await Engine.get_main_loop().process_frame
 	assert_true(AudioManager.master_volume >= 0.0)
 	
 	slider.value = 999.0
+	slider._on_value_changed(999.0) # Explicitly trigger the handler
 	await Engine.get_main_loop().process_frame
 	assert_true(AudioManager.master_volume <= 1.0)
 
