@@ -452,7 +452,6 @@ func play_sfx(
 	player.play()
 
 
-
 ## [DIAGNOSTIC]
 ## Checks if any AudioStreamPlayer node within the pre-allocated pool is currently active.
 ## :rtype: bool
@@ -461,7 +460,6 @@ func is_any_sfx_playing() -> bool:
 		if player.playing:
 			return true
 	return false
-
 
 
 ## [DIAGNOSTIC]
