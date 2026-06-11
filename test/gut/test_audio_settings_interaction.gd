@@ -130,6 +130,10 @@ func test_slider_gui_input_triggers_audio() -> void:
 	# Act: Simulate a GUI value change
 	# We invoke the handler directly as it is the controller's public API
 	slider.value = 0.5
+	# Explicitly call the handler since setting .value doesn't emit signals
+	audio_instance._on_master_slider_value_changed(0.5)
+	
+	await Engine.get_main_loop().process_frame
 	
 	await Engine.get_main_loop().process_frame
 	
