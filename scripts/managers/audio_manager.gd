@@ -484,7 +484,7 @@ func stop_all_sfx() -> void:
 ## If no sounds are playing, returns an empty string.
 ## @return String: Resource path of the active stream.
 func get_active_sfx_stream_path() -> String:
-	# Iterate backwards through the pool to return the most recently 
+	# Iterate backwards through the pool to return the most recently
 	# added/played sound, making the choice deterministic and explicit.
 	for i in range(_sfx_pool.size() - 1, -1, -1):
 		if _sfx_pool[i].playing and _sfx_pool[i].stream:
