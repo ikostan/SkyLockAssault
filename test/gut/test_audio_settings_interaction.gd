@@ -51,7 +51,7 @@ func _clear_pool_players() -> void:
 ## Helper: Checks if any sound is actively streaming using public API.
 ## @return bool
 func _is_sound_playing() -> bool:
-	return AudioManager.is_sfx_playing()
+	return AudioManager.is_any_sfx_playing()
 
 
 ## Helper: Inspects the pool via public API to find the playing stream's resource path.

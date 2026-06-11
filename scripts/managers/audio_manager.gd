@@ -479,15 +479,6 @@ func stop_all_sfx() -> void:
 		player.stream = null
 
 
-## Checks if any SFX is currently playing.
-## @return bool
-func is_sfx_playing() -> bool:
-	for player in _sfx_pool:
-		if player.playing:
-			return true
-	return false
-
-
 ## Public API: Returns the resource path of the currently playing SFX.
 ## @return String: Resource path of the active stream, or empty if silent.
 func get_active_sfx_stream_path() -> String:
