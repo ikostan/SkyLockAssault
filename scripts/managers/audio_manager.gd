@@ -452,6 +452,8 @@ func play_sfx(
 	player.play()
 
 
+
+## [DIAGNOSTIC]
 ## Checks if any AudioStreamPlayer node within the pre-allocated pool is currently active.
 ## :rtype: bool
 func is_any_sfx_playing() -> bool:
@@ -461,6 +463,8 @@ func is_any_sfx_playing() -> bool:
 	return false
 
 
+
+## [DIAGNOSTIC]
 ## Returns the total number of AudioStreamPlayer channels currently active.
 ## :rtype: int
 func get_active_sfx_playback_count() -> int:
@@ -479,6 +483,7 @@ func stop_all_sfx() -> void:
 		player.stream = null
 
 
+## [DIAGNOSTIC]
 ## Public API: Returns the resource path of the most recently started active SFX.
 ## If multiple sounds are active, this returns the one most recently assigned to the pool.
 ## If no sounds are playing, returns an empty string.
