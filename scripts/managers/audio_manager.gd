@@ -477,3 +477,12 @@ func stop_all_sfx() -> void:
 	for player: AudioStreamPlayer in _sfx_pool:
 		player.stop()
 		player.stream = null
+
+
+## Checks if any SFX is currently playing.
+## @return bool
+func is_sfx_playing() -> bool:
+	for player in _sfx_pool:
+		if player.playing:
+			return true
+	return false

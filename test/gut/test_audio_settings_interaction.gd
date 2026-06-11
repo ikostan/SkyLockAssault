@@ -35,24 +35,24 @@ func after_each() -> void:
 		await main_loop.process_frame
 
 
-## Silences active audio signals and strips streams from the reuse pool
-## to ensure test isolation.
-## :rtype: void
+## Silences active audio signals via public API.
+## @return void
 func _clear_pool_players() -> void:
-	for player in AudioManager._sfx_pool:
-		var p: AudioStreamPlayer = player
-		p.stop()
-		p.stream = null
+	AudioManager.stop_all_sfx()
 
 
-## Helper: Checks if any sound is actively streaming from the AudioManager pool.
-## :rtype: bool
+## Helper: Checks if any sound is actively streaming using public API.
+## @return bool
 func _is_sound_playing() -> bool:
+	return AudioManager.is_sfx_playing()
+
+
+## Helper: Inspects the pool to find the playing stream's resource path.
+func _get_playing_stream_path() -> String:
 	for player in AudioManager._sfx_pool:
-		var p: AudioStreamPlayer = player
-		if p.playing:
-			return true
-	return false
+		if player.playing and player.stream:
+			return player.stream.resource_path
+	return ""
 
 
 # ==========================================================================
@@ -65,9 +65,12 @@ func test_mute_toggle_triggers_audio() -> void:
 	_clear_pool_players()
 	var btn: CheckButton = audio_instance.mute_master
 	btn.grab_focus()
+	
 	audio_instance._on_master_mute_toggled(false)
 	await Engine.get_main_loop().process_frame
-	assert_true(_is_sound_playing(), "Mute toggle should trigger 'check' sound.")
+	
+	var path := _get_playing_stream_path()
+	assert_true("check" in path, "Expected 'check' sound, but played: " + path)
 
 
 ## Validates that the Reset button reverts AudioManager to default state.
@@ -125,9 +128,8 @@ func test_interaction_spam_is_bounded() -> void:
 	
 	var play_count: int = AudioManager.get_active_sfx_playback_count()
 	
-	# Ensure interaction spam is rate-limited by focus-gate logic.
-	assert_true(play_count <= 3, 
-		"Interaction spam should be rate-limited by focus-gate logic. Count was: " + str(play_count))
+	# Assert exact count instead of inequality
+	assert_eq(play_count, 3, "Interaction spam should result in exactly 3 requests. Was: " + str(play_count))
 
 
 ## Validates that GUI input interaction on volume sliders triggers the expected audio state update.
@@ -225,3 +227,16 @@ func test_focus_change_is_silent() -> void:
 	await Engine.get_main_loop().process_frame
 	
 	assert_false(_is_sound_playing(), "Changing focus alone should not trigger audio.")
+
+
+## Validates resilience when an invalid/corrupt SFX key is requested.
+## @return void
+func test_play_invalid_sfx_key_is_resilient() -> void:
+	_clear_pool_players()
+	
+	# Attempt to play a non-existent sound key
+	AudioManager.play_sfx("INVALID_CORRUPT_KEY_999")
+	await Engine.get_main_loop().process_frame
+	
+	# Assert system is still functional and didn't crash
+	assert_false(_is_sound_playing(), "System should handle invalid keys gracefully without crashing.")
