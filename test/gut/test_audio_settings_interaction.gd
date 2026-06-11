@@ -11,12 +11,17 @@ extends "res://addons/gut/test.gd"
 # Load the scene using the shared GamePaths
 var audio_scene: PackedScene = load(GamePaths.AUDIO_SETTINGS_SCENE)
 var audio_instance: Control
-
+var _original_prev_scene: String
 
 ## Per-test setup: Instantiate scene and ensure initial focus state.
 ## :rtype: void
 func before_each() -> void:
 	_clear_pool_players()
+	
+	# Save the original state and force a blank previous_scene
+	_original_prev_scene = Globals.previous_scene
+	Globals.previous_scene = ""
+	
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
 	# Removed ineffective grab_focus() call
@@ -26,6 +31,8 @@ func before_each() -> void:
 ## Post-test cleanup: Free nodes and synchronize with engine loop.
 ## :rtype: void
 func after_each() -> void:
+	# Restore the original state so subsequent tests aren't affected
+	Globals.previous_scene = _original_prev_scene
 	_clear_pool_players()
 	if is_instance_valid(audio_instance):
 		audio_instance.queue_free()
@@ -93,6 +100,21 @@ func test_mute_toggled_unfocused_is_silent() -> void:
 	await Engine.get_main_loop().process_frame
 	
 	assert_false(_is_sound_playing(), "Mute toggle when unfocused should be silent.")
+
+
+## Validates that the back button interaction triggers the handler.
+## :rtype: void
+func test_back_button_triggers_exit() -> void:
+	# Call the actual handler
+	audio_instance._on_back_button_pressed()
+	
+	# Wait for the engine to process the queue_free()
+	await Engine.get_main_loop().process_frame
+	
+	# Verify the node is no longer valid (meaning the handler freed it)
+	# Do NOT call a method on audio_instance here, it is already dead.
+	assert_false(is_instance_valid(audio_instance), 
+		"Back button handler should trigger the exit sequence and free the menu.")
 
 
 # ==========================================================================
