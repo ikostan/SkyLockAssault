@@ -192,6 +192,13 @@ func test_audio_pool_no_leak_under_stress() -> void:
 	var initial_count := AudioManager.get_active_sfx_playback_count()
 	
 	for i in range(20):
+func test_audio_pool_no_leak_under_stress() -> void:
+	_clear_pool_players()
+	var btn: CheckButton = audio_instance.mute_music
+	btn.grab_focus()
+	var initial_count := AudioManager.get_active_sfx_playback_count()
+	
+	for i in range(20):
 		audio_instance._on_music_mute_toggled(i % 2 == 0)
 		await Engine.get_main_loop().process_frame
 	
