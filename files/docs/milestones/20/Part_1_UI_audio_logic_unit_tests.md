@@ -75,7 +75,7 @@ Adds diagnostic APIs on AudioManager for querying current SFX playback and intro
 
 ---
 
-**Bots/AI Contributions Summary for PR #746**
+## Bots/AI Contributions Summary for PR #746
 
 This PR adds public diagnostic helpers (`is_sfx_playing()`, `get_active_sfx_stream_path()`) to `AudioManager`, implements comprehensive GUT tests for UI audio interactions (mute toggles, sliders, reset behavior, focus-gating, boundary/stress cases), includes a minor bug fix for volume slider clamping, and updates the Codecov GitHub Action. It received strong support from automated bots and AI tools for dependency management, PR summarization, review, and code quality analysis.
 
