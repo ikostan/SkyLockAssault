@@ -144,6 +144,7 @@ func test_interaction_spam_is_bounded() -> void:
 	assert_eq(play_count, 3, "Interaction spam should result in exactly 3 requests. Was: " + str(play_count))
 
 
+## :rtype: void
 ## Validates that GUI input interaction on volume sliders triggers the expected audio state update.
 ## Uses approximate equality for floating-point volume thresholds.
 ## :rtype: void
@@ -154,14 +155,15 @@ func test_slider_gui_input_triggers_audio() -> void:
 	var slider: VolumeSlider = audio_instance.master_slider
 	slider.grab_focus()
 	
-	# Act: Call the handler on the slider instance itself
-	# Use the method name defined in volume_slider.gd
+	# Act: Simulate a GUI value change
+	slider.value = 0.5
+	# Add this line to trigger the handler
 	slider._on_value_changed(0.5) 
 	await Engine.get_main_loop().process_frame
 	
-	# Assert
+	# Assert: Check if AudioManager reflects the value change
 	assert_almost_eq(AudioManager.master_volume, 0.5, 0.01,
-		"Slider input should update AudioManager.master_volume.")
+		"Slider input should update AudioManager.master_volume (within tolerance).")
 
 
 # ==========================================================================
