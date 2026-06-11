@@ -84,7 +84,9 @@ func test_reset_button_restores_defaults() -> void:
 ## Validates that the back button interaction correctly queues the menu for deletion.
 ## :rtype: void
 func test_back_button_triggers_exit() -> void:
-	audio_instance.queue_free()
+	# Assuming the back button handler is named _on_back_button_pressed
+	audio_instance._on_back_button_pressed()
+	await Engine.get_main_loop().process_frame
 	assert_true(audio_instance.is_queued_for_deletion(), 
 		"Back button should queue_free the menu.")
 
