@@ -17,11 +17,9 @@ var audio_instance: Control
 ## :rtype: void
 func before_each() -> void:
 	_clear_pool_players()
+	# Fixed: Removed double instantiation
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
-	audio_instance = audio_scene.instantiate() as Control
-	add_child_autofree(audio_instance)
-	await Engine.get_main_loop().process_frame
 	await Engine.get_main_loop().process_frame
 
 
@@ -83,14 +81,13 @@ func test_reset_button_restores_defaults() -> void:
 	assert_false(AudioManager.master_muted, "Reset button should unmute master.")
 
 
-## Validates that the back button interaction correctly queues the menu for deletion.
+## Validates that the back button interaction correctly triggers the exit handler.
 ## :rtype: void
 func test_back_button_triggers_exit() -> void:
-	# Assuming the back button handler is named _on_back_button_pressed
 	audio_instance._on_back_button_pressed()
 	await Engine.get_main_loop().process_frame
 	assert_true(audio_instance.is_queued_for_deletion(), 
-		"Back button should queue_free the menu.")
+		"Back button handler should trigger the exit sequence and queue_free the menu.")
 
 
 # ==========================================================================
@@ -105,8 +102,6 @@ func test_interaction_spam_is_bounded() -> void:
 	var btn: CheckButton = audio_instance.mute_music
 	btn.grab_focus()
 	
-	# Rapid calls — in real UI these are spaced by input frames.
-	# We manually await frames to mimic the engine's event processing.
 	audio_instance._on_music_mute_toggled(false)
 	await Engine.get_main_loop().process_frame
 	audio_instance._on_music_mute_toggled(true)
@@ -115,33 +110,22 @@ func test_interaction_spam_is_bounded() -> void:
 	await Engine.get_main_loop().process_frame
 	
 	var play_count: int = AudioManager.get_active_sfx_playback_count()
-	
-	# Ensure interaction spam is rate-limited by focus-gate logic.
 	assert_true(play_count <= 3, 
 		"Interaction spam should be rate-limited by focus-gate logic. Count was: " + str(play_count))
 
 
 ## Validates that GUI input interaction on volume sliders triggers the expected audio state update.
-## Uses approximate equality for floating-point volume thresholds.
 ## :rtype: void
 func test_slider_gui_input_triggers_audio() -> void:
 	_clear_pool_players()
-	
-	# Target: Master Slider
 	var slider: HSlider = audio_instance.master_slider
 	slider.grab_focus()
 	
-	# Act: Simulate a GUI value change
-	# We invoke the handler directly as it is the controller's public API
 	slider.value = 0.5
-	# Explicitly call the handler since setting .value doesn't emit signals
 	audio_instance._on_master_slider_value_changed(0.5)
 	
 	await Engine.get_main_loop().process_frame
 	
-	await Engine.get_main_loop().process_frame
-	
-	# Assert: Check if AudioManager reflects the value change and audio was processed
 	assert_almost_eq(AudioManager.master_volume, 0.5, 0.01,
 		"Slider input should update AudioManager.master_volume (within tolerance).")
 
@@ -156,11 +140,15 @@ func test_slider_extreme_values() -> void:
 	_clear_pool_players()
 	var slider: HSlider = audio_instance.master_slider
 	
+	# Test Lower Boundary
 	slider.value = 0.0
+	audio_instance._on_master_slider_value_changed(0.0)
 	await Engine.get_main_loop().process_frame
 	assert_almost_eq(AudioManager.master_volume, 0.0, 0.01)
 	
+	# Test Upper Boundary
 	slider.value = 1.0
+	audio_instance._on_master_slider_value_changed(1.0)
 	await Engine.get_main_loop().process_frame
 	assert_almost_eq(AudioManager.master_volume, 1.0, 0.01)
 
@@ -171,11 +159,15 @@ func test_slider_invalid_input_resilience() -> void:
 	_clear_pool_players()
 	var slider: HSlider = audio_instance.master_slider
 	
+	# Test Under-range
 	slider.value = -1.0
+	audio_instance._on_master_slider_value_changed(-1.0)
 	await Engine.get_main_loop().process_frame
 	assert_true(AudioManager.master_volume >= 0.0)
 	
+	# Test Over-range
 	slider.value = 999.0
+	audio_instance._on_master_slider_value_changed(999.0)
 	await Engine.get_main_loop().process_frame
 	assert_true(AudioManager.master_volume <= 1.0)
 
@@ -199,6 +191,8 @@ func test_audio_pool_no_leak_under_stress() -> void:
 	_clear_pool_players()
 	var btn: CheckButton = audio_instance.mute_music
 	btn.grab_focus()
+	await Engine.get_main_loop().process_frame
+	
 	var initial_count := AudioManager.get_active_sfx_playback_count()
 	
 	for i in range(20):
