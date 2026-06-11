@@ -19,7 +19,7 @@ func before_each() -> void:
 	_clear_pool_players()
 	audio_instance = audio_scene.instantiate() as Control
 	add_child_autofree(audio_instance)
-	audio_instance.grab_focus()
+	# Removed ineffective grab_focus() call
 	await Engine.get_main_loop().process_frame
 
 
