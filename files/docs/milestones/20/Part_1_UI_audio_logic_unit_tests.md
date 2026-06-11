@@ -73,7 +73,6 @@ Adds diagnostic APIs on AudioManager for querying current SFX playback and intro
 
 - **#ISSUE_NUMBER**: The PR implements the specified audio settings UI GUT tests and public AudioManager inspection APIs matching the issue scope.
 
-
 ---
 
 **Bots/AI Contributions Summary for PR #746**
