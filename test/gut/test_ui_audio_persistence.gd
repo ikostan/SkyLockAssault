@@ -37,6 +37,8 @@ func before_each() -> void:
 
 ## Per-test cleanup: Delete the temporary configuration file, restore global paths, and tear down test buses.
 ## :rtype: void
+## Per-test cleanup: Delete the temporary configuration file, restore global paths, and tear down test buses.
+## :rtype: void
 func after_each() -> void:
 	if FileAccess.file_exists(test_config_path):
 		DirAccess.remove_absolute(test_config_path)
@@ -45,12 +47,13 @@ func after_each() -> void:
 	
 	# Restore AudioServer bus layout back to its original environment state
 	if _bus_created_by_test:
+		# RE-FETCH the index every time because the server might have shifted buses
 		var bus_idx: int = AudioServer.get_bus_index(AudioConstants.BUS_SFX_MENU)
 		if bus_idx != -1:
+			# Mute to prevent "popping" or C++ audio thread errors during removal
+			AudioServer.set_bus_mute(bus_idx, true) 
 			AudioServer.remove_bus(bus_idx)
 		_bus_created_by_test = false
-		
-	# await get_tree().process_frame
 
 
 ## TC-Persistence-01 | Verifies that programmatic changes to the Menu/UI volume persist across save/load cycles
