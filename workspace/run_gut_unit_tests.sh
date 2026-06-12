@@ -26,6 +26,12 @@ if [ ! -d "$PROJECT_DIR/addons/gut" ]; then
   rm -rf "$PROJECT_DIR/addons/Gut-9.5.0" v9.5.0.zip
 fi
 
+# Disable incompatible gdUnit4 plugin for GUT runs
+if [ -d "$PROJECT_DIR/addons/gdUnit4" ]; then
+  echo "Moving incompatible gdUnit4 addon..."
+  mv "$PROJECT_DIR/addons/gdUnit4" "$PROJECT_DIR/addons/gdUnit4_disabled"
+fi
+
 # Optional: Import resources (uncomment if needed; runs Godot headless to import)
 echo "Importing Resources..."
 "$GODOT" --headless --path "$PROJECT_DIR" --import --quit
@@ -33,7 +39,7 @@ if [ $? -ne 0 ]; then echo "Resource import failed."; exit 1; fi
 
 # Run GUT tests
 echo "Running GUT Unit Tests..."
-"$GODOT" --headless --verbose --path "$PROJECT_DIR" -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gdir=res://test -ginclude_subdirs=true -gexit
+"$GODOT" --headless --verbose --path "$PROJECT_DIR" -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gdir=res://test/gut -ginclude_subdirs=true -gexit
 if [ $? -ne 0 ]; then echo "Unit tests failed."; exit 1; fi
 
 # Optional: Handle reports (GUT can generate JUnit XML or other reports based on config)
