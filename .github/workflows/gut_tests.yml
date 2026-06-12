@@ -41,7 +41,7 @@ jobs:
         run: |
           REPORT_DIR="gut-reports/$(date +%Y%m%d_%H%M%S)"
           mkdir -p $REPORT_DIR
-          ./godot --headless --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gjunit_xml_file=$REPORT_DIR/gut_junit.xml -gexit
+          ./godot --headless --verbose --path . -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gjunit_xml_file=$REPORT_DIR/gut_junit.xml -gexit
       - name: "Find Latest Report Directory"
         if: always()
         id: find_report
