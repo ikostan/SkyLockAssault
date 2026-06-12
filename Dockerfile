@@ -17,7 +17,7 @@ RUN mkdir -p /project/artifacts \
     && chown -R godotuser:godotuser /project  # Added early for artifacts
 
 # Set Godot config path to non-root user's home
-ENV GODOT_VERSION="4.5.stable" \
+ENV GODOT_VERSION="4.6.3.stable" \
     XDG_DATA_HOME="/home/godotuser/.local/share"
 
 # Create and activate virtual environment for Python tools
@@ -39,19 +39,19 @@ RUN pip install pytest-html pytest-timeout
 # Install markdownlint-cli2 via npm (Node.js tool)
 RUN npm install -g markdownlint-cli2@0.12.1
 
-# Download Godot v4.5 binary and export templates
-RUN wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip \
-    && unzip Godot_v4.5-stable_linux.x86_64.zip \
-    && mv Godot_v4.5-stable_linux.x86_64 /usr/local/bin/godot \
+# Download Godot v4.6.3 binary and export templates
+RUN wget https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip \
+    && unzip Godot_v4.6.3-stable_linux.x86_64.zip \
+    && mv Godot_v4.6.3-stable_linux.x86_64 /usr/local/bin/godot \
     && chmod +x /usr/local/bin/godot \
-    && rm Godot_v4.5-stable_linux.x86_64.zip
+    && rm Godot_v4.6.3-stable_linux.x86_64.zip
 
 # Download and extract export templates, placing them in the user-specific location
-RUN wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz \
+RUN wget https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz \
     && mkdir -p "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}" \
-    && unzip Godot_v4.5-stable_export_templates.tpz -d /tmp/templates \
+    && unzip Godot_v4.6.3-stable_export_templates.tpz -d /tmp/templates \
     && mv /tmp/templates/templates/* "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}/" \
-    && rm -rf /tmp/templates Godot_v4.5-stable_export_templates.tpz \
+    && rm -rf /tmp/templates Godot_v4.6.3-stable_export_templates.tpz \
     && chown -R godotuser:godotuser "${XDG_DATA_HOME}"
 
 # Install GDUnit4 v6
