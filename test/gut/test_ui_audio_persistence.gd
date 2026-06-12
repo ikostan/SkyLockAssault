@@ -38,24 +38,18 @@ func before_each() -> void:
 ## Per-test cleanup: Delete the temporary configuration file, restore global paths, and tear down test buses.
 ## :rtype: void
 func after_each() -> void:
-	# 1. TELL THE MANAGER TO FORGET THE BUSES
-	# You need a method in AudioManager like `reset_bus_indices()` 
-	# that clears any cached bus indices (e.g., set variables to -1).
-	if AudioManager.has_method("reset_bus_indices"):
-		AudioManager.reset_bus_indices()
+	if FileAccess.file_exists(test_config_path):
+		DirAccess.remove_absolute(test_config_path)
+		
+	AudioManager.current_config_path = _orig_config_path
 	
-	# 2. Now it is safe to remove the bus from the server
+	# Restore AudioServer bus layout back to its original environment state
 	if _bus_created_by_test:
 		var bus_idx: int = AudioServer.get_bus_index(AudioConstants.BUS_SFX_MENU)
 		if bus_idx != -1:
 			AudioServer.remove_bus(bus_idx)
 		_bus_created_by_test = false
-
-	# 3. Standard cleanup
-	if FileAccess.file_exists(test_config_path):
-		DirAccess.remove_absolute(test_config_path)
 		
-	AudioManager.current_config_path = _orig_config_path
 	await get_tree().process_frame
 
 
