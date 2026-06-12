@@ -229,6 +229,9 @@ func test_ui_menu_missing_configuration_defaults() -> void:
 	# 2. Create an empty or incomplete settings file.
 	var config: ConfigFile = ConfigFile.new()
 	
+	# FIX: Bypasses Godot's 0-byte buffer encryption bug by giving it content
+	config.set_value("meta", "empty", true)
+	
 	# FIX: Save using encryption to prevent C++ core errors during AudioManager.load_volumes
 	var save_err: int = config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
 	assert_eq(save_err, OK, "Failed to create encrypted test config fixture.")

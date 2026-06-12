@@ -335,7 +335,13 @@ func apply_all_volumes() -> void:
 ## :type muted: bool
 ## :rtype: void
 func apply_volume_to_bus(bus_name: String, volume: float, muted: bool) -> void:
+	# 1. Guard against null or invalid Engine access
+	if not is_instance_valid(AudioServer):
+		return
+
 	var bus_idx: int = AudioServer.get_bus_index(bus_name)
+	# 2. Add an explicit check to prevent the 'p_ptr is null' error
+	# if the bus was removed by a test or logic error
 	if bus_idx != -1:
 		# Always set the volume level (so it's ready when unmuted)
 		AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
@@ -493,3 +499,30 @@ func get_active_sfx_stream_path() -> String:
 		if _sfx_pool[i].playing and _sfx_pool[i].stream:
 			return _sfx_pool[i].stream.resource_path
 	return ""
+
+
+## FOR GUT UNIT TEST ONLY
+## Since AudioManager is an Autoload, it does not get freed between tests.
+## If you are calling play_sfx or other logic that involves timers or deferred calls,
+## they might be hanging.
+## To stop the leaks, add a cleanup method to AudioManager.gd and call it in your test after_each
+## Forcefully clear resources to prevent leaks between unit tests.
+func cleanup_for_test() -> void:
+	_sfx_cache.clear()
+	_missing_sfx_cache.clear()
+
+	# 1. Clean the pool
+	for i in range(_sfx_pool.size() - 1, -1, -1):
+		var player := _sfx_pool[i]
+		if is_instance_valid(player):
+			player.stop()
+			# Reset bus before freeing to avoid dangling references
+			player.bus = "Master"
+			player.queue_free()
+		_sfx_pool.remove_at(i)
+
+	# 2. Re-create the pool
+	for i in range(SFX_POOL_SIZE):
+		var p := AudioStreamPlayer.new()
+		add_child(p)
+		_sfx_pool.append(p)

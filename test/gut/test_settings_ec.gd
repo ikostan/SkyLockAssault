@@ -200,6 +200,10 @@ func test_ec_09_last_input_device_validation() -> void:
 	assert_eq(Globals.current_input_device, "gamepad", "Valid device must load")
 	
 	cfg.erase_section_key("input", "last_input_device")
+	
+	# FIX: Add dummy content to prevent the 0-byte encryption bug
+	cfg.set_value("meta", "empty", true)
+	
 	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
 	
 	DirAccess.copy_absolute(test_config_path, real_path)
