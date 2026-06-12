@@ -19,8 +19,8 @@ jobs:
       - name: "Download Godot Binary"
         run: |
           wget https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
-          unzip Godot_v4.5-stable_linux.x86_64.zip
-          mv Godot_v4.5-stable_linux.x86_64 godot
+          unzip Godot_v4.6.3-stable_linux.x86_64.zip
+          mv Godot_v4.6.3-stable_linux.x86_64 godot
           chmod +x godot
       - name: "Install GDUnit4"
         run: |
