@@ -50,7 +50,7 @@ func after_each() -> void:
 			AudioServer.remove_bus(bus_idx)
 		_bus_created_by_test = false
 		
-	await get_tree().process_frame
+	# await get_tree().process_frame
 
 
 ## TC-Persistence-01 | Verifies that programmatic changes to the Menu/UI volume persist across save/load cycles
