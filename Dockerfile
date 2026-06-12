@@ -27,7 +27,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Upgrade pip, setuptools, and wheel in venv
 RUN pip install --upgrade pip setuptools wheel
 
-# Install GDToolkit for GDScript lint/format (gdtoolkit==4.* for Godot 4.x)
+# Install GDToolkit for GDScript linter/formatter (gdtoolkit==4.* for Godot 4.x)
 RUN pip install gdtoolkit==4.*
 
 # Install yamllint
@@ -54,12 +54,12 @@ RUN wget https://github.com/godotengine/godot/releases/download/4.6.3-stable/God
     && rm -rf /tmp/templates Godot_v4.6.3-stable_export_templates.tpz \
     && chown -R godotuser:godotuser "${XDG_DATA_HOME}"
 
-# Install GDUnit4 v6
+# Install GDUnit4 v6.1.3
 RUN mkdir -p /project/addons \
-    && wget https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.0.0.zip \
-    && unzip v6.0.0.zip -d /project/addons \
-    && mv /project/addons/gdUnit4-6.0.0/addons/gdUnit4 /project/addons/gdUnit4 \
-    && rm -rf /project/addons/gdUnit4-6.0.0 v6.0.0.zip \
+    && wget https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.1.3.zip \
+    && unzip v6.1.3.zip -d /project/addons \
+    && mv /project/addons/gdUnit4-6.1.3/addons/gdUnit4 /project/addons/gdUnit4 \
+    && rm -rf /project/addons/gdUnit4-6.1.3 v6.1.3.zip \
     && chown -R godotuser:godotuser /project  # Make project dir accessible
 
 # Install GUT v9.5.0

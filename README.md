@@ -33,11 +33,11 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 
 ## Project Overview
 
-- **Godot Version**: 4.5 stable (or compatible).
-- **OS**: `Windows 10 64-bit`.
+- **Godot Version**: 4.6.3 stable (or compatible).
+- **OS**: `Windows 10 64-bit`, `Windows 11 64-bit`.
 - **Tools**:
-  - `Docker Desktop v4.45` for local testing
-  - `GitHub Desktop v3.5` for repo management
+  - `Docker Desktop v4.75.0` for local testing
+  - `GitHub Desktop v3.5.12` for repo management
   - `PyCharm 2024.1.7 (Community Edition)` for file editing
   - `Windows PowerShell` for running Docker commands
 - **Supported Browsers**: Chrome 90+, Firefox 88+, Edge 90+ (WebGL 2.0 required)

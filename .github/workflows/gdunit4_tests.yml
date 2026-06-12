@@ -1,4 +1,3 @@
----
 name: "GDUnit4 Unit Tests"
 
 on:
@@ -25,10 +24,10 @@ jobs:
       - name: "Install GDUnit4"
         run: |
           mkdir -p addons
-          wget https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.0.0.zip
-          unzip v6.0.0.zip -d addons
-          mv addons/gdUnit4-6.0.0/addons/gdUnit4 addons/gdUnit4
-          rm -rf addons/gdUnit4-6.0.0
+          wget https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.1.3.zip
+          unzip v6.1.3.zip -d addons
+          mv addons/gdUnit4-6.1.3/addons/gdUnit4 addons/gdUnit4
+          rm -rf addons/gdUnit4-6.1.3
       - name: "Initialize Project and UIDs"
         run: |
           ./godot --headless --editor --quit --path .
