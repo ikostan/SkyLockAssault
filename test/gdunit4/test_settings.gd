@@ -327,6 +327,8 @@ func test_preserve_default_joypad_no_saved() -> void:
 	InputMap.action_add_event("test_action", default_joy)
 
 	var config: ConfigFile = ConfigFile.new()
+	# FIX: Add dummy data to prevent a core engine crash when encrypting a completely empty ConfigFile
+	config.set_value("meta", "initialized", true)
 	config.save_encrypted_pass(PATH_NO_SAVED, Globals.save_encryption_pass)
 
 	Settings.load_input_mappings(PATH_NO_SAVED, test_actions)
