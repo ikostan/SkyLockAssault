@@ -16,9 +16,17 @@ jobs:
       checks: write
     steps:
       - uses: "actions/checkout@v6"
-      - name: "Download Godot Binary"
+      - name: "Download and Verify Godot Binary"
         run: |
-          wget https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+          # Download target binary and the official release checksums matching v4.6.3
+          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/SHA256-SUMS.txt
+          
+          # Verify integrity dynamically using the official signature manifest
+          sha256sum --check --ignore-missing SHA256-SUMS.txt
+          
+          # Clean up verification assets and extract
+          rm SHA256-SUMS.txt
           unzip Godot_v4.6.3-stable_linux.x86_64.zip
           mv Godot_v4.6.3-stable_linux.x86_64 godot
           chmod +x godot
