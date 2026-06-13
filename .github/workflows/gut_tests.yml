@@ -18,15 +18,16 @@ jobs:
       - uses: "actions/checkout@v6"
       - name: "Download and Verify Godot Binary"
         run: |
-          # Download target binary and the official release checksums matching v4.6.3
           wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
-          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/SHA256-SUMS.txt
-
-          # Verify integrity dynamically using the official signature manifest
-          sha256sum --check --ignore-missing SHA256-SUMS.txt
-
-          # Clean up verification assets and extract
-          rm SHA256-SUMS.txt
+          
+          EXPECTED_SHA256="d0bc2113065e481c9c2c2b2c37daa4e8be3fe9e27f0ab9ab0b6096e9a37907f3"
+          
+          echo "$EXPECTED_SHA256  Godot_v4.6.3-stable_linux.x86_64.zip" | sha256sum --check --status
+          if [ $? -ne 0 ]; then
+            echo "❌ CRITICAL: Godot binary verification failed! Checksum mismatch."
+            exit 1
+          fi
+          
           unzip Godot_v4.6.3-stable_linux.x86_64.zip
           mv Godot_v4.6.3-stable_linux.x86_64 godot
           chmod +x godot
