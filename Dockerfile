@@ -39,15 +39,16 @@ RUN pip install pytest-html pytest-timeout
 # Install markdownlint-cli2 via npm (Node.js tool)
 RUN npm install -g markdownlint-cli2@0.12.1
 
-# Download Godot v4.6.3 binary and export templates
-RUN wget https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip \
+# Download and verify Godot v4.6.3 binary using trusted cryptographic signature
+RUN wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip \
+    && echo "d0bc2113065e481c9c2c2b2c37daa4e8be3fe9e27f0ab9ab0b6096e9a37907f3  Godot_v4.6.3-stable_linux.x86_64.zip" | sha256sum --check --status \
     && unzip Godot_v4.6.3-stable_linux.x86_64.zip \
     && mv Godot_v4.6.3-stable_linux.x86_64 /usr/local/bin/godot \
     && chmod +x /usr/local/bin/godot \
     && rm Godot_v4.6.3-stable_linux.x86_64.zip
 
-# Download and extract export templates, placing them in the user-specific location
-RUN wget https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz \
+# Download and extract export templates
+RUN wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz \
     && mkdir -p "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}" \
     && unzip Godot_v4.6.3-stable_export_templates.tpz -d /tmp/templates \
     && mv /tmp/templates/templates/* "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}/" \
@@ -56,15 +57,15 @@ RUN wget https://github.com/godotengine/godot/releases/download/4.6.3-stable/God
 
 # Install GDUnit4 v6.1.3
 RUN mkdir -p /project/addons \
-    && wget https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.1.3.zip \
+    && wget -q https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.1.3.zip \
     && unzip v6.1.3.zip -d /project/addons \
     && mv /project/addons/gdUnit4-6.1.3/addons/gdUnit4 /project/addons/gdUnit4 \
     && rm -rf /project/addons/gdUnit4-6.1.3 v6.1.3.zip \
-    && chown -R godotuser:godotuser /project  # Make project dir accessible
+    && chown -R godotuser:godotuser /project
 
 # Install GUT v9.5.0
 RUN mkdir -p /project/addons \
-    && wget https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip \
+    && wget -q https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip \
     && unzip v9.5.0.zip -d /project/addons \
     && mv /project/addons/Gut-9.5.0/addons/gut /project/addons/gut \
     && rm -rf /project/addons/Gut-9.5.0 v9.5.0.zip \
