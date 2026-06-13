@@ -72,8 +72,8 @@ RUN mkdir -p /project/addons \
     && chown -R godotuser:godotuser /project
 
 # Install Playwright Python packages and system deps (as root)
+# FIX: Removed redundant 'playwright install-deps' invocation
 RUN pip install playwright pytest-playwright pytest-asyncio \
-    && playwright install-deps \
     && playwright install --with-deps chromium
 
 # Switch to non-root user (fixes DS002; all subsequent commands run as godotuser)
