@@ -1,8 +1,15 @@
 ---
-name: "GUT Unit Tests"  # Workflow name for CI display.
+name: "GUT Unit Tests"
 
 on:
   workflow_call:
+    inputs:
+      godot_version:
+        type: string
+        default: "4.6.3-stable"
+      godot_sha256:
+        type: string
+        default: "d0bc2113065e481c9c2c2b2c37daa4e8be3fe9e27f0ab9ab0b6096e9a37907f3"
     secrets:
       CODECOV_TOKEN:
         description: "Codecov requires a token to authenticate"
@@ -14,22 +21,23 @@ jobs:
     timeout-minutes: 10
     permissions:
       checks: write
+    env:
+      GODOT_VERSION: ${{ inputs.godot_version }}
+      GODOT_SHA256: ${{ inputs.godot_sha256 }}
     steps:
       - uses: "actions/checkout@v6"
       - name: "Download and Verify Godot Binary"
         run: |
-          wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+          wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip
 
-          EXPECTED_SHA256="d0bc2113065e481c9c2c2b2c37daa4e8be3fe9e27f0ab9ab0b6096e9a37907f3"
-
-          echo "$EXPECTED_SHA256  Godot_v4.6.3-stable_linux.x86_64.zip" | sha256sum --check --status
+          echo "${GODOT_SHA256}  Godot_v${GODOT_VERSION}_linux.x86_64.zip" | sha256sum --check --status
           if [ $? -ne 0 ]; then
             echo "❌ CRITICAL: Godot binary verification failed! Checksum mismatch."
             exit 1
           fi
 
-          unzip Godot_v4.6.3-stable_linux.x86_64.zip
-          mv Godot_v4.6.3-stable_linux.x86_64 godot
+          unzip Godot_v${GODOT_VERSION}_linux.x86_64.zip
+          mv Godot_v${GODOT_VERSION}_linux.x86_64 godot
           chmod +x godot
       - name: "Install GUT"
         run: |
