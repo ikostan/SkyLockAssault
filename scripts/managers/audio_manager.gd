@@ -511,14 +511,16 @@ func cleanup_for_test() -> void:
 	_sfx_cache.clear()
 	_missing_sfx_cache.clear()
 
-	# 1. Clean the pool
+	# 1. Clean the pool deterministically
 	for i in range(_sfx_pool.size() - 1, -1, -1):
 		var player := _sfx_pool[i]
 		if is_instance_valid(player):
 			player.stop()
 			# Reset bus before freeing to avoid dangling references
 			player.bus = "Master"
-			player.queue_free()
+			if player.get_parent() == self:
+				remove_child(player)
+			player.free()
 		_sfx_pool.remove_at(i)
 
 	# 2. Re-create the pool
