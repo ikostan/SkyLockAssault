@@ -90,7 +90,7 @@ Upgrades the project toolchain and CI from Godot 4.5 to 4.6.3, introduces a lega
 - **@coderabbitai**: Provided a concise summary categorizing changes into Chores (toolchain upgrades, project settings), Bug Fixes (config reliability, audio handling), Tests (CI hardening), and Refactor (stable IDs in scenes). One commit explicitly lists co-authorship with @ikostan (e.g., updates to browser_test.yml or related files), indicating direct code suggestions or automated edits integrated by the maintainer.
 - **Other potential bots**: No direct commits or mentions of @dependabot in this PR. Standard GitHub bots (e.g., for actions or workflows) may have run in the background but are not prominently featured in conversation or commits.
 
-**DeepsourceReview**: No explicit mentions, comments, or contributions from Deepsource (e.g., @deepsource-io or similar) were visible in the PR conversation, commits, or summaries. If Deepsource was configured for static analysis/linting, its review may have occurred implicitly via CI without a named bot comment.
+**DeepSource Review**: No explicit mentions, comments, or contributions from DeepSource (e.g., @deepsource-io or similar) were visible in the PR conversation, commits, or summaries. If DeepSource was configured for static analysis/linting, its review may have occurred implicitly via CI without a named bot comment.
 
 These tools enhanced code quality, documentation, and maintainability without replacing core human-driven changes.
 
