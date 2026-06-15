@@ -502,12 +502,14 @@ func get_active_sfx_stream_path() -> String:
 
 
 ## FOR GUT UNIT TEST ONLY
-## Since AudioManager is an Autoload, it does not get freed between tests.
-## If you are calling play_sfx or other logic that involves timers or deferred calls,
-## they might be hanging.
-## To stop the leaks, add a cleanup method to AudioManager.gd and call it in your test after_each
 ## Forcefully clear resources to prevent leaks between unit tests.
+## Strictly guarded to prevent accidental execution in production builds.
 func cleanup_for_test() -> void:
+	# 0. Production safety guards
+	if not OS.is_debug_build():
+		return
+	assert(OS.is_debug_build(), "cleanup_for_test() should only be called in test/debug environments.")
+
 	_sfx_cache.clear()
 	_missing_sfx_cache.clear()
 
