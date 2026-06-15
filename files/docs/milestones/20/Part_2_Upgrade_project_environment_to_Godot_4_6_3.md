@@ -1,5 +1,5 @@
 # PR #754: Upgrade project environment to Godot 4.6.3
-<!-- markdownlint-disable MD013 MD033 table-column-style -->
+<!-- markdownlint-disable MD001 MD036 MD013 MD033 table-column-style -->
 
 **Author:** [@ikostan](https://github.com/ikostan)  
 **Status:** Merged (as of latest activity)  
@@ -110,4 +110,4 @@ These tools enhanced code quality, documentation, and maintainability without re
 - Maintains backward compatibility via the archived 4.5 Docker image.
 
 This PR exemplifies a well-structured toolchain upgrade with proactive fixes for edge cases in testing and audio systems.
-<!-- markdownlint-enable MD013 MD033 table-column-style -->
+<!-- markdownlint-enable MD001 MD036 MD013 MD033 table-column-style -->
