@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://r8xidy68s04r"]
+[gd_scene format=3 uid="uid://r8xidy68s04r"]
 
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_j3be7"]
 [ext_resource type="Script" uid="uid://c2u0utdi762fi" path="res://scripts/ui/menus/audio_settings.gd" id="1_yonr6"]
@@ -54,7 +54,7 @@ corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
 shadow_size = 5
 
-[node name="AudioSettings" type="Control"]
+[node name="AudioSettings" type="Control" unique_id=2122962287]
 layout_mode = 3
 anchors_preset = 8
 anchor_left = 0.5
@@ -66,7 +66,7 @@ grow_vertical = 2
 size_flags_horizontal = 4
 script = ExtResource("1_yonr6")
 
-[node name="Panel" type="Panel" parent="."]
+[node name="Panel" type="Panel" parent="." unique_id=182030717]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -83,7 +83,7 @@ size_flags_horizontal = 4
 tooltip_text = "Volume Controls"
 theme_override_styles/panel = SubResource("StyleBoxFlat_j3be7")
 
-[node name="VolumeControls" type="VBoxContainer" parent="Panel"]
+[node name="VolumeControls" type="VBoxContainer" parent="Panel" unique_id=285039029]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -98,7 +98,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 27
 
-[node name="MainLabel" type="Label" parent="Panel/VolumeControls"]
+[node name="MainLabel" type="Label" parent="Panel/VolumeControls" unique_id=1521202838]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 6
@@ -107,7 +107,7 @@ theme_override_fonts/font = ExtResource("1_j3be7")
 theme_override_font_sizes/font_size = 55
 text = "{OPTIONS}"
 
-[node name="SubLabel" type="Label" parent="Panel/VolumeControls"]
+[node name="SubLabel" type="Label" parent="Panel/VolumeControls" unique_id=887788036]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("1_j3be7")
@@ -115,21 +115,21 @@ theme_override_font_sizes/font_size = 28
 text = "{VOLUME=CONTROLS}"
 horizontal_alignment = 1
 
-[node name="Master" parent="Panel/VolumeControls" instance=ExtResource("3_koe27")]
+[node name="Master" parent="Panel/VolumeControls" unique_id=1083331251 instance=ExtResource("3_koe27")]
 layout_mode = 2
 focus_neighbor_top = NodePath("../../BtnContainer/AudioBackButton")
 focus_neighbor_bottom = NodePath("../Music/HSlider")
 focus_next = NodePath("../Music/HSlider")
 focus_previous = NodePath("../../BtnContainer/AudioBackButton")
 
-[node name="Music" parent="Panel/VolumeControls" instance=ExtResource("4_a0ntd")]
+[node name="Music" parent="Panel/VolumeControls" unique_id=1987353201 instance=ExtResource("4_a0ntd")]
 layout_mode = 2
 focus_neighbor_top = NodePath("../Master/Mute")
 focus_neighbor_bottom = NodePath("../SFX")
 focus_next = NodePath("../SFX")
 focus_previous = NodePath("../Master/Mute")
 
-[node name="SFX" parent="Panel/VolumeControls" instance=ExtResource("5_w6v8r")]
+[node name="SFX" parent="Panel/VolumeControls" unique_id=589946358 instance=ExtResource("5_w6v8r")]
 layout_mode = 2
 size_flags_horizontal = 1
 focus_neighbor_top = NodePath("../Music")
@@ -137,7 +137,7 @@ focus_neighbor_bottom = NodePath("../SFXWeapon")
 focus_next = NodePath("../SFXWeapon")
 focus_previous = NodePath("../Music")
 
-[node name="SFXWeapon" parent="Panel/VolumeControls" instance=ExtResource("6_axthr")]
+[node name="SFXWeapon" parent="Panel/VolumeControls" unique_id=2073683000 instance=ExtResource("6_axthr")]
 custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 focus_neighbor_top = NodePath("../SFX")
@@ -145,7 +145,7 @@ focus_neighbor_bottom = NodePath("../SFXRotors")
 focus_next = NodePath("../SFXRotors")
 focus_previous = NodePath("../SFX")
 
-[node name="SFXRotors" parent="Panel/VolumeControls" instance=ExtResource("7_ut8uj")]
+[node name="SFXRotors" parent="Panel/VolumeControls" unique_id=1166330513 instance=ExtResource("7_ut8uj")]
 custom_minimum_size = Vector2(0, 0)
 layout_mode = 2
 focus_neighbor_top = NodePath("../SFXWeapon")
@@ -153,14 +153,14 @@ focus_neighbor_bottom = NodePath("../SFXMenu")
 focus_next = NodePath("../SFXMenu")
 focus_previous = NodePath("../SFXWeapon")
 
-[node name="SFXMenu" parent="Panel/VolumeControls" instance=ExtResource("8_a0ntd")]
+[node name="SFXMenu" parent="Panel/VolumeControls" unique_id=1027797093 instance=ExtResource("8_a0ntd")]
 layout_mode = 2
 focus_neighbor_top = NodePath("../SFXRotors")
 focus_neighbor_bottom = NodePath("../../BtnContainer/AudioBackButton")
 focus_next = NodePath("../../BtnContainer/AudioBackButton")
 focus_previous = NodePath("../SFXRotors")
 
-[node name="BtnContainer" type="HBoxContainer" parent="Panel"]
+[node name="BtnContainer" type="HBoxContainer" parent="Panel" unique_id=1742579248]
 layout_mode = 1
 anchors_preset = 12
 anchor_top = 1.0
@@ -175,7 +175,7 @@ grow_vertical = 0
 size_flags_vertical = 3
 theme_override_constants/separation = 20
 
-[node name="AudioBackButton" type="Button" parent="Panel/BtnContainer"]
+[node name="AudioBackButton" type="Button" parent="Panel/BtnContainer" unique_id=844723005]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -196,7 +196,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_a0ntd")
 theme_override_styles/focus = SubResource("StyleBoxFlat_w6v8r")
 text = "{BACK}"
 
-[node name="AudioResetButton" type="Button" parent="Panel/BtnContainer"]
+[node name="AudioResetButton" type="Button" parent="Panel/BtnContainer" unique_id=1111147124]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -217,8 +217,8 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_a0ntd")
 theme_override_styles/focus = SubResource("StyleBoxFlat_axthr")
 text = "{RESET}"
 
-[node name="MasterWarningDialog" type="AcceptDialog" parent="."]
+[node name="MasterWarningDialog" type="AcceptDialog" parent="." unique_id=572349664]
 oversampling_override = 1.0
 
-[node name="SFXWarningDialog" type="AcceptDialog" parent="."]
+[node name="SFXWarningDialog" type="AcceptDialog" parent="." unique_id=1376291446]
 oversampling_override = 1.0

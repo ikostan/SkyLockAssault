@@ -8,6 +8,9 @@ on:  # yamllint disable-line rule:truthy
         description: "Codecov requires a token to authenticate"
         required: true
     inputs:
+      godot_version:
+        type: "string"
+        default: "4.6.3-stable"
       pw_timeout:
         description: "Playwright timeout in ms"
         required: false
@@ -47,8 +50,8 @@ jobs:
         id: "export"
         uses: "firebelley/godot-export@615a6f7afc22d6266bf55c17748fb07447e8bdab"
         with:
-          godot_executable_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip"
-          godot_export_templates_download_url: "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz"
+          godot_executable_download_url: "https://github.com/godotengine/godot/releases/download/${{ inputs.godot_version }}/Godot_v${{ inputs.godot_version }}_linux.x86_64.zip"
+          godot_export_templates_download_url: "https://github.com/godotengine/godot/releases/download/${{ inputs.godot_version }}/Godot_v${{ inputs.godot_version }}_export_templates.tpz"
           relative_project_path: "./"
           relative_export_path: "./export/web_thread_off"
           archive_output: false
