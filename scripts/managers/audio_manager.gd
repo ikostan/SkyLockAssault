@@ -508,9 +508,6 @@ func cleanup_for_test() -> void:
 	# 0. Production safety guards
 	if not OS.is_debug_build():
 		return
-	assert(
-		OS.is_debug_build(), "cleanup_for_test() should only be called in test/debug environments."
-	)
 
 	_sfx_cache.clear()
 	_missing_sfx_cache.clear()
