@@ -67,7 +67,7 @@ jobs:
 
           EXE_URL="https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip"
           TEMPLATE_URL="https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz"
-          CHECKSUM_URL="https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_SHA256SUMS.txt"
+          CHECKSUM_URL="https://github.com/godotengine/godot/releases/download/4.6.3-stable/SHA256SUMS.txt"
 
           echo "📥 Downloading Godot executable..."
           curl -fL --show-error -o Godot_v4.6.3-stable_linux.x86_64.zip "$EXE_URL"
