@@ -84,8 +84,18 @@ jobs:
           echo "✅ Integrity check passed. Starting local HTTP server..."
           nohup python3 -m http.server 8000 > /dev/null 2>&1 &
 
-          # Allow the background server a brief moment to initialize
-          sleep 2
+          echo "⏳ Waiting for local HTTP server to spin up..."
+          TIMEOUT=20
+          while ! curl -s http://localhost:8000/ > /dev/null; do
+            if [ $TIMEOUT -le 0 ]; then
+              echo "❌ FATAL: Local HTTP server failed to start within timeout window."
+              exit 1
+            fi
+            sleep 0.5
+            TIMEOUT=$((TIMEOUT - 1))
+          done
+
+          echo "🚀 Local HTTP server is responsive and ready."
 
       - name: "Export Godot to Web"
         id: "export"
