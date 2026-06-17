@@ -62,12 +62,6 @@ func _ready() -> void:
 	# Initialize the SFX object pool
 	_initialize_sfx_pool()
 
-	# Initialize the SFX object pool
-	for i in range(SFX_POOL_SIZE):
-		var p := AudioStreamPlayer.new()
-		add_child(p)
-		_sfx_pool.append(p)
-
 
 ## Initialize all volumes and mutes to defaults from AudioConstants
 ## :rtype: void
