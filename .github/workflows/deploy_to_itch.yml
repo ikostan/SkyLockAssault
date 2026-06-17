@@ -59,17 +59,45 @@ jobs:
           set -euo pipefail
           mkdir -p export/web
 
+      - name: "Download and Verify Godot Binaries"
+        run: |
+          set -euo pipefail
+          mkdir -p godot_binaries
+          cd godot_binaries
+
+          EXE_URL="https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip"
+          TEMPLATE_URL="https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz"
+          CHECKSUM_URL="https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_SHA256SUMS.txt"
+
+          echo "📥 Downloading Godot executable..."
+          curl -fL --show-error -o Godot_v4.6.3-stable_linux.x86_64.zip "$EXE_URL"
+
+          echo "📥 Downloading Godot export templates..."
+          curl -fL --show-error -o Godot_v4.6.3-stable_export_templates.tpz "$TEMPLATE_URL"
+
+          echo "📥 Downloading official SHA-256 checksums..."
+          curl -fL --show-error -o SHA256SUMS.txt "$CHECKSUM_URL"
+
+          echo "🔒 Verifying binary integrity against official signatures..."
+          sha256sum --check --ignore-missing SHA256SUMS.txt
+
+          echo "✅ Integrity check passed. Starting local HTTP server..."
+          nohup python3 -m http.server 8000 > /dev/null 2>&1 &
+          
+          # Allow the background server a brief moment to initialize
+          sleep 2
+
       - name: "Export Godot to Web"
         id: "export"
         uses: "firebelley/godot-export@615a6f7afc22d6266bf55c17748fb07447e8bdab"
         with:
-          godot_executable_download_url: "https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip"
-          godot_export_templates_download_url: "https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz"
+          godot_executable_download_url: "http://localhost:8000/Godot_v4.6.3-stable_linux.x86_64.zip"
+          godot_export_templates_download_url: "http://localhost:8000/Godot_v4.6.3-stable_export_templates.tpz"
           relative_project_path: "./"
           relative_export_path: "./export/web"
           archive_output: true
           verbose: true
-          cache: false  # disable the export cache so Godot is forced to recompile the freshly injected GDScript
+          cache: false
           presets_to_export: "Web"
           use_preset_export_path: true
 
