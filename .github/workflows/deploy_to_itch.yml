@@ -83,7 +83,7 @@ jobs:
 
           echo "✅ Integrity check passed. Starting local HTTP server..."
           nohup python3 -m http.server 8000 > /dev/null 2>&1 &
-          
+
           # Allow the background server a brief moment to initialize
           sleep 2
 
