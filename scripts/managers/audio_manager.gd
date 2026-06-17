@@ -60,6 +60,9 @@ func _ready() -> void:
 	apply_all_volumes()  # Apply to AudioServer buses
 
 	# Initialize the SFX object pool
+	_initialize_sfx_pool()
+
+	# Initialize the SFX object pool
 	for i in range(SFX_POOL_SIZE):
 		var p := AudioStreamPlayer.new()
 		add_child(p)
@@ -524,7 +527,12 @@ func cleanup_for_test() -> void:
 			player.free()
 		_sfx_pool.remove_at(i)
 
-	# 2. Re-create the pool
+	# 2. Re-create the pool matching production configuration
+	_initialize_sfx_pool()
+
+
+## Private helper to initialize the SFX object pool matching production setup.
+func _initialize_sfx_pool() -> void:
 	for i in range(SFX_POOL_SIZE):
 		var p := AudioStreamPlayer.new()
 		add_child(p)
