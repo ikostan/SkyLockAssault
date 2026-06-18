@@ -7,6 +7,7 @@ echo "🔍 Initiating target asset verification for Godot ${GODOT_VERSION}..."
 
 # Setup a clean, local workspace folder for binaries
 STAGING_DIR="godot_binaries"
+rm -rf "$STAGING_DIR"
 mkdir -p "$STAGING_DIR"
 cd "$STAGING_DIR"
 
