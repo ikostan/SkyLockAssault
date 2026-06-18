@@ -40,6 +40,16 @@ func before_each() -> void:
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, AudioConstants.BUS_SFX_MENU)
 
 
+func after_each() -> void:
+	# 1. Keep this: Cleans up the audio players safely
+	if AudioManager.has_method("cleanup_for_test"):
+		AudioManager.cleanup_for_test()
+
+	# 2. Keep this: Deletes the physical file
+	if FileAccess.file_exists(test_config_path):
+		DirAccess.remove_absolute(test_config_path)
+
+
 ## TC-SL-01 |
 ## Config file does not exist; AudioManager volumes/mutes at defaults (all 1.0, false); No other settings. | Call AudioManager.save_volumes() |
 ## Config file created with only "audio" section; All audio keys set to defaults;
@@ -164,7 +174,10 @@ func test_tc_sl_04() -> void:
 func test_tc_sl_05() -> void:
 	var config: ConfigFile = ConfigFile.new()
 	
-	# FIX: Save using encryption to prevent C++ errors during AudioManager load
+	# Bypasses Godot's 0-byte buffer encryption bug by giving it content
+	config.set_value("meta", "empty", true) 
+	
+	# This will now save flawlessly without throwing engine errors
 	config.save_encrypted_pass(test_config_path, Globals.save_encryption_pass)
 	
 	assert_true(FileAccess.file_exists(test_config_path))

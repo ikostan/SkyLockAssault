@@ -3,6 +3,13 @@ name: "GDUnit4 Unit Tests"
 
 on:
   workflow_call:
+    inputs:
+      godot_version:
+        type: string
+        default: "4.6.3-stable"
+      godot_sha256:
+        type: string
+        default: "d0bc2113065e481c9c2c2b2c37daa4e8be3fe9e27f0ab9ab0b6096e9a37907f3"
     secrets:
       CODECOV_TOKEN:
         description: "Codecov requires a token to authenticate"
@@ -14,21 +21,31 @@ jobs:
     timeout-minutes: 10
     permissions:
       checks: write
+    env:
+      GODOT_VERSION: ${{ inputs.godot_version }}
+      GODOT_SHA256: ${{ inputs.godot_sha256 }}
     steps:
       - uses: "actions/checkout@v6.0.1"
-      - name: "Download Godot Binary"
+      - name: "Download and Verify Godot Binary"
         run: |
-          wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
-          unzip Godot_v4.5-stable_linux.x86_64.zip
-          mv Godot_v4.5-stable_linux.x86_64 godot
+          wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip
+
+          echo "${GODOT_SHA256}  Godot_v${GODOT_VERSION}_linux.x86_64.zip" | sha256sum --check --status
+          if [ $? -ne 0 ]; then
+            echo "❌ CRITICAL: Godot binary verification failed! Checksum mismatch."
+            exit 1
+          fi
+
+          unzip Godot_v${GODOT_VERSION}_linux.x86_64.zip
+          mv Godot_v${GODOT_VERSION}_linux.x86_64 godot
           chmod +x godot
       - name: "Install GDUnit4"
         run: |
           mkdir -p addons
-          wget https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.0.0.zip
-          unzip v6.0.0.zip -d addons
-          mv addons/gdUnit4-6.0.0/addons/gdUnit4 addons/gdUnit4
-          rm -rf addons/gdUnit4-6.0.0
+          wget https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.1.3.zip
+          unzip v6.1.3.zip -d addons
+          mv addons/gdUnit4-6.1.3/addons/gdUnit4 addons/gdUnit4
+          rm -rf addons/gdUnit4-6.1.3
       - name: "Initialize Project and UIDs"
         run: |
           ./godot --headless --editor --quit --path .

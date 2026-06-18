@@ -132,6 +132,9 @@ func _notification(what: int) -> void:
 ## :type new_value: float
 ## :rtype: void
 func _on_value_changed(new_value: float) -> void:
+	# Add this clamp logic to enforce bounds
+	new_value = clamp(new_value, min_value, max_value)
+
 	# Early return: Prevent redundant backend I/O and disk saves on float jitter
 	if is_equal_approx(new_value, _previous_value):
 		return

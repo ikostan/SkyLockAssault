@@ -8,18 +8,23 @@
 
 config_version=5
 
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+
 [application]
 
 config/name="SkyLockAssault"
 config/description="Combat top-down airplane game with fuel management, multiple weapons, multi-level, and adjustable difficulty. Made with Godot."
 run/main_scene="uid://di3kdwlspwjbt"
-config/features=PackedStringArray("4.5", "GL Compatibility")
+config/features=PackedStringArray("4.6", "GL Compatibility")
 boot_splash/bg_color=Color(0.23921569, 0.23921569, 0.23921569, 1)
 boot_splash/image="uid://b7jpd8lq6kokg"
 config/icon="res://icon.svg"
 
 [audio]
 
+buses/default_bus_layout="uid://ia7kqvsfnrnl"
 general/default_playback_type.web=0
 
 [autoload]
