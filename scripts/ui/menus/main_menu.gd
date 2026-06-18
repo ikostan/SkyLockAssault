@@ -156,15 +156,9 @@ func _setup_unbound_dialog() -> void:
 	)
 
 
-func _input(_event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
 	## Handles input events for the main menu.
-	##
-	## Logs mouse clicks and unlocks audio on web platforms upon user gesture.
-	##
-	## :param _event: The input event to process.
-	## :type _event: InputEvent
-	## :rtype: void
-	# New: Unlock audio on first qualifying gesture (click or key press)
+	# Keep your existing Web platform audio gesture unlock logic intact
 	if OS.get_name() == "Web" and not background_music.playing:
 		background_music.play()
 		Globals.log_message(
@@ -251,11 +245,20 @@ func _on_quit_pressed(_args: Array = []) -> void:
 
 func _on_quit_dialog_confirmed() -> void:
 	## Handles quit dialog confirmation.
-	##
 	## Performs platform-specific quit actions.
-	##
 	## :rtype: void
-	# User confirmed: Execute platform-specific quit
+	
+	# 1. Fire the confirmation sound asset
+	AudioManager.play_sfx("ui_accept")
+	
+	# 2. Hide the panel immediately so the player gets immediate feedback
+	if is_instance_valid(quit_dialog):
+		quit_dialog.hide()
+		
+	# 3. Create a tiny non-blocking delay to let the audio stream flush to hardware
+	await get_tree().create_timer(0.2).timeout
+	
+	# 4. Execute platform-specific quit execution path
 	if OS.get_name() == "Web":
 		# Web export: Redirect to itch.io game page (clean exit, no freeze)
 		JavaScriptBridge.eval("window.location.href = 'https://ikostan.itch.io/sky-lock-assault';")
@@ -267,13 +270,15 @@ func _on_quit_dialog_confirmed() -> void:
 
 func _on_quit_dialog_canceled() -> void:
 	## Handles quit dialog cancellation.
-	##
 	## Hides the dialog and logs the action.
-	##
 	## :rtype: void
-	# Optional: Handle cancel (e.g., play sound or log)
+	
+	# Play the cancel sound effect directly on trigger execution
+	AudioManager.play_sfx("ui_cancel")
+	
 	quit_dialog.hide()
 	Globals.log_message("Quit canceled.", Globals.LogLevel.DEBUG)
+	
 	# Return focus to the button that opened the dialog
 	if is_instance_valid(last_focused_button):  # Safety check
 		last_focused_button.call_deferred("grab_focus")  # Restore to original opener

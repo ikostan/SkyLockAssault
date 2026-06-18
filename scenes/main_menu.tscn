@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://brpckgp7j86jp"]
+[gd_scene format=3 uid="uid://brpckgp7j86jp"]
 
 [ext_resource type="Script" uid="uid://cdubukgyitlm8" path="res://scripts/ui/menus/main_menu.gd" id="1_l6cm7"]
 [ext_resource type="VideoStream" uid="uid://bmpiyn7clgg1c" path="res://files/video/grok-video-main_menu_3_by_2.ogv" id="2_wu84c"]
@@ -73,7 +73,7 @@ corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
 shadow_size = 5
 
-[node name="Control" type="Control"]
+[node name="Control" type="Control" unique_id=1897598360]
 layout_mode = 3
 anchors_preset = 8
 anchor_left = 0.5
@@ -84,7 +84,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_l6cm7")
 
-[node name="VideoStreamPlayer" type="VideoStreamPlayer" parent="."]
+[node name="VideoStreamPlayer" type="VideoStreamPlayer" parent="." unique_id=950508958]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -95,7 +95,7 @@ stream = ExtResource("2_wu84c")
 autoplay = true
 loop = true
 
-[node name="Panel" type="Panel" parent="VideoStreamPlayer" groups=["MenuWithOptions"]]
+[node name="Panel" type="Panel" parent="VideoStreamPlayer" unique_id=1930415154 groups=["MenuWithOptions"]]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -111,7 +111,7 @@ grow_vertical = 2
 tooltip_text = "Main Menu Panel"
 theme_override_styles/panel = SubResource("StyleBoxFlat_oa1go")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VideoStreamPlayer/Panel"]
+[node name="VBoxContainer" type="VBoxContainer" parent="VideoStreamPlayer/Panel" unique_id=313610418]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -126,7 +126,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="VideoStreamPlayer/Panel/VBoxContainer"]
+[node name="Label" type="Label" parent="VideoStreamPlayer/Panel/VBoxContainer" unique_id=1439282182]
 visible = false
 layout_mode = 2
 size_flags_vertical = 3
@@ -137,7 +137,7 @@ text = "{SKY=LOCK=ASSAULT}"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="StartButton" type="Button" parent="VideoStreamPlayer/Panel/VBoxContainer"]
+[node name="StartButton" type="Button" parent="VideoStreamPlayer/Panel/VBoxContainer" unique_id=1925580230]
 layout_mode = 2
 size_flags_vertical = 3
 tooltip_text = "Start game"
@@ -154,7 +154,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_8ln24")
 theme_override_styles/focus = SubResource("StyleBoxFlat_tbmy8")
 text = "{START=GAME}"
 
-[node name="OptionsButton" type="Button" parent="VideoStreamPlayer/Panel/VBoxContainer"]
+[node name="OptionsButton" type="Button" parent="VideoStreamPlayer/Panel/VBoxContainer" unique_id=263782677]
 layout_mode = 2
 size_flags_vertical = 3
 tooltip_text = "Options"
@@ -171,7 +171,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_8ln24")
 theme_override_styles/focus = SubResource("StyleBoxFlat_jk1qb")
 text = "{OPTIONS}"
 
-[node name="QuitButton" type="Button" parent="VideoStreamPlayer/Panel/VBoxContainer"]
+[node name="QuitButton" type="Button" parent="VideoStreamPlayer/Panel/VBoxContainer" unique_id=1382332223]
 layout_mode = 2
 size_flags_vertical = 3
 tooltip_text = "Quit"
@@ -188,13 +188,13 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_8ln24")
 theme_override_styles/focus = SubResource("StyleBoxFlat_5dd4i")
 text = "{QUIT}"
 
-[node name="QuitDialog" type="ConfirmationDialog" parent="VideoStreamPlayer/Panel/VBoxContainer"]
+[node name="QuitDialog" type="ConfirmationDialog" parent="VideoStreamPlayer/Panel/VBoxContainer" unique_id=363884447]
 oversampling_override = 1.0
 title = "Quit Game?"
 size = Vector2i(383, 100)
 dialog_text = "Are you sure you want to quit Sky Lock Assault?"
 
-[node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="."]
+[node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="." unique_id=1930504616]
 stream = ExtResource("4_wu84c")
 autoplay = true
 bus = &"Music"
