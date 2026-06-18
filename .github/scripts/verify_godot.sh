@@ -12,8 +12,11 @@ mkdir -p "$STAGING_DIR"
 cd "$STAGING_DIR"
 
 # Define asset targets mapping to GitHub Release assets
-EXE_URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip"
-TEMPLATE_URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_export_templates.tpz"
+EXE_FILE="Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+TEMPLATE_FILE="Godot_v${GODOT_VERSION}_export_templates.tpz"
+
+EXE_URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/${EXE_FILE}"
+TEMPLATE_URL="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/${TEMPLATE_FILE}"
 
 # Parse standard version component for the TuxFamily path (e.g., extracts 4.6.3)
 TUX_VERSION=$(echo "${GODOT_VERSION}" | sed 's/-stable//')
@@ -45,17 +48,40 @@ if ! curl -sI -fL "$CHECKSUM_URL" > /dev/null; then
 fi
 
 echo "📥 Fetching distribution binaries..."
-curl -fL --show-error -o "Godot_v${GODOT_VERSION}_linux.x86_64.zip" "$EXE_URL"
-curl -fL --show-error -o "Godot_v${GODOT_VERSION}_export_templates.tpz" "$TEMPLATE_URL"
+curl -fL --show-error -o "$EXE_FILE" "$EXE_URL"
+curl -fL --show-error -o "$TEMPLATE_FILE" "$TEMPLATE_URL"
+
+# Define a single target map for structural extraction
+TARGET_MANIFEST="GODOT_TARGET_SUMS.txt"
 
 if [ "$USE_SHA512" = true ]; then
     curl -fL --show-error -o SHA512-SUMS.txt "$CHECKSUM_URL"
-    echo "🔒 Executing cryptographic signature test (SHA-512)..."
-    sha512sum --check --ignore-missing SHA512-SUMS.txt
+    echo "🔒 Isolating cryptographic signature entries (SHA-512)..."
+
+    grep -F "${EXE_FILE}" SHA512-SUMS.txt > "$TARGET_MANIFEST"
+    grep -F "${TEMPLATE_FILE}" SHA512-SUMS.txt >> "$TARGET_MANIFEST"
+
+    # Assert that both files were explicitly matched in the official manifest
+    if [ "$(wc -l < "$TARGET_MANIFEST")" -ne 2 ]; then
+        echo "❌ FATAL: Manifest is missing explicit checksum signatures for target assets."
+        exit 1
+    fi
+
+    sha512sum --check "$TARGET_MANIFEST"
 else
     curl -fL --show-error -o SHA256SUMS.txt "$CHECKSUM_URL"
-    echo "🔒 Executing cryptographic signature test (SHA-256)..."
-    sha256sum --check --ignore-missing SHA256SUMS.txt
+    echo "🔒 Isolating cryptographic signature entries (SHA-256)..."
+
+    grep -F "${EXE_FILE}" SHA256SUMS.txt > "$TARGET_MANIFEST"
+    grep -F "${TEMPLATE_FILE}" SHA256SUMS.txt >> "$TARGET_MANIFEST"
+
+    # Assert that both files were explicitly matched in the official manifest
+    if [ "$(wc -l < "$TARGET_MANIFEST")" -ne 2 ]; then
+        echo "❌ FATAL: Manifest is missing explicit checksum signatures for target assets."
+        exit 1
+    fi
+
+    sha256sum --check "$TARGET_MANIFEST"
 fi
 
 echo "✅ SUCCESS: All targeted Godot engine components are structurally authentic and valid."
