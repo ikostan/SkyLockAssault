@@ -8,6 +8,11 @@ on:  # yamllint disable-line rule:truthy
         description: "The version to inject (e.g., v0.6.1)"
         type: string
         required: true
+      godot_version:
+        description: "The Godot version string passed from the calling pipeline"
+        type: string
+        default: "4.6.3-stable"
+        required: true
     secrets:
       ITCHIO_API_KEY:
         description: "Itch.io API key"
@@ -62,59 +67,36 @@ jobs:
 
       - name: "Download and Verify Godot Binaries"
         run: |
-            set -euo pipefail
-            mkdir -p godot_binaries
-            cd godot_binaries
+          set -euo pipefail
+          
+          # Execute your standalone test script directly
+          bash ./.github/scripts/verify_godot.sh "${{ inputs.godot_version }}"
 
-            EXE_URL="https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64.zip"
-            TEMPLATE_URL="https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}/Godot_v${{ env.GODOT_VERSION }}_export_templates.tpz"
+          # Step inside the created directory context to launch the engine asset pipe
+          cd godot_binaries
 
-            # Extract the directory version string for the TuxFamily mirror path (e.g., 4.6.3)
-            TUX_VERSION=$(echo "${{ env.GODOT_VERSION }}" | sed 's/-stable//')
-            CHECKSUM_URL="https://downloads.tuxfamily.org/godotengine/${TUX_VERSION}/SHA256SUMS.txt"
+          echo "✅ Integrity check passed. Starting local HTTP server..."
+          nohup python3 -m http.server 8000 > /dev/null 2>&1 &
 
-            echo "📥 Downloading Godot executable from GitHub..."
-            curl -fL --show-error -o "Godot_v${{ env.GODOT_VERSION }}_linux.x86_64.zip" "$EXE_URL"
-
-            echo "📥 Downloading Godot export templates from GitHub..."
-            curl -fL --show-error -o "Godot_v${{ env.GODOT_VERSION }}_export_templates.tpz" "$TEMPLATE_URL"
-
-            echo "📥 Downloading official checksum manifest from TuxFamily mirror..."
-            # Gracefully fallback to SHA512-SUMS if a specific point release format changes
-            if ! curl -fL --show-error -o SHA256SUMS.txt "$CHECKSUM_URL"; then
-              echo "⚠️ SHA256SUMS.txt missing on mirror, checking for SHA512-SUMS.txt..."
-              CHECKSUM_URL="https://downloads.tuxfamily.org/godotengine/${TUX_VERSION}/SHA512-SUMS.txt"
-              curl -fL --show-error -o SHA512-SUMS.txt "$CHECKSUM_URL"
-
-              echo "🔒 Verifying binary integrity via SHA-512 signatures..."
-              sha512sum --check --ignore-missing SHA512-SUMS.txt
-            else
-              echo "🔒 Verifying binary integrity via SHA-256 signatures..."
-              sha256sum --check --ignore-missing SHA256SUMS.txt
+          echo "⏳ Waiting for local HTTP server to spin up..."
+          TIMEOUT=20
+          while ! curl -s http://localhost:8000/ > /dev/null; do
+            if [ $TIMEOUT -le 0 ]; then
+              echo "❌ FATAL: Local HTTP server failed to start within timeout window."
+              exit 1
             fi
+            sleep 0.5
+            TIMEOUT=$((TIMEOUT - 1))
+          done
 
-            echo "✅ Integrity check passed. Starting local HTTP server..."
-            nohup python3 -m http.server 8000 > /dev/null 2>&1 &
-
-            echo "⏳ Waiting for local HTTP server to spin up..."
-            TIMEOUT=20
-            while ! curl -s http://localhost:8000/ > /dev/null; do
-              if [ $TIMEOUT -le 0 ]; then
-                echo "❌ FATAL: Local HTTP server failed to start within timeout window."
-                exit 1
-              fi
-              sleep 0.5
-              TIMEOUT=$((TIMEOUT - 1))
-            done
-
-            echo "🚀 Local HTTP server is responsive and ready."
+          echo "🚀 Local HTTP server is responsive and ready."
 
       - name: "Export Godot to Web"
         id: "export"
         uses: "firebelley/godot-export@615a6f7afc22d6266bf55c17748fb07447e8bdab"
         with:
-          godot_executable_download_url: "http://localhost:8000/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64.zip"
-          godot_export_templates_download_url: "http://localhost:8000/Godot_v${{ env.GODOT_VERSION }}_export_templates.tpz"
+          godot_executable_download_url: "http://localhost:8000/Godot_v"${{ inputs.godot_version }}"_linux.x86_64.zip"
+          godot_export_templates_download_url: "http://localhost:8000/Godot_v"${{ inputs.godot_version }}"_export_templates.tpz"
           relative_project_path: "./"
           relative_export_path: "./export/web"
           archive_output: true
