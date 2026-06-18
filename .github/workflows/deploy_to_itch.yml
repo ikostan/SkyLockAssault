@@ -8,6 +8,10 @@ on:  # yamllint disable-line rule:truthy
         description: "The version to inject (e.g., v0.6.1)"
         type: string
         required: true
+      godot_version:
+        description: "The Godot version string passed from the calling pipeline"
+        type: string
+        required: true
     secrets:
       ITCHIO_API_KEY:
         description: "Itch.io API key"
@@ -63,24 +67,12 @@ jobs:
       - name: "Download and Verify Godot Binaries"
         run: |
           set -euo pipefail
-          mkdir -p godot_binaries
+
+          # Execute your standalone test script directly
+          bash ./.github/scripts/verify_godot.sh "${{ inputs.godot_version }}"
+
+          # Step inside the created directory context to launch the engine asset pipe
           cd godot_binaries
-
-          EXE_URL="https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64.zip"
-          TEMPLATE_URL="https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}/Godot_v${{ env.GODOT_VERSION }}_export_templates.tpz"
-          CHECKSUM_URL="https://github.com/godotengine/godot/releases/download/${{ env.GODOT_VERSION }}/SHA256SUMS.txt"
-
-          echo "📥 Downloading Godot executable..."
-          curl -fL --show-error -o "Godot_v${{ env.GODOT_VERSION }}_linux.x86_64.zip" "$EXE_URL"
-
-          echo "📥 Downloading Godot export templates..."
-          curl -fL --show-error -o "Godot_v${{ env.GODOT_VERSION }}_export_templates.tpz" "$TEMPLATE_URL"
-
-          echo "📥 Downloading official SHA-256 checksums..."
-          curl -fL --show-error -o SHA256SUMS.txt "$CHECKSUM_URL"
-
-          echo "🔒 Verifying binary integrity against official signatures..."
-          sha256sum --check --ignore-missing SHA256SUMS.txt
 
           echo "✅ Integrity check passed. Starting local HTTP server..."
           nohup python3 -m http.server 8000 > /dev/null 2>&1 &
@@ -102,8 +94,10 @@ jobs:
         id: "export"
         uses: "firebelley/godot-export@615a6f7afc22d6266bf55c17748fb07447e8bdab"
         with:
-          godot_executable_download_url: "http://localhost:8000/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64.zip"
-          godot_export_templates_download_url: "http://localhost:8000/Godot_v${{ env.GODOT_VERSION }}_export_templates.tpz"
+          # yamllint disable rule:line-length
+          godot_executable_download_url: "http://localhost:8000/Godot_v${{ inputs.godot_version }}_linux.x86_64.zip"
+          godot_export_templates_download_url: "http://localhost:8000/Godot_v${{ inputs.godot_version }}_export_templates.tpz"
+          # yamllint enable rule:line-length
           relative_project_path: "./"
           relative_export_path: "./export/web"
           archive_output: true

@@ -2,7 +2,12 @@
 name: "CI/CD Infrastructure Tests"
 
 on:  # yamllint disable-line rule:truthy
-  workflow_call:   # yamllint disable rule:empty-values
+  workflow_call:
+    inputs:
+      godot_version:
+        description: "The Godot version string passed from the calling pipeline"
+        type: string
+        required: true
 
 jobs:
   test-scripts:
@@ -26,3 +31,8 @@ jobs:
       - name: "Run CI Injection Tests"
         run: |
           pytest tests/ci/ -v -s
+
+      - name: "Test Godot Asset Infrastructure and Signature Verification"
+        run: |
+          chmod +x .github/scripts/verify_godot.sh
+          bash .github/scripts/verify_godot.sh "${{ inputs.godot_version }}"
