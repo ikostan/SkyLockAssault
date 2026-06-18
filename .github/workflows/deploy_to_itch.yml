@@ -68,7 +68,7 @@ jobs:
       - name: "Download and Verify Godot Binaries"
         run: |
           set -euo pipefail
-          
+
           # Execute your standalone test script directly
           bash ./.github/scripts/verify_godot.sh "${{ inputs.godot_version }}"
 
@@ -95,8 +95,10 @@ jobs:
         id: "export"
         uses: "firebelley/godot-export@615a6f7afc22d6266bf55c17748fb07447e8bdab"
         with:
-          godot_executable_download_url: "http://localhost:8000/Godot_v"${{ inputs.godot_version }}"_linux.x86_64.zip"
-          godot_export_templates_download_url: "http://localhost:8000/Godot_v"${{ inputs.godot_version }}"_export_templates.tpz"
+          # yamllint disable rule:line-length
+          godot_executable_download_url: "http://localhost:8000/Godot_v${{ inputs.godot_version }}_linux.x86_64.zip"
+          godot_export_templates_download_url: "http://localhost:8000/Godot_v${{ inputs.godot_version }}_export_templates.tpz"
+          # yamllint enable rule:line-length
           relative_project_path: "./"
           relative_export_path: "./export/web"
           archive_output: true
