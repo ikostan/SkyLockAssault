@@ -156,7 +156,7 @@ func _setup_unbound_dialog() -> void:
 	)
 
 
-func _input(event: InputEvent) -> void:
+func _input(_event: InputEvent) -> void:
 	## Handles input events for the main menu.
 	# Keep your existing Web platform audio gesture unlock logic intact
 	if OS.get_name() == "Web" and not background_music.playing:
