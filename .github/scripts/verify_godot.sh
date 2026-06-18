@@ -20,9 +20,8 @@ TEMPLATE_URL="https://github.com/godotengine/godot/releases/download/${GODOT_VER
 
 # Parse standard version component for the TuxFamily path (e.g., extracts 4.6.3)
 TUX_VERSION=$(echo "${GODOT_VERSION}" | sed 's/-stable//')
-CHECKSUM_URL="https://downloads.tuxfamily.org/godotengine/${TUX_VERSION}/SHA256SUMS.txt"
 
-echo "🌐 Testing URL connectivity..."
+echo "🌐 Testing target binary availability..."
 if ! curl -sI -fL "$EXE_URL" > /dev/null; then
     echo "❌ FATAL: Godot Executable URL is invalid or throwing a 404 error:"
     echo "   $EXE_URL"
@@ -35,52 +34,50 @@ if ! curl -sI -fL "$TEMPLATE_URL" > /dev/null; then
     exit 1
 fi
 
-# Fallback block if the maintainers drop an alternate hash algorithm target folder layout
-USE_SHA512=false
-if ! curl -sI -fL "$CHECKSUM_URL" > /dev/null; then
-    echo "⚠️ SHA256SUMS.txt missing at primary URL. Checking for SHA512-SUMS.txt fallback..."
-    CHECKSUM_URL="https://downloads.tuxfamily.org/godotengine/${TUX_VERSION}/SHA512-SUMS.txt"
-    if ! curl -sI -fL "$CHECKSUM_URL" > /dev/null; then
-        echo "❌ FATAL: No valid verification manifests found on the mirror infra."
-        exit 1
-    fi
-    USE_SHA512=true
-fi
-
-echo "📥 Fetching distribution binaries..."
+echo "📥 Fetching distribution binaries from GitHub..."
 curl -fL --show-error -o "$EXE_FILE" "$EXE_URL"
 curl -fL --show-error -o "$TEMPLATE_FILE" "$TEMPLATE_URL"
 
-# Define a single target map for structural extraction
+echo "📥 Locating official cryptographic verification manifest..."
 TARGET_MANIFEST="GODOT_TARGET_SUMS.txt"
+MANIFEST_DOWNLOADED=false
+USE_SHA512=false
 
-if [ "$USE_SHA512" = true ]; then
-    curl -fL --show-error -o SHA512-SUMS.txt "$CHECKSUM_URL"
-    echo "🔒 Isolating cryptographic signature entries (SHA-512)..."
-
-    grep -F "${EXE_FILE}" SHA512-SUMS.txt > "$TARGET_MANIFEST"
-    grep -F "${TEMPLATE_FILE}" SHA512-SUMS.txt >> "$TARGET_MANIFEST"
-
-    # Assert that both files were explicitly matched in the official manifest
-    if [ "$(wc -l < "$TARGET_MANIFEST")" -ne 2 ]; then
-        echo "❌ FATAL: Manifest is missing explicit checksum signatures for target assets."
-        exit 1
-    fi
-
-    sha512sum --check "$TARGET_MANIFEST"
-else
-    curl -fL --show-error -o SHA256SUMS.txt "$CHECKSUM_URL"
-    echo "🔒 Isolating cryptographic signature entries (SHA-256)..."
-
+# Sequence through official download mirrors using standard GET requests to bypass server restrictions
+if curl -fL --silent --show-error -o SHA256SUMS.txt "https://downloads.tuxfamily.org/godotengine/${TUX_VERSION}/SHA256SUMS.txt" 2>/dev/null; then
+    echo "🔒 Isolating cryptographic signature entries (SHA-256) from TuxFamily..."
     grep -F "${EXE_FILE}" SHA256SUMS.txt > "$TARGET_MANIFEST"
     grep -F "${TEMPLATE_FILE}" SHA256SUMS.txt >> "$TARGET_MANIFEST"
+    MANIFEST_DOWNLOADED=true
+elif curl -fL --silent --show-error -o SHA512-SUMS.txt "https://downloads.tuxfamily.org/godotengine/${TUX_VERSION}/SHA512-SUMS.txt" 2>/dev/null; then
+    echo "🔒 Isolating cryptographic signature entries (SHA-512) from TuxFamily..."
+    grep -F "${EXE_FILE}" SHA512-SUMS.txt > "$TARGET_MANIFEST"
+    grep -F "${TEMPLATE_FILE}" SHA512-SUMS.txt >> "$TARGET_MANIFEST"
+    USE_SHA512=true
+    MANIFEST_DOWNLOADED=true
+elif curl -fL --silent --show-error -o SHA512-SUMS.txt "https://sourceforge.net/projects/godot-engine.mirror/files/${GODOT_VERSION}/SHA512-SUMS.txt/download" 2>/dev/null; then
+    echo "🔒 Isolating cryptographic signature entries (SHA-512) from SourceForge mirror..."
+    grep -F "${EXE_FILE}" SHA512-SUMS.txt > "$TARGET_MANIFEST"
+    grep -F "${TEMPLATE_FILE}" SHA512-SUMS.txt >> "$TARGET_MANIFEST"
+    USE_SHA512=true
+    MANIFEST_DOWNLOADED=true
+fi
 
-    # Assert that both files were explicitly matched in the official manifest
-    if [ "$(wc -l < "$TARGET_MANIFEST")" -ne 2 ]; then
-        echo "❌ FATAL: Manifest is missing explicit checksum signatures for target assets."
-        exit 1
-    fi
+if [ "$MANIFEST_DOWNLOADED" = false ]; then
+    echo "❌ FATAL: Could not retrieve a valid SHA256SUMS.txt or SHA512-SUMS.txt manifest from official mirrors."
+    exit 1
+fi
 
+# CodeRabbit Validation: Assert that both files were explicitly matched in the isolated manifest
+if [ "$(wc -l < "$TARGET_MANIFEST")" -ne 2 ]; then
+    echo "❌ FATAL: Downloaded manifest is incomplete or missing checksum signatures for target assets."
+    exit 1
+fi
+
+# Execute the strict cryptographic test
+if [ "$USE_SHA512" = true ]; then
+    sha512sum --check "$TARGET_MANIFEST"
+else
     sha256sum --check "$TARGET_MANIFEST"
 fi
 
