@@ -247,17 +247,17 @@ func _on_quit_dialog_confirmed() -> void:
 	## Handles quit dialog confirmation.
 	## Performs platform-specific quit actions.
 	## :rtype: void
-	
+
 	# 1. Fire the confirmation sound asset
 	AudioManager.play_sfx("ui_accept")
-	
+
 	# 2. Hide the panel immediately so the player gets immediate feedback
 	if is_instance_valid(quit_dialog):
 		quit_dialog.hide()
-		
+
 	# 3. Create a tiny non-blocking delay to let the audio stream flush to hardware
 	await get_tree().create_timer(0.2).timeout
-	
+
 	# 4. Execute platform-specific quit execution path
 	if OS.get_name() == "Web":
 		# Web export: Redirect to itch.io game page (clean exit, no freeze)
@@ -272,13 +272,13 @@ func _on_quit_dialog_canceled() -> void:
 	## Handles quit dialog cancellation.
 	## Hides the dialog and logs the action.
 	## :rtype: void
-	
+
 	# Play the cancel sound effect directly on trigger execution
 	AudioManager.play_sfx("ui_cancel")
-	
+
 	quit_dialog.hide()
 	Globals.log_message("Quit canceled.", Globals.LogLevel.DEBUG)
-	
+
 	# Return focus to the button that opened the dialog
 	if is_instance_valid(last_focused_button):  # Safety check
 		last_focused_button.call_deferred("grab_focus")  # Restore to original opener
