@@ -66,6 +66,9 @@ func _ready() -> void:
 		settings = GameSettingsResource.new()
 		settings.current_log_level = LogLevel.WARNING
 
+	# Connect global listener to monitor all runtime UI instantiation tracks
+	get_tree().node_added.connect(_on_node_added)
+
 	if Engine.is_editor_hint() or settings.enable_debug_logging:
 		settings.current_log_level = LogLevel.DEBUG
 	log_message("Log level set to: " + LogLevel.keys()[settings.current_log_level], LogLevel.DEBUG)
@@ -596,3 +599,11 @@ func safe_load_config(path: String) -> Dictionary:
 func set_test_encryption_key(override_key: String = "test_deterministic_key_123") -> void:
 	save_encryption_pass = override_key
 	log_message("Encryption key overridden for testing.", LogLevel.DEBUG)
+
+
+## Automatically hooks up base Button elements for confirmation sfx
+func _on_node_added(node: Node) -> void:
+	# Strict type matching: excludes CheckButton, CheckBox, OptionButton, etc.
+	if node.get_class() == "Button":
+		# Use CONNECT_DEFERRED to prevent scene tree modification errors during instantiation
+		node.pressed.connect(func() -> void: AudioManager.play_sfx("ui_accept"), CONNECT_DEFERRED)
