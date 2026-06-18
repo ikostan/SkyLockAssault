@@ -7,7 +7,6 @@ on:  # yamllint disable-line rule:truthy
       godot_version:
         description: "The Godot version string passed from the calling pipeline"
         type: string
-        default: "4.6.3-stable"
         required: true
 
 jobs:
