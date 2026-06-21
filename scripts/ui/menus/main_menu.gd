@@ -168,10 +168,8 @@ func _input(_event: InputEvent) -> void:
 
 func _setup_quit_dialog() -> void:
 	## Sets up the quit confirmation dialog.
-	##
 	## Finds the dialog node and connects signals if not already connected.
 	## Hides the dialog initially.
-	##
 	## :rtype: void
 	quit_dialog = get_node_or_null(quit_dialog_path)
 	if is_instance_valid(quit_dialog):
@@ -184,9 +182,25 @@ func _setup_quit_dialog() -> void:
 		# Close button (×) in title bar or other "just hide" cases
 		if not quit_dialog.close_requested.is_connected(_on_quit_dialog_canceled):
 			quit_dialog.close_requested.connect(_on_quit_dialog_canceled)
+		
+		# Clear generic 'pressed' audio connections on the internal Cancel button
+		var cancel_button := quit_dialog.get_cancel_button()
+		if is_instance_valid(cancel_button):
+			for connection: Dictionary in cancel_button.pressed.get_connections():
+				# If the target isn't the dialog itself, it's an external/global connection
+				if connection.callable.get_object() != quit_dialog:
+					cancel_button.pressed.disconnect(connection.callable)
+		
+		# Optional: Do the same for the OK button to prevent double-triggering the accept sound
+		var ok_button := quit_dialog.get_ok_button()
+		if is_instance_valid(ok_button):
+			for connection: Dictionary in ok_button.pressed.get_connections():
+				if connection.callable.get_object() != quit_dialog:
+					ok_button.pressed.disconnect(connection.callable)
+
 		# Ensure initially hidden
 		quit_dialog.hide()
-		Globals.log_message("QuitDialog signals connected.", Globals.LogLevel.DEBUG)
+		Globals.log_message("QuitDialog signals connected and internal buttons sanitized.", Globals.LogLevel.DEBUG)
 	else:
 		Globals.log_message(
 			"QuitDialog not found at path: " + str(quit_dialog_path), Globals.LogLevel.ERROR
