@@ -25,6 +25,7 @@ extends Control
 # Default relative path; override in Inspector if needed
 const QUIT_DIALOG_DEFAULT_PATH: String = "VideoStreamPlayer/Panel/VBoxContainer/QuitDialog"
 @export var quit_dialog_path: NodePath = NodePath(QUIT_DIALOG_DEFAULT_PATH)
+@export var audio_flush_delay: float = 0.2
 
 # Reference to the quit dialog node, assigned in setup_quit_dialog or _ready()
 var quit_dialog: ConfirmationDialog
@@ -273,18 +274,21 @@ func _on_quit_dialog_confirmed() -> void:
 
 	# 3. Execute platform-specific quit execution path
 	if OS.get_name() == "Web":
-		# Offload the 200ms delay to JavaScript instead of utilizing a Godot await.
-		# This allows the audio player to fire immediately on this frame before the redirect.
+		# Offload the delay to JavaScript instead of utilizing a Godot await
+		var ms_delay: int = int(audio_flush_delay * 1000.0)
 		(
 			JavaScriptBridge
 			. eval(
-				"setTimeout(function() { window.top.location.href = 'https://ikostan.itch.io/sky-lock-assault'; }, 200);"
+				(
+					"setTimeout(function() { window.top.location.href = 'https://ikostan.itch.io/sky-lock-assault'; }, %d);"
+					% ms_delay
+				)
 			)
 		)
 		Globals.log_message("Web quit: Scheduled JS timeout redirect.", Globals.LogLevel.DEBUG)
 	else:
-		# Desktop/editor: Standard hardware audio flush delay
-		await get_tree().create_timer(0.2).timeout
+		# Desktop/editor: Use the clean, configurable export delay parameter
+		await get_tree().create_timer(audio_flush_delay).timeout
 		get_tree().quit()
 		Globals.log_message("Native quit executed!", Globals.LogLevel.DEBUG)
 
@@ -294,18 +298,20 @@ func _on_quit_dialog_canceled() -> void:
 	## Hides the dialog and logs the action.
 	## :rtype: void
 
-	# Play the cancel sound effect directly on trigger execution
-	AudioManager.play_sfx("ui_cancel")
+	# Guard: Only play the localized sound if this wasn't triggered via a physical
+	# keyboard/gamepad action (which Globals._input already plays sound for)
+	if not Input.is_action_just_pressed("ui_cancel"):
+		AudioManager.play_sfx("ui_cancel")
 
 	quit_dialog.hide()
 	Globals.log_message("Quit canceled.", Globals.LogLevel.DEBUG)
 
 	# Return focus to the button that opened the dialog
-	if is_instance_valid(last_focused_button):  # Safety check
-		last_focused_button.call_deferred("grab_focus")  # Restore to original opener
+	if is_instance_valid(last_focused_button):
+		last_focused_button.call_deferred("grab_focus")
 		Globals.log_message(
 			"Restored focus to: " + last_focused_button.name, Globals.LogLevel.DEBUG
 		)
 	else:
 		if is_instance_valid(quit_button):
-			quit_button.call_deferred("grab_focus")  # Fallback to default
+			quit_button.call_deferred("grab_focus")
