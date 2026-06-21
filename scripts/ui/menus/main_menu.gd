@@ -182,7 +182,7 @@ func _setup_quit_dialog() -> void:
 		# Close button (×) in title bar or other "just hide" cases
 		if not quit_dialog.close_requested.is_connected(_on_quit_dialog_canceled):
 			quit_dialog.close_requested.connect(_on_quit_dialog_canceled)
-		
+
 		# Clear generic 'pressed' audio connections on the internal Cancel button
 		var cancel_button := quit_dialog.get_cancel_button()
 		if is_instance_valid(cancel_button):
@@ -190,7 +190,7 @@ func _setup_quit_dialog() -> void:
 				# If the target isn't the dialog itself, it's an external/global connection
 				if connection.callable.get_object() != quit_dialog:
 					cancel_button.pressed.disconnect(connection.callable)
-		
+
 		# Optional: Do the same for the OK button to prevent double-triggering the accept sound
 		var ok_button := quit_dialog.get_ok_button()
 		if is_instance_valid(ok_button):
@@ -200,7 +200,9 @@ func _setup_quit_dialog() -> void:
 
 		# Ensure initially hidden
 		quit_dialog.hide()
-		Globals.log_message("QuitDialog signals connected and internal buttons sanitized.", Globals.LogLevel.DEBUG)
+		Globals.log_message(
+			"QuitDialog signals connected and internal buttons sanitized.", Globals.LogLevel.DEBUG
+		)
 	else:
 		Globals.log_message(
 			"QuitDialog not found at path: " + str(quit_dialog_path), Globals.LogLevel.ERROR
@@ -273,7 +275,12 @@ func _on_quit_dialog_confirmed() -> void:
 	if OS.get_name() == "Web":
 		# Offload the 200ms delay to JavaScript instead of utilizing a Godot await.
 		# This allows the audio player to fire immediately on this frame before the redirect.
-		JavaScriptBridge.eval("setTimeout(function() { window.top.location.href = 'https://ikostan.itch.io/sky-lock-assault'; }, 200);")
+		(
+			JavaScriptBridge
+			. eval(
+				"setTimeout(function() { window.top.location.href = 'https://ikostan.itch.io/sky-lock-assault'; }, 200);"
+			)
+		)
 		Globals.log_message("Web quit: Scheduled JS timeout redirect.", Globals.LogLevel.DEBUG)
 	else:
 		# Desktop/editor: Standard hardware audio flush delay
