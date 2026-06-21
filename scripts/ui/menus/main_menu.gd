@@ -255,17 +255,17 @@ func _on_quit_dialog_confirmed() -> void:
 	if is_instance_valid(quit_dialog):
 		quit_dialog.hide()
 
-	# 3. Create a tiny non-blocking delay to let the audio stream flush to hardware
-	await get_tree().create_timer(0.2).timeout
-
-	# 4. Execute platform-specific quit execution path
+	# 3. Execute platform-specific quit execution path
 	if OS.get_name() == "Web":
-		# Web export: Redirect to itch.io game page (clean exit, no freeze)
-		JavaScriptBridge.eval("window.location.href = 'https://ikostan.itch.io/sky-lock-assault';")
+		# Offload the 200ms delay to JavaScript instead of utilizing a Godot await.
+		# This allows the audio player to fire immediately on this frame before the redirect.
+		JavaScriptBridge.eval("setTimeout(function() { window.top.location.href = 'https://ikostan.itch.io/sky-lock-assault'; }, 200);")
+		Globals.log_message("Web quit: Scheduled JS timeout redirect.", Globals.LogLevel.DEBUG)
 	else:
-		# Desktop/editor: Standard quit
+		# Desktop/editor: Standard hardware audio flush delay
+		await get_tree().create_timer(0.2).timeout
 		get_tree().quit()
-	Globals.log_message("Quit confirmed and executed!", Globals.LogLevel.DEBUG)
+		Globals.log_message("Native quit executed!", Globals.LogLevel.DEBUG)
 
 
 func _on_quit_dialog_canceled() -> void:
