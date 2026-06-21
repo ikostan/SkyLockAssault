@@ -276,13 +276,11 @@ func _on_quit_dialog_confirmed() -> void:
 	if OS.get_name() == "Web":
 		# Offload the delay to JavaScript instead of utilizing a Godot await
 		var ms_delay: int = int(audio_flush_delay * 1000.0)
-		(
-			JavaScriptBridge
-			. eval(
-				(
-					"setTimeout(function() { window.top.location.href = 'https://ikostan.itch.io/sky-lock-assault'; }, %d);"
-					% ms_delay
-				)
+		JavaScriptBridge.eval(
+			(
+				"setTimeout(function() "
+				+ "{ window.top.location.href = 'https://ikostan.itch.io/sky-lock-assault'; }"
+				+ ", %d);" % ms_delay
 			)
 		)
 		Globals.log_message("Web quit: Scheduled JS timeout redirect.", Globals.LogLevel.DEBUG)
