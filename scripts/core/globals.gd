@@ -639,6 +639,5 @@ func _on_node_added(node: Node) -> void:
 
 			# Use CONNECT_DEFERRED to prevent scene tree modification errors
 			btn.pressed.connect(
-				func() -> void: AudioManager.play_sfx("ui_accept"),
-				CONNECT_DEFERRED
+				func() -> void: AudioManager.play_sfx("ui_accept"), CONNECT_DEFERRED
 			)
