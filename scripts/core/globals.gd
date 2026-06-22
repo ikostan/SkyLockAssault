@@ -624,5 +624,14 @@ func set_test_encryption_key(override_key: String = "test_deterministic_key_123"
 func _on_node_added(node: Node) -> void:
 	# Strict type matching: excludes CheckButton, CheckBox, OptionButton, etc.
 	if node.get_class() == "Button":
-		# Use CONNECT_DEFERRED to prevent scene tree modification errors during instantiation
-		node.pressed.connect(func() -> void: AudioManager.play_sfx("ui_accept"), CONNECT_DEFERRED)
+		var btn := node as Button
+		if is_instance_valid(btn):
+			# Flat Button Protection: Avoid superimposing global audio over theme audio
+			if btn.flat or btn.has_meta("no_global_sound"):
+				return
+			
+			# Use CONNECT_DEFERRED to prevent scene tree modification errors
+			btn.pressed.connect(
+				func() -> void: AudioManager.play_sfx("ui_accept"),
+				CONNECT_DEFERRED
+			)

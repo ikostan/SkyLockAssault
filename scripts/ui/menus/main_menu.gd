@@ -82,12 +82,18 @@ func _ready() -> void:
 	# Connect START button signal
 	@warning_ignore("return_value_discarded")
 	start_button.pressed.connect(_on_start_pressed)
+	start_button.set_meta("no_global_sound", true)
+
 	# Connect OPTIONS button signal
 	@warning_ignore("return_value_discarded")
 	options_button.pressed.connect(_on_options_button_pressed)
+	options_button.set_meta("no_global_sound", true)
+
 	# Connect QUIT button signal
 	@warning_ignore("return_value_discarded")
 	quit_button.pressed.connect(_on_quit_pressed)
+	quit_button.set_meta("no_global_sound", true)
+
 	# Setup quit dialog
 	_setup_quit_dialog()
 	# To prevent garbage collection of JavaScriptObject callbacks in Godot's JS bindings,
