@@ -630,7 +630,15 @@ func _on_node_added(node: Node) -> void:
 			if btn.flat or btn.has_meta("no_global_sound"):
 				return
 
+			# Dialog Protection: Exclude internal buttons of Accept/ConfirmationDialogs
+			var parent := btn.get_parent()
+			while parent:
+				if parent is AcceptDialog:
+					return
+				parent = parent.get_parent()
+
 			# Use CONNECT_DEFERRED to prevent scene tree modification errors
 			btn.pressed.connect(
-				func() -> void: AudioManager.play_sfx("ui_accept"), CONNECT_DEFERRED
+				func() -> void: AudioManager.play_sfx("ui_accept"),
+				CONNECT_DEFERRED
 			)

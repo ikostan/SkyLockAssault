@@ -54,54 +54,25 @@ func _ready() -> void:
 	##
 	## :rtype: void
 	Globals.log_message("Initializing main menu...", Globals.LogLevel.DEBUG)
-	# Prepare menu for fade-in: Make visible but fully transparent
-	menu.visible = true
-	menu.modulate.a = 0.0  # Start invisible (alpha 0)
-	# Wait for 3 seconds (adjust as needed)
-	await get_tree().create_timer(3.0).timeout
-	# Optional: Play a fade-in animation if you have an AnimationPlayer
-	# Fade in the main panel over 1 second (smooth easing)
-	var panel_tween := create_tween()
-	# Property to animate (alpha channel)  # End value (fully opaque)  # Duration in seconds
-	panel_tween.tween_property(menu, "modulate:a", 1.0, 1.0).set_ease(Tween.EASE_OUT).set_trans(
-		Tween.TRANS_QUAD
-	)  # Smooth curve (eases out, quadratic)
-	# Wait only if tween is valid
-	if panel_tween and panel_tween.is_valid():
-		Globals.log_message("Waiting for fade-in tween to finish.", Globals.LogLevel.DEBUG)
-		await panel_tween.finished  # Non-blocking await; resumes after signal
-		Globals.log_message("Fade-in complete—granting focus.", Globals.LogLevel.DEBUG)
-	else:
-		Globals.log_message("Invalid tween—grabbing focus immediately.", Globals.LogLevel.WARNING)
-	# Fallback: Grab focus immediately if tween isn't running (e.g., error or instant)
-	# Give keyboard focus to the first button after the fade-in completes
-	Globals.ensure_initial_focus(
-		start_button, [start_button, options_button, quit_button], "Main Menu"
-	)
 
-	# Connect START button signal
+	# 1. Connect core button signals and set metadata immediately on Frame 1
 	@warning_ignore("return_value_discarded")
 	start_button.pressed.connect(_on_start_pressed)
 	start_button.set_meta("no_global_sound", true)
 
-	# Connect OPTIONS button signal
 	@warning_ignore("return_value_discarded")
 	options_button.pressed.connect(_on_options_button_pressed)
 	options_button.set_meta("no_global_sound", true)
 
-	# Connect QUIT button signal
 	@warning_ignore("return_value_discarded")
 	quit_button.pressed.connect(_on_quit_pressed)
 	quit_button.set_meta("no_global_sound", true)
 
-	# Setup quit dialog
+	# 2. Run dialog configurations instantly
 	_setup_quit_dialog()
-	# To prevent garbage collection of JavaScriptObject callbacks in Godot's JS bindings,
-	# which can break the references and cause calls like window.optionsPressed([]) to fail
-	# silently, leading to issues like the test timeout on waiting for visible elements
-	# (e.g., #audio-button remains hidden because options menu _ready() doesn't run).
-	# Storing them as member variables ensures they persist.
 	_setup_unbound_dialog()
+
+	# 3. Expose JS Web callbacks right away if on Web platform
 	if OS.get_name() == "Web":
 		var js_window := JavaScriptBridge.get_interface("window")
 		if js_window:
@@ -118,6 +89,34 @@ func _ready() -> void:
 			Globals.log_message(
 				"Exposed main menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
 			)
+
+	# 4. Handle visual fade-in sequence asynchronously in the background
+	_run_fade_in_sequence()
+
+
+func _run_fade_in_sequence() -> void:
+	## Manages the initial main menu background layout animation.
+	menu.visible = true
+	menu.modulate.a = 0.0  # Start invisible
+	
+	# Non-blocking background sequence wait
+	await get_tree().create_timer(3.0).timeout
+	
+	var panel_tween := create_tween()
+	panel_tween.tween_property(menu, "modulate:a", 1.0, 1.0).set_ease(Tween.EASE_OUT).set_trans(
+		Tween.TRANS_QUAD
+	)
+	
+	if panel_tween and panel_tween.is_valid():
+		Globals.log_message("Waiting for fade-in tween to finish.", Globals.LogLevel.DEBUG)
+		await panel_tween.finished
+		Globals.log_message("Fade-in complete—granting focus.", Globals.LogLevel.DEBUG)
+	else:
+		Globals.log_message("Invalid tween—grabbing focus immediately.", Globals.LogLevel.WARNING)
+		
+	Globals.ensure_initial_focus(
+		start_button, [start_button, options_button, quit_button], "Main Menu"
+	)
 
 
 func _setup_unbound_dialog() -> void:
@@ -194,15 +193,16 @@ func _setup_quit_dialog() -> void:
 		var cancel_button := quit_dialog.get_cancel_button()
 		if is_instance_valid(cancel_button):
 			for connection: Dictionary in cancel_button.pressed.get_connections():
-				# If the target isn't the dialog itself, it's an external/global connection
-				if connection.callable.get_object() != quit_dialog:
+				# Explicitly target only the Globals singleton audio hook
+				if connection.callable.get_object() == Globals:
 					cancel_button.pressed.disconnect(connection.callable)
 
-		# Optional: Do the same for the OK button to prevent double-triggering the accept sound
+		# Do the same for the OK button to prevent double-triggering the accept sound
 		var ok_button := quit_dialog.get_ok_button()
 		if is_instance_valid(ok_button):
 			for connection: Dictionary in ok_button.pressed.get_connections():
-				if connection.callable.get_object() != quit_dialog:
+				# Explicitly target only the Globals singleton audio hook
+				if connection.callable.get_object() == Globals:
 					ok_button.pressed.disconnect(connection.callable)
 
 		# Ensure initially hidden
