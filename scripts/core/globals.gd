@@ -406,6 +406,25 @@ func _input(event: InputEvent) -> void:
 
 	# ADDED: Sound selection effect on hitting ESC/ui_cancel within any valid menu context
 	if event.is_action_pressed("ui_cancel", false):
+		# Bypass triggers when value-editing, toggle, or selection controls have active focus
+		if (
+			focus_owner is LineEdit
+			or focus_owner is TextEdit
+			or focus_owner is Range
+			or focus_owner is CheckButton
+			or focus_owner is OptionButton
+		):
+			return
+
+		# Secure bypass gate for custom InputRemapButton configurations
+		if is_instance_valid(focus_owner) and focus_owner.get_script() != null:
+			if (
+				"action" in focus_owner 
+				or "action_name" in focus_owner 
+				or focus_owner.has_method("cancel_remap")
+			):
+				return
+
 		AudioManager.play_sfx("ui_cancel")
 		return
 
