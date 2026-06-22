@@ -419,8 +419,8 @@ func _input(event: InputEvent) -> void:
 		# Secure bypass gate for custom InputRemapButton configurations
 		if is_instance_valid(focus_owner) and focus_owner.get_script() != null:
 			if (
-				"action" in focus_owner 
-				or "action_name" in focus_owner 
+				"action" in focus_owner
+				or "action_name" in focus_owner
 				or focus_owner.has_method("cancel_remap")
 			):
 				return
@@ -629,9 +629,8 @@ func _on_node_added(node: Node) -> void:
 			# Flat Button Protection: Avoid superimposing global audio over theme audio
 			if btn.flat or btn.has_meta("no_global_sound"):
 				return
-			
+
 			# Use CONNECT_DEFERRED to prevent scene tree modification errors
 			btn.pressed.connect(
-				func() -> void: AudioManager.play_sfx("ui_accept"),
-				CONNECT_DEFERRED
+				func() -> void: AudioManager.play_sfx("ui_accept"), CONNECT_DEFERRED
 			)
