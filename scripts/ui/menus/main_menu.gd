@@ -104,14 +104,23 @@ func _run_fade_in_sequence() -> void:
 	# Non-blocking background sequence wait
 	await get_tree().create_timer(3.0).timeout
 
+	# GUARD 1: Safe exit if the menu scene was torn down during the 3s intro delay
+	if not is_inside_tree() or not is_instance_valid(menu):
+		return
+
 	var panel_tween := create_tween()
-	panel_tween.tween_property(menu, "modulate:a", 1.0, 1.0).set_ease(Tween.EASE_OUT).set_trans(
-		Tween.TRANS_QUAD
-	)
+	panel_tween.tween_property(
+		menu, "modulate:a", 1.0, 1.0
+	).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 
 	if panel_tween and panel_tween.is_valid():
 		Globals.log_message("Waiting for fade-in tween to finish.", Globals.LogLevel.DEBUG)
 		await panel_tween.finished
+		
+		# GUARD 2: Safe exit if the menu scene was torn down during the 1s fade animation
+		if not is_inside_tree() or not is_instance_valid(start_button):
+			return
+			
 		Globals.log_message("Fade-in complete—granting focus.", Globals.LogLevel.DEBUG)
 	else:
 		Globals.log_message("Invalid tween—grabbing focus immediately.", Globals.LogLevel.WARNING)
