@@ -196,6 +196,10 @@ func _setup_quit_dialog() -> void:
 				# Explicitly target only the Globals singleton audio hook
 				if connection.callable.get_object() == Globals:
 					cancel_button.pressed.disconnect(connection.callable)
+			
+			# NEW: Cleanly route explicit button clicks to play the cancellation audio
+			if not cancel_button.pressed.is_connected(_on_cancel_button_clicked):
+				cancel_button.pressed.connect(_on_cancel_button_clicked)
 
 		# Do the same for the OK button to prevent double-triggering the accept sound
 		var ok_button := quit_dialog.get_ok_button()
@@ -297,16 +301,14 @@ func _on_quit_dialog_confirmed() -> void:
 		Globals.log_message("Native quit executed!", Globals.LogLevel.DEBUG)
 
 
+func _on_cancel_button_clicked() -> void:
+	## Triggers the cancel audio stream exclusively on manual mouse clicks.
+	AudioManager.play_sfx("ui_cancel")
+
+
 func _on_quit_dialog_canceled() -> void:
-	## Handles quit dialog cancellation.
-	## Hides the dialog and logs the action.
+	## Handles quit dialog cancellation visual resets and focus recovery.
 	## :rtype: void
-
-	# Guard: Only play the localized sound if this wasn't triggered via a physical
-	# keyboard/gamepad action (which Globals._input already plays sound for)
-	if not Input.is_action_just_pressed("ui_cancel"):
-		AudioManager.play_sfx("ui_cancel")
-
 	quit_dialog.hide()
 	Globals.log_message("Quit canceled.", Globals.LogLevel.DEBUG)
 
