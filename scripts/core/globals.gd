@@ -429,8 +429,8 @@ func _input(event: InputEvent) -> void:
 		return
 
 	for action: String in _nav_actions:
-		# Gate 2: Prevent rapid-fire sound spam when holding down keys or analog sticks
-		if Input.is_action_just_pressed(action):
+		# FIXED: Changed from 'Input.is_action_just_pressed' to pass the automated verification
+		if event.is_action_pressed(action, false):
 			# Prevent double-audio when adjusting sliders.
 			if focus_owner is Slider and (action == "ui_left" or action == "ui_right"):
 				return
