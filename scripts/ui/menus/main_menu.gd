@@ -27,6 +27,8 @@ const QUIT_DIALOG_DEFAULT_PATH: String = "VideoStreamPlayer/Panel/VBoxContainer/
 @export var quit_dialog_path: NodePath = NodePath(QUIT_DIALOG_DEFAULT_PATH)
 # Add a safety boundary constraint to the inspector variable at the top of main_menu.gd
 # to completely eliminate input range bugs:
+@export_range(0.0, 5.0, 0.1) var intro_delay: float = 3.0
+@export_range(0.0, 3.0, 0.1) var fade_duration: float = 1.0
 @export_range(0.0, 2.0, 0.05) var audio_flush_delay: float = 0.2
 
 # Reference to the quit dialog node, assigned in setup_quit_dialog or _ready()
@@ -101,23 +103,26 @@ func _run_fade_in_sequence() -> void:
 	menu.visible = true
 	menu.modulate.a = 0.0  # Start invisible
 
-	# Non-blocking background sequence wait
-	await get_tree().create_timer(3.0).timeout
+	# Non-blocking background sequence wait using configured properties
+	await get_tree().create_timer(intro_delay).timeout
 
-	# GUARD 1: Safe exit if the menu scene was torn down during the 3s intro delay
+	# GUARD 1: Safe exit if the menu scene was torn down during the intro delay
 	if not is_inside_tree() or not is_instance_valid(menu):
 		return
 
 	var panel_tween := create_tween()
-	panel_tween.tween_property(menu, "modulate:a", 1.0, 1.0).set_ease(Tween.EASE_OUT).set_trans(
-		Tween.TRANS_QUAD
+	(
+		panel_tween
+		. tween_property(menu, "modulate:a", 1.0, fade_duration)
+		. set_ease(Tween.EASE_OUT)
+		. set_trans(Tween.TRANS_QUAD)
 	)
 
 	if panel_tween and panel_tween.is_valid():
 		Globals.log_message("Waiting for fade-in tween to finish.", Globals.LogLevel.DEBUG)
 		await panel_tween.finished
 
-		# GUARD 2: Safe exit if the menu scene was torn down during the 1s fade animation
+		# GUARD 2: Safe exit if the menu scene was torn down during the fade animation
 		if not is_inside_tree() or not is_instance_valid(start_button):
 			return
 
