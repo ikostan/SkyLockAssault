@@ -205,11 +205,11 @@ func _setup_quit_dialog() -> void:
 		if not quit_dialog.close_requested.is_connected(_on_quit_dialog_canceled):
 			quit_dialog.close_requested.connect(_on_quit_dialog_canceled)
 
-		# Clear generic 'pressed' audio connections on the internal Cancel button
+		# Clear generic audio connections on the internal Cancel button
 		var cancel_button := quit_dialog.get_cancel_button()
 		if is_instance_valid(cancel_button):
 			for connection: Dictionary in cancel_button.pressed.get_connections():
-				# Explicitly target only the Globals singleton audio hook by object and method
+				# Check both the object and the explicit audio handler name
 				if (
 					connection.callable.get_object() == Globals
 					and connection.callable.get_method() == "_on_global_button_pressed"
