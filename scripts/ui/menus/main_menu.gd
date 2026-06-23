@@ -25,7 +25,9 @@ extends Control
 # Default relative path; override in Inspector if needed
 const QUIT_DIALOG_DEFAULT_PATH: String = "VideoStreamPlayer/Panel/VBoxContainer/QuitDialog"
 @export var quit_dialog_path: NodePath = NodePath(QUIT_DIALOG_DEFAULT_PATH)
-@export var audio_flush_delay: float = 0.2
+# Add a safety boundary constraint to the inspector variable at the top of main_menu.gd
+# to completely eliminate input range bugs:
+@export_range(0.0, 2.0, 0.05) var audio_flush_delay: float = 0.2
 
 # Reference to the quit dialog node, assigned in setup_quit_dialog or _ready()
 var quit_dialog: ConfirmationDialog
