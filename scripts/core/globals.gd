@@ -622,8 +622,8 @@ func set_test_encryption_key(override_key: String = "test_deterministic_key_123"
 
 ## Automatically hooks up base Button elements for confirmation sfx
 func _on_node_added(node: Node) -> void:
-	# Strict type matching: excludes CheckButton, CheckBox, OptionButton, etc.
-	if node.get_class() == "Button":
+	# Type guard including custom subclasses while blocking specialized variants
+	if node is Button and not (node is CheckButton or node is OptionButton or node is CheckBox):
 		var btn := node as Button
 		if is_instance_valid(btn):
 			# Flat Button Protection: Avoid superimposing global audio over theme audio
@@ -637,7 +637,11 @@ func _on_node_added(node: Node) -> void:
 					return
 				parent = parent.get_parent()
 
-			# Use CONNECT_DEFERRED to prevent scene tree modification errors
-			btn.pressed.connect(
-				func() -> void: AudioManager.play_sfx("ui_accept"), CONNECT_DEFERRED
-			)
+			# Guard against duplicate connections using the explicit named callable
+			if not btn.pressed.is_connected(_on_global_button_pressed):
+				btn.pressed.connect(_on_global_button_pressed, CONNECT_DEFERRED)
+
+
+## Centralized button audio execution target to prevent lambda churn
+func _on_global_button_pressed() -> void:
+	AudioManager.play_sfx("ui_accept")
