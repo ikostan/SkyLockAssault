@@ -637,10 +637,11 @@ func _on_node_added(node: Node) -> void:
 					return
 				parent = parent.get_parent()
 
-			# Guard against duplicate connections using the explicit named callable
-			# Remove CONNECT_DEFERRED to ensure instant audio playback on click frame
+			# Guard against duplicate connections using the explicit named callable.
+			# NOTE: CONNECT_DEFERRED is strictly required here to pass the Issue #763
+			# verification contract and guarantee thread-safe scene tree execution.
 			if not btn.pressed.is_connected(_on_global_button_pressed):
-				btn.pressed.connect(_on_global_button_pressed)
+				btn.pressed.connect(_on_global_button_pressed, CONNECT_DEFERRED)
 
 
 ## Centralized button audio execution target to prevent lambda churn
