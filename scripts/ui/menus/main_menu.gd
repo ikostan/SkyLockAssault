@@ -196,7 +196,7 @@ func _setup_quit_dialog() -> void:
 				# Explicitly target only the Globals singleton audio hook
 				if connection.callable.get_object() == Globals:
 					cancel_button.pressed.disconnect(connection.callable)
-			
+
 			# NEW: Cleanly route explicit button clicks to play the cancellation audio
 			if not cancel_button.pressed.is_connected(_on_cancel_button_clicked):
 				cancel_button.pressed.connect(_on_cancel_button_clicked)
