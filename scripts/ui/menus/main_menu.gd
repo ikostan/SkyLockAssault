@@ -59,18 +59,15 @@ func _ready() -> void:
 	## :rtype: void
 	Globals.log_message("Initializing main menu...", Globals.LogLevel.DEBUG)
 
-	# 1. Connect core button signals and set metadata immediately on Frame 1
+	# 1. Connect core button signals on Frame 1 (Metadata is already set in _enter_tree)
 	@warning_ignore("return_value_discarded")
 	start_button.pressed.connect(_on_start_pressed)
-	start_button.set_meta("no_global_sound", true)
 
 	@warning_ignore("return_value_discarded")
 	options_button.pressed.connect(_on_options_button_pressed)
-	options_button.set_meta("no_global_sound", true)
 
 	@warning_ignore("return_value_discarded")
 	quit_button.pressed.connect(_on_quit_pressed)
-	quit_button.set_meta("no_global_sound", true)
 
 	# 2. Run dialog configurations instantly
 	_setup_quit_dialog()
@@ -96,6 +93,14 @@ func _ready() -> void:
 
 	# 4. Handle visual fade-in sequence asynchronously in the background
 	_run_fade_in_sequence()
+
+
+func _enter_tree() -> void:
+	## Assign protection metadata before child nodes trigger node_added signals.
+	var path := "VideoStreamPlayer/Panel/VBoxContainer/"
+	get_node(path + "StartButton").set_meta("no_global_sound", true)
+	get_node(path + "OptionsButton").set_meta("no_global_sound", true)
+	get_node(path + "QuitButton").set_meta("no_global_sound", true)
 
 
 func _run_fade_in_sequence() -> void:
