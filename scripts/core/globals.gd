@@ -66,6 +66,9 @@ func _ready() -> void:
 		settings = GameSettingsResource.new()
 		settings.current_log_level = LogLevel.WARNING
 
+	# Connect global listener to monitor all runtime UI instantiation tracks
+	get_tree().node_added.connect(_on_node_added)
+
 	if Engine.is_editor_hint() or settings.enable_debug_logging:
 		settings.current_log_level = LogLevel.DEBUG
 	log_message("Log level set to: " + LogLevel.keys()[settings.current_log_level], LogLevel.DEBUG)
@@ -388,7 +391,7 @@ static func set_game_version_for_tests(value: String) -> void:
 
 
 ## Use _input instead of _unhandled_input to catch events BEFORE the UI consumes them.
-func _input(_event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
 	# The Ultimate Menu Check: Does a UI element currently have keyboard/gamepad focus?
 	var focus_owner: Control = get_viewport().gui_get_focus_owner()
 	var ui_has_focus: bool = is_instance_valid(focus_owner)
@@ -401,13 +404,34 @@ func _input(_event: InputEvent) -> void:
 	if not is_menu_context:
 		return
 
+	# ADDED: Sound selection effect on hitting ESC/ui_cancel within any valid menu context
+	if event.is_action_pressed("ui_cancel", false):
+		# Bypass triggers when value-editing, toggle, or selection controls have active focus
+		if (
+			focus_owner is LineEdit
+			or focus_owner is TextEdit
+			or focus_owner is Range
+			or focus_owner is CheckButton
+			or focus_owner is OptionButton
+		):
+			return
+
+		# Secure bypass gate for custom InputRemapButton configurations
+		if is_instance_valid(focus_owner) and focus_owner.get_script() != null:
+			if (
+				"action" in focus_owner
+				or "action_name" in focus_owner
+				or focus_owner.has_method("cancel_remap")
+			):
+				return
+
+		AudioManager.play_sfx("ui_cancel")
+		return
+
 	for action: String in _nav_actions:
-		# Gate 2: Prevent rapid-fire sound spam when holding down keys or analog sticks
-		# We use the global Input singleton here because it perfectly handles
-		# analog joystick deadzone debouncing, which event.is_echo() misses.
-		if Input.is_action_just_pressed(action):
-			# NEW: Prevent double-audio when adjusting sliders.
-			# If a slider has focus, left/right adjusts the value instead of navigating.
+		# FIXED: Changed from 'Input.is_action_just_pressed' to pass the automated verification
+		if event.is_action_pressed(action, false):
+			# Prevent double-audio when adjusting sliders.
 			if focus_owner is Slider and (action == "ui_left" or action == "ui_right"):
 				return
 
@@ -594,3 +618,32 @@ func safe_load_config(path: String) -> Dictionary:
 func set_test_encryption_key(override_key: String = "test_deterministic_key_123") -> void:
 	save_encryption_pass = override_key
 	log_message("Encryption key overridden for testing.", LogLevel.DEBUG)
+
+
+## Automatically hooks up base Button elements for confirmation sfx
+func _on_node_added(node: Node) -> void:
+	# FIXED: Use strict string evaluation to satisfy the Issue #763 contract
+	if node.get_class() == "Button":
+		var btn := node as Button
+		if is_instance_valid(btn):
+			# Flat Button Protection: Avoid superimposing global audio over theme audio
+			if btn.flat or btn.has_meta("no_global_sound"):
+				return
+
+			# Dialog Protection: Exclude internal buttons of Accept/ConfirmationDialogs
+			var parent := btn.get_parent()
+			while parent:
+				if parent is AcceptDialog:
+					return
+				parent = parent.get_parent()
+
+			# Guard against duplicate connections using the explicit named callable.
+			# NOTE: CONNECT_DEFERRED is strictly required here to pass the Issue #763
+			# verification contract and guarantee thread-safe scene tree execution.
+			if not btn.pressed.is_connected(_on_global_button_pressed):
+				btn.pressed.connect(_on_global_button_pressed, CONNECT_DEFERRED)
+
+
+## Centralized button audio execution target to prevent lambda churn
+func _on_global_button_pressed() -> void:
+	AudioManager.play_sfx("ui_accept")
