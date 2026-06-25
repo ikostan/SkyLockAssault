@@ -60,10 +60,7 @@ func _ready() -> void:
 	apply_all_volumes()  # Apply to AudioServer buses
 
 	# Initialize the SFX object pool
-	for i in range(SFX_POOL_SIZE):
-		var p := AudioStreamPlayer.new()
-		add_child(p)
-		_sfx_pool.append(p)
+	_initialize_sfx_pool()
 
 
 ## Initialize all volumes and mutes to defaults from AudioConstants
@@ -335,7 +332,13 @@ func apply_all_volumes() -> void:
 ## :type muted: bool
 ## :rtype: void
 func apply_volume_to_bus(bus_name: String, volume: float, muted: bool) -> void:
+	# 1. Guard against null or invalid Engine access
+	if not is_instance_valid(AudioServer):
+		return
+
 	var bus_idx: int = AudioServer.get_bus_index(bus_name)
+	# 2. Add an explicit check to prevent the 'p_ptr is null' error
+	# if the bus was removed by a test or logic error
 	if bus_idx != -1:
 		# Always set the volume level (so it's ready when unmuted)
 		AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
@@ -450,3 +453,81 @@ func play_sfx(
 
 	# 4. Play (No queue_free needed since we reuse the nodes)
 	player.play()
+
+
+## [DIAGNOSTIC]
+## Checks if any AudioStreamPlayer node within the pre-allocated pool is currently active.
+## :rtype: bool
+func is_any_sfx_playing() -> bool:
+	for player: AudioStreamPlayer in _sfx_pool:
+		if player.playing:
+			return true
+	return false
+
+
+## [DIAGNOSTIC]
+## Returns the total number of AudioStreamPlayer channels currently active.
+## :rtype: int
+func get_active_sfx_playback_count() -> int:
+	var count: int = 0
+	for player: AudioStreamPlayer in _sfx_pool:
+		if player.playing:
+			count += 1
+	return count
+
+
+## Stops all active audio layers and clears streamed audio resources across the object pool.
+## :rtype: void
+func stop_all_sfx() -> void:
+	for player: AudioStreamPlayer in _sfx_pool:
+		player.stop()
+		player.stream = null
+
+
+## [DIAGNOSTIC]
+## Public API: Returns the resource path of the most recently started active SFX.
+## If multiple sounds are active, this returns the one most recently assigned to the pool.
+## If no sounds are playing, returns an empty string.
+## @return String: Resource path of the active stream.
+func get_active_sfx_stream_path() -> String:
+	# Iterate backwards through the pool to return the most recently
+	# added/played sound, making the choice deterministic and explicit.
+	for i in range(_sfx_pool.size() - 1, -1, -1):
+		if _sfx_pool[i].playing and _sfx_pool[i].stream:
+			return _sfx_pool[i].stream.resource_path
+	return ""
+
+
+## FOR GUT UNIT TEST ONLY
+## Forcefully clear resources to prevent leaks between unit tests.
+## Strictly guarded to prevent accidental execution in production builds.
+func cleanup_for_test() -> void:
+	# 0. Production safety guards
+	if not OS.is_debug_build():
+		return
+
+	_sfx_cache.clear()
+	_missing_sfx_cache.clear()
+
+	# 1. Clean the pool deterministically
+	for i in range(_sfx_pool.size() - 1, -1, -1):
+		var player := _sfx_pool[i]
+		if is_instance_valid(player):
+			player.stop()
+			# Reset bus before freeing to avoid dangling references
+			player.bus = "Master"
+			if player.get_parent() == self:
+				remove_child(player)
+			player.free()
+		_sfx_pool.remove_at(i)
+
+	# 2. Re-create the pool matching production configuration
+	_initialize_sfx_pool()
+
+
+## Private helper to initialize the SFX object pool matching production setup.
+func _initialize_sfx_pool() -> void:
+	for i in range(SFX_POOL_SIZE):
+		var p := AudioStreamPlayer.new()
+		add_child(p)
+		_sfx_pool.append(p)

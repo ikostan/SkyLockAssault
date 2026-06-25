@@ -17,7 +17,7 @@ RUN mkdir -p /project/artifacts \
     && chown -R godotuser:godotuser /project  # Added early for artifacts
 
 # Set Godot config path to non-root user's home
-ENV GODOT_VERSION="4.6.3.stable" \
+ENV GODOT_VERSION="4.5.stable" \
     XDG_DATA_HOME="/home/godotuser/.local/share"
 
 # Create and activate virtual environment for Python tools
@@ -27,7 +27,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Upgrade pip, setuptools, and wheel in venv
 RUN pip install --upgrade pip setuptools wheel
 
-# Install GDToolkit for GDScript linter/formatter (gdtoolkit==4.* for Godot 4.x)
+# Install GDToolkit for GDScript lint/format (gdtoolkit==4.* for Godot 4.x)
 RUN pip install gdtoolkit==4.*
 
 # Install yamllint
@@ -39,44 +39,40 @@ RUN pip install pytest-html pytest-timeout
 # Install markdownlint-cli2 via npm (Node.js tool)
 RUN npm install -g markdownlint-cli2@0.12.1
 
-# Download and verify Godot v4.6.3 binary using the official SHA256SUMS file
-RUN wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/SHA256SUMS.txt \
-    && wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip \
-    && grep " Godot_v4.6.3-stable_linux.x86_64.zip$" SHA256SUMS.txt | sha256sum --check --status \
-    && unzip Godot_v4.6.3-stable_linux.x86_64.zip \
-    && mv Godot_v4.6.3-stable_linux.x86_64 /usr/local/bin/godot \
+# Download Godot v4.5 binary and export templates
+RUN wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip \
+    && unzip Godot_v4.5-stable_linux.x86_64.zip \
+    && mv Godot_v4.5-stable_linux.x86_64 /usr/local/bin/godot \
     && chmod +x /usr/local/bin/godot \
-    && rm Godot_v4.6.3-stable_linux.x86_64.zip SHA256SUMS.txt
+    && rm Godot_v4.5-stable_linux.x86_64.zip
 
-# Download, verify, and extract export templates using the official SHA256SUMS file
-RUN wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/SHA256SUMS.txt \
-    && wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz \
-    && grep " Godot_v4.6.3-stable_export_templates.tpz$" SHA256SUMS.txt | sha256sum --check --status \
+# Download and extract export templates, placing them in the user-specific location
+RUN wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz \
     && mkdir -p "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}" \
-    && unzip Godot_v4.6.3-stable_export_templates.tpz -d /tmp/templates \
+    && unzip Godot_v4.5-stable_export_templates.tpz -d /tmp/templates \
     && mv /tmp/templates/templates/* "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}/" \
-    && rm -rf /tmp/templates Godot_v4.6.3-stable_export_templates.tpz SHA256SUMS.txt \
+    && rm -rf /tmp/templates Godot_v4.5-stable_export_templates.tpz \
     && chown -R godotuser:godotuser "${XDG_DATA_HOME}"
 
-# Install GDUnit4 v6.1.3
+# Install GDUnit4 v6
 RUN mkdir -p /project/addons \
-    && wget -q https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.1.3.zip \
-    && unzip v6.1.3.zip -d /project/addons \
-    && mv /project/addons/gdUnit4-6.1.3/addons/gdUnit4 /project/addons/gdUnit4 \
-    && rm -rf /project/addons/gdUnit4-6.1.3 v6.1.3.zip \
-    && chown -R godotuser:godotuser /project
+    && wget https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.0.0.zip \
+    && unzip v6.0.0.zip -d /project/addons \
+    && mv /project/addons/gdUnit4-6.0.0/addons/gdUnit4 /project/addons/gdUnit4 \
+    && rm -rf /project/addons/gdUnit4-6.0.0 v6.0.0.zip \
+    && chown -R godotuser:godotuser /project  # Make project dir accessible
 
 # Install GUT v9.5.0
 RUN mkdir -p /project/addons \
-    && wget -q https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip \
+    && wget https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip \
     && unzip v9.5.0.zip -d /project/addons \
     && mv /project/addons/Gut-9.5.0/addons/gut /project/addons/gut \
     && rm -rf /project/addons/Gut-9.5.0 v9.5.0.zip \
     && chown -R godotuser:godotuser /project
 
 # Install Playwright Python packages and system deps (as root)
-# FIX: Removed redundant 'playwright install-deps' invocation
 RUN pip install playwright pytest-playwright pytest-asyncio \
+    && playwright install-deps \
     && playwright install --with-deps chromium
 
 # Switch to non-root user (fixes DS002; all subsequent commands run as godotuser)
