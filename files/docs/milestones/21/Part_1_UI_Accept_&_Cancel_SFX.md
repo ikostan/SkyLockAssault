@@ -31,6 +31,7 @@ This PR hardens our centralized UI audio routing pipelines, eliminates double-au
 ---
 
 ### Verification Checklist
+
 - [x] **Issue #491 Contract:** Centralized directional menu navigation audio registers on keyboard and gamepad pads while blocking echo inputs. Horizontal slider actions cleanly bypass the tick sfx.
 - [x] **Issue #763 Contract:** Only native base buttons bind to the global accept chime; specialized checkboxes and options are excluded via string class name matching, and all connections deploy thread-safely via `CONNECT_DEFERRED`.
 - [x] **Lifecycle Sequence Verification:** Metadata exclusion tags execute before `node_added` notifications, silencing the global hook on main menu entries without build latency.
