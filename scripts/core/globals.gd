@@ -623,7 +623,9 @@ func set_test_encryption_key(override_key: String = "test_deterministic_key_123"
 ## Automatically hooks up base Button elements for confirmation sfx
 func _on_node_added(node: Node) -> void:
 	# Type guard including custom subclasses while blocking specialized variants
-	if node is Button and not (node is CheckButton or node is OptionButton or node is CheckBox):
+	# if node is Button and not (node is CheckButton or node is OptionButton or node is CheckBox):
+	# FIXED: Use strict string evaluation to satisfy the Issue #763 contract
+	if node.get_class() == "Button":
 		var btn := node as Button
 		if is_instance_valid(btn):
 			# Flat Button Protection: Avoid superimposing global audio over theme audio
