@@ -25,7 +25,7 @@ jobs:
       GODOT_VERSION: ${{ inputs.godot_version }}
       GODOT_SHA256: ${{ inputs.godot_sha256 }}
     steps:
-      - uses: "actions/checkout@v6"
+      - uses: "actions/checkout@v7"
       - name: "Download and Verify Godot Binary"
         run: |
           wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip
