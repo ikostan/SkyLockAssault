@@ -24,7 +24,7 @@ jobs:
     env:
       PW_TIMEOUT: "${{ inputs.pw_timeout }}"
     steps:
-      - uses: "actions/checkout@v6.0.1"
+      - uses: "actions/checkout@v7"
 
       - name: "Disable Editor Plugins (Prevent Headless Crash)"
         run: |
