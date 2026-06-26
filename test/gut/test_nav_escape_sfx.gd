@@ -30,6 +30,9 @@ func play_sfx(key: String, extra: Variant = null) -> void:
 func after_all() -> void:
 	if original_audio_script and is_instance_valid(AudioManager):
 		AudioManager.set_script(original_audio_script)
+		# FIX: Re-populate and rebuild the internal variable states wiped by set_script()
+		if AudioManager.has_method("cleanup_for_test"):
+			AudioManager.cleanup_for_test()
 
 
 ## Per-test setup: Snapshot Globals fields to isolate state and reset call logs.
