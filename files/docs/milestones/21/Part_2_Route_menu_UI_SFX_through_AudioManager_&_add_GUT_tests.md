@@ -91,6 +91,13 @@ This blocks `get_tree().quit()` execution streams from tearing down the running 
 - Headless verification passes cleanly via automated terminal triggers.
 - Complete CI/CD testing guarantees **9/9 passing gates** on remote Ubuntu integration pipelines.
 
+### Risks & Considerations
+
+- **Scene Name Dependency**: The debug/CI fallback relies on `"Menu"` substring in `current_scene.name`. Future scene renames could break this (mitigated by feature flags).
+- **Test Brittleness**: Heavy use of mocks, signal emission, and scene tree manipulation — requires maintenance if Godot internals or GUT change.
+- **Performance**: Negligible, but repeated `get_tree().current_scene` checks in `_input` (already guarded).
+- **Platform Quirks**: Quit bypass only active in `debug`/`ci` builds; Web export behavior remains unchanged.
+
 ---
 
 ## Reviewer's Guide
