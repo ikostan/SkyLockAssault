@@ -30,7 +30,7 @@ func play_sfx(key: String, extra: Variant = null) -> void:
 func after_all() -> void:
 	if original_audio_script and is_instance_valid(AudioManager):
 		AudioManager.set_script(original_audio_script)
-		# FIX: Re-populate and rebuild the internal variable states wiped by set_script()
+		# Re-populate and rebuild the internal variable states wiped by set_script()
 		if AudioManager.has_method("cleanup_for_test"):
 			AudioManager.cleanup_for_test()
 
@@ -40,10 +40,10 @@ func after_all() -> void:
 func before_each() -> void:
 	globals_instance = Globals
 	
+	# FIX: Added "options_open" to snapshot real properties on Globals for stable headless testing
 	var possible_fields: Array[String] = [
-		"is_menu_context", "_is_menu_context", 
-		"is_menu", "_is_menu", 
-		"in_menu", "_in_menu"
+		"options_open", "is_menu_context", "_is_menu_context", 
+		"is_menu", "_is_menu", "in_menu", "_in_menu"
 	]
 	for field: String in possible_fields:
 		if field in globals_instance:
@@ -68,7 +68,6 @@ func after_each() -> void:
 func _assert_sfx_called(key: String) -> void:
 	var found := false
 	var calls: Array = AudioManager.get("sfx_calls")
-	# FIX: Explicitly statically type the iterator variable to satisfy strict project rules
 	for c: Array in calls:
 		if c[0] == key:
 			found = true
