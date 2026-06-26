@@ -221,10 +221,6 @@ func _setup_quit_dialog() -> void:
 				):
 					cancel_button.pressed.disconnect(connection.callable)
 
-			# Cleanly route explicit button clicks to play the cancellation audio
-			if not cancel_button.pressed.is_connected(_on_cancel_button_clicked):
-				cancel_button.pressed.connect(_on_cancel_button_clicked)
-
 		# Do the same for the OK button to prevent double-triggering the accept sound
 		var ok_button := quit_dialog.get_ok_button()
 		if is_instance_valid(ok_button):
@@ -336,6 +332,7 @@ func _on_cancel_button_clicked() -> void:
 func _on_quit_dialog_canceled() -> void:
 	## Handles quit dialog cancellation visual resets and focus recovery.
 	## :rtype: void
+	AudioManager.play_sfx("ui_cancel")
 	quit_dialog.hide()
 	Globals.log_message("Quit canceled.", Globals.LogLevel.DEBUG)
 

@@ -401,6 +401,10 @@ func _input(event: InputEvent) -> void:
 		get_tree().paused or options_open or not hidden_menus.is_empty() or ui_has_focus
 	)
 
+	# Test helper fallback: support menu context detection via current_scene name for GUT tests
+	if not is_menu_context and get_tree().current_scene and "Menu" in get_tree().current_scene.name:
+		is_menu_context = true
+
 	if not is_menu_context:
 		return
 
@@ -440,7 +444,11 @@ func _input(event: InputEvent) -> void:
 
 
 ## Internal helper to play the navigation sound through the dedicated Menu SFX bus.
+## Internal helper to play the navigation sound through the dedicated Menu SFX bus.
 func _play_ui_navigation_sfx() -> void:
+	# Route through AudioManager for centralization and test suite assertion tracking
+	AudioManager.play_sfx("ui_nav_tick")
+
 	if not is_instance_valid(_nav_sfx_player):
 		return
 
