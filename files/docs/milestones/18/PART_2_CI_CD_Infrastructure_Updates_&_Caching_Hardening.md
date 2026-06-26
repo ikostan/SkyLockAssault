@@ -62,12 +62,12 @@ issues.
 
 ## Contributions
 
-### @ikostan’s Key Contributions to PR #654:
+### @ikostan’s Key Contributions to PR #654
 
 * Created the PR, self-assigned it, linked to issue #614, and
   provided full documentation.
 * **.github/workflows/deploy_to_itch.yml**: Upgraded Butler
-  to **15.27.0**, updated download URL, added centralized 
+  to **15.27.0**, updated download URL, added centralized
   `BUTLER_VERSION` + `BUTLER_SHA256` env vars, implemented
   version-aware caching, conditional download on cache miss,
   SHA-256 integrity verification, and proper setup (`chmod`,
@@ -80,7 +80,7 @@ issues.
   cache key) and addressed bot feedback while preserving project
   constraints.
 
-All commits authored by @ikostan. This PR improves deployment 
+All commits authored by @ikostan. This PR improves deployment
 reliability, caching stability, and supply-chain security.
 
 ---
@@ -140,5 +140,5 @@ since the pipeline requires linux-amd64).
 
 ---
 
-**Full Contributors List (for GitHub recognition)**: 
+**Full Contributors List (for GitHub recognition)**:
 @ikostan, @sourcery-ai, @coderabbitai, @deepsource-io (or @deepsource-bot).

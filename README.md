@@ -330,26 +330,26 @@ planned carryover work to future milestones.
 
 #### 🌟 New Features & Polish
 
-* **UI Audio Polish:** Implemented a dedicated `slider.wav` sound effect
+- **UI Audio Polish:** Implemented a dedicated `slider.wav` sound effect
   for audio menus that strictly triggers only upon manual player adjustments,
   cleanly decoupling it from programmatic `value_changed` signals.
-* **Encrypted Local Storage:** Transitioned local save configurations
+- **Encrypted Local Storage:** Transitioned local save configurations
   (`settings.cfg`) to use Godot's native encrypted `ConfigFile` methods.
-* **Hardware-Bound Encryption:** Implemented an automatic encryption key
+- **Hardware-Bound Encryption:** Implemented an automatic encryption key
   generation system (`Globals._get_encryption_key()`) that combines the OS
   name with a hardware-unique ID to securely lock local save data.
 
 #### 🛠️ Architecture & Refactors
 
-* **Centralized Configuration I/O:** Refactored core singletons (`Settings`,
+- **Centralized Configuration I/O:** Refactored core singletons (`Settings`,
   `AudioManager`) to route all file operations through a unified
   `Globals.safe_load_config()` helper.
-* **In-Memory Testing (Separation of Concerns):** Decoupled the config
+- **In-Memory Testing (Separation of Concerns):** Decoupled the config
   parsing logic from the physical file I/O. Our GUT and GdUnit4
   error-handling test suites now construct `ConfigFile` objects entirely
   in-memory, bypassing the disk and permanently eliminating fatal C++ crypto
   layer crashes in the CI/CD pipeline.
-* **Codebase Audit & Technical Debt:** Conducted a comprehensive audit of the
+- **Codebase Audit & Technical Debt:** Conducted a comprehensive audit of the
   core singletons. Verified a warning-free baseline by confirming no syntax
   errors exist in legacy `settings.gd` fallback calls.
 
