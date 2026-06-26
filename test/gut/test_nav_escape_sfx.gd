@@ -8,6 +8,8 @@ extends "res://addons/gut/test.gd"
 var globals_instance: Node
 var original_audio_script: Script
 var original_fields := {}
+# FIX: Dedicated tracking variable to prevent cross-suite scene pollution
+var original_scene_name: String = ""
 
 ## Suite setup: Double the AudioManager using a decoupled script to bypass lifecycle destruction guards.
 ## :rtype: void
@@ -40,7 +42,7 @@ func after_all() -> void:
 func before_each() -> void:
 	globals_instance = Globals
 	
-	# FIX: Added "options_open" to snapshot real properties on Globals for stable headless testing
+	# Added "options_open" to snapshot real properties on Globals for stable headless testing
 	var possible_fields: Array[String] = [
 		"options_open", "is_menu_context", "_is_menu_context", 
 		"is_menu", "_is_menu", "in_menu", "_in_menu"
@@ -48,6 +50,10 @@ func before_each() -> void:
 	for field: String in possible_fields:
 		if field in globals_instance:
 			original_fields[field] = globals_instance.get(field)
+			
+	# FIX: Securely snapshot the active root scene name before any mutations occur
+	if get_tree().current_scene:
+		original_scene_name = get_tree().current_scene.name
 			
 	if AudioManager.get("sfx_calls") != null:
 		AudioManager.set("sfx_calls", [])
@@ -61,6 +67,12 @@ func after_each() -> void:
 	for field: String in original_fields:
 		globals_instance.set(field, original_fields[field])
 	original_fields.clear()
+	
+	# FIX: Cleanly restore the shared engine scene tree name wrapper to its baseline state
+	if original_scene_name != "" and get_tree().current_scene:
+		get_tree().current_scene.name = original_scene_name
+	original_scene_name = ""
+	
 	await get_tree().process_frame
 
 
