@@ -393,7 +393,13 @@ func _input(event: InputEvent) -> void:
 	)
 
 	# Test helper fallback: support menu context detection via current_scene name for GUT tests
-	if not is_menu_context and get_tree().current_scene and "Menu" in get_tree().current_scene.name:
+	# Gated strictly behind debug/ci features to prevent leakage into production shipped builds.
+	if (
+		(OS.has_feature("debug") or OS.has_feature("ci"))
+		and not is_menu_context
+		and get_tree().current_scene
+		and "Menu" in get_tree().current_scene.name
+	):
 		is_menu_context = true
 
 	if not is_menu_context:
