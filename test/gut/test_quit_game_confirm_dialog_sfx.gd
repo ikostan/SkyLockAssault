@@ -111,17 +111,14 @@ func test_flat_button_anti_trigger_protection() -> void:
 	var start_button: Button = Button.new()
 	start_button.flat = true
 	main_menu_instance.add_child(start_button)
-	start_button.grab_focus()
+	
+	# FIX: Explicitly drive the button through the global connection hook to mimic tree entry
+	Globals._on_node_added(start_button)
 	await get_tree().process_frame
 	
-	var event: InputEventAction = InputEventAction.new()
-	event.action = "ui_accept"
-	event.pressed = true
-	
-	if main_menu_instance.has_method("_input"):
-		main_menu_instance._input(event)
-	if main_menu_instance.has_method("_unhandled_input"):
-		main_menu_instance._unhandled_input(event)
+	# FIX: Directly emit the pressed signal to verify the global hook was successfully blocked
+	start_button.pressed.emit()
+	await get_tree().process_frame
 		
 	# Global accept confirmation must remain untouched to respect native inspector themes
 	_assert_sfx_not_called("ui_accept")
