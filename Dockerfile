@@ -39,18 +39,18 @@ RUN pip install pytest-html pytest-timeout
 # Install markdownlint-cli2 via npm (Node.js tool)
 RUN npm install -g markdownlint-cli2@0.12.1
 
-# Download and verify Godot v4.6.3 binary using the official SHA256SUMS file
-RUN wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/SHA256SUMS.txt \
-    && wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip \
+# Download and verify Godot v4.6.3 binary using the official TuxFamily mirror
+RUN wget -q https://downloads.tuxfamily.org/godotengine/4.6.3/SHA256SUMS.txt \
+    && wget -q https://downloads.tuxfamily.org/godotengine/4.6.3/Godot_v4.6.3-stable_linux.x86_64.zip \
     && grep " Godot_v4.6.3-stable_linux.x86_64.zip$" SHA256SUMS.txt | sha256sum --check --status \
     && unzip Godot_v4.6.3-stable_linux.x86_64.zip \
     && mv Godot_v4.6.3-stable_linux.x86_64 /usr/local/bin/godot \
     && chmod +x /usr/local/bin/godot \
     && rm Godot_v4.6.3-stable_linux.x86_64.zip SHA256SUMS.txt
 
-# Download, verify, and extract export templates using the official SHA256SUMS file
-RUN wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/SHA256SUMS.txt \
-    && wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz \
+# Download, verify, and extract export templates using the official TuxFamily mirror
+RUN wget -q https://downloads.tuxfamily.org/godotengine/4.6.3/SHA256SUMS.txt \
+    && wget -q https://downloads.tuxfamily.org/godotengine/4.6.3/Godot_v4.6.3-stable_export_templates.tpz \
     && grep " Godot_v4.6.3-stable_export_templates.tpz$" SHA256SUMS.txt | sha256sum --check --status \
     && mkdir -p "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}" \
     && unzip Godot_v4.6.3-stable_export_templates.tpz -d /tmp/templates \
