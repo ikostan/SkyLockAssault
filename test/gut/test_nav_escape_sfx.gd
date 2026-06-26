@@ -108,7 +108,6 @@ func test_global_cancellation_in_menu_context() -> void:
 	event.pressed = true
 	
 	_simulate_input(event)
-	
 	_assert_sfx_called("ui_cancel")
 	_assert_sfx_call_count(1)
 
@@ -128,7 +127,6 @@ func test_global_out_of_context_suppression() -> void:
 	
 	_simulate_input(event_cancel)
 	_simulate_input(event_nav)
-	
 	_assert_sfx_not_called()
 
 
@@ -143,7 +141,6 @@ func test_menu_context_exit_cleanup() -> void:
 	event.pressed = true
 	
 	_simulate_input(event)
-	
 	_assert_sfx_not_called()
 
 
@@ -158,7 +155,6 @@ func test_input_repeat_gate_echo_mitigation() -> void:
 	event.physical_keycode = KEY_UP
 	
 	_simulate_input(event)
-	
 	_assert_sfx_not_called()
 
 
@@ -177,7 +173,6 @@ func test_navigation_positive_case() -> void:
 	event.pressed = true
 	
 	_simulate_input(event)
-	
 	_assert_sfx_called("ui_navigation")
 
 
@@ -196,7 +191,6 @@ func test_single_dispatch_guarantee() -> void:
 	event.pressed = true
 	
 	_simulate_input(event)
-	
 	_assert_sfx_call_count(1)
 
 
@@ -215,7 +209,6 @@ func test_value_editing_text_gate() -> void:
 	event.pressed = true
 	
 	_simulate_input(event)
-	
 	_assert_sfx_not_called()
 
 
@@ -239,7 +232,6 @@ func test_slider_double_audio_gate() -> void:
 	
 	_simulate_input(event_left)
 	_simulate_input(event_right)
-	
 	_assert_sfx_not_called()
 
 
