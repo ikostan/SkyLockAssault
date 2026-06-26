@@ -324,11 +324,6 @@ func _on_quit_dialog_confirmed() -> void:
 		Globals.log_message("Native quit executed!", Globals.LogLevel.DEBUG)
 
 
-func _on_cancel_button_clicked() -> void:
-	## Triggers the cancel audio stream exclusively on manual mouse clicks.
-	AudioManager.play_sfx("ui_cancel")
-
-
 func _on_quit_dialog_canceled() -> void:
 	## Handles quit dialog cancellation visual resets and focus recovery.
 	## :rtype: void
