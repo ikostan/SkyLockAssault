@@ -38,9 +38,6 @@ var _is_loading_settings: bool = false  # Guard flag
 ## Preloaded stream to prevent disk I/O lag during fast menu navigation.
 var _ui_nav_stream: AudioStream = preload(UI_NAV_SOUND_PATH)
 
-# NEW: The persistent audio player to prevent node churn
-var _nav_sfx_player: AudioStreamPlayer
-
 # List of actions that should trigger the navigation sound
 var _nav_actions: Array[String] = [
 	"ui_up", "ui_down", "ui_left", "ui_right", "ui_focus_next", "ui_focus_prev"
@@ -50,12 +47,6 @@ var _nav_actions: Array[String] = [
 func _ready() -> void:
 	# Keep processing inputs even when the game is paused!
 	process_mode = Node.PROCESS_MODE_ALWAYS
-
-	# --- NEW: Initialize the permanent SFX player ---
-	_nav_sfx_player = AudioStreamPlayer.new()
-	_nav_sfx_player.stream = _ui_nav_stream
-	_nav_sfx_player.bus = AudioConstants.BUS_SFX_MENU
-	add_child(_nav_sfx_player)
 
 	# Load the resource here instead of preloading at the top
 	settings = load("res://config_resources/default_settings.tres") as GameSettingsResource
@@ -448,13 +439,6 @@ func _input(event: InputEvent) -> void:
 func _play_ui_navigation_sfx() -> void:
 	# Route through AudioManager for centralization and test suite assertion tracking
 	AudioManager.play_sfx("ui_nav_tick")
-
-	if not is_instance_valid(_nav_sfx_player):
-		return
-
-	# If the sound is already playing (e.g., from rapid button presses),
-	# restart it from the beginning to feel responsive.
-	_nav_sfx_player.play()
 
 
 ## Ensures the encryption key is initialized and returns it.
