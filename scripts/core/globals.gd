@@ -441,10 +441,9 @@ func _input(event: InputEvent) -> void:
 
 
 ## Internal helper to play the navigation sound through the dedicated Menu SFX bus.
-## Internal helper to play the navigation sound through the dedicated Menu SFX bus.
 func _play_ui_navigation_sfx() -> void:
-	# Route through AudioManager for centralization and test suite assertion tracking
-	AudioManager.play_sfx("ui_nav_tick")
+	# FIX: Correct the key string to match the true filename asset (ui_navigation.wav)
+	AudioManager.play_sfx("ui_navigation")
 
 
 ## Ensures the encryption key is initialized and returns it.

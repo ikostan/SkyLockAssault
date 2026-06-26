@@ -196,7 +196,8 @@ func test_navigation_positive_case() -> void:
 	
 	_simulate_input(event)
 	
-	_assert_sfx_called("ui_nav_tick")
+	# FIX: Align verification string with the true production asset name
+	_assert_sfx_called("ui_navigation")
 
 
 ## Assert that a single discrete navigation input event produces exactly one audio trigger request.
