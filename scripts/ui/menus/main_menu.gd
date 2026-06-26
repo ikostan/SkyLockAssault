@@ -203,12 +203,12 @@ func _setup_quit_dialog() -> void:
 		# Confirmed = user wants to quit
 		if not quit_dialog.confirmed.is_connected(_on_quit_dialog_confirmed):
 			quit_dialog.confirmed.connect(_on_quit_dialog_confirmed)
-		# Canceled = Cancel button or Esc
+
+		# Centralized Dismissal: In Godot, 'canceled' covers the explicit Cancel button,
+		# the Escape key, and title-bar Close (X) actions natively. Connecting close_requested
+		# here is redundant and would cause double audio triggers.
 		if not quit_dialog.canceled.is_connected(_on_quit_dialog_canceled):
 			quit_dialog.canceled.connect(_on_quit_dialog_canceled)
-		# Close button (×) in title bar or other "just hide" cases
-		if not quit_dialog.close_requested.is_connected(_on_quit_dialog_canceled):
-			quit_dialog.close_requested.connect(_on_quit_dialog_canceled)
 
 		# Clear generic audio connections on the internal Cancel button
 		var cancel_button := quit_dialog.get_cancel_button()
