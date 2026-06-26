@@ -8,6 +8,7 @@ extends "res://addons/gut/test.gd"
 var globals_instance: Node
 var original_audio_script: Script
 var original_scene_name: String = ""
+var dummy_scene_node: Node = null
 
 ## Suite setup: Double the AudioManager using a decoupled script to bypass lifecycle destruction guards.
 ## :rtype: void
@@ -43,6 +44,13 @@ func before_each() -> void:
 	# Securely snapshot the active root scene name before any mutations occur
 	if get_tree().current_scene:
 		original_scene_name = get_tree().current_scene.name
+		dummy_scene_node = null
+	else:
+		# FIX: If running headlessly/CI, create a temporary dummy node to safely act as current_scene
+		dummy_scene_node = Node.new()
+		get_tree().root.add_child(dummy_scene_node)
+		get_tree().current_scene = dummy_scene_node
+		original_scene_name = ""
 			
 	if AudioManager.get("sfx_calls") != null:
 		AudioManager.set("sfx_calls", [])
@@ -53,10 +61,16 @@ func before_each() -> void:
 ## Per-test cleanup: Restore the shared engine scene tree name wrapper cleanly.
 ## :rtype: void
 func after_each() -> void:
-	if original_scene_name != "" and get_tree().current_scene:
+	# FIX: Cleanly teardown and unmount the dummy scene tracker if initialized
+	if dummy_scene_node and is_instance_valid(dummy_scene_node):
+		if get_tree().current_scene == dummy_scene_node:
+			get_tree().current_scene = null
+		dummy_scene_node.queue_free()
+		dummy_scene_node = null
+	elif original_scene_name != "" and get_tree().current_scene:
 		get_tree().current_scene.name = original_scene_name
+		
 	original_scene_name = ""
-	
 	await get_tree().process_frame
 
 
