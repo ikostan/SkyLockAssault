@@ -10,8 +10,8 @@ on:  # yamllint disable-line rule:truthy
         required: true
 
 jobs:
-  test-scripts:
-    name: "Test Deployment Scripts"
+  test-python:
+    name: "Run CI Injection Tests"
     runs-on: "ubuntu-latest"
     timeout-minutes: 5
     steps:
@@ -31,6 +31,14 @@ jobs:
       - name: "Run CI Injection Tests"
         run: |
           pytest tests/ci/ -v -s
+
+  verify-godot:
+    name: "Test Godot Asset Infrastructure and Signature Verification"
+    runs-on: "ubuntu-latest"
+    timeout-minutes: 10  # Generous timeout to download the 1.2 GB template file
+    steps:
+      - name: "Checkout code"
+        uses: "actions/checkout@v7"
 
       - name: "Test Godot Asset Infrastructure and Signature Verification"
         run: |
