@@ -40,8 +40,13 @@ func after_all() -> void:
 ## Per-test setup: Instantiate target menu scene layout tree and clear call logs.
 ## :rtype: void
 func before_each() -> void:
-	# FIX: Instantiate the scene instead of using script.new() to initialize @onready child nodes
+	# Instantiate the scene instead of using script.new() to initialize @onready child nodes
 	main_menu_instance = MainMenuScene.instantiate() as Control
+	
+	# FIX: Turn on the safety guard to block get_tree().quit() from crashing the runner
+	if "bypass_quit_for_testing" in main_menu_instance:
+		main_menu_instance.set("bypass_quit_for_testing", true)
+		
 	add_child_autofree(main_menu_instance)
 	
 	if AudioManager.get("sfx_calls") != null:

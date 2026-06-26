@@ -37,6 +37,8 @@ var quit_dialog: ConfirmationDialog
 var unbound_dialog: ConfirmationDialog
 var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 var last_focused_button: Button = null  # Tracks which button opened the dialog
+# FIX: Safety flag to shield test runners from process termination loops
+var bypass_quit_for_testing: bool = false
 var _start_pressed_cb: JavaScriptObject
 var _options_pressed_cb: JavaScriptObject
 var _quit_pressed_cb: JavaScriptObject
@@ -304,6 +306,13 @@ func _on_quit_dialog_confirmed() -> void:
 	# 2. Hide the panel immediately so the player gets immediate feedback
 	if is_instance_valid(quit_dialog):
 		quit_dialog.hide()
+
+	# FIX: Guard against terminating the engine/editor during automated test execution
+	if bypass_quit_for_testing:
+		Globals.log_message(
+			"Bypassing game quit execution for unit testing.", Globals.LogLevel.DEBUG
+		)
+		return
 
 	# 3. Execute platform-specific quit execution path
 	if OS.get_name() == "Web":
