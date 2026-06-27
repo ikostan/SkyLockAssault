@@ -37,6 +37,8 @@ var quit_dialog: ConfirmationDialog
 var unbound_dialog: ConfirmationDialog
 var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 var last_focused_button: Button = null  # Tracks which button opened the dialog
+# FIX: Safety flag to shield test runners from process termination loops
+var bypass_quit_for_testing: bool = false
 var _start_pressed_cb: JavaScriptObject
 var _options_pressed_cb: JavaScriptObject
 var _quit_pressed_cb: JavaScriptObject
@@ -203,12 +205,12 @@ func _setup_quit_dialog() -> void:
 		# Confirmed = user wants to quit
 		if not quit_dialog.confirmed.is_connected(_on_quit_dialog_confirmed):
 			quit_dialog.confirmed.connect(_on_quit_dialog_confirmed)
-		# Canceled = Cancel button or Esc
+
+		# Centralized Dismissal: In Godot, 'canceled' covers the explicit Cancel button,
+		# the Escape key, and title-bar Close (X) actions natively. Connecting close_requested
+		# here is redundant and would cause double audio triggers.
 		if not quit_dialog.canceled.is_connected(_on_quit_dialog_canceled):
 			quit_dialog.canceled.connect(_on_quit_dialog_canceled)
-		# Close button (×) in title bar or other "just hide" cases
-		if not quit_dialog.close_requested.is_connected(_on_quit_dialog_canceled):
-			quit_dialog.close_requested.connect(_on_quit_dialog_canceled)
 
 		# Clear generic audio connections on the internal Cancel button
 		var cancel_button := quit_dialog.get_cancel_button()
@@ -220,10 +222,6 @@ func _setup_quit_dialog() -> void:
 					and connection.callable.get_method() == "_on_global_button_pressed"
 				):
 					cancel_button.pressed.disconnect(connection.callable)
-
-			# Cleanly route explicit button clicks to play the cancellation audio
-			if not cancel_button.pressed.is_connected(_on_cancel_button_clicked):
-				cancel_button.pressed.connect(_on_cancel_button_clicked)
 
 		# Do the same for the OK button to prevent double-triggering the accept sound
 		var ok_button := quit_dialog.get_ok_button()
@@ -309,6 +307,13 @@ func _on_quit_dialog_confirmed() -> void:
 	if is_instance_valid(quit_dialog):
 		quit_dialog.hide()
 
+	# FIX: Guard against terminating the engine/editor during automated test execution
+	if bypass_quit_for_testing:
+		Globals.log_message(
+			"Bypassing game quit execution for unit testing.", Globals.LogLevel.DEBUG
+		)
+		return
+
 	# 3. Execute platform-specific quit execution path
 	if OS.get_name() == "Web":
 		# Offload the delay to JavaScript instead of utilizing a Godot await
@@ -328,14 +333,10 @@ func _on_quit_dialog_confirmed() -> void:
 		Globals.log_message("Native quit executed!", Globals.LogLevel.DEBUG)
 
 
-func _on_cancel_button_clicked() -> void:
-	## Triggers the cancel audio stream exclusively on manual mouse clicks.
-	AudioManager.play_sfx("ui_cancel")
-
-
 func _on_quit_dialog_canceled() -> void:
 	## Handles quit dialog cancellation visual resets and focus recovery.
 	## :rtype: void
+	AudioManager.play_sfx("ui_cancel")
 	quit_dialog.hide()
 	Globals.log_message("Quit canceled.", Globals.LogLevel.DEBUG)
 
