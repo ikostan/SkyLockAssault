@@ -217,7 +217,8 @@ func test_value_editing_text_gate() -> void:
 	await get_tree().process_frame
 	
 	var event: InputEventAction = InputEventAction.new()
-	event.action = "ui_accept"
+	# FIX: Swapped from ui_accept to ui_cancel to properly challenge the text control bypass branch
+	event.action = "ui_cancel"
 	event.pressed = true
 	
 	_simulate_input(event)
