@@ -435,17 +435,16 @@ func _input(event: InputEvent) -> void:
 				return  # Always break input cycle once action matches
 
 			# Context Guard B: Handle Directional & Focus Navigation Safeguards
-			else:
-				var is_horizontal_slider: bool = (
-					focus_owner is Slider and (action == "ui_left" or action == "ui_right")
-				)
+			var is_horizontal_slider: bool = (
+				focus_owner is Slider and (action == "ui_left" or action == "ui_right")
+			)
 
-				# Gated on active UI focus ownership, excluding horizontal sliders
-				if ui_has_focus and not is_horizontal_slider:
-					var file_path: String = AudioConstants.UI_SFX[action]
-					var sfx_name: String = file_path.get_file().get_basename()
-					AudioManager.play_sfx(sfx_name, AudioConstants.BUS_SFX)
-				return  # Always break input cycle once action matches
+			# Gated on active UI focus ownership, excluding horizontal sliders
+			if ui_has_focus and not is_horizontal_slider:
+				var file_path: String = AudioConstants.UI_SFX[action]
+				var sfx_name: String = file_path.get_file().get_basename()
+				AudioManager.play_sfx(sfx_name, AudioConstants.BUS_SFX)
+			return  # Always break input cycle once action matches
 
 
 ## Internal helper to play the navigation sound through the dedicated Menu SFX bus.
