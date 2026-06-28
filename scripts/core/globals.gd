@@ -393,7 +393,6 @@ func _input(event: InputEvent) -> void:
 	)
 
 	# Test helper fallback: support menu context detection via current_scene name for GUT tests
-	# Gated strictly behind debug/ci features to prevent leakage into production shipped builds.
 	if (
 		(OS.has_feature("debug") or OS.has_feature("ci"))
 		and not is_menu_context
@@ -427,12 +426,16 @@ func _input(event: InputEvent) -> void:
 					)
 				)
 
-				# If not typing or remapping controls, play cancel sound through SFX bus
 				if not is_editing_control and not is_remap_control:
 					var file_path: String = AudioConstants.UI_SFX[action]
 					var sfx_name: String = file_path.get_file().get_basename()
 					AudioManager.play_sfx(sfx_name, AudioConstants.BUS_SFX)
-				return  # Always break input cycle once action matches
+				return  # Always break input cycle once action matches [cite: 44]
+
+			# UPDATED: Context Guard C: Mute generic accept sounds for elements that handle their own audio signals
+			if action == "ui_accept":
+				if focus_owner is Button or focus_owner is Slider:
+					return  # Quietly drop the event here; let the UI node signals handle playback!
 
 			# Context Guard B: Handle Directional & Focus Navigation Safeguards
 			var is_horizontal_slider: bool = (
@@ -445,7 +448,6 @@ func _input(event: InputEvent) -> void:
 				var sfx_name: String = file_path.get_file().get_basename()
 				AudioManager.play_sfx(sfx_name, AudioConstants.BUS_SFX)
 			return  # Always break input cycle once action matches
-
 
 ## Internal helper to play the navigation sound through the dedicated Menu SFX bus.
 func _play_ui_navigation_sfx() -> void:
