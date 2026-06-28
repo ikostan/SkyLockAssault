@@ -405,42 +405,48 @@ func _input(event: InputEvent) -> void:
 	if not is_menu_context:
 		return
 
-	# ADDED: Sound selection effect on hitting ESC/ui_cancel within any valid menu context
-	if event.is_action_pressed("ui_cancel", false):
-		var is_editing_control: bool = (
-			focus_owner is LineEdit
-			or focus_owner is TextEdit
-			or focus_owner is Range
-			or focus_owner is CheckButton
-			or focus_owner is OptionButton
-		)
-
-		var is_remap_control: bool = (
-			is_instance_valid(focus_owner)
-			and focus_owner.get_script() != null
-			and (
-				"action" in focus_owner
-				or "action_name" in focus_owner
-				or focus_owner.has_method("cancel_remap")
-			)
-		)
-
-		if not is_editing_control and not is_remap_control:
-			AudioManager.play_sfx("ui_cancel")
-
-		return
-
-	for action: String in _nav_actions:
-		# FIXED: Changed from 'Input.is_action_just_pressed' to pass the automated verification
+	# DATA-DRIVEN DICTIONARY LOOKUP (Issue #490 Compliance)
+	for action: String in AudioConstants.UI_SFX.keys():
 		if event.is_action_pressed(action, false):
-			var is_horizontal_slider: bool = (
-				focus_owner is Slider and (action == "ui_left" or action == "ui_right")
-			)
-
-			if ui_has_focus and not is_horizontal_slider:
-				_play_ui_navigation_sfx()
-
-			return
+			
+			# Context Guard A: Handle Escape/Cancellation Safeguards
+			if action == "ui_cancel":
+				var is_editing_control: bool = (
+					focus_owner is LineEdit
+					or focus_owner is TextEdit
+					or focus_owner is Range
+					or focus_owner is CheckButton
+					or focus_owner is OptionButton
+				)
+				var is_remap_control: bool = (
+					is_instance_valid(focus_owner)
+					and focus_owner.get_script() != null
+					and (
+						"action" in focus_owner
+						or "action_name" in focus_owner
+						or focus_owner.has_method("cancel_remap")
+					)
+				)
+				
+				# If not typing or remapping controls, play cancel sound through SFX bus
+				if not is_editing_control and not is_remap_control:
+					var file_path: String = AudioConstants.UI_SFX[action]
+					var sfx_name: String = file_path.get_file().get_basename()
+					AudioManager.play_sfx(sfx_name, AudioConstants.BUS_SFX)
+				return # Always break input cycle once action matches
+			
+			# Context Guard B: Handle Directional & Focus Navigation Safeguards
+			else:
+				var is_horizontal_slider: bool = (
+					focus_owner is Slider and (action == "ui_left" or action == "ui_right")
+				)
+				
+				# Gated on active UI focus ownership, excluding horizontal sliders
+				if ui_has_focus and not is_horizontal_slider:
+					var file_path: String = AudioConstants.UI_SFX[action]
+					var sfx_name: String = file_path.get_file().get_basename()
+					AudioManager.play_sfx(sfx_name, AudioConstants.BUS_SFX)
+				return # Always break input cycle once action matches
 
 
 ## Internal helper to play the navigation sound through the dedicated Menu SFX bus.

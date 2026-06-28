@@ -65,3 +65,15 @@ const BUS_CONFIG: Dictionary = {
 		"default_muted": false
 	}
 }
+
+# --- Global UI SFX Mappings (Issue #490) ---
+const UI_SFX: Dictionary = {
+	"ui_up": "res://files/sounds/sfx/ui_navigation.wav",
+	"ui_down": "res://files/sounds/sfx/ui_navigation.wav",
+	"ui_left": "res://files/sounds/sfx/ui_navigation.wav",
+	"ui_right": "res://files/sounds/sfx/ui_navigation.wav",
+	"ui_focus_next": "res://files/sounds/sfx/ui_navigation.wav",
+	"ui_focus_prev": "res://files/sounds/sfx/ui_navigation.wav",
+	"ui_accept": "res://files/sounds/sfx/ui_accept.wav",
+	"ui_cancel": "res://files/sounds/sfx/ui_cancel.wav"
+}
