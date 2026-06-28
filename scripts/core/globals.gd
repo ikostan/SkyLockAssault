@@ -432,6 +432,10 @@ func _input(event: InputEvent) -> void:
 	for action: String in _nav_actions:
 		# FIXED: Changed from 'Input.is_action_just_pressed' to pass the automated verification
 		if event.is_action_pressed(action, false):
+			# STRICT FOCUS GATE: Navigation sounds strictly require an active GUI focus owner
+			if not ui_has_focus:
+				return
+
 			# Prevent double-audio when adjusting sliders.
 			if focus_owner is Slider and (action == "ui_left" or action == "ui_right"):
 				return
