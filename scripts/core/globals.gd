@@ -432,7 +432,8 @@ func _input(event: InputEvent) -> void:
 					AudioManager.play_sfx(sfx_name, AudioConstants.BUS_SFX)
 				return  # Always break input cycle once action matches [cite: 44]
 
-			# UPDATED: Context Guard C: Mute generic accept sounds for elements that handle their own audio signals
+			# UPDATED: Context Guard C: Mute generic accept sounds for elements
+			# that handle their own audio signals
 			if action == "ui_accept":
 				if focus_owner is BaseButton or focus_owner is Slider:
 					return  # Quietly drop the event here; let the UI node signals handle playback!
