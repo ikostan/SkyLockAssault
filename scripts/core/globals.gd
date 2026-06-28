@@ -434,7 +434,7 @@ func _input(event: InputEvent) -> void:
 
 			# UPDATED: Context Guard C: Mute generic accept sounds for elements that handle their own audio signals
 			if action == "ui_accept":
-				if focus_owner is Button or focus_owner is Slider:
+				if focus_owner is BaseButton or focus_owner is Slider:
 					return  # Quietly drop the event here; let the UI node signals handle playback!
 
 			# Context Guard B: Handle Directional & Focus Navigation Safeguards
@@ -448,6 +448,7 @@ func _input(event: InputEvent) -> void:
 				var sfx_name: String = file_path.get_file().get_basename()
 				AudioManager.play_sfx(sfx_name, AudioConstants.BUS_SFX)
 			return  # Always break input cycle once action matches
+
 
 ## Internal helper to play the navigation sound through the dedicated Menu SFX bus.
 func _play_ui_navigation_sfx() -> void:
