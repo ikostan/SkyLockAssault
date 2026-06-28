@@ -434,8 +434,7 @@ func _input(event: InputEvent) -> void:
 		# FIXED: Changed from 'Input.is_action_just_pressed' to pass the automated verification
 		if event.is_action_pressed(action, false):
 			var is_horizontal_slider: bool = (
-				focus_owner is Slider 
-				and (action == "ui_left" or action == "ui_right")
+				focus_owner is Slider and (action == "ui_left" or action == "ui_right")
 			)
 
 			if ui_has_focus and not is_horizontal_slider:
