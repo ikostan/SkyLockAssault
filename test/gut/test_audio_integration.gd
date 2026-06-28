@@ -172,3 +172,70 @@ func test_ui_mute_toggle_defers_hardware_cutoff_for_click_feedback() -> void:
 		AudioServer.is_bus_mute(bus_idx),
 		"Hardware bus must be muted after safety cutoff timer expires."
 	)
+
+
+## Scenario E: Verify that watch_signals correctly isolates test actions from setup pollution.
+func test_signal_isolation_from_setup_pollution() -> void:
+	# 1. Trigger setup noise BEFORE watching
+	AudioManager.set_muted(TARGET_BUS, false)
+	
+	# 2. Start watching signals strictly for the ACT phase
+	watch_signals(AudioManager)
+	
+	# 3. ACT
+	AudioManager.set_muted(TARGET_BUS, true)
+	
+	# 4. ASSERT
+	# get_signal_emit_count ensures prior setup calls weren't captured by the watcher
+	assert_eq(
+		get_signal_emit_count(AudioManager, "mute_toggled"),
+		1,
+		"Watcher should strictly capture emissions that occurred after watch_signals() was invoked."
+	)
+	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [TARGET_BUS, true])
+
+## Scenario F: Verify rapid mute toggling cancels pending hardware cutoffs.
+func test_rapid_mute_toggle_cancels_pending_hardware_cutoff() -> void:
+	var bus_idx: int = AudioServer.get_bus_index(TARGET_BUS)
+	
+	# 1. Ensure clean unmuted baseline
+	AudioManager.set_muted(TARGET_BUS, false)
+	AudioManager.apply_volume_to_bus(TARGET_BUS, 1.0, false)
+	
+	# 2. ACT: Toggle Mute ON (Starts the 0.15s hardware cutoff timer)
+	AudioManager.set_muted(TARGET_BUS, true)
+	
+	# Wait 0.05s (Timer is half-way through its countdown)
+	await wait_seconds(0.05)
+	
+	# 3. ACT: Immediately toggle Mute OFF before the timer expires
+	AudioManager.set_muted(TARGET_BUS, false)
+	
+	# 4. AWAIT past the original 0.15s expiration window
+	await wait_seconds(0.15)
+	
+	# 5. ASSERT
+	assert_false(
+		AudioServer.is_bus_mute(bus_idx),
+		"Hardware bus must remain unmuted; rapid unmute should abort pending cutoff timers."
+	)
+
+
+## Scenario G: Verify UI mute buttons dynamically sync state without hardcoded tree paths.
+func test_ui_mute_controls_sync_state_dynamically() -> void:
+	var audio_settings_scene := preload("res://scenes/audio_settings.tscn")
+	var audio_menu: Control = audio_settings_scene.instantiate()
+	add_child_autofree(audio_menu)
+	await wait_process_frames(1)
+	
+	# Find interactive checkbuttons dynamically without relying on brittle node paths
+	var check_buttons := audio_menu.find_children("", "CheckButton", true, false)
+	assert_gt(check_buttons.size(), 0, "Audio menu must instantiate interactive CheckButtons.")
+	
+	var candidate_btn: CheckButton = check_buttons[0]
+	candidate_btn.toggled.emit(false) # Simulate UI mute press
+	
+	assert_true(
+		AudioManager.is_any_sfx_playing(),
+		"Triggering any audio menu CheckButton should invoke confirmation SFX."
+	)
