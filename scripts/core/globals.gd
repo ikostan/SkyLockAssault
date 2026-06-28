@@ -407,41 +407,41 @@ func _input(event: InputEvent) -> void:
 
 	# ADDED: Sound selection effect on hitting ESC/ui_cancel within any valid menu context
 	if event.is_action_pressed("ui_cancel", false):
-		# Bypass triggers when value-editing, toggle, or selection controls have active focus
-		if (
+		var is_editing_control: bool = (
 			focus_owner is LineEdit
 			or focus_owner is TextEdit
 			or focus_owner is Range
 			or focus_owner is CheckButton
 			or focus_owner is OptionButton
-		):
-			return
+		)
 
-		# Secure bypass gate for custom InputRemapButton configurations
-		if is_instance_valid(focus_owner) and focus_owner.get_script() != null:
-			if (
+		var is_remap_control: bool = (
+			is_instance_valid(focus_owner)
+			and focus_owner.get_script() != null
+			and (
 				"action" in focus_owner
 				or "action_name" in focus_owner
 				or focus_owner.has_method("cancel_remap")
-			):
-				return
+			)
+		)
 
-		AudioManager.play_sfx("ui_cancel")
+		if not is_editing_control and not is_remap_control:
+			AudioManager.play_sfx("ui_cancel")
+
 		return
 
 	for action: String in _nav_actions:
 		# FIXED: Changed from 'Input.is_action_just_pressed' to pass the automated verification
 		if event.is_action_pressed(action, false):
-			# STRICT FOCUS GATE: Navigation sounds strictly require an active GUI focus owner
-			if not ui_has_focus:
-				return
+			var is_horizontal_slider: bool = (
+				focus_owner is Slider 
+				and (action == "ui_left" or action == "ui_right")
+			)
 
-			# Prevent double-audio when adjusting sliders.
-			if focus_owner is Slider and (action == "ui_left" or action == "ui_right"):
-				return
+			if ui_has_focus and not is_horizontal_slider:
+				_play_ui_navigation_sfx()
 
-			_play_ui_navigation_sfx()
-			return  # Exit once sound is triggered to avoid double-plays
+			return
 
 
 ## Internal helper to play the navigation sound through the dedicated Menu SFX bus.
