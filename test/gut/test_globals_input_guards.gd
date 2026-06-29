@@ -21,11 +21,11 @@ var _original_options_open: bool
 
 
 func before_each() -> void:
-	# Snapshot state and force active menu context for predictable test execution [cite: 2]
+	# Snapshot state and force active menu context for predictable test execution
 	_original_options_open = Globals.options_open
 	Globals.options_open = true
 	
-	# Purge any running streams from the shared singleton pool [cite: 2]
+	# Purge any running streams from the shared singleton pool
 	AudioManager.stop_all_sfx()
 	if AudioManager.has_method("cleanup_for_test"):
 		AudioManager.cleanup_for_test()
@@ -94,7 +94,7 @@ func test_check_button_focus_skips_global_audio() -> void:
 
 
 ## Issue #2 Verification: Pressing Enter or Spacebar while a volume slider 
-## holds focus must remain entirely silent[cite: 4].
+## holds focus must remain entirely silent.
 func test_slider_focus_skips_global_audio() -> void:
 	var slider := HSlider.new()
 	await _setup_focused_control(slider)
