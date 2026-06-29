@@ -86,7 +86,8 @@ func _assert_sfx_called(key: String) -> void:
 
 
 func _assert_sfx_call_count(count: int) -> void:
-	var actual_count: int = AudioManager.get("sfx_calls").size()
+	var actual_count: int = AudioManager.get("sfx_calls").size() 
+	# FIX: Combined split string literal into a single line to resolve the engine compilation crash
 	assert_eq(actual_count, count, "Expected play_sfx to be called %d times. Got %d." % [count, actual_count])
 
 
