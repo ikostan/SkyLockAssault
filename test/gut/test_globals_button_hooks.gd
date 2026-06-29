@@ -26,13 +26,18 @@ func _wait_for_registration() -> void:
 
 
 ## Counts how many times the global audio hook is connected to a specific button.
-func _get_global_connection_count(btn: Button) -> int:
+## Optionally validates that the connection strictly uses the CONNECT_DEFERRED flag.
+func _get_global_connection_count(btn: Button, require_deferred: bool = true) -> int:
 	var count: int = 0
 	for connection: Dictionary in btn.pressed.get_connections():
-		# Defensive retrieval safeguards against future engine-level dictionary layout updates
 		var callable: Callable = connection.get("callable", Callable())
 		if callable == Globals._on_global_button_pressed:
-			count += 1
+			if require_deferred:
+				var flags: int = connection.get("flags", 0)
+				if flags & CONNECT_DEFERRED:
+					count += 1
+			else:
+				count += 1
 	return count
 
 
