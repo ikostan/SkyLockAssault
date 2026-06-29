@@ -384,13 +384,13 @@ static func set_game_version_for_tests(value: String) -> void:
 ## Use _input instead of _unhandled_input to catch events BEFORE the UI consumes them.
 func _input(event: InputEvent) -> void:
 	# Gate 1: Echo Input Mitigation
-	# Explicitly catch and discard pre-fabricated or hardware-repeated input echo notifications 
+	# Explicitly catch and discard pre-fabricated or hardware-repeated input echo notifications
 	# at the absolute threshold to safeguard the framework against machine-gun audio loops.
 	if event.is_echo():
 		return
 
 	# Gate 2: Comprehensive Hardware Device Tracking
-	# Dynamically evaluates the class architecture of incoming I/O packets to seamlessly log 
+	# Dynamically evaluates the class architecture of incoming I/O packets to seamlessly log
 	# whether the active user is operating a keyboard/mouse configuration vs a gamepad controller.
 	if event is InputEventKey or event is InputEventMouseButton or event is InputEventMouseMotion:
 		current_input_device = "keyboard"
@@ -405,9 +405,9 @@ func _input(event: InputEvent) -> void:
 	# Incorporates a substring fallback check on the current scene tree name to guarantee that global
 	# UI cancellation and navigation rules function even if focus is temporarily empty during layout fades.
 	var is_menu_context: bool = (
-		get_tree().paused 
-		or options_open 
-		or not hidden_menus.is_empty() 
+		get_tree().paused
+		or options_open
+		or not hidden_menus.is_empty()
 		or ui_has_focus
 		or (get_tree().current_scene and "Menu" in get_tree().current_scene.name)
 	)
