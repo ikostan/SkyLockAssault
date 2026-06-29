@@ -403,7 +403,8 @@ func _input(event: InputEvent) -> void:
 
 	# Gate 3: Broadened Menu Layer Context Safeguards
 	# Incorporates a substring fallback check on the current scene tree name to guarantee that global
-	# UI cancellation and navigation rules function even if focus is temporarily empty during layout fades.
+	# UI cancellation and navigation rules function even if focus is temporarily empty during layout
+	# fades.
 	var is_menu_context: bool = (
 		get_tree().paused
 		or options_open
