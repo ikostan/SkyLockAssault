@@ -5,7 +5,6 @@
 ## Automated verification suite for Feature Request #570.
 ## Validates object pooling, LRU cache eviction, failure isolation, 
 ## and constant engine node tree allocation rules.
-
 extends "res://addons/gut/test.gd"
 
 var _orig_cache: Dictionary = {}
@@ -31,7 +30,8 @@ func after_each() -> void:
 		p.stop()
 
 
-## Verification 1 | A menu sound plays correctly when passing its string identifier to the API.
+## Verification 1 |
+## A menu sound plays correctly when passing its string identifier to the API.
 ## :rtype: void
 func test_verification_01_play_by_identifier() -> void:
 	var sfx_name: String = "slider"
@@ -46,7 +46,8 @@ func test_verification_01_play_by_identifier() -> void:
 	assert_true(sound_playing, "An audio player in the pool should be active and streaming the asset.")
 
 
-## Verification 2 | Consecutive rapid calls succeed and naturally overlap using separate pool players.
+## Verification 2 |
+## Consecutive rapid calls succeed and naturally overlap using separate pool players.
 ## :rtype: void
 func test_verification_02_consecutive_overlapping_playback() -> void:
 	AudioManager.play_sfx("slider")
@@ -60,7 +61,8 @@ func test_verification_02_consecutive_overlapping_playback() -> void:
 	assert_eq(active_players, 2, "Two separate audio players must execute concurrently to allow overlap sounds.")
 
 
-## Verification 3 | Flooding the API handles playback gracefully via player hijacking without crashing.
+## Verification 3 |
+## Flooding the API handles playback gracefully via player hijacking without crashing.
 ## :rtype: void
 func test_verification_03_pool_flooding_graceful_hijack() -> void:
 	# Flood with 10 concurrent requests (Pool size is capped at 8)
@@ -75,7 +77,8 @@ func test_verification_03_pool_flooding_graceful_hijack() -> void:
 	assert_eq(active_players, AudioManager.SFX_POOL_SIZE, "All pool channels must remain busy without crashing the execution loop.")
 
 
-## Verification 4 | Cache bounds are respected: loading a 21st unique SFX successfully evicts the oldest cached stream.
+## Verification 4 |
+## Cache bounds are respected: loading a 21st unique SFX successfully evicts the oldest cached stream.
 ## :rtype: void
 func test_verification_04_lru_cache_eviction_strategy() -> void:
 	# Populate the internal cache up to the maximum allowable limit (20 entries)
@@ -93,7 +96,8 @@ func test_verification_04_lru_cache_eviction_strategy() -> void:
 	assert_true(AudioManager._sfx_cache.has("slider"), "The newly parsed asset payload must successfully occupy the cache structure.")
 
 
-## Verification 5 | Requesting a non-existent SFX logs a warning once, caches the failure, and suppresses repeated disk lookups.
+## Verification 5 |
+## Requesting a non-existent SFX logs a warning once, caches the failure, and suppresses repeated disk lookups.
 ## :rtype: void
 func test_verification_05_missing_asset_failure_suppression() -> void:
 	var fake_sfx: String = "invalid_ghost_sound"
@@ -108,7 +112,8 @@ func test_verification_05_missing_asset_failure_suppression() -> void:
 	assert_false(AudioManager._sfx_cache.has(fake_sfx), "The API must short-circuit and completely bypass disk access routines for known failure keys.")
 
 
-## Verification 6 | The total number of AudioStreamPlayer child nodes remains constant before, during, and after playback.
+## Verification 6 |
+## The total number of AudioStreamPlayer child nodes remains constant before, during, and after playback.
 ## :rtype: void
 func test_verification_06_pool_node_count_constancy() -> void:
 	var initial_count: int = AudioManager.get_child_count()
@@ -124,6 +129,9 @@ func test_verification_06_pool_node_count_constancy() -> void:
 	assert_eq(mid_count, final_count, "The structural node tree footprint under AudioManager must remain completely constant.")
 
 
+## Verification 7 |
+## Validates that play_sfx resolves logical identifiers to their explicit file extensions using the asset map.
+## :rtype: void
 func test_play_sfx_resolves_via_asset_map() -> void:
 	# Ensure the cache doesn't skew results
 	AudioManager.cleanup_for_test()
@@ -132,20 +140,26 @@ func test_play_sfx_resolves_via_asset_map() -> void:
 	# AudioManager should look for 'airplane_prop.ogg' instead of 'airplane_prop.wav'
 	AudioManager.play_sfx("airplane_prop")
 	
-	var active_path: = AudioManager.get_active_sfx_stream_path()
+	var active_path := AudioManager.get_active_sfx_stream_path()
 	assert_string_contains(active_path, "airplane_prop.ogg", "AudioManager should resolve mapping to exact extension found in asset map.")
 	
 	
+## Verification 8 |
+## Validates that fallback handling automatically appends the default .wav extension to unmapped sound identifiers.
+## :rtype: void
 func test_play_sfx_unmapped_legacy_fallback() -> void:
 	AudioManager.cleanup_for_test()
 	
 	# Pass an unmapped logical string identifier
 	AudioManager.play_sfx("slider")
 	
-	var active_path: = AudioManager.get_active_sfx_stream_path()
+	var active_path := AudioManager.get_active_sfx_stream_path()
 	assert_string_contains(active_path, "slider.wav", "Unmapped IDs should automatically append .wav for fallback compatibility.")
 
 
+## Verification 9 |
+## Validates that high-frequency mouse motion inputs are dropped out of the global input process loop to optimize performance.
+## :rtype: void
 func test_input_ignores_mouse_motion() -> void:
 	AudioManager.cleanup_for_test()
 	
