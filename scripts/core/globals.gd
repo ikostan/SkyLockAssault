@@ -481,15 +481,15 @@ func _handle_ui_cancel_action(focus_owner: Control, action: String) -> void:
 		or focus_owner is CheckButton
 		or focus_owner is OptionButton
 	)
-	var is_remap_control: bool = (
-		is_instance_valid(focus_owner)
-		and focus_owner.get_script() != null
-		and (
-			"action" in focus_owner
-			or "action_name" in focus_owner
-			or focus_owner.has_method("cancel_remap")
+
+	# Upgraded remap detection to avoid brittle 'in' operator checks on Node instances
+	var is_remap_control: bool = false
+	if is_instance_valid(focus_owner):
+		is_remap_control = (
+			focus_owner.has_method("cancel_remap")
+			or focus_owner.get("action") != null
+			or focus_owner.get("action_name") != null
 		)
-	)
 
 	if not is_editing_control and not is_remap_control:
 		var logical_id: String = AudioConstants.UI_SFX[action]
