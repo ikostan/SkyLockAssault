@@ -13,7 +13,7 @@ const UI_NAV_SOUND_PATH: String = "res://files/sounds/sfx/ui_navigation.wav"
 
 # --- TASK #529: Encryption Key Management ---
 ## Centralized key for securing local configuration files.
-## This ensures consistent encryption/decryption across different game systems. [cite: 3]
+## This ensures consistent encryption/decryption across different game systems.
 ## Define the variable by pulling from ProjectSettings.
 ## If the setting doesn't exist, it falls back to a non-secure string.
 var save_encryption_pass: String = _get_encryption_key()
