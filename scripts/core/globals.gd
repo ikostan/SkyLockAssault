@@ -419,27 +419,26 @@ func _check_menu_context(ui_has_focus: bool) -> bool:
 		get_tree().paused or options_open or not hidden_menus.is_empty() or ui_has_focus
 	)
 
+	# Cache the current scene reference once to guarantee mid-frame evaluation consistency
+	var active_scene: Node = get_tree().current_scene if get_tree() else null
+	if not is_instance_valid(active_scene):
+		return is_menu_context
+
 	# Explicit marker evaluation with a substring fallback for legacy compliance
-	if not is_menu_context and get_tree().current_scene:
-		var scene: Node = get_tree().current_scene
+	if not is_menu_context:
 		if (
-			scene.is_in_group("menu_context")
-			or scene.has_meta("is_menu_context")
-			or "Menu" in scene.name
+			active_scene.is_in_group("menu_context")
+			or active_scene.has_meta("is_menu_context")
+			or "Menu" in active_scene.name
 		):
 			is_menu_context = true
 
 	# Test helper fallback: support menu context detection during automated test suite runs
-	if (
-		(OS.has_feature("debug") or OS.has_feature("ci"))
-		and not is_menu_context
-		and get_tree().current_scene
-	):
-		var test_scene: Node = get_tree().current_scene
+	if (OS.has_feature("debug") or OS.has_feature("ci")) and not is_menu_context:
 		if (
-			"Menu" in test_scene.name
-			or test_scene.has_meta("is_menu_context")
-			or test_scene.is_in_group("menu_context")
+			"Menu" in active_scene.name
+			or active_scene.has_meta("is_menu_context")
+			or active_scene.is_in_group("menu_context")
 		):
 			is_menu_context = true
 
