@@ -26,6 +26,10 @@ func before_each() -> void:
 func after_each() -> void:
 	AudioManager._sfx_cache = _orig_cache
 	AudioManager._missing_sfx_cache = _orig_missing
+	
+	# FIX: Prevent global state pollution if assertions fail early in the test body
+	Globals.options_open = false
+	
 	for p: AudioStreamPlayer in AudioManager._sfx_pool:
 		p.stop()
 
@@ -178,5 +182,4 @@ func test_input_ignores_mouse_motion() -> void:
 	# Ensure no execution churn occurred and no playback pool frames were hijacked
 	assert_false(AudioManager.is_any_sfx_playing(), "Mouse motion wiggles must drop immediately out of the input loop without triggering audio players.")
 	
-	# Tear down state
-	Globals.options_open = false
+	# REMOVED: Inline cleanup deleted from here to rely safely on shared teardown execution loops.
