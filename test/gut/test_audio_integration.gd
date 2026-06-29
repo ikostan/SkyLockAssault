@@ -208,7 +208,14 @@ func test_ui_mute_controls_sync_state_dynamically() -> void:
 	var check_buttons := audio_menu.find_children("", "CheckButton", true, false)
 	assert_gt(check_buttons.size(), 0, "Audio menu must instantiate interactive CheckButtons.")
 	
-	var candidate_btn: CheckButton = check_buttons[0] as CheckButton
+	# FIX: Filter specifically for a mute control instead of blindly picking the first index
+	var candidate_btn: CheckButton = null
+	for btn in check_buttons:
+		if "mute" in btn.name.to_lower():
+			candidate_btn = btn as CheckButton
+			break
+			
+	assert_not_null(candidate_btn, "Layout Validation: Audio menu must contain at least one CheckButton matching a 'mute' naming convention.")
 	candidate_btn.toggled.emit(false) # Simulate UI mute press
 	
 	assert_true(AudioManager.is_any_sfx_playing(), "Triggering any audio menu CheckButton should invoke confirmation SFX.")
