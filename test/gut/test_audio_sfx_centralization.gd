@@ -150,12 +150,13 @@ func test_play_sfx_resolves_via_asset_map() -> void:
 func test_play_sfx_unmapped_legacy_fallback() -> void:
 	AudioManager.cleanup_for_test()
 	
-	# Pass an unmapped logical string identifier
-	AudioManager.play_sfx("slider")
+	# FIX: Pass an unmapped logical string identifier ("check") instead of a mapped one ("slider")
+	# to correctly exercise the .wav fallback branch.
+	AudioManager.play_sfx("check")
 	
 	var active_path := AudioManager.get_active_sfx_stream_path()
-	assert_string_contains(active_path, "slider.wav", "Unmapped IDs should automatically append .wav for fallback compatibility.")
-
+	assert_string_contains(active_path, "check.wav", "Unmapped IDs should automatically append .wav for fallback compatibility.")
+	
 
 ## Verification 9 |
 ## Validates that high-frequency mouse motion inputs are dropped out of the global input process loop to optimize performance.
