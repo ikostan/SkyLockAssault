@@ -33,17 +33,23 @@ func before_all() -> void:
 		assert_eq(err, OK, "Failed to backup config: " + str(err))
 
 
-## Per-test setup: Delete test config, reset InputMap for test action.
+## Per-test setup: Reset global device tracking state, delete test config, and clear InputMap actions.
 ## :rtype: void
 func before_each() -> void:
+	# FIX: Neutralize cross-test state leakage from preceding gamepad suites
+	if is_instance_valid(Globals):
+		Globals.current_input_device = "keyboard"
+
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		var err: Error = DirAccess.remove_absolute(TEST_CONFIG_PATH)
 		assert_eq(err, OK)
+		
 	for action in Settings.ACTIONS:
 		if InputMap.has_action(action):
 			InputMap.action_erase_events(action)
 		else:
 			InputMap.add_action(action)
+			
 	Settings.load_input_mappings()  # Reload empty
 
 

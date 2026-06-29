@@ -383,13 +383,33 @@ static func set_game_version_for_tests(value: String) -> void:
 
 ## Use _input instead of _unhandled_input to catch events BEFORE the UI consumes them.
 func _input(event: InputEvent) -> void:
+	# Gate 1: Echo Input Mitigation
+	# Explicitly catch and discard pre-fabricated or hardware-repeated input echo notifications 
+	# at the absolute threshold to safeguard the framework against machine-gun audio loops.
+	if event.is_echo():
+		return
+
+	# Gate 2: Comprehensive Hardware Device Tracking
+	# Dynamically evaluates the class architecture of incoming I/O packets to seamlessly log 
+	# whether the active user is operating a keyboard/mouse configuration vs a gamepad controller.
+	if event is InputEventKey or event is InputEventMouseButton or event is InputEventMouseMotion:
+		current_input_device = "keyboard"
+	elif event is InputEventJoypadButton or event is InputEventJoypadMotion:
+		current_input_device = "gamepad"
+
 	# The Ultimate Menu Check: Does a UI element currently have keyboard/gamepad focus?
 	var focus_owner: Control = get_viewport().gui_get_focus_owner()
 	var ui_has_focus: bool = is_instance_valid(focus_owner)
 
-	# Gate 1: Only play UI sounds if a UI element is focused OR we are in a known menu state
+	# Gate 3: Broadened Menu Layer Context Safeguards
+	# Incorporates a substring fallback check on the current scene tree name to guarantee that global
+	# UI cancellation and navigation rules function even if focus is temporarily empty during layout fades.
 	var is_menu_context: bool = (
-		get_tree().paused or options_open or not hidden_menus.is_empty() or ui_has_focus
+		get_tree().paused 
+		or options_open 
+		or not hidden_menus.is_empty() 
+		or ui_has_focus
+		or (get_tree().current_scene and "Menu" in get_tree().current_scene.name)
 	)
 
 	# Test helper fallback: support menu context detection via current_scene name for GUT tests
@@ -430,10 +450,9 @@ func _input(event: InputEvent) -> void:
 					var file_path: String = AudioConstants.UI_SFX[action]
 					var sfx_name: String = file_path.get_file().get_basename()
 					AudioManager.play_sfx(sfx_name, AudioConstants.BUS_SFX)
-				return  # Always break input cycle once action matches [cite: 44]
+				return  # Always break input cycle once action matches
 
-			# UPDATED: Context Guard C: Mute generic accept sounds for elements
-			# that handle their own audio signals
+			# Context Guard C: Mute generic accept sounds for elements that handle their own audio signals
 			if action == "ui_accept":
 				if focus_owner is BaseButton or focus_owner is Slider:
 					return  # Quietly drop the event here; let the UI node signals handle playback!
