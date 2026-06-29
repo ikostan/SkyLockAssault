@@ -416,16 +416,17 @@ func _track_input_device(event: InputEvent) -> void:
 ## Evaluates tree states and explicit markers to safeguard input contexts.
 func _check_menu_context(ui_has_focus: bool) -> bool:
 	var is_menu_context: bool = (
-		get_tree().paused
-		or options_open
-		or not hidden_menus.is_empty()
-		or ui_has_focus
+		get_tree().paused or options_open or not hidden_menus.is_empty() or ui_has_focus
 	)
-	
+
 	# Explicit marker evaluation with a substring fallback for legacy compliance
 	if not is_menu_context and get_tree().current_scene:
 		var scene: Node = get_tree().current_scene
-		if scene.is_in_group("menu_context") or scene.has_meta("is_menu_context") or "Menu" in scene.name:
+		if (
+			scene.is_in_group("menu_context")
+			or scene.has_meta("is_menu_context")
+			or "Menu" in scene.name
+		):
 			is_menu_context = true
 
 	# Test helper fallback: support menu context detection during automated test suite runs
@@ -435,17 +436,22 @@ func _check_menu_context(ui_has_focus: bool) -> bool:
 		and get_tree().current_scene
 	):
 		var test_scene: Node = get_tree().current_scene
-		if "Menu" in test_scene.name or test_scene.has_meta("is_menu_context") or test_scene.is_in_group("menu_context"):
+		if (
+			"Menu" in test_scene.name
+			or test_scene.has_meta("is_menu_context")
+			or test_scene.is_in_group("menu_context")
+		):
 			is_menu_context = true
 
 	return is_menu_context
 
 
 ## Matches actions against AudioConstants configurations to execute global menu sfx.
-func _process_ui_navigation_sfx(event: InputEvent, focus_owner: Control, ui_has_focus: bool) -> void:
+func _process_ui_navigation_sfx(
+	event: InputEvent, focus_owner: Control, ui_has_focus: bool
+) -> void:
 	for action: String in AudioConstants.UI_SFX.keys():
 		if event.is_action_pressed(action, false):
-			
 			# Context Guard A: Handle Escape/Cancellation Safeguards
 			if action == "ui_cancel":
 				_handle_ui_cancel_action(focus_owner, action)
