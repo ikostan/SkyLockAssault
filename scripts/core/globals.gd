@@ -425,6 +425,11 @@ func _input(event: InputEvent) -> void:
 	if not is_menu_context:
 		return
 
+	# --- SOURCERY FIX 1: EARLY RETURN OPTIMIZATION ---
+	# Drop heavy frame-rate mouse wiggles or non-action events immediately before entering the loop.
+	if event is InputEventMouseMotion or not event.is_action_type():
+		return
+
 	# DATA-DRIVEN DICTIONARY LOOKUP (Issue #490 Compliance)
 	for action: String in AudioConstants.UI_SFX.keys():
 		if event.is_action_pressed(action, false):
@@ -448,12 +453,13 @@ func _input(event: InputEvent) -> void:
 				)
 
 				if not is_editing_control and not is_remap_control:
-					var file_path: String = AudioConstants.UI_SFX[action]
-					var sfx_name: String = file_path.get_file().get_basename()
-					AudioManager.play_sfx(sfx_name, AudioConstants.BUS_SFX)
+					# --- SOURCERY FIX 2: PATH COUPLE DECOUPLING ---
+					# Direct resolution via the updated Dictionary strings
+					var logical_id: String = AudioConstants.UI_SFX[action]
+					AudioManager.play_sfx(logical_id, AudioConstants.BUS_SFX)
 				return  # Always break input cycle once action matches
 
-			# UPDATED: Context Guard C: Mute generic accept sounds for nodes handling native audio signals
+			# Context Guard C: Mute generic accept sounds for nodes handling native audio signals
 			# or text entry elements to prevent double audio or global leakage during typing submissions.
 			if action == "ui_accept":
 				if (
@@ -469,11 +475,17 @@ func _input(event: InputEvent) -> void:
 				focus_owner is Slider and (action == "ui_left" or action == "ui_right")
 			)
 
-			# Gated on active UI focus ownership, excluding horizontal sliders
-			if ui_has_focus and not is_horizontal_slider:
-				var file_path: String = AudioConstants.UI_SFX[action]
-				var sfx_name: String = file_path.get_file().get_basename()
-				AudioManager.play_sfx(sfx_name, AudioConstants.BUS_SFX)
+			# 1. We create 'is_nav_action' here by checking your existing list
+			var is_nav_action: bool = action in _nav_actions
+
+			# 2. We create 'should_play_nav_sfx' here by combining your focus toggles
+			var should_play_nav_sfx: bool = (ui_has_focus or is_nav_action) and not is_horizontal_slider
+
+			# 3. Now the engine uses the new variable we just created
+			if should_play_nav_sfx:
+				# --- SOURCERY FIX 2: PATH COUPLE DECOUPLING ---
+				var logical_id: String = AudioConstants.UI_SFX[action]
+				AudioManager.play_sfx(logical_id, AudioConstants.BUS_SFX)
 			return  # Always break input cycle once action matches
 
 

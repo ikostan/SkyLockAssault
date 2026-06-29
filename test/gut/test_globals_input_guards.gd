@@ -147,3 +147,37 @@ func test_passive_control_triggers_global_audio() -> void:
 		AudioManager.is_any_sfx_playing(),
 		"Control Parity Failure: Global ui_accept tracking was blocked by an overly broad filter check."
 	)
+
+
+# ==========================================================================
+# DIRECTIONAL NAVIGATION & STALE FOCUS COVERAGE (Sourcery Verification)
+# ==========================================================================
+
+## Helper method to assemble a navigation InputEventAction payload
+func _create_nav_event(action_name: String) -> InputEventAction:
+	var event := InputEventAction.new()
+	event.action = action_name
+	event.pressed = true
+	return event
+
+
+## Verification: Directional navigation sound effects must not be dropped
+## when viewport focus is transiently empty/stale during a menu context.
+func test_stale_focus_navigation_retains_audio_safeguard() -> void:
+	# 1. Force a valid menu context but ensure focus owner is explicitly empty/stale
+	Globals.options_open = true
+	var focus_owner := get_viewport().gui_get_focus_owner()
+	if is_instance_valid(focus_owner):
+		focus_owner.release_focus()
+	
+	# Clear out any previous audio junk
+	AudioManager.stop_all_sfx()
+	
+	# 2. Simulate a user hitting 'ui_down' during a focus transition fade
+	Globals._input(_create_nav_event("ui_down"))
+	
+	# 3. Assert that the safeguard caught the transition and played the fallback audio
+	assert_true(
+		AudioManager.is_any_sfx_playing(),
+		"Safeguard Failure: Navigation audio was unintentionally dropped due to a stale UI focus state."
+	)

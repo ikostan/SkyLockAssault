@@ -369,7 +369,7 @@ func reset_volumes() -> void:
 
 ## Centralized SFX Playback API (Issue #570)
 ## Handles non-positional audio with LRU caching and auto-cleanup.
-## :param sfx_name: The filename without extension (e.g., "slider").
+## :param sfx_name: The logical identifier (e.g., "ui_navigation" or "slider").
 ## :param bus_name: Target audio bus (defaults to SFX_Menu).
 ## :param pitch_scale: Pitch override for variety.
 ## :param volume_db: Volume offset in decibels.
@@ -388,7 +388,15 @@ func play_sfx(
 
 	# 1. Resolve and Cache the AudioStream (with LRU Eviction)
 	if not _sfx_cache.has(sfx_name):
-		var full_path: String = SFX_DIR_PATH + sfx_name + ".wav"
+		# Resolve the logical name to its exact mapped file name
+		var file_name: String = sfx_name
+		if sfx_name in AudioConstants.SFX_ASSET_MAP:
+			file_name = AudioConstants.SFX_ASSET_MAP[sfx_name]
+		else:
+			# Structural fallback safely preserving legacy/direct calls
+			file_name += ".wav"
+
+		var full_path: String = SFX_DIR_PATH + file_name
 
 		# Safety guard against non-existent files to block core engine loader errors from polluting tests
 		if not ResourceLoader.exists(full_path):

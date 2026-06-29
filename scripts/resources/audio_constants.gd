@@ -78,3 +78,16 @@ const UI_SFX: Dictionary = {
 	"ui_accept": "ui_accept",
 	"ui_cancel": "ui_cancel"
 }
+
+# --- SFX Asset Path Resolution Map ---
+# Maps logical SFX identifiers to their exact filenames with extensions.
+# This prevents asset changes from requiring script alterations.
+const SFX_ASSET_MAP: Dictionary = {
+	"slider": "slider.wav",
+	"mute_toggle": "check.wav",
+	"ui_navigation": "ui_navigation.wav",
+	"ui_accept": "ui_accept.wav",
+	"ui_cancel": "ui_cancel.wav",
+	"airplane_prop": "airplane_prop.ogg",
+	"retro_laser": "retro-laser-1-236669.mp3"
+}

@@ -122,3 +122,46 @@ func test_verification_06_pool_node_count_constancy() -> void:
 	
 	assert_eq(initial_count, mid_count)
 	assert_eq(mid_count, final_count, "The structural node tree footprint under AudioManager must remain completely constant.")
+
+
+func test_play_sfx_resolves_via_asset_map() -> void:
+	# Ensure the cache doesn't skew results
+	AudioManager.cleanup_for_test()
+	
+	# Test an explicit .ogg file defined in our map
+	# AudioManager should look for 'airplane_prop.ogg' instead of 'airplane_prop.wav'
+	AudioManager.play_sfx("airplane_prop")
+	
+	var active_path: = AudioManager.get_active_sfx_stream_path()
+	assert_string_contains(active_path, "airplane_prop.ogg", "AudioManager should resolve mapping to exact extension found in asset map.")
+	
+	
+func test_play_sfx_unmapped_legacy_fallback() -> void:
+	AudioManager.cleanup_for_test()
+	
+	# Pass an unmapped logical string identifier
+	AudioManager.play_sfx("slider")
+	
+	var active_path: = AudioManager.get_active_sfx_stream_path()
+	assert_string_contains(active_path, "slider.wav", "Unmapped IDs should automatically append .wav for fallback compatibility.")
+
+
+func test_input_ignores_mouse_motion() -> void:
+	AudioManager.cleanup_for_test()
+	
+	# Simulate entering a menu layer to activate context checks
+	Globals.options_open = true
+	
+	# Construct a generic high-frequency mouse movement packet
+	var mouse_event := InputEventMouseMotion.new()
+	mouse_event.position = Vector2(250, 450)
+	mouse_event.relative = Vector2(5, 5)
+	
+	# Route the fake event pack directly into our global tracker
+	Globals._input(mouse_event)
+	
+	# Ensure no execution churn occurred and no playback pool frames were hijacked
+	assert_false(AudioManager.is_any_sfx_playing(), "Mouse motion wiggles must drop immediately out of the input loop without triggering audio players.")
+	
+	# Tear down state
+	Globals.options_open = false
