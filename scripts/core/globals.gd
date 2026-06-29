@@ -453,10 +453,16 @@ func _input(event: InputEvent) -> void:
 					AudioManager.play_sfx(sfx_name, AudioConstants.BUS_SFX)
 				return  # Always break input cycle once action matches
 
-			# Context Guard C: Mute generic accept sounds for elements that handle their own audio signals
+			# UPDATED: Context Guard C: Mute generic accept sounds for nodes handling native audio signals
+			# or text entry elements to prevent double audio or global leakage during typing submissions.
 			if action == "ui_accept":
-				if focus_owner is BaseButton or focus_owner is Slider:
-					return  # Quietly drop the event here; let the UI node signals handle playback!
+				if (
+					focus_owner is BaseButton
+					or focus_owner is Slider
+					or focus_owner is LineEdit
+					or focus_owner is TextEdit
+				):
+					return  # Quietly drop the event here; let the text control or button signals handle it!
 
 			# Context Guard B: Handle Directional & Focus Navigation Safeguards
 			var is_horizontal_slider: bool = (
