@@ -1,9 +1,8 @@
 ## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_nav_escape_sfx.gd
-## GUT unit tests for global navigation and escape audio routing gates.
-
-extends "res://addons/gut/test.gd"
+# FIX: Swapped out explicit path inheritance for the global class name token to ensure test runner discovery
+extends GutTest
 
 var globals_instance: Node
 var original_audio_script: Script
