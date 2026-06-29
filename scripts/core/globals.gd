@@ -384,83 +384,74 @@ static func set_game_version_for_tests(value: String) -> void:
 ## Use _input instead of _unhandled_input to catch events BEFORE the UI consumes them.
 func _input(event: InputEvent) -> void:
 	# Gate 1: Echo Input Mitigation
-	# Explicitly catch and discard pre-fabricated or hardware-repeated input echo notifications
-	# at the absolute threshold to safeguard the framework against machine-gun audio loops.
 	if event.is_echo():
 		return
 
 	# Gate 2: Comprehensive Hardware Device Tracking
-	# Dynamically evaluates the class architecture of incoming I/O packets to seamlessly log
-	# whether the active user is operating a keyboard/mouse configuration vs a gamepad controller.
+	_track_input_device(event)
+
+	var focus_owner: Control = get_viewport().gui_get_focus_owner()
+	var ui_has_focus: bool = is_instance_valid(focus_owner)
+
+	# Gate 3: Broadened Menu Layer Context Safeguards
+	if not _check_menu_context(ui_has_focus):
+		return
+
+	# Gate 4: Drop heavy frame-rate mouse wiggles or non-action events early
+	if event is InputEventMouseMotion or not event.is_action_type():
+		return
+
+	# Gate 5: Process Menu UI Sound Effects via Data-Driven Lookup
+	_process_ui_navigation_sfx(event, focus_owner, ui_has_focus)
+
+
+## Private helper to dynamically track the active hardware user control scheme.
+func _track_input_device(event: InputEvent) -> void:
 	if event is InputEventKey or event is InputEventMouseButton or event is InputEventMouseMotion:
 		current_input_device = "keyboard"
 	elif event is InputEventJoypadButton or event is InputEventJoypadMotion:
 		current_input_device = "gamepad"
 
-	# The Ultimate Menu Check: Does a UI element currently have keyboard/gamepad focus?
-	var focus_owner: Control = get_viewport().gui_get_focus_owner()
-	var ui_has_focus: bool = is_instance_valid(focus_owner)
 
-	# Gate 3: Broadened Menu Layer Context Safeguards
-	# Incorporates a substring fallback check on the current scene tree name to guarantee that global
-	# UI cancellation and navigation rules function even if focus is temporarily empty during layout
-	# fades.
+## Evaluates tree states and explicit markers to safeguard input contexts.
+func _check_menu_context(ui_has_focus: bool) -> bool:
 	var is_menu_context: bool = (
 		get_tree().paused
 		or options_open
 		or not hidden_menus.is_empty()
 		or ui_has_focus
-		or (get_tree().current_scene and "Menu" in get_tree().current_scene.name)
 	)
+	
+	# Explicit marker evaluation with a substring fallback for legacy compliance
+	if not is_menu_context and get_tree().current_scene:
+		var scene: Node = get_tree().current_scene
+		if scene.is_in_group("menu_context") or scene.has_meta("is_menu_context") or "Menu" in scene.name:
+			is_menu_context = true
 
-	# Test helper fallback: support menu context detection via current_scene name for GUT tests
+	# Test helper fallback: support menu context detection during automated test suite runs
 	if (
 		(OS.has_feature("debug") or OS.has_feature("ci"))
 		and not is_menu_context
 		and get_tree().current_scene
-		and "Menu" in get_tree().current_scene.name
 	):
-		is_menu_context = true
+		var test_scene: Node = get_tree().current_scene
+		if "Menu" in test_scene.name or test_scene.has_meta("is_menu_context") or test_scene.is_in_group("menu_context"):
+			is_menu_context = true
 
-	if not is_menu_context:
-		return
+	return is_menu_context
 
-	# --- SOURCERY FIX 1: EARLY RETURN OPTIMIZATION ---
-	# Drop heavy frame-rate mouse wiggles or non-action events immediately before entering the loop.
-	if event is InputEventMouseMotion or not event.is_action_type():
-		return
 
-	# DATA-DRIVEN DICTIONARY LOOKUP (Issue #490 Compliance)
+## Matches actions against AudioConstants configurations to execute global menu sfx.
+func _process_ui_navigation_sfx(event: InputEvent, focus_owner: Control, ui_has_focus: bool) -> void:
 	for action: String in AudioConstants.UI_SFX.keys():
 		if event.is_action_pressed(action, false):
+			
 			# Context Guard A: Handle Escape/Cancellation Safeguards
 			if action == "ui_cancel":
-				var is_editing_control: bool = (
-					focus_owner is LineEdit
-					or focus_owner is TextEdit
-					or focus_owner is Range
-					or focus_owner is CheckButton
-					or focus_owner is OptionButton
-				)
-				var is_remap_control: bool = (
-					is_instance_valid(focus_owner)
-					and focus_owner.get_script() != null
-					and (
-						"action" in focus_owner
-						or "action_name" in focus_owner
-						or focus_owner.has_method("cancel_remap")
-					)
-				)
+				_handle_ui_cancel_action(focus_owner, action)
+				return
 
-				if not is_editing_control and not is_remap_control:
-					# --- SOURCERY FIX 2: PATH COUPLE DECOUPLING ---
-					# Direct resolution via the updated Dictionary strings
-					var logical_id: String = AudioConstants.UI_SFX[action]
-					AudioManager.play_sfx(logical_id, AudioConstants.BUS_SFX)
-				return  # Always break input cycle once action matches
-
-			# Context Guard C: Mute generic accept sounds for nodes handling native audio signals
-			# or text entry elements to prevent double audio or global leakage during typing submissions.
+			# Context Guard C: Quietly drop events handling native element submissions
 			if action == "ui_accept":
 				if (
 					focus_owner is BaseButton
@@ -468,25 +459,48 @@ func _input(event: InputEvent) -> void:
 					or focus_owner is LineEdit
 					or focus_owner is TextEdit
 				):
-					return  # Quietly drop the event here; let the text control or button signals handle it!
+					return
 
 			# Context Guard B: Handle Directional & Focus Navigation Safeguards
-			var is_horizontal_slider: bool = (
-				focus_owner is Slider and (action == "ui_left" or action == "ui_right")
-			)
+			_handle_ui_navigation_action(action, focus_owner, ui_has_focus)
+			return
 
-			# 1. We create 'is_nav_action' here by checking your existing list
-			var is_nav_action: bool = action in _nav_actions
 
-			# 2. We create 'should_play_nav_sfx' here by combining your focus toggles
-			var should_play_nav_sfx: bool = (ui_has_focus or is_nav_action) and not is_horizontal_slider
+## Separated execution logic for UI cancellation actions.
+func _handle_ui_cancel_action(focus_owner: Control, action: String) -> void:
+	var is_editing_control: bool = (
+		focus_owner is LineEdit
+		or focus_owner is TextEdit
+		or focus_owner is Range
+		or focus_owner is CheckButton
+		or focus_owner is OptionButton
+	)
+	var is_remap_control: bool = (
+		is_instance_valid(focus_owner)
+		and focus_owner.get_script() != null
+		and (
+			"action" in focus_owner
+			or "action_name" in focus_owner
+			or focus_owner.has_method("cancel_remap")
+		)
+	)
 
-			# 3. Now the engine uses the new variable we just created
-			if should_play_nav_sfx:
-				# --- SOURCERY FIX 2: PATH COUPLE DECOUPLING ---
-				var logical_id: String = AudioConstants.UI_SFX[action]
-				AudioManager.play_sfx(logical_id, AudioConstants.BUS_SFX)
-			return  # Always break input cycle once action matches
+	if not is_editing_control and not is_remap_control:
+		var logical_id: String = AudioConstants.UI_SFX[action]
+		AudioManager.play_sfx(logical_id, AudioConstants.BUS_SFX)
+
+
+## Separated execution logic for directional UI focus swaps.
+func _handle_ui_navigation_action(action: String, focus_owner: Control, ui_has_focus: bool) -> void:
+	var is_horizontal_slider: bool = (
+		focus_owner is Slider and (action == "ui_left" or action == "ui_right")
+	)
+	var is_nav_action: bool = action in _nav_actions
+	var should_play_nav_sfx: bool = (ui_has_focus or is_nav_action) and not is_horizontal_slider
+
+	if should_play_nav_sfx:
+		var logical_id: String = AudioConstants.UI_SFX[action]
+		AudioManager.play_sfx(logical_id, AudioConstants.BUS_SFX)
 
 
 ## Internal helper to play the navigation sound through the dedicated Menu SFX bus.
