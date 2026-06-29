@@ -711,5 +711,6 @@ func _on_node_added(node: Node) -> void:
 
 ## Centralized button audio execution target to prevent lambda churn
 func _on_global_button_pressed() -> void:
-	# Explicitly route button accepts through the shared UI SFX bus to guarantee consistent muting behavior
+	# Explicitly route button accepts through the shared UI SFX bus to guarantee consistent
+	# muting behavior
 	AudioManager.play_sfx("ui_accept", AudioConstants.BUS_SFX)
