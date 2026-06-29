@@ -204,7 +204,8 @@ func test_post_registration_metadata_changes_do_not_retroactively_disconnect() -
 func test_node_destruction_cleanup_is_safe() -> void:
 	# Arrange
 	var initial_btn := Button.new()
-	add_child(initial_btn)
+	# Upgraded to autofree to prevent scene tree pollution if the precondition assertion fails
+	add_child_autofree(initial_btn)
 	await _wait_for_registration()
 	assert_eq(_get_global_connection_count(initial_btn), 1, "Precondition: First button hooked up cleanly.")
 	
