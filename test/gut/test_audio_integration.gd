@@ -43,6 +43,9 @@ func after_each() -> void:
 	if AudioManager.has_method("cleanup_for_test"):
 		AudioManager.cleanup_for_test()
 	AudioManager.reset_volumes()
+	
+	# FIX: Prevent global state pollution if Scenario C assertions fail early
+	Globals.options_open = false
 
 
 ## Scenario A: Verify that when the parent SFX bus is muted, UI button presses
@@ -86,29 +89,37 @@ func test_sfx_unmuted_plays_audibly_at_audioserver_level() -> void:
 
 ## Scenario C: Verify navigation SFX routing and focus-gating.
 func test_ui_navigation_sfx_requires_gui_focus() -> void:
-	Globals.options_open = true
-	var unfocused_slider := HSlider.new()
-	add_child_autofree(unfocused_slider)
-	unfocused_slider.release_focus()
-	await wait_frames(1)
+	Globals.options_open = true 
+	
+	# FIX: Hard-clear the viewport focus to eliminate ambient test runner focus flakiness
+	var current_focus := get_viewport().gui_get_focus_owner()
+	if is_instance_valid(current_focus):
+		current_focus.release_focus()
+	
+	# Assert pristine environment state as an explicit precondition
+	assert_null(get_viewport().gui_get_focus_owner(), "Precondition failed: Viewport focus must be completely empty.")
 
-	var nav_event := InputEventAction.new()
-	nav_event.action = "ui_down"
-	nav_event.pressed = true
-	Globals._input(nav_event)
-	await wait_frames(1)
+	var unfocused_slider := HSlider.new() 
+	add_child_autofree(unfocused_slider) 
+	unfocused_slider.release_focus() 
+	await wait_frames(1) 
 
-	assert_false(AudioManager.is_any_sfx_playing(), "Navigation audio should be blocked when no GUI element has focus.")
+	var nav_event := InputEventAction.new() 
+	nav_event.action = "ui_down" 
+	nav_event.pressed = true 
+	Globals._input(nav_event) 
+	await wait_frames(1) 
 
-	unfocused_slider.grab_focus()
-	await wait_frames(1)
-	Globals._input(nav_event)
-	await wait_frames(1)
+	assert_false(AudioManager.is_any_sfx_playing(), "Navigation audio should be blocked when no GUI element has focus.") 
 
-	assert_true(AudioManager.is_any_sfx_playing(), "Navigation audio should trigger when GUI element has active focus.")
-	assert_true(AudioManager.get_active_sfx_stream_path().contains("ui_navigation"), "Active stream path should point to ui_navigation asset.")
+	unfocused_slider.grab_focus() 
+	await wait_frames(1) 
+	Globals._input(nav_event) 
+	await wait_frames(1) 
 
-	Globals.options_open = false
+	assert_true(AudioManager.is_any_sfx_playing(), "Navigation audio should trigger when GUI element has active focus.") 
+	assert_true(AudioManager.get_active_sfx_stream_path().contains("ui_navigation"), "Active stream path should point to ui_navigation asset.") 
+	# FIX: Removed Globals.options_open = false from here to avoid short-circuit skips
 
 
 ## Scenario E: Verify that watch_signals correctly isolates test actions from setup pollution.
