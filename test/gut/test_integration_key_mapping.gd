@@ -15,40 +15,56 @@
 
 extends GutTest
 
+# ==========================================================================
+# Member Variables & Preloads
+# ==========================================================================
 const InputRemapButton: Script = preload(GamePaths.INPUT_REMAP_BUTTON)
-const TEST_ACTION: String = "speed_up"  # Example action from UI; adjust if needed.
+const TEST_ACTION: String = "speed_up"
 const TEST_CONFIG_PATH: String = "user://settings.cfg"
-const KEY_W_CODE: int = Key.KEY_W  # 87, default assumed.
-const KEY_Z_CODE: int = Key.KEY_Z  # 90, custom for tests.
+const KEY_W_CODE: int = Key.KEY_W
+const KEY_Z_CODE: int = Key.KEY_Z
 
 var menu: CanvasLayer = null
+# New variable to prevent cross-suite state leakage
+var _original_input_device: String = "keyboard"
 
 
-## Suite-wide setup: Backup production config if exists to preserve user settings.
-## :rtype: void
+# ==========================================================================
+# Lifecycle & Setup / Teardown
+# ==========================================================================
+
+## Suite-wide setup: Cache global state and backup production config.
 func before_all() -> void:
+	# Cache the current state before this suite modifies it
+	if is_instance_valid(Globals):
+		_original_input_device = Globals.current_input_device
+
 	var backup_path: String = "user://settings_backup.cfg"
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		var err: Error = DirAccess.copy_absolute(TEST_CONFIG_PATH, backup_path)
 		assert_eq(err, OK, "Failed to backup config: " + str(err))
 
 
-## Per-test setup: Delete test config, reset InputMap for test action.
-## :rtype: void
+## Per-test setup: Reset global device tracking state and clear test configurations.
 func before_each() -> void:
-	if FileAccess.file_exists(TEST_CONFIG_PATH):
-		var err: Error = DirAccess.remove_absolute(TEST_CONFIG_PATH)
-		assert_eq(err, OK)
-	for action in Settings.ACTIONS:
-		if InputMap.has_action(action):
-			InputMap.action_erase_events(action)
+	# Enforce a clean keyboard baseline for each test within this suite
+	if is_instance_valid(Globals):
+		Globals.current_input_device = "keyboard" 
+
+	if FileAccess.file_exists(TEST_CONFIG_PATH): 
+		var err: Error = DirAccess.remove_absolute(TEST_CONFIG_PATH) 
+		assert_eq(err, OK) 
+		
+	for action in Settings.ACTIONS: 
+		if InputMap.has_action(action): 
+			InputMap.action_erase_events(action) 
 		else:
-			InputMap.add_action(action)
-	Settings.load_input_mappings()  # Reload empty
+			InputMap.add_action(action) 
+			
+	Settings.load_input_mappings() 
 
 
-## Per-test cleanup: Free menu, delete test config.
-## :rtype: void
+## Per-test cleanup: Free menu and delete test configuration files.
 func after_each() -> void:
 	if is_instance_valid(menu):
 		menu.queue_free()
@@ -58,9 +74,12 @@ func after_each() -> void:
 	await get_tree().process_frame
 
 
-## Suite-wide cleanup: Restore production config from backup if it existed.
-## :rtype: void
+## Suite-wide cleanup: Restore original global input device and production config backup.
 func after_all() -> void:
+	# RESTORE: Safely put back the global state exactly how we found it
+	if is_instance_valid(Globals):
+		Globals.current_input_device = _original_input_device
+
 	var backup_path: String = "user://settings_backup.cfg"
 	if FileAccess.file_exists(backup_path):
 		if FileAccess.file_exists(TEST_CONFIG_PATH):

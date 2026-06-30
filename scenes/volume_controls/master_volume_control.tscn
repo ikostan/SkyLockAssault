@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://b5gng6qabe5s"]
+[gd_scene format=3 uid="uid://b5gng6qabe5s"]
 
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_xrowc"]
 [ext_resource type="Script" uid="uid://8hd1kvmb5bt1" path="res://scripts/ui/components/volume_slider.gd" id="2_xrowc"]
@@ -10,7 +10,7 @@ corner_radius_bottom_right = 20
 corner_radius_bottom_left = 20
 shadow_size = 5
 
-[node name="Master" type="Control"]
+[node name="Master" type="Control" unique_id=1081219089]
 layout_mode = 3
 anchors_preset = 0
 offset_right = 400.0
@@ -19,7 +19,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 tooltip_text = "Master Volume Control"
 
-[node name="MasterLabel" type="Label" parent="."]
+[node name="MasterLabel" type="Label" parent="." unique_id=1598579695]
 layout_mode = 0
 size_flags_horizontal = 0
 size_flags_vertical = 1
@@ -27,7 +27,7 @@ theme_override_fonts/font = ExtResource("1_xrowc")
 theme_override_font_sizes/font_size = 18
 text = "{MASTER}"
 
-[node name="HSlider" type="HSlider" parent="."]
+[node name="HSlider" type="HSlider" parent="." unique_id=1105307839]
 layout_direction = 2
 layout_mode = 0
 offset_left = 125.0
@@ -43,7 +43,7 @@ ticks_on_borders = true
 script = ExtResource("2_xrowc")
 bus_name = "Master"
 
-[node name="Mute" type="CheckButton" parent="."]
+[node name="Mute" type="CheckButton" parent="." unique_id=2103506226]
 layout_mode = 0
 offset_left = 360.0
 offset_right = 404.0

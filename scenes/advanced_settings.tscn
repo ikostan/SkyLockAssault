@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://du088cq02x8ws"]
+[gd_scene format=3 uid="uid://du088cq02x8ws"]
 
 [ext_resource type="Script" uid="uid://c0howk0q12qpa" path="res://scripts/ui/menus/advanced_settings.gd" id="1_o600e"]
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="2_vw8ml"]
@@ -85,7 +85,7 @@ corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
 shadow_size = 5
 
-[node name="AdvancedSettings" type="Control"]
+[node name="AdvancedSettings" type="Control" unique_id=1404066766]
 layout_mode = 3
 anchors_preset = 8
 anchor_left = 0.5
@@ -97,7 +97,7 @@ grow_vertical = 2
 size_flags_horizontal = 4
 script = ExtResource("1_o600e")
 
-[node name="Panel" type="Panel" parent="."]
+[node name="Panel" type="Panel" parent="." unique_id=777703237]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -114,7 +114,7 @@ size_flags_horizontal = 4
 tooltip_text = "Advanced Settings"
 theme_override_styles/panel = SubResource("StyleBoxFlat_j3be7")
 
-[node name="Controls" type="VBoxContainer" parent="Panel"]
+[node name="Controls" type="VBoxContainer" parent="Panel" unique_id=1500592321]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -129,7 +129,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 15
 
-[node name="MainLabel" type="Label" parent="Panel/Controls"]
+[node name="MainLabel" type="Label" parent="Panel/Controls" unique_id=317986468]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 6
@@ -138,7 +138,7 @@ theme_override_fonts/font = ExtResource("2_vw8ml")
 theme_override_font_sizes/font_size = 55
 text = "{OPTIONS}"
 
-[node name="SubLabel" type="Label" parent="Panel/Controls"]
+[node name="SubLabel" type="Label" parent="Panel/Controls" unique_id=1533283147]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("2_vw8ml")
@@ -146,13 +146,13 @@ theme_override_font_sizes/font_size = 28
 text = "{ADVANCED=SETTINGS}"
 horizontal_alignment = 1
 
-[node name="LogLevelContainer" type="HBoxContainer" parent="Panel/Controls"]
+[node name="LogLevelContainer" type="HBoxContainer" parent="Panel/Controls" unique_id=1424792941]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 6
 theme_override_constants/separation = 35
 
-[node name="Label" type="Label" parent="Panel/Controls/LogLevelContainer"]
+[node name="Label" type="Label" parent="Panel/Controls/LogLevelContainer" unique_id=849949417]
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
@@ -160,7 +160,7 @@ theme_override_fonts/font = ExtResource("2_vw8ml")
 theme_override_font_sizes/font_size = 20
 text = "{LOG=LEVEL}"
 
-[node name="LogLevelOptionButton" type="OptionButton" parent="Panel/Controls/LogLevelContainer"]
+[node name="LogLevelOptionButton" type="OptionButton" parent="Panel/Controls/LogLevelContainer" unique_id=1652415882]
 custom_minimum_size = Vector2(175, 0)
 layout_mode = 2
 size_flags_vertical = 4
@@ -184,12 +184,12 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_o600e")
 theme_override_styles/hover = SubResource("StyleBoxFlat_o3hvc")
 theme_override_styles/focus = SubResource("StyleBoxFlat_6dctt")
 
-[node name="BtnContainer" type="HBoxContainer" parent="Panel/Controls"]
+[node name="BtnContainer" type="HBoxContainer" parent="Panel/Controls" unique_id=617440997]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 5
 
-[node name="BackButton" type="Button" parent="Panel/Controls/BtnContainer"]
+[node name="BackButton" type="Button" parent="Panel/Controls/BtnContainer" unique_id=2130459941]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -209,7 +209,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_a0ntd")
 theme_override_styles/focus = SubResource("StyleBoxFlat_cfdt5")
 text = "{BACK}"
 
-[node name="ResetButton" type="Button" parent="Panel/Controls/BtnContainer"]
+[node name="ResetButton" type="Button" parent="Panel/Controls/BtnContainer" unique_id=782978532]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3

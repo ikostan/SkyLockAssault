@@ -28,6 +28,9 @@ func before_each() -> void:
 	if not is_instance_valid(_audio_manager):
 		_audio_manager = DummyAudioManager.new()
 
+	# FIX: Clear out lingering audio playback from preceding test files to prevent bleed contamination
+	_clear_pool_players()
+
 	gameplay_instance = gameplay_scene.instantiate() as Control
 	gameplay_instance.os_wrapper = OSWrapper.new()
 	add_child_autofree(gameplay_instance)

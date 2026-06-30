@@ -1,0 +1,104 @@
+# Centralize UI SFX mapping and tighten global input audio guards
+<!-- markdownlint-disable MD001 MD036 MD013 MD033 table-column-style -->
+
+## Summary by Sourcery
+
+Refine global UI input handling and audio routing to support device tracking, menu context guards, and data-driven SFX lookup, while expanding automated coverage around audio buses, mute controls, sliders, and button hooks.
+
+### Overall PR Context
+
+The PR focuses on refactoring global UI audio handling for better consistency, robustness, and test coverage in a Godot project. AI tools significantly aided in summarizing changes, spotting potential issues (e.g., flakiness, code complexity), and ensuring comprehensive test expansion. The final output benefited from iterative human refinements addressing bot feedback.
+
+Enhancements:
+
+- Introduce data-driven UI sound routing using logical action-to-SFX mappings and an asset map that decouples identifiers from file extensions and file layout.
+- Improve global input processing with device tracking, menu-context detection helpers, echo and mouse-motion filtering, and targeted ui_accept/ui_cancel navigation guards.
+- Adjust test infrastructure to avoid runner path brittleness, ensure bus availability in headless environments, and prevent cross-suite global state leakage.
+
+Tests:
+
+- Add extensive GUT suites for audio integration, volume hierarchy and slider focus behavior, global button hook registration, global input guards, and SFX asset resolution and input performance.
+- Update existing audio SFX centralization and navigation/escape SFX tests to align with the new logical identifier mapping, input guards, and test runner discovery patterns.
+- Expanded GUT coverage for audio focus gating, mute timing, hierarchy behavior, and input guardrails.
+
+New Features:
+
+- UI sounds are now driven by a centralized UI SFX mapping for consistent action audio.
+- Sound playback now supports logical sound identifiers resolved via an asset map.
+
+Bug Fixes:
+
+- UI navigation/cancel/accept sounds are more tightly gated by GUI focus and control type.
+- Mouse motion is ignored for UI sound triggering.
+- Audio mute/unmute and slider focus/drag behavior are stabilized, preserving expected click feedback and hardware mute state.
+
+Chores:
+
+- Removed the unit-test runner script.
+
+### Key Technical Decisions
+
+- **Data-driven SFX routing** over hardcoded strings → easier asset management and future expansion.
+- **Early-exit guards** in `Globals._input()` for performance and clarity.
+- **Extensive GUT integration tests** rather than unit tests only → better coverage of AudioServer + UI focus interactions.
+- Removal of `run_unit_tests.sh` → consolidation toward editor/GUT runner.
+
+---
+
+## Reviewer's Guide
+
+Strengthens global UI input-to-audio routing by centralizing UI SFX mappings, refining Globals._input guards, and expanding GUT integration tests for audio mute hierarchy, button hooks, sliders, and ui_accept/ui_cancel behavior.
+
+### File-Level Changes
+
+| Change                                                                                                                                                                                       | Details                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Files                                                                                                                                                                                                                                                                                                                                                                               |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Refactor global input handling to gate menu contexts, ignore non-action/mouse motion events, and route UI navigation/accept/cancel sounds through data-driven helpers.                       | <ul><li>Add echo-event guard and hardware device tracking at the top of Globals._input.</li><li>Introduce _check_menu_context to consolidate menu/scene/group/meta-based context detection with debug/CI fallbacks.</li><li>Split navigation/cancel handling into _process_ui_navigation_sfx plus _handle_ui_cancel_action and _handle_ui_navigation_action, including ui_accept bypasses for BaseButton, Slider, LineEdit, and TextEdit.</li><li>Ensure global button pressed handler routes through the shared UI SFX bus for consistent mute behavior.</li></ul>                                                                                                                                                                                                                                                                                                                           | `scripts/core/globals.gd`                                                                                                                                                                                                                                                                                                                                                           |
+| Centralize UI SFX logical mappings and asset filename resolution, and update AudioManager to resolve logical IDs through an asset map with .wav fallback.                                    | <ul><li>Add UI_SFX mapping from input actions to logical SFX identifiers.</li><li>Add SFX_ASSET_MAP mapping logical IDs to concrete filenames and extensions.</li><li>Change AudioManager.play_sfx to treat sfx_name as a logical ID, resolve via SFX_ASSET_MAP, and append .wav for unmapped identifiers.</li></ul>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `scripts/resources/audio_constants.gd`<br/>`scripts/managers/audio_manager.gd`                                                                                                                                                                                                                                                                                                      |
+| Extend and harden GUT audio SFX centralization, navigation, and quit-dialog tests to align with the new mapping and input guards.                                                            | <ul><li>Reset Globals.options_open and stop pooled players in audio SFX centralization teardown to avoid global-state pollution.</li><li>Add tests verifying asset-map extension resolution and unmapped .wav fallback for play_sfx, plus ignoring mouse motion in Globals._input.</li><li>Switch nav/escape and quit-dialog suites to GutTest inheritance and fix assertion/message robustness and scene loading requirements.</li></ul>                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `test/gut/test_audio_sfx_centralization.gd`<br/>`test/gut/test_nav_escape_sfx.gd`<br/>`test/gut/test_quit_game_confirm_dialog_sfx.gd`                                                                                                                                                                                                                                               |
+| Add integration suites covering audio bus mute propagation, hierarchy interactions, slider focus/drag resilience, global button hook policies, and global input ui_accept/navigation guards. | <ul><li>Introduce test_audio_integration.gd to validate SFX bus mute/unmute routing, AudioServer bus bootstrap in headless environments, navigation focus safeguards, and mute timing behavior.</li><li>Add test_audio_hierarchy_and_sliders.gd to verify master/SFX hierarchy locking/unlocking, independent bus states, and VolumeSlider drag state behavior under window focus loss.</li><li>Add test_globals_button_hooks.gd to assert global button hook inclusion/exclusion rules, reparenting and duplicate scan idempotency, and cleanup after node destruction.</li><li>Add test_globals_input_guards.gd to ensure ui_accept audio is suppressed for interactive controls (CheckButton, sliders, BaseButton/TextureButton) while still playing for passive controls and stale-focus navigation in menu contexts.</li><li>Include associated .uid files for new GUT suites.</li></ul> | `test/gut/test_audio_integration.gd`<br/>`test/gut/test_audio_hierarchy_and_sliders.gd`<br/>`test/gut/test_globals_button_hooks.gd`<br/>`test/gut/test_globals_input_guards.gd`<br/>`test/gut/test_audio_hierarchy_and_sliders.gd.uid`<br/>`test/gut/test_audio_integration.gd.uid`<br/>`test/gut/test_globals_button_hooks.gd.uid`<br/>`test/gut/test_globals_input_guards.gd.uid` |
+| Stabilize key-mapping integration tests to avoid global input-device state leakage and ensure clean InputMap configuration per test.                                                         | <ul><li>Cache and restore Globals.current_input_device across the key-mapping suite.</li><li>Reset Globals.current_input_device to keyboard and clear/re-add Settings.ACTIONS in InputMap in before_each.</li><li>Maintain backup/restore of user settings config and clean up menu instances after each test.</li></ul>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | `test/gut/test_integration_key_mapping.gd`                                                                                                                                                                                                                                                                                                                                          |
+| Add documentation for the milestone and remove obsolete unit-test runner tooling.                                                                                                            | <ul><li>Create milestone document describing centralized UI SFX mapping, tightened input audio guards, and expanded audio-related tests.</li><li>Delete workspace/run_unit_tests.sh to retire the legacy unit-test runner script.</li></ul>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `files/docs/milestones/21/Part_3_Centralize_UI_SFX_mapping_and_tighten_global_input_audio_guards.md`<br/>`workspace/run_unit_tests.sh`                                                                                                                                                                                                                                              |
+
+### Assessment against linked issues
+
+| Issue                                                | Objective                                                                                                                                                                                                                                                                       | Addressed | Explanation |
+|------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-------------|
+| https://github.com/ikostan/SkyLockAssault/issues/493 | Add a GUT integration test suite at res://test/gut/test_audio_integration.gd that verifies muted SFX bus propagation from AudioManager through UI button interaction to Godot's AudioServer, following the described Scenario A behavior and architectural nuances.             | ✅         |             |
+| https://github.com/ikostan/SkyLockAssault/issues/493 | Add a GUT integration test in the same suite that verifies unmuted SFX bus behavior for UI button interaction and AudioServer state (Scenario B), confirming audible playback and correct hardware mute flags.                                                                  | ✅         |             |
+| https://github.com/ikostan/SkyLockAssault/issues/493 | Configure the audio integration test suite with the specified lifecycle hooks and architectural requirements (placement under test/gut, using AudioManager.apply_volume_to_bus, targeting the parent SFX bus index, and sanitizing the AudioManager pool via cleanup_for_test). | ✅         |             |
+| https://github.com/ikostan/SkyLockAssault/issues/764 | Implement correct UI audio behavior for navigation, accept, and cancel actions, including menu-context gating, echo mitigation, suppression for LineEdit/TextEdit and Slider controls, and protection against double audio on buttons/flat buttons/dialog internals.            | ✅         |             |
+| https://github.com/ikostan/SkyLockAssault/issues/764 | Provide automated GUT test coverage (including test_nav_escape_sfx.gd and test_quit_game_confirm_dialog_sfx.gd and related new suites) to verify the specified UI audio behaviors and acceptance criteria.                                                                      | ✅         |             |
+| https://github.com/ikostan/SkyLockAssault/issues/785 | Prevent global ui_accept audio from playing when toggling audio bus Mute CheckButtons via keyboard/gamepad, so only the local 'check' sound effect is heard.                                                                                                                    | ✅         |             |
+| https://github.com/ikostan/SkyLockAssault/issues/786 | Update global UI input handling so that pressing ui_accept (Enter/Space) while a volume slider is focused does not play the generic ui_accept sound, leaving audio feedback only to slider horizontal adjustments.                                                              | ✅         |             |
+| https://github.com/ikostan/SkyLockAssault/issues/786 | Add automated tests that verify ui_accept audio is suppressed for focused volume sliders (and similar controls) to prevent regressions of the unwanted sound.                                                                                                                   | ✅         |             |
+
+### Possibly linked issues
+
+- **#N/A**: PR creates test_audio_integration.gd with Scenario A/B mute propagation tests and proper setup/teardown exactly as the issue requests.
+- **#FEATURE UI Audio Logic Unit Tests (GUT)**: PR implements the requested audio_settings UI-to-AudioManager GUT suites (mute, sliders, focus) plus extra global audio features.
+- **#[FEATURE] UI Audio Logic Unit Tests (GUT)**: PR implements the requested nav/escape and quit dialog GUT tests and supporting Globals/AudioManager audio routing logic.
+
+---
+
+**Bots/AI Contributors to PR #784**
+
+### AI/Bot-Assisted Contributions
+
+These automated tools provided code summaries, reviews, suggestions, and analysis that influenced the development and refinement of the PR:
+
+- **@sourcery-ai**: Generated the primary PR summary, reviewer's guide, and multiple code reviews with high-level feedback on focus gating, test brittleness, scene dependencies, timing in tests, and metadata files. Offered actionable prompts for addressing comments.
+- **@coderabbitai**: Provided a detailed summary of new features, bug fixes, and tests. Posted actionable inline comments (e.g., on test flakiness in `test_audio_integration.gd` and `_input` function complexity/return limits). Included context from prior learnings in the repo.
+- **@deepsource-io**: Performed a code review across changes (e.g., commits in the range 939000c...912c858), generating a PR report card with assessments on security, reliability, complexity, and hygiene. Included Python/JavaScript analysis links and inline issue summaries.
+
+No evidence of other common bots like @dependabot in the visible PR activity, commits, or reviews.
+
+These tools did not author code but provided valuable guardrails: Sourcery and CodeRabbit drove iterative refinements (especially around test robustness and input guard logic), while DeepSource contributed static analysis.
+
+### Human Contributors
+
+- **@ikostan**: Primary author who implemented the core changes—centralizing UI SFX mappings in `AudioConstants`, tightening global input guards in `Globals._input()` (device tracking, menu context, echo/mouse filters, focus-based navigation/accept/cancel logic), updating `AudioManager`, and adding/extending extensive GUT integration tests for audio buses, mute hierarchy, sliders, button hooks, and input guards. Also handled test infrastructure cleanup (e.g., removing `run_unit_tests.sh`).
+- **@espanakosta-jpg**: No visible direct commits, reviews, or comments attributed in the PR timeline or files (based on available data). 
+
+---
+<!-- markdownlint-enable MD001 MD036 MD013 MD033 table-column-style -->

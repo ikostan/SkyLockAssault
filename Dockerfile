@@ -39,23 +39,23 @@ RUN pip install pytest-html pytest-timeout
 # Install markdownlint-cli2 via npm (Node.js tool)
 RUN npm install -g markdownlint-cli2@0.12.1
 
-# Download and verify Godot v4.6.3 binary using the official SHA256SUMS file
-RUN wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/SHA256SUMS.txt \
+# Download and verify Godot v4.6.3 binary using the official GitHub SHA512-SUMS file
+RUN wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/SHA512-SUMS.txt \
     && wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip \
-    && grep " Godot_v4.6.3-stable_linux.x86_64.zip$" SHA256SUMS.txt | sha256sum --check --status \
+    && grep " Godot_v4.6.3-stable_linux.x86_64.zip$" SHA512-SUMS.txt | sha512sum --check --status \
     && unzip Godot_v4.6.3-stable_linux.x86_64.zip \
     && mv Godot_v4.6.3-stable_linux.x86_64 /usr/local/bin/godot \
     && chmod +x /usr/local/bin/godot \
-    && rm Godot_v4.6.3-stable_linux.x86_64.zip SHA256SUMS.txt
+    && rm Godot_v4.6.3-stable_linux.x86_64.zip SHA512-SUMS.txt
 
-# Download, verify, and extract export templates using the official SHA256SUMS file
-RUN wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/SHA256SUMS.txt \
+# Download, verify, and extract export templates using the official GitHub SHA512-SUMS file
+RUN wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/SHA512-SUMS.txt \
     && wget -q https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_export_templates.tpz \
-    && grep " Godot_v4.6.3-stable_export_templates.tpz$" SHA256SUMS.txt | sha256sum --check --status \
+    && grep " Godot_v4.6.3-stable_export_templates.tpz$" SHA512-SUMS.txt | sha512sum --check --status \
     && mkdir -p "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}" \
     && unzip Godot_v4.6.3-stable_export_templates.tpz -d /tmp/templates \
     && mv /tmp/templates/templates/* "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}/" \
-    && rm -rf /tmp/templates Godot_v4.6.3-stable_export_templates.tpz SHA256SUMS.txt \
+    && rm -rf /tmp/templates Godot_v4.6.3-stable_export_templates.tpz SHA512-SUMS.txt \
     && chown -R godotuser:godotuser "${XDG_DATA_HOME}"
 
 # Install GDUnit4 v6.1.3
