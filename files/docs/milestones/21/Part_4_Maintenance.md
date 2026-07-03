@@ -22,7 +22,7 @@ Chores:
 
 ## Reviewer's Guide
 
-This PR performs maintenance on CI workflows by updating pinned versions of actions/cache, release-drafter, and github/codeql upload-sarif across several GitHub Actions workflows to newer, presumably patched SHAs and major versions.
+This PR performs maintenance on CI workflows by updating pinned versions of actions/cache, release-drafter, and github/codeql-action/upload-sarif across several GitHub Actions workflows to newer, presumably patched SHAs and major versions.
 
 ### File-Level Changes
 
