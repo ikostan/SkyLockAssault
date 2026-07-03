@@ -224,6 +224,8 @@ func test_node_destruction_cleanup_is_safe() -> void:
 		1,
 		"Memory Cleanup Failed: Node destruction caused tracking anomalies or double connection leaks on fresh nodes."
 	)
+
+
 ## Functional Coverage: Verifies that the deferred connection track established during
 ## instantiation tracking cleanly triggers audio output via AudioManager upon signal emission.
 func test_standard_button_pressed_executes_audio_output() -> void:
@@ -242,8 +244,8 @@ func test_standard_button_pressed_executes_audio_output() -> void:
 	# Act: Simulate a direct hardware selection event by manually emitting the pressed track
 	standard_btn.pressed.emit()
 	
-	# Act: Yield execution to allow the CONNECT_DEFERRED queue pipeline to completely settle
-	await _wait_for_registration()
+	# Act: Yield exactly one frame to allow the CONNECT_DEFERRED queue pipeline to completely settle
+	await get_tree().process_frame
 
 	# Assert: Verify that the global button press handler accurately requested playback
 	assert_true(
