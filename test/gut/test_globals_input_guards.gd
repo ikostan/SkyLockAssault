@@ -189,13 +189,13 @@ func test_line_edit_focus_skips_global_audio() -> void:
 	# Arrange: Instantiate a standard single-line edit control
 	var line_edit: LineEdit = LineEdit.new()
 	
-	# Act: Register node layout inside scene tree and capture focus [cite: 788]
+	# Act: Register node layout inside scene tree and capture focus
 	await _setup_focused_control(line_edit)
 
-	# Act: Inject a synthetic ui_accept payload directly into the intercept routine [cite: 791]
+	# Act: Inject a synthetic ui_accept payload directly into the intercept routine
 	Globals._input(_create_ui_accept_event())
 
-	# Assert: Confirm the input gate successfully blocked the generic fallback sound [cite: 789]
+	# Assert: Confirm the input gate successfully blocked the generic fallback sound
 	assert_false(
 		AudioManager.is_any_sfx_playing(),
 		"Branch Coverage Failure: LineEdit leaked a generic global accept sound overlay."
@@ -208,13 +208,13 @@ func test_text_edit_focus_skips_global_audio() -> void:
 	# Arrange: Instantiate a multi-line text editing control
 	var text_edit: TextEdit = TextEdit.new()
 	
-	# Act: Register node layout inside scene tree and capture focus [cite: 788]
+	# Act: Register node layout inside scene tree and capture focus
 	await _setup_focused_control(text_edit)
 
-	# Act: Inject a synthetic ui_accept payload directly into the intercept routine [cite: 791]
+	# Act: Inject a synthetic ui_accept payload directly into the intercept routine
 	Globals._input(_create_ui_accept_event())
 
-	# Assert: Confirm the input gate successfully blocked the generic fallback sound [cite: 789]
+	# Assert: Confirm the input gate successfully blocked the generic fallback sound
 	assert_false(
 		AudioManager.is_any_sfx_playing(),
 		"Branch Coverage Failure: TextEdit leaked a generic global accept sound overlay."
