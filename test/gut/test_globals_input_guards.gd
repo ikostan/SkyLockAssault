@@ -39,8 +39,6 @@ func after_each() -> void:
 		focus_owner.release_focus()
 		
 	AudioManager.stop_all_sfx()
-	# Micro-optimization: Removed 'await get_tree().process_frame' 
-	# unless cross-suite focus pollution explicitly requires it.
 
 
 # ==========================================================================
@@ -59,7 +57,7 @@ func _create_ui_accept_event() -> InputEventAction:
 func _setup_focused_control(control: Control) -> void:
 	add_child_autofree(control)
 	
-	# Godot 4 Fix: Force passive controls (like Panel) to allow focus allocation for baseline testing
+	# Force passive controls (like Panel) to allow focus allocation for baseline testing
 	if control.focus_mode == Control.FOCUS_NONE:
 		control.focus_mode = Control.FOCUS_ALL
 		
@@ -72,6 +70,21 @@ func _setup_focused_control(control: Control) -> void:
 	AudioManager.stop_all_sfx()
 
 
+## CodeRabbit Refactor: Centralized assertion helper to eliminate internal 
+## Arrange/Act/Assert code duplication across the separate test blocks.
+func _assert_focus_blocks_ui_accept(control: Control, failure_message: String) -> void:
+	await _setup_focused_control(control)
+	Globals._input(_create_ui_accept_event())
+	
+	assert_false(
+		AudioManager.is_any_sfx_playing(),
+		failure_message
+	)
+	
+	control.release_focus()
+	AudioManager.stop_all_sfx()
+
+
 # ==========================================================================
 # TEST SCENARIOS
 # ==========================================================================
@@ -79,16 +92,8 @@ func _setup_focused_control(control: Control) -> void:
 ## Issue #1 Verification: Toggling a mute button should bypass the global 
 ## ui_accept sound, delegating downstream audio feedback purely to its local pipeline.
 func test_check_button_focus_skips_global_audio() -> void:
-	var mute_btn := CheckButton.new()
-	await _setup_focused_control(mute_btn)
-
-	# Feed the event directly into Globals._input().
-	# GUT does not cleanly pump synthetic InputEventActions through the engine's main OS window
-	# pipeline, so this exercises the target script's entry point directly and deterministically.
-	Globals._input(_create_ui_accept_event())
-
-	assert_false(
-		AudioManager.is_any_sfx_playing(),
+	await _assert_focus_blocks_ui_accept(
+		CheckButton.new(), 
 		"Fix Verification Failed: Global pipeline played generic audio over a focused CheckButton toggle switch."
 	)
 
@@ -96,13 +101,8 @@ func test_check_button_focus_skips_global_audio() -> void:
 ## Issue #2 Verification: Pressing Enter or Spacebar while a volume slider 
 ## holds focus must remain entirely silent.
 func test_slider_focus_skips_global_audio() -> void:
-	var slider := HSlider.new()
-	await _setup_focused_control(slider)
-
-	Globals._input(_create_ui_accept_event())
-
-	assert_false(
-		AudioManager.is_any_sfx_playing(),
+	await _assert_focus_blocks_ui_accept(
+		HSlider.new(), 
 		"Fix Verification Failed: Slider emitted generic ui_accept audio when activated via keyboard/controller."
 	)
 
@@ -110,13 +110,8 @@ func test_slider_focus_skips_global_audio() -> void:
 ## Issue #3 Verification: Hitting Enter on standard menu buttons must block 
 ## the global input hook from playing audio, preventing back-to-back double triggers.
 func test_button_focus_skips_global_audio() -> void:
-	var menu_btn := Button.new()
-	await _setup_focused_control(menu_btn)
-
-	Globals._input(_create_ui_accept_event())
-
-	assert_false(
-		AudioManager.is_any_sfx_playing(),
+	await _assert_focus_blocks_ui_accept(
+		Button.new(), 
 		"Fix Verification Failed: Global hook double-dipped audio on a standard Button element."
 	)
 
@@ -124,14 +119,27 @@ func test_button_focus_skips_global_audio() -> void:
 ## Regression Guard: Ensure the input block checks the abstract BaseButton class,
 ## preventing audio leakage on alternative button implementations like TextureButtons.
 func test_texture_button_focus_skips_global_audio() -> void:
-	var texture_btn := TextureButton.new()
-	await _setup_focused_control(texture_btn)
-
-	Globals._input(_create_ui_accept_event())
-
-	assert_false(
-		AudioManager.is_any_sfx_playing(),
+	await _assert_focus_blocks_ui_accept(
+		TextureButton.new(), 
 		"Regression Failure: Input guard failed to catch TextureButton (likely checking for Button instead of BaseButton)."
+	)
+
+
+## Branch Coverage: Hitting Enter/Spacebar while focused on a LineEdit
+## must bypass the global ui_accept sound intercept track.
+func test_line_edit_focus_skips_global_audio() -> void:
+	await _assert_focus_blocks_ui_accept(
+		LineEdit.new(), 
+		"Branch Coverage Failure: LineEdit leaked a generic global accept sound overlay."
+	)
+
+
+## Branch Coverage: Hitting Enter/Spacebar while focused on a TextEdit
+## must bypass the global ui_accept sound intercept track.
+func test_text_edit_focus_skips_global_audio() -> void:
+	await _assert_focus_blocks_ui_accept(
+		TextEdit.new(), 
+		"Branch Coverage Failure: TextEdit leaked a generic global accept sound overlay."
 	)
 
 
@@ -150,7 +158,7 @@ func test_passive_control_triggers_global_audio() -> void:
 
 
 # ==========================================================================
-# DIRECTIONAL NAVIGATION & STALE FOCUS COVERAGE (Sourcery Verification)
+# DIRECTIONAL NAVIGATION & STALE FOCUS COVERAGE
 # ==========================================================================
 
 ## Helper method to assemble a navigation InputEventAction payload
@@ -180,42 +188,4 @@ func test_stale_focus_navigation_retains_audio_safeguard() -> void:
 	assert_true(
 		AudioManager.is_any_sfx_playing(),
 		"Safeguard Failure: Navigation audio was unintentionally dropped due to a stale UI focus state."
-	)
-
-
-## Branch Coverage: Hitting Enter/Spacebar while focused on a LineEdit
-## must bypass the global ui_accept sound intercept track.
-func test_line_edit_focus_skips_global_audio() -> void:
-	# Arrange: Instantiate a standard single-line edit control
-	var line_edit: LineEdit = LineEdit.new()
-	
-	# Act: Register node layout inside scene tree and capture focus
-	await _setup_focused_control(line_edit)
-
-	# Act: Inject a synthetic ui_accept payload directly into the intercept routine
-	Globals._input(_create_ui_accept_event())
-
-	# Assert: Confirm the input gate successfully blocked the generic fallback sound
-	assert_false(
-		AudioManager.is_any_sfx_playing(),
-		"Branch Coverage Failure: LineEdit leaked a generic global accept sound overlay."
-	)
-
-
-## Branch Coverage: Hitting Enter/Spacebar while focused on a TextEdit
-## must bypass the global ui_accept sound intercept track.
-func test_text_edit_focus_skips_global_audio() -> void:
-	# Arrange: Instantiate a multi-line text editing control
-	var text_edit: TextEdit = TextEdit.new()
-	
-	# Act: Register node layout inside scene tree and capture focus
-	await _setup_focused_control(text_edit)
-
-	# Act: Inject a synthetic ui_accept payload directly into the intercept routine
-	Globals._input(_create_ui_accept_event())
-
-	# Assert: Confirm the input gate successfully blocked the generic fallback sound
-	assert_false(
-		AudioManager.is_any_sfx_playing(),
-		"Branch Coverage Failure: TextEdit leaked a generic global accept sound overlay."
 	)
