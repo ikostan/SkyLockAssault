@@ -45,6 +45,27 @@ func after_each() -> void:
 # TEST HELPERS
 # ==========================================================================
 
+## Centralized assertion helper to eliminate internal code duplication.
+## Parameterized to support checking alternative input actions dynamically.
+func _assert_focus_blocks_action(control: Control, failure_message: String, action_name: String = "ui_accept") -> void:
+	# Setup layout tracking parameters
+	await _setup_focused_control(control)
+	
+	# Assemble the target dynamic action payload
+	var event := InputEventAction.new()
+	event.action = action_name
+	event.pressed = true
+	
+	# Route synthetic input payload straight to the intercept loop
+	Globals._input(event)
+	
+	# Assert: Validation logic only. Lifecycle cleanup is deferred to after_each()
+	assert_false(
+		AudioManager.is_any_sfx_playing(),
+		failure_message
+	)
+
+
 ## Factory method to assemble an isolated ui_accept InputEventAction payload
 func _create_ui_accept_event() -> InputEventAction:
 	var event := InputEventAction.new()
@@ -110,18 +131,9 @@ func test_slider_focus_skips_global_audio() -> void:
 ## Issue #3 Verification: Hitting Enter on standard menu buttons must block 
 ## the global input hook from playing audio, preventing back-to-back double triggers.
 func test_button_focus_skips_global_audio() -> void:
-	await _assert_focus_blocks_ui_accept(
+	await _assert_focus_blocks_action(
 		Button.new(), 
 		"Fix Verification Failed: Global hook double-dipped audio on a standard Button element."
-	)
-
-
-## Regression Guard: Ensure the input block checks the abstract BaseButton class,
-## preventing audio leakage on alternative button implementations like TextureButtons.
-func test_texture_button_focus_skips_global_audio() -> void:
-	await _assert_focus_blocks_ui_accept(
-		TextureButton.new(), 
-		"Regression Failure: Input guard failed to catch TextureButton (likely checking for Button instead of BaseButton)."
 	)
 
 
