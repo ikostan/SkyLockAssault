@@ -34,9 +34,10 @@ This PR performs maintenance on CI workflows by updating pinned versions of acti
 
 **Bots/AI Contributions to PR #796**
 
-This PR performs routine maintenance by updating pinned versions of several GitHub Actions in CI/CD workflows (primarily bumping `actions/cache` from v5 to v6, along with refreshed SHAs for `release-drafter/release-drafter` and `github/codeql-action/upload-sarif`). The changes touch seven workflow files to improve caching reliability, security scanning, and release drafting.
+This PR performs routine maintenance by updating pinned versions of several GitHub Actions in CI/CD workflows (primarily bumping `actions/cache` from v5 to v6, along with refreshed SHAs for `release-drafter/release-drafter` and `github/codeql-action/upload-sarif`). The changes touch eight workflow files to improve caching reliability, security scanning, and release drafting.
 
 ### AI/Bot Contributors
+
 - **@dependabot** — Primary contributor of the dependency update commits. Automated multiple version bumps (e.g., `actions/cache`, `release-drafter`, and CodeQL SARIF uploader) and created related PRs that were merged into this one.
 - **@sourcery-ai** — Provided an automated PR summary, reviewer's guide, and positive code review. Generated detailed analysis of changes, estimated review effort, and offered interactive commands for further assistance.
 - **@coderabbitai** — Delivered a comprehensive walkthrough of the changes, including file-level summaries, related PR context, and helpful finishing touches suggestions.
@@ -45,6 +46,7 @@ This PR performs routine maintenance by updating pinned versions of several GitH
 These tools collectively handled the bulk of the commit history, summaries, reviews, and quality checks, demonstrating effective use of automation for dependency maintenance and CI hygiene.
 
 ### Human Contributors
+
 - **@ikostan** — Opened the PR, performed merges of the Dependabot branches, applied labels (CI/CD, dependencies, github_actions), self-assigned, and managed project/milestone tracking.
 - **@espanakosta-jpg** — (No direct commits or reviews visible in the PR timeline; contribution may be in related context or upstream work.)
 
