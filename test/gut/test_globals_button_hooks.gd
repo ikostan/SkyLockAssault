@@ -224,19 +224,17 @@ func test_node_destruction_cleanup_is_safe() -> void:
 		1,
 		"Memory Cleanup Failed: Node destruction caused tracking anomalies or double connection leaks on fresh nodes."
 	)
-
-
 ## Functional Coverage: Verifies that the deferred connection track established during
 ## instantiation tracking cleanly triggers audio output via AudioManager upon signal emission.
 func test_standard_button_pressed_executes_audio_output() -> void:
 	# Arrange: Instantiate a standard baseline push button node
 	var standard_btn: Button = Button.new()
 	
-	# Act: Append button node to current layout scene tracking frame windows [cite: 774]
+	# Act: Append button node to current layout scene tracking frame windows
 	add_child_autofree(standard_btn)
 	await _wait_for_registration()
 	
-	# Act: Clean running audio buffers to isolate manual tracking loop emissions [cite: 770]
+	# Act: Clean running audio buffers to isolate manual tracking loop emissions
 	AudioManager.stop_all_sfx()
 	if AudioManager.has_method("cleanup_for_test"):
 		AudioManager.cleanup_for_test()
@@ -244,7 +242,7 @@ func test_standard_button_pressed_executes_audio_output() -> void:
 	# Act: Simulate a direct hardware selection event by manually emitting the pressed track
 	standard_btn.pressed.emit()
 	
-	# Act: Yield execution to allow the CONNECT_DEFERRED queue pipeline to completely settle [cite: 771]
+	# Act: Yield execution to allow the CONNECT_DEFERRED queue pipeline to completely settle
 	await _wait_for_registration()
 
 	# Assert: Verify that the global button press handler accurately requested playback
