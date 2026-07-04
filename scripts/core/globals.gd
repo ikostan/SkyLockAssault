@@ -457,6 +457,9 @@ func _process_ui_navigation_sfx(
 				return
 
 			# Context Guard C: Quietly drop events handling native element submissions
+			# FIX (#787): Bypasses the global input loop if an interactive control has focus.
+			# This delegates audio execution entirely to the component's native pressed signal
+			# and completely eliminates back-to-back duplicate confirmation sound triggers.
 			if action == "ui_accept":
 				if (
 					focus_owner is BaseButton
