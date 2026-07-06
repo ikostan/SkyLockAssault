@@ -44,7 +44,7 @@ jobs:
 
       - name: "Upload Snyk Code SARIF to GitHub"
         # Aligned with v3 for consistency, pinned to SHA for security
-        uses: "github/codeql-action/upload-sarif@9cea5827c668a1fe7165dbce6e80c3f9cf3f83ac"
+        uses: "github/codeql-action/upload-sarif@3cf0a529d8434171b6af190714e8d5b7abb83927"
         if: "always() && hashFiles('snyk-code.sarif') != ''"
         with:
           sarif_file: "snyk-code.sarif"
@@ -56,7 +56,7 @@ jobs:
 
       - name: "Upload Snyk Open Source SARIF to GitHub"
         # Aligned with v3 for consistency, pinned to SHA for security
-        uses: "github/codeql-action/upload-sarif@9cea5827c668a1fe7165dbce6e80c3f9cf3f83ac"
+        uses: "github/codeql-action/upload-sarif@3cf0a529d8434171b6af190714e8d5b7abb83927"
         if: "always() && hashFiles('snyk-os.sarif') != ''"
         with:
           sarif_file: "snyk-os.sarif"
