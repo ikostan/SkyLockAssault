@@ -26,9 +26,11 @@ func _wait_for_registration() -> void:
 
 
 ## Counts how many times the global audio hook is connected to a specific button.
-## Optionally validates that the connection strictly uses the CONNECT_DEFERRED flag.
-func _get_global_connection_count(node: Node, require_deferred: bool = true) -> int:
+## Includes a safety toggle to allow non-button objects to pass safely during exclusion tests.
+func _get_global_connection_count(node: Node, require_deferred: bool = true, fail_on_missing_signal: bool = true) -> int:
 	if not node.has_signal("pressed"):
+		if fail_on_missing_signal:
+			assert_true(false, "Architectural Test Bug: Node '%s' does not possess a 'pressed' signal." % node.name)
 		return 0
 		
 	var count: int = 0
@@ -70,9 +72,9 @@ func test_standard_non_button_node_is_bypassed_by_class_evaluation() -> void:
 	add_child_autofree(plain_control)
 	await _wait_for_registration()
 	
-	# Assert
+	# Assert - Pass false to fail_on_missing_signal since a raw Control node intentionally lacks 'pressed'
 	assert_eq(
-		_get_global_connection_count(plain_control, false),
+		_get_global_connection_count(plain_control, false, false),
 		0,
 		"Standard non-Button nodes must be bypassed by the strict node.get_class() == 'Button' evaluation."
 	)
@@ -226,27 +228,11 @@ func test_duplicate_scan_calls_do_not_duplicate_connections() -> void:
 ## NEW: Assert that button connections strictly utilize the CONNECT_DEFERRED flag
 ## to validate safe multi-threaded runtime scene tree interaction.
 func test_button_connection_strictly_utilizes_deferred_flag() -> void:
-	# Arrange
 	var standard_btn := Button.new()
 	add_child_autofree(standard_btn)
 	await _wait_for_registration()
 	
-	# Act - FIX: Use type inference operator (:=) to match engine's untyped Array return
-	var connections := standard_btn.pressed.get_connections()
-	var found_global_connection: bool = false
-	var flag_is_deferred: bool = false
-	
-	for connection: Dictionary in connections:
-		var callable: Callable = connection.get("callable", Callable())
-		if callable == Globals._on_global_button_pressed:
-			found_global_connection = true
-			var flags: int = connection.get("flags", 0)
-			if flags & CONNECT_DEFERRED:
-				flag_is_deferred = true
-	
-	# Assert
-	assert_true(found_global_connection, "Precondition Failure: Global button press callback not found.")
-	assert_true(flag_is_deferred, "Architectural Contract Violated: Audio connection hooks must utilize CONNECT_DEFERRED.")
+	assert_eq(_get_global_connection_count(standard_btn, true), 1, "Audio connection hooks must utilize CONNECT_DEFERRED.")
 
 
 ## Architectural Constraint: Runtime metadata updates applied post-entrance are not reactive.
