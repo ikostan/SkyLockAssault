@@ -25,16 +25,18 @@ func _wait_for_registration() -> void:
 	await wait_process_frames(2)
 
 
-## Counts how many times the global audio hook is connected to a specific button.
-## Includes a safety toggle to allow non-button objects to pass safely during exclusion tests.
-func _get_global_connection_count(node: Node, require_deferred: bool = true, fail_on_missing_signal: bool = true) -> int:
+## Counts how many times the global audio hook is connected to an active button component.
+## Strictly validates that the target node possesses a 'pressed' signal, failing early if missing.
+func _get_button_connection_count(node: Node, require_deferred: bool = true) -> int:
 	if not node.has_signal("pressed"):
-		if fail_on_missing_signal:
-			assert_true(false, "Architectural Test Bug: Node '%s' does not possess a 'pressed' signal." % node.name)
+		fail_test("Architectural Test Bug: Node '%s' does not possess a 'pressed' signal." % node.name)
 		return 0
 		
 	var count: int = 0
-	for connection: Dictionary in node.pressed.get_connections():
+	# FIX: Explicitly type as Array instead of using inference
+	var connections: Array = node.pressed.get_connections()
+	
+	for connection: Dictionary in connections:
 		var callable: Callable = connection.get("callable", Callable())
 		if callable == Globals._on_global_button_pressed:
 			if require_deferred:
@@ -43,6 +45,22 @@ func _get_global_connection_count(node: Node, require_deferred: bool = true, fai
 					count += 1
 			else:
 				count += 1
+	return count
+
+
+## Safe connection counter for layout controls that are explicitly expected to lack a 'pressed' signal.
+func _get_non_button_connection_count(node: Node) -> int:
+	if not node.has_signal("pressed"):
+		return 0
+		
+	var count: int = 0
+	# FIX: Explicitly type as Array instead of using inference
+	var connections: Array = node.pressed.get_connections()
+	
+	for connection: Dictionary in connections:
+		var callable: Callable = connection.get("callable", Callable())
+		if callable == Globals._on_global_button_pressed:
+			count += 1
 	return count
 
 
@@ -59,22 +77,22 @@ func test_standard_button_auto_connects_exactly_once() -> void:
 	
 	# Assert
 	assert_eq(
-		_get_global_connection_count(standard_btn),
+		_get_button_connection_count(standard_btn, true),
 		1,
 		"Standard interactive buttons must have exactly one connection to the global handler."
 	)
 
 
-## NEW: Mock a standard node and verify it is bypassed because it fails the strict class evaluation.
+## Mock a standard node and verify it is bypassed because it fails the strict class evaluation.
 func test_standard_non_button_node_is_bypassed_by_class_evaluation() -> void:
 	# Arrange & Act
 	var plain_control := Control.new()
 	add_child_autofree(plain_control)
 	await _wait_for_registration()
 	
-	# Assert - Pass false to fail_on_missing_signal since a raw Control node intentionally lacks 'pressed'
+	# Assert - Uses explicit helper designed for objects lacking button press capabilities
 	assert_eq(
-		_get_global_connection_count(plain_control, false, false),
+		_get_non_button_connection_count(plain_control),
 		0,
 		"Standard non-Button nodes must be bypassed by the strict node.get_class() == 'Button' evaluation."
 	)
@@ -88,9 +106,9 @@ func test_flat_button_is_ignored_by_hook() -> void:
 	add_child_autofree(flat_btn)
 	await _wait_for_registration()
 	
-	# Assert
+	# Assert - Setting require_deferred to false checks for ANY accidental global routing connection
 	assert_eq(
-		_get_global_connection_count(flat_btn),
+		_get_button_connection_count(flat_btn, false),
 		0,
 		"Flat buttons must bypass global audio registration."
 	)
@@ -106,7 +124,7 @@ func test_meta_flagged_button_is_ignored_by_hook() -> void:
 	
 	# Assert
 	assert_eq(
-		_get_global_connection_count(isolated_btn),
+		_get_button_connection_count(isolated_btn, false),
 		0,
 		"Metadata-flagged buttons must bypass global audio registration."
 	)
@@ -123,11 +141,11 @@ func test_dialog_internal_buttons_are_ignored_by_hook() -> void:
 	await _wait_for_registration()
 	
 	# Assert
-	assert_eq(_get_global_connection_count(ok_btn), 0, "Dialog OK button must ignore global hooks.")
-	assert_eq(_get_global_connection_count(cancel_btn), 0, "Dialog Cancel button must ignore global hooks.")
+	assert_eq(_get_button_connection_count(ok_btn, false), 0, "Dialog OK button must ignore global hooks.")
+	assert_eq(_get_button_connection_count(cancel_btn, false), 0, "Dialog Cancel button must ignore global hooks.")
 
 
-## NEW: Construct instances of AcceptDialog and ConfirmationDialog, append buttons internally,
+## Construct instances of AcceptDialog and ConfirmationDialog, append buttons internally,
 ## and assert that tree traversal up the hierarchy catches the ancestor to block attachment.
 func test_dialog_ancestry_traversal_prevents_global_attachment() -> void:
 	# Arrange
@@ -146,12 +164,12 @@ func test_dialog_ancestry_traversal_prevents_global_attachment() -> void:
 	
 	# Assert
 	assert_eq(
-		_get_global_connection_count(custom_btn_accept, false),
+		_get_button_connection_count(custom_btn_accept, false),
 		0,
 		"Buttons appended inside an AcceptDialog must be blocked via ancestry tree evaluation."
 	)
 	assert_eq(
-		_get_global_connection_count(custom_btn_confirm, false),
+		_get_button_connection_count(custom_btn_confirm, false),
 		0,
 		"Buttons appended inside a ConfirmationDialog must be blocked via ancestry tree evaluation."
 	)
@@ -167,7 +185,7 @@ func test_button_subclass_is_ignored_by_strict_class_contract() -> void:
 	
 	# Assert
 	assert_eq(
-		_get_global_connection_count(custom_btn),
+		_get_button_connection_count(custom_btn, false),
 		0,
 		"Engine button subclasses must bypass global audio registration matching rules."
 	)
@@ -189,7 +207,7 @@ func test_reparenting_does_not_create_duplicate_connections() -> void:
 	parent_a.add_child(btn)
 	await _wait_for_registration()
 	
-	assert_eq(_get_global_connection_count(btn), 1, "Precondition: Single tracking baseline established.")
+	assert_eq(_get_button_connection_count(btn, true), 1, "Precondition: Single tracking baseline established.")
 
 	# Act
 	btn.reparent(parent_b)
@@ -197,7 +215,7 @@ func test_reparenting_does_not_create_duplicate_connections() -> void:
 
 	# Assert
 	assert_eq(
-		_get_global_connection_count(btn),
+		_get_button_connection_count(btn, true),
 		1,
 		"Reparenting a node inside the scene tree must not introduce duplicate signal connections."
 	)
@@ -209,30 +227,32 @@ func test_duplicate_scan_calls_do_not_duplicate_connections() -> void:
 	var btn := Button.new()
 	add_child_autofree(btn)
 	await _wait_for_registration()
-	assert_eq(_get_global_connection_count(btn), 1, "Precondition: Single link registered.")
+	assert_eq(_get_button_connection_count(btn, true), 1, "Precondition: Single link registered.")
 
 	# Act
-	# This intentionally exercises the internal callback because duplicate registration 
-	# protection loops live entirely within that routine block.
 	Globals._on_node_added(btn)
 	await _wait_for_registration()
 
 	# Assert
 	assert_eq(
-		_get_global_connection_count(btn),
+		_get_button_connection_count(btn, true),
 		1,
 		"Repeated tree tracking passes must guard against duplicate audio stream connections."
 	)
 
 
-## NEW: Assert that button connections strictly utilize the CONNECT_DEFERRED flag
+## Assert that button connections strictly utilize the CONNECT_DEFERRED flag
 ## to validate safe multi-threaded runtime scene tree interaction.
 func test_button_connection_strictly_utilizes_deferred_flag() -> void:
 	var standard_btn := Button.new()
 	add_child_autofree(standard_btn)
 	await _wait_for_registration()
 	
-	assert_eq(_get_global_connection_count(standard_btn, true), 1, "Audio connection hooks must utilize CONNECT_DEFERRED.")
+	assert_eq(
+		_get_button_connection_count(standard_btn, true), 
+		1, 
+		"Audio connection hooks must utilize CONNECT_DEFERRED."
+	)
 
 
 ## Architectural Constraint: Runtime metadata updates applied post-entrance are not reactive.
@@ -241,7 +261,7 @@ func test_post_registration_metadata_changes_do_not_retroactively_disconnect() -
 	var btn := Button.new()
 	add_child_autofree(btn)
 	await _wait_for_registration()
-	assert_eq(_get_global_connection_count(btn), 1, "Precondition: Normal hook assigned on entrance.")
+	assert_eq(_get_button_connection_count(btn, true), 1, "Precondition: Normal hook assigned on entrance.")
 
 	# Act
 	btn.set_meta("no_global_sound", true)
@@ -249,7 +269,7 @@ func test_post_registration_metadata_changes_do_not_retroactively_disconnect() -
 
 	# Assert
 	assert_eq(
-		_get_global_connection_count(btn),
+		_get_button_connection_count(btn, true),
 		1,
 		"Architectural Constraint: Runtime metadata updates applied post-entrance are not reactive."
 	)
@@ -266,7 +286,7 @@ func test_node_destruction_cleanup_is_safe() -> void:
 	var initial_btn := Button.new()
 	add_child_autofree(initial_btn)
 	await _wait_for_registration()
-	assert_eq(_get_global_connection_count(initial_btn), 1, "Precondition: First button hooked up cleanly.")
+	assert_eq(_get_button_connection_count(initial_btn, true), 1, "Precondition: First button hooked up cleanly.")
 	
 	# Act: Deallocate the node from memory completely
 	initial_btn.queue_free()
@@ -279,7 +299,7 @@ func test_node_destruction_cleanup_is_safe() -> void:
 	
 	# Assert: Tracking baseline re-registers perfectly without bleeding stale links
 	assert_eq(
-		_get_global_connection_count(fresh_btn),
+		_get_button_connection_count(fresh_btn, true),
 		1,
 		"Memory Cleanup Failed: Node destruction caused tracking anomalies or double connection leaks on fresh nodes."
 	)
