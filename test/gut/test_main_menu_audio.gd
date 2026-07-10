@@ -16,20 +16,14 @@ var _initial_current_scene: Node = null
 
 
 func before_all() -> void:
-	# Bootstrap required audio server buses headlessly
+	# REFACTOR: Offload bus setup configurations entirely to shared test utilities
 	var required_buses: Array[String] = [
 		AudioConstants.BUS_MASTER,
 		AudioConstants.BUS_MUSIC,
 		AudioConstants.BUS_SFX,
 		MENU_BUS
 	]
-	
-	for bus_name in required_buses:
-		var idx: int = AudioServer.get_bus_index(bus_name)
-		if idx == -1:
-			AudioServer.add_bus()
-			var new_idx: int = AudioServer.get_bus_count() - 1
-			AudioServer.set_bus_name(new_idx, bus_name)
+	GutTestHelper.bootstrap_headless_audio_buses(required_buses)
 
 
 func before_each() -> void:
@@ -50,7 +44,7 @@ func after_each() -> void:
 	Globals.hidden_menus.clear()
 
 	# 2. Revert scene tree transitions back to pristine baseline test states
-	if get_tree().current_scene != _initial_current_scene and is_instance_valid(get_tree().current_scene):
+	if is_instance_valid(get_tree().current_scene) and get_tree().current_scene != _initial_current_scene:
 		var leaked_scene := get_tree().current_scene
 		
 		# Create an empty node space to safely swap back to 
@@ -64,7 +58,7 @@ func after_each() -> void:
 
 	# 3. Clean up any standalone canvas layers or popups pushed straight to the root window
 	for child in get_tree().root.get_children():
-		if child not in _initial_root_children and is_instance_valid(child) and child != get_tree().current_scene:
+		if is_instance_valid(child) and child not in _initial_root_children and child != get_tree().current_scene:
 			child.queue_free()
 
 	# 4. Flush all hardware audio registers completely

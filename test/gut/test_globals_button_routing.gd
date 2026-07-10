@@ -12,21 +12,14 @@ const MENU_BUS: String = AudioConstants.BUS_SFX_MENU
 
 
 func before_all() -> void:
-	# FAIL-FAST / BOOTSTRAP: Ensure the test runner environment possesses the required audio buses.
-	# This guarantees the test suite passes flawlessly on stripped headless CI/CD systems.
+	# REFACTOR: Offload bus setup configurations entirely to shared test utilities
 	var required_buses: Array[String] = [
 		AudioConstants.BUS_MASTER,
 		AudioConstants.BUS_MUSIC,
 		GAMEPLAY_BUS,
 		MENU_BUS
 	]
-	
-	for bus_name in required_buses:
-		var idx: int = AudioServer.get_bus_index(bus_name)
-		if idx == -1:
-			AudioServer.add_bus()
-			var new_idx: int = AudioServer.get_bus_count() - 1
-			AudioServer.set_bus_name(new_idx, bus_name)
+	GutTestHelper.bootstrap_headless_audio_buses(required_buses)
 
 
 func before_each() -> void:
@@ -42,8 +35,6 @@ func after_each() -> void:
 
 
 ## Test Case 1: Verifies that standard UI button presses route confirmation SFX to the Menu bus.
-## FAILURE MODE (Before Fix): Routes to AudioConstants.BUS_SFX ("SFX"), causing the assertion to fail.
-## SUCCESS MODE (After Fix): Routes to AudioConstants.BUS_SFX_MENU ("SFX_Menu"), passing successfully.
 func test_global_button_press_routes_to_menu_sfx_bus() -> void:
 	# 1. Instantiate a standard menu button to invoke the interceptor track
 	var dummy_btn := Button.new()
@@ -56,12 +47,8 @@ func test_global_button_press_routes_to_menu_sfx_bus() -> void:
 	dummy_btn.pressed.emit()
 	await wait_process_frames(1)
 
-	# 3. Assert: Identify the allocated pool player and inspect its target bus
-	var targeted_bus: String = ""
-	for player: AudioStreamPlayer in AudioManager._sfx_pool:
-		if player.playing:
-			targeted_bus = player.bus
-			break
+	# 3. Assert: Verify routing destination via decoupled public diagnostic API
+	var targeted_bus := AudioManager.get_active_sfx_bus_name()
 
 	assert_true(AudioManager.is_any_sfx_playing(), "A pool channel must be actively streaming the confirmation click.")
 	assert_eq(targeted_bus, MENU_BUS, "Centralized button click confirmation audio must route over the dedicated Menu SFX layer.")

@@ -505,6 +505,18 @@ func get_active_sfx_stream_path() -> String:
 	return ""
 
 
+## [DIAGNOSTIC]
+## Public API: Returns the target audio bus name of the most recently started active SFX.
+## If no sounds are playing, returns an empty string.
+## @return String: Name of the assigned audio bus.
+func get_active_sfx_bus_name() -> String:
+	# Iterate backwards matching our deterministic track verification rules
+	for i in range(_sfx_pool.size() - 1, -1, -1):
+		if _sfx_pool[i].playing:
+			return _sfx_pool[i].bus
+	return ""
+
+
 ## FOR GUT UNIT TEST ONLY
 ## Forcefully clear resources to prevent leaks between unit tests.
 ## Strictly guarded to prevent accidental execution in production builds.
