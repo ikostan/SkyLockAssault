@@ -51,10 +51,10 @@ func after_each() -> void:
 
 	# 2. Revert scene tree transitions back to pristine baseline test states
 	if get_tree().current_scene != _initial_current_scene and is_instance_valid(get_tree().current_scene):
-		var leaked_scene: = get_tree().current_scene
+		var leaked_scene := get_tree().current_scene
 		
 		# Create an empty node space to safely swap back to 
-		var blank_placeholder: = Node.new()
+		var blank_placeholder := Node.new()
 		blank_placeholder.name = "TestPlaceholderScene"
 		get_tree().root.add_child(blank_placeholder)
 		get_tree().current_scene = blank_placeholder
@@ -64,7 +64,7 @@ func after_each() -> void:
 
 	# 3. Clean up any standalone canvas layers or popups pushed straight to the root window
 	for child in get_tree().root.get_children():
-		if not child in _initial_root_children and is_instance_valid(child) and child != get_tree().current_scene:
+		if child not in _initial_root_children and is_instance_valid(child) and child != get_tree().current_scene:
 			child.queue_free()
 
 	# 4. Flush all hardware audio registers completely
