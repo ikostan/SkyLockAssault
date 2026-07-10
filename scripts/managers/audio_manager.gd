@@ -52,6 +52,9 @@ var _missing_sfx_cache: Dictionary = {}
 ## Array of pre-instantiated AudioStreamPlayers to prevent node instantiation churn.
 var _sfx_pool: Array[AudioStreamPlayer] = []
 
+## Preloaded stream to prevent disk I/O lag during fast menu navigation.
+var _ui_nav_stream: AudioStream = preload(AudioConstants.UI_NAV_SOUND_PATH)
+
 
 func _ready() -> void:
 	## Initializes to defaults and loads/applies volumes.
@@ -230,8 +233,7 @@ func set_muted(bus_name: String, muted: bool) -> void:
 
 
 ## load_volumes
-## Loads persisted volumes from config if valid types;
-## skips invalid/missing to keep current.
+## Loads persisted volumes from config if valid types; skips invalid/missing to keep current.
 ## :param path: Config file path (default: current_config_path).
 ## :type path: String
 ## :rtype: void

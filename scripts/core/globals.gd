@@ -8,9 +8,6 @@ extends Node
 
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 
-## Path to the navigation sound file
-const UI_NAV_SOUND_PATH: String = "res://files/sounds/sfx/ui_navigation.wav"
-
 # --- TASK #529: Encryption Key Management ---
 ## Centralized key for securing local configuration files.
 ## This ensures consistent encryption/decryption across different game systems.
@@ -34,9 +31,6 @@ var next_scene: String = ""  # Path to the next scene to load via loading screen
 ## Updated when player toggles Keyboard/Gamepad in Key Mapping.
 var current_input_device: String = "keyboard"  # "keyboard" or "gamepad"
 var _is_loading_settings: bool = false  # Guard flag
-
-## Preloaded stream to prevent disk I/O lag during fast menu navigation.
-var _ui_nav_stream: AudioStream = preload(UI_NAV_SOUND_PATH)
 
 # List of actions that should trigger the navigation sound
 var _nav_actions: Array[String] = [
