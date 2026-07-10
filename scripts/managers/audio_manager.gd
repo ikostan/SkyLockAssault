@@ -230,8 +230,7 @@ func set_muted(bus_name: String, muted: bool) -> void:
 
 
 ## load_volumes
-## Loads persisted volumes from config if valid types;
-## skips invalid/missing to keep current.
+## Loads persisted volumes from config if valid types; skips invalid/missing to keep current.
 ## :param path: Config file path (default: current_config_path).
 ## :type path: String
 ## :rtype: void
@@ -503,6 +502,18 @@ func get_active_sfx_stream_path() -> String:
 	for i in range(_sfx_pool.size() - 1, -1, -1):
 		if _sfx_pool[i].playing and _sfx_pool[i].stream:
 			return _sfx_pool[i].stream.resource_path
+	return ""
+
+
+## [DIAGNOSTIC]
+## Public API: Returns the target audio bus name of the most recently started active SFX.
+## If no sounds are playing, returns an empty string.
+## @return String: Name of the assigned audio bus.
+func get_active_sfx_bus_name() -> String:
+	# Iterate backwards matching our deterministic track verification rules
+	for i in range(_sfx_pool.size() - 1, -1, -1):
+		if _sfx_pool[i].playing:
+			return _sfx_pool[i].bus
 	return ""
 
 

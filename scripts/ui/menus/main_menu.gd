@@ -257,6 +257,10 @@ func _on_start_pressed(_args: Array = []) -> void:
 	## :type _args: Array
 	## :rtype: void
 	Globals.log_message("Start Game menu button pressed.", Globals.LogLevel.DEBUG)
+
+	# Play confirmation sound locally due to no_global_sound metadata block
+	AudioManager.play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)
+
 	if Settings.has_unbound_critical_actions_for_current_device():
 		# Guard: Disable button to prevent spamming while dialog is open
 		start_button.disabled = true
@@ -274,6 +278,10 @@ func _on_options_button_pressed(_args: Array = []) -> void:
 	## :type _args: Array
 	## :rtype: void
 	Globals.log_message("Options button pressed.", Globals.LogLevel.DEBUG)
+
+	# Play confirmation sound locally due to no_global_sound metadata block
+	AudioManager.play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)
+
 	Globals.load_options(ui_panel)  # Your existing load
 
 
@@ -285,6 +293,11 @@ func _on_quit_pressed(_args: Array = []) -> void:
 	## :param _args: Optional arguments from web overlays (unused).
 	## :type _args: Array
 	## :rtype: void
+	Globals.log_message("Quit button pressed.", Globals.LogLevel.DEBUG)
+
+	# Play confirmation sound locally due to no_global_sound metadata block
+	AudioManager.play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)
+
 	# Show confirmation dialog
 	if is_instance_valid(quit_dialog):
 		last_focused_button = quit_button  # Remember the opener
@@ -301,7 +314,7 @@ func _on_quit_dialog_confirmed() -> void:
 	## :rtype: void
 
 	# 1. Fire the confirmation sound asset
-	AudioManager.play_sfx("ui_accept")
+	AudioManager.play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)
 
 	# 2. Hide the panel immediately so the player gets immediate feedback
 	if is_instance_valid(quit_dialog):
@@ -336,7 +349,7 @@ func _on_quit_dialog_confirmed() -> void:
 func _on_quit_dialog_canceled() -> void:
 	## Handles quit dialog cancellation visual resets and focus recovery.
 	## :rtype: void
-	AudioManager.play_sfx("ui_cancel")
+	AudioManager.play_sfx("ui_cancel", AudioConstants.BUS_SFX_MENU)
 	quit_dialog.hide()
 	Globals.log_message("Quit canceled.", Globals.LogLevel.DEBUG)
 
