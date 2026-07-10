@@ -506,12 +506,6 @@ func _handle_ui_navigation_action(action: String, focus_owner: Control, ui_has_f
 		AudioManager.play_sfx(logical_id, AudioConstants.BUS_SFX)
 
 
-## Internal helper to play the navigation sound through the dedicated Menu SFX bus.
-func _play_ui_navigation_sfx() -> void:
-	# FIX: Correct the key string to match the true filename asset (ui_navigation.wav)
-	AudioManager.play_sfx("ui_navigation")
-
-
 ## Ensures the encryption key is initialized and returns it.
 ## Centralizes the safety check so other scripts don't have to repeat it.
 func ensure_encryption_key() -> String:
