@@ -327,7 +327,8 @@ func load_options(menu_to_hide: Node) -> void:
 # @param message: The string message to log.
 # @param level: The log level (default INFO).
 func log_message(message: String, level: LogLevel = LogLevel.INFO) -> void:
-	# FIX: Guard the log level check. If settings is null, print everything.
+	# FIX: Guard the log level check.
+	# If settings is null, print everything.
 	if is_instance_valid(settings) and level < settings.current_log_level:
 		return  # Skip if below threshold
 
@@ -535,8 +536,10 @@ func ensure_encryption_key() -> String:
 ## Security Guard:
 ## In production builds (when neither 'editor' nor 'debug' features are present),
 ## this function strictly validates that a secure salt was successfully injected
-## during the CI/CD deployment. If the salt is missing or matches the weak development
-## fallback, it forces an immediate engine crash. This prevents the game from silently
+## during the CI/CD deployment.
+## If the salt is missing or matches the weak development
+## fallback, it forces an immediate engine crash.
+## This prevents the game from silently
 ## encrypting data with a weak/empty key.
 ##
 ## :rtype: String (The SHA-256 hashed key)
@@ -544,7 +547,8 @@ func ensure_encryption_key() -> String:
 ## Generates a unique, deterministic encryption key for local save files.
 ## Generates a unique, deterministic encryption key for local save files.
 func _get_encryption_key() -> String:
-	# Safe placeholder. This is an open source repo, so the REAL salt
+	# Safe placeholder.
+	# This is an open source repo, so the REAL salt
 	# is injected by GitHub Actions / CI pipeline during the build process.
 	var salt: String = "CI_INJECT_SALT_HERE"
 
@@ -569,7 +573,8 @@ func _get_encryption_key() -> String:
 			push_error(error_msg)
 			OS.crash(error_msg)
 
-	# FIX: Removed JavaScriptBridge.eval() from here. Calling JS from a
+	# FIX: Removed JavaScriptBridge.eval() from here.
+	# Calling JS from a
 	# class-level variable initialization silently crashes the WebAssembly module!
 	var device_id: String = "web_fallback"
 	if not OS.has_feature("web"):
@@ -710,4 +715,4 @@ func _on_node_added(node: Node) -> void:
 func _on_global_button_pressed() -> void:
 	# Explicitly route button accepts through the shared UI SFX bus to guarantee consistent
 	# muting behavior
-	AudioManager.play_sfx("ui_accept", AudioConstants.BUS_SFX)
+	AudioManager.play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)
