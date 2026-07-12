@@ -51,9 +51,6 @@ func _ready() -> void:
 		settings = GameSettingsResource.new()
 		settings.current_log_level = LogLevel.WARNING
 
-	# Connect global listener to monitor all runtime UI instantiation tracks
-	# get_tree().node_added.connect(_on_node_added)
-
 	if Engine.is_editor_hint() or settings.enable_debug_logging:
 		settings.current_log_level = LogLevel.DEBUG
 	log_message("Log level set to: " + LogLevel.keys()[settings.current_log_level], LogLevel.DEBUG)
@@ -538,8 +535,6 @@ func ensure_encryption_key() -> String:
 ##
 ## :rtype: String (The SHA-256 hashed key)
 ## Generates a unique, deterministic encryption key for local save files.
-## Generates a unique, deterministic encryption key for local save files.
-## Generates a unique, deterministic encryption key for local save files.
 func _get_encryption_key() -> String:
 	# Safe placeholder.
 	# This is an open source repo, so the REAL salt
@@ -679,32 +674,3 @@ func safe_load_config(path: String) -> Dictionary:
 func set_test_encryption_key(override_key: String = "test_deterministic_key_123") -> void:
 	save_encryption_pass = override_key
 	log_message("Encryption key overridden for testing.", LogLevel.DEBUG)
-
-## Automatically hooks up base Button elements for confirmation sfx
-#func _on_node_added(node: Node) -> void:
-#	# FIXED: Use strict string evaluation to satisfy the Issue #763 contract
-#	if node.get_class() == "Button":
-#		var btn := node as Button
-#		if is_instance_valid(btn):
-#			# Flat Button Protection: Avoid superimposing global audio over theme audio
-#			if btn.flat or btn.has_meta("no_global_sound"):
-#				return
-#
-#			# Dialog Protection: Exclude internal buttons of Accept/ConfirmationDialogs
-#			var parent := btn.get_parent()
-#			while parent:
-#				if parent is AcceptDialog:
-#					return
-#				parent = parent.get_parent()
-#
-#			# Guard against duplicate connections using the explicit named callable.
-#			# NOTE: CONNECT_DEFERRED is strictly required here to pass the Issue #763
-#			# verification contract and guarantee thread-safe scene tree execution.
-#			if not btn.pressed.is_connected(_on_global_button_pressed):
-#				btn.pressed.connect(_on_global_button_pressed, CONNECT_DEFERRED)
-
-## Centralized button audio execution target to prevent lambda churn
-#func _on_global_button_pressed() -> void:
-#	# Explicitly route button accepts through the shared UI SFX bus to guarantee consistent
-#	# muting behavior
-#	AudioManager.play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)
