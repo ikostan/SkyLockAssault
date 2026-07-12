@@ -62,6 +62,9 @@ func _ready() -> void:
 	# Initialize the SFX object pool
 	_initialize_sfx_pool()
 
+	# NEW: Connect global listener to monitor all runtime UI instantiation tracks (Issue #800)
+	get_tree().node_added.connect(_on_node_added)
+
 
 ## Initialize all volumes and mutes to defaults from AudioConstants
 ## :rtype: void
@@ -550,3 +553,31 @@ func _initialize_sfx_pool() -> void:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
 		_sfx_pool.append(p)
+
+
+## Automatically hooks up base Button elements for confirmation sfx (Ported via Issue #800)
+func _on_node_added(node: Node) -> void:
+	# Use strict string evaluation to satisfy the verification contract
+	if node.get_class() == "Button":
+		var btn := node as Button
+		if is_instance_valid(btn):
+			# Flat Button Protection: Avoid superimposing global audio over theme audio
+			if btn.flat or btn.has_meta("no_global_sound"):
+				return
+
+			# Dialog Protection: Exclude internal buttons of Accept/ConfirmationDialogs
+			var parent := btn.get_parent()
+			while parent:
+				if parent is AcceptDialog:
+					return
+				parent = parent.get_parent()
+
+			# Guard against duplicate connections using CONNECT_DEFERRED for thread safety
+			if not btn.pressed.is_connected(_on_global_button_pressed):
+				btn.pressed.connect(_on_global_button_pressed, CONNECT_DEFERRED)
+
+
+## Centralized button audio execution target routed natively within AudioManager
+func _on_global_button_pressed() -> void:
+	# Route button accepts directly through the internal SFX bus configuration
+	play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)

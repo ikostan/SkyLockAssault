@@ -38,7 +38,8 @@ func _get_button_connection_count(node: Node, require_deferred: bool = true) -> 
 	
 	for connection: Dictionary in connections:
 		var callable: Callable = connection.get("callable", Callable())
-		if callable == Globals._on_global_button_pressed:
+		#if callable == Globals._on_global_button_pressed:
+		if callable == AudioManager._on_global_button_pressed:
 			if require_deferred:
 				var flags: int = connection.get("flags", 0)
 				if flags & CONNECT_DEFERRED:
@@ -59,7 +60,8 @@ func _get_non_button_connection_count(node: Node) -> int:
 	
 	for connection: Dictionary in connections:
 		var callable: Callable = connection.get("callable", Callable())
-		if callable == Globals._on_global_button_pressed:
+		#if callable == Globals._on_global_button_pressed:
+		if callable == AudioManager._on_global_button_pressed:	
 			count += 1
 	return count
 
@@ -229,8 +231,8 @@ func test_duplicate_scan_calls_do_not_duplicate_connections() -> void:
 	await _wait_for_registration()
 	assert_eq(_get_button_connection_count(btn, true), 1, "Precondition: Single link registered.")
 
-	# Act
-	Globals._on_node_added(btn)
+	# Act - FIX: Target AudioManager instead of Globals
+	AudioManager._on_node_added(btn)
 	await _wait_for_registration()
 
 	# Assert
