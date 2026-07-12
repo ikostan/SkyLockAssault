@@ -65,7 +65,7 @@ func _ready() -> void:
 	# Connect global listener  with a safety guard to ensure only one listener attaches (Issue #800)
 	if not get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.connect(_on_node_added)
-	
+
 	# NEW: Retroactively scan for any buttons that snuck into the tree during the initialization frame
 	_retroactive_ui_scan(get_tree().root)
 
@@ -74,7 +74,7 @@ func _ready() -> void:
 func _retroactive_ui_scan(node: Node) -> void:
 	if not is_instance_valid(node):
 		return
-		
+
 	_on_node_added(node)
 	for child in node.get_children():
 		_retroactive_ui_scan(child)
