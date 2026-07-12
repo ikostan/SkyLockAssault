@@ -261,7 +261,7 @@ jobs:
           flags: "playwright"
           fail_ci_if_error: false  # Non-blocking on 0%
           verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: "${{ secrets.CODECOV_TOKEN }}"
           directory: "export/web_thread_off"
 
       - name: "Install Codecov CLI"
