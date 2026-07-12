@@ -106,32 +106,36 @@ jobs:
         id: "playwright-cache"
         with:
           path: "~/.cache/ms-playwright"
-          # FIX: Cache key is now strictly tied to the installed Playwright package version
+          # yamllint disable rule:line-length
+          # FIX: Cache key is tied to the installed Playwright package version
           key: "${{ runner.os }}-playwright-v2-${{ steps.playwright-version.outputs.version }}"
+          # yamllint enable rule:line-length
 
       - name: "Install Playwright Browsers"
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        if: "steps.playwright-cache.outputs.cache-hit != 'true'"
         run: |
-            playwright install --with-deps chromium
+          playwright install --with-deps chromium
 
       - name: "Start Security-Isolated HTTP Server"
+        # yamllint disable rule:line-length
         run: |
-            python3 -c "
-            import http.server, socketserver, os
-            class MyHandler(http.server.SimpleHTTPRequestHandler):
-                def end_headers(self):
-                    self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
-                    self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')
-                    self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
-                    super().end_headers()
-            socketserver.TCPServer.allow_reuse_address = True
-            with socketserver.TCPServer(('', 8080), MyHandler) as httpd:
-                os.chdir('export/web_thread_off')
-                print('🚀 Security-isolated server starting on port 8080...')
-                httpd.serve_forever()
-            " &
-            sleep 5
-            curl -I http://localhost:8080/index.html
+          python3 -c "
+          import http.server, socketserver, os
+          class MyHandler(http.server.SimpleHTTPRequestHandler):
+              def end_headers(self):
+                  self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
+                  self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')
+                  self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
+                  super().end_headers()
+          socketserver.TCPServer.allow_reuse_address = True
+          with socketserver.TCPServer(('', 8080), MyHandler) as httpd:
+              os.chdir('export/web_thread_off')
+              print('🚀 Security-isolated server starting on port 8080...')
+              httpd.serve_forever()
+          " &
+          sleep 5
+          curl -I http://localhost:8080/index.html
+        # yamllint enable rule:line-length
 
       - name: "Wait For WEB Server Response"
         run: |
@@ -157,7 +161,7 @@ jobs:
       - name: "Set up Node.js for Coverage Conversion"
         uses: "actions/setup-node@v6"
         with:
-          node-version: '20'  # Stable for Win10 compat
+          node-version: "20"  # Stable for Win10 compat
 
       - name: "Install Conversion Tools"
         # For conversion and report
@@ -208,10 +212,10 @@ jobs:
       # yamllint enable rule:line-length
 
       - name: "Upload LCOV Artifact"
-        if: always()
+        if: "always()"
         uses: "actions/upload-artifact@v7"
         with:
-          name: lcov-report
+          name: "lcov-report"
           path: "./coverage/lcov/lcov.info"
           retention-days: 5
 
@@ -234,41 +238,41 @@ jobs:
           fi
 
       - name: "Upload Test Report Artifact"
-        if: always()
+        if: "always()"
         uses: "actions/upload-artifact@v7"
         with:
-          name: test-report
-          path: junit.xml
+          name: "test-report"
+          path: "junit.xml"
 
       - name: "Upload Screenshot and Coverage Artifacts"
-        if: always()
+        if: "always()"
         uses: "actions/upload-artifact@v7"
         with:
-          name: test-screenshots
+          name: "test-screenshots"
           path: |
             main_menu.png
             coverage_*.json
 
       - name: "Upload Coverage to Codecov"
-        if: ${{ !cancelled() }}
+        if: "${{ !cancelled() }}"
         uses: "codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f"
         with:
-          files: ./coverage/lcov/lcov.info
-          flags: playwright
+          files: "./coverage/lcov/lcov.info"
+          flags: "playwright"
           fail_ci_if_error: false  # Non-blocking on 0%
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
-          directory: export/web_thread_off
+          directory: "export/web_thread_off"
 
       - name: "Install Codecov CLI"
-        if: success()
+        if: "success()"
         run: |
           curl -Os https://cli.codecov.io/latest/linux/codecov
           chmod +x codecov
 
       # yamllint disable rule:line-length
       - name: "Upload Test Report to Codecov"
-        if: success()
+        if: "success()"
         run: |
           REPORT_FILE="./junit.xml"
           if [ -f "$REPORT_FILE" ]; then
