@@ -212,7 +212,7 @@ jobs:
       # yamllint enable rule:line-length
 
       - name: "Upload LCOV Artifact"
-        if: always()
+        if: "always()"
         uses: "actions/upload-artifact@v7"
         with:
           name: "lcov-report"
@@ -238,14 +238,14 @@ jobs:
           fi
 
       - name: "Upload Test Report Artifact"
-        if: always()
+        if: "always()"
         uses: "actions/upload-artifact@v7"
         with:
           name: "test-report"
           path: "junit.xml"
 
       - name: "Upload Screenshot and Coverage Artifacts"
-        if: always()
+        if: "always()"
         uses: "actions/upload-artifact@v7"
         with:
           name: "test-screenshots"
@@ -254,7 +254,7 @@ jobs:
             coverage_*.json
 
       - name: "Upload Coverage to Codecov"
-        if: !cancelled()
+        if: "${{ !cancelled() }}"
         uses: "codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f"
         with:
           files: "./coverage/lcov/lcov.info"
@@ -265,14 +265,14 @@ jobs:
           directory: "export/web_thread_off"
 
       - name: "Install Codecov CLI"
-        if: success()
+        if: "success()"
         run: |
           curl -Os https://cli.codecov.io/latest/linux/codecov
           chmod +x codecov
 
       # yamllint disable rule:line-length
       - name: "Upload Test Report to Codecov"
-        if: success()
+        if: "success()"
         run: |
           REPORT_FILE="./junit.xml"
           if [ -f "$REPORT_FILE" ]; then
