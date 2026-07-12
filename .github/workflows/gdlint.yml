@@ -28,7 +28,9 @@ jobs:
             ${{ runner.os }}-pip-
       - name: "Install GDToolkit (for gdlint & gdformat)"
         # Installs gdtoolkit==4.* for Godot 4.x
-        uses: "Scony/godot-gdscript-toolkit@master"
+        # uses: "Scony/godot-gdscript-toolkit@master"
+        run: |
+          pip install "gdtoolkit==4.*"
       - name: "Check Formatting"
         # Scans all .gd files; use --diff for detailed output
         run: |
