@@ -62,8 +62,9 @@ func _ready() -> void:
 	# Initialize the SFX object pool
 	_initialize_sfx_pool()
 
-	# Connect global listener to monitor all runtime UI instantiation tracks (Issue #800)
-	get_tree().node_added.connect(_on_node_added)
+	# Connect global listener  with a safety guard to ensure only one listener attaches (Issue #800)
+	if not get_tree().node_added.is_connected(_on_node_added):
+		get_tree().node_added.connect(_on_node_added)
 	
 	# NEW: Retroactively scan for any buttons that snuck into the tree during the initialization frame
 	_retroactive_ui_scan(get_tree().root)

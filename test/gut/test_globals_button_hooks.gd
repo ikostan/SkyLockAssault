@@ -400,3 +400,39 @@ func test_retroactive_scan_is_idempotent_and_does_not_double_bind() -> void:
 		1,
 		"Idempotency Guard Failed: Retroactive scan introduced duplicate audio connections to an active button."
 	)
+
+
+## Verifies that AudioManager guards against duplicate listener registration 
+## on the SceneTree's node_added signal.
+func test_audiomanager_listener_registration_is_strictly_singular() -> void:
+	# 1. Arrange: Verify the production baseline is already active
+	assert_true(
+		get_tree().node_added.is_connected(AudioManager._on_node_added),
+		"Precondition Failed: AudioManager should naturally be connected to node_added."
+	)
+	
+	# Extract initial connections array to count total bindings
+	var initial_connections: Array = get_tree().node_added.get_connections()
+	var baseline_listener_count: int = 0
+	for conn: Dictionary in initial_connections:
+		if conn.get("callable", Callable()) == AudioManager._on_node_added:
+			baseline_listener_count += 1
+			
+	assert_eq(baseline_listener_count, 1, "Baseline setup should have exactly one listener attached.")
+
+	# 2. Act: Manually simulate a secondary initialization or boot path trigger by calling connect again
+	if not get_tree().node_added.is_connected(AudioManager._on_node_added):
+		get_tree().node_added.connect(AudioManager._on_node_added)
+	
+	# 3. Assert: Total active listener attachments on the signal must remain exactly 1
+	var post_connections: Array = get_tree().node_added.get_connections()
+	var post_listener_count: int = 0
+	for conn: Dictionary in post_connections:
+		if conn.get("callable", Callable()) == AudioManager._on_node_added:
+			post_listener_count += 1
+			
+	assert_eq(
+		post_listener_count, 
+		1, 
+		"Guard Failure: Multiple boot paths or setup loops duplicated the tree observer listener."
+	)
