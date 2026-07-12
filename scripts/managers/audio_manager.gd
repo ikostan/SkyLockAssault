@@ -62,8 +62,21 @@ func _ready() -> void:
 	# Initialize the SFX object pool
 	_initialize_sfx_pool()
 
-	# NEW: Connect global listener to monitor all runtime UI instantiation tracks (Issue #800)
+	# Connect global listener to monitor all runtime UI instantiation tracks (Issue #800)
 	get_tree().node_added.connect(_on_node_added)
+	
+	# NEW: Retroactively scan for any buttons that snuck into the tree during the initialization frame
+	_retroactive_ui_scan(get_tree().root)
+
+
+## Recursively passes existing tree nodes into the parsing logic to catch early initializations
+func _retroactive_ui_scan(node: Node) -> void:
+	if not is_instance_valid(node):
+		return
+		
+	_on_node_added(node)
+	for child in node.get_children():
+		_retroactive_ui_scan(child)
 
 
 ## Initialize all volumes and mutes to defaults from AudioConstants
