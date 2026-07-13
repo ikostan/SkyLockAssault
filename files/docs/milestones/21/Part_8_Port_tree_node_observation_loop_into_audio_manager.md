@@ -1,4 +1,4 @@
-# 🏁 Port tree node observation loop into audiomanager
+# 🏁 Port tree node observation loop into AudioManager
 <!-- markdownlint-disable MD001 MD036 MD013 MD033 table-column-style -->
 
 ## Overview
