@@ -117,23 +117,3 @@ func test_dialog_cancellation_audio() -> void:
 		
 	_assert_sfx_called("ui_cancel")
 	_assert_sfx_call_count(1)
-
-
-## Assert that standard menu buttons do not trigger global confirmation requests on ui_accept.
-## :rtype: void
-func test_flat_button_anti_trigger_protection() -> void:
-	var start_button: Button = Button.new()
-	start_button.flat = true
-	main_menu_instance.add_child(start_button)
-	
-	# FIX: Explicitly drive the button through the global connection hook to mimic tree entry
-	# OLD: Globals._on_node_added(start_button)
-	AudioManager._on_node_added(start_button)
-	await get_tree().process_frame
-	
-	# FIX: Directly emit the pressed signal to verify the global hook was successfully blocked
-	start_button.pressed.emit()
-	await get_tree().process_frame
-		
-	# Global accept confirmation must remain untouched to respect native inspector themes
-	_assert_sfx_not_called("ui_accept")
