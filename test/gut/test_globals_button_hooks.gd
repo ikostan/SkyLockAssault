@@ -13,6 +13,11 @@ func before_each() -> void:
 
 func after_each() -> void:
 	AudioManager.stop_all_sfx()
+	
+	# FIX (CodeRabbit AI): Prevent state leakage if an early assertion aborts the test body
+	if not get_tree().node_added.is_connected(AudioManager._on_node_added):
+		get_tree().node_added.connect(AudioManager._on_node_added)
+		
 	await _wait_for_registration()
 
 
