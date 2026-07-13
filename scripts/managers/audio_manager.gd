@@ -74,11 +74,11 @@ func _ready() -> void:
 func _retroactive_ui_scan(node: Node) -> void:
 	if not is_instance_valid(node):
 		return
-		
+
 	# FIX: Optimize tree traversal by skipping function call churn on non-Button components
 	if node.get_class() == "Button":
 		_on_node_added(node)
-		
+
 	# Always traverse children so we don't miss buttons nested inside containers/panels
 	for child in node.get_children():
 		_retroactive_ui_scan(child)
