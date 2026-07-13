@@ -12,22 +12,26 @@ var original_audio_script: Script
 var original_fields := {}
 
 
-## Suite setup: Double the AudioManager using a decoupled script to bypass lifecycle destruction guards.
+## Suite setup: Double the AudioManager using an inherited script to preserve real node-wiring behavior.
 ## :rtype: void
 func before_all() -> void:
 	if is_instance_valid(AudioManager):
 		original_audio_script = AudioManager.get_script()
+		var script_path: String = original_audio_script.resource_path
 		var mock_script := GDScript.new()
+		
+		# FIX (Sourcery-AI): Inherit directly from the production script so all real validation,
+		# tree tracking, and filtering logic remain active. We only override play_sfx to spy on output.
 		mock_script.source_code = """
-extends Node
-var sfx_calls: Array = []
-func play_sfx(key: String, extra: Variant = null) -> void:
-	sfx_calls.append([key, extra])
+extends "%s"
 
-# FIX (Issue #800): Stub added to support manual scene-tree tracking tests on the doubled object
-func _on_node_added(node: Node) -> void:
-	pass
-"""
+var sfx_calls: Array = []
+
+# Override play_sfx matching the production signature to intercept audio calls safely
+func play_sfx(sfx_name: String, bus_name: String = "SFX_Menu", pitch_scale: float = 1.0, volume_db: float = 0.0) -> void:
+	sfx_calls.append([sfx_name, bus_name])
+""" % script_path
+		
 		mock_script.reload()
 		AudioManager.set_script(mock_script)
 
