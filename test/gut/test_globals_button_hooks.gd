@@ -408,7 +408,7 @@ func test_retroactive_scan_is_idempotent_and_does_not_double_bind() -> void:
 
 
 ## Verifies that AudioManager guards against duplicate listener registration 
-## on the SceneTree's node_added signal.
+## on the SceneTree's node_added signal when _ready() is invoked multiple times.
 func test_audiomanager_listener_registration_is_strictly_singular() -> void:
 	# 1. Arrange: Verify the production baseline is already active
 	assert_true(
@@ -425,9 +425,8 @@ func test_audiomanager_listener_registration_is_strictly_singular() -> void:
 			
 	assert_eq(baseline_listener_count, 1, "Baseline setup should have exactly one listener attached.")
 
-	# 2. Act: Manually simulate a secondary initialization or boot path trigger by calling connect again
-	if not get_tree().node_added.is_connected(AudioManager._on_node_added):
-		get_tree().node_added.connect(AudioManager._on_node_added)
+	# 2. Act: Force an unconditional alternate boot path trigger by calling production _ready() again
+	AudioManager._ready()
 	
 	# 3. Assert: Total active listener attachments on the signal must remain exactly 1
 	var post_connections: Array = get_tree().node_added.get_connections()
@@ -439,7 +438,7 @@ func test_audiomanager_listener_registration_is_strictly_singular() -> void:
 	assert_eq(
 		post_listener_count, 
 		1, 
-		"Guard Failure: Multiple boot paths or setup loops duplicated the tree observer listener."
+		"Guard Failure: Production _ready() re-entry duplicated the tree observer listener."
 	)
 
 
