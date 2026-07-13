@@ -441,3 +441,47 @@ func test_audiomanager_listener_registration_is_strictly_singular() -> void:
 		1, 
 		"Guard Failure: Multiple boot paths or setup loops duplicated the tree observer listener."
 	)
+
+
+## Verifies that the optimized retroactive scan successfully crawls deep hierarchies 
+## containing non-UI and structural nodes, ensuring leaf buttons are found while 
+## container elements are bypassed cleanly.
+func test_retroactive_scan_traverses_mixed_hierarchy_safely() -> void:
+	# 1. Arrange: Disconnect live listener to prevent automatic runtime hooking on entrance
+	if get_tree().node_added.is_connected(AudioManager._on_node_added):
+		get_tree().node_added.disconnect(AudioManager._on_node_added)
+		
+	var structural_root := Node.new()          # Completely non-UI structural node
+	var intermediate_box := Control.new()       # Layout container (non-Button UI)
+	var leaf_button := Button.new()            # Target interactive element
+	
+	structural_root.add_child(intermediate_box)
+	intermediate_box.add_child(leaf_button)
+	add_child_autofree(structural_root)
+	
+	# Precondition check: Hierarchy must start entirely unlinked
+	assert_eq(_get_button_connection_count(leaf_button, false), 0)
+	assert_eq(_get_non_button_connection_count(intermediate_box), 0)
+	
+	# 2. Act: Target the optimized retroactive scan directly at the structural root node
+	if AudioManager.has_method("_retroactive_ui_scan"):
+		AudioManager._retroactive_ui_scan(structural_root)
+	else:
+		fail_test("Method '_retroactive_ui_scan' missing from AudioManager.")
+		return
+		
+	await _wait_for_registration()
+	
+	# 3. Assert: The deep leaf button must be successfully wired up
+	assert_eq(
+		_get_button_connection_count(leaf_button, true),
+		1,
+		"Optimized retroactive scan failed to descend through non-button layers to find nested buttons."
+	)
+	
+	# 4. Assert: Container items must remain untouched by the wiring logic
+	assert_eq(
+		_get_non_button_connection_count(intermediate_box),
+		0,
+		"Optimized retroactive scan incorrectly attempted to apply button hooks to container controls."
+	)
