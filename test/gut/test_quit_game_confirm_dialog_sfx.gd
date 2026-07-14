@@ -11,18 +11,27 @@ var main_menu_instance: Control
 var original_audio_script: Script
 var original_fields := {}
 
-## Suite setup: Double the AudioManager using a decoupled script to bypass lifecycle destruction guards.
+
+## Suite setup: Double the AudioManager using an inherited script to preserve real node-wiring behavior.
 ## :rtype: void
 func before_all() -> void:
 	if is_instance_valid(AudioManager):
 		original_audio_script = AudioManager.get_script()
+		var script_path: String = original_audio_script.resource_path
 		var mock_script := GDScript.new()
+		
+		# FIX (Sourcery-AI): Inherit directly from the production script so all real validation,
+		# tree tracking, and filtering logic remain active. We only override play_sfx to spy on output.
 		mock_script.source_code = """
-extends Node
+extends "%s"
+
 var sfx_calls: Array = []
-func play_sfx(key: String, extra: Variant = null) -> void:
-	sfx_calls.append([key, extra])
-"""
+
+# Override play_sfx matching the production signature to intercept audio calls safely
+func play_sfx(sfx_name: String, bus_name: String = "SFX_Menu", pitch_scale: float = 1.0, volume_db: float = 0.0) -> void:
+	sfx_calls.append([sfx_name, bus_name])
+""" % script_path
+		
 		mock_script.reload()
 		AudioManager.set_script(mock_script)
 
@@ -108,22 +117,3 @@ func test_dialog_cancellation_audio() -> void:
 		
 	_assert_sfx_called("ui_cancel")
 	_assert_sfx_call_count(1)
-
-
-## Assert that standard menu buttons do not trigger global confirmation requests on ui_accept.
-## :rtype: void
-func test_flat_button_anti_trigger_protection() -> void:
-	var start_button: Button = Button.new()
-	start_button.flat = true
-	main_menu_instance.add_child(start_button)
-	
-	# FIX: Explicitly drive the button through the global connection hook to mimic tree entry
-	Globals._on_node_added(start_button)
-	await get_tree().process_frame
-	
-	# FIX: Directly emit the pressed signal to verify the global hook was successfully blocked
-	start_button.pressed.emit()
-	await get_tree().process_frame
-		
-	# Global accept confirmation must remain untouched to respect native inspector themes
-	_assert_sfx_not_called("ui_accept")

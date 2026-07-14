@@ -13,6 +13,11 @@ func before_each() -> void:
 
 func after_each() -> void:
 	AudioManager.stop_all_sfx()
+	
+	# FIX (CodeRabbit AI): Prevent state leakage if an early assertion aborts the test body
+	if not get_tree().node_added.is_connected(AudioManager._on_node_added):
+		get_tree().node_added.connect(AudioManager._on_node_added)
+		
 	await _wait_for_registration()
 
 
@@ -38,7 +43,8 @@ func _get_button_connection_count(node: Node, require_deferred: bool = true) -> 
 	
 	for connection: Dictionary in connections:
 		var callable: Callable = connection.get("callable", Callable())
-		if callable == Globals._on_global_button_pressed:
+		#if callable == Globals._on_global_button_pressed:
+		if callable == AudioManager._on_global_button_pressed:
 			if require_deferred:
 				var flags: int = connection.get("flags", 0)
 				if flags & CONNECT_DEFERRED:
@@ -59,7 +65,8 @@ func _get_non_button_connection_count(node: Node) -> int:
 	
 	for connection: Dictionary in connections:
 		var callable: Callable = connection.get("callable", Callable())
-		if callable == Globals._on_global_button_pressed:
+		#if callable == Globals._on_global_button_pressed:
+		if callable == AudioManager._on_global_button_pressed:	
 			count += 1
 	return count
 
@@ -229,8 +236,8 @@ func test_duplicate_scan_calls_do_not_duplicate_connections() -> void:
 	await _wait_for_registration()
 	assert_eq(_get_button_connection_count(btn, true), 1, "Precondition: Single link registered.")
 
-	# Act
-	Globals._on_node_added(btn)
+	# Act - FIX: Target AudioManager instead of Globals
+	AudioManager._on_node_added(btn)
 	await _wait_for_registration()
 
 	# Assert
@@ -330,4 +337,150 @@ func test_standard_button_pressed_executes_audio_output() -> void:
 	assert_true(
 		AudioManager.is_any_sfx_playing(),
 		"Functional Failure: Automated button hook was deferred but failed to route playback to AudioManager on press."
+	)
+
+
+# ==========================================================================
+# 5. RETROACTIVE INITIALIZATION & AUTOLOAD LIFECYCLE TESTS (SOURCERY-AI)
+# ==========================================================================
+
+## Verifies that buttons already present in the scene tree *before* a scan 
+## are successfully hooked up by the retroactive tree traversal function.
+func test_retroactive_scan_captures_pre_existing_buttons() -> void:
+	# 1. Arrange: Disconnect the live listener temporarily to simulate a button 
+	# entering the tree BEFORE AudioManager is ready.
+	if get_tree().node_added.is_connected(AudioManager._on_node_added):
+		get_tree().node_added.disconnect(AudioManager._on_node_added)
+		
+	var early_button := Button.new()
+	add_child_autofree(early_button)
+	
+	# Precondition check: The button should have 0 connections because the listener was off.
+	assert_eq(
+		_get_button_connection_count(early_button, false),
+		0,
+		"Precondition Failed: Early button should not be automatically wired without a live listener."
+	)
+	
+	# 2. Act: Re-connect the production listener and force-run the retroactive scan wrapper
+	get_tree().node_added.connect(AudioManager._on_node_added)
+	if AudioManager.has_method("_retroactive_ui_scan"):
+		AudioManager._retroactive_ui_scan(get_tree().root)
+	else:
+		fail_test("Architectural Failure: AudioManager is missing the '_retroactive_ui_scan' method.")
+		return
+		
+	await _wait_for_registration()
+	
+	# 3. Assert: The early button must now be fully wired up
+	assert_eq(
+		_get_button_connection_count(early_button, true),
+		1,
+		"Retroactive scan failed to crawl the scene tree and hook up pre-existing buttons."
+	)
+
+
+## Verifies that running the retroactive initialization scan against an active, 
+## already-tracked hierarchy remains completely safe and idempotent.
+func test_retroactive_scan_is_idempotent_and_does_not_double_bind() -> void:
+	# 1. Arrange: Let a standard button auto-register naturally through the active listener
+	var standard_button := Button.new()
+	add_child_autofree(standard_button)
+	await _wait_for_registration()
+	
+	assert_eq(
+		_get_button_connection_count(standard_button, true),
+		1,
+		"Precondition Failed: Standard button did not perform baseline auto-connection."
+	)
+	
+	# 2. Act: Execute a manual retroactive sweep across the entire root tree layout
+	if AudioManager.has_method("_retroactive_ui_scan"):
+		AudioManager._retroactive_ui_scan(get_tree().root)
+	await _wait_for_registration()
+	
+	# 3. Assert: Connection counts must still be exactly 1 thanks to the internal .is_connected() guard
+	assert_eq(
+		_get_button_connection_count(standard_button, true),
+		1,
+		"Idempotency Guard Failed: Retroactive scan introduced duplicate audio connections to an active button."
+	)
+
+
+## Verifies that AudioManager guards against duplicate listener registration 
+## on the SceneTree's node_added signal when _ready() is invoked multiple times.
+func test_audiomanager_listener_registration_is_strictly_singular() -> void:
+	# 1. Arrange: Verify the production baseline is already active
+	assert_true(
+		get_tree().node_added.is_connected(AudioManager._on_node_added),
+		"Precondition Failed: AudioManager should naturally be connected to node_added."
+	)
+	
+	# Extract initial connections array to count total bindings
+	var initial_connections: Array = get_tree().node_added.get_connections()
+	var baseline_listener_count: int = 0
+	for conn: Dictionary in initial_connections:
+		if conn.get("callable", Callable()) == AudioManager._on_node_added:
+			baseline_listener_count += 1
+			
+	assert_eq(baseline_listener_count, 1, "Baseline setup should have exactly one listener attached.")
+
+	# 2. Act: Force an unconditional alternate boot path trigger by calling production _ready() again
+	AudioManager._ready()
+	
+	# 3. Assert: Total active listener attachments on the signal must remain exactly 1
+	var post_connections: Array = get_tree().node_added.get_connections()
+	var post_listener_count: int = 0
+	for conn: Dictionary in post_connections:
+		if conn.get("callable", Callable()) == AudioManager._on_node_added:
+			post_listener_count += 1
+			
+	assert_eq(
+		post_listener_count, 
+		1, 
+		"Guard Failure: Production _ready() re-entry duplicated the tree observer listener."
+	)
+
+
+## Verifies that the optimized retroactive scan successfully crawls deep hierarchies 
+## containing non-UI and structural nodes, ensuring leaf buttons are found while 
+## container elements are bypassed cleanly.
+func test_retroactive_scan_traverses_mixed_hierarchy_safely() -> void:
+	# 1. Arrange: Disconnect live listener to prevent automatic runtime hooking on entrance
+	if get_tree().node_added.is_connected(AudioManager._on_node_added):
+		get_tree().node_added.disconnect(AudioManager._on_node_added)
+		
+	var structural_root := Node.new()          # Completely non-UI structural node
+	var intermediate_box := Control.new()       # Layout container (non-Button UI)
+	var leaf_button := Button.new()            # Target interactive element
+	
+	structural_root.add_child(intermediate_box)
+	intermediate_box.add_child(leaf_button)
+	add_child_autofree(structural_root)
+	
+	# Precondition check: Hierarchy must start entirely unlinked
+	assert_eq(_get_button_connection_count(leaf_button, false), 0)
+	assert_eq(_get_non_button_connection_count(intermediate_box), 0)
+	
+	# 2. Act: Target the optimized retroactive scan directly at the structural root node
+	if AudioManager.has_method("_retroactive_ui_scan"):
+		AudioManager._retroactive_ui_scan(structural_root)
+	else:
+		fail_test("Method '_retroactive_ui_scan' missing from AudioManager.")
+		return
+		
+	await _wait_for_registration()
+	
+	# 3. Assert: The deep leaf button must be successfully wired up
+	assert_eq(
+		_get_button_connection_count(leaf_button, true),
+		1,
+		"Optimized retroactive scan failed to descend through non-button layers to find nested buttons."
+	)
+	
+	# 4. Assert: Container items must remain untouched by the wiring logic
+	assert_eq(
+		_get_non_button_connection_count(intermediate_box),
+		0,
+		"Optimized retroactive scan incorrectly attempted to apply button hooks to container controls."
 	)
