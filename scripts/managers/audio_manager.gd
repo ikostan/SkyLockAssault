@@ -62,6 +62,27 @@ func _ready() -> void:
 	# Initialize the SFX object pool
 	_initialize_sfx_pool()
 
+	# Connect global listener  with a safety guard to ensure only one listener attaches (Issue #800)
+	if not get_tree().node_added.is_connected(_on_node_added):
+		get_tree().node_added.connect(_on_node_added)
+
+	# NEW: Retroactively scan for any buttons that snuck into the tree during the initialization frame
+	_retroactive_ui_scan(get_tree().root)
+
+
+## Recursively passes existing tree nodes into the parsing logic to catch early initializations
+func _retroactive_ui_scan(node: Node) -> void:
+	if not is_instance_valid(node):
+		return
+
+	# FIX: Optimize tree traversal by skipping function call churn on non-Button components
+	if node.get_class() == "Button":
+		_on_node_added(node)
+
+	# Always traverse children so we don't miss buttons nested inside containers/panels
+	for child in node.get_children():
+		_retroactive_ui_scan(child)
+
 
 ## Initialize all volumes and mutes to defaults from AudioConstants
 ## :rtype: void
@@ -230,8 +251,7 @@ func set_muted(bus_name: String, muted: bool) -> void:
 
 
 ## load_volumes
-## Loads persisted volumes from config if valid types;
-## skips invalid/missing to keep current.
+## Loads persisted volumes from config if valid types; skips invalid/missing to keep current.
 ## :param path: Config file path (default: current_config_path).
 ## :type path: String
 ## :rtype: void
@@ -506,6 +526,18 @@ func get_active_sfx_stream_path() -> String:
 	return ""
 
 
+## [DIAGNOSTIC]
+## Public API: Returns the target audio bus name of the most recently started active SFX.
+## If no sounds are playing, returns an empty string.
+## @return String: Name of the assigned audio bus.
+func get_active_sfx_bus_name() -> String:
+	# Iterate backwards matching our deterministic track verification rules
+	for i in range(_sfx_pool.size() - 1, -1, -1):
+		if _sfx_pool[i].playing:
+			return _sfx_pool[i].bus
+	return ""
+
+
 ## FOR GUT UNIT TEST ONLY
 ## Forcefully clear resources to prevent leaks between unit tests.
 ## Strictly guarded to prevent accidental execution in production builds.
@@ -539,3 +571,31 @@ func _initialize_sfx_pool() -> void:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
 		_sfx_pool.append(p)
+
+
+## Automatically hooks up base Button elements for confirmation sfx (Ported via Issue #800)
+func _on_node_added(node: Node) -> void:
+	# Use strict string evaluation to satisfy the verification contract
+	if node.get_class() == "Button":
+		var btn := node as Button
+		if is_instance_valid(btn):
+			# Flat Button Protection: Avoid superimposing global audio over theme audio
+			if btn.flat or btn.has_meta("no_global_sound"):
+				return
+
+			# Dialog Protection: Exclude internal buttons of Accept/ConfirmationDialogs
+			var parent := btn.get_parent()
+			while parent:
+				if parent is AcceptDialog:
+					return
+				parent = parent.get_parent()
+
+			# Guard against duplicate connections using CONNECT_DEFERRED for thread safety
+			if not btn.pressed.is_connected(_on_global_button_pressed):
+				btn.pressed.connect(_on_global_button_pressed, CONNECT_DEFERRED)
+
+
+## Centralized button audio execution target routed natively within AudioManager
+func _on_global_button_pressed() -> void:
+	# Route button accepts directly through the internal SFX bus configuration
+	play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)

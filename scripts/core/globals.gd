@@ -8,9 +8,6 @@ extends Node
 
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 
-## Path to the navigation sound file
-const UI_NAV_SOUND_PATH: String = "res://files/sounds/sfx/ui_navigation.wav"
-
 # --- TASK #529: Encryption Key Management ---
 ## Centralized key for securing local configuration files.
 ## This ensures consistent encryption/decryption across different game systems.
@@ -35,9 +32,6 @@ var next_scene: String = ""  # Path to the next scene to load via loading screen
 var current_input_device: String = "keyboard"  # "keyboard" or "gamepad"
 var _is_loading_settings: bool = false  # Guard flag
 
-## Preloaded stream to prevent disk I/O lag during fast menu navigation.
-var _ui_nav_stream: AudioStream = preload(UI_NAV_SOUND_PATH)
-
 # List of actions that should trigger the navigation sound
 var _nav_actions: Array[String] = [
 	"ui_up", "ui_down", "ui_left", "ui_right", "ui_focus_next", "ui_focus_prev"
@@ -56,9 +50,6 @@ func _ready() -> void:
 		# Fallback to in-memory defaults so Globals remains operational
 		settings = GameSettingsResource.new()
 		settings.current_log_level = LogLevel.WARNING
-
-	# Connect global listener to monitor all runtime UI instantiation tracks
-	get_tree().node_added.connect(_on_node_added)
 
 	if Engine.is_editor_hint() or settings.enable_debug_logging:
 		settings.current_log_level = LogLevel.DEBUG
@@ -333,7 +324,8 @@ func load_options(menu_to_hide: Node) -> void:
 # @param message: The string message to log.
 # @param level: The log level (default INFO).
 func log_message(message: String, level: LogLevel = LogLevel.INFO) -> void:
-	# FIX: Guard the log level check. If settings is null, print everything.
+	# FIX: Guard the log level check.
+	# If settings is null, print everything.
 	if is_instance_valid(settings) and level < settings.current_log_level:
 		return  # Skip if below threshold
 
@@ -457,6 +449,9 @@ func _process_ui_navigation_sfx(
 				return
 
 			# Context Guard C: Quietly drop events handling native element submissions
+			# FIX (#787): Bypasses the global input loop if an interactive control has focus.
+			# This delegates audio execution entirely to the component's native pressed signal
+			# and completely eliminates back-to-back duplicate confirmation sound triggers.
 			if action == "ui_accept":
 				if (
 					focus_owner is BaseButton
@@ -508,12 +503,6 @@ func _handle_ui_navigation_action(action: String, focus_owner: Control, ui_has_f
 		AudioManager.play_sfx(logical_id, AudioConstants.BUS_SFX)
 
 
-## Internal helper to play the navigation sound through the dedicated Menu SFX bus.
-func _play_ui_navigation_sfx() -> void:
-	# FIX: Correct the key string to match the true filename asset (ui_navigation.wav)
-	AudioManager.play_sfx("ui_navigation")
-
-
 ## Ensures the encryption key is initialized and returns it.
 ## Centralizes the safety check so other scripts don't have to repeat it.
 func ensure_encryption_key() -> String:
@@ -538,16 +527,17 @@ func ensure_encryption_key() -> String:
 ## Security Guard:
 ## In production builds (when neither 'editor' nor 'debug' features are present),
 ## this function strictly validates that a secure salt was successfully injected
-## during the CI/CD deployment. If the salt is missing or matches the weak development
-## fallback, it forces an immediate engine crash. This prevents the game from silently
+## during the CI/CD deployment.
+## If the salt is missing or matches the weak development
+## fallback, it forces an immediate engine crash.
+## This prevents the game from silently
 ## encrypting data with a weak/empty key.
 ##
 ## :rtype: String (The SHA-256 hashed key)
 ## Generates a unique, deterministic encryption key for local save files.
-## Generates a unique, deterministic encryption key for local save files.
-## Generates a unique, deterministic encryption key for local save files.
 func _get_encryption_key() -> String:
-	# Safe placeholder. This is an open source repo, so the REAL salt
+	# Safe placeholder.
+	# This is an open source repo, so the REAL salt
 	# is injected by GitHub Actions / CI pipeline during the build process.
 	var salt: String = "CI_INJECT_SALT_HERE"
 
@@ -572,7 +562,8 @@ func _get_encryption_key() -> String:
 			push_error(error_msg)
 			OS.crash(error_msg)
 
-	# FIX: Removed JavaScriptBridge.eval() from here. Calling JS from a
+	# FIX: Removed JavaScriptBridge.eval() from here.
+	# Calling JS from a
 	# class-level variable initialization silently crashes the WebAssembly module!
 	var device_id: String = "web_fallback"
 	if not OS.has_feature("web"):
@@ -683,34 +674,3 @@ func safe_load_config(path: String) -> Dictionary:
 func set_test_encryption_key(override_key: String = "test_deterministic_key_123") -> void:
 	save_encryption_pass = override_key
 	log_message("Encryption key overridden for testing.", LogLevel.DEBUG)
-
-
-## Automatically hooks up base Button elements for confirmation sfx
-func _on_node_added(node: Node) -> void:
-	# FIXED: Use strict string evaluation to satisfy the Issue #763 contract
-	if node.get_class() == "Button":
-		var btn := node as Button
-		if is_instance_valid(btn):
-			# Flat Button Protection: Avoid superimposing global audio over theme audio
-			if btn.flat or btn.has_meta("no_global_sound"):
-				return
-
-			# Dialog Protection: Exclude internal buttons of Accept/ConfirmationDialogs
-			var parent := btn.get_parent()
-			while parent:
-				if parent is AcceptDialog:
-					return
-				parent = parent.get_parent()
-
-			# Guard against duplicate connections using the explicit named callable.
-			# NOTE: CONNECT_DEFERRED is strictly required here to pass the Issue #763
-			# verification contract and guarantee thread-safe scene tree execution.
-			if not btn.pressed.is_connected(_on_global_button_pressed):
-				btn.pressed.connect(_on_global_button_pressed, CONNECT_DEFERRED)
-
-
-## Centralized button audio execution target to prevent lambda churn
-func _on_global_button_pressed() -> void:
-	# Explicitly route button accepts through the shared UI SFX bus to guarantee consistent
-	# muting behavior
-	AudioManager.play_sfx("ui_accept", AudioConstants.BUS_SFX)

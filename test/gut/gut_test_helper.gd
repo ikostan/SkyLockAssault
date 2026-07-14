@@ -2,6 +2,7 @@
 ## SPDX-License-Identifier: GPL-3.0-or-later
 ## gut_test_helper.gd
 ## Shared helper functions and mock builders for GUT unit tests.
+class_name GutTestHelper
 extends RefCounted
 
 const PLAYER_SCRIPT_PATH: String = GamePaths.PLAYER
@@ -17,6 +18,16 @@ static func safe_hard_free(node: Node) -> void:
 		node.get_parent().remove_child(node)
 	
 	node.free()
+
+
+## Headless audio bus bootstrapper to keep test suite initialization DRY across runners.
+static func bootstrap_headless_audio_buses(required_buses: Array[String]) -> void:
+	for bus_name in required_buses:
+		var idx := AudioServer.get_bus_index(bus_name)
+		if idx == -1:
+			AudioServer.add_bus()
+			var new_idx := AudioServer.get_bus_count() - 1
+			AudioServer.set_bus_name(new_idx, bus_name)
 
 
 ## Dynamically constructs the node hierarchy required by player.gd.
@@ -101,7 +112,7 @@ static func build_mock_player_scene() -> Node:
 	sprite.texture = dummy_texture
 	
 	var coll: CollisionPolygon2D = CollisionPolygon2D.new()
-	coll.name = "CollisionPolygon2D" # <--- This is the line I accidentally deleted!
+	coll.name = "CollisionPolygon2D"
 	
 	var weapon: Node2D = Node2D.new()
 	weapon.name = "Weapon"
