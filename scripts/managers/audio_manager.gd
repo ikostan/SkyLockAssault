@@ -7,14 +7,14 @@
 
 extends Node
 
-# --- NEW: SFX CACHING & MANAGEMENT ---
-## Base path for all UI sound effects.
-const SFX_DIR_PATH: String = "res://files/sounds/sfx/"
-
 # --- NEW SIGNALS FOR WEB BRIDGE & UI SYNC ---
 signal volume_changed(bus_name: String, volume: float)
 signal mute_toggled(bus_name: String, is_muted: bool)
 # --------------------------------------------
+
+# --- NEW: SFX CACHING & MANAGEMENT ---
+## Base path for all UI sound effects.
+const SFX_DIR_PATH: String = "res://files/sounds/sfx/"
 
 # --- NEW: SFX CACHING & MANAGEMENT ---
 ## Hard cap for cached SFX streams to prevent unbounded memory growth.
