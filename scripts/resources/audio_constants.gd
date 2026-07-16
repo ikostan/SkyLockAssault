@@ -7,8 +7,6 @@
 
 extends Node
 
-## Path to the navigation sound file
-# const UI_NAV_SOUND_PATH: String = "res://files/sounds/sfx/ui_navigation.wav"
 
 # --- Audio Bus Names ---
 const BUS_MASTER: String = "Master"
