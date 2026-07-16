@@ -413,7 +413,6 @@ func play_sfx(
 			# Structural fallback safely preserving legacy/direct calls
 			file_name += ".wav"
 
-		# var full_path: String = SFX_DIR_PATH + file_name
 		var full_path: String = AudioConstants.SFX_DIR_PATH + file_name
 
 		# Safety guard against non-existent files to block core engine loader errors from polluting tests
