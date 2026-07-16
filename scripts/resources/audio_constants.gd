@@ -7,10 +7,6 @@
 
 extends Node
 
-# --- SFX Asset Path Resolution Config ---
-## Base directory path for all game SFX assets (Unified here for discovery and configuration)
-const SFX_DIR_PATH: String = "res://files/sounds/sfx/"
-
 # --- Audio Bus Names ---
 const BUS_MASTER: String = "Master"
 const BUS_MUSIC: String = "Music"
