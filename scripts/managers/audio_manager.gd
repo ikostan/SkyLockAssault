@@ -7,6 +7,10 @@
 
 extends Node
 
+# --- NEW: SFX CACHING & MANAGEMENT ---
+## Base path for all UI sound effects.
+const SFX_DIR_PATH: String = "res://files/sounds/sfx/"
+
 # --- NEW SIGNALS FOR WEB BRIDGE & UI SYNC ---
 signal volume_changed(bus_name: String, volume: float)
 signal mute_toggled(bus_name: String, is_muted: bool)
@@ -413,7 +417,7 @@ func play_sfx(
 			# Structural fallback safely preserving legacy/direct calls
 			file_name += ".wav"
 
-		var full_path: String = AudioConstants.SFX_DIR_PATH + file_name
+		var full_path: String = SFX_DIR_PATH + file_name
 
 		# Safety guard against non-existent files to block core engine loader errors from polluting tests
 		if not ResourceLoader.exists(full_path):
