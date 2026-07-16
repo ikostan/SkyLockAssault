@@ -1,4 +1,4 @@
-# UI Navigation Focus SFX & Global UI Audio Integration
+# Centralize UI SFX configuration and add audio integrity tests
 <!-- markdownlint-disable MD001 MD036 MD013 MD033 table-column-style -->
 
 ### Overview
