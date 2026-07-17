@@ -5,7 +5,6 @@
 # Use as AudioConstants.BUS_MASTER, etc., to prevent typos and ease renaming.
 # Extends Node for autoload compatibility.
 
-
 extends Node
 
 ## Base path for all UI sound effects.
