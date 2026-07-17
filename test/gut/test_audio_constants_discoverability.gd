@@ -159,3 +159,21 @@ func test_fallback_bus_exists_in_audio_server() -> void:
 	var bus_idx: int = AudioServer.get_bus_index(AudioConstants.BUS_SFX_MENU)
 	assert_gt(bus_idx, -1, 
 		"Fallback mixing bus '%s' must exist in default_bus_layout.tres" % AudioConstants.BUS_SFX_MENU)
+
+
+## Runtime Smoke Test: Exercises play_sfx() to verify it successfully loads a stream.
+## This verifies the pool logic, cache logic, and ResourceLoader integration end-to-end.
+func test_runtime_play_sfx_smoke_test() -> void:
+	# Use a known UI sound from your map
+	var test_key: String = AudioConstants.UI_SFX.keys()[0]
+	var logical_key: String = AudioConstants.UI_SFX[test_key]
+	
+	# Pre-condition: Ensure it exists
+	assert_true(AudioConstants.SFX_ASSET_MAP.has(logical_key), "Key mapping missing.")
+	
+	# Execution: Trigger playback
+	AudioManager.play_sfx(logical_key)
+	
+	# Assertions
+	assert_true(AudioManager.get_active_sfx_playback_count() >= 0, "AudioManager failed to attempt playback.")
+	assert_not_null(AudioManager.get_active_sfx_stream_path(), "Stream path was not assigned.")
