@@ -17,14 +17,16 @@ func before_all() -> void:
 	if is_instance_valid(AudioManager):
 		original_audio_script = AudioManager.get_script()
 		var mock_script := GDScript.new()
+		# FIX: Match production signature (4 arguments) to prevent argument-count crashes
 		mock_script.source_code = """
 extends Node
 var sfx_calls: Array = []
-func play_sfx(key: String, extra: Variant = null) -> void:
+func play_sfx(key: String, bus_name: String = "SFX_Menu", pitch_scale: float = 1.0, volume_db: float = 0.0) -> void:
 	sfx_calls.append(key)
 """
 		mock_script.reload()
 		AudioManager.set_script(mock_script)
+
 
 ## Suite cleanup: Safely restore the original AudioManager script and
 ## re-populate its internal state to ensure strict test isolation.
