@@ -110,7 +110,7 @@ func test_ui_navigation_sfx_requires_gui_focus() -> void:
 	UiManager._input(nav_event) 
 	await wait_process_frames(1)
 
-	# FIX VERIFIED: Because we added the stale focus safeguard to Globals._input,
+	# FIX VERIFIED: Because we added the stale focus safeguard to UiManager._input,
 	# navigation audio is now INTENTIONALLY allowed to play in menu contexts even if the focus owner flag is stale.
 	assert_true(AudioManager.is_any_sfx_playing(), "Stale Focus Safeguard: Navigation audio should play in menu context even if focus is transiently empty.") 
 
