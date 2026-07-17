@@ -46,6 +46,26 @@ This PR strengthens the audio architecture foundation for consistent UI sound ha
 
 ---
 
+## Developer Changelog
+
+- **Centralized UI SFX path configuration** so audio asset locations have one authoritative source, preventing path drift between playback code and configuration/tests.
+- **Hardened pooled SFX playback against Godot lifecycle timing** by safely handling calls before pool initialization and ignoring freed `AudioStreamPlayer` instances during playback and diagnostics.
+- **Improved audio routing resilience** by validating requested buses and safely falling back to the dedicated menu-SFX bus when a caller supplies an invalid bus.
+- **Expanded audio integrity coverage from static checks to runtime validation**: mapped assets must load as valid `AudioStream`s, fallback routing is exercised, and freed-player scenarios are tested end-to-end.
+- **Preserved session-level caching of missing assets intentionally** to avoid repeated resource lookups and input-time micro-stutter when an asset is unavailable.
+- **Strengthened type clarity in UI traversal code** to improve editor assistance and maintainability without adding runtime overhead.
+
+---
+
+## Player-Facing Impact
+
+- UI navigation, confirmation, and cancellation sounds should be **more consistent and reliable** across menus.
+- The game is more resilient during scene changes, startup timing, and audio-system edge cases—reducing the chance of missing UI sounds or runtime errors.
+- Invalid or unavailable audio configuration now degrades more gracefully, favoring fallback behavior over broken or silent interactions.
+- No intended gameplay changes; this is a **stability, consistency, and maintainability** improvement to the UI audio experience.
+
+---
+
 ## Reviewer's Guide
 
 Centralizes SFX directory configuration into AudioConstants and wires AudioManager to use it, while adding tests that verify audio constants, asset paths, bus configuration, and UI SFX mappings are discoverable and correct.
