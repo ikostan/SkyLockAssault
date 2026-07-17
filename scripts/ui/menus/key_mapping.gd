@@ -303,6 +303,6 @@ func _on_gamepad_toggled(toggled_on: bool) -> void:
 		Globals.current_input_device = "gamepad"
 		Settings.save_last_input_device("gamepad")
 		update_all_remap_buttons()
-		# FIX: Use centralized AudioConstants key instead of hardcoded string[cite: 7]
+		# FIX: Use centralized AudioConstants key instead of hardcoded string
 		AudioManager.play_sfx(AudioConstants.SFX_CHECK)
 		Globals.log_message("Current input device set to: gamepad", Globals.LogLevel.DEBUG)

@@ -154,7 +154,7 @@ func _handle_ui_navigation_action(action: String, focus_owner: Control, ui_has_f
 	var is_horizontal_slider: bool = (
 		focus_owner is Slider and (action == "ui_left" or action == "ui_right")
 	)
-	
+
 	# Reference the constant from AudioConstants
 	var is_nav_action: bool = action in AudioConstants.NAV_ACTIONS
 	var should_play_nav_sfx: bool = (ui_has_focus or is_nav_action) and not is_horizontal_slider
