@@ -77,7 +77,7 @@ func _retroactive_ui_scan(node: Node) -> void:
 		_on_node_added(node)
 
 	# Always traverse children so we don't miss buttons nested inside containers/panels
-	for child in node.get_children():
+	for child: Node in node.get_children():
 		_retroactive_ui_scan(child)
 
 
@@ -596,7 +596,7 @@ func _on_node_added(node: Node) -> void:
 				return
 
 			# Dialog Protection: Exclude internal buttons of Accept/ConfirmationDialogs
-			var parent := btn.get_parent()
+			var parent: Node = btn.get_parent()
 			while parent:
 				if parent is AcceptDialog:
 					return
