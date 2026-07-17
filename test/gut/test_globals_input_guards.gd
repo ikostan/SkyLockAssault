@@ -56,8 +56,8 @@ func _assert_focus_blocks_action(control: Control, failure_message: String, acti
 	event.action = action_name
 	event.pressed = true
 	
-	# Route synthetic input payload straight to the intercept loop
-	Globals._input(event)
+	# Route synthetic input payload straight to the intercept loop (Issue #490)
+	UiManager._unhandled_input(event)
 	
 	# Assert: Validation logic only. Lifecycle cleanup is deferred to after_each()
 	assert_false(
@@ -95,7 +95,8 @@ func _setup_focused_control(control: Control) -> void:
 ## Arrange/Act/Assert code duplication across the separate test blocks.
 func _assert_focus_blocks_ui_accept(control: Control, failure_message: String) -> void:
 	await _setup_focused_control(control)
-	Globals._input(_create_ui_accept_event())
+	# Route synthetic input payload straight to the intercept loop (Issue #490)
+	UiManager._unhandled_input(_create_ui_accept_event())
 	
 	assert_false(
 		AudioManager.is_any_sfx_playing(),
@@ -161,7 +162,7 @@ func test_passive_control_triggers_global_audio() -> void:
 	var fallback_control := Panel.new()
 	await _setup_focused_control(fallback_control)
 
-	Globals._input(_create_ui_accept_event())
+	UiManager._unhandled_input(_create_ui_accept_event())
 
 	assert_true(
 		AudioManager.is_any_sfx_playing(),
@@ -193,8 +194,8 @@ func test_stale_focus_navigation_retains_audio_safeguard() -> void:
 	# Clear out any previous audio junk
 	AudioManager.stop_all_sfx()
 	
-	# 2. Simulate a user hitting 'ui_down' during a focus transition fade
-	Globals._input(_create_nav_event("ui_down"))
+	# 2. Simulate a user hitting 'ui_down' during a focus transition fade (Issue #490)
+	UiManager._unhandled_input(_create_nav_event("ui_down"))
 	
 	# 3. Assert that the safeguard caught the transition and played the fallback audio
 	assert_true(
