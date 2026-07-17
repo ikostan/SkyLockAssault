@@ -32,6 +32,10 @@ func after_each() -> void:
 	# Restore global configuration state cleanly
 	Globals.options_open = _original_options_open
 	
+	# UNCONDITIONALLY unpause the tree to prevent test runner hangs
+	# This ensures subsequent tests start in a clean, running state
+	get_tree().paused = false
+	
 	var focus_owner := get_viewport().gui_get_focus_owner()
 	if is_instance_valid(focus_owner):
 		focus_owner.release_focus()
