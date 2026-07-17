@@ -148,6 +148,12 @@ func test_ui_sfx_referential_integrity() -> void:
 # 5. RUNTIME & SYSTEMIC INTEGRATION VERIFICATION
 # ==========================================================================
 
+## GUT Lifecycle hook: Runs automatically after every single test method.
+## Guarantees the AudioManager is restored to a pristine state even if assertions fail.
+func after_each() -> void:
+	AudioManager.cleanup_for_test()
+
+
 ## Validates that every asset defined in the central map physically exists on disk
 ## AND successfully loads as a valid, uncorrupted AudioStream.
 func test_all_mapped_assets_load_as_valid_audiostream() -> void:
@@ -174,8 +180,6 @@ func test_fallback_bus_exists_in_audio_server() -> void:
 
 ## Verifies play_sfx() correctly routes to the fallback bus when an invalid bus is requested.
 func test_invalid_bus_fallback_routing() -> void:
-	AudioManager.cleanup_for_test()
-	
 	var test_key: String = AudioConstants.SFX_ASSET_MAP.keys()[0]
 	var invalid_bus: String = "ThisIsAFakeBusThatDoesNotExist"
 	
@@ -188,14 +192,10 @@ func test_invalid_bus_fallback_routing() -> void:
 		AudioConstants.BUS_SFX_MENU, 
 		"AudioManager failed to fall back to the Menu bus when an invalid bus was requested."
 	)
-	
-	AudioManager.cleanup_for_test()
 
 
 ## Verifies that play_sfx() survives and runs cleanly if a pooled player is freed midway through execution.
 func test_play_sfx_resilience_to_freed_players() -> void:
-	AudioManager.cleanup_for_test()
-	
 	# Force-retrieve the private pool array
 	var pool_array: Array = AudioManager.get("_sfx_pool")
 	assert_gt(pool_array.size(), 0, "SFX pool was not initialized correctly.")
@@ -210,6 +210,3 @@ func test_play_sfx_resilience_to_freed_players() -> void:
 	
 	# Assert that play_sfx gracefully bypassed the dead node and still executed on a living one
 	assert_true(AudioManager.is_any_sfx_playing(), "AudioManager failed to play SFX after a pool node was freed.")
-	
-	# Force-cleanup to leave the singleton pristine for subsequent tests
-	AudioManager.cleanup_for_test()
