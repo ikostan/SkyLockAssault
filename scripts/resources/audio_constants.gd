@@ -117,3 +117,9 @@ const SFX_ASSET_MAP: Dictionary = {
 	"airplane_prop": "airplane_prop.ogg",
 	"retro_laser": "retro-laser-1-236669.mp3"
 }
+
+## Centralized list of UI navigation actions to ensure consistency 
+## and prevent duplicate definitions across the codebase.
+const NAV_ACTIONS: Array[String] = [
+	"ui_up", "ui_down", "ui_left", "ui_right", "ui_focus_next", "ui_focus_prev"
+]

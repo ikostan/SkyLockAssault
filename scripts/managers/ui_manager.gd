@@ -8,11 +8,6 @@
 
 extends Node
 
-## List of explicit directional and focus-shifting UI actions.
-var _nav_actions: Array[String] = [
-	"ui_up", "ui_down", "ui_left", "ui_right", "ui_focus_next", "ui_focus_prev"
-]
-
 
 func _ready() -> void:
 	# Ensure this manager continues processing inputs when the SceneTree is paused
@@ -159,7 +154,9 @@ func _handle_ui_navigation_action(action: String, focus_owner: Control, ui_has_f
 	var is_horizontal_slider: bool = (
 		focus_owner is Slider and (action == "ui_left" or action == "ui_right")
 	)
-	var is_nav_action: bool = action in _nav_actions
+	
+	# Reference the constant from AudioConstants
+	var is_nav_action: bool = action in AudioConstants.NAV_ACTIONS
 	var should_play_nav_sfx: bool = (ui_has_focus or is_nav_action) and not is_horizontal_slider
 
 	if should_play_nav_sfx:
