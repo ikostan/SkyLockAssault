@@ -24,38 +24,39 @@ var _intentional_exit: bool = false
 @onready var device_group: ButtonGroup = ButtonGroup.new()  # Mutual exclusivity
 
 
+## Initializes the controls menu.
+##
+## Connects signals, configures process mode, and sets the initial device
+## selection using `set_pressed_no_signal` to prevent triggering audio
+## playback during initialization.
 func _ready() -> void:
-	## Initializes controls menu.
-	##
-	## Connects signals, configures process mode.
-	##
-	## Toggles web overlays if on web.
-	##
-	## :rtype: void
-	##
-	# Back button
+	# Back button connection
 	if not controls_back_button.pressed.is_connected(_on_controls_back_button_pressed):
 		controls_back_button.pressed.connect(_on_controls_back_button_pressed)
 
-	# NEW: Reset button connect (add if not there—resets to defaults)
+	# Reset button connection
 	if not controls_reset_button.pressed.is_connected(_on_reset_pressed):
 		controls_reset_button.pressed.connect(_on_reset_pressed)
 
-	# NEW: Assign ButtonGroup for exclusivity
+	# Assign ButtonGroup for mutual exclusivity
 	keyboard.button_group = device_group
 	gamepad.button_group = device_group
-	keyboard.button_pressed = true  # Default: Keyboard
+
+	# FIX: Use set_pressed_no_signal() to set the default state without
+	# triggering the _on_keyboard_toggled / _on_gamepad_toggled audio callbacks
+	keyboard.set_pressed_no_signal(Globals.current_input_device == "keyboard")
+	gamepad.set_pressed_no_signal(Globals.current_input_device == "gamepad")
 
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	# NEW: Default focus on "Keyboard" when the menu opens
 	_grab_initial_focus()
 
 	# Conflicting key remap functionality/setup
-	add_to_group("key_mapping_menu")  # so buttons can find us
-	# Create the conflict dialog once
+	add_to_group("key_mapping_menu")
+
+	# Create the conflict dialog
 	conflict_dialog = ConfirmationDialog.new()
 	conflict_dialog.title = "Input Already Used"
-	conflict_dialog.exclusive = true  # blocks background input
+	conflict_dialog.exclusive = true
 	conflict_dialog.get_ok_button().text = "Reassign (unbind other)"
 	conflict_dialog.get_cancel_button().text = "Cancel"
 	add_child(conflict_dialog)
@@ -67,25 +68,15 @@ func _ready() -> void:
 
 	if os_wrapper.has_feature("web"):
 		js_window = js_bridge_wrapper.get_interface("window")
-		if js_window:  # New: Null check
-			(
-				js_bridge_wrapper
-				. eval(
-					"""
-					document.getElementById('controls-back-button').style.display = 'block';
-					""",
-					true
-				)
+		if js_window:
+			js_bridge_wrapper.eval(
+				"document.getElementById('controls-back-button').style.display = 'block';", true
 			)
-			# JS Callbacks
 			_controls_back_button_pressed_cb = js_bridge_wrapper.create_callback(
 				Callable(self, "_on_controls_back_button_pressed_js")
 			)
 			js_window.controlsBackPressed = _controls_back_button_pressed_cb
 
-	# Apply the last selected device (Globals has already loaded it in _ready)
-	keyboard.button_pressed = (Globals.current_input_device == "keyboard")
-	gamepad.button_pressed = (Globals.current_input_device == "gamepad")
 	update_all_remap_buttons()
 
 
@@ -289,17 +280,29 @@ func _grab_initial_focus() -> void:
 	Globals.ensure_initial_focus(keyboard, allowed_controls, "Key Mapping Menu")  # candidate
 
 
+## Callback triggered when the keyboard device toggle is interacted with.
+## Saves the input preference to persistent settings, updates the UI button mappings,
+## and plays confirmation audio feedback using the centralized SFX map.
+## @param toggled_on: The current boolean state of the toggle button.
 func _on_keyboard_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		Globals.current_input_device = "keyboard"
 		Settings.save_last_input_device("keyboard")
 		update_all_remap_buttons()
+		# FIX: Pass BUS_SFX_MENU explicitly as requested by reviewer
+		AudioManager.play_sfx(AudioConstants.SFX_CHECK, AudioConstants.BUS_SFX_MENU)
 		Globals.log_message("Current input device set to: keyboard", Globals.LogLevel.DEBUG)
 
 
+## Callback triggered when the gamepad device toggle is interacted with.
+## Saves the input preference to persistent settings, updates the UI button mappings,
+## and plays confirmation audio feedback using the centralized SFX map.
+## @param toggled_on: The current boolean state of the toggle button.
 func _on_gamepad_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		Globals.current_input_device = "gamepad"
 		Settings.save_last_input_device("gamepad")
 		update_all_remap_buttons()
+		# FIX: Pass BUS_SFX_MENU explicitly as requested by reviewer
+		AudioManager.play_sfx(AudioConstants.SFX_CHECK, AudioConstants.BUS_SFX_MENU)
 		Globals.log_message("Current input device set to: gamepad", Globals.LogLevel.DEBUG)

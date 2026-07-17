@@ -1,7 +1,7 @@
 ## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_nav_escape_sfx.gd
-# FIX: Swapped out explicit path inheritance for the global class name token to ensure test runner discovery
+
 extends GutTest
 
 var globals_instance: Node
@@ -15,11 +15,12 @@ func before_all() -> void:
 	if is_instance_valid(AudioManager):
 		original_audio_script = AudioManager.get_script()
 		var mock_script := GDScript.new()
+		# FIX: Match production signature (4 arguments) and log [key, bus_name]
 		mock_script.source_code = """
 extends Node
 var sfx_calls: Array = []
-func play_sfx(key: String, extra: Variant = null) -> void:
-	sfx_calls.append([key, extra])
+func play_sfx(key: String, bus_name: String = "SFX_Menu", pitch_scale: float = 1.0, volume_db: float = 0.0) -> void:
+	sfx_calls.append([key, bus_name])
 """
 		mock_script.reload()
 		AudioManager.set_script(mock_script)
@@ -105,9 +106,9 @@ func _set_menu_context(value: bool) -> void:
 ## Helper to feed simulated inputs safely and directly through the pipeline contexts.
 ## :rtype: void
 func _simulate_input(event: InputEvent) -> void:
-	# FIX: Invoke only the explicit _input path to ensure we strictly test the audio routing contract
-	if is_instance_valid(globals_instance) and globals_instance.has_method("_input"):
-		globals_instance._input(event)
+	# Route simulated input events directly into the new decoupled UiManager (Issue #490)
+	if is_instance_valid(UiManager) and UiManager.has_method("_input"):
+		UiManager._input(event)
 
 
 ## Assert that simulating a ui_cancel input event when inside a menu context triggers cancel audio.

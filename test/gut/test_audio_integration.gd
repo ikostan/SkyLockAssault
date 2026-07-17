@@ -3,6 +3,7 @@
 ## test_audio_integration.gd
 ##
 ## Comprehensive GUT integration test suite verified against headless runner environments.
+
 extends GutTest
 
 const TARGET_BUS: String = AudioConstants.BUS_SFX
@@ -107,10 +108,10 @@ func test_ui_navigation_sfx_requires_gui_focus() -> void:
 	var nav_event := InputEventAction.new() 
 	nav_event.action = "ui_down" 
 	nav_event.pressed = true 
-	Globals._input(nav_event) 
-	await wait_process_frames(1) 
+	UiManager._input(nav_event) 
+	await wait_process_frames(1)
 
-	# FIX VERIFIED: Because we added the stale focus safeguard to Globals._input,
+	# FIX VERIFIED: Because we added the stale focus safeguard to UiManager._input,
 	# navigation audio is now INTENTIONALLY allowed to play in menu contexts even if the focus owner flag is stale.
 	assert_true(AudioManager.is_any_sfx_playing(), "Stale Focus Safeguard: Navigation audio should play in menu context even if focus is transiently empty.") 
 
@@ -119,8 +120,8 @@ func test_ui_navigation_sfx_requires_gui_focus() -> void:
 
 	unfocused_slider.grab_focus() 
 	await wait_process_frames(1) 
-	Globals._input(nav_event) 
-	await wait_process_frames(1) 
+	UiManager._input(nav_event)
+	await wait_process_frames(1)
 
 	assert_true(AudioManager.is_any_sfx_playing(), "Navigation audio should trigger when GUI element has active focus.") 
 	assert_true(AudioManager.get_active_sfx_stream_path().contains("ui_navigation"), "Active stream path should point to ui_navigation asset.") 
