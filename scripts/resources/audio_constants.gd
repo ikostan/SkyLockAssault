@@ -43,6 +43,9 @@ const SFX_SLIDER: String = "slider"
 const SFX_MUTE_TOGGLE: String = "mute_toggle"  # For future CheckButton task
 const SFX_UI_NAVIGATION: String = "ui_navigation"
 
+## Centralized SFX keys
+const SFX_CHECK = "check"
+
 # Centralized config with defaults and var mappings
 const BUS_CONFIG: Dictionary = {
 	BUS_MASTER:
