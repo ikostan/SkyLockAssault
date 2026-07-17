@@ -497,7 +497,7 @@ func play_sfx(
 ## :rtype: bool
 func is_any_sfx_playing() -> bool:
 	for player: AudioStreamPlayer in _sfx_pool:
-		if player.playing:
+		if is_instance_valid(player) and player.playing:
 			return true
 	return false
 
@@ -508,7 +508,7 @@ func is_any_sfx_playing() -> bool:
 func get_active_sfx_playback_count() -> int:
 	var count: int = 0
 	for player: AudioStreamPlayer in _sfx_pool:
-		if player.playing:
+		if is_instance_valid(player) and player.playing:
 			count += 1
 	return count
 
@@ -517,8 +517,9 @@ func get_active_sfx_playback_count() -> int:
 ## :rtype: void
 func stop_all_sfx() -> void:
 	for player: AudioStreamPlayer in _sfx_pool:
-		player.stop()
-		player.stream = null
+		if is_instance_valid(player):
+			player.stop()
+			player.stream = null
 
 
 ## [DIAGNOSTIC]
@@ -530,8 +531,9 @@ func get_active_sfx_stream_path() -> String:
 	# Iterate backwards through the pool to return the most recently
 	# added/played sound, making the choice deterministic and explicit.
 	for i in range(_sfx_pool.size() - 1, -1, -1):
-		if _sfx_pool[i].playing and _sfx_pool[i].stream:
-			return _sfx_pool[i].stream.resource_path
+		var player: AudioStreamPlayer = _sfx_pool[i]
+		if is_instance_valid(player) and player.playing and player.stream:
+			return player.stream.resource_path
 	return ""
 
 
@@ -542,8 +544,9 @@ func get_active_sfx_stream_path() -> String:
 func get_active_sfx_bus_name() -> String:
 	# Iterate backwards matching our deterministic track verification rules
 	for i in range(_sfx_pool.size() - 1, -1, -1):
-		if _sfx_pool[i].playing:
-			return _sfx_pool[i].bus
+		var player: AudioStreamPlayer = _sfx_pool[i]
+		if is_instance_valid(player) and player.playing:
+			return player.bus
 	return ""
 
 

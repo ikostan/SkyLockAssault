@@ -144,14 +144,25 @@ func test_ui_sfx_referential_integrity() -> void:
 		)
 
 
-## Validates that every asset defined in the central map physically exists on disk.
-func test_all_mapped_assets_exist_on_disk() -> void:
+# ==========================================================================
+# 5. RUNTIME & SYSTEMIC INTEGRATION VERIFICATION
+# ==========================================================================
+
+## Validates that every asset defined in the central map physically exists on disk
+## AND successfully loads as a valid, uncorrupted AudioStream.
+func test_all_mapped_assets_load_as_valid_audiostream() -> void:
 	for key: String in AudioConstants.SFX_ASSET_MAP:
 		var file_name: String = AudioConstants.SFX_ASSET_MAP[key]
 		var full_path: String = AudioConstants.SFX_DIR_PATH + file_name
 		
+		# 1. Assert physical file existence on disk
 		assert_true(ResourceLoader.exists(full_path), 
 			"SFX mapping key '%s' points to a missing file on disk: %s" % [key, full_path])
+		
+		# 2. Force load the resource and verify it compiles to a valid AudioStream instance
+		var stream: Resource = load(full_path)
+		assert_not_null(stream, "Failed to load audio resource at: %s" % full_path)
+		assert_true(stream is AudioStream, "Resource at %s is not a valid AudioStream." % full_path)
 
 
 ## Validates that the fallback menu mixing bus actually exists in the AudioServer.
@@ -161,19 +172,44 @@ func test_fallback_bus_exists_in_audio_server() -> void:
 		"Fallback mixing bus '%s' must exist in default_bus_layout.tres" % AudioConstants.BUS_SFX_MENU)
 
 
-## Runtime Smoke Test: Exercises play_sfx() to verify it successfully loads a stream.
-## This verifies the pool logic, cache logic, and ResourceLoader integration end-to-end.
-func test_runtime_play_sfx_smoke_test() -> void:
-	# Use a known UI sound from your map
-	var test_key: String = AudioConstants.UI_SFX.keys()[0]
-	var logical_key: String = AudioConstants.UI_SFX[test_key]
+## Verifies play_sfx() correctly routes to the fallback bus when an invalid bus is requested.
+func test_invalid_bus_fallback_routing() -> void:
+	AudioManager.cleanup_for_test()
 	
-	# Pre-condition: Ensure it exists
-	assert_true(AudioConstants.SFX_ASSET_MAP.has(logical_key), "Key mapping missing.")
+	var test_key: String = AudioConstants.SFX_ASSET_MAP.keys()[0]
+	var invalid_bus: String = "ThisIsAFakeBusThatDoesNotExist"
 	
-	# Execution: Trigger playback
-	AudioManager.play_sfx(logical_key)
+	# Trigger playback with invalid bus configuration
+	AudioManager.play_sfx(test_key, invalid_bus)
 	
-	# Assertions
-	assert_true(AudioManager.get_active_sfx_playback_count() >= 0, "AudioManager failed to attempt playback.")
-	assert_not_null(AudioManager.get_active_sfx_stream_path(), "Stream path was not assigned.")
+	# Verify it safely fell back to SFX_Menu instead of failing or muting
+	assert_eq(
+		AudioManager.get_active_sfx_bus_name(), 
+		AudioConstants.BUS_SFX_MENU, 
+		"AudioManager failed to fall back to the Menu bus when an invalid bus was requested."
+	)
+	
+	AudioManager.cleanup_for_test()
+
+
+## Verifies that play_sfx() survives and runs cleanly if a pooled player is freed midway through execution.
+func test_play_sfx_resilience_to_freed_players() -> void:
+	AudioManager.cleanup_for_test()
+	
+	# Force-retrieve the private pool array
+	var pool_array: Array = AudioManager.get("_sfx_pool")
+	assert_gt(pool_array.size(), 0, "SFX pool was not initialized correctly.")
+	
+	# Violently free the first node in the pool to create a dangling/previously-freed reference
+	var target_player: AudioStreamPlayer = pool_array[0]
+	target_player.free()
+	
+	# Trigger playback
+	var test_key: String = AudioConstants.SFX_ASSET_MAP.keys()[0]
+	AudioManager.play_sfx(test_key)
+	
+	# Assert that play_sfx gracefully bypassed the dead node and still executed on a living one
+	assert_true(AudioManager.is_any_sfx_playing(), "AudioManager failed to play SFX after a pool node was freed.")
+	
+	# Force-cleanup to leave the singleton pristine for subsequent tests
+	AudioManager.cleanup_for_test()
