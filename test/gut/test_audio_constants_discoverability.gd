@@ -142,3 +142,20 @@ func test_ui_sfx_referential_integrity() -> void:
 			"UI Action '%s' maps to an unresolved logical key '%s' missing from SFX_ASSET_MAP." 
 			% [action_name, logical_sfx_key]
 		)
+
+
+## Validates that every asset defined in the central map physically exists on disk.
+func test_all_mapped_assets_exist_on_disk() -> void:
+	for key: String in AudioConstants.SFX_ASSET_MAP:
+		var file_name: String = AudioConstants.SFX_ASSET_MAP[key]
+		var full_path: String = AudioConstants.SFX_DIR_PATH + file_name
+		
+		assert_true(ResourceLoader.exists(full_path), 
+			"SFX mapping key '%s' points to a missing file on disk: %s" % [key, full_path])
+
+
+## Validates that the fallback menu mixing bus actually exists in the AudioServer.
+func test_fallback_bus_exists_in_audio_server() -> void:
+	var bus_idx: int = AudioServer.get_bus_index(AudioConstants.BUS_SFX_MENU)
+	assert_gt(bus_idx, -1, 
+		"Fallback mixing bus '%s' must exist in default_bus_layout.tres" % AudioConstants.BUS_SFX_MENU)

@@ -27,6 +27,9 @@
 
 extends Node
 
+## Base path for all UI sound effects.
+const SFX_DIR_PATH: String = "res://files/sounds/sfx/"
+
 # --- Audio Bus Names ---
 const BUS_MASTER: String = "Master"
 const BUS_MUSIC: String = "Music"

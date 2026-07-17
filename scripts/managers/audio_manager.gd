@@ -13,10 +13,6 @@ signal mute_toggled(bus_name: String, is_muted: bool)
 # --------------------------------------------
 
 # --- NEW: SFX CACHING & MANAGEMENT ---
-## Base path for all UI sound effects.
-const SFX_DIR_PATH: String = "res://files/sounds/sfx/"
-
-# --- NEW: SFX CACHING & MANAGEMENT ---
 ## Hard cap for cached SFX streams to prevent unbounded memory growth.
 const MAX_SFX_CACHE_SIZE: int = 20
 
@@ -400,6 +396,11 @@ func play_sfx(
 	pitch_scale: float = 1.0,
 	volume_db: float = 0.0
 ) -> void:
+	# Guard against early calls before Godot's ready lifecycle initializes the pool
+	if _sfx_pool.is_empty():
+		push_warning("AudioManager: play_sfx() called before pool initialization.")
+		return
+
 	if sfx_name.is_empty():
 		return
 
@@ -417,7 +418,7 @@ func play_sfx(
 			# Structural fallback safely preserving legacy/direct calls
 			file_name += ".wav"
 
-		var full_path: String = SFX_DIR_PATH + file_name
+		var full_path: String = AudioConstants.SFX_DIR_PATH + file_name
 
 		# Safety guard against non-existent files to block core engine loader errors from polluting tests
 		if not ResourceLoader.exists(full_path):
@@ -454,17 +455,24 @@ func play_sfx(
 		_sfx_cache.erase(sfx_name)
 		_sfx_cache[sfx_name] = stream
 
-	# 2. Grab an available player from the object pool
+	# 2. Grab an available player from the object pool (Safe against freed/dangling instances!)
 	var player: AudioStreamPlayer = null
 	for p: AudioStreamPlayer in _sfx_pool:
-		if not p.playing:
+		if is_instance_valid(p) and not p.playing:
 			player = p
 			break
 
-	# Fallback: If all players are busy, hijack the first one in the pool
-	# to prevent dropping the new sound entirely.
+	# Fallback: If all players are busy, hijack the first valid one in the pool
 	if player == null:
-		player = _sfx_pool[0]
+		for p: AudioStreamPlayer in _sfx_pool:
+			if is_instance_valid(p):
+				player = p
+				break
+
+	# Final safety guard in case the pool somehow contains zero valid instances
+	if player == null:
+		push_error("AudioManager: No valid AudioStreamPlayer instances found in pool.")
+		return
 
 	player.stream = _sfx_cache[sfx_name]
 	player.pitch_scale = pitch_scale
