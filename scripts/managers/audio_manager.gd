@@ -398,7 +398,7 @@ func play_sfx(
 ) -> void:
 	# LAZY-INIT SAFEGUARD: If the pool hasn't been initialized yet, build it on the fly
 	if _sfx_pool.is_empty():
-		_initialize_sfx_pool() # Assumes this is your pool setup function name
+		_initialize_sfx_pool()  # Assumes this is your pool setup function name
 
 	if sfx_name.is_empty():
 		return
