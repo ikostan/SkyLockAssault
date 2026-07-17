@@ -4,6 +4,7 @@
 ##
 ## Regression test suite ensuring that initializing the Key Mapping menu
 ## does not prematurely trigger audio feedback.
+
 extends GutTest
 
 const KEY_MAPPING_PATH: String = "res://scenes/key_mapping_menu.tscn"

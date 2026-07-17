@@ -4,6 +4,7 @@
 ##
 ## Architectural test suite verifying the automatic stream connection guards
 ## inside the global Node instantiation tracking track.
+
 extends "res://addons/gut/test.gd"
 
 

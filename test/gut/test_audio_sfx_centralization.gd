@@ -5,6 +5,7 @@
 ## Automated verification suite for Feature Request #570.
 ## Validates object pooling, LRU cache eviction, failure isolation, 
 ## and constant engine node tree allocation rules.
+
 extends "res://addons/gut/test.gd"
 
 var _orig_cache: Dictionary = {}

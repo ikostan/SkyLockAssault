@@ -4,6 +4,7 @@
 ##
 ## Regression test suite specifically targeting audio playback failures 
 ## when toggling input devices in the Key Mapping Options menu.
+
 extends GutTest
 
 const KEY_MAPPING_PATH: String = "res://scenes/key_mapping_menu.tscn"
