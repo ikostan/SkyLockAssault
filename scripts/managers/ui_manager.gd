@@ -2,20 +2,15 @@
 ## SPDX-License-Identifier: GPL-3.0-or-later
 ## ui_manager.gd
 ##
-## Global controller responsible for capturing UI input events, tracking user 
-## hardware control schemes, and routing global navigation, acceptance, and 
+## Global controller responsible for capturing UI input events, tracking user
+## hardware control schemes, and routing global navigation, acceptance, and
 ## cancellation sound effects through the central AudioManager.
 
 extends Node
 
 ## List of explicit directional and focus-shifting UI actions.
 var _nav_actions: Array[String] = [
-	"ui_up", 
-	"ui_down", 
-	"ui_left", 
-	"ui_right", 
-	"ui_focus_next", 
-	"ui_focus_prev"
+	"ui_up", "ui_down", "ui_left", "ui_right", "ui_focus_next", "ui_focus_prev"
 ]
 
 
@@ -60,9 +55,9 @@ func _track_input_device(event: InputEvent) -> void:
 ## @return bool: True if the current state is an eligible menu context.
 func _check_menu_context(ui_has_focus: bool) -> bool:
 	var is_menu_context: bool = (
-		get_tree().paused 
-		or Globals.options_open 
-		or not Globals.hidden_menus.is_empty() 
+		get_tree().paused
+		or Globals.options_open
+		or not Globals.hidden_menus.is_empty()
 		or ui_has_focus
 	)
 
@@ -98,9 +93,7 @@ func _check_menu_context(ui_has_focus: bool) -> bool:
 ## @param ui_has_focus: Boolean state verifying if focus is owned.
 ## :rtype: void
 func _process_ui_navigation_sfx(
-	event: InputEvent, 
-	focus_owner: Control, 
-	ui_has_focus: bool
+	event: InputEvent, focus_owner: Control, ui_has_focus: bool
 ) -> void:
 	for action: String in AudioConstants.UI_SFX.keys():
 		if event.is_action_pressed(action, false):
@@ -156,11 +149,7 @@ func _handle_ui_cancel_action(focus_owner: Control, action: String) -> void:
 ## @param focus_owner: The currently focused Control element.
 ## @param ui_has_focus: Check determining if focus is active.
 ## :rtype: void
-func _handle_ui_navigation_action(
-	action: String, 
-	focus_owner: Control, 
-	ui_has_focus: bool
-) -> void:
+func _handle_ui_navigation_action(action: String, focus_owner: Control, ui_has_focus: bool) -> void:
 	var is_horizontal_slider: bool = (
 		focus_owner is Slider and (action == "ui_left" or action == "ui_right")
 	)
