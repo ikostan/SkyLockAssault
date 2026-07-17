@@ -26,8 +26,8 @@ var _intentional_exit: bool = false
 
 ## Initializes the controls menu.
 ##
-## Connects signals, configures process mode, and sets the initial device 
-## selection using `set_pressed_no_signal` to prevent triggering audio 
+## Connects signals, configures process mode, and sets the initial device
+## selection using `set_pressed_no_signal` to prevent triggering audio
 ## playback during initialization.
 func _ready() -> void:
 	# Back button connection
@@ -42,7 +42,7 @@ func _ready() -> void:
 	keyboard.button_group = device_group
 	gamepad.button_group = device_group
 
-	# FIX: Use set_pressed_no_signal() to set the default state without 
+	# FIX: Use set_pressed_no_signal() to set the default state without
 	# triggering the _on_keyboard_toggled / _on_gamepad_toggled audio callbacks
 	keyboard.set_pressed_no_signal(Globals.current_input_device == "keyboard")
 	gamepad.set_pressed_no_signal(Globals.current_input_device == "gamepad")
@@ -52,7 +52,7 @@ func _ready() -> void:
 
 	# Conflicting key remap functionality/setup
 	add_to_group("key_mapping_menu")
-	
+
 	# Create the conflict dialog
 	conflict_dialog = ConfirmationDialog.new()
 	conflict_dialog.title = "Input Already Used"
@@ -69,8 +69,12 @@ func _ready() -> void:
 	if os_wrapper.has_feature("web"):
 		js_window = js_bridge_wrapper.get_interface("window")
 		if js_window:
-			js_bridge_wrapper.eval("document.getElementById('controls-back-button').style.display = 'block';", true)
-			_controls_back_button_pressed_cb = js_bridge_wrapper.create_callback(Callable(self, "_on_controls_back_button_pressed_js"))
+			js_bridge_wrapper.eval(
+				"document.getElementById('controls-back-button').style.display = 'block';", true
+			)
+			_controls_back_button_pressed_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_controls_back_button_pressed_js")
+			)
 			js_window.controlsBackPressed = _controls_back_button_pressed_cb
 
 	update_all_remap_buttons()
