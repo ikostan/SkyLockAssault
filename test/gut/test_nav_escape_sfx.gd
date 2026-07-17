@@ -106,8 +106,8 @@ func _set_menu_context(value: bool) -> void:
 ## :rtype: void
 func _simulate_input(event: InputEvent) -> void:
 	# Route simulated input events directly into the new decoupled UiManager (Issue #490)
-	if is_instance_valid(UiManager) and UiManager.has_method("_unhandled_input"):
-		UiManager._unhandled_input(event)
+	if is_instance_valid(UiManager) and UiManager.has_method("_input"):
+		UiManager._input(event)
 
 
 ## Assert that simulating a ui_cancel input event when inside a menu context triggers cancel audio.
