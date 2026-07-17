@@ -10,6 +10,7 @@ const KEY_MAPPING_PATH: String = "res://scenes/key_mapping_menu.tscn"
 
 var original_audio_script: Script
 
+
 ## Suite setup: Bootstrap a mock AudioManager to intercept and record 
 ## playback calls during test execution.
 func before_all() -> void:
@@ -25,11 +26,15 @@ func play_sfx(key: String, extra: Variant = null) -> void:
 		mock_script.reload()
 		AudioManager.set_script(mock_script)
 
-## Suite cleanup: Safely restore the original AudioManager script 
-## after the test suite finishes execution.
+## Suite cleanup: Safely restore the original AudioManager script and
+## re-populate its internal state to ensure strict test isolation.
 func after_all() -> void:
 	if original_audio_script and is_instance_valid(AudioManager):
 		AudioManager.set_script(original_audio_script)
+		# Rebuild internal state to prevent cascading failures
+		if AudioManager.has_method("cleanup_for_test"):
+			AudioManager.cleanup_for_test()
+
 
 ## Per-test setup: Reset global device state and clear the mock 
 ## call log to ensure test isolation.
@@ -39,6 +44,7 @@ func before_each() -> void:
 	
 	if AudioManager.get("sfx_calls") != null:
 		AudioManager.set("sfx_calls", [])
+
 
 ## Test Scenario: Verify that instantiating the Key Mapping menu does not 
 ## trigger any audio playback during the _ready() initialization phase.
