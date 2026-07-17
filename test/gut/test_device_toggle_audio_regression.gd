@@ -9,11 +9,13 @@ extends GutTest
 const KEY_MAPPING_PATH: String = "res://scenes/key_mapping_menu.tscn"
 
 var _original_options_open: bool
+var _original_input_device: String
 
 
 func before_each() -> void:
 	# Snapshot the initial global options state to prevent pollution
 	_original_options_open = Globals.options_open
+	_original_input_device = Globals.current_input_device
 	Globals.options_open = true
 	
 	# Purge running streams from the shared singleton pool
@@ -25,6 +27,8 @@ func before_each() -> void:
 func after_each() -> void:
 	# Restore state cleanly
 	Globals.options_open = _original_options_open
+	Globals.current_input_device = _original_input_device
+	Settings.save_last_input_device(_original_input_device)
 	
 	var focus_owner := get_viewport().gui_get_focus_owner()
 	if is_instance_valid(focus_owner):
