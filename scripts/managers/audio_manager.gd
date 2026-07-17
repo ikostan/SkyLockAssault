@@ -396,10 +396,9 @@ func play_sfx(
 	pitch_scale: float = 1.0,
 	volume_db: float = 0.0
 ) -> void:
-	# Guard against early calls before Godot's ready lifecycle initializes the pool
+	# LAZY-INIT SAFEGUARD: If the pool hasn't been initialized yet, build it on the fly
 	if _sfx_pool.is_empty():
-		push_warning("AudioManager: play_sfx() called before pool initialization.")
-		return
+		_initialize_sfx_pool() # Assumes this is your pool setup function name
 
 	if sfx_name.is_empty():
 		return
