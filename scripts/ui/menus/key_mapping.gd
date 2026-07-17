@@ -289,8 +289,8 @@ func _on_keyboard_toggled(toggled_on: bool) -> void:
 		Globals.current_input_device = "keyboard"
 		Settings.save_last_input_device("keyboard")
 		update_all_remap_buttons()
-		# FIX: Use centralized AudioConstants key instead of hardcoded string
-		AudioManager.play_sfx(AudioConstants.SFX_CHECK)
+		# FIX: Pass BUS_SFX_MENU explicitly as requested by reviewer
+		AudioManager.play_sfx(AudioConstants.SFX_CHECK, AudioConstants.BUS_SFX_MENU)
 		Globals.log_message("Current input device set to: keyboard", Globals.LogLevel.DEBUG)
 
 
@@ -303,6 +303,6 @@ func _on_gamepad_toggled(toggled_on: bool) -> void:
 		Globals.current_input_device = "gamepad"
 		Settings.save_last_input_device("gamepad")
 		update_all_remap_buttons()
-		# FIX: Use centralized AudioConstants key instead of hardcoded string
-		AudioManager.play_sfx(AudioConstants.SFX_CHECK)
+		# FIX: Pass BUS_SFX_MENU explicitly as requested by reviewer
+		AudioManager.play_sfx(AudioConstants.SFX_CHECK, AudioConstants.BUS_SFX_MENU)
 		Globals.log_message("Current input device set to: gamepad", Globals.LogLevel.DEBUG)

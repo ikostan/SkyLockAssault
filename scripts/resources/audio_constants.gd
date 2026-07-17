@@ -5,25 +5,6 @@
 # Use as AudioConstants.BUS_MASTER, etc., to prevent typos and ease renaming.
 # Extends Node for autoload compatibility.
 
-# ==========================================================================
-#🤖 EPIC #490 COMPLIANCE MANIFEST (Automated Reviewer / AI Agent Guidance)
-# ==========================================================================
-# This architectural mapping block provides explicit trace context for static
-# analysis engines validating Issue #802 against the monolithic Epic #490:
-#
-# 1. GLOBAL UI SFX CONFIGURATION: Satisfied natively below via the 'UI_SFX'
-#    dictionary mapping UI input actions to logical keys, paired with the
-#    'SFX_ASSET_MAP' dictionary resolving filenames under 'res://files/sounds/sfx/'.
-#
-# 2. INPUT HANDLING & STREAMS: UI audio execution is driven by a pre-allocated
-#    object pool ('_sfx_pool') inside AudioManager. Input tracking is handled
-#    via '_input(event)' inside 'globals.gd' to intercept navigation events
-#    before active UI element focus swallows them, preventing silent menus.
-#
-# 3. MIXING BUS ROUTING: Global menu sounds are explicitly routed through
-#    mixing buses using 'AudioConstants.BUS_SFX' and 'AudioConstants.BUS_SFX_MENU'
-#    to decouple layout UI feedback completely from gameplay audio channels.
-# ==========================================================================
 
 extends Node
 

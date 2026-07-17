@@ -1,48 +1,48 @@
 # Centralize UI SFX configuration and add audio integrity tests
 <!-- markdownlint-disable MD001 MD036 MD013 MD033 table-column-style -->
 
-### Overview
+## PR #827 Summary: UI Navigation Focus SFX & Global UI Audio Integration
 
-This pull request centralizes SFX (sound effects) path configuration and improves audio asset discoverability and integrity testing for the SkyLockAssault project. It focuses on refactoring audio-related constants and managers to support a more consistent global UI audio system, while adding robust GUT (Godot Unit Test) coverage.<grok-card data-id="36c6ab" data-type="citation_card" data-plain-type="render_inline_citation" ></grok-card>
+**Author:** [@ikostan](https://github.com/ikostan)  
+**Repository:** [ikostan/SkyLockAssault](https://github.com/ikostan/SkyLockAssault/pull/827)  
+**Milestone:** Milestone 21 – Implement Global UI SFX Layer & Decouple Settings  
+**Labels:** enhancement, good first issue, testing, menu, audio, refactoring, EPIC
 
-This PR primarily advances audio configuration centralization and testing for UI navigation SFX in the SkyLockAssault project. Multiple AI-powered code review and automation bots contributed through summaries, reviews, feedback, and prompts.
+### What This PR Does
+This PR centralizes sound effect (SFX) asset path configuration and strengthens testing for global UI audio features in the Godot-based SkyLockAssault project. It lays groundwork for consistent UI navigation sounds (focus, accept, cancel, etc.) by reducing duplication and improving maintainability.<grok-card data-id="3fea19" data-type="citation_card" data-plain-type="render_inline_citation" ></grok-card>
 
-### Key Changes
+### Key Changes by File
+- **`scripts/resources/audio_constants.gd`**:
+  - Added `SFX_DIR_PATH` as the single source of truth for all SFX assets.
+  - Replaced legacy `UI_NAV_SOUND_PATH`.
+  - Enhanced constants for audio buses and mappings.<grok-card data-id="deced2" data-type="citation_card" data-plain-type="render_inline_citation" ></grok-card>
 
-- **AudioConstants (`scripts/resources/audio_constants.gd`)**:
-  - Introduced `SFX_DIR_PATH` as a unified base directory constant for all game SFX assets (`res://files/sounds/sfx/`).
-  - Replaced legacy `UI_NAV_SOUND_PATH` with the broader `SFX_DIR_PATH`.
-  - Added documentation and structural improvements for SFX asset mapping and bus configuration.<grok-card data-id="19c5e7" data-type="citation_card" data-plain-type="render_inline_citation" ></grok-card>
+- **`scripts/managers/audio_manager.gd`**:
+  - Updated `play_sfx()` to use the centralized `AudioConstants.SFX_DIR_PATH`.
+  - Removed duplicated local path constants.<grok-card data-id="194b85" data-type="citation_card" data-plain-type="render_inline_citation" ></grok-card>
 
-- **AudioManager (`scripts/managers/audio_manager.gd`)**:
-  - Updated `play_sfx` logic to resolve paths through `AudioConstants.SFX_DIR_PATH` instead of hard-coded local constants.
-  - Removed duplicated `SFX_DIR_PATH` to eliminate configuration drift.<grok-card data-id="f65ecd" data-type="citation_card" data-plain-type="render_inline_citation" ></grok-card>
+- **`test/gut/test_audio_constants_discoverability.gd`** (new):
+  - Comprehensive GUT tests verifying:
+    - Directory existence and format.
+    - Bus name constants and `BUS_CONFIG` structure.
+    - `SFX_ASSET_MAP` and `UI_SFX` referential integrity.
+  - Includes associated `.uid` file.<grok-card data-id="e5d67d" data-type="citation_card" data-plain-type="render_inline_citation" ></grok-card>
 
-- **Testing (`test/gut/test_audio_constants_discoverability.gd` + `.uid`)**:
-  - New comprehensive test suite validating:
-    - `SFX_DIR_PATH` existence, format, and disk presence.
-    - Audio bus name constants and `BUS_CONFIG` structure/metadata.
-    - `SFX_ASSET_MAP` integrity and referential links from `UI_SFX` mappings.
-  - Ensures audio configuration is discoverable and production-ready.<grok-card data-id="2ff807" data-type="citation_card" data-plain-type="render_inline_citation" ></grok-card>
+### AI & Bot Support
+- **@sourcery-ai**: Provided PR summary, Reviewer's Guide, and actionable review comments.
+- **@coderabbitai**: Assisted with review tips and unit test ideas.
+- **@deepsource-io**: Ran automated code review with a detailed Report Card.
 
-### AI/Bot Contributions
+### Relation to Broader Work
+- Advances **EPIC #490** and related issues (#801, #802) around global UI audio handling, decoupling from `globals.gd`, and legacy cleanup.
+- Note: Some full UI input routing and callback migration items are noted as still pending in the PR assessment.
 
-- **@sourcery-ai**: Generated PR summary, Reviewer's Guide, and code review feedback.
-- **@coderabbitai**: Provided review assistance and unit test generation prompts.
-- **@deepsource-io**: Automated code review with Report Card (Security, Reliability, etc.).
+### Testing & Status
+- Changes tested in Godot editor.
+- New unit tests added for long-term reliability.
+- Multiple iterative commits by @ikostan incorporating bot feedback.
 
-### Related Issues / EPIC
-
-- Partially addresses **EPIC #490** (Global UI SFX configuration and integration) and linked issues (#801, #802) around decoupling from `globals.gd`, callback migration, and legacy cleanup.
-- Note: Some broader UI input handling (`_unhandled_input`, dedicated players, full globals purge) appears pending based on the self-assessment in the PR.<grok-card data-id="6d2142" data-type="citation_card" data-plain-type="render_inline_citation" ></grok-card>
-
-### Testing & Validation
-
-- Changes were tested in Godot editor.
-- New unit tests enforce audio config integrity.
-- Iterative commits refined implementation following bot feedback.
-
-This PR strengthens the audio architecture foundation for consistent UI sound handling across the game.
+This is a solid refactoring step toward a cleaner, more maintainable audio system for UI interactions across the game.
 
 ---
 
@@ -93,28 +93,29 @@ Centralizes SFX directory configuration into AudioConstants and wires AudioManag
 
 ---
 
-**Bots/AI Contributions to PR #827**
+## Bots/AI Contributions Summary for PR #827
 
-### AI/Bot Contributors
+This PR received significant support from AI-powered code review and automation bots that provided summaries, feedback, reviews, and testing prompts.
 
-- **@sourcery-ai**: Generated the PR summary, provided a Reviewer's Guide, and left targeted code review comments (e.g., on replacing `UI_NAV_SOUND_PATH` with better discoverability mechanisms in `AudioConstants`). It also offered interaction commands for further reviews.
-- **@coderabbitai**: Contributed finishing touches suggestions, unit test generation prompts, and code review assistance (noted in the conversation with thanks for OSS support).
-- **@deepsource-io** (DeepSource Code Review / DeepsourceReview): Performed an automated code review on the changes (commit range including `d6b9071...0155c0c`), providing a PR Report Card with grades on Security, Reliability, Complexity, and Hygiene, plus inline issues.
+### AI / Bot Contributors
+- **@sourcery-ai** — Generated the main PR summary, Reviewer's Guide, and left detailed code review comments (e.g., suggestions around `UI_NAV_SOUND_PATH` replacement and discoverability). Offered commands for further interactions like `@sourcery-ai review` or `@sourcery-ai summary`.
+- **@coderabbitai** — Contributed finishing touches, unit test generation suggestions, and overall code review assistance (highlighted in the PR conversation with thanks for OSS support).
+- **@deepsource-io** (DeepSource Code Review / DeepsourceReview) — Performed automated static analysis and code review on the changes (covering commits including `d6b9071...0155c0c`). Provided a PR Report Card with grades for Security, Reliability, Complexity, and Hygiene, plus inline issue comments.
 
-Other common bots like `@dependabot` do not appear to have contributed to this specific PR.
+(No visible contributions from `@dependabot` or similar dependency bots in this PR.)
 
 ### @ikostan Contributions (Human Maintainer)
 
-@ikostan is the primary author and contributor, driving the core implementation:
+@ikostan is the sole human author and primary contributor:
 
-- **Key Changes**:
+- Authored and iterated on all code changes through multiple commits.
+- **Core work**:
+  - Centralized SFX directory configuration (`SFX_DIR_PATH`) in `scripts/resources/audio_constants.gd`.
+  - Updated path resolution logic in `scripts/managers/audio_manager.gd`.
+  - Added a full GUT test suite (`test/gut/test_audio_constants_discoverability.gd`) validating constants, asset maps, bus configs, and referential integrity.
+- Drove the PR forward, applied bot feedback, added labels/milestone, and triggered bot reviews.
 
-  - Centralized SFX asset directory configuration (`SFX_DIR_PATH`) in `scripts/resources/audio_constants.gd`.
-  - Updated `scripts/managers/audio_manager.gd` to resolve SFX paths via `AudioConstants` (removing duplicated local constants).
-  - Added comprehensive GUT tests in `test/gut/test_audio_constants_discoverability.gd` for bus constants, asset map integrity, bus config structure, directory validation, and UI SFX referential integrity (plus associated `.uid` file).
-  - Multiple iterative commits refining constants, manager logic, tests, and bot-triggering updates.
-
-The PR addresses aspects of related EPIC #490 and issues like #801/#802 through refactoring and testing, though some broader UI input handling and globals decoupling remain pending per the assessment. All work was committed by @ikostan.
+These bot contributions helped refine the code quality, documentation, and test coverage while @ikostan handled the architectural implementation.
 
 ---
 <!-- markdownlint-enable MD001 MD036 MD013 MD033 table-column-style -->

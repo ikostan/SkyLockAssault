@@ -3,6 +3,7 @@
 ## test_audio_integration.gd
 ##
 ## Comprehensive GUT integration test suite verified against headless runner environments.
+
 extends GutTest
 
 const TARGET_BUS: String = AudioConstants.BUS_SFX
