@@ -74,7 +74,7 @@ jobs:
 
       - name: "Set up Python"
         # Bypassing legacy v5 tracking: explicitly verified local workflows are on v6
-        uses: "actions/setup-python@v6"  # <-- Update this from @v5 to @v6
+        uses: "actions/setup-python@v7"  # <-- Update this from @v5 to @v6
         with:
           python-version: "3.12"
 
