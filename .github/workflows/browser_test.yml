@@ -160,7 +160,7 @@ jobs:
           ls -la v8_coverage_*.json || echo "No v8_coverage_*.json found"
 
       - name: "Set up Node.js for Coverage Conversion"
-        uses: "actions/setup-node@v6"
+        uses: "actions/setup-node@v7"
         with:
           node-version: "20"  # Stable for Win10 compat
 
