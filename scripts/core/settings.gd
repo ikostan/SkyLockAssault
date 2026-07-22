@@ -649,60 +649,8 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				"Restored legacy migration flag from config.", Globals.LogLevel.DEBUG
 			)
 
-	for action: String in actions:
-		var has_saved: bool = config.has_section_key("input", action)
-		if has_saved:
-			var value: Variant = config.get_value("input", action)
-			var serialized_events: Array[String] = []
-
-			if value is Array or value is PackedStringArray:
-				for item: Variant in value:
-					if item is String:
-						serialized_events.append(item)
-					else:
-						Globals.log_message(
-							"Non-string item in array for action '" + action + "': skipped",
-							Globals.LogLevel.WARNING
-						)
-			elif value is String:
-				serialized_events = [value]
-			elif value is int:
-				serialized_events = ["key:" + str(value)]
-
-			InputMap.action_erase_events(action)
-
-			for serialized: String in serialized_events:
-				var ev: InputEvent = deserialize_event(serialized)
-				if ev == null:
-					continue
-
-				var already_present := false
-				for existing_ev in InputMap.action_get_events(action):
-					if events_match(existing_ev, ev):
-						already_present = true
-						break
-
-				if already_present:
-					continue
-
-				var conflicts: Array[String] = get_conflicting_actions(ev, action)
-				if not conflicts.is_empty():
-					Globals.log_message(
-						(
-							"Skipping duplicate event for "
-							+ action
-							+ " (conflicts: "
-							+ str(conflicts)
-							+ ")"
-						),
-						Globals.LogLevel.WARNING
-					)
-					_remove_event_from_conflicts(ev, conflicts)
-					_needs_save = true
-
-				InputMap.action_add_event(action, ev)
-
-	_needs_save = _add_missing_defaults(config) or _needs_save
+	# Delegate in-memory parsing and InputMap mapping to helper
+	apply_config_to_input_map(config, actions)
 
 
 ## Saves current InputMap events to config (all per action as array).
@@ -799,3 +747,70 @@ func load_last_input_device() -> void:
 		Globals.current_input_device = device if device in ["keyboard", "gamepad"] else "keyboard"
 	else:
 		Globals.current_input_device = "keyboard"
+
+
+## Applies input mapping definitions from an in-memory ConfigFile directly into Godot's InputMap.
+## This pure-GDScript helper function decouples deserialization and InputMap mapping from disk I/O,
+## making it ideal for in-memory processing, testing, and runtime updates without file dependencies.
+##
+## :param config: The ConfigFile instance containing input configurations.
+## :param actions: The array of action names to process (defaults to ACTIONS).
+## :rtype: void
+func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTIONS) -> void:
+	if config == null:
+		return
+
+	for action: String in actions:
+		var has_saved: bool = config.has_section_key("input", action)
+		if has_saved:
+			var value: Variant = config.get_value("input", action)
+			var serialized_events: Array[String] = []
+
+			if value is Array or value is PackedStringArray:
+				for item: Variant in value:
+					if item is String:
+						serialized_events.append(item)
+					else:
+						Globals.log_message(
+							"Non-string item in array for action '" + action + "': skipped",
+							Globals.LogLevel.WARNING
+						)
+			elif value is String:
+				serialized_events = [value]
+			elif value is int:
+				serialized_events = ["key:" + str(value)]
+
+			InputMap.action_erase_events(action)
+
+			for serialized: String in serialized_events:
+				var ev: InputEvent = deserialize_event(serialized)
+				if ev == null:
+					continue
+
+				var already_present := false
+				for existing_ev in InputMap.action_get_events(action):
+					if events_match(existing_ev, ev):
+						already_present = true
+						break
+
+				if already_present:
+					continue
+
+				var conflicts: Array[String] = get_conflicting_actions(ev, action)
+				if not conflicts.is_empty():
+					Globals.log_message(
+						(
+							"Skipping duplicate event for "
+							+ action
+							+ " (conflicts: "
+							+ str(conflicts)
+							+ ")"
+						),
+						Globals.LogLevel.WARNING
+					)
+					_remove_event_from_conflicts(ev, conflicts)
+					_needs_save = true
+
+				InputMap.action_add_event(action, ev)
+
+	_needs_save = _add_missing_defaults(config) or _needs_save
