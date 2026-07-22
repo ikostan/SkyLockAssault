@@ -623,13 +623,19 @@ static func get_event_label(ev: InputEvent) -> String:
 
 
 ## Loads input mappings from config, overriding project defaults only if saved.
+## Acts strictly as an I/O coordinator by loading the file via `Globals.safe_load_config`
+## and delegating all deserialization and InputMap mapping to `apply_config_to_input_map`.
+##
+## :param path: Path to the config file (defaults to CONFIG_PATH).
+## :param actions: List of input actions to load (defaults to ACTIONS).
+## :rtype: void
 func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
-	# Use our new centralized helper to safely read the file
+	# 1. Disk I/O: Read and decrypt configuration file
 	var load_data: Dictionary = Globals.safe_load_config(path)
 	var config: ConfigFile = load_data["config"]
 	var err: int = load_data["err"]
 
-	if load_data["is_legacy"]:
+	if load_data.get("is_legacy", false):
 		Globals.log_message(
 			"Legacy plaintext input mappings found. Migration required.", Globals.LogLevel.INFO
 		)
@@ -640,7 +646,7 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			"Error loading settings file at " + path + ": " + str(err), Globals.LogLevel.ERROR
 		)
 
-	# Restore migration metadata
+	# 2. Metadata restoring
 	if config.has_section_key("meta", LEGACY_MIGRATION_KEY):
 		var migrated: bool = config.get_value("meta", LEGACY_MIGRATION_KEY, false)
 		if migrated:
@@ -649,7 +655,7 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				"Restored legacy migration flag from config.", Globals.LogLevel.DEBUG
 			)
 
-	# Delegate in-memory parsing and InputMap mapping to helper
+	# 3. Delegate in-memory parsing and InputMap mapping strictly to the helper
 	apply_config_to_input_map(config, actions)
 
 
