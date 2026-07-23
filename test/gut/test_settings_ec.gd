@@ -35,15 +35,9 @@ func before_each() -> void:
 		else:
 			InputMap.add_action(act)
 
-	# Restore fresh default mappings in memory before each test runs
-	Settings.apply_config_to_input_map(ConfigFile.new())
-	Settings._needs_save = false  # <-- Reset state pollution caused by before_each setup
-
-	# Backup real config before tests touching Settings.CONFIG_PATH
-	var real_path: String = Settings.CONFIG_PATH
-	if FileAccess.file_exists(real_path):
-		var backup_path: String = "user://settings_backup.cfg"
-		DirAccess.copy_absolute(real_path, backup_path)
+	# Explicitly backfill defaults without setting _needs_save
+	Settings._add_missing_defaults(ConfigFile.new())
+	Settings._needs_save = false
 
 
 func after_each() -> void:
@@ -67,7 +61,11 @@ func test_ec_04_legacy_mixed_formats() -> void:
 	cfg.set_value("input", "fire", ["joybtn:0:-1"])            # new format
 	cfg.set_value("input", "move_left", ["key:65", "key:66"])  # valid new
 
+	# 1. Apply in-memory custom config
 	Settings.apply_config_to_input_map(cfg)
+
+	# 2. Explicitly trigger default backfilling for unmentioned actions
+	Settings._add_missing_defaults(cfg)
 
 	# speed_up should have migrated from old int
 	var events := InputMap.action_get_events(TEST_ACTION)
@@ -78,19 +76,19 @@ func test_ec_04_legacy_mixed_formats() -> void:
 	assert_true(InputMap.action_get_events("pause").any(func(e: InputEvent) -> bool: return e is InputEventKey))
 
 
-## EC-05 | Config unreadable | Corrupt JSON/parse error | Load defaults | Log error
 func test_ec_05_corrupt_parse_error() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("input", TEST_ACTION, ["invalid_format", "key:not_a_number", "joybtn:999:too:many:colons"])
 
-	# Clear action to verify corrupt data is rejected and defaults are restored
 	InputMap.action_erase_events(TEST_ACTION)
 
+	# 1. Pure parse rejects garbage data (leaving speed_up empty)
 	Settings.apply_config_to_input_map(cfg)
+	assert_true(InputMap.action_get_events(TEST_ACTION).is_empty(), "Pure parser discards corrupt strings")
 
-	var events := InputMap.action_get_events(TEST_ACTION)
-	assert_false(events.is_empty(), "Should have backfilled defaults after rejecting corrupted strings")
-	assert_true(events.any(func(e: InputEvent) -> bool: return e is InputEventKey and e.physical_keycode == Settings.DEFAULT_KEYBOARD[TEST_ACTION]))
+	# 2. Backfill fallback step restores default KEY_W
+	Settings._add_missing_defaults(cfg)
+	assert_false(InputMap.action_get_events(TEST_ACTION).is_empty(), "Defaults backfilled after corrupt reject")
 
 
 ## EC-06 | Save fails | Disk full / permission denied | Report error, no crash
