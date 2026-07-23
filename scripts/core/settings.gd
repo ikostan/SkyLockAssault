@@ -796,6 +796,7 @@ func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTI
 					"Unsupported config value type for action '" + action + "': skipped",
 					Globals.LogLevel.WARNING
 				)
+				continue  # Skip erasing events and preserve existing InputMap bindings
 
 			InputMap.action_erase_events(action)
 

@@ -242,3 +242,55 @@ func test_ec_14_pause_binding_label_for_device() -> void:
 
 	InputMap.action_erase_events("pause")
 	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "UNBOUND", "Unbound fallback should be 'UNBOUND'")
+
+
+## EC-15 | Pure Parser | Unsupported config value type preserves existing bindings
+func test_ec_15_unsupported_type_preserves_existing_events() -> void:
+	# 1. Bind an initial event to 'fire'
+	var key_a := InputEventKey.new()
+	key_a.physical_keycode = KEY_A
+	InputMap.action_erase_events("fire")
+	InputMap.action_add_event("fire", key_a)
+
+	# 2. Pass an unsupported config type (e.g. bool)
+	var cfg := ConfigFile.new()
+	cfg.set_value("input", "fire", true)
+
+	# 3. Apply config
+	Settings.apply_config_to_input_map(cfg)
+
+	# 4. Verify existing event was preserved and NOT erased
+	var events := InputMap.action_get_events("fire")
+	assert_eq(events.size(), 1, "Unsupported config value type must preserve existing InputMap bindings")
+	assert_true(events.any(func(e: InputEvent) -> bool: return e is InputEventKey and e.physical_keycode == KEY_A))
+
+
+## EC-16 | Pure Parser | Conflict resolution returns boolean status without mutating singleton flag directly
+func test_ec_16_apply_config_conflict_resolution_return_value() -> void:
+	# 1. Setup conflict: bind KEY_SPACE to 'fire'
+	InputMap.action_erase_events("fire")
+	var space_key := InputEventKey.new()
+	space_key.physical_keycode = KEY_SPACE
+	InputMap.action_add_event("fire", space_key)
+
+	# 2. Config maps KEY_SPACE to 'next_weapon'
+	var cfg := ConfigFile.new()
+	cfg.set_value("input", "next_weapon", ["key:" + str(KEY_SPACE)])
+
+	# 3. Verify apply_config_to_input_map returns true when conflicts are resolved
+	var conflicts_resolved: bool = Settings.apply_config_to_input_map(cfg)
+	assert_true(conflicts_resolved, "Must return true when conflicting bindings are resolved")
+
+	# 4. Verify clean mapping case returns false
+	var clean_cfg := ConfigFile.new()
+	clean_cfg.set_value("input", "move_left", ["key:" + str(KEY_A)])
+	assert_false(Settings.apply_config_to_input_map(clean_cfg), "Must return false when no conflicts exist")
+
+
+## EC-17 | Public Helpers | Test encapsulation helpers for _needs_save
+func test_ec_17_needs_save_encapsulation_helpers() -> void:
+	Settings.set_needs_save_for_test(true)
+	assert_true(Settings.needs_save(), "needs_save() must return true after set_needs_save_for_test(true)")
+
+	Settings.set_needs_save_for_test(false)
+	assert_false(Settings.needs_save(), "needs_save() must return false after set_needs_save_for_test(false)")
