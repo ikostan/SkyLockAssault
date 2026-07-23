@@ -88,8 +88,8 @@ jobs:
 
       - name: "Install Playwright"
         run: |
-          sudo apt-get update && sudo apt-get install -y libxml2-utils
-          pip install playwright pytest-playwright pytest-asyncio
+            sudo apt-get update && sudo apt-get install -y libxml2-utils
+            pip install -r requirements.txt
 
       # NEW STEP: Extract the exact Playwright version to use as a cache key
       # yamllint disable rule:line-length
