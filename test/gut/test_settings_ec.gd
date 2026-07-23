@@ -56,7 +56,7 @@ func after_each() -> void:
 ## EC-04 | Legacy config formats | Mixed old/new types | Backfill defaults, preserve valid
 func test_ec_04_legacy_mixed_formats() -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("input", TEST_ACTION, 87)                    # old int
+	cfg.set_value("input", TEST_ACTION, 89)                    # old int (KEY_Y - non-default)
 	cfg.set_value("input", "speed_down", "key:88")             # old string key
 	cfg.set_value("input", "fire", ["joybtn:0:-1"])            # new format
 	cfg.set_value("input", "move_left", ["key:65", "key:66"])  # valid new
@@ -67,10 +67,10 @@ func test_ec_04_legacy_mixed_formats() -> void:
 	# 2. Explicitly trigger default backfilling for unmentioned actions
 	Settings.backfill_missing_defaults(cfg)
 
-	# speed_up should have migrated from old int
+	# speed_up should have migrated from old int 89 (KEY_Y), distinguishing it from default 87 (KEY_W)
 	var events := InputMap.action_get_events(TEST_ACTION)
 	assert_true(events.any(func(e: InputEvent) -> bool:
-		return e is InputEventKey and e.physical_keycode == 87
+		return e is InputEventKey and e.physical_keycode == 89
 	))
 	# defaults backfilled where missing
 	assert_true(InputMap.action_get_events("pause").any(func(e: InputEvent) -> bool: return e is InputEventKey))
