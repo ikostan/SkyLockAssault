@@ -791,6 +791,11 @@ func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTI
 				serialized_events = [value]
 			elif value is int:
 				serialized_events = ["key:" + str(value)]
+			else:
+				Globals.log_message(
+					"Unsupported config value type for action '" + action + "': skipped",
+					Globals.LogLevel.WARNING
+				)
 
 			InputMap.action_erase_events(action)
 
