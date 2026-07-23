@@ -623,8 +623,9 @@ static func get_event_label(ev: InputEvent) -> String:
 
 
 ## Loads input mappings from config, overriding project defaults only if saved.
-## Acts strictly as an I/O coordinator by loading the file via `Globals.safe_load_config`
-## and delegating all deserialization and InputMap mapping to `apply_config_to_input_map`.
+## Loads input mappings from config, overriding project defaults only if saved.
+## Acts strictly as an I/O coordinator by loading the file via `Globals.safe_load_config`,
+## applying mappings via `apply_config_to_input_map`, and backfilling missing defaults.
 ##
 ## :param path: Path to the config file (defaults to CONFIG_PATH).
 ## :param actions: List of input actions to load (defaults to ACTIONS).
@@ -655,8 +656,11 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				"Restored legacy migration flag from config.", Globals.LogLevel.DEBUG
 			)
 
-	# 3. Delegate in-memory parsing and InputMap mapping strictly to the helper
+	# 3. Apply memory configuration to InputMap
 	apply_config_to_input_map(config, actions)
+
+	# 4. Backfill missing defaults and update save state for missing actions
+	_needs_save = _add_missing_defaults(config) or _needs_save
 
 
 ## Saves current InputMap events to config (all per action as array).
@@ -756,8 +760,7 @@ func load_last_input_device() -> void:
 
 
 ## Applies input mapping definitions from an in-memory ConfigFile directly into Godot's InputMap.
-## This pure-GDScript helper function decouples deserialization and InputMap mapping from disk I/O,
-## making it ideal for in-memory processing, testing, and runtime updates without file dependencies.
+## Pure GDScript helper function without side-effect default backfilling.
 ##
 ## :param config: The ConfigFile instance containing input configurations.
 ## :param actions: The array of action names to process (defaults to ACTIONS).
@@ -818,5 +821,3 @@ func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTI
 					_needs_save = true
 
 				InputMap.action_add_event(action, ev)
-
-	_needs_save = _add_missing_defaults(config) or _needs_save
