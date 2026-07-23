@@ -35,8 +35,9 @@ func before_each() -> void:
 		else:
 			InputMap.add_action(act)
 
-	# Populate default input mappings in-memory so tests start with default bindings
+	# Restore fresh default mappings in memory before each test runs
 	Settings.apply_config_to_input_map(ConfigFile.new())
+	Settings._needs_save = false  # <-- Reset state pollution caused by before_each setup
 
 	# Backup real config before tests touching Settings.CONFIG_PATH
 	var real_path: String = Settings.CONFIG_PATH
