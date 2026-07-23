@@ -773,82 +773,88 @@ func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTI
 	var conflicts_resolved: bool = false
 
 	for action: String in actions:
-		var has_saved: bool = config.has_section_key("input", action)
-		if has_saved:
-			var value: Variant = config.get_value("input", action)
-			var serialized_events: Array[String] = []
+		if not config.has_section_key("input", action):
+			continue
 
-			if value is Array or value is PackedStringArray:
-				for item: Variant in value:
-					if item is String:
-						serialized_events.append(item)
-					else:
-						Globals.log_message(
-							"Non-string item in array for action '" + action + "': skipped",
-							Globals.LogLevel.WARNING
-						)
-			elif value is String:
-				serialized_events = [value]
-			elif value is int:
-				serialized_events = ["key:" + str(value)]
-			else:
+		var raw_val: Variant = config.get_value("input", action)
+		if not (raw_val is Array or raw_val is PackedStringArray or raw_val is String or raw_val is int):
+			Globals.log_message(
+				"Unsupported config value type for action '" + action + "': skipped",
+				Globals.LogLevel.WARNING
+			)
+			continue  # Preserve existing bindings for invalid types
+
+		var serialized_events: Array[String] = _normalize_input_value(raw_val, action)
+		InputMap.action_erase_events(action)
+
+		for serialized: String in serialized_events:
+			var ev: InputEvent = deserialize_event(serialized)
+			if ev == null:
+				continue
+
+			var already_present := false
+			for existing_ev in InputMap.action_get_events(action):
+				if events_match(existing_ev, ev):
+					already_present = true
+					break
+
+			if already_present:
+				continue
+
+			var conflicts: Array[String] = get_conflicting_actions(ev, action)
+			if not conflicts.is_empty():
 				Globals.log_message(
-					"Unsupported config value type for action '" + action + "': skipped",
+					(
+						"Skipping duplicate event for "
+						+ action
+						+ " (conflicts: "
+						+ str(conflicts)
+						+ ")"
+					),
 					Globals.LogLevel.WARNING
 				)
-				continue  # Skip erasing events and preserve existing InputMap bindings
+				_remove_event_from_conflicts(ev, conflicts)
+				conflicts_resolved = true
 
-			InputMap.action_erase_events(action)
-
-			for serialized: String in serialized_events:
-				var ev: InputEvent = deserialize_event(serialized)
-				if ev == null:
-					continue
-
-				var already_present := false
-				for existing_ev in InputMap.action_get_events(action):
-					if events_match(existing_ev, ev):
-						already_present = true
-						break
-
-				if already_present:
-					continue
-
-				var conflicts: Array[String] = get_conflicting_actions(ev, action)
-				if not conflicts.is_empty():
-					Globals.log_message(
-						(
-							"Skipping duplicate event for "
-							+ action
-							+ " (conflicts: "
-							+ str(conflicts)
-							+ ")"
-						),
-						Globals.LogLevel.WARNING
-					)
-					_remove_event_from_conflicts(ev, conflicts)
-					conflicts_resolved = true
-
-				InputMap.action_add_event(action, ev)
+			InputMap.action_add_event(action, ev)
 
 	return conflicts_resolved
 
 
-## Public wrapper for backfilling missing action defaults into InputMap.
-## :param config: Loaded ConfigFile instance.
-## :rtype: bool
+## Helper function to convert raw ConfigFile values (Array, String, or int) into serialized strings.
+func _normalize_input_value(value: Variant, action: String) -> Array[String]:
+	var serials: Array[String] = []
+	if value is Array or value is PackedStringArray:
+		for item: Variant in value:
+			if item is String:
+				serials.append(item)
+			else:
+				Globals.log_message(
+					"Non-string item in array for action '" + action + "': skipped",
+					Globals.LogLevel.WARNING
+				)
+	elif value is String:
+		serials.append(value)
+	elif value is int:
+		serials.append("key:" + str(value))
+	return serials
+
+
+# ==============================================================================
+# TEST SUPPORT HELPERS (Do not use in production code)
+# ==============================================================================
+
+## [TEST ONLY] Public wrapper for backfilling missing action defaults into InputMap.
+## Intended exclusively for test suites to prevent direct access to private methods.
 func backfill_missing_defaults(config: ConfigFile) -> bool:
 	return _add_missing_defaults(config)
 
 
-## Resets the internal _needs_save flag. Intended for test suite teardown/setup.
-## :param value: Boolean state (defaults to false).
-## :rtype: void
+## [TEST ONLY] Resets the internal _needs_save flag during test setup/teardown.
 func set_needs_save_for_test(value: bool = false) -> void:
 	_needs_save = value
 
 
-## Returns current state of _needs_save.
-## :rtype: bool
+## [TEST ONLY] Returns current state of _needs_save for test assertions.
 func needs_save() -> bool:
 	return _needs_save
