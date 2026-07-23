@@ -37,7 +37,7 @@ const PATH_NEW_FORMAT: String = "user://new_format.cfg"
 @warning_ignore("unused_parameter")
 func before() -> void:
 	# Reset global singleton state for determinism
-	Settings._needs_save = false
+	Settings.set_needs_save_for_test(false)
 	
 	# Ensure test actions exist (and start unbound).
 	for action: String in ["test_action", "test_action1", "test_action2"]:
@@ -49,7 +49,7 @@ func before() -> void:
 @warning_ignore("unused_parameter")
 func after() -> void:
 	# Reset state to avoid leaking into other test suites
-	Settings._needs_save = false
+	Settings.set_needs_save_for_test(false)
 
 	# Remove test actions.
 	for action: String in ["test_action", "test_action1", "test_action2"]:
@@ -264,7 +264,7 @@ func test_multi_action_persistence() -> void:
 
 
 func test_no_migration_on_new() -> void:
-	Settings._needs_save = false
+	Settings.set_needs_save_for_test(false)
 	
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("input", "test_action", ["key:%d" % TEST_KEY_3])
@@ -276,11 +276,11 @@ func test_no_migration_on_new() -> void:
 
 	Settings.load_input_mappings(PATH_NEW_FORMAT, ["test_action"])
 	
-	assert_bool(Settings._needs_save).is_false()
+	assert_bool(Settings.needs_save()).is_false()
 
 
 func test_migration_save_only_on_old() -> void:
-	Settings._needs_save = false
+	Settings.set_needs_save_for_test(false)
 	
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("input", "test_action", TEST_KEY_3)
@@ -289,13 +289,13 @@ func test_migration_save_only_on_old() -> void:
 	InputMap.action_erase_events("test_action")
 	
 	Settings.load_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
-	assert_bool(Settings._needs_save).is_true()
+	assert_bool(Settings.needs_save()).is_true()
 
 	Settings.save_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
-	Settings._needs_save = false
+	Settings.set_needs_save_for_test(false)
 	
 	Settings.load_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
-	assert_bool(Settings._needs_save).is_false()
+	assert_bool(Settings.needs_save()).is_false()
 
 
 # ==============================================================================

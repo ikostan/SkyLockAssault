@@ -831,3 +831,23 @@ func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTI
 				InputMap.action_add_event(action, ev)
 
 	return conflicts_resolved
+
+
+## Public wrapper for backfilling missing action defaults into InputMap.
+## :param config: Loaded ConfigFile instance.
+## :rtype: bool
+func backfill_missing_defaults(config: ConfigFile) -> bool:
+	return _add_missing_defaults(config)
+
+
+## Resets the internal _needs_save flag. Intended for test suite teardown/setup.
+## :param value: Boolean state (defaults to false).
+## :rtype: void
+func set_needs_save_for_test(value: bool = false) -> void:
+	_needs_save = value
+
+
+## Returns current state of _needs_save.
+## :rtype: bool
+func needs_save() -> bool:
+	return _needs_save

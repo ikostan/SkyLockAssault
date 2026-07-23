@@ -36,8 +36,8 @@ func before_each() -> void:
 			InputMap.add_action(act)
 
 	# Explicitly backfill defaults without setting _needs_save
-	Settings._add_missing_defaults(ConfigFile.new())
-	Settings._needs_save = false
+	Settings.backfill_missing_defaults(ConfigFile.new())
+	Settings.set_needs_save_for_test(false)
 
 
 func after_each() -> void:
@@ -65,7 +65,7 @@ func test_ec_04_legacy_mixed_formats() -> void:
 	Settings.apply_config_to_input_map(cfg)
 
 	# 2. Explicitly trigger default backfilling for unmentioned actions
-	Settings._add_missing_defaults(cfg)
+	Settings.backfill_missing_defaults(cfg)
 
 	# speed_up should have migrated from old int
 	var events := InputMap.action_get_events(TEST_ACTION)
