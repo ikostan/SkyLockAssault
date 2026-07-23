@@ -623,13 +623,19 @@ static func get_event_label(ev: InputEvent) -> String:
 
 
 ## Loads input mappings from config, overriding project defaults only if saved.
+## Acts strictly as an I/O coordinator by loading the file via `Globals.safe_load_config`,
+## applying mappings via `apply_config_to_input_map`, and backfilling missing defaults.
+##
+## :param path: Path to the config file (defaults to CONFIG_PATH).
+## :param actions: List of input actions to load (defaults to ACTIONS).
+## :rtype: void
 func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
-	# Use our new centralized helper to safely read the file
+	# 1. Disk I/O: Read and decrypt configuration file
 	var load_data: Dictionary = Globals.safe_load_config(path)
 	var config: ConfigFile = load_data["config"]
 	var err: int = load_data["err"]
 
-	if load_data["is_legacy"]:
+	if load_data.get("is_legacy", false):
 		Globals.log_message(
 			"Legacy plaintext input mappings found. Migration required.", Globals.LogLevel.INFO
 		)
@@ -640,7 +646,7 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			"Error loading settings file at " + path + ": " + str(err), Globals.LogLevel.ERROR
 		)
 
-	# Restore migration metadata
+	# 2. Metadata restoring
 	if config.has_section_key("meta", LEGACY_MIGRATION_KEY):
 		var migrated: bool = config.get_value("meta", LEGACY_MIGRATION_KEY, false)
 		if migrated:
@@ -649,60 +655,12 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				"Restored legacy migration flag from config.", Globals.LogLevel.DEBUG
 			)
 
-	for action: String in actions:
-		var has_saved: bool = config.has_section_key("input", action)
-		if has_saved:
-			var value: Variant = config.get_value("input", action)
-			var serialized_events: Array[String] = []
+	# 3. Apply memory configuration to InputMap & collect conflict resolution status
+	var conflicts_resolved: bool = apply_config_to_input_map(config, actions)
 
-			if value is Array or value is PackedStringArray:
-				for item: Variant in value:
-					if item is String:
-						serialized_events.append(item)
-					else:
-						Globals.log_message(
-							"Non-string item in array for action '" + action + "': skipped",
-							Globals.LogLevel.WARNING
-						)
-			elif value is String:
-				serialized_events = [value]
-			elif value is int:
-				serialized_events = ["key:" + str(value)]
-
-			InputMap.action_erase_events(action)
-
-			for serialized: String in serialized_events:
-				var ev: InputEvent = deserialize_event(serialized)
-				if ev == null:
-					continue
-
-				var already_present := false
-				for existing_ev in InputMap.action_get_events(action):
-					if events_match(existing_ev, ev):
-						already_present = true
-						break
-
-				if already_present:
-					continue
-
-				var conflicts: Array[String] = get_conflicting_actions(ev, action)
-				if not conflicts.is_empty():
-					Globals.log_message(
-						(
-							"Skipping duplicate event for "
-							+ action
-							+ " (conflicts: "
-							+ str(conflicts)
-							+ ")"
-						),
-						Globals.LogLevel.WARNING
-					)
-					_remove_event_from_conflicts(ev, conflicts)
-					_needs_save = true
-
-				InputMap.action_add_event(action, ev)
-
-	_needs_save = _add_missing_defaults(config) or _needs_save
+	# 4. Backfill missing defaults and aggregate save requirements
+	var defaults_added: bool = _add_missing_defaults(config)
+	_needs_save = conflicts_resolved or defaults_added or _needs_save
 
 
 ## Saves current InputMap events to config (all per action as array).
@@ -799,3 +757,107 @@ func load_last_input_device() -> void:
 		Globals.current_input_device = device if device in ["keyboard", "gamepad"] else "keyboard"
 	else:
 		Globals.current_input_device = "keyboard"
+
+
+## Applies input mapping definitions from an in-memory ConfigFile directly into Godot's InputMap.
+## Pure GDScript helper function without singleton side effects.
+## Returns true if any conflicting bindings were removed during mapping.
+##
+## :param config: The ConfigFile instance containing input configurations.
+## :param actions: The array of action names to process (defaults to ACTIONS).
+## :rtype: bool
+func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTIONS) -> bool:
+	if config == null:
+		return false
+
+	var conflicts_resolved: bool = false
+
+	for action: String in actions:
+		if not config.has_section_key("input", action):
+			continue
+
+		var raw_val: Variant = config.get_value("input", action)
+		if not (
+			raw_val is Array or raw_val is PackedStringArray or raw_val is String or raw_val is int
+		):
+			Globals.log_message(
+				"Unsupported config value type for action '" + action + "': skipped",
+				Globals.LogLevel.WARNING
+			)
+			continue  # Preserve existing bindings for invalid types
+
+		var serialized_events: Array[String] = _normalize_input_value(raw_val, action)
+		InputMap.action_erase_events(action)
+
+		for serialized: String in serialized_events:
+			var ev: InputEvent = deserialize_event(serialized)
+			if ev == null:
+				continue
+
+			var already_present := false
+			for existing_ev in InputMap.action_get_events(action):
+				if events_match(existing_ev, ev):
+					already_present = true
+					break
+
+			if already_present:
+				continue
+
+			var conflicts: Array[String] = get_conflicting_actions(ev, action)
+			if not conflicts.is_empty():
+				Globals.log_message(
+					(
+						"Skipping duplicate event for "
+						+ action
+						+ " (conflicts: "
+						+ str(conflicts)
+						+ ")"
+					),
+					Globals.LogLevel.WARNING
+				)
+				_remove_event_from_conflicts(ev, conflicts)
+				conflicts_resolved = true
+
+			InputMap.action_add_event(action, ev)
+
+	return conflicts_resolved
+
+
+## Helper function to convert raw ConfigFile values (Array, String, or int) into serialized strings.
+func _normalize_input_value(value: Variant, action: String) -> Array[String]:
+	var serials: Array[String] = []
+	if value is Array or value is PackedStringArray:
+		for item: Variant in value:
+			if item is String:
+				serials.append(item)
+			else:
+				Globals.log_message(
+					"Non-string item in array for action '" + action + "': skipped",
+					Globals.LogLevel.WARNING
+				)
+	elif value is String:
+		serials.append(value)
+	elif value is int:
+		serials.append("key:" + str(value))
+	return serials
+
+
+# ==============================================================================
+# TEST SUPPORT HELPERS (Do not use in production code)
+# ==============================================================================
+
+
+## [TEST ONLY] Public wrapper for backfilling missing action defaults into InputMap.
+## Intended exclusively for test suites to prevent direct access to private methods.
+func backfill_missing_defaults(config: ConfigFile) -> bool:
+	return _add_missing_defaults(config)
+
+
+## [TEST ONLY] Resets the internal _needs_save flag during test setup/teardown.
+func set_needs_save_for_test(value: bool = false) -> void:
+	_needs_save = value
+
+
+## [TEST ONLY] Returns current state of _needs_save for test assertions.
+func needs_save() -> bool:
+	return _needs_save

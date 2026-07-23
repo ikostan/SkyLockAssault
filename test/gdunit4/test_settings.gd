@@ -17,34 +17,27 @@ const TEST_KEY_3: int = KEY_F15
 const TEST_KEY_4: int = KEY_F16
 
 ## Non-conflicting gamepad buttons.
-## Our previous choice (JOY_BUTTON_X) conflicts with action "pause" in your project.
-## Use a rarely-bound button instead.
 const TEST_JOY_BUTTON: int = JOY_BUTTON_PADDLE1
 
 ## Non-conflicting gamepad axis (defaults use RIGHT_Y and LEFT_X; RIGHT_X is free).
 const TEST_JOY_AXIS: int = JOY_AXIS_RIGHT_X
 const TEST_JOY_AXIS_VALUE: float = -1.0
 
-## Files used by this suite (cleaned up in after()).
+## Disk I/O files used by remaining persistence tests (cleaned up in after()).
 const PATH_TEST_SETTINGS: String = "user://test_settings.cfg"
 const PATH_MULTI_TEST: String = "user://multi_test.cfg"
 const PATH_JOY_TEST: String = "user://joy_test.cfg"
-const PATH_OLD_FORMAT: String = "user://old_format.cfg"
-const PATH_MALFORMED: String = "user://malformed.cfg"
 const PATH_DEFAULT_TEST: String = "user://default_test.cfg"
 const PATH_UNBOUND_TEST: String = "user://unbound_test.cfg"
 const PATH_MULTI_ACTION: String = "user://multi_action.cfg"
-const PATH_NO_SAVED: String = "user://no_saved.cfg"
 const PATH_MIGRATION_TEST: String = "user://migration_test.cfg"
 const PATH_NEW_FORMAT: String = "user://new_format.cfg"
-const PATH_TYPE_TEST: String = "user://type_test.cfg"
-const PATH_CORRUPT: String = "user://corrupt.cfg"
 
 
 @warning_ignore("unused_parameter")
 func before() -> void:
 	# Reset global singleton state for determinism
-	Settings._needs_save = false
+	Settings.set_needs_save_for_test(false)
 	
 	# Ensure test actions exist (and start unbound).
 	for action: String in ["test_action", "test_action1", "test_action2"]:
@@ -56,32 +49,32 @@ func before() -> void:
 @warning_ignore("unused_parameter")
 func after() -> void:
 	# Reset state to avoid leaking into other test suites
-	Settings._needs_save = false
+	Settings.set_needs_save_for_test(false)
 
 	# Remove test actions.
 	for action: String in ["test_action", "test_action1", "test_action2"]:
 		if InputMap.has_action(action):
 			InputMap.erase_action(action)
 
-	# Remove all files this suite may create.
+	# Remove disk test artifacts created during persistence tests.
 	var paths: Array[String] = [
 		PATH_TEST_SETTINGS,
 		PATH_MULTI_TEST,
 		PATH_JOY_TEST,
-		PATH_OLD_FORMAT,
-		PATH_MALFORMED,
 		PATH_DEFAULT_TEST,
 		PATH_UNBOUND_TEST,
 		PATH_MULTI_ACTION,
-		PATH_NO_SAVED,
 		PATH_MIGRATION_TEST,
 		PATH_NEW_FORMAT,
-		PATH_TYPE_TEST,
-		PATH_CORRUPT,
 	]
 	for p: String in paths:
 		if FileAccess.file_exists(p):
 			DirAccess.remove_absolute(p)
+
+
+# ==============================================================================
+# 1. DISK I/O PERSISTENCE TESTS (Save + Load End-to-End)
+# ==============================================================================
 
 
 func test_save_and_load_keyboard() -> void:
@@ -181,7 +174,6 @@ func test_multi_event_persistence() -> void:
 	if events.size() < 2:
 		return
 
-	# Validate content ignoring order (some loaders may reorder).
 	var found_key: bool = false
 	var found_joy: bool = false
 	for ev: InputEvent in events:
@@ -194,27 +186,6 @@ func test_multi_event_persistence() -> void:
 	assert_bool(found_joy).is_true()
 
 
-func test_backward_compat_old_format() -> void:
-	var test_actions: Array[String] = ["test_action"]
-
-	# Old format: single int keycode (must not conflict with defaults).
-	var config: ConfigFile = ConfigFile.new()
-	config.set_value("input", "test_action", TEST_KEY_3)
-	config.save_encrypted_pass(PATH_OLD_FORMAT, Globals.save_encryption_pass)
-
-	assert_bool(FileAccess.file_exists(PATH_OLD_FORMAT)).is_true()
-
-	InputMap.action_erase_events("test_action")
-	Settings.load_input_mappings(PATH_OLD_FORMAT, test_actions)
-
-	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
-	assert_int(events.size()).is_equal(1)
-	if events.size() < 1:
-		return
-	assert_that(events[0] is InputEventKey).is_true()
-	assert_int(events[0].physical_keycode).is_equal(TEST_KEY_3)
-
-
 func test_default_key_fallback() -> void:
 	var test_actions: Array[String] = ["speed_up"]
 
@@ -225,7 +196,6 @@ func test_default_key_fallback() -> void:
 
 	Settings.load_input_mappings(PATH_DEFAULT_TEST, test_actions)
 
-	# Defaults for speed_up: KEY_W + right trigger axis.
 	var events: Array[InputEvent] = InputMap.action_get_events("speed_up")
 	assert_int(events.size()).is_equal(2)
 
@@ -293,6 +263,64 @@ func test_multi_action_persistence() -> void:
 	assert_int(events2.size()).is_equal(0)
 
 
+func test_no_migration_on_new() -> void:
+	Settings.set_needs_save_for_test(false)
+	
+	var config: ConfigFile = ConfigFile.new()
+	config.set_value("input", "test_action", ["key:%d" % TEST_KEY_3])
+	
+	for action: String in Settings.ACTIONS:
+		config.set_value("input", action, [])
+		
+	config.save_encrypted_pass(PATH_NEW_FORMAT, Globals.save_encryption_pass)
+
+	Settings.load_input_mappings(PATH_NEW_FORMAT, ["test_action"])
+	
+	assert_bool(Settings.needs_save()).is_false()
+
+
+func test_migration_save_only_on_old() -> void:
+	Settings.set_needs_save_for_test(false)
+	
+	var config: ConfigFile = ConfigFile.new()
+	config.set_value("input", "test_action", TEST_KEY_3)
+	config.save(PATH_MIGRATION_TEST)
+
+	InputMap.action_erase_events("test_action")
+	
+	Settings.load_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
+	assert_bool(Settings.needs_save()).is_true()
+
+	Settings.save_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
+	Settings.set_needs_save_for_test(false)
+	
+	Settings.load_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
+	assert_bool(Settings.needs_save()).is_false()
+
+
+# ==============================================================================
+# 2. IN-MEMORY PARSING TESTS (Direct apply_config_to_input_map Injections)
+# ==============================================================================
+
+
+func test_backward_compat_old_format() -> void:
+	var test_actions: Array[String] = ["test_action"]
+
+	# Old format: single int keycode in memory
+	var config: ConfigFile = ConfigFile.new()
+	config.set_value("input", "test_action", TEST_KEY_3)
+
+	InputMap.action_erase_events("test_action")
+	Settings.apply_config_to_input_map(config, test_actions)
+
+	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
+	assert_int(events.size()).is_equal(1)
+	if events.size() < 1:
+		return
+	assert_that(events[0] is InputEventKey).is_true()
+	assert_int(events[0].physical_keycode).is_equal(TEST_KEY_3)
+
+
 func test_malformed_deserialization() -> void:
 	var test_actions: Array[String] = ["test_action"]
 	var config: ConfigFile = ConfigFile.new()
@@ -306,12 +334,9 @@ func test_malformed_deserialization() -> void:
 		"invalid:123",
 	]
 	config.set_value("input", "test_action", malformed_serials)
-	config.save_encrypted_pass(PATH_MALFORMED, Globals.save_encryption_pass)
-
-	assert_bool(FileAccess.file_exists(PATH_MALFORMED)).is_true()
 
 	InputMap.action_erase_events("test_action")
-	Settings.load_input_mappings(PATH_MALFORMED, test_actions)
+	Settings.apply_config_to_input_map(config, test_actions)
 
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(0)
@@ -327,11 +352,9 @@ func test_preserve_default_joypad_no_saved() -> void:
 	InputMap.action_add_event("test_action", default_joy)
 
 	var config: ConfigFile = ConfigFile.new()
-	# FIX: Add dummy data to prevent a core engine crash when encrypting a completely empty ConfigFile
 	config.set_value("meta", "initialized", true)
-	config.save_encrypted_pass(PATH_NO_SAVED, Globals.save_encryption_pass)
 
-	Settings.load_input_mappings(PATH_NO_SAVED, test_actions)
+	Settings.apply_config_to_input_map(config, test_actions)
 
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
@@ -341,36 +364,14 @@ func test_preserve_default_joypad_no_saved() -> void:
 	assert_int(events[0].button_index).is_equal(TEST_JOY_BUTTON)
 
 
-func test_no_migration_on_new() -> void:
-	# FIX: Reset singleton state manually. Previous tests in the suite 
-	# trigger the defaults backfill, leaving this flag as true.
-	Settings._needs_save = false
-	
-	var config: ConfigFile = ConfigFile.new()
-	config.set_value("input", "test_action", ["key:%d" % TEST_KEY_3])
-	
-	# Explicitly unbind all default actions so _add_missing_defaults 
-	# doesn't automatically backfill them and trigger a save.
-	for action: String in Settings.ACTIONS:
-		config.set_value("input", action, [])
-		
-	config.save_encrypted_pass(PATH_NEW_FORMAT, Globals.save_encryption_pass)
-
-	Settings.load_input_mappings(PATH_NEW_FORMAT, ["test_action"])
-	
-	# Now this will accurately assert that the legacy migration wasn't triggered
-	assert_bool(Settings._needs_save).is_false()
-
-
 func test_type_safe_new_format() -> void:
 	var test_actions: Array[String] = ["test_action"]
 
 	var config: ConfigFile = ConfigFile.new()
 	config.set_value("input", "test_action", ["key:%d" % TEST_KEY_3])
-	config.save_encrypted_pass(PATH_TYPE_TEST, Globals.save_encryption_pass)
 
 	InputMap.action_erase_events("test_action")
-	Settings.load_input_mappings(PATH_TYPE_TEST, test_actions)
+	Settings.apply_config_to_input_map(config, test_actions)
 
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(1)
@@ -380,53 +381,17 @@ func test_type_safe_new_format() -> void:
 	assert_int(events[0].physical_keycode).is_equal(TEST_KEY_3)
 
 
-## Tests that legacy plaintext files trigger the _needs_save migration flag,
-## and that subsequent encrypted saves clear the flag.
-func test_migration_save_only_on_old() -> void:
-	Settings._needs_save = false
-	
-	# 1. Manually create a LEGACY PLAINTEXT file
-	var config: ConfigFile = ConfigFile.new()
-	config.set_value("input", "test_action", TEST_KEY_3)
-	config.save(PATH_MIGRATION_TEST)
-
-	InputMap.action_erase_events("test_action")
-	
-	# 2. Execute load. Our safe_load_config helper will detect it's not encrypted,
-	# fall back to a plaintext load, and flag _needs_save = true.
-	Settings.load_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
-	
-	assert_bool(Settings._needs_save).is_true()
-
-	# 3. Save the new encrypted format
-	Settings.save_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
-	Settings._needs_save = false
-	
-	# 4. Verify the newly encrypted file no longer triggers migration
-	Settings.load_input_mappings(PATH_MIGRATION_TEST, ["test_action"])
-	assert_bool(Settings._needs_save).is_false()
-
-
-## Tests that logically corrupt strings inside a validly encrypted file
-## are safely ignored by the parser without crashing.
 func test_load_error_handling() -> void:
 	var config: ConfigFile = ConfigFile.new()
-	# Inject completely invalid strings into a perfectly formatted ConfigFile object
+	# Inject invalid strings directly into an in-memory ConfigFile object
 	config.set_value("input", "test_action", ["invalid:data", "key:not_a_number"])
-	
-	# Save it using proper encryption so the C++ engine doesn't panic on load
-	config.save_encrypted_pass(PATH_CORRUPT, Globals.ensure_encryption_key())
-
-	assert_bool(FileAccess.file_exists(PATH_CORRUPT)).is_true()
 
 	InputMap.action_erase_events("test_action")
 
-	# Now is_success() will pass because the file decrypts properly, 
-	# and our GDScript safely skips the garbage data.
 	assert_error(func() -> void:
-		Settings.load_input_mappings(PATH_CORRUPT, ["test_action"])
-	).is_success() 
+		Settings.apply_config_to_input_map(config, ["test_action"])
+	).is_success()
 
-	# Your script correctly skips "invalid:data", so size remains 0
+	# Garbage data is cleanly skipped, leaving size = 0
 	var events: Array[InputEvent] = InputMap.action_get_events("test_action")
 	assert_int(events.size()).is_equal(0)
