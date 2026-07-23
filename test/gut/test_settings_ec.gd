@@ -87,7 +87,7 @@ func test_ec_05_corrupt_parse_error() -> void:
 	assert_true(InputMap.action_get_events(TEST_ACTION).is_empty(), "Pure parser discards corrupt strings")
 
 	# 2. Backfill fallback step restores default KEY_W
-	Settings._add_missing_defaults(cfg)
+	Settings.backfill_missing_defaults(cfg)
 	assert_false(InputMap.action_get_events(TEST_ACTION).is_empty(), "Defaults backfilled after corrupt reject")
 
 
