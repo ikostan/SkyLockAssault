@@ -623,7 +623,6 @@ static func get_event_label(ev: InputEvent) -> String:
 
 
 ## Loads input mappings from config, overriding project defaults only if saved.
-## Loads input mappings from config, overriding project defaults only if saved.
 ## Acts strictly as an I/O coordinator by loading the file via `Globals.safe_load_config`,
 ## applying mappings via `apply_config_to_input_map`, and backfilling missing defaults.
 ##
@@ -656,11 +655,12 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				"Restored legacy migration flag from config.", Globals.LogLevel.DEBUG
 			)
 
-	# 3. Apply memory configuration to InputMap
-	apply_config_to_input_map(config, actions)
+	# 3. Apply memory configuration to InputMap & collect conflict resolution status
+	var conflicts_resolved: bool = apply_config_to_input_map(config, actions)
 
-	# 4. Backfill missing defaults and update save state for missing actions
-	_needs_save = _add_missing_defaults(config) or _needs_save
+	# 4. Backfill missing defaults and aggregate save requirements
+	var defaults_added: bool = _add_missing_defaults(config)
+	_needs_save = conflicts_resolved or defaults_added or _needs_save
 
 
 ## Saves current InputMap events to config (all per action as array).
@@ -760,14 +760,17 @@ func load_last_input_device() -> void:
 
 
 ## Applies input mapping definitions from an in-memory ConfigFile directly into Godot's InputMap.
-## Pure GDScript helper function without side-effect default backfilling.
+## Pure GDScript helper function without singleton side effects.
+## Returns true if any conflicting bindings were removed during mapping.
 ##
 ## :param config: The ConfigFile instance containing input configurations.
 ## :param actions: The array of action names to process (defaults to ACTIONS).
-## :rtype: void
-func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTIONS) -> void:
+## :rtype: bool
+func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTIONS) -> bool:
 	if config == null:
-		return
+		return false
+
+	var conflicts_resolved: bool = false
 
 	for action: String in actions:
 		var has_saved: bool = config.has_section_key("input", action)
@@ -818,6 +821,8 @@ func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTI
 						Globals.LogLevel.WARNING
 					)
 					_remove_event_from_conflicts(ev, conflicts)
-					_needs_save = true
+					conflicts_resolved = true
 
 				InputMap.action_add_event(action, ev)
+
+	return conflicts_resolved
