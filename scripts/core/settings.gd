@@ -777,7 +777,9 @@ func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTI
 			continue
 
 		var raw_val: Variant = config.get_value("input", action)
-		if not (raw_val is Array or raw_val is PackedStringArray or raw_val is String or raw_val is int):
+		if not (
+			raw_val is Array or raw_val is PackedStringArray or raw_val is String or raw_val is int
+		):
 			Globals.log_message(
 				"Unsupported config value type for action '" + action + "': skipped",
 				Globals.LogLevel.WARNING
@@ -843,6 +845,7 @@ func _normalize_input_value(value: Variant, action: String) -> Array[String]:
 # ==============================================================================
 # TEST SUPPORT HELPERS (Do not use in production code)
 # ==============================================================================
+
 
 ## [TEST ONLY] Public wrapper for backfilling missing action defaults into InputMap.
 ## Intended exclusively for test suites to prevent direct access to private methods.
