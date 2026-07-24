@@ -28,11 +28,12 @@ v8_coverage_volume_sliders_mutes_test.json, artifacts/test_volume_failure_*.png/
 import json
 import os
 import time
+from typing import Any, Callable
 
-from playwright.sync_api import Page
+import pytest
+from playwright.sync_api import Page, expect
 
 # Configuration for stability in different environments
-# Default to 5000ms, but allow CI to override via environment variable
 DEFAULT_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "30000"))
 TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "5000"))
 
@@ -50,7 +51,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
     logs: list[dict[str, str]] = []
     cdp_session = None
 
-    def on_console(msg) -> None:
+    def on_console(msg: Any) -> None:
         """
         Console message handler to capture logs.
 
@@ -61,8 +62,25 @@ def test_volume_sliders_mutes(page: Page) -> None:
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
+
+    def wait_for_console_log(
+        predicate: Callable[[str], bool],
+        start_idx: int,
+        timeout_ms: int = TEST_TIMEOUT,
+    ) -> None:
+        """Helper to poll until a matching console log arrives or timeout expires."""
+        start_time = time.time()
+        while (time.time() - start_time) * 1000 < timeout_ms:
+            if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
+                return
+            page.wait_for_timeout(50)  # Micro-poll for event loop progression
+        pytest.fail(
+            "Timed out waiting for expected console log matching "
+            f"predicate after {timeout_ms}ms"
+        )
+
     try:
-        # Start CDP session for V8 JS coverage (workaround for Python Playwright lacking native coverage API)
+        # Start CDP session for V8 JS coverage
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
         cdp_session.send(
@@ -74,22 +92,23 @@ def test_volume_sliders_mutes(page: Page) -> None:
             wait_until="networkidle",
             timeout=DEFAULT_TIMEOUT,
         )
-        # 1. Wait for the engine to actually start the splash scene
-        page.wait_for_timeout(TEST_TIMEOUT)
-        page.wait_for_function("() => window.godotInitialized", timeout=DEFAULT_TIMEOUT)
+
+        # 1. Wait deterministically for Godot engine initialization
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+        )
 
         # Verify canvas
         canvas = page.locator("canvas")
-        page.wait_for_selector("canvas", state="visible", timeout=DEFAULT_TIMEOUT)
+        expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
         box: dict[str, float] | None = canvas.bounding_box()
         assert box is not None, "Canvas not found"
         assert "SkyLockAssault" in page.title(), "Title not found"
 
         # Open options
         page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
-        # page.click("#options-button", force=True)
         page.wait_for_function(
-            "window.optionsPressed !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.optionsPressed !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.optionsPressed([])")
 
@@ -97,28 +116,26 @@ def test_volume_sliders_mutes(page: Page) -> None:
         page.wait_for_selector(
             "#advanced-button", state="visible", timeout=TEST_TIMEOUT
         )
-        # page.click("#advanced-button", force=True)
         page.wait_for_function(
-            "window.advancedPressed !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.advancedPressed !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.advancedPressed([])")
         page.wait_for_function(
-            "window.changeLogLevel !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.changeLogLevel !== 'undefined'", timeout=TEST_TIMEOUT
         )
-        advanced_display: str = page.evaluate(
-            "window.getComputedStyle(document.getElementById('log-level-select')).display"
+        page.wait_for_function(
+            "() => window.getComputedStyle("
+            "document.getElementById('log-level-select')"
+            ").display === 'block'",
+            timeout=TEST_TIMEOUT,
         )
-        assert (
-            advanced_display == "block"
-        ), "Advanced menu not loaded (selected log level not displayed)"
 
         # Set log level DEBUG
         pre_change_log_count = len(logs)
         page.evaluate("window.changeLogLevel([0])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "log level changed to: debug" in log["text"].lower() for log in new_logs
+        wait_for_console_log(
+            lambda text: "log level changed to: debug" in text,
+            start_idx=pre_change_log_count,
         )
         assert page.evaluate(
             "document.getElementById('audio-button') !== null"
@@ -128,47 +145,41 @@ def test_volume_sliders_mutes(page: Page) -> None:
         page.wait_for_selector(
             "#advanced-back-button", state="visible", timeout=TEST_TIMEOUT
         )
-        # page.click("#advanced-back-button", force=True)
         page.wait_for_function(
-            "window.advancedBackPressed !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.advancedBackPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.advancedBackPressed([])")
 
-        # Navigate to audio sub-menu (use coordinates for Godot-rendered button)
-        canvas = page.locator("canvas")
-        box: dict[str, float] | None = canvas.bounding_box()
-        assert box is not None, "Canvas not found"
         # Open audio
         pre_change_log_count = len(logs)
-        # page.click("#audio-button", force=True)
         page.wait_for_function(
-            "window.audioPressed !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.audioPressed !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.audioPressed([])")
-        page.wait_for_timeout(TEST_TIMEOUT)  # Wait for audio scene load
-        audio_display: str = page.evaluate(
-            "window.getComputedStyle(document.getElementById('master-slider')).display"
+
+        page.wait_for_function(
+            "() => window.getComputedStyle("
+            "document.getElementById('master-slider')"
+            ").display === 'block'",
+            timeout=TEST_TIMEOUT,
         )
-        assert (
-            audio_display == "block"
-        ), "Audio menu not loaded (master-slider not displayed)"
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "audio button pressed" in log["text"].lower() for log in new_logs
-        ), "Audio navigation log not found"
+        wait_for_console_log(
+            lambda text: "audio button pressed" in text,
+            start_idx=pre_change_log_count,
+        )
 
         # VOL-01: Adjust Master volume slider
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.changeMasterVolume !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.changeMasterVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.changeMasterVolume([0.5])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "applied loaded master volume to audioserver: 0.5" in log["text"].lower()
-            for log in new_logs
-        ), "Master volume change log not found"
+        wait_for_console_log(
+            lambda text: "applied loaded master volume to audioserver: 0.5" in text,
+            start_idx=pre_change_log_count,
+        )
         value = page.evaluate("document.getElementById('master-slider').value")
         assert value == "0.5", f"Master slider value not set to 0.5, got {value}"
 
@@ -176,279 +187,225 @@ def test_volume_sliders_mutes(page: Page) -> None:
         # MUTE
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.toggleMuteMaster !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.toggleMuteMaster !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.toggleMuteMaster([0])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "master is muted" in log["text"].lower() for log in new_logs
-        ), "Master mute log not found"
+        wait_for_console_log(
+            lambda text: "master is muted" in text,
+            start_idx=pre_change_log_count,
+        )
         checked = page.evaluate("document.getElementById('mute-master').checked")
         assert not checked, "Master mute not toggled to muted"
+
         # UNMUTE
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.toggleMuteMaster !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.toggleMuteMaster !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.toggleMuteMaster([1])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "applied loaded master volume to audioserver: 0.5" in log["text"].lower()
-            for log in new_logs
-        ), "Master mute log not found"
+        wait_for_console_log(
+            lambda text: "master mute button toggled to: true" in text,
+            start_idx=pre_change_log_count,
+        )
         checked = page.evaluate("document.getElementById('mute-master').checked")
         assert checked, "Master mute not toggled to unmuted"
-        assert any(
-            "master mute button toggled to: true" in log["text"].lower()
-            for log in new_logs
-        ), "Master unmute log not found"
 
         # VOL-03: Adjust Music volume slider
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.changeMusicVolume !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.changeMusicVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.changeMusicVolume([0.3])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
+        wait_for_console_log(
+            lambda text: "applied loaded music volume to audioserver: 0.3" in text,
+            start_idx=pre_change_log_count,
+        )
         value = page.evaluate("document.getElementById('music-slider').value")
         assert value == "0.3", f"Music slider value not set to 0.3, got {value}"
-        assert any(
-            "applied loaded music volume to audioserver: 0.3" in log["text"].lower()
-            for log in new_logs
-        ), "Music volume change log not found"
 
         # VOL-04: Mute / unmute Music
         # MUTE
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.toggleMuteMusic !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.toggleMuteMusic !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.toggleMuteMusic([0])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "music is muted" in log["text"].lower() for log in new_logs
-        ), "Music mute log not found"
+        wait_for_console_log(
+            lambda text: "music is muted" in text,
+            start_idx=pre_change_log_count,
+        )
         checked = page.evaluate("document.getElementById('mute-music').checked")
         assert not checked, "Music mute not toggled to muted"
+
         # UNMUTE
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.toggleMuteMusic !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.toggleMuteMusic !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.toggleMuteMusic([1])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "applied loaded music volume to audioserver: 0.3" in log["text"].lower()
-            for log in new_logs
-        ), "Music unmute log not found"
+        wait_for_console_log(
+            lambda text: "music mute button toggled to: true" in text,
+            start_idx=pre_change_log_count,
+        )
         checked = page.evaluate("document.getElementById('mute-music').checked")
         assert checked, "Music mute not toggled to unmuted"
-        assert any(
-            "music mute button toggled to: true" in log["text"].lower()
-            for log in new_logs
-        ), "Music unmute log not found"
 
         # VOL-05: Adjust SFX volume slider
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.changeSfxVolume !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.changeSfxVolume !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.changeSfxVolume([0.8])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
+        wait_for_console_log(
+            lambda text: "applied loaded sfx volume to audioserver: 0.8" in text,
+            start_idx=pre_change_log_count,
+        )
         value = page.evaluate("document.getElementById('sfx-slider').value")
         assert value == "0.8", f"SFX slider value not set to 0.8, got {value}"
-        assert any(
-            "applied loaded sfx volume to audioserver: 0.8" in log["text"].lower()
-            for log in new_logs
-        ), "SFX volume change log not found"
-        assert any(
-            "sfx volume level in audiomanager: 0.8" in log["text"].lower()
-            for log in new_logs
-        ), "SFX volume change log not found"
-        assert any(
-            "saved volumes to config" in log["text"].lower() for log in new_logs
-        ), "SFX volume change log not found"
 
         # VOL-06: Mute / unmute SFX
         # MUTE
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.toggleMuteSfx !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.toggleMuteSfx !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.toggleMuteSfx([0])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "sfx is muted" in log["text"].lower() for log in new_logs
-        ), "SFX mute log not found"
+        wait_for_console_log(
+            lambda text: "sfx is muted" in text,
+            start_idx=pre_change_log_count,
+        )
         checked = page.evaluate("document.getElementById('mute-sfx').checked")
         assert not checked, "SFX mute not toggled to muted"
+
         # UNMUTE
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.toggleMuteSfx !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.toggleMuteSfx !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.toggleMuteSfx([1])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "applied loaded sfx volume to audioserver: 0.8" in log["text"].lower()
-            for log in new_logs
-        ), "SFX unmute log not found"
+        wait_for_console_log(
+            lambda text: "sfx mute button toggled to: true" in text,
+            start_idx=pre_change_log_count,
+        )
         checked = page.evaluate("document.getElementById('mute-sfx').checked")
         assert checked, "SFX mute not toggled to unmuted"
-        assert any(
-            "sfx mute button toggled to: true" in log["text"].lower()
-            for log in new_logs
-        ), "SFX unmute log not found"
 
         # VOL-07: Adjust Weapon volume slider
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.changeWeaponVolume !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.changeWeaponVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.changeWeaponVolume([0.2])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
+        wait_for_console_log(
+            lambda text: "applied loaded sfx_weapon volume to audioserver: 0.2" in text,
+            start_idx=pre_change_log_count,
+        )
         value = page.evaluate("document.getElementById('weapon-slider').value")
         assert value == "0.2", f"Weapon slider value not set to 0.2, got {value}"
-        assert any(
-            "applied loaded sfx_weapon volume to audioserver: 0.2"
-            in log["text"].lower()
-            for log in new_logs
-        ), "Weapon volume change log not found"
 
         # VOL-08: Mute / unmute Weapon
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.toggleMuteWeapon !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.toggleMuteWeapon !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.toggleMuteWeapon([0])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "weapon is muted" in log["text"].lower() for log in new_logs
-        ), "Weapon mute log not found"
+        wait_for_console_log(
+            lambda text: "weapon is muted" in text,
+            start_idx=pre_change_log_count,
+        )
         checked = page.evaluate("document.getElementById('mute-weapon').checked")
         assert not checked, "Weapon mute not toggled to muted"
+
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.toggleMuteWeapon !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.toggleMuteWeapon !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.toggleMuteWeapon([1])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "applied loaded sfx_weapon volume to audioserver: 0.2"
-            in log["text"].lower()
-            for log in new_logs
-        ), "Weapon unmute log not found"
+        wait_for_console_log(
+            lambda text: "weapon mute button toggled to: true" in text,
+            start_idx=pre_change_log_count,
+        )
         checked = page.evaluate("document.getElementById('mute-weapon').checked")
         assert checked, "Weapon mute not toggled to unmuted"
-        assert any(
-            "weapon mute button toggled to: true" in log["text"].lower()
-            for log in new_logs
-        ), "Weapon unmute log not found"
 
         # VOL-09: Adjust Rotors volume slider
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.changeRotorsVolume !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.changeRotorsVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.changeRotorsVolume([0.9])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
+        wait_for_console_log(
+            lambda text: "applied loaded sfx_rotors volume to audioserver: 0.9" in text,
+            start_idx=pre_change_log_count,
+        )
         value = page.evaluate("document.getElementById('rotors-slider').value")
         assert value == "0.9", f"Rotors slider value not set to 0.9, got {value}"
-        assert any(
-            "applied loaded sfx_rotors volume to audioserver: 0.9"
-            in log["text"].lower()
-            for log in new_logs
-        ), "Rotors volume change log not found"
 
         # VOL-10: Mute / unmute Rotors
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.toggleMuteRotors !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.toggleMuteRotors !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.toggleMuteRotors([0])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "rotors is muted" in log["text"].lower() for log in new_logs
-        ), "Rotors mute log not found"
+        wait_for_console_log(
+            lambda text: "rotors is muted" in text,
+            start_idx=pre_change_log_count,
+        )
         checked = page.evaluate("document.getElementById('mute-rotors').checked")
         assert not checked, "Rotors mute not toggled to muted"
+
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.toggleMuteRotors !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.toggleMuteRotors !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.toggleMuteRotors([1])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "applied loaded sfx_rotors volume to audioserver: 0.9"
-            in log["text"].lower()
-            for log in new_logs
-        ), "Rotors unmute log not found"
+        wait_for_console_log(
+            lambda text: "rotors mute button toggled to: true" in text,
+            start_idx=pre_change_log_count,
+        )
         checked = page.evaluate("document.getElementById('mute-rotors').checked")
         assert checked, "Rotors mute not toggled to unmuted"
-        assert any(
-            "rotors mute button toggled to: true" in log["text"].lower()
-            for log in new_logs
-        ), "Rotors unmute log not found"
 
         # VOL-11: Adjust Menu volume slider
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.changeMenuVolume !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.changeMenuVolume !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.changeMenuVolume([0.9])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
+        wait_for_console_log(
+            lambda text: "applied loaded sfx_menu volume to audioserver: 0.9" in text,
+            start_idx=pre_change_log_count,
+        )
         value = page.evaluate("document.getElementById('menu-slider').value")
         assert value == "0.9", f"Menu slider value not set to 0.9, got {value}"
-        assert any(
-            "applied loaded sfx_menu volume to audioserver: 0.9" in log["text"].lower()
-            for log in new_logs
-        ), "Menu volume change log not found"
 
         # VOL-12: Mute / unmute Menu
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.toggleMuteMenu !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.toggleMuteMenu !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.toggleMuteMenu([0])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "menu is muted" in log["text"].lower() for log in new_logs
-        ), "Menu mute log not found"
+        wait_for_console_log(
+            lambda text: "menu is muted" in text,
+            start_idx=pre_change_log_count,
+        )
         checked = page.evaluate("document.getElementById('mute-menu').checked")
         assert not checked, "Menu mute not toggled to muted"
+
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "window.toggleMuteMenu !== undefined", timeout=TEST_TIMEOUT
+            "() => typeof window.toggleMuteMenu !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.toggleMuteMenu([1])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "applied loaded sfx_menu volume to audioserver: 0.9" in log["text"].lower()
-            for log in new_logs
-        ), "Menu unmute log not found"
+        wait_for_console_log(
+            lambda text: "menu mute button toggled to: true" in text,
+            start_idx=pre_change_log_count,
+        )
         checked = page.evaluate("document.getElementById('mute-menu').checked")
         assert checked, "Menu mute not toggled to unmuted"
-        assert any(
-            "menu mute button toggled to: true" in log["text"].lower()
-            for log in new_logs
-        ), "Menu unmute log not found"
 
     except Exception as e:
         print(f"Test suite failed: {str(e)}")
@@ -465,7 +422,6 @@ def test_volume_sliders_mutes(page: Page) -> None:
         raise
     finally:
         if cdp_session:
-            # Stop V8 coverage and save to file (even on failure)
             coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
             cdp_session.send("Profiler.stopPreciseCoverage")
             cdp_session.send("Profiler.disable")

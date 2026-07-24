@@ -37,10 +37,9 @@ import json
 import os
 import time
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 # Configuration for stability in different environments
-# Default to 5000ms, but allow CI to override via environment variable
 DEFAULT_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "30000"))
 TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "5000"))
 
@@ -69,7 +68,7 @@ def test_load_main_menu(page: Page) -> None:
 
     page.on("console", on_console)
     try:
-        # Start CDP session for V8 JS coverage (workaround for Python Playwright lacking native coverage API)
+        # Start CDP session for V8 JS coverage
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
         cdp_session.send(
@@ -81,32 +80,27 @@ def test_load_main_menu(page: Page) -> None:
             wait_until="networkidle",
             timeout=DEFAULT_TIMEOUT,
         )
-        # 1. Wait for the engine to actually start the splash scene
-        page.wait_for_timeout(TEST_TIMEOUT)
-        # Wait for Godot engine init (ensures 'godot' object is defined)
-        page.wait_for_function("() => window.godotInitialized", timeout=DEFAULT_TIMEOUT)
+
+        # Wait deterministically for Godot engine initialization
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+        )
 
         # Verify canvas and title to ensure game is initialized
         canvas = page.locator("canvas")
-        page.wait_for_selector("canvas", state="visible", timeout=DEFAULT_TIMEOUT)
+        expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
         box: dict[str, float] | None = canvas.bounding_box()
         assert box is not None, "Canvas not found on page"
         assert "SkyLockAssault" in page.title(), "Title not found"
 
-        # Since the DOM overlays are now central to the web flow,
-        # consider also asserting that the main-menu overlay elements are present
-        # and visible (similar to navigation_to_audio_test):
-        page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
-        assert page.evaluate("document.getElementById('start-button') !== null")
-        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
-        assert page.evaluate("document.getElementById('options-button') !== null")
-        page.wait_for_selector("#quit-button", state="visible", timeout=TEST_TIMEOUT)
-        assert page.evaluate("document.getElementById('quit-button') !== null")
+        # Assert main-menu DOM overlay elements are present and visible
+        expect(page.locator("#start-button")).to_be_visible(timeout=TEST_TIMEOUT)
+        expect(page.locator("#options-button")).to_be_visible(timeout=TEST_TIMEOUT)
+        expect(page.locator("#quit-button")).to_be_visible(timeout=TEST_TIMEOUT)
 
     except Exception as e:
         print(f"Test: 'test_load_main_menu' failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
-        # Artifact on failure
         timestamp = int(time.time())
         page.screenshot(
             path=f"artifacts/test_load_main_menu_failure_screenshot_{timestamp}.png"

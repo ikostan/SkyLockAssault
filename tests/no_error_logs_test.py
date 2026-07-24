@@ -22,14 +22,10 @@ import json
 import os
 import time
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 # Configuration for stability in different environments
-# Default to 5000ms, but allow CI to override via environment variable
-DEFAULT_TIMEOUT = int(
-    os.getenv("TEST_TIMEOUT", "30000")
-)  # Fallback to 30s instead of 5s
-BUFFER_TIMEOUT = 1000
+DEFAULT_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "30000"))
 TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "5000"))
 
 
@@ -61,21 +57,20 @@ def test_no_error_logs_after_load(page: Page) -> None:
             "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
         )
 
-        # Navigate and wait for the game to initialize
-        # Using the configurable DEFAULT_TIMEOUT for improved stability
         page.goto(
             "http://localhost:8080/index.html",
             wait_until="networkidle",
             timeout=DEFAULT_TIMEOUT,
         )
-        # 1. Wait for the engine to actually start the splash scene
-        page.wait_for_timeout(DEFAULT_TIMEOUT)
 
-        # Wait for the custom Godot initialization flag
-        page.wait_for_function("() => window.godotInitialized", timeout=DEFAULT_TIMEOUT)
+        # Wait deterministically for Godot engine initialization
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+        )
 
-        # Allow a short buffer for any delayed post-load errors
-        page.wait_for_timeout(BUFFER_TIMEOUT)
+        # Ensure canvas is rendered and visible
+        canvas = page.locator("canvas")
+        expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
 
         # Filter for error logs
         error_logs = [log for log in logs if log["type"] == "error"]

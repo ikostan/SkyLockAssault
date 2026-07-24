@@ -21,7 +21,7 @@ Test Flow
 import os
 import time
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 # Configuration for stability in different environments
 # Default to 5000ms, but allow CI to override via environment variable
@@ -52,11 +52,12 @@ def test_no_critical_errors_on_load(page: Page) -> None:
             wait_until="networkidle",
             timeout=DEFAULT_TIMEOUT,
         )
-        # 1.5. Wait for the engine to actually start the splash scene
-        page.wait_for_timeout(TEST_TIMEOUT)
 
-        # 2. Wait for the engine's ready signal
-        page.wait_for_function("() => window.godotInitialized", timeout=DEFAULT_TIMEOUT)
+        # 2. Wait deterministically for the engine's ready signal and canvas visibility
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+        )
+        expect(page.locator("canvas")).to_be_visible(timeout=DEFAULT_TIMEOUT)
 
         # 3. Analyze captured logs for the specific patterns
         # We only check for patterns within 'error' or 'warning' logs to avoid false positives
