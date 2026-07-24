@@ -112,10 +112,11 @@ def test_audio_flow(page: Page) -> None:
         )
 
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('log-level-select')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('log-level-select')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
-
         # Set log level DEBUG
         pre_change_log_count = len(logs)
         page.evaluate("window.changeLogLevel([0])")
