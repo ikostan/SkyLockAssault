@@ -200,9 +200,9 @@ def test_difficulty_flow(page: Page) -> None:
         ), "Audio button not found/displayed"
 
         # Allow either standard encrypted saves (native) OR plaintext fallbacks (WebGL)
-        assert _has_save_log(new_logs), (
-            "Failed to save settings (neither encrypted save nor fallback detected)"
-        )
+        assert _has_save_log(
+            new_logs
+        ), "Failed to save settings (neither encrypted save nor fallback detected)"
 
         # Go back to Options menu
         page.wait_for_selector(

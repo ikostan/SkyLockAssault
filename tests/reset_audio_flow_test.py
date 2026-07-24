@@ -134,9 +134,7 @@ def test_reset_flow(page: Page) -> None:
         assert "SkyLockAssault" in page.title(), "Title not found"
 
         # Open options
-        page.wait_for_selector(
-            "#options-button", state="visible", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
         page.wait_for_function(
             "() => typeof window.optionsPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
@@ -187,9 +185,7 @@ def test_reset_flow(page: Page) -> None:
         page.evaluate("window.advancedBackPressed([])")
 
         # Navigate to audio sub-menu
-        page.wait_for_selector(
-            "#audio-button", state="visible", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
         assert page.evaluate(
             "document.getElementById('audio-button') !== null"
         ), "Audio button not found/displayed"
@@ -260,12 +256,10 @@ def test_reset_flow(page: Page) -> None:
             == 1.0
         )
         assert (
-            float(page.evaluate("document.getElementById('music-slider').value"))
-            == 1.0
+            float(page.evaluate("document.getElementById('music-slider').value")) == 1.0
         )
         assert (
-            float(page.evaluate("document.getElementById('sfx-slider').value"))
-            == 1.0
+            float(page.evaluate("document.getElementById('sfx-slider').value")) == 1.0
         )
         assert (
             float(page.evaluate("document.getElementById('weapon-slider').value"))
@@ -306,9 +300,7 @@ def test_reset_flow(page: Page) -> None:
             == 1.0
         ), "Value changed unexpectedly"
 
-        actual_errors = _get_unignored_errors(
-            logs[pre_reset_logs:], ignored_phrases
-        )
+        actual_errors = _get_unignored_errors(logs[pre_reset_logs:], ignored_phrases)
         assert (
             not actual_errors
         ), f"Unexpected error after reset on defaults: {actual_errors}"
@@ -347,8 +339,7 @@ def test_reset_flow(page: Page) -> None:
             == 1.0
         )
         assert (
-            float(page.evaluate("document.getElementById('music-slider').value"))
-            == 1.0
+            float(page.evaluate("document.getElementById('music-slider').value")) == 1.0
         )
 
         new_logs = logs[pre_change_log_count:]
@@ -399,9 +390,7 @@ def test_reset_flow(page: Page) -> None:
             timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioBackPressed([])")
-        page.wait_for_selector(
-            "#audio-button", state="visible", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
         page.wait_for_function(
             "() => typeof window.audioPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
@@ -415,8 +404,7 @@ def test_reset_flow(page: Page) -> None:
             timeout=TEST_TIMEOUT,
         )
         assert (
-            float(page.evaluate("document.getElementById('sfx-slider').value"))
-            == 1.0
+            float(page.evaluate("document.getElementById('sfx-slider').value")) == 1.0
         ), "Reset not persisted after back"
 
         # RESET-05: Rapid Reset clicks
@@ -476,17 +464,13 @@ def test_reset_flow(page: Page) -> None:
         page.wait_for_function(
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
-        page.wait_for_selector(
-            "#options-button", state="visible", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
         page.wait_for_function(
             "() => typeof window.optionsPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.optionsPressed([])")
-        page.wait_for_selector(
-            "#audio-button", state="visible", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
         page.wait_for_function(
             "() => typeof window.audioPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
@@ -506,12 +490,10 @@ def test_reset_flow(page: Page) -> None:
             == 1.0
         )
         assert (
-            float(page.evaluate("document.getElementById('music-slider').value"))
-            == 1.0
+            float(page.evaluate("document.getElementById('music-slider').value")) == 1.0
         )
         assert (
-            float(page.evaluate("document.getElementById('sfx-slider').value"))
-            == 1.0
+            float(page.evaluate("document.getElementById('sfx-slider').value")) == 1.0
         )
         assert (
             float(page.evaluate("document.getElementById('weapon-slider').value"))
@@ -548,9 +530,7 @@ def test_reset_flow(page: Page) -> None:
         pre_change_log_count = len(logs)
         assert initial_difficulty_value == 1.0, "Unexpected initial difficulty default"
 
-        page.wait_for_selector(
-            "#audio-button", state="visible", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
         page.wait_for_function(
             "() => typeof window.audioPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
@@ -588,11 +568,7 @@ def test_reset_flow(page: Page) -> None:
         )
 
         assert (
-            float(
-                page.evaluate(
-                    "document.getElementById('difficulty-slider').value"
-                )
-            )
+            float(page.evaluate("document.getElementById('difficulty-slider').value"))
             == initial_difficulty_value
         ), "Difficulty reset unexpectedly"
 
@@ -600,9 +576,7 @@ def test_reset_flow(page: Page) -> None:
         print(f"Test suite failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
-        page.screenshot(
-            path=f"artifacts/test_reset_failure_screenshot_{timestamp}.png"
-        )
+        page.screenshot(path=f"artifacts/test_reset_failure_screenshot_{timestamp}.png")
         with open(
             f"artifacts/test_reset_failure_console_logs_{timestamp}.txt", "w"
         ) as f:
