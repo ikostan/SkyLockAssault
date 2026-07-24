@@ -7,7 +7,9 @@ Back Navigation Test Suite (Playwright + UI Automation with DOM Overlays)
 
 Overview
 --------
-E2E tests for BACK-01 to BACK-04: Validate back button behavior from audio menu, including return to options, no state mutation without changes, persistence of changes, and handling mid-interaction.
+E2E tests for BACK-01 to BACK-04: Validate back button behavior from audio menu,
+including return to options, no state mutation without changes, persistence of changes,
+and handling mid-interaction.
 
 Navigates to audio menu, performs actions, backs out, verifies states/logs.
 
@@ -34,7 +36,6 @@ import pytest
 from playwright.sync_api import Page, expect
 
 # Configuration for stability in different environments
-# Default to 30000ms, but allow CI to override via environment variable
 DEFAULT_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "30000"))
 TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "10000"))
 
@@ -43,7 +44,7 @@ def test_back_flow(page: Page) -> None:
     """
     Main test suite for back navigation using DOM overlays.
 
-    Implements BACK-01 to BACK-04: Back from audio, verify return, state persistence, no exceptions.
+    Implements BACK-01 to BACK-04: Back from audio, verify return, state persistence.
 
     :param page: The Playwright page object.
     :type page: Page
@@ -65,22 +66,23 @@ def test_back_flow(page: Page) -> None:
     page.on("console", on_console)
 
     def wait_for_console_log(
-        predicate: Callable[[str], bool], start_idx: int, timeout_ms: int = TEST_TIMEOUT
+        predicate: Callable[[str], bool],
+        start_idx: int,
+        timeout_ms: int = TEST_TIMEOUT,
     ) -> None:
-        """
-        Helper to poll until a matching console log arrives or timeout expires.
-        """
+        """Helper to poll until a matching console log arrives or timeout expires."""
         start_time = time.time()
         while (time.time() - start_time) * 1000 < timeout_ms:
             if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
                 return
             page.wait_for_timeout(50)  # Micro-poll for event loop progression
         pytest.fail(
-            f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms"
+            "Timed out waiting for expected console log matching "
+            f"predicate after {timeout_ms}ms"
         )
 
     try:
-        # Start CDP session for V8 JS coverage (workaround for Python Playwright lacking native coverage API)
+        # Start CDP session for V8 JS coverage
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
         cdp_session.send(
@@ -123,7 +125,9 @@ def test_back_flow(page: Page) -> None:
             "() => typeof window.changeLogLevel !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('log-level-select')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('log-level-select')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
 
@@ -161,7 +165,9 @@ def test_back_flow(page: Page) -> None:
 
         # Wait deterministically for audio menu display
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('master-slider')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('master-slider')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
         wait_for_console_log(
@@ -177,11 +183,15 @@ def test_back_flow(page: Page) -> None:
         page.evaluate("window.audioBackPressed([])")
 
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('gameplay-button')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('gameplay-button')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('master-slider')).display === 'none'",
+            "() => window.getComputedStyle("
+            "document.getElementById('master-slider')"
+            ").display === 'none'",
             timeout=TEST_TIMEOUT,
         )
         wait_for_console_log(
@@ -196,7 +206,9 @@ def test_back_flow(page: Page) -> None:
         )
         page.evaluate("window.audioPressed([0])")
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('master-slider')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('master-slider')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
 
@@ -214,7 +226,9 @@ def test_back_flow(page: Page) -> None:
         )
         page.evaluate("window.audioPressed([0])")
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('master-slider')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('master-slider')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
         assert (
@@ -242,7 +256,9 @@ def test_back_flow(page: Page) -> None:
         )
         page.evaluate("window.audioPressed([0])")
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('master-slider')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('master-slider')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
 
@@ -266,7 +282,9 @@ def test_back_flow(page: Page) -> None:
         )
         page.evaluate("window.audioPressed([0])")
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('master-slider')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('master-slider')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
         assert (
@@ -285,7 +303,9 @@ def test_back_flow(page: Page) -> None:
         )
         page.evaluate("window.audioBackPressed([])")
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('gameplay-button')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('gameplay-button')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
         new_logs = logs[pre_change_log_count:]
