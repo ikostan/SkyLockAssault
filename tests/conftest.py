@@ -16,7 +16,8 @@ from playwright.sync_api import Browser, BrowserContext, Page, Playwright
 @pytest.fixture(scope="session")
 def browser_instance(playwright: Playwright) -> Generator[Browser, None, None]:
     """
-    Session-scoped Chromium launch fixture to minimize startup overhead across the test suite.
+    Session-scoped Chromium launch fixture to minimize startup
+    overhead across the test suite.
     """
     browser = playwright.chromium.launch(
         headless=True,
@@ -35,7 +36,8 @@ def page(
     browser_instance: Browser, request: pytest.FixtureRequest
 ) -> Generator[Page, None, None]:
     """
-    Function-scoped page fixture providing clean browser context isolation for each test.
+    Function-scoped page fixture providing clean browser context
+    isolation for each test.
     """
     har_path = None
     if request.node.get_closest_marker("record_har"):
@@ -57,5 +59,6 @@ def page(
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers",
-        "record_har: Mark tests that should record HAR files for network tracing in Playwright.",
+        "record_har: Mark tests that should record HAR files "
+        "for network tracing in Playwright.",
     )
