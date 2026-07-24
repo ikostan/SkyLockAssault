@@ -68,7 +68,8 @@ def test_audio_flow(page: Page) -> None:
                 return
             page.wait_for_timeout(50)  # Micro-poll for event loop progression
         pytest.fail(
-            f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms"
+            "Timed out waiting for expected console log matching "
+            f"predicate after {timeout_ms}ms"
         )
 
     try:
