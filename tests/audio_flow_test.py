@@ -59,11 +59,9 @@ def test_audio_flow(page: Page) -> None:
     page.on("console", on_console)
 
     def wait_for_console_log(
-        predicate: Callable[[str], bool], start_idx: int, timeout_ms: int = TEST_TIMEOUT
+            predicate: Callable[[str], bool], start_idx: int, timeout_ms: int = TEST_TIMEOUT
     ) -> None:
-        """
-        Helper to poll until a matching console log arrives or timeout expires.
-        """
+        """Helper to poll until a matching console log arrives or timeout expires."""
         start_time = time.time()
         while (time.time() - start_time) * 1000 < timeout_ms:
             if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
