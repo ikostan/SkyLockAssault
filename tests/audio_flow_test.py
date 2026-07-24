@@ -59,7 +59,7 @@ def test_audio_flow(page: Page) -> None:
     page.on("console", on_console)
 
     def wait_for_console_log(
-            predicate: Callable[[str], bool], start_idx: int, timeout_ms: int = TEST_TIMEOUT
+        predicate: Callable[[str], bool], start_idx: int, timeout_ms: int = TEST_TIMEOUT
     ) -> None:
         """Helper to poll until a matching console log arrives or timeout expires."""
         start_time = time.time()
@@ -149,7 +149,7 @@ def test_audio_flow(page: Page) -> None:
             ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
-        
+
         wait_for_console_log(
             lambda text: "audio button pressed" in text,
             start_idx=pre_change_log_count,
