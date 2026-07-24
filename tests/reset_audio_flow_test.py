@@ -1,15 +1,17 @@
 # Copyright (C) 2025 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
-# tests/reset_flow_test.py
+# tests/reset_audio_flow_test.py
 """
 Reset Functionality Test Suite (Playwright + UI Automation with DOM Overlays)
 ============================================================================
 
 Overview
 --------
-E2E tests for RESET-01 to RESET-05 and STATE-01 to STATE-02: Validate reset button behavior in audio menu, including defaults restoration, no-op on defaults, partial changes, persistence after navigation/reload, rapid clicks, and isolation to audio menu.
+E2E tests for RESET-01 to RESET-05 and STATE-01 to STATE-02: Validate reset button
+behavior in audio menu, including defaults restoration, no-op on defaults, partial
+changes, persistence after navigation/reload, rapid clicks, and isolation.
 
-Navigates to audio menu, adjusts sliders/mutes, resets, verifies states/logs. For STATE-01, reloads page to check persistence (assumes config saves on reset; if not, adjust assertions).
+Navigates to audio menu, adjusts sliders/mutes, resets, verifies states/logs.
 
 Prerequisites
 -------------
@@ -42,7 +44,7 @@ def test_reset_flow(page: Page) -> None:
     """
     Main test suite for reset functionality using DOM overlays.
 
-    Implements RESET-01 to RESET-05 and STATE-01 to STATE-02: Adjust/reset, verify defaults, persistence, stability.
+    Implements RESET-01 to RESET-05 and STATE-01 to STATE-02.
 
     :param page: The Playwright page object.
     :type page: Page
@@ -64,18 +66,19 @@ def test_reset_flow(page: Page) -> None:
     page.on("console", on_console)
 
     def wait_for_console_log(
-        predicate: Callable[[str], bool], start_idx: int, timeout_ms: int = TEST_TIMEOUT
+        predicate: Callable[[str], bool],
+        start_idx: int,
+        timeout_ms: int = TEST_TIMEOUT,
     ) -> None:
-        """
-        Helper to poll until a matching console log arrives or timeout expires.
-        """
+        """Helper to poll until a matching console log arrives or timeout expires."""
         start_time = time.time()
         while (time.time() - start_time) * 1000 < timeout_ms:
             if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
                 return
             page.wait_for_timeout(50)  # Micro-poll for event loop progression
         pytest.fail(
-            f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms"
+            "Timed out waiting for expected console log matching "
+            f"predicate after {timeout_ms}ms"
         )
 
     try:
@@ -123,7 +126,9 @@ def test_reset_flow(page: Page) -> None:
             "() => typeof window.changeLogLevel !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('log-level-select')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('log-level-select')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
 
@@ -161,7 +166,9 @@ def test_reset_flow(page: Page) -> None:
         page.evaluate("window.audioPressed([])")
 
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('master-slider')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('master-slider')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
         wait_for_console_log(
@@ -316,10 +323,19 @@ def test_reset_flow(page: Page) -> None:
         ), "Reset log not found"
 
         # RESET-04: Reset persists after Back navigation
+        pre_sfx_count = len(logs)
         page.wait_for_function(
             "() => typeof window.changeSfxVolume !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.evaluate("window.changeSfxVolume([0.2])")
+        wait_for_console_log(
+            lambda text: "applied loaded sfx volume to audioserver: 0.2" in text,
+            start_idx=pre_sfx_count,
+        )
+        page.wait_for_function(
+            "() => parseFloat(document.getElementById('sfx-slider').value) === 0.2",
+            timeout=TEST_TIMEOUT,
+        )
 
         pre_change_log_count = len(logs)
         page.wait_for_function(
@@ -330,6 +346,10 @@ def test_reset_flow(page: Page) -> None:
         wait_for_console_log(
             lambda text: "audio volumes reset to defaults" in text,
             start_idx=pre_change_log_count,
+        )
+        page.wait_for_function(
+            "() => parseFloat(document.getElementById('sfx-slider').value) === 1.0",
+            timeout=TEST_TIMEOUT,
         )
 
         page.wait_for_function(
@@ -343,7 +363,9 @@ def test_reset_flow(page: Page) -> None:
         page.evaluate("window.audioPressed([0])")
 
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('master-slider')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('master-slider')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
         assert (
@@ -396,6 +418,10 @@ def test_reset_flow(page: Page) -> None:
             lambda text: "audio volumes reset to defaults" in text,
             start_idx=pre_change_log_count,
         )
+        page.wait_for_function(
+            "() => parseFloat(document.getElementById('sfx-slider').value) === 1.0",
+            timeout=TEST_TIMEOUT,
+        )
 
         # Reload and validate persisted defaults for all audio controls
         page.reload(wait_until="networkidle")
@@ -414,7 +440,9 @@ def test_reset_flow(page: Page) -> None:
         page.evaluate("window.audioPressed([])")
 
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('master-slider')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('master-slider')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
 
@@ -451,7 +479,9 @@ def test_reset_flow(page: Page) -> None:
         )
         page.evaluate("window.audioBackPressed([])")
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('master-slider')).display === 'none'",
+            "() => window.getComputedStyle("
+            "document.getElementById('master-slider')"
+            ").display === 'none'",
             timeout=TEST_TIMEOUT,
         )
 
@@ -467,7 +497,9 @@ def test_reset_flow(page: Page) -> None:
         )
         page.evaluate("window.audioPressed([])")
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('master-slider')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('master-slider')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
 
@@ -486,7 +518,9 @@ def test_reset_flow(page: Page) -> None:
         )
         page.evaluate("window.audioBackPressed([])")
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('master-slider')).display === 'none'",
+            "() => window.getComputedStyle("
+            "document.getElementById('master-slider')"
+            ").display === 'none'",
             timeout=TEST_TIMEOUT,
         )
 
