@@ -7,13 +7,15 @@ Difficulty State Test (Playwright + UI Automation with DOM Overlays)
 
 Overview
 --------
-Robust E2E test: Sets difficulty=2.0 via UI (click #options-button, set #difficulty-slider), starts game, simulates fire, verifies persistence (cooldown via log).
-No coords - DOM overlays for IDs.
+Robust E2E test: Sets difficulty=2.0 via UI (click #options-button, set
+#difficulty-slider), starts game, simulates fire, verifies persistence (cooldown
+via log). No coords - DOM overlays for IDs.
 
 Test Flow
 ---------
 - Navigate, wait #options-button.
-- Click #options-button, wait for options loaded (via log), set #log-level-select to DEBUG, set #difficulty-slider to 2.0, click #back-button.
+- Click #options-button, wait for options loaded (via log), set #log-level-select
+  to DEBUG, set #difficulty-slider to 2.0, click #back-button.
 - Click #start-button, simulate fire (Space), parse cooldown log (0.15*2.0=0.3).
 - CDP V8 coverage saved.
 
@@ -50,7 +52,8 @@ def test_difficulty_flow(page: Page) -> None:
 
     Test that invisible HTML overlays allow passthrough clicks to Godot UI.
 
-    Verifies overlays are present, invisible, and do not block events (via log check after click).
+    Verifies overlays are present, invisible, and do not block events.
+
     :param page: The Playwright page object.
     :type page: Page
     :rtype: None
@@ -61,6 +64,7 @@ def test_difficulty_flow(page: Page) -> None:
     def on_console(msg: Any) -> None:
         """
         Console message handler.
+
         :param msg: The console message.
         :type msg: Any
         :rtype: None
@@ -74,16 +78,15 @@ def test_difficulty_flow(page: Page) -> None:
         start_idx: int,
         timeout_ms: int = DEFAULT_TIMEOUT,
     ) -> None:
-        """
-        Helper to poll until a matching console log arrives or timeout expires.
-        """
+        """Helper to poll until a matching console log arrives or timeout expires."""
         start_time = time.time()
         while (time.time() - start_time) * 1000 < timeout_ms:
             if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
                 return
             page.wait_for_timeout(50)  # Micro-poll for event loop progression
         pytest.fail(
-            f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms"
+            "Timed out waiting for expected console log matching "
+            f"predicate after {timeout_ms}ms"
         )
 
     try:
@@ -118,13 +121,17 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Check invisible (opacity 0)
         opacity: str = page.evaluate(
-            "window.getComputedStyle(document.getElementById('options-button')).opacity"
+            "window.getComputedStyle("
+            "document.getElementById('options-button')"
+            ").opacity"
         )
         assert opacity == "0", f"Expected opacity 0, got {opacity}"
 
         # Check pointer-events none
         pointer_events: str = page.evaluate(
-            "window.getComputedStyle(document.getElementById('options-button')).pointerEvents"
+            "window.getComputedStyle("
+            "document.getElementById('options-button')"
+            ").pointerEvents"
         )
         assert (
             pointer_events == "none"
@@ -155,7 +162,9 @@ def test_difficulty_flow(page: Page) -> None:
             "() => typeof window.changeLogLevel !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('log-level-select')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('log-level-select')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
 
@@ -179,7 +188,7 @@ def test_difficulty_flow(page: Page) -> None:
             ("encrypted" in log["text"].lower() and "settings" in log["text"].lower())
             or "falling back to plaintext" in log["text"].lower()
             for log in new_logs
-        ), "Failed to save the settings (neither encrypted save nor plaintext fallback detected)"
+        ), "Failed to save settings (neither encrypted save nor fallback detected)"
 
         # Go back to Options menu
         page.wait_for_selector(
@@ -282,8 +291,8 @@ def test_difficulty_flow(page: Page) -> None:
             "#difficulty-slider", state="hidden", timeout=TEST_TIMEOUT
         )
         assert page.evaluate(
-            "document.getElementById('difficulty-slider') === null || document.getElementById("
-            "'difficulty-slider').offsetParent === null"
+            "document.getElementById('difficulty-slider') === null || "
+            "document.getElementById('difficulty-slider').offsetParent === null"
         )
 
         # Check element present
@@ -300,8 +309,8 @@ def test_difficulty_flow(page: Page) -> None:
             "#options-back-button", state="hidden", timeout=TEST_TIMEOUT
         )
         assert page.evaluate(
-            "document.getElementById('options-back-button') === null || document.getElementById("
-            "'options-back-button').offsetParent === null"
+            "document.getElementById('options-back-button') === null || "
+            "document.getElementById('options-back-button').offsetParent === null"
         )
 
         # Start game
@@ -383,7 +392,9 @@ def test_difficulty_flow(page: Page) -> None:
             f.write(page.content())
 
         print(
-            f"Failure logs: artifacts/test_difficulty_failure_console_logs_{timestamp}.txt. Error: {e}"
+            "Failure logs: "
+            f"artifacts/test_difficulty_failure_console_logs_{timestamp}.txt. "
+            f"Error: {e}"
         )
         raise
     finally:
