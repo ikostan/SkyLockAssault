@@ -46,12 +46,44 @@ DEFAULT_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "30000"))
 TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "5000"))
 
 
+def wait_for_console_log(
+    logs: List[Dict[str, str]],
+    predicate: Callable[[str], bool],
+    start_idx: int,
+    page: Page,
+    timeout_ms: int = DEFAULT_TIMEOUT,
+) -> None:
+    """Helper to poll until a matching console log arrives or timeout expires."""
+    start_time = time.time()
+    while (time.time() - start_time) * 1000 < timeout_ms:
+        if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
+            return
+        page.wait_for_timeout(50)  # Micro-poll for event loop progression
+    pytest.fail(
+        "Timed out waiting for expected console log matching "
+        f"predicate after {timeout_ms}ms"
+    )
+
+
+def _has_log(logs: List[Dict[str, str]], keyword: str) -> bool:
+    """Check if any log entry contains the specified keyword."""
+    return any(keyword in log["text"].lower() for log in logs)
+
+
+def _has_save_log(logs: List[Dict[str, str]]) -> bool:
+    """Check if any log entry indicates settings were saved."""
+    return any(
+        ("encrypted" in log["text"].lower() and "settings" in log["text"].lower())
+        or "falling back to plaintext" in log["text"].lower()
+        for log in logs
+    )
+
+
 def test_difficulty_flow(page: Page) -> None:
     """
     Main test for difficulty flow using DOM overlays.
 
     Test that invisible HTML overlays allow passthrough clicks to Godot UI.
-
     Verifies overlays are present, invisible, and do not block events.
 
     :param page: The Playwright page object.
@@ -72,22 +104,6 @@ def test_difficulty_flow(page: Page) -> None:
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
-
-    def wait_for_console_log(
-        predicate: Callable[[str], bool],
-        start_idx: int,
-        timeout_ms: int = DEFAULT_TIMEOUT,
-    ) -> None:
-        """Helper to poll until a matching console log arrives or timeout expires."""
-        start_time = time.time()
-        while (time.time() - start_time) * 1000 < timeout_ms:
-            if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
-                return
-            page.wait_for_timeout(50)  # Micro-poll for event loop progression
-        pytest.fail(
-            "Timed out waiting for expected console log matching "
-            f"predicate after {timeout_ms}ms"
-        )
 
     try:
         # Start CDP session for V8 JS coverage
@@ -172,23 +188,21 @@ def test_difficulty_flow(page: Page) -> None:
         pre_change_log_count: int = len(logs)
         page.evaluate("window.changeLogLevel([0])")
         wait_for_console_log(
+            logs,
             lambda text: "log level changed to: debug" in text,
-            start_idx=pre_change_log_count,
+            pre_change_log_count,
+            page,
         )
         new_logs: List[Dict[str, str]] = logs[pre_change_log_count:]
-        assert any(
-            "log level changed to: debug" in log["text"].lower() for log in new_logs
-        )
+        assert _has_log(new_logs, "log level changed to: debug")
         assert page.evaluate(
             "document.getElementById('audio-button') !== null"
         ), "Audio button not found/displayed"
 
         # Allow either standard encrypted saves (native) OR plaintext fallbacks (WebGL)
-        assert any(
-            ("encrypted" in log["text"].lower() and "settings" in log["text"].lower())
-            or "falling back to plaintext" in log["text"].lower()
-            for log in new_logs
-        ), "Failed to save settings (neither encrypted save nor fallback detected)"
+        assert _has_save_log(new_logs), (
+            "Failed to save settings (neither encrypted save nor fallback detected)"
+        )
 
         # Go back to Options menu
         page.wait_for_selector(
@@ -224,20 +238,18 @@ def test_difficulty_flow(page: Page) -> None:
         )
         page.evaluate("window.changeDifficulty([2.0])")
         wait_for_console_log(
+            logs,
             lambda text: "js difficulty callback called with valid value: 2.0" in text,
-            start_idx=pre_change_log_count,
+            pre_change_log_count,
+            page,
         )
         new_logs = logs[pre_change_log_count:]
 
-        assert any(
-            "js difficulty callback called with valid value: 2.0" in log["text"].lower()
-            for log in new_logs
+        assert _has_log(
+            new_logs, "js difficulty callback called with valid value: 2.0"
         ), "Failed to extract/validate difficulty 2.0 from JS payload"
 
-        assert any(
-            "encrypted" in log["text"].lower() and "settings" in log["text"].lower()
-            for log in new_logs
-        ), "Failed to save the settings"
+        assert _has_save_log(new_logs), "Failed to save the settings"
 
         # Reset gameplay settings back to defaults
         pre_reset_log_count: int = len(logs)
@@ -247,22 +259,25 @@ def test_difficulty_flow(page: Page) -> None:
         )
         page.evaluate("window.gameplayResetPressed([])")
         wait_for_console_log(
+            logs,
             lambda text: "setting 'difficulty' updated to: 1" in text,
-            start_idx=pre_reset_log_count,
+            pre_reset_log_count,
+            page,
         )
         reset_logs: List[Dict[str, str]] = logs[pre_reset_log_count:]
 
-        assert any(
-            "setting 'difficulty' updated to: 1" in log["text"].lower()
-            for log in reset_logs
+        assert _has_log(
+            reset_logs, "setting 'difficulty' updated to: 1"
         ), "Resource did not reset difficulty to 1.0 after reset button press"
 
         # Set difficulty to 2.0 again
         pre_change_log_count = len(logs)
         page.evaluate("window.changeDifficulty([2.0])")
         wait_for_console_log(
+            logs,
             lambda text: "js difficulty callback called with valid value: 2.0" in text,
-            start_idx=pre_change_log_count,
+            pre_change_log_count,
+            page,
         )
 
         # Back to Main menu
@@ -273,13 +288,13 @@ def test_difficulty_flow(page: Page) -> None:
         )
         page.evaluate("window.gameplayBackPressed([])")
         wait_for_console_log(
+            logs,
             lambda text: "back button pressed." in text,
-            start_idx=pre_change_log_count,
+            pre_change_log_count,
+            page,
         )
         new_logs = logs[pre_change_log_count:]
-        assert any(
-            "back button pressed." in log["text"].lower() for log in new_logs
-        ), "Back button not found"
+        assert _has_log(new_logs, "back button pressed."), "Back button not found"
 
         # Options overlay visible
         page.wait_for_selector(
@@ -320,38 +335,45 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Wait deterministically for start button click and loading start
         wait_for_console_log(
+            logs,
             lambda text: "start game menu button pressed." in text,
-            start_idx=pre_start_log_count,
+            pre_start_log_count,
+            page,
             timeout_ms=TEST_TIMEOUT,
         )
 
         wait_for_console_log(
+            logs,
             lambda text: "loading started successfully." in text,
-            start_idx=pre_start_log_count,
+            pre_start_log_count,
+            page,
             timeout_ms=DEFAULT_TIMEOUT,
         )
 
         # Wait deterministically for main scene initialization
         wait_for_console_log(
+            logs,
             lambda text: "initializing main scene..." in text,
-            start_idx=pre_start_log_count,
+            pre_start_log_count,
+            page,
             timeout_ms=DEFAULT_TIMEOUT,
         )
 
         # Wait deterministically for scene load completion
         wait_for_console_log(
+            logs,
             lambda text: "scene loaded successfully." in text,
-            start_idx=pre_start_log_count,
+            pre_start_log_count,
+            page,
             timeout_ms=DEFAULT_TIMEOUT,
         )
 
         start_logs = logs[pre_start_log_count:]
-        assert any(
-            "start game menu button pressed." in log["text"].lower()
-            for log in start_logs
+        assert _has_log(
+            start_logs, "start game menu button pressed."
         ), "Start Game button not found"
-        assert any(
-            "initializing main scene..." in log["text"].lower() for log in start_logs
+        assert _has_log(
+            start_logs, "initializing main scene..."
         ), "Game scene not found"
 
         # Refocus canvas to ensure input capture
@@ -362,14 +384,15 @@ def test_difficulty_flow(page: Page) -> None:
         pre_fire_log_count = len(logs)
         page.keyboard.press("Space")
         wait_for_console_log(
+            logs,
             lambda text: "firing with scaled cooldown: 0.3" in text,
-            start_idx=pre_fire_log_count,
+            pre_fire_log_count,
+            page,
             timeout_ms=TEST_TIMEOUT,
         )
         fire_logs = logs[pre_fire_log_count:]
-        assert any(
-            "firing with scaled cooldown: 0.3" in log["text"].lower()
-            for log in fire_logs
+        assert _has_log(
+            fire_logs, "firing with scaled cooldown: 0.3"
         ), "Scaled cooldown not found in logs"
 
     except Exception as e:
