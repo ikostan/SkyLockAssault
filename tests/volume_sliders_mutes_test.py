@@ -64,18 +64,19 @@ def test_volume_sliders_mutes(page: Page) -> None:
     page.on("console", on_console)
 
     def wait_for_console_log(
-        predicate: Callable[[str], bool], start_idx: int, timeout_ms: int = TEST_TIMEOUT
+        predicate: Callable[[str], bool],
+        start_idx: int,
+        timeout_ms: int = TEST_TIMEOUT,
     ) -> None:
-        """
-        Helper to poll until a matching console log arrives or timeout expires.
-        """
+        """Helper to poll until a matching console log arrives or timeout expires."""
         start_time = time.time()
         while (time.time() - start_time) * 1000 < timeout_ms:
             if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
                 return
             page.wait_for_timeout(50)  # Micro-poll for event loop progression
         pytest.fail(
-            f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms"
+            "Timed out waiting for expected console log matching "
+            f"predicate after {timeout_ms}ms"
         )
 
     try:
@@ -123,7 +124,9 @@ def test_volume_sliders_mutes(page: Page) -> None:
             "() => typeof window.changeLogLevel !== 'undefined'", timeout=TEST_TIMEOUT
         )
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('log-level-select')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('log-level-select')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
 
@@ -156,7 +159,9 @@ def test_volume_sliders_mutes(page: Page) -> None:
         page.evaluate("window.audioPressed([])")
 
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('master-slider')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('master-slider')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
         wait_for_console_log(
