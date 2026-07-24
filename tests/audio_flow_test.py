@@ -47,6 +47,13 @@ def test_audio_flow(page: Page) -> None:
     cdp_session = None
 
     def on_console(msg: Any) -> None:
+        """
+        Console message handler to capture logs.
+
+        :param msg: The console message.
+        :type msg: Any
+        :rtype: None
+        """
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
