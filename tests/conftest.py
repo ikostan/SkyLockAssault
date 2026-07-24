@@ -5,52 +5,54 @@
 Shared pytest fixtures and configs for SkyLockAssault E2E tests.
 """
 
-import pytest
 import re
 from pathlib import Path
-from playwright.sync_api import Page, Playwright
+from typing import Generator
+import pytest
+from playwright.sync_api import Browser, BrowserContext, Page, Playwright
+
+
+@pytest.fixture(scope="session")
+def browser_instance(playwright: Playwright) -> Generator[Browser, None, None]:
+    """
+    Session-scoped Chromium launch fixture to minimize startup overhead across the test suite.
+    """
+    browser = playwright.chromium.launch(
+        headless=True,
+        args=[
+            "--enable-unsafe-swiftshader",
+            "--disable-gpu",
+            "--use-gl=swiftshader",
+        ],
+    )
+    yield browser
+    browser.close()
 
 
 @pytest.fixture(scope="function")
-def page(playwright: Playwright, request) -> Page:
+def page(browser_instance: Browser, request: pytest.FixtureRequest) -> Generator[Page, None, None]:
     """
-    Shared fixture for browser page setup with CDP for coverage.
-    Launches headless Chromium with GPU flags for Godot HTML5/WebGL compatibility.
-
-    :param playwright: The Playwright instance.
-    :param request: Pytest request object (for accessing markers/configs).
-    :return: The configured page object.
+    Function-scoped page fixture providing clean browser context isolation for each test.
     """
-    # Optional: Enable HAR recording if the test is marked with @pytest.mark.record_har
     har_path = None
     if request.node.get_closest_marker("record_har"):
-        # Derive a per-test HAR path from the test nodeid to avoid overwrites
         nodeid = request.node.nodeid
-        # Sanitize nodeid so it's safe as a filename (e.g. replace path separators/param brackets)
         safe_nodeid = re.sub(r"[^A-Za-z0-9._-]+", "_", nodeid)
         artifacts_dir = Path("artifacts")
         artifacts_dir.mkdir(parents=True, exist_ok=True)
         har_path = artifacts_dir / f"{safe_nodeid}.har"
 
-    browser = playwright.chromium.launch(
-        headless=True,  # Change to False for headful debugging (see browser visually)
-        args=[
-            "--enable-unsafe-swiftshader",
-            "--disable-gpu",
-            "--use-gl=swiftshader",
-        ]
-    )
-    context = browser.new_context(
+    context: BrowserContext = browser_instance.new_context(
         viewport={"width": 1280, "height": 720},
-        record_har_path=str(har_path) if har_path else None,  # Network trace for debugging (optional)
+        record_har_path=str(har_path) if har_path else None,
     )
-    page = context.new_page()
+    page: Page = context.new_page()
     yield page
     context.close()
-    browser.close()
 
 
-def pytest_configure(config):
+def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
-        "markers", "record_har: Mark tests that should record HAR files for network tracing in Playwright."
+        "markers",
+        "record_har: Mark tests that should record HAR files for network tracing in Playwright.",
     )
