@@ -144,9 +144,12 @@ def test_audio_flow(page: Page) -> None:
         page.evaluate("window.audioPressed([])")
 
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('master-slider')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('master-slider')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
+        
         wait_for_console_log(
             lambda text: "audio button pressed" in text,
             start_idx=pre_change_log_count,
