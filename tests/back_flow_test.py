@@ -65,7 +65,7 @@ def test_back_flow(page: Page) -> None:
     page.on("console", on_console)
 
     def wait_for_console_log(
-            predicate: Callable[[str], bool], start_idx: int, timeout_ms: int = TEST_TIMEOUT
+        predicate: Callable[[str], bool], start_idx: int, timeout_ms: int = TEST_TIMEOUT
     ) -> None:
         """
         Helper to poll until a matching console log arrives or timeout expires.
@@ -75,7 +75,9 @@ def test_back_flow(page: Page) -> None:
             if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
                 return
             page.wait_for_timeout(50)  # Micro-poll for event loop progression
-        pytest.fail(f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms")
+        pytest.fail(
+            f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms"
+        )
 
     try:
         # Start CDP session for V8 JS coverage (workaround for Python Playwright lacking native coverage API)
@@ -91,7 +93,9 @@ def test_back_flow(page: Page) -> None:
             timeout=DEFAULT_TIMEOUT,
         )
         # 1. Wait deterministically for Godot engine initialization
-        page.wait_for_function("() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT)
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+        )
 
         # Verify canvas
         canvas = page.locator("canvas")
@@ -139,7 +143,8 @@ def test_back_flow(page: Page) -> None:
             "#advanced-back-button", state="visible", timeout=TEST_TIMEOUT
         )
         page.wait_for_function(
-            "() => typeof window.advancedBackPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.advancedBackPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.advancedBackPressed([])")
 
@@ -213,13 +218,15 @@ def test_back_flow(page: Page) -> None:
             timeout=TEST_TIMEOUT,
         )
         assert (
-                page.evaluate("document.getElementById('master-slider').value")
-                == initial_master
+            page.evaluate("document.getElementById('master-slider').value")
+            == initial_master
         ), "State mutated without changes"
 
         # Re-enter audio via page reload
         page.reload(wait_until="networkidle")
-        page.wait_for_function("() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT)
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+        )
 
         # Navigate to options menu
         page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
@@ -241,7 +248,8 @@ def test_back_flow(page: Page) -> None:
 
         # BACK-03: Back after slider changes
         page.wait_for_function(
-            "() => typeof window.changeMusicVolume !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.changeMusicVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.changeMusicVolume([0.4])")
         page.wait_for_function(
@@ -262,7 +270,7 @@ def test_back_flow(page: Page) -> None:
             timeout=TEST_TIMEOUT,
         )
         assert (
-                page.evaluate("document.getElementById('music-slider').value") == "0.4"
+            page.evaluate("document.getElementById('music-slider').value") == "0.4"
         ), "Changes did not persist after back"
 
         # BACK-04: Back from mid-interaction
@@ -291,7 +299,7 @@ def test_back_flow(page: Page) -> None:
         timestamp: int = int(time.time())
         page.screenshot(path=f"artifacts/test_back_failure_screenshot_{timestamp}.png")
         with open(
-                f"artifacts/test_back_failure_console_logs_{timestamp}.txt", "w"
+            f"artifacts/test_back_failure_console_logs_{timestamp}.txt", "w"
         ) as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")

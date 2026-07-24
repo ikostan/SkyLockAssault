@@ -64,7 +64,9 @@ def test_no_error_logs_after_load(page: Page) -> None:
         )
 
         # Wait deterministically for Godot engine initialization
-        page.wait_for_function("() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT)
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+        )
 
         # Ensure canvas is rendered and visible
         canvas = page.locator("canvas")

@@ -82,7 +82,9 @@ def test_load_main_menu(page: Page) -> None:
         )
 
         # Wait deterministically for Godot engine initialization
-        page.wait_for_function("() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT)
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+        )
 
         # Verify canvas and title to ensure game is initialized
         canvas = page.locator("canvas")

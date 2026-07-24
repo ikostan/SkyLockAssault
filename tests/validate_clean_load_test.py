@@ -54,7 +54,9 @@ def test_no_critical_errors_on_load(page: Page) -> None:
         )
 
         # 2. Wait deterministically for the engine's ready signal and canvas visibility
-        page.wait_for_function("() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT)
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+        )
         expect(page.locator("canvas")).to_be_visible(timeout=DEFAULT_TIMEOUT)
 
         # 3. Analyze captured logs for the specific patterns

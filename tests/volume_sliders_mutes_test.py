@@ -64,7 +64,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
     page.on("console", on_console)
 
     def wait_for_console_log(
-            predicate: Callable[[str], bool], start_idx: int, timeout_ms: int = TEST_TIMEOUT
+        predicate: Callable[[str], bool], start_idx: int, timeout_ms: int = TEST_TIMEOUT
     ) -> None:
         """
         Helper to poll until a matching console log arrives or timeout expires.
@@ -74,7 +74,9 @@ def test_volume_sliders_mutes(page: Page) -> None:
             if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
                 return
             page.wait_for_timeout(50)  # Micro-poll for event loop progression
-        pytest.fail(f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms")
+        pytest.fail(
+            f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms"
+        )
 
     try:
         # Start CDP session for V8 JS coverage
@@ -91,7 +93,9 @@ def test_volume_sliders_mutes(page: Page) -> None:
         )
 
         # 1. Wait deterministically for Godot engine initialization
-        page.wait_for_function("() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT)
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+        )
 
         # Verify canvas
         canvas = page.locator("canvas")
@@ -139,7 +143,8 @@ def test_volume_sliders_mutes(page: Page) -> None:
             "#advanced-back-button", state="visible", timeout=TEST_TIMEOUT
         )
         page.wait_for_function(
-            "() => typeof window.advancedBackPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.advancedBackPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.advancedBackPressed([])")
 
@@ -162,7 +167,8 @@ def test_volume_sliders_mutes(page: Page) -> None:
         # VOL-01: Adjust Master volume slider
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "() => typeof window.changeMasterVolume !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.changeMasterVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.changeMasterVolume([0.5])")
         wait_for_console_log(
@@ -202,7 +208,8 @@ def test_volume_sliders_mutes(page: Page) -> None:
         # VOL-03: Adjust Music volume slider
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "() => typeof window.changeMusicVolume !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.changeMusicVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.changeMusicVolume([0.3])")
         wait_for_console_log(
@@ -282,7 +289,8 @@ def test_volume_sliders_mutes(page: Page) -> None:
         # VOL-07: Adjust Weapon volume slider
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "() => typeof window.changeWeaponVolume !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.changeWeaponVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.changeWeaponVolume([0.2])")
         wait_for_console_log(
@@ -320,7 +328,8 @@ def test_volume_sliders_mutes(page: Page) -> None:
         # VOL-09: Adjust Rotors volume slider
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "() => typeof window.changeRotorsVolume !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.changeRotorsVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.changeRotorsVolume([0.9])")
         wait_for_console_log(
@@ -401,7 +410,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
             path=f"artifacts/test_volume_failure_screenshot_{timestamp}.png"
         )
         with open(
-                f"artifacts/test_volume_failure_console_logs_{timestamp}.txt", "w"
+            f"artifacts/test_volume_failure_console_logs_{timestamp}.txt", "w"
         ) as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")

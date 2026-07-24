@@ -70,7 +70,9 @@ def test_difficulty_flow(page: Page) -> None:
     page.on("console", on_console)
 
     def wait_for_console_log(
-        predicate: Callable[[str], bool], start_idx: int, timeout_ms: int = DEFAULT_TIMEOUT
+        predicate: Callable[[str], bool],
+        start_idx: int,
+        timeout_ms: int = DEFAULT_TIMEOUT,
     ) -> None:
         """
         Helper to poll until a matching console log arrives or timeout expires.
@@ -80,7 +82,9 @@ def test_difficulty_flow(page: Page) -> None:
             if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
                 return
             page.wait_for_timeout(50)  # Micro-poll for event loop progression
-        pytest.fail(f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms")
+        pytest.fail(
+            f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms"
+        )
 
     try:
         # Start CDP session for V8 JS coverage
@@ -97,7 +101,9 @@ def test_difficulty_flow(page: Page) -> None:
         )
 
         # 1. Wait deterministically for Godot engine initialization
-        page.wait_for_function("() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT)
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+        )
 
         # Verify canvas and title to ensure game is initialized
         canvas = page.locator("canvas")
@@ -180,7 +186,8 @@ def test_difficulty_flow(page: Page) -> None:
             "#advanced-back-button", state="visible", timeout=TEST_TIMEOUT
         )
         page.wait_for_function(
-            "() => typeof window.advancedBackPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.advancedBackPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.advancedBackPressed([])")
 
@@ -226,7 +233,8 @@ def test_difficulty_flow(page: Page) -> None:
         # Reset gameplay settings back to defaults
         pre_reset_log_count: int = len(logs)
         page.wait_for_function(
-            "() => typeof window.gameplayResetPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.gameplayResetPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.gameplayResetPressed([])")
         wait_for_console_log(
@@ -251,7 +259,8 @@ def test_difficulty_flow(page: Page) -> None:
         # Back to Main menu
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "() => typeof window.gameplayBackPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.gameplayBackPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.gameplayBackPressed([])")
         wait_for_console_log(
@@ -329,7 +338,8 @@ def test_difficulty_flow(page: Page) -> None:
 
         start_logs = logs[pre_start_log_count:]
         assert any(
-            "start game menu button pressed." in log["text"].lower() for log in start_logs
+            "start game menu button pressed." in log["text"].lower()
+            for log in start_logs
         ), "Start Game button not found"
         assert any(
             "initializing main scene..." in log["text"].lower() for log in start_logs

@@ -29,6 +29,7 @@ import json
 import os
 import time
 from typing import Any, Callable
+
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -50,7 +51,9 @@ def test_audio_flow(page: Page) -> None:
 
     page.on("console", on_console)
 
-    def wait_for_console_log(predicate: Callable[[str], bool], start_idx: int, timeout_ms: int = TEST_TIMEOUT) -> None:
+    def wait_for_console_log(
+        predicate: Callable[[str], bool], start_idx: int, timeout_ms: int = TEST_TIMEOUT
+    ) -> None:
         """
         Helper to poll until a matching console log arrives or timeout expires.
         """
@@ -59,7 +62,9 @@ def test_audio_flow(page: Page) -> None:
             if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
                 return
             page.wait_for_timeout(50)  # Micro-poll for event loop progression
-        pytest.fail(f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms")
+        pytest.fail(
+            f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms"
+        )
 
     try:
         # Start CDP session for V8 JS coverage
@@ -76,7 +81,9 @@ def test_audio_flow(page: Page) -> None:
         )
 
         # 1. Wait deterministically for Godot engine initialization
-        page.wait_for_function("() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT)
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+        )
 
         # Verify canvas & title
         canvas = page.locator("canvas")
@@ -84,13 +91,19 @@ def test_audio_flow(page: Page) -> None:
         assert "SkyLockAssault" in page.title(), "Title not found"
 
         # Open options
-        page.wait_for_function("() => typeof window.optionsPressed !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.optionsPressed !== 'undefined'", timeout=TEST_TIMEOUT
+        )
         page.evaluate("window.optionsPressed([])")
 
         # Go to Advanced settings
-        page.wait_for_function("() => typeof window.advancedPressed !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.advancedPressed !== 'undefined'", timeout=TEST_TIMEOUT
+        )
         page.evaluate("window.advancedPressed([])")
-        page.wait_for_function("() => typeof window.changeLogLevel !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.changeLogLevel !== 'undefined'", timeout=TEST_TIMEOUT
+        )
 
         page.wait_for_function(
             "() => window.getComputedStyle(document.getElementById('log-level-select')).display === 'block'",
@@ -110,12 +123,17 @@ def test_audio_flow(page: Page) -> None:
         ), "Audio button not found/displayed"
 
         # Go back to Options menu
-        page.wait_for_function("() => typeof window.advancedBackPressed !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.advancedBackPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
+        )
         page.evaluate("window.advancedBackPressed([])")
 
         # Open audio
         pre_change_log_count = len(logs)
-        page.wait_for_function("() => typeof window.audioPressed !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.audioPressed !== 'undefined'", timeout=TEST_TIMEOUT
+        )
         page.evaluate("window.audioPressed([])")
 
         page.wait_for_function(
@@ -129,13 +147,21 @@ def test_audio_flow(page: Page) -> None:
 
         # Get initial values
         initial_sfx: str = page.evaluate("document.getElementById('sfx-slider').value")
-        initial_weapon: str = page.evaluate("document.getElementById('weapon-slider').value")
-        initial_music: str = page.evaluate("document.getElementById('music-slider').value")
-        initial_rotors: str = page.evaluate("document.getElementById('rotors-slider').value")
+        initial_weapon: str = page.evaluate(
+            "document.getElementById('weapon-slider').value"
+        )
+        initial_music: str = page.evaluate(
+            "document.getElementById('music-slider').value"
+        )
+        initial_rotors: str = page.evaluate(
+            "document.getElementById('rotors-slider').value"
+        )
 
         # WARN-01: Master muted → attempt sub-volume adjust (SFX)
         pre_change_log_count = len(logs)
-        page.wait_for_function("() => typeof window.toggleMuteMaster !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.toggleMuteMaster !== 'undefined'", timeout=TEST_TIMEOUT
+        )
         page.evaluate("window.toggleMuteMaster([0])")  # Mute
         wait_for_console_log(
             lambda text: "master is muted" in text,
@@ -144,78 +170,108 @@ def test_audio_flow(page: Page) -> None:
 
         # Change SFX Volume when Master is muted
         pre_change_log_count = len(logs)
-        page.wait_for_function("() => typeof window.changeSfxVolume !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.changeSfxVolume !== 'undefined'", timeout=TEST_TIMEOUT
+        )
         page.evaluate("window.changeSfxVolume([0])")
         wait_for_console_log(
-            lambda text: "master muted, cannot adjust sub-volume" in text or "warning dialog" in text,
+            lambda text: "master muted, cannot adjust sub-volume" in text
+            or "warning dialog" in text,
             start_idx=pre_change_log_count,
         )
         assert (
-                page.evaluate("document.getElementById('sfx-slider').value") == initial_sfx
+            page.evaluate("document.getElementById('sfx-slider').value") == initial_sfx
         ), "SFX value changed unexpectedly"
 
         # Master muted → attempt sub-volume adjust (Music)
         pre_change_log_count = len(logs)
-        page.wait_for_function("() => typeof window.changeMusicVolume !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.changeMusicVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
+        )
         page.evaluate("window.changeMusicVolume([0.3])")
         wait_for_console_log(
-            lambda text: "master muted, cannot adjust sub-volume" in text or "warning dialog" in text,
+            lambda text: "master muted, cannot adjust sub-volume" in text
+            or "warning dialog" in text,
             start_idx=pre_change_log_count,
         )
         assert (
-                page.evaluate("document.getElementById('music-slider').value") == initial_music
+            page.evaluate("document.getElementById('music-slider').value")
+            == initial_music
         ), "Music value changed unexpectedly under Master mute"
 
         # Master muted → attempt sub-volume adjust (Rotors)
         pre_change_log_count = len(logs)
-        page.wait_for_function("() => typeof window.changeRotorsVolume !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.changeRotorsVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
+        )
         page.evaluate("window.changeRotorsVolume([0.4])")
         wait_for_console_log(
-            lambda text: "master muted, cannot adjust sub-volume" in text or "warning dialog" in text,
+            lambda text: "master muted, cannot adjust sub-volume" in text
+            or "warning dialog" in text,
             start_idx=pre_change_log_count,
         )
         assert (
-                page.evaluate("document.getElementById('rotors-slider').value") == initial_rotors
+            page.evaluate("document.getElementById('rotors-slider').value")
+            == initial_rotors
         ), "Rotors value changed unexpectedly under Master mute"
 
         # Unmute Master for next tests
-        page.wait_for_function("() => typeof window.toggleMuteMaster !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.toggleMuteMaster !== 'undefined'", timeout=TEST_TIMEOUT
+        )
         page.evaluate("window.toggleMuteMaster([1])")
 
         # WARN-02: SFX muted → attempt weapon adjust
-        page.wait_for_function("() => typeof window.toggleMuteSfx !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.toggleMuteSfx !== 'undefined'", timeout=TEST_TIMEOUT
+        )
         page.evaluate("window.toggleMuteSfx([0])")  # Mute
 
         pre_change_log_count = len(logs)
-        page.wait_for_function("() => typeof window.changeWeaponVolume !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.changeWeaponVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
+        )
         page.evaluate("window.changeWeaponVolume([0])")
         wait_for_console_log(
             lambda text: "sfx muted, cannot adjust" in text or "warning dialog" in text,
             start_idx=pre_change_log_count,
         )
         assert (
-                page.evaluate("document.getElementById('weapon-slider').value") == initial_weapon
+            page.evaluate("document.getElementById('weapon-slider').value")
+            == initial_weapon
         ), "Weapon value changed unexpectedly"
 
         # SFX muted → attempt rotors adjust
         pre_change_log_count = len(logs)
-        page.wait_for_function("() => typeof window.changeRotorsVolume !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.changeRotorsVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
+        )
         page.evaluate("window.changeRotorsVolume([0.5])")
         wait_for_console_log(
             lambda text: "sfx muted, cannot adjust" in text or "warning dialog" in text,
             start_idx=pre_change_log_count,
         )
         assert (
-                page.evaluate("document.getElementById('rotors-slider').value") == initial_rotors
+            page.evaluate("document.getElementById('rotors-slider').value")
+            == initial_rotors
         ), "Rotors value changed unexpectedly under SFX mute"
 
         # Unmute SFX
-        page.wait_for_function("() => typeof window.toggleMuteSfx !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.toggleMuteSfx !== 'undefined'", timeout=TEST_TIMEOUT
+        )
         page.evaluate("window.toggleMuteSfx([1])")
 
         # WARN-03: Master unmuted → adjust sub-volume (Music)
         pre_change_log_count = len(logs)
-        page.wait_for_function("() => typeof window.changeMusicVolume !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.changeMusicVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
+        )
         page.evaluate("window.changeMusicVolume([0.6])")
 
         # Deterministic check for value update
@@ -229,7 +285,9 @@ def test_audio_flow(page: Page) -> None:
         for log in new_logs:
             text = log["text"].lower()
             if "warning" in text and "encryption aborted" not in text:
-                assert False, f"Unexpected warning after music volume change: {log['text']}"
+                assert (
+                    False
+                ), f"Unexpected warning after music volume change: {log['text']}"
 
     except Exception as e:
         print(f"Test: 'test_audio_flow' failed: {str(e)}")

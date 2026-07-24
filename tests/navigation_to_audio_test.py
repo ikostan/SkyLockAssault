@@ -75,7 +75,9 @@ def test_navigation_to_audio(page: Page) -> None:
             if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
                 return
             page.wait_for_timeout(50)  # Micro-poll for event loop progression
-        pytest.fail(f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms")
+        pytest.fail(
+            f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms"
+        )
 
     try:
         # Start CDP session for V8 JS coverage (workaround for Python Playwright lacking native coverage API)
@@ -92,7 +94,9 @@ def test_navigation_to_audio(page: Page) -> None:
         )
 
         # 1. Wait deterministically for Godot engine initialization
-        page.wait_for_function("() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT)
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+        )
 
         # Verify canvas
         canvas = page.locator("canvas")
@@ -155,7 +159,8 @@ def test_navigation_to_audio(page: Page) -> None:
             "#advanced-back-button", state="visible", timeout=TEST_TIMEOUT
         )
         page.wait_for_function(
-            "() => typeof window.advancedBackPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.advancedBackPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.advancedBackPressed([])")
 

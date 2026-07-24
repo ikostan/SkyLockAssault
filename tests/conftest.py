@@ -8,6 +8,7 @@ Shared pytest fixtures and configs for SkyLockAssault E2E tests.
 import re
 from pathlib import Path
 from typing import Generator
+
 import pytest
 from playwright.sync_api import Browser, BrowserContext, Page, Playwright
 
@@ -30,7 +31,9 @@ def browser_instance(playwright: Playwright) -> Generator[Browser, None, None]:
 
 
 @pytest.fixture(scope="function")
-def page(browser_instance: Browser, request: pytest.FixtureRequest) -> Generator[Page, None, None]:
+def page(
+    browser_instance: Browser, request: pytest.FixtureRequest
+) -> Generator[Page, None, None]:
     """
     Function-scoped page fixture providing clean browser context isolation for each test.
     """

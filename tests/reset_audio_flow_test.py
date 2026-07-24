@@ -64,7 +64,7 @@ def test_reset_flow(page: Page) -> None:
     page.on("console", on_console)
 
     def wait_for_console_log(
-            predicate: Callable[[str], bool], start_idx: int, timeout_ms: int = TEST_TIMEOUT
+        predicate: Callable[[str], bool], start_idx: int, timeout_ms: int = TEST_TIMEOUT
     ) -> None:
         """
         Helper to poll until a matching console log arrives or timeout expires.
@@ -74,7 +74,9 @@ def test_reset_flow(page: Page) -> None:
             if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
                 return
             page.wait_for_timeout(50)  # Micro-poll for event loop progression
-        pytest.fail(f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms")
+        pytest.fail(
+            f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms"
+        )
 
     try:
         # Start CDP session for V8 JS coverage
@@ -91,7 +93,9 @@ def test_reset_flow(page: Page) -> None:
         )
 
         # 1. Wait deterministically for Godot engine initialization
-        page.wait_for_function("() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT)
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+        )
 
         # Verify canvas
         canvas = page.locator("canvas")
@@ -139,7 +143,8 @@ def test_reset_flow(page: Page) -> None:
             "#advanced-back-button", state="visible", timeout=TEST_TIMEOUT
         )
         page.wait_for_function(
-            "() => typeof window.advancedBackPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.advancedBackPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.advancedBackPressed([])")
 
@@ -166,11 +171,13 @@ def test_reset_flow(page: Page) -> None:
 
         # RESET-01: Reset all buses to defaults
         page.wait_for_function(
-            "() => typeof window.changeMasterVolume !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.changeMasterVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.changeMasterVolume([0.5])")
         page.wait_for_function(
-            "() => typeof window.changeMusicVolume !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.changeMusicVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.changeMusicVolume([0.3])")
         page.wait_for_function(
@@ -188,7 +195,8 @@ def test_reset_flow(page: Page) -> None:
 
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "() => typeof window.audioResetPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioResetPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioResetPressed([])")
 
@@ -198,22 +206,22 @@ def test_reset_flow(page: Page) -> None:
         )
 
         assert (
-                float(page.evaluate("document.getElementById('master-slider').value"))
-                == 1.0
+            float(page.evaluate("document.getElementById('master-slider').value"))
+            == 1.0
         )
         assert (
-                float(page.evaluate("document.getElementById('music-slider').value")) == 1.0
+            float(page.evaluate("document.getElementById('music-slider').value")) == 1.0
         )
         assert (
-                float(page.evaluate("document.getElementById('sfx-slider').value")) == 1.0
+            float(page.evaluate("document.getElementById('sfx-slider').value")) == 1.0
         )
         assert (
-                float(page.evaluate("document.getElementById('weapon-slider').value"))
-                == 1.0
+            float(page.evaluate("document.getElementById('weapon-slider').value"))
+            == 1.0
         )
         assert (
-                float(page.evaluate("document.getElementById('rotors-slider').value"))
-                == 1.0
+            float(page.evaluate("document.getElementById('rotors-slider').value"))
+            == 1.0
         )
         assert page.evaluate("document.getElementById('mute-master').checked")
         assert page.evaluate("document.getElementById('mute-music').checked")
@@ -232,7 +240,8 @@ def test_reset_flow(page: Page) -> None:
         # RESET-02: Reset does not duplicate sliders already default
         pre_reset_logs = len(logs)
         page.wait_for_function(
-            "() => typeof window.audioResetPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioResetPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioResetPressed([])")
         wait_for_console_log(
@@ -241,8 +250,8 @@ def test_reset_flow(page: Page) -> None:
         )
 
         assert (
-                float(page.evaluate("document.getElementById('master-slider').value"))
-                == 1.0
+            float(page.evaluate("document.getElementById('master-slider').value"))
+            == 1.0
         ), "Value changed unexpectedly"
 
         new_logs = logs[pre_reset_logs:]
@@ -265,17 +274,20 @@ def test_reset_flow(page: Page) -> None:
 
         # RESET-03: Reset after incomplete changes
         page.wait_for_function(
-            "() => typeof window.changeMasterVolume !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.changeMasterVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.changeMasterVolume([0.4])")
         page.wait_for_function(
-            "() => typeof window.changeRotorsVolume !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.changeRotorsVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.changeRotorsVolume([0.6])")
 
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "() => typeof window.audioResetPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioResetPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioResetPressed([])")
         wait_for_console_log(
@@ -284,15 +296,15 @@ def test_reset_flow(page: Page) -> None:
         )
 
         assert (
-                float(page.evaluate("document.getElementById('master-slider').value"))
-                == 1.0
+            float(page.evaluate("document.getElementById('master-slider').value"))
+            == 1.0
         )
         assert (
-                float(page.evaluate("document.getElementById('rotors-slider').value"))
-                == 1.0
+            float(page.evaluate("document.getElementById('rotors-slider').value"))
+            == 1.0
         )
         assert (
-                float(page.evaluate("document.getElementById('music-slider').value")) == 1.0
+            float(page.evaluate("document.getElementById('music-slider').value")) == 1.0
         )
 
         new_logs = logs[pre_change_log_count:]
@@ -311,7 +323,8 @@ def test_reset_flow(page: Page) -> None:
 
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "() => typeof window.audioResetPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioResetPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioResetPressed([])")
         wait_for_console_log(
@@ -334,19 +347,21 @@ def test_reset_flow(page: Page) -> None:
             timeout=TEST_TIMEOUT,
         )
         assert (
-                float(page.evaluate("document.getElementById('sfx-slider').value")) == 1.0
+            float(page.evaluate("document.getElementById('sfx-slider').value")) == 1.0
         ), "Reset not persisted after back"
 
         # RESET-05: Rapid Reset clicks
         page.wait_for_function(
-            "() => typeof window.changeMasterVolume !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.changeMasterVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.changeMasterVolume([0.5])")
 
         pre_change_log_count = len(logs)
         for _ in range(3):
             page.wait_for_function(
-                "() => typeof window.audioResetPressed !== 'undefined'", timeout=TEST_TIMEOUT
+                "() => typeof window.audioResetPressed !== 'undefined'",
+                timeout=TEST_TIMEOUT,
             )
             page.evaluate("window.audioResetPressed([])")
 
@@ -356,8 +371,8 @@ def test_reset_flow(page: Page) -> None:
         )
 
         assert (
-                float(page.evaluate("document.getElementById('master-slider').value"))
-                == 1.0
+            float(page.evaluate("document.getElementById('master-slider').value"))
+            == 1.0
         )
 
         new_logs = logs[pre_change_log_count:]
@@ -373,7 +388,8 @@ def test_reset_flow(page: Page) -> None:
         # STATE-01: Reset button state persists in config
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "() => typeof window.audioResetPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioResetPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioResetPressed([])")
         wait_for_console_log(
@@ -383,7 +399,9 @@ def test_reset_flow(page: Page) -> None:
 
         # Reload and validate persisted defaults for all audio controls
         page.reload(wait_until="networkidle")
-        page.wait_for_function("() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT)
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+        )
         page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
         page.wait_for_function(
             "() => typeof window.optionsPressed !== 'undefined'", timeout=TEST_TIMEOUT
@@ -402,22 +420,22 @@ def test_reset_flow(page: Page) -> None:
 
         # Sliders should all be at default volume
         assert (
-                float(page.evaluate("document.getElementById('master-slider').value"))
-                == 1.0
+            float(page.evaluate("document.getElementById('master-slider').value"))
+            == 1.0
         )
         assert (
-                float(page.evaluate("document.getElementById('music-slider').value")) == 1.0
+            float(page.evaluate("document.getElementById('music-slider').value")) == 1.0
         )
         assert (
-                float(page.evaluate("document.getElementById('sfx-slider').value")) == 1.0
+            float(page.evaluate("document.getElementById('sfx-slider').value")) == 1.0
         )
         assert (
-                float(page.evaluate("document.getElementById('weapon-slider').value"))
-                == 1.0
+            float(page.evaluate("document.getElementById('weapon-slider').value"))
+            == 1.0
         )
         assert (
-                float(page.evaluate("document.getElementById('rotors-slider').value"))
-                == 1.0
+            float(page.evaluate("document.getElementById('rotors-slider').value"))
+            == 1.0
         )
 
         # Mutes should retain their default checked state after reload
@@ -454,7 +472,8 @@ def test_reset_flow(page: Page) -> None:
         )
 
         page.wait_for_function(
-            "() => typeof window.audioResetPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioResetPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioResetPressed([])")
         wait_for_console_log(
@@ -472,8 +491,8 @@ def test_reset_flow(page: Page) -> None:
         )
 
         assert (
-                float(page.evaluate("document.getElementById('difficulty-slider').value"))
-                == initial_difficulty_value
+            float(page.evaluate("document.getElementById('difficulty-slider').value"))
+            == initial_difficulty_value
         ), "Difficulty reset unexpectedly"
 
     except Exception as e:
@@ -482,7 +501,7 @@ def test_reset_flow(page: Page) -> None:
         timestamp: int = int(time.time())
         page.screenshot(path=f"artifacts/test_reset_failure_screenshot_{timestamp}.png")
         with open(
-                f"artifacts/test_reset_failure_console_logs_{timestamp}.txt", "w"
+            f"artifacts/test_reset_failure_console_logs_{timestamp}.txt", "w"
         ) as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
