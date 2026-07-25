@@ -252,8 +252,7 @@ def test_audio_flow(page: Page) -> None:
         page.evaluate("window.changeWeaponVolume([0])")
         wait_for_console_log(
             logs,
-            lambda text: "sfx muted, cannot adjust" in text
-            or "warning dialog" in text,
+            lambda text: "sfx muted, cannot adjust" in text or "warning dialog" in text,
             pre_change_log_count,
             page,
         )
@@ -271,8 +270,7 @@ def test_audio_flow(page: Page) -> None:
         page.evaluate("window.changeRotorsVolume([0.5])")
         wait_for_console_log(
             logs,
-            lambda text: "sfx muted, cannot adjust" in text
-            or "warning dialog" in text,
+            lambda text: "sfx muted, cannot adjust" in text or "warning dialog" in text,
             pre_change_log_count,
             page,
         )
@@ -315,9 +313,7 @@ def test_audio_flow(page: Page) -> None:
         print(f"Test: 'test_audio_flow' failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
-        page.screenshot(
-            path=f"artifacts/test_audio_failure_screenshot_{timestamp}.png"
-        )
+        page.screenshot(path=f"artifacts/test_audio_failure_screenshot_{timestamp}.png")
         log_file: str = f"artifacts/test_audio_failure_console_logs_{timestamp}.txt"
         with open(log_file, "w") as f:
             for log in logs:
