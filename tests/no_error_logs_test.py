@@ -72,6 +72,9 @@ def test_no_error_logs_after_load(page: Page) -> None:
         canvas = page.locator("canvas")
         expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
 
+        # Deterministically wait for main menu UI overlays to be fully mounted/ready
+        page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
+
         # Filter for error logs
         error_logs = [log for log in logs if log["type"] == "error"]
 
