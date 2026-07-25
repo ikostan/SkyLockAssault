@@ -7,9 +7,11 @@ Navigation to Audio Settings Test Suite (Playwright + UI Automation with DOM Ove
 
 Overview
 --------
-E2E tests for NAV-01 to NAV-04: Validate main menu overlays, navigate to options, set log level to DEBUG, navigate to audio sub-menu, verify audio overlays.
+E2E tests for NAV-01 to NAV-04: Validate main menu overlays, navigate to options,
+set log level to DEBUG, navigate to audio sub-menu, verify audio overlays.
 
-Uses DOM overlays for main/options, coordinates for audio button (no overlay). Verifies display styles and console logs (DEBUG level).
+Uses DOM overlays for main/options, coordinates for audio button (no overlay).
+Verifies display styles and console logs (DEBUG level).
 
 Prerequisites
 -------------
@@ -34,16 +36,16 @@ import pytest
 from playwright.sync_api import Page, expect
 
 # Configuration for stability in different environments
-# Default to 5000ms, but allow CI to override via environment variable
 DEFAULT_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "30000"))
 TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "5000"))
 
 
 def test_navigation_to_audio(page: Page) -> None:
     """
-    Main test suite for navigation to audio settings using DOM overlays and coordinates.
+    Main test suite for navigation to audio settings using DOM overlays.
 
-    Implements NAV-01 to NAV-04: Verify main menu overlays, open options, set DEBUG log level, open audio, verify overlays/logs.
+    Implements NAV-01 to NAV-04: Verify main menu overlays, open options, set DEBUG
+    log level, open audio, verify overlays/logs.
 
     :param page: The Playwright page object.
     :type page: Page
@@ -65,22 +67,23 @@ def test_navigation_to_audio(page: Page) -> None:
     page.on("console", on_console)
 
     def wait_for_console_log(
-        predicate: Callable[[str], bool], start_idx: int, timeout_ms: int = TEST_TIMEOUT
+        predicate: Callable[[str], bool],
+        start_idx: int,
+        timeout_ms: int = TEST_TIMEOUT,
     ) -> None:
-        """
-        Helper to poll until a matching console log arrives or timeout expires.
-        """
+        """Helper to poll until a matching console log arrives or timeout expires."""
         start_time = time.time()
         while (time.time() - start_time) * 1000 < timeout_ms:
             if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
                 return
             page.wait_for_timeout(50)  # Micro-poll for event loop progression
         pytest.fail(
-            f"Timed out waiting for expected console log matching predicate after {timeout_ms}ms"
+            "Timed out waiting for expected console log matching "
+            f"predicate after {timeout_ms}ms"
         )
 
     try:
-        # Start CDP session for V8 JS coverage (workaround for Python Playwright lacking native coverage API)
+        # Start CDP session for V8 JS coverage
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
         cdp_session.send(
@@ -111,11 +114,15 @@ def test_navigation_to_audio(page: Page) -> None:
         expect(page.locator("#quit-button")).to_be_visible(timeout=TEST_TIMEOUT)
 
         opacity: str = page.evaluate(
-            "window.getComputedStyle(document.getElementById('options-button')).opacity"
+            "window.getComputedStyle("
+            "document.getElementById('options-button')"
+            ").opacity"
         )
         assert opacity == "0", f"Expected opacity 0, got {opacity}"
         pointer_events: str = page.evaluate(
-            "window.getComputedStyle(document.getElementById('options-button')).pointerEvents"
+            "window.getComputedStyle("
+            "document.getElementById('options-button')"
+            ").pointerEvents"
         )
         assert (
             pointer_events == "none"
@@ -123,7 +130,8 @@ def test_navigation_to_audio(page: Page) -> None:
 
         # NAV-02: Navigate to options menu
         page.wait_for_function(
-            "() => typeof window.optionsPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.optionsPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.optionsPressed([])")
 
@@ -132,14 +140,18 @@ def test_navigation_to_audio(page: Page) -> None:
             "#advanced-button", state="visible", timeout=TEST_TIMEOUT
         )
         page.wait_for_function(
-            "() => typeof window.advancedPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.advancedPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.advancedPressed([])")
         page.wait_for_function(
-            "() => typeof window.changeLogLevel !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.changeLogLevel !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('log-level-select')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('log-level-select')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
 
@@ -165,7 +177,9 @@ def test_navigation_to_audio(page: Page) -> None:
         page.evaluate("window.advancedBackPressed([])")
 
         # NAV-04: Navigate to audio sub-menu
-        page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector(
+            "#audio-button", state="visible", timeout=TEST_TIMEOUT
+        )
         assert page.evaluate(
             "document.getElementById('audio-button') !== null"
         ), "Audio button not found/displayed"
@@ -173,13 +187,16 @@ def test_navigation_to_audio(page: Page) -> None:
         # Open audio
         pre_audio_log_count = len(logs)
         page.wait_for_function(
-            "() => typeof window.audioPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioPressed([0])")
 
         # Wait deterministically for master slider display and console log
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('master-slider')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('master-slider')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
         wait_for_console_log(
@@ -189,7 +206,9 @@ def test_navigation_to_audio(page: Page) -> None:
 
         # Assert gameplay/options UI is hidden while audio menu is open
         gameplay_button_display_in_audio: str = page.evaluate(
-            "window.getComputedStyle(document.getElementById('gameplay-button')).display"
+            "window.getComputedStyle("
+            "document.getElementById('gameplay-button')"
+            ").display"
         )
         assert (
             gameplay_button_display_in_audio == "none"
@@ -200,17 +219,22 @@ def test_navigation_to_audio(page: Page) -> None:
             "#audio-back-button", state="visible", timeout=TEST_TIMEOUT
         )
         page.wait_for_function(
-            "() => typeof window.audioBackPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioBackPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioBackPressed([])")
 
-        # Assert audio overlay is hidden again and options overlay is restored deterministically
+        # Assert audio overlay is hidden and options overlay is restored
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('master-slider')).display === 'none'",
+            "() => window.getComputedStyle("
+            "document.getElementById('master-slider')"
+            ").display === 'none'",
             timeout=TEST_TIMEOUT,
         )
         page.wait_for_function(
-            "() => window.getComputedStyle(document.getElementById('gameplay-button')).display === 'block'",
+            "() => window.getComputedStyle("
+            "document.getElementById('gameplay-button')"
+            ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
 
@@ -229,7 +253,6 @@ def test_navigation_to_audio(page: Page) -> None:
         raise
     finally:
         if cdp_session:
-            # Stop V8 coverage and save to file (even on failure)
             coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
             cdp_session.send("Profiler.stopPreciseCoverage")
             cdp_session.send("Profiler.disable")
