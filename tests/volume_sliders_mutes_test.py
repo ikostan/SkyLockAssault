@@ -98,9 +98,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
         assert "SkyLockAssault" in page.title(), "Title not found"
 
         # Open options
-        page.wait_for_selector(
-            "#options-button", state="visible", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
         page.wait_for_function(
             "() => typeof window.optionsPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
@@ -350,8 +348,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
         page.evaluate("window.changeWeaponVolume([0.2])")
         wait_for_console_log(
             logs,
-            lambda text: "applied loaded sfx_weapon volume to audioserver: 0.2"
-            in text,
+            lambda text: "applied loaded sfx_weapon volume to audioserver: 0.2" in text,
             pre_change_log_count,
             page,
         )
@@ -398,8 +395,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
         page.evaluate("window.changeRotorsVolume([0.9])")
         wait_for_console_log(
             logs,
-            lambda text: "applied loaded sfx_rotors volume to audioserver: 0.9"
-            in text,
+            lambda text: "applied loaded sfx_rotors volume to audioserver: 0.9" in text,
             pre_change_log_count,
             page,
         )
@@ -446,8 +442,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
         page.evaluate("window.changeMenuVolume([0.9])")
         wait_for_console_log(
             logs,
-            lambda text: "applied loaded sfx_menu volume to audioserver: 0.9"
-            in text,
+            lambda text: "applied loaded sfx_menu volume to audioserver: 0.9" in text,
             pre_change_log_count,
             page,
         )
