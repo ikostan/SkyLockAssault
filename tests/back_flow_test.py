@@ -30,12 +30,11 @@ v8_coverage_back_flow_test.json, artifacts/test_back_failure_*.png/txt
 import json
 import os
 import time
-from typing import Any, Callable
+from typing import Any
 
 import pytest
 from playwright.sync_api import Page, expect
 
-# Configuration for stability in different environments
 from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT, wait_for_console_log
 
 
@@ -90,9 +89,12 @@ def test_back_flow(page: Page) -> None:
         assert "SkyLockAssault" in page.title(), "Title not found"
 
         # Navigate to options menu
-        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector(
+            "#options-button", state="visible", timeout=TEST_TIMEOUT
+        )
         page.wait_for_function(
-            "() => typeof window.optionsPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.optionsPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.optionsPressed([])")
 
@@ -101,11 +103,13 @@ def test_back_flow(page: Page) -> None:
             "#advanced-button", state="visible", timeout=TEST_TIMEOUT
         )
         page.wait_for_function(
-            "() => typeof window.advancedPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.advancedPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.advancedPressed([])")
         page.wait_for_function(
-            "() => typeof window.changeLogLevel !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.changeLogLevel !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.wait_for_function(
             "() => window.getComputedStyle("
@@ -118,8 +122,10 @@ def test_back_flow(page: Page) -> None:
         pre_change_log_count = len(logs)
         page.evaluate("window.changeLogLevel([0])")
         wait_for_console_log(
+            logs,
             lambda text: "log level changed to: debug" in text,
-            start_idx=pre_change_log_count,
+            pre_change_log_count,
+            page,
         )
         assert page.evaluate(
             "document.getElementById('audio-button') !== null"
@@ -136,13 +142,16 @@ def test_back_flow(page: Page) -> None:
         page.evaluate("window.advancedBackPressed([])")
 
         # Navigate to audio sub-menu
-        page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector(
+            "#audio-button", state="visible", timeout=TEST_TIMEOUT
+        )
         assert page.evaluate(
             "document.getElementById('audio-button') !== null"
         ), "Audio button not found/displayed"
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "() => typeof window.audioPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioPressed([])")
 
@@ -154,14 +163,17 @@ def test_back_flow(page: Page) -> None:
             timeout=TEST_TIMEOUT,
         )
         wait_for_console_log(
+            logs,
             lambda text: "audio button pressed." in text,
-            start_idx=pre_change_log_count,
+            pre_change_log_count,
+            page,
         )
 
         # BACK-01: Back returns to parent menu
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "() => typeof window.audioBackPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioBackPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioBackPressed([])")
 
@@ -178,14 +190,19 @@ def test_back_flow(page: Page) -> None:
             timeout=TEST_TIMEOUT,
         )
         wait_for_console_log(
+            logs,
             lambda text: "audio settings: back button pressed" in text,
-            start_idx=pre_change_log_count,
+            pre_change_log_count,
+            page,
         )
 
         # Re-enter audio for next tests
-        page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector(
+            "#audio-button", state="visible", timeout=TEST_TIMEOUT
+        )
         page.wait_for_function(
-            "() => typeof window.audioPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioPressed([0])")
         page.wait_for_function(
@@ -200,12 +217,16 @@ def test_back_flow(page: Page) -> None:
             "document.getElementById('master-slider').value"
         )
         page.wait_for_function(
-            "() => typeof window.audioBackPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioBackPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioBackPressed([])")
-        page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector(
+            "#audio-button", state="visible", timeout=TEST_TIMEOUT
+        )
         page.wait_for_function(
-            "() => typeof window.audioPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioPressed([0])")
         page.wait_for_function(
@@ -226,16 +247,22 @@ def test_back_flow(page: Page) -> None:
         )
 
         # Navigate to options menu
-        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector(
+            "#options-button", state="visible", timeout=TEST_TIMEOUT
+        )
         page.wait_for_function(
-            "() => typeof window.optionsPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.optionsPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.optionsPressed([])")
 
         # Navigate to audio menu
-        page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector(
+            "#audio-button", state="visible", timeout=TEST_TIMEOUT
+        )
         page.wait_for_function(
-            "() => typeof window.audioPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioPressed([0])")
         page.wait_for_function(
@@ -256,12 +283,16 @@ def test_back_flow(page: Page) -> None:
             timeout=TEST_TIMEOUT,
         )
         page.wait_for_function(
-            "() => typeof window.audioBackPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioBackPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioBackPressed([])")
-        page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector(
+            "#audio-button", state="visible", timeout=TEST_TIMEOUT
+        )
         page.wait_for_function(
-            "() => typeof window.audioPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioPressed([0])")
         page.wait_for_function(
@@ -282,7 +313,8 @@ def test_back_flow(page: Page) -> None:
             slider.dispatchEvent(new Event('input'));  // Mid-drag
         """)
         page.wait_for_function(
-            "() => typeof window.audioBackPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioBackPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioBackPressed([])")
         page.wait_for_function(
@@ -300,7 +332,9 @@ def test_back_flow(page: Page) -> None:
         print(f"Test suite failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
-        page.screenshot(path=f"artifacts/test_back_failure_screenshot_{timestamp}.png")
+        page.screenshot(
+            path=f"artifacts/test_back_failure_screenshot_{timestamp}.png"
+        )
         with open(
             f"artifacts/test_back_failure_console_logs_{timestamp}.txt", "w"
         ) as f:

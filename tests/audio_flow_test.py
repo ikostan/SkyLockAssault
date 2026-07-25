@@ -2,14 +2,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # tests/audio_flow_test.py
 """
-Warning Popups & Constraints Test Suite (Playwright + UI Automation with DOM Overlays)
-===================================================================================
+Warning Popups & Constraints Test Suite (Playwright + UI Automation Overlay)
+=============================================================================
 
 Overview
 --------
-E2E tests for WARN-01 to WARN-03: Validate warning popups when adjusting volumes with mutes enabled.
-
-Navigates to audio menu, adjusts sliders/mutes, verifies states, logs, and popups via console logs.
+E2E tests for WARN-01 to WARN-03: Validate warning popups when adjusting
+volumes with mutes enabled.
 
 Prerequisites
 -------------
@@ -28,7 +27,7 @@ v8_coverage_audio_flow_test.json, artifacts/test_audio_failure_*.png/txt
 import json
 import os
 import time
-from typing import Any, Callable
+from typing import Any
 
 import pytest
 from playwright.sync_api import Page, expect
@@ -40,7 +39,8 @@ from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT, wait_for_console_log
 def test_audio_flow(page: Page) -> None:
     """
     Main test for warning popups and constraints using DOM overlays.
-    Implements WARN-01 to WARN-03: Mute/adjust, verify unchanged values, warning logs.
+
+    Implements WARN-01 to WARN-03: Mute/adjust, verify unchanged values, warnings.
     """
     logs: list[dict[str, str]] = []
     cdp_session = None
@@ -83,17 +83,20 @@ def test_audio_flow(page: Page) -> None:
 
         # Open options
         page.wait_for_function(
-            "() => typeof window.optionsPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.optionsPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.optionsPressed([])")
 
         # Go to Advanced settings
         page.wait_for_function(
-            "() => typeof window.advancedPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.advancedPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.advancedPressed([])")
         page.wait_for_function(
-            "() => typeof window.changeLogLevel !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.changeLogLevel !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
 
         page.wait_for_function(
@@ -106,8 +109,10 @@ def test_audio_flow(page: Page) -> None:
         pre_change_log_count = len(logs)
         page.evaluate("window.changeLogLevel([0])")
         wait_for_console_log(
+            logs,
             lambda text: "log level changed to: debug" in text,
-            start_idx=pre_change_log_count,
+            pre_change_log_count,
+            page,
         )
 
         assert page.evaluate(
@@ -124,7 +129,8 @@ def test_audio_flow(page: Page) -> None:
         # Open audio
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "() => typeof window.audioPressed !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.audioPressed !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioPressed([])")
 
@@ -136,8 +142,10 @@ def test_audio_flow(page: Page) -> None:
         )
 
         wait_for_console_log(
+            logs,
             lambda text: "audio button pressed" in text,
-            start_idx=pre_change_log_count,
+            pre_change_log_count,
+            page,
         )
 
         # Get initial values
@@ -155,24 +163,30 @@ def test_audio_flow(page: Page) -> None:
         # WARN-01: Master muted → attempt sub-volume adjust (SFX)
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "() => typeof window.toggleMuteMaster !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.toggleMuteMaster !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.toggleMuteMaster([0])")  # Mute
         wait_for_console_log(
+            logs,
             lambda text: "master is muted" in text,
-            start_idx=pre_change_log_count,
+            pre_change_log_count,
+            page,
         )
 
         # Change SFX Volume when Master is muted
         pre_change_log_count = len(logs)
         page.wait_for_function(
-            "() => typeof window.changeSfxVolume !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.changeSfxVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.changeSfxVolume([0])")
         wait_for_console_log(
+            logs,
             lambda text: "master muted, cannot adjust sub-volume" in text
             or "warning dialog" in text,
-            start_idx=pre_change_log_count,
+            pre_change_log_count,
+            page,
         )
         assert (
             page.evaluate("document.getElementById('sfx-slider').value") == initial_sfx
@@ -186,9 +200,11 @@ def test_audio_flow(page: Page) -> None:
         )
         page.evaluate("window.changeMusicVolume([0.3])")
         wait_for_console_log(
+            logs,
             lambda text: "master muted, cannot adjust sub-volume" in text
             or "warning dialog" in text,
-            start_idx=pre_change_log_count,
+            pre_change_log_count,
+            page,
         )
         assert (
             page.evaluate("document.getElementById('music-slider').value")
@@ -203,9 +219,11 @@ def test_audio_flow(page: Page) -> None:
         )
         page.evaluate("window.changeRotorsVolume([0.4])")
         wait_for_console_log(
+            logs,
             lambda text: "master muted, cannot adjust sub-volume" in text
             or "warning dialog" in text,
-            start_idx=pre_change_log_count,
+            pre_change_log_count,
+            page,
         )
         assert (
             page.evaluate("document.getElementById('rotors-slider').value")
@@ -214,13 +232,15 @@ def test_audio_flow(page: Page) -> None:
 
         # Unmute Master for next tests
         page.wait_for_function(
-            "() => typeof window.toggleMuteMaster !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.toggleMuteMaster !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.toggleMuteMaster([1])")
 
         # WARN-02: SFX muted → attempt weapon adjust
         page.wait_for_function(
-            "() => typeof window.toggleMuteSfx !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.toggleMuteSfx !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.toggleMuteSfx([0])")  # Mute
 
@@ -231,8 +251,11 @@ def test_audio_flow(page: Page) -> None:
         )
         page.evaluate("window.changeWeaponVolume([0])")
         wait_for_console_log(
-            lambda text: "sfx muted, cannot adjust" in text or "warning dialog" in text,
-            start_idx=pre_change_log_count,
+            logs,
+            lambda text: "sfx muted, cannot adjust" in text
+            or "warning dialog" in text,
+            pre_change_log_count,
+            page,
         )
         assert (
             page.evaluate("document.getElementById('weapon-slider').value")
@@ -247,8 +270,11 @@ def test_audio_flow(page: Page) -> None:
         )
         page.evaluate("window.changeRotorsVolume([0.5])")
         wait_for_console_log(
-            lambda text: "sfx muted, cannot adjust" in text or "warning dialog" in text,
-            start_idx=pre_change_log_count,
+            logs,
+            lambda text: "sfx muted, cannot adjust" in text
+            or "warning dialog" in text,
+            pre_change_log_count,
+            page,
         )
         assert (
             page.evaluate("document.getElementById('rotors-slider').value")
@@ -257,7 +283,8 @@ def test_audio_flow(page: Page) -> None:
 
         # Unmute SFX
         page.wait_for_function(
-            "() => typeof window.toggleMuteSfx !== 'undefined'", timeout=TEST_TIMEOUT
+            "() => typeof window.toggleMuteSfx !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.toggleMuteSfx([1])")
 
@@ -288,7 +315,9 @@ def test_audio_flow(page: Page) -> None:
         print(f"Test: 'test_audio_flow' failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
-        page.screenshot(path=f"artifacts/test_audio_failure_screenshot_{timestamp}.png")
+        page.screenshot(
+            path=f"artifacts/test_audio_failure_screenshot_{timestamp}.png"
+        )
         log_file: str = f"artifacts/test_audio_failure_console_logs_{timestamp}.txt"
         with open(log_file, "w") as f:
             for log in logs:

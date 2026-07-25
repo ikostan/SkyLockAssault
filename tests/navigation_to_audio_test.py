@@ -30,12 +30,11 @@ v8_coverage_navigation_to_audio_test.json, artifacts/test_navigation_failure_*.p
 import json
 import os
 import time
-from typing import Any, Callable
+from typing import Any
 
 import pytest
 from playwright.sync_api import Page, expect
 
-# Configuration for stability in different environments
 from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT, wait_for_console_log
 
 
@@ -142,8 +141,10 @@ def test_navigation_to_audio(page: Page) -> None:
         pre_change_log_count = len(logs)
         page.evaluate("window.changeLogLevel([0])")
         wait_for_console_log(
+            logs,
             lambda text: "log level changed to: debug" in text,
-            start_idx=pre_change_log_count,
+            pre_change_log_count,
+            page,
         )
         assert page.evaluate(
             "document.getElementById('audio-button') !== null"
@@ -181,8 +182,10 @@ def test_navigation_to_audio(page: Page) -> None:
             timeout=TEST_TIMEOUT,
         )
         wait_for_console_log(
+            logs,
             lambda text: "audio button pressed." in text,
-            start_idx=pre_audio_log_count,
+            pre_audio_log_count,
+            page,
         )
 
         # Assert gameplay/options UI is hidden while audio menu is open
