@@ -25,8 +25,7 @@ import time
 from playwright.sync_api import Page, expect
 
 # Configuration for stability in different environments
-DEFAULT_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "30000"))
-TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "5000"))
+from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT
 
 
 def test_no_error_logs_after_load(page: Page) -> None:

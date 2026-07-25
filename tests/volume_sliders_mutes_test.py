@@ -32,28 +32,8 @@ from typing import Any, Callable
 import pytest
 from playwright.sync_api import Page, expect
 
-# Configuration for stability in different environments
-DEFAULT_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "30000"))
-TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "5000"))
-
-
-def wait_for_console_log(
-    logs: list[dict[str, str]],
-    predicate: Callable[[str], bool],
-    start_idx: int,
-    page: Page,
-    timeout_ms: int = TEST_TIMEOUT,
-) -> None:
-    """Helper to poll until a matching console log arrives or timeout expires."""
-    start_time = time.time()
-    while (time.time() - start_time) * 1000 < timeout_ms:
-        if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
-            return
-        page.wait_for_timeout(50)  # Micro-poll for event loop progression
-    pytest.fail(
-        "Timed out waiting for expected console log matching "
-        f"predicate after {timeout_ms}ms"
-    )
+# Import shared utilities at the top of the file
+from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT, wait_for_console_log
 
 
 def _has_save_log(logs: list[dict[str, str]]) -> bool:
