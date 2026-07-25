@@ -177,9 +177,7 @@ def test_navigation_to_audio(page: Page) -> None:
         page.evaluate("window.advancedBackPressed([])")
 
         # NAV-04: Navigate to audio sub-menu
-        page.wait_for_selector(
-            "#audio-button", state="visible", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
         assert page.evaluate(
             "document.getElementById('audio-button') !== null"
         ), "Audio button not found/displayed"
