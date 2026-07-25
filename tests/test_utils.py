@@ -13,7 +13,7 @@ import pytest
 from playwright.sync_api import Page
 
 # Shared timeout configurations across test suites
-DEFAULT_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "30000"))
+DEFAULT_TIMEOUT = int(os.getenv("DEFAULT_TIMEOUT", "30000"))
 TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "5000"))
 
 
