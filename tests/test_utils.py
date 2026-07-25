@@ -1,9 +1,7 @@
 # Copyright (C) 2025 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 # tests/test_utils.py
-"""
-Shared utility functions and helpers for SkyLockAssault Playwright E2E tests.
-"""
+"""Shared utility functions and helpers for SkyLockAssault Playwright E2E tests."""
 
 import os
 import time
