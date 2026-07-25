@@ -32,7 +32,6 @@ import os
 import time
 from typing import Any, Callable
 
-import pytest
 from playwright.sync_api import Page, expect
 
 # Configuration for stability in different environments

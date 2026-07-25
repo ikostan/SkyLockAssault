@@ -32,7 +32,6 @@ import os
 import time
 from typing import Any
 
-import pytest
 from playwright.sync_api import Page, expect
 
 from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT, wait_for_console_log

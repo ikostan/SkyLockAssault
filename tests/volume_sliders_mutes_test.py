@@ -29,7 +29,6 @@ import os
 import time
 from typing import Any, Callable
 
-import pytest
 from playwright.sync_api import Page, expect
 
 # Import shared utilities at the top of the file
