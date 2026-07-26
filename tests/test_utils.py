@@ -15,6 +15,16 @@ DEFAULT_TIMEOUT = int(os.getenv("DEFAULT_TIMEOUT", "30000"))
 TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "5000"))
 
 
+def has_save_log(logs: list[dict[str, str]]) -> bool:
+    """Check if any log entry indicates settings were saved."""
+    return any(
+        ("encrypted" in log["text"].lower() and "settings" in log["text"].lower())
+        or "falling back to plaintext" in log["text"].lower()
+        or "saved" in log["text"].lower()
+        for log in logs
+    )
+
+
 def wait_for_console_log(
     logs: list[dict[str, str]],
     predicate: Callable[[str], bool],

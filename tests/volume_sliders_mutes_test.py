@@ -32,17 +32,12 @@ from typing import Any, Callable
 from playwright.sync_api import Page, expect
 
 # Import shared utilities at the top of the file
-from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT, wait_for_console_log
-
-
-def _has_save_log(logs: list[dict[str, str]]) -> bool:
-    """Check if any log entry indicates settings were saved."""
-    return any(
-        ("encrypted" in log["text"].lower() and "settings" in log["text"].lower())
-        or "falling back to plaintext" in log["text"].lower()
-        or "saved" in log["text"].lower()
-        for log in logs
-    )
+from tests.test_utils import (
+    DEFAULT_TIMEOUT,
+    TEST_TIMEOUT,
+    has_save_log,
+    wait_for_console_log,
+)
 
 
 def test_volume_sliders_mutes(page: Page) -> None:
@@ -303,7 +298,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
         assert any(
             "sfx volume level in audiomanager: 0.8" in log["text"].lower()
             for log in sfx_logs
-        ) or _has_save_log(sfx_logs), "SFX volume side effect log missing"
+        ) or has_save_log(sfx_logs), "SFX volume side effect log missing"
         value = page.evaluate("document.getElementById('sfx-slider').value")
         assert value == "0.8", f"SFX slider value not set to 0.8, got {value}"
 
