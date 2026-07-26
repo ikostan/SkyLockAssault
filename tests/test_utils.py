@@ -7,7 +7,6 @@ import os
 import time
 from typing import Callable
 
-import pytest
 from playwright.sync_api import Page
 
 # Shared timeout configurations across test suites
@@ -38,7 +37,7 @@ def wait_for_console_log(
         if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
             return
         page.wait_for_timeout(50)  # Micro-poll for event loop progression
-    pytest.fail(
+    raise AssertionError(
         "Timed out waiting for expected console log matching "
         f"predicate after {timeout_ms}ms"
     )
