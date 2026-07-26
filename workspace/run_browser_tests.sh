@@ -74,7 +74,8 @@ count=0
 server_ready=0
 
 while [ $count -lt $max_retries ]; do
-  if curl -s http://localhost:$SERVER_PORT/index.html > /dev/null; then
+  if curl --fail --silent --show-error --max-time 1 \
+      "http://localhost:${SERVER_PORT}/index.html" > /dev/null; then
     server_ready=1
     break
   fi
