@@ -39,7 +39,16 @@ echo "🧹 Restoring files to pristine state..."
 git restore export_presets.cfg scripts/core/globals.gd
 check_exit "Repository Restore"
 
-# 5. Start a security-isolated web server with reliable cleanup trap
+cleanup_server() {
+  if [ -n "${SERVER_PID:-}" ]; then
+    kill "$SERVER_PID" 2>/dev/null || true
+    wait "$SERVER_PID" 2>/dev/null || true
+  fi
+}
+
+trap cleanup_server EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 echo "🚀 Starting security-isolated server on port $SERVER_PORT..."
 python3 -c "
 import http.server, socketserver, os
