@@ -374,7 +374,8 @@ def test_reset_flow(page: Page) -> None:
             "() => typeof window.audioPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioPressed([0])")
+        # Update [0] to []
+        page.evaluate("window.audioPressed([])")
 
         page.wait_for_function(
             "() => window.getComputedStyle("
