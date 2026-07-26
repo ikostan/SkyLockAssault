@@ -434,7 +434,9 @@ def test_reset_flow(page: Page) -> None:
         )
         wait_for_console_log(
             logs,
-            lambda text: "saved" in text or "encrypted" in text or "falling back to plaintext" in text,
+            lambda text: "saved" in text
+            or "encrypted" in text
+            or "falling back to plaintext" in text,
             pre_change_log_count,
             page,
         )
