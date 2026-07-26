@@ -23,8 +23,8 @@ def wait_for_console_log(
     timeout_ms: int = TEST_TIMEOUT,
 ) -> None:
     """Helper to poll until a matching console log arrives or timeout expires."""
-    start_time = time.time()
-    while (time.time() - start_time) * 1000 < timeout_ms:
+    start_time = time.monotonic()
+    while (time.monotonic() - start_time) * 1000 < timeout_ms:
         if any(predicate(log["text"].lower()) for log in logs[start_idx:]):
             return
         page.wait_for_timeout(50)  # Micro-poll for event loop progression
