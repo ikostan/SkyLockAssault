@@ -52,6 +52,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
     """
     logs: list[dict[str, str]] = []
     cdp_session = None
+    coverage_started = False
 
     def on_console(msg: Any) -> None:
         """
@@ -72,6 +73,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
         cdp_session.send(
             "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
         )
+        coverage_started = True
 
         page.goto(
             "http://localhost:8080/index.html",
@@ -488,9 +490,12 @@ def test_volume_sliders_mutes(page: Page) -> None:
                 f.write(f"[{log['type']}] {log['text']}\n")
         raise
     finally:
-        if cdp_session:
-            coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
-            cdp_session.send("Profiler.stopPreciseCoverage")
-            cdp_session.send("Profiler.disable")
-            with open("v8_coverage_volume_sliders_mutes_test.json", "w") as f:
-                json.dump(coverage, f)
+        if cdp_session and coverage_started:
+            try:
+                coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
+                cdp_session.send("Profiler.stopPreciseCoverage")
+                cdp_session.send("Profiler.disable")
+                with open("v8_coverage_volume_sliders_mutes_test.json", "w") as f:
+                    json.dump(coverage, f)
+            except Exception as cov_err:
+                print(f"Warning: Failed to harvest V8 coverage data: {cov_err}")
