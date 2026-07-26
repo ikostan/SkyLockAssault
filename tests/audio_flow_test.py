@@ -231,11 +231,18 @@ def test_audio_flow(page: Page) -> None:
         ), "Rotors value changed unexpectedly under Master mute"
 
         # Unmute Master for next tests
+        pre_change_log_count = len(logs)
         page.wait_for_function(
             "() => typeof window.toggleMuteMaster !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.toggleMuteMaster([1])")
+        wait_for_console_log(
+            logs,
+            lambda text: "master mute button toggled to: true" in text,
+            pre_change_log_count,
+            page,
+        )
 
         # WARN-02: SFX muted → attempt weapon adjust
         page.wait_for_function(
@@ -280,11 +287,18 @@ def test_audio_flow(page: Page) -> None:
         ), "Rotors value changed unexpectedly under SFX mute"
 
         # Unmute SFX
+        pre_change_log_count = len(logs)
         page.wait_for_function(
             "() => typeof window.toggleMuteSfx !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.toggleMuteSfx([1])")
+        wait_for_console_log(
+            logs,
+            lambda text: "sfx mute button toggled to: true" in text,
+            pre_change_log_count,
+            page,
+        )
 
         # WARN-03: Master unmuted → adjust sub-volume (Music)
         pre_change_log_count = len(logs)
