@@ -71,6 +71,21 @@ Improvements include:
 - Normalized imports and formatting (multiple Black + isort passes)
 - Extracted duplicated helpers (e.g. `has_save_log`) into the shared utility module
 
+#### 6. Micro-Polling & Test Runner Hardening (Final Review Pass)
+
+- **Clock & Exception Safety (`tests/test_utils.py`):**
+  - Updated `wait_for_console_log` to measure elapsed polling time via `time.monotonic()`.
+  - Replaced `pytest.fail()` with `AssertionError` in `wait_for_console_log` to prevent timeout exceptions from bypassing test-level artifact capture (`except Exception:`).
+  - Centralized `has_save_log()` helper to check for encrypted/plaintext save entries.
+
+- **Race Condition & Persistence Fixes:**
+  - Synchronized `toggleMuteMaster([1])` and `toggleMuteSfx([1])` steps in `tests/audio_flow_test.py` with deterministic log polling.
+  - Added save-log synchronization prior to `page.reload()` in `tests/reset_audio_flow_test.py` (`STATE-01`) to guarantee async disk flushes complete before page reloads.
+  - Standardized callback argument signatures across test files (e.g. `window.audioPressed([])`).
+
+- **V8 Coverage Teardown Resilience:**
+  - Added `coverage_started` state tracking and isolated CDP profiler teardown in `finally` blocks using `try...except` handling, ensuring coverage harvesting failures never mask primary test assertion failures.
+
 ### Benefits
 
 - Dramatically reduced flakiness caused by race conditions and variable load times
