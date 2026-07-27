@@ -426,6 +426,8 @@ def test_reset_flow(page: Page) -> None:
             timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.audioResetPressed([])")
+
+        # Ensure reset log and persistence commit log both arrive before proceeding
         wait_for_console_log(
             logs,
             lambda text: "audio volumes reset to defaults" in text,
@@ -434,12 +436,12 @@ def test_reset_flow(page: Page) -> None:
         )
         wait_for_console_log(
             logs,
-            lambda text: "saved" in text
-            or "encrypted" in text
-            or "falling back to plaintext" in text,
+            lambda text: "encrypted settings persisted successfully" in text
+                         or "saved volumes to config" in text,
             pre_change_log_count,
             page,
         )
+
         page.wait_for_function(
             "() => parseFloat("
             "document.getElementById('sfx-slider').value"
