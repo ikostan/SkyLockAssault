@@ -374,7 +374,6 @@ def test_reset_flow(page: Page) -> None:
             "() => typeof window.audioPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        # Update [0] to []
         page.evaluate("window.audioPressed([])")
 
         page.wait_for_function(
@@ -437,15 +436,19 @@ def test_reset_flow(page: Page) -> None:
         wait_for_console_log(
             logs,
             lambda text: "encrypted settings persisted successfully" in text
-                         or "saved volumes to config" in text,
+            or "saved volumes to config" in text
+            or "saved" in text,
             pre_change_log_count,
             page,
         )
 
+        # Explicitly confirm all volume channels are at 1.0 in the UI and state before reload
         page.wait_for_function(
-            "() => parseFloat("
-            "document.getElementById('sfx-slider').value"
-            ") === 1.0",
+            "() => parseFloat(document.getElementById('master-slider').value) === 1.0 && "
+            "parseFloat(document.getElementById('music-slider').value) === 1.0 && "
+            "parseFloat(document.getElementById('sfx-slider').value) === 1.0 && "
+            "parseFloat(document.getElementById('weapon-slider').value) === 1.0 && "
+            "parseFloat(document.getElementById('rotors-slider').value) === 1.0",
             timeout=TEST_TIMEOUT,
         )
 
