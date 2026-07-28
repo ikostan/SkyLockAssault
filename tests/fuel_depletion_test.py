@@ -129,7 +129,7 @@ def test_fuel_depletion(page: Page) -> None:
         wait_for_console_log(
             logs,
             lambda text: "setting 'difficulty' updated to: 2" in text
-                         or "difficulty" in text,
+            or "difficulty" in text,
             pre_change_log_count,
             page,
             timeout_ms=DEFAULT_TIMEOUT,
@@ -158,8 +158,8 @@ def test_fuel_depletion(page: Page) -> None:
         wait_for_console_log(
             logs,
             lambda text: "options back button pressed" in text
-                         or "back button pressed" in text
-                         or "options menu exited" in text,
+            or "back button pressed" in text
+            or "options menu exited" in text,
             pre_change_log_count,
             page,
             timeout_ms=DEFAULT_TIMEOUT,
@@ -190,7 +190,7 @@ def test_fuel_depletion(page: Page) -> None:
         wait_for_console_log(
             logs,
             lambda text: "setting 'current_fuel' updated to:" in text
-                         and float(text.split("updated to: ")[1]) < 95.0,
+            and float(text.split("updated to: ")[1]) < 95.0,
             pre_change_log_count,
             page,
             timeout_ms=DEFAULT_TIMEOUT,
@@ -205,9 +205,7 @@ def test_fuel_depletion(page: Page) -> None:
         print(f"Test suite failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
-        page.screenshot(
-            path=f"artifacts/test_fuel_depletion_failure_{timestamp}.png"
-        )
+        page.screenshot(path=f"artifacts/test_fuel_depletion_failure_{timestamp}.png")
         log_file = f"artifacts/test_fuel_depletion_failure_console_logs_{timestamp}.txt"
         with open(log_file, "w", encoding="utf-8") as f:
             for log in logs:
@@ -219,7 +217,9 @@ def test_fuel_depletion(page: Page) -> None:
                 coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
-                with open("v8_coverage_fuel_depletion_test.json", "w", encoding="utf-8") as f:
+                with open(
+                    "v8_coverage_fuel_depletion_test.json", "w", encoding="utf-8"
+                ) as f:
                     json.dump(coverage, f)
             except Exception as cov_err:
                 print(f"Warning: Failed to harvest V8 coverage data: {cov_err}")

@@ -107,7 +107,9 @@ def test_log_level_setting(page: Page) -> None:
             )
 
             current_level = page.evaluate("window.currentLogLevel")
-            assert current_level == level_idx, f"Expected log level {level_idx} ({level_name}), got {current_level}"
+            assert (
+                current_level == level_idx
+            ), f"Expected log level {level_idx} ({level_name}), got {current_level}"
 
     except Exception as e:
         print(f"Test suite failed: {str(e)}")
@@ -116,7 +118,9 @@ def test_log_level_setting(page: Page) -> None:
         page.screenshot(
             path=f"artifacts/test_log_level_setting_failure_{timestamp}.png"
         )
-        log_file = f"artifacts/test_log_level_setting_failure_console_logs_{timestamp}.txt"
+        log_file = (
+            f"artifacts/test_log_level_setting_failure_console_logs_{timestamp}.txt"
+        )
         with open(log_file, "w", encoding="utf-8") as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
@@ -127,7 +131,9 @@ def test_log_level_setting(page: Page) -> None:
                 coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
-                with open("v8_coverage_log_level_setting_test.json", "w", encoding="utf-8") as f:
+                with open(
+                    "v8_coverage_log_level_setting_test.json", "w", encoding="utf-8"
+                ) as f:
                     json.dump(coverage, f)
             except Exception as cov_err:
                 print(f"Warning: Failed to harvest V8 coverage data: {cov_err}")
