@@ -75,6 +75,12 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	if setting_name != "current_fuel":
 		log_message(log_msg, LogLevel.DEBUG)
 
+	# Allow current_fuel logs ONLY if debug log level is active
+	if setting_name == "current_fuel":
+		if is_instance_valid(settings) and settings.current_log_level == LogLevel.DEBUG:
+			log_message(log_msg, LogLevel.DEBUG)
+		return
+
 	# Automatically persist to disk
 	# OLD: _save_settings()
 	# NEW: Prevent disk I/O lag by stopping current_fuel from
