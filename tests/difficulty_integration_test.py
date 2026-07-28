@@ -287,7 +287,7 @@ def test_difficulty_integration(page: Page) -> None:
             path=f"artifacts/test_difficulty_integration_failure_{timestamp}.png"
         )
         log_file = f"artifacts/test_difficulty_integration_failure_console_logs_{timestamp}.txt"
-        with open(log_file, "w") as f:
+        with open(log_file, "w", encoding="utf-8") as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
         raise
@@ -297,7 +297,9 @@ def test_difficulty_integration(page: Page) -> None:
                 coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
-                with open("v8_coverage_difficulty_integration_test.json", "w") as f:
+                with open(
+                    "v8_coverage_difficulty_integration_test.json", "w", encoding="utf-8"
+                ) as f:
                     json.dump(coverage, f)
             except Exception as cov_err:
                 print(f"Warning: Failed to harvest V8 coverage data: {cov_err}")
