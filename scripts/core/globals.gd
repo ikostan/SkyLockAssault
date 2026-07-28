@@ -56,10 +56,11 @@ func _ready() -> void:
 		settings.setting_changed.connect(_on_setting_changed)
 
 	# NEW: Signal Playwright that the engine is ready
-	if OS.has_feature("web"):if OS.has_feature("web"):
-		JavaScriptBridge.eval("window.godotInitialized = true")
-		JavaScriptBridge.eval("window.currentLogLevel = " + str(settings.current_log_level))
-		JavaScriptBridge.eval("window.godotInitialized = true")
+	if OS.has_feature("web"):
+		if OS.has_feature("web"):
+			JavaScriptBridge.eval("window.godotInitialized = true")
+			JavaScriptBridge.eval("window.currentLogLevel = " + str(settings.current_log_level))
+			JavaScriptBridge.eval("window.godotInitialized = true")
 
 
 ## Reactive handler for the Observer Pattern connected to GameSettingsResource signals[cite: 18].
