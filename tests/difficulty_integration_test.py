@@ -298,7 +298,9 @@ def test_difficulty_integration(page: Page) -> None:
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
                 with open(
-                    "v8_coverage_difficulty_integration_test.json", "w", encoding="utf-8"
+                    "v8_coverage_difficulty_integration_test.json",
+                    "w",
+                    encoding="utf-8",
                 ) as f:
                     json.dump(coverage, f)
             except Exception as cov_err:
