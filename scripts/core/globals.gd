@@ -58,7 +58,9 @@ func _ready() -> void:
 	# Signal Playwright that the engine is ready and initialize current log level state
 	if OS.has_feature("web"):
 		JavaScriptBridge.eval("window.godotInitialized = true")
-		JavaScriptBridge.eval("window.currentLogLevel = " + JSON.stringify(settings.current_log_level))
+		JavaScriptBridge.eval(
+			"window.currentLogLevel = " + JSON.stringify(settings.current_log_level)
+		)
 
 
 ## Reactive handler for the Observer Pattern connected to GameSettingsResource signals[cite: 18].
