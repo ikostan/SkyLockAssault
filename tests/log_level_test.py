@@ -1,14 +1,14 @@
 # Copyright (C) 2025-2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
-# tests/test_log_level_setting.py
+# tests/log_level_test.py
 """
 Log Level Setting Test (Playwright, Python)
 ===========================================
 
 Overview
 --------
-Verifies that cycling through all log levels (DEBUG, INFO, WARNING, ERROR, NONE)
-correctly updates the application state in Advanced settings.
+Verifies that cycling through all log levels (DEBUG, INFO, WARNING,
+ERROR, NONE) correctly updates the application state in Advanced settings.
 """
 
 import json
@@ -21,7 +21,6 @@ from playwright.sync_api import Page, expect
 from tests.test_utils import (
     DEFAULT_TIMEOUT,
     TEST_TIMEOUT,
-    wait_for_console_log,
 )
 
 
@@ -32,13 +31,15 @@ def test_log_level_setting(page: Page) -> None:
     Steps:
     - Open game page and wait for Godot initialization.
     - Navigate to Options ➔ Advanced settings.
-    - Sequentially test all log levels (0 to 4) and verify `window.currentLogLevel`.
+    - Sequentially test all log levels (0 to 4) and verify
+      `window.currentLogLevel`.
     """
     logs: list[dict[str, str]] = []
     cdp_session = None
     coverage_started = False
 
     def on_console(msg: Any) -> None:
+        """Console message handler to capture logs."""
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
@@ -47,7 +48,8 @@ def test_log_level_setting(page: Page) -> None:
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
         cdp_session.send(
-            "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
+            "Profiler.startPreciseCoverage",
+            {"callCount": True, "detailed": True},
         )
         coverage_started = True
 
@@ -67,7 +69,9 @@ def test_log_level_setting(page: Page) -> None:
         assert "SkyLockAssault" in page.title(), "Title not found"
 
         # 2. Open Options menu
-        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_selector(
+            "#options-button", state="visible", timeout=TEST_TIMEOUT
+        )
         page.wait_for_function(
             "() => typeof window.optionsPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
@@ -88,7 +92,8 @@ def test_log_level_setting(page: Page) -> None:
             timeout=TEST_TIMEOUT,
         )
 
-        # 4. Cycle through all log levels (0: DEBUG, 1: INFO, 2: WARNING, 3: ERROR, 4: NONE)
+        # 4. Cycle through all log levels:
+        # (0: DEBUG, 1: INFO, 2: WARNING, 3: ERROR, 4: NONE)
         log_levels = [
             (0, "DEBUG"),
             (1, "INFO"),
@@ -100,16 +105,18 @@ def test_log_level_setting(page: Page) -> None:
         for level_idx, level_name in log_levels:
             page.evaluate(f"window.changeLogLevel([{level_idx}])")
 
-            # Deterministically wait until window.currentLogLevel matches the target index
+            # Deterministically wait until window.currentLogLevel
+            # matches the target index
             page.wait_for_function(
                 f"() => window.currentLogLevel === {level_idx}",
                 timeout=TEST_TIMEOUT,
             )
 
             current_level = page.evaluate("window.currentLogLevel")
-            assert (
-                current_level == level_idx
-            ), f"Expected log level {level_idx} ({level_name}), got {current_level}"
+            assert current_level == level_idx, (
+                f"Expected log level {level_idx} ({level_name}), "
+                f"got {current_level}"
+            )
 
     except Exception as e:
         print(f"Test suite failed: {str(e)}")
@@ -119,7 +126,8 @@ def test_log_level_setting(page: Page) -> None:
             path=f"artifacts/test_log_level_setting_failure_{timestamp}.png"
         )
         log_file = (
-            f"artifacts/test_log_level_setting_failure_console_logs_{timestamp}.txt"
+            f"artifacts/test_log_level_setting_failure_"
+            f"console_logs_{timestamp}.txt"
         )
         with open(log_file, "w", encoding="utf-8") as f:
             for log in logs:
@@ -128,11 +136,15 @@ def test_log_level_setting(page: Page) -> None:
     finally:
         if cdp_session and coverage_started:
             try:
-                coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
+                coverage = cdp_session.send(
+                    "Profiler.takePreciseCoverage"
+                )["result"]
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
                 with open(
-                    "v8_coverage_log_level_setting_test.json", "w", encoding="utf-8"
+                    "v8_coverage_log_level_setting_test.json",
+                    "w",
+                    encoding="utf-8",
                 ) as f:
                     json.dump(coverage, f)
             except Exception as cov_err:
