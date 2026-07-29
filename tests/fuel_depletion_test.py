@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Egor Kostan
+# Copyright (C) 2025-2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 # tests/fuel_depletion_test.py
 """
@@ -7,9 +7,9 @@ Fuel Depletion Test (Playwright, Python)
 
 Overview
 --------
-Validates that fuel depletes at the expected rate under difficulty 2.0.
-Drives the Godot HTML5 export via DOM overlays and directly queries
-`window.getCurrentFuel()` via the JavaScript bridge.
+Validates that fuel depletes strictly and monotonically under difficulty 2.0.
+Drives the Godot HTML5 export via DOM overlays and directly samples `window.currentFuel`
+exposed via the JavaScript bridge.
 """
 
 import json
@@ -28,10 +28,10 @@ from tests.test_utils import (
 
 def test_fuel_depletion(page: Page) -> None:
     """
-    Validate fuel depletes under difficulty 2.0 after starting the level.
+    Validate fuel depletes monotonically under difficulty 2.0 after starting the level.
 
     Navigates menus via DOM overlays/callbacks, sets difficulty to 2.0, starts
-    the game, and queries `window.getCurrentFuel()` to verify depletion rate.
+    the game, and samples `window.currentFuel` over time to verify depletion rate and monotonicity.
     """
     logs: list[dict[str, str]] = []
     cdp_session = None
@@ -128,8 +128,7 @@ def test_fuel_depletion(page: Page) -> None:
         page.evaluate("window.changeDifficulty([2.0])")
         wait_for_console_log(
             logs,
-            lambda text: "setting 'difficulty' updated to: 2" in text
-            or "difficulty" in text,
+            lambda text: "setting 'difficulty' updated to: 2" in text,
             pre_change_log_count,
             page,
             timeout_ms=DEFAULT_TIMEOUT,
@@ -182,25 +181,45 @@ def test_fuel_depletion(page: Page) -> None:
             timeout_ms=DEFAULT_TIMEOUT,
         )
 
-        # 7. Focus Canvas and verify fuel depletion via console logs
+        # 7. Focus Canvas and sample window.currentFuel deterministically as it ticks
         canvas.focus()
-        pre_change_log_count = len(logs)
 
-        # Wait until we receive a fuel log showing it has dropped below 95.0 under difficulty 2.0
-        wait_for_console_log(
-            logs,
-            lambda text: "setting 'current_fuel' updated to:" in text
-            and float(text.split("updated to: ")[1]) < 95.0,
-            pre_change_log_count,
-            page,
-            timeout_ms=DEFAULT_TIMEOUT,
+        # Wait deterministically until window.currentFuel is initialized
+        page.wait_for_function(
+            "() => typeof window.currentFuel === 'number'",
+            timeout=DEFAULT_TIMEOUT,
         )
 
-        fuel_logs = [log["text"] for log in logs if "current_fuel" in log["text"]]
-        assert len(fuel_logs) > 0, "No fuel logs found"
+        fuel_samples: list[float] = []
+        sample_count = 5
 
-        last_fuel = float(fuel_logs[-1].split("updated to: ")[1])
-        assert last_fuel < 95.0, f"Expected faster drop (<95.0), got {last_fuel}"
+        # Record initial reading
+        last_val = float(page.evaluate("() => window.currentFuel"))
+        fuel_samples.append(last_val)
+
+        # Collect subsequent samples by waiting for actual timer ticks
+        for _ in range(sample_count - 1):
+            page.wait_for_function(
+                f"() => typeof window.currentFuel === 'number' && window.currentFuel < {last_val}",
+                timeout=DEFAULT_TIMEOUT,
+            )
+            last_val = float(page.evaluate("() => window.currentFuel"))
+            fuel_samples.append(last_val)
+
+        # Sanity check: fuel values must be numeric and within [0, 100]
+        for fuel in fuel_samples:
+            assert 0.0 <= fuel <= 100.0, f"Fuel out of expected range [0, 100]: {fuel}"
+
+        # Monotonic decrease check: fuel must strictly decrease over time
+        for earlier, later in zip(fuel_samples, fuel_samples[1:]):
+            assert later < earlier, f"Fuel did not strictly decrease: {earlier} -> {later}"
+
+        # Depletion rate check: total drop across 4 ticks at cruise speed (~2.8 units)
+        total_drop = fuel_samples[0] - fuel_samples[-1]
+        assert (
+                total_drop >= 2.5
+        ), f"Fuel did not deplete enough for difficulty 2.0: drop={total_drop}, samples={fuel_samples}"
+
     except Exception as e:
         print(f"Test suite failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
