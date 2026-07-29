@@ -31,7 +31,8 @@ def test_fuel_depletion(page: Page) -> None:
     Validate fuel depletes monotonically under difficulty 2.0 after starting the level.
 
     Navigates menus via DOM overlays/callbacks, sets difficulty to 2.0, starts
-    the game, and samples `window.currentFuel` over time to verify depletion rate and monotonicity.
+    the game, and samples `window.currentFuel` over time to verify depletion rate
+    and monotonicity.
     """
     logs: list[dict[str, str]] = []
     cdp_session = None
