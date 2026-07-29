@@ -43,6 +43,7 @@ def test_weapon_firing(page: Page) -> None:
     coverage_started = False
 
     def on_console(msg: Any) -> None:
+        """Console message handler to capture logs."""
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
