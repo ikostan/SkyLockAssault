@@ -33,7 +33,6 @@ import pytest
 from playwright.sync_api import Page
 
 from tests.test_utils import (
-    DEFAULT_TIMEOUT,
     TEST_TIMEOUT,
     init_page_and_wait_ready,
     open_audio_menu,
