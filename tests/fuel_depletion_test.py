@@ -212,12 +212,14 @@ def test_fuel_depletion(page: Page) -> None:
 
         # Monotonic decrease check: fuel must strictly decrease over time
         for earlier, later in zip(fuel_samples, fuel_samples[1:]):
-            assert later < earlier, f"Fuel did not strictly decrease: {earlier} -> {later}"
+            assert (
+                later < earlier
+            ), f"Fuel did not strictly decrease: {earlier} -> {later}"
 
         # Depletion rate check: total drop across 4 ticks at cruise speed (~2.8 units)
         total_drop = fuel_samples[0] - fuel_samples[-1]
         assert (
-                total_drop >= 2.5
+            total_drop >= 2.5
         ), f"Fuel did not deplete enough for difficulty 2.0: drop={total_drop}, samples={fuel_samples}"
 
     except Exception as e:

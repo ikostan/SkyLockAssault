@@ -199,7 +199,7 @@ def test_difficulty_integration(page: Page) -> None:
             pre_change_log_count,
             page,
         )
-        
+
         # Return to Options menu from Gameplay Settings
         page.wait_for_selector(
             "#gameplay-back-button", state="visible", timeout=TEST_TIMEOUT
