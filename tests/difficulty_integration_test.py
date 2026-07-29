@@ -296,7 +296,10 @@ def test_difficulty_integration(page: Page) -> None:
         page.screenshot(
             path=(f"artifacts/test_difficulty_integration_failure_{timestamp}.png")
         )
-        log_file = f"artifacts/test_difficulty_integration_failure_console_logs_{timestamp}.txt"
+        log_file = (
+            f"artifacts/test_difficulty_integration_failure_"
+            f"console_logs_{timestamp}.txt"
+        )
         with open(log_file, "w", encoding="utf-8") as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
