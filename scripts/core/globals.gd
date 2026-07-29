@@ -55,12 +55,10 @@ func _ready() -> void:
 	if settings:
 		settings.setting_changed.connect(_on_setting_changed)
 
-	# NEW: Signal Playwright that the engine is ready
+	# Signal Playwright that the engine is ready and initialize current log level state
 	if OS.has_feature("web"):
-		if OS.has_feature("web"):
-			JavaScriptBridge.eval("window.godotInitialized = true")
-			JavaScriptBridge.eval("window.currentLogLevel = " + str(settings.current_log_level))
-			JavaScriptBridge.eval("window.godotInitialized = true")
+		JavaScriptBridge.eval("window.godotInitialized = true")
+		JavaScriptBridge.eval("window.currentLogLevel = " + JSON.stringify(settings.current_log_level))
 
 
 ## Reactive handler for the Observer Pattern connected to GameSettingsResource signals[cite: 18].
@@ -83,11 +81,11 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	var log_msg: String = "Setting '%s' updated to: %s" % [setting_name, str(new_value)]
 
 	# High-frequency setting handling: 'current_fuel' mutates rapidly during gameplay loops.
-	# Bypass standard disk I/O and standard log spam to preserve game performance[cite: 18].
+	# Bypass standard disk I/O and standard log spam to preserve game performance.
 	if setting_name == "current_fuel":
 		# Push live fuel value directly to browser window scope for Playwright E2E assertions
 		if OS.has_feature("web"):
-			JavaScriptBridge.eval("window.currentFuel = " + str(new_value))
+			JavaScriptBridge.eval("window.currentFuel = " + JSON.stringify(new_value))
 
 		# Conditionally log fuel updates ONLY if log level is explicitly set to DEBUG
 		if is_instance_valid(settings) and settings.current_log_level == LogLevel.DEBUG:
@@ -97,7 +95,7 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	# Web / E2E state synchronization: Expose current log level to window.currentLogLevel
 	if setting_name == "current_log_level":
 		if OS.has_feature("web"):
-			JavaScriptBridge.eval("window.currentLogLevel = " + str(new_value))
+			JavaScriptBridge.eval("window.currentLogLevel = " + JSON.stringify(new_value))
 
 	# Log standard setting mutations at DEBUG level[cite: 18]
 	log_message(log_msg, LogLevel.DEBUG)
