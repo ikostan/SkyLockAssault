@@ -441,9 +441,11 @@ def test_reset_flow(page: Page) -> None:
             page,
         )
 
-        # Explicitly confirm all volume channels are at 1.0 in the UI and state before reload
+        # Explicitly confirm all volume channels are at 1.0
+        # in the UI and state before reload
         page.wait_for_function(
-            "() => parseFloat(document.getElementById('master-slider').value) === 1.0 && "
+            "() => "
+            "parseFloat(document.getElementById('master-slider').value) === 1.0 && "
             "parseFloat(document.getElementById('music-slider').value) === 1.0 && "
             "parseFloat(document.getElementById('sfx-slider').value) === 1.0 && "
             "parseFloat(document.getElementById('weapon-slider').value) === 1.0 && "
