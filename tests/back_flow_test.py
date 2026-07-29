@@ -72,7 +72,8 @@ def test_back_flow(page: Page) -> None:
             "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
         )
 
-        # 1-3. Load engine, open options, set log level to DEBUG (0), and open audio menu
+        # 1-3. Load engine, open options, set log level to DEBUG (0),
+        # and open audio menu
         init_page_and_wait_ready(page)
         open_options_menu(page)
         set_log_level(page, logs, level_index=0)
