@@ -202,7 +202,8 @@ def test_fuel_depletion(page: Page) -> None:
         # Collect subsequent samples by waiting for actual timer ticks
         for _ in range(sample_count - 1):
             page.wait_for_function(
-                f"() => typeof window.currentFuel === 'number' && window.currentFuel < {last_val}",
+                f"() => typeof window.currentFuel === 'number' "
+                f"&& window.currentFuel < {last_val}",
                 timeout=DEFAULT_TIMEOUT,
             )
             last_val = float(page.evaluate("() => window.currentFuel"))
@@ -220,9 +221,10 @@ def test_fuel_depletion(page: Page) -> None:
 
         # Depletion rate check: total drop across 4 ticks at cruise speed (~2.8 units)
         total_drop = fuel_samples[0] - fuel_samples[-1]
-        assert (
-            total_drop >= 2.5
-        ), f"Fuel did not deplete enough for difficulty 2.0: drop={total_drop}, samples={fuel_samples}"
+        assert total_drop >= 2.5, (
+            f"Fuel did not deplete enough for difficulty 2.0: "
+            f"drop={total_drop}, samples={fuel_samples}"
+        )
 
     except Exception as e:
         print(f"Test suite failed: {str(e)}")
