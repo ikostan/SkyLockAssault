@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Egor Kostan
+# Copyright (C) 2025-2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 # tests/refactor/difficulty_integration_test.py
 """
@@ -7,28 +7,38 @@ Difficulty Integration Test (Playwright, Python)
 
 Overview
 --------
-This module contains an end-to-end integration test that verifies difficulty selection
-propagates correctly from the options menu into gameplay. The test automates the browser
-with Playwright (sync API), drives the Godot HTML5 export via DOM overlays and exposed JavaScript
-callbacks (`window.xxxPressed`), and asserts on console log messages emitted by the game to
-validate behavior.
+This module contains an end-to-end integration test that verifies
+difficulty selection propagates correctly from the options menu into
+gameplay. The test automates the browser with Playwright (sync API),
+drives the Godot HTML5 export via DOM overlays and exposed JavaScript
+callbacks (`window.xxxPressed`), and asserts on console log messages
+emitted by the game to validate behavior.
 
 Specifically, the test:
-- Loads the game at http://localhost:8080/index.html and verifies engine initialization (`window.godotInitialized === true`), canvas, and title.
-- Opens Options -> Advanced settings, sets Log Level to DEBUG (`window.changeLogLevel([0])`) to surface detailed logs.
-- Opens Gameplay settings, sets Difficulty to 2.0 (`window.changeDifficulty([2.0])`).
-- Returns to the main menu and starts the game (`window.startPressed([])`).
-- Waits for scene initialization, focuses canvas, fires weapon (Space key), and verifies execution.
-- Asserts on expected logs for log level change, navigation, and gameplay initialization under the chosen difficulty.
-  It also records JavaScript coverage via CDP as a workaround for missing Playwright Python coverage API.
+- Loads the game at http://localhost:8080/index.html and verifies
+  engine initialization (`window.godotInitialized === true`),
+  canvas, and title.
+- Opens Options -> Advanced settings, sets Log Level to DEBUG
+  (`window.changeLogLevel([0])`) to surface detailed logs.
+- Opens Gameplay settings, sets Difficulty to 2.0
+  (`window.changeDifficulty([2.0])`).
+- Returns to the main menu and starts the game
+  (`window.startPressed([])`).
+- Waits for scene initialization, focuses canvas, fires weapon
+  (Space key), and verifies execution.
+- Asserts on expected logs for log level change, navigation, and
+  gameplay initialization under the chosen difficulty.
+  It also records JavaScript coverage via CDP as a workaround
+  for missing Playwright Python coverage API.
 
 Prerequisites
 -------------
-- A local server hosting the game at http://localhost:8080/index.html (see files/docs/Docker_Local_Test_Server.md).
+- A local server hosting the game at http://localhost:8080/index.html
+  (see files/docs/Docker_Local_Test_Server.md).
 - Python with pytest and Playwright installed. Example:
   - pip install pytest playwright
   - playwright install chromium
-- The Godot HTML5 build should emit console logs used by this test, including:
+- The Godot HTML5 build should emit console logs used by this test:
   - "Options button pressed." / "Options menu loaded."
   - "Back button pressed."
   - "Start Game menu button pressed."
@@ -39,34 +49,35 @@ Prerequisites
 
 How It Works
 ------------
-- The test leverages shared browser fixtures from ``tests/conftest.py`` to execute Chromium with GPU/WebGL flags.
-- It creates a CDP session to start precise JavaScript coverage collection for V8, then
-  listens to browser console events to gather logs for assertions.
-- UI interactions use DOM overlays and exposed window callbacks (e.g. ``window.optionsPressed``,
-  ``window.changeDifficulty``) synchronized deterministically with ``wait_for_console_log``.
-- Asserts on engine logs during navigation, level transition, and weapon invocation.
+- The test leverages shared browser fixtures from ``tests/conftest.py``
+  to execute Chromium with GPU/WebGL flags.
+- It creates a CDP session to start precise JavaScript coverage collection
+  for V8, then listens to browser console events to gather logs.
+- UI interactions use DOM overlays and exposed window callbacks
+  (e.g., ``window.optionsPressed``, ``window.changeDifficulty``)
+  synchronized deterministically with ``wait_for_console_log``.
+- Asserts on engine logs during navigation, level transition,
+  and weapon invocation.
 
 Artifacts
 ---------
-- v8_coverage_difficulty_integration_test.json: V8 coverage captured via CDP and saved at teardown.
+- v8_coverage_difficulty_integration_test.json: V8 coverage captured via
+  CDP and saved at teardown.
 - artifacts/test_difficulty_integration_failure_*.png: Screenshot on failure.
-- artifacts/test_difficulty_integration_failure_console_logs_*.txt: Console logs on failure.
+- artifacts/test_difficulty_integration_failure_console_logs_*.txt:
+  Console logs on failure.
 
 Running the Test
 ----------------
-- Run only this test: pytest tests/refactor/difficulty_integration_test.py -k difficulty_integration_test -q
-- Breakdown of the Command
-    * `pytest`: The command to run pytest, the Python testing framework.
-    * `tests/refactor/difficulty_integration_test.py`: The target test file path.
-    * `-k difficulty_integration_test`: Filters tests to run only those matching this substring.
-    * `-q`: Short for --quiet, reduces output to minimal information.
+- Run only this test:
+  pytest tests/refactor/difficulty_integration_test.py -k difficulty_integration_test -q
 
 Maintenance Notes
 -----------------
-- Keep asserted log strings in sync with the Godot scripts (options_menu.gd, main_menu.gd,
-  weapon.gd, etc.).
-- Balance changes to fuel or weapon cooldown may require adjusting thresholds or asserted
-  log values.
+- Keep asserted log strings in sync with the Godot scripts
+  (options_menu.gd, main_menu.gd, weapon.gd, etc.).
+- Balance changes to fuel or weapon cooldown may require adjusting
+  thresholds or asserted log values.
 """
 
 import json
