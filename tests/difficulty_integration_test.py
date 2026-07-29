@@ -294,13 +294,9 @@ def test_difficulty_integration(page: Page) -> None:
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
         page.screenshot(
-            path=(
-                f"artifacts/test_difficulty_integration_failure_{timestamp}.png"
-            )
+            path=(f"artifacts/test_difficulty_integration_failure_{timestamp}.png")
         )
-        log_file = (
-            f"artifacts/test_difficulty_integration_failure_console_logs_{timestamp}.txt"
-        )
+        log_file = f"artifacts/test_difficulty_integration_failure_console_logs_{timestamp}.txt"
         with open(log_file, "w", encoding="utf-8") as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")

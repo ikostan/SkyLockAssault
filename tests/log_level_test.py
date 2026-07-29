@@ -69,9 +69,7 @@ def test_log_level_setting(page: Page) -> None:
         assert "SkyLockAssault" in page.title(), "Title not found"
 
         # 2. Open Options menu
-        page.wait_for_selector(
-            "#options-button", state="visible", timeout=TEST_TIMEOUT
-        )
+        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
         page.wait_for_function(
             "() => typeof window.optionsPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
@@ -126,8 +124,7 @@ def test_log_level_setting(page: Page) -> None:
             path=f"artifacts/test_log_level_setting_failure_{timestamp}.png"
         )
         log_file = (
-            f"artifacts/test_log_level_setting_failure_"
-            f"console_logs_{timestamp}.txt"
+            f"artifacts/test_log_level_setting_failure_" f"console_logs_{timestamp}.txt"
         )
         with open(log_file, "w", encoding="utf-8") as f:
             for log in logs:
@@ -136,9 +133,7 @@ def test_log_level_setting(page: Page) -> None:
     finally:
         if cdp_session and coverage_started:
             try:
-                coverage = cdp_session.send(
-                    "Profiler.takePreciseCoverage"
-                )["result"]
+                coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
                 with open(
