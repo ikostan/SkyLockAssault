@@ -63,20 +63,20 @@ func _ready() -> void:
 		)
 
 
-## Reactive handler for the Observer Pattern connected to GameSettingsResource signals[cite: 18].
+## Reactive handler for the Observer Pattern connected to GameSettingsResource signals.
 ##
 ## Triggers centralized side effects whenever a setting property is mutated.
 ## Handles conditional console logging, encrypted disk persistence, and real-time state
-## synchronization with the browser window for Web builds and Playwright E2E tests[cite: 18].
+## synchronization with the browser window for Web builds and Playwright E2E tests.
 ##
-## :param setting_name: The string identifier of the modified setting property[cite: 18].
+## :param setting_name: The string identifier of the modified setting property.
 ## :type setting_name: String
-## :param new_value: The updated property value[cite: 18].
+## :param new_value: The updated property value.
 ## :type new_value: Variant
 ## :rtype: void
 func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	# Guard: Skip persistence, logging, and JS bridge calls during bulk settings loading
-	# to prevent disk I/O lag, log spam, and redundant bridge updates during initialization[cite: 18].
+	# to prevent disk I/O lag, log spam, and redundant bridge updates during initialization.
 	if _is_loading_settings:
 		return
 
@@ -99,10 +99,10 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 		if OS.has_feature("web"):
 			JavaScriptBridge.eval("window.currentLogLevel = " + JSON.stringify(new_value))
 
-	# Log standard setting mutations at DEBUG level[cite: 18]
+	# Log standard setting mutations at DEBUG level
 	log_message(log_msg, LogLevel.DEBUG)
 
-	# Automatically persist updated setting values to encrypted disk storage[cite: 18]
+	# Automatically persist updated setting values to encrypted disk storage
 	_save_settings()
 
 
@@ -427,7 +427,7 @@ func _get_encryption_key() -> String:
 	# Safe placeholder.
 	# This is an open source repo, so the REAL salt
 	# is injected by GitHub Actions / CI pipeline during the build process.
-	var salt: String = "CI_INJECT_SALT_HERE"
+	var salt: String = "playwright_dummy_salt_123"
 
 	# 1. FAILSAFE: If the salt is literally empty, always abort
 	if salt.is_empty():
