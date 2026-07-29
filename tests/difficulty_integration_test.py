@@ -195,12 +195,11 @@ def test_difficulty_integration(page: Page) -> None:
         page.evaluate("window.changeDifficulty([2.0])")
         wait_for_console_log(
             logs,
-            lambda text: "setting 'difficulty' updated to: 2" in text
-            or "difficulty" in text,
+            lambda text: "setting 'difficulty' updated to: 2" in text,
             pre_change_log_count,
             page,
         )
-
+        
         # Return to Options menu from Gameplay Settings
         page.wait_for_selector(
             "#gameplay-back-button", state="visible", timeout=TEST_TIMEOUT
