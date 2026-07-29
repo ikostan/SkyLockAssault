@@ -157,7 +157,9 @@ def set_log_level(page: Page, logs: list[dict[str, str]], level_index: int = 0) 
     page.evaluate("window.advancedBackPressed([])")
 
 
-def set_difficulty(page: Page, logs: list[dict[str, str]], difficulty: float = 2.0) -> None:
+def set_difficulty(
+    page: Page, logs: list[dict[str, str]], difficulty: float = 2.0
+) -> None:
     """Navigate to Gameplay Settings, set difficulty, and return to Options."""
     page.wait_for_selector("#gameplay-button", state="visible", timeout=TEST_TIMEOUT)
     page.wait_for_function(

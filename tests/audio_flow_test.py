@@ -257,7 +257,9 @@ def test_audio_flow(page: Page) -> None:
         with open(log_file, "w", encoding="utf-8") as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
-        with open(f"artifacts/test_audio_failure_html_{timestamp}.html", "w", encoding="utf-8") as f:
+        with open(
+            f"artifacts/test_audio_failure_html_{timestamp}.html", "w", encoding="utf-8"
+        ) as f:
             f.write(page.content())
         raise
     finally:

@@ -185,7 +185,9 @@ def test_back_flow(page: Page) -> None:
         timestamp: int = int(time.time())
         page.screenshot(path=f"artifacts/test_back_failure_screenshot_{timestamp}.png")
         with open(
-            f"artifacts/test_back_failure_console_logs_{timestamp}.txt", "w", encoding="utf-8"
+            f"artifacts/test_back_failure_console_logs_{timestamp}.txt",
+            "w",
+            encoding="utf-8",
         ) as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
