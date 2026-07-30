@@ -127,11 +127,10 @@ def test_back_flow(shared_page: Page) -> None:
         ), "State mutated without changes"
 
         # Re-enter audio via page reload
-        shared_page.reload(wait_until="networkidle")
+        shared_page.reload(wait_until="domcontentloaded")
         shared_page.wait_for_function(
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
-
         open_options_menu(shared_page)
         open_audio_menu(shared_page)
 
