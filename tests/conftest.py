@@ -129,7 +129,10 @@ def shared_page(browser: Browser) -> Page:
     # 1. Neutralize native JS alert/confirm dialogs so they never freeze CDP
     page.add_init_script("""
         window.alert = (msg) => console.log('[STUBBED ALERT]: ' + msg);
-        window.confirm = (msg) => { console.log('[STUBBED CONFIRM]: ' + msg); return true; };
+        window.confirm = (msg) => {
+            console.log('[STUBBED CONFIRM]: ' + msg);
+            return true;
+        };
     """)
     page.on("dialog", lambda dialog: dialog.dismiss())
 
@@ -146,7 +149,9 @@ def shared_page(browser: Browser) -> Page:
         page.evaluate("""() => {
             const canvas = document.getElementById('canvas');
             if (canvas) {
-                const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+                const gl = (
+                    canvas.getContext('webgl2') || canvas.getContext('webgl')
+                );
                 if (gl) {
                     const loseContext = gl.getExtension('WEBGL_lose_context');
                     if (loseContext) loseContext.loseContext();
@@ -170,11 +175,18 @@ def soft_ui_reset(request):
             page.evaluate("""() => {
                 localStorage.clear();
                 sessionStorage.clear();
-                if (typeof window.audioBackPressed === 'function') window.audioBackPressed([]);
-                if (typeof window.controlsBackPressed === 'function') window.controlsBackPressed([]);
-                if (typeof window.gameplayBackPressed === 'function') window.gameplayBackPressed([]);
-                if (typeof window.advancedBackPressed === 'function') window.advancedBackPressed([]);
-                if (typeof window.optionsBackPressed === 'function') window.optionsBackPressed([]);
+                const hooks = [
+                    'audioBackPressed',
+                    'controlsBackPressed',
+                    'gameplayBackPressed',
+                    'advancedBackPressed',
+                    'optionsBackPressed'
+                ];
+                hooks.forEach((hook) => {
+                    if (typeof window[hook] === 'function') {
+                        window[hook]([]);
+                    }
+                });
             }""")
         except Exception:
             pass
