@@ -66,7 +66,16 @@ def init_cdp_coverage(page: Page) -> tuple[Any, bool]:
 def init_page_and_wait_ready(
     page: Page, url: str = "http://localhost:8080/index.html"
 ) -> None:
-    """Navigates to the game page and waits for Godot engine initialization."""
+    """Navigates to the game page and waits for Godot engine initialization if not already loaded."""
+    try:
+        if page.evaluate("window.godotInitialized === true"):
+            # Page is already initialized via shared_page fixture; skip redundant reload
+            canvas = page.locator("canvas")
+            expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
+            return
+    except Exception:
+        pass
+
     page.goto(url, wait_until="domcontentloaded", timeout=DEFAULT_TIMEOUT)
     page.wait_for_function(
         "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT

@@ -34,7 +34,6 @@ from playwright.sync_api import Page
 
 from tests.test_utils import (
     TEST_TIMEOUT,
-    init_page_and_wait_ready,
     open_audio_menu,
     open_options_menu,
     set_log_level,
@@ -67,7 +66,6 @@ def test_audio_flow(shared_page: Page) -> None:
 
         # 1-3. Load engine, open options, set log level to DEBUG (0),
         # and open audio menu
-        init_page_and_wait_ready(shared_page)
         open_options_menu(shared_page)
         set_log_level(shared_page, logs, level_index=0)
         open_audio_menu(shared_page, logs)
