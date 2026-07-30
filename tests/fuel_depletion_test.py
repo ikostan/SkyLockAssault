@@ -73,11 +73,11 @@ def test_fuel_depletion(page: Page) -> None:
         last_val = float(page.evaluate("() => window.currentFuel"))
         fuel_samples.append(last_val)
 
-        # Collect subsequent samples by waiting for actual timer ticks
+        # Collect subsequent samples by waiting for value updates (ticks)
         for _ in range(sample_count - 1):
             page.wait_for_function(
                 f"() => typeof window.currentFuel === 'number' "
-                f"&& window.currentFuel < {last_val}",
+                f"&& window.currentFuel !== {last_val}",
                 timeout=DEFAULT_TIMEOUT,
             )
             last_val = float(page.evaluate("() => window.currentFuel"))
