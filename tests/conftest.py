@@ -58,8 +58,10 @@ def capture_lifecycle_metrics(request):
             pass
 
 
-def pytest_terminal_summary(terminalreporter, _exitstatus, _config):
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
     """Outputs browser memory & lifecycle report at suite end."""
+    # Suppress unused argument warnings for pylint/flake8 if needed
+    _ = (exitstatus, config)
     if _LIFECYCLE_METRICS:
         terminalreporter.ensure_newline()
         terminalreporter.section(
@@ -78,8 +80,9 @@ def pytest_terminal_summary(terminalreporter, _exitstatus, _config):
         terminalreporter.ensure_newline()
 
 
-def pytest_sessionfinish(_session, _exitstatus):
+def pytest_sessionfinish(session, exitstatus):
     """Guarantees sub-processes are terminated when tests finish."""
+    _ = (session, exitstatus)
     # 1. Clean up orphaned python HTTP server sub-processes
     try:
         if os.name == "nt":  # Windows
@@ -118,7 +121,6 @@ def pytest_sessionfinish(_session, _exitstatus):
             subprocess.run([cmd, "-f", "chromium"], check=False)
     except Exception:
         pass
-
 
 @pytest.fixture(scope="module")
 def shared_page(browser: Browser) -> Page:
