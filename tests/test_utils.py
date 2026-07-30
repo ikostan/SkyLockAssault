@@ -173,9 +173,8 @@ def set_difficulty(
         timeout=TEST_TIMEOUT,
     )
     page.wait_for_function(
-        "() => window.getComputedStyle("
-        "document.getElementById('difficulty-slider')"
-        ").display === 'block'",
+        "() => { const el = document.getElementById('difficulty-slider');"
+        " return !!el && window.getComputedStyle(el).display === 'block'; }",
         timeout=TEST_TIMEOUT,
     )
     pre_change_log_count = len(logs)
