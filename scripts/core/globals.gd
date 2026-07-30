@@ -428,7 +428,7 @@ func _get_encryption_key() -> String:
 	# Safe placeholder.
 	# This is an open source repo, so the REAL salt
 	# is injected by GitHub Actions / CI pipeline during the build process.
-	var salt: String = "playwright_dummy_salt_123"
+	var salt: String = "CI_INJECT_SALT_HERE"
 
 	# 1. FAILSAFE: If the salt is literally empty, always abort
 	if salt.is_empty():
