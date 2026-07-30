@@ -18,6 +18,37 @@ from tests.test_utils import init_page_and_wait_ready
 # Storage for test lifecycle memory metrics
 _LIFECYCLE_METRICS = []
 
+# Storage for test-spawned PIDs if managed via pytest
+_TRACKED_PIDS: set[int] = set()
+
+
+def track_process_pid(pid: int) -> None:
+    """Track sub-process PIDs spawned during test execution."""
+    if pid:
+        _TRACKED_PIDS.add(pid)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Safely terminates only the sub-processes tracked during this test run."""
+    _ = (session, exitstatus)
+    for pid in list(_TRACKED_PIDS):
+        try:
+            if os.name == "nt":
+                cmd = shutil.which("taskkill") or "C:\\Windows\\System32\\taskkill.exe"
+                subprocess.run(
+                    [cmd, "/F", "/PID", str(pid)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                )
+            else:
+                os.kill(pid, 9)
+        except ProcessLookupError:
+            pass
+        except Exception:
+            pass
+    _TRACKED_PIDS.clear()
+
 
 @pytest.fixture(autouse=True)
 def capture_lifecycle_metrics(request):
@@ -79,49 +110,6 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
             )
             terminalreporter.write_line(line)
         terminalreporter.ensure_newline()
-
-
-def pytest_sessionfinish(session, exitstatus):
-    """Guarantees sub-processes are terminated when tests finish."""
-    _ = (session, exitstatus)
-    # 1. Clean up orphaned python HTTP server sub-processes running on 8080
-    try:
-        if os.name == "nt":  # Windows
-            cmd = shutil.which("taskkill") or "C:\\Windows\\System32\\taskkill.exe"
-            subprocess.run(
-                [
-                    cmd,
-                    "/F",
-                    "/IM",
-                    "python.exe",
-                    "/FI",
-                    "WINDOWTITLE eq http.server*",
-                ],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=False,
-            )
-        else:  # Linux / WSL2
-            cmd = shutil.which("pkill") or "/usr/bin/pkill"
-            subprocess.run([cmd, "-f", "python3.*http.server"], check=False)
-    except Exception:
-        pass
-
-    # 2. Force terminate lingering Playwright Chromium driver instances
-    try:
-        if os.name == "nt":
-            cmd = shutil.which("taskkill") or "C:\\Windows\\System32\\taskkill.exe"
-            subprocess.run(
-                [cmd, "/F", "/IM", "chrome.exe", "/T"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=False,
-            )
-        else:
-            cmd = shutil.which("pkill") or "/usr/bin/pkill"
-            subprocess.run([cmd, "-f", "playwright.*chromium"], check=False)
-    except Exception:
-        pass
 
 
 @pytest.fixture(scope="module")
