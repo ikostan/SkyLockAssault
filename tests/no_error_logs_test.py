@@ -25,7 +25,7 @@ import time
 from playwright.sync_api import Page, expect
 
 # Configuration for stability in different environments
-from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT
+from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT, init_page_and_wait_ready
 
 
 def test_no_error_logs_after_load(shared_page: Page) -> None:
@@ -56,16 +56,8 @@ def test_no_error_logs_after_load(shared_page: Page) -> None:
             "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
         )
 
-        shared_page.goto(
-            "http://localhost:8080/index.html",
-            wait_until="domcontentloaded",
-            timeout=DEFAULT_TIMEOUT,
-        )
-
-        # Wait deterministically for Godot engine initialization
-        shared_page.wait_for_function(
-            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
-        )
+        # Use idempotent helper to verify/ensure readiness without redundant WASM reload
+        init_page_and_wait_ready(shared_page)
 
         # Ensure canvas is rendered and visible
         canvas = shared_page.locator("canvas")

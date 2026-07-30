@@ -21,11 +21,11 @@ Test Flow
 import os
 import time
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
 # Configuration for stability in different environments
 # Default to 5000ms, but allow CI to override via environment variable
-from tests.test_utils import DEFAULT_TIMEOUT
+from tests.test_utils import init_page_and_wait_ready
 
 
 def test_no_critical_errors_on_load(shared_page: Page) -> None:
@@ -46,17 +46,8 @@ def test_no_critical_errors_on_load(shared_page: Page) -> None:
 
     try:
         # 1. Navigate to the game
-        shared_page.goto(
-            "http://localhost:8080/index.html",
-            wait_until="domcontentloaded",
-            timeout=DEFAULT_TIMEOUT,
-        )
-
-        # 2. Wait deterministically for the engine's ready signal and canvas visibility
-        shared_page.wait_for_function(
-            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
-        )
-        expect(shared_page.locator("canvas")).to_be_visible(timeout=DEFAULT_TIMEOUT)
+        # Use idempotent helper to verify/ensure readiness without redundant WASM reload
+        init_page_and_wait_ready(shared_page)
 
         # 3. Analyze captured logs for the specific patterns
         # We only check for patterns within 'error' or 'warning' logs to avoid false positives

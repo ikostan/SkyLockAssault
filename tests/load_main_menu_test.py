@@ -49,8 +49,8 @@ def test_load_main_menu(shared_page: Page) -> None:
 
     Verifies canvas visibility, godotInitialized flag, and title.
 
-    :param page: The Playwright page object.
-    :type page: Page
+    :param shared_page: The Playwright page object.
+    :type shared_page: Page
     :rtype: None
     """
     logs: list[dict[str, str]] = []
@@ -72,17 +72,6 @@ def test_load_main_menu(shared_page: Page) -> None:
         cdp_session.send("Profiler.enable")
         cdp_session.send(
             "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
-        )
-
-        shared_page.goto(
-            "http://localhost:8080/index.html",
-            wait_until="domcontentloaded",
-            timeout=DEFAULT_TIMEOUT,
-        )
-
-        # Wait deterministically for Godot engine initialization
-        shared_page.wait_for_function(
-            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
 
         # Verify canvas and title to ensure game is initialized

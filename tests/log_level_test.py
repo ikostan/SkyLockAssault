@@ -48,10 +48,8 @@ def test_log_level_setting(shared_page: Page) -> None:
     cdp_session, coverage_started = init_cdp_coverage(shared_page)
 
     try:
-        # 1. Load page and wait deterministically for Godot engine readiness
-        init_page_and_wait_ready(shared_page)
 
-        # 2. Open Options menu
+        # 1. Open Options menu
         open_options_menu(shared_page)
 
         # 3. Go to Advanced settings

@@ -75,17 +75,6 @@ def test_volume_sliders_mutes(shared_page: Page) -> None:
         )
         coverage_started = True
 
-        shared_page.goto(
-            "http://localhost:8080/index.html",
-            wait_until="networkidle",
-            timeout=DEFAULT_TIMEOUT,
-        )
-
-        # 1. Wait deterministically for Godot engine initialization
-        shared_page.wait_for_function(
-            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
-        )
-
         # Verify canvas
         canvas = shared_page.locator("canvas")
         expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
