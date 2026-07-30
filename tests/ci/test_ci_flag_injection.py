@@ -4,6 +4,8 @@ Test suite for the CI flag injection utility.
 Ensures that 'export_presets.cfg' is correctly modified to include the 'ci'
 feature flag, which is critical for bypassing production security guards
 during automated browser testing.
+
+Audited for deterministic execution (subprocess timeouts, no static sleeps).
 """
 
 import os
