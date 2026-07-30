@@ -45,14 +45,17 @@ def test_difficulty_integration(page: Page) -> None:
 
     page.on("console", on_console)
 
-    cdp_session, coverage_started = start_game_and_wait_ready(
-        page=page,
-        logs=logs,
-        difficulty=2.0,
-        log_level="DEBUG",
-    )
+    cdp_session = None
+    coverage_started = False
 
     try:
+        cdp_session, coverage_started = start_game_and_wait_ready(
+            page=page,
+            logs=logs,
+            difficulty=2.0,
+            log_level="DEBUG",
+        )
+
         # Verify canvas is present and visible
         canvas = page.locator("canvas")
         expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
@@ -76,9 +79,9 @@ def test_difficulty_integration(page: Page) -> None:
                 ]
             )
         ]
-        assert (
-            not unexpected_errors
-        ), f"Unexpected error messages found in logs: {unexpected_errors}"
+        assert not unexpected_errors, (
+            f"Unexpected error messages found in logs: {unexpected_errors}"
+        )
 
         # Focus Canvas, fire weapon, and verify execution under difficulty 2.0
         canvas.focus()
@@ -86,7 +89,8 @@ def test_difficulty_integration(page: Page) -> None:
         page.keyboard.press("Space")
         wait_for_console_log(
             logs,
-            lambda text: "weapon.fire() delegating to" in text or "firing" in text,
+            lambda text: "weapon.fire() delegating to" in text
+            or "firing" in text,
             pre_change_log_count,
             page,
         )
@@ -96,7 +100,10 @@ def test_difficulty_integration(page: Page) -> None:
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
         page.screenshot(
-            path=(f"artifacts/test_difficulty_integration_failure_" f"{timestamp}.png")
+            path=(
+                f"artifacts/test_difficulty_integration_failure_"
+                f"{timestamp}.png"
+            )
         )
         log_file = (
             f"artifacts/test_difficulty_integration_failure_"
@@ -109,7 +116,9 @@ def test_difficulty_integration(page: Page) -> None:
     finally:
         if cdp_session and coverage_started:
             try:
-                coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
+                coverage = cdp_session.send(
+                    "Profiler.takePreciseCoverage"
+                )["result"]
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
                 with open(
