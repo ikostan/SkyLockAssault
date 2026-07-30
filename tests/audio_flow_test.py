@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Egor Kostan
+# Copyright (C) 2025-2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 # tests/audio_flow_test.py
 """
@@ -30,9 +30,16 @@ import time
 from typing import Any
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
-from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT, wait_for_console_log
+from tests.test_utils import (
+    TEST_TIMEOUT,
+    init_page_and_wait_ready,
+    open_audio_menu,
+    open_options_menu,
+    set_log_level,
+    wait_for_console_log,
+)
 
 
 @pytest.mark.record_har
@@ -46,13 +53,7 @@ def test_audio_flow(page: Page) -> None:
     cdp_session = None
 
     def on_console(msg: Any) -> None:
-        """
-        Console message handler to capture logs.
-
-        :param msg: The console message.
-        :type msg: Any
-        :rtype: None
-        """
+        """Console message handler to capture logs."""
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
@@ -65,90 +66,14 @@ def test_audio_flow(page: Page) -> None:
             "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
         )
 
-        page.goto(
-            "http://localhost:8080/index.html",
-            wait_until="networkidle",
-            timeout=DEFAULT_TIMEOUT,
-        )
+        # 1-3. Load engine, open options, set log level to DEBUG (0),
+        # and open audio menu
+        init_page_and_wait_ready(page)
+        open_options_menu(page)
+        set_log_level(page, logs, level_index=0)
+        open_audio_menu(page, logs)
 
-        # 1. Wait deterministically for Godot engine initialization
-        page.wait_for_function(
-            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
-        )
-
-        # Verify canvas & title
-        canvas = page.locator("canvas")
-        expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
-        assert "SkyLockAssault" in page.title(), "Title not found"
-
-        # Open options
-        page.wait_for_function(
-            "() => typeof window.optionsPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        page.evaluate("window.optionsPressed([])")
-
-        # Go to Advanced settings
-        page.wait_for_function(
-            "() => typeof window.advancedPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        page.evaluate("window.advancedPressed([])")
-        page.wait_for_function(
-            "() => typeof window.changeLogLevel !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-
-        page.wait_for_function(
-            "() => window.getComputedStyle("
-            "document.getElementById('log-level-select')"
-            ").display === 'block'",
-            timeout=TEST_TIMEOUT,
-        )
-        # Set log level DEBUG
-        pre_change_log_count = len(logs)
-        page.evaluate("window.changeLogLevel([0])")
-        wait_for_console_log(
-            logs,
-            lambda text: "log level changed to: debug" in text,
-            pre_change_log_count,
-            page,
-        )
-
-        assert page.evaluate(
-            "document.getElementById('audio-button') !== null"
-        ), "Audio button not found/displayed"
-
-        # Go back to Options menu
-        page.wait_for_function(
-            "() => typeof window.advancedBackPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        page.evaluate("window.advancedBackPressed([])")
-
-        # Open audio
-        pre_change_log_count = len(logs)
-        page.wait_for_function(
-            "() => typeof window.audioPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        page.evaluate("window.audioPressed([])")
-
-        page.wait_for_function(
-            "() => window.getComputedStyle("
-            "document.getElementById('master-slider')"
-            ").display === 'block'",
-            timeout=TEST_TIMEOUT,
-        )
-
-        wait_for_console_log(
-            logs,
-            lambda text: "audio button pressed" in text,
-            pre_change_log_count,
-            page,
-        )
-
-        # Get initial values
+        # Get initial slider values
         initial_sfx: str = page.evaluate("document.getElementById('sfx-slider').value")
         initial_weapon: str = page.evaluate(
             "document.getElementById('weapon-slider').value"
@@ -160,7 +85,7 @@ def test_audio_flow(page: Page) -> None:
             "document.getElementById('rotors-slider').value"
         )
 
-        # WARN-01: Master muted → attempt sub-volume adjust (SFX)
+        # WARN-01: Master muted ➔ attempt sub-volume adjust (SFX)
         pre_change_log_count = len(logs)
         page.wait_for_function(
             "() => typeof window.toggleMuteMaster !== 'undefined'",
@@ -192,7 +117,7 @@ def test_audio_flow(page: Page) -> None:
             page.evaluate("document.getElementById('sfx-slider').value") == initial_sfx
         ), "SFX value changed unexpectedly"
 
-        # Master muted → attempt sub-volume adjust (Music)
+        # Master muted ➔ attempt sub-volume adjust (Music)
         pre_change_log_count = len(logs)
         page.wait_for_function(
             "() => typeof window.changeMusicVolume !== 'undefined'",
@@ -211,7 +136,7 @@ def test_audio_flow(page: Page) -> None:
             == initial_music
         ), "Music value changed unexpectedly under Master mute"
 
-        # Master muted → attempt sub-volume adjust (Rotors)
+        # Master muted ➔ attempt sub-volume adjust (Rotors)
         pre_change_log_count = len(logs)
         page.wait_for_function(
             "() => typeof window.changeRotorsVolume !== 'undefined'",
@@ -244,7 +169,7 @@ def test_audio_flow(page: Page) -> None:
             page,
         )
 
-        # WARN-02: SFX muted → attempt weapon adjust
+        # WARN-02: SFX muted ➔ attempt weapon adjust
         page.wait_for_function(
             "() => typeof window.toggleMuteSfx !== 'undefined'",
             timeout=TEST_TIMEOUT,
@@ -268,7 +193,7 @@ def test_audio_flow(page: Page) -> None:
             == initial_weapon
         ), "Weapon value changed unexpectedly"
 
-        # SFX muted → attempt rotors adjust
+        # SFX muted ➔ attempt rotors adjust
         pre_change_log_count = len(logs)
         page.wait_for_function(
             "() => typeof window.changeRotorsVolume !== 'undefined'",
@@ -300,7 +225,7 @@ def test_audio_flow(page: Page) -> None:
             page,
         )
 
-        # WARN-03: Master unmuted → adjust sub-volume (Music)
+        # WARN-03: Master unmuted ➔ adjust sub-volume (Music)
         pre_change_log_count = len(logs)
         page.wait_for_function(
             "() => typeof window.changeMusicVolume !== 'undefined'",
@@ -329,10 +254,12 @@ def test_audio_flow(page: Page) -> None:
         timestamp: int = int(time.time())
         page.screenshot(path=f"artifacts/test_audio_failure_screenshot_{timestamp}.png")
         log_file: str = f"artifacts/test_audio_failure_console_logs_{timestamp}.txt"
-        with open(log_file, "w") as f:
+        with open(log_file, "w", encoding="utf-8") as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
-        with open(f"artifacts/test_audio_failure_html_{timestamp}.html", "w") as f:
+        with open(
+            f"artifacts/test_audio_failure_html_{timestamp}.html", "w", encoding="utf-8"
+        ) as f:
             f.write(page.content())
         raise
     finally:
@@ -340,5 +267,5 @@ def test_audio_flow(page: Page) -> None:
             coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
             cdp_session.send("Profiler.stopPreciseCoverage")
             cdp_session.send("Profiler.disable")
-            with open("v8_coverage_audio_flow_test.json", "w") as f:
+            with open("v8_coverage_audio_flow_test.json", "w", encoding="utf-8") as f:
                 json.dump(coverage, f)

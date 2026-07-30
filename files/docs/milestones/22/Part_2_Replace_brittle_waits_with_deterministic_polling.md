@@ -38,6 +38,7 @@ Eliminate timing-dependent flakiness in the Playwright browser E2E test suite by
 #### 3. Test Coverage Stabilization
 
 Affected test files (all converted to deterministic waits):
+
 - `tests/audio_flow_test.py`
 - `tests/volume_sliders_mutes_test.py`
 - `tests/reset_audio_flow_test.py`
@@ -93,6 +94,22 @@ Improvements include:
 - Better isolation between tests while keeping startup overhead low
 - Clearer failure diagnostics and more maintainable test code
 - Improved CI reliability for browser-based E2E runs
+
+### ⏱️ Individual Test Execution Breakdown
+
+The HTTP server request deltas reflect observed request-to-request wall-clock intervals (inclusive of browser initialization, page reloads, test teardown, and server scheduling overhead):
+
+| Test File                                                   | Start Time | End Time   | Approx. Duration |
+|-------------------------------------------------------------|------------|------------|------------------|
+| `tests/audio_flow_test.py`                                  | `03:31:38` | `03:31:43` | **~5.0s**        |
+| `tests/back_flow_test.py` *(includes 1 page reload)*        | `03:31:43` | `03:31:52` | **~9.0s**        |
+| `tests/difficulty_flow_test.py`                             | `03:31:52` | `03:32:01` | **~9.0s**        |
+| `tests/load_main_menu_test.py`                              | `03:32:01` | `03:32:03` | **~2.0s**        |
+| `tests/navigation_to_audio_test.py`                         | `03:32:03` | `03:32:08` | **~5.0s**        |
+| `tests/no_error_logs_test.py`                               | `03:32:08` | `03:32:10` | **~2.0s**        |
+| `tests/reset_audio_flow_test.py` *(includes 1 page reload)* | `03:32:10` | `03:32:20` | **~10.0s**       |
+| `tests/validate_clean_load_test.py`                         | `03:32:20` | `03:32:22` | **~2.0s**        |
+| `tests/volume_sliders_mutes_test.py`                        | `03:32:22` | `03:32:27` | **~5.0s**        |
 
 ---
 

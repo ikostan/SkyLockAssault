@@ -52,35 +52,59 @@ func _ready() -> void:
 	_load_settings()  # Load persisted settings first
 
 	# Connect to the resource signal to centralize side effects
-	if settings:
+	if is_instance_valid(settings):
 		settings.setting_changed.connect(_on_setting_changed)
 
-	# NEW: Signal Playwright that the engine is ready
+	# Signal Playwright that the engine is ready and initialize current log level state
 	if OS.has_feature("web"):
 		JavaScriptBridge.eval("window.godotInitialized = true")
+		if is_instance_valid(settings):
+			JavaScriptBridge.eval(
+				"window.currentLogLevel = " + JSON.stringify(settings.current_log_level)
+			)
 
 
-## Reactive handler for the Observer Pattern
+## Reactive handler for the Observer Pattern connected to GameSettingsResource signals.
+##
+## Triggers centralized side effects whenever a setting property is mutated.
+## Handles conditional console logging, encrypted disk persistence, and real-time state
+## synchronization with the browser window for Web builds and Playwright E2E tests.
+##
+## :param setting_name: The string identifier of the modified setting property.
+## :type setting_name: String
+## :param new_value: The updated property value.
+## :type new_value: Variant
+## :rtype: void
 func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
-	# Skip persistence and logging if we are in a bulk-loading state
+	# Guard: Skip persistence, logging, and JS bridge calls during bulk settings loading
+	# to prevent disk I/O lag, log spam, and redundant bridge updates during initialization.
 	if _is_loading_settings:
 		return
 
-	# FIX: Ensure we are comparing String to String or using correct types
 	var log_msg: String = "Setting '%s' updated to: %s" % [setting_name, str(new_value)]
 
-	# Automatically log the change
-	# OLD: log_message(log_msg, LogLevel.DEBUG)
-	# NEW: Prevent log spam by filtering out high-frequency runtime changes like fuel ticks
-	if setting_name != "current_fuel":
-		log_message(log_msg, LogLevel.DEBUG)
+	# High-frequency setting handling: 'current_fuel' mutates rapidly during gameplay loops.
+	# Bypass standard disk I/O and standard log spam to preserve game performance.
+	if setting_name == "current_fuel":
+		# Push live fuel value directly to browser window scope for Playwright E2E assertions
+		if OS.has_feature("web"):
+			JavaScriptBridge.eval("window.currentFuel = " + JSON.stringify(new_value))
 
-	# Automatically persist to disk
-	# OLD: _save_settings()
-	# NEW: Prevent disk I/O lag by stopping current_fuel from
-	# triggering a file save on every frame/timer tick
-	if setting_name != "current_fuel":
-		_save_settings()
+		# Conditionally log fuel updates ONLY if log level is explicitly set to DEBUG
+		if is_instance_valid(settings) and settings.current_log_level == LogLevel.DEBUG:
+			log_message(log_msg, LogLevel.DEBUG)
+		return
+
+	# Web / E2E state synchronization: Expose current log level to window.currentLogLevel
+	if setting_name == "current_log_level":
+		if OS.has_feature("web"):
+			JavaScriptBridge.eval("window.currentLogLevel = " + JSON.stringify(new_value))
+
+	# Log standard setting mutations at DEBUG level
+	log_message(log_msg, LogLevel.DEBUG)
+
+	# Automatically persist updated setting values to encrypted disk storage
+	_save_settings()
 
 
 ## Centralized "ensure initial focus" helper.
