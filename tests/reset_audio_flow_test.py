@@ -19,7 +19,7 @@ import os
 import time
 from typing import Any
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
 from tests.test_utils import (
     DEFAULT_TIMEOUT,
