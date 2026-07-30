@@ -21,8 +21,7 @@ from playwright.sync_api import Page, expect
 
 from tests.test_utils import (
     DEFAULT_TIMEOUT,
-    TEST_TIMEOUT,
-    wait_for_console_log,
+    start_game_and_wait_ready,
 )
 
 
@@ -35,8 +34,6 @@ def test_fuel_depletion(page: Page) -> None:
     and monotonicity.
     """
     logs: list[dict[str, str]] = []
-    cdp_session = None
-    coverage_started = False
 
     def on_console(msg: Any) -> None:
         """Console message handler to capture logs."""
@@ -44,146 +41,23 @@ def test_fuel_depletion(page: Page) -> None:
 
     page.on("console", on_console)
 
+    cdp_session = None
+    coverage_started = False
+
     try:
-        cdp_session = page.context.new_cdp_session(page)
-        cdp_session.send("Profiler.enable")
-        cdp_session.send(
-            "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
-        )
-        coverage_started = True
-
-        page.goto(
-            "http://localhost:8080/index.html",
-            wait_until="networkidle",
-            timeout=DEFAULT_TIMEOUT,
+        # 1. Initialize CDP coverage, load page, configure settings & start game
+        cdp_session, coverage_started = start_game_and_wait_ready(
+            page=page,
+            logs=logs,
+            difficulty=2.0,
+            log_level="DEBUG",
         )
 
-        # 1. Wait deterministically for Godot engine initialization
-        page.wait_for_function(
-            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
-        )
-
+        # 2. Verify canvas visibility
         canvas = page.locator("canvas")
         expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
-        box = canvas.bounding_box()
-        assert box is not None, "Canvas not found on page"
-        assert "SkyLockAssault" in page.title(), "Title not found"
 
-        # 2. Open Options menu
-        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_function(
-            "() => typeof window.optionsPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        page.evaluate("window.optionsPressed([])")
-
-        # 3. Go to Advanced settings and set log level to DEBUG
-        page.wait_for_selector(
-            "#advanced-button", state="visible", timeout=TEST_TIMEOUT
-        )
-        page.wait_for_function(
-            "() => typeof window.advancedPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        page.evaluate("window.advancedPressed([])")
-        page.wait_for_function(
-            "() => typeof window.changeLogLevel !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-
-        pre_change_log_count = len(logs)
-        page.evaluate("window.changeLogLevel([0])")
-        wait_for_console_log(
-            logs,
-            lambda text: "log level changed to: debug" in text,
-            pre_change_log_count,
-            page,
-            timeout_ms=DEFAULT_TIMEOUT,
-        )
-
-        # Go back to Options menu
-        page.wait_for_selector(
-            "#advanced-back-button", state="visible", timeout=TEST_TIMEOUT
-        )
-        page.wait_for_function(
-            "() => typeof window.advancedBackPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        page.evaluate("window.advancedBackPressed([])")
-
-        # 4. Open Gameplay Settings to access Difficulty control
-        page.wait_for_selector(
-            "#gameplay-button", state="visible", timeout=TEST_TIMEOUT
-        )
-        page.wait_for_function(
-            "() => typeof window.gameplayPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        page.evaluate("window.gameplayPressed([])")
-
-        # Set difficulty to 2.0
-        page.wait_for_function(
-            "() => typeof window.changeDifficulty !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        pre_change_log_count = len(logs)
-        page.evaluate("window.changeDifficulty([2.0])")
-        wait_for_console_log(
-            logs,
-            lambda text: "setting 'difficulty' updated to: 2" in text,
-            pre_change_log_count,
-            page,
-            timeout_ms=DEFAULT_TIMEOUT,
-        )
-
-        # Return to Options menu from Gameplay Settings
-        page.wait_for_selector(
-            "#gameplay-back-button", state="visible", timeout=TEST_TIMEOUT
-        )
-        page.wait_for_function(
-            "() => typeof window.gameplayBackPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        page.evaluate("window.gameplayBackPressed([])")
-
-        # 5. Return to Main Menu from Options
-        page.wait_for_selector(
-            "#options-back-button", state="visible", timeout=TEST_TIMEOUT
-        )
-        page.wait_for_function(
-            "() => typeof window.optionsBackPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        pre_change_log_count = len(logs)
-        page.evaluate("window.optionsBackPressed([])")
-        wait_for_console_log(
-            logs,
-            lambda text: "options back button pressed" in text
-            or "back button pressed" in text
-            or "options menu exited" in text,
-            pre_change_log_count,
-            page,
-            timeout_ms=DEFAULT_TIMEOUT,
-        )
-
-        # 6. Start game
-        page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_function(
-            "() => typeof window.startPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        pre_change_log_count = len(logs)
-        page.evaluate("window.startPressed([])")
-
-        wait_for_console_log(
-            logs,
-            lambda text: "hud successfully wired" in text or "player ready" in text,
-            pre_change_log_count,
-            page,
-            timeout_ms=DEFAULT_TIMEOUT,
-        )
-
-        # 7. Focus Canvas and sample window.currentFuel deterministically as it ticks
+        # 3. Focus Canvas and sample window.currentFuel deterministically as it ticks
         canvas.focus()
 
         # Wait deterministically until window.currentFuel is initialized
@@ -231,7 +105,9 @@ def test_fuel_depletion(page: Page) -> None:
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
         page.screenshot(path=f"artifacts/test_fuel_depletion_failure_{timestamp}.png")
-        log_file = f"artifacts/test_fuel_depletion_failure_console_logs_{timestamp}.txt"
+        log_file = (
+            f"artifacts/test_fuel_depletion_failure_console_logs_{timestamp}.txt"
+        )
         with open(log_file, "w", encoding="utf-8") as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")

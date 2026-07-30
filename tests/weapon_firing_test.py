@@ -21,7 +21,7 @@ from playwright.sync_api import Page, expect
 
 from tests.test_utils import (
     DEFAULT_TIMEOUT,
-    TEST_TIMEOUT,
+    start_game_and_wait_ready,
     wait_for_console_log,
 )
 
@@ -39,8 +39,6 @@ def test_weapon_firing(page: Page) -> None:
     - Verify "Firing with scaled cooldown:" appears in console logs.
     """
     logs: list[dict[str, str]] = []
-    cdp_session = None
-    coverage_started = False
 
     def on_console(msg: Any) -> None:
         """Console message handler to capture logs."""
@@ -48,114 +46,27 @@ def test_weapon_firing(page: Page) -> None:
 
     page.on("console", on_console)
 
+    cdp_session = None
+    coverage_started = False
+
     try:
-        cdp_session = page.context.new_cdp_session(page)
-        cdp_session.send("Profiler.enable")
-        cdp_session.send(
-            "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
-        )
-        coverage_started = True
-
-        page.goto(
-            "http://localhost:8080/index.html",
-            wait_until="networkidle",
-            timeout=DEFAULT_TIMEOUT,
+        # 1. Initialize CDP coverage, load page, configure settings & start game
+        cdp_session, coverage_started = start_game_and_wait_ready(
+            page=page,
+            logs=logs,
+            log_level="DEBUG",
         )
 
-        # 1. Wait deterministically for Godot engine initialization
-        page.wait_for_function(
-            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
-        )
-
+        # 2. Verify canvas visibility
         canvas = page.locator("canvas")
         expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
-        assert "SkyLockAssault" in page.title(), "Title not found"
 
-        # 2. Open Options menu
-        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_function(
-            "() => typeof window.optionsPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        page.evaluate("window.optionsPressed([])")
-
-        # 3. Go to Advanced settings and set log level to DEBUG
-        page.wait_for_selector(
-            "#advanced-button", state="visible", timeout=TEST_TIMEOUT
-        )
-        page.wait_for_function(
-            "() => typeof window.advancedPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        page.evaluate("window.advancedPressed([])")
-        page.wait_for_function(
-            "() => typeof window.changeLogLevel !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-
-        pre_change_log_count = len(logs)
-        page.evaluate("window.changeLogLevel([0])")
-        wait_for_console_log(
-            logs,
-            lambda text: "log level changed to: debug" in text,
-            pre_change_log_count,
-            page,
-            timeout_ms=DEFAULT_TIMEOUT,
-        )
-
-        # Return to Options menu
-        page.wait_for_selector(
-            "#advanced-back-button", state="visible", timeout=TEST_TIMEOUT
-        )
-        page.wait_for_function(
-            "() => typeof window.advancedBackPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        page.evaluate("window.advancedBackPressed([])")
-
-        # Return to Main Menu
-        page.wait_for_selector(
-            "#options-back-button", state="visible", timeout=TEST_TIMEOUT
-        )
-        page.wait_for_function(
-            "() => typeof window.optionsBackPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        pre_change_log_count = len(logs)
-        page.evaluate("window.optionsBackPressed([])")
-        wait_for_console_log(
-            logs,
-            lambda text: "options back button pressed" in text
-            or "back button pressed" in text
-            or "options menu exited" in text,
-            pre_change_log_count,
-            page,
-            timeout_ms=DEFAULT_TIMEOUT,
-        )
-
-        # 4. Start Game
-        page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_function(
-            "() => typeof window.startPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        pre_change_log_count = len(logs)
-        page.evaluate("window.startPressed([])")
-
-        wait_for_console_log(
-            logs,
-            lambda text: "hud successfully wired" in text or "player ready" in text,
-            pre_change_log_count,
-            page,
-            timeout_ms=DEFAULT_TIMEOUT,
-        )
-
-        # 5. Focus Canvas and fire weapon
+        # 3. Focus Canvas and fire weapon
         canvas.focus()
         pre_fire_log_count = len(logs)
         page.keyboard.press("Space")
 
-        # 6. Verify weapon firing log
+        # 4. Verify weapon firing log
         wait_for_console_log(
             logs,
             lambda text: "firing with scaled cooldown:" in text,
