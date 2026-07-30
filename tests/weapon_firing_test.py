@@ -69,7 +69,7 @@ def test_weapon_firing(page: Page) -> None:
         # 4. Verify weapon firing log
         wait_for_console_log(
             logs,
-            lambda text: "firing with scaled cooldown:" in text,
+            lambda text: "firing with scaled cooldown:" in text.lower(),
             pre_fire_log_count,
             page,
             timeout_ms=DEFAULT_TIMEOUT,
