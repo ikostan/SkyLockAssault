@@ -72,6 +72,10 @@ def init_page_and_wait_ready(
         "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
     )
 
+    # Minimal visual assertion to ensure the canvas shell actually rendered
+    canvas = page.locator("canvas")
+    expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
+
 
 def open_options_menu(page: Page) -> None:
     """Navigate from Main Menu to Options menu."""
