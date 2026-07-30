@@ -67,7 +67,8 @@ def test_no_error_logs_after_load(page: Page) -> None:
             {"callCount": True, "detailed": True}
         )
 
-        # Fresh page fixture triggers page navigation & WASM startup while listeners are active
+        # Fresh page fixture triggers page navigation & WASM startup
+        # while listeners are active
         init_page_and_wait_ready(page)
 
         # Ensure canvas is rendered and visible
