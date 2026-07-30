@@ -12,9 +12,8 @@ any 'error' level logs or uncaught exceptions in the browser.
 
 Test Flow
 ---------
-- Listen to all console messages and uncaught page errors.
-- Navigate to the index page and wait for network idle.
-- Wait for window.godotInitialized (Godot _ready() signal).
+- Attach console and uncaught exception listeners to a fresh page context.
+- Navigate to index page and wait for Godot engine initialization signal.
 - Assert that no logs with type="error" or uncaught exceptions exist.
 """
 
@@ -24,13 +23,24 @@ import time
 
 from playwright.sync_api import Page, expect
 
-# Configuration for stability in different environments
 from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT, init_page_and_wait_ready
 
 
-def test_no_error_logs_after_load(shared_page: Page) -> None:
+# DO NOT REFACTOR: Must inject function-scoped `page`, NOT `shared_page`.
+def test_no_error_logs_after_load(page: Page) -> None:
     """
     E2E test to ensure zero console errors and uncaught exceptions on initial load.
+
+    IMPORTANT ARCHITECTURAL CONSTRAINT:
+    -----------------------------------
+    This test MUST consume the function-scoped `page` fixture (NOT `shared_page`).
+    Console listeners (`page.on("console")`) and page exception handlers
+    (`page.on("pageerror")`) MUST be registered BEFORE `init_page_and_wait_ready(page)`
+    triggers browser navigation and Godot WASM engine startup.
+
+    If `shared_page` is used here, Godot initializes before observation starts,
+    and `init_page_and_wait_ready()` will short-circuit without navigating—causing
+    all startup errors and GDScript compilation failures to pass undetected.
     """
     logs: list[dict[str, str]] = []
     page_errors: list[str] = []
@@ -44,27 +54,27 @@ def test_no_error_logs_after_load(shared_page: Page) -> None:
         """Capture uncaught exceptions (pageerror)."""
         page_errors.append(f"Uncaught Exception: {exc.message}\n{exc.stack}")
 
-    # Attach listeners before navigation
-    shared_page.on("console", on_console)
-    shared_page.on("pageerror", on_page_error)
+    # CRITICAL: Attach listeners BEFORE calling init_page_and_wait_ready()
+    page.on("console", on_console)
+    page.on("pageerror", on_page_error)
 
     try:
         # Start CDP session for coverage
-        cdp_session = shared_page.context.new_cdp_session(shared_page)
+        cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
         cdp_session.send(
             "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
         )
 
-        # Use idempotent helper to verify/ensure readiness without redundant WASM reload
-        init_page_and_wait_ready(shared_page)
+        # Fresh page fixture triggers page navigation & WASM startup while listeners are active
+        init_page_and_wait_ready(page)
 
         # Ensure canvas is rendered and visible
-        canvas = shared_page.locator("canvas")
+        canvas = page.locator("canvas")
         expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
 
         # Deterministically wait for main menu UI overlays to be fully mounted/ready
-        shared_page.wait_for_selector(
+        page.wait_for_selector(
             "#start-button", state="visible", timeout=TEST_TIMEOUT
         )
 
@@ -85,7 +95,7 @@ def test_no_error_logs_after_load(shared_page: Page) -> None:
         print(f"Test: 'test_no_error_logs_after_load' failed: {e!s}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time())
-        shared_page.screenshot(
+        page.screenshot(
             path=f"artifacts/test_error_logs_failure_{timestamp}.png"
         )
 
