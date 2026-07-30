@@ -6,10 +6,11 @@ Shared pytest fixtures and configs for SkyLockAssault E2E tests.
 """
 
 import os
-import subprocess
 import re
+import subprocess
 from pathlib import Path
 from typing import Generator
+
 import pytest
 from playwright.sync_api import Browser, BrowserContext, Page, Playwright
 
@@ -20,7 +21,14 @@ def pytest_sessionfinish(session, exitstatus):
     try:
         if os.name == "nt":  # Windows
             subprocess.run(
-                ["taskkill", "/F", "/IM", "python.exe", "/FI", "WINDOWTITLE eq http.server*"],
+                [
+                    "taskkill",
+                    "/F",
+                    "/IM",
+                    "python.exe",
+                    "/FI",
+                    "WINDOWTITLE eq http.server*",
+                ],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
