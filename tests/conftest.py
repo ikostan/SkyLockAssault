@@ -44,12 +44,14 @@ def capture_lifecycle_metrics(request):
             }""")
 
             if heap_info:
-                _LIFECYCLE_METRICS.append({
-                    "test": request.node.name,
-                    "used_heap_mb": heap_info["usedJSHeapMB"],
-                    "total_heap_mb": heap_info["totalJSHeapMB"],
-                    "limit_mb": heap_info["jsHeapLimitMB"],
-                })
+                _LIFECYCLE_METRICS.append(
+                    {
+                        "test": request.node.name,
+                        "used_heap_mb": heap_info["usedJSHeapMB"],
+                        "total_heap_mb": heap_info["totalJSHeapMB"],
+                        "limit_mb": heap_info["jsHeapLimitMB"],
+                    }
+                )
         except Exception:
             pass
 
@@ -58,7 +60,9 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
     """Outputs a browser memory & process lifecycle report at the end of the test suite."""
     if _LIFECYCLE_METRICS:
         terminalreporter.ensure_newline()
-        terminalreporter.section("Browser Lifecycle & Memory Metrics (#773)", sep="=", bold=True)
+        terminalreporter.section(
+            "Browser Lifecycle & Memory Metrics (#773)", sep="=", bold=True
+        )
         for entry in _LIFECYCLE_METRICS:
             terminalreporter.write_line(
                 f"  • {entry['test']:<45} | JS Heap: {entry['used_heap_mb']:>6} MB / {entry['total_heap_mb']:>6} MB (Limit: {entry['limit_mb']} MB)"
