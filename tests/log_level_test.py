@@ -100,8 +100,7 @@ def test_log_level_setting(page: Page) -> None:
             path=f"artifacts/test_log_level_setting_failure_{timestamp}.png"
         )
         log_file = (
-            f"artifacts/test_log_level_setting_failure_"
-            f"console_logs_{timestamp}.txt"
+            f"artifacts/test_log_level_setting_failure_" f"console_logs_{timestamp}.txt"
         )
         with open(log_file, "w", encoding="utf-8") as f:
             for log in logs:
