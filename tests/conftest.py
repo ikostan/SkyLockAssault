@@ -49,10 +49,17 @@ def shared_page(browser: Browser) -> Page:
     context = browser.new_context(viewport={"width": 1280, "height": 720})
     page = context.new_page()
 
-    # 1. Load shell without waiting for networkidle
+    # 1. Neutralize native JS alert/confirm dialogs so they never freeze CDP
+    page.add_init_script("""
+        window.alert = (msg) => console.log('[STUBBED ALERT]: ' + msg);
+        window.confirm = (msg) => { console.log('[STUBBED CONFIRM]: ' + msg); return true; };
+    """)
+    page.on("dialog", lambda dialog: dialog.dismiss())
+
+    # 2. Load shell using domcontentloaded
     page.goto("http://localhost:8080/index.html", wait_until="domcontentloaded")
 
-    # 2. Wait deterministically for Godot startup signal
+    # 3. Wait deterministically for Godot engine boot flag
     page.wait_for_function("() => window.godotInitialized === true", timeout=30000)
 
     yield page
