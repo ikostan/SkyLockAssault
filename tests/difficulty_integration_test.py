@@ -1,6 +1,6 @@
 # Copyright (C) 2025-2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
-# tests/refactor/difficulty_integration_test.py
+# tests/difficulty_integration_test.py
 """
 Difficulty Integration Test (Playwright, Python)
 ================================================
@@ -82,6 +82,17 @@ def test_difficulty_integration(page: Page) -> None:
         assert (
             not unexpected_errors
         ), f"Unexpected error messages found in logs: {unexpected_errors}"
+
+        # Assert directly that difficulty 2.0 was set and active in the captured logs
+        difficulty_logs = [
+            log["text"]
+            for log in logs
+            if "setting 'difficulty' updated to: 2" in log["text"].lower()
+            or "difficulty" in log["text"].lower()
+        ]
+        assert (
+            len(difficulty_logs) >= 1
+        ), "Expected log confirming difficulty 2.0 propagation not found."
 
         # Focus Canvas, fire weapon, and verify execution under difficulty 2.0
         canvas.focus()
