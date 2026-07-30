@@ -38,14 +38,13 @@ def test_weapon_firing(shared_page: Page) -> None:
     - Focus canvas and press Space key.
     - Verify "Firing with scaled cooldown:" appears in console logs.
     """
-    page = shared_page
     logs: list[dict[str, str]] = []
 
     def on_console(msg: Any) -> None:
         """Console message handler to capture logs."""
         logs.append({"type": msg.type, "text": msg.text})
 
-    page.on("console", on_console)
+    shared_page.on("console", on_console)
 
     cdp_session = None
     coverage_started = False
@@ -53,26 +52,26 @@ def test_weapon_firing(shared_page: Page) -> None:
     try:
         # 1. Initialize CDP coverage, load page, configure settings & start game
         cdp_session, coverage_started = start_game_and_wait_ready(
-            page=page,
+            page=shared_page,
             logs=logs,
             log_level="DEBUG",
         )
 
         # 2. Verify canvas visibility
-        canvas = page.locator("canvas")
+        canvas = shared_page.locator("canvas")
         expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
 
         # 3. Focus Canvas and fire weapon
         canvas.focus()
         pre_fire_log_count = len(logs)
-        page.keyboard.press("Space")
+        shared_page.keyboard.press("Space")
 
         # 4. Verify weapon firing log
         wait_for_console_log(
             logs,
             lambda text: "firing with scaled cooldown:" in text.lower(),
             pre_fire_log_count,
-            page,
+            shared_page,
             timeout_ms=DEFAULT_TIMEOUT,
         )
 
@@ -89,7 +88,7 @@ def test_weapon_firing(shared_page: Page) -> None:
         print(f"Test suite failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
-        page.screenshot(path=f"artifacts/test_weapon_firing_failure_{timestamp}.png")
+        shared_page.screenshot(path=f"artifacts/test_weapon_firing_failure_{timestamp}.png")
         log_file = f"artifacts/test_weapon_firing_failure_console_logs_{timestamp}.txt"
         with open(log_file, "w", encoding="utf-8") as f:
             for log in logs:

@@ -33,14 +33,13 @@ def test_fuel_depletion(shared_page: Page) -> None:
     the game, and samples `window.currentFuel` over time to verify depletion rate
     and monotonicity.
     """
-    page = shared_page
     logs: list[dict[str, str]] = []
 
     def on_console(msg: Any) -> None:
         """Console message handler to capture logs."""
         logs.append({"type": msg.type, "text": msg.text})
 
-    page.on("console", on_console)
+    shared_page.on("console", on_console)
 
     cdp_session = None
     coverage_started = False
@@ -48,21 +47,21 @@ def test_fuel_depletion(shared_page: Page) -> None:
     try:
         # 1. Initialize CDP coverage, load page, configure settings & start game
         cdp_session, coverage_started = start_game_and_wait_ready(
-            page=page,
+            page=shared_page,
             logs=logs,
             difficulty=2.0,
             log_level="DEBUG",
         )
 
         # 2. Verify canvas visibility
-        canvas = page.locator("canvas")
+        canvas = shared_page.locator("canvas")
         expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
 
         # 3. Focus Canvas and sample window.currentFuel deterministically as it ticks
         canvas.focus()
 
         # Wait deterministically until window.currentFuel is initialized
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.currentFuel === 'number'",
             timeout=DEFAULT_TIMEOUT,
         )
@@ -71,17 +70,17 @@ def test_fuel_depletion(shared_page: Page) -> None:
         sample_count = 5
 
         # Record initial reading
-        last_val = float(page.evaluate("() => window.currentFuel"))
+        last_val = float(shared_page.evaluate("() => window.currentFuel"))
         fuel_samples.append(last_val)
 
         # Collect subsequent samples by waiting for value updates (ticks)
         for _ in range(sample_count - 1):
-            page.wait_for_function(
+            shared_page.wait_for_function(
                 f"() => typeof window.currentFuel === 'number' "
                 f"&& window.currentFuel !== {last_val}",
                 timeout=DEFAULT_TIMEOUT,
             )
-            last_val = float(page.evaluate("() => window.currentFuel"))
+            last_val = float(shared_page.evaluate("() => window.currentFuel"))
             fuel_samples.append(last_val)
 
         # Sanity check: fuel values must be numeric and within [0, 100]
@@ -105,7 +104,7 @@ def test_fuel_depletion(shared_page: Page) -> None:
         print(f"Test suite failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
-        page.screenshot(path=f"artifacts/test_fuel_depletion_failure_{timestamp}.png")
+        shared_page.screenshot(path=f"artifacts/test_fuel_depletion_failure_{timestamp}.png")
         log_file = f"artifacts/test_fuel_depletion_failure_console_logs_{timestamp}.txt"
         with open(log_file, "w", encoding="utf-8") as f:
             for log in logs:

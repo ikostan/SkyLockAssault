@@ -28,7 +28,7 @@ from playwright.sync_api import Page, expect
 from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT
 
 
-def test_no_error_logs_after_load(page: Page) -> None:
+def test_no_error_logs_after_load(shared_page: Page) -> None:
     """
     E2E test to ensure zero console errors and uncaught exceptions on initial load.
     """
@@ -45,34 +45,34 @@ def test_no_error_logs_after_load(page: Page) -> None:
         page_errors.append(f"Uncaught Exception: {exc.message}\n{exc.stack}")
 
     # Attach listeners before navigation
-    page.on("console", on_console)
-    page.on("pageerror", on_page_error)
+    shared_page.on("console", on_console)
+    shared_page.on("pageerror", on_page_error)
 
     try:
         # Start CDP session for coverage
-        cdp_session = page.context.new_cdp_session(page)
+        cdp_session = shared_page.context.new_cdp_session(shared_page)
         cdp_session.send("Profiler.enable")
         cdp_session.send(
             "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
         )
 
-        page.goto(
+        shared_page.goto(
             "http://localhost:8080/index.html",
             wait_until="domcontentloaded",
             timeout=DEFAULT_TIMEOUT,
         )
 
         # Wait deterministically for Godot engine initialization
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
 
         # Ensure canvas is rendered and visible
-        canvas = page.locator("canvas")
+        canvas = shared_page.locator("canvas")
         expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
 
         # Deterministically wait for main menu UI overlays to be fully mounted/ready
-        page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
+        shared_page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
 
         # Filter for error logs
         error_logs = [log for log in logs if log["type"] == "error"]
@@ -91,7 +91,7 @@ def test_no_error_logs_after_load(page: Page) -> None:
         print(f"Test: 'test_no_error_logs_after_load' failed: {e!s}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time())
-        page.screenshot(path=f"artifacts/test_error_logs_failure_{timestamp}.png")
+        shared_page.screenshot(path=f"artifacts/test_error_logs_failure_{timestamp}.png")
 
         # Save all captured logs and exceptions for inspection
         with open(

@@ -13,6 +13,8 @@ from typing import Generator
 import pytest
 from playwright.sync_api import Browser, BrowserContext, Page, Playwright
 
+from tests.test_utils import init_page_and_wait_ready
+
 # Storage for test lifecycle memory metrics
 _LIFECYCLE_METRICS = []
 
@@ -60,7 +62,6 @@ def capture_lifecycle_metrics(request):
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
     """Outputs browser memory & lifecycle report at suite end."""
-    # Suppress unused argument warnings for pylint/flake8 if needed
     _ = (exitstatus, config)
     if _LIFECYCLE_METRICS:
         terminalreporter.ensure_newline()
@@ -83,7 +84,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 def pytest_sessionfinish(session, exitstatus):
     """Guarantees sub-processes are terminated when tests finish."""
     _ = (session, exitstatus)
-    # 1. Clean up orphaned python HTTP server sub-processes
+    # 1. Clean up orphaned python HTTP server sub-processes running on 8080
     try:
         if os.name == "nt":  # Windows
             cmd = shutil.which("taskkill") or "C:\\Windows\\System32\\taskkill.exe"
@@ -102,7 +103,7 @@ def pytest_sessionfinish(session, exitstatus):
             )
         else:  # Linux / WSL2
             cmd = shutil.which("pkill") or "/usr/bin/pkill"
-            subprocess.run([cmd, "-f", "http.server"], check=False)
+            subprocess.run([cmd, "-f", "python3.*http.server"], check=False)
     except Exception:
         pass
 
@@ -118,7 +119,7 @@ def pytest_sessionfinish(session, exitstatus):
             )
         else:
             cmd = shutil.which("pkill") or "/usr/bin/pkill"
-            subprocess.run([cmd, "-f", "chromium"], check=False)
+            subprocess.run([cmd, "-f", "playwright.*chromium"], check=False)
     except Exception:
         pass
 
@@ -139,11 +140,8 @@ def shared_page(browser: Browser) -> Page:
     """)
     page.on("dialog", lambda dialog: dialog.dismiss())
 
-    # 2. Load shell using domcontentloaded
-    page.goto("http://localhost:8080/index.html", wait_until="domcontentloaded")
-
-    # 3. Wait deterministically for Godot engine boot flag
-    page.wait_for_function("() => window.godotInitialized === true", timeout=30000)
+    # 2. Centralized page load & WASM initialization check
+    init_page_and_wait_ready(page)
 
     yield page
 

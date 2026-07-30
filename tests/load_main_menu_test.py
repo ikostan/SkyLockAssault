@@ -43,7 +43,7 @@ from playwright.sync_api import Page, expect
 from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT
 
 
-def test_load_main_menu(page: Page) -> None:
+def test_load_main_menu(shared_page: Page) -> None:
     """
     Main test for main menu load using DOM overlays.
 
@@ -65,43 +65,43 @@ def test_load_main_menu(page: Page) -> None:
         """
         logs.append({"type": msg.type, "text": msg.text})
 
-    page.on("console", on_console)
+    shared_page.on("console", on_console)
     try:
         # Start CDP session for V8 JS coverage
-        cdp_session = page.context.new_cdp_session(page)
+        cdp_session = shared_page.context.new_cdp_session(shared_page)
         cdp_session.send("Profiler.enable")
         cdp_session.send(
             "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
         )
 
-        page.goto(
+        shared_page.goto(
             "http://localhost:8080/index.html",
             wait_until="domcontentloaded",
             timeout=DEFAULT_TIMEOUT,
         )
 
         # Wait deterministically for Godot engine initialization
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
 
         # Verify canvas and title to ensure game is initialized
-        canvas = page.locator("canvas")
+        canvas = shared_page.locator("canvas")
         expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
         box: dict[str, float] | None = canvas.bounding_box()
         assert box is not None, "Canvas not found on page"
-        assert "SkyLockAssault" in page.title(), "Title not found"
+        assert "SkyLockAssault" in shared_page.title(), "Title not found"
 
         # Assert main-menu DOM overlay elements are present and visible
-        expect(page.locator("#start-button")).to_be_visible(timeout=TEST_TIMEOUT)
-        expect(page.locator("#options-button")).to_be_visible(timeout=TEST_TIMEOUT)
-        expect(page.locator("#quit-button")).to_be_visible(timeout=TEST_TIMEOUT)
+        expect(shared_page.locator("#start-button")).to_be_visible(timeout=TEST_TIMEOUT)
+        expect(shared_page.locator("#options-button")).to_be_visible(timeout=TEST_TIMEOUT)
+        expect(shared_page.locator("#quit-button")).to_be_visible(timeout=TEST_TIMEOUT)
 
     except Exception as e:
         print(f"Test: 'test_load_main_menu' failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time())
-        page.screenshot(
+        shared_page.screenshot(
             path=f"artifacts/test_load_main_menu_failure_screenshot_{timestamp}.png"
         )
 
@@ -116,7 +116,7 @@ def test_load_main_menu(page: Page) -> None:
         with open(
             f"artifacts/test_load_main_menu_failure_html_{timestamp}.html", "w"
         ) as f:
-            f.write(page.content())
+            f.write(shared_page.content())
 
         print(
             f"Failure logs: artifacts/test_load_main_menu_failure_console_logs_{timestamp}.txt. Error: {e}"

@@ -37,32 +37,31 @@ def test_difficulty_integration(shared_page: Page) -> None:
     to 2.0 in Gameplay Settings, starts the game, waits for level load, fires
     weapon, and verifies execution logs.
     """
-    page = shared_page
     logs: list[dict[str, str]] = []
 
     def on_console(msg: Any) -> None:
         """Console message handler to capture logs."""
         logs.append({"type": msg.type, "text": msg.text})
 
-    page.on("console", on_console)
+    shared_page.on("console", on_console)
 
     cdp_session = None
     coverage_started = False
 
     try:
         cdp_session, coverage_started = start_game_and_wait_ready(
-            page=page,
+            page=shared_page,
             logs=logs,
             difficulty=2.0,
             log_level="DEBUG",
         )
 
         # Verify canvas is present and visible
-        canvas = page.locator("canvas")
+        canvas = shared_page.locator("canvas")
         expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
         box = canvas.bounding_box()
         assert box is not None, "Canvas not found on page"
-        assert "SkyLockAssault" in page.title(), "Title not found"
+        assert "SkyLockAssault" in shared_page.title(), "Title not found"
 
         # Check for unexpected error logs after setup
         unexpected_errors = [
@@ -98,19 +97,19 @@ def test_difficulty_integration(shared_page: Page) -> None:
         # Focus Canvas, fire weapon, and verify execution under difficulty 2.0
         canvas.focus()
         pre_change_log_count = len(logs)
-        page.keyboard.press("Space")
+        shared_page.keyboard.press("Space")
         wait_for_console_log(
             logs,
             lambda text: "weapon.fire() delegating to" in text or "firing" in text,
             pre_change_log_count,
-            page,
+            shared_page,
         )
 
     except Exception as e:
         print(f"Test suite failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
-        page.screenshot(
+        shared_page.screenshot(
             path=(f"artifacts/test_difficulty_integration_failure_" f"{timestamp}.png")
         )
         log_file = (

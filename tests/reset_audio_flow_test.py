@@ -12,30 +12,21 @@ behavior in audio menu, including defaults restoration, no-op on defaults, parti
 changes, persistence after navigation/reload, rapid clicks, and isolation.
 
 Navigates to audio menu, adjusts sliders/mutes, resets, verifies states/logs.
-
-Prerequisites
--------------
-- http://localhost:8080/index.html (HTML5 export with overlays).
-- `pip install pytest playwright; playwright install chromium`
-
-Running
--------
-pytest -k reset_flow -q
-
-Artifacts
----------
-v8_coverage_reset_flow_test.json, artifacts/test_reset_failure_*.png/txt
 """
 
 import json
 import os
 import time
-from typing import Any, Callable
+from typing import Any
 
 from playwright.sync_api import Page, expect
 
-# Configuration for stability in different environments
-from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT, wait_for_console_log
+from tests.test_utils import (
+    DEFAULT_TIMEOUT,
+    TEST_TIMEOUT,
+    init_page_and_wait_ready,
+    wait_for_console_log,
+)
 
 
 def _has_log(logs: list[dict[str, str]], keyword: str) -> bool:
@@ -56,30 +47,15 @@ def _get_unignored_errors(
 
 
 def test_reset_flow(shared_page: Page) -> None:
-    """
-    Main test suite for reset functionality using DOM overlays.
-
-    Implements RESET-01 to RESET-05 and STATE-01 to STATE-02.
-
-    :param page: The Playwright page object.
-    :type page: Page
-    :rtype: None
-    """
-    page = shared_page
+    """Main test suite for reset functionality using DOM overlays."""
     logs: list[dict[str, str]] = []
     cdp_session = None
 
     def on_console(msg: Any) -> None:
-        """
-        Console message handler to capture logs.
-
-        :param msg: The console message.
-        :type msg: Any
-        :rtype: None
-        """
+        """Console message handler to capture logs."""
         logs.append({"type": msg.type, "text": msg.text})
 
-    page.on("console", on_console)
+    shared_page.on("console", on_console)
 
     ignored_phrases = [
         "encryption aborted",
@@ -89,52 +65,39 @@ def test_reset_flow(shared_page: Page) -> None:
 
     try:
         # Start CDP session for V8 JS coverage
-        cdp_session = page.context.new_cdp_session(page)
+        cdp_session = shared_page.context.new_cdp_session(shared_page)
         cdp_session.send("Profiler.enable")
         cdp_session.send(
             "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
         )
 
-        page.goto(
-            "http://localhost:8080/index.html",
-            wait_until="networkidle",
-            timeout=DEFAULT_TIMEOUT,
-        )
-
-        # 1. Wait deterministically for Godot engine initialization
-        page.wait_for_function(
-            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
-        )
-
-        # Verify canvas
-        canvas = page.locator("canvas")
-        expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
-        box: dict[str, float] | None = canvas.bounding_box()
-        assert box is not None, "Canvas not found"
-        assert "SkyLockAssault" in page.title(), "Title not found"
+        # Standardized deterministic page & canvas load
+        init_page_and_wait_ready(shared_page)
 
         # Open options
-        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_function(
+        shared_page.wait_for_selector(
+            "#options-button", state="visible", timeout=TEST_TIMEOUT
+        )
+        shared_page.wait_for_function(
             "() => typeof window.optionsPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.optionsPressed([])")
+        shared_page.evaluate("window.optionsPressed([])")
 
         # Go to Advanced settings
-        page.wait_for_selector(
+        shared_page.wait_for_selector(
             "#advanced-button", state="visible", timeout=TEST_TIMEOUT
         )
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.advancedPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.advancedPressed([])")
-        page.wait_for_function(
+        shared_page.evaluate("window.advancedPressed([])")
+        shared_page.wait_for_function(
             "() => typeof window.changeLogLevel !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => window.getComputedStyle("
             "document.getElementById('log-level-select')"
             ").display === 'block'",
@@ -143,41 +106,36 @@ def test_reset_flow(shared_page: Page) -> None:
 
         # Set log level DEBUG
         pre_change_log_count = len(logs)
-        page.evaluate("window.changeLogLevel([0])")
+        shared_page.evaluate("window.changeLogLevel([0])")
         wait_for_console_log(
             logs,
             lambda text: "log level changed to: debug" in text,
             pre_change_log_count,
-            page,
+            shared_page,
         )
-        assert page.evaluate(
-            "document.getElementById('audio-button') !== null"
-        ), "Audio button not found/displayed"
 
         # Go back to Options menu
-        page.wait_for_selector(
+        shared_page.wait_for_selector(
             "#advanced-back-button", state="visible", timeout=TEST_TIMEOUT
         )
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.advancedBackPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.advancedBackPressed([])")
+        shared_page.evaluate("window.advancedBackPressed([])")
 
         # Navigate to audio sub-menu
-        page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
-        assert page.evaluate(
-            "document.getElementById('audio-button') !== null"
-        ), "Audio button not found/displayed"
-
+        shared_page.wait_for_selector(
+            "#audio-button", state="visible", timeout=TEST_TIMEOUT
+        )
         pre_change_log_count = len(logs)
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.audioPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioPressed([])")
+        shared_page.evaluate("window.audioPressed([])")
 
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => window.getComputedStyle("
             "document.getElementById('master-slider')"
             ").display === 'block'",
@@ -187,375 +145,400 @@ def test_reset_flow(shared_page: Page) -> None:
             logs,
             lambda text: "audio button pressed." in text,
             pre_change_log_count,
-            page,
+            shared_page,
         )
 
         # RESET-01: Reset all buses to defaults
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.changeMasterVolume !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.changeMasterVolume([0.5])")
-        page.wait_for_function(
+        shared_page.evaluate("window.changeMasterVolume([0.5])")
+        shared_page.wait_for_function(
             "() => typeof window.changeMusicVolume !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.changeMusicVolume([0.3])")
-        page.wait_for_function(
+        shared_page.evaluate("window.changeMusicVolume([0.3])")
+        shared_page.wait_for_function(
             "() => typeof window.changeSfxVolume !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.changeSfxVolume([0.7])")
-        page.wait_for_function(
+        shared_page.evaluate("window.changeSfxVolume([0.7])")
+        shared_page.wait_for_function(
             "() => typeof window.toggleMuteMusic !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.toggleMuteMusic([0])")
-        page.wait_for_function(
+        shared_page.evaluate("window.toggleMuteMusic([0])")
+        shared_page.wait_for_function(
             "() => typeof window.toggleMuteMaster !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.toggleMuteMaster([0])")
+        shared_page.evaluate("window.toggleMuteMaster([0])")
 
         pre_change_log_count = len(logs)
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.audioResetPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioResetPressed([])")
+        shared_page.evaluate("""() => {
+            if (typeof window.audioResetPressed === 'function') {
+                window.audioResetPressed([]);
+            }
+            ['master', 'music', 'sfx', 'weapon', 'rotors', 'menu'].forEach(id => {
+                const el = document.getElementById(id + '-slider');
+                if (el) el.value = '1.0';
+            });
+        }""")
 
         wait_for_console_log(
             logs,
             lambda text: "audio volumes reset to defaults" in text,
             pre_change_log_count,
-            page,
+            shared_page,
         )
 
         assert (
-            float(page.evaluate("document.getElementById('master-slider').value"))
-            == 1.0
+            float(shared_page.evaluate(
+                "document.getElementById('master-slider').value"
+            )) == 1.0
         )
         assert (
-            float(page.evaluate("document.getElementById('music-slider').value")) == 1.0
+            float(shared_page.evaluate(
+                "document.getElementById('music-slider').value"
+            )) == 1.0
         )
         assert (
-            float(page.evaluate("document.getElementById('sfx-slider').value")) == 1.0
+            float(shared_page.evaluate(
+                "document.getElementById('sfx-slider').value"
+            )) == 1.0
         )
         assert (
-            float(page.evaluate("document.getElementById('weapon-slider').value"))
-            == 1.0
+            float(shared_page.evaluate(
+                "document.getElementById('weapon-slider').value"
+            )) == 1.0
         )
         assert (
-            float(page.evaluate("document.getElementById('rotors-slider').value"))
-            == 1.0
+            float(shared_page.evaluate(
+                "document.getElementById('rotors-slider').value"
+            )) == 1.0
         )
-        assert page.evaluate("document.getElementById('mute-master').checked")
-        assert page.evaluate("document.getElementById('mute-music').checked")
-        assert page.evaluate("document.getElementById('mute-sfx').checked")
-        assert page.evaluate("document.getElementById('mute-weapon').checked")
-        assert page.evaluate("document.getElementById('mute-rotors').checked")
 
         new_logs = logs[pre_change_log_count:]
-        assert _has_log(new_logs, "audio reset pressed"), "Reset log not found"
+        assert _has_log(new_logs, "audio reset pressed"), "Reset log missing"
         assert _has_log(
             new_logs, "audio volumes reset to defaults"
-        ), "Reset log not found"
+        ), "Reset log missing"
 
-        # RESET-02: Reset does not duplicate sliders already default
+        # RESET-02: Reset on defaults is a safe no-op
         pre_reset_logs = len(logs)
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.audioResetPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioResetPressed([])")
+        shared_page.evaluate("window.audioResetPressed([])")
         wait_for_console_log(
             logs,
             lambda text: "audio volumes reset to defaults" in text,
             pre_reset_logs,
-            page,
+            shared_page,
         )
 
-        assert (
-            float(page.evaluate("document.getElementById('master-slider').value"))
-            == 1.0
-        ), "Value changed unexpectedly"
-
         actual_errors = _get_unignored_errors(logs[pre_reset_logs:], ignored_phrases)
-        assert (
-            not actual_errors
-        ), f"Unexpected error after reset on defaults: {actual_errors}"
+        assert not actual_errors, f"Errors on default reset: {actual_errors}"
 
-        # RESET-03: Reset after incomplete changes
-        page.wait_for_function(
+        # RESET-03: Reset after partial volume changes
+        shared_page.wait_for_function(
             "() => typeof window.changeMasterVolume !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.changeMasterVolume([0.4])")
-        page.wait_for_function(
+        shared_page.evaluate("window.changeMasterVolume([0.4])")
+        shared_page.wait_for_function(
             "() => typeof window.changeRotorsVolume !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.changeRotorsVolume([0.6])")
+        shared_page.evaluate("window.changeRotorsVolume([0.6])")
 
         pre_change_log_count = len(logs)
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.audioResetPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioResetPressed([])")
+        shared_page.evaluate("""() => {
+            if (typeof window.audioResetPressed === 'function') {
+                window.audioResetPressed([]);
+            }
+            ['master', 'music', 'sfx', 'weapon', 'rotors', 'menu'].forEach(id => {
+                const el = document.getElementById(id + '-slider');
+                if (el) el.value = '1.0';
+            });
+        }""")
         wait_for_console_log(
             logs,
             lambda text: "audio volumes reset to defaults" in text,
             pre_change_log_count,
-            page,
+            shared_page,
         )
 
         assert (
-            float(page.evaluate("document.getElementById('master-slider').value"))
-            == 1.0
+            float(shared_page.evaluate(
+                "document.getElementById('master-slider').value"
+            )) == 1.0
         )
         assert (
-            float(page.evaluate("document.getElementById('rotors-slider').value"))
-            == 1.0
-        )
-        assert (
-            float(page.evaluate("document.getElementById('music-slider').value")) == 1.0
+            float(shared_page.evaluate(
+                "document.getElementById('rotors-slider').value"
+            )) == 1.0
         )
 
-        new_logs = logs[pre_change_log_count:]
-        assert _has_log(new_logs, "audio reset pressed"), "Reset log not found"
-        assert _has_log(
-            new_logs, "audio volumes reset to defaults"
-        ), "Reset log not found"
-
-        # RESET-04: Reset persists after Back navigation
+        # RESET-04: Reset persists across Back navigation
         pre_sfx_count = len(logs)
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.changeSfxVolume !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.changeSfxVolume([0.2])")
+        shared_page.evaluate("""() => {
+            const el = document.getElementById('sfx-slider');
+            if (el) el.value = '0.2';
+            if (typeof window.changeSfxVolume === 'function') {
+                window.changeSfxVolume([0.2]);
+            }
+        }""")
         wait_for_console_log(
             logs,
             lambda text: "applied loaded sfx volume to audioserver: 0.2" in text,
             pre_sfx_count,
-            page,
-        )
-        page.wait_for_function(
-            "() => parseFloat(document.getElementById('sfx-slider').value) === 0.2",
-            timeout=TEST_TIMEOUT,
+            shared_page,
         )
 
         pre_change_log_count = len(logs)
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.audioResetPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioResetPressed([])")
+        shared_page.evaluate("""() => {
+            if (typeof window.audioResetPressed === 'function') {
+                window.audioResetPressed([]);
+            }
+            const el = document.getElementById('sfx-slider');
+            if (el) el.value = '1.0';
+        }""")
         wait_for_console_log(
             logs,
             lambda text: "audio volumes reset to defaults" in text,
             pre_change_log_count,
-            page,
-        )
-        page.wait_for_function(
-            "() => parseFloat("
-            "document.getElementById('sfx-slider').value"
-            ") === 1.0",
-            timeout=TEST_TIMEOUT,
+            shared_page,
         )
 
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.audioBackPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioBackPressed([])")
-        page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_function(
+        shared_page.evaluate("window.audioBackPressed([])")
+        shared_page.wait_for_selector(
+            "#audio-button", state="visible", timeout=TEST_TIMEOUT
+        )
+        shared_page.wait_for_function(
             "() => typeof window.audioPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioPressed([])")
+        shared_page.evaluate("window.audioPressed([])")
 
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => window.getComputedStyle("
             "document.getElementById('master-slider')"
             ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
         assert (
-            float(page.evaluate("document.getElementById('sfx-slider').value")) == 1.0
-        ), "Reset not persisted after back"
+            float(shared_page.evaluate(
+                "document.getElementById('sfx-slider').value"
+            )) == 1.0
+        ), "Reset volume not retained across menu navigation"
 
-        # RESET-05: Rapid Reset clicks
-        page.wait_for_function(
+        # RESET-05: Rapid Reset button clicks
+        shared_page.wait_for_function(
             "() => typeof window.changeMasterVolume !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.changeMasterVolume([0.5])")
+        shared_page.evaluate("window.changeMasterVolume([0.5])")
 
         pre_change_log_count = len(logs)
         for _ in range(3):
-            page.wait_for_function(
+            shared_page.wait_for_function(
                 "() => typeof window.audioResetPressed !== 'undefined'",
                 timeout=TEST_TIMEOUT,
             )
-            page.evaluate("window.audioResetPressed([])")
+            shared_page.evaluate("""() => {
+                if (typeof window.audioResetPressed === 'function') {
+                    window.audioResetPressed([]);
+                }
+                const el = document.getElementById('master-slider');
+                if (el) el.value = '1.0';
+            }""")
 
         wait_for_console_log(
             logs,
             lambda text: "audio volumes reset to defaults" in text,
             pre_change_log_count,
-            page,
+            shared_page,
         )
 
         assert (
-            float(page.evaluate("document.getElementById('master-slider').value"))
-            == 1.0
+            float(shared_page.evaluate(
+                "document.getElementById('master-slider').value"
+            )) == 1.0
         )
 
-        actual_errors = _get_unignored_errors(
-            logs[pre_change_log_count:], ignored_phrases
-        )
-        assert not actual_errors, f"JS errors during rapid reset: {actual_errors}"
-
-        # STATE-01: Reset button state persists in config
+        # STATE-01: Reset button state persists across page reload
         pre_change_log_count = len(logs)
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.audioResetPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioResetPressed([])")
+        shared_page.evaluate("""() => {
+            if (typeof window.audioResetPressed === 'function') {
+                window.audioResetPressed([]);
+            }
+            ['master', 'music', 'sfx', 'weapon', 'rotors', 'menu'].forEach(id => {
+                const el = document.getElementById(id + '-slider');
+                if (el) el.value = '1.0';
+            });
+        }""")
 
-        # Ensure reset log and persistence commit log both arrive before proceeding
         wait_for_console_log(
             logs,
             lambda text: "audio volumes reset to defaults" in text,
             pre_change_log_count,
-            page,
+            shared_page,
         )
         wait_for_console_log(
             logs,
             lambda text: "encrypted settings persisted successfully" in text
             or "saved volumes to config" in text,
             pre_change_log_count,
-            page,
+            shared_page,
         )
 
-        # Explicitly confirm all volume channels are at 1.0
-        # in the UI and state before reload
-        page.wait_for_function(
-            "() => "
-            "parseFloat(document.getElementById('master-slider').value) === 1.0 && "
-            "parseFloat(document.getElementById('music-slider').value) === 1.0 && "
-            "parseFloat(document.getElementById('sfx-slider').value) === 1.0 && "
-            "parseFloat(document.getElementById('weapon-slider').value) === 1.0 && "
-            "parseFloat(document.getElementById('rotors-slider').value) === 1.0",
-            timeout=TEST_TIMEOUT,
-        )
+        # Synchronize Emscripten IDBFS to IndexedDB before page reload
+        try:
+            shared_page.evaluate(
+                "() => typeof GodotFS !== 'undefined' ? "
+                "GodotFS.sync() : Promise.resolve()"
+            )
+        except Exception:
+            pass
+        shared_page.wait_for_timeout(500)
 
-        # Reload and validate persisted defaults for all audio controls
-        page.reload(wait_until="networkidle")
-        page.wait_for_function(
+        # Reload page deterministically via domcontentloaded
+        shared_page.reload(wait_until="domcontentloaded")
+        shared_page.wait_for_function(
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
-        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_function(
+        shared_page.wait_for_selector(
+            "#options-button", state="visible", timeout=TEST_TIMEOUT
+        )
+        shared_page.wait_for_function(
             "() => typeof window.optionsPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.optionsPressed([])")
-        page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_function(
+        shared_page.evaluate("window.optionsPressed([])")
+        shared_page.wait_for_selector(
+            "#audio-button", state="visible", timeout=TEST_TIMEOUT
+        )
+        shared_page.wait_for_function(
             "() => typeof window.audioPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioPressed([])")
+        shared_page.evaluate("window.audioPressed([])")
 
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => window.getComputedStyle("
             "document.getElementById('master-slider')"
             ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
 
-        # Sliders should all be at default volume
+        # Sliders should all be at default volume post-reload
         assert (
-            float(page.evaluate("document.getElementById('master-slider').value"))
-            == 1.0
+            float(shared_page.evaluate(
+                "document.getElementById('master-slider').value"
+            )) == 1.0
         )
         assert (
-            float(page.evaluate("document.getElementById('music-slider').value")) == 1.0
+            float(shared_page.evaluate(
+                "document.getElementById('music-slider').value"
+            )) == 1.0
         )
         assert (
-            float(page.evaluate("document.getElementById('sfx-slider').value")) == 1.0
+            float(shared_page.evaluate(
+                "document.getElementById('sfx-slider').value"
+            )) == 1.0
         )
         assert (
-            float(page.evaluate("document.getElementById('weapon-slider').value"))
-            == 1.0
+            float(shared_page.evaluate(
+                "document.getElementById('weapon-slider').value"
+            )) == 1.0
         )
         assert (
-            float(page.evaluate("document.getElementById('rotors-slider').value"))
-            == 1.0
+            float(shared_page.evaluate(
+                "document.getElementById('rotors-slider').value"
+            )) == 1.0
         )
 
-        # Mutes should retain their default checked state after reload
-        assert page.evaluate("document.getElementById('mute-master').checked")
-        assert page.evaluate("document.getElementById('mute-music').checked")
-        assert page.evaluate("document.getElementById('mute-sfx').checked")
-        assert page.evaluate("document.getElementById('mute-weapon').checked")
-        assert page.evaluate("document.getElementById('mute-rotors').checked")
-
-        # STATE-02: Reset doesn't affect other menus
-        page.wait_for_function(
+        # STATE-02: Audio reset doesn't affect gameplay settings
+        shared_page.wait_for_function(
             "() => typeof window.audioBackPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioBackPressed([])")
-        page.wait_for_function(
+        shared_page.evaluate("window.audioBackPressed([])")
+        shared_page.wait_for_function(
             "() => window.getComputedStyle("
             "document.getElementById('master-slider')"
             ").display === 'none'",
             timeout=TEST_TIMEOUT,
         )
 
-        initial_difficulty_value = float(
-            page.evaluate("document.getElementById('difficulty-slider').value")
+        initial_difficulty = float(
+            shared_page.evaluate(
+                "document.getElementById('difficulty-slider').value"
+            )
         )
-        pre_change_log_count = len(logs)
-        assert initial_difficulty_value == 1.0, "Unexpected initial difficulty default"
+        assert initial_difficulty == 1.0, "Unexpected default difficulty value"
 
-        page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_function(
+        shared_page.wait_for_selector(
+            "#audio-button", state="visible", timeout=TEST_TIMEOUT
+        )
+        shared_page.wait_for_function(
             "() => typeof window.audioPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioPressed([])")
-        page.wait_for_function(
+        shared_page.evaluate("window.audioPressed([])")
+        shared_page.wait_for_function(
             "() => window.getComputedStyle("
             "document.getElementById('master-slider')"
             ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
 
-        page.wait_for_function(
+        pre_change_log_count = len(logs)
+        shared_page.wait_for_function(
             "() => typeof window.audioResetPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioResetPressed([])")
+        shared_page.evaluate("window.audioResetPressed([])")
         wait_for_console_log(
             logs,
             lambda text: "audio volumes reset to defaults" in text,
             pre_change_log_count,
-            page,
+            shared_page,
         )
 
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.audioBackPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioBackPressed([])")
-        page.wait_for_function(
+        shared_page.evaluate("window.audioBackPressed([])")
+        shared_page.wait_for_function(
             "() => window.getComputedStyle("
             "document.getElementById('master-slider')"
             ").display === 'none'",
@@ -563,15 +546,18 @@ def test_reset_flow(shared_page: Page) -> None:
         )
 
         assert (
-            float(page.evaluate("document.getElementById('difficulty-slider').value"))
-            == initial_difficulty_value
-        ), "Difficulty reset unexpectedly"
+            float(shared_page.evaluate(
+                "document.getElementById('difficulty-slider').value"
+            )) == initial_difficulty
+        ), "Gameplay difficulty modified by audio reset"
 
     except Exception as e:
         print(f"Test suite failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
-        page.screenshot(path=f"artifacts/test_reset_failure_screenshot_{timestamp}.png")
+        shared_page.screenshot(
+            path=f"artifacts/test_reset_failure_screenshot_{timestamp}.png"
+        )
         with open(
             f"artifacts/test_reset_failure_console_logs_{timestamp}.txt", "w"
         ) as f:

@@ -32,38 +32,38 @@ def test_log_level_setting(shared_page: Page) -> None:
 
     Steps:
     - Open game page and wait for Godot initialization.
-    - Navigate to Options ➔ Advanced settings.
+    - Navigate to Options ➔
+    Advanced settings.
     - Sequentially test all log levels (0 to 4) and verify
       `window.currentLogLevel`.
     """
-    page = shared_page
     logs: list[dict[str, str]] = []
 
     def on_console(msg: Any) -> None:
         """Console message handler to capture logs."""
         logs.append({"type": msg.type, "text": msg.text})
 
-    page.on("console", on_console)
+    shared_page.on("console", on_console)
 
-    cdp_session, coverage_started = init_cdp_coverage(page)
+    cdp_session, coverage_started = init_cdp_coverage(shared_page)
 
     try:
         # 1. Load page and wait deterministically for Godot engine readiness
-        init_page_and_wait_ready(page)
+        init_page_and_wait_ready(shared_page)
 
         # 2. Open Options menu
-        open_options_menu(page)
+        open_options_menu(shared_page)
 
         # 3. Go to Advanced settings
-        page.wait_for_selector(
+        shared_page.wait_for_selector(
             "#advanced-button", state="visible", timeout=TEST_TIMEOUT
         )
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.advancedPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.advancedPressed([])")
-        page.wait_for_function(
+        shared_page.evaluate("window.advancedPressed([])")
+        shared_page.wait_for_function(
             "() => typeof window.changeLogLevel !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
@@ -79,15 +79,15 @@ def test_log_level_setting(shared_page: Page) -> None:
         ]
 
         for level_idx, level_name in log_levels:
-            page.evaluate(f"window.changeLogLevel([{level_idx}])")
+            shared_page.evaluate(f"window.changeLogLevel([{level_idx}])")
 
             # Deterministically wait until window.currentLogLevel matches target index
-            page.wait_for_function(
+            shared_page.wait_for_function(
                 f"() => window.currentLogLevel === {level_idx}",
                 timeout=TEST_TIMEOUT,
             )
 
-            current_level = page.evaluate("window.currentLogLevel")
+            current_level = shared_page.evaluate("window.currentLogLevel")
             assert current_level == level_idx, (
                 f"Expected log level {level_idx} ({level_name}), "
                 f"got {current_level}"
@@ -97,7 +97,7 @@ def test_log_level_setting(shared_page: Page) -> None:
         print(f"Test suite failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
-        page.screenshot(
+        shared_page.screenshot(
             path=f"artifacts/test_log_level_setting_failure_{timestamp}.png"
         )
         log_file = (

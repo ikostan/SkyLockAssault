@@ -28,7 +28,7 @@ from playwright.sync_api import Page, expect
 from tests.test_utils import DEFAULT_TIMEOUT
 
 
-def test_no_critical_errors_on_load(page: Page) -> None:
+def test_no_critical_errors_on_load(shared_page: Page) -> None:
     """
     Verifies that the game loads without script compilation or engine errors.
 
@@ -42,21 +42,21 @@ def test_no_critical_errors_on_load(page: Page) -> None:
         """Capture all console messages for inspection."""
         logs.append({"type": msg.type, "text": msg.text})
 
-    page.on("console", on_console)
+    shared_page.on("console", on_console)
 
     try:
         # 1. Navigate to the game
-        page.goto(
+        shared_page.goto(
             "http://localhost:8080/index.html",
             wait_until="domcontentloaded",
             timeout=DEFAULT_TIMEOUT,
         )
 
         # 2. Wait deterministically for the engine's ready signal and canvas visibility
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
-        expect(page.locator("canvas")).to_be_visible(timeout=DEFAULT_TIMEOUT)
+        expect(shared_page.locator("canvas")).to_be_visible(timeout=DEFAULT_TIMEOUT)
 
         # 3. Analyze captured logs for the specific patterns
         # We only check for patterns within 'error' or 'warning' logs to avoid false positives
@@ -91,7 +91,7 @@ def test_no_critical_errors_on_load(page: Page) -> None:
         print(f"Load validation failed: {e!s}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time())
-        page.screenshot(path=f"artifacts/test_load_error_screenshot_{timestamp}.png")
+        shared_page.screenshot(path=f"artifacts/test_load_error_screenshot_{timestamp}.png")
 
         # Save logs for debugging the script failures
         with open(f"artifacts/test_load_error_logs_{timestamp}.txt", "w") as f:

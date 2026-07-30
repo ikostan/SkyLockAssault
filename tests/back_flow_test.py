@@ -51,11 +51,10 @@ def test_back_flow(shared_page: Page) -> None:
 
     Implements BACK-01 to BACK-04: Back from audio, verify return, state persistence.
 
-    :param page: The Playwright page object.
-    :type page: Page
+    :param shared_page: The Playwright page object.
+    :type shared_page: Page
     :rtype: None
     """
-    page = shared_page
     logs: list[dict[str, str]] = []
     cdp_session = None
 
@@ -63,11 +62,11 @@ def test_back_flow(shared_page: Page) -> None:
         """Console message handler to capture logs."""
         logs.append({"type": msg.type, "text": msg.text})
 
-    page.on("console", on_console)
+    shared_page.on("console", on_console)
 
     try:
         # Start CDP session for V8 JS coverage
-        cdp_session = page.context.new_cdp_session(page)
+        cdp_session = shared_page.context.new_cdp_session(shared_page)
         cdp_session.send("Profiler.enable")
         cdp_session.send(
             "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
@@ -75,26 +74,26 @@ def test_back_flow(shared_page: Page) -> None:
 
         # 1-3. Load engine, open options, set log level to DEBUG (0),
         # and open audio menu
-        init_page_and_wait_ready(page)
-        open_options_menu(page)
-        set_log_level(page, logs, level_index=0)
-        open_audio_menu(page, logs)
+        init_page_and_wait_ready(shared_page)
+        open_options_menu(shared_page)
+        set_log_level(shared_page, logs, level_index=0)
+        open_audio_menu(shared_page, logs)
 
         # BACK-01: Back returns to parent menu
         pre_change_log_count = len(logs)
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.audioBackPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioBackPressed([])")
+        shared_page.evaluate("window.audioBackPressed([])")
 
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => window.getComputedStyle("
             "document.getElementById('gameplay-button')"
             ").display === 'block'",
             timeout=TEST_TIMEOUT,
         )
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => window.getComputedStyle("
             "document.getElementById('master-slider')"
             ").display === 'none'",
@@ -104,73 +103,73 @@ def test_back_flow(shared_page: Page) -> None:
             logs,
             lambda text: "audio settings: back button pressed" in text,
             pre_change_log_count,
-            page,
+            shared_page,
         )
 
         # Re-enter audio for next tests
-        open_audio_menu(page)
+        open_audio_menu(shared_page)
 
         # BACK-02: Back without changes
-        initial_master: str = page.evaluate(
+        initial_master: str = shared_page.evaluate(
             "document.getElementById('master-slider').value"
         )
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.audioBackPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioBackPressed([])")
+        shared_page.evaluate("window.audioBackPressed([])")
 
-        open_audio_menu(page)
+        open_audio_menu(shared_page)
 
         assert (
-            page.evaluate("document.getElementById('master-slider').value")
+            shared_page.evaluate("document.getElementById('master-slider').value")
             == initial_master
         ), "State mutated without changes"
 
         # Re-enter audio via page reload
-        page.reload(wait_until="networkidle")
-        page.wait_for_function(
+        shared_page.reload(wait_until="networkidle")
+        shared_page.wait_for_function(
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
 
-        open_options_menu(page)
-        open_audio_menu(page)
+        open_options_menu(shared_page)
+        open_audio_menu(shared_page)
 
         # BACK-03: Back after slider changes
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.changeMusicVolume !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.changeMusicVolume([0.4])")
-        page.wait_for_function(
+        shared_page.evaluate("window.changeMusicVolume([0.4])")
+        shared_page.wait_for_function(
             "() => document.getElementById('music-slider').value === '0.4'",
             timeout=TEST_TIMEOUT,
         )
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.audioBackPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioBackPressed([])")
+        shared_page.evaluate("window.audioBackPressed([])")
 
-        open_audio_menu(page)
+        open_audio_menu(shared_page)
 
         assert (
-            page.evaluate("document.getElementById('music-slider').value") == "0.4"
+            shared_page.evaluate("document.getElementById('music-slider').value") == "0.4"
         ), "Changes did not persist after back"
 
         # BACK-04: Back from mid-interaction
         pre_change_log_count = len(logs)
-        page.evaluate("""
+        shared_page.evaluate("""
             const slider = document.getElementById('sfx-slider');
             slider.value = 0.6;
             slider.dispatchEvent(new Event('input'));  // Mid-drag
         """)
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.audioBackPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioBackPressed([])")
-        page.wait_for_function(
+        shared_page.evaluate("window.audioBackPressed([])")
+        shared_page.wait_for_function(
             "() => window.getComputedStyle("
             "document.getElementById('gameplay-button')"
             ").display === 'block'",
@@ -185,7 +184,7 @@ def test_back_flow(shared_page: Page) -> None:
         print(f"Test suite failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
-        page.screenshot(path=f"artifacts/test_back_failure_screenshot_{timestamp}.png")
+        shared_page.screenshot(path=f"artifacts/test_back_failure_screenshot_{timestamp}.png")
         with open(
             f"artifacts/test_back_failure_console_logs_{timestamp}.txt",
             "w",
