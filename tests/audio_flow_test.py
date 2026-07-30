@@ -42,7 +42,6 @@ from tests.test_utils import (
 )
 
 
-@pytest.mark.record_har
 def test_audio_flow(shared_page: Page) -> None:
     """
     Main test for warning popups and constraints using DOM overlays.
