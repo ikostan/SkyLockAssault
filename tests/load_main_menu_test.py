@@ -36,6 +36,7 @@ v8_coverage_load_main_menu_test.json, artifacts/test_load_main_menu_failure_*.pn
 import json
 import os
 import time
+from typing import Any
 
 from playwright.sync_api import Page, expect
 
@@ -56,7 +57,7 @@ def test_load_main_menu(shared_page: Page) -> None:
     logs: list[dict[str, str]] = []
     cdp_session = None
 
-    def on_console(msg) -> None:
+    def on_console(msg: Any) -> None:
         """
         Console message handler.
 
@@ -114,9 +115,20 @@ def test_load_main_menu(shared_page: Page) -> None:
         )
         raise
     finally:
+        # 1. Unregister console listener from the shared module page
+        try:
+            shared_page.remove_listener("console", on_console)
+        except Exception:
+            pass
+
+        # 2. Stop coverage profiling and detach CDP session
         if cdp_session:
-            coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
-            cdp_session.send("Profiler.stopPreciseCoverage")
-            cdp_session.send("Profiler.disable")
-            with open("v8_coverage_load_main_menu_test.json", "w") as f:
-                json.dump(coverage, f)
+            try:
+                coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
+                cdp_session.send("Profiler.stopPreciseCoverage")
+                cdp_session.send("Profiler.disable")
+                cdp_session.detach()
+                with open("v8_coverage_load_main_menu_test.json", "w") as f:
+                    json.dump(coverage, f)
+            except Exception:
+                pass
