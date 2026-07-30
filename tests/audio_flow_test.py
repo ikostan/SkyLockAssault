@@ -277,7 +277,9 @@ def test_audio_flow(shared_page: Page) -> None:
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
                 cdp_session.detach()
-                with open("v8_coverage_audio_flow_test.json", "w", encoding="utf-8") as f:
+                with open(
+                    "v8_coverage_audio_flow_test.json", "w", encoding="utf-8"
+                ) as f:
                     json.dump(coverage, f)
             except Exception:
                 pass
