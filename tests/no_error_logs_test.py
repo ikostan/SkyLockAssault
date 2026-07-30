@@ -63,7 +63,8 @@ def test_no_error_logs_after_load(page: Page) -> None:
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
         cdp_session.send(
-            "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
+            "Profiler.startPreciseCoverage",
+            {"callCount": True, "detailed": True}
         )
 
         # Fresh page fixture triggers page navigation & WASM startup while listeners are active

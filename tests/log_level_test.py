@@ -21,7 +21,6 @@ from playwright.sync_api import Page
 from tests.test_utils import (
     TEST_TIMEOUT,
     init_cdp_coverage,
-    init_page_and_wait_ready,
     open_options_menu,
 )
 

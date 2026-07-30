@@ -23,7 +23,7 @@ import time
 
 from playwright.sync_api import Page
 
-from tests.test_utils import DEFAULT_TIMEOUT, init_page_and_wait_ready
+from tests.test_utils import init_page_and_wait_ready
 
 
 # DO NOT REFACTOR: Must inject function-scoped `page`, NOT `shared_page`.
@@ -39,7 +39,8 @@ def test_no_critical_errors_on_load(page: Page) -> None:
 
     Using `shared_page` initializes Godot prior to listener attachment, causing
     `init_page_and_wait_ready()` to return instantly and leaving the captured
-    `logs` list empty—allowing GDScript compilation or runtime load errors to bypass detection.
+    `logs` list empty—allowing GDScript compilation or runtime load errors to
+    bypass detection.
     """
     logs: list[dict[str, str]] = []
 

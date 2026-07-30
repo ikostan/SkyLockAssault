@@ -264,9 +264,20 @@ def test_audio_flow(shared_page: Page) -> None:
             f.write(shared_page.content())
         raise
     finally:
+        # 1. Unregister console listener from the shared module page
+        try:
+            shared_page.remove_listener("console", on_console)
+        except Exception:
+            pass
+
+        # 2. Stop coverage profiling and detach CDP session
         if cdp_session:
-            coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
-            cdp_session.send("Profiler.stopPreciseCoverage")
-            cdp_session.send("Profiler.disable")
-            with open("v8_coverage_audio_flow_test.json", "w", encoding="utf-8") as f:
-                json.dump(coverage, f)
+            try:
+                coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
+                cdp_session.send("Profiler.stopPreciseCoverage")
+                cdp_session.send("Profiler.disable")
+                cdp_session.detach()
+                with open("v8_coverage_audio_flow_test.json", "w", encoding="utf-8") as f:
+                    json.dump(coverage, f)
+            except Exception:
+                pass
