@@ -38,6 +38,7 @@ Eliminate timing-dependent flakiness in the Playwright browser E2E test suite by
 #### 3. Test Coverage Stabilization
 
 Affected test files (all converted to deterministic waits):
+
 - `tests/audio_flow_test.py`
 - `tests/volume_sliders_mutes_test.py`
 - `tests/reset_audio_flow_test.py`
@@ -96,7 +97,7 @@ Improvements include:
 
 ### ⏱️ Individual Test Execution Breakdown
 
-By tracking the HTTP server `GET /index.html` request deltas from the latest log, we can observe the exact duration of each user flow test:
+The HTTP server request deltas reflect observed request-to-request wall-clock intervals (inclusive of browser initialization, page reloads, test teardown, and server scheduling overhead):
 
 | Test File                                                   | Start Time | End Time   | Approx. Duration |
 |-------------------------------------------------------------|------------|------------|------------------|

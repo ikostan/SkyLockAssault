@@ -76,9 +76,11 @@ Legacy copies under `tests/refactor/` were removed to keep a single canonical su
 
 ---
 
-By tracking the HTTP server `GET /index.html` request deltas, we can observe the exact execution window and duration of each browser test:
-
 ## ⏱️ Individual Test Execution Breakdown
+
+By trackBy tracking the HTTP server `GET /index.html` request deltas, we can observe the wall-clock intervals between browser test requests. 
+
+> **Timing Methodology Note:** Figures in the table below represent observed request-to-request wall-clock intervals rather than isolated in-test execution durations. These values include browser process launch, page reloads, test teardown, and background server scheduling overhead.ing the HTTP server `GET /index.html` request deltas, we can observe the exact execution window and duration of each browser test:
 
 | Test File                                                   | Start Time | End Time   | Approx. Duration |
 |-------------------------------------------------------------|------------|------------|------------------|
@@ -98,9 +100,9 @@ By tracking the HTTP server `GET /index.html` request deltas, we can observe the
 
 ### Key Execution Highlights
 
-* **Total Suite Duration:** **87.91 seconds** (13 passed, 0 failed).
-* **Longest Test:** `tests/fuel_depletion_test.py` (~17.0s) due to waiting for dynamic fuel consumption ticks.
-* **Fastest Tests:** `load_main_menu_test.py`, `no_error_logs_test.py`, and `validate_clean_load_test.py` (~2.0s each) which evaluate immediately upon engine initialization.
+* **Total Suite Wall-Clock Interval:** **~87.91 seconds** (13 passed, 0 failed across sequential server requests).
+* **Longest Wall-Clock Interval:** `tests/fuel_depletion_test.py` (~17.0s) due to waiting for dynamic fuel consumption ticks.
+* **Fastest Wall-Clock Intervals:** `load_main_menu_test.py`, `no_error_logs_test.py`, and `validate_clean_load_test.py` (~2.0s each) which evaluate immediately upon engine initialization.
 
 ---
 
