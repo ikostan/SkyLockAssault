@@ -16,11 +16,13 @@ import os
 import time
 from typing import Any
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
 from tests.test_utils import (
-    DEFAULT_TIMEOUT,
     TEST_TIMEOUT,
+    init_cdp_coverage,
+    init_page_and_wait_ready,
+    open_options_menu,
 )
 
 
@@ -35,8 +37,6 @@ def test_log_level_setting(page: Page) -> None:
       `window.currentLogLevel`.
     """
     logs: list[dict[str, str]] = []
-    cdp_session = None
-    coverage_started = False
 
     def on_console(msg: Any) -> None:
         """Console message handler to capture logs."""
@@ -44,37 +44,14 @@ def test_log_level_setting(page: Page) -> None:
 
     page.on("console", on_console)
 
+    cdp_session, coverage_started = init_cdp_coverage(page)
+
     try:
-        cdp_session = page.context.new_cdp_session(page)
-        cdp_session.send("Profiler.enable")
-        cdp_session.send(
-            "Profiler.startPreciseCoverage",
-            {"callCount": True, "detailed": True},
-        )
-        coverage_started = True
-
-        page.goto(
-            "http://localhost:8080/index.html",
-            wait_until="networkidle",
-            timeout=DEFAULT_TIMEOUT,
-        )
-
-        # 1. Wait deterministically for Godot engine initialization
-        page.wait_for_function(
-            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
-        )
-
-        canvas = page.locator("canvas")
-        expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
-        assert "SkyLockAssault" in page.title(), "Title not found"
+        # 1. Load page and wait deterministically for Godot engine readiness
+        init_page_and_wait_ready(page)
 
         # 2. Open Options menu
-        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_function(
-            "() => typeof window.optionsPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        page.evaluate("window.optionsPressed([])")
+        open_options_menu(page)
 
         # 3. Go to Advanced settings
         page.wait_for_selector(
@@ -103,8 +80,7 @@ def test_log_level_setting(page: Page) -> None:
         for level_idx, level_name in log_levels:
             page.evaluate(f"window.changeLogLevel([{level_idx}])")
 
-            # Deterministically wait until window.currentLogLevel
-            # matches the target index
+            # Deterministically wait until window.currentLogLevel matches target index
             page.wait_for_function(
                 f"() => window.currentLogLevel === {level_idx}",
                 timeout=TEST_TIMEOUT,
@@ -124,7 +100,8 @@ def test_log_level_setting(page: Page) -> None:
             path=f"artifacts/test_log_level_setting_failure_{timestamp}.png"
         )
         log_file = (
-            f"artifacts/test_log_level_setting_failure_" f"console_logs_{timestamp}.txt"
+            f"artifacts/test_log_level_setting_failure_"
+            f"console_logs_{timestamp}.txt"
         )
         with open(log_file, "w", encoding="utf-8") as f:
             for log in logs:
