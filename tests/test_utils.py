@@ -161,7 +161,7 @@ def set_difficulty(
     page: Page, logs: list[dict[str, str]], difficulty: float = 2.0
 ) -> None:
     """Navigate to Gameplay Settings, set difficulty, and return to Options."""
-    page.wait_for_selector("#gameplay-button", state="visible", timeout=TEST_TIMEOUT)
+    page.wait_for_selector("`#gameplay-button`", state="visible", timeout=TEST_TIMEOUT)
     page.wait_for_function(
         "() => typeof window.gameplayPressed !== 'undefined'",
         timeout=TEST_TIMEOUT,
@@ -170,6 +170,12 @@ def set_difficulty(
 
     page.wait_for_function(
         "() => typeof window.changeDifficulty !== 'undefined'",
+        timeout=TEST_TIMEOUT,
+    )
+    page.wait_for_function(
+        "() => window.getComputedStyle("
+        "document.getElementById('difficulty-slider')"
+        ").display === 'block'",
         timeout=TEST_TIMEOUT,
     )
     pre_change_log_count = len(logs)
@@ -183,7 +189,7 @@ def set_difficulty(
     )
 
     page.wait_for_selector(
-        "#gameplay-back-button", state="visible", timeout=TEST_TIMEOUT
+        "`#gameplay-back-button`", state="visible", timeout=TEST_TIMEOUT
     )
     page.wait_for_function(
         "() => typeof window.gameplayBackPressed !== 'undefined'",
