@@ -84,9 +84,7 @@ def test_no_critical_errors_on_load(page: Page) -> None:
         print(f"Load validation failed: {e!s}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time())
-        page.screenshot(
-            path=f"artifacts/test_load_error_screenshot_{timestamp}.png"
-        )
+        page.screenshot(path=f"artifacts/test_load_error_screenshot_{timestamp}.png")
 
         with open(f"artifacts/test_load_error_logs_{timestamp}.txt", "w") as f:
             for log in logs:
