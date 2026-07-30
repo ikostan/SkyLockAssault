@@ -204,17 +204,23 @@ def start_game_and_wait_ready(
     difficulty: float | None = None,
     log_level: str | int = "DEBUG",
 ) -> tuple[Any, bool]:
-    """Shared E2E setup helper that initializes V8 coverage, loads Godot, configures settings, and starts gameplay."""
+    """
+    Shared E2E setup helper that initializes V8 coverage, loads Godot,
+    configures settings, and starts gameplay.
+    """
     cdp_session, coverage_started = init_cdp_coverage(page)
 
     init_page_and_wait_ready(page)
     open_options_menu(page)
 
-    lvl_index = (
-        LOG_LEVEL_MAP.get(str(log_level).upper(), 0)
-        if isinstance(log_level, str)
-        else log_level
-    )
+    if isinstance(log_level, str):
+        key = log_level.upper()
+        if key not in LOG_LEVEL_MAP:
+            raise ValueError(f"Unknown log level: {log_level!r}")
+        lvl_index = LOG_LEVEL_MAP[key]
+    else:
+        lvl_index = log_level
+
     set_log_level(page, logs, level_index=lvl_index)
 
     if difficulty is not None:
