@@ -13,7 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture(scope="session")
-def browser_launch_args():
+def browser_type_launch_args():
     """Configures Playwright Chromium flags to prevent memory leaks
 
     and container OOM errors.

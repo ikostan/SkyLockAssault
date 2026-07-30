@@ -194,15 +194,22 @@ def soft_ui_reset(request):
 
 
 @pytest.fixture(scope="session")
-def browser_instance(playwright: Playwright) -> Generator[Browser, None, None]:
+def browser_instance(
+    playwright: Playwright, request: pytest.FixtureRequest
+) -> Generator[Browser, None, None]:
     """Session-scoped Chromium launch fixture to minimize startup overhead."""
+    # Consume browser_type_launch_args if provided by conftest override
+    launch_args = [
+        "--enable-unsafe-swiftshader",
+        "--disable-gpu",
+        "--use-gl=swiftshader",
+    ]
+    if "browser_type_launch_args" in request.fixturenames:
+        launch_args = request.getfixturevalue("browser_type_launch_args")
+
     browser = playwright.chromium.launch(
         headless=True,
-        args=[
-            "--enable-unsafe-swiftshader",
-            "--disable-gpu",
-            "--use-gl=swiftshader",
-        ],
+        args=launch_args,
     )
     yield browser
     browser.close()
