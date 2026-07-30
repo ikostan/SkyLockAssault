@@ -13,6 +13,57 @@ from typing import Generator
 import pytest
 from playwright.sync_api import Browser, BrowserContext, Page, Playwright
 
+# Storage for test lifecycle memory metrics
+_LIFECYCLE_METRICS = []
+
+
+@pytest.fixture(autouse=True)
+def capture_lifecycle_metrics(request):
+    """Captures browser JS heap memory metrics after each test execution."""
+    yield
+    # Sample page memory if shared_page or page fixture was used
+    page_fixture = None
+    if "shared_page" in request.fixturenames:
+        page_fixture = "shared_page"
+    elif "page" in request.fixturenames:
+        page_fixture = "page"
+
+    if page_fixture:
+        try:
+            page = request.getfixturevalue(page_fixture)
+            heap_info = page.evaluate("""() => {
+                if (window.performance && window.performance.memory) {
+                    return {
+                        usedJSHeapMB: (performance.memory.usedJSHeapSize / (1024 * 1024)).toFixed(2),
+                        totalJSHeapMB: (performance.memory.totalJSHeapSize / (1024 * 1024)).toFixed(2),
+                        jsHeapLimitMB: (performance.memory.jsHeapSizeLimit / (1024 * 1024)).toFixed(2)
+                    };
+                }
+                return null;
+            }""")
+
+            if heap_info:
+                _LIFECYCLE_METRICS.append({
+                    "test": request.node.name,
+                    "used_heap_mb": heap_info["usedJSHeapMB"],
+                    "total_heap_mb": heap_info["totalJSHeapMB"],
+                    "limit_mb": heap_info["jsHeapLimitMB"],
+                })
+        except Exception:
+            pass
+
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    """Outputs a browser memory & process lifecycle report at the end of the test suite."""
+    if _LIFECYCLE_METRICS:
+        terminalreporter.ensure_newline()
+        terminalreporter.section("Browser Lifecycle & Memory Metrics (#773)", sep="=", bold=True)
+        for entry in _LIFECYCLE_METRICS:
+            terminalreporter.write_line(
+                f"  • {entry['test']:<45} | JS Heap: {entry['used_heap_mb']:>6} MB / {entry['total_heap_mb']:>6} MB (Limit: {entry['limit_mb']} MB)"
+            )
+        terminalreporter.ensure_newline()
+
 
 def pytest_sessionfinish(session, exitstatus):
     """Guarantees browser and HTTP server sub-processes are terminated when PyCharm finishes testing."""
