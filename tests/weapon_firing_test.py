@@ -88,7 +88,9 @@ def test_weapon_firing(shared_page: Page) -> None:
         print(f"Test suite failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
-        shared_page.screenshot(path=f"artifacts/test_weapon_firing_failure_{timestamp}.png")
+        shared_page.screenshot(
+            path=f"artifacts/test_weapon_firing_failure_{timestamp}.png"
+        )
         log_file = f"artifacts/test_weapon_firing_failure_console_logs_{timestamp}.txt"
         with open(log_file, "w", encoding="utf-8") as f:
             for log in logs:

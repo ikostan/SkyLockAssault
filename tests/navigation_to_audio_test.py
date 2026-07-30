@@ -91,7 +91,9 @@ def test_navigation_to_audio(shared_page: Page) -> None:
 
         # NAV-01: Verify main menu overlays exist and are configured
         expect(shared_page.locator("#start-button")).to_be_visible(timeout=TEST_TIMEOUT)
-        expect(shared_page.locator("#options-button")).to_be_visible(timeout=TEST_TIMEOUT)
+        expect(shared_page.locator("#options-button")).to_be_visible(
+            timeout=TEST_TIMEOUT
+        )
         expect(shared_page.locator("#quit-button")).to_be_visible(timeout=TEST_TIMEOUT)
 
         opacity: str = shared_page.evaluate(
@@ -160,7 +162,9 @@ def test_navigation_to_audio(shared_page: Page) -> None:
         shared_page.evaluate("window.advancedBackPressed([])")
 
         # NAV-04: Navigate to audio sub-menu
-        shared_page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
+        shared_page.wait_for_selector(
+            "#audio-button", state="visible", timeout=TEST_TIMEOUT
+        )
         assert shared_page.evaluate(
             "document.getElementById('audio-button') !== null"
         ), "Audio button not found/displayed"

@@ -94,7 +94,9 @@ def test_load_main_menu(shared_page: Page) -> None:
 
         # Assert main-menu DOM overlay elements are present and visible
         expect(shared_page.locator("#start-button")).to_be_visible(timeout=TEST_TIMEOUT)
-        expect(shared_page.locator("#options-button")).to_be_visible(timeout=TEST_TIMEOUT)
+        expect(shared_page.locator("#options-button")).to_be_visible(
+            timeout=TEST_TIMEOUT
+        )
         expect(shared_page.locator("#quit-button")).to_be_visible(timeout=TEST_TIMEOUT)
 
     except Exception as e:
