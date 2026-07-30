@@ -29,7 +29,6 @@ import os
 import time
 from typing import Any
 
-import pytest
 from playwright.sync_api import Page
 
 from tests.test_utils import (
