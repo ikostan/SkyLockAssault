@@ -52,15 +52,16 @@ func _ready() -> void:
 	_load_settings()  # Load persisted settings first
 
 	# Connect to the resource signal to centralize side effects
-	if settings:
+	if is_instance_valid(settings):
 		settings.setting_changed.connect(_on_setting_changed)
 
 	# Signal Playwright that the engine is ready and initialize current log level state
 	if OS.has_feature("web"):
 		JavaScriptBridge.eval("window.godotInitialized = true")
-		JavaScriptBridge.eval(
-			"window.currentLogLevel = " + JSON.stringify(settings.current_log_level)
-		)
+		if is_instance_valid(settings):
+			JavaScriptBridge.eval(
+				"window.currentLogLevel = " + JSON.stringify(settings.current_log_level)
+			)
 
 
 ## Reactive handler for the Observer Pattern connected to GameSettingsResource signals.
