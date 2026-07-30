@@ -1,23 +1,23 @@
+# Copyright (C) 2025 Egor Kostan
+# SPDX-License-Identifier: GPL-3.0-or-later
 # tests/ci/conftest.py
-
-import os
-import tempfile
+"""CI-specific pytest configuration and browser launch arguments."""
 
 import pytest
-
-# Dynamically locate the project root relative to this file
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
 @pytest.fixture(scope="session")
 def browser_launch_args():
-    """Configures Playwright Chromium flags to prevent memory leaks and container OOM."""
+    """Configures Playwright Chromium flags to prevent memory leaks
+
+    and container OOM errors.
+    """
     return [
         "--use-gl=angle",
         "--use-angle=swiftshader",
-        "--disable-dev-shm-usage",  # Prevents /dev/shm memory exhaustion in Docker
+        "--disable-dev-shm-usage",
         "--no-sandbox",
-        "--js-flags=--max-old-space-size=2048",  # Prevents unbounded V8 heap growth
+        "--js-flags=--max-old-space-size=2048",
     ]
 
 
