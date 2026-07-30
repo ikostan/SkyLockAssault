@@ -1,12 +1,11 @@
 # Copyright (C) 2025 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 # tests/conftest.py
-"""
-Shared pytest fixtures and configs for SkyLockAssault E2E tests.
-"""
+"""Shared pytest fixtures and configs for SkyLockAssault E2E tests."""
 
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Generator
@@ -20,9 +19,8 @@ _LIFECYCLE_METRICS = []
 
 @pytest.fixture(autouse=True)
 def capture_lifecycle_metrics(request):
-    """Captures browser JS heap memory metrics after each test execution."""
+    """Captures browser JS heap memory metrics after test execution."""
     yield
-    # Sample page memory if shared_page or page fixture was used
     page_fixture = None
     if "shared_page" in request.fixturenames:
         page_fixture = "shared_page"
@@ -32,52 +30,63 @@ def capture_lifecycle_metrics(request):
     if page_fixture:
         try:
             page = request.getfixturevalue(page_fixture)
-            heap_info = page.evaluate("""() => {
-                if (window.performance && window.performance.memory) {
-                    return {
-                        usedJSHeapMB: (performance.memory.usedJSHeapSize / (1024 * 1024)).toFixed(2),
-                        totalJSHeapMB: (performance.memory.totalJSHeapSize / (1024 * 1024)).toFixed(2),
-                        jsHeapLimitMB: (performance.memory.jsHeapSizeLimit / (1024 * 1024)).toFixed(2)
-                    };
-                }
-                return null;
-            }""")
+            heap_script = (
+                "() => {\n"
+                "  if (window.performance && window.performance.memory) {\n"
+                "    const mem = window.performance.memory;\n"
+                "    return {\n"
+                "      used: (mem.usedJSHeapSize / 1048576).toFixed(2),\n"
+                "      total: (mem.totalJSHeapSize / 1048576).toFixed(2),\n"
+                "      limit: (mem.jsHeapSizeLimit / 1048576).toFixed(2)\n"
+                "    };\n"
+                "  }\n"
+                "  return null;\n"
+                "}"
+            )
+            heap_info = page.evaluate(heap_script)
 
             if heap_info:
                 _LIFECYCLE_METRICS.append(
                     {
                         "test": request.node.name,
-                        "used_heap_mb": heap_info["usedJSHeapMB"],
-                        "total_heap_mb": heap_info["totalJSHeapMB"],
-                        "limit_mb": heap_info["jsHeapLimitMB"],
+                        "used_heap_mb": heap_info["used"],
+                        "total_heap_mb": heap_info["total"],
+                        "limit_mb": heap_info["limit"],
                     }
                 )
         except Exception:
             pass
 
 
-def pytest_terminal_summary(terminalreporter, exitstatus, config):
-    """Outputs a browser memory & process lifecycle report at the end of the test suite."""
+def pytest_terminal_summary(terminalreporter, _exitstatus, _config):
+    """Outputs browser memory & lifecycle report at suite end."""
     if _LIFECYCLE_METRICS:
         terminalreporter.ensure_newline()
         terminalreporter.section(
             "Browser Lifecycle & Memory Metrics (#773)", sep="=", bold=True
         )
         for entry in _LIFECYCLE_METRICS:
-            terminalreporter.write_line(
-                f"  • {entry['test']:<45} | JS Heap: {entry['used_heap_mb']:>6} MB / {entry['total_heap_mb']:>6} MB (Limit: {entry['limit_mb']} MB)"
+            t_name = entry["test"]
+            u_heap = entry["used_heap_mb"]
+            tot_heap = entry["total_heap_mb"]
+            lim_heap = entry["limit_mb"]
+            line = (
+                f"  • {t_name:<45} | JS Heap: {u_heap:>6} MB / "
+                f"{tot_heap:>6} MB (Limit: {lim_heap} MB)"
             )
+            terminalreporter.write_line(line)
         terminalreporter.ensure_newline()
 
 
-def pytest_sessionfinish(session, exitstatus):
-    """Guarantees browser and HTTP server sub-processes are terminated when PyCharm finishes testing."""
+def pytest_sessionfinish(_session, _exitstatus):
+    """Guarantees sub-processes are terminated when tests finish."""
     # 1. Clean up orphaned python HTTP server sub-processes
     try:
         if os.name == "nt":  # Windows
+            cmd = shutil.which("taskkill") or "C:\\Windows\\System32\\taskkill.exe"
             subprocess.run(
                 [
-                    "taskkill",
+                    cmd,
                     "/F",
                     "/IM",
                     "python.exe",
@@ -86,22 +95,27 @@ def pytest_sessionfinish(session, exitstatus):
                 ],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                check=False,
             )
         else:  # Linux / WSL2
-            subprocess.run(["pkill", "-f", "http.server"], check=False)
+            cmd = shutil.which("pkill") or "/usr/bin/pkill"
+            subprocess.run([cmd, "-f", "http.server"], check=False)
     except Exception:
         pass
 
     # 2. Force terminate lingering Playwright Chromium driver instances
     try:
         if os.name == "nt":
+            cmd = shutil.which("taskkill") or "C:\\Windows\\System32\\taskkill.exe"
             subprocess.run(
-                ["taskkill", "/F", "/IM", "chrome.exe", "/T"],
+                [cmd, "/F", "/IM", "chrome.exe", "/T"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                check=False,
             )
         else:
-            subprocess.run(["pkill", "-f", "chromium"], check=False)
+            cmd = shutil.which("pkill") or "/usr/bin/pkill"
+            subprocess.run([cmd, "-f", "chromium"], check=False)
     except Exception:
         pass
 
@@ -148,7 +162,7 @@ def shared_page(browser: Browser) -> Page:
 
 @pytest.fixture(autouse=True)
 def soft_ui_reset(request):
-    """Executes a lightweight UI state reset between tests using existing window hooks."""
+    """Executes a lightweight UI state reset between tests using window hooks."""
     yield
     if "shared_page" in request.fixturenames:
         page = request.getfixturevalue("shared_page")
@@ -168,10 +182,7 @@ def soft_ui_reset(request):
 
 @pytest.fixture(scope="session")
 def browser_instance(playwright: Playwright) -> Generator[Browser, None, None]:
-    """
-    Session-scoped Chromium launch fixture to minimize startup
-    overhead across the test suite.
-    """
+    """Session-scoped Chromium launch fixture to minimize startup overhead."""
     browser = playwright.chromium.launch(
         headless=True,
         args=[
@@ -188,10 +199,7 @@ def browser_instance(playwright: Playwright) -> Generator[Browser, None, None]:
 def page(
     browser_instance: Browser, request: pytest.FixtureRequest
 ) -> Generator[Page, None, None]:
-    """
-    Function-scoped page fixture providing clean browser context
-    isolation for each test.
-    """
+    """Provides clean browser context isolation for each test."""
     har_path = None
     if request.node.get_closest_marker("record_har"):
         nodeid = request.node.nodeid
