@@ -186,19 +186,22 @@ def browser_instance(
     playwright: Playwright, request: pytest.FixtureRequest
 ) -> Generator[Browser, None, None]:
     """Session-scoped Chromium launch fixture to minimize startup overhead."""
-    # Consume browser_type_launch_args if provided by conftest override
-    launch_args = [
-        "--enable-unsafe-swiftshader",
-        "--disable-gpu",
-        "--use-gl=swiftshader",
-    ]
+    launch_options = {
+        "headless": True,
+        "args": [
+            "--enable-unsafe-swiftshader",
+            "--disable-gpu",
+            "--use-gl=swiftshader",
+        ],
+    }
     if "browser_type_launch_args" in request.fixturenames:
-        launch_args = request.getfixturevalue("browser_type_launch_args")
+        override = request.getfixturevalue("browser_type_launch_args")
+        if isinstance(override, dict):
+            launch_options.update(override)
+        elif isinstance(override, list):
+            launch_options["args"] = override
 
-    browser = playwright.chromium.launch(
-        headless=True,
-        args=launch_args,
-    )
+    browser = playwright.chromium.launch(**launch_options)
     yield browser
     browser.close()
 

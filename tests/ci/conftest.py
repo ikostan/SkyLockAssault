@@ -18,13 +18,15 @@ def browser_type_launch_args():
 
     and container OOM errors.
     """
-    return [
-        "--use-gl=angle",
-        "--use-angle=swiftshader",
-        "--disable-dev-shm-usage",
-        "--no-sandbox",
-        "--js-flags=--max-old-space-size=2048",
-    ]
+    return {
+        "args": [
+            "--use-gl=angle",
+            "--use-angle=swiftshader",
+            "--disable-dev-shm-usage",
+            "--no-sandbox",
+            "--js-flags=--max-old-space-size=2048",
+        ]
+    }
 
 
 @pytest.fixture
