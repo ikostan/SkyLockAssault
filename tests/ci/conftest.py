@@ -3,7 +3,13 @@
 # tests/ci/conftest.py
 """CI-specific pytest configuration and browser launch arguments."""
 
+import os
+import tempfile
+from pathlib import Path
+
 import pytest
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture(scope="session")
@@ -23,10 +29,10 @@ def browser_launch_args():
 
 @pytest.fixture
 def repo_tmp():
-    """
-    Creates an isolated temporary directory INSIDE the project root.
-    Yields a relative POSIX path (e.g. 'tmp_xyz') so WSL bash can easily digest
-    it without encountering Windows 'C:\\...' absolute path translation errors.
+    """Creates an isolated temporary directory INSIDE the project root.
+
+    Yields a relative POSIX path (e.g. 'tmp_xyz') so WSL bash can easily
+    digest it without encountering Windows absolute path translation errors.
     """
     with tempfile.TemporaryDirectory(dir=PROJECT_ROOT) as tmpdir:
         rel_path = os.path.relpath(tmpdir, PROJECT_ROOT).replace("\\", "/")
