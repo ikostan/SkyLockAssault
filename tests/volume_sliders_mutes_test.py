@@ -40,7 +40,7 @@ from tests.test_utils import (
 )
 
 
-def test_volume_sliders_mutes(page: Page) -> None:
+def test_volume_sliders_mutes(shared_page: Page) -> None:
     """
     Main test suite for volume sliders and mute toggles using DOM overlays.
 
@@ -50,6 +50,7 @@ def test_volume_sliders_mutes(page: Page) -> None:
     :type page: Page
     :rtype: None
     """
+    page = shared_page
     logs: list[dict[str, str]] = []
     cdp_session = None
     coverage_started = False

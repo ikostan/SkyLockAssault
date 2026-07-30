@@ -43,12 +43,13 @@ from tests.test_utils import (
 
 
 @pytest.mark.record_har
-def test_audio_flow(page: Page) -> None:
+def test_audio_flow(shared_page: Page) -> None:
     """
     Main test for warning popups and constraints using DOM overlays.
 
     Implements WARN-01 to WARN-03: Mute/adjust, verify unchanged values, warnings.
     """
+    page = shared_page
     logs: list[dict[str, str]] = []
     cdp_session = None
 

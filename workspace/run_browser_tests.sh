@@ -46,20 +46,24 @@ cleanup_server() {
   fi
 }
 
-trap cleanup_server EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
+trap cleanup_server EXIT INT TERM
+
 echo "🚀 Starting security-isolated server on port $SERVER_PORT..."
 python3 -c "
 import http.server, socketserver, os
+
 class MyHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
         self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')
         self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
         super().end_headers()
-socketserver.TCPServer.allow_reuse_address = True
-with socketserver.TCPServer(('', $SERVER_PORT), MyHandler) as httpd:
+
+class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+with ThreadedHTTPServer(('', $SERVER_PORT), MyHandler) as httpd:
     os.chdir('$EXPORT_DIR')
     httpd.serve_forever()
 " &

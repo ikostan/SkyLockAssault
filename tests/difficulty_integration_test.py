@@ -29,7 +29,7 @@ from tests.test_utils import (
 )
 
 
-def test_difficulty_integration(page: Page) -> None:
+def test_difficulty_integration(shared_page: Page) -> None:
     """
     Full flow validation that difficulty 2.0 affects gameplay systems.
 
@@ -37,6 +37,7 @@ def test_difficulty_integration(page: Page) -> None:
     to 2.0 in Gameplay Settings, starts the game, waits for level load, fires
     weapon, and verifies execution logs.
     """
+    page = shared_page
     logs: list[dict[str, str]] = []
 
     def on_console(msg: Any) -> None:

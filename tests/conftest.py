@@ -5,12 +5,95 @@
 Shared pytest fixtures and configs for SkyLockAssault E2E tests.
 """
 
+import os
+import subprocess
 import re
 from pathlib import Path
 from typing import Generator
-
 import pytest
 from playwright.sync_api import Browser, BrowserContext, Page, Playwright
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Guarantees browser and HTTP server sub-processes are terminated when PyCharm finishes testing."""
+    # 1. Clean up orphaned python HTTP server sub-processes
+    try:
+        if os.name == "nt":  # Windows
+            subprocess.run(
+                ["taskkill", "/F", "/IM", "python.exe", "/FI", "WINDOWTITLE eq http.server*"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        else:  # Linux / WSL2
+            subprocess.run(["pkill", "-f", "http.server"], check=False)
+    except Exception:
+        pass
+
+    # 2. Force terminate lingering Playwright Chromium driver instances
+    try:
+        if os.name == "nt":
+            subprocess.run(
+                ["taskkill", "/F", "/IM", "chrome.exe", "/T"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        else:
+            subprocess.run(["pkill", "-f", "chromium"], check=False)
+    except Exception:
+        pass
+
+
+@pytest.fixture(scope="module")
+def shared_page(browser: Browser) -> Page:
+    """Module-scoped page fixture. Boots Godot WASM once per module."""
+    context = browser.new_context(viewport={"width": 1280, "height": 720})
+    page = context.new_page()
+
+    # 1. Load shell without waiting for networkidle
+    page.goto("http://localhost:8080/index.html", wait_until="domcontentloaded")
+
+    # 2. Wait deterministically for Godot startup signal
+    page.wait_for_function("() => window.godotInitialized === true", timeout=30000)
+
+    yield page
+
+    # Teardown: Explicitly lose WebGL context to free GPU memory before closing
+    try:
+        page.evaluate("""() => {
+            const canvas = document.getElementById('canvas');
+            if (canvas) {
+                const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+                if (gl) {
+                    const loseContext = gl.getExtension('WEBGL_lose_context');
+                    if (loseContext) loseContext.loseContext();
+                }
+            }
+        }""")
+    except Exception:
+        pass
+
+    page.close()
+    context.close()
+
+
+@pytest.fixture(autouse=True)
+def soft_ui_reset(request):
+    """Executes a lightweight UI state reset between tests using existing window hooks."""
+    yield
+    if "shared_page" in request.fixturenames:
+        page = request.getfixturevalue("shared_page")
+        try:
+            page.evaluate("""() => {
+                localStorage.clear();
+                sessionStorage.clear();
+                if (typeof window.audioBackPressed === 'function') window.audioBackPressed([]);
+                if (typeof window.controlsBackPressed === 'function') window.controlsBackPressed([]);
+                if (typeof window.gameplayBackPressed === 'function') window.gameplayBackPressed([]);
+                if (typeof window.advancedBackPressed === 'function') window.advancedBackPressed([]);
+                if (typeof window.optionsBackPressed === 'function') window.optionsBackPressed([]);
+            }""")
+        except Exception:
+            pass
 
 
 @pytest.fixture(scope="session")

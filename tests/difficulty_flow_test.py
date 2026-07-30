@@ -58,7 +58,7 @@ def _has_save_log(logs: List[Dict[str, str]]) -> bool:
     )
 
 
-def test_difficulty_flow(page: Page) -> None:
+def test_difficulty_flow(shared_page: Page) -> None:
     """
     Main test for difficulty flow using DOM overlays.
 
@@ -69,6 +69,7 @@ def test_difficulty_flow(page: Page) -> None:
     :type page: Page
     :rtype: None
     """
+    page = shared_page
     logs: List[Dict[str, str]] = []
     cdp_session: Optional[Any] = None
 

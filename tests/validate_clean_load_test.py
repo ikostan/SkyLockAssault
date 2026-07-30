@@ -48,7 +48,7 @@ def test_no_critical_errors_on_load(page: Page) -> None:
         # 1. Navigate to the game
         page.goto(
             "http://localhost:8080/index.html",
-            wait_until="networkidle",
+            wait_until="domcontentloaded",
             timeout=DEFAULT_TIMEOUT,
         )
 

@@ -26,7 +26,7 @@ from tests.test_utils import (
 )
 
 
-def test_weapon_firing(page: Page) -> None:
+def test_weapon_firing(shared_page: Page) -> None:
     """
     E2E: Verifies that pressing Space during gameplay fires a weapon.
 
@@ -38,6 +38,7 @@ def test_weapon_firing(page: Page) -> None:
     - Focus canvas and press Space key.
     - Verify "Firing with scaled cooldown:" appears in console logs.
     """
+    page = shared_page
     logs: list[dict[str, str]] = []
 
     def on_console(msg: Any) -> None:

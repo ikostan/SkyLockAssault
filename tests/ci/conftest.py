@@ -9,6 +9,18 @@ import pytest
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
+@pytest.fixture(scope="session")
+def browser_launch_args():
+    """Configures Playwright Chromium flags to prevent memory leaks and container OOM."""
+    return [
+        "--use-gl=angle",
+        "--use-angle=swiftshader",
+        "--disable-dev-shm-usage",  # Prevents /dev/shm memory exhaustion in Docker
+        "--no-sandbox",
+        "--js-flags=--max-old-space-size=2048",  # Prevents unbounded V8 heap growth
+    ]
+
+
 @pytest.fixture
 def repo_tmp():
     """

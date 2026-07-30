@@ -26,7 +26,7 @@ from tests.test_utils import (
 )
 
 
-def test_log_level_setting(page: Page) -> None:
+def test_log_level_setting(shared_page: Page) -> None:
     """
     E2E: Verifies cycling through all log levels in Advanced settings.
 
@@ -36,6 +36,7 @@ def test_log_level_setting(page: Page) -> None:
     - Sequentially test all log levels (0 to 4) and verify
       `window.currentLogLevel`.
     """
+    page = shared_page
     logs: list[dict[str, str]] = []
 
     def on_console(msg: Any) -> None:

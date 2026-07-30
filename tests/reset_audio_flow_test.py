@@ -55,7 +55,7 @@ def _get_unignored_errors(
     return actual_errors
 
 
-def test_reset_flow(page: Page) -> None:
+def test_reset_flow(shared_page: Page) -> None:
     """
     Main test suite for reset functionality using DOM overlays.
 
@@ -65,6 +65,7 @@ def test_reset_flow(page: Page) -> None:
     :type page: Page
     :rtype: None
     """
+    page = shared_page
     logs: list[dict[str, str]] = []
     cdp_session = None
 

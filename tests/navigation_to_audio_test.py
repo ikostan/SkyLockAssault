@@ -37,7 +37,7 @@ from playwright.sync_api import Page, expect
 from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT, wait_for_console_log
 
 
-def test_navigation_to_audio(page: Page) -> None:
+def test_navigation_to_audio(shared_page: Page) -> None:
     """
     Main test suite for navigation to audio settings using DOM overlays.
 
@@ -48,6 +48,7 @@ def test_navigation_to_audio(page: Page) -> None:
     :type page: Page
     :rtype: None
     """
+    page = shared_page
     logs: list[dict[str, str]] = []
     cdp_session = None
 

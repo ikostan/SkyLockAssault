@@ -76,7 +76,7 @@ def test_load_main_menu(page: Page) -> None:
 
         page.goto(
             "http://localhost:8080/index.html",
-            wait_until="networkidle",
+            wait_until="domcontentloaded",
             timeout=DEFAULT_TIMEOUT,
         )
 

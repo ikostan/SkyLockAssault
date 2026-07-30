@@ -25,7 +25,7 @@ from tests.test_utils import (
 )
 
 
-def test_fuel_depletion(page: Page) -> None:
+def test_fuel_depletion(shared_page: Page) -> None:
     """
     Validate fuel depletes monotonically under difficulty 2.0 after starting the level.
 
@@ -33,6 +33,7 @@ def test_fuel_depletion(page: Page) -> None:
     the game, and samples `window.currentFuel` over time to verify depletion rate
     and monotonicity.
     """
+    page = shared_page
     logs: list[dict[str, str]] = []
 
     def on_console(msg: Any) -> None:
