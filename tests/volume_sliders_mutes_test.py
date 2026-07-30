@@ -94,7 +94,9 @@ def test_volume_sliders_mutes(shared_page: Page) -> None:
         assert "SkyLockAssault" in shared_page.title(), "Title not found"
 
         # Open options
-        shared_page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
+        shared_page.wait_for_selector(
+            "#options-button", state="visible", timeout=TEST_TIMEOUT
+        )
         shared_page.wait_for_function(
             "() => typeof window.optionsPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,

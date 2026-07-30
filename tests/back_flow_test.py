@@ -154,7 +154,8 @@ def test_back_flow(shared_page: Page) -> None:
         open_audio_menu(shared_page)
 
         assert (
-            shared_page.evaluate("document.getElementById('music-slider').value") == "0.4"
+            shared_page.evaluate("document.getElementById('music-slider').value")
+            == "0.4"
         ), "Changes did not persist after back"
 
         # BACK-04: Back from mid-interaction
@@ -184,7 +185,9 @@ def test_back_flow(shared_page: Page) -> None:
         print(f"Test suite failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
-        shared_page.screenshot(path=f"artifacts/test_back_failure_screenshot_{timestamp}.png")
+        shared_page.screenshot(
+            path=f"artifacts/test_back_failure_screenshot_{timestamp}.png"
+        )
         with open(
             f"artifacts/test_back_failure_console_logs_{timestamp}.txt",
             "w",

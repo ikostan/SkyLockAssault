@@ -198,29 +198,30 @@ def test_reset_flow(shared_page: Page) -> None:
         )
 
         assert (
-            float(shared_page.evaluate(
-                "document.getElementById('master-slider').value"
-            )) == 1.0
+            float(
+                shared_page.evaluate("document.getElementById('master-slider').value")
+            )
+            == 1.0
         )
         assert (
-            float(shared_page.evaluate(
-                "document.getElementById('music-slider').value"
-            )) == 1.0
+            float(shared_page.evaluate("document.getElementById('music-slider').value"))
+            == 1.0
         )
         assert (
-            float(shared_page.evaluate(
-                "document.getElementById('sfx-slider').value"
-            )) == 1.0
+            float(shared_page.evaluate("document.getElementById('sfx-slider').value"))
+            == 1.0
         )
         assert (
-            float(shared_page.evaluate(
-                "document.getElementById('weapon-slider').value"
-            )) == 1.0
+            float(
+                shared_page.evaluate("document.getElementById('weapon-slider').value")
+            )
+            == 1.0
         )
         assert (
-            float(shared_page.evaluate(
-                "document.getElementById('rotors-slider').value"
-            )) == 1.0
+            float(
+                shared_page.evaluate("document.getElementById('rotors-slider').value")
+            )
+            == 1.0
         )
 
         new_logs = logs[pre_change_log_count:]
@@ -280,14 +281,16 @@ def test_reset_flow(shared_page: Page) -> None:
         )
 
         assert (
-            float(shared_page.evaluate(
-                "document.getElementById('master-slider').value"
-            )) == 1.0
+            float(
+                shared_page.evaluate("document.getElementById('master-slider').value")
+            )
+            == 1.0
         )
         assert (
-            float(shared_page.evaluate(
-                "document.getElementById('rotors-slider').value"
-            )) == 1.0
+            float(
+                shared_page.evaluate("document.getElementById('rotors-slider').value")
+            )
+            == 1.0
         )
 
         # RESET-04: Reset persists across Back navigation
@@ -350,9 +353,8 @@ def test_reset_flow(shared_page: Page) -> None:
             timeout=TEST_TIMEOUT,
         )
         assert (
-            float(shared_page.evaluate(
-                "document.getElementById('sfx-slider').value"
-            )) == 1.0
+            float(shared_page.evaluate("document.getElementById('sfx-slider').value"))
+            == 1.0
         ), "Reset volume not retained across menu navigation"
 
         # RESET-05: Rapid Reset button clicks
@@ -384,9 +386,10 @@ def test_reset_flow(shared_page: Page) -> None:
         )
 
         assert (
-            float(shared_page.evaluate(
-                "document.getElementById('master-slider').value"
-            )) == 1.0
+            float(
+                shared_page.evaluate("document.getElementById('master-slider').value")
+            )
+            == 1.0
         )
 
         # STATE-01: Reset button state persists across page reload
@@ -460,29 +463,30 @@ def test_reset_flow(shared_page: Page) -> None:
 
         # Sliders should all be at default volume post-reload
         assert (
-            float(shared_page.evaluate(
-                "document.getElementById('master-slider').value"
-            )) == 1.0
+            float(
+                shared_page.evaluate("document.getElementById('master-slider').value")
+            )
+            == 1.0
         )
         assert (
-            float(shared_page.evaluate(
-                "document.getElementById('music-slider').value"
-            )) == 1.0
+            float(shared_page.evaluate("document.getElementById('music-slider').value"))
+            == 1.0
         )
         assert (
-            float(shared_page.evaluate(
-                "document.getElementById('sfx-slider').value"
-            )) == 1.0
+            float(shared_page.evaluate("document.getElementById('sfx-slider').value"))
+            == 1.0
         )
         assert (
-            float(shared_page.evaluate(
-                "document.getElementById('weapon-slider').value"
-            )) == 1.0
+            float(
+                shared_page.evaluate("document.getElementById('weapon-slider').value")
+            )
+            == 1.0
         )
         assert (
-            float(shared_page.evaluate(
-                "document.getElementById('rotors-slider').value"
-            )) == 1.0
+            float(
+                shared_page.evaluate("document.getElementById('rotors-slider').value")
+            )
+            == 1.0
         )
 
         # STATE-02: Audio reset doesn't affect gameplay settings
@@ -499,9 +503,7 @@ def test_reset_flow(shared_page: Page) -> None:
         )
 
         initial_difficulty = float(
-            shared_page.evaluate(
-                "document.getElementById('difficulty-slider').value"
-            )
+            shared_page.evaluate("document.getElementById('difficulty-slider').value")
         )
         assert initial_difficulty == 1.0, "Unexpected default difficulty value"
 
@@ -546,9 +548,12 @@ def test_reset_flow(shared_page: Page) -> None:
         )
 
         assert (
-            float(shared_page.evaluate(
-                "document.getElementById('difficulty-slider').value"
-            )) == initial_difficulty
+            float(
+                shared_page.evaluate(
+                    "document.getElementById('difficulty-slider').value"
+                )
+            )
+            == initial_difficulty
         ), "Gameplay difficulty modified by audio reset"
 
     except Exception as e:

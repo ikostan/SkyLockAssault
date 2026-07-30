@@ -111,8 +111,12 @@ def test_difficulty_flow(shared_page: Page) -> None:
         assert "SkyLockAssault" in shared_page.title(), "Title not found"
 
         # Check element present
-        shared_page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
-        assert shared_page.evaluate("document.getElementById('options-button') !== null")
+        shared_page.wait_for_selector(
+            "#options-button", state="visible", timeout=TEST_TIMEOUT
+        )
+        assert shared_page.evaluate(
+            "document.getElementById('options-button') !== null"
+        )
 
         # Check invisible (opacity 0)
         opacity: str = shared_page.evaluate(
@@ -139,7 +143,9 @@ def test_difficulty_flow(shared_page: Page) -> None:
         )
 
         # Open options
-        shared_page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
+        shared_page.wait_for_selector(
+            "#options-button", state="visible", timeout=TEST_TIMEOUT
+        )
         shared_page.wait_for_function(
             "() => typeof window.optionsPressed !== 'undefined'", timeout=TEST_TIMEOUT
         )
@@ -279,7 +285,9 @@ def test_difficulty_flow(shared_page: Page) -> None:
         shared_page.wait_for_selector(
             "#options-back-button", state="visible", timeout=TEST_TIMEOUT
         )
-        assert shared_page.evaluate("document.getElementById('options-back-button') !== null")
+        assert shared_page.evaluate(
+            "document.getElementById('options-back-button') !== null"
+        )
         # Gameplay UI hidden
         shared_page.wait_for_selector(
             "#difficulty-slider", state="hidden", timeout=TEST_TIMEOUT
@@ -293,11 +301,15 @@ def test_difficulty_flow(shared_page: Page) -> None:
         shared_page.wait_for_selector(
             "#options-back-button", state="visible", timeout=TEST_TIMEOUT
         )
-        assert shared_page.evaluate("document.getElementById('options-back-button') !== null")
+        assert shared_page.evaluate(
+            "document.getElementById('options-back-button') !== null"
+        )
         shared_page.evaluate("window.optionsBackPressed([])")
 
         # After optionsBackPressed([]), back on the main menu
-        shared_page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
+        shared_page.wait_for_selector(
+            "#start-button", state="visible", timeout=TEST_TIMEOUT
+        )
         assert shared_page.evaluate("document.getElementById('start-button') !== null")
         shared_page.wait_for_selector(
             "#options-back-button", state="hidden", timeout=TEST_TIMEOUT
@@ -308,7 +320,9 @@ def test_difficulty_flow(shared_page: Page) -> None:
         )
 
         # Start game
-        shared_page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
+        shared_page.wait_for_selector(
+            "#start-button", state="visible", timeout=TEST_TIMEOUT
+        )
         pre_start_log_count = len(logs)
         shared_page.click("#start-button", force=True)
 
