@@ -122,6 +122,7 @@ def pytest_sessionfinish(session, exitstatus):
     except Exception:
         pass
 
+
 @pytest.fixture(scope="module")
 def shared_page(browser: Browser) -> Page:
     """Module-scoped page fixture. Boots Godot WASM once per module."""
