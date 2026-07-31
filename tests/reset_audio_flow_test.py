@@ -191,7 +191,8 @@ def test_reset_flow(shared_page: Page) -> None:
 
         for bus in ("master", "music", "sfx", "weapon", "rotors"):
             shared_page.wait_for_function(
-                "(id) => parseFloat(document.getElementById(id + '-slider').value) === 1.0",
+                "(id) => parseFloat("
+                "document.getElementById(id + '-slider').value) === 1.0",
                 arg=bus,
                 timeout=TEST_TIMEOUT,
             )
@@ -216,7 +217,9 @@ def test_reset_flow(shared_page: Page) -> None:
             shared_page,
         )
 
-        actual_errors = _get_unignored_errors(logs[pre_reset_logs:], ignored_phrases)
+        actual_errors = _get_unignored_errors(
+            logs[pre_reset_logs:], ignored_phrases
+        )
         assert not actual_errors, f"Errors on default reset: {actual_errors}"
 
         # RESET-03: Reset after partial volume changes
@@ -246,7 +249,8 @@ def test_reset_flow(shared_page: Page) -> None:
 
         for bus in ("master", "rotors"):
             shared_page.wait_for_function(
-                "(id) => parseFloat(document.getElementById(id + '-slider').value) === 1.0",
+                "(id) => parseFloat("
+                "document.getElementById(id + '-slider').value) === 1.0",
                 arg=bus,
                 timeout=TEST_TIMEOUT,
             )
@@ -305,7 +309,8 @@ def test_reset_flow(shared_page: Page) -> None:
             timeout=TEST_TIMEOUT,
         )
         shared_page.wait_for_function(
-            "() => parseFloat(document.getElementById('sfx-slider').value) === 1.0",
+            "() => parseFloat("
+            "document.getElementById('sfx-slider').value) === 1.0",
             timeout=TEST_TIMEOUT,
         )
 
@@ -332,7 +337,8 @@ def test_reset_flow(shared_page: Page) -> None:
         )
 
         shared_page.wait_for_function(
-            "() => parseFloat(document.getElementById('master-slider').value) === 1.0",
+            "() => parseFloat("
+            "document.getElementById('master-slider').value) === 1.0",
             timeout=TEST_TIMEOUT,
         )
 
@@ -400,7 +406,8 @@ def test_reset_flow(shared_page: Page) -> None:
         # Sliders should all be at default volume post-reload
         for bus in ("master", "music", "sfx", "weapon", "rotors"):
             shared_page.wait_for_function(
-                "(id) => parseFloat(document.getElementById(id + '-slider').value) === 1.0",
+                "(id) => parseFloat("
+                "document.getElementById(id + '-slider').value) === 1.0",
                 arg=bus,
                 timeout=TEST_TIMEOUT,
             )
@@ -419,7 +426,9 @@ def test_reset_flow(shared_page: Page) -> None:
         )
 
         initial_difficulty = float(
-            shared_page.evaluate("document.getElementById('difficulty-slider').value")
+            shared_page.evaluate(
+                "document.getElementById('difficulty-slider').value"
+            )
         )
         assert initial_difficulty == 1.0, "Unexpected default difficulty value"
 
@@ -473,14 +482,16 @@ def test_reset_flow(shared_page: Page) -> None:
         ), "Gameplay difficulty modified by audio reset"
 
     except Exception as e:
-        print(f"Test suite failed: {str(e)}")
+        print(f"Test suite failed: {e!s}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
         shared_page.screenshot(
             path=f"artifacts/test_reset_failure_screenshot_{timestamp}.png"
         )
         with open(
-            f"artifacts/test_reset_failure_console_logs_{timestamp}.txt", "w"
+            f"artifacts/test_reset_failure_console_logs_{timestamp}.txt",
+            "w",
+            encoding="utf-8",
         ) as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
