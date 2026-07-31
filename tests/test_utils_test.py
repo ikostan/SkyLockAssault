@@ -21,7 +21,9 @@ def test_init_page_short_circuits_when_already_ready(shared_page: Page) -> None:
 
     # Verify marker still exists (proves page did not re-navigate or reload)
     is_same_session = shared_page.evaluate("window.__test_no_reload_marker === true")
-    assert is_same_session, "init_page_and_wait_ready reloaded an already initialized page"
+    assert (
+        is_same_session
+    ), "init_page_and_wait_ready reloaded an already initialized page"
     expect(shared_page.locator("canvas")).to_be_visible(timeout=DEFAULT_TIMEOUT)
 
 
