@@ -7,16 +7,17 @@ Main Menu Load Test (Playwright + UI Automation with DOM Overlays)
 
 Overview
 --------
-E2E test: Verifies Godot HTML5 build loads main menu in browser. Ensures network idle, canvas visibility, godotInitialized flag (from main_menu.gd _ready()), and title contains "SkyLockAssault".
+E2E test: Verifies Godot HTML5 build loads main menu in browser. Ensures network idle,
+canvas visibility, godotInitialized flag (from main_menu.gd _ready()), and title contains "SkyLockAssault".
 
 No coords - DOM overlays for verification.
 
 Test Flow
 ---------
-- Navigate to index.html, wait networkidle.
-- Wait canvas visible.
-- Wait window.godotInitialized (signals _ready() complete).
-- Assert title.
+- Attach console listener and CDP profiler to fresh page context.
+- Call init_page_and_wait_ready(page) to load Godot engine.
+- Wait canvas visible and window.godotInitialized (signals _ready() complete).
+- Assert title and menu overlays.
 - CDP V8 coverage saved.
 
 Prerequisites
@@ -41,17 +42,20 @@ from typing import Any
 from playwright.sync_api import Page, expect
 
 # Configuration for stability in different environments
-from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT
+from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT, init_page_and_wait_ready
 
 
-def test_load_main_menu(shared_page: Page) -> None:
+def test_load_main_menu(page: Page) -> None:
     """
     Main test for main menu load using DOM overlays.
 
     Verifies canvas visibility, godotInitialized flag, and title.
 
-    :param shared_page: The Playwright page object.
-    :type shared_page: Page
+    Note: Uses function-scoped `page` (not `shared_page`) so CDP profiling and console
+    listeners attach BEFORE engine boot to capture startup logs and V8 coverage.
+
+    :param page: The Playwright page object.
+    :type page: Page
     :rtype: None
     """
     logs: list[dict[str, str]] = []
@@ -66,34 +70,37 @@ def test_load_main_menu(shared_page: Page) -> None:
         """
         logs.append({"type": msg.type, "text": msg.text})
 
-    shared_page.on("console", on_console)
+    page.on("console", on_console)
     try:
-        # Start CDP session for V8 JS coverage
-        cdp_session = shared_page.context.new_cdp_session(shared_page)
+        # Start CDP session for V8 JS coverage before load to capture startup
+        cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
         cdp_session.send(
             "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
         )
 
+        # Fresh page fixture navigates and boots engine while listeners are active
+        init_page_and_wait_ready(page)
+
         # Verify canvas and title to ensure game is initialized
-        canvas = shared_page.locator("canvas")
+        canvas = page.locator("canvas")
         expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
         box: dict[str, float] | None = canvas.bounding_box()
         assert box is not None, "Canvas not found on page"
-        assert "SkyLockAssault" in shared_page.title(), "Title not found"
+        assert "SkyLockAssault" in page.title(), "Title not found"
 
         # Assert main-menu DOM overlay elements are present and visible
-        expect(shared_page.locator("#start-button")).to_be_visible(timeout=TEST_TIMEOUT)
-        expect(shared_page.locator("#options-button")).to_be_visible(
+        expect(page.locator("#start-button")).to_be_visible(timeout=TEST_TIMEOUT)
+        expect(page.locator("#options-button")).to_be_visible(
             timeout=TEST_TIMEOUT
         )
-        expect(shared_page.locator("#quit-button")).to_be_visible(timeout=TEST_TIMEOUT)
+        expect(page.locator("#quit-button")).to_be_visible(timeout=TEST_TIMEOUT)
 
     except Exception as e:
         print(f"Test: 'test_load_main_menu' failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time())
-        shared_page.screenshot(
+        page.screenshot(
             path=f"artifacts/test_load_main_menu_failure_screenshot_{timestamp}.png"
         )
 
@@ -108,20 +115,20 @@ def test_load_main_menu(shared_page: Page) -> None:
         with open(
             f"artifacts/test_load_main_menu_failure_html_{timestamp}.html", "w"
         ) as f:
-            f.write(shared_page.content())
+            f.write(page.content())
 
         print(
             f"Failure logs: artifacts/test_load_main_menu_failure_console_logs_{timestamp}.txt. Error: {e}"
         )
         raise
     finally:
-        # 1. Unregister console listener from the shared module page
+        # 1. Unregister console listener
         try:
-            shared_page.remove_listener("console", on_console)
+            page.remove_listener("console", on_console)
         except Exception as exc:
             print(f"Warning: Could not remove console listener: {exc}")
 
-        # 2. Stop coverage profiling and always detach CDP session
+        # 2. Stop coverage profiling and detach CDP session safely
         if cdp_session:
             try:
                 coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
