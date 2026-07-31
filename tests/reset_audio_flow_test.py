@@ -217,9 +217,7 @@ def test_reset_flow(shared_page: Page) -> None:
             shared_page,
         )
 
-        actual_errors = _get_unignored_errors(
-            logs[pre_reset_logs:], ignored_phrases
-        )
+        actual_errors = _get_unignored_errors(logs[pre_reset_logs:], ignored_phrases)
         assert not actual_errors, f"Errors on default reset: {actual_errors}"
 
         # RESET-03: Reset after partial volume changes
@@ -309,8 +307,7 @@ def test_reset_flow(shared_page: Page) -> None:
             timeout=TEST_TIMEOUT,
         )
         shared_page.wait_for_function(
-            "() => parseFloat("
-            "document.getElementById('sfx-slider').value) === 1.0",
+            "() => parseFloat(" "document.getElementById('sfx-slider').value) === 1.0",
             timeout=TEST_TIMEOUT,
         )
 
@@ -426,9 +423,7 @@ def test_reset_flow(shared_page: Page) -> None:
         )
 
         initial_difficulty = float(
-            shared_page.evaluate(
-                "document.getElementById('difficulty-slider').value"
-            )
+            shared_page.evaluate("document.getElementById('difficulty-slider').value")
         )
         assert initial_difficulty == 1.0, "Unexpected default difficulty value"
 
