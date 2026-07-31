@@ -27,13 +27,12 @@ v8_coverage_volume_sliders_mutes_test.json, artifacts/test_volume_failure_*.png/
 import json
 import os
 import time
-from typing import Any, Callable
+from typing import Any
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
 # Import shared utilities at the top of the file
 from tests.test_utils import (
-    DEFAULT_TIMEOUT,
     TEST_TIMEOUT,
     has_save_log,
     init_page_and_wait_ready,
