@@ -8,7 +8,8 @@ Main Menu Load Test (Playwright + UI Automation with DOM Overlays)
 Overview
 --------
 E2E test: Verifies Godot HTML5 build loads main menu in browser. Ensures network idle,
-canvas visibility, godotInitialized flag (from main_menu.gd _ready()), and title contains "SkyLockAssault".
+canvas visibility, godotInitialized flag (from main_menu.gd _ready()), and title
+contains "SkyLockAssault".
 
 No coords - DOM overlays for verification.
 
