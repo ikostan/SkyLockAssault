@@ -37,15 +37,15 @@ from playwright.sync_api import Page, expect
 from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT, wait_for_console_log
 
 
-def test_navigation_to_audio(page: Page) -> None:
+def test_navigation_to_audio(shared_page: Page) -> None:
     """
     Main test suite for navigation to audio settings using DOM overlays.
 
     Implements NAV-01 to NAV-04: Verify main menu overlays, open options, set DEBUG
     log level, open audio, verify overlays/logs.
 
-    :param page: The Playwright page object.
-    :type page: Page
+    :param shared_page: The Playwright page object.
+    :type shared_page: Page
     :rtype: None
     """
     logs: list[dict[str, str]] = []
@@ -61,46 +61,42 @@ def test_navigation_to_audio(page: Page) -> None:
         """
         logs.append({"type": msg.type, "text": msg.text})
 
-    page.on("console", on_console)
+    shared_page.on("console", on_console)
 
     try:
         # Start CDP session for V8 JS coverage
-        cdp_session = page.context.new_cdp_session(page)
+        cdp_session = shared_page.context.new_cdp_session(shared_page)
         cdp_session.send("Profiler.enable")
         cdp_session.send(
             "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
         )
 
-        page.goto(
-            "http://localhost:8080/index.html",
-            wait_until="networkidle",
-            timeout=DEFAULT_TIMEOUT,
-        )
-
         # 1. Wait deterministically for Godot engine initialization
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
 
         # Verify canvas
-        canvas = page.locator("canvas")
+        canvas = shared_page.locator("canvas")
         expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
         box: dict[str, float] | None = canvas.bounding_box()
         assert box is not None, "Canvas not found"
-        assert "SkyLockAssault" in page.title(), "Title not found"
+        assert "SkyLockAssault" in shared_page.title(), "Title not found"
 
         # NAV-01: Verify main menu overlays exist and are configured
-        expect(page.locator("#start-button")).to_be_visible(timeout=TEST_TIMEOUT)
-        expect(page.locator("#options-button")).to_be_visible(timeout=TEST_TIMEOUT)
-        expect(page.locator("#quit-button")).to_be_visible(timeout=TEST_TIMEOUT)
+        expect(shared_page.locator("#start-button")).to_be_visible(timeout=TEST_TIMEOUT)
+        expect(shared_page.locator("#options-button")).to_be_visible(
+            timeout=TEST_TIMEOUT
+        )
+        expect(shared_page.locator("#quit-button")).to_be_visible(timeout=TEST_TIMEOUT)
 
-        opacity: str = page.evaluate(
+        opacity: str = shared_page.evaluate(
             "window.getComputedStyle("
             "document.getElementById('options-button')"
             ").opacity"
         )
         assert opacity == "0", f"Expected opacity 0, got {opacity}"
-        pointer_events: str = page.evaluate(
+        pointer_events: str = shared_page.evaluate(
             "window.getComputedStyle("
             "document.getElementById('options-button')"
             ").pointerEvents"
@@ -110,26 +106,26 @@ def test_navigation_to_audio(page: Page) -> None:
         ), f"Expected pointer-events none, got {pointer_events}"
 
         # NAV-02: Navigate to options menu
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.optionsPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.optionsPressed([])")
+        shared_page.evaluate("window.optionsPressed([])")
 
         # Go to Advanced settings
-        page.wait_for_selector(
+        shared_page.wait_for_selector(
             "#advanced-button", state="visible", timeout=TEST_TIMEOUT
         )
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.advancedPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.advancedPressed([])")
-        page.wait_for_function(
+        shared_page.evaluate("window.advancedPressed([])")
+        shared_page.wait_for_function(
             "() => typeof window.changeLogLevel !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => window.getComputedStyle("
             "document.getElementById('log-level-select')"
             ").display === 'block'",
@@ -138,43 +134,45 @@ def test_navigation_to_audio(page: Page) -> None:
 
         # NAV-03: Set log level to DEBUG
         pre_change_log_count = len(logs)
-        page.evaluate("window.changeLogLevel([0])")
+        shared_page.evaluate("window.changeLogLevel([0])")
         wait_for_console_log(
             logs,
             lambda text: "log level changed to: debug" in text,
             pre_change_log_count,
-            page,
+            shared_page,
         )
-        assert page.evaluate(
+        assert shared_page.evaluate(
             "document.getElementById('audio-button') !== null"
         ), "Audio button not found/displayed"
 
         # Go back to Options menu
-        page.wait_for_selector(
+        shared_page.wait_for_selector(
             "#advanced-back-button", state="visible", timeout=TEST_TIMEOUT
         )
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.advancedBackPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.advancedBackPressed([])")
+        shared_page.evaluate("window.advancedBackPressed([])")
 
         # NAV-04: Navigate to audio sub-menu
-        page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
-        assert page.evaluate(
+        shared_page.wait_for_selector(
+            "#audio-button", state="visible", timeout=TEST_TIMEOUT
+        )
+        assert shared_page.evaluate(
             "document.getElementById('audio-button') !== null"
         ), "Audio button not found/displayed"
 
         # Open audio
         pre_audio_log_count = len(logs)
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.audioPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioPressed([0])")
+        shared_page.evaluate("window.audioPressed([0])")
 
         # Wait deterministically for master slider display and console log
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => window.getComputedStyle("
             "document.getElementById('master-slider')"
             ").display === 'block'",
@@ -184,11 +182,11 @@ def test_navigation_to_audio(page: Page) -> None:
             logs,
             lambda text: "audio button pressed." in text,
             pre_audio_log_count,
-            page,
+            shared_page,
         )
 
         # Assert gameplay/options UI is hidden while audio menu is open
-        gameplay_button_display_in_audio: str = page.evaluate(
+        gameplay_button_display_in_audio: str = shared_page.evaluate(
             "window.getComputedStyle("
             "document.getElementById('gameplay-button')"
             ").display"
@@ -198,23 +196,23 @@ def test_navigation_to_audio(page: Page) -> None:
         ), "Gameplay button should be hidden while audio menu is open"
 
         # Navigate back from audio menu
-        page.wait_for_selector(
+        shared_page.wait_for_selector(
             "#audio-back-button", state="visible", timeout=TEST_TIMEOUT
         )
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.audioBackPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.audioBackPressed([])")
+        shared_page.evaluate("window.audioBackPressed([])")
 
         # Assert audio overlay is hidden and options overlay is restored
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => window.getComputedStyle("
             "document.getElementById('master-slider')"
             ").display === 'none'",
             timeout=TEST_TIMEOUT,
         )
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => window.getComputedStyle("
             "document.getElementById('gameplay-button')"
             ").display === 'block'",
@@ -225,7 +223,7 @@ def test_navigation_to_audio(page: Page) -> None:
         print(f"Test suite failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
-        page.screenshot(
+        shared_page.screenshot(
             path=f"artifacts/test_navigation_failure_screenshot_{timestamp}.png"
         )
         with open(

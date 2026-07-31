@@ -58,15 +58,15 @@ def _has_save_log(logs: List[Dict[str, str]]) -> bool:
     )
 
 
-def test_difficulty_flow(page: Page) -> None:
+def test_difficulty_flow(shared_page: Page) -> None:
     """
     Main test for difficulty flow using DOM overlays.
 
     Test that invisible HTML overlays allow passthrough clicks to Godot UI.
     Verifies overlays are present, invisible, and do not block events.
 
-    :param page: The Playwright page object.
-    :type page: Page
+    :param shared_page: The Playwright page object.
+    :type shared_page: Page
     :rtype: None
     """
     logs: List[Dict[str, str]] = []
@@ -82,40 +82,38 @@ def test_difficulty_flow(page: Page) -> None:
         """
         logs.append({"type": msg.type, "text": msg.text})
 
-    page.on("console", on_console)
+    shared_page.on("console", on_console)
 
     try:
         # Start CDP session for V8 JS coverage
-        cdp_session = page.context.new_cdp_session(page)
+        cdp_session = shared_page.context.new_cdp_session(shared_page)
         cdp_session.send("Profiler.enable")
         cdp_session.send(
             "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
         )
 
-        page.goto(
-            "http://localhost:8080/index.html",
-            wait_until="networkidle",
-            timeout=DEFAULT_TIMEOUT,
-        )
-
         # 1. Wait deterministically for Godot engine initialization
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
 
         # Verify canvas and title to ensure game is initialized
-        canvas = page.locator("canvas")
+        canvas = shared_page.locator("canvas")
         expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
         box: Optional[Dict[str, float]] = canvas.bounding_box()
         assert box is not None, "Canvas not found on page"
-        assert "SkyLockAssault" in page.title(), "Title not found"
+        assert "SkyLockAssault" in shared_page.title(), "Title not found"
 
         # Check element present
-        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
-        assert page.evaluate("document.getElementById('options-button') !== null")
+        shared_page.wait_for_selector(
+            "#options-button", state="visible", timeout=TEST_TIMEOUT
+        )
+        assert shared_page.evaluate(
+            "document.getElementById('options-button') !== null"
+        )
 
         # Check invisible (opacity 0)
-        opacity: str = page.evaluate(
+        opacity: str = shared_page.evaluate(
             "window.getComputedStyle("
             "document.getElementById('options-button')"
             ").opacity"
@@ -123,7 +121,7 @@ def test_difficulty_flow(page: Page) -> None:
         assert opacity == "0", f"Expected opacity 0, got {opacity}"
 
         # Check pointer-events none
-        pointer_events: str = page.evaluate(
+        pointer_events: str = shared_page.evaluate(
             "window.getComputedStyle("
             "document.getElementById('options-button')"
             ").pointerEvents"
@@ -133,30 +131,32 @@ def test_difficulty_flow(page: Page) -> None:
         ), f"Expected pointer-events none, got {pointer_events}"
 
         # Wait main menu
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => document.getElementById('options-button') !== null",
             timeout=TEST_TIMEOUT,
         )
 
         # Open options
-        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_function(
+        shared_page.wait_for_selector(
+            "#options-button", state="visible", timeout=TEST_TIMEOUT
+        )
+        shared_page.wait_for_function(
             "() => typeof window.optionsPressed !== 'undefined'", timeout=TEST_TIMEOUT
         )
-        page.evaluate("window.optionsPressed([])")
+        shared_page.evaluate("window.optionsPressed([])")
 
         # Go to Advanced settings
-        page.wait_for_selector(
+        shared_page.wait_for_selector(
             "#advanced-button", state="visible", timeout=TEST_TIMEOUT
         )
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.advancedPressed !== 'undefined'", timeout=TEST_TIMEOUT
         )
-        page.evaluate("window.advancedPressed([])")
-        page.wait_for_function(
+        shared_page.evaluate("window.advancedPressed([])")
+        shared_page.wait_for_function(
             "() => typeof window.changeLogLevel !== 'undefined'", timeout=TEST_TIMEOUT
         )
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => window.getComputedStyle("
             "document.getElementById('log-level-select')"
             ").display === 'block'",
@@ -165,16 +165,16 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Set log level DEBUG
         pre_change_log_count: int = len(logs)
-        page.evaluate("window.changeLogLevel([0])")
+        shared_page.evaluate("window.changeLogLevel([0])")
         wait_for_console_log(
             logs,
             lambda text: "log level changed to: debug" in text,
             pre_change_log_count,
-            page,
+            shared_page,
         )
         new_logs: List[Dict[str, str]] = logs[pre_change_log_count:]
         assert _has_log(new_logs, "log level changed to: debug")
-        assert page.evaluate(
+        assert shared_page.evaluate(
             "document.getElementById('audio-button') !== null"
         ), "Audio button not found/displayed"
 
@@ -184,43 +184,43 @@ def test_difficulty_flow(page: Page) -> None:
         ), "Failed to save settings (neither encrypted save nor fallback detected)"
 
         # Go back to Options menu
-        page.wait_for_selector(
+        shared_page.wait_for_selector(
             "#advanced-back-button", state="visible", timeout=TEST_TIMEOUT
         )
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.advancedBackPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.advancedBackPressed([])")
+        shared_page.evaluate("window.advancedBackPressed([])")
 
         # Go to Gameplay Settings
-        page.wait_for_selector(
+        shared_page.wait_for_selector(
             "#gameplay-button", state="visible", timeout=TEST_TIMEOUT
         )
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.gameplayPressed !== 'undefined'", timeout=TEST_TIMEOUT
         )
-        page.evaluate("window.gameplayPressed([])")
+        shared_page.evaluate("window.gameplayPressed([])")
 
         # Assert gameplay settings overlay is shown and options overlay is hidden
-        page.wait_for_selector(
+        shared_page.wait_for_selector(
             "#difficulty-slider", state="visible", timeout=TEST_TIMEOUT
         )
-        page.wait_for_selector(
+        shared_page.wait_for_selector(
             "#options-back-button", state="hidden", timeout=TEST_TIMEOUT
         )
 
         # Set difficulty to 2.0
         pre_change_log_count = len(logs)
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.changeDifficulty !== 'undefined'", timeout=TEST_TIMEOUT
         )
-        page.evaluate("window.changeDifficulty([2.0])")
+        shared_page.evaluate("window.changeDifficulty([2.0])")
         wait_for_console_log(
             logs,
             lambda text: "js difficulty callback called with valid value: 2.0" in text,
             pre_change_log_count,
-            page,
+            shared_page,
         )
         new_logs = logs[pre_change_log_count:]
 
@@ -232,16 +232,16 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Reset gameplay settings back to defaults
         pre_reset_log_count: int = len(logs)
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.gameplayResetPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.gameplayResetPressed([])")
+        shared_page.evaluate("window.gameplayResetPressed([])")
         wait_for_console_log(
             logs,
             lambda text: "setting 'difficulty' updated to: 1" in text,
             pre_reset_log_count,
-            page,
+            shared_page,
         )
         reset_logs: List[Dict[str, str]] = logs[pre_reset_log_count:]
 
@@ -251,73 +251,81 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Set difficulty to 2.0 again
         pre_change_log_count = len(logs)
-        page.evaluate("window.changeDifficulty([2.0])")
+        shared_page.evaluate("window.changeDifficulty([2.0])")
         wait_for_console_log(
             logs,
             lambda text: "js difficulty callback called with valid value: 2.0" in text,
             pre_change_log_count,
-            page,
+            shared_page,
         )
 
         # Back to Main menu
         pre_change_log_count = len(logs)
-        page.wait_for_function(
+        shared_page.wait_for_function(
             "() => typeof window.gameplayBackPressed !== 'undefined'",
             timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.gameplayBackPressed([])")
+        shared_page.evaluate("window.gameplayBackPressed([])")
         wait_for_console_log(
             logs,
             lambda text: "back button pressed." in text,
             pre_change_log_count,
-            page,
+            shared_page,
         )
         new_logs = logs[pre_change_log_count:]
         assert _has_log(new_logs, "back button pressed."), "Back button not found"
 
         # Options overlay visible
-        page.wait_for_selector(
+        shared_page.wait_for_selector(
             "#options-back-button", state="visible", timeout=TEST_TIMEOUT
         )
-        assert page.evaluate("document.getElementById('options-back-button') !== null")
+        assert shared_page.evaluate(
+            "document.getElementById('options-back-button') !== null"
+        )
         # Gameplay UI hidden
-        page.wait_for_selector(
+        shared_page.wait_for_selector(
             "#difficulty-slider", state="hidden", timeout=TEST_TIMEOUT
         )
-        assert page.evaluate(
+        assert shared_page.evaluate(
             "document.getElementById('difficulty-slider') === null || "
             "document.getElementById('difficulty-slider').offsetParent === null"
         )
 
         # Check element present
-        page.wait_for_selector(
+        shared_page.wait_for_selector(
             "#options-back-button", state="visible", timeout=TEST_TIMEOUT
         )
-        assert page.evaluate("document.getElementById('options-back-button') !== null")
-        page.evaluate("window.optionsBackPressed([])")
+        assert shared_page.evaluate(
+            "document.getElementById('options-back-button') !== null"
+        )
+        shared_page.evaluate("window.optionsBackPressed([])")
 
         # After optionsBackPressed([]), back on the main menu
-        page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
-        assert page.evaluate("document.getElementById('start-button') !== null")
-        page.wait_for_selector(
+        shared_page.wait_for_selector(
+            "#start-button", state="visible", timeout=TEST_TIMEOUT
+        )
+        assert shared_page.evaluate("document.getElementById('start-button') !== null")
+        shared_page.wait_for_selector(
             "#options-back-button", state="hidden", timeout=TEST_TIMEOUT
         )
-        assert page.evaluate(
+        assert shared_page.evaluate(
             "document.getElementById('options-back-button') === null || "
             "document.getElementById('options-back-button').offsetParent === null"
         )
 
         # Start game
-        page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
+        shared_page.wait_for_selector(
+            "#start-button", state="visible", timeout=TEST_TIMEOUT
+        )
         pre_start_log_count = len(logs)
-        page.click("#start-button", force=True)
+        shared_page.click("#start-button", force=True)
 
         # Wait deterministically for start button click and loading start
         wait_for_console_log(
             logs,
             lambda text: "start game menu button pressed." in text,
             pre_start_log_count,
-            page,
+            shared_page,
             timeout_ms=TEST_TIMEOUT,
         )
 
@@ -325,7 +333,7 @@ def test_difficulty_flow(page: Page) -> None:
             logs,
             lambda text: "loading started successfully." in text,
             pre_start_log_count,
-            page,
+            shared_page,
             timeout_ms=DEFAULT_TIMEOUT,
         )
 
@@ -334,7 +342,7 @@ def test_difficulty_flow(page: Page) -> None:
             logs,
             lambda text: "initializing main scene..." in text,
             pre_start_log_count,
-            page,
+            shared_page,
             timeout_ms=DEFAULT_TIMEOUT,
         )
 
@@ -343,7 +351,7 @@ def test_difficulty_flow(page: Page) -> None:
             logs,
             lambda text: "scene loaded successfully." in text,
             pre_start_log_count,
-            page,
+            shared_page,
             timeout_ms=DEFAULT_TIMEOUT,
         )
 
@@ -357,16 +365,16 @@ def test_difficulty_flow(page: Page) -> None:
 
         # Refocus canvas to ensure input capture
         expect(canvas).to_be_visible(timeout=TEST_TIMEOUT)
-        page.click("canvas")
+        shared_page.click("canvas")
 
         # Simulate fire (press Space)
         pre_fire_log_count = len(logs)
-        page.keyboard.press("Space")
+        shared_page.keyboard.press("Space")
         wait_for_console_log(
             logs,
             lambda text: "firing with scaled cooldown: 0.3" in text,
             pre_fire_log_count,
-            page,
+            shared_page,
             timeout_ms=TEST_TIMEOUT,
         )
         fire_logs = logs[pre_fire_log_count:]
@@ -378,7 +386,7 @@ def test_difficulty_flow(page: Page) -> None:
         print(f"Test: 'test_difficulty_flow' failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
-        page.screenshot(
+        shared_page.screenshot(
             path=f"artifacts/test_difficulty_failure_screenshot_{timestamp}.png"
         )
 
@@ -391,7 +399,7 @@ def test_difficulty_flow(page: Page) -> None:
             print(f"Console logs saved to {log_file}")
 
         with open(f"artifacts/test_difficulty_failure_html_{timestamp}.html", "w") as f:
-            f.write(page.content())
+            f.write(shared_page.content())
 
         print(
             "Failure logs: "

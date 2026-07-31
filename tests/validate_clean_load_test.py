@@ -12,29 +12,35 @@ identified in the browser console during Godot engine initialization.
 
 Test Flow
 ---------
-- Listen for specific error patterns: "SCRIPT ERROR", "Compile Error", "Parse Error".
-- Monitor for 'Uncaught (in promise)' exceptions.
+- Attach console listener to fresh page context.
 - Navigate to index.html and wait for engine initialization signal.
-- Fail if any critical engine or script errors are detected.
+- Listen for specific error patterns: "SCRIPT ERROR", "Compile Error", "Parse Error".
+- Fail if any critical engine or script errors are detected during load.
 """
 
 import os
 import time
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
-# Configuration for stability in different environments
-# Default to 5000ms, but allow CI to override via environment variable
-from tests.test_utils import DEFAULT_TIMEOUT
+from tests.test_utils import init_page_and_wait_ready
 
 
+# DO NOT REFACTOR: Must inject function-scoped `page`, NOT `shared_page`.
 def test_no_critical_errors_on_load(page: Page) -> None:
     """
     Verifies that the game loads without script compilation or engine errors.
 
-    :param page: The Playwright page object.
-    :type page: Page
-    :rtype: None
+    IMPORTANT ARCHITECTURAL CONSTRAINT:
+    -----------------------------------
+    This test MUST consume the function-scoped `page` fixture (NOT `shared_page`).
+    The console listener (`page.on("console")`) MUST be attached BEFORE page
+    navigation and engine bootup.
+
+    Using `shared_page` initializes Godot prior to listener attachment, causing
+    `init_page_and_wait_ready()` to return instantly and leaving the captured
+    `logs` list empty—allowing GDScript compilation or runtime load errors to
+    bypass detection.
     """
     logs: list[dict[str, str]] = []
 
@@ -42,31 +48,20 @@ def test_no_critical_errors_on_load(page: Page) -> None:
         """Capture all console messages for inspection."""
         logs.append({"type": msg.type, "text": msg.text})
 
+    # CRITICAL: Attach console listener BEFORE navigating and booting Godot
     page.on("console", on_console)
 
     try:
-        # 1. Navigate to the game
-        page.goto(
-            "http://localhost:8080/index.html",
-            wait_until="networkidle",
-            timeout=DEFAULT_TIMEOUT,
-        )
+        # Fresh page fixture navigates and logs startup output
+        init_page_and_wait_ready(page)
 
-        # 2. Wait deterministically for the engine's ready signal and canvas visibility
-        page.wait_for_function(
-            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
-        )
-        expect(page.locator("canvas")).to_be_visible(timeout=DEFAULT_TIMEOUT)
-
-        # 3. Analyze captured logs for the specific patterns
-        # We only check for patterns within 'error' or 'warning' logs to avoid false positives
-        # from informational logs that might mention these terms.
+        # Analyze captured logs for specific patterns
         critical_errors = [
             log["text"]
             for log in logs
-            if log["type"] in ["error", "warning"]  # Filter by type first
+            if log["type"] in ["error", "warning"]
             and (
-                log["type"] == "error"  # All error types are critical
+                log["type"] == "error"
                 or any(
                     pattern in log["text"]
                     for pattern in [
@@ -80,7 +75,6 @@ def test_no_critical_errors_on_load(page: Page) -> None:
             )
         ]
 
-        # 4. Detailed assertion
         if critical_errors:
             error_summary = "\n".join([f" - {err}" for err in critical_errors])
             assert (
@@ -93,7 +87,6 @@ def test_no_critical_errors_on_load(page: Page) -> None:
         timestamp = int(time.time())
         page.screenshot(path=f"artifacts/test_load_error_screenshot_{timestamp}.png")
 
-        # Save logs for debugging the script failures
         with open(f"artifacts/test_load_error_logs_{timestamp}.txt", "w") as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")

@@ -63,21 +63,27 @@ def init_cdp_coverage(page: Page) -> tuple[Any, bool]:
         return None, False
 
 
-def init_page_and_wait_ready(page: Page) -> None:
-    """Navigates to the game index and waits for Godot engine initialization and canvas readiness."""
-    page.goto(
-        "http://localhost:8080/index.html",
-        wait_until="networkidle",
-        timeout=DEFAULT_TIMEOUT,
-    )
+def init_page_and_wait_ready(
+    page: Page, url: str = "http://localhost:8080/index.html"
+) -> None:
+    """Navigates to the game page and waits for Godot engine initialization if not already loaded."""
+    try:
+        if page.evaluate("window.godotInitialized === true"):
+            # Page is already initialized via shared_page fixture; skip redundant reload
+            canvas = page.locator("canvas")
+            expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
+            return
+    except Exception:
+        pass
+
+    page.goto(url, wait_until="domcontentloaded", timeout=DEFAULT_TIMEOUT)
     page.wait_for_function(
         "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
     )
+
+    # Minimal visual assertion to ensure the canvas shell actually rendered
     canvas = page.locator("canvas")
     expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
-    box = canvas.bounding_box()
-    assert box is not None, "Canvas not found on page"
-    assert "SkyLockAssault" in page.title(), "Title not found"
 
 
 def open_options_menu(page: Page) -> None:

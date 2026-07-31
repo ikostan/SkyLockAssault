@@ -37,7 +37,7 @@ jobs:
 
       - name: "Upload Trivy scan results to GitHub Security tab"
         # Pinned to CodeQL upload-sarif v3 for security stability; refresh periodically
-        uses: "github/codeql-action/upload-sarif@cf463419fdde78c727231e445622a9ac37966f84"
+        uses: "github/codeql-action/upload-sarif@3434fbbc53af0fe47685ef3897703b39ef77b5cb"
         if: always()  # Upload even if scan fails
         with:
           sarif_file: 'trivy-results.sarif'
