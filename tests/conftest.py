@@ -53,16 +53,18 @@ def pytest_sessionfinish(session, exitstatus):
 @pytest.fixture(autouse=True)
 def capture_lifecycle_metrics(request):
     """Captures browser JS heap memory metrics after test execution."""
-    yield
     page_fixture = None
     if "shared_page" in request.fixturenames:
         page_fixture = "shared_page"
     elif "page" in request.fixturenames:
         page_fixture = "page"
 
-    if page_fixture:
+    # Fetch fixture during setup to guarantee teardown runs BEFORE page is closed
+    page = request.getfixturevalue(page_fixture) if page_fixture else None
+    yield
+
+    if page is not None:
         try:
-            page = request.getfixturevalue(page_fixture)
             heap_script = (
                 "() => {\n"
                 "  if (window.performance && window.performance.memory) {\n"
@@ -87,8 +89,8 @@ def capture_lifecycle_metrics(request):
                         "limit_mb": heap_info["limit"],
                     }
                 )
-        except Exception:
-            pass
+        except Exception as exc:  # noqa: BLE001 - metrics are best-effort
+            print(f"Warning: heap metric capture failed: {exc}")
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
