@@ -91,9 +91,7 @@ def test_load_main_menu(page: Page) -> None:
 
         # Assert main-menu DOM overlay elements are present and visible
         expect(page.locator("#start-button")).to_be_visible(timeout=TEST_TIMEOUT)
-        expect(page.locator("#options-button")).to_be_visible(
-            timeout=TEST_TIMEOUT
-        )
+        expect(page.locator("#options-button")).to_be_visible(timeout=TEST_TIMEOUT)
         expect(page.locator("#quit-button")).to_be_visible(timeout=TEST_TIMEOUT)
 
     except Exception as e:
