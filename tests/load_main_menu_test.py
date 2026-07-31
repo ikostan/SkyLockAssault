@@ -118,17 +118,21 @@ def test_load_main_menu(shared_page: Page) -> None:
         # 1. Unregister console listener from the shared module page
         try:
             shared_page.remove_listener("console", on_console)
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"Warning: Could not remove console listener: {exc}")
 
-        # 2. Stop coverage profiling and detach CDP session
+        # 2. Stop coverage profiling and always detach CDP session
         if cdp_session:
             try:
                 coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
-                cdp_session.detach()
                 with open("v8_coverage_load_main_menu_test.json", "w") as f:
                     json.dump(coverage, f)
-            except Exception:
-                pass
+            except Exception as exc:
+                print(f"Warning: Failed to harvest V8 coverage data: {exc}")
+            finally:
+                try:
+                    cdp_session.detach()
+                except Exception as exc:
+                    print(f"Warning: Could not detach CDP session: {exc}")
