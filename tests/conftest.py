@@ -115,7 +115,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 
 
 @pytest.fixture(scope="module")
-def shared_page(browser: Browser) -> Page:
+def shared_page(browser: Browser) -> Generator[Page, None, None]:
     """Module-scoped page fixture. Boots Godot WASM once per module."""
     context = browser.new_context(viewport={"width": 1280, "height": 720})
     page = context.new_page()

@@ -95,7 +95,7 @@ def test_load_main_menu(page: Page) -> None:
         expect(page.locator("#quit-button")).to_be_visible(timeout=TEST_TIMEOUT)
 
     except Exception as e:
-        print(f"Test: 'test_load_main_menu' failed: {str(e)}")
+        print(f"Test: 'test_load_main_menu' failed: {e!s}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time())
         page.screenshot(

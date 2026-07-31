@@ -36,6 +36,7 @@ from tests.test_utils import (
     DEFAULT_TIMEOUT,
     TEST_TIMEOUT,
     has_save_log,
+    init_page_and_wait_ready,
     wait_for_console_log,
 )
 
@@ -75,10 +76,10 @@ def test_volume_sliders_mutes(shared_page: Page) -> None:
         )
         coverage_started = True
 
-        # Verify canvas
-        canvas = shared_page.locator("canvas")
-        expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
-        box: dict[str, float] | None = canvas.bounding_box()
+        # 1. Centralized deterministic page load & WASM initialization check
+        init_page_and_wait_ready(shared_page)
+
+        box: dict[str, float] | None = shared_page.locator("canvas").bounding_box()
         assert box is not None, "Canvas not found"
         assert "SkyLockAssault" in shared_page.title(), "Title not found"
 
