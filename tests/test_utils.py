@@ -3,9 +3,9 @@
 # tests/test_utils.py
 """Shared utility functions and helpers for SkyLockAssault Playwright E2E tests."""
 
+import json
 import os
 import time
-import json
 from pathlib import Path
 from typing import Any, Callable
 
