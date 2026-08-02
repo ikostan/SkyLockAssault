@@ -107,6 +107,7 @@ jobs:
 
     env:
       PW_TIMEOUT: "${{ inputs.pw_timeout }}"
+      PYTEST_TIMEOUT: "${{ inputs.pw_timeout / 1000 }}"
 
     steps:
       - uses: "actions/checkout@v7"
