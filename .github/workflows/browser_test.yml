@@ -107,7 +107,6 @@ jobs:
 
     env:
       PW_TIMEOUT: "${{ inputs.pw_timeout }}"
-      PYTEST_TIMEOUT: "${{ inputs.pw_timeout / 1000 }}"
 
     steps:
       - uses: "actions/checkout@v7"
@@ -217,6 +216,7 @@ jobs:
         run: |
           shopt -s nullglob
           files=(${{ matrix.test_path }})
+          export PYTEST_TIMEOUT=$((${{ inputs.pw_timeout }} / 1000))
           if [ ${#files[@]} -gt 0 ]; then
             PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest "${files[@]}" -v --junitxml=artifacts/junit.xml -o junit_family=legacy
           else
