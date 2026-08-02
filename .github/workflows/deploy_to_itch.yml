@@ -6,11 +6,11 @@ on:  # yamllint disable-line rule:truthy
     inputs:
       version:
         description: "The version to inject (e.g., v0.6.1)"
-        type: string
+        type: "string"
         required: true
       godot_version:
         description: "The Godot version string passed from the calling pipeline"
-        type: string
+        type: "string"
         required: true
     secrets:
       ITCHIO_API_KEY:
@@ -33,6 +33,7 @@ jobs:
       - name: "Checkout code"
         uses: "actions/checkout@v7"
 
+      # yamllint disable rule:line-length
       - name: "Inject Version into project.godot"
         run: |
           set -euo pipefail
@@ -45,6 +46,7 @@ jobs:
           else
             printf '\n[application]\nconfig/version="%s"\n' "$ESCAPED_VERSION" >> project.godot
           fi
+      # yamllint enable rule:line-length
 
       - name: "Disable Editor Plugins (Prevent Headless Crash)"
         run: |
@@ -54,7 +56,7 @@ jobs:
 
       - name: "Inject Production Salt into GDScript"
         env:
-          PRODUCTION_SALT: ${{ secrets.PRODUCTION_SALT }}
+          PRODUCTION_SALT: "${{ secrets.PRODUCTION_SALT }}"
         run: |
           set -euo pipefail
           bash ./.github/scripts/inject_salt.sh "scripts/core/globals.gd"
@@ -106,6 +108,7 @@ jobs:
           presets_to_export: "Web"
           use_preset_export_path: true
 
+      # yamllint disable rule:line-length
       - name: "Unzip Export Archive"
         run: |
           set -euo pipefail
@@ -120,11 +123,14 @@ jobs:
           rm -rf "$ARCHIVE_DIR/patched_build"
           mkdir -p "$ARCHIVE_DIR/patched_build"
           unzip "$ARCHIVE_DIR/Web.zip" -d "$ARCHIVE_DIR/patched_build"
+      # yamllint enable rule:line-length
 
+      # yamllint disable rule:line-length
       - name: "Patch index.js for security"
         run: |
           set -euo pipefail
           bash ./.github/scripts/patch_index_js.sh "${{ steps.export.outputs.archive_directory }}/patched_build"
+      # yamllint enable rule:line-length
 
       - name: "Re-zip Flattened Export"
         run: |
@@ -137,6 +143,7 @@ jobs:
           # Zip the patched build back into the original location securely
           cd "$ARCHIVE_DIR/patched_build" && zip -r "$ARCHIVE_DIR/Web.zip" .
 
+      # yamllint disable rule:line-length
       - name: "Verify export does not contain placeholder"
         run: |
           set -euo pipefail
@@ -154,6 +161,7 @@ jobs:
           set -o pipefail
 
           echo "✅ Final export archive verified successfully."
+      # yamllint enable rule:line-length
 
       - name: "Cache Butler"
         id: "cache-butler"
@@ -162,8 +170,9 @@ jobs:
           path: "butler"
           key: "Linux-butler-${{ env.BUTLER_VERSION }}-v1"
 
+      # yamllint disable rule:line-length
       - name: "Download Butler (On Cache Miss)"
-        if: steps.cache-butler.outputs.cache-hit != 'true'
+        if: "steps.cache-butler.outputs.cache-hit != 'true'"
         run: |
           set -euo pipefail
           mkdir -p butler
@@ -174,6 +183,7 @@ jobs:
 
           unzip butler.zip -d butler
           rm butler.zip
+      # yamllint enable rule:line-length
 
       - name: "Setup Butler Execution Environment"
         run: |
@@ -183,9 +193,11 @@ jobs:
           ./butler/butler --version
           echo "$(pwd)/butler" >> "$GITHUB_PATH"
 
+      # yamllint disable rule:line-length
       - name: "Deploy to itch.io with Butler"
         run: |
           set -euo pipefail
           butler push "${{ steps.export.outputs.archive_directory }}/Web.zip" ikostan/sky-lock-assault:${{ github.ref_name }} --userversion "${{ inputs.version }}"
         env:
           BUTLER_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"
+      # yamllint enable rule:line-length

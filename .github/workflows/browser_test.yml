@@ -115,6 +115,7 @@ jobs:
           name: "godot-web-build"
           path: "export/web_thread_off"
 
+      # yamllint disable rule:line-length
       - name: "Validate Artifact Integrity"
         run: |
           MANIFEST="export/web_thread_off/build_manifest.json"
@@ -130,6 +131,7 @@ jobs:
             exit 1
           fi
           echo "✅ Artifact integrity verified successfully for commit $DOWNLOADED_SHA."
+      # yamllint enable rule:line-length
 
       - name: "Set up Python"
         uses: "actions/setup-python@v7"
