@@ -24,7 +24,8 @@ LOG_LEVEL_MAP: dict[str, int] = {
 }
 
 # Path configuration
-ARTIFACTS_DIR = Path("artifacts")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
 
 
 def save_v8_coverage(cdp_session: Any, test_name: str) -> None:
