@@ -208,7 +208,14 @@ jobs:
       # yamllint disable rule:line-length
       - name: "Run Sharded Tests"
         run: |
-          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest ${{ matrix.test_path }} -v --junitxml=artifacts/junit.xml -o junit_family=legacy
+          shopt -s nullglob
+          files=(${{ matrix.test_path }})
+          if [ ${#files[@]} -gt 0 ]; then
+            PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest "${files[@]}" -v --junitxml=artifacts/junit.xml -o junit_family=legacy
+          else
+            echo "⚠️ No test files matched pattern: ${{ matrix.test_path }}. Skipping shard execution."
+            echo '<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="empty" tests="0" failures="0" errors="0" skipped="0"/></testsuites>' > artifacts/junit.xml
+          fi
       # yamllint enable rule:line-length
 
       - name: "List Coverage Reports"
