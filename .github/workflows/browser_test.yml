@@ -113,7 +113,6 @@ jobs:
         with:
           persist-credentials: false
 
-      # yamllint disable rule:line-length
       - name: "Validate Artifact Integrity"
         run: |
           MANIFEST="export/web_thread_off/build_manifest.json"
@@ -121,7 +120,8 @@ jobs:
             echo "❌ CRITICAL: Build manifest missing from exported web artifact!"
             exit 1
           fi
-          DOWNLOADED_SHA=$(python3 -c "import json; print(json.load(open('$MANIFEST')).get('commit_sha', ''))")
+          DOWNLOADED_SHA=$(python3 -c \
+            "import json; print(json.load(open('$MANIFEST')).get('commit_sha', ''))")
           EXPECTED_SHA="${{ github.sha }}"
           if [ "$DOWNLOADED_SHA" != "$EXPECTED_SHA" ]; then
             echo "❌ CRITICAL: Commit SHA mismatch in web build artifact!"
@@ -129,7 +129,6 @@ jobs:
             exit 1
           fi
           echo "✅ Artifact integrity verified successfully for commit $DOWNLOADED_SHA."
-      # yamllint enable rule:line-length
 
       - name: "Download Web Build Artifact"
         uses: "actions/download-artifact@v7"
@@ -211,19 +210,23 @@ jobs:
         run: |
           mkdir -p artifacts
 
-      # yamllint disable rule:line-length
       - name: "Run Sharded Tests"
         run: |
           shopt -s nullglob
           files=(${{ matrix.test_path }})
           export PYTEST_TIMEOUT=$((${{ inputs.pw_timeout }} / 1000))
           if [ ${#files[@]} -gt 0 ]; then
-            PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest "${files[@]}" -v --junitxml=artifacts/junit.xml -o junit_family=legacy
+            PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest "${files[@]}" \
+              -v --junitxml=artifacts/junit.xml -o junit_family=legacy
           else
-            echo "⚠️ No test files matched pattern: ${{ matrix.test_path }}. Skipping shard execution."
-            echo '<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="empty" tests="0" failures="0" errors="0" skipped="0"/></testsuites>' > artifacts/junit.xml
+            echo "⚠️ No test files matched pattern: ${{ matrix.test_path }}."
+            cat <<EOF > artifacts/junit.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <testsuites>
+            <testsuite name="empty" tests="0" failures="0" errors="0" skipped="0"/>
+          </testsuites>
+          EOF
           fi
-      # yamllint enable rule:line-length
 
       - name: "List Coverage Reports"
         run: |
@@ -340,15 +343,18 @@ jobs:
           curl -Os https://cli.codecov.io/latest/linux/codecov
           chmod +x codecov
 
-      # yamllint disable rule:line-length
       - name: "Upload Test Report to Codecov"
         if: "success()"
         run: |
           REPORT_FILE="artifacts/junit.xml"
           if [ ! -f "$REPORT_FILE" ]; then REPORT_FILE="./junit.xml"; fi
           if [ -f "$REPORT_FILE" ]; then
-            ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f "$REPORT_FILE" --name "Playwright Browser Test Report (${{ matrix.suite }})" --flag PLAYWRIGHT_${{ matrix.artifact_suffix }} --report-type test_results
+            ./codecov upload-process \
+              --token ${{ secrets.CODECOV_TOKEN }} \
+              -f "$REPORT_FILE" \
+              --name "Playwright Browser Test Report (${{ matrix.suite }})" \
+              --flag PLAYWRIGHT_${{ matrix.artifact_suffix }} \
+              --report-type test_results
           else
             echo "No Playwright JUnit XML found, skipping upload."
           fi
-      # yamllint enable rule:line-length
