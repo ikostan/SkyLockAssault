@@ -113,6 +113,12 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: "Download Web Build Artifact"
+        uses: "actions/download-artifact@v7"
+        with:
+          name: "godot-web-build"
+          path: "export/web_thread_off"
+
       - name: "Validate Artifact Integrity"
         run: |
           MANIFEST="export/web_thread_off/build_manifest.json"
@@ -129,12 +135,6 @@ jobs:
             exit 1
           fi
           echo "✅ Artifact integrity verified successfully for commit $DOWNLOADED_SHA."
-
-      - name: "Download Web Build Artifact"
-        uses: "actions/download-artifact@v7"
-        with:
-          name: "godot-web-build"
-          path: "export/web_thread_off"
 
       - name: "Set up Python"
         uses: "actions/setup-python@v7"
