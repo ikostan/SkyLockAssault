@@ -24,6 +24,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: "actions/checkout@v7"
+        with:
+          persist-credentials: false
 
       - name: "Disable Editor Plugins (Prevent Headless Crash)"
         run: |
@@ -108,12 +110,8 @@ jobs:
 
     steps:
       - uses: "actions/checkout@v7"
-
-      - name: "Download Web Build Artifact"
-        uses: "actions/download-artifact@v7"
         with:
-          name: "godot-web-build"
-          path: "export/web_thread_off"
+          persist-credentials: false
 
       # yamllint disable rule:line-length
       - name: "Validate Artifact Integrity"
@@ -132,6 +130,12 @@ jobs:
           fi
           echo "✅ Artifact integrity verified successfully for commit $DOWNLOADED_SHA."
       # yamllint enable rule:line-length
+
+      - name: "Download Web Build Artifact"
+        uses: "actions/download-artifact@v7"
+        with:
+          name: "godot-web-build"
+          path: "export/web_thread_off"
 
       - name: "Set up Python"
         uses: "actions/setup-python@v7"
