@@ -35,6 +35,8 @@ def save_v8_coverage(cdp_session: Any, test_name: str) -> None:
         ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
         coverage = cdp_session.send("Profiler.takePreciseCoverage")
         cdp_session.send("Profiler.stopPreciseCoverage")
+        if not coverage:
+            return
         output_file = ARTIFACTS_DIR / f"v8_coverage_{test_name}.json"
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(coverage, f)
@@ -287,20 +289,3 @@ def start_game_and_wait_ready(
     )
 
     return cdp_session, coverage_started
-
-
-def save_v8_coverage(cdp_session: Any, test_name: str) -> None:
-    """Collects V8 coverage data from CDP session and saves it directly in artifacts/."""
-    if not cdp_session:
-        return
-    try:
-        ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
-        coverage = cdp_session.send("Profiler.takePreciseCoverage")
-        cdp_session.send("Profiler.stopPreciseCoverage")
-        if not coverage:
-            return
-        output_file = ARTIFACTS_DIR / f"v8_coverage_{test_name}.json"
-        with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(coverage, f)
-    except Exception as e:
-        print(f"Warning: Failed to save V8 coverage for {test_name}: {e}")
