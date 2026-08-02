@@ -4,48 +4,42 @@
 venv/
 .idea/
 
-# Godot-specific ignores (older .import for compat)
+# Godot-specific ignores
 .import/
-# *.import
-
-# Imported asset reimport files
 *.reimport
 
 # System/OS files
 .DS_Store
 Thumbs.db
 
-# Exclude editor metadata UIDs
-# *.uid
-
 # Editor-specific files
 *.tmp
 *.bak
 *.log
 *.pidb
-*.meta  # Unity-like, but sometimes from imports
+*.meta
 
-# Build/export folders (ignore exports; commit presets.cfg)
+# Build/export folders
 export/web/**
 export/web_thread_off/**
-!export/export_presets.cfg  # Keep your export settings
+!export/export_presets.cfg
 
 # Temp files from tools/Docker
 *.swp
 *.swo
-infra/*.log  # If Docker logs appear
+infra/*.log
 
-# Ignore user-specific Godot settings if shared
+# Project override settings
 project.godot.override
 addons/
 reports/
-tests/__pycache__/
-report.xml
+
+# Test & Coverage Artifacts
 artifacts/
-artifacts/main_menu.png
-artifacts/main_menu.png
 v8_coverage_*.json
+tests/__pycache__/
 tests/refactor/__pycache__/
+report.xml
 report.html
 project_structure.txt
 *.pyc

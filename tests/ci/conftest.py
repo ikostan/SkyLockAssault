@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
 
 
 @pytest.fixture(scope="session")
@@ -31,11 +32,13 @@ def browser_type_launch_args():
 
 @pytest.fixture
 def repo_tmp():
-    """Creates an isolated temporary directory INSIDE the project root.
+    """Creates an isolated temporary directory INSIDE artifacts/.
 
-    Yields a relative POSIX path (e.g. 'tmp_xyz') so WSL bash can easily
-    digest it without encountering Windows absolute path translation errors.
+    Yields a relative POSIX path (e.g. 'artifacts/tmp_xyz') so WSL bash can easily
+    digest it without encountering Windows absolute path translation errors while
+    keeping the project root pristine.
     """
-    with tempfile.TemporaryDirectory(dir=PROJECT_ROOT) as tmpdir:
+    ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=ARTIFACTS_DIR) as tmpdir:
         rel_path = os.path.relpath(tmpdir, PROJECT_ROOT).replace("\\", "/")
         yield rel_path
