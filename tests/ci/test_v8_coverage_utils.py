@@ -120,3 +120,19 @@ def test_save_v8_coverage_handles_file_write_exception(
     captured = capsys.readouterr()
     assert "Warning: Failed to save V8 coverage for write_failure_test" in captured.out
     assert "Disk full or permission denied" in captured.out
+
+
+def test_save_v8_coverage_sanitizes_filename(tmp_path: Path) -> None:
+    """Verify special characters (e.g. slashes, colons, brackets) in test_name are sanitized."""
+    mock_cdp = MagicMock()
+    mock_cdp.send.return_value = {"result": []}
+
+    artifacts_dir = tmp_path / "artifacts"
+
+    with patch("tests.test_utils.ARTIFACTS_DIR", artifacts_dir):
+        save_v8_coverage(mock_cdp, "tests/audio_test.py::test_flow[chromium]")
+
+    expected_file = (
+        artifacts_dir / "v8_coverage_tests_audio_test.py__test_flow_chromium_.json"
+    )
+    assert expected_file.exists()

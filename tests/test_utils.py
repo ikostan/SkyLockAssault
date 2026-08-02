@@ -5,6 +5,7 @@
 
 import json
 import os
+import re
 import time
 from pathlib import Path
 from typing import Any, Callable
@@ -38,7 +39,8 @@ def save_v8_coverage(cdp_session: Any, test_name: str) -> None:
         cdp_session.send("Profiler.stopPreciseCoverage")
         if not coverage:
             return
-        output_file = ARTIFACTS_DIR / f"v8_coverage_{test_name}.json"
+        safe_test_name = re.sub(r"[^A-Za-z0-9._-]+", "_", test_name)
+        output_file = ARTIFACTS_DIR / f"v8_coverage_{safe_test_name}.json"
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(coverage, f)
     except Exception as e:
