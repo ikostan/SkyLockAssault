@@ -99,7 +99,7 @@ if [ $server_ready -eq 0 ]; then
 fi
 echo "✅ Server ready"
 
-# 6. Run Playwright browser tests using native headless mode (no xvfb-run dependency)
+# 6. Run Playwright browser tests using native headless mode
 echo "🧪 Running Playwright Browser Tests target: $TEST_TARGET ($SUITE_NAME)..."
 mkdir -p "$PROJECT_DIR/artifacts"
 source /opt/venv/bin/activate
@@ -113,6 +113,9 @@ pytest "$TEST_TARGET" \
   --self-contained-html \
   --junitxml="$PROJECT_DIR/artifacts/report_${SUITE_NAME}.xml"
 check_exit "Playwright Tests"
+
+# 🧹 Post-test sweep: Move V8 coverage outputs to artifacts/
+mv "$PROJECT_DIR"/v8_coverage_*.json "$PROJECT_DIR/artifacts/" 2>/dev/null || true
 
 # 7. Generate suite-scoped test report summary
 REPORT_FILE="$PROJECT_DIR/artifacts/report_${SUITE_NAME}.xml"

@@ -5,6 +5,8 @@
 
 import os
 import time
+import json
+from pathlib import Path
 from typing import Any, Callable
 
 from playwright.sync_api import Page, expect
@@ -20,6 +22,24 @@ LOG_LEVEL_MAP: dict[str, int] = {
     "ERROR": 3,
     "NONE": 4,
 }
+
+# Path configuration
+ARTIFACTS_DIR = Path("artifacts")
+
+
+def save_v8_coverage(cdp_session: Any, test_name: str) -> None:
+    """Collects V8 coverage data from CDP session and saves it directly in artifacts/."""
+    if not cdp_session:
+        return
+    try:
+        ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+        coverage = cdp_session.send("Profiler.takePreciseCoverage")
+        cdp_session.send("Profiler.stopPreciseCoverage")
+        output_file = ARTIFACTS_DIR / f"v8_coverage_{test_name}.json"
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(coverage, f)
+    except Exception as e:
+        print(f"Warning: Failed to save V8 coverage for {test_name}: {e}")
 
 
 def has_save_log(logs: list[dict[str, str]]) -> bool:
