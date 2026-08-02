@@ -97,10 +97,10 @@ jobs:
             test_path: "tests/*_test.py"
             artifact_suffix: "core"
           - suite: "Refactor Suite"
-            test_path: "tests/refactor/*_test.py"
+            test_path: "tests/refactor/*.py"
             artifact_suffix: "refactor"
           - suite: "CI & Security"
-            test_path: "tests/ci/*_test.py"
+            test_path: "tests/ci/*.py"
             artifact_suffix: "ci"
 
     env:
