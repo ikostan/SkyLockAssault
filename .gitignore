@@ -37,8 +37,7 @@ reports/
 # Test & Coverage Artifacts
 artifacts/
 v8_coverage_*.json
-tests/__pycache__/
-tests/refactor/__pycache__/
+**/__pycache__/
 report.xml
 report.html
 project_structure.txt
