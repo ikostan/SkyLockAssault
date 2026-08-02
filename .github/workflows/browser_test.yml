@@ -84,13 +84,28 @@ jobs:
           path: "export/web_thread_off"
           retention-days: 1
 
-  test:
-    name: "Run Browser Tests"
+  test-shard:
+    name: "Shard: ${{ matrix.suite }}"
     needs: "build-web"
     runs-on: "ubuntu-latest"
-    timeout-minutes: 25
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: "Core Web Flows"
+            test_path: "tests/*_test.py"
+            artifact_suffix: "core"
+          - suite: "Refactor Suite"
+            test_path: "tests/refactor/*_test.py"
+            artifact_suffix: "refactor"
+          - suite: "CI & Security"
+            test_path: "tests/ci/*_test.py"
+            artifact_suffix: "ci"
+
     env:
       PW_TIMEOUT: "${{ inputs.pw_timeout }}"
+
     steps:
       - uses: "actions/checkout@v7"
 
@@ -186,10 +201,14 @@ jobs:
           done
           if [ $i -eq 20 ]; then exit 1; fi
 
-      # yamllint disable rule:line-length
-      - name: "Run Tests"
+      - name: "Create Artifacts Directory"
         run: |
-          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/ -v --ignore=tests/refactor --ignore=tests/ci --junitxml=artifacts/junit.xml -o junit_family=legacy
+          mkdir -p artifacts
+
+      # yamllint disable rule:line-length
+      - name: "Run Sharded Tests"
+        run: |
+          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest ${{ matrix.test_path }} -v --junitxml=artifacts/junit.xml -o junit_family=legacy
       # yamllint enable rule:line-length
 
       - name: "List Coverage Reports"
@@ -247,7 +266,7 @@ jobs:
         if: "always()"
         uses: "actions/upload-artifact@v7"
         with:
-          name: "lcov-report"
+          name: "lcov-report-${{ matrix.artifact_suffix }}"
           path: "./coverage/lcov/lcov.info"
           retention-days: 5
 
@@ -261,7 +280,7 @@ jobs:
             errors=$(xmllint --xpath 'count(//testcase/error)' "$JUNIT_FILE")
             skipped=$(xmllint --xpath 'count(//testcase/skipped)' "$JUNIT_FILE")
             passed=$((total - failures - errors - skipped))
-            echo "Test Report Summary:"
+            echo "Test Report Summary (${{ matrix.suite }}):"
             echo "- Total tests: $total"
             echo "- Passed: $passed"
             echo "- Failed: $failures"
@@ -275,14 +294,14 @@ jobs:
         if: "always()"
         uses: "actions/upload-artifact@v7"
         with:
-          name: "test-report"
+          name: "test-report-${{ matrix.artifact_suffix }}"
           path: "artifacts/junit.xml"
 
       - name: "Upload Screenshot and Coverage Artifacts"
         if: "always()"
         uses: "actions/upload-artifact@v7"
         with:
-          name: "test-screenshots"
+          name: "test-screenshots-${{ matrix.artifact_suffix }}"
           path: |
             artifacts/
             coverage_*.json
@@ -292,7 +311,7 @@ jobs:
         uses: "codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f"
         with:
           files: "./coverage/lcov/lcov.info"
-          flags: "playwright"
+          flags: "playwright-${{ matrix.artifact_suffix }}"
           fail_ci_if_error: false
           verbose: true
           token: "${{ secrets.CODECOV_TOKEN }}"
@@ -311,7 +330,7 @@ jobs:
           REPORT_FILE="artifacts/junit.xml"
           if [ ! -f "$REPORT_FILE" ]; then REPORT_FILE="./junit.xml"; fi
           if [ -f "$REPORT_FILE" ]; then
-            ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f "$REPORT_FILE" --name "Playwright Browser Test Report" --flag PLAYWRIGHT --report-type test_results
+            ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f "$REPORT_FILE" --name "Playwright Browser Test Report (${{ matrix.suite }})" --flag PLAYWRIGHT_${{ matrix.artifact_suffix }} --report-type test_results
           else
             echo "No Playwright JUnit XML found, skipping upload."
           fi
