@@ -32,15 +32,12 @@ echo "⚙️ Injecting 'ci' feature flag into export_presets.cfg..."
 python3 .github/scripts/inject_ci_flag.py
 check_exit "CI Flag Injection"
 
-# 4. Check for existing export artifacts to skip redundant Godot builds
-if [ ! -f "$EXPORT_DIR/index.html" ]; then
-  echo "🎮 Exporting Godot Project to Web (Web_thread_off)..."
-  mkdir -p "$EXPORT_DIR"
-  godot --headless --path "$PROJECT_DIR" --export-release "Web_thread_off" "$EXPORT_DIR/index.html"
-  check_exit "Godot Export"
-else
-  echo "⚡ Reusing existing web export artifacts in $EXPORT_DIR"
-fi
+# 4. Clean and export Godot Project to Web
+echo "🎮 Exporting Godot Project to Web (Web_thread_off)..."
+rm -rf "$EXPORT_DIR"
+mkdir -p "$EXPORT_DIR"
+godot --headless --path "$PROJECT_DIR" --export-release "Web_thread_off" "$EXPORT_DIR/index.html"
+check_exit "Godot Export"
 
 # 5. Clean up the repository and purge temporary backups
 echo "🧹 Restoring files to pristine state..."
