@@ -146,21 +146,21 @@ jobs:
           cd "$ARCHIVE_DIR/patched_build" && zip -r "$ARCHIVE_DIR/Web.zip" .
 
       - name: "Verify export does not contain placeholder"
+        env:
+          ARCHIVE_FILE: "${{ steps.export.outputs.archive_directory }}/Web.zip"
         run: |
           set -euo pipefail
 
-          # Temporarily disable pipefail to prevent SIGPIPE from failing check
-          # if grep exits early upon finding match in unpacked byte stream.
-          set +o pipefail
-
-          if unzip -p "${{ steps.export.outputs.archive_directory }}/Web.zip" | \
-            grep -qF "CI_INJECT_SALT_HERE"; then
-            echo "❌ Placeholder detected inside final export archive."
+          if ! unzip -t "$ARCHIVE_FILE" >/dev/null; then
+            echo "❌ Final export archive is invalid."
             exit 1
           fi
 
-          # Immediately restore strict pipefail for future commands
-          set -o pipefail
+          if unzip -p "$ARCHIVE_FILE" | \
+            grep -F "CI_INJECT_SALT_HERE" >/dev/null; then
+            echo "❌ Placeholder detected inside final export archive."
+            exit 1
+          fi
 
           echo "✅ Final export archive verified successfully."
 
@@ -176,8 +176,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p butler
-          # yamllint disable-line rule:line-length
-          curl -fL --show-error -o butler.zip "https://broth.itch.zone/butler/linux-amd64/${{ env.BUTLER_VERSION }}/archive/default"
+          URL="https://broth.itch.zone/butler/linux-amd64"
+          curl -fL --show-error -o butler.zip \
+            "${URL}/${{ env.BUTLER_VERSION }}/archive/default"
 
           # SECURITY CHECK: Verify binary integrity
           echo "${{ env.BUTLER_SHA256 }}  butler.zip" | sha256sum -c -
@@ -197,8 +198,11 @@ jobs:
         run: |
           set -euo pipefail
           butler push \
-            "${{ steps.export.outputs.archive_directory }}/Web.zip" \
-            ikostan/sky-lock-assault:${{ github.ref_name }} \
-            --userversion "${{ inputs.version }}"
+            "$ARCHIVE_DIR/Web.zip" \
+            "ikostan/sky-lock-assault:$REF_NAME" \
+            --userversion "$VERSION"
         env:
           BUTLER_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"
+          REF_NAME: "${{ github.ref_name }}"
+          VERSION: "${{ inputs.version }}"
+          ARCHIVE_DIR: "${{ steps.export.outputs.archive_directory }}"

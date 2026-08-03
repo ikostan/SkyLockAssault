@@ -219,13 +219,14 @@ jobs:
             PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest "${files[@]}" \
               -v --junitxml=artifacts/junit.xml -o junit_family=legacy
           else
-            echo "⚠️ No test files matched pattern: ${{ matrix.test_path }}."
+            echo "❌ No test files matched pattern: ${{ matrix.test_path }}." >&2
             cat <<EOF > artifacts/junit.xml
           <?xml version="1.0" encoding="utf-8"?>
           <testsuites>
             <testsuite name="empty" tests="0" failures="0" errors="0" skipped="0"/>
           </testsuites>
           EOF
+            exit 1
           fi
 
       - name: "List Coverage Reports"
