@@ -104,16 +104,34 @@ cp -r reports/** $PROJECT_DIR/reports || true
 
 # 6. Browser Functional Tests
 echo "Exporting Godot Project to Web..."
-mkdir -p $EXPORT_DIR
-godot --headless --path $PROJECT_DIR --export-release "Web_thread_off" $EXPORT_DIR/index.html
+mkdir -p "$EXPORT_DIR"
+godot --headless --path "$PROJECT_DIR" --export-release "Web_thread_off" "$EXPORT_DIR/index.html"
 check_exit "Godot Web Export"
 
-python3 -m http.server $SERVER_PORT --directory $EXPORT_DIR &
+echo "🚀 Starting security-isolated web server..."
+python3 -c "
+import http.server, socketserver, os
+
+class MyHandler(http.server.SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
+        self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
+        super().end_headers()
+
+class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+with ThreadedHTTPServer(('', $SERVER_PORT), MyHandler) as httpd:
+    os.chdir('$EXPORT_DIR')
+    httpd.serve_forever()
+" &
 SERVER_PID=$!
 
 server_ready=false
 for i in {1..20}; do
-  if curl -f http://localhost:$SERVER_PORT/index.html >/dev/null 2>&1; then
+  if curl -f "http://localhost:$SERVER_PORT/index.html" >/dev/null 2>&1; then
     echo "Web server ready"
     server_ready=true
     break
@@ -123,13 +141,19 @@ done
 
 if [ "$server_ready" != true ]; then
   echo "Web server failed to start"
-  kill $SERVER_PID
+  kill $SERVER_PID 2>/dev/null || true
   exit 1
 fi
 
 echo "Running Playwright Browser Tests..."
-pytest tests/ --ignore=tests/refactor -v --timeout=$PW_TIMEOUT --junitxml=$PROJECT_DIR/report.xml
-check_exit "Playwright Tests"
+pytest tests/ --ignore=tests/refactor -v --timeout=30 --junitxml="$PROJECT_DIR/report.xml"
+PYTEST_EXIT=$?
+
+kill $SERVER_PID 2>/dev/null || true
+if [ $PYTEST_EXIT -ne 0 ]; then
+  echo "Error in Playwright Tests. Exiting pipeline."
+  exit $PYTEST_EXIT
+fi
 
 # 7. Report Summary & Failure Check
 if [ -f $PROJECT_DIR/report.xml ]; then
