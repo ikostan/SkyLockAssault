@@ -194,7 +194,7 @@ def set_difficulty(
     """Navigate to Gameplay Settings, set difficulty, and return to Options."""
     page.wait_for_selector("#gameplay-button", state="visible", timeout=TEST_TIMEOUT)
     page.wait_for_function(
-        "() => typeof window.gameplayPressed !== 'undefined'",
+        "() => typeof window.changeDifficulty !== 'undefined'",
         timeout=TEST_TIMEOUT,
     )
     page.evaluate("window.gameplayPressed([])")
