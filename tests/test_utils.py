@@ -43,7 +43,7 @@ def save_v8_coverage(cdp_session: Any, test_name: str) -> None:
         cdp_session.send("Profiler.stopPreciseCoverage")
         if not coverage:
             return
-        safe_test_name = re.sub(r"[^A-Za-z0-9._-]+", "_", test_name)
+        safe_test_name = re.sub(r"[^A-Za-z0-9._-]+", "_", test_name)[:120]
         name_hash = hashlib.sha256(test_name.encode()).hexdigest()[:12]
         output_file = ARTIFACTS_DIR / f"v8_coverage_{safe_test_name}_{name_hash}.json"
         with open(output_file, "w", encoding="utf-8") as f:
