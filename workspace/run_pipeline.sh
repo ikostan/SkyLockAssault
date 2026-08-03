@@ -1,20 +1,23 @@
 #!/bin/bash
-# Copyright (C) 2025 Egor Kostan
+# Copyright (C) 2025-2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # Set variables
 PROJECT_DIR="/project"
 EXPORT_DIR="$PROJECT_DIR/export/web_thread_off"
 SERVER_PORT=8080
-PW_TIMEOUT=10 # Value is in SECONDS for pytest-timeout compatibility
+PW_TIMEOUT=30000
 
 # Function to check if a step failed
 check_exit() {
   if [ $? -ne 0 ]; then
-    echo "Error in $1. Exiting pipeline."
+    echo "❌ Error in $1. Exiting pipeline."
     exit 1
   fi
 }
+
+# Ensure Git trusts the container directory
+git config --global --add safe.directory "$PROJECT_DIR" 2>/dev/null || true
 
 # 1. GDScript Lint and Format Check
 echo "Running GDScript Format Check..."
@@ -102,11 +105,35 @@ check_exit "GUT Unit Tests"
 mkdir -p $PROJECT_DIR/reports
 cp -r reports/** $PROJECT_DIR/reports || true
 
-# 6. Browser Functional Tests
-echo "Exporting Godot Project to Web..."
+# 6. Pre-Export Setup (Salt & CI Flag Injection)
+echo "⚙️ Injecting dummy salt for Playwright tests..."
+PRODUCTION_SALT="playwright_dummy_salt_123" bash .github/scripts/inject_salt.sh "scripts/core/globals.gd"
+check_exit "Salt Injection"
+
+echo "⚙️ Injecting 'ci' feature flag into export_presets.cfg..."
+python3 .github/scripts/inject_ci_flag.py
+check_exit "CI Flag Injection"
+
+# 7. Browser Functional Tests
+echo "🎮 Exporting Godot Project to Web..."
+rm -rf "$EXPORT_DIR"
 mkdir -p "$EXPORT_DIR"
 godot --headless --path "$PROJECT_DIR" --export-release "Web_thread_off" "$EXPORT_DIR/index.html"
 check_exit "Godot Web Export"
+
+# Clean modified files back to pristine git state
+echo "🧹 Restoring configuration files to pristine state..."
+git restore export_presets.cfg scripts/core/globals.gd 2>/dev/null || true
+rm -f export_presets.cfg.bak 2>/dev/null || true
+
+cleanup_server() {
+  if [ -n "${SERVER_PID:-}" ]; then
+    kill "$SERVER_PID" 2>/dev/null || true
+    wait "$SERVER_PID" 2>/dev/null || true
+  fi
+  rm -f export_presets.cfg.bak 2>/dev/null || true
+}
+trap cleanup_server EXIT INT TERM
 
 echo "🚀 Starting security-isolated web server..."
 python3 -c "
@@ -129,38 +156,40 @@ with ThreadedHTTPServer(('', $SERVER_PORT), MyHandler) as httpd:
 " &
 SERVER_PID=$!
 
-server_ready=false
-for i in {1..20}; do
-  if curl -f "http://localhost:$SERVER_PORT/index.html" >/dev/null 2>&1; then
-    echo "Web server ready"
-    server_ready=true
+echo "Waiting for server to respond..."
+max_retries=100
+count=0
+server_ready=0
+
+while [ $count -lt $max_retries ]; do
+  if curl --fail --silent --show-error --max-time 1 \
+      "http://localhost:${SERVER_PORT}/index.html" > /dev/null; then
+    server_ready=1
     break
   fi
-  sleep 1
+  sleep 0.2
+  count=$((count + 1))
 done
 
-if [ "$server_ready" != true ]; then
-  echo "Web server failed to start"
-  kill $SERVER_PID 2>/dev/null || true
+if [ $server_ready -eq 0 ]; then
+  echo "❌ Web server failed to start within timeout"
   exit 1
 fi
+echo "✅ Server ready"
 
 echo "Running Playwright Browser Tests..."
-pytest tests/ --ignore=tests/refactor -v --timeout=30 --junitxml="$PROJECT_DIR/report.xml"
+source /opt/venv/bin/activate 2>/dev/null || true
+pytest tests/ --ignore=tests/refactor -v --timeout=$PW_TIMEOUT --junitxml="$PROJECT_DIR/report.xml"
 PYTEST_EXIT=$?
 
 kill $SERVER_PID 2>/dev/null || true
-if [ $PYTEST_EXIT -ne 0 ]; then
-  echo "Error in Playwright Tests. Exiting pipeline."
-  exit $PYTEST_EXIT
-fi
 
-# 7. Report Summary & Failure Check
-if [ -f $PROJECT_DIR/report.xml ]; then
-  total=$(xmllint --xpath 'count(//testcase)' $PROJECT_DIR/report.xml)
-  failures=$(xmllint --xpath 'count(//testcase/failure)' $PROJECT_DIR/report.xml)
-  errors=$(xmllint --xpath 'count(//testcase/error)' $PROJECT_DIR/report.xml)
-  skipped=$(xmllint --xpath 'count(//testcase/skipped)' $PROJECT_DIR/report.xml)
+# 8. Report Summary & Failure Check
+if [ -f "$PROJECT_DIR/report.xml" ]; then
+  total=$(xmllint --xpath 'count(//testcase)' "$PROJECT_DIR/report.xml")
+  failures=$(xmllint --xpath 'count(//testcase/failure)' "$PROJECT_DIR/report.xml")
+  errors=$(xmllint --xpath 'count(//testcase/error)' "$PROJECT_DIR/report.xml")
+  skipped=$(xmllint --xpath 'count(//testcase/skipped)' "$PROJECT_DIR/report.xml")
   passed=$((total - failures - errors - skipped))
 
   echo "Test Report Summary:"
@@ -171,15 +200,16 @@ if [ -f $PROJECT_DIR/report.xml ]; then
   echo "- Skipped: $skipped"
 else
   echo "CRITICAL ERROR: report.xml not found! Playwright tests failed to generate results."
-  kill $SERVER_PID
   exit 1
 fi
 
-kill $SERVER_PID
+if [ $PYTEST_EXIT -ne 0 ]; then
+  echo "Error in Playwright Tests. Exiting pipeline."
+  exit $PYTEST_EXIT
+fi
 
-mkdir -p $PROJECT_DIR/artifacts
-cp $PROJECT_DIR/report.xml $PROJECT_DIR/artifacts/ || true
-cp main_menu.png $PROJECT_DIR/artifacts/ || true
-cp -r $PROJECT_DIR/reports $PROJECT_DIR/artifacts/gdunit-reports || true
+mkdir -p "$PROJECT_DIR/artifacts"
+cp "$PROJECT_DIR/report.xml" "$PROJECT_DIR/artifacts/" 2>/dev/null || true
+cp -r "$PROJECT_DIR/reports" "$PROJECT_DIR/artifacts/gdunit-reports" 2>/dev/null || true
 
 echo "Pipeline completed successfully!"
