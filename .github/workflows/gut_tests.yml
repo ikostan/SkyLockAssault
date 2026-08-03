@@ -100,7 +100,7 @@ jobs:
         if: "success()"
         run: |
           VERSION="v11.3.1"
-          URL="https://cli.codecov.io/linux/${VERSION}"
+          URL="https://cli.codecov.io/${VERSION}/linux"
           curl -fL -o codecov "${URL}/codecov"
           curl -fL -o codecov.SHA256SUM "${URL}/codecov.SHA256SUM"
           curl -fL -o codecov.SHA256SUM.sig "${URL}/codecov.SHA256SUM.sig"

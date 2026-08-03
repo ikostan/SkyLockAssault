@@ -3,6 +3,7 @@
 # tests/test_utils.py
 """Shared utility functions and helpers for SkyLockAssault Playwright E2E tests."""
 
+import hashlib
 import json
 import os
 import re
@@ -31,6 +32,7 @@ ARTIFACTS_DIR = Path(
 ).resolve()
 
 
+
 def save_v8_coverage(cdp_session: Any, test_name: str) -> None:
     """Collects V8 coverage data from CDP session and saves it directly in artifacts/."""
     if not cdp_session:
@@ -42,7 +44,10 @@ def save_v8_coverage(cdp_session: Any, test_name: str) -> None:
         if not coverage:
             return
         safe_test_name = re.sub(r"[^A-Za-z0-9._-]+", "_", test_name)
-        output_file = ARTIFACTS_DIR / f"v8_coverage_{safe_test_name}.json"
+        name_hash = hashlib.sha256(test_name.encode()).hexdigest()[:12]
+        output_file = (
+            ARTIFACTS_DIR / f"v8_coverage_{safe_test_name}_{name_hash}.json"
+        )
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(coverage, f)
     except Exception as e:
