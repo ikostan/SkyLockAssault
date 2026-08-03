@@ -80,7 +80,7 @@ Legacy copies under `tests/refactor/` were removed to keep a single canonical su
 
 By tracking the HTTP server `GET /index.html` request deltas, we can observe the wall-clock intervals between browser test requests.
 
-> **Timing Methodology Note:** Figures in the table below represent observed request-to-request wall-clock intervals rather than isolated in-test execution durations. These values include browser process launch, page reloads, test teardown, and background server scheduling overhead.ing the HTTP server `GET /index.html` request deltas, we can observe the exact execution window and duration of each browser test:
+> **Timing Methodology Note:** Figures in the table below represent observed request-to-request wall-clock intervals rather than isolated in-test execution durations. These values include browser process launch, page reloads, test teardown, and background server scheduling overhead.
 
 | Test File                                                   | Start Time | End Time   | Approx. Duration |
 |-------------------------------------------------------------|------------|------------|------------------|
