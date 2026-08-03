@@ -11,6 +11,7 @@ from tests.test_utils import DEFAULT_TIMEOUT, init_page_and_wait_ready, save_v8_
 
 
 def test_save_v8_coverage_collision_prevention(tmp_path, monkeypatch):
+    """Verify that similar test names do not produce duplicate coverage filenames."""
     monkeypatch.setattr("tests.test_utils.ARTIFACTS_DIR", tmp_path)
 
     mock_cdp = MagicMock()
