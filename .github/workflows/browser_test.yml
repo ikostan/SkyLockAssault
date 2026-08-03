@@ -269,7 +269,7 @@ jobs:
                   const converter = new V8ToIstanbul(scriptPath, 0, options);
                   if (entry.url) await converter.load();
                   converter.applyCoverage(entry.functions);
-                  const filename = path.basename(scriptPath) + '_' + (localCounter++) + '.json';
+                  const filename = path.basename(scriptPath) + '_${counter}_' + (localCounter++) + '.json';
                   fs.writeFileSync(path.join('.nyc_output', filename), JSON.stringify(converter.toIstanbul()));
                 } catch (e) {
                   console.error('Skipping entry: ' + e.message);
