@@ -97,17 +97,9 @@ jobs:
           retention-days: 5
 
       - name: "Install Codecov CLI"
-        if: "success()"
+        if: success()  # Only if tests pass.
         run: |
-          VERSION="v11.3.1"
-          URL="https://cli.codecov.io/${VERSION}/linux"
-          curl -fL -o codecov "${URL}/codecov"
-          curl -fL -o codecov.SHA256SUM "${URL}/codecov.SHA256SUM"
-          curl -fL -o codecov.SHA256SUM.sig "${URL}/codecov.SHA256SUM.sig"
-
-          curl -fL https://cli.codecov.io/public-key.asc | gpg --import
-          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
-          sha256sum -c codecov.SHA256SUM
+          curl -Os https://cli.codecov.io/latest/linux/codecov
           chmod +x codecov
 
       - name: "Upload Test Report to Codecov"
