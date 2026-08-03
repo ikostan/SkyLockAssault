@@ -27,7 +27,7 @@ check_exit "GDScript Lint"
 
 # 2. Markdown Lint
 echo "Running Markdown Lint..."
-markdownlint-cli2 "**/*.md" "!.venv/**" "!venv/**" "!staticfiles/**" "!static/**" "!export/**" "!artifacts/**" --config .markdownlint-cli2.yaml --fix
+markdownlint-cli2 "**/*.md" "!.venv/**" "!venv/**" "!staticfiles/**" "!static/**" "!export/**" "!artifacts/**" "!addons/**" --config .markdownlint-cli2.yaml --fix
 check_exit "Markdown Lint"
 
 # 3. YAML Lint
@@ -39,6 +39,7 @@ check_exit "YAML Lint"
 mkdir -p "$PROJECT_DIR/addons"
 
 # 4. Godot Unit Tests (GDUnit4 v6)
+GDUNIT4_SHA256="c73f5ba0638575027a4e69b0fa8bd78ee89626487e60142bc02a2eb0ceee5d23"
 echo "Ensuring GDUnit4 addons are present..."
 if [ ! -d "$PROJECT_DIR/addons/gdUnit4" ]; then
   if [ -d "/opt/addons/gdUnit4" ]; then
@@ -47,6 +48,8 @@ if [ ! -d "$PROJECT_DIR/addons/gdUnit4" ]; then
   else
     echo "📥 GDUnit4 missing locally. Downloading GDUnit4 v6.1.3..."
     wget -q https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.1.3.zip -O /tmp/gdunit4.zip
+    echo "${GDUNIT4_SHA256}  /tmp/gdunit4.zip" | sha256sum --check --status
+    check_exit "GDUnit4 Checksum Verification"
     unzip -q /tmp/gdunit4.zip -d /tmp/gdunit_extract
     mv /tmp/gdunit_extract/gdUnit4-6.1.3/addons/gdUnit4 "$PROJECT_DIR/addons/gdUnit4"
     rm -rf /tmp/gdunit4.zip /tmp/gdunit_extract
@@ -67,6 +70,7 @@ godot --headless --path $PROJECT_DIR -s res://addons/gdUnit4/bin/GdUnitCmdTool.g
 check_exit "GDUnit4 Tests"
 
 # 5. GUT Unit Tests
+GUT_SHA256="577d34a413009772a5a54f8d5069f06c64609825b29094e9f73a388f63567d2c"
 echo "Checking for GUT installation..."
 if [ ! -d "$PROJECT_DIR/addons/gut" ]; then
   if [ -d "/opt/addons/gut" ]; then
@@ -75,6 +79,8 @@ if [ ! -d "$PROJECT_DIR/addons/gut" ]; then
   else
     echo "📥 GUT missing locally. Downloading GUT v9.5.0..."
     wget -q https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip -O /tmp/gut.zip
+    echo "${GUT_SHA256}  /tmp/gut.zip" | sha256sum --check --status
+    check_exit "GUT Checksum Verification"
     unzip -q /tmp/gut.zip -d /tmp/gut_extract
     mv /tmp/gut_extract/Gut-9.5.0/addons/gut "$PROJECT_DIR/addons/gut"
     rm -rf /tmp/gut.zip /tmp/gut_extract
