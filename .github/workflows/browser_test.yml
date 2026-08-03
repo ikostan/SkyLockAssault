@@ -252,8 +252,7 @@ jobs:
       - name: "Convert V8 to LCOV"
         run: |
           mkdir -p .nyc_output coverage/lcov
-          counter=0
-          for file in artifacts/v8_coverage_*.json v8_coverage_*.json; do
+          for file in artifacts/v8_coverage_*.json; do
             [ -e "$file" ] || continue
             node -e "
             const fs = require('fs');
@@ -261,6 +260,7 @@ jobs:
             const V8ToIstanbul = require('v8-to-istanbul');
             const rawCoverage = JSON.parse(fs.readFileSync('$file', 'utf8'));
             const coverage = rawCoverage.result ? rawCoverage.result : rawCoverage;
+            const fileSlug = path.basename('$file', '.json').replace(/^v8_coverage_/, '');
             (async () => {
               let localCounter = 0;
               for (const entry of coverage) {
@@ -273,7 +273,7 @@ jobs:
                   const converter = new V8ToIstanbul(scriptPath, 0, options);
                   if (entry.url) await converter.load();
                   converter.applyCoverage(entry.functions);
-                  const filename = path.basename(scriptPath) + '_${counter}_' + (localCounter++) + '.json';
+                  const filename = path.basename(scriptPath) + '_' + fileSlug + '_' + (localCounter++) + '.json';
                   fs.writeFileSync(path.join('.nyc_output', filename), JSON.stringify(converter.toIstanbul()));
                 } catch (e) {
                   console.error('Skipping entry: ' + e.message);
@@ -281,7 +281,6 @@ jobs:
               }
             })();
             "
-            counter=$((counter + 1))
           done
           npx nyc report --reporter=lcov --report-dir coverage/lcov --all --include=export/web_thread_off/*.js
       # yamllint enable rule:line-length

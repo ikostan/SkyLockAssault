@@ -9,8 +9,7 @@ from pathlib import Path
 
 import pytest
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
+from tests.test_utils import ARTIFACTS_DIR, PROJECT_ROOT
 
 
 @pytest.fixture(scope="session")

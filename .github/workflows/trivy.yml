@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: "Run Trivy FS Scan"
-        # Pin Trivy action to a specific commit to avoid supply-chain risk from master updates
+        # Pin Trivy action to a specific commit to avoid supply-chain risk
         uses: "aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284"
         env:  # Suppress version check notification
           TRIVY_SKIP_VERSION_CHECK: "true"
@@ -29,10 +29,10 @@ jobs:
           scan-type: "fs"  # Scans the filesystem (your repo after checkout)
           scanners: "vuln,secret,misconfig,license"  # Vulns, secrets, configs, licenses
           hide-progress: false
-          format: "sarif"  # Outputs in SARIF for GitHub integration (shows in Security tab)
+          format: "sarif"  # SARIF output for GitHub Security tab
           output: "trivy-results.sarif"
           severity: "CRITICAL,HIGH"  # Focus on serious issues
-          exit-code: "1"  # Fail the workflow if critical/high vulns found (set to '0' to not fail)
+          exit-code: "1"  # Fail workflow if critical/high vulns found
           ignore-unfixed: true  # Ignore vulns without fixes available
 
       - name: "Upload Trivy scan results to GitHub Security tab"
