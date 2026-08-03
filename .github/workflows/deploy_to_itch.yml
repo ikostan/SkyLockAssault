@@ -117,7 +117,9 @@ jobs:
           ARCHIVE_DIR="${{ steps.export.outputs.archive_directory }}"
 
           # Defensive guard: prevent rm -rf from acting on empty/malformed path
-          if [ -z "$ARCHIVE_DIR" ] || [ "$ARCHIVE_DIR" = "/" ] || [ "$ARCHIVE_DIR" = "." ]; then
+          if [ -z "$ARCHIVE_DIR" ] || \
+             [ "$ARCHIVE_DIR" = "/" ] || \
+             [ "$ARCHIVE_DIR" = "." ]; then
             echo "❌ FATAL: archive_directory output is empty or unsafe."
             exit 1
           fi
@@ -174,8 +176,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p butler
-          curl -fL --show-error -o butler.zip \
-            "https://broth.itch.zone/butler/linux-amd64/${{ env.BUTLER_VERSION }}/archive/default"
+          # yamllint disable-line rule:line-length
+          curl -fL --show-error -o butler.zip "https://broth.itch.zone/butler/linux-amd64/${{ env.BUTLER_VERSION }}/archive/default"
 
           # SECURITY CHECK: Verify binary integrity
           echo "${{ env.BUTLER_SHA256 }}  butler.zip" | sha256sum -c -

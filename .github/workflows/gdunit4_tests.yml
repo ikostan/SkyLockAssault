@@ -1,14 +1,14 @@
 ---
 name: "GDUnit4 Unit Tests"
 
-on:
+on:  # yamllint disable-line rule:truthy
   workflow_call:
     inputs:
       godot_version:
-        type: string
+        type: "string"
         default: "4.6.3-stable"
       godot_sha256:
-        type: string
+        type: "string"
         default: "d0bc2113065e481c9c2c2b2c37daa4e8be3fe9e27f0ab9ab0b6096e9a37907f3"
     secrets:
       CODECOV_TOKEN:
@@ -20,70 +20,89 @@ jobs:
     runs-on: "ubuntu-latest"
     timeout-minutes: 10
     permissions:
-      checks: write
+      checks: "write"
     env:
-      GODOT_VERSION: ${{ inputs.godot_version }}
-      GODOT_SHA256: ${{ inputs.godot_sha256 }}
+      GODOT_VERSION: "${{ inputs.godot_version }}"
+      GODOT_SHA256: "${{ inputs.godot_sha256 }}"
     steps:
       - uses: "actions/checkout@v7"
+        with:
+          persist-credentials: false
+
       - name: "Download and Verify Godot Binary"
         run: |
-          wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v${GODOT_VERSION}_linux.x86_64.zip
+          URL="https://github.com/godotengine/godot/releases/download"
+          ZIP_NAME="Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          wget -q "${URL}/${GODOT_VERSION}/${ZIP_NAME}"
 
-          echo "${GODOT_SHA256}  Godot_v${GODOT_VERSION}_linux.x86_64.zip" | sha256sum --check --status
+          echo "${GODOT_SHA256}  ${ZIP_NAME}" | sha256sum --check --status
           if [ $? -ne 0 ]; then
             echo "❌ CRITICAL: Godot binary verification failed! Checksum mismatch."
             exit 1
           fi
 
-          unzip Godot_v${GODOT_VERSION}_linux.x86_64.zip
-          mv Godot_v${GODOT_VERSION}_linux.x86_64 godot
+          unzip "${ZIP_NAME}"
+          mv "Godot_v${GODOT_VERSION}_linux.x86_64" godot
           chmod +x godot
+
       - name: "Install GDUnit4"
         run: |
           mkdir -p addons
-          wget https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.1.3.zip
+          URL="https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.1.3.zip"
+          wget "$URL"
           unzip v6.1.3.zip -d addons
           mv addons/gdUnit4-6.1.3/addons/gdUnit4 addons/gdUnit4
           rm -rf addons/gdUnit4-6.1.3
+
       - name: "Initialize Project and UIDs"
         run: |
           ./godot --headless --editor --quit --path .
+
       - name: "Run GDUnit4 Tests"
         run: |
           ./godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
             --ignoreHeadlessMode \
             --add res://test/gdunit4
+
       - name: "Find Latest Report Directory"
-        id: find_report
+        id: "find_report"
         run: |
           LATEST_REPORT=$(ls -td reports/report_* | head -1 || echo "")
           if [ -z "$LATEST_REPORT" ]; then
             echo "No report directory found; tests may not have generated reports."
             exit 1
           fi
-          echo "latest_report=$LATEST_REPORT" >> $GITHUB_OUTPUT
+          echo "latest_report=$LATEST_REPORT" >> "$GITHUB_OUTPUT"
+
       - name: "List Coverage Reports"
         run: |
-          ls -la ${{ steps.find_report.outputs.latest_report }}/
+          ls -la "${{ steps.find_report.outputs.latest_report }}/"
+
       - name: "Upload Test Reports Artifacts"
-        if: always()
+        if: "always()"
         uses: "actions/upload-artifact@v7"
         with:
-          name: gdunit-reports
-          path: reports/**
+          name: "gdunit-reports"
+          path: "reports/**"
           retention-days: 5
+
       - name: "Install Codecov CLI"
-        if: success()  # Only if tests pass.
+        if: "success()"
         run: |
           curl -Os https://cli.codecov.io/latest/linux/codecov
           chmod +x codecov
+
       - name: "Upload Test Report to Codecov"
-        if: success()
+        if: "success()"
         run: |
           REPORT_FILE="${{ steps.find_report.outputs.latest_report }}/test-report.xml"
           if [ -f "$REPORT_FILE" ]; then
-            ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f "$REPORT_FILE" --name "GDUnit4 Test Report" --flag GDUnit4 --report-type test_results
+            ./codecov upload-process \
+              --token ${{ secrets.CODECOV_TOKEN }} \
+              -f "$REPORT_FILE" \
+              --name "GDUnit4 Test Report" \
+              --flag GDUnit4 \
+              --report-type test_results
           else
             echo "No GDUnit4 test-report XML found, skipping upload."
           fi
