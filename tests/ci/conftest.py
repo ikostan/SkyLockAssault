@@ -5,8 +5,6 @@
 
 import os
 import tempfile
-from pathlib import Path
-
 import pytest
 
 from tests.test_utils import ARTIFACTS_DIR, PROJECT_ROOT
