@@ -27,8 +27,7 @@ check_exit "GDScript Lint"
 
 # 2. Markdown Lint
 echo "Running Markdown Lint..."
-# Now using the version pre-installed in the Docker image
-markdownlint-cli2 "**/*.md" "!venv/**" --config .markdownlint-cli2.yaml --fix
+markdownlint-cli2 "**/*.md" "!.venv/**" "!venv/**" "!staticfiles/**" "!static/**" "!export/**" "!artifacts/**" --config .markdownlint-cli2.yaml --fix
 check_exit "Markdown Lint"
 
 # 3. YAML Lint
@@ -36,10 +35,26 @@ echo "Running YAML Lint..."
 yamllint -c .yamllint.yaml .github/workflows/*.yml
 check_exit "YAML Lint"
 
+# Ensure addons directory exists on mounted workspace
+mkdir -p "$PROJECT_DIR/addons"
+
 # 4. Godot Unit Tests (GDUnit4 v6)
 echo "Ensuring GDUnit4 addons are present..."
 if [ ! -d "$PROJECT_DIR/addons/gdUnit4" ]; then
-  echo "GDUnit4 addon missing at $PROJECT_DIR/addons/gdUnit4"
+  if [ -d "/opt/addons/gdUnit4" ]; then
+    echo "📦 Restoring GDUnit4 from container fallback storage (/opt/addons/gdUnit4)..."
+    cp -r /opt/addons/gdUnit4 "$PROJECT_DIR/addons/"
+  else
+    echo "📥 GDUnit4 missing locally. Downloading GDUnit4 v6.1.3..."
+    wget -q https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.1.3.zip -O /tmp/gdunit4.zip
+    unzip -q /tmp/gdunit4.zip -d /tmp/gdunit_extract
+    mv /tmp/gdunit_extract/gdUnit4-6.1.3/addons/gdUnit4 "$PROJECT_DIR/addons/gdUnit4"
+    rm -rf /tmp/gdunit4.zip /tmp/gdunit_extract
+  fi
+fi
+
+if [ ! -d "$PROJECT_DIR/addons/gdUnit4" ]; then
+  echo "❌ CRITICAL: GDUnit4 addon missing at $PROJECT_DIR/addons/gdUnit4"
   exit 1
 fi
 
@@ -52,16 +67,26 @@ godot --headless --path $PROJECT_DIR -s res://addons/gdUnit4/bin/GdUnitCmdTool.g
 check_exit "GDUnit4 Tests"
 
 # 5. GUT Unit Tests
-# FIXED: Replaced download/unpack logic with existence check
 echo "Checking for GUT installation..."
 if [ ! -d "$PROJECT_DIR/addons/gut" ]; then
-  echo "GUT not found at '$PROJECT_DIR/addons/gut'."
-  echo "CRITICAL: GUT must be pre-installed in the Docker image or cached volume."
+  if [ -d "/opt/addons/gut" ]; then
+    echo "📦 Restoring GUT from container fallback storage (/opt/addons/gut)..."
+    cp -r /opt/addons/gut "$PROJECT_DIR/addons/"
+  else
+    echo "📥 GUT missing locally. Downloading GUT v9.5.0..."
+    wget -q https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip -O /tmp/gut.zip
+    unzip -q /tmp/gut.zip -d /tmp/gut_extract
+    mv /tmp/gut_extract/Gut-9.5.0/addons/gut "$PROJECT_DIR/addons/gut"
+    rm -rf /tmp/gut.zip /tmp/gut_extract
+  fi
+fi
+
+if [ ! -d "$PROJECT_DIR/addons/gut" ]; then
+  echo "❌ CRITICAL: GUT not found at '$PROJECT_DIR/addons/gut'."
   exit 1
 fi
 
 echo "Running GUT Unit Tests..."
-# Let .gutconfig.json govern discovery
 godot --headless --verbose --path $PROJECT_DIR \
   -s res://addons/gut/gut_cmdln.gd \
   -gconfig=res://.gutconfig.json \

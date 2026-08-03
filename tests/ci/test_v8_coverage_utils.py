@@ -11,6 +11,7 @@ file or protocol exceptions without crashing test execution.
 Audited for deterministic execution (subprocess timeouts, no static sleeps).
 """
 
+import hashlib
 import json
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
@@ -44,9 +45,11 @@ def test_save_v8_coverage_success(tmp_path: Path) -> None:
 
     # Mock the artifacts output directory within a temporary test path
     artifacts_dir = tmp_path / "artifacts"
+    test_name = "audio_flow_test"
+    name_hash = hashlib.sha256(test_name.encode()).hexdigest()[:12]
 
     with patch("tests.test_utils.ARTIFACTS_DIR", artifacts_dir):
-        save_v8_coverage(mock_cdp, "audio_flow_test")
+        save_v8_coverage(mock_cdp, test_name)
 
     # 1. Verify directory creation contract
     assert artifacts_dir.is_dir()
@@ -58,7 +61,7 @@ def test_save_v8_coverage_success(tmp_path: Path) -> None:
     ]
 
     # 3. Verify correct target file path creation inside artifacts/
-    expected_file = artifacts_dir / "v8_coverage_audio_flow_test.json"
+    expected_file = artifacts_dir / f"v8_coverage_{test_name}_{name_hash}.json"
     assert expected_file.exists()
 
     # 4. Verify saved payload matches expected CDP output structure
@@ -128,11 +131,13 @@ def test_save_v8_coverage_sanitizes_filename(tmp_path: Path) -> None:
     mock_cdp.send.return_value = {"result": []}
 
     artifacts_dir = tmp_path / "artifacts"
+    test_name = "tests/audio_test.py::test_flow[chromium]"
+    name_hash = hashlib.sha256(test_name.encode()).hexdigest()[:12]
 
     with patch("tests.test_utils.ARTIFACTS_DIR", artifacts_dir):
-        save_v8_coverage(mock_cdp, "tests/audio_test.py::test_flow[chromium]")
+        save_v8_coverage(mock_cdp, test_name)
 
     expected_file = (
-        artifacts_dir / "v8_coverage_tests_audio_test.py_test_flow_chromium_.json"
+        artifacts_dir / f"v8_coverage_tests_audio_test.py_test_flow_chromium__{name_hash}.json"
     )
     assert expected_file.exists()
