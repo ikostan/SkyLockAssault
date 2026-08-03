@@ -3,7 +3,7 @@
 
 ## 📋 Overview
 
-This PR completes the architectural refactoring required for **Issue #799**, moving presentational audio asset paths out of the core lifecycle code. Additionally, it addresses and resolves **Issue #811**—a bug where main menu controls were left completely silent due to a metadata gating conflict. 
+This PR completes the architectural refactoring required for **Issue #799**, moving presentational audio asset paths out of the core lifecycle code. Additionally, it addresses and resolves **Issue #811**—a bug where main menu controls were left completely silent due to a metadata gating conflict.
 
 All scripts have been fully optimized to satisfy the project's rigid formatting rules, and strict typing parameter checks are now completely green across `gdlint`, CodeRabbit, and Sourcery analysis checks.
 
@@ -70,17 +70,17 @@ Relocates UI navigation/confirmation audio responsibilities from the global Glob
 
 | Issue                                                | Objective                                                                                                                                                                                                                                                                                              | Addressed | Explanation |
 |------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-------------|
-| https://github.com/ikostan/SkyLockAssault/issues/799 | Relocate the UI navigation sound path constant (UI_NAV_SOUND_PATH) and any other presentation-focused audio constants from scripts/core/globals.gd into the audio layer (e.g., scripts/resources/audio_constants.gd or audio_manager.gd), so globals.gd no longer contains audio asset paths.          | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/799 | Move any associated preloaded UI navigation audio streams and helper functions for navigation SFX out of globals.gd into the audio manager’s lifecycle (or otherwise into the audio layer) so that globals.gd no longer owns navigation sound playback/caching.                                        | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/799 | Ensure code style/formatting remains compliant (e.g., passes workspace/run_gdlint.sh) after relocating the UI audio constants and related logic.                                                                                                                                                       | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/811 | Ensure main menu buttons (Start, Options, Quit) and their related quit dialog actions play the `ui_accept` (and `ui_cancel` where appropriate) confirmation sound locally, routed through `AudioConstants.BUS_SFX_MENU`, despite the `no_global_sound` metadata shield preventing global interception. | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/811 | Route global UI button press confirmation sounds through the dedicated menu SFX bus (`AudioConstants.BUS_SFX_MENU`) instead of the generic gameplay SFX bus, preserving the existing suppression behavior for flat buttons and `no_global_sound` metadata.                                             | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/811 | Add integration tests that validate main menu button audio playback and global button routing, including robust scene-tree and audio cleanup (snapshotting baseline state and purging leaked scenes/nodes) to prevent test environment pollution.                                                      | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/799> | Relocate the UI navigation sound path constant (UI_NAV_SOUND_PATH) and any other presentation-focused audio constants from scripts/core/globals.gd into the audio layer (e.g., scripts/resources/audio_constants.gd or audio_manager.gd), so globals.gd no longer contains audio asset paths.          | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/799> | Move any associated preloaded UI navigation audio streams and helper functions for navigation SFX out of globals.gd into the audio manager’s lifecycle (or otherwise into the audio layer) so that globals.gd no longer owns navigation sound playback/caching.                                        | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/799> | Ensure code style/formatting remains compliant (e.g., passes workspace/run_gdlint.sh) after relocating the UI audio constants and related logic.                                                                                                                                                       | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/811> | Ensure main menu buttons (Start, Options, Quit) and their related quit dialog actions play the `ui_accept` (and `ui_cancel` where appropriate) confirmation sound locally, routed through `AudioConstants.BUS_SFX_MENU`, despite the `no_global_sound` metadata shield preventing global interception. | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/811> | Route global UI button press confirmation sounds through the dedicated menu SFX bus (`AudioConstants.BUS_SFX_MENU`) instead of the generic gameplay SFX bus, preserving the existing suppression behavior for flat buttons and `no_global_sound` metadata.                                             | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/811> | Add integration tests that validate main menu button audio playback and global button routing, including robust scene-tree and audio cleanup (snapshotting baseline state and purging leaked scenes/nodes) to prevent test environment pollution.                                                      | ✅         |             |
 
 ### Possibly linked issues
 
-- **#FEATURE**: PR moves UI_NAV_SOUND_PATH and related navigation audio handling from globals.gd into AudioConstants/AudioManager, matching the feature request.
-- **#0**: PR directly fixes silent Main Menu buttons by adding local ui_accept calls and proper menu SFX bus routing with tests.
+* **#FEATURE**: PR moves UI_NAV_SOUND_PATH and related navigation audio handling from globals.gd into AudioConstants/AudioManager, matching the feature request.
+* **#0**: PR directly fixes silent Main Menu buttons by adding local ui_accept calls and proper menu SFX bus routing with tests.
 
 ---
 
@@ -90,15 +90,15 @@ This PR primarily involves refactoring audio-related constants, routing UI navig
 
 ### AI/Bot Contributors
 
-- **@sourcery-ai**: Provided a detailed PR summary, categorized changes (Bug Fixes, Enhancements, Tests), walkthrough of modifications across files (e.g., globals.gd, audio_constants.gd, audio_manager.gd, main_menu.gd, and test files), estimated review effort, related issues/PRs, suggested labels, and even a thematic poem. It helped structure the overall context and improvements.
-- **@coderabbitai**: Delivered feature/bug fix/test summaries, posted actionable review comments (including nitpicks on unused code, preloading optimizations, formatting fixes), inline suggestions, and autofix prompts. It reviewed specific commits and files, leveraging repo-specific learnings for Godot/GDScript best practices.
-- **@deepsource-io** (via DeepSource Code Review / DeepsourceReview): Performed automated code review on commits (e.g., 7ade280...3afd0b9), identifying issues with inline comments and a full review summary.
+* **@sourcery-ai**: Provided a detailed PR summary, categorized changes (Bug Fixes, Enhancements, Tests), walkthrough of modifications across files (e.g., globals.gd, audio_constants.gd, audio_manager.gd, main_menu.gd, and test files), estimated review effort, related issues/PRs, suggested labels, and even a thematic poem. It helped structure the overall context and improvements.
+* **@coderabbitai**: Delivered feature/bug fix/test summaries, posted actionable review comments (including nitpicks on unused code, preloading optimizations, formatting fixes), inline suggestions, and autofix prompts. It reviewed specific commits and files, leveraging repo-specific learnings for Godot/GDScript best practices.
+* **@deepsource-io** (via DeepSource Code Review / DeepsourceReview): Performed automated code review on commits (e.g., 7ade280...3afd0b9), identifying issues with inline comments and a full review summary.
 
 These bots enhanced code quality, provided automated testing/validation insights, enforced formatting/style rules (e.g., gdformat), and generated documentation-oriented summaries without direct code commits from external humans beyond the PR author.
 
 ### Human Contributors
 
-- **@ikostan**: Primary author and contributor. Handled all commits, including initial refactor of audio resources, routing menu audio to the dedicated bus, updates to main_menu.gd and globals.gd, dead code removal, style fixes, test helper extraction, and integration of feedback from AI reviews. Self-assigned, labeled, and linked related issues (#811, #799).
+* **@ikostan**: Primary author and contributor. Handled all commits, including initial refactor of audio resources, routing menu audio to the dedicated bus, updates to main_menu.gd and globals.gd, dead code removal, style fixes, test helper extraction, and integration of feedback from AI reviews. Self-assigned, labeled, and linked related issues (#811, #799).
 
 ---
 <!-- markdownlint-enable MD001 MD036 MD013 MD033 table-column-style -->
