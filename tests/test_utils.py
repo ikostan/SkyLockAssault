@@ -27,8 +27,9 @@ LOG_LEVEL_MAP: dict[str, int] = {
 
 # Path configuration
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-ARTIFACTS_DIR = Path(
-    os.getenv("ARTIFACTS_DIR", str(PROJECT_ROOT / "artifacts"))
+_artifacts_path = Path(os.getenv("ARTIFACTS_DIR", "artifacts"))
+ARTIFACTS_DIR = (
+    _artifacts_path if _artifacts_path.is_absolute() else PROJECT_ROOT / _artifacts_path
 ).resolve()
 
 
