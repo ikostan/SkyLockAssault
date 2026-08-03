@@ -32,7 +32,6 @@ ARTIFACTS_DIR = Path(
 ).resolve()
 
 
-
 def save_v8_coverage(cdp_session: Any, test_name: str) -> None:
     """Collects V8 coverage data from CDP session and saves it directly in artifacts/."""
     if not cdp_session:
@@ -45,9 +44,7 @@ def save_v8_coverage(cdp_session: Any, test_name: str) -> None:
             return
         safe_test_name = re.sub(r"[^A-Za-z0-9._-]+", "_", test_name)
         name_hash = hashlib.sha256(test_name.encode()).hexdigest()[:12]
-        output_file = (
-            ARTIFACTS_DIR / f"v8_coverage_{safe_test_name}_{name_hash}.json"
-        )
+        output_file = ARTIFACTS_DIR / f"v8_coverage_{safe_test_name}_{name_hash}.json"
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(coverage, f)
     except Exception as e:
