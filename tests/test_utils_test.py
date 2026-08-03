@@ -4,19 +4,18 @@
 """Targeted unit and integration tests for helper utilities in test_utils.py."""
 
 from unittest.mock import MagicMock
+
 from playwright.sync_api import Page, expect
-from tests.test_utils import DEFAULT_TIMEOUT, init_page_and_wait_ready
-from tests.test_utils import save_v8_coverage
+
+from tests.test_utils import DEFAULT_TIMEOUT, init_page_and_wait_ready, save_v8_coverage
 
 
 def test_save_v8_coverage_collision_prevention(tmp_path, monkeypatch):
     monkeypatch.setattr("tests.test_utils.ARTIFACTS_DIR", tmp_path)
 
     mock_cdp = MagicMock()
-    mock_cdp.send.side_effect = (
-        lambda cmd, *args: {"result": []}
-        if cmd == "Profiler.takePreciseCoverage"
-        else None
+    mock_cdp.send.side_effect = lambda cmd, *args: (
+        {"result": []} if cmd == "Profiler.takePreciseCoverage" else None
     )
 
     test_a = "tests/a/b::test"

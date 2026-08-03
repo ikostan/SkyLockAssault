@@ -138,6 +138,7 @@ def test_save_v8_coverage_sanitizes_filename(tmp_path: Path) -> None:
         save_v8_coverage(mock_cdp, test_name)
 
     expected_file = (
-        artifacts_dir / f"v8_coverage_tests_audio_test.py_test_flow_chromium__{name_hash}.json"
+        artifacts_dir
+        / f"v8_coverage_tests_audio_test.py_test_flow_chromium__{name_hash}.json"
     )
     assert expected_file.exists()
