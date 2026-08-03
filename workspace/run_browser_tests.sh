@@ -53,6 +53,10 @@ cleanup_server() {
     wait "$SERVER_PID" 2>/dev/null || true
   fi
   rm -f export_presets.cfg.bak 2>/dev/null || true
+
+  # Safety trap: ensure any stray coverage files in project root move to artifacts/
+  mkdir -p "$PROJECT_DIR/artifacts" 2>/dev/null || true
+  mv "$PROJECT_DIR"/v8_coverage_*.json "$PROJECT_DIR/artifacts/" 2>/dev/null || true
 }
 
 trap cleanup_server EXIT INT TERM
@@ -112,9 +116,9 @@ pytest "$TEST_TARGET" \
   --html="$PROJECT_DIR/artifacts/report_${SUITE_NAME}.html" \
   --self-contained-html \
   --junitxml="$PROJECT_DIR/artifacts/report_${SUITE_NAME}.xml"
-check_exit "Playwright Tests"
+PYTEST_EXIT=$?
 
-# 🧹 Post-test sweep: Move V8 coverage outputs to artifacts/
+# 🧹 Post-test sweep: Move V8 coverage outputs to artifacts/ regardless of pass/fail
 mv "$PROJECT_DIR"/v8_coverage_*.json "$PROJECT_DIR/artifacts/" 2>/dev/null || true
 
 # 7. Generate suite-scoped test report summary
@@ -133,4 +137,10 @@ if [ -f "$REPORT_FILE" ]; then
   echo "- Skipped: $skipped"
 else
   echo "No report XML found ($REPORT_FILE)—tests may not have run."
+fi
+
+# Exit with pytest status code if tests failed
+if [ $PYTEST_EXIT -ne 0 ]; then
+  echo "❌ Error in Playwright Tests. Exiting pipeline."
+  exit $PYTEST_EXIT
 fi
