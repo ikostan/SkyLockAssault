@@ -20,8 +20,8 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: "Run Trivy FS Scan"
-        uses: "aquasecurity/trivy-action@master"
-        # uses: "aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284"
+        # Pin Trivy action to a specific commit to avoid supply-chain risk from master updates
+        uses: "aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284"
         env:  # Suppress version check notification
           TRIVY_SKIP_VERSION_CHECK: "true"
         with:
