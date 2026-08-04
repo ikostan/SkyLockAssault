@@ -19,6 +19,29 @@ check_exit() {
 # Ensure Git trusts the container directory
 git config --global --add safe.directory "$PROJECT_DIR" 2>/dev/null || true
 
+# 🧹 0. Reset working tree to clean slate before running any tests
+echo "🧹 Resetting repository to pristine state..."
+git restore export_presets.cfg scripts/core/globals.gd 2>/dev/null || true
+rm -f export_presets.cfg.bak v8_coverage_*.json 2>/dev/null || true
+
+# Create an isolated temporary directory for addon downloads
+ADDON_TMP=$(mktemp -d "${TMPDIR:-/tmp}/pipeline-addons.XXXXXX")
+
+cleanup_workspace() {
+  rm -rf "$ADDON_TMP" 2>/dev/null || true
+  if [ -n "${SERVER_PID:-}" ]; then
+    kill "$SERVER_PID" 2>/dev/null || true
+    wait "$SERVER_PID" 2>/dev/null || true
+  fi
+  git restore export_presets.cfg scripts/core/globals.gd 2>/dev/null || true
+  rm -f export_presets.cfg.bak 2>/dev/null || true
+
+  # Safety trap: ensure any stray coverage or report files move to artifacts/
+  mkdir -p "$PROJECT_DIR/artifacts" 2>/dev/null || true
+  mv "$PROJECT_DIR"/v8_coverage_*.json "$PROJECT_DIR/artifacts/" 2>/dev/null || true
+}
+trap cleanup_workspace EXIT INT TERM
+
 # 1. GDScript Lint and Format Check
 echo "Running GDScript Format Check..."
 gdformat --diff --check $PROJECT_DIR/scripts
@@ -38,22 +61,8 @@ echo "Running YAML Lint..."
 yamllint -c .yamllint.yaml .github/workflows/*.yml
 check_exit "YAML Lint"
 
-# Create an isolated temporary directory for addon downloads
-ADDON_TMP=$(mktemp -d "${TMPDIR:-/tmp}/pipeline-addons.XXXXXX")
-
-cleanup_workspace() {
-  rm -rf "$ADDON_TMP" 2>/dev/null || true
-  if [ -n "${SERVER_PID:-}" ]; then
-    kill "$SERVER_PID" 2>/dev/null || true
-    wait "$SERVER_PID" 2>/dev/null || true
-  fi
-  rm -f export_presets.cfg.bak 2>/dev/null || true
-
-  # Safety trap: ensure any stray coverage or report files move to artifacts/
-  mkdir -p "$PROJECT_DIR/artifacts" 2>/dev/null || true
-  mv "$PROJECT_DIR"/v8_coverage_*.json "$PROJECT_DIR/artifacts/" 2>/dev/null || true
-}
-trap cleanup_workspace EXIT INT TERM
+# Ensure addons directory exists on mounted workspace
+mkdir -p "$PROJECT_DIR/addons"
 
 # 4. Godot Unit Tests (GDUnit4 v6)
 GDUNIT4_SHA256="c73f5ba0638575027a4e69b0fa8bd78ee89626487e60142bc02a2eb0ceee5d23"
@@ -138,7 +147,7 @@ check_exit "Godot Web Export"
 # Clean modified config files back to pristine git state
 echo "🧹 Restoring configuration files to pristine state..."
 git restore export_presets.cfg scripts/core/globals.gd 2>/dev/null || true
-rm -f export_presets.cfg.bak v8_coverage_*.json 2>/dev/null || true
+rm -f export_presets.cfg.bak 2>/dev/null || true
 
 echo "🚀 Starting security-isolated web server..."
 python3 -c "
