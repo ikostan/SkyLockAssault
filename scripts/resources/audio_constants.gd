@@ -7,8 +7,8 @@
 
 extends Node
 
-## Path to the navigation sound file
-const UI_NAV_SOUND_PATH: String = "res://files/sounds/sfx/ui_navigation.wav"
+## Base path for all UI sound effects.
+const SFX_DIR_PATH: String = "res://files/sounds/sfx/"
 
 # --- Audio Bus Names ---
 const BUS_MASTER: String = "Master"
@@ -22,6 +22,9 @@ const BUS_SFX_MENU: String = "SFX_Menu"
 const SFX_SLIDER: String = "slider"
 const SFX_MUTE_TOGGLE: String = "mute_toggle"  # For future CheckButton task
 const SFX_UI_NAVIGATION: String = "ui_navigation"
+
+## Centralized SFX keys
+const SFX_CHECK = "check"
 
 # Centralized config with defaults and var mappings
 const BUS_CONFIG: Dictionary = {
@@ -94,3 +97,9 @@ const SFX_ASSET_MAP: Dictionary = {
 	"airplane_prop": "airplane_prop.ogg",
 	"retro_laser": "retro-laser-1-236669.mp3"
 }
+
+## Centralized list of UI navigation actions to ensure consistency
+## and prevent duplicate definitions across the codebase.
+const NAV_ACTIONS: Array[String] = [
+	"ui_up", "ui_down", "ui_left", "ui_right", "ui_focus_next", "ui_focus_prev"
+]

@@ -12,9 +12,8 @@ any 'error' level logs or uncaught exceptions in the browser.
 
 Test Flow
 ---------
-- Listen to all console messages and uncaught page errors.
-- Navigate to the index page and wait for network idle.
-- Wait for window.godotInitialized (Godot _ready() signal).
+- Attach console and uncaught exception listeners to a fresh page context.
+- Navigate to index page and wait for Godot engine initialization signal.
 - Assert that no logs with type="error" or uncaught exceptions exist.
 """
 
@@ -22,20 +21,26 @@ import json
 import os
 import time
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
-# Configuration for stability in different environments
-# Default to 5000ms, but allow CI to override via environment variable
-DEFAULT_TIMEOUT = int(
-    os.getenv("TEST_TIMEOUT", "30000")
-)  # Fallback to 30s instead of 5s
-BUFFER_TIMEOUT = 1000
-TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "5000"))
+from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT, init_page_and_wait_ready
 
 
+# DO NOT REFACTOR: Must inject function-scoped `page`, NOT `shared_page`.
 def test_no_error_logs_after_load(page: Page) -> None:
     """
     E2E test to ensure zero console errors and uncaught exceptions on initial load.
+
+    IMPORTANT ARCHITECTURAL CONSTRAINT:
+    -----------------------------------
+    This test MUST consume the function-scoped `page` fixture (NOT `shared_page`).
+    Console listeners (`page.on("console")`) and page exception handlers
+    (`page.on("pageerror")`) MUST be registered BEFORE `init_page_and_wait_ready(page)`
+    triggers browser navigation and Godot WASM engine startup.
+
+    If `shared_page` is used here, Godot initializes before observation starts,
+    and `init_page_and_wait_ready()` will short-circuit without navigating—causing
+    all startup errors and GDScript compilation failures to pass undetected.
     """
     logs: list[dict[str, str]] = []
     page_errors: list[str] = []
@@ -49,7 +54,7 @@ def test_no_error_logs_after_load(page: Page) -> None:
         """Capture uncaught exceptions (pageerror)."""
         page_errors.append(f"Uncaught Exception: {exc.message}\n{exc.stack}")
 
-    # Attach listeners before navigation
+    # CRITICAL: Attach listeners BEFORE calling init_page_and_wait_ready()
     page.on("console", on_console)
     page.on("pageerror", on_page_error)
 
@@ -61,21 +66,16 @@ def test_no_error_logs_after_load(page: Page) -> None:
             "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
         )
 
-        # Navigate and wait for the game to initialize
-        # Using the configurable DEFAULT_TIMEOUT for improved stability
-        page.goto(
-            "http://localhost:8080/index.html",
-            wait_until="networkidle",
-            timeout=DEFAULT_TIMEOUT,
-        )
-        # 1. Wait for the engine to actually start the splash scene
-        page.wait_for_timeout(DEFAULT_TIMEOUT)
+        # Fresh page fixture triggers page navigation & WASM startup
+        # while listeners are active
+        init_page_and_wait_ready(page)
 
-        # Wait for the custom Godot initialization flag
-        page.wait_for_function("() => window.godotInitialized", timeout=DEFAULT_TIMEOUT)
+        # Ensure canvas is rendered and visible
+        canvas = page.locator("canvas")
+        expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
 
-        # Allow a short buffer for any delayed post-load errors
-        page.wait_for_timeout(BUFFER_TIMEOUT)
+        # Deterministically wait for main menu UI overlays to be fully mounted/ready
+        page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
 
         # Filter for error logs
         error_logs = [log for log in logs if log["type"] == "error"]

@@ -45,8 +45,8 @@ Adds regression tests and helpers around UI confirmation audio safeguards, verif
 
 | Issue                                                | Objective                                                                                                                                                                                                                                                       | Addressed | Explanation |
 |------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-------------|
-| https://github.com/ikostan/SkyLockAssault/issues/787 | Ensure that pressing ui_accept (Enter/Space or controller equivalent) on standard menu buttons plays the confirmation audio exactly once by preventing the global input handler from triggering audio when an interactive control (e.g., BaseButton) has focus. | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/787 | Add regression tests that cover UI input audio safeguards (focused controls bypass global ui_accept playback) and verify that button press hooks correctly trigger AudioManager playback via deferred connections.                                              | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/787> | Ensure that pressing ui_accept (Enter/Space or controller equivalent) on standard menu buttons plays the confirmation audio exactly once by preventing the global input handler from triggering audio when an interactive control (e.g., BaseButton) has focus. | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/787> | Add regression tests that cover UI input audio safeguards (focused controls bypass global ui_accept playback) and verify that button press hooks correctly trigger AudioManager playback via deferred connections.                                              | ✅         |             |
 
 ---
 
@@ -55,6 +55,7 @@ Adds regression tests and helpers around UI confirmation audio safeguards, verif
 This PR primarily addresses a UI confirmation audio double-trigger bug for `ui_accept` events (linked to issue #787), adds/enhances GUT unit tests for global audio hooks and input guards, and includes maintenance documentation for CI workflow updates. While human oversight integrated the changes, bots and AI tools handled the bulk of dependency updates, code reviews, summaries, refactoring suggestions, and quality checks.
 
 ### AI/Bot Contributors
+
 - **@dependabot** — Primary driver of CI dependency updates (e.g., bumping `actions/cache` from v5 to v6, refreshing pinned SHAs for `release-drafter/release-drafter` and `github/codeql-action/upload-sarif` across multiple workflows like `browser_test.yml`, `deploy_to_itch.yml`, security scans, etc.). Automated commits were merged into this PR.
 - **@sourcery-ai** — Generated automated PR summaries, reviewer's guides, enhancement suggestions, and contributed to documentation refinements (e.g., workflow count fixes in `Part_4_Maintenance.md`). Provided structured analysis of changes, related PR context, and estimated review effort.
 - **@coderabbitai** — Delivered detailed walkthroughs, file-level summaries, nitpick comments (e.g., test refactoring for duplication in input guards), actionable suggestions, and poems. Co-authored commits for test updates and improvements based on review feedback. Also suggested finishing touches like unit test generation.
@@ -63,6 +64,7 @@ This PR primarily addresses a UI confirmation audio double-trigger bug for `ui_a
 These tools collectively managed most technical updates, validation, documentation polishing, and review processes, showcasing effective automation for CI hygiene and test coverage.
 
 ### Human Contributors
+
 - **@ikostan** — Opened the PR, implemented the core bug fix in `globals.gd`, added/expanded tests (`test_globals_button_hooks.gd`, `test_globals_input_guards.gd`), created and refined the maintenance doc (`Part_4_Maintenance.md`), merged bot contributions, applied labels (bug, testing, CI/CD, etc.), self-assigned, and handled milestone/project tracking.
 - **@espanakosta-jpg** — No direct commits or reviews visible in this PR's timeline (potential upstream or related context contributions).
 

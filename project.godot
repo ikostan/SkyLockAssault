@@ -34,6 +34,7 @@ Settings="*res://scripts/core/settings.gd"
 AudioConstants="*res://scripts/resources/audio_constants.gd"
 AudioManager="*res://scripts/managers/audio_manager.gd"
 AudioWebBridge="*res://scripts/system/audio_web_bridge.gd"
+UiManager="*uid://bfa366huejmym"
 
 [debug]
 

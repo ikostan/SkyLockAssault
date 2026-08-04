@@ -5,6 +5,7 @@
 ## Automated verification suite for Feature Request #570.
 ## Validates object pooling, LRU cache eviction, failure isolation, 
 ## and constant engine node tree allocation rules.
+
 extends "res://addons/gut/test.gd"
 
 var _orig_cache: Dictionary = {}
@@ -176,8 +177,8 @@ func test_input_ignores_mouse_motion() -> void:
 	mouse_event.position = Vector2(250, 450)
 	mouse_event.relative = Vector2(5, 5)
 	
-	# Route the fake event pack directly into our global tracker
-	Globals._input(mouse_event)
+	# Route the fake event pack directly into our global tracker (Issue #490)
+	UiManager._input(mouse_event)
 	
 	# Ensure no execution churn occurred and no playback pool frames were hijacked
 	assert_false(AudioManager.is_any_sfx_playing(), "Mouse motion wiggles must drop immediately out of the input loop without triggering audio players.")

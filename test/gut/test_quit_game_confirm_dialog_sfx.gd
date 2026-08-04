@@ -2,7 +2,7 @@
 ## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_quit_game_confirm_dialog_sfx.gd
 ## GUT unit tests for main menu quit dialog confirmation audio pathways.
-# FIX: Swapped out explicit path inheritance for the global class name token to ensure test runner discovery
+
 extends GutTest
 
 # FIX: Load the PackedScene layout to build the required @onready subnode tree hierarchy

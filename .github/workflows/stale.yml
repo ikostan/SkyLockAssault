@@ -1,7 +1,7 @@
 ---
 name: "STALE: Mark stale issues and PRs"
 
-on:
+on:  # yamllint disable-line rule:truthy
   schedule:
     - cron: "0 0 * * *"  # Runs daily at midnight UTC
 
@@ -9,8 +9,8 @@ jobs:
   stale:
     runs-on: "ubuntu-latest"
     permissions:
-      issues: write
-      pull-requests: write
+      issues: "write"
+      pull-requests: "write"
     steps:
       # NOTE:
       # - We pin this action to a specific commit SHA to reduce supply-chain risk.
