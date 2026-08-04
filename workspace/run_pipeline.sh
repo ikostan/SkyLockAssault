@@ -40,7 +40,20 @@ check_exit "YAML Lint"
 
 # Create an isolated temporary directory for addon downloads
 ADDON_TMP=$(mktemp -d "${TMPDIR:-/tmp}/pipeline-addons.XXXXXX")
-trap 'rm -rf "$ADDON_TMP"' EXIT INT TERM
+
+cleanup_workspace() {
+  rm -rf "$ADDON_TMP" 2>/dev/null || true
+  if [ -n "${SERVER_PID:-}" ]; then
+    kill "$SERVER_PID" 2>/dev/null || true
+    wait "$SERVER_PID" 2>/dev/null || true
+  fi
+  rm -f export_presets.cfg.bak 2>/dev/null || true
+
+  # Safety trap: ensure any stray coverage or report files move to artifacts/
+  mkdir -p "$PROJECT_DIR/artifacts" 2>/dev/null || true
+  mv "$PROJECT_DIR"/v8_coverage_*.json "$PROJECT_DIR/artifacts/" 2>/dev/null || true
+}
+trap cleanup_workspace EXIT INT TERM
 
 # 4. Godot Unit Tests (GDUnit4 v6)
 GDUNIT4_SHA256="c73f5ba0638575027a4e69b0fa8bd78ee89626487e60142bc02a2eb0ceee5d23"
@@ -122,19 +135,10 @@ mkdir -p "$EXPORT_DIR"
 godot --headless --path "$PROJECT_DIR" --export-release "Web_thread_off" "$EXPORT_DIR/index.html"
 check_exit "Godot Web Export"
 
-# Clean modified files back to pristine git state
+# Clean modified config files back to pristine git state
 echo "🧹 Restoring configuration files to pristine state..."
 git restore export_presets.cfg scripts/core/globals.gd 2>/dev/null || true
-rm -f export_presets.cfg.bak 2>/dev/null || true
-
-cleanup_server() {
-  if [ -n "${SERVER_PID:-}" ]; then
-    kill "$SERVER_PID" 2>/dev/null || true
-    wait "$SERVER_PID" 2>/dev/null || true
-  fi
-  rm -f export_presets.cfg.bak 2>/dev/null || true
-}
-trap cleanup_server EXIT INT TERM
+rm -f export_presets.cfg.bak v8_coverage_*.json 2>/dev/null || true
 
 echo "🚀 Starting security-isolated web server..."
 python3 -c "
@@ -179,18 +183,29 @@ fi
 echo "✅ Server ready"
 
 echo "Running Playwright Browser Tests..."
+mkdir -p "$PROJECT_DIR/artifacts"
 source /opt/venv/bin/activate 2>/dev/null || true
-pytest tests/ --ignore=tests/refactor -v --timeout=$PW_TIMEOUT --junitxml="$PROJECT_DIR/report.xml"
+
+# Execute pytest with outputs directed into artifacts/
+pytest tests/ --ignore=tests/refactor -v \
+  --timeout=$PW_TIMEOUT \
+  --html="$PROJECT_DIR/artifacts/report_all.html" \
+  --self-contained-html \
+  --junitxml="$PROJECT_DIR/artifacts/report.xml"
 PYTEST_EXIT=$?
 
 kill $SERVER_PID 2>/dev/null || true
 
+# Post-test sweep: Move V8 coverage outputs to artifacts/
+mv "$PROJECT_DIR"/v8_coverage_*.json "$PROJECT_DIR/artifacts/" 2>/dev/null || true
+
 # 8. Report Summary & Failure Check
-if [ -f "$PROJECT_DIR/report.xml" ]; then
-  total=$(xmllint --xpath 'count(//testcase)' "$PROJECT_DIR/report.xml")
-  failures=$(xmllint --xpath 'count(//testcase/failure)' "$PROJECT_DIR/report.xml")
-  errors=$(xmllint --xpath 'count(//testcase/error)' "$PROJECT_DIR/report.xml")
-  skipped=$(xmllint --xpath 'count(//testcase/skipped)' "$PROJECT_DIR/report.xml")
+REPORT_FILE="$PROJECT_DIR/artifacts/report.xml"
+if [ -f "$REPORT_FILE" ]; then
+  total=$(xmllint --xpath 'count(//testcase)' "$REPORT_FILE")
+  failures=$(xmllint --xpath 'count(//testcase/failure)' "$REPORT_FILE")
+  errors=$(xmllint --xpath 'count(//testcase/error)' "$REPORT_FILE")
+  skipped=$(xmllint --xpath 'count(//testcase/skipped)' "$REPORT_FILE")
   passed=$((total - failures - errors - skipped))
 
   echo "Test Report Summary:"
@@ -209,8 +224,6 @@ if [ $PYTEST_EXIT -ne 0 ]; then
   exit $PYTEST_EXIT
 fi
 
-mkdir -p "$PROJECT_DIR/artifacts"
-cp "$PROJECT_DIR/report.xml" "$PROJECT_DIR/artifacts/" 2>/dev/null || true
 cp -r "$PROJECT_DIR/reports" "$PROJECT_DIR/artifacts/gdunit-reports" 2>/dev/null || true
 
 echo "Pipeline completed successfully!"
