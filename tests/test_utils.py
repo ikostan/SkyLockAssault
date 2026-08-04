@@ -46,7 +46,9 @@ def save_v8_coverage(cdp_session: Any, test_name: str) -> None:
             try:
                 cdp_session.send("Profiler.stopPreciseCoverage")
             except Exception as stop_error:
-                print(f"Warning: Failed to stop V8 coverage for {test_name}: {stop_error}")
+                print(
+                    f"Warning: Failed to stop V8 coverage for {test_name}: {stop_error}"
+                )
 
         if not coverage:
             return
