@@ -38,8 +38,9 @@ echo "Running YAML Lint..."
 yamllint -c .yamllint.yaml .github/workflows/*.yml
 check_exit "YAML Lint"
 
-# Ensure addons directory exists on mounted workspace
-mkdir -p "$PROJECT_DIR/addons"
+# Create an isolated temporary directory for addon downloads
+ADDON_TMP=$(mktemp -d "${TMPDIR:-/tmp}/pipeline-addons.XXXXXX")
+trap 'rm -rf "$ADDON_TMP"' EXIT INT TERM
 
 # 4. Godot Unit Tests (GDUnit4 v6)
 GDUNIT4_SHA256="c73f5ba0638575027a4e69b0fa8bd78ee89626487e60142bc02a2eb0ceee5d23"
@@ -50,12 +51,12 @@ if [ ! -d "$PROJECT_DIR/addons/gdUnit4" ]; then
     cp -r /opt/addons/gdUnit4 "$PROJECT_DIR/addons/"
   else
     echo "📥 GDUnit4 missing locally. Downloading GDUnit4 v6.1.3..."
-    wget -q https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.1.3.zip -O /tmp/gdunit4.zip
-    echo "${GDUNIT4_SHA256}  /tmp/gdunit4.zip" | sha256sum --check --status
+    wget -q https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.1.3.zip -O "$ADDON_TMP/gdunit4.zip"
+    echo "${GDUNIT4_SHA256}  $ADDON_TMP/gdunit4.zip" | sha256sum --check --status
     check_exit "GDUnit4 Checksum Verification"
-    unzip -q /tmp/gdunit4.zip -d /tmp/gdunit_extract
-    mv /tmp/gdunit_extract/gdUnit4-6.1.3/addons/gdUnit4 "$PROJECT_DIR/addons/gdUnit4"
-    rm -rf /tmp/gdunit4.zip /tmp/gdunit_extract
+    unzip -q "$ADDON_TMP/gdunit4.zip" -d "$ADDON_TMP/gdunit_extract"
+    mv "$ADDON_TMP/gdunit_extract/gdUnit4-6.1.3/addons/gdUnit4" "$PROJECT_DIR/addons/gdUnit4"
+    rm -rf "$ADDON_TMP/gdunit4.zip" "$ADDON_TMP/gdunit_extract"
   fi
 fi
 
@@ -81,12 +82,12 @@ if [ ! -d "$PROJECT_DIR/addons/gut" ]; then
     cp -r /opt/addons/gut "$PROJECT_DIR/addons/"
   else
     echo "📥 GUT missing locally. Downloading GUT v9.5.0..."
-    wget -q https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip -O /tmp/gut.zip
-    echo "${GUT_SHA256}  /tmp/gut.zip" | sha256sum --check --status
+    wget -q https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip -O "$ADDON_TMP/gut.zip"
+    echo "${GUT_SHA256}  $ADDON_TMP/gut.zip" | sha256sum --check --status
     check_exit "GUT Checksum Verification"
-    unzip -q /tmp/gut.zip -d /tmp/gut_extract
-    mv /tmp/gut_extract/Gut-9.5.0/addons/gut "$PROJECT_DIR/addons/gut"
-    rm -rf /tmp/gut.zip /tmp/gut_extract
+    unzip -q "$ADDON_TMP/gut.zip" -d "$ADDON_TMP/gut_extract"
+    mv "$ADDON_TMP/gut_extract/Gut-9.5.0/addons/gut" "$PROJECT_DIR/addons/gut"
+    rm -rf "$ADDON_TMP/gut.zip" "$ADDON_TMP/gut_extract"
   fi
 fi
 
