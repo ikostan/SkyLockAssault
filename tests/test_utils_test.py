@@ -3,9 +3,31 @@
 # tests/test_utils_test.py
 """Targeted unit and integration tests for helper utilities in test_utils.py."""
 
+from unittest.mock import MagicMock
+
 from playwright.sync_api import Page, expect
 
-from tests.test_utils import DEFAULT_TIMEOUT, init_page_and_wait_ready
+from tests.test_utils import DEFAULT_TIMEOUT, init_page_and_wait_ready, save_v8_coverage
+
+
+def test_save_v8_coverage_collision_prevention(tmp_path, monkeypatch):
+    """Verify that similar test names do not produce duplicate coverage filenames."""
+    monkeypatch.setattr("tests.test_utils.ARTIFACTS_DIR", tmp_path)
+
+    mock_cdp = MagicMock()
+    mock_cdp.send.side_effect = lambda cmd, *args: (
+        {"result": []} if cmd == "Profiler.takePreciseCoverage" else None
+    )
+
+    test_a = "tests/a/b::test"
+    test_b = "tests/a_b::test"
+
+    save_v8_coverage(mock_cdp, test_a)
+    save_v8_coverage(mock_cdp, test_b)
+
+    files = list(tmp_path.glob("v8_coverage_*.json"))
+    assert len(files) == 2
+    assert files[0].name != files[1].name
 
 
 def test_init_page_short_circuits_when_already_ready(shared_page: Page) -> None:

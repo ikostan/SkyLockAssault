@@ -6,7 +6,7 @@ on:  # yamllint disable-line rule:truthy
     inputs:
       godot_version:
         description: "The Godot version string passed from the calling pipeline"
-        type: string
+        type: "string"
         required: true
 
 jobs:

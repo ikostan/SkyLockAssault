@@ -18,13 +18,14 @@ on:  # yamllint disable-line rule:truthy
         default: 30000
 
 jobs:
-  test:
+  build-web:
+    name: "Build Web Artifact"
     runs-on: "ubuntu-latest"
-    timeout-minutes: 25
-    env:
-      PW_TIMEOUT: "${{ inputs.pw_timeout }}"
+    timeout-minutes: 15
     steps:
       - uses: "actions/checkout@v7"
+        with:
+          persist-credentials: false
 
       - name: "Disable Editor Plugins (Prevent Headless Crash)"
         run: |
@@ -35,7 +36,6 @@ jobs:
         env:
           PRODUCTION_SALT: "playwright_dummy_salt_123"
         run: |
-          # Executes the Single Source of Truth script
           bash ./.github/scripts/inject_salt.sh "scripts/core/globals.gd"
 
       - name: "Inject 'ci' feature flag into export_presets.cfg"
@@ -45,6 +45,7 @@ jobs:
       - name: "Create Export Directories"
         run: |
           mkdir -p export/web_thread_off
+
       # yamllint disable rule:line-length
       - name: "Export Godot to Web"
         id: "export"
@@ -58,19 +59,83 @@ jobs:
           cache: false
           verbose: true
           presets_to_export: "Web_thread_off"
-          use_preset_export_path: true  # Move exports to the directory defined in export_presets.cfg
+          use_preset_export_path: true
 
       - name: "Flatten Export Directory"
         run: |
           bash ./.github/scripts/flatten_export.sh "export/web_thread_off" "Web_thread_off"
       # yamllint enable rule:line-length
-      - name: "List Export Directory Contents"
-        run: |
-          ls -la export/web_thread_off
 
       - name: "Patch index.js for security"
         run: |
           bash ./.github/scripts/patch_index_js.sh "export/web_thread_off"
+
+      - name: "Generate Build Integrity Manifest"
+        run: |
+          cat <<EOF > export/web_thread_off/build_manifest.json
+          {
+            "commit_sha": "${{ github.sha }}",
+            "godot_version": "${{ inputs.godot_version }}"
+          }
+          EOF
+
+      - name: "Upload Web Build Artifact"
+        uses: "actions/upload-artifact@v7"
+        with:
+          name: "godot-web-build"
+          path: "export/web_thread_off"
+          retention-days: 1
+
+  test-shard:
+    name: "Shard: ${{ matrix.suite }}"
+    needs: "build-web"
+    runs-on: "ubuntu-latest"
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: "Core Web Flows"
+            test_path: "tests/*_test.py"
+            artifact_suffix: "core"
+          - suite: "Refactor Suite"
+            test_path: "tests/refactor/*.py"
+            artifact_suffix: "refactor"
+            allow_empty: "true"
+          - suite: "CI & Security"
+            test_path: "tests/ci/*.py"
+            artifact_suffix: "ci"
+
+    env:
+      PW_TIMEOUT: "${{ inputs.pw_timeout }}"
+
+    steps:
+      - uses: "actions/checkout@v7"
+        with:
+          persist-credentials: false
+
+      - name: "Download Web Build Artifact"
+        uses: "actions/download-artifact@v7"
+        with:
+          name: "godot-web-build"
+          path: "export/web_thread_off"
+
+      - name: "Validate Artifact Integrity"
+        run: |
+          MANIFEST="export/web_thread_off/build_manifest.json"
+          if [ ! -f "$MANIFEST" ]; then
+            echo "❌ CRITICAL: Build manifest missing from exported web artifact!"
+            exit 1
+          fi
+          DOWNLOADED_SHA=$(python3 -c \
+            "import json; print(json.load(open('$MANIFEST')).get('commit_sha', ''))")
+          EXPECTED_SHA="${{ github.sha }}"
+          if [ "$DOWNLOADED_SHA" != "$EXPECTED_SHA" ]; then
+            echo "❌ CRITICAL: Commit SHA mismatch in web build artifact!"
+            echo "Expected: $EXPECTED_SHA | Received: $DOWNLOADED_SHA"
+            exit 1
+          fi
+          echo "✅ Artifact integrity verified successfully for commit $DOWNLOADED_SHA."
 
       - name: "Set up Python"
         uses: "actions/setup-python@v7"
@@ -82,7 +147,6 @@ jobs:
         id: "cache"
         with:
           path: "~/.cache/pip"
-          # FIX: Added '-v2' to invalidate the old corrupted cache
           key: "${{ runner.os }}-pip-v2-${{ hashFiles('requirements.txt') }}"
           restore-keys: "${{ runner.os }}-pip-v2-"
 
@@ -91,13 +155,10 @@ jobs:
             sudo apt-get update && sudo apt-get install -y libxml2-utils
             pip install -r requirements.txt
 
-      # NEW STEP: Extract the exact Playwright version to use as a cache key
       # yamllint disable rule:line-length
       - name: "Get Playwright Version"
         id: "playwright-version"
         run: |
-          # Robustly fetch the version directly from the Python package metadata
-          # bypassing any fragile CLI string formatting
           echo "version=$(python -c 'from importlib.metadata import version; print(version("playwright"))')" >> $GITHUB_OUTPUT
       # yamllint enable rule:line-length
 
@@ -106,10 +167,8 @@ jobs:
         id: "playwright-cache"
         with:
           path: "~/.cache/ms-playwright"
-          # yamllint disable rule:line-length
-          # FIX: Cache key is tied to the installed Playwright package version
+          # yamllint disable-line rule:line-length
           key: "${{ runner.os }}-playwright-v2-${{ steps.playwright-version.outputs.version }}"
-          # yamllint enable rule:line-length
 
       - name: "Install Playwright Browsers"
         if: "steps.playwright-cache.outputs.cache-hit != 'true'"
@@ -148,23 +207,44 @@ jobs:
           done
           if [ $i -eq 20 ]; then exit 1; fi
 
-      # yamllint disable rule:line-length
-      - name: "Run Tests"
+      - name: "Create Artifacts Directory"
         run: |
-          PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest tests/ -v --ignore=tests/refactor --ignore=tests/ci --junitxml=junit.xml -o junit_family=legacy
-      # yamllint enable rule:line-length
+          mkdir -p artifacts
+
+      - name: "Run Sharded Tests"
+        run: |
+          shopt -s nullglob
+          files=(${{ matrix.test_path }})
+          export PYTEST_TIMEOUT=$((${{ inputs.pw_timeout }} / 1000))
+          if [ ${#files[@]} -gt 0 ]; then
+            PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest "${files[@]}" \
+              -v --junitxml=artifacts/junit.xml -o junit_family=legacy
+          else
+            echo "⚠️ No test files matched pattern: ${{ matrix.test_path }}."
+            cat <<EOF > artifacts/junit.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <testsuites>
+            <testsuite name="empty" tests="0" failures="0" errors="0" skipped="0"/>
+          </testsuites>
+          EOF
+            if [ "${{ matrix.allow_empty }}" != "true" ]; then
+              echo "❌ Required suite failed: no test files matched pattern." >&2
+              exit 1
+            fi
+          fi
 
       - name: "List Coverage Reports"
         run: |
-          ls -la v8_coverage_*.json || echo "No v8_coverage_*.json found"
+          ls -la artifacts/v8_coverage_*.json || \
+            ls -la v8_coverage_*.json || \
+            echo "No coverage files found"
 
       - name: "Set up Node.js for Coverage Conversion"
         uses: "actions/setup-node@v7"
         with:
-          node-version: "20"  # Stable for Win10 compat
+          node-version: "20"
 
       - name: "Install Conversion Tools"
-        # For conversion and report
         run: |
           npm install v8-to-istanbul nyc
 
@@ -172,62 +252,58 @@ jobs:
       - name: "Convert V8 to LCOV"
         run: |
           mkdir -p .nyc_output coverage/lcov
-          counter=0
-          for file in v8_coverage_*.json; do
+          for file in artifacts/v8_coverage_*.json; do
+            [ -e "$file" ] || continue
             node -e "
             const fs = require('fs');
             const path = require('path');
             const V8ToIstanbul = require('v8-to-istanbul');
-            // Read and parse coverage file
             const rawCoverage = JSON.parse(fs.readFileSync('$file', 'utf8'));
-            // Extract array from result if present, else use directly
             const coverage = rawCoverage.result ? rawCoverage.result : rawCoverage;
+            const fileSlug = path.basename('$file', '.json').replace(/^v8_coverage_/, '');
             (async () => {
               let localCounter = 0;
               for (const entry of coverage) {
-                if (!entry.functions || entry.functions.length === 0) {
-                  console.log('Skipping entry without functions: ' + (entry.url || 'empty'));
-                  continue;
-                }
+                if (!entry.functions || entry.functions.length === 0) continue;
                 const scriptPath = entry.url && entry.url.startsWith('http://localhost:8080/')
                   ? entry.url.replace('http://localhost:8080/', path.join(process.cwd(), 'export/web_thread_off/'))
-                  : 'export/web_thread_off/index.js';  // Map anonymous to real file
+                  : 'export/web_thread_off/index.js';
                 const options = entry.source ? { source: entry.source } : {};
                 try {
                   const converter = new V8ToIstanbul(scriptPath, 0, options);
-                  if (entry.url) await converter.load();  // Only load if real path
+                  if (entry.url) await converter.load();
                   converter.applyCoverage(entry.functions);
-                  const filename = path.basename(scriptPath) + '_' + (localCounter++) + '.json';
+                  const filename = path.basename(scriptPath) + '_' + fileSlug + '_' + (localCounter++) + '.json';
                   fs.writeFileSync(path.join('.nyc_output', filename), JSON.stringify(converter.toIstanbul()));
-                  console.log('Converted entry for ' + file);
                 } catch (e) {
-                  console.error('Skipping entry ' + (entry.url || 'anonymous') + ': ' + e.message);
+                  console.error('Skipping entry: ' + e.message);
                 }
               }
             })();
             "
-            counter=$((counter + 1))
           done
-          npx nyc report --reporter=lcov --report-dir coverage/lcov --all --include=export/web_thread_off/*.js  # Merge with --all for 0% on untested
+          npx nyc report --reporter=lcov --report-dir coverage/lcov --all --include=export/web_thread_off/*.js
       # yamllint enable rule:line-length
 
       - name: "Upload LCOV Artifact"
         if: "always()"
         uses: "actions/upload-artifact@v7"
         with:
-          name: "lcov-report"
+          name: "lcov-report-${{ matrix.artifact_suffix }}"
           path: "./coverage/lcov/lcov.info"
           retention-days: 5
 
       - name: "Test Report"
         run: |
-          if [ -f junit.xml ]; then
-            total=$(xmllint --xpath 'count(//testcase)' junit.xml)
-            failures=$(xmllint --xpath 'count(//testcase/failure)' junit.xml)
-            errors=$(xmllint --xpath 'count(//testcase/error)' junit.xml)
-            skipped=$(xmllint --xpath 'count(//testcase/skipped)' junit.xml)
+          JUNIT_FILE="artifacts/junit.xml"
+          if [ ! -f "$JUNIT_FILE" ]; then JUNIT_FILE="junit.xml"; fi
+          if [ -f "$JUNIT_FILE" ]; then
+            total=$(xmllint --xpath 'count(//testcase)' "$JUNIT_FILE")
+            failures=$(xmllint --xpath 'count(//testcase/failure)' "$JUNIT_FILE")
+            errors=$(xmllint --xpath 'count(//testcase/error)' "$JUNIT_FILE")
+            skipped=$(xmllint --xpath 'count(//testcase/skipped)' "$JUNIT_FILE")
             passed=$((total - failures - errors - skipped))
-            echo "Test Report Summary:"
+            echo "Test Report Summary (${{ matrix.suite }}):"
             echo "- Total tests: $total"
             echo "- Passed: $passed"
             echo "- Failed: $failures"
@@ -241,16 +317,19 @@ jobs:
         if: "always()"
         uses: "actions/upload-artifact@v7"
         with:
-          name: "test-report"
-          path: "junit.xml"
+          name: "test-report-${{ matrix.artifact_suffix }}"
+          path: |
+            artifacts/junit.xml
+            junit.xml
+          if-no-files-found: "ignore"
 
       - name: "Upload Screenshot and Coverage Artifacts"
         if: "always()"
         uses: "actions/upload-artifact@v7"
         with:
-          name: "test-screenshots"
+          name: "test-screenshots-${{ matrix.artifact_suffix }}"
           path: |
-            main_menu.png
+            artifacts/
             coverage_*.json
 
       - name: "Upload Coverage to Codecov"
@@ -258,8 +337,8 @@ jobs:
         uses: "codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f"
         with:
           files: "./coverage/lcov/lcov.info"
-          flags: "playwright"
-          fail_ci_if_error: false  # Non-blocking on 0%
+          flags: "playwright-${{ matrix.artifact_suffix }}"
+          fail_ci_if_error: false
           verbose: true
           token: "${{ secrets.CODECOV_TOKEN }}"
           directory: "export/web_thread_off"
@@ -270,14 +349,18 @@ jobs:
           curl -Os https://cli.codecov.io/latest/linux/codecov
           chmod +x codecov
 
-      # yamllint disable rule:line-length
       - name: "Upload Test Report to Codecov"
         if: "success()"
         run: |
-          REPORT_FILE="./junit.xml"
+          REPORT_FILE="artifacts/junit.xml"
+          if [ ! -f "$REPORT_FILE" ]; then REPORT_FILE="./junit.xml"; fi
           if [ -f "$REPORT_FILE" ]; then
-            ./codecov upload-process --token ${{ secrets.CODECOV_TOKEN }} -f "$REPORT_FILE" --name "Playwright Browser Test Report" --flag PLAYWRIGHT --report-type test_results
+            ./codecov upload-process \
+              --token ${{ secrets.CODECOV_TOKEN }} \
+              -f "$REPORT_FILE" \
+              --name "Playwright Browser Test Report (${{ matrix.suite }})" \
+              --flag PLAYWRIGHT_${{ matrix.artifact_suffix }} \
+              --report-type test_results
           else
             echo "No Playwright JUnit XML found, skipping upload."
           fi
-      # yamllint enable rule:line-length

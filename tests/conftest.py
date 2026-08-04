@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Egor Kostan
+# Copyright (C) 2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 # tests/conftest.py
 """Shared pytest fixtures and configs for SkyLockAssault E2E tests."""
@@ -14,6 +14,11 @@ import pytest
 from playwright.sync_api import Browser, BrowserContext, Page, Playwright
 
 from tests.test_utils import init_page_and_wait_ready
+
+# Project paths and artifacts configuration
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
+ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Storage for test lifecycle memory metrics
 _LIFECYCLE_METRICS = []
@@ -217,9 +222,7 @@ def page(
     if request.node.get_closest_marker("record_har"):
         nodeid = request.node.nodeid
         safe_nodeid = re.sub(r"[^A-Za-z0-9._-]+", "_", nodeid)
-        artifacts_dir = Path("artifacts")
-        artifacts_dir.mkdir(parents=True, exist_ok=True)
-        har_path = artifacts_dir / f"{safe_nodeid}.har"
+        har_path = ARTIFACTS_DIR / f"{safe_nodeid}.har"
 
     context: BrowserContext = browser_instance.new_context(
         viewport={"width": 1280, "height": 720},

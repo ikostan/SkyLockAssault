@@ -7,8 +7,12 @@
 
 # MarkdownLint should now ignore the staticfiles directory
 ignores:
-  - staticfiles/**
-  - static/**
+  - ".venv/**"
+  - "venv/**"
+  - "staticfiles/**"
+  - "static/**"
+  - "export/**"
+  - "artifacts/**"
 
 # Fix any fixable errors
 fix: true

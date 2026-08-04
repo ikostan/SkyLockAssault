@@ -3,8 +3,12 @@
 # tests/test_utils.py
 """Shared utility functions and helpers for SkyLockAssault Playwright E2E tests."""
 
+import hashlib
+import json
 import os
+import re
 import time
+from pathlib import Path
 from typing import Any, Callable
 
 from playwright.sync_api import Page, expect
@@ -20,6 +24,42 @@ LOG_LEVEL_MAP: dict[str, int] = {
     "ERROR": 3,
     "NONE": 4,
 }
+
+# Path configuration
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_artifacts_path = Path(os.getenv("ARTIFACTS_DIR", "artifacts"))
+ARTIFACTS_DIR = (
+    _artifacts_path if _artifacts_path.is_absolute() else PROJECT_ROOT / _artifacts_path
+).resolve()
+
+
+def save_v8_coverage(cdp_session: Any, test_name: str) -> None:
+    """Collects V8 coverage data from CDP session and saves it directly in artifacts/."""
+    if not cdp_session:
+        return
+    try:
+        ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+        coverage = None
+        try:
+            coverage = cdp_session.send("Profiler.takePreciseCoverage")
+        finally:
+            try:
+                cdp_session.send("Profiler.stopPreciseCoverage")
+            except Exception as stop_error:
+                print(
+                    f"Warning: Failed to stop V8 coverage for {test_name}: {stop_error}"
+                )
+
+        if not coverage:
+            return
+
+        safe_test_name = re.sub(r"[^A-Za-z0-9._-]+", "_", test_name)[:120]
+        name_hash = hashlib.sha256(test_name.encode()).hexdigest()[:12]
+        output_file = ARTIFACTS_DIR / f"v8_coverage_{safe_test_name}_{name_hash}.json"
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(coverage, f)
+    except Exception as e:
+        print(f"Warning: Failed to save V8 coverage for {test_name}: {e}")
 
 
 def has_save_log(logs: list[dict[str, str]]) -> bool:

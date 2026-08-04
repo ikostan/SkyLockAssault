@@ -64,9 +64,9 @@ Refactors Playwright E2E tests to reuse a shared browser page and centralized Go
 
 | Issue                                                | Objective                                                                                                                                                                                                                   | Addressed | Explanation |
 |------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-------------|
-| https://github.com/ikostan/SkyLockAssault/issues/773 | Refactor Playwright browser, context, and page fixtures to reduce unnecessary browser launches and Godot WASM initialization cycles while preserving deterministic test isolation.                                          | ✅        |             |
-| https://github.com/ikostan/SkyLockAssault/issues/773 | Improve lifecycle teardown and resource management (WebGL/canvas, Playwright contexts/pages, local HTTP server, and spawned processes) and add basic lifecycle/memory monitoring to prevent leaks during repeated E2E runs. | ✅        |             |
-| https://github.com/ikostan/SkyLockAssault/issues/773 | Update the specified web E2E tests to use the new shared lifecycle patterns (including lighter-weight navigation and reset mechanisms) without changing their functional assertions or coverage.                            | ✅        |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/773> | Refactor Playwright browser, context, and page fixtures to reduce unnecessary browser launches and Godot WASM initialization cycles while preserving deterministic test isolation.                                          | ✅        |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/773> | Improve lifecycle teardown and resource management (WebGL/canvas, Playwright contexts/pages, local HTTP server, and spawned processes) and add basic lifecycle/memory monitoring to prevent leaks during repeated E2E runs. | ✅        |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/773> | Update the specified web E2E tests to use the new shared lifecycle patterns (including lighter-weight navigation and reset mechanisms) without changing their functional assertions or coverage.                            | ✅        |             |
 
 ### Possibly linked issues
 
