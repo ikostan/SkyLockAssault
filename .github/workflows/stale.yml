@@ -13,7 +13,9 @@ jobs:
       pull-requests: "write"
     steps:
       # NOTE:
-      # - Make sure to periodically update this SHA to the latest patch/release,
+      # - We pin this action to a specific commit SHA to reduce supply-chain risk.
+      # - Make sure to periodically update this SHA to the latest release,
+      #   either via an automated mechanism (e.g., Dependabot) or scheduled routine.
       - uses: "actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93"  # v11.0.0
         # yamllint disable rule:line-length
         with:
