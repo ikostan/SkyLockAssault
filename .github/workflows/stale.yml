@@ -14,10 +14,9 @@ jobs:
     steps:
       # NOTE:
       # - We pin this action to a specific commit SHA to reduce supply-chain risk.
-      # - Make sure to periodically update this SHA to the latest v10.x patch release,
-      #   either via an automated mechanism (e.g., Dependabot for GitHub Actions)
-      #   or a scheduled maintenance routine documented for this repository.
-      - uses: "actions/stale@1e223db275d687790206a7acac4d1a11bd6fe629"  # v10.4.0
+      # - Make sure to periodically update this SHA to the latest release,
+      #   either via an automated mechanism (e.g., Dependabot) or scheduled routine.
+      - uses: "actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93"  # v11.0.0
         # yamllint disable rule:line-length
         with:
           stale-issue-message: "This issue has been inactive for 60 days. It will be marked stale and closed in 10 days unless updated or the stale label is removed."
