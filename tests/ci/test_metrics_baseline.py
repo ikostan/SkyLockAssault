@@ -26,16 +26,12 @@ def _invoke_sessionfinish(
         Dictionary containing mock session state values.
     """
     conftest_module.ARTIFACTS_DIR = artifacts_dir
-    conftest_module._SESSION_STATE["start_time"] = payload.get(
-        "start_time", 1.0
-    )
+    conftest_module._SESSION_STATE["start_time"] = payload.get("start_time", 1.0)
     conftest_module._SESSION_STATE["timestamp"] = payload.get(
         "timestamp", "2026-08-06T03:00:00Z"
     )
     conftest_module._SUMMARY_COUNTS = payload.get("summary_counts", {})
-    conftest_module._TEST_PROFILING_DATA = payload.get(
-        "test_profiling_data", []
-    )
+    conftest_module._TEST_PROFILING_DATA = payload.get("test_profiling_data", [])
 
     dummy_session = SimpleNamespace()
     conftest_module.pytest_sessionfinish(dummy_session, exitstatus=0)
