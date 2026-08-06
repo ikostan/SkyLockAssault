@@ -99,6 +99,8 @@ def test_metrics_baseline_io_failure_is_graceful(
     }
 
     def failing_open(*args, **kwargs):
+        """Simulate an open() file I/O error."""
+        _ = (args, kwargs)
         raise OSError("Simulated write failure")
 
     monkeypatch.setattr("builtins.open", failing_open)
