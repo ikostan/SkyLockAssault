@@ -3,11 +3,87 @@
 # tests/test_utils_test.py
 """Targeted unit and integration tests for helper utilities in test_utils.py."""
 
-from unittest.mock import MagicMock
-
+from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
 from playwright.sync_api import Page, expect
 
-from tests.test_utils import DEFAULT_TIMEOUT, init_page_and_wait_ready, save_v8_coverage
+from tests.test_utils import (
+    DEFAULT_TIMEOUT,
+    save_v8_coverage,
+    init_page_and_wait_ready,
+    navigate_and_profile_godot_wasm,
+)
+
+
+def test_init_page_already_initialized_returns_zero_and_skips_node() -> None:
+    """Verify short-circuit returns 0.0 and leaves request.node untouched.
+
+    When window.godotInitialized is True, the function must return 0.0
+    and avoid writing _wasm_boot_time to request.node.
+    """
+    mock_page = MagicMock()
+    mock_page.evaluate.return_value = True
+
+    mock_request = SimpleNamespace(node=SimpleNamespace())
+
+    with patch("tests.test_utils.expect"):
+        boot_time = init_page_and_wait_ready(mock_page, request=mock_request)
+
+    assert boot_time == 0.0
+    assert not hasattr(mock_request.node, "_wasm_boot_time")
+
+
+def test_init_page_fresh_load_calculates_boot_time_and_sets_node() -> None:
+    """Verify fresh load returns boot time and attaches it to request.node.
+
+    When page is not initialized, execution timing is calculated via
+    time.perf_counter() and recorded on request.node._wasm_boot_time.
+    """
+    mock_page = MagicMock()
+    mock_page.evaluate.return_value = False
+
+    mock_request = SimpleNamespace(node=SimpleNamespace())
+
+    # Simulate start_time = 10.0s, finish_time = 11.23456s -> duration = 1.2346s
+    with patch("time.perf_counter", side_effect=[10.0, 11.23456]), patch(
+        "tests.test_utils.expect"
+    ):
+        boot_time = init_page_and_wait_ready(mock_page, request=mock_request)
+
+    assert boot_time == 1.2346
+    assert hasattr(mock_request.node, "_wasm_boot_time")
+    assert mock_request.node._wasm_boot_time == 1.2346
+
+
+def test_init_page_fresh_load_handles_none_request() -> None:
+    """Verify fresh load calculates boot time cleanly when request is None."""
+    mock_page = MagicMock()
+    mock_page.evaluate.return_value = False
+
+    with patch("time.perf_counter", side_effect=[5.0, 7.5]), patch(
+        "tests.test_utils.expect"
+    ):
+        boot_time = init_page_and_wait_ready(mock_page, request=None)
+
+    assert boot_time == 2.5
+
+
+def test_navigate_and_profile_godot_wasm_delegates_to_init_page() -> None:
+    """Verify wrapper helper delegates arguments to init_page_and_wait_ready."""
+    mock_page = MagicMock()
+    mock_request = SimpleNamespace(node=SimpleNamespace())
+
+    with patch(
+        "tests.test_utils.init_page_and_wait_ready", return_value=1.5
+    ) as mock_init:
+        result = navigate_and_profile_godot_wasm(
+            mock_page, url="http://localhost:8080/test.html", request=mock_request
+        )
+
+    assert result == 1.5
+    mock_init.assert_called_once_with(
+        mock_page, url="http://localhost:8080/test.html", request=mock_request
+    )
 
 
 def test_save_v8_coverage_collision_prevention(tmp_path, monkeypatch):
