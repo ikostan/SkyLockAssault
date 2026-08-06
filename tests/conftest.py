@@ -9,6 +9,7 @@ import re
 import shutil
 import subprocess
 import time
+import warnings
 from pathlib import Path
 from typing import Any, Generator
 
@@ -120,7 +121,11 @@ def pytest_sessionfinish(session, exitstatus):
         with open(metrics_file, "w", encoding="utf-8") as f:
             json.dump(metrics_payload, f, indent=2)
     except Exception as exc:  # noqa: BLE001 - best effort export
-        print(f"Warning: Failed to write metrics baseline: {exc}")
+        warnings.warn(
+            f"Failed to write metrics baseline: {exc}",
+            UserWarning,
+            stacklevel=2,
+        )
 
     # 2. Safely terminate tracked sub-processes
     for pid in list(_TRACKED_PIDS):
@@ -188,7 +193,11 @@ def capture_lifecycle_metrics(request):
                     }
                 )
         except Exception as exc:  # noqa: BLE001 - metrics are best-effort
-            print(f"Warning: heap metric capture failed: {exc}")
+            warnings.warn(
+                f"Heap metric capture failed: {exc}",
+                UserWarning,
+                stacklevel=2,
+            )
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
