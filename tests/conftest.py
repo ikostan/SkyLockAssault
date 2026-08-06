@@ -38,13 +38,25 @@ _TRACKED_PIDS: set[int] = set()
 
 
 def track_process_pid(pid: int) -> None:
-    """Track sub-process PIDs spawned during test execution."""
+    """Track sub-process PIDs spawned during test execution.
+
+    Parameters
+    ----------
+    pid : int
+        Process ID to register for teardown cleanup.
+    """
     if pid:
         _TRACKED_PIDS.add(pid)
 
 
 def pytest_sessionstart(session) -> None:
-    """Captures session start timestamp and start time for profiling (#776)."""
+    """Capture session start timestamp and start time for profiling (#776).
+
+    Parameters
+    ----------
+    session : pytest.Session
+        The pytest session object starting execution.
+    """
     _ = session
     _SESSION_STATE["start_time"] = time.perf_counter()
     _SESSION_STATE["timestamp"] = time.strftime(
@@ -54,12 +66,18 @@ def pytest_sessionstart(session) -> None:
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
-    """Collects execution duration and outcome for report generation (#776)."""
-    _ = call
-    outcome = yield
-    report = outcome.get_result()
+    """Collect execution duration and outcome for report generation (#776).
 
-    if report.when == "call":
+    Parameters
+    ----------
+    item : pytest.Item
+        The test item being reported.
+    call : pytest.CallInfo
+        The call phase outcome information.
+    """
+    outcome = yield
+    if call.when == "call":
+        report = outcome.get_result()
         wasm_boot = getattr(item, "_wasm_boot_time", None)
         test_detail = {
             "nodeid": item.nodeid,
@@ -78,7 +96,15 @@ def pytest_runtest_makereport(item, call):
 
 
 def pytest_sessionfinish(session, exitstatus):
-    """Writes Task #776 metrics baseline JSON and terminates PIDs."""
+    """Write Task #776 metrics baseline JSON and terminate PIDs.
+
+    Parameters
+    ----------
+    session : pytest.Session
+        The completed pytest session.
+    exitstatus : int
+        The overall session exit status code.
+    """
     _ = (session, exitstatus)
 
     # 1. Export Task #776 Baseline Metrics JSON
@@ -125,7 +151,13 @@ def pytest_sessionfinish(session, exitstatus):
 
 @pytest.fixture(autouse=True)
 def capture_lifecycle_metrics(request):
-    """Captures browser JS heap memory metrics after test execution (#773)."""
+    """Capture browser JS heap memory metrics after test execution (#773).
+
+    Parameters
+    ----------
+    request : pytest.FixtureRequest
+        The requesting test fixture context.
+    """
     page_fixture = None
     if "shared_page" in request.fixturenames:
         page_fixture = "shared_page"
@@ -167,7 +199,17 @@ def capture_lifecycle_metrics(request):
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
-    """Outputs Task #776 baseline and #773 memory metrics at suite end."""
+    """Output Task #776 baseline and #773 memory metrics at suite end.
+
+    Parameters
+    ----------
+    terminalreporter : _pytest.terminal.TerminalReporter
+        The pytest terminal reporter instance.
+    exitstatus : int
+        The session exit status code.
+    config : pytest.Config
+        The active pytest configuration.
+    """
     _ = (exitstatus, config)
 
     # Output Task #776 Baseline Summary
@@ -209,7 +251,18 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 
 @pytest.fixture(scope="module")
 def shared_page(browser: Browser) -> Generator[Page, None, None]:
-    """Module-scoped page fixture. Boots Godot WASM once per module."""
+    """Module-scoped page fixture. Boots Godot WASM once per module.
+
+    Parameters
+    ----------
+    browser : Browser
+        The Playwright Browser instance.
+
+    Yields
+    ------
+    Page
+        An initialized Playwright Page instance with Godot WASM booted.
+    """
     context = browser.new_context(viewport={"width": 1280, "height": 720})
     page = context.new_page()
 
@@ -251,7 +304,13 @@ def shared_page(browser: Browser) -> Generator[Page, None, None]:
 
 @pytest.fixture(autouse=True)
 def soft_ui_reset(request):
-    """Executes a lightweight UI state reset between tests using window hooks."""
+    """Execute a lightweight UI state reset between tests using window hooks.
+
+    Parameters
+    ----------
+    request : pytest.FixtureRequest
+        The requesting test fixture context.
+    """
     yield
     if "shared_page" in request.fixturenames:
         page = request.getfixturevalue("shared_page")
@@ -280,7 +339,20 @@ def soft_ui_reset(request):
 def browser_instance(
     playwright: Playwright, request: pytest.FixtureRequest
 ) -> Generator[Browser, None, None]:
-    """Session-scoped Chromium launch fixture to minimize startup overhead."""
+    """Session-scoped Chromium launch fixture to minimize startup overhead.
+
+    Parameters
+    ----------
+    playwright : Playwright
+        The Playwright context instance.
+    request : pytest.FixtureRequest
+        The requesting test fixture context.
+
+    Yields
+    ------
+    Browser
+        Launched session-scoped Chromium browser instance.
+    """
     launch_options = {
         "headless": True,
         "args": [
@@ -305,7 +377,20 @@ def browser_instance(
 def page(
     browser_instance: Browser, request: pytest.FixtureRequest
 ) -> Generator[Page, None, None]:
-    """Provides clean browser context isolation for each test."""
+    """Provide clean browser context isolation for each test function.
+
+    Parameters
+    ----------
+    browser_instance : Browser
+        The shared Chromium browser instance.
+    request : pytest.FixtureRequest
+        The requesting test fixture context.
+
+    Yields
+    ------
+    Page
+        An isolated Playwright Page instance.
+    """
     har_path = None
     if request.node.get_closest_marker("record_har"):
         nodeid = request.node.nodeid
@@ -322,6 +407,13 @@ def page(
 
 
 def pytest_configure(config: pytest.Config) -> None:
+    """Register custom pytest markers for network tracing and profiling.
+
+    Parameters
+    ----------
+    config : pytest.Config
+        The global pytest configuration object.
+    """
     config.addinivalue_line(
         "markers",
         "record_har: Mark tests that should record HAR files "
