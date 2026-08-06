@@ -1,7 +1,7 @@
 # Copyright (C) 2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 # tests/conftest.py
-"""Shared pytest fixtures, configs, and profiling metrics for SkyLockAssault E2E tests."""
+"""Shared pytest fixtures, configs, and metrics for E2E tests."""
 
 import json
 import os
@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
-from typing import Generator
+from typing import Any, Generator
 
 import pytest
 from playwright.sync_api import Browser, BrowserContext, Page, Playwright
@@ -26,8 +26,10 @@ ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 _LIFECYCLE_METRICS = []
 
 # Storage for Task #776 profiling & metrics baseline
-_SESSION_START_TIME: float = 0.0
-_SESSION_START_TIMESTAMP: str = ""
+_SESSION_STATE: dict[str, Any] = {
+    "start_time": 0.0,
+    "timestamp": "",
+}
 _TEST_PROFILING_DATA: list[dict] = []
 _SUMMARY_COUNTS = {"passed": 0, "failed": 0, "skipped": 0}
 
@@ -44,14 +46,16 @@ def track_process_pid(pid: int) -> None:
 def pytest_sessionstart(session) -> None:
     """Captures session start timestamp and start time for profiling (#776)."""
     _ = session
-    global _SESSION_START_TIME, _SESSION_START_TIMESTAMP
-    _SESSION_START_TIME = time.perf_counter()
-    _SESSION_START_TIMESTAMP = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    _SESSION_STATE["start_time"] = time.perf_counter()
+    _SESSION_STATE["timestamp"] = time.strftime(
+        "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+    )
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
-    """Hooks into test report generation to collect execution duration and outcome (#776)."""
+    """Collects execution duration and outcome for report generation (#776)."""
+    _ = call
     outcome = yield
     report = outcome.get_result()
 
@@ -74,17 +78,16 @@ def pytest_runtest_makereport(item, call):
 
 
 def pytest_sessionfinish(session, exitstatus):
-    """Writes Task #776 metrics baseline JSON and safely terminates tracked sub-processes."""
+    """Writes Task #776 metrics baseline JSON and terminates PIDs."""
     _ = (session, exitstatus)
 
     # 1. Export Task #776 Baseline Metrics JSON
+    start_time = _SESSION_STATE["start_time"]
     total_duration = (
-        round(time.perf_counter() - _SESSION_START_TIME, 4)
-        if _SESSION_START_TIME
-        else 0.0
+        round(time.perf_counter() - start_time, 4) if start_time else 0.0
     )
     metrics_payload = {
-        "timestamp": _SESSION_START_TIMESTAMP,
+        "timestamp": _SESSION_STATE["timestamp"],
         "total_duration_sec": total_duration,
         "summary": _SUMMARY_COUNTS,
         "tests": _TEST_PROFILING_DATA,
@@ -101,7 +104,10 @@ def pytest_sessionfinish(session, exitstatus):
     for pid in list(_TRACKED_PIDS):
         try:
             if os.name == "nt":
-                cmd = shutil.which("taskkill") or "C:\\Windows\\System32\\taskkill.exe"
+                cmd = (
+                    shutil.which("taskkill")
+                    or "C:\\Windows\\System32\\taskkill.exe"
+                )
                 subprocess.run(
                     [cmd, "/F", "/PID", str(pid)],
                     stdout=subprocess.DEVNULL,
@@ -161,17 +167,16 @@ def capture_lifecycle_metrics(request):
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
-    """Outputs Task #776 baseline summary and #773 browser memory metrics at suite end."""
+    """Outputs Task #776 baseline and #773 memory metrics at suite end."""
     _ = (exitstatus, config)
 
     # Output Task #776 Baseline Summary
     if _TEST_PROFILING_DATA:
         terminalreporter.ensure_newline()
         terminalreporter.section("Test Profiling Baseline (#776)", sep="=", bold=True)
+        start_time = _SESSION_STATE["start_time"]
         total_duration = (
-            round(time.perf_counter() - _SESSION_START_TIME, 4)
-            if _SESSION_START_TIME
-            else 0.0
+            round(time.perf_counter() - start_time, 4) if start_time else 0.0
         )
         terminalreporter.write_line(f"Total Suite Duration : {total_duration}s")
         terminalreporter.write_line(
