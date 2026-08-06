@@ -1,12 +1,14 @@
 # Copyright (C) 2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 # tests/conftest.py
-"""Shared pytest fixtures and configs for SkyLockAssault E2E tests."""
+"""Shared pytest fixtures, configs, and profiling metrics for SkyLockAssault E2E tests."""
 
+import json
 import os
 import re
 import shutil
 import subprocess
+import time
 from pathlib import Path
 from typing import Generator
 
@@ -20,8 +22,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
 ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 
-# Storage for test lifecycle memory metrics
+# Storage for test lifecycle memory metrics (#773)
 _LIFECYCLE_METRICS = []
+
+# Storage for Task #776 profiling & metrics baseline
+_SESSION_START_TIME: float = 0.0
+_SESSION_START_TIMESTAMP: str = ""
+_TEST_PROFILING_DATA: list[dict] = []
+_SUMMARY_COUNTS = {"passed": 0, "failed": 0, "skipped": 0}
 
 # Storage for test-spawned PIDs if managed via pytest
 _TRACKED_PIDS: set[int] = set()
@@ -33,9 +41,61 @@ def track_process_pid(pid: int) -> None:
         _TRACKED_PIDS.add(pid)
 
 
+def pytest_sessionstart(session) -> None:
+    """Captures session start timestamp and start time for profiling (#776)."""
+    _ = session
+    global _SESSION_START_TIME, _SESSION_START_TIMESTAMP
+    _SESSION_START_TIME = time.perf_counter()
+    _SESSION_START_TIMESTAMP = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Hooks into test report generation to collect execution duration and outcome (#776)."""
+    outcome = yield
+    report = outcome.get_result()
+
+    if report.when == "call":
+        wasm_boot = getattr(item, "_wasm_boot_time", None)
+        test_detail = {
+            "nodeid": item.nodeid,
+            "duration_sec": round(report.duration, 4),
+            "outcome": report.outcome,
+            "wasm_boot_duration_sec": round(wasm_boot, 4) if wasm_boot is not None else None,
+        }
+        _TEST_PROFILING_DATA.append(test_detail)
+
+        if report.outcome in _SUMMARY_COUNTS:
+            _SUMMARY_COUNTS[report.outcome] += 1
+        else:
+            _SUMMARY_COUNTS[report.outcome] = 1
+
+
 def pytest_sessionfinish(session, exitstatus):
-    """Safely terminates only the sub-processes tracked during this test run."""
+    """Writes Task #776 metrics baseline JSON and safely terminates tracked sub-processes."""
     _ = (session, exitstatus)
+
+    # 1. Export Task #776 Baseline Metrics JSON
+    total_duration = (
+        round(time.perf_counter() - _SESSION_START_TIME, 4)
+        if _SESSION_START_TIME
+        else 0.0
+    )
+    metrics_payload = {
+        "timestamp": _SESSION_START_TIMESTAMP,
+        "total_duration_sec": total_duration,
+        "summary": _SUMMARY_COUNTS,
+        "tests": _TEST_PROFILING_DATA,
+    }
+
+    metrics_file = ARTIFACTS_DIR / "metrics_baseline.json"
+    try:
+        with open(metrics_file, "w", encoding="utf-8") as f:
+            json.dump(metrics_payload, f, indent=2)
+    except Exception as exc:  # noqa: BLE001 - best effort export
+        print(f"Warning: Failed to write metrics baseline: {exc}")
+
+    # 2. Safely terminate tracked sub-processes
     for pid in list(_TRACKED_PIDS):
         try:
             if os.name == "nt":
@@ -57,7 +117,7 @@ def pytest_sessionfinish(session, exitstatus):
 
 @pytest.fixture(autouse=True)
 def capture_lifecycle_metrics(request):
-    """Captures browser JS heap memory metrics after test execution."""
+    """Captures browser JS heap memory metrics after test execution (#773)."""
     page_fixture = None
     if "shared_page" in request.fixturenames:
         page_fixture = "shared_page"
@@ -99,8 +159,29 @@ def capture_lifecycle_metrics(request):
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
-    """Outputs browser memory & lifecycle report at suite end."""
+    """Outputs Task #776 baseline summary and #773 browser memory metrics at suite end."""
     _ = (exitstatus, config)
+
+    # Output Task #776 Baseline Summary
+    if _TEST_PROFILING_DATA:
+        terminalreporter.ensure_newline()
+        terminalreporter.section("Test Profiling Baseline (#776)", sep="=", bold=True)
+        total_duration = (
+            round(time.perf_counter() - _SESSION_START_TIME, 4)
+            if _SESSION_START_TIME
+            else 0.0
+        )
+        terminalreporter.write_line(f"Total Suite Duration : {total_duration}s")
+        terminalreporter.write_line(
+            f"Passed: {_SUMMARY_COUNTS.get('passed', 0)} | "
+            f"Failed: {_SUMMARY_COUNTS.get('failed', 0)} | "
+            f"Skipped: {_SUMMARY_COUNTS.get('skipped', 0)}"
+        )
+        metrics_file = ARTIFACTS_DIR / "metrics_baseline.json"
+        terminalreporter.write_line(f"Baseline JSON Exported: {metrics_file}")
+        terminalreporter.ensure_newline()
+
+    # Output Task #773 Memory & Lifecycle Summary
     if _LIFECYCLE_METRICS:
         terminalreporter.ensure_newline()
         terminalreporter.section(
@@ -190,7 +271,7 @@ def soft_ui_reset(request):
 
 @pytest.fixture(scope="session")
 def browser_instance(
-    playwright: Playwright, request: pytest.FixtureRequest
+        playwright: Playwright, request: pytest.FixtureRequest
 ) -> Generator[Browser, None, None]:
     """Session-scoped Chromium launch fixture to minimize startup overhead."""
     launch_options = {
@@ -215,7 +296,7 @@ def browser_instance(
 
 @pytest.fixture(scope="function")
 def page(
-    browser_instance: Browser, request: pytest.FixtureRequest
+        browser_instance: Browser, request: pytest.FixtureRequest
 ) -> Generator[Page, None, None]:
     """Provides clean browser context isolation for each test."""
     har_path = None

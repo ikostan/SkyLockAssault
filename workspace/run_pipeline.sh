@@ -36,7 +36,7 @@ cleanup_workspace() {
   git restore export_presets.cfg scripts/core/globals.gd 2>/dev/null || true
   rm -f export_presets.cfg.bak 2>/dev/null || true
 
-  # Safety trap: ensure any stray coverage or report files move to artifacts/
+  # Safety trap: ensure stray coverage or report files move to artifacts/
   mkdir -p "$PROJECT_DIR/artifacts" 2>/dev/null || true
   mv "$PROJECT_DIR"/v8_coverage_*.json "$PROJECT_DIR/artifacts/" 2>/dev/null || true
 }

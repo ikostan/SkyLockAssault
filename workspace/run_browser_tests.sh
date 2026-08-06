@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2025 Egor Kostan
+# Copyright (C) 2025-2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 PROJECT_DIR="/project"
@@ -51,7 +51,7 @@ cleanup_server() {
   fi
   rm -f export_presets.cfg.bak 2>/dev/null || true
 
-  # Safety trap: ensure any stray coverage files in project root move to artifacts/
+  # Safety trap: ensure coverage files move to artifacts/
   mkdir -p "$PROJECT_DIR/artifacts" 2>/dev/null || true
   mv "$PROJECT_DIR"/v8_coverage_*.json "$PROJECT_DIR/artifacts/" 2>/dev/null || true
 }
@@ -103,7 +103,7 @@ echo "✅ Server ready"
 # 6. Run Playwright browser tests using native headless mode
 echo "🧪 Running Playwright Browser Tests target: $TEST_TARGET ($SUITE_NAME)..."
 mkdir -p "$PROJECT_DIR/artifacts"
-source /opt/venv/bin/activate
+source /opt/venv/bin/activate 2>/dev/null || true
 
 # Execute pytest directly without virtual framebuffer display server overhead
 pytest "$TEST_TARGET" \
@@ -115,7 +115,7 @@ pytest "$TEST_TARGET" \
   --junitxml="$PROJECT_DIR/artifacts/report_${SUITE_NAME}.xml"
 PYTEST_EXIT=$?
 
-# 🧹 Post-test sweep: Move V8 coverage outputs to artifacts/ regardless of pass/fail
+# 🧹 Post-test sweep: Move V8 coverage outputs to artifacts/
 mv "$PROJECT_DIR"/v8_coverage_*.json "$PROJECT_DIR/artifacts/" 2>/dev/null || true
 
 # 7. Generate suite-scoped test report summary
