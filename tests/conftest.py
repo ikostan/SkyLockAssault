@@ -61,7 +61,9 @@ def pytest_runtest_makereport(item, call):
             "nodeid": item.nodeid,
             "duration_sec": round(report.duration, 4),
             "outcome": report.outcome,
-            "wasm_boot_duration_sec": round(wasm_boot, 4) if wasm_boot is not None else None,
+            "wasm_boot_duration_sec": (
+                round(wasm_boot, 4) if wasm_boot is not None else None
+            ),
         }
         _TEST_PROFILING_DATA.append(test_detail)
 
@@ -271,7 +273,7 @@ def soft_ui_reset(request):
 
 @pytest.fixture(scope="session")
 def browser_instance(
-        playwright: Playwright, request: pytest.FixtureRequest
+    playwright: Playwright, request: pytest.FixtureRequest
 ) -> Generator[Browser, None, None]:
     """Session-scoped Chromium launch fixture to minimize startup overhead."""
     launch_options = {
@@ -296,7 +298,7 @@ def browser_instance(
 
 @pytest.fixture(scope="function")
 def page(
-        browser_instance: Browser, request: pytest.FixtureRequest
+    browser_instance: Browser, request: pytest.FixtureRequest
 ) -> Generator[Page, None, None]:
     """Provides clean browser context isolation for each test."""
     har_path = None
