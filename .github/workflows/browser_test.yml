@@ -1,3 +1,4 @@
+---
 name: "Browser Functional Tests"
 
 on:  # yamllint disable-line rule:truthy
