@@ -3,15 +3,16 @@
 # tests/test_utils_test.py
 """Targeted unit and integration tests for helper utilities in test_utils.py."""
 
-from unittest.mock import MagicMock, patch
 from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
+
 from playwright.sync_api import Page, expect
 
 from tests.test_utils import (
     DEFAULT_TIMEOUT,
-    save_v8_coverage,
     init_page_and_wait_ready,
     navigate_and_profile_godot_wasm,
+    save_v8_coverage,
 )
 
 
