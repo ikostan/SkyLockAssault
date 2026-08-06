@@ -23,6 +23,7 @@ git config --global --add safe.directory "$PROJECT_DIR" 2>/dev/null || true
 echo "🧹 Resetting repository to pristine state..."
 git restore export_presets.cfg scripts/core/globals.gd 2>/dev/null || true
 rm -f export_presets.cfg.bak v8_coverage_*.json 2>/dev/null || true
+rm -rf "$PROJECT_DIR/reports" 2>/dev/null || true
 
 # Create an isolated temporary directory for addon downloads
 ADDON_TMP=$(mktemp -d "${TMPDIR:-/tmp}/pipeline-addons.XXXXXX")
@@ -36,9 +37,14 @@ cleanup_workspace() {
   git restore export_presets.cfg scripts/core/globals.gd 2>/dev/null || true
   rm -f export_presets.cfg.bak 2>/dev/null || true
 
-  # Safety trap: ensure stray coverage or report files move to artifacts/
+  # Safety trap: move stray coverage and reports to artifacts/
   mkdir -p "$PROJECT_DIR/artifacts" 2>/dev/null || true
   mv "$PROJECT_DIR"/v8_coverage_*.json "$PROJECT_DIR/artifacts/" 2>/dev/null || true
+
+  if [ -d "$PROJECT_DIR/reports" ]; then
+    rm -rf "$PROJECT_DIR/artifacts/gdunit-reports" 2>/dev/null || true
+    mv "$PROJECT_DIR/reports" "$PROJECT_DIR/artifacts/gdunit-reports" 2>/dev/null || true
+  fi
 }
 trap cleanup_workspace EXIT INT TERM
 
@@ -124,9 +130,6 @@ godot --headless --verbose --path $PROJECT_DIR \
   -gconfig=res://.gutconfig.json \
   -gexit
 check_exit "GUT Unit Tests"
-
-mkdir -p $PROJECT_DIR/reports
-cp -r reports/** $PROJECT_DIR/reports || true
 
 # 6. Pre-Export Setup (Salt & CI Flag Injection)
 echo "⚙️ Injecting dummy salt for Playwright tests..."
@@ -233,6 +236,10 @@ if [ $PYTEST_EXIT -ne 0 ]; then
   exit $PYTEST_EXIT
 fi
 
-cp -r "$PROJECT_DIR/reports" "$PROJECT_DIR/artifacts/gdunit-reports" 2>/dev/null || true
+# Relocate GDUnit4 unit test reports into artifacts/ and clean root
+if [ -d "$PROJECT_DIR/reports" ]; then
+  rm -rf "$PROJECT_DIR/artifacts/gdunit-reports" 2>/dev/null || true
+  mv "$PROJECT_DIR/reports" "$PROJECT_DIR/artifacts/gdunit-reports" 2>/dev/null || true
+fi
 
 echo "Pipeline completed successfully!"
