@@ -1,4 +1,3 @@
----
 name: "Browser Functional Tests"
 
 on:  # yamllint disable-line rule:truthy
@@ -132,7 +131,7 @@ jobs:
           EXPECTED_SHA="${{ github.sha }}"
           if [ "$DOWNLOADED_SHA" != "$EXPECTED_SHA" ]; then
             echo "❌ CRITICAL: Commit SHA mismatch in web build artifact!"
-            echo "Expected: $EXPECTED_SHA | Received: $DOWNLOADED_SHA"
+            echo "Expected: $EXPECTED_SHA \vert{} Received:$DOWNLOADED_SHA"
             exit 1
           fi
           echo "✅ Artifact integrity verified successfully for commit $DOWNLOADED_SHA."
@@ -236,8 +235,8 @@ jobs:
       - name: "Preserve Baseline Profiling Metrics (#776)"
         if: "always()"
         run: |
-          if [ -f "tests/metrics/metrics_baseline.json" ]; then
-            cp "tests/metrics/metrics_baseline.json" "artifacts/metrics_baseline_${{ matrix.artifact_suffix }}.json"
+          if [ -f "artifacts/metrics_baseline.json" ]; then
+            cp "artifacts/metrics_baseline.json" "artifacts/metrics_baseline_${{ matrix.artifact_suffix }}.json"
             echo "📊 Baseline metrics preserved to artifacts/metrics_baseline_${{ matrix.artifact_suffix }}.json"
           fi
 
@@ -337,7 +336,7 @@ jobs:
         with:
           name: "metrics-baseline-${{ matrix.artifact_suffix }}"
           path: |
-            tests/metrics/metrics_baseline.json
+            artifacts/metrics_baseline.json
             artifacts/metrics_baseline_${{ matrix.artifact_suffix }}.json
           if-no-files-found: "ignore"
           retention-days: 14
