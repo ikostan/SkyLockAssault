@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD013 -->
 # 📊 Local AI Models Summary Matrix (v3.2)
 
 **Target Hardware:** Intel Core Ultra 9 285H | NVIDIA RTX 5060 Ti (16 GB GDDR7 VRAM) | 32 GB System RAM
@@ -156,3 +157,4 @@ Non-LLM models running directly inside GPU VRAM for 2D textures, UI sprites, and
 1. **VRAM & Throughput Variations:** Estimated generation speeds (`Ultra`: 60–100+ t/s, `Fast`: 35–60 t/s, `Medium`: 20–35 t/s, `Heavy`: 4–18 t/s, `Slow`: <5 t/s) and VRAM allocations are approximate. Actual metrics depend on the inference backend (Ollama, llama.cpp, vLLM), context length prefill overhead, KV cache quantization setting (e.g., `q4_0` vs `fp16` KV cache), and concurrent system background tasks.
 2. **Quantization Guideline:** `Q4_K_M` and `Q5_K_M` represent the sweet spot for 14B–32B models on 16 GB VRAM. Use `Q8_0` primarily for sub-10B models where VRAM headroom is abundant.
 3. **GDDR7 Bandwidth Advantage:** The RTX 5060 Ti's higher memory bandwidth significantly speeds up token evaluation and generation for sub-20B models compared to previous-generation 16 GB cards.
+<!-- markdownlint-enable MD013 -->
