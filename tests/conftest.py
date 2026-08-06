@@ -59,9 +59,7 @@ def pytest_sessionstart(session) -> None:
     """
     _ = session
     _SESSION_STATE["start_time"] = time.perf_counter()
-    _SESSION_STATE["timestamp"] = time.strftime(
-        "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
-    )
+    _SESSION_STATE["timestamp"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
@@ -109,9 +107,7 @@ def pytest_sessionfinish(session, exitstatus):
 
     # 1. Export Task #776 Baseline Metrics JSON
     start_time = _SESSION_STATE["start_time"]
-    total_duration = (
-        round(time.perf_counter() - start_time, 4) if start_time else 0.0
-    )
+    total_duration = round(time.perf_counter() - start_time, 4) if start_time else 0.0
     metrics_payload = {
         "timestamp": _SESSION_STATE["timestamp"],
         "total_duration_sec": total_duration,
@@ -130,10 +126,7 @@ def pytest_sessionfinish(session, exitstatus):
     for pid in list(_TRACKED_PIDS):
         try:
             if os.name == "nt":
-                cmd = (
-                    shutil.which("taskkill")
-                    or "C:\\Windows\\System32\\taskkill.exe"
-                )
+                cmd = shutil.which("taskkill") or "C:\\Windows\\System32\\taskkill.exe"
                 subprocess.run(
                     [cmd, "/F", "/PID", str(pid)],
                     stdout=subprocess.DEVNULL,
