@@ -41,12 +41,12 @@ Task **#776** establishes the official profiling standard, automated timing infr
 
 ## 🏆 Deliverables Checklist
 
-- [x] Implemented `pytest_sessionstart`, `pytest_runtest_makereport`, and `pytest_sessionfinish` in `tests/conftest.py`.
-- [x] Configured direct baseline JSON export to `artifacts/metrics_baseline.json`.
-- [x] Integrated Playwright WASM initialization latency helper `navigate_and_profile_godot_wasm()` in `tests/test_utils.py`.
-- [x] Updated `workspace/run_browser_tests.sh` and `workspace/run_pipeline.sh` to preserve profiling metrics.
-- [x] Updated `.github/workflows/browser_test.yml` to preserve and upload sharded profiling baseline artifacts.
-- [x] Conducted 5 consecutive profiling runs and recorded the official median baseline (`93.16s`).
+* [x] Implemented `pytest_sessionstart`, `pytest_runtest_makereport`, and `pytest_sessionfinish` in `tests/conftest.py`.
+* [x] Configured direct baseline JSON export to `artifacts/metrics_baseline.json`.
+* [x] Integrated Playwright WASM initialization latency helper `navigate_and_profile_godot_wasm()` in `tests/test_utils.py`.
+* [x] Updated `workspace/run_browser_tests.sh` and `workspace/run_pipeline.sh` to preserve profiling metrics.
+* [x] Updated `.github/workflows/browser_test.yml` to preserve and upload sharded profiling baseline artifacts.
+* [x] Conducted 5 consecutive profiling runs and recorded the official median baseline (`93.16s`).
 
 ---
 <!-- markdownlint-enable MD001 MD036 MD013 MD033 table-column-style -->
