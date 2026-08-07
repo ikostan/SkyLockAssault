@@ -13,6 +13,7 @@ from tests.test_utils import (
     init_page_and_wait_ready,
     navigate_and_profile_godot_wasm,
     save_v8_coverage,
+    start_game_and_wait_ready,
 )
 
 
@@ -126,6 +127,42 @@ def test_navigate_and_profile_godot_wasm_delegates_to_init_page() -> None:
     mock_init.assert_called_once_with(
         mock_page, url="http://localhost:8080/test.html", request=mock_request
     )
+
+
+def test_start_game_and_wait_ready_propagates_request_and_sets_wasm_boot_time() -> None:
+    """Ensure start_game_and_wait_ready forwards pytest request and sets _wasm_boot_time."""
+    mock_page = MagicMock()
+    mock_page.evaluate.return_value = False
+    mock_logs: list[dict[str, str]] = []
+    request = SimpleNamespace(node=SimpleNamespace())
+
+    import tests.test_utils as utils
+
+    real_init_page = utils.init_page_and_wait_ready
+
+    with (
+        patch("tests.test_utils.init_cdp_coverage", return_value=(MagicMock(), True)),
+        patch("tests.test_utils.open_options_menu"),
+        patch("tests.test_utils.set_log_level"),
+        patch("tests.test_utils.set_difficulty"),
+        patch("tests.test_utils.wait_for_console_log"),
+        patch(
+            "tests.test_utils.init_page_and_wait_ready",
+            wraps=real_init_page,
+        ) as mock_init,
+        patch("time.perf_counter", side_effect=[5.0, 7.5]),
+        patch("tests.test_utils.expect"),
+    ):
+        start_game_and_wait_ready(
+            mock_page,
+            logs=mock_logs,
+            request=request,
+        )
+
+    _, kwargs = mock_init.call_args
+    assert kwargs["request"] is request
+    assert hasattr(request.node, "_wasm_boot_time")
+    assert request.node._wasm_boot_time == 2.5
 
 
 def test_save_v8_coverage_collision_prevention(tmp_path, monkeypatch):
