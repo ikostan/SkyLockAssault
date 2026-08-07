@@ -245,6 +245,7 @@ fi
 
 # Relocate GDUnit4 unit test reports into artifacts/ and clean root
 if [ -d "$PROJECT_DIR/reports" ]; then
+  mkdir -p "$PROJECT_DIR/artifacts" 2>/dev/null || true
   rm -rf "$PROJECT_DIR/artifacts/gdunit-reports" 2>/dev/null || true
   mv "$PROJECT_DIR/reports" "$PROJECT_DIR/artifacts/gdunit-reports" 2>/dev/null || true
 fi

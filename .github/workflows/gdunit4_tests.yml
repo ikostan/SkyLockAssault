@@ -67,7 +67,7 @@ jobs:
       - name: "Find Latest Report Directory"
         id: "find_report"
         run: |
-          LATEST_REPORT=$(ls -td reports/report_* | head -1 || echo "")
+          LATEST_REPORT=$(ls -td reports/report_* artifacts/gdunit-reports/report_* 2>/dev/null | head -1 || echo "")
           if [ -z "$LATEST_REPORT" ]; then
             echo "No report directory found; tests may not have generated reports."
             exit 1
@@ -83,7 +83,10 @@ jobs:
         uses: "actions/upload-artifact@v7"
         with:
           name: "gdunit-reports"
-          path: "reports/**"
+          path: |
+            reports/**
+            artifacts/gdunit-reports/**
+          if-no-files-found: "ignore"
           retention-days: 5
 
       - name: "Install Codecov CLI"
