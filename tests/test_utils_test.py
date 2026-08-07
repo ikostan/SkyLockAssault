@@ -70,6 +70,46 @@ def test_init_page_fresh_load_handles_none_request() -> None:
     assert boot_time == 2.5
 
 
+def test_init_page_evaluate_exception_falls_back_to_navigation() -> None:
+    """Verify fallback navigation and boot timing calculation when page.evaluate raises."""
+    mock_page = MagicMock()
+    mock_page.evaluate.side_effect = Exception("JS context not ready")
+
+    mock_request = SimpleNamespace(node=SimpleNamespace())
+
+    with patch("time.perf_counter", side_effect=[10.0, 11.5]), patch(
+        "tests.test_utils.expect"
+    ):
+        boot_time = init_page_and_wait_ready(mock_page, request=mock_request)
+
+    mock_page.goto.assert_called_once()
+    assert boot_time == 1.5
+    assert hasattr(mock_request.node, "_wasm_boot_time")
+    assert mock_request.node._wasm_boot_time == 1.5
+
+
+def test_init_page_handles_request_without_valid_node() -> None:
+    """Verify request objects lacking a valid node attribute do not raise AttributeError."""
+    mock_page = MagicMock()
+    mock_page.evaluate.return_value = False
+
+    request_no_node = SimpleNamespace()
+    request_none_node = SimpleNamespace(node=None)
+
+    with patch("time.perf_counter", side_effect=[1.0, 2.0]), patch(
+        "tests.test_utils.expect"
+    ):
+        boot_time1 = init_page_and_wait_ready(mock_page, request=request_no_node)
+
+    with patch("time.perf_counter", side_effect=[3.0, 4.5]), patch(
+        "tests.test_utils.expect"
+    ):
+        boot_time2 = init_page_and_wait_ready(mock_page, request=request_none_node)
+
+    assert boot_time1 == 1.0
+    assert boot_time2 == 1.5
+
+
 def test_navigate_and_profile_godot_wasm_delegates_to_init_page() -> None:
     """Verify wrapper helper delegates arguments to init_page_and_wait_ready."""
     mock_page = MagicMock()
