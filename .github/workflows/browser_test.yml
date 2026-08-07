@@ -236,9 +236,11 @@ jobs:
       - name: "Preserve Baseline Profiling Metrics (#776)"
         if: "always()"
         run: |
-          if [ -f "artifacts/metrics_baseline.json" ]; then
-            cp "artifacts/metrics_baseline.json" "artifacts/metrics_baseline_${{ matrix.artifact_suffix }}.json"
-            echo "📊 Baseline metrics preserved to artifacts/metrics_baseline_${{ matrix.artifact_suffix }}.json"
+          src="artifacts/metrics_baseline.json"
+          dst="artifacts/metrics_baseline_${{ matrix.artifact_suffix }}.json"
+          if [ -f "$src" ]; then
+            cp "$src" "$dst"
+            echo "📊 Baseline metrics preserved to $dst"
           fi
 
       - name: "List Coverage Reports"
