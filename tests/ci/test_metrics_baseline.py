@@ -7,9 +7,8 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
-
 import pytest
-
+from tests import conftest as conf
 
 def _invoke_sessionfinish(
     conftest_module: Any, artifacts_dir: Path, *, payload: dict[str, Any]
@@ -89,7 +88,6 @@ def test_metrics_baseline_io_failure_is_graceful(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Verify I/O failures issue a UserWarning without crashing session."""
-    from tests import conftest as conf
 
     payload = {
         "start_time": 0.0,
