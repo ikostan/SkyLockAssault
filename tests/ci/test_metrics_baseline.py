@@ -7,8 +7,11 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+
 import pytest
+
 from tests import conftest as conf
+
 
 def _invoke_sessionfinish(
     conftest_module: Any, artifacts_dir: Path, *, payload: dict[str, Any]
