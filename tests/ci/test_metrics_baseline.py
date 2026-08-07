@@ -41,8 +41,6 @@ def _invoke_sessionfinish(
 
 def test_metrics_baseline_file_structure(tmp_path: Path) -> None:
     """Verify metrics_baseline.json schema and test count match state."""
-    from tests import conftest as conf
-
     payload = {
         "start_time": 1.0,
         "timestamp": "2026-08-06T03:00:00Z",
@@ -91,7 +89,6 @@ def test_metrics_baseline_io_failure_is_graceful(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Verify I/O failures issue a UserWarning without crashing session."""
-
     payload = {
         "start_time": 0.0,
         "timestamp": "2026-08-06T03:00:00Z",
