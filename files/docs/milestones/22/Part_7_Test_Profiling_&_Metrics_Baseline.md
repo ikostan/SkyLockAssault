@@ -49,4 +49,4 @@ Task **#776** establishes the official profiling standard, automated timing infr
 - [x] Conducted 5 consecutive profiling runs and recorded the official median baseline (`93.16s`).
 
 ---
-<!-- markdownlint-denable MD001 MD036 MD013 MD033 table-column-style -->
+<!-- markdownlint-enable MD001 MD036 MD013 MD033 table-column-style -->
