@@ -37,6 +37,19 @@ def _invoke_sessionfinish(
     conftest_module.pytest_sessionfinish(dummy_session, exitstatus=0)
 
 
+def _step_hookwrapper(gen: Any, report: Any) -> None:
+    """Safely step through a pytest hookwrapper generator execution."""
+    try:
+        next(gen)
+    except StopIteration:
+        return
+
+    try:
+        gen.send(SimpleNamespace(get_result=lambda: report))
+    except StopIteration:
+        pass
+
+
 def test_metrics_baseline_file_structure(tmp_path: Path) -> None:
     """Verify metrics_baseline.json schema and test count match state."""
     from tests import conftest as conf
@@ -128,12 +141,10 @@ def test_runtest_makereport_aggregates_phases() -> None:
         skipped=False,
         duration=0.01,
     )
-    gen = conf.pytest_runtest_makereport(mock_item, SimpleNamespace(when="setup"))
-    next(gen)
-    try:
-        gen.send(SimpleNamespace(get_result=lambda: rep_setup))
-    except StopIteration:
-        pass
+    gen_setup = conf.pytest_runtest_makereport(
+        mock_item, SimpleNamespace(when="setup")
+    )
+    _step_hookwrapper(gen_setup, rep_setup)
 
     # 2. Call phase (passed)
     rep_call = SimpleNamespace(
@@ -143,12 +154,10 @@ def test_runtest_makereport_aggregates_phases() -> None:
         skipped=False,
         duration=0.40,
     )
-    gen = conf.pytest_runtest_makereport(mock_item, SimpleNamespace(when="call"))
-    next(gen)
-    try:
-        gen.send(SimpleNamespace(get_result=lambda: rep_call))
-    except StopIteration:
-        pass
+    gen_call = conf.pytest_runtest_makereport(
+        mock_item, SimpleNamespace(when="call")
+    )
+    _step_hookwrapper(gen_call, rep_call)
 
     # 3. Teardown phase (passed)
     rep_teardown = SimpleNamespace(
@@ -158,12 +167,10 @@ def test_runtest_makereport_aggregates_phases() -> None:
         skipped=False,
         duration=0.01,
     )
-    gen = conf.pytest_runtest_makereport(mock_item, SimpleNamespace(when="teardown"))
-    next(gen)
-    try:
-        gen.send(SimpleNamespace(get_result=lambda: rep_teardown))
-    except StopIteration:
-        pass
+    gen_teardown = conf.pytest_runtest_makereport(
+        mock_item, SimpleNamespace(when="teardown")
+    )
+    _step_hookwrapper(gen_teardown, rep_teardown)
 
     assert len(conf._TEST_PROFILING_DATA) == 1
     record = conf._TEST_PROFILING_DATA[0]
