@@ -132,7 +132,7 @@ jobs:
           EXPECTED_SHA="${{ github.sha }}"
           if [ "$DOWNLOADED_SHA" != "$EXPECTED_SHA" ]; then
             echo "❌ CRITICAL: Commit SHA mismatch in web build artifact!"
-            echo "Expected: $EXPECTED_SHA \vert{} Received:$DOWNLOADED_SHA"
+            echo "Expected: $EXPECTED_SHA | Received: $DOWNLOADED_SHA"
             exit 1
           fi
           echo "✅ Artifact integrity verified successfully for commit $DOWNLOADED_SHA."
