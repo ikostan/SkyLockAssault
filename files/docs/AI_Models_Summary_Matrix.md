@@ -1,5 +1,5 @@
 <!-- markdownlint-disable MD013 -->
-# 📊 Local AI Models Summary Matrix (v3.4)
+# 📊 Local AI Models Summary Matrix (v3.5)
 
 **Target Hardware:** Intel Core Ultra 9 285H | NVIDIA RTX 5060 Ti
 (16 GB GDDR7 VRAM) | 32 GB System RAM
@@ -123,11 +123,11 @@ speed and full context headroom for active development.
 These models spill 2–5 GB into System RAM, maintaining high generation speeds
 while delivering 20B–35B parameter capability.
 
-| Model Name                | Rank                  | Best For                              | Context | Speed  | License                                    | Quant    | Recommended Ollama Command     |
-|---------------------------|-----------------------|---------------------------------------|---------|--------|--------------------------------------------|----------|--------------------------------|
-| **Devstral 24B**          | ⭐ Primary            | Agentic multi-file repository editing | 128K    | Medium | Apache 2.0                                 | `Q5_K_M` | `ollama run devstral:24b`      |
-| **Mistral-Small 3 (24B)** | Excellent Alternative | Polyglot code refactoring             | 32K     | Medium | Apache 2.0                                 | `Q5_K_M` | `ollama run mistral-small:24b` |
-| **Codestral 22B**         | Specialized           | FIM completion & polyglot             | 32K     | Medium | [MNPL](https://mistral.ai/news/codestral/) | `Q5_K_M` | `ollama run codestral:22b`     |
+| Model Name                | Rank                  | Best For                              | Context | Speed  | License                                                                                        | Quant    | Recommended Ollama Command     |
+|---------------------------|-----------------------|---------------------------------------|---------|--------|------------------------------------------------------------------------------------------------|----------|--------------------------------|
+| **Devstral 24B**          | ⭐ Primary            | Agentic multi-file repository editing | 128K    | Medium | Apache 2.0                                                                                     | `Q5_K_M` | `ollama run devstral:24b`      |
+| **Mistral-Small 3 (24B)** | Excellent Alternative | Polyglot code refactoring             | 32K     | Medium | Apache 2.0                                                                                     | `Q5_K_M` | `ollama run mistral-small:24b` |
+| **Codestral 22B**         | Specialized           | FIM completion & polyglot             | 32K     | Medium | [MNPL](https://www.google.com/url?sa=E&source=gmail&q=https://mistral.ai/licences/MNPL-0.1.md) | `Q5_K_M` | `ollama run codestral:22b`     |
 
 ---
 
@@ -190,4 +190,4 @@ where VRAM headroom is abundant.
 3. **GDDR7 Bandwidth Advantage:** The RTX 5060 Ti's higher memory bandwidth
 significantly speeds up token evaluation and generation for sub-20B
 models compared to previous-generation 16 GB cards.
-<!-- markdownlint-enable MD013 -->
+<!-- markdownlint-disable MD013 -->
