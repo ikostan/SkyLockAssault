@@ -196,7 +196,14 @@ echo "✅ Server ready"
 
 echo "Running Playwright Browser Tests..."
 mkdir -p "$PROJECT_DIR/artifacts"
-source /opt/venv/bin/activate 2>/dev/null || true
+if [ -f "/opt/venv/bin/activate" ]; then
+  source /opt/venv/bin/activate
+fi
+
+if ! command -v pytest >/dev/null 2>&1 || ! python3 -c "import playwright" >/dev/null 2>&1; then
+  echo "❌ Error: Required Python runtime (pytest/playwright) is missing or incomplete."
+  exit 1
+fi
 
 # Execute pytest with outputs directed into artifacts/
 pytest tests/ --ignore=tests/refactor -v \
