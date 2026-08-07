@@ -1,5 +1,5 @@
 <!-- markdownlint-disable MD013 -->
-# 📊 Local AI Models Summary Matrix (v3.3)
+# 📊 Local AI Models Summary Matrix (v3.4)
 
 **Target Hardware:** Intel Core Ultra 9 285H | NVIDIA RTX 5060 Ti
 (16 GB GDDR7 VRAM) | 32 GB System RAM
@@ -123,11 +123,11 @@ speed and full context headroom for active development.
 These models spill 2–5 GB into System RAM, maintaining high generation speeds
 while delivering 20B–35B parameter capability.
 
-| Model Name                | Rank                  | Best For                              | Context | Speed  | License    | Quant    | Recommended Ollama Command     |
-|---------------------------|-----------------------|---------------------------------------|---------|--------|------------|----------|--------------------------------|
-| **Devstral 24B**          | ⭐ Primary            | Agentic multi-file repository editing | 128K    | Medium | Apache 2.0 | `Q5_K_M` | `ollama run devstral:24b`      |
-| **Mistral-Small 3 (24B)** | Excellent Alternative | Polyglot code refactoring             | 32K     | Medium | Apache 2.0 | `Q5_K_M` | `ollama run mistral-small:24b` |
-| **Codestral 22B**         | Specialized           | FIM completion & polyglot             | 32K     | Medium | MNPL       | `Q5_K_M` | `ollama run codestral:22b`     |
+| Model Name                | Rank                  | Best For                              | Context | Speed  | License                                    | Quant    | Recommended Ollama Command     |
+|---------------------------|-----------------------|---------------------------------------|---------|--------|--------------------------------------------|----------|--------------------------------|
+| **Devstral 24B**          | ⭐ Primary            | Agentic multi-file repository editing | 128K    | Medium | Apache 2.0                                 | `Q5_K_M` | `ollama run devstral:24b`      |
+| **Mistral-Small 3 (24B)** | Excellent Alternative | Polyglot code refactoring             | 32K     | Medium | Apache 2.0                                 | `Q5_K_M` | `ollama run mistral-small:24b` |
+| **Codestral 22B**         | Specialized           | FIM completion & polyglot             | 32K     | Medium | [MNPL](https://mistral.ai/news/codestral/) | `Q5_K_M` | `ollama run codestral:22b`     |
 
 ---
 
@@ -146,14 +146,14 @@ while delivering 20B–35B parameter capability.
 These models offload 6–20 GB into System RAM. Generation is slower, but
 parameter depth prevents regressions during multi-file code repair.
 
-| Model Name                  | Rank              | Best For                      | Context | Speed | License      | Quant    | Recommended Ollama Command     |
-|-----------------------------|-------------------|-------------------------------|---------|-------|--------------|----------|--------------------------------|
-| **Qwen2.5-Coder 32B**       | 🌙 Overnight      | Overnight GDScript 4 repair   | 32K     | Heavy | Apache 2.0   | `Q4_K_M` | `ollama run qwen2.5-coder:32b` |
-| **DeepSeek-R1 Distill 32B** | Specialized       | Collision planning & AI logic | 64K     | Heavy | MIT          | `Q4_K_M` | `ollama run deepseek-r1:32b`   |
-| **Qwen3 32B**               | Specialized       | Dual-reasoning planning       | 32K     | Heavy | Apache 2.0   | `Q4_K_M` | `ollama run qwen3:32b`         |
-| **Nemotron 70B**            | Heavy Alternative | Full-codebase ingestion       | 128K    | Slow  | Llama Comm.  | `IQ3_M`  | `ollama run nemotron:70b`      |
-| **Llama 3.3 70B Instruct**  | Heavy Alternative | GDD & documentation           | 128K    | Slow  | Llama Comm.  | `IQ3_M`  | `ollama run llama3.3:70b`      |
-| **Qwen2.5 72B Instruct**    | Heavy Alternative | Polyglot architecture         | 32K     | Slow  | Qwen License | `Q3_K_L` | `ollama run qwen2.5:72b`       |
+| Model Name                  | Rank              | Best For                      | Context | Speed | License                                                                            | Quant    | Recommended Ollama Command     |
+|-----------------------------|-------------------|-------------------------------|---------|-------|------------------------------------------------------------------------------------|----------|--------------------------------|
+| **Qwen2.5-Coder 32B**       | 🌙 Overnight      | Overnight GDScript 4 repair   | 32K     | Heavy | Apache 2.0                                                                         | `Q4_K_M` | `ollama run qwen2.5-coder:32b` |
+| **DeepSeek-R1 Distill 32B** | Specialized       | Collision planning & AI logic | 64K     | Heavy | MIT                                                                                | `Q4_K_M` | `ollama run deepseek-r1:32b`   |
+| **Qwen3 32B**               | Specialized       | Dual-reasoning planning       | 32K     | Heavy | Apache 2.0                                                                         | `Q4_K_M` | `ollama run qwen3:32b`         |
+| **Nemotron 70B**            | Heavy Alternative | Full-codebase ingestion       | 128K    | Slow  | Llama Comm.                                                                        | `IQ3_M`  | `ollama run nemotron:70b`      |
+| **Llama 3.3 70B Instruct**  | Heavy Alternative | GDD & documentation           | 128K    | Slow  | Llama Comm.                                                                        | `IQ3_M`  | `ollama run llama3.3:70b`      |
+| **Qwen2.5 72B Instruct**    | Heavy Alternative | Polyglot architecture         | 32K     | Slow  | [Qwen License](https://huggingface.co/Qwen/Qwen2.5-72B-Instruct/blob/main/LICENSE) | `Q3_K_L` | `ollama run qwen2.5:72b`       |
 
 > 📌 **Note on GLM-4.5-Air & Kimi K2:** While outstanding models,
 > GLM-4.5-Air (~73GB GGUF) and Kimi K2 (1T+ MoE) exceed local consumer
