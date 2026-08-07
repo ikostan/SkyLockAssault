@@ -115,11 +115,11 @@ def init_page_and_wait_ready(
 
     try:
         if page.evaluate("window.godotInitialized === true"):
-            # Page is already initialized via shared_page fixture; skip redundant reload
             canvas = page.locator("canvas")
             expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
             boot_time = 0.0
-            if request is not None and hasattr(request, "node"):
+            # 👇 Update this check
+            if request is not None and getattr(request, "node", None) is not None:
                 request.node._wasm_boot_time = boot_time
             return boot_time
     except Exception:
@@ -130,13 +130,13 @@ def init_page_and_wait_ready(
         "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
     )
 
-    # Minimal visual assertion to ensure the canvas shell actually rendered
     canvas = page.locator("canvas")
     expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
 
     boot_time = round(time.perf_counter() - start_time, 4)
 
-    if request and hasattr(request, "node"):
+    # 👇 Update this check too
+    if request is not None and getattr(request, "node", None) is not None:
         request.node._wasm_boot_time = boot_time
 
     return boot_time
