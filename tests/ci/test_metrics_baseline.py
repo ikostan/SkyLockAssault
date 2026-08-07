@@ -98,80 +98,7 @@ def test_metrics_baseline_file_structure(tmp_path: Path) -> None:
     assert data["tests"] == payload["test_profiling_data"]
 
 
-def test_metrics_baseline_io_failure_is_graceful(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Verify I/O failures issue a UserWarning without crashing session."""
-    from tests import conftest as conf
-
-    payload = {
-        "start_time": 0.0,
-        "timestamp": "2026-08-06T03:00:00Z",
-        "summary_counts": {},
-        "test_profiling_data": [],
-    }
-
-    def failing_open(*args, **kwargs):
-        """Simulate an open() file I/O error."""
-        _ = (args, kwargs)
-        raise OSError("Simulated write failure")
-
-    monkeypatch.setattr("builtins.open", failing_open)
-
-    with pytest.warns(UserWarning, match="Failed to write metrics baseline"):
-        _invoke_sessionfinish(conf, tmp_path, payload=payload)
-
-
-def test_runtest_makereport_aggregates_phases() -> None:
-    """Verify makereport aggregates setup, call, and teardown phase outcomes."""
-    from tests import conftest as conf
-
-    conf._TEST_PROFILING_DATA.clear()
-    conf._SUMMARY_COUNTS = {"passed": 0, "failed": 0, "skipped": 0}
-
-    mock_item = SimpleNamespace(
-        nodeid="tests/test_demo.py::test_demo", _wasm_boot_time=0.5
-    )
-
-    # 1. Setup phase (passed)
-    rep_setup = SimpleNamespace(
-        when="setup",
-        outcome="passed",
-        failed=False,
-        skipped=False,
-        duration=0.01,
-    )
-    gen_setup = conf.pytest_runtest_makereport(mock_item, SimpleNamespace(when="setup"))
-    _step_hookwrapper(gen_setup, rep_setup)
-
-    # 2. Call phase (passed)
-    rep_call = SimpleNamespace(
-        when="call",
-        outcome="passed",
-        failed=False,
-        skipped=False,
-        duration=0.40,
-    )
-    gen_call = conf.pytest_runtest_makereport(mock_item, SimpleNamespace(when="call"))
-    _step_hookwrapper(gen_call, rep_call)
-
-    # 3. Teardown phase (passed)
-    rep_teardown = SimpleNamespace(
-        when="teardown",
-        outcome="passed",
-        failed=False,
-        skipped=False,
-        duration=0.01,
-    )
-    gen_teardown = conf.pytest_runtest_makereport(
-        mock_item, SimpleNamespace(when="teardown")
-    )
-    _step_hookwrapper(gen_teardown, rep_teardown)
-
-    assert len(conf._TEST_PROFILING_DATA) == 1
-    record = conf._TEST_PROFILING_DATA[0]
-    assert record["nodeid"] == "tests/test_demo.py::test_demo"
-    assert record["outcome"]def test_metrics_baseline_missing_start_time_defaults_to_zero_duration(
+def test_metrics_baseline_missing_start_time_defaults_to_zero_duration(
     tmp_path: Path,
 ) -> None:
     """Verify total_duration_sec defaults to 0.0 when start_time is missing or 0.0."""
@@ -218,7 +145,87 @@ def test_metrics_baseline_empty_profiling_data_writes_empty_tests_list(
     data = json.loads(metrics_file.read_text(encoding="utf-8"))
 
     assert isinstance(data["tests"], list)
-    assert data["tests"] == [] == "passed"
+    assert data["tests"] == []
+
+
+def test_metrics_baseline_io_failure_is_graceful(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify I/O failures issue a UserWarning without crashing session."""
+    from tests import conftest as conf
+
+    payload = {
+        "start_time": 0.0,
+        "timestamp": "2026-08-06T03:00:00Z",
+        "summary_counts": {},
+        "test_profiling_data": [],
+    }
+
+    def failing_open(*args, **kwargs):
+        """Simulate an open() file I/O error."""
+        _ = (args, kwargs)
+        raise OSError("Simulated write failure")
+
+    monkeypatch.setattr("builtins.open", failing_open)
+
+    with pytest.warns(UserWarning, match="Failed to write metrics baseline"):
+        _invoke_sessionfinish(conf, tmp_path, payload=payload)
+
+
+def test_runtest_makereport_aggregates_phases() -> None:
+    """Verify makereport aggregates setup, call, and teardown phase outcomes."""
+    from tests import conftest as conf
+
+    conf._TEST_PROFILING_DATA.clear()
+    conf._SUMMARY_COUNTS = {"passed": 0, "failed": 0, "skipped": 0}
+
+    mock_item = SimpleNamespace(
+        nodeid="tests/test_demo.py::test_demo", _wasm_boot_time=0.5
+    )
+
+    # 1. Setup phase (passed)
+    rep_setup = SimpleNamespace(
+        when="setup",
+        outcome="passed",
+        failed=False,
+        skipped=False,
+        duration=0.01,
+    )
+    gen_setup = conf.pytest_runtest_makereport(
+        mock_item, SimpleNamespace(when="setup")
+    )
+    _step_hookwrapper(gen_setup, rep_setup)
+
+    # 2. Call phase (passed)
+    rep_call = SimpleNamespace(
+        when="call",
+        outcome="passed",
+        failed=False,
+        skipped=False,
+        duration=0.40,
+    )
+    gen_call = conf.pytest_runtest_makereport(
+        mock_item, SimpleNamespace(when="call")
+    )
+    _step_hookwrapper(gen_call, rep_call)
+
+    # 3. Teardown phase (passed)
+    rep_teardown = SimpleNamespace(
+        when="teardown",
+        outcome="passed",
+        failed=False,
+        skipped=False,
+        duration=0.01,
+    )
+    gen_teardown = conf.pytest_runtest_makereport(
+        mock_item, SimpleNamespace(when="teardown")
+    )
+    _step_hookwrapper(gen_teardown, rep_teardown)
+
+    assert len(conf._TEST_PROFILING_DATA) == 1
+    record = conf._TEST_PROFILING_DATA[0]
+    assert record["nodeid"] == "tests/test_demo.py::test_demo"
+    assert record["outcome"] == "passed"
     assert record["duration_sec"] == 0.42
     assert record["wasm_boot_duration_sec"] == 0.5
     assert conf._SUMMARY_COUNTS["passed"] == 1
@@ -243,7 +250,9 @@ def test_runtest_makereport_skipped_phase_aggregates_outcome_and_duration() -> N
         skipped=True,
         duration=0.15,
     )
-    gen_setup = conf.pytest_runtest_makereport(mock_item, SimpleNamespace(when="setup"))
+    gen_setup = conf.pytest_runtest_makereport(
+        mock_item, SimpleNamespace(when="setup")
+    )
     _step_hookwrapper(gen_setup, rep_setup)
 
     # 2. Teardown phase (passed)
@@ -286,7 +295,9 @@ def test_runtest_makereport_setup_failure_short_circuits_and_counts_failed() -> 
         skipped=False,
         duration=0.25,
     )
-    gen_setup = conf.pytest_runtest_makereport(mock_item, SimpleNamespace(when="setup"))
+    gen_setup = conf.pytest_runtest_makereport(
+        mock_item, SimpleNamespace(when="setup")
+    )
     _step_hookwrapper(gen_setup, rep_setup)
 
     # 2. Teardown phase (executed after failed setup)
