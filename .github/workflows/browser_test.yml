@@ -233,6 +233,16 @@ jobs:
             fi
           fi
 
+      - name: "Preserve Baseline Profiling Metrics (#776)"
+        if: "always()"
+        run: |
+          src="artifacts/metrics_baseline.json"
+          dst="artifacts/metrics_baseline_${{ matrix.artifact_suffix }}.json"
+          if [ -f "$src" ]; then
+            cp "$src" "$dst"
+            echo "📊 Baseline metrics preserved to $dst"
+          fi
+
       - name: "List Coverage Reports"
         run: |
           ls -la artifacts/v8_coverage_*.json || \
@@ -322,6 +332,17 @@ jobs:
             artifacts/junit.xml
             junit.xml
           if-no-files-found: "ignore"
+
+      - name: "Upload Profiling Baseline Artifact (#776)"
+        if: "always()"
+        uses: "actions/upload-artifact@v7"
+        with:
+          name: "metrics-baseline-${{ matrix.artifact_suffix }}"
+          path: |
+            artifacts/metrics_baseline.json
+            artifacts/metrics_baseline_${{ matrix.artifact_suffix }}.json
+          if-no-files-found: "ignore"
+          retention-days: 14
 
       - name: "Upload Screenshot and Coverage Artifacts"
         if: "always()"

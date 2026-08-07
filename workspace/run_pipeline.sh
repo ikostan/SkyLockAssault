@@ -23,6 +23,7 @@ git config --global --add safe.directory "$PROJECT_DIR" 2>/dev/null || true
 echo "🧹 Resetting repository to pristine state..."
 git restore export_presets.cfg scripts/core/globals.gd 2>/dev/null || true
 rm -f export_presets.cfg.bak v8_coverage_*.json 2>/dev/null || true
+rm -rf "$PROJECT_DIR/reports" 2>/dev/null || true
 
 # Create an isolated temporary directory for addon downloads
 ADDON_TMP=$(mktemp -d "${TMPDIR:-/tmp}/pipeline-addons.XXXXXX")
@@ -36,9 +37,14 @@ cleanup_workspace() {
   git restore export_presets.cfg scripts/core/globals.gd 2>/dev/null || true
   rm -f export_presets.cfg.bak 2>/dev/null || true
 
-  # Safety trap: ensure any stray coverage or report files move to artifacts/
+  # Safety trap: move stray coverage and reports to artifacts/
   mkdir -p "$PROJECT_DIR/artifacts" 2>/dev/null || true
   mv "$PROJECT_DIR"/v8_coverage_*.json "$PROJECT_DIR/artifacts/" 2>/dev/null || true
+
+  if [ -d "$PROJECT_DIR/reports" ]; then
+    rm -rf "$PROJECT_DIR/artifacts/gdunit-reports" 2>/dev/null || true
+    mv "$PROJECT_DIR/reports" "$PROJECT_DIR/artifacts/gdunit-reports" 2>/dev/null || true
+  fi
 }
 trap cleanup_workspace EXIT INT TERM
 
@@ -125,9 +131,6 @@ godot --headless --verbose --path $PROJECT_DIR \
   -gexit
 check_exit "GUT Unit Tests"
 
-mkdir -p $PROJECT_DIR/reports
-cp -r reports/** $PROJECT_DIR/reports || true
-
 # 6. Pre-Export Setup (Salt & CI Flag Injection)
 echo "⚙️ Injecting dummy salt for Playwright tests..."
 PRODUCTION_SALT="playwright_dummy_salt_123" bash .github/scripts/inject_salt.sh "scripts/core/globals.gd"
@@ -193,10 +196,17 @@ echo "✅ Server ready"
 
 echo "Running Playwright Browser Tests..."
 mkdir -p "$PROJECT_DIR/artifacts"
-source /opt/venv/bin/activate 2>/dev/null || true
+if [ -f "/opt/venv/bin/activate" ]; then
+  source /opt/venv/bin/activate
+fi
+
+if ! python3 -m pytest --version >/dev/null 2>&1 || ! python3 -c "import playwright" >/dev/null 2>&1; then
+  echo "❌ Error: Required Python runtime (pytest/playwright) is missing or incomplete."
+  exit 1
+fi
 
 # Execute pytest with outputs directed into artifacts/
-pytest tests/ --ignore=tests/refactor -v \
+python3 -m pytest tests/ --ignore=tests/refactor -v \
   --timeout=$PW_TIMEOUT \
   --html="$PROJECT_DIR/artifacts/report_all.html" \
   --self-contained-html \
@@ -233,6 +243,11 @@ if [ $PYTEST_EXIT -ne 0 ]; then
   exit $PYTEST_EXIT
 fi
 
-cp -r "$PROJECT_DIR/reports" "$PROJECT_DIR/artifacts/gdunit-reports" 2>/dev/null || true
+# Relocate GDUnit4 unit test reports into artifacts/ and clean root
+if [ -d "$PROJECT_DIR/reports" ]; then
+  mkdir -p "$PROJECT_DIR/artifacts" 2>/dev/null || true
+  rm -rf "$PROJECT_DIR/artifacts/gdunit-reports" 2>/dev/null || true
+  mv "$PROJECT_DIR/reports" "$PROJECT_DIR/artifacts/gdunit-reports" 2>/dev/null || true
+fi
 
 echo "Pipeline completed successfully!"

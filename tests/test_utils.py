@@ -104,15 +104,24 @@ def init_cdp_coverage(page: Page) -> tuple[Any, bool]:
 
 
 def init_page_and_wait_ready(
-    page: Page, url: str = "http://localhost:8080/index.html"
-) -> None:
-    """Navigates to the game page and waits for Godot engine initialization if not already loaded."""
+    page: Page,
+    url: str = "http://localhost:8080/index.html",
+    request: Any | None = None,
+) -> float:
+    """Navigates to the game page and waits for Godot engine initialization if not already loaded.
+    Returns the WASM initialization boot duration in seconds (#776).
+    """
+    start_time = time.perf_counter()
+
     try:
         if page.evaluate("window.godotInitialized === true"):
             # Page is already initialized via shared_page fixture; skip redundant reload
             canvas = page.locator("canvas")
             expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
-            return
+            boot_time = 0.0
+            if request is not None and getattr(request, "node", None) is not None:
+                request.node._wasm_boot_time = boot_time
+            return boot_time
     except Exception:
         pass
 
@@ -124,6 +133,22 @@ def init_page_and_wait_ready(
     # Minimal visual assertion to ensure the canvas shell actually rendered
     canvas = page.locator("canvas")
     expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
+
+    boot_time = round(time.perf_counter() - start_time, 4)
+
+    if request is not None and getattr(request, "node", None) is not None:
+        request.node._wasm_boot_time = boot_time
+
+    return boot_time
+
+
+def navigate_and_profile_godot_wasm(
+    page: Page,
+    url: str = "http://localhost:8080/index.html",
+    request: Any | None = None,
+) -> float:
+    """Explicitly navigates to Godot Web export and measures WASM boot latency (#776)."""
+    return init_page_and_wait_ready(page, url=url, request=request)
 
 
 def open_options_menu(page: Page) -> None:
@@ -248,14 +273,14 @@ def start_game_and_wait_ready(
     logs: list[dict[str, str]],
     difficulty: float | None = None,
     log_level: str | int = "DEBUG",
+    request: Any | None = None,
 ) -> tuple[Any, bool]:
-    """
-    Shared E2E setup helper that initializes V8 coverage, loads Godot,
+    """Shared E2E setup helper that initializes V8 coverage, loads Godot,
     configures settings, and starts gameplay.
     """
     cdp_session, coverage_started = init_cdp_coverage(page)
 
-    init_page_and_wait_ready(page)
+    init_page_and_wait_ready(page, request=request)
     open_options_menu(page)
 
     if isinstance(log_level, str):
