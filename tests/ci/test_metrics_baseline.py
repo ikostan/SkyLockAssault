@@ -14,27 +14,22 @@ import pytest
 def _invoke_sessionfinish(
     conftest_module: Any, artifacts_dir: Path, *, payload: dict[str, Any]
 ) -> None:
-    """Invoke pytest_sessionfinish with controlled module state.
-
-    Parameters
-    ----------
-    conftest_module : Any
-        The imported conftest module.
-    artifacts_dir : Path
-        Temporary directory to use as ARTIFACTS_DIR.
-    payload : dict[str, Any]
-        Dictionary containing mock session state values.
-    """
+    """Invoke pytest_sessionfinish with controlled module state."""
+    original_artifacts_dir = conftest_module.ARTIFACTS_DIR
     conftest_module.ARTIFACTS_DIR = artifacts_dir
-    conftest_module._SESSION_STATE["start_time"] = payload.get("start_time", 1.0)
-    conftest_module._SESSION_STATE["timestamp"] = payload.get(
-        "timestamp", "2026-08-06T03:00:00Z"
-    )
-    conftest_module._SUMMARY_COUNTS = payload.get("summary_counts", {})
-    conftest_module._TEST_PROFILING_DATA = payload.get("test_profiling_data", [])
+    try:
+        conftest_module._SESSION_STATE["start_time"] = payload.get("start_time", 1.0)
+        conftest_module._SESSION_STATE["timestamp"] = payload.get(
+            "timestamp", "2026-08-06T03:00:00Z"
+        )
+        conftest_module._SUMMARY_COUNTS = payload.get("summary_counts", {})
+        conftest_module._TEST_PROFILING_DATA = payload.get("test_profiling_data", [])
 
-    dummy_session = SimpleNamespace()
-    conftest_module.pytest_sessionfinish(dummy_session, exitstatus=0)
+        dummy_session = SimpleNamespace()
+        conftest_module.pytest_sessionfinish(dummy_session, exitstatus=0)
+    finally:
+        # Restore the original project artifacts directory so subsequent runs export correctly
+        conftest_module.ARTIFACTS_DIR = original_artifacts_dir
 
 
 def _step_hookwrapper(gen: Any, report: Any) -> None:
