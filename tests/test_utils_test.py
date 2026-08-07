@@ -16,11 +16,11 @@ from tests.test_utils import (
 )
 
 
-def test_init_page_already_initialized_returns_zero_and_skips_node() -> None:
-    """Verify short-circuit returns 0.0 and leaves request.node untouched.
+def test_init_page_already_initialized_returns_zero_and_sets_node() -> None:
+    """Verify short-circuit returns 0.0 and sets request.node._wasm_boot_time.
 
     When window.godotInitialized is True, the function must return 0.0
-    and avoid writing _wasm_boot_time to request.node.
+    and assign 0.0 to request.node._wasm_boot_time.
     """
     mock_page = MagicMock()
     mock_page.evaluate.return_value = True
@@ -31,7 +31,8 @@ def test_init_page_already_initialized_returns_zero_and_skips_node() -> None:
         boot_time = init_page_and_wait_ready(mock_page, request=mock_request)
 
     assert boot_time == 0.0
-    assert not hasattr(mock_request.node, "_wasm_boot_time")
+    assert hasattr(mock_request.node, "_wasm_boot_time")
+    assert mock_request.node._wasm_boot_time == 0.0
 
 
 def test_init_page_fresh_load_calculates_boot_time_and_sets_node() -> None:

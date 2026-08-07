@@ -118,7 +118,10 @@ def init_page_and_wait_ready(
             # Page is already initialized via shared_page fixture; skip redundant reload
             canvas = page.locator("canvas")
             expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
-            return 0.0
+            boot_time = 0.0
+            if request is not None and hasattr(request, "node"):
+                request.node._wasm_boot_time = boot_time
+            return boot_time
     except Exception:
         pass
 
