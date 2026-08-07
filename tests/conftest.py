@@ -65,33 +65,61 @@ def pytest_sessionstart(session) -> None:
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
-    """Collect execution duration and outcome for report generation (#776).
+    """Collect execution duration and outcome across all phases (#776).
 
     Parameters
     ----------
     item : pytest.Item
         The test item being reported.
     call : pytest.CallInfo
-        The call phase outcome information.
+        The phase outcome information.
     """
+    _ = call
     outcome = yield
-    if call.when == "call":
-        report = outcome.get_result()
+    report = outcome.get_result()
+    setattr(item, f"rep_{report.when}", report)
+
+    # Finalize reporting only once teardown completes
+    if report.when == "teardown":
+        rep_setup = getattr(item, "rep_setup", None)
+        rep_call = getattr(item, "rep_call", None)
+        rep_teardown = report
+
+        # Determine overall test outcome across setup, call, and teardown
+        if rep_setup and rep_setup.failed:
+            final_outcome = "failed"
+        elif rep_setup and rep_setup.skipped:
+            final_outcome = "skipped"
+        elif rep_call and rep_call.failed:
+            final_outcome = "failed"
+        elif rep_call and rep_call.skipped:
+            final_outcome = "skipped"
+        elif rep_teardown.failed:
+            final_outcome = "failed"
+        else:
+            final_outcome = "passed"
+
+        duration = sum(
+            rep.duration
+            for rep in (rep_setup, rep_call, rep_teardown)
+            if rep is not None
+        )
+
         wasm_boot = getattr(item, "_wasm_boot_time", None)
         test_detail = {
             "nodeid": item.nodeid,
-            "duration_sec": round(report.duration, 4),
-            "outcome": report.outcome,
+            "duration_sec": round(duration, 4),
+            "outcome": final_outcome,
             "wasm_boot_duration_sec": (
                 round(wasm_boot, 4) if wasm_boot is not None else None
             ),
         }
         _TEST_PROFILING_DATA.append(test_detail)
 
-        if report.outcome in _SUMMARY_COUNTS:
-            _SUMMARY_COUNTS[report.outcome] += 1
+        if final_outcome in _SUMMARY_COUNTS:
+            _SUMMARY_COUNTS[final_outcome] += 1
         else:
-            _SUMMARY_COUNTS[report.outcome] = 1
+            _SUMMARY_COUNTS[final_outcome] = 1
 
 
 def pytest_sessionfinish(session, exitstatus):

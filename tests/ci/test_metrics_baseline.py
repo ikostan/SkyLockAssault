@@ -10,8 +10,6 @@ from typing import Any
 
 import pytest
 
-from tests import conftest as conf
-
 
 def _invoke_sessionfinish(
     conftest_module: Any, artifacts_dir: Path, *, payload: dict[str, Any]
@@ -41,6 +39,8 @@ def _invoke_sessionfinish(
 
 def test_metrics_baseline_file_structure(tmp_path: Path) -> None:
     """Verify metrics_baseline.json schema and test count match state."""
+    from tests import conftest as conf
+
     payload = {
         "start_time": 1.0,
         "timestamp": "2026-08-06T03:00:00Z",
@@ -89,6 +89,8 @@ def test_metrics_baseline_io_failure_is_graceful(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Verify I/O failures issue a UserWarning without crashing session."""
+    from tests import conftest as conf
+
     payload = {
         "start_time": 0.0,
         "timestamp": "2026-08-06T03:00:00Z",
@@ -105,3 +107,68 @@ def test_metrics_baseline_io_failure_is_graceful(
 
     with pytest.warns(UserWarning, match="Failed to write metrics baseline"):
         _invoke_sessionfinish(conf, tmp_path, payload=payload)
+
+
+def test_runtest_makereport_aggregates_phases() -> None:
+    """Verify makereport aggregates setup, call, and teardown phase outcomes."""
+    from tests import conftest as conf
+
+    conf._TEST_PROFILING_DATA.clear()
+    conf._SUMMARY_COUNTS = {"passed": 0, "failed": 0, "skipped": 0}
+
+    mock_item = SimpleNamespace(
+        nodeid="tests/test_demo.py::test_demo", _wasm_boot_time=0.5
+    )
+
+    # 1. Setup phase (passed)
+    rep_setup = SimpleNamespace(
+        when="setup",
+        outcome="passed",
+        failed=False,
+        skipped=False,
+        duration=0.01,
+    )
+    gen = conf.pytest_runtest_makereport(mock_item, SimpleNamespace(when="setup"))
+    next(gen)
+    try:
+        gen.send(SimpleNamespace(get_result=lambda: rep_setup))
+    except StopIteration:
+        pass
+
+    # 2. Call phase (passed)
+    rep_call = SimpleNamespace(
+        when="call",
+        outcome="passed",
+        failed=False,
+        skipped=False,
+        duration=0.40,
+    )
+    gen = conf.pytest_runtest_makereport(mock_item, SimpleNamespace(when="call"))
+    next(gen)
+    try:
+        gen.send(SimpleNamespace(get_result=lambda: rep_call))
+    except StopIteration:
+        pass
+
+    # 3. Teardown phase (passed)
+    rep_teardown = SimpleNamespace(
+        when="teardown",
+        outcome="passed",
+        failed=False,
+        skipped=False,
+        duration=0.01,
+    )
+    gen = conf.pytest_runtest_makereport(mock_item, SimpleNamespace(when="teardown"))
+    next(gen)
+    try:
+        gen.send(SimpleNamespace(get_result=lambda: rep_teardown))
+    except StopIteration:
+        pass
+
+    assert len(conf._TEST_PROFILING_DATA) == 1
+    record = conf._TEST_PROFILING_DATA[0]
+    assert record["nodeid"] == "tests/test_demo.py::test_demo"
+    assert record["outcome"] == "passed"
+    assert record["duration_sec"] == 0.42
+    assert record["wasm_boot_duration_sec"] == 0.5
+    assert conf._SUMMARY_COUNTS["passed"] == 1
