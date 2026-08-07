@@ -111,35 +111,41 @@ def init_page_and_wait_ready(
     """Navigates to the game page and waits for Godot engine initialization if not already loaded.
     Returns the WASM initialization boot duration in seconds (#776).
     """
-    start_time = time.perf_counter()
 
-    try:
-        if page.evaluate("window.godotInitialized === true"):
-            canvas = page.locator("canvas")
-            expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
-            boot_time = 0.0
-            # 👇 Update this check
-            if request is not None and getattr(request, "node", None) is not None:
-                request.node._wasm_boot_time = boot_time
-            return boot_time
-    except Exception:
-        pass
+    def init_page_and_wait_ready(
+            page: Page,
+            url: str = "http://localhost:8080/index.html",
+            request: Any | None = None,
+    ) -> float:
+        start_time = time.perf_counter()
 
-    page.goto(url, wait_until="domcontentloaded", timeout=DEFAULT_TIMEOUT)
-    page.wait_for_function(
-        "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
-    )
+        try:
+            if page.evaluate("window.godotInitialized === true"):
+                canvas = page.locator("canvas")
+                expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
+                boot_time = 0.0
+                # Ensure request.node is not None before accessing it
+                if request is not None and getattr(request, "node", None) is not None:
+                    request.node._wasm_boot_time = boot_time
+                return boot_time
+        except Exception:
+            pass
 
-    canvas = page.locator("canvas")
-    expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
+        page.goto(url, wait_until="domcontentloaded", timeout=DEFAULT_TIMEOUT)
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+        )
 
-    boot_time = round(time.perf_counter() - start_time, 4)
+        canvas = page.locator("canvas")
+        expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
 
-    # 👇 Update this check too
-    if request is not None and getattr(request, "node", None) is not None:
-        request.node._wasm_boot_time = boot_time
+        boot_time = round(time.perf_counter() - start_time, 4)
 
-    return boot_time
+        # Ensure request.node is not None before accessing it
+        if request is not None and getattr(request, "node", None) is not None:
+            request.node._wasm_boot_time = boot_time
+
+        return boot_time
 
 
 def navigate_and_profile_godot_wasm(
