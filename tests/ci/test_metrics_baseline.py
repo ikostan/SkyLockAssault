@@ -141,9 +141,7 @@ def test_runtest_makereport_aggregates_phases() -> None:
         skipped=False,
         duration=0.01,
     )
-    gen_setup = conf.pytest_runtest_makereport(
-        mock_item, SimpleNamespace(when="setup")
-    )
+    gen_setup = conf.pytest_runtest_makereport(mock_item, SimpleNamespace(when="setup"))
     _step_hookwrapper(gen_setup, rep_setup)
 
     # 2. Call phase (passed)
@@ -154,9 +152,7 @@ def test_runtest_makereport_aggregates_phases() -> None:
         skipped=False,
         duration=0.40,
     )
-    gen_call = conf.pytest_runtest_makereport(
-        mock_item, SimpleNamespace(when="call")
-    )
+    gen_call = conf.pytest_runtest_makereport(mock_item, SimpleNamespace(when="call"))
     _step_hookwrapper(gen_call, rep_call)
 
     # 3. Teardown phase (passed)
