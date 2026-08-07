@@ -48,8 +48,9 @@ def test_init_page_fresh_load_calculates_boot_time_and_sets_node() -> None:
     mock_request = SimpleNamespace(node=SimpleNamespace())
 
     # Simulate start_time = 10.0s, finish_time = 11.23456s -> duration = 1.2346s
-    with patch("time.perf_counter", side_effect=[10.0, 11.23456]), patch(
-        "tests.test_utils.expect"
+    with (
+        patch("time.perf_counter", side_effect=[10.0, 11.23456]),
+        patch("tests.test_utils.expect"),
     ):
         boot_time = init_page_and_wait_ready(mock_page, request=mock_request)
 
@@ -63,8 +64,9 @@ def test_init_page_fresh_load_handles_none_request() -> None:
     mock_page = MagicMock()
     mock_page.evaluate.return_value = False
 
-    with patch("time.perf_counter", side_effect=[5.0, 7.5]), patch(
-        "tests.test_utils.expect"
+    with (
+        patch("time.perf_counter", side_effect=[5.0, 7.5]),
+        patch("tests.test_utils.expect"),
     ):
         boot_time = init_page_and_wait_ready(mock_page, request=None)
 
@@ -78,8 +80,9 @@ def test_init_page_evaluate_exception_falls_back_to_navigation() -> None:
 
     mock_request = SimpleNamespace(node=SimpleNamespace())
 
-    with patch("time.perf_counter", side_effect=[10.0, 11.5]), patch(
-        "tests.test_utils.expect"
+    with (
+        patch("time.perf_counter", side_effect=[10.0, 11.5]),
+        patch("tests.test_utils.expect"),
     ):
         boot_time = init_page_and_wait_ready(mock_page, request=mock_request)
 
@@ -97,13 +100,15 @@ def test_init_page_handles_request_without_valid_node() -> None:
     request_no_node = SimpleNamespace()
     request_none_node = SimpleNamespace(node=None)
 
-    with patch("time.perf_counter", side_effect=[1.0, 2.0]), patch(
-        "tests.test_utils.expect"
+    with (
+        patch("time.perf_counter", side_effect=[1.0, 2.0]),
+        patch("tests.test_utils.expect"),
     ):
         boot_time1 = init_page_and_wait_ready(mock_page, request=request_no_node)
 
-    with patch("time.perf_counter", side_effect=[3.0, 4.5]), patch(
-        "tests.test_utils.expect"
+    with (
+        patch("time.perf_counter", side_effect=[3.0, 4.5]),
+        patch("tests.test_utils.expect"),
     ):
         boot_time2 = init_page_and_wait_ready(mock_page, request=request_none_node)
 
