@@ -171,7 +171,140 @@ def test_runtest_makereport_aggregates_phases() -> None:
     assert len(conf._TEST_PROFILING_DATA) == 1
     record = conf._TEST_PROFILING_DATA[0]
     assert record["nodeid"] == "tests/test_demo.py::test_demo"
-    assert record["outcome"] == "passed"
+    assert record["outcome"]def test_metrics_baseline_missing_start_time_defaults_to_zero_duration(
+    tmp_path: Path,
+) -> None:
+    """Verify total_duration_sec defaults to 0.0 when start_time is missing or 0.0."""
+    from tests import conftest as conf
+
+    payload = {
+        "start_time": 0.0,
+        "timestamp": "2026-08-06T03:00:00Z",
+        "summary_counts": {"passed": 1, "failed": 0, "skipped": 0},
+        "test_profiling_data": [
+            {
+                "nodeid": "tests/test_a.py::test_one",
+                "duration_sec": 0.1,
+                "outcome": "passed",
+                "wasm_boot_duration_sec": None,
+            }
+        ],
+    }
+
+    _invoke_sessionfinish(conf, tmp_path, payload=payload)
+
+    metrics_file = tmp_path / "metrics_baseline.json"
+    data = json.loads(metrics_file.read_text(encoding="utf-8"))
+
+    assert data["total_duration_sec"] == 0.0
+
+
+def test_metrics_baseline_empty_profiling_data_writes_empty_tests_list(
+    tmp_path: Path,
+) -> None:
+    """Verify baseline JSON exporter writes an empty tests list when profiling data is empty."""
+    from tests import conftest as conf
+
+    payload = {
+        "start_time": 10.0,
+        "timestamp": "2026-08-06T03:00:00Z",
+        "summary_counts": {"passed": 0, "failed": 0, "skipped": 0},
+        "test_profiling_data": [],
+    }
+
+    _invoke_sessionfinish(conf, tmp_path, payload=payload)
+
+    metrics_file = tmp_path / "metrics_baseline.json"
+    data = json.loads(metrics_file.read_text(encoding="utf-8"))
+
+    assert isinstance(data["tests"], list)
+    assert data["tests"] == [] == "passed"
     assert record["duration_sec"] == 0.42
     assert record["wasm_boot_duration_sec"] == 0.5
     assert conf._SUMMARY_COUNTS["passed"] == 1
+
+
+def test_runtest_makereport_skipped_phase_aggregates_outcome_and_duration() -> None:
+    """Verify skipped setup/call phase aggregates 'skipped' outcome and sums durations."""
+    from tests import conftest as conf
+
+    conf._TEST_PROFILING_DATA.clear()
+    conf._SUMMARY_COUNTS = {"passed": 0, "failed": 0, "skipped": 0}
+
+    mock_item = SimpleNamespace(
+        nodeid="tests/test_demo.py::test_skipped", _wasm_boot_time=None
+    )
+
+    # 1. Setup phase (skipped)
+    rep_setup = SimpleNamespace(
+        when="setup",
+        outcome="skipped",
+        failed=False,
+        skipped=True,
+        duration=0.15,
+    )
+    gen_setup = conf.pytest_runtest_makereport(mock_item, SimpleNamespace(when="setup"))
+    _step_hookwrapper(gen_setup, rep_setup)
+
+    # 2. Teardown phase (passed)
+    rep_teardown = SimpleNamespace(
+        when="teardown",
+        outcome="passed",
+        failed=False,
+        skipped=False,
+        duration=0.05,
+    )
+    gen_teardown = conf.pytest_runtest_makereport(
+        mock_item, SimpleNamespace(when="teardown")
+    )
+    _step_hookwrapper(gen_teardown, rep_teardown)
+
+    assert len(conf._TEST_PROFILING_DATA) == 1
+    record = conf._TEST_PROFILING_DATA[0]
+    assert record["nodeid"] == "tests/test_demo.py::test_skipped"
+    assert record["outcome"] == "skipped"
+    assert record["duration_sec"] == 0.20
+    assert conf._SUMMARY_COUNTS["skipped"] == 1
+
+
+def test_runtest_makereport_setup_failure_short_circuits_and_counts_failed() -> None:
+    """Verify setup failure records 'failed' outcome and counts setup duration."""
+    from tests import conftest as conf
+
+    conf._TEST_PROFILING_DATA.clear()
+    conf._SUMMARY_COUNTS = {"passed": 0, "failed": 0, "skipped": 0}
+
+    mock_item = SimpleNamespace(
+        nodeid="tests/test_demo.py::test_failed_setup", _wasm_boot_time=None
+    )
+
+    # 1. Setup phase (failing setup)
+    rep_setup = SimpleNamespace(
+        when="setup",
+        outcome="failed",
+        failed=True,
+        skipped=False,
+        duration=0.25,
+    )
+    gen_setup = conf.pytest_runtest_makereport(mock_item, SimpleNamespace(when="setup"))
+    _step_hookwrapper(gen_setup, rep_setup)
+
+    # 2. Teardown phase (executed after failed setup)
+    rep_teardown = SimpleNamespace(
+        when="teardown",
+        outcome="passed",
+        failed=False,
+        skipped=False,
+        duration=0.02,
+    )
+    gen_teardown = conf.pytest_runtest_makereport(
+        mock_item, SimpleNamespace(when="teardown")
+    )
+    _step_hookwrapper(gen_teardown, rep_teardown)
+
+    assert len(conf._TEST_PROFILING_DATA) == 1
+    record = conf._TEST_PROFILING_DATA[0]
+    assert record["nodeid"] == "tests/test_demo.py::test_failed_setup"
+    assert record["outcome"] == "failed"
+    assert record["duration_sec"] == 0.27
+    assert conf._SUMMARY_COUNTS["failed"] == 1
