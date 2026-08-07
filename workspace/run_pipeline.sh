@@ -200,13 +200,13 @@ if [ -f "/opt/venv/bin/activate" ]; then
   source /opt/venv/bin/activate
 fi
 
-if ! command -v pytest >/dev/null 2>&1 || ! python3 -c "import playwright" >/dev/null 2>&1; then
+if ! python3 -m pytest --version >/dev/null 2>&1 || ! python3 -c "import playwright" >/dev/null 2>&1; then
   echo "❌ Error: Required Python runtime (pytest/playwright) is missing or incomplete."
   exit 1
 fi
 
 # Execute pytest with outputs directed into artifacts/
-pytest tests/ --ignore=tests/refactor -v \
+python3 -m pytest tests/ --ignore=tests/refactor -v \
   --timeout=$PW_TIMEOUT \
   --html="$PROJECT_DIR/artifacts/report_all.html" \
   --self-contained-html \

@@ -107,13 +107,13 @@ if [ -f "/opt/venv/bin/activate" ]; then
   source /opt/venv/bin/activate
 fi
 
-if ! command -v pytest >/dev/null 2>&1 || ! python3 -c "import playwright" >/dev/null 2>&1; then
+if ! python3 -m pytest --version >/dev/null 2>&1 || ! python3 -c "import playwright" >/dev/null 2>&1; then
   echo "❌ Error: Required Python runtime (pytest/playwright) is missing or incomplete."
   exit 1
 fi
 
 # Execute pytest directly without virtual framebuffer display server overhead
-pytest "$TEST_TARGET" \
+python3 -m pytest "$TEST_TARGET" \
   -v \
   --timeout=$PW_TIMEOUT \
   --capture=no \
