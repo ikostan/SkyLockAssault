@@ -62,13 +62,14 @@ install models in this recommended sequence:
 *(Recommended Overnight Multi-File Refactoring Engine)*
 
 > 💡 **Pro-Tips for Local Tuning:**
+>
 > * **Performance Benchmark:** Run `ollama run <model> --verbose` with a
 > short prompt to verify your token generation rate (`eval rate` in t/s).
 > * **KV-Cache Optimization:** Set `OLLAMA_KV_CACHE_TYPE=q4_0` as a system
 > environment variable to compress the KV cache, freeing up 2–4 GB of
 > additional VRAM for ultra-long context windows on 14B models.
-> 
-> 
+>
+>
 
 ---
 
