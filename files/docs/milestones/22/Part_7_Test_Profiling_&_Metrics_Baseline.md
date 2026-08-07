@@ -69,31 +69,32 @@ Establish automated profiling infrastructure and a statistical baseline for the 
 
 ## 🎯 Baseline Objectives & Key Performance Indicators (KPIs)
 
-* **Profiling Infrastructure:** Centralized session timing, individual test durations, and outcome tracking exported directly to `artifacts/metrics_baseline.json`.
-* **Execution Stability:** Verified 100% pass rate across 58 E2E and CI test cases with no flaky or race-dependent failures.
-* **Deterministic Benchmark:** Executed 5 consecutive profiling runs in identical environment configurations to eliminate system scheduling noise and calculate a median execution baseline.
+- **Profiling Infrastructure:** Centralized session timing, individual test durations, and outcome tracking exported directly to `artifacts/metrics_baseline.json`.
+- **Execution Stability:** Verified 100% pass rate across 58 E2E and CI test cases with no flaky or race-dependent failures.
+- **Deterministic Benchmark:** Executed 5 consecutive profiling runs in identical environment configurations to eliminate system scheduling noise and calculate a median execution baseline.
 
 ---
 
 ## 📊 5-Run Profiling Benchmark Results
 
-| Profiling Run |   Timestamp (UTC)    | Total Duration (sec) | Passed | Failed | Skipped |
-|:-------------:|:--------------------:|:--------------------:|:------:|:------:|:-------:|
-|     Run 1     | 2026-08-06T03:07:32Z |      104.5763s       |   58   |   0    |    0    |
-|     Run 2     | 2026-08-06T03:12:48Z |       93.2269s       |   58   |   0    |    0    |
-|     Run 3     | 2026-08-06T03:16:32Z |       90.5947s       |   58   |   0    |    0    |
-|     Run 4     | 2026-08-06T03:19:31Z |       93.1585s       |   58   |   0    |    0    |
-|     Run 5     | 2026-08-06T03:23:48Z |       92.3970s       |   58   |   0    |    0    |
+| Profiling Run | Timestamp (UTC)      | Total Duration (sec) | Passed | Failed | Skipped |
+|---------------|----------------------|----------------------|--------|--------|---------|
+| Run 1         | 2026-08-06T03:07:32Z | 104.5763s            | 58     | 0      | 0       |
+| Run 2         | 2026-08-06T03:12:48Z | 93.2269s             | 58     | 0      | 0       |
+| Run 3         | 2026-08-06T03:16:32Z | 90.5947s             | 58     | 0      | 0       |
+| Run 4         | 2026-08-06T03:19:31Z | 93.1585s             | 58     | 0      | 0       |
+| Run 5         | 2026-08-06T03:23:48Z | 92.3970s             | 58     | 0      | 0       |
+| Run 6         | 2026-08-07T03:26:26Z | 94.3200s             | 72     | 0      | 0       |
 
 ---
 
 ## 📈 Statistical Target Analysis
 
-* **Minimum Duration:** `90.5947s`
-* **Maximum Duration:** `104.5763s`
-* **Mean (Average) Duration:** `94.7907s`
-* **Official Median Baseline:** **`93.1585s`**
-* **Epic #771 Target (~70% Reduction):** **`<= 27.95s`**
+- **Minimum Duration:** `90.5947s`
+- **Maximum Duration:** `104.5763s`
+- **Mean (Average) Duration:** `94.7907s`
+- **Official Median Baseline:** **`93.1585s`**
+- **Epic #771 Target (~70% Reduction):** **`<= 27.95s`**
 
 > **Note:** The median runtime of **`93.16s`** establishes our official pre-optimization benchmark. Sub-tasks under Epic `#771` must collectively reduce the median execution duration down to approximately **`27.95s`**.
 
@@ -101,12 +102,12 @@ Establish automated profiling infrastructure and a statistical baseline for the 
 
 ## 🏆 Deliverables Checklist
 
-* [x] Implemented `pytest_sessionstart`, `pytest_runtest_makereport`, and `pytest_sessionfinish` in `tests/conftest.py`.
-* [x] Configured direct baseline JSON export to `artifacts/metrics_baseline.json`.
-* [x] Integrated Playwright WASM initialization latency helper `navigate_and_profile_godot_wasm()` in `tests/test_utils.py`.
-* [x] Updated `workspace/run_browser_tests.sh` and `workspace/run_pipeline.sh` to preserve profiling metrics.
-* [x] Updated `.github/workflows/browser_test.yml` to preserve and upload sharded profiling baseline artifacts.
-* [x] Conducted 5 consecutive profiling runs and recorded the official median baseline (`93.16s`).
+- [x] Implemented `pytest_sessionstart`, `pytest_runtest_makereport`, and `pytest_sessionfinish` in `tests/conftest.py`.
+- [x] Configured direct baseline JSON export to `artifacts/metrics_baseline.json`.
+- [x] Integrated Playwright WASM initialization latency helper `navigate_and_profile_godot_wasm()` in `tests/test_utils.py`.
+- [x] Updated `workspace/run_browser_tests.sh` and `workspace/run_pipeline.sh` to preserve profiling metrics.
+- [x] Updated `.github/workflows/browser_test.yml` to preserve and upload sharded profiling baseline artifacts.
+- [x] Conducted 5 consecutive profiling runs and recorded the official median baseline (`93.16s`).
 
 ---
 
@@ -123,16 +124,16 @@ Introduces a pytest-based profiling infrastructure that records per-test and ses
 | Add targeted tests for the metrics_baseline exporter and the pytest hook behavior to ensure schema and aggregation correctness.                           | <ul><li>Create a helper to invoke pytest_sessionfinish with controlled module state and a temporary artifacts directory.</li><li>Verify metrics_baseline.json is written with the expected top-level keys, summary counts, and per-test records matching the provided payload.</li><li>Ensure file I/O failures during metrics export raise a UserWarning without breaking the session.</li><li>Exercise pytest_runtest_makereport as a hookwrapper across setup/call/teardown phases to verify aggregated duration, outcome, and WASM boot time handling.</li></ul>                                                                                                                                                                                                                                                                                                       | `tests/ci/test_metrics_baseline.py`                                                                                 |
 | Integrate metrics_baseline.json into the browser test CI workflow and ensure profiling artifacts are preserved per shard.                                 | <ul><li>Add a step that copies artifacts/metrics_baseline.json to a shard-specific filename using matrix.artifact_suffix when present.</li><li>Upload both the raw and shard-suffixed baseline JSON as a dedicated metrics-baseline artifact with 14-day retention, always running regardless of test outcome.</li></ul>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `.github/workflows/browser_test.yml`                                                                                |
 | Improve local pipeline and browser test scripts to validate Python/Playwright availability and centralize coverage and report artifacts under artifacts/. | <ul><li>Reset and clean reports directories at pipeline start, and move stray coverage and reports into artifacts/ (including gdunit-reports) during cleanup.</li><li>Switch pytest invocations to python3 -m pytest and gate execution on presence of the venv activate script plus successful pytest/playwright import checks.</li><li>Adjust gdunit report handling so reports/ is moved into artifacts/gdunit-reports both in the pipeline and browser test scripts.</li><li>Update comments and copyright headers to reflect the new behavior and year range.</li></ul>                                                                                                                                                                                                                                                                                               | `workspace/run_pipeline.sh`<br/>`workspace/run_browser_tests.sh`                                                    |
-| Relax GDUnit4 workflow assumptions about report location and upload consolidated report artifacts from both root and artifacts.                           | <ul><li>Update the step that finds the latest GDUnit report directory to search both reports/report_* and artifacts/gdunit-reports/report_*.</li><li>Expand the upload-artifact path configuration to include reports/** and artifacts/gdunit-reports/** with if-no-files-found set to ignore.</li></ul>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `.github/workflows/gdunit4_tests.yml`                                                                               |
+| Relax GDUnit4 workflow assumptions about report location and upload consolidated report artifacts from both root and artifacts.                           | <ul><li>Update the step that finds the latest GDUnit report directory to search both reports/report_*and artifacts/gdunit-reports/report_*.</li><li>Expand the upload-artifact path configuration to include reports/**and artifacts/gdunit-reports/** with if-no-files-found set to ignore.</li></ul>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `.github/workflows/gdunit4_tests.yml`                                                                               |
 | Add documentation describing the test profiling baseline, benchmark results, and local AI model recommendations for development workflows.                | <ul><li>Introduce a milestone document outlining the profiling infrastructure, KPIs, 5-run benchmark statistics (including the 93.16s median), and deliverables for Epic #771.</li><li>Add an AI Models Summary Matrix that recommends local LLM and image models, hardware fit, and installation order tailored to Godot, Python, and game-development tasks.</li></ul>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `files/docs/milestones/22/Part_7_Test_Profiling_&_Metrics_Baseline.md`<br/>`files/docs/AI_Models_Summary_Matrix.md` |
 
 ### Assessment against linked issues
 
 | Issue                                                | Objective                                                                                                                                                                                                                                                                                          | Addressed | Explanation |
 |------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-------------|
-| https://github.com/ikostan/SkyLockAssault/issues/776 | Implement automated profiling infrastructure for Playwright E2E browser tests that captures per-test execution durations, overall session timing, and Godot WASM initialization latency, and exports these metrics as reproducible baseline artifacts (e.g., metrics_baseline.json in artifacts/). | ✅        |             |
-| https://github.com/ikostan/SkyLockAssault/issues/776 | Persist profiling outputs and baseline statistics (including multiple runs and median runtime) in version-controlled documentation and CI artifacts so they can be compared against future optimizations.                                                                                          | ✅        |             |
-| https://github.com/ikostan/SkyLockAssault/issues/776 | Integrate profiling into the CI/web test pipeline to help identify runtime bottlenecks such as browser initialization, WASM boot, and slow test flows, while preserving existing test behavior and coverage.                                                                                       | ✅        |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/776> | Implement automated profiling infrastructure for Playwright E2E browser tests that captures per-test execution durations, overall session timing, and Godot WASM initialization latency, and exports these metrics as reproducible baseline artifacts (e.g., metrics_baseline.json in artifacts/). | ✅        |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/776> | Persist profiling outputs and baseline statistics (including multiple runs and median runtime) in version-controlled documentation and CI artifacts so they can be compared against future optimizations.                                                                                          | ✅        |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/776> | Integrate profiling into the CI/web test pipeline to help identify runtime bottlenecks such as browser initialization, WASM boot, and slow test flows, while preserving existing test behavior and coverage.                                                                                       | ✅        |             |
 
 ### Possibly linked issues
 
