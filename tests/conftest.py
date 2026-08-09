@@ -279,21 +279,110 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         terminalreporter.ensure_newline()
 
 
+def _cleanup_context_diagnostics(
+    context: BrowserContext, page: Page, request: pytest.FixtureRequest
+) -> None:
+    """Conditionally retain trace, screenshot, and video on failure, or purge on pass.
+
+    Parameters
+    ----------
+    context : BrowserContext
+        The Playwright BrowserContext being closed.
+    page : Page
+        The active Playwright Page instance.
+    request : pytest.FixtureRequest
+        The requesting test fixture context.
+    """
+    rep_setup = getattr(request.node, "rep_setup", None)
+    rep_call = getattr(request.node, "rep_call", None)
+    test_failed = (rep_setup and rep_setup.failed) or (rep_call and rep_call.failed)
+
+    safe_nodeid = re.sub(r"[^A-Za-z0-9._-]+", "_", request.node.nodeid)
+    video_handle = page.video
+
+    try:
+        if test_failed:
+            screenshot_path = ARTIFACTS_DIR / f"failure_{safe_nodeid}.png"
+            trace_path = ARTIFACTS_DIR / f"trace_{safe_nodeid}.zip"
+
+            # 1. Capture visual DOM state before context closes
+            try:
+                page.screenshot(path=str(screenshot_path), full_page=True)
+            except Exception as exc:  # noqa: BLE001
+                warnings.warn(
+                    f"Failed to capture failure screenshot for {safe_nodeid}: {exc}",
+                    UserWarning,
+                    stacklevel=2,
+                )
+
+            # 2. Stop tracing & persist trace archive
+            try:
+                context.tracing.stop(path=str(trace_path))
+            except Exception as exc:  # noqa: BLE001
+                warnings.warn(
+                    f"Failed to stop tracing for {safe_nodeid}: {exc}",
+                    UserWarning,
+                    stacklevel=2,
+                )
+        else:
+            try:
+                context.tracing.stop()
+            except Exception:
+                pass
+    finally:
+        # 3. Close context FIRST so Playwright finalizes video file streams on disk
+        try:
+            context.close()
+        except Exception as exc:  # noqa: BLE001
+            warnings.warn(
+                f"Error closing Playwright browser context for {safe_nodeid}: {exc}",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        # 4. Handle video retention/deletion post-context closure
+        if video_handle:
+            if test_failed:
+                video_path = ARTIFACTS_DIR / f"video_{safe_nodeid}.webm"
+                try:
+                    video_handle.save_as(str(video_path))
+                except Exception as exc:  # noqa: BLE001
+                    warnings.warn(
+                        f"Failed to save video for {safe_nodeid}: {exc}",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+            else:
+                try:
+                    video_handle.delete()
+                except Exception:
+                    pass
+
+
 @pytest.fixture(scope="module")
-def shared_page(browser: Browser) -> Generator[Page, None, None]:
+def shared_page(
+    browser: Browser, request: pytest.FixtureRequest
+) -> Generator[Page, None, None]:
     """Module-scoped page fixture. Boots Godot WASM once per module.
 
     Parameters
     ----------
     browser : Browser
         The Playwright Browser instance.
+    request : pytest.FixtureRequest
+        The requesting test fixture context.
 
     Yields
     ------
     Page
         An initialized Playwright Page instance with Godot WASM booted.
     """
-    context = browser.new_context(viewport={"width": 1280, "height": 720})
+    context = browser.new_context(
+        viewport={"width": 1280, "height": 720},
+        record_video_dir=str(ARTIFACTS_DIR),
+        record_video_size={"width": 1280, "height": 720},
+    )
+    context.tracing.start(screenshots=True, snapshots=True, sources=True)
     page = context.new_page()
 
     # 1. Neutralize native JS alert/confirm dialogs so they never freeze CDP
@@ -309,27 +398,27 @@ def shared_page(browser: Browser) -> Generator[Page, None, None]:
     # 2. Centralized page load & WASM initialization check
     init_page_and_wait_ready(page)
 
-    yield page
-
-    # Teardown: Explicitly lose WebGL context to free GPU memory before closing
     try:
-        page.evaluate("""() => {
-            const canvas = document.getElementById('canvas');
-            if (canvas) {
-                const gl = (
-                    canvas.getContext('webgl2') || canvas.getContext('webgl')
-                );
-                if (gl) {
-                    const loseContext = gl.getExtension('WEBGL_lose_context');
-                    if (loseContext) loseContext.loseContext();
+        yield page
+    finally:
+        # Explicitly lose WebGL context to free GPU memory before closing
+        try:
+            page.evaluate("""() => {
+                const canvas = document.getElementById('canvas');
+                if (canvas) {
+                    const gl = (
+                        canvas.getContext('webgl2') || canvas.getContext('webgl')
+                    );
+                    if (gl) {
+                        const loseContext = gl.getExtension('WEBGL_lose_context');
+                        if (loseContext) loseContext.loseContext();
+                    }
                 }
-            }
-        }""")
-    except Exception:
-        pass
+            }""")
+        except Exception:
+            pass
 
-    page.close()
-    context.close()
+        _cleanup_context_diagnostics(context, page, request)
 
 
 @pytest.fixture(autouse=True)
@@ -430,10 +519,17 @@ def page(
     context: BrowserContext = browser_instance.new_context(
         viewport={"width": 1280, "height": 720},
         record_har_path=str(har_path) if har_path else None,
+        record_video_dir=str(ARTIFACTS_DIR),
+        record_video_size={"width": 1280, "height": 720},
     )
+
+    context.tracing.start(screenshots=True, snapshots=True, sources=True)
     page: Page = context.new_page()
-    yield page
-    context.close()
+
+    try:
+        yield page
+    finally:
+        _cleanup_context_diagnostics(context, page, request)
 
 
 def pytest_configure(config: pytest.Config) -> None:
