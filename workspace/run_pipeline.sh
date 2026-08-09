@@ -152,22 +152,34 @@ echo "🧹 Restoring configuration files to pristine state..."
 git restore export_presets.cfg scripts/core/globals.gd 2>/dev/null || true
 rm -f export_presets.cfg.bak 2>/dev/null || true
 
-echo "🚀 Starting security-isolated web server..."
+echo "🚀 Starting security-isolated server on port $SERVER_PORT..."
 python3 -c "
-import http.server, socketserver, os
+import http.server, socketserver, os, mimetypes
 
-class MyHandler(http.server.SimpleHTTPRequestHandler):
+# Guarantee application/wasm registration
+mimetypes.add_type('application/wasm', '.wasm')
+
+class OptimizedGodotHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
         self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')
-        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
+
+        # Cache static export binaries without immutable flag to avoid persistent stale state
+        if self.path.endswith(('.wasm', '.pck', '.js')):
+            self.send_header('Cache-Control', 'public, max-age=3600')
+        # Revalidate HTML entrypoints on every request
+        elif self.path.endswith('.html') or self.path.endswith('/'):
+            self.send_header('Cache-Control', 'no-cache, must-revalidate')
+        else:
+            self.send_header('Cache-Control', 'public, max-age=1800')
+
         super().end_headers()
 
 class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     daemon_threads = True
     allow_reuse_address = True
 
-with ThreadedHTTPServer(('', $SERVER_PORT), MyHandler) as httpd:
+with ThreadedHTTPServer(('', $SERVER_PORT), OptimizedGodotHandler) as httpd:
     os.chdir('$EXPORT_DIR')
     httpd.serve_forever()
 " &
