@@ -358,7 +358,7 @@ def test_reset_flow(shared_page: Page) -> None:
         wait_for_console_log(
             logs,
             lambda text: "encrypted settings persisted successfully" in text
-                         or "saved volumes to config" in text,
+            or "saved volumes to config" in text,
             pre_change_log_count,
             shared_page,
         )
