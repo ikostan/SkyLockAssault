@@ -19,6 +19,7 @@ import os
 import time
 from typing import Any
 
+import pytest
 from playwright.sync_api import Page
 
 from tests.test_utils import (
@@ -46,6 +47,7 @@ def _get_unignored_errors(
     return actual_errors
 
 
+@pytest.mark.timeout(90)
 def test_reset_flow(shared_page: Page) -> None:
     """Main test suite for reset functionality using DOM overlays."""
     logs: list[dict[str, str]] = []
