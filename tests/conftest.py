@@ -308,9 +308,7 @@ def _cleanup_context_diagnostics(
     )
 
     mod_prefix = str(request.node.nodeid).split("::")[0]
-    module_failed_tests = [
-        nid for nid in _FAILED_NODEIDS if nid.startswith(mod_prefix)
-    ]
+    module_failed_tests = [nid for nid in _FAILED_NODEIDS if nid.startswith(mod_prefix)]
 
     test_failed = node_failed or bool(module_failed_tests)
     target_nodeid = (
