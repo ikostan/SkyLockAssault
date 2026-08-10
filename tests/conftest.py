@@ -45,6 +45,7 @@ _FAILED_NODEIDS: set[str] = set()
 # Helper Functions
 # ==============================================================================
 
+
 def track_process_pid(pid: int) -> None:
     """Track sub-process PIDs spawned during test execution.
 
@@ -213,6 +214,7 @@ def _cleanup_context_diagnostics(
 # ==============================================================================
 # Pytest Hooks
 # ==============================================================================
+
 
 def pytest_configure(config: pytest.Config) -> None:
     """Register custom pytest markers for network tracing and profiling.
@@ -411,6 +413,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 # ==============================================================================
 # Pytest Fixtures
 # ==============================================================================
+
 
 @pytest.fixture(autouse=True)
 def capture_lifecycle_metrics(request):
