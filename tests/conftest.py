@@ -280,7 +280,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 
 
 def _cleanup_context_diagnostics(
-    context: BrowserContext, page: Page, request: pytest.FixtureRequest
+    context: BrowserContext, page_obj: Page, request: pytest.FixtureRequest
 ) -> None:
     """Conditionally retain trace, screenshot, and video on failure, or purge on pass.
 
@@ -288,7 +288,7 @@ def _cleanup_context_diagnostics(
     ----------
     context : BrowserContext
         The Playwright BrowserContext being closed.
-    page : Page
+    page_obj : Page
         The active Playwright Page instance.
     request : pytest.FixtureRequest
         The requesting test fixture context.
@@ -298,7 +298,7 @@ def _cleanup_context_diagnostics(
     test_failed = (rep_setup and rep_setup.failed) or (rep_call and rep_call.failed)
 
     safe_nodeid = re.sub(r"[^A-Za-z0-9._-]+", "_", request.node.nodeid)
-    video_handle = page.video
+    video_handle = page_obj.video
 
     try:
         if test_failed:
@@ -307,7 +307,7 @@ def _cleanup_context_diagnostics(
 
             # 1. Capture visual DOM state before context closes
             try:
-                page.screenshot(path=str(screenshot_path), full_page=True)
+                page_obj.screenshot(path=str(screenshot_path), full_page=True)
             except Exception as exc:  # noqa: BLE001
                 warnings.warn(
                     f"Failed to capture failure screenshot for {safe_nodeid}: {exc}",
@@ -383,27 +383,27 @@ def shared_page(
         record_video_size={"width": 1280, "height": 720},
     )
     context.tracing.start(screenshots=True, snapshots=True, sources=True)
-    page = context.new_page()
+    page_obj = context.new_page()
 
     # 1. Neutralize native JS alert/confirm dialogs so they never freeze CDP
-    page.add_init_script("""
+    page_obj.add_init_script("""
         window.alert = (msg) => console.log('[STUBBED ALERT]: ' + msg);
         window.confirm = (msg) => {
             console.log('[STUBBED CONFIRM]: ' + msg);
             return true;
         };
     """)
-    page.on("dialog", lambda dialog: dialog.dismiss())
+    page_obj.on("dialog", lambda dialog: dialog.dismiss())
 
     # 2. Centralized page load & WASM initialization check
-    init_page_and_wait_ready(page)
+    init_page_and_wait_ready(page_obj)
 
     try:
-        yield page
+        yield page_obj
     finally:
         # Explicitly lose WebGL context to free GPU memory before closing
         try:
-            page.evaluate("""() => {
+            page_obj.evaluate("""() => {
                 const canvas = document.getElementById('canvas');
                 if (canvas) {
                     const gl = (
@@ -418,7 +418,47 @@ def shared_page(
         except Exception:
             pass
 
-        _cleanup_context_diagnostics(context, page, request)
+        _cleanup_context_diagnostics(context, page_obj, request)
+
+
+@pytest.fixture(scope="function")
+def page(
+    browser_instance: Browser, request: pytest.FixtureRequest
+) -> Generator[Page, None, None]:
+    """Provide clean browser context isolation for each test function.
+
+    Parameters
+    ----------
+    browser_instance : Browser
+        The shared Chromium browser instance.
+    request : pytest.FixtureRequest
+        The requesting test fixture context.
+
+    Yields
+    ------
+    Page
+        An isolated Playwright Page instance.
+    """
+    har_path = None
+    if request.node.get_closest_marker("record_har"):
+        nodeid = request.node.nodeid
+        safe_nodeid = re.sub(r"[^A-Za-z0-9._-]+", "_", nodeid)
+        har_path = ARTIFACTS_DIR / f"{safe_nodeid}.har"
+
+    context: BrowserContext = browser_instance.new_context(
+        viewport={"width": 1280, "height": 720},
+        record_har_path=str(har_path) if har_path else None,
+        record_video_dir=str(ARTIFACTS_DIR),
+        record_video_size={"width": 1280, "height": 720},
+    )
+
+    context.tracing.start(screenshots=True, snapshots=True, sources=True)
+    page_obj: Page = context.new_page()
+
+    try:
+        yield page_obj
+    finally:
+        _cleanup_context_diagnostics(context, page_obj, request)
 
 
 @pytest.fixture(autouse=True)
@@ -490,46 +530,6 @@ def browser_instance(
     browser = playwright.chromium.launch(**launch_options)
     yield browser
     browser.close()
-
-
-@pytest.fixture(scope="function")
-def page(
-    browser_instance: Browser, request: pytest.FixtureRequest
-) -> Generator[Page, None, None]:
-    """Provide clean browser context isolation for each test function.
-
-    Parameters
-    ----------
-    browser_instance : Browser
-        The shared Chromium browser instance.
-    request : pytest.FixtureRequest
-        The requesting test fixture context.
-
-    Yields
-    ------
-    Page
-        An isolated Playwright Page instance.
-    """
-    har_path = None
-    if request.node.get_closest_marker("record_har"):
-        nodeid = request.node.nodeid
-        safe_nodeid = re.sub(r"[^A-Za-z0-9._-]+", "_", nodeid)
-        har_path = ARTIFACTS_DIR / f"{safe_nodeid}.har"
-
-    context: BrowserContext = browser_instance.new_context(
-        viewport={"width": 1280, "height": 720},
-        record_har_path=str(har_path) if har_path else None,
-        record_video_dir=str(ARTIFACTS_DIR),
-        record_video_size={"width": 1280, "height": 720},
-    )
-
-    context.tracing.start(screenshots=True, snapshots=True, sources=True)
-    page: Page = context.new_page()
-
-    try:
-        yield page
-    finally:
-        _cleanup_context_diagnostics(context, page, request)
 
 
 def pytest_configure(config: pytest.Config) -> None:
