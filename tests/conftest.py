@@ -285,6 +285,103 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         terminalreporter.ensure_newline()
 
 
+def _is_test_failed(request: pytest.FixtureRequest) -> tuple[bool, str]:
+    """Determine if the current test node or its parent module failed.
+
+    Parameters
+    ----------
+    request : pytest.FixtureRequest
+        The requesting test fixture context.
+
+    Returns
+    -------
+    tuple[bool, str]
+        Tuple containing a failure flag and the target test nodeid.
+    """
+    rep_setup = getattr(request.node, "rep_setup", None)
+    rep_call = getattr(request.node, "rep_call", None)
+    node_failed = (
+        (rep_setup and rep_setup.failed)
+        or (rep_call and rep_call.failed)
+        or (request.node.nodeid in _FAILED_NODEIDS)
+    )
+
+    mod_prefix = str(request.node.nodeid).split("::")[0]
+    module_failed_tests = [
+        nid for nid in _FAILED_NODEIDS if nid.startswith(mod_prefix)
+    ]
+
+    test_failed = node_failed or bool(module_failed_tests)
+    target_nodeid = (
+        module_failed_tests[0] if module_failed_tests else request.node.nodeid
+    )
+    return test_failed, target_nodeid
+
+
+def _stop_tracing(
+    context: BrowserContext, safe_nodeid: str, test_failed: bool
+) -> None:
+    """Stop Playwright tracing and conditionally export trace archive.
+
+    Parameters
+    ----------
+    context : BrowserContext
+        The Playwright BrowserContext being closed.
+    safe_nodeid : str
+        Sanitized node ID for file naming.
+    test_failed : bool
+        Flag indicating if the test failed.
+    """
+    trace_path = ARTIFACTS_DIR / f"trace_{safe_nodeid}.zip" if test_failed else None
+    try:
+        if trace_path:
+            context.tracing.stop(path=str(trace_path))
+        else:
+            context.tracing.stop()
+    except Exception as exc:  # noqa: BLE001
+        warnings.warn(
+            f"Failed to stop tracing for {safe_nodeid}: {exc}",
+            UserWarning,
+            stacklevel=2,
+        )
+
+
+def _finalize_video(video_handle: Any, safe_nodeid: str, test_failed: bool) -> None:
+    """Save or delete video recording based on test outcome post-context close.
+
+    Parameters
+    ----------
+    video_handle : Any
+        The Playwright Video handle or None.
+    safe_nodeid : str
+        Sanitized node ID for file naming.
+    test_failed : bool
+        Flag indicating if the test failed.
+    """
+    if not video_handle:
+        return
+
+    if test_failed:
+        video_path = ARTIFACTS_DIR / f"video_{safe_nodeid}.webm"
+        try:
+            video_handle.save_as(str(video_path))
+        except Exception as exc:  # noqa: BLE001
+            warnings.warn(
+                f"Failed to save video for {safe_nodeid}: {exc}",
+                UserWarning,
+                stacklevel=2,
+            )
+    else:
+        try:
+            video_handle.delete()
+        except Exception as exc:  # noqa: BLE001
+            warnings.warn(
+                f"Failed to delete video for {safe_nodeid}: {exc}",
+                UserWarning,
+                stacklevel=2,
+            )
+
+
 def _cleanup_context_diagnostics(
     context: BrowserContext, page_obj: Page, request: pytest.FixtureRequest
 ) -> None:
@@ -299,31 +396,13 @@ def _cleanup_context_diagnostics(
     request : pytest.FixtureRequest
         The requesting test fixture context.
     """
-    rep_setup = getattr(request.node, "rep_setup", None)
-    rep_call = getattr(request.node, "rep_call", None)
-    node_failed = (
-        (rep_setup and rep_setup.failed)
-        or (rep_call and rep_call.failed)
-        or (request.node.nodeid in _FAILED_NODEIDS)
-    )
-
-    mod_prefix = str(request.node.nodeid).split("::")[0]
-    module_failed_tests = [nid for nid in _FAILED_NODEIDS if nid.startswith(mod_prefix)]
-
-    test_failed = node_failed or bool(module_failed_tests)
-    target_nodeid = (
-        module_failed_tests[0] if module_failed_tests else request.node.nodeid
-    )
-
+    test_failed, target_nodeid = _is_test_failed(request)
     safe_nodeid = re.sub(r"[^A-Za-z0-9._-]+", "_", target_nodeid)
     video_handle = page_obj.video
 
     try:
         if test_failed:
             screenshot_path = ARTIFACTS_DIR / f"failure_{safe_nodeid}.png"
-            trace_path = ARTIFACTS_DIR / f"trace_{safe_nodeid}.zip"
-
-            # 1. Capture visual DOM state before context closes
             try:
                 page_obj.screenshot(path=str(screenshot_path), full_page=True)
             except Exception as exc:  # noqa: BLE001
@@ -333,26 +412,9 @@ def _cleanup_context_diagnostics(
                     stacklevel=2,
                 )
 
-            # 2. Stop tracing & persist trace archive
-            try:
-                context.tracing.stop(path=str(trace_path))
-            except Exception as exc:  # noqa: BLE001
-                warnings.warn(
-                    f"Failed to stop tracing for {safe_nodeid}: {exc}",
-                    UserWarning,
-                    stacklevel=2,
-                )
-        else:
-            try:
-                context.tracing.stop()
-            except Exception as exc:  # noqa: BLE001
-                warnings.warn(
-                    f"Failed to stop tracing for {safe_nodeid}: {exc}",
-                    UserWarning,
-                    stacklevel=2,
-                )
+        _stop_tracing(context, safe_nodeid, test_failed)
     finally:
-        # 3. Close context FIRST so Playwright finalizes video file streams on disk
+        # Close context FIRST so Playwright finalizes video file streams on disk
         try:
             context.close()
         except Exception as exc:  # noqa: BLE001
@@ -362,27 +424,7 @@ def _cleanup_context_diagnostics(
                 stacklevel=2,
             )
 
-        # 4. Handle video retention/deletion post-context closure
-        if video_handle:
-            if test_failed:
-                video_path = ARTIFACTS_DIR / f"video_{safe_nodeid}.webm"
-                try:
-                    video_handle.save_as(str(video_path))
-                except Exception as exc:  # noqa: BLE001
-                    warnings.warn(
-                        f"Failed to save video for {safe_nodeid}: {exc}",
-                        UserWarning,
-                        stacklevel=2,
-                    )
-            else:
-                try:
-                    video_handle.delete()
-                except Exception as exc:  # noqa: BLE001
-                    warnings.warn(
-                        f"Failed to delete video for {safe_nodeid}: {exc}",
-                        UserWarning,
-                        stacklevel=2,
-                    )
+        _finalize_video(video_handle, safe_nodeid, test_failed)
 
 
 @pytest.fixture(scope="module")
