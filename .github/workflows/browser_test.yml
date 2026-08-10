@@ -176,33 +176,10 @@ jobs:
           playwright install --with-deps chromium
 
       - name: "Start Security-Isolated HTTP Server"
-        # yamllint disable rule:line-length
         run: |
-            python3 -c "
-            import http.server, socketserver, os, mimetypes
-            mimetypes.add_type('application/wasm', '.wasm')
-            class OptimizedGodotHandler(http.server.SimpleHTTPRequestHandler):
-                def end_headers(self):
-                    self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
-                    self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')
-                    if self.path.endswith(('.wasm', '.pck', '.js')):
-                        self.send_header('Cache-Control', 'public, max-age=3600')
-                    elif self.path.endswith('.html') or self.path.endswith('/'):
-                        self.send_header('Cache-Control', 'no-cache, must-revalidate')
-                    else:
-                        self.send_header('Cache-Control', 'public, max-age=1800')
-                    super().end_headers()
-            class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
-                daemon_threads = True
-                allow_reuse_address = True
-            with ThreadedHTTPServer(('', 8080), OptimizedGodotHandler) as httpd:
-                os.chdir('export/web_thread_off')
-                print('🚀 Security-isolated server starting on port 8080...')
-                httpd.serve_forever()
-            " &
-            sleep 5
-            curl -I http://localhost:8080/index.html
-        # yamllint enable rule:line-length
+          python3 .github/scripts/serve_web_export.py 8080 "export/web_thread_off" &
+          sleep 5
+          curl -I http://localhost:8080/index.html
 
       - name: "Wait For WEB Server Response"
         run: |
