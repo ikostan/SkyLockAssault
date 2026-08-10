@@ -347,8 +347,12 @@ def _cleanup_context_diagnostics(
         else:
             try:
                 context.tracing.stop()
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001
+                warnings.warn(
+                    f"Failed to stop tracing for {safe_nodeid}: {exc}",
+                    UserWarning,
+                    stacklevel=2,
+                )
     finally:
         # 3. Close context FIRST so Playwright finalizes video file streams on disk
         try:
@@ -375,8 +379,12 @@ def _cleanup_context_diagnostics(
             else:
                 try:
                     video_handle.delete()
-                except Exception:
-                    pass
+                except Exception as exc:  # noqa: BLE001
+                    warnings.warn(
+                        f"Failed to delete video for {safe_nodeid}: {exc}",
+                        UserWarning,
+                        stacklevel=2,
+                    )
 
 
 @pytest.fixture(scope="module")
