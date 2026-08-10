@@ -285,68 +285,6 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         terminalreporter.ensure_newline()
 
 
-@pytest.fixture(scope="module")
-def shared_page(
-    browser: Browser, request: pytest.FixtureRequest
-) -> Generator[Page, None, None]:
-    """Module-scoped page fixture. Boots Godot WASM once per module.
-
-    Parameters
-    ----------
-    browser : Browser
-        The Playwright Browser instance.
-    request : pytest.FixtureRequest
-        The requesting test fixture context.
-
-    Yields
-    ------
-    Page
-        An initialized Playwright Page instance with Godot WASM booted.
-    """
-    context = browser.new_context(
-        viewport={"width": 1280, "height": 720},
-        record_video_dir=str(ARTIFACTS_DIR),
-        record_video_size={"width": 1280, "height": 720},
-    )
-    context.tracing.start(screenshots=True, snapshots=True, sources=True)
-    page_obj = context.new_page()
-
-    # 1. Neutralize native JS alert/confirm dialogs so they never freeze CDP
-    page_obj.add_init_script("""
-        window.alert = (msg) => console.log('[STUBBED ALERT]: ' + msg);
-        window.confirm = (msg) => {
-            console.log('[STUBBED CONFIRM]: ' + msg);
-            return true;
-        };
-    """)
-    page_obj.on("dialog", lambda dialog: dialog.dismiss())
-
-    # 2. Centralized page load & WASM initialization check
-    init_page_and_wait_ready(page_obj)
-
-    try:
-        yield page_obj
-    finally:
-        # Explicitly lose WebGL context to free GPU memory before closing
-        try:
-            page_obj.evaluate("""() => {
-                const canvas = document.getElementById('canvas');
-                if (canvas) {
-                    const gl = (
-                        canvas.getContext('webgl2') || canvas.getContext('webgl')
-                    );
-                    if (gl) {
-                        const loseContext = gl.getExtension('WEBGL_lose_context');
-                        if (loseContext) loseContext.loseContext();
-                    }
-                }
-            }""")
-        except Exception:
-            pass
-
-        _cleanup_context_diagnostics(context, page_obj, request)
-
-
 @pytest.fixture(autouse=True)
 def soft_ui_reset(request):
     """Execute a lightweight UI state reset between tests using window hooks.
