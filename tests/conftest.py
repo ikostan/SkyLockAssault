@@ -37,6 +37,9 @@ _SUMMARY_COUNTS = {"passed": 0, "failed": 0, "skipped": 0}
 # Storage for test-spawned PIDs if managed via pytest
 _TRACKED_PIDS: set[int] = set()
 
+# Set of failed test node IDs across session execution
+_FAILED_NODEIDS: set[str] = set()
+
 
 def track_process_pid(pid: int) -> None:
     """Track sub-process PIDs spawned during test execution.
@@ -104,6 +107,9 @@ def pytest_runtest_makereport(item, call):
             for rep in (rep_setup, rep_call, rep_teardown)
             if rep is not None
         )
+
+        if final_outcome == "failed":
+            _FAILED_NODEIDS.add(item.nodeid)
 
         wasm_boot = getattr(item, "_wasm_boot_time", None)
         test_detail = {
@@ -191,10 +197,10 @@ def capture_lifecycle_metrics(request):
         page_fixture = "page"
 
     # Fetch fixture during setup to guarantee teardown runs BEFORE page is closed
-    page = request.getfixturevalue(page_fixture) if page_fixture else None
+    page_obj = request.getfixturevalue(page_fixture) if page_fixture else None
     yield
 
-    if page is not None:
+    if page_obj is not None:
         try:
             heap_script = (
                 "() => {\n"
@@ -209,7 +215,7 @@ def capture_lifecycle_metrics(request):
                 "  return null;\n"
                 "}"
             )
-            heap_info = page.evaluate(heap_script)
+            heap_info = page_obj.evaluate(heap_script)
 
             if heap_info:
                 _LIFECYCLE_METRICS.append(
@@ -295,9 +301,23 @@ def _cleanup_context_diagnostics(
     """
     rep_setup = getattr(request.node, "rep_setup", None)
     rep_call = getattr(request.node, "rep_call", None)
-    test_failed = (rep_setup and rep_setup.failed) or (rep_call and rep_call.failed)
+    node_failed = (
+        (rep_setup and rep_setup.failed)
+        or (rep_call and rep_call.failed)
+        or (request.node.nodeid in _FAILED_NODEIDS)
+    )
 
-    safe_nodeid = re.sub(r"[^A-Za-z0-9._-]+", "_", request.node.nodeid)
+    mod_prefix = str(request.node.nodeid).split("::")[0]
+    module_failed_tests = [
+        nid for nid in _FAILED_NODEIDS if nid.startswith(mod_prefix)
+    ]
+
+    test_failed = node_failed or bool(module_failed_tests)
+    target_nodeid = (
+        module_failed_tests[0] if module_failed_tests else request.node.nodeid
+    )
+
+    safe_nodeid = re.sub(r"[^A-Za-z0-9._-]+", "_", target_nodeid)
     video_handle = page_obj.video
 
     try:
@@ -421,46 +441,6 @@ def shared_page(
         _cleanup_context_diagnostics(context, page_obj, request)
 
 
-@pytest.fixture(scope="function")
-def page(
-    browser_instance: Browser, request: pytest.FixtureRequest
-) -> Generator[Page, None, None]:
-    """Provide clean browser context isolation for each test function.
-
-    Parameters
-    ----------
-    browser_instance : Browser
-        The shared Chromium browser instance.
-    request : pytest.FixtureRequest
-        The requesting test fixture context.
-
-    Yields
-    ------
-    Page
-        An isolated Playwright Page instance.
-    """
-    har_path = None
-    if request.node.get_closest_marker("record_har"):
-        nodeid = request.node.nodeid
-        safe_nodeid = re.sub(r"[^A-Za-z0-9._-]+", "_", nodeid)
-        har_path = ARTIFACTS_DIR / f"{safe_nodeid}.har"
-
-    context: BrowserContext = browser_instance.new_context(
-        viewport={"width": 1280, "height": 720},
-        record_har_path=str(har_path) if har_path else None,
-        record_video_dir=str(ARTIFACTS_DIR),
-        record_video_size={"width": 1280, "height": 720},
-    )
-
-    context.tracing.start(screenshots=True, snapshots=True, sources=True)
-    page_obj: Page = context.new_page()
-
-    try:
-        yield page_obj
-    finally:
-        _cleanup_context_diagnostics(context, page_obj, request)
-
-
 @pytest.fixture(autouse=True)
 def soft_ui_reset(request):
     """Execute a lightweight UI state reset between tests using window hooks.
@@ -472,9 +452,9 @@ def soft_ui_reset(request):
     """
     yield
     if "shared_page" in request.fixturenames:
-        page = request.getfixturevalue("shared_page")
+        page_obj = request.getfixturevalue("shared_page")
         try:
-            page.evaluate("""() => {
+            page_obj.evaluate("""() => {
                 localStorage.clear();
                 sessionStorage.clear();
                 const hooks = [
@@ -530,6 +510,46 @@ def browser_instance(
     browser = playwright.chromium.launch(**launch_options)
     yield browser
     browser.close()
+
+
+@pytest.fixture(scope="function")
+def page(
+    browser_instance: Browser, request: pytest.FixtureRequest
+) -> Generator[Page, None, None]:
+    """Provide clean browser context isolation for each test function.
+
+    Parameters
+    ----------
+    browser_instance : Browser
+        The shared Chromium browser instance.
+    request : pytest.FixtureRequest
+        The requesting test fixture context.
+
+    Yields
+    ------
+    Page
+        An isolated Playwright Page instance.
+    """
+    har_path = None
+    if request.node.get_closest_marker("record_har"):
+        nodeid = request.node.nodeid
+        safe_nodeid = re.sub(r"[^A-Za-z0-9._-]+", "_", nodeid)
+        har_path = ARTIFACTS_DIR / f"{safe_nodeid}.har"
+
+    context: BrowserContext = browser_instance.new_context(
+        viewport={"width": 1280, "height": 720},
+        record_har_path=str(har_path) if har_path else None,
+        record_video_dir=str(ARTIFACTS_DIR),
+        record_video_size={"width": 1280, "height": 720},
+    )
+
+    context.tracing.start(screenshots=True, snapshots=True, sources=True)
+    page_obj: Page = context.new_page()
+
+    try:
+        yield page_obj
+    finally:
+        _cleanup_context_diagnostics(context, page_obj, request)
 
 
 def pytest_configure(config: pytest.Config) -> None:
