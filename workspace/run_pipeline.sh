@@ -208,7 +208,7 @@ echo "✅ Server ready"
 
 echo "Running Playwright Browser Tests..."
 mkdir -p "$PROJECT_DIR/artifacts"
-rm -f "$PROJECT_DIR/artifacts/trace_*.zip" "$PROJECT_DIR/artifacts/failure_*.png" "$PROJECT_DIR/artifacts/video_*.webm" 2>/dev/null || true
+rm -f "$PROJECT_DIR"/artifacts/trace_*.zip "$PROJECT_DIR"/artifacts/failure_*.png "$PROJECT_DIR"/artifacts/video_*.webm 2>/dev/null || true
 if [ -f "/opt/venv/bin/activate" ]; then
   source /opt/venv/bin/activate
 fi

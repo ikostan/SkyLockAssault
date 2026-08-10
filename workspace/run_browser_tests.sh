@@ -115,7 +115,7 @@ echo "✅ Server ready"
 # 6. Run Playwright browser tests using native headless mode
 echo "🧪 Running Playwright Browser Tests target: $TEST_TARGET ($SUITE_NAME)..."
 mkdir -p "$PROJECT_DIR/artifacts"
-rm -f "$PROJECT_DIR/artifacts/trace_*.zip" "$PROJECT_DIR/artifacts/failure_*.png" "$PROJECT_DIR/artifacts/video_*.webm" 2>/dev/null || true
+rm -f "$PROJECT_DIR"/artifacts/trace_*.zip "$PROJECT_DIR"/artifacts/failure_*.png "$PROJECT_DIR"/artifacts/video_*.webm 2>/dev/null || true
 if [ -f "/opt/venv/bin/activate" ]; then
   source /opt/venv/bin/activate
 fi
