@@ -227,7 +227,11 @@ jobs:
           export PYTEST_TIMEOUT=$((${{ inputs.pw_timeout }} / 1000))
           if [ ${#files[@]} -gt 0 ]; then
             PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest "${files[@]}" \
-              -v --junitxml=artifacts/junit.xml -o junit_family=legacy
+              -v \
+              -s \
+              --capture=no \
+              --timeout-method=thread \
+              --junitxml=artifacts/junit.xml -o junit_family=legacy
           else
             echo "⚠️ No test files matched pattern: ${{ matrix.test_path }}."
             cat <<EOF > artifacts/junit.xml
