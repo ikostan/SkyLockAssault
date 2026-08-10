@@ -61,6 +61,7 @@ trap cleanup_server EXIT INT TERM
 echo "🚀 Starting security-isolated server on port $SERVER_PORT..."
 python3 -c "
 import http.server, socketserver, os, mimetypes
+from urllib.parse import urlsplit
 
 # Guarantee application/wasm registration
 mimetypes.add_type('application/wasm', '.wasm')
@@ -70,11 +71,14 @@ class OptimizedGodotHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
         self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')
 
+        # Normalize path to exclude query parameters before cache classification
+        clean_path = urlsplit(self.path).path
+
         # Cache static export binaries without immutable flag to avoid persistent stale state
-        if self.path.endswith(('.wasm', '.pck', '.js')):
+        if clean_path.endswith(('.wasm', '.pck', '.js')):
             self.send_header('Cache-Control', 'public, max-age=3600')
         # Revalidate HTML entrypoints on every request
-        elif self.path.endswith('.html') or self.path.endswith('/'):
+        elif clean_path.endswith('.html') or clean_path.endswith('/'):
             self.send_header('Cache-Control', 'no-cache, must-revalidate')
         else:
             self.send_header('Cache-Control', 'public, max-age=1800')
