@@ -330,9 +330,7 @@ def test_cleanup_context_diagnostics_context_close_failure_still_finalizes_video
         rep_call=SimpleNamespace(failed=False),
     )
 
-    with pytest.warns(
-        UserWarning, match="Error closing Playwright browser context"
-    ):
+    with pytest.warns(UserWarning, match="Error closing Playwright browser context"):
         conf._cleanup_context_diagnostics(context, page_obj, request)
 
     video_handle.delete.assert_called_once_with()
@@ -391,9 +389,7 @@ def test_determine_final_outcome_setup_failure(_isolate_conftest_state):
 
 def test_determine_final_outcome_call_failure(_isolate_conftest_state):
     conf = _isolate_conftest_state
-    item = SimpleNamespace(
-        rep_setup=_rep("setup"), rep_call=_rep("call", failed=True)
-    )
+    item = SimpleNamespace(rep_setup=_rep("setup"), rep_call=_rep("call", failed=True))
 
     outcome = conf._determine_final_outcome(item, _rep("teardown"))
 
@@ -404,9 +400,7 @@ def test_determine_final_outcome_teardown_failure(_isolate_conftest_state):
     conf = _isolate_conftest_state
     item = SimpleNamespace(rep_setup=_rep("setup"), rep_call=_rep("call"))
 
-    outcome = conf._determine_final_outcome(
-        item, _rep("teardown", failed=True)
-    )
+    outcome = conf._determine_final_outcome(item, _rep("teardown", failed=True))
 
     assert outcome == "failed"
 

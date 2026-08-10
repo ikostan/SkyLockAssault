@@ -55,7 +55,7 @@ def test_server_level_coop_coep_headers_present(conf_text: str) -> None:
 def test_static_binary_location_sets_long_lived_cache_control(conf_text: str) -> None:
     """Verify .wasm/.pck/.js assets get the 1-hour public cache directive."""
     match = re.search(
-        r'location ~\* \\\.\(wasm\|pck\|js\)\$ \{(?P<body>[^}]*)\}',
+        r"location ~\* \\\.\(wasm\|pck\|js\)\$ \{(?P<body>[^}]*)\}",
         conf_text,
     )
     assert match, "Expected location block for .wasm|.pck|.js assets not found"
@@ -69,7 +69,7 @@ def test_static_binary_location_sets_long_lived_cache_control(conf_text: str) ->
 def test_html_location_sets_revalidation_cache_control(conf_text: str) -> None:
     """Verify HTML entrypoints are always revalidated, never long-cached."""
     match = re.search(
-        r'location ~\* \\\.html\$ \{(?P<body>[^}]*)\}',
+        r"location ~\* \\\.html\$ \{(?P<body>[^}]*)\}",
         conf_text,
     )
     assert match, "Expected location block for .html not found"
