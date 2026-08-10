@@ -472,9 +472,7 @@ def _is_test_failed(
     return test_failed, target_nodeid
 
 
-def _stop_tracing(
-    context: BrowserContext, safe_nodeid: str, test_failed: bool
-) -> None:
+def _stop_tracing(context: BrowserContext, safe_nodeid: str, test_failed: bool) -> None:
     """Stop Playwright tracing and conditionally export trace archive.
 
     Parameters
