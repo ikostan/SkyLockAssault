@@ -61,19 +61,21 @@ def track_process_pid(pid: int) -> None:
 def _is_test_failed(
     request: pytest.FixtureRequest, include_module_failures: bool = False
 ) -> tuple[bool, str]:
-    """Determine if the current test node or its parent module failed.
+    """Determine if the active test node or any test in its parent module failed.
 
     Parameters
     ----------
     request : pytest.FixtureRequest
         The requesting test fixture context.
     include_module_failures : bool, default=False
-        Whether to check for module-wide failures (used for module-scoped fixtures).
+        Whether to inspect module-wide failures (used exclusively by module-scoped
+        fixtures like `shared_page` so final context teardown retains diagnostics
+        attributed to the primary failing test node ID).
 
     Returns
     -------
     tuple[bool, str]
-        Tuple containing a failure flag and the target test nodeid.
+        Tuple containing (is_failed, target_nodeid).
     """
     rep_setup = getattr(request.node, "rep_setup", None)
     rep_call = getattr(request.node, "rep_call", None)
@@ -91,6 +93,9 @@ def _is_test_failed(
         ]
 
     test_failed = node_failed or bool(module_failed_tests)
+
+    # Attribute module-level fixture diagnostics to the first failing test node ID
+    # in the module, or fallback to the current node ID if the failure was isolated.
     target_nodeid = (
         module_failed_tests[0] if module_failed_tests else request.node.nodeid
     )
