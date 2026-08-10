@@ -211,6 +211,74 @@ def _cleanup_context_diagnostics(
         _finalize_video(video_handle, safe_nodeid, test_failed)
 
 
+def _determine_final_outcome(item: pytest.Item, rep_teardown: pytest.TestReport) -> str:
+    """Determine overall test outcome across setup, call, and teardown phases.
+
+    Parameters
+    ----------
+    item : pytest.Item
+        The active pytest item being reported.
+    rep_teardown : pytest.TestReport
+        The teardown phase test report object.
+
+    Returns
+    -------
+    str
+        One of "failed", "skipped", or "passed".
+    """
+    rep_setup = getattr(item, "rep_setup", None)
+    rep_call = getattr(item, "rep_call", None)
+
+    for rep in (rep_setup, rep_call, rep_teardown):
+        if rep and rep.failed:
+            return "failed"
+
+    for rep in (rep_setup, rep_call):
+        if rep and rep.skipped:
+            return "skipped"
+
+    return "passed"
+
+
+def _record_test_profiling(item: pytest.Item, rep_teardown: pytest.TestReport) -> None:
+    """Record test profiling metrics at teardown phase (#776).
+
+    Parameters
+    ----------
+    item : pytest.Item
+        The active pytest item being reported.
+    rep_teardown : pytest.TestReport
+        The teardown phase test report object.
+    """
+    rep_setup = getattr(item, "rep_setup", None)
+    rep_call = getattr(item, "rep_call", None)
+
+    final_outcome = _determine_final_outcome(item, rep_teardown)
+
+    if final_outcome == "failed":
+        _FAILED_NODEIDS.add(item.nodeid)
+
+    duration = sum(
+        rep.duration
+        for rep in (rep_setup, rep_call, rep_teardown)
+        if rep is not None
+    )
+
+    wasm_boot = getattr(item, "_wasm_boot_time", None)
+    wasm_boot_sec = round(wasm_boot, 4) if wasm_boot is not None else None
+
+    _TEST_PROFILING_DATA.append(
+        {
+            "nodeid": item.nodeid,
+            "duration_sec": round(duration, 4),
+            "outcome": final_outcome,
+            "wasm_boot_duration_sec": wasm_boot_sec,
+        }
+    )
+
+    _SUMMARY_COUNTS[final_outcome] = _SUMMARY_COUNTS.get(final_outcome, 0) + 1
+
+
 # ==============================================================================
 # Pytest Hooks
 # ==============================================================================
@@ -262,48 +330,7 @@ def pytest_runtest_makereport(item, call):
 
     # Finalize reporting only once teardown completes
     if report.when == "teardown":
-        rep_setup = getattr(item, "rep_setup", None)
-        rep_call = getattr(item, "rep_call", None)
-        rep_teardown = report
-
-        # Determine overall test outcome across setup, call, and teardown
-        if rep_setup and rep_setup.failed:
-            final_outcome = "failed"
-        elif rep_setup and rep_setup.skipped:
-            final_outcome = "skipped"
-        elif rep_call and rep_call.failed:
-            final_outcome = "failed"
-        elif rep_call and rep_call.skipped:
-            final_outcome = "skipped"
-        elif rep_teardown.failed:
-            final_outcome = "failed"
-        else:
-            final_outcome = "passed"
-
-        duration = sum(
-            rep.duration
-            for rep in (rep_setup, rep_call, rep_teardown)
-            if rep is not None
-        )
-
-        if final_outcome == "failed":
-            _FAILED_NODEIDS.add(item.nodeid)
-
-        wasm_boot = getattr(item, "_wasm_boot_time", None)
-        test_detail = {
-            "nodeid": item.nodeid,
-            "duration_sec": round(duration, 4),
-            "outcome": final_outcome,
-            "wasm_boot_duration_sec": (
-                round(wasm_boot, 4) if wasm_boot is not None else None
-            ),
-        }
-        _TEST_PROFILING_DATA.append(test_detail)
-
-        if final_outcome in _SUMMARY_COUNTS:
-            _SUMMARY_COUNTS[final_outcome] += 1
-        else:
-            _SUMMARY_COUNTS[final_outcome] = 1
+        _record_test_profiling(item, report)
 
 
 def pytest_sessionfinish(session, exitstatus):
