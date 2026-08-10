@@ -259,9 +259,7 @@ def _record_test_profiling(item: pytest.Item, rep_teardown: pytest.TestReport) -
         _FAILED_NODEIDS.add(item.nodeid)
 
     duration = sum(
-        rep.duration
-        for rep in (rep_setup, rep_call, rep_teardown)
-        if rep is not None
+        rep.duration for rep in (rep_setup, rep_call, rep_teardown) if rep is not None
     )
 
     wasm_boot = getattr(item, "_wasm_boot_time", None)
