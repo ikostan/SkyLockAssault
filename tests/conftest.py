@@ -307,9 +307,7 @@ def _is_test_failed(request: pytest.FixtureRequest) -> tuple[bool, str]:
     )
 
     mod_prefix = str(request.node.nodeid).split("::")[0]
-    module_failed_tests = [
-        nid for nid in _FAILED_NODEIDS if nid.startswith(mod_prefix)
-    ]
+    module_failed_tests = [nid for nid in _FAILED_NODEIDS if nid.startswith(mod_prefix)]
 
     test_failed = node_failed or bool(module_failed_tests)
     target_nodeid = (
@@ -318,9 +316,7 @@ def _is_test_failed(request: pytest.FixtureRequest) -> tuple[bool, str]:
     return test_failed, target_nodeid
 
 
-def _stop_tracing(
-    context: BrowserContext, safe_nodeid: str, test_failed: bool
-) -> None:
+def _stop_tracing(context: BrowserContext, safe_nodeid: str, test_failed: bool) -> None:
     """Stop Playwright tracing and conditionally export trace archive.
 
     Parameters
