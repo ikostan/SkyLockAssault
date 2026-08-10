@@ -326,6 +326,10 @@ def pytest_runtest_makereport(item, call):
     report = outcome.get_result()
     setattr(item, f"rep_{report.when}", report)
 
+    # Record setup and call failures immediately before fixture teardowns run
+    if report.when in {"setup", "call"} and report.failed:
+        _FAILED_NODEIDS.add(item.nodeid)
+
     # Finalize reporting only once teardown completes
     if report.when == "teardown":
         _record_test_profiling(item, report)
