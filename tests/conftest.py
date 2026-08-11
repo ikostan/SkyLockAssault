@@ -14,7 +14,13 @@ from pathlib import Path
 from typing import Any, Generator
 
 import pytest
-from playwright.sync_api import Browser, BrowserContext, Page, Playwright, sync_playwright
+from playwright.sync_api import (
+    Browser,
+    BrowserContext,
+    Page,
+    Playwright,
+    sync_playwright,
+)
 
 from tests.test_utils import init_page_and_wait_ready
 
