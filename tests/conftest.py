@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Generator
 
 import pytest
-from playwright.sync_api import Browser, BrowserContext, Page, Playwright
+from playwright.sync_api import Browser, BrowserContext, Page, Playwright, sync_playwright
 
 from tests.test_utils import init_page_and_wait_ready
 
@@ -536,23 +536,17 @@ def soft_ui_reset(request):
 
 
 @pytest.fixture(scope="session")
+def playwright_instance() -> Generator[Playwright, None, None]:
+    """Session-scoped Playwright context generator independent of pytest plugins."""
+    with sync_playwright() as pw:
+        yield pw
+
+
+@pytest.fixture(scope="session")
 def browser_instance(
-    playwright: Playwright, request: pytest.FixtureRequest
+    playwright_instance: Playwright, request: pytest.FixtureRequest
 ) -> Generator[Browser, None, None]:
-    """Session-scoped Chromium launch fixture to minimize startup overhead.
-
-    Parameters
-    ----------
-    playwright : Playwright
-        The Playwright context instance.
-    request : pytest.FixtureRequest
-        The requesting test fixture context.
-
-    Yields
-    ------
-    Browser
-        Launched session-scoped Chromium browser instance.
-    """
+    """Session-scoped Chromium launch fixture to minimize startup overhead."""
     launch_options = {
         "headless": True,
         "args": [
@@ -568,7 +562,7 @@ def browser_instance(
         elif isinstance(override, list):
             launch_options["args"] = override
 
-    browser = playwright.chromium.launch(**launch_options)
+    browser = playwright_instance.chromium.launch(**launch_options)
     yield browser
     browser.close()
 
@@ -577,20 +571,7 @@ def browser_instance(
 def shared_page(
     browser_instance: Browser, request: pytest.FixtureRequest
 ) -> Generator[Page, None, None]:
-    """Module-scoped page fixture. Boots Godot WASM once per module.
-
-    Parameters
-    ----------
-    browser_instance : Browser
-        The shared Chromium browser instance.
-    request : pytest.FixtureRequest
-        The requesting test fixture context.
-
-    Yields
-    ------
-    Page
-        An initialized Playwright Page instance with Godot WASM booted.
-    """
+    """Module-scoped page fixture. Boots Godot WASM once per module."""
     context = browser_instance.new_context(
         viewport={"width": 1280, "height": 720},
         record_video_dir=str(ARTIFACTS_DIR),
@@ -638,20 +619,7 @@ def shared_page(
 def page(
     browser_instance: Browser, request: pytest.FixtureRequest
 ) -> Generator[Page, None, None]:
-    """Provide clean browser context isolation for each test function.
-
-    Parameters
-    ----------
-    browser_instance : Browser
-        The shared Chromium browser instance.
-    request : pytest.FixtureRequest
-        The requesting test fixture context.
-
-    Yields
-    ------
-    Page
-        An isolated Playwright Page instance.
-    """
+    """Provide clean browser context isolation for each test function."""
     har_path = None
     if request.node.get_closest_marker("record_har"):
         nodeid = request.node.nodeid
