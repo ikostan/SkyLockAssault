@@ -18,6 +18,9 @@ from playwright.sync_api import Browser, BrowserContext, Page, Playwright
 
 from tests.test_utils import init_page_and_wait_ready
 
+# Force-load Playwright plugin fixtures for isolated shard executions
+pytest_plugins = ["playwright"]
+
 # Project paths and artifacts configuration
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
@@ -575,14 +578,14 @@ def browser_instance(
 
 @pytest.fixture(scope="module")
 def shared_page(
-    browser: Browser, request: pytest.FixtureRequest
+    browser_instance: Browser, request: pytest.FixtureRequest
 ) -> Generator[Page, None, None]:
     """Module-scoped page fixture. Boots Godot WASM once per module.
 
     Parameters
     ----------
-    browser : Browser
-        The Playwright Browser instance.
+    browser_instance : Browser
+        The shared Chromium browser instance.
     request : pytest.FixtureRequest
         The requesting test fixture context.
 
@@ -591,7 +594,7 @@ def shared_page(
     Page
         An initialized Playwright Page instance with Godot WASM booted.
     """
-    context = browser.new_context(
+    context = browser_instance.new_context(
         viewport={"width": 1280, "height": 720},
         record_video_dir=str(ARTIFACTS_DIR),
         record_video_size={"width": 1280, "height": 720},
