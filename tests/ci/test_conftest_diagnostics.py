@@ -18,6 +18,7 @@ class DummyTracing:
 
     @staticmethod
     def stop(*, path: str | Path | None = None, **_: Any) -> None:
+        """Stop tracing and write trace file if path is specified."""
         if path is not None:
             trace_path = Path(path)
             trace_path.parent.mkdir(parents=True, exist_ok=True)
@@ -34,11 +35,13 @@ class DummyVideo:
 
     @staticmethod
     def save_as(path: str | Path) -> None:
+        """Save video handle contents to specified destination path."""
         target = Path(path)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text("saved_video", encoding="utf-8")
 
     def delete(self) -> None:
+        """Delete temporary video file from disk if present."""
         if self.path.exists():
             self.path.unlink()
 
@@ -51,6 +54,7 @@ class DummyPage:
 
     @staticmethod
     def screenshot(path: str | Path, **_: Any) -> None:
+        """Capture screenshot and write placeholder image to path."""
         screenshot_path = Path(path)
         screenshot_path.parent.mkdir(parents=True, exist_ok=True)
         screenshot_path.write_text("screenshot", encoding="utf-8")
@@ -64,6 +68,7 @@ class DummyContext:
         self.closed = False
 
     def close(self) -> None:
+        """Mark browser context as closed."""
         self.closed = True
 
 
