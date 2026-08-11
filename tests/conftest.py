@@ -3,6 +3,9 @@
 # tests/conftest.py
 """Shared pytest fixtures, configs, and metrics for E2E tests."""
 
+# Explicitly load pytest-playwright plugin fixtures across all test shards
+pytest_plugins = ["playwright.pytest_plugin"]
+
 import json
 import os
 import re
@@ -17,9 +20,6 @@ import pytest
 from playwright.sync_api import Browser, BrowserContext, Page, Playwright
 
 from tests.test_utils import init_page_and_wait_ready
-
-# Force-load Playwright plugin fixtures for isolated shard executions
-pytest_plugins = ["playwright"]
 
 # Project paths and artifacts configuration
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
