@@ -4,7 +4,7 @@
 """Shared pytest fixtures, configs, and metrics for E2E tests."""
 
 # Explicitly load pytest-playwright plugin fixtures across all test shards
-pytest_plugins = ["playwright.pytest_plugin"]
+pytest_plugins = ["pytest_playwright"]
 
 import json
 import os
