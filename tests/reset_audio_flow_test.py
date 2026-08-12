@@ -19,6 +19,7 @@ import os
 import time
 from typing import Any
 
+import pytest
 from playwright.sync_api import Page
 
 from tests.test_utils import (
@@ -46,6 +47,7 @@ def _get_unignored_errors(
     return actual_errors
 
 
+@pytest.mark.timeout(90)
 def test_reset_flow(shared_page: Page) -> None:
     """Main test suite for reset functionality using DOM overlays."""
     logs: list[dict[str, str]] = []
@@ -372,10 +374,23 @@ def test_reset_flow(shared_page: Page) -> None:
         shared_page.wait_for_timeout(500)
 
         # Reload page deterministically via domcontentloaded
+        pre_reload_log_count = len(logs)
         shared_page.reload(wait_until="domcontentloaded")
+
+        # Wait for WASM initialization
         shared_page.wait_for_function(
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
+
+        # Wait for GDScript async settings initialization log before touching the UI
+        wait_for_console_log(
+            logs,
+            lambda text: "applied loaded" in text or "audio server initialized" in text,
+            pre_reload_log_count,
+            shared_page,
+        )
+
+        # Navigate to audio sub-menu post-initialization
         shared_page.wait_for_selector(
             "#options-button", state="visible", timeout=TEST_TIMEOUT
         )
@@ -384,6 +399,7 @@ def test_reset_flow(shared_page: Page) -> None:
             timeout=TEST_TIMEOUT,
         )
         shared_page.evaluate("window.optionsPressed([])")
+
         shared_page.wait_for_selector(
             "#audio-button", state="visible", timeout=TEST_TIMEOUT
         )

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2025 Egor Kostan
+# Copyright (C) 2025-2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 PROJECT_DIR="/project"
@@ -51,7 +51,7 @@ cleanup_server() {
   fi
   rm -f export_presets.cfg.bak 2>/dev/null || true
 
-  # Safety trap: ensure any stray coverage files in project root move to artifacts/
+  # Safety trap: ensure coverage files move to artifacts/
   mkdir -p "$PROJECT_DIR/artifacts" 2>/dev/null || true
   mv "$PROJECT_DIR"/v8_coverage_*.json "$PROJECT_DIR/artifacts/" 2>/dev/null || true
 }
@@ -59,24 +59,7 @@ cleanup_server() {
 trap cleanup_server EXIT INT TERM
 
 echo "🚀 Starting security-isolated server on port $SERVER_PORT..."
-python3 -c "
-import http.server, socketserver, os
-
-class MyHandler(http.server.SimpleHTTPRequestHandler):
-    def end_headers(self):
-        self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
-        self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')
-        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
-        super().end_headers()
-
-class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
-    daemon_threads = True
-    allow_reuse_address = True
-
-with ThreadedHTTPServer(('', $SERVER_PORT), MyHandler) as httpd:
-    os.chdir('$EXPORT_DIR')
-    httpd.serve_forever()
-" &
+python3 "$PROJECT_DIR/.github/scripts/serve_web_export.py" "$SERVER_PORT" "$EXPORT_DIR" &
 SERVER_PID=$!
 
 echo "Waiting for server to respond..."
@@ -103,10 +86,18 @@ echo "✅ Server ready"
 # 6. Run Playwright browser tests using native headless mode
 echo "🧪 Running Playwright Browser Tests target: $TEST_TARGET ($SUITE_NAME)..."
 mkdir -p "$PROJECT_DIR/artifacts"
-source /opt/venv/bin/activate
+rm -f "$PROJECT_DIR"/artifacts/trace_*.zip "$PROJECT_DIR"/artifacts/failure_*.png "$PROJECT_DIR"/artifacts/video_*.webm 2>/dev/null || true
+if [ -f "/opt/venv/bin/activate" ]; then
+  source /opt/venv/bin/activate
+fi
+
+if ! python3 -m pytest --version >/dev/null 2>&1 || ! python3 -c "import playwright" >/dev/null 2>&1; then
+  echo "❌ Error: Required Python runtime (pytest/playwright) is missing or incomplete."
+  exit 1
+fi
 
 # Execute pytest directly without virtual framebuffer display server overhead
-pytest "$TEST_TARGET" \
+python3 -m pytest "$TEST_TARGET" \
   -v \
   --timeout=$PW_TIMEOUT \
   --capture=no \
@@ -115,7 +106,7 @@ pytest "$TEST_TARGET" \
   --junitxml="$PROJECT_DIR/artifacts/report_${SUITE_NAME}.xml"
 PYTEST_EXIT=$?
 
-# 🧹 Post-test sweep: Move V8 coverage outputs to artifacts/ regardless of pass/fail
+# 🧹 Post-test sweep: Move V8 coverage outputs to artifacts/
 mv "$PROJECT_DIR"/v8_coverage_*.json "$PROJECT_DIR/artifacts/" 2>/dev/null || true
 
 # 7. Generate suite-scoped test report summary

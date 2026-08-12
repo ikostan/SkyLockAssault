@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Egor Kostan
+# Copyright (C) 2025-2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 services:
@@ -9,7 +9,7 @@ services:
       - "127.0.0.1:9090:8080"  # Map host 9090 to container 8080 (unprivileged default)
     restart: unless-stopped
     volumes:
-      - ../export/web:/usr/share/nginx/html:ro
+      - ../export/web_thread_off:/usr/share/nginx/html:ro
       - ./nginx:/etc/nginx/conf.d
     # Remove 'user: "nginx:nginx"' - image runs as non-root by default
     healthcheck:
