@@ -45,11 +45,20 @@ def main() -> None:
 
     mimetypes.add_type("application/wasm", ".wasm")
 
-    if os.path.exists(export_dir):
-        os.chdir(export_dir)
+    if not os.path.exists(export_dir):
+        print(
+            f"❌ Error: Export directory '{export_dir}' does not exist.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    os.chdir(export_dir)
 
     with ThreadedHTTPServer(("", port), OptimizedGodotHandler) as httpd:
-        print(f"🚀 Security-isolated server starting on port {port} for directory: {export_dir}...")
+        print(
+            f"🚀 Security-isolated server starting on port {port} "
+            f"for directory: {export_dir}..."
+        )
         httpd.serve_forever()
 
 
