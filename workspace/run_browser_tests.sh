@@ -59,24 +59,7 @@ cleanup_server() {
 trap cleanup_server EXIT INT TERM
 
 echo "🚀 Starting security-isolated server on port $SERVER_PORT..."
-python3 -c "
-import http.server, socketserver, os
-
-class MyHandler(http.server.SimpleHTTPRequestHandler):
-    def end_headers(self):
-        self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
-        self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')
-        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
-        super().end_headers()
-
-class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
-    daemon_threads = True
-    allow_reuse_address = True
-
-with ThreadedHTTPServer(('', $SERVER_PORT), MyHandler) as httpd:
-    os.chdir('$EXPORT_DIR')
-    httpd.serve_forever()
-" &
+python3 "$PROJECT_DIR/.github/scripts/serve_web_export.py" "$SERVER_PORT" "$EXPORT_DIR" &
 SERVER_PID=$!
 
 echo "Waiting for server to respond..."
@@ -103,6 +86,7 @@ echo "✅ Server ready"
 # 6. Run Playwright browser tests using native headless mode
 echo "🧪 Running Playwright Browser Tests target: $TEST_TARGET ($SUITE_NAME)..."
 mkdir -p "$PROJECT_DIR/artifacts"
+rm -f "$PROJECT_DIR"/artifacts/trace_*.zip "$PROJECT_DIR"/artifacts/failure_*.png "$PROJECT_DIR"/artifacts/video_*.webm 2>/dev/null || true
 if [ -f "/opt/venv/bin/activate" ]; then
   source /opt/venv/bin/activate
 fi

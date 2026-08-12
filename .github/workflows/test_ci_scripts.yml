@@ -27,6 +27,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest playwright
+          playwright install --with-deps chromium
 
       - name: "Run CI Injection Tests"
         run: |
