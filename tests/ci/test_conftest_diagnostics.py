@@ -13,6 +13,11 @@ from tests import conftest
 from tests.conftest import _cleanup_context_diagnostics
 
 
+# ==============================================================================
+# Mock / Stand-in Test Classes
+# ==============================================================================
+
+
 class DummyTracing:
     """Fake tracing object that writes a trace file when stopped with a path."""
 
@@ -23,6 +28,16 @@ class DummyTracing:
             trace_path = Path(path)
             trace_path.parent.mkdir(parents=True, exist_ok=True)
             trace_path.write_text("trace", encoding="utf-8")
+
+
+class FailingTracing:
+    """Fake tracing handle that raises an error when stop is called."""
+
+    @staticmethod
+    def stop(*, path: str | Path | None = None, **_: Any) -> None:
+        """Raise simulated tracing stop exception."""
+        _ = path
+        raise RuntimeError("Simulated tracing stop failure")
 
 
 class DummyVideo:
@@ -60,16 +75,35 @@ class DummyPage:
         screenshot_path.write_text("screenshot", encoding="utf-8")
 
 
+class FailingScreenshotPage(DummyPage):
+    """Fake Page that raises an error when screenshot is called."""
+
+    @staticmethod
+    def screenshot(path: str | Path, **_: Any) -> None:
+        """Raise simulated screenshot capture exception."""
+        _ = path
+        raise RuntimeError("Simulated screenshot failure")
+
+
 class DummyContext:
     """Fake BrowserContext that exposes a tracing handle and close method."""
 
     def __init__(self) -> None:
-        self.tracing = DummyTracing()
+        self.tracing: Any = DummyTracing()
         self.closed = False
 
     def close(self) -> None:
         """Mark browser context as closed."""
         self.closed = True
+
+
+class FailingCloseContext(DummyContext):
+    """Fake BrowserContext that raises an error when close is called."""
+
+    def close(self) -> None:
+        """Raise simulated context close exception."""
+        self.closed = True
+        raise RuntimeError("Simulated context close failure")
 
 
 def _make_request(
@@ -97,6 +131,11 @@ def isolate_conftest_state(
     monkeypatch.setattr(conftest, "_FAILED_NODEIDS", set())
     yield test_artifacts
     conftest._FAILED_NODEIDS.clear()  # noqa: SLF001
+
+
+# ==============================================================================
+# Success & Retention Behavior Tests
+# ==============================================================================
 
 
 def test_failing_test_retains_trace_screenshot_and_video(
@@ -203,3 +242,63 @@ def test_module_level_failure_preserves_diagnostics_for_failed_nodeids(
     ), "Video filename should be derived from the primary failing nodeid"
 
     assert context.closed, "Context should be closed"
+
+
+# ==============================================================================
+# Defensive Exception Path Tests
+# ==============================================================================
+
+
+def test_cleanup_context_diagnostics_screenshot_failure_handled_gracefully(
+    isolate_conftest_state: Path,
+) -> None:
+    """Screenshot failure should issue a UserWarning and continue context close and video finalization."""
+    artifacts_dir = isolate_conftest_state
+    context: Any = DummyContext()
+    page_obj: Any = FailingScreenshotPage(artifacts_dir / "temp_video.webm")
+    request = _make_request(call_failed=True)
+
+    with pytest.warns(UserWarning, match="Failed to capture failure screenshot"):
+        _cleanup_context_diagnostics(
+            context, page_obj, request, include_module_failures=False
+        )
+
+    assert context.closed, "Context should still close after screenshot exception"
+    assert list(artifacts_dir.glob("video_*.webm")), "Video should still be finalized"
+
+
+def test_cleanup_context_diagnostics_tracing_failure_handled_gracefully(
+    isolate_conftest_state: Path,
+) -> None:
+    """Tracing stop failure should issue a UserWarning and continue context close and video finalization."""
+    artifacts_dir = isolate_conftest_state
+    context: Any = DummyContext()
+    context.tracing = FailingTracing()
+    page_obj: Any = DummyPage(artifacts_dir / "temp_video.webm")
+    request = _make_request(call_failed=True)
+
+    with pytest.warns(UserWarning, match="Failed to stop tracing"):
+        _cleanup_context_diagnostics(
+            context, page_obj, request, include_module_failures=False
+        )
+
+    assert context.closed, "Context should still close after tracing exception"
+    assert list(artifacts_dir.glob("video_*.webm")), "Video should still be finalized"
+
+
+def test_cleanup_context_diagnostics_close_failure_handled_gracefully(
+    isolate_conftest_state: Path,
+) -> None:
+    """Context close failure should issue a UserWarning and still finalize video."""
+    artifacts_dir = isolate_conftest_state
+    context: Any = FailingCloseContext()
+    page_obj: Any = DummyPage(artifacts_dir / "temp_video.webm")
+    request = _make_request(call_failed=True)
+
+    with pytest.warns(UserWarning, match="Error closing Playwright browser context"):
+        _cleanup_context_diagnostics(
+            context, page_obj, request, include_module_failures=False
+        )
+
+    assert context.closed, "Context close attempt should be recorded"
+    assert list(artifacts_dir.glob("video_*.webm")), "Video should still be finalized"
