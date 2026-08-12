@@ -12,7 +12,6 @@ import pytest
 from tests import conftest
 from tests.conftest import _cleanup_context_diagnostics
 
-
 # ==============================================================================
 # Mock / Stand-in Test Classes
 # ==============================================================================
@@ -229,8 +228,12 @@ def test_module_level_failure_preserves_diagnostics_for_failed_nodeids(
     trace_files = list(artifacts_dir.glob("trace_*.zip"))
     video_files = list(artifacts_dir.glob("video_*.webm"))
 
-    assert trace_files, "Trace should be retained for module-level failures in _FAILED_NODEIDS"
-    assert video_files, "Video should be retained for module-level failures in _FAILED_NODEIDS"
+    assert (
+        trace_files
+    ), "Trace should be retained for module-level failures in _FAILED_NODEIDS"
+    assert (
+        video_files
+    ), "Video should be retained for module-level failures in _FAILED_NODEIDS"
 
     # Verify attribution to primary failing test nodeid
     primary_test_name = primary_fail_nodeid.split("::")[-1]
