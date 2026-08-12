@@ -15,12 +15,13 @@ class OptimizedGodotHandler(http.server.SimpleHTTPRequestHandler):
     """HTTP Request Handler with custom security headers and cache-control rules."""
 
     def end_headers(self) -> None:
+        """Inject security headers and cache policies before completing response."""
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
         self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
 
         clean_path = urlsplit(self.path).path
 
-        if clean_path.endswith((".wasm", ".pck", ".js")):
+        if clean_path.endswith((".wasm", ".pck", ".js", ".css")):
             self.send_header("Cache-Control", "public, max-age=3600")
         elif clean_path.endswith(".html") or clean_path.endswith("/"):
             self.send_header("Cache-Control", "no-cache, must-revalidate")
@@ -48,9 +49,7 @@ def main() -> None:
         os.chdir(export_dir)
 
     with ThreadedHTTPServer(("", port), OptimizedGodotHandler) as httpd:
-        print(
-            f"🚀 Security-isolated server starting on port {port} for directory: {export_dir}..."
-        )
+        print(f"🚀 Security-isolated server starting on port {port} for directory: {export_dir}...")
         httpd.serve_forever()
 
 
