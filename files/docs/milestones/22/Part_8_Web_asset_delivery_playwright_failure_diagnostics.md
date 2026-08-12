@@ -8,7 +8,7 @@
 **Author:** @ikostan  
 **Branch:** `web-asset-delivery-playwright-failure-diagnostics` → `main`  
 **Linked Issues:** Epic #771, Task #844 (Web Asset Delivery & Playwright Failure Diagnostics)  
-**Labels:** testing, CI/CD, github actions, github_actions, refactoring, QA
+**Labels:** testing, CI/CD, GitHub Actions, github_actions, refactoring, QA
 
 ### Purpose
 
