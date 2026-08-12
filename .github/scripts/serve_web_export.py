@@ -49,7 +49,9 @@ def main() -> None:
         os.chdir(export_dir)
 
     with ThreadedHTTPServer(("", port), OptimizedGodotHandler) as httpd:
-        print(f"🚀 Security-isolated server starting on port {port} for directory: {export_dir}...")
+        print(
+            f"🚀 Security-isolated server starting on port {port} for directory: {export_dir}..."
+        )
         httpd.serve_forever()
 
 
