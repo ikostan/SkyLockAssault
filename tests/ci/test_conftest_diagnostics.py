@@ -1,6 +1,6 @@
 # Copyright (C) 2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
-# tests/test_conftest_diagnostics.py
+# tests/ci/test_conftest_diagnostics.py
 """Unit tests for conftest diagnostic cleanup helpers."""
 
 from pathlib import Path
@@ -161,4 +161,45 @@ def test_module_level_failure_preserves_module_scoped_diagnostics(
     assert list(
         artifacts_dir.glob("video_*.webm")
     ), "Video should be retained for module setup failure"
+    assert context.closed, "Context should be closed"
+
+
+def test_module_level_failure_preserves_diagnostics_for_failed_nodeids(
+    isolate_conftest_state: Path,
+) -> None:
+    """Module-level failures tracked via _FAILED_NODEIDS should retain artifacts and attribute them to the primary failing test."""
+    artifacts_dir = isolate_conftest_state
+    context: Any = DummyContext()
+    page_obj: Any = DummyPage(artifacts_dir / "temp_video.webm")
+
+    module_path = "tests/ci/test_conftest_diagnostics.py"
+    primary_fail_nodeid = f"{module_path}::test_primary_module_failure"
+    secondary_fail_nodeid = f"{module_path}::test_secondary_module_failure"
+
+    conftest._FAILED_NODEIDS.add(primary_fail_nodeid)  # noqa: SLF001
+    conftest._FAILED_NODEIDS.add(secondary_fail_nodeid)  # noqa: SLF001
+
+    # Simulate a passing test in the same module
+    passing_nodeid = f"{module_path}::test_passing_case"
+    request = _make_request(nodeid=passing_nodeid, call_failed=False)
+
+    _cleanup_context_diagnostics(
+        context, page_obj, request, include_module_failures=True
+    )
+
+    trace_files = list(artifacts_dir.glob("trace_*.zip"))
+    video_files = list(artifacts_dir.glob("video_*.webm"))
+
+    assert trace_files, "Trace should be retained for module-level failures in _FAILED_NODEIDS"
+    assert video_files, "Video should be retained for module-level failures in _FAILED_NODEIDS"
+
+    # Verify attribution to primary failing test nodeid
+    primary_test_name = primary_fail_nodeid.split("::")[-1]
+    assert any(
+        primary_test_name in trace.name for trace in trace_files
+    ), "Trace filename should be derived from the primary failing nodeid"
+    assert any(
+        primary_test_name in video.name for video in video_files
+    ), "Video filename should be derived from the primary failing nodeid"
+
     assert context.closed, "Context should be closed"
