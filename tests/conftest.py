@@ -94,9 +94,10 @@ def _is_test_failed(
     module_failed_tests: list[str] = []
     if include_module_failures:
         mod_prefix = str(request.node.nodeid).split("::")[0]
-        module_failed_tests = [
-            nid for nid in _FAILED_NODEIDS if nid.startswith(mod_prefix)
-        ]
+        # Sort set iteration to ensure deterministic primary node ID attribution
+        module_failed_tests = sorted(
+            [nid for nid in _FAILED_NODEIDS if nid.startswith(mod_prefix)]
+        )
 
     test_failed = node_failed or bool(module_failed_tests)
 
