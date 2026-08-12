@@ -435,3 +435,47 @@ def test_record_test_profiling_duration_aggregation_and_wasm_boot() -> None:
 
     assert entry["duration_sec"] == expected_duration
     assert entry["wasm_boot_duration_sec"] == 1.2346
+
+
+def test_runtest_makereport_setup_failure_short_circuits_and_counts_failed() -> None:
+    """Verify setup failure records 'failed' outcome, updates _FAILED_NODEIDS, and counts setup duration."""
+    mock_item = SimpleNamespace(
+        nodeid="tests/test_demo.py::test_failed_setup", _wasm_boot_time=None
+    )
+
+    # 1. Setup phase (failing setup)
+    rep_setup = SimpleNamespace(
+        when="setup",
+        outcome="failed",
+        failed=True,
+        skipped=False,
+        duration=0.25,
+    )
+    gen_setup = conftest.pytest_runtest_makereport(
+        mock_item, SimpleNamespace(when="setup")
+    )
+    _step_hookwrapper(gen_setup, rep_setup)
+
+    # Verify failing nodeid is recorded immediately during setup report handling
+    assert "tests/test_demo.py::test_failed_setup" in conftest._FAILED_NODEIDS
+
+    # 2. Teardown phase (executed after failed setup)
+    rep_teardown = SimpleNamespace(
+        when="teardown",
+        outcome="passed",
+        failed=False,
+        skipped=False,
+        duration=0.02,
+    )
+    gen_teardown = conftest.pytest_runtest_makereport(
+        mock_item, SimpleNamespace(when="teardown")
+    )
+    _step_hookwrapper(gen_teardown, rep_teardown)
+
+    assert len(conftest._TEST_PROFILING_DATA) == 1
+    record = conftest._TEST_PROFILING_DATA[0]
+    assert record["nodeid"] == "tests/test_demo.py::test_failed_setup"
+    assert record["outcome"] == "failed"
+    assert record["duration_sec"] == 0.27
+    assert conftest._SUMMARY_COUNTS["failed"] == 1
+    assert "tests/test_demo.py::test_failed_setup" in conftest._FAILED_NODEIDS
