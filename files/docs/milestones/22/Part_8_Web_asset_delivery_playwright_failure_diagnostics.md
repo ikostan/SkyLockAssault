@@ -50,6 +50,13 @@ Improve Playwright E2E test reliability and debuggability while optimizing deliv
 - Updated volume mount from `../export/web` → `../export/web_thread_off`
 - Copyright year refreshed to 2025–2026
 
+### Omission of `immutable` Cache-Control Directive
+
+The `Cache-Control` header for static web export assets (`.wasm`, `.pck`, `.js`, `.css`) is configured as `public, max-age=3600` without the `immutable` directive for the following reasons:
+
+* **Prevent Stale Asset Persistence:** The `immutable` directive prevents browsers from sending revalidation requests even on manual page refreshes.
+* **Build & Deployment Safety:** Omitting `immutable` ensures that when Godot Web exports are updated or re-exported without changing filenames, clients and CI runners do not permanently cache stale WASM or PCK binaries.
+
 #### 3. CI & Local Artifact Hygiene
 
 - Pre-test cleanup of stale `trace_*.zip`, `failure_*.png`, and `video_*.webm` in both shell scripts and the workflow
