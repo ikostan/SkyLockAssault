@@ -73,18 +73,25 @@ jobs:
           cp -r temp_cov/addons/gdunit4_coverage addons/
           rm -rf temp_cov
 
-          # 3. Register gdunit4_coverage in project.godot
+          # 3. Register plugin & disable GDScript warning traps in project.godot for debug runs
           python3 -c '
           with open("project.godot", "r") as f:
               content = f.read()
+
           if "res://addons/gdunit4_coverage/plugin.cfg" not in content:
               if "[editor_plugins]" in content:
                   content = content.replace("enabled=PackedStringArray(", "enabled=PackedStringArray(\"res://addons/gdunit4_coverage/plugin.cfg\", ")
               else:
                   content += "\n[editor_plugins]\n\nenabled=PackedStringArray(\"res://addons/gdunit4_coverage/plugin.cfg\")\n"
-              with open("project.godot", "w") as f:
-                  f.write(content)
-              print("✅ Registered gdunit4_coverage plugin in project.godot")
+
+          if "[debug]" not in content:
+              content += "\n[debug]\n\ngdscript/warnings/enable=false\n"
+          else:
+              content += "\ngdscript/warnings/enable=false\n"
+
+          with open("project.godot", "w") as f:
+              f.write(content)
+          print("✅ Registered gdunit4_coverage plugin & suppressed debug warnings in project.godot")
           '
 
           # Verification
