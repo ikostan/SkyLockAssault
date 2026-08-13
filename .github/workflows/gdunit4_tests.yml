@@ -159,24 +159,41 @@ jobs:
           chmod +x codecov
 
       - name: "Upload LCOV Coverage & Test Results to Codecov"
-        if: "success()"
+        if: "always()"
         run: |
-          # Upload Merged Coverage Metrics
+          echo "=================================================="
+          echo "         CODECOV UPLOAD DIAGNOSTICS               "
+          echo "=================================================="
+
+          # 1. Upload Merged Coverage Metrics
           if [ -f "./final_coverage.lcov" ]; then
-            ./codecov upload-process \
-              --token ${{ secrets.CODECOV_TOKEN }} \
+            echo "✅ Found ./final_coverage.lcov ($(du -h ./final_coverage.lcov | cut -f1))"
+            echo "🚀 Initiating Codecov coverage upload..."
+            ./codecov --verbose upload-process \
+              --token "${{ secrets.CODECOV_TOKEN }}" \
               -f "./final_coverage.lcov" \
               --name "GDUnit4 Code Coverage" \
               --flag GDUnit4
+          else
+            echo "❌ CRITICAL: ./final_coverage.lcov WAS NOT FOUND!"
+            echo "   Check prior batch runs and lcov merge step logs."
           fi
 
-          # Upload Test Result XML (if generated)
+          echo "--------------------------------------------------"
+
+          # 2. Upload Test Result XML (if generated)
           REPORT_FILE="${{ steps.find_report.outputs.latest_report }}/test-report.xml"
           if [ -f "$REPORT_FILE" ]; then
-            ./codecov upload-process \
-              --token ${{ secrets.CODECOV_TOKEN }} \
+            echo "✅ Found test report XML at: $REPORT_FILE"
+            echo "🚀 Uploading test result XML to Codecov..."
+            ./codecov --verbose upload-process \
+              --token "${{ secrets.CODECOV_TOKEN }}" \
               -f "$REPORT_FILE" \
               --name "GDUnit4 Test Report" \
               --flag GDUnit4 \
               --report-type test_results
+          else
+            echo "⚠️ WARNING: Test report XML not found at '$REPORT_FILE'"
           fi
+
+          echo "=================================================="
