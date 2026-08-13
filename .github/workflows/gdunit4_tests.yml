@@ -67,7 +67,7 @@ jobs:
             unzip coverage.zip -d addons
             rm coverage.zip
           fi
-          
+
           chmod +x addons/gdunit4_coverage/bin/gdcov 2>/dev/null || true
 
       - name: "Initialize Project and UIDs"
