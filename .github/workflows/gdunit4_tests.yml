@@ -74,8 +74,10 @@ jobs:
 
       - name: "Run Coverage - Batch 1 (Core Systems & Entities)"
         run: |
-          xvfb-run ./godot --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
-            --ignoreHeadlessMode \
+          # Add current directory to PATH so gdcov finds ./godot
+          export PATH="$PWD:$PATH"
+
+          xvfb-run ./addons/gdunit4_coverage/bin/gdcov --path . \
             --add res://test/gdunit4/test_audio_manager.gd \
             --add res://test/gdunit4/test_bullet.gd \
             --add res://test/gdunit4/test_difficulty.gd \
@@ -89,15 +91,16 @@ jobs:
           USER_PATH="$HOME/.local/share/godot/app_userdata/SkyLockAssault/coverage/coverage.lcov"
           if [ -f "$USER_PATH" ]; then
             cp "$USER_PATH" ./batch1.lcov
-            echo "Batch 1 tracefile saved successfully."
+            echo "✅ Batch 1 tracefile saved successfully ($(du -h ./batch1.lcov | cut -f1))."
           else
-            echo "Warning: Batch 1 coverage tracefile missing at $USER_PATH"
+            echo "❌ ERROR: Batch 1 coverage tracefile missing at $USER_PATH" && exit 1
           fi
 
       - name: "Run Coverage - Batch 2 (UI, Menus & Controls)"
         run: |
-          xvfb-run ./godot --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
-            --ignoreHeadlessMode \
+          export PATH="$PWD:$PATH"
+
+          xvfb-run ./addons/gdunit4_coverage/bin/gdcov --path . \
             --add res://test/gdunit4/test_audio_settings.gd \
             --add res://test/gdunit4/test_audio_unexpected_exit.gd \
             --add res://test/gdunit4/test_input_remap_button.gd \
@@ -111,9 +114,9 @@ jobs:
           USER_PATH="$HOME/.local/share/godot/app_userdata/SkyLockAssault/coverage/coverage.lcov"
           if [ -f "$USER_PATH" ]; then
             cp "$USER_PATH" ./batch2.lcov
-            echo "Batch 2 tracefile saved successfully."
+            echo "✅ Batch 2 tracefile saved successfully ($(du -h ./batch2.lcov | cut -f1))."
           else
-            echo "Warning: Batch 2 coverage tracefile missing at $USER_PATH"
+            echo "❌ ERROR: Batch 2 coverage tracefile missing at $USER_PATH" && exit 1
           fi
 
       - name: "Merge LCOV Tracefiles"
