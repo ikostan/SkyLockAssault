@@ -52,29 +52,33 @@ jobs:
 
       - name: "Install GDUnit4 (v6.2.0+) & GdUnit4 Coverage Plugin"
         run: |
+          # Purge any double-nested directories from earlier runs
+          rm -rf addons/addons
+
           mkdir -p addons
           # Upgrade base GDUnit4 to v6.2.0
           URL_GDUNIT="https://github.com/godot-gdunit-labs/gdUnit4/archive/refs/tags/v6.2.0.zip"
-          wget "$URL_GDUNIT" -O gdunit4.zip
-          unzip gdunit4.zip -d addons
+          wget -q "$URL_GDUNIT" -O gdunit4.zip
+          unzip -q gdunit4.zip -d addons
           mv addons/gdUnit4-6.2.0/addons/gdUnit4 addons/gdUnit4
           rm -rf addons/gdUnit4-6.2.0 gdunit4.zip
 
-          # Download and extract gdunit4_coverage into root (zip includes 'addons/' folder)
+          # Download and extract gdunit4_coverage into project root
           URL_COV="https://github.com/godot-gdunit-labs/gdUnit4-coverage/releases/download/v0.1.4/gdUnit4-coverage-0.1.4-trial.zip"
-          wget "$URL_COV" -O coverage.zip
-          unzip coverage.zip -d .
+          wget -q "$URL_COV" -O coverage.zip
+          unzip -q coverage.zip -d .
           rm coverage.zip
 
           chmod +x addons/gdunit4_coverage/bin/gdcov 2>/dev/null || true
 
       - name: "Initialize Project and UIDs"
         run: |
+          # Clean stale cache so GDExtension registers clean path res://addons/gdunit4_coverage/...
+          rm -rf .godot/
           ./godot --headless --editor --quit --path .
 
       - name: "Run Coverage - Batch 1 (Core Systems & Entities)"
         run: |
-          # Add current directory to PATH so gdcov finds ./godot
           export PATH="$PWD:$PATH"
 
           xvfb-run ./addons/gdunit4_coverage/bin/gdcov --path . \
@@ -88,12 +92,17 @@ jobs:
             --add res://test/gdunit4/test_settings.gd \
             --add res://test/gdunit4/test_settings_persistence.gd
 
-          USER_PATH="$HOME/.local/share/godot/app_userdata/SkyLockAssault/coverage/coverage.lcov"
-          if [ -f "$USER_PATH" ]; then
+          # Dynamically locate the generated LCOV file
+          USER_PATH=$(find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" 2>/dev/null | head -n 1)
+
+          if [ -n "$USER_PATH" ] && [ -f "$USER_PATH" ]; then
             cp "$USER_PATH" ./batch1.lcov
+            rm -f "$USER_PATH"
             echo "✅ Batch 1 tracefile saved successfully ($(du -h ./batch1.lcov | cut -f1))."
           else
-            echo "❌ ERROR: Batch 1 coverage tracefile missing at $USER_PATH" && exit 1
+            echo "❌ ERROR: Batch 1 coverage tracefile missing!"
+            find "$HOME/.local/share/godot/" -maxdepth 4 2>/dev/null || true
+            exit 1
           fi
 
       - name: "Run Coverage - Batch 2 (UI, Menus & Controls)"
@@ -111,12 +120,17 @@ jobs:
             --add res://test/gdunit4/test_volume_slider.gd \
             --add res://test/gdunit4/test_weapon_firing_bullet.gd
 
-          USER_PATH="$HOME/.local/share/godot/app_userdata/SkyLockAssault/coverage/coverage.lcov"
-          if [ -f "$USER_PATH" ]; then
+          # Dynamically locate the generated LCOV file
+          USER_PATH=$(find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" 2>/dev/null | head -n 1)
+
+          if [ -n "$USER_PATH" ] && [ -f "$USER_PATH" ]; then
             cp "$USER_PATH" ./batch2.lcov
+            rm -f "$USER_PATH"
             echo "✅ Batch 2 tracefile saved successfully ($(du -h ./batch2.lcov | cut -f1))."
           else
-            echo "❌ ERROR: Batch 2 coverage tracefile missing at $USER_PATH" && exit 1
+            echo "❌ ERROR: Batch 2 coverage tracefile missing!"
+            find "$HOME/.local/share/godot/" -maxdepth 4 2>/dev/null || true
+            exit 1
           fi
 
       - name: "Merge LCOV Tracefiles"
@@ -130,7 +144,8 @@ jobs:
           elif [ -f "./batch2.lcov" ]; then
             cp ./batch2.lcov ./final_coverage.lcov
           else
-            echo "No LCOV tracefiles were generated to merge."
+            echo "❌ ERROR: No LCOV tracefiles were generated to merge."
+            exit 1
           fi
 
       - name: "Find Latest Report Directory"
