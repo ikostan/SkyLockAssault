@@ -10,10 +10,7 @@ on:  # yamllint disable-line rule:truthy
       godot_sha256:
         type: "string"
         default: "d0bc2113065e481c9c2c2b2c37daa4e8be3fe9e27f0ab9ab0b6096e9a37907f3"
-    secrets:
-      CODECOV_TOKEN:
-        description: "Codecov requires a token to authenticate"
-        required: true
+
 
 jobs:
   unit-test:
@@ -101,37 +98,3 @@ jobs:
           name: "gut-reports"
           path: "gut-reports/**"
           retention-days: 5
-
-      - name: "Install Codecov CLI"
-        if: "success()"  # Only if tests pass.
-        run: |
-          curl -Os https://cli.codecov.io/latest/linux/codecov
-          chmod +x codecov
-
-      - name: "Upload Test Report to Codecov"
-        if: "success()"
-        env:
-          CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
-          REPORT_DIR: "${{ steps.find_report.outputs.latest_report }}"
-        run: |
-          if [ -z "$CODECOV_TOKEN" ]; then
-            echo "CODECOV_TOKEN is missing or empty (e.g., Dependabot PR). Skipping upload."
-            exit 0
-          fi
-
-          if [ -z "$REPORT_DIR" ] || [ ! -d "$REPORT_DIR" ]; then
-            echo "Report directory path is invalid or missing, skipping upload."
-            exit 0
-          fi
-
-          REPORT_FILE="${REPORT_DIR}/gut_junit.xml"
-          if [ -f "$REPORT_FILE" ]; then
-            ./codecov upload-process \
-              --token "$CODECOV_TOKEN" \
-              -f "$REPORT_FILE" \
-              --name "GUT Test Report" \
-              --flag GUT \
-              --report-type test_results
-          else
-            echo "No GUT JUnit XML found, skipping upload."
-          fi

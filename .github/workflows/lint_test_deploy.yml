@@ -43,8 +43,6 @@ jobs:
       - "gdlint"
       - "readmelint"
       - "yamllint"
-    secrets:
-      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
   ci_script_tests:
     name: "CI/CD Infrastructure Tests"
     uses: "./.github/workflows/test_ci_scripts.yml"
