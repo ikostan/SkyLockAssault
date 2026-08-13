@@ -52,28 +52,44 @@ jobs:
 
       - name: "Install GDUnit4 (v6.2.0+) & GdUnit4 Coverage Plugin"
         run: |
-          # Purge any double-nested directories from earlier runs
-          rm -rf addons/addons
+          rm -rf addons/gdUnit4 addons/gdunit4_coverage gdunit4_coverage
 
           mkdir -p addons
-          # Upgrade base GDUnit4 to v6.2.0
+
+          # 1. Install GDUnit4 Core (v6.2.0)
           URL_GDUNIT="https://github.com/godot-gdunit-labs/gdUnit4/archive/refs/tags/v6.2.0.zip"
           wget -q "$URL_GDUNIT" -O gdunit4.zip
           unzip -q gdunit4.zip -d addons
           mv addons/gdUnit4-6.2.0/addons/gdUnit4 addons/gdUnit4
           rm -rf addons/gdUnit4-6.2.0 gdunit4.zip
 
-          # Download and extract gdunit4_coverage into project root
+          # 2. Download and extract GdUnit4 Coverage v0.1.4
           URL_COV="https://github.com/godot-gdunit-labs/gdUnit4-coverage/releases/download/v0.1.4/gdUnit4-coverage-0.1.4-trial.zip"
           wget -q "$URL_COV" -O coverage.zip
           unzip -q coverage.zip -d .
           rm coverage.zip
 
-          chmod +x addons/gdunit4_coverage/bin/gdcov 2>/dev/null || true
+          # Normalize folder structure if extracted to root
+          if [ -d "gdunit4_coverage" ] && [ ! -d "addons/gdunit4_coverage" ]; then
+            mv gdunit4_coverage addons/
+          fi
+
+          # 3. Grant execution permissions on all binary tools
+          chmod -R +x addons/gdunit4_coverage/bin/
+
+          # Sanity verification
+          echo "=== Verifying gdcov binary installation ==="
+          if [ -f "./addons/gdunit4_coverage/bin/gdcov" ]; then
+            echo "✅ gdcov binary located at ./addons/gdunit4_coverage/bin/gdcov"
+            ls -la ./addons/gdunit4_coverage/bin/
+          else
+            echo "❌ ERROR: gdcov binary missing after extraction!"
+            find . -name "gdcov"
+            exit 1
+          fi
 
       - name: "Initialize Project and UIDs"
         run: |
-          # Clean stale cache so GDExtension registers clean path res://addons/gdunit4_coverage/...
           rm -rf .godot/
           ./godot --headless --editor --quit --path .
 
@@ -92,7 +108,6 @@ jobs:
             --add res://test/gdunit4/test_settings.gd \
             --add res://test/gdunit4/test_settings_persistence.gd
 
-          # Dynamically locate the generated LCOV file
           USER_PATH=$(find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" 2>/dev/null | head -n 1)
 
           if [ -n "$USER_PATH" ] && [ -f "$USER_PATH" ]; then
@@ -101,7 +116,6 @@ jobs:
             echo "✅ Batch 1 tracefile saved successfully ($(du -h ./batch1.lcov | cut -f1))."
           else
             echo "❌ ERROR: Batch 1 coverage tracefile missing!"
-            find "$HOME/.local/share/godot/" -maxdepth 4 2>/dev/null || true
             exit 1
           fi
 
@@ -120,7 +134,6 @@ jobs:
             --add res://test/gdunit4/test_volume_slider.gd \
             --add res://test/gdunit4/test_weapon_firing_bullet.gd
 
-          # Dynamically locate the generated LCOV file
           USER_PATH=$(find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" 2>/dev/null | head -n 1)
 
           if [ -n "$USER_PATH" ] && [ -f "$USER_PATH" ]; then
@@ -129,7 +142,6 @@ jobs:
             echo "✅ Batch 2 tracefile saved successfully ($(du -h ./batch2.lcov | cut -f1))."
           else
             echo "❌ ERROR: Batch 2 coverage tracefile missing!"
-            find "$HOME/.local/share/godot/" -maxdepth 4 2>/dev/null || true
             exit 1
           fi
 
@@ -183,7 +195,6 @@ jobs:
           echo "         CODECOV UPLOAD DIAGNOSTICS               "
           echo "=================================================="
 
-          # 1. Upload Merged Coverage Metrics
           if [ -f "./final_coverage.lcov" ]; then
             echo "✅ Found ./final_coverage.lcov ($(du -h ./final_coverage.lcov | cut -f1))"
             echo "🚀 Initiating Codecov coverage upload..."
@@ -194,12 +205,10 @@ jobs:
               --flag GDUnit4
           else
             echo "❌ CRITICAL: ./final_coverage.lcov WAS NOT FOUND!"
-            echo "   Check prior batch runs and lcov merge step logs."
           fi
 
           echo "--------------------------------------------------"
 
-          # 2. Upload Test Result XML (if generated)
           REPORT_FILE="${{ steps.find_report.outputs.latest_report }}/test-report.xml"
           if [ -f "$REPORT_FILE" ]; then
             echo "✅ Found test report XML at: $REPORT_FILE"
