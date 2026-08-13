@@ -52,7 +52,7 @@ jobs:
 
       - name: "Install GDUnit4 (v6.2.0+) & GdUnit4 Coverage Extension"
         run: |
-          rm -rf addons/gdUnit4 addons/gdunit4_coverage temp_cov
+          rm -rf addons/gdUnit4 addons/gdunit4_coverage temp_cov override.cfg
 
           mkdir -p addons
 
@@ -73,26 +73,24 @@ jobs:
           cp -r temp_cov/addons/gdunit4_coverage addons/
           rm -rf temp_cov
 
-          # 3. Register plugin & disable GDScript warning traps in project.godot for debug runs
-          python3 -c '
-          with open("project.godot", "r") as f:
-              content = f.read()
+          # 3. Create override.cfg to enforce plugin activation & suppress GDScript warning traps
+          cat << 'EOF' > override.cfg
+          [editor_plugins]
 
-          if "res://addons/gdunit4_coverage/plugin.cfg" not in content:
-              if "[editor_plugins]" in content:
-                  content = content.replace("enabled=PackedStringArray(", "enabled=PackedStringArray(\"res://addons/gdunit4_coverage/plugin.cfg\", ")
-              else:
-                  content += "\n[editor_plugins]\n\nenabled=PackedStringArray(\"res://addons/gdunit4_coverage/plugin.cfg\")\n"
+          enabled=PackedStringArray("res://addons/gdunit4_coverage/plugin.cfg")
 
-          if "[debug]" not in content:
-              content += "\n[debug]\n\ngdscript/warnings/enable=false\n"
-          else:
-              content += "\ngdscript/warnings/enable=false\n"
+          [debug]
 
-          with open("project.godot", "w") as f:
-              f.write(content)
-          print("✅ Registered gdunit4_coverage plugin & suppressed debug warnings in project.godot")
-          '
+          gdscript/warnings/enable=false
+          gdscript/warnings/unsafe_property_access=0
+          gdscript/warnings/unsafe_method_access=0
+          gdscript/warnings/unsafe_call_argument=0
+          gdscript/warnings/return_value_discarded=0
+          gdscript/warnings/integer_division=0
+          gdscript/warnings/unused_parameter=0
+          EOF
+
+          echo "✅ Created clean override.cfg for CI test execution"
 
           # Verification
           if [ -f "./addons/gdunit4_coverage/gdunit4_coverage.gdextension" ]; then
