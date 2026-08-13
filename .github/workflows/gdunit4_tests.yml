@@ -53,17 +53,17 @@ jobs:
       - name: "Install GDUnit4 (v6.2.0+) & GdUnit4 Coverage Plugin"
         run: |
           mkdir -p addons
-          # Upgrade GDUnit4 to v6.2.0
+          # Upgrade base GDUnit4 to v6.2.0
           URL_GDUNIT="https://github.com/godot-gdunit-labs/gdUnit4/archive/refs/tags/v6.2.0.zip"
           wget "$URL_GDUNIT" -O gdunit4.zip
           unzip gdunit4.zip -d addons
           mv addons/gdUnit4-6.2.0/addons/gdUnit4 addons/gdUnit4
           rm -rf addons/gdUnit4-6.2.0 gdunit4.zip
 
-          # Install gdunit4_coverage plugin v0.1.4 using exact asset name
+          # Download and extract gdunit4_coverage into root (zip includes 'addons/' folder)
           URL_COV="https://github.com/godot-gdunit-labs/gdUnit4-coverage/releases/download/v0.1.4/gdUnit4-coverage-0.1.4-trial.zip"
           wget "$URL_COV" -O coverage.zip
-          unzip coverage.zip -d addons
+          unzip coverage.zip -d .
           rm coverage.zip
 
           chmod +x addons/gdunit4_coverage/bin/gdcov 2>/dev/null || true
@@ -76,7 +76,15 @@ jobs:
         run: |
           xvfb-run ./godot --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
             --ignoreHeadlessMode \
-            --add res://test/gdunit4/core/
+            --add res://test/gdunit4/test_audio_manager.gd \
+            --add res://test/gdunit4/test_bullet.gd \
+            --add res://test/gdunit4/test_difficulty.gd \
+            --add res://test/gdunit4/test_difficulty_integration.gd \
+            --add res://test/gdunit4/test_globals.gd \
+            --add res://test/gdunit4/test_helpers.gd \
+            --add res://test/gdunit4/test_player.gd \
+            --add res://test/gdunit4/test_settings.gd \
+            --add res://test/gdunit4/test_settings_persistence.gd
 
           USER_PATH="$HOME/.local/share/godot/app_userdata/SkyLockAssault/coverage/coverage.lcov"
           if [ -f "$USER_PATH" ]; then
@@ -90,7 +98,15 @@ jobs:
         run: |
           xvfb-run ./godot --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
             --ignoreHeadlessMode \
-            --add res://test/gdunit4/ui/
+            --add res://test/gdunit4/test_audio_settings.gd \
+            --add res://test/gdunit4/test_audio_unexpected_exit.gd \
+            --add res://test/gdunit4/test_input_remap_button.gd \
+            --add res://test/gdunit4/test_load_options_reentrancy.gd \
+            --add res://test/gdunit4/test_main_menu.gd \
+            --add res://test/gdunit4/test_menu_visibility.gd \
+            --add res://test/gdunit4/test_options_teardown.gd \
+            --add res://test/gdunit4/test_volume_slider.gd \
+            --add res://test/gdunit4/test_weapon_firing_bullet.gd
 
           USER_PATH="$HOME/.local/share/godot/app_userdata/SkyLockAssault/coverage/coverage.lcov"
           if [ -f "$USER_PATH" ]; then
