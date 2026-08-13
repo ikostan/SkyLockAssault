@@ -53,20 +53,18 @@ jobs:
       - name: "Install GDUnit4 (v6.2.0+) & GdUnit4 Coverage Plugin"
         run: |
           mkdir -p addons
-          # Upgrade GDUnit4 to v6.2.0 required for coverage integration
+          # Upgrade GDUnit4 to v6.2.0
           URL_GDUNIT="https://github.com/godot-gdunit-labs/gdUnit4/archive/refs/tags/v6.2.0.zip"
           wget "$URL_GDUNIT" -O gdunit4.zip
           unzip gdunit4.zip -d addons
           mv addons/gdUnit4-6.2.0/addons/gdUnit4 addons/gdUnit4
           rm -rf addons/gdUnit4-6.2.0 gdunit4.zip
 
-          # Install gdunit4_coverage plugin & set gdcov permissions
-          URL_COV="https://github.com/godot-gdunit-labs/gdUnit4-coverage/releases/latest/download/gdunit4_coverage.zip"
-          wget "$URL_COV" -O coverage.zip || true
-          if [ -f "coverage.zip" ]; then
-            unzip coverage.zip -d addons
-            rm coverage.zip
-          fi
+          # Install gdunit4_coverage plugin v0.1.4 using exact asset name
+          URL_COV="https://github.com/godot-gdunit-labs/gdUnit4-coverage/releases/download/v0.1.4/gdUnit4-coverage-0.1.4-trial.zip"
+          wget "$URL_COV" -O coverage.zip
+          unzip coverage.zip -d addons
+          rm coverage.zip
 
           chmod +x addons/gdunit4_coverage/bin/gdcov 2>/dev/null || true
 
