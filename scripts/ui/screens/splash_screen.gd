@@ -44,9 +44,7 @@ func _poll_resource_backend() -> void:
 		return
 
 	var progress_array: Array = []
-	var status: int = ResourceLoader.load_threaded_get_status(
-		Globals.next_scene, progress_array
-	)
+	var status: int = ResourceLoader.load_threaded_get_status(Globals.next_scene, progress_array)
 
 	match status:
 		ResourceLoader.THREAD_LOAD_IN_PROGRESS:
@@ -61,8 +59,8 @@ func _poll_resource_backend() -> void:
 
 		ResourceLoader.THREAD_LOAD_LOADED:
 			display_target = 100.0
-			var loaded_res: = ResourceLoader.load_threaded_get(Globals.next_scene)
-			
+			var loaded_res := ResourceLoader.load_threaded_get(Globals.next_scene)
+
 			# Type check validation on retrieved resource
 			if loaded_res is PackedScene:
 				scene = loaded_res
@@ -84,7 +82,7 @@ func _poll_resource_backend() -> void:
 ## Smoothly steps UI display towards display_target linearly via move_toward.
 func _update_presentation_handler(delta: float) -> void:
 	loader_progress = move_toward(loader_progress, display_target, presentation_speed * delta)
-	
+
 	# Update visual UI components
 	progress_bar.value = loader_progress
 	label.text = label_text + str(int(loader_progress)) + "%"
