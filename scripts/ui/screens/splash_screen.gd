@@ -44,7 +44,9 @@ func _poll_resource_backend() -> void:
 		return
 
 	var progress_array: Array = []
-	var status: int = ResourceLoader.load_threaded_get_status(Globals.next_scene, progress_array)
+	var status: int = ResourceLoader.load_threaded_get_status(
+		Globals.next_scene, progress_array
+	)
 
 	match status:
 		ResourceLoader.THREAD_LOAD_IN_PROGRESS:
@@ -93,7 +95,8 @@ func _update_presentation_handler(delta: float) -> void:
 func _evaluate_transition_router() -> void:
 	var elapsed_time: float = (Time.get_ticks_msec() / 1000.0) - load_start_time
 
-	# Proceed only when both loaded (or failed fallback), display target complete, and minimum time elapsed.
+	# Proceed only when loaded (or failed fallback), display target complete,
+	# and minimum time elapsed.
 	if (
 		(is_scene_loaded or load_failed)
 		and elapsed_time >= min_load_time
