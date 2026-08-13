@@ -103,10 +103,15 @@ jobs:
           chmod +x codecov
 
       - name: "Upload Test Report to Codecov"
-        if: "success() && secrets.CODECOV_TOKEN != ''"
+        if: "success()"
         env:
           CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
         run: |
+          if [ -z "$CODECOV_TOKEN" ]; then
+            echo "CODECOV_TOKEN is missing or empty (e.g., Dependabot PR). Skipping upload."
+            exit 0
+          fi
+
           REPORT_FILE="${{ steps.find_report.outputs.latest_report }}/gut_junit.xml"
           if [ -f "$REPORT_FILE" ]; then
             ./codecov upload-process \
