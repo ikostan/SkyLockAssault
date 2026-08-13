@@ -16,6 +16,8 @@ const DEFAULT_STARTUP_SCENE := "res://scenes/main_menu.tscn"
 
 var resolved_next_scene: String = ""
 var loader_progress: float = 0.0  # Current smoothed progress value.
+var display_target: float = 0.0  # Target display progress value.
+var presentation_speed: float = 50.0  # Speed rate for move_toward (units per second).
 var min_load_time: float = 1.0  # Minimum splashing time in seconds for visibility.
 var load_start_time: float = 0.0  # Timestamp when splashing starts.
 var is_scene_loaded: bool = false  # Flag to track if the scene is fully loaded.
@@ -28,79 +30,99 @@ var label_text: String = "Loading: "
 @onready var label: Label = $Label  # Label for displaying loading status.
 
 
-# Polls loading status and updates UI. Changes scene when loaded.
-# Eliminated fake_progress; relies on real ResourceLoader progress.
-func _process(_delta: float) -> void:
-	var elapsed_time: float = (Time.get_ticks_msec() / 1000.0) - load_start_time
+func _process(delta: float) -> void:
+	_poll_resource_backend()
+	_update_presentation_handler(delta)
+	_evaluate_transition_router()
 
-	var real_progress: float = 0.0
-	if is_scene_loaded:
-		real_progress = 100.0  # Force 100% if already loaded (ignores post-load status).
-	elif load_failed:
-		real_progress = 0.0  # Keep at 0 if failed early.
-	else:
-		# Only poll if not done.
-		var progress_array: Array = []
-		var status: int = ResourceLoader.load_threaded_get_status(
-			Globals.next_scene, progress_array
-		)
 
-		if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+## State 1: Resource polling backend.
+## Polls status until cache state is reached or failure occurs.
+func _poll_resource_backend() -> void:
+	# Immediately stop polling if already marked as loaded or failed
+	if is_scene_loaded or load_failed:
+		return
+
+	var progress_array: Array = []
+	var status: int = ResourceLoader.load_threaded_get_status(
+		Globals.next_scene, progress_array
+	)
+
+	match status:
+		ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 			if progress_array.size() > 0:
-				real_progress = progress_array[0] * 100.0  # Convert to percentage.
+				var backend_progress: float = progress_array[0] * 100.0
+				# Preserve strictly monotonic progress scaling
+				display_target = max(display_target, backend_progress)
 			else:
 				Globals.log_message(
 					"Progress array empty during IN_PROGRESS.", Globals.LogLevel.WARNING
 				)
 
-		elif status == ResourceLoader.THREAD_LOAD_LOADED:
-			real_progress = 100.0
-			if not is_scene_loaded:
+		ResourceLoader.THREAD_LOAD_LOADED:
+			display_target = 100.0
+			var loaded_res: = ResourceLoader.load_threaded_get(Globals.next_scene)
+			
+			# Type check validation on retrieved resource
+			if loaded_res is PackedScene:
+				scene = loaded_res
 				is_scene_loaded = true
-				scene = ResourceLoader.load_threaded_get(Globals.next_scene)
 				Globals.log_message("Scene loaded successfully.", Globals.LogLevel.DEBUG)
+			else:
+				Globals.log_message(
+					"Loaded resource is null or not a PackedScene.", Globals.LogLevel.ERROR
+				)
+				load_failed = true
 
-		elif (
-			status == ResourceLoader.THREAD_LOAD_FAILED
-			or status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE
-		):
+		ResourceLoader.THREAD_LOAD_FAILED, ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
 			Globals.log_message("Loading failed or invalid.", Globals.LogLevel.ERROR)
 			load_failed = true
+			display_target = 100.0  # Force target to end on failure fallback
 
-	# Use real progress only (eliminates fake_progress process).
-	# Sub-threads + Web min_load_time fix 50% quirk and give breathing room.
-	var display_progress: float = real_progress
-	if load_failed:
-		display_progress = 100.0  # Force end on failure.
 
-	# Smooth progress with lerp.
-	loader_progress = lerp(loader_progress, display_progress, 0.01)
-	# Update UI.
+## State 2: Presentation Handler.
+## Smoothly steps UI display towards display_target linearly via move_toward.
+func _update_presentation_handler(delta: float) -> void:
+	loader_progress = move_toward(loader_progress, display_target, presentation_speed * delta)
+	
+	# Update visual UI components
 	progress_bar.value = loader_progress
 	label.text = label_text + str(int(loader_progress)) + "%"
 
-	# Proceed only when both loaded (or failed fallback) and minimum time elapsed.
-	if (is_scene_loaded or load_failed) and elapsed_time >= min_load_time and not transitioning:
-		transitioning = true  # Lock to prevent re-entry.
-		loader_progress = 100.0
-		progress_bar.value = 100.0
-		label.text = label_text + "100%"
 
-		# Optional delay at 100%.
-		await get_tree().create_timer(1.5).timeout
+## State 3: Transition Router.
+## Evaluates temporal and resource safety flags to switch scene context profiles.
+func _evaluate_transition_router() -> void:
+	var elapsed_time: float = (Time.get_ticks_msec() / 1000.0) - load_start_time
 
-		var target_path: String = Globals.next_scene  # Cache the path.
-		Globals.next_scene = ""  # Reset to avoid stale values.
+	# Proceed only when both loaded (or failed fallback), display target complete, and minimum time elapsed.
+	if (
+		(is_scene_loaded or load_failed)
+		and elapsed_time >= min_load_time
+		and is_equal_approx(loader_progress, 100.0)
+		and not transitioning
+	):
+		transitioning = true  # Lock to prevent re-entry
+
+		var target_path: String = Globals.next_scene  # Cache the path
+		Globals.next_scene = ""  # Reset to avoid stale values
 
 		if target_path == "":
 			Globals.log_message(
 				"Empty next_scene - returning to main menu.", Globals.LogLevel.ERROR
 			)
-			get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+			get_tree().change_scene_to_file(DEFAULT_STARTUP_SCENE)
 		elif load_failed:
 			# Fallback to direct load on failure
 			Globals.log_message("Fallback: Loading scene directly.", Globals.LogLevel.WARNING)
 			get_tree().change_scene_to_file(target_path)
 		else:
-			# Change scene.
-			get_tree().change_scene_to_packed(scene)
+			# Defensive validation before changing scene
+			if is_instance_valid(scene) and scene is PackedScene:
+				get_tree().change_scene_to_packed(scene)
+			else:
+				Globals.log_message(
+					"PackedScene validation failed during scene transition. Direct load fallback.",
+					Globals.LogLevel.ERROR
+				)
+				get_tree().change_scene_to_file(target_path)
