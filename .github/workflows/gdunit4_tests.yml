@@ -52,7 +52,7 @@ jobs:
 
       - name: "Install GDUnit4 (v6.2.0+) & GdUnit4 Coverage Plugin"
         run: |
-          rm -rf addons/gdUnit4 addons/gdunit4_coverage gdunit4_coverage
+          rm -rf addons/gdUnit4 addons/gdunit4_coverage temp_cov
 
           mkdir -p addons
 
@@ -63,28 +63,41 @@ jobs:
           mv addons/gdUnit4-6.2.0/addons/gdUnit4 addons/gdUnit4
           rm -rf addons/gdUnit4-6.2.0 gdunit4.zip
 
-          # 2. Download and extract GdUnit4 Coverage v0.1.4
+          # 2. Download and extract GdUnit4 Coverage v0.1.4 into temp_cov/
           URL_COV="https://github.com/godot-gdunit-labs/gdUnit4-coverage/releases/download/v0.1.4/gdUnit4-coverage-0.1.4-trial.zip"
           wget -q "$URL_COV" -O coverage.zip
-          unzip -q coverage.zip -d .
+          mkdir -p temp_cov
+          unzip -q coverage.zip -d temp_cov/
           rm coverage.zip
 
-          # Normalize folder structure if extracted to root
-          if [ -d "gdunit4_coverage" ] && [ ! -d "addons/gdunit4_coverage" ]; then
-            mv gdunit4_coverage addons/
+          # Find plugin root directory inside extracted zip regardless of folder casing/nesting
+          COV_ROOT=$(find temp_cov/ -name "plugin.cfg" -exec dirname {} \; | head -n 1)
+
+          if [ -z "$COV_ROOT" ]; then
+            COV_ROOT=$(find temp_cov/ -name "gdcov" -exec dirname {} \; | xargs dirname | head -n 1)
           fi
 
-          # 3. Grant execution permissions on all binary tools
-          chmod -R +x addons/gdunit4_coverage/bin/
+          if [ -n "$COV_ROOT" ]; then
+            mkdir -p addons/gdunit4_coverage
+            cp -r "$COV_ROOT"/* addons/gdunit4_coverage/
+            rm -rf temp_cov
+            echo "✅ Successfully placed coverage plugin into addons/gdunit4_coverage"
+          else
+            echo "❌ ERROR: Failed to locate plugin root inside coverage.zip!"
+            exit 1
+          fi
 
-          # Sanity verification
+          # 3. Grant execution permissions on binary tools
+          chmod -R +x addons/gdunit4_coverage/
+
+          # Verification
           echo "=== Verifying gdcov binary installation ==="
           if [ -f "./addons/gdunit4_coverage/bin/gdcov" ]; then
             echo "✅ gdcov binary located at ./addons/gdunit4_coverage/bin/gdcov"
             ls -la ./addons/gdunit4_coverage/bin/
           else
-            echo "❌ ERROR: gdcov binary missing after extraction!"
-            find . -name "gdcov"
+            echo "❌ ERROR: gdcov binary missing after copy!"
+            find addons/ -name "*gdcov*"
             exit 1
           fi
 
