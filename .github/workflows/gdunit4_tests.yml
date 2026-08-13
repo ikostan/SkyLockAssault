@@ -50,9 +50,9 @@ jobs:
           mv "Godot_v${GODOT_VERSION}_linux.x86_64" godot
           chmod +x godot
 
-      - name: "Install GDUnit4 (v6.2.0+) & GdUnit4 Coverage Plugin"
+      - name: "Install GDUnit4 (v6.2.0+) & GdUnit4 Coverage Extension"
         run: |
-          rm -rf addons/gdUnit4 addons/gdunit4_coverage addons/gdUnit4_coverage temp_cov
+          rm -rf addons/gdUnit4 addons/gdunit4_coverage temp_cov
 
           mkdir -p addons
 
@@ -63,47 +63,37 @@ jobs:
           mv addons/gdUnit4-6.2.0/addons/gdUnit4 addons/gdUnit4
           rm -rf addons/gdUnit4-6.2.0 gdunit4.zip
 
-          # 2. Extract GdUnit4 Coverage v0.1.4 into isolated temp directory
+          # 2. Extract GdUnit4 Coverage v0.1.4 (GDExtension)
           URL_COV="https://github.com/godot-gdunit-labs/gdUnit4-coverage/releases/download/v0.1.4/gdUnit4-coverage-0.1.4-trial.zip"
           wget -q "$URL_COV" -O coverage.zip
           mkdir -p temp_cov
           unzip -q coverage.zip -d temp_cov/
           rm coverage.zip
 
-          # 3. Target the 'gdcov' binary directly to bypass casing mismatches
-          GDCOV_BIN=$(find temp_cov/ -type f -name "gdcov" | head -n 1)
+          # Copy GDExtension plugin directly into addons/
+          cp -r temp_cov/addons/gdunit4_coverage addons/
+          rm -rf temp_cov
 
-          if [ -n "$GDCOV_BIN" ]; then
-            # Get plugin root (two levels up from bin/gdcov)
-            PLUGIN_DIR=$(dirname $(dirname "$GDCOV_BIN"))
-            mkdir -p addons/gdunit4_coverage
-            cp -r "$PLUGIN_DIR"/* addons/gdunit4_coverage/
-            rm -rf temp_cov
-            echo "✅ Successfully normalized coverage plugin into addons/gdunit4_coverage"
+          # 3. Verification
+          echo "=== Verifying GDExtension Plugin ==="
+          if [ -f "./addons/gdunit4_coverage/gdunit4_coverage.gdextension" ]; then
+            echo "✅ GDExtension successfully installed at ./addons/gdunit4_coverage/"
+            ls -la ./addons/gdunit4_coverage/
           else
-            echo "❌ ERROR: Could not find 'gdcov' binary inside coverage.zip!"
-            echo "Contents of zip were:"
-            find temp_cov/
+            echo "❌ ERROR: Failed to install gdunit4_coverage GDExtension!"
             exit 1
           fi
 
-          # 4. Grant execution permissions
-          chmod -R +x addons/gdunit4_coverage/bin/
-
-          # Verification
-          echo "=== Verifying gdcov binary installation ==="
-          ls -la ./addons/gdunit4_coverage/bin/gdcov
-
-      - name: "Initialize Project and UIDs"
+      - name: "Initialize Project and Register GDExtensions"
         run: |
+          # Purge stale engine cache so Godot registers res://addons/gdunit4_coverage/
           rm -rf .godot/
           ./godot --headless --editor --quit --path .
 
       - name: "Run Coverage - Batch 1 (Core Systems & Entities)"
         run: |
-          export PATH="$PWD:$PATH"
-
-          xvfb-run ./addons/gdunit4_coverage/bin/gdcov --path . \
+          xvfb-run ./godot --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+            --ignoreHeadlessMode \
             --add res://test/gdunit4/test_audio_manager.gd \
             --add res://test/gdunit4/test_bullet.gd \
             --add res://test/gdunit4/test_difficulty.gd \
@@ -122,14 +112,18 @@ jobs:
             echo "✅ Batch 1 tracefile saved successfully ($(du -h ./batch1.lcov | cut -f1))."
           else
             echo "❌ ERROR: Batch 1 coverage tracefile missing!"
+            LOG_FILE=$(find "$HOME/.local/share/godot/" -name "gdcov.log" 2>/dev/null | head -n 1)
+            if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
+              echo "=== GDExtension Diagnostic Log (gdcov.log) ==="
+              cat "$LOG_FILE"
+            fi
             exit 1
           fi
 
       - name: "Run Coverage - Batch 2 (UI, Menus & Controls)"
         run: |
-          export PATH="$PWD:$PATH"
-
-          xvfb-run ./addons/gdunit4_coverage/bin/gdcov --path . \
+          xvfb-run ./godot --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+            --ignoreHeadlessMode \
             --add res://test/gdunit4/test_audio_settings.gd \
             --add res://test/gdunit4/test_audio_unexpected_exit.gd \
             --add res://test/gdunit4/test_input_remap_button.gd \
@@ -148,6 +142,11 @@ jobs:
             echo "✅ Batch 2 tracefile saved successfully ($(du -h ./batch2.lcov | cut -f1))."
           else
             echo "❌ ERROR: Batch 2 coverage tracefile missing!"
+            LOG_FILE=$(find "$HOME/.local/share/godot/" -name "gdcov.log" 2>/dev/null | head -n 1)
+            if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
+              echo "=== GDExtension Diagnostic Log (gdcov.log) ==="
+              cat "$LOG_FILE"
+            fi
             exit 1
           fi
 
