@@ -52,7 +52,7 @@ jobs:
 
       - name: "Install GDUnit4 (v6.2.0+) & GdUnit4 Coverage Plugin"
         run: |
-          rm -rf addons/gdUnit4 addons/gdunit4_coverage temp_cov
+          rm -rf addons/gdUnit4 addons/gdunit4_coverage addons/gdUnit4_coverage temp_cov
 
           mkdir -p addons
 
@@ -63,43 +63,36 @@ jobs:
           mv addons/gdUnit4-6.2.0/addons/gdUnit4 addons/gdUnit4
           rm -rf addons/gdUnit4-6.2.0 gdunit4.zip
 
-          # 2. Download and extract GdUnit4 Coverage v0.1.4 into temp_cov/
+          # 2. Extract GdUnit4 Coverage v0.1.4 into isolated temp directory
           URL_COV="https://github.com/godot-gdunit-labs/gdUnit4-coverage/releases/download/v0.1.4/gdUnit4-coverage-0.1.4-trial.zip"
           wget -q "$URL_COV" -O coverage.zip
           mkdir -p temp_cov
           unzip -q coverage.zip -d temp_cov/
           rm coverage.zip
 
-          # Find plugin root directory inside extracted zip regardless of folder casing/nesting
-          COV_ROOT=$(find temp_cov/ -name "plugin.cfg" -exec dirname {} \; | head -n 1)
+          # 3. Target the 'gdcov' binary directly to bypass casing mismatches
+          GDCOV_BIN=$(find temp_cov/ -type f -name "gdcov" | head -n 1)
 
-          if [ -z "$COV_ROOT" ]; then
-            COV_ROOT=$(find temp_cov/ -name "gdcov" -exec dirname {} \; | xargs dirname | head -n 1)
-          fi
-
-          if [ -n "$COV_ROOT" ]; then
+          if [ -n "$GDCOV_BIN" ]; then
+            # Get plugin root (two levels up from bin/gdcov)
+            PLUGIN_DIR=$(dirname $(dirname "$GDCOV_BIN"))
             mkdir -p addons/gdunit4_coverage
-            cp -r "$COV_ROOT"/* addons/gdunit4_coverage/
+            cp -r "$PLUGIN_DIR"/* addons/gdunit4_coverage/
             rm -rf temp_cov
-            echo "✅ Successfully placed coverage plugin into addons/gdunit4_coverage"
+            echo "✅ Successfully normalized coverage plugin into addons/gdunit4_coverage"
           else
-            echo "❌ ERROR: Failed to locate plugin root inside coverage.zip!"
+            echo "❌ ERROR: Could not find 'gdcov' binary inside coverage.zip!"
+            echo "Contents of zip were:"
+            find temp_cov/
             exit 1
           fi
 
-          # 3. Grant execution permissions on binary tools
-          chmod -R +x addons/gdunit4_coverage/
+          # 4. Grant execution permissions
+          chmod -R +x addons/gdunit4_coverage/bin/
 
           # Verification
           echo "=== Verifying gdcov binary installation ==="
-          if [ -f "./addons/gdunit4_coverage/bin/gdcov" ]; then
-            echo "✅ gdcov binary located at ./addons/gdunit4_coverage/bin/gdcov"
-            ls -la ./addons/gdunit4_coverage/bin/
-          else
-            echo "❌ ERROR: gdcov binary missing after copy!"
-            find addons/ -name "*gdcov*"
-            exit 1
-          fi
+          ls -la ./addons/gdunit4_coverage/bin/gdcov
 
       - name: "Initialize Project and UIDs"
         run: |
