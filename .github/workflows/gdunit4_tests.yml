@@ -73,7 +73,7 @@ jobs:
           cp -r temp_cov/addons/gdunit4_coverage addons/
           rm -rf temp_cov
 
-          # 3. Register gdunit4_coverage in project.godot so GDUnit4 installs the coverage hook
+          # 3. Register gdunit4_coverage in project.godot
           python3 -c '
           with open("project.godot", "r") as f:
               content = f.read()
@@ -97,13 +97,13 @@ jobs:
 
       - name: "Initialize Project and Register GDExtensions"
         run: |
-          # Purge stale engine cache so Godot registers res://addons/gdunit4_coverage/
           rm -rf .godot/
           ./godot --headless --editor --quit --path .
 
       - name: "Run Coverage - Batch 1 (Core Systems & Entities)"
         run: |
-          xvfb-run ./godot --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+          # Pass -d (debug mode) to Godot to enable ScriptDebugger for coverage tracking
+          xvfb-run ./godot -d --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
             --ignoreHeadlessMode \
             --add res://test/gdunit4/test_audio_manager.gd \
             --add res://test/gdunit4/test_bullet.gd \
@@ -133,7 +133,7 @@ jobs:
 
       - name: "Run Coverage - Batch 2 (UI, Menus & Controls)"
         run: |
-          xvfb-run ./godot --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+          xvfb-run ./godot -d --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
             --ignoreHeadlessMode \
             --add res://test/gdunit4/test_audio_settings.gd \
             --add res://test/gdunit4/test_audio_unexpected_exit.gd \
