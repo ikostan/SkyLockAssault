@@ -70,15 +70,26 @@ jobs:
           unzip -q coverage.zip -d temp_cov/
           rm coverage.zip
 
-          # Copy GDExtension plugin directly into addons/
           cp -r temp_cov/addons/gdunit4_coverage addons/
           rm -rf temp_cov
 
-          # 3. Verification
-          echo "=== Verifying GDExtension Plugin ==="
+          # 3. Register gdunit4_coverage in project.godot so GDUnit4 installs the coverage hook
+          python3 -c '
+          with open("project.godot", "r") as f:
+              content = f.read()
+          if "res://addons/gdunit4_coverage/plugin.cfg" not in content:
+              if "[editor_plugins]" in content:
+                  content = content.replace("enabled=PackedStringArray(", "enabled=PackedStringArray(\"res://addons/gdunit4_coverage/plugin.cfg\", ")
+              else:
+                  content += "\n[editor_plugins]\n\nenabled=PackedStringArray(\"res://addons/gdunit4_coverage/plugin.cfg\")\n"
+              with open("project.godot", "w") as f:
+                  f.write(content)
+              print("✅ Registered gdunit4_coverage plugin in project.godot")
+          '
+
+          # Verification
           if [ -f "./addons/gdunit4_coverage/gdunit4_coverage.gdextension" ]; then
             echo "✅ GDExtension successfully installed at ./addons/gdunit4_coverage/"
-            ls -la ./addons/gdunit4_coverage/
           else
             echo "❌ ERROR: Failed to install gdunit4_coverage GDExtension!"
             exit 1
