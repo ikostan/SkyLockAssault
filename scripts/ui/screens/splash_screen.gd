@@ -14,10 +14,11 @@ extends Control
 
 const DEFAULT_STARTUP_SCENE := "res://scenes/main_menu.tscn"
 
+@export var presentation_speed: float = 50.0  # Speed rate for move_toward (units/sec).
+
 var resolved_next_scene: String = ""
 var loader_progress: float = 0.0  # Current smoothed progress value.
 var display_target: float = 0.0  # Target display progress value.
-var presentation_speed: float = 50.0  # Speed rate for move_toward (units per second).
 var min_load_time: float = 1.0  # Minimum splashing time in seconds for visibility.
 var load_start_time: float = 0.0  # Timestamp when splashing starts.
 var is_scene_loaded: bool = false  # Flag to track if the scene is fully loaded.
@@ -48,7 +49,9 @@ func _poll_resource_backend() -> void:
 		return
 
 	var progress_array: Array = []
-	var status: int = ResourceLoader.load_threaded_get_status(Globals.next_scene, progress_array)
+	var status: int = ResourceLoader.load_threaded_get_status(
+		Globals.next_scene, progress_array
+	)
 
 	match status:
 		ResourceLoader.THREAD_LOAD_IN_PROGRESS:
@@ -97,12 +100,12 @@ func _update_presentation_handler(delta: float) -> void:
 func _evaluate_transition_router() -> void:
 	var elapsed_time: float = (Time.get_ticks_msec() / 1000.0) - load_start_time
 
-	# Proceed only when loaded (or failed fallback), display target complete,
+	# Proceed only when loaded (or failed fallback), display progress >= 99.9%,
 	# and minimum time elapsed.
 	if (
 		(is_scene_loaded or load_failed)
 		and elapsed_time >= min_load_time
-		and is_equal_approx(loader_progress, 100.0)
+		and loader_progress >= 99.9
 		and not transitioning
 	):
 		transitioning = true  # Lock to prevent re-entry
