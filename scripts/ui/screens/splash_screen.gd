@@ -15,9 +15,13 @@ extends Control
 const DEFAULT_STARTUP_SCENE := "res://scenes/main_menu.tscn"
 const TRANSITION_PROGRESS_THRESHOLD: float = 99.9
 
-@export_range(0.0, 500.0, 0.1, "or_greater") var presentation_speed: float = 50.0:
+var _presentation_speed: float = 50.0
+
+@export_range(0.0, 500.0, 0.1, "or_greater") var presentation_speed: float:
+	get:
+		return _presentation_speed
 	set(value):
-		presentation_speed = max(0.0, value)
+		_presentation_speed = max(0.0, value)
 
 var resolved_next_scene: String = ""
 var loader_progress: float = 0.0  # Current smoothed progress value.
@@ -129,7 +133,10 @@ func _evaluate_transition_router() -> void:
 				get_tree().change_scene_to_packed(scene)
 			else:
 				Globals.log_message(
-					"PackedScene validation failed during scene transition. Direct load fallback.",
+					(
+						"PackedScene validation failed during scene transition."
+						+ " Direct load fallback."
+					),
 					Globals.LogLevel.ERROR
 				)
 				get_tree().change_scene_to_file(target_path)
