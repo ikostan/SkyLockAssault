@@ -13,8 +13,11 @@
 extends Control
 
 const DEFAULT_STARTUP_SCENE := "res://scenes/main_menu.tscn"
+const TRANSITION_PROGRESS_THRESHOLD: float = 99.9
 
-@export var presentation_speed: float = 50.0  # Speed rate for move_toward (units/sec).
+@export_range(0.0, 500.0, 0.1, "or_greater") var presentation_speed: float = 50.0:
+	set(value):
+		presentation_speed = max(0.0, value)
 
 var resolved_next_scene: String = ""
 var loader_progress: float = 0.0  # Current smoothed progress value.
@@ -49,7 +52,9 @@ func _poll_resource_backend() -> void:
 		return
 
 	var progress_array: Array = []
-	var status: int = ResourceLoader.load_threaded_get_status(Globals.next_scene, progress_array)
+	var status: int = ResourceLoader.load_threaded_get_status(
+		Globals.next_scene, progress_array
+	)
 
 	match status:
 		ResourceLoader.THREAD_LOAD_IN_PROGRESS:
@@ -98,12 +103,12 @@ func _update_presentation_handler(delta: float) -> void:
 func _evaluate_transition_router() -> void:
 	var elapsed_time: float = (Time.get_ticks_msec() / 1000.0) - load_start_time
 
-	# Proceed only when loaded (or failed fallback), display progress >= 99.9%,
+	# Proceed only when loaded (or failed fallback), display progress >= threshold,
 	# and minimum time elapsed.
 	if (
 		(is_scene_loaded or load_failed)
 		and elapsed_time >= min_load_time
-		and loader_progress >= 99.9
+		and loader_progress >= TRANSITION_PROGRESS_THRESHOLD
 		and not transitioning
 	):
 		transitioning = true  # Lock to prevent re-entry
