@@ -2,12 +2,13 @@
 ## SPDX-License-Identifier: GPL-3.0-or-later
 ## test_splash_screen.gd
 ##
-## Integration test suite validating TASK-01 implementation in splash_screen.gd:
+## Integration test suite validating TASK-01 and TASK-03 implementations in splash_screen.gd:
 ## 1. Monotonic progress updates driven through _poll_resource_backend.
 ## 2. Unsubscribing/ceasing polling upon cached completion or failure.
 ## 3. Linear progression convergence via move_toward.
 ## 4. Defensive PackedScene resource type verification via _poll_resource_backend.
 ## 5. Automatic initialization of load_start_time on _ready().
+## 6. Full TASK-03 (#780) transition gating and move_toward resolution assertions.
 
 extends "res://addons/gut/test.gd"
 
@@ -31,8 +32,22 @@ func before_each() -> void:
 func after_each() -> void:
 	Globals.next_scene = original_next_scene
 	Globals.settings = original_settings
+	
+	AudioManager.stop_all_sfx()
+	
+	var focus_owner := get_viewport().gui_get_focus_owner()
+	if is_instance_valid(focus_owner):
+		focus_owner.release_focus()
+
 	if is_instance_valid(splash_instance):
 		splash_instance.queue_free()
+
+	# Await frame to let deferred scene transitions land, then instantly wipe the root-level dummy node
+	await get_tree().process_frame
+	var root := get_tree().root
+	for child in root.get_children():
+		if child is Node2D and not child.name.begins_with("Gut"):
+			child.free()
 
 
 ## Factory helper to safely instantiate the full scene layout and resolve @onready nodes
@@ -91,6 +106,11 @@ func test_monotonic_progress_scaling() -> void:
 	)
 
 
+## Explicit TASK-03 spec alias verifying presentation engine rejects downward layout tracking values
+func test_monotonic_progress_safeguard() -> void:
+	test_monotonic_progress_scaling()
+
+
 ## Verifies that move_toward smoothly steps progress forward deterministically based on delta.
 func test_presentation_handler_linear_convergence() -> void:
 	splash_instance = _create_splash_instance()
@@ -112,6 +132,11 @@ func test_presentation_handler_linear_convergence() -> void:
 		25.0, 
 		"ProgressBar UI value must reflect updated loader_progress."
 	)
+
+
+## Explicit TASK-03 spec alias evaluating frame-rate independent tracking and move_toward convergence
+func test_convergent_move_toward_resolution() -> void:
+	test_presentation_handler_linear_convergence()
 
 
 # ==========================================================================
@@ -136,7 +161,6 @@ func test_poll_resource_backend_stops_when_loaded() -> void:
 	)
 
 
-## Ensures backend polling sets load_failed and forces target to 100 on non-PackedScene resources.
 ## Ensures backend polling sets load_failed and forces target to 100 on non-PackedScene resources.
 func test_poll_resource_backend_handles_invalid_resource_type() -> void:
 	splash_instance = _create_splash_instance()
@@ -172,7 +196,7 @@ func test_poll_resource_backend_handles_invalid_resource_type() -> void:
 
 
 # ==========================================================================
-# 4. TRANSITION ROUTER DEFENSIVE VALIDATION
+# 4. TRANSITION ROUTER DEFENSIVE VALIDATION & GATING MECHANICS
 # ==========================================================================
 
 ## Validates that the transition router respects minimum load time before proceeding.
@@ -188,4 +212,44 @@ func test_transition_router_respects_min_load_time() -> void:
 	assert_false(
 		splash_instance.transitioning, 
 		"Transition router must lock out scene change until min_load_time has elapsed."
+	)
+
+
+## TASK-03 Spec: Evaluates transition gating remains locked when progress bar is incomplete
+func test_transition_gating_mechanics_locked_when_bar_incomplete() -> void:
+	splash_instance = _create_splash_instance()
+	
+	splash_instance.is_scene_loaded = true
+	splash_instance.loader_progress = 50.0  # Bar incomplete (<99.9%)
+	splash_instance.min_load_time = 0.0
+
+	splash_instance._evaluate_transition_router()
+
+	assert_false(
+		splash_instance.transitioning, 
+		"Transition router must remain locked when presentation progress is incomplete."
+	)
+
+
+## TASK-03 Spec: Evaluates transition gating unlocks and fires transition on full completion
+func test_transition_gating_mechanics_fire_on_full_completion() -> void:
+	splash_instance = _create_splash_instance()
+	
+	# Pack a lightweight dummy node to avoid loading main_menu.tscn (prevents audio/orphan leaks)
+	var dummy_root := Node2D.new()
+	var dummy_packed := PackedScene.new()
+	dummy_packed.pack(dummy_root)
+	dummy_root.free()
+	
+	splash_instance.scene = dummy_packed
+	Globals.next_scene = "res://scenes/dummy_test_scene.tscn"
+	splash_instance.is_scene_loaded = true
+	splash_instance.loader_progress = 100.0
+	splash_instance.min_load_time = 0.0  # Force time elapsed
+
+	splash_instance._evaluate_transition_router()
+
+	assert_true(
+		splash_instance.transitioning, 
+		"Transition router must unlock and set transitioning flag upon full completion."
 	)
