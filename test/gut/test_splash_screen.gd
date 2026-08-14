@@ -42,12 +42,11 @@ func after_each() -> void:
 	if is_instance_valid(splash_instance):
 		splash_instance.queue_free()
 
-	# Await frame to let deferred scene transitions land, then instantly wipe the root-level dummy node
+	# Safely release ONLY the specific dummy scene created by the transition router
 	await get_tree().process_frame
-	var root := get_tree().root
-	for child in root.get_children():
-		if child is Node2D and not child.name.begins_with("Gut"):
-			child.free()
+	var current_scene := get_tree().current_scene
+	if is_instance_valid(current_scene) and current_scene.name == "SplashTestDummyScene":
+		current_scene.free()
 
 
 ## Factory helper to safely instantiate the full scene layout and resolve @onready nodes
@@ -235,8 +234,10 @@ func test_transition_gating_mechanics_locked_when_bar_incomplete() -> void:
 func test_transition_gating_mechanics_fire_on_full_completion() -> void:
 	splash_instance = _create_splash_instance()
 	
-	# Pack a lightweight dummy node to avoid loading main_menu.tscn (prevents audio/orphan leaks)
+	# Pack a uniquely named dummy node to avoid root-level collision
 	var dummy_root := Node2D.new()
+	dummy_root.name = "SplashTestDummyScene"
+	
 	var dummy_packed := PackedScene.new()
 	dummy_packed.pack(dummy_root)
 	dummy_root.free()
