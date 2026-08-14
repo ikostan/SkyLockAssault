@@ -48,9 +48,7 @@ func _poll_resource_backend() -> void:
 		return
 
 	var progress_array: Array = []
-	var status: int = ResourceLoader.load_threaded_get_status(
-		Globals.next_scene, progress_array
-	)
+	var status: int = ResourceLoader.load_threaded_get_status(Globals.next_scene, progress_array)
 
 	match status:
 		ResourceLoader.THREAD_LOAD_IN_PROGRESS:
