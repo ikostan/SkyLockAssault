@@ -7,6 +7,7 @@
 ## 2. Unsubscribing/ceasing polling upon cached completion or failure.
 ## 3. Linear progression convergence via move_toward.
 ## 4. Defensive PackedScene resource type verification.
+## 5. Automatic initialization of load_start_time on _ready().
 
 extends "res://addons/gut/test.gd"
 
@@ -48,7 +49,22 @@ func _create_splash_instance() -> Control:
 
 
 # ==========================================================================
-# 1. MONOTONIC PROGRESS & PRESENTATION PIPELINE TESTS
+# 1. LIFECYCLE & INITIALIZATION TESTS
+# ==========================================================================
+
+## Asserts that load_start_time is initialized upon entering the scene tree (_ready).
+func test_load_start_time_initialized_on_ready() -> void:
+	splash_instance = _create_splash_instance()
+
+	assert_gt(
+		splash_instance.load_start_time,
+		0.0,
+		"Regression: load_start_time must be initialized via _ready() upon entering tree."
+	)
+
+
+# ==========================================================================
+# 2. MONOTONIC PROGRESS & PRESENTATION PIPELINE TESTS
 # ==========================================================================
 
 ## Verifies that progress display target is monotonic and does not regress 
@@ -93,7 +109,7 @@ func test_presentation_handler_linear_convergence() -> void:
 
 
 # ==========================================================================
-# 2. BACKEND POLLING & EARLY EXIT SAFEGUARDS
+# 3. BACKEND POLLING & EARLY EXIT SAFEGUARDS
 # ==========================================================================
 
 ## Ensures backend polling early-returns when the scene is already marked as loaded.
@@ -137,7 +153,7 @@ func test_poll_resource_backend_handles_invalid_resource_type() -> void:
 
 
 # ==========================================================================
-# 3. TRANSITION ROUTER DEFENSIVE VALIDATION
+# 4. TRANSITION ROUTER DEFENSIVE VALIDATION
 # ==========================================================================
 
 ## Validates that the transition router respects minimum load time before proceeding.
@@ -147,7 +163,6 @@ func test_transition_router_respects_min_load_time() -> void:
 	splash_instance.is_scene_loaded = true
 	splash_instance.loader_progress = 100.0
 	splash_instance.min_load_time = 10.0  # Set long minimum load time
-	splash_instance.load_start_time = Time.get_ticks_msec() / 1000.0
 
 	splash_instance._evaluate_transition_router()
 

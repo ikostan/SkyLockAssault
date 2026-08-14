@@ -30,6 +30,10 @@ var label_text: String = "Loading: "
 @onready var label: Label = $Label  # Label for displaying loading status.
 
 
+func _ready() -> void:
+	load_start_time = Time.get_ticks_msec() / 1000.0
+
+
 func _process(delta: float) -> void:
 	_poll_resource_backend()
 	_update_presentation_handler(delta)
@@ -44,7 +48,9 @@ func _poll_resource_backend() -> void:
 		return
 
 	var progress_array: Array = []
-	var status: int = ResourceLoader.load_threaded_get_status(Globals.next_scene, progress_array)
+	var status: int = ResourceLoader.load_threaded_get_status(
+		Globals.next_scene, progress_array
+	)
 
 	match status:
 		ResourceLoader.THREAD_LOAD_IN_PROGRESS:
