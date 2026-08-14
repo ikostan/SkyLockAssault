@@ -15,8 +15,6 @@ extends Control
 const DEFAULT_STARTUP_SCENE := "res://scenes/main_menu.tscn"
 const TRANSITION_PROGRESS_THRESHOLD: float = 99.9
 
-var _presentation_speed: float = 50.0
-
 @export_range(0.0, 500.0, 0.1, "or_greater") var presentation_speed: float:
 	get:
 		return _presentation_speed
@@ -33,6 +31,8 @@ var scene: PackedScene = null  # Holder for the loaded scene.
 var load_failed: bool = false  # Flag if splashing request failed.
 var transitioning: bool = false  # Flag to prevent multiple scene changes.
 var label_text: String = "Loading: "
+
+var _presentation_speed: float = 50.0
 
 @onready var progress_bar: ProgressBar = $ProgressBar  # Progress bar UI element.
 @onready var label: Label = $Label  # Label for displaying loading status.
