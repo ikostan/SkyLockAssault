@@ -16,12 +16,14 @@ const SPLASH_SCREEN_PATH: String = "res://scenes/splash_screen.tscn"
 var splash_instance: Control
 var original_next_scene: String
 
+var original_settings: GameSettingsResource
+
 
 func before_each() -> void:
-	# Snapshot active next_scene path
 	original_next_scene = Globals.next_scene
 	Globals.next_scene = "res://scenes/main_menu.tscn"
-	
+	original_settings = Globals.settings
+
 	# Silence logs during test runs
 	Globals.settings = GameSettingsResource.new()
 	Globals.settings.current_log_level = 4
@@ -29,6 +31,7 @@ func before_each() -> void:
 
 func after_each() -> void:
 	Globals.next_scene = original_next_scene
+	Globals.settings = original_settings
 	if is_instance_valid(splash_instance):
 		splash_instance.queue_free()
 
