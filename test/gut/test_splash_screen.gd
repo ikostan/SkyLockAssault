@@ -3,10 +3,10 @@
 ## test_splash_screen.gd
 ##
 ## Integration test suite validating TASK-01 implementation in splash_screen.gd:
-## 1. Monotonic progress updates.
+## 1. Monotonic progress updates driven through _poll_resource_backend.
 ## 2. Unsubscribing/ceasing polling upon cached completion or failure.
 ## 3. Linear progression convergence via move_toward.
-## 4. Defensive PackedScene resource type verification.
+## 4. Defensive PackedScene resource type verification via _poll_resource_backend.
 ## 5. Automatic initialization of load_start_time on _ready().
 
 extends "res://addons/gut/test.gd"
@@ -15,7 +15,6 @@ const SPLASH_SCREEN_PATH: String = "res://scenes/splash_screen.tscn"
 
 var splash_instance: Control
 var original_next_scene: String
-
 var original_settings: GameSettingsResource
 
 
@@ -71,20 +70,24 @@ func test_load_start_time_initialized_on_ready() -> void:
 # ==========================================================================
 
 ## Verifies that progress display target is monotonic and does not regress 
-## even if lower backend progress values are reported.
+## when _poll_resource_backend processes lower progress values from the loader.
 func test_monotonic_progress_scaling() -> void:
 	splash_instance = _create_splash_instance()
+	Globals.next_scene = "res://scenes/main_menu.tscn"
 
-	# Simulate initial higher progress
+	# Simulate initial higher progress target
 	splash_instance.display_target = 60.0
 	
-	# Simulate backend step attempting to set lower progress
-	splash_instance.display_target = max(splash_instance.display_target, 40.0)
+	# Request threaded loading to create an active IN_PROGRESS status
+	ResourceLoader.load_threaded_request(Globals.next_scene)
+	
+	# Execute polling; initial loader progress (<60%) must not decrease display_target
+	splash_instance._poll_resource_backend()
 	
 	assert_eq(
 		splash_instance.display_target, 
 		60.0, 
-		"Display target must remain at peak value to guarantee strictly monotonic progress scaling."
+		"Display target must remain at peak value when _poll_resource_backend runs."
 	)
 
 
@@ -133,25 +136,38 @@ func test_poll_resource_backend_stops_when_loaded() -> void:
 	)
 
 
-## Ensures backend polling sets load_failed and forces target to 100 on corrupt/invalid resources.
+## Ensures backend polling sets load_failed and forces target to 100 on non-PackedScene resources.
+## Ensures backend polling sets load_failed and forces target to 100 on non-PackedScene resources.
 func test_poll_resource_backend_handles_invalid_resource_type() -> void:
 	splash_instance = _create_splash_instance()
 
-	# Untyped Variant forces dynamic runtime type checking without GDScript compiler errors
-	var invalid_resource: Variant = Resource.new() # Standard Resource, not a PackedScene
-	
-	if not (invalid_resource is PackedScene):
-		splash_instance.load_failed = true
-		splash_instance.display_target = 100.0
+	# Resolve valid non-PackedScene resource path on disk
+	var non_packed_path := "res://scripts/ui/screens/splash_screen.gd"
+	if not FileAccess.file_exists(non_packed_path):
+		non_packed_path = "res://scripts/splash_screen.gd"
+
+	Globals.next_scene = non_packed_path
+
+	var err := ResourceLoader.load_threaded_request(Globals.next_scene)
+	assert_eq(err, OK, "Threaded load request for non-PackedScene resource must succeed.")
+
+	# Wait until threaded loader finishes loading the GDScript resource
+	var status: int = ResourceLoader.load_threaded_get_status(Globals.next_scene)
+	while status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		await get_tree().process_frame
+		status = ResourceLoader.load_threaded_get_status(Globals.next_scene)
+
+	# Execute production backend polling logic
+	splash_instance._poll_resource_backend()
 
 	assert_true(
-		splash_instance.load_failed, 
-		"Non-PackedScene resource package must trigger load_failed flag."
+		splash_instance.load_failed,
+		"Non-PackedScene resource package must trigger load_failed flag in _poll_resource_backend."
 	)
 	assert_eq(
-		splash_instance.display_target, 
-		100.0, 
-		"Failure condition must push display_target to 100 for fallback routing."
+		splash_instance.display_target,
+		100.0,
+		"Failure condition in _poll_resource_backend must push display_target to 100."
 	)
 
 
