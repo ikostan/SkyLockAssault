@@ -1,4 +1,4 @@
-# Refactor splash loader; add monotonic progress & tests- #893
+# Refactor splash loader; add monotonic progress & tests - #893
 <!-- markdownlint-disable MD001 MD036 MD013 MD033 table-column-style -->
 ---
 
