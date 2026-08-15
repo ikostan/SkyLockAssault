@@ -91,9 +91,15 @@ def test_splash_transition_flow(page: Page) -> None:
             len(transfer_logs) > 0
         ), "No 'Telemetry - Assembly Transfer:' telemetry marks captured during load."
 
-        # 4. ASSIGN RENDERING CANVAS HANDSHAKE INVARIANTS
+        # 4. ASSIGN RENDERING CANVAS HANDSHAKE & GEOMETRY INVARIANTS
         canvas_element = page.locator("#canvas")
         expect(canvas_element).to_be_visible(timeout=TEST_TIMEOUT)
+
+        canvas_box = canvas_element.bounding_box()
+        assert canvas_box is not None, "Canvas has no rendered bounding box"
+        assert canvas_box["width"] > 0, "Canvas rendered width is zero"
+        assert canvas_box["height"] > 0, "Canvas rendered height is zero"
+
         assert (
             "SkyLockAssault" in page.title()
         ), f"Unexpected page execution title: '{page.title()}'"
