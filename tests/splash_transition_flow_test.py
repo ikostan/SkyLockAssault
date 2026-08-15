@@ -214,9 +214,7 @@ def test_splash_transition_flow(page: Page) -> None:
             log["text"]
             for log in logs
             if "Telemetry - Assembly Transfer:" in log["text"]
-            and not re.search(
-                r"Telemetry - Assembly Transfer:\s*\d+%$", log["text"]
-            )
+            and not re.search(r"Telemetry - Assembly Transfer:\s*\d+%$", log["text"])
         ]
         assert malformed == [], f"Malformed telemetry entries: {malformed}"
 
@@ -225,9 +223,7 @@ def test_splash_transition_flow(page: Page) -> None:
         expect(canvas_element).to_be_visible(timeout=TEST_TIMEOUT)
 
         canvas_box = canvas_element.bounding_box()
-        assert (
-            canvas_box is not None
-        ), "Canvas element has no rendered bounding box"
+        assert canvas_box is not None, "Canvas element has no rendered bounding box"
         assert (
             canvas_box["width"] > 0
         ), "Canvas rendered width is zero (viewport layout failure)"
@@ -263,9 +259,8 @@ def test_splash_transition_flow(page: Page) -> None:
 
         assert (
             len(critical_faults) == 0
-        ), (
-            "Critical exceptions found during web handshake:\n"
-            + "\n".join(critical_faults)
+        ), "Critical exceptions found during web handshake:\n" + "\n".join(
+            critical_faults
         )
 
     except Exception as e:
@@ -273,9 +268,7 @@ def test_splash_transition_flow(page: Page) -> None:
         timestamp = int(time.time())
 
         # Save test-specific log and HTML dumps (screenshot/video handled by conftest)
-        logs_path = (
-            ARTIFACTS_DIR / f"test_splash_failure_logs_{timestamp}.txt"
-        )
+        logs_path = ARTIFACTS_DIR / f"test_splash_failure_logs_{timestamp}.txt"
         with open(logs_path, "w", encoding="utf-8") as f:
             f.write("--- CONSOLE LOGS ---\n")
             for log in logs:
@@ -284,9 +277,7 @@ def test_splash_transition_flow(page: Page) -> None:
             for p_err in page_errors:
                 f.write(f"{p_err}\n")
 
-        html_path = (
-            ARTIFACTS_DIR / f"test_splash_failure_html_{timestamp}.html"
-        )
+        html_path = ARTIFACTS_DIR / f"test_splash_failure_html_{timestamp}.html"
         with open(html_path, "w", encoding="utf-8") as f:
             f.write(page.content())
         raise
