@@ -252,7 +252,9 @@ def _extract_on_progress_function_source() -> str:
     return f"function(current, total) {body}"
 
 
-def _run_on_progress(page: Page, fn_source: str, calls: list[tuple[int, int]]) -> list[str]:
+def _run_on_progress(
+    page: Page, fn_source: str, calls: list[tuple[int, int]]
+) -> list[str]:
     """Evaluates the extracted onProgress function against a series of
     (current, total) calls and returns every console.log message it emitted.
     """
