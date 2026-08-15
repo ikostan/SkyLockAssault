@@ -31,11 +31,117 @@ import json
 import os
 import re
 import time
+from pathlib import Path
 from typing import Any
 
 from playwright.sync_api import Page, expect
 
 from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT
+
+_CUSTOM_SHELL_PATH = Path(__file__).resolve().parents[1] / "custom_shell.html"
+_ON_PROGRESS_MARKER = "onProgress: function(current, total)"
+
+
+# ==============================================================================
+# Helper Functions for Isolated JS Unit Tests
+# ==============================================================================
+
+
+def _extract_on_progress_function_source() -> str:
+    """Extracts onProgress telemetry callback verbatim from custom_shell.html."""
+    html = _CUSTOM_SHELL_PATH.read_text(encoding="utf-8")
+    try:
+        marker_idx = html.index(_ON_PROGRESS_MARKER)
+    except ValueError as exc:
+        raise AssertionError(
+            "onProgress telemetry handler not found in custom_shell.html"
+        ) from exc
+
+    brace_start = html.index("{", marker_idx)
+    depth = 0
+    idx = brace_start
+    while idx < len(html):
+        if html[idx] == "{":
+            depth += 1
+        elif html[idx] == "}":
+            depth -= 1
+            if depth == 0:
+                break
+        idx += 1
+    else:
+        raise AssertionError("Could not find matching closing brace for body")
+
+    body = html[brace_start : idx + 1]
+    return f"function(current, total) {body}"
+
+
+def _run_on_progress(
+    page: Page, fn_source: str, calls: list[tuple[int, int]]
+) -> list[str]:
+    """Evaluates the extracted callback in an isolated JS context."""
+    return page.evaluate(
+        """([fnSource, calls]) => {
+            const onProgress = new Function('return (' + fnSource + ')')();
+            const outputs = [];
+            const originalLog = console.log;
+            console.log = (msg) => { outputs.push(msg); };
+            try {
+                for (const [current, total] of calls) {
+                    onProgress(current, total);
+                }
+            } finally {
+                console.log = originalLog;
+            }
+            return outputs;
+        }""",
+        [fn_source, calls],
+    )
+
+
+# ==============================================================================
+# Fast Unit Tests (Run in ~20ms, No WASM Boot Required)
+# ==============================================================================
+
+
+def test_on_progress_telemetry_math_is_correct(page: Page) -> None:
+    """Validates percentage calculations in isolated JS context."""
+    fn_source = _extract_on_progress_function_source()
+    outputs = _run_on_progress(
+        page, fn_source, [(0, 200), (50, 200), (100, 200), (200, 200)]
+    )
+    assert outputs == [
+        "Telemetry - Assembly Transfer: 0%",
+        "Telemetry - Assembly Transfer: 25%",
+        "Telemetry - Assembly Transfer: 50%",
+        "Telemetry - Assembly Transfer: 100%",
+    ]
+
+
+def test_on_progress_floors_fractional_percentages(page: Page) -> None:
+    """Regression test: fractional percentages must be floored, not rounded."""
+    fn_source = _extract_on_progress_function_source()
+    outputs = _run_on_progress(
+        page,
+        fn_source,
+        [(1, 3), (2, 3), (99, 100)],
+    )
+    assert outputs == [
+        "Telemetry - Assembly Transfer: 33%",
+        "Telemetry - Assembly Transfer: 66%",
+        "Telemetry - Assembly Transfer: 99%",
+    ]
+
+
+def test_on_progress_skips_logging_when_total_is_zero(page: Page) -> None:
+    """Guards against division-by-zero (NaN% or Infinity%) when total is 0."""
+    fn_source = _extract_on_progress_function_source()
+    outputs = _run_on_progress(page, fn_source, [(0, 0), (5, 0)])
+    assert outputs == [], f"Expected no logs when total=0, got: {outputs}"
+
+
+# ==============================================================================
+# Comprehensive E2E Test (Single WASM Boot)
+# ==============================================================================
 
 
 # DO NOT REFACTOR: Must consume function-scoped `page` to capture preloader
@@ -57,7 +163,6 @@ def test_splash_transition_flow(page: Page) -> None:
         """Capture uncaught runtime errors during engine boot."""
         page_errors.append(f"Uncaught Exception: {exc.message}\n{exc.stack}")
 
-    # Register listeners BEFORE navigation to capture early boot telemetry
     page.on("console", on_console)
     page.on("pageerror", on_page_error)
 
@@ -77,7 +182,6 @@ def test_splash_transition_flow(page: Page) -> None:
             timeout=DEFAULT_TIMEOUT,
         )
 
-        # Verify custom HTML layout preloader maps instantly to viewport
         loading_overlay = page.locator("#loading")
         expect(loading_overlay).to_be_visible(timeout=TEST_TIMEOUT)
 
@@ -87,8 +191,7 @@ def test_splash_transition_flow(page: Page) -> None:
             timeout=DEFAULT_TIMEOUT,
         )
 
-        # Parse progressive assembly transfer marks
-        # Format: "Telemetry - Assembly Transfer: X%"
+        # Parse and validate progressive assembly transfer marks
         progress_values: list[int] = []
         for log in logs:
             match = re.search(
@@ -98,7 +201,6 @@ def test_splash_transition_flow(page: Page) -> None:
             if match:
                 progress_values.append(int(match.group(1)))
 
-        # Assert telemetry presence, range bounds, and progression
         assert (
             len(progress_values) > 0
         ), "No 'Telemetry - Assembly Transfer:' marks captured during load."
@@ -109,6 +211,19 @@ def test_splash_transition_flow(page: Page) -> None:
             "Assembly transfer telemetry did not progress monotonically: "
             f"{progress_values}"
         )
+        assert max(progress_values) >= 90, (
+            "Assembly transfer telemetry never approached completion: "
+            f"{progress_values}"
+        )
+
+        # Audit against malformed values (e.g. NaN% or Infinity%)
+        malformed = [
+            log["text"]
+            for log in logs
+            if "Telemetry - Assembly Transfer:" in log["text"]
+            and not re.search(r"Telemetry - Assembly Transfer:\s*\d+%$", log["text"])
+        ]
+        assert malformed == [], f"Malformed telemetry entries: {malformed}"
 
         # 4. ASSIGN RENDERING CANVAS HANDSHAKE & STRUCTURAL GEOMETRY
         canvas_element = page.locator("#canvas")
@@ -116,7 +231,6 @@ def test_splash_transition_flow(page: Page) -> None:
 
         canvas_box = canvas_element.bounding_box()
         assert canvas_box is not None, "Canvas element has no rendered bounding box"
-
         assert (
             canvas_box["width"] > 0
         ), "Canvas rendered width is zero (viewport layout failure)"
@@ -135,11 +249,9 @@ def test_splash_transition_flow(page: Page) -> None:
             ".getAttribute('aria-hidden') === 'true'"
         ), "Loading container missing aria-hidden='true' post-initialization"
 
-        # Invariant: engine initialization state persists after overlay teardown
-        assert page.evaluate("() => window.godotInitialized === true"), (
-            "window.godotInitialized lost its truthy state after splash "
-            "transition completed"
-        )
+        assert page.evaluate(
+            "() => window.godotInitialized === true"
+        ), "window.godotInitialized lost state after splash transition"
 
         # 6. AUDIT FATAL PARSING & SCRIPT COMPILATION EXCEPTIONS
         critical_faults = [
@@ -163,10 +275,8 @@ def test_splash_transition_flow(page: Page) -> None:
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
 
-        # Isolate diagnostic files on execution crashes
-        page.screenshot(
-            path=f"artifacts/test_splash_failure_screenshot_{timestamp}.png"
-        )
+        screenshot_path = f"artifacts/test_splash_failure_screenshot_{timestamp}.png"
+        page.screenshot(path=screenshot_path)
 
         logs_path = f"artifacts/test_splash_failure_console_logs_{timestamp}.txt"
         with open(logs_path, "w", encoding="utf-8") as f:
