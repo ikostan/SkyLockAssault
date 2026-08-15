@@ -110,7 +110,6 @@ def test_splash_transition_flow(page: Page) -> None:
             f"{progress_values}"
         )
 
-
         # 4. ASSIGN RENDERING CANVAS HANDSHAKE & STRUCTURAL GEOMETRY
         canvas_element = page.locator("#canvas")
         expect(canvas_element).to_be_visible(timeout=TEST_TIMEOUT)
@@ -137,9 +136,7 @@ def test_splash_transition_flow(page: Page) -> None:
         ), "Loading container missing aria-hidden='true' post-initialization"
 
         # Invariant: engine initialization state persists after overlay teardown
-        assert page.evaluate(
-            "() => window.godotInitialized === true"
-        ), (
+        assert page.evaluate("() => window.godotInitialized === true"), (
             "window.godotInitialized lost its truthy state after splash "
             "transition completed"
         )
@@ -157,10 +154,8 @@ def test_splash_transition_flow(page: Page) -> None:
 
         assert (
             len(critical_faults) == 0
-        ), (
-            "Critical exceptions found during web handshake:\n"
-            + "\n".join(critical_faults)
-
+        ), "Critical exceptions found during web handshake:\n" + "\n".join(
+            critical_faults
         )
 
     except Exception as e:
@@ -173,10 +168,7 @@ def test_splash_transition_flow(page: Page) -> None:
             path=f"artifacts/test_splash_failure_screenshot_{timestamp}.png"
         )
 
-
-        logs_path = (
-            f"artifacts/test_splash_failure_console_logs_{timestamp}.txt"
-        )
+        logs_path = f"artifacts/test_splash_failure_console_logs_{timestamp}.txt"
         with open(logs_path, "w", encoding="utf-8") as f:
             f.write("--- CONSOLE LOGS ---\n")
             for log in logs:
