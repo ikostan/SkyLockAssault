@@ -188,13 +188,24 @@
 
     <script src="$GODOT_URL"></script> <!-- Godot replaces with actual JS file, e.g., tmp_js_export.js -->
     <script>
-        var engine = new Engine($GODOT_CONFIG); // Official placeholder for config
+        // Consolidate engine configuration with custom telemetry hooks
+        var customConfig = Object.assign({}, $GODOT_CONFIG, {
+            onProgress: function(current, total) {
+                if (total > 0) {
+                    var percent = Math.floor((current / total) * 100);
+                    console.log("Telemetry - Assembly Transfer: " + percent + "%");
+                }
+            }
+        });
+
+        // Initialize engine instance with customConfig
+        var engine = new Engine(customConfig);
 
         // Start Godot engine (async for stability)
         engine.startGame().then(() => {
             console.log("Godot engine started successfully!");
 
-            // Hide the loading UI
+            // Hide the loading UI and set accessibility attributes
             var loadingDiv = document.getElementById('loading');
             if (loadingDiv) {
                 loadingDiv.style.display = 'none';
@@ -229,14 +240,14 @@
         document.getElementById('mute-weapon').onchange = (e) => window.toggleMuteWeapon([e.target.checked]);
         document.getElementById('mute-menu').onchange = (e) => window.toggleMuteMenu([e.target.checked]);
         document.getElementById('mute-rotors').onchange = (e) => window.toggleMuteRotors([e.target.checked]);
-        document.getElementById('options-back-button').onclick = () => window.optionsBackPressed([]);  // Add this for options back
-        document.getElementById('controls-back-button').onclick = () => window.controlsBackPressed([]);  // Add this for controls back
-        document.getElementById('audio-back-button').onclick = () => window.audioBackPressed([]);  // Add this for audio back
-        document.getElementById('audio-reset-button').onclick = () => window.audioResetPressed([]);  // Add for reset
-        document.getElementById('advanced-back-button').onclick = () => window.advancedBackPressed([]);  // Add this for advanced back
-        document.getElementById('advanced-reset-button').onclick = () => window.advancedResetPressed([]);  // Add for reset
-        document.getElementById('gameplay-back-button').onclick = () => window.gameplayBackPressed([]);  // Add this for advanced back
-        document.getElementById('gameplay-reset-button').onclick = () => window.gameplayResetPressed([]);  // Add for reset
+        document.getElementById('options-back-button').onclick = () => window.optionsBackPressed([]);
+        document.getElementById('controls-back-button').onclick = () => window.controlsBackPressed([]);
+        document.getElementById('audio-back-button').onclick = () => window.audioBackPressed([]);
+        document.getElementById('audio-reset-button').onclick = () => window.audioResetPressed([]);
+        document.getElementById('advanced-back-button').onclick = () => window.advancedBackPressed([]);
+        document.getElementById('advanced-reset-button').onclick = () => window.advancedResetPressed([]);
+        document.getElementById('gameplay-back-button').onclick = () => window.gameplayBackPressed([]);
+        document.getElementById('gameplay-reset-button').onclick = () => window.gameplayResetPressed([]);
     </script>
 <div class="ime" contenteditable="true" style="background: none; opacity: 0; position: fixed; text-align: left; font-size: 1px; left: 0px; top: 0px; width: 100%; height: 40px; pointer-events: none; display: none;"></div>
 </body>
