@@ -97,8 +97,8 @@ def test_splash_transition_flow(page: Page) -> None:
         assert all(
             0 <= val <= 100 for val in progress_values
         ), f"Telemetry percentage out of bounds [0, 100]: {progress_values}"
-        assert (
-            progress_values == sorted(progress_values)
+        assert progress_values == sorted(
+            progress_values
         ), f"Assembly transfer telemetry did not progress monotonically: {progress_values}"
 
         # 4. ASSIGN RENDERING CANVAS HANDSHAKE & STRUCTURAL GEOMETRY
@@ -107,8 +107,12 @@ def test_splash_transition_flow(page: Page) -> None:
 
         canvas_box = canvas_element.bounding_box()
         assert canvas_box is not None, "Canvas element has no rendered bounding box"
-        assert canvas_box["width"] > 0, "Canvas rendered width is zero (viewport layout failure)"
-        assert canvas_box["height"] > 0, "Canvas rendered height is zero (viewport layout failure)"
+        assert (
+            canvas_box["width"] > 0
+        ), "Canvas rendered width is zero (viewport layout failure)"
+        assert (
+            canvas_box["height"] > 0
+        ), "Canvas rendered height is zero (viewport layout failure)"
 
         assert (
             "SkyLockAssault" in page.title()
@@ -138,7 +142,9 @@ def test_splash_transition_flow(page: Page) -> None:
 
         assert (
             len(critical_faults) == 0
-        ), f"Critical exceptions found during web handshake:\n" + "\n".join(critical_faults)
+        ), f"Critical exceptions found during web handshake:\n" + "\n".join(
+            critical_faults
+        )
 
     except Exception as e:
         print(f"Test: 'test_splash_transition_flow' failed: {e!s}")
@@ -146,7 +152,9 @@ def test_splash_transition_flow(page: Page) -> None:
         timestamp: int = int(time.time())
 
         # Isolate diagnostic files on execution crashes
-        page.screenshot(path=f"artifacts/test_splash_failure_screenshot_{timestamp}.png")
+        page.screenshot(
+            path=f"artifacts/test_splash_failure_screenshot_{timestamp}.png"
+        )
 
         with open(
             f"artifacts/test_splash_failure_console_logs_{timestamp}.txt",
@@ -182,7 +190,9 @@ def test_splash_transition_flow(page: Page) -> None:
                 cdp_session.send("Profiler.disable")
                 cdp_session.detach()
                 with open(
-                    "v8_coverage_splash_transition_flow_test.json", "w", encoding="utf-8"
+                    "v8_coverage_splash_transition_flow_test.json",
+                    "w",
+                    encoding="utf-8",
                 ) as f:
                     json.dump(coverage, f)
             except Exception as cov_err:
