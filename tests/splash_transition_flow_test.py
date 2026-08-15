@@ -165,8 +165,7 @@ def _validate_telemetry_stream(logs: list[dict[str, str]]) -> None:
         f"{progress_values}"
     )
     assert max(progress_values) >= 90, (
-        "Assembly transfer telemetry never approached completion: "
-        f"{progress_values}"
+        "Assembly transfer telemetry never approached completion: " f"{progress_values}"
     )
 
     malformed = [
@@ -178,9 +177,7 @@ def _validate_telemetry_stream(logs: list[dict[str, str]]) -> None:
     assert malformed == [], f"Malformed telemetry entries: {malformed}"
 
 
-def _validate_canvas_and_dom_invariants(
-    page: Page, loading_overlay: Any
-) -> None:
+def _validate_canvas_and_dom_invariants(page: Page, loading_overlay: Any) -> None:
     """Validates canvas layout, overlay teardown, and initialized state."""
     canvas_element = page.locator("#canvas")
     expect(canvas_element).to_be_visible(timeout=TEST_TIMEOUT)
@@ -225,9 +222,7 @@ def _assert_no_critical_faults(
 
     assert (
         len(critical_faults) == 0
-    ), "Critical exceptions found during web handshake:\n" + "\n".join(
-        critical_faults
-    )
+    ), "Critical exceptions found during web handshake:\n" + "\n".join(critical_faults)
 
 
 def _save_failure_artifacts(
