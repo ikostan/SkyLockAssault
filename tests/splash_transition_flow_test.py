@@ -8,8 +8,9 @@ Splash Screen Transition & Telemetry Test Suite (Playwright + UI Automation)
 Overview
 --------
 Verifies the asynchronous web loading workflow, custom shell initialization pipeline,
-and in-game progress transition mechanics. Eliminates race conditions by validating
-orderly handshakes between the DOM layout engine and the WebAssembly runtime graphics context.
+progressive assembly telemetry, and in-game progress transition mechanics. Eliminates
+race conditions by validating orderly handshakes between the DOM layout engine and the
+WebAssembly runtime graphics context.
 
 Prerequisites
 -------------
@@ -27,6 +28,7 @@ v8_coverage_splash_transition_flow_test.json, artifacts/test_splash_failure_*.pn
 
 import json
 import os
+import re
 import time
 from typing import Any
 
@@ -38,8 +40,8 @@ from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT
 # DO NOT REFACTOR: Must consume function-scoped `page` to capture preloader & startup telemetry.
 def test_splash_transition_flow(page: Page) -> None:
     """
-    Validates assembly stream metrics, WebGL frame canvas presentation,
-    and the removal of preloader DOM layers without structural rendering anomalies.
+    Validates assembly stream metrics, progressive telemetry monotonicity,
+    WebGL frame canvas presentation, and orderly removal of preloader DOM layers.
     """
     logs: list[dict[str, str]] = []
     page_errors: list[str] = []
@@ -53,7 +55,7 @@ def test_splash_transition_flow(page: Page) -> None:
         """Capture uncaught runtime errors during engine boot."""
         page_errors.append(f"Uncaught Exception: {exc.message}\n{exc.stack}")
 
-    # Register listeners BEFORE page navigation
+    # Register listeners BEFORE navigation to capture early boot telemetry & errors
     page.on("console", on_console)
     page.on("pageerror", on_page_error)
 
@@ -81,36 +83,49 @@ def test_splash_transition_flow(page: Page) -> None:
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
 
-        # Confirm the customized configuration object processed data transfers
-        transfer_logs = [
-            log["text"]
-            for log in logs
-            if "Telemetry - Assembly Transfer:" in log["text"]
-        ]
-        assert (
-            len(transfer_logs) > 0
-        ), "No 'Telemetry - Assembly Transfer:' telemetry marks captured during load."
+        # Parse progressive assembly transfer marks ("Telemetry - Assembly Transfer: X%")
+        progress_values: list[int] = []
+        for log in logs:
+            match = re.search(r"Telemetry - Assembly Transfer:\s*(\d+)%", log["text"])
+            if match:
+                progress_values.append(int(match.group(1)))
 
-        # 4. ASSIGN RENDERING CANVAS HANDSHAKE & GEOMETRY INVARIANTS
+        # Assert telemetry presence, range bounds, and monotonic forward progression
+        assert (
+            len(progress_values) > 0
+        ), "No 'Telemetry - Assembly Transfer:' marks captured during engine boot."
+        assert all(
+            0 <= val <= 100 for val in progress_values
+        ), f"Telemetry percentage out of bounds [0, 100]: {progress_values}"
+        assert (
+            progress_values == sorted(progress_values)
+        ), f"Assembly transfer telemetry did not progress monotonically: {progress_values}"
+
+        # 4. ASSIGN RENDERING CANVAS HANDSHAKE & STRUCTURAL GEOMETRY
         canvas_element = page.locator("#canvas")
         expect(canvas_element).to_be_visible(timeout=TEST_TIMEOUT)
 
         canvas_box = canvas_element.bounding_box()
-        assert canvas_box is not None, "Canvas has no rendered bounding box"
-        assert canvas_box["width"] > 0, "Canvas rendered width is zero"
-        assert canvas_box["height"] > 0, "Canvas rendered height is zero"
+        assert canvas_box is not None, "Canvas element has no rendered bounding box"
+        assert canvas_box["width"] > 0, "Canvas rendered width is zero (viewport layout failure)"
+        assert canvas_box["height"] > 0, "Canvas rendered height is zero (viewport layout failure)"
 
         assert (
             "SkyLockAssault" in page.title()
-        ), f"Unexpected page execution title: '{page.title()}'"
+        ), f"Target application title mismatch: '{page.title()}'"
 
-        # Verify HTML shell overlay deflates cleanly out of view
+        # 5. VERIFY DOM TEARDOWN & LIFECYCLE INVARIANTS
         expect(loading_overlay).to_be_hidden(timeout=TEST_TIMEOUT)
         assert page.evaluate(
             "() => document.getElementById('loading').getAttribute('aria-hidden') === 'true'"
         ), "Loading container missing aria-hidden='true' post-initialization"
 
-        # 5. AUDIT FATAL PARSING & SCRIPT COMPILATION EXCEPTIONS
+        # Invariant: engine initialization state must remain true after overlay teardown
+        assert page.evaluate(
+            "() => window.godotInitialized === true"
+        ), "window.godotInitialized lost its truthy state after splash transition completed"
+
+        # 6. AUDIT FATAL PARSING & SCRIPT COMPILATION EXCEPTIONS
         critical_faults = [
             log["text"]
             for log in logs
