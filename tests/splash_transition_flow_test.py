@@ -110,14 +110,14 @@ def test_splash_transition_flow(page: Page) -> None:
             f"{progress_values}"
         )
 
+
         # 4. ASSIGN RENDERING CANVAS HANDSHAKE & STRUCTURAL GEOMETRY
         canvas_element = page.locator("#canvas")
         expect(canvas_element).to_be_visible(timeout=TEST_TIMEOUT)
 
         canvas_box = canvas_element.bounding_box()
-        assert (
-            canvas_box is not None
-        ), "Canvas element has no rendered bounding box"
+        assert canvas_box is not None, "Canvas element has no rendered bounding box"
+
         assert (
             canvas_box["width"] > 0
         ), "Canvas rendered width is zero (viewport layout failure)"
@@ -160,6 +160,7 @@ def test_splash_transition_flow(page: Page) -> None:
         ), (
             "Critical exceptions found during web handshake:\n"
             + "\n".join(critical_faults)
+
         )
 
     except Exception as e:
@@ -168,10 +169,10 @@ def test_splash_transition_flow(page: Page) -> None:
         timestamp: int = int(time.time())
 
         # Isolate diagnostic files on execution crashes
-        screenshot_path = (
-            f"artifacts/test_splash_failure_screenshot_{timestamp}.png"
+        page.screenshot(
+            path=f"artifacts/test_splash_failure_screenshot_{timestamp}.png"
         )
-        page.screenshot(path=screenshot_path)
+
 
         logs_path = (
             f"artifacts/test_splash_failure_console_logs_{timestamp}.txt"
