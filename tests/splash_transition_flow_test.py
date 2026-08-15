@@ -221,9 +221,7 @@ def test_splash_transition_flow(page: Page) -> None:
             log["text"]
             for log in logs
             if "Telemetry - Assembly Transfer:" in log["text"]
-            and not re.search(
-                r"Telemetry - Assembly Transfer:\s*\d+%$", log["text"]
-            )
+            and not re.search(r"Telemetry - Assembly Transfer:\s*\d+%$", log["text"])
         ]
         assert malformed == [], f"Malformed telemetry entries: {malformed}"
 
@@ -232,9 +230,7 @@ def test_splash_transition_flow(page: Page) -> None:
         expect(canvas_element).to_be_visible(timeout=TEST_TIMEOUT)
 
         canvas_box = canvas_element.bounding_box()
-        assert (
-            canvas_box is not None
-        ), "Canvas element has no rendered bounding box"
+        assert canvas_box is not None, "Canvas element has no rendered bounding box"
         assert (
             canvas_box["width"] > 0
         ), "Canvas rendered width is zero (viewport layout failure)"
@@ -270,9 +266,8 @@ def test_splash_transition_flow(page: Page) -> None:
 
         assert (
             len(critical_faults) == 0
-        ), (
-            "Critical exceptions found during web handshake:\n"
-            + "\n".join(critical_faults)
+        ), "Critical exceptions found during web handshake:\n" + "\n".join(
+            critical_faults
         )
 
     except Exception as e:
@@ -280,14 +275,10 @@ def test_splash_transition_flow(page: Page) -> None:
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
 
-        screenshot_path = (
-            f"artifacts/test_splash_failure_screenshot_{timestamp}.png"
-        )
+        screenshot_path = f"artifacts/test_splash_failure_screenshot_{timestamp}.png"
         page.screenshot(path=screenshot_path)
 
-        logs_path = (
-            f"artifacts/test_splash_failure_console_logs_{timestamp}.txt"
-        )
+        logs_path = f"artifacts/test_splash_failure_console_logs_{timestamp}.txt"
         with open(logs_path, "w", encoding="utf-8") as f:
             f.write("--- CONSOLE LOGS ---\n")
             for log in logs:
