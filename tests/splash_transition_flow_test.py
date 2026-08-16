@@ -200,6 +200,13 @@ def _validate_canvas_and_dom_invariants(page: Page, loading_overlay: Any) -> Non
         "() => document.getElementById('loading')"
         ".getAttribute('aria-hidden') === 'true'"
     ), "Loading container missing aria-hidden='true' post-initialization"
+    assert page.evaluate(
+        "() => document.getElementById('loading')"
+        ".getAttribute('aria-busy') === 'false'"
+    ), "Loading container missing aria-busy='false' post-initialization"
+    assert page.evaluate(
+        "() => document.activeElement === document.getElementById('canvas')"
+    ), "Canvas did not receive focus after initialization"
 
     assert page.evaluate(
         "() => window.godotInitialized === true"
