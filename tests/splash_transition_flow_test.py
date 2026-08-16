@@ -50,8 +50,7 @@ def _extract_on_progress_function_source() -> str:
     """Extracts onProgress telemetry callback verbatim from custom_shell.html."""
     html = _CUSTOM_SHELL_PATH.read_text(encoding="utf-8")
     pattern = (
-        r"onProgress\s*:\s*"
-        r"(function\s*\([^)]*\)\s*\{(?:[^{}]*|\{[^{}]*\})*\})"
+        r"onProgress\s*:\s*" r"(function\s*\([^)]*\)\s*\{(?:[^{}]*|\{[^{}]*\})*\})"
     )
     match = re.search(pattern, html)
     if not match:
