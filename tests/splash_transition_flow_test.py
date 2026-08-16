@@ -49,29 +49,16 @@ _ON_PROGRESS_MARKER = "onProgress: function(current, total)"
 def _extract_on_progress_function_source() -> str:
     """Extracts onProgress telemetry callback verbatim from custom_shell.html."""
     html = _CUSTOM_SHELL_PATH.read_text(encoding="utf-8")
-    try:
-        marker_idx = html.index(_ON_PROGRESS_MARKER)
-    except ValueError as exc:
+    pattern = (
+        r"onProgress\s*:\s*"
+        r"(function\s*\([^)]*\)\s*\{(?:[^{}]*|\{[^{}]*\})*\})"
+    )
+    match = re.search(pattern, html)
+    if not match:
         raise AssertionError(
             "onProgress telemetry handler not found in custom_shell.html"
-        ) from exc
-
-    brace_start = html.index("{", marker_idx)
-    depth = 0
-    idx = brace_start
-    while idx < len(html):
-        if html[idx] == "{":
-            depth += 1
-        elif html[idx] == "}":
-            depth -= 1
-            if depth == 0:
-                break
-        idx += 1
-    else:
-        raise AssertionError("Could not find matching closing brace for body")
-
-    body = html[brace_start : idx + 1]
-    return f"function(current, total) {body}"
+        )
+    return match.group(1).strip()
 
 
 def _run_on_progress(
