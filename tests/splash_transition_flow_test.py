@@ -222,8 +222,16 @@ def _assert_no_critical_faults(
 def _save_failure_artifacts(
     page: Page, logs: list[dict[str, str]], page_errors: list[str]
 ) -> None:
-    """Captures diagnostic log and DOM snapshot to ARTIFACTS_DIR on error."""
+    """Captures screenshot, logs, and DOM snapshot to ARTIFACTS_DIR on error."""
     timestamp = int(time.time())
+
+    # 1. Screenshot
+    screenshot_path = (
+        ARTIFACTS_DIR / f"test_splash_failure_screenshot_{timestamp}.png"
+    )
+    page.screenshot(path=str(screenshot_path))
+
+    # 2. Console & Page Error Logs
     logs_path = ARTIFACTS_DIR / f"test_splash_failure_logs_{timestamp}.txt"
     with open(logs_path, "w", encoding="utf-8") as f:
         f.write("--- CONSOLE LOGS ---\n")
@@ -233,6 +241,7 @@ def _save_failure_artifacts(
         for p_err in page_errors:
             f.write(f"{p_err}\n")
 
+    # 3. DOM HTML Snapshot
     html_path = ARTIFACTS_DIR / f"test_splash_failure_html_{timestamp}.html"
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(page.content())
