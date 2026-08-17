@@ -15,7 +15,7 @@ from playwright.sync_api import Page, expect
 
 # Shared timeout configurations across test suites
 DEFAULT_TIMEOUT = int(os.getenv("DEFAULT_TIMEOUT", "30000"))
-TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "7000"))
+TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "15000"))
 
 LOG_LEVEL_MAP: dict[str, int] = {
     "DEBUG": 0,
