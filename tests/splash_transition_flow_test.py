@@ -262,23 +262,35 @@ def _save_failure_artifacts(
     """Captures screenshot, logs, and DOM snapshot to ARTIFACTS_DIR on error."""
     timestamp = int(time.time())
 
+    # 1. Screenshot (best effort)
     screenshot_path = (
         ARTIFACTS_DIR / f"test_splash_failure_screenshot_{timestamp}.png"
     )
-    page.screenshot(path=str(screenshot_path))
+    try:
+        page.screenshot(path=str(screenshot_path))
+    except Exception:
+        pass
 
+    # 2. Console & Page Error Logs
     logs_path = ARTIFACTS_DIR / f"test_splash_failure_logs_{timestamp}.txt"
-    with open(logs_path, "w", encoding="utf-8") as f:
-        f.write("--- CONSOLE LOGS ---\n")
-        for log in logs:
-            f.write(f"[{log['type']}] {log['text']}\n")
-        f.write("\n--- PAGE ERRORS ---\n")
-        for p_err in page_errors:
-            f.write(f"{p_err}\n")
+    try:
+        with open(logs_path, "w", encoding="utf-8") as f:
+            f.write("--- CONSOLE LOGS ---\n")
+            for log in logs:
+                f.write(f"[{log['type']}] {log['text']}\n")
+            f.write("\n--- PAGE ERRORS ---\n")
+            for p_err in page_errors:
+                f.write(f"{p_err}\n")
+    except Exception:
+        pass
 
+    # 3. DOM HTML Snapshot (best effort)
     html_path = ARTIFACTS_DIR / f"test_splash_failure_html_{timestamp}.html"
-    with open(html_path, "w", encoding="utf-8") as f:
-        f.write(page.content())
+    try:
+        with open(html_path, "w", encoding="utf-8") as f:
+            f.write(page.content())
+    except Exception:
+        pass
 
 
 # ==============================================================================
