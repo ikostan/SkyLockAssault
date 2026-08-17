@@ -47,17 +47,49 @@ _ON_PROGRESS_MARKER = "onProgress: function(current, total)"
 
 
 def _extract_on_progress_function_source() -> str:
-    """Extracts onProgress telemetry callback verbatim from custom_shell.html."""
+    """Extracts onProgress telemetry callback verbatim from custom_shell.html.
+
+    Uses `_ON_PROGRESS_MARKER` to locate callback and parses balanced braces.
+    """
     html = _CUSTOM_SHELL_PATH.read_text(encoding="utf-8")
-    pattern = (
-        r"onProgress\s*:\s*" r"(function\s*\([^)]*\)\s*\{(?:[^{}]*|\{[^{}]*\})*\})"
-    )
-    match = re.search(pattern, html)
-    if not match:
+
+    marker_index = html.find(_ON_PROGRESS_MARKER)
+    if marker_index == -1:
         raise AssertionError(
-            "onProgress telemetry handler not found in custom_shell.html"
+            "onProgress telemetry handler marker not found in custom_shell.html"
         )
-    return match.group(1).strip()
+
+    tail = html[marker_index:]
+    relative_func_index = tail.find("function")
+    if relative_func_index == -1:
+        raise AssertionError(
+            "onProgress handler function definition not found after marker"
+        )
+
+    func_start = marker_index + relative_func_index
+    brace_start = html.find("{", func_start)
+    if brace_start == -1:
+        raise AssertionError(
+            "onProgress handler function body opening brace not found"
+        )
+
+    depth = 0
+    func_end: int | None = None
+    for i, ch in enumerate(html[brace_start:], start=brace_start):
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                func_end = i
+                break
+
+    if func_end is None or depth != 0:
+        raise AssertionError(
+            "onProgress handler function body has unbalanced braces"
+        )
+
+    return html[func_start : func_end + 1].strip()
 
 
 def _run_on_progress(
@@ -151,7 +183,8 @@ def _validate_telemetry_stream(logs: list[dict[str, str]]) -> None:
         f"{progress_values}"
     )
     assert max(progress_values) >= 90, (
-        "Assembly transfer telemetry never approached completion: " f"{progress_values}"
+        "Assembly transfer telemetry never approached completion: "
+        f"{progress_values}"
     )
 
     malformed = [
@@ -163,13 +196,17 @@ def _validate_telemetry_stream(logs: list[dict[str, str]]) -> None:
     assert malformed == [], f"Malformed telemetry entries: {malformed}"
 
 
-def _validate_canvas_and_dom_invariants(page: Page, loading_overlay: Any) -> None:
+def _validate_canvas_and_dom_invariants(
+    page: Page, loading_overlay: Any
+) -> None:
     """Validates canvas layout, overlay teardown, and initialized state."""
     canvas_element = page.locator("#canvas")
     expect(canvas_element).to_be_visible(timeout=TEST_TIMEOUT)
 
     canvas_box = canvas_element.bounding_box()
-    assert canvas_box is not None, "Canvas element has no rendered bounding box"
+    assert (
+        canvas_box is not None
+    ), "Canvas element has no rendered bounding box"
     assert (
         canvas_box["width"] > 0
     ), "Canvas rendered width is zero (viewport layout failure)"
@@ -213,9 +250,10 @@ def _assert_no_critical_faults(
         )
     ] + page_errors
 
-    assert (
-        len(critical_faults) == 0
-    ), "Critical exceptions found during web handshake:\n" + "\n".join(critical_faults)
+    assert len(critical_faults) == 0, (
+        "Critical exceptions found during web handshake:\n"
+        + "\n".join(critical_faults)
+    )
 
 
 def _save_failure_artifacts(
@@ -224,11 +262,11 @@ def _save_failure_artifacts(
     """Captures screenshot, logs, and DOM snapshot to ARTIFACTS_DIR on error."""
     timestamp = int(time.time())
 
-    # 1. Screenshot
-    screenshot_path = ARTIFACTS_DIR / f"test_splash_failure_screenshot_{timestamp}.png"
+    screenshot_path = (
+        ARTIFACTS_DIR / f"test_splash_failure_screenshot_{timestamp}.png"
+    )
     page.screenshot(path=str(screenshot_path))
 
-    # 2. Console & Page Error Logs
     logs_path = ARTIFACTS_DIR / f"test_splash_failure_logs_{timestamp}.txt"
     with open(logs_path, "w", encoding="utf-8") as f:
         f.write("--- CONSOLE LOGS ---\n")
@@ -238,7 +276,6 @@ def _save_failure_artifacts(
         for p_err in page_errors:
             f.write(f"{p_err}\n")
 
-    # 3. DOM HTML Snapshot
     html_path = ARTIFACTS_DIR / f"test_splash_failure_html_{timestamp}.html"
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(page.content())
