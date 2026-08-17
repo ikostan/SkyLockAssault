@@ -223,6 +223,12 @@
             window.godotInitialized = true;
         }).catch(err => {
             console.error("Error starting Godot:", err);
+
+            var loadingDiv = document.getElementById('loading');
+            if (loadingDiv) {
+                loadingDiv.setAttribute('aria-busy', 'false');
+            }
+
             alert('Error loading SkyLockAssault. Please refresh.');
         });
 
