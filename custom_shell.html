@@ -205,12 +205,14 @@
         engine.startGame().then(() => {
             console.log("Godot engine started successfully!");
 
-            // Hide the loading UI, update ARIA state, and transfer focus to the game
+            // Hide loading UI, clean up ARIA live-region attributes, and focus canvas
             var loadingDiv = document.getElementById('loading');
             if (loadingDiv) {
                 loadingDiv.style.display = 'none';
                 loadingDiv.setAttribute('aria-hidden', 'true');
                 loadingDiv.setAttribute('aria-busy', 'false');
+                loadingDiv.removeAttribute('role');
+                loadingDiv.removeAttribute('aria-live');
             }
 
             var canvas = document.getElementById('canvas');
