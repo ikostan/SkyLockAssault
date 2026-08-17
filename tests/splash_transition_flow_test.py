@@ -225,9 +225,7 @@ def _save_failure_artifacts(
     timestamp = int(time.time())
 
     # 1. Screenshot
-    screenshot_path = (
-        ARTIFACTS_DIR / f"test_splash_failure_screenshot_{timestamp}.png"
-    )
+    screenshot_path = ARTIFACTS_DIR / f"test_splash_failure_screenshot_{timestamp}.png"
     page.screenshot(path=str(screenshot_path))
 
     # 2. Console & Page Error Logs
