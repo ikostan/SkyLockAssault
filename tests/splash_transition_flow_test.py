@@ -69,9 +69,7 @@ def _extract_on_progress_function_source() -> str:
     func_start = marker_index + relative_func_index
     brace_start = html.find("{", func_start)
     if brace_start == -1:
-        raise AssertionError(
-            "onProgress handler function body opening brace not found"
-        )
+        raise AssertionError("onProgress handler function body opening brace not found")
 
     depth = 0
     func_end: int | None = None
@@ -85,9 +83,7 @@ def _extract_on_progress_function_source() -> str:
                 break
 
     if func_end is None or depth != 0:
-        raise AssertionError(
-            "onProgress handler function body has unbalanced braces"
-        )
+        raise AssertionError("onProgress handler function body has unbalanced braces")
 
     return html[func_start : func_end + 1].strip()
 
@@ -183,8 +179,7 @@ def _validate_telemetry_stream(logs: list[dict[str, str]]) -> None:
         f"{progress_values}"
     )
     assert max(progress_values) >= 90, (
-        "Assembly transfer telemetry never approached completion: "
-        f"{progress_values}"
+        "Assembly transfer telemetry never approached completion: " f"{progress_values}"
     )
 
     malformed = [
@@ -196,17 +191,13 @@ def _validate_telemetry_stream(logs: list[dict[str, str]]) -> None:
     assert malformed == [], f"Malformed telemetry entries: {malformed}"
 
 
-def _validate_canvas_and_dom_invariants(
-    page: Page, loading_overlay: Any
-) -> None:
+def _validate_canvas_and_dom_invariants(page: Page, loading_overlay: Any) -> None:
     """Validates canvas layout, overlay teardown, and initialized state."""
     canvas_element = page.locator("#canvas")
     expect(canvas_element).to_be_visible(timeout=TEST_TIMEOUT)
 
     canvas_box = canvas_element.bounding_box()
-    assert (
-        canvas_box is not None
-    ), "Canvas element has no rendered bounding box"
+    assert canvas_box is not None, "Canvas element has no rendered bounding box"
     assert (
         canvas_box["width"] > 0
     ), "Canvas rendered width is zero (viewport layout failure)"
@@ -250,10 +241,9 @@ def _assert_no_critical_faults(
         )
     ] + page_errors
 
-    assert len(critical_faults) == 0, (
-        "Critical exceptions found during web handshake:\n"
-        + "\n".join(critical_faults)
-    )
+    assert (
+        len(critical_faults) == 0
+    ), "Critical exceptions found during web handshake:\n" + "\n".join(critical_faults)
 
 
 def _save_failure_artifacts(
@@ -262,9 +252,7 @@ def _save_failure_artifacts(
     """Captures screenshot, logs, and DOM snapshot to ARTIFACTS_DIR on error."""
     timestamp = int(time.time())
 
-    screenshot_path = (
-        ARTIFACTS_DIR / f"test_splash_failure_screenshot_{timestamp}.png"
-    )
+    screenshot_path = ARTIFACTS_DIR / f"test_splash_failure_screenshot_{timestamp}.png"
     page.screenshot(path=str(screenshot_path))
 
     logs_path = ARTIFACTS_DIR / f"test_splash_failure_logs_{timestamp}.txt"
