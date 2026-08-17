@@ -191,8 +191,8 @@
         // Consolidate engine configuration with custom telemetry hooks
         var customConfig = Object.assign({}, $GODOT_CONFIG, {
             onProgress: function(current, total) {
-                if (total > 0) {
-                    var percent = Math.floor((current / total) * 100);
+                if (total > 0 && current >= 0) {
+                    var percent = Math.min(100, Math.floor((current / total) * 100));
                     console.log("Telemetry - Assembly Transfer: " + percent + "%");
                 }
             }
