@@ -252,13 +252,13 @@ def _save_failure_artifacts(
     """Captures screenshot, logs, and DOM snapshot to ARTIFACTS_DIR on error."""
     timestamp = int(time.time())
 
+
 screenshot_path = ARTIFACTS_DIR / f"test_splash_failure_screenshot_{timestamp}.png"
 try:
     page.screenshot(path=str(screenshot_path))
 except Exception:
     # Best-effort screenshot; ignore errors so we don't mask the original failure
     pass
-
 
     # 2. Console & Page Error Logs
     logs_path = ARTIFACTS_DIR / f"test_splash_failure_logs_{timestamp}.txt"
