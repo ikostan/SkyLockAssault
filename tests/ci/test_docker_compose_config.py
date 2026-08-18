@@ -31,6 +31,7 @@ def compose_text() -> str:
 
 
 def test_web_server_service_exists(compose_config: dict[str, Any]) -> None:
+    """Verify godot_web_server service definition is declared in compose config."""
     assert "godot_web_server" in compose_config["services"]
 
 
@@ -60,5 +61,6 @@ def test_nginx_conf_directory_still_mounted(compose_config: dict[str, Any]) -> N
 
 
 def test_copyright_header_updated_to_2025_2026(compose_text: str) -> None:
+    """Verify compose file top comment reflects updated 2025-2026 copyright year."""
     assert "# Copyright (C) 2025-2026 Egor Kostan" in compose_text
     assert "# Copyright (C) 2025 Egor Kostan" not in compose_text
