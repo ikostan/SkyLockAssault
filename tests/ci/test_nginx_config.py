@@ -29,6 +29,7 @@ def test_config_braces_are_balanced(conf_text: str) -> None:
 
 
 def test_registers_application_wasm_mime_type(conf_text: str) -> None:
+    """Verify custom MIME type mapping is declared for WebAssembly binaries."""
     assert "application/wasm wasm;" in conf_text
     assert "include mime.types;" in conf_text
 
@@ -48,6 +49,7 @@ def test_gzip_compression_enabled_for_wasm_and_static_assets(conf_text: str) -> 
 
 
 def test_server_level_coop_coep_headers_present(conf_text: str) -> None:
+    """Verify top-level server block configures COOP and COEP isolation headers."""
     assert "add_header Cross-Origin-Embedder-Policy 'require-corp';" in conf_text
     assert "add_header Cross-Origin-Opener-Policy 'same-origin';" in conf_text
 
@@ -81,6 +83,7 @@ def test_html_location_sets_revalidation_cache_control(conf_text: str) -> None:
 
 
 def test_root_location_still_serves_index_with_try_files(conf_text: str) -> None:
+    """Verify root location block serves index files with standard fallback."""
     match = re.search(r"location / \{(?P<body>[^}]*)\}", conf_text)
     assert match, "Expected root location block not found"
     body = match.group("body")
@@ -91,4 +94,5 @@ def test_root_location_still_serves_index_with_try_files(conf_text: str) -> None
 
 
 def test_listens_on_unprivileged_port_8080(conf_text: str) -> None:
+    """Verify Nginx server directive binds to unprivileged port 8080."""
     assert re.search(r"^\s*listen 8080;", conf_text, re.MULTILINE)
