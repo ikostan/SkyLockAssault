@@ -48,18 +48,13 @@ def test_workflow_file_is_valid_yaml(workflow: dict[str, Any]) -> None:
 def test_start_server_step_registers_wasm_mime_and_optimized_handler(
     test_shard_steps: list[dict[str, Any]],
 ) -> None:
-    """Verify the security-isolated server registers WASM MIME + tiered caching."""
+    """Verify the security-isolated server starts via serve_web_export.py."""
     step = _find_step(test_shard_steps, "Start Security-Isolated HTTP Server")
     script = step["run"]
 
-    assert "mimetypes.add_type('application/wasm', '.wasm')" in script
-    assert "class OptimizedGodotHandler" in script
-    assert "class ThreadedHTTPServer(socketserver.ThreadingMixIn" in script
-    assert "public, max-age=3600" in script
-    assert "no-cache, must-revalidate" in script
-    assert "public, max-age=1800" in script
-    assert "Cross-Origin-Opener-Policy" in script
-    assert "Cross-Origin-Embedder-Policy" in script
+    assert "python3 .github/scripts/serve_web_export.py 8080" in script
+    assert "export/web_thread_off" in script
+    assert "curl -I http://localhost:8080/index.html" in script
 
 
 def test_create_artifacts_directory_step_purges_stale_diagnostics(

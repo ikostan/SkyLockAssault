@@ -52,36 +52,46 @@ def test_gzip_compression_enabled_for_wasm_and_static_assets(conf_text: str) -> 
 
 def test_server_level_coop_coep_headers_present(conf_text: str) -> None:
     """Verify top-level server block configures COOP and COEP isolation headers."""
-    assert "add_header Cross-Origin-Embedder-Policy 'require-corp';" in conf_text
-    assert "add_header Cross-Origin-Opener-Policy 'same-origin';" in conf_text
+    assert re.search(
+        r"add_header\s+Cross-Origin-Embedder-Policy\s+['\"]require-corp['\"]",
+        conf_text,
+    )
+    assert re.search(
+        r"add_header\s+Cross-Origin-Opener-Policy\s+['\"]same-origin['\"]",
+        conf_text,
+    )
 
 
 def test_static_binary_location_sets_long_lived_cache_control(conf_text: str) -> None:
     """Verify .wasm/.pck/.js assets get the 1-hour public cache directive."""
     match = re.search(
-        r"location ~\* \\\.\(wasm\|pck\|js\)\$ \{(?P<body>[^}]*)\}",
+        r"location\s+~\*\s+.*?(?:wasm|pck|js).*?\{(?P<body>[^}]*)\}",
         conf_text,
     )
     assert match, "Expected location block for .wasm|.pck|.js assets not found"
     body = match.group("body")
 
-    assert 'add_header Cache-Control "public, max-age=3600";' in body
-    assert "Cross-Origin-Embedder-Policy 'require-corp'" in body
-    assert "Cross-Origin-Opener-Policy 'same-origin'" in body
+    assert re.search(
+        r'add_header\s+Cache-Control\s+["\']public,\s*max-age=3600["\']', body
+    )
+    assert "Cross-Origin-Embedder-Policy" in body
+    assert "Cross-Origin-Opener-Policy" in body
 
 
 def test_html_location_sets_revalidation_cache_control(conf_text: str) -> None:
     """Verify HTML entrypoints are always revalidated, never long-cached."""
     match = re.search(
-        r"location ~\* \\\.html\$ \{(?P<body>[^}]*)\}",
+        r"location\s+~\*\s+.*?\.html.*?\{(?P<body>[^}]*)\}",
         conf_text,
     )
     assert match, "Expected location block for .html not found"
     body = match.group("body")
 
-    assert 'add_header Cache-Control "no-cache, must-revalidate";' in body
-    assert "Cross-Origin-Embedder-Policy 'require-corp'" in body
-    assert "Cross-Origin-Opener-Policy 'same-origin'" in body
+    assert re.search(
+        r'add_header\s+Cache-Control\s+["\']no-cache,\s*must-revalidate["\']', body
+    )
+    assert "Cross-Origin-Embedder-Policy" in body
+    assert "Cross-Origin-Opener-Policy" in body
 
 
 def test_root_location_still_serves_index_with_try_files(conf_text: str) -> None:

@@ -3,23 +3,13 @@
 # tests/ci/test_web_asset_delivery.py
 """Tests for the optimized local/CI web asset delivery logic added in PR #872.
 
-``workspace/run_browser_tests.sh`` and ``workspace/run_pipeline.sh`` both embed
-an identical inline Python HTTP server (``OptimizedGodotHandler``) that adds
-WASM MIME registration and tiered ``Cache-Control`` headers, plus a
-pre-test cleanup line that purges stale Playwright failure diagnostics.
-
-Rather than re-implementing that logic (which would test a copy, not the
-shipped code), these tests extract the exact snippets from the shell scripts
-and exercise them directly:
-
-- The HTTP handler class is ``exec``'d (minus the socket-binding bootstrap) so
-  ``end_headers()`` can be unit tested against a bare instance without opening
-  any network sockets.
-- The artifact-cleanup ``rm -f`` line is executed via ``bash`` in an isolated
-  temporary directory to confirm it purges only diagnostic artifacts.
+Validates the HTTP server (``OptimizedGodotHandler``) in
+``.github/scripts/serve_web_export.py`` and the pre-test artifact cleanup line
+in ``workspace/run_browser_tests.sh`` and ``workspace/run_pipeline.sh``.
 """
 
 import http.server
+import importlib.util
 import re
 import subprocess
 from pathlib import Path
@@ -34,36 +24,39 @@ SCRIPT_PATHS = [
     PROJECT_ROOT / "workspace" / "run_pipeline.sh",
 ]
 
-_SERVER_SNIPPET_RE = re.compile(r'python3 -c "\n(.*?)\n"\s*&', re.DOTALL)
+SERVE_SCRIPT_PATH = PROJECT_ROOT / ".github" / "scripts" / "serve_web_export.py"
 _CLEANUP_LINE_RE = re.compile(
     r'^rm -f "\$PROJECT_DIR".*artifacts/trace_\*\.zip.*$', re.MULTILINE
 )
 
 
-def _extract_handler_class_source(script_path: Path) -> str:
-    """Extract just the class definitions from the embedded python3 -c snippet.
+def _can_run_bash() -> bool:
+    """Check if a functioning bash shell is available in current environment."""
+    try:
+        res = subprocess.run(
+            ["bash", "-c", "echo ok"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        return res.returncode == 0 and res.stdout.strip() == "ok"
+    except Exception:  # noqa: BLE001
+        return False
 
-    The socket-binding bootstrap (``with ThreadedHTTPServer(...) as httpd:``)
-    is intentionally excluded so the snippet can be exec'd without opening a
-    listening socket.
-    """
-    text = script_path.read_text(encoding="utf-8")
-    match = _SERVER_SNIPPET_RE.search(text)
-    assert match, f"Could not locate embedded python server snippet in {script_path}"
-    code = match.group(1)
-    boundary = code.index("with ThreadedHTTPServer")
-    return code[:boundary]
 
-
-def _load_handler_class(script_path: Path):
-    """Exec the extracted server snippet and return classes and modules."""
-    namespace: dict = {}
-    src = _extract_handler_class_source(script_path)
-    exec(src, namespace)  # skipcq: PTC-W0034, PYL-W0122
+def _load_handler_class(script_path: Path | None = None):
+    """Load OptimizedGodotHandler and ThreadedHTTPServer from serve_web_export.py."""
+    spec = importlib.util.spec_from_file_location(
+        "serve_web_export", SERVE_SCRIPT_PATH
+    )
+    assert spec and spec.loader, f"Could not load spec for {SERVE_SCRIPT_PATH}"
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
     return (
-        namespace["OptimizedGodotHandler"],
-        namespace["mimetypes"],
-        namespace["ThreadedHTTPServer"],
+        mod.OptimizedGodotHandler,
+        mod.mimetypes,
+        mod.ThreadedHTTPServer,
     )
 
 
@@ -88,6 +81,11 @@ def script_path(request: pytest.FixtureRequest) -> Path:
 def test_script_file_exists(script_path: Path) -> None:
     """Verify the target pipeline script exists on disk."""
     assert script_path.is_file()
+
+
+def test_serve_script_file_exists() -> None:
+    """Verify the standalone serve_web_export.py script exists on disk."""
+    assert SERVE_SCRIPT_PATH.is_file()
 
 
 def test_wasm_mime_type_registered(script_path: Path) -> None:
@@ -155,7 +153,7 @@ def test_server_uses_threaded_http_server_with_daemon_threads(
 
 def _extract_cleanup_line(script_path: Path) -> str:
     """Extract artifact cleanup bash command from the script."""
-    text = script_path.read_text(encoding="utf-8")
+    text = script_path.read_text(encoding="utf-8").replace("\r\n", "\n")
     match = _CLEANUP_LINE_RE.search(text)
     assert match, f"Could not locate artifact cleanup line in {script_path}"
     return match.group(0)
@@ -176,6 +174,9 @@ def test_cleanup_line_removes_only_diagnostic_artifacts(
     script_path: Path, tmp_path: Path
 ) -> None:
     """Run the exact extracted cleanup line and verify selective deletion."""
+    if not _can_run_bash():
+        pytest.skip("Functional bash interpreter is not available on this platform")
+
     line = _extract_cleanup_line(script_path)
     artifacts_dir = tmp_path / "artifacts"
     artifacts_dir.mkdir()
@@ -185,8 +186,9 @@ def test_cleanup_line_removes_only_diagnostic_artifacts(
     for name in stale_files + keep_files:
         (artifacts_dir / name).write_text("placeholder")
 
+    posix_tmp_path = tmp_path.as_posix()
     result = subprocess.run(
-        ["bash", "-c", f'PROJECT_DIR="{tmp_path}"\n{line}'],
+        ["bash", "-c", f'PROJECT_DIR="{posix_tmp_path}"\n{line}'],
         capture_output=True,
         text=True,
         timeout=10,
@@ -202,11 +204,15 @@ def test_cleanup_line_is_a_safe_noop_when_artifacts_dir_is_empty(
     script_path: Path, tmp_path: Path
 ) -> None:
     """The `|| true` guard means a missing/empty artifacts dir must not fail."""
+    if not _can_run_bash():
+        pytest.skip("Functional bash interpreter is not available on this platform")
+
     line = _extract_cleanup_line(script_path)
     (tmp_path / "artifacts").mkdir()
 
+    posix_tmp_path = tmp_path.as_posix()
     result = subprocess.run(
-        ["bash", "-c", f'PROJECT_DIR="{tmp_path}"\n{line}'],
+        ["bash", "-c", f'PROJECT_DIR="{posix_tmp_path}"\n{line}'],
         capture_output=True,
         text=True,
         timeout=10,
