@@ -69,6 +69,7 @@ def _make_request(
 
 
 def test_is_test_failed_returns_false_when_no_failure_signals(_isolate_conftest_state):
+    """Verify test is marked not failed when reports contain no failure signals."""
     conf = _isolate_conftest_state
     request = _make_request("tests/test_a.py::test_one")
 
@@ -79,6 +80,7 @@ def test_is_test_failed_returns_false_when_no_failure_signals(_isolate_conftest_
 
 
 def test_is_test_failed_detects_rep_call_failure(_isolate_conftest_state):
+    """Verify failure is detected when rep_call is marked failed."""
     conf = _isolate_conftest_state
     request = _make_request(
         "tests/test_a.py::test_one",
@@ -92,6 +94,7 @@ def test_is_test_failed_detects_rep_call_failure(_isolate_conftest_state):
 
 
 def test_is_test_failed_detects_rep_setup_failure(_isolate_conftest_state):
+    """Verify failure is detected when rep_setup fails even if rep_call did not."""
     conf = _isolate_conftest_state
     request = _make_request(
         "tests/test_a.py::test_one",
@@ -106,6 +109,7 @@ def test_is_test_failed_detects_rep_setup_failure(_isolate_conftest_state):
 
 
 def test_is_test_failed_detects_membership_in_failed_nodeids(_isolate_conftest_state):
+    """Verify failure is detected if node ID is present in _FAILED_NODEIDS registry."""
     conf = _isolate_conftest_state
     conf._FAILED_NODEIDS.add("tests/test_a.py::test_one")
     request = _make_request("tests/test_a.py::test_one")
@@ -143,6 +147,7 @@ def test_is_test_failed_module_failures_detected_when_enabled(_isolate_conftest_
 def test_is_test_failed_module_failures_does_not_match_other_modules(
     _isolate_conftest_state,
 ):
+    """Verify include_module_failures scopes strictly to the same test module."""
     conf = _isolate_conftest_state
     conf._FAILED_NODEIDS.add("tests/test_b.py::test_other")
     request = _make_request("tests/test_a.py::test_one")
@@ -159,6 +164,7 @@ def test_is_test_failed_module_failures_does_not_match_other_modules(
 
 
 def test_stop_tracing_saves_trace_archive_on_failure(_isolate_conftest_state):
+    """Verify trace archive zip is written to artifacts on test failure."""
     conf = _isolate_conftest_state
     context = MagicMock()
 
@@ -169,6 +175,7 @@ def test_stop_tracing_saves_trace_archive_on_failure(_isolate_conftest_state):
 
 
 def test_stop_tracing_discards_trace_on_success(_isolate_conftest_state):
+    """Verify trace archive is discarded without writing a file on test success."""
     conf = _isolate_conftest_state
     context = MagicMock()
 
@@ -178,6 +185,7 @@ def test_stop_tracing_discards_trace_on_success(_isolate_conftest_state):
 
 
 def test_stop_tracing_emits_warning_on_exception(_isolate_conftest_state):
+    """Verify UserWarning is emitted when stopping trace raises an exception."""
     conf = _isolate_conftest_state
     context = MagicMock()
     context.tracing.stop.side_effect = RuntimeError("boom")
@@ -192,6 +200,7 @@ def test_stop_tracing_emits_warning_on_exception(_isolate_conftest_state):
 
 
 def test_finalize_video_noop_when_no_video_handle(_isolate_conftest_state):
+    """Verify finalize_video safely no-ops when video handle is None."""
     conf = _isolate_conftest_state
 
     # Must not raise even though there is nothing to save/delete.
@@ -200,6 +209,7 @@ def test_finalize_video_noop_when_no_video_handle(_isolate_conftest_state):
 
 
 def test_finalize_video_saves_video_on_failure(_isolate_conftest_state):
+    """Verify video recording webm is saved to artifacts on test failure."""
     conf = _isolate_conftest_state
     video_handle = MagicMock()
 
@@ -211,6 +221,7 @@ def test_finalize_video_saves_video_on_failure(_isolate_conftest_state):
 
 
 def test_finalize_video_deletes_video_on_success(_isolate_conftest_state):
+    """Verify video recording is deleted on test success."""
     conf = _isolate_conftest_state
     video_handle = MagicMock()
 
@@ -221,6 +232,7 @@ def test_finalize_video_deletes_video_on_success(_isolate_conftest_state):
 
 
 def test_finalize_video_save_failure_emits_warning(_isolate_conftest_state):
+    """Verify UserWarning is emitted when saving video file fails."""
     conf = _isolate_conftest_state
     video_handle = MagicMock()
     video_handle.save_as.side_effect = OSError("disk full")
@@ -230,6 +242,7 @@ def test_finalize_video_save_failure_emits_warning(_isolate_conftest_state):
 
 
 def test_finalize_video_delete_failure_emits_warning(_isolate_conftest_state):
+    """Verify UserWarning is emitted when deleting video file fails."""
     conf = _isolate_conftest_state
     video_handle = MagicMock()
     video_handle.delete.side_effect = OSError("locked")
@@ -447,6 +460,7 @@ def test_determine_final_outcome_failure_takes_priority_over_skip(
 
 
 def test_record_test_profiling_appends_passed_entry(_isolate_conftest_state):
+    """Verify profiling record is created with correct duration and passed outcome."""
     conf = _isolate_conftest_state
     item = SimpleNamespace(
         nodeid="tests/test_a.py::test_one",
@@ -474,6 +488,7 @@ def test_record_test_profiling_appends_passed_entry(_isolate_conftest_state):
 def test_record_test_profiling_failed_entry_updates_failed_nodeids(
     _isolate_conftest_state,
 ):
+    """Verify profiling adds failed node ID to the failed node registry."""
     conf = _isolate_conftest_state
     item = SimpleNamespace(
         nodeid="tests/test_a.py::test_two",
@@ -496,6 +511,7 @@ def test_record_test_profiling_failed_entry_updates_failed_nodeids(
 def test_record_test_profiling_includes_rounded_wasm_boot_time(
     _isolate_conftest_state,
 ):
+    """Verify WASM boot time is captured and rounded to 4 decimal places."""
     conf = _isolate_conftest_state
     item = SimpleNamespace(
         nodeid="tests/test_a.py::test_three",
@@ -515,6 +531,7 @@ def test_record_test_profiling_includes_rounded_wasm_boot_time(
 def test_record_test_profiling_accumulates_summary_counts_across_calls(
     _isolate_conftest_state,
 ):
+    """Verify summary counts correctly aggregate multiple test records."""
     conf = _isolate_conftest_state
     rep_teardown = SimpleNamespace(
         when="teardown", failed=False, skipped=False, duration=0.0
