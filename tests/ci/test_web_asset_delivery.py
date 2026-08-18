@@ -103,10 +103,10 @@ def test_wasm_mime_type_registered(script_path: Path) -> None:
         ("/index.js", "public, max-age=3600"),
         ("/game.wasm", "public, max-age=3600"),
         ("/game.pck", "public, max-age=3600"),
+        ("/styles/main.css", "public, max-age=3600"),
         ("/index.html", "no-cache, must-revalidate"),
         ("/", "no-cache, must-revalidate"),
         ("/assets/icon.png", "public, max-age=1800"),
-        ("/styles/main.css", "public, max-age=1800"),
     ],
 )
 def test_handler_sets_expected_cache_control_by_asset_type(
