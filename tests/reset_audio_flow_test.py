@@ -365,8 +365,7 @@ def test_reset_flow(shared_page: Page) -> None:
 
         # Synchronize Emscripten IDBFS to IndexedDB before page reload
         try:
-            shared_page.evaluate(
-                """async () => {
+            shared_page.evaluate("""async () => {
                     if (typeof GodotFS !== 'undefined' && GodotFS.sync) {
                         await GodotFS.sync();
                     } else if (
@@ -378,8 +377,7 @@ def test_reset_flow(shared_page: Page) -> None:
                             Module.FS.syncfs(false, resolve);
                         });
                     }
-                }"""
-            )
+                }""")
         except Exception as exc:  # noqa: BLE001 - best-effort IDBFS flush
             print(f"Warning: GodotFS.sync() failed before reload: {exc}")
         shared_page.wait_for_timeout(timeout=TEST_TIMEOUT)
