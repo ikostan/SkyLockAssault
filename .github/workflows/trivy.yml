@@ -21,7 +21,7 @@ jobs:
           persist-credentials: false
       - name: "Run Trivy FS Scan"
         # Pin Trivy action to a specific commit to avoid supply-chain risk
-        uses: "aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284"
+        uses: "aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25"
         env:  # Suppress version check notification
           TRIVY_SKIP_VERSION_CHECK: "true"
         with:
@@ -37,7 +37,7 @@ jobs:
 
       - name: "Upload Trivy scan results to GitHub Security tab"
         # Pinned to CodeQL upload-sarif v3 for security stability; refresh periodically
-        uses: "github/codeql-action/upload-sarif@6a9359a1bd054c53cae7bb737bd8d796cfbf3014"
+        uses: "github/codeql-action/upload-sarif@d97b3428e8eebbb1810cf454d6397886d136b4ba"
         if: "always()"  # Upload even if scan fails
         with:
           sarif_file: "trivy-results.sarif"

@@ -115,7 +115,7 @@ jobs:
           persist-credentials: false
 
       - name: "Download Web Build Artifact"
-        uses: "actions/download-artifact@v7"
+        uses: "actions/download-artifact@v8"
         with:
           name: "godot-web-build"
           path: "export/web_thread_off"
@@ -176,25 +176,10 @@ jobs:
           playwright install --with-deps chromium
 
       - name: "Start Security-Isolated HTTP Server"
-        # yamllint disable rule:line-length
         run: |
-          python3 -c "
-          import http.server, socketserver, os
-          class MyHandler(http.server.SimpleHTTPRequestHandler):
-              def end_headers(self):
-                  self.send_header('Cross-Origin-Opener-Policy', 'same-origin')
-                  self.send_header('Cross-Origin-Embedder-Policy', 'require-corp')
-                  self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
-                  super().end_headers()
-          socketserver.TCPServer.allow_reuse_address = True
-          with socketserver.TCPServer(('', 8080), MyHandler) as httpd:
-              os.chdir('export/web_thread_off')
-              print('🚀 Security-isolated server starting on port 8080...')
-              httpd.serve_forever()
-          " &
+          python3 .github/scripts/serve_web_export.py 8080 "export/web_thread_off" &
           sleep 5
           curl -I http://localhost:8080/index.html
-        # yamllint enable rule:line-length
 
       - name: "Wait For WEB Server Response"
         run: |
@@ -210,6 +195,7 @@ jobs:
       - name: "Create Artifacts Directory"
         run: |
           mkdir -p artifacts
+          rm -f artifacts/trace_*.zip artifacts/failure_*.png artifacts/video_*.webm 2>/dev/null || true
 
       - name: "Run Sharded Tests"
         run: |
@@ -218,7 +204,11 @@ jobs:
           export PYTEST_TIMEOUT=$((${{ inputs.pw_timeout }} / 1000))
           if [ ${#files[@]} -gt 0 ]; then
             PYTHONPATH="$PWD/tests:$PYTHONPATH" pytest "${files[@]}" \
-              -v --junitxml=artifacts/junit.xml -o junit_family=legacy
+              -v \
+              -s \
+              --capture=no \
+              --timeout-method=thread \
+              --junitxml=artifacts/junit.xml -o junit_family=legacy
           else
             echo "⚠️ No test files matched pattern: ${{ matrix.test_path }}."
             cat <<EOF > artifacts/junit.xml
@@ -344,14 +334,17 @@ jobs:
           if-no-files-found: "ignore"
           retention-days: 14
 
-      - name: "Upload Screenshot and Coverage Artifacts"
-        if: "always()"
+      - name: "Upload Failure Diagnostic Artifacts"
+        if: failure()
         uses: "actions/upload-artifact@v7"
         with:
-          name: "test-screenshots-${{ matrix.artifact_suffix }}"
+          name: "test-failures-${{ matrix.artifact_suffix }}"
           path: |
-            artifacts/
-            coverage_*.json
+            artifacts/trace_*.zip
+            artifacts/failure_*.png
+            artifacts/video_*.webm
+          if-no-files-found: "ignore"
+          retention-days: 7
 
       - name: "Upload Coverage to Codecov"
         if: "${{ !cancelled() }}"

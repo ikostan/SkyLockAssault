@@ -1,0 +1,307 @@
+# Copyright (C) 2026 Egor Kostan
+# SPDX-License-Identifier: GPL-3.0-or-later
+# tests/ci/test_conftest_diagnostics.py
+"""Unit tests for conftest diagnostic cleanup helpers."""
+
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, Generator
+
+import pytest
+
+from tests import conftest
+from tests.conftest import _cleanup_context_diagnostics
+
+# ==============================================================================
+# Mock / Stand-in Test Classes
+# ==============================================================================
+
+
+class DummyTracing:
+    """Fake tracing object that writes a trace file when stopped with a path."""
+
+    @staticmethod
+    def stop(*, path: str | Path | None = None, **_: Any) -> None:
+        """Stop tracing and write trace file if path is specified."""
+        if path is not None:
+            trace_path = Path(path)
+            trace_path.parent.mkdir(parents=True, exist_ok=True)
+            trace_path.write_text("trace", encoding="utf-8")
+
+
+class FailingTracing:
+    """Fake tracing handle that raises an error when stop is called."""
+
+    @staticmethod
+    def stop(*, path: str | Path | None = None, **_: Any) -> None:
+        """Raise simulated tracing stop exception."""
+        _ = path
+        raise RuntimeError("Simulated tracing stop failure")
+
+
+class DummyVideo:
+    """Fake video handle that manages video file lifecycle."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text("video", encoding="utf-8")
+
+    @staticmethod
+    def save_as(path: str | Path) -> None:
+        """Save video handle contents to specified destination path."""
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("saved_video", encoding="utf-8")
+
+    def delete(self) -> None:
+        """Delete temporary video file from disk if present."""
+        if self.path.exists():
+            self.path.unlink()
+
+
+class DummyPage:
+    """Fake Page that records screenshots and exposes a video handle."""
+
+    def __init__(self, video_path: Path) -> None:
+        self.video = DummyVideo(video_path)
+
+    @staticmethod
+    def screenshot(path: str | Path, **_: Any) -> None:
+        """Capture screenshot and write placeholder image to path."""
+        screenshot_path = Path(path)
+        screenshot_path.parent.mkdir(parents=True, exist_ok=True)
+        screenshot_path.write_text("screenshot", encoding="utf-8")
+
+
+class FailingScreenshotPage(DummyPage):
+    """Fake Page that raises an error when screenshot is called."""
+
+    @staticmethod
+    def screenshot(path: str | Path, **_: Any) -> None:
+        """Raise simulated screenshot capture exception."""
+        _ = path
+        raise RuntimeError("Simulated screenshot failure")
+
+
+class DummyContext:
+    """Fake BrowserContext that exposes a tracing handle and close method."""
+
+    def __init__(self) -> None:
+        self.tracing: Any = DummyTracing()
+        self.closed = False
+
+    def close(self) -> None:
+        """Mark browser context as closed."""
+        self.closed = True
+
+
+class FailingCloseContext(DummyContext):
+    """Fake BrowserContext that raises an error when close is called."""
+
+    def close(self) -> None:
+        """Raise simulated context close exception."""
+        self.closed = True
+        raise RuntimeError("Simulated context close failure")
+
+
+def _make_request(
+    nodeid: str = "tests/test_demo.py::test_case",
+    call_failed: bool | None = None,
+    setup_failed: bool | None = None,
+) -> Any:
+    """Build a minimal stand-in for pytest.FixtureRequest with outcome info."""
+    node = SimpleNamespace(nodeid=nodeid)
+    if call_failed is not None:
+        node.rep_call = SimpleNamespace(failed=call_failed, when="call")
+    if setup_failed is not None:
+        node.rep_setup = SimpleNamespace(failed=setup_failed, when="setup")
+    return SimpleNamespace(node=node)
+
+
+@pytest.fixture(autouse=True)
+def isolate_conftest_state(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> Generator[Path, None, None]:
+    """Isolate ARTIFACTS_DIR and reset global _FAILED_NODEIDS state."""
+    test_artifacts = tmp_path / "artifacts"
+    test_artifacts.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(conftest, "ARTIFACTS_DIR", test_artifacts)
+    monkeypatch.setattr(conftest, "_FAILED_NODEIDS", set())
+    yield test_artifacts
+    conftest._FAILED_NODEIDS.clear()  # noqa: SLF001
+
+
+# ==============================================================================
+# Success & Retention Behavior Tests
+# ==============================================================================
+
+
+def test_failing_test_retains_trace_screenshot_and_video(
+    isolate_conftest_state: Path,
+) -> None:
+    """A failing test should retain trace, screenshot, and video artifacts."""
+    artifacts_dir = isolate_conftest_state
+    context: Any = DummyContext()
+    page_obj: Any = DummyPage(artifacts_dir / "temp_video.webm")
+    request = _make_request(call_failed=True)
+
+    _cleanup_context_diagnostics(
+        context, page_obj, request, include_module_failures=False
+    )
+
+    assert list(artifacts_dir.glob("trace_*.zip")), "Trace artifact missing on failure"
+    assert list(artifacts_dir.glob("failure_*.png")), "Screenshot missing on failure"
+    assert list(artifacts_dir.glob("video_*.webm")), "Video artifact missing on failure"
+    assert context.closed, "Context should be closed"
+
+
+def test_passing_test_purges_failure_artifacts(
+    isolate_conftest_state: Path,
+) -> None:
+    """A passing test should not produce screenshots or trace archives and should delete video."""
+    artifacts_dir = isolate_conftest_state
+    context: Any = DummyContext()
+    video_file = artifacts_dir / "temp_video.webm"
+    page_obj: Any = DummyPage(video_file)
+    request = _make_request(call_failed=False)
+
+    _cleanup_context_diagnostics(
+        context, page_obj, request, include_module_failures=False
+    )
+
+    assert not list(
+        artifacts_dir.glob("trace_*.zip")
+    ), "Trace should not be saved on pass"
+    assert not list(
+        artifacts_dir.glob("failure_*.png")
+    ), "Screenshot should not be created on pass"
+    assert not video_file.exists(), "Video should be deleted on pass"
+    assert context.closed, "Context should be closed"
+
+
+def test_module_level_failure_preserves_module_scoped_diagnostics(
+    isolate_conftest_state: Path,
+) -> None:
+    """A setup or module-level failure should retain traces and videos when include_module_failures=True."""
+    artifacts_dir = isolate_conftest_state
+    context: Any = DummyContext()
+    page_obj: Any = DummyPage(artifacts_dir / "temp_video.webm")
+    request = _make_request(setup_failed=True)
+
+    _cleanup_context_diagnostics(
+        context, page_obj, request, include_module_failures=True
+    )
+
+    assert list(
+        artifacts_dir.glob("trace_*.zip")
+    ), "Trace should be retained for module setup failure"
+    assert list(
+        artifacts_dir.glob("video_*.webm")
+    ), "Video should be retained for module setup failure"
+    assert context.closed, "Context should be closed"
+
+
+def test_module_level_failure_preserves_diagnostics_for_failed_nodeids(
+    isolate_conftest_state: Path,
+) -> None:
+    """Module-level failures tracked via _FAILED_NODEIDS should retain artifacts and attribute them to the primary failing test."""
+    artifacts_dir = isolate_conftest_state
+    context: Any = DummyContext()
+    page_obj: Any = DummyPage(artifacts_dir / "temp_video.webm")
+
+    module_path = "tests/ci/test_conftest_diagnostics.py"
+    primary_fail_nodeid = f"{module_path}::test_primary_module_failure"
+    secondary_fail_nodeid = f"{module_path}::test_secondary_module_failure"
+
+    conftest._FAILED_NODEIDS.add(primary_fail_nodeid)  # noqa: SLF001
+    conftest._FAILED_NODEIDS.add(secondary_fail_nodeid)  # noqa: SLF001
+
+    # Simulate a passing test in the same module
+    passing_nodeid = f"{module_path}::test_passing_case"
+    request = _make_request(nodeid=passing_nodeid, call_failed=False)
+
+    _cleanup_context_diagnostics(
+        context, page_obj, request, include_module_failures=True
+    )
+
+    trace_files = list(artifacts_dir.glob("trace_*.zip"))
+    video_files = list(artifacts_dir.glob("video_*.webm"))
+
+    assert (
+        trace_files
+    ), "Trace should be retained for module-level failures in _FAILED_NODEIDS"
+    assert (
+        video_files
+    ), "Video should be retained for module-level failures in _FAILED_NODEIDS"
+
+    # Verify attribution to primary failing test nodeid
+    primary_test_name = primary_fail_nodeid.split("::")[-1]
+    assert any(
+        primary_test_name in trace.name for trace in trace_files
+    ), "Trace filename should be derived from the primary failing nodeid"
+    assert any(
+        primary_test_name in video.name for video in video_files
+    ), "Video filename should be derived from the primary failing nodeid"
+
+    assert context.closed, "Context should be closed"
+
+
+# ==============================================================================
+# Defensive Exception Path Tests
+# ==============================================================================
+
+
+def test_cleanup_context_diagnostics_screenshot_failure_handled_gracefully(
+    isolate_conftest_state: Path,
+) -> None:
+    """Screenshot failure should issue a UserWarning and continue context close and video finalization."""
+    artifacts_dir = isolate_conftest_state
+    context: Any = DummyContext()
+    page_obj: Any = FailingScreenshotPage(artifacts_dir / "temp_video.webm")
+    request = _make_request(call_failed=True)
+
+    with pytest.warns(UserWarning, match="Failed to capture failure screenshot"):
+        _cleanup_context_diagnostics(
+            context, page_obj, request, include_module_failures=False
+        )
+
+    assert context.closed, "Context should still close after screenshot exception"
+    assert list(artifacts_dir.glob("video_*.webm")), "Video should still be finalized"
+
+
+def test_cleanup_context_diagnostics_tracing_failure_handled_gracefully(
+    isolate_conftest_state: Path,
+) -> None:
+    """Tracing stop failure should issue a UserWarning and continue context close and video finalization."""
+    artifacts_dir = isolate_conftest_state
+    context: Any = DummyContext()
+    context.tracing = FailingTracing()
+    page_obj: Any = DummyPage(artifacts_dir / "temp_video.webm")
+    request = _make_request(call_failed=True)
+
+    with pytest.warns(UserWarning, match="Failed to stop tracing"):
+        _cleanup_context_diagnostics(
+            context, page_obj, request, include_module_failures=False
+        )
+
+    assert context.closed, "Context should still close after tracing exception"
+    assert list(artifacts_dir.glob("video_*.webm")), "Video should still be finalized"
+
+
+def test_cleanup_context_diagnostics_close_failure_handled_gracefully(
+    isolate_conftest_state: Path,
+) -> None:
+    """Context close failure should issue a UserWarning and still finalize video."""
+    artifacts_dir = isolate_conftest_state
+    context: Any = FailingCloseContext()
+    page_obj: Any = DummyPage(artifacts_dir / "temp_video.webm")
+    request = _make_request(call_failed=True)
+
+    with pytest.warns(UserWarning, match="Error closing Playwright browser context"):
+        _cleanup_context_diagnostics(
+            context, page_obj, request, include_module_failures=False
+        )
+
+    assert context.closed, "Context close attempt should be recorded"
+    assert list(artifacts_dir.glob("video_*.webm")), "Video should still be finalized"
