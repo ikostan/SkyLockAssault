@@ -365,13 +365,21 @@ def test_reset_flow(shared_page: Page) -> None:
 
         # Synchronize Emscripten IDBFS to IndexedDB before page reload
         try:
-            shared_page.evaluate("""async () => {
+            shared_page.evaluate(
+                """async () => {
                     if (typeof GodotFS !== 'undefined' && GodotFS.sync) {
                         await GodotFS.sync();
-                    } else if (typeof Module !== 'undefined' && Module.FS && Module.FS.syncfs) {
-                        await new Promise((resolve) => Module.FS.syncfs(false, resolve));
+                    } else if (
+                        typeof Module !== 'undefined'
+                        && Module.FS
+                        && Module.FS.syncfs
+                    ) {
+                        await new Promise((resolve) => {
+                            Module.FS.syncfs(false, resolve);
+                        });
                     }
-                }""")
+                }"""
+            )
         except Exception as exc:  # noqa: BLE001 - best-effort IDBFS flush
             print(f"Warning: GodotFS.sync() failed before reload: {exc}")
         shared_page.wait_for_timeout(timeout=TEST_TIMEOUT)
@@ -388,7 +396,7 @@ def test_reset_flow(shared_page: Page) -> None:
         # Wait for GDScript async settings initialization log before touching the UI
         wait_for_console_log(
             logs,
-            lambda text: "applied loaded" in text or "audio server initialized" in text,
+            lambda text: "applied loaded" in text,
             pre_reload_log_count,
             shared_page,
         )
@@ -425,7 +433,7 @@ def test_reset_flow(shared_page: Page) -> None:
                 "(id) => parseFloat("
                 "document.getElementById(id + '-slider').value) === 1.0",
                 arg=bus,
-                timeout=TEST_TIMEOUT,
+                timeout=DEFAULT_TIMEOUT,
             )
 
         # STATE-02: Audio reset doesn't affect gameplay settings
