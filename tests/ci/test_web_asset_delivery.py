@@ -58,9 +58,8 @@ def _extract_handler_class_source(script_path: Path) -> str:
 def _load_handler_class(script_path: Path):
     """Exec the extracted server snippet and return classes and modules."""
     namespace: dict = {}
-    exec(
-        _extract_handler_class_source(script_path), namespace
-    )  # skipcq: PTC-W0034, PYL-W0122
+    src = _extract_handler_class_source(script_path)
+    exec(src, namespace)  # skipcq: PTC-W0034, PYL-W0122
     return (
         namespace["OptimizedGodotHandler"],
         namespace["mimetypes"],
@@ -127,7 +126,7 @@ def test_handler_strips_query_string_before_cache_classification(
     script_path: Path,
 ) -> None:
     """A cache-busting query string on a .wasm request must not defeat caching."""
-    handler_cls, _ = _load_handler_class(script_path)
+    handler_cls, _, _ = _load_handler_class(script_path)
 
     headers = _headers_for_path(handler_cls, "/game.wasm?v=123&nocache=1")
 
@@ -163,6 +162,7 @@ def _extract_cleanup_line(script_path: Path) -> str:
 
 
 def test_cleanup_line_present_before_test_execution(script_path: Path) -> None:
+    """Verify cleanup command is present before test execution with true guard."""
     line = _extract_cleanup_line(script_path)
 
     assert "trace_*.zip" in line
