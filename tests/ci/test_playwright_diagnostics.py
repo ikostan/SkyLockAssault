@@ -102,6 +102,7 @@ def test_is_test_failed_detects_rep_setup_failure(_isolate_conftest_state):
     failed, target = conf._is_test_failed(request)
 
     assert failed is True
+    assert target == "tests/test_a.py::test_one"
 
 
 def test_is_test_failed_detects_membership_in_failed_nodeids(_isolate_conftest_state):
