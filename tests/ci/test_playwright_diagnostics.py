@@ -244,6 +244,7 @@ def test_finalize_video_delete_failure_emits_warning(_isolate_conftest_state):
 
 
 def _make_page(video_handle: Any = None) -> MagicMock:
+    """Create a mock Playwright Page with an optional video handle."""
     page = MagicMock()
     page.video = video_handle
     return page
@@ -252,6 +253,7 @@ def _make_page(video_handle: Any = None) -> MagicMock:
 def test_cleanup_context_diagnostics_failure_path_captures_all_artifacts(
     _isolate_conftest_state,
 ):
+    """Verify test failure captures screenshot, saves trace and video, and closes context."""
     conf = _isolate_conftest_state
     context = MagicMock()
     video_handle = MagicMock()
@@ -279,6 +281,7 @@ def test_cleanup_context_diagnostics_failure_path_captures_all_artifacts(
 def test_cleanup_context_diagnostics_success_path_purges_artifacts(
     _isolate_conftest_state,
 ):
+    """Verify passing test run stops tracing without saving and purges recorded video."""
     conf = _isolate_conftest_state
     context = MagicMock()
     video_handle = MagicMock()
@@ -300,6 +303,7 @@ def test_cleanup_context_diagnostics_success_path_purges_artifacts(
 def test_cleanup_context_diagnostics_screenshot_failure_still_closes_context(
     _isolate_conftest_state,
 ):
+    """Verify context closes and video saves even if screenshot capture raises an error."""
     conf = _isolate_conftest_state
     context = MagicMock()
     video_handle = MagicMock()
@@ -321,6 +325,7 @@ def test_cleanup_context_diagnostics_screenshot_failure_still_closes_context(
 def test_cleanup_context_diagnostics_context_close_failure_still_finalizes_video(
     _isolate_conftest_state,
 ):
+    """Verify video finalizes even when browser context close raises an exception."""
     conf = _isolate_conftest_state
     context = MagicMock()
     context.close.side_effect = RuntimeError("close boom")
@@ -367,10 +372,12 @@ def test_cleanup_context_diagnostics_module_scope_uses_failed_sibling_nodeid(
 
 
 def _rep(when: str, *, failed: bool = False, skipped: bool = False) -> SimpleNamespace:
+    """Build a mock pytest TestReport namespace object."""
     return SimpleNamespace(when=when, failed=failed, skipped=skipped)
 
 
 def test_determine_final_outcome_all_passed(_isolate_conftest_state):
+    """Verify final outcome is 'passed' when all test phases succeed."""
     conf = _isolate_conftest_state
     item = SimpleNamespace(rep_setup=_rep("setup"), rep_call=_rep("call"))
 
@@ -380,6 +387,7 @@ def test_determine_final_outcome_all_passed(_isolate_conftest_state):
 
 
 def test_determine_final_outcome_setup_failure(_isolate_conftest_state):
+    """Verify final outcome resolves to 'failed' when fixture setup fails."""
     conf = _isolate_conftest_state
     item = SimpleNamespace(rep_setup=_rep("setup", failed=True), rep_call=None)
 
@@ -389,6 +397,7 @@ def test_determine_final_outcome_setup_failure(_isolate_conftest_state):
 
 
 def test_determine_final_outcome_call_failure(_isolate_conftest_state):
+    """Verify final outcome resolves to 'failed' when test execution call fails."""
     conf = _isolate_conftest_state
     item = SimpleNamespace(rep_setup=_rep("setup"), rep_call=_rep("call", failed=True))
 
@@ -398,6 +407,7 @@ def test_determine_final_outcome_call_failure(_isolate_conftest_state):
 
 
 def test_determine_final_outcome_teardown_failure(_isolate_conftest_state):
+    """Verify final outcome resolves to 'failed' when fixture teardown fails."""
     conf = _isolate_conftest_state
     item = SimpleNamespace(rep_setup=_rep("setup"), rep_call=_rep("call"))
 
@@ -407,6 +417,7 @@ def test_determine_final_outcome_teardown_failure(_isolate_conftest_state):
 
 
 def test_determine_final_outcome_setup_skipped(_isolate_conftest_state):
+    """Verify outcome is 'skipped' when test setup is marked skipped."""
     conf = _isolate_conftest_state
     item = SimpleNamespace(rep_setup=_rep("setup", skipped=True), rep_call=None)
 
@@ -418,6 +429,7 @@ def test_determine_final_outcome_setup_skipped(_isolate_conftest_state):
 def test_determine_final_outcome_failure_takes_priority_over_skip(
     _isolate_conftest_state,
 ):
+    """Verify failure status takes precedence over skipped flags."""
     conf = _isolate_conftest_state
     item = SimpleNamespace(
         rep_setup=_rep("setup", skipped=True),
