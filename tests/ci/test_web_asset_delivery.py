@@ -56,10 +56,14 @@ def _extract_handler_class_source(script_path: Path) -> str:
 
 
 def _load_handler_class(script_path: Path):
-    """Exec the extracted server snippet and return OptimizedGodotHandler."""
+    """Exec the extracted server snippet and return classes and modules."""
     namespace: dict = {}
-    exec(_extract_handler_class_source(script_path), namespace)  # noqa: S102
-    return namespace["OptimizedGodotHandler"], namespace["mimetypes"]
+    exec(_extract_handler_class_source(script_path), namespace)  # skipcq: PTC-W0034, PYL-W0122
+    return (
+        namespace["OptimizedGodotHandler"],
+        namespace["mimetypes"],
+        namespace["ThreadedHTTPServer"],
+    )
 
 
 def _headers_for_path(handler_cls, path: str) -> list[tuple[str, str]]:
@@ -76,15 +80,18 @@ def _headers_for_path(handler_cls, path: str) -> list[tuple[str, str]]:
 
 @pytest.fixture(params=SCRIPT_PATHS, ids=lambda p: p.name)
 def script_path(request: pytest.FixtureRequest) -> Path:
+    """Parametrized fixture providing path to scripts embedding the HTTP server."""
     return request.param
 
 
 def test_script_file_exists(script_path: Path) -> None:
+    """Verify the target pipeline script exists on disk."""
     assert script_path.is_file()
 
 
 def test_wasm_mime_type_registered(script_path: Path) -> None:
-    _, mimetypes_module = _load_handler_class(script_path)
+    """Verify application/wasm MIME mapping is registered in the embedded server."""
+    _, mimetypes_module, _ = _load_handler_class(script_path)
 
     guessed_type, _ = mimetypes_module.guess_type("game.wasm")
 
@@ -103,10 +110,13 @@ def test_wasm_mime_type_registered(script_path: Path) -> None:
         ("/styles/main.css", "public, max-age=1800"),
     ],
 )
+
+
 def test_handler_sets_expected_cache_control_by_asset_type(
     script_path: Path, path: str, expected_cache_control: str
 ) -> None:
-    handler_cls, _ = _load_handler_class(script_path)
+    """Verify appropriate Cache-Control header is attached based on asset extension."""
+    handler_cls, _, _ = _load_handler_class(script_path)
 
     headers = _headers_for_path(handler_cls, path)
 
@@ -125,7 +135,8 @@ def test_handler_strips_query_string_before_cache_classification(
 
 
 def test_handler_sets_coop_and_coep_headers(script_path: Path) -> None:
-    handler_cls, _ = _load_handler_class(script_path)
+    """Verify COOP and COEP isolation headers are applied to HTTP responses."""
+    handler_cls, _, _ = _load_handler_class(script_path)
 
     headers = _headers_for_path(handler_cls, "/index.html")
 
@@ -136,15 +147,15 @@ def test_handler_sets_coop_and_coep_headers(script_path: Path) -> None:
 def test_server_uses_threaded_http_server_with_daemon_threads(
     script_path: Path,
 ) -> None:
-    namespace: dict = {}
-    exec(_extract_handler_class_source(script_path), namespace)  # noqa: S102
-    threaded_server_cls = namespace["ThreadedHTTPServer"]
+    """Verify ThreadedHTTPServer enables daemon threads and address reuse."""
+    _, _, threaded_server_cls = _load_handler_class(script_path)
 
     assert threaded_server_cls.daemon_threads is True
     assert threaded_server_cls.allow_reuse_address is True
 
 
 def _extract_cleanup_line(script_path: Path) -> str:
+    """Extract artifact cleanup bash command from the script."""
     text = script_path.read_text(encoding="utf-8")
     match = _CLEANUP_LINE_RE.search(text)
     assert match, f"Could not locate artifact cleanup line in {script_path}"
