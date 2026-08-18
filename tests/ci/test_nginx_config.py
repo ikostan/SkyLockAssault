@@ -19,6 +19,7 @@ CONF_PATH = PROJECT_ROOT / "infra" / "nginx" / "default.conf"
 
 @pytest.fixture(scope="module")
 def conf_text() -> str:
+    """Read and return the raw text content of default.conf."""
     return CONF_PATH.read_text(encoding="utf-8")
 
 
@@ -35,6 +36,7 @@ def test_registers_application_wasm_mime_type(conf_text: str) -> None:
 
 
 def test_gzip_compression_enabled_for_wasm_and_static_assets(conf_text: str) -> None:
+    """Verify gzip compression directives and MIME types are configured."""
     assert re.search(r"^\s*gzip on;", conf_text, re.MULTILINE)
     assert re.search(r"^\s*gzip_static on;", conf_text, re.MULTILINE)
     assert re.search(r"^\s*gzip_vary on;", conf_text, re.MULTILINE)
