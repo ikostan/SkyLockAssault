@@ -58,7 +58,9 @@ def _extract_handler_class_source(script_path: Path) -> str:
 def _load_handler_class(script_path: Path):
     """Exec the extracted server snippet and return classes and modules."""
     namespace: dict = {}
-    exec(_extract_handler_class_source(script_path), namespace)  # skipcq: PTC-W0034, PYL-W0122
+    exec(
+        _extract_handler_class_source(script_path), namespace
+    )  # skipcq: PTC-W0034, PYL-W0122
     return (
         namespace["OptimizedGodotHandler"],
         namespace["mimetypes"],
@@ -110,8 +112,6 @@ def test_wasm_mime_type_registered(script_path: Path) -> None:
         ("/styles/main.css", "public, max-age=1800"),
     ],
 )
-
-
 def test_handler_sets_expected_cache_control_by_asset_type(
     script_path: Path, path: str, expected_cache_control: str
 ) -> None:
