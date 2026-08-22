@@ -47,7 +47,9 @@ def _can_run_bash() -> bool:
 
 def _load_handler_class(script_path: Path | None = None):
     """Load OptimizedGodotHandler and ThreadedHTTPServer from serve_web_export.py."""
-    spec = importlib.util.spec_from_file_location("serve_web_export", SERVE_SCRIPT_PATH)
+    spec = importlib.util.spec_from_file_location(
+        "serve_web_export", SERVE_SCRIPT_PATH
+    )
     assert spec and spec.loader, f"Could not load spec for {SERVE_SCRIPT_PATH}"
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -64,8 +66,11 @@ def _headers_for_path(handler_cls, path: str) -> list[tuple[str, str]]:
     handler.path = path
     handler.send_header = MagicMock()
 
-    with patch.object(http.server.BaseHTTPRequestHandler, "end_headers", MagicMock()):
+    with patch.object(
+        http.server.BaseHTTPRequestHandler, "end_headers", MagicMock()
+    ) as end_headers_mock:
         handler.end_headers()
+        end_headers_mock.assert_called_once()
 
     return [call.args for call in handler.send_header.call_args_list]
 
