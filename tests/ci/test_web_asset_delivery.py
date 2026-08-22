@@ -48,9 +48,7 @@ def _can_run_bash() -> bool:
 
 def _load_handler_class():
     """Load OptimizedGodotHandler and ThreadedHTTPServer from serve_web_export.py."""
-    spec = importlib.util.spec_from_file_location(
-        "serve_web_export", SERVE_SCRIPT_PATH
-    )
+    spec = importlib.util.spec_from_file_location("serve_web_export", SERVE_SCRIPT_PATH)
     assert spec and spec.loader, f"Could not load spec for {SERVE_SCRIPT_PATH}"
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
