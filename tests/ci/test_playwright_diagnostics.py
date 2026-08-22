@@ -508,6 +508,62 @@ def test_record_test_profiling_failed_entry_updates_failed_nodeids(
     assert conf._TEST_PROFILING_DATA[0]["outcome"] == "failed"
 
 
+def test_record_test_profiling_records_skipped_outcome(_isolate_conftest_state):
+    """Verify skipped outcome updates profiling records and summary counts."""
+    conf = _isolate_conftest_state
+    rep_setup = _rep("setup", skipped=True)
+    rep_setup.duration = 0.01
+
+    item = SimpleNamespace(
+        nodeid="tests/test_a.py::test_skipped",
+        rep_setup=rep_setup,
+        rep_call=None,
+    )
+    rep_teardown = SimpleNamespace(
+        when="teardown", failed=False, skipped=False, duration=0.00
+    )
+
+    conf._record_test_profiling(item, rep_teardown)
+
+    assert len(conf._TEST_PROFILING_DATA) == 1
+    record = conf._TEST_PROFILING_DATA[0]
+    assert record["nodeid"] == "tests/test_a.py::test_skipped"
+    assert record["outcome"] == "skipped"
+    assert record["duration_sec"] == pytest.approx(0.01)
+    assert conf._SUMMARY_COUNTS["skipped"] == 1
+    assert "tests/test_a.py::test_skipped" not in conf._FAILED_NODEIDS
+
+
+def test_record_test_profiling_records_teardown_failure_and_failed_nodeid(
+    _isolate_conftest_state,
+):
+    """Verify teardown failure drives outcome to failed and registers failed node ID."""
+    conf = _isolate_conftest_state
+    rep_setup = _rep("setup", failed=False)
+    rep_setup.duration = 0.01
+    rep_call = _rep("call", failed=False)
+    rep_call.duration = 0.02
+
+    item = SimpleNamespace(
+        nodeid="tests/test_a.py::test_teardown_fail",
+        rep_setup=rep_setup,
+        rep_call=rep_call,
+    )
+    rep_teardown = SimpleNamespace(
+        when="teardown", failed=True, skipped=False, duration=0.03
+    )
+
+    conf._record_test_profiling(item, rep_teardown)
+
+    assert len(conf._TEST_PROFILING_DATA) == 1
+    record = conf._TEST_PROFILING_DATA[0]
+    assert record["nodeid"] == "tests/test_a.py::test_teardown_fail"
+    assert record["outcome"] == "failed"
+    assert record["duration_sec"] == pytest.approx(0.06)
+    assert conf._SUMMARY_COUNTS["failed"] == 1
+    assert "tests/test_a.py::test_teardown_fail" in conf._FAILED_NODEIDS
+
+
 def test_record_test_profiling_includes_rounded_wasm_boot_time(
     _isolate_conftest_state,
 ):
