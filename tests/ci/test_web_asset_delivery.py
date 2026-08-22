@@ -4,8 +4,9 @@
 """Tests for the optimized local/CI web asset delivery logic added in PR #872.
 
 Validates the HTTP server (``OptimizedGodotHandler``) in
-``.github/scripts/serve_web_export.py`` and the pre-test artifact cleanup line
-in ``workspace/run_browser_tests.sh`` and ``workspace/run_pipeline.sh``.
+``.github/scripts/serve_web_export.py`` and the pre-test artifact cleanup and
+server invocation in ``workspace/run_browser_tests.sh`` and
+``workspace/run_pipeline.sh``.
 """
 
 import http.server
@@ -45,9 +46,11 @@ def _can_run_bash() -> bool:
         return False
 
 
-def _load_handler_class(script_path: Path | None = None):
+def _load_handler_class():
     """Load OptimizedGodotHandler and ThreadedHTTPServer from serve_web_export.py."""
-    spec = importlib.util.spec_from_file_location("serve_web_export", SERVE_SCRIPT_PATH)
+    spec = importlib.util.spec_from_file_location(
+        "serve_web_export", SERVE_SCRIPT_PATH
+    )
     assert spec and spec.loader, f"Could not load spec for {SERVE_SCRIPT_PATH}"
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -79,9 +82,9 @@ def script_path(request: pytest.FixtureRequest) -> Path:
     return request.param
 
 
-def test_script_file_exists(script_path: Path) -> None:
-    """Verify the target pipeline script exists on disk."""
-    assert script_path.is_file()
+# ==============================================================================
+# HTTP Server Unit Tests (serve_web_export.py)
+# ==============================================================================
 
 
 def test_serve_script_file_exists() -> None:
@@ -89,9 +92,9 @@ def test_serve_script_file_exists() -> None:
     assert SERVE_SCRIPT_PATH.is_file()
 
 
-def test_wasm_mime_type_registered(script_path: Path) -> None:
+def test_wasm_mime_type_registered() -> None:
     """Verify application/wasm MIME mapping is registered in the embedded server."""
-    _, mimetypes_module, _ = _load_handler_class(script_path)
+    _, mimetypes_module, _ = _load_handler_class()
 
     guessed_type, _ = mimetypes_module.guess_type("game.wasm")
 
@@ -111,30 +114,28 @@ def test_wasm_mime_type_registered(script_path: Path) -> None:
     ],
 )
 def test_handler_sets_expected_cache_control_by_asset_type(
-    script_path: Path, path: str, expected_cache_control: str
+    path: str, expected_cache_control: str
 ) -> None:
     """Verify appropriate Cache-Control header is attached based on asset extension."""
-    handler_cls, _, _ = _load_handler_class(script_path)
+    handler_cls, _, _ = _load_handler_class()
 
     headers = _headers_for_path(handler_cls, path)
 
     assert ("Cache-Control", expected_cache_control) in headers
 
 
-def test_handler_strips_query_string_before_cache_classification(
-    script_path: Path,
-) -> None:
+def test_handler_strips_query_string_before_cache_classification() -> None:
     """A cache-busting query string on a .wasm request must not defeat caching."""
-    handler_cls, _, _ = _load_handler_class(script_path)
+    handler_cls, _, _ = _load_handler_class()
 
     headers = _headers_for_path(handler_cls, "/game.wasm?v=123&nocache=1")
 
     assert ("Cache-Control", "public, max-age=3600") in headers
 
 
-def test_handler_sets_coop_and_coep_headers(script_path: Path) -> None:
+def test_handler_sets_coop_and_coep_headers() -> None:
     """Verify COOP and COEP isolation headers are applied to HTTP responses."""
-    handler_cls, _, _ = _load_handler_class(script_path)
+    handler_cls, _, _ = _load_handler_class()
 
     headers = _headers_for_path(handler_cls, "/index.html")
 
@@ -142,14 +143,28 @@ def test_handler_sets_coop_and_coep_headers(script_path: Path) -> None:
     assert ("Cross-Origin-Embedder-Policy", "require-corp") in headers
 
 
-def test_server_uses_threaded_http_server_with_daemon_threads(
-    script_path: Path,
-) -> None:
+def test_server_uses_threaded_http_server_with_daemon_threads() -> None:
     """Verify ThreadedHTTPServer enables daemon threads and address reuse."""
-    _, _, threaded_server_cls = _load_handler_class(script_path)
+    _, _, threaded_server_cls = _load_handler_class()
 
     assert threaded_server_cls.daemon_threads is True
     assert threaded_server_cls.allow_reuse_address is True
+
+
+# ==============================================================================
+# Workspace Script Tests (run_browser_tests.sh & run_pipeline.sh)
+# ==============================================================================
+
+
+def test_script_file_exists(script_path: Path) -> None:
+    """Verify the target pipeline script exists on disk."""
+    assert script_path.is_file()
+
+
+def test_script_invokes_serve_web_export(script_path: Path) -> None:
+    """Verify the shell script executes serve_web_export.py."""
+    content = script_path.read_text(encoding="utf-8")
+    assert "serve_web_export.py" in content
 
 
 def _extract_cleanup_line(script_path: Path) -> str:
