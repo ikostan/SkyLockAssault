@@ -220,32 +220,32 @@ jobs:
 
       - name: "Merge & Sanitize LCOV Tracefiles"
         run: |
-            if [ -f "./batch1.lcov" ] && [ -f "./batch2.lcov" ]; then
-            lcov -a batch1.lcov -a batch2.lcov -o final_coverage.lcov
-            elif [ -f "./batch1.lcov" ]; then
-            cp ./batch1.lcov ./final_coverage.lcov
-            elif [ -f "./batch2.lcov" ]; then
-            cp ./batch2.lcov ./final_coverage.lcov
-            else
-            echo "❌ ERROR: No LCOV tracefiles were generated to merge."
-            exit 1
-            fi
+          if [ -f "./batch1.lcov" ] && [ -f "./batch2.lcov" ]; then
+          lcov -a batch1.lcov -a batch2.lcov -o final_coverage.lcov
+          elif [ -f "./batch1.lcov" ]; then
+          cp ./batch1.lcov ./final_coverage.lcov
+          elif [ -f "./batch2.lcov" ]; then
+          cp ./batch2.lcov ./final_coverage.lcov
+          else
+          echo "❌ ERROR: No LCOV tracefiles were generated to merge."
+          exit 1
+          fi
 
-            # Strip Godot res:// protocol prefix so paths match repo root (scripts/...)
-            sed -i 's|SF:res://|SF:|g' final_coverage.lcov
+          # Strip Godot res:// protocol prefix so paths match repo root (scripts/...)
+          sed -i 's|SF:res://|SF:|g' final_coverage.lcov
 
-            # Clean up intermediate batch tracefiles
-            rm -f batch1.lcov batch2.lcov
+          # Clean up intermediate batch tracefiles
+          rm -f batch1.lcov batch2.lcov
 
-            echo "=== Sanitized LCOV Summary ==="
-            lcov --summary final_coverage.lcov
+          echo "=== Sanitized LCOV Summary ==="
+          lcov --summary final_coverage.lcov
 
       - name: "Find Latest Report Directory"
         id: "find_report"
         if: "always()"
         run: |
-            LATEST_REPORT=$(ls -td reports/report_* artifacts/gdunit-reports/report_* 2>/dev/null | head -1 || echo "")
-            echo "latest_report=$LATEST_REPORT" >> "$GITHUB_OUTPUT"
+          LATEST_REPORT=$(ls -td reports/report_* artifacts/gdunit-reports/report_* 2>/dev/null | head -1 || echo "")
+          echo "latest_report=$LATEST_REPORT" >> "$GITHUB_OUTPUT"
 
       - name: "Upload Test Reports Artifacts"
         if: "always()"
@@ -262,51 +262,51 @@ jobs:
       - name: "Install Codecov CLI"
         if: "success()"
         run: |
-             curl -Os https://cli.codecov.io/latest/linux/codecov
-             chmod +x codecov
+         curl -Os https://cli.codecov.io/latest/linux/codecov
+         chmod +x codecov
 
       - name: "Upload LCOV Coverage & Test Results to Codecov"
         if: "success()"
         run: |
-              echo "=================================================="
-              echo "         CODECOV UPLOAD DIAGNOSTICS               "
-              echo "=================================================="
+          echo "=================================================="
+          echo "         CODECOV UPLOAD DIAGNOSTICS               "
+          echo "=================================================="
 
-              if [ -f "./final_coverage.lcov" ]; then
-                echo "✅ Found ./final_coverage.lcov ($(du -h ./final_coverage.lcov | cut -f1))"
-                echo "🚀 Initiating Codecov coverage upload..."
-                ./codecov --verbose upload-process \
-                  --token "${{ secrets.CODECOV_TOKEN }}" \
-                  -f "./final_coverage.lcov" \
-                  --disable-search \
-                  --name "GDUnit4 Code Coverage" \
-                  --flag GDUnit4
-              else
-                echo "❌ CRITICAL: ./final_coverage.lcov WAS NOT FOUND!"
-              fi
+          if [ -f "./final_coverage.lcov" ]; then
+            echo "✅ Found ./final_coverage.lcov ($(du -h ./final_coverage.lcov | cut -f1))"
+            echo "🚀 Initiating Codecov coverage upload..."
+            ./codecov --verbose upload-process \
+              --token "${{ secrets.CODECOV_TOKEN }}" \
+              -f "./final_coverage.lcov" \
+              --disable-search \
+              --name "GDUnit4 Code Coverage" \
+              --flag GDUnit4
+          else
+            echo "❌ CRITICAL: ./final_coverage.lcov WAS NOT FOUND!"
+          fi
 
-              echo "--------------------------------------------------"
+          echo "--------------------------------------------------"
 
-              REPORT_DIR="${{ steps.find_report.outputs.latest_report }}"
-              REPORT_FILE=""
-              if [ -f "$REPORT_DIR/results.xml" ]; then
-                REPORT_FILE="$REPORT_DIR/results.xml"
-              elif [ -f "$REPORT_DIR/test-report.xml" ]; then
-                REPORT_FILE="$REPORT_DIR/test-report.xml"
-              fi
+          REPORT_DIR="${{ steps.find_report.outputs.latest_report }}"
+          REPORT_FILE=""
+          if [ -f "$REPORT_DIR/results.xml" ]; then
+            REPORT_FILE="$REPORT_DIR/results.xml"
+          elif [ -f "$REPORT_DIR/test-report.xml" ]; then
+            REPORT_FILE="$REPORT_DIR/test-report.xml"
+          fi
 
-              if [ -n "$REPORT_FILE" ]; then
-                echo "✅ Found test report XML at: $REPORT_FILE"
-                echo "🚀 Uploading test result XML to Codecov..."
-                ./codecov --verbose upload-process \
-                  --token "${{ secrets.CODECOV_TOKEN }}" \
-                  -f "$REPORT_FILE" \
-                  --disable-search \
-                  --name "GDUnit4 Test Report" \
-                  --flag GDUnit4 \
-                  --report-type test_results
-              else
-                echo "⚠️ WARNING: Test report XML not found in '$REPORT_DIR'"
-              fi
+          if [ -n "$REPORT_FILE" ]; then
+            echo "✅ Found test report XML at: $REPORT_FILE"
+            echo "🚀 Uploading test result XML to Codecov..."
+            ./codecov --verbose upload-process \
+              --token "${{ secrets.CODECOV_TOKEN }}" \
+              -f "$REPORT_FILE" \
+              --disable-search \
+              --name "GDUnit4 Test Report" \
+              --flag GDUnit4 \
+              --report-type test_results
+          else
+            echo "⚠️ WARNING: Test report XML not found in '$REPORT_DIR'"
+          fi
 
-              echo "=================================================="
+          echo "=================================================="
