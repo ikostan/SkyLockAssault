@@ -271,7 +271,7 @@ jobs:
                 echo "=================================================="
                 echo "         CODECOV UPLOAD DIAGNOSTICS               "
                 echo "=================================================="
-                
+
                 if [ -f "./final_coverage.lcov" ]; then
                   echo "✅ Found ./final_coverage.lcov ($(du -h ./final_coverage.lcov | cut -f1))"
                   echo "🚀 Initiating Codecov coverage upload..."
@@ -284,7 +284,7 @@ jobs:
                 else
                   echo "❌ CRITICAL: ./final_coverage.lcov WAS NOT FOUND!"
                 fi
-                
+
                 echo "--------------------------------------------------"
 
                 REPORT_DIR="${{ steps.find_report.outputs.latest_report }}"
@@ -308,4 +308,5 @@ jobs:
                 else
                   echo "⚠️ WARNING: Test report XML not found in '$REPORT_DIR'"
                 fi
+
                 echo "=================================================="
