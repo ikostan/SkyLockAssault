@@ -155,6 +155,20 @@ jobs:
           chmod +x ./gdcov
           echo "✅ gdcov runner ready: $(./gdcov --version)"
 
+      - name: "Configure gdUnit4 Coverage via override.cfg"
+        run: |
+          cat << 'EOF' > override.cfg
+          [gdunit4_coverage]
+
+          include_paths=PackedStringArray("res://scripts")
+          exclude_paths=PackedStringArray("res://test", "res://addons")
+          settings/include_paths=PackedStringArray("res://scripts")
+          settings/exclude_paths=PackedStringArray("res://test", "res://addons")
+          settings/include_filters=PackedStringArray("res://scripts")
+          settings/exclude_filters=PackedStringArray("res://test", "res://addons")
+          EOF
+          echo "✅ Injected coverage rules into override.cfg"
+
       - name: "Initialize Project and Register GDExtensions"
         run: |
           rm -rf .godot/
@@ -221,21 +235,22 @@ jobs:
       - name: "Merge & Sanitize LCOV Tracefiles"
         run: |
           if [ -f "./batch1.lcov" ] && [ -f "./batch2.lcov" ]; then
-          lcov -a batch1.lcov -a batch2.lcov -o final_coverage.lcov
+            lcov -a batch1.lcov -a batch2.lcov -o final_coverage.lcov
           elif [ -f "./batch1.lcov" ]; then
-          cp ./batch1.lcov ./final_coverage.lcov
+            cp ./batch1.lcov ./final_coverage.lcov
           elif [ -f "./batch2.lcov" ]; then
-          cp ./batch2.lcov ./final_coverage.lcov
+            cp ./batch2.lcov ./final_coverage.lcov
           else
-          echo "❌ ERROR: No LCOV tracefiles were generated to merge."
-          exit 1
+            echo "❌ ERROR: No LCOV tracefiles were generated to merge."
+            exit 1
           fi
 
           # Strip Godot res:// protocol prefix so paths match repo root (scripts/...)
           sed -i 's|SF:res://|SF:|g' final_coverage.lcov
-
-          # Clean up intermediate batch tracefiles
           rm -f batch1.lcov batch2.lcov
+
+          echo "=== Tracked Files in final_coverage.lcov ==="
+          grep '^SF:' final_coverage.lcov | sort -u
 
           echo "=== Sanitized LCOV Summary ==="
           lcov --summary final_coverage.lcov
