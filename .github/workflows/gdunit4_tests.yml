@@ -249,7 +249,7 @@ jobs:
           chmod +x codecov
 
       - name: "Upload LCOV Coverage & Test Results to Codecov"
-        if: "asuccess()"
+        if: "success()"
         run: |
           echo "=================================================="
           echo "         CODECOV UPLOAD DIAGNOSTICS               "
