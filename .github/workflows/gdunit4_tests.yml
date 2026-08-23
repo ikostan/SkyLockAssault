@@ -105,14 +105,51 @@ jobs:
             exit 1
           fi
 
+      - name: "Download and Setup gdcov Runner from Manifest"
+        run: |
+          # 1. Fetch manifest from the gdUnit4-coverage release
+          wget -q "https://github.com/godot-gdunit-labs/gdUnit4-coverage/releases/download/v0.1.4/manifest.json" -O manifest.json
+
+          # 2. Extract Linux 4.7 runner URL
+          GDCOV_URL=$(python3 -c '
+          import json
+          with open("manifest.json") as f:
+              m = json.load(f)
+          # Search assets array or mapped dict for linux 4.7 runner
+          url = ""
+          if isinstance(m, dict):
+              if "assets" in m:
+                  for asset in m["assets"]:
+                      if "linux" in asset.get("platform", "").lower() and "4.7" in asset.get("version", ""):
+                          url = asset.get("url", "")
+                          break
+              if not url:
+                  url = m.get("linux", {}).get("4.7", m.get("linux", {}).get("4.7.1", ""))
+          print(url)
+          ')
+
+          if [ -z "$GDCOV_URL" ]; then
+            echo "❌ Failed to resolve gdcov download URL from manifest.json"
+            cat manifest.json
+            exit 1
+          fi
+
+          # 3. Download and unpack gdcov
+          wget -q "$GDCOV_URL" -O gdcov_linux.zip
+          unzip -q gdcov_linux.zip
+          RUNNER=$(find . -maxdepth 2 -type f -name "gdcov*" ! -name "*.zip" | head -n 1)
+          mv "$RUNNER" ./gdcov
+          chmod +x ./gdcov
+          echo "✅ gdcov runner ready: $(./gdcov --version)"
+
       - name: "Initialize Project and Register GDExtensions"
         run: |
           rm -rf .godot/
-          ./godot --headless --editor --quit --path .
+          ./gdcov --headless --editor --quit --path .
 
       - name: "Run Coverage - Batch 1 (Core Systems & Entities)"
         run: |
-          xvfb-run ./godot -d --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+          xvfb-run ./gdcov -d --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
             --ignoreHeadlessMode \
             --add res://test/gdunit4/test_audio_manager.gd \
             --add res://test/gdunit4/test_bullet.gd \
@@ -134,7 +171,6 @@ jobs:
             echo "❌ ERROR: Batch 1 coverage tracefile missing!"
             LOG_FILE=$(find "$HOME/.local/share/godot/" -name "gdcov.log" 2>/dev/null | head -n 1)
             if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
-              echo "=== GDExtension Diagnostic Log (gdcov.log) ==="
               cat "$LOG_FILE"
             fi
             exit 1
@@ -142,7 +178,7 @@ jobs:
 
       - name: "Run Coverage - Batch 2 (UI, Menus & Controls)"
         run: |
-          xvfb-run ./godot -d --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+          xvfb-run ./gdcov -d --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
             --ignoreHeadlessMode \
             --add res://test/gdunit4/test_audio_settings.gd \
             --add res://test/gdunit4/test_audio_unexpected_exit.gd \
@@ -164,7 +200,6 @@ jobs:
             echo "❌ ERROR: Batch 2 coverage tracefile missing!"
             LOG_FILE=$(find "$HOME/.local/share/godot/" -name "gdcov.log" 2>/dev/null | head -n 1)
             if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
-              echo "=== GDExtension Diagnostic Log (gdcov.log) ==="
               cat "$LOG_FILE"
             fi
             exit 1
@@ -214,7 +249,7 @@ jobs:
           chmod +x codecov
 
       - name: "Upload LCOV Coverage & Test Results to Codecov"
-        if: "always()"
+        if: "asuccess()"
         run: |
           echo "=================================================="
           echo "         CODECOV UPLOAD DIAGNOSTICS               "
