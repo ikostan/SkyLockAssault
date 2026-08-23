@@ -10,6 +10,10 @@ on:  # yamllint disable-line rule:truthy
       godot_sha256:
         type: "string"
         default: ""
+    secrets:
+      CODECOV_TOKEN:
+        description: "Codecov requires a token to authenticate"
+        required: false
 
 jobs:
   unit-test:
