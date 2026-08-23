@@ -73,11 +73,12 @@ jobs:
           cp -r temp_cov/addons/gdunit4_coverage addons/
           rm -rf temp_cov
 
-          # 3. Register plugin & disable warning traps in project.godot
+          # 3. Register plugin & configure include/exclude tracking filters in project.godot
           python3 -c '
           with open("project.godot", "r") as f:
               content = f.read()
 
+          # Register coverage plugin
           if "res://addons/gdunit4_coverage/plugin.cfg" not in content:
               if "enabled=PackedStringArray(" in content:
                   content = content.replace("enabled=PackedStringArray(", "enabled=PackedStringArray(\"res://addons/gdunit4_coverage/plugin.cfg\", ")
@@ -86,15 +87,24 @@ jobs:
               else:
                   content += "\n\n[editor_plugins]\n\nenabled=PackedStringArray(\"res://addons/gdunit4_coverage/plugin.cfg\")\n"
 
+          # Suppress warning traps
           if "[debug]" in content:
               content = content.replace("[debug]", "[debug]\n\ngdscript/warnings/enable=false")
           else:
               content += "\n\n[debug]\n\ngdscript/warnings/enable=false\n"
 
+          # Inject filters to track ONLY res://scripts and ignore tests/addons
+          coverage_settings = (
+              "\n[gdunit4_coverage]\n\n"
+              "settings/include_filters=PackedStringArray(\"res://scripts\")\n"
+              "settings/exclude_filters=PackedStringArray(\"res://test\", \"res://addons\")\n"
+          )
+          content += coverage_settings
+
           with open("project.godot", "w") as f:
               f.write(content)
 
-          print("✅ Registered gdunit4_coverage plugin & suppressed debug warning traps.")
+          print("✅ Registered gdunit4_coverage plugin & injected include_filters for res://scripts.")
           '
 
           # Verification
@@ -221,8 +231,10 @@ jobs:
             exit 1
           fi
 
-          # Strip Godot res:// protocol prefix so paths match repo root
+          # Strip Godot res:// protocol prefix so paths match repo root (scripts/...)
           sed -i 's|SF:res://|SF:|g' final_coverage.lcov
+          echo "=== Sanitized LCOV summary ==="
+          lcov --summary final_coverage.lcov
 
       - name: "Find Latest Report Directory"
         id: "find_report"
