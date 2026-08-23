@@ -230,13 +230,13 @@ jobs:
             echo "❌ ERROR: No LCOV tracefiles were generated to merge."
             exit 1
             fi
-            
+
             # Strip Godot res:// protocol prefix so paths match repo root (scripts/...)
             sed -i 's|SF:res://|SF:|g' final_coverage.lcov
-            
+
             # Clean up intermediate batch tracefiles
             rm -f batch1.lcov batch2.lcov
-            
+
             echo "=== Sanitized LCOV Summary ==="
             lcov --summary final_coverage.lcov
 
@@ -286,7 +286,7 @@ jobs:
                 fi
                 
                 echo "--------------------------------------------------"
-                
+
                 REPORT_DIR="${{ steps.find_report.outputs.latest_report }}"
                 REPORT_FILE=""
                 if [ -f "$REPORT_DIR/results.xml" ]; then
@@ -294,7 +294,7 @@ jobs:
                 elif [ -f "$REPORT_DIR/test-report.xml" ]; then
                   REPORT_FILE="$REPORT_DIR/test-report.xml"
                 fi
-                
+
                 if [ -n "$REPORT_FILE" ]; then
                   echo "✅ Found test report XML at: $REPORT_FILE"
                   echo "🚀 Uploading test result XML to Codecov..."
@@ -308,5 +308,4 @@ jobs:
                 else
                   echo "⚠️ WARNING: Test report XML not found in '$REPORT_DIR'"
                 fi
-                
                 echo "=================================================="
