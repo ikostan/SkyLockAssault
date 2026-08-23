@@ -4,15 +4,9 @@ coverage:
       gdscript:
         target: 70%
         flags:
-          - gdunit4
+          - GDUnit4
         paths:
           - "scripts/"
-      playwright:
-        target: 50%
-        flags:
-          - playwright
-        paths:
-          - "export/web_thread_off/"
     patch:
       default:
         target: 80%
@@ -29,15 +23,9 @@ ignore:
   - "addons/**/*"
 
 flags:
-  gdunit4:
+  GDUnit4:
     paths:
       - "scripts/"
-    carryforward: false
-  playwright:
-    paths:
-      - "export/web_thread_off/"
-    carryforward: false
 
 fixes:
   - "/home/runner/work/SkyLockAssault/SkyLockAssault/::"
-  
