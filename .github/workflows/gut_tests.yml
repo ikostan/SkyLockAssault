@@ -6,7 +6,7 @@ on:  # yamllint disable-line rule:truthy
     inputs:
       godot_version:
         type: "string"
-        default: "4.6.3-stable"
+        default: "4.7.1-stable"
       godot_sha256:
         type: "string"
         default: "d0bc2113065e481c9c2c2b2c37daa4e8be3fe9e27f0ab9ab0b6096e9a37907f3"
@@ -48,10 +48,11 @@ jobs:
       - name: "Install GUT"
         run: |
           mkdir -p addons
-          URL="https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip"
+          URL="https://github.com/bitwes/Gut/archive/refs/tags/v9.7.1.zip"
           wget "$URL"
-          unzip v9.5.0.zip -d addons
-          mv addons/Gut-9.5.0/addons/gut addons/gut
+          unzip v9.7.1.zip -d addons
+          mv addons/Gut-9.7.1/addons/gut addons/gut
+          rm -rf addons/Gut-9.7.1 v9.7.1.zip
 
       - name: "Clean Cache"
         run: |
