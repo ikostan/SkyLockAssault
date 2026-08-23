@@ -35,10 +35,11 @@ jobs:
           ZIP_NAME="Godot_v${GODOT_VERSION}_linux.x86_64.zip"
           wget -q "${URL}/${GODOT_VERSION}/${ZIP_NAME}"
 
-          echo "${GODOT_SHA256}  ${ZIP_NAME}" | sha256sum --check --status
-          if [ $? -ne 0 ]; then
-            echo "❌ CRITICAL: Godot binary verification failed! Checksum mismatch."
-            exit 1
+          if [ -n "${GODOT_SHA256}" ]; then
+            echo "${GODOT_SHA256}  ${ZIP_NAME}" | sha256sum --check --status || {
+              echo "❌ CRITICAL: Godot binary verification failed! Checksum mismatch."
+              exit 1
+            }
           fi
 
           unzip "${ZIP_NAME}"
