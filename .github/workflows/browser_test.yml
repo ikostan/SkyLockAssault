@@ -10,7 +10,7 @@ on:  # yamllint disable-line rule:truthy
     inputs:
       godot_version:
         type: "string"
-        default: "4.6.3-stable"
+        default: "4.7.1-stable"
       pw_timeout:
         description: "Playwright timeout in ms"
         required: false
