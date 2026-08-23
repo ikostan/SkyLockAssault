@@ -24,7 +24,9 @@ comment:
   layout: "diff, files"
 
 ignore:
-  - export/web/*
+  - "export/web/*.wasm"
+  - "export/web/*.pck"
+  - "export/web/*.zip"
 
 flags:
   gdscript:
@@ -35,6 +37,6 @@ flags:
       - export/web/
 
 fixes:
-  - "::export/web/"  # New: Strip empty prefixes
-  - "anonymous_::export/web/index.js"  # Map anonymous to real JS file (adjust if multiple)
-  - "/home/runner/work/SkyLockAssault/SkyLockAssault/::"  # Strip CI absolute paths
+  - "::export/web/"
+  - "anonymous_::export/web/index.js"
+  - "/home/runner/work/SkyLockAssault/SkyLockAssault/::"
