@@ -6,7 +6,7 @@ on:  # yamllint disable-line rule:truthy
     inputs:
       godot_version:
         type: "string"
-        default: "4.7-stable"
+        default: "4.7.1-stable"
       godot_sha256:
         type: "string"
         default: ""
@@ -30,7 +30,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y xvfb lcov
 
-      - name: "Download and Verify Godot 4.7 Binary"
+      - name: "Download and Verify Godot 4.7.1-stable Binary"
         run: |
           URL="https://github.com/godotengine/godot/releases/download"
           ZIP_NAME="Godot_v${GODOT_VERSION}_linux.x86_64.zip"
