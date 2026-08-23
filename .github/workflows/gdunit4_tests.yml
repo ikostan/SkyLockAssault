@@ -110,21 +110,24 @@ jobs:
           # 1. Fetch manifest from the gdUnit4-coverage release
           wget -q "https://github.com/godot-gdunit-labs/gdUnit4-coverage/releases/download/v0.1.4/manifest.json" -O manifest.json
 
-          # 2. Extract Linux 4.7 runner URL
+          # 2. Extract Linux 4.7 runner URL matching manifest schema
           GDCOV_URL=$(python3 -c '
           import json
           with open("manifest.json") as f:
               m = json.load(f)
-          # Search assets array or mapped dict for linux 4.7 runner
+
+          gdcov = m.get("gdcov", {})
           url = ""
-          if isinstance(m, dict):
-              if "assets" in m:
-                  for asset in m["assets"]:
-                      if "linux" in asset.get("platform", "").lower() and "4.7" in asset.get("version", ""):
-                          url = asset.get("url", "")
+
+          # Match 4.7 or 4.7-stable release key
+          for ver_key, platforms in gdcov.items():
+              if "4.7" in ver_key:
+                  linux_info = platforms.get("linux-x86_64") or platforms.get("linux", {})
+                  if isinstance(linux_info, dict):
+                      url = linux_info.get("url", "")
+                      if url:
                           break
-              if not url:
-                  url = m.get("linux", {}).get("4.7", m.get("linux", {}).get("4.7.1", ""))
+
           print(url)
           ')
 
@@ -134,7 +137,7 @@ jobs:
             exit 1
           fi
 
-          # 3. Download and unpack gdcov
+          echo "⬇️ Downloading gdcov from: $GDCOV_URL"
           wget -q "$GDCOV_URL" -O gdcov_linux.zip
           unzip -q gdcov_linux.zip
           RUNNER=$(find . -maxdepth 2 -type f -name "gdcov*" ! -name "*.zip" | head -n 1)
