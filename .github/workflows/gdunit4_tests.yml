@@ -240,34 +240,34 @@ jobs:
             echo "=== Sanitized LCOV Summary ==="
             lcov --summary final_coverage.lcov
 
-            - name: "Find Latest Report Directory"
-              id: "find_report"
-              if: "always()"
-              run: |
-                LATEST_REPORT=$(ls -td reports/report_* artifacts/gdunit-reports/report_* 2>/dev/null | head -1 || echo "")
-                echo "latest_report=$LATEST_REPORT" >> "$GITHUB_OUTPUT"
+      - name: "Find Latest Report Directory"
+        id: "find_report"
+        if: "always()"
+        run: |
+            LATEST_REPORT=$(ls -td reports/report_* artifacts/gdunit-reports/report_* 2>/dev/null | head -1 || echo "")
+            echo "latest_report=$LATEST_REPORT" >> "$GITHUB_OUTPUT"
 
-            - name: "Upload Test Reports Artifacts"
-              if: "always()"
-              uses: "actions/upload-artifact@v7"
-              with:
-                name: "gdunit-reports"
-                path: |
-                  reports/**
-                  artifacts/gdunit-reports/**
-                  final_coverage.lcov
-                if-no-files-found: "ignore"
-                retention-days: 5
+      - name: "Upload Test Reports Artifacts"
+        if: "always()"
+        uses: "actions/upload-artifact@v7"
+        with:
+          name: "gdunit-reports"
+          path: |
+                reports/**
+                artifacts/gdunit-reports/**
+                final_coverage.lcov
+          if-no-files-found: "ignore"
+          retention-days: 5
 
-            - name: "Install Codecov CLI"
-              if: "success()"
-              run: |
-                curl -Os https://cli.codecov.io/latest/linux/codecov
-                chmod +x codecov
+      - name: "Install Codecov CLI"
+        if: "success()"
+        run: |
+             curl -Os https://cli.codecov.io/latest/linux/codecov
+             chmod +x codecov
 
-            - name: "Upload LCOV Coverage & Test Results to Codecov"
-              if: "success()"
-              run: |
+      - name: "Upload LCOV Coverage & Test Results to Codecov"
+        if: "success()"
+        run: |
                 echo "=================================================="
                 echo "         CODECOV UPLOAD DIAGNOSTICS               "
                 echo "=================================================="
