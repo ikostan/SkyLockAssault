@@ -218,85 +218,95 @@ jobs:
             exit 1
           fi
 
-      - name: "Merge LCOV Tracefiles"
+      - name: "Merge & Sanitize LCOV Tracefiles"
         run: |
-          if [ -f "./batch1.lcov" ] && [ -f "./batch2.lcov" ]; then
+            if [ -f "./batch1.lcov" ] && [ -f "./batch2.lcov" ]; then
             lcov -a batch1.lcov -a batch2.lcov -o final_coverage.lcov
-          elif [ -f "./batch1.lcov" ]; then
+            elif [ -f "./batch1.lcov" ]; then
             cp ./batch1.lcov ./final_coverage.lcov
-          elif [ -f "./batch2.lcov" ]; then
+            elif [ -f "./batch2.lcov" ]; then
             cp ./batch2.lcov ./final_coverage.lcov
-          else
+            else
             echo "❌ ERROR: No LCOV tracefiles were generated to merge."
             exit 1
-          fi
+            fi
+            
+            # Strip Godot res:// protocol prefix so paths match repo root (scripts/...)
+            sed -i 's|SF:res://|SF:|g' final_coverage.lcov
+            
+            # Clean up intermediate batch tracefiles
+            rm -f batch1.lcov batch2.lcov
+            
+            echo "=== Sanitized LCOV Summary ==="
+            lcov --summary final_coverage.lcov
 
-          # Strip Godot res:// protocol prefix so paths match repo root (scripts/...)
-          sed -i 's|SF:res://|SF:|g' final_coverage.lcov
-          echo "=== Sanitized LCOV summary ==="
-          lcov --summary final_coverage.lcov
+            - name: "Find Latest Report Directory"
+              id: "find_report"
+              if: "always()"
+              run: |
+                LATEST_REPORT=$(ls -td reports/report_* artifacts/gdunit-reports/report_* 2>/dev/null | head -1 || echo "")
+                echo "latest_report=$LATEST_REPORT" >> "$GITHUB_OUTPUT"
 
-      - name: "Find Latest Report Directory"
-        id: "find_report"
-        if: "always()"
-        run: |
-          LATEST_REPORT=$(ls -td reports/report_* artifacts/gdunit-reports/report_* 2>/dev/null | head -1 || echo "")
-          if [ -z "$LATEST_REPORT" ]; then
-            echo "No report directory found; tests may not have generated reports."
-          fi
-          echo "latest_report=$LATEST_REPORT" >> "$GITHUB_OUTPUT"
+            - name: "Upload Test Reports Artifacts"
+              if: "always()"
+              uses: "actions/upload-artifact@v7"
+              with:
+                name: "gdunit-reports"
+                path: |
+                  reports/**
+                  artifacts/gdunit-reports/**
+                  final_coverage.lcov
+                if-no-files-found: "ignore"
+                retention-days: 5
 
-      - name: "Upload Test Reports Artifacts"
-        if: "always()"
-        uses: "actions/upload-artifact@v7"
-        with:
-          name: "gdunit-reports"
-          path: |
-            reports/**
-            artifacts/gdunit-reports/**
-            final_coverage.lcov
-          if-no-files-found: "ignore"
-          retention-days: 5
+            - name: "Install Codecov CLI"
+              if: "success()"
+              run: |
+                curl -Os https://cli.codecov.io/latest/linux/codecov
+                chmod +x codecov
 
-      - name: "Install Codecov CLI"
-        if: "success()"
-        run: |
-          curl -Os https://cli.codecov.io/latest/linux/codecov
-          chmod +x codecov
-
-      - name: "Upload LCOV Coverage & Test Results to Codecov"
-        if: "success()"
-        run: |
-          echo "=================================================="
-          echo "         CODECOV UPLOAD DIAGNOSTICS               "
-          echo "=================================================="
-
-          if [ -f "./final_coverage.lcov" ]; then
-            echo "✅ Found ./final_coverage.lcov ($(du -h ./final_coverage.lcov | cut -f1))"
-            echo "🚀 Initiating Codecov coverage upload..."
-            ./codecov --verbose upload-process \
-              --token "${{ secrets.CODECOV_TOKEN }}" \
-              -f "./final_coverage.lcov" \
-              --name "GDUnit4 Code Coverage" \
-              --flag GDUnit4
-          else
-            echo "❌ CRITICAL: ./final_coverage.lcov WAS NOT FOUND!"
-          fi
-
-          echo "--------------------------------------------------"
-
-          REPORT_FILE="${{ steps.find_report.outputs.latest_report }}/test-report.xml"
-          if [ -f "$REPORT_FILE" ]; then
-            echo "✅ Found test report XML at: $REPORT_FILE"
-            echo "🚀 Uploading test result XML to Codecov..."
-            ./codecov --verbose upload-process \
-              --token "${{ secrets.CODECOV_TOKEN }}" \
-              -f "$REPORT_FILE" \
-              --name "GDUnit4 Test Report" \
-              --flag GDUnit4 \
-              --report-type test_results
-          else
-            echo "⚠️ WARNING: Test report XML not found at '$REPORT_FILE'"
-          fi
-
-          echo "=================================================="
+            - name: "Upload LCOV Coverage & Test Results to Codecov"
+              if: "success()"
+              run: |
+                echo "=================================================="
+                echo "         CODECOV UPLOAD DIAGNOSTICS               "
+                echo "=================================================="
+                
+                if [ -f "./final_coverage.lcov" ]; then
+                  echo "✅ Found ./final_coverage.lcov ($(du -h ./final_coverage.lcov | cut -f1))"
+                  echo "🚀 Initiating Codecov coverage upload..."
+                  ./codecov --verbose upload-process \
+                    --token "${{ secrets.CODECOV_TOKEN }}" \
+                    -f "./final_coverage.lcov" \
+                    --disable-search \
+                    --name "GDUnit4 Code Coverage" \
+                    --flag GDUnit4
+                else
+                  echo "❌ CRITICAL: ./final_coverage.lcov WAS NOT FOUND!"
+                fi
+                
+                echo "--------------------------------------------------"
+                
+                REPORT_DIR="${{ steps.find_report.outputs.latest_report }}"
+                REPORT_FILE=""
+                if [ -f "$REPORT_DIR/results.xml" ]; then
+                  REPORT_FILE="$REPORT_DIR/results.xml"
+                elif [ -f "$REPORT_DIR/test-report.xml" ]; then
+                  REPORT_FILE="$REPORT_DIR/test-report.xml"
+                fi
+                
+                if [ -n "$REPORT_FILE" ]; then
+                  echo "✅ Found test report XML at: $REPORT_FILE"
+                  echo "🚀 Uploading test result XML to Codecov..."
+                  ./codecov --verbose upload-process \
+                    --token "${{ secrets.CODECOV_TOKEN }}" \
+                    -f "$REPORT_FILE" \
+                    --disable-search \
+                    --name "GDUnit4 Test Report" \
+                    --flag GDUnit4 \
+                    --report-type test_results
+                else
+                  echo "⚠️ WARNING: Test report XML not found in '$REPORT_DIR'"
+                fi
+                
+                echo "=================================================="
