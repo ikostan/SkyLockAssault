@@ -3,16 +3,16 @@ coverage:
     project:
       gdscript:
         target: 70%
-        paths:
-          - scripts/
         flags:
-          - gdscript
-      javascript:
-        target: 50%
+          - gdunit4
         paths:
-          - export/web/
+          - "scripts/"
+      playwright:
+        target: 50%
         flags:
           - playwright
+        paths:
+          - "export/web_thread_off/"
     patch:
       default:
         target: 80%
@@ -24,19 +24,20 @@ comment:
   layout: "diff, files"
 
 ignore:
-  - "export/web/*.wasm"
-  - "export/web/*.pck"
-  - "export/web/*.zip"
+  - "test/**/*"
+  - "tests/**/*"
+  - "addons/**/*"
 
 flags:
-  gdscript:
+  gdunit4:
     paths:
-      - scripts/
+      - "scripts/"
+    carryforward: false
   playwright:
     paths:
-      - export/web/
+      - "export/web_thread_off/"
+    carryforward: false
 
 fixes:
-  - "::export/web/"
-  - "anonymous_::export/web/index.js"
   - "/home/runner/work/SkyLockAssault/SkyLockAssault/::"
+  

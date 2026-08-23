@@ -208,7 +208,7 @@ jobs:
             exit 1
           fi
 
-      - name: "Merge & Normalize LCOV Tracefiles"
+      - name: "Merge LCOV Tracefiles"
         run: |
           if [ -f "./batch1.lcov" ] && [ -f "./batch2.lcov" ]; then
             lcov -a batch1.lcov -a batch2.lcov -o final_coverage.lcov
@@ -221,12 +221,8 @@ jobs:
             exit 1
           fi
 
-          # Strip Godot res:// protocol and runner prefixes to match Git repo root
+          # Strip Godot res:// protocol prefix so paths match repo root
           sed -i 's|SF:res://|SF:|g' final_coverage.lcov
-          sed -i 's|SF:[^/]*/SkyLockAssault/|SF:|g' final_coverage.lcov
-
-          echo "=== Combined LCOV Coverage Report Summary ==="
-          lcov --summary final_coverage.lcov
 
       - name: "Find Latest Report Directory"
         id: "find_report"
