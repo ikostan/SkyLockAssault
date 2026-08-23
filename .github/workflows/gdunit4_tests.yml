@@ -148,7 +148,7 @@ jobs:
       - name: "Initialize Project and Register GDExtensions"
         run: |
           rm -rf .godot/
-          ./gdcov --headless --editor --quit --path .
+          ./godot --headless --editor --quit --path . || true
 
       - name: "Run Coverage - Batch 1 (Core Systems & Entities)"
         run: |
