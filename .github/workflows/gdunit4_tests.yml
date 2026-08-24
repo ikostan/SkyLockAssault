@@ -147,20 +147,36 @@ jobs:
           chmod +x ./gdcov
           echo "✅ gdcov runner ready: $(./gdcov --version)"
 
-      - name: "Configure gdUnit4 Coverage via override.cfg"
+      - name: "Configure gdUnit4 Coverage Filters"
         run: |
-          cat << 'EOF' > override.cfg
-          [gdunit4_coverage]
+          echo "=== Inspecting embedded coverage property strings ==="
+          STRINGS_FOUND=$(strings addons/gdunit4_coverage/bin/libgdunit4_coverage.linux.*.so 2>/dev/null | grep -E "include|exclude|coverage" | sort -u || true)
+          echo "$STRINGS_FOUND"
 
+          # Write all setting variations to override.cfg so the engine picks up the correct key at boot
+          cat << 'EOF' > override.cfg
+          [gdunit4]
+          coverage/include_paths=PackedStringArray("res://scripts")
+          coverage/exclude_paths=PackedStringArray("res://test", "res://addons")
+          coverage/include_filters=PackedStringArray("res://scripts")
+          coverage/exclude_filters=PackedStringArray("res://test", "res://addons")
+          coverage/include=PackedStringArray("res://scripts")
+          coverage/exclude=PackedStringArray("res://test", "res://addons")
+
+          [gdunit4_coverage]
           include_paths=PackedStringArray("res://scripts")
           exclude_paths=PackedStringArray("res://test", "res://addons")
+          include_filters=PackedStringArray("res://scripts")
+          exclude_filters=PackedStringArray("res://test", "res://addons")
+          include=PackedStringArray("res://scripts")
+          exclude=PackedStringArray("res://test", "res://addons")
           settings/include_paths=PackedStringArray("res://scripts")
           settings/exclude_paths=PackedStringArray("res://test", "res://addons")
           settings/include_filters=PackedStringArray("res://scripts")
           settings/exclude_filters=PackedStringArray("res://test", "res://addons")
           EOF
-          echo "✅ Injected coverage rules into override.cfg"
 
+          echo "✅ Configured override.cfg with coverage filters."
       - name: "Initialize Project and Register GDExtensions"
         run: |
           rm -rf .godot/
