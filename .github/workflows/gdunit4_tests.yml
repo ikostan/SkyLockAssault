@@ -182,6 +182,10 @@ jobs:
           rm -rf .godot/
           ./godot --headless --editor --quit --path . || true
 
+      - name: "Isolate GDUnit Test Environment"
+        run: |
+          touch test/gut/.gdignore
+
       - name: "Run Coverage - Batch 1 (Core Systems & Entities)"
         run: |
           xvfb-run ./gdcov -d --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \

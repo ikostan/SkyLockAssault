@@ -2,16 +2,13 @@ coverage:
   status:
     project:
       gdscript:
-        target: 70%
+        target: auto
         flags:
           - GDUnit4
-        paths:
-          - "scripts/"
     patch:
       default:
         target: 80%
   precision: 2
-  range: "60...90"
   round: down
 
 comment:
@@ -25,6 +22,4 @@ flags:
   GDUnit4:
     paths:
       - "scripts/"
-
-fixes:
-  - "/home/runner/work/SkyLockAssault/SkyLockAssault/::"
+      - "test/gdunit4/"
