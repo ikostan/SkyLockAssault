@@ -5,6 +5,8 @@ coverage:
         target: auto
         flags:
           - GDUnit4
+        paths:
+          - "scripts/"
     patch:
       default:
         target: 80%
@@ -15,6 +17,7 @@ comment:
   layout: "diff, files"
 
 ignore:
+  - "test/**/*"
   - "tests/**/*"
   - "addons/**/*"
 
@@ -22,4 +25,6 @@ flags:
   GDUnit4:
     paths:
       - "scripts/"
-      - "test/gdunit4/"
+
+fixes:
+  - "/home/runner/work/SkyLockAssault/SkyLockAssault/::"
