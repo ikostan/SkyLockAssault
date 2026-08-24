@@ -93,18 +93,22 @@ jobs:
           else:
               content += "\n\n[debug]\n\ngdscript/warnings/enable=false\n"
 
-          # Inject filters to track ONLY res://scripts and ignore tests/addons
+          # Clean existing coverage block if present
+          if "[gdunit4_coverage]" in content:
+              content = content.split("[gdunit4_coverage]")[0].rstrip()
+
+          # Inject filters: track scripts/, ignore test/ and addons/
           coverage_settings = (
-              "\n[gdunit4_coverage]\n\n"
-              "settings/include_filters=PackedStringArray(\"res://scripts\")\n"
-              "settings/exclude_filters=PackedStringArray(\"res://test\", \"res://addons\")\n"
+              "\n\n[gdunit4_coverage]\n\n"
+              "include_paths=PackedStringArray(\"res://scripts\")\n"
+              "exclude_paths=PackedStringArray(\"res://test\", \"res://addons\")\n"
           )
           content += coverage_settings
 
           with open("project.godot", "w") as f:
               f.write(content)
 
-          print("✅ Registered gdunit4_coverage plugin & injected include_filters for res://scripts.")
+          print("✅ Registered gdunit4_coverage plugin & injected include_paths for res://scripts.")
           '
 
           # Verification
@@ -245,8 +249,11 @@ jobs:
             exit 1
           fi
 
-          # Strip Godot res:// protocol prefix so paths match repo root (scripts/...)
+          # Strip CI workspace prefix and Godot res:// prefix to match git repo root
+          sed -i 's|SF:.*/SkyLockAssault/|SF:|g' final_coverage.lcov
           sed -i 's|SF:res://|SF:|g' final_coverage.lcov
+
+          # Clean up batch tracefiles
           rm -f batch1.lcov batch2.lcov
 
           echo "=== Tracked Files in final_coverage.lcov ==="
