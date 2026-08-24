@@ -34,7 +34,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y xvfb lcov
 
-      - name: "Download and Verify Godot 4.7.1-stable Binary"
+      - name: "Download and Verify Godot Binary"
         run: |
           URL="https://github.com/godotengine/godot/releases/download"
           ZIP_NAME="Godot_v${GODOT_VERSION}_linux.x86_64.zip"
@@ -50,10 +50,9 @@ jobs:
           mv "Godot_v${GODOT_VERSION}_linux.x86_64" godot
           chmod +x godot
 
-      - name: "Install GDUnit4 (v6.2.0+) & GdUnit4 Coverage Extension"
+      - name: "Install GDUnit4 Core & Coverage GDExtension"
         run: |
           rm -rf addons/gdUnit4 addons/gdunit4_coverage temp_cov override.cfg
-
           mkdir -p addons
 
           # 1. Install GDUnit4 Core (v6.2.0)
@@ -73,12 +72,11 @@ jobs:
           cp -r temp_cov/addons/gdunit4_coverage addons/
           rm -rf temp_cov
 
-          # 3. Register plugin & suppress warning traps safely without mutating other project settings
+          # 3. Enable plugin & suppress debug warnings safely
           python3 -c '
           with open("project.godot", "r") as f:
               content = f.read()
 
-          # Register coverage plugin
           if "res://addons/gdunit4_coverage/plugin.cfg" not in content:
               if "enabled=PackedStringArray(" in content:
                   content = content.replace("enabled=PackedStringArray(", "enabled=PackedStringArray(\"res://addons/gdunit4_coverage/plugin.cfg\", ")
@@ -87,7 +85,6 @@ jobs:
               else:
                   content += "\n\n[editor_plugins]\n\nenabled=PackedStringArray(\"res://addons/gdunit4_coverage/plugin.cfg\")\n"
 
-          # Suppress debug warnings
           if "[debug]" in content:
               content = content.replace("[debug]", "[debug]\n\ngdscript/warnings/enable=false")
           else:
@@ -95,24 +92,19 @@ jobs:
 
           with open("project.godot", "w") as f:
               f.write(content)
-
-          print("✅ Registered gdunit4_coverage plugin without corrupting project.godot sections.")
           '
 
-          # Verification
           if [ -f "./addons/gdunit4_coverage/gdunit4_coverage.gdextension" ]; then
-            echo "✅ GDExtension successfully installed at ./addons/gdunit4_coverage/"
+            echo "✅ GDExtension successfully installed."
           else
             echo "❌ ERROR: Failed to install gdunit4_coverage GDExtension!"
             exit 1
           fi
 
-      - name: "Download and Setup gdcov Runner from Manifest"
+      - name: "Download and Setup gdcov Runner"
         run: |
-          # 1. Fetch manifest from the gdUnit4-coverage release
           wget -q "https://github.com/godot-gdunit-labs/gdUnit4-coverage/releases/download/v0.1.4/manifest.json" -O manifest.json
 
-          # 2. Extract Linux 4.7 runner URL matching manifest schema
           GDCOV_URL=$(python3 -c '
           import json
           with open("manifest.json") as f:
@@ -121,7 +113,6 @@ jobs:
           gdcov = m.get("gdcov", {})
           url = ""
 
-          # Match 4.7 or 4.7-stable release key
           for ver_key, platforms in gdcov.items():
               if "4.7" in ver_key:
                   linux_info = platforms.get("linux-x86_64") or platforms.get("linux", {})
@@ -135,11 +126,9 @@ jobs:
 
           if [ -z "$GDCOV_URL" ]; then
             echo "❌ Failed to resolve gdcov download URL from manifest.json"
-            cat manifest.json
             exit 1
           fi
 
-          echo "⬇️ Downloading gdcov from: $GDCOV_URL"
           wget -q "$GDCOV_URL" -O gdcov_linux.zip
           unzip -q gdcov_linux.zip
           RUNNER=$(find . -maxdepth 2 -type f -name "gdcov*" ! -name "*.zip" | head -n 1)
@@ -147,16 +136,17 @@ jobs:
           chmod +x ./gdcov
           echo "✅ gdcov runner ready: $(./gdcov --version)"
 
-      - name: "Configure gdUnit4 Coverage Filters & Isolate Environment"
+      - name: "Isolate Test Suites Outside Workspace"
         run: |
-          # 1. Block GUT tests from being loaded into memory by Godot
-          touch test/gut/.gdignore
-
-          # 2. Back up test folder outside workspace
+          # 1. Back up all tests outside the Godot res:// root
           rm -rf /tmp/test_backup
           cp -r test /tmp/test_backup
 
-          # 3. Write coverage filter configurations to override.cfg
+          # 2. Clear res://test completely so Godot does not pre-compile test files on boot
+          rm -rf test
+          mkdir -p test/gdunit4
+
+          # 3. Configure coverage filters in override.cfg
           cat << 'EOF' > override.cfg
           [gdunit4]
           coverage/include_paths=PackedStringArray("res://scripts")
@@ -167,125 +157,99 @@ jobs:
           settings/exclude_filters=PackedStringArray("res://test", "res://addons")
           EOF
 
-          echo "✅ Configured override.cfg and staged test backups."
+          echo "✅ Test suites stashed to /tmp/test_backup and override.cfg configured."
 
       - name: "Initialize Project and Register GDExtensions"
         run: |
           rm -rf .godot/
           ./godot --headless --editor --quit --path . || true
 
-      - name: "Run Coverage - Batch 1 (Core Systems & Entities)"
+      - name: "Run GDUnit4 Coverage in Micro-Batches"
         run: |
-          # Keep only Batch 1 test files in res://test to stay under the 20-file limit
-          rm -rf test/gdunit4
-          mkdir -p test/gdunit4
-          cp /tmp/test_backup/gdunit4/test_audio_manager.gd test/gdunit4/
-          cp /tmp/test_backup/gdunit4/test_bullet.gd test/gdunit4/
-          cp /tmp/test_backup/gdunit4/test_difficulty.gd test/gdunit4/
-          cp /tmp/test_backup/gdunit4/test_difficulty_integration.gd test/gdunit4/
-          cp /tmp/test_backup/gdunit4/test_globals.gd test/gdunit4/
-          cp /tmp/test_backup/gdunit4/test_helpers.gd test/gdunit4/
-          cp /tmp/test_backup/gdunit4/test_player.gd test/gdunit4/
-          cp /tmp/test_backup/gdunit4/test_settings.gd test/gdunit4/
-          cp /tmp/test_backup/gdunit4/test_settings_persistence.gd test/gdunit4/
+          rm -rf lcov_batches
+          mkdir -p lcov_batches
 
-          xvfb-run ./gdcov -d --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
-            --ignoreHeadlessMode \
-            --add res://test/gdunit4/test_audio_manager.gd \
-            --add res://test/gdunit4/test_bullet.gd \
-            --add res://test/gdunit4/test_difficulty.gd \
-            --add res://test/gdunit4/test_difficulty_integration.gd \
-            --add res://test/gdunit4/test_globals.gd \
-            --add res://test/gdunit4/test_helpers.gd \
-            --add res://test/gdunit4/test_player.gd \
-            --add res://test/gdunit4/test_settings.gd \
-            --add res://test/gdunit4/test_settings_persistence.gd
+          # Collect only GDUnit test suites (ignore helpers/gut)
+          TEST_FILES=($(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | sort))
+          echo "Found ${#TEST_FILES[@]} test suites. Running in micro-batches of 2 files..."
 
-          USER_PATH=$(find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" 2>/dev/null | head -n 1)
+          BATCH_NUM=1
+          CHUNK_SIZE=2
 
-          if [ -n "$USER_PATH" ] && [ -f "$USER_PATH" ]; then
-            cp "$USER_PATH" ./batch1.lcov
-            rm -f "$USER_PATH"
-            echo "✅ Batch 1 tracefile saved successfully ($(du -h ./batch1.lcov | cut -f1))."
-          else
-            echo "❌ ERROR: Batch 1 coverage tracefile missing!"
-            LOG_FILE=$(find "$HOME/.local/share/godot/" -name "gdcov.log" 2>/dev/null | head -n 1)
-            if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
-              cat "$LOG_FILE"
+          for ((i=0; i<${#TEST_FILES[@]}; i+=CHUNK_SIZE)); do
+            CHUNK=("${TEST_FILES[@]:i:CHUNK_SIZE}")
+            echo "--------------------------------------------------"
+            echo "🚀 Running Micro-Batch $BATCH_NUM: ${CHUNK[*]}"
+            echo "--------------------------------------------------"
+
+            # Wipe res://test and stage ONLY the current 2 test files (+ helper if present)
+            rm -rf test
+            mkdir -p test/gdunit4
+
+            if [ -f "/tmp/test_backup/gdunit4/test_helpers.gd" ]; then
+              cp "/tmp/test_backup/gdunit4/test_helpers.gd" "test/gdunit4/"
             fi
-            exit 1
-          fi
 
-      - name: "Run Coverage - Batch 2 (UI, Menus & Controls)"
-        run: |
-          # Keep only Batch 2 test files in res://test
-          rm -rf test/gdunit4
-          mkdir -p test/gdunit4
-          cp /tmp/test_backup/gdunit4/test_audio_settings.gd test/gdunit4/
-          cp /tmp/test_backup/gdunit4/test_audio_unexpected_exit.gd test/gdunit4/
-          cp /tmp/test_backup/gdunit4/test_input_remap_button.gd test/gdunit4/
-          cp /tmp/test_backup/gdunit4/test_load_options_reentrancy.gd test/gdunit4/
-          cp /tmp/test_backup/gdunit4/test_main_menu.gd test/gdunit4/
-          cp /tmp/test_backup/gdunit4/test_menu_visibility.gd test/gdunit4/
-          cp /tmp/test_backup/gdunit4/test_options_teardown.gd test/gdunit4/
-          cp /tmp/test_backup/gdunit4/test_volume_slider.gd test/gdunit4/
-          cp /tmp/test_backup/gdunit4/test_weapon_firing_bullet.gd test/gdunit4/
+            ADD_ARGS=()
+            for t_file in "${CHUNK[@]}"; do
+              BASE_NAME=$(basename "$t_file")
+              cp "$t_file" "test/gdunit4/$BASE_NAME"
+              ADD_ARGS+=(--add "res://test/gdunit4/$BASE_NAME")
+            done
 
-          xvfb-run ./gdcov -d --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
-            --ignoreHeadlessMode \
-            --add res://test/gdunit4/test_audio_settings.gd \
-            --add res://test/gdunit4/test_audio_unexpected_exit.gd \
-            --add res://test/gdunit4/test_input_remap_button.gd \
-            --add res://test/gdunit4/test_load_options_reentrancy.gd \
-            --add res://test/gdunit4/test_main_menu.gd \
-            --add res://test/gdunit4/test_menu_visibility.gd \
-            --add res://test/gdunit4/test_options_teardown.gd \
-            --add res://test/gdunit4/test_volume_slider.gd \
-            --add res://test/gdunit4/test_weapon_firing_bullet.gd
+            # Clear previous runner coverage output before launching
+            find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" -delete 2>/dev/null || true
 
-          USER_PATH=$(find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" 2>/dev/null | head -n 1)
+            # Execute micro-batch (2 tests + production scripts <= 10 files total)
+            xvfb-run ./gdcov -d --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+              --ignoreHeadlessMode \
+              "${ADD_ARGS[@]}"
 
-          if [ -n "$USER_PATH" ] && [ -f "$USER_PATH" ]; then
-            cp "$USER_PATH" ./batch2.lcov
-            rm -f "$USER_PATH"
-            echo "✅ Batch 2 tracefile saved successfully ($(du -h ./batch2.lcov | cut -f1))."
-          else
-            echo "❌ ERROR: Batch 2 coverage tracefile missing!"
-            LOG_FILE=$(find "$HOME/.local/share/godot/" -name "gdcov.log" 2>/dev/null | head -n 1)
-            if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
-              cat "$LOG_FILE"
+            USER_PATH=$(find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" 2>/dev/null | head -n 1)
+            if [ -n "$USER_PATH" ] && [ -f "$USER_PATH" ]; then
+              cp "$USER_PATH" "lcov_batches/batch_${BATCH_NUM}.lcov"
+              echo "✅ Captured tracefile: lcov_batches/batch_${BATCH_NUM}.lcov"
+            else
+              echo "⚠️ WARNING: No tracefile generated for Batch $BATCH_NUM"
             fi
-            exit 1
-          fi
 
-      - name: "Restore Test Suite & Merge LCOV Tracefiles"
+            BATCH_NUM=$((BATCH_NUM + 1))
+          done
+
+      - name: "Restore Full Test Suite & Merge LCOV Tracefiles"
         run: |
-          # Restore full test folder for test report uploaders and artifacts
+          # 1. Restore complete test folder for artifact uploaders and report parsers
           rm -rf test
           cp -r /tmp/test_backup test
 
-          if [ -f "./batch1.lcov" ] && [ -f "./batch2.lcov" ]; then
-            lcov -a batch1.lcov -a batch2.lcov -o final_coverage.lcov
-          elif [ -f "./batch1.lcov" ]; then
-            cp ./batch1.lcov ./final_coverage.lcov
-          elif [ -f "./batch2.lcov" ]; then
-            cp ./batch2.lcov ./final_coverage.lcov
+          # 2. Build lcov merge arguments from all generated micro-batches
+          LCOV_ARGS=()
+          for f in lcov_batches/*.lcov; do
+            if [ -f "$f" ]; then
+              LCOV_ARGS+=(-a "$f")
+            fi
+          done
+
+          if [ ${#LCOV_ARGS[@]} -gt 0 ]; then
+            lcov "${LCOV_ARGS[@]}" -o final_coverage.lcov
           else
-            echo "❌ ERROR: No LCOV tracefiles were generated to merge."
+            echo "❌ ERROR: No batch LCOV tracefiles were captured."
             exit 1
           fi
 
-          # Strip CI workspace prefix and Godot res:// prefix to match repository root
+          # 3. Strip absolute CI runner directory prefix and res:// prefix
           sed -i 's|SF:.*/SkyLockAssault/|SF:|g' final_coverage.lcov
           sed -i 's|SF:res://|SF:|g' final_coverage.lcov
 
-          # Clean up batch files
-          rm -f batch1.lcov batch2.lcov
+          # 4. Clean up micro-batch directory
+          rm -rf lcov_batches
 
+          echo "=================================================="
           echo "=== Tracked Files in final_coverage.lcov ==="
           grep '^SF:' final_coverage.lcov | sort -u
+          echo "=================================================="
 
-          echo "=== Sanitized LCOV Summary ==="
+          echo "=== Final Sanitized LCOV Summary ==="
           lcov --summary final_coverage.lcov
 
       - name: "Find Latest Report Directory"
