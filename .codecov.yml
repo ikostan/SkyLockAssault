@@ -18,7 +18,6 @@ comment:
   layout: "diff, files"
 
 ignore:
-  - "test/**/*"
   - "tests/**/*"
   - "addons/**/*"
 
