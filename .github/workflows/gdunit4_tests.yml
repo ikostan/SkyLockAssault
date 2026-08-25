@@ -171,7 +171,7 @@ jobs:
           mv "$RUNNER" ./gdcov
           rm -rf temp_gdcov gdcov_linux.zip manifest.json
           chmod +x ./gdcov
-          echo "✅ gdcov runner ready: $(./gdcov --version)" 
+          echo "✅ gdcov runner ready: $(./gdcov --version)"
 
       # Move tests outside workspace to prevent Godot from compiling full test tree upfront on boot
       - name: "Isolate Test Suites Outside Workspace"
