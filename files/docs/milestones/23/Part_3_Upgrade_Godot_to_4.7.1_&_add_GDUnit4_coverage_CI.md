@@ -3,56 +3,126 @@
 
 ---
 
-Upgrade the project to Godot 4.7.1 and add resilient GDUnit4 code coverage reporting to the CI pipeline.
+## PR #902 Summary: Upgrade Godot to 4.7.1 and add GDUnit4 coverage CI
 
-New Features:
+**Repository:** [ikostan/SkyLockAssault](https://github.com/ikostan/SkyLockAssault)  
+**Author:** @ikostan  
+**Branch:** `upgrade-godot-engine-to-471-stable` → `main`  
+**Linked Issues:** #890 (Godot 4.7.1 upgrade), #891 (GUT v9.7.1), #892 (GDUnit4 v6.2.0 + coverage)  
+**Milestone:** Milestone 23 – Settings Architecture & FPS Counter Implementation  
+**Labels:** setup, tools, testing, CI/CD, integration, godot-upgrade, github actions, github_actions, CODECOV, GUT, QA, gdunit4
 
-- Add GDUnit4 coverage profiling to CI, including LCOV aggregation and Codecov uploads for coverage and test results.
+### Purpose
 
-Enhancements:
+Upgrade the engine and test toolchain from Godot **4.6.3** to **4.7.1-stable**, refresh GUT and GDUnit4 for compatibility, and add resilient GDUnit4 code-coverage collection in CI (batched runs, merged LCOV, optional Codecov uploads).
 
-- Upgrade project tooling and CI workflows to Godot 4.7.1 with engine version and checksum validation.
-- Update GDUnit4 and GUT test dependencies to newer releases.
-- Improve GDUnit4 CI reliability by isolating test suites into memory-conscious batches and supporting unauthenticated runs without Codecov secrets.
-- Align Codecov configuration with GDUnit4 coverage reporting and exclude test and addon sources from coverage.
-- Refresh the development container with Godot 4.7.1 and updated export templates and testing dependencies.
+### Core Improvements
+
+#### 1. Godot 4.7.1 Across the Stack
+
+- Project metadata, export templates, and runtime version-parity checks
+- CI workflows: GDUnit4, GUT, browser tests, lint/test, deploy-to-itch, PR lint
+- Development container (`Dockerfile`) aligned to 4.7.1 with matching templates
+- Binary integrity: SHA verification and engine version checks in CI
+- Bundled Godot license/copyright notices under `bin/`
+
+#### 2. Test Framework Refresh
+
+| Tool                 | Version                            |
+|----------------------|------------------------------------|
+| **GDUnit4**          | **v6.2.0**                         |
+| **GUT**              | **v9.7.1**                         |
+| **gdUnit4-coverage** | **v0.1.4** (GDExtension + `gdcov`) |
+
+#### 3. GDUnit4 Coverage CI (`.github/workflows/gdunit4_tests.yml`)
+
+- Install coverage GDExtension; resolve compatible `gdcov` runner
+- Run under `xvfb`; stage suites in **two-file isolated batches** (stability)
+- Capture per-batch LCOV, merge/sanitize paths → `final_coverage.lcov`
+- Archive coverage + test reports as artifacts
+- **Optional Codecov upload** only when `CODECOV_TOKEN` is present (safe for forks/Dependabot)
+- Align reporting to production GDScript (`scripts/`), exclude tests and addons
+
+#### 4. Codecov & Reporting Config
+
+- Updated `.codecov.yml` (GDUnit4 flag, path filters)
+- Removed legacy browser/GUT Codecov upload steps where superseded
+- Token-gated install/upload so CI stays green without credentials
+
+#### 5. Security / Pins
+
+- Refreshed CodeQL SARIF upload pins in Snyk/Trivy workflows (via Dependabot merge)
+
+#### 6. Documentation
+
+- Milestone doc: `files/docs/milestones/23/Part_3_Upgrade_Godot_to_4.7.1_&_add_GDUnit4_coverage_CI.md`
+
+### Benefits
+
+- Single supported engine version (4.7.1) across local, CI, and deploy
+- Native GDUnit4 coverage with mergeable LCOV and optional Codecov visibility
+- More reliable GDUnit runs via batch isolation
+- Safer CI for forks (no hard failure on missing Codecov token)
+- Clearer coverage signal focused on production game scripts
+
+### Status Notes
+
+Addresses the objectives of #890, #891, and #892 for the engine upgrade, GUT/GDUnit4 refresh, and coverage CI under Milestone 23.
 
 ---
-
-## Reviewer's Guide
-
-This PR upgrades the project and all containerized, testing, browser, CI, and deployment environments from Godot 4.6.3 to 4.7.1, refreshes the GDUnit4/GUT dependencies, and substantially redesigns GDUnit4 CI to generate merged GDScript LCOV coverage with optional Codecov uploads while tightening engine verification and scan integrations.
 
 ### File-Level Changes
 
-| Change                                                                                                                                              | Details                                                                                                                                                                                                                                                                                                                                                                                         | Files                                                                                                                                                                                                                                                                                                                                                     |
-|-----------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Standardize the project, CI workflows, container image, and deployment tooling on Godot 4.7.1 with verified binaries and matching export templates. | <ul><li>Updated engine versions and SHA-256 validation inputs across reusable test, pull-request, release, browser, and itch.io deployment workflows.</li><li>Updated the Docker image to install Godot 4.7.1, its export templates, and matching GDUnit4/GUT versions.</li><li>Added runtime engine-version parity checks and bundled Godot licensing and copyright notices.</li></ul>         | `.github/workflows/browser_test.yml`<br/>`.github/workflows/deploy_to_itch.yml`<br/>`.github/workflows/gdunit4_tests.yml`<br/>`.github/workflows/gut_tests.yml`<br/>`.github/workflows/lint_test_deploy.yml`<br/>`.github/workflows/lint_test_on_pull.yml`<br/>`Dockerfile`<br/>`bin/godot-COPYRIGHT.txt`<br/>`bin/godot-LICENSE.txt`<br/>`project.godot` |
-| Replace the GDUnit4 test workflow with coverage-aware, resilient test execution and optional Codecov reporting.                                     | <ul><li>Install GDUnit4 6.2.0, the GDUnit4 coverage extension, gdcov, xvfb, and lcov dynamically for Godot 4.7 compatibility.</li><li>Run GDUnit4 suites in two-file micro-batches with isolated test staging, then restore the suite and merge LCOV tracefiles.</li><li>Archive coverage and test reports and upload them to Codecov only when an authentication token is available.</li></ul> | `.github/workflows/gdunit4_tests.yml`                                                                                                                                                                                                                                                                                                                     |
-| Refresh coverage configuration and simplify coverage ownership around GDScript production code.                                                     | <ul><li>Configure an auto-targeted GDUnit4 coverage flag for scripts while excluding tests and addons.</li><li>Remove browser JavaScript coverage mappings and browser/GUT-specific Codecov test-report uploads.</li></ul>                                                                                                                                                                      | `.codecov.yml`<br/>`.github/workflows/browser_test.yml`<br/>`.github/workflows/gut_tests.yml`                                                                                                                                                                                                                                                             |
-| Update dependency and security-scan workflow integrations for the upgraded toolchain.                                                               | <ul><li>Upgrade GUT from 9.5.0 to 9.7.1 and GDUnit4 from 6.1.3 to 6.2.0.</li><li>Pin CodeQL SARIF uploads in Snyk and Trivy workflows to the newer action revision.</li></ul>                                                                                                                                                                                                                   | `Dockerfile`<br/>`.github/workflows/gut_tests.yml`<br/>`.github/workflows/snyk.yml`<br/>`.github/workflows/trivy.yml`                                                                                                                                                                                                                                     |
+| Change                                                                                           | Details                                                                                                                                                                                                                                                                                                                                                                                      | Files                                                                                                                                                                                                                                                                                                                                                     |
+|--------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Standardize engine and test tooling on Godot 4.7.1 with integrity and compatibility checks.      | <ul><li>Updated reusable CI, browser, deployment, release, and development-container versions and checksums.</li><li>Added Godot runtime version-parity validation and refreshed export templates.</li><li>Upgraded GDUnit4 to 6.2.0 and GUT to 9.7.1; bundled Godot license notices.</li></ul>                                                                                              | `.github/workflows/browser_test.yml`<br/>`.github/workflows/deploy_to_itch.yml`<br/>`.github/workflows/gdunit4_tests.yml`<br/>`.github/workflows/gut_tests.yml`<br/>`.github/workflows/lint_test_deploy.yml`<br/>`.github/workflows/lint_test_on_pull.yml`<br/>`Dockerfile`<br/>`bin/godot-COPYRIGHT.txt`<br/>`bin/godot-LICENSE.txt`<br/>`project.godot` |
+| Add resilient GDUnit4 coverage generation and reporting to CI.                                   | <ul><li>Installs the GDUnit4 coverage GDExtension, dynamically resolves the compatible gdcov runner, and runs tests under xvfb.</li><li>Stages GDUnit4 suites in two-file batches, captures LCOV tracefiles, merges and sanitizes them, and restores the full test tree.</li><li>Archives coverage/test reports and skips Codecov installation/uploads when no token is available.</li></ul> | `.github/workflows/gdunit4_tests.yml`                                                                                                                                                                                                                                                                                                                     |
+| Align coverage configuration with production GDScript sources and update reporting integrations. | <ul><li>Configures a GDUnit4 Codecov flag for scripts and excludes tests and addons.</li><li>Removes browser JavaScript coverage mappings and legacy browser/GUT Codecov report-upload steps.</li><li>Updates pinned CodeQL SARIF upload action revisions.</li></ul>                                                                                                                         | `.codecov.yml`<br/>`.github/workflows/browser_test.yml`<br/>`.github/workflows/gut_tests.yml`<br/>`.github/workflows/snyk.yml`<br/>`.github/workflows/trivy.yml`                                                                                                                                                                                          |
+| Document the engine migration, dependency refresh, and coverage CI design.                       | <ul><li>Records the implementation approach and file-level changes.</li><li>Maps the changes to the associated upgrade and testing objectives.</li></ul>                                                                                                                                                                                                                                     | `files/docs/milestones/23/Part_3_Upgrade_Godot_to_4.7.1_&_add_GDUnit4_coverage_CI.md`                                                                                                                                                                                                                                                                     |
 
 ### Assessment against linked issues
 
-| Issue                                                | Objective                                                                                                                                                                   | Addressed | Explanation |
-|------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-------------|
-| https://github.com/ikostan/SkyLockAssault/issues/890 | Upgrade the project’s Godot engine from 4.6.3 to 4.7.1-stable across the Docker development environment, project metadata, CI workflows, and deployment configuration.      | ✅        |             |
-| https://github.com/ikostan/SkyLockAssault/issues/890 | Ensure CI downloads and validates the Godot 4.7.1 binaries, verifies engine version parity, and uses compatible refreshed GUT/GDUnit4 tooling.                              | ✅        |             |
-| https://github.com/ikostan/SkyLockAssault/issues/890 | Enable native GDUnit4 gdcov coverage execution under Godot 4.7.1 and integrate merged LCOV coverage and test-report uploads with Codecov.                                   | ✅        |             |
-| https://github.com/ikostan/SkyLockAssault/issues/891 | Upgrade the project’s GUT dependency to v9.7.1, including the bundled/containerized tooling where GUT is installed.                                                         | ✅        |             |
-| https://github.com/ikostan/SkyLockAssault/issues/891 | Update the GUT CI workflow to use Godot 4.7.1-stable and dynamically download and configure GUT v9.7.1 during test setup.                                                   | ✅        |             |
-| https://github.com/ikostan/SkyLockAssault/issues/891 | Verify that the GUT test suite remains compatible with Godot 4.7.1-stable and completes successfully in headless CI without new errors or failures.                         | ✅        |             |
-| https://github.com/ikostan/SkyLockAssault/issues/892 | Upgrade gdUnit4 to version 6.2.0 across the project's CI and containerized development environments.                                                                        | ✅        |             |
-| https://github.com/ikostan/SkyLockAssault/issues/892 | Install and enable gdUnit4-coverage version 0.1.4 as a GDExtension for coverage profiling, including headless CI execution with the gdcov runner.                           | ✅        |             |
-| https://github.com/ikostan/SkyLockAssault/issues/892 | Generate valid LCOV coverage output from CI test runs, merge and sanitize batch tracefiles, archive the result, and optionally upload coverage and test results to Codecov. | ✅        |             |
+| Issue                                                | Objective                                                                                                                                                                                      | Addressed | Explanation |
+|------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-------------|
+| https://github.com/ikostan/SkyLockAssault/issues/890 | Upgrade the project’s Godot engine from 4.6.3 to 4.7.1-stable across the Docker development environment, project metadata, CI workflows, browser and deployment workflows, and export tooling. | ✅        |             |
+| https://github.com/ikostan/SkyLockAssault/issues/890 | Ensure CI uses verified Godot 4.7.1 binaries, performs engine-version parity checks, and refreshes the GUT and GDUnit4 dependencies for compatibility with the upgraded engine.                | ✅        |             |
+| https://github.com/ikostan/SkyLockAssault/issues/890 | Enable native GDUnit4 coverage execution under Godot 4.7.1, including gdcov setup, batched test execution, merged LCOV generation, artifact retention, and optional Codecov uploads.           | ✅        |             |
+| https://github.com/ikostan/SkyLockAssault/issues/891 | Upgrade GUT to v9.7.1 wherever it is installed or configured, including the containerized development environment.                                                                             | ✅        |             |
+| https://github.com/ikostan/SkyLockAssault/issues/891 | Update the GUT CI workflow to use Godot 4.7.1-stable and dynamically download and configure GUT v9.7.1 during test setup.                                                                      | ✅        |             |
+| https://github.com/ikostan/SkyLockAssault/issues/891 | Ensure the GUT test suite runs successfully under Godot 4.7.1-stable in headless CI with no test failures or newly introduced engine/plugin errors.                                            | ✅        |             |
+| https://github.com/ikostan/SkyLockAssault/issues/892 | Upgrade gdUnit4 to version 6.2.0 in the project’s CI and containerized development environments.                                                                                               | ✅        |             |
+| https://github.com/ikostan/SkyLockAssault/issues/892 | Install and enable gdUnit4-coverage version 0.1.4 as a GDExtension and configure headless CI execution with the gdcov runner.                                                                  | ✅        |             |
+| https://github.com/ikostan/SkyLockAssault/issues/892 | Produce valid LCOV coverage from GDUnit4 test runs, including batch aggregation and path sanitization, and make the resulting report available for optional Codecov upload.                    | ✅        |             |
 
 ### Possibly linked issues
 
-- **#TASK-1**: PR directly implements the issue’s Godot 4.7.1 migration, including Docker, CI workflows, checksums, parity checks, and project metadata.
+- **#TASK-1**: The PR directly implements the issue’s Godot 4.7.1 upgrade across environments and adds compatible coverage CI.
 
 ---
 
+## PR #902 Summary: Bots / AI Contributions
 
+### AI / Bot Contributors
+
+- **@sourcery-ai**  
+  Generated the PR summary and Reviewer’s Guide. Documented the Godot 4.7.1 upgrade path, GDUnit4 coverage CI design (batched runs, LCOV merge, optional Codecov), and mapped changes to linked upgrade/testing issues.
+
+- **@coderabbitai**  
+  Generated the PR summary, walkthrough, and poem. Reviewed the engine/toolchain upgrade, coverage batching, and reporting configuration.
+
+- **@deepsource-io**  
+  Performed automated DeepSource Code Review and published a PR Report Card (Security / Reliability / Complexity / Hygiene).
+
+- **@dependabot**  
+  Authored the `github/codeql-action/upload-sarif` pin bump (merged via #904 into this branch).
+
+- **@codecov**  
+  Posted the Codecov coverage report on the PR (coverage diff, file impact, test status). Target of the optional LCOV/test-report uploads configured in this PR (token-gated so fork/Dependabot runs can skip cleanly).
+
+### Human Contributor
+
+- **@ikostan**  
+  Primary author of the PR. Upgraded the project, Docker/dev container, CI, browser tests, and itch.io deploy paths from Godot 4.6.3 → **4.7.1-stable** with checksum and version-parity checks; refreshed **GDUnit4 v6.2.0** and **GUT v9.7.1**; enabled gdUnit4-coverage / `gdcov`; redesigned GDUnit4 CI for isolated two-file batches, merged/sanitized LCOV, artifact retention, and optional Codecov uploads; aligned `.codecov.yml` to production GDScript sources (excluding tests/addons); bundled Godot license notices; and documented the work under Milestone 23.
 
 ---
 <!-- markdownlint-enable MD001 MD036 MD013 MD033 table-column-style -->
