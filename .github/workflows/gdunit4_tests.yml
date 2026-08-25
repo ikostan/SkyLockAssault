@@ -188,6 +188,7 @@ jobs:
           coverage/exclude_paths=PackedStringArray("res://test", "res://addons")
 
           [gdunit4_coverage]
+          runner/gdcov_path="./gdcov"
           settings/include_filters=PackedStringArray("res://scripts")
           settings/exclude_filters=PackedStringArray("res://test", "res://addons")
           EOF
