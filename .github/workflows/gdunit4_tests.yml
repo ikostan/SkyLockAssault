@@ -50,7 +50,8 @@ jobs:
 
           if [ -n "${GODOT_SHA256}" ]; then
             echo "${GODOT_SHA256}  ${ZIP_NAME}" | sha256sum --check --status || {
-              echo "⚠️ SHA256 checksum verification failed or skipped."
+              echo "❌ CRITICAL: Godot binary verification failed! Checksum mismatch."
+              exit 1
             }
           fi
 
