@@ -132,11 +132,13 @@ jobs:
               m = json.load(f)
 
           gdcov = m.get("gdcov", {})
-          version = os.environ.get("GODOT_VERSION", "").split("-")[0]
+          godot_ver = os.environ.get("GODOT_VERSION", "4.7.1-stable")
+          major_minor = ".".join(godot_ver.split(".")[:2])
           url = ""
 
+          # Match exact version or major.minor prefix (e.g. "4.7-stable")
           for ver_key, platforms in gdcov.items():
-              if ver_key in version or version.startswith(ver_key):
+              if ver_key == godot_ver or ver_key.startswith(major_minor):
                   linux_info = platforms.get("linux-x86_64") or platforms.get("linux", {})
                   if isinstance(linux_info, dict):
                       url = linux_info.get("url", "")
