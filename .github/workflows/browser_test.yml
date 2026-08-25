@@ -10,7 +10,7 @@ on:  # yamllint disable-line rule:truthy
     inputs:
       godot_version:
         type: "string"
-        default: "4.6.3-stable"
+        default: "4.7.1-stable"
       pw_timeout:
         description: "Playwright timeout in ms"
         required: false
@@ -356,25 +356,3 @@ jobs:
           verbose: true
           token: "${{ secrets.CODECOV_TOKEN }}"
           directory: "export/web_thread_off"
-
-      - name: "Install Codecov CLI"
-        if: "success()"
-        run: |
-          curl -Os https://cli.codecov.io/latest/linux/codecov
-          chmod +x codecov
-
-      - name: "Upload Test Report to Codecov"
-        if: "success()"
-        run: |
-          REPORT_FILE="artifacts/junit.xml"
-          if [ ! -f "$REPORT_FILE" ]; then REPORT_FILE="./junit.xml"; fi
-          if [ -f "$REPORT_FILE" ]; then
-            ./codecov upload-process \
-              --token ${{ secrets.CODECOV_TOKEN }} \
-              -f "$REPORT_FILE" \
-              --name "Playwright Browser Test Report (${{ matrix.suite }})" \
-              --flag PLAYWRIGHT_${{ matrix.artifact_suffix }} \
-              --report-type test_results
-          else
-            echo "No Playwright JUnit XML found, skipping upload."
-          fi

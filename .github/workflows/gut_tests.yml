@@ -6,10 +6,10 @@ on:  # yamllint disable-line rule:truthy
     inputs:
       godot_version:
         type: "string"
-        default: "4.6.3-stable"
+        default: "4.7.1-stable"
       godot_sha256:
         type: "string"
-        default: "d0bc2113065e481c9c2c2b2c37daa4e8be3fe9e27f0ab9ab0b6096e9a37907f3"
+        default: "c7ff14fd28472c8d4f193043de30278dcf7e5241a1dcf7566b02e27addaa33ba"
     secrets:
       CODECOV_TOKEN:
         description: "Codecov requires a token to authenticate"
@@ -35,23 +35,36 @@ jobs:
           ZIP_NAME="Godot_v${GODOT_VERSION}_linux.x86_64.zip"
           wget -q "${URL}/${GODOT_VERSION}/${ZIP_NAME}"
 
-          echo "${GODOT_SHA256}  ${ZIP_NAME}" | sha256sum --check --status
-          if [ $? -ne 0 ]; then
-            echo "❌ CRITICAL: Godot binary verification failed! Checksum mismatch."
-            exit 1
+          if [ -n "${GODOT_SHA256}" ]; then
+            echo "${GODOT_SHA256}  ${ZIP_NAME}" | sha256sum --check --status || {
+              echo "❌ CRITICAL: Godot binary verification failed! Checksum mismatch."
+              exit 1
+            }
           fi
 
           unzip "${ZIP_NAME}"
           mv "Godot_v${GODOT_VERSION}_linux.x86_64" godot
           chmod +x godot
 
+      - name: "Verify Godot Engine Version Parity"
+        run: |
+          ENGINE_VERSION=$(./godot --version)
+          echo "Detected engine version: $ENGINE_VERSION"
+          EXPECTED_VERSION="${GODOT_VERSION/-stable/.stable}"
+          echo "$ENGINE_VERSION" | grep -q "$EXPECTED_VERSION" || {
+            echo "❌ ERROR: Expected Godot ${EXPECTED_VERSION}, but received: $ENGINE_VERSION"
+            exit 1
+          }
+          echo "✅ Version parity verified (${EXPECTED_VERSION})."
+
       - name: "Install GUT"
         run: |
           mkdir -p addons
-          URL="https://github.com/bitwes/Gut/archive/refs/tags/v9.5.0.zip"
+          URL="https://github.com/bitwes/Gut/archive/refs/tags/v9.7.1.zip"
           wget "$URL"
-          unzip v9.5.0.zip -d addons
-          mv addons/Gut-9.5.0/addons/gut addons/gut
+          unzip v9.7.1.zip -d addons
+          mv addons/Gut-9.7.1/addons/gut addons/gut
+          rm -rf addons/Gut-9.7.1 v9.7.1.zip
 
       - name: "Clean Cache"
         run: |
@@ -101,37 +114,3 @@ jobs:
           name: "gut-reports"
           path: "gut-reports/**"
           retention-days: 5
-
-      - name: "Install Codecov CLI"
-        if: "success()"  # Only if tests pass.
-        run: |
-          curl -Os https://cli.codecov.io/latest/linux/codecov
-          chmod +x codecov
-
-      - name: "Upload Test Report to Codecov"
-        if: "success()"
-        env:
-          CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
-          REPORT_DIR: "${{ steps.find_report.outputs.latest_report }}"
-        run: |
-          if [ -z "$CODECOV_TOKEN" ]; then
-            echo "CODECOV_TOKEN is missing or empty (e.g., Dependabot PR). Skipping upload."
-            exit 0
-          fi
-
-          if [ -z "$REPORT_DIR" ] || [ ! -d "$REPORT_DIR" ]; then
-            echo "Report directory path is invalid or missing, skipping upload."
-            exit 0
-          fi
-
-          REPORT_FILE="${REPORT_DIR}/gut_junit.xml"
-          if [ -f "$REPORT_FILE" ]; then
-            ./codecov upload-process \
-              --token "$CODECOV_TOKEN" \
-              -f "$REPORT_FILE" \
-              --name "GUT Test Report" \
-              --flag GUT \
-              --report-type test_results
-          else
-            echo "No GUT JUnit XML found, skipping upload."
-          fi

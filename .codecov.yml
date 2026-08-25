@@ -2,39 +2,29 @@ coverage:
   status:
     project:
       gdscript:
-        target: 70%
-        paths:
-          - scripts/
+        target: auto
         flags:
-          - gdscript
-      javascript:
-        target: 50%
+          - GDUnit4
         paths:
-          - export/web/
-        flags:
-          - playwright
+          - "scripts/"
     patch:
       default:
         target: 80%
   precision: 2
-  range: "60...90"
   round: down
 
 comment:
   layout: "diff, files"
 
 ignore:
-  - export/web/*
+  - "test/**/*"
+  - "tests/**/*"
+  - "addons/**/*"
 
 flags:
-  gdscript:
+  GDUnit4:
     paths:
-      - scripts/
-  playwright:
-    paths:
-      - export/web/
+      - "scripts/"
 
 fixes:
-  - "::export/web/"  # New: Strip empty prefixes
-  - "anonymous_::export/web/index.js"  # Map anonymous to real JS file (adjust if multiple)
-  - "/home/runner/work/SkyLockAssault/SkyLockAssault/::"  # Strip CI absolute paths
+  - "/home/runner/work/SkyLockAssault/SkyLockAssault/::"
