@@ -1,6 +1,7 @@
 ---
 name: "GDUnit4 Unit Tests & Code Coverage"
 
+# Reusable workflow for executing GDUnit4 test suites with GDExtension-based coverage profiling
 on:  # yamllint disable-line rule:truthy
   workflow_call:
     inputs:
@@ -25,16 +26,19 @@ jobs:
       GODOT_VERSION: "${{ inputs.godot_version }}"
       GODOT_SHA256: "${{ inputs.godot_sha256 }}"
     steps:
+      # Check out full repository history (fetch-depth: 0) to allow Codecov base commit resolution
       - uses: "actions/checkout@v7"
         with:
           persist-credentials: false
           fetch-depth: 0
 
+      # Install virtual frame buffer (xvfb) for display emulation and lcov for tracefile merging
       - name: "Install System Dependencies (xvfb & lcov)"
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb lcov
 
+      # Download official Godot Linux binary and enforce SHA-256 integrity validation
       - name: "Download and Verify Godot Binary"
         run: |
           URL="https://github.com/godotengine/godot/releases/download"
@@ -49,6 +53,7 @@ jobs:
           echo "${CALCULATED_SHA256}"
           echo "=================================================="
 
+          # Verify downloaded asset checksum against expected hash if provided
           if [ -n "${GODOT_SHA256}" ]; then
             echo "${GODOT_SHA256}  ${ZIP_NAME}" | sha256sum --check --status || {
               echo "❌ CRITICAL: Godot binary verification failed! Checksum mismatch."
@@ -60,6 +65,7 @@ jobs:
           mv "Godot_v${GODOT_VERSION}_linux.x86_64" godot
           chmod +x godot
 
+      # Validate that downloaded binary matches the expected version string (converts -stable to .stable)
       - name: "Verify Godot Engine Version Parity"
         run: |
           ENGINE_VERSION=$(./godot --version)
@@ -71,19 +77,20 @@ jobs:
           }
           echo "✅ Version parity verified (${EXPECTED_VERSION})."
 
+      # Install GDUnit4 Core addon, GDUnit4 Coverage GDExtension, and enable plugin in project.godot
       - name: "Install GDUnit4 Core & Coverage GDExtension"
         run: |
           rm -rf addons/gdUnit4 addons/gdunit4_coverage temp_cov override.cfg
           mkdir -p addons
 
-          # 1. Install GDUnit4 Core (v6.2.0)
+          # 1. Download and extract GDUnit4 Core framework (v6.2.0)
           URL_GDUNIT="https://github.com/godot-gdunit-labs/gdUnit4/archive/refs/tags/v6.2.0.zip"
           wget -q "$URL_GDUNIT" -O gdunit4.zip
           unzip -q gdunit4.zip -d addons
           mv addons/gdUnit4-6.2.0/addons/gdUnit4 addons/gdUnit4
           rm -rf addons/gdUnit4-6.2.0 gdunit4.zip
 
-          # 2. Extract GdUnit4 Coverage v0.1.4 (GDExtension)
+          # 2. Download and unpack GDUnit4 Coverage GDExtension (v0.1.4)
           URL_COV="https://github.com/godot-gdunit-labs/gdUnit4-coverage/releases/download/v0.1.4/gdUnit4-coverage-0.1.4-trial.zip"
           wget -q "$URL_COV" -O coverage.zip
           mkdir -p temp_cov
@@ -93,7 +100,7 @@ jobs:
           cp -r temp_cov/addons/gdunit4_coverage addons/
           rm -rf temp_cov
 
-          # 3. Enable plugin & suppress debug warnings safely
+          # 3. Safely inject plugin activation and disable strict warnings to avoid test aborts
           python3 -c '
           with open("project.godot", "r") as f:
               content = f.read()
@@ -122,10 +129,12 @@ jobs:
             exit 1
           fi
 
+      # Dynamically query manifest.json to resolve and download the matching gdcov coverage runner binary
       - name: "Download and Setup gdcov Runner"
         run: |
           wget -q "https://github.com/godot-gdunit-labs/gdUnit4-coverage/releases/download/v0.1.4/manifest.json" -O manifest.json
 
+          # Resolve matching platform binary URL dynamically by matching major.minor version prefix
           GDCOV_URL=$(python3 -c '
           import json, os
           with open("manifest.json") as f:
@@ -136,7 +145,7 @@ jobs:
           major_minor = ".".join(godot_ver.split(".")[:2])
           url = ""
 
-          # Match exact version or major.minor prefix (e.g. "4.7-stable")
+          # Match exact version key or major.minor prefix (e.g., "4.7-stable")
           for ver_key, platforms in gdcov.items():
               if ver_key == godot_ver or ver_key.startswith(major_minor):
                   linux_info = platforms.get("linux-x86_64") or platforms.get("linux", {})
@@ -161,17 +170,18 @@ jobs:
           chmod +x ./gdcov
           echo "✅ gdcov runner ready: $(./gdcov --version)"
 
+      # Move tests outside workspace to prevent Godot from compiling full test tree upfront on boot
       - name: "Isolate Test Suites Outside Workspace"
         run: |
-          # 1. Back up all tests outside the Godot res:// root
+          # 1. Back up all test suites to /tmp outside the project res:// root
           rm -rf /tmp/test_backup
           cp -r test /tmp/test_backup
 
-          # 2. Clear res://test completely so Godot does not pre-compile test files on boot
+          # 2. Clear res://test completely to ensure a clean state for micro-batching
           rm -rf test
           mkdir -p test/gdunit4
 
-          # 3. Configure coverage filters in override.cfg
+          # 3. Configure source inclusion and test exclusion filters in override.cfg
           cat << 'EOF' > override.cfg
           [gdunit4]
           coverage/include_paths=PackedStringArray("res://scripts")
@@ -184,17 +194,19 @@ jobs:
 
           echo "✅ Test suites stashed to /tmp/test_backup and override.cfg configured."
 
+      # Initialize Godot project and generate .godot cache to register newly installed GDExtensions
       - name: "Initialize Project and Register GDExtensions"
         run: |
           rm -rf .godot/
           ./godot --headless --editor --quit --path .
 
+      # Run test suites in isolated micro-batches (2 suites per batch) to limit memory overhead and GDExtension load limits
       - name: "Run GDUnit4 Coverage in Micro-Batches"
         run: |
           rm -rf lcov_batches
           mkdir -p lcov_batches
 
-          # Collect only GDUnit test suites (ignore helpers/gut)
+          # Collect only GDUnit test suites safely using mapfile to avoid whitespace path splitting
           mapfile -t TEST_FILES < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | sort)
           echo "Found ${#TEST_FILES[@]} test suites. Running in micro-batches of 2 files..."
 
@@ -207,7 +219,7 @@ jobs:
             echo "🚀 Running Micro-Batch $BATCH_NUM: ${CHUNK[*]}"
             echo "--------------------------------------------------"
 
-            # Wipe res://test and stage ONLY the current 2 test files (+ helper if present)
+            # Reset workspace and stage ONLY the current batch test files + shared helper
             rm -rf test
             mkdir -p test/gdunit4
 
@@ -222,14 +234,15 @@ jobs:
               ADD_ARGS+=(--add "res://test/gdunit4/$BASE_NAME")
             done
 
-            # Clear previous runner coverage output before launching
+            # Remove stale runner coverage tracefiles prior to batch launch
             find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" -delete 2>/dev/null || true
 
-            # Execute micro-batch (2 tests + production scripts <= 10 files total)
+            # Execute micro-batch under virtual display using gdcov runner
             xvfb-run ./gdcov -d --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
               --ignoreHeadlessMode \
               "${ADD_ARGS[@]}"
 
+            # Save batch coverage tracefile
             USER_PATH=$(find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" 2>/dev/null | head -n 1)
             if [ -n "$USER_PATH" ] && [ -f "$USER_PATH" ]; then
               cp "$USER_PATH" "lcov_batches/batch_${BATCH_NUM}.lcov"
@@ -241,13 +254,21 @@ jobs:
             BATCH_NUM=$((BATCH_NUM + 1))
           done
 
-      - name: "Restore Full Test Suite & Merge LCOV Tracefiles"
+      # Restore full test folder unconditionally so downstream report finders and artifact uploaders have complete access
+      - name: "Restore Full Test Suite"
+        if: "always()"
         run: |
-          # 1. Restore complete test folder for artifact uploaders and report parsers
-          rm -rf test
-          cp -r /tmp/test_backup test
+          if [ -d "/tmp/test_backup" ]; then
+            rm -rf test
+            cp -r /tmp/test_backup test
+            echo "✅ Full test suite workspace restored from /tmp/test_backup."
+          fi
 
-          # 2. Build lcov merge arguments from all generated micro-batches
+      # Aggregate micro-batch coverage tracefiles into a single unified report and sanitize filepaths
+      - name: "Merge LCOV Tracefiles"
+        if: "success()"
+        run: |
+          # 1. Collect all generated batch tracefiles
           LCOV_ARGS=()
           for f in lcov_batches/*.lcov; do
             if [ -f "$f" ]; then
@@ -262,21 +283,17 @@ jobs:
             exit 1
           fi
 
-          # 3. Strip absolute CI runner directory prefix and res:// prefix
+          # 2. Strip runner workspace absolute paths and Godot res:// prefixes for Codecov mapping
           sed -i 's|SF:.*/SkyLockAssault/|SF:|g' final_coverage.lcov
           sed -i 's|SF:res://|SF:|g' final_coverage.lcov
 
-          # 4. Clean up micro-batch directory
+          # 3. Clean up batch directory
           rm -rf lcov_batches
-
-          echo "=================================================="
-          echo "=== Tracked Files in final_coverage.lcov ==="
-          grep '^SF:' final_coverage.lcov | sort -u
-          echo "=================================================="
 
           echo "=== Final Sanitized LCOV Summary ==="
           lcov --summary final_coverage.lcov
 
+      # Locate most recent XML test report directory generated by GDUnit4
       - name: "Find Latest Report Directory"
         id: "find_report"
         if: "always()"
@@ -284,6 +301,7 @@ jobs:
           LATEST_REPORT=$(ls -td reports/report_* artifacts/gdunit-reports/report_* 2>/dev/null | head -1 || echo "")
           echo "latest_report=$LATEST_REPORT" >> "$GITHUB_OUTPUT"
 
+      # Upload XML test results and final LCOV coverage file as GitHub Actions run artifacts
       - name: "Upload Test Reports Artifacts"
         if: "always()"
         uses: "actions/upload-artifact@v7"
@@ -296,6 +314,7 @@ jobs:
           if-no-files-found: "ignore"
           retention-days: 5
 
+      # Install standalone Codecov CLI binary (guarded inside script when token is empty)
       - name: "Install Codecov CLI"
         if: "success()"
         env:
@@ -308,6 +327,7 @@ jobs:
           curl -Os https://cli.codecov.io/latest/linux/codecov
           chmod +x codecov
 
+      # Upload LCOV coverage report and XML test results to Codecov (guarded for unauthenticated fork runs)
       - name: "Upload LCOV Coverage & Test Results to Codecov"
         if: "success()"
         env:
@@ -322,6 +342,7 @@ jobs:
           echo "         CODECOV UPLOAD DIAGNOSTICS               "
           echo "=================================================="
 
+          # 1. Upload unified LCOV coverage tracefile
           if [ -f "./final_coverage.lcov" ]; then
             echo "✅ Found ./final_coverage.lcov ($(du -h ./final_coverage.lcov | cut -f1))"
             echo "🚀 Initiating Codecov coverage upload..."
@@ -337,6 +358,7 @@ jobs:
 
           echo "--------------------------------------------------"
 
+          # 2. Upload test results XML report if available
           REPORT_DIR="${{ steps.find_report.outputs.latest_report }}"
           REPORT_FILE=""
           if [ -f "$REPORT_DIR/results.xml" ]; then
