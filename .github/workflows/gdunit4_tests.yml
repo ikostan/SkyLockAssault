@@ -40,6 +40,14 @@ jobs:
           ZIP_NAME="Godot_v${GODOT_VERSION}_linux.x86_64.zip"
           wget -q "${URL}/${GODOT_VERSION}/${ZIP_NAME}"
 
+          echo "=================================================="
+          echo "         ASSET SHA256 CHECKSUM                    "
+          echo "=================================================="
+          CALCULATED_SHA256=$(sha256sum "${ZIP_NAME}" | awk '{print $1}')
+          echo "SHA256 for ${ZIP_NAME}:"
+          echo "${CALCULATED_SHA256}"
+          echo "=================================================="
+
           if [ -n "${GODOT_SHA256}" ]; then
             echo "${GODOT_SHA256}  ${ZIP_NAME}" | sha256sum --check --status || {
               echo "⚠️ SHA256 checksum verification failed or skipped."
@@ -49,6 +57,16 @@ jobs:
           unzip "${ZIP_NAME}"
           mv "Godot_v${GODOT_VERSION}_linux.x86_64" godot
           chmod +x godot
+
+      - name: "Verify Godot Engine Version Parity"
+        run: |
+          ENGINE_VERSION=$(./godot --version)
+          echo "Detected engine version: $ENGINE_VERSION"
+          echo "$ENGINE_VERSION" | grep -q "4.7.1.stable" || {
+            echo "❌ ERROR: Expected Godot 4.7.1.stable, but received: $ENGINE_VERSION"
+            exit 1
+          }
+          echo "✅ Version parity verified (4.7.1.stable)."
 
       - name: "Install GDUnit4 Core & Coverage GDExtension"
         run: |
@@ -126,6 +144,7 @@ jobs:
 
           if [ -z "$GDCOV_URL" ]; then
             echo "❌ Failed to resolve gdcov download URL from manifest.json"
+            cat manifest.json
             exit 1
           fi
 
@@ -162,7 +181,7 @@ jobs:
       - name: "Initialize Project and Register GDExtensions"
         run: |
           rm -rf .godot/
-          ./godot --headless --editor --quit --path . || true
+          ./godot --headless --editor --quit --path .
 
       - name: "Run GDUnit4 Coverage in Micro-Batches"
         run: |
