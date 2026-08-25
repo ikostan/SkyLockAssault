@@ -135,7 +135,7 @@ jobs:
           url = ""
 
           for ver_key, platforms in gdcov.items():
-              if "4.7" in ver_key:
+              if "4.7.1" in ver_key:
                   linux_info = platforms.get("linux-x86_64") or platforms.get("linux", {})
                   if isinstance(linux_info, dict):
                       url = linux_info.get("url", "")
