@@ -9,7 +9,7 @@ on:  # yamllint disable-line rule:truthy
         default: "4.7.1-stable"
       godot_sha256:
         type: "string"
-        default: ""
+        default: "c7ff14fd28472c8d4f193043de30278dcf7e5241a1dcf7566b02e27addaa33ba"
     secrets:
       CODECOV_TOKEN:
         description: "Codecov requires a token to authenticate"
@@ -45,7 +45,15 @@ jobs:
           unzip "${ZIP_NAME}"
           mv "Godot_v${GODOT_VERSION}_linux.x86_64" godot
           chmod +x godot
-
+      - name: "Verify Godot Engine Version Parity"
+        run: |
+            ENGINE_VERSION=$(./godot --version)
+            echo "Detected engine version: $ENGINE_VERSION"
+            echo "$ENGINE_VERSION" | grep -q "4.7.1.stable" || {
+              echo "❌ ERROR: Expected Godot 4.7.1.stable, but received: $ENGINE_VERSION"
+              exit 1
+            }
+            echo "✅ Version parity verified (4.7.1.stable)."
       - name: "Install GUT"
         run: |
           mkdir -p addons

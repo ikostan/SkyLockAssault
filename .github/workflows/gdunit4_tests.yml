@@ -9,7 +9,7 @@ on:  # yamllint disable-line rule:truthy
         default: "4.7.1-stable"
       godot_sha256:
         type: "string"
-        default: ""
+        default: "c7ff14fd28472c8d4f193043de30278dcf7e5241a1dcf7566b02e27addaa33ba"
     secrets:
       CODECOV_TOKEN:
         description: "Codecov requires a token to authenticate"
