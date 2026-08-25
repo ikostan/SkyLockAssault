@@ -302,7 +302,7 @@ jobs:
         id: "find_report"
         if: "always()"
         run: |
-          LATEST_REPORT=$(ls -td reports/report_* artifacts/gdunit-reports/report_* 2>/dev/null | head -1 || echo "")
+          LATEST_REPORT=$(find reports artifacts/gdunit-reports -maxdepth 1 -type d -name 'report_*' -printf '%T@\t%p\n' 2>/dev/null | sort -rn | head -n 1 | cut -f2-)
           echo "latest_report=$LATEST_REPORT" >> "$GITHUB_OUTPUT"
 
       # Upload XML test results and final LCOV coverage file as GitHub Actions run artifacts
