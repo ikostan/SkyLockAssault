@@ -294,13 +294,13 @@ jobs:
           retention-days: 5
 
       - name: "Install Codecov CLI"
-        if: "success()"
+        if: "success() && secrets.CODECOV_TOKEN != ''"
         run: |
           curl -Os https://cli.codecov.io/latest/linux/codecov
           chmod +x codecov
 
       - name: "Upload LCOV Coverage & Test Results to Codecov"
-        if: "success()"
+        if: "success() && secrets.CODECOV_TOKEN != ''"
         run: |
           echo "=================================================="
           echo "         CODECOV UPLOAD DIAGNOSTICS               "
