@@ -64,11 +64,12 @@ jobs:
         run: |
           ENGINE_VERSION=$(./godot --version)
           echo "Detected engine version: $ENGINE_VERSION"
-          echo "$ENGINE_VERSION" | grep -q "4.7.1.stable" || {
-            echo "❌ ERROR: Expected Godot 4.7.1.stable, but received: $ENGINE_VERSION"
+          EXPECTED_VERSION="${GODOT_VERSION/-stable/.stable}"
+          echo "$ENGINE_VERSION" | grep -q "$EXPECTED_VERSION" || {
+            echo "❌ ERROR: Expected Godot ${EXPECTED_VERSION}, but received: $ENGINE_VERSION"
             exit 1
           }
-          echo "✅ Version parity verified (4.7.1.stable)."
+          echo "✅ Version parity verified (${EXPECTED_VERSION})."
 
       - name: "Install GDUnit4 Core & Coverage GDExtension"
         run: |

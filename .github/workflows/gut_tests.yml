@@ -45,15 +45,18 @@ jobs:
           unzip "${ZIP_NAME}"
           mv "Godot_v${GODOT_VERSION}_linux.x86_64" godot
           chmod +x godot
+
       - name: "Verify Godot Engine Version Parity"
         run: |
-            ENGINE_VERSION=$(./godot --version)
-            echo "Detected engine version: $ENGINE_VERSION"
-            echo "$ENGINE_VERSION" | grep -q "4.7.1.stable" || {
-              echo "❌ ERROR: Expected Godot 4.7.1.stable, but received: $ENGINE_VERSION"
-              exit 1
-            }
-            echo "✅ Version parity verified (4.7.1.stable)."
+          ENGINE_VERSION=$(./godot --version)
+          echo "Detected engine version: $ENGINE_VERSION"
+          EXPECTED_VERSION="${GODOT_VERSION/-stable/.stable}"
+          echo "$ENGINE_VERSION" | grep -q "$EXPECTED_VERSION" || {
+            echo "❌ ERROR: Expected Godot ${EXPECTED_VERSION}, but received: $ENGINE_VERSION"
+            exit 1
+          }
+          echo "✅ Version parity verified (${EXPECTED_VERSION})."
+
       - name: "Install GUT"
         run: |
           mkdir -p addons
