@@ -191,7 +191,7 @@ jobs:
           mkdir -p lcov_batches
 
           # Collect only GDUnit test suites (ignore helpers/gut)
-          TEST_FILES=($(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | sort))
+          mapfile -t TEST_FILES < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | sort)
           echo "Found ${#TEST_FILES[@]} test suites. Running in micro-batches of 2 files..."
 
           BATCH_NUM=1
