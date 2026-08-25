@@ -127,15 +127,16 @@ jobs:
           wget -q "https://github.com/godot-gdunit-labs/gdUnit4-coverage/releases/download/v0.1.4/manifest.json" -O manifest.json
 
           GDCOV_URL=$(python3 -c '
-          import json
+          import json, os
           with open("manifest.json") as f:
               m = json.load(f)
 
           gdcov = m.get("gdcov", {})
+          version = os.environ.get("GODOT_VERSION", "").split("-")[0]
           url = ""
 
           for ver_key, platforms in gdcov.items():
-              if "4.7.1" in ver_key:
+              if ver_key in version or version.startswith(ver_key):
                   linux_info = platforms.get("linux-x86_64") or platforms.get("linux", {})
                   if isinstance(linux_info, dict):
                       url = linux_info.get("url", "")
