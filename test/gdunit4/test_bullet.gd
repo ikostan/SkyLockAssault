@@ -1,9 +1,11 @@
 ## Copyright (C) 2025 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
 
+@warning_ignore("unused_parameter")
 extends GdUnitTestSuite
 
 var bullet_scene := preload("res://scenes/bullet.tscn")
+
 
 func test_bullet_collision() -> void:
 	# New: auto_free for cleanup (prevents leaks/orphans)
@@ -14,7 +16,7 @@ func test_bullet_collision() -> void:
 	bullet.global_rotation = 0
 	# New: Safer await for tree settling (physics_frame can be flaky in CI)
 	await await_idle_frame()
-	
+
 	# Simulate a hit body with take_damage method
 	# New: auto_free for dummy cleanup
 	var dummy: Node2D = auto_free(Node2D.new())
@@ -22,14 +24,14 @@ func test_bullet_collision() -> void:
 	script.source_code = """
 extends Node2D
 
-func take_damage(d: int) -> void:
+func take_damage(_d: int) -> void:
     pass
-	"""
+"""
 	script.reload()
 	dummy.set_script(script)
-	
+
 	# Emit signal to simulate hit
 	bullet.get_node("Area2D").area_entered.emit(dummy)
-	
+
 	# Assert bullet queued for deletion after hit
-	assert_that(bullet).is_queued_for_deletion()  # Verify despawn on hit
+	assert_that(bullet).is_queued_for_deletion()
