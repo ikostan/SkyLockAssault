@@ -1,74 +1,66 @@
 ## Copyright (C) 2025 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
-# test_difficulty_integration.gd (extends GdUnitTestSuite) - FIXED: fire() + bullet timer path/math
-# Updated for speed-scaled fuel depletion (issue: outdated fixed assert)
+# test_difficulty_integration.gd
+# Integration tests for difficulty scaling across Player and Weapon systems.
 
 extends GdUnitTestSuite
 
+const PlayerScene: PackedScene = preload("res://scenes/Player.tscn")
+const PlayerScript = preload("res://scripts/entities/player.gd")
+const GameSettingsResource = preload("res://scripts/resources/game_settings_resource.gd")
 const TestHelpers = preload("res://test/gdunit4/test_helpers.gd")
 
-var original_difficulty: float  # Snapshot holder
-# NEW: Added snapshot holders for global fuel state to prevent test leakage
+var original_difficulty: float
 var original_current_fuel: float
 var original_max_fuel: float
 
 
 func before_test() -> void:
-	original_difficulty = Globals.settings.difficulty  # Snapshot before each test
-	# NEW: Snapshot fuel state
-	original_current_fuel = Globals.settings.current_fuel
-	original_max_fuel = Globals.settings.max_fuel
+	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
+	original_difficulty = settings.difficulty
+	original_current_fuel = settings.current_fuel
+	original_max_fuel = settings.max_fuel
 
 
 func after_test() -> void:
-	Globals.settings.difficulty = original_difficulty  # Restore after each test
-	# NEW: Restore fuel state so other tests start clean
-	Globals.settings.max_fuel = original_max_fuel
-	Globals.settings.current_fuel = original_current_fuel
+	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
+	settings.difficulty = original_difficulty
+	settings.max_fuel = original_max_fuel
+	settings.current_fuel = original_current_fuel
 
 
 func test_difficulty_scales_fuel_and_weapon() -> void:
-	# Setup: Load main_scene for full context (PlayerStatsPanel for fuel_bar path)
-	var main_scene: Variant = auto_free(load("res://scenes/main_scene.tscn").instantiate())
-	add_child(main_scene)  # Add to tree for _ready() (init timers, paths)
-	# Await frame to ensure @onready vars set (fixes null in tests/CI)
+	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
+	assert_object(settings).is_not_null()
+
+	# Instantiate Player directly to avoid loading full main_scene overhead
+	var player: PlayerScript = auto_free(PlayerScene.instantiate()) as PlayerScript
+	add_child(player)
 	await await_idle_frame()
-	
-	# Get player and weapon (correct path per player.tscn: Player/CharacterBody2D/Weapon)
-	var player: Node2D = main_scene.get_node("Player")
-	assert_object(player).is_not_null()  
-	var weapon: Node2D = player.get_node("CharacterBody2D/Weapon")
+
+	var weapon: Node2D = player.get_node_or_null("CharacterBody2D/Weapon")
+	if weapon == null:
+		weapon = player.get_node_or_null("Weapon")
 	assert_object(weapon).is_not_null()
-	
-	var original_difficulty: float = Globals.settings.difficulty
-	Globals.settings.difficulty = 2.0
 
-	# NEW: Derive the starting baseline dynamically to avoid clamping issues if max_fuel changed
-	var start_fuel: float = Globals.settings.max_fuel
+	var orig_diff: float = settings.difficulty
+	settings.difficulty = 2.0
 
-	# TEST 1: Fuel depletion scales (derive from constants)
-	# OLD: player.fuel["fuel"] = 100.0
-	# NEW: Set the fuel level using the dynamic baseline instead of hardcoded 100.0
-	Globals.settings.current_fuel = start_fuel
-	
-	# NEW: Calculate normalized speed using the global max_speed, as MAX_SPEED was removed from player.gd
-	var normalized_speed: float = player.current_speed / Globals.settings.max_speed
-	
-	# OLD: var expected_depletion: float = player.base_fuel_drain * normalized_speed * Globals.settings.difficulty
-	# NEW: Reference base_consumption_rate from the global resource since it was removed from the player script
-	var expected_depletion: float = Globals.settings.base_consumption_rate * normalized_speed * Globals.settings.difficulty
-	
+	var start_fuel: float = settings.max_fuel
+	settings.current_fuel = start_fuel
+
+	# TEST 1: Fuel depletion scaling
+	var normalized_speed: float = player.current_speed / settings.max_speed
+	var expected_depletion: float = settings.base_consumption_rate * normalized_speed * settings.difficulty
+
 	player._on_fuel_timer_timeout()
 	var expected_fuel: float = start_fuel - expected_depletion
-	
-	# OLD: assert_float(player.fuel["fuel"]).is_equal_approx(expected_fuel, 0.01)  # Larger delta for precision
-	# NEW: Verify the depletion amount against the global resource current_fuel
-	assert_float(Globals.settings.current_fuel).is_equal_approx(expected_fuel, 0.01)  # Larger delta for precision
+	assert_float(settings.current_fuel).is_equal_approx(expected_fuel, 0.01)
 
-	# TEST 2: Weapon cooldown scales (fire_rate 0.15 * 2.0 = 0.30)
-	weapon.fire()  # FIXED: fire() not _fire(); delegates → BulletFirer.fire() → timer.start(0.30)
-	var bullet_firer: Node2D = weapon.get_child(0)  # Weapon child 0 = BulletFirer
-	var cooldown_timer: Timer = bullet_firer.get_node("CooldownTimer")
-	assert_float(cooldown_timer.wait_time).is_equal_approx(0.30, 0.001)  # Tolerance for float
+	# TEST 2: Weapon cooldown scaling
+	weapon.fire()
+	var bullet_firer: Node2D = weapon.get_child(0)
+	var cooldown_timer: Timer = bullet_firer.get_node("CooldownTimer") as Timer
+	assert_float(cooldown_timer.wait_time).is_equal_approx(0.30, 0.001)
 
-	Globals.settings.difficulty = original_difficulty
+	settings.difficulty = orig_diff
