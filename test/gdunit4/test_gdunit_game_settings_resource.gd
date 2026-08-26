@@ -43,8 +43,15 @@ func after_test() -> void:
 
 ## GS-RES-01 | Validate signal emission on valid update
 func test_gs_res_01_signal_on_valid_change() -> void:
+	var emitted: Array = []
+	_resource.setting_changed.connect(func(setting_name: String, value: Variant) -> void:
+		emitted.append([setting_name, value])
+	)
+
 	_resource.difficulty = 1.5
-	await assert_signal(_resource).is_emitted("setting_changed", ["difficulty", 1.5])
+
+	assert_int(emitted.size()).is_equal(1)
+	assert_array(emitted[0]).is_equal(["difficulty", 1.5])
 
 
 ## GS-RES-02/03 | Validate clamping logic
@@ -68,12 +75,17 @@ func test_gs_res_04_05_06_boundary_values() -> void:
 
 ## GS-RES-07 | Validate stability on redundant assignments
 func test_gs_res_07_redundant_assignment() -> void:
-	var res: GameSettingsResource = GameSettingsResource.new()
-	res.difficulty = 1.2
-	# Assigning the exact same value must not re-emit the signal
-	var redundant_res: GameSettingsResource = GameSettingsResource.new()
-	redundant_res.difficulty = redundant_res.difficulty
-	await assert_signal(redundant_res).is_not_emitted("setting_changed")
+	_resource.difficulty = 1.2
+
+	var emitted: Array = []
+	_resource.setting_changed.connect(func(setting_name: String, value: Variant) -> void:
+		emitted.append([setting_name, value])
+	)
+
+	# Redundant assignment must not emit
+	_resource.difficulty = 1.2
+
+	assert_array(emitted).is_empty()
 
 
 # --- SECTION 2: MENU INITIALIZATION TESTS (GS-READY) ---
@@ -107,8 +119,8 @@ func test_gs_ready_05_no_duplicate_connections() -> void:
 	# Manually call _ready again to test idempotency/guards
 	gameplay_menu._ready()
 
-	# Verify connection count on global resource
-	var connections: Array[Dictionary] = Globals.settings.setting_changed.get_connections()
+	# Signal.get_connections() returns an untyped Array in Godot 4
+	var connections: Array = Globals.settings.setting_changed.get_connections()
 	var count: int = 0
 
 	for conn: Dictionary in connections:
