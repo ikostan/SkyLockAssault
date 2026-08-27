@@ -37,6 +37,12 @@ func _ready() -> void:
 		load_failed = true
 		return
 
+	# Explicit check to catch missing/invalid paths immediately
+	if not ResourceLoader.exists(Globals.next_scene):
+		Globals.log_message("Next scene does not exist: " + Globals.next_scene, Globals.LogLevel.ERROR)
+		load_failed = true
+		return
+
 	# Start background loading with sub-threads
 	var err: int = ResourceLoader.load_threaded_request(Globals.next_scene, "", true)
 	if err != OK:
@@ -89,11 +95,12 @@ func _change_to_next_scene() -> void:
 	# Ensure the bar visually fills completely to 100%
 	progress_bar.value = 100.0
 
-	# 1-second pause at 100% so the player clearly sees completion
-	await get_tree().create_timer(1.0).timeout
-
+	# Cache and reset global scene path synchronously before yielding
 	var target_path: String = Globals.next_scene
 	Globals.next_scene = ""
+
+	# 1-second pause at 100% so the player clearly sees completion
+	await get_tree().create_timer(1.0).timeout
 
 	if target_path == "":
 		Globals.log_message("Empty next_scene - returning to main menu.", Globals.LogLevel.ERROR)
