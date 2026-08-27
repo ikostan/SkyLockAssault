@@ -4,6 +4,8 @@ Test suite for the CI/CD salt injection pipeline.
 Validates that the master bash script correctly replaces placeholder strings
 in GDScript files with various complex secrets, ensuring that escape sequences
 and special sed characters do not break the final game code.
+
+Audited for deterministic execution (subprocess timeouts, no static sleeps).
 """
 
 import os

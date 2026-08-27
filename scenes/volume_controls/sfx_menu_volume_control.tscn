@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://cm2nruujxhdhu"]
+[gd_scene format=3 uid="uid://cm2nruujxhdhu"]
 
 [ext_resource type="FontFile" uid="uid://borwvgqdgawbj" path="res://files/fonts/EMPIREST.TTF" id="1_f34wo"]
 [ext_resource type="Script" uid="uid://8hd1kvmb5bt1" path="res://scripts/ui/components/volume_slider.gd" id="2_3a0os"]
@@ -10,7 +10,7 @@ corner_radius_bottom_right = 20
 corner_radius_bottom_left = 20
 shadow_size = 5
 
-[node name="SFXMenu" type="Control"]
+[node name="SFXMenu" type="Control" unique_id=1615954462]
 custom_minimum_size = Vector2(385, 24)
 layout_mode = 3
 anchors_preset = 0
@@ -20,7 +20,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 tooltip_text = "SFX Menu Volume Control"
 
-[node name="SFXMenuLabel" type="Label" parent="."]
+[node name="SFXMenuLabel" type="Label" parent="." unique_id=2003122289]
 layout_mode = 0
 offset_top = 3.0
 offset_right = 100.0
@@ -30,7 +30,7 @@ theme_override_fonts/font = ExtResource("1_f34wo")
 theme_override_font_sizes/font_size = 18
 text = "{MENU}"
 
-[node name="HSlider" type="HSlider" parent="."]
+[node name="HSlider" type="HSlider" parent="." unique_id=1622043815]
 layout_direction = 2
 layout_mode = 0
 offset_left = 125.0
@@ -48,7 +48,7 @@ ticks_on_borders = true
 script = ExtResource("2_3a0os")
 bus_name = "SFX_Menu"
 
-[node name="Mute" type="CheckButton" parent="."]
+[node name="Mute" type="CheckButton" parent="." unique_id=1618523756]
 layout_direction = 1
 layout_mode = 0
 offset_left = 360.0

@@ -26,8 +26,8 @@ jobs:
       tag_name: "${{ steps.drafter.outputs.tag_name }}"  # Expose from step
     steps:
       # yamllint disable-line rule:line-length
-      - uses: "release-drafter/release-drafter@ed4bc48ec97379be2258e7b7ac2624a3e26ab809"
-        id: drafter  # Add ID to access outputs
+      - uses: "release-drafter/release-drafter@34d80673e067bdc0c24568d3af899c216adcfaa9"
+        id: "drafter"  # Add ID to access outputs
         with:
           config-name: "release-drafter.yml"  # Explicitly point to your config
         env:

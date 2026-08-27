@@ -6,11 +6,11 @@ on:  # yamllint disable-line rule:truthy
     inputs:
       version:
         description: "The version to inject (e.g., v0.6.1)"
-        type: string
+        type: "string"
         required: true
       godot_version:
         description: "The Godot version string passed from the calling pipeline"
-        type: string
+        type: "string"
         required: true
     secrets:
       ITCHIO_API_KEY:
@@ -23,7 +23,7 @@ on:  # yamllint disable-line rule:truthy
 env:
   BUTLER_VERSION: "15.27.0"
   BUTLER_SHA256: "b9f0d6eef33036031cafaf59939d9f3bc724e2b674c510d4a9cf8a9f1008e299"
-  GODOT_VERSION: "4.6.3-stable"
+  GODOT_VERSION: "4.7.1-stable"
 
 jobs:
   export-and-deploy:
@@ -39,11 +39,16 @@ jobs:
           VERSION="${{ inputs.version }}"
           ESCAPED_VERSION=$(printf '%s' "$VERSION" | sed 's/[\\\\/&]/\\\\&/g')
           if grep -q '^config/version="' project.godot; then
-            sed -i "s/^config\/version=\".*\"$/config\/version=\"$ESCAPED_VERSION\"/g" project.godot
+            sed -i \
+              "s/^config\/version=\".*\"$/config\/version=\"$ESCAPED_VERSION\"/g" \
+              project.godot
           elif grep -q '^\[application\]' project.godot; then
-            sed -i "/^\[application\]/a config\/version=\"$ESCAPED_VERSION\"" project.godot
+            sed -i \
+              "/^\[application\]/a config\/version=\"$ESCAPED_VERSION\"" \
+              project.godot
           else
-            printf '\n[application]\nconfig/version="%s"\n' "$ESCAPED_VERSION" >> project.godot
+            printf '\n[application]\nconfig/version="%s"\n' \
+              "$ESCAPED_VERSION" >> project.godot
           fi
 
       - name: "Disable Editor Plugins (Prevent Headless Crash)"
@@ -54,7 +59,7 @@ jobs:
 
       - name: "Inject Production Salt into GDScript"
         env:
-          PRODUCTION_SALT: ${{ secrets.PRODUCTION_SALT }}
+          PRODUCTION_SALT: "${{ secrets.PRODUCTION_SALT }}"
         run: |
           set -euo pipefail
           bash ./.github/scripts/inject_salt.sh "scripts/core/globals.gd"
@@ -71,7 +76,7 @@ jobs:
           # Execute your standalone test script directly
           bash ./.github/scripts/verify_godot.sh "${{ inputs.godot_version }}"
 
-          # Step inside the created directory context to launch the engine asset pipe
+          # Step inside created directory context to launch engine asset pipe
           cd godot_binaries
 
           echo "✅ Integrity check passed. Starting local HTTP server..."
@@ -94,10 +99,10 @@ jobs:
         id: "export"
         uses: "firebelley/godot-export@615a6f7afc22d6266bf55c17748fb07447e8bdab"
         with:
-          # yamllint disable rule:line-length
+          # yamllint disable-line rule:line-length
           godot_executable_download_url: "http://localhost:8000/Godot_v${{ inputs.godot_version }}_linux.x86_64.zip"
+          # yamllint disable-line rule:line-length
           godot_export_templates_download_url: "http://localhost:8000/Godot_v${{ inputs.godot_version }}_export_templates.tpz"
-          # yamllint enable rule:line-length
           relative_project_path: "./"
           relative_export_path: "./export/web"
           archive_output: true
@@ -111,8 +116,10 @@ jobs:
           set -euo pipefail
           ARCHIVE_DIR="${{ steps.export.outputs.archive_directory }}"
 
-          # Defensive guard: prevent rm -rf from acting on an empty or malformed path
-          if [ -z "$ARCHIVE_DIR" ] || [ "$ARCHIVE_DIR" = "/" ] || [ "$ARCHIVE_DIR" = "." ]; then
+          # Defensive guard: prevent rm -rf from acting on empty/malformed path
+          if [ -z "$ARCHIVE_DIR" ] || \
+             [ "$ARCHIVE_DIR" = "/" ] || \
+             [ "$ARCHIVE_DIR" = "." ]; then
             echo "❌ FATAL: archive_directory output is empty or unsafe."
             exit 1
           fi
@@ -124,7 +131,8 @@ jobs:
       - name: "Patch index.js for security"
         run: |
           set -euo pipefail
-          bash ./.github/scripts/patch_index_js.sh "${{ steps.export.outputs.archive_directory }}/patched_build"
+          bash ./.github/scripts/patch_index_js.sh \
+            "${{ steps.export.outputs.archive_directory }}/patched_build"
 
       - name: "Re-zip Flattened Export"
         run: |
@@ -138,36 +146,39 @@ jobs:
           cd "$ARCHIVE_DIR/patched_build" && zip -r "$ARCHIVE_DIR/Web.zip" .
 
       - name: "Verify export does not contain placeholder"
+        env:
+          ARCHIVE_FILE: "${{ steps.export.outputs.archive_directory }}/Web.zip"
         run: |
           set -euo pipefail
 
-          # Temporarily disable pipefail to prevent SIGPIPE from failing the check
-          # if grep exits early upon finding a match in the unpacked byte stream.
-          set +o pipefail
-
-          if unzip -p "${{ steps.export.outputs.archive_directory }}/Web.zip" | grep -qF "CI_INJECT_SALT_HERE"; then
-            echo "❌ Placeholder detected inside final export archive."
+          if ! unzip -t "$ARCHIVE_FILE" >/dev/null; then
+            echo "❌ Final export archive is invalid."
             exit 1
           fi
 
-          # Immediately restore strict pipefail for any future commands added to this block
-          set -o pipefail
+          if unzip -p "$ARCHIVE_FILE" | \
+            grep -F "CI_INJECT_SALT_HERE" >/dev/null; then
+            echo "❌ Placeholder detected inside final export archive."
+            exit 1
+          fi
 
           echo "✅ Final export archive verified successfully."
 
       - name: "Cache Butler"
         id: "cache-butler"
-        uses: "actions/cache@v5"
+        uses: "actions/cache@v6"
         with:
           path: "butler"
           key: "Linux-butler-${{ env.BUTLER_VERSION }}-v1"
 
       - name: "Download Butler (On Cache Miss)"
-        if: steps.cache-butler.outputs.cache-hit != 'true'
+        if: "steps.cache-butler.outputs.cache-hit != 'true'"
         run: |
           set -euo pipefail
           mkdir -p butler
-          curl -fL --show-error -o butler.zip "https://broth.itch.zone/butler/linux-amd64/${{ env.BUTLER_VERSION }}/archive/default"
+          URL="https://broth.itch.zone/butler/linux-amd64"
+          curl -fL --show-error -o butler.zip \
+            "${URL}/${{ env.BUTLER_VERSION }}/archive/default"
 
           # SECURITY CHECK: Verify binary integrity
           echo "${{ env.BUTLER_SHA256 }}  butler.zip" | sha256sum -c -
@@ -186,6 +197,12 @@ jobs:
       - name: "Deploy to itch.io with Butler"
         run: |
           set -euo pipefail
-          butler push "${{ steps.export.outputs.archive_directory }}/Web.zip" ikostan/sky-lock-assault:${{ github.ref_name }} --userversion "${{ inputs.version }}"
+          butler push \
+            "$ARCHIVE_DIR/Web.zip" \
+            "ikostan/sky-lock-assault:$REF_NAME" \
+            --userversion "$VERSION"
         env:
           BUTLER_API_KEY: "${{ secrets.ITCHIO_API_KEY }}"
+          REF_NAME: "${{ github.ref_name }}"
+          VERSION: "${{ inputs.version }}"
+          ARCHIVE_DIR: "${{ steps.export.outputs.archive_directory }}"

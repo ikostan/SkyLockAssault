@@ -129,6 +129,7 @@ Drove entire PR #607 (10+ commits) fixing web export encryption
 key crash (linked to #600).  
 
 **Core changes:**  
+
 - **globals.gd**: Replaced ProjectSettings salt with CI-injected
   placeholder `"CI_INJECT_SALT_HERE"`, switched to
   `OS.has_feature("web")` check, implemented SHA-256 key generation, added

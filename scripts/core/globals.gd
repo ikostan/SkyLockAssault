@@ -8,12 +8,9 @@ extends Node
 
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 
-## Path to the navigation sound file
-const UI_NAV_SOUND_PATH: String = "res://files/sounds/sfx/ui_navigation.wav"
-
 # --- TASK #529: Encryption Key Management ---
 ## Centralized key for securing local configuration files.
-## This ensures consistent encryption/decryption across different game systems. [cite: 3]
+## This ensures consistent encryption/decryption across different game systems.
 ## Define the variable by pulling from ProjectSettings.
 ## If the setting doesn't exist, it falls back to a non-secure string.
 var save_encryption_pass: String = _get_encryption_key()
@@ -35,27 +32,10 @@ var next_scene: String = ""  # Path to the next scene to load via loading screen
 var current_input_device: String = "keyboard"  # "keyboard" or "gamepad"
 var _is_loading_settings: bool = false  # Guard flag
 
-## Preloaded stream to prevent disk I/O lag during fast menu navigation.
-var _ui_nav_stream: AudioStream = preload(UI_NAV_SOUND_PATH)
-
-# NEW: The persistent audio player to prevent node churn
-var _nav_sfx_player: AudioStreamPlayer
-
-# List of actions that should trigger the navigation sound
-var _nav_actions: Array[String] = [
-	"ui_up", "ui_down", "ui_left", "ui_right", "ui_focus_next", "ui_focus_prev"
-]
-
 
 func _ready() -> void:
 	# Keep processing inputs even when the game is paused!
 	process_mode = Node.PROCESS_MODE_ALWAYS
-
-	# --- NEW: Initialize the permanent SFX player ---
-	_nav_sfx_player = AudioStreamPlayer.new()
-	_nav_sfx_player.stream = _ui_nav_stream
-	_nav_sfx_player.bus = AudioConstants.BUS_SFX_MENU
-	add_child(_nav_sfx_player)
 
 	# Load the resource here instead of preloading at the top
 	settings = load("res://config_resources/default_settings.tres") as GameSettingsResource
@@ -66,44 +46,65 @@ func _ready() -> void:
 		settings = GameSettingsResource.new()
 		settings.current_log_level = LogLevel.WARNING
 
-	# Connect global listener to monitor all runtime UI instantiation tracks
-	get_tree().node_added.connect(_on_node_added)
-
 	if Engine.is_editor_hint() or settings.enable_debug_logging:
 		settings.current_log_level = LogLevel.DEBUG
 	log_message("Log level set to: " + LogLevel.keys()[settings.current_log_level], LogLevel.DEBUG)
 	_load_settings()  # Load persisted settings first
 
 	# Connect to the resource signal to centralize side effects
-	if settings:
+	if is_instance_valid(settings):
 		settings.setting_changed.connect(_on_setting_changed)
 
-	# NEW: Signal Playwright that the engine is ready
+	# Signal Playwright that the engine is ready and initialize current log level state
 	if OS.has_feature("web"):
 		JavaScriptBridge.eval("window.godotInitialized = true")
+		if is_instance_valid(settings):
+			JavaScriptBridge.eval(
+				"window.currentLogLevel = " + JSON.stringify(settings.current_log_level)
+			)
 
 
-## Reactive handler for the Observer Pattern
+## Reactive handler for the Observer Pattern connected to GameSettingsResource signals.
+##
+## Triggers centralized side effects whenever a setting property is mutated.
+## Handles conditional console logging, encrypted disk persistence, and real-time state
+## synchronization with the browser window for Web builds and Playwright E2E tests.
+##
+## :param setting_name: The string identifier of the modified setting property.
+## :type setting_name: String
+## :param new_value: The updated property value.
+## :type new_value: Variant
+## :rtype: void
 func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
-	# Skip persistence and logging if we are in a bulk-loading state
+	# Guard: Skip persistence, logging, and JS bridge calls during bulk settings loading
+	# to prevent disk I/O lag, log spam, and redundant bridge updates during initialization.
 	if _is_loading_settings:
 		return
 
-	# FIX: Ensure we are comparing String to String or using correct types
 	var log_msg: String = "Setting '%s' updated to: %s" % [setting_name, str(new_value)]
 
-	# Automatically log the change
-	# OLD: log_message(log_msg, LogLevel.DEBUG)
-	# NEW: Prevent log spam by filtering out high-frequency runtime changes like fuel ticks
-	if setting_name != "current_fuel":
-		log_message(log_msg, LogLevel.DEBUG)
+	# High-frequency setting handling: 'current_fuel' mutates rapidly during gameplay loops.
+	# Bypass standard disk I/O and standard log spam to preserve game performance.
+	if setting_name == "current_fuel":
+		# Push live fuel value directly to browser window scope for Playwright E2E assertions
+		if OS.has_feature("web"):
+			JavaScriptBridge.eval("window.currentFuel = " + JSON.stringify(new_value))
 
-	# Automatically persist to disk
-	# OLD: _save_settings()
-	# NEW: Prevent disk I/O lag by stopping current_fuel from
-	# triggering a file save on every frame/timer tick
-	if setting_name != "current_fuel":
-		_save_settings()
+		# Conditionally log fuel updates ONLY if log level is explicitly set to DEBUG
+		if is_instance_valid(settings) and settings.current_log_level == LogLevel.DEBUG:
+			log_message(log_msg, LogLevel.DEBUG)
+		return
+
+	# Web / E2E state synchronization: Expose current log level to window.currentLogLevel
+	if setting_name == "current_log_level":
+		if OS.has_feature("web"):
+			JavaScriptBridge.eval("window.currentLogLevel = " + JSON.stringify(new_value))
+
+	# Log standard setting mutations at DEBUG level
+	log_message(log_msg, LogLevel.DEBUG)
+
+	# Automatically persist updated setting values to encrypted disk storage
+	_save_settings()
 
 
 ## Centralized "ensure initial focus" helper.
@@ -342,7 +343,8 @@ func load_options(menu_to_hide: Node) -> void:
 # @param message: The string message to log.
 # @param level: The log level (default INFO).
 func log_message(message: String, level: LogLevel = LogLevel.INFO) -> void:
-	# FIX: Guard the log level check. If settings is null, print everything.
+	# FIX: Guard the log level check.
+	# If settings is null, print everything.
 	if is_instance_valid(settings) and level < settings.current_log_level:
 		return  # Skip if below threshold
 
@@ -390,65 +392,6 @@ static func set_game_version_for_tests(value: String) -> void:
 	ProjectSettings.set_setting("application/config/version", value)
 
 
-## Use _input instead of _unhandled_input to catch events BEFORE the UI consumes them.
-func _input(event: InputEvent) -> void:
-	# The Ultimate Menu Check: Does a UI element currently have keyboard/gamepad focus?
-	var focus_owner: Control = get_viewport().gui_get_focus_owner()
-	var ui_has_focus: bool = is_instance_valid(focus_owner)
-
-	# Gate 1: Only play UI sounds if a UI element is focused OR we are in a known menu state
-	var is_menu_context: bool = (
-		get_tree().paused or options_open or not hidden_menus.is_empty() or ui_has_focus
-	)
-
-	if not is_menu_context:
-		return
-
-	# ADDED: Sound selection effect on hitting ESC/ui_cancel within any valid menu context
-	if event.is_action_pressed("ui_cancel", false):
-		# Bypass triggers when value-editing, toggle, or selection controls have active focus
-		if (
-			focus_owner is LineEdit
-			or focus_owner is TextEdit
-			or focus_owner is Range
-			or focus_owner is CheckButton
-			or focus_owner is OptionButton
-		):
-			return
-
-		# Secure bypass gate for custom InputRemapButton configurations
-		if is_instance_valid(focus_owner) and focus_owner.get_script() != null:
-			if (
-				"action" in focus_owner
-				or "action_name" in focus_owner
-				or focus_owner.has_method("cancel_remap")
-			):
-				return
-
-		AudioManager.play_sfx("ui_cancel")
-		return
-
-	for action: String in _nav_actions:
-		# FIXED: Changed from 'Input.is_action_just_pressed' to pass the automated verification
-		if event.is_action_pressed(action, false):
-			# Prevent double-audio when adjusting sliders.
-			if focus_owner is Slider and (action == "ui_left" or action == "ui_right"):
-				return
-
-			_play_ui_navigation_sfx()
-			return  # Exit once sound is triggered to avoid double-plays
-
-
-## Internal helper to play the navigation sound through the dedicated Menu SFX bus.
-func _play_ui_navigation_sfx() -> void:
-	if not is_instance_valid(_nav_sfx_player):
-		return
-
-	# If the sound is already playing (e.g., from rapid button presses),
-	# restart it from the beginning to feel responsive.
-	_nav_sfx_player.play()
-
-
 ## Ensures the encryption key is initialized and returns it.
 ## Centralizes the safety check so other scripts don't have to repeat it.
 func ensure_encryption_key() -> String:
@@ -473,16 +416,17 @@ func ensure_encryption_key() -> String:
 ## Security Guard:
 ## In production builds (when neither 'editor' nor 'debug' features are present),
 ## this function strictly validates that a secure salt was successfully injected
-## during the CI/CD deployment. If the salt is missing or matches the weak development
-## fallback, it forces an immediate engine crash. This prevents the game from silently
+## during the CI/CD deployment.
+## If the salt is missing or matches the weak development
+## fallback, it forces an immediate engine crash.
+## This prevents the game from silently
 ## encrypting data with a weak/empty key.
 ##
 ## :rtype: String (The SHA-256 hashed key)
 ## Generates a unique, deterministic encryption key for local save files.
-## Generates a unique, deterministic encryption key for local save files.
-## Generates a unique, deterministic encryption key for local save files.
 func _get_encryption_key() -> String:
-	# Safe placeholder. This is an open source repo, so the REAL salt
+	# Safe placeholder.
+	# This is an open source repo, so the REAL salt
 	# is injected by GitHub Actions / CI pipeline during the build process.
 	var salt: String = "CI_INJECT_SALT_HERE"
 
@@ -507,7 +451,8 @@ func _get_encryption_key() -> String:
 			push_error(error_msg)
 			OS.crash(error_msg)
 
-	# FIX: Removed JavaScriptBridge.eval() from here. Calling JS from a
+	# FIX: Removed JavaScriptBridge.eval() from here.
+	# Calling JS from a
 	# class-level variable initialization silently crashes the WebAssembly module!
 	var device_id: String = "web_fallback"
 	if not OS.has_feature("web"):
@@ -618,32 +563,3 @@ func safe_load_config(path: String) -> Dictionary:
 func set_test_encryption_key(override_key: String = "test_deterministic_key_123") -> void:
 	save_encryption_pass = override_key
 	log_message("Encryption key overridden for testing.", LogLevel.DEBUG)
-
-
-## Automatically hooks up base Button elements for confirmation sfx
-func _on_node_added(node: Node) -> void:
-	# FIXED: Use strict string evaluation to satisfy the Issue #763 contract
-	if node.get_class() == "Button":
-		var btn := node as Button
-		if is_instance_valid(btn):
-			# Flat Button Protection: Avoid superimposing global audio over theme audio
-			if btn.flat or btn.has_meta("no_global_sound"):
-				return
-
-			# Dialog Protection: Exclude internal buttons of Accept/ConfirmationDialogs
-			var parent := btn.get_parent()
-			while parent:
-				if parent is AcceptDialog:
-					return
-				parent = parent.get_parent()
-
-			# Guard against duplicate connections using the explicit named callable.
-			# NOTE: CONNECT_DEFERRED is strictly required here to pass the Issue #763
-			# verification contract and guarantee thread-safe scene tree execution.
-			if not btn.pressed.is_connected(_on_global_button_pressed):
-				btn.pressed.connect(_on_global_button_pressed, CONNECT_DEFERRED)
-
-
-## Centralized button audio execution target to prevent lambda churn
-func _on_global_button_pressed() -> void:
-	AudioManager.play_sfx("ui_accept")

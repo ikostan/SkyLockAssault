@@ -14,9 +14,9 @@ ensure test reports upload correctly to Codecov.
 
 ### Chores
 
-  - Updated build and export automation dependencies to maintain
+- Updated build and export automation dependencies to maintain
     compatibility and reliability.
-  - Enhanced CI/CD pipeline security by properly configuring token access
+- Enhanced CI/CD pipeline security by properly configuring token access
     for automated code coverage reporting.
 
 ---
@@ -26,7 +26,6 @@ ensure test reports upload correctly to Codecov.
 Updates CI workflows to use a newer pinned revision of the
 firebelley/godot-export GitHub Action and ensures the Codecov upload step
 has the required token set via environment variables.
-
 
 ### File-Level Changes
 
@@ -41,7 +40,7 @@ has the required token set via environment variables.
 
 ## Bots/AI Contributions Summary for PR #736
 
-This PR focuses on CI/CD maintenance: updating the pinned SHA for the 
+This PR focuses on CI/CD maintenance: updating the pinned SHA for the
 `firebelley/godot-export` GitHub Action across multiple workflows and
 configuring the `CODECOV_TOKEN` for authenticated coverage uploads.
 It received valuable support from automated bots and AI tools for dependency

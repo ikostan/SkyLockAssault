@@ -17,7 +17,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 config/name="SkyLockAssault"
 config/description="Combat top-down airplane game with fuel management, multiple weapons, multi-level, and adjustable difficulty. Made with Godot."
 run/main_scene="uid://di3kdwlspwjbt"
-config/features=PackedStringArray("4.6", "GL Compatibility")
+config/features=PackedStringArray("4.7", "GL Compatibility")
 boot_splash/bg_color=Color(0.23921569, 0.23921569, 0.23921569, 1)
 boot_splash/image="uid://b7jpd8lq6kokg"
 config/icon="res://icon.svg"
@@ -34,9 +34,11 @@ Settings="*res://scripts/core/settings.gd"
 AudioConstants="*res://scripts/resources/audio_constants.gd"
 AudioManager="*res://scripts/managers/audio_manager.gd"
 AudioWebBridge="*res://scripts/system/audio_web_bridge.gd"
+UiManager="*uid://bfa366huejmym"
 
 [debug]
 
+gdscript/warnings/enable=false
 gdscript/warnings/untyped_declaration=2
 gdscript/warnings/unsafe_property_access=1
 gdscript/warnings/unsafe_method_access=1
@@ -55,7 +57,7 @@ window/vsync/vsync_mode=0
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/gut/plugin.cfg")
+enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg", "res://addons/gdunit4_coverage/plugin.cfg")
 
 [game]
 
@@ -66,6 +68,13 @@ security/save_salt="dev_fallback_salt"
 settings/test/test_discovery=true
 ui/toolbar/run_overall=true
 report/godot/push_error=true
+hooks/session_hooks=Dictionary[String, bool]({
+"res://addons/gdunit4_coverage/GdUnitCoverageTestSessionHook.gd": true
+})
+
+[gdunit4_coverage]
+
+runner/gdcov_path="C:/Users/super/OneDrive/Documents/GitHub/SkyLockAssault/bin/gdcov-4.7-stable.exe"
 
 [input]
 

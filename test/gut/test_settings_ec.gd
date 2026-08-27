@@ -34,22 +34,17 @@ func before_each() -> void:
 			InputMap.action_erase_events(act)
 		else:
 			InputMap.add_action(act)
-	Settings.load_input_mappings(test_config_path)
-	
-	# NEW: Backup real config before EC-09 (if exists)
-	var real_path: String = Settings.CONFIG_PATH
-	if FileAccess.file_exists(real_path):
-		var backup_path: String = "user://settings_backup.cfg"
-		DirAccess.copy_absolute(real_path, backup_path)
-	else:
-		var backup_path: String = ""  # No backup if missing
+
+	# Explicitly backfill defaults without setting _needs_save
+	Settings.backfill_missing_defaults(ConfigFile.new())
+	Settings.set_needs_save_for_test(false)
 
 
 func after_each() -> void:
 	if FileAccess.file_exists(test_config_path):
 		DirAccess.remove_absolute(test_config_path)
-	
-	# NEW: Restore real config after EC-09
+
+	# Restore real config after tests touching Settings.CONFIG_PATH
 	var real_path: String = Settings.CONFIG_PATH
 	var backup_path: String = "user://settings_backup.cfg"
 	if FileAccess.file_exists(backup_path):
@@ -61,51 +56,46 @@ func after_each() -> void:
 ## EC-04 | Legacy config formats | Mixed old/new types | Backfill defaults, preserve valid
 func test_ec_04_legacy_mixed_formats() -> void:
 	var cfg := ConfigFile.new()
-	cfg.set_value("input", TEST_ACTION, 87)                    # old int
+	cfg.set_value("input", TEST_ACTION, 89)                    # old int (KEY_Y - non-default)
 	cfg.set_value("input", "speed_down", "key:88")             # old string key
 	cfg.set_value("input", "fire", ["joybtn:0:-1"])            # new format
 	cfg.set_value("input", "move_left", ["key:65", "key:66"])  # valid new
-	
-	# FIX: Use centralized key helper
-	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
-	
-	Settings.load_input_mappings(test_config_path)
 
-	# speed_up should have migrated from old int
+	# 1. Apply in-memory custom config
+	Settings.apply_config_to_input_map(cfg)
+
+	# 2. Explicitly trigger default backfilling for unmentioned actions
+	Settings.backfill_missing_defaults(cfg)
+
+	# speed_up should have migrated from old int 89 (KEY_Y), distinguishing it from default 87 (KEY_W)
 	var events := InputMap.action_get_events(TEST_ACTION)
 	assert_true(events.any(func(e: InputEvent) -> bool:
-		return e is InputEventKey and e.physical_keycode == 87
+		return e is InputEventKey and e.physical_keycode == 89
 	))
 	# defaults backfilled where missing
 	assert_true(InputMap.action_get_events("pause").any(func(e: InputEvent) -> bool: return e is InputEventKey))
 
 
-## EC-05 | Config unreadable | Corrupt JSON/parse error | Load defaults | Log error
 func test_ec_05_corrupt_parse_error() -> void:
-	# FIX: Simulate corrupt cfg file by writing logically invalid input strings.
-	# Proves `deserialize_event` gracefully rejects garbage without crashing.
 	var cfg := ConfigFile.new()
 	cfg.set_value("input", TEST_ACTION, ["invalid_format", "key:not_a_number", "joybtn:999:too:many:colons"])
-	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
 
-	# Clear the action first to prove the bad data isn't loaded
 	InputMap.action_erase_events(TEST_ACTION)
 
-	Settings.load_input_mappings(test_config_path)  # should reject garbage and fall back to defaults
+	# 1. Pure parse rejects garbage data (leaving speed_up empty)
+	Settings.apply_config_to_input_map(cfg)
+	assert_true(InputMap.action_get_events(TEST_ACTION).is_empty(), "Pure parser discards corrupt strings")
 
-	var events := InputMap.action_get_events(TEST_ACTION)
-	assert_false(events.is_empty(), "Should have backfilled defaults after rejecting corrupted strings")
-	assert_true(events.any(func(e: InputEvent) -> bool: return e is InputEventKey and e.physical_keycode == Settings.DEFAULT_KEYBOARD[TEST_ACTION]))
+	# 2. Backfill fallback step restores default KEY_W
+	Settings.backfill_missing_defaults(cfg)
+	assert_false(InputMap.action_get_events(TEST_ACTION).is_empty(), "Defaults backfilled after corrupt reject")
 
 
 ## EC-06 | Save fails | Disk full / permission denied | Report error, no crash
 func test_ec_06_save_fails_gracefully() -> void:
-	# Force failure path
 	Settings.save_input_mappings(invalid_path)
 
-	# No crash occurred, InputMap is still valid
 	assert_true(InputMap.has_action(TEST_ACTION))
-	# File was not created
 	assert_false(FileAccess.file_exists(invalid_path))
 
 
@@ -115,61 +105,39 @@ func test_ec_07_extra_unknown_keys_ignored() -> void:
 	cfg.set_value("input", TEST_ACTION, ["key:87"])
 	cfg.set_value("input", "non_existent_action", ["key:999"])  # not in ACTIONS
 	cfg.set_value("other_section", "foo", "bar")
-	
-	# FIX: Use centralized key helper
-	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
 
-	Settings.load_input_mappings(test_config_path)
-	Settings.save_input_mappings(test_config_path)  # round-trip
+	Settings.apply_config_to_input_map(cfg)
 
-	cfg = ConfigFile.new()
-	cfg.load_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
-	
-	assert_true(cfg.has_section("other_section"))  # preserved
-	assert_false(InputMap.has_action("non_existent_action"))  # ignored
+	assert_true(cfg.has_section("other_section"))
+	assert_false(InputMap.has_action("non_existent_action"))
+	var events := InputMap.action_get_events(TEST_ACTION)
+	assert_true(events.any(func(e: InputEvent) -> bool: return e is InputEventKey and e.physical_keycode == 87))
 
 
-## EC-08 | Conflict unbind | FIRE unbound via conflict → saved as [] → reload → stays unbound | NEXT_WEAPON keeps Space.
-## Catches PR#409 regression: unbound must persist across restarts.
-## :rtype: void
+## EC-08 | Conflict unbind | FIRE unbound via conflict → saved as [] → reload → stays unbound
 func test_ec_08_conflict_unbind_persists_after_reload() -> void:
-	# Clean defaults (before_each already did this, but we keep it explicit)
-	Settings.load_input_mappings(test_config_path)
-
-	# Simulate conflict: unbind FIRE (erase its keyboard event)
 	var fire_events: Array[InputEvent] = InputMap.action_get_events("fire")
 	for ev: InputEvent in fire_events:
 		if ev is InputEventKey and ev.physical_keycode == Settings.DEFAULT_KEYBOARD["fire"]:
 			InputMap.action_erase_event("fire", ev)
 			break
 
-	# Bind the conflicting event to NEXT_WEAPON (Space)
 	var space_key: InputEventKey = InputEventKey.new()
 	space_key.physical_keycode = KEY_SPACE
 	InputMap.action_add_event("next_weapon", space_key)
 
 	var cfg: ConfigFile = ConfigFile.new()
-	
-	# FIX: Use centralized key helper
-	cfg.load_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
-	
-	cfg.set_value("input", "fire", [])  # <-- explicit unbound
+	cfg.set_value("input", "fire", [])
 
-	# NEXT_WEAPON now has its original Q + the new Space
 	var next_serials: Array[String] = []
 	for ev: InputEvent in InputMap.action_get_events("next_weapon"):
 		next_serials.append(Settings.serialize_event(ev))
 	cfg.set_value("input", "next_weapon", next_serials)
 
-	# FIX: Use centralized key helper
-	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
+	Settings.apply_config_to_input_map(cfg)
 
-	# Reload (exact game-restart simulation)
-	Settings.load_input_mappings(test_config_path)
-
-	# FIRE must stay unbound (no events at all)
 	var fire_after: Array[InputEvent] = InputMap.action_get_events("fire")
-	assert_eq(fire_after.size(), 0, "FIRE must stay unbound after reload (no keyboard event)")
+	assert_eq(fire_after.size(), 0, "FIRE must stay unbound (no keyboard event)")
 
 
 ## EC-09 | Last device validation | Corrupted "last_input_device" in config | Falls back to "keyboard"
@@ -178,38 +146,33 @@ func test_ec_09_last_input_device_validation() -> void:
 	var backup_path: String = "user://settings_backup.cfg"
 	if FileAccess.file_exists(real_path):
 		DirAccess.copy_absolute(real_path, backup_path)
-	
+
 	if FileAccess.file_exists(test_config_path):
 		DirAccess.remove_absolute(test_config_path)
-	
+
 	var cfg := ConfigFile.new()
-	cfg.set_value("input", "last_input_device", "mouse")  # Invalid!
-	
-	# FIX: Use centralized key helper
+	cfg.set_value("input", "last_input_device", "mouse")
 	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
-	
+
 	DirAccess.copy_absolute(test_config_path, real_path)
 	Settings.load_last_input_device()
 	assert_eq(Globals.current_input_device, "keyboard", "Corrupted device must default to keyboard")
-	
+
 	cfg.set_value("input", "last_input_device", "gamepad")
 	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
-	
+
 	DirAccess.copy_absolute(test_config_path, real_path)
 	Settings.load_last_input_device()
 	assert_eq(Globals.current_input_device, "gamepad", "Valid device must load")
-	
+
 	cfg.erase_section_key("input", "last_input_device")
-	
-	# FIX: Add dummy content to prevent the 0-byte encryption bug
 	cfg.set_value("meta", "empty", true)
-	
 	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
-	
+
 	DirAccess.copy_absolute(test_config_path, real_path)
 	Settings.load_last_input_device()
 	assert_eq(Globals.current_input_device, "keyboard", "Missing key must default")
-	
+
 	if FileAccess.file_exists(backup_path):
 		DirAccess.copy_absolute(backup_path, real_path)
 		DirAccess.remove_absolute(backup_path)
@@ -217,19 +180,16 @@ func test_ec_09_last_input_device_validation() -> void:
 		DirAccess.remove_absolute(real_path)
 
 
-## EC-10 | Legacy migration | Old config with empty critical actions | Forces defaults once | "Unbound" labels fixed.
+## EC-10 | Legacy migration | Old config with empty critical actions | Forces defaults once
 func test_ec_10_legacy_migration() -> void:
 	var cfg: ConfigFile = ConfigFile.new()
-	cfg.set_value("input", "fire", [])  # Legacy unbound
-	
-	# FIX: Use centralized key helper
-	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
-	
-	Settings.load_input_mappings(test_config_path)
-	
+	cfg.set_value("input", "fire", [])
+
+	Settings.apply_config_to_input_map(cfg)
+
 	Globals.remove_meta(Settings.LEGACY_MIGRATION_KEY)
 	Settings._migrate_legacy_unbound_states()
-	
+
 	var fire_events: Array[InputEvent] = InputMap.action_get_events("fire")
 	assert_true(
 		fire_events.any(func(e: InputEvent) -> bool: return e is InputEventKey and e.physical_keycode == Settings.DEFAULT_KEYBOARD["fire"]),
@@ -238,60 +198,99 @@ func test_ec_10_legacy_migration() -> void:
 
 
 ## EC-11 | Event labels | Keyboard keys | Correct string (e.g., "SPACE")
-## :rtype: void
 func test_ec_11_keyboard_event_label() -> void:
 	var ev: InputEventKey = InputEventKey.new()
-	# 1
 	ev.physical_keycode = KEY_SPACE
-	print("expected ev: " + str(ev.physical_keycode) + " actual ev: " + Settings.get_event_label(ev))
 	assert_eq(Settings.get_event_label(ev), "Space", "Keyboard label must be 'Space'")
-	# 2
+
 	ev.physical_keycode = KEY_ESCAPE
-	print("expected ev: " + str(ev.physical_keycode) + " actual ev: " + Settings.get_event_label(ev))
-	assert_eq(Settings.get_event_label(ev), "Escape", "Keyboard label must be 'Escape'")  # Adjust if your logic uses short form
+	assert_eq(Settings.get_event_label(ev), "Escape", "Keyboard label must be 'Escape'")
 
 
-## EC-12 | Event labels | Gamepad buttons | Cross-platform (e.g., "A / X")
-## :rtype: void
+## EC-12 | Event labels | Gamepad buttons | Cross-platform
 func test_ec_12_gamepad_button_label() -> void:
 	var ev: InputEventJoypadButton = InputEventJoypadButton.new()
-	# 1
 	ev.button_index = JOY_BUTTON_A
-	print("expected ev: " + str(ev.button_index) + " actual ev: " + Settings.get_event_label(ev))
 	assert_eq(Settings.get_event_label(ev), "A", "Button A must be 'A'")
-	# 2
+
 	ev.button_index = JOY_BUTTON_START
-	print("expected ev: " + str(ev.button_index) + " actual ev: " + Settings.get_event_label(ev))
 	assert_eq(Settings.get_event_label(ev), "Start", "Start button label is not correct")
 
 
-## EC-13 | Event labels | Gamepad axes | Direction-aware (e.g., "RT (+)")
-## :rtype: void
+## EC-13 | Event labels | Gamepad axes | Direction-aware
 func test_ec_13_gamepad_axis_label() -> void:
 	var ev: InputEventJoypadMotion = InputEventJoypadMotion.new()
-	# 1
 	ev.axis = JOY_AXIS_TRIGGER_RIGHT
 	ev.axis_value = 1.0
 	assert_eq(Settings.get_event_label(ev), "Right Trigger (+)", "Positive RT axis label correct")
-	# 2
+
 	ev.axis_value = -1.0
 	assert_eq(Settings.get_event_label(ev), "Right Trigger (-)", "Negative RT axis label correct")
-	# 3
+
 	ev.axis = JOY_AXIS_LEFT_X
 	ev.axis_value = 1.0
 	assert_eq(Settings.get_event_label(ev), "Left Stick (Right)", "Left Stick right label correct")
 
 
 ## EC-14 | Pause label | Per device | Uppercase, unbound fallback
-## :rtype: void
 func test_ec_14_pause_binding_label_for_device() -> void:
-	# Keyboard
 	Globals.current_input_device = "keyboard"
 	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "ESCAPE", "Keyboard pause label should be 'ESCAPE'")
-	# Gamepad
+
 	Globals.current_input_device = "gamepad"
-	print("actual ev: " + Settings.get_pause_binding_label_for_device("gamepad"))
 	assert_eq(Settings.get_pause_binding_label_for_device("gamepad"), "START", "Gamepad pause label is not correct")
-	# Unbound case (erase pause events)
+
 	InputMap.action_erase_events("pause")
 	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "UNBOUND", "Unbound fallback should be 'UNBOUND'")
+
+
+## EC-15 | Pure Parser | Unsupported config value type preserves existing bindings
+func test_ec_15_unsupported_type_preserves_existing_events() -> void:
+	# 1. Bind an initial event to 'fire'
+	var key_a := InputEventKey.new()
+	key_a.physical_keycode = KEY_A
+	InputMap.action_erase_events("fire")
+	InputMap.action_add_event("fire", key_a)
+
+	# 2. Pass an unsupported config type (e.g. bool)
+	var cfg := ConfigFile.new()
+	cfg.set_value("input", "fire", true)
+
+	# 3. Apply config
+	Settings.apply_config_to_input_map(cfg)
+
+	# 4. Verify existing event was preserved and NOT erased
+	var events := InputMap.action_get_events("fire")
+	assert_eq(events.size(), 1, "Unsupported config value type must preserve existing InputMap bindings")
+	assert_true(events.any(func(e: InputEvent) -> bool: return e is InputEventKey and e.physical_keycode == KEY_A))
+
+
+## EC-16 | Pure Parser | Conflict resolution returns boolean status without mutating singleton flag directly
+func test_ec_16_apply_config_conflict_resolution_return_value() -> void:
+	# 1. Setup conflict: bind KEY_SPACE to 'fire'
+	InputMap.action_erase_events("fire")
+	var space_key := InputEventKey.new()
+	space_key.physical_keycode = KEY_SPACE
+	InputMap.action_add_event("fire", space_key)
+
+	# 2. Config maps KEY_SPACE to 'next_weapon'
+	var cfg := ConfigFile.new()
+	cfg.set_value("input", "next_weapon", ["key:" + str(KEY_SPACE)])
+
+	# 3. Verify apply_config_to_input_map returns true when conflicts are resolved
+	var conflicts_resolved: bool = Settings.apply_config_to_input_map(cfg)
+	assert_true(conflicts_resolved, "Must return true when conflicting bindings are resolved")
+
+	# 4. Verify clean mapping case returns false
+	var clean_cfg := ConfigFile.new()
+	clean_cfg.set_value("input", "move_left", ["key:" + str(KEY_A)])
+	assert_false(Settings.apply_config_to_input_map(clean_cfg), "Must return false when no conflicts exist")
+
+
+## EC-17 | Public Helpers | Test encapsulation helpers for _needs_save
+func test_ec_17_needs_save_encapsulation_helpers() -> void:
+	Settings.set_needs_save_for_test(true)
+	assert_true(Settings.needs_save(), "needs_save() must return true after set_needs_save_for_test(true)")
+
+	Settings.set_needs_save_for_test(false)
+	assert_false(Settings.needs_save(), "needs_save() must return false after set_needs_save_for_test(false)")

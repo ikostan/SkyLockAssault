@@ -7,6 +7,9 @@
 
 extends Node
 
+## Base path for all UI sound effects.
+const SFX_DIR_PATH: String = "res://files/sounds/sfx/"
+
 # --- Audio Bus Names ---
 const BUS_MASTER: String = "Master"
 const BUS_MUSIC: String = "Music"
@@ -19,6 +22,9 @@ const BUS_SFX_MENU: String = "SFX_Menu"
 const SFX_SLIDER: String = "slider"
 const SFX_MUTE_TOGGLE: String = "mute_toggle"  # For future CheckButton task
 const SFX_UI_NAVIGATION: String = "ui_navigation"
+
+## Centralized SFX keys
+const SFX_CHECK = "check"
 
 # Centralized config with defaults and var mappings
 const BUS_CONFIG: Dictionary = {
@@ -65,3 +71,35 @@ const BUS_CONFIG: Dictionary = {
 		"default_muted": false
 	}
 }
+
+# --- Global UI SFX Mappings (Issue #490 Compliance) ---
+# Decoupled from file extensions and folder layouts to prevent silent breaks on asset moves
+const UI_SFX: Dictionary = {
+	"ui_up": "ui_navigation",
+	"ui_down": "ui_navigation",
+	"ui_left": "ui_navigation",
+	"ui_right": "ui_navigation",
+	"ui_focus_next": "ui_navigation",
+	"ui_focus_prev": "ui_navigation",
+	"ui_accept": "ui_accept",
+	"ui_cancel": "ui_cancel"
+}
+
+# --- SFX Asset Path Resolution Map ---
+# Maps logical SFX identifiers to their exact filenames with extensions.
+# This prevents asset changes from requiring script alterations.
+const SFX_ASSET_MAP: Dictionary = {
+	"slider": "slider.wav",
+	"mute_toggle": "check.wav",
+	"ui_navigation": "ui_navigation.wav",
+	"ui_accept": "ui_accept.wav",
+	"ui_cancel": "ui_cancel.wav",
+	"airplane_prop": "airplane_prop.ogg",
+	"retro_laser": "retro-laser-1-236669.mp3"
+}
+
+## Centralized list of UI navigation actions to ensure consistency
+## and prevent duplicate definitions across the codebase.
+const NAV_ACTIONS: Array[String] = [
+	"ui_up", "ui_down", "ui_left", "ui_right", "ui_focus_next", "ui_focus_prev"
+]

@@ -1,15 +1,14 @@
-# Copyright (C) 2025 Egor Kostan
+# Copyright (C) 2025-2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 # tests/audio_flow_test.py
 """
-Warning Popups & Constraints Test Suite (Playwright + UI Automation with DOM Overlays)
-===================================================================================
+Warning Popups & Constraints Test Suite (Playwright + UI Automation Overlay)
+=============================================================================
 
 Overview
 --------
-E2E tests for WARN-01 to WARN-03: Validate warning popups when adjusting volumes with mutes enabled.
-
-Navigates to audio menu, adjusts sliders/mutes, verifies states, logs, and popups via console logs.
+E2E tests for WARN-01 to WARN-03: Validate warning popups when adjusting
+volumes with mutes enabled.
 
 Prerequisites
 -------------
@@ -28,297 +27,259 @@ v8_coverage_audio_flow_test.json, artifacts/test_audio_failure_*.png/txt
 import json
 import os
 import time
+from typing import Any
 
-import pytest
 from playwright.sync_api import Page
 
-# Configuration for stability in different environments
-# Default to 5000ms, but allow CI to override via environment variable
-DEFAULT_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "30000"))
-TEST_TIMEOUT = int(os.getenv("TEST_TIMEOUT", "5000"))
+from tests.test_utils import (
+    TEST_TIMEOUT,
+    open_audio_menu,
+    open_options_menu,
+    set_log_level,
+    wait_for_console_log,
+)
 
 
-@pytest.mark.record_har
-def test_audio_flow(page: Page) -> None:
+def test_audio_flow(shared_page: Page) -> None:
     """
     Main test for warning popups and constraints using DOM overlays.
 
-    Implements WARN-01 to WARN-03: Mute/adjust, verify unchanged values, warning logs.
-
-    :param page: The Playwright page object.
-    :type page: Page
-    :return: None
-    :rtype: None
+    Implements WARN-01 to WARN-03: Mute/adjust, verify unchanged values, warnings.
     """
     logs: list[dict[str, str]] = []
     cdp_session = None
 
-    def on_console(msg) -> None:
-        """
-        Console message handler.
-
-        :param msg: The console message.
-        :type msg: Any
-        :rtype: None
-        """
+    def on_console(msg: Any) -> None:
+        """Console message handler to capture logs."""
         logs.append({"type": msg.type, "text": msg.text})
 
-    page.on("console", on_console)
+    shared_page.on("console", on_console)
+
     try:
-        # Start CDP session for V8 JS coverage (workaround for Python Playwright lacking native coverage API)
-        cdp_session = page.context.new_cdp_session(page)
+        # Start CDP session for V8 JS coverage
+        cdp_session = shared_page.context.new_cdp_session(shared_page)
         cdp_session.send("Profiler.enable")
         cdp_session.send(
             "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
         )
 
-        page.goto(
-            "http://localhost:8080/index.html",
-            wait_until="networkidle",
-            timeout=DEFAULT_TIMEOUT,
-        )
-        # 1. Wait for the engine to actually start the splash scene
-        page.wait_for_timeout(TEST_TIMEOUT)
-        page.wait_for_function("() => window.godotInitialized", timeout=DEFAULT_TIMEOUT)
+        # 1-3. Load engine, open options, set log level to DEBUG (0),
+        # and open audio menu
+        open_options_menu(shared_page)
+        set_log_level(shared_page, logs, level_index=0)
+        open_audio_menu(shared_page, logs)
 
-        # Verify canvas
-        canvas = page.locator("canvas")
-        page.wait_for_selector("canvas", state="visible", timeout=DEFAULT_TIMEOUT)
-        box: dict[str, float] | None = canvas.bounding_box()
-        assert box is not None, "Canvas not found"
-        assert "SkyLockAssault" in page.title(), "Title not found"
-
-        # Open options
-        page.wait_for_selector("#options-button", state="visible", timeout=TEST_TIMEOUT)
-        # page.click("#options-button", force=True)
-        page.wait_for_function(
-            "window.optionsPressed !== undefined", timeout=TEST_TIMEOUT
+        # Get initial slider values
+        initial_sfx: str = shared_page.evaluate(
+            "document.getElementById('sfx-slider').value"
         )
-        page.evaluate("window.optionsPressed([])")
-
-        # Go to Advanced settings
-        page.wait_for_selector(
-            "#advanced-button", state="visible", timeout=TEST_TIMEOUT
-        )
-        # page.click("#advanced-button", force=True)
-        page.wait_for_function(
-            "window.advancedPressed !== undefined", timeout=TEST_TIMEOUT
-        )
-        page.evaluate("window.advancedPressed([])")
-        page.wait_for_function(
-            "window.changeLogLevel !== undefined", timeout=TEST_TIMEOUT
-        )
-        advanced_display: str = page.evaluate(
-            "window.getComputedStyle(document.getElementById('log-level-select')).display"
-        )
-        assert (
-            advanced_display == "block"
-        ), "Advanced menu not loaded (selected log level not displayed)"
-
-        # Set log level DEBUG
-        pre_change_log_count = len(logs)
-        page.evaluate("window.changeLogLevel([0])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "log level changed to: debug" in log["text"].lower() for log in new_logs
-        )
-        assert page.evaluate(
-            "document.getElementById('audio-button') !== null"
-        ), "Audio button not found/displayed"
-
-        # Go back to Options menu
-        page.wait_for_selector(
-            "#advanced-back-button", state="visible", timeout=TEST_TIMEOUT
-        )
-        # page.click("#advanced-back-button", force=True)
-        page.wait_for_function(
-            "window.advancedBackPressed !== undefined", timeout=TEST_TIMEOUT
-        )
-        page.evaluate("window.advancedBackPressed([])")
-
-        # Open audio
-        pre_change_log_count = len(logs)
-        page.wait_for_selector("#audio-button", state="visible", timeout=TEST_TIMEOUT)
-        # page.click("#audio-button", force=True)
-        page.wait_for_function(
-            "window.audioPressed !== undefined", timeout=TEST_TIMEOUT
-        )
-        page.evaluate("window.audioPressed([])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-        assert (
-            page.evaluate(
-                "window.getComputedStyle(document.getElementById('master-slider')).display"
-            )
-            == "block"
-        )
-        new_logs = logs[pre_change_log_count:]
-        assert any("audio button pressed" in log["text"].lower() for log in new_logs)
-
-        # Get initial values
-        initial_sfx: str = page.evaluate("document.getElementById('sfx-slider').value")
-        initial_weapon: str = page.evaluate(
+        initial_weapon: str = shared_page.evaluate(
             "document.getElementById('weapon-slider').value"
         )
-        initial_music: str = page.evaluate(
+        initial_music: str = shared_page.evaluate(
             "document.getElementById('music-slider').value"
         )
-        initial_rotors: str = page.evaluate(
+        initial_rotors: str = shared_page.evaluate(
             "document.getElementById('rotors-slider').value"
         )
 
-        # WARN-01: Master muted → attempt sub-volume adjust (SFX)
+        # WARN-01: Master muted ➔ attempt sub-volume adjust (SFX)
         pre_change_log_count = len(logs)
-        page.wait_for_function(
-            "window.toggleMuteMaster !== undefined", timeout=TEST_TIMEOUT
+        shared_page.wait_for_function(
+            "() => typeof window.toggleMuteMaster !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.toggleMuteMaster([0])")  # Mute
-        page.wait_for_timeout(TEST_TIMEOUT)
-        new_logs = logs[pre_change_log_count:]
-        assert any("master is muted" in log["text"].lower() for log in new_logs)
+        shared_page.evaluate("window.toggleMuteMaster([0])")  # Mute
+        wait_for_console_log(
+            logs,
+            lambda text: "master is muted" in text,
+            pre_change_log_count,
+            shared_page,
+        )
+
         # Change SFX Volume when Master is muted
         pre_change_log_count = len(logs)
-        page.wait_for_function(
-            "window.changeSfxVolume !== undefined", timeout=TEST_TIMEOUT
+        shared_page.wait_for_function(
+            "() => typeof window.changeSfxVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.changeSfxVolume([0])")
-        page.wait_for_timeout(TEST_TIMEOUT)
+        shared_page.evaluate("window.changeSfxVolume([0])")
+        wait_for_console_log(
+            logs,
+            lambda text: "master muted, cannot adjust sub-volume" in text
+            or "warning dialog" in text,
+            pre_change_log_count,
+            shared_page,
+        )
         assert (
-            page.evaluate("document.getElementById('sfx-slider').value") == initial_sfx
+            shared_page.evaluate("document.getElementById('sfx-slider').value")
+            == initial_sfx
         ), "SFX value changed unexpectedly"
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "master muted, cannot adjust sub-volume" in log["text"].lower()
-            for log in new_logs
-        ) or any("warning dialog" in log["text"].lower() for log in new_logs)
 
-        # Additional: Master muted → attempt sub-volume adjust (Music)
-        # Attempt to change music while Master is still muted
+        # Master muted ➔ attempt sub-volume adjust (Music)
         pre_change_log_count = len(logs)
-        page.wait_for_function(
-            "window.changeMusicVolume !== undefined", timeout=TEST_TIMEOUT
+        shared_page.wait_for_function(
+            "() => typeof window.changeMusicVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.changeMusicVolume([0.3])")
-        page.wait_for_timeout(TEST_TIMEOUT)
+        shared_page.evaluate("window.changeMusicVolume([0.3])")
+        wait_for_console_log(
+            logs,
+            lambda text: "master muted, cannot adjust sub-volume" in text
+            or "warning dialog" in text,
+            pre_change_log_count,
+            shared_page,
+        )
         assert (
-            page.evaluate("document.getElementById('music-slider').value")
+            shared_page.evaluate("document.getElementById('music-slider').value")
             == initial_music
         ), "Music value changed unexpectedly under Master mute"
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "master muted, cannot adjust sub-volume" in log["text"].lower()
-            for log in new_logs
-        ) or any("warning dialog" in log["text"].lower() for log in new_logs)
 
-        # Additional: Master muted → attempt sub-volume adjust (Rotors)
-        # Assuming Rotors is affected by Master mute (as a deeper sub-volume)
+        # Master muted ➔ attempt sub-volume adjust (Rotors)
         pre_change_log_count = len(logs)
-        page.wait_for_function(
-            "window.changeRotorsVolume !== undefined", timeout=TEST_TIMEOUT
+        shared_page.wait_for_function(
+            "() => typeof window.changeRotorsVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.changeRotorsVolume([0.4])")
-        page.wait_for_timeout(TEST_TIMEOUT)
+        shared_page.evaluate("window.changeRotorsVolume([0.4])")
+        wait_for_console_log(
+            logs,
+            lambda text: "master muted, cannot adjust sub-volume" in text
+            or "warning dialog" in text,
+            pre_change_log_count,
+            shared_page,
+        )
         assert (
-            page.evaluate("document.getElementById('rotors-slider').value")
+            shared_page.evaluate("document.getElementById('rotors-slider').value")
             == initial_rotors
         ), "Rotors value changed unexpectedly under Master mute"
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "master muted, cannot adjust sub-volume" in log["text"].lower()
-            for log in new_logs
-        ) or any("warning dialog" in log["text"].lower() for log in new_logs)
 
         # Unmute Master for next tests
-        page.wait_for_function(
-            "window.toggleMuteMaster !== undefined", timeout=TEST_TIMEOUT
-        )
-        page.evaluate("window.toggleMuteMaster([1])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-
-        # WARN-02: SFX muted → attempt weapon adjust
-        page.wait_for_function(
-            "window.toggleMuteSfx !== undefined", timeout=TEST_TIMEOUT
-        )
-        page.evaluate("window.toggleMuteSfx([0])")  # Mute
-        page.wait_for_timeout(TEST_TIMEOUT)
         pre_change_log_count = len(logs)
-        page.wait_for_function(
-            "window.changeWeaponVolume !== undefined", timeout=TEST_TIMEOUT
+        shared_page.wait_for_function(
+            "() => typeof window.toggleMuteMaster !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.changeWeaponVolume([0])")
-        page.wait_for_timeout(TEST_TIMEOUT)
+        shared_page.evaluate("window.toggleMuteMaster([1])")
+        wait_for_console_log(
+            logs,
+            lambda text: "master mute button toggled to: true" in text,
+            pre_change_log_count,
+            shared_page,
+        )
+
+        # WARN-02: SFX muted ➔ attempt weapon adjust
+        shared_page.wait_for_function(
+            "() => typeof window.toggleMuteSfx !== 'undefined'",
+            timeout=TEST_TIMEOUT,
+        )
+        shared_page.evaluate("window.toggleMuteSfx([0])")  # Mute
+
+        pre_change_log_count = len(logs)
+        shared_page.wait_for_function(
+            "() => typeof window.changeWeaponVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
+        )
+        shared_page.evaluate("window.changeWeaponVolume([0])")
+        wait_for_console_log(
+            logs,
+            lambda text: "sfx muted, cannot adjust" in text or "warning dialog" in text,
+            pre_change_log_count,
+            shared_page,
+        )
         assert (
-            page.evaluate("document.getElementById('weapon-slider').value")
+            shared_page.evaluate("document.getElementById('weapon-slider').value")
             == initial_weapon
         ), "Weapon value changed unexpectedly"
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "sfx muted, cannot adjust" in log["text"].lower() for log in new_logs
-        ) or any("warning dialog" in log["text"].lower() for log in new_logs)
 
-        # Additional: SFX muted → attempt rotors adjust (assuming Rotors under SFX)
+        # SFX muted ➔ attempt rotors adjust
         pre_change_log_count = len(logs)
-        page.wait_for_function(
-            "window.changeRotorsVolume !== undefined", timeout=TEST_TIMEOUT
+        shared_page.wait_for_function(
+            "() => typeof window.changeRotorsVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.changeRotorsVolume([0.5])")
-        page.wait_for_timeout(TEST_TIMEOUT)
+        shared_page.evaluate("window.changeRotorsVolume([0.5])")
+        wait_for_console_log(
+            logs,
+            lambda text: "sfx muted, cannot adjust" in text or "warning dialog" in text,
+            pre_change_log_count,
+            shared_page,
+        )
         assert (
-            page.evaluate("document.getElementById('rotors-slider').value")
+            shared_page.evaluate("document.getElementById('rotors-slider').value")
             == initial_rotors
         ), "Rotors value changed unexpectedly under SFX mute"
-        new_logs = logs[pre_change_log_count:]
-        assert any(
-            "sfx muted, cannot adjust" in log["text"].lower() for log in new_logs
-        ) or any("warning dialog" in log["text"].lower() for log in new_logs)
 
         # Unmute SFX
-        page.wait_for_function(
-            "window.toggleMuteSfx !== undefined", timeout=TEST_TIMEOUT
-        )
-        page.evaluate("window.toggleMuteSfx([1])")
-        page.wait_for_timeout(TEST_TIMEOUT)
-
-        # WARN-03: Master unmuted → adjust sub-volume (Music)
-        # Capture logs before the change to isolate new ones (good for debugging in Godot tests)
         pre_change_log_count = len(logs)
-        page.wait_for_function(
-            "window.changeMusicVolume !== undefined", timeout=TEST_TIMEOUT
+        shared_page.wait_for_function(
+            "() => typeof window.toggleMuteSfx !== 'undefined'",
+            timeout=TEST_TIMEOUT,
         )
-        page.evaluate("window.changeMusicVolume([0.6])")
-        page.wait_for_timeout(TEST_TIMEOUT)
+        shared_page.evaluate("window.toggleMuteSfx([1])")
+        wait_for_console_log(
+            logs,
+            lambda text: "sfx mute button toggled to: true" in text,
+            pre_change_log_count,
+            shared_page,
+        )
 
-        # Verify the value changed (as expected, no mute constraint)
-        assert (
-            page.evaluate("document.getElementById('music-slider').value") == "0.6"
-        ), "Music value not changed"
+        # WARN-03: Master unmuted ➔ adjust sub-volume (Music)
+        pre_change_log_count = len(logs)
+        shared_page.wait_for_function(
+            "() => typeof window.changeMusicVolume !== 'undefined'",
+            timeout=TEST_TIMEOUT,
+        )
+        shared_page.evaluate("window.changeMusicVolume([0.6])")
 
-        # Check only new logs for no warnings, ignoring known encryption fallbacks
+        # Deterministic check for value update
+        shared_page.wait_for_function(
+            "() => document.getElementById('music-slider').value === '0.6'",
+            timeout=TEST_TIMEOUT,
+        )
+
+        # Ensure no unexpected warning logs were generated
         new_logs = logs[pre_change_log_count:]
         for log in new_logs:
             text = log["text"].lower()
             if "warning" in text and "encryption aborted" not in text:
-                assert (
-                    False
-                ), f"Unexpected warning after music volume change: {log['text']}"
+                raise AssertionError(
+                    f"Unexpected warning after music volume change: {log['text']}"
+                )
 
     except Exception as e:
         print(f"Test: 'test_audio_flow' failed: {str(e)}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp: int = int(time.time())
-        page.screenshot(path=f"artifacts/test_audio_failure_screenshot_{timestamp}.png")
+        shared_page.screenshot(
+            path=f"artifacts/test_audio_failure_screenshot_{timestamp}.png"
+        )
         log_file: str = f"artifacts/test_audio_failure_console_logs_{timestamp}.txt"
-        with open(log_file, "w") as f:
+        with open(log_file, "w", encoding="utf-8") as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
-        with open(f"artifacts/test_audio_failure_html_{timestamp}.html", "w") as f:
-            f.write(page.content())
+        with open(
+            f"artifacts/test_audio_failure_html_{timestamp}.html", "w", encoding="utf-8"
+        ) as f:
+            f.write(shared_page.content())
         raise
     finally:
+        # 1. Unregister console listener from the shared module page
+        try:
+            shared_page.remove_listener("console", on_console)
+        except Exception:
+            pass
+
+        # 2. Stop coverage profiling and detach CDP session
         if cdp_session:
-            # Stop V8 coverage and save to file (even on failure)
-            coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
-            cdp_session.send("Profiler.stopPreciseCoverage")
-            cdp_session.send("Profiler.disable")
-            with open("v8_coverage_audio_flow_test.json", "w") as f:
-                json.dump(coverage, f)
+            try:
+                coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
+                cdp_session.send("Profiler.stopPreciseCoverage")
+                cdp_session.send("Profiler.disable")
+                cdp_session.detach()
+                with open(
+                    "v8_coverage_audio_flow_test.json", "w", encoding="utf-8"
+                ) as f:
+                    json.dump(coverage, f)
+            except Exception:
+                pass

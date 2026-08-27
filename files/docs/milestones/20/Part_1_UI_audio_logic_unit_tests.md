@@ -8,23 +8,27 @@ This PR introduces an automated testing suite for `AudioSettings` and implements
 ## 🚀 Key Changes
 
 ### 1. Architectural Testing Suite (`test_audio_settings_interaction.gd`)
+
 * **GUT Integration:** Established a comprehensive test suite using the GUT framework.
 * **Focus-Gate Validation:** Added stress tests to verify that audio triggers only fire when the UI component has focus, validating the logic in `audio_settings.gd`.
 * **Resilience Testing:** Introduced boundary and stress tests to ensure:
-    * Rapid UI interaction (spamming) does not overwhelm the audio pool.
-    * Out-of-range volume values and invalid SFX keys are handled gracefully without crashing.
+  * Rapid UI interaction (spamming) does not overwhelm the audio pool.
+  * Out-of-range volume values and invalid SFX keys are handled gracefully without crashing.
 * **State Management:** Mocked `Globals.previous_scene` during test execution to prevent unintended scene changes (restarts) during UI interaction tests.
 
 ### 2. AudioManager Refactoring (`audio_manager.gd`)
+
 * **Diagnostic APIs:** Added `is_sfx_playing()` and `get_active_sfx_stream_path()` to expose internal state to tests.
-    * *Note:* These are explicitly commented as `## [DIAGNOSTIC]` to signal their appropriate use.
+  * *Note:* These are explicitly commented as `## [DIAGNOSTIC]` to signal their appropriate use.
 * **Determinism:** Updated `get_active_sfx_stream_path()` to return the most recently played SFX, ensuring tests have a deterministic target rather than an arbitrary pool index.
 
 ### 3. Component Resilience (`volume_slider.gd`)
+
 * **Signal Integrity:** Updated the volume logic to allow programmatic updates via `_on_value_changed()` (explicitly called by tests), bypassing issues where `slider.value` property setters do not emit signals.
 * **Input Clamping:** Implemented `clamp()` logic in `_on_value_changed` to ensure slider values always stay within valid bounds, improving resilience against invalid user or test inputs.
 
 ### 4. Repository Health
+
 * **Metadata Cleanup:** Updated `.gitignore` to ignore engine-generated `*.uid` files, eliminating "noisy" diffs and potential merge conflicts.
 
 ---
@@ -53,6 +57,7 @@ This PR introduces an automated testing suite for `AudioSettings` and implements
 ## Reviewer's Guide
 
 Adds diagnostic AudioManager APIs to inspect active SFX, tightens VolumeSlider value handling, and introduces a comprehensive GUT-based UI interaction test suite for audio settings, plus a minor CI workflow bump and docs for the milestone.
+
 ### File-Level Changes
 
 | Change                                                                                             | Details                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Files                                                                                                   |
@@ -66,12 +71,12 @@ Adds diagnostic AudioManager APIs to inspect active SFX, tightens VolumeSlider v
 
 | Issue                                                | Objective                                                                                                                                                                                                                                                                                                                             | Addressed | Explanation |
 |------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-------------|
-| https://github.com/ikostan/SkyLockAssault/issues/494 | Add a comprehensive GUT test suite for the audio settings UI (audio_settings.gd) that validates interaction-to-audio mapping with AudioManager (mute toggles, sliders, reset), focus-gate behavior, spam/regression scenarios, invalid inputs, and pool/leak resilience using public inspection APIs and compatible with headless CI. | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/494 | Expose or extend AudioManager’s public inspection APIs to allow tests to query SFX playback state (whether SFX are playing and which stream is active) without accessing internal pool details.                                                                                                                                       | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/494> | Add a comprehensive GUT test suite for the audio settings UI (audio_settings.gd) that validates interaction-to-audio mapping with AudioManager (mute toggles, sliders, reset), focus-gate behavior, spam/regression scenarios, invalid inputs, and pool/leak resilience using public inspection APIs and compatible with headless CI. | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/494> | Expose or extend AudioManager’s public inspection APIs to allow tests to query SFX playback state (whether SFX are playing and which stream is active) without accessing internal pool details.                                                                                                                                       | ✅         |             |
 
 ### Possibly linked issues
 
-- **#ISSUE_NUMBER**: The PR implements the specified audio settings UI GUT tests and public AudioManager inspection APIs matching the issue scope.
+* **#ISSUE_NUMBER**: The PR implements the specified audio settings UI GUT tests and public AudioManager inspection APIs matching the issue scope.
 
 ---
 
@@ -81,19 +86,19 @@ This PR adds public diagnostic helpers (`is_sfx_playing()`, `get_active_sfx_stre
 
 ### Automated Bots & AI Tools
 
-- **@dependabot[bot]**: Handled the dependency update by bumping `codecov/codecov-action` from 6.0.1 to 7.0.0 (major version) in the browser test workflow, including the automated commit and related merge. This improves coverage reporting reliability and security.
+* **@dependabot[bot]**: Handled the dependency update by bumping `codecov/codecov-action` from 6.0.1 to 7.0.0 (major version) in the browser test workflow, including the automated commit and related merge. This improves coverage reporting reliability and security.
 
-- **@sourcery-ai**: Provided the primary structured PR summary and reviewer's guide. Highlighted new AudioManager APIs, the extensive GUT test suite (UI interactions, resilience, stress scenarios), CI updates, and linked the work to issue #494. Also contributed to title and description refinement.
+* **@sourcery-ai**: Provided the primary structured PR summary and reviewer's guide. Highlighted new AudioManager APIs, the extensive GUT test suite (UI interactions, resilience, stress scenarios), CI updates, and linked the work to issue #494. Also contributed to title and description refinement.
 
-- **@coderabbitai**: Delivered a focused summary covering bug fixes (volume slider clamping), new comprehensive test suite for audio settings interactions, and maintenance chores (workflow dependency update).
+* **@coderabbitai**: Delivered a focused summary covering bug fixes (volume slider clamping), new comprehensive test suite for audio settings interactions, and maintenance chores (workflow dependency update).
 
-- **@deepsource-io**: Performed automated static code analysis and code review on the changes (AudioManager extensions, test suite, CI workflow). Provided an overall grade across Security, Reliability, Complexity, and Hygiene categories, along with inline comments and a full review report.
+* **@deepsource-io**: Performed automated static code analysis and code review on the changes (AudioManager extensions, test suite, CI workflow). Provided an overall grade across Security, Reliability, Complexity, and Hygiene categories, along with inline comments and a full review report.
 
 These tools enhanced test coverage documentation, reviewer guidance, dependency security, and overall code health validation.
 
 ### Human Maintainers
 
-- **@ikostan**: Primary contributor and PR author. Led the full implementation, including new diagnostic APIs on `AudioManager`, volume slider input clamping fix, comprehensive GUT test suite (`test_audio_settings_interaction.gd`) covering interaction scenarios, focus-gating, resilience, and stress tests, test harness helpers, sequence diagrams, milestone integration, and CI workflow updates.
+* **@ikostan**: Primary contributor and PR author. Led the full implementation, including new diagnostic APIs on `AudioManager`, volume slider input clamping fix, comprehensive GUT test suite (`test_audio_settings_interaction.gd`) covering interaction scenarios, focus-gating, resilience, and stress tests, test harness helpers, sequence diagrams, milestone integration, and CI workflow updates.
 <!-- markdownlint-enable MD013 MD033 table-column-style -->
 
 ---

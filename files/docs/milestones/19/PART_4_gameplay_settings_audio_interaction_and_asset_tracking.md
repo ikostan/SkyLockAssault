@@ -17,7 +17,7 @@ design patterns established within the Audio Settings menu, the
 implementation operates under a strict **Mute Signal Isolation and
 Decoupling Pattern**.
 
-### Core Architectural Axioms:
+### Core Architectural Axioms
 
 * **Focus-Gated Control:** Audio playback is strictly decoupled from the
   low-level data engine layer. Sound effects are never permitted to fire
@@ -104,7 +104,7 @@ registered:
 
 ```
 
-### Resource Metadata Definitions:
+### Resource Metadata Definitions
 
 * **Asset Path:** `res://files/sounds/sfx/slider.wav`
 * **Import Profile Configuration:** Controlled via tracking metadata
@@ -120,7 +120,7 @@ registered:
 The sound asset `slider.wav` is flagged as an **actively referenced
 runtime gameplay UI dependency**.
 
-### Maintenance Directives for Future Contributors:
+### Maintenance Directives for Future Contributors
 
 * **Exclusion from Optimization Suites:** This file **is unsafe to remove**
   or exclude during asset compression passes, engine pruning commands, or
@@ -190,7 +190,7 @@ interaction architecture and related CI maintenance work.
 <!-- markdownlint-disable MD013 MD033 table-column-style -->
 | Change                                                                                                                                 | Details                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Files                                                                                                                                                                                           |
 |----------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Gate difficulty slider SFX behind focus/interaction checks and ensure reset and JS paths are treated as interactive.                   | <ul><li>Extend _on_difficulty_value_changed to accept an is_interactive flag defaulting to false.</li><li>Determine slider focus state and compute a should_play_audio flag based on focus or the interactive override.</li><li>Invoke a new _play_slider_sfx helper when audio should play, and route reset button and JS callbacks through the handler with the interactive flag set to true.</li><li>Add an AudioManager presence/method check in _play_slider_sfx to avoid crashes in headless/test environments and log when unavailable.</li></ul>                 | `scripts/ui/menus/gameplay_settings.gd`                                                                                                                                                         |
+| Gate difficulty slider SFX behind focus/interaction checks and ensure reset and JS paths are treated as interactive.                   | <ul><li>Extend _on_difficulty_value_changed to accept an is_interactive flag defaulting to false.</li><li>Determine slider focus state and compute a should_play_audio flag based on focus or the interactive override.</li><li>Invoke a new_play_slider_sfx helper when audio should play, and route reset button and JS callbacks through the handler with the interactive flag set to true.</li><li>Add an AudioManager presence/method check in _play_slider_sfx to avoid crashes in headless/test environments and log when unavailable.</li></ul>                 | `scripts/ui/menus/gameplay_settings.gd`                                                                                                                                                         |
 | Expose AudioManager pool inspection and control helpers used by tests.                                                                 | <ul><li>Add is_any_sfx_playing to report whether any pooled AudioStreamPlayer is currently playing.</li><li>Add get_active_sfx_playback_count to count active SFX channels.</li><li>Add stop_all_sfx to stop playback and clear streams on all pooled AudioStreamPlayers.</li></ul>                                                                                                                                                                                                                                                                                      | `scripts/managers/audio_manager.gd`                                                                                                                                                             |
 | Add GUT tests covering gameplay settings audio behavior across interactive, programmatic, reset, and JS paths with safe audio mocking. | <ul><li>Instantiate the gameplay settings scene with a deterministic Globals.settings and a real or dummy AudioManager.</li><li>Provide helper methods to clear SFX, query if sound is playing, and use AudioManager’s new APIs.</li><li>Test that initialization and programmatic changes are silent, interactive/focused and JS override paths play audio, reset emits exactly one SFX, and malformed JS inputs do not change difficulty or play sound.</li><li>Introduce a DummyAudioManager class to satisfy test calls when the real autoload is missing.</li></ul> | `test/gut/test_gameplay_settings_audio.gd`<br/>`test/gut/test_gameplay_settings_audio.gd.uid`                                                                                                   |
 | Document the gameplay settings audio interaction architecture and CI workflow maintenance for Godot export and Codecov.                | <ul><li>Describe focus-gated vs silent pathways for the difficulty slider, including JS overrides and reset behavior.</li><li>Record the runtime dependency mapping from gameplay_settings.gd to the slider.wav asset and outline asset-pruning safeguards and regression-prevention notes.</li><li>Document CI changes updating the pinned firebelley/godot-export action SHA across workflows and configuring the CODECOV_TOKEN for Codecov uploads, along with a reviewer’s guide and bots/AI contribution notes.</li></ul>                                           | `files/docs/milestones/19/PART_4_gameplay_settings_audio_interaction_and_asset_tracking.md`<br/>`files/docs/milestones/19/PART_3_Update_Godot_export_action_pin_and_configure_Codecov_token.md` |
@@ -199,25 +199,25 @@ interaction architecture and related CI maintenance work.
 
 | Issue                                                | Objective                                                                                                                                                                                                                                                                                                                                       | Addressed | Explanation |
 |------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-------------|
-| https://github.com/ikostan/SkyLockAssault/issues/728 | Implement focus-gated audio feedback for the difficulty slider (using slider.wav via AudioManager) for all intentional user interactions, including focused native UI (mouse/keyboard/controller), reset button, and JavaScript web bridge, while routing JS interactions through the same native handler.                                      | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/728 | Ensure all programmatic and synchronization pathways for the difficulty setting (initialization, config restoration, lifecycle sync, scripted mutations, reopening the menu) remain silent by bypassing the interaction layer and using set_value_no_signal() for UI updates where applicable, with explicit typing on new code paths.          | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/728 | Add automated tests and documentation describing the gameplay settings audio interaction architecture (focus gating, JS routing, silent vs interactive pathways) and explicitly track the dependency on slider.wav.                                                                                                                             | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/729 | Refactor the difficulty slider pipeline so that audio feedback (slider.wav) is only played for verified interactive operations (focused native UI, JS overlay with explicit override, and gameplay reset) while all initialization, restoration, and programmatic synchronizations remain completely silent.                                    | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/729 | Ensure the JavaScript overlay difficulty change path reuses the same internal interaction handler as native UI input, forwarding an explicit interaction override while preserving existing JS validation, bounds checking, and behavior.                                                                                                       | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/729 | Preserve or improve defensive programming practices (instance checks, logging, type and bounds validation) with explicit datatypes for new code, and document and test the new gameplay settings audio interaction behavior.                                                                                                                    | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/730 | Implement a deterministic GUT automated test suite for the difficulty slider audio behavior (initialization silence, focus-gated interaction, silent programmatic updates, reset behavior, JS override path, and invalid JS input) as specified in TC-GUT-DIFF-01 through TC-GUT-DIFF-06.                                                       | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/730 | Align gameplay_settings.gd difficulty slider audio behavior with the specified architecture: audio plays only for verified interactive/focus-gated events (local UI, reset button, JS override) and remains silent for programmatic/synchronization paths.                                                                                      | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/730 | Ensure the test infrastructure is isolation-safe and headless-friendly by providing audio manager helpers and cleanup to prevent audio leakage, race conditions, and dependence on real audio hardware.                                                                                                                                         | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/731 | Document the Gameplay Settings audio interaction architecture and behavior, clearly distinguishing interactive (audible) pathways from silent synchronization pathways, including focus-gated behavior and JS overlay routing, in project documentation.                                                                                        | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/731 | Record an explicit runtime dependency mapping between res://scripts/ui/menus/gameplay_settings.gd and res://files/sounds/sfx/slider.wav, including notes that slider.wav is an active runtime dependency and unsafe to remove during asset cleanup or export optimization, so contributors can identify this without code tracing.              | ✅         |             |
-| https://github.com/ikostan/SkyLockAssault/issues/731 | Establish reusable guidance and regression-prevention notes for future interactive UI audio systems, explaining why audio is not attached directly to generic value_changed signals, why synchronization remains silent, why JS overlays require explicit routing, and how this relates to asset tracking (especially for web/CI environments). | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/728> | Implement focus-gated audio feedback for the difficulty slider (using slider.wav via AudioManager) for all intentional user interactions, including focused native UI (mouse/keyboard/controller), reset button, and JavaScript web bridge, while routing JS interactions through the same native handler.                                      | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/728> | Ensure all programmatic and synchronization pathways for the difficulty setting (initialization, config restoration, lifecycle sync, scripted mutations, reopening the menu) remain silent by bypassing the interaction layer and using set_value_no_signal() for UI updates where applicable, with explicit typing on new code paths.          | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/728> | Add automated tests and documentation describing the gameplay settings audio interaction architecture (focus gating, JS routing, silent vs interactive pathways) and explicitly track the dependency on slider.wav.                                                                                                                             | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/729> | Refactor the difficulty slider pipeline so that audio feedback (slider.wav) is only played for verified interactive operations (focused native UI, JS overlay with explicit override, and gameplay reset) while all initialization, restoration, and programmatic synchronizations remain completely silent.                                    | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/729> | Ensure the JavaScript overlay difficulty change path reuses the same internal interaction handler as native UI input, forwarding an explicit interaction override while preserving existing JS validation, bounds checking, and behavior.                                                                                                       | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/729> | Preserve or improve defensive programming practices (instance checks, logging, type and bounds validation) with explicit datatypes for new code, and document and test the new gameplay settings audio interaction behavior.                                                                                                                    | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/730> | Implement a deterministic GUT automated test suite for the difficulty slider audio behavior (initialization silence, focus-gated interaction, silent programmatic updates, reset behavior, JS override path, and invalid JS input) as specified in TC-GUT-DIFF-01 through TC-GUT-DIFF-06.                                                       | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/730> | Align gameplay_settings.gd difficulty slider audio behavior with the specified architecture: audio plays only for verified interactive/focus-gated events (local UI, reset button, JS override) and remains silent for programmatic/synchronization paths.                                                                                      | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/730> | Ensure the test infrastructure is isolation-safe and headless-friendly by providing audio manager helpers and cleanup to prevent audio leakage, race conditions, and dependence on real audio hardware.                                                                                                                                         | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/731> | Document the Gameplay Settings audio interaction architecture and behavior, clearly distinguishing interactive (audible) pathways from silent synchronization pathways, including focus-gated behavior and JS overlay routing, in project documentation.                                                                                        | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/731> | Record an explicit runtime dependency mapping between res://scripts/ui/menus/gameplay_settings.gd and res://files/sounds/sfx/slider.wav, including notes that slider.wav is an active runtime dependency and unsafe to remove during asset cleanup or export optimization, so contributors can identify this without code tracing.              | ✅         |             |
+| <https://github.com/ikostan/SkyLockAssault/issues/731> | Establish reusable guidance and regression-prevention notes for future interactive UI audio systems, explaining why audio is not attached directly to generic value_changed signals, why synchronization remains silent, why JS overlays require explicit routing, and how this relates to asset tracking (especially for web/CI environments). | ✅         |             |
 <!-- markdownlint-enable MD013 MD033 table-column-style -->
 
 ### Possibly linked issues
 
-- **#728**: The PR implements the requested focus-gated difficulty slider
+* **#728**: The PR implements the requested focus-gated difficulty slider
   audio behavior, JS bridge routing, reset handling, and validation/tests.
-- **#728**: PR directly implements the epic’s difficulty slider audio
+* **#728**: PR directly implements the epic’s difficulty slider audio
   behavior, including focus-gating, JS pathway reuse, and silent sync.
 
 ---
@@ -233,17 +233,17 @@ summarization, documentation refinement, and quality review.
 
 ### Automated Bots & AI Tools
 
-- **@sourcery-ai**: Actively contributed to multiple documentation updates
+* **@sourcery-ai**: Actively contributed to multiple documentation updates
   (co-author on several commits) and provided the primary PR summary.
   Highlighted new features (focus-gated slider audio), enhancements
   (AudioManager utilities for SFX pool control), tests (GUT suite for
   interactive vs. silent paths), and documentation (architecture, asset
   tracking, and CI milestone notes).
-- **@coderabbitai**: Delivered a concise summary focusing on new features
+* **@coderabbitai**: Delivered a concise summary focusing on new features
   (conditional audio playback for user interactions), expanded test coverage
   (interactive, programmatic, reset, and JS paths), documentation
   improvements, and related chores.
-- **@deepsource-io**: Performed automated static code analysis and code
+* **@deepsource-io**: Performed automated static code analysis and code
   review across the changes in `gameplay_settings.gd`, `audio_manager.gd`,
   tests, and documentation. Provided an overall grade across Security,
   Reliability, Complexity, and Hygiene categories, along with inline comments
@@ -255,7 +255,7 @@ prior audio infrastructure work.
 
 ### Human Maintainers
 
-- **@ikostan**: Primary contributor and PR author. Led the full implementation,
+* **@ikostan**: Primary contributor and PR author. Led the full implementation,
   including focus/interaction-gated audio logic in the difficulty slider
   pipeline, AudioManager extensions (`is_any_sfx_playing`, `stop_all_sfx`,
   etc.), safe headless/test helpers, comprehensive GUT test suite (covering
