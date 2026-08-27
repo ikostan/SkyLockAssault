@@ -101,35 +101,44 @@
             to { transform: rotate(-360deg); }
           }
 
-        /* Hardware Acceleration Warning Popup */
+        /* Grayed out background backdrop & left-aligned modal */
         #gpu-alert-modal {
             display: none;
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #222;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(30, 30, 30, 0.85);
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+        }
+        #gpu-alert-box {
+            background: #181818;
             color: #fff;
             border: 2px solid #e74c3c;
             border-radius: 8px;
-            padding: 24px;
-            max-width: 500px;
+            padding: 24px 28px;
+            max-width: 520px;
             width: 85%;
             box-shadow: 0 0 30px rgba(0,0,0,0.9);
-            z-index: 99999;
-            text-align: center;
+            text-align: left;
             font-family: sans-serif;
+            box-sizing: border-box;
         }
-        #gpu-alert-modal h3 {
-            margin-top: 0;
+        #gpu-alert-box h3 {
+            margin: 0 0 12px 0;
             color: #e74c3c;
             font-size: 20px;
+            text-align: center;
         }
-        #gpu-alert-modal p {
+        #gpu-alert-box p {
             font-size: 14px;
-            line-height: 1.5;
+            line-height: 1.6;
             color: #eee;
-            margin: 14px 0 20px 0;
+            margin: 0 0 20px 0;
+            text-align: left;
         }
         #gpu-alert-btn {
             opacity: 1 !important;
@@ -138,10 +147,13 @@
             transform: none !important;
             background: #e74c3c !important;
             color: white !important;
-            padding: 8px 20px !important;
+            padding: 10px 24px !important;
             font-size: 14px !important;
             border-radius: 4px !important;
-            display: inline-block !important;
+            display: block !important;
+            margin: 0 auto !important;
+            cursor: pointer;
+            text-align: center !important;
         }
     </style>
 <!-- Removed favicon link to avoid 404 -->
@@ -149,13 +161,15 @@
 <body>
     <!-- Hardware Acceleration Popup Modal -->
     <div id="gpu-alert-modal">
-        <h3>⚠️ Performance Warning</h3>
-        <p id="gpu-alert-text">
-            Hardware acceleration is disabled in your browser. The game will run using CPU software emulation, which can cause multi-second freezes and severe lag.
-            <br><br>
-            Please enable <strong>"Hardware Acceleration"</strong> in your browser settings for smooth gameplay.
-        </p>
-        <button id="gpu-alert-btn" onclick="document.getElementById('gpu-alert-modal').style.display='none'">I Understand / Continue</button>
+        <div id="gpu-alert-box">
+            <h3>⚠️ Performance Warning</h3>
+            <p id="gpu-alert-text">
+                Hardware acceleration is disabled in your browser. The game will run using CPU software emulation, which can cause multi-second freezes and severe lag.
+                <br><br>
+                Please enable <strong>"Hardware Acceleration"</strong> in your browser settings for smooth gameplay.
+            </p>
+            <button id="gpu-alert-btn" onclick="document.getElementById('gpu-alert-modal').style.display='none'">I Understand / Continue</button>
+        </div>
     </div>
 
     <canvas id="canvas" tabindex="0" width="1280" height="720" style="position: absolute; top: 0px; left: 0px; width: 1280px; height: 720px;"></canvas>
@@ -253,7 +267,7 @@
                     console.warn("[SkyLockAssault] Hardware acceleration disabled! Detected software renderer:", renderer);
                     var modal = document.getElementById("gpu-alert-modal");
                     if (modal) {
-                        modal.style.display = "block";
+                        modal.style.display = "flex";
                     }
                 } else {
                     console.log("[SkyLockAssault] Hardware GPU active:", renderer);
