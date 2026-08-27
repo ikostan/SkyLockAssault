@@ -14,16 +14,22 @@ const GameSettingsResource = preload("res://scripts/resources/game_settings_reso
 const TestHelpers = preload("res://test/gdunit4/test_helpers.gd")
 
 var original_difficulty: float
+var original_current_fuel: float
+var original_max_fuel: float
 
 
 func before_test() -> void:
 	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
 	original_difficulty = settings.difficulty
+	original_current_fuel = settings.current_fuel
+	original_max_fuel = settings.max_fuel
 
 
 func after_test() -> void:
 	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
 	settings.difficulty = original_difficulty
+	settings.current_fuel = original_current_fuel
+	settings.max_fuel = original_max_fuel
 
 
 ## Validates that the shared calculation helper produces expected depletion values.
