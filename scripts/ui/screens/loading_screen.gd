@@ -13,31 +13,31 @@
 extends Control
 
 var loader_progress: float = 0.0  # Current smoothed progress value.
-var min_load_time: float = 1.0  # Minimum loading time in seconds for visibility (adjust as needed).
+var min_load_time: float = 0.3  # Minimum loading time in seconds for visibility.
 var load_start_time: float = 0.0  # Timestamp when loading starts.
 var is_scene_loaded: bool = false  # Flag to track if the scene is fully loaded.
 var scene: PackedScene = null  # Holder for the loaded scene.
 var load_failed: bool = false  # Flag if loading request failed.
 var transitioning: bool = false  # Flag to prevent multiple scene changes.
 
-@onready var progress_bar: ProgressBar = $Panel/Container/ProgressBar  # Progress bar UI element.
-@onready var label: Label = $Panel/Container/Label  # Label for displaying loading status.
+@onready var progress_bar: ProgressBar = $Panel/Container/ProgressBar
+@onready var label: Label = $Panel/Container/Label
 
 
-# Starts threaded loading of the next scene from Globals.
 func _ready() -> void:
 	load_start_time = Time.get_ticks_msec() / 1000.0
 
-	# Give more breathing room on Web (threaded progress unreliable per Godot 4.5).
 	if OS.has_feature("web"):
-		min_load_time = 3.0
+		min_load_time = 0.3
+	else:
+		min_load_time = 0.2
 
 	if Globals.next_scene == "":
 		Globals.log_message("Next scene path is empty!", Globals.LogLevel.ERROR)
 		load_failed = true
 		return
 
-	# Start background loading with sub-threads to fix 50% quirk.
+	# Start background loading with sub-threads
 	var err: int = ResourceLoader.load_threaded_request(Globals.next_scene, "", true)
 	if err != OK:
 		Globals.log_message("Failed to start loading: " + str(err), Globals.LogLevel.ERROR)
@@ -46,18 +46,15 @@ func _ready() -> void:
 		Globals.log_message("Loading started successfully.", Globals.LogLevel.DEBUG)
 
 
-# Polls loading status and updates UI. Changes scene when loaded.
-# Eliminated fake_progress; relies on real ResourceLoader progress.
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	var elapsed_time: float = (Time.get_ticks_msec() / 1000.0) - load_start_time
 
 	var real_progress: float = 0.0
 	if is_scene_loaded:
-		real_progress = 100.0  # Force 100% if already loaded (ignores post-load status).
+		real_progress = 100.0
 	elif load_failed:
-		real_progress = 0.0  # Keep at 0 if failed early.
+		real_progress = 0.0
 	else:
-		# Only poll if not done.
 		var progress_array: Array = []
 		var status: int = ResourceLoader.load_threaded_get_status(
 			Globals.next_scene, progress_array
@@ -65,56 +62,55 @@ func _process(_delta: float) -> void:
 
 		if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 			if progress_array.size() > 0:
-				real_progress = progress_array[0] * 100.0  # Convert to percentage.
-			else:
-				Globals.log_message(
-					"Progress array empty during IN_PROGRESS.", Globals.LogLevel.WARNING
-				)
-
+				real_progress = progress_array[0] * 100.0
 		elif status == ResourceLoader.THREAD_LOAD_LOADED:
 			real_progress = 100.0
 			if not is_scene_loaded:
 				is_scene_loaded = true
 				scene = ResourceLoader.load_threaded_get(Globals.next_scene)
 				Globals.log_message("Scene loaded successfully.", Globals.LogLevel.DEBUG)
-
-		elif (
-			status == ResourceLoader.THREAD_LOAD_FAILED
-			or status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE
-		):
+		elif status in [ResourceLoader.THREAD_LOAD_FAILED, ResourceLoader.THREAD_LOAD_INVALID_RESOURCE]:
 			Globals.log_message("Loading failed or invalid.", Globals.LogLevel.ERROR)
 			load_failed = true
 
-	# Use real progress only (eliminates fake_progress process).
-	# Sub-threads + Web min_load_time fix 50% quirk and give breathing room.
-	var display_progress: float = real_progress
-	if load_failed:
-		display_progress = 100.0  # Force end on failure.
+	var target_progress: float = 100.0 if load_failed else real_progress
 
-	# Smooth progress with lerp.
-	loader_progress = lerp(loader_progress, display_progress, 0.1)
-	# Update UI.
+	# Smooth progress bar movement
+	loader_progress = move_toward(loader_progress, target_progress, delta * 120.0)
 	progress_bar.value = loader_progress
 
-	# Proceed only when both loaded (or failed fallback) and minimum time elapsed.
-	if (is_scene_loaded or load_failed) and elapsed_time >= min_load_time and not transitioning:
-		transitioning = true  # Lock to prevent re-entry.
+	# Proceed when resource is ready, bar visually reached 100%, and minimum display time elapsed
+	if (is_scene_loaded or load_failed) and loader_progress >= 99.9 and elapsed_time >= min_load_time and not transitioning:
+		transitioning = true
+		_change_to_next_scene()
 
-		# Optional delay at 100%.
-		await get_tree().create_timer(0.5).timeout
 
-		var target_path: String = Globals.next_scene  # Cache the path.
-		Globals.next_scene = ""  # Reset to avoid stale values.
+func _change_to_next_scene() -> void:
+	# Ensure the bar visually fills completely to 100%
+	progress_bar.value = 100.0
 
-		if target_path == "":
-			Globals.log_message(
-				"Empty next_scene - returning to main menu.", Globals.LogLevel.ERROR
-			)
-			get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
-		elif load_failed:
-			# Fallback to direct load on failure
-			Globals.log_message("Fallback: Loading scene directly.", Globals.LogLevel.WARNING)
-			get_tree().change_scene_to_file(target_path)
-		else:
-			# Change scene.
-			get_tree().change_scene_to_packed(scene)
+	# 1-second pause at 100% so the player clearly sees completion
+	await get_tree().create_timer(1.0).timeout
+
+	var target_path: String = Globals.next_scene
+	Globals.next_scene = ""
+
+	if target_path == "":
+		Globals.log_message("Empty next_scene - returning to main menu.", Globals.LogLevel.ERROR)
+		get_tree().change_scene_to_file("res://scenes/main_menu.tscn")
+		return
+
+	if load_failed or scene == null:
+		Globals.log_message("Fallback: Loading scene directly.", Globals.LogLevel.WARNING)
+		get_tree().change_scene_to_file(target_path)
+		return
+
+	# 1. Instantiation
+	var new_scene_node := scene.instantiate()
+
+	# 2. Add to Root and trigger _enter_tree() & _ready()
+	get_tree().root.add_child(new_scene_node)
+
+	# 3. Swap active scene and free the loading screen
+	get_tree().current_scene = new_scene_node
+	queue_free()

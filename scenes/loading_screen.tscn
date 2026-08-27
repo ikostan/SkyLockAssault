@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://c7v7wvpn01fpp"]
+[gd_scene format=3 uid="uid://c7v7wvpn01fpp"]
 
 [ext_resource type="Script" uid="uid://cq2tlsh4o7fda" path="res://scripts/ui/screens/loading_screen.gd" id="1_hprjd"]
 [ext_resource type="Texture2D" uid="uid://duosg5kjn4lgb" path="res://files/img/2001-Model_7.png" id="2_5phy8"]
@@ -27,7 +27,7 @@ corner_radius_bottom_left = 20
 corner_detail = 12
 shadow_size = 3
 
-[node name="LoadingScreen" type="Control"]
+[node name="LoadingScreen" type="Control" unique_id=301197548]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -38,13 +38,13 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 script = ExtResource("1_hprjd")
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=127843161]
 position = Vector2(640, 360)
 scale = Vector2(0.5, 0.5)
 texture = ExtResource("2_5phy8")
 flip_h = true
 
-[node name="Panel" type="Panel" parent="."]
+[node name="Panel" type="Panel" parent="." unique_id=1437185176]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -53,7 +53,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_5phy8")
 
-[node name="Container" type="VBoxContainer" parent="Panel"]
+[node name="Container" type="VBoxContainer" parent="Panel" unique_id=425933097]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -68,7 +68,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 11
 
-[node name="Label" type="Label" parent="Panel/Container"]
+[node name="Label" type="Label" parent="Panel/Container" unique_id=2094383757]
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
@@ -77,7 +77,7 @@ theme_override_fonts/font = ExtResource("2_ku3bi")
 theme_override_font_sizes/font_size = 50
 text = "{LOADING...}"
 
-[node name="ProgressBar" type="ProgressBar" parent="Panel/Container"]
+[node name="ProgressBar" type="ProgressBar" parent="Panel/Container" unique_id=2061457550]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.32915837, 0.3291584, 0.32915837, 1)
 theme_override_font_sizes/font_size = 17
