@@ -356,9 +356,14 @@ jobs:
           retention-days: 5
 
       - name: "Inspect LCOV File Paths"
+        if: "always()"
         run: |
+          if [ -f final_coverage.lcov ]; then
             echo "=== Sample SF paths in final_coverage.lcov ==="
-            grep '^SF:' final_coverage.lcov | head -n 30
+            awk '/^SF:/ { print; if (++c >= 30) exit }' final_coverage.lcov
+          else
+            echo "⚠️ final_coverage.lcov does not exist; skipping inspection."
+          fi
 
       # Install standalone Codecov CLI binary (guarded inside script when token is empty)
       - name: "Install Codecov CLI"
