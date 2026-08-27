@@ -248,7 +248,7 @@ jobs:
             else
               INCLUDE_TARGETS='PackedStringArray("res://scripts/ui", "res://scripts/core")'
             fi
-            
+
             # Write valid INI config starting at column 0 (avoids YAML indentation corruption)
             # and injects batch-scoped include filters to stay below the 20-file trial cap
             printf "[gdunit4]\ncoverage/include_paths=%s\ncoverage/exclude_paths=PackedStringArray(\"res://test\", \"res://addons\")\n\n[gdunit4_coverage]\nrunner/gdcov_path=\"./gdcov\"\nsettings/include_filters=%s\nsettings/exclude_filters=PackedStringArray(\"res://test\", \"res://addons\")\n" "$INCLUDE_TARGETS" "$INCLUDE_TARGETS" > override.cfg
