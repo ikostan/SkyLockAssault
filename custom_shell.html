@@ -188,6 +188,23 @@
 
     <script src="$GODOT_URL"></script> <!-- Godot replaces with actual JS file, e.g., tmp_js_export.js -->
     <script>
+        (function checkGpuHardwareAcceleration() {
+            try {
+                var testCanvas = document.createElement("canvas");
+                var gl = testCanvas.getContext("webgl2") || testCanvas.getContext("webgl") || testCanvas.getContext("experimental-webgl");
+                if (!gl) return;
+                var debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+                var renderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+                if (/SwiftShader|llvmpipe|Software Rasterizer|Microsoft Basic Render Driver|Google SwiftShader/i.test(renderer)) {
+                    console.warn("[SkyLockAssault] Hardware acceleration disabled! Detected software renderer:", renderer);
+                } else {
+                    console.log("[SkyLockAssault] Hardware GPU active:", renderer);
+                }
+            } catch (e) {
+                console.warn("[SkyLockAssault] Could not query GPU context:", e);
+            }
+        })();
+
         // Consolidate engine configuration with custom telemetry hooks
         var customConfig = Object.assign({}, $GODOT_CONFIG, {
             onProgress: function(current, total) {
