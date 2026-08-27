@@ -19,11 +19,12 @@ func test_bullet_collision() -> void:
 	# Safer than physics_frame for tree settling
 	await await_idle_frame()
 
-	# Create a dummy body that implements take_damage
-	var dummy: Node2D = auto_free(Node2D.new())
+	# Create a dummy Area2D that implements take_damage
+	# (area_entered signal requires an Area2D argument)
+	var dummy: Area2D = auto_free(Area2D.new())
 	var script := GDScript.new()
 	script.source_code = """
-extends Node2D
+extends Area2D
 
 func take_damage(_d: int) -> void:
 	pass
