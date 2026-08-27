@@ -205,23 +205,23 @@ jobs:
           rm -rf .godot/
           ./godot --headless --editor --quit --path .
 
-      # Run test suites in isolated micro-batches (2 suites per batch) to limit memory overhead and GDExtension load limits
+# Run test suites in isolated micro-batches (3 suites per batch) to stay below the 20-file trial cap
       - name: "Run GDUnit4 Coverage in Micro-Batches"
         run: |
           rm -rf lcov_batches
           mkdir -p lcov_batches
 
-          # Collect only GDUnit test suites safely using mapfile to avoid whitespace path splitting
+          # Collect all GDUnit test suites safely
           mapfile -t TEST_FILES < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | sort)
-          echo "Found ${#TEST_FILES[@]} test suites. Running in micro-batches of 2 files..."
+          echo "Found ${#TEST_FILES[@]} test suites. Partitioning execution into micro-batches of 3 suites..."
 
           BATCH_NUM=1
-          CHUNK_SIZE=2
+          CHUNK_SIZE=3
 
           for ((i=0; i<${#TEST_FILES[@]}; i+=CHUNK_SIZE)); do
             CHUNK=("${TEST_FILES[@]:i:CHUNK_SIZE}")
             echo "--------------------------------------------------"
-            echo "🚀 Running Micro-Batch $BATCH_NUM: ${CHUNK[*]}"
+            echo "🚀 Executing Micro-Batch $BATCH_NUM: ${CHUNK[*]}"
             echo "--------------------------------------------------"
 
             # Reset workspace and stage ONLY the current batch test files + shared helper
