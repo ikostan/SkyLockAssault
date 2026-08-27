@@ -2,6 +2,7 @@
 name: "GDUnit4 Unit Tests & Code Coverage"
 
 # Reusable workflow for executing GDUnit4 test suites with GDExtension-based coverage profiling
+# Ref #887: gdUnit4-coverage v0.1.4 micro-batched LCOV collection, path sanitization, and Codecov reporting
 on:  # yamllint disable-line rule:truthy
   workflow_call:
     inputs:
@@ -268,7 +269,7 @@ jobs:
             echo "✅ Full test suite workspace restored from /tmp/test_backup."
           fi
 
-      # Aggregate micro-batch coverage tracefiles into a single unified report and sanitize filepaths
+      # Aggregate micro-batch coverage tracefiles into a single unified report and sanitize filepaths (Ref #887)
       - name: "Merge LCOV Tracefiles"
         if: "success()"
         run: |
