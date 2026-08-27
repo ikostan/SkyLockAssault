@@ -311,20 +311,22 @@ func test_movement() -> void:
 
 ## Verifies calculation consistency across varying difficulty levels.
 func test_depletion_helper_difficulties() -> void:
+	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
 	var main_scene: Node2D = auto_free(load("res://scenes/main_scene.tscn").instantiate())
 	add_child(main_scene)
 	await await_idle_frame()
 
 	var player_root: PlayerScript = main_scene.get_node("Player") as PlayerScript
+	var base_expected: float = float(settings.base_consumption_rate) * (float(player_root.current_speed) / float(settings.max_speed))
 
 	var dep_1: float = TestHelpers.calculate_expected_depletion(player_root, 1.0)
-	assert_float(dep_1).is_equal_approx(0.350631, 0.001)
+	assert_float(dep_1).is_equal_approx(base_expected * 1.0, 0.001)
 
 	var dep_2: float = TestHelpers.calculate_expected_depletion(player_root, 2.0)
-	assert_float(dep_2).is_equal_approx(0.701262, 0.001)
+	assert_float(dep_2).is_equal_approx(base_expected * 2.0, 0.001)
 
 	var dep_05: float = TestHelpers.calculate_expected_depletion(player_root, 0.5)
-	assert_float(dep_05).is_equal_approx(0.175315, 0.001)
+	assert_float(dep_05).is_equal_approx(base_expected * 0.5, 0.001)
 
 
 ## Validates fuel depletion timer ticks and engine shutdown on empty fuel.
