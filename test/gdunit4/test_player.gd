@@ -347,3 +347,54 @@ func test_fuel_depletion() -> void:
 	player_root._on_fuel_timer_timeout()
 	assert_float(player_root.current_speed).is_equal(0.0)
 	assert_bool(player_root.fuel_timer.is_stopped()).is_true()
+
+
+## Validates speed bar color transitions across normal, yellow, and red thresholds.
+func test_speed_colors() -> void:
+	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
+	var main_scene: Node2D = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+
+	var hud: HUDScript = main_scene.get_node("PlayerStatsPanel") as HUDScript
+	var speed_bar: ProgressBar = hud.speed_bar
+
+	var max_s: float = settings.max_speed
+	var min_s: float = settings.min_speed
+
+	# Normal (green) – mid-safe speed
+	hud._current_speed = (min_s + max_s) / 2.0
+	hud.update_speed_bar()
+	var style: StyleBoxFlat = speed_bar.get_theme_stylebox("fill").duplicate() as StyleBoxFlat
+	assert_that(style.bg_color).is_equal(Color.GREEN)
+
+	# Approaching high (green → yellow lerp)
+	var high_yellow: float = max_s * settings.high_yellow_fraction
+	var high_red: float = max_s * hud.HIGH_RED_FRACTION
+	var mid_high_yellow: float = high_yellow + (high_red - high_yellow) / 2.0
+	hud._current_speed = mid_high_yellow
+	hud.update_speed_bar()
+	style = speed_bar.get_theme_stylebox("fill").duplicate() as StyleBoxFlat
+	assert_bool(style.bg_color.is_equal_approx(Color.GREEN.lerp(Color.YELLOW, 0.5))).is_true()
+
+	# Overspeed (yellow → dark red lerp)
+	var mid_high_red: float = high_red + (max_s - high_red) / 2.0
+	hud._current_speed = mid_high_red
+	hud.update_speed_bar()
+	style = speed_bar.get_theme_stylebox("fill").duplicate() as StyleBoxFlat
+	assert_bool(style.bg_color.is_equal_approx(Color.YELLOW.lerp(hud.DARK_RED, 0.5))).is_true()
+
+	# Approaching low (green → yellow lerp)
+	var low_yellow: float = min_s + (max_s - min_s) * settings.low_yellow_fraction
+	var low_red: float = min_s
+	var mid_low_yellow: float = low_yellow - (low_yellow - low_red) / 2.0
+	hud._current_speed = mid_low_yellow
+	hud.update_speed_bar()
+	style = speed_bar.get_theme_stylebox("fill").duplicate() as StyleBoxFlat
+	assert_bool(style.bg_color.is_equal_approx(Color.GREEN.lerp(Color.YELLOW, 0.5))).is_true()
+
+	# Low red at minimum speed
+	hud._current_speed = min_s
+	hud.update_speed_bar()
+	style = speed_bar.get_theme_stylebox("fill").duplicate() as StyleBoxFlat
+	assert_that(style.bg_color).is_equal(hud.DARK_RED)
