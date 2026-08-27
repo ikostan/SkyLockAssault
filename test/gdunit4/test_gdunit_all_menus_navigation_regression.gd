@@ -99,11 +99,10 @@ func test_pause_menu_navigation_sfx_while_paused() -> void:
 	get_viewport().push_input(event)
 	await await_idle_frame()
 	
-	get_tree().paused = false
-	
 	assert_bool(AudioManager.is_any_sfx_playing()).is_true()
 	var active_path: String = AudioManager.get_active_sfx_stream_path()
 	assert_bool(active_path.contains("ui_navigation.wav")).is_true()
+	get_tree().paused = false
 
 
 ## Traverses an instantiated scene tree to find the first focusable Control node.
