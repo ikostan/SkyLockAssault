@@ -256,10 +256,11 @@ jobs:
             # Remove stale runner coverage tracefiles prior to batch launch
             find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" -delete 2>/dev/null || true
 
-            # If batch does not test UI, remove UiManager autoload to prevent preloading 10 menu scripts on boot
+            # Strip ResourcePreloader and UiManager on non-UI batches so menus are not preloaded into the 20-file cap
             cp project.godot project.godot.bak
             if [[ "${CHUNK[*]}" =~ (player|bullet|weapon|difficulty|system|parallax) ]]; then
               sed -i '/UiManager=/d' project.godot
+              sed -i '/ResourcePreloader=/d' project.godot
             fi
 
             # Execute micro-batch under virtual display using gdcov runner
