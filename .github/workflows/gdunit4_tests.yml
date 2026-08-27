@@ -248,17 +248,10 @@ jobs:
             else
               INCLUDE_TARGETS='PackedStringArray("res://scripts/ui", "res://scripts/core")'
             fi
-
-            cat << EOF > override.cfg
-          [gdunit4]
-          coverage/include_paths=$INCLUDE_TARGETS
-          coverage/exclude_paths=PackedStringArray("res://test", "res://addons")
-
-          [gdunit4_coverage]
-          runner/gdcov_path="./gdcov"
-          settings/include_filters=$INCLUDE_TARGETS
-          settings/exclude_filters=PackedStringArray("res://test", "res://addons")
-          EOF
+            
+            # Write valid INI config starting at column 0 (avoids YAML indentation corruption)
+            # and injects batch-scoped include filters to stay below the 20-file trial cap
+            printf "[gdunit4]\ncoverage/include_paths=%s\ncoverage/exclude_paths=PackedStringArray(\"res://test\", \"res://addons\")\n\n[gdunit4_coverage]\nrunner/gdcov_path=\"./gdcov\"\nsettings/include_filters=%s\nsettings/exclude_filters=PackedStringArray(\"res://test\", \"res://addons\")\n" "$INCLUDE_TARGETS" "$INCLUDE_TARGETS" > override.cfg
 
             # Remove stale runner coverage tracefiles prior to batch launch
             find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" -delete 2>/dev/null || true
@@ -278,6 +271,15 @@ jobs:
             fi
 
             BATCH_NUM=$((BATCH_NUM + 1))
+          done
+
+      - name: "Debug Batch Tracefiles"
+        run: |
+          echo "=== Checking each batch for scripts/entities and scripts/system ==="
+          for f in lcov_batches/*.lcov; do
+            echo "--- $f ---"
+            grep '^SF:.*entities' "$f" || echo "No entities in $f"
+            grep '^SF:.*system' "$f" || echo "No system in $f"
           done
 
       # Restore full test folder unconditionally so downstream report finders and artifact uploaders have complete access
