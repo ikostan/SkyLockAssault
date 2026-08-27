@@ -42,14 +42,13 @@ jobs:
             }
           fi
 
-          unzip "${ZIP_NAME}"
+          unzip -q "${ZIP_NAME}"
           mv "Godot_v${GODOT_VERSION}_linux.x86_64" godot
           chmod +x godot
 
       - name: "Verify Godot Engine Version Parity"
         run: |
           ENGINE_VERSION=$(./godot --version)
-          echo "Detected engine version: $ENGINE_VERSION"
           EXPECTED_VERSION="${GODOT_VERSION/-stable/.stable}"
           echo "$ENGINE_VERSION" | grep -q "$EXPECTED_VERSION" || {
             echo "❌ ERROR: Expected Godot ${EXPECTED_VERSION}, but received: $ENGINE_VERSION"
@@ -60,11 +59,10 @@ jobs:
       - name: "Install GUT"
         run: |
           mkdir -p addons
-          URL="https://github.com/bitwes/Gut/archive/refs/tags/v9.7.1.zip"
-          wget "$URL"
-          unzip v9.7.1.zip -d addons
+          wget -q "https://github.com/bitwes/Gut/archive/refs/tags/v9.7.1.zip" -O gut.zip
+          unzip -q gut.zip -d addons
           mv addons/Gut-9.7.1/addons/gut addons/gut
-          rm -rf addons/Gut-9.7.1 v9.7.1.zip
+          rm -rf addons/Gut-9.7.1 gut.zip
 
       - name: "Clean Cache"
         run: |
@@ -74,8 +72,8 @@ jobs:
         run: |
           timeout 30s ./godot --headless --audio-driver Dummy --editor --path . || true
 
-      - name: "Run GUT Tests"
-        continue-on-error: false  # Explicit no continue on error
+      - name: "Run GUT Tests (Codecov Upload Step Excluded)"
+        continue-on-error: false
         run: |
           REPORT_DIR="gut-reports/$(date +%Y%m%d_%H%M%S)"
           mkdir -p "$REPORT_DIR"
@@ -107,10 +105,10 @@ jobs:
             echo "No valid report directory to list."
           fi
 
-      - name: "Upload Test Reports Artifacts"
+      - name: "Upload GUT Test Reports Artifacts"
         if: "always()"
         uses: "actions/upload-artifact@v7"
         with:
           name: "gut-reports"
           path: "gut-reports/**"
-          retention-days: 5
+          retention-days: 7

@@ -1,7 +1,8 @@
 ---
 name: "GDUnit4 Unit Tests & Code Coverage"
 
-# Reusable workflow for executing GDUnit4 test suites with GDExtension-based coverage profiling
+# Ref #889, #887: Standardizes Godot 4.7.1-stable runtime, gdUnit4 v6.2.0, and gdUnit4-coverage v0.1.4.
+# Implements micro-batched LCOV execution, tracefile merging, and Codecov upload with --flag GDUnit4.
 on:  # yamllint disable-line rule:truthy
   workflow_call:
     inputs:
@@ -204,58 +205,95 @@ jobs:
           rm -rf .godot/
           ./godot --headless --editor --quit --path .
 
-      # Run test suites in isolated micro-batches (2 suites per batch) to limit memory overhead and GDExtension load limits
+      # Run test suites partitioned by domain in micro-batches (2 suites per batch)
       - name: "Run GDUnit4 Coverage in Micro-Batches"
         run: |
           rm -rf lcov_batches
           mkdir -p lcov_batches
 
-          # Collect only GDUnit test suites safely using mapfile to avoid whitespace path splitting
-          mapfile -t TEST_FILES < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | sort)
-          echo "Found ${#TEST_FILES[@]} test suites. Running in micro-batches of 2 files..."
-
           BATCH_NUM=1
           CHUNK_SIZE=2
 
-          for ((i=0; i<${#TEST_FILES[@]}; i+=CHUNK_SIZE)); do
-            CHUNK=("${TEST_FILES[@]:i:CHUNK_SIZE}")
-            echo "--------------------------------------------------"
-            echo "🚀 Running Micro-Batch $BATCH_NUM: ${CHUNK[*]}"
-            echo "--------------------------------------------------"
+          # Helper to execute test suites within a single isolated domain
+          run_domain_batches() {
+            local include_targets="$1"
+            local strip_ui="$2"
+            shift 2
+            local files=("$@")
 
-            # Reset workspace and stage ONLY the current batch test files + shared helper
-            rm -rf test
-            mkdir -p test/gdunit4
-
-            if [ -f "/tmp/test_backup/gdunit4/test_helpers.gd" ]; then
-              cp "/tmp/test_backup/gdunit4/test_helpers.gd" "test/gdunit4/"
+            if [ ${#files[@]} -eq 0 ] || [ -z "${files[0]}" ]; then
+              return
             fi
 
-            ADD_ARGS=()
-            for t_file in "${CHUNK[@]}"; do
-              BASE_NAME=$(basename "$t_file")
-              cp "$t_file" "test/gdunit4/$BASE_NAME"
-              ADD_ARGS+=(--add "res://test/gdunit4/$BASE_NAME")
+            for ((i=0; i<${#files[@]}; i+=CHUNK_SIZE)); do
+              local chunk=("${files[@]:i:CHUNK_SIZE}")
+              echo "--------------------------------------------------"
+              echo "🚀 Executing Micro-Batch $BATCH_NUM: ${chunk[*]}"
+              echo "--------------------------------------------------"
+
+              rm -rf test
+              mkdir -p test/gdunit4
+
+              if [ -f "/tmp/test_backup/gdunit4/test_helpers.gd" ]; then
+                cp "/tmp/test_backup/gdunit4/test_helpers.gd" "test/gdunit4/"
+              fi
+
+              local add_args=()
+              for t_file in "${chunk[@]}"; do
+                local base_name=$(basename "$t_file")
+                cp "$t_file" "test/gdunit4/$base_name"
+                add_args+=(--add "res://test/gdunit4/$base_name")
+              done
+
+              printf "[gdunit4]\ncoverage/include_paths=%s\ncoverage/exclude_paths=PackedStringArray(\"res://test\", \"res://addons\")\n\n[gdunit4_coverage]\nrunner/gdcov_path=\"./gdcov\"\nsettings/include_filters=%s\nsettings/exclude_filters=PackedStringArray(\"res://test\", \"res://addons\")\n" "$include_targets" "$include_targets" > override.cfg
+
+              find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" -delete 2>/dev/null || true
+
+              cp project.godot project.godot.bak
+              if [ "$strip_ui" = "true" ]; then
+                sed -i '/UiManager=/d' project.godot
+                sed -i '/ResourcePreloader=/d' project.godot
+              fi
+
+              xvfb-run ./gdcov -d --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+                --ignoreHeadlessMode \
+                "${add_args[@]}"
+
+              mv project.godot.bak project.godot
+
+              local user_path=$(find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" 2>/dev/null | head -n 1)
+              if [ -n "$user_path" ] && [ -f "$user_path" ]; then
+                cp "$user_path" "lcov_batches/batch_${BATCH_NUM}.lcov"
+                echo "✅ Captured tracefile: lcov_batches/batch_${BATCH_NUM}.lcov"
+              else
+                echo "⚠️ WARNING: No tracefile generated for Batch $BATCH_NUM"
+              fi
+
+              BATCH_NUM=$((BATCH_NUM + 1))
             done
+          }
 
-            # Remove stale runner coverage tracefiles prior to batch launch
-            find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" -delete 2>/dev/null || true
+          # 1. Entity domain
+          mapfile -t ENTITY_TESTS < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | grep -E "player|bullet|weapon|difficulty" | sort || true)
+          # 2. Managers & System domain
+          mapfile -t MANAGER_TESTS < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | grep -E "audio|parallax|bridge" | grep -v -E "player|bullet|weapon|difficulty" | sort || true)
+          # 3. Core & Settings domain
+          mapfile -t SETTINGS_TESTS < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | grep -E "settings|input_remap|globals" | grep -v -E "player|bullet|weapon|difficulty|audio|parallax|bridge" | sort || true)
+          # 4. UI & Navigation domain
+          mapfile -t UI_TESTS < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | grep -v -E "player|bullet|weapon|difficulty|audio|parallax|bridge|settings|input_remap|globals" | sort || true)
 
-            # Execute micro-batch under virtual display using gdcov runner
-            xvfb-run ./gdcov -d --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
-              --ignoreHeadlessMode \
-              "${ADD_ARGS[@]}"
+          run_domain_batches 'PackedStringArray("res://scripts/entities", "res://scripts/core", "res://scripts/resources")' "true" "${ENTITY_TESTS[@]}"
+          run_domain_batches 'PackedStringArray("res://scripts/managers", "res://scripts/system", "res://scripts/core", "res://scripts/resources", "res://scripts/ui")' "false" "${MANAGER_TESTS[@]}"
+          run_domain_batches 'PackedStringArray("res://scripts/core", "res://scripts/resources", "res://scripts/ui/components")' "false" "${SETTINGS_TESTS[@]}"
+          run_domain_batches 'PackedStringArray("res://scripts/ui", "res://scripts/core")' "false" "${UI_TESTS[@]}"
 
-            # Save batch coverage tracefile
-            USER_PATH=$(find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" 2>/dev/null | head -n 1)
-            if [ -n "$USER_PATH" ] && [ -f "$USER_PATH" ]; then
-              cp "$USER_PATH" "lcov_batches/batch_${BATCH_NUM}.lcov"
-              echo "✅ Captured tracefile: lcov_batches/batch_${BATCH_NUM}.lcov"
-            else
-              echo "⚠️ WARNING: No tracefile generated for Batch $BATCH_NUM"
-            fi
-
-            BATCH_NUM=$((BATCH_NUM + 1))
+      - name: "Debug Batch Tracefiles"
+        run: |
+          echo "=== Checking each batch for scripts/entities and scripts/system ==="
+          for f in lcov_batches/*.lcov; do
+            echo "--- $f ---"
+            grep '^SF:.*entities' "$f" || echo "No entities in $f"
+            grep '^SF:.*system' "$f" || echo "No system in $f"
           done
 
       # Restore full test folder unconditionally so downstream report finders and artifact uploaders have complete access
@@ -272,7 +310,6 @@ jobs:
       - name: "Merge LCOV Tracefiles"
         if: "success()"
         run: |
-          # 1. Collect all generated batch tracefiles
           LCOV_ARGS=()
           for f in lcov_batches/*.lcov; do
             if [ -f "$f" ]; then
@@ -287,14 +324,18 @@ jobs:
             exit 1
           fi
 
-          # 2. Strip runner workspace absolute paths and Godot res:// prefixes for Codecov mapping
+          # 1. Sanitize file paths
           sed -i 's|SF:.*/SkyLockAssault/|SF:|g' final_coverage.lcov
           sed -i 's|SF:res://|SF:|g' final_coverage.lcov
+          sed -i 's|^SF:/*|SF:|g' final_coverage.lcov
+
+          # 2. Extract ONLY production scripts (strips test/gdunit4/ from coverage)
+          lcov --extract final_coverage.lcov "scripts/*" -o final_coverage.lcov
 
           # 3. Clean up batch directory
           rm -rf lcov_batches
 
-          echo "=== Final Sanitized LCOV Summary ==="
+          echo "=== Final Filtered Production LCOV Summary ==="
           lcov --summary final_coverage.lcov
 
       # Locate most recent XML test report directory generated by GDUnit4
@@ -317,6 +358,16 @@ jobs:
             final_coverage.lcov
           if-no-files-found: "ignore"
           retention-days: 5
+
+      - name: "Inspect LCOV File Paths"
+        if: "always()"
+        run: |
+          if [ -f final_coverage.lcov ]; then
+            echo "=== Sample SF paths in final_coverage.lcov ==="
+            awk '/^SF:/ { print; if (++c >= 30) exit }' final_coverage.lcov
+          else
+            echo "⚠️ final_coverage.lcov does not exist; skipping inspection."
+          fi
 
       # Install standalone Codecov CLI binary (guarded inside script when token is empty)
       - name: "Install Codecov CLI"

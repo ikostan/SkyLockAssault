@@ -1,35 +1,39 @@
 ## Copyright (C) 2025 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
 
+@warning_ignore("unused_parameter")
 extends GdUnitTestSuite
 
 var bullet_scene := preload("res://scenes/bullet.tscn")
 
+
 func test_bullet_collision() -> void:
-	# New: auto_free for cleanup (prevents leaks/orphans)
+	# Instantiate with auto_free to prevent leaks/orphans
 	var bullet: Variant = auto_free(bullet_scene.instantiate())
-	# Updated: Use root (reliable in CI/tests)
+
+	# Add to root (more reliable in CI / headless runs)
 	get_tree().root.add_child(bullet)
 	bullet.global_position = Vector2.ZERO
 	bullet.global_rotation = 0
-	# New: Safer await for tree settling (physics_frame can be flaky in CI)
+
+	# Safer than physics_frame for tree settling
 	await await_idle_frame()
-	
-	# Simulate a hit body with take_damage method
-	# New: auto_free for dummy cleanup
-	var dummy: Node2D = auto_free(Node2D.new())
+
+	# Create a dummy Area2D that implements take_damage
+	# (area_entered signal requires an Area2D argument)
+	var dummy: Area2D = auto_free(Area2D.new())
 	var script := GDScript.new()
 	script.source_code = """
-extends Node2D
+extends Area2D
 
-func take_damage(d: int) -> void:
-    pass
-	"""
+func take_damage(_d: int) -> void:
+	pass
+"""
 	script.reload()
 	dummy.set_script(script)
-	
-	# Emit signal to simulate hit
+
+	# Simulate a hit by emitting the area_entered signal
 	bullet.get_node("Area2D").area_entered.emit(dummy)
-	
-	# Assert bullet queued for deletion after hit
-	assert_that(bullet).is_queued_for_deletion()  # Verify despawn on hit
+
+	# Bullet should be queued for deletion after a successful hit
+	assert_that(bullet).is_queued_for_deletion()
