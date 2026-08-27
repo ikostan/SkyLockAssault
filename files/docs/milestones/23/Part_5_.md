@@ -70,54 +70,6 @@ Diagnose and resolve the multi-second loading screen freeze observed during scen
 
 ## Reviewer's Guide
 
-This PR resolves the scene transition stall on HTML5 exports by detecting unaccelerated browser environments, providing user-facing remediation in `custom_shell.html`, profiling in-engine swap latencies, and modernizing progress bar smoothing and completion pacing in `loading_screen.gd`.
-
-### File-Level Changes
-
-| Change                                                                                     | Details                                                                                                                                                                                                                                                                                                                                                                    | Files                                                                                                                         |
-|--------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| Implement pre-boot GPU software rasterizer detection and warning modal UI.                 | Query `WEBGL_debug_renderer_info` on startup for software renderers (`Microsoft Basic Render Driver`, `SwiftShader`, `llvmpipe`).Display centered warning modal with centered title, left-aligned guidance text, centered action button, and dimmed backdrop overlay (`rgba(30, 30, 30, 0.85)`).Allow users to acknowledge the warning and continue engine initialization. | `custom_shell.html`                                                                                                           |
-| Refactor loading screen lifecycle, progress smoothing, and completion hold.                | Replace asymptotic `lerp(..., 0.1)` with delta-independent `move_toward(..., delta * 120.0)`.Reduce `min_load_time` from 3.0s to 0.3s on Web to prevent holding completed loads.Add an explicit 1.0s hold (`await create_timer(1.0).timeout`) at 100% before swapping scenes.Measure and log instantiation and tree-entry latencies.                                       | `scripts/loading_screen.gd`<br>                                                                                               |
-| Document Web transition latency diagnosis, GPU detection, and loading screen optimization. | Record root cause analysis, trace metrics, in-engine benchmarks, and shell UI architecture for Milestone 23 documentation.                                                                                                                                                                                                                                                 | `files/docs/milestones/23/Part_5_Web_scene_transition_latency_GPU_acceleration_detection_&_loading_lifecycle_optimization.md` |
-
----
-
-### Assessment Against Linked Issues
-
-| Issue                                                                                                        | Objective                                                                                            | Addressed | Explanation                                                                                                                         |
-|--------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------|
-| [https://github.com/ikostan/SkyLockAssault/issues/829](https://github.com/ikostan/SkyLockAssault/issues/829) | Investigate and eliminate multi-second hangs at 80% and 90% during scene transitions on Web exports. | ✅        | Isolated root cause to disabled browser GPU hardware acceleration (`SwANGLE` software rasterizer) and resolved 10.6s `Commit` lock. |
-
-|
-| [https://github.com/ikostan/SkyLockAssault/issues/829](https://github.com/ikostan/SkyLockAssault/issues/829) | Implement granular timestamped logging to isolate resource locks, asset loading, or process frame bottlenecks. | ✅ | Added lifecycle telemetry proving `.instantiate()` (13 ms) and tree insertion (28 ms) total only 41 ms in-engine.
-
- |
-| [https://github.com/ikostan/SkyLockAssault/issues/829](https://github.com/ikostan/SkyLockAssault/issues/829) | Prevent perceived visual stalls at 100% and provide smooth progress bar progression. | ✅ | Replaced asymptotic `lerp()` with linear `move_toward()`, reduced `min_load_time`, and added an intentional 1.0s completion pause.
-
- |
-| [https://github.com/ikostan/SkyLockAssault/issues/829](https://github.com/ikostan/SkyLockAssault/issues/829) | Safeguard web players against software rendering performance degradation. | ✅ | Added client-side GPU query and warning modal in `custom_shell.html` with instructions to enable Hardware Acceleration. |
-
----
-
-### In-Engine vs. Browser Latency Breakdown
-
-| Execution Layer             | Component / Phase                          | Measured Latency | Assessment                                                          |
-|-----------------------------|--------------------------------------------|------------------|---------------------------------------------------------------------|
-| **Browser (Software Mode)** | `Commit` & GPU Buffer Flush (`SwANGLE`)    | **10,628.7 ms**  | **Root Cause:** Software rasterizer lockup on scene initialization. |
-| **Browser (Hardware Mode)** | `Commit` & Compositor Flush (Hardware GPU) | **< 20 ms**      | Fully optimized; smooth frame transition.                           |
-| **Engine (Godot 4.7.1)**    | Raw Resource Fetch (`load_threaded_get`)   | **< 5 ms**<br>   | Efficient threaded byte ingestion.                                  |
-
-|
-| **Engine (Godot 4.7.1)** | Node Instantiation (`.instantiate()`) | **13 ms**<br> | Negligible allocation overhead.
-
- |
-| **Engine (Godot 4.7.1)** | Tree Entry & `_ready()` Callbacks | **28 ms**<br> | Sub-scenes, signals, HUD, and audio initialize cleanly.
-
- |
-| **UX Pacing** | Intentional Completion Pause (`create_timer`) | **1,000 ms**<br> | Dedicated visual hold at 100% before gameplay begins.
-
- |
-
 ---
 
 ## PR #910 Summary: Bots / AI Contributions
