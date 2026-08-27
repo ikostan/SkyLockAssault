@@ -1,7 +1,7 @@
 ---
 name: "GUT Unit Tests"
 
-# Ref #887: Codecov reporting removed from GUT workflow to prevent metric collisions with GDUnit4
+# Ref #889, #887: Upgrades GUT to v9.7.1 under Godot 4.7.1. Removed Codecov upload to isolate metrics to GDUnit4.
 on:  # yamllint disable-line rule:truthy
   workflow_call:
     inputs:
