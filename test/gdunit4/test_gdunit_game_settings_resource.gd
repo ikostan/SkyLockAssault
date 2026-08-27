@@ -12,7 +12,7 @@ extends GdUnitTestSuite
 
 const GameplaySettings = preload(GamePaths.GAMEPLAY_SETTINGS)
 
-var gameplay_menu: Control
+var gameplay_menu: GameplaySettings
 var _resource: GameSettingsResource
 var _original_settings: GameSettingsResource
 
@@ -24,7 +24,7 @@ func before_test() -> void:
 	Globals.settings = _resource
 
 	# Instantiate the menu for initialization tests
-	gameplay_menu = auto_free(load(GamePaths.GAMEPLAY_SETTINGS_SCENE).instantiate())
+	gameplay_menu = auto_free(load(GamePaths.GAMEPLAY_SETTINGS_SCENE).instantiate()) as GameplaySettings
 	# Inject default wrapper to avoid real JS/OS calls during unit tests
 	gameplay_menu.os_wrapper = OSWrapper.new()
 
@@ -95,7 +95,7 @@ func test_gs_ready_01_02_ui_initialization_sync() -> void:
 	var test_difficulty: float = 1.7
 	_resource.difficulty = test_difficulty
 
-	var new_menu: Control = auto_free(load(GamePaths.GAMEPLAY_SETTINGS_SCENE).instantiate())
+	var new_menu: GameplaySettings = auto_free(load(GamePaths.GAMEPLAY_SETTINGS_SCENE).instantiate()) as GameplaySettings
 	new_menu.os_wrapper = OSWrapper.new()
 	add_child(new_menu)
 	await await_idle_frame()
@@ -137,7 +137,7 @@ func test_gs_ready_06_safe_init_non_web() -> void:
 	var mock_os: OSWrapper = mock(OSWrapper)
 	do_return(false).on(mock_os).has_feature(any_string())
 
-	var menu: Control = auto_free(load(GamePaths.GAMEPLAY_SETTINGS_SCENE).instantiate())
+	var menu: GameplaySettings = auto_free(load(GamePaths.GAMEPLAY_SETTINGS_SCENE).instantiate()) as GameplaySettings
 	menu.os_wrapper = mock_os
 
 	add_child(menu)
