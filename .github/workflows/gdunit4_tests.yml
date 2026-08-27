@@ -205,83 +205,87 @@ jobs:
           rm -rf .godot/
           ./godot --headless --editor --quit --path .
 
-      # Run test suites in isolated micro-batches (2 suites per batch) with scoped include targets
+      # Run test suites partitioned by domain in micro-batches (2 suites per batch)
       - name: "Run GDUnit4 Coverage in Micro-Batches"
         run: |
           rm -rf lcov_batches
           mkdir -p lcov_batches
 
-          mapfile -t TEST_FILES < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | sort)
-          echo "Found ${#TEST_FILES[@]} test suites. Running micro-batches..."
-
           BATCH_NUM=1
           CHUNK_SIZE=2
 
-          for ((i=0; i<${#TEST_FILES[@]}; i+=CHUNK_SIZE)); do
-            CHUNK=("${TEST_FILES[@]:i:CHUNK_SIZE}")
-            echo "--------------------------------------------------"
-            echo "🚀 Executing Micro-Batch $BATCH_NUM: ${CHUNK[*]}"
-            echo "--------------------------------------------------"
+          # Helper to execute test suites within a single isolated domain
+          run_domain_batches() {
+            local include_targets="$1"
+            local strip_ui="$2"
+            shift 2
+            local files=("$@")
 
-            # Reset workspace and stage ONLY current batch test files + shared helper
-            rm -rf test
-            mkdir -p test/gdunit4
-
-            if [ -f "/tmp/test_backup/gdunit4/test_helpers.gd" ]; then
-              cp "/tmp/test_backup/gdunit4/test_helpers.gd" "test/gdunit4/"
+            if [ ${#files[@]} -eq 0 ] || [ -z "${files[0]}" ]; then
+              return
             fi
 
-            ADD_ARGS=()
-            for t_file in "${CHUNK[@]}"; do
-              BASE_NAME=$(basename "$t_file")
-              cp "$t_file" "test/gdunit4/$BASE_NAME"
-              ADD_ARGS+=(--add "res://test/gdunit4/$BASE_NAME")
+            for ((i=0; i<${#files[@]}; i+=CHUNK_SIZE)); do
+              local chunk=("${files[@]:i:CHUNK_SIZE}")
+              echo "--------------------------------------------------"
+              echo "🚀 Executing Micro-Batch $BATCH_NUM: ${chunk[*]}"
+              echo "--------------------------------------------------"
+
+              rm -rf test
+              mkdir -p test/gdunit4
+
+              if [ -f "/tmp/test_backup/gdunit4/test_helpers.gd" ]; then
+                cp "/tmp/test_backup/gdunit4/test_helpers.gd" "test/gdunit4/"
+              fi
+
+              local add_args=()
+              for t_file in "${chunk[@]}"; do
+                local base_name=$(basename "$t_file")
+                cp "$t_file" "test/gdunit4/$base_name"
+                add_args+=(--add "res://test/gdunit4/$base_name")
+              done
+
+              printf "[gdunit4]\ncoverage/include_paths=%s\ncoverage/exclude_paths=PackedStringArray(\"res://test\", \"res://addons\")\n\n[gdunit4_coverage]\nrunner/gdcov_path=\"./gdcov\"\nsettings/include_filters=%s\nsettings/exclude_filters=PackedStringArray(\"res://test\", \"res://addons\")\n" "$include_targets" "$include_targets" > override.cfg
+
+              find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" -delete 2>/dev/null || true
+
+              cp project.godot project.godot.bak
+              if [ "$strip_ui" = "true" ]; then
+                sed -i '/UiManager=/d' project.godot
+                sed -i '/ResourcePreloader=/d' project.godot
+              fi
+
+              xvfb-run ./gdcov -d --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+                --ignoreHeadlessMode \
+                "${add_args[@]}"
+
+              mv project.godot.bak project.godot
+
+              local user_path=$(find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" 2>/dev/null | head -n 1)
+              if [ -n "$user_path" ] && [ -f "$user_path" ]; then
+                cp "$user_path" "lcov_batches/batch_${BATCH_NUM}.lcov"
+                echo "✅ Captured tracefile: lcov_batches/batch_${BATCH_NUM}.lcov"
+              else
+                echo "⚠️ WARNING: No tracefile generated for Batch $BATCH_NUM"
+              fi
+
+              BATCH_NUM=$((BATCH_NUM + 1))
             done
+          }
 
-            # Explicitly scope include paths under 20 files based on domain being tested
-            if [[ "${CHUNK[*]}" =~ (player|bullet|weapon|difficulty) ]]; then
-              INCLUDE_TARGETS='PackedStringArray("res://scripts/entities", "res://scripts/core", "res://scripts/resources")'
-            elif [[ "${CHUNK[*]}" =~ (audio_manager|parallax|bridge) ]]; then
-              INCLUDE_TARGETS='PackedStringArray("res://scripts/managers", "res://scripts/system", "res://scripts/core", "res://scripts/resources")'
-            elif [[ "${CHUNK[*]}" =~ (settings|input_remap|globals) ]]; then
-              INCLUDE_TARGETS='PackedStringArray("res://scripts/core", "res://scripts/resources", "res://scripts/ui/components")'
-            else
-              INCLUDE_TARGETS='PackedStringArray("res://scripts/ui", "res://scripts/core")'
-            fi
+          # 1. Entity domain
+          mapfile -t ENTITY_TESTS < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | grep -E "player|bullet|weapon|difficulty" | sort || true)
+          # 2. Managers & System domain
+          mapfile -t MANAGER_TESTS < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | grep -E "audio|parallax|bridge" | grep -v -E "player|bullet|weapon|difficulty" | sort || true)
+          # 3. Core & Settings domain
+          mapfile -t SETTINGS_TESTS < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | grep -E "settings|input_remap|globals" | grep -v -E "player|bullet|weapon|difficulty|audio|parallax|bridge" | sort || true)
+          # 4. UI & Navigation domain
+          mapfile -t UI_TESTS < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | grep -v -E "player|bullet|weapon|difficulty|audio|parallax|bridge|settings|input_remap|globals" | sort || true)
 
-            # Write valid INI config starting at column 0 (avoids YAML indentation corruption)
-            # and injects batch-scoped include filters to stay below the 20-file trial cap
-            printf "[gdunit4]\ncoverage/include_paths=%s\ncoverage/exclude_paths=PackedStringArray(\"res://test\", \"res://addons\")\n\n[gdunit4_coverage]\nrunner/gdcov_path=\"./gdcov\"\nsettings/include_filters=%s\nsettings/exclude_filters=PackedStringArray(\"res://test\", \"res://addons\")\n" "$INCLUDE_TARGETS" "$INCLUDE_TARGETS" > override.cfg
-
-            # Remove stale runner coverage tracefiles prior to batch launch
-            find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" -delete 2>/dev/null || true
-
-            # Strip ResourcePreloader and UiManager on non-UI batches so menus are not preloaded into the 20-file cap
-            cp project.godot project.godot.bak
-            if [[ "${CHUNK[*]}" =~ (player|bullet|weapon|difficulty|system|parallax) ]]; then
-              sed -i '/UiManager=/d' project.godot
-              sed -i '/ResourcePreloader=/d' project.godot
-            fi
-
-            # Execute micro-batch under virtual display using gdcov runner
-            xvfb-run ./gdcov -d --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
-              --ignoreHeadlessMode \
-              "${ADD_ARGS[@]}"
-
-            # Restore project.godot for the next batch
-            mv project.godot.bak project.godot
-
-            # Save batch coverage tracefile
-            USER_PATH=$(find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" 2>/dev/null | head -n 1)
-            if [ -n "$USER_PATH" ] && [ -f "$USER_PATH" ]; then
-              cp "$USER_PATH" "lcov_batches/batch_${BATCH_NUM}.lcov"
-              echo "✅ Captured tracefile: lcov_batches/batch_${BATCH_NUM}.lcov"
-            else
-              echo "⚠️ WARNING: No tracefile generated for Batch $BATCH_NUM"
-            fi
-
-            BATCH_NUM=$((BATCH_NUM + 1))
-          done
+          run_domain_batches 'PackedStringArray("res://scripts/entities", "res://scripts/core", "res://scripts/resources")' "true" "${ENTITY_TESTS[@]}"
+          run_domain_batches 'PackedStringArray("res://scripts/managers", "res://scripts/system", "res://scripts/core", "res://scripts/resources", "res://scripts/ui")' "false" "${MANAGER_TESTS[@]}"
+          run_domain_batches 'PackedStringArray("res://scripts/core", "res://scripts/resources", "res://scripts/ui/components")' "false" "${SETTINGS_TESTS[@]}"
+          run_domain_batches 'PackedStringArray("res://scripts/ui", "res://scripts/core")' "false" "${UI_TESTS[@]}"
 
       - name: "Debug Batch Tracefiles"
         run: |
