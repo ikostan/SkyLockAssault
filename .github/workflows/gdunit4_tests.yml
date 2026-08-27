@@ -205,15 +205,14 @@ jobs:
           rm -rf .godot/
           ./godot --headless --editor --quit --path .
 
-# Run test suites in isolated micro-batches (3 suites per batch) to stay below the 20-file trial cap
+      # Run test suites in isolated micro-batches (2 suites per batch)
       - name: "Run GDUnit4 Coverage in Micro-Batches"
         run: |
           rm -rf lcov_batches
           mkdir -p lcov_batches
 
-          # Collect all GDUnit test suites safely
           mapfile -t TEST_FILES < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | sort)
-          echo "Found ${#TEST_FILES[@]} test suites. Partitioning execution into micro-batches of 3 suites..."
+          echo "Found ${#TEST_FILES[@]} test suites. Running micro-batches..."
 
           BATCH_NUM=1
           CHUNK_SIZE=2
@@ -224,7 +223,7 @@ jobs:
             echo "🚀 Executing Micro-Batch $BATCH_NUM: ${CHUNK[*]}"
             echo "--------------------------------------------------"
 
-            # Reset workspace and stage ONLY the current batch test files + shared helper
+            # Reset workspace and stage ONLY current batch test files + shared helper
             rm -rf test
             mkdir -p test/gdunit4
 
@@ -238,6 +237,24 @@ jobs:
               cp "$t_file" "test/gdunit4/$BASE_NAME"
               ADD_ARGS+=(--add "res://test/gdunit4/$BASE_NAME")
             done
+
+            # Preserve 20-file budget: if batch does not test menus, exclude UI menus/screens on boot
+            if [[ "${CHUNK[*]}" =~ (player|bullet|weapon|difficulty|audio_manager|globals|settings|parallax) && ! "${CHUNK[*]}" =~ (main_menu|options|audio_settings|menu_visibility|navigation_regression) ]]; then
+              EXCLUDE_LIST='PackedStringArray("res://scripts/ui/menus", "res://scripts/ui/screens", "res://test", "res://addons")'
+            else
+              EXCLUDE_LIST='PackedStringArray("res://test", "res://addons")'
+            fi
+
+            cat << EOF > override.cfg
+          [gdunit4]
+          coverage/include_paths=PackedStringArray("res://scripts")
+          coverage/exclude_paths=PackedStringArray("res://test", "res://addons")
+
+          [gdunit4_coverage]
+          runner/gdcov_path="./gdcov"
+          settings/include_filters=PackedStringArray("res://scripts")
+          settings/exclude_filters=$EXCLUDE_LIST
+          EOF
 
             # Remove stale runner coverage tracefiles prior to batch launch
             find "$HOME/.local/share/godot/" "$PWD" -name "coverage.lcov" -delete 2>/dev/null || true
