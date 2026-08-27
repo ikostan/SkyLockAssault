@@ -78,13 +78,20 @@ func test_pause_menu_navigation_sfx_while_paused() -> void:
 	assert_bool(FileAccess.file_exists(PAUSE_MENU_PATH)).is_true()
 	var scene: PackedScene = load(PAUSE_MENU_PATH) as PackedScene
 	assert_object(scene).is_not_null()
+	if scene == null:
+		return
 	
-	var instance: Node = auto_free(scene.instantiate())
-	assert_object(instance).is_not_null()
+	var raw_instance: Node = scene.instantiate()
+	assert_object(raw_instance).is_not_null()
+	if raw_instance == null:
+		return
+	var instance: Node = auto_free(raw_instance)
 	add_child(instance)
 	
 	var target_control: Control = _find_first_focusable_control(instance)
 	assert_object(target_control).is_not_null()
+	if target_control == null:
+		return
 	target_control.grab_focus()
 	await await_idle_frame()
 	
@@ -126,13 +133,20 @@ func _assert_menu_navigation_sfx_trigger(scene_path: String) -> void:
 	
 	var scene: PackedScene = load(scene_path) as PackedScene
 	assert_object(scene).is_not_null()
+	if scene == null:
+		return
 	
-	var instance: Node = auto_free(scene.instantiate())
-	assert_object(instance).is_not_null()
+	var raw_instance: Node = scene.instantiate()
+	assert_object(raw_instance).is_not_null()
+	if raw_instance == null:
+		return
+	var instance: Node = auto_free(raw_instance)
 	add_child(instance)
 	
 	var target_control: Control = _find_first_focusable_control(instance)
 	assert_object(target_control).is_not_null()
+	if target_control == null:
+		return
 	
 	target_control.grab_focus()
 	await await_idle_frame()
