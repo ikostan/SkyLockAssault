@@ -401,55 +401,44 @@ def pytest_sessionfinish(session, exitstatus):
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
-    """Output Task #776 baseline and #773 memory metrics at suite end.
+    """Format and display the Test Profiling Baseline (#776) and Browser Lifecycle Metrics (#773)."""
+    # 1. Test Profiling Baseline (#776)
+    terminalreporter.section("Test Profiling Baseline (#776)", sep="=")
+    start_time = _SESSION_STATE.get("start_time", 0.0)
+    total_duration = round(time.perf_counter() - start_time, 2) if start_time else 0.0
+    passed = _SUMMARY_COUNTS.get("passed", 0)
+    failed = _SUMMARY_COUNTS.get("failed", 0)
+    skipped = _SUMMARY_COUNTS.get("skipped", 0)
 
-    Parameters
-    ----------
-    terminalreporter : _pytest.terminal.TerminalReporter
-        The pytest terminal reporter instance.
-    exitstatus : int
-        The session exit status code.
-    config : pytest.Config
-        The active pytest configuration.
-    """
-    _ = (exitstatus, config)
+    terminalreporter.write_line(f"Total Suite Duration : {total_duration}s")
+    terminalreporter.write_line(f"Passed: {passed} | Failed: {failed} | Skipped: {skipped}")
+    metrics_file = ARTIFACTS_DIR / "metrics_baseline.json"
+    terminalreporter.write_line(f"Baseline JSON Exported: {metrics_file}")
 
-    # Output Task #776 Baseline Summary
-    if _TEST_PROFILING_DATA:
-        terminalreporter.ensure_newline()
-        terminalreporter.section("Test Profiling Baseline (#776)", sep="=", bold=True)
-        start_time = _SESSION_STATE["start_time"]
-        total_duration = (
-            round(time.perf_counter() - start_time, 4) if start_time else 0.0
-        )
-        terminalreporter.write_line(f"Total Suite Duration : {total_duration}s")
+    # 2. Browser Lifecycle & Memory Metrics (#773)
+    if not _LIFECYCLE_METRICS:
+        return
+
+    terminalreporter.section("Browser Lifecycle & Memory Metrics (#773)", sep="=")
+
+    # Calculate dynamic column width from the longest test name
+    min_name_width = 30
+    max_name_width = max(len(m["test"]) for m in _LIFECYCLE_METRICS)
+    col_width = max(min_name_width, max_name_width)
+
+    # Print strictly aligned rows
+    for item in _LIFECYCLE_METRICS:
+        test_name = item["test"]
+        used_val = f"{float(item['used_heap_mb']):.2f}"
+        total_val = f"{float(item['total_heap_mb']):.2f}"
+        limit_val = f"{float(item['limit_mb']):.2f}"
+
+        heap_str = f"{used_val:>7} MB / {total_val:>7} MB (Limit: {limit_val:>7} MB)"
         terminalreporter.write_line(
-            f"Passed: {_SUMMARY_COUNTS.get('passed', 0)} | "
-            f"Failed: {_SUMMARY_COUNTS.get('failed', 0)} | "
-            f"Skipped: {_SUMMARY_COUNTS.get('skipped', 0)}"
+            f"  • {test_name:<{col_width}} | JS Heap: {heap_str}"
         )
-        metrics_file = ARTIFACTS_DIR / "metrics_baseline.json"
-        terminalreporter.write_line(f"Baseline JSON Exported: {metrics_file}")
-        terminalreporter.ensure_newline()
 
-    # Output Task #773 Memory & Lifecycle Summary
-    if _LIFECYCLE_METRICS:
-        terminalreporter.ensure_newline()
-        terminalreporter.section(
-            "Browser Lifecycle & Memory Metrics (#773)", sep="=", bold=True
-        )
-        for entry in _LIFECYCLE_METRICS:
-            t_name = entry["test"]
-            u_heap = entry["used_heap_mb"]
-            tot_heap = entry["total_heap_mb"]
-            lim_heap = entry["limit_mb"]
-            line = (
-                f"  • {t_name:<45} | JS Heap: {u_heap:>6} MB / "
-                f"{tot_heap:>6} MB (Limit: {lim_heap} MB)"
-            )
-            terminalreporter.write_line(line)
-        terminalreporter.ensure_newline()
-
+    terminalreporter.write_line("")
 
 # ==============================================================================
 # Pytest Fixtures
