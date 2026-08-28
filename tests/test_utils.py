@@ -115,7 +115,11 @@ def init_page_and_wait_ready(
 
     try:
         if page.evaluate("window.godotInitialized === true"):
-            # Page is already initialized via shared_page fixture; skip redundant reload
+            # Dismiss GPU warning modal if displayed in software rasterizer/headless CI
+            gpu_btn = page.locator("#gpu-alert-btn")
+            if gpu_btn.is_visible():
+                gpu_btn.click()
+
             canvas = page.locator("canvas")
             expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
             boot_time = 0.0
@@ -129,6 +133,11 @@ def init_page_and_wait_ready(
     page.wait_for_function(
         "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
     )
+
+    # Dismiss GPU warning modal if displayed in software rasterizer/headless CI
+    gpu_btn = page.locator("#gpu-alert-btn")
+    if gpu_btn.is_visible():
+        gpu_btn.click()
 
     # Minimal visual assertion to ensure the canvas shell actually rendered
     canvas = page.locator("canvas")

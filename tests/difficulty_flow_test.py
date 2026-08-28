@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Egor Kostan
+# Copyright (C) 2025-2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 # tests/difficulty_flow_test.py
 """
@@ -31,16 +31,16 @@ pytest -k difficulty_flow_test -q
 Artifacts
 ---------
 v8_coverage_difficulty_flow_test.json, artifacts/test_difficulty_failure_*.png/txt
+
 """
 
 import json
 import os
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from playwright.sync_api import Page, expect
 
-# Configuration for stability in different environments
 from tests.test_utils import DEFAULT_TIMEOUT, TEST_TIMEOUT, wait_for_console_log
 
 
@@ -73,13 +73,7 @@ def test_difficulty_flow(shared_page: Page) -> None:
     cdp_session: Optional[Any] = None
 
     def on_console(msg: Any) -> None:
-        """
-        Console message handler.
-
-        :param msg: The console message.
-        :type msg: Any
-        :rtype: None
-        """
+        """Console message handler."""
         logs.append({"type": msg.type, "text": msg.text})
 
     shared_page.on("console", on_console)
@@ -96,6 +90,12 @@ def test_difficulty_flow(shared_page: Page) -> None:
         shared_page.wait_for_function(
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
+
+        # Dismiss GPU alert modal if triggered by software rasterizer in test environment
+        gpu_alert_btn = shared_page.locator("#gpu-alert-btn")
+        if gpu_alert_btn.is_visible():
+            gpu_alert_btn.click()
+            expect(shared_page.locator("#gpu-alert-modal")).not_to_be_visible()
 
         # Verify canvas and title to ensure game is initialized
         canvas = shared_page.locator("canvas")
