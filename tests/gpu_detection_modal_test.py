@@ -403,14 +403,14 @@ def test_pw_gpu_07_accessible_keyboard_dismissal(page: Page, key: str) -> None:
         dismiss_btn = page.locator("#gpu-alert-btn")
         expect(dismiss_btn).to_be_visible(timeout=TEST_TIMEOUT)
 
-        # Focus the button and trigger dismissal via keyboard
-        dismiss_btn.focus()
-        page.keyboard.press(key)
+        # Dispatch keyboard dismissal directly to the button locator
+        dismiss_btn.press(key)
 
         page.wait_for_function("() => window.godotInitialized === true", timeout=TEST_TIMEOUT)
 
         modal = page.locator("#gpu-alert-modal")
         expect(modal).not_to_be_visible()
+        expect(modal).to_have_css("display", "none")
 
     except Exception as e:
         print(f"Test suite failed: {e!s}")
