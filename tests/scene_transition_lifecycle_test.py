@@ -55,15 +55,11 @@ def _gameplay_ready_predicate(text: str) -> bool:
 
 
 def _main_menu_ready_predicate(text: str) -> bool:
-    """True when a log indicates return to the Main Menu finished."""
+    """True only when main_menu.tscn has fully loaded and bound fresh JS callbacks."""
     t = text.lower()
     return (
         "initializing main menu" in t
-        or "back to main menu button pressed" in t
-        or "exposed main menu callbacks" in t
-        or "grabbed initial focus on startbutton" in t
-        or "showing menu: panel" in t
-        or "fade-in complete" in t
+        or "exposed main menu callbacks to js" in t
     )
 
 
@@ -434,9 +430,12 @@ def test_pw_trans_06_multi_cycle_transition_lifecycle(page: Page) -> None:
         cdp_session = _setup_mock_page(page, logs)
 
         for cycle_idx in range(1, 3):
-            # Forward: Main Menu -> Gameplay
+            # 1. Forward: Main Menu -> Gameplay
             page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
-            page.wait_for_function("() => typeof window.startPressed !== 'undefined'", timeout=TEST_TIMEOUT)
+            page.wait_for_function(
+                "() => typeof window.startPressed === 'function'",
+                timeout=TEST_TIMEOUT,
+            )
             pre_start_idx = len(logs)
             t_cycle_start = time.perf_counter()
 
@@ -451,7 +450,7 @@ def test_pw_trans_06_multi_cycle_transition_lifecycle(page: Page) -> None:
             duration_ms = (time.perf_counter() - t_cycle_start) * 1000
             assert duration_ms < 2500.0, f"Cycle {cycle_idx} forward transition exceeded SLA: {duration_ms:.2f} ms"
 
-            # Reverse: Gameplay -> Main Menu
+            # 2. Reverse: Gameplay -> Main Menu
             pre_return_idx = len(logs)
             _return_to_main_menu_from_gameplay(page)
             wait_for_console_log(
@@ -461,7 +460,13 @@ def test_pw_trans_06_multi_cycle_transition_lifecycle(page: Page) -> None:
                 page,
                 timeout_ms=TEST_TIMEOUT,
             )
+
+            # 3. Ensure Main Menu is interactive before next cycle begins
             page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
+            page.wait_for_function(
+                "() => typeof window.startPressed === 'function'",
+                timeout=TEST_TIMEOUT,
+            )
 
     except Exception as e:
         print(f"Test PW-TRANS-06 failed: {e}")
