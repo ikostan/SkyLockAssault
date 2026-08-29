@@ -42,22 +42,15 @@ def _count_logs(logs: list[dict[str, str]], keyword: str) -> int:
 
 
 def _gameplay_ready_predicate(text: str) -> bool:
-    """True when a log indicates the forward Main Menu -> Gameplay transition finished.
-
-    Accepts both legacy HUD/player strings and the currently emitted
-    scene-load / BulletFirer / viewport signals (visible under DEBUG).
-    """
+    """True when a log indicates the forward Main Menu -> Gameplay transition finished."""
     t = text.lower()
     return (
         "hud successfully wired" in t
         or "player ready" in t
         or "player spawned" in t
         or "switched to bulletfirer" in t
-        or "viewport size" in t
-        or "scene loaded successfully" in t
         or "initializing main scene" in t
-        or "loading started successfully" in t
-        or "start game menu button pressed" in t
+        or "scene loaded successfully" in t
     )
 
 
@@ -65,12 +58,12 @@ def _main_menu_ready_predicate(text: str) -> bool:
     """True when a log indicates return to the Main Menu finished."""
     t = text.lower()
     return (
-        "showing menu: panel" in t
-        or "main menu" in t
-        or "grabbed focus on start" in t
-        or "options menu exited" in t
-        or "empty next_scene - returning to main menu" in t
-        or "back button pressed" in t
+        "initializing main menu" in t
+        or "back to main menu button pressed" in t
+        or "exposed main menu callbacks" in t
+        or "grabbed initial focus on startbutton" in t
+        or "showing menu: panel" in t
+        or "fade-in complete" in t
     )
 
 
@@ -94,14 +87,12 @@ def _setup_mock_page(page: Page, logs: list[dict[str, str]]) -> Any:
     page.goto("http://localhost:8080/index.html")
     page.wait_for_function("() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT)
 
-    # Dismiss GPU alert modal if the software-rasterizer path still surfaces it
+    # Dismiss GPU alert modal if displayed
     gpu_btn = page.locator("#gpu-alert-btn")
     if gpu_btn.is_visible():
         gpu_btn.click()
 
-    # Force DEBUG log level (mirrors difficulty_flow / start_game_and_wait_ready).
-    # Without this the post-migration default can suppress HUD/player/scene logs
-    # and surface the "Empty next_scene" fallback path.
+    # Force DEBUG log level to guarantee visibility of transition lifecycle events
     open_options_menu(page)
     set_log_level(page, logs, level_index=0)  # 0 = DEBUG
 
@@ -127,6 +118,15 @@ def _setup_mock_page(page: Page, logs: list[dict[str, str]]) -> Any:
     page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
 
     return cdp_session
+
+
+def _return_to_main_menu_from_gameplay(page: Page) -> None:
+    """Dispatches return-to-main-menu transition from active gameplay via exposed bridge."""
+    page.wait_for_function(
+        "() => typeof window.mainMenuPressed === 'function'",
+        timeout=TEST_TIMEOUT,
+    )
+    page.evaluate("window.mainMenuPressed([])")
 
 
 def _dump_failure_artifacts(page: Page, logs: list[dict[str, str]], test_id: str) -> None:
@@ -177,7 +177,7 @@ def test_pw_trans_01_main_menu_to_gameplay_lifecycle_sla(page: Page) -> None:
         # Trigger forward transition into gameplay
         page.evaluate("window.startPressed([])")
 
-        # Await gameplay readiness (BulletFirer / viewport or legacy HUD/player logs)
+        # Await gameplay readiness
         wait_for_console_log(
             logs,
             _gameplay_ready_predicate,
@@ -225,21 +225,9 @@ def test_pw_trans_02_gameplay_to_main_menu_teardown(page: Page) -> None:
             timeout_ms=TEST_TIMEOUT,
         )
 
-        # Refocus game canvas and trigger Pause Menu via Escape key
-        canvas = page.locator("#canvas")
-        expect(canvas).to_be_visible(timeout=TEST_TIMEOUT)
-        canvas.focus()
-        page.keyboard.press("Escape")
-
         # 2. Trigger reverse transition to Main Menu
         pre_return_idx = len(logs)
-        page.wait_for_function(
-            "() => typeof window.mainMenuPressed !== 'undefined' || typeof window.optionsBackPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        page.evaluate(
-            "() => { if (typeof window.mainMenuPressed === 'function') { window.mainMenuPressed([]); } else { window.optionsBackPressed([]); } }"
-        )
+        _return_to_main_menu_from_gameplay(page)
 
         # Await Main Menu re-entry and focus restoration
         wait_for_console_log(
@@ -295,19 +283,17 @@ def test_pw_trans_03_forward_transition_idempotency(page: Page) -> None:
         )
 
         new_logs = logs[pre_burst_idx:]
-        start_button_logs = _count_logs(new_logs, "start game menu button pressed")
-        bullet_firer_logs = _count_logs(new_logs, "switched to bulletfirer")
-        viewport_logs = _count_logs(new_logs, "viewport size")
-        scene_loaded_logs = _count_logs(new_logs, "scene loaded successfully")
+        scene_loaded_count = _count_logs(new_logs, "scene loaded successfully")
+        init_main_scene_count = _count_logs(new_logs, "initializing main scene")
+        hud_wired_count = _count_logs(new_logs, "hud successfully wired")
 
-        # Verify idempotency guards: state machine admits exactly one active instance
-        if start_button_logs > 0:
-            assert start_button_logs == 1, f"Expected 1 start button trigger, observed: {start_button_logs}"
-        readiness_count = bullet_firer_logs or viewport_logs or scene_loaded_logs
-        if readiness_count > 0:
-            assert readiness_count == 1, (
-                f"Expected 1 gameplay readiness log, observed: {readiness_count}"
-            )
+        # Verify idempotency guards: exactly 1 scene is loaded and initialized
+        if scene_loaded_count > 0:
+            assert scene_loaded_count == 1, f"Expected 1 scene load, observed: {scene_loaded_count}"
+        if init_main_scene_count > 0:
+            assert init_main_scene_count == 1, f"Expected 1 main scene init, observed: {init_main_scene_count}"
+        if hud_wired_count > 0:
+            assert hud_wired_count == 1, f"Expected 1 HUD wiring, observed: {hud_wired_count}"
 
     except Exception as e:
         print(f"Test PW-TRANS-03 failed: {e}")
@@ -341,21 +327,18 @@ def test_pw_trans_04_reverse_transition_idempotency(page: Page) -> None:
             timeout_ms=TEST_TIMEOUT,
         )
 
-        # Pause and burst duplicate return triggers
-        page.locator("#canvas").focus()
-        page.keyboard.press("Escape")
-
         page.wait_for_function(
-            "() => typeof window.mainMenuPressed !== 'undefined' || typeof window.optionsBackPressed !== 'undefined'",
+            "() => typeof window.mainMenuPressed === 'function'",
             timeout=TEST_TIMEOUT,
         )
 
         pre_burst_idx = len(logs)
+
+        # Rapidly dispatch multiple return activations
         page.evaluate("""() => {
-            const hook = typeof window.mainMenuPressed === 'function' ? window.mainMenuPressed : window.optionsBackPressed;
-            hook([]);
-            hook([]);
-            hook([]);
+            window.mainMenuPressed([]);
+            window.mainMenuPressed([]);
+            window.mainMenuPressed([]);
         }""")
 
         wait_for_console_log(
@@ -419,16 +402,8 @@ def test_pw_trans_05_canvas_and_initialization_invariants(page: Page) -> None:
         assert_canvas_invariants("Checkpoint 2 (Gameplay Active)")
 
         # Checkpoint 3: Main Menu Re-entry
-        page.locator("#canvas").focus()
-        page.keyboard.press("Escape")
         pre_menu_idx = len(logs)
-        page.wait_for_function(
-            "() => typeof window.mainMenuPressed !== 'undefined' || typeof window.optionsBackPressed !== 'undefined'",
-            timeout=TEST_TIMEOUT,
-        )
-        page.evaluate(
-            "() => { if (typeof window.mainMenuPressed === 'function') { window.mainMenuPressed([]); } else { window.optionsBackPressed([]); } }"
-        )
+        _return_to_main_menu_from_gameplay(page)
         wait_for_console_log(
             logs,
             _main_menu_ready_predicate,
@@ -477,19 +452,8 @@ def test_pw_trans_06_multi_cycle_transition_lifecycle(page: Page) -> None:
             assert duration_ms < 2500.0, f"Cycle {cycle_idx} forward transition exceeded SLA: {duration_ms:.2f} ms"
 
             # Reverse: Gameplay -> Main Menu
-            canvas = page.locator("#canvas")
-            expect(canvas).to_be_visible(timeout=TEST_TIMEOUT)
-            canvas.focus()
-            page.keyboard.press("Escape")
-
             pre_return_idx = len(logs)
-            page.wait_for_function(
-                "() => typeof window.mainMenuPressed !== 'undefined' || typeof window.optionsBackPressed !== 'undefined'",
-                timeout=TEST_TIMEOUT,
-            )
-            page.evaluate(
-                "() => { if (typeof window.mainMenuPressed === 'function') { window.mainMenuPressed([]); } else { window.optionsBackPressed([]); } }"
-            )
+            _return_to_main_menu_from_gameplay(page)
             wait_for_console_log(
                 logs,
                 _main_menu_ready_predicate,

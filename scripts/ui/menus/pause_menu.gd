@@ -12,6 +12,12 @@ var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 @onready var back_to_main_button: Button = $VBoxContainer/BackToMainButton
 @onready var options_button: Button = $VBoxContainer/OptionsButton
 
+# Store JS callback objects to prevent garbage collection on Web export
+var _toggle_pause_cb: JavaScriptObject
+var _back_to_main_cb: JavaScriptObject
+var _resume_cb: JavaScriptObject
+var _options_cb: JavaScriptObject
+
 
 func _input(event: InputEvent) -> void:
 	## Handles input events.
@@ -41,6 +47,22 @@ func _ready() -> void:
 		options_button.pressed.connect(_on_options_button_pressed)
 	visible = false
 	Globals.log_message("Pause menu is ready.", Globals.LogLevel.DEBUG)
+	
+	# Expose JS Web callbacks for automated testing & browser interaction
+	if OS.get_name() == "Web":
+		var js_window := JavaScriptBridge.get_interface("window")
+		if js_window:
+			_toggle_pause_cb = JavaScriptBridge.create_callback(Callable(self, "_on_js_toggle_pause"))
+			js_window.togglePause = _toggle_pause_cb
+			_back_to_main_cb = JavaScriptBridge.create_callback(Callable(self, "_on_back_to_main_button_pressed"))
+			js_window.mainMenuPressed = _back_to_main_cb
+			_resume_cb = JavaScriptBridge.create_callback(Callable(self, "_on_resume_button_pressed"))
+			js_window.resumePressed = _resume_cb
+			_options_cb = JavaScriptBridge.create_callback(Callable(self, "_on_options_button_pressed"))
+			js_window.pauseOptionsPressed = _options_cb
+			Globals.log_message(
+				"Exposed pause menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
+			)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -71,21 +93,34 @@ func toggle_pause() -> void:
 		)
 
 
-func _on_resume_button_pressed() -> void:
+func _on_js_toggle_pause(_args: Array = []) -> void:
+	## Handles toggle pause callback from JS bridge.
+	##
+	## :param _args: Optional arguments from web overlays (unused).
+	## :type _args: Array
+	## :rtype: void
+	toggle_pause()
+
+
+func _on_resume_button_pressed(_args: Array = []) -> void:
 	## Handles resume button press.
 	##
 	## Logs and toggles pause.
 	##
+	## :param _args: Optional arguments from web overlays (unused).
+	## :type _args: Array
 	## :rtype: void
 	Globals.log_message("Resume button pressed.", Globals.LogLevel.DEBUG)
 	toggle_pause()
 
 
-func _on_back_to_main_button_pressed() -> void:
+func _on_back_to_main_button_pressed(_args: Array = []) -> void:
 	## Handles back to main button press.
 	##
 	## Unpauses, hides, loads main menu.
 	##
+	## :param _args: Optional arguments from web overlays (unused).
+	## :type _args: Array
 	## :rtype: void
 	Globals.log_message("Back To Main Menu button pressed.", Globals.LogLevel.DEBUG)
 	get_tree().paused = false
@@ -93,11 +128,13 @@ func _on_back_to_main_button_pressed() -> void:
 	Globals.load_scene_with_loading("res://scenes/main_menu.tscn")
 
 
-func _on_options_button_pressed() -> void:
+func _on_options_button_pressed(_args: Array = []) -> void:
 	## Handles options button press.
 	##
 	## Logs and loads options, hides self.
 	##
+	## :param _args: Optional arguments from web overlays (unused).
+	## :type _args: Array
 	## :rtype: void
 	Globals.log_message("Options button pressed.", Globals.LogLevel.DEBUG)
 	Globals.load_options(self)
