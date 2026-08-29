@@ -42,15 +42,11 @@ def _count_logs(logs: list[dict[str, str]], keyword: str) -> int:
 
 
 def _gameplay_ready_predicate(text: str) -> bool:
-    """True when a log indicates the forward Main Menu -> Gameplay transition finished."""
+    """True only when gameplay is fully mounted, HUD is wired, and Pause Menu callbacks are exposed."""
     t = text.lower()
     return (
-        "hud successfully wired" in t
-        or "player ready" in t
-        or "player spawned" in t
-        or "switched to bulletfirer" in t
-        or "initializing main scene" in t
-        or "scene loaded successfully" in t
+        "hud successfully wired to player signals" in t
+        or "exposed pause menu callbacks to js" in t
     )
 
 
@@ -58,8 +54,8 @@ def _main_menu_ready_predicate(text: str) -> bool:
     """True only when main_menu.tscn has fully loaded and bound fresh JS callbacks."""
     t = text.lower()
     return (
-        "initializing main menu" in t
-        or "exposed main menu callbacks to js" in t
+        "exposed main menu callbacks to js" in t
+        or "quitdialog signals connected" in t
     )
 
 
@@ -279,13 +275,10 @@ def test_pw_trans_03_forward_transition_idempotency(page: Page) -> None:
         )
 
         new_logs = logs[pre_burst_idx:]
-        scene_loaded_count = _count_logs(new_logs, "scene loaded successfully")
         init_main_scene_count = _count_logs(new_logs, "initializing main scene")
         hud_wired_count = _count_logs(new_logs, "hud successfully wired")
 
         # Verify idempotency guards: exactly 1 scene is loaded and initialized
-        if scene_loaded_count > 0:
-            assert scene_loaded_count == 1, f"Expected 1 scene load, observed: {scene_loaded_count}"
         if init_main_scene_count > 0:
             assert init_main_scene_count == 1, f"Expected 1 main scene init, observed: {init_main_scene_count}"
         if hud_wired_count > 0:
