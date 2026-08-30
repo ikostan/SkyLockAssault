@@ -309,12 +309,12 @@ def test_pw_tel_03_handler_robustness(page: Page) -> None:
             len(page_errors) == 0
         ), f"Exceptions leaked into page context during execution: {page_errors}"
         for text in new_logs:
-            assert "nan" not in text, (
-                f"Calculation propagated NaN into formatting output: {text}"
-            )
-            assert "infinity" not in text, (
-                f"Calculation propagated Infinity into formatting output: {text}"
-            )
+            assert (
+                "nan" not in text
+            ), f"Calculation propagated NaN into formatting output: {text}"
+            assert (
+                "infinity" not in text
+            ), f"Calculation propagated Infinity into formatting output: {text}"
 
     except Exception as e:
         print(f"Test PW-TEL-03 failed: {e}")
