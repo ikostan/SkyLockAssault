@@ -53,8 +53,7 @@ def _main_menu_ready_predicate(text: str) -> bool:
     """True only when main_menu.tscn has fully loaded and bound fresh JS callbacks."""
     t = text.lower()
     return (
-        "exposed main menu callbacks to js" in t
-        or "quitdialog signals connected" in t
+        "exposed main menu callbacks to js" in t or "quitdialog signals connected" in t
     )
 
 
@@ -62,6 +61,7 @@ def _setup_mock_page(page: Page, logs: list[dict[str, str]]) -> Any:
     """Configures hardware GPU mock, attaches listeners, starts CDP coverage,
     and forces DEBUG log level so readiness / scene-transition messages appear.
     """
+
     def on_console(msg: Any) -> None:
         logs.append({"type": msg.type, "text": msg.text})
 
@@ -69,14 +69,18 @@ def _setup_mock_page(page: Page, logs: list[dict[str, str]]) -> Any:
 
     cdp_session = page.context.new_cdp_session(page)
     cdp_session.send("Profiler.enable")
-    cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+    cdp_session.send(
+        "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
+    )
 
     # Mock hardware GPU to bypass pre-boot software warning modals
     page.add_init_script(
         get_webgl_mock_script(renderer_string="ANGLE (NVIDIA, RTX 4070 Direct3D11)")
     )
     page.goto("http://localhost:8080/index.html")
-    page.wait_for_function("() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT)
+    page.wait_for_function(
+        "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+    )
 
     # Dismiss GPU alert modal if displayed
     gpu_btn = page.locator("#gpu-alert-btn")
@@ -88,7 +92,9 @@ def _setup_mock_page(page: Page, logs: list[dict[str, str]]) -> Any:
     set_log_level(page, logs, level_index=0)  # 0 = DEBUG
 
     # Return to main menu so subsequent startPressed calls begin from a clean state
-    page.wait_for_selector("#options-back-button", state="visible", timeout=TEST_TIMEOUT)
+    page.wait_for_selector(
+        "#options-back-button", state="visible", timeout=TEST_TIMEOUT
+    )
     page.wait_for_function(
         "() => typeof window.optionsBackPressed !== 'undefined'",
         timeout=TEST_TIMEOUT,
@@ -120,14 +126,22 @@ def _return_to_main_menu_from_gameplay(page: Page) -> None:
     page.evaluate("window.mainMenuPressed([])")
 
 
-def _dump_failure_artifacts(page: Page, logs: list[dict[str, str]], test_id: str) -> None:
+def _dump_failure_artifacts(
+    page: Page, logs: list[dict[str, str]], test_id: str
+) -> None:
     """Dumps diagnostic artifacts on test failure."""
     os.makedirs("artifacts", exist_ok=True)
     timestamp = int(time.time() * 1000)
     page.screenshot(path=f"artifacts/{test_id}_failure_screenshot_{timestamp}.png")
-    with open(f"artifacts/{test_id}_failure_html_{timestamp}.html", "w", encoding="utf-8") as f:
+    with open(
+        f"artifacts/{test_id}_failure_html_{timestamp}.html", "w", encoding="utf-8"
+    ) as f:
         f.write(page.content())
-    with open(f"artifacts/{test_id}_failure_console_logs_{timestamp}.txt", "w", encoding="utf-8") as f:
+    with open(
+        f"artifacts/{test_id}_failure_console_logs_{timestamp}.txt",
+        "w",
+        encoding="utf-8",
+    ) as f:
         for log in logs:
             f.write(f"[{log['type']}] {log['text']}\n")
 
@@ -140,7 +154,11 @@ def _save_coverage(cdp_session: Any, test_id: str) -> None:
             cdp_session.send("Profiler.stopPreciseCoverage")
             cdp_session.send("Profiler.disable")
             os.makedirs("artifacts", exist_ok=True)
-            with open(f"artifacts/v8_coverage_{test_id}_{int(time.time() * 1000)}.json", "w", encoding="utf-8") as f:
+            with open(
+                f"artifacts/v8_coverage_{test_id}_{int(time.time() * 1000)}.json",
+                "w",
+                encoding="utf-8",
+            ) as f:
                 json.dump(coverage, f)
         except Exception as cov_err:
             print(f"Warning: Failed to harvest V8 coverage data: {cov_err}")
@@ -160,7 +178,9 @@ def test_pw_trans_01_main_menu_to_gameplay_lifecycle_sla(page: Page) -> None:
         cdp_session = _setup_mock_page(page, logs)
 
         page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_function("() => typeof window.startPressed !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.startPressed !== 'undefined'", timeout=TEST_TIMEOUT
+        )
 
         start_click_idx = len(logs)
         t_start = time.perf_counter()
@@ -179,10 +199,12 @@ def test_pw_trans_01_main_menu_to_gameplay_lifecycle_sla(page: Page) -> None:
         transition_duration_ms = (time.perf_counter() - t_start) * 1000
 
         # Functional and Performance SLA Assertions
-        assert transition_duration_ms < 2500.0, (
-            f"Transition SLA violated: took {transition_duration_ms:.2f} ms (limit: 2500 ms)"
-        )
-        assert len(page_errors) == 0, f"Uncaught page errors detected during transition: {page_errors}"
+        assert (
+            transition_duration_ms < 2500.0
+        ), f"Transition SLA violated: took {transition_duration_ms:.2f} ms (limit: 2500 ms)"
+        assert (
+            len(page_errors) == 0
+        ), f"Uncaught page errors detected during transition: {page_errors}"
 
     except Exception as e:
         print(f"Test PW-TRANS-01 failed: {e}")
@@ -205,7 +227,9 @@ def test_pw_trans_02_gameplay_to_main_menu_teardown(page: Page) -> None:
 
         # 1. Enter gameplay
         page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_function("() => typeof window.startPressed !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.startPressed !== 'undefined'", timeout=TEST_TIMEOUT
+        )
         pre_start_idx = len(logs)
         page.evaluate("window.startPressed([])")
         wait_for_console_log(
@@ -253,7 +277,9 @@ def test_pw_trans_03_forward_transition_idempotency(page: Page) -> None:
         cdp_session = _setup_mock_page(page, logs)
 
         page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_function("() => typeof window.startPressed !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.startPressed !== 'undefined'", timeout=TEST_TIMEOUT
+        )
 
         pre_burst_idx = len(logs)
 
@@ -279,9 +305,13 @@ def test_pw_trans_03_forward_transition_idempotency(page: Page) -> None:
 
         # Verify idempotency guards: exactly 1 scene is loaded and initialized
         if init_main_scene_count > 0:
-            assert init_main_scene_count == 1, f"Expected 1 main scene init, observed: {init_main_scene_count}"
+            assert (
+                init_main_scene_count == 1
+            ), f"Expected 1 main scene init, observed: {init_main_scene_count}"
         if hud_wired_count > 0:
-            assert hud_wired_count == 1, f"Expected 1 HUD wiring, observed: {hud_wired_count}"
+            assert (
+                hud_wired_count == 1
+            ), f"Expected 1 HUD wiring, observed: {hud_wired_count}"
 
     except Exception as e:
         print(f"Test PW-TRANS-03 failed: {e}")
@@ -304,7 +334,9 @@ def test_pw_trans_04_reverse_transition_idempotency(page: Page) -> None:
 
         # Transition into Gameplay
         page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_function("() => typeof window.startPressed !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.startPressed !== 'undefined'", timeout=TEST_TIMEOUT
+        )
         pre_game_idx = len(logs)
         page.evaluate("window.startPressed([])")
         wait_for_console_log(
@@ -359,15 +391,19 @@ def test_pw_trans_05_canvas_and_initialization_invariants(page: Page) -> None:
 
     def assert_canvas_invariants(checkpoint_label: str) -> None:
         is_init = page.evaluate("() => window.godotInitialized === true")
-        assert is_init is True, f"Invariant failed at {checkpoint_label}: godotInitialized is not true"
+        assert (
+            is_init is True
+        ), f"Invariant failed at {checkpoint_label}: godotInitialized is not true"
 
         canvas = page.locator("#canvas")
         expect(canvas).to_be_visible(timeout=TEST_TIMEOUT)
         box = canvas.bounding_box()
-        assert box is not None, f"Invariant failed at {checkpoint_label}: canvas bounding box is None"
-        assert box["width"] > 0 and box["height"] > 0, (
-            f"Invariant failed at {checkpoint_label}: invalid dimensions ({box['width']}x{box['height']})"
-        )
+        assert (
+            box is not None
+        ), f"Invariant failed at {checkpoint_label}: canvas bounding box is None"
+        assert (
+            box["width"] > 0 and box["height"] > 0
+        ), f"Invariant failed at {checkpoint_label}: invalid dimensions ({box['width']}x{box['height']})"
 
     try:
         cdp_session = _setup_mock_page(page, logs)
@@ -377,7 +413,9 @@ def test_pw_trans_05_canvas_and_initialization_invariants(page: Page) -> None:
 
         # Checkpoint 2: Gameplay Ready
         page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_function("() => typeof window.startPressed !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.startPressed !== 'undefined'", timeout=TEST_TIMEOUT
+        )
         pre_game_idx = len(logs)
         page.evaluate("window.startPressed([])")
         wait_for_console_log(
@@ -423,7 +461,9 @@ def test_pw_trans_06_multi_cycle_transition_lifecycle(page: Page) -> None:
 
         for cycle_idx in range(1, 3):
             # 1. Forward: Main Menu -> Gameplay
-            page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
+            page.wait_for_selector(
+                "#start-button", state="visible", timeout=TEST_TIMEOUT
+            )
             page.wait_for_function(
                 "() => typeof window.startPressed === 'function'",
                 timeout=TEST_TIMEOUT,
@@ -440,7 +480,9 @@ def test_pw_trans_06_multi_cycle_transition_lifecycle(page: Page) -> None:
                 timeout_ms=TEST_TIMEOUT,
             )
             duration_ms = (time.perf_counter() - t_cycle_start) * 1000
-            assert duration_ms < 2500.0, f"Cycle {cycle_idx} forward transition exceeded SLA: {duration_ms:.2f} ms"
+            assert (
+                duration_ms < 2500.0
+            ), f"Cycle {cycle_idx} forward transition exceeded SLA: {duration_ms:.2f} ms"
 
             # 2. Reverse: Gameplay -> Main Menu
             pre_return_idx = len(logs)
@@ -454,7 +496,9 @@ def test_pw_trans_06_multi_cycle_transition_lifecycle(page: Page) -> None:
             )
 
             # 3. Ensure Main Menu is interactive before next cycle begins
-            page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
+            page.wait_for_selector(
+                "#start-button", state="visible", timeout=TEST_TIMEOUT
+            )
             page.wait_for_function(
                 "() => typeof window.startPressed === 'function'",
                 timeout=TEST_TIMEOUT,

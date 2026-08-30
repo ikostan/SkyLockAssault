@@ -35,25 +35,26 @@ def _setup_mock_page(page: Page, logs: list[dict[str, Any]]) -> Any:
     and forces DEBUG log level. Injects high-precision timestamps into intercepted
     log objects for UX pacing math.
     """
+
     def on_console(msg: Any) -> None:
-        logs.append({
-            "type": msg.type,
-            "text": msg.text,
-            "time": time.perf_counter()
-        })
+        logs.append({"type": msg.type, "text": msg.text, "time": time.perf_counter()})
 
     page.on("console", on_console)
 
     cdp_session = page.context.new_cdp_session(page)
     cdp_session.send("Profiler.enable")
-    cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+    cdp_session.send(
+        "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
+    )
 
     # Mock hardware GPU to bypass pre-boot software warning modals
     page.add_init_script(
         get_webgl_mock_script(renderer_string="ANGLE (NVIDIA, RTX 4070 Direct3D11)")
     )
     page.goto("http://localhost:8080/index.html")
-    page.wait_for_function("() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT)
+    page.wait_for_function(
+        "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
+    )
 
     # Dismiss GPU alert modal if displayed
     gpu_btn = page.locator("#gpu-alert-btn")
@@ -63,7 +64,9 @@ def _setup_mock_page(page: Page, logs: list[dict[str, Any]]) -> Any:
     open_options_menu(page)
     set_log_level(page, logs, level_index=0)  # 0 = DEBUG
 
-    page.wait_for_selector("#options-back-button", state="visible", timeout=TEST_TIMEOUT)
+    page.wait_for_selector(
+        "#options-back-button", state="visible", timeout=TEST_TIMEOUT
+    )
     page.wait_for_function(
         "() => typeof window.optionsBackPressed !== 'undefined'",
         timeout=TEST_TIMEOUT,
@@ -86,14 +89,22 @@ def _setup_mock_page(page: Page, logs: list[dict[str, Any]]) -> Any:
     return cdp_session
 
 
-def _dump_failure_artifacts(page: Page, logs: list[dict[str, Any]], test_id: str) -> None:
+def _dump_failure_artifacts(
+    page: Page, logs: list[dict[str, Any]], test_id: str
+) -> None:
     """Dumps diagnostic artifacts on test failure."""
     os.makedirs("artifacts", exist_ok=True)
     timestamp = int(time.time() * 1000)
     page.screenshot(path=f"artifacts/{test_id}_failure_screenshot_{timestamp}.png")
-    with open(f"artifacts/{test_id}_failure_html_{timestamp}.html", "w", encoding="utf-8") as f:
+    with open(
+        f"artifacts/{test_id}_failure_html_{timestamp}.html", "w", encoding="utf-8"
+    ) as f:
         f.write(page.content())
-    with open(f"artifacts/{test_id}_failure_console_logs_{timestamp}.txt", "w", encoding="utf-8") as f:
+    with open(
+        f"artifacts/{test_id}_failure_console_logs_{timestamp}.txt",
+        "w",
+        encoding="utf-8",
+    ) as f:
         for log in logs:
             f.write(f"[{log['type']}] {log['text']}\n")
 
@@ -106,7 +117,11 @@ def _save_coverage(cdp_session: Any, test_id: str) -> None:
             cdp_session.send("Profiler.stopPreciseCoverage")
             cdp_session.send("Profiler.disable")
             os.makedirs("artifacts", exist_ok=True)
-            with open(f"artifacts/v8_coverage_{test_id}_{int(time.time() * 1000)}.json", "w", encoding="utf-8") as f:
+            with open(
+                f"artifacts/v8_coverage_{test_id}_{int(time.time() * 1000)}.json",
+                "w",
+                encoding="utf-8",
+            ) as f:
                 json.dump(coverage, f)
         except Exception as cov_err:
             print(f"Warning: Failed to harvest V8 coverage data: {cov_err}")
@@ -124,7 +139,9 @@ def test_pw_hold_01_ux_completion_delay(page: Page) -> None:
         cdp_session = _setup_mock_page(page, logs)
 
         page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
-        page.wait_for_function("() => typeof window.startPressed !== 'undefined'", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.startPressed !== 'undefined'", timeout=TEST_TIMEOUT
+        )
 
         start_click_idx = len(logs)
         page.evaluate("window.startPressed([])")
@@ -139,15 +156,31 @@ def test_pw_hold_01_ux_completion_delay(page: Page) -> None:
         )
 
         # Locate exact instances of the log dictionaries to compute Delta T
-        load_log = next((l for l in logs[start_click_idx:] if "scene loaded successfully" in str(l["text"]).lower()), None)
-        swap_log = next((l for l in logs[start_click_idx:] if "initializing main scene" in str(l["text"]).lower()), None)
+        load_log = next(
+            (
+                l
+                for l in logs[start_click_idx:]
+                if "scene loaded successfully" in str(l["text"]).lower()
+            ),
+            None,
+        )
+        swap_log = next(
+            (
+                l
+                for l in logs[start_click_idx:]
+                if "initializing main scene" in str(l["text"]).lower()
+            ),
+            None,
+        )
 
         assert load_log is not None, "Missing 'Scene loaded successfully.' log sequence"
         assert swap_log is not None, "Missing 'Initializing main scene...' log sequence"
 
         # SLA bounds check (1.0s hold + CI WASM instantiation overhead)
         delta_ms = (swap_log["time"] - load_log["time"]) * 1000
-        assert 950.0 <= delta_ms <= 1800.0, f"UX hold timing {delta_ms:.2f} ms outside 950-1800 ms SLA"
+        assert (
+            950.0 <= delta_ms <= 1800.0
+        ), f"UX hold timing {delta_ms:.2f} ms outside 950-1800 ms SLA"
 
     except Exception as e:
         print(f"Test PW-HOLD-01 failed: {e}")
@@ -168,7 +201,11 @@ def test_pw_tel_01_monotonic_progress(page: Page) -> None:
         cdp_session = _setup_mock_page(page, logs)
 
         # Extract only the telemetry logs generated during boot
-        telemetry_logs = [str(l["text"]) for l in logs if "telemetry - assembly transfer:" in str(l["text"]).lower()]
+        telemetry_logs = [
+            str(l["text"])
+            for l in logs
+            if "telemetry - assembly transfer:" in str(l["text"]).lower()
+        ]
         assert len(telemetry_logs) > 0, "No telemetry logs found in console history"
 
         percentages = []
@@ -182,7 +219,9 @@ def test_pw_tel_01_monotonic_progress(page: Page) -> None:
 
         # Check monotonicity
         for i in range(len(percentages) - 1):
-            assert percentages[i] <= percentages[i+1], f"Non-monotonic telemetry dip detected: {percentages[i]}% -> {percentages[i+1]}%"
+            assert (
+                percentages[i] <= percentages[i + 1]
+            ), f"Non-monotonic telemetry dip detected: {percentages[i]}% -> {percentages[i+1]}%"
 
     except Exception as e:
         print(f"Test PW-TEL-01 failed: {e}")
@@ -203,7 +242,11 @@ def test_pw_tel_02_terminal_completion(page: Page) -> None:
     try:
         cdp_session = _setup_mock_page(page, logs)
 
-        telemetry_logs = [str(l["text"]) for l in logs if "telemetry - assembly transfer:" in str(l["text"]).lower()]
+        telemetry_logs = [
+            str(l["text"])
+            for l in logs
+            if "telemetry - assembly transfer:" in str(l["text"]).lower()
+        ]
         assert len(telemetry_logs) > 0, "No telemetry logs found"
 
         percentages = []
@@ -212,7 +255,9 @@ def test_pw_tel_02_terminal_completion(page: Page) -> None:
             percentages.append(int(percent_str))
 
         assert 100 in percentages, "Terminal 100% completion step missing from sequence"
-        assert max(percentages) == 100, f"Telemetry logic overflowed: {max(percentages)}%"
+        assert (
+            max(percentages) == 100
+        ), f"Telemetry logic overflowed: {max(percentages)}%"
 
     except Exception as e:
         print(f"Test PW-TEL-02 failed: {e}")
@@ -252,13 +297,23 @@ def test_pw_tel_03_handler_robustness(page: Page) -> None:
 
         # Allow execution and console pipeline to clear
         page.wait_for_timeout(150)
-        new_logs = [str(l["text"]).lower() for l in logs[start_idx:] if "telemetry - assembly transfer:" in str(l["text"]).lower()]
+        new_logs = [
+            str(l["text"]).lower()
+            for l in logs[start_idx:]
+            if "telemetry - assembly transfer:" in str(l["text"]).lower()
+        ]
 
         # Handler assertions
-        assert len(page_errors) == 0, f"Exceptions leaked into page context during execution: {page_errors}"
+        assert (
+            len(page_errors) == 0
+        ), f"Exceptions leaked into page context during execution: {page_errors}"
         for text in new_logs:
-            assert "nan" not in text, f"Calculation propagated NaN into formatting output: {text}"
-            assert "infinity" not in text, f"Calculation propagated Infinity into formatting output: {text}"
+            assert (
+                "nan" not in text
+            ), f"Calculation propagated NaN into formatting output: {text}"
+            assert (
+                "infinity" not in text
+            ), f"Calculation propagated Infinity into formatting output: {text}"
 
     except Exception as e:
         print(f"Test PW-TEL-03 failed: {e}")
