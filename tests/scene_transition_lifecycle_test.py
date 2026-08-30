@@ -41,7 +41,9 @@ def _count_logs(logs: list[dict[str, str]], keyword: str) -> int:
 
 
 def _gameplay_ready_predicate(text: str) -> bool:
-    """True only when gameplay is fully mounted, HUD is wired, and Pause Menu callbacks are exposed."""
+    """True only when gameplay is fully mounted, HUD is wired, and
+    Pause Menu callbacks are exposed.
+    """
     t = text.lower()
     return (
         "hud successfully wired to player signals" in t
@@ -118,7 +120,9 @@ def _setup_mock_page(page: Page, logs: list[dict[str, str]]) -> Any:
 
 
 def _return_to_main_menu_from_gameplay(page: Page) -> None:
-    """Dispatches return-to-main-menu transition from active gameplay via exposed bridge."""
+    """Dispatches return-to-main-menu transition from active gameplay
+    via exposed bridge.
+    """
     page.wait_for_function(
         "() => typeof window.mainMenuPressed === 'function'",
         timeout=TEST_TIMEOUT,
@@ -199,12 +203,13 @@ def test_pw_trans_01_main_menu_to_gameplay_lifecycle_sla(page: Page) -> None:
         transition_duration_ms = (time.perf_counter() - t_start) * 1000
 
         # Functional and Performance SLA Assertions
-        assert (
-            transition_duration_ms < 2500.0
-        ), f"Transition SLA violated: took {transition_duration_ms:.2f} ms (limit: 2500 ms)"
-        assert (
-            len(page_errors) == 0
-        ), f"Uncaught page errors detected during transition: {page_errors}"
+        assert transition_duration_ms < 2500.0, (
+            f"Transition SLA violated: took {transition_duration_ms:.2f} ms "
+            "(limit: 2500 ms)"
+        )
+        assert len(page_errors) == 0, (
+            f"Uncaught page errors detected during transition: {page_errors}"
+        )
 
     except Exception as e:
         print(f"Test PW-TRANS-01 failed: {e}")
@@ -305,13 +310,13 @@ def test_pw_trans_03_forward_transition_idempotency(page: Page) -> None:
 
         # Verify idempotency guards: exactly 1 scene is loaded and initialized
         if init_main_scene_count > 0:
-            assert (
-                init_main_scene_count == 1
-            ), f"Expected 1 main scene init, observed: {init_main_scene_count}"
+            assert init_main_scene_count == 1, (
+                f"Expected 1 main scene init, observed: {init_main_scene_count}"
+            )
         if hud_wired_count > 0:
-            assert (
-                hud_wired_count == 1
-            ), f"Expected 1 HUD wiring, observed: {hud_wired_count}"
+            assert hud_wired_count == 1, (
+                f"Expected 1 HUD wiring, observed: {hud_wired_count}"
+            )
 
     except Exception as e:
         print(f"Test PW-TRANS-03 failed: {e}")
@@ -391,19 +396,20 @@ def test_pw_trans_05_canvas_and_initialization_invariants(page: Page) -> None:
 
     def assert_canvas_invariants(checkpoint_label: str) -> None:
         is_init = page.evaluate("() => window.godotInitialized === true")
-        assert (
-            is_init is True
-        ), f"Invariant failed at {checkpoint_label}: godotInitialized is not true"
+        assert is_init is True, (
+            f"Invariant failed at {checkpoint_label}: godotInitialized is not true"
+        )
 
         canvas = page.locator("#canvas")
         expect(canvas).to_be_visible(timeout=TEST_TIMEOUT)
         box = canvas.bounding_box()
-        assert (
-            box is not None
-        ), f"Invariant failed at {checkpoint_label}: canvas bounding box is None"
-        assert (
-            box["width"] > 0 and box["height"] > 0
-        ), f"Invariant failed at {checkpoint_label}: invalid dimensions ({box['width']}x{box['height']})"
+        assert box is not None, (
+            f"Invariant failed at {checkpoint_label}: canvas bounding box is None"
+        )
+        assert box["width"] > 0 and box["height"] > 0, (
+            f"Invariant failed at {checkpoint_label}: "
+            f"invalid dimensions ({box['width']}x{box['height']})"
+        )
 
     try:
         cdp_session = _setup_mock_page(page, logs)
@@ -480,9 +486,10 @@ def test_pw_trans_06_multi_cycle_transition_lifecycle(page: Page) -> None:
                 timeout_ms=TEST_TIMEOUT,
             )
             duration_ms = (time.perf_counter() - t_cycle_start) * 1000
-            assert (
-                duration_ms < 2500.0
-            ), f"Cycle {cycle_idx} forward transition exceeded SLA: {duration_ms:.2f} ms"
+            assert duration_ms < 2500.0, (
+                f"Cycle {cycle_idx} forward transition exceeded SLA: "
+                f"{duration_ms:.2f} ms"
+            )
 
             # 2. Reverse: Gameplay -> Main Menu
             pre_return_idx = len(logs)
