@@ -284,8 +284,11 @@ def test_pw_tel_03_handler_robustness(page: Page) -> None:
 
         # Execute boundary testing directly against the production handler
         page.evaluate("""() => {
-            if (typeof customConfig !== 'object' || typeof customConfig.onProgress !== 'function') {
-                throw new Error("Missing customConfig.onProgress handler in HTML shell");
+            if (
+                typeof customConfig !== 'object' ||
+                typeof customConfig.onProgress !== 'function'
+            ) {
+                throw new Error("Missing onProgress handler in HTML shell");
             }
             const handler = customConfig.onProgress;
             handler(0, 0);          // Div by zero / empty stream
