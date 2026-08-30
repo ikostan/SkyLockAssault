@@ -401,7 +401,8 @@ def pytest_sessionfinish(session, exitstatus):
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
-    """Format and display the Test Profiling Baseline (#776) and Browser Lifecycle Metrics (#773)."""
+    """Format and display Test Profiling Baseline and Browser Lifecycle Metrics."""
+    _ = (exitstatus, config)
     # 1. Test Profiling Baseline (#776)
     terminalreporter.section("Test Profiling Baseline (#776)", sep="=")
     start_time = _SESSION_STATE.get("start_time", 0.0)
