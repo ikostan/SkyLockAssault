@@ -47,18 +47,26 @@ func _ready() -> void:
 		options_button.pressed.connect(_on_options_button_pressed)
 	visible = false
 	Globals.log_message("Pause menu is ready.", Globals.LogLevel.DEBUG)
-	
+
 	# Expose JS Web callbacks for automated testing & browser interaction
 	if OS.get_name() == "Web":
 		var js_window := JavaScriptBridge.get_interface("window")
 		if js_window:
-			_toggle_pause_cb = JavaScriptBridge.create_callback(Callable(self, "_on_js_toggle_pause"))
+			_toggle_pause_cb = JavaScriptBridge.create_callback(
+				Callable(self, "_on_js_toggle_pause")
+			)
 			js_window.togglePause = _toggle_pause_cb
-			_back_to_main_cb = JavaScriptBridge.create_callback(Callable(self, "_on_back_to_main_button_pressed"))
+			_back_to_main_cb = JavaScriptBridge.create_callback(
+				Callable(self, "_on_back_to_main_button_pressed")
+			)
 			js_window.mainMenuPressed = _back_to_main_cb
-			_resume_cb = JavaScriptBridge.create_callback(Callable(self, "_on_resume_button_pressed"))
+			_resume_cb = JavaScriptBridge.create_callback(
+				Callable(self, "_on_resume_button_pressed")
+			)
 			js_window.resumePressed = _resume_cb
-			_options_cb = JavaScriptBridge.create_callback(Callable(self, "_on_options_button_pressed"))
+			_options_cb = JavaScriptBridge.create_callback(
+				Callable(self, "_on_options_button_pressed")
+			)
 			js_window.pauseOptionsPressed = _options_cb
 			Globals.log_message(
 				"Exposed pause menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG

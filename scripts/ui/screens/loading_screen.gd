@@ -39,7 +39,9 @@ func _ready() -> void:
 
 	# Explicit check to catch missing/invalid paths immediately
 	if not ResourceLoader.exists(Globals.next_scene):
-		Globals.log_message("Next scene does not exist: " + Globals.next_scene, Globals.LogLevel.ERROR)
+		Globals.log_message(
+			"Next scene does not exist: " + Globals.next_scene, Globals.LogLevel.ERROR
+		)
 		load_failed = true
 		return
 
@@ -75,7 +77,10 @@ func _process(delta: float) -> void:
 				is_scene_loaded = true
 				scene = ResourceLoader.load_threaded_get(Globals.next_scene)
 				Globals.log_message("Scene loaded successfully.", Globals.LogLevel.DEBUG)
-		elif status in [ResourceLoader.THREAD_LOAD_FAILED, ResourceLoader.THREAD_LOAD_INVALID_RESOURCE]:
+		elif (
+			status
+			in [ResourceLoader.THREAD_LOAD_FAILED, ResourceLoader.THREAD_LOAD_INVALID_RESOURCE]
+		):
 			Globals.log_message("Loading failed or invalid.", Globals.LogLevel.ERROR)
 			load_failed = true
 
@@ -86,7 +91,12 @@ func _process(delta: float) -> void:
 	progress_bar.value = loader_progress
 
 	# Proceed when resource is ready, bar visually reached 100%, and minimum display time elapsed
-	if (is_scene_loaded or load_failed) and loader_progress >= 99.9 and elapsed_time >= min_load_time and not transitioning:
+	if (
+		(is_scene_loaded or load_failed)
+		and loader_progress >= 99.9
+		and elapsed_time >= min_load_time
+		and not transitioning
+	):
 		transitioning = true
 		_change_to_next_scene()
 
