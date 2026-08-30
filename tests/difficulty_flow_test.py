@@ -91,7 +91,7 @@ def test_difficulty_flow(shared_page: Page) -> None:
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
 
-        # Dismiss GPU alert modal if triggered by software rasterizer in test environment
+        # Dismiss GPU alert modal if triggered by software rasterizer in test env
         gpu_alert_btn = shared_page.locator("#gpu-alert-btn")
         if gpu_alert_btn.is_visible():
             gpu_alert_btn.click()
