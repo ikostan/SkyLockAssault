@@ -17,8 +17,7 @@ import os
 import time
 from typing import Any
 
-import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 
 from tests.gpu_detection_modal_test import get_webgl_mock_script
 from tests.test_utils import (
@@ -37,6 +36,7 @@ def _setup_mock_page(page: Page, logs: list[dict[str, Any]]) -> Any:
     """
 
     def on_console(msg: Any) -> None:
+        """Appends intercepted console messages to the logs list."""
         logs.append({"type": msg.type, "text": msg.text, "time": time.perf_counter()})
 
     page.on("console", on_console)
@@ -95,18 +95,19 @@ def _dump_failure_artifacts(
     """Dumps diagnostic artifacts on test failure."""
     os.makedirs("artifacts", exist_ok=True)
     timestamp = int(time.time() * 1000)
-    page.screenshot(path=f"artifacts/{test_id}_failure_screenshot_{timestamp}.png")
+    safe_id = os.path.basename(test_id)
+    page.screenshot(path=f"artifacts/{safe_id}_failure_screenshot_{timestamp}.png")
     with open(
-        f"artifacts/{test_id}_failure_html_{timestamp}.html", "w", encoding="utf-8"
+        f"artifacts/{safe_id}_failure_html_{timestamp}.html", "w", encoding="utf-8"
     ) as f:
         f.write(page.content())
     with open(
-        f"artifacts/{test_id}_failure_console_logs_{timestamp}.txt",
+        f"artifacts/{safe_id}_failure_console_logs_{timestamp}.txt",
         "w",
         encoding="utf-8",
     ) as f:
-        for log in logs:
-            f.write(f"[{log['type']}] {log['text']}\n")
+        for log_entry in logs:
+            f.write(f"[{log_entry['type']}] {log_entry['text']}\n")
 
 
 def _save_coverage(cdp_session: Any, test_id: str) -> None:
@@ -117,8 +118,9 @@ def _save_coverage(cdp_session: Any, test_id: str) -> None:
             cdp_session.send("Profiler.stopPreciseCoverage")
             cdp_session.send("Profiler.disable")
             os.makedirs("artifacts", exist_ok=True)
+            safe_id = os.path.basename(test_id)
             with open(
-                f"artifacts/v8_coverage_{test_id}_{int(time.time() * 1000)}.json",
+                f"artifacts/v8_coverage_{safe_id}_{int(time.time() * 1000)}.json",
                 "w",
                 encoding="utf-8",
             ) as f:
@@ -158,17 +160,17 @@ def test_pw_hold_01_ux_completion_delay(page: Page) -> None:
         # Locate exact instances of the log dictionaries to compute Delta T
         load_log = next(
             (
-                l
-                for l in logs[start_click_idx:]
-                if "scene loaded successfully" in str(l["text"]).lower()
+                log_entry
+                for log_entry in logs[start_click_idx:]
+                if "scene loaded successfully" in str(log_entry["text"]).lower()
             ),
             None,
         )
         swap_log = next(
             (
-                l
-                for l in logs[start_click_idx:]
-                if "initializing main scene" in str(l["text"]).lower()
+                log_entry
+                for log_entry in logs[start_click_idx:]
+                if "initializing main scene" in str(log_entry["text"]).lower()
             ),
             None,
         )
@@ -191,9 +193,7 @@ def test_pw_hold_01_ux_completion_delay(page: Page) -> None:
 
 
 def test_pw_tel_01_monotonic_progress(page: Page) -> None:
-    """
-    PW-TEL-01: Progress events emit monotonic non-decreasing, finite percentages.
-    """
+    """PW-TEL-01: Progress events emit monotonic non-decreasing, finite percentages."""
     logs: list[dict[str, Any]] = []
     cdp_session = None
 
@@ -202,9 +202,9 @@ def test_pw_tel_01_monotonic_progress(page: Page) -> None:
 
         # Extract only the telemetry logs generated during boot
         telemetry_logs = [
-            str(l["text"])
-            for l in logs
-            if "telemetry - assembly transfer:" in str(l["text"]).lower()
+            str(log_entry["text"])
+            for log_entry in logs
+            if "telemetry - assembly transfer:" in str(log_entry["text"]).lower()
         ]
         assert len(telemetry_logs) > 0, "No telemetry logs found in console history"
 
@@ -219,9 +219,10 @@ def test_pw_tel_01_monotonic_progress(page: Page) -> None:
 
         # Check monotonicity
         for i in range(len(percentages) - 1):
-            assert (
-                percentages[i] <= percentages[i + 1]
-            ), f"Non-monotonic telemetry dip detected: {percentages[i]}% -> {percentages[i+1]}%"
+            assert percentages[i] <= percentages[i + 1], (
+                f"Non-monotonic telemetry dip detected: "
+                f"{percentages[i]}% -> {percentages[i+1]}%"
+            )
 
     except Exception as e:
         print(f"Test PW-TEL-01 failed: {e}")
@@ -243,9 +244,9 @@ def test_pw_tel_02_terminal_completion(page: Page) -> None:
         cdp_session = _setup_mock_page(page, logs)
 
         telemetry_logs = [
-            str(l["text"])
-            for l in logs
-            if "telemetry - assembly transfer:" in str(l["text"]).lower()
+            str(log_entry["text"])
+            for log_entry in logs
+            if "telemetry - assembly transfer:" in str(log_entry["text"]).lower()
         ]
         assert len(telemetry_logs) > 0, "No telemetry logs found"
 
@@ -298,9 +299,9 @@ def test_pw_tel_03_handler_robustness(page: Page) -> None:
         # Allow execution and console pipeline to clear
         page.wait_for_timeout(150)
         new_logs = [
-            str(l["text"]).lower()
-            for l in logs[start_idx:]
-            if "telemetry - assembly transfer:" in str(l["text"]).lower()
+            str(log_entry["text"]).lower()
+            for log_entry in logs[start_idx:]
+            if "telemetry - assembly transfer:" in str(log_entry["text"]).lower()
         ]
 
         # Handler assertions
@@ -308,12 +309,12 @@ def test_pw_tel_03_handler_robustness(page: Page) -> None:
             len(page_errors) == 0
         ), f"Exceptions leaked into page context during execution: {page_errors}"
         for text in new_logs:
-            assert (
-                "nan" not in text
-            ), f"Calculation propagated NaN into formatting output: {text}"
-            assert (
-                "infinity" not in text
-            ), f"Calculation propagated Infinity into formatting output: {text}"
+            assert "nan" not in text, (
+                f"Calculation propagated NaN into formatting output: {text}"
+            )
+            assert "infinity" not in text, (
+                f"Calculation propagated Infinity into formatting output: {text}"
+            )
 
     except Exception as e:
         print(f"Test PW-TEL-03 failed: {e}")
