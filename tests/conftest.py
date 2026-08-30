@@ -411,7 +411,9 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
     skipped = _SUMMARY_COUNTS.get("skipped", 0)
 
     terminalreporter.write_line(f"Total Suite Duration : {total_duration}s")
-    terminalreporter.write_line(f"Passed: {passed} | Failed: {failed} | Skipped: {skipped}")
+    terminalreporter.write_line(
+        f"Passed: {passed} | Failed: {failed} | Skipped: {skipped}"
+    )
     metrics_file = ARTIFACTS_DIR / "metrics_baseline.json"
     terminalreporter.write_line(f"Baseline JSON Exported: {metrics_file}")
 
@@ -439,6 +441,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         )
 
     terminalreporter.write_line("")
+
 
 # ==============================================================================
 # Pytest Fixtures

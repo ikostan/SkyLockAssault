@@ -69,7 +69,10 @@ class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
         exc_type, exc_val, _ = sys.exc_info()
         if exc_type in (BrokenPipeError, ConnectionResetError):
             return
-        if isinstance(exc_val, OSError) and exc_val.errno in (errno.EPIPE, errno.ECONNRESET):
+        if isinstance(exc_val, OSError) and exc_val.errno in (
+            errno.EPIPE,
+            errno.ECONNRESET,
+        ):
             return
 
         # Output any real/unhandled server errors

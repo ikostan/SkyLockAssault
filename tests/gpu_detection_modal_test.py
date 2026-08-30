@@ -19,10 +19,10 @@ from tests.test_utils import TEST_TIMEOUT
 
 
 def get_webgl_mock_script(
-        renderer_string: str = "",
-        missing_ext: bool = False,
-        missing_context: bool = False,
-        throw_exception: bool = False,
+    renderer_string: str = "",
+    missing_ext: bool = False,
+    missing_context: bool = False,
+    throw_exception: bool = False,
 ) -> str:
     """
     Helper to generate JavaScript scripts for deterministic WebGL prototype interception.
@@ -75,11 +75,15 @@ def test_pw_gpu_01_software_rasterizer_triggers_modal(page: Page) -> None:
     try:
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+        cdp_session.send(
+            "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
+        )
 
         # Uses prototype interception to mock Microsoft Basic Render Driver
         page.add_init_script(
-            get_webgl_mock_script(renderer_string="Microsoft Basic Render Driver (Direct3D11)")
+            get_webgl_mock_script(
+                renderer_string="Microsoft Basic Render Driver (Direct3D11)"
+            )
         )
         page.goto("http://localhost:8080/index.html")
 
@@ -94,10 +98,20 @@ def test_pw_gpu_01_software_rasterizer_triggers_modal(page: Page) -> None:
         print(f"Test suite failed: {e!s}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time() * 1000)
-        page.screenshot(path=f"artifacts/test_pw_gpu_01_failure_screenshot_{timestamp}.png")
-        with open(f"artifacts/test_pw_gpu_01_failure_html_{timestamp}.html", "w", encoding="utf-8") as f:
+        page.screenshot(
+            path=f"artifacts/test_pw_gpu_01_failure_screenshot_{timestamp}.png"
+        )
+        with open(
+            f"artifacts/test_pw_gpu_01_failure_html_{timestamp}.html",
+            "w",
+            encoding="utf-8",
+        ) as f:
             f.write(page.content())
-        with open(f"artifacts/test_pw_gpu_01_failure_console_logs_{timestamp}.txt", "w", encoding="utf-8") as f:
+        with open(
+            f"artifacts/test_pw_gpu_01_failure_console_logs_{timestamp}.txt",
+            "w",
+            encoding="utf-8",
+        ) as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
         raise
@@ -107,7 +121,11 @@ def test_pw_gpu_01_software_rasterizer_triggers_modal(page: Page) -> None:
                 coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
-                with open(f"v8_coverage_pw_gpu_01_{int(time.time() * 1000)}.json", "w", encoding="utf-8") as f:
+                with open(
+                    f"v8_coverage_pw_gpu_01_{int(time.time() * 1000)}.json",
+                    "w",
+                    encoding="utf-8",
+                ) as f:
                     json.dump(coverage, f)
             except Exception as cov_err:
                 print(f"Warning: Failed to harvest V8 coverage data: {cov_err}")
@@ -129,7 +147,9 @@ def test_pw_gpu_02_modal_dismissal_unblocks_engine(page: Page) -> None:
     try:
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+        cdp_session.send(
+            "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
+        )
 
         page.add_init_script(
             get_webgl_mock_script(renderer_string="Microsoft Basic Render Driver")
@@ -141,7 +161,9 @@ def test_pw_gpu_02_modal_dismissal_unblocks_engine(page: Page) -> None:
         dismiss_btn.click()
 
         # Modal dismissal unblocks engine boot and godotInitialized resolves
-        page.wait_for_function("() => window.godotInitialized === true", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=TEST_TIMEOUT
+        )
 
         # Modal receives display: none
         modal = page.locator("#gpu-alert-modal")
@@ -152,10 +174,20 @@ def test_pw_gpu_02_modal_dismissal_unblocks_engine(page: Page) -> None:
         print(f"Test suite failed: {e!s}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time() * 1000)
-        page.screenshot(path=f"artifacts/test_pw_gpu_02_failure_screenshot_{timestamp}.png")
-        with open(f"artifacts/test_pw_gpu_02_failure_html_{timestamp}.html", "w", encoding="utf-8") as f:
+        page.screenshot(
+            path=f"artifacts/test_pw_gpu_02_failure_screenshot_{timestamp}.png"
+        )
+        with open(
+            f"artifacts/test_pw_gpu_02_failure_html_{timestamp}.html",
+            "w",
+            encoding="utf-8",
+        ) as f:
             f.write(page.content())
-        with open(f"artifacts/test_pw_gpu_02_failure_console_logs_{timestamp}.txt", "w", encoding="utf-8") as f:
+        with open(
+            f"artifacts/test_pw_gpu_02_failure_console_logs_{timestamp}.txt",
+            "w",
+            encoding="utf-8",
+        ) as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
         raise
@@ -165,7 +197,11 @@ def test_pw_gpu_02_modal_dismissal_unblocks_engine(page: Page) -> None:
                 coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
-                with open(f"v8_coverage_pw_gpu_02_{int(time.time() * 1000)}.json", "w", encoding="utf-8") as f:
+                with open(
+                    f"v8_coverage_pw_gpu_02_{int(time.time() * 1000)}.json",
+                    "w",
+                    encoding="utf-8",
+                ) as f:
                     json.dump(coverage, f)
             except Exception as cov_err:
                 print(f"Warning: Failed to harvest V8 coverage data: {cov_err}")
@@ -196,7 +232,9 @@ def test_pw_gpu_03_detects_software_strings(page: Page, renderer: str) -> None:
     try:
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+        cdp_session.send(
+            "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
+        )
 
         page.add_init_script(get_webgl_mock_script(renderer_string=renderer))
         page.goto("http://localhost:8080/index.html")
@@ -207,10 +245,20 @@ def test_pw_gpu_03_detects_software_strings(page: Page, renderer: str) -> None:
         print(f"Test suite failed: {e!s}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time() * 1000)
-        page.screenshot(path=f"artifacts/test_pw_gpu_03_failure_screenshot_{timestamp}.png")
-        with open(f"artifacts/test_pw_gpu_03_failure_html_{timestamp}.html", "w", encoding="utf-8") as f:
+        page.screenshot(
+            path=f"artifacts/test_pw_gpu_03_failure_screenshot_{timestamp}.png"
+        )
+        with open(
+            f"artifacts/test_pw_gpu_03_failure_html_{timestamp}.html",
+            "w",
+            encoding="utf-8",
+        ) as f:
             f.write(page.content())
-        with open(f"artifacts/test_pw_gpu_03_failure_console_logs_{timestamp}.txt", "w", encoding="utf-8") as f:
+        with open(
+            f"artifacts/test_pw_gpu_03_failure_console_logs_{timestamp}.txt",
+            "w",
+            encoding="utf-8",
+        ) as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
         raise
@@ -220,7 +268,11 @@ def test_pw_gpu_03_detects_software_strings(page: Page, renderer: str) -> None:
                 coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
-                with open(f"v8_coverage_pw_gpu_03_{int(time.time() * 1000)}.json", "w", encoding="utf-8") as f:
+                with open(
+                    f"v8_coverage_pw_gpu_03_{int(time.time() * 1000)}.json",
+                    "w",
+                    encoding="utf-8",
+                ) as f:
                     json.dump(coverage, f)
             except Exception as cov_err:
                 print(f"Warning: Failed to harvest V8 coverage data: {cov_err}")
@@ -251,13 +303,17 @@ def test_pw_gpu_04_hardware_bypass(page: Page, renderer: str) -> None:
     try:
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+        cdp_session.send(
+            "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
+        )
 
         page.add_init_script(get_webgl_mock_script(renderer_string=renderer))
         page.goto("http://localhost:8080/index.html")
 
         # Engine initialization begins immediately without blocking
-        page.wait_for_function("() => window.godotInitialized === true", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=TEST_TIMEOUT
+        )
 
         modal = page.locator("#gpu-alert-modal")
         expect(modal).not_to_be_visible()
@@ -267,10 +323,20 @@ def test_pw_gpu_04_hardware_bypass(page: Page, renderer: str) -> None:
         print(f"Test suite failed: {e!s}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time() * 1000)
-        page.screenshot(path=f"artifacts/test_pw_gpu_04_failure_screenshot_{timestamp}.png")
-        with open(f"artifacts/test_pw_gpu_04_failure_html_{timestamp}.html", "w", encoding="utf-8") as f:
+        page.screenshot(
+            path=f"artifacts/test_pw_gpu_04_failure_screenshot_{timestamp}.png"
+        )
+        with open(
+            f"artifacts/test_pw_gpu_04_failure_html_{timestamp}.html",
+            "w",
+            encoding="utf-8",
+        ) as f:
             f.write(page.content())
-        with open(f"artifacts/test_pw_gpu_04_failure_console_logs_{timestamp}.txt", "w", encoding="utf-8") as f:
+        with open(
+            f"artifacts/test_pw_gpu_04_failure_console_logs_{timestamp}.txt",
+            "w",
+            encoding="utf-8",
+        ) as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
         raise
@@ -280,7 +346,11 @@ def test_pw_gpu_04_hardware_bypass(page: Page, renderer: str) -> None:
                 coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
-                with open(f"v8_coverage_pw_gpu_04_{int(time.time() * 1000)}.json", "w", encoding="utf-8") as f:
+                with open(
+                    f"v8_coverage_pw_gpu_04_{int(time.time() * 1000)}.json",
+                    "w",
+                    encoding="utf-8",
+                ) as f:
                     json.dump(coverage, f)
             except Exception as cov_err:
                 print(f"Warning: Failed to harvest V8 coverage data: {cov_err}")
@@ -301,22 +371,36 @@ def test_pw_gpu_05_missing_extension_degrades_gracefully(page: Page) -> None:
     try:
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+        cdp_session.send(
+            "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
+        )
 
         page.add_init_script(get_webgl_mock_script(missing_ext=True))
         page.goto("http://localhost:8080/index.html")
 
-        page.wait_for_function("() => window.godotInitialized === true", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=TEST_TIMEOUT
+        )
         expect(page.locator("#gpu-alert-modal")).not_to_be_visible()
 
     except Exception as e:
         print(f"Test suite failed: {e!s}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time() * 1000)
-        page.screenshot(path=f"artifacts/test_pw_gpu_05_failure_screenshot_{timestamp}.png")
-        with open(f"artifacts/test_pw_gpu_05_failure_html_{timestamp}.html", "w", encoding="utf-8") as f:
+        page.screenshot(
+            path=f"artifacts/test_pw_gpu_05_failure_screenshot_{timestamp}.png"
+        )
+        with open(
+            f"artifacts/test_pw_gpu_05_failure_html_{timestamp}.html",
+            "w",
+            encoding="utf-8",
+        ) as f:
             f.write(page.content())
-        with open(f"artifacts/test_pw_gpu_05_failure_console_logs_{timestamp}.txt", "w", encoding="utf-8") as f:
+        with open(
+            f"artifacts/test_pw_gpu_05_failure_console_logs_{timestamp}.txt",
+            "w",
+            encoding="utf-8",
+        ) as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
         raise
@@ -326,7 +410,11 @@ def test_pw_gpu_05_missing_extension_degrades_gracefully(page: Page) -> None:
                 coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
-                with open(f"v8_coverage_pw_gpu_05_{int(time.time() * 1000)}.json", "w", encoding="utf-8") as f:
+                with open(
+                    f"v8_coverage_pw_gpu_05_{int(time.time() * 1000)}.json",
+                    "w",
+                    encoding="utf-8",
+                ) as f:
                     json.dump(coverage, f)
             except Exception as cov_err:
                 print(f"Warning: Failed to harvest V8 coverage data: {cov_err}")
@@ -347,7 +435,9 @@ def test_pw_gpu_06_missing_context_safety(page: Page) -> None:
     try:
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+        cdp_session.send(
+            "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
+        )
 
         page.add_init_script(get_webgl_mock_script(missing_context=True))
         page.goto("http://localhost:8080/index.html")
@@ -358,10 +448,20 @@ def test_pw_gpu_06_missing_context_safety(page: Page) -> None:
         print(f"Test suite failed: {e!s}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time() * 1000)
-        page.screenshot(path=f"artifacts/test_pw_gpu_06_failure_screenshot_{timestamp}.png")
-        with open(f"artifacts/test_pw_gpu_06_failure_html_{timestamp}.html", "w", encoding="utf-8") as f:
+        page.screenshot(
+            path=f"artifacts/test_pw_gpu_06_failure_screenshot_{timestamp}.png"
+        )
+        with open(
+            f"artifacts/test_pw_gpu_06_failure_html_{timestamp}.html",
+            "w",
+            encoding="utf-8",
+        ) as f:
             f.write(page.content())
-        with open(f"artifacts/test_pw_gpu_06_failure_console_logs_{timestamp}.txt", "w", encoding="utf-8") as f:
+        with open(
+            f"artifacts/test_pw_gpu_06_failure_console_logs_{timestamp}.txt",
+            "w",
+            encoding="utf-8",
+        ) as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
         raise
@@ -371,7 +471,11 @@ def test_pw_gpu_06_missing_context_safety(page: Page) -> None:
                 coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
-                with open(f"v8_coverage_pw_gpu_06_{int(time.time() * 1000)}.json", "w", encoding="utf-8") as f:
+                with open(
+                    f"v8_coverage_pw_gpu_06_{int(time.time() * 1000)}.json",
+                    "w",
+                    encoding="utf-8",
+                ) as f:
                     json.dump(coverage, f)
             except Exception as cov_err:
                 print(f"Warning: Failed to harvest V8 coverage data: {cov_err}")
@@ -393,7 +497,9 @@ def test_pw_gpu_07_accessible_keyboard_dismissal(page: Page, key: str) -> None:
     try:
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+        cdp_session.send(
+            "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
+        )
 
         page.add_init_script(
             get_webgl_mock_script(renderer_string="Microsoft Basic Render Driver")
@@ -406,7 +512,9 @@ def test_pw_gpu_07_accessible_keyboard_dismissal(page: Page, key: str) -> None:
         # Dispatch keyboard dismissal directly to the button locator
         dismiss_btn.press(key)
 
-        page.wait_for_function("() => window.godotInitialized === true", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=TEST_TIMEOUT
+        )
 
         modal = page.locator("#gpu-alert-modal")
         expect(modal).not_to_be_visible()
@@ -416,10 +524,20 @@ def test_pw_gpu_07_accessible_keyboard_dismissal(page: Page, key: str) -> None:
         print(f"Test suite failed: {e!s}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time() * 1000)
-        page.screenshot(path=f"artifacts/test_pw_gpu_07_failure_screenshot_{timestamp}.png")
-        with open(f"artifacts/test_pw_gpu_07_failure_html_{timestamp}.html", "w", encoding="utf-8") as f:
+        page.screenshot(
+            path=f"artifacts/test_pw_gpu_07_failure_screenshot_{timestamp}.png"
+        )
+        with open(
+            f"artifacts/test_pw_gpu_07_failure_html_{timestamp}.html",
+            "w",
+            encoding="utf-8",
+        ) as f:
             f.write(page.content())
-        with open(f"artifacts/test_pw_gpu_07_failure_console_logs_{timestamp}.txt", "w", encoding="utf-8") as f:
+        with open(
+            f"artifacts/test_pw_gpu_07_failure_console_logs_{timestamp}.txt",
+            "w",
+            encoding="utf-8",
+        ) as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
         raise
@@ -429,7 +547,11 @@ def test_pw_gpu_07_accessible_keyboard_dismissal(page: Page, key: str) -> None:
                 coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
-                with open(f"v8_coverage_pw_gpu_07_{int(time.time() * 1000)}.json", "w", encoding="utf-8") as f:
+                with open(
+                    f"v8_coverage_pw_gpu_07_{int(time.time() * 1000)}.json",
+                    "w",
+                    encoding="utf-8",
+                ) as f:
                     json.dump(coverage, f)
             except Exception as cov_err:
                 print(f"Warning: Failed to harvest V8 coverage data: {cov_err}")
@@ -459,7 +581,9 @@ def test_pw_gpu_08_case_insensitive_matching(page: Page, renderer: str) -> None:
     try:
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+        cdp_session.send(
+            "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
+        )
 
         page.add_init_script(get_webgl_mock_script(renderer_string=renderer))
         page.goto("http://localhost:8080/index.html")
@@ -470,10 +594,20 @@ def test_pw_gpu_08_case_insensitive_matching(page: Page, renderer: str) -> None:
         print(f"Test suite failed: {e!s}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time() * 1000)
-        page.screenshot(path=f"artifacts/test_pw_gpu_08_failure_screenshot_{timestamp}.png")
-        with open(f"artifacts/test_pw_gpu_08_failure_html_{timestamp}.html", "w", encoding="utf-8") as f:
+        page.screenshot(
+            path=f"artifacts/test_pw_gpu_08_failure_screenshot_{timestamp}.png"
+        )
+        with open(
+            f"artifacts/test_pw_gpu_08_failure_html_{timestamp}.html",
+            "w",
+            encoding="utf-8",
+        ) as f:
             f.write(page.content())
-        with open(f"artifacts/test_pw_gpu_08_failure_console_logs_{timestamp}.txt", "w", encoding="utf-8") as f:
+        with open(
+            f"artifacts/test_pw_gpu_08_failure_console_logs_{timestamp}.txt",
+            "w",
+            encoding="utf-8",
+        ) as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
         raise
@@ -483,7 +617,11 @@ def test_pw_gpu_08_case_insensitive_matching(page: Page, renderer: str) -> None:
                 coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
-                with open(f"v8_coverage_pw_gpu_08_{int(time.time() * 1000)}.json", "w", encoding="utf-8") as f:
+                with open(
+                    f"v8_coverage_pw_gpu_08_{int(time.time() * 1000)}.json",
+                    "w",
+                    encoding="utf-8",
+                ) as f:
                     json.dump(coverage, f)
             except Exception as cov_err:
                 print(f"Warning: Failed to harvest V8 coverage data: {cov_err}")
@@ -507,7 +645,9 @@ def test_pw_gpu_09_exception_safety(page: Page) -> None:
     try:
         cdp_session = page.context.new_cdp_session(page)
         cdp_session.send("Profiler.enable")
-        cdp_session.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+        cdp_session.send(
+            "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
+        )
 
         page.add_init_script(get_webgl_mock_script(throw_exception=True))
         page.goto("http://localhost:8080/index.html")
@@ -519,10 +659,20 @@ def test_pw_gpu_09_exception_safety(page: Page) -> None:
         print(f"Test suite failed: {e!s}")
         os.makedirs("artifacts", exist_ok=True)
         timestamp = int(time.time() * 1000)
-        page.screenshot(path=f"artifacts/test_pw_gpu_09_failure_screenshot_{timestamp}.png")
-        with open(f"artifacts/test_pw_gpu_09_failure_html_{timestamp}.html", "w", encoding="utf-8") as f:
+        page.screenshot(
+            path=f"artifacts/test_pw_gpu_09_failure_screenshot_{timestamp}.png"
+        )
+        with open(
+            f"artifacts/test_pw_gpu_09_failure_html_{timestamp}.html",
+            "w",
+            encoding="utf-8",
+        ) as f:
             f.write(page.content())
-        with open(f"artifacts/test_pw_gpu_09_failure_console_logs_{timestamp}.txt", "w", encoding="utf-8") as f:
+        with open(
+            f"artifacts/test_pw_gpu_09_failure_console_logs_{timestamp}.txt",
+            "w",
+            encoding="utf-8",
+        ) as f:
             for log in logs:
                 f.write(f"[{log['type']}] {log['text']}\n")
         raise
@@ -532,7 +682,11 @@ def test_pw_gpu_09_exception_safety(page: Page) -> None:
                 coverage = cdp_session.send("Profiler.takePreciseCoverage")["result"]
                 cdp_session.send("Profiler.stopPreciseCoverage")
                 cdp_session.send("Profiler.disable")
-                with open(f"v8_coverage_pw_gpu_09_{int(time.time() * 1000)}.json", "w", encoding="utf-8") as f:
+                with open(
+                    f"v8_coverage_pw_gpu_09_{int(time.time() * 1000)}.json",
+                    "w",
+                    encoding="utf-8",
+                ) as f:
                     json.dump(coverage, f)
             except Exception as cov_err:
                 print(f"Warning: Failed to harvest V8 coverage data: {cov_err}")
