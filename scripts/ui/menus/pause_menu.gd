@@ -7,16 +7,16 @@
 
 extends CanvasLayer
 
-var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
-@onready var resume_button: Button = $VBoxContainer/ResumeButton
-@onready var back_to_main_button: Button = $VBoxContainer/BackToMainButton
-@onready var options_button: Button = $VBoxContainer/OptionsButton
-
 # Store JS callback objects to prevent garbage collection on Web export
 var _toggle_pause_cb: JavaScriptObject
 var _back_to_main_cb: JavaScriptObject
 var _resume_cb: JavaScriptObject
 var _options_cb: JavaScriptObject
+
+var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
+@onready var resume_button: Button = $VBoxContainer/ResumeButton
+@onready var back_to_main_button: Button = $VBoxContainer/BackToMainButton
+@onready var options_button: Button = $VBoxContainer/OptionsButton
 
 
 func _input(event: InputEvent) -> void:
