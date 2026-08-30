@@ -207,9 +207,9 @@ def test_pw_trans_01_main_menu_to_gameplay_lifecycle_sla(page: Page) -> None:
             f"Transition SLA violated: took {transition_duration_ms:.2f} ms "
             "(limit: 2500 ms)"
         )
-        assert len(page_errors) == 0, (
-            f"Uncaught page errors detected during transition: {page_errors}"
-        )
+        assert (
+            len(page_errors) == 0
+        ), f"Uncaught page errors detected during transition: {page_errors}"
 
     except Exception as e:
         print(f"Test PW-TRANS-01 failed: {e}")
@@ -310,13 +310,13 @@ def test_pw_trans_03_forward_transition_idempotency(page: Page) -> None:
 
         # Verify idempotency guards: exactly 1 scene is loaded and initialized
         if init_main_scene_count > 0:
-            assert init_main_scene_count == 1, (
-                f"Expected 1 main scene init, observed: {init_main_scene_count}"
-            )
+            assert (
+                init_main_scene_count == 1
+            ), f"Expected 1 main scene init, observed: {init_main_scene_count}"
         if hud_wired_count > 0:
-            assert hud_wired_count == 1, (
-                f"Expected 1 HUD wiring, observed: {hud_wired_count}"
-            )
+            assert (
+                hud_wired_count == 1
+            ), f"Expected 1 HUD wiring, observed: {hud_wired_count}"
 
     except Exception as e:
         print(f"Test PW-TRANS-03 failed: {e}")
@@ -396,16 +396,16 @@ def test_pw_trans_05_canvas_and_initialization_invariants(page: Page) -> None:
 
     def assert_canvas_invariants(checkpoint_label: str) -> None:
         is_init = page.evaluate("() => window.godotInitialized === true")
-        assert is_init is True, (
-            f"Invariant failed at {checkpoint_label}: godotInitialized is not true"
-        )
+        assert (
+            is_init is True
+        ), f"Invariant failed at {checkpoint_label}: godotInitialized is not true"
 
         canvas = page.locator("#canvas")
         expect(canvas).to_be_visible(timeout=TEST_TIMEOUT)
         box = canvas.bounding_box()
-        assert box is not None, (
-            f"Invariant failed at {checkpoint_label}: canvas bounding box is None"
-        )
+        assert (
+            box is not None
+        ), f"Invariant failed at {checkpoint_label}: canvas bounding box is None"
         assert box["width"] > 0 and box["height"] > 0, (
             f"Invariant failed at {checkpoint_label}: "
             f"invalid dimensions ({box['width']}x{box['height']})"
