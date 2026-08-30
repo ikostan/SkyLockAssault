@@ -43,7 +43,10 @@ def get_webgl_mock_script(
             }}
             if (name === 'WEBGL_debug_renderer_info') {{
                 if ('{str(missing_ext).lower()}' === 'true') return null;
-                return {{ UNMASKED_RENDERER_WEBGL: 37446, UNMASKED_VENDOR_WEBGL: 37445 }};
+                return {{
+                    UNMASKED_RENDERER_WEBGL: 37446,
+                    UNMASKED_VENDOR_WEBGL: 37445
+                }};
             }}
             return origGetExtension.call(this, name);
         }};
@@ -54,8 +57,12 @@ def get_webgl_mock_script(
             return origGetParameter.call(this, pname);
         }};
     }}
-    installMock(window.WebGLRenderingContext && window.WebGLRenderingContext.prototype);
-    installMock(window.WebGL2RenderingContext && window.WebGL2RenderingContext.prototype);
+    installMock(
+        window.WebGLRenderingContext && window.WebGLRenderingContext.prototype
+    );
+    installMock(
+        window.WebGL2RenderingContext && window.WebGL2RenderingContext.prototype
+    );
     """
 
 
@@ -68,6 +75,7 @@ def test_pw_gpu_01_software_rasterizer_triggers_modal(page: Page) -> None:
     cdp_session = None
 
     def on_console(msg: Any) -> None:
+        """Append intercepted console messages to the logs list."""
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
@@ -140,6 +148,7 @@ def test_pw_gpu_02_modal_dismissal_unblocks_engine(page: Page) -> None:
     cdp_session = None
 
     def on_console(msg: Any) -> None:
+        """Append intercepted console messages to the logs list."""
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
@@ -225,6 +234,7 @@ def test_pw_gpu_03_detects_software_strings(page: Page, renderer: str) -> None:
     cdp_session = None
 
     def on_console(msg: Any) -> None:
+        """Append intercepted console messages to the logs list."""
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
@@ -296,6 +306,7 @@ def test_pw_gpu_04_hardware_bypass(page: Page, renderer: str) -> None:
     cdp_session = None
 
     def on_console(msg: Any) -> None:
+        """Append intercepted console messages to the logs list."""
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
@@ -364,6 +375,7 @@ def test_pw_gpu_05_missing_extension_degrades_gracefully(page: Page) -> None:
     cdp_session = None
 
     def on_console(msg: Any) -> None:
+        """Append intercepted console messages to the logs list."""
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
@@ -422,12 +434,14 @@ def test_pw_gpu_05_missing_extension_degrades_gracefully(page: Page) -> None:
 
 def test_pw_gpu_06_missing_context_safety(page: Page) -> None:
     """
-    PW-GPU-06: Complete absence of WebGL context does not crash the GPU detection routine.
+    PW-GPU-06: Complete absence of WebGL context does not crash the GPU
+    detection routine.
     """
     logs: list[dict[str, str]] = []
     cdp_session = None
 
     def on_console(msg: Any) -> None:
+        """Append intercepted console messages to the logs list."""
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
@@ -490,6 +504,7 @@ def test_pw_gpu_07_accessible_keyboard_dismissal(page: Page, key: str) -> None:
     cdp_session = None
 
     def on_console(msg: Any) -> None:
+        """Append intercepted console messages to the logs list."""
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
@@ -574,6 +589,7 @@ def test_pw_gpu_08_case_insensitive_matching(page: Page, renderer: str) -> None:
     cdp_session = None
 
     def on_console(msg: Any) -> None:
+        """Append intercepted console messages to the logs list."""
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
@@ -635,6 +651,7 @@ def test_pw_gpu_09_exception_safety(page: Page) -> None:
     cdp_session = None
 
     def on_console(msg: Any) -> None:
+        """Append intercepted console messages to the logs list."""
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
