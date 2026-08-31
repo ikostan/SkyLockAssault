@@ -52,10 +52,13 @@ def _gameplay_ready_predicate(text: str) -> bool:
 
 
 def _main_menu_ready_predicate(text: str) -> bool:
-    """True only when main_menu.tscn has fully loaded and bound fresh JS callbacks."""
+    """True only when main_menu.tscn has fully loaded and bound fresh JS
+    callbacks.
+    """
     t = text.lower()
     return (
-        "exposed main menu callbacks to js" in t or "quitdialog signals connected" in t
+        "exposed main menu callbacks to js" in t
+        or "quitdialog signals connected" in t
     )
 
 
@@ -138,16 +141,14 @@ def _dump_failure_artifacts(
     os.makedirs("artifacts", exist_ok=True)
     timestamp = int(time.time() * 1000)
     safe_id = os.path.basename(test_id)
-    page.screenshot(path=f"artifacts/{safe_id}_failure_screenshot_{timestamp}.png")
-    with open(
-        f"artifacts/{safe_id}_failure_html_{timestamp}.html", "w", encoding="utf-8"
-    ) as f:
+    page.screenshot(
+        path=f"artifacts/{safe_id}_failure_screenshot_{timestamp}.png"
+    )
+    html_path = f"artifacts/{safe_id}_failure_html_{timestamp}.html"
+    with open(html_path, "w", encoding="utf-8") as f:
         f.write(page.content())
-    with open(
-        f"artifacts/{safe_id}_failure_console_logs_{timestamp}.txt",
-        "w",
-        encoding="utf-8",
-    ) as f:
+    log_path = f"artifacts/{safe_id}_failure_console_logs_{timestamp}.txt"
+    with open(log_path, "w", encoding="utf-8") as f:
         for log in logs:
             f.write(f"[{log['type']}] {log['text']}\n")
 
@@ -161,11 +162,10 @@ def _save_coverage(cdp_session: Any, test_id: str) -> None:
             cdp_session.send("Profiler.disable")
             os.makedirs("artifacts", exist_ok=True)
             safe_id = os.path.basename(test_id)
-            with open(
-                f"artifacts/v8_coverage_{safe_id}_{int(time.time() * 1000)}.json",
-                "w",
-                encoding="utf-8",
-            ) as f:
+            cov_path = (
+                f"artifacts/v8_coverage_{safe_id}_{int(time.time() * 1000)}.json"
+            )
+            with open(cov_path, "w", encoding="utf-8") as f:
                 json.dump(coverage, f)
         except Exception as cov_err:
             print(f"Warning: Failed to harvest V8 coverage data: {cov_err}")
@@ -413,7 +413,10 @@ def test_pw_trans_05_canvas_and_initialization_invariants(page: Page) -> None:
         ), f"Invariant failed at {checkpoint_label}: canvas bounding box is None"
         assert (
             box["width"] > 0 and box["height"] > 0
-        ), f"Invariant failed at {checkpoint_label}: invalid dimensions ({box['width']}x{box['height']})"
+        ), (
+            f"Invariant failed at {checkpoint_label}: "
+            f"invalid dimensions ({box['width']}x{box['height']})"
+        )
 
     try:
         cdp_session = _setup_mock_page(page, logs)
