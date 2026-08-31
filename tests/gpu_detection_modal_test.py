@@ -25,7 +25,7 @@ def get_webgl_mock_script(
     throw_exception: bool = False,
 ) -> str:
     """
-    Helper to generate JavaScript scripts for deterministic WebGL prototype interception.
+    Helper to generate JS scripts for deterministic WebGL prototype interception.
     Allows testing hardware/software renderer paths without relying on the host OS GPU.
     """
     if missing_context:
@@ -497,9 +497,7 @@ def test_pw_gpu_06_missing_context_safety(page: Page) -> None:
 
 @pytest.mark.parametrize("key", ["Enter", "Space"])
 def test_pw_gpu_07_accessible_keyboard_dismissal(page: Page, key: str) -> None:
-    """
-    PW-GPU-07: Modal enforces focus placement and accessible keyboard dismissal.
-    """
+    """PW-GPU-07: Modal enforces focus placement and accessible keyboard dismissal."""
     logs: list[dict[str, str]] = []
     cdp_session = None
 
@@ -657,7 +655,7 @@ def test_pw_gpu_09_exception_safety(page: Page) -> None:
     page.on("console", on_console)
 
     errors: list[str] = []
-    page.on("pageerror", lambda e: errors.append(e))
+    page.on("pageerror", errors.append)
 
     try:
         cdp_session = page.context.new_cdp_session(page)
