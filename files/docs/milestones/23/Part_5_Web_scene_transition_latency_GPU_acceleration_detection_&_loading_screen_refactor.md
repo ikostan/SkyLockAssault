@@ -3,7 +3,7 @@
 
 ---
 
-## PR #910 Summary: Web scene transition latency, GPU acceleration detection & loading screen optimization
+## PR #913 Summary: Web scene transition latency, GPU acceleration detection & loading screen optimization
 
 **Repository:** [ikostan/SkyLockAssault](https://github.com/ikostan/SkyLockAssault)
 
@@ -55,8 +55,6 @@ Diagnose and resolve the multi-second loading screen freeze observed during scen
 * **Intentional 1.0s Completion Hold:** Added `await get_tree().create_timer(1.0).timeout` once the progress bar visually fills to 100%, giving players clear visual confirmation of completion before entering gameplay.
 * **Architecture Validation:** Verified that multi-threaded Web export (Config A) and synchronous sub-scene loading (`res://scenes/bullet.tscn`) perform within acceptable thresholds (<15 ms) without requiring matrix bypasses or structural refactoring.
 
-
-
 ---
 
 ### Benefits
@@ -72,23 +70,7 @@ Diagnose and resolve the multi-second loading screen freeze observed during scen
 
 ---
 
-## PR #910 Summary: Bots / AI Contributions
 
-### AI / Bot Contributors
-
-* **@sourcery-ai**
-Generated the PR summary, structural breakdown, and Reviewer’s Guide. Conducted code reviews and suggested improvements for progress smoothing and transition error handling.
-* **@coderabbitai**
-Generated the PR walkthrough and summary. Reviewed the loading lifecycle refactor, WebGL hardware acceleration detection hooks, and CSS styling consistency.
-* **@deepsource-io**
-Performed automated static analysis and validated code health across modified HTML/JavaScript and GDScript components.
-* **@deepsource-autofix**
-Enforced formatting and style compliance across GDScript and web shell assets.
-
-### Human Contributor
-
-* **@ikostan**
-Primary author of the PR. Conducted DevTools performance trace analysis to isolate the 10.6s `Commit` software rasterizer bottleneck; implemented pre-boot GPU hardware acceleration detection and modal UI in `custom_shell.html`; engineered microsecond lifecycle profiling in `loading_screen.gd`; refactored progress interpolation from asymptotic `lerp` to delta-scaled `move_toward`; tuned visual completion pacing with a 1.0s hold; validated export matrix configurations and reverse transition teardowns; and authored Milestone 23 documentation.
 
 ---
 <!-- markdownlint-enable MD001 MD036 MD013 MD033 table-column-style -->
