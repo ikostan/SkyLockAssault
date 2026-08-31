@@ -57,8 +57,7 @@ def _main_menu_ready_predicate(text: str) -> bool:
     """
     t = text.lower()
     return (
-        "exposed main menu callbacks to js" in t
-        or "quitdialog signals connected" in t
+        "exposed main menu callbacks to js" in t or "quitdialog signals connected" in t
     )
 
 
@@ -141,9 +140,7 @@ def _dump_failure_artifacts(
     os.makedirs("artifacts", exist_ok=True)
     timestamp = int(time.time() * 1000)
     safe_id = os.path.basename(test_id)
-    page.screenshot(
-        path=f"artifacts/{safe_id}_failure_screenshot_{timestamp}.png"
-    )
+    page.screenshot(path=f"artifacts/{safe_id}_failure_screenshot_{timestamp}.png")
     html_path = f"artifacts/{safe_id}_failure_html_{timestamp}.html"
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(page.content())
@@ -162,9 +159,7 @@ def _save_coverage(cdp_session: Any, test_id: str) -> None:
             cdp_session.send("Profiler.disable")
             os.makedirs("artifacts", exist_ok=True)
             safe_id = os.path.basename(test_id)
-            cov_path = (
-                f"artifacts/v8_coverage_{safe_id}_{int(time.time() * 1000)}.json"
-            )
+            cov_path = f"artifacts/v8_coverage_{safe_id}_{int(time.time() * 1000)}.json"
             with open(cov_path, "w", encoding="utf-8") as f:
                 json.dump(coverage, f)
         except Exception as cov_err:
@@ -411,9 +406,7 @@ def test_pw_trans_05_canvas_and_initialization_invariants(page: Page) -> None:
         assert (
             box is not None
         ), f"Invariant failed at {checkpoint_label}: canvas bounding box is None"
-        assert (
-            box["width"] > 0 and box["height"] > 0
-        ), (
+        assert box["width"] > 0 and box["height"] > 0, (
             f"Invariant failed at {checkpoint_label}: "
             f"invalid dimensions ({box['width']}x{box['height']})"
         )
