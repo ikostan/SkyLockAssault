@@ -65,6 +65,7 @@ def _setup_mock_page(page: Page, logs: list[dict[str, str]]) -> Any:
     """
 
     def on_console(msg: Any) -> None:
+        """Append intercepted console messages to the logs list."""
         logs.append({"type": msg.type, "text": msg.text})
 
     page.on("console", on_console)
@@ -136,13 +137,14 @@ def _dump_failure_artifacts(
     """Dumps diagnostic artifacts on test failure."""
     os.makedirs("artifacts", exist_ok=True)
     timestamp = int(time.time() * 1000)
-    page.screenshot(path=f"artifacts/{test_id}_failure_screenshot_{timestamp}.png")
+    safe_id = os.path.basename(test_id)
+    page.screenshot(path=f"artifacts/{safe_id}_failure_screenshot_{timestamp}.png")
     with open(
-        f"artifacts/{test_id}_failure_html_{timestamp}.html", "w", encoding="utf-8"
+        f"artifacts/{safe_id}_failure_html_{timestamp}.html", "w", encoding="utf-8"
     ) as f:
         f.write(page.content())
     with open(
-        f"artifacts/{test_id}_failure_console_logs_{timestamp}.txt",
+        f"artifacts/{safe_id}_failure_console_logs_{timestamp}.txt",
         "w",
         encoding="utf-8",
     ) as f:
@@ -158,8 +160,9 @@ def _save_coverage(cdp_session: Any, test_id: str) -> None:
             cdp_session.send("Profiler.stopPreciseCoverage")
             cdp_session.send("Profiler.disable")
             os.makedirs("artifacts", exist_ok=True)
+            safe_id = os.path.basename(test_id)
             with open(
-                f"artifacts/v8_coverage_{test_id}_{int(time.time() * 1000)}.json",
+                f"artifacts/v8_coverage_{safe_id}_{int(time.time() * 1000)}.json",
                 "w",
                 encoding="utf-8",
             ) as f:
@@ -310,13 +313,13 @@ def test_pw_trans_03_forward_transition_idempotency(page: Page) -> None:
 
         # Verify idempotency guards: exactly 1 scene is loaded and initialized
         if init_main_scene_count > 0:
-            assert (
-                init_main_scene_count == 1
-            ), f"Expected 1 main scene init, observed: {init_main_scene_count}"
+            assert init_main_scene_count == 1, (
+                f"Expected 1 main scene init, observed: {init_main_scene_count}"
+            )
         if hud_wired_count > 0:
-            assert (
-                hud_wired_count == 1
-            ), f"Expected 1 HUD wiring, observed: {hud_wired_count}"
+            assert hud_wired_count == 1, (
+                f"Expected 1 HUD wiring, observed: {hud_wired_count}"
+            )
 
     except Exception as e:
         print(f"Test PW-TRANS-03 failed: {e}")
@@ -389,12 +392,14 @@ def test_pw_trans_04_reverse_transition_idempotency(page: Page) -> None:
 def test_pw_trans_05_canvas_and_initialization_invariants(page: Page) -> None:
     """
     PW-TRANS-05: Validates that window.godotInitialized remains persistently true
-    and the HTML5 canvas bounding box maintains positive width/height across all checkpoints.
+    and the HTML5 canvas bounding box maintains positive width and height
+    across all checkpoints.
     """
     logs: list[dict[str, str]] = []
     cdp_session = None
 
     def assert_canvas_invariants(checkpoint_label: str) -> None:
+        """Asserts that Godot is initialized and canvas has positive dimensions."""
         is_init = page.evaluate("() => window.godotInitialized === true")
         assert (
             is_init is True
@@ -406,10 +411,9 @@ def test_pw_trans_05_canvas_and_initialization_invariants(page: Page) -> None:
         assert (
             box is not None
         ), f"Invariant failed at {checkpoint_label}: canvas bounding box is None"
-        assert box["width"] > 0 and box["height"] > 0, (
-            f"Invariant failed at {checkpoint_label}: "
-            f"invalid dimensions ({box['width']}x{box['height']})"
-        )
+        assert (
+            box["width"] > 0 and box["height"] > 0
+        ), f"Invariant failed at {checkpoint_label}: invalid dimensions ({box['width']}x{box['height']})"
 
     try:
         cdp_session = _setup_mock_page(page, logs)
