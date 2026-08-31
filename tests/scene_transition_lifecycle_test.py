@@ -313,13 +313,13 @@ def test_pw_trans_03_forward_transition_idempotency(page: Page) -> None:
 
         # Verify idempotency guards: exactly 1 scene is loaded and initialized
         if init_main_scene_count > 0:
-            assert init_main_scene_count == 1, (
-                f"Expected 1 main scene init, observed: {init_main_scene_count}"
-            )
+            assert (
+                init_main_scene_count == 1
+            ), f"Expected 1 main scene init, observed: {init_main_scene_count}"
         if hud_wired_count > 0:
-            assert hud_wired_count == 1, (
-                f"Expected 1 HUD wiring, observed: {hud_wired_count}"
-            )
+            assert (
+                hud_wired_count == 1
+            ), f"Expected 1 HUD wiring, observed: {hud_wired_count}"
 
     except Exception as e:
         print(f"Test PW-TRANS-03 failed: {e}")
