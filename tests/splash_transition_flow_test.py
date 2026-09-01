@@ -322,6 +322,14 @@ def test_splash_transition_flow(page: Page) -> None:
         loading_overlay = page.locator("#loading")
         expect(loading_overlay).to_be_visible(timeout=TEST_TIMEOUT)
 
+        # Dismiss GPU warning modal if displayed in software rasterizer/headless CI
+        gpu_btn = page.locator("#gpu-warning-dismiss-btn")
+        try:
+            gpu_btn.wait_for(state="visible", timeout=1500)
+            gpu_btn.click()
+        except Exception:
+            pass
+
         # 3. Wait for WASM initialization
         page.wait_for_function(
             "() => window.godotInitialized === true",
