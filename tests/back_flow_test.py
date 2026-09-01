@@ -126,6 +126,12 @@ def test_back_flow(shared_page: Page) -> None:
 
         # Re-enter audio via page reload
         shared_page.reload(wait_until="domcontentloaded")
+        gpu_btn = shared_page.locator("#gpu-warning-dismiss-btn")
+        try:
+            gpu_btn.wait_for(state="visible", timeout=1500)
+            gpu_btn.click()
+        except Exception:
+            pass
         shared_page.wait_for_function(
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
