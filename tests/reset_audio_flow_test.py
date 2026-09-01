@@ -364,7 +364,6 @@ def test_reset_flow(shared_page: Page) -> None:
         )
 
         # Synchronize Emscripten IDBFS to IndexedDB before page reload
-        # Synchronize Emscripten IDBFS to IndexedDB before page reload
         try:
             shared_page.evaluate("""async () => {
                     if (typeof GodotFS !== 'undefined' && GodotFS.sync) {
@@ -392,6 +391,12 @@ def test_reset_flow(shared_page: Page) -> None:
         # Reload page deterministically via domcontentloaded
         pre_reload_log_count = len(logs)
         shared_page.reload(wait_until="domcontentloaded")
+        gpu_btn = shared_page.locator("#gpu-warning-dismiss-btn")
+        try:
+            gpu_btn.wait_for(state="visible", timeout=1500)
+            gpu_btn.click()
+        except Exception:
+            pass
 
         # Wait for WASM initialization
         shared_page.wait_for_function(
