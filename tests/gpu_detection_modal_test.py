@@ -26,7 +26,17 @@ def get_webgl_mock_script(
 ) -> str:
     """Helper to generate JS scripts for deterministic WebGL prototype interception."""
     if missing_context:
-        return "HTMLCanvasElement.prototype.getContext = function() { return null; };"
+        return """
+        (function() {
+            const origGetContext = HTMLCanvasElement.prototype.getContext;
+            HTMLCanvasElement.prototype.getContext = function(type, ...args) {
+                if (!this.id || this.id !== 'canvas') {
+                    return null;
+                }
+                return origGetContext.call(this, type, ...args);
+            };
+        })();
+        """
 
     # Injects a prototype override to intercept getExtension and getParameter
     # calls across both WebGLRenderingContext and WebGL2RenderingContext APIs.
@@ -35,10 +45,10 @@ def get_webgl_mock_script(
         if (!proto) return;
         const origGetExtension = proto.getExtension;
         proto.getExtension = function(name) {{
-            if ('{str(throw_exception).lower()}' === 'true') {{
-                throw new Error("Mocked WebGL Security Exception");
-            }}
             if (name === 'WEBGL_debug_renderer_info') {{
+                if ('{str(throw_exception).lower()}' === 'true') {{
+                    throw new Error("Mocked WebGL Security Exception");
+                }}
                 if ('{str(missing_ext).lower()}' === 'true') return null;
                 return {{
                     UNMASKED_RENDERER_WEBGL: 37446,
@@ -432,8 +442,8 @@ def test_pw_gpu_05_missing_extension_degrades_gracefully(page: Page) -> None:
 
 def test_pw_gpu_06_missing_context_safety(page: Page) -> None:
     """
-    PW-GPU-06: Complete absence of WebGL context does not crash the GPU
-    detection routine.
+    PW-GPU-06: Absence of WebGL context on detector probe does not crash
+    detection or block engine initialization.
     """
     logs: list[dict[str, str]] = []
     cdp_session = None
@@ -454,6 +464,9 @@ def test_pw_gpu_06_missing_context_safety(page: Page) -> None:
         page.add_init_script(get_webgl_mock_script(missing_context=True))
         page.goto("http://localhost:8080/index.html")
 
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=TEST_TIMEOUT
+        )
         expect(page.locator("#gpu-alert-modal")).not_to_be_visible()
 
     except Exception as e:
@@ -642,7 +655,7 @@ def test_pw_gpu_08_case_insensitive_matching(page: Page, renderer: str) -> None:
 def test_pw_gpu_09_exception_safety(page: Page) -> None:
     """
     PW-GPU-09: WebGL API exceptions during probe do not escape into the page
-    context.
+    context or block engine initialization.
     """
     logs: list[dict[str, str]] = []
     cdp_session = None
@@ -671,6 +684,9 @@ def test_pw_gpu_09_exception_safety(page: Page) -> None:
         page.add_init_script(get_webgl_mock_script(throw_exception=True))
         page.goto("http://localhost:8080/index.html")
 
+        page.wait_for_function(
+            "() => window.godotInitialized === true", timeout=TEST_TIMEOUT
+        )
         expect(page.locator("#gpu-alert-modal")).not_to_be_visible()
         assert len(errors) == 0
 
