@@ -94,7 +94,6 @@ def test_pw_gpu_01_software_rasterizer_triggers_modal(page: Page) -> None:
             "Profiler.startPreciseCoverage", {"callCount": True, "detailed": True}
         )
 
-        # Uses prototype interception to mock Microsoft Basic Render Driver
         page.add_init_script(
             get_webgl_mock_script(
                 renderer_string="Microsoft Basic Render Driver (Direct3D11)"
@@ -102,10 +101,14 @@ def test_pw_gpu_01_software_rasterizer_triggers_modal(page: Page) -> None:
         )
         page.goto("http://localhost:8080/index.html")
 
-        modal = page.locator("#gpu-alert-modal")
+        modal = page.locator("#gpu-warning-modal")
         expect(modal).to_be_visible(timeout=TEST_TIMEOUT)
 
-        # Underlying canvas interaction is blocked; engine is paused
+        # Dialog accessibility & viewport coverage validation
+        expect(modal).to_have_attribute("role", "dialog")
+        expect(modal).to_have_attribute("aria-modal", "true")
+
+        # Engine startup is paused prior to dismissal
         is_init = page.evaluate("window.godotInitialized")
         assert is_init in [None, False]
 
@@ -172,19 +175,24 @@ def test_pw_gpu_02_modal_dismissal_unblocks_engine(page: Page) -> None:
         )
         page.goto("http://localhost:8080/index.html")
 
-        dismiss_btn = page.locator("#gpu-alert-btn")
+        dismiss_btn = page.locator("#gpu-warning-dismiss-btn")
         expect(dismiss_btn).to_be_visible(timeout=TEST_TIMEOUT)
         dismiss_btn.click()
 
-        # Modal dismissal unblocks engine boot and godotInitialized resolves
+        # Modal dismissal unblocks engine boot
         page.wait_for_function(
             "() => window.godotInitialized === true", timeout=TEST_TIMEOUT
         )
 
-        # Modal receives display: none
-        modal = page.locator("#gpu-alert-modal")
+        modal = page.locator("#gpu-warning-modal")
         expect(modal).not_to_be_visible()
         expect(modal).to_have_css("display", "none")
+
+        # Focus shifts to the primary game canvas
+        canvas_focused = page.evaluate(
+            "() => document.activeElement === document.querySelector('#canvas')"
+        )
+        assert canvas_focused is True
 
     except Exception as e:
         print(f"Test suite failed: {e!s}")
@@ -256,7 +264,9 @@ def test_pw_gpu_03_detects_software_strings(page: Page, renderer: str) -> None:
         page.add_init_script(get_webgl_mock_script(renderer_string=renderer))
         page.goto("http://localhost:8080/index.html")
 
-        expect(page.locator("#gpu-alert-modal")).to_be_visible(timeout=TEST_TIMEOUT)
+        expect(page.locator("#gpu-warning-modal")).to_be_visible(
+            timeout=TEST_TIMEOUT
+        )
 
     except Exception as e:
         print(f"Test suite failed: {e!s}")
@@ -333,7 +343,7 @@ def test_pw_gpu_04_hardware_bypass(page: Page, renderer: str) -> None:
             "() => window.godotInitialized === true", timeout=TEST_TIMEOUT
         )
 
-        modal = page.locator("#gpu-alert-modal")
+        modal = page.locator("#gpu-warning-modal")
         expect(modal).not_to_be_visible()
         expect(modal).to_have_css("display", "none")
 
@@ -401,7 +411,7 @@ def test_pw_gpu_05_missing_extension_degrades_gracefully(page: Page) -> None:
         page.wait_for_function(
             "() => window.godotInitialized === true", timeout=TEST_TIMEOUT
         )
-        expect(page.locator("#gpu-alert-modal")).not_to_be_visible()
+        expect(page.locator("#gpu-warning-modal")).not_to_be_visible()
 
     except Exception as e:
         print(f"Test suite failed: {e!s}")
@@ -467,7 +477,7 @@ def test_pw_gpu_06_missing_context_safety(page: Page) -> None:
         page.wait_for_function(
             "() => window.godotInitialized === true", timeout=TEST_TIMEOUT
         )
-        expect(page.locator("#gpu-alert-modal")).not_to_be_visible()
+        expect(page.locator("#gpu-warning-modal")).not_to_be_visible()
 
     except Exception as e:
         print(f"Test suite failed: {e!s}")
@@ -530,8 +540,14 @@ def test_pw_gpu_07_accessible_keyboard_dismissal(page: Page, key: str) -> None:
         )
         page.goto("http://localhost:8080/index.html")
 
-        dismiss_btn = page.locator("#gpu-alert-btn")
+        dismiss_btn = page.locator("#gpu-warning-dismiss-btn")
         expect(dismiss_btn).to_be_visible(timeout=TEST_TIMEOUT)
+
+        # Enforce initial focus placement on the dismiss button
+        initial_focus = page.evaluate(
+            "() => document.activeElement === document.querySelector('#gpu-warning-dismiss-btn')"
+        )
+        assert initial_focus is True
 
         # Dispatch keyboard dismissal directly to the button locator
         dismiss_btn.press(key)
@@ -540,9 +556,15 @@ def test_pw_gpu_07_accessible_keyboard_dismissal(page: Page, key: str) -> None:
             "() => window.godotInitialized === true", timeout=TEST_TIMEOUT
         )
 
-        modal = page.locator("#gpu-alert-modal")
+        modal = page.locator("#gpu-warning-modal")
         expect(modal).not_to_be_visible()
         expect(modal).to_have_css("display", "none")
+
+        # Focus shifts to the primary game canvas
+        post_focus = page.evaluate(
+            "() => document.activeElement === document.querySelector('#canvas')"
+        )
+        assert post_focus is True
 
     except Exception as e:
         print(f"Test suite failed: {e!s}")
@@ -613,7 +635,9 @@ def test_pw_gpu_08_case_insensitive_matching(page: Page, renderer: str) -> None:
         page.add_init_script(get_webgl_mock_script(renderer_string=renderer))
         page.goto("http://localhost:8080/index.html")
 
-        expect(page.locator("#gpu-alert-modal")).to_be_visible(timeout=TEST_TIMEOUT)
+        expect(page.locator("#gpu-warning-modal")).to_be_visible(
+            timeout=TEST_TIMEOUT
+        )
 
     except Exception as e:
         print(f"Test suite failed: {e!s}")
@@ -687,7 +711,7 @@ def test_pw_gpu_09_exception_safety(page: Page) -> None:
         page.wait_for_function(
             "() => window.godotInitialized === true", timeout=TEST_TIMEOUT
         )
-        expect(page.locator("#gpu-alert-modal")).not_to_be_visible()
+        expect(page.locator("#gpu-warning-modal")).not_to_be_visible()
         assert len(errors) == 0
 
     except Exception as e:

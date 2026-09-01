@@ -102,7 +102,7 @@
           }
 
         /* Grayed out background backdrop & left-aligned modal */
-        #gpu-alert-modal {
+        #gpu-warning-modal {
             display: none;
             position: fixed;
             top: 0;
@@ -114,7 +114,7 @@
             align-items: center;
             justify-content: center;
         }
-        #gpu-alert-box {
+        #gpu-warning-box {
             background: #181818;
             color: #fff;
             border: 2px solid #e74c3c;
@@ -127,20 +127,20 @@
             font-family: sans-serif;
             box-sizing: border-box;
         }
-        #gpu-alert-box h3 {
+        #gpu-warning-title {
             margin: 0 0 12px 0;
             color: #e74c3c;
             font-size: 20px;
             text-align: center;
         }
-        #gpu-alert-box p {
+        #gpu-warning-text {
             font-size: 14px;
             line-height: 1.6;
             color: #eee;
             margin: 0 0 20px 0;
             text-align: left;
         }
-        #gpu-alert-btn {
+        #gpu-warning-dismiss-btn {
             opacity: 1 !important;
             pointer-events: auto !important;
             position: static !important;
@@ -155,20 +155,24 @@
             cursor: pointer;
             text-align: center !important;
         }
+        #gpu-warning-dismiss-btn:focus {
+            outline: 2px solid #ffffff;
+            outline-offset: 2px;
+        }
     </style>
 <!-- Removed favicon link to avoid 404 -->
 </head>
 <body>
     <!-- Hardware Acceleration Popup Modal -->
-    <div id="gpu-alert-modal">
-        <div id="gpu-alert-box">
-            <h3>⚠️ Performance Warning</h3>
-            <p id="gpu-alert-text">
+    <div id="gpu-warning-modal" role="dialog" aria-modal="true" aria-labelledby="gpu-warning-title" aria-describedby="gpu-warning-text">
+        <div id="gpu-warning-box">
+            <h3 id="gpu-warning-title">⚠️ Performance Warning</h3>
+            <p id="gpu-warning-text">
                 Hardware acceleration is disabled in your browser. The game will run using CPU software emulation, which can cause multi-second freezes and severe lag.
                 <br><br>
                 Please enable <strong>"Hardware Acceleration"</strong> in your browser settings for smooth gameplay.
             </p>
-            <button id="gpu-alert-btn" onclick="document.getElementById('gpu-alert-modal').style.display='none'">I Understand / Continue</button>
+            <button id="gpu-warning-dismiss-btn">I Understand / Continue</button>
         </div>
     </div>
 
@@ -260,70 +264,103 @@
 
     <script src="$GODOT_URL"></script> <!-- Godot replaces with actual JS file, e.g., tmp_js_export.js -->
     <script>
+        var isEngineBooted = false;
+
+        function bootEngine() {
+            if (isEngineBooted) return;
+            isEngineBooted = true;
+
+            // Consolidate engine configuration with custom telemetry hooks
+            var customConfig = Object.assign({}, $GODOT_CONFIG, {
+                onProgress: function(current, total) {
+                    if (total > 0 && current >= 0) {
+                        var percent = Math.min(100, Math.floor((current / total) * 100));
+                        console.log("Telemetry - Assembly Transfer: " + percent + "%");
+                    }
+                }
+            });
+
+            // Initialize engine instance with customConfig
+            var engine = new Engine(customConfig);
+
+            // Start Godot engine (async for stability)
+            engine.startGame().then(() => {
+                console.log("Godot engine started successfully!");
+
+                // Hide loading UI, clean up ARIA live-region attributes, and focus canvas
+                var loadingDiv = document.getElementById('loading');
+                if (loadingDiv) {
+                    loadingDiv.style.display = 'none';
+                    loadingDiv.setAttribute('aria-hidden', 'true');
+                    loadingDiv.setAttribute('aria-busy', 'false');
+                    loadingDiv.removeAttribute('role');
+                    loadingDiv.removeAttribute('aria-live');
+                }
+
+                var canvas = document.getElementById('canvas');
+                if (canvas) {
+                    canvas.focus();
+                }
+
+                window.godotInitialized = true;
+            }).catch(err => {
+                console.error("Error starting Godot:", err);
+
+                var loadingDiv = document.getElementById('loading');
+                if (loadingDiv) {
+                    loadingDiv.setAttribute('aria-busy', 'false');
+                }
+
+                alert('Error loading SkyLockAssault. Please refresh.');
+            });
+        }
+
         (function checkGpuHardwareAcceleration() {
+            var isSoftwareGpu = false;
             try {
                 var testCanvas = document.createElement("canvas");
                 var gl = testCanvas.getContext("webgl2") || testCanvas.getContext("webgl") || testCanvas.getContext("experimental-webgl");
-                if (!gl) return;
-                var debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
-                var renderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
-                if (/SwiftShader|llvmpipe|Software Rasterizer|Microsoft Basic Render Driver|Google SwiftShader/i.test(renderer)) {
-                    console.warn("[SkyLockAssault] Hardware acceleration disabled! Detected software renderer:", renderer);
-                    var modal = document.getElementById("gpu-alert-modal");
-                    if (modal) {
-                        modal.style.display = "flex";
+                if (gl) {
+                    var debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+                    var renderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+                    if (/SwiftShader|llvmpipe|Software Rasterizer|Microsoft Basic Render Driver|Google SwiftShader/i.test(renderer)) {
+                        console.warn("[SkyLockAssault] Hardware acceleration disabled! Detected software renderer:", renderer);
+                        isSoftwareGpu = true;
+                    } else {
+                        console.log("[SkyLockAssault] Hardware GPU active:", renderer);
                     }
-                } else {
-                    console.log("[SkyLockAssault] Hardware GPU active:", renderer);
                 }
             } catch (e) {
                 console.warn("[SkyLockAssault] Could not query GPU context:", e);
             }
+
+            var modal = document.getElementById("gpu-warning-modal");
+            var dismissBtn = document.getElementById("gpu-warning-dismiss-btn");
+
+            if (isSoftwareGpu && modal && dismissBtn) {
+                modal.style.display = "flex";
+                dismissBtn.focus();
+
+                var dismissHandler = function() {
+                    modal.style.display = "none";
+                    bootEngine();
+                    var canvas = document.getElementById("canvas");
+                    if (canvas) {
+                        canvas.focus();
+                    }
+                };
+
+                dismissBtn.onclick = dismissHandler;
+                dismissBtn.onkeydown = function(e) {
+                    if (e.key === "Enter" || e.key === " " || e.keyCode === 13 || e.keyCode === 32) {
+                        e.preventDefault();
+                        dismissHandler();
+                    }
+                };
+            } else {
+                bootEngine();
+            }
         })();
-
-        // Consolidate engine configuration with custom telemetry hooks
-        var customConfig = Object.assign({}, $GODOT_CONFIG, {
-            onProgress: function(current, total) {
-                if (total > 0 && current >= 0) {
-                    var percent = Math.min(100, Math.floor((current / total) * 100));
-                    console.log("Telemetry - Assembly Transfer: " + percent + "%");
-                }
-            }
-        });
-
-        // Initialize engine instance with customConfig
-        var engine = new Engine(customConfig);
-
-        // Start Godot engine (async for stability)
-        engine.startGame().then(() => {
-            console.log("Godot engine started successfully!");
-
-            // Hide loading UI, clean up ARIA live-region attributes, and focus canvas
-            var loadingDiv = document.getElementById('loading');
-            if (loadingDiv) {
-                loadingDiv.style.display = 'none';
-                loadingDiv.setAttribute('aria-hidden', 'true');
-                loadingDiv.setAttribute('aria-busy', 'false');
-                loadingDiv.removeAttribute('role');
-                loadingDiv.removeAttribute('aria-live');
-            }
-
-            var canvas = document.getElementById('canvas');
-            if (canvas) {
-                canvas.focus();
-            }
-
-            window.godotInitialized = true;
-        }).catch(err => {
-            console.error("Error starting Godot:", err);
-
-            var loadingDiv = document.getElementById('loading');
-            if (loadingDiv) {
-                loadingDiv.setAttribute('aria-busy', 'false');
-            }
-
-            alert('Error loading SkyLockAssault. Please refresh.');
-        });
 
         // Hook buttons/sliders to exposed Godot functions
         document.getElementById('controls-button').onclick = () => window.controlsPressed([]);
