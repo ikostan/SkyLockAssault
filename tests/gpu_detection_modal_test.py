@@ -24,10 +24,7 @@ def get_webgl_mock_script(
     missing_context: bool = False,
     throw_exception: bool = False,
 ) -> str:
-    """
-    Helper to generate JS scripts for deterministic WebGL prototype interception.
-    Allows testing hardware/software renderer paths without relying on the host OS GPU.
-    """
+    """Helper to generate JS scripts for deterministic WebGL prototype interception."""
     if missing_context:
         return "HTMLCanvasElement.prototype.getContext = function() { return null; };"
 
@@ -369,7 +366,8 @@ def test_pw_gpu_04_hardware_bypass(page: Page, renderer: str) -> None:
 
 def test_pw_gpu_05_missing_extension_degrades_gracefully(page: Page) -> None:
     """
-    PW-GPU-05: Missing or null WEBGL_debug_renderer_info extensions degrade gracefully.
+    PW-GPU-05: Missing or null WEBGL_debug_renderer_info extensions degrade
+    gracefully.
     """
     logs: list[dict[str, str]] = []
     cdp_session = None
@@ -643,7 +641,8 @@ def test_pw_gpu_08_case_insensitive_matching(page: Page, renderer: str) -> None:
 
 def test_pw_gpu_09_exception_safety(page: Page) -> None:
     """
-    PW-GPU-09: WebGL API exceptions during probe do not escape into the page context.
+    PW-GPU-09: WebGL API exceptions during probe do not escape into the page
+    context.
     """
     logs: list[dict[str, str]] = []
     cdp_session = None
@@ -655,7 +654,12 @@ def test_pw_gpu_09_exception_safety(page: Page) -> None:
     page.on("console", on_console)
 
     errors: list[str] = []
-    page.on("pageerror", errors.append)
+
+    def on_page_error(err: Any) -> None:
+        """Record uncaught page errors."""
+        errors.append(str(err))
+
+    page.on("pageerror", on_page_error)
 
     try:
         cdp_session = page.context.new_cdp_session(page)
