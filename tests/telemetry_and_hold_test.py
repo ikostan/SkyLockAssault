@@ -56,8 +56,8 @@ def _setup_mock_page(page: Page, logs: list[dict[str, Any]]) -> Any:
         "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
     )
 
-    # Dismiss GPU alert modal if displayed
-    gpu_btn = page.locator("#gpu-alert-btn")
+    # Dismiss GPU warning modal if displayed
+    gpu_btn = page.locator("#gpu-warning-dismiss-btn")
     if gpu_btn.is_visible():
         gpu_btn.click()
 

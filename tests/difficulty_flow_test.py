@@ -91,11 +91,11 @@ def test_difficulty_flow(shared_page: Page) -> None:
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
 
-        # Dismiss GPU alert modal if triggered by software rasterizer in test env
-        gpu_alert_btn = shared_page.locator("#gpu-alert-btn")
-        if gpu_alert_btn.is_visible():
-            gpu_alert_btn.click()
-            expect(shared_page.locator("#gpu-alert-modal")).not_to_be_visible()
+        # Dismiss GPU warning modal if triggered by software rasterizer in test env
+        gpu_warning_btn = shared_page.locator("#gpu-warning-dismiss-btn")
+        if gpu_warning_btn.is_visible():
+            gpu_warning_btn.click()
+            expect(shared_page.locator("#gpu-warning-modal")).not_to_be_visible()
 
         # Verify canvas and title to ensure game is initialized
         canvas = shared_page.locator("canvas")

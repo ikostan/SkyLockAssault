@@ -115,11 +115,6 @@ def init_page_and_wait_ready(
 
     try:
         if page.evaluate("window.godotInitialized === true"):
-            # Dismiss GPU warning modal if displayed in software rasterizer/headless CI
-            gpu_btn = page.locator("#gpu-alert-btn")
-            if gpu_btn.is_visible():
-                gpu_btn.click()
-
             canvas = page.locator("canvas")
             expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
             boot_time = 0.0
@@ -130,14 +125,18 @@ def init_page_and_wait_ready(
         pass
 
     page.goto(url, wait_until="domcontentloaded", timeout=DEFAULT_TIMEOUT)
+
+    # Dismiss GPU warning modal if displayed in software rasterizer/headless CI
+    gpu_btn = page.locator("#gpu-warning-dismiss-btn")
+    try:
+        gpu_btn.wait_for(state="visible", timeout=1500)
+        gpu_btn.click()
+    except Exception:
+        pass
+
     page.wait_for_function(
         "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
     )
-
-    # Dismiss GPU warning modal if displayed in software rasterizer/headless CI
-    gpu_btn = page.locator("#gpu-alert-btn")
-    if gpu_btn.is_visible():
-        gpu_btn.click()
 
     # Minimal visual assertion to ensure the canvas shell actually rendered
     canvas = page.locator("canvas")
