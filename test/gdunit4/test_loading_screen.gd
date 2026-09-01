@@ -271,14 +271,19 @@ func test_ls_trans_05_transition_gate_conjunction_logic() -> void:
 	loader._process(0.016)
 	assert_bool(loader.transitioning).is_true()
 
-	# Case 4: ✅ Failed load, 100% progress, ✅ valid time -> true
-	loader.is_scene_loaded = false
-	loader.load_failed = true
-	loader.loader_progress = 100.0
-	loader.load_start_time = now - loader.min_load_time - EPSILON
-	loader.transitioning = false
-	loader._process(0.016)
-	assert_bool(loader.transitioning).is_true()
+	# Case 4: ✅ Failed load, 100% progress, ✅ valid time -> true (Isolated instance)
+	Globals.next_scene = MAIN_MENU_PATH
+	var loader_fail: Control = _create_loader()
+	add_child(loader_fail)
+	await await_idle_frame()
+
+	loader_fail.is_scene_loaded = false
+	loader_fail.load_failed = true
+	loader_fail.loader_progress = 100.0
+	loader_fail.load_start_time = now - loader_fail.min_load_time - EPSILON
+	loader_fail.transitioning = false
+	loader_fail._process(0.016)
+	assert_bool(loader_fail.transitioning).is_true()
 
 
 ## LS-TRANS-06 | Reset Globals.next_scene cache to empty string on successful transition.
