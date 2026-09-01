@@ -642,3 +642,8 @@ def page(
         _cleanup_context_diagnostics(
             context, page_obj, request, include_module_failures=False
         )
+
+
+def pytest_runtest_logstart(nodeid: str, location: tuple[str, int | None, str]) -> None:
+    """Ensure background HTTP server logs appear on a new line below the test node ID."""
+    print("")
