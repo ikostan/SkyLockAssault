@@ -264,9 +264,7 @@ def test_pw_gpu_03_detects_software_strings(page: Page, renderer: str) -> None:
         page.add_init_script(get_webgl_mock_script(renderer_string=renderer))
         page.goto("http://localhost:8080/index.html")
 
-        expect(page.locator("#gpu-warning-modal")).to_be_visible(
-            timeout=TEST_TIMEOUT
-        )
+        expect(page.locator("#gpu-warning-modal")).to_be_visible(timeout=TEST_TIMEOUT)
 
     except Exception as e:
         print(f"Test suite failed: {e!s}")
@@ -635,9 +633,7 @@ def test_pw_gpu_08_case_insensitive_matching(page: Page, renderer: str) -> None:
         page.add_init_script(get_webgl_mock_script(renderer_string=renderer))
         page.goto("http://localhost:8080/index.html")
 
-        expect(page.locator("#gpu-warning-modal")).to_be_visible(
-            timeout=TEST_TIMEOUT
-        )
+        expect(page.locator("#gpu-warning-modal")).to_be_visible(timeout=TEST_TIMEOUT)
 
     except Exception as e:
         print(f"Test suite failed: {e!s}")
