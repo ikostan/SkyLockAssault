@@ -41,14 +41,8 @@ def _count_logs(logs: list[dict[str, str]], keyword: str) -> int:
 
 
 def _gameplay_ready_predicate(text: str) -> bool:
-    """True only when gameplay is fully mounted, HUD is wired, and
-    Pause Menu callbacks are exposed.
-    """
-    t = text.lower()
-    return (
-        "hud successfully wired to player signals" in t
-        or "exposed pause menu callbacks to js" in t
-    )
+    """True when the gameplay scene has finished mounting and wiring signals."""
+    return "hud successfully wired to player signals" in text.lower()
 
 
 def _main_menu_ready_predicate(text: str) -> bool:
