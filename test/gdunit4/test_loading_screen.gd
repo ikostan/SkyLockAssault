@@ -154,6 +154,22 @@ func test_ls_load_02_threaded_loading_failure_detection() -> void:
 	assert_bool(loader.is_scene_loaded).is_false()
 
 
+## LS-LOAD-03 | Exercise THREAD_LOAD_FAILED / INVALID_RESOURCE branch in _process polling (lines 81-83).
+func test_ls_load_03_process_polling_failure_branch() -> void:
+	Globals.next_scene = "res://scenes/non_existent_scene.tscn"
+	var loader: Control = _create_loader()
+	add_child(loader)
+	await await_idle_frame()
+
+	# Force loader into the active polling branch
+	loader.is_scene_loaded = false
+	loader.load_failed = false
+
+	loader._process(0.016)
+
+	assert_bool(loader.load_failed).is_true()
+
+
 # --- SECTION 4: TRANSITION TIMING & GATING (LS-TRANS) ---
 
 ## LS-TRANS-01 | Prevent duplicate scene swaps across consecutive process frames (idempotency).
@@ -324,5 +340,40 @@ func test_ls_fallback_02_empty_path_recovery_to_main_menu() -> void:
 	await await_idle_frame()
 
 	loader._change_to_next_scene()
+
+	assert_str(Globals.next_scene).is_empty()
+
+
+## LS-FALLBACK-03 | Await 1.0s completion timer to execute empty target_path recovery (lines 116-118).
+func test_ls_fallback_03_empty_path_coroutine_execution() -> void:
+	Globals.next_scene = ""
+	var loader: Control = _create_loader()
+	add_child(loader)
+	await await_idle_frame()
+
+	loader._change_to_next_scene()
+
+	# Await past the 1.0s timer to execute post-yield recovery lines
+	await get_tree().create_timer(1.1).timeout
+	await await_idle_frame()
+
+	assert_str(Globals.next_scene).is_empty()
+
+
+## LS-FALLBACK-04 | Await 1.0s completion timer to execute direct loading fallback (lines 121-123).
+func test_ls_fallback_04_direct_load_coroutine_execution() -> void:
+	Globals.next_scene = MAIN_MENU_PATH
+	var loader: Control = _create_loader()
+	add_child(loader)
+	await await_idle_frame()
+
+	loader.load_failed = true
+	loader.scene = null
+
+	loader._change_to_next_scene()
+
+	# Await past the 1.0s timer to execute post-yield fallback lines
+	await get_tree().create_timer(1.1).timeout
+	await await_idle_frame()
 
 	assert_str(Globals.next_scene).is_empty()
