@@ -263,22 +263,23 @@
     <button id="pause-main-menu-button" style="top: 60%; display: none;">MAIN MENU</button>
 
     <script src="$GODOT_URL"></script> <!-- Godot replaces with actual JS file, e.g., tmp_js_export.js -->
+<script src="$GODOT_URL"></script>
     <script>
         var isEngineBooted = false;
+
+        // Consolidate engine configuration with custom telemetry hooks at top-level scope
+        var customConfig = Object.assign({}, $GODOT_CONFIG, {
+            onProgress: function(current, total) {
+                if (total > 0 && current >= 0) {
+                    var percent = Math.min(100, Math.floor((current / total) * 100));
+                    console.log("Telemetry - Assembly Transfer: " + percent + "%");
+                }
+            }
+        });
 
         function bootEngine() {
             if (isEngineBooted) return;
             isEngineBooted = true;
-
-            // Consolidate engine configuration with custom telemetry hooks
-            var customConfig = Object.assign({}, $GODOT_CONFIG, {
-                onProgress: function(current, total) {
-                    if (total > 0 && current >= 0) {
-                        var percent = Math.min(100, Math.floor((current / total) * 100));
-                        console.log("Telemetry - Assembly Transfer: " + percent + "%");
-                    }
-                }
-            });
 
             // Initialize engine instance with customConfig
             var engine = new Engine(customConfig);
@@ -287,7 +288,6 @@
             engine.startGame().then(() => {
                 console.log("Godot engine started successfully!");
 
-                // Hide loading UI, clean up ARIA live-region attributes, and focus canvas
                 var loadingDiv = document.getElementById('loading');
                 if (loadingDiv) {
                     loadingDiv.style.display = 'none';
