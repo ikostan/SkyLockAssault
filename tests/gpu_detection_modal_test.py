@@ -543,8 +543,10 @@ def test_pw_gpu_07_accessible_keyboard_dismissal(page: Page, key: str) -> None:
 
         # Enforce initial focus placement on the dismiss button
         initial_focus = page.evaluate(
-            "() => document.activeElement === document.querySelector('#gpu-warning-dismiss-btn')"
+            "() => document.activeElement === "
+            "document.querySelector('#gpu-warning-dismiss-btn')"
         )
+        assert initial_focus is True
         assert initial_focus is True
 
         # Dispatch keyboard dismissal directly to the button locator
