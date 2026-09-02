@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, expect
 
 # Shared timeout configurations across test suites
 DEFAULT_TIMEOUT = int(os.getenv("DEFAULT_TIMEOUT", "30000"))
@@ -128,11 +128,15 @@ def init_page_and_wait_ready(
 
     # Dismiss GPU warning modal if displayed in software rasterizer/headless CI
     gpu_btn = page.locator("#gpu-warning-dismiss-btn")
+    modal_visible = False
     try:
         gpu_btn.wait_for(state="visible", timeout=1500)
-        gpu_btn.click()
-    except Exception:
+        modal_visible = True
+    except PlaywrightTimeoutError:
         pass
+
+    if modal_visible:
+        gpu_btn.click()
 
     page.wait_for_function(
         "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
