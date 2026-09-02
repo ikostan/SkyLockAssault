@@ -27,7 +27,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, expect
 
 from tests.test_utils import (
     ARTIFACTS_DIR,
@@ -324,11 +324,15 @@ def test_splash_transition_flow(page: Page) -> None:
 
         # Dismiss GPU warning modal if displayed in software rasterizer/headless CI
         gpu_btn = page.locator("#gpu-warning-dismiss-btn")
+        modal_visible = False
         try:
             gpu_btn.wait_for(state="visible", timeout=1500)
-            gpu_btn.click()
-        except Exception:
+            modal_visible = True
+        except PlaywrightTimeoutError:
             pass
+
+        if modal_visible:
+            gpu_btn.click()
 
         # 3. Wait for WASM initialization
         page.wait_for_function(

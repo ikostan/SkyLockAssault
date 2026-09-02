@@ -20,7 +20,8 @@ import time
 from typing import Any
 
 import pytest
-from playwright.sync_api import Page
+
+from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 
 from tests.test_utils import (
     DEFAULT_TIMEOUT,
@@ -392,11 +393,15 @@ def test_reset_flow(shared_page: Page) -> None:
         pre_reload_log_count = len(logs)
         shared_page.reload(wait_until="domcontentloaded")
         gpu_btn = shared_page.locator("#gpu-warning-dismiss-btn")
+        modal_visible = False
         try:
             gpu_btn.wait_for(state="visible", timeout=1500)
-            gpu_btn.click()
-        except Exception:
+            modal_visible = True
+        except PlaywrightTimeoutError:
             pass
+
+        if modal_visible:
+            gpu_btn.click()
 
         # Wait for WASM initialization
         shared_page.wait_for_function(
