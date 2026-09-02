@@ -11,6 +11,7 @@ extends GdUnitTestSuite
 const PAUSE_MENU_PATH: String = "res://scenes/pause_menu.tscn"
 
 var _orig_globals_script: Script
+var _original_next_scene: String
 
 
 ## Test-only mock to prevent get_tree().change_scene_to_file from evicting the GdUnit runner.
@@ -24,10 +25,12 @@ class MockGlobals extends "res://scripts/core/globals.gd":
 
 func before_test() -> void:
 	_orig_globals_script = Globals.get_script()
+	_original_next_scene = Globals.next_scene
 	Globals.set_script(MockGlobals)
 
 
 func after_test() -> void:
+	Globals.next_scene = _original_next_scene
 	if _orig_globals_script:
 		Globals.set_script(_orig_globals_script)
 		Globals.settings = load("res://config_resources/default_settings.tres") as GameSettingsResource
