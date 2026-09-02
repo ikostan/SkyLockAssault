@@ -644,6 +644,6 @@ def page(
         )
 
 
-def pytest_runtest_logstart(nodeid: str, location: tuple[str, int | None, str]) -> None:
-    """Ensure background HTTP server logs appear on a new line below the test node ID."""
+def pytest_runtest_logstart() -> None:
+    """Ensure background HTTP server logs appear on a new line."""
     print("")
