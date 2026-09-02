@@ -20,8 +20,8 @@ import time
 from typing import Any
 
 import pytest
-
-from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import Page
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from tests.test_utils import (
     DEFAULT_TIMEOUT,

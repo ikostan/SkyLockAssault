@@ -11,7 +11,9 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, expect
+from playwright.sync_api import Page
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import expect
 
 # Shared timeout configurations across test suites
 DEFAULT_TIMEOUT = int(os.getenv("DEFAULT_TIMEOUT", "30000"))
