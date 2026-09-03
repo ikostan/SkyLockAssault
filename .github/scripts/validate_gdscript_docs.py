@@ -107,12 +107,18 @@ def validate_file(file_path: Path) -> List[str]:
     for idx, line in enumerate(lines, start=1):
         if RE_DOC_LINE.match(line):
             if RE_BANNED_FENCE.search(line):
-                errors.append(f"{file_path}:{idx} Banned Markdown fence (```) in docstring.")
+                errors.append(
+                    f"{file_path}:{idx} Banned Markdown fence (```) in docstring."
+                )
             if RE_DOXYGEN_TAG.search(line):
-                errors.append(f"{file_path}:{idx} Banned Doxygen tag (@param/@return). Use Godot BBCode [param name].")
+                errors.append(
+                    f"{file_path}:{idx} Banned Doxygen tag (@param/@return). Use Godot BBCode [param name]."
+                )
             for tag_name in RE_BBCODE_TAG.findall(line):
                 if tag_name.lower() not in ALLOWED_BASE_TAGS:
-                    errors.append(f"{file_path}:{idx} Unapproved BBCode tag '[{tag_name}]'.")
+                    errors.append(
+                        f"{file_path}:{idx} Unapproved BBCode tag '[{tag_name}]'."
+                    )
 
     # 2. Validate Functions
     for node in ast.find_data("func_def"):
