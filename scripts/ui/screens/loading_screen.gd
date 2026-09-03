@@ -109,6 +109,9 @@ func _change_to_next_scene() -> void:
 	var target_path: String = Globals.next_scene
 	Globals.next_scene = ""
 
+	# 1. Log in-engine completion ticks right before starting the hold
+	Globals.log_message("Scene loaded successfully. (ticks: %d)" % Time.get_ticks_msec(), Globals.LogLevel.DEBUG)
+
 	# 1-second pause at 100% so the player clearly sees completion
 	await get_tree().create_timer(1.0).timeout
 
@@ -122,7 +125,8 @@ func _change_to_next_scene() -> void:
 		get_tree().change_scene_to_file(target_path)
 		return
 
-	# 1. Instantiation
+	# 2. Log in-engine instantiate ticks immediately before instantiation
+	Globals.log_message("[SWAP TIMING] 1. .instantiate() (ticks: %d)" % Time.get_ticks_msec(), Globals.LogLevel.DEBUG)
 	var new_scene_node := scene.instantiate()
 
 	# 2. Add to Root and trigger _enter_tree() & _ready()
