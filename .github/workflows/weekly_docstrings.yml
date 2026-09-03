@@ -76,9 +76,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: docs
           branch: automation/weekly-gdscript-docs
-          title: "docs(gdscript): Sync Native BBCode docstrings"
+          title: "docs(gdscript): Sync Native BBCode docstrings (single file)"
           body: |
-            Automated weekly documentation update:
+            Automated single-file documentation sync:
             * Standardized public member docstrings to Godot 4 Native BBCode (`##`).
             * Verified non-comment byte-for-byte source integrity.
             * Passed documentation contract validator, `gdlint`, and Godot headless check.
