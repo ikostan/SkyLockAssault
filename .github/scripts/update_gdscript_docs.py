@@ -674,10 +674,14 @@ def atomic_commit_all_changes(changes: List[ProposedFileChange]) -> None:
 
             # CWE-59: Reject pre-existing symlinks or collision paths
             if tmp_path.is_symlink() or tmp_path.exists():
-                print(f"[FAIL-CLOSED] Collision or symlink rejected at staging path: {tmp_path}")
+                print(
+                    f"[FAIL-CLOSED] Collision or symlink rejected at staging path: {tmp_path}"
+                )
                 sys.exit(1)
             if backup_path.is_symlink() or backup_path.exists():
-                print(f"[FAIL-CLOSED] Collision or symlink rejected at backup path: {backup_path}")
+                print(
+                    f"[FAIL-CLOSED] Collision or symlink rejected at backup path: {backup_path}"
+                )
                 sys.exit(1)
 
             # Exclusive creation prevents following newly created symlinks
