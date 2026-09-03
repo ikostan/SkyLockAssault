@@ -456,7 +456,10 @@ def test_pw_trans_05_lifecycle_canvas_invariants(page: Page) -> None:
     cdp_session = None
 
     def _verify_canvas_checkpoint(checkpoint_name: str) -> None:
-        """Asserts Godot initialization state and positive canvas bounding box dimensions."""
+        """
+        1. Asserts Godot initialization state.
+        2. Asserts Godot positive canvas bounding box dimensions.
+        """
         is_init = page.evaluate("() => window.godotInitialized === true")
         assert (
             is_init is True
