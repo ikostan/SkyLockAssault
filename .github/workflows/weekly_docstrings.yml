@@ -53,7 +53,7 @@ jobs:
       - name: "Setup Godot Engine (Headless Syntax Verification)"
         uses: chickensoft-games/setup-godot@v2
         with:
-          version: 4.3.0
+          version: 4.7.0
 
       - name: "Verify Godot Project Parsing"
         run: |
