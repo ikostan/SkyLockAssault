@@ -171,6 +171,7 @@ class MemberDeclaration:
     context_snippet: str
     status: DocStatus = DocStatus.MISSING
     existing_doc_lines: List[str] = field(default_factory=list)
+    detached_doc_indices: List[int] = field(default_factory=list)  # 0-based indices
 
 
 def extract_parameters_from_ast(func_node: Tree) -> Tuple[List[str], bool]:
@@ -394,8 +395,11 @@ def classify_member(decl: MemberDeclaration, raw_lines: List[str]) -> None:
     if decl.insert_line != decl.decl_line:
         for mid_idx in range(decl.insert_line - 1, decl.decl_line - 1):
             if RE_DOC_LINE.match(raw_lines[mid_idx]):
+                decl.detached_doc_indices.append(mid_idx)
                 decl.status = DocStatus.NON_COMPLIANT
-                return
+
+        if decl.detached_doc_indices:
+            return
 
     if not doc_lines:
         decl.status = DocStatus.MISSING
@@ -599,9 +603,14 @@ def prepare_file_change(
     # Reverse order insertion to maintain line indices
     new_lines = list(raw_lines)
     for decl in sorted(actionable, key=lambda d: d.insert_line, reverse=True):
+        # 1. Clean up any detached comments placed between annotation and declaration
+        for stray_idx in sorted(decl.detached_doc_indices, reverse=True):
+            del new_lines[stray_idx]
+
+        # 2. Remove compliant/non-compliant comments directly above insert_line
         if decl.existing_doc_lines:
             start_remove = decl.insert_line - 1 - len(decl.existing_doc_lines)
-            del new_lines[start_remove : decl.insert_line - 1]
+            del new_lines[start_remove: decl.insert_line - 1]
             insert_at = start_remove
         else:
             insert_at = decl.insert_line - 1
