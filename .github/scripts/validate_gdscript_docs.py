@@ -252,7 +252,7 @@ def main():
             continue
         for fpath in sorted(target.rglob("*.gd")):
             resolved = fpath.resolve()
-            if not resolved.is_relative_to(scripts_root) or resolved.is_symlink():
+            if not resolved.is_relative_to(scripts_root) or fpath.is_symlink():
                 all_errors.append(f"Symlink or invalid path rejected: {fpath}")
                 continue
             errs = validate_file(resolved)

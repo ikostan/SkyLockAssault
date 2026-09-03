@@ -723,7 +723,7 @@ def main():
 
         for file_path in sorted(target_dir.rglob("*.gd")):
             resolved = file_path.resolve()
-            if not resolved.is_relative_to(scripts_root) or resolved.is_symlink():
+            if not resolved.is_relative_to(scripts_root) or file_path.is_symlink():
                 print(
                     f"[FAIL-CLOSED] Invalid file path or symlink rejected: {file_path}"
                 )
