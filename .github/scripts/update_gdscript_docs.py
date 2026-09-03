@@ -28,10 +28,10 @@ from typing import Any, Dict, List, Optional, Tuple
 # -----------------------------------------------------------------------------
 try:
     from gdtoolkit.parser import parser as gdparser
-    from lark.lexer import Token
-    from lark.tree import Tree
     from google import genai
     from google.genai import types
+    from lark.lexer import Token
+    from lark.tree import Tree
     from pydantic import BaseModel, Field, field_validator
 except ImportError as err:
     print(f"[FAIL-CLOSED] Missing required dependency: {err}")
@@ -43,13 +43,7 @@ except ImportError as err:
 MAX_FILES_MODIFIED_PER_RUN = 15
 MAX_DOC_SLOTS_MODIFIED_PER_RUN = 50
 PINNED_MODEL = "gemini-2.5-flash"
-ALLOWED_SUBDIRS = (
-    "core",
-    "entities",
-    "managers",
-    "resources",
-    "system",
-    "ui")
+ALLOWED_SUBDIRS = ("core", "entities", "managers", "resources", "system", "ui")
 
 RE_DOC_LINE = re.compile(r"^[ \t]*##(?:\s.*)?$")
 RE_PARAM_TAG = re.compile(r"\[param\s+([a-zA-Z0-9_]+)\]")
@@ -58,7 +52,15 @@ RE_DOXYGEN_TAG = re.compile(r"@(param|return|brief)")
 
 # Strict allowlist of Godot 4 documentation BBCode base tags
 ALLOWED_BASE_TAGS = {
-    "param", "code", "constant", "member", "method", "signal", "enum", "b", "i"
+    "param",
+    "code",
+    "constant",
+    "member",
+    "method",
+    "signal",
+    "enum",
+    "b",
+    "i",
 }
 RE_BBCODE_TAG = re.compile(r"\[/?([a-zA-Z0-9_]+)(?:\s+[^\]]+)?\]")
 
@@ -68,6 +70,7 @@ class DocStatus(enum.Enum):
     MISSING = "MISSING"
     NON_COMPLIANT = "NON_COMPLIANT"
     AMBIGUOUS = "AMBIGUOUS"
+
 
 # -----------------------------------------------------------------------------
 # Text Validation Helper & Pydantic Schema
@@ -85,9 +88,7 @@ def validate_docstring_text(text: Optional[str], field_name: str) -> Optional[st
     found_tags = RE_BBCODE_TAG.findall(text)
     for tag in found_tags:
         if tag.lower() not in ALLOWED_BASE_TAGS:
-            raise ValueError(
-                f"{field_name} contains unapproved BBCode tag '[{tag}]'."
-            )
+            raise ValueError(f"{field_name} contains unapproved BBCode tag '[{tag}]'.")
     return text.strip()
 
 
