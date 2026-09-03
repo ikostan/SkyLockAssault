@@ -13,7 +13,6 @@ import math
 import os
 import re
 import time
-from datetime import datetime
 from typing import Any
 
 from playwright.sync_api import (
@@ -237,7 +236,8 @@ def test_pw_hold_01_ux_completion_delay(page: Page) -> None:
             timeout_ms=TEST_TIMEOUT,
         )
 
-        # Locate exact instances of completion and instantiate timing logs from post-click events only
+        # Locate exact instances of completion and instantiate timing
+        # logs from post-click events only
         load_log = next(
             (
                 log_entry
