@@ -242,6 +242,7 @@ def test_pw_hold_01_ux_completion_delay(page: Page) -> None:
                 log_entry
                 for log_entry in logs[start_click_idx:]
                 if "scene loaded successfully" in str(log_entry["text"]).lower()
+                   and "ticks:" in str(log_entry["text"]).lower()
             ),
             None,
         )
