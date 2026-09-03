@@ -141,7 +141,9 @@ class MemberDoc(BaseModel):
     def check_returns(cls, v: Optional[str]) -> Optional[str]:
         validated = validate_docstring_text(v, "Returns")
         if validated and ("\n" in validated or "\r" in validated):
-            raise ValueError("Return description must be a single line without line breaks.")
+            raise ValueError(
+                "Return description must be a single line without line breaks."
+            )
         return validated
 
     @field_validator("parameters", mode="after")
@@ -151,9 +153,13 @@ class MemberDoc(BaseModel):
             return v
         for p_name, p_desc in v.items():
             validate_docstring_text(p_name, f"Parameter key '{p_name}'")
-            validated_desc = validate_docstring_text(p_desc, f"Parameter description for '{p_name}'")
+            validated_desc = validate_docstring_text(
+                p_desc, f"Parameter description for '{p_name}'"
+            )
             if validated_desc and ("\n" in validated_desc or "\r" in validated_desc):
-                raise ValueError(f"Parameter description for '{p_name}' must be a single line without line breaks.")
+                raise ValueError(
+                    f"Parameter description for '{p_name}' must be a single line without line breaks."
+                )
         return v
 
 
