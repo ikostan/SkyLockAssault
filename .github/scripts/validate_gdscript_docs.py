@@ -83,6 +83,16 @@ def extract_params(func_node: Tree) -> List[str]:
     return params
 
 
+def extract_signal_params(signal_node: Tree) -> List[str]:
+    params = []
+    for arg_node in signal_node.find_data("signal_arg_regular"):
+        for child in arg_node.children:
+            if isinstance(child, Token) and child.type == "NAME":
+                params.append(str(child.value))
+                break
+    return params
+
+
 def check_doc_presence(lines: List[str], insert_line: int) -> List[str]:
     """Extracts consecutive '##' doc lines immediately preceding insert_line."""
     doc_lines = []
@@ -231,6 +241,15 @@ def validate_file(file_path: Path) -> List[str]:
             errors.append(
                 f"{file_path}:{decl_line} Public signal '{sig_name}' is missing docstrings."
             )
+        else:
+            joined = "".join(docs)
+            params = extract_signal_params(node)
+            for tag in RE_PARAM_TAG.findall(joined):
+                if tag not in params:
+                    errors.append(
+                        f"{file_path}:{decl_line} Signal '{sig_name}' docstring references [param {tag}], "
+                        f"which does not exist in signature: {params}"
+                    )
 
     # 5. Validate Public Constants
     for node in ast.find_data("const_stmt"):

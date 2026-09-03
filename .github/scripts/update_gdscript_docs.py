@@ -199,6 +199,16 @@ def extract_parameters_from_ast(func_node: Tree) -> Tuple[List[str], bool]:
     return params, True
 
 
+def extract_signal_parameters_from_ast(sig_node: Tree) -> List[str]:
+    params = []
+    for arg_node in sig_node.find_data("signal_arg_regular"):
+        for child in arg_node.children:
+            if isinstance(child, Token) and child.type == "NAME":
+                params.append(str(child.value))
+                break
+    return params
+
+
 def get_first_token_line(node: Any) -> Optional[int]:
     if isinstance(node, Token):
         return node.line
@@ -279,13 +289,14 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
         decl_line = get_first_token_line(node)
         if not decl_line:
             return [], False
+        sig_params = extract_signal_parameters_from_ast(node)
         declarations.append(
             MemberDeclaration(
                 name=sig_name,
                 kind="signal",
                 decl_line=decl_line,
                 insert_line=decl_line,
-                params=[],
+                params=sig_params,
                 context_snippet=source_lines[decl_line - 1],
             )
         )
@@ -424,7 +435,7 @@ def classify_member(decl: MemberDeclaration, raw_lines: List[str]) -> None:
             return
 
     # Check parameter referencing
-    if decl.kind == "function":
+    if decl.kind in ("function", "signal"):
         tags = RE_PARAM_TAG.findall(combined_docs)
         for t in tags:
             if t not in decl.params:
@@ -445,7 +456,7 @@ def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> Li
         for line in doc.description.strip().splitlines():
             lines.append(f"{indent}## {line.strip()}\n")
 
-    if doc.parameters and decl.kind == "function":
+    if doc.parameters and decl.kind in ("function", "signal"):
         lines.append(f"{indent}##\n")
         for p_name, p_desc in doc.parameters.items():
             desc_lines = p_desc.strip().splitlines()
