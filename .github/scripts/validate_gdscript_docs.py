@@ -154,7 +154,9 @@ def validate_file(file_path: Path) -> List[str]:
 
         docs = check_doc_presence(lines, insert_line)
         if not docs:
-            errors.append(f"{file_path}:{decl_line} Public function '{func_name}' is missing docstrings.")
+            errors.append(
+                f"{file_path}:{decl_line} Public function '{func_name}' is missing docstrings."
+            )
         else:
             joined = "".join(docs)
             params = extract_params(node)
@@ -186,7 +188,9 @@ def validate_file(file_path: Path) -> List[str]:
 
         docs = check_doc_presence(lines, insert_line)
         if not docs:
-            errors.append(f"{file_path}:{decl_line} Exported property '{var_name}' is missing docstrings.")
+            errors.append(
+                f"{file_path}:{decl_line} Exported property '{var_name}' is missing docstrings."
+            )
 
     # 4. Validate Public Signals
     for node in ast.find_data("signal_stmt"):
@@ -202,7 +206,9 @@ def validate_file(file_path: Path) -> List[str]:
         decl_line = get_first_token_line(node)
         docs = check_doc_presence(lines, decl_line)
         if not docs:
-            errors.append(f"{file_path}:{decl_line} Public signal '{sig_name}' is missing docstrings.")
+            errors.append(
+                f"{file_path}:{decl_line} Public signal '{sig_name}' is missing docstrings."
+            )
 
     # 5. Validate Public Constants
     for node in ast.find_data("const_stmt"):
@@ -218,7 +224,9 @@ def validate_file(file_path: Path) -> List[str]:
         decl_line = get_first_token_line(node)
         docs = check_doc_presence(lines, decl_line)
         if not docs:
-            errors.append(f"{file_path}:{decl_line} Public constant '{const_name}' is missing docstrings.")
+            errors.append(
+                f"{file_path}:{decl_line} Public constant '{const_name}' is missing docstrings."
+            )
 
     # 6. Validate Public Enums
     for node in ast.find_data("enum_stmt"):
@@ -234,7 +242,9 @@ def validate_file(file_path: Path) -> List[str]:
         decl_line = get_first_token_line(node)
         docs = check_doc_presence(lines, decl_line)
         if not docs:
-            errors.append(f"{file_path}:{decl_line} Public enum '{enum_name}' is missing docstrings.")
+            errors.append(
+                f"{file_path}:{decl_line} Public enum '{enum_name}' is missing docstrings."
+            )
 
     return errors
 
