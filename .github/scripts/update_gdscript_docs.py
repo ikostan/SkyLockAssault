@@ -563,7 +563,7 @@ class ProposedFileChange:
 def prepare_file_change(
     client: Optional[genai.Client], file_path: Path, check_mode: bool
 ) -> Optional[ProposedFileChange]:
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, "r", encoding="utf-8", newline="") as f:
         original_source = f.read()
 
     declarations, ok = parse_declarations_from_ast(original_source)
@@ -651,7 +651,7 @@ def atomic_commit_all_changes(changes: List[ProposedFileChange]) -> None:
     try:
         for change in changes:
             tmp_path = change.file_path.with_suffix(".tmp_doc")
-            with open(tmp_path, "w", encoding="utf-8") as f:
+            with open(tmp_path, "w", encoding="utf-8", newline="") as f:
                 f.write(change.proposed_source)
                 f.flush()
                 os.fsync(f.fileno())
