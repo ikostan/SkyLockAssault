@@ -49,6 +49,7 @@ RE_DOC_LINE = re.compile(r"^[ \t]*##(?:\s.*)?$")
 RE_PARAM_TAG = re.compile(r"\[param\s+([a-zA-Z0-9_]+)\]")
 RE_BANNED_FENCE = re.compile(r"```")
 RE_DOXYGEN_TAG = re.compile(r"@(param|return|brief)")
+RE_CODE_BLOCK = re.compile(r"\[code\].*?\[/code\]", re.DOTALL | re.IGNORECASE)
 
 # Strict allowlist of Godot 4 documentation BBCode base tags
 ALLOWED_BASE_TAGS = {
@@ -84,8 +85,11 @@ def validate_docstring_text(text: Optional[str], field_name: str) -> Optional[st
     if RE_DOXYGEN_TAG.search(text):
         raise ValueError(f"{field_name} contains banned Doxygen tags (@param/@return).")
 
-    # Verify that all BBCode tags are in the allowlist
-    found_tags = RE_BBCODE_TAG.findall(text)
+    # Exclude [code]...[/code] content so bracketed syntax like Array[Node] isn't misidentified as tags
+    text_without_code = RE_CODE_BLOCK.sub("", text)
+
+    # Verify that all BBCode tags outside code blocks are in the allowlist
+    found_tags = RE_BBCODE_TAG.findall(text_without_code)
     for tag in found_tags:
         if tag.lower() not in ALLOWED_BASE_TAGS:
             raise ValueError(f"{field_name} contains unapproved BBCode tag '[{tag}]'.")
