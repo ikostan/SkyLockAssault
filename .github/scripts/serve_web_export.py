@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # Copyright (C) 2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
+
 """Security-isolated HTTP server for hosting Godot Web exports in CI/testing environments."""
 
+import errno
 import http.server
 import mimetypes
 import os
@@ -30,12 +32,51 @@ class OptimizedGodotHandler(http.server.SimpleHTTPRequestHandler):
 
         super().end_headers()
 
+    def copyfile(self, source, outputfile) -> None:
+        """Stream files safely and catch client-initiated disconnects."""
+        try:
+            super().copyfile(source, outputfile)
+        except (BrokenPipeError, ConnectionResetError):
+            # Client closed the tab or navigated away before streaming finished
+            pass
+        except OSError as exc:
+            if exc.errno in (errno.EPIPE, errno.ECONNRESET):
+                pass
+            else:
+                raise
+
+    def handle_one_request(self) -> None:
+        """Process single HTTP request and catch early socket drops."""
+        try:
+            super().handle_one_request()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        except OSError as exc:
+            if exc.errno in (errno.EPIPE, errno.ECONNRESET):
+                pass
+            else:
+                raise
+
 
 class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
-    """Threaded HTTP server supporting address reuse."""
+    """Threaded HTTP server supporting address reuse and quiet socket drop handling."""
 
     daemon_threads = True
     allow_reuse_address = True
+
+    def handle_error(self, request, client_address) -> None:
+        """Suppress socketserver's default stderr traceback dump on client disconnect."""
+        exc_type, exc_val, _ = sys.exc_info()
+        if exc_type in (BrokenPipeError, ConnectionResetError):
+            return
+        if isinstance(exc_val, OSError) and exc_val.errno in (
+            errno.EPIPE,
+            errno.ECONNRESET,
+        ):
+            return
+
+        # Output any real/unhandled server errors
+        super().handle_error(request, client_address)
 
 
 def main() -> None:

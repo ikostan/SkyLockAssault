@@ -33,6 +33,7 @@ import time
 from typing import Any
 
 from playwright.sync_api import Page
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from tests.test_utils import (
     DEFAULT_TIMEOUT,
@@ -126,6 +127,17 @@ def test_back_flow(shared_page: Page) -> None:
 
         # Re-enter audio via page reload
         shared_page.reload(wait_until="domcontentloaded")
+        gpu_btn = shared_page.locator("#gpu-warning-dismiss-btn")
+        modal_visible = False
+        try:
+            gpu_btn.wait_for(state="visible", timeout=1500)
+            modal_visible = True
+        except PlaywrightTimeoutError:
+            pass
+
+        if modal_visible:
+            gpu_btn.click()
+
         shared_page.wait_for_function(
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
