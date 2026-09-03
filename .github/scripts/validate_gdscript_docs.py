@@ -30,7 +30,7 @@ except ImportError:
 ALLOWED_SUBDIRS = ("core", "entities", "managers", "resources", "system", "ui")
 
 RE_DOC_LINE = re.compile(r"^[ \t]*##(?:\s.*)?$")
-RE_PARAM_TAG = re.compile(r"\[param\s+([a-zA-Z0-9_]+)\]")
+RE_PARAM_TAG = re.compile(r"\[param\s+([a-zA-Z0-9_]+)\]", re.IGNORECASE)
 RE_BANNED_FENCE = re.compile(r"```")
 RE_DOXYGEN_TAG = re.compile(r"@(param|return|brief)")
 
