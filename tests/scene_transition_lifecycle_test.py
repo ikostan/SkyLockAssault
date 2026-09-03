@@ -31,6 +31,7 @@ from tests.test_utils import (
 
 MAX_TRANSITION_SLA_MS = 3500.0  # Raised from 2500.0 for CI/WASM overhead
 
+
 def _has_log(logs: list[dict[str, str]], keyword: str) -> bool:
     """Check if any log entry contains the specified keyword."""
     return any(keyword in log["text"].lower() for log in logs)
