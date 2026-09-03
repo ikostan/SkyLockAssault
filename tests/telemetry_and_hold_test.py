@@ -18,7 +18,9 @@ from typing import Any
 
 from playwright.sync_api import (
     Page,
-    TimeoutError as PlaywrightTimeoutError,
+)
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import (
     expect,
 )
 
@@ -30,7 +32,6 @@ from tests.test_utils import (
     set_log_level,
     wait_for_console_log,
 )
-
 
 # ==============================================================================
 # Helper Functions & In-Engine Timestamp Parsing
@@ -44,9 +45,7 @@ def _setup_mock_page(page: Page, logs: list[dict[str, Any]]) -> Any:
 
     def on_console(msg: Any) -> None:
         """Appends intercepted console messages to the logs list."""
-        logs.append(
-            {"type": msg.type, "text": msg.text, "time": time.perf_counter()}
-        )
+        logs.append({"type": msg.type, "text": msg.text, "time": time.perf_counter()})
 
     page.on("console", on_console)
 
@@ -58,9 +57,7 @@ def _setup_mock_page(page: Page, logs: list[dict[str, Any]]) -> Any:
 
     # Mock hardware GPU to bypass software emulation warnings
     page.add_init_script(
-        get_webgl_mock_script(
-            renderer_string="ANGLE (NVIDIA, RTX 4070 Direct3D11)"
-        )
+        get_webgl_mock_script(renderer_string="ANGLE (NVIDIA, RTX 4070 Direct3D11)")
     )
     page.goto(
         "http://localhost:8080/index.html",
@@ -109,9 +106,7 @@ def _setup_mock_page(page: Page, logs: list[dict[str, Any]]) -> Any:
 
     # Allow UI thread focus to settle before returning to test logic
     page.wait_for_timeout(500)
-    page.wait_for_selector(
-        "#start-button", state="visible", timeout=TEST_TIMEOUT
-    )
+    page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
 
     return cdp_session
 
@@ -123,9 +118,7 @@ def _dump_failure_artifacts(
     os.makedirs("artifacts", exist_ok=True)
     timestamp = int(time.time() * 1000)
     safe_id = os.path.basename(test_id)
-    page.screenshot(
-        path=f"artifacts/{safe_id}_failure_screenshot_{timestamp}.png"
-    )
+    page.screenshot(path=f"artifacts/{safe_id}_failure_screenshot_{timestamp}.png")
     with open(
         f"artifacts/{safe_id}_failure_html_{timestamp}.html",
         "w",
@@ -160,7 +153,9 @@ def _save_coverage(cdp_session: Any, test_id: str) -> None:
             print(f"Warning: Failed to harvest V8 coverage data: {cov_err}")
 
 
-def _compute_in_engine_delta_ms(load_log: dict[str, Any], swap_log: dict[str, Any]) -> float:
+def _compute_in_engine_delta_ms(
+    load_log: dict[str, Any], swap_log: dict[str, Any]
+) -> float:
     """Computes time delta in ms using in-engine ticks from log messages."""
     load_text = str(load_log.get("text", ""))
     swap_text = str(swap_log.get("text", ""))
@@ -172,8 +167,12 @@ def _compute_in_engine_delta_ms(load_log: dict[str, Any], swap_log: dict[str, An
         return float(t2_ticks.group(1)) - float(t1_ticks.group(1))
 
     # Fallback to general tick/time extraction
-    t1_alt = re.search(r"(?:time|timestamp)[:\s=]+(\d+(?:\.\d+)?)\b", load_text, re.IGNORECASE)
-    t2_alt = re.search(r"(?:time|timestamp)[:\s=]+(\d+(?:\.\d+)?)\b", swap_text, re.IGNORECASE)
+    t1_alt = re.search(
+        r"(?:time|timestamp)[:\s=]+(\d+(?:\.\d+)?)\b", load_text, re.IGNORECASE
+    )
+    t2_alt = re.search(
+        r"(?:time|timestamp)[:\s=]+(\d+(?:\.\d+)?)\b", swap_text, re.IGNORECASE
+    )
     if t1_alt and t2_alt:
         return float(t2_alt.group(1)) - float(t1_alt.group(1))
 
@@ -194,9 +193,11 @@ def _compute_in_engine_delta_ms(load_log: dict[str, Any], swap_log: dict[str, An
         f"  swap: {swap_text}"
     )
 
+
 # ==============================================================================
 # Playwright Telemetry & UX Hold Timing Tests
 # ==============================================================================
+
 
 def test_pw_hold_01_ux_completion_delay(page: Page) -> None:
     """PW-HOLD-01: In-engine loading screen visibly holds at 100% for ~1.0s.
@@ -255,8 +256,12 @@ def test_pw_hold_01_ux_completion_delay(page: Page) -> None:
             None,
         )
 
-        assert load_log is not None, "Missing 'Scene loaded successfully. (ticks: ...)' in console logs"
-        assert swap_log is not None, "Missing '[SWAP TIMING] 1. .instantiate()' in console logs"
+        assert (
+            load_log is not None
+        ), "Missing 'Scene loaded successfully. (ticks: ...)' in console logs"
+        assert (
+            swap_log is not None
+        ), "Missing '[SWAP TIMING] 1. .instantiate()' in console logs"
 
         delta_ms = _compute_in_engine_delta_ms(load_log, swap_log)
         assert 950.0 <= delta_ms <= 1400.0, (
@@ -284,21 +289,16 @@ def test_pw_tel_01_monotonic_progress(page: Page) -> None:
         telemetry_logs = [
             str(log_entry["text"])
             for log_entry in logs
-            if (
-                "telemetry - assembly transfer:"
-                in str(log_entry["text"]).lower()
-            )
+            if ("telemetry - assembly transfer:" in str(log_entry["text"]).lower())
         ]
-        assert len(telemetry_logs) > 0, (
-            "No telemetry logs found in console history"
-        )
+        assert len(telemetry_logs) > 0, "No telemetry logs found in console history"
 
         percentages: list[int] = []
         for text in telemetry_logs:
             percent_str = text.split(":")[-1].replace("%", "").strip()
-            assert (
-                percent_str.replace("-", "").isdigit()
-            ), f"Malformed progress telemetry percentage: {percent_str!r}"
+            assert percent_str.replace(
+                "-", ""
+            ).isdigit(), f"Malformed progress telemetry percentage: {percent_str!r}"
             val = float(percent_str)
             assert math.isfinite(val), f"Percentage is not finite: {val}"
             percentages.append(int(val))
@@ -333,10 +333,7 @@ def test_pw_tel_02_terminal_completion(page: Page) -> None:
         telemetry_logs = [
             str(log_entry["text"])
             for log_entry in logs
-            if (
-                "telemetry - assembly transfer:"
-                in str(log_entry["text"]).lower()
-            )
+            if ("telemetry - assembly transfer:" in str(log_entry["text"]).lower())
         ]
         assert len(telemetry_logs) > 0, "No telemetry logs found"
 
@@ -345,12 +342,10 @@ def test_pw_tel_02_terminal_completion(page: Page) -> None:
             for text in telemetry_logs
         ]
 
-        assert 100 in percentages, (
-            "Terminal 100% completion step missing from sequence"
-        )
-        assert max(percentages) == 100, (
-            f"Telemetry logic overflowed: {max(percentages)}%"
-        )
+        assert 100 in percentages, "Terminal 100% completion step missing from sequence"
+        assert (
+            max(percentages) == 100
+        ), f"Telemetry logic overflowed: {max(percentages)}%"
 
     except Exception as e:
         print(f"Test PW-TEL-02 failed: {e}")
@@ -398,16 +393,15 @@ def test_pw_tel_03_handler_robustness(page: Page) -> None:
 
         # Handler assertions
         assert len(page_errors) == 0, (
-            f"Exceptions leaked into page context during execution: "
-            f"{page_errors}"
+            f"Exceptions leaked into page context during execution: " f"{page_errors}"
         )
         for text in new_logs:
-            assert "nan" not in text, (
-                f"Calculation propagated NaN into formatting output: {text}"
-            )
-            assert "infinity" not in text, (
-                f"Calculation propagated Infinity into formatting output: {text}"
-            )
+            assert (
+                "nan" not in text
+            ), f"Calculation propagated NaN into formatting output: {text}"
+            assert (
+                "infinity" not in text
+            ), f"Calculation propagated Infinity into formatting output: {text}"
 
     except Exception as e:
         print(f"Test PW-TEL-03 failed: {e}")

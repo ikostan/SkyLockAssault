@@ -13,7 +13,9 @@ from typing import Any
 
 from playwright.sync_api import (
     Page,
-    TimeoutError as PlaywrightTimeoutError,
+)
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import (
     expect,
 )
 
@@ -35,15 +37,14 @@ MAX_TRANSITION_SLA_MS = 3500.0  # Raised from 2500.0 for CI overhead
 # Helper Functions & Scene Tree State Query Helpers
 # ==============================================================================
 
+
 def _setup_game_page(
     page: Page, logs: list[dict[str, Any]], page_errors: list[str]
 ) -> Any:
     """Configures GPU mock, forces DEBUG log level, and awaits Main Menu."""
 
     def on_console(msg: Any) -> None:
-        logs.append(
-            {"type": msg.type, "text": msg.text, "time": time.perf_counter()}
-        )
+        logs.append({"type": msg.type, "text": msg.text, "time": time.perf_counter()})
 
     def on_page_error(err: Any) -> None:
         page_errors.append(str(err))
@@ -54,9 +55,7 @@ def _setup_game_page(
     cdp_session, _ = init_cdp_coverage(page)
 
     page.add_init_script(
-        get_webgl_mock_script(
-            renderer_string="ANGLE (NVIDIA, RTX 4070 Direct3D11)"
-        )
+        get_webgl_mock_script(renderer_string="ANGLE (NVIDIA, RTX 4070 Direct3D11)")
     )
     page.goto(
         "http://localhost:8080/index.html",
@@ -107,9 +106,7 @@ def _setup_game_page(
     # Allow GDScript UI focus logic to settle after closing options
     page.wait_for_timeout(500)
 
-    page.wait_for_selector(
-        "#start-button", state="visible", timeout=TEST_TIMEOUT
-    )
+    page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
     page.wait_for_function(
         "() => typeof window.startPressed !== 'undefined'",
         timeout=TEST_TIMEOUT,
@@ -148,9 +145,7 @@ def _count_log_matches(
 ) -> int:
     """Counts matching occurrences of a keyword in captured console logs."""
     return sum(
-        1
-        for log in logs[start_idx:]
-        if keyword.lower() in str(log["text"]).lower()
+        1 for log in logs[start_idx:] if keyword.lower() in str(log["text"]).lower()
     )
 
 
@@ -159,28 +154,22 @@ def _assert_single_gameplay_and_player(
 ) -> None:
     """Asserts exactly one gameplay scene and Player node exist."""
     player_inits = _count_log_matches(logs, "player ready", start_idx)
-    assert player_inits == 1, (
-        f"Expected 1 'player ready' event, found {player_inits}"
-    )
+    assert player_inits == 1, f"Expected 1 'player ready' event, found {player_inits}"
 
     hud_inits = _count_log_matches(logs, "hud successfully wired", start_idx)
-    assert hud_inits == 1, (
-        f"Expected 1 'HUD wired' event, found {hud_inits}"
-    )
+    assert hud_inits == 1, f"Expected 1 'HUD wired' event, found {hud_inits}"
 
     tree = _query_scene_tree_counts(page, is_gameplay=True)
-    assert tree["gameplay"] == 1, (
-        f"Expected exactly 1 gameplay scene, found {tree['gameplay']}"
-    )
-    assert tree["player"] == 1, (
-        f"Expected exactly 1 Player node, found {tree['player']}"
-    )
-    assert tree["hud"] == 1, (
-        f"Expected exactly 1 HUD instance, found {tree['hud']}"
-    )
-    assert tree["main_menu"] == 0, (
-        f"Expected 0 Main Menu instances, found {tree['main_menu']}"
-    )
+    assert (
+        tree["gameplay"] == 1
+    ), f"Expected exactly 1 gameplay scene, found {tree['gameplay']}"
+    assert (
+        tree["player"] == 1
+    ), f"Expected exactly 1 Player node, found {tree['player']}"
+    assert tree["hud"] == 1, f"Expected exactly 1 HUD instance, found {tree['hud']}"
+    assert (
+        tree["main_menu"] == 0
+    ), f"Expected 0 Main Menu instances, found {tree['main_menu']}"
 
 
 def _assert_main_menu_active_and_gameplay_torn_down(
@@ -190,18 +179,16 @@ def _assert_main_menu_active_and_gameplay_torn_down(
     _ = logs
     _ = start_idx
     tree = _query_scene_tree_counts(page, is_gameplay=False)
-    assert tree["main_menu"] == 1, (
-        f"Expected exactly 1 Main Menu instance, found {tree['main_menu']}"
-    )
-    assert tree["gameplay"] == 0, (
-        f"Expected gameplay node to be removed (0), found {tree['gameplay']}"
-    )
-    assert tree["player"] == 0, (
-        f"Expected Player node to be removed (0), found {tree['player']}"
-    )
-    assert tree["hud"] == 0, (
-        f"Expected HUD node to be removed (0), found {tree['hud']}"
-    )
+    assert (
+        tree["main_menu"] == 1
+    ), f"Expected exactly 1 Main Menu instance, found {tree['main_menu']}"
+    assert (
+        tree["gameplay"] == 0
+    ), f"Expected gameplay node to be removed (0), found {tree['gameplay']}"
+    assert (
+        tree["player"] == 0
+    ), f"Expected Player node to be removed (0), found {tree['player']}"
+    assert tree["hud"] == 0, f"Expected HUD node to be removed (0), found {tree['hud']}"
 
     start_button = page.locator("#start-button")
     expect(start_button).to_be_visible(timeout=TEST_TIMEOUT)
@@ -250,9 +237,7 @@ def _dump_failure_diagnostics(
     os.makedirs(ARTIFACTS_DIR, exist_ok=True)
     timestamp = int(time.time() * 1000)
     try:
-        page.screenshot(
-            path=str(ARTIFACTS_DIR / f"{name}_failure_{timestamp}.png")
-        )
+        page.screenshot(path=str(ARTIFACTS_DIR / f"{name}_failure_{timestamp}.png"))
     except Exception:
         pass
     try:
@@ -299,9 +284,7 @@ def test_pw_trans_01_main_menu_to_gameplay_sla(page: Page) -> None:
 
         wait_for_console_log(
             logs,
-            lambda text: (
-                "player ready" in text or "hud successfully wired" in text
-            ),
+            lambda text: ("player ready" in text or "hud successfully wired" in text),
             start_click_idx,
             page,
             timeout_ms=TEST_TIMEOUT,
@@ -361,9 +344,7 @@ def test_pw_trans_02_gameplay_to_main_menu_teardown(page: Page) -> None:
         page.wait_for_selector(
             "#start-button", state="visible", timeout=DEFAULT_TIMEOUT
         )
-        _assert_main_menu_active_and_gameplay_torn_down(
-            page, logs, reverse_start_idx
-        )
+        _assert_main_menu_active_and_gameplay_torn_down(page, logs, reverse_start_idx)
         assert len(page_errors) == 0, f"Uncaught page errors: {page_errors}"
 
     except Exception as e:
@@ -404,9 +385,9 @@ def test_pw_trans_03_forward_transition_idempotency(page: Page) -> None:
         load_completions = _count_log_matches(
             logs, "scene loaded successfully", start_click_idx
         )
-        assert 1 <= load_completions <= 2, (
-            f"Duplicate transition completions observed: {load_completions}"
-        )
+        assert (
+            1 <= load_completions <= 2
+        ), f"Duplicate transition completions observed: {load_completions}"
         assert len(page_errors) == 0, f"Uncaught page errors: {page_errors}"
 
     except Exception as e:
@@ -454,9 +435,7 @@ def test_pw_trans_04_reverse_transition_idempotency(page: Page) -> None:
         page.wait_for_selector(
             "#start-button", state="visible", timeout=DEFAULT_TIMEOUT
         )
-        _assert_main_menu_active_and_gameplay_torn_down(
-            page, logs, reverse_start_idx
-        )
+        _assert_main_menu_active_and_gameplay_torn_down(page, logs, reverse_start_idx)
         assert len(page_errors) == 0, f"Uncaught page errors: {page_errors}"
 
     except Exception as e:
@@ -475,16 +454,14 @@ def test_pw_trans_05_lifecycle_canvas_invariants(page: Page) -> None:
 
     def _verify_canvas_checkpoint(checkpoint_name: str) -> None:
         is_init = page.evaluate("() => window.godotInitialized === true")
-        assert is_init is True, (
-            f"window.godotInitialized lost at checkpoint: {checkpoint_name}"
-        )
+        assert (
+            is_init is True
+        ), f"window.godotInitialized lost at checkpoint: {checkpoint_name}"
         box = page.locator("#canvas").bounding_box()
-        assert box is not None, (
-            f"Missing canvas bounding box at {checkpoint_name}"
-        )
-        assert box["width"] > 0 and box["height"] > 0, (
-            f"Invalid canvas dimensions at {checkpoint_name}: {box}"
-        )
+        assert box is not None, f"Missing canvas bounding box at {checkpoint_name}"
+        assert (
+            box["width"] > 0 and box["height"] > 0
+        ), f"Invalid canvas dimensions at {checkpoint_name}: {box}"
 
     try:
         cdp_session = _setup_game_page(page, logs, page_errors)
