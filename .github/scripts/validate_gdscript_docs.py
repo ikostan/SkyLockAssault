@@ -11,7 +11,7 @@ Audits production GDScript files for:
 2. Parameter tag matching: all [param x] must exist in method signatures.
 3. Complete rejection of banned constructs (```, @param, @return).
 4. Strict BBCode tag allowlist (handles opening and closing tags cleanly).
-5. Proper annotation placement (docstrings must precede annotations).
+5. Proper annotation placement across ALL public members (docstrings must precede annotations).
 """
 
 import re
@@ -91,6 +91,20 @@ def check_doc_presence(lines: List[str], insert_line: int) -> List[str]:
     return doc_lines
 
 
+def check_detached_docs(
+    lines: List[str], anno_line: Optional[int], decl_line: Optional[int], member_kind: str, member_name: str
+) -> List[str]:
+    """Validates that no docstring comments sit detached between annotations and declarations."""
+    errs = []
+    if anno_line and decl_line and anno_line < decl_line:
+        for mid in range(anno_line - 1, decl_line - 1):
+            if RE_DOC_LINE.match(lines[mid]):
+                errs.append(
+                    f"Docstring placed between annotation and {member_kind} '{member_name}' (line {mid + 1})."
+                )
+    return errs
+
+
 def validate_file(file_path: Path) -> List[str]:
     errors = []
     with open(file_path, "r", encoding="utf-8") as f:
@@ -135,12 +149,8 @@ def validate_file(file_path: Path) -> List[str]:
         anno_line = get_first_annotation_line(node)
         insert_line = anno_line if anno_line else decl_line
 
-        if anno_line and decl_line:
-            for mid in range(anno_line - 1, decl_line - 1):
-                if RE_DOC_LINE.match(lines[mid]):
-                    errors.append(
-                        f"{file_path}:{mid + 1} Docstring placed between annotation and function '{func_name}'."
-                    )
+        for detached_err in check_detached_docs(lines, anno_line, decl_line, "function", func_name):
+            errors.append(f"{file_path}: {detached_err}")
 
         docs = check_doc_presence(lines, insert_line)
         if not docs:
@@ -176,6 +186,9 @@ def validate_file(file_path: Path) -> List[str]:
         anno_line = get_first_annotation_line(node)
         insert_line = anno_line if anno_line else decl_line
 
+        for detached_err in check_detached_docs(lines, anno_line, decl_line, "exported property", var_name):
+            errors.append(f"{file_path}: {detached_err}")
+
         docs = check_doc_presence(lines, insert_line)
         if not docs:
             errors.append(
@@ -194,7 +207,13 @@ def validate_file(file_path: Path) -> List[str]:
             continue
 
         decl_line = get_first_token_line(node)
-        docs = check_doc_presence(lines, decl_line)
+        anno_line = get_first_annotation_line(node)
+        insert_line = anno_line if anno_line else decl_line
+
+        for detached_err in check_detached_docs(lines, anno_line, decl_line, "signal", sig_name):
+            errors.append(f"{file_path}: {detached_err}")
+
+        docs = check_doc_presence(lines, insert_line)
         if not docs:
             errors.append(
                 f"{file_path}:{decl_line} Public signal '{sig_name}' is missing docstrings."
@@ -212,7 +231,13 @@ def validate_file(file_path: Path) -> List[str]:
             continue
 
         decl_line = get_first_token_line(node)
-        docs = check_doc_presence(lines, decl_line)
+        anno_line = get_first_annotation_line(node)
+        insert_line = anno_line if anno_line else decl_line
+
+        for detached_err in check_detached_docs(lines, anno_line, decl_line, "constant", const_name):
+            errors.append(f"{file_path}: {detached_err}")
+
+        docs = check_doc_presence(lines, insert_line)
         if not docs:
             errors.append(
                 f"{file_path}:{decl_line} Public constant '{const_name}' is missing docstrings."
@@ -230,7 +255,13 @@ def validate_file(file_path: Path) -> List[str]:
             continue
 
         decl_line = get_first_token_line(node)
-        docs = check_doc_presence(lines, decl_line)
+        anno_line = get_first_annotation_line(node)
+        insert_line = anno_line if anno_line else decl_line
+
+        for detached_err in check_detached_docs(lines, anno_line, decl_line, "enum", enum_name):
+            errors.append(f"{file_path}: {detached_err}")
+
+        docs = check_doc_presence(lines, insert_line)
         if not docs:
             errors.append(
                 f"{file_path}:{decl_line} Public enum '{enum_name}' is missing docstrings."
