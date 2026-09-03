@@ -610,7 +610,7 @@ def prepare_file_change(
         # 2. Remove compliant/non-compliant comments directly above insert_line
         if decl.existing_doc_lines:
             start_remove = decl.insert_line - 1 - len(decl.existing_doc_lines)
-            del new_lines[start_remove: decl.insert_line - 1]
+            del new_lines[start_remove : decl.insert_line - 1]
             insert_at = start_remove
         else:
             insert_at = decl.insert_line - 1
