@@ -251,6 +251,38 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
     declarations: List[MemberDeclaration] = []
     source_lines = source.splitlines(keepends=True)
 
+    # Collect all annotations with their start lines
+    # gdtoolkit represents annotations as Tree nodes with data == "annotation"
+    annotations: List[Tuple[int, str]] = []
+    for anno_node in ast.find_data("annotation"):
+        line = get_first_token_line(anno_node)
+        if line:
+            # Extract annotation text, e.g. "@export" or "@rpc"
+            anno_text = "".join(
+                str(t.value) for t in anno_node.scan_values(lambda v: isinstance(v, Token))
+            )
+            annotations.append((line, anno_text))
+
+
+    def find_associated_annotation_line(target_line: int) -> Optional[int]:
+        """Finds the earliest consecutive annotation preceding target_line."""
+        # Search backwards from target_line
+        curr = target_line - 1
+        earliest_line = None
+        anno_map = {l: txt for l, txt in annotations}
+
+        while curr > 0:
+            line_str = source_lines[curr - 1].strip()
+            # If empty line or comment, docstrings/annotations could span, but consecutive annotations are directly adjacent
+            if curr in anno_map:
+                earliest_line = curr
+                curr -= 1
+            elif line_str.startswith("#"):
+                curr -= 1
+            else:
+                break
+        return earliest_line
+
     # 1. Functions
     for node in ast.find_data("func_def"):
         func_name = None
@@ -267,7 +299,7 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
         if not decl_line:
             return [], False
 
-        anno_line = get_first_annotation_line(node)
+        anno_line = find_associated_annotation_line(decl_line)
         insert_line = anno_line if anno_line else decl_line
 
         decl = MemberDeclaration(
@@ -277,14 +309,63 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
             insert_line=insert_line,
             params=params,
             context_snippet="".join(
-                source_lines[insert_line - 1 : min(len(source_lines), decl_line + 15)]
+                source_lines[insert_line - 1: min(len(source_lines), decl_line + 15)]
             ),
         )
         if not ok:
             decl.status = DocStatus.AMBIGUOUS
         declarations.append(decl)
 
-    # 2. Signals
+    # 2. Exported Variables (@export)
+    for node in ast.find_data("class_var_stmt"):
+        var_name = None
+        for child in node.children:
+            if isinstance(child, Token) and child.type == "NAME":
+                var_name = str(child.value)
+                break
+
+        if not var_name or var_name.startswith("_"):
+            continue
+
+        decl_line = get_first_token_line(node)
+        if not decl_line:
+            return [], False
+
+        # Look for preceding annotations (e.g. @export, @export_range)
+        anno_line = find_associated_annotation_line(decl_line)
+
+        # Verify if any associated annotation is an @export variant
+        is_export = False
+        if anno_line:
+            for l, txt in annotations:
+                if anno_line <= l < decl_line and txt.startswith("@export"):
+                    is_export = True
+                    break
+
+        if not is_export:
+            # Also check child annotations if gdtoolkit nested them
+            for child in node.children:
+                if isinstance(child, Tree) and child.data == "annotation":
+                    for t in child.scan_values(lambda v: isinstance(v, Token)):
+                        if t.value.startswith("@export"):
+                            is_export = True
+
+        if not is_export:
+            continue
+
+        insert_line = anno_line if anno_line else decl_line
+        declarations.append(
+            MemberDeclaration(
+                name=var_name,
+                kind="export",
+                decl_line=decl_line,
+                insert_line=insert_line,
+                params=[],
+                context_snippet="".join(source_lines[insert_line - 1: decl_line]),
+            )
+        )
+
+    # 3. Signals
     for node in ast.find_data("signal_stmt"):
         sig_name = None
         for child in node.children:
@@ -297,48 +378,18 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
         decl_line = get_first_token_line(node)
         if not decl_line:
             return [], False
+
+        anno_line = find_associated_annotation_line(decl_line)
+        insert_line = anno_line if anno_line else decl_line
         sig_params = extract_signal_parameters_from_ast(node)
         declarations.append(
             MemberDeclaration(
                 name=sig_name,
                 kind="signal",
                 decl_line=decl_line,
-                insert_line=decl_line,
+                insert_line=insert_line,
                 params=sig_params,
                 context_snippet=source_lines[decl_line - 1],
-            )
-        )
-
-    # 3. Exported Variables (@export)
-    for node in ast.find_data("class_var_stmt"):
-        is_export = False
-        var_name = None
-        for child in node.children:
-            if isinstance(child, Tree) and child.data == "annotation":
-                for token in child.scan_values(lambda v: isinstance(v, Token)):
-                    if token.value.startswith("@export"):
-                        is_export = True
-            elif isinstance(child, Token) and child.type == "NAME":
-                var_name = str(child.value)
-
-        if not is_export or not var_name or var_name.startswith("_"):
-            continue
-
-        decl_line = get_first_token_line(node)
-        if not decl_line:
-            return [], False
-
-        anno_line = get_first_annotation_line(node)
-        insert_line = anno_line if anno_line else decl_line
-
-        declarations.append(
-            MemberDeclaration(
-                name=var_name,
-                kind="export",
-                decl_line=decl_line,
-                insert_line=insert_line,
-                params=[],
-                context_snippet="".join(source_lines[insert_line - 1 : decl_line]),
             )
         )
 
@@ -355,12 +406,15 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
         decl_line = get_first_token_line(node)
         if not decl_line:
             return [], False
+
+        anno_line = find_associated_annotation_line(decl_line)
+        insert_line = anno_line if anno_line else decl_line
         declarations.append(
             MemberDeclaration(
                 name=const_name,
                 kind="constant",
                 decl_line=decl_line,
-                insert_line=decl_line,
+                insert_line=insert_line,
                 params=[],
                 context_snippet=source_lines[decl_line - 1],
             )
@@ -379,12 +433,15 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
         decl_line = get_first_token_line(node)
         if not decl_line:
             return [], False
+
+        anno_line = find_associated_annotation_line(decl_line)
+        insert_line = anno_line if anno_line else decl_line
         declarations.append(
             MemberDeclaration(
                 name=enum_name,
                 kind="enum",
                 decl_line=decl_line,
-                insert_line=decl_line,
+                insert_line=insert_line,
                 params=[],
                 context_snippet=source_lines[decl_line - 1],
             )

@@ -63,16 +63,6 @@ def get_first_token_line(node: Any) -> Optional[int]:
     return None
 
 
-def get_first_annotation_line(node: Tree) -> Optional[int]:
-    first_line = None
-    for child in node.children:
-        if isinstance(child, Tree) and child.data == "annotation":
-            line = get_first_token_line(child)
-            if line and (first_line is None or line < first_line):
-                first_line = line
-    return first_line
-
-
 def extract_params(func_node: Tree) -> List[str]:
     params = []
     arg_rules = (
@@ -158,6 +148,33 @@ def validate_file(file_path: Path) -> List[str]:
                         f"{file_path}:{idx} Unapproved BBCode tag '[{tag_name}]'."
                     )
 
+    # Collect all annotations with their start lines
+    annotations: List[Tuple[int, str]] = []
+    for anno_node in ast.find_data("annotation"):
+        line = get_first_token_line(anno_node)
+        if line:
+            anno_text = "".join(
+                str(t.value) for t in anno_node.scan_values(lambda v: isinstance(v, Token))
+            )
+            annotations.append((line, anno_text))
+
+    def find_associated_annotation_line(target_line: int) -> Optional[int]:
+        """Finds the earliest consecutive annotation preceding target_line."""
+        curr = target_line - 1
+        earliest_line = None
+        anno_map = {l: txt for l, txt in annotations}
+
+        while curr > 0:
+            line_str = lines[curr - 1].strip()
+            if curr in anno_map:
+                earliest_line = curr
+                curr -= 1
+            elif line_str.startswith("#"):
+                curr -= 1
+            else:
+                break
+        return earliest_line
+
     # 2. Validate Functions
     for node in ast.find_data("func_def"):
         func_name = None
@@ -170,7 +187,7 @@ def validate_file(file_path: Path) -> List[str]:
             continue
 
         decl_line = get_first_token_line(node)
-        anno_line = get_first_annotation_line(node)
+        anno_line = find_associated_annotation_line(decl_line)
         insert_line = anno_line if anno_line else decl_line
 
         for detached_err in check_detached_docs(
@@ -195,21 +212,38 @@ def validate_file(file_path: Path) -> List[str]:
 
     # 3. Validate Exported Variables (@export)
     for node in ast.find_data("class_var_stmt"):
-        is_export = False
         var_name = None
         for child in node.children:
-            if isinstance(child, Tree) and child.data == "annotation":
-                for token in child.scan_values(lambda v: isinstance(v, Token)):
-                    if token.value.startswith("@export"):
-                        is_export = True
-            elif isinstance(child, Token) and child.type == "NAME":
+            if isinstance(child, Token) and child.type == "NAME":
                 var_name = str(child.value)
+                break
 
-        if not is_export or not var_name or var_name.startswith("_"):
+        if not var_name or var_name.startswith("_"):
             continue
 
         decl_line = get_first_token_line(node)
-        anno_line = get_first_annotation_line(node)
+        if not decl_line:
+            continue
+
+        anno_line = find_associated_annotation_line(decl_line)
+
+        is_export = False
+        if anno_line:
+            for l, txt in annotations:
+                if anno_line <= l < decl_line and txt.startswith("@export"):
+                    is_export = True
+                    break
+
+        if not is_export:
+            for child in node.children:
+                if isinstance(child, Tree) and child.data == "annotation":
+                    for t in child.scan_values(lambda v: isinstance(v, Token)):
+                        if t.value.startswith("@export"):
+                            is_export = True
+
+        if not is_export:
+            continue
+
         insert_line = anno_line if anno_line else decl_line
 
         for detached_err in check_detached_docs(
@@ -235,7 +269,7 @@ def validate_file(file_path: Path) -> List[str]:
             continue
 
         decl_line = get_first_token_line(node)
-        anno_line = get_first_annotation_line(node)
+        anno_line = find_associated_annotation_line(decl_line)
         insert_line = anno_line if anno_line else decl_line
 
         for detached_err in check_detached_docs(
@@ -270,7 +304,7 @@ def validate_file(file_path: Path) -> List[str]:
             continue
 
         decl_line = get_first_token_line(node)
-        anno_line = get_first_annotation_line(node)
+        anno_line = find_associated_annotation_line(decl_line)
         insert_line = anno_line if anno_line else decl_line
 
         for detached_err in check_detached_docs(
@@ -296,7 +330,7 @@ def validate_file(file_path: Path) -> List[str]:
             continue
 
         decl_line = get_first_token_line(node)
-        anno_line = get_first_annotation_line(node)
+        anno_line = find_associated_annotation_line(decl_line)
         insert_line = anno_line if anno_line else decl_line
 
         for detached_err in check_detached_docs(
