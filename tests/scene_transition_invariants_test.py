@@ -44,9 +44,11 @@ def _setup_game_page(
     """Configures GPU mock, forces DEBUG log level, and awaits Main Menu."""
 
     def on_console(msg: Any) -> None:
+        """Appends intercepted console log messages to the list."""
         logs.append({"type": msg.type, "text": msg.text, "time": time.perf_counter()})
 
     def on_page_error(err: Any) -> None:
+        """Appends uncaught page errors to the list."""
         page_errors.append(str(err))
 
     page.on("console", on_console)
@@ -241,14 +243,15 @@ def _dump_failure_diagnostics(
     except Exception:
         pass
     try:
+        safe_name = os.path.basename(name)
         with open(
-            ARTIFACTS_DIR / f"{name}_failure_html_{timestamp}.html",
+            ARTIFACTS_DIR / f"{safe_name}_failure_html_{timestamp}.html",
             "w",
             encoding="utf-8",
         ) as f:
             f.write(page.content())
         with open(
-            ARTIFACTS_DIR / f"{name}_failure_logs_{timestamp}.txt",
+            ARTIFACTS_DIR / f"{safe_name}_failure_logs_{timestamp}.txt",
             "w",
             encoding="utf-8",
         ) as f:
@@ -453,6 +456,7 @@ def test_pw_trans_05_lifecycle_canvas_invariants(page: Page) -> None:
     cdp_session = None
 
     def _verify_canvas_checkpoint(checkpoint_name: str) -> None:
+        """Asserts Godot initialization state and positive canvas bounding box dimensions."""
         is_init = page.evaluate("() => window.godotInitialized === true")
         assert (
             is_init is True
@@ -579,7 +583,7 @@ def test_pw_trans_06_lifecycle_reentry_multiple_cycles(page: Page) -> None:
             )
             page.wait_for_function(
                 "() => typeof window.startPressed === 'function'",
-                timeout=DEFAULT_TIMEOUT,
+                timeout=TEST_TIMEOUT,
             )
             _assert_main_menu_active_and_gameplay_torn_down(page, logs, rev_idx)
 
