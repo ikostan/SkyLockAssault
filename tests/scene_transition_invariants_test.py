@@ -79,7 +79,7 @@ def _setup_game_page(
         "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
     )
 
-    # Force DEBUG log level to enable 'player ready' and scene telemetry[cite: 28]
+    # Force DEBUG log level to enable 'player ready' and scene telemetry
     open_options_menu(page)
     set_log_level(page, logs, level_index=0)
 
