@@ -35,7 +35,15 @@ RE_BANNED_FENCE = re.compile(r"```")
 RE_DOXYGEN_TAG = re.compile(r"@(param|return|brief)")
 
 ALLOWED_BASE_TAGS = {
-    "param", "code", "constant", "member", "method", "signal", "enum", "b", "i"
+    "param",
+    "code",
+    "constant",
+    "member",
+    "method",
+    "signal",
+    "enum",
+    "b",
+    "i",
 }
 RE_BBCODE_TAG = re.compile(r"\[/?([a-zA-Z0-9_]+)(?:\s+[^\]]+)?\]")
 
@@ -99,12 +107,18 @@ def validate_file(file_path: Path) -> List[str]:
     for idx, l in enumerate(lines, start=1):
         if RE_DOC_LINE.match(l):
             if RE_BANNED_FENCE.search(l):
-                errors.append(f"{file_path}:{idx} Banned Markdown fence (```) in docstring.")
+                errors.append(
+                    f"{file_path}:{idx} Banned Markdown fence (```) in docstring."
+                )
             if RE_DOXYGEN_TAG.search(l):
-                errors.append(f"{file_path}:{idx} Banned Doxygen tag (@param/@return). Use Godot BBCode [param name].")
+                errors.append(
+                    f"{file_path}:{idx} Banned Doxygen tag (@param/@return). Use Godot BBCode [param name]."
+                )
             for tag_name in RE_BBCODE_TAG.findall(l):
                 if tag_name.lower() not in ALLOWED_BASE_TAGS:
-                    errors.append(f"{file_path}:{idx} Unapproved BBCode tag '[{tag_name}]'.")
+                    errors.append(
+                        f"{file_path}:{idx} Unapproved BBCode tag '[{tag_name}]'."
+                    )
 
     # 2. Validate Functions
     for node in ast.find_data("func_def"):
@@ -124,11 +138,15 @@ def validate_file(file_path: Path) -> List[str]:
         if anno_line and decl_line:
             for mid in range(anno_line - 1, decl_line - 1):
                 if RE_DOC_LINE.match(lines[mid]):
-                    errors.append(f"{file_path}:{mid + 1} Docstring placed between annotation and function '{func_name}'.")
+                    errors.append(
+                        f"{file_path}:{mid + 1} Docstring placed between annotation and function '{func_name}'."
+                    )
 
         docs = check_doc_presence(lines, insert_line)
         if not docs:
-            errors.append(f"{file_path}:{decl_line} Public function '{func_name}' is missing docstrings.")
+            errors.append(
+                f"{file_path}:{decl_line} Public function '{func_name}' is missing docstrings."
+            )
         else:
             joined = "".join(docs)
             params = extract_params(node)
@@ -160,7 +178,9 @@ def validate_file(file_path: Path) -> List[str]:
 
         docs = check_doc_presence(lines, insert_line)
         if not docs:
-            errors.append(f"{file_path}:{decl_line} Exported property '{var_name}' is missing docstrings.")
+            errors.append(
+                f"{file_path}:{decl_line} Exported property '{var_name}' is missing docstrings."
+            )
 
     # 4. Validate Public Signals
     for node in ast.find_data("signal_stmt"):
@@ -176,7 +196,9 @@ def validate_file(file_path: Path) -> List[str]:
         decl_line = get_first_token_line(node)
         docs = check_doc_presence(lines, decl_line)
         if not docs:
-            errors.append(f"{file_path}:{decl_line} Public signal '{sig_name}' is missing docstrings.")
+            errors.append(
+                f"{file_path}:{decl_line} Public signal '{sig_name}' is missing docstrings."
+            )
 
     # 5. Validate Public Constants
     for node in ast.find_data("const_stmt"):
@@ -192,7 +214,9 @@ def validate_file(file_path: Path) -> List[str]:
         decl_line = get_first_token_line(node)
         docs = check_doc_presence(lines, decl_line)
         if not docs:
-            errors.append(f"{file_path}:{decl_line} Public constant '{const_name}' is missing docstrings.")
+            errors.append(
+                f"{file_path}:{decl_line} Public constant '{const_name}' is missing docstrings."
+            )
 
     # 6. Validate Public Enums
     for node in ast.find_data("enum_stmt"):
@@ -208,7 +232,9 @@ def validate_file(file_path: Path) -> List[str]:
         decl_line = get_first_token_line(node)
         docs = check_doc_presence(lines, decl_line)
         if not docs:
-            errors.append(f"{file_path}:{decl_line} Public enum '{enum_name}' is missing docstrings.")
+            errors.append(
+                f"{file_path}:{decl_line} Public enum '{enum_name}' is missing docstrings."
+            )
 
     return errors
 
@@ -233,12 +259,16 @@ def main():
             all_errors.extend(errs)
 
     if all_errors:
-        print(f"\n[FAIL] Documentation contract validation failed with {len(all_errors)} error(s):")
+        print(
+            f"\n[FAIL] Documentation contract validation failed with {len(all_errors)} error(s):"
+        )
         for e in all_errors:
             print(f"  - {e}")
         sys.exit(1)
 
-    print("[SUCCESS] All production GDScript documentation contracts validated successfully.")
+    print(
+        "[SUCCESS] All production GDScript documentation contracts validated successfully."
+    )
 
 
 if __name__ == "__main__":
