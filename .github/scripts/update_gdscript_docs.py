@@ -23,20 +23,18 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+# -----------------------------------------------------------------------------
+# Imports & Fail-Closed Environment Check
+# -----------------------------------------------------------------------------
 try:
     from gdtoolkit.parser import parser as gdparser
     from lark.lexer import Token
     from lark.tree import Tree
-except ImportError:
-    print("[FAIL-CLOSED] 'gdtoolkit' is required. Run: pip install gdtoolkit")
-    sys.exit(1)
-
-try:
     from google import genai
     from google.genai import types
     from pydantic import BaseModel, Field, field_validator
-except ImportError:
-    print("[FAIL-CLOSED] 'google-genai' and 'pydantic' are required.")
+except ImportError as err:
+    print(f"[FAIL-CLOSED] Missing required dependency: {err}")
     sys.exit(1)
 
 # -----------------------------------------------------------------------------
@@ -45,7 +43,13 @@ except ImportError:
 MAX_FILES_MODIFIED_PER_RUN = 15
 MAX_DOC_SLOTS_MODIFIED_PER_RUN = 50
 PINNED_MODEL = "gemini-2.5-flash"
-ALLOWED_SUBDIRS = ("core", "entities", "managers", "resources", "system", "ui")
+ALLOWED_SUBDIRS = (
+    "core",
+    "entities",
+    "managers",
+    "resources",
+    "system",
+    "ui")
 
 RE_DOC_LINE = re.compile(r"^[ \t]*##(?:\s.*)?$")
 RE_PARAM_TAG = re.compile(r"\[param\s+([a-zA-Z0-9_]+)\]")
@@ -54,15 +58,7 @@ RE_DOXYGEN_TAG = re.compile(r"@(param|return|brief)")
 
 # Strict allowlist of Godot 4 documentation BBCode base tags
 ALLOWED_BASE_TAGS = {
-    "param",
-    "code",
-    "constant",
-    "member",
-    "method",
-    "signal",
-    "enum",
-    "b",
-    "i"
+    "param", "code", "constant", "member", "method", "signal", "enum", "b", "i"
 }
 RE_BBCODE_TAG = re.compile(r"\[/?([a-zA-Z0-9_]+)(?:\s+[^\]]+)?\]")
 
@@ -72,7 +68,6 @@ class DocStatus(enum.Enum):
     MISSING = "MISSING"
     NON_COMPLIANT = "NON_COMPLIANT"
     AMBIGUOUS = "AMBIGUOUS"
-
 
 # -----------------------------------------------------------------------------
 # Text Validation Helper & Pydantic Schema
