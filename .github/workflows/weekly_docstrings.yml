@@ -1,0 +1,75 @@
+---
+name: "Weekly GDScript Documentation Sync"
+
+on:
+  schedule:
+    # Runs every Sunday at 00:00 UTC (triggered from default branch)
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync-docstrings:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v4
+        with:
+          ref: docs
+          fetch-depth: 0
+
+      - name: "Setup Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: "Install Pinned Dependencies"
+        run: |
+          python -m pip install --upgrade pip
+          pip install \
+            google-genai==0.1.1 \
+            pydantic==2.10.6 \
+            gdtoolkit==4.5.0
+
+      - name: "Run GDScript Docstring Auditor & Injector"
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python .github/scripts/update_gdscript_docs.py --write
+
+      - name: "Run Documentation Contract Validator"
+        run: |
+          python .github/scripts/validate_gdscript_docs.py
+
+      - name: "Run GDScript Linter (gdlint)"
+        run: |
+          gdlint scripts/
+
+      - name: "Setup Godot Engine (Headless Syntax Verification)"
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.3.0
+
+      - name: "Verify Godot Project Parsing"
+        run: |
+          godot --headless --editor --check-only --quit
+
+      - name: "Create or Update Pull Request"
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: docs
+          branch: automation/weekly-gdscript-docs
+          title: "docs(gdscript): Sync Native BBCode docstrings"
+          body: |
+            Automated weekly documentation update:
+            * Standardized public member docstrings to Godot 4 Native BBCode (`##`).
+            * Verified non-comment byte-for-byte source integrity.
+            * Passed documentation contract validator, `gdlint`, and Godot headless check.
+          commit-message: "docs(gdscript): update and enhance Native BBCode docstrings"
+          delete-branch: true
