@@ -154,7 +154,8 @@ def validate_file(file_path: Path) -> List[str]:
         line = get_first_token_line(anno_node)
         if line:
             anno_text = "".join(
-                str(t.value) for t in anno_node.scan_values(lambda v: isinstance(v, Token))
+                str(t.value)
+                for t in anno_node.scan_values(lambda v: isinstance(v, Token))
             )
             annotations.append((line, anno_text))
 

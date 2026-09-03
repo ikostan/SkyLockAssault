@@ -259,10 +259,10 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
         if line:
             # Extract annotation text, e.g. "@export" or "@rpc"
             anno_text = "".join(
-                str(t.value) for t in anno_node.scan_values(lambda v: isinstance(v, Token))
+                str(t.value)
+                for t in anno_node.scan_values(lambda v: isinstance(v, Token))
             )
             annotations.append((line, anno_text))
-
 
     def find_associated_annotation_line(target_line: int) -> Optional[int]:
         """Finds the earliest consecutive annotation preceding target_line."""
@@ -309,7 +309,7 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
             insert_line=insert_line,
             params=params,
             context_snippet="".join(
-                source_lines[insert_line - 1: min(len(source_lines), decl_line + 15)]
+                source_lines[insert_line - 1 : min(len(source_lines), decl_line + 15)]
             ),
         )
         if not ok:
@@ -361,7 +361,7 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
                 decl_line=decl_line,
                 insert_line=insert_line,
                 params=[],
-                context_snippet="".join(source_lines[insert_line - 1: decl_line]),
+                context_snippet="".join(source_lines[insert_line - 1 : decl_line]),
             )
         )
 
