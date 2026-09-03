@@ -670,13 +670,24 @@ def atomic_commit_all_changes(changes: List[ProposedFileChange]) -> None:
     try:
         for change in changes:
             tmp_path = change.file_path.with_suffix(".tmp_doc")
-            with open(tmp_path, "w", encoding="utf-8", newline="") as f:
+            backup_path = change.file_path.with_suffix(".bak_doc")
+
+            # CWE-59: Reject pre-existing symlinks or collision paths
+            if tmp_path.is_symlink() or tmp_path.exists():
+                print(f"[FAIL-CLOSED] Collision or symlink rejected at staging path: {tmp_path}")
+                sys.exit(1)
+            if backup_path.is_symlink() or backup_path.exists():
+                print(f"[FAIL-CLOSED] Collision or symlink rejected at backup path: {backup_path}")
+                sys.exit(1)
+
+            # Exclusive creation prevents following newly created symlinks
+            with open(tmp_path, "x", encoding="utf-8", newline="") as f:
                 f.write(change.proposed_source)
                 f.flush()
                 os.fsync(f.fileno())
 
-            backup_path = change.file_path.with_suffix(".bak_doc")
-            shutil.copy2(change.file_path, backup_path)
+            # Copy to backup ensuring it does not follow a pre-existing link
+            shutil.copy2(change.file_path, backup_path, follow_symlinks=False)
             backups[change.file_path] = backup_path
             staged_files.append((tmp_path, change.file_path))
 
