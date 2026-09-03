@@ -143,9 +143,9 @@ class MemberDoc(BaseModel):
             validated_desc = validate_docstring_text(
                 p_desc, f"Parameter description for '{p_name}'"
             )
-            if validated_desc and ("\n" in validated_desc or "\r" in validated_desc):
+            if not validated_desc or "\n" in validated_desc or "\r" in validated_desc:
                 raise ValueError(
-                    f"Parameter description for '{p_name}' must be a single line without line breaks."
+                    f"Parameter description for '{p_name}' must be a non-empty single line without line breaks."
                 )
         return v
 
