@@ -40,35 +40,73 @@ jobs:
 
       - name: "Audit GDScript Docstring Coverage"
         run: |
-          # Deterministic audit scan without API credentials
-          python .github/scripts/update_gdscript_docs.py --check || true
+          set -euo pipefail
+          python .github/scripts/update_gdscript_docs.py --check
 
       - name: "Generate & Inject GDScript Docstrings"
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
+          set -euo pipefail
           python .github/scripts/update_gdscript_docs.py --write
 
       - name: "Run Documentation Contract Validator"
         run: |
+          set -euo pipefail
           python .github/scripts/validate_gdscript_docs.py
 
       - name: "Run GDScript Linter (gdlint)"
         run: |
-          gdlint scripts/
+          set -euo pipefail
+          gdlint \
+            scripts/core \
+            scripts/entities \
+            scripts/managers \
+            scripts/resources \
+            scripts/system \
+            scripts/ui
 
       - name: "Setup Godot Engine (Headless Syntax Verification)"
         uses: chickensoft-games/setup-godot@c2da9f9ad7a77e5c5443c9839ae30fb0eecb9b94  # v2.1.2
         with:
-          version: 4.7.0
+          version: 4.7.1
 
-      - name: "Verify Godot Project Parsing"
+      - name: "Verify Godot Script Parsing"
         run: |
           set -euo pipefail
-          while read -r script_file; do
+          target_dirs=(
+            "scripts/core"
+            "scripts/entities"
+            "scripts/managers"
+            "scripts/resources"
+            "scripts/system"
+            "scripts/ui"
+          )
+          while IFS= read -r -d '' script_file; do
             echo "Checking: $script_file"
             godot --headless --check-only -s "$script_file"
-          done < <(find scripts/ -type f -name "*.gd")
+          done < <(find "${target_dirs[@]}" -type f -name "*.gd" -print0 2>/dev/null)
+
+      - name: "Final Documentation Scope Check"
+        run: |
+          set -euo pipefail
+          git diff --check
+
+          # Reject any file deletions
+          deleted_files="$(git diff --name-only --diff-filter=D)"
+          if [[ -n "$deleted_files" ]]; then
+            echo "::error::Documentation automation attempted to delete files:"
+            echo "$deleted_files"
+            exit 1
+          fi
+
+          # Reject changes outside the six allowed production subtrees
+          unexpected_files="$(git diff --name-only --diff-filter=ACMRT | grep -Ev '^scripts/(core|entities|managers|resources|system|ui)/.*\.gd$' || true)"
+          if [[ -n "$unexpected_files" ]]; then
+            echo "::error::Unexpected files modified outside production scope:"
+            echo "$unexpected_files"
+            exit 1
+          fi
 
       - name: "Create or Update Pull Request"
         uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e  # v6.1.0
@@ -76,11 +114,11 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: docs
           branch: automation/weekly-gdscript-docs
-          title: "docs(gdscript): Sync Native BBCode docstrings (single file)"
+          title: "docs(gdscript): Sync Native BBCode docstrings"
           body: |
-            Automated single-file documentation sync:
+            Automated weekly documentation sync:
             * Standardized public member docstrings to Godot 4 Native BBCode (`##`).
             * Verified non-comment byte-for-byte source integrity.
-            * Passed documentation contract validator, `gdlint`, and Godot headless check.
+            * Passed documentation contract validator, `gdlint`, and Godot headless checks.
           commit-message: "docs(gdscript): update and enhance Native BBCode docstrings"
-          delete-branch: true
+          delete-branch: false
