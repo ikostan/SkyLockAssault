@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Strict GDScript Documentation Contract Validator.
+"""
+Strict GDScript Documentation Contract Validator.
 
 Audits production GDScript files for:
 1. Native Godot 4 '##' docstrings on ALL public members:
@@ -33,6 +34,7 @@ RE_DOC_LINE = re.compile(r"^[ \t]*##(?:\s.*)?$")
 RE_PARAM_TAG = re.compile(r"\[param\s+([a-zA-Z0-9_]+)\]", re.IGNORECASE)
 RE_BANNED_FENCE = re.compile(r"```")
 RE_DOXYGEN_TAG = re.compile(r"@(param|return|brief)")
+RE_CODE_BLOCK = re.compile(r"\[code\].*?\[/code\]", re.DOTALL | re.IGNORECASE)
 
 ALLOWED_BASE_TAGS = {
     "param",
@@ -132,7 +134,8 @@ def validate_file(file_path: Path) -> List[str]:
                 errors.append(
                     f"{file_path}:{idx} Banned Doxygen tag (@param/@return). Use Godot BBCode [param name]."
                 )
-            for tag_name in RE_BBCODE_TAG.findall(line):
+            line_without_code = RE_CODE_BLOCK.sub("", line)
+            for tag_name in RE_BBCODE_TAG.findall(line_without_code):
                 if tag_name.lower() not in ALLOWED_BASE_TAGS:
                     errors.append(
                         f"{file_path}:{idx} Unapproved BBCode tag '[{tag_name}]'."
