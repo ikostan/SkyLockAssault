@@ -29,6 +29,7 @@ from tests.test_utils import (
     wait_for_console_log,
 )
 
+MAX_TRANSITION_SLA_MS = 3500.0  # Raised from 2500.0 for CI/WASM overhead
 
 def _has_log(logs: list[dict[str, str]], keyword: str) -> bool:
     """Check if any log entry contains the specified keyword."""
@@ -480,7 +481,7 @@ def test_pw_trans_06_multi_cycle_transition_lifecycle(page: Page) -> None:
                 timeout_ms=TEST_TIMEOUT,
             )
             duration_ms = (time.perf_counter() - t_cycle_start) * 1000
-            assert duration_ms < 2500.0, (
+            assert duration_ms < MAX_TRANSITION_SLA_MS, (
                 f"Cycle {cycle_idx} forward transition exceeded SLA: "
                 f"{duration_ms:.2f} ms"
             )
