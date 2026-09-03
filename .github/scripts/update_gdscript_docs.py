@@ -434,8 +434,8 @@ def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> Li
 
     if doc.description and doc.description.strip():
         lines.append(f"{indent}##\n")
-        for l in doc.description.strip().splitlines():
-            lines.append(f"{indent}## {l.strip()}\n")
+        for line in doc.description.strip().splitlines():
+            lines.append(f"{indent}## {line.strip()}\n")
 
     if doc.parameters and decl.kind == "function":
         lines.append(f"{indent}##\n")
@@ -457,7 +457,7 @@ def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> Li
 def compute_non_doc_bytes_sha256(source: str) -> str:
     """Computes exact SHA-256 over all bytes excluding recognized '##' lines."""
     raw_lines = source.splitlines(keepends=True)
-    non_doc = "".join([l for l in raw_lines if not RE_DOC_LINE.match(l)])
+    non_doc = "".join([line for line in raw_lines if not RE_DOC_LINE.match(line)])
     return hashlib.sha256(non_doc.encode("utf-8")).hexdigest()
 
 
