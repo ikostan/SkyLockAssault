@@ -199,8 +199,8 @@ def extract_parameters_from_ast(func_node: Tree) -> Tuple[List[str], bool]:
                 return [], False
             params.append(param_name)
 
-    # Support vararg functions
-    for _ in func_node.find_data("func_arg_vararg"):
+    # Support variadic functions
+    for _ in func_node.find_data("func_arg_variadic"):
         # Flag as ambiguous if vararg requires complex tagging
         return [], False
 
