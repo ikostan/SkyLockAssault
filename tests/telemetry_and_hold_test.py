@@ -161,17 +161,22 @@ def _save_coverage(cdp_session: Any, test_id: str) -> None:
 
 
 def _compute_in_engine_delta_ms(load_log: dict[str, Any], swap_log: dict[str, Any]) -> float:
-    """Computes time delta in ms using in-engine ticks, hold durations, or sub-second timestamps."""
+    """Computes time delta in ms using in-engine ticks from log messages."""
     load_text = str(load_log.get("text", ""))
     swap_text = str(swap_log.get("text", ""))
 
-    # 1. Match explicit in-engine ticks: (ticks: 12345)
-    t1_ticks = re.search(r"(?:ticks?|at)[:\s=]+(\d+(?:\.\d+)?)\b", load_text, re.IGNORECASE)
-    t2_ticks = re.search(r"(?:ticks?|at)[:\s=]+(\d+(?:\.\d+)?)\b", swap_text, re.IGNORECASE)
+    # Robust regex to capture any number following 'ticks' or 'at'
+    t1_ticks = re.search(r"ticks?.*?(\d+)", load_text, re.IGNORECASE)
+    t2_ticks = re.search(r"ticks?.*?(\d+)", swap_text, re.IGNORECASE)
     if t1_ticks and t2_ticks:
         return float(t2_ticks.group(1)) - float(t1_ticks.group(1))
 
-    # 2. Match explicit hold/elapsed durations in the swap log
+    # Fallback to general tick/time extraction
+    t1_alt = re.search(r"(?:time|timestamp)[:\s=]+(\d+(?:\.\d+)?)\b", load_text, re.IGNORECASE)
+    t2_alt = re.search(r"(?:time|timestamp)[:\s=]+(\d+(?:\.\d+)?)\b", swap_text, re.IGNORECASE)
+    if t1_alt and t2_alt:
+        return float(t2_alt.group(1)) - float(t1_alt.group(1))
+
     elapsed_match = re.search(
         r"(?:hold|elapsed|delta|duration)[:\s=]+(\d+(?:\.\d+)?)\s*ms\b",
         swap_text,
@@ -180,15 +185,6 @@ def _compute_in_engine_delta_ms(load_log: dict[str, Any], swap_log: dict[str, An
     if elapsed_match:
         return float(elapsed_match.group(1))
 
-    # 3. Match ISO timestamps with sub-second precision
-    m1_iso = re.search(r"\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+)\]", load_text)
-    m2_iso = re.search(r"\[(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+)\]", swap_text)
-    if m1_iso and m2_iso:
-        dt1 = datetime.fromisoformat(m1_iso.group(1))
-        dt2 = datetime.fromisoformat(m2_iso.group(1))
-        return (dt2 - dt1).total_seconds() * 1000.0
-
-    # 4. Fallback to browser console event performance time (seconds to ms)
     if "time" in swap_log and "time" in load_log:
         return (swap_log["time"] - load_log["time"]) * 1000.0
 
@@ -203,7 +199,8 @@ def _compute_in_engine_delta_ms(load_log: dict[str, Any], swap_log: dict[str, An
 # ==============================================================================
 
 def test_pw_hold_01_ux_completion_delay(page: Page) -> None:
-    """PW-HOLD-01: In-engine loading screen visibly holds at 100% for ~1.0s.
+    """
+    PW-HOLD-01: In-engine loading screen visibly holds at 100% for ~1.0s.
 
     Extracts in-engine timestamps from 'Scene loaded successfully.' and
     '[SWAP TIMING] 1. .instantiate()' to confirm the delta satisfies
@@ -230,13 +227,10 @@ def test_pw_hold_01_ux_completion_delay(page: Page) -> None:
             }
         }""")
 
-        # Await the in-engine swap timing log signaling hold completion
+        # Strictly await the in-engine swap timing log signaling hold completion
         wait_for_console_log(
             logs,
-            lambda text: (
-                "[swap timing] 1. .instantiate()" in str(text).lower()
-                or "initializing main scene" in str(text).lower()
-            ),
+            lambda text: "[swap timing] 1. .instantiate()" in str(text).lower(),
             start_click_idx,
             page,
             timeout_ms=TEST_TIMEOUT,
@@ -259,18 +253,9 @@ def test_pw_hold_01_ux_completion_delay(page: Page) -> None:
             ),
             None,
         )
-        if swap_log is None:
-            swap_log = next(
-                (
-                    log_entry
-                    for log_entry in logs[start_click_idx:]
-                    if "initializing main scene" in str(log_entry["text"]).lower()
-                ),
-                None,
-            )
 
         assert load_log is not None, "Missing 'Scene loaded successfully.' in console logs"
-        assert swap_log is not None, "Missing swap timing log in console logs"
+        assert swap_log is not None, "Missing '[SWAP TIMING] 1. .instantiate()' in console logs"
 
         delta_ms = _compute_in_engine_delta_ms(load_log, swap_log)
         assert 1000.0 <= delta_ms <= 1400.0, (
