@@ -75,11 +75,18 @@ def get_first_annotation_line(node: Tree) -> Optional[int]:
 
 def extract_params(func_node: Tree) -> List[str]:
     params = []
-    for arg_node in func_node.find_data("func_arg_regular"):
-        for child in arg_node.children:
-            if isinstance(child, Token) and child.type == "NAME":
-                params.append(str(child.value))
-                break
+    arg_rules = (
+        "func_arg_regular",
+        "func_arg_typed",
+        "func_arg_default",
+        "func_arg_inf",
+    )
+    for rule in arg_rules:
+        for arg_node in func_node.find_data(rule):
+            for child in arg_node.children:
+                if isinstance(child, Token) and child.type == "NAME":
+                    params.append(str(child.value))
+                    break
     return params
 
 

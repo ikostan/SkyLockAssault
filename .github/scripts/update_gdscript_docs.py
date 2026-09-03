@@ -181,15 +181,23 @@ class MemberDeclaration:
 def extract_parameters_from_ast(func_node: Tree) -> Tuple[List[str], bool]:
     """Robustly extracts parameter identifiers from all GDScript 4 parameter forms."""
     params = []
-    for arg_node in func_node.find_data("func_arg_regular"):
-        param_name = None
-        for child in arg_node.children:
-            if isinstance(child, Token) and child.type == "NAME":
-                param_name = str(child.value)
-                break
-        if not param_name:
-            return [], False
-        params.append(param_name)
+    # GDToolkit 4.5.0 parameter rule names
+    arg_rules = (
+        "func_arg_regular",
+        "func_arg_typed",
+        "func_arg_default",
+        "func_arg_inf",
+    )
+    for rule in arg_rules:
+        for arg_node in func_node.find_data(rule):
+            param_name = None
+            for child in arg_node.children:
+                if isinstance(child, Token) and child.type == "NAME":
+                    param_name = str(child.value)
+                    break
+            if not param_name:
+                return [], False
+            params.append(param_name)
 
     # Support vararg functions
     for _ in func_node.find_data("func_arg_vararg"):
