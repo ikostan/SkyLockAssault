@@ -21,7 +21,7 @@ import shutil
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from gdtoolkit.parser import parser as gdparser
@@ -52,27 +52,19 @@ RE_PARAM_TAG = re.compile(r"\[param\s+([a-zA-Z0-9_]+)\]")
 RE_BANNED_FENCE = re.compile(r"```")
 RE_DOXYGEN_TAG = re.compile(r"@(param|return|brief)")
 
-# Strict allowlist of Godot 4 documentation BBCode tags
-ALLOWED_BBCODE_TAGS = {
+# Strict allowlist of Godot 4 documentation BBCode base tags
+ALLOWED_BASE_TAGS = {
     "param",
     "code",
-    "/code",
     "constant",
-    "/constant",
     "member",
-    "/member",
     "method",
-    "/method",
     "signal",
-    "/signal",
     "enum",
-    "/enum",
     "b",
-    "/b",
-    "i",
-    "/i",
+    "i"
 }
-RE_BBCODE_EXTRACTOR = re.compile(r"\[([/a-zA-Z0-9_]+)(?:\s+[^\]]+)?\]")
+RE_BBCODE_TAG = re.compile(r"\[/?([a-zA-Z0-9_]+)(?:\s+[^\]]+)?\]")
 
 
 class DocStatus(enum.Enum):
@@ -95,12 +87,11 @@ def validate_docstring_text(text: Optional[str], field_name: str) -> Optional[st
         raise ValueError(f"{field_name} contains banned Doxygen tags (@param/@return).")
 
     # Verify that all BBCode tags are in the allowlist
-    found_tags = RE_BBCODE_EXTRACTOR.findall(text)
+    found_tags = RE_BBCODE_TAG.findall(text)
     for tag in found_tags:
-        clean_tag = tag.strip()
-        if clean_tag not in ALLOWED_BBCODE_TAGS:
+        if tag.lower() not in ALLOWED_BASE_TAGS:
             raise ValueError(
-                f"{field_name} contains unapproved BBCode tag '[{clean_tag}]'."
+                f"{field_name} contains unapproved BBCode tag '[{tag}]'."
             )
     return text.strip()
 
@@ -422,9 +413,9 @@ def classify_member(decl: MemberDeclaration, raw_lines: List[str]) -> None:
         return
 
     # Check unapproved BBCode tags
-    found_tags = RE_BBCODE_EXTRACTOR.findall(combined_docs)
+    found_tags = RE_BBCODE_TAG.findall(combined_docs)
     for tag in found_tags:
-        if tag.strip() not in ALLOWED_BBCODE_TAGS:
+        if tag.lower() not in ALLOWED_BASE_TAGS:
             decl.status = DocStatus.NON_COMPLIANT
             return
 
