@@ -492,8 +492,9 @@ def classify_member(decl: MemberDeclaration, raw_lines: List[str]) -> None:
         decl.status = DocStatus.NON_COMPLIANT
         return
 
-    # Check unapproved BBCode tags
-    found_tags = RE_BBCODE_TAG.findall(combined_docs)
+    # Check unapproved BBCode tags (excluding contents within [code]...[/code])
+    docs_without_code = RE_CODE_BLOCK.sub("", combined_docs)
+    found_tags = RE_BBCODE_TAG.findall(docs_without_code)
     for tag in found_tags:
         if tag.lower() not in ALLOWED_BASE_TAGS:
             decl.status = DocStatus.NON_COMPLIANT
