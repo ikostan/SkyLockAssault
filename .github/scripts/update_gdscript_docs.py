@@ -40,7 +40,7 @@ except ImportError as err:
 # -----------------------------------------------------------------------------
 # Configuration & Limits
 # -----------------------------------------------------------------------------
-MAX_FILES_MODIFIED_PER_RUN = 15
+MAX_FILES_MODIFIED_PER_RUN = 1
 MAX_DOC_SLOTS_MODIFIED_PER_RUN = 50
 PINNED_MODEL = "gemini-2.5-flash"
 ALLOWED_SUBDIRS = ("core", "entities", "managers", "resources", "system", "ui")
@@ -829,6 +829,10 @@ def main():
             if change:
                 proposed_changes.append(change)
                 total_slots += change.slots_count
+                break  # Stop searching this folder once 1 file is queued
+
+        if len(proposed_changes) >= MAX_FILES_MODIFIED_PER_RUN:
+            break  # Stop scanning other subdirectories
 
     total_files = len(proposed_changes)
     print(
