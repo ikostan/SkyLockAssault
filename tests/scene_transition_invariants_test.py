@@ -541,7 +541,7 @@ def test_pw_trans_06_lifecycle_reentry_multiple_cycles(page: Page) -> None:
         cdp_session = _setup_game_page(page, logs, page_errors)
 
         for cycle_idx in range(1, 3):
-            # 1. Ensure Start button is visible and JS bridge is wired
+            # 1. Ensure Start button and JS bridge are ready for this cycle
             start_btn = page.locator("#start-button")
             expect(start_btn).to_be_visible(timeout=TEST_TIMEOUT)
             page.wait_for_function(
@@ -552,7 +552,7 @@ def test_pw_trans_06_lifecycle_reentry_multiple_cycles(page: Page) -> None:
             cycle_start_idx = len(logs)
             t_start = time.perf_counter()
 
-            # 2. Click button and invoke JS hook as fallback
+            # 2. Click button and invoke JS hook fallback directly
             start_btn.click(force=True)
             page.evaluate("""() => {
                 if (typeof window.startPressed === 'function') {
@@ -564,7 +564,8 @@ def test_pw_trans_06_lifecycle_reentry_multiple_cycles(page: Page) -> None:
             wait_for_console_log(
                 logs,
                 lambda text: (
-                    "player ready" in text or "hud successfully wired" in text
+                    "player ready" in str(text).lower()
+                    or "hud successfully wired" in str(text).lower()
                 ),
                 cycle_start_idx,
                 page,
@@ -572,29 +573,30 @@ def test_pw_trans_06_lifecycle_reentry_multiple_cycles(page: Page) -> None:
             )
             duration_ms = (time.perf_counter() - t_start) * 1000.0
             assert duration_ms < MAX_TRANSITION_SLA_MS, (
-                f"Cycle {cycle_idx} exceeded SLA: {duration_ms:.2f}ms"
+                f"Cycle {cycle_idx} exceeded SLA: {duration_ms:.2f}ms >= "
+                f"{MAX_TRANSITION_SLA_MS}ms"
             )
 
             _assert_single_gameplay_and_player(page, logs, cycle_start_idx)
 
-            # 4. Trigger reverse transition
+            # 4. Trigger reverse transition back to Main Menu
             rev_idx = len(logs)
             _trigger_pause_and_return_to_main_menu(page, double_trigger=False)
 
-            # 5. Wait specifically for main menu load, excluding pause panel logs
+            # 5. Wait for the loading screen to finish and Main Menu _ready() to fire
             wait_for_console_log(
                 logs,
                 lambda text: (
-                    "scene loaded successfully" in text
-                    or "main menu ready" in text
-                    or "main_menu" in text
+                    "initializing main menu" in str(text).lower()
+                    or "exposed main menu callbacks to js" in str(text).lower()
                 ),
                 rev_idx,
                 page,
                 timeout_ms=DEFAULT_TIMEOUT,
             )
 
-            # 6. Ensure Main Menu DOM and callback bridge are restored
+            # 6. Settle Godot UI loop before beginning next cycle
+            page.wait_for_timeout(500)
             page.wait_for_selector(
                 "#start-button", state="visible", timeout=DEFAULT_TIMEOUT
             )
