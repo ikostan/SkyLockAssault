@@ -131,10 +131,18 @@ class MemberDoc(BaseModel):
             )
         return validated
 
-    @field_validator("description", "returns", mode="after")
+    @field_validator("description", mode="after")
     @classmethod
-    def check_optional_fields(cls, v: Optional[str]) -> Optional[str]:
-        return validate_docstring_text(v, "Field")
+    def check_description(cls, v: Optional[str]) -> Optional[str]:
+        return validate_docstring_text(v, "Description")
+
+    @field_validator("returns", mode="after")
+    @classmethod
+    def check_returns(cls, v: Optional[str]) -> Optional[str]:
+        validated = validate_docstring_text(v, "Returns")
+        if validated and ("\n" in validated or "\r" in validated):
+            raise ValueError("Return description must be a single line without line breaks.")
+        return validated
 
     @field_validator("parameters", mode="after")
     @classmethod
@@ -143,7 +151,9 @@ class MemberDoc(BaseModel):
             return v
         for p_name, p_desc in v.items():
             validate_docstring_text(p_name, f"Parameter key '{p_name}'")
-            validate_docstring_text(p_desc, f"Parameter description for '{p_name}'")
+            validated_desc = validate_docstring_text(p_desc, f"Parameter description for '{p_name}'")
+            if validated_desc and ("\n" in validated_desc or "\r" in validated_desc):
+                raise ValueError(f"Parameter description for '{p_name}' must be a single line without line breaks.")
         return v
 
 
@@ -428,6 +438,7 @@ def classify_member(decl: MemberDeclaration, raw_lines: List[str]) -> None:
 # -----------------------------------------------------------------------------
 def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> List[str]:
     lines = [f"{indent}## {doc.summary}\n"]
+
     if doc.description and doc.description.strip():
         lines.append(f"{indent}##\n")
         for l in doc.description.strip().splitlines():
@@ -436,10 +447,16 @@ def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> Li
     if doc.parameters and decl.kind == "function":
         lines.append(f"{indent}##\n")
         for p_name, p_desc in doc.parameters.items():
-            lines.append(f"{indent}## [param {p_name}]: {p_desc.strip()}\n")
+            desc_lines = p_desc.strip().splitlines()
+            lines.append(f"{indent}## [param {p_name}]: {desc_lines[0].strip()}\n")
+            for cont in desc_lines[1:]:
+                lines.append(f"{indent}##     {cont.strip()}\n")
 
     if doc.returns and doc.returns.strip() and decl.kind == "function":
-        lines.append(f"{indent}## Returns {doc.returns.strip()}\n")
+        ret_lines = doc.returns.strip().splitlines()
+        lines.append(f"{indent}## Returns {ret_lines[0].strip()}\n")
+        for cont in ret_lines[1:]:
+            lines.append(f"{indent}##     {cont.strip()}\n")
 
     return lines
 
