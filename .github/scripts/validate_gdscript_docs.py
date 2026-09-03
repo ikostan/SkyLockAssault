@@ -31,8 +31,23 @@ RE_BANNED_FENCE = re.compile(r"```")
 RE_DOXYGEN_TAG = re.compile(r"@(param|return|brief)")
 
 ALLOWED_BBCODE_TAGS = {
-    "param", "code", "/code", "constant", "/constant", "member", "/member",
-    "method", "/method", "signal", "/signal", "enum", "/enum", "b", "/b", "i", "/i"
+    "param",
+    "code",
+    "/code",
+    "constant",
+    "/constant",
+    "member",
+    "/member",
+    "method",
+    "/method",
+    "signal",
+    "/signal",
+    "enum",
+    "/enum",
+    "b",
+    "/b",
+    "i",
+    "/i",
 }
 RE_BBCODE_EXTRACTOR = re.compile(r"\[([/a-zA-Z0-9_]+)(?:\s+[^\]]+)?\]")
 
@@ -86,13 +101,19 @@ def validate_file(file_path: Path) -> List[str]:
     for idx, l in enumerate(lines, start=1):
         if RE_DOC_LINE.match(l):
             if RE_BANNED_FENCE.search(l):
-                errors.append(f"{file_path}:{idx} Banned Markdown fence (```) in docstring.")
+                errors.append(
+                    f"{file_path}:{idx} Banned Markdown fence (```) in docstring."
+                )
             if RE_DOXYGEN_TAG.search(l):
-                errors.append(f"{file_path}:{idx} Banned Doxygen tag (@param/@return). Use Godot BBCode [param name].")
+                errors.append(
+                    f"{file_path}:{idx} Banned Doxygen tag (@param/@return). Use Godot BBCode [param name]."
+                )
             tags = RE_BBCODE_EXTRACTOR.findall(l)
             for t in tags:
                 if t.strip() not in ALLOWED_BBCODE_TAGS:
-                    errors.append(f"{file_path}:{idx} Unapproved BBCode tag '[{t.strip()}]'.")
+                    errors.append(
+                        f"{file_path}:{idx} Unapproved BBCode tag '[{t.strip()}]'."
+                    )
 
     # Validate function declarations
     for node in ast.find_data("func_def"):
@@ -113,7 +134,9 @@ def validate_file(file_path: Path) -> List[str]:
         if anno_line and decl_line:
             for mid in range(anno_line - 1, decl_line - 1):
                 if RE_DOC_LINE.match(lines[mid]):
-                    errors.append(f"{file_path}:{mid + 1} Docstring placed between annotation and function '{func_name}'.")
+                    errors.append(
+                        f"{file_path}:{mid + 1} Docstring placed between annotation and function '{func_name}'."
+                    )
 
         # Collect doc lines above insert_line
         doc_lines = []
@@ -123,7 +146,9 @@ def validate_file(file_path: Path) -> List[str]:
             idx -= 1
 
         if not doc_lines:
-            errors.append(f"{file_path}:{decl_line} Public function '{func_name}' is missing docstrings.")
+            errors.append(
+                f"{file_path}:{decl_line} Public function '{func_name}' is missing docstrings."
+            )
         else:
             joined = "".join(doc_lines)
             params = extract_params(node)
@@ -160,7 +185,9 @@ def validate_file(file_path: Path) -> List[str]:
             idx -= 1
 
         if not doc_lines:
-            errors.append(f"{file_path}:{decl_line} Exported property '{var_name}' is missing docstrings.")
+            errors.append(
+                f"{file_path}:{decl_line} Exported property '{var_name}' is missing docstrings."
+            )
 
     return errors
 
@@ -185,12 +212,16 @@ def main():
             all_errors.extend(errs)
 
     if all_errors:
-        print(f"\n[FAIL] Documentation contract validation failed with {len(all_errors)} error(s):")
+        print(
+            f"\n[FAIL] Documentation contract validation failed with {len(all_errors)} error(s):"
+        )
         for e in all_errors:
             print(f"  - {e}")
         sys.exit(1)
 
-    print("[SUCCESS] All production GDScript documentation contracts validated successfully.")
+    print(
+        "[SUCCESS] All production GDScript documentation contracts validated successfully."
+    )
 
 
 if __name__ == "__main__":

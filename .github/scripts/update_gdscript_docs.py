@@ -54,8 +54,23 @@ RE_DOXYGEN_TAG = re.compile(r"@(param|return|brief)")
 
 # Strict allowlist of Godot 4 documentation BBCode tags
 ALLOWED_BBCODE_TAGS = {
-    "param", "code", "/code", "constant", "/constant", "member", "/member",
-    "method", "/method", "signal", "/signal", "enum", "/enum", "b", "/b", "i", "/i"
+    "param",
+    "code",
+    "/code",
+    "constant",
+    "/constant",
+    "member",
+    "/member",
+    "method",
+    "/method",
+    "signal",
+    "/signal",
+    "enum",
+    "/enum",
+    "b",
+    "/b",
+    "i",
+    "/i",
 }
 RE_BBCODE_EXTRACTOR = re.compile(r"\[([/a-zA-Z0-9_]+)(?:\s+[^\]]+)?\]")
 
@@ -84,26 +99,36 @@ def validate_docstring_text(text: Optional[str], field_name: str) -> Optional[st
     for tag in found_tags:
         clean_tag = tag.strip()
         if clean_tag not in ALLOWED_BBCODE_TAGS:
-            raise ValueError(f"{field_name} contains unapproved BBCode tag '[{clean_tag}]'.")
+            raise ValueError(
+                f"{field_name} contains unapproved BBCode tag '[{clean_tag}]'."
+            )
     return text.strip()
 
 
 class MemberDoc(BaseModel):
     name: str = Field(description="Exact name of the target public member.")
-    summary: str = Field(description="Single-line concise description starting with an active verb.")
-    description: Optional[str] = Field(default=None, description="Optional extended details.")
+    summary: str = Field(
+        description="Single-line concise description starting with an active verb."
+    )
+    description: Optional[str] = Field(
+        default=None, description="Optional extended details."
+    )
     parameters: Optional[Dict[str, str]] = Field(
         default=None,
-        description="Key-value mapping of parameter name to description. Keys MUST strictly match parameter identifiers."
+        description="Key-value mapping of parameter name to description. Keys MUST strictly match parameter identifiers.",
     )
-    returns: Optional[str] = Field(default=None, description="Optional return value description.")
+    returns: Optional[str] = Field(
+        default=None, description="Optional return value description."
+    )
 
     @field_validator("summary", mode="after")
     @classmethod
     def check_summary(cls, v: str) -> str:
         validated = validate_docstring_text(v, "Summary")
         if not validated or "\n" in validated or "\r" in validated:
-            raise ValueError("Summary must be a single non-empty line without line breaks.")
+            raise ValueError(
+                "Summary must be a single non-empty line without line breaks."
+            )
         return validated
 
     @field_validator("description", "returns", mode="after")
@@ -123,7 +148,9 @@ class MemberDoc(BaseModel):
 
 
 class FileDocumentationResponse(BaseModel):
-    members: List[MemberDoc] = Field(description="Documentation entries for all requested members.")
+    members: List[MemberDoc] = Field(
+        description="Documentation entries for all requested members."
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -134,7 +161,9 @@ class MemberDeclaration:
     name: str
     kind: str  # function, signal, export, const, enum
     decl_line: int  # 1-based start line of the declaration keyword (func, var, etc.)
-    insert_line: int  # 1-based line where documentation MUST be placed (above annotations)
+    insert_line: (
+        int  # 1-based line where documentation MUST be placed (above annotations)
+    )
     params: List[str]
     context_snippet: str
     status: DocStatus = DocStatus.MISSING
@@ -221,7 +250,9 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
             decl_line=decl_line,
             insert_line=insert_line,
             params=params,
-            context_snippet="".join(source_lines[insert_line - 1 : min(len(source_lines), decl_line + 15)]),
+            context_snippet="".join(
+                source_lines[insert_line - 1 : min(len(source_lines), decl_line + 15)]
+            ),
         )
         if not ok:
             decl.status = DocStatus.AMBIGUOUS
@@ -422,8 +453,7 @@ def compute_non_doc_bytes_sha256(source: str) -> str:
 
 def verify_modification_allowlist(original: str, proposed: str) -> bool:
     diff = difflib.ndiff(
-        original.splitlines(keepends=True),
-        proposed.splitlines(keepends=True)
+        original.splitlines(keepends=True), proposed.splitlines(keepends=True)
     )
     for line in diff:
         code = line[0]
@@ -438,9 +468,7 @@ def verify_modification_allowlist(original: str, proposed: str) -> bool:
 # Gemini Query
 # -----------------------------------------------------------------------------
 def query_gemini_for_docs(
-    client: genai.Client,
-    file_path: Path,
-    targets: List[MemberDeclaration]
+    client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
 ) -> Dict[str, MemberDoc]:
     manifest = [
         {
@@ -482,7 +510,9 @@ def query_gemini_for_docs(
     requested_names = {t.name for t in targets}
     returned_names = {m.name for m in validated.members}
     if requested_names != returned_names:
-        print(f"[FAIL-CLOSED] Set mismatch in {file_path}! Expected {requested_names}, got {returned_names}")
+        print(
+            f"[FAIL-CLOSED] Set mismatch in {file_path}! Expected {requested_names}, got {returned_names}"
+        )
         sys.exit(1)
 
     doc_map = {}
@@ -492,7 +522,9 @@ def query_gemini_for_docs(
         if m.parameters:
             for p in m.parameters:
                 if p not in target.params:
-                    print(f"[FAIL-CLOSED] Invalid parameter '{p}' returned for {m.name}. Valid: {target.params}")
+                    print(
+                        f"[FAIL-CLOSED] Invalid parameter '{p}' returned for {m.name}. Valid: {target.params}"
+                    )
                     sys.exit(1)
         doc_map[m.name] = m
 
@@ -511,9 +543,7 @@ class ProposedFileChange:
 
 
 def prepare_file_change(
-    client: Optional[genai.Client],
-    file_path: Path,
-    check_mode: bool
+    client: Optional[genai.Client], file_path: Path, check_mode: bool
 ) -> Optional[ProposedFileChange]:
     with open(file_path, "r", encoding="utf-8") as f:
         original_source = f.read()
@@ -530,15 +560,25 @@ def prepare_file_change(
     # Report ambiguous declarations
     ambiguous = [d for d in declarations if d.status == DocStatus.AMBIGUOUS]
     for amb in ambiguous:
-        print(f"[SKIPPED: AMBIGUOUS] {file_path.name}: Declaration '{amb.name}' on line {amb.decl_line} is ambiguous.")
+        print(
+            f"[SKIPPED: AMBIGUOUS] {file_path.name}: Declaration '{amb.name}' on line {amb.decl_line} is ambiguous."
+        )
 
-    actionable = [d for d in declarations if d.status in (DocStatus.MISSING, DocStatus.NON_COMPLIANT)]
+    actionable = [
+        d
+        for d in declarations
+        if d.status in (DocStatus.MISSING, DocStatus.NON_COMPLIANT)
+    ]
     if not actionable:
         return None
 
-    print(f"[{'CHECK' if check_mode else 'PROPOSE'}] {file_path.name}: {len(actionable)} target slot(s).")
+    print(
+        f"[{'CHECK' if check_mode else 'PROPOSE'}] {file_path.name}: {len(actionable)} target slot(s)."
+    )
     if check_mode:
-        return ProposedFileChange(file_path, original_source, original_source, len(actionable))
+        return ProposedFileChange(
+            file_path, original_source, original_source, len(actionable)
+        )
 
     if not client:
         print("[FAIL-CLOSED] API client required in write mode.")
@@ -575,7 +615,9 @@ def prepare_file_change(
         print(f"[FAIL-CLOSED] Non-documentation lines modified in {file_path}!")
         sys.exit(1)
 
-    return ProposedFileChange(file_path, original_source, proposed_source, len(actionable))
+    return ProposedFileChange(
+        file_path, original_source, proposed_source, len(actionable)
+    )
 
 
 def atomic_commit_all_changes(changes: List[ProposedFileChange]) -> None:
@@ -622,9 +664,17 @@ def atomic_commit_all_changes(changes: List[ProposedFileChange]) -> None:
 # Main CLI
 # -----------------------------------------------------------------------------
 def main():
-    parser = argparse.ArgumentParser(description="GDScript Documentation Auditor & Transactional Injector")
-    parser.add_argument("--check", action="store_true", help="Dry-run audit without writing changes.")
-    parser.add_argument("--write", action="store_true", help="Generate and inject missing/non-compliant docstrings.")
+    parser = argparse.ArgumentParser(
+        description="GDScript Documentation Auditor & Transactional Injector"
+    )
+    parser.add_argument(
+        "--check", action="store_true", help="Dry-run audit without writing changes."
+    )
+    parser.add_argument(
+        "--write",
+        action="store_true",
+        help="Generate and inject missing/non-compliant docstrings.",
+    )
     args = parser.parse_args()
 
     if not (args.check ^ args.write):
@@ -655,7 +705,9 @@ def main():
         for file_path in sorted(target_dir.rglob("*.gd")):
             resolved = file_path.resolve()
             if not resolved.is_relative_to(scripts_root) or resolved.is_symlink():
-                print(f"[FAIL-CLOSED] Invalid file path or symlink rejected: {file_path}")
+                print(
+                    f"[FAIL-CLOSED] Invalid file path or symlink rejected: {file_path}"
+                )
                 sys.exit(1)
 
             change = prepare_file_change(client, resolved, check_mode=args.check)
@@ -664,14 +716,20 @@ def main():
                 total_slots += change.slots_count
 
     total_files = len(proposed_changes)
-    print(f"\nPhase 1 Complete: {total_files} file(s) and {total_slots} slot(s) identified.")
+    print(
+        f"\nPhase 1 Complete: {total_files} file(s) and {total_slots} slot(s) identified."
+    )
 
     if args.write:
         if total_files > MAX_FILES_MODIFIED_PER_RUN:
-            print(f"[FAIL-CLOSED] Modified files ({total_files}) exceeded threshold ({MAX_FILES_MODIFIED_PER_RUN}). Aborting.")
+            print(
+                f"[FAIL-CLOSED] Modified files ({total_files}) exceeded threshold ({MAX_FILES_MODIFIED_PER_RUN}). Aborting."
+            )
             sys.exit(1)
         if total_slots > MAX_DOC_SLOTS_MODIFIED_PER_RUN:
-            print(f"[FAIL-CLOSED] Modified slots ({total_slots}) exceeded threshold ({MAX_DOC_SLOTS_MODIFIED_PER_RUN}). Aborting.")
+            print(
+                f"[FAIL-CLOSED] Modified slots ({total_slots}) exceeded threshold ({MAX_DOC_SLOTS_MODIFIED_PER_RUN}). Aborting."
+            )
             sys.exit(1)
 
         atomic_commit_all_changes(proposed_changes)
