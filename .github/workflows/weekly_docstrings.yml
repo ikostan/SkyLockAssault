@@ -52,7 +52,7 @@ jobs:
           gdlint scripts/
 
       - name: "Setup Godot Engine (Headless Syntax Verification)"
-        uses: chickensoft-games/setup-godot@v2
+        uses: chickensoft-games/setup-godot@c2da9f9ad7a77e5c5443c9839ae30fb0eecb9b94 # v2.1.2
         with:
           version: 4.7.0
 
@@ -61,7 +61,7 @@ jobs:
           godot --headless --editor --check-only --quit
 
       - name: "Create or Update Pull Request"
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v6.1.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           base: docs
