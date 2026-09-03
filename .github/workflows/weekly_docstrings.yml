@@ -38,7 +38,12 @@ jobs:
             pydantic==2.10.6 \
             gdtoolkit==4.5.0
 
-      - name: "Run GDScript Docstring Auditor & Injector"
+      - name: "Audit GDScript Docstring Coverage"
+        run: |
+          # Deterministic audit scan without API credentials
+          python .github/scripts/update_gdscript_docs.py --check || true
+
+      - name: "Generate & Inject GDScript Docstrings"
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
