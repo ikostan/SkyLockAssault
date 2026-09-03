@@ -64,10 +64,11 @@ jobs:
 
       - name: "Verify Godot Project Parsing"
         run: |
-          find scripts/ -type f -name "*.gd" | while read -r script_file; do
+          set -euo pipefail
+          while read -r script_file; do
             echo "Checking: $script_file"
             godot --headless --check-only -s "$script_file"
-          done
+          done < <(find scripts/ -type f -name "*.gd")
 
       - name: "Create or Update Pull Request"
         uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e  # v6.1.0
