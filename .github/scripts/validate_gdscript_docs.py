@@ -92,7 +92,11 @@ def check_doc_presence(lines: List[str], insert_line: int) -> List[str]:
 
 
 def check_detached_docs(
-    lines: List[str], anno_line: Optional[int], decl_line: Optional[int], member_kind: str, member_name: str
+    lines: List[str],
+    anno_line: Optional[int],
+    decl_line: Optional[int],
+    member_kind: str,
+    member_name: str,
 ) -> List[str]:
     """Validates that no docstring comments sit detached between annotations and declarations."""
     errs = []
@@ -149,7 +153,9 @@ def validate_file(file_path: Path) -> List[str]:
         anno_line = get_first_annotation_line(node)
         insert_line = anno_line if anno_line else decl_line
 
-        for detached_err in check_detached_docs(lines, anno_line, decl_line, "function", func_name):
+        for detached_err in check_detached_docs(
+            lines, anno_line, decl_line, "function", func_name
+        ):
             errors.append(f"{file_path}: {detached_err}")
 
         docs = check_doc_presence(lines, insert_line)
@@ -186,7 +192,9 @@ def validate_file(file_path: Path) -> List[str]:
         anno_line = get_first_annotation_line(node)
         insert_line = anno_line if anno_line else decl_line
 
-        for detached_err in check_detached_docs(lines, anno_line, decl_line, "exported property", var_name):
+        for detached_err in check_detached_docs(
+            lines, anno_line, decl_line, "exported property", var_name
+        ):
             errors.append(f"{file_path}: {detached_err}")
 
         docs = check_doc_presence(lines, insert_line)
@@ -210,7 +218,9 @@ def validate_file(file_path: Path) -> List[str]:
         anno_line = get_first_annotation_line(node)
         insert_line = anno_line if anno_line else decl_line
 
-        for detached_err in check_detached_docs(lines, anno_line, decl_line, "signal", sig_name):
+        for detached_err in check_detached_docs(
+            lines, anno_line, decl_line, "signal", sig_name
+        ):
             errors.append(f"{file_path}: {detached_err}")
 
         docs = check_doc_presence(lines, insert_line)
@@ -234,7 +244,9 @@ def validate_file(file_path: Path) -> List[str]:
         anno_line = get_first_annotation_line(node)
         insert_line = anno_line if anno_line else decl_line
 
-        for detached_err in check_detached_docs(lines, anno_line, decl_line, "constant", const_name):
+        for detached_err in check_detached_docs(
+            lines, anno_line, decl_line, "constant", const_name
+        ):
             errors.append(f"{file_path}: {detached_err}")
 
         docs = check_doc_presence(lines, insert_line)
@@ -258,7 +270,9 @@ def validate_file(file_path: Path) -> List[str]:
         anno_line = get_first_annotation_line(node)
         insert_line = anno_line if anno_line else decl_line
 
-        for detached_err in check_detached_docs(lines, anno_line, decl_line, "enum", enum_name):
+        for detached_err in check_detached_docs(
+            lines, anno_line, decl_line, "enum", enum_name
+        ):
             errors.append(f"{file_path}: {detached_err}")
 
         docs = check_doc_presence(lines, insert_line)
