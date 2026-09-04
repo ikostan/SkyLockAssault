@@ -21,7 +21,7 @@ import shutil
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 # -----------------------------------------------------------------------------
 # Imports & Fail-Closed Environment Check
@@ -51,19 +51,13 @@ RE_BANNED_FENCE = re.compile(r"```")
 RE_DOXYGEN_TAG = re.compile(r"@(param|return|brief)")
 RE_CODE_BLOCK = re.compile(r"\[code\].*?\[/code\]", re.DOTALL | re.IGNORECASE)
 
-# Strict allowlist of Godot 4 documentation BBCode base tags
-ALLOWED_BASE_TAGS = {
-    "param",
-    "code",
-    "constant",
-    "member",
-    "method",
-    "signal",
-    "enum",
-    "b",
-    "i",
-}
-RE_BBCODE_TAG = re.compile(r"\[/?([a-zA-Z0-9_]+)(?:\s+[^\]]+)?\]")
+# Formatting BBCode tags (open/close)
+FORMATTING_BBCODE_TAGS = {"b", "i", "code"}
+
+# Semantic BBCode tags that require a single valid identifier/path argument
+SEMANTIC_BBCODE_TAGS = {"param", "constant", "member", "method", "signal", "enum"}
+
+RE_ANY_BBCODE_TAG = re.compile(r"\[(/?[a-zA-Z0-9_]+)(?:\s+([^\]]*))?\]")
 
 
 class DocStatus(enum.Enum):
@@ -77,7 +71,7 @@ class DocStatus(enum.Enum):
 # Text Validation Helper & Pydantic Schema
 # -----------------------------------------------------------------------------
 def validate_docstring_text(text: Optional[str], field_name: str) -> Optional[str]:
-    """Validates that text contains no code fences, Doxygen tags, or unapproved BBCode."""
+    """Validates that text contains no code fences, Doxygen tags, or malformed/unapproved BBCode."""
     if not text:
         return text
     if RE_BANNED_FENCE.search(text):
@@ -88,11 +82,31 @@ def validate_docstring_text(text: Optional[str], field_name: str) -> Optional[st
     # Exclude [code]...[/code] content so bracketed syntax like Array[Node] isn't misidentified as tags
     text_without_code = RE_CODE_BLOCK.sub("", text)
 
-    # Verify that all BBCode tags outside code blocks are in the allowlist
-    found_tags = RE_BBCODE_TAG.findall(text_without_code)
-    for tag in found_tags:
-        if tag.lower() not in ALLOWED_BASE_TAGS:
-            raise ValueError(f"{field_name} contains unapproved BBCode tag '[{tag}]'.")
+    for match in RE_ANY_BBCODE_TAG.finditer(text_without_code):
+        tag_name = match.group(1).lower()
+        tag_args = (match.group(2) or "").strip()
+
+        # Closing tags
+        if tag_name.startswith("/"):
+            base = tag_name[1:]
+            if base not in FORMATTING_BBCODE_TAGS or tag_args:
+                raise ValueError(f"{field_name} contains invalid closing tag '[{tag_name}]'.")
+            continue
+
+        # Formatting tags
+        if tag_name in FORMATTING_BBCODE_TAGS:
+            if tag_args:
+                raise ValueError(f"{field_name} tag '[{tag_name}]' must not have arguments.")
+            continue
+
+        # Semantic tags require exactly one identifier
+        if tag_name in SEMANTIC_BBCODE_TAGS:
+            if not tag_args or len(tag_args.split()) != 1:
+                raise ValueError(f"{field_name} tag '[{tag_name}]' requires exactly one identifier.")
+            continue
+
+        raise ValueError(f"{field_name} contains unapproved BBCode tag '[{tag_name}]'.")
+
     return text.strip()
 
 
@@ -112,14 +126,19 @@ class MemberDoc(BaseModel):
         default=None, description="Optional return value description."
     )
 
+    @field_validator("name", mode="after")
+    @classmethod
+    def check_name(cls, v: str) -> str:
+        if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", v):
+            raise ValueError(f"Invalid member name identifier: '{v}'")
+        return v
+
     @field_validator("summary", mode="after")
     @classmethod
     def check_summary(cls, v: str) -> str:
         validated = validate_docstring_text(v, "Summary")
         if not validated or "\n" in validated or "\r" in validated:
-            raise ValueError(
-                "Summary must be a single non-empty line without line breaks."
-            )
+            raise ValueError("Summary must be a single non-empty line without line breaks.")
         return validated
 
     @field_validator("description", mode="after")
@@ -132,9 +151,7 @@ class MemberDoc(BaseModel):
     def check_returns(cls, v: Optional[str]) -> Optional[str]:
         validated = validate_docstring_text(v, "Returns")
         if validated and ("\n" in validated or "\r" in validated):
-            raise ValueError(
-                "Return description must be a single line without line breaks."
-            )
+            raise ValueError("Return description must be a single line without line breaks.")
         return validated
 
     @field_validator("parameters", mode="after")
@@ -143,10 +160,9 @@ class MemberDoc(BaseModel):
         if not v:
             return v
         for p_name, p_desc in v.items():
-            validate_docstring_text(p_name, f"Parameter key '{p_name}'")
-            validated_desc = validate_docstring_text(
-                p_desc, f"Parameter description for '{p_name}'"
-            )
+            if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", p_name):
+                raise ValueError(f"Invalid parameter identifier key: '{p_name}'")
+            validated_desc = validate_docstring_text(p_desc, f"Parameter description for '{p_name}'")
             if not validated_desc or "\n" in validated_desc or "\r" in validated_desc:
                 raise ValueError(
                     f"Parameter description for '{p_name}' must be a non-empty single line without line breaks."
@@ -167,31 +183,33 @@ class FileDocumentationResponse(BaseModel):
 class MemberDeclaration:
     name: str
     kind: str  # function, signal, export, const, enum
-    decl_line: int  # 1-based start line of the declaration keyword (func, var, etc.)
-    insert_line: (
-        int  # 1-based line where documentation MUST be placed (above annotations)
-    )
+    decl_line: int
+    insert_line: int
     params: List[str]
     context_snippet: str
     status: DocStatus = DocStatus.MISSING
     existing_doc_lines: List[str] = field(default_factory=list)
-    detached_doc_indices: List[int] = field(default_factory=list)  # 0-based indices
+    detached_doc_indices: List[int] = field(default_factory=list)
 
 
 def extract_parameters_from_ast(func_node: Tree) -> Tuple[List[str], bool]:
-    """Robustly extracts parameter identifiers from all GDScript 4 parameter forms."""
+    """Extracts parameter identifiers in source order across all GDScript 4 forms."""
     params = []
-    # GDToolkit 4.5.0 parameter rule names
-    arg_rules = (
+    param_rules: Set[str] = {
         "func_arg_regular",
         "func_arg_typed",
         "func_arg_default",
         "func_arg_inf",
-    )
-    for rule in arg_rules:
-        for arg_node in func_node.find_data(rule):
+    }
+
+    # Traverse subtrees in document/source order
+    for subtree in func_node.iter_subtrees():
+        if subtree.data == "func_arg_variadic":
+            return [], False
+
+        if subtree.data in param_rules:
             param_name = None
-            for child in arg_node.children:
+            for child in subtree.children:
                 if isinstance(child, Token) and child.type == "NAME":
                     param_name = str(child.value)
                     break
@@ -199,21 +217,18 @@ def extract_parameters_from_ast(func_node: Tree) -> Tuple[List[str], bool]:
                 return [], False
             params.append(param_name)
 
-    # Support variadic functions
-    for _ in func_node.find_data("func_arg_variadic"):
-        # Flag as ambiguous if vararg requires complex tagging
-        return [], False
-
     return params, True
 
 
 def extract_signal_parameters_from_ast(sig_node: Tree) -> List[str]:
+    """Extracts signal parameter identifiers in source order."""
     params = []
-    for arg_node in sig_node.find_data("signal_arg_regular"):
-        for child in arg_node.children:
-            if isinstance(child, Token) and child.type == "NAME":
-                params.append(str(child.value))
-                break
+    for subtree in sig_node.iter_subtrees():
+        if subtree.data == "signal_arg_regular":
+            for child in subtree.children:
+                if isinstance(child, Token) and child.type == "NAME":
+                    params.append(str(child.value))
+                    break
     return params
 
 
@@ -230,17 +245,6 @@ def get_first_token_line(node: Any) -> Optional[int]:
     return None
 
 
-def get_first_annotation_line(node: Tree) -> Optional[int]:
-    """Finds line of the first annotation preceding a declaration."""
-    first_line = None
-    for child in node.children:
-        if isinstance(child, Tree) and child.data == "annotation":
-            line = get_first_token_line(child)
-            if line and (first_line is None or line < first_line):
-                first_line = line
-    return first_line
-
-
 def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], bool]:
     try:
         ast = gdparser.parse(source)
@@ -252,12 +256,10 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
     source_lines = source.splitlines(keepends=True)
 
     # Collect all annotations with their start lines
-    # gdtoolkit represents annotations as Tree nodes with data == "annotation"
     annotations: List[Tuple[int, str]] = []
     for anno_node in ast.find_data("annotation"):
         line = get_first_token_line(anno_node)
         if line:
-            # Extract annotation text, e.g. "@export" or "@rpc"
             anno_text = "".join(
                 str(t.value)
                 for t in anno_node.scan_values(lambda v: isinstance(v, Token))
@@ -266,14 +268,12 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
 
     def find_associated_annotation_line(target_line: int) -> Optional[int]:
         """Finds the earliest consecutive annotation preceding target_line."""
-        # Search backwards from target_line
         curr = target_line - 1
         earliest_line = None
         anno_map = {l: txt for l, txt in annotations}
 
         while curr > 0:
             line_str = source_lines[curr - 1].strip()
-            # If empty line or comment, docstrings/annotations could span, but consecutive annotations are directly adjacent
             if curr in anno_map:
                 earliest_line = curr
                 curr -= 1
@@ -331,10 +331,8 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
         if not decl_line:
             return [], False
 
-        # Look for preceding annotations (e.g. @export, @export_range)
         anno_line = find_associated_annotation_line(decl_line)
 
-        # Verify if any associated annotation is an @export variant
         is_export = False
         if anno_line:
             for l, txt in annotations:
@@ -343,7 +341,6 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
                     break
 
         if not is_export:
-            # Also check child annotations if gdtoolkit nested them
             for child in node.children:
                 if isinstance(child, Tree) and child.data == "annotation":
                     for t in child.scan_values(lambda v: isinstance(v, Token)):
@@ -459,7 +456,7 @@ def classify_member(decl: MemberDeclaration, raw_lines: List[str]) -> None:
         return
 
     doc_lines = []
-    idx = decl.insert_line - 2  # Line immediately preceding annotations/declaration
+    idx = decl.insert_line - 2
 
     while idx >= 0:
         curr = raw_lines[idx]
@@ -471,12 +468,13 @@ def classify_member(decl: MemberDeclaration, raw_lines: List[str]) -> None:
 
     decl.existing_doc_lines = doc_lines
 
-    # Detached Docstring Guard: Check if ## appears between annotations and decl
+    # Detached Docstring Guard: Check strictly between annotation and declaration
+    # 0-based index range: decl.insert_line to decl.decl_line - 2
     if decl.insert_line != decl.decl_line:
-        for mid_idx in range(decl.insert_line - 1, decl.decl_line - 1):
+        for mid_idx in range(decl.insert_line, decl.decl_line - 1):
             if RE_DOC_LINE.match(raw_lines[mid_idx]):
                 decl.detached_doc_indices.append(mid_idx)
-                decl.status = DocStatus.NON_COMPLIANT
+                decl.status = DocStatus.AMBIGUOUS
 
         if decl.detached_doc_indices:
             return
@@ -487,18 +485,11 @@ def classify_member(decl: MemberDeclaration, raw_lines: List[str]) -> None:
 
     combined_docs = "".join(doc_lines)
 
-    # Check banned tags or fences
-    if RE_BANNED_FENCE.search(combined_docs) or RE_DOXYGEN_TAG.search(combined_docs):
+    try:
+        validate_docstring_text(combined_docs, f"Docstring for '{decl.name}'")
+    except ValueError:
         decl.status = DocStatus.NON_COMPLIANT
         return
-
-    # Check unapproved BBCode tags (excluding contents within [code]...[/code])
-    docs_without_code = RE_CODE_BLOCK.sub("", combined_docs)
-    found_tags = RE_BBCODE_TAG.findall(docs_without_code)
-    for tag in found_tags:
-        if tag.lower() not in ALLOWED_BASE_TAGS:
-            decl.status = DocStatus.NON_COMPLIANT
-            return
 
     # Check parameter referencing
     if decl.kind in ("function", "signal"):
@@ -540,10 +531,12 @@ def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> Li
 
 
 def compute_non_doc_bytes_sha256(source: str) -> str:
-    """Computes exact SHA-256 over all bytes excluding recognized '##' lines."""
+    """Computes exact SHA-256 over non-documentation UTF-8 byte stream."""
     raw_lines = source.splitlines(keepends=True)
-    non_doc = "".join([line for line in raw_lines if not RE_DOC_LINE.match(line)])
-    return hashlib.sha256(non_doc.encode("utf-8")).hexdigest()
+    non_doc_bytes = b"".join(
+        line.encode("utf-8") for line in raw_lines if not RE_DOC_LINE.match(line)
+    )
+    return hashlib.sha256(non_doc_bytes).hexdigest()
 
 
 def verify_modification_allowlist(original: str, proposed: str) -> bool:
@@ -583,7 +576,7 @@ def query_gemini_for_docs(
         "1. Supply documentation for EVERY target member in the manifest.\n"
         "2. Return only requested member names. Do not invent members.\n"
         "3. In 'parameters', use ONLY parameter names present in the declaration.\n"
-        "4. BBCode allowed: [param], [code], [constant], [member], [method], [signal], [b], [i].\n"
+        "4. BBCode allowed: [param name], [code], [constant], [member], [method], [signal], [b], [i].\n"
         "5. Strictly NO Markdown code blocks (```) or Doxygen (@param/@return) tags."
     )
 
@@ -652,7 +645,6 @@ def prepare_file_change(
     for decl in declarations:
         classify_member(decl, raw_lines)
 
-    # Report ambiguous declarations
     ambiguous = [d for d in declarations if d.status == DocStatus.AMBIGUOUS]
     for amb in ambiguous:
         print(
@@ -667,9 +659,6 @@ def prepare_file_change(
     if not actionable:
         return None
 
-    print(
-        f"[{'CHECK' if check_mode else 'PROPOSE'}] {file_path.name}: {len(actionable)} target slot(s)."
-    )
     if check_mode:
         return ProposedFileChange(
             file_path, original_source, original_source, len(actionable)
@@ -681,14 +670,14 @@ def prepare_file_change(
 
     generated_docs = query_gemini_for_docs(client, file_path, actionable)
 
-    # Reverse order insertion to maintain line indices
     new_lines = list(raw_lines)
     for decl in sorted(actionable, key=lambda d: d.insert_line, reverse=True):
-        # 1. Clean up any detached comments placed between annotation and declaration
-        for stray_idx in sorted(decl.detached_doc_indices, reverse=True):
-            del new_lines[stray_idx]
+        if decl.detached_doc_indices:
+            print(
+                f"[FAIL-CLOSED] {file_path.name}: Detached docstring detected between annotation and {decl.name}. Aborting."
+            )
+            sys.exit(1)
 
-        # 2. Remove compliant/non-compliant comments directly above insert_line
         if decl.existing_doc_lines:
             start_remove = decl.insert_line - 1 - len(decl.existing_doc_lines)
             del new_lines[start_remove : decl.insert_line - 1]
@@ -704,7 +693,6 @@ def prepare_file_change(
 
     proposed_source = "".join(new_lines)
 
-    # Invariants
     orig_fp = compute_non_doc_bytes_sha256(original_source)
     prop_fp = compute_non_doc_bytes_sha256(proposed_source)
     if orig_fp != prop_fp:
@@ -730,35 +718,26 @@ def atomic_commit_all_changes(changes: List[ProposedFileChange]) -> None:
             tmp_path = change.file_path.with_suffix(".tmp_doc")
             backup_path = change.file_path.with_suffix(".bak_doc")
 
-            # CWE-59: Reject pre-existing symlinks or collision paths
             if tmp_path.is_symlink() or tmp_path.exists():
-                print(
-                    f"[FAIL-CLOSED] Collision or symlink rejected at staging path: {tmp_path}"
-                )
+                print(f"[FAIL-CLOSED] Collision or symlink rejected at staging path: {tmp_path}")
                 sys.exit(1)
             if backup_path.is_symlink() or backup_path.exists():
-                print(
-                    f"[FAIL-CLOSED] Collision or symlink rejected at backup path: {backup_path}"
-                )
+                print(f"[FAIL-CLOSED] Collision or symlink rejected at backup path: {backup_path}")
                 sys.exit(1)
 
-            # Exclusive creation prevents following newly created symlinks
             with open(tmp_path, "x", encoding="utf-8", newline="") as f:
                 f.write(change.proposed_source)
                 f.flush()
                 os.fsync(f.fileno())
 
-            # Copy to backup ensuring it does not follow a pre-existing link
             shutil.copy2(change.file_path, backup_path, follow_symlinks=False)
             backups[change.file_path] = backup_path
             staged_files.append((tmp_path, change.file_path))
 
-        # Perform atomic renames
         for tmp_path, dest_path in staged_files:
             tmp_path.replace(dest_path)
             print(f"[COMMITTED] Successfully updated: {dest_path}")
 
-        # Cleanup backups upon successful commit
         for bak in backups.values():
             if bak.exists():
                 bak.unlink()
@@ -768,7 +747,6 @@ def atomic_commit_all_changes(changes: List[ProposedFileChange]) -> None:
         for dest_path, bak in backups.items():
             if bak.exists():
                 bak.replace(dest_path)
-        # Cleanup temporary files
         for tmp_path, _ in staged_files:
             if tmp_path.exists():
                 tmp_path.unlink()
@@ -782,19 +760,23 @@ def main():
     parser = argparse.ArgumentParser(
         description="GDScript Documentation Auditor & Transactional Injector"
     )
-    parser.add_argument(
-        "--check", action="store_true", help="Dry-run audit without writing changes."
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "--audit",
+        action="store_true",
+        help="Non-mutating full-inventory scan. Always exits 0 if scanner succeeds.",
     )
-    parser.add_argument(
+    group.add_argument(
+        "--check",
+        action="store_true",
+        help="Non-mutating strict compliance check. Exits 0 if fully documented, 1 if gaps exist.",
+    )
+    group.add_argument(
         "--write",
         action="store_true",
         help="Generate and inject missing/non-compliant docstrings.",
     )
     args = parser.parse_args()
-
-    if not (args.check ^ args.write):
-        print("Error: Specify exactly one mode: --check or --write.")
-        sys.exit(1)
 
     client = None
     if args.write:
@@ -809,7 +791,7 @@ def main():
         print("[FAIL-CLOSED] 'scripts/' directory not found.")
         sys.exit(1)
 
-    proposed_changes: List[ProposedFileChange] = []
+    actionable_files: List[Tuple[Path, int]] = []
     total_slots = 0
 
     for subdir_name in ALLOWED_SUBDIRS:
@@ -817,44 +799,55 @@ def main():
         if not target_dir.exists():
             continue
 
+        # Fail-closed directory traversal checks
+        if target_dir.is_symlink() or not target_dir.resolve().is_relative_to(scripts_root):
+            print(f"[FAIL-CLOSED] Approved directory {target_dir} is a symlink or escapes root.")
+            sys.exit(1)
+
         for file_path in sorted(target_dir.rglob("*.gd")):
             resolved = file_path.resolve()
             if not resolved.is_relative_to(scripts_root) or file_path.is_symlink():
-                print(
-                    f"[FAIL-CLOSED] Invalid file path or symlink rejected: {file_path}"
-                )
+                print(f"[FAIL-CLOSED] Invalid file path or symlink rejected: {file_path}")
                 sys.exit(1)
 
-            change = prepare_file_change(client, resolved, check_mode=args.check)
+            change = prepare_file_change(client=None, file_path=resolved, check_mode=True)
             if change:
-                proposed_changes.append(change)
+                actionable_files.append((resolved, change.slots_count))
                 total_slots += change.slots_count
-                break  # Stop searching this folder once 1 file is queued
 
-        if len(proposed_changes) >= MAX_FILES_MODIFIED_PER_RUN:
-            break  # Stop scanning other subdirectories
-
-    total_files = len(proposed_changes)
+    total_files = len(actionable_files)
     print(
-        f"\nPhase 1 Complete: {total_files} file(s) and {total_slots} slot(s) identified."
+        f"\nInventory Complete: {total_files} file(s) and {total_slots} slot(s) identified across production subtrees."
     )
 
-    if args.write:
-        if total_files > MAX_FILES_MODIFIED_PER_RUN:
-            print(
-                f"[FAIL-CLOSED] Modified files ({total_files}) exceeded threshold ({MAX_FILES_MODIFIED_PER_RUN}). Aborting."
-            )
+    if args.audit:
+        print(f"[AUDIT COMPLETE] Scan succeeded. {total_files} file(s) require docstrings.")
+        sys.exit(0)
+
+    if args.check:
+        if total_files > 0:
+            print(f"[CHECK FAILED] Documentation violations exist in {total_files} file(s).")
             sys.exit(1)
+        print("[CHECK PASSED] All production GDScript public members are compliant.")
+        sys.exit(0)
+
+    if args.write:
+        if total_files == 0:
+            print("[INFO] No actionable docstring slots found. Repository is up-to-date.")
+            sys.exit(0)
+
         if total_slots > MAX_DOC_SLOTS_MODIFIED_PER_RUN:
             print(
-                f"[FAIL-CLOSED] Modified slots ({total_slots}) exceeded threshold ({MAX_DOC_SLOTS_MODIFIED_PER_RUN}). Aborting."
+                f"[FAIL-CLOSED] Actionable slots ({total_slots}) exceeded limit ({MAX_DOC_SLOTS_MODIFIED_PER_RUN}). Aborting."
             )
             sys.exit(1)
 
-        atomic_commit_all_changes(proposed_changes)
+        target_file, _ = actionable_files[0]
+        print(f"[WRITE BATCH] Processing 1 file out of {total_files} actionable: {target_file.name}")
 
-    if args.check and total_files > 0:
-        sys.exit(2)
+        change = prepare_file_change(client, target_file, check_mode=False)
+        if change:
+            atomic_commit_all_changes([change])
 
 
 if __name__ == "__main__":
