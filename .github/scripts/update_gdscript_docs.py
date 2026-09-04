@@ -818,7 +818,7 @@ def verify_modification_allowlist(original: str, proposed: str) -> bool:
 
 
 def query_gemini_for_docs(
-        client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
+    client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
 ) -> Dict[str, MemberDoc]:
     import time
 
@@ -840,7 +840,7 @@ def query_gemini_for_docs(
     chunk_size = 1  # Process in safe batches to prevent JSON truncation
 
     for i in range(0, len(targets), chunk_size):
-        chunk_targets = targets[i: i + chunk_size]
+        chunk_targets = targets[i : i + chunk_size]
         manifest = [
             {
                 "name": t.name,
@@ -895,7 +895,9 @@ def query_gemini_for_docs(
         chunk_requested_names = {t.name for t in chunk_targets}
 
         # Filter out any unrequested extra members returned by the model
-        filtered_members = [m for m in validated.members if m.name in chunk_requested_names]
+        filtered_members = [
+            m for m in validated.members if m.name in chunk_requested_names
+        ]
         chunk_returned_names = {m.name for m in filtered_members}
 
         if chunk_requested_names != chunk_returned_names:
@@ -938,9 +940,11 @@ def query_gemini_for_docs(
 
     return doc_map
 
+
 # -----------------------------------------------------------------------------
 # Transaction Management
 # -----------------------------------------------------------------------------
+
 
 @dataclass
 class ProposedFileChange:
