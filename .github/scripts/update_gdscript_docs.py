@@ -488,7 +488,9 @@ def get_top_level_statements(ast: Tree) -> List[Any]:
             if isinstance(child, Tree) and child.data == "class_body":
                 return child.children
         raise ValueError("AST 'start' node contains no class_body.")
-    raise ValueError(f"Unable to locate top-level class body. Root rule is '{ast.data}'.")
+    raise ValueError(
+        f"Unable to locate top-level class body. Root rule is '{ast.data}'."
+    )
 
 
 def resolve_declaration_block(
@@ -525,7 +527,9 @@ def resolve_declaration_block(
         block_top = earliest_anno
         while block_top > 1:
             line_above = source_lines[block_top - 2].strip()
-            if line_above.startswith("#") and not RE_DOC_LINE.match(source_lines[block_top - 2]):
+            if line_above.startswith("#") and not RE_DOC_LINE.match(
+                source_lines[block_top - 2]
+            ):
                 block_top -= 1
             else:
                 break
@@ -586,7 +590,9 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
                 insert_line=insert_line,
                 params=params,
                 context_snippet="".join(
-                    source_lines[insert_line - 1 : min(len(source_lines), decl_line + 15)]
+                    source_lines[
+                        insert_line - 1 : min(len(source_lines), decl_line + 15)
+                    ]
                 ),
                 existing_doc_lines=docs,
                 detached_doc_indices=detached,
@@ -814,7 +820,9 @@ def query_gemini_for_docs(
     # Reject duplicate target names before prompting
     target_names = [t.name for t in targets]
     if len(target_names) != len(set(target_names)):
-        print(f"[FAIL-CLOSED] Duplicate target member names in {file_path.name}: {target_names}")
+        print(
+            f"[FAIL-CLOSED] Duplicate target member names in {file_path.name}: {target_names}"
+        )
         sys.exit(1)
 
     manifest = [
@@ -856,12 +864,16 @@ def query_gemini_for_docs(
 
     # Validate exact count and uniqueness
     if len(validated.members) != len(targets):
-        print(f"[FAIL-CLOSED] Member count mismatch in {file_path.name}: Expected {len(targets)}, got {len(validated.members)}")
+        print(
+            f"[FAIL-CLOSED] Member count mismatch in {file_path.name}: Expected {len(targets)}, got {len(validated.members)}"
+        )
         sys.exit(1)
 
     returned_names_list = [m.name for m in validated.members]
     if len(returned_names_list) != len(set(returned_names_list)):
-        print(f"[FAIL-CLOSED] Duplicate member documentation returned in {file_path.name}: {returned_names_list}")
+        print(
+            f"[FAIL-CLOSED] Duplicate member documentation returned in {file_path.name}: {returned_names_list}"
+        )
         sys.exit(1)
 
     requested_names = set(target_names)
@@ -991,18 +1003,24 @@ def prepare_file_change(
 
     post_by_key = {(d.kind, d.name): d for d in post_declarations}
     if len(post_by_key) != len(post_declarations):
-        print(f"[FAIL-CLOSED] Duplicate declarations detected in post-injection AST for {file_path.name}.")
+        print(
+            f"[FAIL-CLOSED] Duplicate declarations detected in post-injection AST for {file_path.name}."
+        )
         sys.exit(1)
 
     for orig_decl in actionable:
         key = (orig_decl.kind, orig_decl.name)
         post_decl = post_by_key.get(key)
         if not post_decl:
-            print(f"[FAIL-CLOSED] Target declaration {key} missing from post-injection AST in {file_path.name}.")
+            print(
+                f"[FAIL-CLOSED] Target declaration {key} missing from post-injection AST in {file_path.name}."
+            )
             sys.exit(1)
 
         if post_decl.params != orig_decl.params:
-            print(f"[FAIL-CLOSED] Target declaration {orig_decl.name} signature mutated during injection in {file_path.name}!")
+            print(
+                f"[FAIL-CLOSED] Target declaration {orig_decl.name} signature mutated during injection in {file_path.name}!"
+            )
             sys.exit(1)
 
         classify_member(post_decl)
@@ -1185,7 +1203,9 @@ def main():
     )
 
     if args.audit:
-        print(f"\n[AUDIT COMPLETE] GDScript Documentation Contract v{DOCUMENTATION_CONTRACT_VERSION}")
+        print(
+            f"\n[AUDIT COMPLETE] GDScript Documentation Contract v{DOCUMENTATION_CONTRACT_VERSION}"
+        )
         print(f"  Production files scanned: {total_files_scanned}")
         print(f"  Public members audited:   {total_declarations}")
         print(f"  - COMPLIANT:              {status_counts[DocStatus.COMPLIANT]}")
@@ -1211,7 +1231,9 @@ def main():
 
     if args.write:
         if len(actionable_files) == 0:
-            print("[INFO] No actionable docstring slots found. Repository is up-to-date.")
+            print(
+                "[INFO] No actionable docstring slots found. Repository is up-to-date."
+            )
             sys.exit(0)
 
         if total_actionable_slots > MAX_DOC_SLOTS_MODIFIED_PER_RUN:
@@ -1222,7 +1244,9 @@ def main():
             sys.exit(1)
 
         target_file, slots = actionable_files[0]
-        print(f"[WRITE BATCH] Processing 1 file out of {len(actionable_files)} actionable: {target_file.name} ({slots} slot(s))")
+        print(
+            f"[WRITE BATCH] Processing 1 file out of {len(actionable_files)} actionable: {target_file.name} ({slots} slot(s))"
+        )
 
         change = prepare_file_change(client, target_file, check_mode=False)
         if change:
