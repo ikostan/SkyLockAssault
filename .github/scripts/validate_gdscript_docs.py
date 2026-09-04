@@ -641,7 +641,10 @@ def validate_file(file_path: Path) -> List[str]:
 # -----------------------------------------------------------------------------
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description="GDScript Documentation Contract Validator")
+
+    parser = argparse.ArgumentParser(
+        description="GDScript Documentation Contract Validator"
+    )
     parser.add_argument(
         "files",
         nargs="*",
@@ -697,12 +700,16 @@ def main():
                 all_errors.extend(validate_file(resolved))
 
     if all_errors:
-        print(f"\n[FAIL] Documentation contract validation v{DOCUMENTATION_CONTRACT_VERSION} failed with {len(all_errors)} error(s):")
+        print(
+            f"\n[FAIL] Documentation contract validation v{DOCUMENTATION_CONTRACT_VERSION} failed with {len(all_errors)} error(s):"
+        )
         for e in all_errors:
             print(f"  - {e}")
         sys.exit(1)
 
-    print(f"[SUCCESS] All targeted GDScript documentation contracts (v{DOCUMENTATION_CONTRACT_VERSION}) validated successfully.")
+    print(
+        f"[SUCCESS] All targeted GDScript documentation contracts (v{DOCUMENTATION_CONTRACT_VERSION}) validated successfully."
+    )
 
 
 if __name__ == "__main__":
