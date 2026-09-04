@@ -337,7 +337,9 @@ def get_top_level_statements(ast: Tree) -> List[Any]:
             if isinstance(child, Tree) and child.data == "class_body":
                 return child.children
         raise ValueError("AST 'start' node contains no class_body.")
-    raise ValueError(f"Unable to locate top-level class body. Root rule is '{ast.data}'.")
+    raise ValueError(
+        f"Unable to locate top-level class body. Root rule is '{ast.data}'."
+    )
 
 
 def check_doc_presence(lines: List[str], insert_line: int) -> List[str]:
@@ -392,9 +394,13 @@ def validate_file(file_path: Path) -> List[str]:
     for idx, line in enumerate(lines, start=1):
         if RE_DOC_LINE.match(line):
             if RE_BANNED_FENCE.search(line):
-                errors.append(f"{file_path}:{idx} Banned Markdown code fence (```) in docstring.")
+                errors.append(
+                    f"{file_path}:{idx} Banned Markdown code fence (```) in docstring."
+                )
             if RE_DOXYGEN_TAG.search(line):
-                errors.append(f"{file_path}:{idx} Banned Doxygen tag (@param/@return/@brief). Use Native Godot BBCode.")
+                errors.append(
+                    f"{file_path}:{idx} Banned Doxygen tag (@param/@return/@brief). Use Native Godot BBCode."
+                )
 
     # 2. Collect class-level annotations
     annotations: List[Tuple[int, str]] = []
@@ -436,29 +442,41 @@ def validate_file(file_path: Path) -> List[str]:
             anno_line = find_associated_annotation_line(decl_line)
             insert_line = anno_line if anno_line else decl_line
 
-            for detached_err in check_detached_docs(lines, anno_line, decl_line, "function", func_name):
+            for detached_err in check_detached_docs(
+                lines, anno_line, decl_line, "function", func_name
+            ):
                 errors.append(f"{file_path}: {detached_err}")
 
             docs = check_doc_presence(lines, insert_line)
             if not docs:
-                errors.append(f"{file_path}:{decl_line} Public function '{func_name}' is missing docstrings.")
+                errors.append(
+                    f"{file_path}:{decl_line} Public function '{func_name}' is missing docstrings."
+                )
             else:
                 raw_payload = normalize_doc_payload(docs)
-                payload = validate_and_tokenize_bbcode(raw_payload, f"{file_path}:{decl_line} ({func_name})")
+                payload = validate_and_tokenize_bbcode(
+                    raw_payload, f"{file_path}:{decl_line} ({func_name})"
+                )
                 errors.extend(payload.errors)
 
                 sig_params = extract_params(node)
                 doc_params = payload.param_names
                 if len(doc_params) != len(set(doc_params)):
-                    errors.append(f"{file_path}:{decl_line} Function '{func_name}' has duplicate [param] tags.")
+                    errors.append(
+                        f"{file_path}:{decl_line} Function '{func_name}' has duplicate [param] tags."
+                    )
 
                 missing = [p for p in sig_params if p not in doc_params]
                 unexpected = [p for p in doc_params if p not in sig_params]
 
                 for p in missing:
-                    errors.append(f"{file_path}:{decl_line} Function '{func_name}' is missing docstring tag for [param {p}].")
+                    errors.append(
+                        f"{file_path}:{decl_line} Function '{func_name}' is missing docstring tag for [param {p}]."
+                    )
                 for p in unexpected:
-                    errors.append(f"{file_path}:{decl_line} Function '{func_name}' docstring references undeclared [param {p}].")
+                    errors.append(
+                        f"{file_path}:{decl_line} Function '{func_name}' docstring references undeclared [param {p}]."
+                    )
 
         # Exported Properties
         elif node.data == "class_var_stmt":
@@ -474,7 +492,10 @@ def validate_file(file_path: Path) -> List[str]:
             is_export = False
             if anno_line:
                 for l, name in annotations:
-                    if anno_line <= l < decl_line and name in PROPERTY_EXPORT_ANNOTATIONS:
+                    if (
+                        anno_line <= l < decl_line
+                        and name in PROPERTY_EXPORT_ANNOTATIONS
+                    ):
                         is_export = True
                         break
 
@@ -489,15 +510,21 @@ def validate_file(file_path: Path) -> List[str]:
                 continue
 
             insert_line = anno_line if anno_line else decl_line
-            for detached_err in check_detached_docs(lines, anno_line, decl_line, "exported property", var_name):
+            for detached_err in check_detached_docs(
+                lines, anno_line, decl_line, "exported property", var_name
+            ):
                 errors.append(f"{file_path}: {detached_err}")
 
             docs = check_doc_presence(lines, insert_line)
             if not docs:
-                errors.append(f"{file_path}:{decl_line} Exported property '{var_name}' is missing docstrings.")
+                errors.append(
+                    f"{file_path}:{decl_line} Exported property '{var_name}' is missing docstrings."
+                )
             else:
                 raw_payload = normalize_doc_payload(docs)
-                payload = validate_and_tokenize_bbcode(raw_payload, f"{file_path}:{decl_line} (@export {var_name})")
+                payload = validate_and_tokenize_bbcode(
+                    raw_payload, f"{file_path}:{decl_line} (@export {var_name})"
+                )
                 errors.extend(payload.errors)
 
         # Public Signals
@@ -512,29 +539,41 @@ def validate_file(file_path: Path) -> List[str]:
             anno_line = find_associated_annotation_line(decl_line)
             insert_line = anno_line if anno_line else decl_line
 
-            for detached_err in check_detached_docs(lines, anno_line, decl_line, "signal", sig_name):
+            for detached_err in check_detached_docs(
+                lines, anno_line, decl_line, "signal", sig_name
+            ):
                 errors.append(f"{file_path}: {detached_err}")
 
             docs = check_doc_presence(lines, insert_line)
             if not docs:
-                errors.append(f"{file_path}:{decl_line} Public signal '{sig_name}' is missing docstrings.")
+                errors.append(
+                    f"{file_path}:{decl_line} Public signal '{sig_name}' is missing docstrings."
+                )
             else:
                 raw_payload = normalize_doc_payload(docs)
-                payload = validate_and_tokenize_bbcode(raw_payload, f"{file_path}:{decl_line} (signal {sig_name})")
+                payload = validate_and_tokenize_bbcode(
+                    raw_payload, f"{file_path}:{decl_line} (signal {sig_name})"
+                )
                 errors.extend(payload.errors)
 
                 sig_params = extract_signal_params(node)
                 doc_params = payload.param_names
                 if len(doc_params) != len(set(doc_params)):
-                    errors.append(f"{file_path}:{decl_line} Signal '{sig_name}' has duplicate [param] tags.")
+                    errors.append(
+                        f"{file_path}:{decl_line} Signal '{sig_name}' has duplicate [param] tags."
+                    )
 
                 missing = [p for p in sig_params if p not in doc_params]
                 unexpected = [p for p in doc_params if p not in sig_params]
 
                 for p in missing:
-                    errors.append(f"{file_path}:{decl_line} Signal '{sig_name}' is missing docstring tag for [param {p}].")
+                    errors.append(
+                        f"{file_path}:{decl_line} Signal '{sig_name}' is missing docstring tag for [param {p}]."
+                    )
                 for p in unexpected:
-                    errors.append(f"{file_path}:{decl_line} Signal '{sig_name}' references undeclared [param {p}].")
+                    errors.append(
+                        f"{file_path}:{decl_line} Signal '{sig_name}' references undeclared [param {p}]."
+                    )
 
         # Public Constants
         elif node.data == "const_stmt":
@@ -548,15 +587,21 @@ def validate_file(file_path: Path) -> List[str]:
             anno_line = find_associated_annotation_line(decl_line)
             insert_line = anno_line if anno_line else decl_line
 
-            for detached_err in check_detached_docs(lines, anno_line, decl_line, "constant", const_name):
+            for detached_err in check_detached_docs(
+                lines, anno_line, decl_line, "constant", const_name
+            ):
                 errors.append(f"{file_path}: {detached_err}")
 
             docs = check_doc_presence(lines, insert_line)
             if not docs:
-                errors.append(f"{file_path}:{decl_line} Public constant '{const_name}' is missing docstrings.")
+                errors.append(
+                    f"{file_path}:{decl_line} Public constant '{const_name}' is missing docstrings."
+                )
             else:
                 raw_payload = normalize_doc_payload(docs)
-                payload = validate_and_tokenize_bbcode(raw_payload, f"{file_path}:{decl_line} (const {const_name})")
+                payload = validate_and_tokenize_bbcode(
+                    raw_payload, f"{file_path}:{decl_line} (const {const_name})"
+                )
                 errors.extend(payload.errors)
 
         # Public Enums
@@ -571,15 +616,21 @@ def validate_file(file_path: Path) -> List[str]:
             anno_line = find_associated_annotation_line(decl_line)
             insert_line = anno_line if anno_line else decl_line
 
-            for detached_err in check_detached_docs(lines, anno_line, decl_line, "enum", enum_name):
+            for detached_err in check_detached_docs(
+                lines, anno_line, decl_line, "enum", enum_name
+            ):
                 errors.append(f"{file_path}: {detached_err}")
 
             docs = check_doc_presence(lines, insert_line)
             if not docs:
-                errors.append(f"{file_path}:{decl_line} Public enum '{enum_name}' is missing docstrings.")
+                errors.append(
+                    f"{file_path}:{decl_line} Public enum '{enum_name}' is missing docstrings."
+                )
             else:
                 raw_payload = normalize_doc_payload(docs)
-                payload = validate_and_tokenize_bbcode(raw_payload, f"{file_path}:{decl_line} (enum {enum_name})")
+                payload = validate_and_tokenize_bbcode(
+                    raw_payload, f"{file_path}:{decl_line} (enum {enum_name})"
+                )
                 errors.extend(payload.errors)
 
     return errors
@@ -627,12 +678,16 @@ def main():
             all_errors.extend(validate_file(resolved))
 
     if all_errors:
-        print(f"\n[FAIL] Documentation contract validation v{DOCUMENTATION_CONTRACT_VERSION} failed with {len(all_errors)} error(s):")
+        print(
+            f"\n[FAIL] Documentation contract validation v{DOCUMENTATION_CONTRACT_VERSION} failed with {len(all_errors)} error(s):"
+        )
         for e in all_errors:
             print(f"  - {e}")
         sys.exit(1)
 
-    print(f"[SUCCESS] All production GDScript documentation contracts (v{DOCUMENTATION_CONTRACT_VERSION}) validated successfully.")
+    print(
+        f"[SUCCESS] All production GDScript documentation contracts (v{DOCUMENTATION_CONTRACT_VERSION}) validated successfully."
+    )
 
 
 if __name__ == "__main__":
