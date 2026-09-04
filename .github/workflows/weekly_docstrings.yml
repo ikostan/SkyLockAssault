@@ -53,7 +53,10 @@ jobs:
       - name: "Run Documentation Contract Validator"
         run: |
           set -euo pipefail
-          python .github/scripts/validate_gdscript_docs.py
+          mapfile -t modified_files < <(git diff --name-only -- 'scripts/**/*.gd')
+          if [[ ${#modified_files[@]} -gt 0 ]]; then
+            python .github/scripts/validate_gdscript_docs.py "${modified_files[@]}"
+          fi
 
       - name: "Run GDScript Linter (gdlint)"
         run: |

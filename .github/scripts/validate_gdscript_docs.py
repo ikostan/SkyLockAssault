@@ -640,6 +640,15 @@ def validate_file(file_path: Path) -> List[str]:
 # Main Execution
 # -----------------------------------------------------------------------------
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="GDScript Documentation Contract Validator")
+    parser.add_argument(
+        "files",
+        nargs="*",
+        help="Optional specific files to validate. If omitted, scans all approved subtrees.",
+    )
+    args = parser.parse_args()
+
     raw_scripts_root = Path("scripts")
     if raw_scripts_root.is_symlink():
         print("[ERROR] 'scripts/' must not be a symlink.")
@@ -651,43 +660,49 @@ def main():
         sys.exit(1)
 
     all_errors: List[str] = []
-    for subdir in ALLOWED_SUBDIRS:
-        raw_target = scripts_root / subdir
-        if not raw_target.exists():
-            continue
 
-        if raw_target.is_symlink():
-            all_errors.append(f"Symlink directory rejected: {raw_target}")
-            continue
-
-        target = raw_target.resolve()
-        if not target.is_relative_to(scripts_root):
-            all_errors.append(f"Directory escaping root rejected: {raw_target}")
-            continue
-
-        for fpath in sorted(target.rglob("*.gd")):
+    # If specific files are passed (e.g. from git diff), validate only those
+    if args.files:
+        for file_str in args.files:
+            fpath = Path(file_str)
             if fpath.is_symlink():
                 all_errors.append(f"Symlink file rejected: {fpath}")
                 continue
-
             resolved = fpath.resolve()
             if not resolved.is_relative_to(scripts_root):
                 all_errors.append(f"Path escaping root rejected: {fpath}")
                 continue
-
             all_errors.extend(validate_file(resolved))
+    else:
+        # Full-tree scan
+        for subdir in ALLOWED_SUBDIRS:
+            raw_target = scripts_root / subdir
+            if not raw_target.exists():
+                continue
+            if raw_target.is_symlink():
+                all_errors.append(f"Symlink directory rejected: {raw_target}")
+                continue
+            target = raw_target.resolve()
+            if not target.is_relative_to(scripts_root):
+                all_errors.append(f"Directory escaping root rejected: {raw_target}")
+                continue
+            for fpath in sorted(target.rglob("*.gd")):
+                if fpath.is_symlink():
+                    all_errors.append(f"Symlink file rejected: {fpath}")
+                    continue
+                resolved = fpath.resolve()
+                if not resolved.is_relative_to(scripts_root):
+                    all_errors.append(f"Path escaping root rejected: {fpath}")
+                    continue
+                all_errors.extend(validate_file(resolved))
 
     if all_errors:
-        print(
-            f"\n[FAIL] Documentation contract validation v{DOCUMENTATION_CONTRACT_VERSION} failed with {len(all_errors)} error(s):"
-        )
+        print(f"\n[FAIL] Documentation contract validation v{DOCUMENTATION_CONTRACT_VERSION} failed with {len(all_errors)} error(s):")
         for e in all_errors:
             print(f"  - {e}")
         sys.exit(1)
 
-    print(
-        f"[SUCCESS] All production GDScript documentation contracts (v{DOCUMENTATION_CONTRACT_VERSION}) validated successfully."
-    )
+    print(f"[SUCCESS] All targeted GDScript documentation contracts (v{DOCUMENTATION_CONTRACT_VERSION}) validated successfully.")
 
 
 if __name__ == "__main__":
