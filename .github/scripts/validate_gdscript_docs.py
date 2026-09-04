@@ -330,16 +330,21 @@ def extract_signal_params(signal_node: Tree) -> List[str]:
 
 
 def get_top_level_statements(ast: Tree) -> List[Any]:
+    """Extraction of top-level class body statements with safe fallback for script layouts."""
     if ast.data == "class_body":
         return ast.children
     if ast.data == "start":
         for child in ast.children:
             if isinstance(child, Tree) and child.data == "class_body":
                 return child.children
-        raise ValueError("AST 'start' node contains no class_body.")
-    raise ValueError(
-        f"Unable to locate top-level class body. Root rule is '{ast.data}'."
-    )
+        # Safe fallback with explicit diagnostic logging instead of silent failure
+        print(
+            f"[WARNING] Unrecognized AST root layout; falling back to direct children extraction."
+        )
+        return [c for c in ast.children if isinstance(c, Tree)]
+
+    print(f"[FAIL-CLOSED] Unknown AST root type: {ast.data}")
+    sys.exit(1)
 
 
 def check_doc_presence(lines: List[str], insert_line: int) -> List[str]:

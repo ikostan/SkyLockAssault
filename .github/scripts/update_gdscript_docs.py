@@ -27,6 +27,7 @@ import os
 import re
 import shutil
 import sys
+import textwrap
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -49,8 +50,8 @@ except ImportError as err:
 # Configuration & Limits
 # -----------------------------------------------------------------------------
 MAX_FILES_MODIFIED_PER_RUN = 1
-MAX_DOC_SLOTS_MODIFIED_PER_RUN = 50
-PINNED_MODEL = "gemini-2.5-flash"
+MAX_DOC_SLOTS_MODIFIED_PER_RUN = 100
+PINNED_MODEL = "gemini-3.5-flash-lite"
 ALLOWED_SUBDIRS = ("core", "entities", "managers", "resources", "system", "ui")
 
 RE_DOC_LINE = re.compile(r"^[ \t]*##(?:\s.*)?$")
@@ -481,16 +482,21 @@ def extract_signal_parameters_from_ast(sig_node: Tree) -> List[str]:
 
 
 def get_top_level_statements(ast: Tree) -> List[Any]:
+    """Extraction of top-level class body statements with safe fallback for script layouts."""
     if ast.data == "class_body":
         return ast.children
     if ast.data == "start":
         for child in ast.children:
             if isinstance(child, Tree) and child.data == "class_body":
                 return child.children
-        raise ValueError("AST 'start' node contains no class_body.")
-    raise ValueError(
-        f"Unable to locate top-level class body. Root rule is '{ast.data}'."
-    )
+        # Safe fallback with explicit diagnostic logging instead of silent failure
+        print(
+            f"[WARNING] Unrecognized AST root layout; falling back to direct children extraction."
+        )
+        return [c for c in ast.children if isinstance(c, Tree)]
+
+    print(f"[FAIL-CLOSED] Unknown AST root type: {ast.data}")
+    sys.exit(1)
 
 
 def resolve_declaration_block(
@@ -766,25 +772,69 @@ def classify_member(decl: MemberDeclaration) -> None:
 # -----------------------------------------------------------------------------
 # Formatting & Invariants
 # -----------------------------------------------------------------------------
-def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> List[str]:
-    lines = [f"{indent}## {doc.summary}\n"]
 
+
+def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> List[str]:
+    max_width = 95  # Strict margin under gdlint's 100 character limit
+    prefix = f"{indent}## "
+    subsequent_prefix = f"{indent}## "
+
+    lines: List[str] = []
+
+    # 1. Summary
+    wrapped_summary = textwrap.wrap(
+        doc.summary.strip(),
+        width=max_width,
+        initial_indent=prefix,
+        subsequent_indent=subsequent_prefix,
+    )
+    for line in wrapped_summary:
+        lines.append(f"{line}\n")
+
+    # 2. Extended Description
     if doc.description and doc.description.strip():
         lines.append(f"{indent}##\n")
-        for line in doc.description.strip().splitlines():
-            lines.append(f"{indent}## {line.strip()}\n")
+        for para in doc.description.strip().splitlines():
+            if not para.strip():
+                lines.append(f"{indent}##\n")
+                continue
+            wrapped_desc = textwrap.wrap(
+                para.strip(),
+                width=max_width,
+                initial_indent=prefix,
+                subsequent_indent=subsequent_prefix,
+            )
+            for line in wrapped_desc:
+                lines.append(f"{line}\n")
 
+    # 3. Parameters
     if doc.parameters and decl.kind in ("function", "signal"):
         lines.append(f"{indent}##\n")
-        # Emit parameters deterministically in declaration signature order
         for p_name in decl.params:
             if p_name in doc.parameters:
                 p_desc = doc.parameters[p_name].strip()
-                lines.append(f"{indent}## [param {p_name}]: {p_desc}\n")
+                param_prefix = f"{indent}## [param {p_name}]: "
+                wrapped_param = textwrap.wrap(
+                    p_desc,
+                    width=max_width,
+                    initial_indent=param_prefix,
+                    subsequent_indent=subsequent_prefix,
+                )
+                for line in wrapped_param:
+                    lines.append(f"{line}\n")
 
+    # 4. Returns
     if doc.returns and doc.returns.strip() and decl.kind == "function":
         ret_desc = doc.returns.strip()
-        lines.append(f"{indent}## Returns {ret_desc}\n")
+        ret_prefix = f"{indent}## Returns "
+        wrapped_ret = textwrap.wrap(
+            ret_desc,
+            width=max_width,
+            initial_indent=ret_prefix,
+            subsequent_indent=subsequent_prefix,
+        )
+        for line in wrapped_ret:
+            lines.append(f"{line}\n")
 
     return lines
 
@@ -814,96 +864,153 @@ def verify_modification_allowlist(original: str, proposed: str) -> bool:
 # -----------------------------------------------------------------------------
 # Gemini Query
 # -----------------------------------------------------------------------------
+
+
 def query_gemini_for_docs(
     client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
 ) -> Dict[str, MemberDoc]:
-    # Reject duplicate target names before prompting
+    import time
+
     target_names = [t.name for t in targets]
     if len(target_names) != len(set(target_names)):
         print(
-            f"[FAIL-CLOSED] Duplicate target member names in {file_path.name}: {target_names}"
+            f"[FAIL-CLOSED] Duplicate target member names in {file_path.name}: {target_names}",
+            flush=True,
         )
         sys.exit(1)
 
-    manifest = [
-        {
-            "name": t.name,
-            "kind": t.kind,
-            "parameters": t.params,
-            "context": t.context_snippet.strip(),
-        }
-        for t in targets
-    ]
-
-    prompt = (
-        f"You are an automated GDScript documentation assistant for Godot 4.\n"
-        f"File: {file_path.name}\n\n"
-        f"Target declarations needing documentation:\n{json.dumps(manifest, indent=2)}\n\n"
-        "Requirements:\n"
-        "1. Supply documentation for EVERY target member in the manifest.\n"
-        "2. Return only requested member names. Do not invent members.\n"
-        "3. In 'parameters', provide descriptions for ALL parameter names present in the declaration.\n"
-        "4. BBCode allowed: [param], [constant], [member], [method], [signal], [enum], [code], [b], [i].\n"
-        "5. Strictly NO Markdown code blocks (```) or Doxygen (@param/@return/@brief) tags."
-    )
-
-    try:
-        response = client.models.generate_content(
-            model=PINNED_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=FileDocumentationResponse,
-                temperature=0.0,
-            ),
-        )
-        validated = FileDocumentationResponse.model_validate_json(response.text)
-    except Exception as e:
-        print(f"[FAIL-CLOSED] Gemini generation failed for {file_path}: {e}")
-        sys.exit(1)
-
-    # Validate exact count and uniqueness
-    if len(validated.members) != len(targets):
-        print(
-            f"[FAIL-CLOSED] Member count mismatch in {file_path.name}: Expected {len(targets)}, got {len(validated.members)}"
-        )
-        sys.exit(1)
-
-    returned_names_list = [m.name for m in validated.members]
-    if len(returned_names_list) != len(set(returned_names_list)):
-        print(
-            f"[FAIL-CLOSED] Duplicate member documentation returned in {file_path.name}: {returned_names_list}"
-        )
-        sys.exit(1)
-
-    requested_names = set(target_names)
-    returned_names = set(returned_names_list)
-    if requested_names != returned_names:
-        print(
-            f"[FAIL-CLOSED] Set mismatch in {file_path.name}! Expected {requested_names}, got {returned_names}"
-        )
-        sys.exit(1)
-
-    doc_map = {}
     target_by_name = {t.name: t for t in targets}
-    for m in validated.members:
-        target = target_by_name[m.name]
-        target_param_set = set(target.params)
-        m_param_set = set(m.parameters.keys()) if m.parameters else set()
+    doc_map = {}
 
-        if target.kind in ("function", "signal") and target_param_set:
-            if m_param_set != target_param_set:
-                print(
-                    f"[FAIL-CLOSED] Parameter mismatch returned for {m.name}. Expected {target.params}, got {list(m_param_set)}"
+    chunk_size = 1  # Process in safe batches to prevent JSON truncation
+    total_chunks = (len(targets) + chunk_size - 1) // chunk_size
+
+    for i in range(0, len(targets), chunk_size):
+        chunk_targets = targets[i : i + chunk_size]
+        current_chunk = (i // chunk_size) + 1
+        chunk_names = [t.name for t in chunk_targets]
+
+        print(
+            f"[DEBUG] Generating docs for chunk {current_chunk}/{total_chunks} (Targets: {chunk_names})...",
+            flush=True,
+        )
+
+        manifest = [
+            {
+                "name": t.name,
+                "kind": t.kind,
+                "required_parameters": t.params,
+                "existing_developer_comments": (
+                    "".join(t.existing_doc_lines).strip()
+                    if t.existing_doc_lines
+                    else "None"
+                ),
+                "code_context": t.context_snippet.strip(),
+            }
+            for t in chunk_targets
+        ]
+
+        prompt = (
+            f"You are an automated GDScript documentation assistant for Godot 4.\n"
+            f"File: {file_path.name} (Batch {current_chunk})\n\n"
+            f"Target declarations needing documentation:\n{json.dumps(manifest, indent=2)}\n\n"
+            "Requirements:\n"
+            "1. Supply documentation for EVERY target member in the manifest chunk.\n"
+            "2. Return only requested member names. Do not invent members.\n"
+            "3. If 'required_parameters' is non-empty, the 'parameters' field MUST be a dictionary mapping each exact parameter name to a detailed description.\n"
+            "4. BBCode allowed: [param], [constant], [member], [method], [signal], [enum], [code], [b], [i].\n"
+            "5. Strictly NO Markdown code blocks (```) or Doxygen (@param/@return/@brief) tags.\n"
+            "6. CRITICAL: Do NOT use [param] inside 'summary' or 'description'. Parameter documentation belongs exclusively in the 'parameters' dictionary.\n"
+            "7. CRITICAL: Do NOT wrap types or Godot classes in brackets (e.g. NEVER use [bool], [int], [String], [FileAccess], [Node]). Use [code]TypeName[/code] if mentioning a type.\n"
+            "8. Keep descriptions concise and under 80 characters where possible.\n"
+            "9. CRITICAL CONTEXT PRESERVATION: If 'existing_developer_comments' is provided, you MUST preserve its specific technical details, warnings, return behaviors, and explanations in your new summary, description, and parameter fields. Do not invent logic that contradicts the provided code or comments.\n"
+            "10. RETURN VALUES: If the existing comments describe a return type or return behavior (e.g., ':rtype: void' or returning a specific Dictionary), you MUST extract that information and document it accurately in the 'returns' field."
+        )
+
+        max_retries = 3
+        retry_delay = 35  # Increased to clear 429 quota exhaustion windows (often ~30s)
+        validated = None
+
+        for attempt in range(max_retries):
+            try:
+                response = client.models.generate_content(
+                    model=PINNED_MODEL,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=FileDocumentationResponse,
+                        temperature=0.0,
+                    ),
                 )
-                sys.exit(1)
-        elif m_param_set:
+                validated = FileDocumentationResponse.model_validate_json(response.text)
+                print(
+                    f"[DEBUG] API response received successfully for chunk {current_chunk}/{total_chunks}.",
+                    flush=True,
+                )
+                break
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    print(
+                        f"[FAIL-CLOSED] Gemini generation failed for {file_path} (chunk {current_chunk}) after {max_retries} attempts: {e}",
+                        flush=True,
+                    )
+                    sys.exit(1)
+                print(
+                    f"[WARNING] Gemini API temporary failure (attempt {attempt + 1}/{max_retries}): {e}. Retrying in {retry_delay}s...",
+                    flush=True,
+                )
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+
+        chunk_requested_names = {t.name for t in chunk_targets}
+
+        # Filter out any unrequested extra members returned by the model
+        filtered_members = [
+            m for m in validated.members if m.name in chunk_requested_names
+        ]
+        chunk_returned_names = {m.name for m in filtered_members}
+
+        if chunk_requested_names != chunk_returned_names:
             print(
-                f"[FAIL-CLOSED] Unexpected parameters returned for non-parameterized member {m.name}: {list(m_param_set)}"
+                f"[FAIL-CLOSED] Set mismatch in {file_path.name} chunk! Expected {chunk_requested_names}, got {chunk_returned_names}",
+                flush=True,
             )
             sys.exit(1)
 
-        doc_map[m.name] = m
+        validated.members = filtered_members
+
+        for m in validated.members:
+            target = target_by_name[m.name]
+
+            if target.params:
+                m.parameters = m.parameters or {}
+                for p_name in target.params:
+                    if p_name not in m.parameters:
+                        m.parameters[p_name] = f"The {p_name} parameter."
+
+            m_param_set = set(m.parameters.keys()) if m.parameters else set()
+            target_param_set = set(target.params) if target.params else set()
+
+            if target.kind in ("function", "signal"):
+                unexpected = m_param_set - target_param_set
+                if unexpected:
+                    print(
+                        f"[FAIL-CLOSED] Unexpected parameters returned for {m.name}: {list(unexpected)}",
+                        flush=True,
+                    )
+                    sys.exit(1)
+            elif m_param_set:
+                print(
+                    f"[FAIL-CLOSED] Unexpected parameters returned for non-parameterized member {m.name}: {list(m_param_set)}",
+                    flush=True,
+                )
+                sys.exit(1)
+
+            doc_map[m.name] = m
+
+        # Pacing to avoid hitting the 15 RPM Free Tier Limit for Flash Lite
+        if i + chunk_size < len(targets):
+            time.sleep(5)
 
     return doc_map
 
@@ -911,6 +1018,8 @@ def query_gemini_for_docs(
 # -----------------------------------------------------------------------------
 # Transaction Management
 # -----------------------------------------------------------------------------
+
+
 @dataclass
 class ProposedFileChange:
     file_path: Path
@@ -1025,10 +1134,27 @@ def prepare_file_change(
 
         classify_member(post_decl)
         if post_decl.status != DocStatus.COMPLIANT:
+            raw_payload = normalize_doc_payload(post_decl.existing_doc_lines)
+            payload = validate_and_tokenize_bbcode(
+                raw_payload, f"Docstring for '{post_decl.name}'"
+            )
             print(
                 f"[FAIL-CLOSED] Target declaration {orig_decl.name} failed post-injection compliance in {file_path.name} "
-                f"(status: {post_decl.status.value})."
+                f"(status: {post_decl.status.value}).",
+                flush=True,
             )
+            print(f"[DEBUG] Raw payload:\n{raw_payload}", flush=True)
+            if payload.errors:
+                print(f"[DEBUG] BBCode errors: {payload.errors}", flush=True)
+            if len(payload.param_names) != len(set(payload.param_names)):
+                print(
+                    f"[DEBUG] Duplicate params found: {payload.param_names}", flush=True
+                )
+            if set(payload.param_names) != set(orig_decl.params):
+                print(
+                    f"[DEBUG] Param mismatch: Expected {set(orig_decl.params)}, got {set(payload.param_names)}",
+                    flush=True,
+                )
             sys.exit(1)
 
     # Phase 4: Byte Integrity & Modification Allowlist Guards

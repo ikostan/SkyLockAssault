@@ -36,7 +36,7 @@ Introduce a deterministic GDScript documentation auditor (.github/scripts/update
 - Reject symlinks and paths outside approved production script directories
 - Handle `[code]` blocks and case-insensitive `[param]` matching
 
-#### 3. Scheduled CI (`.github/workflows/weekly_docstrings.yml`)
+#### 3. Scheduled CI (`.github/workflows/bi_weekly_gd_docstrings.yml`)
 
 - Weekly schedule **and** manual `workflow_dispatch`
 - Pinned checkout, Python setup, Godot, and PR-creation actions (immutable SHAs)
@@ -47,6 +47,14 @@ Introduce a deterministic GDScript documentation auditor (.github/scripts/update
 #### 4. Documentation
 
 - Milestone doc: `files/docs/milestones/23/Part_6_Automate_GDScript_documentation_auditing_&_weekly_sync.md`
+
+#### 5. Milestone 23 Pipeline Resiliency & Quota Updates
+
+* **Pinned Gemini Model & Quota Management**: Updated the pipeline model to `gemini-3.5-flash-lite`, leveraging a higher Free Tier quota (500 RPD / 15 RPM) with robust exponential backoff retry logic and 5-second pacing delays.
+* **Chunked Processing Strategy**: Configured single-slot chunking (`chunk_size = 1`) to completely eliminate JSON truncation and prevent member omission during large file processing (e.g., `globals.gd`).
+* **Twice-A-Weekly Schedule**: Updated the cron schedule in `.github/workflows/weekly_docstrings.yml` to run bi-weekly on **Sundays and Wednesdays at 00:00 UTC** (`0 0 * * 0,3`).
+* **Linter & Formatting Alignment**: Replaced unstable headless Godot script syntax checks with `gdformat --diff --check ./scripts` and `gdlint`, aligning the workflow with the repository's dedicated linting standard.
+* **Automatic Line Wrapping & Context Preservation**: Integrated Python's `textwrap` module to automatically wrap injected documentation comments at 95 characters for strict compliance with `gdlint`'s 100-character line-length limit. Updated the LLM prompt to ingest `existing_developer_comments` and mandate `returns` field mapping to preserve technical context and prevent docstring regressions.
 
 ### Benefits
 
@@ -71,7 +79,7 @@ This PR introduces a fail-closed AST-based GDScript documentation auditor and va
 |-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
 | Add an AST-based auditor that discovers public GDScript members, classifies documentation coverage, generates missing or non-compliant docstrings, and applies guarded transactional updates. | <ul><li>Parse functions, signals, exports, constants, and enums with gdtoolkit.</li><li>Classify documentation as compliant, missing, non-compliant, or ambiguous, including annotation-placement checks.</li><li>Generate structured documentation through the pinned Gemini model with Pydantic validation and parameter-name checks.</li><li>Restrict edits to documentation lines, verify non-documentation SHA-256 integrity, enforce modification limits, and commit changes with staged atomic renames and rollback.</li></ul> | `.github/scripts/update_gdscript_docs.py`                                                   |
 | Add a strict AST-driven documentation contract validator for production GDScript files.                                                                                                       | <ul><li>Require native `##` documentation for all supported public member types.</li><li>Validate parameter references, annotation placement, banned Markdown/Doxygen constructs, and the BBCode allowlist.</li><li>Reject symlinks and paths outside the configured production script subdirectories.</li></ul>                                                                                                                                                                                                                      | `.github/scripts/validate_gdscript_docs.py`                                                 |
-| Automate weekly and on-demand documentation synchronization through a pinned GitHub Actions pipeline.                                                                                         | <ul><li>Install pinned Python dependencies and run audit, generation, validation, gdlint, and Godot headless parsing checks.</li><li>Use a pinned checkout, setup, Godot, and pull-request action configuration.</li><li>Create or update a dedicated documentation synchronization branch and pull request based on generated changes.</li></ul>                                                                                                                                                                                     | `.github/workflows/weekly_docstrings.yml`                                                   |
+| Automate weekly and on-demand documentation synchronization through a pinned GitHub Actions pipeline.                                                                                         | <ul><li>Install pinned Python dependencies and run audit, generation, validation, gdlint, and Godot headless parsing checks.</li><li>Use a pinned checkout, setup, Godot, and pull-request action configuration.</li><li>Create or update a dedicated documentation synchronization branch and pull request based on generated changes.</li></ul>                                                                                                                                                                                     | `../../../../.github/workflows/bi_weekly_gd_docstrings.yml`                                 |
 | Document the new automated GDScript documentation auditing and synchronization process.                                                                                                       | <ul><li>Describe the auditor, validator, integrity safeguards, model generation, scheduled workflow, and verification stages.</li></ul>                                                                                                                                                                                                                                                                                                                                                                                               | `files/docs/milestones/23/Part_6_Automate_GDScript_documentation_auditing_&_weekly_sync.md` |
 
 ### Assessment against linked issues
@@ -93,7 +101,7 @@ This PR introduces a fail-closed AST-based GDScript documentation auditor and va
 ### AI / Bot Contributors
 
 - **@sourcery-ai**  
-  Generated the PR summary and Reviewer’s Guide. Performed code review (including transactional-commit / atomicity feedback). Co-authored workflow and auditor updates (e.g. `weekly_docstrings.yml`, `update_gdscript_docs.py`).
+  Generated the PR summary and Reviewer’s Guide. Performed code review (including transactional-commit / atomicity feedback). Co-authored workflow and auditor updates (e.g. `bi_weekly_gd_docstrings.yml`, `update_gdscript_docs.py`).
 
 - **@coderabbitai**  
   Generated the PR summary, walkthrough, and poem. Reviewed the documentation auditing pipeline and pre-merge checks (including docstring-coverage feedback on the new Python tooling).
@@ -115,7 +123,7 @@ This PR introduces a fail-closed AST-based GDScript documentation auditor and va
 ### Human Contributor
 
 - **@ikostan**  
-  Primary author of the PR. Implemented the deterministic GDScript documentation auditor (`update_gdscript_docs.py`), strict contract validator (`validate_gdscript_docs.py`), and weekly/on-demand GitHub Actions workflow (`weekly_docstrings.yml`); added integrity safeguards (non-doc SHA-256, modification allowlists, transactional writes, BBCode allowlist, fail-closed validation); pinned Actions/tooling; expanded coverage for signals/constants/enums and annotation placement; and documented the system under Milestone 23 (`Part_6_Automate_GDScript_documentation_auditing_&_weekly_sync.md`).
+  Primary author of the PR. Implemented the deterministic GDScript documentation auditor (`update_gdscript_docs.py`), strict contract validator (`validate_gdscript_docs.py`), and weekly/on-demand GitHub Actions workflow (`bi_weekly_gd_docstrings.yml`); added integrity safeguards (non-doc SHA-256, modification allowlists, transactional writes, BBCode allowlist, fail-closed validation); pinned Actions/tooling; expanded coverage for signals/constants/enums and annotation placement; and documented the system under Milestone 23 (`Part_6_Automate_GDScript_documentation_auditing_&_weekly_sync.md`).
 
 ---
 <!-- markdownlint-enable MD001 MD036 MD013 MD033 table-column-style -->
