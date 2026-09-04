@@ -338,7 +338,9 @@ def get_top_level_statements(ast: Tree) -> List[Any]:
             if isinstance(child, Tree) and child.data == "class_body":
                 return child.children
         # Safe fallback with explicit diagnostic logging instead of silent failure
-        print(f"[WARNING] Unrecognized AST root layout; falling back to direct children extraction.")
+        print(
+            f"[WARNING] Unrecognized AST root layout; falling back to direct children extraction."
+        )
         return [c for c in ast.children if isinstance(c, Tree)]
 
     print(f"[FAIL-CLOSED] Unknown AST root type: {ast.data}")
