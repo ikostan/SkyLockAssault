@@ -50,7 +50,7 @@ except ImportError as err:
 # -----------------------------------------------------------------------------
 MAX_FILES_MODIFIED_PER_RUN = 1
 MAX_DOC_SLOTS_MODIFIED_PER_RUN = 100
-PINNED_MODEL = "gemini-2.5-flash"
+PINNED_MODEL = "gemini-3.6-flash"
 ALLOWED_SUBDIRS = ("core", "entities", "managers", "resources", "system", "ui")
 
 RE_DOC_LINE = re.compile(r"^[ \t]*##(?:\s.*)?$")
