@@ -865,7 +865,8 @@ def query_gemini_for_docs(
             "3. If 'required_parameters' is non-empty, the 'parameters' field MUST be a dictionary mapping each exact parameter name to its description string.\n"
             "4. BBCode allowed: [param], [constant], [member], [method], [signal], [enum], [code], [b], [i].\n"
             "5. Strictly NO Markdown code blocks (```) or Doxygen (@param/@return/@brief) tags.\n"
-            "6. CRITICAL: Do NOT wrap arbitrary words, types, or Godot classes in brackets (e.g., NEVER use [VideoStreamPlayer] or [Node]). Only use the exact allowed tags from rule 4."
+            "6. CRITICAL: Do NOT use [param] inside 'summary' or 'description'. Parameter documentation belongs exclusively in the 'parameters' dictionary.\n"
+            "7. CRITICAL: Do NOT wrap types or Godot classes in brackets (e.g. NEVER use [bool], [int], [String], [FileAccess], [Node]). Use [code]TypeName[/code] if mentioning a type."
         )
 
         max_retries = 3
@@ -1075,10 +1076,27 @@ def prepare_file_change(
 
         classify_member(post_decl)
         if post_decl.status != DocStatus.COMPLIANT:
+            raw_payload = normalize_doc_payload(post_decl.existing_doc_lines)
+            payload = validate_and_tokenize_bbcode(
+                raw_payload, f"Docstring for '{post_decl.name}'"
+            )
             print(
                 f"[FAIL-CLOSED] Target declaration {orig_decl.name} failed post-injection compliance in {file_path.name} "
-                f"(status: {post_decl.status.value})."
+                f"(status: {post_decl.status.value}).",
+                flush=True,
             )
+            print(f"[DEBUG] Raw payload:\n{raw_payload}", flush=True)
+            if payload.errors:
+                print(f"[DEBUG] BBCode errors: {payload.errors}", flush=True)
+            if len(payload.param_names) != len(set(payload.param_names)):
+                print(
+                    f"[DEBUG] Duplicate params found: {payload.param_names}", flush=True
+                )
+            if set(payload.param_names) != set(orig_decl.params):
+                print(
+                    f"[DEBUG] Param mismatch: Expected {set(orig_decl.params)}, got {set(payload.param_names)}",
+                    flush=True,
+                )
             sys.exit(1)
 
     # Phase 4: Byte Integrity & Modification Allowlist Guards
