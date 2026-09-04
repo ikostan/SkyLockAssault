@@ -817,7 +817,7 @@ def verify_modification_allowlist(original: str, proposed: str) -> bool:
 # -----------------------------------------------------------------------------
 
 def query_gemini_for_docs(
-    client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
+        client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
 ) -> Dict[str, MemberDoc]:
     import time
 
@@ -839,7 +839,7 @@ def query_gemini_for_docs(
     chunk_size = 1  # Process in safe batches to prevent JSON truncation
 
     for i in range(0, len(targets), chunk_size):
-        chunk_targets = targets[i : i + chunk_size]
+        chunk_targets = targets[i: i + chunk_size]
         manifest = [
             {
                 "name": t.name,
@@ -852,7 +852,7 @@ def query_gemini_for_docs(
 
         prompt = (
             f"You are an automated GDScript documentation assistant for Godot 4.\n"
-            f"File: {file_path.name} (Batch {i//chunk_size + 1})\n\n"
+            f"File: {file_path.name} (Batch {i // chunk_size + 1})\n\n"
             f"Target declarations needing documentation:\n{json.dumps(manifest, indent=2)}\n\n"
             "Requirements:\n"
             "1. Supply documentation for EVERY target member in the manifest chunk.\n"
@@ -892,12 +892,18 @@ def query_gemini_for_docs(
                 retry_delay *= 2  # Exponential backoff
 
         chunk_requested_names = {t.name for t in chunk_targets}
-        chunk_returned_names = {m.name for m in validated.members}
+
+        # Filter out any unrequested extra members returned by the model
+        filtered_members = [m for m in validated.members if m.name in chunk_requested_names]
+        chunk_returned_names = {m.name for m in filtered_members}
+
         if chunk_requested_names != chunk_returned_names:
             print(
                 f"[FAIL-CLOSED] Set mismatch in {file_path.name} chunk! Expected {chunk_requested_names}, got {chunk_returned_names}"
             )
             sys.exit(1)
+
+        validated.members = filtered_members
 
         # Adding an automatic parameter fallback in query_gemini_for_docs ensures that if Gemini
         # omits any required parameters, a clean default description is generated automatically.
@@ -931,10 +937,10 @@ def query_gemini_for_docs(
 
     return doc_map
 
-
 # -----------------------------------------------------------------------------
 # Transaction Management
 # -----------------------------------------------------------------------------
+
 @dataclass
 class ProposedFileChange:
     file_path: Path
