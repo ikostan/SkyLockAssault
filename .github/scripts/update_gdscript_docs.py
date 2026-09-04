@@ -819,7 +819,9 @@ def query_gemini_for_docs(
 ) -> Dict[str, MemberDoc]:
     target_names = [t.name for t in targets]
     if len(target_names) != len(set(target_names)):
-        print(f"[FAIL-CLOSED] Duplicate target member names in {file_path.name}: {target_names}")
+        print(
+            f"[FAIL-CLOSED] Duplicate target member names in {file_path.name}: {target_names}"
+        )
         sys.exit(1)
 
     target_by_name = {t.name: t for t in targets}
@@ -833,7 +835,7 @@ def query_gemini_for_docs(
     chunk_size = 1  # Process in safe batches to prevent JSON truncation
 
     for i in range(0, len(targets), chunk_size):
-        chunk_targets = targets[i:i + chunk_size]
+        chunk_targets = targets[i : i + chunk_size]
         manifest = [
             {
                 "name": t.name,
@@ -868,7 +870,9 @@ def query_gemini_for_docs(
             )
             validated = FileDocumentationResponse.model_validate_json(response.text)
         except Exception as e:
-            print(f"[FAIL-CLOSED] Gemini generation failed for {file_path} (chunk {i}): {e}")
+            print(
+                f"[FAIL-CLOSED] Gemini generation failed for {file_path} (chunk {i}): {e}"
+            )
             sys.exit(1)
 
         chunk_requested_names = {t.name for t in chunk_targets}
