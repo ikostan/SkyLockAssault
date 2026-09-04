@@ -18,7 +18,6 @@ Audits and synchronizes production GDScript files against documentation contract
 
 DOCUMENTATION_CONTRACT_VERSION = "1.0"
 
-import time
 import argparse
 import difflib
 import enum
@@ -28,6 +27,7 @@ import os
 import re
 import shutil
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -815,6 +815,7 @@ def verify_modification_allowlist(original: str, proposed: str) -> bool:
 # -----------------------------------------------------------------------------
 # Gemini Query
 # -----------------------------------------------------------------------------
+
 
 def query_gemini_for_docs(
         client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
