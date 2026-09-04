@@ -107,15 +107,14 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	_save_settings()
 
 
-## Centralized "ensure initial focus" helper.
-## Checks whether keyboard/controller focus is already inside this menu.
-## If it isn't, defers grab_focus() on the candidate and logs the action.
-## If it is, logs the skip (so you can still see what happened).
+## Ensures the given candidate control receives initial focus.
 ##
-## :param candidate: The control that should receive focus by default.
-## :param allowed_controls: All interactive controls that belong to this menu.
-##                          If focus is already on any of them we do nothing.
-## :param context: Optional string that appears in the log (e.g. "Pause Menu").
+## Checks if a valid focus owner exists within the allowed controls, and if not, grants focus
+## to the specified candidate.
+##
+## [param candidate]: The candidate parameter.
+## [param allowed_controls]: The allowed_controls parameter.
+## [param context]: The context parameter.
 func ensure_initial_focus(
 	candidate: Control, allowed_controls: Array[Control] = [], context: String = ""
 ) -> void:
@@ -145,10 +144,9 @@ func ensure_initial_focus(
 		)
 
 
-## Loads Key Mapping menu directly while keeping background video visible.
-## :param menu_to_hide: Usually the UI Panel (not the root Control).
-## :type menu_to_hide: Node
-## :rtype: void
+## Hides specified menu, shows associated video player, and loads key mapping scene.
+##
+## [param menu_to_hide]: The menu_to_hide parameter.
 func load_key_mapping(menu_to_hide: Node) -> void:
 	if is_instance_valid(menu_to_hide):
 		hidden_menus.push_back(menu_to_hide)
@@ -289,6 +287,12 @@ func _on_options_exited_unexpectedly() -> void:
 	options_instance = null
 
 
+## Loads options menu and hides the caller menu.
+##
+## Guards against re-entrancy by checking existing instance and validates the provided node
+## before hiding.
+##
+## [param menu_to_hide]: The menu_to_hide parameter.
 func load_options(menu_to_hide: Node) -> void:
 	## Loads options menu and hides the caller menu (if valid).
 	##
@@ -342,6 +346,13 @@ func load_options(menu_to_hide: Node) -> void:
 # Custom logging function with timestamp and level filtering.
 # @param message: The string message to log.
 # @param level: The log level (default INFO).
+## Prints a formatted log message if the level meets the threshold.
+##
+## Checks the current log level against settings before printing a timestamped and level-tagged
+## message.
+##
+## [param message]: The message parameter.
+## [param level]: The level parameter.
 func log_message(message: String, level: LogLevel = LogLevel.INFO) -> void:
 	# FIX: Guard the log level check.
 	# If settings is null, print everything.
@@ -369,6 +380,12 @@ func _notification(what: int) -> void:
 		get_tree().quit()
 
 
+## Queues a scene change through the loading screen.
+##
+## Sets the next scene path and transitions to the loading screen scene. Handles invalid paths
+## safely.
+##
+## [param target_path]: The target_path parameter.
 func load_scene_with_loading(target_path: String) -> void:
 	# Queues a scene change via the loading screen.
 	# Sets next_scene and transitions to loading_screen.tscn.
@@ -383,11 +400,20 @@ func load_scene_with_loading(target_path: String) -> void:
 
 
 # Static helpers for version (add after _ready())
+## Returns the current game version string.
+##
+## Retrieves the version from the project settings, defaulting to "n/a" if unset.
+## Returns The game version as a string.
 static func get_game_version() -> String:
 	return ProjectSettings.get_setting("application/config/version", "n/a") as String
 
 
 # For tests only—avoids direct writes in prod
+## Sets the game version in project settings for testing.
+##
+## Updates the application config version project setting to the specified string value.
+##
+## [param value]: The value parameter.
 static func set_game_version_for_tests(value: String) -> void:
 	ProjectSettings.set_setting("application/config/version", value)
 
@@ -467,7 +493,11 @@ func _get_encryption_key() -> String:
 	return final_key
 
 
-## Helper to determine if a config file is encrypted.
+## Checks if a file is encrypted with Godot's GDEC format.
+##
+## [param path]: The path parameter.
+## Returns [code]true[/code] if the file starts with the encryption magic number, otherwise
+## [code]false[/code].
 func is_file_encrypted(path: String) -> bool:
 	if not FileAccess.file_exists(path):
 		return false
@@ -483,10 +513,14 @@ func is_file_encrypted(path: String) -> bool:
 	return magic == 0x43454447
 
 
-## Safely loads a config file, handling both encrypted and legacy plaintext formats.
-## Returns a Dictionary: {"config": ConfigFile, "err": int, "is_legacy": bool}
-## Safely loads a config file, handling both encrypted and legacy plaintext formats.
-## Returns a Dictionary: {"config": ConfigFile, "err": int, "is_legacy": bool}
+## Safely loads a configuration file from the specified path.
+##
+## Handles both encrypted and legacy configuration files, automatically managing encryption
+## keys and logging status messages.
+##
+## [param path]: The path parameter.
+## Returns A dictionary containing the loaded configuration data, or an empty dictionary on
+## failure.
 func safe_load_config(path: String) -> Dictionary:
 	var key: String = ensure_encryption_key()
 
@@ -558,8 +592,9 @@ func safe_load_config(path: String) -> Dictionary:
 	return {"config": config, "err": err, "is_legacy": is_legacy}
 
 
-## Overrides the encryption key with a deterministic value for unit tests.
-## This decouples test artifacts from specific hardware IDs so failures are reproducible.
+## Sets a custom encryption key for testing purposes.
+##
+## [param override_key]: The override_key parameter.
 func set_test_encryption_key(override_key: String = "test_deterministic_key_123") -> void:
 	save_encryption_pass = override_key
 	log_message("Encryption key overridden for testing.", LogLevel.DEBUG)
