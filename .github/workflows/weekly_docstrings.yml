@@ -70,7 +70,7 @@ jobs:
             scripts/ui
 
       - name: "Setup Godot Engine (Headless Syntax Verification)"
-        uses: chickensoft-games/setup-godot@c2da9f9ad7a77e5c5443c9839ae30fb0eecb9b94  # v2.1.2
+        uses: chickensoft-games/setup-godot@v2.1.2
         with:
           version: 4.7.1
 
