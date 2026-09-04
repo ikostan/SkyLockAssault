@@ -895,8 +895,11 @@ def query_gemini_for_docs(
                 "name": t.name,
                 "kind": t.kind,
                 "required_parameters": t.params,
-                "existing_developer_comments": "".join(
-                    t.existing_doc_lines).strip() if t.existing_doc_lines else "None",
+                "existing_developer_comments": (
+                    "".join(t.existing_doc_lines).strip()
+                    if t.existing_doc_lines
+                    else "None"
+                ),
                 "code_context": t.context_snippet.strip(),
             }
             for t in chunk_targets
