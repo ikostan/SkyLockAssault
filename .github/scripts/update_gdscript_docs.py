@@ -90,19 +90,25 @@ def validate_docstring_text(text: Optional[str], field_name: str) -> Optional[st
         if tag_name.startswith("/"):
             base = tag_name[1:]
             if base not in FORMATTING_BBCODE_TAGS or tag_args:
-                raise ValueError(f"{field_name} contains invalid closing tag '[{tag_name}]'.")
+                raise ValueError(
+                    f"{field_name} contains invalid closing tag '[{tag_name}]'."
+                )
             continue
 
         # Formatting tags
         if tag_name in FORMATTING_BBCODE_TAGS:
             if tag_args:
-                raise ValueError(f"{field_name} tag '[{tag_name}]' must not have arguments.")
+                raise ValueError(
+                    f"{field_name} tag '[{tag_name}]' must not have arguments."
+                )
             continue
 
         # Semantic tags require exactly one identifier
         if tag_name in SEMANTIC_BBCODE_TAGS:
             if not tag_args or len(tag_args.split()) != 1:
-                raise ValueError(f"{field_name} tag '[{tag_name}]' requires exactly one identifier.")
+                raise ValueError(
+                    f"{field_name} tag '[{tag_name}]' requires exactly one identifier."
+                )
             continue
 
         raise ValueError(f"{field_name} contains unapproved BBCode tag '[{tag_name}]'.")
@@ -138,7 +144,9 @@ class MemberDoc(BaseModel):
     def check_summary(cls, v: str) -> str:
         validated = validate_docstring_text(v, "Summary")
         if not validated or "\n" in validated or "\r" in validated:
-            raise ValueError("Summary must be a single non-empty line without line breaks.")
+            raise ValueError(
+                "Summary must be a single non-empty line without line breaks."
+            )
         return validated
 
     @field_validator("description", mode="after")
@@ -151,7 +159,9 @@ class MemberDoc(BaseModel):
     def check_returns(cls, v: Optional[str]) -> Optional[str]:
         validated = validate_docstring_text(v, "Returns")
         if validated and ("\n" in validated or "\r" in validated):
-            raise ValueError("Return description must be a single line without line breaks.")
+            raise ValueError(
+                "Return description must be a single line without line breaks."
+            )
         return validated
 
     @field_validator("parameters", mode="after")
@@ -162,7 +172,9 @@ class MemberDoc(BaseModel):
         for p_name, p_desc in v.items():
             if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", p_name):
                 raise ValueError(f"Invalid parameter identifier key: '{p_name}'")
-            validated_desc = validate_docstring_text(p_desc, f"Parameter description for '{p_name}'")
+            validated_desc = validate_docstring_text(
+                p_desc, f"Parameter description for '{p_name}'"
+            )
             if not validated_desc or "\n" in validated_desc or "\r" in validated_desc:
                 raise ValueError(
                     f"Parameter description for '{p_name}' must be a non-empty single line without line breaks."
@@ -719,10 +731,14 @@ def atomic_commit_all_changes(changes: List[ProposedFileChange]) -> None:
             backup_path = change.file_path.with_suffix(".bak_doc")
 
             if tmp_path.is_symlink() or tmp_path.exists():
-                print(f"[FAIL-CLOSED] Collision or symlink rejected at staging path: {tmp_path}")
+                print(
+                    f"[FAIL-CLOSED] Collision or symlink rejected at staging path: {tmp_path}"
+                )
                 sys.exit(1)
             if backup_path.is_symlink() or backup_path.exists():
-                print(f"[FAIL-CLOSED] Collision or symlink rejected at backup path: {backup_path}")
+                print(
+                    f"[FAIL-CLOSED] Collision or symlink rejected at backup path: {backup_path}"
+                )
                 sys.exit(1)
 
             with open(tmp_path, "x", encoding="utf-8", newline="") as f:
@@ -800,17 +816,25 @@ def main():
             continue
 
         # Fail-closed directory traversal checks
-        if target_dir.is_symlink() or not target_dir.resolve().is_relative_to(scripts_root):
-            print(f"[FAIL-CLOSED] Approved directory {target_dir} is a symlink or escapes root.")
+        if target_dir.is_symlink() or not target_dir.resolve().is_relative_to(
+            scripts_root
+        ):
+            print(
+                f"[FAIL-CLOSED] Approved directory {target_dir} is a symlink or escapes root."
+            )
             sys.exit(1)
 
         for file_path in sorted(target_dir.rglob("*.gd")):
             resolved = file_path.resolve()
             if not resolved.is_relative_to(scripts_root) or file_path.is_symlink():
-                print(f"[FAIL-CLOSED] Invalid file path or symlink rejected: {file_path}")
+                print(
+                    f"[FAIL-CLOSED] Invalid file path or symlink rejected: {file_path}"
+                )
                 sys.exit(1)
 
-            change = prepare_file_change(client=None, file_path=resolved, check_mode=True)
+            change = prepare_file_change(
+                client=None, file_path=resolved, check_mode=True
+            )
             if change:
                 actionable_files.append((resolved, change.slots_count))
                 total_slots += change.slots_count
@@ -821,19 +845,25 @@ def main():
     )
 
     if args.audit:
-        print(f"[AUDIT COMPLETE] Scan succeeded. {total_files} file(s) require docstrings.")
+        print(
+            f"[AUDIT COMPLETE] Scan succeeded. {total_files} file(s) require docstrings."
+        )
         sys.exit(0)
 
     if args.check:
         if total_files > 0:
-            print(f"[CHECK FAILED] Documentation violations exist in {total_files} file(s).")
+            print(
+                f"[CHECK FAILED] Documentation violations exist in {total_files} file(s)."
+            )
             sys.exit(1)
         print("[CHECK PASSED] All production GDScript public members are compliant.")
         sys.exit(0)
 
     if args.write:
         if total_files == 0:
-            print("[INFO] No actionable docstring slots found. Repository is up-to-date.")
+            print(
+                "[INFO] No actionable docstring slots found. Repository is up-to-date."
+            )
             sys.exit(0)
 
         if total_slots > MAX_DOC_SLOTS_MODIFIED_PER_RUN:
@@ -843,7 +873,9 @@ def main():
             sys.exit(1)
 
         target_file, _ = actionable_files[0]
-        print(f"[WRITE BATCH] Processing 1 file out of {total_files} actionable: {target_file.name}")
+        print(
+            f"[WRITE BATCH] Processing 1 file out of {total_files} actionable: {target_file.name}"
+        )
 
         change = prepare_file_change(client, target_file, check_mode=False)
         if change:
