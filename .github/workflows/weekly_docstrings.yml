@@ -41,7 +41,7 @@ jobs:
       - name: "Audit GDScript Docstring Coverage"
         run: |
           set -euo pipefail
-          python .github/scripts/update_gdscript_docs.py --check
+          python .github/scripts/update_gdscript_docs.py --audit
 
       - name: "Generate & Inject GDScript Docstrings"
         env:
