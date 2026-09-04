@@ -817,93 +817,80 @@ def verify_modification_allowlist(original: str, proposed: str) -> bool:
 def query_gemini_for_docs(
     client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
 ) -> Dict[str, MemberDoc]:
-    # Reject duplicate target names before prompting
     target_names = [t.name for t in targets]
     if len(target_names) != len(set(target_names)):
-        print(
-            f"[FAIL-CLOSED] Duplicate target member names in {file_path.name}: {target_names}"
-        )
+        print(f"[FAIL-CLOSED] Duplicate target member names in {file_path.name}: {target_names}")
         sys.exit(1)
 
-    manifest = [
-        {
-            "name": t.name,
-            "kind": t.kind,
-            "required_parameters": t.params,
-            "context": t.context_snippet.strip(),
-        }
-        for t in targets
-    ]
-
-    prompt = (
-        f"You are an automated GDScript documentation assistant for Godot 4.\n"
-        f"File: {file_path.name}\n\n"
-        f"Target declarations needing documentation:\n{json.dumps(manifest, indent=2)}\n\n"
-        "Requirements:\n"
-        "1. Supply documentation for EVERY target member in the manifest.\n"
-        "2. Return only requested member names. Do not invent members.\n"
-        "3. In 'parameters', provide descriptions for ALL parameter names present in the declaration.\n"
-        "4. BBCode allowed: [param], [constant], [member], [method], [signal], [enum], [code], [b], [i].\n"
-        "5. Strictly NO Markdown code blocks (```) or Doxygen (@param/@return/@brief) tags."
-    )
-
-    try:
-        response = client.models.generate_content(
-            model=PINNED_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=FileDocumentationResponse,
-                temperature=0.0,
-            ),
-        )
-        validated = FileDocumentationResponse.model_validate_json(response.text)
-    except Exception as e:
-        print(f"[FAIL-CLOSED] Gemini generation failed for {file_path}: {e}")
-        sys.exit(1)
-
-    # Validate exact count and uniqueness
-    if len(validated.members) != len(targets):
-        print(
-            f"[FAIL-CLOSED] Member count mismatch in {file_path.name}: Expected {len(targets)}, got {len(validated.members)}"
-        )
-        sys.exit(1)
-
-    returned_names_list = [m.name for m in validated.members]
-    if len(returned_names_list) != len(set(returned_names_list)):
-        print(
-            f"[FAIL-CLOSED] Duplicate member documentation returned in {file_path.name}: {returned_names_list}"
-        )
-        sys.exit(1)
-
-    requested_names = set(target_names)
-    returned_names = set(returned_names_list)
-    if requested_names != returned_names:
-        print(
-            f"[FAIL-CLOSED] Set mismatch in {file_path.name}! Expected {requested_names}, got {returned_names}"
-        )
-        sys.exit(1)
-
-    doc_map = {}
     target_by_name = {t.name: t for t in targets}
-    for m in validated.members:
-        target = target_by_name[m.name]
-        target_param_set = set(target.params)
-        m_param_set = set(m.parameters.keys()) if m.parameters else set()
+    doc_map = {}
+    chunk_size = 3  # Process in safe batches to prevent JSON truncation
 
-        if target.kind in ("function", "signal") and target_param_set:
-            if m_param_set != target_param_set:
-                print(
-                    f"[FAIL-CLOSED] Parameter mismatch returned for {m.name}. Expected {target.params}, got {list(m_param_set)}"
-                )
-                sys.exit(1)
-        elif m_param_set:
+    for i in range(0, len(targets), chunk_size):
+        chunk_targets = targets[i:i + chunk_size]
+        manifest = [
+            {
+                "name": t.name,
+                "kind": t.kind,
+                "required_parameters": t.params,
+                "context": t.context_snippet.strip(),
+            }
+            for t in chunk_targets
+        ]
+
+        prompt = (
+            f"You are an automated GDScript documentation assistant for Godot 4.\n"
+            f"File: {file_path.name} (Batch {i//chunk_size + 1})\n\n"
+            f"Target declarations needing documentation:\n{json.dumps(manifest, indent=2)}\n\n"
+            "Requirements:\n"
+            "1. Supply documentation for EVERY target member in the manifest chunk.\n"
+            "2. Return only requested member names. Do not invent members.\n"
+            "3. If 'required_parameters' is non-empty, the 'parameters' field MUST be a dictionary mapping each exact parameter name to its description string.\n"
+            "4. BBCode allowed: [param], [constant], [member], [method], [signal], [enum], [code], [b], [i].\n"
+            "5. Strictly NO Markdown code blocks (```) or Doxygen (@param/@return/@brief) tags."
+        )
+
+        try:
+            response = client.models.generate_content(
+                model=PINNED_MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=FileDocumentationResponse,
+                    temperature=0.0,
+                ),
+            )
+            validated = FileDocumentationResponse.model_validate_json(response.text)
+        except Exception as e:
+            print(f"[FAIL-CLOSED] Gemini generation failed for {file_path} (chunk {i}): {e}")
+            sys.exit(1)
+
+        chunk_requested_names = {t.name for t in chunk_targets}
+        chunk_returned_names = {m.name for m in validated.members}
+        if chunk_requested_names != chunk_returned_names:
             print(
-                f"[FAIL-CLOSED] Unexpected parameters returned for non-parameterized member {m.name}: {list(m_param_set)}"
+                f"[FAIL-CLOSED] Set mismatch in {file_path.name} chunk! Expected {chunk_requested_names}, got {chunk_returned_names}"
             )
             sys.exit(1)
 
-        doc_map[m.name] = m
+        for m in validated.members:
+            target = target_by_name[m.name]
+            target_param_set = set(target.params)
+            m_param_set = set(m.parameters.keys()) if m.parameters else set()
+
+            if target.kind in ("function", "signal") and target_param_set:
+                if m_param_set != target_param_set:
+                    print(
+                        f"[FAIL-CLOSED] Parameter mismatch returned for {m.name}. Expected {target.params}, got {list(m_param_set)}"
+                    )
+                    sys.exit(1)
+            elif m_param_set:
+                print(
+                    f"[FAIL-CLOSED] Unexpected parameters returned for non-parameterized member {m.name}: {list(m_param_set)}"
+                )
+                sys.exit(1)
+
+            doc_map[m.name] = m
 
     return doc_map
 
