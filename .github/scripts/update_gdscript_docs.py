@@ -27,7 +27,6 @@ import os
 import re
 import shutil
 import sys
-import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -50,7 +49,7 @@ except ImportError as err:
 # Configuration & Limits
 # -----------------------------------------------------------------------------
 MAX_FILES_MODIFIED_PER_RUN = 1
-MAX_DOC_SLOTS_MODIFIED_PER_RUN = 100
+MAX_DOC_SLOTS_MODIFIED_PER_RUN = 15  # Keeps you safely under the 20 RPD free tier limit
 PINNED_MODEL = "gemini-3.6-flash"
 ALLOWED_SUBDIRS = ("core", "entities", "managers", "resources", "system", "ui")
 
@@ -818,29 +817,32 @@ def verify_modification_allowlist(original: str, proposed: str) -> bool:
 
 
 def query_gemini_for_docs(
-    client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
+        client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
 ) -> Dict[str, MemberDoc]:
     import time
 
     target_names = [t.name for t in targets]
     if len(target_names) != len(set(target_names)):
         print(
-            f"[FAIL-CLOSED] Duplicate target member names in {file_path.name}: {target_names}"
+            f"[FAIL-CLOSED] Duplicate target member names in {file_path.name}: {target_names}",
+            flush=True
         )
         sys.exit(1)
 
     target_by_name = {t.name: t for t in targets}
     doc_map = {}
 
-    # Gemini still omitted items from the chunk because batching multiple declarations—even
-    # in groups of three—can cause the model to focus on only the first item.
-    #
-    # Setting the chunk size to 1 processes members one by one, completely eliminating item
-    # omission while easily staying within API rate limits for a single file.
     chunk_size = 1  # Process in safe batches to prevent JSON truncation
+    total_chunks = (len(targets) + chunk_size - 1) // chunk_size
 
     for i in range(0, len(targets), chunk_size):
-        chunk_targets = targets[i : i + chunk_size]
+        chunk_targets = targets[i: i + chunk_size]
+        current_chunk = (i // chunk_size) + 1
+        chunk_names = [t.name for t in chunk_targets]
+
+        print(f"[DEBUG] Generating docs for chunk {current_chunk}/{total_chunks} (Targets: {chunk_names})...",
+              flush=True)
+
         manifest = [
             {
                 "name": t.name,
@@ -853,18 +855,19 @@ def query_gemini_for_docs(
 
         prompt = (
             f"You are an automated GDScript documentation assistant for Godot 4.\n"
-            f"File: {file_path.name} (Batch {i // chunk_size + 1})\n\n"
+            f"File: {file_path.name} (Batch {current_chunk})\n\n"
             f"Target declarations needing documentation:\n{json.dumps(manifest, indent=2)}\n\n"
             "Requirements:\n"
             "1. Supply documentation for EVERY target member in the manifest chunk.\n"
             "2. Return only requested member names. Do not invent members.\n"
             "3. If 'required_parameters' is non-empty, the 'parameters' field MUST be a dictionary mapping each exact parameter name to its description string.\n"
             "4. BBCode allowed: [param], [constant], [member], [method], [signal], [enum], [code], [b], [i].\n"
-            "5. Strictly NO Markdown code blocks (```) or Doxygen (@param/@return/@brief) tags."
+            "5. Strictly NO Markdown code blocks (```) or Doxygen (@param/@return/@brief) tags.\n"
+            "6. CRITICAL: Do NOT wrap arbitrary words, types, or Godot classes in brackets (e.g., NEVER use [VideoStreamPlayer] or [Node]). Only use the exact allowed tags from rule 4."
         )
 
         max_retries = 3
-        retry_delay = 5
+        retry_delay = 35  # Increased to clear 429 quota exhaustion windows (often ~30s)
         validated = None
 
         for attempt in range(max_retries):
@@ -879,15 +882,19 @@ def query_gemini_for_docs(
                     ),
                 )
                 validated = FileDocumentationResponse.model_validate_json(response.text)
+                print(f"[DEBUG] API response received successfully for chunk {current_chunk}/{total_chunks}.",
+                      flush=True)
                 break
             except Exception as e:
                 if attempt == max_retries - 1:
                     print(
-                        f"[FAIL-CLOSED] Gemini generation failed for {file_path} (chunk {i}) after {max_retries} attempts: {e}"
+                        f"[FAIL-CLOSED] Gemini generation failed for {file_path} (chunk {current_chunk}) after {max_retries} attempts: {e}",
+                        flush=True
                     )
                     sys.exit(1)
                 print(
-                    f"[WARNING] Gemini API temporary failure (attempt {attempt + 1}/{max_retries}): {e}. Retrying in {retry_delay}s..."
+                    f"[WARNING] Gemini API temporary failure (attempt {attempt + 1}/{max_retries}): {e}. Retrying in {retry_delay}s...",
+                    flush=True
                 )
                 time.sleep(retry_delay)
                 retry_delay *= 2  # Exponential backoff
@@ -895,22 +902,18 @@ def query_gemini_for_docs(
         chunk_requested_names = {t.name for t in chunk_targets}
 
         # Filter out any unrequested extra members returned by the model
-        filtered_members = [
-            m for m in validated.members if m.name in chunk_requested_names
-        ]
+        filtered_members = [m for m in validated.members if m.name in chunk_requested_names]
         chunk_returned_names = {m.name for m in filtered_members}
 
         if chunk_requested_names != chunk_returned_names:
             print(
-                f"[FAIL-CLOSED] Set mismatch in {file_path.name} chunk! Expected {chunk_requested_names}, got {chunk_returned_names}"
+                f"[FAIL-CLOSED] Set mismatch in {file_path.name} chunk! Expected {chunk_requested_names}, got {chunk_returned_names}",
+                flush=True
             )
             sys.exit(1)
 
         validated.members = filtered_members
 
-        # Adding an automatic parameter fallback in query_gemini_for_docs ensures that if Gemini
-        # omits any required parameters, a clean default description is generated automatically.
-        # This keeps the pipeline 100% reliable and fully compliant with contract v1.0
         for m in validated.members:
             target = target_by_name[m.name]
 
@@ -927,19 +930,24 @@ def query_gemini_for_docs(
                 unexpected = m_param_set - target_param_set
                 if unexpected:
                     print(
-                        f"[FAIL-CLOSED] Unexpected parameters returned for {m.name}: {list(unexpected)}"
+                        f"[FAIL-CLOSED] Unexpected parameters returned for {m.name}: {list(unexpected)}",
+                        flush=True
                     )
                     sys.exit(1)
             elif m_param_set:
                 print(
-                    f"[FAIL-CLOSED] Unexpected parameters returned for non-parameterized member {m.name}: {list(m_param_set)}"
+                    f"[FAIL-CLOSED] Unexpected parameters returned for non-parameterized member {m.name}: {list(m_param_set)}",
+                    flush=True
                 )
                 sys.exit(1)
 
             doc_map[m.name] = m
 
-    return doc_map
+        # Pacing to avoid hitting the 5 RPM Free Tier Limit
+        if i + chunk_size < len(targets):
+            time.sleep(15)
 
+    return doc_map
 
 # -----------------------------------------------------------------------------
 # Transaction Management

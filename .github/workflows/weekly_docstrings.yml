@@ -47,7 +47,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -euo pipefail
-          python .github/scripts/update_gdscript_docs.py --write
+          python -u .github/scripts/update_gdscript_docs.py --write
 
       - name: "Run Documentation Contract Validator"
         run: |
