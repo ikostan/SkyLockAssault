@@ -18,7 +18,7 @@ Audits production GDScript files for:
 import re
 import sys
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
 try:
     from gdtoolkit.parser import parser as gdparser
@@ -65,15 +65,15 @@ def get_first_token_line(node: Any) -> Optional[int]:
 
 def extract_params(func_node: Tree) -> List[str]:
     params = []
-    arg_rules = (
+    param_rules = {
         "func_arg_regular",
         "func_arg_typed",
         "func_arg_default",
         "func_arg_inf",
-    )
-    for rule in arg_rules:
-        for arg_node in func_node.find_data(rule):
-            for child in arg_node.children:
+    }
+    for subtree in func_node.iter_subtrees():
+        if subtree.data in param_rules:
+            for child in subtree.children:
                 if isinstance(child, Token) and child.type == "NAME":
                     params.append(str(child.value))
                     break
@@ -107,10 +107,11 @@ def check_detached_docs(
     member_kind: str,
     member_name: str,
 ) -> List[str]:
-    """Validates that no docstring comments sit detached between annotations and declarations."""
+    """Validates that no docstring comments sit detached strictly between annotations and declarations."""
     errs = []
     if anno_line and decl_line and anno_line < decl_line:
-        for mid in range(anno_line - 1, decl_line - 1):
+        # Check strictly between anno_line and decl_line
+        for mid in range(anno_line, decl_line - 1):
             if RE_DOC_LINE.match(lines[mid]):
                 errs.append(
                     f"Docstring placed between annotation and {member_kind} '{member_name}' (line {mid + 1})."
