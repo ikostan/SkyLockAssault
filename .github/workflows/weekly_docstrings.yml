@@ -76,6 +76,11 @@ jobs:
       - name: "Verify Godot Script Parsing"
         run: |
           set -euo pipefail
+          
+          # Force Godot to import the project and build the global class cache (.godot/)
+          echo "Building Godot project cache..."
+          godot --headless --editor --quit || true
+          
           target_dirs=(
             "scripts/core"
             "scripts/entities"
