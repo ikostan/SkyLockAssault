@@ -19,6 +19,7 @@ Audits and synchronizes production GDScript files against documentation contract
 DOCUMENTATION_CONTRACT_VERSION = "1.0"
 
 import argparse
+import textwrap
 import difflib
 import enum
 import hashlib
@@ -766,28 +767,70 @@ def classify_member(decl: MemberDeclaration) -> None:
 # -----------------------------------------------------------------------------
 # Formatting & Invariants
 # -----------------------------------------------------------------------------
-def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> List[str]:
-    lines = [f"{indent}## {doc.summary}\n"]
 
+def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> List[str]:
+    max_width = 95  # Strict margin under gdlint's 100 character limit
+    prefix = f"{indent}## "
+    subsequent_prefix = f"{indent}## "
+
+    lines: List[str] = []
+
+    # 1. Summary
+    wrapped_summary = textwrap.wrap(
+        doc.summary.strip(),
+        width=max_width,
+        initial_indent=prefix,
+        subsequent_indent=subsequent_prefix,
+    )
+    for line in wrapped_summary:
+        lines.append(f"{line}\n")
+
+    # 2. Extended Description
     if doc.description and doc.description.strip():
         lines.append(f"{indent}##\n")
-        for line in doc.description.strip().splitlines():
-            lines.append(f"{indent}## {line.strip()}\n")
+        for para in doc.description.strip().splitlines():
+            if not para.strip():
+                lines.append(f"{indent}##\n")
+                continue
+            wrapped_desc = textwrap.wrap(
+                para.strip(),
+                width=max_width,
+                initial_indent=prefix,
+                subsequent_indent=subsequent_prefix,
+            )
+            for line in wrapped_desc:
+                lines.append(f"{line}\n")
 
+    # 3. Parameters
     if doc.parameters and decl.kind in ("function", "signal"):
         lines.append(f"{indent}##\n")
-        # Emit parameters deterministically in declaration signature order
         for p_name in decl.params:
             if p_name in doc.parameters:
                 p_desc = doc.parameters[p_name].strip()
-                lines.append(f"{indent}## [param {p_name}]: {p_desc}\n")
+                param_prefix = f"{indent}## [param {p_name}]: "
+                wrapped_param = textwrap.wrap(
+                    p_desc,
+                    width=max_width,
+                    initial_indent=param_prefix,
+                    subsequent_indent=subsequent_prefix,
+                )
+                for line in wrapped_param:
+                    lines.append(f"{line}\n")
 
+    # 4. Returns
     if doc.returns and doc.returns.strip() and decl.kind == "function":
         ret_desc = doc.returns.strip()
-        lines.append(f"{indent}## Returns {ret_desc}\n")
+        ret_prefix = f"{indent}## Returns "
+        wrapped_ret = textwrap.wrap(
+            ret_desc,
+            width=max_width,
+            initial_indent=ret_prefix,
+            subsequent_indent=subsequent_prefix,
+        )
+        for line in wrapped_ret:
+            lines.append(f"{line}\n")
 
     return lines
-
 
 def compute_non_doc_bytes_sha256(source: str) -> str:
     """Computes exact SHA-256 over non-documentation UTF-8 byte stream."""
@@ -866,7 +909,8 @@ def query_gemini_for_docs(
             "4. BBCode allowed: [param], [constant], [member], [method], [signal], [enum], [code], [b], [i].\n"
             "5. Strictly NO Markdown code blocks (```) or Doxygen (@param/@return/@brief) tags.\n"
             "6. CRITICAL: Do NOT use [param] inside 'summary' or 'description'. Parameter documentation belongs exclusively in the 'parameters' dictionary.\n"
-            "7. CRITICAL: Do NOT wrap types or Godot classes in brackets (e.g. NEVER use [bool], [int], [String], [FileAccess], [Node]). Use [code]TypeName[/code] if mentioning a type."
+            "7. CRITICAL: Do NOT wrap types or Godot classes in brackets (e.g. NEVER use [bool], [int], [String], [FileAccess], [Node]). Use [code]TypeName[/code] if mentioning a type.\n"
+            "8. Keep descriptions concise and under 80 characters where possible."
         )
 
         max_retries = 3
