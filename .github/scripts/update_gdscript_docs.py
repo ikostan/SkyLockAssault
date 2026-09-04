@@ -19,7 +19,6 @@ Audits and synchronizes production GDScript files against documentation contract
 DOCUMENTATION_CONTRACT_VERSION = "1.0"
 
 import argparse
-import textwrap
 import difflib
 import enum
 import hashlib
@@ -28,6 +27,7 @@ import os
 import re
 import shutil
 import sys
+import textwrap
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -768,6 +768,7 @@ def classify_member(decl: MemberDeclaration) -> None:
 # Formatting & Invariants
 # -----------------------------------------------------------------------------
 
+
 def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> List[str]:
     max_width = 95  # Strict margin under gdlint's 100 character limit
     prefix = f"{indent}## "
@@ -831,6 +832,7 @@ def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> Li
             lines.append(f"{line}\n")
 
     return lines
+
 
 def compute_non_doc_bytes_sha256(source: str) -> str:
     """Computes exact SHA-256 over non-documentation UTF-8 byte stream."""
