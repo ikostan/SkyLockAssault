@@ -895,7 +895,9 @@ def query_gemini_for_docs(
                 "name": t.name,
                 "kind": t.kind,
                 "required_parameters": t.params,
-                "context": t.context_snippet.strip(),
+                "existing_developer_comments": "".join(
+                    t.existing_doc_lines).strip() if t.existing_doc_lines else "None",
+                "code_context": t.context_snippet.strip(),
             }
             for t in chunk_targets
         ]
@@ -907,12 +909,14 @@ def query_gemini_for_docs(
             "Requirements:\n"
             "1. Supply documentation for EVERY target member in the manifest chunk.\n"
             "2. Return only requested member names. Do not invent members.\n"
-            "3. If 'required_parameters' is non-empty, the 'parameters' field MUST be a dictionary mapping each exact parameter name to its description string.\n"
+            "3. If 'required_parameters' is non-empty, the 'parameters' field MUST be a dictionary mapping each exact parameter name to a detailed description.\n"
             "4. BBCode allowed: [param], [constant], [member], [method], [signal], [enum], [code], [b], [i].\n"
             "5. Strictly NO Markdown code blocks (```) or Doxygen (@param/@return/@brief) tags.\n"
             "6. CRITICAL: Do NOT use [param] inside 'summary' or 'description'. Parameter documentation belongs exclusively in the 'parameters' dictionary.\n"
             "7. CRITICAL: Do NOT wrap types or Godot classes in brackets (e.g. NEVER use [bool], [int], [String], [FileAccess], [Node]). Use [code]TypeName[/code] if mentioning a type.\n"
-            "8. Keep descriptions concise and under 80 characters where possible."
+            "8. Keep descriptions concise and under 80 characters where possible.\n"
+            "9. CRITICAL CONTEXT PRESERVATION: If 'existing_developer_comments' is provided, you MUST preserve its specific technical details, warnings, return behaviors, and explanations in your new summary, description, and parameter fields. Do not invent logic that contradicts the provided code or comments.\n"
+            "10. RETURN VALUES: If the existing comments describe a return type or return behavior (e.g., ':rtype: void' or returning a specific Dictionary), you MUST extract that information and document it accurately in the 'returns' field."
         )
 
         max_retries = 3
