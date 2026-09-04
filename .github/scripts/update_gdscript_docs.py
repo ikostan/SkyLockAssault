@@ -817,7 +817,7 @@ def verify_modification_allowlist(original: str, proposed: str) -> bool:
 
 
 def query_gemini_for_docs(
-        client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
+    client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
 ) -> Dict[str, MemberDoc]:
     import time
 
@@ -825,7 +825,7 @@ def query_gemini_for_docs(
     if len(target_names) != len(set(target_names)):
         print(
             f"[FAIL-CLOSED] Duplicate target member names in {file_path.name}: {target_names}",
-            flush=True
+            flush=True,
         )
         sys.exit(1)
 
@@ -836,12 +836,14 @@ def query_gemini_for_docs(
     total_chunks = (len(targets) + chunk_size - 1) // chunk_size
 
     for i in range(0, len(targets), chunk_size):
-        chunk_targets = targets[i: i + chunk_size]
+        chunk_targets = targets[i : i + chunk_size]
         current_chunk = (i // chunk_size) + 1
         chunk_names = [t.name for t in chunk_targets]
 
-        print(f"[DEBUG] Generating docs for chunk {current_chunk}/{total_chunks} (Targets: {chunk_names})...",
-              flush=True)
+        print(
+            f"[DEBUG] Generating docs for chunk {current_chunk}/{total_chunks} (Targets: {chunk_names})...",
+            flush=True,
+        )
 
         manifest = [
             {
@@ -882,19 +884,21 @@ def query_gemini_for_docs(
                     ),
                 )
                 validated = FileDocumentationResponse.model_validate_json(response.text)
-                print(f"[DEBUG] API response received successfully for chunk {current_chunk}/{total_chunks}.",
-                      flush=True)
+                print(
+                    f"[DEBUG] API response received successfully for chunk {current_chunk}/{total_chunks}.",
+                    flush=True,
+                )
                 break
             except Exception as e:
                 if attempt == max_retries - 1:
                     print(
                         f"[FAIL-CLOSED] Gemini generation failed for {file_path} (chunk {current_chunk}) after {max_retries} attempts: {e}",
-                        flush=True
+                        flush=True,
                     )
                     sys.exit(1)
                 print(
                     f"[WARNING] Gemini API temporary failure (attempt {attempt + 1}/{max_retries}): {e}. Retrying in {retry_delay}s...",
-                    flush=True
+                    flush=True,
                 )
                 time.sleep(retry_delay)
                 retry_delay *= 2  # Exponential backoff
@@ -902,13 +906,15 @@ def query_gemini_for_docs(
         chunk_requested_names = {t.name for t in chunk_targets}
 
         # Filter out any unrequested extra members returned by the model
-        filtered_members = [m for m in validated.members if m.name in chunk_requested_names]
+        filtered_members = [
+            m for m in validated.members if m.name in chunk_requested_names
+        ]
         chunk_returned_names = {m.name for m in filtered_members}
 
         if chunk_requested_names != chunk_returned_names:
             print(
                 f"[FAIL-CLOSED] Set mismatch in {file_path.name} chunk! Expected {chunk_requested_names}, got {chunk_returned_names}",
-                flush=True
+                flush=True,
             )
             sys.exit(1)
 
@@ -931,13 +937,13 @@ def query_gemini_for_docs(
                 if unexpected:
                     print(
                         f"[FAIL-CLOSED] Unexpected parameters returned for {m.name}: {list(unexpected)}",
-                        flush=True
+                        flush=True,
                     )
                     sys.exit(1)
             elif m_param_set:
                 print(
                     f"[FAIL-CLOSED] Unexpected parameters returned for non-parameterized member {m.name}: {list(m_param_set)}",
-                    flush=True
+                    flush=True,
                 )
                 sys.exit(1)
 
@@ -948,6 +954,7 @@ def query_gemini_for_docs(
             time.sleep(5)
 
     return doc_map
+
 
 # -----------------------------------------------------------------------------
 # Transaction Management
