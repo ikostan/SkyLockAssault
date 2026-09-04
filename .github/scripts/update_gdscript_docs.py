@@ -49,8 +49,8 @@ except ImportError as err:
 # Configuration & Limits
 # -----------------------------------------------------------------------------
 MAX_FILES_MODIFIED_PER_RUN = 1
-MAX_DOC_SLOTS_MODIFIED_PER_RUN = 15  # Keeps you safely under the 20 RPD free tier limit
-PINNED_MODEL = "gemini-3.6-flash"
+MAX_DOC_SLOTS_MODIFIED_PER_RUN = 100
+PINNED_MODEL = "gemini-3.5-flash-lite"
 ALLOWED_SUBDIRS = ("core", "entities", "managers", "resources", "system", "ui")
 
 RE_DOC_LINE = re.compile(r"^[ \t]*##(?:\s.*)?$")
@@ -943,9 +943,9 @@ def query_gemini_for_docs(
 
             doc_map[m.name] = m
 
-        # Pacing to avoid hitting the 5 RPM Free Tier Limit
+        # Pacing to avoid hitting the 15 RPM Free Tier Limit for Flash Lite
         if i + chunk_size < len(targets):
-            time.sleep(15)
+            time.sleep(5)
 
     return doc_map
 
