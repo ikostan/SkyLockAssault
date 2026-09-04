@@ -18,6 +18,7 @@ Audits and synchronizes production GDScript files against documentation contract
 
 DOCUMENTATION_CONTRACT_VERSION = "1.0"
 
+import time
 import argparse
 import difflib
 import enum
@@ -814,9 +815,12 @@ def verify_modification_allowlist(original: str, proposed: str) -> bool:
 # -----------------------------------------------------------------------------
 # Gemini Query
 # -----------------------------------------------------------------------------
+
 def query_gemini_for_docs(
     client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
 ) -> Dict[str, MemberDoc]:
+    import time
+
     target_names = [t.name for t in targets]
     if len(target_names) != len(set(target_names)):
         print(
@@ -858,22 +862,34 @@ def query_gemini_for_docs(
             "5. Strictly NO Markdown code blocks (```) or Doxygen (@param/@return/@brief) tags."
         )
 
-        try:
-            response = client.models.generate_content(
-                model=PINNED_MODEL,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=FileDocumentationResponse,
-                    temperature=0.0,
-                ),
-            )
-            validated = FileDocumentationResponse.model_validate_json(response.text)
-        except Exception as e:
-            print(
-                f"[FAIL-CLOSED] Gemini generation failed for {file_path} (chunk {i}): {e}"
-            )
-            sys.exit(1)
+        max_retries = 3
+        retry_delay = 5
+        validated = None
+
+        for attempt in range(max_retries):
+            try:
+                response = client.models.generate_content(
+                    model=PINNED_MODEL,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=FileDocumentationResponse,
+                        temperature=0.0,
+                    ),
+                )
+                validated = FileDocumentationResponse.model_validate_json(response.text)
+                break
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    print(
+                        f"[FAIL-CLOSED] Gemini generation failed for {file_path} (chunk {i}) after {max_retries} attempts: {e}"
+                    )
+                    sys.exit(1)
+                print(
+                    f"[WARNING] Gemini API temporary failure (attempt {attempt + 1}/{max_retries}): {e}. Retrying in {retry_delay}s..."
+                )
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
 
         chunk_requested_names = {t.name for t in chunk_targets}
         chunk_returned_names = {m.name for m in validated.members}
