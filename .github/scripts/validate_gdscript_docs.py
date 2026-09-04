@@ -337,9 +337,12 @@ def get_top_level_statements(ast: Tree) -> List[Any]:
         for child in ast.children:
             if isinstance(child, Tree) and child.data == "class_body":
                 return child.children
-        # Safe fallback for files parsed directly under start (e.g. constant/path scripts)
+        # Safe fallback with explicit diagnostic logging instead of silent failure
+        print(f"[WARNING] Unrecognized AST root layout; falling back to direct children extraction.")
         return [c for c in ast.children if isinstance(c, Tree)]
-    return [c for c in ast.children if isinstance(c, Tree)]
+
+    print(f"[FAIL-CLOSED] Unknown AST root type: {ast.data}")
+    sys.exit(1)
 
 
 def check_doc_presence(lines: List[str], insert_line: int) -> List[str]:
