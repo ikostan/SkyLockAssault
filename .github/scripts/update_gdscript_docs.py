@@ -829,7 +829,7 @@ def query_gemini_for_docs(
         {
             "name": t.name,
             "kind": t.kind,
-            "parameters": t.params,
+            "required_parameters": t.params,
             "context": t.context_snippet.strip(),
         }
         for t in targets
