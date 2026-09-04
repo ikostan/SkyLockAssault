@@ -2,13 +2,21 @@
 """
 Deterministic GDScript Documentation Auditor and Transactional Injector.
 
-Implements all issue #915 invariants:
-- AST parsing via gdtoolkit.
+DOCUMENTATION_CONTRACT_VERSION = "1.0"
+
+Audits and synchronizes production GDScript files against documentation contract v1.0:
+- AST parsing via gdtoolkit with explicit metadata collection.
+- Top-level class scope isolation (matches contract validator).
 - Operational 4-state classification (COMPLIANT, MISSING, NON_COMPLIANT, AMBIGUOUS).
-- Strict BBCode tag allowlist and comprehensive text validation.
+- Bidirectional parameter contract enforcement for functions and signals.
+- Project-approved single-pass BBCode grammar validation with case-insensitive code spans.
+- Contiguous annotation/comment block resolution.
+- Post-injection AST reparse and reclassification verification.
 - Non-comment byte-for-byte SHA-256 integrity verification.
-- Two-phase transaction with atomic rename and filesystem rollback.
+- Two-phase staged transaction with atomic replacement and filesystem rollback.
 """
+
+DOCUMENTATION_CONTRACT_VERSION = "1.0"
 
 import argparse
 import difflib
@@ -46,18 +54,45 @@ PINNED_MODEL = "gemini-2.5-flash"
 ALLOWED_SUBDIRS = ("core", "entities", "managers", "resources", "system", "ui")
 
 RE_DOC_LINE = re.compile(r"^[ \t]*##(?:\s.*)?$")
-RE_PARAM_TAG = re.compile(r"\[param\s+([a-zA-Z0-9_]+)\]", re.IGNORECASE)
 RE_BANNED_FENCE = re.compile(r"```")
-RE_DOXYGEN_TAG = re.compile(r"@(param|return|brief)")
-RE_CODE_BLOCK = re.compile(r"\[code\].*?\[/code\]", re.DOTALL | re.IGNORECASE)
+RE_DOXYGEN_TAG = re.compile(r"(?<![A-Za-z0-9_])@(param|return|brief)\b")
 
-# Formatting BBCode tags (open/close)
-FORMATTING_BBCODE_TAGS = {"b", "i", "code"}
+FORMATTING_TAGS = {"b", "i"}
 
-# Semantic BBCode tags that require a single valid identifier/path argument
-SEMANTIC_BBCODE_TAGS = {"param", "constant", "member", "method", "signal", "enum"}
+SEMANTIC_TAG_RULES = {
+    "param": re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$"),
+    "constant": re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$"),
+    "member": re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$"),
+    "method": re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$"),
+    "signal": re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$"),
+    "enum": re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$"),
+}
 
-RE_ANY_BBCODE_TAG = re.compile(r"\[(/?[a-zA-Z0-9_]+)(?:\s+([^\]]*))?\]")
+PROPERTY_EXPORT_ANNOTATIONS = {
+    "export",
+    "export_range",
+    "export_enum",
+    "export_file",
+    "export_file_path",
+    "export_dir",
+    "export_global_file",
+    "export_global_dir",
+    "export_multiline",
+    "export_placeholder",
+    "export_node_path",
+    "export_flags",
+    "export_flags_2d_physics",
+    "export_flags_2d_render",
+    "export_flags_3d_physics",
+    "export_flags_3d_render",
+    "export_color_no_alpha",
+    "export_exp_easing",
+    "export_storage",
+    "export_custom",
+    "export_tool_button",
+}
+
+RE_TOKEN_TAG = re.compile(r"\[(/?[a-zA-Z0-9_]+)(?:\s+([^\]]*))?\]")
 
 
 class DocStatus(enum.Enum):
@@ -67,51 +102,159 @@ class DocStatus(enum.Enum):
     AMBIGUOUS = "AMBIGUOUS"
 
 
+@dataclass
+class DocumentationPayload:
+    errors: List[str]
+    param_names: List[str]
+    tags: List[str]
+
+
 # -----------------------------------------------------------------------------
-# Text Validation Helper & Pydantic Schema
+# Documentation Payload Normalization & BBCode Parser
 # -----------------------------------------------------------------------------
+def normalize_doc_payload(docs: List[str]) -> str:
+    """Strips comment markers ('##') and leading whitespace, returning raw payload."""
+    return "".join(re.sub(r"^[ \t]*##[ \t]?", "", line) for line in docs)
+
+
+def validate_and_tokenize_bbcode(text: str, location_desc: str) -> DocumentationPayload:
+    """
+    Validates project-approved BBCode via a single-pass token stack.
+    - [code] is case-insensitive, non-nesting, rejects attributes, and terminates at [/code].
+    - [b], [i] enforce balanced opening/closing with no attributes.
+    - Semantic tags enforce per-tag argument grammar and cannot be closed.
+    """
+    errors: List[str] = []
+    param_names: List[str] = []
+    found_tags: List[str] = []
+    idx = 0
+    length = len(text)
+    tag_stack: List[str] = []
+
+    while idx < length:
+        # Check for malformed [code ...] with attributes
+        m_code_attr = re.match(r"^\[code\s+[^\]]+\]", text[idx:], re.IGNORECASE)
+        if m_code_attr:
+            errors.append(f"{location_desc}: Tag '[code]' does not accept attributes.")
+            idx += m_code_attr.end()
+            continue
+
+        # Valid [code] open tag
+        m_code_open = re.match(r"^\[code\]", text[idx:], re.IGNORECASE)
+        if m_code_open:
+            found_tags.append("code")
+            m_close = re.search(r"\[/code\]", text[idx + 6 :], re.IGNORECASE)
+            if not m_close:
+                errors.append(f"{location_desc}: Unclosed '[code]' block.")
+                break
+
+            end_code = (idx + 6) + m_close.start()
+            inner_code = text[idx + 6 : end_code]
+            if re.search(r"\[code\]", inner_code, re.IGNORECASE):
+                errors.append(
+                    f"{location_desc}: Nested '[code]' block detected inside code span."
+                )
+
+            idx = (idx + 6) + m_close.end()
+            continue
+
+        m_code_stray = re.match(r"^\[/code\]", text[idx:], re.IGNORECASE)
+        if m_code_stray:
+            errors.append(
+                f"{location_desc}: Stray closing '[/code]' without preceding open '[code]'."
+            )
+            idx += m_code_stray.end()
+            continue
+
+        match = RE_TOKEN_TAG.match(text, idx)
+        if not match:
+            idx += 1
+            continue
+
+        raw_tag = match.group(0)
+        tag_name = match.group(1).lower()
+        tag_args = (match.group(2) or "").strip()
+        idx = match.end()
+
+        if tag_name == "codeblock":
+            errors.append(
+                f"{location_desc}: Unsupported project BBCode tag '[codeblock]'. Only inline [code] is permitted."
+            )
+            continue
+
+        if tag_name.startswith("/"):
+            base_tag = tag_name[1:]
+            if tag_args:
+                errors.append(
+                    f"{location_desc}: Closing tag '[{tag_name}]' cannot contain arguments."
+                )
+                continue
+            if base_tag not in FORMATTING_TAGS:
+                errors.append(
+                    f"{location_desc}: Unsupported or non-closeable tag '[{tag_name}]'."
+                )
+                continue
+            if not tag_stack or tag_stack[-1] != base_tag:
+                expected = f"[/{tag_stack[-1]}]" if tag_stack else "no open tags"
+                errors.append(
+                    f"{location_desc}: Mismatched closing tag '{raw_tag}', expected '{expected}'."
+                )
+                continue
+            tag_stack.pop()
+            continue
+
+        if tag_name in FORMATTING_TAGS:
+            found_tags.append(tag_name)
+            if tag_args:
+                errors.append(
+                    f"{location_desc}: Formatting tag '[{tag_name}]' cannot take attributes."
+                )
+                continue
+            tag_stack.append(tag_name)
+            continue
+
+        if tag_name in SEMANTIC_TAG_RULES:
+            found_tags.append(tag_name)
+            rule = SEMANTIC_TAG_RULES[tag_name]
+            if not tag_args:
+                errors.append(
+                    f"{location_desc}: Semantic tag '[{tag_name}]' requires a target identifier argument."
+                )
+            elif not rule.match(tag_args):
+                errors.append(
+                    f"{location_desc}: Argument '{tag_args}' in '[{tag_name}]' violates {tag_name} grammar."
+                )
+            else:
+                if tag_name == "param":
+                    param_names.append(tag_args)
+            continue
+
+        errors.append(
+            f"{location_desc}: Unapproved or malformed BBCode tag '{raw_tag}'."
+        )
+
+    while tag_stack:
+        unclosed = tag_stack.pop()
+        errors.append(
+            f"{location_desc}: Unclosed formatting tag '[{unclosed}]' at end of documentation."
+        )
+
+    return DocumentationPayload(errors=errors, param_names=param_names, tags=found_tags)
+
+
 def validate_docstring_text(text: Optional[str], field_name: str) -> Optional[str]:
-    """Validates that text contains no code fences, Doxygen tags, or malformed/unapproved BBCode."""
     if not text:
         return text
     if RE_BANNED_FENCE.search(text):
         raise ValueError(f"{field_name} contains banned Markdown code fences (```).")
     if RE_DOXYGEN_TAG.search(text):
-        raise ValueError(f"{field_name} contains banned Doxygen tags (@param/@return).")
+        raise ValueError(
+            f"{field_name} contains banned Doxygen tags (@param/@return/@brief)."
+        )
 
-    # Exclude [code]...[/code] content so bracketed syntax like Array[Node] isn't misidentified as tags
-    text_without_code = RE_CODE_BLOCK.sub("", text)
-
-    for match in RE_ANY_BBCODE_TAG.finditer(text_without_code):
-        tag_name = match.group(1).lower()
-        tag_args = (match.group(2) or "").strip()
-
-        # Closing tags
-        if tag_name.startswith("/"):
-            base = tag_name[1:]
-            if base not in FORMATTING_BBCODE_TAGS or tag_args:
-                raise ValueError(
-                    f"{field_name} contains invalid closing tag '[{tag_name}]'."
-                )
-            continue
-
-        # Formatting tags
-        if tag_name in FORMATTING_BBCODE_TAGS:
-            if tag_args:
-                raise ValueError(
-                    f"{field_name} tag '[{tag_name}]' must not have arguments."
-                )
-            continue
-
-        # Semantic tags require exactly one identifier
-        if tag_name in SEMANTIC_BBCODE_TAGS:
-            if not tag_args or len(tag_args.split()) != 1:
-                raise ValueError(
-                    f"{field_name} tag '[{tag_name}]' requires exactly one identifier."
-                )
-            continue
-
-        raise ValueError(f"{field_name} contains unapproved BBCode tag '[{tag_name}]'.")
+    payload = validate_and_tokenize_bbcode(text, field_name)
+    if payload.errors:
+        raise ValueError(f"{field_name} BBCode violation: {'; '.join(payload.errors)}")
 
     return text.strip()
 
@@ -194,7 +337,7 @@ class FileDocumentationResponse(BaseModel):
 @dataclass
 class MemberDeclaration:
     name: str
-    kind: str  # function, signal, export, const, enum
+    kind: str
     decl_line: int
     insert_line: int
     params: List[str]
@@ -204,19 +347,112 @@ class MemberDeclaration:
     detached_doc_indices: List[int] = field(default_factory=list)
 
 
+def get_first_token_line(node: Any) -> Optional[int]:
+    if isinstance(node, Token):
+        return node.line
+    if isinstance(node, Tree):
+        if hasattr(node, "meta") and hasattr(node.meta, "line"):
+            return node.meta.line
+        for child in node.children:
+            line = get_first_token_line(child)
+            if line is not None:
+                return line
+    return None
+
+
+def extract_annotation_name(anno_node: Tree) -> Optional[str]:
+    for child in anno_node.children:
+        if isinstance(child, Token) and child.type == "NAME":
+            return str(child.value).lstrip("@")
+    return None
+
+
+def extract_func_name(func_node: Tree) -> Optional[str]:
+    """Unwraps static_func_def -> func_def -> func_header to locate the function identifier."""
+    target_def = func_node
+    if target_def.data == "static_func_def":
+        if not target_def.children or not isinstance(target_def.children[0], Tree):
+            return None
+        target_def = target_def.children[0]
+
+    if not isinstance(target_def, Tree) or target_def.data != "func_def":
+        return None
+
+    func_header = None
+    for child in target_def.children:
+        if isinstance(child, Tree) and child.data == "func_header":
+            func_header = child
+            break
+
+    if not func_header:
+        if target_def.children and isinstance(target_def.children[0], Tree):
+            func_header = target_def.children[0]
+        else:
+            return None
+
+    for child in func_header.children:
+        if isinstance(child, Token) and child.type == "NAME":
+            return str(child.value)
+
+    return None
+
+
+def extract_var_name(var_node: Tree) -> Optional[str]:
+    for child in var_node.children:
+        if isinstance(child, Tree) and child.data == "class_var_name":
+            for sub in child.children:
+                if isinstance(sub, Token) and sub.type == "NAME":
+                    return str(sub.value)
+        elif isinstance(child, Token) and child.type == "NAME":
+            return str(child.value)
+    return None
+
+
+def extract_signal_name(signal_node: Tree) -> Optional[str]:
+    for child in signal_node.children:
+        if isinstance(child, Token) and child.type == "NAME":
+            return str(child.value)
+    return None
+
+
+def extract_const_name(const_node: Tree) -> Optional[str]:
+    for child in const_node.children:
+        if isinstance(child, Token) and child.type == "NAME":
+            return str(child.value)
+    return None
+
+
+def extract_enum_name(enum_node: Tree) -> Optional[str]:
+    for child in enum_node.children:
+        if isinstance(child, Tree) and child.data == "enum_name":
+            for sub in child.children:
+                if isinstance(sub, Token) and sub.type == "NAME":
+                    return str(sub.value)
+        elif isinstance(child, Token) and child.type == "NAME":
+            return str(child.value)
+    return None
+
+
 def extract_parameters_from_ast(func_node: Tree) -> Tuple[List[str], bool]:
     """Extracts parameter identifiers in source order across all GDScript 4 forms."""
     params = []
     param_rules: Set[str] = {
         "func_arg_regular",
         "func_arg_typed",
-        "func_arg_default",
         "func_arg_inf",
+        "func_arg_variadic",
     }
 
-    # Traverse subtrees in document/source order
     for subtree in func_node.iter_subtrees():
         if subtree.data == "func_arg_variadic":
+            vararg_name = None
+            for child in subtree.children:
+                if isinstance(child, Token) and child.type == "NAME":
+                    vararg_name = str(child.value)
+                    break
+            if vararg_name:
+                params.append(vararg_name)
+                continue
             return [], False
 
         if subtree.data in param_rules:
@@ -233,10 +469,10 @@ def extract_parameters_from_ast(func_node: Tree) -> Tuple[List[str], bool]:
 
 
 def extract_signal_parameters_from_ast(sig_node: Tree) -> List[str]:
-    """Extracts signal parameter identifiers in source order."""
     params = []
+    signal_arg_rules: Set[str] = {"signal_arg_regular", "signal_arg_typed"}
     for subtree in sig_node.iter_subtrees():
-        if subtree.data == "signal_arg_regular":
+        if subtree.data in signal_arg_rules:
             for child in subtree.children:
                 if isinstance(child, Token) and child.type == "NAME":
                     params.append(str(child.value))
@@ -244,22 +480,72 @@ def extract_signal_parameters_from_ast(sig_node: Tree) -> List[str]:
     return params
 
 
-def get_first_token_line(node: Any) -> Optional[int]:
-    if isinstance(node, Token):
-        return node.line
-    if isinstance(node, Tree):
-        if hasattr(node, "meta") and hasattr(node.meta, "line"):
-            return node.meta.line
-        for child in node.children:
-            line = get_first_token_line(child)
-            if line is not None:
-                return line
-    return None
+def get_top_level_statements(ast: Tree) -> List[Any]:
+    if ast.data == "class_body":
+        return ast.children
+    if ast.data == "start":
+        for child in ast.children:
+            if isinstance(child, Tree) and child.data == "class_body":
+                return child.children
+        raise ValueError("AST 'start' node contains no class_body.")
+    raise ValueError(f"Unable to locate top-level class body. Root rule is '{ast.data}'.")
+
+
+def resolve_declaration_block(
+    decl_line: int,
+    source_lines: List[str],
+    anno_map: Dict[int, List[str]],
+) -> Tuple[int, List[str], List[int]]:
+    """
+    Resolves the contiguous annotation block, insertion anchor, and docstrings.
+    Returns: (insert_line, existing_doc_lines, detached_doc_indices)
+    """
+    curr = decl_line - 1
+    contiguous_lines: List[int] = []
+
+    while curr > 0:
+        line_str = source_lines[curr - 1].strip()
+        if line_str == "":
+            break  # Blank line strictly terminates the contiguous block
+        if curr in anno_map or line_str.startswith("#"):
+            contiguous_lines.append(curr)
+            curr -= 1
+        else:
+            break
+
+    member_annos = [l for l in contiguous_lines if l in anno_map]
+    detached_indices: List[int] = []
+
+    if member_annos:
+        earliest_anno = min(member_annos)
+        for mid in range(earliest_anno + 1, decl_line):
+            if RE_DOC_LINE.match(source_lines[mid - 1]):
+                detached_indices.append(mid - 1)
+
+        block_top = earliest_anno
+        while block_top > 1:
+            line_above = source_lines[block_top - 2].strip()
+            if line_above.startswith("#") and not RE_DOC_LINE.match(source_lines[block_top - 2]):
+                block_top -= 1
+            else:
+                break
+        insert_line = block_top
+    else:
+        insert_line = decl_line
+
+    doc_lines: List[str] = []
+    idx = insert_line - 2
+    while idx >= 0 and RE_DOC_LINE.match(source_lines[idx]):
+        doc_lines.insert(0, source_lines[idx])
+        idx -= 1
+
+    return insert_line, doc_lines, detached_indices
 
 
 def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], bool]:
     try:
-        ast = gdparser.parse(source)
+        ast = gdparser.parse(source, gather_metadata=True)
+        statements = get_top_level_statements(ast)
     except Exception as e:
         print(f"[FAIL-CLOSED] GDScript AST parse error: {e}")
         return [], False
@@ -267,194 +553,173 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
     declarations: List[MemberDeclaration] = []
     source_lines = source.splitlines(keepends=True)
 
-    # Collect all annotations with their start lines
-    annotations: List[Tuple[int, str]] = []
+    anno_map: Dict[int, List[str]] = {}
     for anno_node in ast.find_data("annotation"):
         line = get_first_token_line(anno_node)
-        if line:
-            anno_text = "".join(
-                str(t.value)
-                for t in anno_node.scan_values(lambda v: isinstance(v, Token))
+        anno_name = extract_annotation_name(anno_node)
+        if line and anno_name:
+            anno_map.setdefault(line, []).append(anno_name)
+
+    for node in statements:
+        if not isinstance(node, Tree):
+            continue
+
+        # 1. Functions (regular and static)
+        if node.data in ("func_def", "static_func_def"):
+            func_name = extract_func_name(node)
+            if not func_name or func_name.startswith("_"):
+                continue
+
+            decl_line = get_first_token_line(node)
+            if not decl_line:
+                return [], False
+
+            params, ok = extract_parameters_from_ast(node)
+            insert_line, docs, detached = resolve_declaration_block(
+                decl_line, source_lines, anno_map
             )
-            annotations.append((line, anno_text))
 
-    def find_associated_annotation_line(target_line: int) -> Optional[int]:
-        """Finds the earliest consecutive annotation preceding target_line."""
-        curr = target_line - 1
-        earliest_line = None
-        anno_map = {l: txt for l, txt in annotations}
+            decl = MemberDeclaration(
+                name=func_name,
+                kind="function",
+                decl_line=decl_line,
+                insert_line=insert_line,
+                params=params,
+                context_snippet="".join(
+                    source_lines[insert_line - 1 : min(len(source_lines), decl_line + 15)]
+                ),
+                existing_doc_lines=docs,
+                detached_doc_indices=detached,
+            )
+            if not ok:
+                decl.status = DocStatus.AMBIGUOUS
+            declarations.append(decl)
 
-        while curr > 0:
-            line_str = source_lines[curr - 1].strip()
-            if curr in anno_map:
-                earliest_line = curr
-                curr -= 1
-            elif line_str.startswith("#"):
-                curr -= 1
-            else:
-                break
-        return earliest_line
+        # 2. Exported Variables (@export)
+        elif node.data == "class_var_stmt":
+            var_name = extract_var_name(node)
+            if not var_name or var_name.startswith("_"):
+                continue
 
-    # 1. Functions
-    for node in ast.find_data("func_def"):
-        func_name = None
-        for child in node.children:
-            if isinstance(child, Token) and child.type == "NAME":
-                func_name = str(child.value)
-                break
+            decl_line = get_first_token_line(node)
+            if not decl_line:
+                return [], False
 
-        if not func_name or func_name.startswith("_"):
-            continue
+            insert_line, docs, detached = resolve_declaration_block(
+                decl_line, source_lines, anno_map
+            )
 
-        params, ok = extract_parameters_from_ast(node)
-        decl_line = get_first_token_line(node)
-        if not decl_line:
-            return [], False
+            is_export = False
+            for l in range(insert_line, decl_line):
+                if l in anno_map:
+                    if any(name in PROPERTY_EXPORT_ANNOTATIONS for name in anno_map[l]):
+                        is_export = True
+                        break
 
-        anno_line = find_associated_annotation_line(decl_line)
-        insert_line = anno_line if anno_line else decl_line
-
-        decl = MemberDeclaration(
-            name=func_name,
-            kind="function",
-            decl_line=decl_line,
-            insert_line=insert_line,
-            params=params,
-            context_snippet="".join(
-                source_lines[insert_line - 1 : min(len(source_lines), decl_line + 15)]
-            ),
-        )
-        if not ok:
-            decl.status = DocStatus.AMBIGUOUS
-        declarations.append(decl)
-
-    # 2. Exported Variables (@export)
-    for node in ast.find_data("class_var_stmt"):
-        var_name = None
-        for child in node.children:
-            if isinstance(child, Token) and child.type == "NAME":
-                var_name = str(child.value)
-                break
-
-        if not var_name or var_name.startswith("_"):
-            continue
-
-        decl_line = get_first_token_line(node)
-        if not decl_line:
-            return [], False
-
-        anno_line = find_associated_annotation_line(decl_line)
-
-        is_export = False
-        if anno_line:
-            for l, txt in annotations:
-                if anno_line <= l < decl_line and txt.startswith("@export"):
-                    is_export = True
-                    break
-
-        if not is_export:
-            for child in node.children:
-                if isinstance(child, Tree) and child.data == "annotation":
-                    for t in child.scan_values(lambda v: isinstance(v, Token)):
-                        if t.value.startswith("@export"):
+            if not is_export:
+                for child in node.children:
+                    if isinstance(child, Tree) and child.data == "annotation":
+                        child_name = extract_annotation_name(child)
+                        if child_name in PROPERTY_EXPORT_ANNOTATIONS:
                             is_export = True
 
-        if not is_export:
-            continue
+            if not is_export:
+                continue
 
-        insert_line = anno_line if anno_line else decl_line
-        declarations.append(
-            MemberDeclaration(
-                name=var_name,
-                kind="export",
-                decl_line=decl_line,
-                insert_line=insert_line,
-                params=[],
-                context_snippet="".join(source_lines[insert_line - 1 : decl_line]),
+            declarations.append(
+                MemberDeclaration(
+                    name=var_name,
+                    kind="export",
+                    decl_line=decl_line,
+                    insert_line=insert_line,
+                    params=[],
+                    context_snippet="".join(source_lines[insert_line - 1 : decl_line]),
+                    existing_doc_lines=docs,
+                    detached_doc_indices=detached,
+                )
             )
-        )
 
-    # 3. Signals
-    for node in ast.find_data("signal_stmt"):
-        sig_name = None
-        for child in node.children:
-            if isinstance(child, Token) and child.type == "NAME":
-                sig_name = str(child.value)
-                break
-        if not sig_name or sig_name.startswith("_"):
-            continue
+        # 3. Signals
+        elif node.data == "signal_stmt":
+            sig_name = extract_signal_name(node)
+            if not sig_name or sig_name.startswith("_"):
+                continue
 
-        decl_line = get_first_token_line(node)
-        if not decl_line:
-            return [], False
+            decl_line = get_first_token_line(node)
+            if not decl_line:
+                return [], False
 
-        anno_line = find_associated_annotation_line(decl_line)
-        insert_line = anno_line if anno_line else decl_line
-        sig_params = extract_signal_parameters_from_ast(node)
-        declarations.append(
-            MemberDeclaration(
-                name=sig_name,
-                kind="signal",
-                decl_line=decl_line,
-                insert_line=insert_line,
-                params=sig_params,
-                context_snippet=source_lines[decl_line - 1],
+            sig_params = extract_signal_parameters_from_ast(node)
+            insert_line, docs, detached = resolve_declaration_block(
+                decl_line, source_lines, anno_map
             )
-        )
 
-    # 4. Public Constants
-    for node in ast.find_data("const_stmt"):
-        const_name = None
-        for child in node.children:
-            if isinstance(child, Token) and child.type == "NAME":
-                const_name = str(child.value)
-                break
-        if not const_name or const_name.startswith("_"):
-            continue
-
-        decl_line = get_first_token_line(node)
-        if not decl_line:
-            return [], False
-
-        anno_line = find_associated_annotation_line(decl_line)
-        insert_line = anno_line if anno_line else decl_line
-        declarations.append(
-            MemberDeclaration(
-                name=const_name,
-                kind="constant",
-                decl_line=decl_line,
-                insert_line=insert_line,
-                params=[],
-                context_snippet=source_lines[decl_line - 1],
+            declarations.append(
+                MemberDeclaration(
+                    name=sig_name,
+                    kind="signal",
+                    decl_line=decl_line,
+                    insert_line=insert_line,
+                    params=sig_params,
+                    context_snippet=source_lines[decl_line - 1],
+                    existing_doc_lines=docs,
+                    detached_doc_indices=detached,
+                )
             )
-        )
 
-    # 5. Public Enums
-    for node in ast.find_data("enum_stmt"):
-        enum_name = None
-        for child in node.children:
-            if isinstance(child, Token) and child.type == "NAME":
-                enum_name = str(child.value)
-                break
-        if not enum_name or enum_name.startswith("_"):
-            continue
+        # 4. Public Constants
+        elif node.data == "const_stmt":
+            const_name = extract_const_name(node)
+            if not const_name or const_name.startswith("_"):
+                continue
 
-        decl_line = get_first_token_line(node)
-        if not decl_line:
-            return [], False
+            decl_line = get_first_token_line(node)
+            if not decl_line:
+                return [], False
 
-        anno_line = find_associated_annotation_line(decl_line)
-        insert_line = anno_line if anno_line else decl_line
-        declarations.append(
-            MemberDeclaration(
-                name=enum_name,
-                kind="enum",
-                decl_line=decl_line,
-                insert_line=insert_line,
-                params=[],
-                context_snippet=source_lines[decl_line - 1],
+            insert_line, docs, detached = resolve_declaration_block(
+                decl_line, source_lines, anno_map
             )
-        )
+
+            declarations.append(
+                MemberDeclaration(
+                    name=const_name,
+                    kind="constant",
+                    decl_line=decl_line,
+                    insert_line=insert_line,
+                    params=[],
+                    context_snippet=source_lines[decl_line - 1],
+                    existing_doc_lines=docs,
+                    detached_doc_indices=detached,
+                )
+            )
+
+        # 5. Public Enums
+        elif node.data == "enum_stmt":
+            enum_name = extract_enum_name(node)
+            if not enum_name or enum_name.startswith("_"):
+                continue
+
+            decl_line = get_first_token_line(node)
+            if not decl_line:
+                return [], False
+
+            insert_line, docs, detached = resolve_declaration_block(
+                decl_line, source_lines, anno_map
+            )
+
+            declarations.append(
+                MemberDeclaration(
+                    name=enum_name,
+                    kind="enum",
+                    decl_line=decl_line,
+                    insert_line=insert_line,
+                    params=[],
+                    context_snippet=source_lines[decl_line - 1],
+                    existing_doc_lines=docs,
+                    detached_doc_indices=detached,
+                )
+            )
 
     return declarations, True
 
@@ -462,54 +727,32 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
 # -----------------------------------------------------------------------------
 # Classification Engine
 # -----------------------------------------------------------------------------
-def classify_member(decl: MemberDeclaration, raw_lines: List[str]) -> None:
+def classify_member(decl: MemberDeclaration) -> None:
     """Classifies a member into COMPLIANT, MISSING, NON_COMPLIANT, or AMBIGUOUS."""
     if decl.status == DocStatus.AMBIGUOUS:
         return
 
-    doc_lines = []
-    idx = decl.insert_line - 2
+    if decl.detached_doc_indices:
+        decl.status = DocStatus.AMBIGUOUS
+        return
 
-    while idx >= 0:
-        curr = raw_lines[idx]
-        if RE_DOC_LINE.match(curr):
-            doc_lines.insert(0, curr)
-            idx -= 1
-        else:
-            break
-
-    decl.existing_doc_lines = doc_lines
-
-    # Detached Docstring Guard: Check strictly between annotation and declaration
-    # 0-based index range: decl.insert_line to decl.decl_line - 2
-    if decl.insert_line != decl.decl_line:
-        for mid_idx in range(decl.insert_line, decl.decl_line - 1):
-            if RE_DOC_LINE.match(raw_lines[mid_idx]):
-                decl.detached_doc_indices.append(mid_idx)
-                decl.status = DocStatus.AMBIGUOUS
-
-        if decl.detached_doc_indices:
-            return
-
-    if not doc_lines:
+    if not decl.existing_doc_lines:
         decl.status = DocStatus.MISSING
         return
 
-    combined_docs = "".join(doc_lines)
-
-    try:
-        validate_docstring_text(combined_docs, f"Docstring for '{decl.name}'")
-    except ValueError:
+    raw_payload = normalize_doc_payload(decl.existing_doc_lines)
+    payload = validate_and_tokenize_bbcode(raw_payload, f"Docstring for '{decl.name}'")
+    if payload.errors:
         decl.status = DocStatus.NON_COMPLIANT
         return
 
-    # Check parameter referencing
-    if decl.kind in ("function", "signal"):
-        tags = RE_PARAM_TAG.findall(combined_docs)
-        for t in tags:
-            if t not in decl.params:
-                decl.status = DocStatus.NON_COMPLIANT
-                return
+    if len(payload.param_names) != len(set(payload.param_names)):
+        decl.status = DocStatus.NON_COMPLIANT
+        return
+
+    if set(payload.param_names) != set(decl.params):
+        decl.status = DocStatus.NON_COMPLIANT
+        return
 
     decl.status = DocStatus.COMPLIANT
 
@@ -527,17 +770,15 @@ def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> Li
 
     if doc.parameters and decl.kind in ("function", "signal"):
         lines.append(f"{indent}##\n")
-        for p_name, p_desc in doc.parameters.items():
-            desc_lines = p_desc.strip().splitlines()
-            lines.append(f"{indent}## [param {p_name}]: {desc_lines[0].strip()}\n")
-            for cont in desc_lines[1:]:
-                lines.append(f"{indent}##     {cont.strip()}\n")
+        # Emit parameters deterministically in declaration signature order
+        for p_name in decl.params:
+            if p_name in doc.parameters:
+                p_desc = doc.parameters[p_name].strip()
+                lines.append(f"{indent}## [param {p_name}]: {p_desc}\n")
 
     if doc.returns and doc.returns.strip() and decl.kind == "function":
-        ret_lines = doc.returns.strip().splitlines()
-        lines.append(f"{indent}## Returns {ret_lines[0].strip()}\n")
-        for cont in ret_lines[1:]:
-            lines.append(f"{indent}##     {cont.strip()}\n")
+        ret_desc = doc.returns.strip()
+        lines.append(f"{indent}## Returns {ret_desc}\n")
 
     return lines
 
@@ -552,15 +793,15 @@ def compute_non_doc_bytes_sha256(source: str) -> str:
 
 
 def verify_modification_allowlist(original: str, proposed: str) -> bool:
+    """Rejects any modifications or deletions to lines that do not match RE_DOC_LINE."""
     diff = difflib.ndiff(
         original.splitlines(keepends=True), proposed.splitlines(keepends=True)
     )
     for line in diff:
         code = line[0]
         content = line[2:]
-        if code in ("+", "-"):
-            if not RE_DOC_LINE.match(content) and content.strip():
-                return False
+        if code in ("+", "-") and not RE_DOC_LINE.match(content):
+            return False
     return True
 
 
@@ -570,6 +811,12 @@ def verify_modification_allowlist(original: str, proposed: str) -> bool:
 def query_gemini_for_docs(
     client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
 ) -> Dict[str, MemberDoc]:
+    # Reject duplicate target names before prompting
+    target_names = [t.name for t in targets]
+    if len(target_names) != len(set(target_names)):
+        print(f"[FAIL-CLOSED] Duplicate target member names in {file_path.name}: {target_names}")
+        sys.exit(1)
+
     manifest = [
         {
             "name": t.name,
@@ -587,9 +834,9 @@ def query_gemini_for_docs(
         "Requirements:\n"
         "1. Supply documentation for EVERY target member in the manifest.\n"
         "2. Return only requested member names. Do not invent members.\n"
-        "3. In 'parameters', use ONLY parameter names present in the declaration.\n"
-        "4. BBCode allowed: [param name], [code], [constant], [member], [method], [signal], [b], [i].\n"
-        "5. Strictly NO Markdown code blocks (```) or Doxygen (@param/@return) tags."
+        "3. In 'parameters', provide descriptions for ALL parameter names present in the declaration.\n"
+        "4. BBCode allowed: [param], [constant], [member], [method], [signal], [enum], [code], [b], [i].\n"
+        "5. Strictly NO Markdown code blocks (```) or Doxygen (@param/@return/@brief) tags."
     )
 
     try:
@@ -607,11 +854,21 @@ def query_gemini_for_docs(
         print(f"[FAIL-CLOSED] Gemini generation failed for {file_path}: {e}")
         sys.exit(1)
 
-    requested_names = {t.name for t in targets}
-    returned_names = {m.name for m in validated.members}
+    # Validate exact count and uniqueness
+    if len(validated.members) != len(targets):
+        print(f"[FAIL-CLOSED] Member count mismatch in {file_path.name}: Expected {len(targets)}, got {len(validated.members)}")
+        sys.exit(1)
+
+    returned_names_list = [m.name for m in validated.members]
+    if len(returned_names_list) != len(set(returned_names_list)):
+        print(f"[FAIL-CLOSED] Duplicate member documentation returned in {file_path.name}: {returned_names_list}")
+        sys.exit(1)
+
+    requested_names = set(target_names)
+    returned_names = set(returned_names_list)
     if requested_names != returned_names:
         print(
-            f"[FAIL-CLOSED] Set mismatch in {file_path}! Expected {requested_names}, got {returned_names}"
+            f"[FAIL-CLOSED] Set mismatch in {file_path.name}! Expected {requested_names}, got {returned_names}"
         )
         sys.exit(1)
 
@@ -619,13 +876,21 @@ def query_gemini_for_docs(
     target_by_name = {t.name: t for t in targets}
     for m in validated.members:
         target = target_by_name[m.name]
-        if m.parameters:
-            for p in m.parameters:
-                if p not in target.params:
-                    print(
-                        f"[FAIL-CLOSED] Invalid parameter '{p}' returned for {m.name}. Valid: {target.params}"
-                    )
-                    sys.exit(1)
+        target_param_set = set(target.params)
+        m_param_set = set(m.parameters.keys()) if m.parameters else set()
+
+        if target.kind in ("function", "signal") and target_param_set:
+            if m_param_set != target_param_set:
+                print(
+                    f"[FAIL-CLOSED] Parameter mismatch returned for {m.name}. Expected {target.params}, got {list(m_param_set)}"
+                )
+                sys.exit(1)
+        elif m_param_set:
+            print(
+                f"[FAIL-CLOSED] Unexpected parameters returned for non-parameterized member {m.name}: {list(m_param_set)}"
+            )
+            sys.exit(1)
+
         doc_map[m.name] = m
 
     return doc_map
@@ -645,17 +910,21 @@ class ProposedFileChange:
 def prepare_file_change(
     client: Optional[genai.Client], file_path: Path, check_mode: bool
 ) -> Optional[ProposedFileChange]:
-    with open(file_path, "r", encoding="utf-8", newline="") as f:
-        original_source = f.read()
-
-    declarations, ok = parse_declarations_from_ast(original_source)
-    if not ok:
-        print(f"[FAIL-CLOSED] AST parse failed for {file_path}.")
+    try:
+        with open(file_path, "r", encoding="utf-8", newline="") as f:
+            original_source = f.read()
+    except (OSError, UnicodeError) as e:
+        print(f"[FAIL-CLOSED] Unable to read {file_path}: {e}")
         sys.exit(1)
 
-    raw_lines = original_source.splitlines(keepends=True)
+    # Phase 1: Baseline AST Audit
+    declarations, ok = parse_declarations_from_ast(original_source)
+    if not ok:
+        print(f"[FAIL-CLOSED] Baseline AST parse failed for {file_path}.")
+        sys.exit(1)
+
     for decl in declarations:
-        classify_member(decl, raw_lines)
+        classify_member(decl)
 
     ambiguous = [d for d in declarations if d.status == DocStatus.AMBIGUOUS]
     for amb in ambiguous:
@@ -676,12 +945,14 @@ def prepare_file_change(
             file_path, original_source, original_source, len(actionable)
         )
 
+    # Phase 2: Generation & Construction
     if not client:
         print("[FAIL-CLOSED] API client required in write mode.")
         sys.exit(1)
 
     generated_docs = query_gemini_for_docs(client, file_path, actionable)
 
+    raw_lines = original_source.splitlines(keepends=True)
     new_lines = list(raw_lines)
     for decl in sorted(actionable, key=lambda d: d.insert_line, reverse=True):
         if decl.detached_doc_indices:
@@ -705,6 +976,44 @@ def prepare_file_change(
 
     proposed_source = "".join(new_lines)
 
+    # Phase 3: Post-Injection Contract Re-Verification
+    post_declarations, ok = parse_declarations_from_ast(proposed_source)
+    if not ok:
+        print(f"[FAIL-CLOSED] Post-injection AST parse failed for {file_path.name}.")
+        sys.exit(1)
+
+    if len(post_declarations) != len(declarations):
+        print(
+            f"[FAIL-CLOSED] Post-injection declaration count mismatch in {file_path.name}: "
+            f"expected {len(declarations)}, got {len(post_declarations)}."
+        )
+        sys.exit(1)
+
+    post_by_key = {(d.kind, d.name): d for d in post_declarations}
+    if len(post_by_key) != len(post_declarations):
+        print(f"[FAIL-CLOSED] Duplicate declarations detected in post-injection AST for {file_path.name}.")
+        sys.exit(1)
+
+    for orig_decl in actionable:
+        key = (orig_decl.kind, orig_decl.name)
+        post_decl = post_by_key.get(key)
+        if not post_decl:
+            print(f"[FAIL-CLOSED] Target declaration {key} missing from post-injection AST in {file_path.name}.")
+            sys.exit(1)
+
+        if post_decl.params != orig_decl.params:
+            print(f"[FAIL-CLOSED] Target declaration {orig_decl.name} signature mutated during injection in {file_path.name}!")
+            sys.exit(1)
+
+        classify_member(post_decl)
+        if post_decl.status != DocStatus.COMPLIANT:
+            print(
+                f"[FAIL-CLOSED] Target declaration {orig_decl.name} failed post-injection compliance in {file_path.name} "
+                f"(status: {post_decl.status.value})."
+            )
+            sys.exit(1)
+
+    # Phase 4: Byte Integrity & Modification Allowlist Guards
     orig_fp = compute_non_doc_bytes_sha256(original_source)
     prop_fp = compute_non_doc_bytes_sha256(proposed_source)
     if orig_fp != prop_fp:
@@ -721,7 +1030,7 @@ def prepare_file_change(
 
 
 def atomic_commit_all_changes(changes: List[ProposedFileChange]) -> None:
-    """Atomic filesystem commit with rollback support on failure."""
+    """Staged file replacement with rollback-protected restoration on failure."""
     backups: Dict[Path, Path] = {}
     staged_files: List[Tuple[Path, Path]] = []
 
@@ -802,80 +1111,118 @@ def main():
             sys.exit(1)
         client = genai.Client(api_key=api_key)
 
-    scripts_root = Path("scripts").resolve()
+    raw_scripts_root = Path("scripts")
+    if raw_scripts_root.is_symlink():
+        print("[FAIL-CLOSED] 'scripts/' must not be a symlink.")
+        sys.exit(1)
+
+    scripts_root = raw_scripts_root.resolve()
     if not scripts_root.exists():
         print("[FAIL-CLOSED] 'scripts/' directory not found.")
         sys.exit(1)
 
+    total_files_scanned = 0
+    total_declarations = 0
+    status_counts = {
+        DocStatus.COMPLIANT: 0,
+        DocStatus.MISSING: 0,
+        DocStatus.NON_COMPLIANT: 0,
+        DocStatus.AMBIGUOUS: 0,
+    }
     actionable_files: List[Tuple[Path, int]] = []
-    total_slots = 0
 
     for subdir_name in ALLOWED_SUBDIRS:
-        target_dir = scripts_root / subdir_name
-        if not target_dir.exists():
+        raw_target = scripts_root / subdir_name
+        if not raw_target.exists():
             continue
 
-        # Fail-closed directory traversal checks
-        if target_dir.is_symlink() or not target_dir.resolve().is_relative_to(
-            scripts_root
-        ):
-            print(
-                f"[FAIL-CLOSED] Approved directory {target_dir} is a symlink or escapes root."
-            )
+        if raw_target.is_symlink():
+            print(f"[FAIL-CLOSED] Symlink directory rejected: {raw_target}")
+            sys.exit(1)
+
+        target_dir = raw_target.resolve()
+        if not target_dir.is_relative_to(scripts_root):
+            print(f"[FAIL-CLOSED] Approved directory {raw_target} escapes root.")
             sys.exit(1)
 
         for file_path in sorted(target_dir.rglob("*.gd")):
-            resolved = file_path.resolve()
-            if not resolved.is_relative_to(scripts_root) or file_path.is_symlink():
-                print(
-                    f"[FAIL-CLOSED] Invalid file path or symlink rejected: {file_path}"
-                )
+            if file_path.is_symlink():
+                print(f"[FAIL-CLOSED] Symlink file rejected: {file_path}")
                 sys.exit(1)
 
-            change = prepare_file_change(
-                client=None, file_path=resolved, check_mode=True
-            )
-            if change:
-                actionable_files.append((resolved, change.slots_count))
-                total_slots += change.slots_count
+            resolved = file_path.resolve()
+            if not resolved.is_relative_to(scripts_root):
+                print(f"[FAIL-CLOSED] Invalid file path rejected: {file_path}")
+                sys.exit(1)
 
-    total_files = len(actionable_files)
-    print(
-        f"\nInventory Complete: {total_files} file(s) and {total_slots} slot(s) identified across production subtrees."
+            try:
+                with open(resolved, "r", encoding="utf-8", newline="") as f:
+                    content = f.read()
+            except (OSError, UnicodeError) as e:
+                print(f"[FAIL-CLOSED] Unable to read {resolved}: {e}")
+                sys.exit(1)
+
+            decls, ok = parse_declarations_from_ast(content)
+            if not ok:
+                print(f"[FAIL-CLOSED] AST parse failed for {resolved.name}.")
+                sys.exit(1)
+
+            total_files_scanned += 1
+            file_actionable_slots = 0
+
+            for decl in decls:
+                total_declarations += 1
+                classify_member(decl)
+                status_counts[decl.status] += 1
+                if decl.status in (DocStatus.MISSING, DocStatus.NON_COMPLIANT):
+                    file_actionable_slots += 1
+
+            if file_actionable_slots > 0:
+                actionable_files.append((resolved, file_actionable_slots))
+
+    total_actionable_slots = (
+        status_counts[DocStatus.MISSING] + status_counts[DocStatus.NON_COMPLIANT]
     )
 
     if args.audit:
-        print(
-            f"[AUDIT COMPLETE] Scan succeeded. {total_files} file(s) require docstrings."
-        )
+        print(f"\n[AUDIT COMPLETE] GDScript Documentation Contract v{DOCUMENTATION_CONTRACT_VERSION}")
+        print(f"  Production files scanned: {total_files_scanned}")
+        print(f"  Public members audited:   {total_declarations}")
+        print(f"  - COMPLIANT:              {status_counts[DocStatus.COMPLIANT]}")
+        print(f"  - MISSING:                {status_counts[DocStatus.MISSING]}")
+        print(f"  - NON_COMPLIANT:          {status_counts[DocStatus.NON_COMPLIANT]}")
+        print(f"  - AMBIGUOUS:              {status_counts[DocStatus.AMBIGUOUS]}")
+        print(f"  Actionable files:         {len(actionable_files)}")
+        print(f"  Actionable slots:         {total_actionable_slots}")
         sys.exit(0)
 
     if args.check:
-        if total_files > 0:
+        if total_actionable_slots > 0 or status_counts[DocStatus.AMBIGUOUS] > 0:
             print(
-                f"[CHECK FAILED] Documentation violations exist in {total_files} file(s)."
+                f"[CHECK FAILED] Documentation violations exist: {total_actionable_slots} actionable slot(s), "
+                f"{status_counts[DocStatus.AMBIGUOUS]} ambiguous declaration(s) across {len(actionable_files)} file(s)."
             )
             sys.exit(1)
-        print("[CHECK PASSED] All production GDScript public members are compliant.")
+        print(
+            f"[CHECK PASSED] All {total_declarations} public members in {total_files_scanned} files "
+            f"are compliant with contract v{DOCUMENTATION_CONTRACT_VERSION}."
+        )
         sys.exit(0)
 
     if args.write:
-        if total_files == 0:
-            print(
-                "[INFO] No actionable docstring slots found. Repository is up-to-date."
-            )
+        if len(actionable_files) == 0:
+            print("[INFO] No actionable docstring slots found. Repository is up-to-date.")
             sys.exit(0)
 
-        if total_slots > MAX_DOC_SLOTS_MODIFIED_PER_RUN:
+        if total_actionable_slots > MAX_DOC_SLOTS_MODIFIED_PER_RUN:
             print(
-                f"[FAIL-CLOSED] Actionable slots ({total_slots}) exceeded limit ({MAX_DOC_SLOTS_MODIFIED_PER_RUN}). Aborting."
+                f"[FAIL-CLOSED] Actionable slots ({total_actionable_slots}) exceeded limit "
+                f"({MAX_DOC_SLOTS_MODIFIED_PER_RUN}). Aborting."
             )
             sys.exit(1)
 
-        target_file, _ = actionable_files[0]
-        print(
-            f"[WRITE BATCH] Processing 1 file out of {total_files} actionable: {target_file.name}"
-        )
+        target_file, slots = actionable_files[0]
+        print(f"[WRITE BATCH] Processing 1 file out of {len(actionable_files)} actionable: {target_file.name} ({slots} slot(s))")
 
         change = prepare_file_change(client, target_file, check_mode=False)
         if change:
