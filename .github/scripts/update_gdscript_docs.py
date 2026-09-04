@@ -824,7 +824,13 @@ def query_gemini_for_docs(
 
     target_by_name = {t.name: t for t in targets}
     doc_map = {}
-    chunk_size = 3  # Process in safe batches to prevent JSON truncation
+
+    # Gemini still omitted items from the chunk because batching multiple declarations—even
+    # in groups of three—can cause the model to focus on only the first item.
+    #
+    # Setting the chunk size to 1 processes members one by one, completely eliminating item
+    # omission while easily staying within API rate limits for a single file.
+    chunk_size = 1  # Process in safe batches to prevent JSON truncation
 
     for i in range(0, len(targets), chunk_size):
         chunk_targets = targets[i:i + chunk_size]
