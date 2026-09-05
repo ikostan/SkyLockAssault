@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://js2q55q35854"]
+
+[ext_resource type="Script" uid="uid://b5ltxua1xq2t8" path="res://scripts/ui/components/fps_counter.gd" id="1_u321x"]
+
+[node name="FpsCounter" type="Label" unique_id=2068238154]
+script = ExtResource("1_u321x")
