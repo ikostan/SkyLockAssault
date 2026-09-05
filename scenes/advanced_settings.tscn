@@ -105,9 +105,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -215.0
-offset_top = -155.0
+offset_top = -167.5
 offset_right = 215.0
-offset_bottom = 155.0
+offset_bottom = 167.5
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 4
@@ -122,9 +122,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -192.5
-offset_top = -125.0
+offset_top = -142.5
 offset_right = 192.5
-offset_bottom = 125.0
+offset_bottom = 142.5
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 15
@@ -183,6 +183,28 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_4xsk5")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_o600e")
 theme_override_styles/hover = SubResource("StyleBoxFlat_o3hvc")
 theme_override_styles/focus = SubResource("StyleBoxFlat_6dctt")
+
+[node name="FPSContainer" type="HBoxContainer" parent="Panel/Controls" unique_id=2093012006]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 6
+tooltip_text = "Show FPS Setting"
+theme_override_constants/separation = 165
+
+[node name="Label" type="Label" parent="Panel/Controls/FPSContainer" unique_id=1848955139]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("2_vw8ml")
+theme_override_font_sizes/font_size = 20
+text = "{SHOW=FPS}"
+
+[node name="CheckButton" type="CheckButton" parent="Panel/Controls/FPSContainer" unique_id=1304250797]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("2_vw8ml")
+theme_override_font_sizes/font_size = 20
 
 [node name="BtnContainer" type="HBoxContainer" parent="Panel/Controls" unique_id=617440997]
 layout_mode = 2

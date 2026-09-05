@@ -206,6 +206,10 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 			var loaded_max: Variant = config.get_value("Settings", "max_fuel")
 			if loaded_max is float or loaded_max is int:
 				settings.max_fuel = float(loaded_max)
+		if config.has_section_key("Settings", "show_fps"):
+			var loaded_fps: Variant = config.get_value("Settings", "show_fps")
+			if loaded_fps is bool:
+				settings.show_fps = loaded_fps
 
 		_is_loading_settings = false
 		log_message("Settings synchronization complete.", LogLevel.DEBUG)
@@ -243,6 +247,7 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	config.set_value("Settings", "difficulty", settings.difficulty)
 	config.set_value("Settings", "enable_debug_logging", settings.enable_debug_logging)
 	config.set_value("Settings", "max_fuel", settings.max_fuel)
+	config.set_value("Settings", "show_fps", settings.show_fps)
 
 	# FIX: Re-added the branch to properly handle the plaintext failsafe
 	var key: String = ensure_encryption_key()

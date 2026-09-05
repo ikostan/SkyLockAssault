@@ -8,9 +8,8 @@ extends Label
 
 func _ready() -> void:
 	if not settings:
-		# Fallback: Adjust this path to wherever your default resource is saved, 
-		# or replace this with your Globals reference (e.g., settings = Globals.settings)
-		settings = load("res://resources/game_settings.tres")
+		# Use the global singleton so it shares state with advanced_settings.gd
+		settings = Globals.settings
 		
 	if settings:
 		# 1. Set the initial visibility state on load
