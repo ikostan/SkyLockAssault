@@ -34,18 +34,16 @@ corner_radius_bottom_left = 10
 expand_margin_left = 20.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6dctt"]
-bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
 expand_margin_left = 20.0
-shadow_color = Color(0.7647059, 0.8156863, 0.03137255, 0.33333334)
-shadow_size = 2
+shadow_size = 5
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dkru2"]
 corner_radius_top_left = 20
@@ -227,10 +225,10 @@ theme_override_constants/separation = 5
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-focus_neighbor_top = NodePath("../../LogLevelContainer/LogLevelOptionButton")
+focus_neighbor_top = NodePath("../../FPSContainer/CheckButton")
 focus_neighbor_bottom = NodePath("../ResetButton")
 focus_next = NodePath("../ResetButton")
-focus_previous = NodePath("../../LogLevelContainer/LogLevelOptionButton")
+focus_previous = NodePath("../../FPSContainer/CheckButton")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
 theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_pressed_color = Color(0.9607843, 0.9607843, 0.050980393, 0.9019608)
@@ -248,7 +246,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 focus_neighbor_top = NodePath("../BackButton")
-focus_neighbor_bottom = NodePath("../../LogLevelContainer/LogLevelOptionButton")
+focus_neighbor_bottom = NodePath("../../FPSContainer/CheckButton")
 focus_next = NodePath("../../LogLevelContainer/LogLevelOptionButton")
 focus_previous = NodePath("../BackButton")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
