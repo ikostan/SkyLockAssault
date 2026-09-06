@@ -39,8 +39,13 @@ func after() -> void:
 		DirAccess.remove_absolute(Settings.CONFIG_PATH)
 		
 	if _has_backup and FileAccess.file_exists(_backup_path):
-		DirAccess.rename_absolute(_backup_path, Settings.CONFIG_PATH)
-		_has_backup = false
+		var err: int = DirAccess.rename_absolute(_backup_path, Settings.CONFIG_PATH)
+		if err == OK:
+			# Only clear the backup flag if the restoration succeeded
+			_has_backup = false
+		else:
+			# Leave _has_backup = true so subsequent teardowns or manual recovery can find it
+			push_error("CRITICAL: Failed to restore settings backup from " + _backup_path + " (Error: " + str(err) + ").")
 		
 	Globals.save_encryption_pass = _orig_save_encryption_pass
 
