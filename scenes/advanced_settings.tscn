@@ -47,6 +47,13 @@ expand_margin_left = 20.0
 shadow_color = Color(0.7647059, 0.8156863, 0.03137255, 0.33333334)
 shadow_size = 2
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dkru2"]
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+shadow_size = 5
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_yonr6"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
 corner_radius_top_left = 40
@@ -209,6 +216,7 @@ focus_previous = NodePath("../../LogLevelContainer/LogLevelOptionButton")
 theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_fonts/font = ExtResource("2_vw8ml")
 theme_override_font_sizes/font_size = 20
+theme_override_styles/focus = SubResource("StyleBoxFlat_dkru2")
 
 [node name="BtnContainer" type="HBoxContainer" parent="Panel/Controls" unique_id=617440997]
 layout_mode = 2

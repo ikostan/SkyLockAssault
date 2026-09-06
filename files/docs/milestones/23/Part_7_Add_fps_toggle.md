@@ -6,7 +6,7 @@
 **Repository:** [ikostan/SkyLockAssault](https://github.com/ikostan/SkyLockAssault)  
 **Author:** @ikostan  
 **Branch:** `add-fps-toggle` → `main`  
-**Linked Issues:** #518 (show_fps on GameSettingsResource), #519 (HUD FPS counter), #520 (Advanced Settings toggle), #522 (GDUnit data-mode tests), #925 (integration tests); related #521 (manual QA plan — not fully addressed)  
+**Linked Issues:** #518 (show_fps on GameSettingsResource), #519 (HUD FPS counter), #520 (Advanced Settings toggle), #522 (GDUnit data-mode tests), #925 (integration tests); related #521 (manual QA plan — fully addressed)  
 **Milestone:** Milestone 23 – Settings Architecture & FPS Counter Implementation  
 **Labels:** enhancement, testing, menu, GUI, controls, QA
 
