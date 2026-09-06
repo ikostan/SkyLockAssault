@@ -12,15 +12,31 @@ const PATH_TEST_SETTINGS: String = "user://test_fps_settings.cfg"
 var _orig_settings: GameSettingsResource
 var _orig_save_encryption_pass: String
 
+# File ownership state for safe teardowns
+var _backup_path: String = ""
+var _test_owns_config_path: bool = false
+var _has_backup: bool = false
 
 func before_test() -> void:
 	# Backup globals to prevent test bleeding
 	_orig_settings = Globals.settings
 	_orig_save_encryption_pass = Globals.save_encryption_pass
 	
-	# BACKUP THE REAL SETTINGS FILE to prevent test keys from corrupting it
-	if FileAccess.file_exists(Settings.CONFIG_PATH):
-		DirAccess.rename_absolute(Settings.CONFIG_PATH, Settings.CONFIG_PATH + ".backup")
+	var target_path: String = Settings.CONFIG_PATH
+	if FileAccess.file_exists(target_path):
+		# Generate a unique backup name to prevent colliding with existing .backup files
+		_backup_path = target_path + ".gdunit_" + str(Time.get_ticks_usec()) + ".bak"
+		
+		var err: int = DirAccess.rename_absolute(target_path, _backup_path)
+		if err == OK:
+			_has_backup = true
+			_test_owns_config_path = true # We safely isolated the original; test owns the path
+		else:
+			push_warning("Failed to backup " + target_path + " (Error: " + str(err) + ").")
+			_test_owns_config_path = false # Rename failed; DO NOT delete this file during teardown
+	else:
+		# No original file existed; test owns whatever gets created here
+		_test_owns_config_path = true
 	
 	# Reset for isolated tests with a deterministic encryption key
 	Globals.settings = GameSettingsResource.new()
@@ -28,17 +44,21 @@ func before_test() -> void:
 
 
 func after_test() -> void:
-	# Clean up disk I/O artifacts created by explicit test paths
+	# Clean up explicit test path artifacts
 	if FileAccess.file_exists(PATH_TEST_SETTINGS):
 		DirAccess.remove_absolute(PATH_TEST_SETTINGS)
 		
-	# Clean up artifacts created by UI scenes defaulting to Settings.CONFIG_PATH
-	if FileAccess.file_exists(Settings.CONFIG_PATH):
+	# Only delete the default config path if we successfully backed up the original,
+	# or if no original file existed in the first place.
+	if _test_owns_config_path and FileAccess.file_exists(Settings.CONFIG_PATH):
 		DirAccess.remove_absolute(Settings.CONFIG_PATH)
 		
-	# RESTORE THE REAL SETTINGS FILE
-	if FileAccess.file_exists(Settings.CONFIG_PATH + ".backup"):
-		DirAccess.rename_absolute(Settings.CONFIG_PATH + ".backup", Settings.CONFIG_PATH)
+	# Restore the uniquely named backup if we created one
+	if _has_backup and FileAccess.file_exists(_backup_path):
+		var err: int = DirAccess.rename_absolute(_backup_path, Settings.CONFIG_PATH)
+		if err != OK:
+			push_error("Failed to restore settings backup from " + _backup_path)
+		_has_backup = false
 		
 	# Restore the global state for subsequent suites
 	Globals.settings = _orig_settings
