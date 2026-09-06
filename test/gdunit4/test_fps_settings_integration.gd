@@ -35,10 +35,11 @@ func after_test() -> void:
 
 ## Test 4: Verify UI Visibility & Processing Culling
 ## Objective: Validate the invariant contract between data state, visibility, and CPU processing.
-## Description: Trigger `_on_setting_changed("show_fps", true)`, then `_on_setting_changed("show_fps", false)` directly on the `FPSCounter`.
-## Expected Result: When `true`, `visible == true` and `is_processing() == true`. When `false`, `visible == false` and `is_processing() == false`.
+## Description: Instantiate the FPSCounter, mount it to the test SceneTree using add_child(), and invoke _on_setting_changed("show_fps", true) followed by _on_setting_changed("show_fps", false).
+## Expected Result: When true, visible == true and is_processing() == true. When false, visible == false and is_processing() == false.
 func test_verify_ui_visibility_and_processing_culling() -> void:
 	var fps_counter: FPSCounter = auto_free(FPSCounter.new())
+	add_child(fps_counter) # Mount to active SceneTree for true integration verification
 	
 	# Simulate false -> true transition
 	fps_counter._on_setting_changed("show_fps", true)
