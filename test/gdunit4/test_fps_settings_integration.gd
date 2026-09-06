@@ -454,3 +454,34 @@ func test_fixture_failed_rename_handling() -> void:
 	_test_owns_config_path = actual_owns
 	_has_backup = actual_has_backup
 	_backup_path = actual_backup
+
+
+## Test 20: Verify Advanced Menu Reset Button Binding
+## Objective: Ensure the Reset button correctly reverts Advanced Settings to their default states.
+## Description: Load the advanced settings scene. Mutate the global settings to non-default values (e.g., ERROR log level, show_fps = true). Programmatically emit the pressed signal on the Reset button.
+## Expected Result: The settings accurately revert to their defaults (INFO log level, show_fps = false). Because of the Observer pattern, these mutations will inherently trigger the save cycle.
+func test_verify_advanced_menu_reset_binding() -> void:
+	# 1. Force non-default states
+	Globals.settings = auto_free(GameSettingsResource.new())
+	Globals.settings.current_log_level = Globals.LogLevel.ERROR
+	Globals.settings.show_fps = true
+	
+	# 2. Load the specific Advanced Settings scene
+	var target_scene: String = "res://scenes/advanced_settings.tscn"
+	if not ResourceLoader.exists(target_scene):
+		fail("Target advanced settings scene does not exist.")
+		return
+		
+	var runner: GdUnitSceneRunner = scene_runner(target_scene)
+	
+	# 3. Find the Reset button dynamically 
+	var reset_btn: Button = runner.find_child("ResetButton", true, false) as Button
+	assert_bool(is_instance_valid(reset_btn)).is_true()
+	
+	if is_instance_valid(reset_btn):
+		# 4. Simulate the user clicking 'Reset'
+		reset_btn.pressed.emit()
+		
+		# 5. Verify the backend state mutated back to defaults successfully
+		assert_int(Globals.settings.current_log_level).is_equal(Globals.LogLevel.INFO)
+		assert_bool(Globals.settings.show_fps).is_false()

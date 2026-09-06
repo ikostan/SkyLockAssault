@@ -178,8 +178,6 @@ func _on_advanced_reset_button_pressed() -> void:
 	Globals.settings.show_fps = false
 	fps_toggle.set_pressed_no_signal(false)
 
-	Globals._save_settings()
-
 
 func _on_advanced_reset_js(_args: Array) -> void:
 	_on_advanced_reset_button_pressed()
@@ -353,4 +351,3 @@ func _on_change_log_level_js(args: Array) -> void:
 func _on_fps_toggle_toggled(toggled_on: bool) -> void:
 	Globals.log_message("FPS Toggle set to: " + str(toggled_on), Globals.LogLevel.DEBUG)
 	Globals.settings.show_fps = toggled_on
-	Globals._save_settings()
