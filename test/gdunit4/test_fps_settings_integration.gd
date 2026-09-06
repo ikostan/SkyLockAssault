@@ -132,11 +132,20 @@ func test_verify_persistence_isolation() -> void:
 
 ## Test 7: Verify Menu Initial State & UI Binding
 ## Objective: Ensure the frontend correctly reads initial state and mutates the backend without scene reloads.
-## Description: Load the options scene. Verify the UI control matches the persisted `show_fps` state. Toggle the control programmatically.
-## Expected Result: The control initializes accurately. Toggling it updates `Globals.settings.show_fps`, emits the signal, and updates the `FPSCounter` instantly.
+## Description: Load the options scene alongside a mounted FPSCounter. Verify the UI control matches the persisted state. Toggle the control programmatically via simulated user input.
+## Expected Result: The control initializes accurately. Toggling it updates `Globals.settings.show_fps`, emits the signal, and instantly updates the `FPSCounter` visibility and processing state.
 func test_verify_menu_initial_state_and_ui_binding() -> void:
 	Globals.settings = auto_free(GameSettingsResource.new())
 	Globals.settings.show_fps = true
+	
+	# 1. Mount an active FPSCounter to prove the signal-driven update path works
+	var fps_counter: FPSCounter = auto_free(FPSCounter.new())
+	add_child(fps_counter)
+	await await_idle_frame()
+	
+	# Verify the counter initially matches the settings
+	assert_bool(fps_counter.visible).is_true()
+	assert_bool(fps_counter.is_processing()).is_true()
 	
 	# Fallback resolution depending on where the FPS toggle is implemented
 	var target_scene: String = "res://scenes/advanced_settings.tscn"
@@ -148,26 +157,32 @@ func test_verify_menu_initial_state_and_ui_binding() -> void:
 			
 	var runner: GdUnitSceneRunner = scene_runner(target_scene)
 	
-	# Dynamically search for the toggle button in the tree using find_child
+	# Dynamically search for the toggle button in the tree
 	var fps_toggle: CheckButton = runner.find_child("CheckButton", true, false) as CheckButton
 	if not is_instance_valid(fps_toggle):
 		fps_toggle = runner.find_child("ShowFPSButton", true, false) as CheckButton
 		if not is_instance_valid(fps_toggle):
 			fps_toggle = runner.find_child("FPSButton", true, false) as CheckButton
 			
-	# Explicitly fail the test if the toggle is missing rather than skipping silently
+	# Explicitly fail the test if the toggle is missing
 	assert_bool(is_instance_valid(fps_toggle)).is_true()
 	
 	if is_instance_valid(fps_toggle):
 		# Verify initial sync from backend
 		assert_bool(fps_toggle.button_pressed).is_true()
 		
-		# Simulate user toggling the button OFF
-		fps_toggle.button_pressed = false
-		fps_toggle.toggled.emit(false)
+		# 2. Simulate real user interaction (mouse click) using the correct GDUnit4 API
+		runner.simulate_mouse_move(fps_toggle.get_global_rect().get_center())
+		runner.simulate_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+		runner.simulate_mouse_button_release(MOUSE_BUTTON_LEFT)
+		await await_idle_frame()
 		
-		# Verify backend state mutated successfully
+		# 3. Verify backend state mutated successfully
 		assert_bool(Globals.settings.show_fps).is_false()
+		
+		# 4. Verify the signal correctly updated the mounted FPSCounter without a scene reload
+		assert_bool(fps_counter.visible).is_false()
+		assert_bool(fps_counter.is_processing()).is_false()
 
 
 ## Test 8: Verify FPSCounter _ready Lifecycle (Fallback to Globals)
