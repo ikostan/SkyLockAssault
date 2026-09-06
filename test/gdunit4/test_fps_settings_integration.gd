@@ -18,15 +18,27 @@ func before_test() -> void:
 	_orig_settings = Globals.settings
 	_orig_save_encryption_pass = Globals.save_encryption_pass
 	
+	# BACKUP THE REAL SETTINGS FILE to prevent test keys from corrupting it
+	if FileAccess.file_exists(Settings.CONFIG_PATH):
+		DirAccess.rename_absolute(Settings.CONFIG_PATH, Settings.CONFIG_PATH + ".backup")
+	
 	# Reset for isolated tests with a deterministic encryption key
 	Globals.settings = GameSettingsResource.new()
 	Globals.save_encryption_pass = "deterministic_test_key_123"
 
 
 func after_test() -> void:
-	# Clean up disk I/O artifacts
+	# Clean up disk I/O artifacts created by explicit test paths
 	if FileAccess.file_exists(PATH_TEST_SETTINGS):
 		DirAccess.remove_absolute(PATH_TEST_SETTINGS)
+		
+	# Clean up artifacts created by UI scenes defaulting to Settings.CONFIG_PATH
+	if FileAccess.file_exists(Settings.CONFIG_PATH):
+		DirAccess.remove_absolute(Settings.CONFIG_PATH)
+		
+	# RESTORE THE REAL SETTINGS FILE
+	if FileAccess.file_exists(Settings.CONFIG_PATH + ".backup"):
+		DirAccess.rename_absolute(Settings.CONFIG_PATH + ".backup", Settings.CONFIG_PATH)
 		
 	# Restore the global state for subsequent suites
 	Globals.settings = _orig_settings
@@ -111,17 +123,21 @@ func test_verify_menu_initial_state_and_ui_binding() -> void:
 	if not ResourceLoader.exists(target_scene):
 		target_scene = "res://scenes/gameplay_settings.tscn"
 		if not ResourceLoader.exists(target_scene):
-			return  # Skip test safely if the target UI doesn't exist in the CI scope
+			fail("Target options scene does not exist in CI scope.")
+			return
 			
 	var runner: GdUnitSceneRunner = scene_runner(target_scene)
 	
-	# Dynamically search for the toggle button in the tree
-	var fps_toggle: CheckButton = runner.find_child("ShowFPSButton", true, false) as CheckButton
+	# Dynamically search for the toggle button in the tree using find_child
+	var fps_toggle: CheckButton = runner.find_child("CheckButton", true, false) as CheckButton
 	if not is_instance_valid(fps_toggle):
-		fps_toggle = runner.find_child("FPSButton", true, false) as CheckButton
+		fps_toggle = runner.find_child("ShowFPSButton", true, false) as CheckButton
 		if not is_instance_valid(fps_toggle):
-			fps_toggle = runner.find_child("FPSToggle", true, false) as CheckButton
+			fps_toggle = runner.find_child("FPSButton", true, false) as CheckButton
 			
+	# Explicitly fail the test if the toggle is missing rather than skipping silently
+	assert_bool(is_instance_valid(fps_toggle)).is_true()
+	
 	if is_instance_valid(fps_toggle):
 		# Verify initial sync from backend
 		assert_bool(fps_toggle.button_pressed).is_true()
