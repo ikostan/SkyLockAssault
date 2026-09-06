@@ -478,6 +478,10 @@ func test_fixture_failed_rename_handling() -> void:
 func test_verify_advanced_menu_reset_binding() -> void:
 	# 1. Force non-default states
 	Globals.settings = auto_free(GameSettingsResource.new())
+	
+	# FIX: Reconnect the observer path so the test validates the persistence trigger
+	Globals.settings.setting_changed.connect(Globals._on_setting_changed)
+	
 	Globals.settings.current_log_level = Globals.LogLevel.ERROR
 	Globals.settings.show_fps = true
 	
@@ -496,7 +500,16 @@ func test_verify_advanced_menu_reset_binding() -> void:
 	if is_instance_valid(reset_btn):
 		# 4. Simulate the user clicking 'Reset'
 		reset_btn.pressed.emit()
+		await await_idle_frame()
 		
-		# 5. Verify the backend state mutated back to defaults successfully
+		# 5. Verify the backend memory state mutated back to defaults successfully
+		assert_int(Globals.settings.current_log_level).is_equal(Globals.LogLevel.INFO)
+		assert_bool(Globals.settings.show_fps).is_false()
+		
+		# 6. Verify the Observer path actually persisted the changes to disk
+		# Clear memory entirely and reload from the file system to prove the save occurred
+		Globals.settings = auto_free(GameSettingsResource.new())
+		Globals._load_settings(Settings.CONFIG_PATH)
+		
 		assert_int(Globals.settings.current_log_level).is_equal(Globals.LogLevel.INFO)
 		assert_bool(Globals.settings.show_fps).is_false()
