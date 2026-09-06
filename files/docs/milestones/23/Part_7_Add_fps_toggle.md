@@ -54,7 +54,7 @@ Implements #518, #519, #520, #521, #522, and #925.
 
 ---
 
-# QA Manual Test Plan: FPS Counter Implementation
+## QA Manual Test Plan: FPS Counter Implementation
 
 **Description**:
 
