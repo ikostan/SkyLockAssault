@@ -100,7 +100,7 @@ A predefined set of manual testing steps to verify the FPS feature works end-to-
 
 **Steps to Execute**:
 
-1. **Launch Game:** Start the game from the editor. Ensure no FPS counter is visible by default.
+1. **Launch Game:** Clear your saved test configuration (or click Reset in Advanced Settings), then start the game from the editor. Ensure no FPS counter is visible by default.
 2. **Toggle On:** Navigate to Options -> Advanced Settings. Toggle "Show FPS" to ON.
 3. **Verify UI:** Enter gameplay. Verify the FPS counter appears in the top-left corner and updates its value continuously.
 4. **Real-time Toggle:** Pause the game, navigate to settings, and toggle "Show FPS" to OFF. Resume gameplay. Verify the counter disappears immediately without a scene reload.
