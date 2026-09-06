@@ -10,15 +10,40 @@
 
 extends GdUnitTestSuite
 
-## Global setup if needed (e.g., mock Globals/Settings if logging/save called)
-## :rtype: void
-func before() -> void:
-	pass
+var _backup_path: String = ""
+var _test_owns_config_path: bool = false
+var _has_backup: bool = false
+var _orig_save_encryption_pass: String
 
-## Global cleanup
-## :rtype: void
+
+func before() -> void:
+	_orig_save_encryption_pass = Globals.save_encryption_pass
+	Globals.save_encryption_pass = "deterministic_test_key_123"
+	
+	var target_path: String = Settings.CONFIG_PATH
+	if FileAccess.file_exists(target_path):
+		_backup_path = target_path + ".gdunit_input_" + str(Time.get_ticks_usec()) + ".bak"
+		var err: int = DirAccess.rename_absolute(target_path, _backup_path)
+		if err == OK:
+			_has_backup = true
+			_test_owns_config_path = true 
+		else:
+			push_warning("Failed to backup " + target_path)
+			_test_owns_config_path = false 
+	else:
+		_test_owns_config_path = true
+
+
 func after() -> void:
-	pass
+	if _test_owns_config_path and FileAccess.file_exists(Settings.CONFIG_PATH):
+		DirAccess.remove_absolute(Settings.CONFIG_PATH)
+		
+	if _has_backup and FileAccess.file_exists(_backup_path):
+		DirAccess.rename_absolute(_backup_path, Settings.CONFIG_PATH)
+		_has_backup = false
+		
+	Globals.save_encryption_pass = _orig_save_encryption_pass
+
 
 ## Test keyboard label display (original, updated for Godot 4.x)
 ## :rtype: void
