@@ -44,9 +44,13 @@ func _ready() -> void:
 	# Set the initial visual state without triggering the toggle signal
 	fps_toggle.set_pressed_no_signal(Globals.settings.show_fps)
 
-	# Connect the UI toggle to our handler
+	# Connect the state-change signal strictly for data management
 	if not fps_toggle.toggled.is_connected(_on_fps_toggle_toggled):
 		fps_toggle.toggled.connect(_on_fps_toggle_toggled)
+		
+	# Connect the user-activation signal strictly for audio feedback
+	if not fps_toggle.pressed.is_connected(_on_fps_toggle_pressed):
+		fps_toggle.pressed.connect(_on_fps_toggle_pressed)
 
 	# Connect signals to type-specific handlers (change: separate from JS callbacks)
 	tree_exited.connect(_on_tree_exited)
@@ -348,10 +352,14 @@ func _on_change_log_level_js(args: Array) -> void:
 	_on_log_level_item_selected(index)
 
 
+func _on_fps_toggle_pressed() -> void:
+	# This only fires on an explicit physical interaction (mouse click, enter key, gamepad)
+	AudioManager.play_sfx("check")
+
+
 func _on_fps_toggle_toggled(toggled_on: bool) -> void:
 	Globals.log_message("FPS Toggle set to: " + str(toggled_on), Globals.LogLevel.DEBUG)
 	Globals.settings.show_fps = toggled_on
-
 	# Play the check.wav sound only if the user explicitly interacted with the button
 	if fps_toggle.has_focus():
 		AudioManager.play_sfx("check")
