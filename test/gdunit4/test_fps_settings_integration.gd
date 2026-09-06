@@ -405,6 +405,9 @@ func test_fixture_pre_existing_backup_handling() -> void:
 	var actual_owns: bool = _test_owns_config_path
 	var actual_has_backup: bool = _has_backup
 	var actual_backup: String = _backup_path
+	# FIX: Snapshot the outer globals so the manual before_test() doesn't overwrite them
+	var actual_orig_settings: GameSettingsResource = _orig_settings
+	var actual_orig_pass: String = _orig_save_encryption_pass
 	
 	# 2. Create a fake "original" settings file
 	var f: FileAccess = FileAccess.open(Settings.CONFIG_PATH, FileAccess.WRITE)
@@ -439,6 +442,8 @@ func test_fixture_pre_existing_backup_handling() -> void:
 	_test_owns_config_path = actual_owns
 	_has_backup = actual_has_backup
 	_backup_path = actual_backup
+	_orig_settings = actual_orig_settings
+	_orig_save_encryption_pass = actual_orig_pass
 
 
 ## Test 19: Verify Fixture Teardown on Failed Rename
@@ -450,6 +455,9 @@ func test_fixture_failed_rename_handling() -> void:
 	var actual_owns: bool = _test_owns_config_path
 	var actual_has_backup: bool = _has_backup
 	var actual_backup: String = _backup_path
+	# FIX: Snapshot the outer globals
+	var actual_orig_settings: GameSettingsResource = _orig_settings
+	var actual_orig_pass: String = _orig_save_encryption_pass
 	
 	# 2. Force the state flags to simulate a failed rename during setup
 	_test_owns_config_path = false
@@ -473,6 +481,8 @@ func test_fixture_failed_rename_handling() -> void:
 	_test_owns_config_path = actual_owns
 	_has_backup = actual_has_backup
 	_backup_path = actual_backup
+	_orig_settings = actual_orig_settings
+	_orig_save_encryption_pass = actual_orig_pass
 
 
 ## Test 20: Verify Advanced Menu Reset Button Binding
