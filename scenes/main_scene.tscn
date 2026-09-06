@@ -1,4 +1,4 @@
-[gd_scene load_steps=83 format=3 uid="uid://nnnc0qhx07i8"]
+[gd_scene format=3 uid="uid://nnnc0qhx07i8"]
 
 [ext_resource type="Script" uid="uid://ctm7qg12s2swt" path="res://scripts/core/main_scene.gd" id="1_7ykc4"]
 [ext_resource type="PackedScene" uid="uid://cb4n4cqkuddqg" path="res://scenes/pause_menu.tscn" id="1_w2twt"]
@@ -78,6 +78,7 @@
 [ext_resource type="Texture2D" uid="uid://f4hxu68qa4fi" path="res://files/random_decor/dirt_002.png" id="70_isor2"]
 [ext_resource type="Script" uid="uid://blu5qujicfa7e" path="res://scripts/ui/hud.gd" id="72_sgkfd"]
 [ext_resource type="Script" uid="uid://b5x2ehdthhrla" path="res://scripts/managers/parallax_manager.gd" id="76_qj6t7"]
+[ext_resource type="PackedScene" uid="uid://js2q55q35854" path="res://scenes/fps_counter.tscn" id="79_k78mq"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pu3yx"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
@@ -111,14 +112,14 @@ corner_detail = 10
 shadow_color = Color(0, 0, 0, 0.3882353)
 shadow_size = 1
 
-[node name="Node2D" type="Node2D"]
+[node name="Node2D" type="Node2D" unique_id=676243702]
 script = ExtResource("1_7ykc4")
 
-[node name="ResourcePreloader" type="ResourcePreloader" parent="."]
+[node name="ResourcePreloader" type="ResourcePreloader" parent="." unique_id=1474956794]
 resources = [PackedStringArray("bush_0", "bush_1", "bush_10", "bush_11", "bush_12", "bush_13", "bush_14", "bush_15", "bush_16", "bush_17", "bush_18", "bush_19", "bush_2", "bush_20", "bush_21", "bush_22", "bush_23", "bush_24", "bush_25", "bush_26", "bush_27", "bush_28", "bush_29", "bush_3", "bush_30", "bush_31", "bush_32", "bush_33", "bush_34", "bush_35", "bush_36", "bush_37", "bush_38", "bush_39", "bush_4", "bush_40", "bush_41", "bush_42", "bush_43", "bush_44", "bush_45", "bush_46", "bush_5", "bush_6", "bush_7", "bush_8", "bush_9", "decor_0", "decor_1", "decor_10", "decor_11", "decor_12", "decor_13", "decor_14", "decor_15", "decor_16", "decor_17", "decor_18", "decor_19", "decor_2", "decor_20", "decor_21", "decor_3", "decor_4", "decor_5", "decor_6", "decor_7", "decor_8", "decor_9"), [ExtResource("2_fm3ay"), ExtResource("3_sgkfd"), ExtResource("4_qj6t7"), ExtResource("5_k78mq"), ExtResource("6_ldtbd"), ExtResource("7_gmxj2"), ExtResource("8_xncra"), ExtResource("9_4fyw0"), ExtResource("10_00pac"), ExtResource("11_3sutw"), ExtResource("12_h20w0"), ExtResource("13_c1tim"), ExtResource("14_ahecp"), ExtResource("5_rt2n2"), ExtResource("16_f0q1o"), ExtResource("17_iaiog"), ExtResource("18_bciwm"), ExtResource("19_ds4wg"), ExtResource("20_lgwe5"), ExtResource("21_6pqhf"), ExtResource("22_hu1xv"), ExtResource("23_2aaiw"), ExtResource("24_tm4k6"), ExtResource("25_5t4fw"), ExtResource("26_65o4m"), ExtResource("27_vygp1"), ExtResource("28_75n0t"), ExtResource("29_bt07v"), ExtResource("30_opbc2"), ExtResource("31_pxuh0"), ExtResource("32_abvoq"), ExtResource("33_qj5h3"), ExtResource("34_10pix"), ExtResource("35_k8vib"), ExtResource("36_5iwo2"), ExtResource("37_v7tct"), ExtResource("38_vlitc"), ExtResource("39_bofc0"), ExtResource("40_btbde"), ExtResource("41_8ic2j"), ExtResource("42_magks"), ExtResource("43_5vrw5"), ExtResource("44_7062q"), ExtResource("45_yk56o"), ExtResource("46_mxavj"), ExtResource("47_uf32p"), ExtResource("48_n8t7m"), ExtResource("49_agode"), ExtResource("50_3fm0y"), ExtResource("51_l05tx"), ExtResource("52_y2xfi"), ExtResource("53_grn4f"), ExtResource("54_0rnsp"), ExtResource("55_fpmhc"), ExtResource("56_cwycm"), ExtResource("57_ik4fr"), ExtResource("7_18nlu"), ExtResource("59_ukbd8"), ExtResource("60_ycc4e"), ExtResource("61_l7h1d"), ExtResource("62_6t57n"), ExtResource("63_h45r1"), ExtResource("64_4utpg"), ExtResource("65_yl5kd"), ExtResource("66_4c0ir"), ExtResource("67_y23kb"), ExtResource("68_f3krf"), ExtResource("69_7tyuc"), ExtResource("70_isor2")]]
 script = ExtResource("3_c1pb6")
 
-[node name="PlayerStatsPanel" type="Panel" parent="."]
+[node name="PlayerStatsPanel" type="Panel" parent="." unique_id=1097904950]
 offset_left = 910.0
 offset_top = 20.0
 offset_right = 1270.0
@@ -128,7 +129,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_pu3yx")
 script = ExtResource("72_sgkfd")
 metadata/_edit_use_anchors_ = true
 
-[node name="Stats" type="VBoxContainer" parent="PlayerStatsPanel"]
+[node name="Stats" type="VBoxContainer" parent="PlayerStatsPanel" unique_id=210734551]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -143,21 +144,21 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 7
 
-[node name="Fuel" type="HBoxContainer" parent="PlayerStatsPanel/Stats"]
+[node name="Fuel" type="HBoxContainer" parent="PlayerStatsPanel/Stats" unique_id=2106163930]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 34
 
-[node name="FuelLabel" type="Label" parent="PlayerStatsPanel/Stats/Fuel"]
+[node name="FuelLabel" type="Label" parent="PlayerStatsPanel/Stats/Fuel" unique_id=147564361]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9102516, 5.2943824e-07, 0.102033384, 1)
 theme_override_fonts/font = ExtResource("2_pu3yx")
 theme_override_font_sizes/font_size = 28
 text = "{FUEL}"
 
-[node name="BlinkTimer" type="Timer" parent="PlayerStatsPanel/Stats/Fuel/FuelLabel"]
+[node name="BlinkTimer" type="Timer" parent="PlayerStatsPanel/Stats/Fuel/FuelLabel" unique_id=207163788]
 
-[node name="FuelBar" type="ProgressBar" parent="PlayerStatsPanel/Stats/Fuel"]
+[node name="FuelBar" type="ProgressBar" parent="PlayerStatsPanel/Stats/Fuel" unique_id=912690088]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 1
@@ -171,21 +172,21 @@ theme_override_styles/background = SubResource("StyleBoxFlat_gubc5")
 theme_override_styles/fill = SubResource("StyleBoxFlat_rt2n2")
 step = 0.1
 
-[node name="Speed" type="HBoxContainer" parent="PlayerStatsPanel/Stats"]
+[node name="Speed" type="HBoxContainer" parent="PlayerStatsPanel/Stats" unique_id=366075098]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 7
 
-[node name="SpeedLabel" type="Label" parent="PlayerStatsPanel/Stats/Speed"]
+[node name="SpeedLabel" type="Label" parent="PlayerStatsPanel/Stats/Speed" unique_id=1460877827]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9104413, 0, 0.10132807, 1)
 theme_override_fonts/font = ExtResource("2_pu3yx")
 theme_override_font_sizes/font_size = 28
 text = "{SPEED}"
 
-[node name="BlinkTimer" type="Timer" parent="PlayerStatsPanel/Stats/Speed/SpeedLabel"]
+[node name="BlinkTimer" type="Timer" parent="PlayerStatsPanel/Stats/Speed/SpeedLabel" unique_id=1901780599]
 
-[node name="SpeedBar" type="ProgressBar" parent="PlayerStatsPanel/Stats/Speed"]
+[node name="SpeedBar" type="ProgressBar" parent="PlayerStatsPanel/Stats/Speed" unique_id=544340904]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 1
@@ -200,50 +201,50 @@ theme_override_styles/fill = SubResource("StyleBoxFlat_rt2n2")
 max_value = 713.0
 step = 1.0
 
-[node name="Player" parent="." instance=ExtResource("2_pw63i")]
+[node name="Player" parent="." unique_id=1227188394 instance=ExtResource("2_pw63i")]
 
-[node name="PauseMenu" parent="." instance=ExtResource("1_w2twt")]
+[node name="PauseMenu" parent="." unique_id=1126493176 instance=ExtResource("1_w2twt")]
 
-[node name="Background" type="ParallaxBackground" parent="."]
+[node name="Background" type="ParallaxBackground" parent="." unique_id=1461843764]
 script = ExtResource("76_qj6t7")
 
-[node name="Sand" type="ParallaxLayer" parent="Background"]
+[node name="Sand" type="ParallaxLayer" parent="Background" unique_id=1556497242]
 
-[node name="Sprite2D" type="Sprite2D" parent="Background/Sand"]
+[node name="Sprite2D" type="Sprite2D" parent="Background/Sand" unique_id=260994887]
 texture_filter = 1
 texture_repeat = 2
 texture = ExtResource("6_c16ls")
 region_enabled = true
 region_rect = Rect2(128, 128, 128, 128)
 
-[node name="Grass" type="ParallaxLayer" parent="Background"]
+[node name="Grass" type="ParallaxLayer" parent="Background" unique_id=288439164]
 visible = false
 
-[node name="Sprite2D" type="Sprite2D" parent="Background/Grass"]
+[node name="Sprite2D" type="Sprite2D" parent="Background/Grass" unique_id=235371718]
 texture_filter = 1
 texture_repeat = 2
 texture = ExtResource("6_18nlu")
 region_enabled = true
 region_rect = Rect2(128, 128, 128, 128)
 
-[node name="Decor" type="ParallaxLayer" parent="Background"]
+[node name="Decor" type="ParallaxLayer" parent="Background" unique_id=1314497794]
 
-[node name="Sprite2D" type="Sprite2D" parent="Background/Decor"]
+[node name="Sprite2D" type="Sprite2D" parent="Background/Decor" unique_id=791176175]
 texture_filter = 1
 texture_repeat = 2
 texture = ExtResource("7_18nlu")
 region_enabled = true
 region_rect = Rect2(128, 128, 128, 128)
 
-[node name="Bushes" type="ParallaxLayer" parent="Background"]
+[node name="Bushes" type="ParallaxLayer" parent="Background" unique_id=644141269]
 
-[node name="Sprite2D" type="Sprite2D" parent="Background/Bushes"]
+[node name="Sprite2D" type="Sprite2D" parent="Background/Bushes" unique_id=867505540]
 texture_filter = 1
 texture = ExtResource("5_rt2n2")
 
-[node name="HUD" type="CanvasLayer" parent="."]
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1115398249]
 
-[node name="MessageLabel" type="Label" parent="HUD"]
+[node name="MessageLabel" type="Label" parent="HUD" unique_id=1025536049]
 top_level = true
 anchors_preset = 8
 anchor_left = 0.5
@@ -263,3 +264,13 @@ theme_override_fonts/font = ExtResource("2_pu3yx")
 theme_override_font_sizes/font_size = 35
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="FpsCounter" parent="." unique_id=2068238154 instance=ExtResource("79_k78mq")]
+offset_left = 10.0
+offset_top = 5.0
+offset_right = 100.0
+offset_bottom = 30.0
+tooltip_text = "FPS"
+mouse_filter = 0
+theme_override_colors/font_color = Color(6.978959e-06, 0.7897352, 0.02887999, 1)
+theme_override_colors/font_shadow_color = Color(0.57700837, 0.5770084, 0.57700837, 0)
