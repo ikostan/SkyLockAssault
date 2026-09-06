@@ -47,7 +47,7 @@ func _ready() -> void:
 	# Connect the state-change signal strictly for data management
 	if not fps_toggle.toggled.is_connected(_on_fps_toggle_toggled):
 		fps_toggle.toggled.connect(_on_fps_toggle_toggled)
-		
+
 	# Connect the user-activation signal strictly for audio feedback
 	if not fps_toggle.pressed.is_connected(_on_fps_toggle_pressed):
 		fps_toggle.pressed.connect(_on_fps_toggle_pressed)
