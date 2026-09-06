@@ -30,7 +30,7 @@ func _process(_delta: float) -> void:
 func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	# Only react if the specific setting changed was 'show_fps'
 	if setting_name == "show_fps":
-		_update_visibility(new_value as bool)
+		_update_visibility(bool(new_value))
 
 
 func _update_visibility(is_visible: bool) -> void:
