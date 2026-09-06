@@ -360,6 +360,3 @@ func _on_fps_toggle_pressed() -> void:
 func _on_fps_toggle_toggled(toggled_on: bool) -> void:
 	Globals.log_message("FPS Toggle set to: " + str(toggled_on), Globals.LogLevel.DEBUG)
 	Globals.settings.show_fps = toggled_on
-	# Play the check.wav sound only if the user explicitly interacted with the button
-	if fps_toggle.has_focus():
-		AudioManager.play_sfx("check")

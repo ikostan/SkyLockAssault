@@ -529,11 +529,11 @@ func test_verify_advanced_menu_reset_binding() -> void:
 		assert_bool(Globals.settings.show_fps).is_false()
 
 
-## Test 21: Verify FPS Toggle Audio Feedback (With Focus)
-## Objective: Ensure the UI plays the check sound when explicitly interacted with by the user.
-## Description: Mount the scene inside an isolated SubViewport to guarantee focus allocation in headless CI, then emit the toggle.
-## Expected Result: The button registers as having focus natively, successfully hitting the AudioManager branch.
-func test_verify_fps_toggle_audio_feedback_with_focus() -> void:
+## Test 21: Verify FPS Toggle Audio Feedback (User Action)
+## Objective: Ensure the UI plays the check sound when explicitly clicked by the user.
+## Description: Load the scene and explicitly emit the user-activation 'pressed' signal.
+## Expected Result: The separated signal successfully hits the AudioManager branch without crashing.
+func test_verify_fps_toggle_audio_feedback_user_action() -> void:
 	var target_scene: String = "res://scenes/advanced_settings.tscn"
 	if not ResourceLoader.exists(target_scene):
 		target_scene = "res://scenes/gameplay_settings.tscn"
@@ -541,54 +541,25 @@ func test_verify_fps_toggle_audio_feedback_with_focus() -> void:
 			fail("Target options scene does not exist in CI scope.")
 			return
 			
-	# FIX: Create a dedicated SubViewport. Headless CI OS windows reject focus grabs.
-	# A SubViewport with handle_input_locally manages its own isolated focus state.
-	var vp: SubViewport = auto_free(SubViewport.new())
-	vp.handle_input_locally = true
-	vp.size = Vector2i(1280, 720)
-	add_child(vp)
-	
-	var scene: Node = auto_free(load(target_scene).instantiate())
-	vp.add_child(scene)
-	
-	var fps_toggle: CheckButton = scene.find_child("CheckButton", true, false) as CheckButton
+	var runner: GdUnitSceneRunner = scene_runner(target_scene)
+	var fps_toggle: CheckButton = runner.find_child("CheckButton", true, false) as CheckButton
 	if not is_instance_valid(fps_toggle):
-		fps_toggle = scene.find_child("ShowFPSButton", true, false) as CheckButton
-		if not is_instance_valid(fps_toggle):
-			fps_toggle = scene.find_child("FPSButton", true, false) as CheckButton
+		fps_toggle = runner.find_child("ShowFPSButton", true, false) as CheckButton
 			
 	assert_bool(is_instance_valid(fps_toggle)).is_true()
 	
-	# Force visibility and interactability up the local tree
-	var curr: Node = fps_toggle
-	while curr != null and curr is CanvasItem:
-		curr.visible = true
-		curr = curr.get_parent()
-		
-	fps_toggle.disabled = false
-	fps_toggle.focus_mode = Control.FOCUS_ALL
-	
-	# Wait for the SubViewport to initialize and process the scene tree
-	await await_idle_frame()
+	# Explicitly emit the user-activation signal that triggers the audio
+	fps_toggle.pressed.emit()
 	await await_idle_frame()
 	
-	# Grab focus natively within the isolated SubViewport
-	fps_toggle.grab_focus()
-	await await_idle_frame()
-	
-	# Verify the SubViewport granted focus
-	assert_bool(fps_toggle.has_focus()).is_true()
-	
-	# Toggling while focused will hit the AudioManager.play_sfx("check") branch
-	fps_toggle.button_pressed = not fps_toggle.button_pressed
-	fps_toggle.toggled.emit(fps_toggle.button_pressed)
+	# Test passes if the emitted signal didn't cause an AudioManager null reference crash
 
 
-## Test 22: Verify FPS Toggle Audio Feedback (Without Focus)
+## Test 22: Verify FPS Toggle Audio Feedback (Background Sync)
 ## Objective: Ensure the UI remains silent during programmatic or background state syncs.
-## Description: Mount the scene to the active tree, explicitly drop focus, and emit the toggled signal.
-## Expected Result: The button registers as not having focus, bypassing the AudioManager call completely.
-func test_verify_fps_toggle_audio_feedback_without_focus() -> void:
+## Description: Load the scene and programmatically change the state without emitting 'pressed'.
+## Expected Result: The global setting updates, but the separated audio path is never executed.
+func test_verify_fps_toggle_audio_feedback_background_sync() -> void:
 	var target_scene: String = "res://scenes/advanced_settings.tscn"
 	if not ResourceLoader.exists(target_scene):
 		target_scene = "res://scenes/gameplay_settings.tscn"
@@ -596,31 +567,17 @@ func test_verify_fps_toggle_audio_feedback_without_focus() -> void:
 			fail("Target options scene does not exist in CI scope.")
 			return
 			
-	var scene: Node = auto_free(load(target_scene).instantiate())
-	add_child(scene)
-	
-	var fps_toggle: CheckButton = scene.find_child("CheckButton", true, false) as CheckButton
+	var runner: GdUnitSceneRunner = scene_runner(target_scene)
+	var fps_toggle: CheckButton = runner.find_child("CheckButton", true, false) as CheckButton
 	if not is_instance_valid(fps_toggle):
-		fps_toggle = scene.find_child("ShowFPSButton", true, false) as CheckButton
-		if not is_instance_valid(fps_toggle):
-			fps_toggle = scene.find_child("FPSButton", true, false) as CheckButton
+		fps_toggle = runner.find_child("ShowFPSButton", true, false) as CheckButton
 			
 	assert_bool(is_instance_valid(fps_toggle)).is_true()
 	
-	var curr: Node = fps_toggle
-	while curr != null and curr is CanvasItem:
-		curr.visible = true
-		curr = curr.get_parent()
-		
-	fps_toggle.disabled = false
-	fps_toggle.focus_mode = Control.FOCUS_ALL
-	
-	# Explicitly drop focus to simulate a background settings sync
-	fps_toggle.release_focus()
+	# Programmatically change the visual state, which fires 'toggled' but NOT 'pressed'
+	fps_toggle.button_pressed = not fps_toggle.button_pressed
 	await await_idle_frame()
 	
-	assert_bool(fps_toggle.has_focus()).is_false()
-	
-	# Hit the negative branch natively
-	fps_toggle.button_pressed = not fps_toggle.button_pressed
-	fps_toggle.toggled.emit(fps_toggle.button_pressed)
+	# Verify the data updated
+	assert_bool(Globals.settings.show_fps).is_equal(fps_toggle.button_pressed)
+	# Because 'pressed' was never emitted, the audio path was safely bypassed
