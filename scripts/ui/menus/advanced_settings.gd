@@ -24,6 +24,7 @@ var _intentional_exit: bool = false
 var log_lvl_option: OptionButton = get_node("Panel/Controls/LogLevelContainer/LogLevelOptionButton")
 @onready var fps_toggle: CheckButton = $Panel/Controls/FPSContainer/CheckButton
 
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	# Populate Log level with all LogLevel enum values
@@ -39,7 +40,7 @@ func _ready() -> void:
 	else:
 		log_lvl_option.selected = 1  # Fallback to INFO (index 1)
 		Globals.log_message("Invalid saved log level—reset to INFO.", Globals.LogLevel.WARNING)
-	
+
 	# Set the initial visual state without triggering the toggle signal
 	fps_toggle.set_pressed_no_signal(Globals.settings.show_fps)
 
@@ -96,7 +97,7 @@ func _ready() -> void:
 	Globals.ensure_initial_focus(
 		log_lvl_option,
 		[log_lvl_option, fps_toggle, advanced_back_button, advanced_reset_button],
-	    "Advanced Settings"
+		"Advanced Settings"
 	)
 
 	Globals.log_message("Advanced Settings menu loaded.", Globals.LogLevel.DEBUG)
@@ -168,15 +169,15 @@ func _unset_advanced_window_callbacks() -> void:
 ## Handles Advanced Settings reset button press.
 func _on_advanced_reset_button_pressed() -> void:
 	Globals.log_message("Advanced Settings reset pressed.", Globals.LogLevel.DEBUG)
-	
+
 	# Log level should be reset to INFO
 	Globals.settings.current_log_level = Globals.LogLevel.INFO
 	log_lvl_option.selected = Globals.LogLevel.values().find(Globals.LogLevel.INFO)
-	
+
 	# Reset FPS Toggle to default (false)
 	Globals.settings.show_fps = false
 	fps_toggle.set_pressed_no_signal(false)
-	
+
 	Globals._save_settings()
 
 
@@ -347,6 +348,7 @@ func _on_change_log_level_js(args: Array) -> void:
 		Globals.LogLevel.DEBUG
 	)
 	_on_log_level_item_selected(index)
+
 
 func _on_fps_toggle_toggled(toggled_on: bool) -> void:
 	Globals.log_message("FPS Toggle set to: " + str(toggled_on), Globals.LogLevel.DEBUG)
