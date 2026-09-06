@@ -17,6 +17,7 @@ var _backup_path: String = ""
 var _test_owns_config_path: bool = false
 var _has_backup: bool = false
 
+
 func before_test() -> void:
 	# Backup globals to prevent test bleeding
 	_orig_settings = Globals.settings
@@ -32,8 +33,11 @@ func before_test() -> void:
 			_has_backup = true
 			_test_owns_config_path = true # We safely isolated the original; test owns the path
 		else:
-			push_warning("Failed to backup " + target_path + " (Error: " + str(err) + ").")
 			_test_owns_config_path = false # Rename failed; DO NOT delete this file during teardown
+			
+			# FIX: Immediately fail and return to prevent overwriting the user's real configuration
+			fail("CRITICAL: Failed to backup user settings (Error %d). Aborting to protect data." % err)
+			return
 	else:
 		# No original file existed; test owns whatever gets created here
 		_test_owns_config_path = true
