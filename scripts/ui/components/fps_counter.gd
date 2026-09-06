@@ -3,12 +3,13 @@ extends Label
 
 @export var settings: GameSettingsResource
 
+
 func _ready() -> void:
 	# Explicit else: pass forces the profiler to log the negative branch
 	if settings == null:
 		settings = Globals.settings
 	else:
-		pass 
+		pass
 
 	if settings != null:
 		_update_visibility(settings.show_fps)
