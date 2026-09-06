@@ -375,3 +375,82 @@ func test_omnibus_native_branch_profiler_sync() -> void:
 	fps_valid._on_setting_changed("difficulty", false)   # Hits the FALSE branch
 	
 	assert_bool(fps_valid.visible).is_true()
+
+
+## Test 18: Verify Fixture Setup/Teardown with Pre-existing Backup
+## Objective: Ensure the fixture correctly backs up an existing user config and restores it.
+## Description: Save the runner's internal state, create a mock user configuration file, and manually invoke `before_test()` to simulate setup. Verify the backup is created and ownership is claimed. Then simulate `after_test()` to verify the artifact is removed and the original file is restored.
+## Expected Result: `before_test()` successfully renames the mock file and sets `_test_owns_config_path` and `_has_backup` to true. `after_test()` correctly restores the mock file to its original path without data loss.
+func test_fixture_pre_existing_backup_handling() -> void:
+	# 1. Save actual runner state to prevent breaking the suite's real teardown
+	var actual_owns: bool = _test_owns_config_path
+	var actual_has_backup: bool = _has_backup
+	var actual_backup: String = _backup_path
+	
+	# 2. Create a fake "original" settings file
+	var f: FileAccess = FileAccess.open(Settings.CONFIG_PATH, FileAccess.WRITE)
+	f.store_string("dummy user data")
+	f.close()
+	
+	# 3. Manually run before_test() to trigger the backup logic
+	before_test()
+	
+	# Assert the file was moved and test owns the path
+	assert_bool(FileAccess.file_exists(Settings.CONFIG_PATH)).is_false()
+	assert_bool(_has_backup).is_true()
+	assert_bool(_test_owns_config_path).is_true()
+	assert_bool(FileAccess.file_exists(_backup_path)).is_true()
+	
+	# 4. Create a fake test artifact
+	f = FileAccess.open(Settings.CONFIG_PATH, FileAccess.WRITE)
+	f.store_string("test artifact")
+	f.close()
+	
+	# 5. Manually run after_test() to trigger restoration
+	after_test()
+	
+	# Assert the artifact was deleted and original restored
+	assert_bool(FileAccess.file_exists(_backup_path)).is_false()
+	assert_bool(FileAccess.file_exists(Settings.CONFIG_PATH)).is_true()
+	
+	# Cleanup the dummy file
+	DirAccess.remove_absolute(Settings.CONFIG_PATH)
+	
+	# 6. Restore real runner state
+	_test_owns_config_path = actual_owns
+	_has_backup = actual_has_backup
+	_backup_path = actual_backup
+
+
+## Test 19: Verify Fixture Teardown on Failed Rename
+## Objective: Ensure the fixture does NOT delete the user's config if the test failed to take ownership.
+## Description: Save the runner's internal state, explicitly set `_test_owns_config_path` to false to simulate a failed file lock/rename during setup, and create a mock user configuration file. Manually invoke `after_test()`.
+## Expected Result: `after_test()` respects the false ownership flag and leaves the mock user configuration file completely intact on the disk.
+func test_fixture_failed_rename_handling() -> void:
+	# 1. Save actual runner state
+	var actual_owns: bool = _test_owns_config_path
+	var actual_has_backup: bool = _has_backup
+	var actual_backup: String = _backup_path
+	
+	# 2. Force the state flags to simulate a failed rename during setup
+	_test_owns_config_path = false
+	_has_backup = false
+	
+	# 3. Create a dummy file that simulates the user's REAL settings file
+	var f: FileAccess = FileAccess.open(Settings.CONFIG_PATH, FileAccess.WRITE)
+	f.store_string("real user data")
+	f.close()
+	
+	# 4. Manually run after_test()
+	after_test()
+	
+	# Assert the file was NOT deleted because the test doesn't own it
+	assert_bool(FileAccess.file_exists(Settings.CONFIG_PATH)).is_true()
+	
+	# Cleanup
+	DirAccess.remove_absolute(Settings.CONFIG_PATH)
+	
+	# 5. Restore real runner state
+	_test_owns_config_path = actual_owns
+	_has_backup = actual_has_backup
+	_backup_path = actual_backup
