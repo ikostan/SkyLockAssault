@@ -1,6 +1,6 @@
 ## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
-## resource_preloader_test.gd
+## test_resource_preloader.gd
 ##
 ## GdUnit4 automated test suite for ResourcePreloader.
 
