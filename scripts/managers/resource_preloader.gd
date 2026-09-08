@@ -81,13 +81,15 @@ func load_textures_from_dir(dir_path: String) -> Array[Texture2D]:
 				file_list += file_name + ", "  # Collect all files
 				if file_name.ends_with(".png"):
 					var texture_path: String = dir_path + file_name
-					
+
 					# USE THE WRAPPER HERE
 					var texture: Texture2D = _load_resource(texture_path)
-					
+
 					if texture:
 						textures.append(texture)
-						Globals.log_message("Loaded texture: " + texture_path, Globals.LogLevel.DEBUG)
+						Globals.log_message(
+							"Loaded texture: " + texture_path, Globals.LogLevel.DEBUG
+						)
 					else:
 						Globals.log_message(
 							"Warning: Failed to load " + texture_path + " in editor",
