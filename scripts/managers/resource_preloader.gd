@@ -80,7 +80,7 @@ func load_textures_from_dir(dir_path: String) -> Array[Texture2D]:
 				file_count += 1
 				file_list += file_name + ", "  # Collect all files
 				if file_name.ends_with(".png"):
-					var texture_path: String = dir_path + file_name
+					var texture_path: String = dir_path + ("" if dir_path.ends_with("/") else "/") + file_name
 
 					# USE THE WRAPPER HERE
 					var texture: Texture2D = _load_resource(texture_path)
