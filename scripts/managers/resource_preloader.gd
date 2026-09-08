@@ -33,7 +33,7 @@ func _force_reload(value: bool) -> void:
 func _ready() -> void:
 	if _is_in_editor():  # Only run in editor
 		# Clear existing preloaded resources to avoid duplicates on reload
-		var ids: Array = get_resource_list()  # Changed to untyped Array
+		var ids: PackedStringArray = get_resource_list()
 		Globals.log_message(
 			"get_resource_list completed, ids size: %d" % ids.size(), Globals.LogLevel.DEBUG
 		)
