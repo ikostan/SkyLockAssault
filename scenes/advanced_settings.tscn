@@ -34,18 +34,23 @@ corner_radius_bottom_left = 10
 expand_margin_left = 20.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6dctt"]
-bg_color = Color(0.53333336, 0.6666667, 0.98039216, 0.3137255)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
 expand_margin_left = 20.0
-shadow_color = Color(0.7647059, 0.8156863, 0.03137255, 0.33333334)
-shadow_size = 2
+shadow_size = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_dkru2"]
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+shadow_size = 5
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_yonr6"]
 bg_color = Color(0.2627451, 0.2627451, 0.2627451, 0.5882353)
@@ -105,9 +110,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -215.0
-offset_top = -155.0
+offset_top = -167.5
 offset_right = 215.0
-offset_bottom = 155.0
+offset_bottom = 167.5
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 4
@@ -122,12 +127,12 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -192.5
-offset_top = -125.0
+offset_top = -142.5
 offset_right = 192.5
-offset_bottom = 125.0
+offset_bottom = 142.5
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 15
+theme_override_constants/separation = 10
 
 [node name="MainLabel" type="Label" parent="Panel/Controls" unique_id=317986468]
 layout_mode = 2
@@ -165,8 +170,8 @@ custom_minimum_size = Vector2(175, 0)
 layout_mode = 2
 size_flags_vertical = 4
 focus_neighbor_top = NodePath("../../BtnContainer/ResetButton")
-focus_neighbor_bottom = NodePath("../../BtnContainer/BackButton")
-focus_next = NodePath("../../BtnContainer/BackButton")
+focus_neighbor_bottom = NodePath("../../FPSContainer/CheckButton")
+focus_next = NodePath("../../FPSContainer/CheckButton")
 focus_previous = NodePath("../../BtnContainer/ResetButton")
 theme_override_colors/font_color = Color(0.24840015, 0.24840018, 0.24840012, 1)
 theme_override_colors/font_focus_color = Color(0.24705882, 0.24705882, 0.24705882, 1)
@@ -184,6 +189,33 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_o600e")
 theme_override_styles/hover = SubResource("StyleBoxFlat_o3hvc")
 theme_override_styles/focus = SubResource("StyleBoxFlat_6dctt")
 
+[node name="FPSContainer" type="HBoxContainer" parent="Panel/Controls" unique_id=2093012006]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 6
+tooltip_text = "Show FPS Setting"
+theme_override_constants/separation = 165
+
+[node name="Label" type="Label" parent="Panel/Controls/FPSContainer" unique_id=1848955139]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("2_vw8ml")
+theme_override_font_sizes/font_size = 20
+text = "{SHOW=FPS}"
+
+[node name="CheckButton" type="CheckButton" parent="Panel/Controls/FPSContainer" unique_id=1304250797]
+layout_mode = 2
+size_flags_horizontal = 3
+focus_neighbor_top = NodePath("../../LogLevelContainer/LogLevelOptionButton")
+focus_neighbor_bottom = NodePath("../../BtnContainer/BackButton")
+focus_next = NodePath("../../BtnContainer/BackButton")
+focus_previous = NodePath("../../LogLevelContainer/LogLevelOptionButton")
+theme_override_colors/font_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
+theme_override_fonts/font = ExtResource("2_vw8ml")
+theme_override_font_sizes/font_size = 20
+theme_override_styles/focus = SubResource("StyleBoxFlat_dkru2")
+
 [node name="BtnContainer" type="HBoxContainer" parent="Panel/Controls" unique_id=617440997]
 layout_mode = 2
 size_flags_vertical = 3
@@ -193,10 +225,10 @@ theme_override_constants/separation = 5
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-focus_neighbor_top = NodePath("../../LogLevelContainer/LogLevelOptionButton")
+focus_neighbor_top = NodePath("../../FPSContainer/CheckButton")
 focus_neighbor_bottom = NodePath("../ResetButton")
 focus_next = NodePath("../ResetButton")
-focus_previous = NodePath("../../LogLevelContainer/LogLevelOptionButton")
+focus_previous = NodePath("../../FPSContainer/CheckButton")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)
 theme_override_colors/font_focus_color = Color(0.9607843, 0.9607843, 0.050980393, 1)
 theme_override_colors/font_pressed_color = Color(0.9607843, 0.9607843, 0.050980393, 0.9019608)
@@ -214,7 +246,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 focus_neighbor_top = NodePath("../BackButton")
-focus_neighbor_bottom = NodePath("../../LogLevelContainer/LogLevelOptionButton")
+focus_neighbor_bottom = NodePath("../../FPSContainer/CheckButton")
 focus_next = NodePath("../../LogLevelContainer/LogLevelOptionButton")
 focus_previous = NodePath("../BackButton")
 theme_override_colors/font_color = Color(0.99215686, 0.21568628, 0.2784314, 1)

@@ -11,7 +11,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/ikostan/SkyLockAssault?label=Latest%20Release&style=flat-square&color=brightgreen)](https://github.com/ikostan/SkyLockAssault/releases/latest)
 ![Last Commit](https://img.shields.io/github/last-commit/ikostan/SkyLockAssault?style=flat-square)
 [![Downloads](https://img.shields.io/github/downloads/ikostan/SkyLockAssault/total?style=flat-square&color=brightgreen&label=Downloads)](https://github.com/ikostan/SkyLockAssault/releases)
-[![codecov](https://codecov.io/gh/ikostan/SkyLockAssault/graph/badge.svg?token=A4O6I72HP0)](https://codecov.io/gh/ikostan/SkyLockAssault)
+[![codecov](https://codecov.io/github/ikostan/SkyLockAssault/graph/badge.svg?token=A4O6I72HP0)](https://codecov.io/github/ikostan/SkyLockAssault)
 ![Repo Size](https://img.shields.io/github/repo-size/ikostan/SkyLockAssault?style=flat-square)
 ![Closed Issues](https://img.shields.io/github/issues-closed/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=green)
 ![Open Issues](https://img.shields.io/github/issues/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=red)

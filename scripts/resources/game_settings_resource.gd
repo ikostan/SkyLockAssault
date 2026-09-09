@@ -236,6 +236,15 @@ signal fuel_depleted
 # Use type-hinting without forced preloading to break circular dependencies
 @export var key_mapping_scene: PackedScene
 @export var options_scene: PackedScene
+@export var show_fps: bool = false:
+	set(value):
+		var new_val: bool = bool(value)
+		if _show_fps == new_val:
+			return
+		_show_fps = new_val
+		setting_changed.emit("show_fps", _show_fps)
+	get:
+		return _show_fps
 
 # Private member variables moved to bottom to satisfy class-definitions-order
 # NEW: GDScript requires backing fields to be declared BEFORE
@@ -252,6 +261,7 @@ var _high_fuel_threshold: float = 90.0
 var _medium_fuel_threshold: float = 50.0
 var _low_fuel_threshold: float = 30.0
 var _no_fuel_threshold: float = 15.0
+var _show_fps: bool = false
 
 # Speed Backing Fields
 var _max_speed: float = 713.0

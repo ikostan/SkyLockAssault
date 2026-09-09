@@ -3,13 +3,16 @@
 ## Shared test helpers for SkyLockAssault unit tests.
 ## Contains utility functions for calculations.
 
+class_name TestHelpers
 extends RefCounted
+
+const PlayerScript = preload("res://scripts/entities/player.gd")
+const GameSettingsResource = preload("res://scripts/resources/game_settings_resource.gd")
 
 
 ## Calculates the expected fuel depletion based on the global GameSettingsResource.
 static func calculate_expected_depletion(player_root: Node, difficulty: float) -> float:
-	# NEW: Use Globals.settings.max_speed instead of player_root.MAX_SPEED
-	var normalized_speed: float = player_root.current_speed / Globals.settings.max_speed
-	
-	# NEW: Use Globals.settings.base_consumption_rate instead of player_root.base_fuel_drain
-	return Globals.settings.base_consumption_rate * normalized_speed * difficulty
+	var player: PlayerScript = player_root as PlayerScript
+	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
+	var normalized_speed: float = float(player.current_speed) / float(settings.max_speed)
+	return float(settings.base_consumption_rate) * normalized_speed * float(difficulty)
