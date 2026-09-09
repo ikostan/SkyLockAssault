@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: "Checkout code"
-        uses: "actions/checkout@v7"
+        uses: "actions/checkout@v7.0.1"
 
       - name: "Set up Python"
         uses: "actions/setup-python@v7"
@@ -39,7 +39,7 @@ jobs:
     timeout-minutes: 10  # Generous timeout to download the 1.2 GB template file
     steps:
       - name: "Checkout code"
-        uses: "actions/checkout@v7"
+        uses: "actions/checkout@v7.0.1"
 
       - name: "Test Godot Asset Infrastructure and Signature Verification"
         run: |
