@@ -40,16 +40,24 @@ func before_test() -> void:
 
 func after_test() -> void:
 	if DirAccess.dir_exists_absolute(TEMP_TEST_DIR):
-		var dir: DirAccess = DirAccess.open(TEMP_TEST_DIR)
-		if dir:
-			dir.list_dir_begin()
-			var file_name: String = dir.get_next()
-			while file_name != "":
-				if not dir.current_is_dir():
-					DirAccess.remove_absolute(TEMP_TEST_DIR + file_name)
-				file_name = dir.get_next()
-			dir.list_dir_end()
-		DirAccess.remove_absolute(TEMP_TEST_DIR)
+		_remove_dir_recursive(TEMP_TEST_DIR)
+
+
+func _remove_dir_recursive(path: String) -> void:
+	var dir: DirAccess = DirAccess.open(path)
+	if dir:
+		dir.list_dir_begin()
+		var file_name: String = dir.get_next()
+		while file_name != "":
+			if file_name != "." and file_name != "..":
+				var child_path: String = path + "/" + file_name
+				if dir.current_is_dir():
+					_remove_dir_recursive(child_path)
+				else:
+					DirAccess.remove_absolute(child_path)
+			file_name = dir.get_next()
+		dir.list_dir_end()
+		DirAccess.remove_absolute(path)
 
 
 func _create_file(path: String, contents: String = "placeholder") -> void:
