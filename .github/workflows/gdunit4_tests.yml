@@ -275,12 +275,12 @@ jobs:
 
           # 1. Entity domain
           mapfile -t ENTITY_TESTS < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | grep -E "player|bullet|weapon|difficulty" | sort || true)
-          # 2. Managers & System domain
-          mapfile -t MANAGER_TESTS < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | grep -E "audio|parallax|bridge" | grep -v -E "player|bullet|weapon|difficulty" | sort || true)
-          # 3. Core & Settings domain
-          mapfile -t SETTINGS_TESTS < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | grep -E "settings|input_remap|globals" | grep -v -E "player|bullet|weapon|difficulty|audio|parallax|bridge" | sort || true)
-          # 4. UI & Navigation domain
-          mapfile -t UI_TESTS < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | grep -v -E "player|bullet|weapon|difficulty|audio|parallax|bridge|settings|input_remap|globals" | sort || true)
+          # 2. Managers & System domain (Added preloader)
+          mapfile -t MANAGER_TESTS < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | grep -E "audio|parallax|bridge|preloader" | grep -v -E "player|bullet|weapon|difficulty" | sort || true)
+          # 3. Core & Settings domain (Excluded preloader)
+          mapfile -t SETTINGS_TESTS < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | grep -E "settings|input_remap|globals" | grep -v -E "player|bullet|weapon|difficulty|audio|parallax|bridge|preloader" | sort || true)
+          # 4. UI & Navigation domain (Excluded preloader)
+          mapfile -t UI_TESTS < <(find /tmp/test_backup/gdunit4 -name "test_*.gd" ! -name "test_helpers.gd" | grep -v -E "player|bullet|weapon|difficulty|audio|parallax|bridge|preloader|settings|input_remap|globals" | sort || true)
 
           run_domain_batches 'PackedStringArray("res://scripts/entities", "res://scripts/core", "res://scripts/resources")' "true" "${ENTITY_TESTS[@]}"
           run_domain_batches 'PackedStringArray("res://scripts/managers", "res://scripts/system", "res://scripts/core", "res://scripts/resources", "res://scripts/ui")' "false" "${MANAGER_TESTS[@]}"
