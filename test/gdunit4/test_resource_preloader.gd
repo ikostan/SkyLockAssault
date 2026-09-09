@@ -19,6 +19,7 @@ const REAL_TEXTURE_DIR: String = "res://files/random_decor/"
 class FakePreloader extends "res://scripts/managers/resource_preloader.gd":
 	var mock_is_in_editor: bool = false
 	var mock_load_failure: bool = false
+	var mock_loader_calls: int = 0
 	
 	func _is_in_editor() -> bool:
 		if mock_is_in_editor:
@@ -27,6 +28,7 @@ class FakePreloader extends "res://scripts/managers/resource_preloader.gd":
 		
 	# MATCH THE PARENT SIGNATURE EXACTLY
 	func _load_resource(path: Variant) -> Texture2D:
+		mock_loader_calls += 1
 		if mock_load_failure:
 			return null
 		return super._load_resource(path)
@@ -62,9 +64,12 @@ func _remove_dir_recursive(path: String) -> void:
 
 func _create_file(path: String, contents: String = "placeholder") -> void:
 	var f: FileAccess = FileAccess.open(path, FileAccess.WRITE)
-	if f:
-		f.store_string(contents)
-		f.close()
+	if f == null:
+		fail("Failed to create file at: " + path)
+		return
+		
+	f.store_string(contents)
+	f.close()
 
 
 ## Test 1: Verify Initial Default State
@@ -117,9 +122,11 @@ func test_verify_directory_scanner_ignores_invalid_paths() -> void:
 func test_verify_directory_scanner_filters_non_png_files() -> void:
 	_create_file(DUMMY_TXT, "Not an image")
 	
-	var preloader: ResourcePreloader = auto_free(PRELOADER_SCRIPT.new())
+	var preloader: FakePreloader = auto_free(FakePreloader.new())
 	var textures: Array[Texture2D] = preloader.load_textures_from_dir(TEMP_TEST_DIR)
+	
 	assert_array(textures).is_empty()
+	assert_int(preloader.mock_loader_calls).is_equal(0)
 
 
 ## Test 6: Verify Valid PNG Assets Load Successfully
@@ -173,3 +180,4 @@ func test_verify_corrupted_png_warning_branch_fake() -> void:
 	var textures: Array[Texture2D] = preloader.load_textures_from_dir(REAL_TEXTURE_DIR)
 	
 	assert_array(textures).is_empty()
+	assert_int(preloader.mock_loader_calls).is_greater(0)
