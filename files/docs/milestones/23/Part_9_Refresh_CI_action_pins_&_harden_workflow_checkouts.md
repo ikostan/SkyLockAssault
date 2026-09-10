@@ -1,4 +1,7 @@
 <!-- markdownlint-disable MD001 MD036 MD013 MD033 table-column-style -->
+# Refresh CI action pins and harden workflow checkouts
+
+---
 
 ## PR #941 Summary: Refresh CI action pins and harden workflow checkouts
 
