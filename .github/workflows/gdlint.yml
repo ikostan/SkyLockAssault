@@ -13,14 +13,17 @@ jobs:
     # indefinitely if something goes wrong
     timeout-minutes: 10
     steps:
+
       - name: "Checkout code"
-        uses: "actions/checkout@v7.0.1"
+        uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"  # v7.0.1
         with:
           persist-credentials: false
+
       - name: "Set up Python"
-        uses: "actions/setup-python@v7.0.0"
+        uses: "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97"  # v7.0.0
         with:
           python-version: "3.x"
+
       - name: "Cache PIP Dependencies"
         uses: "actions/cache@v6"
         with:
@@ -28,15 +31,18 @@ jobs:
           key: "${{ runner.os }}-pip-gdtoolkit"
           restore-keys: |
             ${{ runner.os }}-pip-
+
       - name: "Install GDToolkit (for gdlint & gdformat)"
         # Installs gdtoolkit==4.* for Godot 4.x
         # uses: "Scony/godot-gdscript-toolkit@master"
         run: |
           pip install "gdtoolkit==4.*"
+
       - name: "Check Formatting"
         # Scans all .gd files; use --diff for detailed output
         run: |
           gdformat --diff --check ./scripts
+
       - name: "Lint Code"
         # Runs static analysis; fails if issues found
         run: |
