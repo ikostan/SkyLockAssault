@@ -28,7 +28,7 @@ jobs:
       GODOT_SHA256: "${{ inputs.godot_sha256 }}"
     steps:
       # Check out full repository history (fetch-depth: 0) to allow Codecov base commit resolution
-      - uses: "actions/checkout@v7"
+      - uses: "actions/checkout@v7.0.1"
         with:
           persist-credentials: false
           fetch-depth: 0
