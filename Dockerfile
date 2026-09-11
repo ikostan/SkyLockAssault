@@ -40,8 +40,8 @@ RUN pip install pytest-html pytest-timeout
 RUN npm install -g markdownlint-cli2@0.12.1
 
 # Download and verify Godot v4.7.1 binary using the official GitHub SHA512-SUMS file
-RUN wget -q https://github.com/godotengine/godot/releases/download/4.7.1-stable/SHA512-SUMS.txt \
-    && wget -q https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip \
+RUN wget --progress=dot:giga https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/SHA512-SUMS.txt \
+    && wget --progress=dot:giga https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip \
     && grep " Godot_v4.7.1-stable_linux.x86_64.zip$" SHA512-SUMS.txt | sha512sum --check --status \
     && unzip Godot_v4.7.1-stable_linux.x86_64.zip \
     && mv Godot_v4.7.1-stable_linux.x86_64 /usr/local/bin/godot \
@@ -49,8 +49,8 @@ RUN wget -q https://github.com/godotengine/godot/releases/download/4.7.1-stable/
     && rm Godot_v4.7.1-stable_linux.x86_64.zip SHA512-SUMS.txt
 
 # Download, verify, and extract export templates using the official GitHub SHA512-SUMS file
-RUN wget -q https://github.com/godotengine/godot/releases/download/4.7.1-stable/SHA512-SUMS.txt \
-    && wget -q https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_export_templates.tpz \
+RUN wget --progress=dot:giga https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/SHA512-SUMS.txt \
+    && wget --progress=dot:giga https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_export_templates.tpz \
     && grep " Godot_v4.7.1-stable_export_templates.tpz$" SHA512-SUMS.txt | sha512sum --check --status \
     && mkdir -p "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}" \
     && unzip Godot_v4.7.1-stable_export_templates.tpz -d /tmp/templates \
