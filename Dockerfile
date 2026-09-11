@@ -3,10 +3,10 @@
 # Use Ubuntu 24.04 as base (matches GitHub Actions runner)
 FROM ubuntu:24.04
 
-# Install base dependencies (added nodejs, npm, libglib2.0-bin, kio, gvfs, xvfb)
+# Install base dependencies (added nodejs, npm, libglib2.0-bin, kio, gvfs, xvfb, aria2)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip wget unzip curl git zip libxml2-utils netcat-openbsd python3-venv nodejs npm \
-    libglib2.0-bin kio gvfs xvfb ca-certificates \
+    libglib2.0-bin kio gvfs xvfb ca-certificates aria2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user to run the container (fixes DS002)
@@ -40,8 +40,8 @@ RUN pip install pytest-html pytest-timeout
 RUN npm install -g markdownlint-cli2@0.12.1
 
 # Download and verify Godot v4.7.1 binary using the official GitHub SHA512-SUMS file
-RUN wget --progress=dot:giga https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/SHA512-SUMS.txt \
-    && wget --progress=dot:giga https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip \
+RUN aria2c -x 16 -s 16 https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/SHA512-SUMS.txt \
+    && aria2c -x 16 -s 16 https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip \
     && grep " Godot_v4.7.1-stable_linux.x86_64.zip$" SHA512-SUMS.txt | sha512sum --check --status \
     && unzip Godot_v4.7.1-stable_linux.x86_64.zip \
     && mv Godot_v4.7.1-stable_linux.x86_64 /usr/local/bin/godot \
@@ -49,8 +49,8 @@ RUN wget --progress=dot:giga https://github.com/godotengine/godot-builds/release
     && rm Godot_v4.7.1-stable_linux.x86_64.zip SHA512-SUMS.txt
 
 # Download, verify, and extract export templates using the official GitHub SHA512-SUMS file
-RUN wget --progress=dot:giga https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/SHA512-SUMS.txt \
-    && wget --progress=dot:giga https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_export_templates.tpz \
+RUN aria2c -x 16 -s 16 https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/SHA512-SUMS.txt \
+    && aria2c -x 16 -s 16 https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_export_templates.tpz \
     && grep " Godot_v4.7.1-stable_export_templates.tpz$" SHA512-SUMS.txt | sha512sum --check --status \
     && mkdir -p "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}" \
     && unzip Godot_v4.7.1-stable_export_templates.tpz -d /tmp/templates \
