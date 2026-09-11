@@ -11,6 +11,7 @@ var log_level_display_to_enum: Dictionary = {
 	"ERROR": Globals.LogLevel.ERROR,
 	"NONE": Globals.LogLevel.NONE
 }
+var _fps_toggle_cb: JavaScriptObject
 var _change_log_level_cb: JavaScriptObject
 # Reset button
 var _advanced_reset_cb: Variant
@@ -103,6 +104,40 @@ func _ready() -> void:
 		[log_lvl_option, fps_toggle, advanced_back_button, advanced_reset_button],
 		"Advanced Settings"
 	)
+	
+	if js_bridge_wrapper and os_wrapper.has_feature("web"):
+		# Toggle overlays...
+		var initial_fps_state: String = "true" if Globals.settings.show_fps else "false"
+		(
+			js_bridge_wrapper
+			. eval(
+                """
+                document.getElementById('log-level-select').style.display = 'block';
+                document.getElementById('advanced-back-button').style.display = 'block';
+                document.getElementById('advanced-reset-button').style.display = 'block';
+                var fpsEl = document.getElementById('fps-toggle');
+                if (fpsEl) {
+                    fpsEl.style.display = 'block';
+                    fpsEl.checked = %s;
+                }
+				""" % initial_fps_state,
+				true
+			)
+		)
+
+	# Expose callbacks to JS (store refs to prevent GC)
+	js_window = js_bridge_wrapper.get_interface("window") as JavaScriptObject
+	if js_window:
+		_change_log_level_cb = js_bridge_wrapper.create_callback(
+			Callable(self, "_on_change_log_level_js")
+		)
+		js_window.changeLogLevel = _change_log_level_cb
+
+		# Register FPS toggle callback
+		_fps_toggle_cb = js_bridge_wrapper.create_callback(
+			Callable(self, "_on_fps_toggle_js")
+		)
+		js_window.toggleFps = _fps_toggle_cb
 
 	Globals.log_message("Advanced Settings menu loaded.", Globals.LogLevel.DEBUG)
 
@@ -151,6 +186,7 @@ func _on_tree_exited() -> void:
 					document.getElementById('log-level-select').style.display = 'none';
 					document.getElementById('advanced-back-button').style.display = 'none';
 					document.getElementById('advanced-reset-button').style.display = 'none';
+					document.getElementById('fps-toggle').style.display = 'none';
 					""",
 					true
 				)
@@ -165,6 +201,7 @@ func _unset_advanced_window_callbacks() -> void:
 	if not os_wrapper.has_feature("web") or not js_window:
 		return
 	js_window.changeLogLevel = null
+	js_window.toggleFps = null
 	js_window.advancedBackPressed = null
 	js_window.advancedResetPressed = null
 
@@ -181,6 +218,13 @@ func _on_advanced_reset_button_pressed() -> void:
 	# Reset FPS Toggle to default (false)
 	Globals.settings.show_fps = false
 	fps_toggle.set_pressed_no_signal(false)
+	
+	# Sync DOM overlay state
+	if os_wrapper.has_feature("web") and js_bridge_wrapper:
+		js_bridge_wrapper.eval(
+			"var fpsEl = document.getElementById('fps-toggle'); if (fpsEl) fpsEl.checked = false;",
+			true
+		)
 
 
 func _on_advanced_reset_js(_args: Array) -> void:
@@ -234,6 +278,7 @@ func _on_advanced_back_button_pressed() -> void:
 					document.getElementById('log-level-select').style.display = 'none';
 					document.getElementById('advanced-back-button').style.display = 'none';
 					document.getElementById('advanced-reset-button').style.display = 'none';
+					document.getElementById('fps-toggle').style.display = 'none';
 					""",
 					true
 				)
@@ -360,3 +405,31 @@ func _on_fps_toggle_pressed() -> void:
 func _on_fps_toggle_toggled(toggled_on: bool) -> void:
 	Globals.log_message("FPS Toggle set to: " + str(toggled_on), Globals.LogLevel.DEBUG)
 	Globals.settings.show_fps = toggled_on
+
+
+func _on_fps_toggle_js(args: Array) -> void:
+	if args.is_empty():
+		Globals.log_message(
+			"JS toggleFps callback received empty args—skipping.", Globals.LogLevel.WARNING
+		)
+		return
+
+	var raw_val: Variant = args[0]
+	var toggled_on: bool = false
+
+	if raw_val is Array and not raw_val.is_empty():
+		toggled_on = bool(raw_val[0])
+	elif typeof(raw_val) == TYPE_BOOL:
+		toggled_on = raw_val
+	else:
+		toggled_on = bool(raw_val)
+
+	Globals.log_message(
+		"JS toggleFps callback called with state: " + str(toggled_on),
+		Globals.LogLevel.DEBUG
+	)
+
+	# Keep the Godot in-engine CheckButton visually synchronized
+	fps_toggle.set_pressed_no_signal(toggled_on)
+	# Trigger setting update, persistence, and signal propagation
+	_on_fps_toggle_toggled(toggled_on)
