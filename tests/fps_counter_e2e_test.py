@@ -16,8 +16,9 @@ import re
 import time
 from typing import Any
 
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import expect
 
 from tests.test_utils import (
     ARTIFACTS_DIR,
@@ -114,15 +115,13 @@ def _toggle_fps_overlay(
 
     # Safely sync the DOM element AND invoke the JS bridge directly.
     # Avoid dispatchEvent() because it does not reliably trigger inline `onchange` properties.
-    page.evaluate(
-        f"""() => {{
+    page.evaluate(f"""() => {{
             const el = document.getElementById('fps-toggle');
             if (el) el.checked = {target_str};
             if (typeof window.toggleFps === 'function') {{
                 window.toggleFps([{target_str}]);
             }}
-        }}"""
-    )
+        }}""")
 
     # 1. Await GDScript observer signal handler and logging confirmation
     wait_for_console_log(
@@ -246,7 +245,9 @@ def test_webgl_export_stability_and_console(page: Page, request) -> None:
         expect(fps_checkbox).not_to_be_checked()
 
         # 5. Assert clean runtime execution
-        assert not fatal_errors, f"Fatal errors or unallowlisted exceptions occurred: {fatal_errors}"
+        assert (
+            not fatal_errors
+        ), f"Fatal errors or unallowlisted exceptions occurred: {fatal_errors}"
 
     except Exception as e:
         print(f"Test 'test_webgl_export_stability_and_console' failed: {e}")
@@ -320,7 +321,9 @@ def test_webgl_session_persistence(page: Page, request) -> None:
         second_reloaded_checkbox = page.locator("#fps-toggle")
         expect(second_reloaded_checkbox).not_to_be_checked(timeout=TEST_TIMEOUT)
 
-        assert not fatal_errors, f"Fatal errors during persistence reload cycles: {fatal_errors}"
+        assert (
+            not fatal_errors
+        ), f"Fatal errors during persistence reload cycles: {fatal_errors}"
 
     except Exception as e:
         print(f"Test 'test_webgl_session_persistence' failed: {e}")
