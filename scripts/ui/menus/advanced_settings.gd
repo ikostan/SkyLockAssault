@@ -414,15 +414,22 @@ func _on_fps_toggle_js(args: Array) -> void:
 		)
 		return
 
-	var raw_val: Variant = args[0]
+	var first_arg: Variant = args[0]
 	var toggled_on: bool = false
 
-	if raw_val is Array and not raw_val.is_empty():
-		toggled_on = bool(raw_val[0])
-	elif typeof(raw_val) == TYPE_BOOL:
-		toggled_on = raw_val
+	# JavaScriptBridge converts JS array arguments like [true] into a JavaScriptObject
+	if first_arg is JavaScriptObject or typeof(first_arg) == TYPE_ARRAY:
+		var potential_bool: Variant = first_arg[0]
+		# Handle explicit strings ("true"/"false") or direct JS booleans
+		if typeof(potential_bool) == TYPE_STRING:
+			toggled_on = (potential_bool.to_lower() == "true")
+		else:
+			toggled_on = bool(potential_bool)
 	else:
-		toggled_on = bool(raw_val)
+		if typeof(first_arg) == TYPE_STRING:
+			toggled_on = (first_arg.to_lower() == "true")
+		else:
+			toggled_on = bool(first_arg)
 
 	Globals.log_message(
 		"JS toggleFps callback called with state: " + str(toggled_on),
