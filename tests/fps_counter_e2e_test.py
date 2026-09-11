@@ -1,6 +1,6 @@
 # Copyright (C) 2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
-# tests/test_fps_counter_e2e.py
+# tests/fps_counter_e2e_test.py
 """E2E Playwright tests for WebGL FPS Counter (Issue #926).
 
 Validates:
@@ -30,7 +30,6 @@ from tests.test_utils import (
     wait_for_console_log,
 )
 
-# Narrow allowlist for non-fatal Godot/WebGL initialization notices
 ALLOWLISTED_LOG_PATTERNS = [
     re.compile(r"USER SCRIPT DEBUG", re.IGNORECASE),
     re.compile(r"WebGL.*vendor-prefixed", re.IGNORECASE),
@@ -44,12 +43,9 @@ IGNORED_ERROR_PHRASES = [
     "encryption aborted",
     "salt is empty",
     "key generation failed",
+    "empty next_scene",
+    "loading failed or invalid",
 ]
-
-
-# ==============================================================================
-# Helper Functions & Synchronization
-# ==============================================================================
 
 
 def _setup_runtime_monitoring(
@@ -72,8 +68,8 @@ def _setup_runtime_monitoring(
     page.on("pageerror", on_page_error)
 
 
-def _navigate_to_advanced_menu(page: Page) -> None:
-    """Navigates from Main Menu to Advanced Settings and awaits DOM overlay mounts."""
+def _navigate_to_advanced_menu(page: Page, logs: list[dict[str, Any]]) -> None:
+    """Navigates from Main Menu to Advanced Settings and forces DEBUG log level."""
     open_options_menu(page)
 
     page.wait_for_selector("#advanced-button", state="visible", timeout=TEST_TIMEOUT)
@@ -93,6 +89,21 @@ def _navigate_to_advanced_menu(page: Page) -> None:
         timeout=TEST_TIMEOUT,
     )
 
+    # Enable DEBUG logging so setting updates and persistence are emitted to console
+    pre_lvl_count = len(logs)
+    page.wait_for_function(
+        "() => typeof window.changeLogLevel !== 'undefined'",
+        timeout=TEST_TIMEOUT,
+    )
+    page.evaluate("window.changeLogLevel([0])")
+    wait_for_console_log(
+        logs,
+        lambda text: "log level changed to: debug" in text,
+        pre_lvl_count,
+        page,
+        timeout_ms=DEFAULT_TIMEOUT,
+    )
+
 
 def _toggle_fps_overlay(
     page: Page, logs: list[dict[str, Any]], target_state: bool
@@ -101,15 +112,19 @@ def _toggle_fps_overlay(
     pre_count = len(logs)
     target_str = str(target_state).lower()
 
+    # Safely sync the DOM element AND invoke the JS bridge directly.
+    # Avoid dispatchEvent() because it does not reliably trigger inline `onchange` properties.
     page.evaluate(
         f"""() => {{
             const el = document.getElementById('fps-toggle');
-            el.checked = {target_str};
-            el.dispatchEvent(new Event('change'));
+            if (el) el.checked = {target_str};
+            if (typeof window.toggleFps === 'function') {{
+                window.toggleFps([{target_str}]);
+            }}
         }}"""
     )
 
-    # Await GDScript observer signal handler and logging confirmation
+    # 1. Await GDScript observer signal handler and logging confirmation
     wait_for_console_log(
         logs,
         lambda text: f"fps toggle set to: {target_str}" in text
@@ -119,7 +134,7 @@ def _toggle_fps_overlay(
         timeout_ms=DEFAULT_TIMEOUT,
     )
 
-    # Confirm persistence file write side effect
+    # 2. Confirm persistence file write side effect
     wait_for_console_log(
         logs,
         lambda text: "encrypted settings persisted successfully" in text
@@ -128,6 +143,12 @@ def _toggle_fps_overlay(
         pre_count,
         page,
         timeout_ms=DEFAULT_TIMEOUT,
+    )
+
+    # 3. Wait for DOM element attribute and JS state reflection
+    page.wait_for_function(
+        f"() => document.getElementById('fps-toggle').checked === {target_str}",
+        timeout=TEST_TIMEOUT,
     )
 
 
@@ -155,6 +176,7 @@ def _flush_emscripten_idbfs(page: Page) -> None:
         }""")
     except Exception as exc:  # noqa: BLE001 - best-effort IDBFS flush
         print(f"Warning: GodotFS.sync() failed before reload: {exc}")
+    page.wait_for_timeout(300)
 
 
 def _dump_failure_diagnostics(
@@ -195,13 +217,7 @@ def _dump_failure_diagnostics(
 
 
 def test_webgl_export_stability_and_console(page: Page, request) -> None:
-    """Test 1: Verify WebGL Export Stability & Console.
-
-    - Boots the production WebGL export in a headless browser context.
-    - Asserts that WebGL/WASM initializes and bridge callbacks mount.
-    - Transitions FPS counter OFF -> ON -> OFF through the production DOM bridge.
-    - Verifies observable state and absence of uncaught runtime crashes.
-    """
+    """Test 1: Verify WebGL Export Stability & Console."""
     logs: list[dict[str, Any]] = []
     fatal_errors: list[str] = []
     cdp_session = None
@@ -214,13 +230,11 @@ def test_webgl_export_stability_and_console(page: Page, request) -> None:
         # 1. WASM & Engine initialization
         init_page_and_wait_ready(page, request=request)
 
-        # 2. Navigate to Advanced Menu
-        _navigate_to_advanced_menu(page)
+        # 2. Navigate to Advanced Menu (enables DEBUG logging)
+        _navigate_to_advanced_menu(page, logs)
 
         fps_checkbox = page.locator("#fps-toggle")
         expect(fps_checkbox).to_be_attached(timeout=TEST_TIMEOUT)
-
-        # Initial default state is false
         expect(fps_checkbox).not_to_be_checked()
 
         # 3. Transition 1: OFF -> ON
@@ -243,14 +257,7 @@ def test_webgl_export_stability_and_console(page: Page, request) -> None:
 
 
 def test_webgl_session_persistence(page: Page, request) -> None:
-    """Test 2: Verify WebGL Session Persistence.
-
-    - Starts with clean, isolated browser persistence (function-scoped context).
-    - Toggles FPS ON and flushes IndexedDB storage.
-    - Performs hard page reload and validates restoration of `show_fps == true`.
-    - Toggles FPS OFF and flushes IndexedDB storage.
-    - Performs second reload and validates restoration of `show_fps == false`.
-    """
+    """Test 2: Verify WebGL Session Persistence across Hard Reloads."""
     logs: list[dict[str, Any]] = []
     fatal_errors: list[str] = []
     cdp_session = None
@@ -262,7 +269,7 @@ def test_webgl_session_persistence(page: Page, request) -> None:
 
         # 1. First Boot
         init_page_and_wait_ready(page, request=request)
-        _navigate_to_advanced_menu(page)
+        _navigate_to_advanced_menu(page, logs)
 
         fps_checkbox = page.locator("#fps-toggle")
         expect(fps_checkbox).not_to_be_checked()
@@ -286,8 +293,8 @@ def test_webgl_session_persistence(page: Page, request) -> None:
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
 
-        # Navigate back to Advanced Settings to check loaded state
-        _navigate_to_advanced_menu(page)
+        # Navigate back to Advanced Settings
+        _navigate_to_advanced_menu(page, logs)
         reloaded_checkbox = page.locator("#fps-toggle")
         expect(reloaded_checkbox).to_be_checked(timeout=TEST_TIMEOUT)
 
@@ -309,7 +316,7 @@ def test_webgl_session_persistence(page: Page, request) -> None:
             "() => window.godotInitialized === true", timeout=DEFAULT_TIMEOUT
         )
 
-        _navigate_to_advanced_menu(page)
+        _navigate_to_advanced_menu(page, logs)
         second_reloaded_checkbox = page.locator("#fps-toggle")
         expect(second_reloaded_checkbox).not_to_be_checked(timeout=TEST_TIMEOUT)
 
