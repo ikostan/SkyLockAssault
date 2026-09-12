@@ -391,7 +391,6 @@ func _on_fps_toggle_js(args: Array) -> void:
 
 	# JavaScriptBridge converts JS array arguments like [true] into a JavaScriptObject
 	if first_arg is JavaScriptObject or typeof(first_arg) == TYPE_ARRAY:
-		
 		# Safely check if the nested JS array is empty before indexing into it
 		if (
 			(first_arg is JavaScriptObject and first_arg.length == 0)
@@ -403,7 +402,7 @@ func _on_fps_toggle_js(args: Array) -> void:
 			return
 
 		var potential_bool: Variant = first_arg[0]
-		
+
 		# Handle explicit strings ("true"/"false") or direct JS booleans
 		if typeof(potential_bool) == TYPE_STRING:
 			toggled_on = (potential_bool.to_lower() == "true")
@@ -416,12 +415,11 @@ func _on_fps_toggle_js(args: Array) -> void:
 			toggled_on = bool(first_arg)
 
 	Globals.log_message(
-		"JS toggleFps callback called with state: " + str(toggled_on),
-		Globals.LogLevel.DEBUG
+		"JS toggleFps callback called with state: " + str(toggled_on), Globals.LogLevel.DEBUG
 	)
 
 	# Keep the Godot in-engine CheckButton visually synchronized
 	fps_toggle.set_pressed_no_signal(toggled_on)
-	
+
 	# Trigger setting update, persistence, and signal propagation
 	_on_fps_toggle_toggled(toggled_on)
