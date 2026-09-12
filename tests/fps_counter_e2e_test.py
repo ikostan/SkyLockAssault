@@ -16,9 +16,8 @@ import re
 import time
 from typing import Any
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-from playwright.sync_api import expect
 
 from tests.test_utils import (
     ARTIFACTS_DIR,
@@ -50,19 +49,23 @@ IGNORED_ERROR_PHRASES = [
 
 
 def _setup_runtime_monitoring(
-    page: Page, logs: list[dict[str, Any]], fatal_errors: list[str]
+        page: Page, logs: list[dict[str, Any]], fatal_errors: list[str]
 ) -> None:
     """Attaches console message and pageerror collectors with engine allowlisting."""
 
     def on_console(msg: Any) -> None:
+        """Process console messages and filter allowlisted patterns."""
         text = str(msg.text)
         logs.append({"type": msg.type, "text": text, "time": time.perf_counter()})
-        if msg.type == "error":
-            if not any(pattern.search(text) for pattern in ALLOWLISTED_LOG_PATTERNS):
-                if not any(phrase in text.lower() for phrase in IGNORED_ERROR_PHRASES):
-                    fatal_errors.append(f"Console Error: {text}")
+
+        is_allowlisted = any(p.search(text) for p in ALLOWLISTED_LOG_PATTERNS)
+        is_ignored = any(p in text.lower() for p in IGNORED_ERROR_PHRASES)
+
+        if msg.type == "error" and not is_allowlisted and not is_ignored:
+            fatal_errors.append(f"Console Error: {text}")
 
     def on_page_error(exc: Any) -> None:
+        """Capture uncaught page errors into fatal_errors list."""
         fatal_errors.append(f"Uncaught PageError: {exc}")
 
     page.on("console", on_console)
@@ -107,27 +110,29 @@ def _navigate_to_advanced_menu(page: Page, logs: list[dict[str, Any]]) -> None:
 
 
 def _toggle_fps_overlay(
-    page: Page, logs: list[dict[str, Any]], target_state: bool
+        page: Page, logs: list[dict[str, Any]], target_state: bool
 ) -> None:
     """Deterministically sets the FPS toggle through the DOM overlay element."""
     pre_count = len(logs)
     target_str = str(target_state).lower()
 
-    # Safely sync the DOM element AND invoke the JS bridge directly.
-    # Avoid dispatchEvent() because it does not reliably trigger inline `onchange` properties.
-    page.evaluate(f"""() => {{
+    # Sync DOM element and invoke JS bridge directly.
+    # Avoid dispatchEvent() as it fails to trigger inline onchange hooks reliably.
+    page.evaluate(
+        f"""() => {{
             const el = document.getElementById('fps-toggle');
             if (el) el.checked = {target_str};
             if (typeof window.toggleFps === 'function') {{
-                window.toggleFps([{target_str}]);
+                window.toggleFps(['{target_str}']);
             }}
-        }}""")
+        }}"""
+    )
 
     # 1. Await GDScript observer signal handler and logging confirmation
     wait_for_console_log(
         logs,
         lambda text: f"fps toggle set to: {target_str}" in text
-        or f"setting 'show_fps' updated to: {target_str}" in text,
+                     or f"setting 'show_fps' updated to: {target_str}" in text,
         pre_count,
         page,
         timeout_ms=DEFAULT_TIMEOUT,
@@ -137,8 +142,8 @@ def _toggle_fps_overlay(
     wait_for_console_log(
         logs,
         lambda text: "encrypted settings persisted successfully" in text
-        or "failsafe active" in text
-        or "saved" in text,
+                     or "failsafe active" in text
+                     or "saved" in text,
         pre_count,
         page,
         timeout_ms=DEFAULT_TIMEOUT,
@@ -179,26 +184,31 @@ def _flush_emscripten_idbfs(page: Page) -> None:
 
 
 def _dump_failure_diagnostics(
-    page: Page, logs: list[dict[str, Any]], fatal_errors: list[str], name: str
+        page: Page, logs: list[dict[str, Any]], fatal_errors: list[str], name: str
 ) -> None:
     """Saves screenshots, DOM content, and log archives upon test failure."""
     os.makedirs(ARTIFACTS_DIR, exist_ok=True)
     timestamp = int(time.time() * 1000)
+
+    # Strip potential path traversal characters to appease DeepSource
+    safe_name = re.sub(r"[^A-Za-z0-9_-]", "_", name)
+
     try:
-        page.screenshot(path=str(ARTIFACTS_DIR / f"{name}_failure_{timestamp}.png"))
+        page.screenshot(path=str(ARTIFACTS_DIR / f"{safe_name}_failure_{timestamp}.png"))
     except Exception:
         pass
+
     try:
         with open(
-            ARTIFACTS_DIR / f"{name}_failure_html_{timestamp}.html",
-            "w",
-            encoding="utf-8",
+                ARTIFACTS_DIR / f"{safe_name}_failure_html_{timestamp}.html",
+                "w",
+                encoding="utf-8",
         ) as f:
             f.write(page.content())
         with open(
-            ARTIFACTS_DIR / f"{name}_failure_logs_{timestamp}.txt",
-            "w",
-            encoding="utf-8",
+                ARTIFACTS_DIR / f"{safe_name}_failure_logs_{timestamp}.txt",
+                "w",
+                encoding="utf-8",
         ) as f:
             f.write("--- CONSOLE LOGS ---\n")
             for entry in logs:
