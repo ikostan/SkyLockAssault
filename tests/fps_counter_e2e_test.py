@@ -1,6 +1,7 @@
 # Copyright (C) 2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 # tests/fps_counter_e2e_test.py
+
 """E2E Playwright tests for WebGL FPS Counter (Issue #926).
 
 Validates:
@@ -141,8 +142,7 @@ def _toggle_fps_overlay(
     wait_for_console_log(
         logs,
         lambda text: "encrypted settings persisted successfully" in text
-        or "failsafe active" in text
-        or "saved" in text,
+        or "failsafe active" in text,  # Removed the broad "saved" fallback
         pre_count,
         page,
         timeout_ms=DEFAULT_TIMEOUT,
