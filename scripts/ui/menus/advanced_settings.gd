@@ -28,117 +28,77 @@ var log_lvl_option: OptionButton = get_node("Panel/Controls/LogLevelContainer/Lo
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	
 	# Populate Log level with all LogLevel enum values
 	for level: String in Globals.LogLevel.keys():
-		if level != "NONE":  # Skip auto-add NONE; add manually as "None"
-			log_lvl_option.add_item(level)  # "Debug", "Info", etc.
-	log_lvl_option.add_item("NONE")  # Manual for title case
-	# Set to current log level (find index by enum value)
+		if level != "NONE":
+			log_lvl_option.add_item(level)
+	log_lvl_option.add_item("NONE")
+	
+	# Set to current log level
 	var current_value: int = Globals.settings.current_log_level
 	var index: int = Globals.LogLevel.values().find(current_value)
 	if index != -1:
 		log_lvl_option.selected = index
 	else:
-		log_lvl_option.selected = 1  # Fallback to INFO (index 1)
+		log_lvl_option.selected = 1
 		Globals.log_message("Invalid saved log level—reset to INFO.", Globals.LogLevel.WARNING)
 
 	# Set the initial visual state without triggering the toggle signal
 	fps_toggle.set_pressed_no_signal(Globals.settings.show_fps)
 
-	# Connect the state-change signal strictly for data management
+	# Connect signals
 	if not fps_toggle.toggled.is_connected(_on_fps_toggle_toggled):
 		fps_toggle.toggled.connect(_on_fps_toggle_toggled)
-
-	# Connect the user-activation signal strictly for audio feedback
 	if not fps_toggle.pressed.is_connected(_on_fps_toggle_pressed):
 		fps_toggle.pressed.connect(_on_fps_toggle_pressed)
-
-	# Connect signals to type-specific handlers (change: separate from JS callbacks)
-	tree_exited.connect(_on_tree_exited)
-	log_lvl_option.item_selected.connect(_on_log_level_item_selected)
-
-	if js_bridge_wrapper and os_wrapper.has_feature("web"):
-		# Toggle overlays...
-		(
-			js_bridge_wrapper
-			. eval(
-				"""
-				document.getElementById('log-level-select').style.display = 'block';
-				document.getElementById('advanced-back-button').style.display = 'block';
-				document.getElementById('advanced-reset-button').style.display = 'block';
-				""",
-				true
-			)
-		)
-
-	# Expose callbacks to JS (store refs to prevent GC)
-	js_window = js_bridge_wrapper.get_interface("window") as JavaScriptObject
-	if js_window:
-		_change_log_level_cb = js_bridge_wrapper.create_callback(
-			Callable(self, "_on_change_log_level_js")
-		)
-		js_window.changeLogLevel = _change_log_level_cb
-
-	# Back button
 	if not advanced_back_button.pressed.is_connected(_on_advanced_back_button_pressed):
 		advanced_back_button.pressed.connect(_on_advanced_back_button_pressed)
-
-	# Reset button listener
 	if not advanced_reset_button.pressed.is_connected(_on_advanced_reset_button_pressed):
 		advanced_reset_button.pressed.connect(_on_advanced_reset_button_pressed)
 
-	if os_wrapper.has_feature("web"):
-		if js_window:  # New: Null check
-			# JS Callbacks
-			# Expose callbacks for back button
-			_advanced_back_button_pressed_cb = _register_js_callback(
-				"_on_advanced_back_button_pressed_js", "advancedBackPressed"
-			)
-			# Expose callbacks for Reset button
-			_advanced_reset_cb = _register_js_callback(
-				"_on_advanced_reset_js", "advancedResetPressed"
-			)
-	# Give keyboard focus to the log level slider (only if nothing in this menu already has focus)
+	tree_exited.connect(_on_tree_exited)
+	log_lvl_option.item_selected.connect(_on_log_level_item_selected)
+
+	# Give keyboard focus to the log level slider
 	Globals.ensure_initial_focus(
 		log_lvl_option,
 		[log_lvl_option, fps_toggle, advanced_back_button, advanced_reset_button],
 		"Advanced Settings"
 	)
 
-	if js_bridge_wrapper and os_wrapper.has_feature("web"):
-		# Toggle overlays...
+	# ==============================================================================
+	# SINGLE CONSOLIDATED WEB BRIDGE GUARD
+	# ==============================================================================
+	if os_wrapper.has_feature("web") and js_bridge_wrapper:
+		
+		# 1. Sync DOM overlays and initial state
 		var initial_fps_state: String = "true" if Globals.settings.show_fps else "false"
-		(
-			js_bridge_wrapper
-			. eval(
-				(
-					"""
-                document.getElementById('log-level-select').style.display = 'block';
-                document.getElementById('advanced-back-button').style.display = 'block';
-                document.getElementById('advanced-reset-button').style.display = 'block';
-                var fpsEl = document.getElementById('fps-toggle');
-                if (fpsEl) {
-                    fpsEl.style.display = 'block';
-                    fpsEl.checked = %s;
-                }
-				"""
-					% initial_fps_state
-				),
-				true
-			)
+		js_bridge_wrapper.eval(
+			"""
+			document.getElementById('log-level-select').style.display = 'block';
+			document.getElementById('advanced-back-button').style.display = 'block';
+			document.getElementById('advanced-reset-button').style.display = 'block';
+			var fpsEl = document.getElementById('fps-toggle');
+			if (fpsEl) {
+				fpsEl.style.display = 'block';
+				fpsEl.checked = %s;
+			}
+			""" % initial_fps_state,
+			true
 		)
 
-	# Expose callbacks to JS (store refs to prevent GC)
-	js_window = js_bridge_wrapper.get_interface("window") as JavaScriptObject
-	if js_window:
-		_change_log_level_cb = js_bridge_wrapper.create_callback(
-			Callable(self, "_on_change_log_level_js")
-		)
-		js_window.changeLogLevel = _change_log_level_cb
+		# 2. Expose Callbacks to JS
+		js_window = js_bridge_wrapper.get_interface("window") as JavaScriptObject
+		if js_window:
+			_change_log_level_cb = js_bridge_wrapper.create_callback(Callable(self, "_on_change_log_level_js"))
+			js_window.changeLogLevel = _change_log_level_cb
 
-		# Register FPS toggle callback
-		_fps_toggle_cb = js_bridge_wrapper.create_callback(Callable(self, "_on_fps_toggle_js"))
-		js_window.toggleFps = _fps_toggle_cb
+			_fps_toggle_cb = js_bridge_wrapper.create_callback(Callable(self, "_on_fps_toggle_js"))
+			js_window.toggleFps = _fps_toggle_cb
+
+			_advanced_back_button_pressed_cb = _register_js_callback("_on_advanced_back_button_pressed_js", "advancedBackPressed")
+			_advanced_reset_cb = _register_js_callback("_on_advanced_reset_js", "advancedResetPressed")
 
 	Globals.log_message("Advanced Settings menu loaded.", Globals.LogLevel.DEBUG)
 
