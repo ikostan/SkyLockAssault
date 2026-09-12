@@ -28,13 +28,13 @@ var log_lvl_option: OptionButton = get_node("Panel/Controls/LogLevelContainer/Lo
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	
+
 	# Populate Log level with all LogLevel enum values
 	for level: String in Globals.LogLevel.keys():
 		if level != "NONE":
 			log_lvl_option.add_item(level)
 	log_lvl_option.add_item("NONE")
-	
+
 	# Set to current log level
 	var current_value: int = Globals.settings.current_log_level
 	var index: int = Globals.LogLevel.values().find(current_value)
@@ -71,11 +71,13 @@ func _ready() -> void:
 	# SINGLE CONSOLIDATED WEB BRIDGE GUARD
 	# ==============================================================================
 	if os_wrapper.has_feature("web") and js_bridge_wrapper:
-		
 		# 1. Sync DOM overlays and initial state
 		var initial_fps_state: String = "true" if Globals.settings.show_fps else "false"
-		js_bridge_wrapper.eval(
-			"""
+		(
+			js_bridge_wrapper
+			. eval(
+				(
+					"""
 			document.getElementById('log-level-select').style.display = 'block';
 			document.getElementById('advanced-back-button').style.display = 'block';
 			document.getElementById('advanced-reset-button').style.display = 'block';
@@ -84,21 +86,30 @@ func _ready() -> void:
 				fpsEl.style.display = 'block';
 				fpsEl.checked = %s;
 			}
-			""" % initial_fps_state,
-			true
+			"""
+					% initial_fps_state
+				),
+				true
+			)
 		)
 
 		# 2. Expose Callbacks to JS
 		js_window = js_bridge_wrapper.get_interface("window") as JavaScriptObject
 		if js_window:
-			_change_log_level_cb = js_bridge_wrapper.create_callback(Callable(self, "_on_change_log_level_js"))
+			_change_log_level_cb = js_bridge_wrapper.create_callback(
+				Callable(self, "_on_change_log_level_js")
+			)
 			js_window.changeLogLevel = _change_log_level_cb
 
 			_fps_toggle_cb = js_bridge_wrapper.create_callback(Callable(self, "_on_fps_toggle_js"))
 			js_window.toggleFps = _fps_toggle_cb
 
-			_advanced_back_button_pressed_cb = _register_js_callback("_on_advanced_back_button_pressed_js", "advancedBackPressed")
-			_advanced_reset_cb = _register_js_callback("_on_advanced_reset_js", "advancedResetPressed")
+			_advanced_back_button_pressed_cb = _register_js_callback(
+				"_on_advanced_back_button_pressed_js", "advancedBackPressed"
+			)
+			_advanced_reset_cb = _register_js_callback(
+				"_on_advanced_reset_js", "advancedResetPressed"
+			)
 
 	Globals.log_message("Advanced Settings menu loaded.", Globals.LogLevel.DEBUG)
 
