@@ -104,14 +104,15 @@ func _ready() -> void:
 		[log_lvl_option, fps_toggle, advanced_back_button, advanced_reset_button],
 		"Advanced Settings"
 	)
-	
+
 	if js_bridge_wrapper and os_wrapper.has_feature("web"):
 		# Toggle overlays...
 		var initial_fps_state: String = "true" if Globals.settings.show_fps else "false"
 		(
 			js_bridge_wrapper
 			. eval(
-                """
+				(
+					"""
                 document.getElementById('log-level-select').style.display = 'block';
                 document.getElementById('advanced-back-button').style.display = 'block';
                 document.getElementById('advanced-reset-button').style.display = 'block';
@@ -120,7 +121,9 @@ func _ready() -> void:
                     fpsEl.style.display = 'block';
                     fpsEl.checked = %s;
                 }
-				""" % initial_fps_state,
+				"""
+					% initial_fps_state
+				),
 				true
 			)
 		)
@@ -134,9 +137,7 @@ func _ready() -> void:
 		js_window.changeLogLevel = _change_log_level_cb
 
 		# Register FPS toggle callback
-		_fps_toggle_cb = js_bridge_wrapper.create_callback(
-			Callable(self, "_on_fps_toggle_js")
-		)
+		_fps_toggle_cb = js_bridge_wrapper.create_callback(Callable(self, "_on_fps_toggle_js"))
 		js_window.toggleFps = _fps_toggle_cb
 
 	Globals.log_message("Advanced Settings menu loaded.", Globals.LogLevel.DEBUG)
@@ -218,7 +219,7 @@ func _on_advanced_reset_button_pressed() -> void:
 	# Reset FPS Toggle to default (false)
 	Globals.settings.show_fps = false
 	fps_toggle.set_pressed_no_signal(false)
-	
+
 	# Sync DOM overlay state
 	if os_wrapper.has_feature("web") and js_bridge_wrapper:
 		js_bridge_wrapper.eval(
@@ -432,8 +433,7 @@ func _on_fps_toggle_js(args: Array) -> void:
 			toggled_on = bool(first_arg)
 
 	Globals.log_message(
-		"JS toggleFps callback called with state: " + str(toggled_on),
-		Globals.LogLevel.DEBUG
+		"JS toggleFps callback called with state: " + str(toggled_on), Globals.LogLevel.DEBUG
 	)
 
 	# Keep the Godot in-engine CheckButton visually synchronized
