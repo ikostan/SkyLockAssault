@@ -10,8 +10,8 @@ node removal, and layout persistence (Issue #911).
 import os
 import time
 from typing import Any
-import pytest
 
+import pytest
 from playwright.sync_api import (
     Page,
 )
