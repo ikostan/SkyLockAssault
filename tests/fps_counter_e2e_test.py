@@ -51,7 +51,7 @@ IGNORED_ERROR_PHRASES = [
 
 
 def _setup_runtime_monitoring(
-        page: Page, logs: list[dict[str, Any]], fatal_errors: list[str]
+    page: Page, logs: list[dict[str, Any]], fatal_errors: list[str]
 ) -> None:
     """Attaches console message and pageerror collectors with engine allowlisting."""
 
@@ -112,7 +112,7 @@ def _navigate_to_advanced_menu(page: Page, logs: list[dict[str, Any]]) -> None:
 
 
 def _toggle_fps_overlay(
-        page: Page, logs: list[dict[str, Any]], target_state: bool
+    page: Page, logs: list[dict[str, Any]], target_state: bool
 ) -> None:
     """Deterministically sets the FPS toggle through the DOM overlay element."""
     pre_count = len(logs)
@@ -132,7 +132,7 @@ def _toggle_fps_overlay(
     wait_for_console_log(
         logs,
         lambda text: f"fps toggle set to: {target_str}" in text
-                     or f"setting 'show_fps' updated to: {target_str}" in text,
+        or f"setting 'show_fps' updated to: {target_str}" in text,
         pre_count,
         page,
         timeout_ms=DEFAULT_TIMEOUT,
@@ -142,7 +142,7 @@ def _toggle_fps_overlay(
     wait_for_console_log(
         logs,
         lambda text: "encrypted settings persisted successfully" in text
-                     or "failsafe active" in text,
+        or "failsafe active" in text,
         pre_count,
         page,
         timeout_ms=DEFAULT_TIMEOUT,
@@ -189,7 +189,7 @@ def _flush_emscripten_idbfs(page: Page) -> None:
 
 
 def _dump_failure_diagnostics(
-        page: Page, logs: list[dict[str, Any]], fatal_errors: list[str], name: str
+    page: Page, logs: list[dict[str, Any]], fatal_errors: list[str], name: str
 ) -> None:
     """Saves screenshots, DOM content, and log archives upon test failure."""
     os.makedirs(ARTIFACTS_DIR, exist_ok=True)
@@ -207,15 +207,15 @@ def _dump_failure_diagnostics(
 
     try:
         with open(
-                ARTIFACTS_DIR / f"{safe_name}_failure_html_{timestamp}.html",
-                "w",
-                encoding="utf-8",
+            ARTIFACTS_DIR / f"{safe_name}_failure_html_{timestamp}.html",
+            "w",
+            encoding="utf-8",
         ) as f:
             f.write(page.content())
         with open(
-                ARTIFACTS_DIR / f"{safe_name}_failure_logs_{timestamp}.txt",
-                "w",
-                encoding="utf-8",
+            ARTIFACTS_DIR / f"{safe_name}_failure_logs_{timestamp}.txt",
+            "w",
+            encoding="utf-8",
         ) as f:
             f.write("--- CONSOLE LOGS ---\n")
             for entry in logs:
