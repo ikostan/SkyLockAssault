@@ -17,6 +17,7 @@ import re
 import time
 from typing import Any
 
+import pytest
 from playwright.sync_api import Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import expect
@@ -118,8 +119,8 @@ def _toggle_fps_overlay(
     pre_count = len(logs)
     target_str = str(target_state).lower()
 
-    # Sync DOM element and invoke the JS bridge directly.
-    # Avoid dispatchEvent() as it fails to trigger inline onchange.
+    # Sync DOM element and invoke JS bridge directly.
+    # Avoid dispatchEvent() as it fails to trigger inline onchange hooks reliably.
     page.evaluate(f"""() => {{
             const el = document.getElementById('fps-toggle');
             if (el) el.checked = {target_str};
@@ -156,10 +157,10 @@ def _toggle_fps_overlay(
 
 
 def _flush_emscripten_idbfs(page: Page) -> None:
-    """Sync Emscripten memory filesystem to browser IndexedDB."""
+    """Explicitly synchronizes Emscripten memory filesystem to browser IndexedDB."""
     try:
-        # Internal Emscripten Module is often not globally exposed.
-        # If unavailable, JS evaluates instantly and skips.
+        # In Godot 4 Web exports, Emscripten's internal Module is often not globally exposed.
+        # If these objects are unavailable, the JS evaluates instantly and skips the manual block.
         page.evaluate("""async () => {
             if (typeof GodotFS !== 'undefined' && GodotFS.sync) {
                 await GodotFS.sync();
@@ -179,12 +180,12 @@ def _flush_emscripten_idbfs(page: Page) -> None:
                 });
             }
         }""")
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001 - best-effort IDBFS flush
         print(f"Warning: GodotFS.sync() failed before reload: {exc}")
 
-    # Godot 4 executes internal syncfs() asynchronously on save.
-    # Keep the I/O thread alive so IndexedDB can commit
-    # before page.reload() tears down the runtime context.
+    # Godot 4 automatically executes internal syncfs() asynchronously when files are saved.
+    # We must guarantee the browser keeps the I/O thread alive long enough for IndexedDB
+    # to commit the transaction before page.reload() tears down the runtime context.
     page.wait_for_timeout(TEST_TIMEOUT)
 
 
@@ -232,6 +233,7 @@ def _dump_failure_diagnostics(
 # ==============================================================================
 
 
+@pytest.mark.timeout(90)
 def test_webgl_export_stability_and_console(page: Page, request) -> None:
     """Test 1: Verify WebGL Export Stability & Console."""
     logs: list[dict[str, Any]] = []
@@ -274,6 +276,7 @@ def test_webgl_export_stability_and_console(page: Page, request) -> None:
         save_v8_coverage(cdp_session, "fps_counter_stability_test")
 
 
+@pytest.mark.timeout(90)
 def test_webgl_session_persistence(page: Page, request) -> None:
     """Test 2: Verify WebGL Session Persistence across Hard Reloads."""
     logs: list[dict[str, Any]] = []
