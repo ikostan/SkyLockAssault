@@ -377,6 +377,14 @@ func _on_fps_toggle_pressed() -> void:
 func _on_fps_toggle_toggled(toggled_on: bool) -> void:
 	Globals.log_message("FPS Toggle set to: " + str(toggled_on), Globals.LogLevel.DEBUG)
 	Globals.settings.show_fps = toggled_on
+	
+	# Synchronize the DOM element when toggled via native keyboard/gamepad
+	if os_wrapper.has_feature("web") and js_bridge_wrapper:
+		var js_bool: String = "true" if toggled_on else "false"
+		js_bridge_wrapper.eval(
+			"var fpsEl = document.getElementById('fps-toggle'); if (fpsEl) fpsEl.checked = " + js_bool + ";", 
+			true
+		)
 
 
 func _on_fps_toggle_js(args: Array) -> void:
