@@ -54,7 +54,7 @@ IGNORED_ERROR_PHRASES = [
 def _setup_runtime_monitoring(
     page: Page, logs: list[dict[str, Any]], fatal_errors: list[str]
 ) -> None:
-    """Attaches console message and pageerror collectors with engine allowlisting."""
+    """Attaches console message and pageerror collectors."""
 
     def on_console(msg: Any) -> None:
         """Process console messages and filter allowlisted patterns."""
@@ -76,7 +76,7 @@ def _setup_runtime_monitoring(
 
 
 def _navigate_to_advanced_menu(page: Page, logs: list[dict[str, Any]]) -> None:
-    """Navigates from Main Menu to Advanced Settings and forces DEBUG log level."""
+    """Navigates to Advanced Settings and forces DEBUG log level."""
     open_options_menu(page)
 
     page.wait_for_selector("#advanced-button", state="visible", timeout=TEST_TIMEOUT)
@@ -96,7 +96,7 @@ def _navigate_to_advanced_menu(page: Page, logs: list[dict[str, Any]]) -> None:
         timeout=TEST_TIMEOUT,
     )
 
-    # Enable DEBUG logging so setting updates and persistence are emitted to console
+    # Enable DEBUG logging to surface persistence output
     pre_lvl_count = len(logs)
     page.wait_for_function(
         "() => typeof window.changeLogLevel !== 'undefined'",
@@ -115,21 +115,24 @@ def _navigate_to_advanced_menu(page: Page, logs: list[dict[str, Any]]) -> None:
 def _toggle_fps_overlay(
     page: Page, logs: list[dict[str, Any]], target_state: bool
 ) -> None:
-    """Deterministically sets the FPS toggle through the DOM overlay element."""
+    """Deterministically sets the FPS toggle through the DOM element."""
     pre_count = len(logs)
     target_str = str(target_state).lower()
 
-    # Sync DOM element and invoke JS bridge directly.
-    # Avoid dispatchEvent() as it fails to trigger inline onchange hooks reliably.
-    page.evaluate(f"""() => {{
+    # Trigger inline handler with a mock event object.
+    page.evaluate(
+        f"""() => {{
             const el = document.getElementById('fps-toggle');
-            if (el) el.checked = {target_str};
-            if (typeof window.toggleFps === 'function') {{
-                window.toggleFps(['{target_str}']);
+            if (el) {{
+                el.checked = {target_str};
+                if (typeof el.onchange === 'function') {{
+                    el.onchange({{target: el}});
+                }}
             }}
-        }}""")
+        }}"""
+    )
 
-    # 1. Await GDScript observer signal handler and logging confirmation
+    # 1. Await GDScript observer signal handler and logging
     wait_for_console_log(
         logs,
         lambda text: f"fps toggle set to: {target_str}" in text
@@ -157,10 +160,10 @@ def _toggle_fps_overlay(
 
 
 def _flush_emscripten_idbfs(page: Page) -> None:
-    """Explicitly synchronizes Emscripten memory filesystem to browser IndexedDB."""
+    """Sync Emscripten memory filesystem to browser IndexedDB."""
     try:
-        # In Godot 4 Web exports, Emscripten's internal Module is often not globally exposed.
-        # If these objects are unavailable, the JS evaluates instantly and skips the manual block.
+        # Godot 4 Web exports may obfuscate Emscripten Module.
+        # If unavailable, JS evaluates instantly and skips.
         page.evaluate("""async () => {
             if (typeof GodotFS !== 'undefined' && GodotFS.sync) {
                 await GodotFS.sync();
@@ -180,23 +183,22 @@ def _flush_emscripten_idbfs(page: Page) -> None:
                 });
             }
         }""")
-    except Exception as exc:  # noqa: BLE001 - best-effort IDBFS flush
+    except Exception as exc:  # noqa: BLE001
         print(f"Warning: GodotFS.sync() failed before reload: {exc}")
 
-    # Godot 4 automatically executes internal syncfs() asynchronously when files are saved.
-    # We must guarantee the browser keeps the I/O thread alive long enough for IndexedDB
-    # to commit the transaction before page.reload() tears down the runtime context.
+    # Godot 4 executes internal syncfs() async on save.
+    # Keep I/O thread alive so IndexedDB can commit
+    # before reload tears down the runtime context.
     page.wait_for_timeout(TEST_TIMEOUT)
 
 
 def _dump_failure_diagnostics(
     page: Page, logs: list[dict[str, Any]], fatal_errors: list[str], name: str
 ) -> None:
-    """Saves screenshots, DOM content, and log archives upon test failure."""
+    """Saves screenshots, DOM content, and logs upon failure."""
     os.makedirs(ARTIFACTS_DIR, exist_ok=True)
     timestamp = int(time.time() * 1000)
 
-    # Strip potential path traversal characters
     safe_name = re.sub(r"[^A-Za-z0-9_-]", "_", name)
 
     try:
@@ -248,7 +250,7 @@ def test_webgl_export_stability_and_console(page: Page, request) -> None:
         # 1. WASM & Engine initialization
         init_page_and_wait_ready(page, request=request)
 
-        # 2. Navigate to Advanced Menu (enables DEBUG logging)
+        # 2. Navigate to Advanced Menu
         _navigate_to_advanced_menu(page, logs)
 
         fps_checkbox = page.locator("#fps-toggle")
@@ -266,7 +268,7 @@ def test_webgl_export_stability_and_console(page: Page, request) -> None:
         # 5. Assert clean runtime execution
         assert (
             not fatal_errors
-        ), f"Fatal errors or unallowlisted exceptions occurred: {fatal_errors}"
+        ), f"Fatal errors or exceptions occurred: {fatal_errors}"
 
     except Exception as e:
         print(f"Test 'test_webgl_export_stability_and_console' failed: {e}")
