@@ -10,6 +10,7 @@ node removal, and layout persistence (Issue #911).
 import os
 import time
 from typing import Any
+import pytest
 
 from playwright.sync_api import (
     Page,
@@ -515,11 +516,14 @@ def test_pw_trans_05_lifecycle_canvas_invariants(page: Page) -> None:
         save_v8_coverage(cdp_session, "scene_transition_pw_trans_05")
 
 
+@pytest.mark.timeout(90)
 def test_pw_trans_06_lifecycle_reentry_multiple_cycles(page: Page) -> None:
     """PW-TRANS-06: Multiple forward/reverse cycles execute cleanly."""
     logs: list[dict[str, Any]] = []
     page_errors: list[str] = []
     cdp_session = None
+
+    # ... remainder of the function remains exactly the same ...
 
     try:
         cdp_session = _setup_game_page(page, logs, page_errors)
