@@ -120,8 +120,7 @@ def _toggle_fps_overlay(
     target_str = str(target_state).lower()
 
     # Trigger inline handler with a mock event object.
-    page.evaluate(
-        f"""() => {{
+    page.evaluate(f"""() => {{
             const el = document.getElementById('fps-toggle');
             if (el) {{
                 el.checked = {target_str};
@@ -129,8 +128,7 @@ def _toggle_fps_overlay(
                     el.onchange({{target: el}});
                 }}
             }}
-        }}"""
-    )
+        }}""")
 
     # 1. Await GDScript observer signal handler and logging
     wait_for_console_log(
@@ -266,9 +264,7 @@ def test_webgl_export_stability_and_console(page: Page, request) -> None:
         expect(fps_checkbox).not_to_be_checked()
 
         # 5. Assert clean runtime execution
-        assert (
-            not fatal_errors
-        ), f"Fatal errors or exceptions occurred: {fatal_errors}"
+        assert not fatal_errors, f"Fatal errors or exceptions occurred: {fatal_errors}"
 
     except Exception as e:
         print(f"Test 'test_webgl_export_stability_and_console' failed: {e}")
