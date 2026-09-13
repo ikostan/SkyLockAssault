@@ -51,7 +51,7 @@ IGNORED_ERROR_PHRASES = [
 
 
 def _setup_runtime_monitoring(
-    page: Page, logs: list[dict[str, Any]], fatal_errors: list[str]
+        page: Page, logs: list[dict[str, Any]], fatal_errors: list[str]
 ) -> None:
     """Attaches console message and pageerror collectors with engine allowlisting."""
 
@@ -112,7 +112,7 @@ def _navigate_to_advanced_menu(page: Page, logs: list[dict[str, Any]]) -> None:
 
 
 def _toggle_fps_overlay(
-    page: Page, logs: list[dict[str, Any]], target_state: bool
+        page: Page, logs: list[dict[str, Any]], target_state: bool
 ) -> None:
     """Deterministically sets the FPS toggle through the DOM overlay element."""
     pre_count = len(logs)
@@ -132,7 +132,7 @@ def _toggle_fps_overlay(
     wait_for_console_log(
         logs,
         lambda text: f"fps toggle set to: {target_str}" in text
-        or f"setting 'show_fps' updated to: {target_str}" in text,
+                     or f"setting 'show_fps' updated to: {target_str}" in text,
         pre_count,
         page,
         timeout_ms=DEFAULT_TIMEOUT,
@@ -142,7 +142,7 @@ def _toggle_fps_overlay(
     wait_for_console_log(
         logs,
         lambda text: "encrypted settings persisted successfully" in text
-        or "failsafe active" in text,  # Removed the broad "saved" fallback
+                     or "failsafe active" in text,
         pre_count,
         page,
         timeout_ms=DEFAULT_TIMEOUT,
@@ -158,6 +158,8 @@ def _toggle_fps_overlay(
 def _flush_emscripten_idbfs(page: Page) -> None:
     """Explicitly synchronizes Emscripten memory filesystem to browser IndexedDB."""
     try:
+        # In Godot 4 Web exports, Emscripten's internal Module is often not globally exposed.
+        # If these objects are unavailable, the JS evaluates instantly and skips the manual block.
         page.evaluate("""async () => {
             if (typeof GodotFS !== 'undefined' && GodotFS.sync) {
                 await GodotFS.sync();
@@ -179,17 +181,21 @@ def _flush_emscripten_idbfs(page: Page) -> None:
         }""")
     except Exception as exc:  # noqa: BLE001 - best-effort IDBFS flush
         print(f"Warning: GodotFS.sync() failed before reload: {exc}")
-    page.wait_for_timeout(300)
+
+    # Godot 4 automatically executes internal syncfs() asynchronously when files are saved.
+    # We must guarantee the browser keeps the I/O thread alive long enough for IndexedDB
+    # to commit the transaction before page.reload() tears down the runtime context.
+    page.wait_for_timeout(3500)
 
 
 def _dump_failure_diagnostics(
-    page: Page, logs: list[dict[str, Any]], fatal_errors: list[str], name: str
+        page: Page, logs: list[dict[str, Any]], fatal_errors: list[str], name: str
 ) -> None:
     """Saves screenshots, DOM content, and log archives upon test failure."""
     os.makedirs(ARTIFACTS_DIR, exist_ok=True)
     timestamp = int(time.time() * 1000)
 
-    # Strip potential path traversal characters to appease DeepSource
+    # Strip potential path traversal characters
     safe_name = re.sub(r"[^A-Za-z0-9_-]", "_", name)
 
     try:
@@ -201,15 +207,15 @@ def _dump_failure_diagnostics(
 
     try:
         with open(
-            ARTIFACTS_DIR / f"{safe_name}_failure_html_{timestamp}.html",
-            "w",
-            encoding="utf-8",
+                ARTIFACTS_DIR / f"{safe_name}_failure_html_{timestamp}.html",
+                "w",
+                encoding="utf-8",
         ) as f:
             f.write(page.content())
         with open(
-            ARTIFACTS_DIR / f"{safe_name}_failure_logs_{timestamp}.txt",
-            "w",
-            encoding="utf-8",
+                ARTIFACTS_DIR / f"{safe_name}_failure_logs_{timestamp}.txt",
+                "w",
+                encoding="utf-8",
         ) as f:
             f.write("--- CONSOLE LOGS ---\n")
             for entry in logs:
