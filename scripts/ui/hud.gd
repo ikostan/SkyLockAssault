@@ -152,9 +152,9 @@ func _ready() -> void:
 	fuel_bar.max_value = _settings.max_fuel
 
 	fuel_stat = StatManager.new(
-		fuel_label, 
-		fuel_blink_timer, 
-		get_label_text_color(fuel_label), 
+		fuel_label,
+		fuel_blink_timer,
+		get_label_text_color(fuel_label),
 		Color.RED.lerp(DARK_RED, 1.0)
 	)
 
@@ -171,9 +171,9 @@ func _ready() -> void:
 	speed_bar.max_value = _settings.max_speed  # Pull directly from resource!
 
 	speed_stat = StatManager.new(
-		speed_label, 
-		speed_blink_timer, 
-		get_label_text_color(speed_label), 
+		speed_label,
+		speed_blink_timer,
+		get_label_text_color(speed_label),
 		Color.RED.lerp(DARK_RED, 1.0)
 	)
 
