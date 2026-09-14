@@ -14,6 +14,88 @@ const HIGH_RED_FRACTION: float = 0.90
 const DARK_RED: Color = Color(0.5, 0.0, 0.0)
 const BLINK_INTERVAL: float = 0.5
 
+
+## Encapsulates UI warning state for a specific statistic (e.g., fuel or speed).
+## Manages the label's color toggling and the associated blink timer safely,
+## fully isolated from external helper methods.
+class StatManager:
+	## Indicates whether the warning label is currently in an active blinking state.
+	var is_blinking: bool = false
+	## The default text color of the label when no warning is active.
+	var base_color: Color
+	## The alert text color of the label during a warning state.
+	var warning_color: Color
+	## The UI Label node being manipulated.
+	var label: Label
+	## The Timer node dictating the blink frequency.
+	var timer: Timer
+
+	## Initializes the manager with required node references and color states.
+	## @param _label: The target Label node to manipulate.
+	## @param _timer: The Timer node controlling the blink cycle.
+	## @param _base: The default Color of the label text.
+	## @param _warning: The active warning Color of the label text.
+	## @return: void
+	func _init(_label: Label, _timer: Timer, _base: Color, _warning: Color) -> void:
+		label = _label
+		timer = _timer
+		base_color = _base
+		warning_color = _warning
+
+	## Activates the warning state, starting the timer and applying the initial color toggle.
+	## Fails gracefully if node references have been queued for deletion.
+	## @return: void
+	func start_blinking() -> void:
+		# Defensive check to ensure SceneTree nodes are still valid before manipulating
+		if not is_instance_valid(label) or not is_instance_valid(timer):
+			return
+
+		is_blinking = true
+		timer.start()
+		toggle_label()
+
+	## Deactivates the warning state, stops the timer, and restores the base color.
+	## Handles cleanup defensively to ensure logical resets even if nodes are partially freed.
+	## @return: void
+	func stop_blinking() -> void:
+		# Always reset the logical flag immediately
+		is_blinking = false
+
+		if is_instance_valid(timer):
+			timer.stop()
+
+		# Ensure the label is firmly restored to its non-warning visual state
+		if is_instance_valid(label):
+			label.add_theme_color_override("font_color", base_color)
+
+	## Swaps the label's text color between base_color and warning_color.
+	## Internally called by the timer's timeout mechanism.
+	## @return: void
+	func toggle_label() -> void:
+		if not is_instance_valid(label):
+			return
+
+		var current_color: Color
+
+		# Resolve the effective color by prioritizing local theme overrides over class defaults
+		if label.has_theme_color_override("font_color"):
+			current_color = label.get("theme_override_colors/font_color")
+		else:
+			current_color = label.get_theme_color("font_color", "Label")
+
+		# Alternate the color based on the current visual state
+		if current_color == base_color:
+			label.add_theme_color_override("font_color", warning_color)
+		else:
+			label.add_theme_color_override("font_color", base_color)
+
+	## Safely checks if the underlying SceneTree timer is actively ticking.
+	## Useful for external state queries or unit tests.
+	## @return: bool - True if the timer is valid and running, false otherwise.
+	func is_timer_running() -> bool:
+		return is_instance_valid(timer) and not timer.is_stopped()
+
+
 # --- Internal State ---
 var _settings: GameSettingsResource = null
 var _current_speed: float = 250.0
