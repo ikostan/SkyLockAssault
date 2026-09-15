@@ -186,12 +186,12 @@ func test_independent_blinking() -> void:
 	hud.check_fuel_warning()
 	hud.check_speed_warning()
 
-	assert_that(hud.get_label_text_color(hud.fuel_label)).is_equal(hud._fuel_state["warning_color"])
-	assert_that(hud.get_label_text_color(hud.speed_label)).is_equal(hud._speed_state["warning_color"])
+	assert_that(hud.get_label_text_color(hud.fuel_label)).is_equal(hud.fuel_stat["warning_color"])
+	assert_that(hud.get_label_text_color(hud.speed_label)).is_equal(hud.speed_stat["warning_color"])
 
-	hud._toggle_label(hud._fuel_state)
-	assert_that(hud.get_label_text_color(hud.fuel_label)).is_equal(hud._fuel_state["base_color"])
-	assert_that(hud.get_label_text_color(hud.speed_label)).is_equal(hud._speed_state["warning_color"])
+	hud._toggle_label(hud.fuel_stat)
+	assert_that(hud.get_label_text_color(hud.fuel_label)).is_equal(hud.fuel_stat["base_color"])
+	assert_that(hud.get_label_text_color(hud.speed_label)).is_equal(hud.speed_stat["warning_color"])
 
 
 ## Validates color resolution when theme overrides are applied to HUD labels.
@@ -252,37 +252,37 @@ func test_speed_blinking_thresholds() -> void:
 	# Normal speed
 	hud._current_speed = (settings.min_speed + high_yellow_thresh) / 2.0
 	hud.check_speed_warning()
-	assert_bool(hud._speed_state["blinking"]).is_false()
+	assert_bool(hud.speed_stat["blinking"]).is_false()
 
 	# Low yellow
 	hud._current_speed = low_yellow_thresh - 10.0
 	hud.check_speed_warning()
-	assert_bool(hud._speed_state["blinking"]).is_true()
+	assert_bool(hud.speed_stat["blinking"]).is_true()
 
 	# Low red
 	hud._current_speed = settings.min_speed - 1.0
 	hud.check_speed_warning()
-	assert_bool(hud._speed_state["blinking"]).is_true()
+	assert_bool(hud.speed_stat["blinking"]).is_true()
 
 	# Normal speed
 	hud._current_speed = (low_yellow_thresh + high_yellow_thresh) / 2.0
 	hud.check_speed_warning()
-	assert_bool(hud._speed_state["blinking"]).is_false()
+	assert_bool(hud.speed_stat["blinking"]).is_false()
 
 	# High yellow
 	hud._current_speed = high_yellow_thresh + 10.0
 	hud.check_speed_warning()
-	assert_bool(hud._speed_state["blinking"]).is_true()
+	assert_bool(hud.speed_stat["blinking"]).is_true()
 
 	# High red
 	hud._current_speed = high_red_thresh + 10.0
 	hud.check_speed_warning()
-	assert_bool(hud._speed_state["blinking"]).is_true()
+	assert_bool(hud.speed_stat["blinking"]).is_true()
 
 	# Normal speed
 	hud._current_speed = (low_yellow_thresh + high_yellow_thresh) / 2.0
 	hud.check_speed_warning()
-	assert_bool(hud._speed_state["blinking"]).is_false()
+	assert_bool(hud.speed_stat["blinking"]).is_false()
 
 
 ## Validates lateral movement and forward acceleration input actions.
