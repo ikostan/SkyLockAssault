@@ -14,12 +14,94 @@ const HIGH_RED_FRACTION: float = 0.90
 const DARK_RED: Color = Color(0.5, 0.0, 0.0)
 const BLINK_INTERVAL: float = 0.5
 
+
+## Encapsulates UI warning state for a specific statistic (e.g., fuel or speed).
+## Manages the label's color toggling and the associated blink timer safely,
+## fully isolated from external helper methods.
+class StatManager:
+	## Indicates whether the warning label is currently in an active blinking state.
+	var is_blinking: bool = false
+	## The default text color of the label when no warning is active.
+	var base_color: Color
+	## The alert text color of the label during a warning state.
+	var warning_color: Color
+	## The UI Label node being manipulated.
+	var label: Label
+	## The Timer node dictating the blink frequency.
+	var timer: Timer
+
+	## Initializes the manager with required node references and color states.
+	## @param _label: The target Label node to manipulate.
+	## @param _timer: The Timer node controlling the blink cycle.
+	## @param _base: The default Color of the label text.
+	## @param _warning: The active warning Color of the label text.
+	## @return: void
+	func _init(_label: Label, _timer: Timer, _base: Color, _warning: Color) -> void:
+		label = _label
+		timer = _timer
+		base_color = _base
+		warning_color = _warning
+
+	## Activates the warning state, starting the timer and applying the initial color toggle.
+	## Fails gracefully if node references have been queued for deletion.
+	## @return: void
+	func start_blinking() -> void:
+		# Defensive check to ensure SceneTree nodes are still valid before manipulating
+		if not is_instance_valid(label) or not is_instance_valid(timer):
+			return
+
+		is_blinking = true
+		timer.start()
+		toggle_label()
+
+	## Deactivates the warning state, stops the timer, and restores the base color.
+	## Handles cleanup defensively to ensure logical resets even if nodes are partially freed.
+	## @return: void
+	func stop_blinking() -> void:
+		# Always reset the logical flag immediately
+		is_blinking = false
+
+		if is_instance_valid(timer):
+			timer.stop()
+
+		# Ensure the label is firmly restored to its non-warning visual state
+		if is_instance_valid(label):
+			label.add_theme_color_override("font_color", base_color)
+
+	## Swaps the label's text color between base_color and warning_color.
+	## Internally called by the timer's timeout mechanism.
+	## @return: void
+	func toggle_label() -> void:
+		if not is_instance_valid(label):
+			return
+
+		var current_color: Color
+
+		# Resolve the effective color by prioritizing local theme overrides over class defaults
+		if label.has_theme_color_override("font_color"):
+			current_color = label.get("theme_override_colors/font_color")
+		else:
+			current_color = label.get_theme_color("font_color", "Label")
+
+		# Alternate the color based on the current visual state
+		if current_color == base_color:
+			label.add_theme_color_override("font_color", warning_color)
+		else:
+			label.add_theme_color_override("font_color", base_color)
+
+	## Safely checks if the underlying SceneTree timer is actively ticking.
+	## Useful for external state queries or unit tests.
+	## @return: bool - True if the timer is valid and running, false otherwise.
+	func is_timer_running() -> bool:
+		return is_instance_valid(timer) and not timer.is_stopped()
+
+
 # --- Internal State ---
+var fuel_stat: StatManager
+var speed_stat: StatManager
+
 var _settings: GameSettingsResource = null
 var _current_speed: float = 250.0
-
-var _fuel_state: Dictionary = {}
-var _speed_state: Dictionary = {}
 
 var _fuel_bar_style: StyleBoxFlat
 var _speed_bar_style: StyleBoxFlat
@@ -69,13 +151,12 @@ func _ready() -> void:
 	set_bar_fill_style(fuel_bar, _fuel_bar_style)
 	fuel_bar.max_value = _settings.max_fuel
 
-	_fuel_state = {
-		"label": fuel_label,
-		"timer": fuel_blink_timer,
-		"blinking": false,
-		"base_color": get_label_text_color(fuel_label),
-		"warning_color": Color.RED.lerp(DARK_RED, 1.0)
-	}
+	fuel_stat = StatManager.new(
+		fuel_label,
+		fuel_blink_timer,
+		get_label_text_color(fuel_label),
+		Color.RED.lerp(DARK_RED, 1.0)
+	)
 
 	if fuel_blink_timer:
 		fuel_blink_timer.wait_time = BLINK_INTERVAL
@@ -89,13 +170,12 @@ func _ready() -> void:
 	set_bar_fill_style(speed_bar, _speed_bar_style)
 	speed_bar.max_value = _settings.max_speed  # Pull directly from resource!
 
-	_speed_state = {
-		"label": speed_label,
-		"timer": speed_blink_timer,
-		"blinking": false,
-		"base_color": get_label_text_color(speed_label),
-		"warning_color": Color.RED.lerp(DARK_RED, 1.0)
-	}
+	speed_stat = StatManager.new(
+		speed_label,
+		speed_blink_timer,
+		get_label_text_color(speed_label),
+		Color.RED.lerp(DARK_RED, 1.0)
+	)
 
 	if speed_blink_timer:
 		speed_blink_timer.wait_time = BLINK_INTERVAL
@@ -135,6 +215,13 @@ func setup_hud(player_node: Node2D) -> void:
 		_connected_player.speed_changed.connect(_on_player_speed_changed)
 
 	Globals.log_message("HUD successfully wired to Player signals.", Globals.LogLevel.DEBUG)
+
+
+## Retrieves the effective text color of a Label, considering theme overrides.
+func get_label_text_color(label: Label) -> Color:
+	if label.has_theme_color_override("font_color"):
+		return label.get("theme_override_colors/font_color")
+	return label.get_theme_color("font_color", "Label")
 
 
 ## Lifecycle callback triggered right before the node is removed from the tree.
@@ -307,10 +394,10 @@ func check_fuel_warning() -> void:
 		0.0 if _settings.max_fuel <= 0.0 else (_settings.current_fuel / _settings.max_fuel) * 100.0
 	)
 
-	if fuel_percent <= _settings.low_fuel_threshold and not _fuel_state["blinking"]:
-		start_blinking(_fuel_state)
-	elif fuel_percent > _settings.low_fuel_threshold and _fuel_state["blinking"]:
-		stop_blinking(_fuel_state)
+	if fuel_percent <= _settings.low_fuel_threshold and not fuel_stat.is_blinking:
+		fuel_stat.start_blinking()
+	elif fuel_percent > _settings.low_fuel_threshold and fuel_stat.is_blinking:
+		fuel_stat.stop_blinking()
 
 
 ## Checks speed and starts/stops label blinking if approaching or exceeding limits.
@@ -328,81 +415,33 @@ func check_speed_warning() -> void:
 
 	if (
 		(_current_speed < low_yellow_thresh or _current_speed > high_yellow_thresh)
-		and not _speed_state["blinking"]
+		and not speed_stat.is_blinking
 	):
-		start_blinking(_speed_state)
+		speed_stat.start_blinking()
 	elif (
 		(low_yellow_thresh <= _current_speed and _current_speed <= high_yellow_thresh)
-		and _speed_state["blinking"]
+		and speed_stat.is_blinking
 	):
-		stop_blinking(_speed_state)
-
-
-## Initiates the blinking effect for a specific UI state dictionary.
-## @param state: The target state dictionary.
-## @return: void
-func start_blinking(state: Dictionary) -> void:
-	if state["label"] and state["timer"]:
-		state["blinking"] = true
-		state["timer"].start()
-		_toggle_label(state)
-
-
-## Halts the blinking effect for a specific UI state dictionary and restores its base color.
-## @param state: The target state dictionary.
-## @return: void
-func stop_blinking(state: Dictionary) -> void:
-	if state["label"] and state["timer"]:
-		state["blinking"] = false
-		state["timer"].stop()
-		set_label_text_color(state["label"], state["base_color"])
+		speed_stat.stop_blinking()
 
 
 ## Timer callback that toggles the visual state of the fuel warning label.
 ## @return: void
 func _on_fuel_blink_timer_timeout() -> void:
-	if _fuel_state["blinking"] and _fuel_state["label"]:
-		_toggle_label(_fuel_state)
+	if fuel_stat != null and fuel_stat.is_blinking:
+		fuel_stat.toggle_label()
 
 
 ## Timer callback that toggles the visual state of the speed warning label.
 ## @return: void
 func _on_speed_blink_timer_timeout() -> void:
-	if _speed_state["blinking"] and _speed_state["label"]:
-		_toggle_label(_speed_state)
-
-
-## Swaps the text color of the given UI dictionary's label between its base and warning colors.
-## @param state: The target state dictionary.
-## @return: void
-func _toggle_label(state: Dictionary) -> void:
-	if get_label_text_color(state["label"]) == state["base_color"]:
-		set_label_text_color(state["label"], state["warning_color"])
-	else:
-		set_label_text_color(state["label"], state["base_color"])
+	if speed_stat != null and speed_stat.is_blinking:
+		speed_stat.toggle_label()
 
 
 # ==========================================
 # STYLING HELPERS
 # ==========================================
-
-
-## Retrieves the effective text color of a Label, considering theme overrides.
-## @param label: The Label node to query.
-## @return: The effective font color.
-func get_label_text_color(label: Label) -> Color:
-	if label.has_theme_color_override("font_color"):
-		return label.get("theme_override_colors/font_color")
-	return label.get_theme_color("font_color", "Label")
-
-
-## Applies a dynamic font color override to a specified label.
-## @param label: The Label node to modify.
-## @param new_color: The target Color to apply.
-## @return: void
-func set_label_text_color(label: Label, new_color: Color) -> void:
-	if label:
-		label.add_theme_color_override("font_color", new_color)
 
 
 ## Applies standard corner radiuses and assigns a custom stylebox to a ProgressBar.
@@ -458,17 +497,16 @@ func get_speed_bar_color() -> Color:
 ## Checks if the fuel warning label is currently in a blinking state.
 ## @return: bool - True if the fuel warning is active and blinking, false otherwise.
 func is_fuel_warning_active() -> bool:
-	return _fuel_state.get("blinking", false)
+	return fuel_stat != null and fuel_stat.is_blinking
 
 
 ## Checks if the speed warning label is currently in a blinking state.
 ## @return: bool - True if the speed warning is active and blinking, false otherwise.
 func is_speed_warning_active() -> bool:
-	return _speed_state.get("blinking", false)
+	return speed_stat != null and speed_stat.is_blinking
 
 
 ## Verifies if the underlying SceneTree Timer for the speed blinker is actively running.
 ## @return: bool - True if the timer node is valid and not stopped, false otherwise.
 func is_speed_timer_running() -> bool:
-	var timer: Timer = _speed_state.get("timer")
-	return is_instance_valid(timer) and not timer.is_stopped()
+	return speed_stat != null and speed_stat.is_timer_running()
