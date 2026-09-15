@@ -186,12 +186,15 @@ func test_independent_blinking() -> void:
 	hud.check_fuel_warning()
 	hud.check_speed_warning()
 
-	assert_that(hud.get_label_text_color(hud.fuel_label)).is_equal(hud.fuel_stat["warning_color"])
-	assert_that(hud.get_label_text_color(hud.speed_label)).is_equal(hud.speed_stat["warning_color"])
+	# FIXED: Use dot notation instead of dictionary brackets
+	assert_that(hud.get_label_text_color(hud.fuel_label)).is_equal(hud.fuel_stat.warning_color)
+	assert_that(hud.get_label_text_color(hud.speed_label)).is_equal(hud.speed_stat.warning_color)
 
 	hud.fuel_stat.toggle_label()
-	assert_that(hud.get_label_text_color(hud.fuel_label)).is_equal(hud.fuel_stat["base_color"])
-	assert_that(hud.get_label_text_color(hud.speed_label)).is_equal(hud.speed_stat["warning_color"])
+	
+	# FIXED: Use dot notation instead of dictionary brackets
+	assert_that(hud.get_label_text_color(hud.fuel_label)).is_equal(hud.fuel_stat.base_color)
+	assert_that(hud.get_label_text_color(hud.speed_label)).is_equal(hud.speed_stat.warning_color)
 
 
 ## Validates color resolution when theme overrides are applied to HUD labels.
