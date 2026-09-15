@@ -172,7 +172,7 @@ func test_rotor_null_sfx() -> void:
 	assert_bool(player_root.rotor_right.get_node("AnimatedSprite2D").is_playing()).is_false()
 
 
-## Validates that fuel and speed warning labels can blink independently.
+## Proves fuel and speed warning behaviors are independent and threshold transitions do not cross-contaminate.
 func test_independent_blinking() -> void:
 	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
 	var main_scene: Node2D = auto_free(load("res://scenes/main_scene.tscn").instantiate())
@@ -181,20 +181,31 @@ func test_independent_blinking() -> void:
 
 	var hud: HUDScript = main_scene.get_node("PlayerStatsPanel") as HUDScript
 
+	# 1. Establish Safe State
+	settings.current_fuel = settings.max_fuel
+	hud._current_speed = (settings.min_speed + settings.max_speed) / 2.0
+	hud.check_fuel_warning()
+	hud.check_speed_warning()
+
+	assert_bool(hud.fuel_stat.is_blinking).is_false()
+	assert_bool(hud.speed_stat.is_blinking).is_false()
+
+	# 2. Trigger ONLY fuel warning
 	settings.current_fuel = settings.max_fuel * 0.10
+	hud.check_fuel_warning()
+	hud.check_speed_warning() # Check speed again to ensure it ignores the fuel drop
+
+	assert_bool(hud.fuel_stat.is_blinking).is_true()
+	assert_bool(hud.speed_stat.is_blinking).is_false() # Speed must remain completely unchanged
+
+	# 3. Trigger ONLY speed warning, recover fuel
+	settings.current_fuel = settings.max_fuel
 	hud._current_speed = settings.max_speed * 0.95
 	hud.check_fuel_warning()
 	hud.check_speed_warning()
 
-	# FIXED: Use dot notation instead of dictionary brackets
-	assert_that(hud.get_label_text_color(hud.fuel_label)).is_equal(hud.fuel_stat.warning_color)
-	assert_that(hud.get_label_text_color(hud.speed_label)).is_equal(hud.speed_stat.warning_color)
-
-	hud.fuel_stat.toggle_label()
-	
-	# FIXED: Use dot notation instead of dictionary brackets
-	assert_that(hud.get_label_text_color(hud.fuel_label)).is_equal(hud.fuel_stat.base_color)
-	assert_that(hud.get_label_text_color(hud.speed_label)).is_equal(hud.speed_stat.warning_color)
+	assert_bool(hud.fuel_stat.is_blinking).is_false() # Fuel must recover
+	assert_bool(hud.speed_stat.is_blinking).is_true() # Speed warning must activate
 
 
 ## Validates color resolution when theme overrides are applied to HUD labels.
@@ -409,3 +420,34 @@ func test_speed_colors() -> void:
 	hud.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate() as StyleBoxFlat
 	assert_that(style.bg_color).is_equal(hud.DARK_RED)
+
+
+## Validates StatManager lifecycle: timer state, blinking flags, and alternating color toggles.
+func test_stat_manager_lifecycle() -> void:
+	var main_scene: Node2D = auto_free(load("res://scenes/main_scene.tscn").instantiate())
+	add_child(main_scene)
+	await await_idle_frame()
+
+	var hud: HUDScript = main_scene.get_node("PlayerStatsPanel") as HUDScript
+	var stat = hud.fuel_stat
+	var label = hud.fuel_label
+
+	# 1. Start blinking
+	stat.start_blinking()
+	assert_bool(stat.is_blinking).is_true()
+	assert_bool(stat.is_timer_running()).is_true()
+	assert_that(hud.get_label_text_color(label)).is_equal(stat.warning_color)
+
+	# 2. Toggle (simulating first timer tick)
+	stat.toggle_label()
+	assert_that(hud.get_label_text_color(label)).is_equal(stat.base_color)
+
+	# 3. Toggle again (simulating second timer tick)
+	stat.toggle_label()
+	assert_that(hud.get_label_text_color(label)).is_equal(stat.warning_color)
+
+	# 4. Stop blinking
+	stat.stop_blinking()
+	assert_bool(stat.is_blinking).is_false()
+	assert_bool(stat.is_timer_running()).is_false()
+	assert_that(hud.get_label_text_color(label)).is_equal(stat.base_color)
