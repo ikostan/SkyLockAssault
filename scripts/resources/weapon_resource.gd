@@ -19,7 +19,11 @@ signal ammo_updated(current: int, max_ammo: int)
 	set(value):
 		# 1. Cache the old active weapon name
 		var old_name: String = "None"
-		if not available_weapons.is_empty() and current_index >= 0 and current_index < available_weapons.size():
+		if (
+			not available_weapons.is_empty()
+			and current_index >= 0
+			and current_index < available_weapons.size()
+		):
 			old_name = available_weapons[current_index]
 
 		# 2. Update the array (with duplicate() to prevent reference mutation)
@@ -30,7 +34,7 @@ signal ammo_updated(current: int, max_ammo: int)
 
 		# 3. Check for clamping or silent swaps
 		if current_index >= available_weapons.size():
-			# The array shrank. Triggering self.current_index will handle clamping 
+			# The array shrank. Triggering self.current_index will handle clamping
 			# and automatically emit the signal since the index number is changing.
 			self.current_index = max(0, available_weapons.size() - 1)
 		else:
@@ -38,7 +42,6 @@ signal ammo_updated(current: int, max_ammo: int)
 			var new_name: String = available_weapons[current_index]
 			if old_name != new_name:
 				weapon_swapped.emit(current_index, new_name)
-
 
 @export var current_index: int = 0:
 	set(value):
@@ -55,7 +58,6 @@ signal ammo_updated(current: int, max_ammo: int)
 		)
 		weapon_swapped.emit(current_index, w_name)
 
-
 @export var max_ammo: int = 1000:
 	set(value):
 		var new_max: int = maxi(1, value)
@@ -67,7 +69,6 @@ signal ammo_updated(current: int, max_ammo: int)
 		# Invariant: Shrinking max_ammo must clamp current_ammo
 		if current_ammo > max_ammo:
 			self.current_ammo = max_ammo
-
 
 @export var current_ammo: int = 1000:
 	set(value):
@@ -85,7 +86,6 @@ signal ammo_updated(current: int, max_ammo: int)
 @export var fire_rate: float = 0.1:
 	set(value):
 		fire_rate = max(0.01, value)
-
 
 @export var damage: float = 10.0:
 	set(value):
