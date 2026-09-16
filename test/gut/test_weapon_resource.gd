@@ -96,3 +96,58 @@ func test_weapon_swapped_emits_correctly() -> void:
 	watch_signals(weapon_res)
 	weapon_res.current_index = 1
 	assert_signal_not_emitted(weapon_res, "weapon_swapped", "Identical index must not emit.")
+
+
+func test_available_weapons_prevents_external_mutation() -> void:
+	gut.p("Testing: available_weapons duplicates the input array to prevent external reference mutations.")
+	
+	var external_array: Array[String] = ["Laser", "Plasma", "Railgun"]
+	weapon_res.available_weapons = external_array
+	weapon_res.current_index = 2 # Selected Railgun
+	
+	# Mutate the external array (should NOT affect the resource)
+	external_array.clear()
+	
+	assert_eq(
+		weapon_res.available_weapons.size(), 
+		3, 
+		"Resource array must remain unchanged when the external array is mutated."
+	)
+	assert_eq(
+		weapon_res.current_index, 
+		2, 
+		"current_index must not be invalidated by external array mutations."
+	)
+
+
+func test_replacing_array_emits_if_active_weapon_changes() -> void:
+	gut.p("Testing: Replacing array emits weapon_swapped if active weapon name changes, even if index stays the same.")
+	weapon_res.available_weapons = ["Pistol", "Shotgun"]
+	weapon_res.current_index = 0 # Active is Pistol
+	watch_signals(weapon_res)
+
+	# Replace array, same size, index 0 is now "Rifle"
+	weapon_res.available_weapons = ["Rifle", "Sniper"]
+
+	assert_signal_emitted_with_parameters(
+		weapon_res,
+		"weapon_swapped",
+		[0, "Rifle"],
+		"Must emit weapon_swapped when the weapon name at the current index changes."
+	)
+
+
+func test_replacing_array_does_not_emit_if_active_weapon_unchanged() -> void:
+	gut.p("Testing: Replacing array does not emit if the active weapon name at the current index is identical.")
+	weapon_res.available_weapons = ["Pistol", "Shotgun"]
+	weapon_res.current_index = 0 # Active is Pistol
+	watch_signals(weapon_res)
+
+	# Replace array, same size, index 0 is STILL "Pistol"
+	weapon_res.available_weapons = ["Pistol", "Sniper"]
+
+	assert_signal_not_emitted(
+		weapon_res,
+		"weapon_swapped",
+		"Must not emit weapon_swapped if the active weapon name and index remain exactly the same."
+	)
