@@ -11,10 +11,9 @@ var speed_res: SpeedResource
 
 func before_each() -> void:
 	speed_res = SpeedResource.new()
-	watch_signals(speed_res)
 
 func after_each() -> void:
-	speed_res.free()
+	pass
 
 
 # ==========================================
@@ -41,16 +40,21 @@ func test_boundary_shift_clamps_current_speed() -> void:
 	speed_res.min_speed = 100.0
 	speed_res.current_speed = 300.0
 	
+	watch_signals(speed_res)
+	
 	# Shift max boundary down
 	speed_res.max_speed = 200.0
 	assert_eq(speed_res.current_speed, 200.0, "current_speed must shrink to fit new max_speed.")
+	# FIX: Reverted to single brackets [200.0]
 	assert_signal_emitted_with_parameters(speed_res, "speed_updated", [200.0])
 	
-	watch_signals(speed_res)
+	# Reset max boundary to give min_speed room to shift upwards
+	speed_res.max_speed = 500.0 
 	
-	# Shift min boundary up
+	# Shift min boundary up (current_speed is currently 200.0)
 	speed_res.min_speed = 250.0
 	assert_eq(speed_res.current_speed, 250.0, "current_speed must increase to fit new min_speed.")
+	# FIX: Reverted to single brackets [250.0]
 	assert_signal_emitted_with_parameters(speed_res, "speed_updated", [250.0])
 
 
@@ -68,13 +72,14 @@ func test_speed_updated_emits_only_on_effective_change() -> void:
 	
 	# Exact reassignment
 	speed_res.current_speed = 300.0
-	assert_signal_not_emitted(speed_res, "speed_updated", "Reassigning the same value must not emit.")
+	assert_signal_emit_count(speed_res, "speed_updated", 0, "Reassigning the same value must not emit.")
 	
 	# Out of bounds reassignment resulting in the same clamped value
 	speed_res.current_speed = 500.0
-	watch_signals(speed_res)
+	# The above line caused 1 valid emission.
+	
 	speed_res.current_speed = 800.0 # Clamps to 500.0
-	assert_signal_not_emitted(speed_res, "speed_updated", "Value clamping to unchanged effective state must not emit.")
+	assert_signal_emit_count(speed_res, "speed_updated", 1, "Value clamping to unchanged effective state must not emit again.")
 
 
 func test_speed_low_crossing_semantics() -> void:
@@ -88,19 +93,18 @@ func test_speed_low_crossing_semantics() -> void:
 	
 	# 1. Cross the threshold
 	speed_res.current_speed = 150.0
-	assert_signal_emitted(speed_res, "speed_low", "Crossing below threshold must emit speed_low.")
+	assert_signal_emit_count(speed_res, "speed_low", 1, "Crossing below threshold must emit speed_low.")
 	
 	# 2. Mutate while already below threshold
-	watch_signals(speed_res)
 	speed_res.current_speed = 120.0
-	assert_signal_not_emitted(speed_res, "speed_low", "Mutating below threshold must not re-emit.")
+	assert_signal_emit_count(speed_res, "speed_low", 1, "Mutating below threshold must not re-emit.")
 	
 	# 3. Climb back out and re-cross
 	speed_res.current_speed = 300.0
-	assert_signal_not_emitted(speed_res, "speed_low", "Climbing above threshold must not emit.")
+	assert_signal_emit_count(speed_res, "speed_low", 1, "Climbing above threshold must not emit.")
 	
 	speed_res.current_speed = 200.0 # Exactly hitting the threshold
-	assert_signal_emitted(speed_res, "speed_low", "Hitting threshold exactly from above must emit.")
+	assert_signal_emit_count(speed_res, "speed_low", 2, "Hitting threshold exactly from above must emit.")
 
 
 func test_speed_maxed_crossing_semantics() -> void:
@@ -108,13 +112,13 @@ func test_speed_maxed_crossing_semantics() -> void:
 	speed_res.max_speed = 500.0
 	speed_res.min_speed = 100.0
 	speed_res.current_speed = 300.0
+	
 	watch_signals(speed_res)
 	
 	# 1. Hit max speed
 	speed_res.current_speed = 600.0 # Clamps to 500.0
-	assert_signal_emitted(speed_res, "speed_maxed", "Hitting max_speed must emit.")
+	assert_signal_emit_count(speed_res, "speed_maxed", 1, "Hitting max_speed must emit.")
 	
 	# 2. Stay at max speed
-	watch_signals(speed_res)
 	speed_res.current_speed = 800.0 # Clamps to 500.0
-	assert_signal_not_emitted(speed_res, "speed_maxed", "Staying at max_speed must not re-emit.")
+	assert_signal_emit_count(speed_res, "speed_maxed", 1, "Staying at max_speed must not re-emit.")
