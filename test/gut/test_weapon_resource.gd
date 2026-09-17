@@ -55,13 +55,26 @@ func test_weapon_index_clamps_to_available_array() -> void:
 
 
 func test_shrinking_array_clamps_current_index() -> void:
-	gut.p("Testing: Removing available weapons safely clamps the current_index.")
+	gut.p("Testing: Removing available weapons safely clamps the current_index and emits signal.")
 	weapon_res.available_weapons = ["Cannon", "Missile", "Laser"]
 	weapon_res.current_index = 2 # Selected Laser
 	
+	# Start watching after setup to isolate the clamping emission
+	watch_signals(weapon_res)
+	
 	# Shrink the inventory
 	weapon_res.available_weapons = ["Cannon"]
+	
 	assert_eq(weapon_res.current_index, 0, "Index must clamp down when weapons are removed.")
+	
+	# Assert the UI was notified of the clamp
+	assert_signal_emitted_with_parameters(weapon_res, "weapon_swapped", [0, "Cannon"])
+	assert_signal_emit_count(
+		weapon_res, 
+		"weapon_swapped", 
+		1, 
+		"Clamping the index must emit weapon_swapped exactly once."
+	)
 
 # ==========================================
 # SIGNAL CROSSING SEMANTICS
