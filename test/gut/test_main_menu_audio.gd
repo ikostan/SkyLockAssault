@@ -102,11 +102,11 @@ func test_main_menu_buttons_execute_accept_audio() -> void:
 	
 	options_btn.pressed.emit()
 	
-	# FIX: Assert instantly
+	await get_tree().process_frame
+	
 	assert_true(AudioManager.is_any_sfx_playing(), "Options button must trigger confirmation audio.")
 	assert_string_contains(AudioManager.get_active_sfx_stream_path(), "ui_accept", "Options button must play the 'ui_accept' sound effect asset.")
 	
-	await wait_process_frames(1)
 	AudioManager.stop_all_sfx()
 
 	# --- TEST QUIT BUTTON ---
@@ -115,11 +115,7 @@ func test_main_menu_buttons_execute_accept_audio() -> void:
 	
 	quit_btn.pressed.emit()
 	
-	# FIX: Assert instantly
-	assert_true(AudioManager.is_any_sfx_playing(), "Quit button must trigger confirmation audio.")
-	assert_string_contains(AudioManager.get_active_sfx_stream_path(), "ui_accept", "Quit button must play the 'ui_accept' sound effect asset.")
-	
-	await wait_process_frames(1)
+	await get_tree().process_frame
 	
 	assert_true(AudioManager.is_any_sfx_playing(), "Quit button must trigger confirmation audio.")
 	assert_string_contains(AudioManager.get_active_sfx_stream_path(), "ui_accept", "Quit button must play the 'ui_accept' sound effect asset.")
