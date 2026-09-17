@@ -76,6 +76,11 @@ RUN pip install -r /tmp/requirements.txt \
     && playwright install --with-deps chromium \
     && chmod -R 755 /ms-playwright
 
+# A functional health check tailored to the active service within the container. \
+# DO NOT REMOVE: addresses DS026, though LOW severity.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+     CMD /usr/local/bin/godot --version || exit 1
+
 # Switch to your non-root user
 USER godotuser
 
