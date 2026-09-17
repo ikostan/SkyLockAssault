@@ -74,23 +74,19 @@ RUN mkdir -p /project/addons \
     && rm -rf /project/addons/Gut-9.7.1 v9.7.1.zip \
     && chown -R godotuser:godotuser /project
 
-# Install Playwright Python packages and system deps (as root)
-# FIX: Removed redundant 'playwright install-deps' invocation
+# Set a shared folder for the browser so both root and godotuser can use it
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# Install Python packages and download the browser just ONCE as root
 RUN pip install playwright pytest-playwright pytest-asyncio \
-    && playwright install --with-deps chromium
+    && playwright install --with-deps chromium \
+    && chmod -R 755 /ms-playwright
 
-# Switch to non-root user (fixes DS002; all subsequent commands run as godotuser)
+# Switch to your non-root user
 USER godotuser
-
-# Install Playwright browsers (as godotuser, to place in user's cache)
-RUN playwright install
-
-# Optional: Add a simple HEALTHCHECK to verify Godot is runnable (addresses DS026, though LOW severity)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD /usr/local/bin/godot --version || exit 1
 
 # Set working directory
 WORKDIR /project
 
-# Default command (overridden when running the script)
+# Default command
 CMD ["/bin/bash"]
