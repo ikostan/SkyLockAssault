@@ -43,10 +43,9 @@ signal ammo_updated(current: int, max_ammo: int)
 			if old_name != new_name:
 				weapon_swapped.emit(current_index, new_name)
 	get:
-		# Protect the output boundary: return a copy so external callers cannot 
+		# Protect the output boundary: return a copy so external callers cannot
 		# mutate the internal array by reference and bypass the setter validations.
 		return available_weapons.duplicate()
-
 
 @export var current_index: int = 0:
 	set(value):
@@ -63,7 +62,6 @@ signal ammo_updated(current: int, max_ammo: int)
 		)
 		weapon_swapped.emit(current_index, w_name)
 
-
 @export var max_ammo: int = 1000:
 	set(value):
 		var new_max: int = maxi(1, value)
@@ -75,7 +73,6 @@ signal ammo_updated(current: int, max_ammo: int)
 		# Invariant: Shrinking max_ammo must clamp current_ammo
 		if current_ammo > max_ammo:
 			self.current_ammo = max_ammo
-
 
 @export var current_ammo: int = 1000:
 	set(value):
@@ -93,7 +90,6 @@ signal ammo_updated(current: int, max_ammo: int)
 @export var fire_rate: float = 0.1:
 	set(value):
 		fire_rate = max(0.01, value)
-
 
 @export var damage: float = 10.0:
 	set(value):
