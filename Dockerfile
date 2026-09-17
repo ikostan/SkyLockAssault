@@ -27,15 +27,6 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Upgrade pip, setuptools, and wheel in venv
 RUN pip install --upgrade pip setuptools wheel
 
-# Install GDToolkit for GDScript linter/formatter (gdtoolkit==4.* for Godot 4.x)
-RUN pip install gdtoolkit==4.*
-
-# Install yamllint
-RUN pip install yamllint
-
-# Install pytest plugins for html/timeout (fixes unrecognized arguments)
-RUN pip install pytest-html pytest-timeout
-
 # Install markdownlint-cli2 via npm (Node.js tool)
 RUN npm install -g markdownlint-cli2@0.12.1
 
@@ -77,8 +68,11 @@ RUN mkdir -p /project/addons \
 # Set a shared folder for the browser so both root and godotuser can use it
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# Install Python packages and download the browser just ONCE as root
-RUN pip install playwright pytest-playwright pytest-asyncio \
+# Copy the project requirements into the container
+COPY requirements.txt /tmp/requirements.txt
+
+# Install all locked Python packages and download the browser just ONCE as root
+RUN pip install -r /tmp/requirements.txt \
     && playwright install --with-deps chromium \
     && chmod -R 755 /ms-playwright
 
