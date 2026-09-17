@@ -87,12 +87,13 @@ func test_main_menu_buttons_execute_accept_audio() -> void:
 	
 	start_btn.pressed.emit()
 	
-	# FIX: Assert instantly! Do not wait a frame, otherwise the deferred 
-	# scene transition will execute and kill the audio before we can verify it.
+	# FIX: Await the exact moment deferred signals are flushed, but BEFORE the 
+	# end-of-frame scene transition destroys the tree and kills the audio.
+	await get_tree().process_frame
+	
 	assert_true(AudioManager.is_any_sfx_playing(), "Start Game button must trigger confirmation audio.")
 	assert_string_contains(AudioManager.get_active_sfx_stream_path(), "ui_accept", "Start Game button must play the 'ui_accept' sound effect asset.")
 	
-	await wait_process_frames(1)
 	AudioManager.stop_all_sfx()
 
 	# --- TEST OPTIONS BUTTON ---
