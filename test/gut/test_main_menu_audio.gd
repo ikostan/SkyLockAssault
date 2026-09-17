@@ -86,11 +86,13 @@ func test_main_menu_buttons_execute_accept_audio() -> void:
 	assert_not_null(start_btn, "Layout Validation: Start Button is missing from scene tree.")
 	
 	start_btn.pressed.emit()
-	await wait_process_frames(1)
 	
+	# FIX: Assert instantly! Do not wait a frame, otherwise the deferred 
+	# scene transition will execute and kill the audio before we can verify it.
 	assert_true(AudioManager.is_any_sfx_playing(), "Start Game button must trigger confirmation audio.")
 	assert_string_contains(AudioManager.get_active_sfx_stream_path(), "ui_accept", "Start Game button must play the 'ui_accept' sound effect asset.")
 	
+	await wait_process_frames(1)
 	AudioManager.stop_all_sfx()
 
 	# --- TEST OPTIONS BUTTON ---
@@ -98,11 +100,12 @@ func test_main_menu_buttons_execute_accept_audio() -> void:
 	assert_not_null(options_btn, "Layout Validation: Options Button is missing from scene tree.")
 	
 	options_btn.pressed.emit()
-	await wait_process_frames(1)
 	
+	# FIX: Assert instantly
 	assert_true(AudioManager.is_any_sfx_playing(), "Options button must trigger confirmation audio.")
 	assert_string_contains(AudioManager.get_active_sfx_stream_path(), "ui_accept", "Options button must play the 'ui_accept' sound effect asset.")
 	
+	await wait_process_frames(1)
 	AudioManager.stop_all_sfx()
 
 	# --- TEST QUIT BUTTON ---
@@ -110,6 +113,11 @@ func test_main_menu_buttons_execute_accept_audio() -> void:
 	assert_not_null(quit_btn, "Layout Validation: Quit Button is missing from scene tree.")
 	
 	quit_btn.pressed.emit()
+	
+	# FIX: Assert instantly
+	assert_true(AudioManager.is_any_sfx_playing(), "Quit button must trigger confirmation audio.")
+	assert_string_contains(AudioManager.get_active_sfx_stream_path(), "ui_accept", "Quit button must play the 'ui_accept' sound effect asset.")
+	
 	await wait_process_frames(1)
 	
 	assert_true(AudioManager.is_any_sfx_playing(), "Quit button must trigger confirmation audio.")
