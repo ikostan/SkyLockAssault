@@ -9,9 +9,11 @@ extends "res://addons/gut/test.gd"
 
 var weapon_res: WeaponResource
 
+
 func before_each() -> void:
 	weapon_res = WeaponResource.new()
 	watch_signals(weapon_res)
+
 
 func after_each() -> void:
 	weapon_res.free()
@@ -151,3 +153,20 @@ func test_replacing_array_does_not_emit_if_active_weapon_unchanged() -> void:
 		"weapon_swapped",
 		"Must not emit weapon_swapped if the active weapon name and index remain exactly the same."
 	)
+
+
+func test_available_weapons_getter_prevents_external_mutation() -> void:
+	gut.p("Testing: Getter returns a duplicate so external mutations do not corrupt internal state.")
+	weapon_res.available_weapons = ["Pistol", "Shotgun"]
+	
+	# Retrieve the array and attempt to maliciously mutate it
+	var retrieved_array: Array[String] = weapon_res.available_weapons
+	retrieved_array.clear()
+	
+	# The internal array should remain completely intact
+	assert_eq(
+		weapon_res.available_weapons.size(), 
+		2, 
+		"Internal array must resist mutation from getter references."
+	)
+	assert_eq(weapon_res.available_weapons[0], "Pistol", "Array data must remain intact.")
