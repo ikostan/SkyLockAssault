@@ -122,3 +122,18 @@ func test_speed_maxed_crossing_semantics() -> void:
 	# 2. Stay at max speed
 	speed_res.current_speed = 800.0 # Clamps to 500.0
 	assert_signal_emit_count(speed_res, "speed_maxed", 1, "Staying at max_speed must not re-emit.")
+
+
+func test_speed_boundaries_cannot_be_negative() -> void:
+	gut.p("Testing: min_speed and max_speed strictly enforce non-negative limits.")
+	speed_res.max_speed = 500.0
+	speed_res.min_speed = 100.0
+
+	# Attempt to push min_speed below 0
+	speed_res.min_speed = -50.0
+	assert_eq(speed_res.min_speed, 0.0, "min_speed must clamp to a hard floor of 0.0.")
+
+	# Attempt to push max_speed below 1.0 (after dropping min_speed to give it room)
+	speed_res.min_speed = 0.0
+	speed_res.max_speed = -10.0
+	assert_eq(speed_res.max_speed, 1.0, "max_speed must clamp to a hard floor of 1.0.")
