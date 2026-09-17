@@ -49,8 +49,10 @@ docker ps
 
 **Expected Status Progression:**
 
-1. `Up X seconds (health: starting)` - Container is running; waiting for the start period.
-2. `Up X seconds (healthy)` - The Godot version command returned an exit code of `0`.
+1. `Up X seconds (health: starting)` - Container is running; waiting for the start
+period.
+2. `Up X seconds (healthy)` - The Godot version command returned an exit code
+of `0`.
 
 ## 4. Troubleshooting (If Unhealthy)
 
