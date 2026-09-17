@@ -28,7 +28,6 @@ signal speed_maxed
 		max_speed = new_max
 		_enforce_current_speed_bounds()
 
-
 @export var min_speed: float = 95.0:
 	set(value):
 		# Prevent min_speed from dropping below 0.0, and respect max_speed
@@ -38,7 +37,6 @@ signal speed_maxed
 
 		min_speed = new_min
 		_enforce_current_speed_bounds()
-
 
 @export var current_speed: float = 250.0:
 	set(value):
@@ -64,16 +62,13 @@ signal speed_maxed
 	set(value):
 		acceleration = max(0.0, value)
 
-
 @export var deceleration: float = 100.0:
 	set(value):
 		deceleration = max(0.0, value)
 
-
 @export var lateral_speed: float = 250.0:
 	set(value):
 		lateral_speed = max(0.0, value)
-
 
 @export var high_yellow_fraction: float = 0.80:
 	set(value):
@@ -84,7 +79,6 @@ signal speed_maxed
 
 		if low_yellow_fraction > high_yellow_fraction:
 			self.low_yellow_fraction = high_yellow_fraction
-
 
 @export var low_yellow_fraction: float = 0.10:
 	set(value):
