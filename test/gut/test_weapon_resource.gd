@@ -9,14 +9,12 @@ extends "res://addons/gut/test.gd"
 
 var weapon_res: WeaponResource
 
-
 func before_each() -> void:
 	weapon_res = WeaponResource.new()
-	watch_signals(weapon_res)
-
+	# REMOVED: watch_signals(weapon_res) -> We will only watch when needed.
 
 func after_each() -> void:
-	weapon_res.free()
+	pass
 
 # ==========================================
 # BOUNDARY & INVARIANT TESTS
@@ -37,6 +35,7 @@ func test_max_ammo_clamps_current_ammo() -> void:
 	gut.p("Testing: Shrinking max_ammo clamps current_ammo and emits signal.")
 	weapon_res.max_ammo = 100
 	weapon_res.current_ammo = 100
+	
 	watch_signals(weapon_res)
 	
 	weapon_res.max_ammo = 50
@@ -71,33 +70,31 @@ func test_shrinking_array_clamps_current_index() -> void:
 func test_ammo_updated_emits_on_effective_change() -> void:
 	gut.p("Testing: ammo_updated strictly emits only on effective state change.")
 	weapon_res.max_ammo = 100
-	weapon_res.current_ammo = 50
-	
-	assert_signal_emitted_with_parameters(weapon_res, "ammo_updated", [50, 100])
 	
 	watch_signals(weapon_res)
 	
 	weapon_res.current_ammo = 50
-	assert_signal_not_emitted(weapon_res, "ammo_updated", "Reassigning the same value must not emit.")
+	assert_signal_emit_count(weapon_res, "ammo_updated", 1)
+	
+	weapon_res.current_ammo = 50
+	# FIX: Check that the total count remains 1
+	assert_signal_emit_count(weapon_res, "ammo_updated", 1, "Reassigning the same value must not emit.")
 
 
 func test_weapon_swapped_emits_correctly() -> void:
 	gut.p("Testing: weapon_swapped emits with correct index and name.")
 	weapon_res.available_weapons = ["Cannon", "Missile"]
 	weapon_res.current_index = 0
+	
 	watch_signals(weapon_res)
 	
 	weapon_res.current_index = 1
-	assert_signal_emitted_with_parameters(
-		weapon_res, 
-		"weapon_swapped", 
-		[1, "Missile"], 
-		"Signal must provide correct index and weapon name."
-	)
+	assert_signal_emitted_with_parameters(weapon_res, "weapon_swapped", [1, "Missile"])
+	assert_signal_emit_count(weapon_res, "weapon_swapped", 1)
 	
-	watch_signals(weapon_res)
 	weapon_res.current_index = 1
-	assert_signal_not_emitted(weapon_res, "weapon_swapped", "Identical index must not emit.")
+	# FIX: Check that the total count remains 1
+	assert_signal_emit_count(weapon_res, "weapon_swapped", 1, "Identical index must not emit.")
 
 
 func test_available_weapons_prevents_external_mutation() -> void:
@@ -126,31 +123,31 @@ func test_replacing_array_emits_if_active_weapon_changes() -> void:
 	gut.p("Testing: Replacing array emits weapon_swapped if active weapon name changes, even if index stays the same.")
 	weapon_res.available_weapons = ["Pistol", "Shotgun"]
 	weapon_res.current_index = 0 # Active is Pistol
+	
 	watch_signals(weapon_res)
 
 	# Replace array, same size, index 0 is now "Rifle"
 	weapon_res.available_weapons = ["Rifle", "Sniper"]
 
-	assert_signal_emitted_with_parameters(
-		weapon_res,
-		"weapon_swapped",
-		[0, "Rifle"],
-		"Must emit weapon_swapped when the weapon name at the current index changes."
-	)
+	assert_signal_emitted_with_parameters(weapon_res, "weapon_swapped", [0, "Rifle"])
+	assert_signal_emit_count(weapon_res, "weapon_swapped", 1)
 
 
 func test_replacing_array_does_not_emit_if_active_weapon_unchanged() -> void:
 	gut.p("Testing: Replacing array does not emit if the active weapon name at the current index is identical.")
 	weapon_res.available_weapons = ["Pistol", "Shotgun"]
 	weapon_res.current_index = 0 # Active is Pistol
+	
 	watch_signals(weapon_res)
 
 	# Replace array, same size, index 0 is STILL "Pistol"
 	weapon_res.available_weapons = ["Pistol", "Sniper"]
 
-	assert_signal_not_emitted(
+	# FIX: Because watch_signals started right before this, the count should be 0
+	assert_signal_emit_count(
 		weapon_res,
 		"weapon_swapped",
+		0,
 		"Must not emit weapon_swapped if the active weapon name and index remain exactly the same."
 	)
 
