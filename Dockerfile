@@ -27,15 +27,6 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Upgrade pip, setuptools, and wheel in venv
 RUN pip install --upgrade pip setuptools wheel
 
-# Install GDToolkit for GDScript linter/formatter (gdtoolkit==4.* for Godot 4.x)
-RUN pip install gdtoolkit==4.*
-
-# Install yamllint
-RUN pip install yamllint
-
-# Install pytest plugins for html/timeout (fixes unrecognized arguments)
-RUN pip install pytest-html pytest-timeout
-
 # Install markdownlint-cli2 via npm (Node.js tool)
 RUN npm install -g markdownlint-cli2@0.12.1
 
@@ -74,23 +65,22 @@ RUN mkdir -p /project/addons \
     && rm -rf /project/addons/Gut-9.7.1 v9.7.1.zip \
     && chown -R godotuser:godotuser /project
 
-# Install Playwright Python packages and system deps (as root)
-# FIX: Removed redundant 'playwright install-deps' invocation
-RUN pip install playwright pytest-playwright pytest-asyncio \
-    && playwright install --with-deps chromium
+# Set a shared folder for the browser so both root and godotuser can use it
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# Switch to non-root user (fixes DS002; all subsequent commands run as godotuser)
+# Copy the project requirements into the container
+COPY requirements.txt /tmp/requirements.txt
+
+# Install all locked Python packages and download the browser just ONCE as root
+RUN pip install -r /tmp/requirements.txt \
+    && playwright install --with-deps chromium \
+    && chmod -R 755 /ms-playwright
+
+# Switch to your non-root user
 USER godotuser
-
-# Install Playwright browsers (as godotuser, to place in user's cache)
-RUN playwright install
-
-# Optional: Add a simple HEALTHCHECK to verify Godot is runnable (addresses DS026, though LOW severity)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD /usr/local/bin/godot --version || exit 1
 
 # Set working directory
 WORKDIR /project
 
-# Default command (overridden when running the script)
+# Default command
 CMD ["/bin/bash"]
