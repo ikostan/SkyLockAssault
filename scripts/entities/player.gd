@@ -147,6 +147,12 @@ func _exit_tree() -> void:
 ## @param new_fuel: The updated value of the property.
 ## @return: void
 func _on_fuel_changed(new_fuel: float) -> void:
+	# --- EXPLICIT COMPATIBILITY BRIDGE ---
+	# Safely sync fuel drops back to Globals.settings so legacy UI/Parallax consumers
+	# remain accurate until they are fully migrated.
+	if is_instance_valid(_settings) and _settings.current_fuel != new_fuel:
+		_settings.current_fuel = new_fuel
+
 	# Reignite the engine if previously dead and we just got refueled
 	if new_fuel > 0.0 and fuel_timer.is_stopped():
 		fuel_timer.start()
