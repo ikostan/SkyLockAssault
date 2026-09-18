@@ -87,11 +87,14 @@ func _ready() -> void:
 	else:
 		push_warning("Player sprite texture missing! Using fallback size.")
 
+	# --- RESTORED BOUNDARY CALCULATIONS ---
+	player_x_min = (screen_size.x * -0.5) + (sprite_size[0] * HITBOX_SCALE)
+	player_x_max = (screen_size.x * 0.5) - (sprite_size[0] * HITBOX_SCALE)
+	player_y_min = (screen_size.y * -0.83) + (sprite_size[1] * HITBOX_SCALE)
+	player_y_max = (screen_size.y / 6) - (sprite_size[1] * HITBOX_SCALE)
+
 	# Ensure the player always spawns with a full tank and default properties
 	fuel_resource.max_fuel = _settings.max_fuel
-	fuel_resource.current_fuel = _settings.max_fuel
-	_settings.current_fuel = fuel_resource.current_fuel
-	fuel_resource.base_consumption_rate = _settings.base_consumption_rate
 
 	# Setup speed boundaries and tuning properties from global settings
 	speed_resource.max_speed = _settings.max_speed
