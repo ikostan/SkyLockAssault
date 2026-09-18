@@ -1,13 +1,13 @@
-## Copyright (C) 2025 Egor Kostan
+## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
-# weapon.gd - FIXED with debug logs for null current_weapon
+# weapon.gd
 extends Node2D
 
 @export var weapon_types: Array[PackedScene] = []  # Drag bullet.tscn...
 
 var current_weapon: Node2D
 var current_index: int = 0
-
+var weapon_resource: WeaponResource = WeaponResource.new()
 
 func _ready() -> void:
 	Globals.log_message(
@@ -40,7 +40,22 @@ func switch_to(index: int) -> void:
 		add_child(current_weapon)
 		current_weapon.position = Vector2.ZERO
 		current_index = index
-		Globals.log_message("Switched to " + current_weapon.name, Globals.LogLevel.INFO)
+		
+		# 1. Safe type cast from Godot's StringName to String
+		var safe_weapon_name: String = String(current_weapon.name)
+		
+		# 2. Sync the resource's available_weapons array
+		# We pull the duplicate, resize if necessary, inject the safe name, and push it back.
+		var updated_weapons: Array[String] = weapon_resource.available_weapons
+		if updated_weapons.size() < weapon_types.size():
+			updated_weapons.resize(weapon_types.size())
+		updated_weapons[index] = safe_weapon_name
+		weapon_resource.available_weapons = updated_weapons
+		
+		# 3. Update the resource index (this automatically triggers the weapon_swapped signal)
+		weapon_resource.current_index = index
+		
+		Globals.log_message("Switched to " + safe_weapon_name, Globals.LogLevel.INFO)
 	else:
 		push_error(
 			"Failed to instantiate weapon_types[" + str(index) + "] - check scene/script errors!"
@@ -51,7 +66,7 @@ func switch_to(index: int) -> void:
 func fire() -> void:
 	if current_weapon and current_weapon.has_method("fire"):
 		Globals.log_message(
-			"Weapon.fire() delegating to " + current_weapon.name, Globals.LogLevel.DEBUG
+			"Weapon.fire() delegating to " + str(current_weapon.name), Globals.LogLevel.DEBUG
 		)
 		current_weapon.fire()
 	else:

@@ -27,10 +27,16 @@ var rotor_left_sfx: AudioStreamPlayer2D
 var rotor_right_sfx: AudioStreamPlayer2D
 
 # Local state container for physics
-# var speed: Dictionary = {"speed": 250.0}
+var speed_resource: SpeedResource = SpeedResource.new()
+var fuel_resource: FuelResource = FuelResource.new()
 
 ## The player's current forward speed.
-var current_speed: float = 250.0
+## Acts as a transparent compatibility bridge for main_scene.gd and HUD.
+var current_speed: float:
+	get:
+		return speed_resource.current_speed
+	set(value):
+		speed_resource.current_speed = value
 
 # Cache the global settings to avoid singleton lookups in hot paths
 var _settings: GameSettingsResource = null
@@ -86,15 +92,30 @@ func _ready() -> void:
 	player_y_min = (screen_size.y * -0.83) + (sprite_size[1] * HITBOX_SCALE)
 	player_y_max = (screen_size.y / 6) - (sprite_size[1] * HITBOX_SCALE)
 
-	# Ensure the player always spawns with a full tank
-	_settings.current_fuel = _settings.max_fuel
+	# Ensure the player always spawns with a full tank and default properties
+	fuel_resource.max_fuel = _settings.max_fuel
+	fuel_resource.current_fuel = _settings.max_fuel
+	
+	speed_resource.max_speed = _settings.max_speed
+	speed_resource.min_speed = _settings.min_speed
+	speed_resource.current_speed = 250.0
 
 	# Initialize timers and observers
 	fuel_timer.timeout.connect(_on_fuel_timer_timeout)
 	fuel_timer.start()
 
-	_settings.fuel_depleted.connect(_on_player_out_of_fuel)
-	_settings.setting_changed.connect(_on_setting_changed)
+	# --- Compatibility Bridges ---
+	speed_resource.speed_updated.connect(func(spd: float): speed_changed.emit(spd, speed_resource.max_speed))
+	
+	speed_resource.speed_low.connect(func():
+		var threshold: float = speed_resource.min_speed + (speed_resource.max_speed - speed_resource.min_speed) * speed_resource.low_yellow_fraction
+		speed_low.emit(threshold)
+	)
+	
+	speed_resource.speed_maxed.connect(func(): speed_maxed.emit())
+	
+	fuel_resource.fuel_depleted.connect(_on_player_out_of_fuel)
+	fuel_resource.fuel_changed.connect(_on_fuel_changed)
 
 	if weapon:
 		Globals.log_message("Player ready. Weapons loaded.", Globals.LogLevel.DEBUG)
@@ -106,62 +127,39 @@ func _ready() -> void:
 ## Safely disconnects global resource signals to prevent dangling references and memory leaks.
 ## @return: void
 func _exit_tree() -> void:
-	if is_instance_valid(_settings):
-		if _settings.setting_changed.is_connected(_on_setting_changed):
-			_settings.setting_changed.disconnect(_on_setting_changed)
-		if _settings.fuel_depleted.is_connected(_on_player_out_of_fuel):
-			_settings.fuel_depleted.disconnect(_on_player_out_of_fuel)
+	if fuel_resource.fuel_depleted.is_connected(_on_player_out_of_fuel):
+		fuel_resource.fuel_depleted.disconnect(_on_player_out_of_fuel)
+	if fuel_resource.fuel_changed.is_connected(_on_fuel_changed):
+		fuel_resource.fuel_changed.disconnect(_on_fuel_changed)
 
 
-## Observer pattern callback to react to updates from the global settings resource.
+## Observer pattern callback to react to updates from the local fuel resource.
 ## Re-ignites engines if refueled.
-## @param setting_name: The name of the property that was modified.
-## @param new_value: The updated value of the property.
+## @param new_fuel: The updated value of the property.
 ## @return: void
-func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
-	if not is_instance_valid(_settings):
-		return
-
-	if setting_name == "current_fuel":
-		# Reignite the engine if previously dead and we just got refueled
-		if float(new_value) > 0.0 and fuel_timer.is_stopped():
-			fuel_timer.start()
-			rotor_start(rotor_right, rotor_right_sfx)
-			rotor_start(rotor_left, rotor_left_sfx)
-			Globals.log_message(
-				"Engine reignited! Rotors and fuel consumption resumed.", Globals.LogLevel.INFO
-			)
+func _on_fuel_changed(new_fuel: float) -> void:
+	# Reignite the engine if previously dead and we just got refueled
+	if new_fuel > 0.0 and fuel_timer.is_stopped():
+		fuel_timer.start()
+		rotor_start(rotor_right, rotor_right_sfx)
+		rotor_start(rotor_left, rotor_left_sfx)
+		Globals.log_message(
+			"Engine reignited! Rotors and fuel consumption resumed.", Globals.LogLevel.INFO
+		)
 
 
 ## NEW: Centralized helper to clamp speed and emit state changes.
 ## Resolves PR duplication feedback.
 func _set_speed(target_speed: float) -> void:
-	if not is_instance_valid(_settings):
-		return
+	# If out of fuel, drop min_speed so the setter allows clamping to 0.0
+	if fuel_resource.current_fuel <= 0.0:
+		speed_resource.min_speed = 0.0
+	elif is_instance_valid(_settings):
+		# Restore standard min_speed when fueled
+		speed_resource.min_speed = _settings.min_speed
 
-	var old_speed: float = current_speed
-
-	# Clamp current_speed based on fuel state
-	if _settings.current_fuel == 0:
-		current_speed = clamp(target_speed, 0.0, _settings.max_speed)
-	else:
-		current_speed = clamp(target_speed, _settings.min_speed, _settings.max_speed)
-
-	# Emit signals if speed actually changed
-	if old_speed != current_speed:
-		speed_changed.emit(current_speed, _settings.max_speed)
-
-		# Check for maximum speed limit
-		if current_speed >= _settings.max_speed:
-			speed_maxed.emit()
-
-		# Check for low speed warning
-		var low_yellow_thresh: float = (
-			_settings.min_speed
-			+ (_settings.max_speed - _settings.min_speed) * _settings.low_yellow_fraction
-		)
-		if current_speed <= low_yellow_thresh:
-			speed_low.emit(low_yellow_thresh)
+	# Assignment automatically triggers clamping and observers inside SpeedResource
+	speed_resource.current_speed = target_speed
 
 
 ## Signal handler for engine failure triggered by the global fuel_depleted signal.
@@ -170,7 +168,6 @@ func _set_speed(target_speed: float) -> void:
 func _on_player_out_of_fuel() -> void:
 	Globals.log_message("Player is out of fuel! Engine flameout.", Globals.LogLevel.WARNING)
 
-	# Use the new centralized helper
 	_set_speed(0.0)
 
 	rotor_stop(rotor_right, rotor_right_sfx)
@@ -225,11 +222,11 @@ func _on_fuel_timer_timeout() -> void:
 	if not is_instance_valid(_settings):
 		return
 
-	var normalized_speed: float = clamp(current_speed / _settings.max_speed, 0.0, 1.0)
+	var normalized_speed: float = clamp(speed_resource.current_speed / speed_resource.max_speed, 0.0, 1.0)
 	var consumption: float = (
-		_settings.base_consumption_rate * normalized_speed * _settings.difficulty
+		fuel_resource.base_consumption_rate * normalized_speed * _settings.difficulty
 	)
-	_settings.current_fuel -= consumption
+	fuel_resource.current_fuel -= consumption
 
 
 ## The main physics loop for the player.
@@ -241,14 +238,14 @@ func _physics_process(_delta: float) -> void:
 	if not is_instance_valid(_settings):
 		return
 
-	var target_speed: float = current_speed
+	var target_speed: float = speed_resource.current_speed
 
 	# Speed changes allowed only if fuel > 0
-	if Input.is_action_pressed("speed_up") and _settings.current_fuel > 0:
-		target_speed += _settings.acceleration * _delta
+	if Input.is_action_pressed("speed_up") and fuel_resource.current_fuel > 0:
+		target_speed += speed_resource.acceleration * _delta
 
-	if Input.is_action_pressed("speed_down") and _settings.current_fuel > 0:
-		target_speed -= _settings.deceleration * _delta
+	if Input.is_action_pressed("speed_down") and fuel_resource.current_fuel > 0:
+		target_speed -= speed_resource.deceleration * _delta
 
 	# Let the helper handle clamping and signal emission
 	_set_speed(target_speed)
@@ -256,8 +253,8 @@ func _physics_process(_delta: float) -> void:
 	# Left/Right movement
 	var lateral_input: float = Input.get_axis("move_left", "move_right")
 
-	if lateral_input and _settings.current_fuel > 0 and current_speed > 0:
-		player.velocity.x = lateral_input * _settings.lateral_speed
+	if lateral_input and fuel_resource.current_fuel > 0 and speed_resource.current_speed > 0:
+		player.velocity.x = lateral_input * speed_resource.lateral_speed
 	else:
 		player.velocity.x = 0.0
 
