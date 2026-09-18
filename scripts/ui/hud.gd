@@ -129,7 +129,6 @@ func _ready() -> void:
 	_settings = Globals.settings if is_instance_valid(Globals) else null
 
 	if not is_instance_valid(_settings):
-		# FIX 1: Use Globals logger or print to bypass GUT engine-level warning captures
 		if is_instance_valid(Globals):
 			Globals.log_message(
 				"HUD couldn't find Globals.settings! Creating fallback settings resource.",
@@ -144,15 +143,14 @@ func _ready() -> void:
 		if is_instance_valid(Globals):
 			Globals.settings = _settings
 
-	# FIX 2: Add connection guards to prevent ERR_INVALID_PARAMETER if _ready runs multiple times
 	if not _settings.setting_changed.is_connected(_on_setting_changed):
 		_settings.setting_changed.connect(_on_setting_changed)
-	if not _settings.fuel_depleted.is_connected(_on_player_out_of_fuel):
-		_settings.fuel_depleted.connect(_on_player_out_of_fuel)
+	# REMOVED: _settings.fuel_depleted connection (now handled by FuelResource)
 
 	# --- Fuel UI Setup ---
 	_fuel_bar_style = StyleBoxFlat.new()
 	set_bar_fill_style(fuel_bar, _fuel_bar_style)
+	# NOTE: max_value will be updated dynamically once setup_hud is called
 	fuel_bar.max_value = _settings.max_fuel
 
 	fuel_stat = StatManager.new(
@@ -165,14 +163,13 @@ func _ready() -> void:
 	if fuel_blink_timer:
 		fuel_blink_timer.wait_time = BLINK_INTERVAL
 		fuel_blink_timer.one_shot = false
-		# FIX 2: Connection guard
 		if not fuel_blink_timer.timeout.is_connected(_on_fuel_blink_timer_timeout):
 			fuel_blink_timer.timeout.connect(_on_fuel_blink_timer_timeout)
 
 	# --- Speed UI Setup ---
 	_speed_bar_style = StyleBoxFlat.new()
 	set_bar_fill_style(speed_bar, _speed_bar_style)
-	speed_bar.max_value = _settings.max_speed  # Pull directly from resource!
+	speed_bar.max_value = _settings.max_speed 
 
 	speed_stat = StatManager.new(
 		speed_label,
@@ -184,13 +181,8 @@ func _ready() -> void:
 	if speed_blink_timer:
 		speed_blink_timer.wait_time = BLINK_INTERVAL
 		speed_blink_timer.one_shot = false
-		# FIX 2: Connection guard
 		if not speed_blink_timer.timeout.is_connected(_on_speed_blink_timer_timeout):
 			speed_blink_timer.timeout.connect(_on_speed_blink_timer_timeout)
-
-	# Initial UI Draw
-	update_fuel_bar()
-	update_speed_bar()
 
 
 ## Wires the HUD to the injected data resources.
@@ -210,21 +202,48 @@ func setup_hud(
 		push_error("HUD setup failed: Invalid resource injection.")
 		return
 
-	# Safely disconnect old speed resource if we are hot-swapping nodes
+	# Safely disconnect old resources if we are hot-swapping nodes
 	if is_instance_valid(_speed_resource) and _speed_resource != speed_res:
 		if _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
 			_speed_resource.speed_updated.disconnect(_on_speed_updated_bridge)
+			
+	if is_instance_valid(_fuel_resource) and _fuel_resource != fuel_res:
+		if _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
+			_fuel_resource.fuel_changed.disconnect(_on_fuel_changed_bridge)
+		if _fuel_resource.fuel_depleted.is_connected(_on_player_out_of_fuel):
+			_fuel_resource.fuel_depleted.disconnect(_on_player_out_of_fuel)
+
+	if is_instance_valid(_weapon_resource) and _weapon_resource != weapon_res:
+		if _weapon_resource.weapon_swapped.is_connected(_on_weapon_swapped):
+			_weapon_resource.weapon_swapped.disconnect(_on_weapon_swapped)
+		if _weapon_resource.ammo_updated.is_connected(_on_ammo_updated):
+			_weapon_resource.ammo_updated.disconnect(_on_ammo_updated)
 
 	# Idempotency assignment for injected resources
 	_fuel_resource = fuel_res
 	_speed_resource = speed_res
 	_weapon_resource = weapon_res
 
-	# Connection guard for external wiring (Phase 2 Speed Mapping)
+	# Connection guards for external wiring
 	if not _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
 		_speed_resource.speed_updated.connect(_on_speed_updated_bridge)
+		
+	if not _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
+		_fuel_resource.fuel_changed.connect(_on_fuel_changed_bridge)
+	if not _fuel_resource.fuel_depleted.is_connected(_on_player_out_of_fuel):
+		_fuel_resource.fuel_depleted.connect(_on_player_out_of_fuel)
 
-	Globals.log_message("HUD successfully wired to Data Resources.", Globals.LogLevel.DEBUG)
+	if not _weapon_resource.weapon_swapped.is_connected(_on_weapon_swapped):
+		_weapon_resource.weapon_swapped.connect(_on_weapon_swapped)
+	if not _weapon_resource.ammo_updated.is_connected(_on_ammo_updated):
+		_weapon_resource.ammo_updated.connect(_on_ammo_updated)
+
+	# Force an initial UI draw with the new authoritative data
+	fuel_bar.max_value = _fuel_resource.max_fuel
+	update_fuel_bar()
+	update_speed_bar()
+
+	Globals.log_message("HUD successfully wired to all Data Resources.", Globals.LogLevel.DEBUG)
 
 
 ## Retrieves the effective text color of a Label, considering theme overrides.
@@ -242,12 +261,22 @@ func _exit_tree() -> void:
 	if is_instance_valid(_speed_resource):
 		if _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
 			_speed_resource.speed_updated.disconnect(_on_speed_updated_bridge)
+			
+	if is_instance_valid(_fuel_resource):
+		if _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
+			_fuel_resource.fuel_changed.disconnect(_on_fuel_changed_bridge)
+		if _fuel_resource.fuel_depleted.is_connected(_on_player_out_of_fuel):
+			_fuel_resource.fuel_depleted.disconnect(_on_player_out_of_fuel)
+
+	if is_instance_valid(_weapon_resource):
+		if _weapon_resource.weapon_swapped.is_connected(_on_weapon_swapped):
+			_weapon_resource.weapon_swapped.disconnect(_on_weapon_swapped)
+		if _weapon_resource.ammo_updated.is_connected(_on_ammo_updated):
+			_weapon_resource.ammo_updated.disconnect(_on_ammo_updated)
 
 	if is_instance_valid(_settings):
 		if _settings.setting_changed.is_connected(_on_setting_changed):
 			_settings.setting_changed.disconnect(_on_setting_changed)
-		if _settings.fuel_depleted.is_connected(_on_player_out_of_fuel):
-			_settings.fuel_depleted.disconnect(_on_player_out_of_fuel)
 
 
 # ==========================================
@@ -284,27 +313,9 @@ func _on_setting_changed(setting_name: String, _new_value: Variant) -> void:
 	if not is_instance_valid(_settings):
 		return
 
-	# --- Handle Fuel Updates ---
-	if (
-		setting_name
-		in [
-			"current_fuel",
-			"max_fuel",
-			"high_fuel_threshold",
-			"medium_fuel_threshold",
-			"low_fuel_threshold",
-			"no_fuel_threshold"
-		]
-	):
-		if setting_name == "max_fuel":
-			fuel_bar.max_value = _settings.max_fuel
-
-		update_fuel_bar()
-		check_fuel_warning()
-
 	# --- Handle Speed Updates ---
-	# NEW FIX: React immediately to dynamic threshold or speed limit changes
-	elif setting_name in ["max_speed", "min_speed", "high_yellow_fraction", "low_yellow_fraction"]:
+	# React immediately to dynamic threshold or speed limit changes
+	if setting_name in ["max_speed", "min_speed", "high_yellow_fraction", "low_yellow_fraction"]:
 		if setting_name == "max_speed":
 			speed_bar.max_value = _settings.max_speed
 
@@ -329,20 +340,20 @@ func _on_player_out_of_fuel() -> void:
 ## Updates the fuel bar's visual fill and color based on the current fuel level.
 ## @return: void
 func update_fuel_bar() -> void:
-	if not is_instance_valid(_settings):
+	if not is_instance_valid(_fuel_resource):
 		return
 
-	var cur_fuel: float = _settings.current_fuel
-	var m_fuel: float = _settings.max_fuel
+	var cur_fuel: float = _fuel_resource.current_fuel
+	var m_fuel: float = _fuel_resource.max_fuel
 
 	fuel_bar.value = cur_fuel
 	var fuel_percent: float = 0.0 if m_fuel <= 0.0 else (cur_fuel / m_fuel) * 100.0
 	var factor: float = 0.0
 
-	var high: float = _settings.high_fuel_threshold
-	var medium: float = _settings.medium_fuel_threshold
-	var low: float = _settings.low_fuel_threshold
-	var no_fuel: float = _settings.no_fuel_threshold
+	var high: float = _fuel_resource.high_fuel_threshold
+	var medium: float = _fuel_resource.medium_fuel_threshold
+	var low: float = _fuel_resource.low_fuel_threshold
+	var no_fuel: float = _fuel_resource.no_fuel_threshold
 
 	if fuel_percent > high:
 		_fuel_bar_style.bg_color = Color.GREEN
@@ -407,16 +418,16 @@ func update_speed_bar() -> void:
 ## Activates or deactivates the UI warning blinker accordingly.
 ## @return: void
 func check_fuel_warning() -> void:
-	if not is_instance_valid(_settings):
+	if not is_instance_valid(_fuel_resource):
 		return
 
 	var fuel_percent: float = (
-		0.0 if _settings.max_fuel <= 0.0 else (_settings.current_fuel / _settings.max_fuel) * 100.0
+		0.0 if _fuel_resource.max_fuel <= 0.0 else (_fuel_resource.current_fuel / _fuel_resource.max_fuel) * 100.0
 	)
 
-	if fuel_percent <= _settings.low_fuel_threshold and not fuel_stat.is_blinking:
+	if fuel_percent <= _fuel_resource.low_fuel_threshold and not fuel_stat.is_blinking:
 		fuel_stat.start_blinking()
-	elif fuel_percent > _settings.low_fuel_threshold and fuel_stat.is_blinking:
+	elif fuel_percent > _fuel_resource.low_fuel_threshold and fuel_stat.is_blinking:
 		fuel_stat.stop_blinking()
 
 
@@ -530,3 +541,29 @@ func is_speed_warning_active() -> bool:
 ## @return: bool - True if the timer node is valid and not stopped, false otherwise.
 func is_speed_timer_running() -> bool:
 	return speed_stat != null and speed_stat.is_timer_running()
+
+
+## Compatibility bridge to route the new FuelResource signal into the UI updates.
+## @param _new_fuel: The updated fuel value from the resource.
+## @return: void
+func _on_fuel_changed_bridge(_new_fuel: float) -> void:
+	update_fuel_bar()
+	check_fuel_warning()
+
+
+## Callback triggered when the WeaponResource index changes.
+## @param index: The array index of the newly equipped weapon.
+## @param weapon_name: The string identifier of the weapon.
+## @return: void
+func _on_weapon_swapped(index: int, weapon_name: String) -> void:
+	Globals.log_message("HUD: Weapon swapped to " + weapon_name, Globals.LogLevel.DEBUG)
+	# TODO: Update weapon icon/name UI here when elements are added
+
+
+## Callback triggered when the WeaponResource ammo count changes.
+## @param current: The current ammo count.
+## @param max_ammo: The maximum ammo capacity.
+## @return: void
+func _on_ammo_updated(current: int, max_ammo: int) -> void:
+	# TODO: Update ammo counter UI here when elements are added
+	pass
