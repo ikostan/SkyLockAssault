@@ -87,17 +87,16 @@ func _ready() -> void:
 	else:
 		push_warning("Player sprite texture missing! Using fallback size.")
 
-	player_x_min = (screen_size.x * -0.5) + (sprite_size[0] * HITBOX_SCALE)
-	player_x_max = (screen_size.x * 0.5) - (sprite_size[0] * HITBOX_SCALE)
-	player_y_min = (screen_size.y * -0.83) + (sprite_size[1] * HITBOX_SCALE)
-	player_y_max = (screen_size.y / 6) - (sprite_size[1] * HITBOX_SCALE)
-
 	# Ensure the player always spawns with a full tank and default properties
 	fuel_resource.max_fuel = _settings.max_fuel
 	fuel_resource.current_fuel = _settings.max_fuel
 
+	# Setup speed boundaries and tuning properties from global settings
 	speed_resource.max_speed = _settings.max_speed
 	speed_resource.min_speed = _settings.min_speed
+	speed_resource.acceleration = _settings.acceleration
+	speed_resource.deceleration = _settings.deceleration
+	speed_resource.lateral_speed = _settings.lateral_speed
 	speed_resource.current_speed = 250.0
 
 	# Initialize timers and observers

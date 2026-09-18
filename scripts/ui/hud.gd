@@ -554,18 +554,18 @@ func _on_fuel_changed_bridge(_new_fuel: float) -> void:
 
 
 ## Callback triggered when the WeaponResource index changes.
-## @param index: The array index of the newly equipped weapon.
+## @param _index: The array index of the newly equipped weapon.
 ## @param weapon_name: The string identifier of the weapon.
 ## @return: void
-func _on_weapon_swapped(index: int, weapon_name: String) -> void:
+func _on_weapon_swapped(_index: int, weapon_name: String) -> void:
 	Globals.log_message("HUD: Weapon swapped to " + weapon_name, Globals.LogLevel.DEBUG)
 	# TODO: Update weapon icon/name UI here when elements are added
 
 
 ## Callback triggered when the WeaponResource ammo count changes.
-## @param current: The current ammo count.
-## @param max_ammo: The maximum ammo capacity.
+## @param _current: The current ammo count.
+## @param _max_ammo: The maximum ammo capacity.
 ## @return: void
-func _on_ammo_updated(current: int, max_ammo: int) -> void:
+func _on_ammo_updated(_current: int, _max_ammo: int) -> void:
 	# TODO: Update ammo counter UI here when elements are added
 	pass
