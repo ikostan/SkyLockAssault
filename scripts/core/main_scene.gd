@@ -33,11 +33,12 @@ func _ready() -> void:
 	Globals.log_message("Initializing main scene...", Globals.LogLevel.DEBUG)
 
 	# =========================================================
-	# THIS IS THE MISSING LINK THAT WAKES UP YOUR HUD!
-	# It passes the Player directly to the HUD script so the bars work.
+	# DEPENDENCY INJECTION: HUD Data Layer
+	# Extracts raw telemetry data resources directly from the player
+	# hierarchy and passes them into the HUD.
 	# =========================================================
 	if stats_panel.has_method("setup_hud"):
-		stats_panel.setup_hud(player)
+		stats_panel.setup_hud(player.fuel_resource, player.speed_resource, player.weapon.weapon_resource)
 	else:
 		push_error(
 			"HUD Script is missing! Make sure 'hud.gd' is attached to the 'PlayerStatsPanel' node."

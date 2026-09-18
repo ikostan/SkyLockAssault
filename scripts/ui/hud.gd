@@ -105,7 +105,11 @@ var _current_speed: float = 250.0
 
 var _fuel_bar_style: StyleBoxFlat
 var _speed_bar_style: StyleBoxFlat
-var _connected_player: Node2D = null  # NEW: Track the player for clean disconnects
+
+# --- Data Resource Injection Tracking ---
+var _fuel_resource: FuelResource = null
+var _speed_resource: SpeedResource = null
+var _weapon_resource: WeaponResource = null
 
 # --- Node References ---
 # Paths assume this script is attached directly to "PlayerStatsPanel"
@@ -189,32 +193,32 @@ func _ready() -> void:
 	update_speed_bar()
 
 
-## Wires the HUD to the Player node's exported signals.
+## Wires the HUD to the injected data resources.
 ## Call this from your main level script when instantiating the player and UI.
-## @param player_node: The Player Node2D instance.
+## @param fuel_res: The authoritative FuelResource instance.
+## @param speed_res: The authoritative SpeedResource instance.
+## @param weapon_res: The authoritative WeaponResource instance.
 ## @return: void
-func setup_hud(player_node: Node2D) -> void:
-	if not is_instance_valid(player_node):
-		push_error("HUD setup failed: Invalid player node.")
+func setup_hud(fuel_res: FuelResource, speed_res: SpeedResource, weapon_res: WeaponResource) -> void:
+	if not is_instance_valid(fuel_res) or not is_instance_valid(speed_res) or not is_instance_valid(weapon_res):
+		push_error("HUD setup failed: Invalid resource injection.")
 		return
 
-	# NEW FIX: Verify the signal actually exists before attempting to access it!
-	if not player_node.has_signal("speed_changed"):
-		push_error("HUD setup failed: Provided node lacks 'speed_changed' signal.")
-		return
+	# Safely disconnect old speed resource if we are hot-swapping nodes
+	if is_instance_valid(_speed_resource) and _speed_resource != speed_res:
+		if _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
+			_speed_resource.speed_updated.disconnect(_on_speed_updated_bridge)
 
-	# Safely disconnect the old player if we are hot-swapping nodes
-	if is_instance_valid(_connected_player) and _connected_player != player_node:
-		if _connected_player.speed_changed.is_connected(_on_player_speed_changed):
-			_connected_player.speed_changed.disconnect(_on_player_speed_changed)
+	# Idempotency assignment for injected resources
+	_fuel_resource = fuel_res
+	_speed_resource = speed_res
+	_weapon_resource = weapon_res
 
-	_connected_player = player_node
+	# Connection guard for external wiring (Phase 2 Speed Mapping)
+	if not _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
+		_speed_resource.speed_updated.connect(_on_speed_updated_bridge)
 
-	# Connection guard for external wiring
-	if not _connected_player.speed_changed.is_connected(_on_player_speed_changed):
-		_connected_player.speed_changed.connect(_on_player_speed_changed)
-
-	Globals.log_message("HUD successfully wired to Player signals.", Globals.LogLevel.DEBUG)
+	Globals.log_message("HUD successfully wired to Data Resources.", Globals.LogLevel.DEBUG)
 
 
 ## Retrieves the effective text color of a Label, considering theme overrides.
@@ -228,10 +232,10 @@ func get_label_text_color(label: Label) -> Color:
 ## Safely disconnects global resource signals to prevent memory leaks.
 ## @return: void
 func _exit_tree() -> void:
-	# NEW FIX: Explicitly sever the connection to the player
-	if is_instance_valid(_connected_player):
-		if _connected_player.speed_changed.is_connected(_on_player_speed_changed):
-			_connected_player.speed_changed.disconnect(_on_player_speed_changed)
+	# Explicitly sever the connection to the data resources
+	if is_instance_valid(_speed_resource):
+		if _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
+			_speed_resource.speed_updated.disconnect(_on_speed_updated_bridge)
 
 	if is_instance_valid(_settings):
 		if _settings.setting_changed.is_connected(_on_setting_changed):
@@ -241,11 +245,19 @@ func _exit_tree() -> void:
 
 
 # ==========================================
-# SIGNAL HANDLERS
+# SIGNAL HANDLERS & BRIDGES
 # ==========================================
 
 
-## Callback triggered externally by the Player node when its speed changes.
+## Compatibility bridge to route the new SpeedResource signal into the legacy logic.
+## @param new_speed: The updated speed value from the resource.
+## @return: void
+func _on_speed_updated_bridge(new_speed: float) -> void:
+	var max_spd: float = _speed_resource.max_speed if is_instance_valid(_speed_resource) else speed_bar.max_value
+	_on_player_speed_changed(new_speed, max_spd)
+
+
+## Legacy pathway: Callback triggered externally by the Player node when its speed changes.
 ## @param new_speed: The current forward speed of the player.
 ## @param max_speed: The absolute maximum speed limit.
 ## @return: void
