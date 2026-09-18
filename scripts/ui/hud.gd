@@ -199,8 +199,14 @@ func _ready() -> void:
 ## @param speed_res: The authoritative SpeedResource instance.
 ## @param weapon_res: The authoritative WeaponResource instance.
 ## @return: void
-func setup_hud(fuel_res: FuelResource, speed_res: SpeedResource, weapon_res: WeaponResource) -> void:
-	if not is_instance_valid(fuel_res) or not is_instance_valid(speed_res) or not is_instance_valid(weapon_res):
+func setup_hud(
+	fuel_res: FuelResource, speed_res: SpeedResource, weapon_res: WeaponResource
+) -> void:
+	if (
+		not is_instance_valid(fuel_res)
+		or not is_instance_valid(speed_res)
+		or not is_instance_valid(weapon_res)
+	):
 		push_error("HUD setup failed: Invalid resource injection.")
 		return
 
@@ -253,7 +259,9 @@ func _exit_tree() -> void:
 ## @param new_speed: The updated speed value from the resource.
 ## @return: void
 func _on_speed_updated_bridge(new_speed: float) -> void:
-	var max_spd: float = _speed_resource.max_speed if is_instance_valid(_speed_resource) else speed_bar.max_value
+	var max_spd: float = (
+		_speed_resource.max_speed if is_instance_valid(_speed_resource) else speed_bar.max_value
+	)
 	_on_player_speed_changed(new_speed, max_spd)
 
 
