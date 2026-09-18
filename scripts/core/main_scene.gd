@@ -38,7 +38,9 @@ func _ready() -> void:
 	# hierarchy and passes them into the HUD.
 	# =========================================================
 	if stats_panel.has_method("setup_hud"):
-		stats_panel.setup_hud(player.fuel_resource, player.speed_resource, player.weapon.weapon_resource)
+		stats_panel.setup_hud(
+			player.fuel_resource, player.speed_resource, player.weapon.weapon_resource
+		)
 	else:
 		push_error(
 			"HUD Script is missing! Make sure 'hud.gd' is attached to the 'PlayerStatsPanel' node."
