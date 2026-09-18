@@ -95,7 +95,7 @@ func _ready() -> void:
 	# Ensure the player always spawns with a full tank and default properties
 	fuel_resource.max_fuel = _settings.max_fuel
 	fuel_resource.current_fuel = _settings.max_fuel
-	
+
 	speed_resource.max_speed = _settings.max_speed
 	speed_resource.min_speed = _settings.min_speed
 	speed_resource.current_speed = 250.0
@@ -105,15 +105,24 @@ func _ready() -> void:
 	fuel_timer.start()
 
 	# --- Compatibility Bridges ---
-	speed_resource.speed_updated.connect(func(spd: float): speed_changed.emit(spd, speed_resource.max_speed))
-	
-	speed_resource.speed_low.connect(func():
-		var threshold: float = speed_resource.min_speed + (speed_resource.max_speed - speed_resource.min_speed) * speed_resource.low_yellow_fraction
-		speed_low.emit(threshold)
+	speed_resource.speed_updated.connect(
+		func(spd: float): speed_changed.emit(spd, speed_resource.max_speed)
 	)
-	
+
+	speed_resource.speed_low.connect(
+		func():
+			var threshold: float = (
+				speed_resource.min_speed
+				+ (
+					(speed_resource.max_speed - speed_resource.min_speed)
+					* speed_resource.low_yellow_fraction
+				)
+			)
+			speed_low.emit(threshold)
+	)
+
 	speed_resource.speed_maxed.connect(func(): speed_maxed.emit())
-	
+
 	fuel_resource.fuel_depleted.connect(_on_player_out_of_fuel)
 	fuel_resource.fuel_changed.connect(_on_fuel_changed)
 
@@ -222,7 +231,9 @@ func _on_fuel_timer_timeout() -> void:
 	if not is_instance_valid(_settings):
 		return
 
-	var normalized_speed: float = clamp(speed_resource.current_speed / speed_resource.max_speed, 0.0, 1.0)
+	var normalized_speed: float = clamp(
+		speed_resource.current_speed / speed_resource.max_speed, 0.0, 1.0
+	)
 	var consumption: float = (
 		fuel_resource.base_consumption_rate * normalized_speed * _settings.difficulty
 	)
