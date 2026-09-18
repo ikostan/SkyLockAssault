@@ -169,7 +169,7 @@ func _ready() -> void:
 	# --- Speed UI Setup ---
 	_speed_bar_style = StyleBoxFlat.new()
 	set_bar_fill_style(speed_bar, _speed_bar_style)
-	speed_bar.max_value = _settings.max_speed 
+	speed_bar.max_value = _settings.max_speed
 
 	speed_stat = StatManager.new(
 		speed_label,
@@ -206,7 +206,7 @@ func setup_hud(
 	if is_instance_valid(_speed_resource) and _speed_resource != speed_res:
 		if _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
 			_speed_resource.speed_updated.disconnect(_on_speed_updated_bridge)
-			
+
 	if is_instance_valid(_fuel_resource) and _fuel_resource != fuel_res:
 		if _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
 			_fuel_resource.fuel_changed.disconnect(_on_fuel_changed_bridge)
@@ -227,7 +227,7 @@ func setup_hud(
 	# Connection guards for external wiring
 	if not _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
 		_speed_resource.speed_updated.connect(_on_speed_updated_bridge)
-		
+
 	if not _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
 		_fuel_resource.fuel_changed.connect(_on_fuel_changed_bridge)
 	if not _fuel_resource.fuel_depleted.is_connected(_on_player_out_of_fuel):
@@ -261,7 +261,7 @@ func _exit_tree() -> void:
 	if is_instance_valid(_speed_resource):
 		if _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
 			_speed_resource.speed_updated.disconnect(_on_speed_updated_bridge)
-			
+
 	if is_instance_valid(_fuel_resource):
 		if _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
 			_fuel_resource.fuel_changed.disconnect(_on_fuel_changed_bridge)
@@ -422,7 +422,9 @@ func check_fuel_warning() -> void:
 		return
 
 	var fuel_percent: float = (
-		0.0 if _fuel_resource.max_fuel <= 0.0 else (_fuel_resource.current_fuel / _fuel_resource.max_fuel) * 100.0
+		0.0
+		if _fuel_resource.max_fuel <= 0.0
+		else (_fuel_resource.current_fuel / _fuel_resource.max_fuel) * 100.0
 	)
 
 	if fuel_percent <= _fuel_resource.low_fuel_threshold and not fuel_stat.is_blinking:
