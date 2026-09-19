@@ -95,6 +95,13 @@ func _ready() -> void:
 
 	# Ensure the player always spawns with a full tank and default properties
 	fuel_resource.max_fuel = _settings.max_fuel
+	fuel_resource.current_fuel = _settings.max_fuel
+	_settings.current_fuel = fuel_resource.current_fuel
+	fuel_resource.base_consumption_rate = _settings.base_consumption_rate
+	fuel_resource.high_fuel_threshold = _settings.high_fuel_threshold
+	fuel_resource.medium_fuel_threshold = _settings.medium_fuel_threshold
+	fuel_resource.low_fuel_threshold = _settings.low_fuel_threshold
+	fuel_resource.no_fuel_threshold = _settings.no_fuel_threshold
 
 	# Setup speed boundaries and tuning properties from global settings
 	speed_resource.max_speed = _settings.max_speed
