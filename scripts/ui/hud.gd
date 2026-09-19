@@ -241,6 +241,7 @@ func setup_hud(
 	# Force an initial UI draw with the new authoritative data
 	fuel_bar.max_value = _fuel_resource.max_fuel
 	update_fuel_bar()
+	check_fuel_warning()
 	update_speed_bar()
 
 	Globals.log_message("HUD successfully wired to all Data Resources.", Globals.LogLevel.DEBUG)
