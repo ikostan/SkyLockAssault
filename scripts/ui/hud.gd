@@ -237,6 +237,14 @@ func setup_hud(
 		_weapon_resource.weapon_swapped.connect(_on_weapon_swapped)
 	if not _weapon_resource.ammo_updated.is_connected(_on_ammo_updated):
 		_weapon_resource.ammo_updated.connect(_on_ammo_updated)
+		
+	# Connection guards for external wiring
+	if not _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
+		_speed_resource.speed_updated.connect(_on_speed_updated_bridge)
+	if not _speed_resource.speed_low.is_connected(_on_speed_low):
+		_speed_resource.speed_low.connect(_on_speed_low)
+	if not _speed_resource.speed_maxed.is_connected(_on_speed_maxed):
+		_speed_resource.speed_maxed.connect(_on_speed_maxed)
 
 	# Force an initial UI draw with the new authoritative data
 	fuel_bar.max_value = _fuel_resource.max_fuel
@@ -262,6 +270,10 @@ func _exit_tree() -> void:
 	if is_instance_valid(_speed_resource):
 		if _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
 			_speed_resource.speed_updated.disconnect(_on_speed_updated_bridge)
+		if _speed_resource.speed_low.is_connected(_on_speed_low):
+			_speed_resource.speed_low.disconnect(_on_speed_low)
+		if _speed_resource.speed_maxed.is_connected(_on_speed_maxed):
+			_speed_resource.speed_maxed.disconnect(_on_speed_maxed)
 
 	if is_instance_valid(_fuel_resource):
 		if _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
@@ -379,18 +391,18 @@ func update_fuel_bar() -> void:
 ## Updates the speed bar value and color based on current speed.
 ## @return: void
 func update_speed_bar() -> void:
-	if not is_instance_valid(_settings):
+	if not is_instance_valid(_speed_resource):
 		return
 
+	speed_bar.max_value = _speed_resource.max_speed
 	speed_bar.value = _current_speed
 	var factor: float = 0.0
 
-	# Dynamically calculate thresholds from the Resource
-	var max_s: float = _settings.max_speed
-	var min_s: float = _settings.min_speed
+	var max_s: float = _speed_resource.max_speed
+	var min_s: float = _speed_resource.min_speed
 	var high_red_thresh: float = max_s * HIGH_RED_FRACTION
-	var high_yellow_thresh: float = max_s * _settings.high_yellow_fraction
-	var low_yellow_thresh: float = min_s + (max_s - min_s) * _settings.low_yellow_fraction
+	var high_yellow_thresh: float = max_s * _speed_resource.high_yellow_fraction
+	var low_yellow_thresh: float = min_s + (max_s - min_s) * _speed_resource.low_yellow_fraction
 	var low_red_thresh: float = min_s
 
 	if _current_speed >= high_red_thresh:
@@ -439,14 +451,13 @@ func check_fuel_warning() -> void:
 ## Checks speed and starts/stops label blinking if approaching or exceeding limits.
 ## @return: void
 func check_speed_warning() -> void:
-	if not is_instance_valid(_settings):
+	if not is_instance_valid(_speed_resource):
 		return
 
-	# Dynamically calculate thresholds from the Resource
-	var high_yellow_thresh: float = _settings.max_speed * _settings.high_yellow_fraction
+	var high_yellow_thresh: float = _speed_resource.max_speed * _speed_resource.high_yellow_fraction
 	var low_yellow_thresh: float = (
-		_settings.min_speed
-		+ (_settings.max_speed - _settings.min_speed) * _settings.low_yellow_fraction
+		_speed_resource.min_speed
+		+ (_speed_resource.max_speed - _speed_resource.min_speed) * _speed_resource.low_yellow_fraction
 	)
 
 	if (
@@ -571,4 +582,14 @@ func _on_weapon_swapped(_index: int, weapon_name: String) -> void:
 ## @return: void
 func _on_ammo_updated(_current: int, _max_ammo: int) -> void:
 	# TODO: Update ammo counter UI here when elements are added
+	pass
+
+
+func _on_speed_low(_threshold: float) -> void:
+	# Optional handling for low speed warning signal
+	pass
+
+
+func _on_speed_maxed() -> void:
+	# Optional handling for max speed signal
 	pass
