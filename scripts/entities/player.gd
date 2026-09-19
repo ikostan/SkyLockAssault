@@ -102,6 +102,8 @@ func _ready() -> void:
 	speed_resource.acceleration = _settings.acceleration
 	speed_resource.deceleration = _settings.deceleration
 	speed_resource.lateral_speed = _settings.lateral_speed
+	speed_resource.high_yellow_fraction = _settings.high_yellow_fraction
+	speed_resource.low_yellow_fraction = _settings.low_yellow_fraction
 	speed_resource.current_speed = 250.0
 
 	# Initialize timers and observers
@@ -130,6 +132,10 @@ func _ready() -> void:
 	fuel_resource.fuel_depleted.connect(_on_player_out_of_fuel)
 	fuel_resource.fuel_changed.connect(_on_fuel_changed)
 
+	# Guarded reverse-compatibility listener
+	if not _settings.setting_changed.is_connected(_on_setting_changed):
+		_settings.setting_changed.connect(_on_setting_changed)
+
 	if weapon:
 		Globals.log_message("Player ready. Weapons loaded.", Globals.LogLevel.DEBUG)
 	else:
@@ -144,6 +150,8 @@ func _exit_tree() -> void:
 		fuel_resource.fuel_depleted.disconnect(_on_player_out_of_fuel)
 	if fuel_resource.fuel_changed.is_connected(_on_fuel_changed):
 		fuel_resource.fuel_changed.disconnect(_on_fuel_changed)
+	if is_instance_valid(_settings) and _settings.setting_changed.is_connected(_on_setting_changed):
+		_settings.setting_changed.disconnect(_on_setting_changed)
 
 
 ## Observer pattern callback to react to updates from the local fuel resource.
@@ -284,3 +292,14 @@ func _physics_process(_delta: float) -> void:
 	player.position.y = clamp(player.position.y, player_y_min, player_y_max)
 
 	player.move_and_slide()
+
+
+## Guarded compatibility listener for legacy external fuel mutations.
+## Ensures that if legacy code or tests modify Globals.settings directly,
+## the authoritative FuelResource stays in sync.
+## @param setting_name: The name of the modified setting.
+## @param new_value: The updated value.
+## @return: void
+func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
+	if setting_name == "current_fuel" and fuel_resource.current_fuel != float(new_value):
+		fuel_resource.current_fuel = float(new_value)
