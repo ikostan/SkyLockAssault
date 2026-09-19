@@ -57,7 +57,7 @@ window/vsync/vsync_mode=0
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg", "res://addons/gdunit4_coverage/plugin.cfg")
+enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg", "res://addons/gdunit4_coverage/plugin.cfg", "res://addons/gut/plugin.cfg")
 
 [game]
 

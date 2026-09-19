@@ -45,6 +45,23 @@ func before() -> void:
 			InputMap.add_action(action)
 		InputMap.action_erase_events(action)
 
+	# CRITICAL FIX: Clean up disk test artifacts BEFORE tests run.
+	# Prevents ERR_FILE_CORRUPT crashes if previous test runs were aborted
+	# and left unencrypted files on disk.
+	var paths: Array[String] = [
+		PATH_TEST_SETTINGS,
+		PATH_MULTI_TEST,
+		PATH_JOY_TEST,
+		PATH_DEFAULT_TEST,
+		PATH_UNBOUND_TEST,
+		PATH_MULTI_ACTION,
+		PATH_MIGRATION_TEST,
+		PATH_NEW_FORMAT,
+	]
+	for p: String in paths:
+		if FileAccess.file_exists(p):
+			DirAccess.remove_absolute(p)
+
 
 @warning_ignore("unused_parameter")
 func after() -> void:

@@ -28,8 +28,13 @@ func before_each() -> void:
 	_hud = _mock_root.get_node("PlayerStatsPanel")
 	_player = _mock_root.get_node("Player")
 	
-	# Wire the HUD to the Player as main_scene.gd would
-	_hud.setup_hud(_player)
+	# ==========================================================
+	# PHASE 2 FIX: Update setup_hud to use Dependency Injection.
+	# Fallback to a new WeaponResource if the mock player doesn't 
+	# have the weapon node fully instantiated in this test scope.
+	# ==========================================================
+	var w_res: WeaponResource = _player.weapon.weapon_resource if _player.get("weapon") and _player.weapon.get("weapon_resource") else WeaponResource.new()
+	_hud.setup_hud(_player.fuel_resource, _player.speed_resource, w_res)
 
 
 ## Post-test cleanup: Restores global state to prevent test leakage.
@@ -100,6 +105,10 @@ func test_speed_bar_visual_states() -> void:
 	var max_s: float = Globals.settings.max_speed
 	var min_s: float = Globals.settings.min_speed
 	
+	# Synchronize the injected mock resource to match the global settings
+	_player.speed_resource.max_speed = max_s
+	_player.speed_resource.min_speed = min_s
+	
 	# Dynamically calculate the thresholds used by the HUD
 	var high_red_thresh: float = max_s * _hud.HIGH_RED_FRACTION
 	var high_yellow_thresh: float = max_s * Globals.settings.high_yellow_fraction
@@ -107,23 +116,23 @@ func test_speed_bar_visual_states() -> void:
 	
 	# --- 1. Safe Zone (Solid Green) ---
 	var safe_speed: float = (low_yellow_thresh + high_yellow_thresh) / 2.0
-	_player.speed_changed.emit(safe_speed, max_s)
+	_player.speed_resource.speed_updated.emit(safe_speed)
 	assert_eq(_hud.get_speed_bar_color(), Color.GREEN, "Cruising speed must be solid Green.")
 	
 	# --- 2. High Speed Warning (Green to Yellow Lerp) ---
 	var high_speed: float = high_yellow_thresh + ((high_red_thresh - high_yellow_thresh) / 2.0)
-	_player.speed_changed.emit(high_speed, max_s)
+	_player.speed_resource.speed_updated.emit(high_speed)
 	var expected_yellow: Color = Color.GREEN.lerp(Color.YELLOW, 0.5)
 	assert_true(_hud.get_speed_bar_color().is_equal_approx(expected_yellow), "High speed must lerp towards Yellow.")
 	
 	# --- 3. Overspeed Critical (Yellow to Dark Red Lerp) ---
 	var overspeed: float = high_red_thresh + ((max_s - high_red_thresh) / 2.0)
-	_player.speed_changed.emit(overspeed, max_s)
+	_player.speed_resource.speed_updated.emit(overspeed)
 	var expected_dark: Color = Color.YELLOW.lerp(_hud.DARK_RED, 0.5)
 	assert_true(_hud.get_speed_bar_color().is_equal_approx(expected_dark), "Overspeed must lerp towards Dark Red.")
 	
 	# --- 4. Stall Critical (Solid Dark Red) ---
-	_player.speed_changed.emit(min_s, max_s)
+	_player.speed_resource.speed_updated.emit(min_s)
 	assert_eq(_hud.get_speed_bar_color(), _hud.DARK_RED, "Stall speed must be solid Dark Red.")
 
 
@@ -135,17 +144,21 @@ func test_speed_bar_visual_states() -> void:
 func test_warning_blinkers_activate_and_deactivate() -> void:
 	gut.p("Testing: Warning labels start and stop blinking seamlessly across thresholds.")
 	
+	# Sync mock resource
+	_player.speed_resource.max_speed = Globals.settings.max_speed
+	_player.speed_resource.min_speed = Globals.settings.min_speed
+	
 	# --- Speed Blinker Test ---
 	var safe_speed: float = (Globals.settings.max_speed + Globals.settings.min_speed) / 2.0
 	var danger_speed: float = Globals.settings.max_speed * 0.95
 	
-	# 1. Enter danger zone via simulated Player emission
-	_player.speed_changed.emit(danger_speed, Globals.settings.max_speed)
+	# 1. Enter danger zone via simulated Resource emission
+	_player.speed_resource.speed_updated.emit(danger_speed)
 	assert_true(_hud.is_speed_warning_active(), "Speed blinker must activate in the danger zone.")
 	assert_true(_hud.is_speed_timer_running(), "Speed blink timer must be running.")
 	
 	# 2. Return to safe zone
-	_player.speed_changed.emit(safe_speed, Globals.settings.max_speed)
+	_player.speed_resource.speed_updated.emit(safe_speed)
 	assert_false(_hud.is_speed_warning_active(), "Speed blinker must deactivate in the safe zone.")
 	assert_false(_hud.is_speed_timer_running(), "Speed blink timer must halt.")
 	
@@ -165,10 +178,12 @@ func test_warning_blinkers_activate_and_deactivate() -> void:
 
 ## test_hud_reacts_to_player_signals | Observer Integration
 func test_hud_reacts_to_player_signals() -> void:
-	gut.p("Testing: HUD correctly processes speed_changed signals from the Player.")
+	gut.p("Testing: HUD correctly processes speed_updated signals from the new SpeedResource.")
 	
-	# Simulate the Player broadcasting a new speed natively
-	_player.speed_changed.emit(400.0, 800.0)
+	_player.speed_resource.max_speed = 800.0
+	
+	# Simulate the Resource broadcasting a new speed natively
+	_player.speed_resource.speed_updated.emit(400.0)
 	
 	assert_eq(_hud.get_current_speed(), 400.0, "HUD must internally cache the new speed.")
 	assert_eq(_hud.speed_bar.max_value, 800.0, "HUD must update the progress bar maximum.")
@@ -178,8 +193,10 @@ func test_hud_reacts_to_player_signals() -> void:
 func test_hud_reacts_to_flameout_signal() -> void:
 	gut.p("Testing: HUD forces speed to 0.0 upon receiving a fuel_depleted signal.")
 	
+	_player.speed_resource.max_speed = Globals.settings.max_speed
+	
 	# Establish a cruising speed
-	_player.speed_changed.emit(300.0, Globals.settings.max_speed)
+	_player.speed_resource.speed_updated.emit(300.0)
 	
 	# Broadcast flameout globally
 	Globals.settings.current_fuel = 0.0
