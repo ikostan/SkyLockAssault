@@ -331,9 +331,11 @@ func _on_player_out_of_fuel() -> void:
 	update_speed_bar()
 	check_speed_warning()
 
+
 # ==========================================
 # UI UPDATE LOGIC
 # ==========================================
+
 
 ## Updates the fuel bar's visual fill and color based on the current fuel level.
 ## @return: void
