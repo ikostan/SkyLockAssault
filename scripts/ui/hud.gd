@@ -331,11 +331,9 @@ func _on_player_out_of_fuel() -> void:
 	update_speed_bar()
 	check_speed_warning()
 
-
 # ==========================================
 # UI UPDATE LOGIC
 # ==========================================
-
 
 ## Updates the fuel bar's visual fill and color based on the current fuel level.
 ## @return: void
@@ -346,6 +344,8 @@ func update_fuel_bar() -> void:
 	var cur_fuel: float = _fuel_resource.current_fuel
 	var m_fuel: float = _fuel_resource.max_fuel
 
+	# FIX: Dynamically sync the progress bar's maximum limit on UI draw
+	fuel_bar.max_value = m_fuel
 	fuel_bar.value = cur_fuel
 	var fuel_percent: float = 0.0 if m_fuel <= 0.0 else (cur_fuel / m_fuel) * 100.0
 	var factor: float = 0.0

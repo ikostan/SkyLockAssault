@@ -93,13 +93,10 @@ func test_flameout_resets_speed_and_emits_signal() -> void:
 	
 	_player.current_speed = 300.0
 	
-	# Use the private backing field `_current_fuel` to bypass the public setter.
-	# This sets up the empty tank condition without automatically triggering the fuel_depleted signal,
-	# ensuring our manual call below is actually what we are testing!
-	Globals.settings._current_fuel = 0.0 
-	
-	# Manually trigger the flameout handler
-	_player._on_player_out_of_fuel()
+	# FIX: Mutate the authoritative Data Resource instead of the legacy Globals singleton.
+	# Setting this to 0.0 will natively trigger the `fuel_depleted` signal inside 
+	# the resource, which `player.gd` is listening to, correctly firing `_on_player_out_of_fuel()`.
+	_player.fuel_resource.current_fuel = 0.0 
 	
 	assert_eq(_player.current_speed, 0.0, "Speed must forcibly reset to 0.0 on zero fuel.")
 	assert_signal_emitted(_player, "speed_changed", "Flameout must broadcast the speed halt to UI.")
@@ -114,7 +111,10 @@ func test_ui_updates_on_speed_signal() -> void:
 	gut.p("Testing: Target UI updates instantly when speed_changed fires.")
 	
 	var hud_panel: Variant = _mock_root.get_node("PlayerStatsPanel")
-	hud_panel.setup_hud(_player)
+	
+	# Explicitly inject the three required resources instead of the raw player node
+	var dummy_weapon_res: WeaponResource = WeaponResource.new()
+	hud_panel.setup_hud(_player.fuel_resource, _player.speed_resource, dummy_weapon_res)
 	
 	hud_panel.speed_bar.value = 0.0
 	_player.current_speed = 500.0 # Force local sync
