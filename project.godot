@@ -74,7 +74,7 @@ hooks/session_hooks=Dictionary[String, bool]({
 
 [gdunit4_coverage]
 
-runner/gdcov_path="C:/Users/super/Documents/GitHub/SkyLockAssault/bin/gdcov-4.7-stable.exe"
+runner/gdcov_path="./bin/gdcov-4.7-stable.exe"
 
 [input]
 
