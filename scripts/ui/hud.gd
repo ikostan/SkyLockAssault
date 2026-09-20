@@ -237,7 +237,7 @@ func setup_hud(
 		_weapon_resource.weapon_swapped.connect(_on_weapon_swapped)
 	if not _weapon_resource.ammo_updated.is_connected(_on_ammo_updated):
 		_weapon_resource.ammo_updated.connect(_on_ammo_updated)
-		
+
 	# Connection guards for external wiring
 	if not _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
 		_speed_resource.speed_updated.connect(_on_speed_updated_bridge)
@@ -457,7 +457,10 @@ func check_speed_warning() -> void:
 	var high_yellow_thresh: float = _speed_resource.max_speed * _speed_resource.high_yellow_fraction
 	var low_yellow_thresh: float = (
 		_speed_resource.min_speed
-		+ (_speed_resource.max_speed - _speed_resource.min_speed) * _speed_resource.low_yellow_fraction
+		+ (
+			(_speed_resource.max_speed - _speed_resource.min_speed)
+			* _speed_resource.low_yellow_fraction
+		)
 	)
 
 	if (
