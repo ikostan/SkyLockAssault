@@ -105,7 +105,11 @@ var _current_speed: float = 250.0
 
 var _fuel_bar_style: StyleBoxFlat
 var _speed_bar_style: StyleBoxFlat
-var _connected_player: Node2D = null  # NEW: Track the player for clean disconnects
+
+# --- Data Resource Injection Tracking ---
+var _fuel_resource: FuelResource = null
+var _speed_resource: SpeedResource = null
+var _weapon_resource: WeaponResource = null
 
 # --- Node References ---
 # Paths assume this script is attached directly to "PlayerStatsPanel"
@@ -125,7 +129,6 @@ func _ready() -> void:
 	_settings = Globals.settings if is_instance_valid(Globals) else null
 
 	if not is_instance_valid(_settings):
-		# FIX 1: Use Globals logger or print to bypass GUT engine-level warning captures
 		if is_instance_valid(Globals):
 			Globals.log_message(
 				"HUD couldn't find Globals.settings! Creating fallback settings resource.",
@@ -140,15 +143,14 @@ func _ready() -> void:
 		if is_instance_valid(Globals):
 			Globals.settings = _settings
 
-	# FIX 2: Add connection guards to prevent ERR_INVALID_PARAMETER if _ready runs multiple times
 	if not _settings.setting_changed.is_connected(_on_setting_changed):
 		_settings.setting_changed.connect(_on_setting_changed)
-	if not _settings.fuel_depleted.is_connected(_on_player_out_of_fuel):
-		_settings.fuel_depleted.connect(_on_player_out_of_fuel)
+	# REMOVED: _settings.fuel_depleted connection (now handled by FuelResource)
 
 	# --- Fuel UI Setup ---
 	_fuel_bar_style = StyleBoxFlat.new()
 	set_bar_fill_style(fuel_bar, _fuel_bar_style)
+	# NOTE: max_value will be updated dynamically once setup_hud is called
 	fuel_bar.max_value = _settings.max_fuel
 
 	fuel_stat = StatManager.new(
@@ -161,14 +163,13 @@ func _ready() -> void:
 	if fuel_blink_timer:
 		fuel_blink_timer.wait_time = BLINK_INTERVAL
 		fuel_blink_timer.one_shot = false
-		# FIX 2: Connection guard
 		if not fuel_blink_timer.timeout.is_connected(_on_fuel_blink_timer_timeout):
 			fuel_blink_timer.timeout.connect(_on_fuel_blink_timer_timeout)
 
 	# --- Speed UI Setup ---
 	_speed_bar_style = StyleBoxFlat.new()
 	set_bar_fill_style(speed_bar, _speed_bar_style)
-	speed_bar.max_value = _settings.max_speed  # Pull directly from resource!
+	speed_bar.max_value = _settings.max_speed
 
 	speed_stat = StatManager.new(
 		speed_label,
@@ -180,41 +181,78 @@ func _ready() -> void:
 	if speed_blink_timer:
 		speed_blink_timer.wait_time = BLINK_INTERVAL
 		speed_blink_timer.one_shot = false
-		# FIX 2: Connection guard
 		if not speed_blink_timer.timeout.is_connected(_on_speed_blink_timer_timeout):
 			speed_blink_timer.timeout.connect(_on_speed_blink_timer_timeout)
 
-	# Initial UI Draw
+
+## Wires the HUD to the injected data resources.
+## Call this from your main level script when instantiating the player and UI.
+## @param fuel_res: The authoritative FuelResource instance.
+## @param speed_res: The authoritative SpeedResource instance.
+## @param weapon_res: The authoritative WeaponResource instance.
+## @return: void
+func setup_hud(
+	fuel_res: FuelResource, speed_res: SpeedResource, weapon_res: WeaponResource
+) -> void:
+	if (
+		not is_instance_valid(fuel_res)
+		or not is_instance_valid(speed_res)
+		or not is_instance_valid(weapon_res)
+	):
+		push_error("HUD setup failed: Invalid resource injection.")
+		return
+
+	# Safely disconnect old resources if we are hot-swapping nodes
+	if is_instance_valid(_speed_resource) and _speed_resource != speed_res:
+		if _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
+			_speed_resource.speed_updated.disconnect(_on_speed_updated_bridge)
+
+	if is_instance_valid(_fuel_resource) and _fuel_resource != fuel_res:
+		if _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
+			_fuel_resource.fuel_changed.disconnect(_on_fuel_changed_bridge)
+		if _fuel_resource.fuel_depleted.is_connected(_on_player_out_of_fuel):
+			_fuel_resource.fuel_depleted.disconnect(_on_player_out_of_fuel)
+
+	if is_instance_valid(_weapon_resource) and _weapon_resource != weapon_res:
+		if _weapon_resource.weapon_swapped.is_connected(_on_weapon_swapped):
+			_weapon_resource.weapon_swapped.disconnect(_on_weapon_swapped)
+		if _weapon_resource.ammo_updated.is_connected(_on_ammo_updated):
+			_weapon_resource.ammo_updated.disconnect(_on_ammo_updated)
+
+	# Idempotency assignment for injected resources
+	_fuel_resource = fuel_res
+	_speed_resource = speed_res
+	_weapon_resource = weapon_res
+
+	# Connection guards for external wiring
+	if not _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
+		_speed_resource.speed_updated.connect(_on_speed_updated_bridge)
+
+	if not _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
+		_fuel_resource.fuel_changed.connect(_on_fuel_changed_bridge)
+	if not _fuel_resource.fuel_depleted.is_connected(_on_player_out_of_fuel):
+		_fuel_resource.fuel_depleted.connect(_on_player_out_of_fuel)
+
+	if not _weapon_resource.weapon_swapped.is_connected(_on_weapon_swapped):
+		_weapon_resource.weapon_swapped.connect(_on_weapon_swapped)
+	if not _weapon_resource.ammo_updated.is_connected(_on_ammo_updated):
+		_weapon_resource.ammo_updated.connect(_on_ammo_updated)
+
+	# Connection guards for external wiring
+	if not _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
+		_speed_resource.speed_updated.connect(_on_speed_updated_bridge)
+	if not _speed_resource.speed_low.is_connected(_on_speed_low):
+		_speed_resource.speed_low.connect(_on_speed_low)
+	if not _speed_resource.speed_maxed.is_connected(_on_speed_maxed):
+		_speed_resource.speed_maxed.connect(_on_speed_maxed)
+
+	# Force an initial UI draw with the new authoritative data
+	fuel_bar.max_value = _fuel_resource.max_fuel
 	update_fuel_bar()
+	check_fuel_warning()
 	update_speed_bar()
 
-
-## Wires the HUD to the Player node's exported signals.
-## Call this from your main level script when instantiating the player and UI.
-## @param player_node: The Player Node2D instance.
-## @return: void
-func setup_hud(player_node: Node2D) -> void:
-	if not is_instance_valid(player_node):
-		push_error("HUD setup failed: Invalid player node.")
-		return
-
-	# NEW FIX: Verify the signal actually exists before attempting to access it!
-	if not player_node.has_signal("speed_changed"):
-		push_error("HUD setup failed: Provided node lacks 'speed_changed' signal.")
-		return
-
-	# Safely disconnect the old player if we are hot-swapping nodes
-	if is_instance_valid(_connected_player) and _connected_player != player_node:
-		if _connected_player.speed_changed.is_connected(_on_player_speed_changed):
-			_connected_player.speed_changed.disconnect(_on_player_speed_changed)
-
-	_connected_player = player_node
-
-	# Connection guard for external wiring
-	if not _connected_player.speed_changed.is_connected(_on_player_speed_changed):
-		_connected_player.speed_changed.connect(_on_player_speed_changed)
-
-	Globals.log_message("HUD successfully wired to Player signals.", Globals.LogLevel.DEBUG)
+	Globals.log_message("HUD successfully wired to all Data Resources.", Globals.LogLevel.DEBUG)
 
 
 ## Retrieves the effective text color of a Label, considering theme overrides.
@@ -228,24 +266,48 @@ func get_label_text_color(label: Label) -> Color:
 ## Safely disconnects global resource signals to prevent memory leaks.
 ## @return: void
 func _exit_tree() -> void:
-	# NEW FIX: Explicitly sever the connection to the player
-	if is_instance_valid(_connected_player):
-		if _connected_player.speed_changed.is_connected(_on_player_speed_changed):
-			_connected_player.speed_changed.disconnect(_on_player_speed_changed)
+	# Explicitly sever the connection to the data resources
+	if is_instance_valid(_speed_resource):
+		if _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
+			_speed_resource.speed_updated.disconnect(_on_speed_updated_bridge)
+		if _speed_resource.speed_low.is_connected(_on_speed_low):
+			_speed_resource.speed_low.disconnect(_on_speed_low)
+		if _speed_resource.speed_maxed.is_connected(_on_speed_maxed):
+			_speed_resource.speed_maxed.disconnect(_on_speed_maxed)
+
+	if is_instance_valid(_fuel_resource):
+		if _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
+			_fuel_resource.fuel_changed.disconnect(_on_fuel_changed_bridge)
+		if _fuel_resource.fuel_depleted.is_connected(_on_player_out_of_fuel):
+			_fuel_resource.fuel_depleted.disconnect(_on_player_out_of_fuel)
+
+	if is_instance_valid(_weapon_resource):
+		if _weapon_resource.weapon_swapped.is_connected(_on_weapon_swapped):
+			_weapon_resource.weapon_swapped.disconnect(_on_weapon_swapped)
+		if _weapon_resource.ammo_updated.is_connected(_on_ammo_updated):
+			_weapon_resource.ammo_updated.disconnect(_on_ammo_updated)
 
 	if is_instance_valid(_settings):
 		if _settings.setting_changed.is_connected(_on_setting_changed):
 			_settings.setting_changed.disconnect(_on_setting_changed)
-		if _settings.fuel_depleted.is_connected(_on_player_out_of_fuel):
-			_settings.fuel_depleted.disconnect(_on_player_out_of_fuel)
 
 
 # ==========================================
-# SIGNAL HANDLERS
+# SIGNAL HANDLERS & BRIDGES
 # ==========================================
 
 
-## Callback triggered externally by the Player node when its speed changes.
+## Compatibility bridge to route the new SpeedResource signal into the legacy logic.
+## @param new_speed: The updated speed value from the resource.
+## @return: void
+func _on_speed_updated_bridge(new_speed: float) -> void:
+	var max_spd: float = (
+		_speed_resource.max_speed if is_instance_valid(_speed_resource) else speed_bar.max_value
+	)
+	_on_player_speed_changed(new_speed, max_spd)
+
+
+## Legacy pathway: Callback triggered externally by the Player node when its speed changes.
 ## @param new_speed: The current forward speed of the player.
 ## @param max_speed: The absolute maximum speed limit.
 ## @return: void
@@ -264,27 +326,9 @@ func _on_setting_changed(setting_name: String, _new_value: Variant) -> void:
 	if not is_instance_valid(_settings):
 		return
 
-	# --- Handle Fuel Updates ---
-	if (
-		setting_name
-		in [
-			"current_fuel",
-			"max_fuel",
-			"high_fuel_threshold",
-			"medium_fuel_threshold",
-			"low_fuel_threshold",
-			"no_fuel_threshold"
-		]
-	):
-		if setting_name == "max_fuel":
-			fuel_bar.max_value = _settings.max_fuel
-
-		update_fuel_bar()
-		check_fuel_warning()
-
 	# --- Handle Speed Updates ---
-	# NEW FIX: React immediately to dynamic threshold or speed limit changes
-	elif setting_name in ["max_speed", "min_speed", "high_yellow_fraction", "low_yellow_fraction"]:
+	# React immediately to dynamic threshold or speed limit changes
+	if setting_name in ["max_speed", "min_speed", "high_yellow_fraction", "low_yellow_fraction"]:
 		if setting_name == "max_speed":
 			speed_bar.max_value = _settings.max_speed
 
@@ -309,20 +353,22 @@ func _on_player_out_of_fuel() -> void:
 ## Updates the fuel bar's visual fill and color based on the current fuel level.
 ## @return: void
 func update_fuel_bar() -> void:
-	if not is_instance_valid(_settings):
+	if not is_instance_valid(_fuel_resource):
 		return
 
-	var cur_fuel: float = _settings.current_fuel
-	var m_fuel: float = _settings.max_fuel
+	var cur_fuel: float = _fuel_resource.current_fuel
+	var m_fuel: float = _fuel_resource.max_fuel
 
+	# FIX: Dynamically sync the progress bar's maximum limit on UI draw
+	fuel_bar.max_value = m_fuel
 	fuel_bar.value = cur_fuel
 	var fuel_percent: float = 0.0 if m_fuel <= 0.0 else (cur_fuel / m_fuel) * 100.0
 	var factor: float = 0.0
 
-	var high: float = _settings.high_fuel_threshold
-	var medium: float = _settings.medium_fuel_threshold
-	var low: float = _settings.low_fuel_threshold
-	var no_fuel: float = _settings.no_fuel_threshold
+	var high: float = _fuel_resource.high_fuel_threshold
+	var medium: float = _fuel_resource.medium_fuel_threshold
+	var low: float = _fuel_resource.low_fuel_threshold
+	var no_fuel: float = _fuel_resource.no_fuel_threshold
 
 	if fuel_percent > high:
 		_fuel_bar_style.bg_color = Color.GREEN
@@ -345,18 +391,18 @@ func update_fuel_bar() -> void:
 ## Updates the speed bar value and color based on current speed.
 ## @return: void
 func update_speed_bar() -> void:
-	if not is_instance_valid(_settings):
+	if not is_instance_valid(_speed_resource):
 		return
 
+	speed_bar.max_value = _speed_resource.max_speed
 	speed_bar.value = _current_speed
 	var factor: float = 0.0
 
-	# Dynamically calculate thresholds from the Resource
-	var max_s: float = _settings.max_speed
-	var min_s: float = _settings.min_speed
+	var max_s: float = _speed_resource.max_speed
+	var min_s: float = _speed_resource.min_speed
 	var high_red_thresh: float = max_s * HIGH_RED_FRACTION
-	var high_yellow_thresh: float = max_s * _settings.high_yellow_fraction
-	var low_yellow_thresh: float = min_s + (max_s - min_s) * _settings.low_yellow_fraction
+	var high_yellow_thresh: float = max_s * _speed_resource.high_yellow_fraction
+	var low_yellow_thresh: float = min_s + (max_s - min_s) * _speed_resource.low_yellow_fraction
 	var low_red_thresh: float = min_s
 
 	if _current_speed >= high_red_thresh:
@@ -387,30 +433,34 @@ func update_speed_bar() -> void:
 ## Activates or deactivates the UI warning blinker accordingly.
 ## @return: void
 func check_fuel_warning() -> void:
-	if not is_instance_valid(_settings):
+	if not is_instance_valid(_fuel_resource):
 		return
 
 	var fuel_percent: float = (
-		0.0 if _settings.max_fuel <= 0.0 else (_settings.current_fuel / _settings.max_fuel) * 100.0
+		0.0
+		if _fuel_resource.max_fuel <= 0.0
+		else (_fuel_resource.current_fuel / _fuel_resource.max_fuel) * 100.0
 	)
 
-	if fuel_percent <= _settings.low_fuel_threshold and not fuel_stat.is_blinking:
+	if fuel_percent <= _fuel_resource.low_fuel_threshold and not fuel_stat.is_blinking:
 		fuel_stat.start_blinking()
-	elif fuel_percent > _settings.low_fuel_threshold and fuel_stat.is_blinking:
+	elif fuel_percent > _fuel_resource.low_fuel_threshold and fuel_stat.is_blinking:
 		fuel_stat.stop_blinking()
 
 
 ## Checks speed and starts/stops label blinking if approaching or exceeding limits.
 ## @return: void
 func check_speed_warning() -> void:
-	if not is_instance_valid(_settings):
+	if not is_instance_valid(_speed_resource):
 		return
 
-	# Dynamically calculate thresholds from the Resource
-	var high_yellow_thresh: float = _settings.max_speed * _settings.high_yellow_fraction
+	var high_yellow_thresh: float = _speed_resource.max_speed * _speed_resource.high_yellow_fraction
 	var low_yellow_thresh: float = (
-		_settings.min_speed
-		+ (_settings.max_speed - _settings.min_speed) * _settings.low_yellow_fraction
+		_speed_resource.min_speed
+		+ (
+			(_speed_resource.max_speed - _speed_resource.min_speed)
+			* _speed_resource.low_yellow_fraction
+		)
 	)
 
 	if (
@@ -510,3 +560,39 @@ func is_speed_warning_active() -> bool:
 ## @return: bool - True if the timer node is valid and not stopped, false otherwise.
 func is_speed_timer_running() -> bool:
 	return speed_stat != null and speed_stat.is_timer_running()
+
+
+## Compatibility bridge to route the new FuelResource signal into the UI updates.
+## @param _new_fuel: The updated fuel value from the resource.
+## @return: void
+func _on_fuel_changed_bridge(_new_fuel: float) -> void:
+	update_fuel_bar()
+	check_fuel_warning()
+
+
+## Callback triggered when the WeaponResource index changes.
+## @param _index: The array index of the newly equipped weapon.
+## @param weapon_name: The string identifier of the weapon.
+## @return: void
+func _on_weapon_swapped(_index: int, weapon_name: String) -> void:
+	Globals.log_message("HUD: Weapon swapped to " + weapon_name, Globals.LogLevel.DEBUG)
+	# TODO: Update weapon icon/name UI here when elements are added
+
+
+## Callback triggered when the WeaponResource ammo count changes.
+## @param _current: The current ammo count.
+## @param _max_ammo: The maximum ammo capacity.
+## @return: void
+func _on_ammo_updated(_current: int, _max_ammo: int) -> void:
+	# TODO: Update ammo counter UI here when elements are added
+	pass
+
+
+func _on_speed_low() -> void:
+	# Optional handling for low speed warning signal
+	pass
+
+
+func _on_speed_maxed() -> void:
+	# Optional handling for max speed signal
+	pass

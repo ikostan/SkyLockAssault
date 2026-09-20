@@ -48,15 +48,20 @@ func test_ui_updates_automatically_on_resource_change() -> void:
 	gut.p("Testing: Player UI responds seamlessly to external fuel updates.")
 	
 	var hud_panel: Variant = _mock_root.get_node("PlayerStatsPanel")
-	hud_panel.setup_hud(_player)
+	
+	# Explicitly inject the three required resources instead of the raw player node
+	var dummy_weapon_res: WeaponResource = WeaponResource.new()
+	hud_panel.setup_hud(_player.fuel_resource, _player.speed_resource, dummy_weapon_res)
 	
 	var fuel_bar: ProgressBar = hud_panel.fuel_bar
 	
-	Globals.settings.max_fuel = 200.0
-	Globals.settings.current_fuel = 150.0 
+	# FIX: Mutate the injected Resource directly, not Globals.settings!
+	_player.fuel_resource.max_fuel = 200.0
+	_player.fuel_resource.current_fuel = 150.0 
 	
 	assert_eq(fuel_bar.max_value, 200.0, "Fuel Bar max_value must sync with Resource max.")
 	assert_eq(fuel_bar.value, 150.0, "Fuel Bar value must sync automatically.")
+
 
 ## test_engine_stops_on_zero_fuel | Component State
 ## :rtype: void
