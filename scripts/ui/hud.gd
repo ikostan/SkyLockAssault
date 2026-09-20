@@ -588,7 +588,7 @@ func _on_ammo_updated(_current: int, _max_ammo: int) -> void:
 	pass
 
 
-func _on_speed_low(_threshold: float) -> void:
+func _on_speed_low() -> void:
 	# Optional handling for low speed warning signal
 	pass
 
