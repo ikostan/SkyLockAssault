@@ -100,8 +100,8 @@ class StatManager:
 var fuel_stat: StatManager
 var speed_stat: StatManager
 
-var _settings: GameSettingsResource = null
-var _current_speed: float = 250.0
+# var _settings: GameSettingsResource = null
+# var _current_speed: float = 250.0
 
 var _fuel_bar_style: StyleBoxFlat
 var _speed_bar_style: StyleBoxFlat
@@ -126,33 +126,10 @@ var _weapon_resource: WeaponResource = null
 ## Initializes UI styles, establishes local states, and connects to global settings.
 ## @return: void
 func _ready() -> void:
-	_settings = Globals.settings if is_instance_valid(Globals) else null
-
-	if not is_instance_valid(_settings):
-		if is_instance_valid(Globals):
-			Globals.log_message(
-				"HUD couldn't find Globals.settings! Creating fallback settings resource.",
-				Globals.LogLevel.WARNING
-			)
-		else:
-			print(
-				"WARNING: HUD couldn't find Globals.settings! Creating fallback settings resource."
-			)
-
-		_settings = GameSettingsResource.new()
-		if is_instance_valid(Globals):
-			Globals.settings = _settings
-
-	if not _settings.setting_changed.is_connected(_on_setting_changed):
-		_settings.setting_changed.connect(_on_setting_changed)
-	# REMOVED: _settings.fuel_depleted connection (now handled by FuelResource)
-
 	# --- Fuel UI Setup ---
 	_fuel_bar_style = StyleBoxFlat.new()
 	set_bar_fill_style(fuel_bar, _fuel_bar_style)
-	# NOTE: max_value will be updated dynamically once setup_hud is called
-	fuel_bar.max_value = _settings.max_fuel
-
+	
 	fuel_stat = StatManager.new(
 		fuel_label,
 		fuel_blink_timer,
@@ -169,7 +146,6 @@ func _ready() -> void:
 	# --- Speed UI Setup ---
 	_speed_bar_style = StyleBoxFlat.new()
 	set_bar_fill_style(speed_bar, _speed_bar_style)
-	speed_bar.max_value = _settings.max_speed
 
 	speed_stat = StatManager.new(
 		speed_label,
@@ -287,10 +263,6 @@ func _exit_tree() -> void:
 		if _weapon_resource.ammo_updated.is_connected(_on_ammo_updated):
 			_weapon_resource.ammo_updated.disconnect(_on_ammo_updated)
 
-	if is_instance_valid(_settings):
-		if _settings.setting_changed.is_connected(_on_setting_changed):
-			_settings.setting_changed.disconnect(_on_setting_changed)
-
 
 # ==========================================
 # SIGNAL HANDLERS & BRIDGES
@@ -300,47 +272,17 @@ func _exit_tree() -> void:
 ## Compatibility bridge to route the new SpeedResource signal into the legacy logic.
 ## @param new_speed: The updated speed value from the resource.
 ## @return: void
-func _on_speed_updated_bridge(new_speed: float) -> void:
-	var max_spd: float = (
-		_speed_resource.max_speed if is_instance_valid(_speed_resource) else speed_bar.max_value
-	)
-	_on_player_speed_changed(new_speed, max_spd)
-
-
-## Legacy pathway: Callback triggered externally by the Player node when its speed changes.
-## @param new_speed: The current forward speed of the player.
-## @param max_speed: The absolute maximum speed limit.
-## @return: void
-func _on_player_speed_changed(new_speed: float, max_speed: float) -> void:
-	_current_speed = new_speed
-	speed_bar.max_value = max_speed
+func _on_speed_updated_bridge(_new_speed: float) -> void:
+	# Route directly to the UI updaters instead of the legacy player pathway
 	update_speed_bar()
 	check_speed_warning()
-
-
-## Observer pattern callback to react to updates from the global settings resource.
-## @param setting_name: The name of the property that was modified.
-## @param _new_value: The updated value of the property (unused directly here).
-## @return: void
-func _on_setting_changed(setting_name: String, _new_value: Variant) -> void:
-	if not is_instance_valid(_settings):
-		return
-
-	# --- Handle Speed Updates ---
-	# React immediately to dynamic threshold or speed limit changes
-	if setting_name in ["max_speed", "min_speed", "high_yellow_fraction", "low_yellow_fraction"]:
-		if setting_name == "max_speed":
-			speed_bar.max_value = _settings.max_speed
-
-		update_speed_bar()
-		check_speed_warning()
 
 
 ## Signal handler for global engine failure.
 ## Triggers immediate UI feedback for a flameout state.
 ## @return: void
 func _on_player_out_of_fuel() -> void:
-	_current_speed = 0.0
+	# The Player node sets the resource speed to 0.0. We just update the UI.
 	update_speed_bar()
 	check_speed_warning()
 
@@ -394,30 +336,32 @@ func update_speed_bar() -> void:
 	if not is_instance_valid(_speed_resource):
 		return
 
-	speed_bar.max_value = _speed_resource.max_speed
-	speed_bar.value = _current_speed
-	var factor: float = 0.0
-
+	var current_spd: float = _speed_resource.current_speed
 	var max_s: float = _speed_resource.max_speed
 	var min_s: float = _speed_resource.min_speed
+	
+	speed_bar.max_value = max_s
+	speed_bar.value = current_spd
+	var factor: float = 0.0
+
 	var high_red_thresh: float = max_s * HIGH_RED_FRACTION
 	var high_yellow_thresh: float = max_s * _speed_resource.high_yellow_fraction
 	var low_yellow_thresh: float = min_s + (max_s - min_s) * _speed_resource.low_yellow_fraction
 	var low_red_thresh: float = min_s
 
-	if _current_speed >= high_red_thresh:
-		factor = clamp((_current_speed - high_red_thresh) / (max_s - high_red_thresh), 0.0, 1.0)
+	if current_spd >= high_red_thresh:
+		factor = clamp((current_spd - high_red_thresh) / (max_s - high_red_thresh), 0.0, 1.0)
 		_speed_bar_style.bg_color = Color.YELLOW.lerp(DARK_RED, factor)
-	elif _current_speed >= high_yellow_thresh:
+	elif current_spd >= high_yellow_thresh:
 		factor = clamp(
-			(_current_speed - high_yellow_thresh) / (high_red_thresh - high_yellow_thresh), 0.0, 1.0
+			(current_spd - high_yellow_thresh) / (high_red_thresh - high_yellow_thresh), 0.0, 1.0
 		)
 		_speed_bar_style.bg_color = Color.GREEN.lerp(Color.YELLOW, factor)
-	elif _current_speed <= low_red_thresh:
+	elif current_spd <= low_red_thresh:
 		_speed_bar_style.bg_color = DARK_RED
-	elif _current_speed <= low_yellow_thresh:
+	elif current_spd <= low_yellow_thresh:
 		factor = clamp(
-			(low_yellow_thresh - _current_speed) / (low_yellow_thresh - low_red_thresh), 0.0, 1.0
+			(low_yellow_thresh - current_spd) / (low_yellow_thresh - low_red_thresh), 0.0, 1.0
 		)
 		_speed_bar_style.bg_color = Color.GREEN.lerp(Color.YELLOW, factor)
 	else:
@@ -453,7 +397,8 @@ func check_fuel_warning() -> void:
 func check_speed_warning() -> void:
 	if not is_instance_valid(_speed_resource):
 		return
-
+		
+	var current_spd: float = _speed_resource.current_speed
 	var high_yellow_thresh: float = _speed_resource.max_speed * _speed_resource.high_yellow_fraction
 	var low_yellow_thresh: float = (
 		_speed_resource.min_speed
@@ -464,12 +409,12 @@ func check_speed_warning() -> void:
 	)
 
 	if (
-		(_current_speed < low_yellow_thresh or _current_speed > high_yellow_thresh)
+		(current_spd < low_yellow_thresh or current_spd > high_yellow_thresh)
 		and not speed_stat.is_blinking
 	):
 		speed_stat.start_blinking()
 	elif (
-		(low_yellow_thresh <= _current_speed and _current_speed <= high_yellow_thresh)
+		(low_yellow_thresh <= current_spd and current_spd <= high_yellow_thresh)
 		and speed_stat.is_blinking
 	):
 		speed_stat.stop_blinking()
@@ -515,14 +460,9 @@ func set_bar_fill_style(bar: ProgressBar, bar_fill_style: StyleBoxFlat) -> void:
 ## Retrieves the current forward speed cached by the HUD.
 ## @return: float - The player's current speed value.
 func get_current_speed() -> float:
-	return _current_speed
-
-
-## Retrieves the active game settings resource driving the HUD's logic.
-## @return: GameSettingsResource - The global settings data container.
-func get_settings() -> GameSettingsResource:
-	return _settings
-
+	if is_instance_valid(_speed_resource):
+		return _speed_resource.current_speed
+	return 0.0
 
 ## Retrieves the current computed background color of the fuel progress bar.
 ## Useful for verifying threshold lerping logic in unit tests.
