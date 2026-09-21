@@ -24,10 +24,10 @@
 Combat airplane web game with fuel management, multiple weapons, multi-level,
 and adjustable difficulty.
 
-This is a dedicated Godot v4.5 game dev project on Windows 10 64-bit OS.
+This is a dedicated Godot v4.X game dev project.
 We'll be learning game dev here, starting with a simple main menu and expanding
 to core mechanics like player controls, enemy AI, and assaults in the sky.
-The repo is open-source at [SkyLockAssault](https://github.com/ikostan/SkyLockAssault).
+The source is publicly available at [SkyLockAssault](https://github.com/ikostan/SkyLockAssault) under a non-commercial license.
 
 You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 
@@ -96,11 +96,17 @@ Here's a high-level plan for upcoming features. Contributions welcome!
 - Future: Multiplayer elements, AI enemies, mobile export
   (post-launch based on community input).
 
-## Contributing
+## License
 
-Pull requests welcome for mechanics like enemy AI, levels, or web optimizations!
-Fork the repo and submit your ideas. See [CONTRIBUTING](CONTRIBUTING.md) for
-guidelines (create if needed).
+This project is **source-available** under the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0).
+
+- Free for personal, educational, research, hobby, and non-profit use.
+- Modification and redistribution are allowed **only** for non-commercial purposes.
+- **Commercial use is prohibited** without a separate commercial license from the copyright holder.
+
+For commercial licensing inquiries, contact via GitHub issues or X @EgorKostan.
+
+See the [LICENSE](LICENSE) file for the full terms.
 
 ## Player Feedback
 
