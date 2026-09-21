@@ -17,7 +17,7 @@
 ![Open Issues](https://img.shields.io/github/issues/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=red)
 [![All Contributors](https://img.shields.io/github/all-contributors/ikostan/SkyLockAssault?color=ee8449&style=flat-square)](#contributors)
 
-## A top-down online web browser game built with Godot 4.5
+## A top-down online web browser game built with Godot 4.X
 
 ![Sky Lock Assault](https://github.com/ikostan/SkyLockAssault/blob/main/files/img/main_menu_2.png)
 
