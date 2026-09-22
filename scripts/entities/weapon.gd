@@ -69,10 +69,18 @@ func switch_to(index: int) -> void:
 
 func fire() -> void:
 	if current_weapon and current_weapon.has_method("fire"):
-		Globals.log_message(
-			"Weapon.fire() delegating to " + str(current_weapon.name), Globals.LogLevel.DEBUG
-		)
-		current_weapon.fire()
+		# Check if we have ammo before firing (assuming < 0 is infinite ammo)
+		if weapon_resource.current_ammo > 0 or weapon_resource.max_ammo < 0:
+			Globals.log_message(
+				"Weapon.fire() delegating to " + str(current_weapon.name), Globals.LogLevel.DEBUG
+			)
+			current_weapon.fire()
+
+			# Deduct ammo to automatically trigger the ammo_updated signal via the setter
+			if weapon_resource.max_ammo >= 0:
+				weapon_resource.current_ammo -= 1
+		else:
+			Globals.log_message("Weapon.fire(): Out of ammo!", Globals.LogLevel.WARNING)
 	else:
 		push_error(
 			(

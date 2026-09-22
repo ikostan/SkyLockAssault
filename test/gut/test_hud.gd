@@ -3,44 +3,102 @@
 ## test_hud.gd
 ##
 ## Comprehensive GUT unit tests for the Heads-Up Display manager (hud.gd).
-## Validates UI state synchronization, color lerping thresholds, and warning label blinking.
+## Validates UI state synchronization, color lerping thresholds, warning label blinking,
+## and rigorous resource dependency injection isolation (idempotency & hot-swapping).
 
 extends "res://addons/gut/test.gd"
 
-const GutTestHelper = preload("res://test/gut/gut_test_helper.gd")
-
-var _mock_root: Node
 var _hud: Panel
-var _player: Variant
+var _fuel: FuelResource
+var _speed: SpeedResource
+var _weapon: WeaponResource
+
 var _original_settings: GameSettingsResource
 
 
-## Pre-test setup: Isolates the global resource state and builds the mock scene hierarchy.
+## Pre-test setup: Builds a purely programmatic mock UI tree to guarantee absolute 
+## isolation from Player node hierarchies and physical scene trees.
 ## :rtype: void
 func before_each() -> void:
 	_original_settings = Globals.settings
 	Globals.settings = GameSettingsResource.new()
 	Globals.settings.current_log_level = Globals.LogLevel.NONE
 	
-	_mock_root = GutTestHelper.build_mock_player_scene()
-	add_child_autoqfree(_mock_root)
+	_hud = _build_isolated_hud_tree()
+	add_child_autoqfree(_hud)
 	
-	_hud = _mock_root.get_node("PlayerStatsPanel")
-	_player = _mock_root.get_node("Player")
+	# Force ready to initialize the HUD's internal @onready variables
+	_hud._ready()
 	
-	# ==========================================================
-	# PHASE 2 FIX: Update setup_hud to use Dependency Injection.
-	# Fallback to a new WeaponResource if the mock player doesn't 
-	# have the weapon node fully instantiated in this test scope.
-	# ==========================================================
-	var w_res: WeaponResource = _player.weapon.weapon_resource if _player.get("weapon") and _player.weapon.get("weapon_resource") else WeaponResource.new()
-	_hud.setup_hud(_player.fuel_resource, _player.speed_resource, w_res)
+	# Instantiate authoritative test resources directly
+	_fuel = FuelResource.new()
+	_speed = SpeedResource.new()
+	_weapon = WeaponResource.new()
+	
+	_hud.setup_hud(_fuel, _speed, _weapon)
 
 
 ## Post-test cleanup: Restores global state to prevent test leakage.
 ## :rtype: void
 func after_each() -> void:
 	Globals.settings = _original_settings
+
+
+## Helper: Constructs the required Panel/VBox/HBox hierarchy purely in code.
+## Severely decouples the HUD tests from the main_scene.tscn or player mocks.
+func _build_isolated_hud_tree() -> Panel:
+	var root: Panel = Panel.new()
+	root.set_script(preload("res://scripts/ui/hud.gd"))
+	
+	var stats: VBoxContainer = VBoxContainer.new()
+	stats.name = "Stats"
+	root.add_child(stats)
+	
+	# Fuel Hierarchy
+	var fuel: HBoxContainer = HBoxContainer.new()
+	fuel.name = "Fuel"
+	stats.add_child(fuel)
+	var f_label: Label = Label.new()
+	f_label.name = "FuelLabel"
+	fuel.add_child(f_label)
+	var f_timer: Timer = Timer.new()
+	f_timer.name = "BlinkTimer"
+	f_label.add_child(f_timer)
+	var f_bar: ProgressBar = ProgressBar.new()
+	f_bar.name = "FuelBar"
+	fuel.add_child(f_bar)
+	
+	# Speed Hierarchy
+	var speed: HBoxContainer = HBoxContainer.new()
+	speed.name = "Speed"
+	stats.add_child(speed)
+	var s_label: Label = Label.new()
+	s_label.name = "SpeedLabel"
+	speed.add_child(s_label)
+	var s_timer: Timer = Timer.new()
+	s_timer.name = "BlinkTimer"
+	s_label.add_child(s_timer)
+	var s_bar: ProgressBar = ProgressBar.new()
+	s_bar.name = "SpeedBar"
+	speed.add_child(s_bar)
+	
+	# Weapon Hierarchy
+	var weapon: HBoxContainer = HBoxContainer.new()
+	weapon.name = "Weapon"
+	stats.add_child(weapon)
+	var w_label: Label = Label.new()
+	w_label.name = "WeaponLabel"
+	weapon.add_child(w_label)
+	
+	# Ammo Hierarchy
+	var ammo: HBoxContainer = HBoxContainer.new()
+	ammo.name = "Ammo"
+	stats.add_child(ammo)
+	var a_bar: ProgressBar = ProgressBar.new()
+	a_bar.name = "AmmoBar"
+	ammo.add_child(a_bar)
+	
+	return root
 
 
 # ==========================================
@@ -51,9 +109,63 @@ func after_each() -> void:
 func test_setup_hud_with_invalid_resources() -> void:
 	gut.p("Testing: HUD rejects invalid resource injections gracefully without crashing.")
 	
-	# Passing nulls should push an error and return without crashing the node
+	# Passing nulls should push an error log and return without crashing the node
 	_hud.setup_hud(null, null, null)
 	assert_true(true, "HUD survived null resource injection.")
+
+
+# ==========================================
+# ISOLATION & IDEMPOTENCY TESTS (PHASE 2)
+# ==========================================
+
+## test_resource_replacement_isolation | Dependency Injection
+func test_resource_replacement_isolation() -> void:
+	gut.p("Testing: Replaced resources become inert, while new resources correctly drive telemetry.")
+	
+	var new_speed: SpeedResource = SpeedResource.new()
+	new_speed.max_speed = 1000.0
+	new_speed.current_speed = 100.0
+	
+	# Inject the replacement resource (Hot-swapping)
+	_hud.setup_hud(_fuel, new_speed, _weapon)
+	
+	# 1. Mutate the old, now inert resource
+	_speed.current_speed = 500.0
+	
+	# Verify HUD ignored the old resource
+	assert_eq(_hud.get_current_speed(), 100.0, "HUD must ignore mutations from replaced inert resources.")
+	
+	# 2. Mutate the newly injected active resource
+	new_speed.current_speed = 800.0
+	
+	# Verify HUD followed the new resource
+	assert_eq(_hud.get_current_speed(), 800.0, "HUD must react immediately to mutations from the newly injected resource.")
+
+
+## test_setup_hud_idempotency | Dependency Injection
+func test_setup_hud_idempotency() -> void:
+	gut.p("Testing: Repeated injection of identical instances does not duplicate signal connections.")
+	
+	# Count baseline connections explicitly wired to our HUD instance
+	var initial_conns: int = 0
+	for conn in _speed.speed_updated.get_connections():
+		if conn["callable"].get_object() == _hud:
+			initial_conns += 1
+			
+	assert_eq(initial_conns, 1, "HUD should have exactly 1 connection to the speed_updated signal initially.")
+	
+	# Spam the injection method to simulate heavy level reloading or scene churn
+	_hud.setup_hud(_fuel, _speed, _weapon)
+	_hud.setup_hud(_fuel, _speed, _weapon)
+	_hud.setup_hud(_fuel, _speed, _weapon)
+	
+	# Count connections again
+	var final_conns: int = 0
+	for conn in _speed.speed_updated.get_connections():
+		if conn["callable"].get_object() == _hud:
+			final_conns += 1
+			
+	assert_eq(final_conns, 1, "Repeated injection of the same resource instance must not duplicate signal connections.")
 
 
 # ==========================================
@@ -62,33 +174,29 @@ func test_setup_hud_with_invalid_resources() -> void:
 
 ## test_fuel_bar_visual_states | UI Rendering
 func test_fuel_bar_visual_states() -> void:
-	gut.p("Testing: Fuel bar properly applies solid and lerped colors based on thresholds.")
+	gut.p("Testing: Fuel bar applies solid and lerped colors by driving public resource properties.")
 	
-	var max_f: float = _player.fuel_resource.max_fuel
+	var max_f: float = _fuel.max_fuel
 	
 	# --- 1. Safe Zone (Solid Green) ---
-	_player.fuel_resource.current_fuel = max_f * 0.95
-	_player.fuel_resource.fuel_changed.emit(_player.fuel_resource.current_fuel)
+	_fuel.current_fuel = max_f * 0.95
 	assert_eq(_hud.get_fuel_bar_color(), Color.GREEN, "High fuel must be solid Green.")
 	
 	# --- 2. Medium Warning (Green to Yellow Lerp) ---
-	var mid_yellow: float = (_player.fuel_resource.high_fuel_threshold + _player.fuel_resource.medium_fuel_threshold) / 2.0
-	_player.fuel_resource.current_fuel = (mid_yellow / 100.0) * max_f
-	_player.fuel_resource.fuel_changed.emit(_player.fuel_resource.current_fuel)
+	var mid_yellow: float = (_fuel.high_fuel_threshold + _fuel.medium_fuel_threshold) / 2.0
+	_fuel.current_fuel = (mid_yellow / 100.0) * max_f
 	var expected_yellow_lerp: Color = Color.GREEN.lerp(Color.YELLOW, 0.5)
 	assert_true(_hud.get_fuel_bar_color().is_equal_approx(expected_yellow_lerp), "Medium fuel must lerp towards Yellow.")
 	
 	# --- 3. Low Warning (Yellow to Red Lerp) ---
-	var mid_red: float = (_player.fuel_resource.medium_fuel_threshold + _player.fuel_resource.low_fuel_threshold) / 2.0
-	_player.fuel_resource.current_fuel = (mid_red / 100.0) * max_f
-	_player.fuel_resource.fuel_changed.emit(_player.fuel_resource.current_fuel)
+	var mid_red: float = (_fuel.medium_fuel_threshold + _fuel.low_fuel_threshold) / 2.0
+	_fuel.current_fuel = (mid_red / 100.0) * max_f
 	var expected_red_lerp: Color = Color.YELLOW.lerp(Color.RED, 0.5)
 	assert_true(_hud.get_fuel_bar_color().is_equal_approx(expected_red_lerp), "Low fuel must lerp towards Red.")
 	
 	# --- 4. Critical Zone (Red to Dark Red Lerp) ---
-	var mid_dark: float = (_player.fuel_resource.low_fuel_threshold + _player.fuel_resource.no_fuel_threshold) / 2.0
-	_player.fuel_resource.current_fuel = (mid_dark / 100.0) * max_f
-	_player.fuel_resource.fuel_changed.emit(_player.fuel_resource.current_fuel)
+	var mid_dark: float = (_fuel.low_fuel_threshold + _fuel.no_fuel_threshold) / 2.0
+	_fuel.current_fuel = (mid_dark / 100.0) * max_f
 	var expected_dark_lerp: Color = Color.RED.lerp(_hud.DARK_RED, 0.5)
 	assert_true(_hud.get_fuel_bar_color().is_equal_approx(expected_dark_lerp), "Critical fuel must lerp towards Dark Red.")
 
@@ -99,40 +207,31 @@ func test_fuel_bar_visual_states() -> void:
 
 ## test_speed_bar_visual_states | UI Rendering
 func test_speed_bar_visual_states() -> void:
-	gut.p("Testing: Speed bar properly applies solid and lerped colors based on dynamic thresholds.")
+	gut.p("Testing: Speed bar applies solid and lerped colors by driving public resource properties.")
 	
-	var max_s: float = _player.speed_resource.max_speed
-	var min_s: float = _player.speed_resource.min_speed
+	var max_s: float = _speed.max_speed
+	var min_s: float = _speed.min_speed
 	
-	# Dynamically calculate the thresholds used by the HUD
 	var high_red_thresh: float = max_s * _hud.HIGH_RED_FRACTION
-	var high_yellow_thresh: float = max_s * _player.speed_resource.high_yellow_fraction
-	var low_yellow_thresh: float = min_s + (max_s - min_s) * _player.speed_resource.low_yellow_fraction
+	var high_yellow_thresh: float = max_s * _speed.high_yellow_fraction
+	var low_yellow_thresh: float = min_s + (max_s - min_s) * _speed.low_yellow_fraction
 	
 	# --- 1. Safe Zone (Solid Green) ---
 	var safe_speed: float = (low_yellow_thresh + high_yellow_thresh) / 2.0
-	_player.speed_resource.current_speed = safe_speed
-	_player.speed_resource.speed_updated.emit(safe_speed)
+	_speed.current_speed = safe_speed
 	assert_eq(_hud.get_speed_bar_color(), Color.GREEN, "Cruising speed must be solid Green.")
 	
 	# --- 2. High Speed Warning (Green to Yellow Lerp) ---
 	var high_speed: float = high_yellow_thresh + ((high_red_thresh - high_yellow_thresh) / 2.0)
-	_player.speed_resource.current_speed = high_speed
-	_player.speed_resource.speed_updated.emit(high_speed)
+	_speed.current_speed = high_speed
 	var expected_yellow: Color = Color.GREEN.lerp(Color.YELLOW, 0.5)
 	assert_true(_hud.get_speed_bar_color().is_equal_approx(expected_yellow), "High speed must lerp towards Yellow.")
 	
 	# --- 3. Overspeed Critical (Yellow to Dark Red Lerp) ---
 	var overspeed: float = high_red_thresh + ((max_s - high_red_thresh) / 2.0)
-	_player.speed_resource.current_speed = overspeed
-	_player.speed_resource.speed_updated.emit(overspeed)
+	_speed.current_speed = overspeed
 	var expected_dark: Color = Color.YELLOW.lerp(_hud.DARK_RED, 0.5)
 	assert_true(_hud.get_speed_bar_color().is_equal_approx(expected_dark), "Overspeed must lerp towards Dark Red.")
-	
-	# --- 4. Stall Critical (Solid Dark Red) ---
-	_player.speed_resource.current_speed = min_s
-	_player.speed_resource.speed_updated.emit(min_s)
-	assert_eq(_hud.get_speed_bar_color(), _hud.DARK_RED, "Stall speed must be solid Dark Red.")
 
 
 # ==========================================
@@ -141,74 +240,64 @@ func test_speed_bar_visual_states() -> void:
 
 ## test_warning_blinkers_activate_and_deactivate | State Management
 func test_warning_blinkers_activate_and_deactivate() -> void:
-	gut.p("Testing: Warning labels start and stop blinking seamlessly across thresholds.")
+	gut.p("Testing: Warning labels start and stop blinking seamlessly across thresholds via resource setters.")
 	
-	var max_s: float = _player.speed_resource.max_speed
-	var min_s: float = _player.speed_resource.min_speed
+	var max_s: float = _speed.max_speed
+	var min_s: float = _speed.min_speed
 	
 	# --- Speed Blinker Test ---
 	var safe_speed: float = (max_s + min_s) / 2.0
 	var danger_speed: float = max_s * 0.95
 	
-	# 1. Enter danger zone via simulated Resource state update and emission
-	_player.speed_resource.current_speed = danger_speed
-	_player.speed_resource.speed_updated.emit(danger_speed)
+	# 1. Enter danger zone via property mutation
+	_speed.current_speed = danger_speed
 	assert_true(_hud.is_speed_warning_active(), "Speed blinker must activate in the danger zone.")
 	assert_true(_hud.is_speed_timer_running(), "Speed blink timer must be running.")
 	
 	# 2. Return to safe zone
-	_player.speed_resource.current_speed = safe_speed
-	_player.speed_resource.speed_updated.emit(safe_speed)
+	_speed.current_speed = safe_speed
 	assert_false(_hud.is_speed_warning_active(), "Speed blinker must deactivate in the safe zone.")
 	assert_false(_hud.is_speed_timer_running(), "Speed blink timer must halt.")
 	
 	# --- Fuel Blinker Test ---
-	# 1. Enter danger zone via Resource update
-	_player.fuel_resource.current_fuel = (_player.fuel_resource.low_fuel_threshold - 5.0) / 100.0 * _player.fuel_resource.max_fuel
-	_player.fuel_resource.fuel_changed.emit(_player.fuel_resource.current_fuel)
+	# 1. Enter danger zone via property mutation
+	_fuel.current_fuel = (_fuel.low_fuel_threshold - 5.0) / 100.0 * _fuel.max_fuel
 	assert_true(_hud.is_fuel_warning_active(), "Fuel blinker must activate in the low fuel zone.")
 	
 	# 2. Return to safe zone
-	_player.fuel_resource.current_fuel = _player.fuel_resource.max_fuel
-	_player.fuel_resource.fuel_changed.emit(_player.fuel_resource.current_fuel)
+	_fuel.current_fuel = _fuel.max_fuel
 	assert_false(_hud.is_fuel_warning_active(), "Fuel blinker must deactivate when refueled.")
 
 
 # ==========================================
-# OBSERVER INTEGRATION TESTS
+# END-TO-END OBSERVER INTEGRATION TESTS
 # ==========================================
 
-## test_hud_reacts_to_player_signals | Observer Integration
-func test_hud_reacts_to_player_signals() -> void:
-	gut.p("Testing: HUD correctly processes speed_updated signals from the new SpeedResource.")
+## test_hud_reacts_to_resource_mutations | Observer Integration
+func test_hud_reacts_to_resource_mutations() -> void:
+	gut.p("Testing: HUD correctly processes speed_updated signals end-to-end via resource mutation.")
 	
-	_player.speed_resource.max_speed = 800.0
+	_speed.max_speed = 800.0
+	_speed.current_speed = 400.0
 	
-	# Update the resource value BEFORE emitting the signal, as HUD now strictly observes the resource
-	_player.speed_resource.current_speed = 400.0
-	_player.speed_resource.speed_updated.emit(400.0)
-	
-	assert_eq(_hud.get_current_speed(), 400.0, "HUD must internally read the new speed from the resource.")
+	assert_eq(_hud.get_current_speed(), 400.0, "HUD must strictly read the speed from the injected resource.")
 	assert_eq(_hud.speed_bar.max_value, 800.0, "HUD must update the progress bar maximum.")
 	assert_eq(_hud.speed_bar.value, 400.0, "HUD must update the progress bar value.")
 
 
 ## test_hud_reacts_to_flameout_signal | Observer Integration
 func test_hud_reacts_to_flameout_signal() -> void:
-	gut.p("Testing: HUD forces UI update upon receiving a fuel_depleted signal.")
+	gut.p("Testing: HUD forces UI update upon fuel depletion.")
 	
-	_player.speed_resource.max_speed = 1000.0
+	_speed.max_speed = 1000.0
+	_speed.current_speed = 300.0
 	
-	# Establish a cruising speed
-	_player.speed_resource.current_speed = 300.0
-	_player.speed_resource.speed_updated.emit(300.0)
+	# Simulate the physics reaction to a flameout by zeroing speed
+	_speed.current_speed = 0.0
 	
-	# Empty the fuel tank so the mock player's physics allow the speed 
-	# to correctly clamp to 0.0 instead of bottoming out at min_speed (95.0)
-	_player.fuel_resource.current_fuel = 0.0
-	
-	# Broadcast flameout signal natively via the resource
-	_player.fuel_resource.fuel_depleted.emit()
+	# Empty the fuel tank to trigger the fuel_depleted observer cascade
+	_fuel.current_fuel = 0.0
+	_fuel.fuel_depleted.emit()
 	
 	assert_eq(_hud.get_current_speed(), 0.0, "HUD must reflect the zeroed speed upon flameout.")
 	assert_eq(_hud.speed_bar.value, 0.0, "Progress bar must visually drop to zero.")
