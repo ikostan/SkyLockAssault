@@ -42,8 +42,11 @@ func switch_to(index: int) -> void:
 		current_weapon.position = Vector2.ZERO
 		current_index = index
 
-		# 1. Safe type cast from Godot's StringName to String
-		var safe_weapon_name: String = String(current_weapon.name)
+		# 1. Safely extract a readable weapon name, falling back to "Machine Gun"
+		# This allows future weapons (e.g., missiles) to define a custom 'weapon_name' variable.
+		var safe_weapon_name: String = "Machine Gun"
+		if current_weapon.get("weapon_name") != null:
+			safe_weapon_name = String(current_weapon.get("weapon_name"))
 
 		# 2. Sync the resource's available_weapons array
 		# We pull the duplicate, resize if necessary, inject the safe name, and push it back.

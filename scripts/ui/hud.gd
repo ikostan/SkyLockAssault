@@ -8,6 +8,9 @@
 ## Operates entirely via Observer Patterns, completely decoupled from physics logic.
 extends Panel
 
+@onready var weapon_label: Label = $Stats/Weapon/WeaponLabel
+@onready var ammo_bar: ProgressBar = $Stats/Ammo/AmmoBar
+
 # --- Speed Constants ---
 # Fraction constants that are strictly visual can remain local.
 const HIGH_RED_FRACTION: float = 0.90
@@ -239,12 +242,14 @@ func setup_hud(
 	# Sync Speed
 	update_speed_bar()
 
-	# Sync Weapon
+	# Sync Weapon & Ammo
 	if _weapon_resource.available_weapons.size() > _weapon_resource.current_index:
 		var initial_weapon: String = _weapon_resource.available_weapons[
 			_weapon_resource.current_index
 		]
 		_on_weapon_swapped(_weapon_resource.current_index, initial_weapon)
+
+	_on_ammo_updated(_weapon_resource.current_ammo, _weapon_resource.max_ammo)
 
 	Globals.log_message("HUD successfully wired to all Data Resources.", Globals.LogLevel.DEBUG)
 
@@ -535,23 +540,40 @@ func _on_fuel_changed_bridge(_new_fuel: float) -> void:
 ## @return: void
 func _on_weapon_swapped(_index: int, weapon_name: String) -> void:
 	Globals.log_message("HUD: Weapon swapped to " + weapon_name, Globals.LogLevel.DEBUG)
-	# TODO: Update weapon icon/name UI here when elements are added
+
+	if is_instance_valid(weapon_label):
+		# Format string to {MACHINE=GUN} by uppercase, replacing space, and wrapping
+		var formatted_name: String = "{%s}" % weapon_name.to_upper().replace(" ", "=")
+		weapon_label.text = formatted_name
 
 
 ## Callback triggered when the WeaponResource ammo count changes.
-## @param _current: The current ammo count.
-## @param _max_ammo: The maximum ammo capacity.
+## @param current: The current ammo count.
+## @param max_ammo: The maximum ammo capacity.
 ## @return: void
-func _on_ammo_updated(_current: int, _max_ammo: int) -> void:
-	# TODO: Update ammo counter UI here when elements are added
-	pass
+func _on_ammo_updated(current: int, max_ammo: int) -> void:
+	if is_instance_valid(ammo_bar):
+		ammo_bar.max_value = float(max_ammo)
+		ammo_bar.value = float(current)
 
 
+## Signal handler for extreme low speed (stall warning).
+## Snaps the UI to a maximum dark red warning state.
+## @return: void
 func _on_speed_low() -> void:
-	# Optional handling for low speed warning signal
-	pass
+	if speed_stat != null and not speed_stat.is_blinking:
+		speed_stat.start_blinking()
+
+	if _speed_bar_style != null:
+		_speed_bar_style.bg_color = DARK_RED
 
 
+## Signal handler for maximum forward velocity.
+## Snaps the UI to a bright red warning state to indicate structural stress.
+## @return: void
 func _on_speed_maxed() -> void:
-	# Optional handling for max speed signal
-	pass
+	if speed_stat != null and not speed_stat.is_blinking:
+		speed_stat.start_blinking()
+
+	if _speed_bar_style != null:
+		_speed_bar_style.bg_color = Color.RED
