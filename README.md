@@ -96,18 +96,6 @@ Here's a high-level plan for upcoming features. Contributions welcome!
 - Future: Multiplayer elements, AI enemies, mobile export
   (post-launch based on community input).
 
-## License
-
-This project is **source-available** under the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0).
-
-- Free for personal, educational, research, hobby, and non-profit use.
-- Modification and redistribution are allowed **only** for non-commercial purposes.
-- **Commercial use is prohibited** without a separate commercial license from the copyright holder.
-
-For commercial licensing inquiries, contact via GitHub issues or X @EgorKostan.
-
-See the [LICENSE](LICENSE) file for the full terms.
-
 ## Player Feedback
 
 We value your input to improve Sky Lock Assault! Share your thoughts via:
@@ -124,22 +112,16 @@ For details on reporting vulnerabilities and our disclosure process, see
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0 or
-later (GPL-3.0-or-later) - see the [LICENSE](LICENSE) file for details.
+This project is **source-available** under the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0).
 
-Commercial use is allowed under GPLv3 terms, which require that any
-distributed derivatives or combined works remain open source and provide
-source code to users. For closed-source commercial alternatives without
-these GPL requirements, a separate license is available upon request.
+- Free for personal, educational, research, hobby, and non-profit use.
+- Modification and redistribution are allowed **only** for non-commercial purposes.
+- **Commercial use is prohibited** without a separate commercial license from the copyright
+  holder.
 
-### Key Terms
+For commercial licensing inquiries, contact via GitHub issues or X @EgorKostan.
 
-- **Open Source**: You can view, modify, and distribute the code freely,
-  as long as derivatives remain under GPLv3.
-- **Commercial Use**: Allowed under GPLv3 (with source code obligations
-  for distributions). Closed-source commercial use requires a separate license.
-- **Contact**: For custom licenses, trademark use (e.g., "Sky Lock Assault"),
-  or inquiries, reach out via GitHub issues or X @EgorKostan.
+See the [LICENSE](LICENSE) file for the full terms.
 
 ---
 
