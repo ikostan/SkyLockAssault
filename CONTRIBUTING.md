@@ -11,7 +11,7 @@ changes from external contributors at this time.
 If you find a bug or have feedback, you are welcome to open a GitHub issue. Feature
 requests and discussions are also fine.
 
-For commercial licensing or other inquiries, please open a GitHub issue or contact via X
-@EgorKostan.
+For commercial licensing or other inquiries, please open a GitHub issue or contact
+via X @EgorKostan.
 
 Thank you for understanding.
