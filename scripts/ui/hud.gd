@@ -175,7 +175,7 @@ func setup_hud(
 		or not is_instance_valid(speed_res)
 		or not is_instance_valid(weapon_res)
 	):
-		push_error("HUD setup failed: Invalid resource injection.")
+		Globals.log_message("HUD setup failed: Invalid resource injection.", Globals.LogLevel.ERROR)
 		return
 
 	# ==========================================
