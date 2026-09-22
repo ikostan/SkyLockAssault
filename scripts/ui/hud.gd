@@ -129,7 +129,7 @@ func _ready() -> void:
 	# --- Fuel UI Setup ---
 	_fuel_bar_style = StyleBoxFlat.new()
 	set_bar_fill_style(fuel_bar, _fuel_bar_style)
-	
+
 	fuel_stat = StatManager.new(
 		fuel_label,
 		fuel_blink_timer,
@@ -235,13 +235,15 @@ func setup_hud(
 	fuel_bar.max_value = _fuel_resource.max_fuel
 	update_fuel_bar()
 	check_fuel_warning()
-	
+
 	# Sync Speed
 	update_speed_bar()
-	
+
 	# Sync Weapon
 	if _weapon_resource.available_weapons.size() > _weapon_resource.current_index:
-		var initial_weapon: String = _weapon_resource.available_weapons[_weapon_resource.current_index]
+		var initial_weapon: String = _weapon_resource.available_weapons[
+			_weapon_resource.current_index
+		]
 		_on_weapon_swapped(_weapon_resource.current_index, initial_weapon)
 
 	Globals.log_message("HUD successfully wired to all Data Resources.", Globals.LogLevel.DEBUG)
@@ -355,7 +357,7 @@ func update_speed_bar() -> void:
 	var current_spd: float = _speed_resource.current_speed
 	var max_s: float = _speed_resource.max_speed
 	var min_s: float = _speed_resource.min_speed
-	
+
 	speed_bar.max_value = max_s
 	speed_bar.value = current_spd
 	var factor: float = 0.0
@@ -413,7 +415,7 @@ func check_fuel_warning() -> void:
 func check_speed_warning() -> void:
 	if not is_instance_valid(_speed_resource):
 		return
-		
+
 	var current_spd: float = _speed_resource.current_speed
 	var high_yellow_thresh: float = _speed_resource.max_speed * _speed_resource.high_yellow_fraction
 	var low_yellow_thresh: float = (
@@ -479,6 +481,7 @@ func get_current_speed() -> float:
 	if is_instance_valid(_speed_resource):
 		return _speed_resource.current_speed
 	return 0.0
+
 
 ## Retrieves the current computed background color of the fuel progress bar.
 ## Useful for verifying threshold lerping logic in unit tests.
