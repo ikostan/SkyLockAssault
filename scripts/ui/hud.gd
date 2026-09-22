@@ -178,10 +178,16 @@ func setup_hud(
 		push_error("HUD setup failed: Invalid resource injection.")
 		return
 
-	# Safely disconnect old resources if we are hot-swapping nodes
+	# ==========================================
+	# STEP 1: Safely Disconnect Old Resources
+	# ==========================================
 	if is_instance_valid(_speed_resource) and _speed_resource != speed_res:
 		if _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
 			_speed_resource.speed_updated.disconnect(_on_speed_updated_bridge)
+		if _speed_resource.speed_low.is_connected(_on_speed_low):
+			_speed_resource.speed_low.disconnect(_on_speed_low)
+		if _speed_resource.speed_maxed.is_connected(_on_speed_maxed):
+			_speed_resource.speed_maxed.disconnect(_on_speed_maxed)
 
 	if is_instance_valid(_fuel_resource) and _fuel_resource != fuel_res:
 		if _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
@@ -195,14 +201,22 @@ func setup_hud(
 		if _weapon_resource.ammo_updated.is_connected(_on_ammo_updated):
 			_weapon_resource.ammo_updated.disconnect(_on_ammo_updated)
 
-	# Idempotency assignment for injected resources
+	# ==========================================
+	# STEP 2: Assign New Resource References
+	# ==========================================
 	_fuel_resource = fuel_res
 	_speed_resource = speed_res
 	_weapon_resource = weapon_res
 
-	# Connection guards for external wiring
+	# ==========================================
+	# STEP 3: Connect New Signals
+	# ==========================================
 	if not _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
 		_speed_resource.speed_updated.connect(_on_speed_updated_bridge)
+	if not _speed_resource.speed_low.is_connected(_on_speed_low):
+		_speed_resource.speed_low.connect(_on_speed_low)
+	if not _speed_resource.speed_maxed.is_connected(_on_speed_maxed):
+		_speed_resource.speed_maxed.connect(_on_speed_maxed)
 
 	if not _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
 		_fuel_resource.fuel_changed.connect(_on_fuel_changed_bridge)
@@ -214,19 +228,21 @@ func setup_hud(
 	if not _weapon_resource.ammo_updated.is_connected(_on_ammo_updated):
 		_weapon_resource.ammo_updated.connect(_on_ammo_updated)
 
-	# Connection guards for external wiring
-	if not _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
-		_speed_resource.speed_updated.connect(_on_speed_updated_bridge)
-	if not _speed_resource.speed_low.is_connected(_on_speed_low):
-		_speed_resource.speed_low.connect(_on_speed_low)
-	if not _speed_resource.speed_maxed.is_connected(_on_speed_maxed):
-		_speed_resource.speed_maxed.connect(_on_speed_maxed)
-
-	# Force an initial UI draw with the new authoritative data
+	# ==========================================
+	# STEP 4: Force Deterministic Initial Sync
+	# ==========================================
+	# Sync Fuel
 	fuel_bar.max_value = _fuel_resource.max_fuel
 	update_fuel_bar()
 	check_fuel_warning()
+	
+	# Sync Speed
 	update_speed_bar()
+	
+	# Sync Weapon
+	if _weapon_resource.available_weapons.size() > _weapon_resource.current_index:
+		var initial_weapon: String = _weapon_resource.available_weapons[_weapon_resource.current_index]
+		_on_weapon_swapped(_weapon_resource.current_index, initial_weapon)
 
 	Globals.log_message("HUD successfully wired to all Data Resources.", Globals.LogLevel.DEBUG)
 
