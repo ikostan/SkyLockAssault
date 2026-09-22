@@ -8,14 +8,39 @@
 ## Operates entirely via Observer Patterns, completely decoupled from physics logic.
 extends Panel
 
-@onready var weapon_label: Label = $Stats/Weapon/WeaponLabel
-@onready var ammo_bar: ProgressBar = $Stats/Ammo/AmmoBar
-
 # --- Speed Constants ---
 # Fraction constants that are strictly visual can remain local.
 const HIGH_RED_FRACTION: float = 0.90
 const DARK_RED: Color = Color(0.5, 0.0, 0.0)
 const BLINK_INTERVAL: float = 0.5
+
+# --- Internal State ---
+var fuel_stat: StatManager
+var speed_stat: StatManager
+
+# var _settings: GameSettingsResource = null
+# var _current_speed: float = 250.0
+
+var _fuel_bar_style: StyleBoxFlat
+var _speed_bar_style: StyleBoxFlat
+
+# --- Data Resource Injection Tracking ---
+var _fuel_resource: FuelResource = null
+var _speed_resource: SpeedResource = null
+var _weapon_resource: WeaponResource = null
+
+# --- Node References ---
+# Paths assume this script is attached directly to "PlayerStatsPanel"
+@onready var fuel_bar: ProgressBar = $Stats/Fuel/FuelBar
+@onready var fuel_label: Label = $Stats/Fuel/FuelLabel
+@onready var fuel_blink_timer: Timer = $Stats/Fuel/FuelLabel/BlinkTimer
+
+@onready var speed_bar: ProgressBar = $Stats/Speed/SpeedBar
+@onready var speed_label: Label = $Stats/Speed/SpeedLabel
+@onready var speed_blink_timer: Timer = $Stats/Speed/SpeedLabel/BlinkTimer
+
+@onready var weapon_label: Label = $Stats/Weapon/WeaponLabel
+@onready var ammo_bar: ProgressBar = $Stats/Ammo/AmmoBar
 
 
 ## Encapsulates UI warning state for a specific statistic (e.g., fuel or speed).
@@ -97,32 +122,6 @@ class StatManager:
 	## @return: bool - True if the timer is valid and running, false otherwise.
 	func is_timer_running() -> bool:
 		return is_instance_valid(timer) and not timer.is_stopped()
-
-
-# --- Internal State ---
-var fuel_stat: StatManager
-var speed_stat: StatManager
-
-# var _settings: GameSettingsResource = null
-# var _current_speed: float = 250.0
-
-var _fuel_bar_style: StyleBoxFlat
-var _speed_bar_style: StyleBoxFlat
-
-# --- Data Resource Injection Tracking ---
-var _fuel_resource: FuelResource = null
-var _speed_resource: SpeedResource = null
-var _weapon_resource: WeaponResource = null
-
-# --- Node References ---
-# Paths assume this script is attached directly to "PlayerStatsPanel"
-@onready var fuel_bar: ProgressBar = $Stats/Fuel/FuelBar
-@onready var fuel_label: Label = $Stats/Fuel/FuelLabel
-@onready var fuel_blink_timer: Timer = $Stats/Fuel/FuelLabel/BlinkTimer
-
-@onready var speed_bar: ProgressBar = $Stats/Speed/SpeedBar
-@onready var speed_label: Label = $Stats/Speed/SpeedLabel
-@onready var speed_blink_timer: Timer = $Stats/Speed/SpeedLabel/BlinkTimer
 
 
 ## Called when the node enters the scene tree for the first time.
