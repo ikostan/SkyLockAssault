@@ -116,8 +116,8 @@ This project is **source-available** under the [PolyForm Noncommercial License 1
 
 - Free for personal, educational, research, hobby, and non-profit use.
 - Modification and redistribution are allowed **only** for non-commercial purposes.
-- **Commercial use is prohibited** without a separate commercial license from the copyright
-  holder.
+- **Commercial use is prohibited** without a separate commercial license from the
+  copyright holder.
 
 For commercial licensing inquiries, contact via GitHub issues or X @EgorKostan.
 
