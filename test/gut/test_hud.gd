@@ -292,7 +292,8 @@ func test_hud_reacts_to_flameout_signal() -> void:
 	_speed.max_speed = 1000.0
 	_speed.current_speed = 300.0
 	
-	# Simulate the physics reaction to a flameout by zeroing speed
+	# Simulate the physics reaction to a flameout by dropping the min bound and zeroing speed
+	_speed.min_speed = 0.0
 	_speed.current_speed = 0.0
 	
 	# Empty the fuel tank to trigger the fuel_depleted observer cascade
