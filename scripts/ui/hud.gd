@@ -125,7 +125,7 @@ class StatManager:
 
 
 ## Called when the node enters the scene tree for the first time.
-## Initializes UI styles, establishes local states, and connects to global settings.
+## Initializes UI styles and establishes local states.
 ## @return: void
 func _ready() -> void:
 	# --- Fuel UI Setup ---
@@ -240,6 +240,7 @@ func setup_hud(
 
 	# Sync Speed
 	update_speed_bar()
+	check_speed_warning()  # <-- ADD THIS LINE
 
 	# Sync Weapon & Ammo
 	if _weapon_resource.available_weapons.size() > _weapon_resource.current_index:
@@ -479,7 +480,7 @@ func set_bar_fill_style(bar: ProgressBar, bar_fill_style: StyleBoxFlat) -> void:
 # ==========================================
 
 
-## Retrieves the current forward speed cached by the HUD.
+## Retrieves the current forward speed directly from the injected SpeedResource.
 ## @return: float - The player's current speed value.
 func get_current_speed() -> float:
 	if is_instance_valid(_speed_resource):
