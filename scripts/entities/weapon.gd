@@ -74,10 +74,12 @@ func fire() -> void:
 			Globals.log_message(
 				"Weapon.fire() delegating to " + str(current_weapon.name), Globals.LogLevel.DEBUG
 			)
-			current_weapon.fire()
+			
+			# The child weapon's fire() method MUST return a boolean indicating success
+			var shot_fired: bool = current_weapon.fire()
 
-			# Deduct ammo to automatically trigger the ammo_updated signal via the setter
-			if weapon_resource.max_ammo >= 0:
+			# Deduct ammo ONLY if the weapon successfully fired a projectile
+			if shot_fired and weapon_resource.max_ammo > 0:
 				weapon_resource.current_ammo -= 1
 		else:
 			Globals.log_message("Weapon.fire(): Out of ammo!", Globals.LogLevel.WARNING)
