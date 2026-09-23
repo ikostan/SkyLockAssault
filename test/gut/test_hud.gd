@@ -122,6 +122,12 @@ func test_setup_hud_with_invalid_resources() -> void:
 func test_resource_replacement_isolation() -> void:
 	gut.p("Testing: All replaced resources become inert, while new resources correctly drive telemetry (Bi-directional).")
 	
+	# Prevent default clamping: expand the max limits of the original resources
+	# so our test values are not truncated by the default 100.0 boundaries.
+	_speed.max_speed = 1000.0
+	_fuel.max_fuel = 1000.0
+	_weapon.max_ammo = 1000
+	
 	var new_speed: SpeedResource = SpeedResource.new()
 	new_speed.max_speed = 1000.0
 	new_speed.current_speed = 100.0
