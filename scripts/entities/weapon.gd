@@ -69,8 +69,8 @@ func switch_to(index: int) -> void:
 
 func fire() -> void:
 	if current_weapon and current_weapon.has_method("fire"):
-		# Check if we have ammo before firing (assuming < 0 is infinite ammo)
-		if weapon_resource.current_ammo > 0 or weapon_resource.max_ammo < 0:
+		# Strictly require ammo to fire (no infinite ammo checks)
+		if weapon_resource.current_ammo > 0:
 			Globals.log_message(
 				"Weapon.fire() delegating to " + str(current_weapon.name), Globals.LogLevel.DEBUG
 			)
@@ -79,7 +79,7 @@ func fire() -> void:
 			var shot_fired: bool = current_weapon.fire()
 
 			# Deduct ammo ONLY if the weapon successfully fired a projectile
-			if shot_fired and weapon_resource.max_ammo > 0:
+			if shot_fired:
 				weapon_resource.current_ammo -= 1
 		else:
 			Globals.log_message("Weapon.fire(): Out of ammo!", Globals.LogLevel.WARNING)
