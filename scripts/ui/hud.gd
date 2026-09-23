@@ -562,25 +562,19 @@ func _on_ammo_updated(current: int, max_ammo: int) -> void:
 
 
 ## Signal handler for extreme low speed (stall warning).
-## Snaps the UI to a maximum dark red warning state.
+## Activates the warning blinker.
 ## @return: void
 func _on_speed_low() -> void:
 	if speed_stat != null and not speed_stat.is_blinking:
 		speed_stat.start_blinking()
 
-	if _speed_bar_style != null:
-		_speed_bar_style.bg_color = DARK_RED
-
 
 ## Signal handler for maximum forward velocity.
-## Snaps the UI to a bright red warning state to indicate structural stress.
+## Activates the warning blinker to indicate structural stress.
 ## @return: void
 func _on_speed_maxed() -> void:
 	if speed_stat != null and not speed_stat.is_blinking:
 		speed_stat.start_blinking()
-
-	if _speed_bar_style != null:
-		_speed_bar_style.bg_color = Color.RED
 
 
 ## Callback triggered when the SpeedResource modifies its visual warning fractions.
