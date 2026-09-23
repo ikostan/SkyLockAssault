@@ -431,13 +431,14 @@ func check_speed_warning() -> void:
 		)
 	)
 
+	# BUG FIX: Treat exact threshold equality as a warning state.
 	if (
-		(current_spd < low_yellow_thresh or current_spd > high_yellow_thresh)
+		(current_spd <= low_yellow_thresh or current_spd >= high_yellow_thresh)
 		and not speed_stat.is_blinking
 	):
 		speed_stat.start_blinking()
 	elif (
-		(low_yellow_thresh <= current_spd and current_spd <= high_yellow_thresh)
+		(low_yellow_thresh < current_spd and current_spd < high_yellow_thresh)
 		and speed_stat.is_blinking
 	):
 		speed_stat.stop_blinking()
