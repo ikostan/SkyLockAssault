@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_hud.gd
 ##
 ## Comprehensive GUT unit tests for the Heads-Up Display manager (hud.gd).
@@ -120,52 +120,70 @@ func test_setup_hud_with_invalid_resources() -> void:
 
 ## test_resource_replacement_isolation | Dependency Injection
 func test_resource_replacement_isolation() -> void:
-	gut.p("Testing: Replaced resources become inert, while new resources correctly drive telemetry.")
+	gut.p("Testing: All replaced resources become inert, while new resources correctly drive telemetry.")
 	
 	var new_speed: SpeedResource = SpeedResource.new()
 	new_speed.max_speed = 1000.0
 	new_speed.current_speed = 100.0
 	
-	# Inject the replacement resource (Hot-swapping)
-	_hud.setup_hud(_fuel, new_speed, _weapon)
+	var new_fuel: FuelResource = FuelResource.new()
+	new_fuel.max_fuel = 500.0
+	new_fuel.current_fuel = 50.0
 	
-	# 1. Mutate the old, now inert resource
+	var new_weapon: WeaponResource = WeaponResource.new()
+	new_weapon.max_ammo = 500
+	new_weapon.current_ammo = 100
+	
+	# Inject the replacement resources (Hot-swapping)
+	_hud.setup_hud(new_fuel, new_speed, new_weapon)
+	
+	# 1. Mutate the old, now inert resources
 	_speed.current_speed = 500.0
+	_fuel.current_fuel = 300.0
+	_weapon.current_ammo = 999
 	
-	# Verify HUD ignored the old resource
-	assert_eq(_hud.get_current_speed(), 100.0, "HUD must ignore mutations from replaced inert resources.")
+	# Verify HUD ignored the old resources completely
+	assert_eq(_hud.get_current_speed(), 100.0, "HUD must ignore speed mutations from replaced inert resources.")
+	assert_eq(_hud.fuel_bar.value, 50.0, "HUD must ignore fuel mutations from replaced inert resources.")
+	assert_eq(_hud.ammo_bar.value, 100.0, "HUD must ignore ammo mutations from replaced inert resources.")
 	
-	# 2. Mutate the newly injected active resource
+	# 2. Mutate the newly injected active resources
 	new_speed.current_speed = 800.0
+	new_fuel.current_fuel = 450.0
+	new_weapon.current_ammo = 200
 	
-	# Verify HUD followed the new resource
-	assert_eq(_hud.get_current_speed(), 800.0, "HUD must react immediately to mutations from the newly injected resource.")
+	# Verify HUD followed the new resources
+	assert_eq(_hud.get_current_speed(), 800.0, "HUD must react immediately to new speed resource.")
+	assert_eq(_hud.fuel_bar.value, 450.0, "HUD must react immediately to new fuel resource.")
+	assert_eq(_hud.ammo_bar.value, 200.0, "HUD must react immediately to new weapon resource.")
 
 
 ## test_setup_hud_idempotency | Dependency Injection
 func test_setup_hud_idempotency() -> void:
-	gut.p("Testing: Repeated injection of identical instances does not duplicate signal connections.")
+	gut.p("Testing: Repeated injection of identical instances does not duplicate signal connections for any resource.")
 	
+	# Helper lambda to count active connections directed to the HUD
+	var count_conns = func(sig: Signal) -> int:
+		var count: int = 0
+		for conn in sig.get_connections():
+			if conn["callable"].get_object() == _hud:
+				count += 1
+		return count
+		
 	# Count baseline connections explicitly wired to our HUD instance
-	var initial_conns: int = 0
-	for conn in _speed.speed_updated.get_connections():
-		if conn["callable"].get_object() == _hud:
-			initial_conns += 1
-			
-	assert_eq(initial_conns, 1, "HUD should have exactly 1 connection to the speed_updated signal initially.")
+	assert_eq(count_conns.call(_speed.speed_updated), 1, "Speed should have exactly 1 connection to speed_updated initially.")
+	assert_eq(count_conns.call(_fuel.fuel_changed), 1, "Fuel should have exactly 1 connection to fuel_changed initially.")
+	assert_eq(count_conns.call(_weapon.ammo_updated), 1, "Weapon should have exactly 1 connection to ammo_updated initially.")
 	
 	# Spam the injection method to simulate heavy level reloading or scene churn
 	_hud.setup_hud(_fuel, _speed, _weapon)
 	_hud.setup_hud(_fuel, _speed, _weapon)
 	_hud.setup_hud(_fuel, _speed, _weapon)
 	
-	# Count connections again
-	var final_conns: int = 0
-	for conn in _speed.speed_updated.get_connections():
-		if conn["callable"].get_object() == _hud:
-			final_conns += 1
-			
-	assert_eq(final_conns, 1, "Repeated injection of the same resource instance must not duplicate signal connections.")
+	# Assert counts remain strictly at 1 across all data layers
+	assert_eq(count_conns.call(_speed.speed_updated), 1, "Repeated setup must not duplicate Speed connections.")
+	assert_eq(count_conns.call(_fuel.fuel_changed), 1, "Repeated setup must not duplicate Fuel connections.")
+	assert_eq(count_conns.call(_weapon.ammo_updated), 1, "Repeated setup must not duplicate Weapon connections.")
 
 
 # ==========================================
