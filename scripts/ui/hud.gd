@@ -18,9 +18,6 @@ const BLINK_INTERVAL: float = 0.5
 var fuel_stat: StatManager
 var speed_stat: StatManager
 
-# var _settings: GameSettingsResource = null
-# var _current_speed: float = 250.0
-
 var _fuel_bar_style: StyleBoxFlat
 var _speed_bar_style: StyleBoxFlat
 
@@ -190,6 +187,8 @@ func setup_hud(
 			_speed_resource.speed_low.disconnect(_on_speed_low)
 		if _speed_resource.speed_maxed.is_connected(_on_speed_maxed):
 			_speed_resource.speed_maxed.disconnect(_on_speed_maxed)
+		if _speed_resource.thresholds_changed.is_connected(_on_speed_thresholds_changed):
+			_speed_resource.thresholds_changed.disconnect(_on_speed_thresholds_changed)
 
 	if is_instance_valid(_fuel_resource) and _fuel_resource != fuel_res:
 		if _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
@@ -219,6 +218,8 @@ func setup_hud(
 		_speed_resource.speed_low.connect(_on_speed_low)
 	if not _speed_resource.speed_maxed.is_connected(_on_speed_maxed):
 		_speed_resource.speed_maxed.connect(_on_speed_maxed)
+	if not _speed_resource.thresholds_changed.is_connected(_on_speed_thresholds_changed):
+		_speed_resource.thresholds_changed.connect(_on_speed_thresholds_changed)
 
 	if not _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
 		_fuel_resource.fuel_changed.connect(_on_fuel_changed_bridge)
@@ -240,7 +241,7 @@ func setup_hud(
 
 	# Sync Speed
 	update_speed_bar()
-	check_speed_warning()  # <-- ADD THIS LINE
+	check_speed_warning()
 
 	# Sync Weapon & Ammo
 	if _weapon_resource.available_weapons.size() > _weapon_resource.current_index:
@@ -273,6 +274,8 @@ func _exit_tree() -> void:
 			_speed_resource.speed_low.disconnect(_on_speed_low)
 		if _speed_resource.speed_maxed.is_connected(_on_speed_maxed):
 			_speed_resource.speed_maxed.disconnect(_on_speed_maxed)
+		if _speed_resource.thresholds_changed.is_connected(_on_speed_thresholds_changed):
+			_speed_resource.thresholds_changed.disconnect(_on_speed_thresholds_changed)
 
 	if is_instance_valid(_fuel_resource):
 		if _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
@@ -578,3 +581,10 @@ func _on_speed_maxed() -> void:
 
 	if _speed_bar_style != null:
 		_speed_bar_style.bg_color = Color.RED
+
+
+## Callback triggered when the SpeedResource modifies its visual warning fractions.
+## @return: void
+func _on_speed_thresholds_changed() -> void:
+	update_speed_bar()
+	check_speed_warning()
