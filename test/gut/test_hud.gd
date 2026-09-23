@@ -120,7 +120,7 @@ func test_setup_hud_with_invalid_resources() -> void:
 
 ## test_resource_replacement_isolation | Dependency Injection
 func test_resource_replacement_isolation() -> void:
-	gut.p("Testing: All replaced resources become inert, while new resources correctly drive telemetry.")
+	gut.p("Testing: All replaced resources become inert, while new resources correctly drive telemetry (Bi-directional).")
 	
 	var new_speed: SpeedResource = SpeedResource.new()
 	new_speed.max_speed = 1000.0
@@ -134,7 +134,9 @@ func test_resource_replacement_isolation() -> void:
 	new_weapon.max_ammo = 500
 	new_weapon.current_ammo = 100
 	
-	# Inject the replacement resources (Hot-swapping)
+	# =========================================
+	# FORWARD SWAP: Original -> New
+	# =========================================
 	_hud.setup_hud(new_fuel, new_speed, new_weapon)
 	
 	# 1. Mutate the old, now inert resources
@@ -156,6 +158,30 @@ func test_resource_replacement_isolation() -> void:
 	assert_eq(_hud.get_current_speed(), 800.0, "HUD must react immediately to new speed resource.")
 	assert_eq(_hud.fuel_bar.value, 450.0, "HUD must react immediately to new fuel resource.")
 	assert_eq(_hud.ammo_bar.value, 200.0, "HUD must react immediately to new weapon resource.")
+
+	# =========================================
+	# REVERSE SWAP: New -> Original
+	# =========================================
+	_hud.setup_hud(_fuel, _speed, _weapon)
+	
+	# 3. Mutate the temporary 'new' resources, which should now be inert
+	new_speed.current_speed = 200.0
+	new_fuel.current_fuel = 150.0
+	new_weapon.current_ammo = 50
+	
+	# Verify HUD ignored the now-inert 'new' resources
+	assert_eq(_hud.get_current_speed(), 500.0, "HUD must ignore mutations from second set after swapping back.")
+	assert_eq(_hud.fuel_bar.value, 300.0, "HUD must ignore mutations from second set after swapping back.")
+	assert_eq(_hud.ammo_bar.value, 999.0, "HUD must ignore mutations from second set after swapping back.")
+	
+	# 4. Mutate the original resources to prove they resumed control
+	_speed.current_speed = 600.0
+	_fuel.current_fuel = 200.0
+	_weapon.current_ammo = 500
+	
+	assert_eq(_hud.get_current_speed(), 600.0, "HUD must resume tracking original speed resource.")
+	assert_eq(_hud.fuel_bar.value, 200.0, "HUD must resume tracking original fuel resource.")
+	assert_eq(_hud.ammo_bar.value, 500.0, "HUD must resume tracking original weapon resource.")
 
 
 ## test_setup_hud_idempotency | Dependency Injection
