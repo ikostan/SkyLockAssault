@@ -320,3 +320,27 @@ func test_hud_reacts_to_flameout_signal() -> void:
 	
 	assert_eq(_hud.get_current_speed(), 0.0, "HUD must reflect the zeroed speed upon flameout.")
 	assert_eq(_hud.speed_bar.value, 0.0, "Progress bar must visually drop to zero.")
+
+
+## test_hud_reacts_to_weapon_swapped | Observer Integration
+func test_hud_reacts_to_weapon_swapped() -> void:
+	gut.p("Testing: HUD formats and updates the weapon label strictly observing weapon_swapped.")
+	
+	# Mutate the resource to trigger the weapon_swapped signal
+	_weapon.available_weapons = ["Plasma Cannon"]
+	
+	# The HUD format rules dictate uppercase, spaces replaced by equals, and curly brackets
+	var expected_text: String = "{PLASMA=CANNON}"
+	assert_eq(_hud.weapon_label.text, expected_text, "HUD must format the text correctly to '{PLASMA=CANNON}'.")
+
+
+## test_hud_reacts_to_ammo_updated | Observer Integration
+func test_hud_reacts_to_ammo_updated() -> void:
+	gut.p("Testing: HUD correctly updates the ammo progress bar observing ammo_updated.")
+	
+	# Mutate resource to trigger ammo_updated signals
+	_weapon.max_ammo = 500
+	_weapon.current_ammo = 250
+	
+	assert_eq(_hud.ammo_bar.max_value, 500.0, "HUD must dynamically sync the ammo bar maximum value.")
+	assert_eq(_hud.ammo_bar.value, 250.0, "HUD must dynamically sync the ammo bar current value.")
