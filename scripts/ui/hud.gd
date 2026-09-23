@@ -1,9 +1,9 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## hud.gd
 ##
 ## Heads-Up Display manager for SkyLockAssault.
-## Handles all visual player statistics, including the Fuel and Speed progress bars,
+## Handles all visual statistics, including the Fuel and Speed progress bars,
 ## threshold calculations, and warning label animations.
 ## Operates entirely via Observer Patterns, completely decoupled from physics logic.
 extends Panel
@@ -193,8 +193,8 @@ func setup_hud(
 	if is_instance_valid(_fuel_resource) and _fuel_resource != fuel_res:
 		if _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
 			_fuel_resource.fuel_changed.disconnect(_on_fuel_changed_bridge)
-		if _fuel_resource.fuel_depleted.is_connected(_on_player_out_of_fuel):
-			_fuel_resource.fuel_depleted.disconnect(_on_player_out_of_fuel)
+		if _fuel_resource.fuel_depleted.is_connected(_on_fuel_depleted):
+			_fuel_resource.fuel_depleted.disconnect(_on_fuel_depleted)
 
 	if is_instance_valid(_weapon_resource) and _weapon_resource != weapon_res:
 		if _weapon_resource.weapon_swapped.is_connected(_on_weapon_swapped):
@@ -223,8 +223,8 @@ func setup_hud(
 
 	if not _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
 		_fuel_resource.fuel_changed.connect(_on_fuel_changed_bridge)
-	if not _fuel_resource.fuel_depleted.is_connected(_on_player_out_of_fuel):
-		_fuel_resource.fuel_depleted.connect(_on_player_out_of_fuel)
+	if not _fuel_resource.fuel_depleted.is_connected(_on_fuel_depleted):
+		_fuel_resource.fuel_depleted.connect(_on_fuel_depleted)
 
 	if not _weapon_resource.weapon_swapped.is_connected(_on_weapon_swapped):
 		_weapon_resource.weapon_swapped.connect(_on_weapon_swapped)
@@ -280,8 +280,8 @@ func _exit_tree() -> void:
 	if is_instance_valid(_fuel_resource):
 		if _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
 			_fuel_resource.fuel_changed.disconnect(_on_fuel_changed_bridge)
-		if _fuel_resource.fuel_depleted.is_connected(_on_player_out_of_fuel):
-			_fuel_resource.fuel_depleted.disconnect(_on_player_out_of_fuel)
+		if _fuel_resource.fuel_depleted.is_connected(_on_fuel_depleted):
+			_fuel_resource.fuel_depleted.disconnect(_on_fuel_depleted)
 
 	if is_instance_valid(_weapon_resource):
 		if _weapon_resource.weapon_swapped.is_connected(_on_weapon_swapped):
@@ -299,7 +299,7 @@ func _exit_tree() -> void:
 ## @param new_speed: The updated speed value from the resource.
 ## @return: void
 func _on_speed_updated_bridge(_new_speed: float) -> void:
-	# Route directly to the UI updaters instead of the legacy player pathway
+	# Route directly to the UI updaters instead of the legacy pathway
 	update_speed_bar()
 	check_speed_warning()
 
@@ -307,8 +307,8 @@ func _on_speed_updated_bridge(_new_speed: float) -> void:
 ## Signal handler for global engine failure.
 ## Triggers immediate UI feedback for a flameout state.
 ## @return: void
-func _on_player_out_of_fuel() -> void:
-	# The Player node sets the resource speed to 0.0. We just update the UI.
+func _on_fuel_depleted() -> void:
+	# The physics controller sets the resource speed to 0.0. We just update the UI.
 	update_speed_bar()
 	check_speed_warning()
 
@@ -485,7 +485,7 @@ func set_bar_fill_style(bar: ProgressBar, bar_fill_style: StyleBoxFlat) -> void:
 
 
 ## Retrieves the current forward speed directly from the injected SpeedResource.
-## @return: float - The player's current speed value.
+## @return: float - The current speed value.
 func get_current_speed() -> float:
 	if is_instance_valid(_speed_resource):
 		return _speed_resource.current_speed
