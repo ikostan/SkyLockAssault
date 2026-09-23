@@ -114,7 +114,8 @@ For details on reporting vulnerabilities and our disclosure process, see
 
 This project is **source-available** under the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0).
 
-- Free for noncommercial purposes, including personal study, hobby projects, and use by eligible noncommercial organizations.
+- Free for noncommercial purposes, including personal study, hobby projects,
+  and use by eligible noncommercial organizations.
 - Modification and redistribution are allowed **only** for non-commercial purposes.
 - **Commercial use is prohibited** without a separate commercial license from the
   copyright holder.
