@@ -1,6 +1,7 @@
-## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## bullet.gd - FIXED for Web SFX Volume Control
+
 extends Node2D
 
 @export var fire_rate: float = 0.15
