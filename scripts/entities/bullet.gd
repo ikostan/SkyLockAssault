@@ -52,7 +52,7 @@ func fire() -> bool:
 
 	spawn_projectile()
 	play_sfx_with_volume()
-	
+
 	return true
 
 

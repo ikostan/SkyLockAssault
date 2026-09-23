@@ -74,7 +74,7 @@ func fire() -> void:
 			Globals.log_message(
 				"Weapon.fire() delegating to " + str(current_weapon.name), Globals.LogLevel.DEBUG
 			)
-			
+
 			# The child weapon's fire() method MUST return a boolean indicating success
 			var shot_fired: bool = current_weapon.fire()
 
