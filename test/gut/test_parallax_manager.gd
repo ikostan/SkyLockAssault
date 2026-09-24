@@ -7,29 +7,34 @@
 extends "res://addons/gut/test.gd"
 
 var _parallax_manager: ParallaxManager
-var _original_settings: GameSettingsResource
+var _speed: SpeedResource
+var _fuel: FuelResource
+var _settings: GameSettingsResource
 
 
-## Per-test setup: Isolates the global resource state and instantiates the manager.
+## Per-test setup: Instantiates isolated resources and the manager.
 ## :rtype: void
 func before_each() -> void:
-	_original_settings = Globals.settings
-	Globals.settings = GameSettingsResource.new()
-	Globals.settings.difficulty = 1.0
-	Globals.settings.current_fuel = 100.0  # Ensure scroll is not gated by flameout reset
+	# Isolate Speed
+	_speed = SpeedResource.new()
+	_speed.min_speed = 0.0
+	_speed.max_speed = 1000.0
+	_speed.current_speed = 100.0
+	
+	# Isolate Fuel
+	_fuel = FuelResource.new()
+	_fuel.max_fuel = 100.0
+	_fuel.current_fuel = 100.0
+	
+	# Isolate Settings
+	_settings = GameSettingsResource.new()
+	_settings.difficulty = 1.0
 	
 	_parallax_manager = ParallaxManager.new()
 	add_child_autofree(_parallax_manager)
 	_parallax_manager.set_process(false)  # Only run _process explicitly from tests
 	
-	# NEW: Inject the test settings into the manager
-	_parallax_manager.setup(Globals.settings)
-
-
-## Post-test cleanup: Restores global state to prevent test leakage.
-## :rtype: void
-func after_each() -> void:
-	Globals.settings = _original_settings
+	_parallax_manager.setup(_speed, _fuel, _settings)
 
 
 # ==========================================
@@ -39,15 +44,36 @@ func after_each() -> void:
 ## test_speed_update_from_signal | Observer Integration
 ## :rtype: void
 func test_speed_update_from_signal() -> void:
-	gut.p("Testing: ParallaxManager correctly caches speed from the player's signal.")
+	gut.p("Testing: ParallaxManager correctly caches speed from the SpeedResource signal.")
 	
-	# Simulate the Player broadcasting a new speed of 250.0
-	_parallax_manager.update_speed(250.0, 500.0)
+	_speed.current_speed = 250.0
 	
 	assert_eq(
 		_parallax_manager._current_speed, 
 		250.0, 
-		"Manager must update _current_speed when signal callback is invoked."
+		"Manager must update _current_speed when SpeedResource is mutated."
+	)
+
+
+## test_difficulty_updates_via_settings_resource_signal | Observer Integration
+## :rtype: void
+func test_difficulty_updates_via_settings_resource_signal() -> void:
+	gut.p("Testing: ParallaxManager dynamically updates its difficulty multiplier via GameSettingsResource.")
+	
+	# Use 2.0 as it falls within the valid clamp(0.5, 2.0) bounds of GameSettingsResource
+	_settings.difficulty = 2.0
+	assert_eq(_parallax_manager._difficulty, 2.0, "Manager must update _difficulty when GameSettingsResource is mutated.")
+	
+	_speed.current_speed = 100.0
+	_parallax_manager.scroll_offset.y = 0.0
+	_parallax_manager._process(1.0)
+	
+	var expected_offset: float = 100.0 * 1.0 * 2.0 * 0.8
+	assert_almost_eq(
+		_parallax_manager.scroll_offset.y, 
+		expected_offset, 
+		0.01, 
+		"Scroll offset math must use the newly emitted difficulty multiplier."
 	)
 
 
@@ -60,16 +86,13 @@ func test_speed_update_from_signal() -> void:
 func test_scroll_offset_math() -> void:
 	gut.p("Testing: Process loop correctly calculates the scroll offset increment based on difficulty.")
 	
-	# 1. Setup specific variables for predictable math
-	Globals.settings.difficulty = 2.0
-	_parallax_manager._current_speed = 100.0
+	_settings.difficulty = 2.0
+	_speed.current_speed = 100.0
 	_parallax_manager.scroll_offset.y = 0.0
 	
-	# 2. Simulate one physics frame
 	var delta: float = 0.5
 	_parallax_manager._process(delta)
 	
-	# 3. Verify the math
 	# Expected math: speed(100.0) * delta(0.5) * diff(2.0) * multiplier(0.8) = 80.0
 	var expected_offset: float = 100.0 * 0.5 * 2.0 * 0.8
 	
@@ -86,15 +109,12 @@ func test_scroll_offset_math() -> void:
 func test_zero_speed_stops_scroll() -> void:
 	gut.p("Testing: A speed of 0.0 results in a halted background scroll.")
 	
-	# 1. Setup flameout/halt state
-	_parallax_manager._current_speed = 0.0
+	_speed.current_speed = 0.0
 	var initial_offset: float = 125.5
 	_parallax_manager.scroll_offset.y = initial_offset 
 	
-	# 2. Simulate processing frame
 	_parallax_manager._process(1.0)
 	
-	# 3. Verify no movement
 	assert_eq(
 		_parallax_manager.scroll_offset.y, 
 		initial_offset, 
@@ -106,10 +126,12 @@ func test_zero_speed_stops_scroll() -> void:
 ## :rtype: void
 func test_flameout_resets_offset() -> void:
 	gut.p("Testing: current_fuel <= 0 resets scroll_offset to Vector2.ZERO.")
-	Globals.settings.current_fuel = 0.0
-	_parallax_manager._current_speed = 100.0
+	_speed.current_speed = 100.0
 	_parallax_manager.scroll_offset = Vector2(42.0, 125.5)
+	
+	_fuel.current_fuel = 0.0
 	_parallax_manager._process(0.5)
+	
 	assert_eq(
 		_parallax_manager.scroll_offset,
 		Vector2.ZERO,
@@ -118,19 +140,13 @@ func test_flameout_resets_offset() -> void:
 
 
 ## test_flameout_recovery_resumes_scroll | State Management
-## Tests the exact recovery path of the ParallaxManager after a flameout event.
-## Verifies that pushing a positive fuel value via the global Observer pattern 
-## successfully flips the internal `_out_of_fuel` boolean back to false, allowing 
-## the `_process` loop to seamlessly resume parallax scrolling without needing a scene reload.
 ## :rtype: void
 func test_flameout_recovery_resumes_scroll() -> void:
 	gut.p("Testing: Refueling after a flameout clears the _out_of_fuel state and resumes scrolling.")
 	
-	# 1. Setup initial speed and force the flameout state
-	_parallax_manager.prime_speed(100.0)
-	_parallax_manager._on_fuel_depleted() # Simulates the global fuel_depleted signal
+	_speed.current_speed = 100.0
+	_fuel.current_fuel = 0.0
 	
-	# Verify the background is hard-stopped (Baseline Assertion)
 	_parallax_manager._process(1.0)
 	assert_eq(
 		_parallax_manager.scroll_offset.y, 
@@ -138,15 +154,9 @@ func test_flameout_recovery_resumes_scroll() -> void:
 		"PRE-CONDITION: Scroll must be completely locked to ZERO during a flameout."
 	)
 	
-	# 2. Simulate Refueling via the Observer Pattern
-	# This mimics `main_scene.gd` or `player.gd` updating the global resource.
-	# It triggers the specific `elif` branch in `_on_setting_changed` to clear `_out_of_fuel`.
-	_parallax_manager._on_setting_changed("current_fuel", 50.0)
-	
-	# 3. Simulate the next physics frame post-refuel
+	_fuel.current_fuel = 50.0
 	_parallax_manager._process(1.0)
 	
-	# 4. Verify the math resumed correctly
 	# Expected math: speed(100.0) * delta(1.0) * diff(1.0) * multiplier(0.8) = 80.0
 	var expected_offset: float = 100.0 * 1.0 * 1.0 * 0.8
 	
@@ -159,34 +169,103 @@ func test_flameout_recovery_resumes_scroll() -> void:
 
 
 # ==========================================
-# SAFETY & EDGE CASE TESTS
+# ISOLATION & LIFECYCLE TESTS
 # ==========================================
 
-## test_process_safe_with_null_globals_after_setup | Safety Constraint
+## test_setup_initial_state_synchronization | Initialization
 ## :rtype: void
-func test_process_safe_with_null_globals_after_setup() -> void:
-	gut.p("Testing: ParallaxManager continues using cached state and does not crash if Globals drop.")
+func test_setup_initial_state_synchronization() -> void:
+	gut.p("Testing: Manager instantly synchronizes internal variables during setup().")
 	
-	# 1. Force a null state (simulating scene transition or engine shutdown)
-	Globals.settings = null
+	var s = SpeedResource.new()
+	s.min_speed = 0.0
+	s.max_speed = 1000.0
+	s.current_speed = 350.0
 	
-	_parallax_manager.prime_speed(100.0)
-	_parallax_manager.scroll_offset.y = 0.0
+	var f = FuelResource.new()
+	f.max_fuel = 100.0
+	f.current_fuel = 0.0
 	
-	# 2. Simulate processing frame
-	var delta: float = 1.0
-	_parallax_manager._process(delta)
+	var st = GameSettingsResource.new()
+	st.difficulty = 1.5
 	
-	# 3. Verify the math used the cached difficulty (1.0 from before_each)
-	# Expected math: speed(100.0) * delta(1.0) * cached_diff(1.0) * multiplier(0.8) = 80.0
-	var expected_offset: float = 100.0 * 1.0 * 1.0 * 0.8
+	var pm = ParallaxManager.new()
+	pm.setup(s, f, st)
 	
-	assert_almost_eq(
-		_parallax_manager.scroll_offset.y, 
-		expected_offset, 
-		0.01, 
-		"Process must use cached difficulty and avoid null instance errors when Globals are missing."
+	assert_eq(pm._current_speed, 350.0, "Manager must pull initial speed.")
+	assert_eq(pm._out_of_fuel, true, "Manager must pull initial fuel state.")
+	assert_eq(pm._difficulty, 1.5, "Manager must pull initial difficulty.")
+	pm.free()
+
+
+## test_resource_replacement_disconnects_old_signals | Isolation
+## :rtype: void
+func test_resource_replacement_disconnects_old_signals() -> void:
+	gut.p("Testing: Injecting new resources correctly severs connections to the old ones.")
+	
+	var speedA = SpeedResource.new()
+	speedA.min_speed = 0.0
+	speedA.max_speed = 500.0
+	speedA.current_speed = 100.0
+	_parallax_manager.setup(speedA, _fuel, _settings)
+	
+	var speedB = SpeedResource.new()
+	speedB.min_speed = 0.0
+	speedB.max_speed = 500.0
+	speedB.current_speed = 200.0
+	_parallax_manager.setup(speedB, _fuel, _settings)
+	
+	speedA.current_speed = 300.0
+	assert_eq(
+		_parallax_manager._current_speed, 
+		200.0, 
+		"Manager must ignore signals from previously injected resources."
 	)
+	
+	speedB.current_speed = 400.0
+	assert_eq(
+		_parallax_manager._current_speed, 
+		400.0, 
+		"Manager must correctly observe the newly injected resource."
+	)
+
+
+## test_setup_idempotency_prevents_duplicate_connections | Safety Constraint
+## :rtype: void
+func test_setup_idempotency_prevents_duplicate_connections() -> void:
+	gut.p("Testing: Running setup() multiple times is safe and prevents duplicate connections.")
+	
+	# Godot will throw an internal console error if we attempt to disconnect 
+	# a non-connected signal or double-connect.
+	_parallax_manager.setup(_speed, _fuel, _settings)
+	_parallax_manager.setup(_speed, _fuel, _settings)
+	_parallax_manager.setup(_speed, _fuel, _settings)
+	
+	_speed.current_speed = 123.0
+	
+	assert_eq(
+		_parallax_manager._current_speed, 
+		123.0, 
+		"Signal processing must still function normally after idempotent setups."
+	)
+
+
+## test_setup_handles_null_resources_gracefully | Safety Constraint
+## :rtype: void
+func test_setup_handles_null_resources_gracefully() -> void:
+	gut.p("Testing: ParallaxManager survives null resource injection without crashing.")
+	
+	var pm = ParallaxManager.new()
+	pm._current_speed = 42.0
+	pm._difficulty = 3.0
+	pm._out_of_fuel = true
+	
+	pm.setup(null, null, null)
+	
+	assert_eq(pm._current_speed, 42.0, "Manager should retain previous state if speed is null.")
+	assert_eq(pm._difficulty, 3.0, "Manager should retain previous state if settings are null.")
+	assert_eq(pm._out_of_fuel, true, "Manager should retain previous state if fuel is null.")
+	pm.free()
 
 
 ## test_process_uses_default_values_without_setup | Initialization
@@ -194,19 +273,14 @@ func test_process_safe_with_null_globals_after_setup() -> void:
 func test_process_uses_default_values_without_setup() -> void:
 	gut.p("Testing: ParallaxManager uses safe default values (difficulty 1.0) if setup() is never called.")
 	
-	# 1. Create a fresh manager without calling setup()
 	var uninitialized_manager: ParallaxManager = ParallaxManager.new()
 	add_child_autofree(uninitialized_manager)
-	uninitialized_manager.set_process(false)  # Only run _process explicitly from tests
+	uninitialized_manager.set_process(false)
 	
-	uninitialized_manager.prime_speed(100.0)
+	uninitialized_manager._current_speed = 100.0
 	uninitialized_manager.scroll_offset.y = 0.0
+	uninitialized_manager._process(1.0)
 	
-	# 2. Simulate processing frame
-	var delta: float = 1.0
-	uninitialized_manager._process(delta)
-	
-	# 3. Verify the math used the default initialized difficulty of 1.0
 	# Expected math: speed(100.0) * delta(1.0) * default_diff(1.0) * multiplier(0.8) = 80.0
 	var expected_offset: float = 100.0 * 1.0 * 1.0 * 0.8
 	

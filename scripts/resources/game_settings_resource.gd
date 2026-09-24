@@ -4,6 +4,8 @@
 ##
 ## DATA CONTAINER: This Resource serves as the central "Source of Truth" for game configuration.
 ## It decouples static data from logic found in Globals.gd.
+
+@tool
 class_name GameSettingsResource
 extends Resource
 

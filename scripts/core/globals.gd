@@ -4,6 +4,7 @@
 ## Global utilities singleton: Provides shared functions like logging.
 ## Access from any script as Globals.log_message("message").
 
+@tool
 extends Node
 
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
