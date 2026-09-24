@@ -7,7 +7,7 @@
 [resource]
 script = ExtResource("3_qb8m4")
 current_log_level = 0
+
 key_mapping_scene = ExtResource("1_qho2n")
 options_scene = ExtResource("2_b4w4u")
-show_fps = true
 metadata/_custom_type_script = "uid://cgtk0ximoo5ty"
