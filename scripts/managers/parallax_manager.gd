@@ -33,22 +33,22 @@ var _settings: GameSettingsResource
 func setup(speed: SpeedResource, fuel: FuelResource, settings: GameSettingsResource) -> void:
 	# 1. Disconnect previously observed resources
 	_disconnect_signals()
-	
+
 	# 2. Store the new resource references
 	_speed_resource = speed
 	_fuel_resource = fuel
 	_settings = settings
-	
+
 	# 3. Connect required signals and 4. Perform initial state synchronization
 	if is_instance_valid(_speed_resource):
 		_speed_resource.speed_updated.connect(_on_speed_updated)
 		_current_speed = _speed_resource.current_speed
-		
+
 	if is_instance_valid(_fuel_resource):
 		_fuel_resource.fuel_changed.connect(_on_fuel_changed)
 		_fuel_resource.fuel_depleted.connect(_on_fuel_depleted)
 		_out_of_fuel = (_fuel_resource.current_fuel <= 0.0)
-		
+
 	if is_instance_valid(_settings):
 		_settings.setting_changed.connect(_on_setting_changed)
 		_difficulty = _settings.difficulty
@@ -57,15 +57,18 @@ func setup(speed: SpeedResource, fuel: FuelResource, settings: GameSettingsResou
 ## Helper to disconnect signals during teardown or replacement.
 ## @return: void
 func _disconnect_signals() -> void:
-	if is_instance_valid(_speed_resource) and _speed_resource.speed_updated.is_connected(_on_speed_updated):
+	if (
+		is_instance_valid(_speed_resource)
+		and _speed_resource.speed_updated.is_connected(_on_speed_updated)
+	):
 		_speed_resource.speed_updated.disconnect(_on_speed_updated)
-		
+
 	if is_instance_valid(_fuel_resource):
 		if _fuel_resource.fuel_changed.is_connected(_on_fuel_changed):
 			_fuel_resource.fuel_changed.disconnect(_on_fuel_changed)
 		if _fuel_resource.fuel_depleted.is_connected(_on_fuel_depleted):
 			_fuel_resource.fuel_depleted.disconnect(_on_fuel_depleted)
-			
+
 	if is_instance_valid(_settings) and _settings.setting_changed.is_connected(_on_setting_changed):
 		_settings.setting_changed.disconnect(_on_setting_changed)
 
