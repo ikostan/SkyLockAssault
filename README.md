@@ -33,7 +33,7 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 
 ## Project Overview
 
-- **Godot Version**: 4.6.3 stable (or compatible).
+- **Godot Version**: 4.X stable (or compatible).
 - **OS**: `Windows 10 64-bit`, `Windows 11 64-bit`.
 - **Tools**:
   - `Docker Desktop v4.75.0` for local testing
@@ -83,19 +83,6 @@ You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 12. [Browser DevTools Guide — Verifying Web Save Encryption in Godot 4.5](files/docs/Browser_DevTools_Guide_Verifying_Web_Save_Encryption.md)
 <!-- markdownlint-enable line-length -->
 
-## Roadmap
-
-Here's a high-level plan for upcoming features. Contributions welcome!
-
-- **v0.2: Completed Foundations** - Project import, Docker local testing,
-  basic input actions, top-down movement, main menu, quit handling for browser,
-  HTML5 export and testing, GitHub Actions CI/CD to Itch.io (complete).
-- **v0.3: Expansion** - Add levels, weapons, player feedback integration.
-- **v0.4: Post-MVP Refinements** - Performance optimization, audio polish, bug fixes.
-- **v0.5: Ongoing Development** - Feedback gathering, minor updates, release tagging.
-- Future: Multiplayer elements, AI enemies, mobile export
-  (post-launch based on community input).
-
 ## Player Feedback
 
 We value your input to improve Sky Lock Assault! Share your thoughts via:
@@ -140,8 +127,9 @@ See the [LICENSE](LICENSE) file for the full terms.
 ### Project Structure (`scripts/`)
 
 Post-Refactor Phase 4 (PR `#582`), the root `scripts/` directory has been fully
-reorganised into purpose-specific sub-directories:
+reorganized into purpose-specific subdirectories:
 <!-- markdownlint-disable MD013 -->
+
 | Directory            | Contents                                                                                                                                                                                     |
 |----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `scripts/core/`      | Foundational systems: `game_paths.gd` (centralized path registry), `globals.gd`, `main_scene.gd`, `settings.gd`                                                                              |
@@ -151,198 +139,6 @@ reorganised into purpose-specific sub-directories:
 | `scripts/managers/`  | Game-loop managers: `audio_manager.gd`, `parallax_manager.gd`, `resource_preloader.gd`                                                                                                       |
 | `scripts/ui/`        | Interface layer: `hud.gd`; sub-dirs `menus/` (main, pause, options, audio, gameplay, key-mapping, advanced), `screens/` (splash, loading), `components/` (volume slider, input remap button) |
 <!-- markdownlint-enable MD013 -->
----
-
-## 🟢 Current Development Status
-
-**Milestone:** Milestone 14
-**Status:** Stable gameplay loop with synced UI systems and GUT-based unit testing.
-**Active Focus:** Gameplay expansion (AI enemies, multiplayer, levels).
-
-### Current features
-
-- Main menu scene with buttons (Start, Resume, Options, Quit).
-- Placeholder game level for future mechanics and game testing.
-- Options menu with log level settings, accessible from main and pause menus.
-- Pause menu with buttons (Main Menu, Options, Resume).
-- Player scene with CharacterBody2D, ShaderBody, CollisionShape, and FuelTimer.
-- Fade-in animations for main menu UI panels.
-- Fuel system including fuel level progress bar with dynamic color gradients
-  (green to yellow to red/dark red) and low-fuel blinking warnings.
-- Basic weapon system.
-- Difficulty settings.
-- Game controls input remapping.
-- Fuel management (timer-based depletion scaled by speed, base drain, and difficulty;
-  refuel not yet implemented).
-- Basic adjustable difficulty (affects fire rate, fuel depletion, and more).
-- Basic sound effects & background music.
-- Airplane Rotor Sound (Stereo SFX) + Rotor Animation, with reusable helpers and
-  rotors stopping on zero fuel.
-- Audio Buses & Panning (L/R Split).
-- Options Menu: Rotors Volume Slider.
-- Multi-Thread support enabled.
-- Player movement refactor: Lateral-only motion with acceleration-based forward/back
-  speed control, clamped between min/max speeds.
-- Speed system with progress bar, dynamic color changes (green normal, yellow caution,
-  red/dark red danger based on thresholds), and low/over-speed blinking warnings.
-- Centralized fuel/speed tracking via dictionaries for gameplay and UI integration.
-- Fully synchronized Input Remapping system:
-  - UI reflects saved bindings
-  - Conflict-safe remapping logic
-  - Persistent across sessions
-- Improved Options Menu behavior:
-  - Shared between Main Menu and Pause Menu
-  - Live updates to audio and gameplay settings
-- UI state consistency across scene transitions
-- Automatic Settings Persistence: Settings (including log levels, difficulty, and
-  debug flags) auto-save to disk via Globals.gd whenever a change is detected in
-  the resource.
-- Real-time UI Synchronization: UI components dynamically observe the settings resource,
-  ensuring that any external changes are immediately reflected in the menus.
-- UI navigation sounds integrated with a dedicated Menu SFX bus.
-- Hardened JavaScript bridge (`AudioWebBridge` and gameplay settings bridge)
-  to ensure robust communication between the Godot engine and the web browser
-  environment.
-
-### Features Roadmap
-
-- **Completed (Merged via Recent PRs)**:
-  - Fuel management with timer-based depletion scaled by speed/difficulty (PR #288).
-  - Player movement refactor: Lateral-only controls with acceleration/deceleration,
-    min/max speed clamping (PR #288).
-  - Speed system with progress bar, dynamic color gradients (green normal, yellow
-    caution, red/dark red danger), and low/over-speed blinking warnings
-    (PR #275 and #288).
-  - Rotor SFX/animation with volume sliders and zero-fuel stopping (prior PRs).
-  - Refactor player movement integrations
-    (e.g., speed-based fuel drain, UI sync) – Issue #169.
-  - Add procedural random parallax background for speed-based
-    scrolling – Issue #273.
-  - Switch testing from GDUnit4 to GUT for better coverage – Issues #282, #283.
-  - GitHub Wiki for documentation/learning resources – Issue #284.
-  - Version tagging in CI/CD – Issue #285.
-  - Dynamic speed bar color changes (partially merged in PR #275/#288,
-    but full threshold logic ongoing) – Issue #286.
-  - Improve input mappings with conflict handling and unbound warnings:
-    - Conflict detection + confirmation dialog when assigning already-used inputs.
-    - Per-device tracking, last-used device persistence, and device-aware
-      remap prompts.
-    - HUD warnings for unbound critical controls during gameplay.
-    - Support opening key-mapping menu directly from other menus.
-    - Expanded tests for input remap and settings behaviors.
-  - Ensure menu navigation bindings & legacy input migration:
-    - Guaranteed binding of core navigation actions (ui_accept, ui_up, etc.).
-    - Initial focus management for gameplay/options menus and restored focus flows.
-    - Improved keyboard/gamepad input label generation and legacy config migration.
-    - Updated default gamepad throttle mappings to match expectations.
-    - Expanded test coverage around menu navigation and input handling.
-  - Enable keyboard & d-pad navigation for audio settings and key mappings:
-    - Full keyboard + gamepad navigation support for audio settings.
-    - Focus highlighting on volume rows and unified accept action for slider/toggle.
-    - Better modifier key handling (Ctrl/Shift/Alt/Meta) in remapping UI.
-    - Refined conflict handling in key remapping logic and focus restoration
-      from audio → main menu.
-    - CI/tooling version bumps and asset import config additions.
-  - Documented the observer-based settings system and pinned CI actions for
-    pipeline stability (PR #488).
-  - Hardened the gameplay settings JavaScript bridge and added comprehensive GUT
-    test coverage (PR #500).
-  - Integrated UI navigation sounds, a dedicated Menu SFX bus, and the
-    `AudioWebBridge` (PR #479).
-
----
-
-## Milestones
-
-## Input & Navigation Improvements (Milestone 12)
-
-Milestone 12 focused on making the game more navigable and responsive
-to user input devices:
-
-### Input Remapping
-
-- Conflict detection dialog when assigning existing bindings
-- Per-device last input selection persists between sessions
-- Critical control warnings if actions are unbound
-- Remap menu accessible from all relevant UI paths
-
-### Menu Navigation
-
-- Keyboard + gamepad (D-Pad) support for all menu flows
-- Guaranteed core navigation actions remain bound
-- Focus restoration when leaving submenus (Audio → Options → Main)
-- Modifier key respect (Ctrl/Shift/Alt/Meta) in remapping UI
-
-### Audio Settings Controls
-
-- Use keyboard/gamepad accept action for sliders and toggles
-- Focus highlighting for better visual feedback
-- Unified UI interactions without relying on the mouse
-- Modular audio system with dedicated buses (including a specific
-  Menu SFX bus) and an `AudioWebBridge` for seamless web environment
-  synchronization.
-
-### Godot Resource Migration
-
-- Replaced hard-coded globals with a `GameSettingsResource`
-- Easier inspector-based editing and persistence
-- Safer loading with fallback on corrupted configs
-
-### Known Limitations
-
-- Some complex menu flows may still rely on the mouse until additional
-  focus neighbors are defined.
-- Modifier-aware remapping requires explicit key+modifier press for
-  unique bindings.
-
-### Milestone 14
-
-**Status:** Stable gameplay loop with synced UI systems and GUT-based
-unit testing.
-**Active Focus:** Gameplay expansion (AI enemies, multiplayer, levels).
-**Version:** v0.9.18
-
-### Milestone 16
-
-**Status:** Stable gameplay loop with fully refactored script architecture,
-synced UI systems, and GUT-based unit testing.
-**Active Focus:** Gameplay expansion (AI enemies, multiplayer, levels).
-
-### Milestone 17
-
-This milestone focused on polishing UI audio feedback, tightening the
-security of local save files, and paying down technical debt in our
-testing architecture.
-
-**Delivery Status:** Milestone 17 is fully complete. There is no
-planned carryover work to future milestones.
-
-#### 🌟 New Features & Polish
-
-- **UI Audio Polish:** Implemented a dedicated `slider.wav` sound effect
-  for audio menus that strictly triggers only upon manual player adjustments,
-  cleanly decoupling it from programmatic `value_changed` signals.
-- **Encrypted Local Storage:** Transitioned local save configurations
-  (`settings.cfg`) to use Godot's native encrypted `ConfigFile` methods.
-- **Hardware-Bound Encryption:** Implemented an automatic encryption key
-  generation system (`Globals._get_encryption_key()`) that combines the OS
-  name with a hardware-unique ID to securely lock local save data.
-
-#### 🛠️ Architecture & Refactors
-
-- **Centralized Configuration I/O:** Refactored core singletons (`Settings`,
-  `AudioManager`) to route all file operations through a unified
-  `Globals.safe_load_config()` helper.
-- **In-Memory Testing (Separation of Concerns):** Decoupled the config
-  parsing logic from the physical file I/O. Our GUT and GdUnit4
-  error-handling test suites now construct `ConfigFile` objects entirely
-  in-memory, bypassing the disk and permanently eliminating fatal C++ crypto
-  layer crashes in the CI/CD pipeline.
-- **Codebase Audit & Technical Debt:** Conducted a comprehensive audit of the
-  core singletons. Verified a warning-free baseline by confirming no syntax
-  errors exist in legacy `settings.gd` fallback calls.
-
-Track progress via [Milestones](https://github.com/ikostan/SkyLockAssault/milestones).
 
 ---
 
@@ -409,25 +205,6 @@ Testing is a core part of development and required for gameplay logic changes.
 
 For learning: Test quit handling (platform-specific) and log levels in options
 menu during play.
-
----
-
-### 🙌 How to Contribute
-
-- Fork the repo and create a branch for your changes.
-- Follow GDScript best practices; test in editor and web export.
-- Open a Pull Request with details.
-- See [CONTRIBUTING.md](/CONTRIBUTING.md) for full guidelines.
-- **Join the Discussions**: Chat about ideas, ask questions on web exports, or suggest
-  features at [GitHub Discussions](https://github.com/ikostan/SkyLockAssault/discussions).
-
-We use the following labels to organize contributions:
-
-- `good first issue` — beginner friendly
-- `documentation` — improvements to docs
-- `feature` — gameplay or UI work
-
-Please create a branch per issue and reference the issue number in your PR title.
 
 ---
 
