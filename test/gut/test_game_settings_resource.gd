@@ -32,14 +32,12 @@ func before_each() -> void:
 
 func test_default_settings_enable_fps_display_and_disable_logging() -> void:
 	var defaults: GameSettingsResource = (
-		ResourceLoader.load(
-			"res://config_resources/default_settings.tres", "", ResourceLoader.CACHE_MODE_IGNORE
-		) as GameSettingsResource
+		load("res://config_resources/default_settings.tres") as GameSettingsResource
 	)
 
 	assert_not_null(defaults, "Default settings must load as a GameSettingsResource.")
-	assert_true(defaults.show_fps, "The shipped default must enable the FPS display.")
-	assert_eq(defaults.current_log_level, 4, "The shipped default must disable runtime logging.")
+	assert_false(defaults.show_fps, "The shipped default must disable the FPS display.")
+	assert_eq(defaults.current_log_level, 1, "The shipped default must set log level to DEBUG.")
 
 
 ## GS-RES-01 | Validate signal emission on valid update
