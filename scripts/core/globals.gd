@@ -37,7 +37,7 @@ var _is_loading_settings: bool = false  # Guard flag
 func _ready() -> void:
 	# Keep processing inputs even when the game is paused!
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	
+
 	# Prevent editor execution from dirtying local config files and state
 	if Engine.is_editor_hint():
 		return
