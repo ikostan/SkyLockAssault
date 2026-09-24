@@ -50,7 +50,7 @@ func _ready() -> void:
 		# Fallback to in-memory defaults so Globals remains operational
 		settings = GameSettingsResource.new()
 		settings.current_log_level = LogLevel.WARNING
-		
+
 		# FIX: Manually inject the scenes into the fallback instance to avoid null UI errors
 		settings.key_mapping_scene = load("res://scenes/key_mapping_menu.tscn")
 		settings.options_scene = load("res://scenes/options_menu.tscn")
@@ -59,7 +59,7 @@ func _ready() -> void:
 		settings.current_log_level = LogLevel.DEBUG
 	log_message("Log level set to: " + LogLevel.keys()[settings.current_log_level], LogLevel.DEBUG)
 	_load_settings()  # Load persisted settings first
-	
+
 	# Connect to the resource signal to centralize side effects
 	if is_instance_valid(settings):
 		settings.setting_changed.connect(_on_setting_changed)
