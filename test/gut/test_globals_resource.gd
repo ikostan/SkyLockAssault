@@ -7,18 +7,18 @@ extends GutTest
 
 const TEST_RESOURCE_PATH: String = "user://test_settings.tres"
 
+
 func before_each() -> void:
 	if FileAccess.file_exists(TEST_RESOURCE_PATH):
 		DirAccess.remove_absolute(TEST_RESOURCE_PATH)
 	
-	# --- ADD THIS LINE ---
-	# Override the empty project salt with a valid test key 
-	# to ensure saves actually use encryption.
+	# Override encryption key for testing
 	Globals.set_test_encryption_key()
 	
-	# REMOVE the double_scene line. It is causing the crash in Image 7.
-	# If you need to stop log spam, just do this:
+	# Reset Globals.settings to a fresh load of default settings to prevent test pollution
+	Globals.settings = load("res://config_resources/default_settings.tres") as GameSettingsResource
 	Globals.settings.current_log_level = Globals.LogLevel.NONE
+
 
 func after_each() -> void:
 	if FileAccess.file_exists(TEST_RESOURCE_PATH):
