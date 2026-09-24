@@ -37,6 +37,10 @@ var _is_loading_settings: bool = false  # Guard flag
 func _ready() -> void:
 	# Keep processing inputs even when the game is paused!
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	
+	# Prevent editor execution from dirtying local config files and state
+	if Engine.is_editor_hint():
+		return
 
 	# Load the resource here instead of preloading at the top
 	settings = load("res://config_resources/default_settings.tres") as GameSettingsResource
@@ -362,6 +366,10 @@ func log_message(message: String, level: LogLevel = LogLevel.INFO) -> void:
 # Override to handle engine notifications, like window close requests.
 # @param what: The notification ID (int constant from Godot).
 func _notification(what: int) -> void:
+	# Prevent the editor's close routine from executing game quit logic
+	if Engine.is_editor_hint():
+		return
+
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		# Cleanup logic here—runs just before quit.
 		log_message("Window close requested—performing cleanup...", LogLevel.DEBUG)
