@@ -15,8 +15,9 @@ func before_each() -> void:
 	# Override encryption key for testing
 	Globals.set_test_encryption_key()
 	
-	# Reset Globals.settings to a fresh load of default settings to prevent test pollution
-	Globals.settings = load("res://config_resources/default_settings.tres") as GameSettingsResource
+	# Duplicate the loaded resource to create an isolated instance for this test suite
+	var default_res: GameSettingsResource = load("res://config_resources/default_settings.tres")
+	Globals.settings = default_res.duplicate() as GameSettingsResource
 	Globals.settings.current_log_level = Globals.LogLevel.NONE
 
 
