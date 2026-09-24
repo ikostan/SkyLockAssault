@@ -1,4 +1,5 @@
-<!-- markdownlint-disable MD001 MD036 MD013 MD033 table-column-style -->
+<!-- markdownlint-disable MD001 MD013 MD036 MD033 table-column-style -->
+
 # [Sky Lock Assault](https://ikostan.itch.io/sky-lock-assault)
 
 [![Project Start](https://img.shields.io/badge/Project_Start-Jul_28%2C_2025-blue?style=flat-square)](https://github.com/ikostan/SkyLockAssault/commit/c412eb3cea0bbc73f716a14afa678d21c7d4d0d0)
@@ -302,4 +303,4 @@ We value your input! Share thoughts, bugs, or suggestions via:
 - [itch.io Comments](https://ikostan.itch.io/sky-lock-assault) — discuss gameplay directly on the game page
 - [GitHub Issues](https://github.com/ikostan/SkyLockAssault/issues) — bug reports and feature requests
 
-<!-- markdownlint-enable MD001 MD036 MD013 MD033 table-column-style -->
+<!-- markdownlint-enable MD001 MD013 MD036 MD033 table-column-style -->
