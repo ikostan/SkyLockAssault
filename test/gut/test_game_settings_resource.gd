@@ -30,7 +30,7 @@ func before_each() -> void:
 
 # --- SECTION 2: RESOURCE CONTRACT TESTS (GS-RES) ---
 
-func test_default_settings_enable_fps_display_and_disable_logging() -> void:
+func test_default_settings_enable_fps_display_and_enable_info_log_lvl() -> void:
 	var defaults: GameSettingsResource = (
 		load("res://config_resources/default_settings.tres") as GameSettingsResource
 	)
