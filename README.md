@@ -300,7 +300,11 @@ For details on reporting vulnerabilities and our disclosure process, see
 
 We value your input! Share thoughts, bugs, or suggestions via:
 
-- [itch.io Comments](https://ikostan.itch.io/sky-lock-assault) — discuss gameplay directly on the game page
-- [GitHub Issues](https://github.com/ikostan/SkyLockAssault/issues) — bug reports and feature requests
+- [GitHub Discussions](https://github.com/ikostan/SkyLockAssault/discussions) -
+  all the hottest features ar here, share your opinion
+- [itch.io Comments](https://ikostan.itch.io/sky-lock-assault) — discuss
+  gameplay directly on the game page
+- [GitHub Issues](https://github.com/ikostan/SkyLockAssault/issues) — bug
+  reports and feature requests
 
 <!-- markdownlint-enable MD001 MD013 MD036 MD033 table-column-style -->
