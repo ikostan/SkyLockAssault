@@ -17,17 +17,17 @@
 ![Open Issues](https://img.shields.io/github/issues/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=red)
 [![All Contributors](https://img.shields.io/github/all-contributors/ikostan/SkyLockAssault?color=ee8449&style=flat-square)](#contributors)
 
-## A top-down online web browser game built with Godot 4.5
+## A top-down online web browser game built with Godot 4.X
 
 ![Sky Lock Assault](https://github.com/ikostan/SkyLockAssault/blob/main/files/img/main_menu_2.png)
 
 Combat airplane web game with fuel management, multiple weapons, multi-level,
 and adjustable difficulty.
 
-This is a dedicated Godot v4.5 game dev project on Windows 10 64-bit OS.
+This is a dedicated Godot v4.X game dev project.
 We'll be learning game dev here, starting with a simple main menu and expanding
 to core mechanics like player controls, enemy AI, and assaults in the sky.
-The repo is open-source at [SkyLockAssault](https://github.com/ikostan/SkyLockAssault).
+The source is publicly available at [SkyLockAssault](https://github.com/ikostan/SkyLockAssault) under a non-commercial license.
 
 You can play this game on [Itch.io](https://ikostan.itch.io/sky-lock-assault)
 
@@ -96,12 +96,6 @@ Here's a high-level plan for upcoming features. Contributions welcome!
 - Future: Multiplayer elements, AI enemies, mobile export
   (post-launch based on community input).
 
-## Contributing
-
-Pull requests welcome for mechanics like enemy AI, levels, or web optimizations!
-Fork the repo and submit your ideas. See [CONTRIBUTING](CONTRIBUTING.md) for
-guidelines (create if needed).
-
 ## Player Feedback
 
 We value your input to improve Sky Lock Assault! Share your thoughts via:
@@ -118,22 +112,17 @@ For details on reporting vulnerabilities and our disclosure process, see
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0 or
-later (GPL-3.0-or-later) - see the [LICENSE](LICENSE) file for details.
+This project is **source-available** under the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0).
 
-Commercial use is allowed under GPLv3 terms, which require that any
-distributed derivatives or combined works remain open source and provide
-source code to users. For closed-source commercial alternatives without
-these GPL requirements, a separate license is available upon request.
+- Free for noncommercial purposes, including personal study, hobby projects,
+  and use by eligible noncommercial organizations.
+- Modification and redistribution are allowed **only** for non-commercial purposes.
+- **Commercial use is prohibited** without a separate commercial license from the
+  copyright holder.
 
-### Key Terms
+For commercial licensing inquiries, contact via GitHub issues or X @EgorKostan.
 
-- **Open Source**: You can view, modify, and distribute the code freely,
-  as long as derivatives remain under GPLv3.
-- **Commercial Use**: Allowed under GPLv3 (with source code obligations
-  for distributions). Closed-source commercial use requires a separate license.
-- **Contact**: For custom licenses, trademark use (e.g., "Sky Lock Assault"),
-  or inquiries, reach out via GitHub issues or X @EgorKostan.
+See the [LICENSE](LICENSE) file for the full terms.
 
 ---
 

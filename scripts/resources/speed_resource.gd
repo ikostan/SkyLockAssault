@@ -7,6 +7,9 @@
 class_name SpeedResource
 extends Resource
 
+## Emitted when visual fraction thresholds are modified.
+signal thresholds_changed
+
 ## Emitted strictly when the effective speed value changes.
 signal speed_updated(new_speed: float)
 
@@ -76,6 +79,7 @@ signal speed_maxed
 		if high_yellow_fraction == new_val:
 			return
 		high_yellow_fraction = new_val
+		thresholds_changed.emit()
 
 		if low_yellow_fraction > high_yellow_fraction:
 			self.low_yellow_fraction = high_yellow_fraction
@@ -86,6 +90,7 @@ signal speed_maxed
 		if low_yellow_fraction == new_val:
 			return
 		low_yellow_fraction = new_val
+		thresholds_changed.emit()
 
 
 func _init() -> void:
