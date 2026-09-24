@@ -16,13 +16,16 @@
 ![Open Issues](https://img.shields.io/github/issues/ikostan/SkyLockAssault?style=flat-square&label=Issues&color=red)
 [![All Contributors](https://img.shields.io/github/all-contributors/ikostan/SkyLockAssault?color=ee8449&style=flat-square)](#contributors)
 
-**A top-down combat airplane web game** built with Godot 4.X — fuel management, multiple weapons, multi-level progression, and adjustable difficulty.
+**A top-down combat airplane web game** built with Godot 4.X — fuel management,
+multiple weapons, multi-level progression, and adjustable difficulty.
 
 Play it now on [itch.io](https://ikostan.itch.io/sky-lock-assault).
 
 ![Sky Lock Assault](https://github.com/ikostan/SkyLockAssault/blob/main/files/img/main_menu_2.png)
 
-This is a learning-focused Godot project. We started with a simple main menu and continue expanding into player controls, enemy AI, and aerial combat. Source is publicly available under a non-commercial license.
+This is a learning-focused Godot project. We started with a simple main menu
+and continue expanding into player controls, enemy AI, and aerial combat.
+Source is publicly available under the PolyForm Noncommercial License 1.0.0.
 
 ---
 
@@ -46,15 +49,15 @@ This is a learning-focused Godot project. We started with a simple main menu and
 
 ## Project Overview
 
-| Item | Details |
-|------|---------|
-| **Godot Version** | 4.X stable (or compatible) |
-| **Primary OS** | Windows 10/11 64-bit |
-| **Supported Browsers** | Chrome 90+, Firefox 88+, Edge 90+ (WebGL 2.0 required) |
-| **Known Limitations** | Mobile touch controls are experimental; fullscreen may not persist on iOS Safari |
-| **Goal** | Playable top-down shooter with HTML5/Web export, local testing, and itch.io deployment |
+| Item                   | Details                                                                                |
+|------------------------|----------------------------------------------------------------------------------------|
+| **Godot Version**      | 4.X stable (or compatible)                                                             |
+| **Primary OS**         | Windows 10/11 64-bit                                                                   |
+| **Supported Browsers** | Chrome 90+, Firefox 88+, Edge 90+ (WebGL 2.0 required)                                 |
+| **Known Limitations**  | Mobile touch controls are experimental; fullscreen may not persist on iOS Safari       |
+| **Goal**               | Playable top-down shooter with HTML5/Web export, local testing, and itch.io deployment |
 
-**Local development tools**
+### Local development tools
 
 - Docker Desktop (local web testing)
 - GitHub Desktop (repo management)
@@ -85,7 +88,8 @@ This is a learning-focused Godot project. We started with a simple main menu and
 
 The game is browser-first and landscape-oriented. Mobile support is experimental.
 
-> Tip: While playing, try the options menu — test quit handling (platform-specific) and log levels.
+> Tip: While playing, try the options menu — test quit handling
+> (platform-specific) and log levels.
 
 ---
 
@@ -119,7 +123,7 @@ The game is browser-first and landscape-oriented. Mobile support is experimental
 | 10 | [CI/CD Production Salt Injection & Security Guard Architecture](files/docs/Production_Salt_Injection_&_Security_Guard_Architecture.md) |
 | 11 | [Browser DevTools Guide — Verifying Web Save Encryption](files/docs/Browser_DevTools_Guide_Verifying_Web_Save_Encryption.md)           |
 
-**Bots & automation tools used in the repo**
+### Bots & automation tools used in the repo
 
 - [Dependabot](https://docs.github.com/en/code-security/dependabot)
 - [Snyk](https://docs.snyk.io/)
@@ -163,7 +167,8 @@ The `scripts/` directory is organized by purpose:
 
 ## Known Issues
 
-- Harmless console warning on desktop fullscreen (`NotSupportedError` for orientation lock — non-fatal, does not affect gameplay).
+- Harmless console warning on desktop fullscreen (`NotSupportedError` for
+  orientation lock — non-fatal, does not affect gameplay).
 - Placeholder level still lacks full mechanics (work in progress):
   - Core loop is functional (movement, fuel, speed, audio)
   - Enemy AI and combat progression are upcoming
@@ -187,7 +192,7 @@ Report new issues on [GitHub Issues](https://github.com/ikostan/SkyLockAssault/i
 
 Sky Lock Assault uses the **GUT (Godot Unit Test)** framework.
 
-**Covered areas**
+### Covered areas
 
 - Input remapping logic
 - Fuel system behavior
@@ -198,7 +203,7 @@ Sky Lock Assault uses the **GUT (Godot Unit Test)** framework.
 
 Tests run locally and in CI via GitHub Actions. Coverage is tracked with Codecov.
 
-**How to run tests**
+### How to run tests
 
 - Open Godot → GUT Test Runner, **or**
 - Run via the CI pipeline
@@ -259,19 +264,24 @@ Thanks to everyone who has contributed!
 <!-- prettier-ignore-end -->
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
-Want to contribute? See [CONTRIBUTING.md](CONTRIBUTING.md) and look for issues labeled `good first issue`.
+**This project is currently closed to external code contributions.**
+However, if you find a bug or have feedback, you are welcome to open a
+GitHub issue. See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
 
 ---
 
 ## License
 
-This project is **source-available** under the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0).
+This project is **source-available** under the
+[PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0).
 
-- Free for noncommercial purposes (personal study, hobby projects, eligible noncommercial organizations)
+- Free for noncommercial purposes (personal study, hobby projects, eligible
+  noncommercial organizations)
 - Modification and redistribution allowed **only** for non-commercial purposes
 - **Commercial use is prohibited** without a separate commercial license
 
-For commercial licensing inquiries, open a GitHub issue or contact via X [@EgorKostan](https://x.com/EgorKostan).
+For commercial licensing inquiries, open a GitHub issue or contact via X
+[@EgorKostan](https://x.com/EgorKostan).
 
 See the [LICENSE](LICENSE) file for full terms.
 
@@ -279,7 +289,8 @@ See the [LICENSE](LICENSE) file for full terms.
 
 ## Security
 
-For details on reporting vulnerabilities and our disclosure process, see [SECURITY.md](.github/SECURITY.md).
+For details on reporting vulnerabilities and our disclosure process, see
+[SECURITY.md](.github/SECURITY.md).
 
 ---
 
