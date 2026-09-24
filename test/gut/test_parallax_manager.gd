@@ -290,3 +290,90 @@ func test_process_uses_default_values_without_setup() -> void:
 		0.01, 
 		"Process must use its baseline difficulty of 1.0 if dependency injection never occurs."
 	)
+
+
+func test_fuel_depletion_resets_offset_before_next_frame() -> void:
+	_parallax_manager.scroll_offset = Vector2(12.0, 240.0)
+
+	_fuel.current_fuel = 0.0
+
+	assert_eq(_parallax_manager.scroll_offset, Vector2.ZERO, "Depletion must stop scrolling immediately.")
+	_parallax_manager.scroll_offset = Vector2(5.0, 10.0)
+	_parallax_manager._process(0.0)
+	assert_eq(_parallax_manager.scroll_offset, Vector2.ZERO, "The background must stay stopped while fuel is empty.")
+
+
+func test_replacing_fuel_ignores_old_depletion_and_refueling() -> void:
+	var replacement_fuel: FuelResource = FuelResource.new()
+	replacement_fuel.current_fuel = 0.0
+	_parallax_manager.setup(_speed, replacement_fuel, _settings)
+
+	assert_true(_parallax_manager._out_of_fuel, "Replacement fuel must determine the initial state.")
+	assert_false(_fuel.fuel_changed.is_connected(_parallax_manager._on_fuel_changed))
+	assert_false(_fuel.fuel_depleted.is_connected(_parallax_manager._on_fuel_depleted))
+	_fuel.current_fuel = 0.0
+	_fuel.current_fuel = 50.0
+	assert_true(_parallax_manager._out_of_fuel, "Old fuel changes must not resume scrolling.")
+
+	replacement_fuel.current_fuel = 10.0
+	assert_false(_parallax_manager._out_of_fuel, "Refueling the observed resource must resume scrolling.")
+	_parallax_manager.scroll_offset = Vector2(4.0, 80.0)
+	replacement_fuel.current_fuel = 0.0
+	assert_eq(_parallax_manager.scroll_offset, Vector2.ZERO, "Only the observed fuel may trigger a flameout.")
+
+
+func test_replacing_settings_ignores_old_difficulty_and_fuel_settings() -> void:
+	var old_settings: GameSettingsResource = _settings
+	var replacement_settings: GameSettingsResource = GameSettingsResource.new()
+	replacement_settings.difficulty = 1.5
+	_parallax_manager.setup(_speed, _fuel, replacement_settings)
+
+	assert_false(old_settings.setting_changed.is_connected(_parallax_manager._on_setting_changed))
+	assert_eq(_parallax_manager._difficulty, 1.5, "Setup must cache the replacement difficulty.")
+	old_settings.difficulty = 2.0
+	old_settings.current_fuel = 0.0
+	assert_eq(_parallax_manager._difficulty, 1.5, "Old settings must not change the multiplier.")
+	assert_false(_parallax_manager._out_of_fuel, "Settings fuel must not drive the background.")
+
+	replacement_settings.difficulty = 0.5
+	_parallax_manager.scroll_offset = Vector2.ZERO
+	_parallax_manager._process(1.0)
+	assert_almost_eq(_parallax_manager.scroll_offset.y, 40.0, 0.01, "Only the observed difficulty must affect scrolling.")
+
+
+func test_null_setup_disconnects_observers_until_resources_are_reinjected() -> void:
+	_parallax_manager.setup(null, null, null)
+
+	assert_false(_speed.speed_updated.is_connected(_parallax_manager._on_speed_updated))
+	assert_false(_fuel.fuel_changed.is_connected(_parallax_manager._on_fuel_changed))
+	assert_false(_fuel.fuel_depleted.is_connected(_parallax_manager._on_fuel_depleted))
+	assert_false(_settings.setting_changed.is_connected(_parallax_manager._on_setting_changed))
+	_speed.current_speed = 300.0
+	_fuel.current_fuel = 0.0
+	_settings.difficulty = 2.0
+	assert_eq(_parallax_manager._current_speed, 100.0, "Detached speed must not update the cache.")
+	assert_false(_parallax_manager._out_of_fuel, "Detached fuel must not trigger flameout.")
+	assert_eq(_parallax_manager._difficulty, 1.0, "Detached settings must not update the cache.")
+
+	_parallax_manager.setup(_speed, _fuel, _settings)
+	assert_eq(_parallax_manager._current_speed, 300.0, "Reinjection must read the current speed.")
+	assert_true(_parallax_manager._out_of_fuel, "Reinjection must read the current fuel.")
+	assert_eq(_parallax_manager._difficulty, 2.0, "Reinjection must read the current difficulty.")
+
+
+func test_replacing_only_speed_keeps_other_observers_active() -> void:
+	var replacement_speed: SpeedResource = SpeedResource.new()
+	replacement_speed.min_speed = 0.0
+	replacement_speed.current_speed = 0.0
+	_parallax_manager.setup(replacement_speed, _fuel, _settings)
+
+	assert_eq(_parallax_manager._current_speed, 0.0, "A stationary replacement must be cached immediately.")
+	_speed.current_speed = 300.0
+	assert_eq(_parallax_manager._current_speed, 0.0, "The replaced speed must not be observed.")
+	_fuel.current_fuel = 0.0
+	assert_true(_parallax_manager._out_of_fuel, "Unchanged fuel must remain observed.")
+	_fuel.current_fuel = 20.0
+	_settings.difficulty = 2.0
+	replacement_speed.current_speed = 150.0
+	_parallax_manager._process(1.0)
+	assert_almost_eq(_parallax_manager.scroll_offset.y, 240.0, 0.01, "Unchanged settings and replacement speed must drive scrolling.")

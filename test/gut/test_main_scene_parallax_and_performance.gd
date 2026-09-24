@@ -28,6 +28,19 @@ func after_each() -> void:
 	await get_tree().process_frame
 
 
+func test_main_scene_injects_player_resources_into_parallax() -> void:
+	var player: Node2D = main_scene.player
+	var background: ParallaxManager = main_scene.background as ParallaxManager
+
+	assert_eq(background._speed_resource, player.speed_resource, "Background must observe the player's speed resource.")
+	assert_eq(background._fuel_resource, player.fuel_resource, "Background must observe the player's fuel resource.")
+	assert_eq(background._settings, Globals.settings, "Background must observe the active settings resource.")
+	assert_eq(background._current_speed, player.speed_resource.current_speed, "Background must be primed from player speed.")
+
+	player.speed_resource.current_speed = player.speed_resource.max_speed
+	assert_eq(background._current_speed, player.speed_resource.current_speed, "Player speed updates must reach the background.")
+
+
 ## test_parallax_chunk_size_is_optimized |
 ## Enforces the 8-screen limit to prevent Bounding Volume Hierarchy (BVH) bloat.
 ## :rtype: void
