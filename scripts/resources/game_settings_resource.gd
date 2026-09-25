@@ -4,6 +4,8 @@
 ##
 ## DATA CONTAINER: This Resource serves as the central "Source of Truth" for game configuration.
 ## It decouples static data from logic found in Globals.gd.
+
+@tool
 class_name GameSettingsResource
 extends Resource
 
@@ -274,12 +276,7 @@ var _low_yellow_fraction: float = 0.10
 
 
 func _init() -> void:
-	# This only runs if the values aren't already set (like in a .new() call)
-	if not key_mapping_scene:
-		key_mapping_scene = load("res://scenes/key_mapping_menu.tscn")
-	if not options_scene:
-		options_scene = load("res://scenes/options_menu.tscn")
-	# NEW: Safely enforce the invariant that a brand new resource
+	# Safely enforce the invariant that a brand new resource
 	# always starts with a full tank, without bypassing the validation setters.
 	_current_fuel = _max_fuel
 

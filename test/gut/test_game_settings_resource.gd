@@ -30,6 +30,16 @@ func before_each() -> void:
 
 # --- SECTION 2: RESOURCE CONTRACT TESTS (GS-RES) ---
 
+func test_default_settings_enable_fps_display_and_enable_info_log_lvl() -> void:
+	var defaults: GameSettingsResource = (
+		load("res://config_resources/default_settings.tres") as GameSettingsResource
+	)
+
+	assert_not_null(defaults, "Default settings must load as a GameSettingsResource.")
+	assert_false(defaults.show_fps, "The shipped default must disable the FPS display.")
+	assert_eq(defaults.current_log_level, 1, "The shipped default must set log level to INFO.")
+
+
 ## GS-RES-01 | Validate signal emission on valid update
 func test_gs_res_01_signal_on_valid_change() -> void:
 	watch_signals(_resource)

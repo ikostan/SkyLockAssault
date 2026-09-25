@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="GameSettingsResource" load_steps=4 format=3 uid="uid://28t4yno1suni"]
+[gd_resource type="Resource" script_class="GameSettingsResource" format=3 uid="uid://28t4yno1suni"]
 
 [ext_resource type="PackedScene" uid="uid://dxep4xm1sl8im" path="res://scenes/key_mapping_menu.tscn" id="1_qho2n"]
 [ext_resource type="PackedScene" uid="uid://cl4m4q2eurcn0" path="res://scenes/options_menu.tscn" id="2_b4w4u"]

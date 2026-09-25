@@ -4,6 +4,7 @@
 ## Global utilities singleton: Provides shared functions like logging.
 ## Access from any script as Globals.log_message("message").
 
+@tool
 extends Node
 
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
@@ -37,6 +38,10 @@ func _ready() -> void:
 	# Keep processing inputs even when the game is paused!
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
+	# Prevent editor execution from dirtying local config files and state
+	if Engine.is_editor_hint():
+		return
+
 	# Load the resource here instead of preloading at the top
 	settings = load("res://config_resources/default_settings.tres") as GameSettingsResource
 	if settings == null:
@@ -45,6 +50,10 @@ func _ready() -> void:
 		# Fallback to in-memory defaults so Globals remains operational
 		settings = GameSettingsResource.new()
 		settings.current_log_level = LogLevel.WARNING
+
+		# FIX: Manually inject the scenes into the fallback instance to avoid null UI errors
+		settings.key_mapping_scene = load("res://scenes/key_mapping_menu.tscn")
+		settings.options_scene = load("res://scenes/options_menu.tscn")
 
 	if Engine.is_editor_hint() or settings.enable_debug_logging:
 		settings.current_log_level = LogLevel.DEBUG
@@ -361,6 +370,10 @@ func log_message(message: String, level: LogLevel = LogLevel.INFO) -> void:
 # Override to handle engine notifications, like window close requests.
 # @param what: The notification ID (int constant from Godot).
 func _notification(what: int) -> void:
+	# Prevent the editor's close routine from executing game quit logic
+	if Engine.is_editor_hint():
+		return
+
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		# Cleanup logic here—runs just before quit.
 		log_message("Window close requested—performing cleanup...", LogLevel.DEBUG)
