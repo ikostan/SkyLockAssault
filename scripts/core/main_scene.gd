@@ -33,11 +33,14 @@ func _ready() -> void:
 	Globals.log_message("Initializing main scene...", Globals.LogLevel.DEBUG)
 
 	# =========================================================
-	# THIS IS THE MISSING LINK THAT WAKES UP YOUR HUD!
-	# It passes the Player directly to the HUD script so the bars work.
+	# DEPENDENCY INJECTION: HUD Data Layer
+	# Extracts raw telemetry data resources directly from the player
+	# hierarchy and passes them into the HUD.
 	# =========================================================
 	if stats_panel.has_method("setup_hud"):
-		stats_panel.setup_hud(player)
+		stats_panel.setup_hud(
+			player.fuel_resource, player.speed_resource, player.weapon.weapon_resource
+		)
 	else:
 		push_error(
 			"HUD Script is missing! Make sure 'hud.gd' is attached to the 'PlayerStatsPanel' node."
@@ -71,40 +74,13 @@ func _ready() -> void:
 	)
 
 	if background.has_method("setup"):
-		background.setup(settings_res)
+		# Inject all required resources into the newly refactored ParallaxManager
+		background.setup(player.speed_resource, player.fuel_resource, settings_res)
 	else:
 		push_warning(
-			"Parallax background is missing the `setup` method. Settings injection failed."
+			"Parallax background is missing the `setup` method. Resource injection failed."
 		)
 
-	# Wire up the signal architecture for the parallax background
-	if player.has_signal("speed_changed") and background.has_method("update_speed"):
-		# 1. Guard against duplicate connections
-		if not player.speed_changed.is_connected(background.update_speed):
-			player.speed_changed.connect(background.update_speed)
-
-		# 2. Prime the background securely via a public method
-		if background.has_method("prime_speed"):
-			background.prime_speed(player.current_speed)
-		else:
-			push_warning("Parallax background is missing the `prime_speed` method.")
-
-	elif not player.has_signal("speed_changed"):
-		push_warning(
-			(
-				"Parallax background not wired: player is missing the `speed_changed` signal. "
-				+ "Verify that the Player node defines and emits `speed_changed`."
-			)
-		)
-	elif not background.has_method("update_speed"):
-		push_warning(
-			(
-				"Parallax background not wired: background is missing"
-				+ " `update_speed` method. "
-				+ "Ensure the background script implements "
-				+ " `update_speed(speed: float, max_speed: float)`."
-			)
-		)
 	# =========================================================
 	# FLOAT DEGRADATION SAFEGUARD
 	# =========================================================

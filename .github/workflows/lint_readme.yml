@@ -15,8 +15,12 @@ jobs:
       matrix:
         python-version: ["3.x"]  # Single entry for consistent display
     steps:
+
       - name: "Checkout code"
-        uses: "actions/checkout@v7"
+        uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"  # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: "Lint MARKDOWN Files"
         # Lints Markdown for formatting/spelling
         # Pinned to SHA for security (was @v19)

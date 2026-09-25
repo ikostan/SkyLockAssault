@@ -3,10 +3,10 @@
 # Use Ubuntu 24.04 as base (matches GitHub Actions runner)
 FROM ubuntu:24.04
 
-# Install base dependencies (added nodejs, npm, libglib2.0-bin, kio, gvfs, xvfb)
+# Install base dependencies (added nodejs, npm, libglib2.0-bin, kio, gvfs, xvfb, aria2)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip wget unzip curl git zip libxml2-utils netcat-openbsd python3-venv nodejs npm \
-    libglib2.0-bin kio gvfs xvfb ca-certificates \
+    libglib2.0-bin kio gvfs xvfb ca-certificates aria2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user to run the container (fixes DS002)
@@ -27,21 +27,12 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Upgrade pip, setuptools, and wheel in venv
 RUN pip install --upgrade pip setuptools wheel
 
-# Install GDToolkit for GDScript linter/formatter (gdtoolkit==4.* for Godot 4.x)
-RUN pip install gdtoolkit==4.*
-
-# Install yamllint
-RUN pip install yamllint
-
-# Install pytest plugins for html/timeout (fixes unrecognized arguments)
-RUN pip install pytest-html pytest-timeout
-
 # Install markdownlint-cli2 via npm (Node.js tool)
 RUN npm install -g markdownlint-cli2@0.12.1
 
 # Download and verify Godot v4.7.1 binary using the official GitHub SHA512-SUMS file
-RUN wget -q https://github.com/godotengine/godot/releases/download/4.7.1-stable/SHA512-SUMS.txt \
-    && wget -q https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip \
+RUN aria2c -x 16 -s 16 https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/SHA512-SUMS.txt \
+    && aria2c -x 16 -s 16 https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip \
     && grep " Godot_v4.7.1-stable_linux.x86_64.zip$" SHA512-SUMS.txt | sha512sum --check --status \
     && unzip Godot_v4.7.1-stable_linux.x86_64.zip \
     && mv Godot_v4.7.1-stable_linux.x86_64 /usr/local/bin/godot \
@@ -49,8 +40,8 @@ RUN wget -q https://github.com/godotengine/godot/releases/download/4.7.1-stable/
     && rm Godot_v4.7.1-stable_linux.x86_64.zip SHA512-SUMS.txt
 
 # Download, verify, and extract export templates using the official GitHub SHA512-SUMS file
-RUN wget -q https://github.com/godotengine/godot/releases/download/4.7.1-stable/SHA512-SUMS.txt \
-    && wget -q https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_export_templates.tpz \
+RUN aria2c -x 16 -s 16 https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/SHA512-SUMS.txt \
+    && aria2c -x 16 -s 16 https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_export_templates.tpz \
     && grep " Godot_v4.7.1-stable_export_templates.tpz$" SHA512-SUMS.txt | sha512sum --check --status \
     && mkdir -p "${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}" \
     && unzip Godot_v4.7.1-stable_export_templates.tpz -d /tmp/templates \
@@ -74,23 +65,27 @@ RUN mkdir -p /project/addons \
     && rm -rf /project/addons/Gut-9.7.1 v9.7.1.zip \
     && chown -R godotuser:godotuser /project
 
-# Install Playwright Python packages and system deps (as root)
-# FIX: Removed redundant 'playwright install-deps' invocation
-RUN pip install playwright pytest-playwright pytest-asyncio \
-    && playwright install --with-deps chromium
+# Set a shared folder for the browser so both root and godotuser can use it
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# Switch to non-root user (fixes DS002; all subsequent commands run as godotuser)
-USER godotuser
+# Copy the project requirements into the container
+COPY requirements.txt /tmp/requirements.txt
 
-# Install Playwright browsers (as godotuser, to place in user's cache)
-RUN playwright install
+# Install all locked Python packages and download the browser just ONCE as root
+RUN pip install -r /tmp/requirements.txt \
+    && playwright install --with-deps chromium \
+    && chmod -R 755 /ms-playwright
 
-# Optional: Add a simple HEALTHCHECK to verify Godot is runnable (addresses DS026, though LOW severity)
+# A functional health check tailored to the active service within the container. \
+# DO NOT REMOVE: addresses DS026, though LOW severity.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD /usr/local/bin/godot --version || exit 1
+     CMD /usr/local/bin/godot --version || exit 1
+
+# Switch to your non-root user
+USER godotuser
 
 # Set working directory
 WORKDIR /project
 
-# Default command (overridden when running the script)
+# Default command
 CMD ["/bin/bash"]

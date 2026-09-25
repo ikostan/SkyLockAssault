@@ -203,7 +203,7 @@ def test_pw_hold_01_ux_completion_delay(page: Page) -> None:
 
     Extracts in-engine timestamps from 'Scene loaded successfully.' and
     '[SWAP TIMING] 1. .instantiate()' to confirm the delta satisfies
-    1000ms <= delta <= 1400ms without relying on host-side clock drift.
+    900ms <= delta <= 1400ms without relying on host-side clock drift.
     """
     logs: list[dict[str, Any]] = []
     cdp_session = None
