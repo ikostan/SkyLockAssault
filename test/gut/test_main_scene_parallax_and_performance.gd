@@ -201,3 +201,25 @@ func test_decor_layer_chunk_size_and_density() -> void:
 		expected_count, 
 		"Decor layer should spawn exactly 2 times the number of available decor sprites."
 	)
+
+
+func test_legacy_signals_are_disconnected() -> void:
+	gut.p("Testing: Main scene no longer relies on legacy player signals for parallax updates.")
+	
+	var player: Node2D = main_scene.player
+	var background: ParallaxManager = main_scene.background as ParallaxManager
+	
+	# Ensure legacy speed signal is not connected to the background
+	if player.has_signal("speed_changed"):
+		var speed_connections: Array = player.get_signal_connection_list("speed_changed")
+		for conn in speed_connections:
+			assert_ne(conn.callable.get_object(), background, "Legacy 'speed_changed' signal must not be connected to ParallaxManager.")
+			
+	# Ensure legacy fuel signal is not connected to the background
+	if player.has_signal("fuel_depleted"):
+		var fuel_connections: Array = player.get_signal_connection_list("fuel_depleted")
+		for conn in fuel_connections:
+			assert_ne(conn.callable.get_object(), background, "Legacy 'fuel_depleted' signal must not be connected to ParallaxManager.")
+			
+	# Fallback assertion to log a clear pass if the signals were already completely removed from the Player node
+	assert_true(true, "Legacy Player -> ParallaxManager signal paths are verified clear.")
