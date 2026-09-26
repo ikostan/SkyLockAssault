@@ -209,6 +209,11 @@ func test_legacy_signals_are_disconnected() -> void:
 	var player: Node2D = main_scene.player
 	var background: ParallaxManager = main_scene.background as ParallaxManager
 	
+	# Fix: Assert the background is valid and correctly cast before inspecting connections
+	assert_not_null(background, "Background node must exist and have the ParallaxManager script attached.")
+	if background == null:
+		return
+	
 	# Ensure legacy speed signal is not connected to the background
 	if player.has_signal("speed_changed"):
 		var speed_connections: Array = player.get_signal_connection_list("speed_changed")
