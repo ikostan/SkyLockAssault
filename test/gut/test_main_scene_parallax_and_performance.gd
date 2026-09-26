@@ -225,6 +225,3 @@ func test_legacy_signals_are_disconnected() -> void:
 		var fuel_connections: Array = player.get_signal_connection_list("fuel_depleted")
 		for conn in fuel_connections:
 			assert_ne(conn.callable.get_object(), background, "Legacy 'fuel_depleted' signal must not be connected to ParallaxManager.")
-			
-	# Fallback assertion to log a clear pass if the signals were already completely removed from the Player node
-	assert_true(true, "Legacy Player -> ParallaxManager signal paths are verified clear.")
