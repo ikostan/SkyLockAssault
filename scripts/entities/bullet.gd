@@ -7,6 +7,9 @@ extends Node2D
 # Inject the dedicated projectile configuration here via the Inspector (.tres)
 @export var config: BulletResource
 
+# Preload the default configuration at the class level to satisfy gdlint
+const DEFAULT_BULLET_CONFIG: BulletResource = preload("res://config_resources/default_bullet.tres")
+
 # var projectile_texture: Texture2D
 # var shot_sound: AudioStream
 var can_fire: bool = true
@@ -18,8 +21,7 @@ func _ready() -> void:
 	# Load the default configuration and duplicate it so each weapon gets an isolated copy.
 	# This prevents stat modifications (like damage upgrades) from leaking between weapons.
 	if not config:
-		var default_config: BulletResource = preload("res://config_resources/default_bullet.tres")
-		config = default_config.duplicate()
+		config = DEFAULT_BULLET_CONFIG.duplicate()
 
 	# Set Texture Filter to Nearest
 	get_viewport().canvas_item_default_texture_filter = (
