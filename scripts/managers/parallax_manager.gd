@@ -3,6 +3,7 @@
 ## parallax_manager.gd
 ## Manages the scrolling speed of the parallax background based on player velocity.
 ## Decoupled via Dependency Injection and the Observer Pattern.
+## NOTE: Legacy Player-to-parallax signal coupling and compatibility shims are completely removed.
 
 class_name ParallaxManager
 extends ParallaxBackground

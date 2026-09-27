@@ -3,6 +3,7 @@
 ## main_scene.gd
 ## Main scene script for SkyLockAssault.
 ## Handles player positioning, stats visibility, and parallax background setup.
+## NOTE: Legacy Player-to-parallax signal coupling and compatibility shims are completely removed.
 
 class_name MainScene
 extends Node2D
