@@ -9,7 +9,7 @@ extends Node
 var os_wrapper: OSWrapper = OSWrapper.new()
 var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
 
-var _fuel_resource: Resource = null
+var _fuel_resource: FuelResource = null
 var _last_fuel_value: float = -1.0
 
 
@@ -22,7 +22,7 @@ func _ready() -> void:
 
 
 ## Safely binds the adapter to a specific FuelResource instance.
-func setup(resource: Resource) -> void:
+func setup(resource: FuelResource) -> void:
 	# Clear any existing connections first to prevent memory leaks
 	teardown()
 
