@@ -99,7 +99,8 @@ func _ready() -> void:
 	add_child(web_telemetry_adapter)
 
 	# 3. Inject the active resource from the player
-	web_telemetry_adapter.setup(player.fuel_resource)
+	if OS.has_feature("web"):
+		web_telemetry_adapter.setup(player.fuel_resource)
 
 
 # 2. Detect when player presses a key/button that has NO binding at all
