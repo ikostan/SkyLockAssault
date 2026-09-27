@@ -92,18 +92,6 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 
 	var log_msg: String = "Setting '%s' updated to: %s" % [setting_name, str(new_value)]
 
-	# High-frequency setting handling: 'current_fuel' mutates rapidly during gameplay loops.
-	# Bypass standard disk I/O and standard log spam to preserve game performance.
-	if setting_name == "current_fuel":
-		# Push live fuel value directly to browser window scope for Playwright E2E assertions
-		if OS.has_feature("web"):
-			JavaScriptBridge.eval("window.currentFuel = " + JSON.stringify(new_value))
-
-		# Conditionally log fuel updates ONLY if log level is explicitly set to DEBUG
-		if is_instance_valid(settings) and settings.current_log_level == LogLevel.DEBUG:
-			log_message(log_msg, LogLevel.DEBUG)
-		return
-
 	# Web / E2E state synchronization: Expose current log level to window.currentLogLevel
 	if setting_name == "current_log_level":
 		if OS.has_feature("web"):

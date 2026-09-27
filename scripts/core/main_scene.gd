@@ -13,6 +13,7 @@ enum MessageType { CRITICAL_UNBOUND, KEY_PRESS_UNBOUND }
 # At the top of main_scene.gd
 @export var parallax_screens_tall: float = 8.0
 
+var web_telemetry_adapter: Node
 var _showing_unbound_warning: bool = false
 var _showing_unbound_key_message: bool = false
 
@@ -89,6 +90,17 @@ func _ready() -> void:
 	# This preserves encapsulation so main_scene doesn't need to know layer specifics.
 	if background.has_method("auto_calculate_wrap_period"):
 		background.auto_calculate_wrap_period()
+
+	# 1. Instantiate the adapter
+	var TelemetryScript = load("res://scripts/system/web_telemetry_adapter.gd")
+	web_telemetry_adapter = TelemetryScript.new()
+
+	# 2. Add it to the Scene Tree so _ready() fires (allowing it to self-destruct if not on web)
+	add_child(web_telemetry_adapter)
+
+	# 3. Inject the active resource from the player
+	if OS.has_feature("web"):
+		web_telemetry_adapter.setup(player.fuel_resource)
 
 
 # 2. Detect when player presses a key/button that has NO binding at all
