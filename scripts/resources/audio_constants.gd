@@ -1,9 +1,9 @@
-# Copyright (C) 2025 Egor Kostan
-# SPDX-License-Identifier: GPL-3.0-or-later
-# audio_constants.gd
-# Centralized audio bus name constants and config as autoload singleton.
-# Use as AudioConstants.BUS_MASTER, etc., to prevent typos and ease renaming.
-# Extends Node for autoload compatibility.
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+## audio_constants.gd
+## Centralized audio bus name constants and config as autoload singleton.
+## Use as AudioConstants.BUS_MASTER, etc., to prevent typos and ease renaming.
+## Extends Node for autoload compatibility.
 
 extends Node
 
