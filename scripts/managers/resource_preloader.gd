@@ -1,5 +1,6 @@
-## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+## res://scripts/managers/resource_preloader.gd
 
 @tool  # Runs in editor
 extends ResourcePreloader

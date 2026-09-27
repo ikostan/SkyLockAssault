@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## speed_resource.gd
 ##
 ## DATA CONTAINER: Manages the player's speed state, limits, and acceleration profiles.

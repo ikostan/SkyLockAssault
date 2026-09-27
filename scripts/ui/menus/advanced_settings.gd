@@ -1,3 +1,6 @@
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+## res://scripts/ui/menus/advanced_settings.gd
 extends Control
 
 var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()

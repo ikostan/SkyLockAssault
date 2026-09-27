@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## parallax_manager.gd
 ## Manages the scrolling speed of the parallax background based on player velocity.
 ## Decoupled via Dependency Injection and the Observer Pattern.

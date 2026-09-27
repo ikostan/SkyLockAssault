@@ -4,14 +4,11 @@
 
 extends Node2D
 
-@export var fire_rate: float = 0.15
-@export var muzzle_offset: Vector2 = Vector2(0, -25)
-@export var projectile_speed: float = 400.0
-@export var projectile_lifetime: float = 5.0
-@export var damage: int = 10
-@export var projectile_texture: Texture2D = preload("res://files/sprite/laser_sprites/01.png")
-# Default sound; assign in Inspector to override
-@export var shot_sound: AudioStream = preload("res://files/sounds/sfx/retro-laser-1-236669.mp3")
+# Preload the default configuration at the class level to satisfy gdlint
+const DEFAULT_BULLET_CONFIG: BulletResource = preload("res://config_resources/default_bullet.tres")
+
+# Inject the dedicated projectile configuration here via the Inspector (.tres)
+@export var config: BulletResource
 
 # var projectile_texture: Texture2D
 # var shot_sound: AudioStream
@@ -21,7 +18,10 @@ var timer: Timer
 
 # NO @onready for ShotSFX — we’ll create players dynamically
 func _ready() -> void:
-	# Globals.log_message("BulletFirer _ready: Script loaded.", Globals.LogLevel.DEBUG)
+	# Load the shared default configuration to save memory across all default bullets.
+	if not config:
+		config = DEFAULT_BULLET_CONFIG
+
 	# Set Texture Filter to Nearest
 	get_viewport().canvas_item_default_texture_filter = (
 		Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
@@ -43,7 +43,7 @@ func fire() -> bool:
 		return false
 	can_fire = false
 
-	var scaled_cooldown: float = fire_rate * Globals.settings.difficulty
+	var scaled_cooldown: float = config.fire_rate * Globals.settings.difficulty
 	timer.start(scaled_cooldown)
 
 	# LOG
@@ -59,11 +59,11 @@ func fire() -> bool:
 
 # NEW: Play SFX with correct bus + volume scaling
 func play_sfx_with_volume() -> void:
-	if not shot_sound:
+	if not config.shot_sound:
 		return
 
 	var sfx_player := AudioStreamPlayer2D.new()
-	sfx_player.stream = shot_sound
+	sfx_player.stream = config.shot_sound
 	sfx_player.bus = AudioConstants.BUS_SFX_WEAPON  # Critical: assign to SFX bus
 	sfx_player.volume_db = 0.0  # Base volume (will be scaled by bus)
 
@@ -80,8 +80,9 @@ func spawn_projectile() -> void:
 	var proj: RigidBody2D = RigidBody2D.new()  # Projectile body – physics for movement/collision
 	proj.name = "BulletProjectile"
 	proj.gravity_scale = 0.0  # No gravity – top-down space flight
-	proj.linear_velocity = Vector2(0, -projectile_speed)  # Up velocity (negative y = up in Godot 2D)
-	proj.global_position = global_position + muzzle_offset  # Spawn at muzzle
+	# Up velocity (negative y = up in Godot 2D)
+	proj.linear_velocity = Vector2(0, -config.projectile_speed)
+	proj.global_position = global_position + config.muzzle_offset  # Spawn at muzzle
 	proj.global_rotation = -PI / 2  # Rotate sprite up if needed
 
 	# Collision detection – Area2D for hit events (learning: lighter than RigidBody collisions)
@@ -91,21 +92,21 @@ func spawn_projectile() -> void:
 		func(body: Node2D) -> void:
 			Globals.log_message("Projectile hit: " + body.name, Globals.LogLevel.DEBUG)
 			if body.has_method("take_damage"):
-				body.take_damage(damage)  # Apply damage to enemy
+				body.take_damage(config.damage)  # Apply damage to enemy
 			if is_instance_valid(proj):  # Safe check (handles any rare race)
 				proj.queue_free()  # Destroy on hit
 	)
 
 	# Sprite for visuals – drag texture in Inspector
 	var sprite: Sprite2D = Sprite2D.new()
-	sprite.texture = projectile_texture
-	sprite.scale = Vector2(0.25, 0.25)  # Scale for bullet size – tweak
+	sprite.texture = config.projectile_texture
+	sprite.scale = config.scale  # Scale for bullet size – tweak
 	proj.add_child(sprite)
 
 	# Collision shape – rectangle for bullet hitbox (learning: match sprite size)
 	var collision: CollisionShape2D = CollisionShape2D.new()
 	var shape: CircleShape2D = CircleShape2D.new()
-	shape.radius = 3.0
+	shape.radius = config.collision_radius
 	collision.shape = shape
 	area.add_child(collision)
 
@@ -117,4 +118,4 @@ func spawn_projectile() -> void:
 	lifetime_timer.one_shot = true  # Only fire once (like create_timer)
 	proj.add_child(lifetime_timer)
 	lifetime_timer.timeout.connect(proj.queue_free)  # Bound callable: safe, no lambda/capture
-	lifetime_timer.start(projectile_lifetime)
+	lifetime_timer.start(config.projectile_lifetime)

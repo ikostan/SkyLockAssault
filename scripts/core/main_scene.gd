@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## main_scene.gd
 ## Main scene script for SkyLockAssault.
 ## Handles player positioning, stats visibility, and parallax background setup.
