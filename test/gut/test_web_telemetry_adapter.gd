@@ -201,4 +201,3 @@ func test_leaving_tree_disconnects_and_allows_binding_again() -> void:
 	add_child(_adapter)
 	_adapter.setup(_fuel)
 	_assert_published([100.0, 55.0])
-
