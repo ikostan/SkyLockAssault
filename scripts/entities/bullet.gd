@@ -18,10 +18,9 @@ var timer: Timer
 
 # NO @onready for ShotSFX — we’ll create players dynamically
 func _ready() -> void:
-	# Load the default configuration and duplicate it so each weapon gets an isolated copy.
-	# This prevents stat modifications (like damage upgrades) from leaking between weapons.
+	# Load the shared default configuration to save memory across all default bullets.
 	if not config:
-		config = DEFAULT_BULLET_CONFIG.duplicate()
+		config = DEFAULT_BULLET_CONFIG
 
 	# Set Texture Filter to Nearest
 	get_viewport().canvas_item_default_texture_filter = (
