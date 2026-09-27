@@ -32,7 +32,7 @@ func setup(resource: FuelResource) -> void:
 	_fuel_resource = resource
 	if not _fuel_resource.is_connected("fuel_changed", _on_fuel_changed):
 		_fuel_resource.connect("fuel_changed", _on_fuel_changed)
-		
+
 		# Prime the DOM with the current value immediately upon connection
 		_on_fuel_changed(_fuel_resource.current_fuel)
 
