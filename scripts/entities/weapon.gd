@@ -1,6 +1,6 @@
 ## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
-# weapon.gd
+## weapon.gd
 extends Node2D
 
 @export var weapon_types: Array[PackedScene] = []  # Drag bullet.tscn...
@@ -8,6 +8,9 @@ extends Node2D
 var current_weapon: Node2D
 var current_index: int = 0
 var weapon_resource: WeaponResource = WeaponResource.new()
+
+# Added for HUD/Bot decoupling
+signal weapon_fired(ammo_remaining: int)
 
 
 func _ready() -> void:
@@ -47,6 +50,12 @@ func switch_to(index: int) -> void:
 		var safe_weapon_name: String = "Machine Gun"
 		if current_weapon.get("weapon_name") != null:
 			safe_weapon_name = String(current_weapon.get("weapon_name"))
+			
+		# Sync unique weapon stats into the active resource
+		if current_weapon.get("fire_rate") != null:
+			weapon_resource.fire_rate = current_weapon.get("fire_rate")
+		if current_weapon.get("damage") != null:
+			weapon_resource.damage = current_weapon.get("damage")
 
 		# 2. Sync the resource's available_weapons array
 		# We pull the duplicate, resize if necessary, inject the safe name, and push it back.
@@ -81,6 +90,7 @@ func fire() -> void:
 			# Deduct ammo ONLY if the weapon successfully fired a projectile
 			if shot_fired:
 				weapon_resource.current_ammo -= 1
+				weapon_fired.emit(weapon_resource.current_ammo)
 		else:
 			Globals.log_message("Weapon.fire(): Out of ammo!", Globals.LogLevel.WARNING)
 	else:
