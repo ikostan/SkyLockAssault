@@ -3,10 +3,10 @@
 ## weapon.gd
 extends Node2D
 
-@export var weapon_types: Array[PackedScene] = []  # Drag bullet.tscn...
-
 # Added for HUD/Bot decoupling
 signal weapon_fired(ammo_remaining: int)
+
+@export var weapon_types: Array[PackedScene] = []  # Drag bullet.tscn...
 
 var current_weapon: Node2D
 var current_index: int = 0
