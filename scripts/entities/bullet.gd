@@ -7,13 +7,13 @@ extends Node2D
 # Inject the dedicated projectile configuration here via the Inspector (.tres)
 @export var config: BulletResource
 
-# Preload the default configuration at the class level to satisfy gdlint
-const DEFAULT_BULLET_CONFIG: BulletResource = preload("res://config_resources/default_bullet.tres")
-
 # var projectile_texture: Texture2D
 # var shot_sound: AudioStream
 var can_fire: bool = true
 var timer: Timer
+
+# Preload the default configuration at the class level to satisfy gdlint
+const DEFAULT_BULLET_CONFIG: BulletResource = preload("res://config_resources/default_bullet.tres")
 
 
 # NO @onready for ShotSFX — we’ll create players dynamically
