@@ -11,3 +11,7 @@ extends Resource
 @export var damage: int = 10
 @export var projectile_texture: Texture2D = preload("res://files/sprite/laser_sprites/01.png")
 @export var shot_sound: AudioStream = preload("res://files/sounds/sfx/retro-laser-1-236669.mp3")
+
+# Added specifically for Issue #284 requirements
+@export var scale: Vector2 = Vector2(0.25, 0.25)
+@export var collision_radius: float = 3.0
