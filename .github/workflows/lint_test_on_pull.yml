@@ -31,6 +31,12 @@ jobs:
       markdown: "${{ steps.filter.outputs.markdown }}"
       yaml: "${{ steps.filter.outputs.yaml }}"
       ci: "${{ steps.filter.outputs.ci }}"
+      # Called-workflow self-changes: a PR that edits one of these files alone
+      # doesn't touch any .gd/test/py path, so gdscript/python_tests stay false
+      # and the job that runs *that* workflow gets skipped untested.
+      gdunit4_workflow: "${{ steps.filter.outputs.gdunit4_workflow }}"
+      gut_workflow: "${{ steps.filter.outputs.gut_workflow }}"
+      browser_workflow: "${{ steps.filter.outputs.browser_workflow }}"
     steps:
       - name: "Checkout Code"
         uses: "actions/checkout@v7.0.1"
@@ -76,6 +82,12 @@ jobs:
               - 'workspace/**/*.sh' # Added bash workspace scripts
               - 'workspace/**/*.py' # Added workspace python scripts
               - 'infra/**'          # Added docker and nginx configuration
+            gdunit4_workflow:
+              - '.github/workflows/gdunit4_tests.yml'
+            gut_workflow:
+              - '.github/workflows/gut_tests.yml'
+            browser_workflow:
+              - '.github/workflows/browser_test.yml'
 
   # NOTE: jobs below call a reusable workflow via `uses:`. That job shape does not support
   # `runs-on` or `timeout-minutes` — GitHub Actions only allows needs/if/permissions/uses/
@@ -130,7 +142,10 @@ jobs:
     if: >-
       ${{
         always() &&
-        needs.detect-changes.outputs.gdscript == 'true' &&
+        (
+          needs.detect-changes.outputs.gdscript == 'true' ||
+          needs.detect-changes.outputs.gdunit4_workflow == 'true'
+        ) &&
         needs.gdlint.result != 'failure' &&
         needs.readmelint.result != 'failure' &&
         needs.yamllint.result != 'failure'
@@ -154,7 +169,10 @@ jobs:
     if: >-
       ${{
         always() &&
-        needs.detect-changes.outputs.gdscript == 'true' &&
+        (
+          needs.detect-changes.outputs.gdscript == 'true' ||
+          needs.detect-changes.outputs.gut_workflow == 'true'
+        ) &&
         needs.gdlint.result != 'failure' &&
         needs.readmelint.result != 'failure' &&
         needs.yamllint.result != 'failure'
@@ -209,7 +227,8 @@ jobs:
         always() &&
         (
           needs.detect-changes.outputs.gdscript == 'true' ||
-          needs.detect-changes.outputs.python_tests == 'true'
+          needs.detect-changes.outputs.python_tests == 'true' ||
+          needs.detect-changes.outputs.browser_workflow == 'true'
         ) &&
         needs.gdlint.result != 'failure' &&
         needs.readmelint.result != 'failure' &&
