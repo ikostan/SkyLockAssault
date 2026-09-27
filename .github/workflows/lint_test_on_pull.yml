@@ -1,64 +1,94 @@
----
 name: "Pull Request Pipeline"
 
-# Define permissions at the workflow level
 permissions:
   contents: "write"
   pull-requests: "write"
   actions: "read"
-  # Needed to upload SARIF results
   security-events: "write"
-  checks: "write"  # Add this to allow check run creation
+  checks: "write" 
 
-on:  # yamllint disable-line rule:truthy
+on: 
   pull_request:
-    branches: [main]  # yamllint disable-line rule:quoted-strings
+    branches: [main] 
 
 jobs:
+  # 1. New job to evaluate changed files
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      gdscript: ${{ steps.filter.outputs.gdscript }}
+      markdown: ${{ steps.filter.outputs.markdown }}
+      yaml:     ${{ steps.filter.outputs.yaml }}
+      ci:       ${{ steps.filter.outputs.ci }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            gdscript:
+              - '**/*.gd'
+              - 'project.godot'
+              - 'tests/**'
+            markdown:
+              - '**/*.md'
+            yaml:
+              - '**/*.yml'
+              - '**/*.yaml'
+            ci:
+              - '.github/scripts/**'
+              - 'tests/ci/**'
+
+  # 2. Add conditions to existing jobs based on the outputs
   gdlint:
     name: "GDScript Lint and Format Check"
-    uses: "./.github/workflows/gdlint.yml"
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.gdscript == 'true' }}
+    uses: ./.github/workflows/gdlint.yml
+
   readmelint:
     name: "Markdown Lint"
-    uses: "./.github/workflows/lint_readme.yml"
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.markdown == 'true' }}
+    uses: ./.github/workflows/lint_readme.yml
+
   yamllint:
     name: "YAML Lint"
-    uses: "./.github/workflows/yamllint.yml"
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.yaml == 'true' }}
+    uses: ./.github/workflows/yamllint.yml
     with:
       config-path: ".github/workflows/*.yml"
+
   gdunit4_tests:
     name: "GDUnit4 Unit Tests"
-    uses: "./.github/workflows/gdunit4_tests.yml"
-    needs:
-      - "gdlint"
-      - "readmelint"
-      - "yamllint"
+    needs: [detect-changes, gdlint, readmelint, yamllint]
+    # Ensure it only runs if gdscript changes, but still respects the needs tree
+    if: ${{ always() && needs.detect-changes.outputs.gdscript == 'true' && needs.gdlint.result != 'failure' }}
+    uses: ./.github/workflows/gdunit4_tests.yml
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+
   gut_tests:
     name: "GUT Unit Tests"
-    uses: "./.github/workflows/gut_tests.yml"
-    needs:
-      - "gdlint"
-      - "readmelint"
-      - "yamllint"
+    needs: [detect-changes, gdlint, readmelint, yamllint]
+    if: ${{ always() && needs.detect-changes.outputs.gdscript == 'true' && needs.gdlint.result != 'failure' }}
+    uses: ./.github/workflows/gut_tests.yml
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+
   ci_script_tests:
     name: "CI/CD Infrastructure Tests"
-    uses: "./.github/workflows/test_ci_scripts.yml"
-    needs:
-      - "gdlint"
-      - "readmelint"
-      - "yamllint"
+    needs: [detect-changes, gdlint, readmelint, yamllint]
+    if: ${{ always() && needs.detect-changes.outputs.ci == 'true' }}
+    uses: ./.github/workflows/test_ci_scripts.yml
     with:
       godot_version: "4.7.1-stable"
+
   browser_tests:
     name: "Browser Functional Tests"
-    uses: "./.github/workflows/browser_test.yml"
-    needs:
-      - "gdunit4_tests"
-      - "gut_tests"
-      - "ci_script_tests"
+    needs: [detect-changes, gdunit4_tests, gut_tests, ci_script_tests]
+    if: ${{ always() && needs.detect-changes.outputs.gdscript == 'true' }}
+    uses: ./.github/workflows/browser_test.yml
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
