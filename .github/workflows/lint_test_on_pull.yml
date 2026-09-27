@@ -95,9 +95,9 @@ jobs:
     permissions:
       contents: "read"
       pull-requests: "read"  # Required: yamllint.yml's own workflow declares this, even
-                              # though nothing in its steps currently exercises it. GitHub
-                              # validates the declared request against the caller's grant
-                              # at call time, regardless of whether it's actually used.
+                             # though nothing in its steps currently exercises it. GitHub
+                             # validates the declared request against the caller's grant
+                             # at call time, regardless of whether it's actually used.
     if: "${{ needs.detect-changes.outputs.yaml == 'true' }}"
     uses: "./.github/workflows/yamllint.yml"
     with:
