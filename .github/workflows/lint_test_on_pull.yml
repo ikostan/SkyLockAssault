@@ -50,6 +50,8 @@ jobs:
           filters: |
             gdscript:
               - '**/*.gd'
+              - '**/*.tscn'         # Godot scene files
+              - '**/*.tres'         # Godot resource files
               - 'project.godot'
               - 'test/**'           # Corrected to capture Godot tests (GUT/GDUnit4)
             python_tests:
