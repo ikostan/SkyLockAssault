@@ -50,7 +50,7 @@ func switch_to(index: int) -> void:
 		var safe_weapon_name: String = "Machine Gun"
 		if current_weapon.get("weapon_name") != null:
 			safe_weapon_name = String(current_weapon.get("weapon_name"))
-			
+
 		# Sync unique weapon stats into the active resource
 		if current_weapon.get("fire_rate") != null:
 			weapon_resource.fire_rate = current_weapon.get("fire_rate")
