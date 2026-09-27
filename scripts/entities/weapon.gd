@@ -40,32 +40,37 @@ func switch_to(index: int) -> void:
 		current_weapon.queue_free()
 	current_weapon = weapon_types[index].instantiate()
 	Globals.log_message("Instantiate result: " + str(current_weapon), Globals.LogLevel.DEBUG)
+	
 	if current_weapon:
 		add_child(current_weapon)
 		current_weapon.position = Vector2.ZERO
 		current_index = index
 
 		# 1. Safely extract a readable weapon name, falling back to "Machine Gun"
-		# This allows future weapons (e.g., missiles) to define a custom 'weapon_name' variable.
 		var safe_weapon_name: String = "Machine Gun"
 		if current_weapon.get("weapon_name") != null:
 			safe_weapon_name = String(current_weapon.get("weapon_name"))
+			
+		# 2. Sync unique weapon stats into the active resource
+		if "config" in current_weapon and current_weapon.config != null:
+			# Pull from BulletResource if the weapon uses the new architecture
+			weapon_resource.fire_rate = current_weapon.config.fire_rate
+			weapon_resource.damage = current_weapon.config.damage
+		else:
+			# Fallback for simple/legacy weapons (like Gut test mocks)
+			if current_weapon.get("fire_rate") != null:
+				weapon_resource.fire_rate = current_weapon.get("fire_rate")
+			if current_weapon.get("damage") != null:
+				weapon_resource.damage = current_weapon.get("damage")
 
-		# Sync unique weapon stats into the active resource
-		if current_weapon.get("fire_rate") != null:
-			weapon_resource.fire_rate = current_weapon.get("fire_rate")
-		if current_weapon.get("damage") != null:
-			weapon_resource.damage = current_weapon.get("damage")
-
-		# 2. Sync the resource's available_weapons array
-		# We pull the duplicate, resize if necessary, inject the safe name, and push it back.
+		# 3. Sync the resource's available_weapons array
 		var updated_weapons: Array[String] = weapon_resource.available_weapons
 		if updated_weapons.size() < weapon_types.size():
 			updated_weapons.resize(weapon_types.size())
 		updated_weapons[index] = safe_weapon_name
 		weapon_resource.available_weapons = updated_weapons
 
-		# 3. Update the resource index (this automatically triggers the weapon_swapped signal)
+		# 4. Update the resource index (this automatically triggers the weapon_swapped signal)
 		weapon_resource.current_index = index
 
 		Globals.log_message("Switched to " + safe_weapon_name, Globals.LogLevel.INFO)
