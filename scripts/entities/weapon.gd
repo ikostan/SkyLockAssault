@@ -56,6 +56,12 @@ func switch_to(index: int) -> void:
 			# Pull from BulletResource if the weapon uses the new architecture
 			weapon_resource.fire_rate = current_weapon.config.fire_rate
 			weapon_resource.damage = current_weapon.config.damage
+			# Write the (possibly clamped) values back so Bullet.fire() and
+			# projectile hit handling, which read current_weapon.config
+			# directly, stay consistent with the selected weapon_resource's
+			# normalized fire_rate/damage rather than the original values.
+			current_weapon.config.fire_rate = weapon_resource.fire_rate
+			current_weapon.config.damage = int(weapon_resource.damage)
 		else:
 			# Fallback for simple/legacy weapons (like Gut test mocks)
 			if current_weapon.get("fire_rate") != null:
