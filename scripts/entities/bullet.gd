@@ -5,7 +5,8 @@
 extends Node2D
 
 # Inject the dedicated projectile configuration here via the Inspector (.tres)
-@export var config: BulletResource
+# Preloading ensures all default bullets share the exact same configuration memory.
+@export var config: BulletResource = preload("res://config_resources/default_bullet.tres")
 
 # var projectile_texture: Texture2D
 # var shot_sound: AudioStream
@@ -15,10 +16,6 @@ var timer: Timer
 
 # NO @onready for ShotSFX — we’ll create players dynamically
 func _ready() -> void:
-	# Fallback just in case you forget to assign a .tres in the Inspector
-	if not config:
-		config = BulletResource.new()
-
 	# Globals.log_message("BulletFirer _ready: Script loaded.", Globals.LogLevel.DEBUG)
 	# Set Texture Filter to Nearest
 	get_viewport().canvas_item_default_texture_filter = (
