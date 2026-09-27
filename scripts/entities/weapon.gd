@@ -40,7 +40,7 @@ func switch_to(index: int) -> void:
 		current_weapon.queue_free()
 	current_weapon = weapon_types[index].instantiate()
 	Globals.log_message("Instantiate result: " + str(current_weapon), Globals.LogLevel.DEBUG)
-	
+
 	if current_weapon:
 		add_child(current_weapon)
 		current_weapon.position = Vector2.ZERO
@@ -50,7 +50,7 @@ func switch_to(index: int) -> void:
 		var safe_weapon_name: String = "Machine Gun"
 		if current_weapon.get("weapon_name") != null:
 			safe_weapon_name = String(current_weapon.get("weapon_name"))
-			
+
 		# 2. Sync unique weapon stats into the active resource
 		if "config" in current_weapon and current_weapon.config != null:
 			# Pull from BulletResource if the weapon uses the new architecture
