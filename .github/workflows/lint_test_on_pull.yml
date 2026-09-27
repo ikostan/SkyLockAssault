@@ -19,6 +19,7 @@ jobs:
     runs-on: "ubuntu-latest"
     outputs:
       gdscript: "${{ steps.filter.outputs.gdscript }}"
+      python_tests: "${{ steps.filter.outputs.python_tests }}"
       markdown: "${{ steps.filter.outputs.markdown }}"
       yaml: "${{ steps.filter.outputs.yaml }}"
       ci: "${{ steps.filter.outputs.ci }}"
@@ -33,15 +34,22 @@ jobs:
             gdscript:
               - '**/*.gd'
               - 'project.godot'
-              - 'tests/**'
+              - 'test/**'           # Corrected to capture Godot tests (GUT/GDUnit4)
+            python_tests:
+              - 'tests/**/*.py'     # Explicitly captures Playwright/E2E tests
+              - 'pytest.ini'
             markdown:
               - '**/*.md'
+              - '**/*.txt'          # Grouped text files with documentation
             yaml:
               - '**/*.yml'
               - '**/*.yaml'
             ci:
-              - '.github/scripts/**'
+              - '.github/**'
               - 'tests/ci/**'
+              - 'workspace/**/*.sh' # Added bash workspace scripts
+              - 'workspace/**/*.py' # Added workspace python scripts
+              - 'infra/**'          # Added docker and nginx configuration
 
   gdlint:
     name: "GDScript Lint and Format Check"
