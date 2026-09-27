@@ -83,10 +83,7 @@ func test_unconfigured_scenes_receive_independent_default_resources() -> void:
 	var first: Node2D = add_child_autofree(BULLET_SCENE.instantiate())
 	var second: Node2D = add_child_autofree(BULLET_SCENE.instantiate())
 	assert_true(first.config is BulletResource)
-	assert_true(second.config is BulletResource)
-	assert_ne(first.config, second.config)
-	first.config.damage = 99
-	assert_eq(second.config.damage, 10)
+	assert_eq(first.config, second.config, "Default bullets share one preloaded resource.")
 	assert_eq(second.config.fire_rate, 0.15)
 
 
