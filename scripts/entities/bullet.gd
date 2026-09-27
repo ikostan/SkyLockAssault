@@ -78,7 +78,8 @@ func spawn_projectile() -> void:
 	var proj: RigidBody2D = RigidBody2D.new()  # Projectile body – physics for movement/collision
 	proj.name = "BulletProjectile"
 	proj.gravity_scale = 0.0  # No gravity – top-down space flight
-	proj.linear_velocity = Vector2(0, -config.projectile_speed)  # Up velocity (negative y = up in Godot 2D)
+	# Up velocity (negative y = up in Godot 2D)
+	proj.linear_velocity = Vector2(0, -config.projectile_speed)
 	proj.global_position = global_position + config.muzzle_offset  # Spawn at muzzle
 	proj.global_rotation = -PI / 2  # Rotate sprite up if needed
 
