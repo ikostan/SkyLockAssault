@@ -1,3 +1,6 @@
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+## res://scripts/ui/menus/gameplay_settings.gd
 extends Control
 
 ## The wrappers (like JavaScriptBridgeWrapper and presumably OSWrapper)

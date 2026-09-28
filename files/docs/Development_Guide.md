@@ -38,10 +38,35 @@ Best Practice: Use branches for features (e.g., git checkout -b feature/fuel).
 
 ## 3. Core Mechanics
 
+### Environment and Parallax Background (ParallaxManager)
+<!-- markdownlint-disable line-length -->
+
+The parallax background utilizes a strict **Observer Pattern** combined with **Dependency Injection** to ensure it remains completely decoupled from the `Player` node. The `main_scene.gd` script acts as the pure composition root.
+
+**Architecture and Data Flow:**
+
+1. **Data Ownership:** The `Player` node owns the runtime instances of `SpeedResource` and `FuelResource`. The `Globals` autoload manages the `GameSettingsResource`.
+2. **Dependency Injection:** During `_ready()`, `main_scene.gd` extracts these authoritative resources and injects them into the `ParallaxManager` via its `setup()` method.
+3. **Observation:** The `ParallaxManager` connects to the signals emitted by these resources. It dynamically updates its internal scroll multipliers, halts scrolling during a flameout (0 fuel), and scales speed based on the global difficulty setting, all without polling or relying on legacy physics signals.
+
+**Wiring Example (`main_scene.gd`):**
+
+```gdscript
+@onready var player: Node2D = $Player
+@onready var background: ParallaxManager = $Background
+
+func _ready() -> void:
+    var settings_res: GameSettingsResource = Globals.settings if is_instance_valid(Globals) else null
+    
+    # Inject resources into the newly refactored ParallaxManager
+    if background.has_method("setup"):
+        background.setup(player.speed_resource, player.fuel_resource, settings_res)
+        background.auto_calculate_wrap_period()
+```
+
 ### Top-Down Movement (player.gd)
 
 Use CharacterBody2D for physics. Example code:
-<!-- markdownlint-disable line-length -->
 ```gdscript
 extends CharacterBody2D
 
@@ -131,6 +156,7 @@ use the following signature:
 | **UI Observer (Advanced)**          | `res://scripts/ui/menus/advanced_settings.gd`       | Syncs log level dropdowns and handles web-specific JavaScript callbacks.                   |
 | <del>**Persistence Settings**</del> | <del>`res://scripts/settings.gd`</del>              | <del>Manages low-level `InputMap` serialization and legacy migration logic.</del>          |
 <!-- markdownlint-enable MD033 -->
+
 #### 3. Connection Example for UI
 
 To prevent infinite recursion, UI handlers should always check for equality or use `no_signal` methods when responding to the resource:
