@@ -104,15 +104,14 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	_save_settings()
 
 
-## Centralized "ensure initial focus" helper.
-## Checks whether keyboard/controller focus is already inside this menu.
-## If it isn't, defers grab_focus() on the candidate and logs the action.
-## If it is, logs the skip (so you can still see what happened).
+## Ensure keyboard or controller focus is correctly set inside the menu.
 ##
-## :param candidate: The control that should receive focus by default.
-## :param allowed_controls: All interactive controls that belong to this menu.
-##                          If focus is already on any of them we do nothing.
-## :param context: Optional string that appears in the log (e.g. "Pause Menu").
+## Checks whether focus is already inside this menu. If not, defers grab_focus() on the
+## candidate and logs the action. If it is, logs the skip.
+##
+## [param candidate]: The candidate parameter.
+## [param allowed_controls]: The allowed_controls parameter.
+## [param context]: The context parameter.
 func ensure_initial_focus(
 	candidate: Control, allowed_controls: Array[Control] = [], context: String = ""
 ) -> void:
@@ -143,9 +142,11 @@ func ensure_initial_focus(
 
 
 ## Loads Key Mapping menu directly while keeping background video visible.
-## :param menu_to_hide: Usually the UI Panel (not the root Control).
-## :type menu_to_hide: Node
-## :rtype: void
+##
+## Hides the specified menu node, pushes it to hidden menus, and ensures the background video
+## player remains visible and processing.
+##
+## [param menu_to_hide]: The menu_to_hide parameter.
 func load_key_mapping(menu_to_hide: Node) -> void:
 	if is_instance_valid(menu_to_hide):
 		hidden_menus.push_back(menu_to_hide)
@@ -291,6 +292,11 @@ func _on_options_exited_unexpectedly() -> void:
 	options_instance = null
 
 
+## Loads options menu and hides the caller menu if valid.
+##
+## Guards against re-entrancy by checking existing instance.
+##
+## [param menu_to_hide]: The menu_to_hide parameter.
 func load_options(menu_to_hide: Node) -> void:
 	## Loads options menu and hides the caller menu (if valid).
 	##
@@ -344,6 +350,13 @@ func load_options(menu_to_hide: Node) -> void:
 # Custom logging function with timestamp and level filtering.
 # @param message: The string message to log.
 # @param level: The log level (default INFO).
+## Prints a formatted log message if it meets the log level threshold.
+##
+## Converts the given log level enum to a string, retrieves the system timestamp, and prints
+## the message if the level is greater than or equal to the current settings threshold.
+##
+## [param message]: The message parameter.
+## [param level]: The level parameter.
 func log_message(message: String, level: LogLevel = LogLevel.INFO) -> void:
 	# FIX: Guard the log level check.
 	# If settings is null, print everything.
@@ -375,6 +388,12 @@ func _notification(what: int) -> void:
 		get_tree().quit()
 
 
+## Queues a scene change via the loading screen.
+##
+## Sets the next scene path and transitions to the loading screen scene. Handles empty or
+## invalid paths gracefully.
+##
+## [param target_path]: The target_path parameter.
 func load_scene_with_loading(target_path: String) -> void:
 	# Queues a scene change via the loading screen.
 	# Sets next_scene and transitions to loading_screen.tscn.
@@ -389,11 +408,22 @@ func load_scene_with_loading(target_path: String) -> void:
 
 
 # Static helpers for version (add after _ready())
+## Returns the game version from project settings.
+##
+## Retrieves the version string from the application configuration settings, defaulting to
+## "n/a" if not set.
+## Returns The game version string.
 static func get_game_version() -> String:
 	return ProjectSettings.get_setting("application/config/version", "n/a") as String
 
 
 # For tests only—avoids direct writes in prod
+## Sets the game version project setting for automated testing.
+##
+## Updates the application configuration version setting directly in the project settings using
+## the provided string value.
+##
+## [param value]: The value parameter.
 static func set_game_version_for_tests(value: String) -> void:
 	ProjectSettings.set_setting("application/config/version", value)
 
@@ -473,7 +503,12 @@ func _get_encryption_key() -> String:
 	return final_key
 
 
-## Helper to determine if a config file is encrypted.
+## Determine if a config file is encrypted.
+##
+## Checks the file magic number to verify if it is an encrypted Godot file.
+##
+## [param path]: The path parameter.
+## Returns Returns [code]true[/code] if the file is encrypted, [code]false[/code] otherwise.
 func is_file_encrypted(path: String) -> bool:
 	if not FileAccess.file_exists(path):
 		return false
@@ -489,10 +524,14 @@ func is_file_encrypted(path: String) -> bool:
 	return magic == 0x43454447
 
 
-## Safely loads a config file, handling both encrypted and legacy plaintext formats.
-## Returns a Dictionary: {"config": ConfigFile, "err": int, "is_legacy": bool}
-## Safely loads a config file, handling both encrypted and legacy plaintext formats.
-## Returns a Dictionary: {"config": ConfigFile, "err": int, "is_legacy": bool}
+## Safely loads a config file, handling encrypted and legacy plaintext formats.
+##
+## Loads a configuration file from the specified path, automatically handling encryption keys
+## and plaintext fallbacks.
+##
+## [param path]: The path parameter.
+## Returns A Dictionary containing the keys config as ConfigFile, err as int, and is_legacy as
+## bool.
 func safe_load_config(path: String) -> Dictionary:
 	var key: String = ensure_encryption_key()
 
@@ -565,7 +604,10 @@ func safe_load_config(path: String) -> Dictionary:
 
 
 ## Overrides the encryption key with a deterministic value for unit tests.
+##
 ## This decouples test artifacts from specific hardware IDs so failures are reproducible.
+##
+## [param override_key]: The override_key parameter.
 func set_test_encryption_key(override_key: String = "test_deterministic_key_123") -> void:
 	save_encryption_pass = override_key
 	log_message("Encryption key overridden for testing.", LogLevel.DEBUG)
