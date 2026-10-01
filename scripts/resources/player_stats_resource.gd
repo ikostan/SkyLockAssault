@@ -3,10 +3,12 @@
 ## player_stats_resource.gd
 ##
 ## DATA CONTAINER: Holds static, developer-authored tuning values for the player ship.
-## Read-only configuration: it has no runtime state and emits no signals. player.gd reads
-## it once in _ready() to compute the movement bounds, so changes made at runtime are not
-## picked up until the player is spawned again.
+## Authored configuration: values are meant to be set in the editor (or on a resource
+## assigned to the player), not changed during play. It stores no runtime state and emits
+## no signals. player.gd reads these values once in _ready() to compute the movement
+## bounds, so changes made at runtime are not picked up until the player is spawned again.
 ## Shipped defaults live in res://config_resources/default_player_stats.tres.
+
 class_name PlayerStatsResource
 extends Resource
 
