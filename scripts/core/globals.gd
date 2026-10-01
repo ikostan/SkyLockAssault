@@ -144,7 +144,7 @@ func ensure_initial_focus(
 ## Loads Key Mapping menu directly while keeping background video visible.
 ##
 ## Loads the Key Mapping menu, hides the specified menu node, and keeps the background
-## video visible and processing.
+## video visible and processing when found at one of the expected relative paths.
 ##
 ## [param menu_to_hide]: The menu_to_hide parameter.
 func load_key_mapping(menu_to_hide: Node) -> void:
