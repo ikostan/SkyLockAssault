@@ -47,13 +47,12 @@ jobs:
           # entirely at the cost of a slower checkout on this one job.
           fetch-depth: 0
       - name: "Filter Paths"
-        # Pinned to a full commit SHA per security review: the @v3 tag is a mutable
-        # major-version pointer that has moved several times (currently v3.0.2+).
-        # This SHA corresponds to the v3.0.2 release, verified against dorny/paths-filter's
-        # published history. Newer v3.0.x patches exist (e.g. v3.0.4, which escapes
-        # multi-line filenames in list-files output) -- verify the latest with
-        # `git ls-remote --tags https://github.com/dorny/paths-filter.git v3` and
-        # update this SHA if you want that fix.
+        # Pinned to a full commit SHA per security review: the @v4 tag is a mutable
+        # major-version pointer.
+        # This SHA corresponds to the v4.0.3 release, verified against dorny/paths-filter's
+        # published history. To check for newer v4.0.x patches, verify the latest with
+        # `git ls-remote --tags https://github.com/dorny/paths-filter.git v4` and
+        # update this SHA if you want those fixes.
         uses: "dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d"  # v4.0.3
         id: "filter"
         with:
