@@ -394,13 +394,14 @@ func _notification(what: int) -> void:
 ## Queues a scene change via the loading screen.
 ##
 ## Sets the next scene path and transitions to the loading screen scene. Handles empty or
-## invalid paths gracefully.
-## invalid paths gracefully.
+## Sets the next scene path and transitions to the loading screen scene. Handles empty paths
+## gracefully.
 ##
 ## [param target_path]: The target_path parameter.
 func load_scene_with_loading(target_path: String) -> void:
 	# Queues a scene change via the loading screen.
 	# Sets next_scene and transitions to loading_screen.tscn.
+	# Handles empty paths gracefully.
 	# Handles empty/invalid paths gracefully.
 
 	if target_path == "":
