@@ -393,7 +393,6 @@ func _notification(what: int) -> void:
 
 ## Queues a scene change via the loading screen.
 ##
-## Sets the next scene path and transitions to the loading screen scene. Handles empty or
 ## Sets the next scene path and transitions to the loading screen scene. Handles empty paths
 ## gracefully.
 ##
