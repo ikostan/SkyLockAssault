@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## game_paths.gd
 ## Centralized repository for all hardcoded script and scene paths.
 ## Use this class to reference paths globally to avoid fragility and improve refactoring.

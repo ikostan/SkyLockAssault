@@ -1,39 +1,45 @@
 ## Copyright (C) 2025 Egor Kostan
 ## SPDX-License-Identifier: GPL-3.0-or-later
 
-@warning_ignore("unused_parameter")
 extends GdUnitTestSuite
 
 var bullet_scene := preload("res://scenes/bullet.tscn")
 
 
+class DamageTarget extends Area2D:
+	var received_damage: int = -1
+
+	func take_damage(amount: int) -> void:
+		received_damage = amount
+
+
 func test_bullet_collision() -> void:
-	# Instantiate with auto_free to prevent leaks/orphans
-	var bullet: Variant = auto_free(bullet_scene.instantiate())
+	var firer: Node2D = auto_free(bullet_scene.instantiate())
+	firer.config = BulletResource.new()
+	firer.config.damage = 23
+	var original_filter := get_viewport().canvas_item_default_texture_filter
+	get_tree().root.add_child(firer)
+	get_viewport().canvas_item_default_texture_filter = original_filter
+	var existing_projectiles := get_tree().get_nodes_in_group("bullets")
+	firer.spawn_projectile()
+	var spawned: Array[Node] = []
+	for node in get_tree().get_nodes_in_group("bullets"):
+		if node not in existing_projectiles:
+			spawned.append(auto_free(node))
+	assert_int(spawned.size()).is_equal(1)
+	if spawned.size() != 1:
+		return
+	var projectile := spawned[0]
+	var target: DamageTarget = auto_free(DamageTarget.new())
 
-	# Add to root (more reliable in CI / headless runs)
-	get_tree().root.add_child(bullet)
-	bullet.global_position = Vector2.ZERO
-	bullet.global_rotation = 0
+	# Collision belongs to the spawned projectile; the firer is now only a factory.
+	var areas := projectile.find_children("*", "Area2D", false, false)
+	assert_int(areas.size()).is_equal(1)
+	if areas.size() != 1:
+		return
+	var hit_area := areas[0] as Area2D
+	hit_area.area_entered.emit(target)
 
-	# Safer than physics_frame for tree settling
-	await await_idle_frame()
-
-	# Create a dummy Area2D that implements take_damage
-	# (area_entered signal requires an Area2D argument)
-	var dummy: Area2D = auto_free(Area2D.new())
-	var script := GDScript.new()
-	script.source_code = """
-extends Area2D
-
-func take_damage(_d: int) -> void:
-	pass
-"""
-	script.reload()
-	dummy.set_script(script)
-
-	# Simulate a hit by emitting the area_entered signal
-	bullet.get_node("Area2D").area_entered.emit(dummy)
-
-	# Bullet should be queued for deletion after a successful hit
-	assert_that(bullet).is_queued_for_deletion()
+	assert_int(target.received_damage).is_equal(23)
+	assert_that(projectile).is_queued_for_deletion()
+	assert_bool(firer.is_queued_for_deletion()).is_false()

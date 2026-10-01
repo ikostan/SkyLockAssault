@@ -1,5 +1,5 @@
-## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## globals.gd
 ## Global utilities singleton: Provides shared functions like logging.
 ## Access from any script as Globals.log_message("message").
@@ -92,18 +92,6 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 
 	var log_msg: String = "Setting '%s' updated to: %s" % [setting_name, str(new_value)]
 
-	# High-frequency setting handling: 'current_fuel' mutates rapidly during gameplay loops.
-	# Bypass standard disk I/O and standard log spam to preserve game performance.
-	if setting_name == "current_fuel":
-		# Push live fuel value directly to browser window scope for Playwright E2E assertions
-		if OS.has_feature("web"):
-			JavaScriptBridge.eval("window.currentFuel = " + JSON.stringify(new_value))
-
-		# Conditionally log fuel updates ONLY if log level is explicitly set to DEBUG
-		if is_instance_valid(settings) and settings.current_log_level == LogLevel.DEBUG:
-			log_message(log_msg, LogLevel.DEBUG)
-		return
-
 	# Web / E2E state synchronization: Expose current log level to window.currentLogLevel
 	if setting_name == "current_log_level":
 		if OS.has_feature("web"):
@@ -116,9 +104,9 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	_save_settings()
 
 
-## Ensure initial keyboard or controller focus is set for a menu.
+## Ensures keyboard or controller focus is set correctly within this menu.
 ##
-## Checks whether focus is already inside this menu's allowed controls. If not, defers
+## Checks whether the focus is already inside this menu's allowed controls. If not, defers
 ## grab_focus() on the candidate and logs the action; otherwise, logs the skip.
 ##
 ## [param candidate]: The candidate parameter.
@@ -155,8 +143,8 @@ func ensure_initial_focus(
 
 ## Loads Key Mapping menu directly while keeping background video visible.
 ##
-## Loads the Key Mapping menu and hides the specified UI panel while keeping the background
-## video visible.
+## Loads the Key Mapping menu, hides the specified menu node, and keeps the background
+## video visible and processing.
 ##
 ## [param menu_to_hide]: The menu_to_hide parameter.
 func load_key_mapping(menu_to_hide: Node) -> void:
@@ -304,7 +292,7 @@ func _on_options_exited_unexpectedly() -> void:
 	options_instance = null
 
 
-## Loads options menu and hides caller menu if valid.
+## Loads options menu and hides the caller menu if valid.
 ##
 ## Guards against re-entrancy by checking existing instance.
 ##
@@ -363,10 +351,11 @@ func load_options(menu_to_hide: Node) -> void:
 # Custom logging function with timestamp and level filtering.
 # @param message: The string message to log.
 # @param level: The log level (default INFO).
-## Prints a formatted log message if the level meets the threshold.
+## Prints a formatted log message if it meets the configured log level threshold.
 ##
-## Converts the log level to a string, prepends a system timestamp, and prints the message if
-## the level is greater than or equal to the current configured threshold in settings.
+## Converts the given log level enum to a string, prepends a system timestamp, and prints the
+## message if the level is greater than or equal to the current configured threshold in
+## settings.
 ##
 ## [param message]: The message parameter.
 ## [param level]: The level parameter.
@@ -404,7 +393,8 @@ func _notification(what: int) -> void:
 
 ## Queues a scene change via the loading screen.
 ##
-## Sets the next scene path and transitions to the loading screen scene, handling empty or
+## Sets the next scene path and transitions to the loading screen scene. Handles empty or
+## invalid paths gracefully.
 ## invalid paths gracefully.
 ##
 ## [param target_path]: The target_path parameter.
@@ -422,16 +412,20 @@ func load_scene_with_loading(target_path: String) -> void:
 
 
 # Static helpers for version (add after _ready())
-## Returns the game version from ProjectSettings.
+## Returns the game version from project settings.
+##
+## Retrieves the version string from the application configuration settings, defaulting to
+## "n/a" if not set.
 ## Returns The application configuration version string, or "n/a" if not set.
 static func get_game_version() -> String:
 	return ProjectSettings.get_setting("application/config/version", "n/a") as String
 
 
 # For tests only—avoids direct writes in prod
-## Sets the game version for unit testing purposes.
+## Sets the game version project setting for automated testing.
 ##
-## Updates the project settings application config version to the specified string value.
+## Updates the application configuration version setting in ProjectSettings using the
+## provided string value.
 ##
 ## [param value]: The value parameter.
 static func set_game_version_for_tests(value: String) -> void:
@@ -515,11 +509,11 @@ func _get_encryption_key() -> String:
 
 ## Determine if a config file is encrypted.
 ##
-## Checks if the specified file exists and verifies its magic number against the Godot
+## Checks whether the specified file exists and whether its magic number matches the Godot
 ## encrypted file magic number 0x43454447 ("GDEC").
 ##
 ## [param path]: The path parameter.
-## Returns Returns true if the file is encrypted, otherwise false.
+## Returns [code]true[/code] if the file is encrypted, [code]false[/code] otherwise.
 func is_file_encrypted(path: String) -> bool:
 	if not FileAccess.file_exists(path):
 		return false
@@ -535,13 +529,14 @@ func is_file_encrypted(path: String) -> bool:
 	return magic == 0x43454447
 
 
-## Safely loads a config file, handling encrypted and plaintext formats.
+## Safely loads a config file, handling encrypted and legacy plaintext formats.
 ##
-## Handles both encrypted and legacy plaintext formats, returning the config file, error code,
-## and legacy status.
+## Loads a configuration file from the specified path, automatically handling encrypted keys
+## and plaintext fallbacks.
 ##
 ## [param path]: The path parameter.
-## Returns A Dictionary containing config, err, and is_legacy.
+## Returns A Dictionary containing the keys config as ConfigFile, err as int, and is_legacy as
+## bool.
 func safe_load_config(path: String) -> Dictionary:
 	var key: String = ensure_encryption_key()
 

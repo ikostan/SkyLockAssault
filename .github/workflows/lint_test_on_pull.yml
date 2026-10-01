@@ -1,64 +1,243 @@
 ---
 name: "Pull Request Pipeline"
 
-# Define permissions at the workflow level
+# Cancel stale runs on rapid successive pushes to the same PR, saving CI minutes
+concurrency:
+  group: "pr-pipeline-${{ github.event.pull_request.number || github.ref }}"
+  cancel-in-progress: true
+
+# Least-privilege floor for the orchestrator. Verified against all 7 called workflows on
+# 2026-09-27: none use the SARIF/security-events API. Only gdunit4_tests and gut_tests
+# request checks:write, granted at the job level below rather than here.
 permissions:
-  contents: "write"
-  pull-requests: "write"
-  actions: "read"
-  # Needed to upload SARIF results
-  security-events: "write"
-  checks: "write"  # Add this to allow check run creation
+  contents: "read"
+  pull-requests: "read"
 
 on:  # yamllint disable-line rule:truthy
   pull_request:
-    branches: [main]  # yamllint disable-line rule:quoted-strings
+    branches:
+      - "main"  # yamllint disable-line rule:quoted-strings
 
 jobs:
+  detect-changes:
+    name: "Detect Changed Files"
+    runs-on: "ubuntu-latest"
+    timeout-minutes: 10
+    permissions:
+      contents: "read"
+    outputs:
+      gdscript: "${{ steps.filter.outputs.gdscript }}"
+      python_tests: "${{ steps.filter.outputs.python_tests }}"
+      markdown: "${{ steps.filter.outputs.markdown }}"
+      yaml: "${{ steps.filter.outputs.yaml }}"
+      ci: "${{ steps.filter.outputs.ci }}"
+      # Called-workflow self-changes: a PR that edits one of these files alone
+      # doesn't touch any .gd/test/py path, so gdscript/python_tests stay false
+      # and the job that runs *that* workflow gets skipped untested.
+      gdunit4_workflow: "${{ steps.filter.outputs.gdunit4_workflow }}"
+      gut_workflow: "${{ steps.filter.outputs.gut_workflow }}"
+      browser_workflow: "${{ steps.filter.outputs.browser_workflow }}"
+    steps:
+      - name: "Checkout Code"
+        uses: "actions/checkout@v7.0.1"
+        with:
+          # Full history: on a batched push (multiple commits at once, rebase, force-push)
+          # github.event.before may point further back than a shallow clone can see,
+          # which breaks the paths-filter diff below. fetch-depth: 0 removes that risk
+          # entirely at the cost of a slower checkout on this one job.
+          fetch-depth: 0
+      - name: "Filter Paths"
+        # Pinned to a full commit SHA per security review: the @v3 tag is a mutable
+        # major-version pointer that has moved several times (currently v3.0.2+).
+        # This SHA corresponds to the v3.0.2 release, verified against dorny/paths-filter's
+        # published history. Newer v3.0.x patches exist (e.g. v3.0.4, which escapes
+        # multi-line filenames in list-files output) -- verify the latest with
+        # `git ls-remote --tags https://github.com/dorny/paths-filter.git v3` and
+        # update this SHA if you want that fix.
+        uses: "dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d"  # v4.0.3
+        id: "filter"
+        with:
+          token: ""
+          # On subsequent pushes, compare against the last commit. On initial PR open, fall back to the base branch.
+          base: "${{ github.event.before == '0000000000000000000000000000000000000000' && github.event.pull_request.base.sha || github.event.before }}"
+          filters: |
+            gdscript:
+              - '**/*.gd'
+              - '**/*.tscn'         # Godot scene files
+              - '**/*.tres'         # Godot resource files
+              - 'project.godot'
+              - 'test/**'           # Corrected to capture Godot tests (GUT/GDUnit4)
+            python_tests:
+              - 'tests/**/*.py'     # Explicitly captures Playwright/E2E tests
+              - 'pytest.ini'
+            markdown:
+              - '**/*.md'
+              - '**/*.txt'          # Grouped text files with documentation
+            yaml:
+              - '**/*.yml'
+              - '**/*.yaml'
+            ci:
+              - '.github/**'
+              - 'tests/ci/**'
+              - 'workspace/**/*.sh' # Added bash workspace scripts
+              - 'workspace/**/*.py' # Added workspace python scripts
+              - 'infra/**'          # Added docker and nginx configuration
+            gdunit4_workflow:
+              - '.github/workflows/gdunit4_tests.yml'
+            gut_workflow:
+              - '.github/workflows/gut_tests.yml'
+            browser_workflow:
+              - '.github/workflows/browser_test.yml'
+
+  # NOTE: jobs below call a reusable workflow via `uses:`. That job shape does not support
+  # `runs-on` or `timeout-minutes` — GitHub Actions only allows needs/if/permissions/uses/
+  # with/secrets/strategy/name on a call job. Each called workflow sets its own timeout
+  # internally instead (see gdlint.yml, gut_tests.yml, etc.).
+
   gdlint:
     name: "GDScript Lint and Format Check"
+    needs: "detect-changes"
+    permissions:
+      contents: "read"
+    if: "${{ needs.detect-changes.outputs.gdscript == 'true' }}"
     uses: "./.github/workflows/gdlint.yml"
+
   readmelint:
     name: "Markdown Lint"
+    needs: "detect-changes"
+    permissions:
+      contents: "read"
+    if: "${{ needs.detect-changes.outputs.markdown == 'true' }}"
     uses: "./.github/workflows/lint_readme.yml"
+
   yamllint:
     name: "YAML Lint"
+    needs: "detect-changes"
+    permissions:
+      contents: "read"
+      # Required: yamllint.yml's own workflow declares this, even
+      # though nothing in its steps currently exercises it. GitHub
+      # validates the declared request against the caller's grant
+      # at call time, regardless of whether it's actually used.
+      pull-requests: "read"
+    if: "${{ needs.detect-changes.outputs.yaml == 'true' }}"
     uses: "./.github/workflows/yamllint.yml"
     with:
       config-path: ".github/workflows/*.yml"
+
   gdunit4_tests:
     name: "GDUnit4 Unit Tests"
-    uses: "./.github/workflows/gdunit4_tests.yml"
     needs:
+      - "detect-changes"
       - "gdlint"
       - "readmelint"
       - "yamllint"
+    permissions:
+      contents: "read"
+      checks: "write"  # Required: gdunit4_tests.yml's own job declares checks:write
+    # always() lets this job evaluate even if a needed job was skipped (e.g. no markdown
+    # changed). The explicit result checks below are what actually block it on failure,
+    # since a lint failure makes its own downstream test job *skip* rather than fail.
+    # yamllint disable rule:line-length
+    if: >-
+      ${{
+        always() &&
+        (
+          needs.detect-changes.outputs.gdscript == 'true' ||
+          needs.detect-changes.outputs.gdunit4_workflow == 'true'
+        ) &&
+        needs.gdlint.result != 'failure' &&
+        needs.readmelint.result != 'failure' &&
+        needs.yamllint.result != 'failure'
+      }}
+    # yamllint enable rule:line-length
+    uses: "./.github/workflows/gdunit4_tests.yml"
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+
   gut_tests:
     name: "GUT Unit Tests"
-    uses: "./.github/workflows/gut_tests.yml"
     needs:
+      - "detect-changes"
       - "gdlint"
       - "readmelint"
       - "yamllint"
+    permissions:
+      contents: "read"
+      checks: "write"  # Required: gut_tests.yml's own job declares checks:write
+    # yamllint disable rule:line-length
+    if: >-
+      ${{
+        always() &&
+        (
+          needs.detect-changes.outputs.gdscript == 'true' ||
+          needs.detect-changes.outputs.gut_workflow == 'true'
+        ) &&
+        needs.gdlint.result != 'failure' &&
+        needs.readmelint.result != 'failure' &&
+        needs.yamllint.result != 'failure'
+      }}
+    # yamllint enable rule:line-length
+    uses: "./.github/workflows/gut_tests.yml"
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+
   ci_script_tests:
     name: "CI/CD Infrastructure Tests"
-    uses: "./.github/workflows/test_ci_scripts.yml"
     needs:
+      - "detect-changes"
       - "gdlint"
       - "readmelint"
       - "yamllint"
+    permissions:
+      contents: "read"
+    # yamllint disable rule:line-length
+    if: >-
+      ${{
+        always() &&
+        needs.detect-changes.outputs.ci == 'true' &&
+        needs.gdlint.result != 'failure' &&
+        needs.readmelint.result != 'failure' &&
+        needs.yamllint.result != 'failure'
+      }}
+    # yamllint enable rule:line-length
+    uses: "./.github/workflows/test_ci_scripts.yml"
     with:
       godot_version: "4.7.1-stable"
+
   browser_tests:
     name: "Browser Functional Tests"
-    uses: "./.github/workflows/browser_test.yml"
     needs:
+      - "detect-changes"
+      - "gdlint"
+      - "readmelint"
+      - "yamllint"
       - "gdunit4_tests"
       - "gut_tests"
       - "ci_script_tests"
+    permissions:
+      contents: "read"
+    # Gated on the lint jobs directly, not just on the unit-test jobs. A lint failure
+    # causes gdunit4_tests/gut_tests to be *skipped*, not failed. A skipped result still
+    # passes a "!= failure" check. So without these direct checks, a lint failure would
+    # be silently absorbed and browser tests would still run.
+    # yamllint disable rule:line-length
+    if: >-
+      ${{
+        always() &&
+        (
+          needs.detect-changes.outputs.gdscript == 'true' ||
+          needs.detect-changes.outputs.python_tests == 'true' ||
+          needs.detect-changes.outputs.browser_workflow == 'true'
+        ) &&
+        needs.gdlint.result != 'failure' &&
+        needs.readmelint.result != 'failure' &&
+        needs.yamllint.result != 'failure' &&
+        needs.gdunit4_tests.result != 'failure' &&
+        needs.gut_tests.result != 'failure' &&
+        needs.ci_script_tests.result != 'failure'
+      }}
+    # yamllint enable rule:line-length
+    uses: "./.github/workflows/browser_test.yml"
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
