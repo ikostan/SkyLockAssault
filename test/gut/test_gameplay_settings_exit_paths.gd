@@ -97,14 +97,28 @@ func test_gs_exit_02_back_button_pops_once_web() -> void:
 	var options := _push_hidden_menu("OptionsMock")
 
 	gameplay_menu._on_gameplay_back_button_pressed()
+
+	# The Back handler's own DOM update, checked before tree_exited can overwrite "last eval".
+	var back_code := _last_eval_code()
+	assert_true(
+		back_code.contains("getElementById('controls-button').style.display = 'block'"),
+		"Back must re-show the Options overlays"
+	)
+	assert_true(
+		back_code.contains("getElementById('difficulty-slider').style.display = 'none'"),
+		"Back must hide the gameplay overlays"
+	)
+
 	await get_tree().process_frame  # queue_free -> real tree_exited
 
 	assert_true(options.visible, "Previous menu must be restored")
 	assert_eq(Globals.hidden_menus.size(), 0, "Stack must be empty, with no double pop")
 	var code := _last_eval_code()
 	assert_true(code.contains("'none'"), "Last eval must hide the gameplay overlays")
-	assert_false(code.contains("controls-button"), "tree_exited after Back must not re-show Options overlays")
-
+	assert_false(
+		code.contains("controls-button"),
+		"tree_exited after Back must not re-show Options overlays"
+	)
 
 # --- UNEXPECTED REMOVAL PATH ---
 
