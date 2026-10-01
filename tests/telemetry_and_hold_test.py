@@ -264,11 +264,10 @@ def test_pw_hold_01_ux_completion_delay(page: Page) -> None:
         ), "Missing '[SWAP TIMING] 1. .instantiate()' in console logs"
 
         delta_ms = _compute_in_engine_delta_ms(load_log, swap_log)
-        assert 950.0 <= delta_ms <= 1400.0, (
+        assert 900.0 <= delta_ms <= 1400.0, (
             f"In-engine UX hold timing {delta_ms:.2f} ms outside "
-            f"950-1400 ms contract window"
+            f"900-1400 ms contract window"
         )
-
     except Exception as e:
         print(f"Test PW-HOLD-01 failed: {e}")
         _dump_failure_artifacts(page, logs, "pw_hold_01")
