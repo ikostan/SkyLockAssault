@@ -14,8 +14,8 @@ signal speed_low(threshold: float)
 ## Emitted when the plane hits maximum velocity.
 signal speed_maxed
 
-# Bounds hitbox scale (quarter texture = tight margin for top-down plane)
-const HITBOX_SCALE: float = 0.25
+const DEFAULT_PLAYER_STATS: PlayerStatsResource = preload("res://config_resources/default_player_stats.tres")
+@export var stats: PlayerStatsResource
 
 var screen_size: Vector2
 var player_x_min: float = 0.0
@@ -64,6 +64,9 @@ func _ready() -> void:
 		_settings = GameSettingsResource.new()
 		if is_instance_valid(Globals):
 			Globals.settings = _settings
+	
+	if stats == null: 
+		stats = DEFAULT_PLAYER_STATS
 
 	# Auto-start rotors
 	rotor_left_sfx = rotor_left.get_node_or_null("AudioStreamPlayer2D")
@@ -81,17 +84,17 @@ func _ready() -> void:
 	# Set screen boundaries
 	screen_size = get_viewport_rect().size
 
-	var sprite_size: Vector2 = Vector2(174.0, 132.0)
+	var sprite_size: Vector2 = stats.fallback_sprite_size
 	if player_sprite.texture != null:
 		sprite_size = player_sprite.texture.get_size()
 	else:
 		push_warning("Player sprite texture missing! Using fallback size.")
 
 	# --- RESTORED BOUNDARY CALCULATIONS ---
-	player_x_min = (screen_size.x * -0.5) + (sprite_size[0] * HITBOX_SCALE)
-	player_x_max = (screen_size.x * 0.5) - (sprite_size[0] * HITBOX_SCALE)
-	player_y_min = (screen_size.y * -0.83) + (sprite_size[1] * HITBOX_SCALE)
-	player_y_max = (screen_size.y / 6) - (sprite_size[1] * HITBOX_SCALE)
+	player_x_min = (screen_size.x * -0.5) + (sprite_size[0] * stats.hitbox_scale)
+	player_x_max = (screen_size.x * 0.5) - (sprite_size[0] * stats.hitbox_scale)
+	player_y_min = (screen_size.y * -0.83) + (sprite_size[1] * stats.hitbox_scale)
+	player_y_max = (screen_size.y / 6) - (sprite_size[1] * stats.hitbox_scale)
 
 	# Ensure the player always spawns with a full tank and default properties
 	fuel_resource.max_fuel = _settings.max_fuel
