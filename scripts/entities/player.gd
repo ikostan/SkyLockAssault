@@ -14,7 +14,9 @@ signal speed_low(threshold: float)
 ## Emitted when the plane hits maximum velocity.
 signal speed_maxed
 
-const DEFAULT_PLAYER_STATS: PlayerStatsResource = preload("res://config_resources/default_player_stats.tres")
+const DEFAULT_PLAYER_STATS: PlayerStatsResource = preload(
+	"res://config_resources/default_player_stats.tres"
+)
 @export var stats: PlayerStatsResource
 
 var screen_size: Vector2
@@ -64,8 +66,8 @@ func _ready() -> void:
 		_settings = GameSettingsResource.new()
 		if is_instance_valid(Globals):
 			Globals.settings = _settings
-	
-	if stats == null: 
+
+	if stats == null:
 		stats = DEFAULT_PLAYER_STATS
 
 	# Auto-start rotors
