@@ -5,11 +5,11 @@
 ## GS-EXIT: "Step 0" for #480 (SettingsMenuBase).
 ## Pins down how gameplay_settings.gd leaves the tree (Back button vs. unexpected
 ## removal) and what that does to Globals.hidden_menus and the web overlays, so the
-## base-class extraction can be checked against today's behavior.
+## base-class extraction can be checked against the pre-refactor behavior.
 ##
-## Tests marked CHARACTERIZATION assert what the code does TODAY, including behavior
-## that may be unintended. If #480 deliberately changes it, flip the assertion in the
-## same PR and say so in the PR description.
+## #480 deliberately changed two behaviors that were previously pinned as
+## CHARACTERIZATION (GS-EXIT-03 and GS-EXIT-06); both are now asserted as fixed.
+## GS-EXIT-07 covers the new Back-button re-entrancy guard.
 
 extends "res://addons/gut/test.gd"
 
@@ -123,12 +123,12 @@ func test_gs_exit_02_back_button_pops_once_web() -> void:
 # --- UNEXPECTED REMOVAL PATH ---
 
 
-## GS-EXIT-03 | CHARACTERIZATION: unexpected removal on a non-web platform.
-## Today the menu-stack restore in _on_tree_exited() sits inside the web-only branch,
-## so on desktop the previous menu stays hidden and the stack keeps its entry.
-## Globals._on_options_exited_unexpectedly() restores regardless of platform, so this
-## is probably unintended. Decide in #480 whether to fix it; if so, flip these asserts.
-func test_gs_exit_03_unexpected_removal_non_web_characterization() -> void:
+## GS-EXIT-03 | Unexpected removal on a non-web platform restores the previous menu.
+## FIXED in #480: before SettingsMenuBase the stack restore sat inside the web-only
+## branch, so on desktop the previous menu stayed hidden and the stack kept its entry.
+## The base class restores on every platform, matching audio/advanced settings and
+## Globals._on_options_exited_unexpectedly().
+func test_gs_exit_03_unexpected_removal_non_web_restores_menu() -> void:
 	gameplay_menu = await _spawn_menu(false)
 	var prev := _push_hidden_menu("OptionsMock")
 
@@ -136,8 +136,8 @@ func test_gs_exit_03_unexpected_removal_non_web_characterization() -> void:
 	await get_tree().process_frame
 
 	assert_false(gameplay_menu._intentional_exit, "Unexpected removal must not set the flag")
-	assert_false(prev.visible, "CURRENT BEHAVIOR: previous menu is NOT restored off-web")
-	assert_eq(Globals.hidden_menus.size(), 1, "CURRENT BEHAVIOR: stack entry is left in place off-web")
+	assert_true(prev.visible, "Previous menu must be restored off-web too")
+	assert_eq(Globals.hidden_menus.size(), 0, "Restored menu must be popped off-web too")
 
 
 ## GS-EXIT-04 | Unexpected removal (web) through a real remove_child(), not a direct
@@ -173,12 +173,10 @@ func test_gs_exit_05_unexpected_removal_web_empty_stack() -> void:
 # --- IDEMPOTENCY ---
 
 
-## GS-EXIT-06 | CHARACTERIZATION: running the tree-exit cleanup twice.
-## Signal and JS cleanup are naturally safe to repeat, but the stack restore is not:
-## each unintentional call pops another menu. #480 requires cleanup to be idempotent,
-## so after the refactor the second call should leave `lower` hidden and the stack at 1.
-## Flip the last two asserts when the guard flag lands.
-func test_gs_exit_06_double_cleanup_pops_twice_characterization() -> void:
+## GS-EXIT-06 | Running the tree-exit cleanup twice pops the stack only once.
+## FIXED in #480: before SettingsMenuBase each unintentional call popped another menu.
+## The base teardown is guarded by a flag, so the second call is a no-op.
+func test_gs_exit_06_double_cleanup_pops_once() -> void:
 	gameplay_menu = await _spawn_menu(true)
 	var lower := _push_hidden_menu("LowerMenu")
 	var upper := _push_hidden_menu("UpperMenu")
@@ -189,5 +187,26 @@ func test_gs_exit_06_double_cleanup_pops_twice_characterization() -> void:
 	assert_eq(Globals.hidden_menus.size(), 1)
 
 	gameplay_menu._on_tree_exited()
-	assert_true(lower.visible, "CURRENT BEHAVIOR: second call restores another menu")
-	assert_eq(Globals.hidden_menus.size(), 0, "CURRENT BEHAVIOR: second call pops again")
+	assert_false(lower.visible, "Second call must not restore another menu")
+	assert_eq(Globals.hidden_menus.size(), 1, "Second call must not pop again")
+
+
+# --- RE-ENTRANCY ---
+
+
+## GS-EXIT-07 | Back pressed twice before the menu is freed (e.g. Godot button and the
+## DOM overlay in the same frame) pops exactly one menu.
+func test_gs_exit_07_double_back_pops_once() -> void:
+	gameplay_menu = await _spawn_menu(true)
+	var lower := _push_hidden_menu("LowerMenu")
+	var upper := _push_hidden_menu("UpperMenu")
+
+	gameplay_menu._on_gameplay_back_button_pressed()
+	gameplay_menu._on_gameplay_back_button_pressed_js([])
+
+	assert_true(upper.visible, "Top-of-stack menu must be restored")
+	assert_false(lower.visible, "Second Back must not restore another menu")
+	assert_eq(Globals.hidden_menus.size(), 1, "Second Back must not pop again")
+
+	await get_tree().process_frame  # queue_free -> real tree_exited
+	assert_eq(Globals.hidden_menus.size(), 1, "tree_exited after Back must not pop either")
