@@ -9,10 +9,11 @@
 ##     teardown (pre-existing connections are never touched). safe_disconnect() tolerates a
 ##     freed emitter or a missing connection.
 ##   * Web overlays: update_web_overlays() shows/hides DOM elements through the bridge.
-##   * Menu stack: one Globals.hidden_menus entry is popped and re-shown on exit.
+##   * Menu stack: the nearest live Globals.hidden_menus entry is popped and re-shown on
+##     exit (freed entries above it are discarded).
 ##   * Focus: _grab_initial_focus() routes through Globals.ensure_initial_focus().
 ##
-## Exit paths (both pop the stack exactly once):
+## Exit paths (both restore at most one live menu):
 ##   Back button -> _go_back(): sets _intentional_exit, pops and shows the previous menu,
 ##                  swaps overlays, queue_free(). The tree_exited that follows does NOT pop.
 ##   Unexpected  -> tree_exited -> _teardown(): pops and shows the previous menu on every
@@ -225,23 +226,29 @@ func _run_cleanup() -> void:
 	_cleanup()
 
 
-## Pops the top of Globals.hidden_menus and makes it visible.
+## Pops Globals.hidden_menus down to the nearest live menu and makes it visible.
 ##
-## :returns: The restored menu, or null if the stack was empty, the popped entry was
-##   already freed, or Globals is unavailable.
+## Freed entries are stale and are discarded, so a live menu below them is still restored
+## instead of leaving the player with no visible screen.
+##
+## :returns: The restored menu, or null if no live menu was left on the stack or Globals
+##   is unavailable.
 ## :rtype: Node
 func _restore_previous_menu() -> Node:
-	if not is_instance_valid(Globals) or Globals.hidden_menus.is_empty():
+	if not is_instance_valid(Globals):
 		return null
-	# Pop into a Variant first: assigning a freed instance straight to a typed Node var
-	# raises "Trying to assign invalid previously freed instance" and aborts the function.
-	var popped: Variant = Globals.hidden_menus.pop_back()
-	if not is_instance_valid(popped):
-		return null
-	var prev_menu: Node = popped
-	prev_menu.visible = true
-	_log("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
-	return prev_menu
+	while not Globals.hidden_menus.is_empty():
+		# Pop into a Variant first: assigning a freed instance straight to a typed Node var
+		# raises "Trying to assign invalid previously freed instance" and aborts the function.
+		var popped: Variant = Globals.hidden_menus.pop_back()
+		if not is_instance_valid(popped):
+			_log("Discarding freed entry from hidden_menus.", Globals.LogLevel.DEBUG)
+			continue
+		var prev_menu: Node = popped
+		prev_menu.visible = true
+		_log("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
+		return prev_menu
+	return null
 
 
 # ==============================================================================

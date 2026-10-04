@@ -242,6 +242,32 @@ func test_smb_09_freed_stack_entry_is_skipped() -> void:
 	assert_false(_last_eval_code().contains("controls-button"), "No Options overlays")
 
 
+## SMB-14 | Mixed stack: a freed entry above a live menu is discarded and the live menu
+## below it is restored, on both exit paths.
+func test_smb_14_freed_entry_above_live_menu() -> void:
+	for back_path: bool in [true, false]:
+		Globals.hidden_menus.clear()
+		var probe := await _spawn_probe(true)
+		var lower := _push_hidden_menu("LowerMenu")
+		var live := _push_hidden_menu("LiveMenu")
+		var stale := Control.new()
+		Globals.hidden_menus.push_back(stale)
+		stale.free()
+
+		if back_path:
+			probe._go_back()
+		else:
+			probe._on_tree_exited()
+
+		var path := "Back" if back_path else "tree exit"
+		assert_true(live.visible, path + ": live menu below the freed entry is restored")
+		assert_false(lower.visible, path + ": only one live menu is restored")
+		assert_eq(Globals.hidden_menus.size(), 1, path + ": stale + live popped, lower kept")
+		assert_true(
+			_last_eval_code().contains("controls-button"), path + ": Options overlays shown"
+		)
+
+
 # --- WEB OVERLAYS ---
 
 
