@@ -161,6 +161,24 @@ func test_smb_05_cleanup_runs_once_before_disconnect() -> void:
 	assert_false(probe.ping.is_connected(probe._on_ping), "Tracked signal disconnected")
 
 
+## SMB-13 | safe_connect() does not take ownership of a connection that already existed
+## (e.g. made in the .tscn or by other code): it is not tracked and survives teardown.
+func test_smb_13_preexisting_connection_is_not_owned() -> void:
+	var probe := await _spawn_probe()
+	var emitter := Button.new()
+	add_child_autofree(emitter)
+	var handler := func() -> void: pass
+	emitter.pressed.connect(handler)  # Owned by someone else.
+	var tracked_before: int = probe._tracked_connections.size()
+
+	probe.safe_connect(emitter.pressed, handler)
+	assert_eq(probe._tracked_connections.size(), tracked_before, "Pre-existing -> not tracked")
+
+	probe._on_tree_exited()
+	assert_true(emitter.pressed.is_connected(handler), "Teardown must not remove it")
+	assert_false(probe.ping.is_connected(probe._on_ping), "Own connection still removed")
+
+
 # --- NAVIGATION ---
 
 

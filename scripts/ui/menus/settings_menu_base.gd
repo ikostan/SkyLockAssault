@@ -5,8 +5,9 @@
 ## Shared base class for settings sub-menus (Gameplay today; Audio and Advanced next).
 ##
 ## Owns the boilerplate every settings menu used to repeat:
-##   * Signal cleanup: connections made through safe_connect() are tracked and removed on
-##     teardown. safe_disconnect() tolerates a freed emitter or a missing connection.
+##   * Signal cleanup: connections created by safe_connect() are tracked and removed on
+##     teardown (pre-existing connections are never touched). safe_disconnect() tolerates a
+##     freed emitter or a missing connection.
 ##   * Web overlays: update_web_overlays() shows/hides DOM elements through the bridge.
 ##   * Menu stack: one Globals.hidden_menus entry is popped and re-shown on exit.
 ##   * Focus: _grab_initial_focus() routes through Globals.ensure_initial_focus().
@@ -43,7 +44,7 @@ var _intentional_exit: bool = false
 var _torn_down: bool = false
 ## True once the subclass _cleanup() hook has run.
 var _cleanup_done: bool = false
-## Connections made through safe_connect(): [{"signal": Signal, "callable": Callable}, ...]
+## Connections created by safe_connect(): [{"signal": Signal, "callable": Callable}, ...]
 var _tracked_connections: Array[Dictionary] = []
 
 
@@ -59,7 +60,11 @@ func _ready() -> void:
 # ==============================================================================
 
 
-## Connects signal_obj to callable once and tracks it for automatic teardown cleanup.
+## Connects signal_obj to callable and tracks it for automatic teardown cleanup.
+##
+## Ownership rule: only connections created here are tracked (and later disconnected).
+## If the connection already exists (e.g. made in the .tscn or by other code), it is
+## left alone and NOT tracked, so teardown never removes a connection it does not own.
 ##
 ## :param signal_obj: The signal to connect, e.g. `button.pressed`.
 ## :type signal_obj: Signal
@@ -72,11 +77,9 @@ func safe_connect(signal_obj: Signal, callable: Callable, flags: int = 0) -> voi
 	if signal_obj.is_null() or not callable.is_valid():
 		_log("safe_connect: null signal or invalid callable - skipping.", Globals.LogLevel.WARNING)
 		return
-	if not signal_obj.is_connected(callable):
-		signal_obj.connect(callable, flags)
-	for entry: Dictionary in _tracked_connections:
-		if entry["signal"] == signal_obj and entry["callable"] == callable:
-			return
+	if signal_obj.is_connected(callable):
+		return
+	signal_obj.connect(callable, flags)
 	_tracked_connections.append({"signal": signal_obj, "callable": callable})
 
 
