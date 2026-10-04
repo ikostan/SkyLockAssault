@@ -3,7 +3,63 @@
 
 ---
 
+## PR #996 Summary
 
+**Title:** Implement SettingsMenuBase for Standardized Signal & Web Cleanup  
+**Author:** @ikostan  
+**Linked issue:** [#480 – [FEATURE] Implement SettingsMenuBase for Standardized Signal & Web Cleanup](https://github.com/ikostan/SkyLockAssault/issues/480)  
+**Milestone:** Milestone 25: Resource Migration & Audio Decoupling  
+**Labels:** enhancement, web, testing, refactoring, GUT, QA  
+
+### Purpose
+
+Introduce a reusable `SettingsMenuBase` that centralizes signal management, web-overlay updates, focus handling, menu-stack navigation, and teardown logic for settings sub-menus. Migrate Gameplay Settings onto the new base while preserving its public/test-facing interface.
+
+### Key Changes
+
+- **New base class** (`scripts/ui/menus/settings_menu_base.gd`)
+  - `safe_connect` / `safe_disconnect` with tracked connections and safe teardown (handles already-freed emitters)
+  - `update_web_overlays(visible_ids, hidden_ids)` – single eval, no-op off-web
+  - `_go_back()` – intentional exit path (pop one menu, focus hook, overlay swap, `queue_free`)
+  - `_teardown()` – idempotent, ordered cleanup (subclass `_cleanup` → disconnect signals → conditional stack restore → overlays)
+  - Virtual hooks for menu name, overlay IDs, focus controls, restoration, and cleanup
+- **Migration**
+  - `gameplay_settings.gd` now extends `SettingsMenuBase` (≈ −173 lines)
+  - Public/test-facing members preserved
+  - `GamePaths.SETTINGS_MENU_BASE` added
+  - `Globals.settings` data structures left untouched
+- **Intentional behavior changes**
+  1. Unexpected exit restores previous menu on all platforms (not just web)
+  2. Teardown is idempotent
+  3. Back is re-entrancy-guarded (duplicate presses pop only once)
+  4. JS callbacks cleared in `_cleanup()` on tree exit (one frame later)
+  5. Freed entries on `hidden_menus` no longer abort the exit path
+- **Tests**
+  - New `test/gut/test_settings_menu_base.gd` (SMB-01…14)
+  - Updated `test_gameplay_settings_exit_paths.gd` (GS-EXIT-03/06 flipped, GS-EXIT-07 added)
+- **Docs**
+  - Milestone documentation under `files/docs/milestones/25/`
+
+### Follow-ups (out of scope)
+
+- Migrate `advanced_settings.gd` and `audio_settings.gd` onto the base
+
+### Testing / Coverage
+
+- Author reports 55 tests passing (temporary GUT stand-in; real GUT recommended before merge)
+- Codecov: patch ≈ 56.5%, project ≈ 61.7%
+
+### Review Notes
+
+- @sourcery-ai – summary + Reviewer’s Guide (sequence/flow diagrams)
+- @coderabbitai – summary, review comments, architecture notes
+- @deepsource-io – automated review + PR Report Card
+- @codecov – coverage report
+- @github-copilot-cli – co-authored ownership fix for `safe_connect`
+
+### Status
+
+Implements #480. Ready for review once remaining comments (e.g. mixed freed/live stack edge case) and real GUT runs are addressed.
 
 ---
 
@@ -44,32 +100,78 @@
 
 ## Reviewer's Guide
 
-Introduces SettingsMenuBase to consolidate signal, web-overlay, focus, menu-stack, and teardown behavior, migrates Gameplay Settings to the new hooks, and adds regression tests for lifecycle edge cases; the author reports 55 tests passing with a temporary GUT stand-in, so real GUT execution remains required before merge.
+Adds SettingsMenuBase to centralize settings-menu signals, overlays, focus, navigation, and teardown; migrates Gameplay Settings while preserving its interface; and adds focused regression tests for cleanup ordering, exit-path behavior, re-entrancy, stale menu entries, and data safety.
 
 ### File-Level Changes
 
-| Change                                                                      | Details                                                                                                                                                                                                                                                                                                                                                                                                                      | Files                                                                                     |
-|-----------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------|
-| Extract shared settings-menu lifecycle behavior into a reusable base class. | <ul><li>Add tracked, idempotent signal connection and disconnection helpers.</li><li>Centralize tree-exit teardown, subclass cleanup hooks, menu-stack restoration, and Back-button re-entrancy handling.</li><li>Centralize web overlay show/hide generation and pause-proof process configuration.</li><li>Provide virtual hooks for menu identity, overlays, focus, restoration behavior, and subclass cleanup.</li></ul> | `scripts/ui/menus/settings_menu_base.gd`<br/>`scripts/core/game_paths.gd`                 |
-| Migrate Gameplay Settings to the standardized base-class contract.          | <ul><li>Extend SettingsMenuBase and call its common setup from _ready().</li><li>Replace local signal guards and exit cleanup with safe_connect() and base teardown.</li><li>Declare gameplay overlay IDs and implement focus, menu-name, restoration, and cleanup hooks.</li><li>Delegate Back handling to _go_back() while retaining JavaScript callback registration and removal.</li></ul>                               | `scripts/ui/menus/gameplay_settings.gd`                                                   |
-| Expand exit-path coverage and add isolated base-class tests.                | <ul><li>Update gameplay exit tests for cross-platform restoration and idempotent teardown.</li><li>Add regression coverage for duplicate Back events, signal safety, cleanup ordering, overlay generation, stale stack entries, and settings-resource preservation.</li><li>Use a dynamically generated probe subclass with injected JavaScript and OS doubles to test the base independently.</li></ul>                     | `test/gut/test_gameplay_settings_exit_paths.gd`<br/>`test/gut/test_settings_menu_base.gd` |
+| Change                                                                                                        | Details                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Files                                                                                                 |
+|---------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| Introduce a reusable base class for settings-menu lifecycle management.                                       | <ul><li>Track only signal connections created through safe_connect and disconnect them safely during teardown.</li><li>Centralize web overlay JavaScript generation, focus initialization, hidden-menu restoration, and Back handling.</li><li>Make teardown and Back actions idempotent, while skipping freed stack entries and preserving cleanup ordering.</li><li>Expose virtual hooks for menu-specific identity, overlays, focus, restoration, and cleanup.</li></ul> | `scripts/ui/menus/settings_menu_base.gd`<br/>`scripts/core/game_paths.gd`                             |
+| Migrate Gameplay Settings to the shared lifecycle contract without changing its public/test-facing interface. | <ul><li>Extend SettingsMenuBase and delegate common setup, Back handling, focus, overlay, and exit cleanup to the base.</li><li>Replace local signal guards and teardown logic with safe_connect and _cleanup hooks.</li><li>Retain JavaScript callback registration while clearing callbacks during teardown.</li></ul>                                                                                                                                                    | `scripts/ui/menus/gameplay_settings.gd`                                                               |
+| Add regression coverage for standardized lifecycle behavior and intentional exit changes.                     | <ul><li>Test signal ownership, freed emitters, cleanup ordering, idempotency, Back re-entrancy, stale stack entries, overlay output, focus hooks, and settings-resource preservation.</li><li>Update gameplay exit expectations for non-web restoration and one-time teardown.</li></ul>                                                                                                                                                                                    | `test/gut/test_settings_menu_base.gd`<br/>`test/gut/test_gameplay_settings_exit_paths.gd`             |
+| Document the implementation and review considerations for the milestone.                                      | <ul><li>Record the new base-class contract, behavior changes, test scope, and follow-up migration work.</li></ul>                                                                                                                                                                                                                                                                                                                                                           | `files/docs/milestones/25/Part_5_Implement_SettingsMenuBase_for_Standardized_Signal_&_Web_Cleanup.md` |
 
 ### Assessment against linked issues
 
-| Issue                                                | Objective                                                                                                                                                                                                 | Addressed | Explanation |
-|------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-------------|
-| https://github.com/ikostan/SkyLockAssault/issues/480 | Create a reusable SettingsMenuBase extending Control that centralizes safe signal cleanup, web overlay updates, hidden-menu stack navigation, focus management, and intentional/unexpected exit handling. | ✅        |             |
-| https://github.com/ikostan/SkyLockAssault/issues/480 | Refactor gameplay_settings.gd to inherit from SettingsMenuBase while preserving its behavior and avoiding changes to Globals.settings data structures.                                                    | ✅        |             |
-| https://github.com/ikostan/SkyLockAssault/issues/480 | Add tests covering cleanup ordering, idempotent subclass cleanup, _intentional_exit semantics, and Globals.hidden_menus behavior on both Back-button and unexpected tree-exit paths.                      | ✅        |             |
+| Issue                                                | Objective                                                                                                                                                                                                                             | Addressed | Explanation |
+|------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-------------|
+| https://github.com/ikostan/SkyLockAssault/issues/480 | Create a reusable SettingsMenuBase extending Control that centralizes safe signal connection and disconnection, web overlay updates, hidden-menu stack navigation, focus management, and intentional versus unexpected exit handling. | ✅        |             |
+| https://github.com/ikostan/SkyLockAssault/issues/480 | Refactor gameplay_settings.gd to inherit from SettingsMenuBase while preserving its existing public/test-facing behavior and leaving Globals.settings data structures unchanged.                                                      | ✅        |             |
+| https://github.com/ikostan/SkyLockAssault/issues/480 | Add regression tests for cleanup ordering and idempotency, _intentional_exit semantics, and hidden_menus behavior on both Back-button and unexpected tree-exit paths.                                                                 | ✅        |             |
 
 ### Possibly linked issues
 
-- **#480**: PR directly implements issue #480's requested SettingsMenuBase and preserves tested Back and unexpected-exit behavior.
-- **#480**: The PR directly implements issue #480's lifecycle teardown requirements and adds tests covering callback cleanup, stack restoration, and web cleanup.
+- **#480**: PR directly fulfills issue #480 by introducing SettingsMenuBase, migrating gameplay settings, and testing both exit paths.
+- **#480**: The PR directly implements issue #480’s requested lifecycle tests and teardown behavior, including callbacks, stack restoration, and web cleanup.
 
 ---
 
+## PR #996 Summary: Bots / AI Contributions
 
+**PR:** [Implement SettingsMenuBase for Standardized Signal & Web Cleanup](https://github.com/ikostan/SkyLockAssault/pull/996)  
+**Title:** Implement SettingsMenuBase for Standardized Signal & Web Cleanup  
+**Author / primary contributor:** @ikostan  
+**Linked issue:** #480  
+
+### Human contribution (@ikostan)
+
+- Authored the core implementation of `SettingsMenuBase` (`scripts/ui/menus/settings_menu_base.gd`), migrated `gameplay_settings.gd` onto it (~173 lines removed), added `GamePaths.SETTINGS_MENU_BASE`, and wrote/updated GUT coverage (`test_settings_menu_base.gd`, exit-path tests).
+- Commits primarily by @ikostan:
+  - `I've implemented #480` (`98ec741`)
+  - `Add SettingsMenuBase lifecycle cleanup` (`c3aa4f6`)
+  - `Skip freed entries when restoring hidden menus` (`2bae2fd`)
+- Co-authored one commit with Copilot (see below).
+- Added the PR to Milestone 25, self-assigned, applied labels (enhancement, web, testing, refactoring, GUT, QA), and linked issue #480.
+
+### Bots / AI contributions
+
+- **@coderabbitai**  
+  - Generated “Summary by CodeRabbit” (bug fixes + refactor overview).  
+  - Performed code review with actionable comments (e.g., mixed freed/live stack restoration), walkthrough, architecture/merge-risk notes, and finishing-touches / autopilot support.
+
+- **@sourcery-ai**  
+  - Generated “Summary by Sourcery” (new features, bug fixes, enhancements, docs, tests).  
+  - Produced Reviewer’s Guide with sequence + flow diagrams and file-level change analysis.  
+  - Posted code reviews and suggestions.
+
+- **@deepsource-io** (DeepSource / DeepSourceReview)  
+  - Ran automated code review on the PR range.  
+  - Posted PR Report Card (Security / Reliability / Complexity / Hygiene) and linked full analyzer results (Python & JavaScript).
+
+- **@codecov**  
+  - Posted coverage report: patch coverage ≈ 56.48% (47 missing lines); project coverage 61.74% (−2.05%); all tests successful. Highlighted coverage on `settings_menu_base.gd` and `gameplay_settings.gd`.
+
+- **@github-copilot-cli** (GitHub Copilot)  
+  - Co-authored the commit `Don't track pre-existing signal connections` (`4aa2ed8`)  
+    (`Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`).  
+  - Clarified `safe_connect` ownership so pre-existing connections are not tracked/owned by the base class, plus related docs and test.
+
+- **@dependabot**  
+  - No direct commits, dependency bumps, or review comments observed on this specific PR.
+
+### Notes
+
+All listed accounts are given in the standard GitHub-accepted forms (`@dependabot`, `@deepsource-io`, `@sourcery-ai`, `@codecov`, `@github-copilot-cli`, `@coderabbitai`) so they can be recognized in the repository’s contributors list where applicable. Human work is isolated under @ikostan.
 
 ---
 
