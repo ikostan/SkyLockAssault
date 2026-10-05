@@ -70,7 +70,7 @@ Implements #480. Ready for review once remaining comments (e.g. mixed freed/live
 - **New `scripts/ui/menus/settings_menu_base.gd`** (`class_name SettingsMenuBase`, extends `Control`), shared by settings sub-menus:
   - `safe_connect(signal, callable)` connects once and tracks the connection. `safe_disconnect(signal, callable)` is safe when the emitter has already been freed (it checks `Signal.get_object()`) or when the connection is missing. Tracked connections are removed automatically on teardown.
   - `update_web_overlays(visible_ids, hidden_ids)` replaces the hand-written `js_bridge_wrapper.eval(...)` blocks. It does a single eval, emits exactly the same statement format as before, and does nothing off web or when both lists are empty.
-  - `_go_back()` is the Back-button path. It sets `_intentional_exit`, pops one `Globals.hidden_menus` entry, calls the focus hook, swaps the overlays, then calls `queue_free()`.
+  - `_go_back()` is the Back-button path. It sets `_intentional_exit`, restores the nearest live `Globals.hidden_menus` entry while discarding any stale entries above it, calls the focus hook, swaps the overlays, then calls `queue_free()`.
   - `_teardown()`, reached via `tree_exited`, runs at most once. Order: subclass `_cleanup()`, then the tracked signal disconnects, then a stack restore (unexpected exit only), then the overlay swap.
   - `_grab_initial_focus()` goes through `Globals.ensure_initial_focus`.
   - Virtual hooks: `_get_menu_name`, `_get_overlay_ids`, `_get_previous_menu_overlay_ids` (defaults to the Options overlays), `_get_initial_focus_control`, `_get_focus_controls`, `_on_previous_menu_restored` (Back path only), `_cleanup`.
