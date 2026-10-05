@@ -372,6 +372,7 @@ jobs:
       # Install standalone Codecov CLI binary (guarded inside script when token is empty)
       - name: "Install Codecov CLI"
         if: "success()"
+        continue-on-error: true  # A Codecov download outage must not fail the test job
         env:
           CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
         run: |
@@ -379,7 +380,11 @@ jobs:
             echo "⚠️ CODECOV_TOKEN not provided; skipping Codecov CLI installation."
             exit 0
           fi
-          curl -Os https://cli.codecov.io/latest/linux/codecov
+          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+            -o codecov https://cli.codecov.io/latest/linux/codecov
+          curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors \
+            -o codecov.SHA256SUM https://cli.codecov.io/latest/linux/codecov.SHA256SUM
+          sha256sum -c codecov.SHA256SUM
           chmod +x codecov
 
       # Upload LCOV coverage report and XML test results to Codecov (guarded for unauthenticated fork runs)
