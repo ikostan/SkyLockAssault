@@ -92,7 +92,7 @@ Implements #480. Ready for review once remaining comments (e.g. mixed freed/live
 - `test_gameplay_settings_exit_paths.gd`: GS-EXIT-03 and GS-EXIT-06 are flipped as their comments instructed, and GS-EXIT-07 is added.
 - No other existing test needed changes.
 
-### Follow-ups (out of scope)
+### Follow-ups
 
 - Migrate `advanced_settings.gd` and `audio_settings.gd` onto the base.
 
