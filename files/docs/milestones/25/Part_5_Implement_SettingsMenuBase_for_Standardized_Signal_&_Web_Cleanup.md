@@ -18,9 +18,9 @@ Introduce a reusable `SettingsMenuBase` that centralizes signal management, web-
 ### Key Changes
 
 - **New base class** (`scripts/ui/menus/settings_menu_base.gd`)
-  - `safe_connect` / `safe_disconnect` with tracked connections and safe teardown (handles already-freed emitters)
+  - `safe_connect` / `safe_disconnect` with tracked connections and safe teardown (handles already-freed emitters; only connections created by `safe_connect` are tracked, so pre-existing ones are never removed)
   - `update_web_overlays(visible_ids, hidden_ids)` – single eval, no-op off-web
-  - `_go_back()` – intentional exit path (pop one menu, focus hook, overlay swap, `queue_free`)
+  - `_go_back()` – intentional exit path (restore the nearest live menu while discarding freed entries above it, focus hook, overlay swap, `queue_free`)
   - `_teardown()` – idempotent, ordered cleanup (subclass `_cleanup` → disconnect signals → conditional stack restore → overlays)
   - Virtual hooks for menu name, overlay IDs, focus controls, restoration, and cleanup
 - **Migration**
@@ -33,7 +33,7 @@ Introduce a reusable `SettingsMenuBase` that centralizes signal management, web-
   2. Teardown is idempotent
   3. Back is re-entrancy-guarded (duplicate presses pop only once)
   4. JS callbacks cleared in `_cleanup()` on tree exit (one frame later)
-  5. Freed entries on `hidden_menus` no longer abort the exit path
+  5. Freed entries on `hidden_menus` no longer abort the exit path; the nearest live menu below them is restored
 - **Tests**
   - New `test/gut/test_settings_menu_base.gd` (SMB-01…14)
   - Updated `test_gameplay_settings_exit_paths.gd` (GS-EXIT-03/06 flipped, GS-EXIT-07 added)
@@ -46,7 +46,7 @@ Introduce a reusable `SettingsMenuBase` that centralizes signal management, web-
 
 ### Testing / Coverage
 
-- Author reports 55 tests passing (temporary GUT stand-in; real GUT recommended before merge)
+- Author reports 57 tests passing (temporary GUT stand-in; real GUT recommended before merge)
 - Codecov: patch ≈ 56.5%, project ≈ 61.7%
 
 ### Review Notes
@@ -57,10 +57,6 @@ Introduce a reusable `SettingsMenuBase` that centralizes signal management, web-
 - @codecov – coverage report
 - @github-copilot-cli – co-authored ownership fix for `safe_connect`
 
-### Status
-
-Implements #480. Ready for review once remaining comments (e.g. mixed freed/live stack edge case) and real GUT runs are addressed.
-
 ---
 
 ## Detailed PR description
@@ -68,7 +64,7 @@ Implements #480. Ready for review once remaining comments (e.g. mixed freed/live
 ### What
 
 - **New `scripts/ui/menus/settings_menu_base.gd`** (`class_name SettingsMenuBase`, extends `Control`), shared by settings sub-menus:
-  - `safe_connect(signal, callable)` connects once and tracks the connection. `safe_disconnect(signal, callable)` is safe when the emitter has already been freed (it checks `Signal.get_object()`) or when the connection is missing. Tracked connections are removed automatically on teardown.
+  - `safe_connect(signal, callable)` connects and tracks only connections it creates; a connection that already exists (e.g. made in the `.tscn` or by other code) is left alone and never disconnected on teardown. `safe_disconnect(signal, callable)` is safe when the emitter has already been freed (it checks `Signal.get_object()`) or when the connection is missing. Tracked connections are removed automatically on teardown.
   - `update_web_overlays(visible_ids, hidden_ids)` replaces the hand-written `js_bridge_wrapper.eval(...)` blocks. It does a single eval, emits exactly the same statement format as before, and does nothing off web or when both lists are empty.
   - `_go_back()` is the Back-button path. It sets `_intentional_exit`, restores the nearest live `Globals.hidden_menus` entry while discarding any stale entries above it, calls the focus hook, swaps the overlays, then calls `queue_free()`.
   - `_teardown()`, reached via `tree_exited`, runs at most once. Order: subclass `_cleanup()`, then the tracked signal disconnects, then a stack restore (unexpected exit only), then the overlay swap.
@@ -84,11 +80,11 @@ Implements #480. Ready for review once remaining comments (e.g. mixed freed/live
 2. **Teardown is idempotent.** Before, each unintentional `_on_tree_exited()` call popped another menu. GS-EXIT-06 is flipped.
 3. **Back is re-entrancy guarded.** Two Back presses before the menu is freed (for example the Godot button and the DOM overlay in the same frame) now pop only once. New test: GS-EXIT-07.
 4. **On the Back path, the JS `window.*` callbacks are now cleared in `_cleanup()` on tree exit**, one frame later than before. Before, they were cleared immediately in the Back handler. The guard from (3) makes a DOM click during that frame a no-op. This also keeps the callback refs alive while a JS-initiated Back is still running.
-5. **A freed entry on `hidden_menus` no longer aborts the exit.** Popping straight into a typed `var prev_menu: Node` raised "Trying to assign invalid previously freed instance" and stopped the function, which I reproduced on 4.7.1. The base now pops into a `Variant` first. New test: SMB-09. `advanced_settings.gd` and `audio_settings.gd` still have this pattern until they migrate.
+5. **A freed entry on `hidden_menus` no longer aborts the exit.** Popping straight into a typed `var prev_menu: Node` raised "Trying to assign invalid previously freed instance" and stopped the function, which I reproduced on 4.7.1. The base now pops into a `Variant` first, discards freed entries, and restores the nearest live menu below them. New tests: SMB-09, SMB-14. `advanced_settings.gd` and `audio_settings.gd` still have this pattern until they migrate.
 
 ### Tests
 
-- New `test/gut/test_settings_menu_base.gd` (SMB-01…12) tests the base class through a probe subclass.
+- New `test/gut/test_settings_menu_base.gd` (SMB-01…14) tests the base class through a probe subclass, including that `safe_connect()` never takes over a connection that already existed (SMB-13) and that a live menu below a freed stack entry is still restored (SMB-14).
 - `test_gameplay_settings_exit_paths.gd`: GS-EXIT-03 and GS-EXIT-06 are flipped as their comments instructed, and GS-EXIT-07 is added.
 - No other existing test needed changes.
 
