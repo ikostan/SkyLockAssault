@@ -26,6 +26,9 @@ const INPUT_REMAP_BUTTON: String = "res://scripts/ui/components/input_remap_butt
 ## Path to the gameplay settings menu script.
 const GAMEPLAY_SETTINGS: String = "res://scripts/ui/menus/gameplay_settings.gd"
 
+## Path to the shared settings menu base class script.
+const SETTINGS_MENU_BASE: String = "res://scripts/ui/menus/settings_menu_base.gd"
+
 ## Path to the core settings singleton/script.
 const SETTINGS: String = "res://scripts/core/settings.gd"
 
