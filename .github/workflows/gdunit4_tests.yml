@@ -108,6 +108,58 @@ jobs:
             exit 1
           fi
 
+      # The committed project.godot keeps gdUnit4-coverage enabled for local editor use.
+      # CI deletes the addon, so strip its plugin entry, session hook, and settings section
+      # from this run's copy of project.godot; otherwise gdUnit4 fails loading the missing hook.
+      # Only the CI checkout is modified; nothing is committed back.
+      - name: "Strip gdUnit4-coverage From CI Project Config"
+        run: |
+          python3 - << 'PY'
+          import re
+          import sys
+
+          PATH = "project.godot"
+          NEEDLE = "gdunit4_coverage"
+
+          with open(PATH, encoding="utf-8") as f:
+              lines = f.read().splitlines()
+
+          out = []
+          in_cov_section = False
+          for line in lines:
+              stripped = line.strip()
+              # 1. Drop the whole [gdunit4_coverage] section (header through next section header)
+              if stripped.startswith("[") and stripped.endswith("]"):
+                  in_cov_section = stripped == f"[{NEEDLE}]"
+                  if in_cov_section:
+                      continue
+              if in_cov_section:
+                  continue
+              # 2. Drop dictionary entries pointing into the addon (e.g. the session hook)
+              if stripped.startswith(f'"res://addons/{NEEDLE}/'):
+                  continue
+              # 3. Remove the plugin from PackedStringArray lists (e.g. editor_plugins/enabled)
+              if NEEDLE in line and "PackedStringArray(" in line:
+                  line = re.sub(rf',\s*"res://addons/{NEEDLE}/[^"]*"', "", line)
+                  line = re.sub(rf'"res://addons/{NEEDLE}/[^"]*"\s*,\s*', "", line)
+                  line = re.sub(rf'"res://addons/{NEEDLE}/[^"]*"', "", line)
+              out.append(line)
+
+          text = "\n".join(out) + "\n"
+          # Removing the last entry of a multi-line dict can leave a dangling comma before "}"
+          text = re.sub(r",(\s*\n\s*\})", r"\1", text)
+
+          leftover = [l for l in text.splitlines() if NEEDLE in l]
+          if leftover:
+              print(f"::error file={PATH}::Unhandled {NEEDLE} references remain:")
+              print("\n".join(leftover))
+              sys.exit(1)
+
+          with open(PATH, "w", encoding="utf-8") as f:
+              f.write(text)
+          print(f"✅ Stripped {NEEDLE} plugin, hook, and settings from {PATH} for this CI run.")
+          PY
+
       # Move tests outside workspace so the project import below doesn't compile the full test tree
       - name: "Isolate Test Suites Outside Workspace"
         run: |
