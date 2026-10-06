@@ -151,8 +151,6 @@ jobs:
       }}
     # yamllint enable rule:line-length
     uses: "./.github/workflows/gdunit4_tests.yml"
-    secrets:
-      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
 
   gut_tests:
     name: "GUT Unit Tests"

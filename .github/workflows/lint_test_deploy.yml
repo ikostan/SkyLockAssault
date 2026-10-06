@@ -34,8 +34,6 @@ jobs:
       - "gdlint"
       - "readmelint"
       - "yamllint"
-    secrets:
-      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
   gut_tests:
     name: "GUT Unit Tests"
     uses: "./.github/workflows/gut_tests.yml"

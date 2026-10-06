@@ -9,6 +9,59 @@ extends Node
 
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 
+## ConfigFile section owned by Globals. The audio and input managers write their own
+## sections to the same settings.cfg, so Globals must never touch anything outside this one.
+const SETTINGS_SECTION: String = "Settings"
+
+# --- ISSUE #470: Table-driven settings serialization ---
+## Persistence schema for GameSettingsResource properties.
+##
+## Each entry maps a resource property name to:
+##   "key"   - On-disk key inside SETTINGS_SECTION. NEVER rename an existing key:
+##             player saves in the wild depend on it.
+##   "types" - Accepted Variant.Type values for the raw value read from disk.
+##             Anything else is rejected and the current default is kept.
+##   "cast"  - (Optional) Variant.Type the value is converted to after the type check,
+##             e.g. an int written by an older build becoming a float.
+##   "min"   - (Optional) Inclusive lower bound. Out-of-range values are rejected, not clamped.
+##   "max"   - (Optional) Inclusive upper bound. Out-of-range values are rejected, not clamped.
+##
+## Adding a persisted setting is a one-entry change here. Dictionary insertion order is
+## preserved, so it also defines load and save order.
+## Declared as a mutable static var (snake_case per gdlint's class-variable-name rule) so
+## tests can extend or replace the schema; production code must treat it as read-only.
+static var persisted_schema: Dictionary = {
+	"current_log_level":
+	{
+		"key": "log_level",
+		"types": [TYPE_INT],
+		"min": LogLevel.DEBUG,
+		"max": LogLevel.NONE,
+	},
+	"difficulty":
+	{
+		"key": "difficulty",
+		"types": [TYPE_FLOAT, TYPE_INT],
+		"cast": TYPE_FLOAT,
+	},
+	"enable_debug_logging":
+	{
+		"key": "enable_debug_logging",
+		"types": [TYPE_BOOL],
+	},
+	"max_fuel":
+	{
+		"key": "max_fuel",
+		"types": [TYPE_FLOAT, TYPE_INT],
+		"cast": TYPE_FLOAT,
+	},
+	"show_fps":
+	{
+		"key": "show_fps",
+		"types": [TYPE_BOOL],
+	},
+}
+
 # --- TASK #529: Encryption Key Management ---
 ## Centralized key for securing local configuration files.
 ## This ensures consistent encryption/decryption across different game systems.
@@ -172,8 +225,12 @@ func load_key_mapping(menu_to_hide: Node) -> void:
 
 
 ## Loads persisted settings with backward compatibility for plaintext files.
+##
+## Iterates persisted_schema: for each entry, reads the on-disk key, checks the raw
+## value's type, applies the optional cast, and rejects out-of-range values. Missing keys
+## and rejected values leave the current default untouched.
+##
 ## :param path: Config file path (default: Settings.CONFIG_PATH).
-## skips invalid/missing to keep current.
 ## :type path: String
 ## :rtype: void
 func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
@@ -186,28 +243,49 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 		log_message("Legacy plaintext settings found. Migration required.", LogLevel.INFO)
 
 	if err == OK:
+		# Guard covers the whole loop: setters emit setting_changed, and the observer must
+		# not persist, log, or bridge to JS while we are bulk-applying values.
 		_is_loading_settings = true
 
-		if config.has_section_key("Settings", "log_level"):
-			var loaded_log_level: Variant = config.get_value("Settings", "log_level")
-			if loaded_log_level is int and loaded_log_level >= 0 and loaded_log_level <= 4:
-				settings.current_log_level = loaded_log_level
-		if config.has_section_key("Settings", "difficulty"):
-			var loaded_difficulty: Variant = config.get_value("Settings", "difficulty")
-			if (loaded_difficulty is float) or (loaded_difficulty is int):
-				settings.difficulty = loaded_difficulty
-		if config.has_section_key("Settings", "enable_debug_logging"):
-			var loaded_debug: Variant = config.get_value("Settings", "enable_debug_logging")
-			if loaded_debug is bool:
-				settings.enable_debug_logging = loaded_debug
-		if config.has_section_key("Settings", "max_fuel"):
-			var loaded_max: Variant = config.get_value("Settings", "max_fuel")
-			if loaded_max is float or loaded_max is int:
-				settings.max_fuel = float(loaded_max)
-		if config.has_section_key("Settings", "show_fps"):
-			var loaded_fps: Variant = config.get_value("Settings", "show_fps")
-			if loaded_fps is bool:
-				settings.show_fps = loaded_fps
+		for prop: String in persisted_schema:
+			var spec: Dictionary = persisted_schema[prop]
+			var disk_key: String = spec["key"]
+
+			if not config.has_section_key(SETTINGS_SECTION, disk_key):
+				continue  # Missing key: keep current default.
+
+			if not (prop in settings):
+				log_message(
+					"Schema error: '%s' is not a GameSettingsResource property." % prop,
+					LogLevel.ERROR
+				)
+				continue
+
+			var value: Variant = config.get_value(SETTINGS_SECTION, disk_key)
+
+			if not (typeof(value) in spec["types"]):
+				log_message(
+					(
+						"Ignoring persisted '%s': unexpected type %s."
+						% [disk_key, type_string(typeof(value))]
+					),
+					LogLevel.WARNING
+				)
+				continue
+
+			if spec.has("cast"):
+				value = type_convert(value, spec["cast"])
+
+			var below_min: bool = spec.has("min") and value < spec["min"]
+			var above_max: bool = spec.has("max") and value > spec["max"]
+			if below_min or above_max:
+				log_message(
+					"Ignoring persisted '%s': value %s out of range." % [disk_key, str(value)],
+					LogLevel.WARNING
+				)
+				continue
+
+			settings.set(prop, value)
 
 		_is_loading_settings = false
 		log_message("Settings synchronization complete.", LogLevel.DEBUG)
@@ -222,9 +300,15 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 		log_message("Failed to load settings (Error %d)." % err, LogLevel.ERROR)
 
 
-## New: Add _save_settings to globals.gd (move from options_menu.gd if needed)
 ## Persists current settings to an encrypted config file.
+##
+## Re-reads the existing file first so sections owned by other managers (audio, input)
+## survive, then writes every persisted_schema property into SETTINGS_SECTION.
+## Does not touch _is_loading_settings.
+##
 ## :param path: Config file path (default: Settings.CONFIG_PATH).
+## :type path: String
+## :rtype: void
 func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var load_data: Dictionary = safe_load_config(path)
 	var config: ConfigFile = load_data["config"]
@@ -241,11 +325,15 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 		)
 		return
 
-	config.set_value("Settings", "log_level", settings.current_log_level)
-	config.set_value("Settings", "difficulty", settings.difficulty)
-	config.set_value("Settings", "enable_debug_logging", settings.enable_debug_logging)
-	config.set_value("Settings", "max_fuel", settings.max_fuel)
-	config.set_value("Settings", "show_fps", settings.show_fps)
+	for prop: String in persisted_schema:
+		# Guard: settings.get() on a missing property returns null, and
+		# ConfigFile.set_value(..., null) ERASES the key instead of writing it.
+		if not (prop in settings):
+			log_message(
+				"Schema error: '%s' is not a GameSettingsResource property." % prop, LogLevel.ERROR
+			)
+			continue
+		config.set_value(SETTINGS_SECTION, persisted_schema[prop]["key"], settings.get(prop))
 
 	# FIX: Re-added the branch to properly handle the plaintext failsafe
 	var key: String = ensure_encryption_key()
