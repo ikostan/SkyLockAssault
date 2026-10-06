@@ -328,8 +328,7 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 		# ConfigFile.set_value(..., null) ERASES the key instead of writing it.
 		if not (prop in settings):
 			log_message(
-				"Schema error: '%s' is not a GameSettingsResource property." % prop,
-				LogLevel.ERROR
+				"Schema error: '%s' is not a GameSettingsResource property." % prop, LogLevel.ERROR
 			)
 			continue
 		config.set_value(SETTINGS_SECTION, PERSISTED[prop]["key"], settings.get(prop))
