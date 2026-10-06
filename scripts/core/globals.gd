@@ -28,7 +28,9 @@ const SETTINGS_SECTION: String = "Settings"
 ##
 ## Adding a persisted setting is a one-entry change here. Dictionary insertion order is
 ## preserved, so it also defines load and save order.
-static var PERSISTED: Dictionary = {
+## Declared as a mutable static var (snake_case per gdlint's class-variable-name rule) so
+## tests can extend or replace the schema; production code must treat it as read-only.
+static var persisted_schema: Dictionary = {
 	"current_log_level":
 	{
 		"key": "log_level",
@@ -224,7 +226,7 @@ func load_key_mapping(menu_to_hide: Node) -> void:
 
 ## Loads persisted settings with backward compatibility for plaintext files.
 ##
-## Iterates the PERSISTED schema: for each entry, reads the on-disk key, checks the raw
+## Iterates persisted_schema: for each entry, reads the on-disk key, checks the raw
 ## value's type, applies the optional cast, and rejects out-of-range values. Missing keys
 ## and rejected values leave the current default untouched.
 ##
@@ -245,8 +247,8 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 		# not persist, log, or bridge to JS while we are bulk-applying values.
 		_is_loading_settings = true
 
-		for prop: String in PERSISTED:
-			var spec: Dictionary = PERSISTED[prop]
+		for prop: String in persisted_schema:
+			var spec: Dictionary = persisted_schema[prop]
 			var disk_key: String = spec["key"]
 
 			if not config.has_section_key(SETTINGS_SECTION, disk_key):
@@ -301,7 +303,7 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 ## Persists current settings to an encrypted config file.
 ##
 ## Re-reads the existing file first so sections owned by other managers (audio, input)
-## survive, then writes every PERSISTED property into SETTINGS_SECTION.
+## survive, then writes every persisted_schema property into SETTINGS_SECTION.
 ## Does not touch _is_loading_settings.
 ##
 ## :param path: Config file path (default: Settings.CONFIG_PATH).
@@ -323,7 +325,7 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 		)
 		return
 
-	for prop: String in PERSISTED:
+	for prop: String in persisted_schema:
 		# Guard: settings.get() on a missing property returns null, and
 		# ConfigFile.set_value(..., null) ERASES the key instead of writing it.
 		if not (prop in settings):
@@ -331,7 +333,7 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 				"Schema error: '%s' is not a GameSettingsResource property." % prop, LogLevel.ERROR
 			)
 			continue
-		config.set_value(SETTINGS_SECTION, PERSISTED[prop]["key"], settings.get(prop))
+		config.set_value(SETTINGS_SECTION, persisted_schema[prop]["key"], settings.get(prop))
 
 	# FIX: Re-added the branch to properly handle the plaintext failsafe
 	var key: String = ensure_encryption_key()

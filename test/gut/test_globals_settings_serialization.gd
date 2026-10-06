@@ -6,7 +6,7 @@ extends "res://addons/gut/test.gd"
 const GlobalsScript = preload("res://scripts/core/globals.gd")
 const TEST_PATH: String = "user://test_globals_settings_serialization.cfg"
 const TEST_KEY: String = "settings-schema-unit-test-key"
-# Keep the compatibility oracle independent of PERSISTED, including the log_level alias.
+# Keep the compatibility oracle independent of persisted_schema, including the log_level alias.
 const DISK_VALUES: Dictionary = {
 	"log_level": 3,
 	"difficulty": 1.75,
@@ -21,8 +21,8 @@ var _original_schema: Dictionary
 
 
 func before_each() -> void:
-	_original_schema = GlobalsScript.PERSISTED
-	GlobalsScript.PERSISTED = _original_schema.duplicate(true)
+	_original_schema = GlobalsScript.persisted_schema
+	GlobalsScript.persisted_schema = _original_schema.duplicate(true)
 	# No _ready(), singleton replacement, or connection to the user's live settings.
 	_globals = partial_double(GlobalsScript).new()
 	autofree(_globals)
@@ -41,7 +41,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	GlobalsScript.PERSISTED = _original_schema
+	GlobalsScript.persisted_schema = _original_schema
 	if FileAccess.file_exists(TEST_PATH):
 		DirAccess.remove_absolute(TEST_PATH)
 
@@ -203,7 +203,7 @@ func test_load_schema_extension_honors_alias_cast_and_optional_bounds(
 	case: Array = use_parameters([[100, 100.0], [900, 900.0], [99, 713.0], [901, 713.0]])
 ) -> void:
 	# An existing non-persisted property becomes persistable with only a schema entry.
-	GlobalsScript.PERSISTED["max_speed"] = {
+	GlobalsScript.persisted_schema["max_speed"] = {
 		"key": "speed_limit", "types": [TYPE_INT, TYPE_FLOAT],
 		"cast": TYPE_FLOAT, "min": 100.0, "max": 900.0,
 	}
@@ -213,10 +213,10 @@ func test_load_schema_extension_honors_alias_cast_and_optional_bounds(
 
 
 func test_load_missing_resource_property_is_skipped_without_aborting() -> void:
-	GlobalsScript.PERSISTED = {
+	GlobalsScript.persisted_schema = {
 		"removed_property": {"key": "old_option", "types": [TYPE_INT]},
 	}
-	GlobalsScript.PERSISTED.merge(_original_schema)
+	GlobalsScript.persisted_schema.merge(_original_schema)
 	_populate_config(DISK_VALUES)
 	_config.set_value("Settings", "old_option", 42)
 	_globals._load_settings(TEST_PATH)
@@ -275,7 +275,7 @@ func test_save_preserves_other_managers_and_unknown_settings() -> void:
 
 
 func test_save_schema_extension_uses_disk_alias() -> void:
-	GlobalsScript.PERSISTED["max_speed"] = {"key": "speed_limit", "types": [TYPE_FLOAT]}
+	GlobalsScript.persisted_schema["max_speed"] = {"key": "speed_limit", "types": [TYPE_FLOAT]}
 	_globals.settings.max_speed = 850.5
 	_globals._save_settings(TEST_PATH)
 	var saved := _read_saved_config()
@@ -284,10 +284,10 @@ func test_save_schema_extension_uses_disk_alias() -> void:
 
 
 func test_save_missing_resource_property_does_not_erase_existing_key() -> void:
-	GlobalsScript.PERSISTED = {
+	GlobalsScript.persisted_schema = {
 		"removed_property": {"key": "old_option", "types": [TYPE_INT]},
 	}
-	GlobalsScript.PERSISTED.merge(_original_schema)
+	GlobalsScript.persisted_schema.merge(_original_schema)
 	_config.set_value("Settings", "old_option", 42)
 	_globals._save_settings(TEST_PATH)
 	var saved := _read_saved_config()
