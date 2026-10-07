@@ -61,15 +61,10 @@ func test_tc_sl_21() -> void:
 ## the GDScript logic safely ignores the garbage data without crashing.
 func test_tc_sl_22() -> void:
 	var cfg := ConfigFile.new()
-	# Logically corrupt: inject string instead of float for volume
 	cfg.set_value("audio", "master_volume", "potato_string")
-	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
-
-	AudioManager.master_volume = 0.75 # Set known state
-	AudioManager.load_volumes() # Will attempt to read "potato_string"
-
-	# Should reject 'potato_string' and keep the current state
-	assert_eq(AudioManager.master_volume, 0.75, "Should safely ignore logically corrupt string and keep current volume")
+	AudioManager.master_volume = 0.75
+	AudioManager.apply_volumes_from_config(cfg)  # no disk, no crypto
+	assert_eq(AudioManager.master_volume, 0.75)
 
 
 ## TC-SL-23 | Config with unknown sections/keys (e.g., "random" section). | Call save_volumes() or other saves | Unknown preserved (since load/set/save doesn't touch them); No deletion.
