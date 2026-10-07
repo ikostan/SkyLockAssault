@@ -1,5 +1,6 @@
 # Copyright (C) 2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
+# tests/ci/test_docstrings_workflow.py
 """Regression tests for PR #1007's documentation automation scope guard."""
 
 import subprocess
@@ -14,17 +15,20 @@ WORKFLOW_PATH = PROJECT_ROOT / ".github/workflows/bi_weekly_gd_docstrings.yml"
 
 @pytest.fixture(scope="module")
 def workflow():
+    """Parse bi_weekly_gd_docstrings.yml once for all tests in this module."""
     return yaml.safe_load(WORKFLOW_PATH.read_text(encoding="utf-8"))
 
 
 @pytest.fixture(scope="module")
 def steps(workflow):
+    """Map step names to step definitions for the sync-docstrings job."""
     return {
         step.get("name"): step for step in workflow["jobs"]["sync-docstrings"]["steps"]
     }
 
 
 def git(repo, *args):
+    """Run a git command in ``repo`` and fail the test on a non-zero exit."""
     return subprocess.run(
         ["git", "-C", str(repo), *args],
         capture_output=True,
@@ -53,6 +57,7 @@ def isolated_repo(tmp_path):
 
 
 def run_scope_check(repo, steps):
+    """Run the workflow's "Final Documentation Scope Check" script inside ``repo``."""
     return subprocess.run(
         [
             "bash",
@@ -77,7 +82,10 @@ def run_scope_check(repo, steps):
 def test_scope_guard_accepts_existing_scripts_in_each_allowed_subtree(
     isolated_repo, steps, subtree
 ):
-    script = next((isolated_repo / "scripts" / subtree).rglob("*.gd"))
+    """A docs-only edit to an existing script in each allowed subtree passes."""
+    script = next((isolated_repo / "scripts" / subtree).rglob("*.gd"), None)
+    if script is None:
+        pytest.fail(f"No .gd file found under scripts/{subtree}")
     with script.open("a", encoding="utf-8") as stream:
         stream.write("\n## Additional documentation.\n")
 
@@ -91,6 +99,7 @@ def test_scope_guard_accepts_existing_scripts_in_each_allowed_subtree(
 
 
 def test_scope_guard_accepts_no_changes(isolated_repo, steps):
+    """A run where the generator changed nothing passes the scope check."""
     result = run_scope_check(isolated_repo, steps)
     assert result.returncode == 0, result.stdout + result.stderr
 
@@ -99,6 +108,7 @@ def test_scope_guard_accepts_no_changes(isolated_repo, steps):
 def test_scope_guard_rejects_new_scripts_even_inside_allowed_subtree(
     isolated_repo, steps, staged
 ):
+    """New files are rejected even in an allowed subtree, staged or not."""
     script = isolated_repo / "scripts/managers/unexpected.gd"
     script.write_text("extends Node\n", encoding="utf-8")
     if staged:
@@ -112,6 +122,7 @@ def test_scope_guard_rejects_new_scripts_even_inside_allowed_subtree(
 
 
 def test_scope_guard_rejects_deleted_production_script(isolated_repo, steps):
+    """Deleting a production script fails the scope check."""
     script = isolated_repo / "scripts/managers/audio_manager.gd"
     script.unlink()
 
@@ -125,6 +136,7 @@ def test_scope_guard_rejects_deleted_production_script(isolated_repo, steps):
 def test_scope_guard_rejects_tracked_changes_outside_production_scripts(
     isolated_repo, steps
 ):
+    """Edits to tracked files outside the six production subtrees are rejected."""
     with (isolated_repo / "README.md").open("a", encoding="utf-8") as stream:
         stream.write("\nUnexpected edit.\n")
 
@@ -136,6 +148,7 @@ def test_scope_guard_rejects_tracked_changes_outside_production_scripts(
 
 
 def test_scope_guard_checks_staged_whitespace(isolated_repo, steps):
+    """`git diff --cached --check` catches trailing whitespace in staged edits."""
     script = isolated_repo / "scripts/managers/audio_manager.gd"
     with script.open("a", encoding="utf-8") as stream:
         stream.write("\n## Trailing whitespace.  \n")
@@ -147,6 +160,7 @@ def test_scope_guard_checks_staged_whitespace(isolated_repo, steps):
 
 
 def test_sync_serializes_runs_and_bounds_execution(workflow):
+    """Runs are queued, not cancelled, and the job has a 30-minute timeout."""
     assert workflow["concurrency"] == {
         "group": "gdscript-docs-sync",
         "cancel-in-progress": False,
@@ -155,6 +169,7 @@ def test_sync_serializes_runs_and_bounds_execution(workflow):
 
 
 def test_optional_app_authentication_has_fallback_and_limited_permissions(steps):
+    """The App token is optional, narrowly scoped, and falls back to GITHUB_TOKEN."""
     token_step = steps["Generate GitHub App Token"]
     assert token_step["if"] == "${{ vars.DOCS_BOT_CLIENT_ID != '' }}"
     assert token_step["id"] == "app-token"
