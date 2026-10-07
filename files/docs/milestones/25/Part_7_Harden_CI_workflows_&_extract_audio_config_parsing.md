@@ -124,10 +124,20 @@ The PR extracts AudioManager's config parsing into a pure in-memory helper and t
 
 ---
 
-## Contributors: Human, Bots, and AI
+## PR #1007 Summary: Bots / AI Contributions
 
 ### Human contribution (@ikostan)
 
+- Authored the core work: extracted in-memory audio configuration parsing (`apply_volumes_from_config`) from `AudioManager.load_volumes()`, hardened multiple CI workflows (GDUnit4, browser tests, docs sync), tightened permissions, pinned actions to commit SHAs, and added regression tests/docs.
+- Notable commits by @ikostan include:
+  - `Refactor audio config loading` (`dbefe2d`)
+  - `Strip gdUnit4 coverage from CI config` (`0e8373f`)
+  - `Fix docs workflow validation and lint` (`f07a083`)
+  - `Tighten GitHub workflow permissions` / related permission cleanups (`8178a91`, `a737337`, `6be1899`)
+  - `Pin actions and harden browser CI workflow` (`c5d77b3`)
+  - `Prevent overlapping GDScript doc sync runs` (`d50063b`)
+  - Documentation and follow-up robustness commits (`65ff25b`, `b852dc2`, `7d1a216`, `eed5e91`, `a84a930`, etc.)
+- Added the PR to Milestone 25, self-assigned, applied labels (bug, enhancement, CI/CD, github actions, refactoring, YML), and linked related issues.
 - Led the audio parsing refactor and the CI follow-up work for #1003, #1004, and #1005; applied, reviewed, and ran all changes.
 - Ran the verification that needed repository access (coverage-addon tracking check, pipeline runs).
 - Wrote and maintained the linked issues, including splitting the Ubuntu runner work into #1008 and recording status notes and won't-fix decisions.
@@ -137,11 +147,33 @@ The PR extracts AudioManager's config parsing into a pure in-memory helper and t
 
 - **Claude (claude.ai):** drafted `apply_volumes_from_config()` and the `load_volumes()` refactor; the strip script and its tests; the workflow changes for #1003, #1004, and #1005, including SHA lookups and the regression tests; the #1008 issue description; and this milestone doc. All changes were reviewed and adapted by @ikostan.
 
-### Bots
+### Bots / AI contributions
 
-- **@sourcery-ai**
+- **@coderabbitai**  
+  - Generated “Summary by CodeRabbit”.  
+  - Performed code review, walkthrough, pre-merge checks, and finishing-touches / coding-agent support.  
+  - Committed: `Add regression tests for CI workflows, coverage cleanup, and audio config parsing` (`dc85cf0`).
+
+- **@sourcery-ai**  
+  - Generated “Summary by Sourcery” (features, bug fixes, enhancements, CI, docs, tests).
   - Generated the Reviewer's Guide: the file-level changes table and the linked-issue assessment used above, and flagged #701 as a possibly linked issue.
+  - Posted reviews / title guidance (note: review budget temporarily exhausted on the PR).
   - Its earlier assessment findings led to the #1003 and #1005 status notes and the PR-body wording change for the integrity claim.
+
+- **@deepsource-io** (DeepSource / DeepSourceReview / deepsource-autofix)  
+  - Ran automated code review and posted PR Report Card (Security / Reliability / Complexity / Hygiene) with analyzer links.  
+  - Authored two style/format commits via autofix:  
+    - `style: format code with Black and isort` (`28521ae`)  
+    - `style: format code with Black and isort` (`4d1dc2b`)
+
+- **@codecov**  
+  - Indirectly impacted: the PR continues the removal/cleanup of gdUnit4-coverage tooling and related coverage paths (building on prior Codecov simplification). No new primary coverage report comment was the focus of this PR.
+
+- **@dependabot**  
+  - No direct commits, dependency bumps, or review comments observed on this specific PR.
+
+- **@github-copilot-cli** (GitHub Copilot)  
+  - No co-authored commits, reviews, or direct contributions observed on this specific PR.
 
 ---
 <!-- markdownlint-enable MD001 MD036 MD013 MD033 table-column-style -->
