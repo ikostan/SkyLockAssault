@@ -237,3 +237,70 @@ def test_cli_fails_on_unhandled_reference_and_leaves_file_untouched(tmp_path):
     assert "::error file=" in result.stdout
     assert "some/setting=" in result.stdout
     assert config.read_text(encoding="utf-8") == original
+
+
+@pytest.mark.parametrize("newline", ["\n", "\r\n"])
+def test_removes_indented_middle_hook_and_preserves_neighbors(newline):
+    """Godot may indent hooks; removing one must keep both neighboring entries."""
+    last_hook = '"res://test/hooks/LastHook.gd": false'
+    original = newline.join(
+        [
+            "[gdunit4]", "hooks/session_hooks={", f"\t{OTHER_HOOK},",
+            f"\t{HOOK},", f"\t{last_hook}", "}", "",
+        ]
+    )
+
+    result = strip_mod.strip_coverage(original)
+
+    assert result == (
+        f"[gdunit4]\nhooks/session_hooks={{\n\t{OTHER_HOOK},\n\t{last_hook}\n}}\n"
+    )
+
+
+def test_removes_duplicate_plugin_entries():
+    """Repeated coverage entries must all disappear without damaging separators."""
+    original = f"enabled=PackedStringArray({COV}, {GDUNIT}, {COV}, {GUT}, {COV})\n"
+
+    assert strip_mod.strip_coverage(original) == (
+        f"enabled=PackedStringArray({GDUNIT}, {GUT})\n"
+    )
+
+
+def test_reports_all_unknown_references_after_removing_known_ones():
+    """Diagnostics contain only surviving lines, in source order."""
+    leftovers = [
+        'first="res://addons/gdunit4_coverage/unknown.gd"',
+        'second="gdunit4_coverage"',
+    ]
+    original = REALISTIC_PROJECT + "\n".join(leftovers) + "\n"
+
+    with pytest.raises(strip_mod.UnhandledReferenceError) as exc_info:
+        strip_mod.strip_coverage(original)
+
+    assert exc_info.value.leftover == leftovers
+
+
+def test_failed_cleanup_does_not_partially_rewrite_known_references(tmp_path):
+    """Failure must preserve even references that were successfully stripped in memory."""
+    original = REALISTIC_PROJECT + 'unknown="gdunit4_coverage"\n'
+    config = tmp_path / "project.godot"
+    original_bytes = original.replace("\n", "\r\n").encode("utf-8")
+    config.write_bytes(original_bytes)
+
+    result = run_cli(config)
+
+    assert result.returncode == 1
+    assert config.read_bytes() == original_bytes
+    assert f"::error file={config}::" in result.stdout
+    assert 'unknown="gdunit4_coverage"' in result.stdout
+
+
+def test_main_defaults_to_project_in_working_directory(tmp_path, monkeypatch, capsys):
+    """The documented no-argument entry point cleans the local project.godot."""
+    monkeypatch.chdir(tmp_path)
+    config = tmp_path / "project.godot"
+    config.write_text(REALISTIC_PROJECT, encoding="utf-8")
+
+    assert strip_mod.main([str(SCRIPT_PATH)]) == 0
+    assert config.read_text(encoding="utf-8") == strip_mod.strip_coverage(REALISTIC_PROJECT)
+    assert "project.godot" in capsys.readouterr().out

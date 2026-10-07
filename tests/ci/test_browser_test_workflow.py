@@ -10,6 +10,7 @@ SHA pinning, and the Node.js version used for coverage conversion.
 """
 
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -184,3 +185,51 @@ def test_coverage_node_version_is_not_end_of_life(
     step = _find_step(test_shard_steps, "Set up Node.js for Coverage Conversion")
 
     assert str(step["with"]["node-version"]) != "20"
+
+
+@pytest.mark.parametrize(
+    ("ready_on", "exit_code", "attempts", "head_requests"),
+    [(1, 0, 1, 1), (20, 0, 20, 1), (21, 1, 20, 0)],
+    ids=["immediately-ready", "ready-on-last-attempt", "never-ready"],
+)
+def test_wait_step_obeys_retry_boundary(
+    test_shard_steps: list[dict[str, Any]],
+    ready_on: int,
+    exit_code: int,
+    attempts: int,
+    head_requests: int,
+) -> None:
+    """Execute the actual wait loop with deterministic HTTP and sleep substitutes."""
+    script = _find_step(test_shard_steps, "Wait For WEB Server Response")["run"]
+    harness = r"""
+ready_on="$1"
+probes=0
+headers=0
+curl() {
+  if [[ "$1" == "-I" ]]; then
+    headers=$((headers + 1))
+    return 0
+  fi
+  probes=$((probes + 1))
+  [[ "$probes" -ge "$ready_on" ]]
+}
+sleep() { :; }
+trap 'echo "probes=$probes headers=$headers"' EXIT
+"""
+    result = subprocess.run(
+        [
+            "bash", "--noprofile", "--norc", "-eo", "pipefail", "-c",
+            harness + script, "readiness-test", str(ready_on),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=5,
+        check=False,
+    )
+
+    assert result.returncode == exit_code, result.stdout + result.stderr
+    assert f"probes={attempts} headers={head_requests}" in result.stdout
+    if exit_code:
+        assert "did not respond after 20 attempts" in result.stderr
+    else:
+        assert f"Server ready (attempt {attempts})" in result.stdout

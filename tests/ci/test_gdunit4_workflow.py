@@ -48,3 +48,35 @@ def test_all_actions_are_sha_pinned(unit_test_job: dict[str, Any]) -> None:
     assert uses, "expected at least one action step"
     for ref in uses:
         assert SHA_PINNED.match(ref), f"not SHA-pinned: {ref}"
+
+
+@pytest.mark.parametrize(
+    "workflow_name",
+    ["gdunit4_tests.yml", "gut_tests.yml", "lint_test_on_pull.yml", "lint_test_deploy.yml"],
+)
+def test_changed_workflows_do_not_grant_checks_permission(workflow_name):
+    """Both reusable workflows and their callers must keep the reduced permissions."""
+    path = PROJECT_ROOT / ".github" / "workflows" / workflow_name
+    workflow = yaml.safe_load(path.read_text(encoding="utf-8"))
+    scopes = [workflow, *workflow["jobs"].values()]
+
+    for scope in scopes:
+        permissions = scope.get("permissions", {})
+        assert isinstance(permissions, dict), "Avoid blanket write-all permissions"
+        assert "checks" not in permissions
+
+
+def test_cleanup_precedes_import_and_test_execution(unit_test_job):
+    """Missing coverage hooks must be removed before Godot can load the project."""
+    steps = unit_test_job["steps"]
+    cleanup_index = next(
+        i for i, step in enumerate(steps) if STRIP_SCRIPT in step.get("run", "")
+    )
+    import_indices = [
+        i for i, step in enumerate(steps)
+        if "--headless" in step.get("run", "")
+    ]
+    assert import_indices, "Expected Godot import/test steps"
+    assert all(cleanup_index < index for index in import_indices)
+    assert steps[cleanup_index].get("continue-on-error", False) is False
+    assert unit_test_job["permissions"] == {"contents": "read"}
