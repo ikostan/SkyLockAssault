@@ -1,7 +1,9 @@
 # Copyright (C) 2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 # tests/ci/test_browser_test_workflow.py
-"""Structural tests for .github/workflows/browser_test.yml (PR #872, Issue #1004).
+
+"""
+Structural tests for .github/workflows/browser_test.yml (PR #872, Issue #1004).
 
 Validates the failure-only diagnostics upload step, the pre-test artifact
 cleanup step, and the additional pytest flags added to the sharded test run.
@@ -178,13 +180,20 @@ def test_all_actions_are_sha_pinned(workflow: dict[str, Any]) -> None:
                 assert SHA_PINNED.match(step["uses"]), f"{job_name}: {step['uses']}"
 
 
-def test_coverage_node_version_is_not_end_of_life(
+def test_coverage_node_version_is_supported_lts(
     test_shard_steps: list[dict[str, Any]],
 ) -> None:
-    """Node.js 20 reached end-of-life in April 2026."""
-    step = _find_step(test_shard_steps, "Set up Node.js for Coverage Conversion")
+    """Coverage conversion must use a supported Node.js LTS line (even major, 22+).
 
-    assert str(step["with"]["node-version"]) != "20"
+    Node.js 18 and 20 are end-of-life (20 since April 2026). Using a minimum
+    instead of a fixed list keeps the test valid when newer LTS lines (e.g. 26)
+    are adopted. Raise the floor when Node.js 22 reaches end-of-life (April 2027).
+    """
+    step = _find_step(test_shard_steps, "Set up Node.js for Coverage Conversion")
+    major = int(str(step["with"]["node-version"]).split(".")[0])
+
+    assert major >= 22, f"Node.js {major} is end-of-life"
+    assert major % 2 == 0, f"Node.js {major} is not an LTS line"
 
 
 @pytest.mark.parametrize(
