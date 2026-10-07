@@ -186,6 +186,7 @@ jobs:
 
       - name: "Install Playwright Browsers"
         if: "steps.playwright-cache.outputs.cache-hit != 'true'"
+        timeout-minutes: 8
         run: |
           playwright install --with-deps chromium
 

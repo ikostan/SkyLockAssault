@@ -51,6 +51,7 @@ jobs:
 
       # Download official Godot Linux binary and enforce SHA-256 integrity validation
       - name: "Download and Verify Godot Binary"
+        timeout-minutes: 5
         run: |
           URL="https://github.com/godotengine/godot/releases/download"
           ZIP_NAME="Godot_v${GODOT_VERSION}_linux.x86_64.zip"

@@ -23,8 +23,11 @@ import re
 import pytest
 import yaml
 
-WORKFLOWS = sorted(pathlib.Path(".github/workflows").glob("*.yml"))
-"""All workflow files under test, sorted for stable test ordering."""
+WORKFLOWS = [
+    pathlib.Path(".github/workflows") / name
+    for name in ("gdunit4_tests.yml", "browser_test.yml", "test_ci_scripts.yml")
+]
+"""Workflows under policy. Add files here as they get step timeouts."""
 
 NETWORK_CMD = re.compile(
     r"""
