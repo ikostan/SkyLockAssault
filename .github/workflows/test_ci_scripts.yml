@@ -31,7 +31,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest playwright pyyaml pytest-timeout
-          playwright install --with-deps chromium
+          playwright install chromium
 
       - name: "Run CI Injection Tests"
         run: |
