@@ -19,8 +19,9 @@ jobs:
   unit-test:
     runs-on: "ubuntu-latest"
     timeout-minutes: 10
+    # Least privilege (#1003): no step uses the Checks API; checkout only reads.
     permissions:
-      checks: "write"
+      contents: "read"
     env:
       GODOT_VERSION: "${{ inputs.godot_version }}"
       GODOT_SHA256: "${{ inputs.godot_sha256 }}"
@@ -51,7 +52,8 @@ jobs:
           ENGINE_VERSION=$(./godot --version)
           EXPECTED_VERSION="${GODOT_VERSION/-stable/.stable}"
           echo "$ENGINE_VERSION" | grep -q "$EXPECTED_VERSION" || {
-            echo "❌ ERROR: Expected Godot ${EXPECTED_VERSION}, but received: $ENGINE_VERSION"
+            echo "❌ ERROR: Expected Godot ${EXPECTED_VERSION},"
+            echo "   but received: $ENGINE_VERSION"
             exit 1
           }
           echo "✅ Version parity verified (${EXPECTED_VERSION})."

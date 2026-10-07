@@ -248,12 +248,17 @@ func set_muted(bus_name: String, muted: bool) -> void:
 
 
 ## load_volumes
-## Loads persisted volumes from config if valid types; skips invalid/missing to keep current.
+## Loads persisted volumes from config, overriding current values only if saved and valid.
+## Acts strictly as an I/O coordinator: reads the file via `Globals.safe_load_config`,
+## delegates parsing to `apply_volumes_from_config`, handles legacy migration, and
+## syncs the resulting state to the AudioServer.
 ## :param path: Config file path (default: current_config_path).
 ## :type path: String
 ## :rtype: void
 func load_volumes(path: String = current_config_path) -> void:
 	current_config_path = path
+
+	# 1. Disk I/O: Read and decrypt configuration file
 	var load_data: Dictionary = Globals.safe_load_config(path)
 	var audio_cfg: ConfigFile = load_data["config"]
 	var err: int = load_data["err"]
@@ -267,28 +272,11 @@ func load_volumes(path: String = current_config_path) -> void:
 		Globals.log_message("Failed to load audio config: " + str(err), Globals.LogLevel.ERROR)
 
 	if err == OK:
-		for bus: String in AudioConstants.BUS_CONFIG.keys():
-			var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
-			var volume_key: String = config_data["volume_var"]
-			var muted_key: String = config_data["muted_var"]
-
-			var volume: float = get_volume(bus)
-			var muted: bool = get_muted(bus)
-
-			if audio_cfg.has_section_key("audio", volume_key):
-				var loaded_volume: Variant = audio_cfg.get_value("audio", volume_key)
-				if loaded_volume is float or loaded_volume is int:
-					volume = float(loaded_volume)
-
-			if audio_cfg.has_section_key("audio", muted_key):
-				var loaded_muted: Variant = audio_cfg.get_value("audio", muted_key)
-				if loaded_muted is bool:
-					muted = loaded_muted
-
-			set_bus_state(bus, volume, muted)
-
+		# 2. Apply in-memory configuration to AudioManager state
+		apply_volumes_from_config(audio_cfg)
 		Globals.log_message("Loaded volumes from config.", Globals.LogLevel.DEBUG)
 
+		# 3. Legacy migration: re-save in encrypted format
 		if needs_migration:
 			Globals.log_message(
 				"Upgrading audio settings file to encrypted format...", Globals.LogLevel.INFO
@@ -298,7 +286,52 @@ func load_volumes(path: String = current_config_path) -> void:
 	elif err == ERR_FILE_NOT_FOUND:
 		Globals.log_message("No audio config file found, using defaults.", Globals.LogLevel.DEBUG)
 
+	# 4. Sync runtime state to AudioServer buses
 	apply_all_volumes()
+
+
+## Applies volume and mute values from an in-memory ConfigFile to AudioManager state.
+## Pure GDScript helper with no disk I/O or decryption, intended for in-memory testing.
+## Only well-typed values in the "audio" section are applied: volumes must be float or int,
+## mute flags must be bool. Missing or invalid keys keep the bus's current value.
+## Note: state is updated via set_bus_state(), so volume_changed / mute_toggled are emitted
+## for every bus. AudioServer is not touched; call apply_all_volumes() to sync buses.
+## :param config: The ConfigFile instance containing the "audio" section.
+## :type config: ConfigFile
+## :rtype: void
+func apply_volumes_from_config(config: ConfigFile) -> void:
+	if config == null:
+		return
+
+	for bus: String in AudioConstants.BUS_CONFIG.keys():
+		var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
+		var volume_key: String = config_data["volume_var"]
+		var muted_key: String = config_data["muted_var"]
+
+		var volume: float = get_volume(bus)
+		var muted: bool = get_muted(bus)
+
+		if config.has_section_key("audio", volume_key):
+			var loaded_volume: Variant = config.get_value("audio", volume_key)
+			if loaded_volume is float or loaded_volume is int:
+				volume = float(loaded_volume)
+			else:
+				Globals.log_message(
+					"Unsupported config value type for '" + volume_key + "': skipped",
+					Globals.LogLevel.WARNING
+				)
+
+		if config.has_section_key("audio", muted_key):
+			var loaded_muted: Variant = config.get_value("audio", muted_key)
+			if loaded_muted is bool:
+				muted = loaded_muted
+			else:
+				Globals.log_message(
+					"Unsupported config value type for '" + muted_key + "': skipped",
+					Globals.LogLevel.WARNING
+				)
+
+		set_bus_state(bus, volume, muted)
 
 
 ## Save volumes to config (shared with other settings)

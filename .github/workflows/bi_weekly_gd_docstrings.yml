@@ -1,5 +1,5 @@
 ---
-name: "Weekly GDScript Documentation Sync"
+name: "Twice-Weekly GDScript Documentation Sync"
 
 on:  # yamllint disable-line rule:truthy
   schedule:
@@ -11,9 +11,17 @@ permissions:
   contents: "write"
   pull-requests: "write"
 
+# A manual run overlapping a scheduled one must not push to the automation branch
+# at the same time (#1005). Queue instead of cancel so no generated work is lost.
+concurrency:
+  group: "gdscript-docs-sync"
+  cancel-in-progress: false
+
 jobs:
   sync-docstrings:
     runs-on: "ubuntu-latest"
+    # Caps a stalled Gemini API call well below the 6-hour default (#1005)
+    timeout-minutes: 30
 
     steps:
 
@@ -76,35 +84,69 @@ jobs:
       - name: "Final Documentation Scope Check"
         run: |
           set -euo pipefail
-          git diff --check
+          # Stage everything first: plain `git diff` ignores untracked files, but
+          # create-pull-request commits them (#1005). Checks below use the index.
+          git add -A
+          git diff --cached --check
 
           # Reject any file deletions
-          deleted_files="$(git diff --name-only --diff-filter=D)"
+          deleted_files="$(git diff --cached --name-only --diff-filter=D)"
           if [[ -n "$deleted_files" ]]; then
             echo "::error::Documentation automation attempted to delete files:"
             echo "$deleted_files"
             exit 1
           fi
 
+          # Reject new files: the generator only edits existing scripts, and new
+          # files would also skip the contract validator (it diffs tracked files)
+          added_files="$(git diff --cached --name-only --diff-filter=A)"
+          if [[ -n "$added_files" ]]; then
+            echo "::error::Documentation automation attempted to create files:"
+            echo "$added_files"
+            exit 1
+          fi
+
           # Reject changes outside the six allowed production subtrees
-          unexpected_files="$(git diff --name-only --diff-filter=ACMRT | grep -Ev '^scripts/(core|entities|managers|resources|system|ui)/.*\.gd$' || true)"
+          allowed_re='^scripts/(core|entities|managers|resources|system|ui)/.*\.gd$'
+          unexpected_files="$(
+            git diff --cached --name-only --diff-filter=CMRT \
+              | grep -Ev "$allowed_re" || true
+          )"
           if [[ -n "$unexpected_files" ]]; then
             echo "::error::Unexpected files modified outside production scope:"
             echo "$unexpected_files"
             exit 1
           fi
 
+      # PRs created with GITHUB_TOKEN never trigger pull_request workflows, so
+      # lint_test_on_pull.yml would not run on them (#1005). A GitHub App token
+      # does trigger them. Skipped (falls back to GITHUB_TOKEN) until the App is
+      # configured: repo variable DOCS_BOT_CLIENT_ID + secret DOCS_BOT_PRIVATE_KEY.
+      - name: "Generate GitHub App Token"
+        id: "app-token"
+        if: "${{ vars.DOCS_BOT_CLIENT_ID != '' }}"
+        # yamllint disable-line rule:line-length
+        uses: "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1"  # v3.2.0
+        with:
+          client-id: "${{ vars.DOCS_BOT_CLIENT_ID }}"
+          private-key: "${{ secrets.DOCS_BOT_PRIVATE_KEY }}"
+          permission-contents: "write"
+          permission-pull-requests: "write"
+
       - name: "Create or Update Pull Request"
+        # yamllint disable-line rule:line-length
         uses: "peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1"  # v8.1.1
         with:
-          token: "${{ secrets.GITHUB_TOKEN }}"
+          token: "${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}"
           base: "main"
           branch: "automation/weekly-gdscript-docs"
           title: "docs(gdscript): Sync Native BBCode docstrings"
           body: |
-            Automated weekly documentation sync:
+            Automated twice-weekly documentation sync:
             * Standardized public member docstrings to Godot 4 Native BBCode (`##`).
-            * Verified non-comment byte-for-byte source integrity.
-            * Passed documentation contract validator, `gdlint`, and Godot headless checks.
+            * Verified byte-for-byte non-comment integrity (update_gdscript_docs.py).
+            * Passed the docs contract validator, `gdlint`, and `gdformat`.
+
+            If the PR checks did not start, close and reopen this PR to run them.
           commit-message: "docs(gdscript): update and enhance Native BBCode docstrings"
           delete-branch: false
