@@ -52,7 +52,12 @@ def test_all_actions_are_sha_pinned(unit_test_job: dict[str, Any]) -> None:
 
 @pytest.mark.parametrize(
     "workflow_name",
-    ["gdunit4_tests.yml", "gut_tests.yml", "lint_test_on_pull.yml", "lint_test_deploy.yml"],
+    [
+        "gdunit4_tests.yml",
+        "gut_tests.yml",
+        "lint_test_on_pull.yml",
+        "lint_test_deploy.yml",
+    ],
 )
 def test_changed_workflows_do_not_grant_checks_permission(workflow_name):
     """Both reusable workflows and their callers must keep the reduced permissions."""
@@ -73,8 +78,7 @@ def test_cleanup_precedes_import_and_test_execution(unit_test_job):
         i for i, step in enumerate(steps) if STRIP_SCRIPT in step.get("run", "")
     )
     import_indices = [
-        i for i, step in enumerate(steps)
-        if "--headless" in step.get("run", "")
+        i for i, step in enumerate(steps) if "--headless" in step.get("run", "")
     ]
     assert import_indices, "Expected Godot import/test steps"
     assert all(cleanup_index < index for index in import_indices)

@@ -19,13 +19,18 @@ def workflow():
 
 @pytest.fixture(scope="module")
 def steps(workflow):
-    return {step.get("name"): step for step in workflow["jobs"]["sync-docstrings"]["steps"]}
+    return {
+        step.get("name"): step for step in workflow["jobs"]["sync-docstrings"]["steps"]
+    }
 
 
 def git(repo, *args):
     return subprocess.run(
         ["git", "-C", str(repo), *args],
-        capture_output=True, text=True, timeout=10, check=True,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=True,
     )
 
 
@@ -34,8 +39,13 @@ def isolated_repo(tmp_path):
     """Reuse existing history without creating commits or changing the task checkout."""
     repo = tmp_path / "repo"
     git(
-        PROJECT_ROOT, "clone", "--quiet", "--shared", "--no-checkout",
-        str(PROJECT_ROOT), str(repo),
+        PROJECT_ROOT,
+        "clone",
+        "--quiet",
+        "--shared",
+        "--no-checkout",
+        str(PROJECT_ROOT),
+        str(repo),
     )
     git(repo, "sparse-checkout", "set", "scripts")
     git(repo, "checkout", "--quiet", "HEAD")
@@ -45,10 +55,19 @@ def isolated_repo(tmp_path):
 def run_scope_check(repo, steps):
     return subprocess.run(
         [
-            "bash", "--noprofile", "--norc", "-eo", "pipefail", "-c",
+            "bash",
+            "--noprofile",
+            "--norc",
+            "-eo",
+            "pipefail",
+            "-c",
             steps["Final Documentation Scope Check"]["run"],
         ],
-        cwd=repo, capture_output=True, text=True, timeout=10, check=False,
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
     )
 
 
@@ -65,9 +84,10 @@ def test_scope_guard_accepts_existing_scripts_in_each_allowed_subtree(
     result = run_scope_check(isolated_repo, steps)
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert script.relative_to(isolated_repo).as_posix() in git(
-        isolated_repo, "diff", "--cached", "--name-only"
-    ).stdout
+    assert (
+        script.relative_to(isolated_repo).as_posix()
+        in git(isolated_repo, "diff", "--cached", "--name-only").stdout
+    )
 
 
 def test_scope_guard_accepts_no_changes(isolated_repo, steps):
@@ -128,7 +148,8 @@ def test_scope_guard_checks_staged_whitespace(isolated_repo, steps):
 
 def test_sync_serializes_runs_and_bounds_execution(workflow):
     assert workflow["concurrency"] == {
-        "group": "gdscript-docs-sync", "cancel-in-progress": False,
+        "group": "gdscript-docs-sync",
+        "cancel-in-progress": False,
     }
     assert workflow["jobs"]["sync-docstrings"]["timeout-minutes"] == 30
 

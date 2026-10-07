@@ -218,8 +218,15 @@ trap 'echo "probes=$probes headers=$headers"' EXIT
 """
     result = subprocess.run(
         [
-            "bash", "--noprofile", "--norc", "-eo", "pipefail", "-c",
-            harness + script, "readiness-test", str(ready_on),
+            "bash",
+            "--noprofile",
+            "--norc",
+            "-eo",
+            "pipefail",
+            "-c",
+            harness + script,
+            "readiness-test",
+            str(ready_on),
         ],
         capture_output=True,
         text=True,

@@ -245,8 +245,13 @@ def test_removes_indented_middle_hook_and_preserves_neighbors(newline):
     last_hook = '"res://test/hooks/LastHook.gd": false'
     original = newline.join(
         [
-            "[gdunit4]", "hooks/session_hooks={", f"\t{OTHER_HOOK},",
-            f"\t{HOOK},", f"\t{last_hook}", "}", "",
+            "[gdunit4]",
+            "hooks/session_hooks={",
+            f"\t{OTHER_HOOK},",
+            f"\t{HOOK},",
+            f"\t{last_hook}",
+            "}",
+            "",
         ]
     )
 
@@ -302,5 +307,7 @@ def test_main_defaults_to_project_in_working_directory(tmp_path, monkeypatch, ca
     config.write_text(REALISTIC_PROJECT, encoding="utf-8")
 
     assert strip_mod.main([str(SCRIPT_PATH)]) == 0
-    assert config.read_text(encoding="utf-8") == strip_mod.strip_coverage(REALISTIC_PROJECT)
+    assert config.read_text(encoding="utf-8") == strip_mod.strip_coverage(
+        REALISTIC_PROJECT
+    )
     assert "project.godot" in capsys.readouterr().out
