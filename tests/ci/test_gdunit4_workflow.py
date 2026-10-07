@@ -75,8 +75,11 @@ def test_cleanup_precedes_import_and_test_execution(unit_test_job):
     """Missing coverage hooks must be removed before Godot can load the project."""
     steps = unit_test_job["steps"]
     cleanup_index = next(
-        i for i, step in enumerate(steps) if STRIP_SCRIPT in step.get("run", "")
+        (i for i, step in enumerate(steps) if STRIP_SCRIPT in step.get("run", "")),
+        None,
     )
+    if cleanup_index is None:
+        pytest.fail(f"No step runs {STRIP_SCRIPT}")
     import_indices = [
         i for i, step in enumerate(steps) if "--headless" in step.get("run", "")
     ]
