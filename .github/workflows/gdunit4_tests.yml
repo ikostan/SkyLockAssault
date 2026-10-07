@@ -54,7 +54,7 @@ jobs:
         run: |
           URL="https://github.com/godotengine/godot/releases/download"
           ZIP_NAME="Godot_v${GODOT_VERSION}_linux.x86_64.zip"
-          wget -q "${URL}/${GODOT_VERSION}/${ZIP_NAME}"
+          wget -q --tries=3 --timeout=30 "${URL}/${GODOT_VERSION}/${ZIP_NAME}"
 
           echo "=================================================="
           echo "         ASSET SHA256 CHECKSUM                    "
@@ -99,7 +99,7 @@ jobs:
 
           # 1. Download and extract GDUnit4 Core framework (v6.2.0)
           URL_GDUNIT="https://github.com/godot-gdunit-labs/gdUnit4/archive/refs/tags/v6.2.0.zip"
-          wget -q "$URL_GDUNIT" -O gdunit4.zip
+          wget -q --tries=3 --timeout=30 "$URL_GDUNIT" -O gdunit4.zip
           unzip -q gdunit4.zip -d addons
           mv addons/gdUnit4-6.2.0/addons/gdUnit4 addons/gdUnit4
           rm -rf addons/gdUnit4-6.2.0 gdunit4.zip
