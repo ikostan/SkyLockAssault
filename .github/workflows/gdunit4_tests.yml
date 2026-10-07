@@ -31,11 +31,23 @@ jobs:
         with:
           persist-credentials: false
 
-      # Install virtual frame buffer (xvfb) for display emulation
       - name: "Install System Dependencies (xvfb)"
+        timeout-minutes: 5
+        env:
+          DEBIAN_FRONTEND: "noninteractive"
         run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb
+          if command -v xvfb-run >/dev/null 2>&1; then
+            echo "✅ xvfb-run already on runner image; skipping apt."
+            exit 0
+          fi
+          # Skip the flaky Azure mirror if an alternative exists in the list
+          MIRRORS="/etc/apt/apt-mirrors.txt"
+          if [ -f "$MIRRORS" ] && grep -qv 'azure\.archive' "$MIRRORS"; then
+            sudo sed -i '/azure\.archive\.ubuntu\.com/d' "$MIRRORS"
+          fi
+          APT_OPTS="-o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20"
+          sudo apt-get $APT_OPTS update
+          sudo apt-get $APT_OPTS install -y --no-install-recommends xvfb
 
       # Download official Godot Linux binary and enforce SHA-256 integrity validation
       - name: "Download and Verify Godot Binary"
