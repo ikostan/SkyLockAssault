@@ -164,9 +164,11 @@ func setup_parallax_layer(sprite: Sprite2D, viewport: Vector2, buffer_mult: floa
 
 ## Sets up the bushes layer with random positions, sizes, and textures.
 ##
-## [param viewport]: Viewport size in pixels. [code]x[/code] bounds horizontal placement;
-## [code]y[/code] multiplied by [member parallax_screens_tall] sets the layer height and
-## vertical mirroring interval.
+## Clears existing children and populates the bushes layer using resources from the texture
+## preloader that begin with the bush prefix.
+##
+## [param id]: The id parameter.
+## [param viewport]: The viewport parameter.
 func setup_bushes_layer(viewport: Vector2) -> void:
 	if not bushes_layer:
 		return
@@ -215,9 +217,8 @@ func setup_bushes_layer(viewport: Vector2) -> void:
 ## Configures the decor layer by generating random X positions, sizes, textures, rotations, and
 ## flips for each element.
 ##
-## [param viewport]: Viewport size in pixels. [code]x[/code] bounds horizontal placement;
-## [code]y[/code] multiplied by [member parallax_screens_tall] sets the layer height and
-## vertical mirroring interval.
+## [param id]: The id parameter.
+## [param viewport]: The viewport parameter.
 func setup_decor_layer(viewport: Vector2) -> void:
 	if not decor_layer:
 		return
