@@ -94,6 +94,7 @@ jobs:
       # Install GDUnit4 Core addon and disable strict GDScript warnings
       # to avoid test aborts
       - name: "Install GDUnit4 Core"
+        timeout-minutes: 3
         run: |
           rm -rf addons/gdUnit4 addons/gdunit4_coverage override.cfg
           mkdir -p addons

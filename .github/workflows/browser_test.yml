@@ -269,6 +269,7 @@ jobs:
 
       - name: "Install Conversion Tools"
         if: "!cancelled()"
+        timeout-minutes: 5
         run: |
           npm install v8-to-istanbul nyc
 
