@@ -144,7 +144,7 @@ jobs:
           body: |
             Automated twice-weekly documentation sync:
             * Standardized public member docstrings to Godot 4 Native BBCode (`##`).
-            * Verified non-comment byte-for-byte source integrity.
+            * Verified byte-for-byte non-comment integrity (update_gdscript_docs.py).
             * Passed the docs contract validator, `gdlint`, and `gdformat`.
 
             If the PR checks did not start, close and reopen this PR to run them.
