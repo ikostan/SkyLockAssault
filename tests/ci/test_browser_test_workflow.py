@@ -1,12 +1,15 @@
 # Copyright (C) 2026 Egor Kostan
 # SPDX-License-Identifier: GPL-3.0-or-later
 # tests/ci/test_browser_test_workflow.py
-"""Structural tests for .github/workflows/browser_test.yml (PR #872).
+"""Structural tests for .github/workflows/browser_test.yml (PR #872, Issue #1004).
 
 Validates the failure-only diagnostics upload step, the pre-test artifact
 cleanup step, and the additional pytest flags added to the sharded test run.
+Issue #1004 adds guards for server readiness, failure-path reporting,
+SHA pinning, and the Node.js version used for coverage conversion.
 """
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +18,7 @@ import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW_PATH = PROJECT_ROOT / ".github" / "workflows" / "browser_test.yml"
+SHA_PINNED = re.compile(r"^[\w.-]+/[\w./-]+@[0-9a-f]{40}$")
 
 
 @pytest.fixture(scope="module")
@@ -54,7 +58,10 @@ def test_start_server_step_registers_wasm_mime_and_optimized_handler(
 
     assert "python3 .github/scripts/serve_web_export.py 8080" in script
     assert "export/web_thread_off" in script
-    assert "curl -I http://localhost:8080/index.html" in script
+    # #1004: the start step only launches the server; a probe here would fail the
+    # step under bash -e before the dedicated wait step could retry.
+    assert "curl" not in script
+    assert "sleep" not in script
 
 
 def test_create_artifacts_directory_step_purges_stale_diagnostics(
@@ -91,7 +98,8 @@ def test_failure_diagnostic_artifacts_upload_only_on_failure(
     step = _find_step(test_shard_steps, "Upload Failure Diagnostic Artifacts")
 
     assert step["if"] == "failure()"
-    assert step["uses"] == "actions/upload-artifact@v7"
+    assert step["uses"].startswith("actions/upload-artifact@")
+    assert SHA_PINNED.match(step["uses"])
     assert step["with"]["name"] == "test-failures-${{ matrix.artifact_suffix }}"
     assert step["with"]["if-no-files-found"] == "ignore"
     assert step["with"]["retention-days"] == 7
@@ -125,3 +133,54 @@ def test_other_always_run_upload_steps_are_unaffected(
     ):
         step = _find_step(test_shard_steps, name)
         assert step["if"] == "always()"
+
+
+# --- Issue #1004 regression guards ---
+
+
+def test_wait_step_tracks_readiness_explicitly(
+    test_shard_steps: list[dict[str, Any]],
+) -> None:
+    """A server that answers on the final attempt must not fail the job."""
+    script = _find_step(test_shard_steps, "Wait For WEB Server Response")["run"]
+
+    assert "ready=true" in script
+    assert "$i -eq 20" not in script
+    assert "curl -I http://localhost:8080/index.html" in script
+
+
+def test_test_report_runs_even_when_tests_fail(
+    test_shard_steps: list[dict[str, Any]],
+) -> None:
+    """The xmllint summary is most useful on failed runs, so it must not skip."""
+    assert _find_step(test_shard_steps, "Test Report")["if"] == "always()"
+
+
+def test_coverage_conversion_runs_for_failed_tests(
+    test_shard_steps: list[dict[str, Any]],
+) -> None:
+    """LCOV exists for the always()/!cancelled() upload steps on failed runs."""
+    for name in (
+        "List Coverage Reports",
+        "Set up Node.js for Coverage Conversion",
+        "Install Conversion Tools",
+        "Convert V8 to LCOV",
+    ):
+        assert _find_step(test_shard_steps, name)["if"] == "!cancelled()"
+
+
+def test_all_actions_are_sha_pinned(workflow: dict[str, Any]) -> None:
+    """Every action in every job is pinned to a full 40-character commit SHA."""
+    for job_name, job in workflow["jobs"].items():
+        for step in job["steps"]:
+            if "uses" in step:
+                assert SHA_PINNED.match(step["uses"]), f"{job_name}: {step['uses']}"
+
+
+def test_coverage_node_version_is_not_end_of_life(
+    test_shard_steps: list[dict[str, Any]],
+) -> None:
+    """Node.js 20 reached end-of-life in April 2026."""
+    step = _find_step(test_shard_steps, "Set up Node.js for Coverage Conversion")
+
+    assert str(step["with"]["node-version"]) != "20"
