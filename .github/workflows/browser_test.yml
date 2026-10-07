@@ -186,6 +186,7 @@ jobs:
 
       - name: "Install Playwright Browsers"
         if: "steps.playwright-cache.outputs.cache-hit != 'true'"
+        timeout-minutes: 8
         run: |
           playwright install --with-deps chromium
 
@@ -268,6 +269,7 @@ jobs:
 
       - name: "Install Conversion Tools"
         if: "!cancelled()"
+        timeout-minutes: 5
         run: |
           npm install v8-to-istanbul nyc
 
