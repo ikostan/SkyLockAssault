@@ -87,7 +87,10 @@ jobs:
           fi
 
           # Reject changes outside the six allowed production subtrees
-          unexpected_files="$(git diff --name-only --diff-filter=ACMRT | grep -Ev '^scripts/(core|entities|managers|resources|system|ui)/.*\.gd$' || true)"
+          allowed_re='^scripts/(core|entities|managers|resources|system|ui)/.*\.gd$'
+          unexpected_files="$(
+            git diff --name-only --diff-filter=ACMRT | grep -Ev "$allowed_re" || true
+          )"
           if [[ -n "$unexpected_files" ]]; then
             echo "::error::Unexpected files modified outside production scope:"
             echo "$unexpected_files"
@@ -95,6 +98,7 @@ jobs:
           fi
 
       - name: "Create or Update Pull Request"
+        # yamllint disable-line rule:line-length
         uses: "peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1"  # v8.1.1
         with:
           token: "${{ secrets.GITHUB_TOKEN }}"
@@ -105,6 +109,6 @@ jobs:
             Automated weekly documentation sync:
             * Standardized public member docstrings to Godot 4 Native BBCode (`##`).
             * Verified non-comment byte-for-byte source integrity.
-            * Passed documentation contract validator, `gdlint`, and Godot headless checks.
+            * Passed the docs contract validator, `gdlint`, and Godot headless checks.
           commit-message: "docs(gdscript): update and enhance Native BBCode docstrings"
           delete-branch: false
