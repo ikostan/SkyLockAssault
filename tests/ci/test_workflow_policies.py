@@ -26,7 +26,9 @@ import yaml
 WORKFLOWS = sorted(pathlib.Path(".github/workflows").glob("*.yml"))
 """All workflow files under test, sorted for stable test ordering."""
 
-NETWORK_CMD = re.compile(r"\b(apt-get|pip install|npm install|playwright install|wget)\b")
+NETWORK_CMD = re.compile(
+    r"\b(apt-get|pip install|npm install|playwright install|wget)\b"
+)
 """Commands that download from external hosts and can hang on a slow mirror.
 
 ``curl`` is deliberately excluded: its only use is the localhost readiness
