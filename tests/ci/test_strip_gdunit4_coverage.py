@@ -104,8 +104,7 @@ def test_removes_plugin_from_packed_string_array(entries, expected):
 def test_removes_session_hook_when_only_entry():
     """The real-world shape: the coverage hook is the dictionary's only entry."""
     text = (
-        "[gdunit4]\n\nhooks/session_hooks=Dictionary[String, bool]({\n"
-        f"{HOOK}\n}})\n"
+        "[gdunit4]\n\nhooks/session_hooks=Dictionary[String, bool]({\n" f"{HOOK}\n}})\n"
     )
 
     result = strip_mod.strip_coverage(text)
