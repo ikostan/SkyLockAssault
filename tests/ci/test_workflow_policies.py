@@ -66,30 +66,36 @@ def _jobs():
             yield pytest.param(wf.name, job_id, job, id=f"{wf.name}:{job_id}")
 
 
-@pytest.mark.parametrize("cmd", [
-    "sudo apt-get update",
-    "sudo apt-get $APT_OPTS install -y xvfb",
-    "sudo apt install -y xvfb",
-    "pip install -r requirements.txt",
-    "pip3 install pyyaml",
-    "python -m pip install --upgrade pip",
-    "python3 -m pip install -r requirements.txt",
-    "npm ci",
-    "npm install v8-to-istanbul nyc",
-    "playwright install --with-deps chromium",
-    'wget -q "$URL" -O gdunit4.zip',
-])
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "sudo apt-get update",
+        "sudo apt-get $APT_OPTS install -y xvfb",
+        "sudo apt install -y xvfb",
+        "pip install -r requirements.txt",
+        "pip3 install pyyaml",
+        "python -m pip install --upgrade pip",
+        "python3 -m pip install -r requirements.txt",
+        "npm ci",
+        "npm install v8-to-istanbul nyc",
+        "playwright install --with-deps chromium",
+        'wget -q "$URL" -O gdunit4.zip',
+    ],
+)
 def test_network_cmd_matches_install_commands(cmd):
     """The matcher must flag every network-bound command the policy claims to cover."""
     assert NETWORK_CMD.search(cmd), f"not detected as network-bound: {cmd!r}"
 
 
-@pytest.mark.parametrize("cmd", [
-    "curl -f http://localhost:8080/index.html",
-    "pip freeze",
-    "npm run build",
-    "cat /etc/apt/apt-mirrors.txt",
-])
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "curl -f http://localhost:8080/index.html",
+        "pip freeze",
+        "npm run build",
+        "cat /etc/apt/apt-mirrors.txt",
+    ],
+)
 def test_network_cmd_ignores_local_commands(cmd):
     """The matcher must not flag local-only commands or paths that merely contain 'apt'."""
     assert not NETWORK_CMD.search(cmd), f"falsely detected as network-bound: {cmd!r}"
