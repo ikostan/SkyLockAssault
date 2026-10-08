@@ -7,8 +7,8 @@ concurrency:
   cancel-in-progress: true
 
 # Least-privilege floor for the orchestrator. Verified against all 7 called workflows on
-# 2026-09-27: none use the SARIF/security-events API. Only gdunit4_tests and gut_tests
-# request checks:write, granted at the job level below rather than here.
+# 2026-09-27: none use the SARIF/security-events API. Re-verified 2026-10-06 (#1003):
+# none use the Checks API either, so no job below is granted checks:write.
 permissions:
   contents: "read"
   pull-requests: "read"
@@ -133,7 +133,6 @@ jobs:
       - "yamllint"
     permissions:
       contents: "read"
-      checks: "write"  # Required: gdunit4_tests.yml's own job declares checks:write
     # always() lets this job evaluate even if a needed job was skipped (e.g. no markdown
     # changed). The explicit result checks below are what actually block it on failure,
     # since a lint failure makes its own downstream test job *skip* rather than fail.
@@ -161,7 +160,6 @@ jobs:
       - "yamllint"
     permissions:
       contents: "read"
-      checks: "write"  # Required: gut_tests.yml's own job declares checks:write
     # yamllint disable rule:line-length
     if: >-
       ${{

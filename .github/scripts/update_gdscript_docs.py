@@ -434,37 +434,75 @@ def extract_enum_name(enum_node: Tree) -> Optional[str]:
     return None
 
 
+FUNC_ARG_RULES: Set[str] = {"func_arg_regular", "func_arg_typed", "func_arg_inf"}
+
+
+def _first_name_token(node: Tree) -> Optional[str]:
+    for child in node.children:
+        if isinstance(child, Token) and child.type == "NAME":
+            return str(child.value)
+    return None
+
+
 def extract_parameters_from_ast(func_node: Tree) -> Tuple[List[str], bool]:
-    """Extracts parameter identifiers in source order across all GDScript 4 forms."""
-    params = []
-    param_rules: Set[str] = {
-        "func_arg_regular",
-        "func_arg_typed",
-        "func_arg_inf",
-        "func_arg_variadic",
-    }
+    """
+    Extracts the declared parameter identifiers of a function, in source order.
 
-    for subtree in func_node.iter_subtrees():
-        if subtree.data == "func_arg_variadic":
-            vararg_name = None
-            for child in subtree.children:
-                if isinstance(child, Token) and child.type == "NAME":
-                    vararg_name = str(child.value)
-                    break
-            if vararg_name:
-                params.append(vararg_name)
-                continue
+    Only the direct children of the function's own func_header > func_args node are
+    inspected. Walking the whole subtree (iter_subtrees) would also collect the
+    arguments of lambdas in the function body, e.g. the 'id' in
+    `arr.filter(func(id: String) -> bool: ...)`, and would return them bottom-up.
+    """
+    target_def = func_node
+    if target_def.data == "static_func_def":
+        if not target_def.children or not isinstance(target_def.children[0], Tree):
             return [], False
+        target_def = target_def.children[0]
 
-        if subtree.data in param_rules:
-            param_name = None
-            for child in subtree.children:
-                if isinstance(child, Token) and child.type == "NAME":
-                    param_name = str(child.value)
-                    break
-            if not param_name:
-                return [], False
-            params.append(param_name)
+    func_header = next(
+        (
+            c
+            for c in target_def.children
+            if isinstance(c, Tree) and c.data == "func_header"
+        ),
+        None,
+    )
+    if func_header is None:
+        return [], False
+
+    func_args = next(
+        (
+            c
+            for c in func_header.children
+            if isinstance(c, Tree) and c.data == "func_args"
+        ),
+        None,
+    )
+    if func_args is None:
+        return [], True  # Parameterless function
+
+    params: List[str] = []
+    for arg in func_args.children:
+        if not isinstance(arg, Tree):
+            continue
+        node = arg
+        if node.data == "func_arg_variadic":
+            # `...rest` wraps a regular/typed arg node; the name may also sit directly on it.
+            name = _first_name_token(node)
+            if name is None:
+                inner = next((c for c in node.children if isinstance(c, Tree)), None)
+                if inner is None or inner.data not in FUNC_ARG_RULES:
+                    return [], False
+                node = inner
+            else:
+                params.append(name)
+                continue
+        if node.data not in FUNC_ARG_RULES:
+            return [], False
+        name = _first_name_token(node)
+        if name is None:
+            return [], False
+        params.append(name)
 
     return params, True
 
