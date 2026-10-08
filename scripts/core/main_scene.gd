@@ -162,7 +162,9 @@ func setup_parallax_layer(sprite: Sprite2D, viewport: Vector2, buffer_mult: floa
 	layer.motion_mirroring = Vector2(0, tiles_y * tex_size.y)
 
 
-## Sets up the bushes layer with random positions, sizes, and textures.
+## Clears existing children and repopulates the bushes layer with randomly
+## positioned, scaled, and textured sprites from the texture preloader
+## (resources whose IDs begin with "bush_").
 ##
 ## [param viewport]: Viewport size in pixels. [code]x[/code] bounds horizontal placement;
 ## [code]y[/code] multiplied by [member parallax_screens_tall] sets the layer height and
@@ -210,10 +212,11 @@ func setup_bushes_layer(viewport: Vector2) -> void:
 	bushes_layer.motion_mirroring = Vector2(0, layer_height)
 
 
-## Sets up the decor layer with random properties.
+## Clears existing children and repopulates the decor layer with sprites from the
+## texture preloader (resources whose IDs begin with "decor_").
 ##
-## Configures the decor layer by generating random X positions, sizes, textures, rotations, and
-## flips for each element.
+## Each element gets a random position, scale, texture, cardinal rotation, and
+## horizontal/vertical flip.
 ##
 ## [param viewport]: Viewport size in pixels. [code]x[/code] bounds horizontal placement;
 ## [code]y[/code] multiplied by [member parallax_screens_tall] sets the layer height and
