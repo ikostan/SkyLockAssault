@@ -326,13 +326,21 @@ def extract_params(func_node: Tree) -> List[str]:
         return []
 
     func_header = next(
-        (c for c in target_def.children if isinstance(c, Tree) and c.data == "func_header"),
+        (
+            c
+            for c in target_def.children
+            if isinstance(c, Tree) and c.data == "func_header"
+        ),
         None,
     )
     if func_header is None:
         return []
     func_args = next(
-        (c for c in func_header.children if isinstance(c, Tree) and c.data == "func_args"),
+        (
+            c
+            for c in func_header.children
+            if isinstance(c, Tree) and c.data == "func_args"
+        ),
         None,
     )
     if func_args is None:
