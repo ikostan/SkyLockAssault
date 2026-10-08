@@ -2,9 +2,10 @@
 name: "GDUnit4 Unit Tests"
 
 # Ref #889, #887: Standardizes Godot 4.7.1-stable runtime and gdUnit4 v6.2.0.
-# gdUnit4-coverage was removed: its trial build is capped at 20 files and the maintainer
-# considers micro-batching around that cap a circumvention of the trial restriction.
-# This workflow now runs every gdUnit4 suite in a single pass with no coverage collection.
+# gdUnit4-coverage was removed: its trial build is capped at 20 files and the
+# maintainer considers micro-batching around that cap a circumvention of the trial
+# restriction. This workflow runs every gdUnit4 suite in a single pass with no
+# coverage collection.
 on:  # yamllint disable-line rule:truthy
   workflow_call:
     inputs:
@@ -19,28 +20,42 @@ jobs:
   unit-test:
     runs-on: "ubuntu-latest"
     timeout-minutes: 15
+    # Least privilege (#1003): no step uses the Checks API; checkout only reads.
     permissions:
-      checks: "write"
+      contents: "read"
     env:
       GODOT_VERSION: "${{ inputs.godot_version }}"
       GODOT_SHA256: "${{ inputs.godot_sha256 }}"
     steps:
-      - uses: "actions/checkout@v7.0.1"
+      - uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"  # v7.0.1
         with:
           persist-credentials: false
 
-      # Install virtual frame buffer (xvfb) for display emulation
       - name: "Install System Dependencies (xvfb)"
+        timeout-minutes: 5
+        env:
+          DEBIAN_FRONTEND: "noninteractive"
         run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb
+          if command -v xvfb-run >/dev/null 2>&1; then
+            echo "✅ xvfb-run already on runner image; skipping apt."
+            exit 0
+          fi
+          # Skip the flaky Azure mirror if an alternative exists in the list
+          MIRRORS="/etc/apt/apt-mirrors.txt"
+          if [ -f "$MIRRORS" ] && grep -qv 'azure\.archive' "$MIRRORS"; then
+            sudo sed -i '/azure\.archive\.ubuntu\.com/d' "$MIRRORS"
+          fi
+          APT_OPTS="-o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20"
+          sudo apt-get $APT_OPTS update
+          sudo apt-get $APT_OPTS install -y --no-install-recommends xvfb
 
       # Download official Godot Linux binary and enforce SHA-256 integrity validation
       - name: "Download and Verify Godot Binary"
+        timeout-minutes: 5
         run: |
           URL="https://github.com/godotengine/godot/releases/download"
           ZIP_NAME="Godot_v${GODOT_VERSION}_linux.x86_64.zip"
-          wget -q "${URL}/${GODOT_VERSION}/${ZIP_NAME}"
+          wget -q --tries=3 --timeout=30 "${URL}/${GODOT_VERSION}/${ZIP_NAME}"
 
           echo "=================================================="
           echo "         ASSET SHA256 CHECKSUM                    "
@@ -62,27 +77,31 @@ jobs:
           mv "Godot_v${GODOT_VERSION}_linux.x86_64" godot
           chmod +x godot
 
-      # Validate that downloaded binary matches the expected version string (converts -stable to .stable)
+      # Validate that the binary matches the expected version string
+      # (converts -stable to .stable)
       - name: "Verify Godot Engine Version Parity"
         run: |
           ENGINE_VERSION=$(./godot --version)
           echo "Detected engine version: $ENGINE_VERSION"
           EXPECTED_VERSION="${GODOT_VERSION/-stable/.stable}"
           echo "$ENGINE_VERSION" | grep -q "$EXPECTED_VERSION" || {
-            echo "❌ ERROR: Expected Godot ${EXPECTED_VERSION}, but received: $ENGINE_VERSION"
+            echo "❌ ERROR: Expected Godot ${EXPECTED_VERSION},"
+            echo "   but received: $ENGINE_VERSION"
             exit 1
           }
           echo "✅ Version parity verified (${EXPECTED_VERSION})."
 
-      # Install GDUnit4 Core addon and disable strict GDScript warnings to avoid test aborts
+      # Install GDUnit4 Core addon and disable strict GDScript warnings
+      # to avoid test aborts
       - name: "Install GDUnit4 Core"
+        timeout-minutes: 3
         run: |
           rm -rf addons/gdUnit4 addons/gdunit4_coverage override.cfg
           mkdir -p addons
 
           # 1. Download and extract GDUnit4 Core framework (v6.2.0)
           URL_GDUNIT="https://github.com/godot-gdunit-labs/gdUnit4/archive/refs/tags/v6.2.0.zip"
-          wget -q "$URL_GDUNIT" -O gdunit4.zip
+          wget -q --tries=3 --timeout=30 "$URL_GDUNIT" -O gdunit4.zip
           unzip -q gdunit4.zip -d addons
           mv addons/gdUnit4-6.2.0/addons/gdUnit4 addons/gdUnit4
           rm -rf addons/gdUnit4-6.2.0 gdunit4.zip
@@ -92,10 +111,11 @@ jobs:
           with open("project.godot", "r") as f:
               content = f.read()
 
+          warnings_off = "gdscript/warnings/enable=false"
           if "[debug]" in content:
-              content = content.replace("[debug]", "[debug]\n\ngdscript/warnings/enable=false")
+              content = content.replace("[debug]", "[debug]\n\n" + warnings_off)
           else:
-              content += "\n\n[debug]\n\ngdscript/warnings/enable=false\n"
+              content += "\n\n[debug]\n\n" + warnings_off + "\n"
 
           with open("project.godot", "w") as f:
               f.write(content)
@@ -108,59 +128,18 @@ jobs:
             exit 1
           fi
 
-      # The committed project.godot keeps gdUnit4-coverage enabled for local editor use.
-      # CI deletes the addon, so strip its plugin entry, session hook, and settings section
-      # from this run's copy of project.godot; otherwise gdUnit4 fails loading the missing hook.
-      # Only the CI checkout is modified; nothing is committed back.
+      # The committed project.godot keeps gdUnit4-coverage enabled for local editor
+      # use. CI deletes the addon, so strip its plugin entry, session hook, and
+      # settings section from this run's copy of project.godot; otherwise gdUnit4
+      # fails loading the missing hook. Nothing is committed back.
+      # Logic and tests: .github/scripts/strip_gdunit4_coverage.py,
+      # tests/ci/test_strip_gdunit4_coverage.py
       - name: "Strip gdUnit4-coverage From CI Project Config"
         run: |
-          python3 - << 'PY'
-          import re
-          import sys
+          python3 .github/scripts/strip_gdunit4_coverage.py project.godot
 
-          PATH = "project.godot"
-          NEEDLE = "gdunit4_coverage"
-
-          with open(PATH, encoding="utf-8") as f:
-              lines = f.read().splitlines()
-
-          out = []
-          in_cov_section = False
-          for line in lines:
-              stripped = line.strip()
-              # 1. Drop the whole [gdunit4_coverage] section (header through next section header)
-              if stripped.startswith("[") and stripped.endswith("]"):
-                  in_cov_section = stripped == f"[{NEEDLE}]"
-                  if in_cov_section:
-                      continue
-              if in_cov_section:
-                  continue
-              # 2. Drop dictionary entries pointing into the addon (e.g. the session hook)
-              if stripped.startswith(f'"res://addons/{NEEDLE}/'):
-                  continue
-              # 3. Remove the plugin from PackedStringArray lists (e.g. editor_plugins/enabled)
-              if NEEDLE in line and "PackedStringArray(" in line:
-                  line = re.sub(rf',\s*"res://addons/{NEEDLE}/[^"]*"', "", line)
-                  line = re.sub(rf'"res://addons/{NEEDLE}/[^"]*"\s*,\s*', "", line)
-                  line = re.sub(rf'"res://addons/{NEEDLE}/[^"]*"', "", line)
-              out.append(line)
-
-          text = "\n".join(out) + "\n"
-          # Removing the last entry of a multi-line dict can leave a dangling comma before "}"
-          text = re.sub(r",(\s*\n\s*\})", r"\1", text)
-
-          leftover = [l for l in text.splitlines() if NEEDLE in l]
-          if leftover:
-              print(f"::error file={PATH}::Unhandled {NEEDLE} references remain:")
-              print("\n".join(leftover))
-              sys.exit(1)
-
-          with open(PATH, "w", encoding="utf-8") as f:
-              f.write(text)
-          print(f"✅ Stripped {NEEDLE} plugin, hook, and settings from {PATH} for this CI run.")
-          PY
-
-      # Move tests outside workspace so the project import below doesn't compile the full test tree
+      # Move tests outside the workspace so the project import below
+      # doesn't compile the full test tree
       - name: "Isolate Test Suites Outside Workspace"
         run: |
           rm -rf /tmp/test_backup
@@ -184,7 +163,8 @@ jobs:
             --ignoreHeadlessMode \
             -a res://test/gdunit4
 
-      # Restore full test folder unconditionally so report finders and artifact uploaders have complete access
+      # Always restore the full test folder so report finders and
+      # artifact uploaders have complete access
       - name: "Restore Full Test Suite"
         if: "always()"
         run: |
@@ -197,7 +177,7 @@ jobs:
       # Upload XML/HTML test reports generated by GDUnit4 as GitHub Actions run artifacts
       - name: "Upload Test Reports Artifacts"
         if: "always()"
-        uses: "actions/upload-artifact@v7"
+        uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"  # v7.0.1
         with:
           name: "gdunit-reports"
           path: |
