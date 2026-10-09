@@ -1,19 +1,20 @@
 ## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## res://scripts/ui/menus/gameplay_settings.gd
-extends Control
+##
+## Gameplay Settings menu (difficulty slider, Back, Reset).
+## Signal cleanup, web overlay toggling, menu-stack navigation and focus handling are
+## inherited from SettingsMenuBase (settings_menu_base.gd).
+extends SettingsMenuBase
 
-## The wrappers (like JavaScriptBridgeWrapper and presumably OSWrapper)
-## are designed to abstract away direct singleton calls, making the code
-## easier to unit test by allowing mocks/stubs without relying on the
-## actual engine singletons.
-var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
-var os_wrapper: OSWrapper = OSWrapper.new()
-var js_window: Variant
+## DOM overlays owned by this menu (see custom_shell.html).
+const GAMEPLAY_OVERLAY_IDS: Array[String] = [
+	"difficulty-slider", "gameplay-back-button", "gameplay-reset-button"
+]
+
 var _change_difficulty_cb: JavaScriptObject
 var _gameplay_back_button_pressed_cb: JavaScriptObject
 var _gameplay_reset_cb: JavaScriptObject
-var _intentional_exit: bool = false
 var _default_difficulty: float = 1.0
 
 @onready var difficulty_slider: HSlider = get_node(
@@ -27,17 +28,13 @@ var _default_difficulty: float = 1.0
 
 
 func _ready() -> void:
-	# Configure for web overlays (invisible but positioned)
-	process_mode = Node.PROCESS_MODE_ALWAYS  # Ignore pause
+	super()  # process_mode = ALWAYS (ignore pause) + tree_exited -> teardown
 
 	var settings_res := Globals.settings if is_instance_valid(Globals) else null
 
-	# ADD GUARDS HERE:
-	if not difficulty_slider.value_changed.is_connected(_on_difficulty_value_changed):
-		difficulty_slider.value_changed.connect(_on_difficulty_value_changed)
+	safe_connect(difficulty_slider.value_changed, _on_difficulty_value_changed)
 
 	# Set initial difficulty label (sync with global if available)
-	# FIX: Use the local reference for consistency
 	if is_instance_valid(settings_res):
 		difficulty_slider.value = settings_res.difficulty
 		difficulty_label.text = "{" + str(settings_res.difficulty) + "}"
@@ -45,38 +42,15 @@ func _ready() -> void:
 		difficulty_slider.value = _default_difficulty
 		difficulty_label.text = "{" + str(_default_difficulty) + "}"
 
-	# Back button
-	if not gameplay_back_button.pressed.is_connected(_on_gameplay_back_button_pressed):
-		gameplay_back_button.pressed.connect(_on_gameplay_back_button_pressed)
-	# Reset button listener
-	if not gameplay_reset_button.pressed.is_connected(_on_gameplay_reset_button_pressed):
-		gameplay_reset_button.pressed.connect(_on_gameplay_reset_button_pressed)
-	# NEW: Attach tree_exited for unexpected removal cleanup (like other settings scripts)
-	if not tree_exited.is_connected(_on_tree_exited):
-		tree_exited.connect(_on_tree_exited)
+	safe_connect(gameplay_back_button.pressed, _on_gameplay_back_button_pressed)
+	safe_connect(gameplay_reset_button.pressed, _on_gameplay_reset_button_pressed)
 
-	# NEW: The UI now observes the resource for external changes
-	# if not Globals.settings.setting_changed.is_connected(_on_external_setting_changed):
-	#	Globals.settings.setting_changed.connect(_on_external_setting_changed)
-	if (
-		is_instance_valid(settings_res)
-		and not settings_res.setting_changed.is_connected(_on_external_setting_changed)
-	):
-		settings_res.setting_changed.connect(_on_external_setting_changed)
+	# The UI observes the resource for external changes (e.g. from JS / other menus)
+	if is_instance_valid(settings_res):
+		safe_connect(settings_res.setting_changed, _on_external_setting_changed)
 
 	if os_wrapper.has_feature("web"):
-		# Toggle overlays...
-		(
-			js_bridge_wrapper
-			. eval(
-				"""
-				document.getElementById('difficulty-slider').style.display = 'block';
-				document.getElementById('gameplay-back-button').style.display = 'block';
-				document.getElementById('gameplay-reset-button').style.display = 'block';
-				""",
-				true
-			)
-		)
+		update_web_overlays(_get_overlay_ids(), [])
 		# Expose callbacks to JS (store refs to prevent GC)
 		js_window = js_bridge_wrapper.get_interface("window")
 		if js_window:
@@ -118,88 +92,43 @@ func _on_external_setting_changed(setting_name: String, new_value: Variant) -> v
 		difficulty_label.text = "{" + str(new_value) + "}"
 
 
-func _on_tree_exited() -> void:
-	## Cleanup on unexpected tree exit (e.g. parent removed without calling back button).
-	## Disconnects signals, restores previous menu if not intentional, clears JS/DOM state.
-	## :rtype: void
-	## Cleanup on unexpected tree exit.
+# ==============================================================================
+# SettingsMenuBase HOOKS
+# ==============================================================================
 
-	# FIX: Guard the initial log message against a torn-down Globals singleton
-	if is_instance_valid(Globals):
-		Globals.log_message("Gameplay Settings _on_tree_exited called.", Globals.LogLevel.DEBUG)
 
-	# 1. Safe Global Resource Disconnection
-	var settings_res := Globals.settings if is_instance_valid(Globals) else null
-	if is_instance_valid(settings_res):
-		if settings_res.setting_changed.is_connected(_on_external_setting_changed):
-			settings_res.setting_changed.disconnect(_on_external_setting_changed)
+func _get_menu_name() -> String:
+	return "Gameplay Settings"
 
-	# 2. FIX: Guarded Local Disconnections
-	# We must check if the nodes still exist before accessing 'value_changed' or 'pressed'
-	if is_instance_valid(difficulty_slider):
-		if difficulty_slider.value_changed.is_connected(_on_difficulty_value_changed):
-			difficulty_slider.value_changed.disconnect(_on_difficulty_value_changed)
 
-	if is_instance_valid(gameplay_back_button):
-		if gameplay_back_button.pressed.is_connected(_on_gameplay_back_button_pressed):
-			gameplay_back_button.pressed.disconnect(_on_gameplay_back_button_pressed)
+func _get_overlay_ids() -> Array[String]:
+	return GAMEPLAY_OVERLAY_IDS
 
-	if is_instance_valid(gameplay_reset_button):
-		if gameplay_reset_button.pressed.is_connected(_on_gameplay_reset_button_pressed):
-			gameplay_reset_button.pressed.disconnect(_on_gameplay_reset_button_pressed)
 
-	# 3. Clean up JS/Web state
+func _get_initial_focus_control() -> Control:
+	return difficulty_slider
+
+
+func _get_focus_controls() -> Array[Control]:
+	return [difficulty_slider, gameplay_back_button, gameplay_reset_button]
+
+
+## Back path only: return focus to the Gameplay Settings button in the Options menu.
+func _on_previous_menu_restored(prev_menu: Node) -> void:
+	if prev_menu is OptionsMenu:
+		(prev_menu as OptionsMenu).grab_focus_on_gameplay_settings_button()
+
+
+## Teardown hook (runs once, before the base disconnects the tracked signals).
+## Detaches the JS entry points and drops the callback refs. Safe to call repeatedly.
+func _cleanup() -> void:
 	_unset_gameplay_settings_window_callbacks()
 	_change_difficulty_cb = null
 	_gameplay_back_button_pressed_cb = null
 	_gameplay_reset_cb = null
 
-	# Web overlay cleanup + optional menu restore
-	if os_wrapper.has_feature("web") and js_window and js_bridge_wrapper:
-		# Hide gameplay overlays (same DOM elements shown in _ready)
-		var hide_gameplay: String = """
-			document.getElementById('difficulty-slider').style.display = 'none';
-			document.getElementById('gameplay-back-button').style.display = 'none';
-			document.getElementById('gameplay-reset-button').style.display = 'none';
-			"""
 
-		# FIX: Guard the hidden_menus array check against a torn-down Globals singleton
-		if (
-			not _intentional_exit
-			and is_instance_valid(Globals)
-			and not Globals.hidden_menus.is_empty()
-		):
-			# Unexpected exit → restore previous menu and options overlays
-			var prev_menu: Node = Globals.hidden_menus.pop_back()
-			if is_instance_valid(prev_menu):
-				prev_menu.visible = true
-				Globals.log_message(
-					"tree_exited: Restored menu: " + prev_menu.name, Globals.LogLevel.DEBUG
-				)
-
-			(
-				js_bridge_wrapper
-				. eval(
-					(
-						"""
-						// Show Options menu overlays
-						document.getElementById('controls-button').style.display = 'block';
-						document.getElementById('audio-button').style.display = 'block';
-						document.getElementById('advanced-button').style.display = 'block';
-						document.getElementById('gameplay-button').style.display = 'block';
-						document.getElementById('options-back-button').style.display = 'block';
-						"""
-						+ hide_gameplay
-					),
-					true
-				)
-			)
-		else:
-			# Intentional exit or no previous menu → just hide gameplay overlays
-			js_bridge_wrapper.eval(hide_gameplay, true)
-
-
-## A cleanup function
+## Detaches the gameplay JS entry points from `window` (web only). Idempotent.
 func _unset_gameplay_settings_window_callbacks() -> void:
 	if not os_wrapper.has_feature("web") or not js_window:
 		return
@@ -221,54 +150,13 @@ func _on_gameplay_reset_js(_args: Array) -> void:
 
 
 func _on_gameplay_back_button_pressed() -> void:
-	## Handles Back button press.
+	## Handles Back button press (Godot button and JS overlay).
 	##
-	## Shows previous menu from stack, removes gameplay menu.
-	##
-	## Hides web overlays if on web.
+	## Delegates to SettingsMenuBase._go_back(): restores the previous menu from the
+	## stack, swaps the web overlays and frees this menu.
 	##
 	## :rtype: void
-	Globals.log_message("Gameplay Settings Back button pressed.", Globals.LogLevel.DEBUG)
-
-	var hidden_menu_found: bool = false
-	if not Globals.hidden_menus.is_empty():
-		var prev_menu: Node = Globals.hidden_menus.pop_back()
-		if is_instance_valid(prev_menu):
-			prev_menu.visible = true
-			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
-			hidden_menu_found = true
-			# When returning from Gameplay Settings menu → restore focus to the
-			# Gameplay Settings button in Options
-			if prev_menu is OptionsMenu:
-				(prev_menu as OptionsMenu).grab_focus_on_gameplay_settings_button()
-
-	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
-	if os_wrapper.has_feature("web") and js_window:
-		_unset_gameplay_settings_window_callbacks()
-		# Set Options menu buttons visible in DOM (if bridge available for eval)
-		if hidden_menu_found and js_bridge_wrapper:
-			(
-				js_bridge_wrapper
-				. eval(
-					"""
-					// Show Options menu overlays
-					document.getElementById('controls-button').style.display = 'block';
-					document.getElementById('audio-button').style.display = 'block';
-					document.getElementById('advanced-button').style.display = 'block';
-					document.getElementById('gameplay-button').style.display = 'block';
-					document.getElementById('options-back-button').style.display = 'block';
-					// Hide Gameplay Settings overlays
-					document.getElementById('difficulty-slider').style.display = 'none';
-					document.getElementById('gameplay-back-button').style.display = 'none';
-					document.getElementById('gameplay-reset-button').style.display = 'none';
-					""",
-					true
-				)
-			)
-	if not hidden_menu_found:
-		Globals.log_message("No hidden menu to show.", Globals.LogLevel.INFO)
-	_intentional_exit = true
-	queue_free()
+	_go_back()
 
 
 # New: JS-specific callback (exactly one Array arg, no default)
@@ -432,19 +320,6 @@ func _extract_js_difficulty(args: Array) -> Variant:
 
 	# Handle scalar values (e.g., [1.5]) directly
 	return first_arg
-
-
-## Grabs initial focus on the difficulty slider using the global helper.
-## Ensures the slider is focused when the menu opens.
-## Falls back to other controls if needed.
-##
-## :rtype: void
-func _grab_initial_focus() -> void:
-	Globals.ensure_initial_focus(
-		difficulty_slider,
-		[difficulty_slider, gameplay_back_button, gameplay_reset_button],
-		"Gameplay Settings Menu"
-	)
 
 
 ## Helper to cleanly trigger interactive feedback via the global AudioManager

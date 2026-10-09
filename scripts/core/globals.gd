@@ -9,6 +9,59 @@ extends Node
 
 enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 
+## ConfigFile section owned by Globals. The audio and input managers write their own
+## sections to the same settings.cfg, so Globals must never touch anything outside this one.
+const SETTINGS_SECTION: String = "Settings"
+
+# --- ISSUE #470: Table-driven settings serialization ---
+## Persistence schema for GameSettingsResource properties.
+##
+## Each entry maps a resource property name to:
+##   "key"   - On-disk key inside SETTINGS_SECTION. NEVER rename an existing key:
+##             player saves in the wild depend on it.
+##   "types" - Accepted Variant.Type values for the raw value read from disk.
+##             Anything else is rejected and the current default is kept.
+##   "cast"  - (Optional) Variant.Type the value is converted to after the type check,
+##             e.g. an int written by an older build becoming a float.
+##   "min"   - (Optional) Inclusive lower bound. Out-of-range values are rejected, not clamped.
+##   "max"   - (Optional) Inclusive upper bound. Out-of-range values are rejected, not clamped.
+##
+## Adding a persisted setting is a one-entry change here. Dictionary insertion order is
+## preserved, so it also defines load and save order.
+## Declared as a mutable static var (snake_case per gdlint's class-variable-name rule) so
+## tests can extend or replace the schema; production code must treat it as read-only.
+static var persisted_schema: Dictionary = {
+	"current_log_level":
+	{
+		"key": "log_level",
+		"types": [TYPE_INT],
+		"min": LogLevel.DEBUG,
+		"max": LogLevel.NONE,
+	},
+	"difficulty":
+	{
+		"key": "difficulty",
+		"types": [TYPE_FLOAT, TYPE_INT],
+		"cast": TYPE_FLOAT,
+	},
+	"enable_debug_logging":
+	{
+		"key": "enable_debug_logging",
+		"types": [TYPE_BOOL],
+	},
+	"max_fuel":
+	{
+		"key": "max_fuel",
+		"types": [TYPE_FLOAT, TYPE_INT],
+		"cast": TYPE_FLOAT,
+	},
+	"show_fps":
+	{
+		"key": "show_fps",
+		"types": [TYPE_BOOL],
+	},
+}
+
 # --- TASK #529: Encryption Key Management ---
 ## Centralized key for securing local configuration files.
 ## This ensures consistent encryption/decryption across different game systems.
@@ -104,15 +157,14 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	_save_settings()
 
 
-## Centralized "ensure initial focus" helper.
-## Checks whether keyboard/controller focus is already inside this menu.
-## If it isn't, defers grab_focus() on the candidate and logs the action.
-## If it is, logs the skip (so you can still see what happened).
+## Ensures keyboard or controller focus is set correctly within this menu.
 ##
-## :param candidate: The control that should receive focus by default.
-## :param allowed_controls: All interactive controls that belong to this menu.
-##                          If focus is already on any of them we do nothing.
-## :param context: Optional string that appears in the log (e.g. "Pause Menu").
+## Checks whether the focus is already inside this menu's allowed controls. If not, defers
+## grab_focus() on the candidate and logs the action; otherwise, logs the skip.
+##
+## [param candidate]: The candidate parameter.
+## [param allowed_controls]: The allowed_controls parameter.
+## [param context]: The context parameter.
 func ensure_initial_focus(
 	candidate: Control, allowed_controls: Array[Control] = [], context: String = ""
 ) -> void:
@@ -143,9 +195,11 @@ func ensure_initial_focus(
 
 
 ## Loads Key Mapping menu directly while keeping background video visible.
-## :param menu_to_hide: Usually the UI Panel (not the root Control).
-## :type menu_to_hide: Node
-## :rtype: void
+##
+## Loads the Key Mapping menu, hides the specified menu node, and keeps the background
+## video visible and processing when found at one of the expected relative paths.
+##
+## [param menu_to_hide]: The menu_to_hide parameter.
 func load_key_mapping(menu_to_hide: Node) -> void:
 	if is_instance_valid(menu_to_hide):
 		hidden_menus.push_back(menu_to_hide)
@@ -171,8 +225,12 @@ func load_key_mapping(menu_to_hide: Node) -> void:
 
 
 ## Loads persisted settings with backward compatibility for plaintext files.
+##
+## Iterates persisted_schema: for each entry, reads the on-disk key, checks the raw
+## value's type, applies the optional cast, and rejects out-of-range values. Missing keys
+## and rejected values leave the current default untouched.
+##
 ## :param path: Config file path (default: Settings.CONFIG_PATH).
-## skips invalid/missing to keep current.
 ## :type path: String
 ## :rtype: void
 func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
@@ -185,28 +243,49 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 		log_message("Legacy plaintext settings found. Migration required.", LogLevel.INFO)
 
 	if err == OK:
+		# Guard covers the whole loop: setters emit setting_changed, and the observer must
+		# not persist, log, or bridge to JS while we are bulk-applying values.
 		_is_loading_settings = true
 
-		if config.has_section_key("Settings", "log_level"):
-			var loaded_log_level: Variant = config.get_value("Settings", "log_level")
-			if loaded_log_level is int and loaded_log_level >= 0 and loaded_log_level <= 4:
-				settings.current_log_level = loaded_log_level
-		if config.has_section_key("Settings", "difficulty"):
-			var loaded_difficulty: Variant = config.get_value("Settings", "difficulty")
-			if (loaded_difficulty is float) or (loaded_difficulty is int):
-				settings.difficulty = loaded_difficulty
-		if config.has_section_key("Settings", "enable_debug_logging"):
-			var loaded_debug: Variant = config.get_value("Settings", "enable_debug_logging")
-			if loaded_debug is bool:
-				settings.enable_debug_logging = loaded_debug
-		if config.has_section_key("Settings", "max_fuel"):
-			var loaded_max: Variant = config.get_value("Settings", "max_fuel")
-			if loaded_max is float or loaded_max is int:
-				settings.max_fuel = float(loaded_max)
-		if config.has_section_key("Settings", "show_fps"):
-			var loaded_fps: Variant = config.get_value("Settings", "show_fps")
-			if loaded_fps is bool:
-				settings.show_fps = loaded_fps
+		for prop: String in persisted_schema:
+			var spec: Dictionary = persisted_schema[prop]
+			var disk_key: String = spec["key"]
+
+			if not config.has_section_key(SETTINGS_SECTION, disk_key):
+				continue  # Missing key: keep current default.
+
+			if not (prop in settings):
+				log_message(
+					"Schema error: '%s' is not a GameSettingsResource property." % prop,
+					LogLevel.ERROR
+				)
+				continue
+
+			var value: Variant = config.get_value(SETTINGS_SECTION, disk_key)
+
+			if not (typeof(value) in spec["types"]):
+				log_message(
+					(
+						"Ignoring persisted '%s': unexpected type %s."
+						% [disk_key, type_string(typeof(value))]
+					),
+					LogLevel.WARNING
+				)
+				continue
+
+			if spec.has("cast"):
+				value = type_convert(value, spec["cast"])
+
+			var below_min: bool = spec.has("min") and value < spec["min"]
+			var above_max: bool = spec.has("max") and value > spec["max"]
+			if below_min or above_max:
+				log_message(
+					"Ignoring persisted '%s': value %s out of range." % [disk_key, str(value)],
+					LogLevel.WARNING
+				)
+				continue
+
+			settings.set(prop, value)
 
 		_is_loading_settings = false
 		log_message("Settings synchronization complete.", LogLevel.DEBUG)
@@ -221,9 +300,15 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 		log_message("Failed to load settings (Error %d)." % err, LogLevel.ERROR)
 
 
-## New: Add _save_settings to globals.gd (move from options_menu.gd if needed)
 ## Persists current settings to an encrypted config file.
+##
+## Re-reads the existing file first so sections owned by other managers (audio, input)
+## survive, then writes every persisted_schema property into SETTINGS_SECTION.
+## Does not touch _is_loading_settings.
+##
 ## :param path: Config file path (default: Settings.CONFIG_PATH).
+## :type path: String
+## :rtype: void
 func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 	var load_data: Dictionary = safe_load_config(path)
 	var config: ConfigFile = load_data["config"]
@@ -240,11 +325,15 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 		)
 		return
 
-	config.set_value("Settings", "log_level", settings.current_log_level)
-	config.set_value("Settings", "difficulty", settings.difficulty)
-	config.set_value("Settings", "enable_debug_logging", settings.enable_debug_logging)
-	config.set_value("Settings", "max_fuel", settings.max_fuel)
-	config.set_value("Settings", "show_fps", settings.show_fps)
+	for prop: String in persisted_schema:
+		# Guard: settings.get() on a missing property returns null, and
+		# ConfigFile.set_value(..., null) ERASES the key instead of writing it.
+		if not (prop in settings):
+			log_message(
+				"Schema error: '%s' is not a GameSettingsResource property." % prop, LogLevel.ERROR
+			)
+			continue
+		config.set_value(SETTINGS_SECTION, persisted_schema[prop]["key"], settings.get(prop))
 
 	# FIX: Re-added the branch to properly handle the plaintext failsafe
 	var key: String = ensure_encryption_key()
@@ -291,6 +380,12 @@ func _on_options_exited_unexpectedly() -> void:
 	options_instance = null
 
 
+## Loads options menu and hides the caller menu if valid.
+##
+## Guards against re-entrancy by checking existing instance.
+##
+## [param menu_to_hide]: The menu_to_hide parameter.
+## Returns No return value.
 func load_options(menu_to_hide: Node) -> void:
 	## Loads options menu and hides the caller menu (if valid).
 	##
@@ -344,6 +439,15 @@ func load_options(menu_to_hide: Node) -> void:
 # Custom logging function with timestamp and level filtering.
 # @param message: The string message to log.
 # @param level: The log level (default INFO).
+## Prints a formatted log message if it meets the configured log level threshold.
+##
+## Converts the given log level enum to a string, prepends a system timestamp, and prints the
+## message if the level is greater than or equal to the current configured threshold in
+## settings.
+##
+## [param message]: The message parameter.
+## [param level]: The level parameter.
+## Returns No return value.
 func log_message(message: String, level: LogLevel = LogLevel.INFO) -> void:
 	# FIX: Guard the log level check.
 	# If settings is null, print everything.
@@ -375,9 +479,16 @@ func _notification(what: int) -> void:
 		get_tree().quit()
 
 
+## Queues a scene change via the loading screen.
+##
+## Sets the next scene path and transitions to the loading screen scene. Handles empty paths
+## gracefully.
+##
+## [param target_path]: The target_path parameter.
 func load_scene_with_loading(target_path: String) -> void:
 	# Queues a scene change via the loading screen.
 	# Sets next_scene and transitions to loading_screen.tscn.
+	# Handles empty paths gracefully.
 	# Handles empty/invalid paths gracefully.
 
 	if target_path == "":
@@ -389,11 +500,22 @@ func load_scene_with_loading(target_path: String) -> void:
 
 
 # Static helpers for version (add after _ready())
+## Returns the game version from project settings.
+##
+## Retrieves the version string from the application configuration settings, defaulting to
+## "n/a" if not set.
+## Returns The application configuration version string, or "n/a" if not set.
 static func get_game_version() -> String:
 	return ProjectSettings.get_setting("application/config/version", "n/a") as String
 
 
 # For tests only—avoids direct writes in prod
+## Sets the game version project setting for automated testing.
+##
+## Updates the application configuration version setting in ProjectSettings using the
+## provided string value.
+##
+## [param value]: The value parameter.
 static func set_game_version_for_tests(value: String) -> void:
 	ProjectSettings.set_setting("application/config/version", value)
 
@@ -473,7 +595,13 @@ func _get_encryption_key() -> String:
 	return final_key
 
 
-## Helper to determine if a config file is encrypted.
+## Determine if a config file is encrypted.
+##
+## Checks whether the specified file exists and whether its magic number matches the Godot
+## encrypted file magic number 0x43454447 ("GDEC").
+##
+## [param path]: The path parameter.
+## Returns [code]true[/code] if the file is encrypted, [code]false[/code] otherwise.
 func is_file_encrypted(path: String) -> bool:
 	if not FileAccess.file_exists(path):
 		return false
@@ -489,10 +617,14 @@ func is_file_encrypted(path: String) -> bool:
 	return magic == 0x43454447
 
 
-## Safely loads a config file, handling both encrypted and legacy plaintext formats.
-## Returns a Dictionary: {"config": ConfigFile, "err": int, "is_legacy": bool}
-## Safely loads a config file, handling both encrypted and legacy plaintext formats.
-## Returns a Dictionary: {"config": ConfigFile, "err": int, "is_legacy": bool}
+## Safely loads a config file, handling encrypted and legacy plaintext formats.
+##
+## Loads a configuration file from the specified path, automatically handling encrypted keys
+## and plaintext fallbacks.
+##
+## [param path]: The path parameter.
+## Returns A Dictionary containing the keys config as ConfigFile, err as int, and is_legacy as
+## bool.
 func safe_load_config(path: String) -> Dictionary:
 	var key: String = ensure_encryption_key()
 
@@ -565,7 +697,10 @@ func safe_load_config(path: String) -> Dictionary:
 
 
 ## Overrides the encryption key with a deterministic value for unit tests.
+##
 ## This decouples test artifacts from specific hardware IDs so failures are reproducible.
+##
+## [param override_key]: The override_key parameter.
 func set_test_encryption_key(override_key: String = "test_deterministic_key_123") -> void:
 	save_encryption_pass = override_key
 	log_message("Encryption key overridden for testing.", LogLevel.DEBUG)

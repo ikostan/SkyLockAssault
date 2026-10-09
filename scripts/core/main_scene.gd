@@ -139,10 +139,11 @@ func _input(event: InputEvent) -> void:
 
 
 ## Sets up a parallax layer for tiling and mirroring.
-## @param sprite: Sprite2D - The Sprite2D to configure.
-## @param viewport: Vector2 - The viewport size.
-## @param buffer_mult: float - Multiplier for vertical buffer.
-## @return: void
+##
+## [param sprite]: The sprite parameter.
+## [param viewport]: The viewport parameter.
+## [param buffer_mult]: The buffer_mult parameter.
+## Returns void
 func setup_parallax_layer(sprite: Sprite2D, viewport: Vector2, buffer_mult: float = 1.0) -> void:
 	if not sprite or not sprite.texture:
 		return
@@ -161,9 +162,13 @@ func setup_parallax_layer(sprite: Sprite2D, viewport: Vector2, buffer_mult: floa
 	layer.motion_mirroring = Vector2(0, tiles_y * tex_size.y)
 
 
-## Sets up the bushes layer with random X positions, sizes, and textures.
-## @param viewport: Vector2 - The viewport size.
-## @return: void
+## Clears existing children and repopulates the bushes layer with randomly
+## positioned, scaled, and textured sprites from the texture preloader
+## (resources whose IDs begin with "bush_").
+##
+## [param viewport]: Viewport size in pixels. [code]x[/code] bounds horizontal placement;
+## [code]y[/code] multiplied by [member parallax_screens_tall] sets the layer height and
+## vertical mirroring interval.
 func setup_bushes_layer(viewport: Vector2) -> void:
 	if not bushes_layer:
 		return
@@ -207,9 +212,15 @@ func setup_bushes_layer(viewport: Vector2) -> void:
 	bushes_layer.motion_mirroring = Vector2(0, layer_height)
 
 
-## Sets up the decor layer with random X positions, sizes, textures, rotations, and flips.
-## @param viewport: Vector2 - The viewport size.
-## @return: void
+## Clears existing children and repopulates the decor layer with sprites from the
+## texture preloader (resources whose IDs begin with "decor_").
+##
+## Each element gets a random position, scale, texture, cardinal rotation, and
+## horizontal/vertical flip.
+##
+## [param viewport]: Viewport size in pixels. [code]x[/code] bounds horizontal placement;
+## [code]y[/code] multiplied by [member parallax_screens_tall] sets the layer height and
+## vertical mirroring interval.
 func setup_decor_layer(viewport: Vector2) -> void:
 	if not decor_layer:
 		return
@@ -280,12 +291,13 @@ func _process(_delta: float) -> void:
 		)
 
 
-## Shows a temporary on-screen message (non-blocking).
-## Centralizes timer + flag reset to prevent races.
-## :param text: Message to display.
-## :param type: Which flag to manage (defaults to CRITICAL for backward compat).
-## :type type: MessageType
-## :rtype: void
+## Shows a temporary on-screen message non-blocking and centralizes flags.
+##
+## Displays the specified text on the message label, automatically hiding it after four seconds
+## and resetting the correct flag based on the message type to prevent race conditions.
+##
+## [param text]: The text parameter.
+## [param type]: The type parameter.
 func show_message(text: String, type: MessageType = MessageType.CRITICAL_UNBOUND) -> void:
 	if not is_instance_valid(message_label):
 		return

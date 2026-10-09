@@ -7,8 +7,8 @@ concurrency:
   cancel-in-progress: true
 
 # Least-privilege floor for the orchestrator. Verified against all 7 called workflows on
-# 2026-09-27: none use the SARIF/security-events API. Only gdunit4_tests and gut_tests
-# request checks:write, granted at the job level below rather than here.
+# 2026-09-27: none use the SARIF/security-events API. Re-verified 2026-10-06 (#1003):
+# none use the Checks API either, so no job below is granted checks:write.
 permissions:
   contents: "read"
   pull-requests: "read"
@@ -41,25 +41,26 @@ jobs:
       - name: "Checkout Code"
         uses: "actions/checkout@v7.0.1"
         with:
-          # Full history: on a batched push (multiple commits at once, rebase, force-push)
-          # github.event.before may point further back than a shallow clone can see,
-          # which breaks the paths-filter diff below. fetch-depth: 0 removes that risk
-          # entirely at the cost of a slower checkout on this one job.
+          # Full history keeps the PR base commit available locally for the
+          # paths-filter diff below, at the cost of a slower checkout on this job.
           fetch-depth: 0
       - name: "Filter Paths"
-        # Pinned to a full commit SHA per security review: the @v3 tag is a mutable
-        # major-version pointer that has moved several times (currently v3.0.2+).
-        # This SHA corresponds to the v3.0.2 release, verified against dorny/paths-filter's
-        # published history. Newer v3.0.x patches exist (e.g. v3.0.4, which escapes
-        # multi-line filenames in list-files output) -- verify the latest with
-        # `git ls-remote --tags https://github.com/dorny/paths-filter.git v3` and
-        # update this SHA if you want that fix.
-        uses: "dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36"  # v3.0.2
+        # Pinned to a full commit SHA per security review: the @v4 tag is a mutable
+        # major-version pointer.
+        # This SHA corresponds to the v4.0.3 release, verified against
+        # dorny/paths-filter's published history. To check for newer v4.0.x patches,
+        # verify the latest with
+        # `git ls-remote --tags https://github.com/dorny/paths-filter.git v4` and
+        # update this SHA if you want those fixes.
+        uses: "dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d"  # v4.0.3
         id: "filter"
         with:
+          # With token "" the action diffs locally. `base` is deliberately unset,
+          # so every run compares the whole PR against pull_request.base.sha.
+          # Do not set base to github.event.before: with cancel-in-progress, a
+          # cancelled run's changes would drop out of the next run's diff, and a
+          # .gd change followed by a docs-only push would skip the test jobs.
           token: ""
-          # On subsequent pushes, compare against the last commit. On initial PR open, fall back to the base branch.
-          base: "${{ github.event.before == '0000000000000000000000000000000000000000' && github.event.pull_request.base.sha || github.event.before }}"
           filters: |
             gdscript:
               - '**/*.gd'
@@ -134,7 +135,6 @@ jobs:
       - "yamllint"
     permissions:
       contents: "read"
-      checks: "write"  # Required: gdunit4_tests.yml's own job declares checks:write
     # always() lets this job evaluate even if a needed job was skipped (e.g. no markdown
     # changed). The explicit result checks below are what actually block it on failure,
     # since a lint failure makes its own downstream test job *skip* rather than fail.
@@ -152,8 +152,6 @@ jobs:
       }}
     # yamllint enable rule:line-length
     uses: "./.github/workflows/gdunit4_tests.yml"
-    secrets:
-      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
 
   gut_tests:
     name: "GUT Unit Tests"
@@ -164,7 +162,6 @@ jobs:
       - "yamllint"
     permissions:
       contents: "read"
-      checks: "write"  # Required: gut_tests.yml's own job declares checks:write
     # yamllint disable rule:line-length
     if: >-
       ${{

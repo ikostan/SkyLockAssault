@@ -8,7 +8,6 @@ permissions:
   actions: "read"
   # Needed to upload SARIF results
   security-events: "write"
-  checks: "write"  # Add this to allow check run creation
 
 on:  # yamllint disable-line rule:truthy
   push:
@@ -34,8 +33,6 @@ jobs:
       - "gdlint"
       - "readmelint"
       - "yamllint"
-    secrets:
-      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
   gut_tests:
     name: "GUT Unit Tests"
     uses: "./.github/workflows/gut_tests.yml"
