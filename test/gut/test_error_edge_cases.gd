@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_error_edge_cases.gd
 ## GUT unit tests for AudioManager error/edge cases in save/load.
 ## Covers TC-SL-21 to TC-SL-25 from test plan.
