@@ -41,10 +41,8 @@ jobs:
       - name: "Checkout Code"
         uses: "actions/checkout@v7.0.1"
         with:
-          # Full history: on a batched push (multiple commits at once, rebase, force-push)
-          # github.event.before may point further back than a shallow clone can see,
-          # which breaks the paths-filter diff below. fetch-depth: 0 removes that risk
-          # entirely at the cost of a slower checkout on this one job.
+          # Full history keeps the PR base commit available locally for the
+          # paths-filter diff below, at the cost of a slower checkout on this job.
           fetch-depth: 0
       - name: "Filter Paths"
         # Pinned to a full commit SHA per security review: the @v4 tag is a mutable
@@ -57,12 +55,12 @@ jobs:
         uses: "dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d"  # v4.0.3
         id: "filter"
         with:
+          # With token "" the action diffs locally. `base` is deliberately unset,
+          # so every run compares the whole PR against pull_request.base.sha.
+          # Do not set base to github.event.before: with cancel-in-progress, a
+          # cancelled run's changes would drop out of the next run's diff, and a
+          # .gd change followed by a docs-only push would skip the test jobs.
           token: ""
-          # Live input: with token "" the action diffs locally and honours base.
-          # synchronize (new push): `before` is the previous head, so only the new
-          # commits are compared. opened/reopened: `before` is unset, base is empty,
-          # and the action falls back to pull_request.base.sha.
-          base: "${{ github.event.before }}"
           filters: |
             gdscript:
               - '**/*.gd'
