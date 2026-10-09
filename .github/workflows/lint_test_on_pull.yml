@@ -49,16 +49,20 @@ jobs:
       - name: "Filter Paths"
         # Pinned to a full commit SHA per security review: the @v4 tag is a mutable
         # major-version pointer.
-        # This SHA corresponds to the v4.0.3 release, verified against dorny/paths-filter's
-        # published history. To check for newer v4.0.x patches, verify the latest with
+        # This SHA corresponds to the v4.0.3 release, verified against
+        # dorny/paths-filter's published history. To check for newer v4.0.x patches,
+        # verify the latest with
         # `git ls-remote --tags https://github.com/dorny/paths-filter.git v4` and
         # update this SHA if you want those fixes.
         uses: "dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d"  # v4.0.3
         id: "filter"
         with:
           token: ""
-          # On subsequent pushes, compare against the last commit. On initial PR open, fall back to the base branch.
-          base: "${{ github.event.before == '0000000000000000000000000000000000000000' && github.event.pull_request.base.sha || github.event.before }}"
+          # Live input: with token "" the action diffs locally and honours base.
+          # synchronize (new push): `before` is the previous head, so only the new
+          # commits are compared. opened/reopened: `before` is unset, base is empty,
+          # and the action falls back to pull_request.base.sha.
+          base: "${{ github.event.before }}"
           filters: |
             gdscript:
               - '**/*.gd'
