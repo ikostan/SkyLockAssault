@@ -1,5 +1,5 @@
 # Copyright (C) 2026 Egor Kostan
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # tests/ci/test_gdunit4_workflow.py
 """Structural tests for .github/workflows/gdunit4_tests.yml (Issue #1003).
 

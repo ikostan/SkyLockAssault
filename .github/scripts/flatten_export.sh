@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copyright (C) 2025 Egor Kostan
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 # To address the duplication of the "Flatten Export Directory" logic
 # across workflows, I've extracted it into a shared Bash script at

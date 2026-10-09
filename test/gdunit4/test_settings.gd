@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_settings.gd
 ## GdUnit4 tests for Settings input save/load.
 ## IMPORTANT: This suite must NOT use keys/buttons/axes that conflict with Settings defaults,

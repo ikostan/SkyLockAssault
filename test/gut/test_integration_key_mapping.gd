@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_integration_key_mapping.gd
 ## GUT unit tests for integration of key mapping load, remap, persistence, and reset.
 ## Covers INT-01 to INT-03 from test plan.
