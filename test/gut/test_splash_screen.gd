@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_splash_screen.gd
 ##
 ## Integration test suite validating TASK-01 and TASK-03 implementations in splash_screen.gd:

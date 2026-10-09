@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_master_volume_control_and_music.gd
 ## GUT unit tests for audio_settings.gd Master and Music functionality.
 ## Covers TC-Music-01 to TC-Music-15 from test plan.
