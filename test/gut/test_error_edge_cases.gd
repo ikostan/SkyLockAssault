@@ -12,21 +12,47 @@ var test_config_path: String = "user://test_edge.cfg"
 var invalid_path: String = "res://invalid/unwritable.cfg"  # Simulate unwritable
 var corrupted_path: String = "user://corrupted.cfg"
 
+# Singleton state snapshot, restored in after_all() to prevent cross-suite leakage.
+var _orig_config_path: String
+var _orig_difficulty: float
+
+
+## Suite setup: Snapshot singleton state this suite mutates.
+## :rtype: void
+func before_all() -> void:
+	_orig_config_path = AudioManager.current_config_path
+	_orig_difficulty = Globals.settings.difficulty
+
+
+## Suite cleanup: Restore singleton state and remove test files.
+## :rtype: void
+func after_all() -> void:
+	_remove_test_files()
+	AudioManager.current_config_path = _orig_config_path
+	AudioManager._init_to_defaults()
+	AudioManager.apply_all_volumes()
+	Globals._is_loading_settings = true
+	Globals.settings.difficulty = _orig_difficulty
+	Globals._is_loading_settings = false
+
+
+## Delete any config files this suite may have created.
+## :rtype: void
+func _remove_test_files() -> void:
+	for path: String in [test_config_path, corrupted_path]:
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(path)
+
 
 ## Per-test setup: Reset AudioManager to defaults, delete test files.
 ## :rtype: void
 func before_each() -> void:
-	if FileAccess.file_exists(test_config_path):
-		DirAccess.remove_absolute(test_config_path)
-	if FileAccess.file_exists(corrupted_path):
-		DirAccess.remove_absolute(corrupted_path)
+	_remove_test_files()
 
 	Globals.set_test_encryption_key()
 	AudioManager.current_config_path = test_config_path
-	AudioManager._init_to_defaults()
-	AudioManager.apply_all_volumes()
-	
-	# Add audio buses if not exist
+
+	# Add audio buses if not exist (before apply_all_volumes so they receive state)
 	if AudioServer.get_bus_index(AudioConstants.BUS_MASTER) == -1:
 		AudioServer.add_bus(0)
 		AudioServer.set_bus_name(0, AudioConstants.BUS_MASTER)
@@ -42,6 +68,10 @@ func before_each() -> void:
 	if AudioServer.get_bus_index(AudioConstants.BUS_SFX_ROTORS) == -1:
 		AudioServer.add_bus()
 		AudioServer.set_bus_name(AudioServer.get_bus_count() - 1, AudioConstants.BUS_SFX_ROTORS)
+
+	AudioManager._init_to_defaults()
+	AudioManager.apply_all_volumes()
+
 	# Reset migration flag
 	Settings._needs_save = false
 
@@ -56,15 +86,31 @@ func test_tc_sl_21() -> void:
 	assert_eq(AudioManager.master_volume, 0.5)  # Unchanged
 
 
-## TC-SL-22 | Config validly encrypted but logically corrupt | Call load_volumes() | Corrupted data ignored.
-## RESTORED: Tests that if the file decrypts properly but contains strings instead of floats,
-## the GDScript logic safely ignores the garbage data without crashing.
+## TC-SL-22 | Config decrypts fine but is logically corrupt (wrong value types) |
+## Call apply_volumes_from_config() | Corrupted data ignored; current state kept; no crash.
+## Issue #704: built entirely in memory and passed straight to the parser, so no file is
+## written and the C++ crypto layer is never involved. Exhaustive type coverage lives in
+## test_audio_config_parsing.gd; this case covers every bus of the live singleton.
+## :rtype: void
 func test_tc_sl_22() -> void:
-	var cfg := ConfigFile.new()
-	cfg.set_value("audio", "master_volume", "potato_string")
-	AudioManager.master_volume = 0.75
-	AudioManager.apply_volumes_from_config(cfg)  # no disk, no crypto
-	assert_eq(AudioManager.master_volume, 0.75)
+	var cfg: ConfigFile = ConfigFile.new()
+	var expected: Dictionary = {}
+	for bus: String in AudioConstants.BUS_CONFIG.keys():
+		var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
+		# Non-default state, so a silent reset to defaults would also fail the test.
+		AudioManager.set_bus_state(bus, 0.75, true)
+		expected[bus] = AudioManager.get_bus_state(bus)
+		cfg.set_value("audio", config_data["volume_var"], "potato_string")
+		cfg.set_value("audio", config_data["muted_var"], "not_a_bool")
+
+	AudioManager.apply_volumes_from_config(cfg)
+
+	for bus: String in AudioConstants.BUS_CONFIG.keys():
+		assert_eq(
+			AudioManager.get_bus_state(bus), expected[bus], "Corrupt values must be ignored: " + bus
+		)
+	assert_eq(AudioManager.current_config_path, test_config_path, "Parser must not touch path")
+	assert_false(FileAccess.file_exists(test_config_path), "Parser must not write to disk")
 
 
 ## TC-SL-23 | Config with unknown sections/keys (e.g., "random" section). | Call save_volumes() or other saves | Unknown preserved (since load/set/save doesn't touch them); No deletion.
