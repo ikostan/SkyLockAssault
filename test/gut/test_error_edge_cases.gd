@@ -15,6 +15,7 @@ var corrupted_path: String = "user://corrupted.cfg"
 # Singleton state snapshot, restored in after_all() to prevent cross-suite leakage.
 var _orig_config_path: String
 var _orig_difficulty: float
+var _orig_bus_states: Dictionary = {}
 
 
 ## Suite setup: Snapshot singleton state this suite mutates.
@@ -22,6 +23,8 @@ var _orig_difficulty: float
 func before_all() -> void:
 	_orig_config_path = AudioManager.current_config_path
 	_orig_difficulty = Globals.settings.difficulty
+	for bus: String in AudioConstants.BUS_CONFIG.keys():
+		_orig_bus_states[bus] = AudioManager.get_bus_state(bus)
 
 
 ## Suite cleanup: Restore singleton state and remove test files.
@@ -29,7 +32,10 @@ func before_all() -> void:
 func after_all() -> void:
 	_remove_test_files()
 	AudioManager.current_config_path = _orig_config_path
-	AudioManager._init_to_defaults()
+	# Restore each bus's entry state (not defaults) and re-sync AudioServer.
+	for bus: String in _orig_bus_states:
+		var state: Dictionary = _orig_bus_states[bus]
+		AudioManager.set_bus_state(bus, state["volume"], state["muted"])
 	AudioManager.apply_all_volumes()
 	Globals._is_loading_settings = true
 	Globals.settings.difficulty = _orig_difficulty
