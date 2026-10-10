@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: "write"
       pull-requests: "write"
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-24.04"
     steps:
       # yamllint disable-line rule:line-length
       - uses: "release-drafter/release-drafter@72967cdc98ddd3160f1fc3dff619de365e137dd0"

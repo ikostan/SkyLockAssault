@@ -1,0 +1,55 @@
+---
+name: "Ubuntu 26.04 Canary"
+
+# Ref #1008: ADVISORY ONLY. Runs the Godot test suites and the full web export
+# + browser tests on ubuntu-26.04 so incompatibilities surface before the
+# "latest" Ubuntu runner label moves (Oct 19 - Nov 19, 2026). It is not called from
+# lint_test_on_pull.yml or lint_test_deploy.yml and must not be a required
+# check. Record failures as follow-up issues. Delete this workflow (and
+# tests/ci/test_runner_pinning.py) once the migration to ubuntu-26.04 lands.
+#
+# Scheduled triggers only run from the default branch: start the first run
+# manually after merge (Actions -> "Ubuntu 26.04 Canary" -> Run workflow).
+on:  # yamllint disable-line rule:truthy
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"  # Mondays 06:00 UTC
+
+permissions:
+  contents: "read"
+
+concurrency:
+  group: "ubuntu-26-canary"
+  cancel-in-progress: true
+
+# No `needs:` between jobs, so one failure does not hide the other results.
+jobs:
+  gdunit4_tests:
+    name: "GDUnit4 Unit Tests (26.04)"
+    uses: "./.github/workflows/gdunit4_tests.yml"
+    with:
+      runner: "ubuntu-26.04"
+
+  gut_tests:
+    name: "GUT Unit Tests (26.04)"
+    uses: "./.github/workflows/gut_tests.yml"
+    with:
+      runner: "ubuntu-26.04"
+    secrets:
+      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+
+  ci_script_tests:
+    name: "CI/CD Infrastructure Tests (26.04)"
+    uses: "./.github/workflows/test_ci_scripts.yml"
+    with:
+      runner: "ubuntu-26.04"
+      godot_version: "4.7.1-stable"
+
+  browser_tests:
+    name: "Browser Functional Tests (26.04)"
+    uses: "./.github/workflows/browser_test.yml"
+    with:
+      runner: "ubuntu-26.04"
+      upload_coverage: false
+    secrets:
+      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"

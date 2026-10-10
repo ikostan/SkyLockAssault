@@ -21,7 +21,7 @@ jobs:
     permissions:
       contents: "write"
       pull-requests: "write"
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-24.04"
     outputs:
       tag_name: "${{ steps.drafter.outputs.tag_name }}"  # Expose from step
     steps:
