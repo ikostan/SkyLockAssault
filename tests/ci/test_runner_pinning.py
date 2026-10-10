@@ -69,7 +69,11 @@ def test_reusable_workflow_defines_runner_input(name: str) -> None:
 @pytest.mark.parametrize("name", REUSABLE)
 def test_reusable_workflow_jobs_use_runner_input(name: str) -> None:
     jobs = _load(name)["jobs"]
-    wrong = {jid: j.get("runs-on") for jid, j in jobs.items() if j.get("runs-on") != RUNNER_EXPR}
+    wrong = {
+        jid: j.get("runs-on")
+        for jid, j in jobs.items()
+        if j.get("runs-on") != RUNNER_EXPR
+    }
     assert not wrong, f"{name}: jobs not using {RUNNER_EXPR}: {wrong}"
 
 
