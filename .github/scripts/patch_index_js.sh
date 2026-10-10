@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copyright (C) 2025 Egor Kostan
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 # Script to apply security patch to index.js in Godot web export.
 # Checks for file existence, applies flexible perl regex patch if the target pattern is found,

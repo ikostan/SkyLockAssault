@@ -7,7 +7,7 @@ on:  # yamllint disable-line rule:truthy
 
 jobs:
   lint:
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-24.04"
     # Adding 'timeout-minutes: 10' would prevent jobs from running
     # indefinitely if something goes wrong
     timeout-minutes: 10

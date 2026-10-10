@@ -8,6 +8,14 @@ on:  # yamllint disable-line rule:truthy
         description: "Codecov requires a token to authenticate"
         required: true
     inputs:
+      runner:
+        description: "Runner label. Ubuntu 26.04 canary passes ubuntu-26.04"
+        type: "string"
+        default: "ubuntu-24.04"
+      upload_coverage:
+        description: "Upload Playwright coverage to Codecov. The canary passes false"
+        type: "boolean"
+        default: true
       godot_version:
         type: "string"
         default: "4.7.1-stable"
@@ -20,7 +28,7 @@ on:  # yamllint disable-line rule:truthy
 jobs:
   build-web:
     name: "Build Web Artifact"
-    runs-on: "ubuntu-latest"
+    runs-on: "${{ inputs.runner }}"
     timeout-minutes: 15
     steps:
       - name: "Checkout code"
@@ -90,7 +98,7 @@ jobs:
   test-shard:
     name: "Shard: ${{ matrix.suite }}"
     needs: "build-web"
-    runs-on: "ubuntu-latest"
+    runs-on: "${{ inputs.runner }}"
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -375,7 +383,7 @@ jobs:
           retention-days: 7
 
       - name: "Upload Coverage to Codecov"
-        if: "${{ !cancelled() }}"
+        if: "${{ !cancelled() && inputs.upload_coverage }}"
         uses: "codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5"  # v7.1.1
         with:
           files: "./coverage/lcov/lcov.info"

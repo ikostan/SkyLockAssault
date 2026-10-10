@@ -43,3 +43,4 @@ report.html
 project_structure.txt
 *.pyc
 ikostan-skylockassault-8a5edab282632443.txt
+0001-ci-pin-runners-to-ubuntu-24.04-and-add-non-blocking-.patch

@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_sfx_rotor_volume_control.gd
 ## GUT unit tests for audio_settings.gd SFX and Rotor functionality.
 ## Covers TC-Rotor-01 to TC-Rotor-15 from test plan.

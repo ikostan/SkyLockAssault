@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_gdunit_game_settings_resource.gd
 ##
 ## GdUnit4 unit tests for GameSettingsResource and GameplaySettings initialization.
