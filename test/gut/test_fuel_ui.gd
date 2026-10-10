@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_fuel_ui_gut.gd
 ## Unit tests for UI reactivity to fuel updates.
 extends "res://addons/gut/test.gd"

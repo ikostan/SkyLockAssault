@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_settings_menu_base.gd
 ##
 ## SMB: Unit tests for SettingsMenuBase (settings_menu_base.gd), issue #480.

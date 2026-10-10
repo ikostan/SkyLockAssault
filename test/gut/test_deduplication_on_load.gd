@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_deduplication_on_load.gd
 ## Additional GUT unit test to ensure duplicates in config are deduplicated on load.
 ## Scenario: Config has duplicate events (e.g., same key twice) → load dedups to unique events.

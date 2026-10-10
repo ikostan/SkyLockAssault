@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_player_fuel_logic.gd
 ## GUT unit tests for Player fuel consumption, engine states, and UI Reactivity.
 extends "res://addons/gut/test.gd"

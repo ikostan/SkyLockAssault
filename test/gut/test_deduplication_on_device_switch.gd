@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_deduplication_on_device_switch.gd
 ## Additional GUT unit test to ensure device switch during remap doesn't duplicate.
 ## Scenario: Start remap, switch device, input → no cross-device dups or extras.
