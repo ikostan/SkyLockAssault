@@ -19,6 +19,9 @@ on:  # yamllint disable-line rule:truthy
       godot_sha256:
         type: "string"
         default: "c7ff14fd28472c8d4f193043de30278dcf7e5241a1dcf7566b02e27addaa33ba"
+env:
+  # yamllint disable-line rule:line-length
+  RUNNER_SUFFIX: "${{ inputs.runner != 'ubuntu-24.04' && format('-{0}', inputs.runner) || '' }}"
 
 jobs:
   unit-test:
@@ -187,7 +190,7 @@ jobs:
         if: "always()"
         uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"  # v7.0.1
         with:
-          name: "gdunit-reports"
+          name: "gdunit-reports${{ env.RUNNER_SUFFIX }}"
           path: |
             reports/**
             artifacts/gdunit-reports/**

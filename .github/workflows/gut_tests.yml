@@ -18,6 +18,9 @@ on:  # yamllint disable-line rule:truthy
       CODECOV_TOKEN:
         description: "Codecov requires a token to authenticate"
         required: true
+env:
+  # yamllint disable-line rule:line-length
+  RUNNER_SUFFIX: "${{ inputs.runner != 'ubuntu-24.04' && format('-{0}', inputs.runner) || '' }}"
 
 jobs:
   unit-test:
@@ -115,6 +118,6 @@ jobs:
         if: "always()"
         uses: "actions/upload-artifact@v7"
         with:
-          name: "gut-reports"
+          name: "gut-reports${{ env.RUNNER_SUFFIX }}"
           path: "gut-reports/**"
           retention-days: 7
