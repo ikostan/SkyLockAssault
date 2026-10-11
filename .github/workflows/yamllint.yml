@@ -52,3 +52,27 @@ jobs:
       - name: "Analysing YML Files"
         run: |
           python -m yamllint -c .yamllint.yaml ${{ inputs.config-path }}
+
+      # Ref #1008: checks how workflows call each other (input and secret
+      # names, required inputs/secrets, expressions). These mistakes are valid
+      # YAML but stop GitHub from starting the workflow, and test_suite.yml
+      # only runs on main. Shell and Python checks are off; this checks wiring.
+      - name: "Install actionlint"
+        timeout-minutes: 3
+        env:
+          ACTIONLINT_VERSION: "1.7.7"
+          # yamllint disable-line rule:line-length
+          ACTIONLINT_SHA256: "023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757"
+        run: |
+          TAR="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          URL="https://github.com/rhysd/actionlint/releases/download"
+          wget -q --tries=3 --timeout=30 "${URL}/v${ACTIONLINT_VERSION}/${TAR}"
+          echo "${ACTIONLINT_SHA256}  ${TAR}" | sha256sum --check --status || {
+            echo "❌ CRITICAL: actionlint checksum mismatch."
+            exit 1
+          }
+          tar xzf "${TAR}" actionlint
+
+      - name: "Check Workflow Wiring (actionlint)"
+        run: |
+          ./actionlint -color -shellcheck= -pyflakes=
