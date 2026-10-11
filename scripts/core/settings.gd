@@ -392,14 +392,15 @@ func reset_to_defaults(device_type: String) -> void:
 	)
 
 
-## Return true if two events are exactly the same binding.
+## Returns true if two events are exactly the same binding.
 ##
-## Compares two input events to determine if they match, checking specific properties like
-## keycodes and modifiers for key events.
+## Key events match on [code]physical_keycode[/code] and all four modifiers (Shift, Ctrl, Alt,
+## Meta). Joypad buttons match on button index and device; joypad axes match on axis,
+## direction value and device. Events of different classes never match.
 ##
-## [param a]: The a parameter.
-## [param b]: The b parameter.
-## Returns Returns [code]true[/code] if the events match, [code]false[/code] otherwise.
+## [param a]: First event to compare. [code]null[/code] never matches.
+## [param b]: Second event to compare. [code]null[/code] never matches.
+## Returns [code]true[/code] if both events describe the same binding.
 func events_match(a: InputEvent, b: InputEvent) -> bool:
 	if a == null or b == null:
 		return false
@@ -413,6 +414,7 @@ func events_match(a: InputEvent, b: InputEvent) -> bool:
 			and a.shift_pressed == b.shift_pressed
 			and a.ctrl_pressed == b.ctrl_pressed
 			and a.alt_pressed == b.alt_pressed
+			and a.meta_pressed == b.meta_pressed
 		)
 
 	if a is InputEventJoypadButton:
@@ -422,13 +424,15 @@ func events_match(a: InputEvent, b: InputEvent) -> bool:
 	return false
 
 
-## Finds every other action that already uses this exact event.
+## Finds every other managed action that already uses this exact event.
 ##
-## Checks all actions against the specified event, ignoring the excluded action, and returns a
-## list of conflicting action names.
+## Only actions listed in [constant ACTIONS] are checked. Godot's built-in actions (for example
+## [code]ui_select[/code], [code]ui_cancel[/code] and the [code]ui_text_*[/code] family) are
+## ignored on purpose, because they share common keys and would report false conflicts.
 ##
-## [param event]: The event parameter.
-## [param exclude_action]: The exclude_action parameter.
+## [param event]: The event the player just pressed, compared with [method events_match].
+## [param exclude_action]: The action being remapped, skipped during the check.
+## Returns the conflicting action names, e.g. [code]["fire"][/code], or an empty array.
 func get_conflicting_actions(event: InputEvent, exclude_action: String = "") -> Array[String]:
 	var conflicts: Array[String] = []
 	for action: String in ACTIONS:
@@ -558,13 +562,15 @@ func _migrate_legacy_unbound_states() -> void:
 	Globals.set_meta(LEGACY_MIGRATION_KEY, true)
 
 
-## Return human-readable label for an InputEvent.
+## Returns a human-readable label for an InputEvent.
 ##
-## Supports keys, joypad buttons with Xbox and PlayStation labels, and axes such as triggers
-## and sticks. Handles modifier keys including Ctrl, Alt, Shift, and Meta, and falls back from
-## physical keycodes to standard keycodes.
+## Keys use [method OS.get_keycode_string] with Ctrl, Alt, Shift and Meta prefixes, preferring
+## [code]physical_keycode[/code] and falling back to [code]keycode[/code]. Joypad buttons
+## always use Xbox-style names (A, B, X, Y, LB, RB, ...) regardless of controller brand.
+## Joypad axes use stick and trigger names such as "Left Stick (Right)" or "Left Trigger (+)".
 ##
-## [param ev]: The ev parameter.
+## [param ev]: The event to label.
+## Returns the label, "Unbound" for a key with no keycode, or "Unknown" for other events.
 static func get_event_label(ev: InputEvent) -> String:
 	if ev is InputEventKey:
 		var modifiers: Array[String] = []
@@ -794,13 +800,17 @@ func load_last_input_device() -> void:
 		Globals.current_input_device = "keyboard"
 
 
-## Applies input mapping definitions from a ConfigFile into InputMap.
+## Applies input mapping definitions from an in-memory ConfigFile to the global InputMap.
 ##
-## Pure GDScript helper function without singleton side effects. Returns true if any
-## conflicting bindings were removed during mapping.
+## Performs no file I/O and does not modify the [code]_needs_save[/code] flag, so it can be
+## tested without touching disk. It is not side-effect free: for every action found in the
+## config it erases and re-adds events in the global InputMap, unbinds duplicate events from
+## other actions, and logs warnings through Globals.
 ##
-## [param config]: The config parameter.
-## [param actions]: The actions parameter.
+## [param config]: Loaded ConfigFile to read the [code]input[/code] section from. A
+## [code]null[/code] config is a no-op that returns [code]false[/code].
+## [param actions]: Action names to apply. Defaults to [constant ACTIONS].
+## Returns [code]true[/code] if any conflicting bindings were removed from other actions.
 func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTIONS) -> bool:
 	if config == null:
 		return false
