@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_pause_menu.gd
 ## GUT unit tests for pause_menu.gd based on test plan from #353.
 ## Covers PM-01 to PM-05.

@@ -21,7 +21,7 @@ on:  # yamllint disable-line rule:truthy
 jobs:
   detect-changes:
     name: "Detect Changed Files"
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-24.04"
     timeout-minutes: 10
     permissions:
       contents: "read"

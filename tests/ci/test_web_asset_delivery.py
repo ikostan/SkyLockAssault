@@ -1,5 +1,5 @@
 # Copyright (C) 2026 Egor Kostan
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # tests/ci/test_web_asset_delivery.py
 """Tests for the optimized local/CI web asset delivery logic added in PR #872.
 

@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Egor Kostan
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # tests/navigation_to_audio_test.py
 """
 Navigation to Audio Settings Test Suite (Playwright + UI Automation with DOM Overlays)

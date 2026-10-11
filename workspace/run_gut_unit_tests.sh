@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copyright (C) 2025 Egor Kostan
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 # This script runs GUT unit tests locally on Windows 10 using Godot 4.x.
 # Assumptions:

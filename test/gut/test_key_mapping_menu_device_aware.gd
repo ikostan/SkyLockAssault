@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_key_mapping_menu_device_aware.gd
 ## GUT unit tests for Key Mapping Menu — Device Toggle, Mutual Exclusivity, Reset, Persistence
 ## Covers KM-01 to KM-13 from test plan (Issue #352).
