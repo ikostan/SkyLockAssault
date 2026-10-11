@@ -344,8 +344,49 @@ class MemberDeclaration:
     params: List[str]
     context_snippet: str
     status: DocStatus = DocStatus.MISSING
+    return_type: Optional[str] = None
     existing_doc_lines: List[str] = field(default_factory=list)
     detached_doc_indices: List[int] = field(default_factory=list)
+
+
+MAX_CONTEXT_LINES = 200  # Whole function body; cap protects the prompt from huge functions
+RE_RETURN_TYPE = re.compile(r"\)\s*->\s*([^:]+?)\s*:")
+
+
+def extract_return_type(source_lines: List[str], decl_line: int) -> Optional[str]:
+    """Returns the declared return type ('void', 'bool', ...) or None if untyped.
+
+    Joins the signature lines until the one ending in ':' so wrapped signatures work.
+    """
+    header = ""
+    for line in source_lines[decl_line - 1 : decl_line + 9]:
+        header += line.strip() + " "
+        if line.rstrip().endswith(":"):
+            break
+    match = RE_RETURN_TYPE.search(header)
+    return match.group(1).strip() if match else None
+
+
+def get_function_body_snippet(
+    node: Tree, source_lines: List[str], insert_line: int, decl_line: int
+) -> str:
+    """Returns the function from its docs to its last code line.
+
+    gdtoolkit's end_line can point at the next statement, so trailing blank lines,
+    comments (the next member's ## docs) and unindented lines (the next declaration) are
+    trimmed. Body lines are always indented. The model must see the whole body; a partial
+    body made it trust stale comments over code it never saw (PR #1024).
+    """
+    end_line = getattr(getattr(node, "meta", None), "end_line", None) or decl_line + 15
+    end_line = min(end_line, len(source_lines))
+    while end_line > decl_line:
+        line = source_lines[end_line - 1]
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#") and line[:1] in (" ", "\t"):
+            break
+        end_line -= 1
+    end_line = min(end_line, insert_line + MAX_CONTEXT_LINES)
+    return "".join(source_lines[insert_line - 1 : end_line])
 
 
 def get_first_token_line(node: Any) -> Optional[int]:
@@ -633,11 +674,10 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
                 decl_line=decl_line,
                 insert_line=insert_line,
                 params=params,
-                context_snippet="".join(
-                    source_lines[
-                        insert_line - 1 : min(len(source_lines), decl_line + 15)
-                    ]
+                context_snippet=get_function_body_snippet(
+                    node, source_lines, insert_line, decl_line
                 ),
+                return_type=extract_return_type(source_lines, decl_line),
                 existing_doc_lines=docs,
                 detached_doc_indices=detached,
             )
@@ -777,6 +817,31 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
 # -----------------------------------------------------------------------------
 # Classification Engine
 # -----------------------------------------------------------------------------
+RE_DOUBLE_RETURNS = re.compile(r"^\s*##\s*Returns?\b\s*:?\s*Returns?\b", re.IGNORECASE)
+RE_RETURNS_DOC_LINE = re.compile(r"^\s*##\s*Returns?\b", re.IGNORECASE)
+RE_PARAM_DOC_LINE = re.compile(r"^\s*##\s*\[param\s+(\w+)\]\s*:\s*(.*)$")
+
+
+def has_doc_quality_defects(decl: MemberDeclaration) -> bool:
+    """Mirrors validate_gdscript_docs.check_function_doc_quality (keep in sync).
+
+    Defective docstrings are regenerated instead of failing the validator later.
+    """
+    if decl.kind != "function":
+        return False
+    for line in decl.existing_doc_lines:
+        if RE_DOUBLE_RETURNS.match(line):
+            return True
+        if RE_RETURNS_DOC_LINE.match(line) and decl.return_type == "void":
+            return True
+        param_match = RE_PARAM_DOC_LINE.match(line)
+        if param_match:
+            name, desc = param_match.group(1), param_match.group(2).strip().rstrip(".")
+            if desc.lower() in (f"the {name} parameter".lower(), f"the {name}".lower(), ""):
+                return True
+    return False
+
+
 def classify_member(decl: MemberDeclaration) -> None:
     """Classifies a member into COMPLIANT, MISSING, NON_COMPLIANT, or AMBIGUOUS."""
     if decl.status == DocStatus.AMBIGUOUS:
@@ -804,12 +869,17 @@ def classify_member(decl: MemberDeclaration) -> None:
         decl.status = DocStatus.NON_COMPLIANT
         return
 
+    if has_doc_quality_defects(decl):
+        decl.status = DocStatus.NON_COMPLIANT
+        return
+
     decl.status = DocStatus.COMPLIANT
 
 
 # -----------------------------------------------------------------------------
 # Formatting & Invariants
 # -----------------------------------------------------------------------------
+RE_LEADING_RETURNS = re.compile(r"^(?:returns?\b\s*:?\s*)+", re.IGNORECASE)
 
 
 def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> List[str]:
@@ -861,9 +931,10 @@ def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> Li
                 for line in wrapped_param:
                     lines.append(f"{line}\n")
 
-    # 4. Returns
-    if doc.returns and doc.returns.strip() and decl.kind == "function":
-        ret_desc = doc.returns.strip()
+    # 4. Returns (never for void; strip a duplicated leading 'Returns' from the model)
+    is_void = (decl.return_type or "").strip() == "void"
+    if doc.returns and doc.returns.strip() and decl.kind == "function" and not is_void:
+        ret_desc = RE_LEADING_RETURNS.sub("", doc.returns.strip())
         ret_prefix = f"{indent}## Returns "
         wrapped_ret = textwrap.wrap(
             ret_desc,
@@ -904,6 +975,28 @@ def verify_modification_allowlist(original: str, proposed: str) -> bool:
 # -----------------------------------------------------------------------------
 
 
+def find_incomplete_parameters(
+    members: List[MemberDoc], target_by_name: Dict[str, MemberDeclaration]
+) -> List[str]:
+    """Lists 'member.param' entries the model left empty or filled with a placeholder.
+
+    These used to be back-filled with "The <name> parameter.", which the quality check in
+    classify_member rejects after injection. Treating them as a failed response makes the
+    retry loop ask Gemini again instead of aborting the whole run.
+    """
+    incomplete: List[str] = []
+    for m in members:
+        target = target_by_name.get(m.name)
+        if target is None or target.kind not in ("function", "signal"):
+            continue
+        given = m.parameters or {}
+        for p_name in target.params:
+            desc = (given.get(p_name) or "").strip().rstrip(".").lower()
+            if desc in ("", f"the {p_name} parameter".lower(), f"the {p_name}".lower()):
+                incomplete.append(f"{m.name}.{p_name}")
+    return incomplete
+
+
 def query_gemini_for_docs(
     client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
 ) -> Dict[str, MemberDoc]:
@@ -938,6 +1031,7 @@ def query_gemini_for_docs(
                 "name": t.name,
                 "kind": t.kind,
                 "required_parameters": t.params,
+                "declared_return_type": t.return_type or "untyped",
                 "existing_developer_comments": (
                     "".join(t.existing_doc_lines).strip()
                     if t.existing_doc_lines
@@ -961,8 +1055,10 @@ def query_gemini_for_docs(
             "6. CRITICAL: Do NOT use [param] inside 'summary' or 'description'. Parameter documentation belongs exclusively in the 'parameters' dictionary.\n"
             "7. CRITICAL: Do NOT wrap types or Godot classes in brackets (e.g. NEVER use [bool], [int], [String], [FileAccess], [Node]). Use [code]TypeName[/code] if mentioning a type.\n"
             "8. Keep descriptions concise and under 80 characters where possible.\n"
-            "9. CRITICAL CONTEXT PRESERVATION: If 'existing_developer_comments' is provided, you MUST preserve its specific technical details, warnings, return behaviors, and explanations in your new summary, description, and parameter fields. Do not invent logic that contradicts the provided code or comments.\n"
-            "10. RETURN VALUES: If the existing comments describe a return type or return behavior (e.g., ':rtype: void' or returning a specific Dictionary), you MUST extract that information and document it accurately in the 'returns' field."
+            "9. CRITICAL CONTEXT PRESERVATION: If 'existing_developer_comments' is provided, preserve its specific technical details, warnings, accepted values, formats and examples (e.g. 'key:code', '\"keyboard\" or \"gamepad\"') in your summary, description, and parameter fields.\n"
+            "10. CODE IS THE SOURCE OF TRUTH: 'code_context' contains the whole function body. Existing comments can be stale. If a comment claims something the code does not do (e.g. 'pure' or 'no side effects' while the body changes global state, or support for a feature with no matching branch), drop or correct the claim. Never broaden a claim: 'every other action' must not become 'all actions', 'Xbox/PS' must not become 'Xbox and PlayStation' unless the code handles both.\n"
+            "11. RETURN VALUES: If 'declared_return_type' is 'void', set 'returns' to null. Otherwise describe what is returned, including special values such as null, empty arrays or fallback strings. The 'returns' text is printed after the word 'Returns', so it MUST NOT start with 'Returns', 'Return' or 'Returns:' (write 'true if ...', not 'Returns true if ...').\n"
+            "12. PARAMETERS: Each parameter description must say what the value means or which values are accepted. Never write filler such as 'The x parameter.'"
         )
 
         max_retries = 3
@@ -981,6 +1077,11 @@ def query_gemini_for_docs(
                     ),
                 )
                 validated = FileDocumentationResponse.model_validate_json(response.text)
+                incomplete = find_incomplete_parameters(validated.members, target_by_name)
+                if incomplete:
+                    raise ValueError(
+                        f"Missing or placeholder parameter descriptions: {incomplete}"
+                    )
                 print(
                     f"[DEBUG] API response received successfully for chunk {current_chunk}/{total_chunks}.",
                     flush=True,
@@ -1019,12 +1120,6 @@ def query_gemini_for_docs(
 
         for m in validated.members:
             target = target_by_name[m.name]
-
-            if target.params:
-                m.parameters = m.parameters or {}
-                for p_name in target.params:
-                    if p_name not in m.parameters:
-                        m.parameters[p_name] = f"The {p_name} parameter."
 
             m_param_set = set(m.parameters.keys()) if m.parameters else set()
             target_param_set = set(target.params) if target.params else set()
