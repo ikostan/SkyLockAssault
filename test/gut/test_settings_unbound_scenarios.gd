@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_settings_unbound_scenarios.gd
 ## GUT unit tests for settings.gd unbound/missing scenarios.
 ## Covers first load/missing → defaults; explicit [] → unbound;

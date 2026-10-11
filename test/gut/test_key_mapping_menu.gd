@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # test_key_mapping_menu.gd
 # GUT unit tests for Key Mapping Menu — Device Settings & UI Behavior (Issue #349)
 # Adapted to actual implementation: CheckButtons (Keyboard/Gamepad) with ButtonGroup + dynamic update

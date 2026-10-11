@@ -1,5 +1,5 @@
 # Copyright (C) 2025-2026 Egor Kostan
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # tests/ci/test_v8_coverage_utils.py
 """
 Test suite for V8 coverage collection utilities.

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copyright (C) 2025-2026 Egor Kostan
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 PROJECT_DIR="/project"
 EXPORT_DIR="$PROJECT_DIR/export/web_thread_off"

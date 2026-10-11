@@ -1,5 +1,5 @@
 # Copyright (C) 2026 Egor Kostan
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # tests/ci/test_browser_test_workflow.py
 
 """
@@ -103,7 +103,9 @@ def test_failure_diagnostic_artifacts_upload_only_on_failure(
     assert step["if"] == "failure()"
     assert step["uses"].startswith("actions/upload-artifact@")
     assert SHA_PINNED.match(step["uses"])
-    assert step["with"]["name"] == "test-failures-${{ matrix.artifact_suffix }}"
+    assert step["with"]["name"] == (
+        "test-failures-${{ matrix.artifact_suffix }}${{ env.RUNNER_SUFFIX }}"
+    )
     assert step["with"]["if-no-files-found"] == "ignore"
     assert step["with"]["retention-days"] == 7
 

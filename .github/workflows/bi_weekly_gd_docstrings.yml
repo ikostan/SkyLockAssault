@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   sync-docstrings:
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-24.04"
     # Caps a stalled Gemini API call well below the 6-hour default (#1005)
     timeout-minutes: 30
 
