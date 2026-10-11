@@ -349,7 +349,9 @@ class MemberDeclaration:
     detached_doc_indices: List[int] = field(default_factory=list)
 
 
-MAX_CONTEXT_LINES = 200  # Whole function body; cap protects the prompt from huge functions
+MAX_CONTEXT_LINES = (
+    200  # Whole function body; cap protects the prompt from huge functions
+)
 RE_RETURN_TYPE = re.compile(r"\)\s*->\s*([^:]+?)\s*:")
 
 
@@ -837,7 +839,11 @@ def has_doc_quality_defects(decl: MemberDeclaration) -> bool:
         param_match = RE_PARAM_DOC_LINE.match(line)
         if param_match:
             name, desc = param_match.group(1), param_match.group(2).strip().rstrip(".")
-            if desc.lower() in (f"the {name} parameter".lower(), f"the {name}".lower(), ""):
+            if desc.lower() in (
+                f"the {name} parameter".lower(),
+                f"the {name}".lower(),
+                "",
+            ):
                 return True
     return False
 
@@ -1077,7 +1083,9 @@ def query_gemini_for_docs(
                     ),
                 )
                 validated = FileDocumentationResponse.model_validate_json(response.text)
-                incomplete = find_incomplete_parameters(validated.members, target_by_name)
+                incomplete = find_incomplete_parameters(
+                    validated.members, target_by_name
+                )
                 if incomplete:
                     raise ValueError(
                         f"Missing or placeholder parameter descriptions: {incomplete}"

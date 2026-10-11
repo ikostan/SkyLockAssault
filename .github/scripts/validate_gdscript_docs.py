@@ -444,7 +444,9 @@ def check_function_doc_quality(
     errors: List[str] = []
     for line in docs:
         if RE_DOUBLE_RETURNS.match(line):
-            errors.append(f"{location} Function '{func_name}' has a duplicated 'Returns Returns'.")
+            errors.append(
+                f"{location} Function '{func_name}' has a duplicated 'Returns Returns'."
+            )
         elif RE_RETURNS_LINE.match(line) and return_type == "void":
             errors.append(
                 f"{location} Function '{func_name}' returns void but documents a return value."
@@ -452,7 +454,11 @@ def check_function_doc_quality(
         param_match = RE_PARAM_LINE.match(line)
         if param_match:
             name, desc = param_match.group(1), param_match.group(2).strip().rstrip(".")
-            if desc.lower() in (f"the {name} parameter".lower(), f"the {name}".lower(), ""):
+            if desc.lower() in (
+                f"the {name} parameter".lower(),
+                f"the {name}".lower(),
+                "",
+            ):
                 errors.append(
                     f"{location} Function '{func_name}' has a placeholder description "
                     f"for [param {name}]."
