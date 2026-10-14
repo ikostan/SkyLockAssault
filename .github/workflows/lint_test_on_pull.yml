@@ -27,6 +27,7 @@ jobs:
       contents: "read"
     outputs:
       gdscript: "${{ steps.filter.outputs.gdscript }}"
+      godot_tests: "${{ steps.filter.outputs.godot_tests }}"
       python_tests: "${{ steps.filter.outputs.python_tests }}"
       markdown: "${{ steps.filter.outputs.markdown }}"
       yaml: "${{ steps.filter.outputs.yaml }}"
@@ -61,13 +62,20 @@ jobs:
           # cancelled run's changes would drop out of the next run's diff, and a
           # .gd change followed by a docs-only push would skip the test jobs.
           token: ""
+          # Lets '!' patterns exclude files: a file counts only if it matches an
+          # include pattern and no '!' pattern. Filters without '!' patterns
+          # behave exactly as under the default 'some' quantifier. Do not drop
+          # this: under 'some', '!test/**' would match every file outside test/.
+          predicate-quantifier: "some-with-excludes"
           filters: |
             gdscript:
               - '**/*.gd'
               - '**/*.tscn'         # Godot scene files
               - '**/*.tres'         # Godot resource files
               - 'project.godot'
-              - 'test/**'           # Corrected to capture Godot tests (GUT/GDUnit4)
+              - '!test/**'          # Godot tests: see godot_tests below
+            godot_tests:
+              - 'test/**'           # GUT/GDUnit4 suites; never exported to web
             python_tests:
               - 'tests/**/*.py'     # Explicitly captures Playwright/E2E tests
               - 'pytest.ini'
@@ -144,6 +152,7 @@ jobs:
         always() &&
         (
           needs.detect-changes.outputs.gdscript == 'true' ||
+          needs.detect-changes.outputs.godot_tests == 'true' ||
           needs.detect-changes.outputs.gdunit4_workflow == 'true'
         ) &&
         needs.gdlint.result != 'failure' &&
@@ -168,6 +177,7 @@ jobs:
         always() &&
         (
           needs.detect-changes.outputs.gdscript == 'true' ||
+          needs.detect-changes.outputs.godot_tests == 'true' ||
           needs.detect-changes.outputs.gut_workflow == 'true'
         ) &&
         needs.gdlint.result != 'failure' &&
