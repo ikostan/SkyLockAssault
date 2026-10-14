@@ -19,6 +19,7 @@ browser shards. That relies on three things staying in place:
 """
 
 import pathlib
+import re
 
 import pytest
 import yaml
@@ -28,6 +29,12 @@ WORKFLOW = pathlib.Path(".github/workflows/lint_test_on_pull.yml")
 
 QUANTIFIER = "some-with-excludes"
 """The only paths-filter quantifier under which ``!`` patterns exclude files."""
+
+GAME_PATTERNS = {"**/*.gd", "**/*.tscn", "**/*.tres", "project.godot"}
+"""Positive ``gdscript`` patterns: changes to these must still trigger every job."""
+
+GODOT_TESTS_TRIGGER = "needs.detect-changes.outputs.godot_tests == 'true'"
+"""The exact clause that must enable the unit-test jobs for test-only PRs."""
 
 
 @pytest.fixture(scope="module")
@@ -81,9 +88,10 @@ def _job_if(workflow, job_id):
         job_id: The job key under ``jobs:``.
 
     Returns:
-        str: The ``if:`` expression, or an empty string if the job has none.
+        str: The ``if:`` expression with whitespace collapsed to single spaces,
+        or an empty string if the job has none.
     """
-    return str(workflow["jobs"][job_id].get("if", ""))
+    return " ".join(str(workflow["jobs"][job_id].get("if", "")).split())
 
 
 def test_filter_step_uses_some_with_excludes(filter_step):
@@ -92,10 +100,26 @@ def test_filter_step_uses_some_with_excludes(filter_step):
 
 
 def test_gdscript_excludes_godot_tests(filters):
-    """``gdscript`` must exclude ``test/**`` and must not include it."""
+    """
+    ``gdscript`` must exclude ``test/**`` and must not include it.
+
+    ``gdscript`` is a list, so ``in`` compares whole patterns: ``"test/**"``
+    does not match the ``"!test/**"`` entry.
+    """
     gdscript = filters["gdscript"]
     assert "!test/**" in gdscript
     assert "test/**" not in gdscript
+
+
+def test_gdscript_keeps_game_patterns(filters):
+    """
+    ``gdscript`` must still match game code, scenes, resources and the project.
+
+    Without this, dropping a positive pattern would leave the exclusion tests
+    passing while real game changes stop triggering lint, tests and export.
+    """
+    missing = GAME_PATTERNS - set(filters["gdscript"])
+    assert not missing, f"gdscript lost game patterns: {sorted(missing)}"
 
 
 def test_godot_tests_filter_exists(filters):
@@ -111,8 +135,17 @@ def test_detect_changes_exports_godot_tests(workflow):
 
 @pytest.mark.parametrize("job_id", ["gdunit4_tests", "gut_tests"])
 def test_unit_test_jobs_run_on_godot_tests(workflow, job_id):
-    """The unit-test jobs must run when only Godot test files change."""
-    assert "needs.detect-changes.outputs.godot_tests" in _job_if(workflow, job_id)
+    """
+    The unit-test jobs must run when only Godot test files change.
+
+    Checks the exact ``== 'true'`` clause, bounded by ``(``/``||`` before and
+    ``||``/``)`` after, so a ``!= 'true'`` or an ``&&``-joined clause cannot
+    pass by name alone.
+    """
+    condition = _job_if(workflow, job_id)
+    trigger = re.escape(GODOT_TESTS_TRIGGER)
+    operand = rf"(?:\(|\|\|)\s*{trigger}\s*(?:\|\||\))"
+    assert re.search(operand, condition), f"{job_id} must OR in: {GODOT_TESTS_TRIGGER}"
 
 
 @pytest.mark.parametrize("job_id", ["gdlint", "browser_tests"])
