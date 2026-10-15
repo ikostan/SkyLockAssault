@@ -439,6 +439,8 @@ def test_commit_metadata_falls_back_when_either_git_command_fails(
         responses.insert(0, subprocess.CompletedProcess([], 0, stdout="abc123\n"))
     run = Mock(side_effect=responses)
     monkeypatch.setattr(bundler.subprocess, "run", run)
+    # Pretend git is installed, so the test also passes on machines without it.
+    monkeypatch.setattr(bundler.shutil, "which", lambda name: "/usr/bin/git")
 
     assert bundler.get_commit_sha(tmp_path) == "unknown"
     assert run.call_count == (1 if failing_command == "rev-parse" else 2)
@@ -505,10 +507,10 @@ def test_main_reports_body_token_estimate_and_replaces_old_bundle(
 
 
 @pytest.mark.parametrize("source_state", ["file", "empty", "test", "tests"])
-def test_main_rejects_unusable_sources_without_overwriting_bundle(
+def test_main_rejects_unusable_sources_and_removes_stale_bundle(
     unit_repo, bundler, capsys, source_state
 ):
-    """Invalid sources, including an all-test tree, preserve an existing bundle."""
+    """Invalid sources, including an all-test tree, delete a bundle from an earlier run."""
     source = unit_repo / "scripts"
     if source_state == "file":
         source.rmdir()
@@ -520,12 +522,11 @@ def test_main_rejects_unusable_sources_without_overwriting_bundle(
             test_dir.mkdir(parents=True)
             (test_dir / "only.gd").write_text("# test code\n", encoding="utf-8")
         expected_error = f"ERROR: no .gd files found under {source}\n"
-    original = b"previous valid bundle\n"
-    (unit_repo / OUTPUT_NAME).write_bytes(original)
+    (unit_repo / OUTPUT_NAME).write_bytes(b"previous bundle\n")
 
     assert bundler.main() == 1
 
-    assert (unit_repo / OUTPUT_NAME).read_bytes() == original
+    assert not (unit_repo / OUTPUT_NAME).exists()
     captured = capsys.readouterr()
     assert captured.out == ""
     assert captured.err == expected_error
