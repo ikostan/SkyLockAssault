@@ -116,7 +116,7 @@ Adds a standalone, deterministic bundler that concatenates production GDScript u
 
 ---
 
-## PR #1036 Summary
+## Contribution Summary
 
 ### Human contribution (@ikostan)
 
