@@ -1,7 +1,6 @@
 # Copyright (C) 2026 Egor Kostan
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # tests/ci/test_bundle_production_code.py
-
 """
 Test suite for the production code bundler (workspace/bundle_production_code.py).
 
@@ -90,6 +89,15 @@ def git(root: Path, *args: str) -> str:
         timeout=10,
         check=True,
     ).stdout.strip()
+
+
+def make_symlink(link: Path, target: Path, is_dir: bool = False) -> None:
+    """Create a symlink, or skip the test where the OS doesn't allow it (Windows)."""
+    link.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        link.symlink_to(target, target_is_directory=is_dir)
+    except (OSError, NotImplementedError) as exc:
+        pytest.skip(f"symlinks not supported here: {exc}")
 
 
 def test_bundler_script_exists():
@@ -237,6 +245,25 @@ def test_commit_sha_and_dirty_flag(tmp_path):
     assert f"Commit: {sha}-dirty\n" in read_bundle(root)
 
 
+@pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
+def test_git_ignored_script_marks_dirty(tmp_path):
+    """A bundled file that git ignores isn't in HEAD, so the header must say -dirty."""
+    root = make_fake_repo(
+        tmp_path / "repo",
+        {"scripts/core/a.gd": "# a\n", ".gitignore": "scripts/core/local.gd\n"},
+    )
+    git(root, "init", "-q")
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", "init")
+    sha = git(root, "rev-parse", "HEAD")
+    (root / "scripts" / "core" / "local.gd").write_text("# local\n", encoding="utf-8")
+
+    assert run_bundler(root).returncode == 0
+    bundle = read_bundle(root)
+    assert "scripts/core/local.gd" in bundled_paths(bundle)
+    assert f"Commit: {sha}-dirty\n" in bundle
+
+
 def test_output_is_deterministic(tmp_path):
     """Two runs over the same tree produce byte-identical bundles."""
     root = make_fake_repo(
@@ -273,8 +300,8 @@ def test_output_uses_lf_line_endings(tmp_path):
 
 
 def test_fails_when_scripts_dir_missing(tmp_path):
-    """No scripts/ directory: exit 1 with an error, and no bundle written."""
-    root = make_fake_repo(tmp_path / "repo", {})
+    """No scripts/ directory: exit 1, and a stale bundle from an earlier run is removed."""
+    root = make_fake_repo(tmp_path / "repo", {OUTPUT_NAME: "stale bundle\n"})
     result = run_bundler(root)
 
     assert result.returncode == 1
@@ -283,10 +310,63 @@ def test_fails_when_scripts_dir_missing(tmp_path):
 
 
 def test_fails_when_no_gd_files(tmp_path):
-    """scripts/ without any .gd files: exit 1 with an error, and no bundle written."""
-    root = make_fake_repo(tmp_path / "repo", {"scripts/core/a.gd.uid": "uid://x\n"})
+    """No .gd files: exit 1, and a stale bundle from an earlier run is removed."""
+    root = make_fake_repo(
+        tmp_path / "repo",
+        {"scripts/core/a.gd.uid": "uid://x\n", OUTPUT_NAME: "stale bundle\n"},
+    )
     result = run_bundler(root)
 
     assert result.returncode == 1
     assert "no .gd files found" in result.stderr
     assert not (root / OUTPUT_NAME).exists()
+
+
+def test_symlinked_file_is_skipped_and_reported(tmp_path):
+    """A .gd symlink (e.g. to a file outside the repo) is never read into the bundle."""
+    outside = tmp_path / "outside.gd"
+    outside.write_text("# SECRET outside repo\n", encoding="utf-8")
+    root = make_fake_repo(tmp_path / "repo", {"scripts/core/a.gd": "# a\n"})
+    make_symlink(root / "scripts" / "core" / "link.gd", outside)
+
+    result = run_bundler(root)
+    assert result.returncode == 0
+
+    bundle = read_bundle(root)
+    assert bundled_paths(bundle) == ["scripts/core/a.gd"]
+    assert "SECRET" not in bundle
+    assert "skipping symlink scripts/core/link.gd" in result.stderr
+
+
+def test_symlinked_directory_is_reported(tmp_path):
+    """Files behind a directory symlink are skipped with a warning, not silently."""
+    outside_dir = tmp_path / "outside_dir"
+    outside_dir.mkdir()
+    (outside_dir / "b.gd").write_text("# b\n", encoding="utf-8")
+    root = make_fake_repo(tmp_path / "repo", {"scripts/core/a.gd": "# a\n"})
+    make_symlink(root / "scripts" / "linked", outside_dir, is_dir=True)
+
+    result = run_bundler(root)
+    assert result.returncode == 0
+    assert bundled_paths(read_bundle(root)) == ["scripts/core/a.gd"]
+    assert "skipping symlink scripts/linked" in result.stderr
+
+
+def test_output_symlink_is_replaced_not_followed(tmp_path):
+    """A symlink at the output path is replaced; the file it pointed to is untouched."""
+    victim = tmp_path / "victim.txt"
+    victim.write_text("do not overwrite\n", encoding="utf-8")
+    root = make_fake_repo(tmp_path / "repo", {"scripts/core/a.gd": "# a\n"})
+    make_symlink(root / OUTPUT_NAME, victim)
+
+    assert run_bundler(root).returncode == 0
+    assert victim.read_text(encoding="utf-8") == "do not overwrite\n"
+    assert not (root / OUTPUT_NAME).is_symlink()
+    assert bundled_paths(read_bundle(root)) == ["scripts/core/a.gd"]
+
+
+def test_no_temp_files_left_behind(tmp_path):
+    """The atomic write leaves only the final bundle in the repo root."""
+    root = make_fake_repo(tmp_path / "repo", {"scripts/core/a.gd": "# a\n"})
+    assert run_bundler(root).returncode == 0
+    assert not list(root.glob(f".{OUTPUT_NAME}.*.tmp"))
