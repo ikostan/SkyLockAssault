@@ -27,6 +27,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SOURCE_DIR = REPO_ROOT / "scripts"
 OUTPUT_FILE = REPO_ROOT / "production_code_bundle.txt"
 EXTENSION = ".gd"
+# Folders under scripts/ that hold test code, not production logic.
+EXCLUDED_DIRS = {"test", "tests"}
 # Rough heuristic for code: ~4 characters per token.
 CHARS_PER_TOKEN = 4
 
@@ -63,9 +65,15 @@ def collect_files(source_dir: Path) -> list[Path]:
     Return all production .gd files under source_dir, sorted by path.
 
     Only the exact '.gd' suffix matches, so '.gd.uid', '.import', '.tscn',
-    '.tres' and binary assets are excluded automatically.
+    '.tres' and binary assets are excluded automatically. Anything inside a
+    'test/' or 'tests/' folder (at any depth under source_dir) is skipped.
     """
-    files = [p for p in source_dir.rglob(f"*{EXTENSION}") if p.is_file()]
+    files = [
+        p
+        for p in source_dir.rglob(f"*{EXTENSION}")
+        if p.is_file()
+        and not EXCLUDED_DIRS.intersection(p.relative_to(source_dir).parent.parts)
+    ]
     return sorted(files, key=lambda p: p.relative_to(source_dir).as_posix())
 
 

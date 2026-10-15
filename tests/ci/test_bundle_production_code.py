@@ -123,6 +123,29 @@ def test_includes_only_gd_files_under_scripts(tmp_path):
     ]
 
 
+def test_excludes_test_dirs_inside_scripts(tmp_path):
+    """Test code under scripts/test/ or scripts/tests/ (any depth) is not bundled."""
+    root = make_fake_repo(
+        tmp_path / "repo",
+        {
+            "scripts/core/a.gd": "extends Node\n",
+            "scripts/test/test_a.gd": "extends GutTest\n",
+            "scripts/tests/test_b.gd": "extends GutTest\n",
+            "scripts/ui/tests/helpers/c.gd": "extends Node\n",
+            "scripts/ui/latest/d.gd": "extends Node\n",
+            "scripts/ui/test_utils.gd": "extends Node\n",
+        },
+    )
+    assert run_bundler(root).returncode == 0
+
+    # Only folders named exactly test/tests are skipped, not similar names or files.
+    assert bundled_paths(read_bundle(root)) == [
+        "scripts/core/a.gd",
+        "scripts/ui/latest/d.gd",
+        "scripts/ui/test_utils.gd",
+    ]
+
+
 def test_files_are_sorted_by_path(tmp_path):
     """Order is by repo-relative path, independent of creation order."""
     root = make_fake_repo(
