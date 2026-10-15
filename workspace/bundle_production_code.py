@@ -172,12 +172,12 @@ def build_bundle(files: list[Path], repo_root: Path) -> tuple[str, int]:
 
 
 def write_atomically(target: Path, text: str) -> None:
-    """
+    r"""
     Write text to target via a temp file in the same folder, then swap it in.
 
     os.replace() replaces the directory entry itself, so an existing symlink at
     target is replaced, never followed, and a failed or interrupted write leaves
-    the previous file untouched. newline="\\n" keeps output identical on every OS.
+    the previous file untouched. newline="\n" keeps output identical on every OS.
     """
     fd, tmp_name = tempfile.mkstemp(
         dir=target.parent, prefix=f".{target.name}.", suffix=".tmp"
@@ -192,7 +192,7 @@ def write_atomically(target: Path, text: str) -> None:
 
 
 def _fail(message: str) -> int:
-    """Print an error, remove any previous bundle so it can't be mistaken for current."""
+    """Print an error and delete any old bundle so it isn't mistaken for current."""
     print(f"ERROR: {message}", file=sys.stderr)
     OUTPUT_FILE.unlink(missing_ok=True)
     return 1
@@ -203,9 +203,9 @@ def main() -> int:
     Build the production bundle with metadata at OUTPUT_FILE.
 
     Create or overwrite the output as UTF-8 with LF line endings and return 0
-    on success. Return 1 if SOURCE_DIR is missing, is a symlink, or contains no eligible
-    files; any bundle left by an earlier run is then deleted, so it can't be
-    mistaken for the current one. Paths are resolved from this script's
+    on success. Return 1 if SOURCE_DIR is missing, is a symlink, or contains
+    no eligible files; any bundle left by an earlier run is then deleted, so it
+    can't be mistaken for the current one. Paths are resolved from this script's
     location, independently of the current working directory.
 
     File read/write errors (OSError) and decoding errors (UnicodeDecodeError)

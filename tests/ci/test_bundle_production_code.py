@@ -53,7 +53,7 @@ def _without_git_vars(environ: dict[str, str]) -> dict[str, str]:
 
 
 def git_env(root: Path) -> dict[str, str]:
-    """Env that confines git to the fake repo: no inherited GIT_* vars, no parent repos."""
+    """Env confining git to the fake repo: no inherited GIT_* vars, no parent repos."""
     env = _without_git_vars(dict(os.environ))
     env["PYTHONIOENCODING"] = "utf-8"
     env["GIT_CEILING_DIRECTORIES"] = str(root.parent)
@@ -91,7 +91,7 @@ def run_bundler(
 
 
 def read_bundle(root: Path) -> str:
-    """Read the bundle without newline translation, so '\\r' would be visible."""
+    r"""Read the bundle without newline translation, so '\r' would be visible."""
     with open(root / OUTPUT_NAME, encoding="utf-8", newline="") as f:
         return f.read()
 
@@ -328,7 +328,7 @@ def test_output_uses_lf_line_endings(tmp_path):
 
 
 def test_fails_when_scripts_dir_missing(tmp_path):
-    """No scripts/ directory: exit 1, and a stale bundle from an earlier run is removed."""
+    """No scripts/ directory: exit 1, and a stale bundle from an earlier run is gone."""
     root = make_fake_repo(tmp_path / "repo", {OUTPUT_NAME: "stale bundle\n"})
     result = run_bundler(root)
 
@@ -546,7 +546,7 @@ def test_main_reports_body_token_estimate_and_replaces_old_bundle(
 def test_main_rejects_unusable_sources_and_removes_stale_bundle(
     unit_repo, bundler, capsys, source_state
 ):
-    """Invalid sources, including an all-test tree, delete a bundle from an earlier run."""
+    """Invalid sources, including an all-test tree, delete an earlier run's bundle."""
     source = unit_repo / "scripts"
     if source_state == "file":
         source.rmdir()
@@ -671,7 +671,7 @@ def test_git_calls_have_a_timeout_and_clean_env(tmp_path, monkeypatch, bundler):
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
 def test_bundler_ignores_inherited_git_dir(tmp_path):
-    """Run with GIT_DIR pointing at another repo: the header still names the fake repo."""
+    """With GIT_DIR pointing at another repo, the header still names the fake repo."""
     other = tmp_path / "other"
     other.mkdir()
     git(other, "init", "-q")
