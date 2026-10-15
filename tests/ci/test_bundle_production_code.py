@@ -40,12 +40,37 @@ def make_fake_repo(root: Path, files: dict[str, str]) -> Path:
     return root
 
 
+def _without_git_vars(environ: dict[str, str]) -> dict[str, str]:
+    """
+    Copy of environ without any GIT_* variables.
+
+    Git hooks (e.g. pre-commit) export GIT_DIR, GIT_INDEX_FILE, GIT_WORK_TREE and
+    friends. Those override repository discovery, so leaving them in place would
+    point git at the real repo instead of the fake one.
+    """
+    return {k: v for k, v in environ.items() if not k.startswith("GIT_")}
+
+
 def git_env(root: Path) -> dict[str, str]:
-    """Env that stops git from discovering any repo above the fake one."""
-    env = os.environ.copy()
+    """Env that confines git to the fake repo: no inherited GIT_* vars, no parent repos."""
+    env = _without_git_vars(dict(os.environ))
     env["PYTHONIOENCODING"] = "utf-8"
     env["GIT_CEILING_DIRECTORIES"] = str(root.parent)
     return env
+
+
+@pytest.fixture(autouse=True)
+def isolate_git(tmp_path, monkeypatch):
+    """
+    Apply the same isolation to this test process.
+
+    Unit tests call bundler.get_commit_sha() in-process, so its git subprocesses
+    inherit os.environ rather than git_env(); clean that too.
+    """
+    for key in list(os.environ):
+        if key.startswith("GIT_"):
+            monkeypatch.delenv(key)
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))
 
 
 def run_bundler(
@@ -580,3 +605,35 @@ def test_no_temp_files_left_behind(tmp_path):
     root = make_fake_repo(tmp_path / "repo", {"scripts/core/a.gd": "# a\n"})
     assert run_bundler(root).returncode == 0
     assert not list(root.glob(f".{OUTPUT_NAME}.*.tmp"))
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
+def test_inherited_git_dir_does_not_leak_into_fake_repo(tmp_path, monkeypatch, bundler):
+    """A GIT_DIR exported by a git hook must not redirect the helpers or the bundler."""
+    other = tmp_path / "other"
+    other.mkdir()
+    git(other, "init", "-q")  # stands in for the developer's real repo
+    root = make_fake_repo(tmp_path / "repo", {"scripts/a.gd": "# a\n"})
+    git(root, "init", "-q")
+
+    # Simulate running inside a hook of the "other" repo, then re-apply isolation.
+    monkeypatch.setenv("GIT_DIR", str(other / ".git"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(other))
+    assert "GIT_DIR" not in git_env(root)
+    monkeypatch.delenv("GIT_DIR")
+    monkeypatch.delenv("GIT_WORK_TREE")
+
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", "init")
+    assert bundler.get_commit_sha(root) == git(root, "rev-parse", "HEAD")
+    # The other repo never received a commit.
+    log = subprocess.run(
+        ["git", "log", "--oneline"],
+        cwd=str(other),
+        env=git_env(other),
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    assert log.returncode != 0 or log.stdout.strip() == ""
