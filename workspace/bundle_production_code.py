@@ -37,6 +37,29 @@ EXTENSION = ".gd"
 EXCLUDED_DIRS = {"test", "tests"}
 # Rough heuristic for code: ~4 characters per token.
 CHARS_PER_TOKEN = 4
+# Upper bound for each git call, so a hung git can't block the bundler.
+GIT_TIMEOUT_SECONDS = 10
+# Repository-local variables that override git's repo discovery
+# (the list printed by `git rev-parse --local-env-vars`). They are removed so
+# the metadata always describes REPO_ROOT, even when run from a git hook or
+# from a shell that exported GIT_DIR for another repository.
+GIT_REPO_ENV_VARS = (
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_CONFIG",
+    "GIT_CONFIG_PARAMETERS",
+    "GIT_CONFIG_COUNT",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_IMPLICIT_WORK_TREE",
+    "GIT_GRAFT_FILE",
+    "GIT_INDEX_FILE",
+    "GIT_NO_REPLACE_OBJECTS",
+    "GIT_REPLACE_REF_BASE",
+    "GIT_PREFIX",
+    "GIT_SHALLOW_FILE",
+    "GIT_COMMON_DIR",
+)
 
 
 def get_commit_sha(repo_root: Path) -> str:
@@ -45,29 +68,38 @@ def get_commit_sha(repo_root: Path) -> str:
 
     A '-dirty' suffix is added when 'scripts/' differs from HEAD in any way,
     including modified, untracked, or git-ignored files that could still be bundled.
-    Return 'unknown' if either Git command fails or cannot run, including when
-    no repository or HEAD commit is available.
+    Return 'unknown' if either Git command fails, times out or cannot run,
+    including when no repository or HEAD commit is available.
+
+    Git runs with repository-override variables removed (GIT_REPO_ENV_VARS),
+    so it always discovers the repository from repo_root.
     """
     git = shutil.which("git")
     if git is None:
         return "unknown"
+    env = {k: v for k, v in os.environ.items() if k not in GIT_REPO_ENV_VARS}
     try:
         sha = subprocess.run(
             [git, "rev-parse", "HEAD"],
             cwd=repo_root,
+            env=env,
             capture_output=True,
             text=True,
             check=True,
+            timeout=GIT_TIMEOUT_SECONDS,
         ).stdout.strip()
         dirty = subprocess.run(
             [git, "status", "--porcelain", "--ignored", "--", "scripts"],
             cwd=repo_root,
+            env=env,
             capture_output=True,
             text=True,
             check=True,
+            timeout=GIT_TIMEOUT_SECONDS,
         ).stdout.strip()
         return f"{sha}-dirty" if dirty else sha
-    except (OSError, subprocess.CalledProcessError):
+    except (OSError, subprocess.SubprocessError):
+        # SubprocessError covers CalledProcessError and TimeoutExpired.
         return "unknown"
 
 

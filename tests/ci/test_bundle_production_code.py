@@ -449,16 +449,23 @@ def test_build_bundle_with_no_files(bundler, tmp_path):
 
 
 @pytest.mark.parametrize("failing_command", ["rev-parse", "status"])
-@pytest.mark.parametrize("error_type", [OSError, subprocess.CalledProcessError])
+@pytest.mark.parametrize(
+    "error_type", [OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired]
+)
 def test_commit_metadata_falls_back_when_either_git_command_fails(
     tmp_path, monkeypatch, bundler, failing_command, error_type
 ):
-    """Missing Git and failed status queries both degrade to unknown metadata."""
-    error = (
-        OSError("git unavailable")
-        if error_type is OSError
-        else subprocess.CalledProcessError(128, ["git", failing_command])
-    )
+    """Missing, failing or hung Git (either command) degrades to unknown metadata."""
+    errors = {
+        OSError: OSError("git unavailable"),
+        subprocess.CalledProcessError: subprocess.CalledProcessError(
+            128, ["git", failing_command]
+        ),
+        subprocess.TimeoutExpired: subprocess.TimeoutExpired(
+            ["git", failing_command], timeout=10
+        ),
+    }
+    error = errors[error_type]
     responses = [error]
     if failing_command == "status":
         responses.insert(0, subprocess.CompletedProcess([], 0, stdout="abc123\n"))
@@ -637,3 +644,53 @@ def test_inherited_git_dir_does_not_leak_into_fake_repo(tmp_path, monkeypatch, b
         check=False,
     )
     assert log.returncode != 0 or log.stdout.strip() == ""
+
+
+def test_git_calls_have_a_timeout_and_clean_env(tmp_path, monkeypatch, bundler):
+    """Both git calls pass a finite timeout and drop repository-override variables."""
+    monkeypatch.setenv("GIT_DIR", "/somewhere/else/.git")
+    monkeypatch.setenv("GIT_INDEX_FILE", "/somewhere/else/.git/index")
+    run = Mock(return_value=subprocess.CompletedProcess([], 0, stdout="abc123\n"))
+    monkeypatch.setattr(bundler.subprocess, "run", run)
+    monkeypatch.setattr(bundler.shutil, "which", lambda name: "/usr/bin/git")
+
+    bundler.get_commit_sha(tmp_path)
+
+    assert run.call_count == 2
+    for call in run.call_args_list:
+        assert call.kwargs["timeout"] == bundler.GIT_TIMEOUT_SECONDS
+        assert "GIT_DIR" not in call.kwargs["env"]
+        assert "GIT_INDEX_FILE" not in call.kwargs["env"]
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
+def test_bundler_ignores_inherited_git_dir(tmp_path):
+    """Run with GIT_DIR pointing at another repo: the header still names the fake repo."""
+    other = tmp_path / "other"
+    other.mkdir()
+    git(other, "init", "-q")
+    (other / "x.txt").write_text("x\n", encoding="utf-8")
+    git(other, "add", "-A")
+    git(other, "commit", "-q", "-m", "other")
+    root = make_fake_repo(tmp_path / "repo", {"scripts/a.gd": "# a\n"})
+    git(root, "init", "-q")
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", "init")
+    sha = git(root, "rev-parse", "HEAD")
+
+    env = git_env(root)
+    env["GIT_DIR"] = str(other / ".git")
+    env["GIT_WORK_TREE"] = str(other)
+    result = subprocess.run(
+        [sys.executable, str(root / "workspace" / BUNDLER_SCRIPT.name)],
+        env=env,
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        timeout=10,
+        encoding="utf-8",
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert f"Commit: {sha}\n" in read_bundle(root)
