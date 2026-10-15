@@ -5,18 +5,20 @@
 """
 Test suite for the production code bundler (workspace/bundle_production_code.py).
 
-The bundler resolves the repo root from its own location, so each test builds
-an isolated fake repo (<tmp>/workspace/ + <tmp>/scripts/) with a copy of the
-script and runs it there. The real repo is never written to.
+CLI tests use an isolated fake repo (<tmp>/workspace/ + <tmp>/scripts/) with a
+copy of the script. Unit tests import the module and use temporary source files
+or patch its repository paths. The real repo is never written to.
 
 Audited for deterministic execution (subprocess timeouts, no static sleeps).
 """
 
+import importlib.util
 import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
@@ -290,3 +292,208 @@ def test_fails_when_no_gd_files(tmp_path):
     assert result.returncode == 1
     assert "no .gd files found" in result.stderr
     assert not (root / OUTPUT_NAME).exists()
+
+
+@pytest.fixture
+def bundler():
+    """Load a fresh bundler module without invoking its CLI entry point."""
+    spec = importlib.util.spec_from_file_location("bundle_production_code", BUNDLER_SCRIPT)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
+def unit_repo(tmp_path, monkeypatch, bundler):
+    """Point main() at a temporary repository with predictable commit metadata."""
+    root = tmp_path / "repo"
+    (root / "scripts").mkdir(parents=True)
+    monkeypatch.setattr(bundler, "REPO_ROOT", root)
+    monkeypatch.setattr(bundler, "SOURCE_DIR", root / "scripts")
+    monkeypatch.setattr(bundler, "OUTPUT_FILE", root / OUTPUT_NAME)
+    monkeypatch.setattr(bundler, "get_commit_sha", lambda repo_root: "test-sha")
+    return root
+
+
+@pytest.mark.parametrize("root_name", ["test", "tests", "project with spaces"])
+def test_collect_files_checks_only_directories_below_source(tmp_path, bundler, root_name):
+    """Ancestor names, test-like file names and .gd directories remain distinct."""
+    root = make_fake_repo(
+        tmp_path / root_name,
+        {
+            "scripts/z.gd": "# last\n",
+            "scripts/test.gd": "# production\n",
+            "scripts/testing/tests.gd": "# production helper\n",
+            "scripts/test/hidden.gd": "# excluded\n",
+            "scripts/core/tests/deep/hidden.gd": "# excluded\n",
+            "scripts/core/a.gd.uid": "uid://sidecar\n",
+            "scripts/directory.gd/notes.txt": "not a script\n",
+            "addons/outside.gd": "# outside source\n",
+        },
+    )
+
+    assert bundler.collect_files(root / "scripts") == [
+        root / "scripts/test.gd",
+        root / "scripts/testing/tests.gd",
+        root / "scripts/z.gd",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("content", "normalized", "lines"),
+    [
+        pytest.param("", "\n", 0, id="empty"),
+        pytest.param("\n", "\n", 1, id="blank-line"),
+        pytest.param("\n\n", "\n\n", 2, id="two-blank-lines"),
+        pytest.param(" \t", " \t\n", 1, id="whitespace-without-newline"),
+        pytest.param("first\nlast", "first\nlast\n", 2, id="unterminated-last-line"),
+        pytest.param("first\r\nlast\r\n", "first\nlast\n", 2, id="crlf"),
+        pytest.param("first\rlast\r", "first\nlast\n", 2, id="bare-cr"),
+        pytest.param('var café = "🚁"\n', 'var café = "🚁"\n', 1, id="unicode"),
+    ],
+)
+def test_build_bundle_preserves_content_and_counts_source_lines(
+    tmp_path, bundler, content, normalized, lines
+):
+    """Markers and inserted newlines must not inflate the source line count."""
+    root = make_fake_repo(tmp_path / "repo", {"scripts/ui/écran.gd": content})
+    rel = "scripts/ui/écran.gd"
+
+    body, total_lines = bundler.build_bundle([root / rel], root)
+
+    assert body == f"{START.format(rel)}\n{normalized}{END.format(rel)}\n\n"
+    assert total_lines == lines
+
+
+def test_build_bundle_preserves_supplied_order_and_file_boundaries(tmp_path, bundler):
+    """Building honors the input sequence and keeps adjacent empty files separate."""
+    root = make_fake_repo(
+        tmp_path / "repo", {"scripts/z.gd": "last", "scripts/a.gd": ""}
+    )
+
+    body, lines = bundler.build_bundle(
+        [root / "scripts/z.gd", root / "scripts/a.gd"], root
+    )
+
+    assert body == (
+        f"{START.format('scripts/z.gd')}\nlast\n"
+        f"{END.format('scripts/z.gd')}\n\n"
+        f"{START.format('scripts/a.gd')}\n\n"
+        f"{END.format('scripts/a.gd')}\n\n"
+    )
+    assert lines == 1
+
+
+def test_build_bundle_with_no_files(bundler, tmp_path):
+    """An empty input has neither source lines nor boundary markers."""
+    assert bundler.build_bundle([], tmp_path) == ("", 0)
+
+
+@pytest.mark.parametrize("failing_command", ["rev-parse", "status"])
+@pytest.mark.parametrize("error_type", [OSError, subprocess.CalledProcessError])
+def test_commit_metadata_falls_back_when_either_git_command_fails(
+    tmp_path, monkeypatch, bundler, failing_command, error_type
+):
+    """Missing Git and failed status queries both degrade to unknown metadata."""
+    error = (
+        OSError("git unavailable")
+        if error_type is OSError
+        else subprocess.CalledProcessError(128, ["git", failing_command])
+    )
+    responses = [error]
+    if failing_command == "status":
+        responses.insert(0, subprocess.CompletedProcess([], 0, stdout="abc123\n"))
+    run = Mock(side_effect=responses)
+    monkeypatch.setattr(bundler.subprocess, "run", run)
+
+    assert bundler.get_commit_sha(tmp_path) == "unknown"
+    assert run.call_count == (1 if failing_command == "rev-parse" else 2)
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
+@pytest.mark.parametrize(
+    "change", ["untracked-script", "staged-script", "staged-deletion", "non-gd-file"]
+)
+def test_commit_metadata_detects_all_scripts_changes(tmp_path, bundler, change):
+    """Metadata reflects untracked, staged, deleted and non-GDScript source changes."""
+    root = make_fake_repo(tmp_path / "repo", {"scripts/a.gd": "# original\n"})
+    git(root, "init", "-q")
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", "init")
+    sha = git(root, "rev-parse", "HEAD")
+    assert bundler.get_commit_sha(root) == sha
+
+    if change == "staged-deletion":
+        git(root, "rm", "scripts/a.gd")
+    elif change == "non-gd-file":
+        (root / "scripts/notes.txt").write_text("changed\n", encoding="utf-8")
+    else:
+        (root / "scripts/new.gd").write_text("# new\n", encoding="utf-8")
+        if change == "staged-script":
+            git(root, "add", "scripts/new.gd")
+
+    assert bundler.get_commit_sha(root) == f"{sha}-dirty"
+
+
+@pytest.mark.parametrize(
+    "content",
+    ["", "x", "xx", "xxx", "x" * 5000, "🚁" * 5],
+    ids=["empty", "one-char", "two-chars", "three-chars", "large", "unicode"],
+)
+def test_main_reports_body_token_estimate_and_replaces_old_bundle(
+    unit_repo, bundler, capsys, content
+):
+    """Token estimates use body characters, floor rounding and grouped numbers."""
+    rel = "scripts/a.gd"
+    (unit_repo / rel).write_text(content, encoding="utf-8")
+    (unit_repo / OUTPUT_NAME).write_text("stale bundle", encoding="utf-8")
+    body = f"{START.format(rel)}\n{content}\n{END.format(rel)}\n\n"
+    tokens = len(body) // 4
+    lines = 1 if content else 0
+    header = (
+        "SkyLockAssault - Production Code Bundle\n"
+        "Commit: test-sha\n"
+        "Source: scripts/**/*.gd\n"
+        "Files: 1\n"
+        f"Lines: {lines}\n"
+        f"Estimated tokens: ~{tokens:,}\n"
+        + "=" * 60
+        + "\n\n"
+    )
+
+    assert bundler.main() == 0
+
+    assert (unit_repo / OUTPUT_NAME).read_bytes() == (header + body).encode("utf-8")
+    captured = capsys.readouterr()
+    assert captured.err == ""
+    assert captured.out == (
+        f"Bundle complete! 1 files, {lines} lines, "
+        f"~{tokens:,} tokens -> {OUTPUT_NAME}\n"
+    )
+
+
+@pytest.mark.parametrize("source_state", ["file", "empty", "test", "tests"])
+def test_main_rejects_unusable_sources_without_overwriting_bundle(
+    unit_repo, bundler, capsys, source_state
+):
+    """Invalid sources, including an all-test tree, preserve an existing bundle."""
+    source = unit_repo / "scripts"
+    if source_state == "file":
+        source.rmdir()
+        source.write_text("not a directory", encoding="utf-8")
+        expected_error = f"ERROR: source directory not found: {source}\n"
+    else:
+        if source_state != "empty":
+            test_dir = source / "nested" / source_state
+            test_dir.mkdir(parents=True)
+            (test_dir / "only.gd").write_text("# test code\n", encoding="utf-8")
+        expected_error = f"ERROR: no .gd files found under {source}\n"
+    original = b"previous valid bundle\n"
+    (unit_repo / OUTPUT_NAME).write_bytes(original)
+
+    assert bundler.main() == 1
+
+    assert (unit_repo / OUTPUT_NAME).read_bytes() == original
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == expected_error
