@@ -10,8 +10,10 @@ codebase can be handed to a high-context AI tool in one upload.
 Each file is wrapped in START/END markers carrying its repo-relative path.
 Files are sorted by path, so the output is deterministic and diff-friendly.
 
-Symlinks under 'scripts/' are never followed: they are skipped and reported,
-so the bundle only ever contains real files from this repository.
+Symlinks are never followed: a symlinked 'scripts/' is rejected, and links
+below it are skipped and reported, so the bundle only ever contains real files
+from this repository. The header records the commit plus a SHA-256 of the
+bundled content, which identifies the exact code even for '-dirty' bundles.
 
 Companion to 'scan_project.py', which generates the folder/file tree
 ('project_structure.txt'). Use the tree for layout, this bundle for code.
@@ -20,6 +22,7 @@ Usage (from any working directory):
     python workspace/bundle_production_code.py
 """
 
+import hashlib
 import os
 import shutil
 import subprocess
@@ -66,6 +69,9 @@ def get_commit_sha(repo_root: Path) -> str:
     """
     Return HEAD's commit SHA for the repository at repo_root.
 
+    The SHA is only used when git's top-level directory *is* repo_root; a copy
+    of the project without its own .git that sits inside another repository
+    gets 'unknown' instead of the enclosing repository's SHA.
     A '-dirty' suffix is added when 'scripts/' differs from HEAD in any way,
     including modified, untracked, or git-ignored files that could still be bundled.
     Return 'unknown' if either Git command fails, times out or cannot run,
@@ -79,15 +85,20 @@ def get_commit_sha(repo_root: Path) -> str:
         return "unknown"
     env = {k: v for k, v in os.environ.items() if k not in GIT_REPO_ENV_VARS}
     try:
-        sha = subprocess.run(
-            [git, "rev-parse", "HEAD"],
+        rev_parse = subprocess.run(
+            [git, "rev-parse", "--show-toplevel", "HEAD"],
             cwd=repo_root,
             env=env,
             capture_output=True,
             text=True,
             check=True,
             timeout=GIT_TIMEOUT_SECONDS,
-        ).stdout.strip()
+        ).stdout.splitlines()
+        if len(rev_parse) != 2:
+            return "unknown"
+        toplevel, sha = rev_parse
+        if Path(toplevel).resolve() != repo_root.resolve():
+            return "unknown"  # repo_root is not a repository root of its own
         dirty = subprocess.run(
             [git, "status", "--porcelain", "--ignored", "--", "scripts"],
             cwd=repo_root,
@@ -192,7 +203,7 @@ def main() -> int:
     Build the production bundle with metadata at OUTPUT_FILE.
 
     Create or overwrite the output as UTF-8 with LF line endings and return 0
-    on success. Return 1 if SOURCE_DIR is missing or contains no eligible
+    on success. Return 1 if SOURCE_DIR is missing, is a symlink, or contains no eligible
     files; any bundle left by an earlier run is then deleted, so it can't be
     mistaken for the current one. Paths are resolved from this script's
     location, independently of the current working directory.
@@ -200,6 +211,10 @@ def main() -> int:
     File read/write errors (OSError) and decoding errors (UnicodeDecodeError)
     propagate to the caller rather than becoming a return code.
     """
+    # is_dir() follows symlinks, and find_symlinks() only looks *below* the
+    # source root, so a linked scripts/ itself must be rejected up front.
+    if SOURCE_DIR.is_symlink():
+        return _fail(f"source directory is a symlink: {SOURCE_DIR}")
     if not SOURCE_DIR.is_dir():
         return _fail(f"source directory not found: {SOURCE_DIR}")
 
@@ -219,6 +234,8 @@ def main() -> int:
     header_lines = [
         "SkyLockAssault - Production Code Bundle",
         f"Commit: {get_commit_sha(REPO_ROOT)}",
+        # Exact identity of the bundled code, even when Commit ends in -dirty.
+        f"Content SHA-256: {hashlib.sha256(body.encode('utf-8')).hexdigest()}",
         f"Source: scripts/**/*{EXTENSION}",
         f"Files: {len(files)}",
         f"Lines: {total_lines}",

@@ -11,6 +11,7 @@ or patch its repository paths. The real repo is never written to.
 Audited for deterministic execution (subprocess timeouts, no static sleeps).
 """
 
+import hashlib
 import importlib.util
 import os
 import shutil
@@ -468,7 +469,9 @@ def test_commit_metadata_falls_back_when_either_git_command_fails(
     error = errors[error_type]
     responses = [error]
     if failing_command == "status":
-        responses.insert(0, subprocess.CompletedProcess([], 0, stdout="abc123\n"))
+        responses.insert(
+            0, subprocess.CompletedProcess([], 0, stdout=f"{tmp_path}\nabc123\n")
+        )
     run = Mock(side_effect=responses)
     monkeypatch.setattr(bundler.subprocess, "run", run)
     # Pretend git is installed, so the test also passes on machines without it.
@@ -521,6 +524,7 @@ def test_main_reports_body_token_estimate_and_replaces_old_bundle(
     header = (
         "SkyLockAssault - Production Code Bundle\n"
         "Commit: test-sha\n"
+        f"Content SHA-256: {hashlib.sha256(body.encode('utf-8')).hexdigest()}\n"
         "Source: scripts/**/*.gd\n"
         "Files: 1\n"
         f"Lines: {lines}\n"
@@ -650,7 +654,9 @@ def test_git_calls_have_a_timeout_and_clean_env(tmp_path, monkeypatch, bundler):
     """Both git calls pass a finite timeout and drop repository-override variables."""
     monkeypatch.setenv("GIT_DIR", "/somewhere/else/.git")
     monkeypatch.setenv("GIT_INDEX_FILE", "/somewhere/else/.git/index")
-    run = Mock(return_value=subprocess.CompletedProcess([], 0, stdout="abc123\n"))
+    run = Mock(
+        return_value=subprocess.CompletedProcess([], 0, stdout=f"{tmp_path}\nabc123\n")
+    )
     monkeypatch.setattr(bundler.subprocess, "run", run)
     monkeypatch.setattr(bundler.shutil, "which", lambda name: "/usr/bin/git")
 
@@ -694,3 +700,61 @@ def test_bundler_ignores_inherited_git_dir(tmp_path):
 
     assert result.returncode == 0, result.stderr
     assert f"Commit: {sha}\n" in read_bundle(root)
+
+
+def test_symlinked_scripts_root_is_rejected(tmp_path):
+    """scripts/ itself linking outside the repo is refused, not bundled."""
+    outside_dir = tmp_path / "outside_src"
+    outside_dir.mkdir()
+    (outside_dir / "secret.gd").write_text("# SECRET\n", encoding="utf-8")
+    root = make_fake_repo(tmp_path / "repo", {OUTPUT_NAME: "stale bundle\n"})
+    make_symlink(root / "scripts", outside_dir, is_dir=True)
+
+    result = run_bundler(root)
+
+    assert result.returncode == 1
+    assert "source directory is a symlink" in result.stderr
+    assert not (root / OUTPUT_NAME).exists()
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
+def test_copy_inside_another_repo_reports_unknown_commit(tmp_path):
+    """A project copy without its own .git must not borrow the enclosing repo's SHA."""
+    outer = tmp_path / "outer"
+    outer.mkdir()
+    git(outer, "init", "-q")
+    (outer / "x.txt").write_text("x\n", encoding="utf-8")
+    git(outer, "add", "-A")
+    git(outer, "commit", "-q", "-m", "outer")
+    root = make_fake_repo(outer / "copy", {"scripts/a.gd": "# a\n"})
+
+    # Ceiling above 'outer', so git can discover the enclosing repository.
+    result = subprocess.run(
+        [sys.executable, str(root / "workspace" / BUNDLER_SCRIPT.name)],
+        env=git_env(outer),
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        timeout=10,
+        encoding="utf-8",
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "Commit: unknown\n" in read_bundle(root)
+
+
+def test_content_digest_identifies_exact_code(tmp_path):
+    """Different edits give different digests; identical code gives the same one."""
+
+    def digest_for(content: str, name: str) -> str:
+        root = make_fake_repo(tmp_path / name, {"scripts/a.gd": content})
+        assert run_bundler(root).returncode == 0
+        header = read_bundle(root).split("=" * 60, 1)[0]
+        line = next(x for x in header.splitlines() if x.startswith("Content SHA-256: "))
+        return line.removeprefix("Content SHA-256: ")
+
+    first = digest_for("var x = 1\n", "one")
+    assert digest_for("var x = 1\n", "same") == first
+    assert digest_for("var x = 2\n", "edited") != first
+    assert len(first) == 64
