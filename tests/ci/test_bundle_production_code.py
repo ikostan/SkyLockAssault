@@ -297,7 +297,9 @@ def test_fails_when_no_gd_files(tmp_path):
 @pytest.fixture
 def bundler():
     """Load a fresh bundler module without invoking its CLI entry point."""
-    spec = importlib.util.spec_from_file_location("bundle_production_code", BUNDLER_SCRIPT)
+    spec = importlib.util.spec_from_file_location(
+        "bundle_production_code", BUNDLER_SCRIPT
+    )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -316,7 +318,9 @@ def unit_repo(tmp_path, monkeypatch, bundler):
 
 
 @pytest.mark.parametrize("root_name", ["test", "tests", "project with spaces"])
-def test_collect_files_checks_only_directories_below_source(tmp_path, bundler, root_name):
+def test_collect_files_checks_only_directories_below_source(
+    tmp_path, bundler, root_name
+):
     """Ancestor names, test-like file names and .gd directories remain distinct."""
     root = make_fake_repo(
         tmp_path / root_name,
@@ -456,9 +460,7 @@ def test_main_reports_body_token_estimate_and_replaces_old_bundle(
         "Source: scripts/**/*.gd\n"
         "Files: 1\n"
         f"Lines: {lines}\n"
-        f"Estimated tokens: ~{tokens:,}\n"
-        + "=" * 60
-        + "\n\n"
+        f"Estimated tokens: ~{tokens:,}\n" + "=" * 60 + "\n\n"
     )
 
     assert bundler.main() == 0
