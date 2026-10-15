@@ -747,12 +747,16 @@ def test_copy_inside_another_repo_reports_unknown_commit(tmp_path):
 def test_content_digest_identifies_exact_code(tmp_path):
     """Different edits give different digests; identical code gives the same one."""
 
+    prefix = "Content SHA-256: "
+
     def digest_for(content: str, name: str) -> str:
+        """Bundle a one-file fake repo and return the digest from its header."""
         root = make_fake_repo(tmp_path / name, {"scripts/a.gd": content})
         assert run_bundler(root).returncode == 0
         header = read_bundle(root).split("=" * 60, 1)[0]
-        line = next(x for x in header.splitlines() if x.startswith("Content SHA-256: "))
-        return line.removeprefix("Content SHA-256: ")
+        matches = [x for x in header.splitlines() if x.startswith(prefix)]
+        assert len(matches) == 1, f"expected one '{prefix}' line in:\n{header}"
+        return matches[0].removeprefix(prefix)
 
     first = digest_for("var x = 1\n", "one")
     assert digest_for("var x = 1\n", "same") == first
