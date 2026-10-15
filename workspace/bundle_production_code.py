@@ -41,10 +41,12 @@ CHARS_PER_TOKEN = 4
 
 def get_commit_sha(repo_root: Path) -> str:
     """
-    Return the current git commit SHA, or 'unknown' if git is unavailable.
+    Return HEAD's commit SHA for the repository at repo_root.
 
-    A '-dirty' suffix is added when 'scripts/' differs from HEAD in any way:
-    modified, untracked, or git-ignored files (which could still be bundled).
+    A '-dirty' suffix is added when 'scripts/' differs from HEAD in any way,
+    including modified, untracked, or git-ignored files that could still be bundled.
+    Return 'unknown' if either Git command fails or cannot run, including when
+    no repository or HEAD commit is available.
     """
     git = shutil.which("git")
     if git is None:
@@ -104,9 +106,15 @@ def collect_files(source_dir: Path) -> list[Path]:
 
 def build_bundle(files: list[Path], repo_root: Path) -> tuple[str, int]:
     """
-    Concatenate files with boundary markers.
+    Concatenate UTF-8 files in the supplied order with boundary markers.
 
-    Returns the bundle body and the total number of source lines.
+    Markers use forward-slash paths relative to repo_root. Source line endings
+    are normalized to LF, and a missing final newline is added before the end
+    marker. Returns the bundle body and the total number of source lines,
+    excluding markers and added newlines; empty input returns ('', 0).
+
+    Raises ValueError if a path is not relative to repo_root. File read errors
+    (OSError) and invalid UTF-8 (UnicodeDecodeError) propagate to the caller.
     """
     parts: list[str] = []
     total_lines = 0
@@ -148,7 +156,17 @@ def _fail(message: str) -> int:
 
 
 def main() -> int:
-    """Build the bundle and write it to OUTPUT_FILE."""
+    """
+    Build the production bundle with metadata at OUTPUT_FILE.
+
+    Create or overwrite the output as UTF-8 with LF line endings and return 0
+    on success. Return 1 without writing the output if SOURCE_DIR is missing
+    or contains no eligible files. Paths are resolved from this script's
+    location, independently of the current working directory.
+
+    File read/write errors (OSError) and decoding errors (UnicodeDecodeError)
+    propagate to the caller rather than becoming a return code.
+    """
     if not SOURCE_DIR.is_dir():
         return _fail(f"source directory not found: {SOURCE_DIR}")
 
