@@ -160,8 +160,9 @@ def main() -> int:
     Build the production bundle with metadata at OUTPUT_FILE.
 
     Create or overwrite the output as UTF-8 with LF line endings and return 0
-    on success. Return 1 without writing the output if SOURCE_DIR is missing
-    or contains no eligible files. Paths are resolved from this script's
+    on success. Return 1 if SOURCE_DIR is missing or contains no eligible
+    files; any bundle left by an earlier run is then deleted, so it can't be
+    mistaken for the current one. Paths are resolved from this script's
     location, independently of the current working directory.
 
     File read/write errors (OSError) and decoding errors (UnicodeDecodeError)
