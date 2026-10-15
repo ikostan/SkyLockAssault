@@ -79,6 +79,7 @@ jobs:
             python_tests:
               - 'tests/**/*.py'     # Explicitly captures Playwright/E2E tests
               - 'pytest.ini'
+              - '!tests/ci/**'      # Run by ci_script_tests (ci filter); no web build
             markdown:
               - '**/*.md'
               - '**/*.txt'          # Grouped text files with documentation
