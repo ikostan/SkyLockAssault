@@ -7,6 +7,10 @@
 
 extends "res://addons/gut/test.gd"
 
+## Rotor playback buses used by player.gd (not exposed in AudioConstants).
+const BUS_SFX_ROTOR_LEFT: String = "SFX_Rotor_Left"
+const BUS_SFX_ROTOR_RIGHT: String = "SFX_Rotor_Right"
+
 # ==========================================================================
 # 1. BUS NAME CONSTANTS VERIFICATION
 # ==========================================================================
@@ -144,7 +148,8 @@ func test_fallback_bus_exists_in_audio_server() -> void:
 ## Validates that the mixer routing in default_bus_layout.tres matches the mute/volume
 ## hierarchy the Audio Settings UI and AudioWebBridge enforce (Issue #1045):
 ## SFX sub-buses (Weapon, Rotors, Menu) must send to SFX, so muting or lowering SFX
-## also silences or attenuates them.
+## also silences or attenuates them. The rotor playback buses must feed SFX_Rotors,
+## otherwise rotor audio would bypass the Rotors and SFX controls entirely.
 func test_bus_routing_matches_ui_hierarchy() -> void:
 	var expected_sends: Dictionary = {
 		AudioConstants.BUS_MUSIC: AudioConstants.BUS_MASTER,
@@ -152,6 +157,8 @@ func test_bus_routing_matches_ui_hierarchy() -> void:
 		AudioConstants.BUS_SFX_WEAPON: AudioConstants.BUS_SFX,
 		AudioConstants.BUS_SFX_ROTORS: AudioConstants.BUS_SFX,
 		AudioConstants.BUS_SFX_MENU: AudioConstants.BUS_SFX,
+		BUS_SFX_ROTOR_LEFT: AudioConstants.BUS_SFX_ROTORS,
+		BUS_SFX_ROTOR_RIGHT: AudioConstants.BUS_SFX_ROTORS,
 	}
 	for bus: String in expected_sends:
 		var bus_idx: int = AudioServer.get_bus_index(bus)
