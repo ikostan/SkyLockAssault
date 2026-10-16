@@ -3,7 +3,7 @@
 # tests/ci/test_pr_path_filters.py
 
 """
-Regression guard for the path filters in ``lint_test_on_pull.yml`` (#1018).
+Regression guard for the path filters in ``lint_test_on_pull.yml`` (#1018, #____).
 
 Godot test files under ``test/`` are excluded from the web export
 (``exclude_filter`` in ``export_presets.cfg``), so a PR that only changes them
@@ -16,6 +16,12 @@ browser shards. That relies on three things staying in place:
   so ``'!test/**'`` would match every file outside ``test/`` and turn
   ``gdscript`` on for every PR, docs-only ones included.
 * A separate ``godot_tests`` filter feeds only the unit-test jobs.
+
+The same mechanism keeps CI infrastructure tests out of the browser suite:
+
+* ``python_tests`` excludes ``tests/ci/**`` with a ``'!tests/ci/**'`` pattern.
+  Those tests only parse workflow and config files; ``ci_script_tests`` already
+  runs them through the ``ci`` filter, so they must not trigger the web export.
 """
 
 import pathlib
@@ -35,6 +41,9 @@ GAME_PATTERNS = {"**/*.gd", "**/*.tscn", "**/*.tres", "project.godot"}
 
 GODOT_TESTS_TRIGGER = "needs.detect-changes.outputs.godot_tests == 'true'"
 """The exact clause that must enable the unit-test jobs for test-only PRs."""
+
+FILTERS_WITH_EXCLUDES = ["gdscript", "python_tests"]
+"""The only filters allowed to carry ``!`` patterns (sorted)."""
 
 
 @pytest.fixture(scope="module")
@@ -154,20 +163,38 @@ def test_export_and_lint_jobs_ignore_godot_tests(workflow, job_id):
     assert "godot_tests" not in _job_if(workflow, job_id)
 
 
-def test_only_gdscript_uses_exclude_patterns(filters):
+def test_python_tests_excludes_ci_tests(filters):
+    """
+    ``python_tests`` must exclude ``tests/ci/**`` but keep matching other tests.
+
+    Playwright suites (``tests/*_test.py``, ``tests/refactor/``) still need the
+    browser run; only the CI infrastructure tests are routed elsewhere.
+    """
+    python_tests = filters["python_tests"]
+    assert "!tests/ci/**" in python_tests
+    assert "tests/**/*.py" in python_tests
+    assert "pytest.ini" in python_tests
+
+
+def test_ci_filter_still_covers_ci_tests(filters):
+    """``ci`` must keep ``tests/ci/**`` so ``ci_script_tests`` runs those tests."""
+    assert "tests/ci/**" in filters["ci"]
+
+
+def test_only_expected_filters_use_exclude_patterns(filters):
     """
     No other filter may carry a ``!`` pattern by accident.
 
-    ``some-with-excludes`` applies to every filter in the step. Today only
-    ``gdscript`` needs an exclusion; a new ``!`` pattern elsewhere should be a
-    deliberate change that updates this test.
+    ``some-with-excludes`` applies to every filter in the step. Only ``gdscript``
+    and ``python_tests`` need an exclusion; a new ``!`` pattern elsewhere should
+    be a deliberate change that updates ``FILTERS_WITH_EXCLUDES``.
     """
     with_excludes = sorted(
         name
         for name, patterns in filters.items()
         if any(str(p).startswith("!") for p in patterns)
     )
-    assert with_excludes == ["gdscript"]
+    assert with_excludes == FILTERS_WITH_EXCLUDES
 
 
 def test_exclude_patterns_require_quantifier(filter_step, filters):
