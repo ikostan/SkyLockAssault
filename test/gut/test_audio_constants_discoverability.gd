@@ -141,6 +141,30 @@ func test_fallback_bus_exists_in_audio_server() -> void:
 		"Fallback mixing bus '%s' must exist in default_bus_layout.tres" % AudioConstants.BUS_SFX_MENU)
 
 
+## Validates that the mixer routing in default_bus_layout.tres matches the mute/volume
+## hierarchy the Audio Settings UI and AudioWebBridge enforce (Issue #1045):
+## SFX sub-buses (Weapon, Rotors, Menu) must send to SFX, so muting or lowering SFX
+## also silences or attenuates them.
+func test_bus_routing_matches_ui_hierarchy() -> void:
+	var expected_sends: Dictionary = {
+		AudioConstants.BUS_MUSIC: AudioConstants.BUS_MASTER,
+		AudioConstants.BUS_SFX: AudioConstants.BUS_MASTER,
+		AudioConstants.BUS_SFX_WEAPON: AudioConstants.BUS_SFX,
+		AudioConstants.BUS_SFX_ROTORS: AudioConstants.BUS_SFX,
+		AudioConstants.BUS_SFX_MENU: AudioConstants.BUS_SFX,
+	}
+	for bus: String in expected_sends:
+		var bus_idx: int = AudioServer.get_bus_index(bus)
+		assert_gt(bus_idx, -1, "Bus '%s' must exist in default_bus_layout.tres" % bus)
+		if bus_idx == -1:
+			continue
+		assert_eq(
+			String(AudioServer.get_bus_send(bus_idx)),
+			expected_sends[bus],
+			"Bus '%s' must send to '%s' to match the UI mute hierarchy." % [bus, expected_sends[bus]]
+		)
+
+
 ## Verifies play_sfx() correctly routes to the fallback bus when an invalid bus is requested.
 func test_invalid_bus_fallback_routing() -> void:
 	var test_key: String = AudioConstants.SFX_ASSET_MAP.keys()[0]
