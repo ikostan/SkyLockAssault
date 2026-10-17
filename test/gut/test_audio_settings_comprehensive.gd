@@ -58,12 +58,11 @@ func _is_sound_playing() -> bool:
 	return false
 
 
-## Helper to dynamically calculate safety wait margins from production script constants
+## Helper to dynamically calculate safety wait margins from shared AudioConstants
 ## :rtype: float
 func _get_safety_wait_time() -> float:
-	var delay: float = audio_instance.MUTE_HARDWARE_DELAY
+	var delay: float = AudioConstants.MUTE_HARDWARE_DELAY
 	return delay + 0.05
-
 
 # ==========================================================================
 # 1. MANUAL INTERACTION BOUNDS WITH EPSILON (TC-AM-001 to TC-AM-006)

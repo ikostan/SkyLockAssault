@@ -8,9 +8,6 @@
 
 extends Control
 
-const MUTE_HARDWARE_DELAY: float = 0.15  # Shared Constant
-const AUTO_MUTE_VOLUME_THRESHOLD: float = 0.001
-
 # Test flags for warning popups
 var master_warning_shown: bool = false
 var sfx_warning_shown: bool = false
@@ -281,7 +278,7 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 			menu_slider.set_value_no_signal(volume)
 
 	# --- AUTO-MUTE ON NEAR-ZERO VOLUME THRESHOLD ---
-	if volume <= AUTO_MUTE_VOLUME_THRESHOLD and not AudioManager.get_muted(bus_name):
+	if volume <= AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD and not AudioManager.get_muted(bus_name):
 		# CIRCUIT BREAKER: Flip state immediately to stop rapid consecutive frame triggers
 		AudioManager.set_muted(bus_name, true)
 
@@ -293,12 +290,14 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 
 				var bus_idx: int = AudioServer.get_bus_index(bus_name)
 				if bus_idx != -1:
-					# Keep 0.15 here since this is a temporary linear volume level
-					# to let the click sound audibly stream out before flattening to 0.0
-					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.15))
+					# Hold a temporary audible level so the click can stream out
+					# before the bus is flattened to 0.0
+					AudioServer.set_bus_volume_db(
+						bus_idx, linear_to_db(AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR)
+					)
 
-				AudioManager.play_sfx("check")
-				await get_tree().create_timer(MUTE_HARDWARE_DELAY).timeout
+				AudioManager.play_sfx(AudioConstants.SFX_CHECK)
+				await get_tree().create_timer(AudioConstants.MUTE_HARDWARE_DELAY).timeout
 
 				# TOKEN GATE: Only apply the zero reset if a newer drag didn't interrupt it
 				if current_token == _master_zero_token and bus_idx != -1:
@@ -307,7 +306,7 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 				AudioManager.play_sfx("check")
 
 	# --- AUTO-UNMUTE ON NON-ZERO VOLUME THRESHOLD ---
-	elif volume > AUTO_MUTE_VOLUME_THRESHOLD and AudioManager.get_muted(bus_name):
+	elif volume > AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD and AudioManager.get_muted(bus_name):
 		# CIRCUIT BREAKER: Flip state immediately to short-circuit rapid consecutive frame updates
 		AudioManager.set_muted(bus_name, false)
 
@@ -704,7 +703,7 @@ func _execute_bus_mute_toggle(bus_name: String, toggled_on: bool) -> void:
 	# ENGINE WORKAROUND: Defer hardware cutoffs slightly when muting
 	# to allow the confirmation click to finish streaming to the audio device.
 	if not toggled_on and has_user_focus:
-		await get_tree().create_timer(MUTE_HARDWARE_DELAY).timeout
+		await get_tree().create_timer(AudioConstants.MUTE_HARDWARE_DELAY).timeout
 
 	# Read the newest states to safely update the backend mixing matrix
 	var current_vol: float = AudioManager.get_volume(bus_name)
