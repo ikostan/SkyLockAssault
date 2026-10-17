@@ -647,7 +647,7 @@ func _reset_sfx_warning_shown() -> void:
 
 
 # ==========================================================================
-# FIXED MUTE TOGGLE CALLBACKS (WITH BACKGROUND BUFFER DEFERRAL)
+# BUS LOOKUP HELPERS
 # ==========================================================================
 
 
@@ -679,6 +679,42 @@ func _get_slider_for_bus(bus_name: String) -> HSlider:
 			)
 
 	return target_slider
+
+
+## Auxiliary lookup tool to map string-based audio buses to their respective scene
+## tree mute buttons.
+## Refactored with an explicit default fallback branch to capture configuration mismatches early.
+## :param bus_name: The constant identifier name of the audio channel.
+## :type bus_name: String
+## :rtype: CheckButton
+func _get_mute_button_for_bus(bus_name: String) -> CheckButton:
+	var target_button: CheckButton = null
+
+	match bus_name:
+		AudioConstants.BUS_MASTER:
+			target_button = mute_master
+		AudioConstants.BUS_MUSIC:
+			target_button = mute_music
+		AudioConstants.BUS_SFX:
+			target_button = mute_sfx
+		AudioConstants.BUS_SFX_WEAPON:
+			target_button = mute_weapon
+		AudioConstants.BUS_SFX_ROTORS:
+			target_button = mute_rotor
+		AudioConstants.BUS_SFX_MENU:
+			target_button = mute_menu
+		_:
+			Globals.log_message(
+				"Critical: Unknown bus_name passed to mute button lookup: " + bus_name,
+				Globals.LogLevel.ERROR
+			)
+
+	return target_button
+
+
+# ==========================================================================
+# FIXED MUTE TOGGLE CALLBACKS (WITH BACKGROUND BUFFER DEFERRAL)
+# ==========================================================================
 
 
 ## Centralized pipeline handler for all UI bus mute toggles.
@@ -759,34 +795,3 @@ func _on_rotor_mute_toggled(toggled_on: bool) -> void:
 ## :rtype: void
 func _on_menu_mute_toggled(toggled_on: bool) -> void:
 	await _execute_bus_mute_toggle(AudioConstants.BUS_SFX_MENU, toggled_on)
-
-
-## Auxiliary lookup tool to map string-based audio buses to their respective scene
-## tree mute buttons.
-## Refactored with an explicit default fallback branch to capture configuration mismatches early.
-## :param bus_name: The constant identifier name of the audio channel.
-## :type bus_name: String
-## :rtype: CheckButton
-func _get_mute_button_for_bus(bus_name: String) -> CheckButton:
-	var target_button: CheckButton = null
-
-	match bus_name:
-		AudioConstants.BUS_MASTER:
-			target_button = mute_master
-		AudioConstants.BUS_MUSIC:
-			target_button = mute_music
-		AudioConstants.BUS_SFX:
-			target_button = mute_sfx
-		AudioConstants.BUS_SFX_WEAPON:
-			target_button = mute_weapon
-		AudioConstants.BUS_SFX_ROTORS:
-			target_button = mute_rotor
-		AudioConstants.BUS_SFX_MENU:
-			target_button = mute_menu
-		_:
-			Globals.log_message(
-				"Critical: Unknown bus_name passed to mute button lookup: " + bus_name,
-				Globals.LogLevel.ERROR
-			)
-
-	return target_button
