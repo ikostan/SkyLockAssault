@@ -124,7 +124,6 @@ func _ready() -> void:
 		mute_menu.gui_input.connect(_on_menu_mute_gui_input)
 
 	# Buttons
-	# To this:
 	if not audio_back_button.pressed.is_connected(_on_back_button_pressed):
 		audio_back_button.pressed.connect(_on_back_button_pressed)
 
@@ -241,7 +240,6 @@ func _update_ui_interactivity() -> void:
 	mute_weapon.disabled = is_sfx_hierarchy_muted
 	weapon_slider.editable = not (is_sfx_hierarchy_muted or AudioManager.weapon_muted)
 
-	# Note: Double check your @onready var name for the rotors mute button (mute_rotors vs mute_rotor)
 	mute_rotor.disabled = is_sfx_hierarchy_muted
 	rotor_slider.editable = not (is_sfx_hierarchy_muted or AudioManager.rotors_muted)
 
