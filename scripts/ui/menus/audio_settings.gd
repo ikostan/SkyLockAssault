@@ -303,7 +303,7 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 				if current_token == _master_zero_token and bus_idx != -1:
 					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.0))
 			else:
-				AudioManager.play_sfx("check")
+				AudioManager.play_sfx(AudioConstants.SFX_CHECK)
 
 	# --- AUTO-UNMUTE ON NON-ZERO VOLUME THRESHOLD ---
 	elif volume > AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD and AudioManager.get_muted(bus_name):
@@ -318,7 +318,7 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 				if bus_idx != -1:
 					AudioServer.set_bus_mute(bus_idx, false)
 					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
-			AudioManager.play_sfx("check")
+			AudioManager.play_sfx(AudioConstants.SFX_CHECK)
 
 
 ## Updates the visual Godot CheckButtons when Playwright mutes the AudioManager
@@ -694,7 +694,7 @@ func _execute_bus_mute_toggle(bus_name: String, toggled_on: bool) -> void:
 	)
 
 	if has_user_focus:
-		AudioManager.play_sfx("check")
+		AudioManager.play_sfx(AudioConstants.SFX_CHECK)
 
 	# Update variables and UI locks immediately for snappy interface response
 	AudioManager.set_muted(bus_name, not toggled_on)
