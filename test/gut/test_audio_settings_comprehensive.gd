@@ -305,3 +305,40 @@ func test_tc_am_014_upward_unmute_transition() -> void:
 	
 	assert_false(AudioManager.get_muted(AudioConstants.BUS_MASTER))
 	assert_true(button.button_pressed)
+
+
+# ==========================================================================
+# 5. MASTER FEEDBACK HOLD (TC-AM-015 to TC-AM-016)
+# ==========================================================================
+
+func test_tc_am_015_master_feedback_hold_then_silence() -> void:
+	var slider: HSlider = audio_instance.master_slider
+	var bus_idx: int = AudioServer.get_bus_index(AudioConstants.BUS_MASTER)
+	var hold_db: float = linear_to_db(AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR)
+	slider.grab_focus()
+
+	AudioManager.set_volume(AudioConstants.BUS_MASTER, AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD)
+
+	# During the hardware delay the Master bus is held audible for the click
+	assert_almost_eq(AudioServer.get_bus_volume_db(bus_idx), hold_db, 0.0001)
+
+	await get_tree().create_timer(_get_safety_wait_time()).timeout
+
+	# After the delay the bus is flattened to silence
+	assert_eq(AudioServer.get_bus_volume_db(bus_idx), linear_to_db(0.0))
+
+
+func test_tc_am_016_master_hold_aborted_by_newer_drag() -> void:
+	var slider: HSlider = audio_instance.master_slider
+	var bus_idx: int = AudioServer.get_bus_index(AudioConstants.BUS_MASTER)
+	var restored_vol: float = 0.5
+	slider.grab_focus()
+
+	AudioManager.set_volume(AudioConstants.BUS_MASTER, AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD)
+	# Drag back up before the hold expires: the token gate must cancel the zeroing
+	AudioManager.set_volume(AudioConstants.BUS_MASTER, restored_vol)
+
+	await get_tree().create_timer(_get_safety_wait_time()).timeout
+
+	assert_false(AudioManager.get_muted(AudioConstants.BUS_MASTER))
+	assert_almost_eq(AudioServer.get_bus_volume_db(bus_idx), linear_to_db(restored_vol), 0.0001)
