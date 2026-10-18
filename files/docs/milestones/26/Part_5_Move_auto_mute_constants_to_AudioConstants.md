@@ -5,7 +5,7 @@
 
 ## PR #1052 Summary
 
-**Title:** T1 move auto mute constants to audioconstants  
+**Title:** Move auto-mute constants to AudioConstants (#1038, #1049)
 **PR:** [#1052](https://github.com/ikostan/SkyLockAssault/pull/1052)  
 **Branch:** `t1-move-auto-mute-constants-to-audioconstants` → `main`  
 **Author:** @ikostan  
@@ -44,6 +44,8 @@ This is a pure refactor: no behavior change.
   - `_get_slider_for_bus` and `_get_mute_button_for_bus` are grouped under a new `BUS LOOKUP HELPERS` header. The function bodies are unchanged.
 - **Tests** (`test/gut/test_audio_settings_comprehensive.gd`)
   - `_get_safety_wait_time()` and all 14 TC-AM cases read `AudioConstants` instead of `audio_instance`
+  - New TC-AM-015: the Master bus holds at `FEEDBACK_HOLD_VOLUME_LINEAR` during the delay, then drops to silence
+  - New TC-AM-016: dragging back up during the hold cancels the zeroing (token gate)
 
 ### Design Decisions
 
@@ -62,7 +64,8 @@ This is a pure refactor: no behavior change.
 
 - Full GUT suite, headless Godot 4.7.1 with the Dummy audio driver (same setup as CI)
   - `main` @ `3c1f470` (baseline): 95 scripts, **630/630 passed**, 4611 asserts
-  - PR head `0524392`: 95 scripts, **630/630 passed**, 4611 asserts, no script errors
+  - PR head `ffe160c`: 95 scripts, **632/632 passed**, 4615 asserts, no script errors
+  - Mutation check: with the hold set to `linear_to_db(0.3)`, TC-AM-015 fails; with the token gate removed, TC-AM-016 fails
 - `gdformat --check` and `gdlint` clean on `audio_constants.gd` and `audio_settings.gd`
 - Repo-wide search on the PR head: no `"check"` literal, no `# To this:` or `Double check your` comment in `audio_settings.gd`, and no `audio_instance.AUTO_MUTE_VOLUME_THRESHOLD` / `audio_instance.MUTE_HARDWARE_DELAY` reference anywhere. Older milestone notes still mention the names; they are historical records and stay as written.
 - [ ] CI: GUT, GDUnit4 and browser shards green on the final head
@@ -85,14 +88,14 @@ Centralizes the auto-mute threshold, the hardware mute delay, a new feedback-hol
 
 ### Assessment against linked issues
 
-| Issue                                                   | Objective                                                                   | Addressed | Explanation                                                  |
-|---------------------------------------------------------|-----------------------------------------------------------------------------|-----------|--------------------------------------------------------------|
-| <https://github.com/ikostan/SkyLockAssault/issues/1038> | No behavior change; all existing suites pass.                               | ✅        | GUT 630/630 before and after; confirm CI on the final head.  |
-| <https://github.com/ikostan/SkyLockAssault/issues/1038> | `audio_settings.gd` declares neither constant.                              | ✅        |                                                              |
-| <https://github.com/ikostan/SkyLockAssault/issues/1038> | No `"check"` string literal left in `audio_settings.gd`.                    | ✅        |                                                              |
-| <https://github.com/ikostan/SkyLockAssault/issues/1038> | Tests read the constants from `AudioConstants` instead of `audio_instance`. | ✅        |                                                              |
-| <https://github.com/ikostan/SkyLockAssault/issues/1049> | Remove the stale `# To this:` and `mute_rotors` vs `mute_rotor` comments.   | ✅        | Fixed in `0524392` after CodeRabbit flagged them as missing. |
-| <https://github.com/ikostan/SkyLockAssault/issues/1049> | Move the mute-toggle callbacks header above `_execute_bus_mute_toggle`.     | ✅        | The lookup helpers also got their own header.                |
+| Issue                                                   | Objective                                                                                                                      | Addressed | Explanation                                                  |
+|---------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|-----------|--------------------------------------------------------------|
+| <https://github.com/ikostan/SkyLockAssault/issues/1038> | No behavior change; all existing suites pass. GUT 630/630 before, 632/632 after (two new tests); confirm CI on the final head. | ✅        | GUT 630/630 before and after; confirm CI on the final head.  |
+| <https://github.com/ikostan/SkyLockAssault/issues/1038> | `audio_settings.gd` declares neither constant.                                                                                 | ✅        |                                                              |
+| <https://github.com/ikostan/SkyLockAssault/issues/1038> | No `"check"` string literal left in `audio_settings.gd`.                                                                       | ✅        |                                                              |
+| <https://github.com/ikostan/SkyLockAssault/issues/1038> | Tests read the constants from `AudioConstants` instead of `audio_instance`.                                                    | ✅        |                                                              |
+| <https://github.com/ikostan/SkyLockAssault/issues/1049> | Remove the stale `# To this:` and `mute_rotors` vs `mute_rotor` comments.                                                      | ✅        | Fixed in `0524392` after CodeRabbit flagged them as missing. |
+| <https://github.com/ikostan/SkyLockAssault/issues/1049> | Move the mute-toggle callbacks header above `_execute_bus_mute_toggle`.                                                        | ✅        | The lookup helpers also got their own header.                |
 
 ---
 
