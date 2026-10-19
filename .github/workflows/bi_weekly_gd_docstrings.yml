@@ -36,14 +36,13 @@ jobs:
         with:
           python-version: "3.12"
           cache: "pip"
+          cache-dependency-path: ".github/scripts/requirements-docs.txt"
 
+      # Pins live in one file shared with test_ci_scripts.yml (#1055)
       - name: "Install Pinned Dependencies"
         run: |
           python -m pip install --upgrade pip
-          pip install \
-            google-genai==0.8.0 \
-            pydantic==2.10.6 \
-            gdtoolkit==4.5.0
+          pip install -r .github/scripts/requirements-docs.txt
 
       - name: "Audit GDScript Docstring Coverage"
         run: |
