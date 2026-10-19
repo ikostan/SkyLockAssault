@@ -123,8 +123,7 @@ def test_gemini_schema_keeps_parameter_item_shape(docs):
     google-genai 0.8.0 drops 'items' from a nullable (Optional) array, so this
     checks the converted schema, not just the pydantic one (#1055).
     """
-    from google.genai import Client
-    from google.genai import _transformers
+    from google.genai import Client, _transformers
 
     api_client = Client(api_key="test-key")._api_client
     schema = _transformers.t_schema(api_client, docs.FileDocumentationResponse)
