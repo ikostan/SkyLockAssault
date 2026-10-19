@@ -260,6 +260,32 @@ def validate_docstring_text(text: Optional[str], field_name: str) -> Optional[st
     return text.strip()
 
 
+class ParamDoc(BaseModel):
+    name: str = Field(
+        description="Exact parameter identifier from required_parameters."
+    )
+    description: str = Field(
+        description="Single-line description of what the value means or which values are accepted."
+    )
+
+    @field_validator("name", mode="after")
+    @classmethod
+    def check_name(cls, v: str) -> str:
+        if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", v):
+            raise ValueError(f"Invalid parameter identifier: '{v}'")
+        return v
+
+    @field_validator("description", mode="after")
+    @classmethod
+    def check_description(cls, v: str) -> str:
+        validated = validate_docstring_text(v, "Parameter description")
+        if not validated or "\n" in validated or "\r" in validated:
+            raise ValueError(
+                "Parameter description must be a non-empty single line without line breaks."
+            )
+        return validated
+
+
 class MemberDoc(BaseModel):
     name: str = Field(description="Exact name of the target public member.")
     summary: str = Field(
@@ -268,9 +294,16 @@ class MemberDoc(BaseModel):
     description: Optional[str] = Field(
         default=None, description="Optional extended details."
     )
-    parameters: Optional[Dict[str, str]] = Field(
-        default=None,
-        description="Key-value mapping of parameter name to description. Keys MUST strictly match parameter identifiers.",
+    # A required list, not a dict: Gemini's response schema cannot express maps
+    # with arbitrary keys, so a Dict field always came back empty (#1055). It is
+    # not Optional either: google-genai 0.8.0 drops the item schema of a nullable
+    # array, which would leave Gemini guessing the entry shape again.
+    parameters: List[ParamDoc] = Field(
+        default_factory=list,
+        description=(
+            "One entry per parameter listed in required_parameters, in declaration order. "
+            "Use an empty list when required_parameters is empty."
+        ),
     )
     returns: Optional[str] = Field(
         default=None, description="Optional return value description."
@@ -308,22 +341,24 @@ class MemberDoc(BaseModel):
             )
         return validated
 
+    @field_validator("parameters", mode="before")
+    @classmethod
+    def coerce_null_params(cls, v: Any) -> Any:
+        """Treats a null 'parameters' from the model as an empty list."""
+        return [] if v is None else v
+
     @field_validator("parameters", mode="after")
     @classmethod
-    def check_params_dict(cls, v: Optional[Dict[str, str]]) -> Optional[Dict[str, str]]:
-        if not v:
-            return v
-        for p_name, p_desc in v.items():
-            if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", p_name):
-                raise ValueError(f"Invalid parameter identifier key: '{p_name}'")
-            validated_desc = validate_docstring_text(
-                p_desc, f"Parameter description for '{p_name}'"
-            )
-            if not validated_desc or "\n" in validated_desc or "\r" in validated_desc:
-                raise ValueError(
-                    f"Parameter description for '{p_name}' must be a non-empty single line without line breaks."
-                )
+    def check_params_unique(cls, v: List[ParamDoc]) -> List[ParamDoc]:
+        names = [p.name for p in v]
+        if len(names) != len(set(names)):
+            raise ValueError(f"Duplicate parameter entries: {names}")
         return v
+
+    @property
+    def param_map(self) -> Dict[str, str]:
+        """Parameter name -> description; empty when no parameters were returned."""
+        return {p.name: p.description for p in self.parameters}
 
 
 class FileDocumentationResponse(BaseModel):
@@ -922,11 +957,12 @@ def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> Li
                 lines.append(f"{line}\n")
 
     # 3. Parameters
-    if doc.parameters and decl.kind in ("function", "signal"):
+    param_map = doc.param_map
+    if param_map and decl.kind in ("function", "signal"):
         lines.append(f"{indent}##\n")
         for p_name in decl.params:
-            if p_name in doc.parameters:
-                p_desc = doc.parameters[p_name].strip()
+            if p_name in param_map:
+                p_desc = param_map[p_name].strip()
                 param_prefix = f"{indent}## [param {p_name}]: "
                 wrapped_param = textwrap.wrap(
                     p_desc,
@@ -984,18 +1020,19 @@ def verify_modification_allowlist(original: str, proposed: str) -> bool:
 def find_incomplete_parameters(
     members: List[MemberDoc], target_by_name: Dict[str, MemberDeclaration]
 ) -> List[str]:
-    """Lists 'member.param' entries the model left empty or filled with a placeholder.
+    """Lists 'member.param' entries the model left out or filled with a placeholder.
 
     These used to be back-filled with "The <name> parameter.", which the quality check in
     classify_member rejects after injection. Treating them as a failed response makes the
-    retry loop ask Gemini again instead of aborting the whole run.
+    retry loop ask Gemini again instead of aborting the whole run. Empty descriptions are
+    already rejected by ParamDoc validation (#1055).
     """
     incomplete: List[str] = []
     for m in members:
         target = target_by_name.get(m.name)
         if target is None or target.kind not in ("function", "signal"):
             continue
-        given = m.parameters or {}
+        given = m.param_map
         for p_name in target.params:
             desc = (given.get(p_name) or "").strip().rstrip(".").lower()
             if desc in ("", f"the {p_name} parameter".lower(), f"the {p_name}".lower()):
@@ -1055,10 +1092,10 @@ def query_gemini_for_docs(
             "Requirements:\n"
             "1. Supply documentation for EVERY target member in the manifest chunk.\n"
             "2. Return only requested member names. Do not invent members.\n"
-            "3. If 'required_parameters' is non-empty, the 'parameters' field MUST be a dictionary mapping each exact parameter name to a detailed description.\n"
+            "3. If 'required_parameters' is non-empty, 'parameters' MUST be a list with exactly one {name, description} entry per required parameter, using the exact parameter name. Parameters are NOT separate members. If 'required_parameters' is empty, set 'parameters' to an empty list.\n"
             "4. BBCode allowed: [param], [constant], [member], [method], [signal], [enum], [code], [b], [i].\n"
             "5. Strictly NO Markdown code blocks (```) or Doxygen (@param/@return/@brief) tags.\n"
-            "6. CRITICAL: Do NOT use [param] inside 'summary' or 'description'. Parameter documentation belongs exclusively in the 'parameters' dictionary.\n"
+            "6. CRITICAL: Do NOT use [param] inside 'summary' or 'description'. Parameter documentation belongs exclusively in the 'parameters' list.\n"
             "7. CRITICAL: Do NOT wrap types or Godot classes in brackets (e.g. NEVER use [bool], [int], [String], [FileAccess], [Node]). Use [code]TypeName[/code] if mentioning a type.\n"
             "8. Keep descriptions concise and under 80 characters where possible.\n"
             "9. CRITICAL CONTEXT PRESERVATION: If 'existing_developer_comments' is provided, preserve its specific technical details, warnings, accepted values, formats and examples (e.g. 'key:code', '\"keyboard\" or \"gamepad\"') in your summary, description, and parameter fields.\n"
@@ -1068,21 +1105,31 @@ def query_gemini_for_docs(
         )
 
         max_retries = 3
-        retry_delay = 35  # Increased to clear 429 quota exhaustion windows (often ~30s)
+        retry_delay = 35  # Clears 429 quota exhaustion windows (often ~30s)
         validated = None
+        feedback: Optional[str] = None
 
         for attempt in range(max_retries):
+            attempt_prompt = prompt
+            if feedback:
+                attempt_prompt += (
+                    "\n\nYOUR PREVIOUS RESPONSE WAS REJECTED FOR THESE REASONS:\n"
+                    f"{feedback}\n"
+                    "Return a corrected response that fixes every problem listed above."
+                )
             try:
                 response = client.models.generate_content(
                     model=PINNED_MODEL,
-                    contents=prompt,
+                    contents=attempt_prompt,
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
                         response_schema=FileDocumentationResponse,
                         temperature=0.0,
                     ),
                 )
-                validated = FileDocumentationResponse.model_validate_json(response.text)
+                validated = FileDocumentationResponse.model_validate_json(
+                    response.text or ""
+                )
                 incomplete = find_incomplete_parameters(
                     validated.members, target_by_name
                 )
@@ -1102,12 +1149,20 @@ def query_gemini_for_docs(
                         flush=True,
                     )
                     sys.exit(1)
+                # pydantic.ValidationError subclasses ValueError: a bad response, not an
+                # API fault. Feed the reason back and retry quickly; back off only on
+                # API errors such as 429 quota exhaustion (#1055).
+                if isinstance(e, ValueError):
+                    feedback = str(e)[:2000]
+                    delay, label = 5, "rejected response"
+                else:
+                    delay, label = retry_delay, "API failure"
+                    retry_delay *= 2  # Exponential backoff
                 print(
-                    f"[WARNING] Gemini API temporary failure (attempt {attempt + 1}/{max_retries}): {e}. Retrying in {retry_delay}s...",
+                    f"[WARNING] Gemini {label} (attempt {attempt + 1}/{max_retries}): {e}. Retrying in {delay}s...",
                     flush=True,
                 )
-                time.sleep(retry_delay)
-                retry_delay *= 2  # Exponential backoff
+                time.sleep(delay)
 
         chunk_requested_names = {t.name for t in chunk_targets}
 
@@ -1129,7 +1184,7 @@ def query_gemini_for_docs(
         for m in validated.members:
             target = target_by_name[m.name]
 
-            m_param_set = set(m.parameters.keys()) if m.parameters else set()
+            m_param_set = set(m.param_map)
             target_param_set = set(target.params) if target.params else set()
 
             if target.kind in ("function", "signal"):
