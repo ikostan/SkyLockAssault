@@ -161,15 +161,17 @@ def test_response_schema_has_no_free_form_maps(docs):
 # -----------------------------------------------------------------------------
 # 2. ParamDoc validation
 # -----------------------------------------------------------------------------
-def test_param_doc_accepts_valid_entry(docs):
+@pytest.mark.parametrize("name", ["candidate", "_", "_control2", "Control2"])
+def test_param_doc_accepts_valid_entry(docs, name):
     """A valid entry passes and its description is stripped."""
     entry = docs.ParamDoc(
-        name="candidate", description="  Control that should receive focus.  "
+        name=name, description="  Control that should receive focus.  "
     )
+    assert entry.name == name
     assert entry.description == "Control that should receive focus."
 
 
-@pytest.mark.parametrize("name", ["1abc", "a-b", ""])
+@pytest.mark.parametrize("name", ["1abc", "a-b", "", "a.b", " candidate", "café"])
 def test_param_doc_rejects_invalid_identifier(docs, name):
     """Parameter names must be GDScript identifiers."""
     with pytest.raises(ValidationError):
@@ -182,17 +184,62 @@ def test_param_doc_rejects_invalid_identifier(docs, name):
         "",
         "   ",
         "First line.\nSecond line.",
+        "First line.\rSecond line.",
+        "First line.\r\nSecond line.",
         "Uses ```code``` fences.",
         "@param candidate the control",
         "[b]Unclosed bold",
         "[codeblock]x[/codeblock]",
     ],
-    ids=["empty", "blank", "multi-line", "fence", "doxygen", "unclosed-b", "codeblock"],
+    ids=[
+        "empty",
+        "blank",
+        "multi-line",
+        "carriage-return",
+        "crlf",
+        "fence",
+        "doxygen",
+        "unclosed-b",
+        "codeblock",
+    ],
 )
 def test_param_doc_rejects_invalid_description(docs, description):
     """Descriptions follow the same contract as the rest of the docstring."""
     with pytest.raises(ValidationError):
         docs.ParamDoc(name="candidate", description=description)
+
+
+@pytest.mark.parametrize(
+    "payload, field",
+    [
+        ({"name": "candidate"}, "description"),
+        ({"description": "Receives focus."}, "name"),
+        ({"name": None, "description": "Receives focus."}, "name"),
+        ({"name": 42, "description": "Receives focus."}, "name"),
+        ({"name": "candidate", "description": None}, "description"),
+        ({"name": "candidate", "description": 42}, "description"),
+    ],
+    ids=[
+        "missing-description",
+        "missing-name",
+        "null-name",
+        "numeric-name",
+        "null-description",
+        "numeric-description",
+    ],
+)
+def test_param_doc_requires_string_name_and_description(docs, payload, field):
+    """Incomplete or wrongly typed entries identify the offending field."""
+    with pytest.raises(ValidationError) as exc:
+        docs.ParamDoc.model_validate(payload)
+    assert field in {error["loc"][0] for error in exc.value.errors()}
+
+
+def test_param_doc_preserves_valid_bbcode(docs):
+    """Useful inline formatting survives parameter validation unchanged."""
+    description = "Accepts [code]keyboard[/code] or [b]gamepad[/b] controls."
+    entry = docs.ParamDoc(name="context", description=f"  {description}  ")
+    assert entry.description == description
 
 
 # -----------------------------------------------------------------------------
@@ -225,6 +272,29 @@ def test_member_doc_rejects_missing_parameters_key(docs):
     del without_key["parameters"]
     with pytest.raises(ValidationError, match="parameters"):
         docs.MemberDoc.model_validate(without_key)
+
+
+@pytest.mark.parametrize(
+    "parameters",
+    [{}, {"candidate": "Receives focus."}, "candidate", [None]],
+    ids=["empty-map", "legacy-map", "string", "null-entry"],
+)
+def test_member_doc_rejects_invalid_parameter_shapes(docs, parameters):
+    """Only a list of structured entries can replace the old dictionary schema."""
+    with pytest.raises(ValidationError) as exc:
+        docs.MemberDoc.model_validate(good_member(parameters=parameters))
+    assert all(error["loc"][0] == "parameters" for error in exc.value.errors())
+
+
+def test_member_doc_keeps_case_distinct_parameter_names(docs):
+    """Uniqueness uses exact identifiers, since GDScript is case sensitive."""
+    member = docs.MemberDoc.model_validate(
+        good_member(parameters=param_entries(["control", "Control"]))
+    )
+    assert member.param_map == {
+        "control": "Meaningful description of control.",
+        "Control": "Meaningful description of Control.",
+    }
 
 
 # -----------------------------------------------------------------------------
@@ -318,6 +388,63 @@ def test_find_response_problems_passes_good_response(docs):
     )
 
 
+def test_find_response_problems_collects_all_requested_member_errors(docs):
+    """One retry can report missing members, filler, omissions and extra parameters."""
+    member = docs.MemberDoc.model_validate(
+        good_member(
+            parameters=[
+                {"name": "candidate", "description": "  THE CANDIDATE PARAMETER...  "},
+                {"name": "bogus", "description": "Selects a control."},
+            ]
+        )
+    )
+    targets = {"ensure_initial_focus": make_decl(docs)}
+    problems = docs.find_response_problems(
+        [member], {"z_missing", "ensure_initial_focus", "a_missing"}, targets
+    )
+
+    assert len(problems) == 3
+    assert "['a_missing', 'z_missing']" in problems[0]
+    assert "Missing or placeholder parameter descriptions" in problems[1]
+    for name in FOCUS_PARAMS:
+        assert f"ensure_initial_focus.{name}" in problems[1]
+    assert "Parameters not declared in the signature" in problems[2]
+    assert "ensure_initial_focus.bogus" in problems[2]
+
+
+def test_parameter_checks_ignore_unrequested_members(docs):
+    """Extra members cannot force retries, even when their parameters are wrong."""
+    requested = docs.MemberDoc.model_validate(good_member())
+    extra = docs.MemberDoc.model_validate(
+        good_member(name="other", parameters=param_entries(["bogus"]))
+    )
+    unknown = docs.MemberDoc.model_validate(good_member(name="unknown"))
+    targets = {
+        "ensure_initial_focus": make_decl(docs),
+        "other": make_decl(docs, name="other"),
+    }
+
+    assert docs.find_incomplete_parameters([unknown], targets) == []
+    assert docs.find_unexpected_parameters([unknown], targets) == []
+    assert (
+        docs.find_response_problems(
+            [requested, extra, unknown], {"ensure_initial_focus"}, targets
+        )
+        == []
+    )
+
+
+def test_signal_parameters_are_checked_in_both_directions(docs):
+    """Signals need every declared argument and cannot invent new ones."""
+    member = docs.MemberDoc.model_validate(
+        good_member(name="value_changed", parameters=param_entries(["old", "bogus"]))
+    )
+    target = make_decl(docs, name="value_changed", kind="signal", params=["old", "new"])
+    targets = {"value_changed": target}
+    assert docs.find_incomplete_parameters([member], targets) == ["value_changed.new"]
+    assert docs.find_unexpected_parameters([member], targets) == ["value_changed.bogus"]
+
+
 # -----------------------------------------------------------------------------
 # 5. format_doc_lines
 # -----------------------------------------------------------------------------
@@ -338,6 +465,8 @@ def test_format_orders_params_by_declaration(docs):
     )
     lines = docs.format_doc_lines(doc, make_decl(docs), "")
     assert param_line_names(lines) == FOCUS_PARAMS
+    for name in FOCUS_PARAMS:
+        assert f"## [param {name}]: Meaningful description of {name}.\n" in lines
 
 
 def test_format_wraps_long_descriptions(docs):
@@ -378,6 +507,14 @@ def test_format_strips_duplicated_returns_prefix(docs):
     assert "## Returns true if focus moved.\n" in lines
 
 
+@pytest.mark.parametrize("kind", ["function", "signal", "constant", "export", "enum"])
+def test_format_empty_parameters_adds_no_parameter_section(docs, kind):
+    """Empty parameter lists do not leave stray sections or blank doc lines."""
+    member = docs.MemberDoc.model_validate(good_member(parameters=[]))
+    decl = make_decl(docs, kind=kind, params=[])
+    assert docs.format_doc_lines(member, decl, "\t") == [f"\t## {member.summary}\n"]
+
+
 # -----------------------------------------------------------------------------
 # 6. query_gemini_for_docs (mocked client)
 # -----------------------------------------------------------------------------
@@ -395,6 +532,11 @@ def test_query_returns_docs_on_first_good_response(docs, sleeps):
     assert set(result["ensure_initial_focus"].param_map) == set(FOCUS_PARAMS)
     assert client.models.generate_content.call_count == 1
     assert sleeps == []
+    request = client.models.generate_content.call_args.kwargs
+    assert request["model"] == docs.PINNED_MODEL
+    assert request["config"].response_schema is docs.FileDocumentationResponse
+    assert request["config"].response_mime_type == "application/json"
+    assert request["config"].temperature == 0.0
 
 
 def test_query_recovers_from_oct18_failure_shape_with_feedback(docs, sleeps):
@@ -496,6 +638,207 @@ def test_query_retries_missing_parameters_key(docs, sleeps):
     assert sleeps == [5]
 
 
+@pytest.mark.parametrize("text", [None, "", "not json", '{"members":', "null", "{}"])
+def test_query_retries_malformed_response_text(docs, sleeps, text):
+    """Empty, truncated or structurally invalid JSON gets a fast corrective retry."""
+    client = fake_client(SimpleNamespace(text=text), gemini_reply(good_member()))
+
+    result = query(docs, client)
+
+    assert set(result) == {"ensure_initial_focus"}
+    assert client.models.generate_content.call_count == 2
+    assert REJECTED_MARKER in sent_prompts(client)[1]
+    assert sleeps == [5]
+
+
+@pytest.mark.parametrize(
+    "parameters, reason",
+    [
+        (param_entries(["candidate", "candidate"]), "Duplicate parameter entries"),
+        ([{"name": "candidate"}], "description"),
+        ({"candidate": "Receives focus."}, "parameters"),
+        (
+            [{"name": "a-b", "description": "Receives focus."}],
+            "Invalid parameter identifier",
+        ),
+        (
+            [{"name": "candidate", "description": "The candidate parameter."}],
+            "Missing or placeholder parameter descriptions",
+        ),
+    ],
+    ids=[
+        "duplicate",
+        "missing-description",
+        "legacy-map",
+        "invalid-name",
+        "placeholder",
+    ],
+)
+def test_query_retries_bad_parameter_entries(docs, sleeps, parameters, reason):
+    """Nested schema and semantic errors both reach the retry feedback."""
+    client = fake_client(
+        gemini_reply(good_member(parameters=parameters)), gemini_reply(good_member())
+    )
+
+    result = query(docs, client)
+
+    assert result["ensure_initial_focus"].param_map == {
+        name: f"Meaningful description of {name}." for name in FOCUS_PARAMS
+    }
+    assert reason in sent_prompts(client)[1].split(REJECTED_MARKER)[1]
+    assert client.models.generate_content.call_count == 2
+    assert sleeps == [5]
+
+
+@pytest.mark.parametrize("kind", ["function", "signal", "constant", "export", "enum"])
+@pytest.mark.parametrize("parameters", [[], None], ids=["empty-list", "explicit-null"])
+def test_query_accepts_parameterless_members(docs, sleeps, kind, parameters):
+    """An explicit empty or null list is valid when the declaration has no arguments."""
+    client = fake_client(gemini_reply(good_member(parameters=parameters)))
+    result = query(docs, client, make_decl(docs, kind=kind, params=[]))
+    assert result["ensure_initial_focus"].parameters == []
+    assert client.models.generate_content.call_count == 1
+    assert sleeps == []
+
+
+@pytest.mark.parametrize("api_error_first", [False, True])
+def test_query_mixed_failures_keep_feedback_and_backoff_separate(
+    docs, sleeps, api_error_first
+):
+    """API failures preserve corrective feedback and use their own backoff delay."""
+    bad = gemini_reply(good_member(parameters=[]))
+    error = RuntimeError("503 UNAVAILABLE")
+    outcomes = [error, bad] if api_error_first else [bad, error]
+    client = fake_client(*outcomes, gemini_reply(good_member()))
+
+    result = query(docs, client)
+
+    assert set(result) == {"ensure_initial_focus"}
+    first, second, third = sent_prompts(client)
+    assert REJECTED_MARKER not in first
+    assert sleeps == ([35, 5] if api_error_first else [5, 35])
+    if api_error_first:
+        assert second == first
+        assert "ensure_initial_focus.context" in third.split(REJECTED_MARKER)[1]
+    else:
+        assert second == third
+        assert "ensure_initial_focus.context" in second.split(REJECTED_MARKER)[1]
+
+
+def test_query_replaces_outdated_validation_feedback(docs, sleeps):
+    """Each correction describes the latest rejection without accumulating old errors."""
+    client = fake_client(
+        gemini_reply(good_member(parameters=[])),
+        gemini_reply(good_member(parameters=param_entries(FOCUS_PARAMS + ["bogus"]))),
+        gemini_reply(good_member()),
+    )
+
+    query(docs, client)
+
+    first, second, third = sent_prompts(client)
+    assert "Missing or placeholder parameter descriptions" in second
+    assert "Parameters not declared in the signature" in third
+    assert "Missing or placeholder parameter descriptions" not in third
+    assert third.count(REJECTED_MARKER) == 1
+    assert third.split("\n\n" + REJECTED_MARKER)[0] == first
+    assert sleeps == [5, 5]
+
+
+def test_query_bounds_validation_feedback_length(docs, sleeps):
+    """Large validation errors cannot grow the corrective prompt without a bound."""
+    names = [f"required_control_{index}" for index in range(150)]
+    client = fake_client(
+        gemini_reply(good_member(parameters=[])),
+        gemini_reply(good_member(parameters=param_entries(names))),
+    )
+
+    result = query(docs, client, make_decl(docs, params=names))
+
+    feedback = sent_prompts(client)[1].split(f"{REJECTED_MARKER} FOR THESE REASONS:\n")[
+        1
+    ]
+    feedback = feedback.split("\nReturn a corrected response")[0]
+    assert len(feedback) == 2000
+    assert feedback.startswith("Missing or placeholder parameter descriptions:")
+    assert "ensure_initial_focus.required_control_149" not in feedback
+    assert set(result["ensure_initial_focus"].param_map) == set(names)
+    assert sleeps == [5]
+
+
+@pytest.mark.parametrize(
+    "api_failure", [False, True], ids=["invalid-json", "api-failure"]
+)
+def test_query_stops_after_three_failed_attempts(docs, sleeps, capsys, api_failure):
+    """Exhausted retries exit with no sleep or extra call after the final failure."""
+    outcome = (
+        RuntimeError("503 UNAVAILABLE") if api_failure else SimpleNamespace(text=None)
+    )
+    client = fake_client(outcome, outcome, outcome)
+
+    with pytest.raises(SystemExit) as exc:
+        query(docs, client)
+
+    assert exc.value.code == 1
+    assert client.models.generate_content.call_count == 3
+    assert sleeps == ([35, 70] if api_failure else [5, 5])
+    assert "after 3 attempts" in capsys.readouterr().out
+
+
+def test_query_scopes_validation_and_feedback_to_each_chunk(docs, sleeps):
+    """Extra future members are ignored and do not carry rejected docs to their chunk."""
+    first = good_member()
+    extra = good_member(name="other", parameters=param_entries(["bogus"]))
+    corrected = good_member(
+        name="other",
+        parameters=param_entries(["value"]),
+        summary="Stores the new value.",
+    )
+    client = fake_client(
+        gemini_reply(good_member(parameters=[])),
+        gemini_reply(first, extra),
+        gemini_reply(corrected),
+    )
+    targets = [make_decl(docs), make_decl(docs, name="other", params=["value"])]
+
+    result = docs.query_gemini_for_docs(client, Path("globals.gd"), targets)
+
+    assert set(result) == {"ensure_initial_focus", "other"}
+    assert result["other"].param_map == {"value": "Meaningful description of value."}
+    assert result["other"].summary == "Stores the new value."
+    prompts = sent_prompts(client)
+    assert REJECTED_MARKER in prompts[1]
+    assert REJECTED_MARKER not in prompts[2]
+    manifests = [
+        json.JSONDecoder().raw_decode(
+            prompt.split("Target declarations needing documentation:\n")[1]
+        )[0]
+        for prompt in (prompts[0], prompts[2])
+    ]
+    assert [[entry["name"] for entry in manifest] for manifest in manifests] == [
+        ["ensure_initial_focus"],
+        ["other"],
+    ]
+    assert sleeps == [5, 5]  # One corrective retry, then pacing between chunks.
+
+
+def test_query_resets_api_backoff_for_each_chunk(docs, sleeps):
+    """A new chunk starts with the initial API delay after an earlier chunk recovers."""
+    client = fake_client(
+        RuntimeError("429 RESOURCE_EXHAUSTED"),
+        gemini_reply(good_member()),
+        RuntimeError("429 RESOURCE_EXHAUSTED"),
+        gemini_reply(good_member(name="other", parameters=[])),
+    )
+    targets = [make_decl(docs), make_decl(docs, name="other", params=[])]
+
+    result = docs.query_gemini_for_docs(client, Path("globals.gd"), targets)
+
+    assert set(result) == {"ensure_initial_focus", "other"}
+    assert client.models.generate_content.call_count == 4
+    assert sleeps == [35, 5, 35]
+    assert not any(REJECTED_MARKER in prompt for prompt in sent_prompts(client))
+
+
 # -----------------------------------------------------------------------------
 # 7. Round trip through prepare_file_change
 # -----------------------------------------------------------------------------
@@ -532,6 +875,26 @@ def test_round_trip_injection_is_compliant_and_preserves_code(docs, tmp_path, sl
 # -----------------------------------------------------------------------------
 # 8. Dependency pins
 # -----------------------------------------------------------------------------
+def test_docs_workflow_cache_tracks_shared_requirements():
+    """Changing the shared pins invalidates the documentation workflow's pip cache."""
+    workflow = yaml.safe_load(
+        (PROJECT_ROOT / ".github/workflows/bi_weekly_gd_docstrings.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    setups = [
+        step
+        for step in workflow["jobs"]["sync-docstrings"]["steps"]
+        if step.get("uses", "").startswith("actions/setup-python@")
+    ]
+    assert len(setups) == 1
+    assert setups[0]["with"]["cache"] == "pip"
+    assert (
+        setups[0]["with"]["cache-dependency-path"]
+        == REQUIREMENTS.relative_to(PROJECT_ROOT).as_posix()
+    )
+
+
 def test_docs_requirements_are_exact_pins():
     """requirements-docs.txt pins exactly the three docs dependencies."""
     entries = [
