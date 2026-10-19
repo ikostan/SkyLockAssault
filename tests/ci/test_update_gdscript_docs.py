@@ -56,8 +56,9 @@ def make_decl(
     )
 
 
-def param_entries(names=FOCUS_PARAMS):
-    """Parameter list in the shape Gemini returns."""
+def param_entries(names=None):
+    """Parameter list in the shape Gemini returns (defaults to FOCUS_PARAMS)."""
+    names = FOCUS_PARAMS if names is None else names
     return [
         {"name": n, "description": f"Meaningful description of {n}."} for n in names
     ]
