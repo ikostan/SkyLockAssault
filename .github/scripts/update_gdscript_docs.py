@@ -297,9 +297,10 @@ class MemberDoc(BaseModel):
     # A required list, not a dict: Gemini's response schema cannot express maps
     # with arbitrary keys, so a Dict field always came back empty (#1055). It is
     # not Optional either: google-genai 0.8.0 drops the item schema of a nullable
-    # array, which would leave Gemini guessing the entry shape again.
+    # array, which would leave Gemini guessing the entry shape again. It has no
+    # default, so the schema Gemini receives marks it required and the model
+    # cannot silently skip it.
     parameters: List[ParamDoc] = Field(
-        default_factory=list,
         description=(
             "One entry per parameter listed in required_parameters, in declaration order. "
             "Use an empty list when required_parameters is empty."
@@ -344,7 +345,10 @@ class MemberDoc(BaseModel):
     @field_validator("parameters", mode="before")
     @classmethod
     def coerce_null_params(cls, v: Any) -> Any:
-        """Treats a null 'parameters' from the model as an empty list."""
+        """Treats an explicit null 'parameters' from the model as an empty list.
+
+        A missing key still fails validation, and the retry loop reports it back.
+        """
         return [] if v is None else v
 
     @field_validator("parameters", mode="after")
@@ -1040,6 +1044,54 @@ def find_incomplete_parameters(
     return incomplete
 
 
+def find_unexpected_parameters(
+    members: List[MemberDoc], target_by_name: Dict[str, MemberDeclaration]
+) -> List[str]:
+    """Lists 'member.param' entries for parameters the target does not declare.
+
+    Constants, exports and enums take no parameters, so any entry on them is unexpected.
+    """
+    unexpected: List[str] = []
+    for m in members:
+        target = target_by_name.get(m.name)
+        if target is None:
+            continue
+        allowed = set(target.params) if target.kind in ("function", "signal") else set()
+        for p_name in m.param_map:
+            if p_name not in allowed:
+                unexpected.append(f"{m.name}.{p_name}")
+    return unexpected
+
+
+def find_response_problems(
+    members: List[MemberDoc],
+    requested_names: Set[str],
+    target_by_name: Dict[str, MemberDeclaration],
+) -> List[str]:
+    """Describes everything wrong with a schema-valid response, for retry feedback.
+
+    Each problem is something Gemini can fix on the next attempt, so it is fed back
+    instead of aborting the run. Extra unrequested members are filtered out later and
+    are not reported.
+    """
+    problems: List[str] = []
+    missing_members = sorted(requested_names - {m.name for m in members})
+    if missing_members:
+        problems.append(
+            f"Missing documentation for requested members: {missing_members}"
+        )
+    relevant = [m for m in members if m.name in requested_names]
+    incomplete = find_incomplete_parameters(relevant, target_by_name)
+    if incomplete:
+        problems.append(f"Missing or placeholder parameter descriptions: {incomplete}")
+    unexpected = find_unexpected_parameters(relevant, target_by_name)
+    if unexpected:
+        problems.append(
+            f"Parameters not declared in the signature (remove them): {unexpected}"
+        )
+    return problems
+
+
 def query_gemini_for_docs(
     client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
 ) -> Dict[str, MemberDoc]:
@@ -1104,6 +1156,8 @@ def query_gemini_for_docs(
             "12. PARAMETERS: Each parameter description must say what the value means or which values are accepted. Never write filler such as 'The x parameter.'"
         )
 
+        chunk_requested_names = {t.name for t in chunk_targets}
+
         max_retries = 3
         retry_delay = 35  # Clears 429 quota exhaustion windows (often ~30s)
         validated = None
@@ -1130,13 +1184,11 @@ def query_gemini_for_docs(
                 validated = FileDocumentationResponse.model_validate_json(
                     response.text or ""
                 )
-                incomplete = find_incomplete_parameters(
-                    validated.members, target_by_name
+                problems = find_response_problems(
+                    validated.members, chunk_requested_names, target_by_name
                 )
-                if incomplete:
-                    raise ValueError(
-                        f"Missing or placeholder parameter descriptions: {incomplete}"
-                    )
+                if problems:
+                    raise ValueError("; ".join(problems))
                 print(
                     f"[DEBUG] API response received successfully for chunk {current_chunk}/{total_chunks}.",
                     flush=True,
@@ -1164,9 +1216,8 @@ def query_gemini_for_docs(
                 )
                 time.sleep(delay)
 
-        chunk_requested_names = {t.name for t in chunk_targets}
-
-        # Filter out any unrequested extra members returned by the model
+        # Filter out any unrequested extra members returned by the model.
+        # The checks below repeat find_response_problems as a fail-closed guard.
         filtered_members = [
             m for m in validated.members if m.name in chunk_requested_names
         ]

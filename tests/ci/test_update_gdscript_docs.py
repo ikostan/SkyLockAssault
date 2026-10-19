@@ -134,6 +134,20 @@ def test_gemini_schema_keeps_parameter_item_shape(docs):
     assert set(params["items"]["required"]) == {"name", "description"}
 
 
+def test_gemini_schema_requires_parameters(docs):
+    """Gemini sees 'parameters' as required, so it cannot silently skip the field.
+
+    google-genai builds the schema from pydantic, where a field with a default is
+    optional; Gemini then often leaves it out (Sourcery review, #1057).
+    """
+    from google.genai import Client, _transformers
+
+    api_client = Client(api_key="test-key")._api_client
+    schema = _transformers.t_schema(api_client, docs.FileDocumentationResponse)
+    member = schema.model_dump(exclude_none=True)["properties"]["members"]["items"]
+    assert "parameters" in member["required"], member["required"]
+
+
 def test_response_schema_has_no_free_form_maps(docs):
     """A Dict field reaches Gemini as an object without properties (#1055)."""
     schema = docs.FileDocumentationResponse.model_json_schema()
@@ -199,12 +213,17 @@ def test_member_doc_param_map(docs):
 
 
 def test_member_doc_treats_null_parameters_as_empty(docs):
-    """A null 'parameters' from the model becomes an empty list, not an error."""
+    """An explicit null 'parameters' from the model becomes an empty list."""
     doc = docs.MemberDoc.model_validate(good_member(parameters=None))
     assert doc.parameters == []
+
+
+def test_member_doc_rejects_missing_parameters_key(docs):
+    """Leaving 'parameters' out fails validation, so the retry loop reports it."""
     without_key = good_member()
     del without_key["parameters"]
-    assert docs.MemberDoc.model_validate(without_key).parameters == []
+    with pytest.raises(ValidationError, match="parameters"):
+        docs.MemberDoc.model_validate(without_key)
 
 
 # -----------------------------------------------------------------------------
@@ -252,6 +271,50 @@ def test_find_incomplete_skips_non_parameterized_kinds(docs):
         docs, name="MAX_SPEED", kind="constant", params=["x"], return_type=None
     )
     assert docs.find_incomplete_parameters([doc], {"MAX_SPEED": target}) == []
+
+
+def test_find_unexpected_flags_undeclared_parameter(docs):
+    """A parameter the signature does not declare is reported."""
+    doc = docs.MemberDoc.model_validate(
+        good_member(parameters=param_entries(FOCUS_PARAMS + ["bogus"]))
+    )
+    result = docs.find_unexpected_parameters(
+        [doc], {"ensure_initial_focus": make_decl(docs)}
+    )
+    assert result == ["ensure_initial_focus.bogus"]
+
+
+@pytest.mark.parametrize("kind", ["constant", "export", "enum"])
+def test_find_unexpected_flags_any_parameter_on_non_parameterized_kind(docs, kind):
+    """Constants, exports and enums take no parameters at all."""
+    doc = docs.MemberDoc.model_validate(
+        good_member(name="MAX_SPEED", parameters=param_entries(["x"]))
+    )
+    target = make_decl(docs, name="MAX_SPEED", kind=kind, params=[], return_type=None)
+    assert docs.find_unexpected_parameters([doc], {"MAX_SPEED": target}) == [
+        "MAX_SPEED.x"
+    ]
+
+
+def test_find_response_problems_reports_missing_member(docs):
+    """A requested member absent from the response is reported."""
+    other = docs.MemberDoc.model_validate(good_member(name="other", parameters=[]))
+    problems = docs.find_response_problems(
+        [other], {"ensure_initial_focus"}, {"ensure_initial_focus": make_decl(docs)}
+    )
+    assert len(problems) == 1
+    assert "ensure_initial_focus" in problems[0]
+
+
+def test_find_response_problems_passes_good_response(docs):
+    """A complete, correct response has no problems."""
+    doc = docs.MemberDoc.model_validate(good_member())
+    assert (
+        docs.find_response_problems(
+            [doc], {"ensure_initial_focus"}, {"ensure_initial_focus": make_decl(docs)}
+        )
+        == []
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -373,26 +436,63 @@ def test_query_exits_when_parameters_stay_missing(docs, sleeps):
     assert sleeps == [5, 5]
 
 
-def test_query_exits_on_unexpected_parameter(docs, sleeps):
-    """A parameter not in the signature fails closed."""
-    client = fake_client(
-        gemini_reply(good_member(parameters=param_entries(FOCUS_PARAMS + ["bogus"])))
-    )
+def test_query_retries_unexpected_parameter_with_feedback(docs, sleeps):
+    """An undeclared parameter is fed back to Gemini instead of aborting the run."""
+    bad = gemini_reply(good_member(parameters=param_entries(FOCUS_PARAMS + ["bogus"])))
+    client = fake_client(bad, gemini_reply(good_member()))
+
+    result = query(docs, client)
+
+    assert set(result["ensure_initial_focus"].param_map) == set(FOCUS_PARAMS)
+    second = sent_prompts(client)[1]
+    assert REJECTED_MARKER in second
+    assert "ensure_initial_focus.bogus" in second
+    assert sleeps == [5]
+
+
+def test_query_exits_when_unexpected_parameter_persists(docs, sleeps):
+    """An undeclared parameter on every attempt still fails closed."""
+    bad = gemini_reply(good_member(parameters=param_entries(FOCUS_PARAMS + ["bogus"])))
+    client = fake_client(bad, bad, bad)
     with pytest.raises(SystemExit) as exc:
         query(docs, client)
     assert exc.value.code == 1
+    assert sleeps == [5, 5]
 
 
 @pytest.mark.parametrize("kind", ["constant", "export", "enum"])
-def test_query_exits_on_parameters_for_non_parameterized_member(docs, sleeps, kind):
-    """Parameters returned for a constant, export or enum fail closed."""
+def test_query_retries_parameters_on_non_parameterized_member(docs, sleeps, kind):
+    """Parameters on a constant, export or enum are retried, then fail closed."""
     decl = make_decl(docs, name="MAX_SPEED", kind=kind, params=[], return_type=None)
-    client = fake_client(
-        gemini_reply(good_member(name="MAX_SPEED", parameters=param_entries(["x"])))
-    )
+    bad = gemini_reply(good_member(name="MAX_SPEED", parameters=param_entries(["x"])))
+    client = fake_client(bad, bad, bad)
     with pytest.raises(SystemExit) as exc:
         query(docs, client, decl)
     assert exc.value.code == 1
+    assert "MAX_SPEED.x" in sent_prompts(client)[1]
+
+
+def test_query_retries_missing_member_with_feedback(docs, sleeps):
+    """A response without the requested member is retried with feedback."""
+    other = gemini_reply(good_member(name="other", parameters=[]))
+    client = fake_client(other, gemini_reply(good_member()))
+
+    result = query(docs, client)
+
+    assert "ensure_initial_focus" in result
+    assert "Missing documentation for requested members" in sent_prompts(client)[1]
+
+
+def test_query_retries_missing_parameters_key(docs, sleeps):
+    """A member without a 'parameters' key is retried, not accepted as empty."""
+    without_key = good_member()
+    del without_key["parameters"]
+    client = fake_client(gemini_reply(without_key), gemini_reply(good_member()))
+
+    query(docs, client)
+
+    assert "parameters" in sent_prompts(client)[1].split(REJECTED_MARKER)[1]
+    assert sleeps == [5]
 
 
 # -----------------------------------------------------------------------------
@@ -438,12 +538,14 @@ def test_docs_requirements_are_exact_pins():
         for line in REQUIREMENTS.read_text(encoding="utf-8").splitlines()
         if line.strip() and not line.lstrip().startswith("#")
     ]
-    names = set()
+    names = []
     for entry in entries:
         match = re.fullmatch(r"([A-Za-z0-9_.-]+)==([A-Za-z0-9_.+-]+)", entry)
         assert match, f"Not an exact pin: {entry!r}"
-        names.add(match.group(1).lower())
-    assert names == {"google-genai", "pydantic", "gdtoolkit"}
+        # PEP 503 normalisation: google_genai, Google.GenAI and google-genai match
+        names.append(re.sub(r"[-_.]+", "-", match.group(1)).lower())
+    assert len(names) == len(set(names)), f"Package pinned more than once: {names}"
+    assert set(names) == {"google-genai", "pydantic", "gdtoolkit"}
 
 
 @pytest.mark.parametrize(
@@ -458,10 +560,18 @@ def test_workflows_install_docs_requirements_file(workflow_path, job):
     workflow = yaml.safe_load(
         (PROJECT_ROOT / workflow_path).read_text(encoding="utf-8")
     )
-    runs = [step.get("run", "") for step in workflow["jobs"][job]["steps"]]
+    # Only active shell lines count: a commented-out install must not pass
+    active_lines = [
+        line.strip()
+        for step in workflow["jobs"][job]["steps"]
+        for line in step.get("run", "").splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ]
     assert any(
-        "pip install -r .github/scripts/requirements-docs.txt" in run for run in runs
-    )
+        re.fullmatch(r"pip install -r \.github/scripts/requirements-docs\.txt", line)
+        for line in active_lines
+    ), active_lines
     assert not any(
-        re.search(r"\b(google-genai|gdtoolkit|pydantic)==", run) for run in runs
+        re.search(r"\b(google-genai|gdtoolkit|pydantic)==", line)
+        for line in active_lines
     )
