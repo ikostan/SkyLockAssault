@@ -164,9 +164,9 @@ func test_ac1_unmute_button_restores_last_audible_volume() -> void:
 
 
 ## AC1 (real-world path): dragging 0.66 -> 0 passes through near-silent steps;
-## clicking the locked slider must still restore 0.66, not the last step (0.033).
+## the mute button must still restore 0.66, not the last step (0.033).
 ## :rtype: void
-func test_ac1_drag_to_zero_then_click_locked_slider_restores_pre_drag_volume() -> void:
+func test_ac1_drag_to_zero_then_unmute_button_restores_pre_drag_volume() -> void:
 	await _open_menu()
 	var slider: HSlider = audio_instance.music_slider
 
@@ -177,15 +177,56 @@ func test_ac1_drag_to_zero_then_click_locked_slider_restores_pre_drag_volume() -
 
 	assert_true(AudioManager.music_muted, "Precondition: drag to 0 auto-mutes")
 
+	audio_instance.mute_music.button_pressed = true  # pressed = unmuted
+	await get_tree().process_frame
+
+	assert_false(AudioManager.music_muted, "Mute button must unmute")
+	assert_almost_eq(AudioManager.music_volume, START_VOLUME, 0.0001)
+	_assert_bus_audible_at(AudioConstants.BUS_MUSIC, START_VOLUME)
+
+
+## Clicking a muted slider unmutes it. Only the unmute is asserted: in a real click Godot's
+## own Slider input then moves the value to the click position, which headless GUT cannot
+## reproduce (the gui_input signal fires before the native handler).
+## :rtype: void
+func test_click_on_muted_slider_unmutes() -> void:
+	await _open_menu()
+	audio_instance.music_slider.value = 0.0
+	assert_true(AudioManager.music_muted, "Precondition: auto-muted at 0")
+
 	var click := InputEventMouseButton.new()
 	click.button_index = MOUSE_BUTTON_LEFT
 	click.pressed = true
-	slider.gui_input.emit(click)
+	audio_instance.music_slider.gui_input.emit(click)
 	await get_tree().process_frame
 
 	assert_false(AudioManager.music_muted, "Clicking the locked slider must unmute")
-	assert_almost_eq(AudioManager.music_volume, START_VOLUME, 0.0001)
-	_assert_bus_audible_at(AudioConstants.BUS_MUSIC, START_VOLUME)
+	assert_true(audio_instance.music_slider.editable, "Slider must be unlocked")
+
+
+## The slider's debounced save is a commit point: a level the user settles on is what an
+## unmute-from-zero restores, not the level from load.
+## :rtype: void
+func test_debounced_slider_save_commits_last_audible_volume() -> void:
+	await _open_menu()
+	var slider: VolumeSlider = audio_instance.music_slider as VolumeSlider
+	assert_not_null(slider, "Music slider must be a VolumeSlider")
+	const SETTLED: float = 0.396  # 12 slider steps
+
+	slider.value = SETTLED
+	await get_tree().create_timer(slider.save_debounce_timer.wait_time + 0.1).timeout
+
+	var step_value: float = SETTLED
+	while step_value > 0.0:
+		step_value = maxf(step_value - slider.step, 0.0)
+		slider.value = step_value
+	assert_true(AudioManager.music_muted, "Precondition: drag to 0 auto-mutes")
+
+	audio_instance.mute_music.button_pressed = true
+	await get_tree().process_frame
+
+	assert_almost_eq(AudioManager.music_volume, SETTLED, 0.0001)
+	_assert_bus_audible_at(AudioConstants.BUS_MUSIC, SETTLED)
 
 
 ## AC2: after a restart (bus saved at 0 + muted, nothing audible known) -> 0.495.
