@@ -884,7 +884,7 @@ def test_batch_limits_stay_within_free_tier_quota(docs):
     assert docs.MAX_DOC_SLOTS_MODIFIED_PER_RUN * 3 <= 500  # 3 attempts per slot
 
 
-GD_TEMPLATE = "extends Node\n" "\n" "\n" "func {name}(value: int) -> void:\n" "\tpass\n"
+GD_TEMPLATE = "extends Node\n\n\nfunc {name}(value: int) -> void:\n\tpass\n"
 
 
 @pytest.fixture
@@ -906,6 +906,7 @@ def run_write(docs, monkeypatch, max_files):
     monkeypatch.setattr(docs.genai, "Client", lambda api_key: object())
 
     def fake_prepare(client, path, check_mode):
+        """Record the file and return an empty change instead of calling Gemini."""
         prepared.append(path.name)
         return docs.ProposedFileChange(path, "", "", 1)
 
@@ -945,17 +946,14 @@ def test_write_commits_nothing_when_a_file_fails(
     committed = []
 
     def fake_prepare(client, path, check_mode):
+        """Fail closed on the second file, as prepare_file_change does on errors."""
         if path.name == "b_two.gd":
             sys.exit(1)
         return docs.ProposedFileChange(path, "", "", 1)
 
     monkeypatch.setattr(docs.genai, "Client", lambda api_key: object())
     monkeypatch.setattr(docs, "prepare_file_change", fake_prepare)
-    monkeypatch.setattr(
-        docs,
-        "atomic_commit_all_changes",
-        lambda changes: committed.extend(changes),
-    )
+    monkeypatch.setattr(docs, "atomic_commit_all_changes", committed.extend)
     monkeypatch.setattr("sys.argv", ["update_gdscript_docs.py", "--write"])
     with pytest.raises(SystemExit):
         docs.main()
