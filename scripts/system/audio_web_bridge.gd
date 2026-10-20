@@ -268,12 +268,10 @@ func _on_toggle_mute_js(args: Array, bus_name: String) -> void:
 		Globals.LogLevel.DEBUG
 	)
 
-	AudioManager.set_muted(bus_name, is_muted)
-	if not is_muted:
-		# Issue #1046: never leave a bus unmuted at (near) zero volume. The restored
-		# value reaches the DOM slider through the volume_changed signal.
-		AudioManager.restore_volume_for_unmute(bus_name)
-	AudioManager.apply_volume_to_bus(bus_name, AudioManager.get_volume(bus_name), is_muted)
+	# Shared pipeline with the menu (Issue #1048). Programmatic: silent, immediate cutoff.
+	# Unmuting at zero restores an audible volume (Issue #1046); the DOM slider follows
+	# through the volume_changed signal.
+	await AudioManager.toggle_mute(bus_name, is_muted, false)
 	AudioManager.save_volumes()
 
 

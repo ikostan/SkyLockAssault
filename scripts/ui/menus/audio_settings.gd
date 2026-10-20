@@ -694,82 +694,29 @@ func _get_slider_for_bus(bus_name: String) -> HSlider:
 	return target_slider
 
 
-## Auxiliary lookup tool to map string-based audio buses to their respective scene
-## tree mute buttons.
-## Refactored with an explicit default fallback branch to capture configuration mismatches early.
-## :param bus_name: The constant identifier name of the audio channel.
-## :type bus_name: String
-## :rtype: CheckButton
-func _get_mute_button_for_bus(bus_name: String) -> CheckButton:
-	var target_button: CheckButton = null
-
-	match bus_name:
-		AudioConstants.BUS_MASTER:
-			target_button = mute_master
-		AudioConstants.BUS_MUSIC:
-			target_button = mute_music
-		AudioConstants.BUS_SFX:
-			target_button = mute_sfx
-		AudioConstants.BUS_SFX_WEAPON:
-			target_button = mute_weapon
-		AudioConstants.BUS_SFX_ROTORS:
-			target_button = mute_rotor
-		AudioConstants.BUS_SFX_MENU:
-			target_button = mute_menu
-		_:
-			Globals.log_message(
-				"Critical: Unknown bus_name passed to mute button lookup: " + bus_name,
-				Globals.LogLevel.ERROR
-			)
-
-	return target_button
-
-
 # ==========================================================================
 # FIXED MUTE TOGGLE CALLBACKS (WITH BACKGROUND BUFFER DEFERRAL)
 # ==========================================================================
 
 
-## Centralized pipeline handler for all UI bus mute toggles.
-## Eliminates code duplication and provides a unified hardware safety window.
+## Centralized handler for all UI bus mute toggles (visual-only since Issue #1048).
+## Only real presses reach this: background sync (_on_global_mute_toggled) uses
+## set_pressed_no_signal, so 'toggled' never fires for it. Every call is therefore a manual
+## interaction, including the locked-slider click proxy in _handle_slider_gui_input.
+## The click, the deferred hardware cutoff, the unmute-from-zero restore and the AudioServer
+## update all live in AudioManager.toggle_mute(); UI locks follow via mute_toggled.
+## :param bus_name: The bus being toggled.
+## :type bus_name: String
+## :param toggled_on: True if the bus is unmuted (button pressed), false if muted.
+## :type toggled_on: bool
+## :rtype: void
 func _execute_bus_mute_toggle(bus_name: String, toggled_on: bool) -> void:
-	var button: CheckButton = _get_mute_button_for_bus(bus_name)
-	var slider: HSlider = _get_slider_for_bus(bus_name)
+	if toggled_on and bus_name == AudioConstants.BUS_MASTER:
+		# Invalidate any pending Master auto-mute zeroing timer so it cannot flatten the
+		# bus after the user has already unmuted it (Issue #1046). UI-owned until #725.
+		_master_zero_token += 1
 
-	# Focus Gate: Only play audio feedback if the interaction came from a focused UI element
-	# This guarantees that automated background sync operations remain completely silent.
-	var has_user_focus: bool = (
-		(button != null and button.has_focus()) or (slider != null and slider.has_focus())
-	)
-
-	if has_user_focus:
-		AudioManager.play_sfx(AudioConstants.SFX_CHECK)
-
-	# Update variables and UI locks immediately for snappy interface response
-	AudioManager.set_muted(bus_name, not toggled_on)
-
-	# Issue #1046: never leave a bus unmuted at (near) zero volume.
-	if toggled_on:
-		if bus_name == AudioConstants.BUS_MASTER:
-			# Invalidate any pending Master auto-mute zeroing timer so it cannot
-			# flatten the bus after the user has already unmuted it.
-			_master_zero_token += 1
-		# Must run AFTER set_muted(false): with the bus already unmuted, the
-		# volume_changed echo does not re-enter the auto-unmute branch above.
-		AudioManager.restore_volume_for_unmute(bus_name)
-
-	_update_ui_interactivity()
-
-	# ENGINE WORKAROUND: Defer hardware cutoffs slightly when muting
-	# to allow the confirmation click to finish streaming to the audio device.
-	if not toggled_on and has_user_focus:
-		await get_tree().create_timer(AudioConstants.MUTE_HARDWARE_DELAY).timeout
-
-	# Read the newest states to safely update the backend mixing matrix
-	var current_vol: float = AudioManager.get_volume(bus_name)
-	var is_muted: bool = AudioManager.get_muted(bus_name)
-
-	AudioManager.apply_volume_to_bus(bus_name, current_vol, is_muted)
+	await AudioManager.toggle_mute(bus_name, not toggled_on, true)
 	AudioManager.save_volumes()
 
 

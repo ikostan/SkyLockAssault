@@ -266,17 +266,55 @@ func _get_last_audible_volume(bus_name: String) -> float:
 	)
 
 
+## Single mute/unmute pipeline shared by the Audio Settings menu and the web bridge
+## (Issue #1048). Owns the confirmation click, the deferred hardware cutoff and the
+## unmute-from-zero restore (Issue #1046), so callers never sequence state/apply themselves.
+## Flow:
+##   1. Manual interactions play the confirmation click.
+##   2. The logical mute state flips immediately (mute_toggled fires, so UI locks update).
+##   3. Unmuting a bus at (near) zero volume restores its last audible volume.
+##   4. Manual mutes defer the AudioServer cutoff by MUTE_HARDWARE_DELAY so the click can
+##      finish streaming; unmutes and programmatic calls apply immediately.
+##   5. The newest state is applied to AudioServer (a newer toggle during the delay wins).
+## Does not save: callers follow up with save_volumes(), mirroring set_volume().
+## :param bus_name: Name of the bus.
+## :type bus_name: String
+## :param muted: True to mute, false to unmute.
+## :type muted: bool
+## :param is_manual_interaction: True for real user presses (click + deferred cutoff);
+##     false for programmatic callers such as the web bridge (silent, immediate).
+## :type is_manual_interaction: bool
+## :rtype: void
+func toggle_mute(bus_name: String, muted: bool, is_manual_interaction: bool = false) -> void:
+	if not AudioConstants.BUS_CONFIG.has(bus_name):
+		Globals.log_message("Unknown bus for toggle_mute: " + bus_name, Globals.LogLevel.WARNING)
+		return
+
+	if is_manual_interaction:
+		play_sfx(AudioConstants.SFX_CHECK)
+
+	set_muted(bus_name, muted)
+	if not muted:
+		_restore_volume_for_unmute(bus_name)
+
+	# ENGINE WORKAROUND: defer the hardware cutoff so the confirmation click is not cut off.
+	if muted and is_manual_interaction and is_inside_tree():
+		await get_tree().create_timer(AudioConstants.MUTE_HARDWARE_DELAY).timeout
+
+	# Re-read the newest state: a toggle issued during the delay must not be overwritten.
+	apply_volume_to_bus(bus_name, get_volume(bus_name), get_muted(bus_name))
+
+
 ## Guarantees a bus is never left unmuted at (near) zero volume (Issue #1046).
-## Call right after set_muted(bus_name, false). If the bus volume is at or below
-## AUTO_MUTE_VOLUME_THRESHOLD, it is raised to _get_last_audible_volume(); otherwise it
+## Called by toggle_mute() right after set_muted(bus_name, false). If the bus volume is at or
+## below AUTO_MUTE_VOLUME_THRESHOLD, it is raised to _get_last_audible_volume(); otherwise it
 ## is left unchanged. Uses the raw set_volume() setter, so volume_changed still fires and
 ## the menu slider and the web DOM follow. Because the bus is already unmuted, the UI's
-## near-zero auto-unmute branch does not re-run. AudioServer is not touched: callers
-## follow up with apply_volume_to_bus() + save_volumes().
+## near-zero auto-unmute branch does not re-run. AudioServer is not touched here.
 ## :param bus_name: Name of the bus being unmuted.
 ## :type bus_name: String
 ## :rtype: float
-func restore_volume_for_unmute(bus_name: String) -> float:
+func _restore_volume_for_unmute(bus_name: String) -> float:
 	var current_vol: float = get_volume(bus_name)
 	if current_vol > AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD:
 		return current_vol
