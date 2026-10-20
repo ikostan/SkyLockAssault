@@ -895,6 +895,24 @@ def test_docs_workflow_cache_tracks_shared_requirements():
     )
 
 
+def test_every_workflow_running_ci_tests_installs_docs_requirements():
+    """Any workflow that runs tests/ci/ must install the docs pins (#1058).
+
+    test_update_gdscript_docs.py cannot even be collected without them, so a new
+    runner of tests/ci/ that forgets the install breaks CI.
+    """
+    workflows = sorted((PROJECT_ROOT / ".github/workflows").glob("*.yml"))
+    missing = []
+    for path in workflows:
+        text = path.read_text(encoding="utf-8")
+        runs_ci_tests = re.search(
+            r"pytest[^\n]*tests/ci|test_path:\s*\"tests/ci/", text
+        )
+        if runs_ci_tests and ".github/scripts/requirements-docs.txt" not in text:
+            missing.append(path.name)
+    assert missing == [], missing
+
+
 def test_docs_requirements_are_exact_pins():
     """requirements-docs.txt pins exactly the three docs dependencies."""
     entries = [
@@ -917,10 +935,12 @@ def test_docs_requirements_are_exact_pins():
     [
         (".github/workflows/bi_weekly_gd_docstrings.yml", "sync-docstrings"),
         (".github/workflows/test_ci_scripts.yml", "test-python"),
+        # The "CI & Security" browser shard also runs tests/ci/*.py (#1058)
+        (".github/workflows/browser_test.yml", "test-shard"),
     ],
 )
 def test_workflows_install_docs_requirements_file(workflow_path, job):
-    """Both workflows install the shared pins file and never pin inline."""
+    """Every workflow that runs these tests installs the shared pins, never inline."""
     workflow = yaml.safe_load(
         (PROJECT_ROOT / workflow_path).read_text(encoding="utf-8")
     )
