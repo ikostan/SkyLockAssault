@@ -263,17 +263,17 @@ func _update_ui_interactivity() -> void:
 func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 	match bus_name:
 		AudioConstants.BUS_MASTER:
-			master_slider.set_value_no_signal(volume)
+			_sync_slider_visual(master_slider, volume)
 		AudioConstants.BUS_MUSIC:
-			music_slider.set_value_no_signal(volume)
+			_sync_slider_visual(music_slider, volume)
 		AudioConstants.BUS_SFX:
-			sfx_slider.set_value_no_signal(volume)
+			_sync_slider_visual(sfx_slider, volume)
 		AudioConstants.BUS_SFX_WEAPON:
-			weapon_slider.set_value_no_signal(volume)
+			_sync_slider_visual(weapon_slider, volume)
 		AudioConstants.BUS_SFX_ROTORS:
-			rotor_slider.set_value_no_signal(volume)
+			_sync_slider_visual(rotor_slider, volume)
 		AudioConstants.BUS_SFX_MENU:
-			menu_slider.set_value_no_signal(volume)
+			_sync_slider_visual(menu_slider, volume)
 
 	# --- AUTO-MUTE ON NEAR-ZERO VOLUME THRESHOLD ---
 	if volume <= AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD and not AudioManager.get_muted(bus_name):
@@ -317,6 +317,21 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 					AudioServer.set_bus_mute(bus_idx, false)
 					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
 			AudioManager.play_sfx(AudioConstants.SFX_CHECK)
+
+
+## Moves a slider to a volume AudioManager already holds, without emitting value_changed.
+## VolumeSlider also resyncs its delta tracker so the next manual move is never swallowed
+## (Issue #1046); a plain HSlider only gets its visual value updated.
+## :param slider: The slider mirroring the bus.
+## :type slider: HSlider
+## :param volume: The current linear volume (0.0 to 1.0).
+## :type volume: float
+## :rtype: void
+func _sync_slider_visual(slider: HSlider, volume: float) -> void:
+	if slider is VolumeSlider:
+		(slider as VolumeSlider).sync_from_manager(volume)
+	elif slider != null:
+		slider.set_value_no_signal(volume)
 
 
 ## Updates the visual Godot CheckButtons when Playwright mutes the AudioManager
@@ -732,6 +747,17 @@ func _execute_bus_mute_toggle(bus_name: String, toggled_on: bool) -> void:
 
 	# Update variables and UI locks immediately for snappy interface response
 	AudioManager.set_muted(bus_name, not toggled_on)
+
+	# Issue #1046: never leave a bus unmuted at (near) zero volume.
+	if toggled_on:
+		if bus_name == AudioConstants.BUS_MASTER:
+			# Invalidate any pending Master auto-mute zeroing timer so it cannot
+			# flatten the bus after the user has already unmuted it.
+			_master_zero_token += 1
+		# Must run AFTER set_muted(false): with the bus already unmuted, the
+		# volume_changed echo does not re-enter the auto-unmute branch above.
+		AudioManager.restore_volume_for_unmute(bus_name)
+
 	_update_ui_interactivity()
 
 	# ENGINE WORKAROUND: Defer hardware cutoffs slightly when muting

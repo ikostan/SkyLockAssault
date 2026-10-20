@@ -101,6 +101,20 @@ func set_value_programmatically(new_value: float) -> void:
 	_previous_value = clamped_value
 
 
+## Mirrors a volume change that already happened in AudioManager (web bridge, unmute-from-zero
+## restore, reset). Updates the visual value and the delta tracker without emitting
+## 'value_changed', touching AudioServer, or writing back to AudioManager.
+## Keeping _previous_value in sync matters: if it went stale, a later manual move to that stale
+## value would be swallowed by _on_value_changed's early return (Issue #1046).
+## :param new_value: The volume AudioManager now holds (0.0 to 1.0).
+## :type new_value: float
+## :rtype: void
+func sync_from_manager(new_value: float) -> void:
+	var clamped_value: float = clamp(new_value, min_value, max_value)
+	set_value_no_signal(clamped_value)
+	_previous_value = clamped_value
+
+
 ## Tracks mouse and touch drag state for accurate interaction gating, even if the cursor
 ## leaves the slider's bounding box while dragging.
 ## :param event: The input event passed by the UI system.

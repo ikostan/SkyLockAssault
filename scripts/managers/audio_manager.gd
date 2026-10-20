@@ -49,6 +49,13 @@ var _missing_sfx_cache: Dictionary = {}
 ## Array of pre-instantiated AudioStreamPlayers to prevent node instantiation churn.
 var _sfx_pool: Array[AudioStreamPlayer] = []
 
+# --- UNMUTE-FROM-ZERO STATE (Issue #1046) ---
+## Last committed volume above AUTO_MUTE_VOLUME_THRESHOLD, per bus name. In memory only.
+## Captured at commit points (save_volumes / load_volumes), not on every set_volume(),
+## because a slider drag down to 0 passes through near-silent steps (0.066, 0.033, ...)
+## that must not overwrite the volume the user actually had before the drag.
+var _last_audible_volume: Dictionary = {}
+
 
 func _ready() -> void:
 	## Initializes to defaults and loads/applies volumes.
@@ -247,6 +254,52 @@ func set_muted(bus_name: String, muted: bool) -> void:
 		mute_toggled.emit(bus_name, muted)
 
 
+## Returns the volume a bus should be restored to when unmuted from (near) zero:
+## the last committed volume above AUTO_MUTE_VOLUME_THRESHOLD, or
+## AudioConstants.UNMUTE_FROM_ZERO_FALLBACK_VOLUME if none is known (Issue #1046).
+## :param bus_name: Name of the bus.
+## :type bus_name: String
+## :rtype: float
+func _get_last_audible_volume(bus_name: String) -> float:
+	return float(
+		_last_audible_volume.get(bus_name, AudioConstants.UNMUTE_FROM_ZERO_FALLBACK_VOLUME)
+	)
+
+
+## Guarantees a bus is never left unmuted at (near) zero volume (Issue #1046).
+## Call right after set_muted(bus_name, false). If the bus volume is at or below
+## AUTO_MUTE_VOLUME_THRESHOLD, it is raised to _get_last_audible_volume(); otherwise it
+## is left unchanged. Uses the raw set_volume() setter, so volume_changed still fires and
+## the menu slider and the web DOM follow. Because the bus is already unmuted, the UI's
+## near-zero auto-unmute branch does not re-run. AudioServer is not touched: callers
+## follow up with apply_volume_to_bus() + save_volumes().
+## :param bus_name: Name of the bus being unmuted.
+## :type bus_name: String
+## :rtype: float
+func restore_volume_for_unmute(bus_name: String) -> float:
+	var current_vol: float = get_volume(bus_name)
+	if current_vol > AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD:
+		return current_vol
+
+	var restored_vol: float = _get_last_audible_volume(bus_name)
+	Globals.log_message(
+		"Unmuted " + bus_name + " at zero volume; restoring " + str(restored_vol),
+		Globals.LogLevel.DEBUG
+	)
+	set_volume(bus_name, restored_vol)
+	return restored_vol
+
+
+## Records every bus whose current volume is above AUTO_MUTE_VOLUME_THRESHOLD as its last
+## audible volume. Buses at or below the threshold keep their previous entry (Issue #1046).
+## :rtype: void
+func _snapshot_audible_volumes() -> void:
+	for bus: String in AudioConstants.BUS_CONFIG.keys():
+		var vol: float = get_volume(bus)
+		if vol > AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD:
+			_last_audible_volume[bus] = vol
+
+
 ## load_volumes
 ## Loads persisted volumes from config, overriding current values only if saved and valid.
 ## Acts strictly as an I/O coordinator: reads the file via `Globals.safe_load_config`,
@@ -286,7 +339,11 @@ func load_volumes(path: String = current_config_path) -> void:
 	elif err == ERR_FILE_NOT_FOUND:
 		Globals.log_message("No audio config file found, using defaults.", Globals.LogLevel.DEBUG)
 
-	# 4. Sync runtime state to AudioServer buses
+	# 4. Loaded state is the new baseline: rebuild last-audible volumes from it (Issue #1046)
+	_last_audible_volume.clear()
+	_snapshot_audible_volumes()
+
+	# 5. Sync runtime state to AudioServer buses
 	apply_all_volumes()
 
 
@@ -341,6 +398,9 @@ func apply_volumes_from_config(config: ConfigFile) -> void:
 func save_volumes(path: String = "") -> void:
 	if path == "":
 		path = current_config_path
+
+	# A save is a commit point: remember audible volumes even if the disk write fails (Issue #1046)
+	_snapshot_audible_volumes()
 
 	var load_data: Dictionary = Globals.safe_load_config(path)
 	var config: ConfigFile = load_data["config"]
@@ -592,6 +652,7 @@ func cleanup_for_test() -> void:
 
 	_sfx_cache.clear()
 	_missing_sfx_cache.clear()
+	_last_audible_volume.clear()
 
 	# 1. Clean the pool deterministically
 	for i in range(_sfx_pool.size() - 1, -1, -1):
