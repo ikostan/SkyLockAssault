@@ -620,12 +620,16 @@ func is_file_encrypted(path: String) -> bool:
 
 ## Safely loads a config file, handling encrypted and legacy plaintext formats.
 ##
-## Loads a configuration file from the specified path, automatically handling encrypted keys
-## and plaintext fallbacks, with auto-recovery for corrupted files.
+## Loads an encrypted file with the device key, or a plaintext file as a legacy fallback that
+## needs migration. If an encrypted file fails with [code]ERR_FILE_CORRUPT[/code] or
+## [code]ERR_INVALID_DATA[/code], it is deleted and reported as
+## [code]ERR_FILE_NOT_FOUND[/code], so callers fall back to defaults. Other decryption errors
+## and all plaintext load errors are returned unchanged and the file is kept.
 ##
 ## [param path]: The file system path to the configuration file to load.
-## Returns A Dictionary containing the keys config as ConfigFile, err as int, and is_legacy as
-## bool.
+## Returns a Dictionary with [code]config[/code] ([code]ConfigFile[/code]), [code]err[/code]
+## ([code]int[/code]) and [code]is_legacy[/code] ([code]bool[/code], true only for a plaintext
+## file that loaded successfully).
 func safe_load_config(path: String) -> Dictionary:
 	var key: String = ensure_encryption_key()
 
