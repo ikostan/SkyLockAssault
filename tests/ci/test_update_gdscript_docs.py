@@ -6,6 +6,7 @@
 import importlib.util
 import json
 import re
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -840,7 +841,127 @@ def test_query_resets_api_backoff_for_each_chunk(docs, sleeps):
 
 
 # -----------------------------------------------------------------------------
-# 7. Round trip through prepare_file_change
+# 7. Write batches
+# -----------------------------------------------------------------------------
+def queue(*slot_counts):
+    """Actionable-file queue entries with the given slot counts."""
+    return [(Path(f"scripts/core/file_{i}.gd"), n) for i, n in enumerate(slot_counts)]
+
+
+def test_batch_stops_at_file_limit(docs):
+    """No more than max_files files are taken, in queue order."""
+    files = queue(1, 1, 1, 1)
+    assert docs.select_write_batch(files, max_files=2, max_slots=30) == files[:2]
+
+
+def test_batch_stops_before_exceeding_slot_budget(docs):
+    """A file that would overflow the slot budget ends the batch, keeping order."""
+    files = queue(10, 15, 10, 1)
+    assert docs.select_write_batch(files, max_files=5, max_slots=30) == files[:2]
+
+
+def test_batch_always_takes_first_file(docs):
+    """An oversized first file is still processed, alone, so it cannot block the queue."""
+    files = queue(40, 1)
+    assert docs.select_write_batch(files, max_files=5, max_slots=30) == files[:1]
+
+
+def test_batch_defaults_follow_module_limits(docs, monkeypatch):
+    """Without arguments the batch uses the module-level limits."""
+    monkeypatch.setattr(docs, "MAX_FILES_MODIFIED_PER_RUN", 1)
+    files = queue(1, 1)
+    assert docs.select_write_batch(files) == files[:1]
+
+
+def test_batch_of_empty_queue_is_empty(docs):
+    """Nothing to do yields an empty batch."""
+    assert docs.select_write_batch([], max_files=5, max_slots=30) == []
+
+
+def test_batch_limits_stay_within_free_tier_quota(docs):
+    """Pacing stays under 15 RPM, and a worst-case batch fits the 500 requests/day."""
+    assert 60 / docs.REQUEST_PACING_SECONDS <= 15
+    assert docs.MAX_DOC_SLOTS_MODIFIED_PER_RUN * 3 <= 500  # 3 attempts per slot
+
+
+GD_TEMPLATE = "extends Node\n\n\nfunc {name}(value: int) -> void:\n\tpass\n"
+
+
+@pytest.fixture
+def scripts_tree(tmp_path, monkeypatch):
+    """A fake repo with three undocumented production scripts; cwd set to it."""
+    for sub, name in [("core", "a_one"), ("core", "b_two"), ("ui", "c_three")]:
+        path = tmp_path / "scripts" / sub / f"{name}.gd"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(GD_TEMPLATE.format(name=name), encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    return tmp_path
+
+
+def run_write(docs, monkeypatch, max_files):
+    """Run main() --write with a fake client; return prepared and committed files."""
+    prepared, committed = [], []
+    monkeypatch.setattr(docs, "MAX_FILES_MODIFIED_PER_RUN", max_files)
+    monkeypatch.setattr(docs.genai, "Client", lambda api_key: object())
+
+    def fake_prepare(client, path, check_mode):
+        """Record the file and return an empty change instead of calling Gemini."""
+        prepared.append(path.name)
+        return docs.ProposedFileChange(path, "", "", 1)
+
+    monkeypatch.setattr(docs, "prepare_file_change", fake_prepare)
+    monkeypatch.setattr(
+        docs,
+        "atomic_commit_all_changes",
+        lambda changes: committed.extend(c.file_path.name for c in changes),
+    )
+    monkeypatch.setattr("sys.argv", ["update_gdscript_docs.py", "--write"])
+    docs.main()
+    return prepared, committed
+
+
+def test_write_with_default_limits_takes_whole_small_queue(
+    docs, scripts_tree, monkeypatch, sleeps
+):
+    """With the shipped limits, a small queue is cleared in one run."""
+    prepared, committed = run_write(docs, monkeypatch, docs.MAX_FILES_MODIFIED_PER_RUN)
+    assert prepared == committed == ["a_one.gd", "b_two.gd", "c_three.gd"]
+
+
+def test_write_processes_a_batch_in_queue_order(
+    docs, scripts_tree, monkeypatch, sleeps
+):
+    """--write prepares several files in order and commits them together."""
+    prepared, committed = run_write(docs, monkeypatch, max_files=2)
+    assert prepared == ["a_one.gd", "b_two.gd"]
+    assert committed == ["a_one.gd", "b_two.gd"]
+    assert sleeps == [docs.REQUEST_PACING_SECONDS]  # paced between files
+
+
+def test_write_commits_nothing_when_a_file_fails(
+    docs, scripts_tree, monkeypatch, sleeps
+):
+    """A failure in a later file fails closed before anything is written."""
+    committed = []
+
+    def fake_prepare(client, path, check_mode):
+        """Fail closed on the second file, as prepare_file_change does on errors."""
+        if path.name == "b_two.gd":
+            sys.exit(1)
+        return docs.ProposedFileChange(path, "", "", 1)
+
+    monkeypatch.setattr(docs.genai, "Client", lambda api_key: object())
+    monkeypatch.setattr(docs, "prepare_file_change", fake_prepare)
+    monkeypatch.setattr(docs, "atomic_commit_all_changes", committed.extend)
+    monkeypatch.setattr("sys.argv", ["update_gdscript_docs.py", "--write"])
+    with pytest.raises(SystemExit):
+        docs.main()
+    assert committed == []
+
+
+# -----------------------------------------------------------------------------
+# 8. Round trip through prepare_file_change
 # -----------------------------------------------------------------------------
 FIXTURE_GD = (
     "extends Node\n"
@@ -873,7 +994,7 @@ def test_round_trip_injection_is_compliant_and_preserves_code(docs, tmp_path, sl
 
 
 # -----------------------------------------------------------------------------
-# 8. Dependency pins
+# 9. Dependency pins
 # -----------------------------------------------------------------------------
 def test_docs_workflow_cache_tracks_shared_requirements():
     """Changing the shared pins invalidates the documentation workflow's pip cache."""
@@ -893,6 +1014,24 @@ def test_docs_workflow_cache_tracks_shared_requirements():
         setups[0]["with"]["cache-dependency-path"]
         == REQUIREMENTS.relative_to(PROJECT_ROOT).as_posix()
     )
+
+
+def test_every_workflow_running_ci_tests_installs_docs_requirements():
+    """Any workflow that runs tests/ci/ must install the docs pins (#1058).
+
+    test_update_gdscript_docs.py cannot even be collected without them, so a new
+    runner of tests/ci/ that forgets the install breaks CI.
+    """
+    workflows = sorted((PROJECT_ROOT / ".github/workflows").glob("*.yml"))
+    missing = []
+    for path in workflows:
+        text = path.read_text(encoding="utf-8")
+        runs_ci_tests = re.search(
+            r"pytest[^\n]*tests/ci|test_path:\s*\"tests/ci/", text
+        )
+        if runs_ci_tests and ".github/scripts/requirements-docs.txt" not in text:
+            missing.append(path.name)
+    assert missing == [], missing
 
 
 def test_docs_requirements_are_exact_pins():
@@ -917,10 +1056,12 @@ def test_docs_requirements_are_exact_pins():
     [
         (".github/workflows/bi_weekly_gd_docstrings.yml", "sync-docstrings"),
         (".github/workflows/test_ci_scripts.yml", "test-python"),
+        # The "CI & Security" browser shard also runs tests/ci/*.py (#1058)
+        (".github/workflows/browser_test.yml", "test-shard"),
     ],
 )
 def test_workflows_install_docs_requirements_file(workflow_path, job):
-    """Both workflows install the shared pins file and never pin inline."""
+    """Every workflow that runs these tests installs the shared pins, never inline."""
     workflow = yaml.safe_load(
         (PROJECT_ROOT / workflow_path).read_text(encoding="utf-8")
     )

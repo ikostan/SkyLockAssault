@@ -160,7 +160,8 @@ jobs:
         id: "cache"
         with:
           path: "~/.cache/pip"
-          key: "${{ runner.os }}-pip-v2-${{ hashFiles('requirements.txt') }}"
+          # yamllint disable-line rule:line-length
+          key: "${{ runner.os }}-pip-v2-${{ hashFiles('requirements.txt', '.github/scripts/requirements-docs.txt') }}"
           restore-keys: "${{ runner.os }}-pip-v2-"
 
       - name: "Install System Dependencies"
@@ -180,6 +181,14 @@ jobs:
             --progress-bar off \
             --timeout 60 \
             --retries 3
+
+      # tests/ci/test_update_gdscript_docs.py imports the docs generator, which
+      # exits at import time without these packages (#1055)
+      - name: "Install Docs Generator Dependencies"
+        if: "${{ matrix.suite == 'CI & Security' }}"
+        timeout-minutes: 4
+        run: |
+          pip install -r .github/scripts/requirements-docs.txt
 
       # yamllint disable rule:line-length
       - name: "Get Playwright Version"
