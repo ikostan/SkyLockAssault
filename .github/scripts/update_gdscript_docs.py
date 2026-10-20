@@ -28,6 +28,7 @@ import re
 import shutil
 import sys
 import textwrap
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -49,8 +50,14 @@ except ImportError as err:
 # -----------------------------------------------------------------------------
 # Configuration & Limits
 # -----------------------------------------------------------------------------
-MAX_FILES_MODIFIED_PER_RUN = 1
-MAX_DOC_SLOTS_MODIFIED_PER_RUN = 100
+# Batch size per --write run. API quota is not the bottleneck: one request per slot,
+# paced to ~12 RPM, against free-tier gemini-3.5-flash-lite limits of 15 RPM, 250K TPM
+# and 500 requests/day. The caps keep each automation PR reviewable and the job well
+# inside its 30-minute timeout (#1055 follow-up).
+MAX_FILES_MODIFIED_PER_RUN = 5
+MAX_DOC_SLOTS_MODIFIED_PER_RUN = 30
+# Pause between Gemini requests (chunks and files): 60 / 5 = 12 RPM, under the 15 RPM limit.
+REQUEST_PACING_SECONDS = 5
 PINNED_MODEL = "gemini-3.5-flash-lite"
 ALLOWED_SUBDIRS = ("core", "entities", "managers", "resources", "system", "ui")
 
@@ -1095,8 +1102,6 @@ def find_response_problems(
 def query_gemini_for_docs(
     client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
 ) -> Dict[str, MemberDoc]:
-    import time
-
     target_names = [t.name for t in targets]
     if len(target_names) != len(set(target_names)):
         print(
@@ -1257,7 +1262,7 @@ def query_gemini_for_docs(
 
         # Pacing to avoid hitting the 15 RPM Free Tier Limit for Flash Lite
         if i + chunk_size < len(targets):
-            time.sleep(5)
+            time.sleep(REQUEST_PACING_SECONDS)
 
     return doc_map
 
@@ -1418,6 +1423,34 @@ def prepare_file_change(
     return ProposedFileChange(
         file_path, original_source, proposed_source, len(actionable)
     )
+
+
+def select_write_batch(
+    actionable_files: List[Tuple[Path, int]],
+    max_files: Optional[int] = None,
+    max_slots: Optional[int] = None,
+) -> List[Tuple[Path, int]]:
+    """Takes files from the front of the queue until the file or slot budget is reached.
+
+    Order is preserved and nothing is skipped, so every run continues where the last
+    merged run stopped. The first file is always taken, even if it alone exceeds the slot
+    budget, so a large file can never block the queue. Limits default to
+    MAX_FILES_MODIFIED_PER_RUN and MAX_DOC_SLOTS_MODIFIED_PER_RUN, read at call time.
+    """
+    if max_files is None:
+        max_files = MAX_FILES_MODIFIED_PER_RUN
+    if max_slots is None:
+        max_slots = MAX_DOC_SLOTS_MODIFIED_PER_RUN
+    batch: List[Tuple[Path, int]] = []
+    used_slots = 0
+    for file_path, slots in actionable_files:
+        if len(batch) >= max_files:
+            break
+        if batch and used_slots + slots > max_slots:
+            break
+        batch.append((file_path, slots))
+        used_slots += slots
+    return batch
 
 
 def atomic_commit_all_changes(changes: List[ProposedFileChange]) -> None:
@@ -1609,21 +1642,29 @@ def main():
             )
             sys.exit(0)
 
-        if total_actionable_slots > MAX_DOC_SLOTS_MODIFIED_PER_RUN:
-            print(
-                f"[FAIL-CLOSED] Actionable slots ({total_actionable_slots}) exceeded limit "
-                f"({MAX_DOC_SLOTS_MODIFIED_PER_RUN}). Aborting."
-            )
-            sys.exit(1)
-
-        target_file, slots = actionable_files[0]
+        # The slot cap bounds this batch, not the repository total: a large backlog is
+        # worked through over several runs instead of aborting every run.
+        batch = select_write_batch(actionable_files)
+        batch_slots = sum(slots for _, slots in batch)
         print(
-            f"[WRITE BATCH] Processing 1 file out of {len(actionable_files)} actionable: {target_file.name} ({slots} slot(s))"
+            f"[WRITE BATCH] Processing {len(batch)} of {len(actionable_files)} actionable "
+            f"file(s), {batch_slots} of {total_actionable_slots} slot(s):"
         )
+        for file_path, slots in batch:
+            print(f"  - {file_path.relative_to(scripts_root.parent)} ({slots} slot(s))")
 
-        change = prepare_file_change(client, target_file, check_mode=False)
-        if change:
-            atomic_commit_all_changes([change])
+        # All files are prepared before anything is written: a failure in any file still
+        # fails closed and leaves the working tree untouched.
+        changes: List[ProposedFileChange] = []
+        for index, (file_path, _) in enumerate(batch):
+            if index:
+                time.sleep(REQUEST_PACING_SECONDS)
+            change = prepare_file_change(client, file_path, check_mode=False)
+            if change:
+                changes.append(change)
+
+        if changes:
+            atomic_commit_all_changes(changes)
 
 
 if __name__ == "__main__":
