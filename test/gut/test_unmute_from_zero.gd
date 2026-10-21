@@ -341,6 +341,27 @@ func test_master_unmute_during_auto_mute_window_is_not_zeroed() -> void:
 	_assert_bus_audible_at(AudioConstants.BUS_MASTER, START_VOLUME)
 
 
+## Same race through the web bridge: a toggleMuteMaster unmute inside the 0.15 s window
+## must also cancel the menu's pending zeroing timer (review finding on #1046/#1048).
+## :rtype: void
+func test_master_web_unmute_during_auto_mute_window_is_not_zeroed() -> void:
+	await _open_menu()
+	var bridge := _create_bridge()
+	var slider: HSlider = audio_instance.master_slider
+	slider.grab_focus()  # focus path schedules the deferred zeroing
+
+	slider.value = 0.0
+	await get_tree().process_frame
+	assert_true(AudioManager.master_muted, "Precondition: auto-muted")
+
+	bridge._on_toggle_mute_master_js([true])  # checked = unmuted
+	await get_tree().create_timer(AudioConstants.MUTE_HARDWARE_DELAY + 0.1).timeout
+
+	assert_false(AudioManager.master_muted)
+	assert_almost_eq(AudioManager.master_volume, START_VOLUME, 0.0001)
+	_assert_bus_audible_at(AudioConstants.BUS_MASTER, START_VOLUME)
+
+
 ## After a restore, moving the slider straight back to 0 must auto-mute again
 ## (the slider's delta tracker must not still think it sits at 0).
 ## :rtype: void

@@ -336,6 +336,12 @@ func _sync_slider_visual(slider: HSlider, volume: float) -> void:
 
 ## Updates the visual Godot CheckButtons when Playwright mutes the AudioManager
 func _on_global_mute_toggled(bus_name: String, is_muted: bool) -> void:
+	# Any Master unmute (menu, web bridge, reset) invalidates a pending auto-mute zeroing
+	# timer, so it cannot flatten the bus after it was unmuted (Issue #1046). Lives here,
+	# not in the menu's toggle handler, because every unmute path emits mute_toggled.
+	if bus_name == AudioConstants.BUS_MASTER and not is_muted:
+		_master_zero_token += 1
+
 	# In your Godot UI, if a button is "pressed", it means the audio is UNMUTED.
 	var is_pressed: bool = not is_muted
 
@@ -711,11 +717,7 @@ func _get_slider_for_bus(bus_name: String) -> HSlider:
 ## :type toggled_on: bool
 ## :rtype: void
 func _execute_bus_mute_toggle(bus_name: String, toggled_on: bool) -> void:
-	if toggled_on and bus_name == AudioConstants.BUS_MASTER:
-		# Invalidate any pending Master auto-mute zeroing timer so it cannot flatten the
-		# bus after the user has already unmuted it (Issue #1046). UI-owned until #725.
-		_master_zero_token += 1
-
+	# Pending Master auto-mute timers are invalidated in _on_global_mute_toggled.
 	await AudioManager.toggle_mute(bus_name, not toggled_on, true)
 	AudioManager.save_volumes()
 
