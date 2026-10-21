@@ -37,6 +37,11 @@ const MUTE_HARDWARE_DELAY: float = 0.15
 ## confirmation click plays. A volume level, not a duration: it only shares
 ## its numeric value with MUTE_HARDWARE_DELAY.
 const FEEDBACK_HOLD_VOLUME_LINEAR: float = 0.15
+## Linear volume a bus is restored to when it is unmuted at or below
+## AUTO_MUTE_VOLUME_THRESHOLD and no last audible volume is known yet
+## (e.g. after a restart). Sits on the sliders' 0.033 step grid (15 steps).
+## Issue #1046.
+const UNMUTE_FROM_ZERO_FALLBACK_VOLUME: float = 0.495
 
 # Centralized config with defaults and var mappings
 const BUS_CONFIG: Dictionary = {
