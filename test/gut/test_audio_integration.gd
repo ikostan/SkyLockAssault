@@ -150,6 +150,9 @@ func test_signal_isolation_from_setup_pollution() -> void:
 ## the newest state from AudioManager (AudioManager.toggle_mute, Issue #1048), so it is
 ## harmless. Fails if the post-delay write uses the stale pre-delay state, or if the unmute
 ## step is removed.
+## The unmute is sent in the same frame as the mute, so the cutoff is guaranteed to still be
+## pending; no wall-clock window is asserted. No focus step: since #1048 every real press
+## is a manual interaction and defers the cutoff.
 func test_rapid_mute_toggle_cancels_pending_hardware_cutoff() -> void:
 	var menu_scene: PackedScene = load(GamePaths.AUDIO_SETTINGS_SCENE)
 	assert_not_null(menu_scene, "FAIL-FAST: Failed to load the Audio Settings scene.")
@@ -169,17 +172,17 @@ func test_rapid_mute_toggle_cancels_pending_hardware_cutoff() -> void:
 	assert_false(AudioServer.is_bus_mute(bus_idx), "Precondition: SFX unmuted in AudioServer")
 	watch_signals(AudioManager)
 
-	# Real presses are manual interactions: the mute defers its hardware cutoff
+	# Real presses are manual interactions: the mute defers its hardware cutoff.
+	# No await between the presses, so the cutoff is still pending when the unmute arrives.
 	sfx_mute_btn.toggled.emit(false)  # mute (button pressed = unmuted)
 	assert_true(AudioManager.get_muted(TARGET_BUS), "The mute press must reach AudioManager")
 	assert_false(AudioServer.is_bus_mute(bus_idx), "Manual mute must defer the cutoff")
-	await wait_seconds(AudioConstants.MUTE_HARDWARE_DELAY / 3.0)
-	assert_false(AudioServer.is_bus_mute(bus_idx), "Cutoff still pending inside the delay")
 
-	sfx_mute_btn.toggled.emit(true)  # unmute inside the delay window
+	sfx_mute_btn.toggled.emit(true)  # unmute while that cutoff is still pending
 	assert_false(AudioManager.get_muted(TARGET_BUS), "The unmute press must apply immediately")
 	assert_false(AudioServer.is_bus_mute(bus_idx), "Unmute must leave the hardware audible immediately")
-	await wait_seconds(AudioConstants.MUTE_HARDWARE_DELAY + 0.05)
+	# Waiting longer than the delay is always safe; twice the delay leaves a full margin.
+	await wait_seconds(AudioConstants.MUTE_HARDWARE_DELAY * 2.0)
 
 	assert_false(AudioManager.get_muted(TARGET_BUS), "AudioManager must keep the newest state")
 	assert_false(
