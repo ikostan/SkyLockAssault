@@ -167,13 +167,18 @@ func test_rapid_mute_toggle_cancels_pending_hardware_cutoff() -> void:
 	assert_false(AudioManager.get_muted(TARGET_BUS), "Precondition: SFX unmuted in AudioManager")
 	assert_almost_eq(AudioServer.get_bus_volume_db(bus_idx), 0.0, 0.01, "Precondition: 1.0")
 	assert_false(AudioServer.is_bus_mute(bus_idx), "Precondition: SFX unmuted in AudioServer")
+	watch_signals(AudioManager)
 
 	# Real presses are manual interactions: the mute defers its hardware cutoff
 	sfx_mute_btn.toggled.emit(false)  # mute (button pressed = unmuted)
+	assert_true(AudioManager.get_muted(TARGET_BUS), "The mute press must reach AudioManager")
+	assert_false(AudioServer.is_bus_mute(bus_idx), "Manual mute must defer the cutoff")
 	await wait_seconds(AudioConstants.MUTE_HARDWARE_DELAY / 3.0)
 	assert_false(AudioServer.is_bus_mute(bus_idx), "Cutoff still pending inside the delay")
 
 	sfx_mute_btn.toggled.emit(true)  # unmute inside the delay window
+	assert_false(AudioManager.get_muted(TARGET_BUS), "The unmute press must apply immediately")
+	assert_false(AudioServer.is_bus_mute(bus_idx), "Unmute must leave the hardware audible immediately")
 	await wait_seconds(AudioConstants.MUTE_HARDWARE_DELAY + 0.05)
 
 	assert_false(AudioManager.get_muted(TARGET_BUS), "AudioManager must keep the newest state")
@@ -181,6 +186,10 @@ func test_rapid_mute_toggle_cancels_pending_hardware_cutoff() -> void:
 		AudioServer.is_bus_mute(bus_idx),
 		"The pending cutoff must apply the newest (unmuted) state, not the stale mute"
 	)
+	assert_almost_eq(AudioServer.get_bus_volume_db(bus_idx), 0.0, 0.01, "Full volume must survive the pending cutoff")
+	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [TARGET_BUS, true], 0)
+	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [TARGET_BUS, false], 1)
+	assert_eq(get_signal_emit_count(AudioManager, "mute_toggled"), 2, "The pending cutoff must not toggle state again")
 
 
 ## Scenario D: Verify hardware cutoff safety window.

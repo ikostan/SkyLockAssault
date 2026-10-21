@@ -223,6 +223,88 @@ func test_unknown_bus_is_ignored() -> void:
 # ==========================================
 
 
+## Multiple pending SFX cutoffs must honor the last press, including a final re-mute.
+## :rtype: void
+func test_sfx_rapid_menu_toggles_preserve_latest_state(
+	presses: Array = use_parameters([[false, true, false], [false, true, false, true]])
+) -> void:
+	await _open_menu()
+	var mute_button: CheckButton = audio_instance.get("mute_sfx") as CheckButton
+	assert_not_null(mute_button)
+	watch_signals(AudioManager)
+
+	# No frame elapses between presses: both manual mute timers remain pending.
+	for pressed: bool in presses:
+		mute_button.button_pressed = pressed
+		assert_eq(AudioManager.get_muted(AudioConstants.BUS_SFX), not pressed)
+
+	var expected_muted: bool = not bool(presses.back())
+	assert_false(_hw_muted(AudioConstants.BUS_SFX), "Hardware stays audible while cutoffs are pending")
+	assert_eq(_saved_muted(AudioConstants.BUS_SFX), expected_muted, "The last press is saved before any cutoff")
+
+	await get_tree().create_timer(CUTOFF_WAIT).timeout
+
+	assert_eq(AudioManager.get_muted(AudioConstants.BUS_SFX), expected_muted)
+	assert_eq(_hw_muted(AudioConstants.BUS_SFX), expected_muted, "All pending cutoffs must use the latest state")
+	assert_eq(mute_button.button_pressed, not expected_muted, "The button must still reflect the last press")
+	assert_eq(get_signal_emit_count(AudioManager, "mute_toggled"), presses.size(), "Cutoffs must not emit extra toggles")
+
+
+## An unmute after the delayed cutoff has already fired must also apply immediately.
+## :rtype: void
+func test_sfx_menu_unmute_after_cutoff_is_immediate() -> void:
+	await _open_menu()
+	audio_instance.mute_sfx.button_pressed = false
+	assert_true(AudioManager.get_muted(AudioConstants.BUS_SFX))
+	assert_false(_hw_muted(AudioConstants.BUS_SFX), "Manual mute starts with a pending cutoff")
+
+	await get_tree().create_timer(CUTOFF_WAIT).timeout
+	assert_true(_hw_muted(AudioConstants.BUS_SFX), "The cutoff must actually execute before unmuting")
+
+	audio_instance.mute_sfx.button_pressed = true
+
+	assert_false(AudioManager.get_muted(AudioConstants.BUS_SFX))
+	assert_false(_hw_muted(AudioConstants.BUS_SFX), "Unmute must not introduce another hardware delay")
+	assert_eq(_saved_muted(AudioConstants.BUS_SFX), false)
+
+
+## A pending cutoff must preserve the unmute even if its menu has already been freed.
+## :rtype: void
+func test_sfx_unmute_survives_menu_close_during_cutoff() -> void:
+	await _open_menu()
+	audio_instance.mute_sfx.button_pressed = false
+	assert_true(AudioManager.get_muted(AudioConstants.BUS_SFX))
+	audio_instance.mute_sfx.button_pressed = true
+	assert_false(AudioManager.get_muted(AudioConstants.BUS_SFX))
+
+	audio_instance.free()
+	audio_instance = null
+	await get_tree().create_timer(CUTOFF_WAIT).timeout
+
+	assert_false(AudioManager.get_muted(AudioConstants.BUS_SFX))
+	assert_false(_hw_muted(AudioConstants.BUS_SFX), "Closing the menu must not revive the stale mute")
+	assert_eq(_saved_muted(AudioConstants.BUS_SFX), false, "The unmute must be saved before closing")
+
+
+## The delayed write must preserve a new volume as well as the newest mute flag.
+## :rtype: void
+func test_sfx_pending_cutoff_preserves_updated_volume_after_unmute() -> void:
+	await _open_menu()
+	audio_instance.mute_sfx.button_pressed = false
+	assert_true(AudioManager.get_muted(AudioConstants.BUS_SFX))
+
+	AudioManager.set_volume(AudioConstants.BUS_SFX, 0.33)
+	audio_instance.mute_sfx.button_pressed = true
+	assert_false(AudioManager.get_muted(AudioConstants.BUS_SFX))
+
+	await get_tree().create_timer(CUTOFF_WAIT).timeout
+
+	var sfx_idx: int = AudioServer.get_bus_index(AudioConstants.BUS_SFX)
+	assert_almost_eq(AudioManager.get_volume(AudioConstants.BUS_SFX), 0.33, 0.0001)
+	assert_almost_eq(AudioServer.get_bus_volume_db(sfx_idx), linear_to_db(0.33), 0.01)
+	assert_false(_hw_muted(AudioConstants.BUS_SFX), "The pending cutoff must preserve the unmute at the new volume")
+
+
 ## A real press clicks even when focus is elsewhere: the focus gate is gone.
 ## :rtype: void
 func test_ui_press_clicks_regardless_of_focus() -> void:
