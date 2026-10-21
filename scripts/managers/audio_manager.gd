@@ -329,13 +329,15 @@ func _restore_volume_for_unmute(bus_name: String) -> float:
 
 
 ## Records every bus whose current volume is above AUTO_MUTE_VOLUME_THRESHOLD as its last
-## audible volume. Buses at or below the threshold keep their previous entry (Issue #1046).
+## audible volume, clamped to 0.0-1.0 so an out-of-range value set directly through
+## set_volume() is never restored. Buses at or below the threshold keep their previous
+## entry (Issue #1046).
 ## :rtype: void
 func _snapshot_audible_volumes() -> void:
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
 		var vol: float = get_volume(bus)
 		if vol > AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD:
-			_last_audible_volume[bus] = vol
+			_last_audible_volume[bus] = clampf(vol, 0.0, 1.0)
 
 
 ## load_volumes
@@ -389,6 +391,8 @@ func load_volumes(path: String = current_config_path) -> void:
 ## Pure GDScript helper with no disk I/O or decryption, intended for in-memory testing.
 ## Only well-typed values in the "audio" section are applied: volumes must be float or int,
 ## mute flags must be bool. Missing or invalid keys keep the bus's current value.
+## Volumes are clamped to 0.0-1.0, and a bus at or below AUTO_MUTE_VOLUME_THRESHOLD is loaded
+## muted, so a saved file can never start a bus unmuted at zero volume (Issue #1046).
 ## Note: state is updated via set_bus_state(), so volume_changed / mute_toggled are emitted
 ## for every bus. AudioServer is not touched; call apply_all_volumes() to sync buses.
 ## :param config: The ConfigFile instance containing the "audio" section.
@@ -409,7 +413,12 @@ func apply_volumes_from_config(config: ConfigFile) -> void:
 		if config.has_section_key("audio", volume_key):
 			var loaded_volume: Variant = config.get_value("audio", volume_key)
 			if loaded_volume is float or loaded_volume is int:
-				volume = float(loaded_volume)
+				volume = clampf(float(loaded_volume), 0.0, 1.0)
+				if not is_equal_approx(volume, float(loaded_volume)):
+					Globals.log_message(
+						"Out-of-range value for '" + volume_key + "' clamped to " + str(volume),
+						Globals.LogLevel.WARNING
+					)
 			else:
 				Globals.log_message(
 					"Unsupported config value type for '" + volume_key + "': skipped",
@@ -425,6 +434,14 @@ func apply_volumes_from_config(config: ConfigFile) -> void:
 					"Unsupported config value type for '" + muted_key + "': skipped",
 					Globals.LogLevel.WARNING
 				)
+
+		# Enforce the auto-mute rule on load: never start a bus unmuted at zero volume.
+		if volume <= AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD and not muted:
+			Globals.log_message(
+				bus + " loaded at zero volume while unmuted; loading it muted.",
+				Globals.LogLevel.INFO
+			)
+			muted = true
 
 		set_bus_state(bus, volume, muted)
 

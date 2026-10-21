@@ -192,8 +192,15 @@ func _handle_slider_sfx(_new_value: float) -> void:
 
 
 ## Called on timer timeout—performs the batched disk save.
+## While the pointer is still held, the save is postponed instead: a save is a commit point
+## for the last audible volume, so a pause mid-drag on its way to 0 must not record a
+## near-silent step (Issue #1046). The timer re-arms and the save lands within one
+## debounce interval after release.
 ## :rtype: void
 func _on_debounce_timeout() -> void:
+	if _is_dragging:
+		save_debounce_timer.start()
+		return
 	AudioManager.save_volumes()
 	Globals.log_message("Debounced settings save triggered.", Globals.LogLevel.DEBUG)
 

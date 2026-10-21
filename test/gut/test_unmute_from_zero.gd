@@ -401,3 +401,110 @@ func test_fallback_volume_is_on_slider_step_grid() -> void:
 	assert_gt(
 		AudioConstants.UNMUTE_FROM_ZERO_FALLBACK_VOLUME, AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD
 	)
+
+
+# ==========================================
+# REVIEW FINDINGS (load normalization, paused drags, range)
+# ==========================================
+
+
+## Writes an encrypted audio config with Music at the given state.
+## :rtype: void
+func _write_music_config(volume: Variant, muted: bool) -> void:
+	var cfg := ConfigFile.new()
+	cfg.set_value("audio", "music_volume", volume)
+	cfg.set_value("audio", "music_muted", muted)
+	assert_eq(cfg.save_encrypted_pass(TEST_CONFIG_PATH, Globals.ensure_encryption_key()), OK)
+
+
+## Sends a left-button press or release to a slider's gui_input.
+## :rtype: void
+func _mouse_button(slider: HSlider, pressed: bool) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = pressed
+	slider.gui_input.emit(event)
+
+
+## A config saved at zero volume while unmuted loads muted (auto-mute rule), so the bus
+## never starts silent-but-unmuted; unmuting then restores the fallback.
+## :rtype: void
+func test_load_zero_volume_unmuted_loads_muted() -> void:
+	_write_music_config(0.0, false)
+
+	AudioManager.load_volumes(TEST_CONFIG_PATH)
+
+	assert_true(AudioManager.music_muted, "Zero volume must load muted")
+	assert_almost_eq(AudioManager.music_volume, 0.0, 0.0001, "Saved volume is kept")
+
+	AudioManager.toggle_mute(AudioConstants.BUS_MUSIC, false, false)
+	assert_almost_eq(
+		AudioManager.music_volume, AudioConstants.UNMUTE_FROM_ZERO_FALLBACK_VOLUME, 0.0001
+	)
+
+
+## Out-of-range config volumes are clamped to 0.0-1.0 on load.
+## :rtype: void
+func test_load_clamps_out_of_range_volume() -> void:
+	_write_music_config(1.5, false)
+	AudioManager.load_volumes(TEST_CONFIG_PATH)
+	assert_almost_eq(AudioManager.music_volume, 1.0, 0.0001, "Above 1.0 clamps to 1.0")
+	assert_false(AudioManager.music_muted)
+
+	_write_music_config(-0.25, false)
+	AudioManager.load_volumes(TEST_CONFIG_PATH)
+	assert_almost_eq(AudioManager.music_volume, 0.0, 0.0001, "Below 0.0 clamps to 0.0")
+	assert_true(AudioManager.music_muted, "Clamped to zero, so loaded muted")
+
+
+## A volume above 1.0 set directly is never recorded as a restore value.
+## :rtype: void
+func test_last_audible_volume_is_clamped() -> void:
+	AudioManager.set_volume(AudioConstants.BUS_MUSIC, 1.7)
+	AudioManager.save_volumes(TEST_CONFIG_PATH)
+
+	assert_almost_eq(AudioManager._get_last_audible_volume(AudioConstants.BUS_MUSIC), 1.0, 0.0001)
+
+
+## A drag that pauses longer than the debounce on a near-silent step, then continues to 0,
+## must still restore the pre-drag volume: no save while the pointer is held.
+## :rtype: void
+func test_paused_drag_does_not_commit_near_silent_step() -> void:
+	await _open_menu()
+	var slider: VolumeSlider = audio_instance.music_slider as VolumeSlider
+	assert_not_null(slider, "Music slider must be a VolumeSlider")
+
+	_mouse_button(slider, true)
+	slider.value = 0.066
+	await get_tree().create_timer(slider.save_debounce_timer.wait_time + 0.2).timeout
+	assert_almost_eq(
+		AudioManager._get_last_audible_volume(AudioConstants.BUS_MUSIC),
+		START_VOLUME,
+		0.0001,
+		"No commit while the pointer is held"
+	)
+
+	slider.value = 0.033
+	slider.value = 0.0
+	_mouse_button(slider, false)
+	assert_true(AudioManager.music_muted, "Precondition: drag to 0 auto-mutes")
+
+	audio_instance.mute_music.button_pressed = true
+	await get_tree().process_frame
+
+	assert_almost_eq(AudioManager.music_volume, START_VOLUME, 0.0001)
+
+
+## The postponed save still lands after release, committing the level the user let go at.
+## :rtype: void
+func test_drag_release_commits_after_debounce() -> void:
+	await _open_menu()
+	var slider: VolumeSlider = audio_instance.music_slider as VolumeSlider
+
+	_mouse_button(slider, true)
+	slider.value = 0.396
+	await get_tree().create_timer(slider.save_debounce_timer.wait_time + 0.2).timeout
+	_mouse_button(slider, false)
+	await get_tree().create_timer(slider.save_debounce_timer.wait_time + 0.2).timeout
+
+	assert_almost_eq(AudioManager._get_last_audible_volume(AudioConstants.BUS_MUSIC), 0.396, 0.0001)
