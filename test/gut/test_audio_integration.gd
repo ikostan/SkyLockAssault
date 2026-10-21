@@ -143,18 +143,44 @@ func test_signal_isolation_from_setup_pollution() -> void:
 	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [TARGET_BUS, true])
 
 
-## Scenario F: Verify rapid mute toggling cancels pending hardware cutoffs.
+## Scenario F: a quick re-toggle during the mute cutoff delay must win (Issue #1053).
+## Drives the real Audio Settings menu: a manual mute defers its AudioServer cutoff by
+## MUTE_HARDWARE_DELAY, and an unmute inside that window must not be overwritten when the
+## delay ends. Nothing is actually cancelled: the first coroutine still runs, but it re-reads
+## the newest state from AudioManager (AudioManager.toggle_mute, Issue #1048), so it is
+## harmless. Fails if the post-delay write uses the stale pre-delay state, or if the unmute
+## step is removed.
 func test_rapid_mute_toggle_cancels_pending_hardware_cutoff() -> void:
-	AudioManager.set_muted(TARGET_BUS, false)
+	var menu_scene: PackedScene = load(GamePaths.AUDIO_SETTINGS_SCENE)
+	assert_not_null(menu_scene, "FAIL-FAST: Failed to load the Audio Settings scene.")
+	var audio_menu: Control = menu_scene.instantiate() as Control
+	assert_not_null(audio_menu, "FAIL-FAST: Audio Settings root is not a Control.")
+	add_child_autofree(audio_menu)
+	await wait_process_frames(1)
+
+	var sfx_mute_btn: CheckButton = audio_menu.get("mute_sfx") as CheckButton
+	assert_not_null(sfx_mute_btn, "FAIL-FAST: 'mute_sfx' could not be read from the menu.")
+
+	# Preconditions: SFX unmuted at full volume, in state and in the mixer
+	AudioManager.set_bus_state(TARGET_BUS, 1.0, false)
 	AudioManager.apply_volume_to_bus(TARGET_BUS, 1.0, false)
-	
-	AudioManager.set_muted(TARGET_BUS, true)
-	await wait_seconds(0.05)
-	
-	AudioManager.set_muted(TARGET_BUS, false)
-	await wait_seconds(0.15)
-	
-	assert_false(AudioServer.is_bus_mute(bus_idx), "Hardware bus must remain unmuted; rapid updates abort pending cutoff timers.")
+	assert_false(AudioManager.get_muted(TARGET_BUS), "Precondition: SFX unmuted in AudioManager")
+	assert_almost_eq(AudioServer.get_bus_volume_db(bus_idx), 0.0, 0.01, "Precondition: 1.0")
+	assert_false(AudioServer.is_bus_mute(bus_idx), "Precondition: SFX unmuted in AudioServer")
+
+	# Real presses are manual interactions: the mute defers its hardware cutoff
+	sfx_mute_btn.toggled.emit(false)  # mute (button pressed = unmuted)
+	await wait_seconds(AudioConstants.MUTE_HARDWARE_DELAY / 3.0)
+	assert_false(AudioServer.is_bus_mute(bus_idx), "Cutoff still pending inside the delay")
+
+	sfx_mute_btn.toggled.emit(true)  # unmute inside the delay window
+	await wait_seconds(AudioConstants.MUTE_HARDWARE_DELAY + 0.05)
+
+	assert_false(AudioManager.get_muted(TARGET_BUS), "AudioManager must keep the newest state")
+	assert_false(
+		AudioServer.is_bus_mute(bus_idx),
+		"The pending cutoff must apply the newest (unmuted) state, not the stale mute"
+	)
 
 
 ## Scenario D: Verify hardware cutoff safety window.
