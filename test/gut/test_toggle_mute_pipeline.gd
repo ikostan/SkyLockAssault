@@ -238,6 +238,23 @@ func test_ui_press_clicks_regardless_of_focus() -> void:
 	assert_eq(_saved_muted(BUS), true, "Menu toggles are persisted")
 
 
+## Closing the menu during the 0.15 s hardware delay must not lose the mute: the save
+## happens up front, and the deferred cutoff still finishes in AudioManager.
+## :rtype: void
+func test_mute_persists_when_menu_closes_during_cutoff_delay() -> void:
+	await _open_menu()
+
+	audio_instance.mute_music.button_pressed = false  # press = mute (manual, deferred cutoff)
+	audio_instance.free()  # menu closed before MUTE_HARDWARE_DELAY expires
+	audio_instance = null
+
+	await get_tree().create_timer(CUTOFF_WAIT).timeout
+
+	assert_eq(_saved_muted(BUS), true, "Mute must be persisted despite the early close")
+	assert_true(AudioManager.get_muted(BUS))
+	assert_true(_hw_muted(BUS), "Deferred cutoff still completes in AudioManager")
+
+
 ## Clicking a locked slider is a manual unmute (click + immediate apply).
 ## :rtype: void
 func test_locked_slider_click_is_manual_unmute() -> void:

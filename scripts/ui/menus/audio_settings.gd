@@ -711,6 +711,10 @@ func _get_slider_for_bus(bus_name: String) -> HSlider:
 ## interaction, including the locked-slider click proxy in _handle_slider_gui_input.
 ## The click, the deferred hardware cutoff, the unmute-from-zero restore and the AudioServer
 ## update all live in AudioManager.toggle_mute(); UI locks follow via mute_toggled.
+## toggle_mute() is deliberately not awaited: the logical mute state (and any unmute-from-zero
+## restore) is set synchronously before its MUTE_HARDWARE_DELAY wait, so it is saved at once.
+## The deferred cutoff finishes inside the AudioManager autoload, so closing the menu during
+## the delay can no longer drop the save along with this node's coroutine.
 ## :param bus_name: The bus being toggled.
 ## :type bus_name: String
 ## :param toggled_on: True if the bus is unmuted (button pressed), false if muted.
@@ -718,7 +722,7 @@ func _get_slider_for_bus(bus_name: String) -> HSlider:
 ## :rtype: void
 func _execute_bus_mute_toggle(bus_name: String, toggled_on: bool) -> void:
 	# Pending Master auto-mute timers are invalidated in _on_global_mute_toggled.
-	await AudioManager.toggle_mute(bus_name, not toggled_on, true)
+	AudioManager.toggle_mute(bus_name, not toggled_on, true)
 	AudioManager.save_volumes()
 
 
@@ -727,7 +731,7 @@ func _execute_bus_mute_toggle(bus_name: String, toggled_on: bool) -> void:
 ## :type toggled_on: bool
 ## :rtype: void
 func _on_master_mute_toggled(toggled_on: bool) -> void:
-	await _execute_bus_mute_toggle(AudioConstants.BUS_MASTER, toggled_on)
+	_execute_bus_mute_toggle(AudioConstants.BUS_MASTER, toggled_on)
 
 
 ## Handles Music Mute toggle mutations via the centralized pipeline.
@@ -735,7 +739,7 @@ func _on_master_mute_toggled(toggled_on: bool) -> void:
 ## :type toggled_on: bool
 ## :rtype: void
 func _on_music_mute_toggled(toggled_on: bool) -> void:
-	await _execute_bus_mute_toggle(AudioConstants.BUS_MUSIC, toggled_on)
+	_execute_bus_mute_toggle(AudioConstants.BUS_MUSIC, toggled_on)
 
 
 ## Handles Parent SFX Mute toggle mutations via the centralized pipeline.
@@ -743,7 +747,7 @@ func _on_music_mute_toggled(toggled_on: bool) -> void:
 ## :type toggled_on: bool
 ## :rtype: void
 func _on_sfx_mute_toggled(toggled_on: bool) -> void:
-	await _execute_bus_mute_toggle(AudioConstants.BUS_SFX, toggled_on)
+	_execute_bus_mute_toggle(AudioConstants.BUS_SFX, toggled_on)
 
 
 ## Handles Weapon SFX Mute toggle mutations via the centralized pipeline.
@@ -751,7 +755,7 @@ func _on_sfx_mute_toggled(toggled_on: bool) -> void:
 ## :type toggled_on: bool
 ## :rtype: void
 func _on_weapon_mute_toggled(toggled_on: bool) -> void:
-	await _execute_bus_mute_toggle(AudioConstants.BUS_SFX_WEAPON, toggled_on)
+	_execute_bus_mute_toggle(AudioConstants.BUS_SFX_WEAPON, toggled_on)
 
 
 ## Handles Rotor SFX Mute toggle mutations via the centralized pipeline.
@@ -759,7 +763,7 @@ func _on_weapon_mute_toggled(toggled_on: bool) -> void:
 ## :type toggled_on: bool
 ## :rtype: void
 func _on_rotor_mute_toggled(toggled_on: bool) -> void:
-	await _execute_bus_mute_toggle(AudioConstants.BUS_SFX_ROTORS, toggled_on)
+	_execute_bus_mute_toggle(AudioConstants.BUS_SFX_ROTORS, toggled_on)
 
 
 ## Handles Menu UI SFX Mute toggle mutations via the centralized pipeline.
@@ -767,4 +771,4 @@ func _on_rotor_mute_toggled(toggled_on: bool) -> void:
 ## :type toggled_on: bool
 ## :rtype: void
 func _on_menu_mute_toggled(toggled_on: bool) -> void:
-	await _execute_bus_mute_toggle(AudioConstants.BUS_SFX_MENU, toggled_on)
+	_execute_bus_mute_toggle(AudioConstants.BUS_SFX_MENU, toggled_on)
