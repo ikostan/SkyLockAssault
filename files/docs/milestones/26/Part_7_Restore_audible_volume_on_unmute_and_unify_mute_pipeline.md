@@ -22,7 +22,7 @@
 
 Unmuting a bus whose volume was at 0 (mute button, clicking the locked slider, or the web `toggleMute*` bridge) left it **unmuted at 0**: the button showed sound on while the bus stayed silent. This contradicted the auto-mute rule (≤ threshold ⇒ muted), and the rule never re-ran because the volume didn't change.
 
-#1046 fixes this by restoring the last audible volume. #1048 moves the mute pipeline from the Audio Settings menu into `AudioManager`, so the menu and the web bridge share one code path and one fix. The menu is now visual-only for mute, as it already was for volume.
+Issue #1046 fixes this by restoring the last audible volume. #1048 moves the mute pipeline from the Audio Settings menu into `AudioManager`, so the menu and the web bridge share one code path and one fix. The menu is now visual-only for mute, as it already was for volume.
 
 ### Key Changes
 
