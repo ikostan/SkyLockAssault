@@ -29,6 +29,7 @@ pytest -k unmute_from_zero -q
 import time
 from typing import Any
 
+import pytest
 from playwright.sync_api import Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
@@ -170,6 +171,9 @@ def test_unmute_from_zero_restores_last_audible_volume(page: Page) -> None:
     assert _dom_music_value(page) == 0.3, "DOM slider must follow the restored volume"
 
 
+# Two engine boots plus the IndexedDB flush wait exceed the 30 s default (see
+# fps_counter_e2e_test.py, which uses the same budget for its reload test).
+@pytest.mark.timeout(90)
 def test_unmute_from_zero_after_reload_uses_fallback(page: Page) -> None:
     """
     ZERO-UNMUTE-02: Music saved muted at 0, page reloaded, unmuted -> 0.495.
