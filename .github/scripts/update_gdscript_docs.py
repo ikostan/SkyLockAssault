@@ -28,6 +28,7 @@ import re
 import shutil
 import sys
 import textwrap
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -49,8 +50,14 @@ except ImportError as err:
 # -----------------------------------------------------------------------------
 # Configuration & Limits
 # -----------------------------------------------------------------------------
-MAX_FILES_MODIFIED_PER_RUN = 1
-MAX_DOC_SLOTS_MODIFIED_PER_RUN = 100
+# Batch size per --write run. API quota is not the bottleneck: one request per slot,
+# paced to ~12 RPM, against free-tier gemini-3.5-flash-lite limits of 15 RPM, 250K TPM
+# and 500 requests/day. The caps keep each automation PR reviewable and the job well
+# inside its 30-minute timeout (#1055 follow-up).
+MAX_FILES_MODIFIED_PER_RUN = 5
+MAX_DOC_SLOTS_MODIFIED_PER_RUN = 30
+# Pause between Gemini requests (chunks and files): 60 / 5 = 12 RPM, under the 15 RPM limit.
+REQUEST_PACING_SECONDS = 5
 PINNED_MODEL = "gemini-3.5-flash-lite"
 ALLOWED_SUBDIRS = ("core", "entities", "managers", "resources", "system", "ui")
 
@@ -260,6 +267,32 @@ def validate_docstring_text(text: Optional[str], field_name: str) -> Optional[st
     return text.strip()
 
 
+class ParamDoc(BaseModel):
+    name: str = Field(
+        description="Exact parameter identifier from required_parameters."
+    )
+    description: str = Field(
+        description="Single-line description of what the value means or which values are accepted."
+    )
+
+    @field_validator("name", mode="after")
+    @classmethod
+    def check_name(cls, v: str) -> str:
+        if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", v):
+            raise ValueError(f"Invalid parameter identifier: '{v}'")
+        return v
+
+    @field_validator("description", mode="after")
+    @classmethod
+    def check_description(cls, v: str) -> str:
+        validated = validate_docstring_text(v, "Parameter description")
+        if not validated or "\n" in validated or "\r" in validated:
+            raise ValueError(
+                "Parameter description must be a non-empty single line without line breaks."
+            )
+        return validated
+
+
 class MemberDoc(BaseModel):
     name: str = Field(description="Exact name of the target public member.")
     summary: str = Field(
@@ -268,9 +301,17 @@ class MemberDoc(BaseModel):
     description: Optional[str] = Field(
         default=None, description="Optional extended details."
     )
-    parameters: Optional[Dict[str, str]] = Field(
-        default=None,
-        description="Key-value mapping of parameter name to description. Keys MUST strictly match parameter identifiers.",
+    # A required list, not a dict: Gemini's response schema cannot express maps
+    # with arbitrary keys, so a Dict field always came back empty (#1055). It is
+    # not Optional either: google-genai 0.8.0 drops the item schema of a nullable
+    # array, which would leave Gemini guessing the entry shape again. It has no
+    # default, so the schema Gemini receives marks it required and the model
+    # cannot silently skip it.
+    parameters: List[ParamDoc] = Field(
+        description=(
+            "One entry per parameter listed in required_parameters, in declaration order. "
+            "Use an empty list when required_parameters is empty."
+        ),
     )
     returns: Optional[str] = Field(
         default=None, description="Optional return value description."
@@ -308,22 +349,27 @@ class MemberDoc(BaseModel):
             )
         return validated
 
+    @field_validator("parameters", mode="before")
+    @classmethod
+    def coerce_null_params(cls, v: Any) -> Any:
+        """Treats an explicit null 'parameters' from the model as an empty list.
+
+        A missing key still fails validation, and the retry loop reports it back.
+        """
+        return [] if v is None else v
+
     @field_validator("parameters", mode="after")
     @classmethod
-    def check_params_dict(cls, v: Optional[Dict[str, str]]) -> Optional[Dict[str, str]]:
-        if not v:
-            return v
-        for p_name, p_desc in v.items():
-            if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", p_name):
-                raise ValueError(f"Invalid parameter identifier key: '{p_name}'")
-            validated_desc = validate_docstring_text(
-                p_desc, f"Parameter description for '{p_name}'"
-            )
-            if not validated_desc or "\n" in validated_desc or "\r" in validated_desc:
-                raise ValueError(
-                    f"Parameter description for '{p_name}' must be a non-empty single line without line breaks."
-                )
+    def check_params_unique(cls, v: List[ParamDoc]) -> List[ParamDoc]:
+        names = [p.name for p in v]
+        if len(names) != len(set(names)):
+            raise ValueError(f"Duplicate parameter entries: {names}")
         return v
+
+    @property
+    def param_map(self) -> Dict[str, str]:
+        """Parameter name -> description; empty when no parameters were returned."""
+        return {p.name: p.description for p in self.parameters}
 
 
 class FileDocumentationResponse(BaseModel):
@@ -344,8 +390,51 @@ class MemberDeclaration:
     params: List[str]
     context_snippet: str
     status: DocStatus = DocStatus.MISSING
+    return_type: Optional[str] = None
     existing_doc_lines: List[str] = field(default_factory=list)
     detached_doc_indices: List[int] = field(default_factory=list)
+
+
+MAX_CONTEXT_LINES = (
+    200  # Whole function body; cap protects the prompt from huge functions
+)
+RE_RETURN_TYPE = re.compile(r"\)\s*->\s*([^:]+?)\s*:")
+
+
+def extract_return_type(source_lines: List[str], decl_line: int) -> Optional[str]:
+    """Returns the declared return type ('void', 'bool', ...) or None if untyped.
+
+    Joins the signature lines until the one ending in ':' so wrapped signatures work.
+    """
+    header = ""
+    for line in source_lines[decl_line - 1 : decl_line + 9]:
+        header += line.strip() + " "
+        if line.rstrip().endswith(":"):
+            break
+    match = RE_RETURN_TYPE.search(header)
+    return match.group(1).strip() if match else None
+
+
+def get_function_body_snippet(
+    node: Tree, source_lines: List[str], insert_line: int, decl_line: int
+) -> str:
+    """Returns the function from its docs to its last code line.
+
+    gdtoolkit's end_line can point at the next statement, so trailing blank lines,
+    comments (the next member's ## docs) and unindented lines (the next declaration) are
+    trimmed. Body lines are always indented. The model must see the whole body; a partial
+    body made it trust stale comments over code it never saw (PR #1024).
+    """
+    end_line = getattr(getattr(node, "meta", None), "end_line", None) or decl_line + 15
+    end_line = min(end_line, len(source_lines))
+    while end_line > decl_line:
+        line = source_lines[end_line - 1]
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#") and line[:1] in (" ", "\t"):
+            break
+        end_line -= 1
+    end_line = min(end_line, insert_line + MAX_CONTEXT_LINES)
+    return "".join(source_lines[insert_line - 1 : end_line])
 
 
 def get_first_token_line(node: Any) -> Optional[int]:
@@ -633,11 +722,10 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
                 decl_line=decl_line,
                 insert_line=insert_line,
                 params=params,
-                context_snippet="".join(
-                    source_lines[
-                        insert_line - 1 : min(len(source_lines), decl_line + 15)
-                    ]
+                context_snippet=get_function_body_snippet(
+                    node, source_lines, insert_line, decl_line
                 ),
+                return_type=extract_return_type(source_lines, decl_line),
                 existing_doc_lines=docs,
                 detached_doc_indices=detached,
             )
@@ -777,6 +865,35 @@ def parse_declarations_from_ast(source: str) -> Tuple[List[MemberDeclaration], b
 # -----------------------------------------------------------------------------
 # Classification Engine
 # -----------------------------------------------------------------------------
+RE_DOUBLE_RETURNS = re.compile(r"^\s*##\s*Returns?\b\s*:?\s*Returns?\b", re.IGNORECASE)
+RE_RETURNS_DOC_LINE = re.compile(r"^\s*##\s*Returns?\b", re.IGNORECASE)
+RE_PARAM_DOC_LINE = re.compile(r"^\s*##\s*\[param\s+(\w+)\]\s*:\s*(.*)$")
+
+
+def has_doc_quality_defects(decl: MemberDeclaration) -> bool:
+    """Mirrors validate_gdscript_docs.check_function_doc_quality (keep in sync).
+
+    Defective docstrings are regenerated instead of failing the validator later.
+    """
+    if decl.kind != "function":
+        return False
+    for line in decl.existing_doc_lines:
+        if RE_DOUBLE_RETURNS.match(line):
+            return True
+        if RE_RETURNS_DOC_LINE.match(line) and decl.return_type == "void":
+            return True
+        param_match = RE_PARAM_DOC_LINE.match(line)
+        if param_match:
+            name, desc = param_match.group(1), param_match.group(2).strip().rstrip(".")
+            if desc.lower() in (
+                f"the {name} parameter".lower(),
+                f"the {name}".lower(),
+                "",
+            ):
+                return True
+    return False
+
+
 def classify_member(decl: MemberDeclaration) -> None:
     """Classifies a member into COMPLIANT, MISSING, NON_COMPLIANT, or AMBIGUOUS."""
     if decl.status == DocStatus.AMBIGUOUS:
@@ -804,12 +921,17 @@ def classify_member(decl: MemberDeclaration) -> None:
         decl.status = DocStatus.NON_COMPLIANT
         return
 
+    if has_doc_quality_defects(decl):
+        decl.status = DocStatus.NON_COMPLIANT
+        return
+
     decl.status = DocStatus.COMPLIANT
 
 
 # -----------------------------------------------------------------------------
 # Formatting & Invariants
 # -----------------------------------------------------------------------------
+RE_LEADING_RETURNS = re.compile(r"^(?:returns?\b\s*:?\s*)+", re.IGNORECASE)
 
 
 def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> List[str]:
@@ -846,11 +968,12 @@ def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> Li
                 lines.append(f"{line}\n")
 
     # 3. Parameters
-    if doc.parameters and decl.kind in ("function", "signal"):
+    param_map = doc.param_map
+    if param_map and decl.kind in ("function", "signal"):
         lines.append(f"{indent}##\n")
         for p_name in decl.params:
-            if p_name in doc.parameters:
-                p_desc = doc.parameters[p_name].strip()
+            if p_name in param_map:
+                p_desc = param_map[p_name].strip()
                 param_prefix = f"{indent}## [param {p_name}]: "
                 wrapped_param = textwrap.wrap(
                     p_desc,
@@ -861,9 +984,10 @@ def format_doc_lines(doc: MemberDoc, decl: MemberDeclaration, indent: str) -> Li
                 for line in wrapped_param:
                     lines.append(f"{line}\n")
 
-    # 4. Returns
-    if doc.returns and doc.returns.strip() and decl.kind == "function":
-        ret_desc = doc.returns.strip()
+    # 4. Returns (never for void; strip a duplicated leading 'Returns' from the model)
+    is_void = (decl.return_type or "").strip() == "void"
+    if doc.returns and doc.returns.strip() and decl.kind == "function" and not is_void:
+        ret_desc = RE_LEADING_RETURNS.sub("", doc.returns.strip())
         ret_prefix = f"{indent}## Returns "
         wrapped_ret = textwrap.wrap(
             ret_desc,
@@ -904,11 +1028,80 @@ def verify_modification_allowlist(original: str, proposed: str) -> bool:
 # -----------------------------------------------------------------------------
 
 
+def find_incomplete_parameters(
+    members: List[MemberDoc], target_by_name: Dict[str, MemberDeclaration]
+) -> List[str]:
+    """Lists 'member.param' entries the model left out or filled with a placeholder.
+
+    These used to be back-filled with "The <name> parameter.", which the quality check in
+    classify_member rejects after injection. Treating them as a failed response makes the
+    retry loop ask Gemini again instead of aborting the whole run. Empty descriptions are
+    already rejected by ParamDoc validation (#1055).
+    """
+    incomplete: List[str] = []
+    for m in members:
+        target = target_by_name.get(m.name)
+        if target is None or target.kind not in ("function", "signal"):
+            continue
+        given = m.param_map
+        for p_name in target.params:
+            desc = (given.get(p_name) or "").strip().rstrip(".").lower()
+            if desc in ("", f"the {p_name} parameter".lower(), f"the {p_name}".lower()):
+                incomplete.append(f"{m.name}.{p_name}")
+    return incomplete
+
+
+def find_unexpected_parameters(
+    members: List[MemberDoc], target_by_name: Dict[str, MemberDeclaration]
+) -> List[str]:
+    """Lists 'member.param' entries for parameters the target does not declare.
+
+    Constants, exports and enums take no parameters, so any entry on them is unexpected.
+    """
+    unexpected: List[str] = []
+    for m in members:
+        target = target_by_name.get(m.name)
+        if target is None:
+            continue
+        allowed = set(target.params) if target.kind in ("function", "signal") else set()
+        for p_name in m.param_map:
+            if p_name not in allowed:
+                unexpected.append(f"{m.name}.{p_name}")
+    return unexpected
+
+
+def find_response_problems(
+    members: List[MemberDoc],
+    requested_names: Set[str],
+    target_by_name: Dict[str, MemberDeclaration],
+) -> List[str]:
+    """Describes everything wrong with a schema-valid response, for retry feedback.
+
+    Each problem is something Gemini can fix on the next attempt, so it is fed back
+    instead of aborting the run. Extra unrequested members are filtered out later and
+    are not reported.
+    """
+    problems: List[str] = []
+    missing_members = sorted(requested_names - {m.name for m in members})
+    if missing_members:
+        problems.append(
+            f"Missing documentation for requested members: {missing_members}"
+        )
+    relevant = [m for m in members if m.name in requested_names]
+    incomplete = find_incomplete_parameters(relevant, target_by_name)
+    if incomplete:
+        problems.append(f"Missing or placeholder parameter descriptions: {incomplete}")
+    unexpected = find_unexpected_parameters(relevant, target_by_name)
+    if unexpected:
+        problems.append(
+            f"Parameters not declared in the signature (remove them): {unexpected}"
+        )
+    return problems
+
+
 def query_gemini_for_docs(
     client: genai.Client, file_path: Path, targets: List[MemberDeclaration]
 ) -> Dict[str, MemberDoc]:
-    import time
-
     target_names = [t.name for t in targets]
     if len(target_names) != len(set(target_names)):
         print(
@@ -938,6 +1131,7 @@ def query_gemini_for_docs(
                 "name": t.name,
                 "kind": t.kind,
                 "required_parameters": t.params,
+                "declared_return_type": t.return_type or "untyped",
                 "existing_developer_comments": (
                     "".join(t.existing_doc_lines).strip()
                     if t.existing_doc_lines
@@ -955,32 +1149,51 @@ def query_gemini_for_docs(
             "Requirements:\n"
             "1. Supply documentation for EVERY target member in the manifest chunk.\n"
             "2. Return only requested member names. Do not invent members.\n"
-            "3. If 'required_parameters' is non-empty, the 'parameters' field MUST be a dictionary mapping each exact parameter name to a detailed description.\n"
+            "3. If 'required_parameters' is non-empty, 'parameters' MUST be a list with exactly one {name, description} entry per required parameter, using the exact parameter name. Parameters are NOT separate members. If 'required_parameters' is empty, set 'parameters' to an empty list.\n"
             "4. BBCode allowed: [param], [constant], [member], [method], [signal], [enum], [code], [b], [i].\n"
             "5. Strictly NO Markdown code blocks (```) or Doxygen (@param/@return/@brief) tags.\n"
-            "6. CRITICAL: Do NOT use [param] inside 'summary' or 'description'. Parameter documentation belongs exclusively in the 'parameters' dictionary.\n"
+            "6. CRITICAL: Do NOT use [param] inside 'summary' or 'description'. Parameter documentation belongs exclusively in the 'parameters' list.\n"
             "7. CRITICAL: Do NOT wrap types or Godot classes in brackets (e.g. NEVER use [bool], [int], [String], [FileAccess], [Node]). Use [code]TypeName[/code] if mentioning a type.\n"
             "8. Keep descriptions concise and under 80 characters where possible.\n"
-            "9. CRITICAL CONTEXT PRESERVATION: If 'existing_developer_comments' is provided, you MUST preserve its specific technical details, warnings, return behaviors, and explanations in your new summary, description, and parameter fields. Do not invent logic that contradicts the provided code or comments.\n"
-            "10. RETURN VALUES: If the existing comments describe a return type or return behavior (e.g., ':rtype: void' or returning a specific Dictionary), you MUST extract that information and document it accurately in the 'returns' field."
+            "9. CRITICAL CONTEXT PRESERVATION: If 'existing_developer_comments' is provided, preserve its specific technical details, warnings, accepted values, formats and examples (e.g. 'key:code', '\"keyboard\" or \"gamepad\"') in your summary, description, and parameter fields.\n"
+            "10. CODE IS THE SOURCE OF TRUTH: 'code_context' contains the whole function body. Existing comments can be stale. If a comment claims something the code does not do (e.g. 'pure' or 'no side effects' while the body changes global state, or support for a feature with no matching branch), drop or correct the claim. Never broaden a claim: 'every other action' must not become 'all actions', 'Xbox/PS' must not become 'Xbox and PlayStation' unless the code handles both.\n"
+            "11. RETURN VALUES: If 'declared_return_type' is 'void', set 'returns' to null. Otherwise describe what is returned, including special values such as null, empty arrays or fallback strings. The 'returns' text is printed after the word 'Returns', so it MUST NOT start with 'Returns', 'Return' or 'Returns:' (write 'true if ...', not 'Returns true if ...').\n"
+            "12. PARAMETERS: Each parameter description must say what the value means or which values are accepted. Never write filler such as 'The x parameter.'"
         )
 
+        chunk_requested_names = {t.name for t in chunk_targets}
+
         max_retries = 3
-        retry_delay = 35  # Increased to clear 429 quota exhaustion windows (often ~30s)
+        retry_delay = 35  # Clears 429 quota exhaustion windows (often ~30s)
         validated = None
+        feedback: Optional[str] = None
 
         for attempt in range(max_retries):
+            attempt_prompt = prompt
+            if feedback:
+                attempt_prompt += (
+                    "\n\nYOUR PREVIOUS RESPONSE WAS REJECTED FOR THESE REASONS:\n"
+                    f"{feedback}\n"
+                    "Return a corrected response that fixes every problem listed above."
+                )
             try:
                 response = client.models.generate_content(
                     model=PINNED_MODEL,
-                    contents=prompt,
+                    contents=attempt_prompt,
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
                         response_schema=FileDocumentationResponse,
                         temperature=0.0,
                     ),
                 )
-                validated = FileDocumentationResponse.model_validate_json(response.text)
+                validated = FileDocumentationResponse.model_validate_json(
+                    response.text or ""
+                )
+                problems = find_response_problems(
+                    validated.members, chunk_requested_names, target_by_name
+                )
+                if problems:
+                    raise ValueError("; ".join(problems))
                 print(
                     f"[DEBUG] API response received successfully for chunk {current_chunk}/{total_chunks}.",
                     flush=True,
@@ -993,16 +1206,23 @@ def query_gemini_for_docs(
                         flush=True,
                     )
                     sys.exit(1)
+                # pydantic.ValidationError subclasses ValueError: a bad response, not an
+                # API fault. Feed the reason back and retry quickly; back off only on
+                # API errors such as 429 quota exhaustion (#1055).
+                if isinstance(e, ValueError):
+                    feedback = str(e)[:2000]
+                    delay, label = 5, "rejected response"
+                else:
+                    delay, label = retry_delay, "API failure"
+                    retry_delay *= 2  # Exponential backoff
                 print(
-                    f"[WARNING] Gemini API temporary failure (attempt {attempt + 1}/{max_retries}): {e}. Retrying in {retry_delay}s...",
+                    f"[WARNING] Gemini {label} (attempt {attempt + 1}/{max_retries}): {e}. Retrying in {delay}s...",
                     flush=True,
                 )
-                time.sleep(retry_delay)
-                retry_delay *= 2  # Exponential backoff
+                time.sleep(delay)
 
-        chunk_requested_names = {t.name for t in chunk_targets}
-
-        # Filter out any unrequested extra members returned by the model
+        # Filter out any unrequested extra members returned by the model.
+        # The checks below repeat find_response_problems as a fail-closed guard.
         filtered_members = [
             m for m in validated.members if m.name in chunk_requested_names
         ]
@@ -1020,13 +1240,7 @@ def query_gemini_for_docs(
         for m in validated.members:
             target = target_by_name[m.name]
 
-            if target.params:
-                m.parameters = m.parameters or {}
-                for p_name in target.params:
-                    if p_name not in m.parameters:
-                        m.parameters[p_name] = f"The {p_name} parameter."
-
-            m_param_set = set(m.parameters.keys()) if m.parameters else set()
+            m_param_set = set(m.param_map)
             target_param_set = set(target.params) if target.params else set()
 
             if target.kind in ("function", "signal"):
@@ -1048,7 +1262,7 @@ def query_gemini_for_docs(
 
         # Pacing to avoid hitting the 15 RPM Free Tier Limit for Flash Lite
         if i + chunk_size < len(targets):
-            time.sleep(5)
+            time.sleep(REQUEST_PACING_SECONDS)
 
     return doc_map
 
@@ -1209,6 +1423,34 @@ def prepare_file_change(
     return ProposedFileChange(
         file_path, original_source, proposed_source, len(actionable)
     )
+
+
+def select_write_batch(
+    actionable_files: List[Tuple[Path, int]],
+    max_files: Optional[int] = None,
+    max_slots: Optional[int] = None,
+) -> List[Tuple[Path, int]]:
+    """Takes files from the front of the queue until the file or slot budget is reached.
+
+    Order is preserved and nothing is skipped, so every run continues where the last
+    merged run stopped. The first file is always taken, even if it alone exceeds the slot
+    budget, so a large file can never block the queue. Limits default to
+    MAX_FILES_MODIFIED_PER_RUN and MAX_DOC_SLOTS_MODIFIED_PER_RUN, read at call time.
+    """
+    if max_files is None:
+        max_files = MAX_FILES_MODIFIED_PER_RUN
+    if max_slots is None:
+        max_slots = MAX_DOC_SLOTS_MODIFIED_PER_RUN
+    batch: List[Tuple[Path, int]] = []
+    used_slots = 0
+    for file_path, slots in actionable_files:
+        if len(batch) >= max_files:
+            break
+        if batch and used_slots + slots > max_slots:
+            break
+        batch.append((file_path, slots))
+        used_slots += slots
+    return batch
 
 
 def atomic_commit_all_changes(changes: List[ProposedFileChange]) -> None:
@@ -1400,21 +1642,29 @@ def main():
             )
             sys.exit(0)
 
-        if total_actionable_slots > MAX_DOC_SLOTS_MODIFIED_PER_RUN:
-            print(
-                f"[FAIL-CLOSED] Actionable slots ({total_actionable_slots}) exceeded limit "
-                f"({MAX_DOC_SLOTS_MODIFIED_PER_RUN}). Aborting."
-            )
-            sys.exit(1)
-
-        target_file, slots = actionable_files[0]
+        # The slot cap bounds this batch, not the repository total: a large backlog is
+        # worked through over several runs instead of aborting every run.
+        batch = select_write_batch(actionable_files)
+        batch_slots = sum(slots for _, slots in batch)
         print(
-            f"[WRITE BATCH] Processing 1 file out of {len(actionable_files)} actionable: {target_file.name} ({slots} slot(s))"
+            f"[WRITE BATCH] Processing {len(batch)} of {len(actionable_files)} actionable "
+            f"file(s), {batch_slots} of {total_actionable_slots} slot(s):"
         )
+        for file_path, slots in batch:
+            print(f"  - {file_path.relative_to(scripts_root.parent)} ({slots} slot(s))")
 
-        change = prepare_file_change(client, target_file, check_mode=False)
-        if change:
-            atomic_commit_all_changes([change])
+        # All files are prepared before anything is written: a failure in any file still
+        # fails closed and leaves the working tree untouched.
+        changes: List[ProposedFileChange] = []
+        for index, (file_path, _) in enumerate(batch):
+            if index:
+                time.sleep(REQUEST_PACING_SECONDS)
+            change = prepare_file_change(client, file_path, check_mode=False)
+            if change:
+                changes.append(change)
+
+        if changes:
+            atomic_commit_all_changes(changes)
 
 
 if __name__ == "__main__":

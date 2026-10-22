@@ -49,6 +49,13 @@ var _missing_sfx_cache: Dictionary = {}
 ## Array of pre-instantiated AudioStreamPlayers to prevent node instantiation churn.
 var _sfx_pool: Array[AudioStreamPlayer] = []
 
+# --- UNMUTE-FROM-ZERO STATE (Issue #1046) ---
+## Last committed volume above AUTO_MUTE_VOLUME_THRESHOLD, per bus name. In memory only.
+## Captured at commit points (save_volumes / load_volumes), not on every set_volume(),
+## because a slider drag down to 0 passes through near-silent steps (0.066, 0.033, ...)
+## that must not overwrite the volume the user actually had before the drag.
+var _last_audible_volume: Dictionary = {}
+
 
 func _ready() -> void:
 	## Initializes to defaults and loads/applies volumes.
@@ -247,6 +254,92 @@ func set_muted(bus_name: String, muted: bool) -> void:
 		mute_toggled.emit(bus_name, muted)
 
 
+## Returns the volume a bus should be restored to when unmuted from (near) zero:
+## the last committed volume above AUTO_MUTE_VOLUME_THRESHOLD, or
+## AudioConstants.UNMUTE_FROM_ZERO_FALLBACK_VOLUME if none is known (Issue #1046).
+## :param bus_name: Name of the bus.
+## :type bus_name: String
+## :rtype: float
+func _get_last_audible_volume(bus_name: String) -> float:
+	return float(
+		_last_audible_volume.get(bus_name, AudioConstants.UNMUTE_FROM_ZERO_FALLBACK_VOLUME)
+	)
+
+
+## Single mute/unmute pipeline shared by the Audio Settings menu and the web bridge
+## (Issue #1048). Owns the confirmation click, the deferred hardware cutoff and the
+## unmute-from-zero restore (Issue #1046), so callers never sequence state/apply themselves.
+## Flow:
+##   1. Manual interactions play the confirmation click.
+##   2. The logical mute state flips immediately (mute_toggled fires, so UI locks update).
+##   3. Unmuting a bus at (near) zero volume restores its last audible volume.
+##   4. Manual mutes defer the AudioServer cutoff by MUTE_HARDWARE_DELAY so the click can
+##      finish streaming; unmutes and programmatic calls apply immediately.
+##   5. The newest state is applied to AudioServer (a newer toggle during the delay wins).
+## Does not save: callers follow up with save_volumes(), mirroring set_volume().
+## :param bus_name: Name of the bus.
+## :type bus_name: String
+## :param muted: True to mute, false to unmute.
+## :type muted: bool
+## :param is_manual_interaction: True for real user presses (click + deferred cutoff);
+##     false for programmatic callers such as the web bridge (silent, immediate).
+## :type is_manual_interaction: bool
+## :rtype: void
+func toggle_mute(bus_name: String, muted: bool, is_manual_interaction: bool = false) -> void:
+	if not AudioConstants.BUS_CONFIG.has(bus_name):
+		Globals.log_message("Unknown bus for toggle_mute: " + bus_name, Globals.LogLevel.WARNING)
+		return
+
+	if is_manual_interaction:
+		play_sfx(AudioConstants.SFX_CHECK)
+
+	set_muted(bus_name, muted)
+	if not muted:
+		_restore_volume_for_unmute(bus_name)
+
+	# ENGINE WORKAROUND: defer the hardware cutoff so the confirmation click is not cut off.
+	if muted and is_manual_interaction and is_inside_tree():
+		await get_tree().create_timer(AudioConstants.MUTE_HARDWARE_DELAY).timeout
+
+	# Re-read the newest state: a toggle issued during the delay must not be overwritten.
+	apply_volume_to_bus(bus_name, get_volume(bus_name), get_muted(bus_name))
+
+
+## Guarantees a bus is never left unmuted at (near) zero volume (Issue #1046).
+## Called by toggle_mute() right after set_muted(bus_name, false). If the bus volume is at or
+## below AUTO_MUTE_VOLUME_THRESHOLD, it is raised to _get_last_audible_volume(); otherwise it
+## is left unchanged. Uses the raw set_volume() setter, so volume_changed still fires and
+## the menu slider and the web DOM follow. Because the bus is already unmuted, the UI's
+## near-zero auto-unmute branch does not re-run. AudioServer is not touched here.
+## :param bus_name: Name of the bus being unmuted.
+## :type bus_name: String
+## :rtype: float
+func _restore_volume_for_unmute(bus_name: String) -> float:
+	var current_vol: float = get_volume(bus_name)
+	if current_vol > AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD:
+		return current_vol
+
+	var restored_vol: float = _get_last_audible_volume(bus_name)
+	Globals.log_message(
+		"Unmuted " + bus_name + " at zero volume; restoring " + str(restored_vol),
+		Globals.LogLevel.DEBUG
+	)
+	set_volume(bus_name, restored_vol)
+	return restored_vol
+
+
+## Records every bus whose current volume is above AUTO_MUTE_VOLUME_THRESHOLD as its last
+## audible volume, clamped to 0.0-1.0 so an out-of-range value set directly through
+## set_volume() is never restored. Buses at or below the threshold keep their previous
+## entry (Issue #1046).
+## :rtype: void
+func _snapshot_audible_volumes() -> void:
+	for bus: String in AudioConstants.BUS_CONFIG.keys():
+		var vol: float = get_volume(bus)
+		if vol > AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD:
+			_last_audible_volume[bus] = clampf(vol, 0.0, 1.0)
+
+
 ## load_volumes
 ## Loads persisted volumes from config, overriding current values only if saved and valid.
 ## Acts strictly as an I/O coordinator: reads the file via `Globals.safe_load_config`,
@@ -286,7 +379,11 @@ func load_volumes(path: String = current_config_path) -> void:
 	elif err == ERR_FILE_NOT_FOUND:
 		Globals.log_message("No audio config file found, using defaults.", Globals.LogLevel.DEBUG)
 
-	# 4. Sync runtime state to AudioServer buses
+	# 4. Loaded state is the new baseline: rebuild last-audible volumes from it (Issue #1046)
+	_last_audible_volume.clear()
+	_snapshot_audible_volumes()
+
+	# 5. Sync runtime state to AudioServer buses
 	apply_all_volumes()
 
 
@@ -294,6 +391,8 @@ func load_volumes(path: String = current_config_path) -> void:
 ## Pure GDScript helper with no disk I/O or decryption, intended for in-memory testing.
 ## Only well-typed values in the "audio" section are applied: volumes must be float or int,
 ## mute flags must be bool. Missing or invalid keys keep the bus's current value.
+## Volumes are clamped to 0.0-1.0, and a bus at or below AUTO_MUTE_VOLUME_THRESHOLD is loaded
+## muted, so a saved file can never start a bus unmuted at zero volume (Issue #1046).
 ## Note: state is updated via set_bus_state(), so volume_changed / mute_toggled are emitted
 ## for every bus. AudioServer is not touched; call apply_all_volumes() to sync buses.
 ## :param config: The ConfigFile instance containing the "audio" section.
@@ -314,7 +413,12 @@ func apply_volumes_from_config(config: ConfigFile) -> void:
 		if config.has_section_key("audio", volume_key):
 			var loaded_volume: Variant = config.get_value("audio", volume_key)
 			if loaded_volume is float or loaded_volume is int:
-				volume = float(loaded_volume)
+				volume = clampf(float(loaded_volume), 0.0, 1.0)
+				if not is_equal_approx(volume, float(loaded_volume)):
+					Globals.log_message(
+						"Out-of-range value for '" + volume_key + "' clamped to " + str(volume),
+						Globals.LogLevel.WARNING
+					)
 			else:
 				Globals.log_message(
 					"Unsupported config value type for '" + volume_key + "': skipped",
@@ -331,6 +435,14 @@ func apply_volumes_from_config(config: ConfigFile) -> void:
 					Globals.LogLevel.WARNING
 				)
 
+		# Enforce the auto-mute rule on load: never start a bus unmuted at zero volume.
+		if volume <= AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD and not muted:
+			Globals.log_message(
+				bus + " loaded at zero volume while unmuted; loading it muted.",
+				Globals.LogLevel.INFO
+			)
+			muted = true
+
 		set_bus_state(bus, volume, muted)
 
 
@@ -341,6 +453,9 @@ func apply_volumes_from_config(config: ConfigFile) -> void:
 func save_volumes(path: String = "") -> void:
 	if path == "":
 		path = current_config_path
+
+	# A save is a commit point: remember audible volumes even if the disk write fails (Issue #1046)
+	_snapshot_audible_volumes()
 
 	var load_data: Dictionary = Globals.safe_load_config(path)
 	var config: ConfigFile = load_data["config"]
@@ -592,6 +707,7 @@ func cleanup_for_test() -> void:
 
 	_sfx_cache.clear()
 	_missing_sfx_cache.clear()
+	_last_audible_volume.clear()
 
 	# 1. Clean the pool deterministically
 	for i in range(_sfx_pool.size() - 1, -1, -1):

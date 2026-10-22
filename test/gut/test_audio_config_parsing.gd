@@ -88,8 +88,15 @@ func test_numeric_volumes_include_zero_and_one(
 	for bus: String in BUS_KEYS:
 		_config.set_value("audio", BUS_KEYS[bus][0], value)
 		expected[bus]["volume"] = float(value)
+		# Auto-mute rule on load (Issue #1046): a zero volume always loads muted.
+		if float(value) <= AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD:
+			expected[bus]["muted"] = true
 	_manager.apply_volumes_from_config(_config)
-	assert_eq(_snapshot(), expected, "Numeric volumes must preserve absent mute flags")
+	assert_eq(
+		_snapshot(),
+		expected,
+		"Numeric volumes must preserve absent mute flags (zero volume loads muted)"
+	)
 
 
 func test_both_boolean_mute_values_are_accepted(

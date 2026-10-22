@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   sync-docstrings:
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-24.04"
     # Caps a stalled Gemini API call well below the 6-hour default (#1005)
     timeout-minutes: 30
 
@@ -36,14 +36,13 @@ jobs:
         with:
           python-version: "3.12"
           cache: "pip"
+          cache-dependency-path: ".github/scripts/requirements-docs.txt"
 
+      # Pins live in one file shared with test_ci_scripts.yml (#1055)
       - name: "Install Pinned Dependencies"
         run: |
           python -m pip install --upgrade pip
-          pip install \
-            google-genai==0.8.0 \
-            pydantic==2.10.6 \
-            gdtoolkit==4.5.0
+          pip install -r .github/scripts/requirements-docs.txt
 
       - name: "Audit GDScript Docstring Coverage"
         run: |
@@ -126,7 +125,7 @@ jobs:
         id: "app-token"
         if: "${{ vars.DOCS_BOT_CLIENT_ID != '' }}"
         # yamllint disable-line rule:line-length
-        uses: "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1"  # v3.2.0
+        uses: "actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510"  # v3.3.0
         with:
           client-id: "${{ vars.DOCS_BOT_CLIENT_ID }}"
           private-key: "${{ secrets.DOCS_BOT_PRIVATE_KEY }}"

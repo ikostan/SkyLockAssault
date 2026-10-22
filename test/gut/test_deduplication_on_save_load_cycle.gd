@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_deduplication_on_save_load_cycle.gd
 ## Additional GUT unit test to ensure save-load cycle doesn't introduce duplicates.
 ## Scenario: Add duplicate manually, save, load → dedup on load.

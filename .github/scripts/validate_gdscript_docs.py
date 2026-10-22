@@ -420,6 +420,52 @@ def check_detached_docs(
 # -----------------------------------------------------------------------------
 # File Validation
 # -----------------------------------------------------------------------------
+RE_RETURN_TYPE = re.compile(r"\)\s*->\s*([^:]+?)\s*:")
+RE_RETURNS_LINE = re.compile(r"^\s*##\s*Returns?\b", re.IGNORECASE)
+RE_DOUBLE_RETURNS = re.compile(r"^\s*##\s*Returns?\b\s*:?\s*Returns?\b", re.IGNORECASE)
+RE_PARAM_LINE = re.compile(r"^\s*##\s*\[param\s+(\w+)\]\s*:\s*(.*)$")
+
+
+def extract_return_type(lines: List[str], decl_line: int) -> Optional[str]:
+    """Returns the declared return type of the function at decl_line, or None if untyped."""
+    header = ""
+    for line in lines[decl_line - 1 : decl_line + 9]:
+        header += line.strip() + " "
+        if line.rstrip().endswith(":"):
+            break
+    match = RE_RETURN_TYPE.search(header)
+    return match.group(1).strip() if match else None
+
+
+def check_function_doc_quality(
+    docs: List[str], func_name: str, return_type: Optional[str], location: str
+) -> List[str]:
+    """Rejects generator artefacts seen in PR #1024 that pass the BBCode contract."""
+    errors: List[str] = []
+    for line in docs:
+        if RE_DOUBLE_RETURNS.match(line):
+            errors.append(
+                f"{location} Function '{func_name}' has a duplicated 'Returns Returns'."
+            )
+        elif RE_RETURNS_LINE.match(line) and return_type == "void":
+            errors.append(
+                f"{location} Function '{func_name}' returns void but documents a return value."
+            )
+        param_match = RE_PARAM_LINE.match(line)
+        if param_match:
+            name, desc = param_match.group(1), param_match.group(2).strip().rstrip(".")
+            if desc.lower() in (
+                f"the {name} parameter".lower(),
+                f"the {name}".lower(),
+                "",
+            ):
+                errors.append(
+                    f"{location} Function '{func_name}' has a placeholder description "
+                    f"for [param {name}]."
+                )
+    return errors
+
+
 def validate_file(file_path: Path) -> List[str]:
     try:
         with open(file_path, "r", encoding="utf-8") as f:
@@ -505,6 +551,15 @@ def validate_file(file_path: Path) -> List[str]:
                     raw_payload, f"{file_path}:{decl_line} ({func_name})"
                 )
                 errors.extend(payload.errors)
+
+                errors.extend(
+                    check_function_doc_quality(
+                        docs,
+                        func_name,
+                        extract_return_type(lines, decl_line),
+                        f"{file_path}:{decl_line}",
+                    )
+                )
 
                 sig_params = extract_params(node)
                 doc_params = payload.param_names

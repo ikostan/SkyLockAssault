@@ -4,6 +4,10 @@ name: "CI/CD Infrastructure Tests"
 on:  # yamllint disable-line rule:truthy
   workflow_call:
     inputs:
+      runner:
+        description: "Runner label. Ubuntu 26.04 canary passes ubuntu-26.04"
+        type: "string"
+        default: "ubuntu-24.04"
       godot_version:
         description: "The Godot version string passed from the calling pipeline"
         type: "string"
@@ -12,7 +16,7 @@ on:  # yamllint disable-line rule:truthy
 jobs:
   test-python:
     name: "Run CI Injection Tests"
-    runs-on: "ubuntu-latest"
+    runs-on: "${{ inputs.runner }}"
     timeout-minutes: 5
     steps:
 
@@ -31,6 +35,8 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest playwright pyyaml pytest-timeout
+          # update_gdscript_docs.py exits at import without these (#1055)
+          pip install -r .github/scripts/requirements-docs.txt
           playwright install chromium
 
       - name: "Run CI Injection Tests"
@@ -39,7 +45,7 @@ jobs:
 
   verify-godot:
     name: "Test Godot Asset Infrastructure and Signature Verification"
-    runs-on: "ubuntu-latest"
+    runs-on: "${{ inputs.runner }}"
     timeout-minutes: 10  # Generous timeout to download the 1.2 GB template file
     steps:
       - name: "Checkout code"

@@ -4,6 +4,10 @@ name: "GUT Unit Tests"
 on:  # yamllint disable-line rule:truthy
   workflow_call:
     inputs:
+      runner:
+        description: "Runner label. Ubuntu 26.04 canary passes ubuntu-26.04"
+        type: "string"
+        default: "ubuntu-24.04"
       godot_version:
         type: "string"
         default: "4.7.1-stable"
@@ -14,10 +18,13 @@ on:  # yamllint disable-line rule:truthy
       CODECOV_TOKEN:
         description: "Codecov requires a token to authenticate"
         required: true
+env:
+  # yamllint disable-line rule:line-length
+  RUNNER_SUFFIX: "${{ inputs.runner != 'ubuntu-24.04' && format('-{0}', inputs.runner) || '' }}"
 
 jobs:
   unit-test:
-    runs-on: "ubuntu-latest"
+    runs-on: "${{ inputs.runner }}"
     timeout-minutes: 10
     # Least privilege (#1003): no step uses the Checks API; checkout only reads.
     permissions:
@@ -111,6 +118,6 @@ jobs:
         if: "always()"
         uses: "actions/upload-artifact@v7"
         with:
-          name: "gut-reports"
+          name: "gut-reports${{ env.RUNNER_SUFFIX }}"
           path: "gut-reports/**"
           retention-days: 7

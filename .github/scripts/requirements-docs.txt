@@ -1,0 +1,7 @@
+# Copyright (C) 2026 Egor Kostan
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Pinned dependencies for update_gdscript_docs.py and validate_gdscript_docs.py.
+# Installed by bi_weekly_gd_docstrings.yml and test_ci_scripts.yml (#1055).
+google-genai==0.8.0
+pydantic==2.10.6
+gdtoolkit==4.5.0

@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_audio_settings_interaction.gd
 ##
 ## Architectural test suite for UI interaction logic in audio_settings.gd.
@@ -89,17 +89,22 @@ func test_reset_button_restores_defaults() -> void:
 	assert_false(AudioManager.master_muted, "Reset button should unmute master.")
 
 
-## Validates that mute toggles do NOT emit audio when unfocused (Focus-Gate).
+## Validates that background mute sync is silent (Issue #1048 replaces the old focus gate).
+## Sync uses set_pressed_no_signal, so the 'toggled' handler (and its click) never runs.
 ## :rtype: void
-func test_mute_toggled_unfocused_is_silent() -> void:
+func test_background_mute_sync_is_silent() -> void:
 	_clear_pool_players()
-	# Focus something else
+	var was_muted: bool = AudioManager.music_muted
 	audio_instance.audio_back_button.grab_focus()
-	
-	audio_instance._on_master_mute_toggled(false)
+
+	AudioManager.set_muted(AudioConstants.BUS_MUSIC, true)
 	await Engine.get_main_loop().process_frame
-	
-	assert_false(_is_sound_playing(), "Mute toggle when unfocused should be silent.")
+
+	assert_false(audio_instance.mute_music.button_pressed, "Button should mirror the muted state.")
+	assert_false(_is_sound_playing(), "Background mute sync should be silent.")
+
+	AudioManager.set_muted(AudioConstants.BUS_MUSIC, was_muted)
+	AudioManager.apply_all_volumes()
 
 
 ## Validates that the back button interaction triggers the handler.

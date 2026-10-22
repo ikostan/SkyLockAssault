@@ -1,11 +1,15 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_audio_constants_discoverability.gd
 ##
 ## Quality control suite validating that the audio bus structures,
 ## UI mappings, and filename dictionary formats match production standards.
 
 extends "res://addons/gut/test.gd"
+
+## Rotor playback buses used by player.gd (not exposed in AudioConstants).
+const BUS_SFX_ROTOR_LEFT: String = "SFX_Rotor_Left"
+const BUS_SFX_ROTOR_RIGHT: String = "SFX_Rotor_Right"
 
 # ==========================================================================
 # 1. BUS NAME CONSTANTS VERIFICATION
@@ -139,6 +143,106 @@ func test_fallback_bus_exists_in_audio_server() -> void:
 	var bus_idx: int = AudioServer.get_bus_index(AudioConstants.BUS_SFX_MENU)
 	assert_gt(bus_idx, -1, 
 		"Fallback mixing bus '%s' must exist in default_bus_layout.tres" % AudioConstants.BUS_SFX_MENU)
+
+
+## Validates that the mixer routing in default_bus_layout.tres matches the mute/volume
+## hierarchy the Audio Settings UI and AudioWebBridge enforce (Issue #1045):
+## SFX sub-buses (Weapon, Rotors, Menu) must send to SFX, so muting or lowering SFX
+## also silences or attenuates them. The rotor playback buses must feed SFX_Rotors,
+## otherwise rotor audio would bypass the Rotors and SFX controls entirely.
+func test_bus_routing_matches_ui_hierarchy() -> void:
+	var expected_sends: Dictionary = {
+		AudioConstants.BUS_MUSIC: AudioConstants.BUS_MASTER,
+		AudioConstants.BUS_SFX: AudioConstants.BUS_MASTER,
+		AudioConstants.BUS_SFX_WEAPON: AudioConstants.BUS_SFX,
+		AudioConstants.BUS_SFX_ROTORS: AudioConstants.BUS_SFX,
+		AudioConstants.BUS_SFX_MENU: AudioConstants.BUS_SFX,
+		BUS_SFX_ROTOR_LEFT: AudioConstants.BUS_SFX_ROTORS,
+		BUS_SFX_ROTOR_RIGHT: AudioConstants.BUS_SFX_ROTORS,
+	}
+	for bus: String in expected_sends:
+		var bus_idx: int = AudioServer.get_bus_index(bus)
+		assert_gt(bus_idx, -1, "Bus '%s' must exist in default_bus_layout.tres" % bus)
+		if bus_idx == -1:
+			continue
+		assert_eq(
+			String(AudioServer.get_bus_send(bus_idx)),
+			expected_sends[bus],
+			"Bus '%s' must send to '%s' to match the UI mute hierarchy." % [bus, expected_sends[bus]]
+		)
+
+
+## Reads the serialized layout instead of relying on mutable AudioServer state.
+## Bus indices are discovered by name so harmless insertions do not break tests.
+func _layout_bus_index(layout: AudioBusLayout, bus_name: String) -> int:
+	for property: Dictionary in layout.get_property_list():
+		var property_name: String = property["name"]
+		if property_name.begins_with("bus/") and property_name.ends_with("/name"):
+			if String(layout.get(property_name)) == bus_name:
+				return int(property_name.split("/")[1])
+	return -1
+
+
+## Both stereo channels and direct rotor playback must pass through the SFX
+## volume/mute control before reaching Master (regression for Issue #1045).
+func test_saved_rotor_output_path_includes_sfx(
+	source: String = use_parameters(["SFX_Rotors", "SFX_Rotor_Left", "SFX_Rotor_Right"])
+) -> void:
+	var layout: AudioBusLayout = load("res://default_bus_layout.tres") as AudioBusLayout
+	assert_not_null(layout, "The shipped default audio layout must load")
+	if layout == null:
+		return
+	var expected_path: Array[String] = ["SFX_Rotors", "SFX", "Master"]
+	if source != "SFX_Rotors":
+		expected_path.push_front(source)
+	for hop: int in range(expected_path.size() - 1):
+		var bus_name: String = expected_path[hop]
+		var bus_idx: int = _layout_bus_index(layout, bus_name)
+		assert_gt(bus_idx, -1, "Rotor output bus '%s' must exist" % bus_name)
+		if bus_idx == -1:
+			return
+		assert_eq(
+			String(layout.get("bus/%d/send" % bus_idx)), expected_path[hop + 1],
+			"'%s' must not bypass its parent volume/mute control" % bus_name
+		)
+
+
+## Godot only sends audio to buses on the left. A correct send name alone
+## cannot protect against a reordered layout silently falling back to Master.
+func test_saved_rotor_send_targets_precede_their_sources(
+	source: String = use_parameters(["SFX_Rotors", "SFX_Rotor_Left", "SFX_Rotor_Right", "SFX"])
+) -> void:
+	var layout: AudioBusLayout = load("res://default_bus_layout.tres") as AudioBusLayout
+	assert_not_null(layout)
+	if layout == null:
+		return
+	var source_idx: int = _layout_bus_index(layout, source)
+	assert_gt(source_idx, -1, "Source bus '%s' must exist" % source)
+	if source_idx == -1:
+		return
+	var target: String = String(layout.get("bus/%d/send" % source_idx))
+	var target_idx: int = _layout_bus_index(layout, target)
+	assert_gt(target_idx, -1, "Send target '%s' must exist" % target)
+	assert_lt(target_idx, source_idx, "'%s' must send to an earlier bus, without cycles" % source)
+
+
+## The new route must be audible by default; a muted bus or a solo on a
+## sibling could mask a routing regression even with the correct send names.
+func test_saved_rotor_output_path_is_enabled_by_default() -> void:
+	var layout: AudioBusLayout = load("res://default_bus_layout.tres") as AudioBusLayout
+	assert_not_null(layout)
+	if layout == null:
+		return
+	for bus_name: String in ["Master", "SFX", "SFX_Rotors", "SFX_Rotor_Left", "SFX_Rotor_Right"]:
+		var bus_idx: int = _layout_bus_index(layout, bus_name)
+		assert_gt(bus_idx, -1, "Rotor output bus '%s' must exist" % bus_name)
+		if bus_idx == -1:
+			continue
+		assert_false(bool(layout.get("bus/%d/mute" % bus_idx)), "'%s' must start unmuted" % bus_name)
+	for property: Dictionary in layout.get_property_list():
+		var property_name: String = property["name"]
+		if property_name.begins_with("bus/") and property_name.ends_with("/solo"):
+			assert_false(bool(layout.get(property_name)), "No bus should start soloed")
 
 
 ## Verifies play_sfx() correctly routes to the fallback bus when an invalid bus is requested.

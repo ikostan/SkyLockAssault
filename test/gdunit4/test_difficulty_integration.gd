@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ##
 ## test_difficulty_integration.gd
 ## Integration tests for difficulty scaling across Player fuel depletion
