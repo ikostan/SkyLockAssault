@@ -87,6 +87,9 @@ func test_pause_menu_navigation_sfx_while_paused() -> void:
 		return
 	var instance: Node = auto_free(raw_instance)
 	add_child(instance)
+	# Let deferred focus grabs settle first (menus call ensure_initial_focus(), which uses
+	# call_deferred("grab_focus")), so they cannot steal focus after the test grabs it.
+	await await_idle_frame()
 	
 	var target_control: Control = _find_first_focusable_control(instance)
 	assert_object(target_control).is_not_null()
@@ -142,6 +145,9 @@ func _assert_menu_navigation_sfx_trigger(scene_path: String) -> void:
 		return
 	var instance: Node = auto_free(raw_instance)
 	add_child(instance)
+	# Let deferred focus grabs settle first (menus call ensure_initial_focus(), which uses
+	# call_deferred("grab_focus")), so they cannot steal focus after the test grabs it.
+	await await_idle_frame()
 	
 	var target_control: Control = _find_first_focusable_control(instance)
 	assert_object(target_control).is_not_null()
