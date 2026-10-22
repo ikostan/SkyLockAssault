@@ -74,7 +74,11 @@ COPY requirements.txt /tmp/requirements.txt
 # Install all locked Python packages and download the browser just ONCE as root
 RUN pip install -r /tmp/requirements.txt \
     && playwright install --with-deps chromium \
-    && chmod -R 755 /ms-playwright
+    && chmod -R 755 /ms-playwright \
+
+# Docs generator deps (google-genai, pydantic, gdtoolkit) for tests/ci (#1055)
+COPY .github/scripts/requirements-docs.txt /tmp/requirements-docs.txt
+RUN pip install -r /tmp/requirements-docs.txt
 
 # A functional health check tailored to the active service within the container. \
 # DO NOT REMOVE: addresses DS026, though LOW severity.
