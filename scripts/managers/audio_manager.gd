@@ -40,6 +40,13 @@ var current_config_path: String = Settings.CONFIG_PATH
 ## that must not overwrite the volume the user actually had before the drag.
 var _last_audible_volume: Dictionary = {}
 
+# --- NEAR-ZERO AUTO-MUTE STATE (Issue #1039) ---
+## Generation counter for the Master feedback hold started by change_volume(). Every new
+## Master auto-mute/auto-unmute bumps it, so a hold whose timer fires after a newer change
+## does not flatten the bus. Ported as-is from audio_settings.gd::_master_zero_token;
+## T4 (#1041) replaces it with an idempotent re-sync and removes it.
+var _master_hold_token: int = 0
+
 
 func _ready() -> void:
 	## Initializes to defaults and loads/applies volumes.
@@ -65,6 +72,9 @@ func get_bus_state(bus_name: String) -> Dictionary:
 
 
 ## Set state for a bus
+## Raw setter: writes volume then mute exactly as given and never applies the near-zero
+## auto-mute rule (use change_volume() for that). Config load, reset and init rely on this,
+## so a saved {0.5, muted} does not emit a spurious unmute/re-mute.
 ## :param bus_name: Name of the bus.
 ## :type bus_name: String
 ## :param volume: Volume level (0.0 to 1.0).
@@ -104,6 +114,9 @@ func get_volume(bus_name: String) -> float:
 
 
 ## Set volume for a bus
+## Raw setter: updates state and emits volume_changed only. Never applies the near-zero
+## auto-mute rule, never touches AudioServer and never saves. Use change_volume() when a
+## volume change should be able to auto-mute or auto-unmute the bus.
 ## :param bus_name: Name of the bus.
 ## :type bus_name: String
 ## :param vol: Volume level (0.0 to 1.0).
@@ -263,6 +276,91 @@ func toggle_mute(bus_name: String, muted: bool, is_manual_interaction: bool = fa
 
 	# Re-read the newest state: a toggle issued during the delay must not be overwritten.
 	apply_volume_to_bus(bus_name, get_volume(bus_name), get_muted(bus_name))
+
+
+## Single volume entry point that applies the near-zero auto-mute rule (Issue #1039, epic #725).
+## Ports today's rule from audio_settings.gd::_on_global_volume_changed as-is, so it works
+## with no menu in the tree and callers state their intent instead of the code guessing it
+## from slider focus:
+##   1. The volume is stored (volume_changed fires) and written to AudioServer with the bus's
+##      current mute flag.
+##   2. Volume at or below AUTO_MUTE_VOLUME_THRESHOLD on an unmuted bus -> auto-mute.
+##      Volume above the threshold on a muted bus -> auto-unmute (level-triggered for now;
+##      T3 #1040 switches this to threshold crossings).
+##   3. Manual interactions play the SFX_CHECK confirmation click on a transition.
+##      Programmatic calls (web bridge, cutscenes, sync loops) are always silent.
+##   4. Manual Master auto-mute holds the bus at FEEDBACK_HOLD_VOLUME_LINEAR for
+##      MUTE_HARDWARE_DELAY so the click can stream out, then flattens it to 0.0.
+##      Manual Master auto-unmute clears the AudioServer mute flag immediately.
+## Does not save: persistence stays with callers (slider debounce, web bridge).
+## The raw setters (set_volume, set_bus_state, load_volumes, reset_volumes) never apply this.
+## Await it only if you need the Master hold to have finished.
+## :param bus_name: Name of the bus.
+## :type bus_name: String
+## :param volume: Volume level (0.0 to 1.0).
+## :type volume: float
+## :param is_manual_interaction: True for real user input (click + Master hold);
+##     false for programmatic callers (silent, no hold).
+## :type is_manual_interaction: bool
+## :rtype: void
+func change_volume(bus_name: String, volume: float, is_manual_interaction: bool = false) -> void:
+	if not AudioConstants.BUS_CONFIG.has(bus_name):
+		Globals.log_message("Unknown bus for change_volume: " + bus_name, Globals.LogLevel.WARNING)
+		return
+
+	set_volume(bus_name, volume)
+	# The manager owns the AudioServer write for this path. The mute flag is the pre-rule
+	# state, matching today's slider/bridge behavior; T4 (#1041) re-syncs it after the rule.
+	apply_volume_to_bus(bus_name, volume, get_muted(bus_name))
+
+	var is_master: bool = bus_name == AudioConstants.BUS_MASTER
+	var threshold: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD
+
+	# --- AUTO-MUTE ON NEAR-ZERO VOLUME ---
+	if volume <= threshold and not get_muted(bus_name):
+		# Flip state first so rapid consecutive updates short-circuit.
+		set_muted(bus_name, true)
+		if not is_manual_interaction:
+			return
+
+		SfxManager.play_sfx(AudioConstants.SFX_CHECK)
+		if not is_master:
+			return
+
+		_master_hold_token += 1
+		var hold_token: int = _master_hold_token
+		var bus_idx: int = AudioServer.get_bus_index(bus_name)
+		if bus_idx == -1:
+			return
+
+		# Hold an audible level so the click can stream out before the bus is flattened.
+		AudioServer.set_bus_volume_db(
+			bus_idx, linear_to_db(AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR)
+		)
+		if not is_inside_tree():
+			AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.0))
+			return
+
+		await get_tree().create_timer(AudioConstants.MUTE_HARDWARE_DELAY).timeout
+
+		# A newer Master change (or an unmute) during the hold wins: leave the bus alone.
+		if hold_token == _master_hold_token and get_muted(bus_name):
+			AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.0))
+
+	# --- AUTO-UNMUTE ABOVE THE THRESHOLD ---
+	elif volume > threshold and get_muted(bus_name):
+		set_muted(bus_name, false)
+		if not is_manual_interaction:
+			return
+
+		if is_master:
+			# Invalidate any pending hold so it cannot flatten the bus after this unmute.
+			_master_hold_token += 1
+			var bus_idx: int = AudioServer.get_bus_index(bus_name)
+			if bus_idx != -1:
+				AudioServer.set_bus_mute(bus_idx, false)
+				AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
+		SfxManager.play_sfx(AudioConstants.SFX_CHECK)
 
 
 ## Guarantees a bus is never left unmuted at (near) zero volume (Issue #1046).
@@ -500,4 +598,5 @@ func cleanup_for_test() -> void:
 		return
 
 	_last_audible_volume.clear()
+	_master_hold_token += 1  # Orphan any pending Master hold from a previous test
 	SfxManager.cleanup_for_test()
