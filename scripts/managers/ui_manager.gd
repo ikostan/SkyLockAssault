@@ -142,7 +142,7 @@ func _handle_ui_cancel_action(focus_owner: Control, action: String) -> void:
 	if not is_editing_control and not is_remap_control:
 		var logical_id: String = AudioConstants.UI_SFX[action]
 		# Explicitly route all cancellation SFX through the SFX bus (Issue #490)
-		AudioManager.play_sfx(logical_id, AudioConstants.BUS_SFX)
+		SfxManager.play_sfx(logical_id, AudioConstants.BUS_SFX)
 
 
 ## Evaluates focus transitions and triggers directional UI navigation sounds.
@@ -162,4 +162,4 @@ func _handle_ui_navigation_action(action: String, focus_owner: Control, ui_has_f
 	if should_play_nav_sfx:
 		var logical_id: String = AudioConstants.UI_SFX[action]
 		# Explicitly route navigation SFX through the SFX bus (Issue #490)
-		AudioManager.play_sfx(logical_id, AudioConstants.BUS_SFX)
+		SfxManager.play_sfx(logical_id, AudioConstants.BUS_SFX)

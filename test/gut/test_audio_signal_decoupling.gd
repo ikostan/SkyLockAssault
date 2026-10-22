@@ -36,7 +36,7 @@ func test_programmatic_mute_propagation_is_silent() -> void:
 		get_viewport().gui_get_focus_owner().release_focus()
 		
 	# Force silence on the existing player pool tracks
-	for player: AudioStreamPlayer in AudioManager._sfx_pool:
+	for player: AudioStreamPlayer in SfxManager._sfx_pool:
 		player.stop()
 
 	# Simulate an inbound programmatic sync sequence (like WebBridge or Playwright driver data)
@@ -44,7 +44,7 @@ func test_programmatic_mute_propagation_is_silent() -> void:
 	await get_tree().process_frame
 
 	var sound_triggered: bool = false
-	for player: AudioStreamPlayer in AudioManager._sfx_pool:
+	for player: AudioStreamPlayer in SfxManager._sfx_pool:
 		if player.playing:
 			sound_triggered = true
 			break

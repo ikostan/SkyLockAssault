@@ -76,6 +76,14 @@ RUN pip install -r /tmp/requirements.txt \
     && playwright install --with-deps chromium \
     && chmod -R 755 /ms-playwright
 
+# Docs generator deps (google-genai, pydantic, gdtoolkit) for tests/ci (#1055)
+COPY .github/scripts/requirements-docs.txt /tmp/requirements-docs.txt
+RUN pip install -r /tmp/requirements-docs.txt
+
+# Lint tools used by workspace/run_pipeline.sh and run_yaml_lint.sh
+# (CI installs yamllint separately in .github/workflows/yamllint.yml)
+RUN pip install yamllint==1.38.0
+
 # A functional health check tailored to the active service within the container. \
 # DO NOT REMOVE: addresses DS026, though LOW severity.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

@@ -22,7 +22,7 @@ func before_test() -> void:
 	_original_options_open = Globals.options_open
 	Globals.options_open = true
 	
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	if AudioManager.has_method("cleanup_for_test"):
 		AudioManager.cleanup_for_test()
 
@@ -35,7 +35,7 @@ func after_test() -> void:
 	if is_instance_valid(focus_owner):
 		focus_owner.release_focus()
 		
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 
 
 ## Validates that advanced_settings.tscn triggers ui_navigation SFX on navigation input.
@@ -98,7 +98,7 @@ func test_pause_menu_navigation_sfx_while_paused() -> void:
 	get_tree().paused = true
 	assert_bool(get_tree().paused).is_true()
 	
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	var event: InputEventAction = InputEventAction.new()
 	event.action = "ui_down"
 	event.pressed = true
@@ -106,8 +106,8 @@ func test_pause_menu_navigation_sfx_while_paused() -> void:
 	get_viewport().push_input(event)
 	await await_idle_frame()
 	
-	assert_bool(AudioManager.is_any_sfx_playing()).is_true()
-	var active_path: String = AudioManager.get_active_sfx_stream_path()
+	assert_bool(SfxManager.is_any_sfx_playing()).is_true()
+	var active_path: String = SfxManager.get_active_sfx_stream_path()
 	assert_bool(active_path.contains("ui_navigation.wav")).is_true()
 	get_tree().paused = false
 
@@ -152,7 +152,7 @@ func _assert_menu_navigation_sfx_trigger(scene_path: String) -> void:
 	await await_idle_frame()
 	assert_object(get_viewport().gui_get_focus_owner()).is_equal(target_control)
 	
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	var event: InputEventAction = InputEventAction.new()
 	event.action = "ui_down"
 	event.pressed = true
@@ -160,6 +160,6 @@ func _assert_menu_navigation_sfx_trigger(scene_path: String) -> void:
 	get_viewport().push_input(event)
 	await await_idle_frame()
 	
-	assert_bool(AudioManager.is_any_sfx_playing()).is_true()
-	var active_path: String = AudioManager.get_active_sfx_stream_path()
+	assert_bool(SfxManager.is_any_sfx_playing()).is_true()
+	var active_path: String = SfxManager.get_active_sfx_stream_path()
 	assert_bool(active_path.contains("ui_navigation.wav")).is_true()

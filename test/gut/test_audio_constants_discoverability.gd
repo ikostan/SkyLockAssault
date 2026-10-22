@@ -251,11 +251,11 @@ func test_invalid_bus_fallback_routing() -> void:
 	var invalid_bus: String = "ThisIsAFakeBusThatDoesNotExist"
 	
 	# Trigger playback with invalid bus configuration
-	AudioManager.play_sfx(test_key, invalid_bus)
+	SfxManager.play_sfx(test_key, invalid_bus)
 	
 	# Verify it safely fell back to SFX_Menu instead of failing or muting
 	assert_eq(
-		AudioManager.get_active_sfx_bus_name(), 
+		SfxManager.get_active_sfx_bus_name(), 
 		AudioConstants.BUS_SFX_MENU, 
 		"AudioManager failed to fall back to the Menu bus when an invalid bus was requested."
 	)
@@ -264,7 +264,7 @@ func test_invalid_bus_fallback_routing() -> void:
 ## Verifies that play_sfx() survives and runs cleanly if a pooled player is freed midway through execution.
 func test_play_sfx_resilience_to_freed_players() -> void:
 	# Force-retrieve the private pool array
-	var pool_array: Array = AudioManager.get("_sfx_pool")
+	var pool_array: Array = SfxManager.get("_sfx_pool")
 	assert_gt(pool_array.size(), 0, "SFX pool was not initialized correctly.")
 	
 	# Violently free the first node in the pool to create a dangling/previously-freed reference
@@ -273,7 +273,7 @@ func test_play_sfx_resilience_to_freed_players() -> void:
 	
 	# Trigger playback
 	var test_key: String = AudioConstants.SFX_ASSET_MAP.keys()[0]
-	AudioManager.play_sfx(test_key)
+	SfxManager.play_sfx(test_key)
 	
 	# Assert that play_sfx gracefully bypassed the dead node and still executed on a living one
-	assert_true(AudioManager.is_any_sfx_playing(), "AudioManager failed to play SFX after a pool node was freed.")
+	assert_true(SfxManager.is_any_sfx_playing(), "AudioManager failed to play SFX after a pool node was freed.")
