@@ -294,14 +294,14 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 						bus_idx, linear_to_db(AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR)
 					)
 
-				AudioManager.play_sfx(AudioConstants.SFX_CHECK)
+				SfxManager.play_sfx(AudioConstants.SFX_CHECK)
 				await get_tree().create_timer(AudioConstants.MUTE_HARDWARE_DELAY).timeout
 
 				# TOKEN GATE: Only apply the zero reset if a newer drag didn't interrupt it
 				if current_token == _master_zero_token and bus_idx != -1:
 					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.0))
 			else:
-				AudioManager.play_sfx(AudioConstants.SFX_CHECK)
+				SfxManager.play_sfx(AudioConstants.SFX_CHECK)
 
 	# --- AUTO-UNMUTE ON NON-ZERO VOLUME THRESHOLD ---
 	elif volume > AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD and AudioManager.get_muted(bus_name):
@@ -316,7 +316,7 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 				if bus_idx != -1:
 					AudioServer.set_bus_mute(bus_idx, false)
 					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
-			AudioManager.play_sfx(AudioConstants.SFX_CHECK)
+			SfxManager.play_sfx(AudioConstants.SFX_CHECK)
 
 
 ## Moves a slider to a volume AudioManager already holds, without emitting value_changed.

@@ -188,7 +188,7 @@ func _handle_slider_sfx(_new_value: float) -> void:
 	_last_sfx_time = current_time
 
 	# Use get_node to allow for GUT testing/doubling of the autoload
-	get_node("/root/AudioManager").play_sfx(AudioConstants.SFX_SLIDER)
+	get_node("/root/SfxManager").play_sfx(AudioConstants.SFX_SLIDER)
 
 
 ## Called on timer timeout—performs the batched disk save.

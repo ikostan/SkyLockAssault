@@ -374,7 +374,7 @@ func _on_change_log_level_js(args: Array) -> void:
 
 func _on_fps_toggle_pressed() -> void:
 	# This only fires on an explicit physical interaction (mouse click, enter key, gamepad)
-	AudioManager.play_sfx("check")
+	SfxManager.play_sfx("check")
 
 
 func _on_fps_toggle_toggled(toggled_on: bool) -> void:

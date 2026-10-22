@@ -42,7 +42,7 @@ func after_each() -> void:
 ## Silences active audio signals and strips streams from the reuse pool
 ## :rtype: void
 func _clear_pool_players() -> void:
-	for player in AudioManager._sfx_pool:
+	for player in SfxManager._sfx_pool:
 		var p: AudioStreamPlayer = player
 		p.stop()
 		p.stream = null
@@ -51,7 +51,7 @@ func _clear_pool_players() -> void:
 ## Inspects if any object channel within the player pool is actively streaming audio bytes
 ## :rtype: bool
 func _is_sound_playing() -> bool:
-	for player in AudioManager._sfx_pool:
+	for player in SfxManager._sfx_pool:
 		var p: AudioStreamPlayer = player
 		if p.playing:
 			return true
