@@ -279,14 +279,19 @@ func toggle_mute(bus_name: String, muted: bool, is_manual_interaction: bool = fa
 
 
 ## Single volume entry point that applies the near-zero auto-mute rule (Issue #1039, epic #725).
-## Ports today's rule from audio_settings.gd::_on_global_volume_changed as-is, so it works
-## with no menu in the tree and callers state their intent instead of the code guessing it
-## from slider focus:
-##   1. The volume is stored (volume_changed fires) and written to AudioServer with the bus's
-##      current mute flag.
-##   2. Volume at or below AUTO_MUTE_VOLUME_THRESHOLD on an unmuted bus -> auto-mute.
-##      Volume above the threshold on a muted bus -> auto-unmute (level-triggered for now;
-##      T3 #1040 switches this to threshold crossings).
+## Runs with no menu in the tree, and callers state their intent instead of the code guessing
+## it from slider focus:
+##   1. The previous volume is read, then the new one is stored (volume_changed fires) and
+##      written to AudioServer with the bus's current mute flag.
+##   2. The rule is edge-triggered on AUTO_MUTE_VOLUME_THRESHOLD crossings (Issue #1040):
+##      - crossing down (old > T, new <= T) on an unmuted bus -> auto-mute;
+##      - crossing up (old <= T, new > T) on a muted bus -> auto-unmute.
+##      Anything else leaves the mute flag alone, so a mute the player chose at an audible
+##      volume survives any volume change that stays above the threshold, and repeated
+##      near-zero updates are no-ops. No extra state: the previous volume is enough, so the
+##      rule survives restarts.
+##      Accepted corner case: a bus muted with its button at 0.8, then set to 0 and back up,
+##      is unmuted on the way up; at zero, an explicit mute and an auto-mute look the same.
 ##   3. Manual interactions play the SFX_CHECK confirmation click on a transition.
 ##      Programmatic calls (web bridge, cutscenes, sync loops) are always silent.
 ##   4. Manual Master auto-mute holds the bus at FEEDBACK_HOLD_VOLUME_LINEAR for
@@ -309,16 +314,21 @@ func change_volume(bus_name: String, volume: float, is_manual_interaction: bool 
 		Globals.log_message("Unknown bus for change_volume: " + bus_name, Globals.LogLevel.WARNING)
 		return
 
+	var threshold: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD
+	# Read before set_volume(): the crossing is judged against the previous stored volume.
+	var old_volume: float = get_volume(bus_name)
+	var crossed_down: bool = old_volume > threshold and volume <= threshold
+	var crossed_up: bool = old_volume <= threshold and volume > threshold
+
 	set_volume(bus_name, volume)
 	# The manager owns the AudioServer write for this path. The mute flag is the pre-rule
 	# state, matching today's slider/bridge behavior; T4 (#1041) re-syncs it after the rule.
 	apply_volume_to_bus(bus_name, volume, get_muted(bus_name))
 
 	var is_master: bool = bus_name == AudioConstants.BUS_MASTER
-	var threshold: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD
 
-	# --- AUTO-MUTE ON NEAR-ZERO VOLUME ---
-	if volume <= threshold and not get_muted(bus_name):
+	# --- AUTO-MUTE ON CROSSING DOWN TO NEAR-ZERO ---
+	if crossed_down and not get_muted(bus_name):
 		# Flip state first so rapid consecutive updates short-circuit.
 		set_muted(bus_name, true)
 		if not is_manual_interaction:
@@ -348,8 +358,8 @@ func change_volume(bus_name: String, volume: float, is_manual_interaction: bool 
 		if hold_token == _master_hold_token and get_muted(bus_name):
 			AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.0))
 
-	# --- AUTO-UNMUTE ABOVE THE THRESHOLD ---
-	elif volume > threshold and get_muted(bus_name):
+	# --- AUTO-UNMUTE ON CROSSING UP FROM NEAR-ZERO ---
+	elif crossed_up and get_muted(bus_name):
 		set_muted(bus_name, false)
 		# Apply the unmuted state right away: the write above still carried the old mute flag,
 		# and without this the mixer would stay muted while AudioManager reports unmuted.
