@@ -74,7 +74,7 @@ func before_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
 	Globals.set_test_encryption_key()
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
 		AudioManager.set_bus_state(bus, START_VOLUME, false)
@@ -93,7 +93,7 @@ func after_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
 
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	AudioManager.current_config_path = _original_config_path
 	for bus: String in _original_states.keys():
 		var state: Dictionary = _original_states[bus]

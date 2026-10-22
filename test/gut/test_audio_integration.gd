@@ -40,7 +40,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	if AudioManager.has_method("cleanup_for_test"):
 		AudioManager.cleanup_for_test()
 	AudioManager.reset_volumes()
@@ -68,8 +68,8 @@ func test_sfx_mute_silences_ui_accept_at_audioserver_level() -> void:
 
 	assert_true(AudioManager.get_muted(TARGET_BUS), "Logical: Manager must track bus as muted.")
 	assert_true(AudioServer.is_bus_mute(bus_idx), "Hardware: Native AudioServer bus must be muted.")
-	assert_true(AudioManager.is_any_sfx_playing(), "Pool should successfully allocate stream despite hardware mute.")
-	assert_eq(AudioManager.get_active_sfx_playback_count(), 1, "Exactly one AudioStreamPlayer should be active.")
+	assert_true(SfxManager.is_any_sfx_playing(), "Pool should successfully allocate stream despite hardware mute.")
+	assert_eq(SfxManager.get_active_sfx_playback_count(), 1, "Exactly one AudioStreamPlayer should be active.")
 
 
 ## Scenario B: Verify that unmuted UI interactions audibly play and leave the hardware server unmuted.
@@ -85,7 +85,7 @@ func test_sfx_unmuted_plays_audibly_at_audioserver_level() -> void:
 	await wait_process_frames(1)
 
 	assert_false(AudioServer.is_bus_mute(bus_idx), "Hardware: Native AudioServer bus must be unmuted.")
-	assert_true(AudioManager.is_any_sfx_playing(), "Pool should actively play allocated stream.")
+	assert_true(SfxManager.is_any_sfx_playing(), "Pool should actively play allocated stream.")
 
 
 ## Scenario C: Verify navigation SFX routing, focus-gating, and stale focus safeguards.
@@ -113,18 +113,18 @@ func test_ui_navigation_sfx_requires_gui_focus() -> void:
 
 	# FIX VERIFIED: Because we added the stale focus safeguard to UiManager._input,
 	# navigation audio is now INTENTIONALLY allowed to play in menu contexts even if the focus owner flag is stale.
-	assert_true(AudioManager.is_any_sfx_playing(), "Stale Focus Safeguard: Navigation audio should play in menu context even if focus is transiently empty.") 
+	assert_true(SfxManager.is_any_sfx_playing(), "Stale Focus Safeguard: Navigation audio should play in menu context even if focus is transiently empty.") 
 
 	# Reset the playback state cleanly so we can isolate the active focus test scenario right below
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 
 	unfocused_slider.grab_focus() 
 	await wait_process_frames(1) 
 	UiManager._input(nav_event)
 	await wait_process_frames(1)
 
-	assert_true(AudioManager.is_any_sfx_playing(), "Navigation audio should trigger when GUI element has active focus.") 
-	assert_true(AudioManager.get_active_sfx_stream_path().contains("ui_navigation"), "Active stream path should point to ui_navigation asset.") 
+	assert_true(SfxManager.is_any_sfx_playing(), "Navigation audio should trigger when GUI element has active focus.") 
+	assert_true(SfxManager.get_active_sfx_stream_path().contains("ui_navigation"), "Active stream path should point to ui_navigation asset.") 
 	# FIX: Removed Globals.options_open = false from here to avoid short-circuit skips
 
 
@@ -225,7 +225,7 @@ func test_ui_mute_toggle_defers_hardware_cutoff_for_click_feedback() -> void:
 	# ASSERT IMMEDIATE LOGICAL FLIP
 	assert_true(AudioManager.get_muted(TARGET_BUS), "Logical state should flip immediately.")
 	assert_false(AudioServer.is_bus_mute(bus_idx), "Hardware cutoff should be deferred to allow click audio to stream out.")
-	assert_true(AudioManager.is_any_sfx_playing(), "Confirmation click SFX should be playing.")
+	assert_true(SfxManager.is_any_sfx_playing(), "Confirmation click SFX should be playing.")
 
 	# AWAIT HARDWARE CUTOFF WINDOW (0.15s + buffer)
 	await wait_seconds(0.2)
@@ -257,4 +257,4 @@ func test_ui_mute_controls_sync_state_dynamically() -> void:
 	assert_not_null(candidate_btn, "Layout Validation: Audio menu must contain at least one CheckButton matching a 'mute' naming convention.")
 	candidate_btn.toggled.emit(false) # Simulate UI mute press
 	
-	assert_true(AudioManager.is_any_sfx_playing(), "Triggering any audio menu CheckButton should invoke confirmation SFX.")
+	assert_true(SfxManager.is_any_sfx_playing(), "Triggering any audio menu CheckButton should invoke confirmation SFX.")

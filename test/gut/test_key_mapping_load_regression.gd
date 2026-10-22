@@ -12,11 +12,11 @@ const KEY_MAPPING_PATH: String = "res://scenes/key_mapping_menu.tscn"
 var original_audio_script: Script
 
 
-## Suite setup: Bootstrap a mock AudioManager to intercept and record 
+## Suite setup: Bootstrap a mock SfxManager to intercept and record 
 ## playback calls during test execution.
 func before_all() -> void:
-	if is_instance_valid(AudioManager):
-		original_audio_script = AudioManager.get_script()
+	if is_instance_valid(SfxManager):
+		original_audio_script = SfxManager.get_script()
 		var mock_script := GDScript.new()
 		# FIX: Match production signature (4 arguments) to prevent argument-count crashes
 		mock_script.source_code = """
@@ -26,17 +26,17 @@ func play_sfx(key: String, bus_name: String = "SFX_Menu", pitch_scale: float = 1
 	sfx_calls.append(key)
 """
 		mock_script.reload()
-		AudioManager.set_script(mock_script)
+		SfxManager.set_script(mock_script)
 
 
-## Suite cleanup: Safely restore the original AudioManager script and
+## Suite cleanup: Safely restore the original SfxManager script and
 ## re-populate its internal state to ensure strict test isolation.
 func after_all() -> void:
-	if original_audio_script and is_instance_valid(AudioManager):
-		AudioManager.set_script(original_audio_script)
+	if original_audio_script and is_instance_valid(SfxManager):
+		SfxManager.set_script(original_audio_script)
 		# Rebuild internal state to prevent cascading failures
-		if AudioManager.has_method("cleanup_for_test"):
-			AudioManager.cleanup_for_test()
+		if SfxManager.has_method("cleanup_for_test"):
+			SfxManager.cleanup_for_test()
 
 
 ## Per-test setup: Reset global device state and clear the mock 
@@ -45,8 +45,8 @@ func before_each() -> void:
 	# Force 'gamepad' to ensure the initial state triggers the signal emission
 	Globals.current_input_device = "gamepad"
 	
-	if AudioManager.get("sfx_calls") != null:
-		AudioManager.set("sfx_calls", [])
+	if SfxManager.get("sfx_calls") != null:
+		SfxManager.set("sfx_calls", [])
 
 
 ## Test Scenario: Verify that instantiating the Key Mapping menu does not 
@@ -64,7 +64,7 @@ func test_key_mapping_load_is_silent() -> void:
 	await get_tree().process_frame
 	
 	# 4. Safely retrieve captured SFX calls
-	var raw_calls: Variant = AudioManager.get("sfx_calls")
+	var raw_calls: Variant = SfxManager.get("sfx_calls")
 	var calls: Array = raw_calls as Array if raw_calls is Array else []
 	
 	# 5. Assertion: Initialization should be silent

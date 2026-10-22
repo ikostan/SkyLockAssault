@@ -26,7 +26,7 @@ func before_each() -> void:
 	Globals.options_open = true
 	
 	# Purge any running streams from the shared singleton pool
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	if AudioManager.has_method("cleanup_for_test"):
 		AudioManager.cleanup_for_test()
 
@@ -38,7 +38,7 @@ func after_each() -> void:
 	if is_instance_valid(focus_owner):
 		focus_owner.release_focus()
 		
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 
 
 # ==========================================================================
@@ -61,7 +61,7 @@ func _assert_focus_blocks_action(control: Control, failure_message: String, acti
 	
 	# Assert: Validation logic only. Lifecycle cleanup is deferred to after_each()
 	assert_false(
-		AudioManager.is_any_sfx_playing(),
+		SfxManager.is_any_sfx_playing(),
 		failure_message
 	)
 
@@ -88,7 +88,7 @@ func _setup_focused_control(control: Control) -> void:
 	await get_tree().process_frame
 	
 	assert_eq(get_viewport().gui_get_focus_owner(), control, "Precondition: Target control must hold active focus.")
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 
 
 ## CodeRabbit Refactor: Centralized assertion helper to eliminate internal 
@@ -99,12 +99,12 @@ func _assert_focus_blocks_ui_accept(control: Control, failure_message: String) -
 	UiManager._input(_create_ui_accept_event())
 	
 	assert_false(
-		AudioManager.is_any_sfx_playing(),
+		SfxManager.is_any_sfx_playing(),
 		failure_message
 	)
 	
 	control.release_focus()
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 
 
 # ==========================================================================
@@ -165,7 +165,7 @@ func test_passive_control_triggers_global_audio() -> void:
 	UiManager._input(_create_ui_accept_event())
 
 	assert_true(
-		AudioManager.is_any_sfx_playing(),
+		SfxManager.is_any_sfx_playing(),
 		"Control Parity Failure: Global ui_accept tracking was blocked by an overly broad filter check."
 	)
 
@@ -192,13 +192,13 @@ func test_stale_focus_navigation_retains_audio_safeguard() -> void:
 		focus_owner.release_focus()
 	
 	# Clear out any previous audio junk
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	
 	# 2. Simulate a user hitting 'ui_down' during a focus transition fade (Issue #490)
 	UiManager._input(_create_nav_event("ui_down"))
 	
 	# 3. Assert that the safeguard caught the transition and played the fallback audio
 	assert_true(
-		AudioManager.is_any_sfx_playing(),
+		SfxManager.is_any_sfx_playing(),
 		"Safeguard Failure: Navigation audio was unintentionally dropped due to a stale UI focus state."
 	)
