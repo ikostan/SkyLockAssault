@@ -8,7 +8,9 @@
 ## only on AUTO_MUTE_VOLUME_THRESHOLD crossings (Issue #1040), so mutes the player chose at
 ## an audible volume stay put. The raw setters (set_volume, set_bus_state, config load, reset)
 ## must never apply the rule.
-## Part of epic #725. T4 (#1041) changes the AudioServer re-sync; T7 (#1044) extends this suite.
+## Once an auto-mute settles, AudioServer is re-synced from the manager's current state, so
+## the mixer mute flag always matches and stale hold timers need no token (Issue #1041).
+## Part of epic #725. T7 (#1044) extends this suite.
 
 extends "res://addons/gut/test.gd"
 
@@ -427,6 +429,7 @@ func test_manual_master_hold_then_flatten() -> void:
 	await wait_seconds(HOLD_WAIT)
 	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001, "Master is flattened after the hold")
 	assert_true(AudioManager.get_muted(bus))
+	assert_true(_hw_muted(bus), "The re-sync sets the AudioServer mute flag after the hold")
 
 
 ## Programmatic Master auto-mute never holds.
@@ -687,19 +690,102 @@ func test_other_bus_change_does_not_cancel_master_hold() -> void:
 	assert_false(AudioManager.get_muted(AudioConstants.BUS_MUSIC))
 
 
-## Cleanup must invalidate an outstanding hold even when Master is still logically muted.
+## A stale hold timer re-applies whatever state the manager holds when it fires, even when
+## that state changed through the raw setters with no AudioServer write (Issue #1041).
 ## :rtype: void
-func test_cleanup_invalidates_pending_master_hold() -> void:
+func test_stale_master_hold_reapplies_current_state() -> void:
 	var bus: String = AudioConstants.BUS_MASTER
 	AudioManager.change_volume(bus, 0.0, true)
-	AudioManager.cleanup_for_test()
-	AudioServer.set_bus_volume_db(_bus_idx(bus), linear_to_db(RAISED_VOLUME))
+	AudioManager.set_bus_state(bus, RAISED_VOLUME, false)
 
 	await wait_seconds(HOLD_WAIT)
 
-	assert_true(AudioManager.get_muted(bus), "The mute guard alone cannot cancel this timer")
-	assert_almost_eq(_hw_linear(bus), RAISED_VOLUME, 0.0001, "Cleanup orphaned the stale hold")
+	assert_false(_hw_muted(bus), "The late re-sync applies the current unmuted state")
+	assert_almost_eq(_hw_linear(bus), RAISED_VOLUME, 0.0001, "...at the current volume")
+
+
+## Cleanup still silences SFX after the token was removed.
+## :rtype: void
+func test_cleanup_stops_sfx() -> void:
+	AudioManager.change_volume(AudioConstants.BUS_MUSIC, 0.0, true)
+	assert_true(SfxManager.is_any_sfx_playing(), "Precondition: the click is playing")
+
+	AudioManager.cleanup_for_test()
+
 	assert_false(SfxManager.is_any_sfx_playing(), "Audio cleanup delegates to SfxManager")
+
+
+# ==========================================
+# AUDIOSERVER RE-SYNC (Issue #1041)
+# ==========================================
+
+
+## After any auto-mute settles, the AudioServer mute flag matches AudioManager.
+## :rtype: void
+func test_auto_mute_syncs_hardware_mute(
+	params: Array = use_parameters(
+		[
+			[AudioConstants.BUS_MASTER, false],
+			[AudioConstants.BUS_MASTER, true],
+			[AudioConstants.BUS_MUSIC, false],
+			[AudioConstants.BUS_MUSIC, true],
+			[AudioConstants.BUS_SFX, false],
+			[AudioConstants.BUS_SFX, true],
+			[AudioConstants.BUS_SFX_WEAPON, false],
+			[AudioConstants.BUS_SFX_WEAPON, true],
+			[AudioConstants.BUS_SFX_ROTORS, false],
+			[AudioConstants.BUS_SFX_ROTORS, true],
+			[AudioConstants.BUS_SFX_MENU, false],
+			[AudioConstants.BUS_SFX_MENU, true],
+		]
+	)
+) -> void:
+	var bus: String = params[0]
+	var is_manual: bool = params[1]
+
+	await AudioManager.change_volume(bus, 0.0, is_manual)
+
+	assert_true(AudioManager.get_muted(bus))
+	assert_eq(_hw_muted(bus), AudioManager.get_muted(bus), bus + ": mixer matches the manager")
+	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
+
+
+## A positive near-zero auto-mute is silenced by the mute flag, not by a forced 0.0 write.
+## :rtype: void
+func test_near_zero_auto_mute_keeps_stored_volume_in_mixer(
+	is_manual: bool = use_parameters([false, true])
+) -> void:
+	var bus: String = AudioConstants.BUS_MASTER
+	var volume: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD / 2.0
+
+	await AudioManager.change_volume(bus, volume, is_manual)
+
+	assert_true(_hw_muted(bus), "Silenced by the AudioServer mute flag")
+	assert_almost_eq(_hw_linear(bus), volume, 0.000001, "Mixer level mirrors the stored volume")
+
+
+## Down-crossing then up-crossing within MUTE_HARDWARE_DELAY ends unmuted at the up volume.
+## :rtype: void
+func test_down_up_within_delay_ends_unmuted(bus: String = use_parameters(ALL_BUSES)) -> void:
+	AudioManager.change_volume(bus, 0.0, true)
+	await AudioManager.change_volume(bus, RAISED_VOLUME, true)
+
+	await wait_seconds(HOLD_WAIT)
+
+	assert_false(AudioManager.get_muted(bus))
+	assert_false(_hw_muted(bus), bus + " is audible in AudioServer after any hold settles")
+	assert_almost_eq(_hw_linear(bus), RAISED_VOLUME, 0.0001)
+
+
+## The generation token is gone from the manager and the menu.
+## :rtype: void
+func test_no_hold_token_remains() -> void:
+	assert_false("_master_hold_token" in AudioManager, "No token in AudioManager")
+	var menu_props: Array[String] = []
+	var menu_script: Script = load("res://scripts/ui/menus/audio_settings.gd")
+	for prop: Dictionary in menu_script.get_script_property_list():
+		menu_props.append(prop["name"])
+	assert_false(menu_props.has("_master_zero_token"), "No token in the Audio Settings menu")
 
 
 ## An unattached manager takes the immediate Master cutoff path without needing a timer.

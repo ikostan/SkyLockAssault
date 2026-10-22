@@ -324,8 +324,14 @@ func test_tc_am_015_master_feedback_hold_then_silence() -> void:
 
 	await get_tree().create_timer(_get_safety_wait_time()).timeout
 
-	# After the delay the bus is flattened to silence
-	assert_eq(AudioServer.get_bus_volume_db(bus_idx), linear_to_db(0.0))
+	# After the delay AudioServer is re-synced from AudioManager (Issue #1041): muted, at the
+	# stored near-zero volume, instead of a hard-coded 0.0 write
+	assert_true(AudioServer.is_bus_mute(bus_idx), "Master is muted in AudioServer")
+	assert_almost_eq(
+		AudioServer.get_bus_volume_db(bus_idx),
+		linear_to_db(AudioManager.get_volume(AudioConstants.BUS_MASTER)),
+		0.0001
+	)
 
 
 func test_tc_am_016_master_hold_aborted_by_newer_drag() -> void:
@@ -342,3 +348,76 @@ func test_tc_am_016_master_hold_aborted_by_newer_drag() -> void:
 
 	assert_false(AudioManager.get_muted(AudioConstants.BUS_MASTER))
 	assert_almost_eq(AudioServer.get_bus_volume_db(bus_idx), linear_to_db(restored_vol), 0.0001)
+	assert_false(AudioServer.is_bus_mute(bus_idx), "The late re-sync applies the newer drag")
+
+
+# ==========================================================================
+# 6. AUDIOSERVER RE-SYNC (Issue #1041)
+# ==========================================================================
+
+## Every bus the menu auto-mutes is muted in AudioServer too, focused or not.
+## :rtype: void
+func test_menu_auto_mute_syncs_hardware_mute(
+	params: Array = use_parameters(
+		[
+			[AudioConstants.BUS_MASTER, true],
+			[AudioConstants.BUS_MASTER, false],
+			[AudioConstants.BUS_MUSIC, true],
+			[AudioConstants.BUS_SFX, false],
+			[AudioConstants.BUS_SFX_WEAPON, true],
+			[AudioConstants.BUS_SFX_ROTORS, false],
+			[AudioConstants.BUS_SFX_MENU, true],
+		]
+	)
+) -> void:
+	var bus: String = params[0]
+	var focused: bool = params[1]
+	var slider: HSlider = audio_instance._get_slider_for_bus(bus)
+	if focused:
+		slider.grab_focus()
+	elif slider.has_focus():
+		slider.release_focus()
+	var bus_idx: int = AudioServer.get_bus_index(bus)
+
+	AudioManager.set_volume(bus, 0.0)
+	await get_tree().create_timer(_get_safety_wait_time()).timeout
+
+	assert_true(AudioManager.get_muted(bus))
+	assert_eq(AudioServer.is_bus_mute(bus_idx), AudioManager.get_muted(bus), bus + " in sync")
+
+
+## Raising an auto-muted bus clears the AudioServer mute on every bus, not only Master.
+## :rtype: void
+func test_menu_auto_unmute_clears_hardware_mute(
+	bus: String = use_parameters(AudioConstants.BUS_CONFIG.keys())
+) -> void:
+	var slider: HSlider = audio_instance._get_slider_for_bus(bus)
+	if slider.has_focus():
+		slider.release_focus()
+	var bus_idx: int = AudioServer.get_bus_index(bus)
+	AudioManager.set_volume(bus, 0.0)
+	await get_tree().create_timer(_get_safety_wait_time()).timeout
+	assert_true(AudioServer.is_bus_mute(bus_idx), "Precondition: hardware muted")
+
+	AudioManager.set_volume(bus, 0.4)
+	await get_tree().process_frame
+
+	assert_false(AudioManager.get_muted(bus))
+	assert_false(AudioServer.is_bus_mute(bus_idx), bus + " must be audible in AudioServer")
+	assert_almost_eq(AudioServer.get_bus_volume_db(bus_idx), linear_to_db(0.4), 0.0001)
+
+
+## The mute button unmuting Master during the hold wins over the stale timer, with no token.
+## :rtype: void
+func test_menu_master_button_unmute_during_hold_wins() -> void:
+	var bus: String = AudioConstants.BUS_MASTER
+	var bus_idx: int = AudioServer.get_bus_index(bus)
+	audio_instance.master_slider.grab_focus()
+
+	AudioManager.set_volume(bus, 0.0)
+	await AudioManager.toggle_mute(bus, false, false)
+	await get_tree().create_timer(_get_safety_wait_time()).timeout
+
+	assert_false(AudioManager.get_muted(bus))
+	assert_false(AudioServer.is_bus_mute(bus_idx), "Stale hold re-applied the unmuted state")
+	assert_gt(AudioServer.get_bus_volume_db(bus_idx), linear_to_db(0.0), "Master is audible")
