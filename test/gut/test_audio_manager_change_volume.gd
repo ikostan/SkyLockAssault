@@ -206,6 +206,44 @@ func test_manual_raise_unmutes_with_click(bus: String = use_parameters(ALL_BUSES
 	assert_true(SfxManager.is_any_sfx_playing(), "Manual auto-unmute plays the click")
 
 
+## Programmatic auto-unmute must clear the AudioServer mute flag on every bus, so the mixer
+## never stays muted while AudioManager reports unmuted.
+## :rtype: void
+func test_programmatic_auto_unmute_clears_hardware_mute(
+	bus: String = use_parameters(ALL_BUSES)
+) -> void:
+	_force_muted_at_zero(bus)
+
+	await AudioManager.change_volume(bus, RAISED_VOLUME)
+
+	assert_false(AudioManager.get_muted(bus))
+	assert_false(_hw_muted(bus), bus + " must be audible in AudioServer")
+	assert_almost_eq(_hw_linear(bus), RAISED_VOLUME, 0.0001)
+
+
+## Manual auto-unmute must clear the AudioServer mute flag on every bus, not only Master.
+## :rtype: void
+func test_manual_auto_unmute_clears_hardware_mute(bus: String = use_parameters(ALL_BUSES)) -> void:
+	_force_muted_at_zero(bus)
+
+	await AudioManager.change_volume(bus, RAISED_VOLUME, true)
+
+	assert_false(AudioManager.get_muted(bus))
+	assert_false(_hw_muted(bus), bus + " must be audible in AudioServer")
+	assert_almost_eq(_hw_linear(bus), RAISED_VOLUME, 0.0001)
+
+
+## Down then up through change_volume() alone ends audible in the mixer too.
+## :rtype: void
+func test_programmatic_down_then_up_ends_audible(bus: String = use_parameters(ALL_BUSES)) -> void:
+	await AudioManager.change_volume(bus, 0.0)
+	await AudioManager.change_volume(bus, RAISED_VOLUME)
+
+	assert_false(AudioManager.get_muted(bus))
+	assert_false(_hw_muted(bus), bus + " must not stay muted in AudioServer")
+	assert_almost_eq(_hw_linear(bus), RAISED_VOLUME, 0.0001)
+
+
 ## Manual Master unmute clears the AudioServer mute flag right away (ported as-is).
 ## :rtype: void
 func test_manual_master_raise_clears_hardware_mute() -> void:

@@ -291,7 +291,8 @@ func toggle_mute(bus_name: String, muted: bool, is_manual_interaction: bool = fa
 ##      Programmatic calls (web bridge, cutscenes, sync loops) are always silent.
 ##   4. Manual Master auto-mute holds the bus at FEEDBACK_HOLD_VOLUME_LINEAR for
 ##      MUTE_HARDWARE_DELAY so the click can stream out, then flattens it to 0.0.
-##      Manual Master auto-unmute clears the AudioServer mute flag immediately.
+##   5. Auto-unmute (any bus, manual or programmatic) applies the unmuted state to
+##      AudioServer immediately and cancels a pending Master hold.
 ## Does not save: persistence stays with callers (slider debounce, web bridge).
 ## The raw setters (set_volume, set_bus_state, load_volumes, reset_volumes) never apply this.
 ## Await it only if you need the Master hold to have finished.
@@ -350,17 +351,14 @@ func change_volume(bus_name: String, volume: float, is_manual_interaction: bool 
 	# --- AUTO-UNMUTE ABOVE THE THRESHOLD ---
 	elif volume > threshold and get_muted(bus_name):
 		set_muted(bus_name, false)
-		if not is_manual_interaction:
-			return
-
+		# Apply the unmuted state right away: the write above still carried the old mute flag,
+		# and without this the mixer would stay muted while AudioManager reports unmuted.
+		apply_volume_to_bus(bus_name, volume, false)
 		if is_master:
 			# Invalidate any pending hold so it cannot flatten the bus after this unmute.
 			_master_hold_token += 1
-			var bus_idx: int = AudioServer.get_bus_index(bus_name)
-			if bus_idx != -1:
-				AudioServer.set_bus_mute(bus_idx, false)
-				AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
-		SfxManager.play_sfx(AudioConstants.SFX_CHECK)
+		if is_manual_interaction:
+			SfxManager.play_sfx(AudioConstants.SFX_CHECK)
 
 
 ## Guarantees a bus is never left unmuted at (near) zero volume (Issue #1046).
