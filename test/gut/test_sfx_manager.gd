@@ -1,5 +1,7 @@
 ## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+## test_sfx_manager.gd
+##
 ## Regression tests for the SfxManager extracted from AudioManager in PR #1068.
 
 extends "res://addons/gut/test.gd"

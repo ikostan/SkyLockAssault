@@ -247,6 +247,14 @@ func cleanup_for_test() -> void:
 			player.free()
 		_sfx_pool.remove_at(i)
 
+	# 1b. Free orphaned players left behind when a test swapped this node's script
+	# (set_script() resets _sfx_pool but keeps the child nodes).
+	for child: Node in get_children():
+		if child is AudioStreamPlayer:
+			child.stop()
+			remove_child(child)
+			child.free()
+
 	# 2. Re-create the pool matching production configuration
 	_initialize_sfx_pool()
 
