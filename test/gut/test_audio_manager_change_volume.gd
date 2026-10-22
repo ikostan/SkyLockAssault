@@ -27,12 +27,16 @@ const ALL_BUSES: Array = [
 
 var _original_config_path: String
 var _original_states: Dictionary = {}
+var _original_last_audible: Dictionary = {}
+var _original_encryption_key: String
 
 
 ## Isolates config I/O and starts every bus unmuted at START_VOLUME, in AudioServer too.
 ## :rtype: void
 func before_each() -> void:
 	_original_config_path = AudioManager.current_config_path
+	_original_last_audible = AudioManager._last_audible_volume.duplicate()
+	_original_encryption_key = Globals.save_encryption_pass
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
 		_original_states[bus] = AudioManager.get_bus_state(bus)
 
@@ -61,6 +65,8 @@ func after_each() -> void:
 		var state: Dictionary = _original_states[bus]
 		AudioManager.set_bus_state(bus, state["volume"], state["muted"])
 	AudioManager.apply_all_volumes()
+	AudioManager._last_audible_volume = _original_last_audible
+	Globals.save_encryption_pass = _original_encryption_key
 
 
 # ==========================================
@@ -373,3 +379,165 @@ func test_unknown_bus_is_rejected() -> void:
 	assert_signal_not_emitted(AudioManager, "volume_changed")
 	assert_signal_not_emitted(AudioManager, "mute_toggled")
 	assert_false(SfxManager.is_any_sfx_playing())
+
+
+# ==========================================
+# BOUNDARIES AND CALLER CONTRACTS
+# ==========================================
+
+
+## A positive value below the threshold mutes without replacing the requested volume.
+## :rtype: void
+func test_positive_near_zero_is_stored_and_muted(bus: String = use_parameters(ALL_BUSES)) -> void:
+	var volume: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD / 2.0
+	watch_signals(AudioManager)
+
+	await AudioManager.change_volume(bus, volume)
+
+	assert_eq(AudioManager.get_volume(bus), volume, "Keep the caller's near-zero value")
+	assert_almost_eq(_hw_linear(bus), volume, 0.000001)
+	assert_true(AudioManager.get_muted(bus))
+	assert_eq(_mute_emits_for(bus), 1)
+	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [bus, true])
+	assert_false(SfxManager.is_any_sfx_playing())
+
+
+## The smallest tested step above the boundary must not mute an audible bus.
+## :rtype: void
+func test_just_above_threshold_stays_unmuted(bus: String = use_parameters(ALL_BUSES)) -> void:
+	var volume: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD + 0.000001
+	watch_signals(AudioManager)
+
+	await AudioManager.change_volume(bus, volume, true)
+
+	assert_false(AudioManager.get_muted(bus))
+	assert_eq(AudioManager.get_volume(bus), volume)
+	assert_almost_eq(_hw_linear(bus), volume, 0.000001)
+	assert_eq(_mute_emits_for(bus), 0, "No transition just above the boundary")
+	assert_false(SfxManager.is_any_sfx_playing())
+
+
+## Any muted bus unmutes just above the boundary, even if its previous volume was audible.
+## :rtype: void
+func test_just_above_threshold_unmutes_audible_muted_bus(
+	bus: String = use_parameters(ALL_BUSES)
+) -> void:
+	AudioManager.set_bus_state(bus, START_VOLUME, true)
+	AudioManager.apply_volume_to_bus(bus, START_VOLUME, true)
+	var volume: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD + 0.000001
+	watch_signals(AudioManager)
+
+	await AudioManager.change_volume(bus, volume)
+
+	assert_false(AudioManager.get_muted(bus), "The current rule is level-triggered")
+	assert_eq(AudioManager.get_volume(bus), volume)
+	assert_eq(_mute_emits_for(bus), 1)
+	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [bus, false])
+	assert_false(SfxManager.is_any_sfx_playing())
+
+
+## A down/up sequence emits exactly one transition each way and leaves other buses alone.
+## :rtype: void
+func test_volume_round_trip_is_isolated_to_target_bus(
+	bus: String = use_parameters(ALL_BUSES)
+) -> void:
+	watch_signals(AudioManager)
+
+	await AudioManager.change_volume(bus, 0.0)
+	await AudioManager.change_volume(bus, 1.0)
+
+	assert_eq(AudioManager.get_volume(bus), 1.0, "Full volume is accepted")
+	assert_false(AudioManager.get_muted(bus))
+	assert_eq(get_signal_emit_count(AudioManager, "volume_changed"), 2)
+	assert_eq(get_signal_emit_count(AudioManager, "mute_toggled"), 2)
+	assert_eq(get_signal_parameters(AudioManager, "mute_toggled", 0), [bus, true])
+	assert_eq(get_signal_parameters(AudioManager, "mute_toggled", 1), [bus, false])
+	for other: String in ALL_BUSES:
+		if other == bus:
+			continue
+		assert_eq(AudioManager.get_bus_state(other), {"volume": START_VOLUME, "muted": false})
+		assert_almost_eq(_hw_linear(other), START_VOLUME, 0.0001)
+		assert_false(_hw_muted(other), other + " hardware mute must remain unchanged")
+
+
+## Persistence belongs to callers: transitions neither create nor rewrite the config.
+## :rtype: void
+func test_change_volume_never_saves(is_manual: bool = use_parameters([false, true])) -> void:
+	var bus: String = AudioConstants.BUS_MASTER
+	await AudioManager.change_volume(bus, 0.0, is_manual)
+	assert_false(FileAccess.file_exists(TEST_CONFIG_PATH), "No implicit first save")
+
+	var cfg := ConfigFile.new()
+	cfg.set_value("audio", "master_volume", START_VOLUME)
+	cfg.set_value("sentinel", "keep", "unchanged")
+	assert_eq(cfg.save_encrypted_pass(TEST_CONFIG_PATH, Globals.ensure_encryption_key()), OK)
+	var saved_bytes: PackedByteArray = FileAccess.get_file_as_bytes(TEST_CONFIG_PATH)
+	var history: Dictionary = AudioManager._last_audible_volume.duplicate()
+
+	await AudioManager.change_volume(bus, RAISED_VOLUME, is_manual)
+	await AudioManager.change_volume(bus, 0.0, is_manual)
+
+	assert_eq(FileAccess.get_file_as_bytes(TEST_CONFIG_PATH), saved_bytes, "No implicit rewrite")
+	assert_eq(AudioManager._last_audible_volume, history, "No implicit audible-volume commit")
+
+
+## The raw setter emits volume only and does not change the hardware or muted state.
+## :rtype: void
+func test_raw_set_volume_has_no_hardware_or_unmute_side_effects(
+	bus: String = use_parameters(ALL_BUSES)
+) -> void:
+	_force_muted_at_zero(bus)
+	watch_signals(AudioManager)
+
+	AudioManager.set_volume(bus, RAISED_VOLUME)
+
+	assert_true(AudioManager.get_muted(bus))
+	assert_true(_hw_muted(bus))
+	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
+	assert_signal_emitted_with_parameters(AudioManager, "volume_changed", [bus, RAISED_VOLUME])
+	assert_signal_not_emitted(AudioManager, "mute_toggled")
+	assert_false(SfxManager.is_any_sfx_playing())
+	assert_false(FileAccess.file_exists(TEST_CONFIG_PATH))
+
+
+## Updating a different bus must not cancel the pending Master cutoff.
+## :rtype: void
+func test_other_bus_change_does_not_cancel_master_hold() -> void:
+	AudioManager.change_volume(AudioConstants.BUS_MASTER, 0.0, true)
+	await AudioManager.change_volume(AudioConstants.BUS_MUSIC, RAISED_VOLUME, true)
+	await wait_seconds(HOLD_WAIT)
+
+	assert_true(AudioManager.get_muted(AudioConstants.BUS_MASTER))
+	assert_almost_eq(_hw_linear(AudioConstants.BUS_MASTER), 0.0, 0.0001)
+	assert_eq(AudioManager.get_volume(AudioConstants.BUS_MUSIC), RAISED_VOLUME)
+	assert_false(AudioManager.get_muted(AudioConstants.BUS_MUSIC))
+
+
+## Cleanup must invalidate an outstanding hold even when Master is still logically muted.
+## :rtype: void
+func test_cleanup_invalidates_pending_master_hold() -> void:
+	var bus: String = AudioConstants.BUS_MASTER
+	AudioManager.change_volume(bus, 0.0, true)
+	AudioManager.cleanup_for_test()
+	AudioServer.set_bus_volume_db(_bus_idx(bus), linear_to_db(RAISED_VOLUME))
+
+	await wait_seconds(HOLD_WAIT)
+
+	assert_true(AudioManager.get_muted(bus), "The mute guard alone cannot cancel this timer")
+	assert_almost_eq(_hw_linear(bus), RAISED_VOLUME, 0.0001, "Cleanup orphaned the stale hold")
+	assert_false(SfxManager.is_any_sfx_playing(), "Audio cleanup delegates to SfxManager")
+
+
+## An unattached manager takes the immediate Master cutoff path without needing a timer.
+## :rtype: void
+func test_manual_master_mute_outside_tree_flattens_immediately() -> void:
+	var manager: Node = autofree(load("res://scripts/managers/audio_manager.gd").new())
+	manager.set_bus_state(AudioConstants.BUS_MASTER, START_VOLUME, false)
+	assert_false(manager.is_inside_tree())
+
+	await manager.change_volume(AudioConstants.BUS_MASTER, 0.0, true)
+
+	assert_true(manager.get_muted(AudioConstants.BUS_MASTER))
+	assert_eq(manager.get_volume(AudioConstants.BUS_MASTER), 0.0)
+	assert_almost_eq(_hw_linear(AudioConstants.BUS_MASTER), 0.0, 0.0001)
+	assert_true(SfxManager.is_any_sfx_playing(), "The confirmation still routes to SfxManager")

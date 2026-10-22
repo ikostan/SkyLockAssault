@@ -13,7 +13,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	SfxManager.stop_all_sfx()
+	SfxManager.cleanup_for_test()
 	
 	# FIX (CodeRabbit AI): Prevent state leakage if an early assertion aborts the test body
 	if not get_tree().node_added.is_connected(SfxManager._on_node_added):
@@ -404,13 +404,13 @@ func test_retroactive_scan_is_idempotent_and_does_not_double_bind() -> void:
 	)
 
 
-## Verifies that AudioManager guards against duplicate listener registration 
+## Verifies that SfxManager guards against duplicate listener registration
 ## on the SceneTree's node_added signal when _ready() is invoked multiple times.
-func test_audiomanager_listener_registration_is_strictly_singular() -> void:
+func test_sfxmanager_listener_registration_is_strictly_singular() -> void:
 	# 1. Arrange: Verify the production baseline is already active
 	assert_true(
 		get_tree().node_added.is_connected(SfxManager._on_node_added),
-		"Precondition Failed: AudioManager should naturally be connected to node_added."
+		"Precondition Failed: SfxManager should naturally be connected to node_added."
 	)
 	
 	# Extract initial connections array to count total bindings
@@ -423,7 +423,7 @@ func test_audiomanager_listener_registration_is_strictly_singular() -> void:
 	assert_eq(baseline_listener_count, 1, "Baseline setup should have exactly one listener attached.")
 
 	# 2. Act: Force an unconditional alternate boot path trigger by calling production _ready() again
-	AudioManager._ready()
+	SfxManager._ready()
 	
 	# 3. Assert: Total active listener attachments on the signal must remain exactly 1
 	var post_connections: Array = get_tree().node_added.get_connections()
