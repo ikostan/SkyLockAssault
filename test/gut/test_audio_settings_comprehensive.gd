@@ -456,3 +456,68 @@ func test_menu_freed_during_master_hold_ends_muted_in_mixer() -> void:
 		pending("Master left audible after the menu is freed mid-hold; fixed by T5/T6")
 		return
 	assert_true(_hw_muted(bus), "Master ends muted in the mixer without the menu")
+
+
+# ==========================================================================
+# 7. PLAYER-CHOSEN MUTES SURVIVE WITH THE MENU OPEN (Issue #1040)
+# ==========================================================================
+
+
+## Mutes a bus at an audible volume the way the player does, silently and immediately.
+## :rtype: void
+func _player_mute(bus_name: String) -> void:
+	await AudioManager.toggle_mute(bus_name, true, false)
+	assert_true(AudioManager.get_muted(bus_name), "Precondition: " + bus_name + " muted")
+	assert_true(_hw_muted(bus_name), "Precondition: " + bus_name + " muted in AudioServer")
+
+
+## A web-bridge change to another audible volume does not unmute a bus the player muted
+## (the old level-triggered menu observer did).
+## :rtype: void
+func test_player_mute_survives_bridge_audible_change(bus: String = use_parameters(ALL_BUSES)) -> void:
+	await _player_mute(bus)
+	watch_signals(AudioManager)
+
+	_bridge_volume(bus, RAISED_VOLUME)
+	await get_tree().process_frame
+
+	assert_true(AudioManager.get_muted(bus), bus + " stays muted")
+	assert_false(_button(bus).button_pressed, bus + " mute button still shows muted")
+	assert_true(_hw_muted(bus), bus + " stays muted in AudioServer")
+	assert_eq(_mute_emits_for(bus), 0, bus + ": no mute transition without a crossing")
+	assert_almost_eq(AudioManager.get_volume(bus), RAISED_VOLUME, 0.0001, "Volume still stored")
+	# The slider snaps to its step, so allow up to one step of difference.
+	assert_almost_eq(_slider(bus).value, RAISED_VOLUME, _slider(bus).step, "Slider follows")
+	assert_false(SfxManager.is_any_sfx_playing(), bus + ": no click without a transition")
+
+
+## AudioManager.change_volume() on a player-muted bus keeps it muted with the menu open too:
+## the menu observer no longer overrides the manager's crossing rule.
+## :rtype: void
+func test_player_mute_survives_change_volume_with_menu_open(
+	bus: String = use_parameters(ALL_BUSES)
+) -> void:
+	await _player_mute(bus)
+	watch_signals(AudioManager)
+
+	await AudioManager.change_volume(bus, RAISED_VOLUME)
+
+	assert_true(AudioManager.get_muted(bus), bus + " muted at 0.66 stays muted at 0.5")
+	assert_false(_button(bus).button_pressed)
+	assert_true(_hw_muted(bus))
+	assert_eq(_mute_emits_for(bus), 0, bus + ": no mute transition without a crossing")
+
+
+## Documented corner case, through the menu: a player mute taken through zero and back up is
+## unmuted, because at zero an explicit mute and an auto-mute look the same.
+## :rtype: void
+func test_player_mute_through_zero_unmutes_via_bridge(bus: String = use_parameters(ALL_BUSES)) -> void:
+	await _player_mute(bus)
+
+	_bridge_volume(bus, 0.0)
+	_bridge_volume(bus, RAISED_VOLUME)
+	await get_tree().process_frame
+
+	assert_false(AudioManager.get_muted(bus), "Accepted: crossing up from zero unmutes")
+	assert_true(_button(bus).button_pressed)
+	assert_false(_hw_muted(bus))

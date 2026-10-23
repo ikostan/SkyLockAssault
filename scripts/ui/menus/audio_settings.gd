@@ -12,6 +12,10 @@ extends Control
 var master_warning_shown: bool = false
 var sfx_warning_shown: bool = false
 var _intentional_exit: bool = false
+## Last volume this menu saw per bus, so the auto-mute observer can apply the same
+## threshold-crossing rule as AudioManager.change_volume() (Issue #1040). The observer runs
+## after set_volume() has already overwritten the manager's value, so it keeps its own copy.
+var _last_seen_volume: Dictionary = {}
 
 # Master Volume Controls
 @onready var master_slider: HSlider = $Panel/VolumeControls/Master/HSlider
@@ -150,6 +154,9 @@ func _ready() -> void:
 	Globals.ensure_initial_focus(master_slider, menu_controls, "Audio Settings")
 
 	# 1. Listen for changes coming from Playwright/Web
+	# Seed the crossing baseline before the first volume_changed can arrive (Issue #1040).
+	for bus: String in AudioConstants.BUS_CONFIG.keys():
+		_last_seen_volume[bus] = AudioManager.get_volume(bus)
 	AudioManager.volume_changed.connect(_on_global_volume_changed)
 	AudioManager.mute_toggled.connect(_on_global_mute_toggled)
 
@@ -247,9 +254,14 @@ func _update_ui_interactivity() -> void:
 # ==========================================================================
 
 
-## Updates the visual Godot HSliders when Playwright or UI components alter the AudioManager state.
-## Maintained with balanced near-zero auto-mute and auto-unmute thresholds for seamless
-## state tracking.
+## Updates the visual Godot HSliders when Playwright or UI components alter the AudioManager state,
+## and applies the near-zero auto-mute rule while the menu is open.
+## The rule is edge-triggered, matching AudioManager.change_volume() (Issue #1040):
+##   - crossing down (old > T, new <= T) on an unmuted bus -> auto-mute;
+##   - crossing up (old <= T, new > T) on a muted bus -> auto-unmute.
+## Anything else leaves the mute flag alone, so a mute the player chose at an audible volume
+## survives volume changes from the web bridge or anywhere else. T6 (#1043) reduces this
+## handler to a visual-only observer once callers go through change_volume().
 ## :param bus_name: The constant identifier name of the audio channel.
 ## :type bus_name: String
 ## :param volume: The current linear volume scale level (0.0 to 1.0).
@@ -270,8 +282,15 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 		AudioConstants.BUS_SFX_MENU:
 			_sync_slider_visual(menu_slider, volume)
 
-	# --- AUTO-MUTE ON NEAR-ZERO VOLUME THRESHOLD ---
-	if volume <= AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD and not AudioManager.get_muted(bus_name):
+	# Judge the crossing against the last volume this menu saw, then advance the baseline.
+	var threshold: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD
+	var old_volume: float = float(_last_seen_volume.get(bus_name, volume))
+	_last_seen_volume[bus_name] = volume
+	var crossed_down: bool = old_volume > threshold and volume <= threshold
+	var crossed_up: bool = old_volume <= threshold and volume > threshold
+
+	# --- AUTO-MUTE ON CROSSING DOWN TO NEAR-ZERO ---
+	if crossed_down and not AudioManager.get_muted(bus_name):
 		# CIRCUIT BREAKER: Flip state immediately to stop rapid consecutive frame triggers
 		AudioManager.set_muted(bus_name, true)
 
@@ -298,8 +317,8 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 			bus_name, AudioManager.get_volume(bus_name), AudioManager.get_muted(bus_name)
 		)
 
-	# --- AUTO-UNMUTE ON NON-ZERO VOLUME THRESHOLD ---
-	elif volume > AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD and AudioManager.get_muted(bus_name):
+	# --- AUTO-UNMUTE ON CROSSING UP FROM NEAR-ZERO ---
+	elif crossed_up and AudioManager.get_muted(bus_name):
 		# CIRCUIT BREAKER: Flip state immediately to short-circuit rapid consecutive frame updates
 		AudioManager.set_muted(bus_name, false)
 		# Clear the AudioServer mute on every bus: auto-mute now sets it (Issue #1041), and
