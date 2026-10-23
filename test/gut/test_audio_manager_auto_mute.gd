@@ -1,17 +1,22 @@
 ## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-## test_audio_manager_change_volume.gd
+## test_audio_manager_auto_mute.gd
 ##
-## TEST SUITE: AudioManager.change_volume() owns the near-zero auto-mute rule (Issue #1039).
-## change_volume() ports today's rule from audio_settings.gd as-is, but runs from the
-## autoload with no Audio Settings menu in the tree, and callers state their intent through
-## is_manual_interaction instead of slider focus. The raw setters (set_volume, set_bus_state,
-## config load, reset) must never apply the rule.
-## Part of epic #725. T3 (#1040) and T4 (#1041) change the rule; T7 (#1044) extends this suite.
+## TEST SUITE: the near-zero auto-mute contract, pinned at manager level (epic #725).
+## Renamed from test_audio_manager_change_volume.gd (Issue #1044): this is the suite T7 asks
+## for, so it is extended here rather than duplicated in a second file.
+## AudioManager.change_volume() owns the rule (Issue #1039). It runs from the autoload with no
+## Audio Settings menu in the tree, and callers state their intent through
+## is_manual_interaction instead of slider focus. The rule fires only on
+## AUTO_MUTE_VOLUME_THRESHOLD crossings (Issue #1040), so mutes the player chose at an audible
+## volume stay put. The raw setters (set_volume, set_bus_state, config load, reset) must never
+## apply the rule. Once an auto-mute settles, AudioServer is re-synced from the manager's
+## current state, so the mixer mute flag always matches and stale hold timers need no token
+## (Issue #1041). Every behavior is parameterized over the six buses.
 
 extends "res://addons/gut/test.gd"
 
-const TEST_CONFIG_PATH: String = "user://test_audio_manager_change_volume.cfg"
+const TEST_CONFIG_PATH: String = "user://test_audio_manager_auto_mute.cfg"
 const START_VOLUME: float = 0.66
 const RAISED_VOLUME: float = 0.33
 ## Hold delay plus a safety buffer for timer granularity.
@@ -127,6 +132,46 @@ func test_no_audio_menu_in_tree() -> void:
 
 
 # ==========================================
+# TRANSITION MATRIX: BUS x CALLER x DIRECTION (Issue #1044)
+# ==========================================
+
+
+## Builds [bus, is_manual, crossing_down] for every bus, caller and direction.
+## :rtype: Array
+static func _transition_matrix() -> Array:
+	var rows: Array = []
+	for bus: String in ALL_BUSES:
+		for is_manual: bool in [false, true]:
+			for crossing_down: bool in [true, false]:
+				rows.append([bus, is_manual, crossing_down])
+	return rows
+
+
+## Each crossing flips the mute exactly once, syncs the mixer, and clicks only when manual.
+## :rtype: void
+func test_transition_matrix(params: Array = use_parameters(_transition_matrix())) -> void:
+	var bus: String = params[0]
+	var is_manual: bool = params[1]
+	var crossing_down: bool = params[2]
+	if not crossing_down:
+		_force_muted_at_zero(bus)
+	var target: float = 0.0 if crossing_down else RAISED_VOLUME
+	watch_signals(AudioManager)
+
+	# Not awaited: read the click right away, before a Master hold can outlast it.
+	AudioManager.change_volume(bus, target, is_manual)
+	var click_playing: bool = SfxManager.is_any_sfx_playing()
+	await wait_seconds(HOLD_WAIT)  # Let any Master hold settle before checking the mixer
+
+	assert_eq(AudioManager.get_muted(bus), crossing_down, bus + ": mute follows the crossing")
+	assert_eq(_mute_emits_for(bus), 1, bus + ": exactly one mute transition")
+	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [bus, crossing_down])
+	assert_eq(_hw_muted(bus), AudioManager.get_muted(bus), bus + ": mixer matches the manager")
+	assert_almost_eq(_hw_linear(bus), target, 0.0001, bus + ": mixer holds the new volume")
+	assert_eq(click_playing, is_manual, bus + ": click only for manual changes")
+
+
+# ==========================================
 # AUTO-MUTE (DOWN)
 # ==========================================
 
@@ -163,18 +208,31 @@ func test_value_at_threshold_auto_mutes(bus: String = use_parameters(ALL_BUSES))
 	assert_true(AudioManager.get_muted(bus), "Threshold is inclusive")
 
 
-## An already muted bus at zero is a no-op: no mute signal, no click.
+## An already muted bus at zero is a no-op for every caller: no mute signal, no click.
 ## :rtype: void
-func test_repeated_zero_is_noop(bus: String = use_parameters(ALL_BUSES)) -> void:
-	await AudioManager.change_volume(bus, 0.0, true)
+func test_repeated_zero_is_noop(params: Array = use_parameters(_bus_caller_pairs())) -> void:
+	var bus: String = params[0]
+	var is_manual: bool = params[1]
+	await AudioManager.change_volume(bus, 0.0, is_manual)
 	await wait_seconds(HOLD_WAIT)
 	SfxManager.stop_all_sfx()
 	watch_signals(AudioManager)
 
-	await AudioManager.change_volume(bus, 0.0, true)
+	await AudioManager.change_volume(bus, 0.0, is_manual)
 
 	assert_eq(_mute_emits_for(bus), 0, "No mute_toggled on a repeated near-zero update")
 	assert_false(SfxManager.is_any_sfx_playing(), "No click on a repeated near-zero update")
+	assert_true(_hw_muted(bus), "The mixer stays muted")
+
+
+## Builds [bus, is_manual] for every bus and caller.
+## :rtype: Array
+static func _bus_caller_pairs() -> Array:
+	var rows: Array = []
+	for bus: String in ALL_BUSES:
+		for is_manual: bool in [false, true]:
+			rows.append([bus, is_manual])
+	return rows
 
 
 # ==========================================
@@ -270,6 +328,142 @@ func test_audible_change_on_unmuted_bus_is_plain(bus: String = use_parameters(AL
 
 
 # ==========================================
+# THRESHOLD CROSSING RULE (Issue #1040)
+# ==========================================
+
+
+## Puts a bus in the "muted by the player at an audible volume" state, in AudioServer too.
+## :rtype: void
+func _force_muted_at(bus_name: String, volume: float) -> void:
+	AudioManager.set_bus_state(bus_name, volume, true)
+	AudioManager.apply_volume_to_bus(bus_name, volume, true)
+
+
+## A player-chosen mute survives an audible volume change, manual or programmatic.
+## :rtype: void
+func test_player_mute_survives_audible_change(
+	params: Array = use_parameters(
+		[
+			[AudioConstants.BUS_MASTER, false],
+			[AudioConstants.BUS_MASTER, true],
+			[AudioConstants.BUS_MUSIC, false],
+			[AudioConstants.BUS_MUSIC, true],
+			[AudioConstants.BUS_SFX, false],
+			[AudioConstants.BUS_SFX_WEAPON, true],
+			[AudioConstants.BUS_SFX_ROTORS, false],
+			[AudioConstants.BUS_SFX_MENU, true],
+		]
+	)
+) -> void:
+	var bus: String = params[0]
+	var is_manual: bool = params[1]
+	_force_muted_at(bus, 0.8)
+	watch_signals(AudioManager)
+
+	await AudioManager.change_volume(bus, 0.5, is_manual)
+
+	assert_true(AudioManager.get_muted(bus), bus + " muted at 0.8 stays muted at 0.5")
+	assert_eq(AudioManager.get_volume(bus), 0.5, "The new volume is still stored")
+	assert_signal_emitted_with_parameters(AudioManager, "volume_changed", [bus, 0.5])
+	assert_eq(_mute_emits_for(bus), 0, "No mute transition without a crossing")
+	assert_false(SfxManager.is_any_sfx_playing(), "No click without a transition")
+	assert_true(_hw_muted(bus), "AudioServer stays muted")
+	assert_almost_eq(_hw_linear(bus), 0.5, 0.0001, "The level is ready for a later unmute")
+
+
+## Raising a player-muted bus to full volume still keeps it muted.
+## :rtype: void
+func test_player_mute_survives_raise_to_full(bus: String = use_parameters(ALL_BUSES)) -> void:
+	_force_muted_at(bus, 0.5)
+
+	await AudioManager.change_volume(bus, 1.0, true)
+
+	assert_true(AudioManager.get_muted(bus))
+	assert_true(_hw_muted(bus))
+
+
+## A bus auto-muted at zero unmutes when raised back above the threshold.
+## :rtype: void
+func test_auto_muted_bus_unmutes_on_crossing_up(
+	is_manual: bool = use_parameters([false, true])
+) -> void:
+	var bus: String = AudioConstants.BUS_MUSIC
+	await AudioManager.change_volume(bus, 0.0, is_manual)
+	assert_true(AudioManager.get_muted(bus), "Precondition: auto-muted at zero")
+	SfxManager.stop_all_sfx()
+
+	await AudioManager.change_volume(bus, 0.3, is_manual)
+
+	assert_false(AudioManager.get_muted(bus), "Crossing up unmutes")
+	assert_false(_hw_muted(bus))
+	assert_almost_eq(_hw_linear(bus), 0.3, 0.0001)
+	assert_eq(SfxManager.is_any_sfx_playing(), is_manual, "Click only for manual changes")
+
+
+## Successive near-zero values (not just repeated 0.0) are no-ops once muted.
+## :rtype: void
+func test_repeated_near_zero_values_are_noop(bus: String = use_parameters(ALL_BUSES)) -> void:
+	var near_zero: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD / 2.0
+	await AudioManager.change_volume(bus, near_zero, true)
+	await wait_seconds(HOLD_WAIT)
+	SfxManager.stop_all_sfx()
+	watch_signals(AudioManager)
+
+	await AudioManager.change_volume(bus, 0.0, true)
+	await AudioManager.change_volume(bus, AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD, true)
+	await AudioManager.change_volume(bus, near_zero, true)
+
+	assert_true(AudioManager.get_muted(bus))
+	assert_eq(_mute_emits_for(bus), 0, "No mute_toggled while staying at or below the threshold")
+	assert_false(SfxManager.is_any_sfx_playing(), "No click while staying at or below")
+
+
+## Crossing down on a bus the player already muted changes nothing but the volume.
+## :rtype: void
+func test_crossing_down_on_player_muted_bus_is_silent(bus: String = use_parameters(ALL_BUSES)) -> void:
+	_force_muted_at(bus, 0.8)
+	watch_signals(AudioManager)
+
+	await AudioManager.change_volume(bus, 0.0, true)
+
+	assert_true(AudioManager.get_muted(bus))
+	assert_eq(_mute_emits_for(bus), 0, "Already muted: no transition")
+	assert_false(SfxManager.is_any_sfx_playing(), "Already muted: no click")
+	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001, "No Master hold without a transition")
+
+
+## Documented corner case: a button mute at 0.8, then 0 and back up, is unmuted.
+## At zero an explicit mute and an auto-mute look the same, and the rule keeps no extra state.
+## :rtype: void
+func test_corner_case_player_mute_through_zero_unmutes(
+	bus: String = use_parameters(ALL_BUSES)
+) -> void:
+	_force_muted_at(bus, 0.8)
+
+	await AudioManager.change_volume(bus, 0.0)
+	await AudioManager.change_volume(bus, 0.3)
+
+	assert_false(AudioManager.get_muted(bus), "Accepted: crossing up from zero unmutes")
+	assert_false(_hw_muted(bus))
+
+
+## A bus left unmuted at zero by the raw setters is not muted by a near-zero update:
+## the rule needs a crossing down, and the bus never was above the threshold.
+## :rtype: void
+func test_unmuted_at_zero_stays_unmuted_below_threshold(
+	bus: String = use_parameters(ALL_BUSES)
+) -> void:
+	AudioManager.set_bus_state(bus, 0.0, false)
+	watch_signals(AudioManager)
+
+	await AudioManager.change_volume(bus, AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD / 2.0, true)
+
+	assert_false(AudioManager.get_muted(bus), "No crossing down, no auto-mute")
+	assert_eq(_mute_emits_for(bus), 0)
+	assert_false(SfxManager.is_any_sfx_playing())
+
+
+# ==========================================
 # MASTER FEEDBACK HOLD
 # ==========================================
 
@@ -290,6 +484,7 @@ func test_manual_master_hold_then_flatten() -> void:
 	await wait_seconds(HOLD_WAIT)
 	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001, "Master is flattened after the hold")
 	assert_true(AudioManager.get_muted(bus))
+	assert_true(_hw_muted(bus), "The re-sync sets the AudioServer mute flag after the hold")
 
 
 ## Programmatic Master auto-mute never holds.
@@ -387,6 +582,26 @@ func test_config_load_keeps_muted_audible_bus() -> void:
 	assert_false(SfxManager.is_any_sfx_playing(), "Loading never plays SFX")
 
 
+## load_volumes() from an encrypted file applies saved states verbatim: an audible muted bus
+## stays muted in the manager and the mixer, with no SFX (the near-zero load guard aside).
+## :rtype: void
+func test_load_volumes_from_disk_bypasses_rule() -> void:
+	var cfg := ConfigFile.new()
+	for bus: String in AudioConstants.BUS_CONFIG.keys():
+		var data: Dictionary = AudioConstants.BUS_CONFIG[bus]
+		cfg.set_value("audio", data["volume_var"], 0.5)
+		cfg.set_value("audio", data["muted_var"], true)
+	assert_eq(cfg.save_encrypted_pass(TEST_CONFIG_PATH, Globals.ensure_encryption_key()), OK)
+
+	AudioManager.load_volumes(TEST_CONFIG_PATH)
+
+	for bus: String in ALL_BUSES:
+		assert_true(AudioManager.get_muted(bus), bus + " stays muted after load")
+		assert_eq(AudioManager.get_volume(bus), 0.5)
+		assert_true(_hw_muted(bus), bus + " is muted in the mixer after load")
+	assert_false(SfxManager.is_any_sfx_playing(), "Loading never plays SFX")
+
+
 ## Reset restores defaults verbatim and never plays SFX.
 ## :rtype: void
 func test_reset_volumes_bypasses_rule() -> void:
@@ -455,9 +670,9 @@ func test_just_above_threshold_stays_unmuted(bus: String = use_parameters(ALL_BU
 	assert_false(SfxManager.is_any_sfx_playing())
 
 
-## Any muted bus unmutes just above the boundary, even if its previous volume was audible.
+## A bus muted at an audible volume stays muted just above the boundary: no crossing (#1040).
 ## :rtype: void
-func test_just_above_threshold_unmutes_audible_muted_bus(
+func test_just_above_threshold_keeps_audible_muted_bus_muted(
 	bus: String = use_parameters(ALL_BUSES)
 ) -> void:
 	AudioManager.set_bus_state(bus, START_VOLUME, true)
@@ -467,10 +682,9 @@ func test_just_above_threshold_unmutes_audible_muted_bus(
 
 	await AudioManager.change_volume(bus, volume)
 
-	assert_false(AudioManager.get_muted(bus), "The current rule is level-triggered")
+	assert_true(AudioManager.get_muted(bus), "The rule is edge-triggered: no crossing, no unmute")
 	assert_eq(AudioManager.get_volume(bus), volume)
-	assert_eq(_mute_emits_for(bus), 1)
-	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [bus, false])
+	assert_eq(_mute_emits_for(bus), 0)
 	assert_false(SfxManager.is_any_sfx_playing())
 
 
@@ -551,19 +765,102 @@ func test_other_bus_change_does_not_cancel_master_hold() -> void:
 	assert_false(AudioManager.get_muted(AudioConstants.BUS_MUSIC))
 
 
-## Cleanup must invalidate an outstanding hold even when Master is still logically muted.
+## A stale hold timer re-applies whatever state the manager holds when it fires, even when
+## that state changed through the raw setters with no AudioServer write (Issue #1041).
 ## :rtype: void
-func test_cleanup_invalidates_pending_master_hold() -> void:
+func test_stale_master_hold_reapplies_current_state() -> void:
 	var bus: String = AudioConstants.BUS_MASTER
 	AudioManager.change_volume(bus, 0.0, true)
-	AudioManager.cleanup_for_test()
-	AudioServer.set_bus_volume_db(_bus_idx(bus), linear_to_db(RAISED_VOLUME))
+	AudioManager.set_bus_state(bus, RAISED_VOLUME, false)
 
 	await wait_seconds(HOLD_WAIT)
 
-	assert_true(AudioManager.get_muted(bus), "The mute guard alone cannot cancel this timer")
-	assert_almost_eq(_hw_linear(bus), RAISED_VOLUME, 0.0001, "Cleanup orphaned the stale hold")
+	assert_false(_hw_muted(bus), "The late re-sync applies the current unmuted state")
+	assert_almost_eq(_hw_linear(bus), RAISED_VOLUME, 0.0001, "...at the current volume")
+
+
+## Cleanup still silences SFX after the token was removed.
+## :rtype: void
+func test_cleanup_stops_sfx() -> void:
+	AudioManager.change_volume(AudioConstants.BUS_MUSIC, 0.0, true)
+	assert_true(SfxManager.is_any_sfx_playing(), "Precondition: the click is playing")
+
+	AudioManager.cleanup_for_test()
+
 	assert_false(SfxManager.is_any_sfx_playing(), "Audio cleanup delegates to SfxManager")
+
+
+# ==========================================
+# AUDIOSERVER RE-SYNC (Issue #1041)
+# ==========================================
+
+
+## After any auto-mute settles, the AudioServer mute flag matches AudioManager.
+## :rtype: void
+func test_auto_mute_syncs_hardware_mute(
+	params: Array = use_parameters(
+		[
+			[AudioConstants.BUS_MASTER, false],
+			[AudioConstants.BUS_MASTER, true],
+			[AudioConstants.BUS_MUSIC, false],
+			[AudioConstants.BUS_MUSIC, true],
+			[AudioConstants.BUS_SFX, false],
+			[AudioConstants.BUS_SFX, true],
+			[AudioConstants.BUS_SFX_WEAPON, false],
+			[AudioConstants.BUS_SFX_WEAPON, true],
+			[AudioConstants.BUS_SFX_ROTORS, false],
+			[AudioConstants.BUS_SFX_ROTORS, true],
+			[AudioConstants.BUS_SFX_MENU, false],
+			[AudioConstants.BUS_SFX_MENU, true],
+		]
+	)
+) -> void:
+	var bus: String = params[0]
+	var is_manual: bool = params[1]
+
+	await AudioManager.change_volume(bus, 0.0, is_manual)
+
+	assert_true(AudioManager.get_muted(bus))
+	assert_eq(_hw_muted(bus), AudioManager.get_muted(bus), bus + ": mixer matches the manager")
+	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
+
+
+## A positive near-zero auto-mute is silenced by the mute flag, not by a forced 0.0 write.
+## :rtype: void
+func test_near_zero_auto_mute_keeps_stored_volume_in_mixer(
+	is_manual: bool = use_parameters([false, true])
+) -> void:
+	var bus: String = AudioConstants.BUS_MASTER
+	var volume: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD / 2.0
+
+	await AudioManager.change_volume(bus, volume, is_manual)
+
+	assert_true(_hw_muted(bus), "Silenced by the AudioServer mute flag")
+	assert_almost_eq(_hw_linear(bus), volume, 0.000001, "Mixer level mirrors the stored volume")
+
+
+## Down-crossing then up-crossing within MUTE_HARDWARE_DELAY ends unmuted at the up volume.
+## :rtype: void
+func test_down_up_within_delay_ends_unmuted(bus: String = use_parameters(ALL_BUSES)) -> void:
+	AudioManager.change_volume(bus, 0.0, true)
+	await AudioManager.change_volume(bus, RAISED_VOLUME, true)
+
+	await wait_seconds(HOLD_WAIT)
+
+	assert_false(AudioManager.get_muted(bus))
+	assert_false(_hw_muted(bus), bus + " is audible in AudioServer after any hold settles")
+	assert_almost_eq(_hw_linear(bus), RAISED_VOLUME, 0.0001)
+
+
+## The generation token is gone from the manager and the menu.
+## :rtype: void
+func test_no_hold_token_remains() -> void:
+	assert_false("_master_hold_token" in AudioManager, "No token in AudioManager")
+	var menu_props: Array[String] = []
+	var menu_script: Script = load("res://scripts/ui/menus/audio_settings.gd")
+	for prop: Dictionary in menu_script.get_script_property_list():
+		menu_props.append(prop["name"])
+	assert_false(menu_props.has("_master_zero_token"), "No token in the Audio Settings menu")
 
 
 ## An unattached manager takes the immediate Master cutoff path without needing a timer.
@@ -579,3 +876,95 @@ func test_manual_master_mute_outside_tree_flattens_immediately() -> void:
 	assert_eq(manager.get_volume(AudioConstants.BUS_MASTER), 0.0)
 	assert_almost_eq(_hw_linear(AudioConstants.BUS_MASTER), 0.0, 0.0001)
 	assert_true(SfxManager.is_any_sfx_playing(), "The confirmation still routes to SfxManager")
+
+
+## Starting exactly at the threshold must count as the near-zero side of an upward crossing.
+## :rtype: void
+func test_regression_exact_threshold_raise_unmutes(
+	params: Array = use_parameters(_bus_caller_pairs())
+) -> void:
+	var bus: String = params[0]
+	var is_manual: bool = params[1]
+	var raised: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD + 0.000001
+	_force_muted_at(bus, AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD)
+	watch_signals(AudioManager)
+
+	await AudioManager.change_volume(bus, raised, is_manual)
+
+	assert_false(AudioManager.get_muted(bus), "An upward crossing includes old volume == threshold")
+	assert_false(_hw_muted(bus), "The mixer must unmute immediately")
+	assert_almost_eq(_hw_linear(bus), raised, 0.0000001)
+	assert_eq(get_signal_emit_count(AudioManager, "volume_changed"), 1)
+	assert_signal_emitted_with_parameters(AudioManager, "volume_changed", [bus, raised])
+	assert_eq(_mute_emits_for(bus), 1)
+	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [bus, false])
+	assert_eq(SfxManager.is_any_sfx_playing(), is_manual)
+
+
+## An unmuted threshold baseline stays unmuted until it goes above and crosses down again.
+## :rtype: void
+func test_regression_exact_threshold_requires_fresh_down_crossing(
+	bus: String = use_parameters(ALL_BUSES)
+) -> void:
+	var threshold: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD
+	AudioManager.set_bus_state(bus, threshold, false)
+	AudioManager.apply_volume_to_bus(bus, threshold, false)
+	watch_signals(AudioManager)
+
+	for volume: float in [threshold, 0.0, threshold / 2.0, threshold + 0.000001]:
+		await AudioManager.change_volume(bus, volume, true)
+		assert_false(AudioManager.get_muted(bus), "No downward crossing to " + str(volume))
+		assert_false(_hw_muted(bus))
+		assert_eq(_mute_emits_for(bus), 0)
+		assert_false(SfxManager.is_any_sfx_playing(), "No click without a mute transition")
+
+	await AudioManager.change_volume(bus, threshold)
+
+	assert_true(AudioManager.get_muted(bus), "The fresh downward crossing must auto-mute")
+	assert_true(_hw_muted(bus))
+	assert_almost_eq(_hw_linear(bus), threshold, 0.0000001)
+	assert_eq(_mute_emits_for(bus), 1)
+	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [bus, true])
+
+
+## A hold must preserve a newer audible volume even if the latest state is still muted.
+## :rtype: void
+func test_regression_master_hold_reapplies_latest_muted_volume() -> void:
+	var bus: String = AudioConstants.BUS_MASTER
+	AudioManager.change_volume(bus, 0.0, true)
+	AudioManager.set_bus_state(bus, RAISED_VOLUME, true)
+	SfxManager.stop_all_sfx()
+	watch_signals(AudioManager)
+
+	await wait_seconds(HOLD_WAIT)
+
+	assert_eq(AudioManager.get_volume(bus), RAISED_VOLUME)
+	assert_true(AudioManager.get_muted(bus))
+	assert_true(_hw_muted(bus), "The hold applies the latest mute flag")
+	assert_almost_eq(
+		_hw_linear(bus), RAISED_VOLUME, 0.0001, "Do not replace muted volume with zero"
+	)
+	assert_signal_not_emitted(AudioManager, "volume_changed")
+	assert_signal_not_emitted(AudioManager, "mute_toggled")
+	assert_false(SfxManager.is_any_sfx_playing(), "A delayed re-sync must not replay feedback")
+
+
+## Several pending holds must all re-read the final state rather than restore their own.
+## :rtype: void
+func test_regression_overlapping_master_holds_preserve_final_state(
+	final_muted: bool = use_parameters([false, true])
+) -> void:
+	var bus: String = AudioConstants.BUS_MASTER
+	AudioManager.change_volume(bus, 0.0, true)
+	await AudioManager.change_volume(bus, RAISED_VOLUME)
+	AudioManager.change_volume(bus, 0.0, true)
+	AudioManager.set_bus_state(bus, START_VOLUME, final_muted)
+	watch_signals(AudioManager)
+
+	await wait_seconds(HOLD_WAIT)
+
+	assert_eq(AudioManager.get_bus_state(bus), {"volume": START_VOLUME, "muted": final_muted})
+	assert_eq(_hw_muted(bus), final_muted, "Both pending timers must apply the final mute flag")
+	assert_almost_eq(_hw_linear(bus), START_VOLUME, 0.0001)
+	assert_signal_not_emitted(AudioManager, "volume_changed")
+	assert_signal_not_emitted(AudioManager, "mute_toggled")

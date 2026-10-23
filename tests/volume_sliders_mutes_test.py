@@ -7,8 +7,8 @@ Volume Sliders & Mute Toggles Test Suite (Playwright + UI Automation Overlay)
 
 Overview
 --------
-E2E tests for VOL-01 to VOL-12: Validate volume slider adjustments, side-effect
-logging (AudioManager + persistence), and mute toggles in the audio menu.
+E2E tests for VOL-01 to VOL-13: Validate volume slider adjustments, side-effect
+logging (AudioManager + persistence), mute toggles, and Master auto-mute at 0.
 
 Prerequisites
 -------------
@@ -44,7 +44,7 @@ def test_volume_sliders_mutes(shared_page: Page) -> None:
     """
     Main test suite for volume sliders and mute toggles using DOM overlays.
 
-    Implements VOL-01 to VOL-12: Adjust sliders, toggle mutes, verify states/logs.
+    Implements VOL-01 to VOL-13: Adjust sliders, toggle mutes, verify states/logs.
 
     :param shared_page: The Playwright page object.
     :type shared_page: Page
@@ -466,6 +466,39 @@ def test_volume_sliders_mutes(shared_page: Page) -> None:
         )
         checked = shared_page.evaluate("document.getElementById('mute-menu').checked")
         assert checked, "Menu mute not toggled to unmuted"
+
+        # VOL-13: Master volume to 0 through the bridge auto-mutes Master (Issue #1044).
+        # The click itself is covered by GUT; JS cannot observe SFX playback.
+        pre_change_log_count = len(logs)
+        shared_page.evaluate("window.changeMasterVolume([0])")
+        wait_for_console_log(
+            logs,
+            lambda text: "master is muted" in text,
+            pre_change_log_count,
+            shared_page,
+        )
+        shared_page.wait_for_function(
+            "() => document.getElementById('mute-master').checked === false",
+            timeout=TEST_TIMEOUT,
+        )
+        checked = shared_page.evaluate("document.getElementById('mute-master').checked")
+        assert not checked, "Master volume 0 did not auto-mute Master"
+
+        # Raise Master again: crossing back up unmutes it and leaves state clean
+        pre_change_log_count = len(logs)
+        shared_page.evaluate("window.changeMasterVolume([0.5])")
+        wait_for_console_log(
+            logs,
+            lambda text: "applied loaded master volume to audioserver: 0.5" in text,
+            pre_change_log_count,
+            shared_page,
+        )
+        shared_page.wait_for_function(
+            "() => document.getElementById('mute-master').checked === true",
+            timeout=TEST_TIMEOUT,
+        )
+        checked = shared_page.evaluate("document.getElementById('mute-master').checked")
+        assert checked, "Raising Master from 0 did not auto-unmute it"
 
     except Exception as e:
         print(f"Test suite failed: {str(e)}")

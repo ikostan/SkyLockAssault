@@ -12,11 +12,10 @@ extends Control
 var master_warning_shown: bool = false
 var sfx_warning_shown: bool = false
 var _intentional_exit: bool = false
-# A token tracker (_master_zero_token) to the top level of audio_settings.gd.
-# Every time a zero event occurs, we increment this token. When the timer finishes,
-# we check if the token still matches. If the token has changed, it means a newer
-# user action took place, and the old async routine safely aborts.
-var _master_zero_token: int = 0
+## Last volume this menu saw per bus, so the auto-mute observer can apply the same
+## threshold-crossing rule as AudioManager.change_volume() (Issue #1040). The observer runs
+## after set_volume() has already overwritten the manager's value, so it keeps its own copy.
+var _last_seen_volume: Dictionary = {}
 
 # Master Volume Controls
 @onready var master_slider: HSlider = $Panel/VolumeControls/Master/HSlider
@@ -155,6 +154,9 @@ func _ready() -> void:
 	Globals.ensure_initial_focus(master_slider, menu_controls, "Audio Settings")
 
 	# 1. Listen for changes coming from Playwright/Web
+	# Seed the crossing baseline before the first volume_changed can arrive (Issue #1040).
+	for bus: String in AudioConstants.BUS_CONFIG.keys():
+		_last_seen_volume[bus] = AudioManager.get_volume(bus)
 	AudioManager.volume_changed.connect(_on_global_volume_changed)
 	AudioManager.mute_toggled.connect(_on_global_mute_toggled)
 
@@ -174,6 +176,20 @@ func _ready() -> void:
 		# Listen for the browser's Reset button!
 		if not web_bridge.web_reset_requested.is_connected(_on_audio_reset_button_pressed):
 			web_bridge.web_reset_requested.connect(_on_audio_reset_button_pressed)
+
+
+## Re-syncs Master from AudioManager when the menu leaves the tree (Issue #1041).
+## The Master feedback hold in _on_global_volume_changed() is a coroutine on this node, so
+## freeing the menu during MUTE_HARDWARE_DELAY drops its final re-sync and would leave Master
+## audible at FEEDBACK_HOLD_VOLUME_LINEAR while AudioManager reports it muted. Re-applying the
+## manager's current state is idempotent, so it needs no record of a pending hold. A menu
+## closed mid-hold cuts the confirmation click short. T5/T6 move the hold into the autoload.
+## :rtype: void
+func _exit_tree() -> void:
+	var master: String = AudioConstants.BUS_MASTER
+	AudioManager.apply_volume_to_bus(
+		master, AudioManager.get_volume(master), AudioManager.get_muted(master)
+	)
 
 
 func _on_back_button_pressed() -> void:
@@ -252,9 +268,14 @@ func _update_ui_interactivity() -> void:
 # ==========================================================================
 
 
-## Updates the visual Godot HSliders when Playwright or UI components alter the AudioManager state.
-## Maintained with balanced near-zero auto-mute and auto-unmute thresholds for seamless
-## state tracking.
+## Updates the visual Godot HSliders when Playwright or UI components alter the AudioManager state,
+## and applies the near-zero auto-mute rule while the menu is open.
+## The rule is edge-triggered, matching AudioManager.change_volume() (Issue #1040):
+##   - crossing down (old > T, new <= T) on an unmuted bus -> auto-mute;
+##   - crossing up (old <= T, new > T) on a muted bus -> auto-unmute.
+## Anything else leaves the mute flag alone, so a mute the player chose at an audible volume
+## survives volume changes from the web bridge or anywhere else. T6 (#1043) reduces this
+## handler to a visual-only observer once callers go through change_volume().
 ## :param bus_name: The constant identifier name of the audio channel.
 ## :type bus_name: String
 ## :param volume: The current linear volume scale level (0.0 to 1.0).
@@ -275,47 +296,51 @@ func _on_global_volume_changed(bus_name: String, volume: float) -> void:
 		AudioConstants.BUS_SFX_MENU:
 			_sync_slider_visual(menu_slider, volume)
 
-	# --- AUTO-MUTE ON NEAR-ZERO VOLUME THRESHOLD ---
-	if volume <= AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD and not AudioManager.get_muted(bus_name):
+	# Judge the crossing against the last volume this menu saw, then advance the baseline.
+	var threshold: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD
+	var old_volume: float = float(_last_seen_volume.get(bus_name, volume))
+	_last_seen_volume[bus_name] = volume
+	var crossed_down: bool = old_volume > threshold and volume <= threshold
+	var crossed_up: bool = old_volume <= threshold and volume > threshold
+
+	# --- AUTO-MUTE ON CROSSING DOWN TO NEAR-ZERO ---
+	if crossed_down and not AudioManager.get_muted(bus_name):
 		# CIRCUIT BREAKER: Flip state immediately to stop rapid consecutive frame triggers
 		AudioManager.set_muted(bus_name, true)
 
 		var active_slider: HSlider = _get_slider_for_bus(bus_name)
 		if active_slider and active_slider.has_focus():
 			if bus_name == AudioConstants.BUS_MASTER:
-				_master_zero_token += 1
-				var current_token: int = _master_zero_token
-
 				var bus_idx: int = AudioServer.get_bus_index(bus_name)
 				if bus_idx != -1:
 					# Hold a temporary audible level so the click can stream out
-					# before the bus is flattened to 0.0
+					# before the re-sync below silences the bus
 					AudioServer.set_bus_volume_db(
 						bus_idx, linear_to_db(AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR)
 					)
 
 				SfxManager.play_sfx(AudioConstants.SFX_CHECK)
 				await get_tree().create_timer(AudioConstants.MUTE_HARDWARE_DELAY).timeout
-
-				# TOKEN GATE: Only apply the zero reset if a newer drag didn't interrupt it
-				if current_token == _master_zero_token and bus_idx != -1:
-					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(0.0))
 			else:
 				SfxManager.play_sfx(AudioConstants.SFX_CHECK)
 
-	# --- AUTO-UNMUTE ON NON-ZERO VOLUME THRESHOLD ---
-	elif volume > AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD and AudioManager.get_muted(bus_name):
+		# RE-SYNC (Issue #1041): write the manager's current state to AudioServer, so the
+		# mixer mute flag matches AudioManager. After a hold, a newer drag or unmute made
+		# during the delay is what gets applied, so a stale timer is harmless.
+		AudioManager.apply_volume_to_bus(
+			bus_name, AudioManager.get_volume(bus_name), AudioManager.get_muted(bus_name)
+		)
+
+	# --- AUTO-UNMUTE ON CROSSING UP FROM NEAR-ZERO ---
+	elif crossed_up and AudioManager.get_muted(bus_name):
 		# CIRCUIT BREAKER: Flip state immediately to short-circuit rapid consecutive frame updates
 		AudioManager.set_muted(bus_name, false)
+		# Clear the AudioServer mute on every bus: auto-mute now sets it (Issue #1041), and
+		# leaving it set would keep the mixer silent while AudioManager reports unmuted.
+		AudioManager.apply_volume_to_bus(bus_name, volume, false)
 
 		var active_slider: HSlider = _get_slider_for_bus(bus_name)
 		if active_slider and active_slider.has_focus():
-			if bus_name == AudioConstants.BUS_MASTER:
-				_master_zero_token += 1
-				var bus_idx: int = AudioServer.get_bus_index(bus_name)
-				if bus_idx != -1:
-					AudioServer.set_bus_mute(bus_idx, false)
-					AudioServer.set_bus_volume_db(bus_idx, linear_to_db(volume))
 			SfxManager.play_sfx(AudioConstants.SFX_CHECK)
 
 
@@ -336,12 +361,6 @@ func _sync_slider_visual(slider: HSlider, volume: float) -> void:
 
 ## Updates the visual Godot CheckButtons when Playwright mutes the AudioManager
 func _on_global_mute_toggled(bus_name: String, is_muted: bool) -> void:
-	# Any Master unmute (menu, web bridge, reset) invalidates a pending auto-mute zeroing
-	# timer, so it cannot flatten the bus after it was unmuted (Issue #1046). Lives here,
-	# not in the menu's toggle handler, because every unmute path emits mute_toggled.
-	if bus_name == AudioConstants.BUS_MASTER and not is_muted:
-		_master_zero_token += 1
-
 	# In your Godot UI, if a button is "pressed", it means the audio is UNMUTED.
 	var is_pressed: bool = not is_muted
 
@@ -721,7 +740,6 @@ func _get_slider_for_bus(bus_name: String) -> HSlider:
 ## :type toggled_on: bool
 ## :rtype: void
 func _execute_bus_mute_toggle(bus_name: String, toggled_on: bool) -> void:
-	# Pending Master auto-mute timers are invalidated in _on_global_mute_toggled.
 	AudioManager.toggle_mute(bus_name, not toggled_on, true)
 	AudioManager.save_volumes()
 
