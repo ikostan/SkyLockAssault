@@ -876,3 +876,95 @@ func test_manual_master_mute_outside_tree_flattens_immediately() -> void:
 	assert_eq(manager.get_volume(AudioConstants.BUS_MASTER), 0.0)
 	assert_almost_eq(_hw_linear(AudioConstants.BUS_MASTER), 0.0, 0.0001)
 	assert_true(SfxManager.is_any_sfx_playing(), "The confirmation still routes to SfxManager")
+
+
+## Starting exactly at the threshold must count as the near-zero side of an upward crossing.
+## :rtype: void
+func test_regression_exact_threshold_raise_unmutes(
+	params: Array = use_parameters(_bus_caller_pairs())
+) -> void:
+	var bus: String = params[0]
+	var is_manual: bool = params[1]
+	var raised: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD + 0.000001
+	_force_muted_at(bus, AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD)
+	watch_signals(AudioManager)
+
+	await AudioManager.change_volume(bus, raised, is_manual)
+
+	assert_false(AudioManager.get_muted(bus), "An upward crossing includes old volume == threshold")
+	assert_false(_hw_muted(bus), "The mixer must unmute immediately")
+	assert_almost_eq(_hw_linear(bus), raised, 0.0000001)
+	assert_eq(get_signal_emit_count(AudioManager, "volume_changed"), 1)
+	assert_signal_emitted_with_parameters(AudioManager, "volume_changed", [bus, raised])
+	assert_eq(_mute_emits_for(bus), 1)
+	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [bus, false])
+	assert_eq(SfxManager.is_any_sfx_playing(), is_manual)
+
+
+## An unmuted threshold baseline stays unmuted until it goes above and crosses down again.
+## :rtype: void
+func test_regression_exact_threshold_requires_fresh_down_crossing(
+	bus: String = use_parameters(ALL_BUSES)
+) -> void:
+	var threshold: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD
+	AudioManager.set_bus_state(bus, threshold, false)
+	AudioManager.apply_volume_to_bus(bus, threshold, false)
+	watch_signals(AudioManager)
+
+	for volume: float in [threshold, 0.0, threshold / 2.0, threshold + 0.000001]:
+		await AudioManager.change_volume(bus, volume, true)
+		assert_false(AudioManager.get_muted(bus), "No downward crossing to " + str(volume))
+		assert_false(_hw_muted(bus))
+		assert_eq(_mute_emits_for(bus), 0)
+		assert_false(SfxManager.is_any_sfx_playing(), "No click without a mute transition")
+
+	await AudioManager.change_volume(bus, threshold)
+
+	assert_true(AudioManager.get_muted(bus), "The fresh downward crossing must auto-mute")
+	assert_true(_hw_muted(bus))
+	assert_almost_eq(_hw_linear(bus), threshold, 0.0000001)
+	assert_eq(_mute_emits_for(bus), 1)
+	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [bus, true])
+
+
+## A hold must preserve a newer audible volume even if the latest state is still muted.
+## :rtype: void
+func test_regression_master_hold_reapplies_latest_muted_volume() -> void:
+	var bus: String = AudioConstants.BUS_MASTER
+	AudioManager.change_volume(bus, 0.0, true)
+	AudioManager.set_bus_state(bus, RAISED_VOLUME, true)
+	SfxManager.stop_all_sfx()
+	watch_signals(AudioManager)
+
+	await wait_seconds(HOLD_WAIT)
+
+	assert_eq(AudioManager.get_volume(bus), RAISED_VOLUME)
+	assert_true(AudioManager.get_muted(bus))
+	assert_true(_hw_muted(bus), "The hold applies the latest mute flag")
+	assert_almost_eq(
+		_hw_linear(bus), RAISED_VOLUME, 0.0001, "Do not replace muted volume with zero"
+	)
+	assert_signal_not_emitted(AudioManager, "volume_changed")
+	assert_signal_not_emitted(AudioManager, "mute_toggled")
+	assert_false(SfxManager.is_any_sfx_playing(), "A delayed re-sync must not replay feedback")
+
+
+## Several pending holds must all re-read the final state rather than restore their own.
+## :rtype: void
+func test_regression_overlapping_master_holds_preserve_final_state(
+	final_muted: bool = use_parameters([false, true])
+) -> void:
+	var bus: String = AudioConstants.BUS_MASTER
+	AudioManager.change_volume(bus, 0.0, true)
+	await AudioManager.change_volume(bus, RAISED_VOLUME)
+	AudioManager.change_volume(bus, 0.0, true)
+	AudioManager.set_bus_state(bus, START_VOLUME, final_muted)
+	watch_signals(AudioManager)
+
+	await wait_seconds(HOLD_WAIT)
+
+	assert_eq(AudioManager.get_bus_state(bus), {"volume": START_VOLUME, "muted": final_muted})
+	assert_eq(_hw_muted(bus), final_muted, "Both pending timers must apply the final mute flag")
+	assert_almost_eq(_hw_linear(bus), START_VOLUME, 0.0001)
+	assert_signal_not_emitted(AudioManager, "volume_changed")
+	assert_signal_not_emitted(AudioManager, "mute_toggled")

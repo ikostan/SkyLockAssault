@@ -521,3 +521,130 @@ func test_player_mute_through_zero_unmutes_via_bridge(bus: String = use_paramete
 	assert_false(AudioManager.get_muted(bus), "Accepted: crossing up from zero unmutes")
 	assert_true(_button(bus).button_pressed)
 	assert_false(_hw_muted(bus))
+
+
+# ==========================================================================
+# 8. OBSERVER BASELINES AND INTERLEAVED CHANGES (Issue #1040)
+# ==========================================================================
+
+## Reopens the menu after changing a bus while no menu is observing the manager.
+## :rtype: void
+func _reopen_with_bus_state(bus: String, volume: float, muted: bool) -> void:
+	audio_instance.free()
+	AudioManager.set_bus_state(bus, volume, muted)
+	AudioManager.apply_all_volumes()
+	audio_instance = audio_scene.instantiate() as Control
+	add_child_autofree(audio_instance)
+	await get_tree().process_frame
+
+
+## The first update after opening must compare against the manager's existing threshold value.
+## :rtype: void
+func test_regression_open_at_threshold_first_raise_unmutes(
+	bus: String = use_parameters(ALL_BUSES)
+) -> void:
+	await _reopen_with_bus_state(bus, AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD, true)
+	var raised: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD + 0.000001
+	watch_signals(AudioManager)
+
+	_bridge_volume(bus, raised)
+
+	assert_eq(
+		AudioManager.get_volume(bus), raised, "Preserve the bridge value before slider snapping"
+	)
+	assert_false(
+		AudioManager.get_muted(bus), "The first update crosses up from the seeded baseline"
+	)
+	assert_true(_button(bus).button_pressed)
+	assert_false(_hw_muted(bus))
+	assert_almost_eq(_hw_db(bus), linear_to_db(raised), 0.0001)
+	assert_eq(_mute_emits_for(bus), 1)
+	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [bus, false])
+	assert_false(SfxManager.is_any_sfx_playing(), "An unfocused bridge update stays silent")
+
+
+## Opening at an unmuted near-zero state must not invent a crossing from a default volume.
+## :rtype: void
+func test_regression_open_at_threshold_near_zero_updates_stay_unmuted(
+	bus: String = use_parameters(ALL_BUSES)
+) -> void:
+	var threshold: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD
+	await _reopen_with_bus_state(bus, threshold, false)
+	watch_signals(AudioManager)
+
+	for volume: float in [0.0, threshold / 2.0, threshold]:
+		_bridge_volume(bus, volume)
+		assert_false(
+			AudioManager.get_muted(bus), "No crossing when already at or below the threshold"
+		)
+		assert_true(_button(bus).button_pressed)
+		assert_false(_hw_muted(bus))
+		assert_eq(_mute_emits_for(bus), 0)
+		assert_false(SfxManager.is_any_sfx_playing())
+
+	_bridge_volume(bus, RAISED_VOLUME)
+	assert_false(AudioManager.get_muted(bus), "Crossing up on an unmuted bus is a no-op")
+	assert_eq(_mute_emits_for(bus), 0)
+	_bridge_volume(bus, threshold)
+	assert_true(AudioManager.get_muted(bus), "A later genuine downward crossing must auto-mute")
+	assert_false(_button(bus).button_pressed)
+	assert_true(_hw_muted(bus))
+	assert_eq(_mute_emits_for(bus), 1)
+
+
+## A reopened menu seeds a new baseline after a player mute made while it was closed.
+## :rtype: void
+func test_regression_reopened_menu_preserves_new_audible_mute(
+	bus: String = use_parameters(ALL_BUSES)
+) -> void:
+	_bridge_volume(bus, 0.0)
+	await _reopen_with_bus_state(bus, START_VOLUME, true)
+	watch_signals(AudioManager)
+
+	_bridge_volume(bus, RAISED_VOLUME)
+
+	assert_true(AudioManager.get_muted(bus), "The old menu's near-zero baseline must be discarded")
+	assert_false(_button(bus).button_pressed)
+	assert_true(_hw_muted(bus))
+	assert_almost_eq(_hw_db(bus), linear_to_db(RAISED_VOLUME), 0.0001)
+	assert_eq(_mute_emits_for(bus), 0)
+	assert_false(SfxManager.is_any_sfx_playing())
+
+
+## Changes on other buses must not overwrite the observer's previous volume for this bus.
+## :rtype: void
+func test_regression_interleaved_bus_crossings_are_independent(
+	bus: String = use_parameters(ALL_BUSES)
+) -> void:
+	var other: String = ALL_BUSES[(ALL_BUSES.find(bus) + 1) % ALL_BUSES.size()]
+	_slider(AudioConstants.BUS_MASTER).release_focus()
+	watch_signals(AudioManager)
+
+	# The manager supports changes while parent buses are muted; the web bridge blocks them.
+	await AudioManager.change_volume(bus, 0.0)
+	await AudioManager.change_volume(other, RAISED_VOLUME)
+	await AudioManager.change_volume(bus, RAISED_VOLUME)
+
+	assert_false(
+		AudioManager.get_muted(bus), "Another bus's audible update must not hide this crossing up"
+	)
+	assert_true(_button(bus).button_pressed)
+	assert_false(_hw_muted(bus))
+	assert_eq(_mute_emits_for(bus), 2)
+	assert_eq(_mute_emits_for(other), 0)
+
+	await AudioManager.change_volume(other, 0.0)
+	await AudioManager.change_volume(bus, START_VOLUME)
+	await AudioManager.change_volume(other, RAISED_VOLUME)
+
+	assert_false(AudioManager.get_muted(other), "Crossings must remain independent in either order")
+	assert_true(_button(other).button_pressed)
+	assert_false(_hw_muted(other))
+	assert_eq(_mute_emits_for(other), 2)
+	assert_eq(_mute_emits_for(bus), 2, "An audible update must not add a mute transition")
+	assert_eq(
+		get_signal_emit_count(AudioManager, "volume_changed"), 6, "Visual sync must not feed back"
+	)
+	assert_almost_eq(_hw_db(bus), linear_to_db(START_VOLUME), 0.0001)
+	assert_almost_eq(_hw_db(other), linear_to_db(RAISED_VOLUME), 0.0001)
+	assert_false(SfxManager.is_any_sfx_playing())
