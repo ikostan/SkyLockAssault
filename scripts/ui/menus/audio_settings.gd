@@ -178,6 +178,20 @@ func _ready() -> void:
 			web_bridge.web_reset_requested.connect(_on_audio_reset_button_pressed)
 
 
+## Re-syncs Master from AudioManager when the menu leaves the tree (Issue #1041).
+## The Master feedback hold in _on_global_volume_changed() is a coroutine on this node, so
+## freeing the menu during MUTE_HARDWARE_DELAY drops its final re-sync and would leave Master
+## audible at FEEDBACK_HOLD_VOLUME_LINEAR while AudioManager reports it muted. Re-applying the
+## manager's current state is idempotent, so it needs no record of a pending hold. A menu
+## closed mid-hold cuts the confirmation click short. T5/T6 move the hold into the autoload.
+## :rtype: void
+func _exit_tree() -> void:
+	var master: String = AudioConstants.BUS_MASTER
+	AudioManager.apply_volume_to_bus(
+		master, AudioManager.get_volume(master), AudioManager.get_muted(master)
+	)
+
+
 func _on_back_button_pressed() -> void:
 	Globals.log_message("Audio Settings: Back button pressed.", Globals.LogLevel.DEBUG)
 	_intentional_exit = true

@@ -438,24 +438,40 @@ func test_menu_freed_during_master_hold_raises_no_errors() -> void:
 	assert_true(AudioManager.get_muted(bus), "Master stays muted in the manager")
 
 
-## Freeing the menu during the Master feedback hold still ends with Master muted in the mixer.
-## Pending until T5 (#1042) / T6 (#1043): today the hold lives in the menu's observer, so the
-## coroutine dies with the menu and Master stays audible at FEEDBACK_HOLD_VOLUME_LINEAR while
-## AudioManager reports it muted. Once the slider goes through change_volume() the hold runs
-## in the autoload and this passes; drop the pending() then.
+## Freeing the menu during the Master feedback hold still ends with Master muted in the mixer
+## (Issue #1041). The hold coroutine dies with the menu, so the menu's _exit_tree() re-syncs
+## Master from AudioManager; without it Master stayed audible at FEEDBACK_HOLD_VOLUME_LINEAR.
 ## :rtype: void
 func test_menu_freed_during_master_hold_ends_muted_in_mixer() -> void:
 	var bus: String = AudioConstants.BUS_MASTER
 	_move_focused_slider(bus, 0.0)
+	assert_false(_hw_muted(bus), "Precondition: the hold is still pending")
+
+	audio_instance.free()
+	audio_instance = null
+
+	# Synced as the menu leaves the tree, not by a later timer.
+	assert_true(_hw_muted(bus), "Master is muted in the mixer as soon as the menu is freed")
+	assert_almost_eq(_hw_db(bus), linear_to_db(AudioManager.get_volume(bus)), 0.0001)
+	await wait_seconds(HOLD_WAIT)
+	assert_true(_hw_muted(bus), "Master stays muted after the hold window")
+
+
+## Closing the menu during the hold re-syncs to the newest state, not to a fixed mute: a
+## Master raised back up before the close ends audible.
+## :rtype: void
+func test_menu_freed_after_newer_drag_keeps_master_audible() -> void:
+	var bus: String = AudioConstants.BUS_MASTER
+	_move_focused_slider(bus, 0.0)
+	_move_focused_slider(bus, RAISED_VOLUME)
 
 	audio_instance.free()
 	audio_instance = null
 	await wait_seconds(HOLD_WAIT)
 
-	if not _hw_muted(bus):
-		pending("Master left audible after the menu is freed mid-hold; fixed by T5/T6")
-		return
-	assert_true(_hw_muted(bus), "Master ends muted in the mixer without the menu")
+	assert_false(AudioManager.get_muted(bus))
+	assert_false(_hw_muted(bus), "Master stays audible after the menu closes")
+	assert_almost_eq(_hw_db(bus), linear_to_db(AudioManager.get_volume(bus)), 0.0001)
 
 
 # ==========================================================================
@@ -474,7 +490,9 @@ func _player_mute(bus_name: String) -> void:
 ## A web-bridge change to another audible volume does not unmute a bus the player muted
 ## (the old level-triggered menu observer did).
 ## :rtype: void
-func test_player_mute_survives_bridge_audible_change(bus: String = use_parameters(ALL_BUSES)) -> void:
+func test_player_mute_survives_bridge_audible_change(
+	bus: String = use_parameters(ALL_BUSES)
+) -> void:
 	await _player_mute(bus)
 	watch_signals(AudioManager)
 
@@ -511,7 +529,9 @@ func test_player_mute_survives_change_volume_with_menu_open(
 ## Documented corner case, through the menu: a player mute taken through zero and back up is
 ## unmuted, because at zero an explicit mute and an auto-mute look the same.
 ## :rtype: void
-func test_player_mute_through_zero_unmutes_via_bridge(bus: String = use_parameters(ALL_BUSES)) -> void:
+func test_player_mute_through_zero_unmutes_via_bridge(
+	bus: String = use_parameters(ALL_BUSES)
+) -> void:
 	await _player_mute(bus)
 
 	_bridge_volume(bus, 0.0)
@@ -526,6 +546,7 @@ func test_player_mute_through_zero_unmutes_via_bridge(bus: String = use_paramete
 # ==========================================================================
 # 8. OBSERVER BASELINES AND INTERLEAVED CHANGES (Issue #1040)
 # ==========================================================================
+
 
 ## Reopens the menu after changing a bus while no menu is observing the manager.
 ## :rtype: void

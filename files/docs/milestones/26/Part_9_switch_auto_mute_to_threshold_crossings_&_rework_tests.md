@@ -45,6 +45,9 @@ T5 (routing callers through `change_volume()`) and T6 (reducing the menu observe
 - **Menu observer follows the crossing rule** (`scripts/ui/menus/audio_settings.gd`, `88ba856`)
   - `_on_global_volume_changed()` runs after `set_volume()` has overwritten the manager's value, so the menu keeps its own `_last_seen_volume` per bus, seeded in `_ready()` before the signal is connected
   - Both branches now require a crossing, matching `change_volume()`. With the menu open, a bridge or `change_volume()` call to another audible volume no longer unmutes a player-muted bus
+- **Menu freed during the Master hold** (`scripts/ui/menus/audio_settings.gd`, `4b5ba7f`, #1041)
+  - The Master hold is a coroutine on the menu, so freeing the menu during `MUTE_HARDWARE_DELAY` dropped its final re-sync and left Master audible at `FEEDBACK_HOLD_VOLUME_LINEAR` while `AudioManager` reported it muted
+  - New `_exit_tree()` re-applies Master's current state from `AudioManager`. Idempotent and stateless, so no pending-hold flag or token comes back
 - **Manager-level suite** (`test/gut/test_audio_manager_auto_mute.gd`, new, 50 test functions, T7)
   - Extended from the T2 suite rather than duplicated: everything is parameterized over the six buses
   - `test_transition_matrix`: every bus × manual/programmatic × down/up (24 cases), asserting the mute state, exactly one `mute_toggled`, the mixer flag, the new volume, and a click only when manual
@@ -55,7 +58,7 @@ T5 (routing callers through `change_volume()`) and T6 (reducing the menu observe
   - Manual cases drive a focused `VolumeSlider` through `slider.value`; automation cases call the real web-bridge handler `_on_change_volume_js` through a `TestBridge` subclass that overrides only the JS argument parsing
   - Every TC-AM case is kept and parameterized over all six buses: manual auto-mute (001–006), automation silence (007–012, bridge and unfocused slider), idempotency (013), manual and automation upward unmute (014), Master hold then silence, newer drag, mute-button unmute during the hold, other buses untouched (015–016)
   - Assertions cover the manager, the mute button, the AudioServer mute flag and an **audible** click (its bus, SFX and Master unmuted), not just `player.playing`
-  - Menu lifetime: freeing the menu during the Master hold raises no engine errors; a second test checks the mixer and stays pending until T5/T6 (see Known limitations)
+  - Menu lifetime: freeing the menu during the Master hold raises no engine errors and leaves Master muted in the mixer as soon as the menu leaves the tree; a Master raised back up before the close stays audible
   - Section 7 (`88ba856`): with the menu open, a bridge change and a `change_volume()` call to an audible volume keep a player-muted bus muted, with no transition or click; the through-zero corner case unmutes
 - **CodeRabbit regression tests** (`02e6c74`)
   - Manager suite: exact-threshold raise unmutes; an unmuted threshold baseline needs a fresh down-crossing; a hold re-applies the latest muted volume; overlapping holds keep the final state
@@ -70,7 +73,8 @@ T5 (routing callers through `change_volume()`) and T6 (reducing the menu observe
 - **Fix the menu observer in this PR, not in T6.** The review showed the observer still contradicted T3 with the menu open (the web-bridge criterion of #1040). Tracking the last seen volume in the menu is a small change inside #1040's scope; rerouting callers and making the observer visual-only stay with T5/T6.
 - **Rename the T2 suite instead of a second manager suite.** `test_audio_manager_change_volume.gd` already covered most of what #1044 lists for all six buses; a new file beside it would have duplicated about 40 tests. The rename first landed as a copy, so the old file and its `.uid` were deleted in a follow-up commit.
 - **Rewrite TC-AM cases, don't drop them.** The first T7 draft cut the integration suite to 4 tests; it was rejected in review. Every case now runs through the real slider or bridge path, parameterized over the six buses, and keeps its TC-AM number.
-- **Known gaps as self-activating `pending()` checks.** The SFX/SFX_Menu click audibility (#1047) and the menu-freed-mid-hold mixer state (T5/T6) are asserted live and report pending only while the gap exists, so they start enforcing as soon as the fix lands.
+- **Re-sync on menu exit instead of waiting for T5/T6.** The menu-freed-mid-hold gap broke #1041's "mixer matches manager" criterion, so it is closed here. Re-applying the manager's state in `_exit_tree()` is the same idempotent re-sync the hold ends with, so it needs no state; T5/T6 still move the hold into the autoload.
+- **Known gaps as self-activating `pending()` checks.** The SFX/SFX_Menu click audibility (#1047) is asserted live and reports pending only while the gap exists, so it starts enforcing as soon as the fix lands.
 
 ### Expected Behavior
 
@@ -83,6 +87,7 @@ T5 (routing callers through `change_volume()`) and T6 (reducing the menu observe
 | Drag to 0 (any bus): `AudioServer.is_bus_mute()` after settle | `false` while the manager says muted   | **`true`**, matches the manager        |
 | Master dragged to 0 and back up within 0.15 s                 | Unmuted (token gate)                   | Unmuted at the up volume (no token)    |
 | Muted at 0.8, set to 0, then back to 0.3                      | Unmuted                                | Unmuted (accepted corner case)         |
+| Master dragged to 0, Audio menu closed within 0.15 s          | Audible at 0.15 while reported muted   | **Muted in the mixer**                 |
 
 ### Compatibility
 
@@ -100,11 +105,13 @@ T5 (routing callers through `change_volume()`) and T6 (reducing the menu observe
   - With the observer fix (`88ba856`): **767 passed, 3 pending**
   - PR head `02e6c74`: 100 scripts, **775 passed, 3 pending, 0 failed**, 8200 asserts
   - Without the duplicate T2 suite: 99 scripts, **731 passed, 3 pending, 0 failed**, 7229 asserts (exactly the 44 duplicated tests fewer)
-- The 3 pending checks are the documented gaps: SFX and SFX_Menu click audibility (#1047), and the mixer state after the menu is freed mid-hold (T5/T6)
+  - With the menu-exit re-sync (`4b5ba7f`): 99 scripts, **733 passed, 2 pending, 0 failed**
+- The 2 pending checks are the documented SFX and SFX_Menu click audibility gap (#1047)
 - Mutation checks
   - T3: with the old level rule, 4 new manager tests fail (player mute survives audible change, raise to full, just-above-threshold, unmuted-at-zero)
   - T4: against the T3 code (token + hard-coded `0.0`), the new sync, stale-hold, near-zero and token tests fail, and the menu tests fail their hardware-mute precondition
   - Observer fix: with the old level-triggered observer, the two "player mute survives with the menu open" tests fail
+  - Menu-exit re-sync: without `_exit_tree()`, the lifetime test fails with Master unmuted at -16.5 dB (the 0.15 hold level)
 - Bug reproduced while writing the lifetime test: after freeing the menu mid-hold, Master reported muted while `AudioServer` had mute `false` and volume `0.15`
 - CI on `02e6c74` (last code change): GUT, GdUnit4, gdlint and all four browser jobs passed (Build Web Artifact, CI & Security, Refactor Suite, Core Web Flows). Core Web Flows runs `tests/*_test.py`, so VOL-13 ran and passed
 - `6eec97b` adds only this note, so the path filter skips the Godot and browser jobs on it
@@ -112,7 +119,7 @@ T5 (routing callers through `change_volume()`) and T6 (reducing the menu observe
 
 ### Known limitations / follow-ups
 
-- **Menu freed during the Master hold leaves Master audible** (pre-existing). The hold lives in the menu observer, so its coroutine dies with the menu and Master stays at `FEEDBACK_HOLD_VOLUME_LINEAR` while `AudioManager` reports muted. Fixed by T5/T6, which move the hold into the autoload; `test_menu_freed_during_master_hold_ends_muted_in_mixer` starts enforcing then.
+- **Closing the menu mid-hold cuts the click short.** `_exit_tree()` re-syncs Master at once, so the confirmation click stops when the menu closes within 0.15 s of a Master auto-mute. The mixer state is correct; T5/T6 move the hold into the autoload, where it outlives the menu.
 - **SFX / SFX_Menu click is inaudible.** The click plays on SFX_Menu, so auto-muting SFX or SFX_Menu silences its own click (#1047). The old TC-AM-003/006 hid this.
 - **Down-up-down within 0.15 s on Master.** Without a token, the first hold's timer re-syncs during the second hold and cuts that click short. Nothing ends in a wrong state; `toggle_mute()` behaves the same way.
 - **T5/T6 still open.** The menu observer still runs its own copy of the rule (now crossing-based) and the slider and bridge do not call `change_volume()` yet.
@@ -132,7 +139,7 @@ Moves auto-mute and auto-unmute in `AudioManager.change_volume()` and in the Aud
 |--------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
 | Switch the manager rule to threshold crossings.  | <ul><li>Read the previous volume before <code>set_volume()</code>.</li><li>Mute on a down-crossing of an unmuted bus, unmute on an up-crossing of a muted bus.</li><li>Document the through-zero corner case.</li></ul>                                                               | `scripts/managers/audio_manager.gd`                                                                   |
 | Re-sync AudioServer and remove the tokens.       | <ul><li>Apply the manager's current state after the hold, or right away without one.</li><li>Remove <code>_master_hold_token</code> and <code>_master_zero_token</code> and their bumps.</li><li>Menu auto-unmute clears the hardware mute on every bus.</li></ul>                    | `scripts/managers/audio_manager.gd`<br/>`scripts/ui/menus/audio_settings.gd`                          |
-| Apply the crossing rule in the menu observer.    | <ul><li>Track <code>_last_seen_volume</code> per bus, seeded in <code>_ready()</code>.</li><li>Require a crossing for both branches.</li></ul>                                                                                                                                        | `scripts/ui/menus/audio_settings.gd`                                                                  |
+| Apply the crossing rule in the menu observer.    | <ul><li>Track <code>_last_seen_volume</code> per bus, seeded in <code>_ready()</code>.</li><li>Require a crossing for both branches.</li><li>Re-sync Master in <code>_exit_tree()</code> so a menu freed mid-hold leaves the mixer muted.</li></ul>                                   | `scripts/ui/menus/audio_settings.gd`                                                                  |
 | Pin the contract at manager level.               | <ul><li>Transition matrix over bus × caller × direction.</li><li>Crossing, re-sync, stale-hold, no-token, raw-setter, load and reset tests for all six buses.</li><li>CodeRabbit threshold and overlapping-hold regressions.</li></ul>                                                | `test/gut/test_audio_manager_auto_mute.gd`<br/>`test/gut/test_audio_manager_auto_mute.gd.uid`         |
 | Rewrite the menu suite through real input paths. | <ul><li>Focused <code>VolumeSlider</code> for manual cases, the web-bridge handler for automation.</li><li>All TC-AM cases kept and parameterized over the six buses, with audible-click checks.</li><li>Menu lifetime, player-mute-survives and CodeRabbit baseline tests.</li></ul> | `test/gut/test_audio_settings_comprehensive.gd`                                                       |
 | Remove the superseded T2 suite.                  | <ul><li>Renamed to <code>test_audio_manager_auto_mute.gd</code>, where all 44 of its tests live on.</li><li>The rename first landed as a copy and ran the tests twice; the old file is deleted.</li></ul>                                                                             | `test/gut/test_audio_manager_change_volume.gd`<br/>`test/gut/test_audio_manager_change_volume.gd.uid` |
@@ -147,7 +154,7 @@ Moves auto-mute and auto-unmute in `AudioManager.change_volume()` and in the Aud
 | <https://github.com/ikostan/SkyLockAssault/issues/1040> | A bus auto-muted at 0 unmutes after `change_volume(bus, 0.3)`.                              | ✅        |                                                                                                                                  |
 | <https://github.com/ikostan/SkyLockAssault/issues/1040> | Repeated near-zero updates are no-ops (no signal, no SFX), covering TC-AM-013's intent.     | ✅        | Manager suite (both callers) and TC-AM-013 through the slider and the bridge.                                                    |
 | <https://github.com/ikostan/SkyLockAssault/issues/1040> | `changeMusicVolume([0.5])` on muted Music keeps it muted.                                   | ✅        | GUT through the real bridge handler with the menu open, all six buses; not yet a Playwright case.                                |
-| <https://github.com/ikostan/SkyLockAssault/issues/1041> | After any auto-mute settles, `AudioServer.is_bus_mute(idx) == AudioManager.get_muted(bus)`. | ✅        | Manager and menu paths, all six buses. Exception: menu freed mid-hold, pending T5/T6.                                            |
+| <https://github.com/ikostan/SkyLockAssault/issues/1041> | After any auto-mute settles, `AudioServer.is_bus_mute(idx) == AudioManager.get_muted(bus)`. | ✅        | Manager and menu paths, all six buses, including a menu freed mid-hold (`4b5ba7f`).                                              |
 | <https://github.com/ikostan/SkyLockAssault/issues/1041> | Down-crossing then up-crossing within `MUTE_HARDWARE_DELAY` ends unmuted at the up volume.  | ✅        |                                                                                                                                  |
 | <https://github.com/ikostan/SkyLockAssault/issues/1041> | No token variable in manager or menu.                                                       | ✅        | Asserted by `test_no_hold_token_remains`.                                                                                        |
 | <https://github.com/ikostan/SkyLockAssault/issues/1044> | Old focus-based TC-AM cases removed or rewritten.                                           | ✅        | All rewritten through real input paths; none dropped.                                                                            |
@@ -183,7 +190,7 @@ Moves auto-mute and auto-unmute in `AudioManager.change_volume()` and in the Aud
 - **@claude (Opus 5.5)**
   - Found that the menu observer's auto-unmute had to clear the hardware mute on every bus once auto-mute started setting it.
   - Flagged before review that #1040's first and web-bridge criteria could not hold end to end while the observer stayed level-triggered.
-  - Found, while writing the lifetime test, that freeing the menu mid-hold leaves Master audible at the hold level, and that the old TC-AM-003/006 hid an inaudible click on SFX/SFX_Menu (#1047); both are now tracked by self-activating pending checks.
+  - Found, while writing the lifetime test, that freeing the menu mid-hold leaves Master audible at the hold level, and drafted the `_exit_tree()` re-sync that fixes it; also found that the old TC-AM-003/006 hid an inaudible click on SFX/SFX_Menu (#1047), now tracked by a self-activating pending check.
 
 - **@sourcery-ai**
   - Generated the Reviewer's Guide (on request) with sequence diagrams and the linked-issue assessment, which flagged the two #1040 gaps in the menu observer (fixed in `88ba856`).
