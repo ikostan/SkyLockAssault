@@ -181,8 +181,9 @@ func test_rapid_mute_toggle_cancels_pending_hardware_cutoff() -> void:
 	sfx_mute_btn.toggled.emit(true)  # unmute while that cutoff is still pending
 	assert_false(AudioManager.get_muted(TARGET_BUS), "The unmute press must apply immediately")
 	assert_false(AudioServer.is_bus_mute(bus_idx), "Unmute must leave the hardware audible immediately")
-	# Waiting longer than the delay is always safe; twice the delay leaves a full margin.
-	await wait_seconds(AudioConstants.MUTE_HARDWARE_DELAY * 2.0)
+	
+	# Waiting longer than the delay is always safe.
+	await wait_seconds(GutTestHelper.MUTE_CUTOFF_WAIT)
 
 	assert_false(AudioManager.get_muted(TARGET_BUS), "AudioManager must keep the newest state")
 	assert_false(
@@ -227,8 +228,8 @@ func test_ui_mute_toggle_defers_hardware_cutoff_for_click_feedback() -> void:
 	assert_false(AudioServer.is_bus_mute(bus_idx), "Hardware cutoff should be deferred to allow click audio to stream out.")
 	assert_true(SfxManager.is_any_sfx_playing(), "Confirmation click SFX should be playing.")
 
-	# AWAIT HARDWARE CUTOFF WINDOW (0.15s + buffer)
-	await wait_seconds(0.2)
+	# AWAIT HARDWARE CUTOFF WINDOW (MUTE_HARDWARE_DELAY + margin)
+	await wait_seconds(GutTestHelper.MUTE_CUTOFF_WAIT)
 	assert_true(AudioServer.is_bus_mute(bus_idx), "Hardware bus must be muted after safety cutoff timer expires.")
 
 

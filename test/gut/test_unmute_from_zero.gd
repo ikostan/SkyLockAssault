@@ -334,7 +334,7 @@ func test_master_unmute_during_auto_mute_window_is_not_zeroed() -> void:
 	assert_true(AudioManager.master_muted, "Precondition: auto-muted")
 
 	audio_instance.mute_master.button_pressed = true
-	await get_tree().create_timer(AudioConstants.MUTE_HARDWARE_DELAY + 0.1).timeout
+	await get_tree().create_timer(GutTestHelper.MUTE_CUTOFF_WAIT).timeout
 
 	assert_false(AudioManager.master_muted)
 	assert_almost_eq(AudioManager.master_volume, START_VOLUME, 0.0001)
@@ -355,7 +355,7 @@ func test_master_web_unmute_during_auto_mute_window_is_not_zeroed() -> void:
 	assert_true(AudioManager.master_muted, "Precondition: auto-muted")
 
 	bridge._on_toggle_mute_master_js([true])  # checked = unmuted
-	await get_tree().create_timer(AudioConstants.MUTE_HARDWARE_DELAY + 0.1).timeout
+	await get_tree().create_timer(GutTestHelper.MUTE_CUTOFF_WAIT).timeout
 
 	assert_false(AudioManager.master_muted)
 	assert_almost_eq(AudioManager.master_volume, START_VOLUME, 0.0001)
