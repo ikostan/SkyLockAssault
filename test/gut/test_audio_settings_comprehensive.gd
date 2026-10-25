@@ -105,18 +105,6 @@ func after_each() -> void:
 # HELPERS
 # ==========================================================================
 
-## Number of pool players currently playing the SFX_CHECK click. A click played twice for one
-## transition occupies two players, so this tells "once" apart from "twice".
-## :rtype: int
-func _count_playing_clicks() -> int:
-	var check_path: String = AudioConstants.SFX_DIR_PATH + "check.wav"
-	var count: int = 0
-	for player: AudioStreamPlayer in SfxManager._sfx_pool:
-		if is_instance_valid(player) and player.playing and player.stream:
-			if player.stream.resource_path == check_path:
-				count += 1
-	return count
-
 
 ## Returns the menu slider for a bus.
 ## :rtype: HSlider
@@ -159,6 +147,19 @@ func _playing_click() -> AudioStreamPlayer:
 			if player.stream.resource_path == check_path:
 				return player
 	return null
+
+
+## Number of pool players currently playing the SFX_CHECK click. A click played twice for one
+## transition occupies two players, so this tells "once" apart from "twice".
+## :rtype: int
+func _count_playing_clicks() -> int:
+	var check_path: String = AudioConstants.SFX_DIR_PATH + "check.wav"
+	var count: int = 0
+	for player: AudioStreamPlayer in SfxManager._sfx_pool:
+		if is_instance_valid(player) and player.playing and player.stream:
+			if player.stream.resource_path == check_path:
+				count += 1
+	return count
 
 
 ## True when the SFX_CHECK click is playing at all (audible or not).
@@ -491,8 +492,8 @@ func test_menu_freed_during_master_hold_raises_no_errors() -> void:
 
 
 ## Freeing the menu during the Master feedback hold still ends with Master muted in the mixer
-## (Issue #1041). The hold coroutine dies with the menu, so the menu's _exit_tree() re-syncs
-## Master from AudioManager; without it Master stayed audible at FEEDBACK_HOLD_VOLUME_LINEAR.
+## (Issue #1041). Since #1043 the hold runs in AudioManager and survives the menu; the menu's
+## _exit_tree() re-syncs Master from AudioManager as it leaves, so the mute lands at once.
 ## :rtype: void
 func test_menu_freed_during_master_hold_ends_muted_in_mixer() -> void:
 	var bus: String = AudioConstants.BUS_MASTER
@@ -684,7 +685,7 @@ func test_regression_reopened_menu_preserves_new_audible_mute(
 	assert_false(SfxManager.is_any_sfx_playing())
 
 
-## Changes on other buses must not overwrite the observer's previous volume for this bus.
+## Changes on other buses must not overwrite the previous volume the crossing rule uses for this bus.
 ## :rtype: void
 func test_regression_interleaved_bus_crossings_are_independent(
 	bus: String = use_parameters(ALL_BUSES)
