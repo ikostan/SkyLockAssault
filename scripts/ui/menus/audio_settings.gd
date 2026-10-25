@@ -171,20 +171,6 @@ func _ready() -> void:
 			web_bridge.web_reset_requested.connect(_on_audio_reset_button_pressed)
 
 
-## Re-syncs Master from AudioManager when the menu leaves the tree (Issue #1041).
-## Since #1043 the Master feedback hold runs in AudioManager.change_volume(), not on this
-## node, so the hold survives the menu and re-syncs Master itself when it ends. This re-sync
-## only applies the manager's current state early: a menu closed mid-hold mutes Master at
-## once and cuts the confirmation click short. Re-applying current state is idempotent, so a
-## later hold timer just writes the same state again.
-## :rtype: void
-func _exit_tree() -> void:
-	var master: String = AudioConstants.BUS_MASTER
-	AudioManager.apply_volume_to_bus(
-		master, AudioManager.get_volume(master), AudioManager.get_muted(master)
-	)
-
-
 func _on_back_button_pressed() -> void:
 	Globals.log_message("Audio Settings: Back button pressed.", Globals.LogLevel.DEBUG)
 	_intentional_exit = true

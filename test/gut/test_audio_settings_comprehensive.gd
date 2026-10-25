@@ -492,8 +492,9 @@ func test_menu_freed_during_master_hold_raises_no_errors() -> void:
 
 
 ## Freeing the menu during the Master feedback hold still ends with Master muted in the mixer
-## (Issue #1041). Since #1043 the hold runs in AudioManager and survives the menu; the menu's
-## _exit_tree() re-syncs Master from AudioManager as it leaves, so the mute lands at once.
+## (Issue #1041). Since #1043 the hold runs in AudioManager.change_volume() and survives the
+## menu: closing the menu mid-hold no longer cuts the confirmation click short, and the hold's
+## own re-sync mutes Master once MUTE_HARDWARE_DELAY ends.
 ## :rtype: void
 func test_menu_freed_during_master_hold_ends_muted_in_mixer() -> void:
 	var bus: String = AudioConstants.BUS_MASTER
@@ -503,11 +504,19 @@ func test_menu_freed_during_master_hold_ends_muted_in_mixer() -> void:
 	audio_instance.free()
 	audio_instance = null
 
-	# Synced as the menu leaves the tree, not by a later timer.
-	assert_true(_hw_muted(bus), "Master is muted in the mixer as soon as the menu is freed")
-	assert_almost_eq(_hw_db(bus), linear_to_db(AudioManager.get_volume(bus)), 0.0001)
+	# The hold is not tied to the menu: Master stays audible for the click after the close.
+	assert_false(_hw_muted(bus), "The hold survives the menu being freed")
+	assert_almost_eq(
+		_hw_db(bus),
+		linear_to_db(AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR),
+		0.0001,
+		"Master is still held audible right after the menu is freed"
+	)
+	assert_true(_is_click_audible(), "The click keeps playing after the menu is freed")
+
 	await wait_seconds(HOLD_WAIT)
-	assert_true(_hw_muted(bus), "Master stays muted after the hold window")
+	assert_true(_hw_muted(bus), "Master is muted in the mixer once the hold ends")
+	assert_almost_eq(_hw_db(bus), linear_to_db(AudioManager.get_volume(bus)), 0.0001)
 
 
 ## Closing the menu during the hold re-syncs to the newest state, not to a fixed mute: a
