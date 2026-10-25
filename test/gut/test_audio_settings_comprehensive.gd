@@ -105,6 +105,18 @@ func after_each() -> void:
 # HELPERS
 # ==========================================================================
 
+## Number of pool players currently playing the SFX_CHECK click. A click played twice for one
+## transition occupies two players, so this tells "once" apart from "twice".
+## :rtype: int
+func _count_playing_clicks() -> int:
+	var check_path: String = AudioConstants.SFX_DIR_PATH + "check.wav"
+	var count: int = 0
+	for player: AudioStreamPlayer in SfxManager._sfx_pool:
+		if is_instance_valid(player) and player.playing and player.stream:
+			if player.stream.resource_path == check_path:
+				count += 1
+	return count
+
 
 ## Returns the menu slider for a bus.
 ## :rtype: HSlider
@@ -273,6 +285,46 @@ func test_tc_am_007_012_unfocused_slider_is_silent(bus: String = use_parameters(
 	assert_true(AudioManager.get_muted(bus), bus + " is auto-muted at zero")
 	assert_true(_hw_muted(bus), bus + " is muted in AudioServer")
 	assert_false(SfxManager.is_any_sfx_playing(), bus + ": no click without focus")
+
+
+# ==========================================================================
+# T5: CALLERS STATE THEIR OWN INTENT (Issue #1042)
+# ==========================================================================
+
+
+## The web bridge is never a manual interaction, even while Master holds the menu's initial
+## focus from Globals.ensure_initial_focus(). changeMasterVolume([0]) right after the menu
+## opens must mute Master at once, with no confirmation click and no feedback hold.
+## Unlike _bridge_volume(), focus is deliberately left where the menu put it.
+## :rtype: void
+func test_t5_bridge_master_zero_with_initial_focus_is_silent() -> void:
+	await get_tree().process_frame  # ensure_initial_focus() grabs focus deferred
+	var master: String = AudioConstants.BUS_MASTER
+	assert_true(_slider(master).has_focus(), "Precondition: Master holds the initial focus")
+
+	bridge._on_change_volume_js([0.0], master)
+	var click_after_change: bool = _is_click_playing()
+	var muted_in_mixer_at_once: bool = _hw_muted(master)
+	await wait_seconds(HOLD_WAIT)
+
+	assert_true(AudioManager.get_muted(master), "Master is auto-muted at zero")
+	assert_true(muted_in_mixer_at_once, "No feedback hold: Master is muted in AudioServer at once")
+	assert_true(_hw_muted(master), "Master stays muted in AudioServer")
+	assert_false(click_after_change, "The bridge never plays the confirmation click")
+	assert_false(_is_click_playing(), "Still no click after the hold window")
+
+
+## A focused slider moved to zero auto-mutes its bus and plays the confirmation click exactly
+## once: the slider routes through AudioManager.change_volume() and the rule is applied once.
+## :rtype: void
+func test_t5_focused_slider_to_zero_clicks_once(bus: String = use_parameters(ALL_BUSES)) -> void:
+	_move_focused_slider(bus, 0.0)
+	var clicks: int = _count_playing_clicks()
+	await wait_seconds(HOLD_WAIT)
+
+	assert_true(AudioManager.get_muted(bus), bus + " is auto-muted at zero")
+	assert_true(_hw_muted(bus), bus + " is muted in AudioServer")
+	assert_eq(clicks, 1, bus + ": the confirmation click plays exactly once")
 
 
 # ==========================================================================

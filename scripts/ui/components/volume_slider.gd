@@ -75,6 +75,8 @@ func _ready() -> void:
 
 ## Safe method for external scripts to update the slider without triggering SFX or saves.
 ## Use this instead of modifying `value` directly when restoring settings.
+## Routes through AudioManager.change_volume() as a programmatic call (Issue #1042): the
+## near-zero auto-mute rule still applies, silently, and AudioManager owns the mixer write.
 ## :param new_value: The target volume (0.0 to 1.0).
 ## :type new_value: float
 ## :rtype: void
@@ -93,12 +95,12 @@ func set_value_programmatically(new_value: float) -> void:
 	# Godot 4 native method: updates visual value without emitting 'value_changed'
 	set_value_no_signal(clamped_value)
 
-	# Explicitly sync the audio backend, since the signal was bypassed
-	AudioServer.set_bus_volume_db(bus_index, linear_to_db(clamped_value))
-	AudioManager.set_volume(bus_name, clamped_value)
-
-	# Sync the delta tracker so the next manual interaction calculates correctly
+	# Sync the delta tracker first: change_volume() emits volume_changed, and listeners
+	# mirror the new value back through sync_from_manager().
 	_previous_value = clamped_value
+
+	# The signal was bypassed, so hand the change to AudioManager explicitly (not manual).
+	AudioManager.change_volume(bus_name, clamped_value, false)
 
 
 ## Mirrors a volume change that already happened in AudioManager (web bridge, unmute-from-zero
@@ -142,6 +144,10 @@ func _notification(what: int) -> void:
 
 
 ## Signal listener for when the slider value changes manually.
+## Routes through AudioManager.change_volume() (Issue #1042). The slider states its own intent:
+## a change is manual only while it is being dragged or has focus, the same check as
+## _handle_slider_sfx(). AudioManager applies the near-zero auto-mute rule and writes the mixer.
+## change_volume() is not awaited: the Master feedback hold finishes inside the autoload.
 ## :param new_value: The new volume level from the slider (0.0 to 1.0).
 ## :type new_value: float
 ## :rtype: void
@@ -156,8 +162,7 @@ func _on_value_changed(new_value: float) -> void:
 	# Commit the delta tracker immediately
 	_previous_value = new_value
 
-	AudioServer.set_bus_volume_db(bus_index, linear_to_db(new_value))
-	AudioManager.set_volume(bus_name, new_value)
+	AudioManager.change_volume(bus_name, new_value, _is_dragging or has_focus())
 
 	# Attempt to play interaction feedback
 	_handle_slider_sfx(new_value)
