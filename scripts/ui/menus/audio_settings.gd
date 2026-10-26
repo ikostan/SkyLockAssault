@@ -249,11 +249,12 @@ func _update_ui_interactivity() -> void:
 
 ## Visual-only observer of AudioManager.volume_changed (Issue #1043, epic #725): moves the
 ## bus's slider to the volume the manager already holds, and nothing else.
-## The near-zero auto-mute rule, the confirmation click, the Master feedback hold and every
-## AudioServer write live in AudioManager.change_volume(), which every volume source calls
-## with its own intent (Issue #1042). So behavior is the same whether the menu is open or
-## not, and this handler never awaits: no hold coroutine lives on this node to be dropped
-## when the menu is freed.
+## For volume changes, the near-zero auto-mute rule, the confirmation click, the Master
+## feedback hold and the AudioServer write live in AudioManager.change_volume(), which every
+## volume source calls with its own intent (Issue #1042). Mute presses go through
+## AudioManager.toggle_mute() instead (Issue #1048). This menu writes neither the mixer nor
+## the rule, so behavior is the same whether the menu is open or not, and this handler never
+## awaits: no hold coroutine lives on this node to be dropped when the menu is freed.
 ## :param bus_name: The constant identifier name of the audio channel.
 ## :type bus_name: String
 ## :param volume: The current linear volume scale level (0.0 to 1.0).
