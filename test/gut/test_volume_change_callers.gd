@@ -242,14 +242,16 @@ func test_unfocused_value_signal_auto_mutes_without_feedback(
 func test_programmatic_observer_sync_keeps_next_manual_change(
 	bus: String = use_parameters(ALL_BUSES)
 ) -> void:
-	var menu: Control = _create_observer()
-	AudioManager.volume_changed.connect(menu._on_global_volume_changed)
 	var observed: Array[float] = []
 	var slider: VolumeSlider = _slider(bus)
 	var capture: Callable = func(changed_bus: String, _volume: float) -> void:
 		if changed_bus == bus:
 			observed.append(slider.get_previous_value())
+	# Connected before the menu observer, so it sees the slider's own commit, not the
+	# observer's sync_from_manager() write.
 	AudioManager.volume_changed.connect(capture)
+	var menu: Control = _create_observer()
+	AudioManager.volume_changed.connect(menu._on_global_volume_changed)
 	watch_signals(AudioManager)
 
 	slider.set_value_programmatically(0.33)
