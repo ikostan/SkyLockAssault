@@ -9,7 +9,7 @@
 **PR:** [#1074](https://github.com/ikostan/SkyLockAssault/pull/1074)  
 **Branch:** `t5_t6_Migrate_Near-Zero_Auto-Mute_Threshold_Logic` → `main`  
 **Author:** @ikostan  
-**Closes:**
+**Closes:** #1043 and #1054
 
 - [#1042 – [TASK] T5: Route volume callers through change_volume() with is_manual_interaction](https://github.com/ikostan/SkyLockAssault/issues/1042)
 - [#1043 – [TASK] T6: Reduce audio_settings._on_global_volume_changed to a visual-only observer](https://github.com/ikostan/SkyLockAssault/issues/1043)
