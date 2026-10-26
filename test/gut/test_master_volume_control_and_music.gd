@@ -85,7 +85,7 @@ func test_tc_music_01() -> void:
 ## :rtype: void
 func test_tc_music_02() -> void:
 	audio_instance.mute_music.button_pressed = false  # Simulate toggle to muted
-	await get_tree().create_timer(0.2).timeout  # Wait out the 0.15s background safety timer delay
+	await get_tree().create_timer(GutTestHelper.MUTE_CUTOFF_WAIT).timeout  # Wait out the deferred mute cutoff (MUTE_HARDWARE_DELAY + margin)
 	assert_false(audio_instance.mute_music.button_pressed)
 	assert_true(AudioManager.music_muted)
 	assert_false(audio_instance.music_slider.editable)
@@ -125,7 +125,7 @@ func test_tc_music_05() -> void:
 	if not AudioManager.master_muted:  # If not handled by master warning, simulate propagation to toggle
 		audio_instance.mute_music.button_pressed = not was_pressed
 	
-	await get_tree().create_timer(0.2).timeout  # Wait out the 0.15s background safety timer delay
+	await get_tree().create_timer(GutTestHelper.MUTE_CUTOFF_WAIT).timeout  # Wait out the deferred mute cutoff (MUTE_HARDWARE_DELAY + margin)
 	
 	assert_false(audio_instance.mute_music.button_pressed)  # Toggled to muted
 	assert_true(AudioManager.music_muted)  # Toggled

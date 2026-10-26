@@ -213,8 +213,10 @@ func _on_change_volume_js(args: Array, bus_name: String) -> void:
 		_on_godot_volume_changed(bus_name, AudioManager.get_volume(bus_name))
 		return
 
-	AudioManager.set_volume(bus_name, value)
-	AudioManager.apply_volume_to_bus(bus_name, value, AudioManager.get_muted(bus_name))
+	# Programmatic call (Issue #1042): the bridge is never a manual interaction, whatever has
+	# focus in an open menu, so auto-mute stays silent and no Master hold is scheduled.
+	# AudioManager applies the rule and writes the mixer; no separate apply_volume_to_bus().
+	AudioManager.change_volume(bus_name, value, false)
 	AudioManager.save_volumes()
 
 

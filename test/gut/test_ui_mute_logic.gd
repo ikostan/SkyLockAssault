@@ -75,8 +75,9 @@ func test_ui_menu_mute_signal_propagation() -> void:
 	mute_toggle.button_pressed = false
 	mute_toggle.toggled.emit(false)
 	
-	# 6. FIX: Yield execution to allow the 0.15s background mute safety timer delay to complete
-	await get_tree().create_timer(0.2).timeout
+	# 6. Wait out the deferred hardware cutoff (MUTE_HARDWARE_DELAY + margin): a manual mute
+	#    defers the AudioServer mute so the confirmation click can finish.
+	await get_tree().create_timer(GutTestHelper.MUTE_CUTOFF_WAIT).timeout
 	
 	# 7. Assertions for the muted state.
 	assert_true(AudioServer.is_bus_mute(bus_index), "The AudioServer bus must be muted.")

@@ -5,6 +5,13 @@
 class_name GutTestHelper
 extends RefCounted
 
+## Upper bound for a MUTE_HARDWARE_DELAY wait (Issue #1054): the deferred AudioServer cutoff
+## of a manual mute (AudioManager.toggle_mute) or the Master feedback hold of a manual
+## auto-mute, both of which let the confirmation click finish. Derived from AudioConstants so
+## tests follow the delay if it changes; the 0.1 s margin matches HOLD_WAIT / CUTOFF_WAIT in
+## the newer audio suites.
+const MUTE_CUTOFF_WAIT: float = AudioConstants.MUTE_HARDWARE_DELAY + 0.1
+
 const PLAYER_SCRIPT_PATH: String = GamePaths.PLAYER
 
 

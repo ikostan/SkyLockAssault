@@ -149,6 +149,19 @@ func _playing_click() -> AudioStreamPlayer:
 	return null
 
 
+## Number of pool players currently playing the SFX_CHECK click. A click played twice for one
+## transition occupies two players, so this tells "once" apart from "twice".
+## :rtype: int
+func _count_playing_clicks() -> int:
+	var check_path: String = AudioConstants.SFX_DIR_PATH + "check.wav"
+	var count: int = 0
+	for player: AudioStreamPlayer in SfxManager._sfx_pool:
+		if is_instance_valid(player) and player.playing and player.stream:
+			if player.stream.resource_path == check_path:
+				count += 1
+	return count
+
+
 ## True when the SFX_CHECK click is playing at all (audible or not).
 ## :rtype: bool
 func _is_click_playing() -> bool:
@@ -273,6 +286,46 @@ func test_tc_am_007_012_unfocused_slider_is_silent(bus: String = use_parameters(
 	assert_true(AudioManager.get_muted(bus), bus + " is auto-muted at zero")
 	assert_true(_hw_muted(bus), bus + " is muted in AudioServer")
 	assert_false(SfxManager.is_any_sfx_playing(), bus + ": no click without focus")
+
+
+# ==========================================================================
+# T5: CALLERS STATE THEIR OWN INTENT (Issue #1042)
+# ==========================================================================
+
+
+## The web bridge is never a manual interaction, even while Master holds the menu's initial
+## focus from Globals.ensure_initial_focus(). changeMasterVolume([0]) right after the menu
+## opens must mute Master at once, with no confirmation click and no feedback hold.
+## Unlike _bridge_volume(), focus is deliberately left where the menu put it.
+## :rtype: void
+func test_t5_bridge_master_zero_with_initial_focus_is_silent() -> void:
+	await get_tree().process_frame  # ensure_initial_focus() grabs focus deferred
+	var master: String = AudioConstants.BUS_MASTER
+	assert_true(_slider(master).has_focus(), "Precondition: Master holds the initial focus")
+
+	bridge._on_change_volume_js([0.0], master)
+	var click_after_change: bool = _is_click_playing()
+	var muted_in_mixer_at_once: bool = _hw_muted(master)
+	await wait_seconds(HOLD_WAIT)
+
+	assert_true(AudioManager.get_muted(master), "Master is auto-muted at zero")
+	assert_true(muted_in_mixer_at_once, "No feedback hold: Master is muted in AudioServer at once")
+	assert_true(_hw_muted(master), "Master stays muted in AudioServer")
+	assert_false(click_after_change, "The bridge never plays the confirmation click")
+	assert_false(_is_click_playing(), "Still no click after the hold window")
+
+
+## A focused slider moved to zero auto-mutes its bus and plays the confirmation click exactly
+## once: the slider routes through AudioManager.change_volume() and the rule is applied once.
+## :rtype: void
+func test_t5_focused_slider_to_zero_clicks_once(bus: String = use_parameters(ALL_BUSES)) -> void:
+	_move_focused_slider(bus, 0.0)
+	var clicks: int = _count_playing_clicks()
+	await wait_seconds(HOLD_WAIT)
+
+	assert_true(AudioManager.get_muted(bus), bus + " is auto-muted at zero")
+	assert_true(_hw_muted(bus), bus + " is muted in AudioServer")
+	assert_eq(clicks, 1, bus + ": the confirmation click plays exactly once")
 
 
 # ==========================================================================
@@ -439,8 +492,9 @@ func test_menu_freed_during_master_hold_raises_no_errors() -> void:
 
 
 ## Freeing the menu during the Master feedback hold still ends with Master muted in the mixer
-## (Issue #1041). The hold coroutine dies with the menu, so the menu's _exit_tree() re-syncs
-## Master from AudioManager; without it Master stayed audible at FEEDBACK_HOLD_VOLUME_LINEAR.
+## (Issue #1041). Since #1043 the hold runs in AudioManager.change_volume() and survives the
+## menu: closing the menu mid-hold no longer cuts the confirmation click short, and the hold's
+## own re-sync mutes Master once MUTE_HARDWARE_DELAY ends.
 ## :rtype: void
 func test_menu_freed_during_master_hold_ends_muted_in_mixer() -> void:
 	var bus: String = AudioConstants.BUS_MASTER
@@ -450,11 +504,19 @@ func test_menu_freed_during_master_hold_ends_muted_in_mixer() -> void:
 	audio_instance.free()
 	audio_instance = null
 
-	# Synced as the menu leaves the tree, not by a later timer.
-	assert_true(_hw_muted(bus), "Master is muted in the mixer as soon as the menu is freed")
-	assert_almost_eq(_hw_db(bus), linear_to_db(AudioManager.get_volume(bus)), 0.0001)
+	# The hold is not tied to the menu: Master stays audible for the click after the close.
+	assert_false(_hw_muted(bus), "The hold survives the menu being freed")
+	assert_almost_eq(
+		_hw_db(bus),
+		linear_to_db(AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR),
+		0.0001,
+		"Master is still held audible right after the menu is freed"
+	)
+	assert_true(_is_click_audible(), "The click keeps playing after the menu is freed")
+
 	await wait_seconds(HOLD_WAIT)
-	assert_true(_hw_muted(bus), "Master stays muted after the hold window")
+	assert_true(_hw_muted(bus), "Master is muted in the mixer once the hold ends")
+	assert_almost_eq(_hw_db(bus), linear_to_db(AudioManager.get_volume(bus)), 0.0001)
 
 
 ## Closing the menu during the hold re-syncs to the newest state, not to a fixed mute: a
@@ -632,7 +694,7 @@ func test_regression_reopened_menu_preserves_new_audible_mute(
 	assert_false(SfxManager.is_any_sfx_playing())
 
 
-## Changes on other buses must not overwrite the observer's previous volume for this bus.
+## Changes on other buses must not overwrite the previous volume the crossing rule uses for this bus.
 ## :rtype: void
 func test_regression_interleaved_bus_crossings_are_independent(
 	bus: String = use_parameters(ALL_BUSES)
