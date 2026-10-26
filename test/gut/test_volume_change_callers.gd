@@ -43,6 +43,10 @@ var _original_config_path: String
 var _original_encryption_key: String
 var _needs_hold_wait: bool
 
+## Test-local volume_changed listener. A lambda is not tied to a node, so Godot never
+## disconnects it automatically; after_each() does, even if a test exits early.
+var _capture: Callable
+
 
 func before_each() -> void:
 	_original_states = {}
@@ -58,6 +62,7 @@ func before_each() -> void:
 	_remove_test_config()
 	SfxManager.stop_all_sfx()
 	_needs_hold_wait = false
+	_capture = Callable()
 	_bridge = autofree(NativeBridge.new())  # Avoid the web-only _ready().
 	_sliders = {}
 	for bus: String in ALL_BUSES:
@@ -70,6 +75,11 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	# Before any state restore: the restore emits volume_changed, and the capture reads a slider.
+	if _capture.is_valid() and AudioManager.volume_changed.is_connected(_capture):
+		AudioManager.volume_changed.disconnect(_capture)
+	_capture = Callable()
+	
 	# Prevent an old debounce or hold from mutating the next test's restored state.
 	for slider: VolumeSlider in _sliders.values():
 		slider.save_debounce_timer.stop()
@@ -244,12 +254,12 @@ func test_programmatic_observer_sync_keeps_next_manual_change(
 ) -> void:
 	var observed: Array[float] = []
 	var slider: VolumeSlider = _slider(bus)
-	var capture: Callable = func(changed_bus: String, _volume: float) -> void:
+	_capture = func(changed_bus: String, _volume: float) -> void:
 		if changed_bus == bus:
 			observed.append(slider.get_previous_value())
 	# Connected before the menu observer, so it sees the slider's own commit, not the
-	# observer's sync_from_manager() write.
-	AudioManager.volume_changed.connect(capture)
+	# observer's sync_from_manager() write. Disconnected in after_each().
+	AudioManager.volume_changed.connect(_capture)
 	var menu: Control = _create_observer()
 	AudioManager.volume_changed.connect(menu._on_global_volume_changed)
 	watch_signals(AudioManager)
@@ -262,7 +272,7 @@ func test_programmatic_observer_sync_keeps_next_manual_change(
 	assert_signal_emit_count(AudioManager, "volume_changed", 2)
 	_assert_bus_state(bus, START_VOLUME, false)
 	assert_false(slider.save_debounce_timer.is_stopped())
-	AudioManager.volume_changed.disconnect(capture)
+	AudioManager.volume_changed.disconnect(_capture)
 
 
 ## No menu is connected: the bridge itself must invoke the rule and save its final result.
