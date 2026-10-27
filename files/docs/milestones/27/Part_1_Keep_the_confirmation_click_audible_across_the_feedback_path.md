@@ -55,6 +55,10 @@ Make the auto-mute confirmation click reliably audible. Before this PR it was pr
   - `test_audio_settings_comprehensive.gd`: `SELF_SILENCING_BUSES` and the `pending()` branch removed, so `test_tc_am_001_006_manual_slider_auto_mutes` asserts an audible click on all six buses. `_is_click_audible()` walks the player's send chain and checks volume as well as mute
   - `test_volume_change_callers.gd`: `FEEDBACK_PATH_BUSES`; `test_unfocused_drag_to_zero_is_manual` expects the hold on every path bus (its old Master-only check also leaked an un-awaited hold into the next two tests)
   - No test case removed
+- **gdUnit4 test isolation** (`test/gdunit4/test_loading_screen.gd`, CI failure on this PR)
+  - `after_test()` frees a scene a test installed as the SceneTree's current scene and restores the previous one (`_free_scene_installed_by_test()`), with `free()` so the scene's pending timer and deferred calls die with it
+  - LS-TRANS-03 adds a real main menu to the root, and LS-FALLBACK-03/04 reach `change_scene_to_file()`. That main menu stayed alive for the rest of the run; its intro (`intro_delay` 3 s + `fade_duration` 1 s) ends in `Globals.ensure_initial_focus(start_button)`, which took focus from whatever suite was running about 4 s later
+  - `test_gdunit_all_menus_navigation_regression.gd` is unchanged: it was the victim, not the cause
 
 ### Design Decisions
 
@@ -66,6 +70,7 @@ Make the auto-mute confirmation click reliably audible. Before this PR it was pr
 - **Audibility by bus volume and mute flag, not peak meters.** Peak readings are unreliable with the Dummy driver in headless CI.
 - **Public `feedback_path_settled` signal.** gdlint rejects a leading underscore on signal names; it is documented as the hold's completion signal.
 - **Windows survive `cleanup_for_test()`.** Clearing the counter while a timer is pending would let that timer close a newer window early (kept from the #1075 counter, pinned by `test_feedback_hold_cleanup_preserves_pending_count`).
+- **Fix the leak, not the victim.** Part 10 read the `test_options_menu_navigation_sfx` failure as a focus race and suggested waiting until focus lands instead of one frame. That would only have hidden a main menu that keeps running in every later suite; the loading-screen suite now cleans up what it installs.
 - **Deterministic timing tests.** Two real 0.15 s timers started apart can fire in the same frame after a hitch (the first overlap test failed when run alone). Tests that need to observe "first window closed, second still open" hold the second window open by hand and close it with `_end_click_window()`.
 
 ### Expected Behavior
@@ -103,6 +108,10 @@ Make the auto-mute confirmation click reliably audible. Before this PR it was pr
   - Per-path re-sync instead of `_deferred_buses`: `test_feedback_hold_rerouting_changes_manual_cutoff` fails (found while merging)
 - Flakiness: the first overlap test (two staggered real timers) failed 6/6 when run alone; after making it deterministic, the four #1075 timing-sensitive tests ran 3 times each in isolation, all green
 - gdUnit4 (v6.2.0, run as in CI: `xvfb-run`, coverage plugin stripped): **142/142** at every step
+- gdUnit4 CI failure on this PR (`test_options_menu_navigation_sfx`, focus owner `<Button>` at `test_gdunit_all_menus_navigation_regression.gd:159`; passed on re-run)
+  - Probe: after the real loading-screen suite, `current_scene` was `main_menu.tscn`; repeating the options-menu focus check for 5 s, the leaked menu moved focus to its `StartButton` at +3.7 s (1 mismatch)
+  - With the fix: no leftover scene, 0 mismatches; the full gdUnit4 suite passed **142/142** on 3 consecutive runs
+  - Ruled out first: the menu's own deferred `grab_focus()` (it targets the same `AdvancedSettingsButton` as the test) and `UIManager` (plays SFX only, never moves focus)
 - `gdformat --check` and `gdlint` clean on every changed file in `scripts/`
 - Uploaded `audio_manager.gd` and `test_audio_manager_auto_mute.gd` checked against the reference; the pushed head differs only by blank lines in `audio_constants.gd` and `test_volume_change_callers.gd`
 - [ ] CI: GUT, gdUnit4 and browser shards green on the final head
@@ -114,6 +123,7 @@ Make the auto-mute confirmation click reliably audible. Before this PR it was pr
 - **Back-to-back clicks extend the hold.** Each click opens its own window, so rapid clicks keep the path held until 0.15 s after the last one.
 - **`test_audio_manager_auto_mute.gd` is 1,604 lines.** gdlint flags `max-file-lines` and `max-public-methods` (CI does not lint tests). The #1075 and #1047 sections would split cleanly into their own suite.
 - **Part 9 note (Milestone 26)** describes the #1047 check as a "self-activating pending"; it was an unconditional `pending()`, which is why it had to be removed by hand here.
+- **Part 10 note (Milestone 26)** lists the `test_gdunit_all_menus_navigation_regression.gd` failure as a focus race to fix with a focus wait; the cause was the main menu leaked by `test_loading_screen.gd`, fixed here.
 - **PR description** is still the template; paste this note and add `Closes #1075`, `Closes #1047` (both issues are already linked in the sidebar).
 
 ---
@@ -130,6 +140,7 @@ Replaces the Master-only confirmation-click hold with per-click windows on the c
 | Describe the hold as path-wide, not Master-only.            | <ul><li><code>FEEDBACK_HOLD_VOLUME_LINEAR</code> doc.</li><li>Slider and web-bridge comments.</li></ul>                                                                                                                                                                                                                                                                                                                                                                           | `scripts/resources/audio_constants.gd`<br/>`scripts/ui/components/volume_slider.gd`<br/>`scripts/system/audio_web_bridge.gd` |
 | Pin #1075, #1047 and the review scenarios at manager level. | <ul><li>Near-zero follow-ups, overlapping and cross-bus holds, <code>toggle_mute()</code> during a click.</li><li>Path membership, re-routing, send cycles, missing SFX_Menu, cleanup, unattached manager.</li><li>Ported CodeRabbit routing and lifecycle tests.</li></ul>                                                                                                                                                                                                       | `test/gut/test_audio_manager_auto_mute.gd`                                                                                   |
 | Enforce an audible click on all six buses.                  | <ul><li>Remove the <code>pending()</code> branch in TC-AM-001/006.</li><li><code>_is_click_audible()</code> checks volume and mute along the send chain.</li><li>Caller test expects the hold on every path bus.</li></ul>                                                                                                                                                                                                                                                        | `test/gut/test_audio_settings_comprehensive.gd`<br/>`test/gut/test_volume_change_callers.gd`                                 |
+| Stop loading-screen tests leaking a live main menu.         | <ul><li><code>after_test()</code> frees a scene a test installed as the current scene and restores the previous one.</li><li>Fixes the CI-only <code>test_options_menu_navigation_sfx</code> failure (focus stolen by the leaked menu's <code>StartButton</code>).</li></ul>                                                                                                                                                                                                      | `test/gdunit4/test_loading_screen.gd`                                                                                        |
 | Record the implementation and review context.               | <ul><li>Add the milestone note for this part.</li></ul>                                                                                                                                                                                                                                                                                                                                                                                                                           | `files/docs/milestones/27/Part_1_Keep_the_confirmation_click_audible_across_the_feedback_path.md`                            |
 
 ### Assessment against linked issues
@@ -151,15 +162,16 @@ Replaces the Master-only confirmation-click hold with per-click windows on the c
 
 ## Review decisions
 
-| Finding                                                                                                | Severity | Decision                     | Reason                                                                                                                                                                 |
-|--------------------------------------------------------------------------------------------------------|----------|------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Sourcery: confirmation clicks get cut short across buses (`audio_manager.gd:358–361`, also `:369–371`) | Medium   | **Fixed** (`a43ab87`)        | Valid: holds were per bus. Replaced by per-click windows; `test_regression_cross_bus_holds_wait_for_last_click`.                                                       |
-| CodeRabbit: keep the click route audible until overlapping holds finish (`audio_manager.gd:369–370`)   | Minor    | **Fixed** (`a43ab87`)        | Same root cause (SFX_Menu then SFX within the delay). Both real-timer and deterministic tests.                                                                         |
-| Sourcery: programmatic mutes cut off clicks (`audio_manager.gd:344–345`, also `:361–364`)              | Medium   | **Fixed** (`a43ab87`)        | Valid: `toggle_mute()` wrote the mixer directly. Now deferred for path buses; `test_regression_programmatic_toggle_mute_waits_for_click`.                              |
-| Sourcery: manual toggle cuts off click (`audio_manager.gd:358–361`, also `:369`)                       | Medium   | **Fixed** (`a43ab87`)        | Valid: the toggle's own delay was invisible to the hold. Its click now opens a window; `test_regression_manual_toggle_mute_waits_for_last_click`.                      |
-| Sourcery: callers get wrong settling guidance (docs, `audio_manager.gd:306–307`, also `:359–361`)      | Low      | **Fixed** (`a43ab87`)        | `change_volume()`, `FEEDBACK_HOLD_VOLUME_LINEAR` and slider docs now name SFX and SFX_Menu; the lost `is_manual_interaction` doc line was restored.                    |
-| CodeRabbit generated tests: 8 routing and lifecycle regressions (`34e80bc`)                            | –        | **Kept, ported** (`8547129`) | Written against the per-bus counter replaced in review; rewritten for `_clicks_in_flight` with no case dropped. The re-routing test exposed the `_deferred_buses` gap. |
-| CodeRabbit pre-merge: description still the template                                                   | Warning  | Resolved by this summary     | Paste this note and add the `Closes` lines.                                                                                                                            |
+| Finding                                                                                                | Severity | Decision                     | Reason                                                                                                                                                                                                                   |
+|--------------------------------------------------------------------------------------------------------|----------|------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Sourcery: confirmation clicks get cut short across buses (`audio_manager.gd:358–361`, also `:369–371`) | Medium   | **Fixed** (`a43ab87`)        | Valid: holds were per bus. Replaced by per-click windows; `test_regression_cross_bus_holds_wait_for_last_click`.                                                                                                         |
+| CodeRabbit: keep the click route audible until overlapping holds finish (`audio_manager.gd:369–370`)   | Minor    | **Fixed** (`a43ab87`)        | Same root cause (SFX_Menu then SFX within the delay). Both real-timer and deterministic tests.                                                                                                                           |
+| Sourcery: programmatic mutes cut off clicks (`audio_manager.gd:344–345`, also `:361–364`)              | Medium   | **Fixed** (`a43ab87`)        | Valid: `toggle_mute()` wrote the mixer directly. Now deferred for path buses; `test_regression_programmatic_toggle_mute_waits_for_click`.                                                                                |
+| Sourcery: manual toggle cuts off click (`audio_manager.gd:358–361`, also `:369`)                       | Medium   | **Fixed** (`a43ab87`)        | Valid: the toggle's own delay was invisible to the hold. Its click now opens a window; `test_regression_manual_toggle_mute_waits_for_last_click`.                                                                        |
+| Sourcery: callers get wrong settling guidance (docs, `audio_manager.gd:306–307`, also `:359–361`)      | Low      | **Fixed** (`a43ab87`)        | `change_volume()`, `FEEDBACK_HOLD_VOLUME_LINEAR` and slider docs now name SFX and SFX_Menu; the lost `is_manual_interaction` doc line was restored.                                                                      |
+| CodeRabbit generated tests: 8 routing and lifecycle regressions (`34e80bc`)                            | –        | **Kept, ported** (`8547129`) | Written against the per-bus counter replaced in review; rewritten for `_clicks_in_flight` with no case dropped. The re-routing test exposed the `_deferred_buses` gap.                                                   |
+| CI: gdUnit4 `test_options_menu_navigation_sfx` failed at line 159 (focus on another `Button`)          | –        | **Fixed** (`791a071`)        | Not flaky by itself: a main menu leaked by `test_loading_screen.gd` grabbed focus ~4 s later, landing in this test depending on suite order and timing. Reproduced with a probe; the suite now frees scenes it installs. |
+| CodeRabbit pre-merge: description still the template                                                   | Warning  | Resolved by this summary     | Paste this note and add the `Closes` lines.                                                                                                                                                                              |
 
 ---
 
@@ -171,6 +183,7 @@ Replaces the Master-only confirmation-click hold with per-click windows on the c
   - Decided to resolve #1075 and #1047 in one PR, and added the #1047 acceptance criterion (remove the `pending()` branch, no pending tests).
 - **Implementation and integration**
   - Applied every change by hand, pushed the branch, opened PR #1081, requested CodeRabbit unit-test generation, relayed the five review findings, and uploaded the edited files and the bot-extended test file for verification and merge.
+  - Flagged the recurring CI-only gdUnit4 failure in `test_options_menu_navigation_sfx` (passing locally and on re-run) and applied the loading-screen fix.
   - Implemented the #1075 fix (pending-hold counter, hold level for at-or-below follow-ups, gated re-sync) and the #1047 feedback-path hold (`_is_in_feedback_path()` over live bus sends), with tests verified by mutation.
 
 ### Bots / AI contributions
@@ -180,6 +193,7 @@ Replaces the Master-only confirmation-click hold with per-click windows on the c
   - Found that the old Master-only caller test leaked an un-awaited hold into the next two tests, and that `_is_click_audible()` should walk the real send chain and check volume.
   - Triaged the five review findings (all valid, one root cause), redesigned the hold as per-click windows covering `toggle_mute()`, and pinned each scenario with a test that fails on a targeted mutant.
   - Merged CodeRabbit's 8 generated tests into the reworked suite without dropping cases, and fixed the re-route gap they exposed (`_deferred_buses`).
+  - Root-caused the CI-only gdUnit4 failure: ruled out the menu's own deferred focus grab and `UIManager`, traced it to a main menu left as the current scene by `test_loading_screen.gd`, proved it with a probe suite (focus stolen at +3.7 s), and fixed the cleanup in that suite instead of the failing test.
   - Ran GUT and gdUnit4 locally at every step, and checked the pushed head against the reference.
 
 - **@sourcery-ai**
