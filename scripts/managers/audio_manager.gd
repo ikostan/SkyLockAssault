@@ -12,6 +12,9 @@ extends Node
 signal volume_changed(bus_name: String, volume: float)
 signal mute_toggled(bus_name: String, is_muted: bool)
 # --------------------------------------------
+## Emitted when the last open confirmation-click window closes and the feedback
+## path has been re-synced (Issue #1047). change_volume() awaits it for its own hold.
+signal feedback_path_settled
 
 @export_category("Master Volume")
 @export var master_volume: float
@@ -40,17 +43,20 @@ var current_config_path: String = Settings.CONFIG_PATH
 ## that must not overwrite the volume the user actually had before the drag.
 var _last_audible_volume: Dictionary = {}
 
-# --- FEEDBACK HOLD STATE (Issue #1075) ---
-## Number of pending feedback holds per bus name. In memory only; an absent key means none.
-## A counter, not a flag: a down, up, down sequence within MUTE_HARDWARE_DELAY starts two
-## overlapping holds, and only the last one to end may re-sync AudioServer. While a bus has a
-## pending hold, at-or-below-threshold updates keep the mixer at the hold level instead of
-## writing the muted state, so they cannot cut the confirmation click short.
-## Not a generation token: it only decides when the mixer is written, never which state wins.
-## The hold's re-sync still re-reads the newest state (Issue #1041).
-## Deliberately not cleared by cleanup_for_test(): a hold still awaiting its timer would then
-## decrement a newer hold's count and end it early.
-var _pending_feedback_holds: Dictionary = {}
+# --- CONFIRMATION-CLICK WINDOWS (Issues #1075, #1047) ---
+## Number of confirmation clicks still streaming out. Every SFX_CHECK click AudioManager plays
+## (auto-mute, auto-unmute, mute button) opens a MUTE_HARDWARE_DELAY window. The click plays
+## on SFX_Menu and passes through every bus on its feedback path (SFX_Menu -> SFX -> Master),
+## so while any window is open, a write that would silence one of those buses is deferred:
+## the mixer is kept at FEEDBACK_HOLD_VOLUME_LINEAR (or left as is) instead. When the last
+## window closes, the whole path is re-synced from the manager's current state. Tracking
+## clicks rather than buses covers overlaps across buses (SFX_Menu then SFX within the delay)
+## and mute toggles, not just repeated updates on one bus. In memory only.
+## Not a generation token: it only decides when the mixer is written, never which state wins;
+## the re-sync still re-reads the newest state (Issue #1041).
+## Deliberately not cleared by cleanup_for_test(): a window still awaiting its timer would
+## then close a newer window early.
+var _clicks_in_flight: int = 0
 
 
 func _ready() -> void:
@@ -254,6 +260,10 @@ func _get_last_audible_volume(bus_name: String) -> float:
 ##   4. Manual mutes defer the AudioServer cutoff by MUTE_HARDWARE_DELAY so the click can
 ##      finish streaming; unmutes and programmatic calls apply immediately.
 ##   5. The newest state is applied to AudioServer (a newer toggle during the delay wins).
+##      Exception (Issue #1047): while a confirmation click is still streaming, a mute of a
+##      bus on the click's feedback path is deferred until the last click window closes, so
+##      neither a programmatic mute nor an earlier timer cuts a click short. Unmutes still
+##      apply immediately.
 ## Does not save: callers follow up with save_volumes(), mirroring set_volume().
 ## :param bus_name: Name of the bus.
 ## :type bus_name: String
@@ -269,7 +279,7 @@ func toggle_mute(bus_name: String, muted: bool, is_manual_interaction: bool = fa
 		return
 
 	if is_manual_interaction:
-		SfxManager.play_sfx(AudioConstants.SFX_CHECK)
+		_play_confirmation_click()
 
 	set_muted(bus_name, muted)
 	if not muted:
@@ -280,17 +290,19 @@ func toggle_mute(bus_name: String, muted: bool, is_manual_interaction: bool = fa
 		await get_tree().create_timer(AudioConstants.MUTE_HARDWARE_DELAY).timeout
 
 	# Re-read the newest state: a toggle issued during the delay must not be overwritten.
-	apply_volume_to_bus(bus_name, get_volume(bus_name), get_muted(bus_name))
+	# A mute on the feedback path waits for any click still streaming (Issue #1047).
+	_sync_bus_or_defer(bus_name)
 
 
 ## Single volume entry point that applies the near-zero auto-mute rule (Issue #1039, epic #725).
 ## Runs with no menu in the tree, and callers state their intent instead of the code guessing
 ## it from slider focus:
 ##   1. The previous volume is read, then the new one is stored (volume_changed fires) and
-##      written to AudioServer with the bus's current mute flag. Exception (Issue #1075):
-##      while a feedback hold is pending on the bus, an at-or-below-threshold value keeps the
-##      mixer at FEEDBACK_HOLD_VOLUME_LINEAR instead, so a follow-up near-zero update cannot
-##      hard-mute the bus under the click. Above-threshold values always apply immediately.
+##      written to AudioServer with the bus's current mute flag. Exception (Issues #1075,
+##      #1047): while a confirmation click is streaming, an at-or-below-threshold value on a
+##      feedback-path bus keeps the mixer at FEEDBACK_HOLD_VOLUME_LINEAR instead, so a
+##      follow-up near-zero update cannot hard-mute the bus under the click.
+##      Above-threshold values always apply immediately.
 ##   2. The rule is edge-triggered on AUTO_MUTE_VOLUME_THRESHOLD crossings (Issue #1040):
 ##      - crossing down (old > T, new <= T) on an unmuted bus -> auto-mute;
 ##      - crossing up (old <= T, new > T) on a muted bus -> auto-unmute.
@@ -303,28 +315,31 @@ func toggle_mute(bus_name: String, muted: bool, is_manual_interaction: bool = fa
 ##   3. Manual interactions play the SFX_CHECK confirmation click on a transition.
 ##      Programmatic calls (web bridge, cutscenes, sync loops) are always silent.
 ##   4. A manual auto-mute (inside the tree) of any bus on the click's feedback path holds
-##      that bus at FEEDBACK_HOLD_VOLUME_LINEAR for MUTE_HARDWARE_DELAY so the click can
-##      stream out (Issue #1047). The path is the click bus (SFX_Menu) and every bus it sends
-##      to; today SFX_Menu, SFX and Master. Buses off the path (Music, SFX_Weapon, SFX_Rotors)
-##      need no hold: muting them never silences the click.
+##      that bus at FEEDBACK_HOLD_VOLUME_LINEAR until every confirmation click still streaming
+##      has finished (each click opens a MUTE_HARDWARE_DELAY window; Issue #1047). The path is
+##      the click bus (SFX_Menu) and every bus it sends to; today SFX_Menu, SFX and Master.
+##      Buses off the path (Music, SFX_Weapon, SFX_Rotors) need no hold: muting them never
+##      silences the click. A bus the player had already muted is never unmuted for a click.
 ##      Accepted trade-off: other sounds on a held bus play at the hold level for the delay.
 ##   5. Once an auto-mute settles (after the hold, or right away without one), AudioServer is
 ##      re-synced from the manager's current state, so is_bus_mute() always matches
 ##      get_muted() (Issue #1041). The re-sync re-reads state instead of writing a fixed value,
 ##      so a late timer after a newer change or unmute just re-applies that newer state:
-##      no generation token is needed. While another hold on the same bus is still pending,
-##      the re-sync is left to that hold, so an earlier timer never ends a later hold early
-##      (Issue #1075); the pending-hold counter decides only when to write, never what.
+##      no generation token is needed. For a feedback-path bus the re-sync waits until the
+##      last click window closes, so an earlier timer never cuts a later click short, on the
+##      same bus or another bus on the path (Issues #1075, #1047).
 ##   6. Auto-unmute (any bus, manual or programmatic) applies the unmuted state to
 ##      AudioServer immediately.
 ## Does not save: persistence stays with callers (slider debounce, web bridge).
 ## The raw setters (set_volume, set_bus_state, load_volumes, reset_volumes) never apply this.
-## Await it only if you need the Master hold to have finished.
+## Await it only if you need a manual feedback-path hold (Master, SFX, SFX_Menu) to have
+## finished; every other call returns without waiting.
 ## :param bus_name: Name of the bus.
 ## :type bus_name: String
 ## :param volume: Volume level (0.0 to 1.0).
 ## :type volume: float
 ## :param is_manual_interaction: True for real user input (click + feedback-path hold);
+##     false for programmatic callers (silent, no hold).
 ## :type is_manual_interaction: bool
 ## :rtype: void
 func change_volume(bus_name: String, volume: float, is_manual_interaction: bool = false) -> void:
@@ -341,11 +356,11 @@ func change_volume(bus_name: String, volume: float, is_manual_interaction: bool 
 	set_volume(bus_name, volume)
 	# The manager owns the AudioServer write for this path. This write carries the pre-rule
 	# mute flag; a transition below re-syncs AudioServer once the rule has run.
-	if volume > threshold or not _has_pending_feedback_hold(bus_name):
+	if volume > threshold or not _is_path_write_deferred(bus_name):
 		apply_volume_to_bus(bus_name, volume, get_muted(bus_name))
 	else:
-		# A pending hold owns the mixer until it ends (Issue #1075): writing the muted state
-		# now would cut the click short. The hold re-syncs to this newest state when it ends.
+		# A click is still streaming through this bus (Issues #1075, #1047): writing the muted
+		# state now would cut it short. The last click window re-syncs this newest state.
 		_apply_feedback_hold_level(bus_name)
 
 	# --- AUTO-MUTE ON CROSSING DOWN TO NEAR-ZERO ---
@@ -353,21 +368,14 @@ func change_volume(bus_name: String, volume: float, is_manual_interaction: bool 
 		# Flip state first so rapid consecutive updates short-circuit.
 		set_muted(bus_name, true)
 		if is_manual_interaction:
-			SfxManager.play_sfx(AudioConstants.SFX_CHECK)
+			_play_confirmation_click()
 
-		# _is_in_feedback_path() also guarantees the bus exists in AudioServer.
-		if is_manual_interaction and is_inside_tree() and _is_in_feedback_path(bus_name):
-			# Hold an audible level so the click can stream out before the re-sync.
-			_pending_feedback_holds[bus_name] = int(_pending_feedback_holds.get(bus_name, 0)) + 1
-			_apply_feedback_hold_level(bus_name)
-			await get_tree().create_timer(AudioConstants.MUTE_HARDWARE_DELAY).timeout
-			_release_feedback_hold(bus_name)
-
-		# Re-sync from current state (Issue #1041). After a hold, a newer change or unmute
-		# made during the delay is what gets applied, so a stale timer is harmless.
-		# A later hold that is still pending re-syncs when it ends instead (Issue #1075).
-		if not _has_pending_feedback_hold(bus_name):
-			apply_volume_to_bus(bus_name, get_volume(bus_name), get_muted(bus_name))
+		# Re-sync from current state (Issue #1041), unless a click is still streaming through
+		# this bus: then hold an audible level, and the last click window re-syncs instead, so
+		# a newer change or unmute made in the meantime is what gets applied (Issue #1047).
+		_sync_bus_or_defer(bus_name)
+		if is_manual_interaction and _is_path_write_deferred(bus_name):
+			await feedback_path_settled
 
 	# --- AUTO-UNMUTE ON CROSSING UP FROM NEAR-ZERO ---
 	elif crossed_up and get_muted(bus_name):
@@ -376,7 +384,7 @@ func change_volume(bus_name: String, volume: float, is_manual_interaction: bool 
 		# and without this the mixer would stay muted while AudioManager reports unmuted.
 		apply_volume_to_bus(bus_name, volume, false)
 		if is_manual_interaction:
-			SfxManager.play_sfx(AudioConstants.SFX_CHECK)
+			_play_confirmation_click()
 
 
 ## Returns true when a bus carries the auto-mute confirmation click (Issue #1047): the click
@@ -400,25 +408,64 @@ func _is_in_feedback_path(bus_name: String) -> bool:
 	return false
 
 
-## Returns true while at least one feedback hold is pending on a bus (Issue #1075).
+## Plays the SFX_CHECK confirmation click and, inside the tree, keeps its window open for
+## MUTE_HARDWARE_DELAY so silencing writes on the feedback path wait for it (Issue #1047).
+## Callers do not await it; change_volume() awaits feedback_path_settled when it must.
+## :rtype: void
+func _play_confirmation_click() -> void:
+	SfxManager.play_sfx(AudioConstants.SFX_CHECK)
+	if not is_inside_tree():
+		return
+	_clicks_in_flight += 1
+	await get_tree().create_timer(AudioConstants.MUTE_HARDWARE_DELAY).timeout
+	_end_click_window()
+
+
+## Closes one confirmation-click window. When it was the last one, re-syncs every bus on the
+## feedback path from the manager's current state and emits feedback_path_settled.
+## Never drops below zero, so a stray call cannot open a negative balance.
+## :rtype: void
+func _end_click_window() -> void:
+	_clicks_in_flight = maxi(_clicks_in_flight - 1, 0)
+	if _clicks_in_flight == 0:
+		_resync_feedback_path()
+		feedback_path_settled.emit()
+
+
+## Returns true while a confirmation click is streaming through a bus, i.e. a click window is
+## open and the bus is on the click's feedback path. Silencing writes to it must wait.
 ## :param bus_name: Name of the bus.
 ## :type bus_name: String
 ## :rtype: bool
-func _has_pending_feedback_hold(bus_name: String) -> bool:
-	return int(_pending_feedback_holds.get(bus_name, 0)) > 0
+func _is_path_write_deferred(bus_name: String) -> bool:
+	return _clicks_in_flight > 0 and _is_in_feedback_path(bus_name)
 
 
-## Ends one pending feedback hold on a bus, dropping the key once none are left, so an idle
-## manager carries no hold state (Issue #1075).
+## Applies a bus's current state to AudioServer, unless that would silence a bus a click is
+## still streaming through. Then an at-or-below-threshold bus is held at
+## FEEDBACK_HOLD_VOLUME_LINEAR and a muted audible bus is left as it is; the mute flag is
+## never touched, so a bus the player already muted stays muted. The last click window
+## re-syncs it (Issue #1047).
 ## :param bus_name: Name of the bus.
 ## :type bus_name: String
 ## :rtype: void
-func _release_feedback_hold(bus_name: String) -> void:
-	var remaining: int = int(_pending_feedback_holds.get(bus_name, 0)) - 1
-	if remaining > 0:
-		_pending_feedback_holds[bus_name] = remaining
-	else:
-		_pending_feedback_holds.erase(bus_name)
+func _sync_bus_or_defer(bus_name: String) -> void:
+	var volume: float = get_volume(bus_name)
+	var at_or_below: bool = volume <= AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD
+	if (get_muted(bus_name) or at_or_below) and _is_path_write_deferred(bus_name):
+		if at_or_below:
+			_apply_feedback_hold_level(bus_name)
+		return
+	apply_volume_to_bus(bus_name, volume, get_muted(bus_name))
+
+
+## Re-applies the current state of every bus on the feedback path to AudioServer. Runs when
+## the last click window closes; buses that were never deferred just get their state again.
+## :rtype: void
+func _resync_feedback_path() -> void:
+	for bus: String in AudioConstants.BUS_CONFIG.keys():
+		if _is_in_feedback_path(bus):
+			apply_volume_to_bus(bus, get_volume(bus), get_muted(bus))
 
 
 ## Writes FEEDBACK_HOLD_VOLUME_LINEAR to a bus's AudioServer volume so the confirmation click
