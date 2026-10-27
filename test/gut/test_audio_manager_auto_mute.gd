@@ -32,6 +32,15 @@ const ALL_BUSES: Array = [
 	AudioConstants.BUS_SFX_MENU,
 ]
 
+## Buses off the click's path (SFX_Menu -> SFX -> Master): muting them never silences it.
+const OFF_PATH_BUSES: Array = [
+	AudioConstants.BUS_MUSIC,
+	AudioConstants.BUS_SFX_WEAPON,
+	AudioConstants.BUS_SFX_ROTORS,
+]
+## Path buses other than Master; Master's hold is covered in MASTER FEEDBACK HOLD.
+const HELD_SFX_BUSES: Array = [AudioConstants.BUS_SFX, AudioConstants.BUS_SFX_MENU]
+
 var _original_config_path: String
 var _original_states: Dictionary = {}
 var _original_last_audible: Dictionary = {}
@@ -497,7 +506,7 @@ func test_programmatic_master_has_no_hold() -> void:
 	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001, "No hold for programmatic changes")
 
 
-## Only Master is held; other buses are not (hold for SFX/SFX_Menu is #1047).
+## Music is off the click's feedback path, so it is never held (path buses: Issue #1047).
 ## :rtype: void
 func test_non_master_manual_has_no_hold() -> void:
 	var bus: String = AudioConstants.BUS_MUSIC
@@ -1128,3 +1137,139 @@ func test_overlapping_real_master_holds_settle_muted_and_drain() -> void:
 	assert_true(_hw_muted(bus), "The last hold mutes Master when it ends")
 	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
 	assert_true(AudioManager._pending_feedback_holds.is_empty(), "No hold state left behind")
+
+
+
+
+# ==========================================
+# FEEDBACK PATH HOLD: SFX AND SFX_MENU (Issue #1047)
+# ==========================================
+
+
+## True when every bus from SFX_Menu up to Master is unmuted and above the threshold in
+## AudioServer, so a click on SFX_Menu can actually be heard (a bus check, not player.playing).
+## :rtype: bool
+func _click_chain_audible() -> bool:
+	for bus: String in [
+		AudioConstants.BUS_SFX_MENU, AudioConstants.BUS_SFX, AudioConstants.BUS_MASTER
+	]:
+		if _hw_muted(bus) or _hw_linear(bus) <= AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD:
+			return false
+	return true
+
+
+## The path is walked from SFX_Menu through AudioServer sends: today SFX_Menu, SFX and Master.
+## :rtype: void
+func test_feedback_path_membership(
+	params: Array = use_parameters(
+		[
+			[AudioConstants.BUS_MASTER, true],
+			[AudioConstants.BUS_SFX, true],
+			[AudioConstants.BUS_SFX_MENU, true],
+			[AudioConstants.BUS_MUSIC, false],
+			[AudioConstants.BUS_SFX_WEAPON, false],
+			[AudioConstants.BUS_SFX_ROTORS, false],
+			["NotABus", false],
+		]
+	)
+) -> void:
+	assert_eq(AudioManager._is_in_feedback_path(params[0]), params[1], str(params[0]))
+
+
+## The path follows the live bus layout: re-routing SFX_Menu straight to Master drops SFX.
+## :rtype: void
+func test_feedback_path_follows_bus_layout() -> void:
+	var menu_idx: int = _bus_idx(AudioConstants.BUS_SFX_MENU)
+	var original_send: StringName = AudioServer.get_bus_send(menu_idx)
+	AudioServer.set_bus_send(menu_idx, AudioConstants.BUS_MASTER)
+
+	var sfx_on_path: bool = AudioManager._is_in_feedback_path(AudioConstants.BUS_SFX)
+	var master_on_path: bool = AudioManager._is_in_feedback_path(AudioConstants.BUS_MASTER)
+	AudioServer.set_bus_send(menu_idx, original_send)
+
+	assert_false(sfx_on_path, "SFX is off the path once SFX_Menu bypasses it")
+	assert_true(master_on_path, "Master is still on the path")
+
+
+## A misconfigured send cycle cannot hang the walk.
+## :rtype: void
+func test_feedback_path_walk_survives_send_cycle() -> void:
+	var sfx_idx: int = _bus_idx(AudioConstants.BUS_SFX)
+	var original_send: StringName = AudioServer.get_bus_send(sfx_idx)
+	AudioServer.set_bus_send(sfx_idx, AudioConstants.BUS_SFX_MENU)  # SFX_Menu <-> SFX
+
+	var music_on_path: bool = AudioManager._is_in_feedback_path(AudioConstants.BUS_MUSIC)
+	AudioServer.set_bus_send(sfx_idx, original_send)
+
+	assert_false(music_on_path, "The capped walk returns instead of looping")
+
+
+## A manual auto-mute of SFX or SFX_Menu holds the bus audible for the click, then mutes it.
+## :rtype: void
+func test_manual_feedback_path_hold_then_flatten(
+	bus: String = use_parameters(HELD_SFX_BUSES)
+) -> void:
+	AudioManager.change_volume(bus, 0.0, true)
+
+	assert_true(AudioManager.get_muted(bus), "State flips immediately")
+	assert_false(_hw_muted(bus), bus + " is not muted in the mixer during the hold")
+	assert_almost_eq(
+		_hw_linear(bus),
+		AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR,
+		0.0001,
+		bus + " is held at the feedback level"
+	)
+	assert_true(SfxManager.is_any_sfx_playing(), "The click is playing")
+	assert_true(_click_chain_audible(), "The click's bus chain is audible during the hold")
+
+	await wait_seconds(HOLD_WAIT)
+
+	assert_true(_hw_muted(bus), bus + " is muted in the mixer once the hold ends")
+	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
+	assert_true(AudioManager._pending_feedback_holds.is_empty(), "No hold state left behind")
+
+
+## Buses off the path are muted right away even for manual changes: no hold, no hold state.
+## :rtype: void
+func test_off_path_manual_auto_mute_has_no_hold(
+	bus: String = use_parameters(OFF_PATH_BUSES)
+) -> void:
+	AudioManager.change_volume(bus, 0.0, true)
+
+	assert_true(_hw_muted(bus), bus + " is muted in the mixer immediately")
+	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
+	assert_true(AudioManager._pending_feedback_holds.is_empty(), "No hold for off-path buses")
+	assert_true(_click_chain_audible(), "Muting an off-path bus never silences the click")
+
+
+## Programmatic auto-mutes of path buses stay silent and immediate: the hold is manual-only.
+## :rtype: void
+func test_programmatic_feedback_path_auto_mute_has_no_hold(
+	bus: String = use_parameters(HELD_SFX_BUSES)
+) -> void:
+	AudioManager.change_volume(bus, 0.0)
+
+	assert_true(_hw_muted(bus), bus + " is muted in the mixer immediately")
+	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
+	assert_false(SfxManager.is_any_sfx_playing(), "Programmatic changes never play SFX")
+	assert_true(AudioManager._pending_feedback_holds.is_empty())
+
+
+## The Issue #1075 guard covers the new path buses too: a near-zero follow-up during an SFX or
+## SFX_Menu hold keeps the hold, and the bus is muted at the newest volume afterwards.
+## :rtype: void
+func test_near_zero_follow_up_keeps_feedback_path_hold(
+	bus: String = use_parameters(HELD_SFX_BUSES)
+) -> void:
+	var near_zero: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD / 2.0
+	AudioManager.change_volume(bus, 0.0, true)
+
+	await AudioManager.change_volume(bus, near_zero)
+
+	assert_false(_hw_muted(bus), "The follow-up must not hard-mute the held bus")
+	assert_almost_eq(_hw_linear(bus), AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR, 0.0001)
+
+	await wait_seconds(HOLD_WAIT)
+
+	assert_true(_hw_muted(bus))
+	assert_almost_eq(_hw_linear(bus), near_zero, 0.000001, "Re-synced to the newest volume")

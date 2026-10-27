@@ -47,9 +47,6 @@ const BUS_CONTROLS: Dictionary = {
 	AudioConstants.BUS_SFX_ROTORS: ["rotor_slider", "mute_rotor"],
 	AudioConstants.BUS_SFX_MENU: ["menu_slider", "mute_menu"],
 }
-## The click plays on SFX_Menu, so auto-muting SFX or SFX_Menu silences its own click.
-## Known gap tracked in #1047 (feedback hold for those buses).
-const SELF_SILENCING_BUSES: Array = [AudioConstants.BUS_SFX, AudioConstants.BUS_SFX_MENU]
 
 var audio_scene: PackedScene = load(GamePaths.AUDIO_SETTINGS_SCENE)
 var audio_instance: Control
@@ -168,18 +165,25 @@ func _is_click_playing() -> bool:
 	return _playing_click() != null
 
 
-## True when the SFX_CHECK click is playing on a bus chain the player can hear: its own bus,
-## SFX and Master all unmuted in AudioServer. A bare player.playing check passes even for a
-## click routed through a muted bus, which is what the old TC-AM-003/006 asserted.
+## True when the SFX_CHECK click is playing on a bus chain the player can hear: every bus from
+## the player's own bus up its AudioServer sends to Master is unmuted and above
+## AUTO_MUTE_VOLUME_THRESHOLD. A bare player.playing check passes even for a click routed
+## through a muted or near-zero bus, which is what the old TC-AM-003/006 asserted (#1047).
 ## :rtype: bool
 func _is_click_audible() -> bool:
 	var player: AudioStreamPlayer = _playing_click()
 	if player == null:
 		return false
-	for bus: String in [player.bus, AudioConstants.BUS_SFX, AudioConstants.BUS_MASTER]:
+	var bus: String = player.bus
+	for _step in range(AudioServer.bus_count):
 		if _hw_muted(bus):
 			return false
-	return true
+		if db_to_linear(_hw_db(bus)) <= AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD:
+			return false
+		bus = String(AudioServer.get_bus_send(_bus_idx(bus)))
+		if bus.is_empty():
+			return true
+	return false
 
 
 ## Moves a slider the way keyboard input does: focused, through slider.value, so the change
@@ -229,9 +233,7 @@ func test_tc_am_001_006_manual_slider_auto_mutes(bus: String = use_parameters(AL
 	assert_false(_button(bus).button_pressed, bus + " mute button shows muted")
 	assert_true(_hw_muted(bus), bus + " is muted in AudioServer")
 	assert_true(click_played, bus + ": the confirmation click plays")
-	if bus in SELF_SILENCING_BUSES:
-		pending(bus + ": the click plays on a bus this auto-mute silences (#1047)")
-		return
+	# Enforced on all six buses: SFX and SFX_Menu are held audible like Master (Issue #1047).
 	assert_true(click_audible, bus + ": the confirmation click is audible")
 
 

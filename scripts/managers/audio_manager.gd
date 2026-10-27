@@ -302,8 +302,12 @@ func toggle_mute(bus_name: String, muted: bool, is_manual_interaction: bool = fa
 ##      is unmuted on the way up; at zero, an explicit mute and an auto-mute look the same.
 ##   3. Manual interactions play the SFX_CHECK confirmation click on a transition.
 ##      Programmatic calls (web bridge, cutscenes, sync loops) are always silent.
-##   4. Manual Master auto-mute (inside the tree) holds the bus at FEEDBACK_HOLD_VOLUME_LINEAR
-##      for MUTE_HARDWARE_DELAY so the click can stream out.
+##   4. A manual auto-mute (inside the tree) of any bus on the click's feedback path holds
+##      that bus at FEEDBACK_HOLD_VOLUME_LINEAR for MUTE_HARDWARE_DELAY so the click can
+##      stream out (Issue #1047). The path is the click bus (SFX_Menu) and every bus it sends
+##      to; today SFX_Menu, SFX and Master. Buses off the path (Music, SFX_Weapon, SFX_Rotors)
+##      need no hold: muting them never silences the click.
+##      Accepted trade-off: other sounds on a held bus play at the hold level for the delay.
 ##   5. Once an auto-mute settles (after the hold, or right away without one), AudioServer is
 ##      re-synced from the manager's current state, so is_bus_mute() always matches
 ##      get_muted() (Issue #1041). The re-sync re-reads state instead of writing a fixed value,
@@ -320,8 +324,7 @@ func toggle_mute(bus_name: String, muted: bool, is_manual_interaction: bool = fa
 ## :type bus_name: String
 ## :param volume: Volume level (0.0 to 1.0).
 ## :type volume: float
-## :param is_manual_interaction: True for real user input (click + Master hold);
-##     false for programmatic callers (silent, no hold).
+## :param is_manual_interaction: True for real user input (click + feedback-path hold);
 ## :type is_manual_interaction: bool
 ## :rtype: void
 func change_volume(bus_name: String, volume: float, is_manual_interaction: bool = false) -> void:
@@ -345,8 +348,6 @@ func change_volume(bus_name: String, volume: float, is_manual_interaction: bool 
 		# now would cut the click short. The hold re-syncs to this newest state when it ends.
 		_apply_feedback_hold_level(bus_name)
 
-	var is_master: bool = bus_name == AudioConstants.BUS_MASTER
-
 	# --- AUTO-MUTE ON CROSSING DOWN TO NEAR-ZERO ---
 	if crossed_down and not get_muted(bus_name):
 		# Flip state first so rapid consecutive updates short-circuit.
@@ -354,12 +355,8 @@ func change_volume(bus_name: String, volume: float, is_manual_interaction: bool 
 		if is_manual_interaction:
 			SfxManager.play_sfx(AudioConstants.SFX_CHECK)
 
-		if (
-			is_manual_interaction
-			and is_master
-			and is_inside_tree()
-			and AudioServer.get_bus_index(bus_name) != -1
-		):
+		# _is_in_feedback_path() also guarantees the bus exists in AudioServer.
+		if is_manual_interaction and is_inside_tree() and _is_in_feedback_path(bus_name):
 			# Hold an audible level so the click can stream out before the re-sync.
 			_pending_feedback_holds[bus_name] = int(_pending_feedback_holds.get(bus_name, 0)) + 1
 			_apply_feedback_hold_level(bus_name)
@@ -380,6 +377,27 @@ func change_volume(bus_name: String, volume: float, is_manual_interaction: bool 
 		apply_volume_to_bus(bus_name, volume, false)
 		if is_manual_interaction:
 			SfxManager.play_sfx(AudioConstants.SFX_CHECK)
+
+
+## Returns true when a bus carries the auto-mute confirmation click (Issue #1047): the click
+## bus itself (SFX_Menu, SfxManager.play_sfx()'s default) or any bus it sends to, found by
+## walking AudioServer.get_bus_send() up the layout. Today that is SFX_Menu, SFX and Master.
+## Read live from AudioServer, so a changed bus layout is followed without code changes.
+## The walk is capped at bus_count steps so a misconfigured send cycle cannot loop forever.
+## :param bus_name: Name of the bus.
+## :type bus_name: String
+## :rtype: bool
+func _is_in_feedback_path(bus_name: String) -> bool:
+	var current: String = AudioConstants.BUS_SFX_MENU
+	for _step in range(AudioServer.bus_count):
+		if AudioServer.get_bus_index(current) == -1:
+			return false
+		if current == bus_name:
+			return true
+		current = String(AudioServer.get_bus_send(AudioServer.get_bus_index(current)))
+		if current.is_empty():
+			return false
+	return false
 
 
 ## Returns true while at least one feedback hold is pending on a bus (Issue #1075).
