@@ -26,6 +26,15 @@ const ALL_BUSES: Array = [
 	AudioConstants.BUS_SFX_ROTORS,
 	AudioConstants.BUS_SFX_MENU,
 ]
+
+## Buses the confirmation click plays through (SFX_Menu -> SFX -> Master). A manual auto-mute
+## of any of them is held at FEEDBACK_HOLD_VOLUME_LINEAR for the click (Issue #1047).
+const FEEDBACK_PATH_BUSES: Array = [
+	AudioConstants.BUS_MASTER,
+	AudioConstants.BUS_SFX,
+	AudioConstants.BUS_SFX_MENU,
+]
+
 const SLIDER_PROPERTIES: Dictionary = {
 	AudioConstants.BUS_MASTER: "master_slider",
 	AudioConstants.BUS_MUSIC: "music_slider",
@@ -211,7 +220,8 @@ func test_repeated_programmatic_value_does_not_repeat_backend_update(
 	assert_false(FileAccess.file_exists(TEST_CONFIG_PATH))
 
 
-## A mouse drag remains manual without keyboard focus, including the Master feedback hold.
+## A mouse drag remains manual without keyboard focus, including the feedback hold on every
+## bus the click plays through (SFX_Menu, SFX, Master; Issue #1047).
 func test_unfocused_drag_to_zero_is_manual(bus: String = use_parameters(ALL_BUSES)) -> void:
 	var slider: VolumeSlider = _slider(bus)
 	assert_false(slider.has_focus(), "Precondition: drag has no keyboard focus")
@@ -219,15 +229,15 @@ func test_unfocused_drag_to_zero_is_manual(bus: String = use_parameters(ALL_BUSE
 	press.button_index = MOUSE_BUTTON_LEFT
 	press.pressed = true
 	slider._on_gui_input(press)
-	_needs_hold_wait = bus == AudioConstants.BUS_MASTER
+	_needs_hold_wait = bus in FEEDBACK_PATH_BUSES
 	slider.value = 0.0
 
 	assert_true(AudioManager.get_muted(bus))
 	assert_eq(_count_confirmation_clicks(), 1, "Manual transition confirms exactly once")
 	assert_false(slider.save_debounce_timer.is_stopped(), "Manual changes schedule persistence")
-	if bus == AudioConstants.BUS_MASTER:
+	if bus in FEEDBACK_PATH_BUSES:
 		var index: int = AudioServer.get_bus_index(bus)
-		assert_false(AudioServer.is_bus_mute(index), "Master remains audible during feedback")
+		assert_false(AudioServer.is_bus_mute(index), bus + " remains audible during feedback")
 		assert_almost_eq(
 			db_to_linear(AudioServer.get_bus_volume_db(index)),
 			AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR,

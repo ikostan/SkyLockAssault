@@ -147,7 +147,8 @@ func _notification(what: int) -> void:
 ## Routes through AudioManager.change_volume() (Issue #1042). The slider states its own intent:
 ## a change is manual only while it is being dragged or has focus, the same check as
 ## _handle_slider_sfx(). AudioManager applies the near-zero auto-mute rule and writes the mixer.
-## change_volume() is not awaited: the Master feedback hold finishes inside the autoload.
+## change_volume() is not awaited: the feedback hold (Master, SFX or SFX_Menu) finishes inside
+## the autoload.
 ## :param new_value: The new volume level from the slider (0.0 to 1.0).
 ## :type new_value: float
 ## :rtype: void
