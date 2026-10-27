@@ -31,7 +31,6 @@ const ALL_BUSES: Array = [
 	AudioConstants.BUS_SFX_ROTORS,
 	AudioConstants.BUS_SFX_MENU,
 ]
-
 ## Buses off the click's path (SFX_Menu -> SFX -> Master): muting them never silences it.
 const OFF_PATH_BUSES: Array = [
 	AudioConstants.BUS_MUSIC,
@@ -863,9 +862,9 @@ func test_down_up_within_delay_ends_unmuted(bus: String = use_parameters(ALL_BUS
 	assert_almost_eq(_hw_linear(bus), RAISED_VOLUME, 0.0001)
 
 
-## The generation token is gone from the manager and the menu. The pending-hold counter added
-## for Issue #1075 is not a token (it only decides when the mixer is written), and an idle
-## manager carries none of it: every hold from earlier tests has ended (after_each waits).
+## The generation token is gone from the manager and the menu. The click-window counter
+## (Issues #1075, #1047) is not a token (it only decides when the mixer is written), and an
+## idle manager has no window open: every click from earlier tests has finished.
 ## :rtype: void
 func test_no_hold_token_remains() -> void:
 	assert_false("_master_hold_token" in AudioManager, "No token in AudioManager")
@@ -874,9 +873,7 @@ func test_no_hold_token_remains() -> void:
 	for prop: Dictionary in menu_script.get_script_property_list():
 		menu_props.append(prop["name"])
 	assert_false(menu_props.has("_master_zero_token"), "No token in the Audio Settings menu")
-	assert_true(
-		AudioManager._pending_feedback_holds.is_empty(), "No pending-hold count left at rest"
-	)
+	assert_eq(AudioManager._clicks_in_flight, 0, "No click window left open at rest")
 
 
 ## An unattached manager takes the immediate Master cutoff path without needing a timer.
@@ -986,8 +983,6 @@ func test_regression_overlapping_master_holds_preserve_final_state(
 	assert_signal_not_emitted(AudioManager, "mute_toggled")
 
 
-
-
 # ==========================================
 # NEAR-ZERO FOLLOW-UPS DURING THE MASTER HOLD (Issue #1075)
 # ==========================================
@@ -1092,21 +1087,21 @@ func test_audible_updates_during_master_hold_apply_immediately(
 	assert_almost_eq(_hw_linear(bus), START_VOLUME, 0.0001)
 
 
-## While a newer hold is still pending, the first hold's timer must neither mute nor unmute
-## Master: only the last hold re-syncs the mixer. Deterministic on purpose: two real 0.15 s
-## timers started apart can fire in the same frame after a frame hitch, so the newer hold is
-## kept pending by holding its count open instead of racing a second timer.
+## While a newer click is still streaming, the first hold's timer must neither mute nor unmute
+## Master: only the last click window re-syncs the mixer. Deterministic on purpose: two real
+## 0.15 s timers started apart can fire in the same frame after a frame hitch, so the newer
+## click's window is held open by hand and closed with _end_click_window().
 ## :rtype: void
 func test_regression_first_of_overlapping_holds_leaves_second_alone() -> void:
 	var bus: String = AudioConstants.BUS_MASTER
 	AudioManager.change_volume(bus, 0.0, true)
-	assert_eq(AudioManager._pending_feedback_holds.get(bus, 0), 1, "Hold 1 is pending")
-	# Hold 2 is still pending when hold 1 ends.
-	AudioManager._pending_feedback_holds[bus] = 2
+	assert_eq(AudioManager._clicks_in_flight, 1, "Click 1's window is open")
+	# Click 2 is still streaming when click 1's window closes.
+	AudioManager._clicks_in_flight += 1
 
 	await wait_seconds(HOLD_WAIT)
 
-	assert_eq(AudioManager._pending_feedback_holds.get(bus, 0), 1, "Only hold 1 has ended")
+	assert_eq(AudioManager._clicks_in_flight, 1, "Only click 1's window has closed")
 	assert_true(AudioManager.get_muted(bus), "The manager state is muted throughout")
 	assert_false(_hw_muted(bus), "Hold 1 must not mute Master under the second click")
 	assert_almost_eq(
@@ -1116,19 +1111,23 @@ func test_regression_first_of_overlapping_holds_leaves_second_alone() -> void:
 		"Master is still at the hold level"
 	)
 
-	AudioManager._release_feedback_hold(bus)
-	assert_true(AudioManager._pending_feedback_holds.is_empty(), "Releasing hold 2 drains it")
+	AudioManager._end_click_window()
+
+	assert_eq(AudioManager._clicks_in_flight, 0, "Closing click 2's window drains it")
+	assert_true(_hw_muted(bus), "The last window re-syncs Master to muted")
+	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
 
 
 ## Two real overlapping manual holds (down, up, down within the delay) both settle: Master
-## ends muted in the mixer and no pending-hold count is left behind.
+## ends muted in the mixer and no click window is left open. Each of the three manual
+## transitions plays its own click, so three windows are open at once.
 ## :rtype: void
 func test_overlapping_real_master_holds_settle_muted_and_drain() -> void:
 	var bus: String = AudioConstants.BUS_MASTER
 	AudioManager.change_volume(bus, 0.0, true)
 	await AudioManager.change_volume(bus, RAISED_VOLUME, true)
 	AudioManager.change_volume(bus, 0.0, true)
-	assert_eq(AudioManager._pending_feedback_holds.get(bus, 0), 2, "Two holds are pending")
+	assert_eq(AudioManager._clicks_in_flight, 3, "Three click windows are open")
 	assert_false(_hw_muted(bus), "Master is held audible for the second click")
 
 	await wait_seconds(HOLD_WAIT)
@@ -1136,9 +1135,7 @@ func test_overlapping_real_master_holds_settle_muted_and_drain() -> void:
 	assert_true(AudioManager.get_muted(bus))
 	assert_true(_hw_muted(bus), "The last hold mutes Master when it ends")
 	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
-	assert_true(AudioManager._pending_feedback_holds.is_empty(), "No hold state left behind")
-
-
+	assert_eq(AudioManager._clicks_in_flight, 0, "No click window left open")
 
 
 # ==========================================
@@ -1226,7 +1223,7 @@ func test_manual_feedback_path_hold_then_flatten(
 
 	assert_true(_hw_muted(bus), bus + " is muted in the mixer once the hold ends")
 	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
-	assert_true(AudioManager._pending_feedback_holds.is_empty(), "No hold state left behind")
+	assert_eq(AudioManager._clicks_in_flight, 0, "No click window left open")
 
 
 ## Buses off the path are muted right away even for manual changes: no hold, no hold state.
@@ -1238,7 +1235,7 @@ func test_off_path_manual_auto_mute_has_no_hold(
 
 	assert_true(_hw_muted(bus), bus + " is muted in the mixer immediately")
 	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
-	assert_true(AudioManager._pending_feedback_holds.is_empty(), "No hold for off-path buses")
+	assert_false(AudioManager._is_path_write_deferred(bus), "Off-path writes are never deferred")
 	assert_true(_click_chain_audible(), "Muting an off-path bus never silences the click")
 
 
@@ -1252,7 +1249,7 @@ func test_programmatic_feedback_path_auto_mute_has_no_hold(
 	assert_true(_hw_muted(bus), bus + " is muted in the mixer immediately")
 	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
 	assert_false(SfxManager.is_any_sfx_playing(), "Programmatic changes never play SFX")
-	assert_true(AudioManager._pending_feedback_holds.is_empty())
+	assert_eq(AudioManager._clicks_in_flight, 0, "Programmatic changes open no click window")
 
 
 ## The Issue #1075 guard covers the new path buses too: a near-zero follow-up during an SFX or
@@ -1308,7 +1305,7 @@ func test_feedback_hold_rerouting_changes_manual_cutoff(
 	AudioServer.set_bus_send(menu_idx, AudioConstants.BUS_MUSIC)
 
 	AudioManager.change_volume(bus, 0.0, true)
-	var held: bool = AudioManager._has_pending_feedback_hold(bus)
+	var held: bool = AudioManager._is_path_write_deferred(bus)
 	var mixer_muted: bool = _hw_muted(bus)
 	var mixer_volume: float = _hw_linear(bus)
 	var menu_audible: bool = not _hw_muted(AudioConstants.BUS_SFX_MENU)
@@ -1320,7 +1317,9 @@ func test_feedback_hold_rerouting_changes_manual_cutoff(
 	assert_eq(mixer_muted, not should_hold)
 	var expected_volume: float = AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR if should_hold else 0.0
 	assert_almost_eq(mixer_volume, expected_volume, 0.0001)
-	assert_true(menu_audible and music_audible and master_audible, "The rerouted path stays unmuted")
+	assert_true(
+		menu_audible and music_audible and master_audible, "The rerouted path stays unmuted"
+	)
 	assert_true(SfxManager.is_any_sfx_playing(), "Manual transitions still play a click")
 	assert_true(AudioManager.get_muted(bus), "The logical mute is immediate")
 
@@ -1328,7 +1327,7 @@ func test_feedback_hold_rerouting_changes_manual_cutoff(
 
 	assert_true(_hw_muted(bus), "The final mute applies even after the route changes back")
 	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
-	assert_true(AudioManager._pending_feedback_holds.is_empty())
+	assert_eq(AudioManager._clicks_in_flight, 0, "No click window left open")
 
 
 ## Repeated boundary updates on the newly held buses neither cut off nor replay the click.
@@ -1357,7 +1356,7 @@ func test_feedback_hold_sfx_boundary_follow_ups(
 		assert_true(AudioManager.get_muted(bus))
 		assert_false(_hw_muted(bus), "At-or-below-threshold updates preserve the hold")
 		assert_almost_eq(_hw_linear(bus), AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR, 0.0001)
-		assert_eq(AudioManager._pending_feedback_holds.get(bus, 0), 1, "No extra hold")
+		assert_eq(AudioManager._clicks_in_flight, 1, "No extra click window")
 		assert_false(SfxManager.is_any_sfx_playing(), "No new click without a crossing")
 
 	assert_signal_emit_count(AudioManager, "volume_changed", 3)
@@ -1366,7 +1365,7 @@ func test_feedback_hold_sfx_boundary_follow_ups(
 
 	assert_true(_hw_muted(bus))
 	assert_almost_eq(_hw_linear(bus), threshold / 2.0, 0.000001)
-	assert_true(AudioManager._pending_feedback_holds.is_empty())
+	assert_eq(AudioManager._clicks_in_flight, 0, "No click window left open")
 	assert_signal_emit_count(AudioManager, "volume_changed", 3, "Settling only writes the mixer")
 	assert_signal_not_emitted(AudioManager, "mute_toggled")
 
@@ -1383,7 +1382,7 @@ func test_feedback_hold_sfx_raise_at_boundary(bus: String = use_parameters(HELD_
 	assert_false(AudioManager.get_muted(bus))
 	assert_false(_hw_muted(bus), "An upward crossing applies before the hold timer ends")
 	assert_almost_eq(_hw_linear(bus), raised, 0.0000001)
-	assert_eq(AudioManager._pending_feedback_holds.get(bus, 0), 1, "The old timer is still pending")
+	assert_eq(AudioManager._clicks_in_flight, 1, "The old click window is still open")
 	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [bus, false])
 	SfxManager.stop_all_sfx()
 
@@ -1391,7 +1390,7 @@ func test_feedback_hold_sfx_raise_at_boundary(bus: String = use_parameters(HELD_
 
 	assert_false(_hw_muted(bus), "The old timer must preserve the newer unmute")
 	assert_almost_eq(_hw_linear(bus), raised, 0.0000001)
-	assert_true(AudioManager._pending_feedback_holds.is_empty())
+	assert_eq(AudioManager._clicks_in_flight, 0, "No click window left open")
 	assert_signal_emit_count(AudioManager, "mute_toggled", 1)
 	assert_false(SfxManager.is_any_sfx_playing(), "Settling does not replay the click")
 
@@ -1413,7 +1412,7 @@ func test_feedback_hold_sfx_overlaps_preserve_latest_state(
 	AudioManager.change_volume(bus, 0.0, true)
 	await AudioManager.change_volume(bus, RAISED_VOLUME)
 	AudioManager.change_volume(bus, 0.0, true)
-	assert_eq(AudioManager._pending_feedback_holds.get(bus, 0), 2)
+	assert_eq(AudioManager._clicks_in_flight, 2, "One window per manual click")
 	assert_false(_hw_muted(bus))
 	assert_almost_eq(_hw_linear(bus), AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR, 0.0001)
 	AudioManager.set_bus_state(bus, START_VOLUME, final_muted)
@@ -1425,7 +1424,7 @@ func test_feedback_hold_sfx_overlaps_preserve_latest_state(
 	assert_eq(AudioManager.get_bus_state(bus), {"volume": START_VOLUME, "muted": final_muted})
 	assert_eq(_hw_muted(bus), final_muted)
 	assert_almost_eq(_hw_linear(bus), START_VOLUME, 0.0001)
-	assert_true(AudioManager._pending_feedback_holds.is_empty())
+	assert_eq(AudioManager._clicks_in_flight, 0, "No click window left open")
 	assert_signal_not_emitted(AudioManager, "volume_changed")
 	assert_signal_not_emitted(AudioManager, "mute_toggled")
 	assert_false(SfxManager.is_any_sfx_playing())
@@ -1438,13 +1437,16 @@ func test_feedback_hold_buses_settle_independently(
 		[AudioConstants.BUS_MASTER, AudioConstants.BUS_SFX, AudioConstants.BUS_SFX_MENU]
 	)
 ) -> void:
-	var buses: Array = [AudioConstants.BUS_MASTER, AudioConstants.BUS_SFX, AudioConstants.BUS_SFX_MENU]
+	var buses: Array = [
+		AudioConstants.BUS_MASTER, AudioConstants.BUS_SFX, AudioConstants.BUS_SFX_MENU
+	]
 	for bus: String in buses:
 		AudioManager.change_volume(bus, 0.0, true)
 	await AudioManager.change_volume(raised_bus, RAISED_VOLUME)
 
+	assert_eq(AudioManager._clicks_in_flight, 3, "One window per manual click")
 	for bus: String in buses:
-		assert_eq(AudioManager._pending_feedback_holds.get(bus, 0), 1, bus + " owns its hold")
+		assert_true(AudioManager._is_path_write_deferred(bus), bus + " is still held")
 		assert_false(_hw_muted(bus))
 		var expected: float = (
 			RAISED_VOLUME if bus == raised_bus else AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR
@@ -1458,21 +1460,21 @@ func test_feedback_hold_buses_settle_independently(
 		assert_eq(AudioManager.get_muted(bus), should_mute)
 		assert_eq(_hw_muted(bus), should_mute, bus + " settles from its own state")
 		assert_almost_eq(_hw_linear(bus), 0.0 if should_mute else RAISED_VOLUME, 0.0001)
-	assert_true(AudioManager._pending_feedback_holds.is_empty())
+	assert_eq(AudioManager._clicks_in_flight, 0, "No click window left open")
 
 
-## Cleanup must retain outstanding counts so an old timer cannot consume a newer hold.
+## Cleanup must retain open click windows so an old timer cannot close a newer one early.
 ## :rtype: void
 func test_feedback_hold_cleanup_preserves_pending_count(
 	bus: String = use_parameters(HELD_SFX_BUSES)
 ) -> void:
 	AudioManager.change_volume(bus, 0.0, true)
 	AudioManager.cleanup_for_test()
-	assert_eq(AudioManager._pending_feedback_holds.get(bus, 0), 1, "Cleanup preserves the timer's hold")
+	assert_eq(AudioManager._clicks_in_flight, 1, "Cleanup keeps the open click window")
 
 	await AudioManager.change_volume(bus, RAISED_VOLUME)
 	AudioManager.change_volume(bus, 0.0, true)
-	assert_eq(AudioManager._pending_feedback_holds.get(bus, 0), 2, "The new hold has its own count")
+	assert_eq(AudioManager._clicks_in_flight, 2, "The new click has its own window")
 	assert_false(_hw_muted(bus))
 	assert_almost_eq(_hw_linear(bus), AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR, 0.0001)
 
@@ -1481,7 +1483,7 @@ func test_feedback_hold_cleanup_preserves_pending_count(
 	assert_true(AudioManager.get_muted(bus))
 	assert_true(_hw_muted(bus))
 	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
-	assert_true(AudioManager._pending_feedback_holds.is_empty())
+	assert_eq(AudioManager._clicks_in_flight, 0, "No click window left open")
 
 
 ## New path buses also take the immediate branch when their manager has no SceneTree.
@@ -1497,5 +1499,106 @@ func test_feedback_hold_sfx_outside_tree_is_immediate(
 	assert_true(manager.get_muted(bus))
 	assert_true(_hw_muted(bus), "An unattached manager cannot defer the hardware cutoff")
 	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
-	assert_true(manager._pending_feedback_holds.is_empty())
+	assert_eq(manager._clicks_in_flight, 0, "An unattached manager opens no click window")
 	assert_true(SfxManager.is_any_sfx_playing(), "The manual transition still requests feedback")
+
+
+## Cross-bus overlap (review on #1047): SFX_Menu is auto-muted, then SFX, and a later click is
+## still streaming when the first windows close. SFX_Menu's timer must not mute SFX_Menu (or
+## SFX) under that click: both stay held until the last window closes, then both are muted.
+## The later click's window is held open by hand, so the check does not race real timers.
+## :rtype: void
+func test_regression_cross_bus_holds_wait_for_last_click() -> void:
+	var menu_bus: String = AudioConstants.BUS_SFX_MENU
+	var sfx_bus: String = AudioConstants.BUS_SFX
+	AudioManager.change_volume(menu_bus, 0.0, true)
+	AudioManager.change_volume(sfx_bus, 0.0, true)
+	AudioManager._clicks_in_flight += 1  # A later click still streaming through both buses
+
+	await wait_seconds(HOLD_WAIT)
+
+	assert_eq(AudioManager._clicks_in_flight, 1, "Only the later click's window is open")
+	for bus: String in [menu_bus, sfx_bus]:
+		assert_true(AudioManager.get_muted(bus), bus + " is muted in the manager")
+		assert_false(_hw_muted(bus), bus + " must not be muted under the later click")
+		assert_almost_eq(
+			_hw_linear(bus), AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR, 0.0001, bus + " held"
+		)
+	assert_true(_click_chain_audible(), "The later click can still be heard")
+
+	AudioManager._end_click_window()
+
+	for bus: String in [menu_bus, sfx_bus]:
+		assert_true(_hw_muted(bus), bus + " is muted once the last window closes")
+		assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
+
+
+## Same cross-bus sequence with real timers only: both holds settle and nothing stays open.
+## :rtype: void
+func test_cross_bus_real_holds_settle_muted() -> void:
+	AudioManager.change_volume(AudioConstants.BUS_SFX_MENU, 0.0, true)
+	AudioManager.change_volume(AudioConstants.BUS_SFX, 0.0, true)
+	assert_eq(AudioManager._clicks_in_flight, 2, "One window per click")
+
+	await wait_seconds(HOLD_WAIT)
+
+	for bus: String in HELD_SFX_BUSES:
+		assert_true(_hw_muted(bus), bus + " is muted after both holds")
+		assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
+	assert_eq(AudioManager._clicks_in_flight, 0, "No click window left open")
+
+
+## A programmatic mute of a feedback-path bus while a click streams (review on #1047) is
+## deferred: the manager state flips now, the mixer mutes when the last window closes.
+## :rtype: void
+func test_regression_programmatic_toggle_mute_waits_for_click(
+	bus: String = use_parameters([AudioConstants.BUS_MASTER, AudioConstants.BUS_SFX])
+) -> void:
+	AudioManager.change_volume(AudioConstants.BUS_SFX_MENU, 0.0, true)
+	watch_signals(AudioManager)
+
+	await AudioManager.toggle_mute(bus, true)
+
+	assert_true(AudioManager.get_muted(bus), "The manager state flips immediately")
+	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [bus, true])
+	assert_false(_hw_muted(bus), bus + " is not muted under the streaming click")
+	assert_true(_click_chain_audible(), "The click can still be heard")
+
+	await wait_seconds(HOLD_WAIT)
+
+	assert_true(_hw_muted(bus), bus + " is muted once the click has finished")
+	assert_almost_eq(_hw_linear(bus), START_VOLUME, 0.0001, "Muted at its own volume")
+
+
+## Off-path programmatic mutes and any unmute still apply at once while a click streams.
+## :rtype: void
+func test_toggle_mute_during_click_applies_immediately_when_safe() -> void:
+	var master: String = AudioConstants.BUS_MASTER
+	AudioManager.change_volume(master, 0.0, true)
+
+	await AudioManager.toggle_mute(AudioConstants.BUS_MUSIC, true)
+	assert_true(_hw_muted(AudioConstants.BUS_MUSIC), "An off-path mute is never deferred")
+
+	await AudioManager.toggle_mute(master, false)
+	assert_false(_hw_muted(master), "An unmute applies immediately during the hold")
+	assert_gt(_hw_linear(master), AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD, "Volume restored")
+
+
+## A manual mute toggle's own click keeps the path open (review on #1047): when its delay
+## ends while another click is still streaming, the toggled bus is not muted yet; the last
+## window mutes it. The other click's window is held open by hand to avoid a timer race.
+## :rtype: void
+func test_regression_manual_toggle_mute_waits_for_last_click() -> void:
+	var bus: String = AudioConstants.BUS_SFX
+	AudioManager.toggle_mute(bus, true, true)
+	assert_eq(AudioManager._clicks_in_flight, 1, "The toggle's click opens a window")
+	AudioManager._clicks_in_flight += 1  # Another click still streaming after the toggle's
+
+	await wait_seconds(HOLD_WAIT)
+
+	assert_true(AudioManager.get_muted(bus))
+	assert_false(_hw_muted(bus), "The toggle's delay must not cut the other click short")
+
+	AudioManager._end_click_window()
+
+	assert_true(_hw_muted(bus), "The last window applies the toggled mute")

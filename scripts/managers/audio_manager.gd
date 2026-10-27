@@ -49,7 +49,8 @@ var _last_audible_volume: Dictionary = {}
 ## on SFX_Menu and passes through every bus on its feedback path (SFX_Menu -> SFX -> Master),
 ## so while any window is open, a write that would silence one of those buses is deferred:
 ## the mixer is kept at FEEDBACK_HOLD_VOLUME_LINEAR (or left as is) instead. When the last
-## window closes, the whole path is re-synced from the manager's current state. Tracking
+## window closes, every bus whose write was deferred is re-synced from the manager's current
+## state (see _deferred_buses). Tracking
 ## clicks rather than buses covers overlaps across buses (SFX_Menu then SFX within the delay)
 ## and mute toggles, not just repeated updates on one bus. In memory only.
 ## Not a generation token: it only decides when the mixer is written, never which state wins;
@@ -57,6 +58,11 @@ var _last_audible_volume: Dictionary = {}
 ## Deliberately not cleared by cleanup_for_test(): a window still awaiting its timer would
 ## then close a newer window early.
 var _clicks_in_flight: int = 0
+## Buses whose silencing write was deferred while a click window was open, used as a set.
+## Recorded per bus rather than re-derived from the feedback path when the last window
+## closes, so a bus held under one routing is still re-synced if the route changes before
+## then. Cleared after that re-sync; like _clicks_in_flight, kept by cleanup_for_test().
+var _deferred_buses: Dictionary = {}
 
 
 func _ready() -> void:
@@ -361,6 +367,7 @@ func change_volume(bus_name: String, volume: float, is_manual_interaction: bool 
 	else:
 		# A click is still streaming through this bus (Issues #1075, #1047): writing the muted
 		# state now would cut it short. The last click window re-syncs this newest state.
+		_deferred_buses[bus_name] = true
 		_apply_feedback_hold_level(bus_name)
 
 	# --- AUTO-MUTE ON CROSSING DOWN TO NEAR-ZERO ---
@@ -421,14 +428,14 @@ func _play_confirmation_click() -> void:
 	_end_click_window()
 
 
-## Closes one confirmation-click window. When it was the last one, re-syncs every bus on the
-## feedback path from the manager's current state and emits feedback_path_settled.
+## Closes one confirmation-click window. When it was the last one, re-syncs every bus whose
+## write was deferred from the manager's current state and emits feedback_path_settled.
 ## Never drops below zero, so a stray call cannot open a negative balance.
 ## :rtype: void
 func _end_click_window() -> void:
 	_clicks_in_flight = maxi(_clicks_in_flight - 1, 0)
 	if _clicks_in_flight == 0:
-		_resync_feedback_path()
+		_resync_deferred_buses()
 		feedback_path_settled.emit()
 
 
@@ -453,19 +460,22 @@ func _sync_bus_or_defer(bus_name: String) -> void:
 	var volume: float = get_volume(bus_name)
 	var at_or_below: bool = volume <= AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD
 	if (get_muted(bus_name) or at_or_below) and _is_path_write_deferred(bus_name):
+		_deferred_buses[bus_name] = true
 		if at_or_below:
 			_apply_feedback_hold_level(bus_name)
 		return
 	apply_volume_to_bus(bus_name, volume, get_muted(bus_name))
 
 
-## Re-applies the current state of every bus on the feedback path to AudioServer. Runs when
-## the last click window closes; buses that were never deferred just get their state again.
+## Re-applies the current state of every bus whose write was deferred, then forgets them.
+## Runs when the last click window closes. Uses the recorded buses, not the current feedback
+## path, so a bus held before a re-route is still settled.
 ## :rtype: void
-func _resync_feedback_path() -> void:
-	for bus: String in AudioConstants.BUS_CONFIG.keys():
-		if _is_in_feedback_path(bus):
-			apply_volume_to_bus(bus, get_volume(bus), get_muted(bus))
+func _resync_deferred_buses() -> void:
+	var buses: Array = _deferred_buses.keys()
+	_deferred_buses.clear()
+	for bus: String in buses:
+		apply_volume_to_bus(bus, get_volume(bus), get_muted(bus))
 
 
 ## Writes FEEDBACK_HOLD_VOLUME_LINEAR to a bus's AudioServer volume so the confirmation click
