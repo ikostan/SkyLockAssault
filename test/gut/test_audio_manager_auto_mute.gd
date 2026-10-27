@@ -12,7 +12,9 @@
 ## volume stay put. The raw setters (set_volume, set_bus_state, config load, reset) must never
 ## apply the rule. Once an auto-mute settles, AudioServer is re-synced from the manager's
 ## current state, so the mixer mute flag always matches and stale hold timers need no token
-## (Issue #1041). Every behavior is parameterized over the six buses.
+## (Issue #1041). A pending Master hold also owns the mixer against at-or-below-threshold
+## follow-ups and earlier overlapping timers (Issue #1075).
+## Every behavior is parameterized over the six buses.
 
 extends "res://addons/gut/test.gd"
 
@@ -852,7 +854,9 @@ func test_down_up_within_delay_ends_unmuted(bus: String = use_parameters(ALL_BUS
 	assert_almost_eq(_hw_linear(bus), RAISED_VOLUME, 0.0001)
 
 
-## The generation token is gone from the manager and the menu.
+## The generation token is gone from the manager and the menu. The pending-hold counter added
+## for Issue #1075 is not a token (it only decides when the mixer is written), and an idle
+## manager carries none of it: every hold from earlier tests has ended (after_each waits).
 ## :rtype: void
 func test_no_hold_token_remains() -> void:
 	assert_false("_master_hold_token" in AudioManager, "No token in AudioManager")
@@ -861,6 +865,9 @@ func test_no_hold_token_remains() -> void:
 	for prop: Dictionary in menu_script.get_script_property_list():
 		menu_props.append(prop["name"])
 	assert_false(menu_props.has("_master_zero_token"), "No token in the Audio Settings menu")
+	assert_true(
+		AudioManager._pending_feedback_holds.is_empty(), "No pending-hold count left at rest"
+	)
 
 
 ## An unattached manager takes the immediate Master cutoff path without needing a timer.
@@ -968,3 +975,156 @@ func test_regression_overlapping_master_holds_preserve_final_state(
 	assert_almost_eq(_hw_linear(bus), START_VOLUME, 0.0001)
 	assert_signal_not_emitted(AudioManager, "volume_changed")
 	assert_signal_not_emitted(AudioManager, "mute_toggled")
+
+
+
+
+# ==========================================
+# NEAR-ZERO FOLLOW-UPS DURING THE MASTER HOLD (Issue #1075)
+# ==========================================
+
+
+## Builds [value, is_manual] for at-or-below-threshold follow-ups from both callers.
+## :rtype: Array
+static func _near_zero_follow_ups() -> Array:
+	var rows: Array = []
+	var threshold: float = AudioConstants.AUTO_MUTE_VOLUME_THRESHOLD
+	for value: float in [0.0, threshold / 2.0, threshold]:
+		for is_manual: bool in [false, true]:
+			rows.append([value, is_manual])
+	return rows
+
+
+## An at-or-below follow-up during the hold is not a new crossing, but it must not hard-mute
+## Master under the click either: Master stays at the hold level, then is muted at the
+## follow-up's volume once MUTE_HARDWARE_DELAY ends.
+## :rtype: void
+func test_regression_near_zero_follow_up_keeps_master_hold(
+	params: Array = use_parameters(_near_zero_follow_ups())
+) -> void:
+	var bus: String = AudioConstants.BUS_MASTER
+	var value: float = params[0]
+	var is_manual: bool = params[1]
+	AudioManager.change_volume(bus, 0.0, true)
+	watch_signals(AudioManager)
+
+	await AudioManager.change_volume(bus, value, is_manual)
+
+	assert_false(_hw_muted(bus), "The follow-up must not hard-mute Master during the hold")
+	assert_almost_eq(
+		_hw_linear(bus),
+		AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR,
+		0.0001,
+		"Master stays at the hold level"
+	)
+	assert_true(SfxManager.is_any_sfx_playing(), "The confirmation click is still playing")
+	assert_eq(_mute_emits_for(bus), 0, "Already muted: the follow-up is not a transition")
+
+	await wait_seconds(HOLD_WAIT)
+
+	assert_eq(AudioManager.get_volume(bus), value)
+	assert_true(AudioManager.get_muted(bus))
+	assert_true(_hw_muted(bus), "Master is muted once the hold ends")
+	assert_almost_eq(_hw_linear(bus), value, 0.000001, "The hold re-syncs to the newest volume")
+
+
+## A programmatic crossing down during a pending hold (after an audible raise) starts no hold
+## of its own and must not settle early: Master goes back to the hold level, and the pending
+## hold mutes it when it ends.
+## :rtype: void
+func test_regression_crossing_down_during_hold_waits_for_master_hold(
+	is_manual_raise: bool = use_parameters([false, true])
+) -> void:
+	var bus: String = AudioConstants.BUS_MASTER
+	AudioManager.change_volume(bus, 0.0, true)
+	await AudioManager.change_volume(bus, RAISED_VOLUME, is_manual_raise)
+	assert_false(_hw_muted(bus), "Precondition: the raise applied immediately")
+
+	await AudioManager.change_volume(bus, 0.0)
+
+	assert_true(AudioManager.get_muted(bus), "The crossing still auto-mutes the manager state")
+	assert_false(_hw_muted(bus), "The pending hold owns the mixer until it ends")
+	assert_almost_eq(
+		_hw_linear(bus),
+		AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR,
+		0.0001,
+		"Master goes back to the hold level, not to the raised volume"
+	)
+
+	await wait_seconds(HOLD_WAIT)
+
+	assert_true(_hw_muted(bus), "The pending hold mutes Master when it ends")
+	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
+
+
+## Above-threshold updates during the hold still apply immediately (TC-AM-016 unchanged),
+## whether they cross up or stay audible.
+## :rtype: void
+func test_audible_updates_during_master_hold_apply_immediately(
+	is_manual: bool = use_parameters([false, true])
+) -> void:
+	var bus: String = AudioConstants.BUS_MASTER
+	AudioManager.change_volume(bus, 0.0, true)
+
+	await AudioManager.change_volume(bus, RAISED_VOLUME, is_manual)
+
+	assert_false(_hw_muted(bus), "Crossing up unmutes the mixer right away")
+	assert_almost_eq(_hw_linear(bus), RAISED_VOLUME, 0.0001, "...at the raised volume")
+
+	await AudioManager.change_volume(bus, START_VOLUME, is_manual)
+
+	assert_false(_hw_muted(bus))
+	assert_almost_eq(_hw_linear(bus), START_VOLUME, 0.0001, "Audible updates apply right away")
+
+	await wait_seconds(HOLD_WAIT)
+
+	assert_false(AudioManager.get_muted(bus))
+	assert_false(_hw_muted(bus), "The stale hold re-applies the newest unmuted state")
+	assert_almost_eq(_hw_linear(bus), START_VOLUME, 0.0001)
+
+
+## While a newer hold is still pending, the first hold's timer must neither mute nor unmute
+## Master: only the last hold re-syncs the mixer. Deterministic on purpose: two real 0.15 s
+## timers started apart can fire in the same frame after a frame hitch, so the newer hold is
+## kept pending by holding its count open instead of racing a second timer.
+## :rtype: void
+func test_regression_first_of_overlapping_holds_leaves_second_alone() -> void:
+	var bus: String = AudioConstants.BUS_MASTER
+	AudioManager.change_volume(bus, 0.0, true)
+	assert_eq(AudioManager._pending_feedback_holds.get(bus, 0), 1, "Hold 1 is pending")
+	# Hold 2 is still pending when hold 1 ends.
+	AudioManager._pending_feedback_holds[bus] = 2
+
+	await wait_seconds(HOLD_WAIT)
+
+	assert_eq(AudioManager._pending_feedback_holds.get(bus, 0), 1, "Only hold 1 has ended")
+	assert_true(AudioManager.get_muted(bus), "The manager state is muted throughout")
+	assert_false(_hw_muted(bus), "Hold 1 must not mute Master under the second click")
+	assert_almost_eq(
+		_hw_linear(bus),
+		AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR,
+		0.0001,
+		"Master is still at the hold level"
+	)
+
+	AudioManager._release_feedback_hold(bus)
+	assert_true(AudioManager._pending_feedback_holds.is_empty(), "Releasing hold 2 drains it")
+
+
+## Two real overlapping manual holds (down, up, down within the delay) both settle: Master
+## ends muted in the mixer and no pending-hold count is left behind.
+## :rtype: void
+func test_overlapping_real_master_holds_settle_muted_and_drain() -> void:
+	var bus: String = AudioConstants.BUS_MASTER
+	AudioManager.change_volume(bus, 0.0, true)
+	await AudioManager.change_volume(bus, RAISED_VOLUME, true)
+	AudioManager.change_volume(bus, 0.0, true)
+	assert_eq(AudioManager._pending_feedback_holds.get(bus, 0), 2, "Two holds are pending")
+	assert_false(_hw_muted(bus), "Master is held audible for the second click")
+
+	await wait_seconds(HOLD_WAIT)
+
+	assert_true(AudioManager.get_muted(bus))
+	assert_true(_hw_muted(bus), "The last hold mutes Master when it ends")
+	assert_almost_eq(_hw_linear(bus), 0.0, 0.0001)
+	assert_true(AudioManager._pending_feedback_holds.is_empty(), "No hold state left behind")

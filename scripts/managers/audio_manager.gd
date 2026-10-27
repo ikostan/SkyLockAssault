@@ -40,6 +40,18 @@ var current_config_path: String = Settings.CONFIG_PATH
 ## that must not overwrite the volume the user actually had before the drag.
 var _last_audible_volume: Dictionary = {}
 
+# --- FEEDBACK HOLD STATE (Issue #1075) ---
+## Number of pending feedback holds per bus name. In memory only; an absent key means none.
+## A counter, not a flag: a down, up, down sequence within MUTE_HARDWARE_DELAY starts two
+## overlapping holds, and only the last one to end may re-sync AudioServer. While a bus has a
+## pending hold, at-or-below-threshold updates keep the mixer at the hold level instead of
+## writing the muted state, so they cannot cut the confirmation click short.
+## Not a generation token: it only decides when the mixer is written, never which state wins.
+## The hold's re-sync still re-reads the newest state (Issue #1041).
+## Deliberately not cleared by cleanup_for_test(): a hold still awaiting its timer would then
+## decrement a newer hold's count and end it early.
+var _pending_feedback_holds: Dictionary = {}
+
 
 func _ready() -> void:
 	## Initializes to defaults and loads/applies volumes.
@@ -275,7 +287,10 @@ func toggle_mute(bus_name: String, muted: bool, is_manual_interaction: bool = fa
 ## Runs with no menu in the tree, and callers state their intent instead of the code guessing
 ## it from slider focus:
 ##   1. The previous volume is read, then the new one is stored (volume_changed fires) and
-##      written to AudioServer with the bus's current mute flag.
+##      written to AudioServer with the bus's current mute flag. Exception (Issue #1075):
+##      while a feedback hold is pending on the bus, an at-or-below-threshold value keeps the
+##      mixer at FEEDBACK_HOLD_VOLUME_LINEAR instead, so a follow-up near-zero update cannot
+##      hard-mute the bus under the click. Above-threshold values always apply immediately.
 ##   2. The rule is edge-triggered on AUTO_MUTE_VOLUME_THRESHOLD crossings (Issue #1040):
 ##      - crossing down (old > T, new <= T) on an unmuted bus -> auto-mute;
 ##      - crossing up (old <= T, new > T) on a muted bus -> auto-unmute.
@@ -293,7 +308,9 @@ func toggle_mute(bus_name: String, muted: bool, is_manual_interaction: bool = fa
 ##      re-synced from the manager's current state, so is_bus_mute() always matches
 ##      get_muted() (Issue #1041). The re-sync re-reads state instead of writing a fixed value,
 ##      so a late timer after a newer change or unmute just re-applies that newer state:
-##      no generation token is needed.
+##      no generation token is needed. While another hold on the same bus is still pending,
+##      the re-sync is left to that hold, so an earlier timer never ends a later hold early
+##      (Issue #1075); the pending-hold counter decides only when to write, never what.
 ##   6. Auto-unmute (any bus, manual or programmatic) applies the unmuted state to
 ##      AudioServer immediately.
 ## Does not save: persistence stays with callers (slider debounce, web bridge).
@@ -321,7 +338,12 @@ func change_volume(bus_name: String, volume: float, is_manual_interaction: bool 
 	set_volume(bus_name, volume)
 	# The manager owns the AudioServer write for this path. This write carries the pre-rule
 	# mute flag; a transition below re-syncs AudioServer once the rule has run.
-	apply_volume_to_bus(bus_name, volume, get_muted(bus_name))
+	if volume > threshold or not _has_pending_feedback_hold(bus_name):
+		apply_volume_to_bus(bus_name, volume, get_muted(bus_name))
+	else:
+		# A pending hold owns the mixer until it ends (Issue #1075): writing the muted state
+		# now would cut the click short. The hold re-syncs to this newest state when it ends.
+		_apply_feedback_hold_level(bus_name)
 
 	var is_master: bool = bus_name == AudioConstants.BUS_MASTER
 
@@ -332,18 +354,23 @@ func change_volume(bus_name: String, volume: float, is_manual_interaction: bool 
 		if is_manual_interaction:
 			SfxManager.play_sfx(AudioConstants.SFX_CHECK)
 
-		if is_manual_interaction and is_master and is_inside_tree():
-			var bus_idx: int = AudioServer.get_bus_index(bus_name)
-			if bus_idx != -1:
-				# Hold an audible level so the click can stream out before the re-sync.
-				AudioServer.set_bus_volume_db(
-					bus_idx, linear_to_db(AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR)
-				)
-				await get_tree().create_timer(AudioConstants.MUTE_HARDWARE_DELAY).timeout
+		if (
+			is_manual_interaction
+			and is_master
+			and is_inside_tree()
+			and AudioServer.get_bus_index(bus_name) != -1
+		):
+			# Hold an audible level so the click can stream out before the re-sync.
+			_pending_feedback_holds[bus_name] = int(_pending_feedback_holds.get(bus_name, 0)) + 1
+			_apply_feedback_hold_level(bus_name)
+			await get_tree().create_timer(AudioConstants.MUTE_HARDWARE_DELAY).timeout
+			_release_feedback_hold(bus_name)
 
 		# Re-sync from current state (Issue #1041). After a hold, a newer change or unmute
 		# made during the delay is what gets applied, so a stale timer is harmless.
-		apply_volume_to_bus(bus_name, get_volume(bus_name), get_muted(bus_name))
+		# A later hold that is still pending re-syncs when it ends instead (Issue #1075).
+		if not _has_pending_feedback_hold(bus_name):
+			apply_volume_to_bus(bus_name, get_volume(bus_name), get_muted(bus_name))
 
 	# --- AUTO-UNMUTE ON CROSSING UP FROM NEAR-ZERO ---
 	elif crossed_up and get_muted(bus_name):
@@ -353,6 +380,40 @@ func change_volume(bus_name: String, volume: float, is_manual_interaction: bool 
 		apply_volume_to_bus(bus_name, volume, false)
 		if is_manual_interaction:
 			SfxManager.play_sfx(AudioConstants.SFX_CHECK)
+
+
+## Returns true while at least one feedback hold is pending on a bus (Issue #1075).
+## :param bus_name: Name of the bus.
+## :type bus_name: String
+## :rtype: bool
+func _has_pending_feedback_hold(bus_name: String) -> bool:
+	return int(_pending_feedback_holds.get(bus_name, 0)) > 0
+
+
+## Ends one pending feedback hold on a bus, dropping the key once none are left, so an idle
+## manager carries no hold state (Issue #1075).
+## :param bus_name: Name of the bus.
+## :type bus_name: String
+## :rtype: void
+func _release_feedback_hold(bus_name: String) -> void:
+	var remaining: int = int(_pending_feedback_holds.get(bus_name, 0)) - 1
+	if remaining > 0:
+		_pending_feedback_holds[bus_name] = remaining
+	else:
+		_pending_feedback_holds.erase(bus_name)
+
+
+## Writes FEEDBACK_HOLD_VOLUME_LINEAR to a bus's AudioServer volume so the confirmation click
+## stays audible. Leaves the AudioServer mute flag alone: the hold's re-sync owns that.
+## :param bus_name: Name of the bus.
+## :type bus_name: String
+## :rtype: void
+func _apply_feedback_hold_level(bus_name: String) -> void:
+	var bus_idx: int = AudioServer.get_bus_index(bus_name)
+	if bus_idx != -1:
+		AudioServer.set_bus_volume_db(
+			bus_idx, linear_to_db(AudioConstants.FEEDBACK_HOLD_VOLUME_LINEAR)
+		)
 
 
 ## Guarantees a bus is never left unmuted at (near) zero volume (Issue #1046).
