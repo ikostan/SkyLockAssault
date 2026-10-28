@@ -907,6 +907,13 @@ def classify_member(decl: MemberDeclaration) -> None:
         decl.status = DocStatus.MISSING
         return
 
+    # The contract validator bans these tags outright. Regenerating the member is
+    # safer than migrating it: a migrated `@return` on a void function, or an
+    # `@param` beside an existing `[param]`, would still fail the validator.
+    if any(RE_DOXYGEN_TAG.search(line) for line in decl.existing_doc_lines):
+        decl.status = DocStatus.NON_COMPLIANT
+        return
+
     raw_payload = normalize_doc_payload(decl.existing_doc_lines)
     payload = validate_and_tokenize_bbcode(raw_payload, f"Docstring for '{decl.name}'")
     if payload.errors:
@@ -1031,6 +1038,8 @@ def verify_modification_allowlist(original: str, proposed: str) -> bool:
 # carried legacy tags on private members (e.g. player.gd `_ready`, `_on_fuel_changed`)
 # failed the validator every run. Those lines are rewritten deterministically here,
 # without Gemini, so the generator's output matches the validator's whole-file scope.
+# Public members with legacy tags are NON_COMPLIANT (classify_member) and regenerated,
+# so in practice only private members' doc blocks reach this migration.
 LEGACY_DOC_MAX_WIDTH = 95  # Same margin as format_doc_lines (gdlint limit is 100)
 RE_LEGACY_PARAM = re.compile(
     r"^([ \t]*)##[ \t]*@param[ \t]+([A-Za-z_][A-Za-z0-9_]*)[ \t]*:?[ \t]*(.*?)[ \t]*$"
@@ -1038,13 +1047,22 @@ RE_LEGACY_PARAM = re.compile(
 RE_LEGACY_RETURN = re.compile(r"^([ \t]*)##[ \t]*@return\b[ \t]*:?[ \t]*(.*?)[ \t]*$")
 RE_LEGACY_BRIEF = re.compile(r"^([ \t]*)##[ \t]*@brief\b[ \t]*:?[ \t]*(.*?)[ \t]*$")
 RE_VOID_RETURN_TEXT = re.compile(r"^void\b[ \t.]*$", re.IGNORECASE)
+RE_NATIVE_PARAM_TAG = re.compile(r"\[param[ \t]+([A-Za-z_][A-Za-z0-9_]*)\]")
+RE_STANDALONE_ANNOTATION = re.compile(r"^[ \t]*@[A-Za-z_]\w*(?:\(.*\))?[ \t]*$")
+RE_VOID_FUNC_DECL = re.compile(
+    r"^[ \t]*(?:static[ \t]+)?func\b[^#]*->[ \t]*void[ \t]*:"
+)
 
 
-def _wrap_doc_line(indent: str, lead: str, text: str, eol: str) -> List[str]:
+def _wrap_doc_line(
+    indent: str, lead: str, text: str, eol: str, newline: str
+) -> List[str]:
     """Wraps text as GDScript doc lines with a target width of 95 columns.
 
-    Preserves indent on each line, adds lead only to the first, and appends eol
-    to every returned line. Empty or whitespace-only text returns an empty list.
+    Preserves indent on each line and adds lead only to the first. Every line but
+    the last ends with newline; the last keeps eol, the source line's own ending
+    (empty on a final line without one), so wrapped lines never run together.
+    Empty or whitespace-only text returns an empty list.
     """
     wrapped = textwrap.wrap(
         text,
@@ -1052,15 +1070,28 @@ def _wrap_doc_line(indent: str, lead: str, text: str, eol: str) -> List[str]:
         initial_indent=f"{indent}## {lead}",
         subsequent_indent=f"{indent}## ",
     )
-    return [f"{line}{eol}" for line in wrapped]
+    return [
+        f"{line}{eol if i == len(wrapped) - 1 else newline}"
+        for i, line in enumerate(wrapped)
+    ]
+
+
+def _doc_block_target(lines: List[str], after: int) -> str:
+    """Returns the first line after a doc block that is not a standalone annotation."""
+    for line in lines[after:]:
+        if not RE_STANDALONE_ANNOTATION.match(line.rstrip("\r\n")):
+            return line
+    return ""
 
 
 def migrate_legacy_doxygen(source: str) -> Tuple[str, List[Tuple[int, str]]]:
     """Rewrites legacy Doxygen doc lines to Native BBCode.
 
-    - `## @param name: desc` -> `## [param name]: desc`
+    - `## @param name: desc` -> `## [param name]: desc`, or removed when the same
+      doc block already has `[param name]` (no duplicate tags)
     - `## @return: void` / bare `## @return` -> line removed
-    - `## @return: text` -> `## Returns text`
+    - `## @return: text` -> `## Returns text`, or removed when the documented
+      declaration is a `-> void` function
     - `## @brief text` -> `## text` (removed when empty)
 
     Returns the migrated source and (1-based input line number, stripped line text)
@@ -1068,40 +1099,70 @@ def migrate_legacy_doxygen(source: str) -> Tuple[str, List[Tuple[int, str]]]:
     @param without a description). Those lines remain unchanged in the result.
     Only `##` lines are touched, so the non-doc byte integrity guards still hold.
     """
+    lines = source.splitlines(keepends=True)
+    newline = "\r\n" if "\r\n" in source else "\n"
     out: List[str] = []
     unmigrated: List[Tuple[int, str]] = []
-    for idx, line in enumerate(source.splitlines(keepends=True), start=1):
-        body = line.rstrip("\r\n")
-        eol = line[len(body) :]
-        if not RE_DOC_LINE.match(body) or not RE_DOXYGEN_TAG.search(body):
+    idx = 0
+    while idx < len(lines):
+        if not RE_DOC_LINE.match(lines[idx].rstrip("\r\n")):
+            out.append(lines[idx])
+            idx += 1
+            continue
+
+        # One doc block: consecutive `##` lines and the declaration they document
+        block_end = idx
+        while block_end < len(lines) and RE_DOC_LINE.match(
+            lines[block_end].rstrip("\r\n")
+        ):
+            block_end += 1
+        documents_void = bool(
+            RE_VOID_FUNC_DECL.match(_doc_block_target(lines, block_end))
+        )
+        seen_params = {
+            name
+            for line in lines[idx:block_end]
+            if not RE_DOXYGEN_TAG.search(line)
+            for name in RE_NATIVE_PARAM_TAG.findall(line)
+        }
+
+        for line_no in range(idx, block_end):
+            line = lines[line_no]
+            body = line.rstrip("\r\n")
+            eol = line[len(body) :]
+            if not RE_DOXYGEN_TAG.search(body):
+                out.append(line)
+                continue
+
+            m = RE_LEGACY_PARAM.match(body)
+            if m and m.group(3) and not RE_DOXYGEN_TAG.search(m.group(3)):
+                indent, name, desc = m.groups()
+                if name not in seen_params:
+                    seen_params.add(name)
+                    out.extend(
+                        _wrap_doc_line(indent, f"[param {name}]: ", desc, eol, newline)
+                    )
+                continue
+
+            m = RE_LEGACY_RETURN.match(body)
+            if m and not RE_DOXYGEN_TAG.search(m.group(2)):
+                indent, text = m.groups()
+                text = RE_LEADING_RETURNS.sub("", text).strip()
+                if documents_void or not text or RE_VOID_RETURN_TEXT.match(text):
+                    continue
+                out.extend(_wrap_doc_line(indent, "Returns ", text, eol, newline))
+                continue
+
+            m = RE_LEGACY_BRIEF.match(body)
+            if m and not RE_DOXYGEN_TAG.search(m.group(2)):
+                indent, text = m.groups()
+                if text:
+                    out.extend(_wrap_doc_line(indent, "", text, eol, newline))
+                continue
+
+            unmigrated.append((line_no + 1, body.strip()))
             out.append(line)
-            continue
-
-        m = RE_LEGACY_PARAM.match(body)
-        if m and m.group(3):
-            indent, name, desc = m.groups()
-            if not RE_DOXYGEN_TAG.search(desc):
-                out.extend(_wrap_doc_line(indent, f"[param {name}]: ", desc, eol))
-                continue
-
-        m = RE_LEGACY_RETURN.match(body)
-        if m and not RE_DOXYGEN_TAG.search(m.group(2)):
-            indent, text = m.groups()
-            text = RE_LEADING_RETURNS.sub("", text).strip()
-            if not text or RE_VOID_RETURN_TEXT.match(text):
-                continue
-            out.extend(_wrap_doc_line(indent, "Returns ", text, eol))
-            continue
-
-        m = RE_LEGACY_BRIEF.match(body)
-        if m and not RE_DOXYGEN_TAG.search(m.group(2)):
-            indent, text = m.groups()
-            if text:
-                out.extend(_wrap_doc_line(indent, "", text, eol))
-            continue
-
-        unmigrated.append((idx, body.strip()))
-        out.append(line)
+        idx = block_end
     return "".join(out), unmigrated
 
 
@@ -1367,15 +1428,17 @@ def prepare_file_change(
 ) -> Optional[ProposedFileChange]:
     """Prepares documentation changes for a UTF-8 GDScript file without writing it.
 
-    Returns None when no members need documentation or generated source contains
-    legacy Doxygen tags that cannot be migrated. Ambiguous members are skipped.
+    Returns None when no members need documentation, or when a legacy Doxygen tag
+    outside the regenerated members cannot be migrated (checked before any Gemini
+    call, with a ::warning per line). Ambiguous members are skipped.
     In check_mode, returns the unchanged source and actionable member count without
     generation or legacy migration; client is not required.
 
     Otherwise, uses client to generate missing or noncompliant documentation and
     migrates legacy tags throughout the file, including private members. Returns
     the original and proposed source with the count of regenerated members, after
-    verifying documentation compliance and preservation of non-documentation bytes.
+    verifying that regenerated and previously compliant members are compliant and
+    that non-documentation bytes are preserved.
 
     Raises SystemExit(1) on read or decoding errors, a required but missing client,
     exhausted generation retries, or failed parsing or integrity checks.
@@ -1415,6 +1478,29 @@ def prepare_file_change(
             file_path, original_source, original_source, len(actionable)
         )
 
+    # Phase 1b: Legacy Doxygen pre-check, before any Gemini call. Doc lines of
+    # actionable members are regenerated anyway; any other line the migration
+    # cannot rewrite would fail the contract validator, so the file is skipped.
+    # Checking the original source keeps the warning's line numbers correct.
+    regenerated_lines = set()
+    for decl in actionable:
+        first_doc_line = decl.insert_line - len(decl.existing_doc_lines)
+        regenerated_lines.update(range(first_doc_line, decl.insert_line))
+    _, unmigrated = migrate_legacy_doxygen(original_source)
+    blocking = [(n, text) for n, text in unmigrated if n not in regenerated_lines]
+    if blocking:
+        for line_no, text in blocking:
+            print(
+                f"::warning file={file_path},line={line_no}::Legacy Doxygen tag cannot be "
+                f"migrated automatically: {text}"
+            )
+        print(
+            f"[SKIPPED: LEGACY DOXYGEN] {file_path.name}: fix the lines above by hand; "
+            "the rest of the batch continues.",
+            flush=True,
+        )
+        return None
+
     # Phase 2: Generation & Construction
     if not client:
         print("[FAIL-CLOSED] API client required in write mode.")
@@ -1451,17 +1537,12 @@ def prepare_file_change(
     # tags the generator never regenerates would fail the run after the PR is built.
     proposed_source, unmigrated = migrate_legacy_doxygen(proposed_source)
     if unmigrated:
-        for line_no, text in unmigrated:
-            print(
-                f"::warning file={file_path},line={line_no}::Legacy Doxygen tag cannot be "
-                f"migrated automatically: {text}"
-            )
+        # Phase 1b already skipped files with such lines; reaching here is a bug.
         print(
-            f"[SKIPPED: LEGACY DOXYGEN] {file_path.name}: fix the lines above by hand; "
-            "the rest of the batch continues.",
-            flush=True,
+            f"[FAIL-CLOSED] Legacy Doxygen left after migration in {file_path.name}: "
+            f"{unmigrated}"
         )
-        return None
+        sys.exit(1)
 
     # Phase 3: Post-Injection Contract Re-Verification
     post_declarations, ok = parse_declarations_from_ast(proposed_source)
@@ -1521,6 +1602,20 @@ def prepare_file_change(
                     f"[DEBUG] Param mismatch: Expected {set(orig_decl.params)}, got {set(payload.param_names)}",
                     flush=True,
                 )
+            sys.exit(1)
+
+    # Members that were already compliant must stay compliant: the migration may
+    # only touch doc lines the generator does not regenerate.
+    original_status = {(d.kind, d.name): d.status for d in declarations}
+    for key, post_decl in post_by_key.items():
+        if original_status.get(key) != DocStatus.COMPLIANT:
+            continue
+        classify_member(post_decl)
+        if post_decl.status != DocStatus.COMPLIANT:
+            print(
+                f"[FAIL-CLOSED] Compliant declaration {post_decl.name} became "
+                f"{post_decl.status.value} after legacy migration in {file_path.name}."
+            )
             sys.exit(1)
 
     # Phase 4: Byte Integrity & Modification Allowlist Guards

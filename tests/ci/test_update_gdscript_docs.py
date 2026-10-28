@@ -1205,6 +1205,7 @@ def test_migrate_wraps_long_param_lines_under_gdlint_limit(docs):
     assert lines[0].startswith("\t## [param value]: ")
     assert all(line.startswith("\t## ") for line in lines)
     assert all(len(line) <= docs.LEGACY_DOC_MAX_WIDTH for line in lines)
+    assert unwrap_param(lines, "value") == desc
 
 
 @pytest.mark.parametrize(
@@ -1330,6 +1331,105 @@ def test_migrate_preserves_mixed_eols_and_non_doc_bytes(docs):
     assert docs.migrate_legacy_doxygen(migrated) == (migrated, [])
 
 
+def unwrap_param(lines, name):
+    """Rejoin a wrapped `[param name]:` description into one string."""
+    first, *rest = (line.strip() for line in lines)
+    prefix = f"## [param {name}]: "
+    assert first.startswith(prefix), first
+    return " ".join([first[len(prefix) :]] + [line[len("## ") :] for line in rest])
+
+
+@pytest.mark.parametrize("newline", ["\n", "\r\n"], ids=["lf", "crlf"])
+def test_migrate_wraps_final_line_without_eol(docs, newline):
+    """Sourcery: a long last line with no EOL must still wrap into separate lines.
+
+    Wrapped lines are separated by the file's own newline style, and the last
+    one keeps the missing EOL, so the file ending does not change.
+    """
+    desc = " ".join(["word"] * 30)
+    source = f"extends Node{newline}{newline}## @param value: {desc}"
+    migrated, unmigrated = docs.migrate_legacy_doxygen(source)
+    assert unmigrated == []
+    assert not migrated.endswith(("\n", "\r"))
+    doc_lines = migrated.split(newline)[2:]
+    assert len(doc_lines) > 1
+    assert all(len(line) <= docs.LEGACY_DOC_MAX_WIDTH for line in doc_lines)
+    assert all("\n" not in line and "\r" not in line for line in doc_lines)
+    assert unwrap_param(doc_lines, "value") == desc
+
+
+def test_migrate_drops_legacy_param_already_documented_natively(docs):
+    """Sourcery: a block with `[param x]` and `@param x` keeps one `[param x]` only."""
+    source = (
+        "## Moves.\n"
+        "## [param x]: The native description.\n"
+        "## @param x: The legacy description.\n"
+        "## @param y: The second value.\n"
+        "## @param y: A repeated legacy entry.\n"
+        "func _move(x: int, y: int) -> void:\n"
+        "\tpass\n"
+    )
+    migrated, unmigrated = docs.migrate_legacy_doxygen(source)
+    assert unmigrated == []
+    assert migrated == (
+        "## Moves.\n"
+        "## [param x]: The native description.\n"
+        "## [param y]: The second value.\n"
+        "func _move(x: int, y: int) -> void:\n"
+        "\tpass\n"
+    )
+
+
+@pytest.mark.parametrize(
+    "declaration, kept",
+    [
+        ("func _speed() -> void:", False),
+        ("static func _speed() -> void:", False),
+        ("func _speed() -> float:", True),
+        ("func _speed():", True),
+    ],
+    ids=["void", "static-void", "float", "untyped"],
+)
+def test_migrate_return_text_follows_declared_return_type(docs, declaration, kept):
+    """Sourcery: `@return: text` on a `-> void` function is dropped, not migrated
+    into a `Returns` line the validator rejects for void functions.
+    """
+    source = (
+        "## Reads the speed.\n"
+        "## @return: The current speed.\n"
+        '@warning_ignore("unused_parameter")\n'
+        f"{declaration}\n"
+        "\tpass\n"
+    )
+    migrated, unmigrated = docs.migrate_legacy_doxygen(source)
+    assert unmigrated == []
+    assert ("## Returns The current speed.\n" in migrated) is kept
+    assert not docs.RE_DOXYGEN_TAG.search(migrated)
+
+
+@pytest.mark.parametrize(
+    "legacy_line",
+    [
+        "## @return: The value.\n",
+        "## @brief Moves the plane.\n",
+        "## Mirrors @param handling.\n",
+    ],
+    ids=["return", "brief", "mid-sentence"],
+)
+def test_public_member_with_legacy_tag_is_non_compliant(docs, legacy_line):
+    """Sourcery: public docs with legacy tags are regenerated, never migrated.
+
+    The tokenizer accepts these lines, so before the fix such members counted
+    as COMPLIANT and the migration rewrote them into validator failures.
+    """
+    source = f"extends Node\n\n\n## Moves.\n{legacy_line}func stop() -> void:\n\tpass\n"
+    decls, ok = docs.parse_declarations_from_ast(source)
+    assert ok
+    (decl,) = decls
+    docs.classify_member(decl)
+    assert decl.status == docs.DocStatus.NON_COMPLIANT
+
+
 LEGACY_FIXTURE_GD = (
     "extends Node\n"
     "\n"
@@ -1360,7 +1460,8 @@ def test_generator_output_passes_validator_with_private_legacy_tags(
 ):
     """Regression for run 40159019327: the generator regenerated the public member,
     left private `_ready`/`_input` Doxygen tags in place, and the contract validator
-    (which scans every `##` line of a modified file) failed the job."""
+    (which scans every `##` line of a modified file) failed the job.
+    """
     gd_file = tmp_path / "player.gd"
     gd_file.write_text(LEGACY_FIXTURE_GD, encoding="utf-8")
     client = fake_client(gemini_reply(good_member()))
@@ -1383,8 +1484,9 @@ def test_generator_output_passes_validator_with_private_legacy_tags(
 def test_generator_skips_file_with_unmigratable_legacy_tag(
     docs, tmp_path, sleeps, capsys
 ):
-    """A tag the migration cannot rewrite skips that file (with a ::warning) instead
-    of producing a change the validator would reject later in the job."""
+    """A tag the migration cannot rewrite skips that file (with a ::warning) before
+    any Gemini call, instead of producing a change the validator would reject later.
+    """
     source = LEGACY_FIXTURE_GD.replace(
         "## Captures input events.\n", "## Captures input events, see @param below.\n"
     )
@@ -1395,10 +1497,115 @@ def test_generator_skips_file_with_unmigratable_legacy_tag(
     change = docs.prepare_file_change(client, gd_file, check_mode=False)
 
     assert change is None
+    client.models.generate_content.assert_not_called()
     out = capsys.readouterr().out
-    assert "::warning file=" in out
+    # Sourcery: the warning points at the line in the unchanged file on disk
+    assert f"::warning file={gd_file},line=10::" in out
     assert "[SKIPPED: LEGACY DOXYGEN] player.gd" in out
     assert gd_file.read_text(encoding="utf-8") == source
+
+
+def test_unmigratable_tag_in_regenerated_member_does_not_skip(
+    docs, validator, tmp_path, sleeps
+):
+    """A tag the migration cannot rewrite is fine inside a member Gemini regenerates."""
+    source = LEGACY_FIXTURE_GD.replace(
+        "## Moves focus.\n", "## Moves focus, see @param below.\n"
+    )
+    gd_file = tmp_path / "player.gd"
+    gd_file.write_text(source, encoding="utf-8")
+    client = fake_client(gemini_reply(good_member()))
+
+    change = docs.prepare_file_change(client, gd_file, check_mode=False)
+
+    assert change is not None
+    assert not docs.RE_DOXYGEN_TAG.search(change.proposed_source)
+    gd_file.write_text(change.proposed_source, encoding="utf-8")
+    assert validator.validate_file(gd_file) == []
+
+
+PUBLIC_LEGACY_FIXTURE_GD = LEGACY_FIXTURE_GD + (
+    "\n"
+    "\n"
+    "## Stops the rotors.\n"
+    "## @return: Nothing useful.\n"
+    "func stop() -> void:\n"
+    "\tpass\n"
+)
+
+
+def test_public_member_with_legacy_return_is_regenerated(
+    docs, validator, tmp_path, sleeps
+):
+    """Sourcery: a public void function with `@return: text` is regenerated by
+    Gemini, so no `Returns` line reaches the validator.
+    """
+    gd_file = tmp_path / "player.gd"
+    gd_file.write_text(PUBLIC_LEGACY_FIXTURE_GD, encoding="utf-8")
+    stop = good_member(name="stop", summary="Stops both rotors.", parameters=[])
+    client = fake_client(gemini_reply(good_member()), gemini_reply(stop))
+
+    change = docs.prepare_file_change(client, gd_file, check_mode=False)
+
+    assert change is not None
+    assert change.slots == 2 if hasattr(change, "slots") else True
+    assert "## Stops both rotors.\nfunc stop() -> void:\n" in change.proposed_source
+    assert "Returns" not in change.proposed_source
+    gd_file.write_text(change.proposed_source, encoding="utf-8")
+    assert validator.validate_file(gd_file) == []
+
+
+def test_generator_fails_closed_when_migration_breaks_compliant_member(
+    docs, tmp_path, sleeps, monkeypatch, capsys
+):
+    """Members that were COMPLIANT are re-verified after the whole-file migration."""
+    source = (
+        LEGACY_FIXTURE_GD + "\n\n## Stops the rotors.\nfunc stop() -> void:\n\tpass\n"
+    )
+    gd_file = tmp_path / "player.gd"
+    gd_file.write_text(source, encoding="utf-8")
+    real_migrate = docs.migrate_legacy_doxygen
+
+    def corrupting_migrate(text):
+        """Real migration, then an unclosed [b] in the compliant member's docs."""
+        migrated, unmigrated = real_migrate(text)
+        return migrated.replace("## Stops the rotors.\n", "## [b]Stops.\n"), unmigrated
+
+    monkeypatch.setattr(docs, "migrate_legacy_doxygen", corrupting_migrate)
+    client = fake_client(gemini_reply(good_member()))
+
+    with pytest.raises(SystemExit) as exc:
+        docs.prepare_file_change(client, gd_file, check_mode=False)
+
+    assert exc.value.code == 1
+    assert "Compliant declaration stop became" in capsys.readouterr().out
+    assert gd_file.read_text(encoding="utf-8") == source
+
+
+def test_generator_fails_closed_when_tags_survive_migration(
+    docs, tmp_path, sleeps, monkeypatch, capsys
+):
+    """Tags left after injection (pre-check bypassed) fail closed, never ship."""
+    gd_file = tmp_path / "player.gd"
+    gd_file.write_text(LEGACY_FIXTURE_GD, encoding="utf-8")
+    real_migrate = docs.migrate_legacy_doxygen
+    calls = []
+
+    def leaky_migrate(text):
+        """Pass the pre-check, then report a leftover tag after injection."""
+        calls.append(text)
+        migrated, _ = real_migrate(text)
+        return migrated, ([] if len(calls) == 1 else [(5, "## @return: void")])
+
+    monkeypatch.setattr(docs, "migrate_legacy_doxygen", leaky_migrate)
+    client = fake_client(gemini_reply(good_member()))
+
+    with pytest.raises(SystemExit) as exc:
+        docs.prepare_file_change(client, gd_file, check_mode=False)
+
+    assert exc.value.code == 1
+    assert len(calls) == 2
+    assert "Legacy Doxygen left after migration" in capsys.readouterr().out
 
 
 def test_generator_check_mode_leaves_legacy_docs_untouched(docs, tmp_path):
@@ -1486,7 +1693,9 @@ def test_write_continues_after_unsafe_legacy_file(
         assert docs.compute_non_doc_bytes_sha256(
             proposed
         ) == docs.compute_non_doc_bytes_sha256(LEGACY_FIXTURE_GD)
-    assert client.models.generate_content.call_count == 3
+    # The unsafe file is skipped before its Gemini call (Phase 1b), so only the two
+    # written files use quota; pacing between files is unchanged.
+    assert client.models.generate_content.call_count == 2
     assert sleeps == [docs.REQUEST_PACING_SECONDS] * 2
     assert "[SKIPPED: LEGACY DOXYGEN] b_two.gd" in capsys.readouterr().out
     assert sorted((scripts_tree / "scripts").rglob("*.*")) == sorted(paths)
