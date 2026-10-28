@@ -264,7 +264,8 @@ func _remove_event_from_conflicts(event: InputEvent, conflicts: Array[String]) -
 ## corresponding input event.
 ##
 ## [param serialized]: The serialized string starting with key, joybtn, or joyaxis.
-## Returns The deserialized InputEvent, or null if the string is invalid.
+## Returns the deserialized InputEvent, or null if the prefix or the numeric fields
+## are invalid. Unrecognized modifier tokens in a key string are ignored.
 func deserialize_event(serialized: String) -> InputEvent:
 	var event_to_return: InputEvent = null
 
@@ -902,7 +903,8 @@ func _normalize_input_value(value: Variant, action: String) -> Array[String]:
 ## for test suites to prevent direct access to private methods.
 ##
 ## [param config]: The configuration file containing action defaults to backfill.
-## Returns true if the operation succeeds, or false otherwise.
+## Returns true if any missing defaults were added to InputMap, or false if nothing
+## was missing.
 func backfill_missing_defaults(config: ConfigFile) -> bool:
 	return _add_missing_defaults(config)
 
