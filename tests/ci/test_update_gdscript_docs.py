@@ -1100,17 +1100,32 @@ def validator():
 @pytest.mark.parametrize(
     "line, expected",
     [
-        ("## @param event: The input event.\n", ["## [param event]: The input event.\n"]),
-        ("## @param event The input event.\n", ["## [param event]: The input event.\n"]),
-        ("\t## @param event: The input event.\n", ["\t## [param event]: The input event.\n"]),
+        (
+            "## @param event: The input event.\n",
+            ["## [param event]: The input event.\n"],
+        ),
+        (
+            "## @param event The input event.\n",
+            ["## [param event]: The input event.\n"],
+        ),
+        (
+            "\t## @param event: The input event.\n",
+            ["\t## [param event]: The input event.\n"],
+        ),
         ("## @return: void\n", []),
         ("## @return void.\n", []),
         ("## @return\n", []),
         ("## @return: The current speed.\n", ["## Returns The current speed.\n"]),
-        ("## @return: Returns the current speed.\n", ["## Returns the current speed.\n"]),
+        (
+            "## @return: Returns the current speed.\n",
+            ["## Returns the current speed.\n"],
+        ),
         ("## @brief Moves the plane.\n", ["## Moves the plane.\n"]),
         ("## @brief\n", []),
-        ("## @param event: The input event.\r\n", ["## [param event]: The input event.\r\n"]),
+        (
+            "## @param event: The input event.\r\n",
+            ["## [param event]: The input event.\r\n"],
+        ),
     ],
 )
 def test_migrate_rewrites_legacy_line(docs, line, expected):
