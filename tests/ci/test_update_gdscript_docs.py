@@ -1742,3 +1742,59 @@ def test_write_continues_after_unsafe_legacy_file(
     assert sleeps == [docs.REQUEST_PACING_SECONDS] * 2
     assert "[SKIPPED: LEGACY DOXYGEN] b_two.gd" in capsys.readouterr().out
     assert sorted((scripts_tree / "scripts").rglob("*.*")) == sorted(paths)
+
+
+# -----------------------------------------------------------------------------
+# 11. Production scripts stay migratable
+# -----------------------------------------------------------------------------
+PRODUCTION_SCRIPTS = sorted(
+    path
+    for subdir in ("core", "entities", "managers", "resources", "system", "ui")
+    for path in (PROJECT_ROOT / "scripts" / subdir).rglob("*.gd")
+)
+
+
+@pytest.mark.parametrize(
+    "script",
+    PRODUCTION_SCRIPTS,
+    ids=[p.relative_to(PROJECT_ROOT).as_posix() for p in PRODUCTION_SCRIPTS],
+)
+def test_production_script_legacy_docs_migrate_cleanly(docs, script):
+    """Every legacy Doxygen line in a real production script can be migrated.
+
+    A line the migration cannot rewrite (a tag mid-sentence, an empty @param)
+    makes the docs sync skip that whole file, so it would never be documented.
+    This catches such a line in the PR that adds it, not weeks later in the
+    scheduled run. The migration must also keep code bytes identical and be
+    idempotent, so a second docs sync run changes nothing.
+    """
+    source = script.read_text(encoding="utf-8")
+
+    migrated, unmigrated = docs.migrate_legacy_doxygen(source)
+
+    assert (
+        unmigrated == []
+    ), f"{script.name}: rewrite these doc lines by hand (Native BBCode): {unmigrated}"
+    assert not docs.RE_DOXYGEN_TAG.search(
+        "".join(
+            line
+            for line in migrated.splitlines(keepends=True)
+            if docs.RE_DOC_LINE.match(line.rstrip("\r\n"))
+        )
+    )
+    assert docs.compute_non_doc_bytes_sha256(
+        source
+    ) == docs.compute_non_doc_bytes_sha256(migrated)
+    assert docs.verify_modification_allowlist(source, migrated)
+    assert docs.migrate_legacy_doxygen(migrated) == (migrated, [])
+    assert all(
+        len(line.rstrip("\r\n")) <= 100
+        for line in migrated.splitlines()
+        if docs.RE_DOC_LINE.match(line)
+    )
+
+
+def test_production_scripts_are_found():
+    """Guards the parametrized test above against silently collecting nothing."""
+    assert len(PRODUCTION_SCRIPTS) >= 30
+    assert PROJECT_ROOT / "scripts/entities/player.gd" in PRODUCTION_SCRIPTS
