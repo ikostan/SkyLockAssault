@@ -137,6 +137,12 @@ func _run_fade_in_sequence() -> void:
 	else:
 		Globals.log_message("Invalid tween—grabbing focus immediately.", Globals.LogLevel.WARNING)
 
+	# GUARD 3: Another menu (e.g. Options) opened during the intro hid this one. Taking focus
+	# now would move keyboard/gamepad focus to a hidden StartButton and strand that menu.
+	if not start_button.is_visible_in_tree():
+		Globals.log_message("Main menu hidden—skipping intro focus.", Globals.LogLevel.DEBUG)
+		return
+
 	Globals.ensure_initial_focus(
 		start_button, [start_button, options_button, quit_button], "Main Menu"
 	)
