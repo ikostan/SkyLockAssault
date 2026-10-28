@@ -1041,6 +1041,11 @@ RE_VOID_RETURN_TEXT = re.compile(r"^void\b[ \t.]*$", re.IGNORECASE)
 
 
 def _wrap_doc_line(indent: str, lead: str, text: str, eol: str) -> List[str]:
+    """Wraps text as GDScript doc lines with a target width of 95 columns.
+
+    Preserves indent on each line, adds lead only to the first, and appends eol
+    to every returned line. Empty or whitespace-only text returns an empty list.
+    """
     wrapped = textwrap.wrap(
         text,
         width=LEGACY_DOC_MAX_WIDTH,
@@ -1058,8 +1063,9 @@ def migrate_legacy_doxygen(source: str) -> Tuple[str, List[Tuple[int, str]]]:
     - `## @return: text` -> `## Returns text`
     - `## @brief text` -> `## text` (removed when empty)
 
-    Returns the migrated source and the (line number, text) of tagged doc lines that
-    could not be migrated safely (tag mid-sentence, @param without a description).
+    Returns the migrated source and (1-based input line number, stripped line text)
+    pairs for tagged doc lines that could not be migrated safely (tag mid-sentence,
+    @param without a description). Those lines remain unchanged in the result.
     Only `##` lines are touched, so the non-doc byte integrity guards still hold.
     """
     out: List[str] = []
@@ -1359,6 +1365,21 @@ class ProposedFileChange:
 def prepare_file_change(
     client: Optional[genai.Client], file_path: Path, check_mode: bool
 ) -> Optional[ProposedFileChange]:
+    """Prepares documentation changes for a UTF-8 GDScript file without writing it.
+
+    Returns None when no members need documentation or generated source contains
+    legacy Doxygen tags that cannot be migrated. Ambiguous members are skipped.
+    In check_mode, returns the unchanged source and actionable member count without
+    generation or legacy migration; client is not required.
+
+    Otherwise, uses client to generate missing or noncompliant documentation and
+    migrates legacy tags throughout the file, including private members. Returns
+    the original and proposed source with the count of regenerated members, after
+    verifying documentation compliance and preservation of non-documentation bytes.
+
+    Raises SystemExit(1) on read or decoding errors, a required but missing client,
+    exhausted generation retries, or failed parsing or integrity checks.
+    """
     try:
         with open(file_path, "r", encoding="utf-8", newline="") as f:
             original_source = f.read()
