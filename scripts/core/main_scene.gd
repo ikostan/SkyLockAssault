@@ -294,11 +294,13 @@ func _process(_delta: float) -> void:
 
 ## Shows a temporary on-screen message non-blocking and centralizes flags.
 ##
-## Displays the specified text on the message label, automatically hiding it after four seconds
-## and resetting the correct flag based on the message type to prevent race conditions.
+## Displays the specified text on the message label and hides it after four seconds.
+## When the message expires, only the KEY_PRESS_UNBOUND flag is reset. The
+## CRITICAL_UNBOUND flag stays set so the warning shows once per session, until
+## [method clear_unbound_warning] is called after the bindings are fixed.
 ##
 ## [param text]: The message text to display on the label.
-## [param type]: The message type used to reset the correct flag.
+## [param type]: The message type; KEY_PRESS_UNBOUND resets its flag on expiry.
 func show_message(text: String, type: MessageType = MessageType.CRITICAL_UNBOUND) -> void:
 	if not is_instance_valid(message_label):
 		return
