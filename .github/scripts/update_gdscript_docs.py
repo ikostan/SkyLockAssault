@@ -1024,6 +1024,82 @@ def verify_modification_allowlist(original: str, proposed: str) -> bool:
 
 
 # -----------------------------------------------------------------------------
+# Legacy Doxygen Migration
+# -----------------------------------------------------------------------------
+# validate_gdscript_docs.py bans @param/@return/@brief on EVERY `##` line of a modified
+# file, but the generator only regenerates public members. A touched file that still
+# carried legacy tags on private members (e.g. player.gd `_ready`, `_on_fuel_changed`)
+# failed the validator every run. Those lines are rewritten deterministically here,
+# without Gemini, so the generator's output matches the validator's whole-file scope.
+LEGACY_DOC_MAX_WIDTH = 95  # Same margin as format_doc_lines (gdlint limit is 100)
+RE_LEGACY_PARAM = re.compile(
+    r"^([ \t]*)##[ \t]*@param[ \t]+([A-Za-z_][A-Za-z0-9_]*)[ \t]*:?[ \t]*(.*?)[ \t]*$"
+)
+RE_LEGACY_RETURN = re.compile(r"^([ \t]*)##[ \t]*@return\b[ \t]*:?[ \t]*(.*?)[ \t]*$")
+RE_LEGACY_BRIEF = re.compile(r"^([ \t]*)##[ \t]*@brief\b[ \t]*:?[ \t]*(.*?)[ \t]*$")
+RE_VOID_RETURN_TEXT = re.compile(r"^void\b[ \t.]*$", re.IGNORECASE)
+
+
+def _wrap_doc_line(indent: str, lead: str, text: str, eol: str) -> List[str]:
+    wrapped = textwrap.wrap(
+        text,
+        width=LEGACY_DOC_MAX_WIDTH,
+        initial_indent=f"{indent}## {lead}",
+        subsequent_indent=f"{indent}## ",
+    )
+    return [f"{line}{eol}" for line in wrapped]
+
+
+def migrate_legacy_doxygen(source: str) -> Tuple[str, List[Tuple[int, str]]]:
+    """Rewrites legacy Doxygen doc lines to Native BBCode.
+
+    - `## @param name: desc` -> `## [param name]: desc`
+    - `## @return: void` / bare `## @return` -> line removed
+    - `## @return: text` -> `## Returns text`
+    - `## @brief text` -> `## text` (removed when empty)
+
+    Returns the migrated source and the (line number, text) of tagged doc lines that
+    could not be migrated safely (tag mid-sentence, @param without a description).
+    Only `##` lines are touched, so the non-doc byte integrity guards still hold.
+    """
+    out: List[str] = []
+    unmigrated: List[Tuple[int, str]] = []
+    for idx, line in enumerate(source.splitlines(keepends=True), start=1):
+        body = line.rstrip("\r\n")
+        eol = line[len(body) :]
+        if not RE_DOC_LINE.match(body) or not RE_DOXYGEN_TAG.search(body):
+            out.append(line)
+            continue
+
+        m = RE_LEGACY_PARAM.match(body)
+        if m and m.group(3):
+            indent, name, desc = m.groups()
+            if not RE_DOXYGEN_TAG.search(desc):
+                out.extend(_wrap_doc_line(indent, f"[param {name}]: ", desc, eol))
+                continue
+
+        m = RE_LEGACY_RETURN.match(body)
+        if m and not RE_DOXYGEN_TAG.search(m.group(2)):
+            indent, text = m.groups()
+            text = RE_LEADING_RETURNS.sub("", text).strip()
+            if not text or RE_VOID_RETURN_TEXT.match(text):
+                continue
+            out.extend(_wrap_doc_line(indent, "Returns ", text, eol))
+            continue
+
+        m = RE_LEGACY_BRIEF.match(body)
+        if m and not RE_DOXYGEN_TAG.search(m.group(2)):
+            indent, text = m.groups()
+            if text:
+                out.extend(_wrap_doc_line(indent, "", text, eol))
+            continue
+
+        unmigrated.append((idx, body.strip()))
+        out.append(line)
+    return "".join(out), unmigrated
+
+
+# -----------------------------------------------------------------------------
 # Gemini Query
 # -----------------------------------------------------------------------------
 
@@ -1348,6 +1424,23 @@ def prepare_file_change(
         new_lines[insert_at:insert_at] = injected
 
     proposed_source = "".join(new_lines)
+
+    # Phase 2b: Legacy Doxygen migration over the whole file. The contract validator
+    # scans every `##` line of a modified file, private members included, so leftover
+    # tags the generator never regenerates would fail the run after the PR is built.
+    proposed_source, unmigrated = migrate_legacy_doxygen(proposed_source)
+    if unmigrated:
+        for line_no, text in unmigrated:
+            print(
+                f"::warning file={file_path},line={line_no}::Legacy Doxygen tag cannot be "
+                f"migrated automatically: {text}"
+            )
+        print(
+            f"[SKIPPED: LEGACY DOXYGEN] {file_path.name}: fix the lines above by hand; "
+            "the rest of the batch continues.",
+            flush=True,
+        )
+        return None
 
     # Phase 3: Post-Injection Contract Re-Verification
     post_declarations, ok = parse_declarations_from_ast(proposed_source)

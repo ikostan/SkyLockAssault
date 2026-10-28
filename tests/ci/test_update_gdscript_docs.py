@@ -1080,3 +1080,158 @@ def test_workflows_install_docs_requirements_file(workflow_path, job):
         re.search(r"\b(google-genai|gdtoolkit|pydantic)==", line)
         for line in active_lines
     )
+
+
+# -----------------------------------------------------------------------------
+# 10. Legacy Doxygen migration (run 40159019327: player.gd private members)
+# -----------------------------------------------------------------------------
+VALIDATOR = PROJECT_ROOT / ".github/scripts/validate_gdscript_docs.py"
+
+
+@pytest.fixture(scope="module")
+def validator():
+    """Load validate_gdscript_docs.py as a module (.github is not a package)."""
+    spec = importlib.util.spec_from_file_location("validate_gdscript_docs", VALIDATOR)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.parametrize(
+    "line, expected",
+    [
+        ("## @param event: The input event.\n", ["## [param event]: The input event.\n"]),
+        ("## @param event The input event.\n", ["## [param event]: The input event.\n"]),
+        ("\t## @param event: The input event.\n", ["\t## [param event]: The input event.\n"]),
+        ("## @return: void\n", []),
+        ("## @return void.\n", []),
+        ("## @return\n", []),
+        ("## @return: The current speed.\n", ["## Returns The current speed.\n"]),
+        ("## @return: Returns the current speed.\n", ["## Returns the current speed.\n"]),
+        ("## @brief Moves the plane.\n", ["## Moves the plane.\n"]),
+        ("## @brief\n", []),
+        ("## @param event: The input event.\r\n", ["## [param event]: The input event.\r\n"]),
+    ],
+)
+def test_migrate_rewrites_legacy_line(docs, line, expected):
+    """Each legacy tag shape becomes Native BBCode (or is dropped) with its EOL kept."""
+    migrated, unmigrated = docs.migrate_legacy_doxygen(line)
+    assert unmigrated == []
+    assert migrated == "".join(expected)
+    assert not docs.RE_DOXYGEN_TAG.search(migrated)
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "## Mirrors @param handling in the parser.\n",
+        "## @param event:\n",
+        "## @param event: See @return of fire().\n",
+    ],
+)
+def test_migrate_reports_lines_it_cannot_rewrite(docs, line):
+    """Mid-sentence tags and empty @param descriptions are left alone and reported."""
+    migrated, unmigrated = docs.migrate_legacy_doxygen(line)
+    assert migrated == line
+    assert unmigrated == [(1, line.strip())]
+
+
+def test_migrate_ignores_code_and_plain_comments(docs):
+    """Only `##` doc lines are touched; code and `#` comments keep their @ text."""
+    source = (
+        "# @param kept in a plain comment\n"
+        'var tag := "@return"\n'
+        "## @return: void\n"
+        "func _ready() -> void:\n"
+        "\tpass\n"
+    )
+    migrated, unmigrated = docs.migrate_legacy_doxygen(source)
+    assert unmigrated == []
+    assert migrated == source.replace("## @return: void\n", "")
+    assert docs.compute_non_doc_bytes_sha256(
+        source
+    ) == docs.compute_non_doc_bytes_sha256(migrated)
+    assert docs.verify_modification_allowlist(source, migrated)
+
+
+def test_migrate_wraps_long_param_lines_under_gdlint_limit(docs):
+    """`[param x]:` is longer than `@param x:`, so long lines are re-wrapped."""
+    desc = " ".join(["word"] * 30)
+    migrated, unmigrated = docs.migrate_legacy_doxygen(f"\t## @param value: {desc}\n")
+    assert unmigrated == []
+    lines = migrated.splitlines()
+    assert len(lines) > 1
+    assert lines[0].startswith("\t## [param value]: ")
+    assert all(line.startswith("\t## ") for line in lines)
+    assert all(len(line) <= docs.LEGACY_DOC_MAX_WIDTH for line in lines)
+
+
+LEGACY_FIXTURE_GD = (
+    "extends Node\n"
+    "\n"
+    "\n"
+    "## Called when the node enters the scene tree.\n"
+    "## @return: void\n"
+    "func _ready() -> void:\n"
+    "\tpass\n"
+    "\n"
+    "\n"
+    "## Captures input events.\n"
+    "## @param event: The input event detected by the engine.\n"
+    "## @return: void\n"
+    "func _input(event: InputEvent) -> void:\n"
+    "\tpass\n"
+    "\n"
+    "\n"
+    "## Moves focus.\n"
+    "## @param candidate: Control to focus.\n"
+    "## @return: void\n"
+    "func ensure_initial_focus(candidate: Control, allowed_controls: Array, context: String) -> void:\n"
+    "\tpass\n"
+)
+
+
+def test_generator_output_passes_validator_with_private_legacy_tags(
+    docs, validator, tmp_path, sleeps
+):
+    """Regression for run 40159019327: the generator regenerated the public member,
+    left private `_ready`/`_input` Doxygen tags in place, and the contract validator
+    (which scans every `##` line of a modified file) failed the job."""
+    gd_file = tmp_path / "player.gd"
+    gd_file.write_text(LEGACY_FIXTURE_GD, encoding="utf-8")
+    client = fake_client(gemini_reply(good_member()))
+
+    change = docs.prepare_file_change(client, gd_file, check_mode=False)
+
+    assert change is not None
+    assert not docs.RE_DOXYGEN_TAG.search(change.proposed_source)
+    assert "## [param event]: The input event detected by the engine.\n" in (
+        change.proposed_source
+    )
+    assert docs.compute_non_doc_bytes_sha256(
+        LEGACY_FIXTURE_GD
+    ) == docs.compute_non_doc_bytes_sha256(change.proposed_source)
+
+    gd_file.write_text(change.proposed_source, encoding="utf-8")
+    assert validator.validate_file(gd_file) == []
+
+
+def test_generator_skips_file_with_unmigratable_legacy_tag(
+    docs, tmp_path, sleeps, capsys
+):
+    """A tag the migration cannot rewrite skips that file (with a ::warning) instead
+    of producing a change the validator would reject later in the job."""
+    source = LEGACY_FIXTURE_GD.replace(
+        "## Captures input events.\n", "## Captures input events, see @param below.\n"
+    )
+    gd_file = tmp_path / "player.gd"
+    gd_file.write_text(source, encoding="utf-8")
+    client = fake_client(gemini_reply(good_member()))
+
+    change = docs.prepare_file_change(client, gd_file, check_mode=False)
+
+    assert change is None
+    out = capsys.readouterr().out
+    assert "::warning file=" in out
+    assert "[SKIPPED: LEGACY DOXYGEN] player.gd" in out
+    assert gd_file.read_text(encoding="utf-8") == source
