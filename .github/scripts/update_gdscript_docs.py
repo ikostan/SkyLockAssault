@@ -1049,9 +1049,7 @@ RE_LEGACY_BRIEF = re.compile(r"^([ \t]*)##[ \t]*@brief\b[ \t]*:?[ \t]*(.*?)[ \t]
 RE_VOID_RETURN_TEXT = re.compile(r"^void\b[ \t.]*$", re.IGNORECASE)
 RE_NATIVE_PARAM_TAG = re.compile(r"\[param[ \t]+([A-Za-z_][A-Za-z0-9_]*)\]")
 RE_STANDALONE_ANNOTATION = re.compile(r"^[ \t]*@[A-Za-z_]\w*(?:\(.*\))?[ \t]*$")
-RE_VOID_FUNC_DECL = re.compile(
-    r"^[ \t]*(?:static[ \t]+)?func\b[^#]*->[ \t]*void[ \t]*:"
-)
+RE_FUNC_START = re.compile(r"^[ \t]*(?:static[ \t]+)?func\b")
 
 
 def _wrap_doc_line(
@@ -1076,12 +1074,28 @@ def _wrap_doc_line(
     ]
 
 
-def _doc_block_target(lines: List[str], after: int) -> str:
-    """Returns the first line after a doc block that is not a standalone annotation."""
-    for line in lines[after:]:
-        if not RE_STANDALONE_ANNOTATION.match(line.rstrip("\r\n")):
-            return line
-    return ""
+def _doc_block_target_index(lines: List[str], after: int) -> Optional[int]:
+    """Returns the index of the first line after a doc block that is not a
+    standalone annotation, or None when the block ends the file.
+    """
+    for index in range(after, len(lines)):
+        if not RE_STANDALONE_ANNOTATION.match(lines[index].rstrip("\r\n")):
+            return index
+    return None
+
+
+def _documents_void_function(lines: List[str], block_end: int) -> bool:
+    """True when the doc block ending at block_end documents a `-> void` function.
+
+    Uses extract_return_type, which joins wrapped signature lines, so a signature
+    whose `-> void:` sits on a later line is still recognised (CodeRabbit, #1087).
+    """
+    target = _doc_block_target_index(lines, block_end)
+    return (
+        target is not None
+        and RE_FUNC_START.match(lines[target]) is not None
+        and extract_return_type(lines, target + 1) == "void"
+    )
 
 
 def migrate_legacy_doxygen(source: str) -> Tuple[str, List[Tuple[int, str]]]:
@@ -1116,9 +1130,7 @@ def migrate_legacy_doxygen(source: str) -> Tuple[str, List[Tuple[int, str]]]:
             lines[block_end].rstrip("\r\n")
         ):
             block_end += 1
-        documents_void = bool(
-            RE_VOID_FUNC_DECL.match(_doc_block_target(lines, block_end))
-        )
+        documents_void = _documents_void_function(lines, block_end)
         seen_params = {
             name
             for line in lines[idx:block_end]

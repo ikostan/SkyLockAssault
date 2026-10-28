@@ -1408,6 +1408,49 @@ def test_migrate_return_text_follows_declared_return_type(docs, declaration, kep
 
 
 @pytest.mark.parametrize(
+    "signature, kept",
+    [
+        ("func _move(\n\tx: int,\n\ty: int\n) -> void:\n", False),
+        ("static func _move(\n\tx: int, y: int\n) -> void:\n", False),
+        ("func _move(\n\tx: int,\n\ty: int\n) -> float:\n", True),
+        ("func _move(\n\tx: int,\n\ty: int\n):\n", True),
+        ("var speed: float = 0.0\n", True),
+    ],
+    ids=[
+        "wrapped-void",
+        "wrapped-static-void",
+        "wrapped-float",
+        "wrapped-untyped",
+        "var",
+    ],
+)
+def test_migrate_return_text_follows_wrapped_signature(docs, signature, kept):
+    """CodeRabbit: a signature whose `-> void:` is on a later line is still void.
+
+    Only a `func` declaration can be void; a `var` after the block keeps its text.
+    """
+    source = (
+        "## Moves the plane.\n"
+        "## @return: The new position.\n"
+        '@warning_ignore("unused_parameter")\n'
+        f"{signature}"
+        "\tpass\n"
+    )
+    migrated, unmigrated = docs.migrate_legacy_doxygen(source)
+    assert unmigrated == []
+    assert ("## Returns The new position.\n" in migrated) is kept
+    assert not docs.RE_DOXYGEN_TAG.search(migrated)
+    assert migrated.endswith(f"{signature}\tpass\n")
+
+
+def test_migrate_return_text_kept_when_block_ends_file(docs):
+    """A doc block with no declaration after it keeps its migrated Returns line."""
+    migrated, unmigrated = docs.migrate_legacy_doxygen("## @return: The value.\n")
+    assert unmigrated == []
+    assert migrated == "## Returns The value.\n"
+
+
+@pytest.mark.parametrize(
     "legacy_line",
     [
         "## @return: The value.\n",
@@ -1548,7 +1591,7 @@ def test_public_member_with_legacy_return_is_regenerated(
     change = docs.prepare_file_change(client, gd_file, check_mode=False)
 
     assert change is not None
-    assert change.slots == 2 if hasattr(change, "slots") else True
+    assert change.slots_count == 2
     assert "## Stops both rotors.\nfunc stop() -> void:\n" in change.proposed_source
     assert "Returns" not in change.proposed_source
     gd_file.write_text(change.proposed_source, encoding="utf-8")
