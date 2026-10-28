@@ -140,10 +140,11 @@ func _input(event: InputEvent) -> void:
 
 ## Sets up a parallax layer for tiling and mirroring.
 ##
-## [param sprite]: The sprite parameter.
-## [param viewport]: The viewport parameter.
-## [param buffer_mult]: The buffer_mult parameter.
-## Returns void
+## Configures region settings and motion mirroring on the parent ParallaxLayer.
+##
+## [param sprite]: The target Sprite2D node to configure for tiling and mirroring.
+## [param viewport]: The size of the viewport used to calculate the required tile count.
+## [param buffer_mult]: Multiplier for the vertical buffer size.
 func setup_parallax_layer(sprite: Sprite2D, viewport: Vector2, buffer_mult: float = 1.0) -> void:
 	if not sprite or not sprite.texture:
 		return
@@ -296,8 +297,8 @@ func _process(_delta: float) -> void:
 ## Displays the specified text on the message label, automatically hiding it after four seconds
 ## and resetting the correct flag based on the message type to prevent race conditions.
 ##
-## [param text]: The text parameter.
-## [param type]: The type parameter.
+## [param text]: The message text to display on the label.
+## [param type]: The message type used to reset the correct flag.
 func show_message(text: String, type: MessageType = MessageType.CRITICAL_UNBOUND) -> void:
 	if not is_instance_valid(message_label):
 		return
