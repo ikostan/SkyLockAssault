@@ -78,7 +78,9 @@ def parse_args() -> argparse.Namespace:
         default=os.environ.get("GODOT_BIN"),
         help="Path to the Godot 4.7.1 console executable (or set GODOT_BIN).",
     )
-    parser.add_argument("--runs", type=int, default=3, help="Number of runs (default 3).")
+    parser.add_argument(
+        "--runs", type=int, default=3, help="Number of runs (default 3)."
+    )
     parser.add_argument(
         "--out",
         type=Path,
@@ -154,10 +156,13 @@ def run_once(godot: str, run_dir: Path) -> tuple[bool, str]:
 def collect_metrics(run_dir: Path) -> dict[str, float | str]:
     """Combine summary.csv with metrics derived from the other CSVs of one run."""
     metrics: dict[str, float | str] = {
-        key: to_number(value) for key, value in read_csv(run_dir / "summary.csv")[0].items()
+        key: to_number(value)
+        for key, value in read_csv(run_dir / "summary.csv")[0].items()
     }
 
-    frames = [float(r["interval_ms"]) for r in read_csv(run_dir / "frames_interval_ms.csv")]
+    frames = [
+        float(r["interval_ms"]) for r in read_csv(run_dir / "frames_interval_ms.csv")
+    ]
     for limit in STUTTER_THRESHOLDS_MS:
         label = f"frames_over_{limit:g}ms"
         metrics[label] = float(sum(1 for f in frames if f > limit))
@@ -212,7 +217,9 @@ def fmt(value: float | str) -> str:
     return f"{value:.3f}"
 
 
-def write_reports(out: Path, results: list[dict[str, float | str]], invalid: int) -> None:
+def write_reports(
+    out: Path, results: list[dict[str, float | str]], invalid: int
+) -> None:
     """Write runs.csv and medians.md."""
     columns: list[str] = []
     for row in results:
