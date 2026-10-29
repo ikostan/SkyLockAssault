@@ -83,6 +83,9 @@ const KEY_MODIFIER_TOKENS: PackedStringArray = ["shift", "ctrl", "alt", "meta"]
 
 # Flag for legacy upgrade OR missing defaults (first-run, new actions)
 var _needs_save: bool = false
+# Set by apply_config_to_input_map when it skips a saved binding it cannot parse, so
+# load_input_mappings re-saves and the corrupt entry does not come back on every start.
+var _skipped_invalid_bindings: bool = false
 
 
 ## Initializes the settings by loading input mappings.
@@ -159,11 +162,8 @@ func _add_missing_defaults(config: ConfigFile) -> bool:
 			else:
 				nev.physical_keycode = def
 
-			InputMap.action_add_event(action, nev)
-			changed = true
-			Globals.log_message(
-				"Added missing default keyboard for " + action, Globals.LogLevel.DEBUG
-			)
+			if _add_default_event(config, action, nev, "keyboard"):
+				changed = true
 
 		# === Gamepad defaults ===
 		if not has_gamepad and DEFAULT_GAMEPAD.has(action) and not explicitly_unbound_gamepad:
@@ -181,14 +181,51 @@ func _add_missing_defaults(config: ConfigFile) -> bool:
 					motion.axis_value = def["value"]
 					motion.device = -1
 					nev = motion
-			if nev:
-				InputMap.action_add_event(action, nev)
+			if nev and _add_default_event(config, action, nev, "gamepad"):
 				changed = true
-				Globals.log_message(
-					"Added missing default gamepad for " + action, Globals.LogLevel.DEBUG
-				)
 
 	return changed
+
+
+## Adds a backfilled default event to an action unless a saved binding already uses it.
+##
+## A default is backfilled when the action has no binding for a device, for example after its
+## saved binding was rejected as corrupt. If another action's saved binding already uses the
+## same input (the player moved that key there), adding the default would make both actions
+## fire on one input. The action is left unbound for that device instead, a warning is logged,
+## and the player can rebind it from the key mapping menu.
+##
+## Only bindings loaded from the config count as owners. Inputs that come only from the
+## project's built-in InputMap, where gameplay and UI actions may share keys, are not treated
+## as conflicts, so a first run with no saved settings still gets every default.
+##
+## [param config]: Loaded ConfigFile, used to tell saved bindings from built-in ones.
+## [param action]: Action that is missing a binding for the device.
+## [param event]: The default event for that action and device.
+## [param device]: Device name used in log messages, keyboard or gamepad.
+## Returns [code]true[/code] if the event was added.
+func _add_default_event(
+	config: ConfigFile, action: String, event: InputEvent, device: String
+) -> bool:
+	var conflicts: Array[String] = []
+	for other: String in get_conflicting_actions(event, action):
+		if config.has_section_key("input", other):
+			conflicts.append(other)
+	if not conflicts.is_empty():
+		Globals.log_message(
+			(
+				"Not restoring default %s binding for %s: already used by %s"
+				% [device, action, str(conflicts)]
+			),
+			Globals.LogLevel.WARNING
+		)
+		return false
+
+	InputMap.action_add_event(action, event)
+	Globals.log_message(
+		"Added missing default " + device + " for " + action, Globals.LogLevel.DEBUG
+	)
+	return true
 
 
 ## Returns true if any critical action has zero events.
@@ -716,7 +753,7 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 
 	# 4. Backfill missing defaults and aggregate save requirements
 	var defaults_added: bool = _add_missing_defaults(config)
-	_needs_save = conflicts_resolved or defaults_added or _needs_save
+	_needs_save = conflicts_resolved or defaults_added or _skipped_invalid_bindings or _needs_save
 
 
 ## Saves current InputMap events to config as an array per action.
@@ -830,13 +867,16 @@ func load_last_input_device() -> void:
 ## Performs no file I/O and does not modify the [code]_needs_save[/code] flag, so it can be
 ## tested without touching disk. It is not side-effect free: for every action found in the
 ## config it erases and re-adds events in the global InputMap, unbinds duplicate events from
-## other actions, and logs warnings through Globals.
+## other actions, and logs warnings through Globals. It also records whether any saved
+## binding was skipped as invalid, which [method load_input_mappings] uses to re-save the
+## cleaned bindings.
 ##
 ## [param config]: Loaded ConfigFile to read the [code]input[/code] section from. A
 ## [code]null[/code] config is a no-op that returns [code]false[/code].
 ## [param actions]: Action names to apply. Defaults to [constant ACTIONS].
 ## Returns [code]true[/code] if any conflicting bindings were removed from other actions.
 func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTIONS) -> bool:
+	_skipped_invalid_bindings = false
 	if config == null:
 		return false
 
@@ -867,6 +907,7 @@ func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTI
 					"Skipping invalid saved binding for " + action + ": " + serialized,
 					Globals.LogLevel.WARNING
 				)
+				_skipped_invalid_bindings = true
 				continue
 
 			var already_present := false
