@@ -145,7 +145,6 @@ func _run_reload_phase() -> void:
 		var orphans: int = int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT))
 		var objects: int = int(Performance.get_monitor(Performance.OBJECT_COUNT))
 		_reload_rows.append("%d,%d,%d" % [cycle, orphans, objects])
-		_emit("reload", [cycle, orphans, objects])
 
 
 func _process(delta: float) -> void:
@@ -189,8 +188,8 @@ func _sample_second() -> void:
 		int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)),
 		_saves,
 	]
+	# Buffered, not printed: console output during the measured window would be measured too.
 	_sec_rows.append(",".join(row.map(func(v: Variant) -> String: return str(v))))
-	_emit("sec", row)
 
 
 ## Counts settings saves: outside settings loading, each emission triggers one save.
@@ -226,6 +225,10 @@ func _report(valid: Dictionary) -> void:
 		valid["speed"],
 		valid["ok"],
 	]
+	for row: String in _sec_rows:
+		print("BENCH,sec," + row)
+	for row: String in _reload_rows:
+		print("BENCH,reload," + row)
 	_emit("summary", summary)
 
 	if _is_web or _out_dir.is_empty():
