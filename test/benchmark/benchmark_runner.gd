@@ -21,6 +21,9 @@ const WARMUP_S: float = 5.0
 const MEASURE_S: float = 60.0
 const RELOAD_CYCLES: int = 10
 const BULLET_CLEAR_TIMEOUT_S: float = 10.0
+## Pause before quitting so the audio server can release playbacks of the last freed scene;
+## quitting right after freeing playing AudioStreamPlayer2Ds reports them as leaked at exit.
+const EXIT_SETTLE_S: float = 1.0
 
 var _out_dir: String = ""
 var _is_web: bool = OS.has_feature("web")
@@ -78,6 +81,7 @@ func _run() -> void:
 	_report(valid)
 	_restore_settings()
 	_emit("done", ["valid" if valid["ok"] else "invalid"])
+	await get_tree().create_timer(EXIT_SETTLE_S).timeout
 	get_tree().quit(0 if valid["ok"] else 2)
 
 
