@@ -202,6 +202,35 @@ func is_sfx_missing(sfx_name: String) -> bool:
 
 
 ## [DIAGNOSTIC]
+## Public API: Returns the number of identifiers in the missing-asset table (Issue #726).
+## :rtype: int
+func get_missing_sfx_count() -> int:
+	return _missing_sfx_cache.size()
+
+
+## [DIAGNOSTIC]
+## Public API: Returns the cached SFX identifiers in LRU order, least recently used first
+## (Issue #726). The next eviction removes element 0. Returns a copy; editing it has no effect.
+## :rtype: Array[String]
+func get_cached_sfx_names() -> Array[String]:
+	var names: Array[String] = []
+	for key: String in _sfx_cache.keys():
+		names.append(key)
+	return names
+
+
+## [DIAGNOSTIC]
+## Public API: Returns a copy of the pooled players array, in pool order (Issue #726).
+## Lets callers inspect per-player state (stream, bus, pitch, volume, playing).
+## Entries may be freed instances; check is_instance_valid() before use.
+## Resizing the returned array does not change the pool. Do not reconfigure the players
+## outside tests: play_sfx() owns their settings.
+## :rtype: Array[AudioStreamPlayer]
+func get_sfx_pool_players() -> Array[AudioStreamPlayer]:
+	return _sfx_pool.duplicate()
+
+
+## [DIAGNOSTIC]
 ## Public API: Empties the stream cache and the missing-asset table (Issue #726).
 ## Safe at runtime: streams reload lazily on the next play_sfx(), and previously missing
 ## assets get one fresh load attempt. Does not touch the player pool; see cleanup_for_test().
@@ -291,7 +320,26 @@ func cleanup_for_test() -> void:
 		return
 
 	clear_diagnostic_caches()
+	_free_sfx_pool()
 
+	# Re-create the pool matching production configuration
+	_initialize_sfx_pool()
+
+
+## FOR GUT UNIT TEST ONLY
+## Frees every pooled player and leaves the pool empty, so tests can verify that play_sfx()
+## lazily rebuilds it (Issue #726). Strictly guarded to no-op in production builds.
+## Call cleanup_for_test() afterwards to restore a full pool.
+## :rtype: void
+func clear_sfx_pool_for_test() -> void:
+	if not OS.is_debug_build():
+		return
+	_free_sfx_pool()
+
+
+## Frees all pooled players (and orphaned player children) and empties the pool array.
+## :rtype: void
+func _free_sfx_pool() -> void:
 	# 1. Clean the pool deterministically
 	for i in range(_sfx_pool.size() - 1, -1, -1):
 		var player := _sfx_pool[i]
@@ -311,9 +359,6 @@ func cleanup_for_test() -> void:
 			child.stop()
 			remove_child(child)
 			child.free()
-
-	# 2. Re-create the pool matching production configuration
-	_initialize_sfx_pool()
 
 
 ## Automatically hooks up base Button elements for confirmation sfx (Ported via Issue #800)
