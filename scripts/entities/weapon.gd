@@ -4,6 +4,9 @@
 extends Node2D
 
 # Added for HUD/Bot decoupling
+## Emitted when the weapon is fired successfully.
+##
+## [param ammo_remaining]: The amount of ammunition left in the magazine after firing.
 signal weapon_fired(ammo_remaining: int)
 
 @export var weapon_types: Array[PackedScene] = []  # Drag bullet.tscn...
@@ -23,6 +26,12 @@ func _ready() -> void:
 	switch_to(0)
 
 
+## Switch the active weapon to the specified index.
+##
+## Instantiates the weapon scene at the given index, synchronizes stats, and updates the
+## resource index.
+##
+## [param index]: The array index of the weapon type to activate.
 func switch_to(index: int) -> void:
 	Globals.log_message(
 		(
@@ -87,6 +96,10 @@ func switch_to(index: int) -> void:
 		current_weapon = null  # Explicit
 
 
+## Trigger the active weapon and deduct ammo if successful.
+##
+## Delegates firing to the current child weapon, validates ammo availability strictly, and
+## emits the weapon_fired signal upon success.
 func fire() -> void:
 	if current_weapon and current_weapon.has_method("fire"):
 		# Strictly require ammo to fire (no infinite ammo checks)
@@ -113,5 +126,7 @@ func fire() -> void:
 		)
 
 
+## Return the total number of weapon types available.
+## Returns the size of the weapon types array.
 func get_num_weapons() -> int:
 	return weapon_types.size()

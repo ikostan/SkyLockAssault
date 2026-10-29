@@ -140,10 +140,11 @@ func _input(event: InputEvent) -> void:
 
 ## Sets up a parallax layer for tiling and mirroring.
 ##
-## [param sprite]: The sprite parameter.
-## [param viewport]: The viewport parameter.
-## [param buffer_mult]: The buffer_mult parameter.
-## Returns void
+## Configures region settings and motion mirroring on the parent ParallaxLayer.
+##
+## [param sprite]: The target Sprite2D node to configure for tiling and mirroring.
+## [param viewport]: The size of the viewport used to calculate the required tile count.
+## [param buffer_mult]: Multiplier for the vertical buffer size.
 func setup_parallax_layer(sprite: Sprite2D, viewport: Vector2, buffer_mult: float = 1.0) -> void:
 	if not sprite or not sprite.texture:
 		return
@@ -293,11 +294,13 @@ func _process(_delta: float) -> void:
 
 ## Shows a temporary on-screen message non-blocking and centralizes flags.
 ##
-## Displays the specified text on the message label, automatically hiding it after four seconds
-## and resetting the correct flag based on the message type to prevent race conditions.
+## Displays the specified text on the message label and hides it after four seconds.
+## When the message expires, only the KEY_PRESS_UNBOUND flag is reset. The
+## CRITICAL_UNBOUND flag stays set so the warning shows once per session, until
+## [method clear_unbound_warning] is called after the bindings are fixed.
 ##
-## [param text]: The text parameter.
-## [param type]: The type parameter.
+## [param text]: The message text to display on the label.
+## [param type]: The message type; KEY_PRESS_UNBOUND resets its flag on expiry.
 func show_message(text: String, type: MessageType = MessageType.CRITICAL_UNBOUND) -> void:
 	if not is_instance_valid(message_label):
 		return

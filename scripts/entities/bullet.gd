@@ -38,6 +38,11 @@ func _reset_can_fire() -> void:
 	can_fire = true
 
 
+## Initiates a projectile firing sequence if allowed.
+##
+## Checks firing readiness, applies scaled cooldown timers, logs debug info, spawns
+## projectiles, and plays sound effects.
+## Returns true if successfully fired, false otherwise.
 func fire() -> bool:
 	if not can_fire:
 		return false
@@ -58,6 +63,11 @@ func fire() -> bool:
 
 
 # NEW: Play SFX with correct bus + volume scaling
+## Plays the configured shot sound effect on the weapon SFX bus.
+##
+## Instantiates an [code]AudioStreamPlayer2D[/code], assigns the shot sound and SFX bus, adds
+## it to the root tree to prevent early freeing, and connects the finished signal to auto-
+## cleanup.
 func play_sfx_with_volume() -> void:
 	if not config.shot_sound:
 		return
@@ -76,6 +86,11 @@ func play_sfx_with_volume() -> void:
 	# Globals.log_message("SFX played on Web with bus volume control.", Globals.LogLevel.DEBUG)
 
 
+## Instantiates and configures a new projectile with physics, visuals, and lifetime.
+##
+## Creates a RigidBody2D projectile using configuration values, sets up collision detection,
+## applies visual sprite and shape settings, and adds it to the root tree with a lifetime
+## timer.
 func spawn_projectile() -> void:
 	var proj: RigidBody2D = RigidBody2D.new()  # Projectile body – physics for movement/collision
 	proj.name = "BulletProjectile"
