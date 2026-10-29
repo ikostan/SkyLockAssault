@@ -77,6 +77,9 @@ const DEFAULT_GAMEPAD: Dictionary = {
 	"ui_focus_next": {"type": "button", "button": JOY_BUTTON_RIGHT_SHOULDER},
 	"ui_focus_prev": {"type": "button", "button": JOY_BUTTON_LEFT_SHOULDER},
 }
+## Modifier tokens [method serialize_event] can write after the keycode in a
+## [code]key:[/code] string. Any other token makes [method deserialize_event] return null.
+const KEY_MODIFIER_TOKENS: PackedStringArray = ["shift", "ctrl", "alt", "meta"]
 
 # Flag for legacy upgrade OR missing defaults (first-run, new actions)
 var _needs_save: bool = false
@@ -264,8 +267,9 @@ func _remove_event_from_conflicts(event: InputEvent, conflicts: Array[String]) -
 ## corresponding input event.
 ##
 ## [param serialized]: The serialized string starting with key, joybtn, or joyaxis.
-## Returns the deserialized InputEvent, or null if the prefix or the numeric fields
-## are invalid. Unrecognized modifier tokens in a key string are ignored.
+## Returns the deserialized InputEvent, or null if the string is invalid.
+## A key string accepts the modifiers in [constant KEY_MODIFIER_TOKENS] in any order; an
+## unknown, empty or repeated token makes the whole string invalid.
 func deserialize_event(serialized: String) -> InputEvent:
 	var event_to_return: InputEvent = null
 
@@ -284,6 +288,22 @@ func deserialize_event(serialized: String) -> InputEvent:
 	match parts[0]:
 		"key":
 			if parts.size() >= 2 and parts[1].is_valid_int():
+				# serialize_event only writes known modifiers, each at most once, so any
+				# other token means the saved binding is corrupt or hand-edited (#1090).
+				var modifiers: PackedStringArray = parts.slice(2)
+				for token: String in modifiers:
+					var problem: String = ""
+					if token not in KEY_MODIFIER_TOKENS:
+						problem = "unknown modifier token '%s'" % token
+					elif modifiers.count(token) > 1:
+						problem = "duplicate modifier token '%s'" % token
+					if not problem.is_empty():
+						Globals.log_message(
+							"Rejecting key event with %s: %s" % [problem, serialized],
+							Globals.LogLevel.WARNING
+						)
+						return null
+
 				var code := parts[1].to_int()
 
 				# OPINION: Explicitly reject 0 to prevent "silent drops"
@@ -296,10 +316,10 @@ func deserialize_event(serialized: String) -> InputEvent:
 
 				var ev := InputEventKey.new()
 				ev.physical_keycode = code
-				ev.shift_pressed = "shift" in parts
-				ev.ctrl_pressed = "ctrl" in parts
-				ev.alt_pressed = "alt" in parts
-				ev.meta_pressed = "meta" in parts
+				ev.shift_pressed = "shift" in modifiers
+				ev.ctrl_pressed = "ctrl" in modifiers
+				ev.alt_pressed = "alt" in modifiers
+				ev.meta_pressed = "meta" in modifiers
 				event_to_return = ev
 		"joybtn":
 			if parts.size() == 3 and parts[1].is_valid_int() and parts[2].is_valid_int():
@@ -842,6 +862,11 @@ func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTI
 		for serialized: String in serialized_events:
 			var ev: InputEvent = deserialize_event(serialized)
 			if ev == null:
+				# _add_missing_defaults restores the device default if nothing else binds it.
+				Globals.log_message(
+					"Skipping invalid saved binding for " + action + ": " + serialized,
+					Globals.LogLevel.WARNING
+				)
 				continue
 
 			var already_present := false
