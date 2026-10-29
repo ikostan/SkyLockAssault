@@ -182,7 +182,7 @@ Report new issues on [GitHub Issues](https://github.com/ikostan/SkyLockAssault/i
 All pipelines run on GitHub Actions:
 
 - **Lint:** `gdlint` / `gdformat` for GDScript, `yamllint`, `markdownlint`
-- **Test:** GUT, gdUnit4, Playwright browser tests, and CI-script tests on pull requests to `main`
+- **Test:** GUT, gdUnit4, Playwright browser tests, and CI-script tests on pull requests to `main`; each suite runs only when the PR changes files it covers (a README-only PR skips them)
 - **Security:** CodeQL, Snyk and Trivy on every push to `main`
 - **Deploy:** HTML5 export and itch.io deployment on every push to `main`
 - **Releases:** Release Drafter for automated changelogs
@@ -215,7 +215,7 @@ All pipelines run on GitHub Actions:
 
 - GUT: Godot → GUT panel → **Run All**
 - gdUnit4: Godot → gdUnit4 inspector → run `test/gdunit4`
-- All suites, including Playwright: run in CI on pull requests to `main`
+- All suites, including Playwright: run in CI on pull requests to `main` when the PR changes files they cover
 
 Testing is required for gameplay logic changes.
 
