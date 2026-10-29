@@ -20,8 +20,7 @@ func _load_resource(path: Variant) -> Texture2D:
 
 
 ## Forces reload in editor.
-## @param value: bool - Toggle value.
-## @return: void
+## [param value]: bool - Toggle value.
 func _force_reload(value: bool) -> void:
 	if value and _is_in_editor():
 		Globals.log_message("Forcing reload of resources!", Globals.LogLevel.DEBUG)
@@ -30,7 +29,6 @@ func _force_reload(value: bool) -> void:
 
 
 ## Editor-only ready function.
-## @return: void
 func _ready() -> void:
 	if _is_in_editor():  # Only run in editor
 		# Clear existing preloaded resources to avoid duplicates on reload
@@ -65,8 +63,8 @@ func _ready() -> void:
 
 
 ## Helper to scan and load textures from a directory (editor only)
-## @param dir_path: String - Directory path.
-## @return: Array[Texture2D] - Loaded textures.
+## [param dir_path]: String - Directory path.
+## Returns the textures loaded from the directory.
 func load_textures_from_dir(dir_path: String) -> Array[Texture2D]:
 	Globals.log_message("Trying to open directory: " + dir_path, Globals.LogLevel.DEBUG)
 	var textures: Array[Texture2D] = []

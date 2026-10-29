@@ -16,7 +16,7 @@ func _ready() -> void:
 
 ## Intercepts global input events early in the frame before focused GUI controls
 ## can consume them, triggering contextual UI audio feedback.
-## @param event: The raw input event captured by the viewport.
+## [param event]: The raw input event captured by the viewport.
 ## :rtype: void
 func _input(event: InputEvent) -> void:
 	# Gate 1: Prevent double-triggering on held-down keys/buttons
@@ -42,7 +42,7 @@ func _input(event: InputEvent) -> void:
 
 
 ## Tracks the active input device scheme and updates the global state.
-## @param event: The current InputEvent being evaluated.
+## [param event]: The current InputEvent being evaluated.
 ## :rtype: void
 func _track_input_device(event: InputEvent) -> void:
 	if event is InputEventKey or event is InputEventMouseButton or event is InputEventMouseMotion:
@@ -52,8 +52,8 @@ func _track_input_device(event: InputEvent) -> void:
 
 
 ## Evaluates the current SceneTree state and system flags to verify menu boundaries.
-## @param ui_has_focus: Whether a UI element currently holds active focus.
-## @return bool: True if the current state is an eligible menu context.
+## [param ui_has_focus]: Whether a UI element currently holds active focus.
+## Returns bool: True if the current state is an eligible menu context.
 func _check_menu_context(ui_has_focus: bool) -> bool:
 	var is_menu_context: bool = (
 		get_tree().paused
@@ -89,9 +89,9 @@ func _check_menu_context(ui_has_focus: bool) -> bool:
 
 
 ## Matches actions against UI_SFX configurations and handles specific control overrides.
-## @param event: The active input event.
-## @param focus_owner: The Control node currently holding focus (can be null).
-## @param ui_has_focus: Boolean state verifying if focus is owned.
+## [param event]: The active input event.
+## [param focus_owner]: The Control node currently holding focus (can be null).
+## [param ui_has_focus]: Boolean state verifying if focus is owned.
 ## :rtype: void
 func _process_ui_navigation_sfx(
 	event: InputEvent, focus_owner: Control, ui_has_focus: bool
@@ -119,8 +119,8 @@ func _process_ui_navigation_sfx(
 
 
 ## Handles UI cancellation/back inputs, filtering out active text fields or input-remapping.
-## @param focus_owner: The currently focused control node.
-## @param action: The input action name string.
+## [param focus_owner]: The currently focused control node.
+## [param action]: The input action name string.
 ## :rtype: void
 func _handle_ui_cancel_action(focus_owner: Control, action: String) -> void:
 	var is_editing_control: bool = (
@@ -146,9 +146,9 @@ func _handle_ui_cancel_action(focus_owner: Control, action: String) -> void:
 
 
 ## Evaluates focus transitions and triggers directional UI navigation sounds.
-## @param action: The directional action key.
-## @param focus_owner: The currently focused Control element.
-## @param ui_has_focus: Check determining if focus is active.
+## [param action]: The directional action key.
+## [param focus_owner]: The currently focused Control element.
+## [param ui_has_focus]: Check determining if focus is active.
 ## :rtype: void
 func _handle_ui_navigation_action(action: String, focus_owner: Control, ui_has_focus: bool) -> void:
 	var is_horizontal_slider: bool = (

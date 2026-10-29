@@ -200,7 +200,7 @@ func stop_all_sfx() -> void:
 ## Public API: Returns the resource path of the most recently started active SFX.
 ## If multiple sounds are active, this returns the one most recently assigned to the pool.
 ## If no sounds are playing, returns an empty string.
-## @return String: Resource path of the active stream.
+## Returns String: Resource path of the active stream.
 func get_active_sfx_stream_path() -> String:
 	# Iterate backwards through the pool to return the most recently
 	# added/played sound, making the choice deterministic and explicit.
@@ -214,7 +214,7 @@ func get_active_sfx_stream_path() -> String:
 ## [DIAGNOSTIC]
 ## Public API: Returns the target audio bus name of the most recently started active SFX.
 ## If no sounds are playing, returns an empty string.
-## @return String: Name of the assigned audio bus.
+## Returns String: Name of the assigned audio bus.
 func get_active_sfx_bus_name() -> String:
 	# Iterate backwards matching our deterministic track verification rules
 	for i in range(_sfx_pool.size() - 1, -1, -1):

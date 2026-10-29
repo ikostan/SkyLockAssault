@@ -284,7 +284,7 @@ func _grab_initial_focus() -> void:
 ## Callback triggered when the keyboard device toggle is interacted with.
 ## Saves the input preference to persistent settings, updates the UI button mappings,
 ## and plays confirmation audio feedback using the centralized SFX map.
-## @param toggled_on: The current boolean state of the toggle button.
+## [param toggled_on]: The current boolean state of the toggle button.
 func _on_keyboard_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		Globals.current_input_device = "keyboard"
@@ -298,7 +298,7 @@ func _on_keyboard_toggled(toggled_on: bool) -> void:
 ## Callback triggered when the gamepad device toggle is interacted with.
 ## Saves the input preference to persistent settings, updates the UI button mappings,
 ## and plays confirmation audio feedback using the centralized SFX map.
-## @param toggled_on: The current boolean state of the toggle button.
+## [param toggled_on]: The current boolean state of the toggle button.
 func _on_gamepad_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		Globals.current_input_device = "gamepad"
