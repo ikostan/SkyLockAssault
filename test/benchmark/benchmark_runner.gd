@@ -36,6 +36,8 @@ var _saves: int = 0
 
 var _process_ms: Array[float] = []
 var _physics_ms: Array[float] = []
+var _frame_ms: Array[float] = []
+var _last_frame_usec: int = 0
 var _sec_rows: Array[String] = []
 var _reload_rows: Array[String] = []
 
@@ -95,6 +97,7 @@ func _run_gameplay_phase() -> Dictionary:
 	_firing = true
 
 	await get_tree().create_timer(WARMUP_S).timeout
+	_last_frame_usec = 0
 	_measuring = true
 	await get_tree().create_timer(MEASURE_S).timeout
 	_measuring = false
@@ -144,19 +147,26 @@ func _run_reload_phase() -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	if _firing:
-		# One shot per press event (player.gd uses event.is_action_pressed), so inject a
-		# fresh press every physics frame; the weapon cooldown decides which become shots.
-		Input.parse_input_event(_fire_press)
-		Input.parse_input_event(_fire_release)
 	if _measuring:
 		_physics_ms.append(Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0)
 
 
 func _process(delta: float) -> void:
+	if _firing:
+		# One shot per press event (player.gd uses event.is_action_pressed), so inject a
+		# press every frame; the weapon cooldown decides which become shots. Done here, not in
+		# _physics_process, because physics can step twice in one frame and Godot warns when
+		# the same event object is parsed twice in a frame.
+		Input.parse_input_event(_fire_press)
+		Input.parse_input_event(_fire_release)
 	if not _measuring:
 		return
 	_process_ms.append(Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0)
+	# Wall-clock interval between frames: what a player actually experiences as a hitch.
+	var now_usec: int = Time.get_ticks_usec()
+	if _last_frame_usec > 0:
+		_frame_ms.append((now_usec - _last_frame_usec) / 1000.0)
+	_last_frame_usec = now_usec
 	_elapsed += delta
 	_sec_accum += delta
 	if _sec_accum >= 1.0:
@@ -191,6 +201,7 @@ func _on_setting_changed(_setting_name: String, _new_value: Variant) -> void:
 func _report(valid: Dictionary) -> void:
 	var p: Dictionary = _stats(_process_ms)
 	var ph: Dictionary = _stats(_physics_ms)
+	var fr: Dictionary = _stats(_frame_ms)
 	var summary: Array = [
 		Engine.get_version_info()["string"],
 		OS.get_name(),
@@ -203,6 +214,10 @@ func _report(valid: Dictionary) -> void:
 		ph["avg"],
 		ph["p95"],
 		ph["max"],
+		fr["n"],
+		fr["avg"],
+		fr["p95"],
+		fr["max"],
 		_saves,
 		valid["fuel"],
 		valid["ammo"],
@@ -222,11 +237,14 @@ func _report(valid: Dictionary) -> void:
 	_write_csv("reload.csv", "cycle,orphans,objects", _reload_rows)
 	_write_csv("frames_process_ms.csv", "process_ms", _to_strings(_process_ms))
 	_write_csv("frames_physics_ms.csv", "physics_ms", _to_strings(_physics_ms))
+	_write_csv("frames_interval_ms.csv", "interval_ms", _to_strings(_frame_ms))
 	_write_csv(
 		"summary.csv",
 		(
 			"godot,os,env,proc_n,proc_avg_ms,proc_p95_ms,proc_max_ms,"
-			+ "phys_n,phys_avg_ms,phys_p95_ms,phys_max_ms,saves,fuel_end,ammo_end,speed_end,valid"
+			+ "phys_n,phys_avg_ms,phys_p95_ms,phys_max_ms,"
+			+ "frame_n,frame_avg_ms,frame_p95_ms,frame_max_ms,"
+			+ "saves,fuel_end,ammo_end,speed_end,valid"
 		),
 		[",".join(summary.map(func(v: Variant) -> String: return str(v)))]
 	)
