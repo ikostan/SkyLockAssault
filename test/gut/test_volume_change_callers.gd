@@ -135,7 +135,7 @@ func _assert_saved_state(bus: String, volume: float, muted: bool) -> void:
 
 func _count_confirmation_clicks() -> int:
 	var count: int = 0
-	for player: AudioStreamPlayer in SfxManager._sfx_pool:
+	for player: AudioStreamPlayer in SfxManager.get_sfx_pool_players():
 		if player.playing and player.stream:
 			if player.stream.resource_path == AudioConstants.SFX_DIR_PATH + "check.wav":
 				count += 1

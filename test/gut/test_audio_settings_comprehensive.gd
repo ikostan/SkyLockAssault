@@ -139,7 +139,7 @@ func _hw_db(bus_name: String) -> float:
 ## :rtype: AudioStreamPlayer
 func _playing_click() -> AudioStreamPlayer:
 	var check_path: String = AudioConstants.SFX_DIR_PATH + "check.wav"
-	for player: AudioStreamPlayer in SfxManager._sfx_pool:
+	for player: AudioStreamPlayer in SfxManager.get_sfx_pool_players():
 		if is_instance_valid(player) and player.playing and player.stream:
 			if player.stream.resource_path == check_path:
 				return player
@@ -152,7 +152,7 @@ func _playing_click() -> AudioStreamPlayer:
 func _count_playing_clicks() -> int:
 	var check_path: String = AudioConstants.SFX_DIR_PATH + "check.wav"
 	var count: int = 0
-	for player: AudioStreamPlayer in SfxManager._sfx_pool:
+	for player: AudioStreamPlayer in SfxManager.get_sfx_pool_players():
 		if is_instance_valid(player) and player.playing and player.stream:
 			if player.stream.resource_path == check_path:
 				count += 1
