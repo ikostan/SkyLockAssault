@@ -8,7 +8,7 @@
 **Title:** Bug fixes  
 **PR:** [#1091](https://github.com/ikostan/SkyLockAssault/pull/1091)  
 **Branch:** `bug-fixes` → `main`  
-**Author:** @ikostan (code and docs drafted with @claude (Opus 5.5))  
+**Author:** @ikostan
 **Resolves:**
 
 - [#1088 – [BUG] Legacy Doxygen @param/@return tags left in 7 production scripts; ui_manager.gd is never cleaned by the docs sync](https://github.com/ikostan/SkyLockAssault/issues/1088)
@@ -126,15 +126,7 @@ The README no longer claims every suite runs on every pull request. `lint_test_o
 
 ## Reviewer's Guide (Sourcery)
 
-> **Accuracy notes** (checked against the code):
->
-> - The sequence diagram compresses the flow. `_add_missing_defaults()` runs once, after
->   `apply_config_to_input_map()` has processed every action, not once per invalid event. It
->   restores a default only when no other action's saved binding uses that input. The cleaned
->   mappings are saved by `Settings._ready()` when `_needs_save` is set, not inside
->   `load_input_mappings()`.
-> - The #1088 row says seven production scripts; six needed changes. `player.gd` had already been
->   cleaned by the docs sync in #1089.
+*Based on Sourcery's guide, with the diagrams and the #1088 row corrected to match the code.*
 
 This PR strengthens input-mapping deserialization and startup recovery against corrupted saved bindings, adds broad regression coverage for fallback, conflict, unbind, and persistence scenarios, and updates project documentation, security metadata, and GDScript comments for Godot 4.7.1.
 
@@ -142,24 +134,34 @@ This PR strengthens input-mapping deserialization and startup recovery against c
 
 ```mermaid
 sequenceDiagram
-    participant Settings as settings.gd
-    participant Config as ConfigFile
+    participant Ready as Settings._ready()
+    participant Load as load_input_mappings()
+    participant Apply as apply_config_to_input_map()
+    participant Backfill as _add_missing_defaults()
     participant InputMap
     participant Globals
 
-    Settings->>Config: load_input_mappings()
-    Settings->>Settings: apply_config_to_input_map()
-    Settings->>Settings: deserialize_event(serialized)
-    alt invalid modifier or event
-        Settings->>Globals: log_message()
-        Settings->>Settings: mark skipped invalid binding
-        Settings->>Settings: _add_missing_defaults()
-        Settings->>Settings: _add_default_event()
-        Settings->>InputMap: action_add_event()
-        Settings->>Config: save cleaned mappings
-    else valid event
-        Settings->>InputMap: action_add_event()
+    Ready->>Load: Load the encrypted settings file
+    Load->>Apply: Apply the saved bindings
+    loop Each saved binding string
+        Apply->>Apply: deserialize_event(serialized)
+        alt Invalid string
+            Apply->>Globals: log_message() warning
+            Apply->>Apply: Set _skipped_invalid_bindings
+        else Valid event
+            Apply->>InputMap: action_add_event()
+        end
     end
+    Load->>Backfill: Fill devices left without a binding
+    loop Each action and device with no binding that is not explicitly unbound
+        alt Default already used by another action's saved binding
+            Backfill->>Globals: log_message() warning, leave unbound
+        else Default is free
+            Backfill->>InputMap: action_add_event() with the default
+        end
+    end
+    Load->>Load: Set _needs_save if a conflict was resolved, a default was added or a binding was skipped
+    Ready->>Ready: If _needs_save, save_input_mappings()
 ```
 
 ### Flow diagram for validated keyboard modifier parsing
@@ -167,11 +169,16 @@ sequenceDiagram
 ```mermaid
 flowchart TD
     A[Serialized key binding] --> B["deserialize_event()"]
-    B --> C{Modifier tokens valid?}
-    C -->|No: unknown empty or duplicate| D[Return null]
-    C -->|Yes| E[Create InputEventKey]
-    E --> F[Apply shift ctrl alt meta]
-    F --> G[Return validated event]
+    B --> C{Keycode is an integer?}
+    C -->|No| N[Return null]
+    C -->|Yes| D{"Every modifier token is shift, ctrl, alt or meta, used once?"}
+    D -->|"No: unknown, empty or duplicate"| W[Log warning]
+    W --> N
+    D -->|Yes| Z{Keycode is 0?}
+    Z -->|Yes| W
+    Z -->|No| E[Create InputEventKey]
+    E --> F[Set shift, ctrl, alt and meta from the tokens]
+    F --> G[Return the event]
 ```
 
 ### File-Level Changes
@@ -179,18 +186,19 @@ flowchart TD
 | Change                                                                                                                                                                | Details                                                                                                                                                                                                                                                                                                                                                                                                                                        | Files                                                                                                                                                                                                                        |
 |-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Harden persisted input-binding parsing and recovery so corrupted mappings are rejected, safely restored when possible, conflict-checked, and persisted after cleanup. | <ul><li>Validate keyboard modifier tokens for unknown, empty, duplicate, and malformed values while preserving valid ordering and combinations.</li><li>Skip invalid saved events, track repair state, and re-save cleaned mappings.</li><li>Backfill missing keyboard and gamepad defaults only when they do not conflict with another saved action.</li><li>Preserve explicit unbinds and existing valid bindings during recovery.</li></ul> | `scripts/core/settings.gd`                                                                                                                                                                                                   |
-| Add regression coverage for malformed input data, fallback behavior, conflict handling, and persistence across reloads.                                               | <ul><li>Cover modifier parsing and serialization round trips, including all combinations and malformed sequences.</li><li>Test keyboard/gamepad recovery, saved-binding ownership, explicit unbinds, packed arrays, and non-key corruption.</li><li>Verify cleanup saves remove invalid entries and subsequent loads remain stable.</li></ul>                                                                                                  | `test/gut/test_deserialize_event_key_tokens.gd`<br/>`test/gut/test_deserialize_event_key_tokens.gd.uid`                                                                                                                      |
+| Add regression coverage for malformed input data, fallback behavior, conflict handling, and persistence across reloads.                                               | <ul><li>Cover modifier parsing and serialization round trips, including all combinations and malformed sequences.</li><li>Test keyboard/gamepad recovery, saved-binding ownership, explicit unbinds, packed arrays, and non-key corruption.</li><li>Verify cleanup saves remove invalid entries and subsequent loads remain stable.</li><li>Back up and restore the real settings file around the suite.</li></ul>                             | `test/gut/test_deserialize_event_key_tokens.gd`<br/>`test/gut/test_deserialize_event_key_tokens.gd.uid`                                                                                                                      |
 | Refresh project documentation and security metadata to match the current release, supported scope, workflows, and project structure.                                  | <ul><li>Update Godot version, platform and control guidance, gameplay status, setup flow, architecture, testing, automation, and documentation links.</li><li>Clarify that mobile browsers and touch controls are unsupported and update local web-testing instructions.</li><li>Update security-policy environment references and contributor/automation information.</li></ul>                                                               | `README.md`<br/>`.github/SECURITY.md`                                                                                                                                                                                        |
 | Standardize GDScript documentation comments to Godot-style parameter and return annotations across managers and UI scripts.                                           | <ul><li>Convert legacy @param/@return comments and remove redundant void annotations.</li><li>Normalize return descriptions for manager, HUD, and key-mapping APIs.</li></ul>                                                                                                                                                                                                                                                                  | `scripts/managers/parallax_manager.gd`<br/>`scripts/managers/resource_preloader.gd`<br/>`scripts/managers/sfx_manager.gd`<br/>`scripts/managers/ui_manager.gd`<br/>`scripts/ui/hud.gd`<br/>`scripts/ui/menus/key_mapping.gd` |
+| Record the PR in the Milestone 27 notes.                                                                                                                              | <ul><li>Add a summary of the changes, review decisions, verification and contributors.</li></ul>                                                                                                                                                                                                                                                                                                                                               | `files/docs/milestones/27/Part_3_Bug_fixes_README_cleanup_legacy_doc_tags_and_key_binding_validation.md`                                                                                                                     |
 
 ### Assessment against linked issues
 
-| Issue                                                   | Objective                                                                                                                                                                                                                                | Addressed | Explanation |
-|---------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-------------|
-| <https://github.com/ikostan/SkyLockAssault/issues/1088> | Remove all legacy Doxygen @param, @return, and @brief tags from the seven production scripts, including the private-function comments in ui_manager.gd, converting or deleting doc lines while leaving non-documentation code unchanged. | ✅        |             |
-| <https://github.com/ikostan/SkyLockAssault/issues/1090> | Reject unknown, empty, and duplicate modifier tokens in `key:` strings while continuing to accept known modifiers in any order and round-trip every string produced by `serialize_event()`.                                              | ✅        |             |
-| <https://github.com/ikostan/SkyLockAssault/issues/1090> | Update `deserialize_event()` documentation to state that invalid strings return `null` and describe the accepted modifier-token behavior.                                                                                                | ✅        |             |
-| <https://github.com/ikostan/SkyLockAssault/issues/1090> | When malformed saved bindings are rejected during loading, recover available defaults without creating conflicts, and save the cleaned mappings so corrupt entries do not recur.                                                         | ✅        |             |
+| Issue                                                   | Objective                                                                                                                                                                                                                      | Addressed | Explanation                                                                               |
+|---------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-------------------------------------------------------------------------------------------|
+| <https://github.com/ikostan/SkyLockAssault/issues/1088> | Remove all legacy Doxygen @param, @return, and @brief tags from production scripts, including the private-function comments in ui_manager.gd, converting or deleting doc lines while leaving non-documentation code unchanged. | ✅        | Six files needed changes; `player.gd` had already been cleaned by the docs sync in #1089. |
+| <https://github.com/ikostan/SkyLockAssault/issues/1090> | Reject unknown, empty, and duplicate modifier tokens in `key:` strings while continuing to accept known modifiers in any order and round-trip every string produced by `serialize_event()`.                                    | ✅        |                                                                                           |
+| <https://github.com/ikostan/SkyLockAssault/issues/1090> | Update `deserialize_event()` documentation to state that invalid strings return `null` and describe the accepted modifier-token behavior.                                                                                      | ✅        |                                                                                           |
+| <https://github.com/ikostan/SkyLockAssault/issues/1090> | When malformed saved bindings are rejected during loading, recover available defaults without creating conflicts, and save the cleaned mappings so corrupt entries do not recur.                                               | ✅        |                                                                                           |
 
 ---
 
