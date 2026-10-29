@@ -224,44 +224,23 @@ Thanks to everyone who has contributed!
 <table>
   <tbody>
     <tr>
-      <td align="center" valign="top" width="14.28%">
-        <a href="https://github.com/ikostan"><img src="https://avatars.githubusercontent.com/u/ikostan?v=4&s=100" width="100px;" alt="ikostan"/><br /><sub><b>ikostan</b></sub></a><br />
-        <a href="https://github.com/ikostan/SkyLockAssault/commits?author=ikostan" title="Code">💻</a>
-        <a href="https://github.com/ikostan/SkyLockAssault/commits?author=ikostan" title="Tests">⚠️</a>
-        <a href="https://github.com/ikostan/SkyLockAssault/commits?author=ikostan" title="Documentation">📖</a>
-        <a href="#infra-ikostan" title="Infrastructure">🚇</a>
-        <a href="#ideas-ikostan" title="Ideas">🤔</a>
-        <a href="#design-ikostan" title="Design">🎨</a>
-      </td>
-      <td align="center" valign="top" width="14.28%">
-        <a href="https://github.com/espanakosta-jpg"><img src="https://avatars.githubusercontent.com/u/espanakosta-jpg?v=4&s=100" width="100px;" alt="espanakosta-jpg"/><br /><sub><b>espanakosta-jpg</b></sub></a><br />
-        <a href="#audio-espanakosta-jpg" title="Audio">🔊</a>
-        <a href="#design-espanakosta-jpg" title="Design">🎨</a>
-      </td>
-      <td align="center" valign="top" width="14.28%">
-        <a href="https://github.com/apps/dependabot"><img src="https://avatars.githubusercontent.com/in/29110?s=100" width="100px;" alt="dependabot[bot]"/><br /><sub><b>dependabot[bot]</b></sub></a><br />
-        <a href="#infra-dependabot[bot]" title="Infrastructure">🚇</a>
-        <a href="#security-dependabot[bot]" title="Security">🛡️</a>
-        <a href="#maintenance-dependabot[bot]" title="Maintenance">🚧</a>
-      </td>
-      <td align="center" valign="top" width="14.28%">
-        <a href="https://github.com/apps/sourcery-ai"><img src="https://avatars.githubusercontent.com/in/60327?s=100" width="100px;" alt="sourcery-ai"/><br /><sub><b>sourcery-ai</b></sub></a><br />
-        <a href="https://github.com/ikostan/SkyLockAssault/pulls?q=is%3Apr+reviewed-by%3Asourcery-ai" title="Reviewed PRs">👀</a>
-        <a href="https://github.com/ikostan/SkyLockAssault/commits?author=sourcery-ai" title="Documentation">📖</a>
-      </td>
-      <td align="center" valign="top" width="14.28%">
-        <a href="https://github.com/apps/coderabbitai"><img src="https://avatars.githubusercontent.com/in/347564?s=100" width="100px;" alt="coderabbitai"/><br /><sub><b>coderabbitai</b></sub></a><br />
-        <a href="https://github.com/ikostan/SkyLockAssault/pulls?q=is%3Apr+reviewed-by%3Acoderabbitai" title="Reviewed PRs">👀</a>
-        <a href="https://github.com/ikostan/SkyLockAssault/commits?author=coderabbitai" title="Documentation">📖</a>
-      </td>
-      <td align="center" valign="top" width="14.28%">
-        <a href="https://github.com/apps/deepsource-io"><img src="https://avatars.githubusercontent.com/in/54034776?s=100" width="100px;" alt="deepsource-io"/><br /><sub><b>deepsource-io</b></sub></a><br />
-        <a href="https://github.com/ikostan/SkyLockAssault/pulls?q=is%3Apr+reviewed-by%3Adeepsource-io" title="Reviewed PRs">👀</a>
-        <a href="#security-deepsource-io" title="Security">🛡️</a>
-      </td>
+      <td align="center" valign="top" width="14.28%"><a href="https://ikostan.com"><img src="https://avatars.githubusercontent.com/u/20955183?v=4&size=100" width="100px" height="100px" alt="Egor Kostan"/><br /><sub><b>Egor Kostan</b></sub></a><br /><a href="https://github.com/ikostan/SkyLockAssault/commits?author=ikostan" title="Code">💻</a> <a href="https://github.com/ikostan/SkyLockAssault/commits?author=ikostan" title="Tests">⚠️</a> <a href="https://github.com/ikostan/SkyLockAssault/commits?author=ikostan" title="Documentation">📖</a> <a href="#infra-ikostan" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#ideas-ikostan" title="Ideas, Planning, & Feedback">🤔</a> <a href="#design-ikostan" title="Design">🎨</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/espanakosta-jpg"><img src="https://avatars.githubusercontent.com/u/261132001?v=4&size=100" width="100px" height="100px" alt="espanakosta-jpg"/><br /><sub><b>espanakosta-jpg</b></sub></a><br /><a href="#audio-espanakosta-jpg" title="Audio contributions (sound effects, UI feedback)">🔊</a> <a href="#design-espanakosta-jpg" title="Design">🎨</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/claude"><img src="https://avatars.githubusercontent.com/u/81847?v=4&size=100" width="100px" height="100px" alt="Claude"/><br /><sub><b>Claude</b></sub></a><br /><a href="https://github.com/ikostan/SkyLockAssault/commits?author=claude" title="Code">💻</a> <a href="https://github.com/ikostan/SkyLockAssault/commits?author=claude" title="Tests">⚠️</a> <a href="https://github.com/ikostan/SkyLockAssault/commits?author=claude" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/apps/copilot-swe-agent"><img src="https://avatars.githubusercontent.com/u/223556219?v=4&size=100" width="100px" height="100px" alt="Copilot"/><br /><sub><b>Copilot</b></sub></a><br /><a href="https://github.com/ikostan/SkyLockAssault/commits?author=Copilot" title="Code">💻</a> <a href="https://github.com/ikostan/SkyLockAssault/commits?author=Copilot" title="Tests">⚠️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/apps/coderabbitai"><img src="https://avatars.githubusercontent.com/in/347564?v=4&size=100" width="100px" height="100px" alt="CodeRabbit"/><br /><sub><b>CodeRabbit</b></sub></a><br /><a href="https://github.com/ikostan/SkyLockAssault/pulls?q=is%3Apr+reviewed-by%3Acoderabbitai[bot]" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/ikostan/SkyLockAssault/commits?author=coderabbitai[bot]" title="Tests">⚠️</a> <a href="https://github.com/ikostan/SkyLockAssault/commits?author=coderabbitai[bot]" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/apps/sourcery-ai"><img src="https://avatars.githubusercontent.com/in/48477?v=4&size=100" width="100px" height="100px" alt="Sourcery AI"/><br /><sub><b>Sourcery AI</b></sub></a><br /><a href="https://github.com/ikostan/SkyLockAssault/pulls?q=is%3Apr+reviewed-by%3Asourcery-ai[bot]" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/ikostan/SkyLockAssault/commits?author=sourcery-ai[bot]" title="Code">💻</a> <a href="https://github.com/ikostan/SkyLockAssault/commits?author=sourcery-ai[bot]" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/apps/qodo-code-review"><img src="https://avatars.githubusercontent.com/in/484649?v=4&size=100" width="100px" height="100px" alt="Qodo"/><br /><sub><b>Qodo</b></sub></a><br /><a href="https://github.com/ikostan/SkyLockAssault/pulls?q=is%3Apr+reviewed-by%3Aqodo-code-review[bot]" title="Reviewed Pull Requests">👀</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/apps/deepsource-io"><img src="https://avatars.githubusercontent.com/in/16372?v=4&size=100" width="100px" height="100px" alt="DeepSource"/><br /><sub><b>DeepSource</b></sub></a><br /><a href="https://github.com/ikostan/SkyLockAssault/pulls?q=is%3Apr+reviewed-by%3Adeepsource-io[bot]" title="Reviewed Pull Requests">👀</a> <a href="#security-deepsource-io[bot]" title="Security">🛡️</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/apps/deepsource-autofix"><img src="https://avatars.githubusercontent.com/in/57168?v=4&size=100" width="100px" height="100px" alt="DeepSource Autofix"/><br /><sub><b>DeepSource Autofix</b></sub></a><br /><a href="#maintenance-deepsource-autofix[bot]" title="Maintenance">🚧</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/apps/dependabot"><img src="https://avatars.githubusercontent.com/in/29110?v=4&size=100" width="100px" height="100px" alt="Dependabot"/><br /><sub><b>Dependabot</b></sub></a><br /><a href="#infra-dependabot[bot]" title="Infrastructure (Hosting, Build-Tools, etc)">🚇</a> <a href="#security-dependabot[bot]" title="Security">🛡️</a> <a href="#maintenance-dependabot[bot]" title="Maintenance">🚧</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/ImgBotApp"><img src="https://avatars.githubusercontent.com/u/31427850?v=4&size=100" width="100px" height="100px" alt="ImgBot"/><br /><sub><b>ImgBot</b></sub></a><br /><a href="#maintenance-ImgBotApp" title="Maintenance">🚧</a></td>
     </tr>
   </tbody>
 </table>
+
 <!-- markdownlint-restore -->
 <!-- prettier-ignore-end -->
 <!-- ALL-CONTRIBUTORS-LIST:END -->
