@@ -1,3 +1,5 @@
+# gdlint: disable=max-public-methods
+# GUT discovers each public test method in this regression suite.
 ## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_deserialize_event_key_tokens.gd
@@ -360,3 +362,281 @@ func _key_event(code: Key) -> InputEventKey:
 	var ev := InputEventKey.new()
 	ev.physical_keycode = code
 	return ev
+
+
+## Duplicate validation applies to every modifier, even when another token separates repeats.
+func test_nonadjacent_duplicate_modifiers_are_rejected(
+	modifier: String = use_parameters(["shift", "ctrl", "alt", "meta"])
+) -> void:
+	var separator: String = "ctrl" if modifier == "shift" else "shift"
+	_assert_rejected(
+		"key:42:%s:%s:%s" % [modifier, separator, modifier], "nonadjacent duplicate modifier"
+	)
+
+
+## Whitespace, mixed case, and empty tokens must not be normalized into valid bindings.
+func test_malformed_modifier_sequences_are_rejected(
+	serialized: String = use_parameters(
+		[
+			"key:42:Ctrl",
+			"key:42:ALT",
+			"key:42:META",
+			"key:42: shift",
+			"key:42:ctrl ",
+			"key:42:\talt",
+			"key:42:meta\n",
+			"key:42:shift::ctrl",
+			"key:42:shift:ctrl:",
+			"key:42:bogus:ctrl",
+		]
+	)
+) -> void:
+	_assert_rejected(serialized, "malformed modifier sequence")
+
+
+## Check flags directly so a shared serializer or event comparison bug cannot hide errors.
+func test_individual_modifiers_load_with_only_their_own_flag(
+	modifier: String = use_parameters(["ctrl", "alt", "meta"])
+) -> void:
+	_assert_key(
+		"key:42:" + modifier, false, modifier == "ctrl", modifier == "alt", modifier == "meta"
+	)
+
+
+## All four modifiers remain valid when supplied in reverse serialization order.
+func test_all_modifiers_load_in_reverse_order() -> void:
+	_assert_key("key:42:meta:alt:ctrl:shift", true, true, true, true)
+
+
+## Returns bindings with modifiers and gamepad device details intact for exact assertions.
+func _serialized_bindings(action: String) -> Array[String]:
+	var bindings: Array[String] = []
+	for event: InputEvent in InputMap.action_get_events(action):
+		bindings.append(Settings.serialize_event(event))
+	return bindings
+
+
+## Rejected keys must not remove another action's binding or interrupt valid entries.
+func test_apply_rejected_key_preserves_valid_bindings_and_other_actions(
+	invalid_first: bool = use_parameters([true, false])
+) -> void:
+	var config: ConfigFile = _default_config()
+	var expected: Array[String] = ["key:%d:ctrl" % KEY_F, "key:%d:alt" % KEY_H]
+	expected.append_array(_gamepad_entries(config, "fire"))
+	var fire: Array[String] = expected.duplicate()
+	fire.insert(0 if invalid_first else fire.size(), "key:42:shift:bogus")
+	config.set_value("input", "fire", fire)
+	var next_weapon: Array[String] = ["key:42:shift"]
+	next_weapon.append_array(_gamepad_entries(config, "next_weapon"))
+	config.set_value("input", "next_weapon", next_weapon)
+	Settings.set_needs_save_for_test(false)
+
+	assert_false(Settings.apply_config_to_input_map(config), "invalid keys are not conflicts")
+
+	assert_eq(_serialized_bindings("fire"), expected, "all valid bindings survive in order")
+	assert_eq(_serialized_bindings("next_weapon"), next_weapon, "the other owner is untouched")
+	assert_false(Settings.needs_save(), "the in-memory apply helper does not set the save flag")
+
+
+## A binding inherited from the project must not block restoring a missing default.
+func test_backfill_ignores_conflicting_action_without_saved_entry() -> void:
+	_default_config()
+	InputMap.action_erase_events("next_weapon")
+	InputMap.action_add_event("next_weapon", _key_event(KEY_SPACE))
+	var config := ConfigFile.new()
+	config.set_value("input", "fire", ["key:42:bogus", "joybtn:%d:-1" % JOY_BUTTON_A])
+	Settings.apply_config_to_input_map(config, ["fire"] as Array[String])
+
+	assert_true(Settings.backfill_missing_defaults(config), "the missing default is added")
+
+	assert_eq(_keycodes("fire"), [KEY_SPACE] as Array[int], "fire regains its default")
+	assert_eq(_keycodes("next_weapon"), [KEY_SPACE] as Array[int], "the inherited owner remains")
+	assert_false(Settings.backfill_missing_defaults(config), "a second backfill adds nothing")
+
+
+## A saved modified key is distinct from the plain default on the same physical key.
+func test_backfill_does_not_treat_modified_default_as_a_conflict() -> void:
+	var config: ConfigFile = _default_config()
+	config.set_value("input", "fire", ["key:42:bogus", "joybtn:%d:-1" % JOY_BUTTON_A])
+	var next_weapon: Array[String] = ["key:%d:shift" % KEY_SPACE]
+	next_weapon.append_array(_gamepad_entries(config, "next_weapon"))
+	config.set_value("input", "next_weapon", next_weapon)
+	Settings.apply_config_to_input_map(config)
+
+	assert_true(Settings.backfill_missing_defaults(config), "plain Space is still available")
+
+	assert_eq(_keycodes("fire"), [KEY_SPACE] as Array[int], "fire receives plain Space")
+	assert_eq(_serialized_bindings("next_weapon"), next_weapon, "Shift+Space stays assigned")
+	assert_eq(
+		Settings.get_conflicting_actions(_key_event(KEY_SPACE), "fire"),
+		[] as Array[String],
+		"the restored plain key has no conflicts"
+	)
+
+
+## Default ownership checks also apply to gamepad buttons and both stick directions.
+func test_backfill_preserves_saved_gamepad_owners(
+	scenario: Array = use_parameters(
+		[
+			["fire", "joybtn:bad:-1", "joybtn:%d:-1" % JOY_BUTTON_A],
+			["speed_up", "joyaxis:bad:-1:-1", "joyaxis:%d:-1.0:-1" % JOY_AXIS_RIGHT_Y],
+			["speed_down", "joyaxis:bad:1:-1", "joyaxis:%d:1.0:-1" % JOY_AXIS_RIGHT_Y],
+		]
+	)
+) -> void:
+	var config: ConfigFile = _default_config()
+	var action: String = scenario[0]
+	var keyboard: String = "key:%d" % Settings.DEFAULT_KEYBOARD[action]
+	config.set_value("input", action, [keyboard, scenario[1]])
+	var next_weapon: Array[String] = ["key:%d" % KEY_Q, scenario[2]]
+	config.set_value("input", "next_weapon", next_weapon)
+	Settings.apply_config_to_input_map(config)
+
+	assert_false(Settings.backfill_missing_defaults(config), "the saved owner blocks restoration")
+
+	assert_eq(_serialized_bindings(action), [keyboard] as Array[String], "keyboard is preserved")
+	assert_eq(_serialized_bindings("next_weapon"), next_weapon, "the gamepad owner is preserved")
+
+
+## Corrupt gamepad mappings still recover their own defaults when those inputs are available.
+func test_backfill_restores_available_gamepad_defaults(
+	scenario: Array = use_parameters(
+		[
+			["fire", "joybtn:bad:-1", "joybtn:%d:-1" % JOY_BUTTON_A],
+			["speed_up", "joyaxis:bad:-1:-1", "joyaxis:%d:-1.0:-1" % JOY_AXIS_RIGHT_Y],
+			["speed_down", "joyaxis:bad:1:-1", "joyaxis:%d:1.0:-1" % JOY_AXIS_RIGHT_Y],
+		]
+	)
+) -> void:
+	var config: ConfigFile = _default_config()
+	var action: String = scenario[0]
+	var keyboard: String = "key:%d" % Settings.DEFAULT_KEYBOARD[action]
+	config.set_value("input", action, [keyboard, scenario[1]])
+	Settings.apply_config_to_input_map(config)
+
+	assert_true(
+		Settings.backfill_missing_defaults(config), "the available gamepad default is added"
+	)
+
+	assert_eq(
+		_serialized_bindings(action),
+		[keyboard, scenario[2]] as Array[String],
+		"the restored default retains its button or axis, direction, and wildcard device"
+	)
+	assert_false(Settings.backfill_missing_defaults(config), "restoration is idempotent")
+
+
+## Recovery must keep explicit unbinds for either device and both supported array formats.
+func test_load_preserves_explicit_unbinds(
+	bindings: Variant = use_parameters(
+		[
+			[],
+			PackedStringArray(),
+			["joybtn:%d:-1" % JOY_BUTTON_A],
+			PackedStringArray(["joybtn:%d:-1" % JOY_BUTTON_A]),
+			["key:%d" % KEY_F],
+			PackedStringArray(["key:%d" % KEY_F]),
+		]
+	)
+) -> void:
+	var config: ConfigFile = _default_config()
+	config.set_value("input", "fire", bindings)
+
+	_load(config)
+
+	var expected: Array[String] = []
+	expected.assign(bindings)
+	assert_eq(_serialized_bindings("fire"), expected, "explicitly omitted devices stay unbound")
+	assert_false(Settings.needs_save(), "explicit unbinds require no repair")
+
+
+## PackedStringArray entries use the same corruption recovery as regular arrays.
+func test_load_recovers_corrupt_packed_string_array() -> void:
+	var config: ConfigFile = _default_config()
+	var gamepad: Array[String] = _gamepad_entries(config, "fire")
+	var fire := PackedStringArray(["key:42:meta:meta"])
+	fire.append_array(PackedStringArray(gamepad))
+	config.set_value("input", "fire", fire)
+
+	_load(config)
+
+	assert_eq(_keycodes("fire"), [KEY_SPACE] as Array[int], "the invalid key gets its default")
+	var expected: Array[String] = gamepad.duplicate()
+	expected.append("key:%d" % KEY_SPACE)
+	assert_eq(_serialized_bindings("fire"), expected, "the valid gamepad entry survives")
+	assert_true(Settings.needs_save(), "the corrupt packed entry needs to be removed from disk")
+
+
+## Invalid non-key entries also request cleanup when every device already has valid bindings.
+func test_load_requests_cleanup_without_needing_defaults(
+	invalid: String = use_parameters(["joybtn:bad:-1", "joyaxis:1:bad:-1", "unknown:42"])
+) -> void:
+	var config: ConfigFile = _default_config()
+	var expected: Array[String] = []
+	expected.assign(config.get_value("input", "fire"))
+	var fire: Array[String] = expected.duplicate()
+	fire.append(invalid)
+	config.set_value("input", "fire", fire)
+
+	_load(config)
+
+	assert_eq(_serialized_bindings("fire"), expected, "valid bindings remain unchanged")
+	assert_true(Settings.needs_save(), "discarding an invalid entry alone requires cleanup")
+
+
+## A later clean load must not inherit the invalid-binding state of an earlier apply.
+func test_load_clean_config_clears_previous_invalid_binding_state() -> void:
+	var config: ConfigFile = _default_config()
+	config.set_value("input", "fire", ["key:42:bogus", "key:%d" % KEY_F])
+	_load(config)
+	assert_true(Settings.needs_save(), "the corrupt load first requests a save")
+
+	_load(_default_config())
+
+	assert_false(Settings.needs_save(), "a fresh clean load does not inherit the repair request")
+	assert_eq(
+		_keycodes("fire"), [KEY_SPACE] as Array[int], "the clean mapping replaces the old one"
+	)
+
+
+## A pending save for another reason must survive a clean input load.
+func test_load_clean_config_preserves_pending_save_request() -> void:
+	_load(_default_config())
+	Settings.set_needs_save_for_test(true)
+
+	Settings.load_input_mappings(TEST_CONFIG_PATH)
+
+	assert_true(Settings.needs_save(), "clean input mappings must not cancel a pending save")
+
+
+## Saving a repaired mapping must make the next startup clean, with stable fallback behavior.
+func test_repaired_mapping_reload_is_clean(
+	default_owned: bool = use_parameters([false, true])
+) -> void:
+	var config: ConfigFile = _default_config()
+	config.set_value("input", "fire", ["key:42:bogus", "joybtn:%d:-1" % JOY_BUTTON_A])
+	if default_owned:
+		config.set_value(
+			"input", "next_weapon", ["key:%d" % KEY_SPACE, "joybtn:%d:-1" % JOY_BUTTON_Y]
+		)
+	_load(config)
+	assert_true(Settings.needs_save(), "the first load requests repair")
+	var expected: Array[String] = ["joybtn:%d:-1" % JOY_BUTTON_A]
+	if not default_owned:
+		expected.push_front("key:%d" % KEY_SPACE)
+	# Compare membership because a backfilled keyboard event follows the existing gamepad event.
+	var repaired: Array[String] = _serialized_bindings("fire")
+	assert_eq(repaired.size(), expected.size(), "repair leaves exactly the expected bindings")
+	for binding: String in expected:
+		assert_has(repaired, binding, "repair keeps the correct fallback or explicit unbind")
+	Settings.save_input_mappings(TEST_CONFIG_PATH)
+	Settings.set_needs_save_for_test(false)
+
+	Settings.load_input_mappings(TEST_CONFIG_PATH)
+
+	assert_eq(_serialized_bindings("fire"), repaired, "the repaired bindings survive a reload")
+	assert_false(Settings.needs_save(), "the cleaned file needs no further repair")
+	if default_owned:
+		assert_eq(
+			_keycodes("next_weapon"), [KEY_SPACE] as Array[int], "the saved owner keeps Space"
+		)
