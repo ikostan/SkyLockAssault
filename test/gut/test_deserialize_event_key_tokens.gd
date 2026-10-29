@@ -40,11 +40,32 @@ extends "res://addons/gut/test.gd"
 const CODE: int = 42
 ## Temporary encrypted config used by the load tests; never the player's real settings file.
 const TEST_CONFIG_PATH: String = "user://test_deserialize_event_key_tokens.cfg"
+## Backup of the real settings file: reset_to_defaults() in _default_config() saves to
+## Settings.CONFIG_PATH, so the player's own bindings must be restored after the suite.
+const SETTINGS_BACKUP_PATH: String = "user://settings_backup_key_tokens.cfg"
 
 ## Snapshot of every action in [constant Settings.ACTIONS], taken in [method before_each].
 var _saved_events: Dictionary = {}
 ## Value of [method Settings.needs_save] before the test, restored in [method after_each].
 var _saved_needs_save: bool = false
+## Whether Settings.CONFIG_PATH existed before the suite ran.
+var _had_settings_file: bool = false
+
+
+## Backs up the real settings file before any test can overwrite it.
+func before_all() -> void:
+	_had_settings_file = FileAccess.file_exists(Settings.CONFIG_PATH)
+	if _had_settings_file:
+		DirAccess.copy_absolute(Settings.CONFIG_PATH, SETTINGS_BACKUP_PATH)
+
+
+## Restores the real settings file, or removes the one the suite created.
+func after_all() -> void:
+	if _had_settings_file:
+		DirAccess.copy_absolute(SETTINGS_BACKUP_PATH, Settings.CONFIG_PATH)
+		DirAccess.remove_absolute(SETTINGS_BACKUP_PATH)
+	elif FileAccess.file_exists(Settings.CONFIG_PATH):
+		DirAccess.remove_absolute(Settings.CONFIG_PATH)
 
 
 ## Saves the events of every action a test may modify.
