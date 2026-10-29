@@ -59,12 +59,14 @@ func _initialize_sfx_pool() -> void:
 		_sfx_pool.append(p)
 
 
-## Centralized SFX Playback API (Issue #570)
-## Handles non-positional audio with LRU caching and auto-cleanup.
-## :param sfx_name: The logical identifier (e.g., "ui_navigation" or "slider").
-## :param bus_name: Target audio bus (defaults to SFX_Menu).
-## :param pitch_scale: Pitch override for variety.
-## :param volume_db: Volume offset in decibels.
+## Plays non-positional audio with LRU caching and auto-cleanup.
+##
+## Handles centralized playback via an object pool and LRU cache.
+##
+## [param sfx_name]: The logical identifier such as ui_navigation or slider.
+## [param bus_name]: Target audio bus, defaults to SFX_Menu.
+## [param pitch_scale]: Pitch override for variety.
+## [param volume_db]: Volume offset in decibels.
 func play_sfx(
 	sfx_name: String,
 	bus_name: String = AudioConstants.BUS_SFX_MENU,
@@ -166,9 +168,10 @@ func play_sfx(
 	player.play()
 
 
-## [DIAGNOSTIC]
 ## Checks if any AudioStreamPlayer node within the pre-allocated pool is currently active.
-## :rtype: bool
+##
+## Iterates through the sfx pool to determine if any player is currently playing.
+## Returns true if at least one audio stream player is playing, false otherwise.
 func is_any_sfx_playing() -> bool:
 	for player: AudioStreamPlayer in _sfx_pool:
 		if is_instance_valid(player) and player.playing:
@@ -176,9 +179,8 @@ func is_any_sfx_playing() -> bool:
 	return false
 
 
-## [DIAGNOSTIC]
-## Returns the total number of AudioStreamPlayer channels currently active.
-## :rtype: int
+## Return the total number of AudioStreamPlayer channels currently active.
+## Returns the total number of currently playing audio stream player channels.
 func get_active_sfx_playback_count() -> int:
 	var count: int = 0
 	for player: AudioStreamPlayer in _sfx_pool:
@@ -196,11 +198,11 @@ func stop_all_sfx() -> void:
 			player.stream = null
 
 
-## [DIAGNOSTIC]
-## Public API: Returns the resource path of the most recently started active SFX.
-## If multiple sounds are active, this returns the one most recently assigned to the pool.
-## If no sounds are playing, returns an empty string.
-## Returns String: Resource path of the active stream.
+## Return the resource path of the most recently started active sound effect.
+##
+## Iterates backwards through the pool to find the most recently assigned active sound,
+## returning its resource path or an empty string if nothing is playing.
+## Returns Resource path of the active stream, or an empty string if no sounds are playing.
 func get_active_sfx_stream_path() -> String:
 	# Iterate backwards through the pool to return the most recently
 	# added/played sound, making the choice deterministic and explicit.
@@ -211,10 +213,10 @@ func get_active_sfx_stream_path() -> String:
 	return ""
 
 
-## [DIAGNOSTIC]
-## Public API: Returns the target audio bus name of the most recently started active SFX.
+## Returns the target audio bus name of the most recently started active SFX.
+##
 ## If no sounds are playing, returns an empty string.
-## Returns String: Name of the assigned audio bus.
+## Returns Name of the assigned audio bus.
 func get_active_sfx_bus_name() -> String:
 	# Iterate backwards matching our deterministic track verification rules
 	for i in range(_sfx_pool.size() - 1, -1, -1):

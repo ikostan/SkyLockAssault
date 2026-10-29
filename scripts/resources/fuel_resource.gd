@@ -8,6 +8,8 @@ class_name FuelResource
 extends Resource
 
 ## Emitted strictly when the effective fuel value changes.
+##
+## [param new_value]: The updated effective fuel value.
 signal fuel_changed(new_value: float)
 
 ## Emitted strictly when crossing from previous_fuel > 0.0 to new_fuel == 0.0.
@@ -79,6 +81,8 @@ func _init() -> void:
 
 
 ## Helper method to safely increase fuel.
+##
+## [param amount]: The quantity of fuel to add if greater than zero.
 func refuel(amount: float) -> void:
 	if amount > 0:
 		self.current_fuel += amount

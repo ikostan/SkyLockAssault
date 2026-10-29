@@ -11,6 +11,8 @@ extends Resource
 signal thresholds_changed
 
 ## Emitted strictly when the effective speed value changes.
+##
+## [param new_speed]: The newly updated effective speed value.
 signal speed_updated(new_speed: float)
 
 ## Emitted strictly when crossing from previous_speed > low_threshold to new_speed <= low_threshold.
