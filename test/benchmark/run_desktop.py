@@ -1,21 +1,27 @@
 # Copyright (C) 2026 Egor Kostan
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # test/benchmark/run_desktop.py
-"""Run the desktop performance benchmark several times and report medians (Issue #1079).
+"""Run the desktop performance benchmark N times and report medians (#1079).
 
-Each run launches Godot headless on res://test/benchmark/benchmark_runner.tscn, which writes
-its CSV files into its own run folder. This script then checks every run is valid, adds a few
-derived metrics (stutter counts, reload object growth, memory growth) and writes:
+Each run launches Godot headless on res://test/benchmark/benchmark_runner.tscn,
+which writes its CSV files into its own run folder. This script then checks
+that every run is valid, adds a few derived metrics (stutter counts, reload
+object growth, memory growth) and writes:
 
-    <out>/run_1 .. run_N/     raw CSVs + console.txt from each run
-    <out>/runs.csv            one row per run, every metric
-    <out>/medians.md          Markdown table (per run + median) ready for the #1079 comment
+    <out>/run_1 .. run_N/  raw CSVs + console.txt from each run
+    <out>/runs.csv         one row per run, every metric
+    <out>/medians.md       Markdown table (per run + median) for #1079
 
 Usage (from anywhere; standard library only):
 
-    python test/benchmark/run_desktop.py --godot "C:/path/Godot_v4.7.1-stable_win64_console.exe"
+    python test/benchmark/run_desktop.py --godot <path to Godot console exe>
 
 The Godot path can also come from the GODOT_BIN environment variable.
+
+Every run starts from default settings: the user's settings.cfg is moved
+aside before the first run, deleted before each run (the game recreates it)
+and put back at the end.
+
 Exit code: 0 if every run is valid, 1 otherwise.
 """
 
@@ -26,6 +32,7 @@ import csv
 import datetime as dt
 import os
 import platform
+import shutil
 import statistics
 import subprocess
 import sys
@@ -34,6 +41,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RUNNER_SCENE = "res://test/benchmark/benchmark_runner.tscn"
 RUN_TIMEOUT_S = 300
+SETTINGS_FILE = "settings.cfg"
 
 # Frame-interval thresholds (ms). 33.4 ms = at least one dropped frame at 60 FPS.
 STUTTER_THRESHOLDS_MS = (25.0, 33.4, 50.0)
@@ -114,6 +122,37 @@ def to_number(value: str) -> float | str:
         return value
 
 
+def project_name() -> str:
+    """Read config/name from project.godot (used for the user data folder)."""
+    for line in (
+        (PROJECT_ROOT / "project.godot").read_text(encoding="utf-8").splitlines()
+    ):
+        if line.startswith("config/name="):
+            return line.split("=", 1)[1].strip().strip('"')
+    return "SkyLockAssault"
+
+
+def user_data_dir() -> Path:
+    """Godot's user:// folder for this project on the current OS."""
+    name = project_name()
+    if sys.platform == "win32":
+        base = Path(os.environ["APPDATA"]) / "Godot"
+    elif sys.platform == "darwin":
+        base = Path.home() / "Library" / "Application Support" / "Godot"
+    else:
+        base = (
+            Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+            / "godot"
+        )
+    return base / "app_userdata" / name
+
+
+def reset_settings(settings: Path) -> None:
+    """Delete settings.cfg so the next run starts from defaults."""
+    if settings.exists():
+        settings.unlink()
+
+
 def run_once(godot: str, run_dir: Path) -> tuple[bool, str]:
     """Run the benchmark once. Returns (valid, reason)."""
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -188,16 +227,19 @@ def collect_metrics(run_dir: Path) -> dict[str, float | str]:
 
 def git_info() -> str:
     """Return 'SHA' or 'SHA (dirty)' for the project, or 'unknown'."""
+    git = shutil.which("git")
+    if git is None:
+        return "unknown"
     try:
         sha = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
+            [git, "rev-parse", "HEAD"],
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
             check=True,
         ).stdout.strip()
         dirty = subprocess.run(
-            ["git", "status", "--porcelain"],
+            [git, "status", "--porcelain"],
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
@@ -240,6 +282,7 @@ def write_reports(
         f"- Godot: {first.get('godot', 'unknown')}",
         f"- OS: {platform.platform()}",
         f"- CPU: {platform.processor() or 'unknown'}",
+        "- Start state: default settings (no settings.cfg) for every run",
         (
             f"- Valid runs: {len(results)}, invalid runs skipped: {invalid}; "
             "table shows each valid run and the median"
@@ -261,24 +304,40 @@ def write_reports(
 def main() -> int:
     """Run the benchmark N times and write the reports."""
     args = parse_args()
+    godot = shutil.which(args.godot)
+    if godot is None:
+        print(f"Godot executable not found: {args.godot}")
+        return 1
     out: Path = args.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
     print(f"Project: {PROJECT_ROOT}")
     print(f"Output:  {out}")
 
+    settings = user_data_dir() / SETTINGS_FILE
+    user_backup = settings.with_name(SETTINGS_FILE + ".bench_user_backup")
+    print(f"Settings: {settings} (moved aside during the runs)")
+    if settings.exists() and not user_backup.exists():
+        shutil.move(settings, user_backup)
+
     results: list[dict[str, float | str]] = []
     invalid = 0
-    for index in range(1, args.runs + 1):
-        run_dir = out / f"run_{index}"
-        print(f"Run {index}/{args.runs} (about 80 s)...", flush=True)
-        valid, reason = run_once(args.godot, run_dir)
-        print(f"  {reason}")
-        if valid:
-            results.append(collect_metrics(run_dir))
-        else:
-            invalid += 1
-            if not args.keep_going:
-                break
+    try:
+        for index in range(1, args.runs + 1):
+            run_dir = out / f"run_{index}"
+            print(f"Run {index}/{args.runs} (about 80 s)...", flush=True)
+            reset_settings(settings)
+            valid, reason = run_once(godot, run_dir)
+            print(f"  {reason}")
+            if valid:
+                results.append(collect_metrics(run_dir))
+            else:
+                invalid += 1
+                if not args.keep_going:
+                    break
+    finally:
+        reset_settings(settings)
+        if user_backup.exists():
+            shutil.move(user_backup, settings)
 
     if not results:
         print("No valid runs; nothing to report.")
