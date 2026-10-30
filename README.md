@@ -139,7 +139,8 @@ External reference: [Godot Documentation](https://docs.godotengine.org/en/stable
 
 - Separation of gameplay logic and UI state
 - Resource-based state model (`FuelResource`, `SpeedResource`, `PlayerStatsResource`, `WeaponResource`, `BulletResource`, `GameSettingsResource`)
-- **Observer-based Settings System**: centralized `GameSettingsResource` that handles automatic persistence and UI synchronization through signals
+- **Observer-based Settings System**: centralized `GameSettingsResource` that handles automatic persistence and UI synchronization through signals. Only keys in `Globals.persisted_schema` are saved; runtime state such as `current_fuel` is never written to disk
+- **Autoload order is a contract**: `Globals` must stay the first autoload in `project.godot`, because `Settings` and `AudioManager` read the config file through `Globals.safe_load_config()` in their `_ready()`. Current order: `Globals` → `Settings` → `AudioConstants` → `SfxManager` → `AudioManager` → `AudioWebBridge` → `UiManager`
 - Audio split into `AudioManager` (buses, volume, mute) and `SfxManager` (sound-effect playback)
 - Platform wrappers (`OSWrapper`, `JavaScriptBridgeWrapper`) so web-only code can be tested on desktop
 - Speed-based gameplay scaling

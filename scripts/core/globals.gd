@@ -1,8 +1,22 @@
 ## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## globals.gd
-## Global utilities singleton: Provides shared functions like logging.
-## Access from any script as Globals.log_message("message").
+## Global autoload singleton. Currently owns:
+## - Logging: log_message() and the LogLevel enum.
+## - Gameplay settings: the shared GameSettingsResource and its encrypted persistence
+##   (persisted_schema, _load_settings/_save_settings). Only schema keys are saved;
+##   runtime state on the resource (fuel, speed, thresholds) is never written to disk.
+## - Config file I/O shared by other autoloads: encryption key, safe_load_config().
+## - Menu overlay stack: hidden_menus, options_open, options_instance,
+##   load_options(), load_key_mapping().
+## - Scene transitions: load_scene_with_loading() and next_scene.
+## - UI focus helper and the last-used input device label.
+##
+## Autoload order contract (project.godot): Globals must stay the FIRST autoload.
+## Settings and AudioManager call Globals.safe_load_config() from their _ready(),
+## and every autoload uses Globals.log_message(). Current order:
+## Globals -> Settings -> AudioConstants -> SfxManager -> AudioManager
+## -> AudioWebBridge -> UiManager.
 
 @tool
 extends Node
@@ -78,12 +92,17 @@ var hidden_menus: Array[Node] = []
 var options_open: bool = false
 ## Key Mapping scene for direct loading from warning dialogs.
 # var key_mapping_scene: PackedScene = preload("res://scenes/key_mapping_menu.tscn")
-var previous_scene: String = "res://scenes/main_menu.tscn"  # Default fallback
+## Scene that audio_settings.gd falls back to when Back is pressed with an empty
+## hidden_menus stack. Never reassigned in production; tests blank it so that path
+## does not replace the test runner's scene.
+var previous_scene: String = "res://scenes/main_menu.tscn"
 # var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 var next_scene: String = ""  # Path to the next scene to load via loading screen.
 ## Last selected input device for UI messages and labels.
 ## Updated when player toggles Keyboard/Gamepad in Key Mapping.
 var current_input_device: String = "keyboard"  # "keyboard" or "gamepad"
+## Mockable wrapper for JavaScriptBridge calls (web builds only).
+var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
 var _is_loading_settings: bool = false  # Guard flag
 
 
@@ -108,7 +127,7 @@ func _ready() -> void:
 		settings.key_mapping_scene = load("res://scenes/key_mapping_menu.tscn")
 		settings.options_scene = load("res://scenes/options_menu.tscn")
 
-	if Engine.is_editor_hint() or settings.enable_debug_logging:
+	if settings.enable_debug_logging:
 		settings.current_log_level = LogLevel.DEBUG
 	log_message("Log level set to: " + LogLevel.keys()[settings.current_log_level], LogLevel.DEBUG)
 	_load_settings()  # Load persisted settings first
@@ -119,18 +138,22 @@ func _ready() -> void:
 
 	# Signal Playwright that the engine is ready and initialize current log level state
 	if OS.has_feature("web"):
-		JavaScriptBridge.eval("window.godotInitialized = true")
+		js_bridge_wrapper.eval("window.godotInitialized = true")
 		if is_instance_valid(settings):
-			JavaScriptBridge.eval(
+			js_bridge_wrapper.eval(
 				"window.currentLogLevel = " + JSON.stringify(settings.current_log_level)
 			)
 
 
 ## Reactive handler for the Observer Pattern connected to GameSettingsResource signals.
 ##
-## Triggers centralized side effects whenever a setting property is mutated.
-## Handles conditional console logging, encrypted disk persistence, and real-time state
-## synchronization with the browser window for Web builds and Playwright E2E tests.
+## Triggers centralized side effects whenever a persisted setting is mutated: DEBUG
+## logging and encrypted disk persistence. Properties outside persisted_schema (runtime
+## state such as current_fuel, which the player mirrors every fuel tick) are ignored,
+## because _save_settings never writes them and each save is a full decrypt + encrypt +
+## write of settings.cfg (issue #616).
+## On web builds, current_log_level is also mirrored to window.currentLogLevel for
+## Playwright E2E tests.
 ##
 ## :param setting_name: The string identifier of the modified setting property.
 ## :type setting_name: String
@@ -143,17 +166,16 @@ func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	if _is_loading_settings:
 		return
 
-	var log_msg: String = "Setting '%s' updated to: %s" % [setting_name, str(new_value)]
-
 	# Web / E2E state synchronization: Expose current log level to window.currentLogLevel
 	if setting_name == "current_log_level":
 		if OS.has_feature("web"):
-			JavaScriptBridge.eval("window.currentLogLevel = " + JSON.stringify(new_value))
+			js_bridge_wrapper.eval("window.currentLogLevel = " + JSON.stringify(new_value))
 
-	# Log standard setting mutations at DEBUG level
-	log_message(log_msg, LogLevel.DEBUG)
+	# Runtime state is not persisted: no log, no disk I/O.
+	if not persisted_schema.has(setting_name):
+		return
 
-	# Automatically persist updated setting values to encrypted disk storage
+	log_message("Setting '%s' updated to: %s" % [setting_name, str(new_value)], LogLevel.DEBUG)
 	_save_settings()
 
 
@@ -288,6 +310,18 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 				continue
 
 			settings.set(prop, value)
+
+			# Fields without schema bounds rely on the resource setter to clamp. Keep that
+			# behavior, but make it visible instead of silently accepting the disk value.
+			var applied: Variant = settings.get(prop)
+			if applied != value:
+				log_message(
+					(
+						"Persisted '%s' value %s was clamped to %s."
+						% [disk_key, str(value), str(applied)]
+					),
+					LogLevel.WARNING
+				)
 
 		_is_loading_settings = false
 		log_message("Settings synchronization complete.", LogLevel.DEBUG)
