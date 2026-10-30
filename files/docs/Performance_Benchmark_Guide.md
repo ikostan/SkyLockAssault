@@ -157,16 +157,30 @@ Options:
   `GODOT_BIN` environment variable.
 - `--runs`: number of runs. Default 3.
 - `--out`: output folder. Default `<project>/bench_results/<timestamp>`.
+- `--fresh`: start every run without a settings file (first-launch player)
+  instead of the default returning-player state.
 - `--keep-going`: continue after an invalid run instead of stopping.
 
 The script exits with 0 only if every run was valid, and with 1 straight
 away if the Godot path does not exist.
 
-Every run starts from **default settings**. Before the first run the script
-moves your real `settings.cfg` aside, deletes the file before each run (the
-game recreates it) and puts your file back at the end, even if a run fails.
-Without this, each run would start from whatever the previous run left
-behind.
+Every run starts from the same **returning-player** state:
+
+1. The script moves your real `settings.cfg` aside.
+2. It launches the game headless twice for a moment (`--quit-after 60`). The
+   first launch has no settings file, so the game writes a fresh one; the
+   second launch loads it and re-saves anything it fixes, as a real second
+   launch would.
+3. That file is saved as `settings_fixture.cfg` and copied in before every
+   run.
+4. At the end your own `settings.cfg` is put back, even if a run fails.
+
+Why not start without a settings file? Because some behaviour only happens
+when saved settings exist. Starting fresh hid the reload-loop object leak
+(0 instead of about +1 per reload) and about 30 live objects. Why not use
+your own file? Because it differs between machines and changes over time,
+and the settings are encrypted with a per-device key, so a committed fixture
+would not load elsewhere. Use `--fresh` only to compare the two states.
 
 ## Step 3: Baseline run in Docker
 
@@ -263,8 +277,11 @@ inside the WSL2 VM, limited to 4 CPUs.
 
 ```text
 <out>/
-├── medians.md          Markdown table: each run + median, ready to paste
-├── runs.csv            every metric, one row per run
+├── medians.md            Markdown table: each run + median, ready to paste
+├── runs.csv              every metric, one row per run
+├── settings_fixture.cfg  the returning-player settings every run started from
+├── prime_1.txt           output of the two fixture launches
+├── prime_2.txt
 └── run_1 .. run_N/
     ├── console.txt             full Godot output of the run
     ├── summary.csv             one-row summary
@@ -288,7 +305,8 @@ object-count growth across the reload loop.
 - **Settings saves** should be ~60 today (one per fuel tick). The refactor is
   expected to reduce this.
 - **Reload loop object growth** above 0 means each load of `main_scene` leaves
-  objects behind.
+  objects behind. It only shows with a saved settings file present, which is
+  why runs start from the returning-player state.
 
 ### Run-to-run variance
 
@@ -346,6 +364,11 @@ These came out of building and testing the harness; keep them for Part 2.
   leaked at exit. Waiting lets the audio server release them.
 - **60 FPS cap on desktop.** Headless Godot otherwise runs uncapped, which
   does not resemble real play.
+- **Returning-player start state.** Each run used to start from whatever
+  `settings.cfg` the previous run (or the user) left, so runs differed. A
+  fixed "no settings file" start fixed that but hid the reload leak. The
+  wrapper now generates one fresh settings file per baseline and starts every
+  run from it.
 
 ## Troubleshooting
 
