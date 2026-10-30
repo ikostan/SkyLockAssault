@@ -47,11 +47,13 @@ def web():
 
 
 def test_results_root_is_bench_results_in_project(desktop):
+    """All results live under <project>/bench_results."""
     assert desktop.RESULTS_ROOT == PROJECT_ROOT / "bench_results"
 
 
 @pytest.mark.parametrize(("exists", "expected"), [(True, "docker"), (False, "desktop")])
 def test_detect_environment_uses_docker_marker(desktop, tmp_path, exists, expected):
+    """/.dockerenv present means docker, absent means desktop."""
     marker = tmp_path / ".dockerenv"
     if exists:
         marker.touch()
@@ -60,12 +62,14 @@ def test_detect_environment_uses_docker_marker(desktop, tmp_path, exists, expect
 
 @pytest.mark.parametrize("kind", ["desktop", "docker", "web_headless", "web_headed"])
 def test_default_out_uses_timestamp_under_kind(desktop, kind):
+    """Without a name, each kind gets a timestamp folder under its own folder."""
     out = desktop.default_out(kind)
     assert out.parent == desktop.RESULTS_ROOT / kind
     assert STAMP.match(out.name), out.name
 
 
 def test_default_out_uses_name_instead_of_timestamp(desktop):
+    """--name replaces the timestamp folder."""
     out = desktop.default_out("docker", "baseline_616")
     assert out == desktop.RESULTS_ROOT / "docker" / "baseline_616"
 
@@ -78,6 +82,7 @@ def test_default_out_uses_name_instead_of_timestamp(desktop):
     ],
 )
 def test_desktop_parse_args_default_out(desktop, monkeypatch, argv, expected_parts):
+    """run_desktop.py defaults to bench_results/desktop/<timestamp or name>."""
     monkeypatch.setattr(desktop, "detect_environment", lambda: "desktop")
     monkeypatch.setattr(sys, "argv", ["run_desktop.py", *argv])
     out = desktop.parse_args().out
@@ -89,12 +94,14 @@ def test_desktop_parse_args_default_out(desktop, monkeypatch, argv, expected_par
 
 
 def test_desktop_parse_args_inside_docker(desktop, monkeypatch):
+    """Inside Docker, run_desktop.py defaults to bench_results/docker."""
     monkeypatch.setattr(desktop, "detect_environment", lambda: "docker")
     monkeypatch.setattr(sys, "argv", ["run_desktop.py", "--godot", "g"])
     assert desktop.parse_args().out.parent == desktop.RESULTS_ROOT / "docker"
 
 
 def test_desktop_parse_args_explicit_out_wins(desktop, monkeypatch, tmp_path):
+    """--out overrides the default folder, even with --name."""
     argv = ["run_desktop.py", "--godot", "g", "--out", str(tmp_path), "--name", "x"]
     monkeypatch.setattr(sys, "argv", argv)
     assert desktop.parse_args().out == tmp_path
@@ -104,6 +111,7 @@ def test_desktop_parse_args_explicit_out_wins(desktop, monkeypatch, tmp_path):
     ("extra", "kind"), [([], "web_headless"), (["--headed"], "web_headed")]
 )
 def test_web_parse_args_default_out_by_mode(web, monkeypatch, extra, kind):
+    """Headless and headed web runs default to separate folders."""
     monkeypatch.setattr(sys, "argv", ["run_web.py", "--godot", "g", *extra])
     out = web.parse_args().out
     assert out.parent == web.PROJECT_ROOT / "bench_results" / kind
@@ -111,6 +119,7 @@ def test_web_parse_args_default_out_by_mode(web, monkeypatch, extra, kind):
 
 
 def test_web_parse_args_name_and_explicit_out(web, monkeypatch, tmp_path):
+    """--name names the web folder; --out overrides it."""
     monkeypatch.setattr(
         sys, "argv", ["run_web.py", "--godot", "g", "--headed", "--name", "after"]
     )
