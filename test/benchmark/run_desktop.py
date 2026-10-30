@@ -44,6 +44,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RUNNER_SCENE = "res://test/benchmark/benchmark_runner.tscn"
 RUN_TIMEOUT_S = 300
 SETTINGS_FILE = "settings.cfg"
+# Backup benchmark_runner.gd makes of settings.cfg. During these runs it only
+# ever holds a fixture copy (the player's file is moved aside first).
+RUNNER_BACKUP_FILE = "settings.cfg.bench_backup"
 FIXTURE_FILE = "settings_fixture.cfg"
 PRIME_LAUNCHES = 2
 PRIME_QUIT_AFTER_FRAMES = "60"
@@ -422,6 +425,9 @@ def main() -> int:
             run_dir = out / f"run_{index}"
             print(f"Run {index}/{args.runs} (about 80 s)...", flush=True)
             reset_settings(settings)
+            # A run killed by the timeout leaves the runner's backup behind;
+            # the runner refuses to start while it exists.
+            reset_settings(settings.with_name(RUNNER_BACKUP_FILE))
             if fixture is not None:
                 shutil.copy2(fixture, settings)
             valid, reason = run_once(godot, run_dir)

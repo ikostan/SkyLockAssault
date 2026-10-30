@@ -7,7 +7,8 @@
 ## (scraped by Playwright on web). On desktop it also writes CSV files.
 ##
 ## Desktop: godot --headless --path . res://test/benchmark/benchmark_runner.tscn -- --out=<dir>
-## Exit code: 0 = valid run, 2 = invalid run (fuel/ammo/speed check failed).
+## Exit code: 0 = valid run, 2 = invalid run (fuel/ammo/speed check failed),
+## 1 = setup failed (settings file could not be backed up; nothing was changed).
 ##
 ## Drives the game only through input and public state; changes no gameplay code.
 
@@ -16,6 +17,11 @@ extends Node
 ## Scenario constants. Part 2 must use identical values.
 const DIFFICULTY: float = 0.5
 const LOG_LEVEL: int = 1  # Globals.LogLevel.INFO, the project default
+## Persisted gameplay/display settings pinned to their defaults, so a saved value
+## (for example a low max_fuel) cannot change the scenario.
+const MAX_FUEL: float = 100.0
+const ENABLE_DEBUG_LOGGING: bool = false
+const SHOW_FPS: bool = false
 const DESKTOP_MAX_FPS: int = 60
 const WARMUP_S: float = 5.0
 const MEASURE_S: float = 60.0
@@ -68,7 +74,11 @@ func _parse_args() -> void:
 
 ## Full scenario: setup, gameplay load, bullet drain, reload loop, report, restore.
 func _run() -> void:
-	_backup_settings()
+	if not _backup_settings():
+		# Nothing has been changed yet; stop before touching the real settings file.
+		_emit("done", ["invalid"])
+		get_tree().quit(1)
+		return
 	_apply_scenario_settings()
 	if not _is_web:
 		Engine.max_fps = DESKTOP_MAX_FPS
@@ -85,10 +95,15 @@ func _run() -> void:
 	get_tree().quit(0 if valid["ok"] else 2)
 
 
-## Fixed difficulty, log level and default (unmuted) volumes for every run.
+## Pins every persisted setting (Globals.persisted_schema) and the volumes, so
+## each run uses the same scenario whatever the settings file contained.
+## Runs before main_scene is loaded: the player reads max_fuel in its setup.
 func _apply_scenario_settings() -> void:
 	Globals.settings.current_log_level = LOG_LEVEL
 	Globals.settings.difficulty = DIFFICULTY
+	Globals.settings.enable_debug_logging = ENABLE_DEBUG_LOGGING
+	Globals.settings.max_fuel = MAX_FUEL
+	Globals.settings.show_fps = SHOW_FPS
 	AudioManager.reset_volumes()
 
 
@@ -304,24 +319,44 @@ func _emit(kind: String, values: Array) -> void:
 
 ## Desktop only: every setting change writes the real settings file, so keep a copy.
 ## Web runs use a fresh browser context instead.
-func _backup_settings() -> void:
+## Returns false, without changing anything, if the copy cannot be made safely.
+func _backup_settings() -> bool:
 	if _is_web:
-		return
+		return true
+	var backup_abs: String = ProjectSettings.globalize_path(_backup_path)
+	if FileAccess.file_exists(_backup_path):
+		# Left by an interrupted run and possibly the only copy of the original file.
+		push_error("Benchmark: %s already exists; restore or delete it first." % backup_abs)
+		return false
 	_had_settings_file = FileAccess.file_exists(_settings_path)
-	if _had_settings_file:
-		DirAccess.copy_absolute(
-			ProjectSettings.globalize_path(_settings_path),
-			ProjectSettings.globalize_path(_backup_path)
-		)
+	if not _had_settings_file:
+		return true
+	var err: Error = DirAccess.copy_absolute(
+		ProjectSettings.globalize_path(_settings_path), backup_abs
+	)
+	if err != OK:
+		push_error("Benchmark: cannot back up settings (%s)." % error_string(err))
+		return false
+	return true
 
 
+## Puts the original settings file back. The backup is only deleted after a
+## successful restore, so a failed copy never loses the original.
 func _restore_settings() -> void:
 	if _is_web:
 		return
 	var settings_abs: String = ProjectSettings.globalize_path(_settings_path)
 	var backup_abs: String = ProjectSettings.globalize_path(_backup_path)
 	if _had_settings_file:
-		DirAccess.copy_absolute(backup_abs, settings_abs)
+		var err: Error = DirAccess.copy_absolute(backup_abs, settings_abs)
+		if err != OK:
+			push_error(
+				(
+					"Benchmark: cannot restore settings (%s); original kept at %s"
+					% [error_string(err), backup_abs]
+				)
+			)
+			return
 		DirAccess.remove_absolute(backup_abs)
 	elif FileAccess.file_exists(_settings_path):
 		DirAccess.remove_absolute(settings_abs)
