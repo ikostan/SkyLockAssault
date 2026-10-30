@@ -5,9 +5,9 @@ How to capture the performance baseline for
 the Milestone 27 refactor) and rerun the identical benchmark for Part 2
 (after the refactor).
 
-Status: the desktop (headless) benchmark is complete and runs natively on
-Windows or inside the project's Docker image. The web benchmark (debug export
-and Playwright) is not written yet.
+Status: the desktop (headless) benchmark runs natively on Windows or inside
+the project's Docker image. The web benchmark runs the same scenario in
+Chromium through Playwright (Step 4).
 
 ## Contents
 
@@ -17,6 +17,7 @@ and Playwright) is not written yet.
 - [Step 1: Single run (smoke test)](#step-1-single-run-smoke-test)
 - [Step 2: Baseline run (3 runs + medians)](#step-2-baseline-run-3-runs--medians)
 - [Step 3: Baseline run in Docker](#step-3-baseline-run-in-docker)
+- [Step 4: Web benchmark](#step-4-web-benchmark)
 - [Native vs Docker](#native-vs-docker)
 - [Output files](#output-files)
 - [Reading the results](#reading-the-results)
@@ -82,6 +83,7 @@ All under `test/benchmark/`:
 | `benchmark_runner.gd`   | The benchmark itself (one run)                   |
 | `benchmark_runner.tscn` | A plain `Node` with the script attached          |
 | `run_desktop.py`        | Runs it N times, checks validity, writes medians |
+| `run_web.py`            | Same, in Chromium (`Web_benchmark` export)       |
 | `compare.py`            | Compares medians with the CI baseline            |
 | `baseline_ci.json`      | The CI baseline (committed from a CI run)        |
 
@@ -240,6 +242,59 @@ What each part does:
 
 The commit may show `(dirty)` inside the container even when it is clean on
 Windows, because git on Linux can see Windows line endings as changes.
+
+## Step 4: Web benchmark
+
+`run_web.py` does everything in one command:
+
+1. Exports the `Web_benchmark` preset as a **debug** build to
+   `export/web_benchmark/`.
+2. Serves that folder on a free local port.
+3. Opens it in Chromium N times, each time in a fresh browser context, so
+   every run starts with no saved settings.
+4. Collects the `BENCH,...` console lines and writes the same `run_N/` CSV
+   files, `runs.csv` and `medians.md` as the desktop runner.
+
+The `Web_benchmark` preset is a copy of `Web_thread_off` that keeps
+`test/benchmark/` in the build and sets the `benchmark` feature tag.
+`project.godot` has `run/main_scene.benchmark`, so only that build opens the
+benchmark instead of the menus. The `Web` and `Web_thread_off` builds are
+unchanged.
+
+First time only, in the project `.venv`:
+
+```powershell
+pip install -r requirements.txt
+python -m playwright install chromium
+```
+
+Run it from the project folder:
+
+```powershell
+$godot = "<full path to Godot_v4.7.1-stable_win64_console.exe>"
+python test/benchmark/run_web.py --godot $godot
+```
+
+Options:
+
+- `--runs N`: number of runs (default 3).
+- `--out <dir>`: output folder (default `bench_results/web_<timestamp>`).
+- `--headed`: show the browser window and use the GPU. Default is headless
+  with software rendering (SwiftShader), like the browser tests.
+- `--channel chrome`: use the installed Google Chrome instead of Playwright's
+  Chromium.
+- `--no-export`: reuse the existing build in `export/web_benchmark/`.
+- `--keep-going`: continue after an invalid run.
+
+Notes:
+
+- Headless software rendering is slow (about 15 to 20 FPS), so web frame
+  times are far above desktop. Compare web results only with web results
+  made the same way (same machine, same mode, same browser).
+- On the web the game cannot write CSV files, so the runner prints the
+  per-frame intervals as one `BENCH,frames` line and `run_web.py` saves them.
+- Web runs start without saved settings (first-launch player); desktop runs
+  start as a returning player. Do not compare reload counts between the two.
 
 ## Native vs Docker
 

@@ -337,9 +337,13 @@ def fmt(value: float | str) -> str:
 
 
 def write_reports(
-    out: Path, results: list[dict[str, float | str]], invalid: int, start: str
+    out: Path,
+    results: list[dict[str, float | str]],
+    invalid: int,
+    start: str,
+    title: str = "desktop, headless",
 ) -> None:
-    """Write runs.csv and medians.md."""
+    """Write runs.csv and medians.md (title: where the benchmark ran)."""
     columns: list[str] = []
     for row in results:
         for key in row:
@@ -353,7 +357,7 @@ def write_reports(
     first = results[0]
     run_headers = " | ".join(f"Run {i}" for i in range(1, len(results) + 1))
     lines = [
-        "## Performance baseline (desktop, headless)",
+        f"## Performance baseline ({title})",
         "",
         f"- Commit: `{git_info()}`",
         f"- Godot: {first.get('godot', 'unknown')}",

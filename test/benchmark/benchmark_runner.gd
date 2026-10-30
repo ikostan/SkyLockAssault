@@ -248,6 +248,10 @@ func _report(valid: Dictionary) -> void:
 		print("BENCH,sec," + row)
 	for row: String in _reload_rows:
 		print("BENCH,reload," + row)
+	if _is_web:
+		# The web build writes no CSV files, so the per-frame intervals go to the console
+		# as one line (values joined by ";") for run_web.py to save as frames_interval_ms.csv.
+		print("BENCH,frames," + ";".join(_to_strings(_frame_ms)))
 	_emit("summary", summary)
 
 	if _is_web or _out_dir.is_empty():
