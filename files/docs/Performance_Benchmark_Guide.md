@@ -66,7 +66,8 @@ Once per second:
 
 Counted or checked once:
 
-- **Settings saves.** One per `Globals.settings.setting_changed` emission.
+- **Settings saves.** Changes to persisted settings (`Globals.persisted_schema`
+  keys) during the measured window; each one is a full encrypted save.
 - **Fuel, ammo and speed at the end.** Validity check.
 
 ### Validity
@@ -109,6 +110,10 @@ unit test.
 - **Python 3.10+.** `run_desktop.py` and `compare.py` need only the standard
   library; `run_web.py` also needs Playwright (see Step 4). The project
   `.venv` works.
+- **Godot 4.7.1 web export templates** (`run_web.py` only). It exports the
+  `Web_benchmark` preset before running. If the export reports a missing
+  template, install them once from the editor: **Editor → Manage Export
+  Templates → Download and Install**.
 - **A committed working tree.** The report records the commit SHA and marks it
   `(dirty)` if there are uncommitted changes. The baseline must name a clean
   commit.
@@ -285,9 +290,13 @@ python -m playwright install chromium
 Run it from the project folder:
 
 ```powershell
-$godot = "<full path to Godot_v4.7.1-stable_win64_console.exe>"
+$godot = "C:\Users\super\OneDrive\Desktop\GODOT\" +
+    "Godot_v4.7.1-stable_win64_console.exe"
 python test/benchmark/run_web.py --godot $godot
 ```
+
+Adjust the Godot path as in Step 1. It takes about 5 minutes (export, then
+3 runs of about 80 s each).
 
 Options:
 
@@ -374,8 +383,8 @@ object-count growth across the reload loop.
 - **Process / physics "worst frame per second"** come from Godot's own
   monitors. They are one value per second (the worst frame in it), not an
   average frame time.
-- **Settings saves** should be ~60 today (one per fuel tick). The refactor is
-  expected to reduce this.
+- **Settings saves** should be 0: the scenario changes no persisted setting
+  while measuring. Before #616 it was ~60 (every fuel tick saved the file).
 - **Reload loop object growth** above 0 means each load of `main_scene` leaves
   objects behind. It only shows with a saved settings file present, which is
   why runs start from the returning-player state.
@@ -529,9 +538,9 @@ These came out of building and testing the harness; keep them for Part 2.
   interval instead.
 - **No console output while measuring.** Per-second rows are buffered and
   printed after the measured window, so console I/O is not measured.
-- **Settings file backup.** Every setting change, including the per-second
-  fuel mirror, saves to `user://settings.cfg`. The runner backs the file up
-  before the run and restores it afterwards (desktop only).
+- **Settings file backup.** The runner changes and saves persisted settings
+  during setup, so it backs up `user://settings.cfg` before the run and
+  restores it afterwards (desktop only).
 - **Bullet drain before the reload loop.** Bullets are added to the scene root,
   not to `main_scene`, so they are waited out before counting nodes.
 - **1 s pause before quitting.** Quitting right after freeing a scene with
