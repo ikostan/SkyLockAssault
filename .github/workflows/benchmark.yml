@@ -1,0 +1,82 @@
+---
+# Performance benchmark (#1079): runs test/benchmark on a GitHub runner and
+# compares the medians with test/benchmark/baseline_ci.json.
+# Reusable workflow: called only from lint_test_deploy.yml (push to main).
+# Count metrics (saves, objects, orphans, reload leak) fail the job when they
+# get worse; timing metrics only warn, because shared runners are noisy.
+# See files/docs/Performance_Benchmark_Guide.md ("CI benchmark").
+name: "Performance Benchmark"
+
+on:  # yamllint disable-line rule:truthy
+  workflow_call:
+    inputs:
+      runs:
+        description: "Number of benchmark runs (median is used)"
+        type: "number"
+        default: 3
+
+jobs:
+  benchmark:
+    runs-on: "ubuntu-24.04"
+    timeout-minutes: 25
+    permissions:
+      contents: "read"
+    env:
+      GODOT_VERSION: "4.7.1-stable"
+      GODOT_SHA256: "c7ff14fd28472c8d4f193043de30278dcf7e5241a1dcf7566b02e27addaa33ba"
+      RUNS: "${{ inputs.runs }}"
+      OUT_DIR: "bench_results/ci"
+    steps:
+      - uses: "actions/checkout@v7.0.1"
+        with:
+          persist-credentials: false
+
+      - name: "Download and Verify Godot Binary"
+        timeout-minutes: 5
+        run: |
+          URL="https://github.com/godotengine/godot/releases/download"
+          ZIP_NAME="Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          wget -q "${URL}/${GODOT_VERSION}/${ZIP_NAME}"
+          echo "${GODOT_SHA256}  ${ZIP_NAME}" | sha256sum --check --status || {
+            echo "❌ CRITICAL: Godot binary verification failed! Checksum mismatch."
+            exit 1
+          }
+          unzip -q "${ZIP_NAME}"
+          mv "Godot_v${GODOT_VERSION}_linux.x86_64" godot
+          chmod +x godot
+
+      - name: "Verify Godot Engine Version Parity"
+        run: |
+          ENGINE_VERSION=$(./godot --version)
+          EXPECTED_VERSION="${GODOT_VERSION/-stable/.stable}"
+          echo "$ENGINE_VERSION" | grep -q "$EXPECTED_VERSION" || {
+            echo "❌ ERROR: Expected Godot ${EXPECTED_VERSION},"
+            echo "   but received: $ENGINE_VERSION"
+            exit 1
+          }
+
+      - name: "Initialize Project and UIDs"
+        run: |
+          timeout 30s ./godot --headless --audio-driver Dummy --editor --path . || true
+
+      - name: "Run Benchmark"
+        timeout-minutes: 15
+        run: |
+          python3 test/benchmark/run_desktop.py \
+            --godot ./godot --runs "${RUNS}" --out "${OUT_DIR}"
+
+      - name: "Compare With Baseline"
+        run: |
+          python3 test/benchmark/compare.py \
+            --results "${OUT_DIR}/runs.csv" \
+            --baseline test/benchmark/baseline_ci.json \
+            --summary "${GITHUB_STEP_SUMMARY}" \
+            --write-baseline "${OUT_DIR}/baseline_ci.json"
+
+      - name: "Upload Benchmark Results"
+        if: "always()"
+        uses: "actions/upload-artifact@v7"
+        with:
+          name: "benchmark-results"
+          path: "bench_results/ci/**"
+          retention-days: 30

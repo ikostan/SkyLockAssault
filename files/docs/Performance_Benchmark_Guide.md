@@ -21,6 +21,7 @@ and Playwright) is not written yet.
 - [Output files](#output-files)
 - [Reading the results](#reading-the-results)
 - [Rerunning for Part 2](#rerunning-for-part-2)
+- [CI benchmark](#ci-benchmark)
 - [Design decisions](#design-decisions)
 - [Troubleshooting](#troubleshooting)
 
@@ -81,6 +82,8 @@ All under `test/benchmark/`:
 | `benchmark_runner.gd`   | The benchmark itself (one run)                   |
 | `benchmark_runner.tscn` | A plain `Node` with the script attached          |
 | `run_desktop.py`        | Runs it N times, checks validity, writes medians |
+| `compare.py`            | Compares medians with the CI baseline            |
+| `baseline_ci.json`      | The CI baseline (committed from a CI run)        |
 
 GUT only scans `res://test/gut/`, so nothing in `test/benchmark/` runs as a
 unit test.
@@ -332,6 +335,51 @@ Part 2 must change nothing except the game code under test:
   `DESKTOP_MAX_FPS`).
 - Same number of runs as Part 1.
 - Post the new `medians.md` next to the Part 1 table and compare medians.
+
+## CI benchmark
+
+The workflow `.github/workflows/benchmark.yml` runs the same benchmark on a
+GitHub runner (`ubuntu-24.04`, headless) and compares it with
+`test/benchmark/baseline_ci.json`.
+
+It runs:
+
+- by hand: **Actions → Performance Benchmark → Run workflow** (choose the
+  number of runs, default 3);
+- on a pull request that has the `performance` label.
+
+What it checks (medians of the runs):
+
+- **Counts** (settings saves, live objects, orphans, reload leak). These are
+  stable. Worse than the baseline beyond a small tolerance **fails** the job.
+- **Timings** (frame p95, dropped frames, process and physics time, memory
+  growth). Shared runners are noisy, so these only **warn**.
+
+The table appears on the run's **Summary** page. All files are in the
+`benchmark-results` artifact.
+
+### Creating or updating the baseline
+
+CI numbers differ from your PC and Docker, so the baseline must come from CI:
+
+1. Run the workflow by hand on `main` (or on the commit you want as the
+   reference).
+2. Download the `benchmark-results` artifact.
+3. Copy its `baseline_ci.json` to `test/benchmark/baseline_ci.json` and commit
+   it.
+
+Until that file exists the job only reports the numbers and passes. Update
+the baseline the same way after an intended change (for example, after a fix
+that lowers settings saves), so later PRs are compared with the new numbers.
+
+### Running the comparison locally
+
+```bash
+python test/benchmark/compare.py --results bench_results/<run>/runs.csv
+```
+
+Only compare results from the same kind of machine: local runs against
+`baseline_ci.json` are not meaningful for timings.
 
 ## Design decisions
 
