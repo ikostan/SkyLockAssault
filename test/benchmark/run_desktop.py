@@ -18,9 +18,11 @@ Usage (from anywhere; standard library only):
 
 The Godot path can also come from the GODOT_BIN environment variable.
 
-Every run starts from default settings: the user's settings.cfg is moved
-aside before the first run, deleted before each run (the game recreates it)
-and put back at the end.
+Every run starts from the same "returning player" state. The user's
+settings.cfg is moved aside, two short headless game launches create a fresh
+settings file (first launch) and load and re-save it (second launch), and
+that file is copied back before every run. The user's file is restored at
+the end. Use --fresh to start every run without any settings file instead.
 
 Exit code: 0 if every run is valid, 1 otherwise.
 """
@@ -42,6 +44,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RUNNER_SCENE = "res://test/benchmark/benchmark_runner.tscn"
 RUN_TIMEOUT_S = 300
 SETTINGS_FILE = "settings.cfg"
+FIXTURE_FILE = "settings_fixture.cfg"
+PRIME_LAUNCHES = 2
+PRIME_QUIT_AFTER_FRAMES = "60"
+PRIME_TIMEOUT_S = 120
 
 # Frame-interval thresholds (ms). 33.4 ms = at least one dropped frame at 60 FPS.
 STUTTER_THRESHOLDS_MS = (25.0, 33.4, 50.0)
@@ -94,6 +100,11 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=PROJECT_ROOT / "bench_results" / stamp,
         help="Output folder (default: <project>/bench_results/<timestamp>).",
+    )
+    parser.add_argument(
+        "--fresh",
+        action="store_true",
+        help="Start every run without a settings file (first-launch player).",
     )
     parser.add_argument(
         "--keep-going",
@@ -151,6 +162,47 @@ def reset_settings(settings: Path) -> None:
     """Delete settings.cfg so the next run starts from defaults."""
     if settings.exists():
         settings.unlink()
+
+
+def prime_settings(godot: str, settings: Path, out: Path) -> Path | None:
+    """Create the returning-player settings fixture. Returns its path.
+
+    Launch 1 starts without settings.cfg, so the game writes a fresh one.
+    Launch 2 loads that file and re-saves anything it fixes, as a second
+    launch by a real player would. The resulting file becomes the fixture.
+    """
+    reset_settings(settings)
+    cmd = [
+        godot,
+        "--headless",
+        "--path",
+        str(PROJECT_ROOT),
+        "--quit-after",
+        PRIME_QUIT_AFTER_FRAMES,
+    ]
+    for launch in range(1, PRIME_LAUNCHES + 1):
+        try:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=PRIME_TIMEOUT_S,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            print(f"  prime launch {launch} failed: {exc}")
+            return None
+        (out / f"prime_{launch}.txt").write_text(
+            proc.stdout + proc.stderr, encoding="utf-8"
+        )
+    if not settings.is_file():
+        print("  the game did not create settings.cfg (see prime_*.txt)")
+        return None
+    fixture = out / FIXTURE_FILE
+    shutil.copy2(settings, fixture)
+    return fixture
 
 
 def run_once(godot: str, run_dir: Path) -> tuple[bool, str]:
@@ -260,7 +312,7 @@ def fmt(value: float | str) -> str:
 
 
 def write_reports(
-    out: Path, results: list[dict[str, float | str]], invalid: int
+    out: Path, results: list[dict[str, float | str]], invalid: int, start: str
 ) -> None:
     """Write runs.csv and medians.md."""
     columns: list[str] = []
@@ -282,7 +334,7 @@ def write_reports(
         f"- Godot: {first.get('godot', 'unknown')}",
         f"- OS: {platform.platform()}",
         f"- CPU: {platform.processor() or 'unknown'}",
-        "- Start state: default settings (no settings.cfg) for every run",
+        f"- Start state: {start}",
         (
             f"- Valid runs: {len(results)}, invalid runs skipped: {invalid}; "
             "table shows each valid run and the median"
@@ -321,11 +373,26 @@ def main() -> int:
 
     results: list[dict[str, float | str]] = []
     invalid = 0
+    fixture: Path | None = None
+    if args.fresh:
+        start = "fresh (no settings.cfg) for every run"
+    else:
+        start = (
+            "returning player (settings.cfg from two short game launches, "
+            "copied in before every run)"
+        )
     try:
+        if not args.fresh:
+            print("Creating the returning-player settings fixture...", flush=True)
+            fixture = prime_settings(godot, settings, out)
+            if fixture is None:
+                return 1
         for index in range(1, args.runs + 1):
             run_dir = out / f"run_{index}"
             print(f"Run {index}/{args.runs} (about 80 s)...", flush=True)
             reset_settings(settings)
+            if fixture is not None:
+                shutil.copy2(fixture, settings)
             valid, reason = run_once(godot, run_dir)
             print(f"  {reason}")
             if valid:
@@ -342,7 +409,7 @@ def main() -> int:
     if not results:
         print("No valid runs; nothing to report.")
         return 1
-    write_reports(out, results, invalid)
+    write_reports(out, results, invalid, start)
     print(f"Wrote {out / 'runs.csv'} and {out / 'medians.md'}")
     if invalid:
         print("At least one run was invalid; do not use these numbers as the baseline.")
