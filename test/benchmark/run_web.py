@@ -240,24 +240,30 @@ def run_once(browser: Browser, url: str, run_dir: Path) -> tuple[bool, str]:
         """Keep uncaught page errors in the console log, marked as such."""
         console.append(f"[pageerror] {error}")
 
+    reason = ""
     # A new context has empty storage, so the game starts with no saved settings.
     context = browser.new_context(viewport=VIEWPORT)
     try:
         page = context.new_page()
         page.on("console", on_console)
         page.on("pageerror", on_page_error)
-        page.goto(url, wait_until="domcontentloaded")
-        dismiss_gpu_warning(page)
         try:
-            page.wait_for_event(
-                "console",
-                predicate=lambda m: m.text.startswith("BENCH,done"),
-                timeout=RUN_TIMEOUT_S * 1000,
-            )
-        except Error:
-            reason = f"no BENCH,done line within {RUN_TIMEOUT_S} s"
+            page.goto(url, wait_until="domcontentloaded")
+        except Error as exc:
+            # Timeout or failed main resource: an invalid run, not a crash, so
+            # --keep-going still works and console.txt is still written.
+            reason = f"page failed to load: {str(exc).splitlines()[0]}"
+            console.append(f"[navigation] {exc}")
         else:
-            reason = ""
+            dismiss_gpu_warning(page)
+            try:
+                page.wait_for_event(
+                    "console",
+                    predicate=lambda m: m.text.startswith("BENCH,done"),
+                    timeout=RUN_TIMEOUT_S * 1000,
+                )
+            except Error:
+                reason = f"no BENCH,done line within {RUN_TIMEOUT_S} s"
     finally:
         context.close()
 
