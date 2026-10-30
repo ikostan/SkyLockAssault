@@ -5,8 +5,9 @@ How to capture the performance baseline for
 the Milestone 27 refactor) and rerun the identical benchmark for Part 2
 (after the refactor).
 
-Status: the desktop (headless) benchmark is complete. The web benchmark
-(debug export + Playwright) is not written yet.
+Status: the desktop (headless) benchmark is complete and runs natively on
+Windows or inside the project's Docker image. The web benchmark (debug export
+and Playwright) is not written yet.
 
 ## Contents
 
@@ -15,6 +16,8 @@ Status: the desktop (headless) benchmark is complete. The web benchmark
 - [Prerequisites](#prerequisites)
 - [Step 1: Single run (smoke test)](#step-1-single-run-smoke-test)
 - [Step 2: Baseline run (3 runs + medians)](#step-2-baseline-run-3-runs--medians)
+- [Step 3: Baseline run in Docker](#step-3-baseline-run-in-docker)
+- [Native vs Docker](#native-vs-docker)
 - [Output files](#output-files)
 - [Reading the results](#reading-the-results)
 - [Rerunning for Part 2](#rerunning-for-part-2)
@@ -165,6 +168,97 @@ game recreates it) and puts your file back at the end, even if a run fails.
 Without this, each run would start from whatever the previous run left
 behind.
 
+## Step 3: Baseline run in Docker
+
+The project `Dockerfile` (image `sky-lock-assault-pipeline`) already contains
+Godot 4.7.1 (`/usr/local/bin/godot`), its export templates, Python 3 and git.
+The project folder is mounted into the container, so it runs exactly the same
+runner and wrapper as the native run. Nothing is copied into the image, so
+script changes do not need a rebuild.
+
+1. Build the image once (skip if it exists):
+
+    ```powershell
+    docker build -t sky-lock-assault-pipeline:latest .
+    ```
+
+2. Record the image ID for the results comment. Part 2 must use the same
+   image, so do not rebuild it until Part 2 is done:
+
+    ```powershell
+    docker image inspect sky-lock-assault-pipeline:latest --format "{{.Id}}"
+    ```
+
+3. Quiet the host (the WSL2 VM shares its CPU) and run, from the project
+   folder:
+
+    ```powershell
+    docker run --rm --cpus=4 --memory=8g `
+        -v "${PWD}:/project" -v "C:/temp/bench:/bench" -w /project `
+        -e GODOT_BIN=/usr/local/bin/godot `
+        sky-lock-assault-pipeline:latest `
+        bash -c "git config --global --add safe.directory /project &&
+            godot --headless --path . --import &&
+            python3 test/benchmark/run_desktop.py --out /bench/baseline_docker"
+    ```
+
+    Each line inside the `bash -c "..."` string ends with `&&`, so bash reads
+    it as one chain of three commands. Do not split a command in the middle.
+
+4. Results land in `C:/temp/bench/baseline_docker`, with the same layout as a
+   native run (see [Output files](#output-files)).
+
+What each part does:
+
+- `--cpus=4 --memory=8g` fixes the container's resources. Use the same values
+  for Part 2.
+- `GODOT_BIN` tells the wrapper where Godot is inside the image.
+- `safe.directory` lets git read the mounted folder (it belongs to a different
+  user inside the container); without it the report shows the commit as
+  `unknown`.
+- `--import` builds the project's import cache for the Linux build. It is
+  quick when nothing changed.
+- `--rm` throws the container away afterwards, including its `user://`
+  folder, so the host settings file is never touched.
+
+The commit may show `(dirty)` inside the container even when it is clean on
+Windows, because git on Linux can see Windows line endings as changes.
+
+## Native vs Docker
+
+The same 3-run benchmark on the same machine (Windows 11, Intel Core Ultra 200
+series CPU), medians:
+
+| Median                       | Native Windows | Docker (WSL2, 4 CPUs) |
+|------------------------------|---------------:|----------------------:|
+| Frame interval avg           |       16.86 ms |              16.67 ms |
+| Frame interval p95           |       29.29 ms |              17.44 ms |
+| Worst frame                  |      173.64 ms |              20.28 ms |
+| Frames > 33.4 ms (dropped)   |             56 |                     0 |
+| Process, worst/s, avg        |        3.61 ms |               0.38 ms |
+| Physics, worst/s, avg        |        9.44 ms |               1.69 ms |
+| Settings saves in 60 s       |             61 |                    61 |
+| Reload loop object growth    |             +9 |                    +9 |
+
+- **Docker is stutter-free and repeatable.** All three Docker runs had zero
+  dropped frames and a p95 between 17.4 and 17.7 ms.
+- **The stutter comes from the Windows host, not the game's own cost.** Docker
+  does the same 61 settings saves per minute without stuttering. Likely causes
+  (not proven): Windows Defender scanning `settings.cfg` in `%APPDATA%` on
+  every write, and Windows moving Godot between performance and efficiency
+  cores.
+- **Game-level numbers agree.** Saves, memory, object counts and the reload
+  leak match in both environments.
+
+Recommendation: use **Docker as the primary baseline** for the Part 1 vs
+Part 2 comparison, because its low noise lets Part 2 detect smaller real
+changes. Keep **native Windows as a secondary, real-world data point**: it
+shows the stutter Windows players may get, and whether the refactor reduces
+it.
+
+The comparison is not purely "Docker overhead": the container runs Linux,
+inside the WSL2 VM, limited to 4 CPUs.
+
 ## Output files
 
 ```text
@@ -213,6 +307,8 @@ Part 2 must change nothing except the game code under test:
 
 - Same machine, same Godot build (4.7.1-stable console), same quiet-machine
   rules.
+- For Docker: the same image (check the recorded image ID) and the same
+  `--cpus` / `--memory` limits.
 - Same `benchmark_runner.gd` and `run_desktop.py`. Do not edit the scenario
   constants (`DIFFICULTY`, `WARMUP_S`, `MEASURE_S`, `RELOAD_CYCLES`,
   `DESKTOP_MAX_FPS`).
