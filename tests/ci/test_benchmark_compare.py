@@ -143,3 +143,12 @@ def test_summary_is_appended(compare, tmp_path):
     text = summary.read_text(encoding="utf-8")
     assert text.startswith("existing\n")
     assert "## Performance benchmark" in text
+
+
+def test_title_sets_report_heading(compare, tmp_path, capsys):
+    """--title replaces the heading, so desktop and web reports differ."""
+    results = write_runs(tmp_path / "runs.csv", [BASE_METRICS])
+    base_path = write_baseline(tmp_path / "baseline_ci.json", BASE_METRICS)
+    args = ["--results", str(results), "--baseline", str(base_path)]
+    assert compare.main([*args, "--title", "Performance benchmark (web)"]) == 0
+    assert "## Performance benchmark (web)" in capsys.readouterr().out

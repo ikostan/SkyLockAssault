@@ -1,9 +1,12 @@
 ---
-# Performance benchmark (#1079): runs test/benchmark on a GitHub runner and
-# compares the medians with test/benchmark/baseline_ci.json.
+# Performance benchmark (#1079): two jobs in parallel.
+# - desktop: headless Godot, compared with test/benchmark/baseline_ci.json
+# - web: Web_benchmark export in headless Chromium (Playwright), compared with
+#   test/benchmark/baseline_web_ci.json
 # Reusable workflow: called only from lint_test_deploy.yml (push to main).
-# Count metrics (saves, objects, orphans, reload leak) fail the job when they
-# get worse; timing metrics only warn, because shared runners are noisy.
+# Count metrics (saves, objects, orphans, reload leak) fail a job when they
+# get worse; timing metrics only warn, because shared runners are noisy (and
+# have no GPU, so web timings use software rendering).
 # See files/docs/Performance_Benchmark_Guide.md ("CI benchmark").
 name: "Performance Benchmark"
 
@@ -16,7 +19,8 @@ on:  # yamllint disable-line rule:truthy
         default: 3
 
 jobs:
-  benchmark:
+  desktop:
+    name: "Desktop"
     runs-on: "ubuntu-24.04"
     timeout-minutes: 25
     permissions:
@@ -71,6 +75,7 @@ jobs:
             --results "${OUT_DIR}/runs.csv" \
             --baseline test/benchmark/baseline_ci.json \
             --summary "${GITHUB_STEP_SUMMARY}" \
+            --title "Performance benchmark (desktop)" \
             --write-baseline "${OUT_DIR}/baseline_ci.json"
 
       - name: "Upload Benchmark Results"
@@ -79,4 +84,135 @@ jobs:
         with:
           name: "benchmark-results"
           path: "bench_results/ci/**"
+          retention-days: 30
+
+  web:
+    name: "Web"
+    runs-on: "ubuntu-24.04"
+    timeout-minutes: 30
+    permissions:
+      contents: "read"
+    env:
+      GODOT_VERSION: "4.7.1-stable"
+      GODOT_SHA256: "c7ff14fd28472c8d4f193043de30278dcf7e5241a1dcf7566b02e27addaa33ba"
+      # From the release's SHA512-SUMS.txt (Godot_v4.7.1-stable_export_templates.tpz)
+      # yamllint disable-line rule:line-length
+      TEMPLATES_SHA512: "afcc83d8d3d298038f19c58744a0d660fa75dd4baa33cb55d1011bb2565a2a8c2381728924564cb909e37c205a23f21b521b23bd057993afd43ae4da0b2f9d47"
+      RUNS: "${{ inputs.runs }}"
+      OUT_DIR: "bench_results/web_ci"
+    steps:
+      - uses: "actions/checkout@v7.0.1"
+        with:
+          persist-credentials: false
+
+      - name: "Download and Verify Godot Binary"
+        timeout-minutes: 5
+        run: |
+          URL="https://github.com/godotengine/godot/releases/download"
+          ZIP_NAME="Godot_v${GODOT_VERSION}_linux.x86_64.zip"
+          wget -q "${URL}/${GODOT_VERSION}/${ZIP_NAME}"
+          echo "${GODOT_SHA256}  ${ZIP_NAME}" | sha256sum --check --status || {
+            echo "❌ CRITICAL: Godot binary verification failed! Checksum mismatch."
+            exit 1
+          }
+          unzip -q "${ZIP_NAME}"
+          mv "Godot_v${GODOT_VERSION}_linux.x86_64" godot
+          chmod +x godot
+
+      - name: "Verify Godot Engine Version Parity"
+        run: |
+          ENGINE_VERSION=$(./godot --version)
+          EXPECTED_VERSION="${GODOT_VERSION/-stable/.stable}"
+          echo "$ENGINE_VERSION" | grep -q "$EXPECTED_VERSION" || {
+            echo "❌ ERROR: Expected Godot ${EXPECTED_VERSION},"
+            echo "   but received: $ENGINE_VERSION"
+            exit 1
+          }
+
+      # Only the web templates are installed; Web_benchmark is a no-threads
+      # preset exported as debug, so web_nothreads_debug.zip is the one used.
+      - name: "Download and Install Web Export Templates"
+        timeout-minutes: 10
+        run: |
+          URL="https://github.com/godotengine/godot/releases/download"
+          TPZ="Godot_v${GODOT_VERSION}_export_templates.tpz"
+          wget -q "${URL}/${GODOT_VERSION}/${TPZ}"
+          echo "${TEMPLATES_SHA512}  ${TPZ}" | sha512sum --check --status || {
+            echo "❌ CRITICAL: Export templates verification failed! Checksum mismatch."
+            exit 1
+          }
+          DEST="${HOME}/.local/share/godot/export_templates/${GODOT_VERSION/-/.}"
+          mkdir -p "${DEST}"
+          unzip -q -j "${TPZ}" "templates/web*" "templates/version.txt" -d "${DEST}"
+          rm "${TPZ}"
+          ls "${DEST}"
+
+      - name: "Initialize Project and UIDs"
+        run: |
+          timeout 30s ./godot --headless --audio-driver Dummy --editor --path . || true
+
+      - name: "Set up Python"
+        uses: "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0"  # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: "Cache PIP Dependencies"
+        uses: "actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9"  # v6.1.0
+        with:
+          path: "~/.cache/pip"
+          key: "${{ runner.os }}-pip-bench-${{ hashFiles('requirements.txt') }}"
+          restore-keys: "${{ runner.os }}-pip-bench-"
+
+      - name: "Install Python Dependencies"
+        timeout-minutes: 8
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt \
+            --progress-bar off \
+            --timeout 60 \
+            --retries 3
+
+      # yamllint disable rule:line-length
+      - name: "Get Playwright Version"
+        id: "playwright-version"
+        run: |
+          echo "version=$(python -c 'from importlib.metadata import version; print(version("playwright"))')" >> $GITHUB_OUTPUT
+      # yamllint enable rule:line-length
+
+      - name: "Cache Playwright Browsers"
+        uses: "actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9"  # v6.1.0
+        id: "playwright-cache"
+        with:
+          path: "~/.cache/ms-playwright"
+          # yamllint disable-line rule:line-length
+          key: "${{ runner.os }}-playwright-v2-${{ steps.playwright-version.outputs.version }}"
+
+      - name: "Install Playwright Browsers"
+        if: "steps.playwright-cache.outputs.cache-hit != 'true'"
+        timeout-minutes: 8
+        run: |
+          playwright install --with-deps chromium
+
+      # Exports Web_benchmark (debug), serves it and runs it in headless Chromium.
+      - name: "Run Web Benchmark"
+        timeout-minutes: 15
+        run: |
+          python test/benchmark/run_web.py \
+            --godot ./godot --runs "${RUNS}" --out "${OUT_DIR}"
+
+      - name: "Compare With Baseline"
+        run: |
+          python test/benchmark/compare.py \
+            --results "${OUT_DIR}/runs.csv" \
+            --baseline test/benchmark/baseline_web_ci.json \
+            --summary "${GITHUB_STEP_SUMMARY}" \
+            --title "Performance benchmark (web)" \
+            --write-baseline "${OUT_DIR}/baseline_web_ci.json"
+
+      - name: "Upload Benchmark Results"
+        if: "always()"
+        uses: "actions/upload-artifact@v7"
+        with:
+          name: "benchmark-web-results"
+          path: "bench_results/web_ci/**"
           retention-days: 30

@@ -393,13 +393,23 @@ Part 2 must change nothing except the game code under test:
 
 ## CI benchmark
 
-The workflow `.github/workflows/benchmark.yml` runs the same benchmark on a
-GitHub runner (`ubuntu-24.04`, headless) and compares it with
-`test/benchmark/baseline_ci.json`.
+The workflow `.github/workflows/benchmark.yml` runs two jobs in parallel on
+GitHub runners (`ubuntu-24.04`):
+
+- **Desktop:** `run_desktop.py` (headless Godot). Baseline
+  `baseline_ci.json`, artifact `benchmark-results`.
+- **Web:** `run_web.py` (`Web_benchmark` in headless Chromium). Baseline
+  `baseline_web_ci.json`, artifact `benchmark-web-results`.
 
 It is a reusable workflow, called only from the main pipeline
 (`lint_test_deploy.yml`, on every push to `main`) after the Ubuntu 24.04
-tests pass. It runs 3 times and does not block the release or deploy jobs.
+tests pass. Each job runs the benchmark 3 times. Neither job blocks the
+release or deploy jobs.
+
+The web job installs only the web export templates (checked against the
+release's SHA-512) and Playwright's Chromium. Runners have no GPU, so the
+web job uses software rendering: its timings are far slower and noisier than
+a real browser and only warn. Its counts are as reliable as on desktop.
 
 What it checks (medians of the runs):
 
@@ -408,8 +418,8 @@ What it checks (medians of the runs):
 - **Timings** (frame p95, dropped frames, process and physics time, memory
   growth). Shared runners are noisy, so these only **warn**.
 
-The table appears on the run's **Summary** page. All files are in the
-`benchmark-results` artifact.
+Each job adds its table to the run's **Summary** page. All files are in the
+job's artifact.
 
 ### Creating or updating the baseline
 
@@ -417,11 +427,11 @@ CI numbers differ from your PC and Docker, so the baseline must come from CI:
 
 1. Open the **Main CI/CD Pipeline** run on `main` for the commit you want as
    the reference.
-2. Download its `benchmark-results` artifact.
-3. Copy its `baseline_ci.json` to `test/benchmark/baseline_ci.json` and commit
-   it.
+2. Download its `benchmark-results` and `benchmark-web-results` artifacts.
+3. Copy `baseline_ci.json` and `baseline_web_ci.json` from them to
+   `test/benchmark/` and commit both.
 
-Until that file exists the job only reports the numbers and passes. Update
+Until a baseline file exists its job only reports the numbers and passes. Update
 the baseline the same way after an intended change (for example, after a fix
 that lowers settings saves), so later PRs are compared with the new numbers.
 

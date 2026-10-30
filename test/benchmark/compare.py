@@ -18,6 +18,7 @@ Usage:
         [--baseline test/benchmark/baseline_ci.json]
         [--summary <markdown file to append the table to>]
         [--write-baseline <path for a new baseline file>]
+        [--title <report heading>]
 
 With no baseline file yet, it only reports the numbers (exit 0). Use
 --write-baseline to produce a baseline file from these results; commit it as
@@ -39,6 +40,7 @@ from pathlib import Path
 
 DEFAULT_BASELINE = Path(__file__).resolve().parent / "baseline_ci.json"
 BASELINE_VERSION = 1
+DEFAULT_TITLE = "Performance benchmark"
 
 
 @dataclass(frozen=True)
@@ -99,6 +101,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--write-baseline",
         type=Path,
         help="Write a new baseline JSON from these results to this path.",
+    )
+    parser.add_argument(
+        "--title",
+        default=DEFAULT_TITLE,
+        help=f"Report heading (default: {DEFAULT_TITLE}).",
     )
     return parser.parse_args(argv)
 
@@ -179,9 +186,10 @@ def render(
     rows: list[tuple[str, str, float | None, float, str]],
     runs: int,
     baseline_meta: dict | None,
+    title: str = DEFAULT_TITLE,
 ) -> str:
     """Render the comparison as Markdown."""
-    lines = ["## Performance benchmark", ""]
+    lines = [f"## {title}", ""]
     if baseline_meta is None:
         lines.append("No baseline yet: these numbers are not compared.")
     else:
@@ -234,7 +242,7 @@ def main(argv: list[str] | None = None) -> int:
     baseline = None if baseline_doc is None else baseline_doc.get("metrics", {})
 
     rows = compare(medians, baseline)
-    report = render(rows, runs, baseline_doc)
+    report = render(rows, runs, baseline_doc, args.title)
     print(report)
     if args.summary:
         with args.summary.open("a", encoding="utf-8") as handle:
