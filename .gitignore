@@ -22,6 +22,7 @@ Thumbs.db
 # Build/export folders
 export/web/**
 export/web_thread_off/**
+export/web_benchmark/**
 !export/export_presets.cfg
 
 # Temp files from tools/Docker
@@ -45,3 +46,5 @@ project_structure.txt
 ikostan-skylockassault-8a5edab282632443.txt
 0001-ci-pin-runners-to-ubuntu-24.04-and-add-non-blocking-.patch
 production_code_bundle.txt
+
+bench_results/

@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://cmhhqdow88okf"]
+
+[ext_resource type="Script" uid="uid://bfccyxuk2tiej" path="res://test/benchmark/benchmark_runner.gd" id="1_n7g4k"]
+
+[node name="BenchmarkRunner" type="Node" unique_id=1195071370]
+script = ExtResource("1_n7g4k")

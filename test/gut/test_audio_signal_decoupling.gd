@@ -36,17 +36,12 @@ func test_programmatic_mute_propagation_is_silent() -> void:
 		get_viewport().gui_get_focus_owner().release_focus()
 		
 	# Force silence on the existing player pool tracks
-	for player: AudioStreamPlayer in SfxManager._sfx_pool:
-		player.stop()
+	SfxManager.stop_all_sfx()
 
 	# Simulate an inbound programmatic sync sequence (like WebBridge or Playwright driver data)
 	AudioManager.set_muted(AudioConstants.BUS_MASTER, true)
 	await get_tree().process_frame
 
-	var sound_triggered: bool = false
-	for player: AudioStreamPlayer in SfxManager._sfx_pool:
-		if player.playing:
-			sound_triggered = true
-			break
+	var sound_triggered: bool = SfxManager.is_any_sfx_playing()
 
 	assert_false(sound_triggered, "Decoupling Verification Failed: Programmatic state mutations leaked an audio artifact!")

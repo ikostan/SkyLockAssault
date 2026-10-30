@@ -263,8 +263,8 @@ func test_invalid_bus_fallback_routing() -> void:
 
 ## Verifies that play_sfx() survives and runs cleanly if a pooled player is freed midway through execution.
 func test_play_sfx_resilience_to_freed_players() -> void:
-	# Force-retrieve the private pool array
-	var pool_array: Array = SfxManager.get("_sfx_pool")
+	# Retrieve the pool through the public diagnostic API (Issue #726)
+	var pool_array: Array[AudioStreamPlayer] = SfxManager.get_sfx_pool_players()
 	assert_gt(pool_array.size(), 0, "SFX pool was not initialized correctly.")
 	
 	# Violently free the first node in the pool to create a dangling/previously-freed reference

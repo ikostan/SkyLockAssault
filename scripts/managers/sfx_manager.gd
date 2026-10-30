@@ -106,15 +106,7 @@ func play_sfx(
 		var stream: AudioStream = load(full_path)
 
 		if stream:
-			# Eviction strategy: If cache is full, remove the oldest (first) entry
-			if _sfx_cache.size() >= MAX_SFX_CACHE_SIZE:
-				var oldest_key: String = _sfx_cache.keys()[0]
-				_sfx_cache.erase(oldest_key)
-				Globals.log_message(
-					"SFX cache full. Evicted: " + oldest_key, Globals.LogLevel.DEBUG
-				)
-
-			_sfx_cache[sfx_name] = stream
+			_store_in_cache(sfx_name, stream)
 		else:
 			Globals.log_message(
 				"SFX file found but failed to parse correctly: " + full_path,
@@ -164,6 +156,101 @@ func play_sfx(
 
 	# 4. Play (No queue_free needed since we reuse the nodes)
 	player.play()
+
+
+## Inserts a stream into the LRU cache, evicting the least recently used entry when full.
+## Shared by play_sfx() and cache_sfx_for_test() so both follow the same eviction rule.
+## :param sfx_name: Logical SFX identifier used as the cache key.
+## :param stream: Loaded AudioStream to cache.
+## :rtype: void
+func _store_in_cache(sfx_name: String, stream: AudioStream) -> void:
+	# Eviction strategy: If cache is full, remove the oldest (first) entry
+	if _sfx_cache.size() >= MAX_SFX_CACHE_SIZE and not _sfx_cache.has(sfx_name):
+		var oldest_key: String = _sfx_cache.keys()[0]
+		_sfx_cache.erase(oldest_key)
+		Globals.log_message("SFX cache full. Evicted: " + oldest_key, Globals.LogLevel.DEBUG)
+
+	# Erase first so a re-insert moves the key to the "newest" end of the dictionary.
+	_sfx_cache.erase(sfx_name)
+	_sfx_cache[sfx_name] = stream
+
+
+## [DIAGNOSTIC]
+## Public API: Returns how many SFX streams are currently held in the LRU cache (Issue #726).
+## Never exceeds MAX_SFX_CACHE_SIZE.
+## :rtype: int
+func get_cached_sfx_count() -> int:
+	return _sfx_cache.size()
+
+
+## [DIAGNOSTIC]
+## Public API: Returns true if the given logical SFX identifier has a stream in the LRU cache
+## (Issue #726). Read-only: does not refresh the entry's LRU position.
+## :param sfx_name: Logical SFX identifier (e.g., "slider").
+## :rtype: bool
+func is_sfx_cached(sfx_name: String) -> bool:
+	return _sfx_cache.has(sfx_name)
+
+
+## [DIAGNOSTIC]
+## Public API: Returns true if the given logical SFX identifier failed to load and is in the
+## missing-asset table, so play_sfx() short-circuits it without touching disk (Issue #726).
+## :param sfx_name: Logical SFX identifier.
+## :rtype: bool
+func is_sfx_missing(sfx_name: String) -> bool:
+	return _missing_sfx_cache.has(sfx_name)
+
+
+## [DIAGNOSTIC]
+## Public API: Returns the number of identifiers in the missing-asset table (Issue #726).
+## :rtype: int
+func get_missing_sfx_count() -> int:
+	return _missing_sfx_cache.size()
+
+
+## [DIAGNOSTIC]
+## Public API: Returns the cached SFX identifiers in LRU order, least recently used first
+## (Issue #726). The next eviction removes element 0. Returns a copy; editing it has no effect.
+## :rtype: Array[String]
+func get_cached_sfx_names() -> Array[String]:
+	var names: Array[String] = []
+	for key: String in _sfx_cache.keys():
+		names.append(key)
+	return names
+
+
+## [DIAGNOSTIC]
+## Public API: Returns a copy of the pooled players array, in pool order (Issue #726).
+## Lets callers inspect per-player state (stream, bus, pitch, volume, playing).
+## Entries may be freed instances; check is_instance_valid() before use.
+## Resizing the returned array does not change the pool. Do not reconfigure the players
+## outside tests: play_sfx() owns their settings.
+## :rtype: Array[AudioStreamPlayer]
+func get_sfx_pool_players() -> Array[AudioStreamPlayer]:
+	return _sfx_pool.duplicate()
+
+
+## [DIAGNOSTIC]
+## Public API: Empties the stream cache and the missing-asset table (Issue #726).
+## Safe at runtime: streams reload lazily on the next play_sfx(), and previously missing
+## assets get one fresh load attempt. Does not touch the player pool; see cleanup_for_test().
+## :rtype: void
+func clear_diagnostic_caches() -> void:
+	_sfx_cache.clear()
+	_missing_sfx_cache.clear()
+
+
+## FOR GUT UNIT TEST ONLY
+## Seeds the LRU cache with a stream under the given key, using the same eviction rule as
+## play_sfx(). Lets tests fill the cache to MAX_SFX_CACHE_SIZE without needing that many real
+## asset files (Issue #726). Strictly guarded to no-op in production builds.
+## :param sfx_name: Cache key to seed.
+## :param stream: Stream to store under that key.
+## :rtype: void
+func cache_sfx_for_test(sfx_name: String, stream: AudioStream) -> void:
+	if not OS.is_debug_build():
+		return
+	_store_in_cache(sfx_name, stream)
 
 
 ## [DIAGNOSTIC]
@@ -232,9 +319,27 @@ func cleanup_for_test() -> void:
 	if not OS.is_debug_build():
 		return
 
-	_sfx_cache.clear()
-	_missing_sfx_cache.clear()
+	clear_diagnostic_caches()
+	_free_sfx_pool()
 
+	# Re-create the pool matching production configuration
+	_initialize_sfx_pool()
+
+
+## FOR GUT UNIT TEST ONLY
+## Frees every pooled player and leaves the pool empty, so tests can verify that play_sfx()
+## lazily rebuilds it (Issue #726). Strictly guarded to no-op in production builds.
+## Call cleanup_for_test() afterwards to restore a full pool.
+## :rtype: void
+func clear_sfx_pool_for_test() -> void:
+	if not OS.is_debug_build():
+		return
+	_free_sfx_pool()
+
+
+## Frees all pooled players (and orphaned player children) and empties the pool array.
+## :rtype: void
+func _free_sfx_pool() -> void:
 	# 1. Clean the pool deterministically
 	for i in range(_sfx_pool.size() - 1, -1, -1):
 		var player := _sfx_pool[i]
@@ -254,9 +359,6 @@ func cleanup_for_test() -> void:
 			child.stop()
 			remove_child(child)
 			child.free()
-
-	# 2. Re-create the pool matching production configuration
-	_initialize_sfx_pool()
 
 
 ## Automatically hooks up base Button elements for confirmation sfx (Ported via Issue #800)

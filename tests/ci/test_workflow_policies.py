@@ -25,7 +25,12 @@ import yaml
 
 WORKFLOWS = [
     pathlib.Path(".github/workflows") / name
-    for name in ("gdunit4_tests.yml", "browser_test.yml", "test_ci_scripts.yml")
+    for name in (
+        "gdunit4_tests.yml",
+        "browser_test.yml",
+        "test_ci_scripts.yml",
+        "benchmark.yml",
+    )
 ]
 """Workflows under policy. Add files here as they get step timeouts."""
 
