@@ -120,7 +120,8 @@ The game is browser-first and landscape-oriented. Mobile browsers are not suppor
 | 10 | [CI/CD Production Salt Injection & Security Guard Architecture](files/docs/Production_Salt_Injection_&_Security_Guard_Architecture.md) |
 | 11 | [Browser DevTools Guide — Verifying Web Save Encryption](files/docs/Browser_DevTools_Guide_Verifying_Web_Save_Encryption.md)           |
 | 12 | [AI Models Summary Matrix](files/docs/AI_Models_Summary_Matrix.md)                                                                     |
-| 13 | [Milestone notes](files/docs/milestones)                                                                                               |
+| 13 | [Performance Benchmark Guide](files/docs/Performance_Benchmark_Guide.md)                                                               |
+| 14 | [Milestone notes](files/docs/milestones)                                                                                               |
 
 External reference: [Godot Documentation](https://docs.godotengine.org/en/stable/index.html).
 
@@ -147,21 +148,22 @@ External reference: [Godot Documentation](https://docs.godotengine.org/en/stable
 
 ## Project Structure
 
-| Directory                | Contents                                                                                                                       |
-|--------------------------|--------------------------------------------------------------------------------------------------------------------------------|
-| `scripts/core/`          | Foundational systems: `game_paths.gd`, `globals.gd`, `main_scene.gd`, `settings.gd`                                            |
-| `scripts/resources/`     | Data containers & configuration: fuel, speed, player stats, weapon, bullet and settings resources; `audio_constants.gd`         |
-| `scripts/entities/`      | Game objects: `player.gd`, `weapon.gd`, `bullet.gd`                                                                            |
-| `scripts/managers/`      | `audio_manager.gd`, `sfx_manager.gd`, `ui_manager.gd`, `parallax_manager.gd`, `resource_preloader.gd`                          |
-| `scripts/system/`        | Platform wrappers: `JavaScriptBridgeWrapper.gd`, `OSWrapper.gd`, `audio_web_bridge.gd`, `web_telemetry_adapter.gd`             |
-| `scripts/ui/`            | `hud.gd`; sub-dirs `menus/` (main, options, pause, settings), `screens/` (splash, loading), `components/`                      |
-| `scenes/`                | Godot scenes (`.tscn`)                                                                                                         |
-| `config_resources/`      | Default `.tres` data: settings, player stats, bullet                                                                           |
-| `files/`                 | Game art, audio, fonts, themes, and project docs (`files/docs/`)                                                               |
-| `test/gut/`, `test/gdunit4/` | GDScript unit tests                                                                                                        |
-| `tests/`                 | Python/Playwright browser end-to-end tests; `tests/ci/` tests the CI helper scripts                                            |
-| `infra/`                 | Docker Compose + nginx for the local web test server                                                                           |
-| `.github/`               | CI/CD workflows and their helper scripts                                                                                       |
+| Directory                    | Contents                                                                                                                |
+|------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| `scripts/core/`              | Foundational systems: `game_paths.gd`, `globals.gd`, `main_scene.gd`, `settings.gd`                                     |
+| `scripts/resources/`         | Data containers & configuration: fuel, speed, player stats, weapon, bullet and settings resources; `audio_constants.gd` |
+| `scripts/entities/`          | Game objects: `player.gd`, `weapon.gd`, `bullet.gd`                                                                     |
+| `scripts/managers/`          | `audio_manager.gd`, `sfx_manager.gd`, `ui_manager.gd`, `parallax_manager.gd`, `resource_preloader.gd`                   |
+| `scripts/system/`            | Platform wrappers: `JavaScriptBridgeWrapper.gd`, `OSWrapper.gd`, `audio_web_bridge.gd`, `web_telemetry_adapter.gd`      |
+| `scripts/ui/`                | `hud.gd`; sub-dirs `menus/` (main, options, pause, settings), `screens/` (splash, loading), `components/`               |
+| `scenes/`                    | Godot scenes (`.tscn`)                                                                                                  |
+| `config_resources/`          | Default `.tres` data: settings, player stats, bullet                                                                    |
+| `files/`                     | Game art, audio, fonts, themes, and project docs (`files/docs/`)                                                        |
+| `test/gut/`, `test/gdunit4/` | GDScript unit tests                                                                                                     |
+| `test/benchmark/`            | Performance benchmark: runner scene, desktop and web runners, CI baseline comparison                                    |
+| `tests/`                     | Python/Playwright browser end-to-end tests; `tests/ci/` tests the CI helper scripts                                     |
+| `infra/`                     | Docker Compose + nginx for the local web test server                                                                    |
+| `.github/`                   | CI/CD workflows and their helper scripts                                                                                |
 
 ---
 
@@ -187,6 +189,7 @@ All pipelines run on GitHub Actions:
 - **Deploy:** HTML5 export and itch.io deployment on every push to `main`
 - **Releases:** Release Drafter for automated changelogs
 - **Docs:** a twice-weekly workflow that generates missing GDScript doc comments with Gemini and opens a PR
+- **Performance:** desktop and web benchmarks run in parallel on every push to `main` and are compared with a committed baseline (report only, not blocking deploys); see the [Performance Benchmark Guide](files/docs/Performance_Benchmark_Guide.md)
 - **Coverage:** Codecov
 - **Local:** Docker-based web test server (`infra/`)
 
@@ -194,11 +197,12 @@ All pipelines run on GitHub Actions:
 
 ## Testing
 
-| Suite      | Location        | What it covers                                                                     |
-|------------|-----------------|------------------------------------------------------------------------------------|
-| GUT        | `test/gut/`     | GDScript unit and integration tests (~100 suites)                                  |
-| gdUnit4    | `test/gdunit4/` | GDScript unit and integration tests: menus, settings, audio, player, weapons       |
-| Playwright | `tests/`        | End-to-end tests against the web export: menus, audio, difficulty, fuel, firing, scene transitions |
+| Suite      | Location          | What it covers                                                                                     |
+|------------|-------------------|----------------------------------------------------------------------------------------------------|
+| GUT        | `test/gut/`       | GDScript unit and integration tests (~100 suites)                                                  |
+| gdUnit4    | `test/gdunit4/`   | GDScript unit and integration tests: menus, settings, audio, player, weapons                       |
+| Playwright | `tests/`          | End-to-end tests against the web export: menus, audio, difficulty, fuel, firing, scene transitions |
+| Benchmark  | `test/benchmark/` | Performance: frame times, settings saves, object and orphan counts, reload leaks (desktop and web) |
 
 ### Covered areas
 
@@ -216,6 +220,7 @@ All pipelines run on GitHub Actions:
 - GUT: Godot → GUT panel → **Run All**
 - gdUnit4: Godot → gdUnit4 inspector → run `test/gdunit4`
 - All suites, including Playwright: run in CI on pull requests to `main` when the PR changes files they cover
+- Benchmark: `python test/benchmark/run_desktop.py --godot <Godot console exe>` (desktop) or `python test/benchmark/run_web.py --godot <Godot console exe>` (web); see the [Performance Benchmark Guide](files/docs/Performance_Benchmark_Guide.md)
 
 Testing is required for gameplay logic changes.
 
