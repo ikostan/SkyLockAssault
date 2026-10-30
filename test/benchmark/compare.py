@@ -62,15 +62,18 @@ class TimingRule:
     min_abs: float
 
 
-# Lower is better for every metric below.
+# Lower is better for every metric below. Tolerances come from the spread seen
+# between runs on GitHub runners (PR #1094 merge run): web nodes_avg varied by
+# about 14 and the reload-loop object count goes up and down by about 5 per
+# cycle, so desktop reload growth varied from 2 to 12.
 COUNT_RULES = [
     CountRule("saves", "Settings saves in 60 s", 2),
     CountRule("objects_avg", "OBJECT_COUNT avg", 25),
-    CountRule("nodes_avg", "OBJECT_NODE_COUNT avg", 5),
+    CountRule("nodes_avg", "OBJECT_NODE_COUNT avg", 15),
     CountRule("resources_avg", "OBJECT_RESOURCE_COUNT avg", 2),
     CountRule("orphans_max", "Orphan nodes, gameplay (max)", 0),
     CountRule("reload_orphans_max", "Orphan nodes, reload loop (max)", 0),
-    CountRule("reload_object_growth", "Reload loop object growth", 1),
+    CountRule("reload_object_growth", "Reload loop object growth", 8),
 ]
 TIMING_RULES = [
     TimingRule("frame_p95_ms", "Frame interval p95 (ms)", 1.25, 1.0),
