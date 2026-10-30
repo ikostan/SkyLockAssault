@@ -150,14 +150,20 @@ The exit code is 0 for a valid run. CSV files are written to `--out`.
 
 Options:
 
-| Option         | Default                               | Meaning                                           |
-|----------------|---------------------------------------|---------------------------------------------------|
-| `--godot`      | `GODOT_BIN` env var                   | Path to the Godot console executable              |
-| `--runs`       | 3                                     | Number of runs                                    |
-| `--out`        | `<project>/bench_results/<timestamp>` | Output folder                                     |
-| `--keep-going` | off                                   | Continue after an invalid run instead of stopping |
+- `--godot`: path to the Godot console executable. Defaults to the
+  `GODOT_BIN` environment variable.
+- `--runs`: number of runs. Default 3.
+- `--out`: output folder. Default `<project>/bench_results/<timestamp>`.
+- `--keep-going`: continue after an invalid run instead of stopping.
 
-The script exits with 0 only if every run was valid.
+The script exits with 0 only if every run was valid, and with 1 straight
+away if the Godot path does not exist.
+
+Every run starts from **default settings**. Before the first run the script
+moves your real `settings.cfg` aside, deletes the file before each run (the
+game recreates it) and puts your file back at the end, even if a run fails.
+Without this, each run would start from whatever the previous run left
+behind.
 
 ## Output files
 
