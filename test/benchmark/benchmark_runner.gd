@@ -8,7 +8,8 @@
 ##
 ## Desktop: godot --headless --path . res://test/benchmark/benchmark_runner.tscn -- --out=<dir>
 ## Exit code: 0 = valid run, 2 = invalid run (fuel/ammo/speed check failed),
-## 1 = setup failed (settings file could not be backed up; nothing was changed).
+## 1 = setup failed (settings file could not be backed up; nothing was changed),
+## 3 = settings file could not be restored (original kept as the .bench_backup file).
 ##
 ## Drives the game only through input and public state; changes no gameplay code.
 
@@ -89,10 +90,14 @@ func _run() -> void:
 	await _run_reload_phase()
 
 	_report(valid)
-	_restore_settings()
-	_emit("done", ["valid" if valid["ok"] else "invalid"])
+	var restored: bool = _restore_settings()
+	# A run that leaves the user's settings changed is never reported as valid.
+	_emit("done", ["valid" if valid["ok"] and restored else "invalid"])
 	await get_tree().create_timer(EXIT_SETTLE_S).timeout
-	get_tree().quit(0 if valid["ok"] else 2)
+	if not restored:
+		get_tree().quit(3)
+	else:
+		get_tree().quit(0 if valid["ok"] else 2)
 
 
 ## Pins every persisted setting (Globals.persisted_schema) and the volumes, so
@@ -346,9 +351,10 @@ func _backup_settings() -> bool:
 
 ## Puts the original settings file back. The backup is only deleted after a
 ## successful restore, so a failed copy never loses the original.
-func _restore_settings() -> void:
+## Returns false if the settings file could not be put back.
+func _restore_settings() -> bool:
 	if _is_web:
-		return
+		return true
 	var settings_abs: String = ProjectSettings.globalize_path(_settings_path)
 	var backup_abs: String = ProjectSettings.globalize_path(_backup_path)
 	if _had_settings_file:
@@ -360,7 +366,14 @@ func _restore_settings() -> void:
 					% [error_string(err), backup_abs]
 				)
 			)
-			return
+			return false
 		DirAccess.remove_absolute(backup_abs)
 	elif FileAccess.file_exists(_settings_path):
-		DirAccess.remove_absolute(settings_abs)
+		# There was no settings file before the run, so remove the one the run created.
+		var err: Error = DirAccess.remove_absolute(settings_abs)
+		if err != OK:
+			push_error(
+				"Benchmark: cannot remove settings created by the run (%s)." % error_string(err)
+			)
+			return false
+	return true
