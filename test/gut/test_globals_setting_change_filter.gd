@@ -36,6 +36,7 @@ func test_each_persisted_key_saves_and_logs_once(
 	assert_true(GlobalsScript.persisted_schema.has(prop), "Parameter list matches the schema")
 	_globals._on_setting_changed(prop, 1)
 	assert_called_count(_globals._save_settings, 1)
+	assert_called_count(_globals.log_message, 1)
 	assert_called(
 		_globals.log_message.bind("Setting '%s' updated to: 1" % prop, Globals.LogLevel.DEBUG)
 	)
