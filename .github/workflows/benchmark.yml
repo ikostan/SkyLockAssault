@@ -29,7 +29,7 @@ jobs:
       GODOT_VERSION: "4.7.1-stable"
       GODOT_SHA256: "c7ff14fd28472c8d4f193043de30278dcf7e5241a1dcf7566b02e27addaa33ba"
       RUNS: "${{ inputs.runs }}"
-      OUT_DIR: "bench_results/ci"
+      OUT_DIR: "bench_results/ci/desktop"
     steps:
       - uses: "actions/checkout@v7.0.1"
         with:
@@ -84,7 +84,7 @@ jobs:
         uses: "actions/upload-artifact@v7"
         with:
           name: "benchmark-results"
-          path: "bench_results/ci/**"
+          path: "bench_results/ci/desktop/**"
           retention-days: 30
 
   web:
@@ -100,7 +100,7 @@ jobs:
       # yamllint disable-line rule:line-length
       TEMPLATES_SHA512: "afcc83d8d3d298038f19c58744a0d660fa75dd4baa33cb55d1011bb2565a2a8c2381728924564cb909e37c205a23f21b521b23bd057993afd43ae4da0b2f9d47"
       RUNS: "${{ inputs.runs }}"
-      OUT_DIR: "bench_results/web_ci"
+      OUT_DIR: "bench_results/ci/web"
     steps:
       - uses: "actions/checkout@v7.0.1"
         with:
@@ -216,5 +216,5 @@ jobs:
         uses: "actions/upload-artifact@v7"
         with:
           name: "benchmark-web-results"
-          path: "bench_results/web_ci/**"
+          path: "bench_results/ci/web/**"
           retention-days: 30

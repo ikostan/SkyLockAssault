@@ -94,9 +94,29 @@ REPORT_METRICS = [
 ]
 
 
+RESULTS_ROOT = PROJECT_ROOT / "bench_results"
+# Docker creates this file in every container.
+DOCKER_MARKER = Path("/.dockerenv")
+
+
+def detect_environment(marker: Path = DOCKER_MARKER) -> str:
+    """Return "docker" inside a Docker container, otherwise "desktop"."""
+    return "docker" if marker.exists() else "desktop"
+
+
+def default_out(kind: str, name: str | None = None) -> Path:
+    """Return bench_results/<kind>/<name or timestamp>.
+
+    kind is where the benchmark ran: desktop, docker, web_headless or
+    web_headed. Results from different kinds are not comparable, so each
+    gets its own folder.
+    """
+    stamp = dt.datetime.now().astimezone().strftime("%Y%m%d_%H%M%S")
+    return RESULTS_ROOT / kind / (name or stamp)
+
+
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
-    stamp = dt.datetime.now().astimezone().strftime("%Y%m%d_%H%M%S")
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "--godot",
@@ -109,8 +129,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--out",
         type=Path,
-        default=PROJECT_ROOT / "bench_results" / stamp,
-        help="Output folder (default: <project>/bench_results/<timestamp>).",
+        help=(
+            "Output folder (default: <project>/bench_results/<desktop|docker>/"
+            "<name or timestamp>)."
+        ),
+    )
+    parser.add_argument(
+        "--name",
+        help="Folder name instead of the timestamp, e.g. baseline_616.",
     )
     parser.add_argument(
         "--fresh",
@@ -127,6 +153,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("Godot executable not given: use --godot or set GODOT_BIN.")
     if args.runs < 1:
         parser.error("--runs must be at least 1.")
+    if args.out is None:
+        args.out = default_out(detect_environment(), args.name)
     return args
 
 

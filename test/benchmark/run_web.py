@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import datetime as dt
 import functools
 import http.server
 import os
@@ -50,6 +49,7 @@ from run_desktop import (  # noqa: E402  (sibling script, not a package)
     PROJECT_ROOT,
     RUN_CSVS,
     collect_metrics,
+    default_out,
     has_data_rows,
     write_reports,
 )
@@ -82,7 +82,6 @@ SUMMARY_HEADER = (
 
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
-    stamp = dt.datetime.now().astimezone().strftime("%Y%m%d_%H%M%S")
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "--godot",
@@ -95,8 +94,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--out",
         type=Path,
-        default=PROJECT_ROOT / "bench_results" / f"web_{stamp}",
-        help="Output folder (default: <project>/bench_results/web_<timestamp>).",
+        help=(
+            "Output folder (default: <project>/bench_results/"
+            "<web_headless|web_headed>/<name or timestamp>)."
+        ),
+    )
+    parser.add_argument(
+        "--name",
+        help="Folder name instead of the timestamp, e.g. baseline_616.",
     )
     parser.add_argument(
         "--build",
@@ -131,6 +136,9 @@ def parse_args() -> argparse.Namespace:
         )
     if args.runs < 1:
         parser.error("--runs must be at least 1.")
+    if args.out is None:
+        mode = "web_headed" if args.headed else "web_headless"
+        args.out = default_out(mode, args.name)
     return args
 
 

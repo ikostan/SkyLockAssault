@@ -19,6 +19,7 @@ Chromium through Playwright (Step 4).
 - [Step 3: Baseline run in Docker](#step-3-baseline-run-in-docker)
 - [Step 4: Web benchmark](#step-4-web-benchmark)
 - [Native vs Docker](#native-vs-docker)
+- [Where results go](#where-results-go)
 - [Output files](#output-files)
 - [Reading the results](#reading-the-results)
 - [Rerunning for Part 2](#rerunning-for-part-2)
@@ -66,8 +67,7 @@ Once per second:
 
 Counted or checked once:
 
-- **Settings saves.** Changes to persisted settings (`Globals.persisted_schema`
-  keys) during the measured window; each one is a full encrypted save.
+- **Settings saves.** One per `Globals.settings.setting_changed` emission.
 - **Fuel, ammo and speed at the end.** Validity check.
 
 ### Validity
@@ -110,10 +110,6 @@ unit test.
 - **Python 3.10+.** `run_desktop.py` and `compare.py` need only the standard
   library; `run_web.py` also needs Playwright (see Step 4). The project
   `.venv` works.
-- **Godot 4.7.1 web export templates** (`run_web.py` only). It exports the
-  `Web_benchmark` preset before running. If the export reports a missing
-  template, install them once from the editor: **Editor → Manage Export
-  Templates → Download and Install**.
 - **A committed working tree.** The report records the commit SHA and marks it
   `(dirty)` if there are uncommitted changes. The baseline must name a clean
   commit.
@@ -130,7 +126,7 @@ $godot = "C:\Users\super\OneDrive\Desktop\GODOT\" +
     "Godot_v4.7.1-stable_win64_console.exe"
 & $godot --headless --path . `
     res://test/benchmark/benchmark_runner.tscn `
-    -- --out=C:/temp/bench/smoke
+    -- --out=bench_results/desktop/smoke
 ```
 
 Godot does not need to be on `PATH`; PowerShell runs it through `&`. The
@@ -148,21 +144,22 @@ The exit code is 0 for a valid run. CSV files are written to `--out`.
 
 ## Step 2: Baseline run (3 runs + medians)
 
-1. Make sure `bench_results/` is in `.gitignore` (the default output folder is
-   inside the project), or always pass `--out` outside the project.
-2. Commit your work so the report shows a clean SHA.
-3. Quiet the machine (see [Prerequisites](#prerequisites)).
-4. Run:
+1. Commit your work so the report shows a clean SHA.
+2. Quiet the machine (see [Prerequisites](#prerequisites)).
+3. Run:
 
     ```powershell
-    python test/benchmark/run_desktop.py --godot $godot `
-        --out C:/temp/bench/baseline_desktop
+    python test/benchmark/run_desktop.py --godot $godot --name baseline
     ```
+
+    Results go to `bench_results/desktop/baseline/` (see
+    [Where results go](#where-results-go)). Leave out `--name` to use a
+    timestamp instead.
 
     `$godot` is set as in Step 1. Alternatively set `$env:GODOT_BIN = $godot`
     once and leave out `--godot`.
 
-5. Expect about 4–5 minutes and this output:
+4. Expect about 4–5 minutes and this output:
 
     ```text
     Run 1/3 (about 80 s)...
@@ -179,7 +176,9 @@ Options:
 - `--godot`: path to the Godot console executable. Defaults to the
   `GODOT_BIN` environment variable.
 - `--runs`: number of runs. Default 3.
-- `--out`: output folder. Default `<project>/bench_results/<timestamp>`.
+- `--name`: results folder name instead of the timestamp.
+- `--out`: exact output folder; overrides the default
+  `bench_results/<desktop|docker>/<name or timestamp>`.
 - `--fresh`: start every run without a settings file (first-launch player)
   instead of the default returning-player state.
 - `--keep-going`: continue after an invalid run instead of stopping.
@@ -232,19 +231,20 @@ script changes do not need a rebuild.
 
     ```powershell
     docker run --rm --cpus=4 --memory=8g `
-        -v "${PWD}:/project" -v "C:/temp/bench:/bench" -w /project `
+        -v "${PWD}:/project" -w /project `
         -e GODOT_BIN=/usr/local/bin/godot `
         sky-lock-assault-pipeline:latest `
         bash -c "git config --global --add safe.directory /project &&
             godot --headless --path . --import &&
-            python3 test/benchmark/run_desktop.py --out /bench/baseline_docker"
+            python3 test/benchmark/run_desktop.py --name baseline"
     ```
 
     Each line inside the `bash -c "..."` string ends with `&&`, so bash reads
     it as one chain of three commands. Do not split a command in the middle.
 
-4. Results land in `C:/temp/bench/baseline_docker`, with the same layout as a
-   native run (see [Output files](#output-files)).
+4. Results land in `bench_results/docker/baseline/` in the project folder on
+   Windows: the runner detects the container and picks the `docker` folder,
+   and the project folder is mounted, so no extra mount is needed.
 
 What each part does:
 
@@ -290,18 +290,16 @@ python -m playwright install chromium
 Run it from the project folder:
 
 ```powershell
-$godot = "C:\Users\super\OneDrive\Desktop\GODOT\" +
-    "Godot_v4.7.1-stable_win64_console.exe"
+$godot = "<full path to Godot_v4.7.1-stable_win64_console.exe>"
 python test/benchmark/run_web.py --godot $godot
 ```
-
-Adjust the Godot path as in Step 1. It takes about 5 minutes (export, then
-3 runs of about 80 s each).
 
 Options:
 
 - `--runs N`: number of runs (default 3).
-- `--out <dir>`: output folder (default `bench_results/web_<timestamp>`).
+- `--name <name>`: results folder name instead of the timestamp.
+- `--out <dir>`: exact output folder; overrides the default
+  `bench_results/<web_headless|web_headed>/<name or timestamp>`.
 - `--headed`: show the browser window and use the GPU. Default is headless
   with software rendering (SwiftShader), like the browser tests.
 - `--channel chrome`: use the installed Google Chrome instead of Playwright's
@@ -354,6 +352,25 @@ it.
 The comparison is not purely "Docker overhead": the container runs Linux,
 inside the WSL2 VM, limited to 4 CPUs.
 
+## Where results go
+
+Every runner writes under `bench_results/` in the project folder (ignored by
+git), one subfolder per kind of run. Results from different kinds are not
+comparable, so they never share a folder.
+
+```text
+bench_results/
+├── desktop/        run_desktop.py, native
+├── docker/         run_desktop.py inside the Docker image (detected)
+├── web_headless/   run_web.py (default: software rendering)
+├── web_headed/     run_web.py --headed (GPU)
+└── ci/             CI only: ci/desktop and ci/web (job artifacts)
+```
+
+Inside each kind, a run gets a timestamp folder (`20261030_161409`) or the
+name given with `--name` (`baseline`, `before_616`, `after_616`). `--out`
+still writes to any exact folder.
+
 ## Output files
 
 ```text
@@ -383,8 +400,8 @@ object-count growth across the reload loop.
 - **Process / physics "worst frame per second"** come from Godot's own
   monitors. They are one value per second (the worst frame in it), not an
   average frame time.
-- **Settings saves** should be 0: the scenario changes no persisted setting
-  while measuring. Before #616 it was ~60 (every fuel tick saved the file).
+- **Settings saves** should be ~60 today (one per fuel tick). The refactor is
+  expected to reduce this.
 - **Reload loop object growth** above 0 means each load of `main_scene` leaves
   objects behind. It only shows with a saved settings file present, which is
   why runs start from the returning-player state.
@@ -415,7 +432,10 @@ session instead of relying on the Part 1 numbers:
 - **Before:** the last `main` commit before the first Region 1–6 PR merged.
   **After:** `main` with all Region 1–6 PRs merged. Check out "before" in a
   separate worktree (`git worktree add ../sla_before <sha>`) and run the same
-  commands in both folders.
+  commands in both folders, with `--name before` and `--name after`. The
+  worktree has its own `bench_results/`; to keep both in this project's
+  folder, pass the "before" run
+  `--out ../SkyLockAssault/bench_results/docker/before` (or `desktop`, ...).
 - Same machine, same Godot build (4.7.1-stable console), same quiet-machine
   rules, same Docker `--cpus` / `--memory` limits, same screen for web.
 - Same harness. Do not edit the scenario constants (`DIFFICULTY`,
@@ -425,10 +445,12 @@ session instead of relying on the Part 1 numbers:
 - Compare with `compare.py`:
 
     ```powershell
-    python test/benchmark/compare.py --results <before>/runs.csv `
-        --write-baseline before.json
-    python test/benchmark/compare.py --results <after>/runs.csv `
-        --baseline before.json
+    python test/benchmark/compare.py `
+        --results bench_results/docker/before/runs.csv `
+        --write-baseline bench_results/docker/before.json
+    python test/benchmark/compare.py `
+        --results bench_results/docker/after/runs.csv `
+        --baseline bench_results/docker/before.json
     ```
 
 - Post the `compare.py` table and both `medians.md` files on #625. The
@@ -504,9 +526,10 @@ that lowers settings saves), so later runs are compared with the new numbers.
 ### Running the comparison locally
 
 ```bash
-python test/benchmark/compare.py --results bench_results/<run>/runs.csv \
-    --profile desktop
-python test/benchmark/compare.py --results bench_results/<web_run>/runs.csv \
+python test/benchmark/compare.py \
+    --results bench_results/desktop/<run>/runs.csv --profile desktop
+python test/benchmark/compare.py \
+    --results bench_results/web_headless/<run>/runs.csv \
     --baseline test/benchmark/baseline_web_ci.json --profile web
 ```
 
@@ -538,9 +561,9 @@ These came out of building and testing the harness; keep them for Part 2.
   interval instead.
 - **No console output while measuring.** Per-second rows are buffered and
   printed after the measured window, so console I/O is not measured.
-- **Settings file backup.** The runner changes and saves persisted settings
-  during setup, so it backs up `user://settings.cfg` before the run and
-  restores it afterwards (desktop only).
+- **Settings file backup.** Every setting change, including the per-second
+  fuel mirror, saves to `user://settings.cfg`. The runner backs the file up
+  before the run and restores it afterwards (desktop only).
 - **Bullet drain before the reload loop.** Bullets are added to the scene root,
   not to `main_scene`, so they are waited out before counting nodes.
 - **1 s pause before quitting.** Quitting right after freeing a scene with
@@ -584,8 +607,8 @@ rerun once with `--verbose` and redirect the output to see the leaked classes:
 ```powershell
 & $godot --verbose --headless --path . `
     res://test/benchmark/benchmark_runner.tscn `
-    -- --out=C:/temp/bench/verbose *> C:/temp/bench/verbose.txt
-Select-String -Path C:/temp/bench/verbose.txt `
+    -- --out=bench_results/desktop/verbose *> bench_results/verbose.txt
+Select-String -Path bench_results/verbose.txt `
     -Pattern "Leaked|still in use" -Context 0,3
 ```
 
