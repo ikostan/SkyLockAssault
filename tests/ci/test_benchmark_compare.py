@@ -6,6 +6,7 @@
 import csv
 import importlib.util
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -173,3 +174,133 @@ def test_web_profile_allows_node_noise_desktop_does_not(compare, tmp_path):
     args = ["--results", str(results), "--baseline", str(base_path)]
     assert compare.main([*args, "--profile", "web"]) == 0
     assert compare.main([*args, "--profile", "desktop"]) == 1
+
+
+@pytest.mark.parametrize(
+    ("profile", "metric", "tolerance"),
+    [
+        (None, "reload_object_growth", 1),
+        ("desktop", "reload_object_growth", 8),
+        ("web", "reload_object_growth", 1),
+        (None, "nodes_avg", 5),
+        ("desktop", "nodes_avg", 5),
+        ("web", "nodes_avg", 15),
+    ],
+)
+@pytest.mark.parametrize(
+    ("relative_change", "expected_status"),
+    [
+        (-1.01, "better"),
+        (-1, "ok"),
+        (0, "ok"),
+        (1, "ok"),
+        (1.01, "fail"),
+    ],
+)
+def test_profile_count_boundaries(
+    compare, profile, metric, tolerance, relative_change, expected_status
+):
+    """The limit is inclusive in both directions for each profile."""
+    baseline = {metric: 100.0}
+    current = {metric: 100.0 + tolerance * relative_change}
+    rows = compare.compare(current, baseline, profile)
+    assert len(rows) == 1
+    assert rows[0][-1] == expected_status
+
+
+@pytest.mark.parametrize("profile", [None, "desktop", "web"])
+@pytest.mark.parametrize(
+    ("metric", "tolerance"),
+    [
+        ("saves", 2),
+        ("objects_avg", 25),
+        ("resources_avg", 2),
+        ("orphans_max", 0),
+        ("reload_orphans_max", 0),
+    ],
+)
+def test_profiles_preserve_other_count_limits(compare, profile, metric, tolerance):
+    """Profiles do not widen limits for unrelated count metrics."""
+    baseline = {metric: 100.0}
+    at_limit = {metric: 100.0 + tolerance}
+    above_limit = {metric: 100.0 + tolerance + 0.1}
+    assert compare.compare(at_limit, baseline, profile)[0][-1] == "ok"
+    assert compare.compare(above_limit, baseline, profile)[0][-1] == "fail"
+
+
+def test_zero_tolerance_override_is_respected(compare):
+    """An explicit zero override is distinct from the default tolerance."""
+    rule = compare.CountRule("example", "Example", 5)
+    assert compare.judge_count(rule, 100, 101) == "ok"
+    assert compare.judge_count(rule, 100, 101, tolerance=0) == "fail"
+    assert compare.judge_count(rule, 100, 99, tolerance=0) == "better"
+
+
+@pytest.mark.parametrize("profile", [None, "desktop", "web"])
+def test_profiles_keep_timing_warnings_and_missing_baselines(compare, profile):
+    """Profiles affect count limits, not timing or missing-baseline handling."""
+    baseline = {"frame_p95_ms": 10.0}
+    current = {"frame_p95_ms": 20.0, "nodes_avg": 600.0}
+    rows = {row[1]: row[-1] for row in compare.compare(current, baseline, profile)}
+    assert rows["Frame interval p95 (ms)"] == "warn"
+    assert rows["OBJECT_NODE_COUNT avg"] == "new"
+    assert all(row[-1] == "new" for row in compare.compare(current, None, profile))
+
+
+def test_invalid_profile_is_rejected(compare, capsys):
+    """Misspelled profiles cannot silently select the default tolerances."""
+    with pytest.raises(SystemExit) as exc:
+        compare.main(["--results", "runs.csv", "--profile", "mobile"])
+    assert exc.value.code == 2
+    assert "invalid choice" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("profile", "baseline_name", "metric", "tolerance"),
+    [
+        ("desktop", "baseline_ci.json", "reload_object_growth", 8),
+        ("web", "baseline_web_ci.json", "nodes_avg", 15),
+    ],
+)
+def test_committed_baseline_and_profile_gate(
+    compare, tmp_path, capsys, profile, baseline_name, metric, tolerance
+):
+    """Each committed CI baseline supplies all metrics and enforces its limit."""
+    baseline_path = PROJECT_ROOT / "test/benchmark" / baseline_name
+    doc = json.loads(baseline_path.read_text(encoding="utf-8"))
+    metrics = doc["metrics"]
+    assert set(metrics) == {
+        "saves",
+        "objects_avg",
+        "nodes_avg",
+        "resources_avg",
+        "orphans_max",
+        "reload_orphans_max",
+        "reload_object_growth",
+        "frame_p95_ms",
+        "frames_over_33.4ms",
+        "proc_worst_avg_ms",
+        "phys_worst_avg_ms",
+        "mem_static_growth",
+    }
+    assert all(
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+        for value in metrics.values()
+    )
+    results = tmp_path / "runs.csv"
+    args = [
+        "--results",
+        str(results),
+        "--baseline",
+        str(baseline_path),
+        "--profile",
+        profile,
+    ]
+    write_runs(results, [{**metrics, metric: metrics[metric] + tolerance}])
+    assert compare.main(args) == 0
+    assert "Regressions: 0." in capsys.readouterr().out
+    write_runs(results, [{**metrics, metric: metrics[metric] + tolerance + 1}])
+    assert compare.main(args) == 1
+    assert "Regressions: 1." in capsys.readouterr().out
