@@ -233,9 +233,11 @@ def run_once(browser: Browser, url: str, run_dir: Path) -> tuple[bool, str]:
     console: list[str] = []
 
     def on_console(message: ConsoleMessage) -> None:
+        """Keep every console line of the page, in order."""
         console.append(message.text)
 
     def on_page_error(error: Exception) -> None:
+        """Keep uncaught page errors in the console log, marked as such."""
         console.append(f"[pageerror] {error}")
 
     # A new context has empty storage, so the game starts with no saved settings.
