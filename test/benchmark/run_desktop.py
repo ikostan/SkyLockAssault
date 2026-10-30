@@ -44,8 +44,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RUNNER_SCENE = "res://test/benchmark/benchmark_runner.tscn"
 RUN_TIMEOUT_S = 300
 SETTINGS_FILE = "settings.cfg"
-# Backup benchmark_runner.gd makes of settings.cfg. During these runs it only
-# ever holds a fixture copy (the player's file is moved aside first).
+# Backup benchmark_runner.gd makes of settings.cfg. One left over from an
+# earlier invocation may hold the player's settings, so main() refuses to
+# start while it exists. During this script's runs it only ever holds a
+# fixture copy (the player's file is moved aside first), so it is safe to
+# delete between runs.
 RUNNER_BACKUP_FILE = "settings.cfg.bench_backup"
 FIXTURE_FILE = "settings_fixture.cfg"
 PRIME_LAUNCHES = 2
@@ -178,6 +181,7 @@ def prime_settings(godot: str, settings: Path, out: Path) -> Path | None:
     Launch 1 starts without settings.cfg, so the game writes a fresh one.
     Launch 2 loads that file and re-saves anything it fixes, as a second
     launch by a real player would. The resulting file becomes the fixture.
+    Both launches must exit with code 0, and launch 1 must create the file.
     """
     reset_settings(settings)
     cmd = [
@@ -202,12 +206,14 @@ def prime_settings(godot: str, settings: Path, out: Path) -> Path | None:
         except (OSError, subprocess.TimeoutExpired) as exc:
             print(f"  prime launch {launch} failed: {exc}")
             return None
-        (out / f"prime_{launch}.txt").write_text(
-            proc.stdout + proc.stderr, encoding="utf-8"
-        )
-    if not settings.is_file():
-        print("  the game did not create settings.cfg (see prime_*.txt)")
-        return None
+        log = out / f"prime_{launch}.txt"
+        log.write_text(proc.stdout + proc.stderr, encoding="utf-8")
+        if proc.returncode != 0:
+            print(f"  prime launch {launch} exited with {proc.returncode} (see {log})")
+            return None
+        if not settings.is_file():
+            print(f"  prime launch {launch} did not create settings.cfg (see {log})")
+            return None
     fixture = out / FIXTURE_FILE
     shutil.copy2(settings, fixture)
     return fixture
@@ -396,16 +402,19 @@ def main() -> int:
 
     settings = user_data_dir() / SETTINGS_FILE
     user_backup = settings.with_name(SETTINGS_FILE + ".bench_user_backup")
+    runner_backup = settings.with_name(RUNNER_BACKUP_FILE)
     print(f"Settings: {settings} (moved aside during the runs)")
-    if user_backup.exists():
-        # Left over from an interrupted run. Stop instead of guessing which
-        # file is the player's: never delete or overwrite either of them.
-        print(f"Backup already exists: {user_backup}")
-        print(
-            "An earlier run was interrupted. Restore it (rename it back to "
-            f"{SETTINGS_FILE}) or delete it, then run again."
-        )
-        return 1
+    for leftover in (user_backup, runner_backup):
+        if leftover.exists():
+            # Left over from an interrupted run and possibly the only copy of
+            # the player's settings. Stop instead of guessing which file is
+            # the player's: never delete or overwrite either of them.
+            print(f"Backup already exists: {leftover}")
+            print(
+                "An earlier run was interrupted. Restore it (rename it back to "
+                f"{SETTINGS_FILE}) or delete it, then run again."
+            )
+            return 1
     if settings.exists():
         shutil.move(settings, user_backup)
 
@@ -429,9 +438,11 @@ def main() -> int:
             run_dir = out / f"run_{index}"
             print(f"Run {index}/{args.runs} (about 80 s)...", flush=True)
             reset_settings(settings)
-            # A run killed by the timeout leaves the runner's backup behind;
-            # the runner refuses to start while it exists.
-            reset_settings(settings.with_name(RUNNER_BACKUP_FILE))
+            # A run of this invocation killed by the timeout leaves the
+            # runner's backup (a fixture copy) behind, and the runner refuses
+            # to start while it exists. A backup from an earlier invocation
+            # was already rejected above, so this only removes our own.
+            reset_settings(runner_backup)
             if fixture is not None:
                 shutil.copy2(fixture, settings)
             valid, reason = run_once(godot, run_dir)
@@ -444,6 +455,7 @@ def main() -> int:
                     break
     finally:
         reset_settings(settings)
+        reset_settings(runner_backup)
         if user_backup.exists():
             shutil.move(user_backup, settings)
 
