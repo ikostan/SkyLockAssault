@@ -48,6 +48,11 @@ FIXTURE_FILE = "settings_fixture.cfg"
 PRIME_LAUNCHES = 2
 PRIME_QUIT_AFTER_FRAMES = "60"
 PRIME_TIMEOUT_S = 120
+GIT_TIMEOUT_S = 10
+
+# CSV files benchmark_runner.gd writes into each run folder. All must be
+# written by the current run, with at least one data row.
+RUN_CSVS = ("summary.csv", "seconds.csv", "reload.csv", "frames_interval_ms.csv")
 
 # Frame-interval thresholds (ms). 33.4 ms = at least one dropped frame at 60 FPS.
 STUTTER_THRESHOLDS_MS = (25.0, 33.4, 50.0)
@@ -205,9 +210,23 @@ def prime_settings(godot: str, settings: Path, out: Path) -> Path | None:
     return fixture
 
 
+def has_data_rows(path: Path) -> bool:
+    """True if the CSV file exists and has at least one row after the header."""
+    if not path.is_file():
+        return False
+    try:
+        return bool(read_csv(path))
+    except (OSError, UnicodeDecodeError, csv.Error):
+        return False
+
+
 def run_once(godot: str, run_dir: Path) -> tuple[bool, str]:
     """Run the benchmark once. Returns (valid, reason)."""
     run_dir.mkdir(parents=True, exist_ok=True)
+    # Remove output from an earlier run in this folder (reused --out), so
+    # only files written by this run can pass the checks below.
+    for name in (*RUN_CSVS, "console.txt"):
+        (run_dir / name).unlink(missing_ok=True)
     cmd = [
         godot,
         "--headless",
@@ -239,8 +258,9 @@ def run_once(godot: str, run_dir: Path) -> tuple[bool, str]:
         return False, "no BENCH,done,valid line (see console.txt)"
     if proc.returncode != 0:
         return False, f"exit code {proc.returncode}"
-    if not (run_dir / "summary.csv").is_file():
-        return False, "summary.csv missing"
+    for name in RUN_CSVS:
+        if not has_data_rows(run_dir / name):
+            return False, f"{name} missing or empty"
     return True, "valid"
 
 
@@ -288,6 +308,7 @@ def git_info() -> str:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
+            timeout=GIT_TIMEOUT_S,
             check=True,
         ).stdout.strip()
         dirty = subprocess.run(
@@ -295,9 +316,10 @@ def git_info() -> str:
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
+            timeout=GIT_TIMEOUT_S,
             check=True,
         ).stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
         return "unknown"
     return f"{sha} (dirty)" if dirty else sha
 
@@ -368,7 +390,16 @@ def main() -> int:
     settings = user_data_dir() / SETTINGS_FILE
     user_backup = settings.with_name(SETTINGS_FILE + ".bench_user_backup")
     print(f"Settings: {settings} (moved aside during the runs)")
-    if settings.exists() and not user_backup.exists():
+    if user_backup.exists():
+        # Left over from an interrupted run. Stop instead of guessing which
+        # file is the player's: never delete or overwrite either of them.
+        print(f"Backup already exists: {user_backup}")
+        print(
+            "An earlier run was interrupted. Restore it (rename it back to "
+            f"{SETTINGS_FILE}) or delete it, then run again."
+        )
+        return 1
+    if settings.exists():
         shutil.move(settings, user_backup)
 
     results: list[dict[str, float | str]] = []
