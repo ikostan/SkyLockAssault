@@ -342,11 +342,9 @@ The workflow `.github/workflows/benchmark.yml` runs the same benchmark on a
 GitHub runner (`ubuntu-24.04`, headless) and compares it with
 `test/benchmark/baseline_ci.json`.
 
-It runs:
-
-- by hand: **Actions → Performance Benchmark → Run workflow** (choose the
-  number of runs, default 3);
-- on a pull request that has the `performance` label.
+It is a reusable workflow, called only from the main pipeline
+(`lint_test_deploy.yml`, on every push to `main`) after the Ubuntu 24.04
+tests pass. It runs 3 times and does not block the release or deploy jobs.
 
 What it checks (medians of the runs):
 
@@ -362,9 +360,9 @@ The table appears on the run's **Summary** page. All files are in the
 
 CI numbers differ from your PC and Docker, so the baseline must come from CI:
 
-1. Run the workflow by hand on `main` (or on the commit you want as the
-   reference).
-2. Download the `benchmark-results` artifact.
+1. Open the **Main CI/CD Pipeline** run on `main` for the commit you want as
+   the reference.
+2. Download its `benchmark-results` artifact.
 3. Copy its `baseline_ci.json` to `test/benchmark/baseline_ci.json` and commit
    it.
 
