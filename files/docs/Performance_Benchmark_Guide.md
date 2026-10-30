@@ -31,8 +31,9 @@ Chromium through Playwright (Step 4).
 One run of `test/benchmark/benchmark_runner.tscn` takes about 80 seconds:
 
 1. **Setup.** Backs up the real settings file (`user://settings.cfg`), then
-   sets difficulty 0.5, log level INFO and default (unmuted) volumes, and caps
-   the desktop frame rate at 60 FPS.
+   sets difficulty 0.5, log level INFO and default (unmuted) volumes, pins the
+   other saved settings to their defaults (`max_fuel` 100, debug logging and
+   the FPS counter off), and caps the desktop frame rate at 60 FPS.
 2. **Gameplay load.** Loads `scenes/main_scene.tscn` directly (no splash or
    menus), holds `speed_up` and fires continuously. 5 s warm-up, then 60 s
    measured.
@@ -71,8 +72,17 @@ Counted or checked once:
 ### Validity
 
 A run is **valid** only if, at the end of the measured window, fuel is above 0,
-ammo is above 0 and the plane is still at max speed. Invalid runs exit with
-code 2 and must not be used.
+ammo is above 0 and the plane is still at max speed. Exit codes of
+`benchmark_runner.gd`:
+
+- `0`: valid run.
+- `1`: setup failed. The settings file could not be backed up, or a backup
+  from an interrupted run already exists; nothing was changed.
+- `2`: invalid run (fuel, ammo or speed check failed).
+- `3`: the settings file could not be put back; the original is kept as
+  `settings.cfg.bench_backup`.
+
+Only use runs that exit with 0.
 
 ## Files
 
@@ -85,7 +95,8 @@ All under `test/benchmark/`:
 | `run_desktop.py`        | Runs it N times, checks validity, writes medians |
 | `run_web.py`            | Same, in Chromium (`Web_benchmark` export)       |
 | `compare.py`            | Compares medians with the CI baseline            |
-| `baseline_ci.json`      | The CI baseline (committed from a CI run)        |
+| `baseline_ci.json`      | Desktop CI baseline (committed from a CI run)    |
+| `baseline_web_ci.json`  | Web CI baseline (committed from a CI run)        |
 
 GUT only scans `res://test/gut/`, so nothing in `test/benchmark/` runs as a
 unit test.
@@ -95,7 +106,9 @@ unit test.
 - **Godot 4.7.1-stable, console build.** On Windows use
   `Godot_v4.7.1-stable_win64_console.exe`; the non-console build does not show
   the `BENCH,...` output. It does not need to be on `PATH`.
-- **Python 3.10+.** Standard library only; the project `.venv` works.
+- **Python 3.10+.** `run_desktop.py` and `compare.py` need only the standard
+  library; `run_web.py` also needs Playwright (see Step 4). The project
+  `.venv` works.
 - **A committed working tree.** The report records the commit SHA and marks it
   `(dirty)` if there are uncommitted changes. The baseline must name a clean
   commit.
@@ -201,8 +214,9 @@ script changes do not need a rebuild.
     docker build -t sky-lock-assault-pipeline:latest .
     ```
 
-2. Record the image ID for the results comment. Part 2 must use the same
-   image, so do not rebuild it until Part 2 is done:
+2. Record the image ID for the results comment. The image is rebuilt often,
+   so Part 2 does not rely on it staying the same (see
+   [Rerunning for Part 2](#rerunning-for-part-2)):
 
     ```powershell
     docker image inspect sky-lock-assault-pipeline:latest --format "{{.Id}}"
@@ -368,28 +382,49 @@ object-count growth across the reload loop.
 
 ### Run-to-run variance
 
-Stutter metrics vary a lot between runs. In the Part 1 baseline, frame-interval
-p95 ranged from 18.6 to 29.5 ms and dropped frames from 19 to 59 per run. The
-averages, memory, object counts and save counts were stable.
+Stutter metrics vary between runs, much more on native Windows than in
+Docker. Natively, frame-interval p95 ranged from 18.6 to 29.5 ms and dropped
+frames from 19 to 59 per run; in Docker, p95 stayed between 17.4 and 17.7 ms
+with 0 dropped frames. The averages, memory, object counts and save counts
+were stable in both. On GitHub runners the reload-loop object growth also
+varies (2 to 12 on desktop), because the object count goes up and down by
+about 5 between reloads.
 
-So when comparing Part 1 with Part 2, treat a stutter difference as real only
-if it is large (roughly 2× or more). More runs (`--runs 5`) make the median
+So when comparing Part 1 with Part 2 natively, treat a stutter difference as
+real only if it is large (roughly 2× or more). More runs (`--runs 5`) make the median
 less sensitive to one unusually calm or noisy run; if you use 5, use 5 for both
 parts.
 
 ## Rerunning for Part 2
 
-Part 2 must change nothing except the game code under test:
+Part 2 ([#625](https://github.com/ikostan/SkyLockAssault/issues/625)) must
+change nothing except the game code under test. Because the Docker image is
+rebuilt often (and a different image, WSL or browser version can move the
+timings by itself), Part 2 runs **both commits back to back** in the same
+session instead of relying on the Part 1 numbers:
 
+- **Before:** the last `main` commit before the first Region 1–6 PR merged.
+  **After:** `main` with all Region 1–6 PRs merged. Check out "before" in a
+  separate worktree (`git worktree add ../sla_before <sha>`) and run the same
+  commands in both folders.
 - Same machine, same Godot build (4.7.1-stable console), same quiet-machine
-  rules.
-- For Docker: the same image (check the recorded image ID) and the same
-  `--cpus` / `--memory` limits.
-- Same `benchmark_runner.gd` and `run_desktop.py`. Do not edit the scenario
-  constants (`DIFFICULTY`, `WARMUP_S`, `MEASURE_S`, `RELOAD_CYCLES`,
-  `DESKTOP_MAX_FPS`).
-- Same number of runs as Part 1.
-- Post the new `medians.md` next to the Part 1 table and compare medians.
+  rules, same Docker `--cpus` / `--memory` limits, same screen for web.
+- Same harness. Do not edit the scenario constants (`DIFFICULTY`,
+  `WARMUP_S`, `MEASURE_S`, `RELOAD_CYCLES`, `DESKTOP_MAX_FPS`, and the pinned
+  settings).
+- Same number of runs for both commits.
+- Compare with `compare.py`:
+
+    ```powershell
+    python test/benchmark/compare.py --results <before>/runs.csv `
+        --write-baseline before.json
+    python test/benchmark/compare.py --results <after>/runs.csv `
+        --baseline before.json
+    ```
+
+- Post the `compare.py` table and both `medians.md` files on #625. The
+  [Part 1 numbers](https://github.com/ikostan/SkyLockAssault/issues/1079#issuecomment-6513724567)
+  are a sanity check for the "before" run.
 
 ## CI benchmark
 
@@ -413,10 +448,27 @@ a real browser and only warn. Its counts are as reliable as on desktop.
 
 What it checks (medians of the runs):
 
-- **Counts** (settings saves, live objects, orphans, reload leak). These are
-  stable. Worse than the baseline beyond a small tolerance **fails** the job.
+- **Counts** (settings saves, live objects, orphans, reload leak). Worse than
+  the baseline beyond a small tolerance **fails** the job. Fewer is shown as
+  🟢 better and passes.
 - **Timings** (frame p95, dropped frames, process and physics time, memory
   growth). Shared runners are noisy, so these only **warn**.
+
+Count tolerances (how much worse is allowed):
+
+| Metric                      | Default | Desktop job | Web job |
+|-----------------------------|--------:|------------:|--------:|
+| Settings saves in 60 s      |       2 |           2 |       2 |
+| `OBJECT_COUNT` avg          |      25 |          25 |      25 |
+| `OBJECT_NODE_COUNT` avg     |       5 |           5 |  **15** |
+| `OBJECT_RESOURCE_COUNT` avg |       2 |           2 |       2 |
+| Orphans (gameplay, reload)  |       0 |           0 |       0 |
+| Reload loop object growth   |       1 |       **8** |       1 |
+
+Each job passes `--profile desktop` or `--profile web` to `compare.py`. The two
+wider values come from the spread seen between runs on GitHub runners
+(desktop reload growth 2 to 12, web node count 506 to 520); each applies only
+to the platform that needs it.
 
 Each job adds its table to the run's **Summary** page. All files are in the
 job's artifact.
@@ -431,15 +483,27 @@ CI numbers differ from your PC and Docker, so the baseline must come from CI:
 3. Copy `baseline_ci.json` and `baseline_web_ci.json` from them to
    `test/benchmark/` and commit both.
 
-Until a baseline file exists its job only reports the numbers and passes. Update
-the baseline the same way after an intended change (for example, after a fix
-that lowers settings saves), so later PRs are compared with the new numbers.
+Downloading artifacts needs a GitHub sign-in. `main` is protected, so commit
+the files on a branch and merge them through a pull request.
+
+The first baselines come from the PR #1094 merge run (commit `ee128f9`) and
+were added in [#1097](https://github.com/ikostan/SkyLockAssault/pull/1097).
+Without a baseline file a job only reports the numbers and passes. Update the
+baselines the same way after an intended change (for example, after a fix
+that lowers settings saves), so later runs are compared with the new numbers.
 
 ### Running the comparison locally
 
 ```bash
-python test/benchmark/compare.py --results bench_results/<run>/runs.csv
+python test/benchmark/compare.py --results bench_results/<run>/runs.csv \
+    --profile desktop
+python test/benchmark/compare.py --results bench_results/<web_run>/runs.csv \
+    --baseline test/benchmark/baseline_web_ci.json --profile web
 ```
+
+Other options: `--write-baseline <file>` writes a baseline from the results,
+`--summary <file>` appends the table to a Markdown file, `--title <text>`
+changes its heading.
 
 Only compare results from the same kind of machine: local runs against
 `baseline_ci.json` are not meaningful for timings.
@@ -517,6 +581,14 @@ Select-String -Path C:/temp/bench/verbose.txt `
 ```
 
 Do not use timing numbers from a `--verbose` run.
+
+### `Backup already exists: ...settings.cfg.bench_user_backup` (or `.bench_backup`)
+
+An earlier run was interrupted before it put your settings back. The backup
+may be the only copy of your settings, so the scripts stop instead of
+touching it. In the folder shown, delete `settings.cfg` if it exists, rename
+the backup to `settings.cfg`, and run again. If you do not need your old
+settings, delete the backup instead.
 
 ### A run is invalid
 

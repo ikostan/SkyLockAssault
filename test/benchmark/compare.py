@@ -72,6 +72,15 @@ COUNT_RULES = [
     CountRule("reload_orphans_max", "Orphan nodes, reload loop (max)", 0),
     CountRule("reload_object_growth", "Reload loop object growth", 1),
 ]
+# Wider count tolerances for one platform only, from the spread seen between
+# runs on GitHub runners (PR #1094 merge run). Desktop: the reload-loop object
+# count goes up and down by about 5 per cycle, so reload growth varied from 2
+# to 12. Web: nodes_avg varied by about 14. The other platform keeps the tight
+# value above (desktop nodes_avg and web reload growth did not vary at all).
+PROFILE_TOLERANCES: dict[str, dict[str, float]] = {
+    "desktop": {"reload_object_growth": 8},
+    "web": {"nodes_avg": 15},
+}
 TIMING_RULES = [
     TimingRule("frame_p95_ms", "Frame interval p95 (ms)", 1.25, 1.0),
     TimingRule("frames_over_33.4ms", "Dropped frames (> 33.4 ms)", 1.5, 5.0),
@@ -103,6 +112,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Write a new baseline JSON from these results to this path.",
     )
     parser.add_argument(
+        "--profile",
+        choices=sorted(PROFILE_TOLERANCES),
+        help="Platform whose count tolerances to use (default: the tight ones).",
+    )
+    parser.add_argument(
         "--title",
         default=DEFAULT_TITLE,
         help=f"Report heading (default: {DEFAULT_TITLE}).",
@@ -127,11 +141,15 @@ def load_medians(results: Path) -> tuple[dict[str, float], int, dict[str, str]]:
     return medians, len(rows), info
 
 
-def judge_count(rule: CountRule, base: float, now: float) -> str:
-    """Status of a count metric."""
-    if now > base + rule.tolerance:
+def judge_count(
+    rule: CountRule, base: float, now: float, tolerance: float | None = None
+) -> str:
+    """Status of a count metric (tolerance overrides the rule's own)."""
+    if tolerance is None:
+        tolerance = rule.tolerance
+    if now > base + tolerance:
         return FAIL
-    if now < base - rule.tolerance:
+    if now < base - tolerance:
         return BETTER
     return OK
 
@@ -162,9 +180,12 @@ def fmt_change(base: float, now: float) -> str:
 
 
 def compare(
-    medians: dict[str, float], baseline: dict[str, float] | None
+    medians: dict[str, float],
+    baseline: dict[str, float] | None,
+    profile: str | None = None,
 ) -> list[tuple[str, str, float | None, float, str]]:
     """Return report rows: (kind, label, baseline, now, status)."""
+    overrides = PROFILE_TOLERANCES.get(profile or "", {})
     rows: list[tuple[str, str, float | None, float, str]] = []
     for kind, rules in (("count", COUNT_RULES), ("timing", TIMING_RULES)):
         for rule in rules:
@@ -175,7 +196,7 @@ def compare(
             if base is None:
                 status = NEW
             elif isinstance(rule, CountRule):
-                status = judge_count(rule, base, now)
+                status = judge_count(rule, base, now, overrides.get(rule.key))
             else:
                 status = judge_timing(rule, base, now)
             rows.append((kind, rule.label, base, now, status))
@@ -241,7 +262,7 @@ def main(argv: list[str] | None = None) -> int:
         baseline_doc = json.loads(args.baseline.read_text(encoding="utf-8"))
     baseline = None if baseline_doc is None else baseline_doc.get("metrics", {})
 
-    rows = compare(medians, baseline)
+    rows = compare(medians, baseline, args.profile)
     report = render(rows, runs, baseline_doc, args.title)
     print(report)
     if args.summary:
