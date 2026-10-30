@@ -152,3 +152,24 @@ def test_title_sets_report_heading(compare, tmp_path, capsys):
     args = ["--results", str(results), "--baseline", str(base_path)]
     assert compare.main([*args, "--title", "Performance benchmark (web)"]) == 0
     assert "## Performance benchmark (web)" in capsys.readouterr().out
+
+
+def test_profile_widens_only_its_own_tolerance(compare, tmp_path):
+    """Desktop allows reload-growth noise; web keeps the tight value."""
+    noisy = {**BASE_METRICS, "reload_object_growth": 15.0}
+    results = write_runs(tmp_path / "runs.csv", [noisy])
+    base_path = write_baseline(tmp_path / "baseline_ci.json", BASE_METRICS)
+    args = ["--results", str(results), "--baseline", str(base_path)]
+    assert compare.main([*args, "--profile", "desktop"]) == 0
+    assert compare.main([*args, "--profile", "web"]) == 1
+    assert compare.main(args) == 1
+
+
+def test_web_profile_allows_node_noise_desktop_does_not(compare, tmp_path):
+    """Web allows nodes_avg noise; desktop keeps the tight value."""
+    noisy = {**BASE_METRICS, "nodes_avg": BASE_METRICS["nodes_avg"] + 12}
+    results = write_runs(tmp_path / "runs.csv", [noisy])
+    base_path = write_baseline(tmp_path / "baseline_ci.json", BASE_METRICS)
+    args = ["--results", str(results), "--baseline", str(base_path)]
+    assert compare.main([*args, "--profile", "web"]) == 0
+    assert compare.main([*args, "--profile", "desktop"]) == 1

@@ -76,6 +76,7 @@ jobs:
             --baseline test/benchmark/baseline_ci.json \
             --summary "${GITHUB_STEP_SUMMARY}" \
             --title "Performance benchmark (desktop)" \
+            --profile desktop \
             --write-baseline "${OUT_DIR}/baseline_ci.json"
 
       - name: "Upload Benchmark Results"
@@ -207,6 +208,7 @@ jobs:
             --baseline test/benchmark/baseline_web_ci.json \
             --summary "${GITHUB_STEP_SUMMARY}" \
             --title "Performance benchmark (web)" \
+            --profile web \
             --write-baseline "${OUT_DIR}/baseline_web_ci.json"
 
       - name: "Upload Benchmark Results"
