@@ -90,15 +90,15 @@ The coverage plugin is no longer used. Its plugin entry was removed, and the lef
 
 Posted on #1079 ([full](https://github.com/ikostan/SkyLockAssault/issues/1079#issuecomment-6513724567), [short](https://github.com/ikostan/SkyLockAssault/issues/1079#issuecomment-6513753157)), with the raw CSVs attached. Medians of 3 valid runs:
 
-| | Desktop (Docker, headless) | Web (Chromium, GPU) |
-|---|---:|---:|
-| Frame time avg | 16.7 ms (60 FPS) | 8.3 ms (120 FPS) |
-| Frame time p95 | 17.7 ms | 10.2 ms |
-| Dropped frames | 0 | 0 |
-| Settings saves per minute | 61 | 60 |
-| Objects (avg) | 2,542 | 2,287 |
-| Orphan nodes | 0 | 0 |
-| Reload loop object growth (10 reloads) | +9 | 0 |
+|                                        | Desktop (Docker, headless) | Web (Chromium, GPU) |
+|----------------------------------------|---------------------------:|--------------------:|
+| Frame time avg                         |           16.7 ms (60 FPS) |    8.3 ms (120 FPS) |
+| Frame time p95                         |                    17.7 ms |             10.2 ms |
+| Dropped frames                         |                          0 |                   0 |
+| Settings saves per minute              |                         61 |                  60 |
+| Objects (avg)                          |                      2,542 |               2,287 |
+| Orphan nodes                           |                          0 |                   0 |
+| Reload loop object growth (10 reloads) |                         +9 |                   0 |
 
 **Main findings for the refactor:**
 
@@ -114,24 +114,24 @@ Posted on #1079 ([full](https://github.com/ikostan/SkyLockAssault/issues/1079#is
 
 ## Review Decisions
 
-| Finding | Severity | Decision | Reason |
-|---|---|---|---|
-| CodeRabbit: the migrated tests call diagnostic APIs missing from `sfx_manager.gd` | Major | **Fixed** (`a786a11`) | Real: the first push of `sfx_manager.gd` lacked several methods the tests used. |
-| CodeRabbit: keep the gdunit4_coverage plugin enabled in `project.godot` | Minor | **Declined**; leftovers removed (`d53d951`) | The plugin is no longer used. Removing only the plugin entry left a session hook pointing at a deleted addon, so the hook and settings section were removed too. |
-| CodeRabbit: a saved `max_fuel` changes the scenario | Major | **Fixed** (`578b950`) | Real: `max_fuel` is a saved setting. All saved settings are now pinned. |
-| CodeRabbit: settings backup and restore copies are not checked | Major | **Fixed** (`578b950`) | The run aborts before changing anything if the backup fails, and keeps the backup if the restore fails. |
-| CodeRabbit: guide option table breaks the Markdown line limit | Major | **Fixed** | Table converted to a list. |
-| CodeRabbit: require fresh, complete CSV output | Minor | **Fixed** (`b5a5185`) | Old CSVs are deleted before each run; all four must have data. |
-| CodeRabbit: bound the git subprocess calls | Minor | **Fixed** (`b5a5185`) | 10 s timeout, reported as "unknown". |
-| CodeRabbit: an existing backup makes the script delete the current settings | Major | **Fixed** (`b5a5185`) | The script stops instead. |
-| CodeRabbit: a failed settings restore is reported as a valid run | Major | **Fixed** (`3421c33`) | Reported as invalid, exit code 3. |
-| CodeRabbit: a failed setup launch can still produce the fixture | Minor | **Fixed** (`564f37c`) | Both launches must exit 0 and leave the settings file. |
-| CodeRabbit: the runner backup from an earlier invocation is deleted | Major | **Fixed** (`564f37c`) | The script refuses to start while it exists and deletes only its own runs' backups. |
-| DeepSource: docstring lines too long (4) | Minor | **Fixed** | Rewrapped to 79 characters. |
-| DeepSource: process started with a partial executable path (2) | Minor | **Fixed** | `git` and Godot are resolved with `shutil.which`. |
-| DeepSource: missing docstrings in `run_web.py` (2) | Minor | **Fixed** (`69767de`) | |
-| Sourcery guide: #1079 harness "not addressed" because `TIME_PROCESS` is sampled per second | — | **Not a gap** | Godot updates `TIME_PROCESS` and `TIME_PHYSICS_PROCESS` once per second with the worst frame of that second, so per-frame values are not available. The runner records that per-second worst value and measures every frame with the wall-clock frame interval. The #1079 text still asks for per-frame `TIME_PROCESS`; see Follow-ups. |
-| Sourcery guide: #1079 baseline "not recorded" | — | **Done after the guide** | The baseline and CSVs were posted on #1079. |
+| Finding                                                                                    | Severity | Decision                                    | Reason                                                                                                                                                                                                                                                                                                                                  |
+|--------------------------------------------------------------------------------------------|----------|---------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| CodeRabbit: the migrated tests call diagnostic APIs missing from `sfx_manager.gd`          | Major    | **Fixed** (`a786a11`)                       | Real: the first push of `sfx_manager.gd` lacked several methods the tests used.                                                                                                                                                                                                                                                         |
+| CodeRabbit: keep the gdunit4_coverage plugin enabled in `project.godot`                    | Minor    | **Declined**; leftovers removed (`d53d951`) | The plugin is no longer used. Removing only the plugin entry left a session hook pointing at a deleted addon, so the hook and settings section were removed too.                                                                                                                                                                        |
+| CodeRabbit: a saved `max_fuel` changes the scenario                                        | Major    | **Fixed** (`578b950`)                       | Real: `max_fuel` is a saved setting. All saved settings are now pinned.                                                                                                                                                                                                                                                                 |
+| CodeRabbit: settings backup and restore copies are not checked                             | Major    | **Fixed** (`578b950`)                       | The run aborts before changing anything if the backup fails, and keeps the backup if the restore fails.                                                                                                                                                                                                                                 |
+| CodeRabbit: guide option table breaks the Markdown line limit                              | Major    | **Fixed**                                   | Table converted to a list.                                                                                                                                                                                                                                                                                                              |
+| CodeRabbit: require fresh, complete CSV output                                             | Minor    | **Fixed** (`b5a5185`)                       | Old CSVs are deleted before each run; all four must have data.                                                                                                                                                                                                                                                                          |
+| CodeRabbit: bound the git subprocess calls                                                 | Minor    | **Fixed** (`b5a5185`)                       | 10 s timeout, reported as "unknown".                                                                                                                                                                                                                                                                                                    |
+| CodeRabbit: an existing backup makes the script delete the current settings                | Major    | **Fixed** (`b5a5185`)                       | The script stops instead.                                                                                                                                                                                                                                                                                                               |
+| CodeRabbit: a failed settings restore is reported as a valid run                           | Major    | **Fixed** (`3421c33`)                       | Reported as invalid, exit code 3.                                                                                                                                                                                                                                                                                                       |
+| CodeRabbit: a failed setup launch can still produce the fixture                            | Minor    | **Fixed** (`564f37c`)                       | Both launches must exit 0 and leave the settings file.                                                                                                                                                                                                                                                                                  |
+| CodeRabbit: the runner backup from an earlier invocation is deleted                        | Major    | **Fixed** (`564f37c`)                       | The script refuses to start while it exists and deletes only its own runs' backups.                                                                                                                                                                                                                                                     |
+| DeepSource: docstring lines too long (4)                                                   | Minor    | **Fixed**                                   | Rewrapped to 79 characters.                                                                                                                                                                                                                                                                                                             |
+| DeepSource: process started with a partial executable path (2)                             | Minor    | **Fixed**                                   | `git` and Godot are resolved with `shutil.which`.                                                                                                                                                                                                                                                                                       |
+| DeepSource: missing docstrings in `run_web.py` (2)                                         | Minor    | **Fixed** (`69767de`)                       |                                                                                                                                                                                                                                                                                                                                         |
+| Sourcery guide: #1079 harness "not addressed" because `TIME_PROCESS` is sampled per second | —        | **Not a gap**                               | Godot updates `TIME_PROCESS` and `TIME_PHYSICS_PROCESS` once per second with the worst frame of that second, so per-frame values are not available. The runner records that per-second worst value and measures every frame with the wall-clock frame interval. The #1079 text still asks for per-frame `TIME_PROCESS`; see Follow-ups. |
+| Sourcery guide: #1079 baseline "not recorded"                                              | —        | **Done after the guide**                    | The baseline and CSVs were posted on #1079.                                                                                                                                                                                                                                                                                             |
 
 ---
 
