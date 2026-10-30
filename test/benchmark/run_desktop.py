@@ -388,6 +388,92 @@ def write_reports(
     (out / "medians.md").write_text("\n".join(lines), encoding="utf-8")
 
 
+def find_leftover_backup(*backups: Path) -> Path | None:
+    """Return the first backup that already exists, or None.
+
+    A backup left over from an interrupted run may be the only copy of the
+    player's settings, so the caller must stop instead of touching it.
+    """
+    return next((backup for backup in backups if backup.exists()), None)
+
+
+def start_state(fresh: bool) -> str:
+    """Describe the settings state each run starts from, for medians.md."""
+    if fresh:
+        return "fresh (no settings.cfg) for every run"
+    return (
+        "returning player (settings.cfg from two short game launches, "
+        "copied in before every run)"
+    )
+
+
+def run_all(
+    godot: str,
+    args: argparse.Namespace,
+    out: Path,
+    settings: Path,
+    runner_backup: Path,
+) -> tuple[list[dict[str, float | str]], int] | None:
+    """Run the benchmark args.runs times.
+
+    Returns (valid results, invalid run count), or None if the
+    returning-player fixture could not be created.
+    """
+    fixture: Path | None = None
+    if not args.fresh:
+        print("Creating the returning-player settings fixture...", flush=True)
+        fixture = prime_settings(godot, settings, out)
+        if fixture is None:
+            return None
+    results: list[dict[str, float | str]] = []
+    invalid = 0
+    for index in range(1, args.runs + 1):
+        run_dir = out / f"run_{index}"
+        print(f"Run {index}/{args.runs} (about 80 s)...", flush=True)
+        reset_settings(settings)
+        # A run of this invocation killed by the timeout leaves the runner's
+        # backup (a fixture copy) behind, and the runner refuses to start
+        # while it exists. A backup from an earlier invocation was already
+        # rejected in main(), so this only removes our own.
+        reset_settings(runner_backup)
+        if fixture is not None:
+            shutil.copy2(fixture, settings)
+        valid, reason = run_once(godot, run_dir)
+        print(f"  {reason}")
+        if valid:
+            results.append(collect_metrics(run_dir))
+            continue
+        invalid += 1
+        if not args.keep_going:
+            break
+    return results, invalid
+
+
+def restore_player_settings(
+    settings: Path, runner_backup: Path, user_backup: Path
+) -> None:
+    """Remove the benchmark's settings files and put the player's file back."""
+    reset_settings(settings)
+    reset_settings(runner_backup)
+    if user_backup.exists():
+        shutil.move(user_backup, settings)
+
+
+def report(
+    out: Path, results: list[dict[str, float | str]], invalid: int, start: str
+) -> int:
+    """Write the reports for the valid runs. Returns the exit code."""
+    if not results:
+        print("No valid runs; nothing to report.")
+        return 1
+    write_reports(out, results, invalid, start)
+    print(f"Wrote {out / 'runs.csv'} and {out / 'medians.md'}")
+    if invalid:
+        print("At least one run was invalid; do not use these numbers as the baseline.")
+        return 1
+    return 0
+
+
 def main() -> int:
     """Run the benchmark N times and write the reports."""
     args = parse_args()
@@ -404,69 +490,25 @@ def main() -> int:
     user_backup = settings.with_name(SETTINGS_FILE + ".bench_user_backup")
     runner_backup = settings.with_name(RUNNER_BACKUP_FILE)
     print(f"Settings: {settings} (moved aside during the runs)")
-    for leftover in (user_backup, runner_backup):
-        if leftover.exists():
-            # Left over from an interrupted run and possibly the only copy of
-            # the player's settings. Stop instead of guessing which file is
-            # the player's: never delete or overwrite either of them.
-            print(f"Backup already exists: {leftover}")
-            print(
-                "An earlier run was interrupted. Restore it (rename it back to "
-                f"{SETTINGS_FILE}) or delete it, then run again."
-            )
-            return 1
+    leftover = find_leftover_backup(user_backup, runner_backup)
+    if leftover is not None:
+        print(f"Backup already exists: {leftover}")
+        print(
+            "An earlier run was interrupted. Restore it (rename it back to "
+            f"{SETTINGS_FILE}) or delete it, then run again."
+        )
+        return 1
     if settings.exists():
         shutil.move(settings, user_backup)
 
-    results: list[dict[str, float | str]] = []
-    invalid = 0
-    fixture: Path | None = None
-    if args.fresh:
-        start = "fresh (no settings.cfg) for every run"
-    else:
-        start = (
-            "returning player (settings.cfg from two short game launches, "
-            "copied in before every run)"
-        )
     try:
-        if not args.fresh:
-            print("Creating the returning-player settings fixture...", flush=True)
-            fixture = prime_settings(godot, settings, out)
-            if fixture is None:
-                return 1
-        for index in range(1, args.runs + 1):
-            run_dir = out / f"run_{index}"
-            print(f"Run {index}/{args.runs} (about 80 s)...", flush=True)
-            reset_settings(settings)
-            # A run of this invocation killed by the timeout leaves the
-            # runner's backup (a fixture copy) behind, and the runner refuses
-            # to start while it exists. A backup from an earlier invocation
-            # was already rejected above, so this only removes our own.
-            reset_settings(runner_backup)
-            if fixture is not None:
-                shutil.copy2(fixture, settings)
-            valid, reason = run_once(godot, run_dir)
-            print(f"  {reason}")
-            if valid:
-                results.append(collect_metrics(run_dir))
-            else:
-                invalid += 1
-                if not args.keep_going:
-                    break
+        outcome = run_all(godot, args, out, settings, runner_backup)
     finally:
-        reset_settings(settings)
-        reset_settings(runner_backup)
-        if user_backup.exists():
-            shutil.move(user_backup, settings)
-
-    if not results:
-        print("No valid runs; nothing to report.")
+        restore_player_settings(settings, runner_backup, user_backup)
+    if outcome is None:
         return 1
-    write_reports(out, results, invalid, start)
-    print(f"Wrote {out / 'runs.csv'} and {out / 'medians.md'}")
-    if invalid:
-        print("At least one run was invalid; do not use these numbers as the baseline.")
-    return 1 if invalid else 0
+    results, invalid = outcome
+    return report(out, results, invalid, start_state(args.fresh))
 
 
 if __name__ == "__main__":
