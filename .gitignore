@@ -22,6 +22,7 @@ Thumbs.db
 # Build/export folders
 export/web/**
 export/web_thread_off/**
+export/web_benchmark/**
 !export/export_presets.cfg
 
 # Temp files from tools/Docker
