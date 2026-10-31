@@ -67,7 +67,8 @@ Once per second:
 
 Counted or checked once:
 
-- **Settings saves.** One per `Globals.settings.setting_changed` emission.
+- **Settings saves.** Changes to persisted settings (`Globals.persisted_schema`
+  keys) during the measured window; each one is a full encrypted save.
 - **Fuel, ammo and speed at the end.** Validity check.
 
 ### Validity
@@ -110,6 +111,10 @@ unit test.
 - **Python 3.10+.** `run_desktop.py` and `compare.py` need only the standard
   library; `run_web.py` also needs Playwright (see Step 4). The project
   `.venv` works.
+- **Godot 4.7.1 web export templates** (`run_web.py` only). It exports the
+  `Web_benchmark` preset before running. If the export reports a missing
+  template, install them once from the editor: **Editor → Manage Export
+  Templates → Download and Install**.
 - **A committed working tree.** The report records the commit SHA and marks it
   `(dirty)` if there are uncommitted changes. The baseline must name a clean
   commit.
@@ -290,9 +295,13 @@ python -m playwright install chromium
 Run it from the project folder:
 
 ```powershell
-$godot = "<full path to Godot_v4.7.1-stable_win64_console.exe>"
+$godot = "C:\Users\super\OneDrive\Desktop\GODOT\" +
+    "Godot_v4.7.1-stable_win64_console.exe"
 python test/benchmark/run_web.py --godot $godot
 ```
+
+Adjust the Godot path as in Step 1. It takes about 5 minutes (export, then
+3 runs of about 80 s each).
 
 Options:
 
@@ -400,8 +409,8 @@ object-count growth across the reload loop.
 - **Process / physics "worst frame per second"** come from Godot's own
   monitors. They are one value per second (the worst frame in it), not an
   average frame time.
-- **Settings saves** should be ~60 today (one per fuel tick). The refactor is
-  expected to reduce this.
+- **Settings saves** should be 0: the scenario changes no persisted setting
+  while measuring. Before #616 it was ~60 (every fuel tick saved the file).
 - **Reload loop object growth** above 0 means each load of `main_scene` leaves
   objects behind. It only shows with a saved settings file present, which is
   why runs start from the returning-player state.
@@ -432,17 +441,15 @@ session instead of relying on the Part 1 numbers:
 - **Before:** the last `main` commit before the first Region 1–6 PR merged.
   **After:** `main` with all Region 1–6 PRs merged. Check out "before" in a
   separate worktree (`git worktree add ../sla_before <sha>`) and run the same
-  commands in both folders, with `--name before` and `--name after`. The
-  worktree has its own `bench_results/`; to keep both in this project's
-  folder, pass the "before" run
-  `--out ../SkyLockAssault/bench_results/docker/before` (or `desktop`, ...).
+  scenario in both folders (see
+  [Running "before" and "after"](#running-before-and-after)).
 - Same machine, same Godot build (4.7.1-stable console), same quiet-machine
   rules, same Docker `--cpus` / `--memory` limits, same screen for web.
 - Same harness. Do not edit the scenario constants (`DIFFICULTY`,
   `WARMUP_S`, `MEASURE_S`, `RELOAD_CYCLES`, `DESKTOP_MAX_FPS`, and the pinned
   settings).
 - Same number of runs for both commits.
-- Compare with `compare.py`:
+- Compare with `compare.py` (from this project's folder):
 
     ```powershell
     python test/benchmark/compare.py `
@@ -456,6 +463,49 @@ session instead of relying on the Part 1 numbers:
 - Post the `compare.py` table and both `medians.md` files on #625. The
   [Part 1 numbers](https://github.com/ikostan/SkyLockAssault/issues/1079#issuecomment-6513724567)
   are a sanity check for the "before" run.
+
+### Running "before" and "after"
+
+The "before" commit predates `--name` and the `bench_results/<kind>/` layout
+(both added in #1098), so the "before" run always uses `--out`. The worktree
+also has its own `bench_results/`; point `--out` at this project's folder so
+both results end up side by side.
+
+**After** (this project's folder, current code):
+
+```powershell
+python test/benchmark/run_desktop.py --godot $godot --name after
+```
+
+**Before, native** (in `../sla_before`):
+
+```powershell
+python test/benchmark/run_desktop.py --godot $godot `
+    --out ..\SkyLockAssault\bench_results\desktop\before
+```
+
+**Before, Docker** (in `../sla_before`). The container only sees mounted
+folders, so mount this project's `bench_results/` as `/results` and write
+there; a relative path outside `/project` would land inside the container and
+disappear with `--rm`:
+
+```powershell
+$results = "$(Resolve-Path ..)\SkyLockAssault\bench_results"
+New-Item -ItemType Directory -Force $results | Out-Null
+docker run --rm --cpus=4 --memory=8g `
+    -v "${PWD}:/project" -v "${results}:/results" -w /project `
+    -e GODOT_BIN=/usr/local/bin/godot `
+    sky-lock-assault-pipeline:latest `
+    bash -c "git config --global --add safe.directory /project &&
+        godot --headless --path . --import &&
+        python3 test/benchmark/run_desktop.py --out /results/docker/before"
+```
+
+The "after" Docker run is the Step 3 command with `--name after`.
+
+**Web** (headed, same screen): `--name after` in this project's folder, and
+`--headed --out ..\SkyLockAssault\bench_results\web_headed\before` in
+`../sla_before`.
 
 ## CI benchmark
 
@@ -561,9 +611,9 @@ These came out of building and testing the harness; keep them for Part 2.
   interval instead.
 - **No console output while measuring.** Per-second rows are buffered and
   printed after the measured window, so console I/O is not measured.
-- **Settings file backup.** Every setting change, including the per-second
-  fuel mirror, saves to `user://settings.cfg`. The runner backs the file up
-  before the run and restores it afterwards (desktop only).
+- **Settings file backup.** The runner changes and saves persisted settings
+  during setup, so it backs up `user://settings.cfg` before the run and
+  restores it afterwards (desktop only).
 - **Bullet drain before the reload loop.** Bullets are added to the scene root,
   not to `main_scene`, so they are waited out before counting nodes.
 - **1 s pause before quitting.** Quitting right after freeing a scene with
