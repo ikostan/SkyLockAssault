@@ -139,7 +139,9 @@ def test_explicit_relative_out_is_preserved_with_name(
     """Explicit output paths take precedence without being resolved or renamed."""
     runner = request.getfixturevalue(runner_name)
     monkeypatch.setattr(
-        sys, "argv", ["runner", "--godot", "g", "--name", "baseline", "--out", "relative/run"]
+        sys,
+        "argv",
+        ["runner", "--godot", "g", "--name", "baseline", "--out", "relative/run"],
     )
     assert runner.parse_args().out == Path("relative/run")
 
@@ -147,8 +149,12 @@ def test_explicit_relative_out_is_preserved_with_name(
 def test_web_no_export_uses_named_headless_default_without_godot(web, monkeypatch):
     """Reusing a build still selects the web output layout without GODOT_BIN."""
     monkeypatch.delenv("GODOT_BIN", raising=False)
-    monkeypatch.setattr(sys, "argv", ["run_web.py", "--no-export", "--name", "baseline"])
-    assert web.parse_args().out == web.PROJECT_ROOT / "bench_results/web_headless/baseline"
+    monkeypatch.setattr(
+        sys, "argv", ["run_web.py", "--no-export", "--name", "baseline"]
+    )
+    assert (
+        web.parse_args().out == web.PROJECT_ROOT / "bench_results/web_headless/baseline"
+    )
 
 
 @pytest.mark.parametrize("runner_name", ["desktop", "web"])
