@@ -38,8 +38,8 @@ This PR limits saves and logs to `persisted_schema` keys, closes the small #616 
 ### 2. GUT coverage (`test/gut/`)
 
 - **`test_globals_fuel_telemetry.gd`:** the three cases from Milestone 25 Part 2 asserted that `current_fuel` saves and logs (the source of the per-tick save). They were rewritten for the new contract, not removed: fuel causes no save and no log; bulk loading still suppresses side effects; after loading, only persisted keys save.
-- **New `test_globals_setting_change_filter.gd`:** each persisted key saves once and logs exactly once; nine runtime properties and unknown names never save or log; the filter follows schema extensions; a simulated minute of fuel ticks through the real resource signals causes zero saves; a log-level change makes no bridge call on native builds.
-- **`test_globals_settings_serialization.gd`:** a clamped disk value (difficulty 8.0 → 2.0, −10.0 → 0.5, max_fuel 0.25 → 1.0) logs the WARNING with the exact text; in-range and int-to-float values log none.
+- **New `test_globals_setting_change_filter.gd`:** each persisted key saves once and logs exactly once; nine runtime properties and unknown names never save or log; the filter follows schema extensions; a simulated minute of fuel ticks through the real resource signals causes zero saves; a log-level change makes no bridge call on native builds. CodeRabbit added two cases for the benchmark counter: only persisted keys count, and only while measuring; the count follows schema extensions.
+- **`test_globals_settings_serialization.gd`:** a clamped disk value (difficulty 8.0 → 2.0, −10.0 → 0.5, max_fuel 0.25 → 1.0) logs the WARNING with the exact text; in-range and int-to-float values log none. CodeRabbit added two cases: a value clamped to the boundary the setting already holds is still reported (the check does not depend on `setting_changed` firing), and the warning names the on-disk key when the schema uses an alias.
 
 ### 3. Benchmark save counter (`test/benchmark/benchmark_runner.gd`)
 
@@ -51,7 +51,7 @@ The runner counted every `setting_changed` signal as one save. After the fix the
 - New `--name` option replaces the timestamp (e.g. `baseline`, `before_616`); `--out` still writes to any exact folder.
 - Docker runs need no extra mount: the mounted project folder puts results in `bench_results/docker/` on the host.
 - CI writes to `bench_results/ci/desktop` and `bench_results/ci/web`; artifact names are unchanged.
-- **New `tests/ci/test_benchmark_output_paths.py`:** Docker detection, default folders per kind, `--name`, and `--out` precedence for both runners.
+- **New `tests/ci/test_benchmark_output_paths.py`:** Docker detection, default folders per kind, `--name`, and `--out` precedence for both runners. CodeRabbit added: a relative `--out` is kept as given even with `--name`; `run_web.py --no-export --name` picks the headless folder without a Godot path; `--runs 0` and `-1` are still rejected when output options are given; an empty name falls back to a timestamp.
 
 ### 5. Documentation (`README.md`, `files/docs/Performance_Benchmark_Guide.md`)
 
@@ -112,10 +112,10 @@ Headless web timings vary widely between runs (the Oct 29 runs alone spread 18�
 
 ## Verification
 
-- **GUT:** 830/830 locally on Godot 4.7.1 (822 before + 8 new) and in CI.
+- **GUT:** 834/834 locally on Godot 4.7.1 (822 before + 12 new, 4 of them from CodeRabbit) and in CI.
 - **gdUnit4:** 155/155 locally and in CI.
 - **CI on `34f17f5`:** all checks green: GUT, GDUnit4, GDScript lint and format, YAML and Markdown lint, CI/CD infrastructure tests, and all browser shards (Build Web Artifact, Core Web Flows, CI & Security, Refactor Suite).
-- **`tests/ci`:** benchmark output path, compare, workflow policy and runner pinning tests pass.
+- **`tests/ci`:** benchmark output path tests 23/23 (15 + 8 cases from CodeRabbit), plus the compare, workflow policy and runner pinning tests, pass.
 - **Benchmarks:** desktop (Docker) 3/3 valid; web headless 3/3 valid, with 0 settings saves; one real desktop run confirmed the new `bench_results/desktop/<name>/` folder.
 - **Lint:** gdlint and gdformat on the GDScript; black, isort and ruff on the Python; yamllint on the workflow; markdownlint-cli2 on the guide.
 
@@ -148,7 +148,7 @@ The PR makes settings persistence schema-driven: runtime-only changes no longer 
 | Restrict settings side effects to schema-backed properties while preserving web synchronization and warning about clamped persisted values. | <ul><li>Return early for runtime-only or unknown setting notifications, avoiding logging and encrypted disk writes.</li><li>Continue mirroring log-level changes through the injectable JavaScript bridge on web builds.</li><li>Compare loaded values with post-setter values and emit warnings when resource setters clamp them.</li></ul> | `scripts/core/globals.gd`                                                                                                                                                                                     |
 | Make JavaScript bridge access testable and clarify initialization dependencies.                                                             | <ul><li>Replace direct bridge calls with a mockable wrapper stored on the Globals autoload.</li><li>Document Globals-first autoload ordering and the persistence/runtime-state boundary.</li></ul>                                                                                                                                           | `scripts/core/globals.gd`<br/>`README.md`                                                                                                                                                                     |
 | Add regression coverage for schema-driven persistence filtering and runtime behavior.                                                       | <ul><li>Verify persisted keys save and log once while runtime and unknown keys do neither.</li><li>Cover bulk-loading suppression, schema extensions, resource signal behavior, native bridge behavior, and the clamped-load warning.</li></ul>                                                                                              | `test/gut/test_globals_fuel_telemetry.gd`<br/>`test/gut/test_globals_setting_change_filter.gd`<br/>`test/gut/test_globals_setting_change_filter.gd.uid`<br/>`test/gut/test_globals_settings_serialization.gd` |
-| Count only persisted settings saves in the benchmark.                                                                                       | <ul><li>Apply the same `persisted_schema` filter as Globals to the saves counter.</li></ul>                                                                                                                                                                                                                                                  | `test/benchmark/benchmark_runner.gd`                                                                                                                                                                          |
+| Count only persisted settings saves in the benchmark.                                                                                       | <ul><li>Apply the same `persisted_schema` filter as Globals to the saves counter.</li><li>Unit-test the counter (measuring window, runtime and unknown keys, schema extensions).</li></ul>                                                                                                                                                   | `test/benchmark/benchmark_runner.gd`<br/>`test/gut/test_globals_setting_change_filter.gd`                                                                                                                     |
 | Separate benchmark results by run type.                                                                                                     | <ul><li>Default to `bench_results/<kind>/<name or timestamp>` with Docker detection and a `--name` option.</li><li>Move CI results to `bench_results/ci/desktop` and `bench_results/ci/web`.</li><li>Cover default folders, naming and `--out` precedence.</li></ul>                                                                         | `test/benchmark/run_desktop.py`<br/>`test/benchmark/run_web.py`<br/>`.github/workflows/benchmark.yml`<br/>`tests/ci/test_benchmark_output_paths.py`                                                           |
 | Update the benchmark guide.                                                                                                                 | <ul><li>Saves metric after #616, results layout, web templates prerequisite, updated examples.</li><li>Part 2 "before" runs use `--out`; Docker mounts the results folder.</li></ul>                                                                                                                                                         | `files/docs/Performance_Benchmark_Guide.md`                                                                                                                                                                   |
 | Record the PR in the Milestone 27 notes.                                                                                                    | <ul><li>Summary of the changes, benchmark results, review decisions, verification and contributors.</li></ul>                                                                                                                                                                                                                                | `files/docs/milestones/27/Part_5_Persist_only_schema_backed_settings_&_separate_benchmark_results.md`                                                                                                         |
@@ -191,6 +191,7 @@ The PR makes settings persistence schema-driven: runtime-only changes no longer 
   - Compared the Docker and web benchmark results, traced the physics improvement to `FuelTimer` running on the physics callback, and found that the benchmark counted signals instead of saves.
   - Wrote the `bench_results/<kind>/<name>` layout, its tests and the guide updates.
   - Assessed the Sourcery, DeepSource and CodeRabbit findings: drafted the two declines (including the Apr 6–9 history check), and fixed the clamp test, the exact log count, the 9 docstrings and the two Part 2 rerun commands.
+  - Reviewed CodeRabbit's added tests (`172eb14`) and ran them: GUT 834/834, output path tests 23/23.
   - Caused and then restored the guide edits lost in `bf334f7` (the layout version of the guide was built on `main`).
   - Filed #1099 and #1100–#1105.
 
@@ -201,8 +202,10 @@ The PR makes settings persistence schema-driven: runtime-only changes no longer 
 
 - **@deepsource-io**
   - Posted 9 review comments (missing docstrings in `test_benchmark_output_paths.py`); all fixed. Python and JavaScript analysis pass on the PR head (grade A).
+  - `deepsource-autofix[bot]` authored `3edd0ca` style: format code with Black and isort (CodeRabbit's new Python tests).
 
 - **@coderabbitai**
+  - Authored `172eb14` Add tests for benchmark save counting, output paths, and settings clamp warnings (on request): 4 GUT tests (benchmark counter ×2, clamp warning at the boundary, clamp warning with a disk alias) and 4 pytest tests (8 cases) for the output paths. Reviewed by @claude (Opus 5.5): all kept unchanged.
   - Posted the PR summary and walkthrough.
   - Posted 2 review comments on the guide's Part 2 rerun commands (both Major): `--name` does not exist in the "before" revision, and the Docker `--out` path was outside the mounted folder. Both fixed.
 
