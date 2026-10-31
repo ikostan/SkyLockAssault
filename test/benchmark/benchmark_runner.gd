@@ -216,9 +216,9 @@ func _sample_second() -> void:
 	_sec_rows.append(",".join(row.map(func(v: Variant) -> String: return str(v))))
 
 
-## Counts settings saves: outside settings loading, each emission triggers one save.
-func _on_setting_changed(_setting_name: String, _new_value: Variant) -> void:
-	if _measuring:
+## Counts settings saves: Globals saves only for persisted_schema keys (#616).
+func _on_setting_changed(setting_name: String, _new_value: Variant) -> void:
+	if _measuring and Globals.persisted_schema.has(setting_name):
 		_saves += 1
 
 

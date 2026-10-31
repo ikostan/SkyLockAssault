@@ -337,3 +337,59 @@ func test_plaintext_migration_applies_schema_and_preserves_other_sections() -> v
 	assert_called_count(_globals._save_settings, 1)
 	assert_called(_globals._save_settings.bind(TEST_PATH))
 	assert_false(_globals._is_loading_settings)
+
+
+func test_load_warns_when_resource_setter_clamps_disk_value(
+	case: Array = use_parameters(
+		[
+			["difficulty", 8.0, 2.0],
+			["difficulty", -10.0, 0.5],
+			["max_fuel", 0.25, 1.0],
+		]
+	)
+) -> void:
+	_config.set_value("Settings", case[0], case[1])
+	_globals._load_settings(TEST_PATH)
+	assert_eq(_globals.settings.get(case[0]), case[2], "Clamping behavior is unchanged")
+	assert_called(
+		_globals.log_message.bind(
+			"Persisted '%s' value %s was clamped to %s." % [case[0], str(case[1]), str(case[2])],
+			Globals.LogLevel.WARNING
+		)
+	)
+
+
+func test_load_does_not_warn_for_in_range_or_cast_values() -> void:
+	# Integers cast to float (1 -> 1.0) and in-range values are applied as-is.
+	_populate_config({"difficulty": 1, "max_fuel": 240.5, "show_fps": true, "log_level": 3})
+	_globals._load_settings(TEST_PATH)
+	assert_eq(_globals.settings.difficulty, 1.0)
+	# Only the completion message: no clamp warning.
+	assert_called_count(_globals.log_message, 1)
+
+
+func test_load_reports_each_clamped_value_even_if_setting_already_at_boundary() -> void:
+	_globals.settings.difficulty = 0.5
+	_globals.settings.max_fuel = 1.0
+	_populate_config({"difficulty": -1, "max_fuel": 0})
+	_globals._load_settings(TEST_PATH)
+	assert_eq(_globals.settings.difficulty, 0.5)
+	assert_eq(_globals.settings.max_fuel, 1.0)
+	assert_called(_globals.log_message.bind(
+		"Persisted 'difficulty' value -1.0 was clamped to 0.5.", Globals.LogLevel.WARNING
+	))
+	assert_called(_globals.log_message.bind(
+		"Persisted 'max_fuel' value 0.0 was clamped to 1.0.", Globals.LogLevel.WARNING
+	))
+	assert_called_count(_globals.log_message, 3)  # Two warnings and completion.
+
+
+func test_clamp_warning_uses_schema_disk_alias() -> void:
+	GlobalsScript.persisted_schema["difficulty"]["key"] = "legacy_difficulty"
+	_config.set_value("Settings", "legacy_difficulty", 8.0)
+	_globals._load_settings(TEST_PATH)
+	assert_eq(_globals.settings.difficulty, 2.0)
+	assert_called(_globals.log_message.bind(
+		"Persisted 'legacy_difficulty' value 8.0 was clamped to 2.0.",
+		Globals.LogLevel.WARNING
+	))

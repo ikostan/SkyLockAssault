@@ -34,6 +34,7 @@ import csv
 import datetime as dt
 import os
 import platform
+import re
 import shutil
 import statistics
 import subprocess
@@ -94,9 +95,100 @@ REPORT_METRICS = [
 ]
 
 
+RESULTS_ROOT = PROJECT_ROOT / "bench_results"
+# Docker creates this file in every container.
+DOCKER_MARKER = Path("/.dockerenv")
+
+
+# Files and folders a runner writes into its output folder. prepare_out()
+# only ever deletes these, so --out pointed at a folder with other files in
+# it (even ".") never loses anything else.
+RESULT_FILES = (
+    "runs.csv",
+    "medians.md",
+    FIXTURE_FILE,
+    "prime_1.txt",
+    "prime_2.txt",
+    "export.txt",
+)
+RUN_DIR_PATTERN = re.compile(r"^run_\d+$")
+
+
+def detect_environment(marker: Path = DOCKER_MARKER) -> str:
+    """Return "docker" inside a Docker container, otherwise "desktop"."""
+    return "docker" if marker.exists() else "desktop"
+
+
+def default_out(kind: str, name: str | None = None) -> Path:
+    """Return bench_results/<kind>/<name or timestamp>.
+
+    kind is where the benchmark ran: desktop, docker, web_headless or
+    web_headed. Results from different kinds are not comparable, so each
+    gets its own folder.
+    """
+    stamp = dt.datetime.now().astimezone().strftime("%Y%m%d_%H%M%S")
+    return RESULTS_ROOT / kind / (name or stamp)
+
+
+def existing_results(out: Path) -> list[Path]:
+    """Return the result files and run_N folders already in out, sorted."""
+    if not out.is_dir():
+        return []
+    return sorted(
+        path
+        for path in out.iterdir()
+        if (path.is_file() and path.name in RESULT_FILES)
+        or (path.is_dir() and RUN_DIR_PATTERN.match(path.name))
+    )
+
+
+def prepare_out(out: Path, overwrite: bool) -> str | None:
+    """Create the output folder. Returns an error message, or None if ready.
+
+    A folder that already holds results (e.g. a reused --name) is refused
+    unless overwrite is set, because a new attempt with fewer runs, or with
+    no valid run, would leave the old files looking like current results.
+    With overwrite, only the earlier results are deleted; other files stay.
+    """
+    old = existing_results(out)
+    if old and not overwrite:
+        names = ", ".join(path.name for path in old)
+        return (
+            f"{out} already has results ({names}). Use another --name or "
+            "--out, or pass --overwrite to replace them."
+        )
+    for path in old:
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
+            path.unlink()
+    out.mkdir(parents=True, exist_ok=True)
+    return None
+
+
+def add_output_arguments(parser: argparse.ArgumentParser, kinds: str) -> None:
+    """Add --out, --name and --overwrite (shared by both runners)."""
+    parser.add_argument(
+        "--out",
+        type=Path,
+        help=(
+            f"Output folder (default: <project>/bench_results/{kinds}/"
+            "<name or timestamp>)."
+        ),
+    )
+    parser.add_argument(
+        "--name",
+        help="Folder name instead of the timestamp, e.g. baseline_616.",
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Replace results already in the output folder (default: refuse).",
+    )
+
+
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
-    stamp = dt.datetime.now().astimezone().strftime("%Y%m%d_%H%M%S")
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
         "--godot",
@@ -106,12 +198,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--runs", type=int, default=3, help="Number of runs (default 3)."
     )
-    parser.add_argument(
-        "--out",
-        type=Path,
-        default=PROJECT_ROOT / "bench_results" / stamp,
-        help="Output folder (default: <project>/bench_results/<timestamp>).",
-    )
+    add_output_arguments(parser, "<desktop|docker>")
     parser.add_argument(
         "--fresh",
         action="store_true",
@@ -127,6 +214,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("Godot executable not given: use --godot or set GODOT_BIN.")
     if args.runs < 1:
         parser.error("--runs must be at least 1.")
+    if args.out is None:
+        args.out = default_out(detect_environment(), args.name)
     return args
 
 
@@ -482,7 +571,10 @@ def main() -> int:
         print(f"Godot executable not found: {args.godot}")
         return 1
     out: Path = args.out.resolve()
-    out.mkdir(parents=True, exist_ok=True)
+    error = prepare_out(out, args.overwrite)
+    if error is not None:
+        print(error)
+        return 1
     print(f"Project: {PROJECT_ROOT}")
     print(f"Output:  {out}")
 
