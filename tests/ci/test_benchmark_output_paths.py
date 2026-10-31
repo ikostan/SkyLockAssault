@@ -178,3 +178,75 @@ def test_empty_name_uses_timestamp(desktop):
     out = desktop.default_out("desktop", "")
     assert out.parent == desktop.RESULTS_ROOT / "desktop"
     assert STAMP.fullmatch(out.name)
+
+
+def _seed_results(out: Path) -> None:
+    """Write the files a finished run leaves behind, plus an unrelated file."""
+    (out / "run_1").mkdir(parents=True)
+    (out / "run_1" / "summary.csv").write_text("old", encoding="utf-8")
+    (out / "run_3").mkdir()
+    (out / "runs.csv").write_text("old", encoding="utf-8")
+    (out / "medians.md").write_text("old", encoding="utf-8")
+    (out / "settings_fixture.cfg").write_text("old", encoding="utf-8")
+    (out / "notes.txt").write_text("keep", encoding="utf-8")
+    (out / "run_notes").mkdir()
+
+
+def test_prepare_out_creates_missing_folder(desktop, tmp_path):
+    """A new output folder is created and accepted."""
+    out = tmp_path / "docker" / "baseline"
+    assert desktop.prepare_out(out, overwrite=False) is None
+    assert out.is_dir()
+
+
+def test_prepare_out_accepts_folder_without_results(desktop, tmp_path):
+    """An existing folder with only unrelated files is not treated as reuse."""
+    (tmp_path / "notes.txt").write_text("keep", encoding="utf-8")
+    assert desktop.prepare_out(tmp_path, overwrite=False) is None
+    assert (tmp_path / "notes.txt").read_text(encoding="utf-8") == "keep"
+
+
+def test_prepare_out_refuses_existing_results(desktop, tmp_path):
+    """A reused name is refused and nothing in the folder is touched."""
+    _seed_results(tmp_path)
+    error = desktop.prepare_out(tmp_path, overwrite=False)
+    assert error is not None
+    assert "--overwrite" in error
+    assert "runs.csv" in error
+    assert (tmp_path / "runs.csv").read_text(encoding="utf-8") == "old"
+    assert (tmp_path / "run_3").is_dir()
+
+
+def test_prepare_out_overwrite_removes_only_earlier_results(desktop, tmp_path):
+    """--overwrite deletes old result files and run_N folders, nothing else."""
+    _seed_results(tmp_path)
+    assert desktop.prepare_out(tmp_path, overwrite=True) is None
+    remaining = sorted(path.name for path in tmp_path.iterdir())
+    assert remaining == ["notes.txt", "run_notes"]
+
+
+@pytest.mark.parametrize("runner_name", ["desktop", "web"])
+@pytest.mark.parametrize(("extra", "expected"), [([], False), (["--overwrite"], True)])
+def test_overwrite_flag_defaults_to_off(
+    request, runner_name, extra, expected, monkeypatch
+):
+    """Both runners refuse to reuse results unless --overwrite is given."""
+    runner = request.getfixturevalue(runner_name)
+    monkeypatch.setattr(sys, "argv", ["runner", "--godot", "g", "--name", "x", *extra])
+    assert runner.parse_args().overwrite is expected
+
+
+@pytest.mark.parametrize("runner_name", ["desktop", "web"])
+def test_main_stops_before_running_when_results_exist(
+    request, runner_name, monkeypatch, tmp_path, capsys
+):
+    """main() exits 1 with the reason before exporting or launching Godot."""
+    runner = request.getfixturevalue(runner_name)
+    _seed_results(tmp_path)
+    monkeypatch.setattr(
+        sys, "argv", ["runner", "--godot", sys.executable, "--out", str(tmp_path)]
+    )
+    monkeypatch.setattr(runner.shutil, "which", lambda name: name, raising=True)
+    assert runner.main() == 1
+    assert "already has results" in capsys.readouterr().out
+    assert (tmp_path / "runs.csv").read_text(encoding="utf-8") == "old"

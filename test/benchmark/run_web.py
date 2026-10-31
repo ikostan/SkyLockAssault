@@ -48,9 +48,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from run_desktop import (  # noqa: E402  (sibling script, not a package)
     PROJECT_ROOT,
     RUN_CSVS,
+    add_output_arguments,
     collect_metrics,
     default_out,
     has_data_rows,
+    prepare_out,
     write_reports,
 )
 
@@ -91,18 +93,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--runs", type=int, default=3, help="Number of runs (default 3)."
     )
-    parser.add_argument(
-        "--out",
-        type=Path,
-        help=(
-            "Output folder (default: <project>/bench_results/"
-            "<web_headless|web_headed>/<name or timestamp>)."
-        ),
-    )
-    parser.add_argument(
-        "--name",
-        help="Folder name instead of the timestamp, e.g. baseline_616.",
-    )
+    add_output_arguments(parser, "<web_headless|web_headed>")
     parser.add_argument(
         "--build",
         type=Path,
@@ -293,7 +284,10 @@ def main() -> int:
     args = parse_args()
     out: Path = args.out.resolve()
     build_dir: Path = args.build.resolve()
-    out.mkdir(parents=True, exist_ok=True)
+    error = prepare_out(out, args.overwrite)
+    if error is not None:
+        print(error)
+        return 1
     print(f"Project: {PROJECT_ROOT}")
     print(f"Build:   {build_dir}")
     print(f"Output:  {out}")

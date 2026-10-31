@@ -184,6 +184,8 @@ Options:
 - `--name`: results folder name instead of the timestamp.
 - `--out`: exact output folder; overrides the default
   `bench_results/<desktop|docker>/<name or timestamp>`.
+- `--overwrite`: replace results already in the output folder. Without it,
+  the script stops if the folder already has results.
 - `--fresh`: start every run without a settings file (first-launch player)
   instead of the default returning-player state.
 - `--keep-going`: continue after an invalid run instead of stopping.
@@ -309,6 +311,7 @@ Options:
 - `--name <name>`: results folder name instead of the timestamp.
 - `--out <dir>`: exact output folder; overrides the default
   `bench_results/<web_headless|web_headed>/<name or timestamp>`.
+- `--overwrite`: replace results already in the output folder.
 - `--headed`: show the browser window and use the GPU. Default is headless
   with software rendering (SwiftShader), like the browser tests.
 - `--channel chrome`: use the installed Google Chrome instead of Playwright's
@@ -379,6 +382,12 @@ bench_results/
 Inside each kind, a run gets a timestamp folder (`20261030_161409`) or the
 name given with `--name` (`baseline`, `before_616`, `after_616`). `--out`
 still writes to any exact folder.
+
+A folder that already has results is never reused silently: the runner stops
+before it starts, so an old `runs.csv` cannot be mistaken for a new one. Pick
+another name, or pass `--overwrite`, which deletes only the earlier results
+(`runs.csv`, `medians.md`, `run_N/`, the fixture and launch logs) and leaves
+any other files in the folder alone.
 
 ## Output files
 
