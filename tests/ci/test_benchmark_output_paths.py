@@ -130,3 +130,45 @@ def test_web_parse_args_name_and_explicit_out(web, monkeypatch, tmp_path):
         sys, "argv", ["run_web.py", "--no-export", "--out", str(tmp_path)]
     )
     assert web.parse_args().out == tmp_path
+
+
+@pytest.mark.parametrize("runner_name", ["desktop", "web"])
+def test_explicit_relative_out_is_preserved_with_name(
+    request, runner_name, monkeypatch
+):
+    """Explicit output paths take precedence without being resolved or renamed."""
+    runner = request.getfixturevalue(runner_name)
+    monkeypatch.setattr(
+        sys, "argv", ["runner", "--godot", "g", "--name", "baseline", "--out", "relative/run"]
+    )
+    assert runner.parse_args().out == Path("relative/run")
+
+
+def test_web_no_export_uses_named_headless_default_without_godot(web, monkeypatch):
+    """Reusing a build still selects the web output layout without GODOT_BIN."""
+    monkeypatch.delenv("GODOT_BIN", raising=False)
+    monkeypatch.setattr(sys, "argv", ["run_web.py", "--no-export", "--name", "baseline"])
+    assert web.parse_args().out == web.PROJECT_ROOT / "bench_results/web_headless/baseline"
+
+
+@pytest.mark.parametrize("runner_name", ["desktop", "web"])
+@pytest.mark.parametrize("runs", ["0", "-1"])
+def test_invalid_run_count_is_rejected_with_output_options(
+    request, runner_name, runs, monkeypatch, capsys
+):
+    """Choosing an output folder must not bypass run-count validation."""
+    runner = request.getfixturevalue(runner_name)
+    monkeypatch.setattr(
+        sys, "argv", ["runner", "--godot", "g", "--runs", runs, "--name", "baseline"]
+    )
+    with pytest.raises(SystemExit) as exc:
+        runner.parse_args()
+    assert exc.value.code == 2
+    assert "--runs must be at least 1" in capsys.readouterr().err
+
+
+def test_empty_name_uses_timestamp(desktop):
+    """An empty name does not collapse the output path to the kind directory."""
+    out = desktop.default_out("desktop", "")
+    assert out.parent == desktop.RESULTS_ROOT / "desktop"
+    assert STAMP.fullmatch(out.name)

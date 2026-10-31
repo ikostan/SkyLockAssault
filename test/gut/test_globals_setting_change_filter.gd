@@ -8,6 +8,7 @@
 extends "res://addons/gut/test.gd"
 
 const GlobalsScript = preload("res://scripts/core/globals.gd")
+const BenchmarkRunner = preload("res://test/benchmark/benchmark_runner.gd")
 
 var _globals: Variant
 var _original_schema: Dictionary
@@ -100,3 +101,33 @@ func test_log_level_change_does_not_touch_js_bridge_on_native() -> void:
 	_globals._on_setting_changed("current_log_level", 0)
 	assert_not_called(bridge, "eval")
 	assert_called_count(_globals._save_settings, 1)
+
+
+func test_benchmark_counts_only_persisted_changes_during_measurement() -> void:
+	# Keep the runner outside the tree to avoid starting the benchmark scenario.
+	var runner: Variant = BenchmarkRunner.new()
+	autofree(runner)
+	runner._on_setting_changed("difficulty", 1.0)  # Warm-up is excluded.
+	assert_eq(runner._saves, 0)
+	runner._measuring = true
+	for prop: String in GlobalsScript.persisted_schema:
+		runner._on_setting_changed(prop, null)
+	runner._on_setting_changed("current_fuel", 42.0)
+	runner._on_setting_changed("unknown", true)
+	assert_eq(runner._saves, 5)
+	# The same setting can be saved more than once during a measurement.
+	runner._on_setting_changed("difficulty", 1.5)
+	assert_eq(runner._saves, 6)
+	runner._measuring = false
+	runner._on_setting_changed("difficulty", 2.0)
+	assert_eq(runner._saves, 6)
+
+
+func test_benchmark_count_tracks_schema_extensions() -> void:
+	var runner: Variant = BenchmarkRunner.new()
+	autofree(runner)
+	runner._measuring = true
+	runner._on_setting_changed("max_speed", 500.0)
+	GlobalsScript.persisted_schema["max_speed"] = {"key": "max_speed", "types": [TYPE_FLOAT]}
+	runner._on_setting_changed("max_speed", 600.0)
+	assert_eq(runner._saves, 1)
