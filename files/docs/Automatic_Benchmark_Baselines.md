@@ -139,12 +139,14 @@ count baseline plus the last 5 passing runs the two rules need.
 - A concurrency group on the `baselines` job, with
   `cancel-in-progress: false`, stops two `main` runs from overwriting each
   other.
-
+- 
+<!-- markdownlint-disable MD013 -->
 | Option                    | Why not                                                 |
 |---------------------------|---------------------------------------------------------|
 | Actions cache             | Evicted after 7 days without use                        |
 | Workflow artifacts        | Expire, and cannot be read back reliably by a later run |
 | Committed files on `main` | Today's manual process; `main` is protected             |
+<!-- markdownlint-enable MD013 -->
 
 Open question: does a repository ruleset cover all branches? If so, the token
 push is rejected, and `benchmark-baselines` needs a bypass or an exclusion.
