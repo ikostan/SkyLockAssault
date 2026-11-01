@@ -26,17 +26,19 @@ file edits.
 ## Counts: a ratchet that only moves down
 
 After each `main` run, each count baseline becomes the worst value of the last
-3 runs, but only when all 3 beat the current baseline by more than that
-metric's tolerance. Counts are the gate: settings saves, objects, nodes,
+3 passing `main` runs, but only when all 3 beat the current baseline by more
+than that metric's tolerance. Counts are the gate: settings saves, objects, nodes,
 resources, orphans and reload growth.
 
 A run here means one `main` pipeline run. Each one is already the median of 3
-benchmark iterations (`runs: 3`), so 3 runs cover 9 iterations.
+benchmark iterations (`runs: 3`), so 3 runs cover 9 iterations. Only passing
+runs are recorded: a run that fails on a count is skipped, so it neither
+counts toward the 3 nor resets them.
 
 - **A real improvement locks in by itself.** It beats the baseline by more
-  than its tolerance in 3 runs in a row, so the baseline drops to it. With
+  than its tolerance in 3 passing runs, so the baseline drops to it. With
   [#616](https://github.com/ikostan/SkyLockAssault/issues/616), saves would
-  lock at 0 after three `main` runs.
+  lock at 0 after three passing `main` runs.
 - **Noise cannot tighten the gate.** The tolerances already reflect measured
   noise, so a gain inside them never moves a baseline. Without that margin, 3
   slightly low runs would nudge float averages down for good. Web nodes\_avg
@@ -51,9 +53,9 @@ also decides how much better 3 runs must be before the baseline moves.
 
 ## Timings: a rolling reference that only warns
 
-The reference for each timing metric is the median of the last 5 `main` runs,
-recomputed on every run. That covers frame p95, dropped frames, process and
-physics worst frame per second, and memory growth.
+The reference for each timing metric is the median of the last 5 passing
+`main` runs, recomputed on every run. That covers frame p95, dropped frames,
+process and physics worst frame per second, and memory growth.
 
 - It adapts by itself when the runner image, Godot or Chromium changes, within
   about 3 runs.
@@ -91,6 +93,10 @@ The label must be on the PR before it merges. The push to `main` carries no
 PR, so the job looks it up with
 `gh api repos/{repo}/commits/$GITHUB_SHA/pulls`, which needs
 `pull-requests: read`. A direct push has no PR and counts as unlabeled.
+`benchmark_baselines.yml` is called from `lint_test_deploy.yml` with
+`workflow_call`, like `benchmark.yml`, so `$GITHUB_SHA` is the merge commit
+the benchmark measured. The manual run uses the selected run's head SHA
+instead.
 
 **Forgot the label?** Run `benchmark_baselines.yml` by hand
 (`workflow_dispatch`) with the failed run's ID and `accept: true`. It reuses
@@ -147,14 +153,17 @@ count baseline plus the last 5 passing runs the two rules need.
   Keeping it separate keeps write access out of the PR pipeline, whose token
   is read-only. One push also avoids a race between the two parallel
   benchmark jobs, which now only measure and report.
-- Only that job gets `contents: write` and `pull-requests: read`. The jobs
-  that run pip, Playwright and Godot keep `contents: read` and
-  `persist-credentials: false`.
+- Only that job gets `contents: write`, `pull-requests: read` and
+  `actions: read`. The manual run needs `actions: read` to check the selected
+  run and download its artifacts. The jobs that run pip, Playwright and Godot
+  keep `contents: read` and `persist-credentials: false`.
 - Every update is a commit naming the run ID and SHA, so `git log` on that
   branch shows when and why each baseline moved.
 - A concurrency group on the `baselines` job, with
-  `cancel-in-progress: false`, stops two `main` runs from overwriting each
-  other.
+  `cancel-in-progress: false` and `queue: max`, stops two `main` runs from
+  overwriting each other. Without the queue, a newer pending run replaces an
+  older pending one, and that run drops out of the gate and the history. The
+  queue holds up to 100 runs, far more than merges to `main` produce.
 
 <!-- markdownlint-disable MD013 -->
 | Option                    | Why not                                                 |
