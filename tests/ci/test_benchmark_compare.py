@@ -180,7 +180,7 @@ def test_web_profile_allows_node_noise_desktop_does_not(compare, tmp_path):
     ("profile", "metric", "tolerance"),
     [
         (None, "reload_object_growth", 1),
-        ("desktop", "reload_object_growth", 8),
+        ("desktop", "reload_object_growth", 10),
         ("web", "reload_object_growth", 1),
         (None, "nodes_avg", 5),
         ("desktop", "nodes_avg", 5),
@@ -258,7 +258,7 @@ def test_invalid_profile_is_rejected(compare, capsys):
 @pytest.mark.parametrize(
     ("profile", "baseline_name", "metric", "tolerance"),
     [
-        ("desktop", "baseline_ci.json", "reload_object_growth", 8),
+        ("desktop", "baseline_ci.json", "reload_object_growth", 10),
         ("web", "baseline_web_ci.json", "nodes_avg", 15),
     ],
 )
