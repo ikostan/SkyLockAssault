@@ -19,7 +19,7 @@
 
 ### Purpose
 
-#1098 dropped settings saves from 61 to 0 on desktop and from 60 to 0 on web, but the committed CI baselines still held the #1094 merge run's values (`ee128f9`). With a count tolerance of 2, a change that brought the per-tick save back would show 61 against 61 and pass. Every other gain from #1098 was unprotected the same way.
+PR #1098 dropped settings saves from 61 to 0 on desktop and from 60 to 0 on web, but the committed CI baselines still held the #1094 merge run's values (`ee128f9`). With a count tolerance of 2, a change that brought the per-tick save back would show 61 against 61 and pass. Every other gain from #1098 was unprotected the same way.
 
 This PR refreshes both baselines from the first `main` run after #1098, so a return to 61 fails. It also adds the epic's design doc to the repo next to the benchmark guide. The design doc was tightened along the way through review. Finally, it widens one desktop tolerance that the refreshed baseline would otherwise have made flaky.
 
