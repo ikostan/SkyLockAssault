@@ -98,6 +98,22 @@ that run's results and raises the failing counts the same way. Without it,
 every later `main` run fails: the baseline stays put and failing runs are not
 recorded.
 
+**Which runs it accepts.** Before it changes anything, the manual run checks
+that the run ID points at a trusted `main` benchmark run, and stops with the
+reason in the job summary if any check fails:
+
+- The run comes from this repository's main CI/CD pipeline, matched by its
+  workflow file path rather than its display name.
+- It was triggered by a `push` to `main` in this repository, not by a pull
+  request, a fork or another branch.
+- Its `desktop` and `web` benchmark jobs ran, and its `benchmark-results` and
+  `benchmark-web-results` artifacts both exist and have not expired.
+- The `commit` in each artifact's baseline file equals the run's head SHA.
+
+Missing, mismatched or untrusted results raise nothing. The approval stays
+explicit: only someone with write access can start `workflow_dispatch`, and
+the run does nothing without `accept: true`.
+
 The label, or the manual accept run, is the only human action in the whole
 scheme, and it is a decision, not maintenance.
 
@@ -139,7 +155,7 @@ count baseline plus the last 5 passing runs the two rules need.
 - A concurrency group on the `baselines` job, with
   `cancel-in-progress: false`, stops two `main` runs from overwriting each
   other.
-- 
+
 <!-- markdownlint-disable MD013 -->
 | Option                    | Why not                                                 |
 |---------------------------|---------------------------------------------------------|
