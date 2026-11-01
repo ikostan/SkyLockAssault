@@ -553,12 +553,13 @@ Count tolerances (how much worse is allowed):
 | `OBJECT_NODE_COUNT` avg     |       5 |           5 |  **15** |
 | `OBJECT_RESOURCE_COUNT` avg |       2 |           2 |       2 |
 | Orphans (gameplay, reload)  |       0 |           0 |       0 |
-| Reload loop object growth   |       1 |       **8** |       1 |
+| Reload loop object growth   |       1 |      **10** |       1 |
 
 Each job passes `--profile desktop` or `--profile web` to `compare.py`. The two
 wider values come from the spread seen between runs on GitHub runners
 (desktop reload growth 2 to 12, web node count 506 to 520); each applies only
-to the platform that needs it.
+to the platform that needs it. The desktop value covers the whole 2-to-12
+spread, so a baseline anywhere inside it cannot fail on noise.
 
 Each job adds its table to the run's **Summary** page. All files are in the
 job's artifact.

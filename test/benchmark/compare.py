@@ -75,12 +75,15 @@ COUNT_RULES = [
 # Wider count tolerances for one platform only, from the spread seen between
 # runs on GitHub runners (PR #1094 merge run). Desktop: the reload-loop object
 # count goes up and down by about 5 per cycle, so reload growth varied from 2
-# to 12. Web: nodes_avg varied by about 14. The other platform keeps the tight
-# value above (desktop nodes_avg and web reload growth did not vary at all).
+# to 12. The tolerance covers the whole 2-to-12 spread, so a baseline anywhere
+# inside it cannot fail on noise. Web: nodes_avg varied by about 14. The other
+# platform keeps the tight value above (desktop nodes_avg and web reload growth
+# did not vary at all).
 PROFILE_TOLERANCES: dict[str, dict[str, float]] = {
-    "desktop": {"reload_object_growth": 8},
+    "desktop": {"reload_object_growth": 10},
     "web": {"nodes_avg": 15},
 }
+
 TIMING_RULES = [
     TimingRule("frame_p95_ms", "Frame interval p95 (ms)", 1.25, 1.0),
     TimingRule("frames_over_33.4ms", "Dropped frames (> 33.4 ms)", 1.5, 5.0),

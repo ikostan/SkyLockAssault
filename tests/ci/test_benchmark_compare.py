@@ -166,6 +166,36 @@ def test_profile_widens_only_its_own_tolerance(compare, tmp_path):
     assert compare.main(args) == 1
 
 
+@pytest.mark.parametrize(
+    ("baseline_growth", "current_growth", "expected_status"),
+    [
+        (2, 11, "ok"),
+        (2, 12, "ok"),
+        (2, 13, "fail"),
+        (12, 2, "ok"),
+        (12, 1, "better"),
+    ],
+)
+def test_desktop_reload_growth_observed_spread(
+    compare, baseline_growth, current_growth, expected_status
+):
+    """The observed 2-to-12 spread fits from either end, but no further."""
+    rows = compare.compare(
+        {"reload_object_growth": current_growth},
+        {"reload_object_growth": baseline_growth},
+        "desktop",
+    )
+    assert rows == [
+        (
+            "count",
+            "Reload loop object growth",
+            baseline_growth,
+            current_growth,
+            expected_status,
+        )
+    ]
+
+
 def test_web_profile_allows_node_noise_desktop_does_not(compare, tmp_path):
     """Web allows nodes_avg noise; desktop keeps the tight value."""
     noisy = {**BASE_METRICS, "nodes_avg": BASE_METRICS["nodes_avg"] + 12}
@@ -180,7 +210,7 @@ def test_web_profile_allows_node_noise_desktop_does_not(compare, tmp_path):
     ("profile", "metric", "tolerance"),
     [
         (None, "reload_object_growth", 1),
-        ("desktop", "reload_object_growth", 8),
+        ("desktop", "reload_object_growth", 10),
         ("web", "reload_object_growth", 1),
         (None, "nodes_avg", 5),
         ("desktop", "nodes_avg", 5),
@@ -258,7 +288,7 @@ def test_invalid_profile_is_rejected(compare, capsys):
 @pytest.mark.parametrize(
     ("profile", "baseline_name", "metric", "tolerance"),
     [
-        ("desktop", "baseline_ci.json", "reload_object_growth", 8),
+        ("desktop", "baseline_ci.json", "reload_object_growth", 10),
         ("web", "baseline_web_ci.json", "nodes_avg", 15),
     ],
 )
@@ -304,3 +334,42 @@ def test_committed_baseline_and_profile_gate(
     write_runs(results, [{**metrics, metric: metrics[metric] + tolerance + 1}])
     assert compare.main(args) == 1
     assert "Regressions: 1." in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("profile", "baseline_name", "old_saves"),
+    [
+        ("desktop", "baseline_ci.json", 61),
+        ("web", "baseline_web_ci.json", 60),
+    ],
+)
+@pytest.mark.parametrize(
+    ("saves", "exit_code", "icon"),
+    [(0, 0, "✅"), (2, 0, "✅"), (3, 1, "❌"), ("old", 1, "❌")],
+)
+def test_refreshed_baselines_gate_settings_saves(
+    compare, tmp_path, capsys, profile, baseline_name, old_saves, saves, exit_code, icon
+):
+    """Both zero-save baselines catch a return to their former save counts."""
+    baseline_path = PROJECT_ROOT / "test/benchmark" / baseline_name
+    metrics = json.loads(baseline_path.read_text(encoding="utf-8"))["metrics"]
+    assert metrics["saves"] == 0
+    saves = old_saves if saves == "old" else saves
+    results = write_runs(tmp_path / "runs.csv", [{**metrics, "saves": saves}] * 3)
+
+    assert (
+        compare.main(
+            [
+                "--results",
+                str(results),
+                "--baseline",
+                str(baseline_path),
+                "--profile",
+                profile,
+            ]
+        )
+        == exit_code
+    )
+    report = capsys.readouterr().out
+    assert f"| {icon} | Settings saves in 60 s | count | 0 | {saves} |" in report
+    assert f"Regressions: {exit_code}." in report
