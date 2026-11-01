@@ -357,9 +357,19 @@ def test_refreshed_baselines_gate_settings_saves(
     saves = old_saves if saves == "old" else saves
     results = write_runs(tmp_path / "runs.csv", [{**metrics, "saves": saves}] * 3)
 
-    assert compare.main(
-        ["--results", str(results), "--baseline", str(baseline_path), "--profile", profile]
-    ) == exit_code
+    assert (
+        compare.main(
+            [
+                "--results",
+                str(results),
+                "--baseline",
+                str(baseline_path),
+                "--profile",
+                profile,
+            ]
+        )
+        == exit_code
+    )
     report = capsys.readouterr().out
     assert f"| {icon} | Settings saves in 60 s | count | 0 | {saves} |" in report
     assert f"Regressions: {exit_code}." in report
