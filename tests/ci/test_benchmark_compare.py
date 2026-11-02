@@ -243,12 +243,21 @@ def test_web_warnings_do_not_hide_a_gated_failure_in_summary(compare, tmp_path, 
     summary = tmp_path / "summary.md"
     summary.write_text("existing\n", encoding="utf-8")
 
-    assert compare.main(
-        [
-            "--results", str(results), "--baseline", str(base_path),
-            "--profile", "web", "--summary", str(summary),
-        ]
-    ) == 1
+    assert (
+        compare.main(
+            [
+                "--results",
+                str(results),
+                "--baseline",
+                str(base_path),
+                "--profile",
+                "web",
+                "--summary",
+                str(summary),
+            ]
+        )
+        == 1
+    )
     report = capsys.readouterr().out
     assert "| ⚠️ | OBJECT_COUNT avg | count |" in report
     assert "| ❌ | Orphan nodes, reload loop (max) | count |" in report
@@ -278,9 +287,19 @@ def test_web_count_warning_uses_median(
     results = write_runs(tmp_path / "runs.csv", runs)
     base_path = write_baseline(tmp_path / "baseline.json", baseline)
 
-    assert compare.main(
-        ["--results", str(results), "--baseline", str(base_path), "--profile", "web"]
-    ) == 0
+    assert (
+        compare.main(
+            [
+                "--results",
+                str(results),
+                "--baseline",
+                str(base_path),
+                "--profile",
+                "web",
+            ]
+        )
+        == 0
+    )
     report = capsys.readouterr().out
     label = "OBJECT_COUNT avg" if metric == "objects_avg" else "OBJECT_NODE_COUNT avg"
     assert f"| {status} | {label} | count |" in report
