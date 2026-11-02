@@ -278,7 +278,13 @@ def build_baseline(medians: dict[str, float], runs: int, info: dict[str, str]) -
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Compare results with the baseline; exit 1 on any count regression."""
+    """
+    Compare results with the baseline; exit 1 on any count regression.
+
+    A count past its tolerance is a regression unless the profile lists it in
+    PROFILE_WARN_ONLY (on web: objects_avg and nodes_avg). Those are reported
+    as warnings and, like timing warnings, do not change the exit code.
+    """
     args = parse_args(argv)
     medians, runs, info = load_medians(args.results)
 
