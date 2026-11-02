@@ -74,6 +74,7 @@ The first `main` run after #1114 ([run 41274707348](https://github.com/ikostan/S
   - the reload-growth spread fits from either end but no further;
   - both refreshed baselines pass 0 to 2 saves and fail 3 saves or a return to 61 (desktop) or 60 (web).
 - **#1116:** four cases rewritten to expect a warning for web objects or nodes past their limit (none removed), plus 11 new cases: the real 459 → 519 node swing (warns on web, fails on desktop), ok and better still reported, web leak counts still fail, and the report note on web only.
+- **Added by CodeRabbit in #1116 (7 cases):** a web count warning and a timing warning alongside a failing leak gate still exit 1 with the summary appended; missing vs zero baselines for warn-only counts; the warning follows the median of three runs.
 
 ### 5. Web object and node counts warn-only (#1116: `test/benchmark/compare.py`, `files/docs/Performance_Benchmark_Guide.md`)
 
@@ -106,7 +107,7 @@ The first `main` run after #1114 ([run 41274707348](https://github.com/ikostan/S
 - **Baselines:** both JSON files come straight from the run 41155653694 artifacts, with `commit` `400d734…` and `saves` `0.0`.
 - **Comparison:** `compare.py` on that run's own `runs.csv` against the new baselines reports 0 regressions, 0 warnings and no 🟢 rows. This only shows the files load and match; a run compared with a baseline made from itself cannot fail, so it did not predict the next run.
 - **First `main` run after #1114:** [run 41274707348](https://github.com/ikostan/SkyLockAssault/actions/runs/41274707348): desktop green (saves 0, reload growth 2), web failed on objects (+87) and nodes (+60), which led to #1116. Under #1116's rules the same results give Regressions 0, Warnings 3.
-- **Tests:** `pytest tests/ci/test_benchmark_compare.py` gives 88 passed (64 before CodeRabbit's tests, 77 after #1114).
+- **Tests:** `pytest tests/ci/test_benchmark_compare.py` gives 95 passed (64 before CodeRabbit's tests, 77 after #1114, 88 with #1116's own tests).
 - **Python style:** Black and isort clean.
 - **Markdown lint:** `markdownlint-cli2` with the repo config, CI's `fix: true` included, reports 0 issues.
 - **CI:** all PR checks green on both PRs.
@@ -138,7 +139,7 @@ The PRs document the automatic benchmark-baseline lifecycle (count ratchets, rol
 | Refresh CI baselines from run 41155653694.          | <ul><li>Settings saves 0 on desktop and web.</li><li>All other metrics from the same run.</li></ul>                                                                                                                                                                                                                                                      | `test/benchmark/baseline_ci.json`<br/>`test/benchmark/baseline_web_ci.json`                                                                                            |
 | Widen the desktop reload-growth tolerance to 10.    | <ul><li>Covers the whole 2-to-12 runner spread.</li><li>Guide table and text updated.</li></ul>                                                                                                                                                                                                                                                          | `test/benchmark/compare.py`<br/>`files/docs/Performance_Benchmark_Guide.md`                                                                                            |
 | Test the tolerance and the refreshed baselines.     | <ul><li>Two cases updated to 10.</li><li>13 new cases: reload spread, return to former save counts.</li></ul>                                                                                                                                                                                                                                            | `tests/ci/test_benchmark_compare.py`                                                                                                                                   |
-| Make web object and node counts warn-only (#1116).  | <ul><li>`PROFILE_WARN_ONLY` turns a web objects or nodes failure into a warning.</li><li>Web report and `main()` docstring name the exception.</li><li>Four cases rewritten, 11 new.</li><li>Guide and design doc updated; design doc status line.</li></ul>                                                                                             | `test/benchmark/compare.py`<br/>`tests/ci/test_benchmark_compare.py`<br/>`files/docs/Performance_Benchmark_Guide.md`<br/>`files/docs/Automatic_Benchmark_Baselines.md` |
+| Make web object and node counts warn-only (#1116).  | <ul><li>`PROFILE_WARN_ONLY` turns a web objects or nodes failure into a warning.</li><li>Web report and `main()` docstring name the exception.</li><li>Four cases rewritten, 11 new, plus 7 from CodeRabbit.</li><li>Guide and design doc updated; design doc status line.</li></ul>                                                                     | `test/benchmark/compare.py`<br/>`tests/ci/test_benchmark_compare.py`<br/>`files/docs/Performance_Benchmark_Guide.md`<br/>`files/docs/Automatic_Benchmark_Baselines.md` |
 
 ### Assessment against linked issues
 
@@ -195,7 +196,7 @@ The PRs document the automatic benchmark-baseline lifecycle (count ratchets, rol
 - **@coderabbitai**
   - Posted the PR summary and 6 actionable comments: 5 fixed, 1 declined with a doc clarification.
   - Authored `daec393` Add benchmark tests for desktop reload growth tolerance and settings save regressions (on request): 2 tests, 13 cases. Reviewed by @claude (Opus 5.5): all kept unchanged.
-  - #1116: posted the PR summary.
+  - #1116: posted the PR summary, and authored `1b34cde` Add tests for web benchmark count warnings, baseline handling, and mixed failure summaries: 3 tests, 7 cases. Reviewed by @claude (Opus 5.5): all kept unchanged; disabling warn-only fails 5 of them.
 
 - **@qodo-code-review**
   - Posted the PR summary and 2 findings: provenance checks fixed; `queue: max` "unsupported" declined (outdated; supported since May 7, 2026).
@@ -203,6 +204,7 @@ The PRs document the automatic benchmark-baseline lifecycle (count ratchets, rol
 
 - **@deepsource-io**
   - Python and JavaScript analysis pass (grade A), on both PRs.
+  - `deepsource-autofix[bot]` authored `4b7b74f` style: format code with Black and isort (#1116).
   - `deepsource-autofix[bot]` authored `a7b0913` style: format code with Black and isort (CodeRabbit's new tests).
 
 <!-- markdownlint-enable MD001 MD036 MD013 MD033 table-column-style -->
