@@ -27,8 +27,9 @@ file edits.
 
 After each `main` run, each count baseline becomes the worst value of the last
 3 passing `main` runs, but only when all 3 beat the current baseline by more
-than that metric's tolerance. Counts are the gate: settings saves, objects, nodes,
-resources, orphans and reload growth.
+than that metric's tolerance. Counts are the gate: settings saves, objects,
+nodes, resources, orphans and reload growth. On web, objects and nodes only
+warn and follow the timing rule instead (see below).
 
 A run here means one `main` pipeline run. Each one is already the median of 3
 benchmark iterations (`runs: 3`), so 3 runs cover 9 iterations. Only passing
@@ -41,9 +42,9 @@ counts toward the 3 nor resets them.
   lock at 0 after three passing `main` runs.
 - **Noise cannot tighten the gate.** The tolerances already reflect measured
   noise, so a gain inside them never moves a baseline. Without that margin, 3
-  slightly low runs would nudge float averages down for good. Web nodes\_avg
-  swings about 14 against a tolerance of 15, so a few low runs would soon fail
-  normal ones.
+  slightly low runs would nudge float averages down for good. Desktop reload
+  growth spans 2 to 12 on runners against a tolerance of 10, so a few low runs
+  would soon fail normal ones.
 - **A slow creep cannot loosen it.** The baseline never goes up on its own, so
   small regressions that each fit inside the tolerance cannot add up.
 
@@ -56,6 +57,12 @@ also decides how much better 3 runs must be before the baseline moves.
 The reference for each timing metric is the median of the last 5 passing
 `main` runs, recomputed on every run. That covers frame p95, dropped frames,
 process and physics worst frame per second, and memory growth.
+
+It also covers web objects and nodes. Their averages follow runner speed:
+nodes\_avg was 459 on a fast runner and 516 to 519 on slower ones, with no
+code change. So on web they warn like timings and are not ratcheted. A ratchet
+would lock in a fast-runner dip, and the next normal run would fail. Desktop
+keeps them on the count gate.
 
 - It adapts by itself when the runner image, Godot or Chromium changes, within
   about 3 runs.

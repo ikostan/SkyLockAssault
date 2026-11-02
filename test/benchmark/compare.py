@@ -8,7 +8,8 @@ metric across the runs and compares it with baseline_ci.json:
 
 - Count metrics (settings saves, live objects, orphans, reload leak) are
   stable from run to run. Getting worse beyond a small tolerance is a
-  REGRESSION and makes this script exit with 1.
+  REGRESSION and makes this script exit with 1. On web, the object and node
+  averages follow runner speed, so they only warn (PROFILE_WARN_ONLY).
 - Timing metrics (frame times) are noisy on shared CI runners. Getting
   clearly worse is only a WARNING.
 
@@ -76,12 +77,21 @@ COUNT_RULES = [
 # runs on GitHub runners (PR #1094 merge run). Desktop: the reload-loop object
 # count goes up and down by about 5 per cycle, so reload growth varied from 2
 # to 12. The tolerance covers the whole 2-to-12 spread, so a baseline anywhere
-# inside it cannot fail on noise. Web: nodes_avg varied by about 14. The other
-# platform keeps the tight value above (desktop nodes_avg and web reload growth
-# did not vary at all).
+# inside it cannot fail on noise. Web: nodes_avg varied by about 14 within one
+# run. The other platform keeps the tight value above (desktop nodes_avg and web
+# reload growth did not vary at all).
 PROFILE_TOLERANCES: dict[str, dict[str, float]] = {
     "desktop": {"reload_object_growth": 10},
     "web": {"nodes_avg": 15},
+}
+# Count metrics that only warn on one platform. Web runs software-rendered in
+# Chromium, and its object and node averages follow how fast the runner draws
+# frames: main runs gave nodes_avg 459 on a fast runner and 516 to 519 on
+# slower ones, with no code change. Desktop headless measures the same game
+# logic without that effect and keeps the gate; on web, saves, resources,
+# orphans and reload growth stay gated.
+PROFILE_WARN_ONLY: dict[str, frozenset[str]] = {
+    "web": frozenset({"objects_avg", "nodes_avg"}),
 }
 
 TIMING_RULES = [
@@ -189,6 +199,7 @@ def compare(
 ) -> list[tuple[str, str, float | None, float, str]]:
     """Return report rows: (kind, label, baseline, now, status)."""
     overrides = PROFILE_TOLERANCES.get(profile or "", {})
+    warn_only = PROFILE_WARN_ONLY.get(profile or "", frozenset())
     rows: list[tuple[str, str, float | None, float, str]] = []
     for kind, rules in (("count", COUNT_RULES), ("timing", TIMING_RULES)):
         for rule in rules:
@@ -200,6 +211,8 @@ def compare(
                 status = NEW
             elif isinstance(rule, CountRule):
                 status = judge_count(rule, base, now, overrides.get(rule.key))
+                if status == FAIL and rule.key in warn_only:
+                    status = WARN
             else:
                 status = judge_timing(rule, base, now)
             rows.append((kind, rule.label, base, now, status))
@@ -211,6 +224,7 @@ def render(
     runs: int,
     baseline_meta: dict | None,
     title: str = DEFAULT_TITLE,
+    profile: str | None = None,
 ) -> str:
     """Render the comparison as Markdown."""
     lines = [f"## {title}", ""]
@@ -224,6 +238,14 @@ def render(
     lines += [
         f"Medians of {runs} runs. Counts fail the job if they get worse;",
         "timings only warn (shared CI runners are noisy).",
+    ]
+    warn_only = PROFILE_WARN_ONLY.get(profile or "", frozenset())
+    if warn_only:
+        labels = [rule.label for rule in COUNT_RULES if rule.key in warn_only]
+        lines.append(
+            f"On {profile}, {' and '.join(labels)} only warn: they follow runner speed."
+        )
+    lines += [
         "",
         "| | Metric | Kind | Baseline | Now | Change |",
         "|---|---|---|---:|---:|---:|",
@@ -266,7 +288,7 @@ def main(argv: list[str] | None = None) -> int:
     baseline = None if baseline_doc is None else baseline_doc.get("metrics", {})
 
     rows = compare(medians, baseline, args.profile)
-    report = render(rows, runs, baseline_doc, args.title)
+    report = render(rows, runs, baseline_doc, args.title, args.profile)
     print(report)
     if args.summary:
         with args.summary.open("a", encoding="utf-8") as handle:

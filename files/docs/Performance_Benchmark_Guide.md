@@ -540,26 +540,35 @@ What it checks (medians of the runs):
 
 - **Counts** (settings saves, live objects, orphans, reload leak). Worse than
   the baseline beyond a small tolerance **fails** the job. Fewer is shown as
-  🟢 better and passes.
+  🟢 better and passes. On the web job, `OBJECT_COUNT` and
+  `OBJECT_NODE_COUNT` only **warn** (see below).
 - **Timings** (frame p95, dropped frames, process and physics time, memory
   growth). Shared runners are noisy, so these only **warn**.
 
 Count tolerances (how much worse is allowed):
 
-| Metric                      | Default | Desktop job | Web job |
-|-----------------------------|--------:|------------:|--------:|
-| Settings saves in 60 s      |       2 |           2 |       2 |
-| `OBJECT_COUNT` avg          |      25 |          25 |      25 |
-| `OBJECT_NODE_COUNT` avg     |       5 |           5 |  **15** |
-| `OBJECT_RESOURCE_COUNT` avg |       2 |           2 |       2 |
-| Orphans (gameplay, reload)  |       0 |           0 |       0 |
-| Reload loop object growth   |       1 |      **10** |       1 |
+| Metric                      | Default | Desktop job |               Web job |
+|-----------------------------|--------:|------------:|----------------------:|
+| Settings saves in 60 s      |       2 |           2 |                     2 |
+| `OBJECT_COUNT` avg          |      25 |          25 |     25, **warn only** |
+| `OBJECT_NODE_COUNT` avg     |       5 |           5 | **15**, **warn only** |
+| `OBJECT_RESOURCE_COUNT` avg |       2 |           2 |                     2 |
+| Orphans (gameplay, reload)  |       0 |           0 |                     0 |
+| Reload loop object growth   |       1 |      **10** |                     1 |
 
 Each job passes `--profile desktop` or `--profile web` to `compare.py`. The two
 wider values come from the spread seen between runs on GitHub runners
 (desktop reload growth 2 to 12, web node count 506 to 520); each applies only
 to the platform that needs it. The desktop value covers the whole 2-to-12
 spread, so a baseline anywhere inside it cannot fail on noise.
+
+On the web job, `OBJECT_COUNT` and `OBJECT_NODE_COUNT` past their tolerance
+only warn. The web job runs software-rendered in Chromium, and those averages
+follow how fast the runner draws frames: two `main` runs with no code change
+between them gave `OBJECT_NODE_COUNT` 459 on a fast runner and 519 on a slower
+one. The desktop job measures the same game logic headless, without that
+effect, so it keeps both on the gate. On web, settings saves, resources,
+orphans and reload growth still fail the job.
 
 Each job adds its table to the run's **Summary** page. All files are in the
 job's artifact.
