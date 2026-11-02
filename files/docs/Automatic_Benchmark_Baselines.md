@@ -2,6 +2,13 @@
 
 Design doc, Oct 30, 2026
 
+Status: planned in [#1107](https://github.com/ikostan/SkyLockAssault/issues/1107).
+The ratchet, the rolling medians and the accept path arrive with
+[#1109](https://github.com/ikostan/SkyLockAssault/issues/1109) and
+[#1111](https://github.com/ikostan/SkyLockAssault/issues/1111). Until then,
+`compare.py` judges every metric against the committed baseline file, and on
+web the object and node counts only warn against it.
+
 Source: the design doc in
 [[EPIC] Automatic CI benchmark baselines #1107](https://github.com/ikostan/SkyLockAssault/issues/1107).
 How the benchmark itself runs is in
