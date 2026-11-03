@@ -9,7 +9,15 @@
 extends Node
 
 # --- NEW SIGNALS FOR WEB BRIDGE & UI SYNC ---
+## Emitted when the volume of an audio bus changes.
+##
+## [param bus_name]: The name of the audio bus.
+## [param volume]: The new volume level in decibels or linear scale.
 signal volume_changed(bus_name: String, volume: float)
+## Emitted when the mute state of an audio bus changes.
+##
+## [param bus_name]: The name of the audio bus.
+## [param is_muted]: True if the bus is muted, false otherwise.
 signal mute_toggled(bus_name: String, is_muted: bool)
 # --------------------------------------------
 ## Emitted when the last open confirmation-click window closes and the feedback
@@ -80,34 +88,36 @@ func _init_to_defaults() -> void:
 		set_bus_state(bus, config_data["default_volume"], config_data["default_muted"])
 
 
-## Get state for a bus
-## :param bus_name: Name of the bus.
-## :type bus_name: String
-## :rtype: Dictionary
+## Retrieve the volume and mute state for an audio bus.
+##
+## Returns a dictionary containing the volume and mute status of the specified audio bus.
+##
+## [param bus_name]: Name of the bus to query.
+## Returns Dictionary containing volume and muted status.
 func get_bus_state(bus_name: String) -> Dictionary:
 	return {"volume": get_volume(bus_name), "muted": get_muted(bus_name)}
 
 
-## Set state for a bus
-## Raw setter: writes volume then mute exactly as given and never applies the near-zero
-## auto-mute rule (use change_volume() for that). Config load, reset and init rely on this,
-## so a saved {0.5, muted} does not emit a spurious unmute/re-mute.
-## :param bus_name: Name of the bus.
-## :type bus_name: String
-## :param volume: Volume level (0.0 to 1.0).
-## :type volume: float
-## :param muted: Mute flag.
-## :type muted: bool
-## :rtype: void
+## Sets volume and mute state for an audio bus without auto-mute rules.
+##
+## Raw setter that writes volume then mute exactly as given, bypassing the near-zero auto-mute
+## rule. Used by config load, reset, and init.
+##
+## [param bus_name]: Name of the audio bus.
+## [param volume]: Volume level from [code]0.0[/code] to [code]1.0[/code].
+## [param muted]: Mute flag indicating whether the bus is muted.
 func set_bus_state(bus_name: String, volume: float, muted: bool) -> void:
 	set_volume(bus_name, volume)
 	set_muted(bus_name, muted)
 
 
-## Get volume for a bus
-## :param bus_name: Name of the bus.
-## :type bus_name: String
-## :rtype: float
+## Return the current volume level for the specified audio bus.
+##
+## Retrieves the volume level associated with the given bus name, matching against predefined
+## audio constants.
+##
+## [param bus_name]: Name of the audio bus to query.
+## Returns the current volume as a float value.
 func get_volume(bus_name: String) -> float:
 	var current_vol: float = 0.0
 
@@ -130,15 +140,14 @@ func get_volume(bus_name: String) -> float:
 	return current_vol
 
 
-## Set volume for a bus
-## Raw setter: updates state and emits volume_changed only. Never applies the near-zero
-## auto-mute rule, never touches AudioServer and never saves. Use change_volume() when a
-## volume change should be able to auto-mute or auto-unmute the bus.
-## :param bus_name: Name of the bus.
-## :type bus_name: String
-## :param vol: Volume level (0.0 to 1.0).
-## :type vol: float
-## :rtype: void
+## Set volume for a bus raw setter without audio server or save side effects.
+##
+## Updates state and emits volume_changed only. Never applies the near-zero auto-mute rule,
+## never touches AudioServer, and never saves. Use change_volume() when a volume change should
+## be able to auto-mute or auto-unmute the bus.
+##
+## [param bus_name]: Name of the bus.
+## [param vol]: Volume level from 0.0 to 1.0.
 func set_volume(bus_name: String, vol: float) -> void:
 	if not AudioConstants.BUS_CONFIG.has(bus_name):
 		Globals.log_message("Unknown bus for set_volume: " + bus_name, Globals.LogLevel.WARNING)
@@ -188,10 +197,12 @@ func set_volume(bus_name: String, vol: float) -> void:
 		volume_changed.emit(bus_name, vol)
 
 
+## Return muted state for a bus.
+##
 ## Get muted state for a bus
-## :param bus_name: Name of the bus.
-## :type bus_name: String
-## :rtype: bool
+##
+## [param bus_name]: Name of the bus.
+## Returns true if the specified audio bus is muted, otherwise false.
 func get_muted(bus_name: String) -> bool:
 	var is_muted: bool = false
 
@@ -214,12 +225,12 @@ func get_muted(bus_name: String) -> bool:
 	return is_muted
 
 
-## Set muted state for a bus
-## :param bus_name: Name of the bus.
-## :type bus_name: String
-## :param muted: Mute flag.
-## :type muted: bool
-## :rtype: void
+## Set muted state for a bus.
+##
+## Updates the mute state for the specified audio bus and emits a signal if successful.
+##
+## [param bus_name]: Name of the audio bus.
+## [param muted]: Mute flag.
 func set_muted(bus_name: String, muted: bool) -> void:
 	var success: bool = true
 	match bus_name:
@@ -256,29 +267,15 @@ func _get_last_audible_volume(bus_name: String) -> float:
 	)
 
 
-## Single mute/unmute pipeline shared by the Audio Settings menu and the web bridge
-## (Issue #1048). Owns the confirmation click, the deferred hardware cutoff and the
-## unmute-from-zero restore (Issue #1046), so callers never sequence state/apply themselves.
-## Flow:
-##   1. Manual interactions play the confirmation click.
-##   2. The logical mute state flips immediately (mute_toggled fires, so UI locks update).
-##   3. Unmuting a bus at (near) zero volume restores its last audible volume.
-##   4. Manual mutes defer the AudioServer cutoff by MUTE_HARDWARE_DELAY so the click can
-##      finish streaming; unmutes and programmatic calls apply immediately.
-##   5. The newest state is applied to AudioServer (a newer toggle during the delay wins).
-##      Exception (Issue #1047): while a confirmation click is still streaming, a mute of a
-##      bus on the click's feedback path is deferred until the last click window closes, so
-##      neither a programmatic mute nor an earlier timer cuts a click short. Unmutes still
-##      apply immediately.
-## Does not save: callers follow up with save_volumes(), mirroring set_volume().
-## :param bus_name: Name of the bus.
-## :type bus_name: String
-## :param muted: True to mute, false to unmute.
-## :type muted: bool
-## :param is_manual_interaction: True for real user presses (click + deferred cutoff);
-##     false for programmatic callers such as the web bridge (silent, immediate).
-## :type is_manual_interaction: bool
-## :rtype: void
+## Shared mute and unmute pipeline handling confirmation clicks and deferred hardware cutoffs.
+##
+## Manages the confirmation click, deferred hardware cutoffs, and unmute-from-zero restores for
+## the audio settings menu and web bridge. Does not save volume settings.
+##
+## [param bus_name]: Name of the audio bus.
+## [param muted]: True to mute, or false to unmute.
+## [param is_manual_interaction]: True for real user presses playing clicks and deferred
+## cutoffs; false for programmatic callers.
 func toggle_mute(bus_name: String, muted: bool, is_manual_interaction: bool = false) -> void:
 	if not AudioConstants.BUS_CONFIG.has(bus_name):
 		Globals.log_message("Unknown bus for toggle_mute: " + bus_name, Globals.LogLevel.WARNING)
@@ -300,54 +297,15 @@ func toggle_mute(bus_name: String, muted: bool, is_manual_interaction: bool = fa
 	_sync_bus_or_defer(bus_name)
 
 
-## Single volume entry point that applies the near-zero auto-mute rule (Issue #1039, epic #725).
-## Runs with no menu in the tree, and callers state their intent instead of the code guessing
-## it from slider focus:
-##   1. The previous volume is read, then the new one is stored (volume_changed fires) and
-##      written to AudioServer with the bus's current mute flag. Exception (Issues #1075,
-##      #1047): while a confirmation click is streaming, an at-or-below-threshold value on a
-##      feedback-path bus keeps the mixer at FEEDBACK_HOLD_VOLUME_LINEAR instead, so a
-##      follow-up near-zero update cannot hard-mute the bus under the click.
-##      Above-threshold values always apply immediately.
-##   2. The rule is edge-triggered on AUTO_MUTE_VOLUME_THRESHOLD crossings (Issue #1040):
-##      - crossing down (old > T, new <= T) on an unmuted bus -> auto-mute;
-##      - crossing up (old <= T, new > T) on a muted bus -> auto-unmute.
-##      Anything else leaves the mute flag alone, so a mute the player chose at an audible
-##      volume survives any volume change that stays above the threshold, and repeated
-##      near-zero updates are no-ops. No extra state: the previous volume is enough, so the
-##      rule survives restarts.
-##      Accepted corner case: a bus muted with its button at 0.8, then set to 0 and back up,
-##      is unmuted on the way up; at zero, an explicit mute and an auto-mute look the same.
-##   3. Manual interactions play the SFX_CHECK confirmation click on a transition.
-##      Programmatic calls (web bridge, cutscenes, sync loops) are always silent.
-##   4. A manual auto-mute (inside the tree) of any bus on the click's feedback path holds
-##      that bus at FEEDBACK_HOLD_VOLUME_LINEAR until every confirmation click still streaming
-##      has finished (each click opens a MUTE_HARDWARE_DELAY window; Issue #1047). The path is
-##      the click bus (SFX_Menu) and every bus it sends to; today SFX_Menu, SFX and Master.
-##      Buses off the path (Music, SFX_Weapon, SFX_Rotors) need no hold: muting them never
-##      silences the click. A bus the player had already muted is never unmuted for a click.
-##      Accepted trade-off: other sounds on a held bus play at the hold level for the delay.
-##   5. Once an auto-mute settles (after the hold, or right away without one), AudioServer is
-##      re-synced from the manager's current state, so is_bus_mute() always matches
-##      get_muted() (Issue #1041). The re-sync re-reads state instead of writing a fixed value,
-##      so a late timer after a newer change or unmute just re-applies that newer state:
-##      no generation token is needed. For a feedback-path bus the re-sync waits until the
-##      last click window closes, so an earlier timer never cuts a later click short, on the
-##      same bus or another bus on the path (Issues #1075, #1047).
-##   6. Auto-unmute (any bus, manual or programmatic) applies the unmuted state to
-##      AudioServer immediately.
-## Does not save: persistence stays with callers (slider debounce, web bridge).
-## The raw setters (set_volume, set_bus_state, load_volumes, reset_volumes) never apply this.
-## Await it only if you need a manual feedback-path hold (Master, SFX, SFX_Menu) to have
-## finished; every other call returns without waiting.
-## :param bus_name: Name of the bus.
-## :type bus_name: String
-## :param volume: Volume level (0.0 to 1.0).
-## :type volume: float
-## :param is_manual_interaction: True for real user input (click + feedback-path hold);
-##     false for programmatic callers (silent, no hold).
-## :type is_manual_interaction: bool
-## :rtype: void
+## Applies the near-zero auto-mute rule and volume change to a bus.
+##
+## Handles volume entry with auto-mute and auto-unmute threshold crossing logic, optional
+## confirmation clicks, and feedback-path holds.
+##
+## [param bus_name]: Name of the bus to modify.
+## [param volume]: Volume level from 0.0 to 1.0.
+## [param is_manual_interaction]: True for real user input with feedback-path hold; false for
+## programmatic callers.
 func change_volume(bus_name: String, volume: float, is_manual_interaction: bool = false) -> void:
 	if not AudioConstants.BUS_CONFIG.has(bus_name):
 		Globals.log_message("Unknown bus for change_volume: " + bus_name, Globals.LogLevel.WARNING)
@@ -526,14 +484,13 @@ func _snapshot_audible_volumes() -> void:
 			_last_audible_volume[bus] = clampf(vol, 0.0, 1.0)
 
 
-## load_volumes
 ## Loads persisted volumes from config, overriding current values only if saved and valid.
-## Acts strictly as an I/O coordinator: reads the file via `Globals.safe_load_config`,
-## delegates parsing to `apply_volumes_from_config`, handles legacy migration, and
-## syncs the resulting state to the AudioServer.
-## :param path: Config file path (default: current_config_path).
-## :type path: String
-## :rtype: void
+##
+## Acts strictly as an I/O coordinator: reads the file via Globals.safe_load_config, delegates
+## parsing to apply_volumes_from_config, handles legacy migration, and syncs the resulting
+## state to the AudioServer.
+##
+## [param path]: Config file path, defaulting to current_config_path.
 func load_volumes(path: String = current_config_path) -> void:
 	current_config_path = path
 
@@ -573,17 +530,13 @@ func load_volumes(path: String = current_config_path) -> void:
 	apply_all_volumes()
 
 
-## Applies volume and mute values from an in-memory ConfigFile to AudioManager state.
-## Pure GDScript helper with no disk I/O or decryption, intended for in-memory testing.
-## Only well-typed values in the "audio" section are applied: volumes must be float or int,
-## mute flags must be bool. Missing or invalid keys keep the bus's current value.
-## Volumes are clamped to 0.0-1.0, and a bus at or below AUTO_MUTE_VOLUME_THRESHOLD is loaded
-## muted, so a saved file can never start a bus unmuted at zero volume (Issue #1046).
-## Note: state is updated via set_bus_state(), so volume_changed / mute_toggled are emitted
-## for every bus. AudioServer is not touched; call apply_all_volumes() to sync buses.
-## :param config: The ConfigFile instance containing the "audio" section.
-## :type config: ConfigFile
-## :rtype: void
+## Applies volume and mute values from a ConfigFile to the AudioManager state.
+##
+## Applies volume and mute values from an in-memory ConfigFile to AudioManager state without
+## disk I/O. Volumes are clamped to 0.0-1.0 and buses at or below AUTO_MUTE_VOLUME_THRESHOLD
+## are loaded muted.
+##
+## [param config]: The ConfigFile instance containing the audio section.
 func apply_volumes_from_config(config: ConfigFile) -> void:
 	if config == null:
 		return
@@ -632,10 +585,11 @@ func apply_volumes_from_config(config: ConfigFile) -> void:
 		set_bus_state(bus, volume, muted)
 
 
-## Save volumes to config (shared with other settings)
-## :param path: Path to config file.
-## :type path: String
-## :rtype: void
+## Save volumes to config file shared with other settings.
+##
+## A save is a commit point that remembers audible volumes even if the disk write fails.
+##
+## [param path]: Path to config file.
 func save_volumes(path: String = "") -> void:
 	if path == "":
 		path = current_config_path
@@ -674,14 +628,14 @@ func apply_all_volumes() -> void:
 		apply_volume_to_bus(bus, state["volume"], state["muted"])
 
 
-## Helper to apply a single volume to a named bus
-## :param bus_name: Name of the bus.
-## :type bus_name: String
-## :param volume: Volume level (0.0 to 1.0).
-## :type volume: float
-## :param muted: Mute flag.
-## :type muted: bool
-## :rtype: void
+## Apply a single volume and mute state to a named audio bus.
+##
+## Helper to apply a single volume to a named bus, updating the AudioServer and logging the
+## state.
+##
+## [param bus_name]: Name of the audio bus.
+## [param volume]: Volume level from 0.0 to 1.0.
+## [param muted]: Mute flag to apply.
 func apply_volume_to_bus(bus_name: String, volume: float, muted: bool) -> void:
 	# 1. Guard against null or invalid Engine access
 	if not is_instance_valid(AudioServer):

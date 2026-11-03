@@ -59,12 +59,14 @@ func _initialize_sfx_pool() -> void:
 		_sfx_pool.append(p)
 
 
-## Centralized SFX Playback API (Issue #570)
-## Handles non-positional audio with LRU caching and auto-cleanup.
-## :param sfx_name: The logical identifier (e.g., "ui_navigation" or "slider").
-## :param bus_name: Target audio bus (defaults to SFX_Menu).
-## :param pitch_scale: Pitch override for variety.
-## :param volume_db: Volume offset in decibels.
+## Plays non-positional audio using LRU caching and auto-cleanup.
+##
+## Handles centralized SFX playback with LRU caching, pool reuse, and safety checks.
+##
+## [param sfx_name]: The logical identifier such as "ui_navigation" or "slider".
+## [param bus_name]: Target audio bus, defaulting to SFX_Menu.
+## [param pitch_scale]: Pitch override used for variety.
+## [param volume_db]: Volume offset in decibels.
 func play_sfx(
 	sfx_name: String,
 	bus_name: String = AudioConstants.BUS_SFX_MENU,
@@ -175,43 +177,47 @@ func _store_in_cache(sfx_name: String, stream: AudioStream) -> void:
 	_sfx_cache[sfx_name] = stream
 
 
-## [DIAGNOSTIC]
-## Public API: Returns how many SFX streams are currently held in the LRU cache (Issue #726).
+## Returns how many SFX streams are currently held in the LRU cache.
+##
 ## Never exceeds MAX_SFX_CACHE_SIZE.
-## :rtype: int
+## Returns the total count of cached sound effects as an [code]int[/code]
 func get_cached_sfx_count() -> int:
 	return _sfx_cache.size()
 
 
-## [DIAGNOSTIC]
-## Public API: Returns true if the given logical SFX identifier has a stream in the LRU cache
-## (Issue #726). Read-only: does not refresh the entry's LRU position.
-## :param sfx_name: Logical SFX identifier (e.g., "slider").
-## :rtype: bool
+## Returns true if the given logical SFX identifier has a stream in the LRU cache.
+##
+## Read-only check that does not refresh the entry's LRU position.
+##
+## [param sfx_name]: Logical SFX identifier such as slider.
+## Returns true if the stream is cached, otherwise false.
 func is_sfx_cached(sfx_name: String) -> bool:
 	return _sfx_cache.has(sfx_name)
 
 
-## [DIAGNOSTIC]
-## Public API: Returns true if the given logical SFX identifier failed to load and is in the
-## missing-asset table, so play_sfx() short-circuits it without touching disk (Issue #726).
-## :param sfx_name: Logical SFX identifier.
-## :rtype: bool
+## Return true if the logical SFX identifier is in the missing-asset table.
+##
+## Short-circuits playback without touching disk if the asset previously failed to load.
+##
+## [param sfx_name]: Logical SFX identifier to check against the missing asset cache.
+## Returns true if the SFX is marked as missing, otherwise false.
 func is_sfx_missing(sfx_name: String) -> bool:
 	return _missing_sfx_cache.has(sfx_name)
 
 
-## [DIAGNOSTIC]
-## Public API: Returns the number of identifiers in the missing-asset table (Issue #726).
-## :rtype: int
+## Return the number of identifiers in the missing-asset table.
+##
+## Returns the number of identifiers in the missing-asset table as part of diagnostics for
+## Issue #726.
+## Returns the total count of missing sound effect identifiers.
 func get_missing_sfx_count() -> int:
 	return _missing_sfx_cache.size()
 
 
-## [DIAGNOSTIC]
-## Public API: Returns the cached SFX identifiers in LRU order, least recently used first
-## (Issue #726). The next eviction removes element 0. Returns a copy; editing it has no effect.
-## :rtype: Array[String]
+## Return the cached SFX identifiers in LRU order, least recently used first.
+##
+## Returns a copy of the cached SFX names; editing the returned array has no effect.
+## Returns an array of cached SFX identifier strings.
 func get_cached_sfx_names() -> Array[String]:
 	var names: Array[String] = []
 	for key: String in _sfx_cache.keys():
@@ -219,43 +225,41 @@ func get_cached_sfx_names() -> Array[String]:
 	return names
 
 
-## [DIAGNOSTIC]
-## Public API: Returns a copy of the pooled players array, in pool order (Issue #726).
-## Lets callers inspect per-player state (stream, bus, pitch, volume, playing).
-## Entries may be freed instances; check is_instance_valid() before use.
-## Resizing the returned array does not change the pool. Do not reconfigure the players
-## outside tests: play_sfx() owns their settings.
-## :rtype: Array[AudioStreamPlayer]
+## Return a copy of the pooled players array in pool order for inspection.
+##
+## Entries may be freed instances; check is_instance_valid before use. Resizing the returned
+## array does not change the pool.
+## Returns an array of pooled AudioStreamPlayer instances.
 func get_sfx_pool_players() -> Array[AudioStreamPlayer]:
 	return _sfx_pool.duplicate()
 
 
-## [DIAGNOSTIC]
-## Public API: Empties the stream cache and the missing-asset table (Issue #726).
-## Safe at runtime: streams reload lazily on the next play_sfx(), and previously missing
-## assets get one fresh load attempt. Does not touch the player pool; see cleanup_for_test().
-## :rtype: void
+## Empties the stream cache and missing-asset table.
+##
+## Safe at runtime: streams reload lazily on the next play_sfx(), and previously missing assets
+## get one fresh load attempt. Does not touch the player pool; see cleanup_for_test().
 func clear_diagnostic_caches() -> void:
 	_sfx_cache.clear()
 	_missing_sfx_cache.clear()
 
 
-## FOR GUT UNIT TEST ONLY
-## Seeds the LRU cache with a stream under the given key, using the same eviction rule as
-## play_sfx(). Lets tests fill the cache to MAX_SFX_CACHE_SIZE without needing that many real
-## asset files (Issue #726). Strictly guarded to no-op in production builds.
-## :param sfx_name: Cache key to seed.
-## :param stream: Stream to store under that key.
-## :rtype: void
+## Seeds the LRU cache with a stream for testing.
+##
+## FOR GUT UNIT TEST ONLY. Seeds the LRU cache with a stream under the given key, using the
+## same eviction rule as play_sfx(). Lets tests fill the cache to MAX_SFX_CACHE_SIZE without
+## needing that many real asset files (Issue #726). Strictly guarded to no-op in production
+## builds.
+##
+## [param sfx_name]: Cache key to seed.
+## [param stream]: Stream to store under that key.
 func cache_sfx_for_test(sfx_name: String, stream: AudioStream) -> void:
 	if not OS.is_debug_build():
 		return
 	_store_in_cache(sfx_name, stream)
 
 
-## [DIAGNOSTIC]
 ## Checks if any AudioStreamPlayer node within the pre-allocated pool is currently active.
-## :rtype: bool
+## Returns true if any pooled player is currently playing, otherwise false.
 func is_any_sfx_playing() -> bool:
 	for player: AudioStreamPlayer in _sfx_pool:
 		if is_instance_valid(player) and player.playing:
@@ -263,9 +267,8 @@ func is_any_sfx_playing() -> bool:
 	return false
 
 
-## [DIAGNOSTIC]
-## Returns the total number of AudioStreamPlayer channels currently active.
-## :rtype: int
+## Return the total number of AudioStreamPlayer channels currently active.
+## Returns the total number of active audio stream player channels as an integer.
 func get_active_sfx_playback_count() -> int:
 	var count: int = 0
 	for player: AudioStreamPlayer in _sfx_pool:
@@ -283,11 +286,11 @@ func stop_all_sfx() -> void:
 			player.stream = null
 
 
-## [DIAGNOSTIC]
-## Public API: Returns the resource path of the most recently started active SFX.
-## If multiple sounds are active, this returns the one most recently assigned to the pool.
-## If no sounds are playing, returns an empty string.
-## Returns String: Resource path of the active stream.
+## Returns the resource path of the most recently started active SFX.
+##
+## Iterates backwards through the pool to return the most recently added or played sound.
+## Returns an empty string if no sounds are playing.
+## Returns resource path of the active stream, or an empty string.
 func get_active_sfx_stream_path() -> String:
 	# Iterate backwards through the pool to return the most recently
 	# added/played sound, making the choice deterministic and explicit.
@@ -298,10 +301,11 @@ func get_active_sfx_stream_path() -> String:
 	return ""
 
 
-## [DIAGNOSTIC]
-## Public API: Returns the target audio bus name of the most recently started active SFX.
-## If no sounds are playing, returns an empty string.
-## Returns String: Name of the assigned audio bus.
+## Return the target audio bus name of the most recently started active SFX.
+##
+## Iterates backwards matching deterministic track verification rules. If no sounds are
+## playing, returns an empty string.
+## Returns name of the assigned audio bus, or an empty string if none are playing.
 func get_active_sfx_bus_name() -> String:
 	# Iterate backwards matching our deterministic track verification rules
 	for i in range(_sfx_pool.size() - 1, -1, -1):
