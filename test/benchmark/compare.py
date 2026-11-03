@@ -50,7 +50,8 @@ history. It still appends to --summary and writes the --write-baseline candidate
 
 A baseline file that is malformed or holds no metrics exits 2, and so does
 --update with no count baselines to gate on, so a bad file cannot reset the gate.
-A NaN or infinite metric in the results also exits 2, before anything is written.
+A non-numeric, NaN or infinite metric in the results also exits 2, before anything
+is written. A metric whose column is absent is skipped.
 
 --report-only never exits 1 and cannot be combined with --update. It still
 appends to --summary and writes the --write-baseline candidate, which the
@@ -220,7 +221,7 @@ def non_empty(value: str) -> str:
 def load_medians(results: Path) -> tuple[dict[str, float], int, dict[str, str]]:
     """Return (median per numeric column, number of runs, text info).
 
-    A column with any NaN or infinite value gets a NaN median: the median of a list
+    A column with any non-numeric cell goes into the text info. A column with any NaN or infinite value gets a NaN median: the median of a list
     holding NaN depends on its order, so it could hide the bad value.
     """
     with results.open(newline="", encoding="utf-8") as handle:
@@ -233,7 +234,7 @@ def load_medians(results: Path) -> tuple[dict[str, float], int, dict[str, str]]:
         values = [row[key] for row in rows]
         try:
             numbers = [float(v) for v in values]
-        except ValueError:
+        except (TypeError, ValueError):  # None marks a row shorter than the header.
             info[key] = values[0]
             continue
         finite = all(math.isfinite(number) for number in numbers)
@@ -577,10 +578,17 @@ def read_baseline(args: argparse.Namespace) -> dict | None:
     return doc
 
 
-def invalid_metrics(medians: dict[str, float]) -> list[str]:
-    """Return the benchmark metrics in these results that are not finite numbers."""
+def invalid_metrics(medians: dict[str, float], info: dict[str, str]) -> list[str]:
+    """Return the benchmark metrics in these results that are not finite numbers.
+
+    A metric in the text info had a non-numeric cell in at least one iteration.
+    """
     keys = [rule.key for rule in COUNT_RULES + TIMING_RULES]
-    return [key for key in keys if key in medians and not is_metric(medians[key])]
+    return [
+        key
+        for key in keys
+        if key in info or (key in medians and not is_metric(medians[key]))
+    ]
 
 
 def failing_counts(rows: list[tuple[str, str, float | None, float, str]]) -> list[str]:
@@ -624,13 +632,13 @@ def main(argv: list[str] | None = None) -> int:
     A count past its tolerance is a regression unless the profile lists it in
     PROFILE_WARN_ONLY (on web: objects_avg and nodes_avg). Those are reported
     as warnings and, like timing warnings, do not change the exit code. Neither
-    does anything under --report-only. Exit 2 means a metric in the results is NaN or
-    infinite, the baseline file is unreadable, malformed or for another profile, or
+    does anything under --report-only. Exit 2 means a metric in the results is
+    non-numeric, NaN or infinite, the baseline file is unreadable, malformed or for another profile, or
     --update has no count baselines to work from.
     """
     args = parse_args(argv)
     medians, runs, info = load_medians(args.results)
-    invalid = invalid_metrics(medians)
+    invalid = invalid_metrics(medians, info)
     if invalid:
         print(f"Invalid results in {args.results}: {invalid}", file=sys.stderr)
         return 2

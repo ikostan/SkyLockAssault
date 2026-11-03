@@ -60,7 +60,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 ### 4. Safety checks beyond the issue
 
 - **Malformed baselines exit 2:** missing or empty metrics, non-numeric values, `NaN` or oversized numbers, or a broken `history` or `seen_runs`.
-- **Non-finite results exit 2:** a `NaN` or infinite benchmark metric in any iteration stops the run before anything is written, including under `--report-only`.
+- **Invalid results exit 2:** a non-numeric, `NaN` or infinite benchmark metric in any iteration stops the run before anything is written, including under `--report-only`. A metric whose column is absent is still skipped.
 - **One file, one platform:** any `--profile` other than the file's own exits 2.
 - **`--update` refuses to reseed:** it exits 2 if the file is missing or holds no count baselines, so a bad file cannot reset the gate from the current run.
 - **Re-runs change nothing:** a run ID in `seen_runs` adds no history and raises nothing, even after it leaves `history` or carries an accept.
@@ -69,7 +69,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 ### 5. Tests (`tests/ci/test_benchmark_compare.py`)
 
 - **Existing cases:** all 95 kept unchanged.
-- **New:** 95 cases, for 190 in total, 8 of them from CodeRabbit's #1124. They cover each acceptance criterion, re-runs, malformed files, non-finite results, profile binding, report-only behaviour and option validation.
+- **New:** 108 cases, for 203 in total, 8 of them from CodeRabbit's #1124. They cover each acceptance criterion, re-runs, malformed files, invalid results, profile binding, report-only behaviour and option validation.
 
 ### 6. Other files in this PR
 
@@ -112,6 +112,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 | CodeRabbit | "Writes nothing" overstates a failing run | **Fixed:** a failing run does not update the baseline file, but still writes the summary and candidate. The note and the `compare.py` docstring now say so. |
 | CodeRabbit | Missing-count rule also implies web warn-only counts | **Fixed:** the rule now says gated counts, and that web objects and nodes are not added. |
 | CodeRabbit | Verification and assessment table disagree on CI | **Fixed:** both say it is still to confirm until CI finishes on the final commit. |
+| CodeRabbit | Non-numeric cells drop a metric from the gate | **Fixed:** reproduced a 500-save regression passing because one iteration held `n/a`. Such results now exit 2, and so does a short row, which crashed with a `TypeError`. |
 | Sourcery   | Report-only writes the candidate                                    | **Declined:** intentional, see Design Decisions.                                                                                                                                                                               |
 | Sourcery   | Workflow changed in a Python-only PR                                | **Fixed in part:** bump reverted; one removed comment remains (see Follow-ups).                                                                                                                                                |
 | Sourcery   | Missing run fails to interrupt the ratchet (#1124)                  | **Fixed:** the test now checks the baseline after `r1` and `r2`, and it moves only after `r3`. With a bug added that skips the gap, the test fails.                                                                            |
@@ -121,8 +122,8 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 
 ## Verification
 
-- **Tests:** `pytest tests/ci/test_benchmark_compare.py` gives 190 passed.
-- **Test strength:** breaking each key rule on purpose makes the tests fail: worst-of-3, the run count, the tolerance, the history size, the failing-run block, re-run handling, the file checks, the non-finite check and the profile check.
+- **Tests:** `pytest tests/ci/test_benchmark_compare.py` gives 203 passed.
+- **Test strength:** breaking each key rule on purpose makes the tests fail: worst-of-3, the run count, the tolerance, the history size, the failing-run block, re-run handling, the file checks, the invalid-results checks and the profile check.
 - **Python style:** `ruff check` and `ruff format` clean with the repo's settings.
 - **`compare.py` complexity (`radon`):** `main` 8, `update_baseline` 4, highest `render` at 14 and `compare` at 11.
 - **Doc comment files:** no non-comment lines changed in the three `.gd` files.
@@ -241,7 +242,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 
 - **@coderabbitai**
   - Posted the walkthrough, rated merge risk minimal, and flagged the unedited PR description.
-  - Posted 8 later comments: the signal docs and four note and docstring wording fixes (fixed), non-finite medians and ratchet history (both fixed differently), and rolling history (declined).
+  - Posted 9 later comments: the signal docs, non-numeric cells and four note and docstring wording fixes (fixed), non-finite medians and ratchet history (both fixed differently), and rolling history (declined).
   - Authored `866d243` Add benchmark comparison edge case tests (#1124): 5 tests, 8 cases. Reviewed by @claude (Opus 5.5): kept, with one test strengthened.
 
 - **@dependabot**

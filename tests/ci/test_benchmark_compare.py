@@ -1360,3 +1360,63 @@ def test_invalid_history_metric_rejects_update_before_writing(
     assert not output.exists()
     assert not summary.exists()
     assert not candidate.exists()
+
+
+@pytest.mark.parametrize("value", ["n/a", ""])
+@pytest.mark.parametrize("metric", ["saves", "frame_p95_ms"])
+@pytest.mark.parametrize("extra", [[], ["--report-only"]])
+def test_non_numeric_results_exit_2_and_write_nothing(
+    compare, tmp_path, capsys, value, metric, extra
+):
+    """A text or blank metric cell cannot silently drop the metric from the gate."""
+    path = write_history_file(tmp_path / "d.json")
+    before = path.read_bytes()
+    results = write_runs(tmp_path / "runs.csv", [{**BASE_METRICS, metric: value}])
+    summary = tmp_path / "summary.md"
+    candidate = tmp_path / "candidate.json"
+    args = ["--results", str(results), "--baseline", str(path)]
+    args += ["--summary", str(summary), "--write-baseline", str(candidate)]
+    assert compare.main([*args, *extra]) == 2
+    assert metric in capsys.readouterr().err
+    assert path.read_bytes() == before
+    assert not summary.exists()
+    assert not candidate.exists()
+
+
+@pytest.mark.parametrize("position", [0, 1, 2])
+def test_one_text_cell_cannot_hide_a_regression(compare, tmp_path, position):
+    """A regression in the other iterations must not pass because one cell is text."""
+    path = write_history_file(tmp_path / "d.json")
+    runs = [{**BASE_METRICS, "saves": 500.0} for _ in range(3)]
+    runs[position]["saves"] = "n/a"
+    code, doc, unchanged = update_run_rows(compare, tmp_path, runs, path)
+    assert code == 2
+    assert unchanged
+    assert doc["history"] == []
+
+
+def update_run_rows(compare, tmp_path, runs, path):
+    """Run one --update pass from several iterations; return like update_run."""
+    results = write_runs(tmp_path / "runs.csv", runs)
+    before = path.read_bytes()
+    args = ["--results", str(results), "--baseline", str(path), "--update", str(path)]
+    code = compare.main([*args, "--run-id", "r1", "--profile", "desktop"])
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    return code, doc, before == path.read_bytes()
+
+
+def test_short_results_row_exits_2_instead_of_crashing(compare, tmp_path, capsys):
+    """A truncated runs.csv row is invalid results, not a traceback."""
+    path = write_history_file(tmp_path / "d.json")
+    results = tmp_path / "runs.csv"
+    results.write_text("godot,saves,orphans_max\n4.7,0,0\n4.7,0\n", encoding="utf-8")
+    assert compare.main(["--results", str(results), "--baseline", str(path)]) == 2
+    assert "orphans_max" in capsys.readouterr().err
+
+
+def test_absent_metric_column_is_still_skipped(compare, tmp_path):
+    """A column the results do not have is not invalid; it is just not compared."""
+    path = write_history_file(tmp_path / "d.json")
+    without = {key: value for key, value in BASE_METRICS.items() if key != "saves"}
+    results = write_runs(tmp_path / "runs.csv", [without])
+    assert compare.main(["--results", str(results), "--baseline", str(path)]) == 0
