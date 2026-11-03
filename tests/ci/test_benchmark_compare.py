@@ -916,7 +916,7 @@ def test_rerun_of_a_recorded_run_changes_nothing(compare, tmp_path, capsys):
     assert doc["baseline"]["saves"] == 61.0
     assert len(doc["history"]) == 2
     assert unchanged
-    assert "Run r2 is already in the history" in capsys.readouterr().out
+    assert "Run r2 is already recorded" in capsys.readouterr().out
 
 
 def test_report_only_never_fails_and_updates_nothing(compare, tmp_path, capsys):
@@ -1031,3 +1031,109 @@ def test_manual_accept_with_nothing_failing_is_named_as_a_run(
     path = write_history_file(tmp_path / "d.json")
     update_run(compare, tmp_path, BASE_METRICS, path, "412", "desktop", accept="412")
     assert "Accept run 412 raised nothing" in capsys.readouterr().out
+
+
+def test_rerun_after_leaving_the_history_does_not_count_again(compare, tmp_path):
+    """A run older than the history still cannot be the third ratchet run."""
+    path = write_history_file(tmp_path / "d.json")
+    update_run(compare, tmp_path, GOOD_SAVES, path, "old")
+    for index in range(5):
+        update_run(compare, tmp_path, BASE_METRICS, path, f"f{index}")
+    update_run(compare, tmp_path, GOOD_SAVES, path, "n1")
+    update_run(compare, tmp_path, GOOD_SAVES, path, "n2")
+
+    _, doc, unchanged = update_run(compare, tmp_path, GOOD_SAVES, path, "old")
+
+    assert unchanged
+    assert doc["baseline"]["saves"] == 61.0
+    assert "old" not in [run["run_id"] for run in doc["history"]]
+
+
+def test_runs_already_in_a_seeded_history_count_as_seen(compare, tmp_path):
+    """A file without seen_runs takes the IDs from its history."""
+    path = write_history_file(tmp_path / "d.json", history=[BASE_METRICS])
+    assert compare.load_baseline(path)["seen_runs"] == ["old0"]
+    _, doc, _ = update_run(compare, tmp_path, BASE_METRICS, path, "old0")
+    assert [run["run_id"] for run in doc["history"]] == ["old0"]
+
+
+def test_seen_runs_keep_only_the_most_recent_ids(compare, tmp_path, monkeypatch):
+    """The list of seen runs cannot grow without limit."""
+    monkeypatch.setattr(compare, "SEEN_RUNS", 6)
+    path = write_history_file(tmp_path / "d.json")
+    for index in range(8):
+        _, doc, _ = update_run(compare, tmp_path, BASE_METRICS, path, f"r{index}")
+    assert doc["seen_runs"] == [f"r{index}" for index in range(2, 8)]
+
+
+def test_accepted_rerun_cannot_raise_the_gate_again(compare, tmp_path, capsys):
+    """Re-running an accepted run keeps the first accept and its numbers."""
+    path = write_history_file(tmp_path / "d.json")
+    first = {**BASE_METRICS, "objects_avg": 2840.0}
+    update_run(compare, tmp_path, first, path, "r1", "desktop", accept="123")
+    capsys.readouterr()
+
+    worse = {**BASE_METRICS, "objects_avg": 3000.0}
+    code, doc, unchanged = update_run(
+        compare, tmp_path, worse, path, "r1", "desktop", accept="123"
+    )
+
+    assert code == 0
+    assert unchanged
+    assert doc["baseline"]["objects_avg"] == 2840.0
+    assert doc["accepted"]["raised"]["objects_avg"]["to"] == 2840.0
+    assert doc["history"][0]["metrics"]["objects_avg"] == 2840.0
+    assert "Run r1 is already recorded" in capsys.readouterr().out
+
+
+def test_failing_rerun_without_accept_still_fails(compare, tmp_path):
+    """A recorded run that now fails exits 1 and changes nothing."""
+    path = write_history_file(tmp_path / "d.json")
+    update_run(compare, tmp_path, BASE_METRICS, path, "r1")
+    worse = {**BASE_METRICS, "saves": 64.0}
+    code, _, unchanged = update_run(compare, tmp_path, worse, path, "r1")
+    assert code == 1
+    assert unchanged
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        '{"version": 1}',
+        '{"version": 1, "metrics": {}}',
+        '{"version": 2}',
+        '{"version": 2, "baseline": {}}',
+        '{"version": 2, "baseline": []}',
+        '{"version": 2, "baseline": {"saves": "61"}}',
+        '{"version": 2, "baseline": {"saves": true}}',
+        '{"version": 2, "baseline": {"saves": NaN}}',
+        '{"version": 2, "baseline": {"saves": 1}, "history": {}}',
+        '{"version": 2, "baseline": {"saves": 1}, "history": [1]}',
+        '{"version": 2, "baseline": {"saves": 1}, "history": [{"run_id": "a"}]}',
+        '{"version": 2, "baseline": {"a": 1}, "history": [{"metrics": {"a": "x"}}]}',
+        '{"version": 2, "baseline": {"saves": 1}, "seen_runs": "a"}',
+        '{"version": 2, "baseline": {"frame_p95_ms": 1.0}}',
+    ],
+)
+def test_malformed_baseline_cannot_reset_the_gate(compare, tmp_path, content, capsys):
+    """--update exits 2 and leaves a bad file alone, whatever this run measured."""
+    path = tmp_path / "bad.json"
+    path.write_text(content, encoding="utf-8")
+    results = write_runs(tmp_path / "runs.csv", [BASE_METRICS])
+    code = compare.main(
+        [
+            "--results",
+            str(results),
+            "--baseline",
+            str(path),
+            "--update",
+            str(path),
+            "--run-id",
+            "r1",
+            "--profile",
+            "desktop",
+        ]
+    )
+    assert code == 2
+    assert path.read_text(encoding="utf-8") == content
+    assert "Cannot read the baseline" in capsys.readouterr().err

@@ -36,11 +36,16 @@ run and an existing baseline. A version 2 file holds:
   reference only until the first passing run and is then dropped.
 - history: the last 5 passing runs (run ID, commit, date, metric medians).
 - accepted: the last accept that raised a count, or null.
+- seen_runs: the IDs of the runs already recorded. A run ID is recorded only
+  once, so a re-run changes nothing, even after it has left the history.
 
 After a passing run, a count baseline drops to the worst of the last 3 runs
 if all 3 beat it by more than its tolerance. It never rises except through
 --accept, which raises only the failing counts to this run's values. A failing
 run without --accept writes nothing, so it is not added to the history.
+
+A baseline file that is malformed or holds no metrics exits 2, and so does
+--update with no count baselines to gate on, so a bad file cannot reset the gate.
 
 --report-only never exits 1 and cannot be combined with --update. It still
 appends to --summary and writes the --write-baseline candidate, which the
@@ -54,6 +59,7 @@ import copy
 import csv
 import datetime as dt
 import json
+import math
 import os
 import platform
 import statistics
@@ -66,6 +72,8 @@ BASELINE_VERSION = 1
 HISTORY_VERSION = 2
 HISTORY_RUNS = 5
 RATCHET_RUNS = 3
+# GitHub re-runs a run for up to 30 days; this covers far more merges than that.
+SEEN_RUNS = 500
 DEFAULT_TITLE = "Performance benchmark"
 
 
@@ -221,24 +229,60 @@ def load_medians(results: Path) -> tuple[dict[str, float], int, dict[str, str]]:
     return medians, len(rows), info
 
 
+def is_metric(value: object) -> bool:
+    """Return True for a finite number; a NaN baseline would never fail a run."""
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+    )
+
+
+def is_metric_map(value: object) -> bool:
+    """Return True for a dictionary whose values are all metrics."""
+    return isinstance(value, dict) and all(is_metric(v) for v in value.values())
+
+
+def baseline_problem(metrics: object, history: object, seen: object) -> str | None:
+    """Return what is wrong with these baseline fields, or None if they are usable."""
+    if not metrics or not is_metric_map(metrics):
+        return "baseline metrics are missing or invalid"
+    if not isinstance(seen, list) or not isinstance(history, list):
+        return "history or seen_runs is not a list"
+    for run in history:
+        if not isinstance(run, dict) or not is_metric_map(run.get("metrics")):
+            return "history holds an invalid run"
+    return None
+
+
+def merge_seen_runs(seen: list, history: list[dict]) -> list:
+    """Add the history's run IDs to the seen ones, for a file without seen_runs."""
+    ids = [str(run["run_id"]) for run in history if "run_id" in run]
+    return seen + [run_id for run_id in ids if run_id not in seen]
+
+
 def load_baseline(path: Path) -> dict | None:
     """Read a version 1 or 2 baseline file as version 2 (None if missing)."""
     if not path.is_file():
         return None
     raw = json.loads(path.read_text(encoding="utf-8"))
     version = raw.get("version") if isinstance(raw, dict) else None
-    if version == BASELINE_VERSION:
-        metrics = raw.get("metrics", {})
-    elif version == HISTORY_VERSION:
-        metrics = raw.get("baseline", {})
-    else:
+    if version not in (BASELINE_VERSION, HISTORY_VERSION):
         raise ValueError(f"{path}: unsupported baseline version {version!r}")
+    metrics = raw.get("metrics" if version == BASELINE_VERSION else "baseline")
+    history = raw.get("history", [])
+    seen = raw.get("seen_runs", [])
+    problem = baseline_problem(metrics, history, seen)
+    if problem:
+        raise ValueError(f"{path}: {problem}")
+
     doc = {key: value for key, value in raw.items() if key != "metrics"}
     doc.update(
         version=HISTORY_VERSION,
         baseline=metrics,
-        history=raw.get("history", []),
+        history=history,
         accepted=raw.get("accepted"),
+        seen_runs=merge_seen_runs(seen, history),
     )
     return doc
 
@@ -287,6 +331,7 @@ def record_run(doc: dict, stamp: dict[str, str], medians: dict[str, float]) -> N
     metrics = {key: medians[key] for key in keys if key in medians}
     doc["history"].append({**stamp, "metrics": metrics})
     doc["history"] = doc["history"][-HISTORY_RUNS:]
+    doc["seen_runs"] = [*doc["seen_runs"], stamp["run_id"]][-SEEN_RUNS:]
 
 
 def apply_accept(
@@ -354,18 +399,16 @@ def update_baseline(
     """Apply the accept and ratchet rules; return (new file, change lines)."""
     new = copy.deepcopy(doc)
     run_id = str(args.run_id)
-    recorded = any(str(run.get("run_id")) == run_id for run in new["history"])
-    if recorded and not failing:
-        # A re-run must not count twice toward the ratchet.
-        return new, [f"Run {run_id} is already in the history: nothing changed."]
+    if run_id in new["seen_runs"]:
+        # A re-run must not count twice toward the ratchet or raise a count again.
+        return new, [f"Run {run_id} is already recorded: nothing changed."]
 
     stamp = {
         "run_id": run_id,
         "commit": args.commit or os.environ.get("GITHUB_SHA", "unknown"),
         "date": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
-    if not recorded:
-        record_run(new, stamp, medians)
+    record_run(new, stamp, medians)
     raised, changes = apply_accept(new, failing, medians, args.accept, stamp)
     changes += ratchet_counts(new, medians, raised, args.profile)
 
@@ -513,6 +556,8 @@ def read_baseline(args: argparse.Namespace) -> dict | None:
     if args.update and doc is None:
         # Seeding from this run would silently reset the gate.
         raise ValueError(f"--update needs a baseline: {args.baseline} not found")
+    if args.update and not any(rule.key in doc["baseline"] for rule in COUNT_RULES):
+        raise ValueError(f"--update needs count baselines: {args.baseline} has none")
     return doc
 
 
@@ -558,7 +603,7 @@ def main(argv: list[str] | None = None) -> int:
     PROFILE_WARN_ONLY (on web: objects_avg and nodes_avg). Those are reported
     as warnings and, like timing warnings, do not change the exit code. Neither
     does anything under --report-only. Exit 2 means the baseline file is
-    unreadable, or missing when --update needs it.
+    unreadable or malformed, or that --update has no count baselines to work from.
     """
     args = parse_args(argv)
     medians, runs, info = load_medians(args.results)
