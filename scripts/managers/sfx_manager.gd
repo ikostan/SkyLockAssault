@@ -278,7 +278,6 @@ func get_active_sfx_playback_count() -> int:
 
 
 ## Stops all active audio layers and clears streamed audio resources across the object pool.
-## :rtype: void
 func stop_all_sfx() -> void:
 	for player: AudioStreamPlayer in _sfx_pool:
 		if is_instance_valid(player):
