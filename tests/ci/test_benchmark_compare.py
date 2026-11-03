@@ -762,7 +762,7 @@ def test_accept_raises_only_failing_counts(compare, tmp_path, capsys):
         "saves": 0.0,
     }
     code, doc, _ = update_run(
-        compare, tmp_path, run_values, path, "r1", "desktop", "--accept", "123"
+        compare, tmp_path, run_values, path, "r1", "desktop", accept="123"
     )
     assert code == 0
     assert doc["baseline"]["objects_avg"] == 2840.0
@@ -781,7 +781,7 @@ def test_accept_keeps_other_counts_on_the_ratchet(compare, tmp_path):
     path = write_history_file(tmp_path / "d.json", history=[GOOD_SAVES, GOOD_SAVES])
     run_values = {**GOOD_SAVES, "objects_avg": 2840.0}
     _, doc, _ = update_run(
-        compare, tmp_path, run_values, path, "r3", "desktop", "--accept", "123"
+        compare, tmp_path, run_values, path, "r3", "desktop", accept="123"
     )
     assert doc["baseline"]["objects_avg"] == 2840.0
     assert doc["baseline"]["saves"] == 0.0
@@ -792,7 +792,7 @@ def test_raised_baseline_is_not_ratcheted_back_by_old_history(compare, tmp_path)
     old = [BASE_METRICS, BASE_METRICS]
     path = write_history_file(tmp_path / "d.json", history=old)
     higher = {**BASE_METRICS, "objects_avg": 2840.0}
-    update_run(compare, tmp_path, higher, path, "r3", "desktop", "--accept", "123")
+    update_run(compare, tmp_path, higher, path, "r3", "desktop", accept="123")
     for index in range(3):
         _, doc, _ = update_run(compare, tmp_path, higher, path, f"r{index + 4}")
     assert doc["baseline"]["objects_avg"] == 2840.0
@@ -803,7 +803,7 @@ def test_accept_with_nothing_failing_keeps_the_last_accept(compare, tmp_path, ca
     last = {"id": "99", "raised": {"saves": {"from": 1, "to": 2}}}
     path = write_history_file(tmp_path / "d.json", accepted=last)
     code, doc, _ = update_run(
-        compare, tmp_path, BASE_METRICS, path, "r1", "desktop", "--accept", "123"
+        compare, tmp_path, BASE_METRICS, path, "r1", "desktop", accept="123"
     )
     assert code == 0
     assert doc["accepted"] == last
@@ -816,7 +816,7 @@ def test_web_warning_is_not_raised_by_accept(compare, tmp_path):
     path = write_history_file(tmp_path / "web.json")
     run_values = {**BASE_METRICS, "objects_avg": 3000.0, "resources_avg": 300.0}
     code, doc, _ = update_run(
-        compare, tmp_path, run_values, path, "r1", "web", "--accept", "123"
+        compare, tmp_path, run_values, path, "r1", "web", accept="123"
     )
     assert code == 0
     assert set(doc["accepted"]["raised"]) == {"resources_avg"}
@@ -1009,7 +1009,7 @@ def test_manual_accept_is_named_as_a_run_not_a_pr(compare, tmp_path, capsys):
     """A manual accept passes the run's own ID, so the summary says run, not #."""
     path = write_history_file(tmp_path / "d.json")
     higher = {**BASE_METRICS, "objects_avg": 2840.0}
-    update_run(compare, tmp_path, higher, path, "412", "desktop", "--accept", "412")
+    update_run(compare, tmp_path, higher, path, "412", "desktop", accept="412")
     report = capsys.readouterr().out
     assert "- objects_avg: raised to 2,840 (accepted in run 412)" in report
     assert "#412" not in report
@@ -1020,7 +1020,5 @@ def test_manual_accept_with_nothing_failing_is_named_as_a_run(
 ):
     """The nothing-to-raise line names the accept the same way."""
     path = write_history_file(tmp_path / "d.json")
-    update_run(
-        compare, tmp_path, BASE_METRICS, path, "412", "desktop", "--accept", "412"
-    )
+    update_run(compare, tmp_path, BASE_METRICS, path, "412", "desktop", accept="412")
     assert "Accept run 412 raised nothing" in capsys.readouterr().out
