@@ -1138,3 +1138,51 @@ def test_malformed_baseline_cannot_reset_the_gate(compare, tmp_path, content, ca
     assert code == 2
     assert path.read_text(encoding="utf-8") == content
     assert "Cannot read the baseline" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("value", ["nan", "inf", "-inf"])
+@pytest.mark.parametrize("metric", ["saves", "frame_p95_ms"])
+@pytest.mark.parametrize("extra", [[], ["--report-only"]])
+def test_non_finite_results_exit_2_and_write_nothing(
+    compare, tmp_path, capsys, value, metric, extra
+):
+    """A bad count or timing is a setup error, even under --report-only."""
+    path = write_history_file(tmp_path / "d.json")
+    before = path.read_bytes()
+    results = write_runs(tmp_path / "runs.csv", [{**BASE_METRICS, metric: value}])
+    summary = tmp_path / "summary.md"
+    candidate = tmp_path / "candidate.json"
+    args = ["--results", str(results), "--baseline", str(path)]
+    args += ["--summary", str(summary), "--write-baseline", str(candidate)]
+    assert compare.main([*args, *extra]) == 2
+    assert metric in capsys.readouterr().err
+    assert path.read_bytes() == before
+    assert not summary.exists()
+    assert not candidate.exists()
+
+
+def test_non_finite_results_do_not_update_the_baseline(compare, tmp_path):
+    """--update rejects the run, so it never reaches the history."""
+    path = write_history_file(tmp_path / "d.json")
+    bad = {**BASE_METRICS, "frame_p95_ms": "nan"}
+    code, doc, unchanged = update_run(compare, tmp_path, bad, path)
+    assert code == 2
+    assert unchanged
+    assert doc["history"] == []
+
+
+@pytest.mark.parametrize("position", [0, 1, 2])
+def test_one_bad_iteration_is_rejected_in_any_position(compare, tmp_path, position):
+    """The median must not hide a NaN, whichever iteration it came from."""
+    path = write_history_file(tmp_path / "d.json")
+    runs = [dict(BASE_METRICS) for _ in range(3)]
+    runs[position]["saves"] = "nan"
+    results = write_runs(tmp_path / "runs.csv", runs)
+    assert compare.main(["--results", str(results), "--baseline", str(path)]) == 2
+
+
+def test_non_finite_column_outside_the_rules_is_ignored(compare, tmp_path):
+    """Only the metrics the gate uses can stop a run."""
+    path = write_history_file(tmp_path / "d.json")
+    results = write_runs(tmp_path / "runs.csv", [{**BASE_METRICS, "other": "nan"}])
+    assert compare.main(["--results", str(results), "--baseline", str(path)]) == 0

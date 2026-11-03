@@ -46,6 +46,7 @@ run without --accept writes nothing, so it is not added to the history.
 
 A baseline file that is malformed or holds no metrics exits 2, and so does
 --update with no count baselines to gate on, so a bad file cannot reset the gate.
+A NaN or infinite metric in the results also exits 2, before anything is written.
 
 --report-only never exits 1 and cannot be combined with --update. It still
 appends to --summary and writes the --write-baseline candidate, which the
@@ -213,7 +214,11 @@ def non_empty(value: str) -> str:
 
 
 def load_medians(results: Path) -> tuple[dict[str, float], int, dict[str, str]]:
-    """Return (median per numeric column, number of runs, text info)."""
+    """Return (median per numeric column, number of runs, text info).
+
+    A column with any NaN or infinite value gets a NaN median: the median of a list
+    holding NaN depends on its order, so it could hide the bad value.
+    """
     with results.open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
     if not rows:
@@ -223,9 +228,12 @@ def load_medians(results: Path) -> tuple[dict[str, float], int, dict[str, str]]:
     for key in rows[0]:
         values = [row[key] for row in rows]
         try:
-            medians[key] = statistics.median(float(v) for v in values)
+            numbers = [float(v) for v in values]
         except ValueError:
             info[key] = values[0]
+            continue
+        finite = all(math.isfinite(number) for number in numbers)
+        medians[key] = statistics.median(numbers) if finite else math.nan
     return medians, len(rows), info
 
 
@@ -562,6 +570,12 @@ def read_baseline(args: argparse.Namespace) -> dict | None:
     return doc
 
 
+def invalid_metrics(medians: dict[str, float]) -> list[str]:
+    """Return the benchmark metrics in these results that are not finite numbers."""
+    keys = [rule.key for rule in COUNT_RULES + TIMING_RULES]
+    return [key for key in keys if key in medians and not is_metric(medians[key])]
+
+
 def failing_counts(rows: list[tuple[str, str, float | None, float, str]]) -> list[str]:
     """Return the keys of the counts that failed in these report rows."""
     labels = {row[1] for row in rows if row[4] == FAIL}
@@ -603,11 +617,16 @@ def main(argv: list[str] | None = None) -> int:
     A count past its tolerance is a regression unless the profile lists it in
     PROFILE_WARN_ONLY (on web: objects_avg and nodes_avg). Those are reported
     as warnings and, like timing warnings, do not change the exit code. Neither
-    does anything under --report-only. Exit 2 means the baseline file is
-    unreadable or malformed, or that --update has no count baselines to work from.
+    does anything under --report-only. Exit 2 means a metric in the results is NaN or
+    infinite, the baseline file is unreadable or malformed, or --update has no count
+    baselines to work from.
     """
     args = parse_args(argv)
     medians, runs, info = load_medians(args.results)
+    invalid = invalid_metrics(medians)
+    if invalid:
+        print(f"Invalid results in {args.results}: {invalid}", file=sys.stderr)
+        return 2
 
     try:
         baseline_doc = read_baseline(args)
