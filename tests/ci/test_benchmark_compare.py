@@ -206,6 +206,143 @@ def test_web_profile_allows_node_noise_desktop_does_not(compare, tmp_path):
     assert compare.main([*args, "--profile", "desktop"]) == 1
 
 
+# Web medians from two main runs with no code change between them: run
+# 41155653694 (400d734, fast runner) and run 41274707348 (c480f53, slower one).
+WEB_FAST_RUNNER = {"objects_avg": 2222.55, "nodes_avg": 458.95}
+WEB_SLOW_RUNNER = {"objects_avg": 2309.267, "nodes_avg": 519.367}
+
+
+def test_web_runner_speed_counts_only_warn(compare, tmp_path, capsys):
+    """The real fast-to-slow runner swing warns on web and fails on desktop."""
+    baseline = {**BASE_METRICS, **WEB_FAST_RUNNER}
+    current = {**BASE_METRICS, **WEB_SLOW_RUNNER}
+    results = write_runs(tmp_path / "runs.csv", [current] * 3)
+    base_path = write_baseline(tmp_path / "baseline_ci.json", baseline)
+    args = ["--results", str(results), "--baseline", str(base_path)]
+
+    assert compare.main([*args, "--profile", "web"]) == 0
+    report = capsys.readouterr().out
+    assert "| ⚠️ | OBJECT_COUNT avg | count |" in report
+    assert "| ⚠️ | OBJECT_NODE_COUNT avg | count |" in report
+    assert "Regressions: 0. Warnings: 2." in report
+
+    assert compare.main([*args, "--profile", "desktop"]) == 1
+    assert "Regressions: 2." in capsys.readouterr().out
+
+
+def test_web_warnings_do_not_hide_a_gated_failure_in_summary(compare, tmp_path, capsys):
+    """A web count warning and a timing warning coexist with a failing leak gate."""
+    current = {
+        **BASE_METRICS,
+        "objects_avg": BASE_METRICS["objects_avg"] + 26,
+        "reload_orphans_max": 1,
+        "frame_p95_ms": 30,
+    }
+    results = write_runs(tmp_path / "runs.csv", [current])
+    base_path = write_baseline(tmp_path / "baseline.json", BASE_METRICS)
+    summary = tmp_path / "summary.md"
+    summary.write_text("existing\n", encoding="utf-8")
+
+    assert (
+        compare.main(
+            [
+                "--results",
+                str(results),
+                "--baseline",
+                str(base_path),
+                "--profile",
+                "web",
+                "--summary",
+                str(summary),
+            ]
+        )
+        == 1
+    )
+    report = capsys.readouterr().out
+    assert "| ⚠️ | OBJECT_COUNT avg | count |" in report
+    assert "| ❌ | Orphan nodes, reload loop (max) | count |" in report
+    assert "| ⚠️ | Frame interval p95 (ms) | timing |" in report
+    assert "Regressions: 1. Warnings: 2." in report
+    assert "On web, OBJECT_COUNT avg and OBJECT_NODE_COUNT avg only warn:" in report
+    assert summary.read_text(encoding="utf-8") == "existing\n" + report
+
+
+@pytest.mark.parametrize("metric", ["objects_avg", "nodes_avg"])
+def test_web_warn_only_counts_distinguish_missing_and_zero_baselines(compare, metric):
+    """Missing counts remain new, while zero is a real baseline that can warn."""
+    current = {metric: 100.0}
+    assert compare.compare(current, None, "web")[0][-1] == "new"
+    assert compare.compare(current, {}, "web")[0][-1] == "new"
+    assert compare.compare(current, {metric: 0.0}, "web")[0][-1] == "warn"
+
+
+@pytest.mark.parametrize("metric, tolerance", [("objects_avg", 25), ("nodes_avg", 15)])
+@pytest.mark.parametrize("worse_runs, status", [(1, "✅"), (2, "⚠️")])
+def test_web_count_warning_uses_median(
+    compare, tmp_path, capsys, metric, tolerance, worse_runs, status
+):
+    """Only a median above the tolerance generates a web count warning."""
+    baseline = {metric: 100.0}
+    runs = [baseline] * (3 - worse_runs) + [{metric: 101.0 + tolerance}] * worse_runs
+    results = write_runs(tmp_path / "runs.csv", runs)
+    base_path = write_baseline(tmp_path / "baseline.json", baseline)
+
+    assert (
+        compare.main(
+            [
+                "--results",
+                str(results),
+                "--baseline",
+                str(base_path),
+                "--profile",
+                "web",
+            ]
+        )
+        == 0
+    )
+    report = capsys.readouterr().out
+    label = "OBJECT_COUNT avg" if metric == "objects_avg" else "OBJECT_NODE_COUNT avg"
+    assert f"| {status} | {label} | count |" in report
+    assert f"Regressions: 0. Warnings: {int(worse_runs == 2)}." in report
+
+
+@pytest.mark.parametrize("metric", ["objects_avg", "nodes_avg"])
+def test_web_warn_only_counts_still_report_ok_and_better(compare, metric):
+    """Warn-only changes only a failure; ok and better are reported as before."""
+    baseline = {metric: WEB_SLOW_RUNNER[metric]}
+    assert compare.compare(dict(baseline), baseline, "web")[0][-1] == "ok"
+    faster = {metric: WEB_FAST_RUNNER[metric]}
+    assert compare.compare(faster, baseline, "web")[0][-1] == "better"
+
+
+@pytest.mark.parametrize(
+    "metric", ["saves", "resources_avg", "orphans_max", "reload_object_growth"]
+)
+def test_web_keeps_gating_leak_counts(compare, metric):
+    """On web, only objects and nodes are warn-only; leak counts still fail."""
+    baseline = {metric: 0.0}
+    rows = compare.compare({metric: 100.0}, baseline, "web")
+    assert rows[0][-1] == "fail"
+
+
+@pytest.mark.parametrize(
+    ("profile", "has_note"), [("web", True), ("desktop", False), (None, False)]
+)
+def test_report_names_warn_only_counts(compare, tmp_path, capsys, profile, has_note):
+    """The web report says which counts only warn, so a count warning is clear."""
+    results = write_runs(tmp_path / "runs.csv", [BASE_METRICS])
+    base_path = write_baseline(tmp_path / "baseline_ci.json", BASE_METRICS)
+    args = ["--results", str(results), "--baseline", str(base_path)]
+    if profile:
+        args += ["--profile", profile]
+    assert compare.main(args) == 0
+    note = (
+        "On web, OBJECT_COUNT avg and OBJECT_NODE_COUNT avg only warn: "
+        "they follow runner speed."
+    )
+    assert (note in capsys.readouterr().out) is has_note
+
+
 @pytest.mark.parametrize(
     ("profile", "metric", "tolerance"),
     [
@@ -230,7 +367,12 @@ def test_web_profile_allows_node_noise_desktop_does_not(compare, tmp_path):
 def test_profile_count_boundaries(
     compare, profile, metric, tolerance, relative_change, expected_status
 ):
-    """The limit is inclusive in both directions for each profile."""
+    """The limit is inclusive in both directions for each profile.
+
+    Past the limit, web nodes_avg warns instead of failing (warn-only on web).
+    """
+    if expected_status == "fail" and (profile, metric) == ("web", "nodes_avg"):
+        expected_status = "warn"
     baseline = {metric: 100.0}
     current = {metric: 100.0 + tolerance * relative_change}
     rows = compare.compare(current, baseline, profile)
@@ -250,12 +392,17 @@ def test_profile_count_boundaries(
     ],
 )
 def test_profiles_preserve_other_count_limits(compare, profile, metric, tolerance):
-    """Profiles do not widen limits for unrelated count metrics."""
+    """Profiles do not widen limits for unrelated count metrics.
+
+    The limit stays the same everywhere; past it, web objects_avg warns instead
+    of failing (warn-only on web).
+    """
+    above_status = "warn" if (profile, metric) == ("web", "objects_avg") else "fail"
     baseline = {metric: 100.0}
     at_limit = {metric: 100.0 + tolerance}
     above_limit = {metric: 100.0 + tolerance + 0.1}
     assert compare.compare(at_limit, baseline, profile)[0][-1] == "ok"
-    assert compare.compare(above_limit, baseline, profile)[0][-1] == "fail"
+    assert compare.compare(above_limit, baseline, profile)[0][-1] == above_status
 
 
 def test_zero_tolerance_override_is_respected(compare):
@@ -286,16 +433,20 @@ def test_invalid_profile_is_rejected(compare, capsys):
 
 
 @pytest.mark.parametrize(
-    ("profile", "baseline_name", "metric", "tolerance"),
+    ("profile", "baseline_name", "metric", "tolerance", "gated"),
     [
-        ("desktop", "baseline_ci.json", "reload_object_growth", 10),
-        ("web", "baseline_web_ci.json", "nodes_avg", 15),
+        ("desktop", "baseline_ci.json", "reload_object_growth", 10, True),
+        ("web", "baseline_web_ci.json", "nodes_avg", 15, False),
+        ("web", "baseline_web_ci.json", "reload_object_growth", 1, True),
     ],
 )
 def test_committed_baseline_and_profile_gate(
-    compare, tmp_path, capsys, profile, baseline_name, metric, tolerance
+    compare, tmp_path, capsys, profile, baseline_name, metric, tolerance, gated
 ):
-    """Each committed CI baseline supplies all metrics and enforces its limit."""
+    """Each committed CI baseline supplies all metrics and enforces its limit.
+
+    Past the limit a gated metric fails; web nodes_avg only warns.
+    """
     baseline_path = PROJECT_ROOT / "test/benchmark" / baseline_name
     doc = json.loads(baseline_path.read_text(encoding="utf-8"))
     metrics = doc["metrics"]
@@ -332,8 +483,12 @@ def test_committed_baseline_and_profile_gate(
     assert compare.main(args) == 0
     assert "Regressions: 0." in capsys.readouterr().out
     write_runs(results, [{**metrics, metric: metrics[metric] + tolerance + 1}])
-    assert compare.main(args) == 1
-    assert "Regressions: 1." in capsys.readouterr().out
+    if gated:
+        assert compare.main(args) == 1
+        assert "Regressions: 1." in capsys.readouterr().out
+    else:
+        assert compare.main(args) == 0
+        assert "Regressions: 0. Warnings: 1." in capsys.readouterr().out
 
 
 @pytest.mark.parametrize(
