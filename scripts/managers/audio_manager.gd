@@ -9,12 +9,14 @@
 extends Node
 
 # --- NEW SIGNALS FOR WEB BRIDGE & UI SYNC ---
-## Emitted when the volume of an audio bus changes.
+## Emitted on every successful volume assignment to a known bus, including when the value
+## is unchanged. Subscribers must not assume the level differs from the previous one.
 ##
 ## [param bus_name]: The name of the audio bus.
-## [param volume]: The new volume level in decibels or linear scale.
+## [param volume]: The new linear volume, nominally 0.0 to 1.0 (not decibels).
 signal volume_changed(bus_name: String, volume: float)
-## Emitted when the mute state of an audio bus changes.
+## Emitted on every successful mute assignment to a known bus, including when the state is
+## unchanged. Subscribers must not assume the state differs from the previous one.
 ##
 ## [param bus_name]: The name of the audio bus.
 ## [param is_muted]: True if the bus is muted, false otherwise.
@@ -297,15 +299,51 @@ func toggle_mute(bus_name: String, muted: bool, is_manual_interaction: bool = fa
 	_sync_bus_or_defer(bus_name)
 
 
-## Applies the near-zero auto-mute rule and volume change to a bus.
+## Single volume entry point that applies the near-zero auto-mute rule (Issue #1039, epic #725).
+## Runs with no menu in the tree, and callers state their intent instead of the code guessing
+## it from slider focus:
+##   1. The previous volume is read, then the new one is stored (volume_changed fires) and
+##      written to AudioServer with the bus's current mute flag. Exception (Issues #1075,
+##      #1047): while a confirmation click is streaming, an at-or-below-threshold value on a
+##      feedback-path bus keeps the mixer at FEEDBACK_HOLD_VOLUME_LINEAR instead, so a
+##      follow-up near-zero update cannot hard-mute the bus under the click.
+##      Above-threshold values always apply immediately.
+##   2. The rule is edge-triggered on AUTO_MUTE_VOLUME_THRESHOLD crossings (Issue #1040):
+##      - crossing down (old > T, new <= T) on an unmuted bus -> auto-mute;
+##      - crossing up (old <= T, new > T) on a muted bus -> auto-unmute.
+##      Anything else leaves the mute flag alone, so a mute the player chose at an audible
+##      volume survives any volume change that stays above the threshold, and repeated
+##      near-zero updates are no-ops. No extra state: the previous volume is enough, so the
+##      rule survives restarts.
+##      Accepted corner case: a bus muted with its button at 0.8, then set to 0 and back up,
+##      is unmuted on the way up; at zero, an explicit mute and an auto-mute look the same.
+##   3. Manual interactions play the SFX_CHECK confirmation click on a transition.
+##      Programmatic calls (web bridge, cutscenes, sync loops) are always silent.
+##   4. A manual auto-mute (inside the tree) of any bus on the click's feedback path holds
+##      that bus at FEEDBACK_HOLD_VOLUME_LINEAR until every confirmation click still streaming
+##      has finished (each click opens a MUTE_HARDWARE_DELAY window; Issue #1047). The path is
+##      the click bus (SFX_Menu) and every bus it sends to; today SFX_Menu, SFX and Master.
+##      Buses off the path (Music, SFX_Weapon, SFX_Rotors) need no hold: muting them never
+##      silences the click. A bus the player had already muted is never unmuted for a click.
+##      Accepted trade-off: other sounds on a held bus play at the hold level for the delay.
+##   5. Once an auto-mute settles (after the hold, or right away without one), AudioServer is
+##      re-synced from the manager's current state, so is_bus_mute() always matches
+##      get_muted() (Issue #1041). The re-sync re-reads state instead of writing a fixed value,
+##      so a late timer after a newer change or unmute just re-applies that newer state:
+##      no generation token is needed. For a feedback-path bus the re-sync waits until the
+##      last click window closes, so an earlier timer never cuts a later click short, on the
+##      same bus or another bus on the path (Issues #1075, #1047).
+##   6. Auto-unmute (any bus, manual or programmatic) applies the unmuted state to
+##      AudioServer immediately.
+## Does not save: persistence stays with callers (slider debounce, web bridge).
+## The raw setters (set_volume, set_bus_state, load_volumes, reset_volumes) never apply this.
+## Await it only if you need a manual feedback-path hold (Master, SFX, SFX_Menu) to have
+## finished; every other call returns without waiting.
 ##
-## Handles volume entry with auto-mute and auto-unmute threshold crossing logic, optional
-## confirmation clicks, and feedback-path holds.
-##
-## [param bus_name]: Name of the bus to modify.
-## [param volume]: Volume level from 0.0 to 1.0.
-## [param is_manual_interaction]: True for real user input with feedback-path hold; false for
-## programmatic callers.
+## [param bus_name]: Name of the bus.
+## [param volume]: Volume level (0.0 to 1.0).
+## [param is_manual_interaction]: True for real user input (click + feedback-path hold);
+## false for programmatic callers (silent, no hold).
 func change_volume(bus_name: String, volume: float, is_manual_interaction: bool = false) -> void:
 	if not AudioConstants.BUS_CONFIG.has(bus_name):
 		Globals.log_message("Unknown bus for change_volume: " + bus_name, Globals.LogLevel.WARNING)
