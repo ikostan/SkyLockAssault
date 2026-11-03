@@ -190,8 +190,6 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
     - Wrote the version 2 format, ratchet, rolling reference, accept rule, new options and summary lines from #1109 and the design doc.
     - Found that "report-only writes nothing" conflicts with the accept check, and that a manual accept needs `--commit`.
     - Added the re-run check, the missing-file check and the option validation.
-  - **Tests**
-    - Wrote the 65 new cases and checked them by breaking each key rule on purpose.
   - **Review findings**
     - Split `update_baseline` and `main` for DeepSource and compared old and new code over 2,048 randomised runs.
     - Reproduced each Qodo bug in `compare.py` before fixing it (malformed file, accepted re-run, older re-run, oversized number) and strengthened the post-accept ratchet test.
