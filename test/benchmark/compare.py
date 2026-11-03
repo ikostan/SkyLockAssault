@@ -281,6 +281,68 @@ def accept_name(accept: str, run_id: str) -> str:
     return f"run {accept}" if accept == run_id else f"#{accept}"
 
 
+def record_run(doc: dict, stamp: dict[str, str], medians: dict[str, float]) -> None:
+    """Add this run to the history, keeping only the most recent runs."""
+    keys = [rule.key for rule in COUNT_RULES + TIMING_RULES]
+    metrics = {key: medians[key] for key in keys if key in medians}
+    doc["history"].append({**stamp, "metrics": metrics})
+    doc["history"] = doc["history"][-HISTORY_RUNS:]
+
+
+def apply_accept(
+    doc: dict,
+    failing: list[str],
+    medians: dict[str, float],
+    accept_id: str | None,
+    stamp: dict[str, str],
+) -> tuple[set[str], list[str]]:
+    """Raise the failing counts to this run; return (raised keys, change lines)."""
+    if not accept_id:
+        return set(), []
+    accept = accept_name(accept_id, stamp["run_id"])
+    if not failing:
+        return set(), [f"Accept {accept} raised nothing: no count failed."]
+    baseline = doc["baseline"]
+    raised = {key: {"from": baseline[key], "to": medians[key]} for key in failing}
+    baseline.update({key: medians[key] for key in failing})
+    doc["accepted"] = {"id": accept_id, **stamp, "raised": raised}
+    changes = [
+        f"{key}: raised to {fmt(medians[key])} (accepted in {accept})"
+        for key in failing
+    ]
+    return set(failing), changes
+
+
+def move_count(
+    rule: CountRule, doc: dict, medians: dict[str, float], profile: str | None
+) -> str | None:
+    """Add or ratchet one count baseline; return its change line, if any."""
+    baseline = doc["baseline"]
+    base = baseline.get(rule.key)
+    if base is None:
+        baseline[rule.key] = medians[rule.key]
+        return f"{rule.key}: added at {fmt(medians[rule.key])} (new metric)"
+    target = ratchet_count(rule, base, doc["history"], profile)
+    if target is None:
+        return None
+    baseline[rule.key] = target
+    return (
+        f"{rule.key}: {fmt(base)} → {fmt(target)} ({RATCHET_RUNS} runs past tolerance)"
+    )
+
+
+def ratchet_counts(
+    doc: dict, medians: dict[str, float], raised: set[str], profile: str | None
+) -> list[str]:
+    """Apply the ratchet to every gated count that was not just raised."""
+    skipped = raised | PROFILE_WARN_ONLY.get(profile or "", frozenset())
+    rules = [
+        rule for rule in COUNT_RULES if rule.key in medians and rule.key not in skipped
+    ]
+    lines = [move_count(rule, doc, medians, profile) for rule in rules]
+    return [line for line in lines if line]
+
+
 def update_baseline(
     doc: dict,
     medians: dict[str, float],
@@ -297,63 +359,21 @@ def update_baseline(
         # A re-run must not count twice toward the ratchet.
         return new, [f"Run {run_id} is already in the history: nothing changed."]
 
-    now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    commit = args.commit or os.environ.get("GITHUB_SHA", "unknown")
-    keys = [rule.key for rule in COUNT_RULES + TIMING_RULES]
+    stamp = {
+        "run_id": run_id,
+        "commit": args.commit or os.environ.get("GITHUB_SHA", "unknown"),
+        "date": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
     if not recorded:
-        new["history"].append(
-            {
-                "run_id": run_id,
-                "commit": commit,
-                "date": now,
-                "metrics": {key: medians[key] for key in keys if key in medians},
-            }
-        )
-        new["history"] = new["history"][-HISTORY_RUNS:]
-
-    baseline = new["baseline"]
-    changes: list[str] = []
-    raised: dict[str, dict[str, float]] = {}
-    accept = accept_name(str(args.accept), run_id)
-    for key in failing:
-        raised[key] = {"from": baseline[key], "to": medians[key]}
-        baseline[key] = medians[key]
-        changes.append(f"{key}: raised to {fmt(medians[key])} (accepted in {accept})")
-    if raised:
-        new["accepted"] = {
-            "id": str(args.accept),
-            "run_id": run_id,
-            "commit": commit,
-            "date": now,
-            "raised": raised,
-        }
-    elif args.accept:
-        changes.append(f"Accept {accept} raised nothing: no count failed.")
-
-    warn_only = PROFILE_WARN_ONLY.get(args.profile or "", frozenset())
-    for rule in COUNT_RULES:
-        if rule.key in warn_only or rule.key in raised or rule.key not in medians:
-            continue
-        base = baseline.get(rule.key)
-        if base is None:
-            baseline[rule.key] = medians[rule.key]
-            changes.append(
-                f"{rule.key}: added at {fmt(medians[rule.key])} (new metric)"
-            )
-            continue
-        target = ratchet_count(rule, base, new["history"], args.profile)
-        if target is not None:
-            baseline[rule.key] = target
-            changes.append(
-                f"{rule.key}: {fmt(base)} → {fmt(target)} "
-                f"({RATCHET_RUNS} runs past tolerance)"
-            )
+        record_run(new, stamp, medians)
+    raised, changes = apply_accept(new, failing, medians, args.accept, stamp)
+    changes += ratchet_counts(new, medians, raised, args.profile)
 
     for key in rolling_keys(args.profile) & set(medians):
-        baseline.pop(key, None)
+        new["baseline"].pop(key, None)
     new.update(
-        created=now,
-        commit=commit,
+        created=stamp["date"],
+        commit=stamp["commit"],
         runner=os.environ.get("RUNNER_NAME", platform.platform()),
         godot=info.get("godot", "unknown"),
         runs=runs,
@@ -487,6 +507,49 @@ def build_baseline(medians: dict[str, float], runs: int, info: dict[str, str]) -
     }
 
 
+def read_baseline(args: argparse.Namespace) -> dict | None:
+    """Load the baseline; raise ValueError if it is unusable for this run."""
+    doc = load_baseline(args.baseline)
+    if args.update and doc is None:
+        # Seeding from this run would silently reset the gate.
+        raise ValueError(f"--update needs a baseline: {args.baseline} not found")
+    return doc
+
+
+def failing_counts(rows: list[tuple[str, str, float | None, float, str]]) -> list[str]:
+    """Return the keys of the counts that failed in these report rows."""
+    labels = {row[1] for row in rows if row[4] == FAIL}
+    return [rule.key for rule in COUNT_RULES if rule.label in labels]
+
+
+def finish_report(report: str, changes: list[str], report_only: bool) -> str:
+    """Add the baseline changes and the report-only note to the report."""
+    if changes:
+        items = "\n".join(f"- {line}" for line in changes)
+        report += f"\nBaseline changes:\n\n{items}\n"
+    if report_only:
+        report += "\nReport only: this run does not fail or update the baseline.\n"
+    return report
+
+
+def write_outputs(
+    args: argparse.Namespace,
+    report: str,
+    candidate: dict,
+    updated: dict | None,
+) -> None:
+    """Write the summary, the baseline candidate and the updated baseline."""
+    if args.summary:
+        with args.summary.open("a", encoding="utf-8") as handle:
+            handle.write(report + "\n")
+    if args.write_baseline:
+        args.write_baseline.write_text(json.dumps(candidate, indent=2) + "\n", "utf-8")
+        print(f"Wrote baseline candidate: {args.write_baseline}")
+    if updated is not None:
+        args.update.write_text(json.dumps(updated, indent=2) + "\n", "utf-8")
+        print(f"Wrote updated baseline: {args.update}")
+
+
 def main(argv: list[str] | None = None) -> int:
     """
     Compare results with the baseline; exit 1 on an unaccepted count regression.
@@ -501,19 +564,13 @@ def main(argv: list[str] | None = None) -> int:
     medians, runs, info = load_medians(args.results)
 
     try:
-        baseline_doc = load_baseline(args.baseline)
+        baseline_doc = read_baseline(args)
     except ValueError as err:
         print(f"Cannot read the baseline: {err}", file=sys.stderr)
         return 2
-    if args.update and baseline_doc is None:
-        # Seeding from this run would silently reset the gate.
-        print(f"--update needs a baseline: {args.baseline} not found", file=sys.stderr)
-        return 2
 
-    reference = build_reference(baseline_doc, args.profile)
-    rows = compare(medians, reference, args.profile)
-    failed_labels = {row[1] for row in rows if row[4] == FAIL}
-    failing = [rule.key for rule in COUNT_RULES if rule.label in failed_labels]
+    rows = compare(medians, build_reference(baseline_doc, args.profile), args.profile)
+    failing = failing_counts(rows)
     blocked = bool(failing) and not args.accept
 
     updated, changes = None, []
@@ -523,22 +580,9 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     report = render(rows, runs, baseline_doc, args.title, args.profile)
-    if changes:
-        items = "\n".join(f"- {line}" for line in changes)
-        report += f"\nBaseline changes:\n\n{items}\n"
-    if args.report_only:
-        report += "\nReport only: this run does not fail or update the baseline.\n"
+    report = finish_report(report, changes, args.report_only)
     print(report)
-    if args.summary:
-        with args.summary.open("a", encoding="utf-8") as handle:
-            handle.write(report + "\n")
-    if args.write_baseline:
-        doc = build_baseline(medians, runs, info)
-        args.write_baseline.write_text(json.dumps(doc, indent=2) + "\n", "utf-8")
-        print(f"Wrote baseline candidate: {args.write_baseline}")
-    if updated is not None:
-        args.update.write_text(json.dumps(updated, indent=2) + "\n", "utf-8")
-        print(f"Wrote updated baseline: {args.update}")
+    write_outputs(args, report, build_baseline(medians, runs, info), updated)
 
     return 1 if blocked and not args.report_only else 0
 
