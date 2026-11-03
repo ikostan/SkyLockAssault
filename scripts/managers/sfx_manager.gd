@@ -286,14 +286,14 @@ func stop_all_sfx() -> void:
 			player.stream = null
 
 
-## Returns the resource path of the most recently started active SFX.
+## Returns the resource path of the active SFX with the highest pool index.
 ##
-## Iterates backwards through the pool to return the most recently added or played sound.
-## Returns an empty string if no sounds are playing.
-## Returns resource path of the active stream, or an empty string.
+## Scans the pool backwards, so the result is deterministic but is not start order: play_sfx()
+## reuses the first idle player, so a newer sound on a lower index is not the one returned.
+## Returns the resource path of that stream, or an empty string if no sounds are playing.
 func get_active_sfx_stream_path() -> String:
-	# Iterate backwards through the pool to return the most recently
-	# added/played sound, making the choice deterministic and explicit.
+	# Iterate backwards through the pool so the choice is deterministic.
+	# Pool index does not reflect start order; see the docstring.
 	for i in range(_sfx_pool.size() - 1, -1, -1):
 		var player: AudioStreamPlayer = _sfx_pool[i]
 		if is_instance_valid(player) and player.playing and player.stream:
@@ -301,13 +301,14 @@ func get_active_sfx_stream_path() -> String:
 	return ""
 
 
-## Return the target audio bus name of the most recently started active SFX.
+## Returns the target audio bus name of the active SFX with the highest pool index.
 ##
-## Iterates backwards matching deterministic track verification rules. If no sounds are
-## playing, returns an empty string.
-## Returns name of the assigned audio bus, or an empty string if none are playing.
+## Scans the pool backwards, so the result is deterministic but is not start order: play_sfx()
+## reuses the first idle player, so a newer sound on a lower index is not the one returned.
+## Returns the name of that player's bus, or an empty string if no sounds are playing.
 func get_active_sfx_bus_name() -> String:
-	# Iterate backwards matching our deterministic track verification rules
+	# Iterate backwards through the pool so the choice is deterministic.
+	# Pool index does not reflect start order; see the docstring.
 	for i in range(_sfx_pool.size() - 1, -1, -1):
 		var player: AudioStreamPlayer = _sfx_pool[i]
 		if is_instance_valid(player) and player.playing:
