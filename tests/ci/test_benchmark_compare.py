@@ -788,14 +788,23 @@ def test_accept_keeps_other_counts_on_the_ratchet(compare, tmp_path):
 
 
 def test_raised_baseline_is_not_ratcheted_back_by_old_history(compare, tmp_path):
-    """Runs from before the accept cannot undo it on the following runs."""
+    """Pre-accept runs cannot lower a raised baseline; only 3 newer runs can."""
     old = [BASE_METRICS, BASE_METRICS]
     path = write_history_file(tmp_path / "d.json", history=old)
     higher = {**BASE_METRICS, "objects_avg": 2840.0}
     update_run(compare, tmp_path, higher, path, "r3", "desktop", accept="123")
-    for index in range(3):
-        _, doc, _ = update_run(compare, tmp_path, higher, path, f"r{index + 4}")
-    assert doc["baseline"]["objects_avg"] == 2840.0
+
+    # Each run beats 2840 by more than the tolerance of 25. The accepted run is
+    # still among the last 3 for the first two, so the baseline must hold.
+    for run_id, objects in (("r4", 2700.0), ("r5", 2650.0)):
+        lower = {**BASE_METRICS, "objects_avg": objects}
+        _, doc, _ = update_run(compare, tmp_path, lower, path, run_id)
+        assert doc["baseline"]["objects_avg"] == 2840.0
+
+    # Three post-accept runs now qualify, so it drops to the worst of them.
+    lowest = {**BASE_METRICS, "objects_avg": 2600.0}
+    _, doc, _ = update_run(compare, tmp_path, lowest, path, "r6")
+    assert doc["baseline"]["objects_avg"] == 2700.0
 
 
 def test_accept_with_nothing_failing_keeps_the_last_accept(compare, tmp_path, capsys):
