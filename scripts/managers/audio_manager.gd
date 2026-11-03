@@ -9,18 +9,24 @@
 extends Node
 
 # --- NEW SIGNALS FOR WEB BRIDGE & UI SYNC ---
-## Emitted on every successful volume assignment to a known bus, including when the value
-## is unchanged. Subscribers must not assume the level differs from the previous one.
+## Emitted by set_volume() for a known bus, including calls through set_bus_state() and
+## change_volume(), even when the value is unchanged. Direct assignments such as
+## AudioManager.master_volume = 0.5 do not emit it. Subscribers must not assume the level
+## differs from the previous one.
 ##
 ## [param bus_name]: The name of the audio bus.
 ## [param volume]: The new linear volume, nominally 0.0 to 1.0 (not decibels).
 signal volume_changed(bus_name: String, volume: float)
-## Emitted on every successful mute assignment to a known bus, including when the state is
-## unchanged. Subscribers must not assume the state differs from the previous one.
+
+## Emitted by set_muted() for a known bus, including calls through set_bus_state(),
+## toggle_mute() and change_volume(), even when the state is unchanged. Direct assignments
+## such as AudioManager.master_muted = true do not emit it. Subscribers must not assume the
+## state differs from the previous one.
 ##
 ## [param bus_name]: The name of the audio bus.
 ## [param is_muted]: True if the bus is muted, false otherwise.
 signal mute_toggled(bus_name: String, is_muted: bool)
+
 # --------------------------------------------
 ## Emitted when the last open confirmation-click window closes and the feedback
 ## path has been re-synced (Issue #1047). change_volume() awaits it for its own hold.
@@ -68,6 +74,7 @@ var _last_audible_volume: Dictionary = {}
 ## Deliberately not cleared by cleanup_for_test(): a window still awaiting its timer would
 ## then close a newer window early.
 var _clicks_in_flight: int = 0
+
 ## Buses whose silencing write was deferred while a click window was open, used as a set.
 ## Recorded per bus rather than re-derived from the feedback path when the last window
 ## closes, so a bus held under one routing is still re-synced if the route changes before
