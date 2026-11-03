@@ -676,7 +676,7 @@ def test_desktop_objects_and_nodes_are_ratcheted(compare, tmp_path):
 
 
 def test_web_warn_only_counts_warn_against_rolling_median(compare, tmp_path, capsys):
-    """Web nodes are judged by the history median, not the seed value, and never fail."""
+    """Web nodes are judged by the history median, not the seed, and never fail."""
     history = [{**BASE_METRICS, "nodes_avg": value} for value in (500.0, 510.0, 900.0)]
     path = write_history_file(tmp_path / "web.json", {"saves": 61.0}, history)
     jump = {**BASE_METRICS, "nodes_avg": 526.0}

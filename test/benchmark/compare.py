@@ -221,8 +221,9 @@ def non_empty(value: str) -> str:
 def load_medians(results: Path) -> tuple[dict[str, float], int, dict[str, str]]:
     """Return (median per numeric column, number of runs, text info).
 
-    A column with any non-numeric cell goes into the text info. A column with any NaN or infinite value gets a NaN median: the median of a list
-    holding NaN depends on its order, so it could hide the bad value.
+    A column with any non-numeric cell goes into the text info. A column with any
+    NaN or infinite value gets a NaN median: the median of a list holding NaN
+    depends on its order, so it could hide the bad value.
     """
     with results.open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
@@ -633,8 +634,8 @@ def main(argv: list[str] | None = None) -> int:
     PROFILE_WARN_ONLY (on web: objects_avg and nodes_avg). Those are reported
     as warnings and, like timing warnings, do not change the exit code. Neither
     does anything under --report-only. Exit 2 means a metric in the results is
-    non-numeric, NaN or infinite, the baseline file is unreadable, malformed or for another profile, or
-    --update has no count baselines to work from.
+    non-numeric, NaN or infinite, the baseline file is unreadable, malformed or for
+    another profile, or --update has no count baselines to work from.
     """
     args = parse_args(argv)
     medians, runs, info = load_medians(args.results)
