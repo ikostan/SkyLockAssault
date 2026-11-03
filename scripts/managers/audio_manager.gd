@@ -201,8 +201,6 @@ func set_volume(bus_name: String, vol: float) -> void:
 
 ## Return muted state for a bus.
 ##
-## Get muted state for a bus
-##
 ## [param bus_name]: Name of the bus.
 ## Returns true if the specified audio bus is muted, otherwise false.
 func get_muted(bus_name: String) -> bool:
