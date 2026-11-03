@@ -1224,3 +1224,139 @@ def test_report_only_checks_the_profile_when_given(compare, tmp_path, profile, c
     if profile:
         args += ["--profile", profile]
     assert compare.main(args) == code
+
+
+def test_missing_metric_in_recent_history_breaks_ratchet_window(compare, tmp_path):
+    """A run without a count cannot be used as evidence to lower its gate."""
+    missing_saves = {key: value for key, value in GOOD_SAVES.items() if key != "saves"}
+    path = write_history_file(tmp_path / "d.json", history=[GOOD_SAVES, missing_saves])
+
+    # The first two new runs still have the gap in their last 3 runs.
+    for run_id in ("r1", "r2"):
+        code, doc, _ = update_run(compare, tmp_path, GOOD_SAVES, path, run_id)
+        assert code == 0
+        assert doc["baseline"]["saves"] == 61.0
+
+    code, doc, _ = update_run(compare, tmp_path, GOOD_SAVES, path, "r3")
+    assert code == 0
+    assert doc["baseline"]["saves"] == 0.0
+
+
+def test_rolling_reference_uses_only_recent_values_and_seed_fallback(compare, tmp_path):
+    """Missing metrics are skipped within the five-run window, not across it."""
+    history = [
+        {"frame_p95_ms": 100.0, "proc_worst_avg_ms": 99.0},
+        {"frame_p95_ms": 10.0},
+        {},
+        {"frame_p95_ms": 30.0},
+        {},
+        {},
+    ]
+    path = write_history_file(
+        tmp_path / "d.json",
+        {"saves": 61.0, "frame_p95_ms": 50.0, "proc_worst_avg_ms": 0.5},
+        history,
+    )
+
+    reference = compare.build_reference(compare.load_baseline(path), "desktop")
+    assert reference["frame_p95_ms"] == 20.0
+    assert reference["proc_worst_avg_ms"] == 0.5
+    assert reference["saves"] == 61.0
+
+
+def test_accept_multiple_failures_to_separate_output(compare, tmp_path, monkeypatch):
+    """All failed counts are recorded, while the source and passing counts stay put."""
+    monkeypatch.setenv("GITHUB_SHA", "workflow-sha")
+    source = write_history_file(tmp_path / "source.json")
+    before = source.read_bytes()
+    values = {**BASE_METRICS, "saves": 64.0, "resources_avg": 210.0}
+    results = write_runs(tmp_path / "runs.csv", [values])
+    output = tmp_path / "updated.json"
+
+    code = compare.main(
+        [
+            "--results",
+            str(results),
+            "--baseline",
+            str(source),
+            "--update",
+            str(output),
+            "--run-id",
+            "r1",
+            "--profile",
+            "desktop",
+            "--commit",
+            "measured-sha",
+            "--accept",
+            "123",
+        ]
+    )
+
+    assert code == 0
+    assert source.read_bytes() == before
+    doc = json.loads(output.read_text(encoding="utf-8"))
+    assert doc["accepted"]["raised"] == {
+        "saves": {"from": 61.0, "to": 64.0},
+        "resources_avg": {"from": 206.0, "to": 210.0},
+    }
+    assert doc["baseline"]["saves"] == 64.0
+    assert doc["baseline"]["resources_avg"] == 210.0
+    assert doc["baseline"]["nodes_avg"] == BASE_METRICS["nodes_avg"]
+    assert doc["commit"] == doc["history"][0]["commit"] == "measured-sha"
+    assert doc["accepted"]["commit"] == "measured-sha"
+
+
+def test_update_records_iteration_medians_and_only_known_metrics(compare, tmp_path):
+    """History stores the run median rather than an iteration or extra CSV data."""
+    path = write_history_file(tmp_path / "d.json")
+    runs = [
+        {**BASE_METRICS, "saves": saves, "frame_p95_ms": timing, "extra": 10}
+        for saves, timing in [(61.0, 20.0), (60.0, 10.0), (59.0, 30.0)]
+    ]
+    results = write_runs(tmp_path / "runs.csv", runs)
+    args = ["--results", str(results), "--baseline", str(path), "--update", str(path)]
+
+    assert compare.main([*args, "--run-id", "r1", "--profile", "desktop"]) == 0
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    assert doc["runs"] == 3
+    assert doc["history"][0]["metrics"]["saves"] == 60.0
+    assert doc["history"][0]["metrics"]["frame_p95_ms"] == 20.0
+    assert "extra" not in doc["history"][0]["metrics"]
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), True, "10"])
+def test_invalid_history_metric_rejects_update_before_writing(
+    compare, tmp_path, capsys, value
+):
+    """Bad historical values cannot poison references or produce output files."""
+    path = write_history_file(tmp_path / "d.json", history=[{"frame_p95_ms": value}])
+    before = path.read_bytes()
+    results = write_runs(tmp_path / "runs.csv", [BASE_METRICS])
+    output = tmp_path / "updated.json"
+    summary = tmp_path / "summary.md"
+    candidate = tmp_path / "candidate.json"
+
+    code = compare.main(
+        [
+            "--results",
+            str(results),
+            "--baseline",
+            str(path),
+            "--update",
+            str(output),
+            "--run-id",
+            "r1",
+            "--profile",
+            "desktop",
+            "--summary",
+            str(summary),
+            "--write-baseline",
+            str(candidate),
+        ]
+    )
+    assert code == 2
+    assert "history holds an invalid run" in capsys.readouterr().err
+    assert path.read_bytes() == before
+    assert not output.exists()
+    assert not summary.exists()
+    assert not candidate.exists()
