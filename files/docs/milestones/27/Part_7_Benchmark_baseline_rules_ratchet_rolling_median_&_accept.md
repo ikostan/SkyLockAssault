@@ -223,7 +223,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
     - Reproduced each Qodo bug in `compare.py` before fixing it (malformed file, accepted re-run, older re-run, oversized number) and strengthened the post-accept ratchet test.
     - Traced the workflow change to Dependabot's `1957ed9` and checked which `.gd` changes were comments only.
     - Checked CodeRabbit's findings against the code: reworded the signal docs, replaced its non-finite guard after finding the crash and the hidden `NaN`, proposed the file-level `profile` check instead of filtering history, and tested that the `build_reference` finding was already covered.
-    - Reviewed #1124 by adding bugs on purpose: its tests caught two that the suite had missed. Found that one test missed a ratchet bug, and corrected the test's run sequence.
+    - Reviewed #1124 with mutation testing on a scratch copy: its tests caught two bugs the suite had missed. One test missed a ratchet bug, so its run sequence was corrected.
   - **Docs**
     - Updated the report-only line in #1109.
 
