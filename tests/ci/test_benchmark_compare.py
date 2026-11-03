@@ -1231,9 +1231,11 @@ def test_missing_metric_in_recent_history_breaks_ratchet_window(compare, tmp_pat
     missing_saves = {key: value for key, value in GOOD_SAVES.items() if key != "saves"}
     path = write_history_file(tmp_path / "d.json", history=[GOOD_SAVES, missing_saves])
 
-    code, doc, _ = update_run(compare, tmp_path, GOOD_SAVES, path, "r2")
-    assert code == 0
-    assert doc["baseline"]["saves"] == 61.0
+    # The first two new runs still have the gap in their last 3 runs.
+    for run_id in ("r1", "r2"):
+        code, doc, _ = update_run(compare, tmp_path, GOOD_SAVES, path, run_id)
+        assert code == 0
+        assert doc["baseline"]["saves"] == 61.0
 
     code, doc, _ = update_run(compare, tmp_path, GOOD_SAVES, path, "r3")
     assert code == 0
