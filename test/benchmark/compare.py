@@ -38,6 +38,8 @@ run and an existing baseline. A version 2 file holds:
 - accepted: the last accept that raised a count, or null.
 - seen_runs: the IDs of the runs already recorded. A run ID is recorded only
   once, so a re-run changes nothing, even after it has left the history.
+- profile: the platform this file belongs to, set by the first --update. A file
+  holds one platform's runs, so any other --profile exits 2.
 
 After a passing run, a count baseline drops to the worst of the last 3 runs
 if all 3 beat it by more than its tolerance. It never rises except through
@@ -424,6 +426,7 @@ def update_baseline(
     for key in rolling_keys(args.profile) & set(medians):
         new["baseline"].pop(key, None)
     new.update(
+        profile=args.profile,
         created=stamp["date"],
         commit=stamp["commit"],
         runner=os.environ.get("RUNNER_NAME", platform.platform()),
@@ -567,6 +570,8 @@ def read_baseline(args: argparse.Namespace) -> dict | None:
         raise ValueError(f"--update needs a baseline: {args.baseline} not found")
     if args.update and not any(rule.key in doc["baseline"] for rule in COUNT_RULES):
         raise ValueError(f"--update needs count baselines: {args.baseline} has none")
+    if doc and args.profile and doc.get("profile", args.profile) != args.profile:
+        raise ValueError(f"{args.baseline} is for {doc['profile']}, not {args.profile}")
     return doc
 
 
@@ -618,8 +623,8 @@ def main(argv: list[str] | None = None) -> int:
     PROFILE_WARN_ONLY (on web: objects_avg and nodes_avg). Those are reported
     as warnings and, like timing warnings, do not change the exit code. Neither
     does anything under --report-only. Exit 2 means a metric in the results is NaN or
-    infinite, the baseline file is unreadable or malformed, or --update has no count
-    baselines to work from.
+    infinite, the baseline file is unreadable, malformed or for another profile, or
+    --update has no count baselines to work from.
     """
     args = parse_args(argv)
     medians, runs, info = load_medians(args.results)

@@ -1186,3 +1186,41 @@ def test_non_finite_column_outside_the_rules_is_ignored(compare, tmp_path):
     path = write_history_file(tmp_path / "d.json")
     results = write_runs(tmp_path / "runs.csv", [{**BASE_METRICS, "other": "nan"}])
     assert compare.main(["--results", str(results), "--baseline", str(path)]) == 0
+
+
+def test_first_update_binds_the_file_to_its_profile(compare, tmp_path):
+    """A seed file takes the profile of its first update and keeps it."""
+    path = write_baseline(tmp_path / "web.json", BASE_METRICS)
+    _, doc, _ = update_run(compare, tmp_path, BASE_METRICS, path, "r1", "web")
+    assert doc["profile"] == "web"
+    code, doc, _ = update_run(compare, tmp_path, BASE_METRICS, path, "r2", "web")
+    assert code == 0
+    assert [run["run_id"] for run in doc["history"]] == ["r1", "r2"]
+
+
+def test_other_profile_cannot_update_the_file(compare, tmp_path, capsys):
+    """Web runs must not ratchet desktop counts, or the reverse."""
+    path = write_history_file(tmp_path / "shared.json")
+    fast = {**BASE_METRICS, "objects_avg": 2000.0}
+    for index in range(3):
+        update_run(compare, tmp_path, fast, path, f"w{index}", "web")
+    capsys.readouterr()
+
+    code, doc, unchanged = update_run(compare, tmp_path, fast, path, "d0", "desktop")
+
+    assert code == 2
+    assert unchanged
+    assert [run["run_id"] for run in doc["history"]] == ["w0", "w1", "w2"]
+    assert "is for web, not desktop" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(("profile", "code"), [("desktop", 2), ("web", 0), (None, 0)])
+def test_report_only_checks_the_profile_when_given(compare, tmp_path, profile, code):
+    """A comparison against another platform's history is also refused."""
+    path = write_history_file(tmp_path / "web.json")
+    update_run(compare, tmp_path, BASE_METRICS, path, "r1", "web")
+    args = ["--results", str(tmp_path / "runs.csv"), "--baseline", str(path)]
+    args += ["--report-only"]
+    if profile:
+        args += ["--profile", profile]
+    assert compare.main(args) == code
