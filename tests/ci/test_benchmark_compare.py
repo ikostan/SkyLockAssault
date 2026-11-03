@@ -1228,9 +1228,7 @@ def test_report_only_checks_the_profile_when_given(compare, tmp_path, profile, c
 
 def test_missing_metric_in_recent_history_breaks_ratchet_window(compare, tmp_path):
     """A run without a count cannot be used as evidence to lower its gate."""
-    missing_saves = {
-        key: value for key, value in GOOD_SAVES.items() if key != "saves"
-    }
+    missing_saves = {key: value for key, value in GOOD_SAVES.items() if key != "saves"}
     path = write_history_file(tmp_path / "d.json", history=[GOOD_SAVES, missing_saves])
 
     code, doc, _ = update_run(compare, tmp_path, GOOD_SAVES, path, "r1")
