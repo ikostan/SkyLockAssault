@@ -89,18 +89,18 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 
 ## Review Decisions
 
-| Reviewer   | Finding                                                     | Decision                                                                                                       |
-|------------|-------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
-| DeepSource | `update_baseline` complexity 20, `main` complexity 17       | **Fixed:** split into helpers. Identical results over 2,048 randomised runs, apart from timestamps and runner. |
-| DeepSource | Keyword arguments before `*extra` in `update_run`           | **Fixed:** replaced with a named `accept` parameter.                                                           |
-| Qodo       | Ratchet test could not catch stale history                  | **Fixed:** the runs after the accept now beat the baseline. With a stale-history bug added, the new test fails and the old one passed. |
-| Qodo       | Malformed baselines can reset count gates                   | **Fixed:** reproduced, then rejected with exit 2.                                                              |
-| Qodo       | An accepted re-run can raise the gate again                 | **Fixed:** reproduced, then any recorded run changes nothing.                                                  |
-| Qodo       | Older re-runs can count twice in the ratchet                | **Fixed:** reproduced, then `seen_runs` added.                                                                 |
-| Qodo       | Oversized baseline numbers crash comparison                 | **Fixed:** reproduced, then treated as an invalid metric (exit 2).                                             |
-| Qodo       | `get_muted` doc comment repeats its summary                 | **Fixed:** duplicate line removed.                                                                             |
-| Sourcery   | Report-only writes the candidate                            | **Declined:** intentional, see Design Decisions.                                                               |
-| Sourcery   | Workflow changed in a Python-only PR                        | **Fixed in part:** bump reverted; one removed comment remains (see Follow-ups).                                |
+| Reviewer   | Finding                                               | Decision                                                                                                                               |
+|------------|-------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| DeepSource | `update_baseline` complexity 20, `main` complexity 17 | **Fixed:** split into helpers. Identical results over 2,048 randomised runs, apart from timestamps and runner.                         |
+| DeepSource | Keyword arguments before `*extra` in `update_run`     | **Fixed:** replaced with a named `accept` parameter.                                                                                   |
+| Qodo       | Ratchet test could not catch stale history            | **Fixed:** the runs after the accept now beat the baseline. With a stale-history bug added, the new test fails and the old one passed. |
+| Qodo       | Malformed baselines can reset count gates             | **Fixed:** reproduced, then rejected with exit 2.                                                                                      |
+| Qodo       | An accepted re-run can raise the gate again           | **Fixed:** reproduced, then any recorded run changes nothing.                                                                          |
+| Qodo       | Older re-runs can count twice in the ratchet          | **Fixed:** reproduced, then `seen_runs` added.                                                                                         |
+| Qodo       | Oversized baseline numbers crash comparison           | **Fixed:** reproduced, then treated as an invalid metric (exit 2).                                                                     |
+| Qodo       | `get_muted` doc comment repeats its summary           | **Fixed:** duplicate line removed.                                                                                                     |
+| Sourcery   | Report-only writes the candidate                      | **Declined:** intentional, see Design Decisions.                                                                                       |
+| Sourcery   | Workflow changed in a Python-only PR                  | **Fixed in part:** bump reverted; one removed comment remains (see Follow-ups).                                                        |
 
 ---
 
@@ -135,28 +135,28 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 
 ### File-Level Changes
 
-| Change                             | Details                                                                                                                                                                 | Files                                                                                                     |
-|------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------|
-| Baseline rules and file format.    | <ul><li>Version 1 and 2 loading with validation.</li><li>Ratchet, rolling median, accept and re-run handling.</li><li>New options, exit 2 and summary lines.</li></ul> | `test/benchmark/compare.py`                                                                               |
-| Tests for every rule.              | <ul><li>Existing cases kept.</li><li>New helpers `write_history_file` and `update_run`.</li></ul>                                                                       | `tests/ci/test_benchmark_compare.py`                                                                      |
-| Doc comment rewrite (no code).     | <ul><li>`:param` tags to `[param]`.</li><li>Clarified audio and SFX behaviour.</li></ul>                                                                                | `scripts/managers/audio_manager.gd`<br/>`scripts/managers/sfx_manager.gd`<br/>`scripts/resources/fuel_resource.gd` |
-| Workflow comment removed.          | <ul><li>Left over from reverting the Dependabot bump.</li></ul>                                                                                                         | `.github/workflows/lint_readme.yml`                                                                       |
+| Change                          | Details                                                                                                                                                                | Files                                                                                                              |
+|---------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| Baseline rules and file format. | <ul><li>Version 1 and 2 loading with validation.</li><li>Ratchet, rolling median, accept and re-run handling.</li><li>New options, exit 2 and summary lines.</li></ul> | `test/benchmark/compare.py`                                                                                        |
+| Tests for every rule.           | <ul><li>Existing cases kept.</li><li>New helpers `write_history_file` and `update_run`.</li></ul>                                                                      | `tests/ci/test_benchmark_compare.py`                                                                               |
+| Doc comment rewrite (no code).  | <ul><li>`:param` tags to `[param]`.</li><li>Clarified audio and SFX behaviour.</li></ul>                                                                               | `scripts/managers/audio_manager.gd`<br/>`scripts/managers/sfx_manager.gd`<br/>`scripts/resources/fuel_resource.gd` |
+| Workflow comment removed.       | <ul><li>Left over from reverting the Dependabot bump.</li></ul>                                                                                                        | `.github/workflows/lint_readme.yml`                                                                                |
 
 ### Assessment against linked issues
 
-| Issue                                                   | Objective                                                                        | Addressed | Explanation                                                                       |
-|---------------------------------------------------------|----------------------------------------------------------------------------------|-----------|-----------------------------------------------------------------------------------|
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Version 2 file; version 1 loads with empty history                               | ✅        | `load_baseline`.                                                                  |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Ratchet only after 3 runs past tolerance; never rises                            | ✅        | `ratchet_count`.                                                                  |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Timings use the median of up to 5 runs and only warn                             | ✅        | `build_reference`.                                                                |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Unaccepted failure leaves the file unchanged and exits 1                         | ✅        | The update path is skipped.                                                       |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Accept raises only failing counts                                                | ✅        | `apply_accept`.                                                                   |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | CLI options; report-only never exits 1 and writes nothing                        | 🟡        | Never updates the baseline, but writes the candidate on purpose.                  |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | A reason for each baseline that moves                                            | ✅        | Summary lines.                                                                    |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Default `--baseline` path stays until task 6                                     | ✅        | `DEFAULT_BASELINE`.                                                               |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Tests cover the listed cases; existing cases kept                                | ✅        | No lines removed from the test file.                                              |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | `pytest tests/ci/` passes                                                        | ⏳        | Confirmed by CI on the final commit.                                              |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Python only; no workflow files change                                            | ❌        | One workflow comment and three `.gd` comment-only files remain (see Follow-ups). |
+| Issue                                                   | Objective                                                 | Addressed | Explanation                                                                      |
+|---------------------------------------------------------|-----------------------------------------------------------|-----------|----------------------------------------------------------------------------------|
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Version 2 file; version 1 loads with empty history        | ✅        | `load_baseline`.                                                                 |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Ratchet only after 3 runs past tolerance; never rises     | ✅        | `ratchet_count`.                                                                 |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Timings use the median of up to 5 runs and only warn      | ✅        | `build_reference`.                                                               |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Unaccepted failure leaves the file unchanged and exits 1  | ✅        | The update path is skipped.                                                      |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Accept raises only failing counts                         | ✅        | `apply_accept`.                                                                  |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | CLI options; report-only never exits 1 and writes nothing | 🟡        | Never updates the baseline, but writes the candidate on purpose.                 |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | A reason for each baseline that moves                     | ✅        | Summary lines.                                                                   |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Default `--baseline` path stays until task 6              | ✅        | `DEFAULT_BASELINE`.                                                              |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Tests cover the listed cases; existing cases kept         | ✅        | No lines removed from the test file.                                             |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | `pytest tests/ci/` passes                                 | ⏳        | Confirmed by CI on the final commit.                                             |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Python only; no workflow files change                     | ❌        | One workflow comment and three `.gd` comment-only files remain (see Follow-ups). |
 
 ---
 
@@ -196,7 +196,6 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
     - Split `update_baseline` and `main` for DeepSource and compared old and new code over 2,048 randomised runs.
     - Reproduced each Qodo bug in `compare.py` before fixing it (malformed file, accepted re-run, older re-run, oversized number) and strengthened the post-accept ratchet test.
     - Traced the workflow change to Dependabot's `1957ed9` and checked which `.gd` changes were comments only.
-  - Corrected its own claim that the script could not tell a PR number from a run ID, and fixed the summary wording.
 
 - **@sourcery-ai**
   - Posted the PR summary and Reviewer's Guide, with 2 inline comments: report-only (declined) and the workflow change (fixed in part).
