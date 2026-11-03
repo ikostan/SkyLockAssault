@@ -528,3 +528,498 @@ def test_refreshed_baselines_gate_settings_saves(
     report = capsys.readouterr().out
     assert f"| {icon} | Settings saves in 60 s | count | 0 | {saves} |" in report
     assert f"Regressions: {exit_code}." in report
+
+
+# Automatic baselines (#1109): ratchet, rolling median and accept.
+
+GOOD_SAVES = {**BASE_METRICS, "saves": 0.0}
+
+
+def write_history_file(
+    path: Path,
+    baseline: dict | None = None,
+    history: list[dict] | None = None,
+    accepted: dict | None = None,
+) -> Path:
+    """Write a version 2 baseline file; history is a list of metric dicts."""
+    doc = {
+        "version": 2,
+        "commit": "seed",
+        "created": "x",
+        "baseline": BASE_METRICS if baseline is None else baseline,
+        "history": [
+            {"run_id": f"old{i}", "commit": "c", "date": "d", "metrics": metrics}
+            for i, metrics in enumerate(history or [])
+        ],
+        "accepted": accepted,
+    }
+    path.write_text(json.dumps(doc), encoding="utf-8")
+    return path
+
+
+def update_run(
+    compare, tmp_path, metrics, base_path, run_id="r1", profile="desktop", *extra
+):
+    """Run one --update pass in place; return (exit code, file, unchanged bytes?)."""
+    results = write_runs(tmp_path / "runs.csv", [metrics])
+    before = base_path.read_bytes()
+    code = compare.main(
+        [
+            "--results",
+            str(results),
+            "--baseline",
+            str(base_path),
+            "--update",
+            str(base_path),
+            "--run-id",
+            run_id,
+            "--commit",
+            f"sha-{run_id}",
+            "--profile",
+            profile,
+            *extra,
+        ]
+    )
+    return (
+        code,
+        json.loads(base_path.read_text(encoding="utf-8")),
+        (before == base_path.read_bytes()),
+    )
+
+
+def test_ratchet_moves_only_after_three_runs_past_tolerance(compare, tmp_path, capsys):
+    """Two good runs change nothing; the third drops the baseline to the worst."""
+    path = write_history_file(tmp_path / "desktop.json")
+    for run_id, saves in (("r1", 0.0), ("r2", 2.0)):
+        code, doc, _ = update_run(
+            compare, tmp_path, {**BASE_METRICS, "saves": saves}, path, run_id
+        )
+        assert code == 0
+        assert doc["baseline"]["saves"] == 61.0
+    capsys.readouterr()
+    code, doc, _ = update_run(
+        compare, tmp_path, {**BASE_METRICS, "saves": 1.0}, path, "r3"
+    )
+    assert code == 0
+    assert doc["baseline"]["saves"] == 2.0
+    assert "- saves: 61 → 2 (3 runs past tolerance)" in capsys.readouterr().out
+    assert [run["run_id"] for run in doc["history"]] == ["r1", "r2", "r3"]
+    assert doc["history"][-1]["commit"] == "sha-r3"
+
+
+def test_noise_inside_tolerance_never_moves_ratchet(compare, tmp_path):
+    """Runs better by exactly the tolerance do not count, however many there are."""
+    path = write_history_file(tmp_path / "desktop.json")
+    at_limit = {**BASE_METRICS, "objects_avg": BASE_METRICS["objects_avg"] - 25}
+    for index in range(6):
+        _, doc, _ = update_run(compare, tmp_path, at_limit, path, f"r{index}")
+    assert doc["baseline"]["objects_avg"] == BASE_METRICS["objects_avg"]
+
+
+def test_single_good_run_between_normal_runs_never_moves_ratchet(compare, tmp_path):
+    """Only three consecutive runs past the tolerance move a baseline."""
+    path = write_history_file(tmp_path / "desktop.json")
+    pattern = [GOOD_SAVES, GOOD_SAVES, BASE_METRICS, GOOD_SAVES, BASE_METRICS]
+    for index, metrics in enumerate(pattern):
+        _, doc, _ = update_run(compare, tmp_path, metrics, path, f"r{index}")
+    assert doc["baseline"]["saves"] == 61.0
+
+
+def test_baseline_never_rises_without_accept(compare, tmp_path):
+    """Passing runs just inside the worse limit never lift the baseline."""
+    path = write_history_file(tmp_path / "desktop.json")
+    creep = {**BASE_METRICS, "saves": 63.0}
+    for index in range(4):
+        code, doc, _ = update_run(compare, tmp_path, creep, path, f"r{index}")
+        assert code == 0
+    assert doc["baseline"]["saves"] == 61.0
+
+
+@pytest.mark.parametrize(("baseline", "moved"), [(12.0, False), (13.0, True)])
+def test_desktop_reload_growth_ratchet_uses_profile_tolerance(
+    compare, tmp_path, baseline, moved
+):
+    """Desktop reload growth moves only past its tolerance of 10."""
+    path = write_history_file(
+        tmp_path / "desktop.json", {**BASE_METRICS, "reload_object_growth": baseline}
+    )
+    low = {**BASE_METRICS, "reload_object_growth": 2.0}
+    for index in range(3):
+        _, doc, _ = update_run(compare, tmp_path, low, path, f"r{index}")
+    assert doc["baseline"]["reload_object_growth"] == (2.0 if moved else baseline)
+
+
+def test_web_warn_only_counts_are_never_ratcheted(compare, tmp_path, capsys):
+    """Web objects and nodes leave the baseline; gated counts still move."""
+    path = write_history_file(tmp_path / "web.json")
+    fast = {**GOOD_SAVES, "objects_avg": 2000.0, "nodes_avg": 400.0}
+    for index in range(3):
+        code, doc, _ = update_run(compare, tmp_path, fast, path, f"r{index}", "web")
+        assert code == 0
+    report = capsys.readouterr().out
+    assert "- objects_avg:" not in report
+    assert "- nodes_avg:" not in report
+    assert "objects_avg" not in doc["baseline"]
+    assert "nodes_avg" not in doc["baseline"]
+    assert doc["baseline"]["saves"] == 0.0
+
+
+def test_desktop_objects_and_nodes_are_ratcheted(compare, tmp_path):
+    """The same drop on desktop moves the count baselines."""
+    path = write_history_file(tmp_path / "desktop.json")
+    fast = {**BASE_METRICS, "objects_avg": 2000.0, "nodes_avg": 400.0}
+    for index in range(3):
+        _, doc, _ = update_run(compare, tmp_path, fast, path, f"r{index}")
+    assert doc["baseline"]["objects_avg"] == 2000.0
+    assert doc["baseline"]["nodes_avg"] == 400.0
+
+
+def test_web_warn_only_counts_warn_against_rolling_median(compare, tmp_path, capsys):
+    """Web nodes are judged by the history median, not the seed value, and never fail."""
+    history = [{**BASE_METRICS, "nodes_avg": value} for value in (500.0, 510.0, 900.0)]
+    path = write_history_file(tmp_path / "web.json", {"saves": 61.0}, history)
+    jump = {**BASE_METRICS, "nodes_avg": 526.0}
+    code, _, _ = update_run(compare, tmp_path, jump, path, "r1", "web")
+    assert code == 0
+    assert (
+        "| ⚠️ | OBJECT_NODE_COUNT avg | count | 510 | 526 |" in capsys.readouterr().out
+    )
+
+
+@pytest.mark.parametrize(
+    ("values", "median"),
+    [
+        ([10.0], 10.0),
+        ([10.0, 20.0], 15.0),
+        ([30.0, 10.0, 20.0], 20.0),
+        ([1.0, 2.0, 3.0, 4.0, 100.0], 3.0),
+        ([500.0, 1.0, 2.0, 3.0, 4.0, 100.0], 3.0),
+    ],
+)
+def test_rolling_median_with_short_and_full_history(compare, tmp_path, values, median):
+    """The timing reference is the median of up to the last 5 runs."""
+    history = [{"frame_p95_ms": value} for value in values]
+    path = write_history_file(tmp_path / "d.json", {"frame_p95_ms": 999.0}, history)
+    reference = compare.build_reference(compare.load_baseline(path), "desktop")
+    assert reference["frame_p95_ms"] == median
+
+
+def test_timing_uses_median_and_stays_a_warning(compare, tmp_path, capsys):
+    """A jump against recent history warns and is still recorded as passing."""
+    history = [{**BASE_METRICS, "frame_p95_ms": 10.0}] * 3
+    path = write_history_file(tmp_path / "d.json", history=history)
+    slow = {**BASE_METRICS, "frame_p95_ms": 20.0}
+    code, doc, _ = update_run(compare, tmp_path, slow, path)
+    report = capsys.readouterr().out
+    assert code == 0
+    assert "| ⚠️ | Frame interval p95 (ms) | timing | 10 | 20 |" in report
+    assert "Timings: median of the last 3 passing runs." in report
+    assert len(doc["history"]) == 4
+
+
+def test_history_keeps_last_five_runs(compare, tmp_path):
+    """Older runs fall out of the history."""
+    path = write_history_file(tmp_path / "d.json")
+    for index in range(7):
+        _, doc, _ = update_run(compare, tmp_path, BASE_METRICS, path, f"r{index}")
+    assert [run["run_id"] for run in doc["history"]] == [f"r{i}" for i in range(2, 7)]
+    assert set(doc["history"][0]) == {"run_id", "commit", "date", "metrics"}
+    assert set(doc["history"][0]["metrics"]) == set(BASE_METRICS)
+
+
+def test_failing_run_leaves_file_and_history_unchanged(compare, tmp_path):
+    """An unaccepted failure exits 1 and writes nothing, even to another path."""
+    path = write_history_file(tmp_path / "d.json", history=[BASE_METRICS])
+    worse = {**BASE_METRICS, "saves": 64.0}
+    code, _, unchanged = update_run(compare, tmp_path, worse, path)
+    assert code == 1
+    assert unchanged
+
+    other = tmp_path / "other.json"
+    results = str(tmp_path / "runs.csv")
+    args = ["--results", results, "--baseline", str(path), "--update", str(other)]
+    assert compare.main([*args, "--run-id", "r2", "--profile", "desktop"]) == 1
+    assert not other.exists()
+
+
+def test_failing_run_does_not_reset_the_ratchet_window(compare, tmp_path):
+    """A failed run is skipped, so it neither counts toward the 3 nor resets them."""
+    path = write_history_file(tmp_path / "d.json", history=[GOOD_SAVES, GOOD_SAVES])
+    regress = {**GOOD_SAVES, "reload_orphans_max": 1.0}
+    assert update_run(compare, tmp_path, regress, path, "bad")[0] == 1
+    _, doc, _ = update_run(compare, tmp_path, GOOD_SAVES, path, "r3")
+    assert doc["baseline"]["saves"] == 0.0
+
+
+def test_accept_raises_only_failing_counts(compare, tmp_path, capsys):
+    """Failing counts rise to this run; passing ones stay and the accept is logged."""
+    path = write_history_file(tmp_path / "d.json")
+    run_values = {
+        **BASE_METRICS,
+        "objects_avg": 2840.0,
+        "nodes_avg": 505.0,
+        "saves": 0.0,
+    }
+    code, doc, _ = update_run(
+        compare, tmp_path, run_values, path, "r1", "desktop", "--accept", "123"
+    )
+    assert code == 0
+    assert doc["baseline"]["objects_avg"] == 2840.0
+    assert doc["baseline"]["nodes_avg"] == 503.0
+    assert doc["baseline"]["saves"] == 61.0
+    assert [run["run_id"] for run in doc["history"]] == ["r1"]
+    assert doc["accepted"]["id"] == "123"
+    assert doc["accepted"]["raised"] == {"objects_avg": {"from": 2542.0, "to": 2840.0}}
+    assert (
+        "- objects_avg: raised to 2,840 (accepted in #123)" in capsys.readouterr().out
+    )
+
+
+def test_accept_keeps_other_counts_on_the_ratchet(compare, tmp_path):
+    """Another count already due to drop still drops on an accepted run."""
+    path = write_history_file(tmp_path / "d.json", history=[GOOD_SAVES, GOOD_SAVES])
+    run_values = {**GOOD_SAVES, "objects_avg": 2840.0}
+    _, doc, _ = update_run(
+        compare, tmp_path, run_values, path, "r3", "desktop", "--accept", "123"
+    )
+    assert doc["baseline"]["objects_avg"] == 2840.0
+    assert doc["baseline"]["saves"] == 0.0
+
+
+def test_raised_baseline_is_not_ratcheted_back_by_old_history(compare, tmp_path):
+    """Runs from before the accept cannot undo it on the following runs."""
+    old = [BASE_METRICS, BASE_METRICS]
+    path = write_history_file(tmp_path / "d.json", history=old)
+    higher = {**BASE_METRICS, "objects_avg": 2840.0}
+    update_run(compare, tmp_path, higher, path, "r3", "desktop", "--accept", "123")
+    for index in range(3):
+        _, doc, _ = update_run(compare, tmp_path, higher, path, f"r{index + 4}")
+    assert doc["baseline"]["objects_avg"] == 2840.0
+
+
+def test_accept_with_nothing_failing_keeps_the_last_accept(compare, tmp_path, capsys):
+    """An unneeded accept records the run but not an empty accept."""
+    last = {"id": "99", "raised": {"saves": {"from": 1, "to": 2}}}
+    path = write_history_file(tmp_path / "d.json", accepted=last)
+    code, doc, _ = update_run(
+        compare, tmp_path, BASE_METRICS, path, "r1", "desktop", "--accept", "123"
+    )
+    assert code == 0
+    assert doc["accepted"] == last
+    assert len(doc["history"]) == 1
+    assert "Accept #123 raised nothing" in capsys.readouterr().out
+
+
+def test_web_warning_is_not_raised_by_accept(compare, tmp_path):
+    """Only failing counts rise; a web warn-only count has no baseline to raise."""
+    path = write_history_file(tmp_path / "web.json")
+    run_values = {**BASE_METRICS, "objects_avg": 3000.0, "resources_avg": 300.0}
+    code, doc, _ = update_run(
+        compare, tmp_path, run_values, path, "r1", "web", "--accept", "123"
+    )
+    assert code == 0
+    assert set(doc["accepted"]["raised"]) == {"resources_avg"}
+    assert "objects_avg" not in doc["baseline"]
+
+
+def test_version_1_file_is_read_as_baseline_with_empty_history(compare, tmp_path):
+    """A version 1 file keeps its metrics and has no history or accept."""
+    path = write_baseline(tmp_path / "baseline_ci.json", BASE_METRICS)
+    doc = compare.load_baseline(path)
+    assert doc["version"] == 2
+    assert doc["baseline"] == BASE_METRICS
+    assert doc["history"] == []
+    assert doc["accepted"] is None
+    assert doc["commit"] == "abc1234"
+    assert "metrics" not in doc
+
+
+def test_version_1_seed_is_updated_to_version_2(compare, tmp_path):
+    """Seeding: timings judge against the seed once, then move to the history."""
+    path = write_baseline(tmp_path / "baseline_ci.json", BASE_METRICS)
+    slow = {**BASE_METRICS, "frame_p95_ms": 30.0}
+    code, doc, _ = update_run(compare, tmp_path, slow, path)
+    assert code == 0
+    assert doc["version"] == 2
+    assert doc["accepted"] is None
+    assert doc["history"][0]["metrics"]["frame_p95_ms"] == 30.0
+    assert set(doc["baseline"]) == {
+        "saves",
+        "objects_avg",
+        "nodes_avg",
+        "resources_avg",
+        "orphans_max",
+        "reload_orphans_max",
+        "reload_object_growth",
+    }
+    assert compare.build_reference(doc, "desktop")["frame_p95_ms"] == 30.0
+
+
+@pytest.mark.parametrize("name", ["baseline_ci.json", "baseline_web_ci.json"])
+def test_committed_baselines_load_as_version_2(compare, name):
+    """Task 3 can seed the branch from both committed files."""
+    doc = compare.load_baseline(PROJECT_ROOT / "test/benchmark" / name)
+    assert doc["history"] == []
+    assert doc["baseline"]["saves"] == 0
+
+
+@pytest.mark.parametrize(
+    "content", ['{"version": 3}', '{"metrics": {}}', "[]", "{oops"]
+)
+def test_unreadable_baseline_exits_2(compare, tmp_path, content, capsys):
+    """An unknown format is a setup error, not a regression or an empty baseline."""
+    results = write_runs(tmp_path / "runs.csv", [BASE_METRICS])
+    path = tmp_path / "bad.json"
+    path.write_text(content, encoding="utf-8")
+    assert compare.main(["--results", str(results), "--baseline", str(path)]) == 2
+    assert "Cannot read the baseline" in capsys.readouterr().err
+
+
+def test_update_without_a_baseline_file_exits_2(compare, tmp_path):
+    """A missing file must not reseed the gate from this run."""
+    results = write_runs(tmp_path / "runs.csv", [BASE_METRICS])
+    out = tmp_path / "out.json"
+    args = ["--results", str(results), "--baseline", str(tmp_path / "none.json")]
+    args += ["--update", str(out), "--run-id", "r1", "--profile", "desktop"]
+    assert compare.main(args) == 2
+    assert not out.exists()
+
+
+def test_new_count_is_added_at_this_runs_value(compare, tmp_path, capsys):
+    """A count missing from the baseline starts being gated."""
+    seed = {key: value for key, value in BASE_METRICS.items() if key != "saves"}
+    path = write_history_file(tmp_path / "d.json", seed)
+    code, doc, _ = update_run(compare, tmp_path, BASE_METRICS, path)
+    assert code == 0
+    assert doc["baseline"]["saves"] == 61.0
+    assert "- saves: added at 61 (new metric)" in capsys.readouterr().out
+
+
+def test_rerun_of_a_recorded_run_changes_nothing(compare, tmp_path, capsys):
+    """Re-running a job must not count one run twice toward the ratchet."""
+    path = write_history_file(tmp_path / "d.json")
+    update_run(compare, tmp_path, GOOD_SAVES, path, "r1")
+    update_run(compare, tmp_path, GOOD_SAVES, path, "r2")
+    capsys.readouterr()
+    code, doc, unchanged = update_run(compare, tmp_path, GOOD_SAVES, path, "r2")
+    assert code == 0
+    assert doc["baseline"]["saves"] == 61.0
+    assert len(doc["history"]) == 2
+    assert unchanged
+    assert "Run r2 is already in the history" in capsys.readouterr().out
+
+
+def test_report_only_never_fails_and_updates_nothing(compare, tmp_path, capsys):
+    """A regression is shown, appended to the summary, and exits 0."""
+    path = write_history_file(tmp_path / "d.json")
+    before = path.read_bytes()
+    worse = {**BASE_METRICS, "saves": 100.0}
+    results = write_runs(tmp_path / "runs.csv", [worse])
+    summary = tmp_path / "summary.md"
+    code = compare.main(
+        [
+            "--results",
+            str(results),
+            "--baseline",
+            str(path),
+            "--summary",
+            str(summary),
+            "--report-only",
+        ]
+    )
+    assert code == 0
+    report = capsys.readouterr().out
+    assert "Regressions: 1." in report
+    assert "Report only:" in report
+    assert "Report only:" in summary.read_text(encoding="utf-8")
+    assert path.read_bytes() == before
+
+
+def test_report_only_still_writes_the_candidate(compare, tmp_path):
+    """The results artifact keeps the candidate that the accept check reads."""
+    path = write_history_file(tmp_path / "d.json")
+    results = write_runs(tmp_path / "runs.csv", [BASE_METRICS])
+    candidate = tmp_path / "candidate.json"
+    args = ["--results", str(results), "--baseline", str(path), "--report-only"]
+    assert compare.main([*args, "--write-baseline", str(candidate)]) == 0
+    doc = json.loads(candidate.read_text(encoding="utf-8"))
+    assert doc["version"] == 1
+    assert doc["metrics"]["saves"] == 61.0
+
+
+@pytest.mark.parametrize(
+    ("extra", "message"),
+    [
+        (
+            [
+                "--update",
+                "o.json",
+                "--run-id",
+                "1",
+                "--profile",
+                "web",
+                "--report-only",
+            ],
+            "--report-only cannot be combined",
+        ),
+        (["--accept", "12"], "--accept requires --update"),
+        (["--update", "o.json", "--profile", "web"], "--update requires --run-id"),
+        (["--update", "o.json", "--run-id", "1"], "--update requires --profile"),
+        (
+            ["--update", "o.json", "--run-id", "", "--profile", "web"],
+            "must not be empty",
+        ),
+        (
+            [
+                "--update",
+                "o.json",
+                "--run-id",
+                "1",
+                "--profile",
+                "web",
+                "--accept",
+                " ",
+            ],
+            "must not be empty",
+        ),
+    ],
+)
+def test_invalid_update_arguments_are_rejected(compare, capsys, extra, message):
+    """Unsafe or incomplete update options stop before anything is read."""
+    with pytest.raises(SystemExit) as exc:
+        compare.main(["--results", "runs.csv", *extra])
+    assert exc.value.code == 2
+    assert message in capsys.readouterr().err
+
+
+def test_commit_falls_back_to_github_sha(compare, tmp_path, monkeypatch):
+    """Without --commit, the history records the pipeline's own SHA."""
+    monkeypatch.setenv("GITHUB_SHA", "from-env")
+    path = write_history_file(tmp_path / "d.json")
+    results = write_runs(tmp_path / "runs.csv", [BASE_METRICS])
+    args = ["--results", str(results), "--baseline", str(path), "--update", str(path)]
+    assert compare.main([*args, "--run-id", "r1", "--profile", "desktop"]) == 0
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    assert doc["history"][0]["commit"] == "from-env"
+    assert doc["commit"] == "from-env"
+
+
+def test_manual_accept_is_named_as_a_run_not_a_pr(compare, tmp_path, capsys):
+    """A manual accept passes the run's own ID, so the summary says run, not #."""
+    path = write_history_file(tmp_path / "d.json")
+    higher = {**BASE_METRICS, "objects_avg": 2840.0}
+    update_run(compare, tmp_path, higher, path, "412", "desktop", "--accept", "412")
+    report = capsys.readouterr().out
+    assert "- objects_avg: raised to 2,840 (accepted in run 412)" in report
+    assert "#412" not in report
+
+
+def test_manual_accept_with_nothing_failing_is_named_as_a_run(
+    compare, tmp_path, capsys
+):
+    """The nothing-to-raise line names the accept the same way."""
+    path = write_history_file(tmp_path / "d.json")
+    update_run(
+        compare, tmp_path, BASE_METRICS, path, "412", "desktop", "--accept", "412"
+    )
+    assert "Accept run 412 raised nothing" in capsys.readouterr().out

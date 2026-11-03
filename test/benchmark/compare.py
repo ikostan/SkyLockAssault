@@ -1,34 +1,56 @@
 # Copyright (C) 2026 Egor Kostan
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # test/benchmark/compare.py
-"""Compare a benchmark result with the committed CI baseline (#1079).
+"""Compare a benchmark result with the CI baseline and maintain it (#1079, #1109).
 
 Reads the runs.csv written by run_desktop.py, takes the median of every
-metric across the runs and compares it with baseline_ci.json:
+metric across the runs and compares it with the baseline file:
 
 - Count metrics (settings saves, live objects, orphans, reload leak) are
   stable from run to run. Getting worse beyond a small tolerance is a
   REGRESSION and makes this script exit with 1. On web, the object and node
   averages follow runner speed, so they only warn (PROFILE_WARN_ONLY).
 - Timing metrics (frame times) are noisy on shared CI runners. Getting
-  clearly worse is only a WARNING.
+  clearly worse is only a WARNING. They are compared with the median of the
+  passing runs in the file's history, as are the warn-only counts.
 
 Usage:
 
     python test/benchmark/compare.py --results <out>/runs.csv
         [--baseline test/benchmark/baseline_ci.json]
         [--summary <markdown file to append the table to>]
-        [--write-baseline <path for a new baseline file>]
+        [--write-baseline <path for a new version 1 baseline file>]
         [--title <report heading>]
+        [--profile desktop|web]
+        [--report-only]
+        [--update <path> --run-id <id> [--commit <sha>] [--accept <id>]]
 
 With no baseline file yet, it only reports the numbers (exit 0). Use
---write-baseline to produce a baseline file from these results; commit it as
-test/benchmark/baseline_ci.json to make it the reference.
+--write-baseline to produce a baseline file from these results.
+
+--update writes the updated version 2 file, which needs a passing or accepted
+run and an existing baseline. A version 2 file holds:
+
+- baseline: the count baselines the gate compares against. A seed file also
+  holds the values that later follow the rolling median; each one is the
+  reference only until the first passing run and is then dropped.
+- history: the last 5 passing runs (run ID, commit, date, metric medians).
+- accepted: the last accept that raised a count, or null.
+
+After a passing run, a count baseline drops to the worst of the last 3 runs
+if all 3 beat it by more than its tolerance. It never rises except through
+--accept, which raises only the failing counts to this run's values. A failing
+run without --accept writes nothing, so it is not added to the history.
+
+--report-only never exits 1 and cannot be combined with --update. It still
+appends to --summary and writes the --write-baseline candidate, which the
+results artifacts carry for the accept check.
 """
 
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
 import datetime as dt
 import json
@@ -41,6 +63,9 @@ from pathlib import Path
 
 DEFAULT_BASELINE = Path(__file__).resolve().parent / "baseline_ci.json"
 BASELINE_VERSION = 1
+HISTORY_VERSION = 2
+HISTORY_RUNS = 5
+RATCHET_RUNS = 3
 DEFAULT_TITLE = "Performance benchmark"
 
 
@@ -134,7 +159,49 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=DEFAULT_TITLE,
         help=f"Report heading (default: {DEFAULT_TITLE}).",
     )
-    return parser.parse_args(argv)
+    parser.add_argument(
+        "--update",
+        type=Path,
+        help="Write the updated version 2 baseline file to this path.",
+    )
+    parser.add_argument(
+        "--accept",
+        type=non_empty,
+        metavar="ID",
+        help="PR number or run ID that raises the failing counts to this run.",
+    )
+    parser.add_argument(
+        "--run-id",
+        type=non_empty,
+        help="ID of this run for the history (required with --update).",
+    )
+    parser.add_argument(
+        "--commit",
+        type=non_empty,
+        help="SHA this run measured (default: the GITHUB_SHA variable).",
+    )
+    parser.add_argument(
+        "--report-only",
+        action="store_true",
+        help="Print and summarize; never exit 1 and never update the baseline.",
+    )
+    args = parser.parse_args(argv)
+    if args.report_only and args.update:
+        parser.error("--report-only cannot be combined with --update")
+    if args.accept and not args.update:
+        parser.error("--accept requires --update")
+    if args.update and not args.run_id:
+        parser.error("--update requires --run-id")
+    if args.update and not args.profile:
+        parser.error("--update requires --profile")
+    return args
+
+
+def non_empty(value: str) -> str:
+    """Reject an empty ID, such as an unset workflow variable."""
+    if not value.strip():
+        raise argparse.ArgumentTypeError("must not be empty")
+    return value
 
 
 def load_medians(results: Path) -> tuple[dict[str, float], int, dict[str, str]]:
@@ -152,6 +219,146 @@ def load_medians(results: Path) -> tuple[dict[str, float], int, dict[str, str]]:
         except ValueError:
             info[key] = values[0]
     return medians, len(rows), info
+
+
+def load_baseline(path: Path) -> dict | None:
+    """Read a version 1 or 2 baseline file as version 2 (None if missing)."""
+    if not path.is_file():
+        return None
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    version = raw.get("version") if isinstance(raw, dict) else None
+    if version == BASELINE_VERSION:
+        metrics = raw.get("metrics", {})
+    elif version == HISTORY_VERSION:
+        metrics = raw.get("baseline", {})
+    else:
+        raise ValueError(f"{path}: unsupported baseline version {version!r}")
+    doc = {key: value for key, value in raw.items() if key != "metrics"}
+    doc.update(
+        version=HISTORY_VERSION,
+        baseline=metrics,
+        history=raw.get("history", []),
+        accepted=raw.get("accepted"),
+    )
+    return doc
+
+
+def rolling_keys(profile: str | None) -> set[str]:
+    """Metrics compared with the history median instead of a fixed baseline."""
+    warn_only = PROFILE_WARN_ONLY.get(profile or "", frozenset())
+    return {rule.key for rule in TIMING_RULES} | set(warn_only)
+
+
+def build_reference(doc: dict | None, profile: str | None) -> dict[str, float] | None:
+    """Return the value each metric is judged against."""
+    if doc is None:
+        return None
+    reference = dict(doc["baseline"])
+    runs = doc["history"][-HISTORY_RUNS:]
+    for key in rolling_keys(profile):
+        values = [run["metrics"][key] for run in runs if key in run["metrics"]]
+        if values:
+            reference[key] = statistics.median(values)
+    return reference
+
+
+def ratchet_count(
+    rule: CountRule, base: float, history: list[dict], profile: str | None
+) -> float | None:
+    """Return the new baseline if the last runs all beat it, else None."""
+    recent = history[-RATCHET_RUNS:]
+    values = [run["metrics"].get(rule.key) for run in recent]
+    if len(values) < RATCHET_RUNS or None in values:
+        return None
+    tolerance = PROFILE_TOLERANCES.get(profile or "", {}).get(rule.key)
+    if all(judge_count(rule, base, value, tolerance) == BETTER for value in values):
+        return max(values)
+    return None
+
+
+def accept_name(accept: str, run_id: str) -> str:
+    """Name an accept: a manual one uses the run's own ID, a label one the PR."""
+    return f"run {accept}" if accept == run_id else f"#{accept}"
+
+
+def update_baseline(
+    doc: dict,
+    medians: dict[str, float],
+    failing: list[str],
+    args: argparse.Namespace,
+    info: dict[str, str],
+    runs: int,
+) -> tuple[dict, list[str]]:
+    """Apply the accept and ratchet rules; return (new file, change lines)."""
+    new = copy.deepcopy(doc)
+    run_id = str(args.run_id)
+    recorded = any(str(run.get("run_id")) == run_id for run in new["history"])
+    if recorded and not failing:
+        # A re-run must not count twice toward the ratchet.
+        return new, [f"Run {run_id} is already in the history: nothing changed."]
+
+    now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    commit = args.commit or os.environ.get("GITHUB_SHA", "unknown")
+    keys = [rule.key for rule in COUNT_RULES + TIMING_RULES]
+    if not recorded:
+        new["history"].append(
+            {
+                "run_id": run_id,
+                "commit": commit,
+                "date": now,
+                "metrics": {key: medians[key] for key in keys if key in medians},
+            }
+        )
+        new["history"] = new["history"][-HISTORY_RUNS:]
+
+    baseline = new["baseline"]
+    changes: list[str] = []
+    raised: dict[str, dict[str, float]] = {}
+    accept = accept_name(str(args.accept), run_id)
+    for key in failing:
+        raised[key] = {"from": baseline[key], "to": medians[key]}
+        baseline[key] = medians[key]
+        changes.append(f"{key}: raised to {fmt(medians[key])} (accepted in {accept})")
+    if raised:
+        new["accepted"] = {
+            "id": str(args.accept),
+            "run_id": run_id,
+            "commit": commit,
+            "date": now,
+            "raised": raised,
+        }
+    elif args.accept:
+        changes.append(f"Accept {accept} raised nothing: no count failed.")
+
+    warn_only = PROFILE_WARN_ONLY.get(args.profile or "", frozenset())
+    for rule in COUNT_RULES:
+        if rule.key in warn_only or rule.key in raised or rule.key not in medians:
+            continue
+        base = baseline.get(rule.key)
+        if base is None:
+            baseline[rule.key] = medians[rule.key]
+            changes.append(
+                f"{rule.key}: added at {fmt(medians[rule.key])} (new metric)"
+            )
+            continue
+        target = ratchet_count(rule, base, new["history"], args.profile)
+        if target is not None:
+            baseline[rule.key] = target
+            changes.append(
+                f"{rule.key}: {fmt(base)} → {fmt(target)} "
+                f"({RATCHET_RUNS} runs past tolerance)"
+            )
+
+    for key in rolling_keys(args.profile) & set(medians):
+        baseline.pop(key, None)
+    new.update(
+        created=now,
+        commit=commit,
+        runner=os.environ.get("RUNNER_NAME", platform.platform()),
+        godot=info.get("godot", "unknown"),
+        runs=runs,
+    )
+    return new, changes
 
 
 def judge_count(
@@ -235,6 +442,9 @@ def render(
             f"Baseline: commit `{baseline_meta.get('commit', 'unknown')}`, "
             f"created {baseline_meta.get('created', 'unknown')}."
         )
+        history = baseline_meta.get("history", [])[-HISTORY_RUNS:]
+        if history:
+            lines.append(f"Timings: median of the last {len(history)} passing runs.")
     lines += [
         f"Medians of {runs} runs. Counts fail the job if they get worse;",
         "timings only warn (shared CI runners are noisy).",
@@ -279,22 +489,45 @@ def build_baseline(medians: dict[str, float], runs: int, info: dict[str, str]) -
 
 def main(argv: list[str] | None = None) -> int:
     """
-    Compare results with the baseline; exit 1 on any count regression.
+    Compare results with the baseline; exit 1 on an unaccepted count regression.
 
     A count past its tolerance is a regression unless the profile lists it in
     PROFILE_WARN_ONLY (on web: objects_avg and nodes_avg). Those are reported
-    as warnings and, like timing warnings, do not change the exit code.
+    as warnings and, like timing warnings, do not change the exit code. Neither
+    does anything under --report-only. Exit 2 means the baseline file is
+    unreadable, or missing when --update needs it.
     """
     args = parse_args(argv)
     medians, runs, info = load_medians(args.results)
 
-    baseline_doc = None
-    if args.baseline.is_file():
-        baseline_doc = json.loads(args.baseline.read_text(encoding="utf-8"))
-    baseline = None if baseline_doc is None else baseline_doc.get("metrics", {})
+    try:
+        baseline_doc = load_baseline(args.baseline)
+    except ValueError as err:
+        print(f"Cannot read the baseline: {err}", file=sys.stderr)
+        return 2
+    if args.update and baseline_doc is None:
+        # Seeding from this run would silently reset the gate.
+        print(f"--update needs a baseline: {args.baseline} not found", file=sys.stderr)
+        return 2
 
-    rows = compare(medians, baseline, args.profile)
+    reference = build_reference(baseline_doc, args.profile)
+    rows = compare(medians, reference, args.profile)
+    failed_labels = {row[1] for row in rows if row[4] == FAIL}
+    failing = [rule.key for rule in COUNT_RULES if rule.label in failed_labels]
+    blocked = bool(failing) and not args.accept
+
+    updated, changes = None, []
+    if args.update and not blocked:
+        updated, changes = update_baseline(
+            baseline_doc, medians, failing, args, info, runs
+        )
+
     report = render(rows, runs, baseline_doc, args.title, args.profile)
+    if changes:
+        items = "\n".join(f"- {line}" for line in changes)
+        report += f"\nBaseline changes:\n\n{items}\n"
+    if args.report_only:
+        report += "\nReport only: this run does not fail or update the baseline.\n"
     print(report)
     if args.summary:
         with args.summary.open("a", encoding="utf-8") as handle:
@@ -303,8 +536,11 @@ def main(argv: list[str] | None = None) -> int:
         doc = build_baseline(medians, runs, info)
         args.write_baseline.write_text(json.dumps(doc, indent=2) + "\n", "utf-8")
         print(f"Wrote baseline candidate: {args.write_baseline}")
+    if updated is not None:
+        args.update.write_text(json.dumps(updated, indent=2) + "\n", "utf-8")
+        print(f"Wrote updated baseline: {args.update}")
 
-    return 1 if any(row[4] == FAIL for row in rows) else 0
+    return 1 if blocked and not args.report_only else 0
 
 
 if __name__ == "__main__":
