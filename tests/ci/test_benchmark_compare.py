@@ -558,11 +558,12 @@ def write_history_file(
 
 
 def update_run(
-    compare, tmp_path, metrics, base_path, run_id="r1", profile="desktop", *extra
+    compare, tmp_path, metrics, base_path, run_id="r1", profile="desktop", accept=None
 ):
     """Run one --update pass in place; return (exit code, file, unchanged bytes?)."""
     results = write_runs(tmp_path / "runs.csv", [metrics])
     before = base_path.read_bytes()
+    accept_args = [] if accept is None else ["--accept", accept]
     code = compare.main(
         [
             "--results",
@@ -577,7 +578,7 @@ def update_run(
             f"sha-{run_id}",
             "--profile",
             profile,
-            *extra,
+            *accept_args,
         ]
     )
     return (
