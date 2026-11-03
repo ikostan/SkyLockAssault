@@ -29,13 +29,13 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 
 ### 1. Version 2 baseline file (`test/benchmark/compare.py`)
 
-| Field        | Holds                                                                  |
-|--------------|------------------------------------------------------------------------|
-| `baseline`   | The count baselines the gate compares against.                         |
-| `history`    | The last 5 recorded runs, passing or accepted: run ID, commit, date and every metric median. |
-| `accepted`   | The last accept that raised a count, and what it raised.               |
-| `seen_runs`  | The IDs of recorded runs, up to 500 (not in the issue; see below).     |
-| `profile`    | The platform this file belongs to (not in the issue; see below).       |
+| Field       | Holds                                                                                        |
+|-------------|----------------------------------------------------------------------------------------------|
+| `baseline`  | The count baselines the gate compares against.                                               |
+| `history`   | The last 5 recorded runs, passing or accepted: run ID, commit, date and every metric median. |
+| `accepted`  | The last accept that raised a count, and what it raised.                                     |
+| `seen_runs` | The IDs of recorded runs, up to 500 (not in the issue; see below).                           |
+| `profile`   | The platform this file belongs to (not in the issue; see below).                             |
 
 - A version 1 file is read as a baseline with empty history, so task 3 (#1110) can seed the branch from today's files.
 - A seed file's `baseline` also holds timings and web objects and nodes. They are the reference only until the first passing or accepted update, and are then dropped.
@@ -108,11 +108,11 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 | CodeRabbit | Non-finite medians reach the baseline file                          | **Fixed differently:** reproduced a traceback and exit 1 before any write, plus a median that could hide `NaN`. Such results now exit 2. The `allow_nan=False` backstop was declined: every written number is already checked. |
 | CodeRabbit | Filter ratchet history by profile                                   | **Fixed differently:** a shared file also mixes rolling medians and `seen_runs`, so the file now records its profile and refuses any other.                                                                                    |
 | CodeRabbit | Filter rolling history by profile in `build_reference`              | **Declined:** the profile check already stops a file holding mixed runs, and no version 2 files exist yet, so there are no legacy entries to migrate.                                                                          |
-| CodeRabbit | `history` and seed wording leave out accepted runs | **Fixed:** the note and the `compare.py` docstring now say passing or accepted. |
-| CodeRabbit | "Writes nothing" overstates a failing run | **Fixed:** a failing run does not update the baseline file, but still writes the summary and candidate. The note and the `compare.py` docstring now say so. |
-| CodeRabbit | Missing-count rule also implies web warn-only counts | **Fixed:** the rule now says gated counts, and that web objects and nodes are not added. |
-| CodeRabbit | Verification and assessment table disagree on CI | **Fixed:** both say it is still to confirm until CI finishes on the final commit. |
-| CodeRabbit | Non-numeric cells drop a metric from the gate | **Fixed:** reproduced a 500-save regression passing because one iteration held `n/a`. Such results now exit 2, and so does a short row, which crashed with a `TypeError`. |
+| CodeRabbit | `history` and seed wording leave out accepted runs                  | **Fixed:** the note and the `compare.py` docstring now say passing or accepted.                                                                                                                                                |
+| CodeRabbit | "Writes nothing" overstates a failing run                           | **Fixed:** a failing run does not update the baseline file, but still writes the summary and candidate. The note and the `compare.py` docstring now say so.                                                                    |
+| CodeRabbit | Missing-count rule also implies web warn-only counts                | **Fixed:** the rule now says gated counts, and that web objects and nodes are not added.                                                                                                                                       |
+| CodeRabbit | Verification and assessment table disagree on CI                    | **Fixed:** both say it is still to confirm until CI finishes on the final commit.                                                                                                                                              |
+| CodeRabbit | Non-numeric cells drop a metric from the gate                       | **Fixed:** reproduced a 500-save regression passing because one iteration held `n/a`. Such results now exit 2, and so does a short row, which crashed with a `TypeError`.                                                      |
 | Sourcery   | Report-only writes the candidate                                    | **Declined:** intentional, see Design Decisions.                                                                                                                                                                               |
 | Sourcery   | Workflow changed in a Python-only PR                                | **Fixed in part:** bump reverted; one removed comment remains (see Follow-ups).                                                                                                                                                |
 | Sourcery   | Missing run fails to interrupt the ratchet (#1124)                  | **Fixed:** the test now checks the baseline after `r1` and `r2`, and it moves only after `r3`. With a bug added that skips the gap, the test fails.                                                                            |
@@ -173,7 +173,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 | <https://github.com/ikostan/SkyLockAssault/issues/1109> | A reason for each baseline that moves                                 | ✅        | Summary lines.                                                                   |
 | <https://github.com/ikostan/SkyLockAssault/issues/1109> | Default `--baseline` path stays until task 6                          | ✅        | `DEFAULT_BASELINE`.                                                              |
 | <https://github.com/ikostan/SkyLockAssault/issues/1109> | Tests cover the listed cases; existing cases kept                     | ✅        | No lines removed from the test file.                                             |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | `pytest tests/ci/` passes                                             | ⏳        | Still to confirm in CI on the final commit (see Verification).                                             |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | `pytest tests/ci/` passes                                             | ⏳        | Still to confirm in CI on the final commit (see Verification).                   |
 | <https://github.com/ikostan/SkyLockAssault/issues/1109> | Python only; no workflow files change                                 | ❌        | One workflow comment and three `.gd` comment-only files remain (see Follow-ups). |
 
 ---
