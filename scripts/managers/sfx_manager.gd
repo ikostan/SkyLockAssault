@@ -335,7 +335,6 @@ func cleanup_for_test() -> void:
 ## Frees every pooled player and leaves the pool empty, so tests can verify that play_sfx()
 ## lazily rebuilds it (Issue #726). Strictly guarded to no-op in production builds.
 ## Call cleanup_for_test() afterwards to restore a full pool.
-## :rtype: void
 func clear_sfx_pool_for_test() -> void:
 	if not OS.is_debug_build():
 		return
@@ -343,7 +342,6 @@ func clear_sfx_pool_for_test() -> void:
 
 
 ## Frees all pooled players (and orphaned player children) and empties the pool array.
-## :rtype: void
 func _free_sfx_pool() -> void:
 	# 1. Clean the pool deterministically
 	for i in range(_sfx_pool.size() - 1, -1, -1):

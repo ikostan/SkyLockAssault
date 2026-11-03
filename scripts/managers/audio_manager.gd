@@ -269,15 +269,26 @@ func _get_last_audible_volume(bus_name: String) -> float:
 	)
 
 
-## Shared mute and unmute pipeline handling confirmation clicks and deferred hardware cutoffs.
+## Single mute/unmute pipeline shared by the Audio Settings menu and the web bridge
+## (Issue #1048). Owns the confirmation click, the deferred hardware cutoff and the
+## unmute-from-zero restore (Issue #1046), so callers never sequence state/apply themselves.
+## Flow:
+##   1. Manual interactions play the confirmation click.
+##   2. The logical mute state flips immediately (mute_toggled fires, so UI locks update).
+##   3. Unmuting a bus at (near) zero volume restores its last audible volume.
+##   4. Manual mutes defer the AudioServer cutoff by MUTE_HARDWARE_DELAY so the click can
+##      finish streaming; unmutes and programmatic calls apply immediately.
+##   5. The newest state is applied to AudioServer (a newer toggle during the delay wins).
+##      Exception (Issue #1047): while a confirmation click is still streaming, a mute of a
+##      bus on the click's feedback path is deferred until the last click window closes, so
+##      neither a programmatic mute nor an earlier timer cuts a click short. Unmutes still
+##      apply immediately.
+## Does not save: callers follow up with save_volumes(), mirroring set_volume().
 ##
-## Manages the confirmation click, deferred hardware cutoffs, and unmute-from-zero restores for
-## the audio settings menu and web bridge. Does not save volume settings.
-##
-## [param bus_name]: Name of the audio bus.
-## [param muted]: True to mute, or false to unmute.
-## [param is_manual_interaction]: True for real user presses playing clicks and deferred
-## cutoffs; false for programmatic callers.
+## [param bus_name]: Name of the bus.
+## [param muted]: True to mute, false to unmute.
+## [param is_manual_interaction]: True for real user presses (click + deferred cutoff);
+## false for programmatic callers such as the web bridge (silent, immediate).
 func toggle_mute(bus_name: String, muted: bool, is_manual_interaction: bool = false) -> void:
 	if not AudioConstants.BUS_CONFIG.has(bus_name):
 		Globals.log_message("Unknown bus for toggle_mute: " + bus_name, Globals.LogLevel.WARNING)
@@ -568,11 +579,14 @@ func load_volumes(path: String = current_config_path) -> void:
 	apply_all_volumes()
 
 
-## Applies volume and mute values from a ConfigFile to the AudioManager state.
-##
-## Applies volume and mute values from an in-memory ConfigFile to AudioManager state without
-## disk I/O. Volumes are clamped to 0.0-1.0 and buses at or below AUTO_MUTE_VOLUME_THRESHOLD
-## are loaded muted.
+## Applies volume and mute values from an in-memory ConfigFile to AudioManager state.
+## Pure GDScript helper with no disk I/O or decryption, intended for in-memory testing.
+## Only well-typed values in the "audio" section are applied: volumes must be float or int,
+## mute flags must be bool. Missing or invalid keys keep the bus's current value.
+## Volumes are clamped to 0.0-1.0, and a bus at or below AUTO_MUTE_VOLUME_THRESHOLD is loaded
+## muted, so a saved file can never start a bus unmuted at zero volume (Issue #1046).
+## Note: state is updated via set_bus_state(), so volume_changed / mute_toggled are emitted
+## for every bus. AudioServer is not touched; call apply_all_volumes() to sync buses.
 ##
 ## [param config]: The ConfigFile instance containing the audio section.
 func apply_volumes_from_config(config: ConfigFile) -> void:
@@ -659,7 +673,6 @@ func save_volumes(path: String = "") -> void:
 
 
 ## Apply all loaded volumes to AudioServer buses
-## :rtype: void
 func apply_all_volumes() -> void:
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
 		var state: Dictionary = get_bus_state(bus)
@@ -700,7 +713,6 @@ func apply_volume_to_bus(bus_name: String, volume: float, muted: bool) -> void:
 
 
 ## Reset all volumes and mute flags to defaults
-## :rtype: void
 func reset_volumes() -> void:
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
 		var config_data: Dictionary = AudioConstants.BUS_CONFIG[bus]
