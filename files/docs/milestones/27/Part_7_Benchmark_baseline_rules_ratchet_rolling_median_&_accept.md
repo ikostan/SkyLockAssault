@@ -32,20 +32,20 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 | Field        | Holds                                                                  |
 |--------------|------------------------------------------------------------------------|
 | `baseline`   | The count baselines the gate compares against.                         |
-| `history`    | The last 5 passing runs: run ID, commit, date and every metric median. |
+| `history`    | The last 5 recorded runs, passing or accepted: run ID, commit, date and every metric median. |
 | `accepted`   | The last accept that raised a count, and what it raised.               |
 | `seen_runs`  | The IDs of recorded runs, up to 500 (not in the issue; see below).     |
 | `profile`    | The platform this file belongs to (not in the issue; see below).       |
 
 - A version 1 file is read as a baseline with empty history, so task 3 (#1110) can seed the branch from today's files.
-- A seed file's `baseline` also holds timings and web objects and nodes. They are the reference only until the first passing run, and are then dropped.
+- A seed file's `baseline` also holds timings and web objects and nodes. They are the reference only until the first passing or accepted update, and are then dropped.
 
 ### 2. The three rules
 
 - **Count ratchet:** a passing run is added to `history`. If the last 3 runs all beat a count's baseline by more than its tolerance, the baseline drops to the worst of the 3. It never rises through this rule.
 - **Rolling reference:** timings, plus web `objects_avg` and `nodes_avg`, compare against the median of up to 5 runs in `history`. They only warn, and web objects and nodes are never ratcheted.
 - **Accept:** `--accept <id>` raises only the failing counts to this run's values and records the accept. Every other count stays on the ratchet.
-- **Failing run:** an unaccepted count failure exits 1 and writes nothing, so the run is not added to `history`.
+- **Failing run:** an unaccepted count failure exits 1 and does not update the baseline file, so the run is not added to `history`. It still appends to `--summary` and writes the `--write-baseline` candidate.
 
 ### 3. Command line and summary
 
@@ -86,7 +86,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 - **`profile` was added at file level.** The first `--update` records it. Filtering history by profile would still leave a shared file's `seen_runs` mixed, so the file refuses any other profile and history entries stay untagged.
 - **A manual accept is named by matching IDs.** If `--accept` equals `--run-id`, the summary says `run <id>`; otherwise `#<id>`. #1111 must pass the failed run's ID to both on the manual path.
 - **An unneeded accept keeps the last `accepted` record.** The run is still recorded, and the summary says the accept raised nothing.
-- **A count missing from the baseline is added at this run's value,** so a new count starts being gated. The file must still hold at least one count baseline.
+- **A gated count missing from the baseline is added at this run's value,** so a new count starts being gated. Web `objects_avg` and `nodes_avg` only warn, so they are not added. The file must still hold at least one count baseline.
 - **A recorded run with `--accept` exits 0 and changes nothing,** even if the table shows a failure. Without `--accept` it exits 1.
 
 ---
@@ -108,6 +108,10 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 | CodeRabbit | Non-finite medians reach the baseline file                          | **Fixed differently:** reproduced a traceback and exit 1 before any write, plus a median that could hide `NaN`. Such results now exit 2. The `allow_nan=False` backstop was declined: every written number is already checked. |
 | CodeRabbit | Filter ratchet history by profile                                   | **Fixed differently:** a shared file also mixes rolling medians and `seen_runs`, so the file now records its profile and refuses any other.                                                                                    |
 | CodeRabbit | Filter rolling history by profile in `build_reference`              | **Declined:** the profile check already stops a file holding mixed runs, and no version 2 files exist yet, so there are no legacy entries to migrate.                                                                          |
+| CodeRabbit | `history` and seed wording leave out accepted runs | **Fixed:** the note and the `compare.py` docstring now say passing or accepted. |
+| CodeRabbit | "Writes nothing" overstates a failing run | **Fixed:** a failing run does not update the baseline file, but still writes the summary and candidate. The note and the `compare.py` docstring now say so. |
+| CodeRabbit | Missing-count rule also implies web warn-only counts | **Fixed:** the rule now says gated counts, and that web objects and nodes are not added. |
+| CodeRabbit | Verification and assessment table disagree on CI | **Fixed:** both say it is still to confirm until CI finishes on the final commit. |
 | Sourcery   | Report-only writes the candidate                                    | **Declined:** intentional, see Design Decisions.                                                                                                                                                                               |
 | Sourcery   | Workflow changed in a Python-only PR                                | **Fixed in part:** bump reverted; one removed comment remains (see Follow-ups).                                                                                                                                                |
 | Sourcery   | Missing run fails to interrupt the ratchet (#1124)                  | **Fixed:** the test now checks the baseline after `r1` and `r2`, and it moves only after `r3`. With a bug added that skips the gap, the test fails.                                                                            |
@@ -168,7 +172,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 | <https://github.com/ikostan/SkyLockAssault/issues/1109> | A reason for each baseline that moves                                 | ✅        | Summary lines.                                                                   |
 | <https://github.com/ikostan/SkyLockAssault/issues/1109> | Default `--baseline` path stays until task 6                          | ✅        | `DEFAULT_BASELINE`.                                                              |
 | <https://github.com/ikostan/SkyLockAssault/issues/1109> | Tests cover the listed cases; existing cases kept                     | ✅        | No lines removed from the test file.                                             |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | `pytest tests/ci/` passes                                             | ⏳        | Confirmed by CI on the final commit.                                             |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | `pytest tests/ci/` passes                                             | ⏳        | Still to confirm in CI on the final commit (see Verification).                                             |
 | <https://github.com/ikostan/SkyLockAssault/issues/1109> | Python only; no workflow files change                                 | ❌        | One workflow comment and three `.gd` comment-only files remain (see Follow-ups). |
 
 ---
@@ -204,6 +208,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
   - `4a20fe1` Fix ratchet window test run sequence
   - `30249ca` Update test_benchmark_compare.py
   - `3e76534` Merge pull request #1124
+  - `a9898c8` Update Part_7_Benchmark_baseline_rules_ratchet_rolling_median_&_accept.md
 
 ### Bots / AI contributions
 
@@ -236,7 +241,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 
 - **@coderabbitai**
   - Posted the walkthrough, rated merge risk minimal, and flagged the unedited PR description.
-  - Posted 4 later comments: the signal docs (fixed), non-finite medians and ratchet history (both fixed differently), and rolling history (declined).
+  - Posted 8 later comments: the signal docs and four note and docstring wording fixes (fixed), non-finite medians and ratchet history (both fixed differently), and rolling history (declined).
   - Authored `866d243` Add benchmark comparison edge case tests (#1124): 5 tests, 8 cases. Reviewed by @claude (Opus 5.5): kept, with one test strengthened.
 
 - **@dependabot**

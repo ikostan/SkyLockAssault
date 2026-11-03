@@ -33,8 +33,9 @@ run and an existing baseline. A version 2 file holds:
 
 - baseline: the count baselines the gate compares against. A seed file also
   holds the values that later follow the rolling median; each one is the
-  reference only until the first passing run and is then dropped.
-- history: the last 5 passing runs (run ID, commit, date, metric medians).
+  reference only until the first passing or accepted update and is then dropped.
+- history: the last 5 recorded runs, passing or accepted (run ID, commit, date,
+  metric medians).
 - accepted: the last accept that raised a count, or null.
 - seen_runs: the IDs of the runs already recorded. A run ID is recorded only
   once, so a re-run changes nothing, even after it has left the history.
@@ -44,7 +45,8 @@ run and an existing baseline. A version 2 file holds:
 After a passing run, a count baseline drops to the worst of the last 3 runs
 if all 3 beat it by more than its tolerance. It never rises except through
 --accept, which raises only the failing counts to this run's values. A failing
-run without --accept writes nothing, so it is not added to the history.
+run without --accept does not update the baseline file, so it is not added to the
+history. It still appends to --summary and writes the --write-baseline candidate.
 
 A baseline file that is malformed or holds no metrics exits 2, and so does
 --update with no count baselines to gate on, so a bad file cannot reset the gate.
