@@ -13,7 +13,7 @@
 
 - [#1109 – [TASK] Benchmark baseline rules in compare.py: ratchet, rolling median and accept](https://github.com/ikostan/SkyLockAssault/issues/1109)
 
-**Related:** [#1107 – [EPIC] Automatic CI benchmark baselines](https://github.com/ikostan/SkyLockAssault/issues/1107) (sub-task 2), [#1110](https://github.com/ikostan/SkyLockAssault/issues/1110), [#1111](https://github.com/ikostan/SkyLockAssault/issues/1111), [#1121](https://github.com/ikostan/SkyLockAssault/pull/1121), [#1123](https://github.com/ikostan/SkyLockAssault/pull/1123)  
+**Related:** [#1107 – [EPIC] Automatic CI benchmark baselines](https://github.com/ikostan/SkyLockAssault/issues/1107) (sub-task 2), [#1110](https://github.com/ikostan/SkyLockAssault/issues/1110), [#1111](https://github.com/ikostan/SkyLockAssault/issues/1111), [#1121](https://github.com/ikostan/SkyLockAssault/pull/1121), [#1123](https://github.com/ikostan/SkyLockAssault/pull/1123), [#1124](https://github.com/ikostan/SkyLockAssault/pull/1124)  
 **Milestone:** Milestone 27: Audio feedback fixes, architecture refactor & performance validation  
 **Labels:** documentation, enhancement, tools, testing, performance, dependencies, dependabot, QA
 
@@ -69,7 +69,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 ### 5. Tests (`tests/ci/test_benchmark_compare.py`)
 
 - **Existing cases:** all 95 kept unchanged.
-- **New:** 87 cases, for 182 in total. They cover each acceptance criterion, re-runs, malformed files, non-finite results, profile binding, report-only behaviour and option validation.
+- **New:** 95 cases, for 190 in total, 8 of them from CodeRabbit's #1124. They cover each acceptance criterion, re-runs, malformed files, non-finite results, profile binding, report-only behaviour and option validation.
 
 ### 6. Other files in this PR
 
@@ -80,7 +80,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 
 ## Design Decisions
 
-- **`--report-only` still writes the `--write-baseline` candidate.** The issue says "write nothing", but the measure jobs will run report-only, and the accept check in the design doc reads `commit` from that file in the results artifacts. It never updates the baseline: `--update` is rejected.
+- **`--report-only` still writes the `--write-baseline` candidate.** The issue first said "write nothing", but the measure jobs will run report-only, and the accept check in the design doc reads `commit` from that file in the results artifacts. It never updates the baseline: `--update` is rejected. #1109 now says this too.
 - **`--commit` was added.** A manual accept runs under a different `GITHUB_SHA` from the run it accepts, so history would otherwise record the wrong commit. It falls back to `GITHUB_SHA`.
 - **`seen_runs` was added.** `history` keeps only 5 runs, so it cannot detect an older re-run. GitHub allows re-runs for up to 30 days, and 500 IDs covers far more merges than that.
 - **`profile` was added at file level.** The first `--update` records it. Filtering history by profile would still leave a shared file's `seen_runs` mixed, so the file refuses any other profile and history entries stay untagged.
@@ -97,6 +97,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 |------------|---------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | DeepSource | `update_baseline` complexity 20, `main` complexity 17               | **Fixed:** split into helpers. Identical results over 2,048 randomised runs, apart from timestamps and runner.                                                                                                                 |
 | DeepSource | Keyword arguments before `*extra` in `update_run`                   | **Fixed:** replaced with a named `accept` parameter.                                                                                                                                                                           |
+| DeepSource | Too many positional arguments (7 calls to `update_run`)             | **Fixed:** the calls still used the old format after the helper changed; CI failed the same way until they were updated.                                                                                                       |
 | Qodo       | Ratchet test could not catch stale history                          | **Fixed:** the runs after the accept now beat the baseline. With a stale-history bug added, the new test fails and the old one passed.                                                                                         |
 | Qodo       | Malformed baselines can reset count gates                           | **Fixed:** reproduced, then rejected with exit 2.                                                                                                                                                                              |
 | Qodo       | An accepted re-run can raise the gate again                         | **Fixed:** reproduced, then any recorded run changes nothing.                                                                                                                                                                  |
@@ -109,12 +110,14 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 | CodeRabbit | Filter rolling history by profile in `build_reference`              | **Declined:** the profile check already stops a file holding mixed runs, and no version 2 files exist yet, so there are no legacy entries to migrate.                                                                          |
 | Sourcery   | Report-only writes the candidate                                    | **Declined:** intentional, see Design Decisions.                                                                                                                                                                               |
 | Sourcery   | Workflow changed in a Python-only PR                                | **Fixed in part:** bump reverted; one removed comment remains (see Follow-ups).                                                                                                                                                |
+| Sourcery   | Missing run fails to interrupt the ratchet (#1124)                  | **Fixed:** the test now checks the baseline after `r1` and `r2`, and it moves only after `r3`. With a bug added that skips the gap, the test fails.                                                                            |
+| Sourcery   | Non-Python changes included                                         | **Expected for the note:** #1107 gives each PR a Part N note. The `.gd` changes are in Follow-ups.                                                                                                                             |
 
 ---
 
 ## Verification
 
-- **Tests:** `pytest tests/ci/test_benchmark_compare.py` gives 182 passed.
+- **Tests:** `pytest tests/ci/test_benchmark_compare.py` gives 190 passed.
 - **Test strength:** breaking each key rule on purpose makes the tests fail: worst-of-3, the run count, the tolerance, the history size, the failing-run block, re-run handling, the file checks, the non-finite check and the profile check.
 - **Python style:** `ruff check` and `ruff format` clean with the repo's settings.
 - **`compare.py` complexity (`radon`):** `main` 8, `update_baseline` 4, highest `render` at 14 and `compare` at 11.
@@ -126,7 +129,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 ## Known Limitations / Follow-ups
 
 - **Scope of #1109:** it says "Python only" and "no workflow files". To meet that, restore `# Pinned to SHA for security (was @v19)` in `lint_readme.yml`, and either move the `.gd` comment changes to their own PR or change the wording.
-- **Issue wording:** update #1109 for `--commit`, `seen_runs`, `profile`, exit 2 and the report-only candidate.
+- **Issue wording:** update #1109 for `--commit`, `seen_runs`, `profile` and exit 2. Its report-only line is already updated.
 - **Markdownlint bump:** v25.0.0 is not on `main`. #1121 was merged into this branch rather than `main`, so the bump needs a new PR. The `dependencies` and `dependabot` labels no longer apply here.
 - **PR description:** still the unedited template, which CodeRabbit's description check flagged.
 - **#1111 must:**
@@ -154,19 +157,19 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 
 ### Assessment against linked issues
 
-| Issue                                                   | Objective                                                 | Addressed | Explanation                                                                      |
-|---------------------------------------------------------|-----------------------------------------------------------|-----------|----------------------------------------------------------------------------------|
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Version 2 file; version 1 loads with empty history        | ✅        | `load_baseline`.                                                                 |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Ratchet only after 3 runs past tolerance; never rises     | ✅        | `ratchet_count`.                                                                 |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Timings use the median of up to 5 runs and only warn      | ✅        | `build_reference`.                                                               |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Unaccepted failure leaves the file unchanged and exits 1  | ✅        | The update path is skipped.                                                      |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Accept raises only failing counts                         | ✅        | `apply_accept`.                                                                  |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | CLI options; report-only never exits 1 and writes nothing | 🟡        | Never updates the baseline, but writes the candidate on purpose.                 |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | A reason for each baseline that moves                     | ✅        | Summary lines.                                                                   |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Default `--baseline` path stays until task 6              | ✅        | `DEFAULT_BASELINE`.                                                              |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Tests cover the listed cases; existing cases kept         | ✅        | No lines removed from the test file.                                             |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | `pytest tests/ci/` passes                                 | ⏳        | Confirmed by CI on the final commit.                                             |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Python only; no workflow files change                     | ❌        | One workflow comment and three `.gd` comment-only files remain (see Follow-ups). |
+| Issue                                                   | Objective                                                             | Addressed | Explanation                                                                      |
+|---------------------------------------------------------|-----------------------------------------------------------------------|-----------|----------------------------------------------------------------------------------|
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Version 2 file; version 1 loads with empty history                    | ✅        | `load_baseline`.                                                                 |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Ratchet only after 3 runs past tolerance; never rises                 | ✅        | `ratchet_count`.                                                                 |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Timings use the median of up to 5 runs and only warn                  | ✅        | `build_reference`.                                                               |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Unaccepted failure leaves the file unchanged and exits 1              | ✅        | The update path is skipped.                                                      |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Accept raises only failing counts                                     | ✅        | `apply_accept`.                                                                  |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | CLI options; report-only never exits 1 and never updates the baseline | ✅        | It still writes the candidate if asked, as #1109 now says.                       |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | A reason for each baseline that moves                                 | ✅        | Summary lines.                                                                   |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Default `--baseline` path stays until task 6                          | ✅        | `DEFAULT_BASELINE`.                                                              |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Tests cover the listed cases; existing cases kept                     | ✅        | No lines removed from the test file.                                             |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | `pytest tests/ci/` passes                                             | ⏳        | Confirmed by CI on the final commit.                                             |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Python only; no workflow files change                                 | ❌        | One workflow comment and three `.gd` comment-only files remain (see Follow-ups). |
 
 ---
 
@@ -175,7 +178,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 ### Human contribution (@ikostan)
 
 - Picked up #1109, applied all code to the PR branch, and brought every CI failure and every DeepSource, Qodo, Sourcery and CodeRabbit finding back for assessment.
-- Merged Dependabot's #1121 and the weekly docs PR #1123 into the branch, reviewed the doc comments, and reverted the markdownlint bump.
+- Merged Dependabot's #1121, the weekly docs PR #1123 and CodeRabbit's test PR #1124 into the branch, reviewed the doc comments, and reverted the markdownlint bump.
 - Commits by @ikostan:
   - `12031c4` Add rolling benchmark baseline updates
   - `cae5c9a` Merge pull request #1121
@@ -197,6 +200,10 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
   - `65c77f1` Update audio_manager.gd
   - `e3293e3` Reject non-finite benchmark metrics
   - `6f2ea1d` Bind benchmark baselines to a profile
+  - `a228133` Document benchmark profile and safety updates
+  - `4a20fe1` Fix ratchet window test run sequence
+  - `30249ca` Update test_benchmark_compare.py
+  - `3e76534` Merge pull request #1124
 
 ### Bots / AI contributions
 
@@ -210,11 +217,13 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
     - Reproduced each Qodo bug in `compare.py` before fixing it (malformed file, accepted re-run, older re-run, oversized number) and strengthened the post-accept ratchet test.
     - Traced the workflow change to Dependabot's `1957ed9` and checked which `.gd` changes were comments only.
     - Checked CodeRabbit's findings against the code: reworded the signal docs, replaced its non-finite guard after finding the crash and the hidden `NaN`, proposed the file-level `profile` check instead of filtering history, and tested that the `build_reference` finding was already covered.
+    - Reviewed #1124 by adding bugs on purpose: its tests caught two that the suite had missed. Found that one test missed a ratchet bug, and corrected the test's run sequence.
   - **Docs**
-    - Wrote this note (`47e0c2f`) and updated it after the later review rounds.
+    - Updated the report-only line in #1109.
 
 - **@sourcery-ai**
-  - Posted the PR summary and Reviewer's Guide, with 2 inline comments: report-only (declined) and the workflow change (fixed in part).
+  - Posted the PR summary and Reviewer's Guide, with 5 inline comments: report-only, twice (declined); the workflow change, twice (fixed in part); non-Python changes (expected for the note).
+  - #1124: posted 1 comment on the missing-run test (fixed).
   - Posted the #1109 requirements check (9 of 12 met, 1 by hand, 1 partly met, 1 not addressed).
   - Skipped one review because the review budget was used up.
 
@@ -222,11 +231,13 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
   - Posted 6 findings, all fixed: 4 bugs in `compare.py`, 1 weak test, 1 duplicate doc comment.
 
 - **@deepsource-io**
-  - Python and JavaScript analysis pass (grade A), with 3 inline comments, all fixed.
+  - Python and JavaScript analysis pass (grade A), with 10 inline comments, all fixed.
+  - `deepsource-autofix[bot]` authored `4e9a62f` style: format code with Black and isort (#1124).
 
 - **@coderabbitai**
   - Posted the walkthrough, rated merge risk minimal, and flagged the unedited PR description.
   - Posted 4 later comments: the signal docs (fixed), non-finite medians and ratchet history (both fixed differently), and rolling history (declined).
+  - Authored `866d243` Add benchmark comparison edge case tests (#1124): 5 tests, 8 cases. Reviewed by @claude (Opus 5.5): kept, with one test strengthened.
 
 - **@dependabot**
   - Authored `1957ed9` Bump DavidAnson/markdownlint-cli2-action from 24.2.0 to 25.0.0 (#1121), later reverted on this branch.
