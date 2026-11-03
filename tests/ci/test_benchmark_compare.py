@@ -1107,6 +1107,7 @@ def test_failing_rerun_without_accept_still_fails(compare, tmp_path):
         '{"version": 2, "baseline": {"saves": "61"}}',
         '{"version": 2, "baseline": {"saves": true}}',
         '{"version": 2, "baseline": {"saves": NaN}}',
+        '{"version": 2, "baseline": {"saves": 1' + "0" * 400 + "}}",
         '{"version": 2, "baseline": {"saves": 1}, "history": {}}',
         '{"version": 2, "baseline": {"saves": 1}, "history": [1]}',
         '{"version": 2, "baseline": {"saves": 1}, "history": [{"run_id": "a"}]}',

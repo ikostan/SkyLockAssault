@@ -231,11 +231,12 @@ def load_medians(results: Path) -> tuple[dict[str, float], int, dict[str, str]]:
 
 def is_metric(value: object) -> bool:
     """Return True for a finite number; a NaN baseline would never fail a run."""
-    return (
-        isinstance(value, (int, float))
-        and not isinstance(value, bool)
-        and math.isfinite(value)
-    )
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:  # An integer too large for a float.
+        return False
 
 
 def is_metric_map(value: object) -> bool:
