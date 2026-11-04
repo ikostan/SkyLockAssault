@@ -350,7 +350,7 @@ def test_report_names_warn_only_counts(compare, tmp_path, capsys, profile, has_n
         ("desktop", "reload_object_growth", 10),
         ("web", "reload_object_growth", 1),
         (None, "nodes_avg", 5),
-        ("desktop", "nodes_avg", 5),
+        ("desktop", "nodes_avg", 6),
         ("web", "nodes_avg", 15),
     ],
 )
@@ -436,6 +436,7 @@ def test_invalid_profile_is_rejected(compare, capsys):
     ("profile", "baseline_name", "metric", "tolerance", "gated"),
     [
         ("desktop", "baseline_ci.json", "reload_object_growth", 10, True),
+        ("desktop", "baseline_ci.json", "nodes_avg", 6, True),
         ("web", "baseline_web_ci.json", "nodes_avg", 15, False),
         ("web", "baseline_web_ci.json", "reload_object_growth", 1, True),
     ],
@@ -648,6 +649,61 @@ def test_desktop_reload_growth_ratchet_uses_profile_tolerance(
     for index in range(3):
         _, doc, _ = update_run(compare, tmp_path, low, path, f"r{index}")
     assert doc["baseline"]["reload_object_growth"] == (2.0 if moved else baseline)
+
+
+@pytest.mark.parametrize(
+    ("baseline", "values", "expected"),
+    [
+        (509.217, [503.583] * 3, 509.217),
+        (100.0, [93.0, 94.0, 93.5], 100.0),
+        (100.0, [93.0, 92.0, 93.5], 93.5),
+    ],
+)
+def test_desktop_node_ratchet_uses_widened_tolerance(
+    compare, tmp_path, baseline, values, expected
+):
+    """Only three improvements beyond six nodes tighten the desktop gate."""
+    path = write_history_file(
+        tmp_path / "desktop.json", {**BASE_METRICS, "nodes_avg": baseline}
+    )
+    for index, nodes in enumerate(values):
+        code, doc, _ = update_run(
+            compare, tmp_path, {**BASE_METRICS, "nodes_avg": nodes}, path, f"r{index}"
+        )
+        assert code == 0
+        if index < 2:
+            assert doc["baseline"]["nodes_avg"] == baseline
+    assert doc["baseline"]["nodes_avg"] == expected
+    assert [run["metrics"]["nodes_avg"] for run in doc["history"]] == values
+
+
+@pytest.mark.parametrize(
+    ("nodes", "accept", "exit_code", "expected_baseline", "raised"),
+    [
+        (105.5, None, 0, 100.0, None),
+        (106.0, "123", 0, 100.0, None),
+        (106.1, None, 1, 100.0, None),
+        (106.1, "123", 0, 106.1, {"nodes_avg": {"from": 100.0, "to": 106.1}}),
+    ],
+)
+def test_desktop_node_update_respects_tolerance_and_accept(
+    compare, tmp_path, nodes, accept, exit_code, expected_baseline, raised
+):
+    """Only a node regression beyond six blocks or raises the baseline."""
+    path = write_history_file(
+        tmp_path / "desktop.json", {**BASE_METRICS, "nodes_avg": 100.0}
+    )
+    code, doc, unchanged = update_run(
+        compare, tmp_path, {**BASE_METRICS, "nodes_avg": nodes}, path, accept=accept
+    )
+    assert code == exit_code
+    assert doc["baseline"]["nodes_avg"] == expected_baseline
+    assert unchanged is (exit_code == 1)
+    if raised is None:
+        assert doc["accepted"] is None
+    else:
+        assert doc["accepted"]["raised"] == raised
+    assert len(doc["history"]) == (0 if exit_code == 1 else 1)
 
 
 def test_web_warn_only_counts_are_never_ratcheted(compare, tmp_path, capsys):
@@ -1420,3 +1476,22 @@ def test_absent_metric_column_is_still_skipped(compare, tmp_path):
     without = {key: value for key, value in BASE_METRICS.items() if key != "saves"}
     results = write_runs(tmp_path / "runs.csv", [without])
     assert compare.main(["--results", str(results), "--baseline", str(path)]) == 0
+
+
+@pytest.mark.parametrize(
+    ("baseline_nodes", "current_nodes", "expected_status"),
+    [
+        (503.983, 509.217, "ok"),
+        (503.583, 509.217, "ok"),
+        (509.217, 503.583, "ok"),
+        (503.983, 510.0, "fail"),
+    ],
+)
+def test_desktop_node_count_observed_spread(
+    compare, baseline_nodes, current_nodes, expected_status
+):
+    """Real main-run values fit from either end, but a bigger rise still fails."""
+    rows = compare.compare(
+        {"nodes_avg": current_nodes}, {"nodes_avg": baseline_nodes}, "desktop"
+    )
+    assert rows[0][-1] == expected_status
