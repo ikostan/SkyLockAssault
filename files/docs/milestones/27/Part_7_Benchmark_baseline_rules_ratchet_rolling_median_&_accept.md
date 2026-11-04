@@ -137,7 +137,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 
 ## Known Limitations / Follow-ups
 
-- **Desktop benchmark failure:** the first `main` run after merge failed on `OBJECT_NODE_COUNT` avg, 509.217 against 503.983 (+5.233, tolerance 5). No game code changed in this PR, and `ee128f9` gave the exact same 509.217, so this looks like runner noise. The cause of the jump is not known. [#1125](https://github.com/ikostan/SkyLockAssault/pull/1125) proposes a desktop tolerance of 6.
+- **Desktop benchmark failure:** the first `main` run after merge failed on `OBJECT_NODE_COUNT` avg, 509.217 against 503.983 (+5.233, tolerance 5). No game code changed in this PR, and `ee128f9` gave the exact same 509.217, so this looks like runner noise. The cause of the jump is not known. [#1125](https://github.com/ikostan/SkyLockAssault/pull/1125) widens the desktop tolerance to 6.
 - **Scope of #1109:** it says "Python only" and "no workflow files", but this PR merged with one removed comment in `lint_readme.yml` and comment changes in three `.gd` files. `# Pinned to SHA for security (was @v19)` can still be restored on `main`.
 - **Issue wording:** #1109 is closed without mentioning `--commit`, `seen_runs`, `profile` or exit 2. Its report-only line was updated. #1111 relies on these, so they are listed below.
 - **Markdownlint bump:** v25.0.0 is not on `main`. #1121 was merged into this branch and then reverted, so the bump needs a new PR. The `dependencies` and `dependabot` labels on this PR are out of date.
