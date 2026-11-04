@@ -2,12 +2,11 @@
 
 Design doc, Oct 30, 2026
 
-Status: planned in [#1107](https://github.com/ikostan/SkyLockAssault/issues/1107).
-The ratchet, the rolling medians and the accept path arrive with
-[#1109](https://github.com/ikostan/SkyLockAssault/issues/1109) and
-[#1111](https://github.com/ikostan/SkyLockAssault/issues/1111). Until then,
-`compare.py` judges every metric against the committed baseline file, and on
-web the object and node counts only warn against it.
+Status: in progress in [#1107](https://github.com/ikostan/SkyLockAssault/issues/1107).
+[#1109](https://github.com/ikostan/SkyLockAssault/issues/1109) added the ratchet,
+the rolling medians and the accept rule to `compare.py`.
+[#1111](https://github.com/ikostan/SkyLockAssault/issues/1111) turns them on
+in CI.
 
 Source: the design doc in
 [[EPIC] Automatic CI benchmark baselines #1107](https://github.com/ikostan/SkyLockAssault/issues/1107).
@@ -95,8 +94,8 @@ and that needs an explicit signal rather than a file edit.
 - **With the label:** after merge, only the counts that failed are raised to
   that run's values, and the PR number is recorded. Every other count stays on
   the ratchet, so one run never tightens the gate.
-- **Without the label:** a worse count fails the benchmark job, as it does
-  today, and that run is not used for the ratchet.
+- **Without the label:** a worse count fails the `baselines` job, and that run
+  is not used for the ratchet. The benchmark jobs only report and stay green.
 
 **Numbers before merge.** Pull requests that touch game code also run the
 benchmark, gated by the existing `dorny/paths-filter` step. They compare
@@ -126,8 +125,11 @@ reason in the job summary if any check fails:
   workflow file path rather than its display name.
 - It was triggered by a `push` to `main` in this repository, not by a pull
   request, a fork or another branch.
-- Its `desktop` and `web` benchmark jobs ran, and its `benchmark-results` and
-  `benchmark-web-results` artifacts both exist and have not expired.
+- It has finished, its `desktop` and `web` benchmark jobs passed, and its
+  `benchmark-results` and `benchmark-web-results` artifacts both exist and have
+  not expired. Those jobs only report, so one that failed did not measure.
+- Its `baselines` job failed. Only a failed gate has something to accept, and
+  this also refuses older runs judged against older baselines.
 - The `commit` in each artifact's baseline file equals the run's head SHA.
 
 Missing, mismatched or untrusted results raise nothing. The approval stays
@@ -187,8 +189,22 @@ count baseline plus the last 5 passing runs the two rules need.
 | Committed files on `main` | Today's manual process; `main` is protected             |
 <!-- markdownlint-enable MD013 -->
 
-Open question: does a repository ruleset cover all branches? If so, the token
-push is rejected, and `benchmark-baselines` needs a bypass or an exclusion.
+### Seed
+
+[#1110](https://github.com/ikostan/SkyLockAssault/issues/1110) created the
+branch by hand at `c7b14a5`. Nothing reads it until
+[#1111](https://github.com/ikostan/SkyLockAssault/issues/1111).
+
+- **Source:** the values were measured on GitHub's runners in
+  [run 41155653694](https://github.com/ikostan/SkyLockAssault/actions/runs/41155653694)
+  (`400d734`), not on a local machine. Only the format was converted. Local
+  results in `bench_results` are not used.
+- **Rulesets:** none cover this branch and only `main` is protected, so the
+  token push needs no bypass or exclusion.
+- **Profile:** each seed records its `profile`, so a wrong `--profile` exits 2
+  from the first `--update`.
+- **Handling:** never merge or delete this branch, and ignore GitHub's "Compare
+  & pull request" banner. Once #1111 is live, only the `baselines` job edits it.
 
 ## Epic and sub-tasks
 
