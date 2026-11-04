@@ -55,7 +55,7 @@ counts toward the 3 nor resets them.
 - **A slow creep cannot loosen it.** The baseline never goes up on its own, so
   small regressions that each fit inside the tolerance cannot add up.
 
-The tolerances stay as they are. The ratchet decides where the baseline sits.
+The ratchet does not change the tolerances. It decides where the baseline sits.
 The tolerance decides how much worse a run may be before the job fails. It
 also decides how much better 3 runs must be before the baseline moves.
 
@@ -215,4 +215,6 @@ What stays the same:
 
 - The benchmark still blocks no deploys until the game is playable. Only
   `main` runs write the baseline; PR runs only report.
-- Count tolerances are unchanged.
+- The ratchet does not change count tolerances. They are set by hand in
+  `compare.py` and listed in the
+  [benchmark guide](Performance_Benchmark_Guide.md).
