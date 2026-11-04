@@ -187,8 +187,22 @@ count baseline plus the last 5 passing runs the two rules need.
 | Committed files on `main` | Today's manual process; `main` is protected             |
 <!-- markdownlint-enable MD013 -->
 
-Open question: does a repository ruleset cover all branches? If so, the token
-push is rejected, and `benchmark-baselines` needs a bypass or an exclusion.
+### Seed
+
+[#1110](https://github.com/ikostan/SkyLockAssault/issues/1110) created the
+branch by hand at `c7b14a5`. Nothing reads it until
+[#1111](https://github.com/ikostan/SkyLockAssault/issues/1111).
+
+- **Source:** the values were measured on GitHub's runners in
+  [run 41155653694](https://github.com/ikostan/SkyLockAssault/actions/runs/41155653694)
+  (`400d734`), not on a local machine. Only the format was converted. Local
+  results in `bench_results` are not used.
+- **Rulesets:** none cover this branch and only `main` is protected, so the
+  token push needs no bypass or exclusion.
+- **Profile:** each seed records its `profile`, so a wrong `--profile` exits 2
+  from the first `--update`.
+- **Handling:** never merge or delete this branch, and ignore GitHub's "Compare
+  & pull request" banner. Once #1111 is live, only the `baselines` job edits it.
 
 ## Epic and sub-tasks
 
