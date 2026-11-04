@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "created": "2026-10-31T01:50:15Z",
+  "commit": "400d73432a6ef689bffae17614ac43884a54fbfd",
+  "runner": "GitHub Actions 1000042442",
+  "godot": "4.7.1-stable (official)",
+  "runs": 3,
+  "baseline": {
+    "saves": 0.0,
+    "objects_avg": 2545.1833333333334,
+    "nodes_avg": 503.98333333333335,
+    "resources_avg": 206.0,
+    "orphans_max": 0.0,
+    "reload_orphans_max": 0.0,
+    "reload_object_growth": 2.0,
+    "frame_p95_ms": 16.837,
+    "frames_over_33.4ms": 0.0,
+    "proc_worst_avg_ms": 0.0996,
+    "phys_worst_avg_ms": 0.1585,
+    "mem_static_growth": 148908.0
+  },
+  "history": [],
+  "accepted": null,
+  "seen_runs": [],
+  "profile": "desktop"
+}
