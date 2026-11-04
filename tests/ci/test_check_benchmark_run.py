@@ -192,9 +192,7 @@ def test_artifact_without_expiry_metadata_is_refused(tmp_path, capsys, name):
 def test_unexpired_duplicate_artifact_is_usable(tmp_path, capsys):
     """An expired artifact with the same name does not hide a usable one."""
     artifacts = good_artifacts()
-    artifacts["artifacts"].insert(
-        0, {"name": "benchmark-results", "expired": True}
-    )
+    artifacts["artifacts"].insert(0, {"name": "benchmark-results", "expired": True})
     assert run_check(tmp_path, capsys, artifacts=artifacts) == (0, SHA)
 
 
