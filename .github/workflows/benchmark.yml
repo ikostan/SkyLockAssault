@@ -11,6 +11,7 @@
 # A job here fails only if it could not measure or compare (compare.py exit 2).
 # The baselines are checked out after the benchmark runs, so they can't end up in
 # the project or the export being measured.
+# See files/docs/Performance_Benchmark_Guide.md ("CI benchmark").
 name: "Performance Benchmark"
 
 on:  # yamllint disable-line rule:truthy
