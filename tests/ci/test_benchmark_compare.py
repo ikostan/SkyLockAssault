@@ -350,7 +350,7 @@ def test_report_names_warn_only_counts(compare, tmp_path, capsys, profile, has_n
         ("desktop", "reload_object_growth", 10),
         ("web", "reload_object_growth", 1),
         (None, "nodes_avg", 5),
-        ("desktop", "nodes_avg", 5),
+        ("desktop", "nodes_avg", 6),
         ("web", "nodes_avg", 15),
     ],
 )
@@ -1420,3 +1420,22 @@ def test_absent_metric_column_is_still_skipped(compare, tmp_path):
     without = {key: value for key, value in BASE_METRICS.items() if key != "saves"}
     results = write_runs(tmp_path / "runs.csv", [without])
     assert compare.main(["--results", str(results), "--baseline", str(path)]) == 0
+
+
+@pytest.mark.parametrize(
+    ("baseline_nodes", "current_nodes", "expected_status"),
+    [
+        (503.983, 509.217, "ok"),
+        (503.583, 509.217, "ok"),
+        (509.217, 503.583, "ok"),
+        (503.983, 510.0, "fail"),
+    ],
+)
+def test_desktop_node_count_observed_spread(
+    compare, baseline_nodes, current_nodes, expected_status
+):
+    """Real main-run values fit from either end, but a bigger rise still fails."""
+    rows = compare.compare(
+        {"nodes_avg": current_nodes}, {"nodes_avg": baseline_nodes}, "desktop"
+    )
+    assert rows[0][-1] == expected_status

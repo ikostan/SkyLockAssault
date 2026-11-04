@@ -116,11 +116,12 @@ COUNT_RULES = [
 # runs on GitHub runners (PR #1094 merge run). Desktop: the reload-loop object
 # count goes up and down by about 5 per cycle, so reload growth varied from 2
 # to 12. The tolerance covers the whole 2-to-12 spread, so a baseline anywhere
-# inside it cannot fail on noise. Web: nodes_avg varied by about 14 within one
-# run. The other platform keeps the tight value above (desktop nodes_avg and web
-# reload growth did not vary at all).
+# inside it cannot fail on noise. Desktop nodes_avg landed on 503.6 to 504.0 or on
+# 509.2 across main runs, including a run with no game code change, so 6 covers that
+# spread. Web: nodes_avg varied by about 14 within one run. The other platform keeps
+# the tight value above (web reload growth did not vary at all).
 PROFILE_TOLERANCES: dict[str, dict[str, float]] = {
-    "desktop": {"reload_object_growth": 10},
+    "desktop": {"nodes_avg": 6, "reload_object_growth": 10},
     "web": {"nodes_avg": 15},
 }
 # Count metrics that only warn on one platform. Web runs software-rendered in
