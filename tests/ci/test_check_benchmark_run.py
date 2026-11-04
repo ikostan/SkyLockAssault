@@ -177,6 +177,27 @@ def test_expired_artifact_is_refused(tmp_path, capsys, name):
     assert name in out
 
 
+@pytest.mark.parametrize("name", ["benchmark-results", "benchmark-web-results"])
+def test_artifact_without_expiry_metadata_is_refused(tmp_path, capsys, name):
+    """An artifact is usable only when the API says it has not expired."""
+    artifacts = good_artifacts()
+    for artifact in artifacts["artifacts"]:
+        if artifact["name"] == name:
+            del artifact["expired"]
+    code, out = run_check(tmp_path, capsys, artifacts=artifacts)
+    assert code == 1
+    assert name in out
+
+
+def test_unexpired_duplicate_artifact_is_usable(tmp_path, capsys):
+    """An expired artifact with the same name does not hide a usable one."""
+    artifacts = good_artifacts()
+    artifacts["artifacts"].insert(
+        0, {"name": "benchmark-results", "expired": True}
+    )
+    assert run_check(tmp_path, capsys, artifacts=artifacts) == (0, SHA)
+
+
 def test_all_problems_are_reported_together(tmp_path, capsys):
     """One summary line names every problem, so one attempt shows them all."""
     run = {**good_run(), "event": "pull_request"}
@@ -192,6 +213,23 @@ def test_malformed_api_response_is_refused(tmp_path, capsys):
     code, out = run_check(tmp_path, capsys, jobs={"message": "Not Found"})
     assert code == 1
     assert "cannot read" in out
+
+
+@pytest.mark.parametrize("bad_file", ["run", "jobs", "artifacts"])
+@pytest.mark.parametrize("content", [None, "{broken"])
+def test_unreadable_api_file_is_refused(tmp_path, capsys, bad_file, content):
+    """Missing or invalid saved API responses cannot authorize an acceptance."""
+    responses = {"run": good_run(), "jobs": good_jobs(), "artifacts": good_artifacts()}
+    argv = ["run", "--repo", REPO]
+    for name, response in responses.items():
+        path = tmp_path / f"{name}.json"
+        if name != bad_file:
+            path.write_text(json.dumps(response), encoding="utf-8")
+        elif content is not None:
+            path.write_text(content, encoding="utf-8")
+        argv += [f"--{name}", str(path)]
+    assert check.main(argv) == 1
+    assert "cannot read the run's details" in capsys.readouterr().out
 
 
 def write_candidate(tmp_path, name, commit):
@@ -231,3 +269,13 @@ def test_unreadable_candidate_is_refused(tmp_path, capsys, content):
         path.write_text(content, encoding="utf-8")
     assert check.main(["candidates", "--sha", SHA, str(path)]) == 1
     assert "cannot read" in capsys.readouterr().out
+
+
+def test_candidate_errors_are_reported_for_both_files(tmp_path, capsys):
+    """A missing candidate does not prevent reporting a mismatched one too."""
+    desktop = tmp_path / "baseline_ci.json"
+    web = write_candidate(tmp_path, "baseline_web_ci.json", "b" * 40)
+    assert check.main(["candidates", "--sha", SHA, str(desktop), web]) == 1
+    out = capsys.readouterr().out
+    assert "cannot read baseline_ci.json" in out
+    assert "baseline_web_ci.json is from commit" in out
