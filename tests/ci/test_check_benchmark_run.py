@@ -136,6 +136,24 @@ def test_missing_benchmark_job_is_refused(tmp_path, capsys, job):
     assert name in out
 
 
+@pytest.mark.parametrize("conclusion", ["success", "skipped", "cancelled", None])
+def test_run_whose_gate_did_not_fail_is_refused(tmp_path, capsys, conclusion):
+    """Only a failed gate has something to accept."""
+    jobs = good_jobs()
+    jobs["jobs"][-1]["conclusion"] = conclusion
+    code, out = run_check(tmp_path, capsys, jobs=jobs)
+    assert code == 1
+    assert "Benchmark Baselines / Baselines" in out
+
+
+def test_run_from_before_the_gate_existed_is_refused(tmp_path, capsys):
+    """An old green run with worse numbers must not raise today's baselines."""
+    jobs = {"jobs": good_jobs()["jobs"][:2]}
+    code, out = run_check(tmp_path, capsys, jobs=jobs)
+    assert code == 1
+    assert "Benchmark Baselines / Baselines" in out
+
+
 @pytest.mark.parametrize("name", ["benchmark-results", "benchmark-web-results"])
 def test_missing_artifact_is_refused(tmp_path, capsys, name):
     """Both results artifacts must exist."""

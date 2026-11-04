@@ -29,20 +29,28 @@ from pathlib import Path
 
 PIPELINE = ".github/workflows/lint_test_deploy.yml"
 BENCHMARK_JOBS = ("Performance Benchmark / Desktop", "Performance Benchmark / Web")
+GATE_JOB = "Benchmark Baselines / Baselines"
 ARTIFACTS = ("benchmark-results", "benchmark-web-results")
 
 
 def job_problems(jobs: dict) -> list[str]:
-    """Return why the run's benchmark jobs cannot be trusted.
+    """Return why this run's jobs give nothing trusted to accept.
 
     The benchmark jobs only report, so one that did not pass failed to measure.
     """
     conclusions = {job.get("name"): job.get("conclusion") for job in jobs["jobs"]}
-    return [
+    problems = [
         f"job '{name}' did not pass (conclusion: {conclusions.get(name)})."
         for name in BENCHMARK_JOBS
         if conclusions.get(name) != "success"
     ]
+    # Only a failed gate has something to accept. Runs from before this job existed
+    # were judged against older baselines, so accepting one could undo a later gain.
+    if conclusions.get(GATE_JOB) != "failure":
+        problems.append(
+            f"job '{GATE_JOB}' did not fail (conclusion: {conclusions.get(GATE_JOB)})."
+        )
+    return problems
 
 
 def artifact_problems(artifacts: dict) -> list[str]:

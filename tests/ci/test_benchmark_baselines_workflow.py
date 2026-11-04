@@ -620,6 +620,7 @@ def good_api() -> dict:
             "jobs": [
                 {"name": "Performance Benchmark / Desktop", "conclusion": "success"},
                 {"name": "Performance Benchmark / Web", "conclusion": "success"},
+                {"name": "Benchmark Baselines / Baselines", "conclusion": "failure"},
             ]
         },
         "artifacts": {

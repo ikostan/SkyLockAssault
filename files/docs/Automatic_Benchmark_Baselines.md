@@ -128,6 +128,8 @@ reason in the job summary if any check fails:
 - It has finished, its `desktop` and `web` benchmark jobs passed, and its
   `benchmark-results` and `benchmark-web-results` artifacts both exist and have
   not expired. Those jobs only report, so one that failed did not measure.
+- Its `baselines` job failed. Only a failed gate has something to accept, and
+  this also refuses older runs judged against older baselines.
 - The `commit` in each artifact's baseline file equals the run's head SHA.
 
 Missing, mismatched or untrusted results raise nothing. The approval stays
