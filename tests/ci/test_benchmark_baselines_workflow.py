@@ -63,9 +63,16 @@ def job_steps() -> list[dict]:
     return load(BASELINES_WORKFLOW)["jobs"]["baselines"]["steps"]
 
 
+def find_step(steps: list[dict], name: str) -> dict:
+    """Return the step with this name, failing the test clearly if it is missing."""
+    found = [s for s in steps if s.get("name") == name]
+    assert found, f"no step named {name!r}"
+    return found[0]
+
+
 def step(name: str) -> dict:
     """Return one step of the baselines job by name."""
-    return next(s for s in job_steps() if s.get("name") == name)
+    return find_step(job_steps(), name)
 
 
 def needs(job: dict) -> list[str]:
@@ -119,7 +126,7 @@ def test_benchmark_jobs_never_persist_credentials():
 def test_benchmark_jobs_only_report(job_id, profile, candidate):
     """The jobs compare report-only with the branch and keep the accept check's file."""
     steps = load("benchmark.yml")["jobs"][job_id]["steps"]
-    script = next(s for s in steps if s.get("name") == "Compare With Baseline")["run"]
+    script = find_step(steps, "Compare With Baseline")["run"]
     assert "--report-only" in script
     assert f"--baseline baselines/{profile}.json" in script
     assert f"--profile {profile}" in script
@@ -133,9 +140,10 @@ def test_benchmark_jobs_check_out_baselines_after_measuring(job_id):
     """The baselines must not be in the project or the export being measured."""
     steps = load("benchmark.yml")["jobs"][job_id]["steps"]
     names = [s.get("name", "") for s in steps]
-    measure = next(i for i, name in enumerate(names) if "Benchmark" in name)
+    measuring = [i for i, name in enumerate(names) if "Benchmark" in name]
+    assert measuring, f"{job_id}: no benchmark step"
     checkout = names.index("Check Out Baselines")
-    assert measure < checkout < names.index("Compare With Baseline")
+    assert measuring[0] < checkout < names.index("Compare With Baseline")
     assert steps[checkout]["with"]["ref"] == BRANCH
     assert steps[checkout]["with"]["path"] == "baselines"
 
