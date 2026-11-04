@@ -73,6 +73,10 @@ jobs:
           }
           tar xzf "${TAR}" actionlint
 
+      # actionlint does not know concurrency's queue key yet, though GitHub documents
+      # it. benchmark_baselines.yml needs queue: max (#1111). Drop -ignore once the
+      # pinned version accepts it.
       - name: "Check Workflow Wiring (actionlint)"
         run: |
-          ./actionlint -color -shellcheck= -pyflakes=
+          ./actionlint -color -shellcheck= -pyflakes= \
+            -ignore 'unexpected key "queue" for "concurrency" section'

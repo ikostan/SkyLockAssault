@@ -5,7 +5,8 @@ Design doc, Oct 30, 2026
 Status: in progress in [#1107](https://github.com/ikostan/SkyLockAssault/issues/1107).
 [#1109](https://github.com/ikostan/SkyLockAssault/issues/1109) added the ratchet,
 the rolling medians and the accept rule to `compare.py`.
-[#1111](https://github.com/ikostan/SkyLockAssault/issues/1111) turns them on in CI.
+[#1111](https://github.com/ikostan/SkyLockAssault/issues/1111) turns them on
+in CI.
 
 Source: the design doc in
 [[EPIC] Automatic CI benchmark baselines #1107](https://github.com/ikostan/SkyLockAssault/issues/1107).
