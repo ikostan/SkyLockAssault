@@ -12,6 +12,12 @@ class_name OSWrapper
 extends RefCounted
 
 
+## Checks if the current platform has a specific feature.
+##
+## Mirrors OS.has_feature.
+##
+## [param feature]: The feature name to check.
+## Returns true if the platform has the feature, false otherwise.
 func has_feature(feature: String) -> bool:
 	## Checks if the current platform has a specific feature.
 	##

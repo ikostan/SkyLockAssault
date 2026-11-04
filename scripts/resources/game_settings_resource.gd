@@ -9,12 +9,13 @@
 class_name GameSettingsResource
 extends Resource
 
-## SIGNAL: setting_changed(setting_name: String, new_value: Variant)
+## Emitted when a setting value is updated.
 ##
-## This signal is the core of the Observer Pattern for game settings.
-## It is automatically emitted by property setters whenever a value is updated.
-## This allows external systems (like Globals.gd) to react to data changes
-## without the UI having to explicitly call persistence or logging methods.
+## Core observer signal emitted by property setters whenever a value updates. Allows external
+## systems to react to data changes without explicit persistence calls.
+##
+## [param setting_name]: Name of the setting that was changed.
+## [param new_value]: The updated value assigned to the setting.
 signal setting_changed(setting_name: String, new_value: Variant)
 
 ## SIGNAL: fuel_depleted
@@ -281,8 +282,11 @@ func _init() -> void:
 	_current_fuel = _max_fuel
 
 
-## Helper method to increase fuel safely.
 ## Increases fuel level by specified amount, clamped to max_fuel.
+##
+## Helper method to increase fuel safely.
+##
+## [param amount]: The quantity of fuel to add, which must be greater than zero.
 func refuel(amount: float) -> void:
 	if amount > 0:
 		current_fuel += amount

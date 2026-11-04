@@ -8,9 +8,17 @@ class_name WeaponResource
 extends Resource
 
 ## Emitted strictly when the active weapon index changes.
+##
+## Emitted strictly when the active weapon index changes.
+##
+## [param index]: The new active weapon index.
+## [param weapon_name]: The name of the newly equipped weapon.
 signal weapon_swapped(index: int, weapon_name: String)
 
 ## Emitted strictly when the effective ammo count changes.
+##
+## [param current]: The current ammo count.
+## [param max_ammo]: The maximum capacity for ammo.
 signal ammo_updated(current: int, max_ammo: int)
 
 # --- State Properties ---
