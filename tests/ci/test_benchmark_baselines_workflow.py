@@ -520,6 +520,21 @@ def test_manual_accept_is_named_by_run(ci):
 
 
 @needs_bash
+def test_accept_updates_regressions_on_both_platforms(ci):
+    """One acceptance covers each failing platform in the same baseline push."""
+    ci.write_results(desktop={"saves": 61}, web={"saves": 60})
+    result = ci.gate(accept="123")
+    assert result.returncode == 0, result.stderr
+    assert ci.push().returncode == 0
+    assert len(ci.remote_log()) == 2
+    for profile, saves in (("desktop", 61), ("web", 60)):
+        doc = ci.remote_file(profile)
+        assert doc["baseline"]["saves"] == saves
+        assert doc["accepted"]["id"] == "123"
+        assert doc["accepted"]["raised"] == {"saves": {"from": 0, "to": saves}}
+
+
+@needs_bash
 def test_rerun_of_a_recorded_run_pushes_nothing(ci):
     """Re-running a recorded run changes no file, so there is nothing to commit."""
     assert ci.gate().returncode == 0
@@ -620,6 +635,7 @@ def good_api() -> dict:
             "jobs": [
                 {"name": "Performance Benchmark / Desktop", "conclusion": "success"},
                 {"name": "Performance Benchmark / Web", "conclusion": "success"},
+                {"name": "Benchmark Baselines / Baselines", "conclusion": "failure"},
             ]
         },
         "artifacts": {
@@ -678,6 +694,20 @@ def test_manual_run_that_cannot_be_read_is_refused(ci):
 
 
 @needs_bash
+@pytest.mark.parametrize("missing", ["jobs", "artifacts"])
+def test_manual_run_refuses_missing_api_details(ci, missing):
+    """Failure to fetch either dependent response stops before selecting the run."""
+    api = good_api()
+    api[missing] = None
+    ci.set_gh(**api)
+    assert manual(ci).returncode == 1
+    assert f"cannot read the {missing} of run 555" in ci.summary.read_text(
+        encoding="utf-8"
+    )
+    assert ci.outputs() == {}
+
+
+@needs_bash
 def test_untrusted_manual_run_is_refused_with_the_reason(ci):
     """A check that fails stops the job and puts its reason in the summary."""
     api = good_api()
@@ -715,6 +745,25 @@ def test_manual_accept_refuses_mismatched_candidates(ci):
     )
     assert result.returncode == 1
     assert "Accept refused" in ci.summary.read_text(encoding="utf-8")
+    assert ci.outputs() == {}
+
+
+@needs_bash
+@pytest.mark.parametrize(
+    "profile, name", [("desktop", "baseline_ci.json"), ("web", "baseline_web_ci.json")]
+)
+def test_manual_accept_refuses_one_missing_candidate(ci, profile, name):
+    """One matching candidate cannot authorize acceptance without the other."""
+    ci.write_candidates()
+    (ci.work / "results" / profile / name).unlink()
+    result = ci.run_step(
+        "Decide the Accept",
+        GITHUB_EVENT_NAME="workflow_dispatch",
+        RUN_ID="555",
+        RUN_SHA=SHA,
+    )
+    assert result.returncode == 1
+    assert name in ci.summary.read_text(encoding="utf-8")
     assert ci.outputs() == {}
 
 
