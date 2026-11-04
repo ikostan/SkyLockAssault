@@ -9,11 +9,12 @@
 **PR:** [#1122](https://github.com/ikostan/SkyLockAssault/pull/1122)  
 **Branch:** `benchmark-baseline-rules-in-comparepy-ratchet-rolling-median-and-accept` → `main`  
 **Author:** @ikostan  
+**Merged:** Nov 3, 2026 as `bd32c63` (final PR commit `a8d3755`)  
 **Resolves:**
 
 - [#1109 – [TASK] Benchmark baseline rules in compare.py: ratchet, rolling median and accept](https://github.com/ikostan/SkyLockAssault/issues/1109)
 
-**Related:** [#1107 – [EPIC] Automatic CI benchmark baselines](https://github.com/ikostan/SkyLockAssault/issues/1107) (sub-task 2), [#1110](https://github.com/ikostan/SkyLockAssault/issues/1110), [#1111](https://github.com/ikostan/SkyLockAssault/issues/1111), [#1121](https://github.com/ikostan/SkyLockAssault/pull/1121), [#1123](https://github.com/ikostan/SkyLockAssault/pull/1123), [#1124](https://github.com/ikostan/SkyLockAssault/pull/1124)  
+**Related:** [#1107 – [EPIC] Automatic CI benchmark baselines](https://github.com/ikostan/SkyLockAssault/issues/1107) (sub-task 2), [#1110](https://github.com/ikostan/SkyLockAssault/issues/1110), [#1111](https://github.com/ikostan/SkyLockAssault/issues/1111), [#1121](https://github.com/ikostan/SkyLockAssault/pull/1121), [#1123](https://github.com/ikostan/SkyLockAssault/pull/1123), [#1124](https://github.com/ikostan/SkyLockAssault/pull/1124), [#1125](https://github.com/ikostan/SkyLockAssault/pull/1125)  
 **Milestone:** Milestone 27: Audio feedback fixes, architecture refactor & performance validation  
 **Labels:** documentation, enhancement, tools, testing, performance, dependencies, dependabot, QA
 
@@ -98,6 +99,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 | DeepSource | `update_baseline` complexity 20, `main` complexity 17               | **Fixed:** split into helpers. Identical results over 2,048 randomised runs, apart from timestamps and runner.                                                                                                                 |
 | DeepSource | Keyword arguments before `*extra` in `update_run`                   | **Fixed:** replaced with a named `accept` parameter.                                                                                                                                                                           |
 | DeepSource | Too many positional arguments (7 calls to `update_run`)             | **Fixed:** the calls still used the old format after the helper changed; CI failed the same way until they were updated.                                                                                                       |
+| DeepSource | Docstring lines over 88 characters in `compare.py` | **Fixed:** wrapped in `a8d3755`, along with a third long line it had not flagged. |
 | Qodo       | Ratchet test could not catch stale history                          | **Fixed:** the runs after the accept now beat the baseline. With a stale-history bug added, the new test fails and the old one passed.                                                                                         |
 | Qodo       | Malformed baselines can reset count gates                           | **Fixed:** reproduced, then rejected with exit 2.                                                                                                                                                                              |
 | Qodo       | An accepted re-run can raise the gate again                         | **Fixed:** reproduced, then any recorded run changes nothing.                                                                                                                                                                  |
@@ -127,16 +129,19 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 - **Python style:** `ruff check` and `ruff format` clean with the repo's settings.
 - **`compare.py` complexity (`radon`):** `main` 8, `update_baseline` 4, highest `render` at 14 and `compare` at 11.
 - **Doc comment files:** no non-comment lines changed in the three `.gd` files.
-- **Still to confirm:** `pytest tests/ci/` and all PR checks on the final commit. Locally the full suite cannot finish because `gdtoolkit` is missing; `test_injection_readonly_file` also fails locally, with the same counts on clean `main`. CodeRabbit reported GUT and CI injection checks skipped on timeout during its review.
+- **PR CI:** `Pull Request Pipeline` passed all 12 jobs on `a8d3755`, including `pytest tests/ci/` with 809 passed.
+- **Local limits:** the full `tests/ci/` suite cannot finish locally because `gdtoolkit` is missing, and `test_injection_readonly_file` also fails locally, with the same counts on clean `main`.
+- **`main` after merge:** [run 41757389863](https://github.com/ikostan/SkyLockAssault/actions/runs/41757389863) on `bd32c63` passed 25 of 26 jobs, and the itch.io deploy succeeded. **Performance Benchmark / Desktop** failed (see Follow-ups).
 
 ---
 
 ## Known Limitations / Follow-ups
 
-- **Scope of #1109:** it says "Python only" and "no workflow files". To meet that, restore `# Pinned to SHA for security (was @v19)` in `lint_readme.yml`, and either move the `.gd` comment changes to their own PR or change the wording.
-- **Issue wording:** update #1109 for `--commit`, `seen_runs`, `profile` and exit 2. Its report-only line is already updated.
-- **Markdownlint bump:** v25.0.0 is not on `main`. #1121 was merged into this branch rather than `main`, so the bump needs a new PR. The `dependencies` and `dependabot` labels no longer apply here.
-- **PR description:** still the unedited template, which CodeRabbit's description check flagged.
+- **Desktop benchmark failure:** the first `main` run after merge failed on `OBJECT_NODE_COUNT` avg, 509.217 against 503.983 (+5.233, tolerance 5). No game code changed in this PR, and `ee128f9` gave the exact same 509.217, so this looks like runner noise. The cause of the jump is not known. [#1125](https://github.com/ikostan/SkyLockAssault/pull/1125) proposes a desktop tolerance of 6.
+- **Scope of #1109:** it says "Python only" and "no workflow files", but this PR merged with one removed comment in `lint_readme.yml` and comment changes in three `.gd` files. `# Pinned to SHA for security (was @v19)` can still be restored on `main`.
+- **Issue wording:** #1109 is closed without mentioning `--commit`, `seen_runs`, `profile` or exit 2. Its report-only line was updated. #1111 relies on these, so they are listed below.
+- **Markdownlint bump:** v25.0.0 is not on `main`. #1121 was merged into this branch and then reverted, so the bump needs a new PR. The `dependencies` and `dependabot` labels on this PR are out of date.
+- **PR description:** merged as the unedited template, which CodeRabbit's description check flagged. This note is the record of the PR.
 - **#1111 must:**
   - pass `--profile` on every call, because a report-only run without it can still compare against another platform's history;
   - pass `--commit` with the selected run's SHA on the manual path;
@@ -173,8 +178,8 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
 | <https://github.com/ikostan/SkyLockAssault/issues/1109> | A reason for each baseline that moves                                 | ✅        | Summary lines.                                                                   |
 | <https://github.com/ikostan/SkyLockAssault/issues/1109> | Default `--baseline` path stays until task 6                          | ✅        | `DEFAULT_BASELINE`.                                                              |
 | <https://github.com/ikostan/SkyLockAssault/issues/1109> | Tests cover the listed cases; existing cases kept                     | ✅        | No lines removed from the test file.                                             |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | `pytest tests/ci/` passes                                             | ⏳        | Still to confirm in CI on the final commit (see Verification).                   |
-| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Python only; no workflow files change                                 | ❌        | One workflow comment and three `.gd` comment-only files remain (see Follow-ups). |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | `pytest tests/ci/` passes | ✅ | 809 passed in CI on `a8d3755`. |
+| <https://github.com/ikostan/SkyLockAssault/issues/1109> | Python only; no workflow files change | ❌ | Merged with one workflow comment removed and three `.gd` comment-only files (see Follow-ups). |
 
 ---
 
@@ -210,6 +215,8 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
   - `30249ca` Update test_benchmark_compare.py
   - `3e76534` Merge pull request #1124
   - `a9898c8` Update Part_7_Benchmark_baseline_rules_ratchet_rolling_median_&_accept.md
+  - `6d10703` Update Part_7_Benchmark_baseline_rules_ratchet_rolling_median_&_accept.md
+  - `bd32c63` Merge pull request #1122
 
 ### Bots / AI contributions
 
@@ -224,8 +231,17 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
     - Traced the workflow change to Dependabot's `1957ed9` and checked which `.gd` changes were comments only.
     - Checked CodeRabbit's findings against the code: reworded the signal docs, replaced its non-finite guard after finding the crash and the hidden `NaN`, proposed the file-level `profile` check instead of filtering history, and tested that the `build_reference` finding was already covered.
     - Reviewed #1124 with mutation testing on a scratch copy: its tests caught two bugs the suite had missed. One test missed a ratchet bug, so its run sequence was corrected.
+    - Wrote the over-long docstring lines DeepSource flagged, then wrapped them.
+  - **After merge**
+    - Compared desktop benchmark values across `main` runs and confirmed no game code changed, then opened #1125.
   - **Docs**
     - Updated the report-only line in #1109.
+  - **Commits**
+    - `47e0c2f` Add milestone 27 Part 7 note for PR #1122
+    - `5473da1` Correct benchmark baseline wording from review (#1109)
+    - `8cd737c` Reject non-numeric benchmark metrics (#1109)
+    - `d6a3402` Clarify how #1124 was reviewed in Part 7 note
+    - `a8d3755` Wrap long benchmark docstring lines (#1109)
 
 - **@sourcery-ai**
   - Posted the PR summary and Reviewer's Guide, with 5 inline comments: report-only, twice (declined); the workflow change, twice (fixed in part); non-Python changes (expected for the note).
@@ -237,7 +253,7 @@ The rules are plain Python, so each one is tested before any workflow uses it. N
   - Posted 6 findings, all fixed: 4 bugs in `compare.py`, 1 weak test, 1 duplicate doc comment.
 
 - **@deepsource-io**
-  - Python and JavaScript analysis pass (grade A), with 10 inline comments, all fixed.
+  - Python and JavaScript analysis pass (grade A), with 14 inline comments, all fixed: 2 complexity, 8 `update_run` calls and signature, and 4 for the long docstring lines (2 lines, posted twice).
   - `deepsource-autofix[bot]` authored `4e9a62f` style: format code with Black and isort (#1124).
 
 - **@coderabbitai**
