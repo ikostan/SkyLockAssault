@@ -186,7 +186,6 @@ Any failure stops the job, with the reason in the summary.
     - Added `queue: max`, which #1111 left out, and the merged-PR-only label filter.
     - Found that the baselines must be checked out after measuring, because the web preset exports all resources.
   - **Tests**
-    - Wrote both new test files, including running the real shell steps against a local remote.
     - Broke 28 key lines on purpose to test the tests, and corrected the test setup when two got through.
     - Traced the Windows collection error to `read_text()` without an encoding in `test_workflow_policies.py`, which was already on `main`.
   - **Mistakes fixed in this PR**
