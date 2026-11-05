@@ -7,12 +7,16 @@
 class_name WeaponResource
 extends Resource
 
-## Emitted strictly when the active weapon index changes.
+## Emitted when the active weapon changes.
 ##
-## Emitted strictly when the active weapon index changes.
+## Fires when [member current_index] changes, including when shrinking
+## [member available_weapons] clamps the index. It also fires when assigning
+## [member available_weapons] changes the weapon name at the current index, even
+## though the index stays the same. Listeners must not treat this signal as proof
+## that the index changed.
 ##
-## [param index]: The new active weapon index.
-## [param weapon_name]: The name of the newly equipped weapon.
+## [param index]: The active weapon index, which may be unchanged.
+## [param weapon_name]: The name of the active weapon.
 signal weapon_swapped(index: int, weapon_name: String)
 
 ## Emitted strictly when the effective ammo count changes.
