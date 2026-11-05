@@ -394,13 +394,29 @@ def test_benchmark_filter_boundaries(filters, path, game_match, benchmark_match)
 
 
 def test_pr_pipeline_does_not_call_the_baseline_gate(workflow):
-    """A separate gate job must not run on PRs, even without a benchmark dependency."""
+    """A separate gate job must not run on PRs, however its workflow is referenced."""
     callers = [
         job_id
         for job_id, job in workflow["jobs"].items()
-        if job.get("uses") == "./.github/workflows/benchmark_baselines.yml"
+        if "benchmark_baselines.yml" in job.get("uses", "")
     ]
     assert not callers, f"PR pipeline must not call the baseline gate: {callers}"
+
+
+def _find_step(steps, name):
+    """
+    Return the step with this name, failing the test clearly if it is missing.
+
+    Args:
+        steps: The job's list of steps.
+        name: The step's ``name``.
+
+    Returns:
+        dict: The first step with that name.
+    """
+    found = [step for step in steps if step.get("name") == name]
+    assert found, f"no step named {name!r}"
+    return found[0]
 
 
 @pytest.mark.parametrize(
@@ -419,13 +435,12 @@ def test_pr_benchmark_reports_are_uploaded_and_errors_are_not_suppressed(
     steps = job["steps"]
     run_name = "Run Benchmark" if job_id == "desktop" else "Run Web Benchmark"
     for name in (run_name, "Compare With Baseline"):
-        step = next(step for step in steps if step.get("name") == name)
+        step = _find_step(steps, name)
         assert not step.get("continue-on-error", False)
+        assert "|| true" not in step["run"]
     assert not job.get("continue-on-error", False)
 
-    upload = next(
-        step for step in steps if step.get("name") == "Upload Benchmark Results"
-    )
+    upload = _find_step(steps, "Upload Benchmark Results")
     assert upload["uses"].startswith("actions/upload-artifact@")
     assert upload["if"] == "always()"
     assert upload["with"]["name"] == artifact_name
