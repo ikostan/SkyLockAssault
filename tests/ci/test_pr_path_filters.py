@@ -22,6 +22,11 @@ The same mechanism keeps CI infrastructure tests out of the browser suite:
 * ``python_tests`` excludes ``tests/ci/**`` with a ``'!tests/ci/**'`` pattern.
   Those tests only parse workflow and config files; ``ci_script_tests`` already
   runs them through the ``ci`` filter, so they must not trigger the web export.
+
+The benchmark runs on PRs too, report-only (#1112). It needs game changes, which
+``gdscript`` catches, and its own files, which ``gdscript`` excludes with the rest
+of ``test/``, so a ``benchmark`` filter adds those. Nothing may wait on that job,
+and it must stay read-only.
 """
 
 import pathlib
@@ -44,6 +49,19 @@ GODOT_TESTS_TRIGGER = "needs.detect-changes.outputs.godot_tests == 'true'"
 
 FILTERS_WITH_EXCLUDES = ["gdscript", "python_tests"]
 """The only filters allowed to carry ``!`` patterns (sorted)."""
+
+BENCHMARK_PATTERNS = {
+    "test/benchmark/**",
+    ".github/workflows/benchmark.yml",
+    "export_presets.cfg",
+}
+"""The benchmark's own files, which must run it even with no game change."""
+
+BENCHMARK_CONDITION = (
+    "${{ needs.detect-changes.outputs.gdscript == 'true' || "
+    "needs.detect-changes.outputs.benchmark == 'true' }}"
+)
+"""The exact condition of the PR ``benchmark`` job, whitespace collapsed."""
 
 
 @pytest.fixture(scope="module")
@@ -204,3 +222,153 @@ def test_exclude_patterns_require_quantifier(filter_step, filters):
     )
     if has_excludes:
         assert filter_step.get("predicate-quantifier") == QUANTIFIER
+
+
+def _glob_to_regex(pattern):
+    """
+    Translate a paths-filter glob to a regular expression.
+
+    Supports only what the ``filters:`` block uses: ``**/``, ``**`` and ``*``.
+    Dot files match, as they do in paths-filter.
+
+    Args:
+        pattern: The glob, without any leading ``!``.
+
+    Returns:
+        re.Pattern: A pattern to use with ``fullmatch``.
+    """
+    regex = re.escape(pattern)
+    regex = regex.replace(r"\*\*/", "(?:.*/)?").replace(r"\*\*", ".*")
+    return re.compile(regex.replace(r"\*", "[^/]*"))
+
+
+def _matches(patterns, path):
+    """
+    Apply the ``some-with-excludes`` rule to one changed file.
+
+    Args:
+        patterns: The filter's patterns, including any ``!`` ones.
+        path: The changed file's path.
+
+    Returns:
+        bool: True if an include pattern matches and no ``!`` pattern does.
+    """
+    excludes = [p[1:] for p in patterns if p.startswith("!")]
+    includes = [p for p in patterns if not p.startswith("!")]
+    return any(_glob_to_regex(p).fullmatch(path) for p in includes) and not any(
+        _glob_to_regex(p).fullmatch(path) for p in excludes
+    )
+
+
+def _benchmark_runs(filters, path):
+    """
+    Say whether changing one file runs the PR ``benchmark`` job.
+
+    Args:
+        filters: Filter name mapped to its list of patterns.
+        path: The changed file's path.
+
+    Returns:
+        bool: True if either filter the job's condition reads matches.
+    """
+    return _matches(filters["gdscript"], path) or _matches(filters["benchmark"], path)
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "scripts/player/player.gd",
+        "scenes/main_menu.tscn",
+        "config_resources/audio.tres",
+        "default_bus_layout.tres",
+        "project.godot",
+        "test/benchmark/benchmark_runner.gd",
+        "test/benchmark/benchmark_runner.tscn",
+        "test/benchmark/compare.py",
+        ".github/workflows/benchmark.yml",
+        "export_presets.cfg",
+    ],
+)
+def test_game_and_benchmark_changes_run_the_benchmark(filters, path):
+    """Game code, resources and the benchmark's own files run both jobs."""
+    assert _benchmark_runs(filters, path), f"{path} must run the benchmark"
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "README.md",
+        "files/docs/Performance_Benchmark_Guide.md",
+        ".github/workflows/yamllint.yml",
+        ".github/workflows/lint_test_on_pull.yml",
+        "tests/ci/test_pr_path_filters.py",
+        "tests/refactor/menu_test.py",
+        "test/gut/test_player.gd",
+        "test/gdunit4/test_scene.tscn",
+    ],
+)
+def test_docs_yaml_and_other_tests_skip_the_benchmark(filters, path):
+    """Docs, other YAML and tests outside ``test/benchmark/`` skip both jobs."""
+    assert not _benchmark_runs(filters, path), f"{path} must not run the benchmark"
+
+
+def test_benchmark_filter_has_exactly_its_patterns(filters):
+    """
+    The filter must list the benchmark's own files and nothing else.
+
+    A wider pattern here would spend about 10 runner minutes on PRs that cannot
+    change the numbers.
+    """
+    assert set(filters.get("benchmark", [])) == BENCHMARK_PATTERNS
+
+
+def test_detect_changes_exports_benchmark(workflow):
+    """``detect-changes`` must expose ``benchmark`` to the job that reads it."""
+    outputs = workflow["jobs"]["detect-changes"]["outputs"]
+    assert outputs.get("benchmark") == "${{ steps.filter.outputs.benchmark }}"
+
+
+def test_benchmark_job_calls_the_workflow_on_either_filter(workflow):
+    """
+    The job must call ``benchmark.yml`` when either filter matches.
+
+    Compares the whole condition: an ``&&`` would skip game-only and
+    benchmark-only PRs, and an ``always()`` would run docs-only ones.
+    """
+    job = workflow["jobs"]["benchmark"]
+    assert job["uses"] == "./.github/workflows/benchmark.yml"
+    assert job["needs"] == "detect-changes"
+    assert _job_if(workflow, "benchmark") == BENCHMARK_CONDITION
+
+
+def test_benchmark_job_stays_read_only(workflow):
+    """
+    Nothing the PR benchmark runs under may be able to write.
+
+    The job and the pipeline's floor are both checked, because a called
+    workflow can only get what its caller grants.
+    """
+    assert workflow["jobs"]["benchmark"]["permissions"] == {"contents": "read"}
+    assert set(workflow["permissions"].values()) == {"read"}
+
+
+def test_called_benchmark_workflow_cannot_push():
+    """``benchmark.yml`` must not push, so a PR never reaches ``benchmark-baselines``."""
+    path = WORKFLOW.parent / "benchmark.yml"
+    assert "git push" not in path.read_text(encoding="utf-8")
+
+
+def test_no_job_waits_on_the_benchmark(workflow):
+    """
+    No job may need ``benchmark``, so it stays outside the merge path.
+
+    A job that needed it would wait on it, and would skip if the benchmark failed
+    because it could not measure.
+    """
+    waiting = []
+    for job_id, job in workflow["jobs"].items():
+        needs = job.get("needs", [])
+        needs = [needs] if isinstance(needs, str) else needs
+        if "benchmark" in needs:
+            waiting.append(job_id)
+    assert not waiting, f"these jobs must not need the benchmark: {waiting}"

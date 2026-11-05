@@ -3,11 +3,14 @@
 # - desktop: headless Godot, compared with desktop.json on benchmark-baselines
 # - web: Web_benchmark export in headless Chromium (Playwright), compared with
 #   web.json on benchmark-baselines
-# Reusable workflow: called only from lint_test_deploy.yml (push to main).
-# Neither job fails on a regression: benchmark_baselines.yml applies the gate after
-# them, using their results artifacts. Count metrics (saves, objects, orphans, reload
-# leak) fail that job when they get worse; timing metrics only warn, because shared
-# runners are noisy (and have no GPU, so web timings use software rendering).
+# Reusable workflow, called from:
+# - lint_test_deploy.yml (push to main)
+# - lint_test_on_pull.yml (PRs that touch game code or the benchmark, #1112). PR runs
+#   only show the tables: no gate runs after them and nothing is written.
+# Neither job fails on a regression: on main, benchmark_baselines.yml applies the gate
+# after them, using their results artifacts. Count metrics (saves, objects, orphans,
+# reload leak) fail that job when they get worse; timing metrics only warn, because
+# shared runners are noisy (and have no GPU, so web timings use software rendering).
 # A job here fails only if it could not measure or compare (compare.py exit 2).
 # The baselines are checked out after the benchmark runs, so they can't end up in
 # the project or the export being measured.

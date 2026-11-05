@@ -7,6 +7,8 @@ Status: in progress in [#1107](https://github.com/ikostan/SkyLockAssault/issues/
 the rolling medians and the accept rule to `compare.py`.
 [#1111](https://github.com/ikostan/SkyLockAssault/issues/1111) turns them on
 in CI.
+[#1112](https://github.com/ikostan/SkyLockAssault/issues/1112) runs the benchmark
+on pull requests, report-only.
 
 Source: the design doc in
 [[EPIC] Automatic CI benchmark baselines #1107](https://github.com/ikostan/SkyLockAssault/issues/1107).
