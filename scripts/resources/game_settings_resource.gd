@@ -9,10 +9,14 @@
 class_name GameSettingsResource
 extends Resource
 
-## Emitted when a setting value is updated.
+## Emitted when a setting with a notifying setter changes value.
 ##
-## Core observer signal emitted by property setters whenever a value updates. Allows external
-## systems to react to data changes without explicit persistence calls.
+## Core observer signal. Allows external systems to react to data changes without explicit
+## persistence calls. Setting a property to its current value does not emit it.
+##
+## Plain exported properties have no setter and never emit it: [member base_consumption_rate],
+## [member remap_prompt_keyboard], [member remap_prompt_gamepad], [member key_mapping_scene]
+## and [member options_scene].
 ##
 ## [param setting_name]: Name of the setting that was changed.
 ## [param new_value]: The updated value assigned to the setting.
