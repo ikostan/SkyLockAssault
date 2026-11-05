@@ -6,7 +6,8 @@
 # Reusable workflow, called from:
 # - lint_test_deploy.yml (push to main)
 # - lint_test_on_pull.yml (PRs that touch game code or the benchmark, #1112). PR runs
-#   only show the tables: no gate runs after them and nothing is written.
+#   show the tables and upload their artifacts: no gate runs after them and
+#   benchmark-baselines is not updated.
 # Neither job fails on a regression: on main, benchmark_baselines.yml applies the gate
 # after them, using their results artifacts. Count metrics (saves, objects, orphans,
 # reload leak) fail that job when they get worse; timing metrics only warn, because

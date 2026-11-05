@@ -535,8 +535,9 @@ benchmark 3 times.
   (`.gd`, `.tscn` or `.tres` files outside `test/`, or `project.godot`),
   anything under `test/benchmark/`, `benchmark.yml` or `export_presets.cfg`. It
   compares with the same baselines but only reports: a worse count shows ❌ in
-  the table without failing the PR, and nothing is written. A PR job still fails
-  if it could not measure or compare.
+  the table without failing the PR. It uploads its results artifacts but does not
+  update `benchmark-baselines`. A PR job still fails if it could not measure or
+  compare.
 
 The web job installs only the web export templates (checked against the
 release's SHA-512) and Playwright's Chromium. Runners have no GPU, so the
