@@ -9,6 +9,7 @@
 **PR:** [#1127](https://github.com/ikostan/SkyLockAssault/pull/1127)  
 **Branch:** `benchmark-workflows-baselines-job-gate-and-accept-path` → `main`  
 **Author:** @ikostan  
+**Merged:** Nov 4, 2026 as `bdba0d7` (final PR commit `39641d5`)  
 **Resolves:**
 
 - [#1111 – [TASK] Benchmark workflows: baselines job, gate and accept path](https://github.com/ikostan/SkyLockAssault/issues/1111)
@@ -21,7 +22,7 @@
 
 This PR turns on the rules from #1109, so every `main` run maintains the baselines on `benchmark-baselines`. The benchmark jobs now only measure and report. One new job applies the gate, updates both files and pushes once. An intended regression is accepted by a label on the PR or by a manual run.
 
-GitHub only runs this workflow for real after it merges, so the first `main` run is its first real test (see Follow-ups).
+GitHub only runs this workflow for real after it merges, so the first `main` run was its first real test, and it passed (see Verification).
 
 ---
 
@@ -65,8 +66,8 @@ Any failure stops the job, with the reason in the summary.
 
 ### 5. Tests
 
-- **`test_check_benchmark_run.py` (new, 43 cases):** each manual accept check on its own, and malformed responses.
-- **`test_benchmark_baselines_workflow.py` (new, 48 cases):** workflow rules, plus the real shell steps with the real `compare.py`, a local bare git remote and a stubbed `gh`.
+- **`test_check_benchmark_run.py` (new, 54 cases):** each manual accept check on its own, and malformed responses.
+- **`test_benchmark_baselines_workflow.py` (new, 53 cases):** workflow rules, plus the real shell steps with the real `compare.py`, a local bare git remote and a stubbed `gh`.
 - **`test_workflow_policies.py`:** adds the new workflow, which adds 2 cases, and reads workflow files as UTF-8.
 - **Existing cases:** none removed.
 
@@ -98,13 +99,13 @@ Any failure stops the job, with the reason in the summary.
 | Sourcery   | Require a failed source run                            | **Fixed, stricter:** the `baselines` job must have failed. A run's conclusion would still allow a run that failed for another reason while its gate passed.                        |
 | CodeRabbit | Allow `concurrency.queue` in YAML Lint                 | **Fixed:** same approach, with the full message matched so a `queue` key anywhere else is still flagged. CodeRabbit verified it and resolved the thread.                           |
 | CodeRabbit | Rewrap design doc line 8                               | **Fixed:** rewrapped. Markdown Lint passes.                                                                                                                                        |
-| CodeRabbit | PR description check (warning)                         | **Open:** the description is still mostly the template. This note is the record of the PR.                                                                                         |
+| CodeRabbit | PR description check (warning)                         | **Fixed:** description rewritten, with `Closes #1111`. The warning cleared: the check passes on CodeRabbit's last review.                                                          |
 
 ---
 
 ## Verification
 
-- **PR CI on `ed08f9f`:** [run 41773584325](https://github.com/ikostan/SkyLockAssault/actions/runs/41773584325): `pytest tests/ci/` gives 915 passed with none skipped, so the shell-step tests ran on Linux. Markdown Lint and YAML Lint pass.
+- **PR CI on `39641d5` (final commit):** [run 41777253058](https://github.com/ikostan/SkyLockAssault/actions/runs/41777253058): `pytest tests/ci/` gives 931 passed with none skipped, so the shell-step tests ran on Linux. Markdown Lint and YAML Lint pass.
 - **Test strength:** breaking 28 key lines on purpose makes the tests fail, including the gate's exit code, the label filter, the push, the queue and the permissions. Two got through at first, both about recording the wrong commit on a manual accept, so the test setup was corrected.
 - **Real runs through the check script:**
   - `ee128f9` passed before the failed-gate check and is refused now.
@@ -112,23 +113,21 @@ Any failure stops the job, with the reason in the summary.
 - **Real label lookup:** the commits API on `fb75135` returns #1125 with a matching `merge_commit_sha`, which is what the filter reads.
 - **Locally:** `ruff format`, `yamllint`, `actionlint` 1.7.7 and markdownlint-cli2 0.23.2 pass, with the versions CI uses for the last two. `ruff check` flags only `EXE001` on the new script: it has a shebang but is not executable, like the other scripts in that folder.
 - **Caught while applying:** one edit dropped the end of both `Compare With Baseline` steps, including `--profile` and `--write-baseline`. `test_benchmark_jobs_only_report` failed before that reached the PR.
-- **Windows:** 32 shell-step cases skip on Windows, so only CI runs them.
-- **`main` after merge:** to confirm on the first run.
+- **Windows:** 37 shell-step cases skip on Windows, so only CI runs them.
+- **`main` after merge:** [Run 41777577668](https://github.com/ikostan/SkyLockAssault/actions/runs/41777577668) passed on `bdba0d7`, with baseline commit `b0e86c1` and the deploy green. All four first-run items are confirmed:
+  - GitHub accepts `queue: max` at job level.
+  - `GITHUB_TOKEN` can push to `benchmark-baselines`.
+  - The artifact downloads work with `run-id`.
+  - The run committed one update naming its run ID and SHA: `Baselines from run 41777577668 (bdba0d7)`.
 
 ---
 
 ## Known Limitations / Follow-ups
 
-- **First `main` run, to confirm:**
-  - GitHub accepts `queue: max` at job level. Its docs cover "jobs or workflow runs", but `actionlint` cannot confirm it. If GitHub rejects the key, the whole pipeline can fail on that merge, deploy included. The fix is to delete that line and its test assertion.
-  - `GITHUB_TOKEN` can push to `benchmark-baselines`.
-  - The artifact downloads work with `run-id`.
-  - The run commits one update naming its run ID and SHA.
 - **Accept paths:** the labelled merge and the manual run are tested with a stubbed `gh` only. Each gets its first real test when first needed.
 - **`actionlint` ignore:** 1.7.12 and its `main` branch still reject `queue`. Drop `-ignore` once the pinned version accepts it.
 - **Old failed runs:** a run whose gate really failed can still be accepted while its artifacts last, up to 30 days. It takes write access and `accept: true`, so this stays a deliberate decision.
 - **Label added late:** adding the label after merge and re-running the failed job would probably also accept, because the job reads the PR's current labels. Not tested on GitHub. It needs write access, so it stays.
-- **Label description:** `benchmark-accept` has no description yet. #1111 asks for "Accept count regressions from this PR into the CI benchmark baseline".
 - **Design doc:** still does not describe `seen_runs`, `profile` beyond the seed, or exit 2.
 - **#1113:** removes the committed baselines and rewrites the benchmark guide, which still says to copy baselines by hand and that counts fail "the job".
 - **Reviews:** Sourcery's requirements check ran on `e99865a`, before the failed-gate check, and its budget was used up on this PR. Qodo reviews were paused, so Qodo did not review it.
@@ -139,27 +138,27 @@ Any failure stops the job, with the reason in the summary.
 
 ### File-Level Changes
 
-| Change                      | Details                                                                                                   | Files                                                                                                                               |
-|-----------------------------|-----------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| Gate and baseline updates.  | <ul><li>One job that writes.</li><li>Label and manual accept.</li><li>Push once, or nothing.</li></ul>    | `.github/workflows/benchmark_baselines.yml`                                                                                         |
-| Report-only benchmark jobs. | <ul><li>Compare against the branch.</li><li>Check out after measuring.</li></ul>                          | `.github/workflows/benchmark.yml`                                                                                                   |
-| Manual accept checks.       | <ul><li>Run, jobs and artifacts.</li><li>Candidate commits.</li></ul>                                     | `.github/scripts/check_benchmark_run.py`                                                                                            |
-| Pipeline and lint.          | <ul><li>Calls the gate after the benchmark.</li><li>Ignores the `queue` message.</li></ul>                | `.github/workflows/lint_test_deploy.yml`<br/>`.github/workflows/yamllint.yml`                                                       |
-| Tests.                      | <ul><li>91 new cases in two files.</li><li>New workflow under policy.</li><li>No cases removed.</li></ul> | `tests/ci/test_benchmark_baselines_workflow.py`<br/>`tests/ci/test_check_benchmark_run.py`<br/>`tests/ci/test_workflow_policies.py` |
-| Docs.                       | <ul><li>Seed section.</li><li>Status and accept rules.</li></ul>                                          | `files/docs/Automatic_Benchmark_Baselines.md`                                                                                       |
+| Change                      | Details                                                                                                    | Files                                                                                                                               |
+|-----------------------------|------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| Gate and baseline updates.  | <ul><li>One job that writes.</li><li>Label and manual accept.</li><li>Push once, or nothing.</li></ul>     | `.github/workflows/benchmark_baselines.yml`                                                                                         |
+| Report-only benchmark jobs. | <ul><li>Compare against the branch.</li><li>Check out after measuring.</li></ul>                           | `.github/workflows/benchmark.yml`                                                                                                   |
+| Manual accept checks.       | <ul><li>Run, jobs and artifacts.</li><li>Candidate commits.</li></ul>                                      | `.github/scripts/check_benchmark_run.py`                                                                                            |
+| Pipeline and lint.          | <ul><li>Calls the gate after the benchmark.</li><li>Ignores the `queue` message.</li></ul>                 | `.github/workflows/lint_test_deploy.yml`<br/>`.github/workflows/yamllint.yml`                                                       |
+| Tests.                      | <ul><li>107 new cases in two files.</li><li>New workflow under policy.</li><li>No cases removed.</li></ul> | `tests/ci/test_benchmark_baselines_workflow.py`<br/>`tests/ci/test_check_benchmark_run.py`<br/>`tests/ci/test_workflow_policies.py` |
+| Docs.                       | <ul><li>Seed section.</li><li>Status and accept rules.</li></ul>                                           | `files/docs/Automatic_Benchmark_Baselines.md`                                                                                       |
 
 ### Assessment against linked issues
 
 | Issue                                                   | Objective                                                          | Addressed | Explanation                                                                     |
 |---------------------------------------------------------|--------------------------------------------------------------------|-----------|---------------------------------------------------------------------------------|
-| <https://github.com/ikostan/SkyLockAssault/issues/1111> | A `main` run commits one update naming its run ID and SHA          | ⏳        | Tested with a local remote. To confirm on the first `main` run.                 |
+| <https://github.com/ikostan/SkyLockAssault/issues/1111> | A `main` run commits one update naming its run ID and SHA          | ✅        | Confirmed on the first `main` run: `b0e86c1`.                                   |
 | <https://github.com/ikostan/SkyLockAssault/issues/1111> | An unaccepted regression fails the job and leaves the branch alone | ⏳        | Tested with a local remote. Proven on GitHub at the first real regression.      |
 | <https://github.com/ikostan/SkyLockAssault/issues/1111> | A labelled merge raises only failing counts and records the PR     | ⏳        | Tested with a stubbed `gh`. Proven on GitHub at the first labelled merge.       |
 | <https://github.com/ikostan/SkyLockAssault/issues/1111> | A manual run does the same for that run                            | ⏳        | Tested with a stubbed `gh`. Proven on GitHub at the first manual accept.        |
 | <https://github.com/ikostan/SkyLockAssault/issues/1111> | Benchmark jobs stay read-only; only `baselines` can write          | ✅        | Checked by `test_only_the_baselines_job_requests_contents_write`.               |
 | <https://github.com/ikostan/SkyLockAssault/issues/1111> | Deploys do not depend on the benchmark                             | ✅        | Checked by `test_deploys_do_not_depend_on_the_benchmark`.                       |
-| <https://github.com/ikostan/SkyLockAssault/issues/1111> | Policy, pinning and new tests pass; no cases removed               | ✅        | 915 passed in CI on `ed08f9f`.                                                  |
-| <https://github.com/ikostan/SkyLockAssault/issues/1111> | `benchmark-accept` label created                                   | ⚠️        | The label exists; its description is still empty (see Follow-ups).              |
+| <https://github.com/ikostan/SkyLockAssault/issues/1111> | Policy, pinning and new tests pass; no cases removed               | ✅        | 931 passed in CI on `39641d5`.                                                  |
+| <https://github.com/ikostan/SkyLockAssault/issues/1111> | `benchmark-accept` label created                                   | ✅        | The label exists, with the description #1111 asks for.                          |
 
 ---
 
@@ -176,6 +175,9 @@ Any failure stops the job, with the reason in the summary.
   - `a73f792` Merge branch into the PR branch
   - `81b3baf` Make benchmark workflow tests fail clearly
   - `57623bf` Merge branch into the PR branch
+  - `93a93c7` Document benchmark baseline gate PR
+  - `91f838e` Merge branch into the PR branch
+  - `39641d5` Test expired duplicate artifact order
 
 ### Bots / AI contributions
 
@@ -184,7 +186,6 @@ Any failure stops the job, with the reason in the summary.
     - Added `queue: max`, which #1111 left out, and the merged-PR-only label filter.
     - Found that the baselines must be checked out after measuring, because the web preset exports all resources.
   - **Tests**
-    - Wrote both new test files, including running the real shell steps against a local remote.
     - Broke 28 key lines on purpose to test the tests, and corrected the test setup when two got through.
     - Traced the Windows collection error to `read_text()` without an encoding in `test_workflow_policies.py`, which was already on `main`.
   - **Mistakes fixed in this PR**
@@ -194,7 +195,7 @@ Any failure stops the job, with the reason in the summary.
     - Assessed each finding against the code. Rated DeepSource's as overstated and proposed the `find_step` fix.
     - Reproduced Sourcery's finding on `ee128f9`, showed `saves` going from 0 to 61, and proposed the stricter `baselines` job check.
   - **Docs**
-    - Wrote the Seed section, the other design doc updates and this note.
+    - Wrote the Seed section, the other design doc updates and this note, and corrected the note after the merge (#1129).
   - **Commits**
     - `331ba89` Document the benchmark-baselines seed (#1110)
     - `0f003b9` Update the design doc for the baselines job (#1111)
@@ -209,10 +210,14 @@ Any failure stops the job, with the reason in the summary.
 
 - **@deepsource-io**
   - Python and JavaScript analysis, with 3 inline comments on `next()` (fixed differently).
+  - Commits:
+    - `6cfb345` style: format code with Black and isort
 
 - **@coderabbitai**
   - Posted the walkthrough and rated merge risk low.
-  - Flagged the unedited PR description.
+  - Flagged the unedited PR description, then passed the check once it was rewritten.
   - Posted 2 inline comments: the `queue` key and design doc line 8 (both fixed). Verified the `queue` fix and resolved that thread.
+  - Commits:
+    - `559c953` Add tests for benchmark baseline acceptance and run validation edge cases
 
 <!-- markdownlint-enable MD001 MD036 MD013 MD033 table-column-style -->

@@ -7,6 +7,8 @@ Status: in progress in [#1107](https://github.com/ikostan/SkyLockAssault/issues/
 the rolling medians and the accept rule to `compare.py`.
 [#1111](https://github.com/ikostan/SkyLockAssault/issues/1111) turns them on
 in CI.
+[#1112](https://github.com/ikostan/SkyLockAssault/issues/1112) runs the benchmark
+on pull requests, report-only.
 
 Source: the design doc in
 [[EPIC] Automatic CI benchmark baselines #1107](https://github.com/ikostan/SkyLockAssault/issues/1107).
@@ -99,7 +101,7 @@ and that needs an explicit signal rather than a file edit.
 
 **Numbers before merge.** Pull requests that touch game code also run the
 benchmark, gated by the existing `dorny/paths-filter` step. They compare
-against the branch baseline, only report and write nothing. So the label is
+against the branch baseline, only report and never update it. So the label is
 set from the PR's numbers, not guessed.
 
 The label must be on the PR before it merges. The push to `main` carries no
@@ -219,7 +221,7 @@ day or two.
 | 2 | Baseline rules in `compare.py`: history format, ratchet with tolerance margin, rolling median, accept raises failing counts only, summary says why a baseline moved. Tests in `tests/ci/test_benchmark_compare.py`, existing cases kept                                                           | M    | —     | Each rule has tests and the suite passes                                                              |
 | 3 | Create the orphan `benchmark-baselines` branch and seed `desktop.json` and `web.json` from task 1's files. Manual, no PR                                                                                                                                                                          | XS   | 1, 2  | Both files are on the branch in the new format, and the ruleset question is answered                  |
 | 4 | New `benchmark_baselines.yml` with one `baselines` job: gate, update, push once, concurrency group, `contents: write`. `benchmark.yml` jobs only measure and report. Accept path: `benchmark-accept` label, label lookup by commit SHA, `workflow_dispatch` with the failed run's ID and `accept` | M    | 2, 3  | A `main` run commits to the branch; a labelled merge and a manual run both raise failing counts       |
-| 5 | PR run in `lint_test_on_pull.yml` behind `dorny/paths-filter`, report-only                                                                                                                                                                                                                        | S    | 4     | A PR that touches game code shows the table, and nothing is written                                   |
+| 5 | PR run in `lint_test_on_pull.yml` behind `dorny/paths-filter`, report-only                                                                                                                                                                                                                        | S    | 4     | A PR that touches game code shows the table, and no baseline is updated                               |
 | 6 | Delete the two files from `main`, drop `compare.py`'s default `--baseline` path, rewrite "Creating or updating the baseline" in `Performance_Benchmark_Guide.md`                                                                                                                                  | S    | 4, 5  | No baseline file on `main`; the guide covers the label, the manual run and fetching baselines locally |
 <!-- markdownlint-enable MD013 -->
 

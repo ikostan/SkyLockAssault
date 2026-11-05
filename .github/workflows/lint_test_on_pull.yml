@@ -8,7 +8,8 @@ concurrency:
 
 # Least-privilege floor for the orchestrator. Verified against all 7 called workflows on
 # 2026-09-27: none use the SARIF/security-events API. Re-verified 2026-10-06 (#1003):
-# none use the Checks API either, so no job below is granted checks:write.
+# none use the Checks API either, so no job below is granted checks:write. benchmark.yml
+# (#1112) was checked for both on 2026-11-05 and uses neither.
 permissions:
   contents: "read"
   pull-requests: "read"
@@ -38,6 +39,8 @@ jobs:
       gdunit4_workflow: "${{ steps.filter.outputs.gdunit4_workflow }}"
       gut_workflow: "${{ steps.filter.outputs.gut_workflow }}"
       browser_workflow: "${{ steps.filter.outputs.browser_workflow }}"
+      # The benchmark's own files. gdscript excludes test/**, so it can't see them.
+      benchmark: "${{ steps.filter.outputs.benchmark }}"
     steps:
       - name: "Checkout Code"
         uses: "actions/checkout@v7.0.1"
@@ -98,6 +101,10 @@ jobs:
               - '.github/workflows/gut_tests.yml'
             browser_workflow:
               - '.github/workflows/browser_test.yml'
+            benchmark:
+              - 'test/benchmark/**'
+              - '.github/workflows/benchmark.yml'
+              - 'export_presets.cfg'  # Holds the Web_benchmark preset
 
   # NOTE: jobs below call a reusable workflow via `uses:`. That job shape does not support
   # `runs-on` or `timeout-minutes` — GitHub Actions only allows needs/if/permissions/uses/
@@ -249,3 +256,19 @@ jobs:
     uses: "./.github/workflows/browser_test.yml"
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+
+  # Report-only (#1112): shows the desktop and web tables on the PR, so the
+  # benchmark-accept label is set from real numbers. A count regression shows in the
+  # table but passes. No job here needs this one, so it stays out of the merge path.
+  # Read-only on purpose: updating the baselines is a separate, main-only workflow.
+  benchmark:
+    name: "Performance Benchmark"
+    needs: "detect-changes"
+    permissions:
+      contents: "read"
+    if: >-
+      ${{
+        needs.detect-changes.outputs.gdscript == 'true' ||
+        needs.detect-changes.outputs.benchmark == 'true'
+      }}
+    uses: "./.github/workflows/benchmark.yml"

@@ -526,10 +526,18 @@ GitHub runners (`ubuntu-24.04`):
 - **Web:** `run_web.py` (`Web_benchmark` in headless Chromium). Baseline
   `baseline_web_ci.json`, artifact `benchmark-web-results`.
 
-It is a reusable workflow, called only from the main pipeline
-(`lint_test_deploy.yml`, on every push to `main`) after the Ubuntu 24.04
-tests pass. Each job runs the benchmark 3 times. Neither job blocks the
-release or deploy jobs.
+It is a reusable workflow, called from two pipelines. Each job runs the
+benchmark 3 times.
+
+- **Main pipeline** (`lint_test_deploy.yml`, on every push to `main`): runs after
+  the Ubuntu 24.04 tests pass. Neither job blocks the release or deploy jobs.
+- **Pull requests** (`lint_test_on_pull.yml`): runs when a PR changes game code
+  (`.gd`, `.tscn` or `.tres` files outside `test/`, or `project.godot`),
+  anything under `test/benchmark/`, `benchmark.yml` or `export_presets.cfg`. It
+  compares with the same baselines but only reports: a worse count shows ❌ in
+  the table without failing the PR. It uploads its results artifacts but does not
+  update `benchmark-baselines`. A PR job still fails if it could not measure or
+  compare.
 
 The web job installs only the web export templates (checked against the
 release's SHA-512) and Playwright's Chromium. Runners have no GPU, so the
