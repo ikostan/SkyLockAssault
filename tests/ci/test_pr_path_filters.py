@@ -372,3 +372,61 @@ def test_no_job_waits_on_the_benchmark(workflow):
         if "benchmark" in needs:
             waiting.append(job_id)
     assert not waiting, f"these jobs must not need the benchmark: {waiting}"
+
+
+@pytest.mark.parametrize(
+    "path, game_match, benchmark_match",
+    [
+        ("player.gd", True, False),
+        ("scenes/nested/level.tscn", True, False),
+        ("test/benchmark/nested/.fixture.json", False, True),
+        ("test/benchmark/nested/scene.tscn", False, True),
+        ("test/benchmarking/scene.tscn", False, False),
+        ("test/benchmark.gd", False, False),
+        ("export_presets.cfg.bak", False, False),
+        (".github/workflows/benchmark.yml.bak", False, False),
+    ],
+)
+def test_benchmark_filter_boundaries(filters, path, game_match, benchmark_match):
+    """Each filter selects only its intended paths, including nested and dot files."""
+    assert _matches(filters["gdscript"], path) is game_match
+    assert _matches(filters["benchmark"], path) is benchmark_match
+
+
+def test_pr_pipeline_does_not_call_the_baseline_gate(workflow):
+    """A separate gate job must not run on PRs, even without a benchmark dependency."""
+    callers = [
+        job_id
+        for job_id, job in workflow["jobs"].items()
+        if job.get("uses") == "./.github/workflows/benchmark_baselines.yml"
+    ]
+    assert not callers, f"PR pipeline must not call the baseline gate: {callers}"
+
+
+@pytest.mark.parametrize(
+    "job_id, artifact_name, artifact_path",
+    [
+        ("desktop", "benchmark-results", "bench_results/ci/desktop/**"),
+        ("web", "benchmark-web-results", "bench_results/ci/web/**"),
+    ],
+)
+def test_pr_benchmark_reports_are_uploaded_and_errors_are_not_suppressed(
+    job_id, artifact_name, artifact_path
+):
+    """Both profiles publish results while measurement and comparison errors fail."""
+    path = WORKFLOW.parent / "benchmark.yml"
+    job = yaml.safe_load(path.read_text(encoding="utf-8"))["jobs"][job_id]
+    steps = job["steps"]
+    run_name = "Run Benchmark" if job_id == "desktop" else "Run Web Benchmark"
+    for name in (run_name, "Compare With Baseline"):
+        step = next(step for step in steps if step.get("name") == name)
+        assert not step.get("continue-on-error", False)
+    assert not job.get("continue-on-error", False)
+
+    upload = next(
+        step for step in steps if step.get("name") == "Upload Benchmark Results"
+    )
+    assert upload["uses"].startswith("actions/upload-artifact@")
+    assert upload["if"] == "always()"
+    assert upload["with"]["name"] == artifact_name
+    assert upload["with"]["path"] == artifact_path
