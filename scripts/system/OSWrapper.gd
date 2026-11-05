@@ -1,5 +1,5 @@
-## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## OSWrapper.gd
 ## Wrapper for OS singleton methods to enable mocking in unit tests.
 ##
@@ -12,6 +12,12 @@ class_name OSWrapper
 extends RefCounted
 
 
+## Checks if the current platform has a specific feature.
+##
+## Mirrors OS.has_feature.
+##
+## [param feature]: The feature name to check.
+## Returns true if the platform has the feature, false otherwise.
 func has_feature(feature: String) -> bool:
 	## Checks if the current platform has a specific feature.
 	##

@@ -1,18 +1,25 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## game_settings_resource.gd
 ##
 ## DATA CONTAINER: This Resource serves as the central "Source of Truth" for game configuration.
 ## It decouples static data from logic found in Globals.gd.
+
+@tool
 class_name GameSettingsResource
 extends Resource
 
-## SIGNAL: setting_changed(setting_name: String, new_value: Variant)
+## Emitted when a setting with a notifying setter changes value.
 ##
-## This signal is the core of the Observer Pattern for game settings.
-## It is automatically emitted by property setters whenever a value is updated.
-## This allows external systems (like Globals.gd) to react to data changes
-## without the UI having to explicitly call persistence or logging methods.
+## Core observer signal. Allows external systems to react to data changes without explicit
+## persistence calls. Setting a property to its current value does not emit it.
+##
+## Plain exported properties have no setter and never emit it: [member base_consumption_rate],
+## [member remap_prompt_keyboard], [member remap_prompt_gamepad], [member key_mapping_scene]
+## and [member options_scene].
+##
+## [param setting_name]: Name of the setting that was changed.
+## [param new_value]: The updated value assigned to the setting.
 signal setting_changed(setting_name: String, new_value: Variant)
 
 ## SIGNAL: fuel_depleted
@@ -274,18 +281,16 @@ var _low_yellow_fraction: float = 0.10
 
 
 func _init() -> void:
-	# This only runs if the values aren't already set (like in a .new() call)
-	if not key_mapping_scene:
-		key_mapping_scene = load("res://scenes/key_mapping_menu.tscn")
-	if not options_scene:
-		options_scene = load("res://scenes/options_menu.tscn")
-	# NEW: Safely enforce the invariant that a brand new resource
+	# Safely enforce the invariant that a brand new resource
 	# always starts with a full tank, without bypassing the validation setters.
 	_current_fuel = _max_fuel
 
 
-## Helper method to increase fuel safely.
 ## Increases fuel level by specified amount, clamped to max_fuel.
+##
+## Helper method to increase fuel safely.
+##
+## [param amount]: The quantity of fuel to add, which must be greater than zero.
 func refuel(amount: float) -> void:
 	if amount > 0:
 		current_fuel += amount

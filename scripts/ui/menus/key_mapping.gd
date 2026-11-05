@@ -1,5 +1,6 @@
-## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+## res://scripts/ui/menus/key_mapping.gd
 
 extends CanvasLayer
 
@@ -283,26 +284,26 @@ func _grab_initial_focus() -> void:
 ## Callback triggered when the keyboard device toggle is interacted with.
 ## Saves the input preference to persistent settings, updates the UI button mappings,
 ## and plays confirmation audio feedback using the centralized SFX map.
-## @param toggled_on: The current boolean state of the toggle button.
+## [param toggled_on]: The current boolean state of the toggle button.
 func _on_keyboard_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		Globals.current_input_device = "keyboard"
 		Settings.save_last_input_device("keyboard")
 		update_all_remap_buttons()
 		# FIX: Pass BUS_SFX_MENU explicitly as requested by reviewer
-		AudioManager.play_sfx(AudioConstants.SFX_CHECK, AudioConstants.BUS_SFX_MENU)
+		SfxManager.play_sfx(AudioConstants.SFX_CHECK, AudioConstants.BUS_SFX_MENU)
 		Globals.log_message("Current input device set to: keyboard", Globals.LogLevel.DEBUG)
 
 
 ## Callback triggered when the gamepad device toggle is interacted with.
 ## Saves the input preference to persistent settings, updates the UI button mappings,
 ## and plays confirmation audio feedback using the centralized SFX map.
-## @param toggled_on: The current boolean state of the toggle button.
+## [param toggled_on]: The current boolean state of the toggle button.
 func _on_gamepad_toggled(toggled_on: bool) -> void:
 	if toggled_on:
 		Globals.current_input_device = "gamepad"
 		Settings.save_last_input_device("gamepad")
 		update_all_remap_buttons()
 		# FIX: Pass BUS_SFX_MENU explicitly as requested by reviewer
-		AudioManager.play_sfx(AudioConstants.SFX_CHECK, AudioConstants.BUS_SFX_MENU)
+		SfxManager.play_sfx(AudioConstants.SFX_CHECK, AudioConstants.BUS_SFX_MENU)
 		Globals.log_message("Current input device set to: gamepad", Globals.LogLevel.DEBUG)

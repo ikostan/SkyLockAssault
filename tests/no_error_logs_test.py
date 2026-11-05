@@ -1,5 +1,5 @@
 # Copyright (C) 2025 Egor Kostan
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # tests/no_error_logs_test.py
 """
 Console & Page Error Integrity Test (Playwright + UI Automation)

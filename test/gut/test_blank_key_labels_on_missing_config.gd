@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_blank_key_labels_on_missing_config.gd
 ## GUT unit tests to reproduce the "blank key label" UI bug:
 ## When config is missing (fresh install / migration) or an action entry is missing,

@@ -1,8 +1,9 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## main_scene.gd
 ## Main scene script for SkyLockAssault.
 ## Handles player positioning, stats visibility, and parallax background setup.
+## NOTE: Legacy Player-to-parallax signal coupling and compatibility shims are completely removed.
 
 class_name MainScene
 extends Node2D
@@ -12,6 +13,7 @@ enum MessageType { CRITICAL_UNBOUND, KEY_PRESS_UNBOUND }
 # At the top of main_scene.gd
 @export var parallax_screens_tall: float = 8.0
 
+var web_telemetry_adapter: Node
 var _showing_unbound_warning: bool = false
 var _showing_unbound_key_message: bool = false
 
@@ -33,11 +35,14 @@ func _ready() -> void:
 	Globals.log_message("Initializing main scene...", Globals.LogLevel.DEBUG)
 
 	# =========================================================
-	# THIS IS THE MISSING LINK THAT WAKES UP YOUR HUD!
-	# It passes the Player directly to the HUD script so the bars work.
+	# DEPENDENCY INJECTION: HUD Data Layer
+	# Extracts raw telemetry data resources directly from the player
+	# hierarchy and passes them into the HUD.
 	# =========================================================
 	if stats_panel.has_method("setup_hud"):
-		stats_panel.setup_hud(player)
+		stats_panel.setup_hud(
+			player.fuel_resource, player.speed_resource, player.weapon.weapon_resource
+		)
 	else:
 		push_error(
 			"HUD Script is missing! Make sure 'hud.gd' is attached to the 'PlayerStatsPanel' node."
@@ -71,40 +76,13 @@ func _ready() -> void:
 	)
 
 	if background.has_method("setup"):
-		background.setup(settings_res)
+		# Inject all required resources into the newly refactored ParallaxManager
+		background.setup(player.speed_resource, player.fuel_resource, settings_res)
 	else:
 		push_warning(
-			"Parallax background is missing the `setup` method. Settings injection failed."
+			"Parallax background is missing the `setup` method. Resource injection failed."
 		)
 
-	# Wire up the signal architecture for the parallax background
-	if player.has_signal("speed_changed") and background.has_method("update_speed"):
-		# 1. Guard against duplicate connections
-		if not player.speed_changed.is_connected(background.update_speed):
-			player.speed_changed.connect(background.update_speed)
-
-		# 2. Prime the background securely via a public method
-		if background.has_method("prime_speed"):
-			background.prime_speed(player.current_speed)
-		else:
-			push_warning("Parallax background is missing the `prime_speed` method.")
-
-	elif not player.has_signal("speed_changed"):
-		push_warning(
-			(
-				"Parallax background not wired: player is missing the `speed_changed` signal. "
-				+ "Verify that the Player node defines and emits `speed_changed`."
-			)
-		)
-	elif not background.has_method("update_speed"):
-		push_warning(
-			(
-				"Parallax background not wired: background is missing"
-				+ " `update_speed` method. "
-				+ "Ensure the background script implements "
-				+ " `update_speed(speed: float, max_speed: float)`."
-			)
-		)
 	# =========================================================
 	# FLOAT DEGRADATION SAFEGUARD
 	# =========================================================
@@ -112,6 +90,17 @@ func _ready() -> void:
 	# This preserves encapsulation so main_scene doesn't need to know layer specifics.
 	if background.has_method("auto_calculate_wrap_period"):
 		background.auto_calculate_wrap_period()
+
+	# 1. Instantiate the adapter
+	var TelemetryScript = load("res://scripts/system/web_telemetry_adapter.gd")
+	web_telemetry_adapter = TelemetryScript.new()
+
+	# 2. Add it to the Scene Tree so _ready() fires (allowing it to self-destruct if not on web)
+	add_child(web_telemetry_adapter)
+
+	# 3. Inject the active resource from the player
+	if OS.has_feature("web"):
+		web_telemetry_adapter.setup(player.fuel_resource)
 
 
 # 2. Detect when player presses a key/button that has NO binding at all
@@ -150,10 +139,12 @@ func _input(event: InputEvent) -> void:
 
 
 ## Sets up a parallax layer for tiling and mirroring.
-## @param sprite: Sprite2D - The Sprite2D to configure.
-## @param viewport: Vector2 - The viewport size.
-## @param buffer_mult: float - Multiplier for vertical buffer.
-## @return: void
+##
+## Configures region settings and motion mirroring on the parent ParallaxLayer.
+##
+## [param sprite]: The target Sprite2D node to configure for tiling and mirroring.
+## [param viewport]: The size of the viewport used to calculate the required tile count.
+## [param buffer_mult]: Multiplier for the vertical buffer size.
 func setup_parallax_layer(sprite: Sprite2D, viewport: Vector2, buffer_mult: float = 1.0) -> void:
 	if not sprite or not sprite.texture:
 		return
@@ -172,9 +163,13 @@ func setup_parallax_layer(sprite: Sprite2D, viewport: Vector2, buffer_mult: floa
 	layer.motion_mirroring = Vector2(0, tiles_y * tex_size.y)
 
 
-## Sets up the bushes layer with random X positions, sizes, and textures.
-## @param viewport: Vector2 - The viewport size.
-## @return: void
+## Clears existing children and repopulates the bushes layer with randomly
+## positioned, scaled, and textured sprites from the texture preloader
+## (resources whose IDs begin with "bush_").
+##
+## [param viewport]: Viewport size in pixels. [code]x[/code] bounds horizontal placement;
+## [code]y[/code] multiplied by [member parallax_screens_tall] sets the layer height and
+## vertical mirroring interval.
 func setup_bushes_layer(viewport: Vector2) -> void:
 	if not bushes_layer:
 		return
@@ -218,9 +213,15 @@ func setup_bushes_layer(viewport: Vector2) -> void:
 	bushes_layer.motion_mirroring = Vector2(0, layer_height)
 
 
-## Sets up the decor layer with random X positions, sizes, textures, rotations, and flips.
-## @param viewport: Vector2 - The viewport size.
-## @return: void
+## Clears existing children and repopulates the decor layer with sprites from the
+## texture preloader (resources whose IDs begin with "decor_").
+##
+## Each element gets a random position, scale, texture, cardinal rotation, and
+## horizontal/vertical flip.
+##
+## [param viewport]: Viewport size in pixels. [code]x[/code] bounds horizontal placement;
+## [code]y[/code] multiplied by [member parallax_screens_tall] sets the layer height and
+## vertical mirroring interval.
 func setup_decor_layer(viewport: Vector2) -> void:
 	if not decor_layer:
 		return
@@ -291,12 +292,15 @@ func _process(_delta: float) -> void:
 		)
 
 
-## Shows a temporary on-screen message (non-blocking).
-## Centralizes timer + flag reset to prevent races.
-## :param text: Message to display.
-## :param type: Which flag to manage (defaults to CRITICAL for backward compat).
-## :type type: MessageType
-## :rtype: void
+## Shows a temporary on-screen message non-blocking and centralizes flags.
+##
+## Displays the specified text on the message label and hides it after four seconds.
+## When the message expires, only the KEY_PRESS_UNBOUND flag is reset. The
+## CRITICAL_UNBOUND flag stays set so the warning shows once per session, until
+## [method clear_unbound_warning] is called after the bindings are fixed.
+##
+## [param text]: The message text to display on the label.
+## [param type]: The message type; KEY_PRESS_UNBOUND resets its flag on expiry.
 func show_message(text: String, type: MessageType = MessageType.CRITICAL_UNBOUND) -> void:
 	if not is_instance_valid(message_label):
 		return

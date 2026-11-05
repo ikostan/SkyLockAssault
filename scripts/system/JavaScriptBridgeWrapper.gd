@@ -1,5 +1,5 @@
-## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## JavaScriptBridgeWrapper.gd
 ## Wrapper for JavaScriptBridge singleton methods to enable mocking in unit tests.
 ##
@@ -12,6 +12,13 @@ class_name JavaScriptBridgeWrapper
 extends RefCounted
 
 
+## Evaluates JavaScript code.
+##
+## Mirrors JavaScriptBridge.eval.
+##
+## [param code]: The JavaScript code to evaluate.
+## [param global_exec]: Whether to execute in global scope.
+## Returns The result of the evaluation.
 func eval(code: String, global_exec: bool = false) -> Variant:
 	## Evaluates JavaScript code.
 	##
@@ -25,6 +32,12 @@ func eval(code: String, global_exec: bool = false) -> Variant:
 	return JavaScriptBridge.eval(code, global_exec)
 
 
+## Gets a JavaScript interface.
+##
+## Mirrors JavaScriptBridge.get_interface.
+##
+## [param interface]: The interface name (e.g., "window").
+## Returns the requested JavaScript interface as a Variant.
 func get_interface(interface: String) -> Variant:
 	## Gets a JavaScript interface.
 	##
@@ -36,6 +49,12 @@ func get_interface(interface: String) -> Variant:
 	return JavaScriptBridge.get_interface(interface)
 
 
+## Creates a JavaScript callback from a GDScript callable.
+##
+## Mirrors JavaScriptBridge.create_callback.
+##
+## [param callable]: The GDScript callable to wrap.
+## Returns The JavaScript callback object.
 func create_callback(callable: Callable) -> Variant:
 	## Creates a JavaScript callback from a GDScript callable.
 	##

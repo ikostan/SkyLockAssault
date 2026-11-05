@@ -2,37 +2,45 @@
 name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
 categories:
+  # --- Changelog categories (rendered into $CHANGES) ---
   - title: '🚀 Features'
-    labels:
-      - 'enhancement'
-      - 'mechanics'
+    when:
+      labels:
+        - 'enhancement'
+        - 'mechanics'
   - title: '🌐 Web Enhancements'
-    labels:
-      - 'web'
+    when:
+      label: 'web'
   - title: '🐛 Bug Fixes'
-    labels:
-      - 'bug'
+    when:
+      label: 'bug'
   - title: '🧰 Maintenance'
-    labels:
-      - 'setup'
-      - 'tools'
-      - 'CI/CD'
+    when:
+      labels:
+        - 'setup'
+        - 'tools'
+        - 'CI/CD'
   - title: '📄 Documentation'
-    labels:
-      - 'documentation'
+    when:
+      label: 'documentation'
+
+  # --- Version resolution only (not rendered in the changelog) ---
+  - type: 'version-resolver'
+    semver-increment: 'major'
+    when:
+      label: 'major'
+  - type: 'version-resolver'
+    semver-increment: 'minor'
+    when:
+      label: 'minor'
+  - type: 'version-resolver'
+    semver-increment: 'patch'
+    when:
+      label: 'patch'
 commitish: main  # Add this to fix the target_commitish error
 change-template: '* $TITLE (#$NUMBER) @$AUTHOR'
 no-changes-template: '* No changes'
 version-resolver:
-  major:
-    labels:
-      - 'major'
-  minor:
-    labels:
-      - 'minor'
-  patch:
-    labels:
-      - 'patch'
   default: patch
 template: |
   ## Changes

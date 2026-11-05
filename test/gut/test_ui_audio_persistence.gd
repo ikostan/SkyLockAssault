@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_ui_audio_persistence.gd
 ##
 ## TEST SUITE: Verifies UI/Menu Volume, Mute, and AudioServer Persistence (Issue #707, #708, #709, #712).

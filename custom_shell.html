@@ -257,6 +257,7 @@
     <button id="advanced-reset-button" style="display: none; top: 80%; left: 75%; width: 200px; height: 50px; transform: translate(-50%, -50%);">Reset</button>
     <button id="gameplay-back-button" style="display: none; top: 80%; left: 25%; width: 200px; height: 50px; transform: translate(-50%, -50%);">Back</button>
     <button id="gameplay-reset-button" style="display: none; top: 80%; left: 75%; width: 200px; height: 50px; transform: translate(-50%, -50%);">Reset</button>
+    <input id="fps-toggle" type="checkbox" style="top: 45%; left: 60%; width: 50px; height: 50px; display: none;">
     <!-- Pause Menu Elements (invisible overlays) -->
     <button id="pause-resume-button" style="top: 40%; display: none;">RESUME</button>
     <button id="pause-options-button" style="top: 50%; display: none;">OPTIONS</button>
@@ -387,6 +388,7 @@
         document.getElementById('controls-back-button').onclick = () => window.controlsBackPressed([]);
         document.getElementById('audio-back-button').onclick = () => window.audioBackPressed([]);
         document.getElementById('audio-reset-button').onclick = () => window.audioResetPressed([]);
+        document.getElementById('fps-toggle').onchange = (e) => window.toggleFps && window.toggleFps([e.target.checked]);
         document.getElementById('advanced-back-button').onclick = () => window.advancedBackPressed([]);
         document.getElementById('advanced-reset-button').onclick = () => window.advancedResetPressed([]);
         document.getElementById('gameplay-back-button').onclick = () => window.gameplayBackPressed([]);

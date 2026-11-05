@@ -1,0 +1,60 @@
+---
+name: "Test Suite"
+
+# Ref #1008: all test suites for one runner OS. lint_test_deploy.yml calls it
+# twice: on ubuntu-24.04 (gates the scans and the itch.io deploy) and on
+# ubuntu-26.04 (advisory; nothing depends on it). lint_test_on_pull.yml does
+# not use it, because it runs each suite only when matching files changed.
+on:  # yamllint disable-line rule:truthy
+  workflow_call:
+    inputs:
+      runner:
+        description: "Runner label for every test job"
+        type: "string"
+        default: "ubuntu-24.04"
+      upload_coverage:
+        description: "Upload Playwright coverage to Codecov"
+        type: "boolean"
+        default: true
+    secrets:
+      CODECOV_TOKEN:
+        description: "Required by gut_tests.yml and browser_test.yml"
+        required: true
+
+permissions:
+  contents: "read"
+
+jobs:
+  gdunit4_tests:
+    name: "GDUnit4 Unit Tests"
+    uses: "./.github/workflows/gdunit4_tests.yml"
+    with:
+      runner: "${{ inputs.runner }}"
+
+  gut_tests:
+    name: "GUT Unit Tests"
+    uses: "./.github/workflows/gut_tests.yml"
+    with:
+      runner: "${{ inputs.runner }}"
+    secrets:
+      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+
+  ci_script_tests:
+    name: "CI/CD Infrastructure Tests"
+    uses: "./.github/workflows/test_ci_scripts.yml"
+    with:
+      runner: "${{ inputs.runner }}"
+      godot_version: "4.7.1-stable"
+
+  browser_tests:
+    name: "Browser Functional Tests"
+    uses: "./.github/workflows/browser_test.yml"
+    needs:
+      - "gdunit4_tests"
+      - "gut_tests"
+      - "ci_script_tests"
+    with:
+      runner: "${{ inputs.runner }}"
+      upload_coverage: "${{ inputs.upload_coverage }}"
+    secrets:
+      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"

@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_deduplication_on_migration.gd
 ## Additional GUT unit test to ensure migration doesn't add duplicates.
 ## Scenario: Legacy unbound → add defaults, but if partial duplicates, dedup.

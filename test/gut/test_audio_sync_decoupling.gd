@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_audio_sync_decoupling.gd
 ##
 ## TEST SUITE: Verifies Signal Decoupling for Web and UI Sync (Issue #567).

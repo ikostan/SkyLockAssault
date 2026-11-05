@@ -8,7 +8,6 @@ permissions:
   actions: "read"
   # Needed to upload SARIF results
   security-events: "write"
-  checks: "write"  # Add this to allow check run creation
 
 on:  # yamllint disable-line rule:truthy
   push:
@@ -27,51 +26,36 @@ jobs:
     uses: "./.github/workflows/yamllint.yml"
     with:
       config-path: ".github/workflows/*.yml"
-  gdunit4_tests:
-    name: "GDUnit4 Unit Tests"
-    uses: "./.github/workflows/gdunit4_tests.yml"
+  tests_ubuntu_24:
+    name: "Tests (Ubuntu 24.04)"
+    uses: "./.github/workflows/test_suite.yml"
     needs:
       - "gdlint"
       - "readmelint"
       - "yamllint"
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
-  gut_tests:
-    name: "GUT Unit Tests"
-    uses: "./.github/workflows/gut_tests.yml"
-    needs:
-      - "gdlint"
-      - "readmelint"
-      - "yamllint"
-    secrets:
-      CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
-  ci_script_tests:
-    name: "CI/CD Infrastructure Tests"
-    uses: "./.github/workflows/test_ci_scripts.yml"
+  tests_ubuntu_26:
+    name: "Tests (Ubuntu 26.04, advisory)"
+    uses: "./.github/workflows/test_suite.yml"
     needs:
       - "gdlint"
       - "readmelint"
       - "yamllint"
     with:
-      godot_version: "4.7.1-stable"
-  browser_tests:
-    name: "Browser Functional Tests"
-    uses: "./.github/workflows/browser_test.yml"
-    needs:
-      - "gdunit4_tests"
-      - "gut_tests"
-      - "ci_script_tests"
+      runner: "ubuntu-26.04"
+      upload_coverage: false
     secrets:
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
   codeql:
     name: "CodeQL Scan on Web Export"
     needs:
-      - "browser_tests"
+      - "tests_ubuntu_24"
     uses: "./.github/workflows/codeql.yml"
   snyk:
     name: "Snyk Scan on Web Export"
     needs:
-      - "browser_tests"
+      - "tests_ubuntu_24"
     uses: "./.github/workflows/snyk.yml"
     secrets:
       SNYK_TOKEN: "${{ secrets.SNYK_TOKEN }}"
@@ -79,8 +63,18 @@ jobs:
   trivy:
     name: "Trivy vulnerability scanner"
     needs:
-      - "browser_tests"
+      - "tests_ubuntu_24"
     uses: "./.github/workflows/trivy.yml"
+  benchmark:
+    name: "Performance Benchmark"
+    needs:
+      - "tests_ubuntu_24"
+    uses: "./.github/workflows/benchmark.yml"
+  benchmark_baselines:
+    name: "Benchmark Baselines"
+    needs:
+      - "benchmark"
+    uses: "./.github/workflows/benchmark_baselines.yml"
   release_drafter:
     name: "Release Drafter"
     needs:

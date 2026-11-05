@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_main_scene_performance_limits.gd
 ##
 ## GUT unit tests for enforcing performance constraints on the MainScene
@@ -26,6 +26,19 @@ func after_each() -> void:
 	if is_instance_valid(main_scene):
 		GutHelper.safe_hard_free(main_scene)
 	await get_tree().process_frame
+
+
+func test_main_scene_injects_player_resources_into_parallax() -> void:
+	var player: Node2D = main_scene.player
+	var background: ParallaxManager = main_scene.background as ParallaxManager
+
+	assert_eq(background._speed_resource, player.speed_resource, "Background must observe the player's speed resource.")
+	assert_eq(background._fuel_resource, player.fuel_resource, "Background must observe the player's fuel resource.")
+	assert_eq(background._settings, Globals.settings, "Background must observe the active settings resource.")
+	assert_eq(background._current_speed, player.speed_resource.current_speed, "Background must be primed from player speed.")
+
+	player.speed_resource.current_speed = player.speed_resource.max_speed
+	assert_eq(background._current_speed, player.speed_resource.current_speed, "Player speed updates must reach the background.")
 
 
 ## test_parallax_chunk_size_is_optimized |
@@ -188,3 +201,27 @@ func test_decor_layer_chunk_size_and_density() -> void:
 		expected_count, 
 		"Decor layer should spawn exactly 2 times the number of available decor sprites."
 	)
+
+
+func test_legacy_signals_are_disconnected() -> void:
+	gut.p("Testing: Main scene no longer relies on legacy player signals for parallax updates.")
+	
+	var player: Node2D = main_scene.player
+	var background: ParallaxManager = main_scene.background as ParallaxManager
+	
+	# Fix: Assert the background is valid and correctly cast before inspecting connections
+	assert_not_null(background, "Background node must exist and have the ParallaxManager script attached.")
+	if background == null:
+		return
+	
+	# Ensure legacy speed signal is not connected to the background
+	if player.has_signal("speed_changed"):
+		var speed_connections: Array = player.get_signal_connection_list("speed_changed")
+		for conn in speed_connections:
+			assert_ne(conn.callable.get_object(), background, "Legacy 'speed_changed' signal must not be connected to ParallaxManager.")
+			
+	# Ensure legacy fuel signal is not connected to the background
+	if player.has_signal("fuel_depleted"):
+		var fuel_connections: Array = player.get_signal_connection_list("fuel_depleted")
+		for conn in fuel_connections:
+			assert_ne(conn.callable.get_object(), background, "Legacy 'fuel_depleted' signal must not be connected to ParallaxManager.")

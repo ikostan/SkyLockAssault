@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_input_remap_ec.gd
 ## Covers EC-02, EC-03, EC-08 from #351
 

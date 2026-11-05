@@ -300,20 +300,62 @@ def extract_enum_name(enum_node: Tree) -> Optional[str]:
     return None
 
 
+FUNC_ARG_RULES: Set[str] = {"func_arg_regular", "func_arg_typed", "func_arg_inf"}
+
+
+def _first_name_token(node: Tree) -> Optional[str]:
+    for child in node.children:
+        if isinstance(child, Token) and child.type == "NAME":
+            return str(child.value)
+    return None
+
+
 def extract_params(func_node: Tree) -> List[str]:
-    params = []
-    param_rules: Set[str] = {
-        "func_arg_regular",
-        "func_arg_typed",
-        "func_arg_inf",
-        "func_arg_variadic",
-    }
-    for subtree in func_node.iter_subtrees():
-        if subtree.data in param_rules:
-            for child in subtree.children:
-                if isinstance(child, Token) and child.type == "NAME":
-                    params.append(str(child.value))
-                    break
+    """
+    Returns the declared parameter identifiers of a function, in source order.
+
+    Only the direct children of the function's own func_header > func_args node are
+    inspected, so arguments of lambdas in the function body (e.g. the 'id' in
+    `arr.filter(func(id: String) -> bool: ...)`) are not mistaken for parameters.
+    Must stay in sync with extract_parameters_from_ast in update_gdscript_docs.py.
+    """
+    target_def = func_node
+    if target_def.data == "static_func_def" and target_def.children:
+        target_def = target_def.children[0]
+    if not isinstance(target_def, Tree):
+        return []
+
+    func_header = next(
+        (
+            c
+            for c in target_def.children
+            if isinstance(c, Tree) and c.data == "func_header"
+        ),
+        None,
+    )
+    if func_header is None:
+        return []
+    func_args = next(
+        (
+            c
+            for c in func_header.children
+            if isinstance(c, Tree) and c.data == "func_args"
+        ),
+        None,
+    )
+    if func_args is None:
+        return []
+
+    params: List[str] = []
+    for arg in func_args.children:
+        if not isinstance(arg, Tree):
+            continue
+        node = arg
+        if node.data == "func_arg_variadic" and _first_name_token(node) is None:
+            node = next((c for c in node.children if isinstance(c, Tree)), node)
+        name = _first_name_token(node)
+        if name is not None:
+            params.append(name)
     return params
 
 
@@ -378,6 +420,52 @@ def check_detached_docs(
 # -----------------------------------------------------------------------------
 # File Validation
 # -----------------------------------------------------------------------------
+RE_RETURN_TYPE = re.compile(r"\)\s*->\s*([^:]+?)\s*:")
+RE_RETURNS_LINE = re.compile(r"^\s*##\s*Returns?\b", re.IGNORECASE)
+RE_DOUBLE_RETURNS = re.compile(r"^\s*##\s*Returns?\b\s*:?\s*Returns?\b", re.IGNORECASE)
+RE_PARAM_LINE = re.compile(r"^\s*##\s*\[param\s+(\w+)\]\s*:\s*(.*)$")
+
+
+def extract_return_type(lines: List[str], decl_line: int) -> Optional[str]:
+    """Returns the declared return type of the function at decl_line, or None if untyped."""
+    header = ""
+    for line in lines[decl_line - 1 : decl_line + 9]:
+        header += line.strip() + " "
+        if line.rstrip().endswith(":"):
+            break
+    match = RE_RETURN_TYPE.search(header)
+    return match.group(1).strip() if match else None
+
+
+def check_function_doc_quality(
+    docs: List[str], func_name: str, return_type: Optional[str], location: str
+) -> List[str]:
+    """Rejects generator artefacts seen in PR #1024 that pass the BBCode contract."""
+    errors: List[str] = []
+    for line in docs:
+        if RE_DOUBLE_RETURNS.match(line):
+            errors.append(
+                f"{location} Function '{func_name}' has a duplicated 'Returns Returns'."
+            )
+        elif RE_RETURNS_LINE.match(line) and return_type == "void":
+            errors.append(
+                f"{location} Function '{func_name}' returns void but documents a return value."
+            )
+        param_match = RE_PARAM_LINE.match(line)
+        if param_match:
+            name, desc = param_match.group(1), param_match.group(2).strip().rstrip(".")
+            if desc.lower() in (
+                f"the {name} parameter".lower(),
+                f"the {name}".lower(),
+                "",
+            ):
+                errors.append(
+                    f"{location} Function '{func_name}' has a placeholder description "
+                    f"for [param {name}]."
+                )
+    return errors
+
+
 def validate_file(file_path: Path) -> List[str]:
     try:
         with open(file_path, "r", encoding="utf-8") as f:
@@ -463,6 +551,15 @@ def validate_file(file_path: Path) -> List[str]:
                     raw_payload, f"{file_path}:{decl_line} ({func_name})"
                 )
                 errors.extend(payload.errors)
+
+                errors.extend(
+                    check_function_doc_quality(
+                        docs,
+                        func_name,
+                        extract_return_type(lines, decl_line),
+                        f"{file_path}:{decl_line}",
+                    )
+                )
 
                 sig_params = extract_params(node)
                 doc_params = payload.param_names

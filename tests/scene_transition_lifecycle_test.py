@@ -1,5 +1,5 @@
 # Copyright (C) 2026 Egor Kostan
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # tests/scene_transition_lifecycle_test.py
 
 """
@@ -44,7 +44,8 @@ def _count_logs(logs: list[dict[str, str]], keyword: str) -> int:
 
 def _gameplay_ready_predicate(text: str) -> bool:
     """True when the gameplay scene has finished mounting and wiring signals."""
-    return "hud successfully wired to player signals" in text.lower()
+    # FIX: Updated to match the new Data Resource injection log message
+    return "hud successfully wired to all data resources" in text.lower()
 
 
 def _main_menu_ready_predicate(text: str) -> bool:

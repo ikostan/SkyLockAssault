@@ -1,5 +1,5 @@
-## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## settings.gd
 ## Input settings singleton: Loads/saves InputMap events to preserve custom mappings.
 ## Supports keys, joypad buttons, and joypad axes (serialized).
@@ -77,9 +77,15 @@ const DEFAULT_GAMEPAD: Dictionary = {
 	"ui_focus_next": {"type": "button", "button": JOY_BUTTON_RIGHT_SHOULDER},
 	"ui_focus_prev": {"type": "button", "button": JOY_BUTTON_LEFT_SHOULDER},
 }
+## Modifier tokens [method serialize_event] can write after the keycode in a
+## [code]key:[/code] string. Any other token makes [method deserialize_event] return null.
+const KEY_MODIFIER_TOKENS: PackedStringArray = ["shift", "ctrl", "alt", "meta"]
 
 # Flag for legacy upgrade OR missing defaults (first-run, new actions)
 var _needs_save: bool = false
+# Set by apply_config_to_input_map when it skips a saved binding it cannot parse, so
+# load_input_mappings re-saves and the corrupt entry does not come back on every start.
+var _skipped_invalid_bindings: bool = false
 
 
 ## Initializes the settings by loading input mappings.
@@ -156,11 +162,8 @@ func _add_missing_defaults(config: ConfigFile) -> bool:
 			else:
 				nev.physical_keycode = def
 
-			InputMap.action_add_event(action, nev)
-			changed = true
-			Globals.log_message(
-				"Added missing default keyboard for " + action, Globals.LogLevel.DEBUG
-			)
+			if _add_default_event(config, action, nev, "keyboard"):
+				changed = true
 
 		# === Gamepad defaults ===
 		if not has_gamepad and DEFAULT_GAMEPAD.has(action) and not explicitly_unbound_gamepad:
@@ -178,14 +181,51 @@ func _add_missing_defaults(config: ConfigFile) -> bool:
 					motion.axis_value = def["value"]
 					motion.device = -1
 					nev = motion
-			if nev:
-				InputMap.action_add_event(action, nev)
+			if nev and _add_default_event(config, action, nev, "gamepad"):
 				changed = true
-				Globals.log_message(
-					"Added missing default gamepad for " + action, Globals.LogLevel.DEBUG
-				)
 
 	return changed
+
+
+## Adds a backfilled default event to an action unless a saved binding already uses it.
+##
+## A default is backfilled when the action has no binding for a device, for example after its
+## saved binding was rejected as corrupt. If another action's saved binding already uses the
+## same input (the player moved that key there), adding the default would make both actions
+## fire on one input. The action is left unbound for that device instead, a warning is logged,
+## and the player can rebind it from the key mapping menu.
+##
+## Only bindings loaded from the config count as owners. Inputs that come only from the
+## project's built-in InputMap, where gameplay and UI actions may share keys, are not treated
+## as conflicts, so a first run with no saved settings still gets every default.
+##
+## [param config]: Loaded ConfigFile, used to tell saved bindings from built-in ones.
+## [param action]: Action that is missing a binding for the device.
+## [param event]: The default event for that action and device.
+## [param device]: Device name used in log messages, keyboard or gamepad.
+## Returns [code]true[/code] if the event was added.
+func _add_default_event(
+	config: ConfigFile, action: String, event: InputEvent, device: String
+) -> bool:
+	var conflicts: Array[String] = []
+	for other: String in get_conflicting_actions(event, action):
+		if config.has_section_key("input", other):
+			conflicts.append(other)
+	if not conflicts.is_empty():
+		Globals.log_message(
+			(
+				"Not restoring default %s binding for %s: already used by %s"
+				% [device, action, str(conflicts)]
+			),
+			Globals.LogLevel.WARNING
+		)
+		return false
+
+	InputMap.action_add_event(action, event)
+	Globals.log_message(
+		"Added missing default " + device + " for " + action, Globals.LogLevel.DEBUG
+	)
+	return true
 
 
 ## Returns true if any critical action has zero events.
@@ -203,10 +243,10 @@ func get_pause_binding_label() -> String:
 	return get_pause_binding_label_for_device(Globals.current_input_device)
 
 
-## Returns true if the given event is bound to any action in InputMap.
-## :param event: Input event to check.
-## :type event: InputEvent
-## :rtype: bool
+## Determine if the given input event is bound to any action in InputMap.
+##
+## [param event]: The input event to check against all actions.
+## Returns true if the event is bound to any action, false otherwise.
 func is_event_bound(event: InputEvent) -> bool:
 	for action: String in InputMap.get_actions():
 		if InputMap.event_is_action(event, action):
@@ -215,10 +255,13 @@ func is_event_bound(event: InputEvent) -> bool:
 
 
 ## Serializes an InputEvent to string for ConfigFile storage.
-## Handles Key (no device), JoypadButton, and JoypadMotion (with device).
-## :param ev: The event to serialize.
-## :type ev: InputEvent
-## :rtype: String
+##
+## Handles Key without device, JoypadButton, and JoypadMotion with device, preserving modifiers
+## like shift, ctrl, alt, and meta.
+##
+## [param ev]: The InputEvent instance to serialize, supporting Key, JoypadButton, and
+## JoypadMotion.
+## Returns a serialized string representation of the event or an empty string if unsupported.
 func serialize_event(ev: InputEvent) -> String:
 	if ev is InputEventKey:
 		var s: String = "key:" + str(ev.physical_keycode)
@@ -255,8 +298,15 @@ func _remove_event_from_conflicts(event: InputEvent, conflicts: Array[String]) -
 				break
 
 
-## Deserializes a string back to InputEvent.
-## Handles "key:code", "joybtn:index:device", "joyaxis:axis:value:device".
+## Deserializes a string back to an InputEvent.
+##
+## Handles serialized strings starting with key, joybtn, or joyaxis to restore the
+## corresponding input event.
+##
+## [param serialized]: The serialized string starting with key, joybtn, or joyaxis.
+## Returns the deserialized InputEvent, or null if the string is invalid.
+## A key string accepts the modifiers in [constant KEY_MODIFIER_TOKENS] in any order; an
+## unknown, empty or repeated token makes the whole string invalid.
 func deserialize_event(serialized: String) -> InputEvent:
 	var event_to_return: InputEvent = null
 
@@ -275,6 +325,22 @@ func deserialize_event(serialized: String) -> InputEvent:
 	match parts[0]:
 		"key":
 			if parts.size() >= 2 and parts[1].is_valid_int():
+				# serialize_event only writes known modifiers, each at most once, so any
+				# other token means the saved binding is corrupt or hand-edited (#1090).
+				var modifiers: PackedStringArray = parts.slice(2)
+				for token: String in modifiers:
+					var problem: String = ""
+					if token not in KEY_MODIFIER_TOKENS:
+						problem = "unknown modifier token '%s'" % token
+					elif modifiers.count(token) > 1:
+						problem = "duplicate modifier token '%s'" % token
+					if not problem.is_empty():
+						Globals.log_message(
+							"Rejecting key event with %s: %s" % [problem, serialized],
+							Globals.LogLevel.WARNING
+						)
+						return null
+
 				var code := parts[1].to_int()
 
 				# OPINION: Explicitly reject 0 to prevent "silent drops"
@@ -287,10 +353,10 @@ func deserialize_event(serialized: String) -> InputEvent:
 
 				var ev := InputEventKey.new()
 				ev.physical_keycode = code
-				ev.shift_pressed = "shift" in parts
-				ev.ctrl_pressed = "ctrl" in parts
-				ev.alt_pressed = "alt" in parts
-				ev.meta_pressed = "meta" in parts
+				ev.shift_pressed = "shift" in modifiers
+				ev.ctrl_pressed = "ctrl" in modifiers
+				ev.alt_pressed = "alt" in modifiers
+				ev.meta_pressed = "meta" in modifiers
 				event_to_return = ev
 		"joybtn":
 			if parts.size() == 3 and parts[1].is_valid_int() and parts[2].is_valid_int():
@@ -338,10 +404,10 @@ func _deserialize_and_add(action: String, serialized: String) -> void:
 
 
 ## Resets input mappings to defaults for the specified device type.
-## Now fully erases ALL events for the device + forces defaults (fixes duplicates).
-## :param device_type: "keyboard" or "gamepad"
-## :type device_type: String
-## :rtype: void
+##
+## Fully erases all events for the specified device type and forces defaults to fix duplicates.
+##
+## [param device_type]: The target device type, accepting either keyboard or gamepad.
 func reset_to_defaults(device_type: String) -> void:
 	if device_type not in ["keyboard", "gamepad"]:
 		return
@@ -390,6 +456,14 @@ func reset_to_defaults(device_type: String) -> void:
 
 
 ## Returns true if two events are exactly the same binding.
+##
+## Key events match on [code]physical_keycode[/code] and all four modifiers (Shift, Ctrl, Alt,
+## Meta). Joypad buttons match on button index and device; joypad axes match on axis,
+## direction value and device. Events of different classes never match.
+##
+## [param a]: First event to compare. [code]null[/code] never matches.
+## [param b]: Second event to compare. [code]null[/code] never matches.
+## Returns [code]true[/code] if both events describe the same binding.
 func events_match(a: InputEvent, b: InputEvent) -> bool:
 	if a == null or b == null:
 		return false
@@ -403,6 +477,7 @@ func events_match(a: InputEvent, b: InputEvent) -> bool:
 			and a.shift_pressed == b.shift_pressed
 			and a.ctrl_pressed == b.ctrl_pressed
 			and a.alt_pressed == b.alt_pressed
+			and a.meta_pressed == b.meta_pressed
 		)
 
 	if a is InputEventJoypadButton:
@@ -412,10 +487,15 @@ func events_match(a: InputEvent, b: InputEvent) -> bool:
 	return false
 
 
-## Finds every other action that already uses this exact event.
-## :param event: The new event the player just pressed.
-## :param exclude_action: The action we are currently remapping (ignored).
-## :rtype: Array[String]  # e.g. ["fire"] or ["next_weapon", "pause"]
+## Finds every other managed action that already uses this exact event.
+##
+## Only actions listed in [constant ACTIONS] are checked. Godot's built-in actions (for example
+## [code]ui_select[/code], [code]ui_cancel[/code] and the [code]ui_text_*[/code] family) are
+## ignored on purpose, because they share common keys and would report false conflicts.
+##
+## [param event]: The event the player just pressed, compared with [method events_match].
+## [param exclude_action]: The action being remapped, skipped during the check.
+## Returns the conflicting action names, e.g. [code]["fire"][/code], or an empty array.
 func get_conflicting_actions(event: InputEvent, exclude_action: String = "") -> Array[String]:
 	var conflicts: Array[String] = []
 	for action: String in ACTIONS:
@@ -428,7 +508,10 @@ func get_conflicting_actions(event: InputEvent, exclude_action: String = "") -> 
 	return conflicts
 
 
-## Returns "keyboard" or "gamepad" based on the type of the event.
+## Return keyboard or gamepad based on the type of the event.
+##
+## [param event]: The input event to check for device type.
+## Returns a string representing the device type such as keyboard or gamepad.
 func get_event_device_type(event: InputEvent) -> String:
 	if event is InputEventKey:
 		return "keyboard"
@@ -437,8 +520,13 @@ func get_event_device_type(event: InputEvent) -> String:
 	return "unknown"
 
 
-## Returns the pause binding label (ALL CAPS) for the specific device that was just used.
-## Returns the pause binding label (ALL CAPS) for the specific device that was just used.
+## Return the pause binding label in ALL CAPS for the specific device.
+##
+## Iterates through InputMap events for the pause action and finds the first matching event for
+## the specified device type, returning its label in uppercase or a fallback.
+##
+## [param device_type]: The target device type, such as keyboard or gamepad.
+## Returns The uppercase string label of the pause input binding for the device.
 func get_pause_binding_label_for_device(device_type: String) -> String:
 	var events: Array[InputEvent] = InputMap.action_get_events("pause")
 	if events.is_empty():
@@ -537,10 +625,15 @@ func _migrate_legacy_unbound_states() -> void:
 	Globals.set_meta(LEGACY_MIGRATION_KEY, true)
 
 
-## Static helper: Returns human-readable label for an InputEvent (e.g., "SPACE", "A", "RT").
-## Supports keys, joypad buttons (Xbox/PS labels), and axes (e.g., "LT (+)", "Left Stick (Right)").
-## :param ev: The event to label.
-## :rtype: String
+## Returns a human-readable label for an InputEvent.
+##
+## Keys use [method OS.get_keycode_string] with Ctrl, Alt, Shift and Meta prefixes, preferring
+## [code]physical_keycode[/code] and falling back to [code]keycode[/code]. Joypad buttons
+## always use Xbox-style names (A, B, X, Y, LB, RB, ...) regardless of controller brand.
+## Joypad axes use stick and trigger names such as "Left Stick (Right)" or "Left Trigger (+)".
+##
+## [param ev]: The event to label.
+## Returns the label, "Unbound" for a key with no keycode, or "Unknown" for other events.
 static func get_event_label(ev: InputEvent) -> String:
 	if ev is InputEventKey:
 		var modifiers: Array[String] = []
@@ -623,12 +716,12 @@ static func get_event_label(ev: InputEvent) -> String:
 
 
 ## Loads input mappings from config, overriding project defaults only if saved.
-## Acts strictly as an I/O coordinator by loading the file via `Globals.safe_load_config`,
-## applying mappings via `apply_config_to_input_map`, and backfilling missing defaults.
 ##
-## :param path: Path to the config file (defaults to CONFIG_PATH).
-## :param actions: List of input actions to load (defaults to ACTIONS).
-## :rtype: void
+## Acts strictly as an I/O coordinator by loading the file via Globals.safe_load_config,
+## applying mappings via apply_config_to_input_map, and backfilling missing defaults.
+##
+## [param path]: The file path used to load the configuration.
+## [param actions]: The array of action names to apply.
 func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
 	# 1. Disk I/O: Read and decrypt configuration file
 	var load_data: Dictionary = Globals.safe_load_config(path)
@@ -660,10 +753,16 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 
 	# 4. Backfill missing defaults and aggregate save requirements
 	var defaults_added: bool = _add_missing_defaults(config)
-	_needs_save = conflicts_resolved or defaults_added or _needs_save
+	_needs_save = conflicts_resolved or defaults_added or _skipped_invalid_bindings or _needs_save
 
 
-## Saves current InputMap events to config (all per action as array).
+## Saves current InputMap events to config as an array per action.
+##
+## Safely pre-loads the config file to preserve other sections during the save operation,
+## logging an error if loading fails.
+##
+## [param path]: The target file path where the configuration is saved.
+## [param actions]: The list of action names whose events will be serialized and saved.
 func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = ACTIONS) -> void:
 	# Safely pre-load the config to preserve other sections during the save
 	var load_data: Dictionary = Globals.safe_load_config(path)
@@ -709,7 +808,11 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 
 
 ## Saves the last selected input device to config.
-## Saves the last selected input device to config.
+##
+## Saves the last selected input device to the configuration file after validating the device
+## type.
+##
+## [param device]: The input device type, accepted values are keyboard or gamepad.
 func save_last_input_device(device: String) -> void:
 	if device not in ["keyboard", "gamepad"]:
 		return
@@ -759,14 +862,21 @@ func load_last_input_device() -> void:
 		Globals.current_input_device = "keyboard"
 
 
-## Applies input mapping definitions from an in-memory ConfigFile directly into Godot's InputMap.
-## Pure GDScript helper function without singleton side effects.
-## Returns true if any conflicting bindings were removed during mapping.
+## Applies input mapping definitions from an in-memory ConfigFile to the global InputMap.
 ##
-## :param config: The ConfigFile instance containing input configurations.
-## :param actions: The array of action names to process (defaults to ACTIONS).
-## :rtype: bool
+## Performs no file I/O and does not modify the [code]_needs_save[/code] flag, so it can be
+## tested without touching disk. It is not side-effect free: for every action found in the
+## config it erases and re-adds events in the global InputMap, unbinds duplicate events from
+## other actions, and logs warnings through Globals. It also records whether any saved
+## binding was skipped as invalid, which [method load_input_mappings] uses to re-save the
+## cleaned bindings.
+##
+## [param config]: Loaded ConfigFile to read the [code]input[/code] section from. A
+## [code]null[/code] config is a no-op that returns [code]false[/code].
+## [param actions]: Action names to apply. Defaults to [constant ACTIONS].
+## Returns [code]true[/code] if any conflicting bindings were removed from other actions.
 func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTIONS) -> bool:
+	_skipped_invalid_bindings = false
 	if config == null:
 		return false
 
@@ -792,6 +902,12 @@ func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTI
 		for serialized: String in serialized_events:
 			var ev: InputEvent = deserialize_event(serialized)
 			if ev == null:
+				# _add_missing_defaults restores the device default if nothing else binds it.
+				Globals.log_message(
+					"Skipping invalid saved binding for " + action + ": " + serialized,
+					Globals.LogLevel.WARNING
+				)
+				_skipped_invalid_bindings = true
 				continue
 
 			var already_present := false
@@ -847,17 +963,31 @@ func _normalize_input_value(value: Variant, action: String) -> Array[String]:
 # ==============================================================================
 
 
-## [TEST ONLY] Public wrapper for backfilling missing action defaults into InputMap.
-## Intended exclusively for test suites to prevent direct access to private methods.
+## Backfills missing action defaults into InputMap for testing.
+##
+## Public wrapper for backfilling missing action defaults into InputMap. Intended exclusively
+## for test suites to prevent direct access to private methods.
+##
+## [param config]: The configuration file containing action defaults to backfill.
+## Returns true if any missing defaults were added to InputMap, or false if nothing
+## was missing.
 func backfill_missing_defaults(config: ConfigFile) -> bool:
 	return _add_missing_defaults(config)
 
 
-## [TEST ONLY] Resets the internal _needs_save flag during test setup/teardown.
+## Resets the internal save flag during test setup or teardown.
+##
+## This function is intended for testing purposes only. It allows direct manipulation of the
+## internal save state flag.
+##
+## [param value]: The boolean value to assign to the internal save state flag.
 func set_needs_save_for_test(value: bool = false) -> void:
 	_needs_save = value
 
 
-## [TEST ONLY] Returns current state of _needs_save for test assertions.
+## Returns current state of _needs_save for test assertions.
+##
+## Test only function to check the current state of _needs_save.
+## Returns the current boolean value of _needs_save
 func needs_save() -> bool:
 	return _needs_save

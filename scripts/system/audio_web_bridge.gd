@@ -1,5 +1,5 @@
-## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## audio_web_bridge.gd
 ## Autoload singleton for Web/JS integration.
 ## Bridges JavaScript DOM events to the AudioManager, and syncs Godot state to the DOM.
@@ -213,8 +213,10 @@ func _on_change_volume_js(args: Array, bus_name: String) -> void:
 		_on_godot_volume_changed(bus_name, AudioManager.get_volume(bus_name))
 		return
 
-	AudioManager.set_volume(bus_name, value)
-	AudioManager.apply_volume_to_bus(bus_name, value, AudioManager.get_muted(bus_name))
+	# Programmatic call (Issue #1042): the bridge is never a manual interaction, whatever has
+	# focus in an open menu, so auto-mute stays silent and no feedback hold is scheduled.
+	# AudioManager applies the rule and writes the mixer; no separate apply_volume_to_bus().
+	AudioManager.change_volume(bus_name, value, false)
 	AudioManager.save_volumes()
 
 
@@ -268,8 +270,10 @@ func _on_toggle_mute_js(args: Array, bus_name: String) -> void:
 		Globals.LogLevel.DEBUG
 	)
 
-	AudioManager.set_muted(bus_name, is_muted)
-	AudioManager.apply_volume_to_bus(bus_name, AudioManager.get_volume(bus_name), is_muted)
+	# Shared pipeline with the menu (Issue #1048). Programmatic: silent, immediate cutoff.
+	# Unmuting at zero restores an audible volume (Issue #1046); the DOM slider follows
+	# through the volume_changed signal.
+	await AudioManager.toggle_mute(bus_name, is_muted, false)
 	AudioManager.save_volumes()
 
 

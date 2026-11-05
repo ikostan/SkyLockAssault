@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## Test Options Teardown Script
 ##
 ## Unit tests for options menu teardown logic, including flag and menu restoration.

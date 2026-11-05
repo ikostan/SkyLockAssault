@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_audio_web_bridge_dom_sync.gd
 ##
 ## TEST SUITE: Verifies DOM Sync Decoupling for Web Bridge (Issue #567).

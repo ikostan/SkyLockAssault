@@ -1,9 +1,16 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## gut_test_helper.gd
 ## Shared helper functions and mock builders for GUT unit tests.
 class_name GutTestHelper
 extends RefCounted
+
+## Upper bound for a MUTE_HARDWARE_DELAY wait (Issue #1054): the deferred AudioServer cutoff
+## of a manual mute (AudioManager.toggle_mute) or the Master feedback hold of a manual
+## auto-mute, both of which let the confirmation click finish. Derived from AudioConstants so
+## tests follow the delay if it changes; the 0.1 s margin matches HOLD_WAIT / CUTOFF_WAIT in
+## the newer audio suites.
+const MUTE_CUTOFF_WAIT: float = AudioConstants.MUTE_HARDWARE_DELAY + 0.1
 
 const PLAYER_SCRIPT_PATH: String = GamePaths.PLAYER
 

@@ -8,6 +8,14 @@ on:  # yamllint disable-line rule:truthy
         description: "Codecov requires a token to authenticate"
         required: true
     inputs:
+      runner:
+        description: "Runner label. Ubuntu 26.04 canary passes ubuntu-26.04"
+        type: "string"
+        default: "ubuntu-24.04"
+      upload_coverage:
+        description: "Upload Playwright coverage to Codecov. The canary passes false"
+        type: "boolean"
+        default: true
       godot_version:
         type: "string"
         default: "4.7.1-stable"
@@ -16,11 +24,14 @@ on:  # yamllint disable-line rule:truthy
         required: false
         type: "number"
         default: 30000
+env:
+  # yamllint disable-line rule:line-length
+  RUNNER_SUFFIX: "${{ inputs.runner != 'ubuntu-24.04' && format('-{0}', inputs.runner) || '' }}"
 
 jobs:
   build-web:
     name: "Build Web Artifact"
-    runs-on: "ubuntu-latest"
+    runs-on: "${{ inputs.runner }}"
     timeout-minutes: 15
     steps:
       - name: "Checkout code"
@@ -50,7 +61,7 @@ jobs:
       # yamllint disable rule:line-length
       - name: "Export Godot to Web"
         id: "export"
-        uses: "firebelley/godot-export@615a6f7afc22d6266bf55c17748fb07447e8bdab"
+        uses: "firebelley/godot-export@615a6f7afc22d6266bf55c17748fb07447e8bdab"  # v8.0.0
         with:
           godot_executable_download_url: "https://github.com/godotengine/godot/releases/download/${{ inputs.godot_version }}/Godot_v${{ inputs.godot_version }}_linux.x86_64.zip"
           godot_export_templates_download_url: "https://github.com/godotengine/godot/releases/download/${{ inputs.godot_version }}/Godot_v${{ inputs.godot_version }}_export_templates.tpz"
@@ -81,16 +92,16 @@ jobs:
           EOF
 
       - name: "Upload Web Build Artifact"
-        uses: "actions/upload-artifact@v7"
+        uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"  # v7.0.1
         with:
-          name: "godot-web-build"
+          name: "godot-web-build${{ env.RUNNER_SUFFIX }}"
           path: "export/web_thread_off"
           retention-days: 1
 
   test-shard:
     name: "Shard: ${{ matrix.suite }}"
     needs: "build-web"
-    runs-on: "ubuntu-latest"
+    runs-on: "${{ inputs.runner }}"
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -111,14 +122,15 @@ jobs:
       PW_TIMEOUT: "${{ inputs.pw_timeout }}"
 
     steps:
-      - uses: "actions/checkout@v7.0.1"
+      - uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"  # v7.0.1
         with:
           persist-credentials: false
 
       - name: "Download Web Build Artifact"
-        uses: "actions/download-artifact@v8"
+        # yamllint disable-line rule:line-length
+        uses: "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333"  # v8.0.2
         with:
-          name: "godot-web-build"
+          name: "godot-web-build${{ env.RUNNER_SUFFIX }}"
           path: "export/web_thread_off"
 
       - name: "Validate Artifact Integrity"
@@ -139,22 +151,44 @@ jobs:
           echo "✅ Artifact integrity verified successfully for commit $DOWNLOADED_SHA."
 
       - name: "Set up Python"
-        uses: "actions/setup-python@v7.0.0"
+        uses: "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0"  # v7.1.0
         with:
           python-version: "3.12"
 
       - name: "Cache PIP Dependencies"
-        uses: "actions/cache@v6"
+        uses: "actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9"  # v6.1.0
         id: "cache"
         with:
           path: "~/.cache/pip"
-          key: "${{ runner.os }}-pip-v2-${{ hashFiles('requirements.txt') }}"
+          # yamllint disable-line rule:line-length
+          key: "${{ runner.os }}-pip-v2-${{ hashFiles('requirements.txt', '.github/scripts/requirements-docs.txt') }}"
           restore-keys: "${{ runner.os }}-pip-v2-"
 
-      - name: "Install Playwright"
+      - name: "Install System Dependencies"
+        timeout-minutes: 5
+        env:
+          DEBIAN_FRONTEND: "noninteractive"
         run: |
-            sudo apt-get update && sudo apt-get install -y libxml2-utils
-            pip install -r requirements.txt
+          APT_OPTS=(-o Acquire::Retries=3)
+          sudo apt-get "${APT_OPTS[@]}" update
+          sudo apt-get "${APT_OPTS[@]}" install -y --no-install-recommends libxml2-utils
+
+      - name: "Install Python Dependencies"
+        timeout-minutes: 8
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt \
+            --progress-bar off \
+            --timeout 60 \
+            --retries 3
+
+      # tests/ci/test_update_gdscript_docs.py imports the docs generator, which
+      # exits at import time without these packages (#1055)
+      - name: "Install Docs Generator Dependencies"
+        if: "${{ matrix.suite == 'CI & Security' }}"
+        timeout-minutes: 4
+        run: |
+          pip install -r .github/scripts/requirements-docs.txt
 
       # yamllint disable rule:line-length
       - name: "Get Playwright Version"
@@ -164,39 +198,46 @@ jobs:
       # yamllint enable rule:line-length
 
       - name: "Cache Playwright Browsers"
-        uses: "actions/cache@v6"
+        uses: "actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9"  # v6.1.0
         id: "playwright-cache"
         with:
           path: "~/.cache/ms-playwright"
           # yamllint disable-line rule:line-length
-          key: "${{ runner.os }}-playwright-v2-${{ steps.playwright-version.outputs.version }}"
+          key: "${{ runner.os }}${{ env.RUNNER_SUFFIX }}-playwright-v2-${{ steps.playwright-version.outputs.version }}"
 
       - name: "Install Playwright Browsers"
         if: "steps.playwright-cache.outputs.cache-hit != 'true'"
+        timeout-minutes: 8
         run: |
           playwright install --with-deps chromium
 
+      # Only launches the server; readiness is checked by the next step (#1004)
       - name: "Start Security-Isolated HTTP Server"
         run: |
           python3 .github/scripts/serve_web_export.py 8080 "export/web_thread_off" &
-          sleep 5
-          curl -I http://localhost:8080/index.html
 
       - name: "Wait For WEB Server Response"
         run: |
+          ready=false
           for i in {1..20}; do
             if curl -f http://localhost:8080/index.html >/dev/null 2>&1; then
-              echo "Server ready"
+              echo "Server ready (attempt $i)"
+              ready=true
               break
             fi
             sleep 1
           done
-          if [ $i -eq 20 ]; then exit 1; fi
+          if [ "$ready" != true ]; then
+            echo "❌ Web server did not respond after 20 attempts." >&2
+            exit 1
+          fi
+          curl -I http://localhost:8080/index.html
 
       - name: "Create Artifacts Directory"
         run: |
           mkdir -p artifacts
-          rm -f artifacts/trace_*.zip artifacts/failure_*.png artifacts/video_*.webm 2>/dev/null || true
+          rm -f artifacts/trace_*.zip artifacts/failure_*.png \
+            artifacts/video_*.webm 2>/dev/null || true
 
       - name: "Run Sharded Tests"
         run: |
@@ -235,22 +276,27 @@ jobs:
           fi
 
       - name: "List Coverage Reports"
+        if: "!cancelled()"
         run: |
           ls -la artifacts/v8_coverage_*.json || \
             ls -la v8_coverage_*.json || \
             echo "No coverage files found"
 
       - name: "Set up Node.js for Coverage Conversion"
-        uses: "actions/setup-node@v7"
+        if: "!cancelled()"
+        uses: "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1"  # v7.1.0
         with:
-          node-version: "20"
+          node-version: "24"
 
       - name: "Install Conversion Tools"
+        if: "!cancelled()"
+        timeout-minutes: 5
         run: |
           npm install v8-to-istanbul nyc
 
       # yamllint disable rule:line-length
       - name: "Convert V8 to LCOV"
+        if: "!cancelled()"
         run: |
           mkdir -p .nyc_output coverage/lcov
           for file in artifacts/v8_coverage_*.json; do
@@ -288,13 +334,14 @@ jobs:
 
       - name: "Upload LCOV Artifact"
         if: "always()"
-        uses: "actions/upload-artifact@v7"
+        uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"  # v7.0.1
         with:
-          name: "lcov-report-${{ matrix.artifact_suffix }}"
+          name: "lcov-report-${{ matrix.artifact_suffix }}${{ env.RUNNER_SUFFIX }}"
           path: "./coverage/lcov/lcov.info"
           retention-days: 5
 
       - name: "Test Report"
+        if: "always()"
         run: |
           JUNIT_FILE="artifacts/junit.xml"
           if [ ! -f "$JUNIT_FILE" ]; then JUNIT_FILE="junit.xml"; fi
@@ -316,9 +363,9 @@ jobs:
 
       - name: "Upload Test Report Artifact"
         if: "always()"
-        uses: "actions/upload-artifact@v7"
+        uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"  # v7.0.1
         with:
-          name: "test-report-${{ matrix.artifact_suffix }}"
+          name: "test-report-${{ matrix.artifact_suffix }}${{ env.RUNNER_SUFFIX }}"
           path: |
             artifacts/junit.xml
             junit.xml
@@ -326,9 +373,9 @@ jobs:
 
       - name: "Upload Profiling Baseline Artifact (#776)"
         if: "always()"
-        uses: "actions/upload-artifact@v7"
+        uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"  # v7.0.1
         with:
-          name: "metrics-baseline-${{ matrix.artifact_suffix }}"
+          name: "metrics-baseline-${{ matrix.artifact_suffix }}${{ env.RUNNER_SUFFIX }}"
           path: |
             artifacts/metrics_baseline.json
             artifacts/metrics_baseline_${{ matrix.artifact_suffix }}.json
@@ -336,10 +383,10 @@ jobs:
           retention-days: 14
 
       - name: "Upload Failure Diagnostic Artifacts"
-        if: failure()
-        uses: "actions/upload-artifact@v7"
+        if: "failure()"
+        uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"  # v7.0.1
         with:
-          name: "test-failures-${{ matrix.artifact_suffix }}"
+          name: "test-failures-${{ matrix.artifact_suffix }}${{ env.RUNNER_SUFFIX }}"
           path: |
             artifacts/trace_*.zip
             artifacts/failure_*.png
@@ -348,8 +395,8 @@ jobs:
           retention-days: 7
 
       - name: "Upload Coverage to Codecov"
-        if: "${{ !cancelled() }}"
-        uses: "codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f"
+        if: "${{ !cancelled() && inputs.upload_coverage }}"
+        uses: "codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5"  # v7.1.1
         with:
           files: "./coverage/lcov/lcov.info"
           flags: "playwright-${{ matrix.artifact_suffix }}"

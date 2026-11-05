@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_deduplication_on_reset.gd
 ## Additional GUT unit test to ensure reset doesn't add duplicates.
 ## Scenario: Reset with existing defaults → no extras.

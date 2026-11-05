@@ -1,9 +1,9 @@
-# Copyright (C) 2025 Egor Kostan
-# SPDX-License-Identifier: GPL-3.0-or-later
-# audio_constants.gd
-# Centralized audio bus name constants and config as autoload singleton.
-# Use as AudioConstants.BUS_MASTER, etc., to prevent typos and ease renaming.
-# Extends Node for autoload compatibility.
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+## audio_constants.gd
+## Centralized audio bus name constants and config as autoload singleton.
+## Use as AudioConstants.BUS_MASTER, etc., to prevent typos and ease renaming.
+## Extends Node for autoload compatibility.
 
 extends Node
 
@@ -24,7 +24,28 @@ const SFX_MUTE_TOGGLE: String = "mute_toggle"  # For future CheckButton task
 const SFX_UI_NAVIGATION: String = "ui_navigation"
 
 ## Centralized SFX keys
-const SFX_CHECK = "check"
+const SFX_CHECK: String = "check"
+
+# --- Auto-Mute / Hardware Timing ---
+## Linear volume at or below which a bus is treated as silent and auto-muted
+## (and above which an auto-muted bus is restored).
+const AUTO_MUTE_VOLUME_THRESHOLD: float = 0.001
+
+## Seconds to defer a hardware mute/volume cutoff so the confirmation click
+## can finish streaming to the audio device first.
+const MUTE_HARDWARE_DELAY: float = 0.15
+
+## Temporary linear volume a bus on the click's feedback path (SFX_Menu, SFX,
+## Master) is held at while an auto-mute confirmation click plays (Issue #1047).
+## A volume level, not a duration: it only shares its numeric value with
+## MUTE_HARDWARE_DELAY.
+const FEEDBACK_HOLD_VOLUME_LINEAR: float = 0.15
+
+## Linear volume a bus is restored to when it is unmuted at or below
+## AUTO_MUTE_VOLUME_THRESHOLD and no last audible volume is known yet
+## (e.g. after a restart). Sits on the sliders' 0.033 step grid (15 steps).
+## Issue #1046.
+const UNMUTE_FROM_ZERO_FALLBACK_VOLUME: float = 0.495
 
 # Centralized config with defaults and var mappings
 const BUS_CONFIG: Dictionary = {

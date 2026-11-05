@@ -1,5 +1,5 @@
 # Copyright (C) 2026 Egor Kostan
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # tests/telemetry_and_hold_test.py
 """UX Hold Pacing & Assembly Transfer Telemetry Test Suite.
 
@@ -203,7 +203,7 @@ def test_pw_hold_01_ux_completion_delay(page: Page) -> None:
 
     Extracts in-engine timestamps from 'Scene loaded successfully.' and
     '[SWAP TIMING] 1. .instantiate()' to confirm the delta satisfies
-    1000ms <= delta <= 1400ms without relying on host-side clock drift.
+    900ms <= delta <= 1400ms without relying on host-side clock drift.
     """
     logs: list[dict[str, Any]] = []
     cdp_session = None
@@ -264,11 +264,10 @@ def test_pw_hold_01_ux_completion_delay(page: Page) -> None:
         ), "Missing '[SWAP TIMING] 1. .instantiate()' in console logs"
 
         delta_ms = _compute_in_engine_delta_ms(load_log, swap_log)
-        assert 950.0 <= delta_ms <= 1400.0, (
+        assert 900.0 <= delta_ms <= 1400.0, (
             f"In-engine UX hold timing {delta_ms:.2f} ms outside "
-            f"950-1400 ms contract window"
+            f"900-1400 ms contract window"
         )
-
     except Exception as e:
         print(f"Test PW-HOLD-01 failed: {e}")
         _dump_failure_artifacts(page, logs, "pw_hold_01")

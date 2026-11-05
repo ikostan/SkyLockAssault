@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_main_menu_audio.gd
 ##
 ## Integration test suite ensuring that Main Menu scene buttons successfully
@@ -31,7 +31,7 @@ func before_each() -> void:
 	_initial_root_children = get_tree().root.get_children()
 	_initial_current_scene = get_tree().current_scene
 	
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	AudioManager.reset_volumes()
 
 
@@ -62,7 +62,7 @@ func after_each() -> void:
 			child.queue_free()
 
 	# 4. Flush all hardware audio registers completely
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	if AudioManager.has_method("cleanup_for_test"):
 		AudioManager.cleanup_for_test()
 	AudioManager.reset_volumes()
@@ -86,31 +86,36 @@ func test_main_menu_buttons_execute_accept_audio() -> void:
 	assert_not_null(start_btn, "Layout Validation: Start Button is missing from scene tree.")
 	
 	start_btn.pressed.emit()
-	await wait_process_frames(1)
 	
-	assert_true(AudioManager.is_any_sfx_playing(), "Start Game button must trigger confirmation audio.")
-	assert_string_contains(AudioManager.get_active_sfx_stream_path(), "ui_accept", "Start Game button must play the 'ui_accept' sound effect asset.")
+	# FIX: Await the exact moment deferred signals are flushed, but BEFORE the 
+	# end-of-frame scene transition destroys the tree and kills the audio.
+	await get_tree().process_frame
 	
-	AudioManager.stop_all_sfx()
+	assert_true(SfxManager.is_any_sfx_playing(), "Start Game button must trigger confirmation audio.")
+	assert_string_contains(SfxManager.get_active_sfx_stream_path(), "ui_accept", "Start Game button must play the 'ui_accept' sound effect asset.")
+	
+	SfxManager.stop_all_sfx()
 
 	# --- TEST OPTIONS BUTTON ---
 	var options_btn: Button = menu_instance.options_button
 	assert_not_null(options_btn, "Layout Validation: Options Button is missing from scene tree.")
 	
 	options_btn.pressed.emit()
-	await wait_process_frames(1)
 	
-	assert_true(AudioManager.is_any_sfx_playing(), "Options button must trigger confirmation audio.")
-	assert_string_contains(AudioManager.get_active_sfx_stream_path(), "ui_accept", "Options button must play the 'ui_accept' sound effect asset.")
+	await get_tree().process_frame
 	
-	AudioManager.stop_all_sfx()
+	assert_true(SfxManager.is_any_sfx_playing(), "Options button must trigger confirmation audio.")
+	assert_string_contains(SfxManager.get_active_sfx_stream_path(), "ui_accept", "Options button must play the 'ui_accept' sound effect asset.")
+	
+	SfxManager.stop_all_sfx()
 
 	# --- TEST QUIT BUTTON ---
 	var quit_btn: Button = menu_instance.quit_button
 	assert_not_null(quit_btn, "Layout Validation: Quit Button is missing from scene tree.")
 	
 	quit_btn.pressed.emit()
-	await wait_process_frames(1)
 	
-	assert_true(AudioManager.is_any_sfx_playing(), "Quit button must trigger confirmation audio.")
-	assert_string_contains(AudioManager.get_active_sfx_stream_path(), "ui_accept", "Quit button must play the 'ui_accept' sound effect asset.")
+	await get_tree().process_frame
+	
+	assert_true(SfxManager.is_any_sfx_playing(), "Quit button must trigger confirmation audio.")
+	assert_string_contains(SfxManager.get_active_sfx_stream_path(), "ui_accept", "Quit button must play the 'ui_accept' sound effect asset.")

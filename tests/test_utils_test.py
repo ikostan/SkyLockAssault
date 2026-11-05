@@ -1,5 +1,5 @@
 # Copyright (C) 2025-2026 Egor Kostan
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # tests/test_utils_test.py
 """Targeted unit and integration tests for helper utilities in test_utils.py."""
 

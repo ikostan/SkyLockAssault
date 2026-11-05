@@ -1,0 +1,192 @@
+---
+# Benchmark baselines (#1107, #1111): the gate, the updates and the accept path.
+# Called from lint_test_deploy.yml after the benchmark jobs, which only measure and
+# report. This is the one job that writes: it applies compare.py's rules to both
+# results and pushes once to the benchmark-baselines branch, or fails and pushes
+# nothing on an unaccepted count regression. Nothing in the deploy chain needs it.
+#
+# Accepting an intended regression:
+# - benchmark-accept label on the PR before it merges;
+# - or run this workflow by hand with the failed run's ID and accept: true.
+# See files/docs/Automatic_Benchmark_Baselines.md.
+name: "Benchmark Baselines"
+
+on:  # yamllint disable-line rule:truthy
+  workflow_call:  # yamllint disable-line rule:empty-values
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "ID of the failed Main CI/CD Pipeline run to accept"
+        type: "string"
+        required: true
+      accept:
+        description: "Raise the failing counts to that run's values"
+        type: "boolean"
+        default: false
+
+jobs:
+  baselines:
+    name: "Baselines"
+    if: "github.ref == 'refs/heads/main'"
+    runs-on: "ubuntu-24.04"
+    timeout-minutes: 10
+    permissions:
+      contents: "write"
+      pull-requests: "read"
+      actions: "read"
+    # Without queue: max, a newer pending run replaces an older pending one, and
+    # that run drops out of the gate and the history.
+    concurrency:
+      group: "benchmark-baselines"
+      cancel-in-progress: false
+      queue: "max"
+    steps:
+      - name: "Check Out Scripts"
+        uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: "Check Out Baselines"
+        uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"  # v7.0.1
+        with:
+          ref: "benchmark-baselines"
+          path: "baselines"
+
+      - name: "Select the Run"
+        id: "run"
+        shell: "bash"
+        env:
+          GH_TOKEN: "${{ github.token }}"
+          INPUT_RUN_ID: "${{ inputs.run_id }}"
+          INPUT_ACCEPT: "${{ inputs.accept }}"
+        run: |
+          stop() {
+            echo "Accept refused: $1" | tee -a "${GITHUB_STEP_SUMMARY}" >&2
+            exit 1
+          }
+          if [ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ]; then
+            echo "id=${GITHUB_RUN_ID}" >> "${GITHUB_OUTPUT}"
+            echo "sha=${GITHUB_SHA}" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          [ "${INPUT_ACCEPT}" = "true" ] || stop "a manual run needs accept: true."
+          [[ "${INPUT_RUN_ID}" =~ ^[0-9]+$ ]] || stop "run_id must be a run's number."
+
+          api="repos/${GITHUB_REPOSITORY}/actions/runs/${INPUT_RUN_ID}"
+          dir="$(mktemp -d)"
+          gh api "${api}" > "${dir}/run.json" \
+            || stop "cannot read run ${INPUT_RUN_ID}."
+          gh api "${api}/jobs?per_page=100" > "${dir}/jobs.json" \
+            || stop "cannot read the jobs of run ${INPUT_RUN_ID}."
+          gh api "${api}/artifacts?per_page=100" > "${dir}/artifacts.json" \
+            || stop "cannot read the artifacts of run ${INPUT_RUN_ID}."
+          out="$(python3 .github/scripts/check_benchmark_run.py run \
+            --run "${dir}/run.json" --jobs "${dir}/jobs.json" \
+            --artifacts "${dir}/artifacts.json" \
+            --repo "${GITHUB_REPOSITORY}")" || stop "${out}"
+          echo "id=${INPUT_RUN_ID}" >> "${GITHUB_OUTPUT}"
+          echo "sha=${out}" >> "${GITHUB_OUTPUT}"
+
+      - name: "Download Desktop Results"
+        timeout-minutes: 5
+        # yamllint disable-line rule:line-length
+        uses: "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333"  # v8.0.2
+        with:
+          name: "benchmark-results"
+          path: "results/desktop"
+          run-id: "${{ steps.run.outputs.id }}"
+          github-token: "${{ github.token }}"
+
+      - name: "Download Web Results"
+        timeout-minutes: 5
+        # yamllint disable-line rule:line-length
+        uses: "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333"  # v8.0.2
+        with:
+          name: "benchmark-web-results"
+          path: "results/web"
+          run-id: "${{ steps.run.outputs.id }}"
+          github-token: "${{ github.token }}"
+
+      - name: "Decide the Accept"
+        id: "accept"
+        shell: "bash"
+        env:
+          GH_TOKEN: "${{ github.token }}"
+          RUN_ID: "${{ steps.run.outputs.id }}"
+          RUN_SHA: "${{ steps.run.outputs.sha }}"
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            out="$(python3 .github/scripts/check_benchmark_run.py candidates \
+              --sha "${RUN_SHA}" results/desktop/baseline_ci.json \
+              results/web/baseline_web_ci.json)" || {
+              echo "Accept refused: ${out}" | tee -a "${GITHUB_STEP_SUMMARY}" >&2
+              exit 1
+            }
+            echo "id=${RUN_ID}" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          # Only the PR this commit merged counts. The API also lists other PRs
+          # that merely contain the commit, and their labels must not accept it.
+          pr="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${RUN_SHA}/pulls" \
+            | jq -r --arg sha "${RUN_SHA}" '[.[]
+                | select(.merge_commit_sha == $sha)
+                | select(any(.labels[]; .name == "benchmark-accept"))
+                | .number] | first // empty')"
+          echo "id=${pr}" >> "${GITHUB_OUTPUT}"
+
+      # Both platforms always run, so the summary shows both tables. compare.py
+      # exits 1 on an unaccepted regression and 2 on a setup problem, such as a
+      # malformed file. Either stops the job before the push step.
+      - name: "Gate and Update Baselines"
+        shell: "bash"
+        env:
+          RUN_ID: "${{ steps.run.outputs.id }}"
+          RUN_SHA: "${{ steps.run.outputs.sha }}"
+          ACCEPT_ID: "${{ steps.accept.outputs.id }}"
+        run: |
+          accept=()
+          if [ -n "${ACCEPT_ID}" ]; then
+            accept=(--accept "${ACCEPT_ID}")
+          fi
+          worst=0
+          for profile in desktop web; do
+            code=0
+            python3 test/benchmark/compare.py \
+              --results "results/${profile}/runs.csv" \
+              --baseline "baselines/${profile}.json" \
+              --update "baselines/${profile}.json" \
+              --profile "${profile}" \
+              --run-id "${RUN_ID}" \
+              --commit "${RUN_SHA}" \
+              --title "Benchmark baseline gate (${profile})" \
+              --summary "${GITHUB_STEP_SUMMARY}" \
+              "${accept[@]}" || code=$?
+            if [ "${code}" -gt "${worst}" ]; then
+              worst="${code}"
+            fi
+          done
+          if [ "${worst}" -eq 1 ]; then
+            echo "::error::Count regression: nothing pushed. See the job summary."
+          elif [ "${worst}" -ne 0 ]; then
+            echo "::error::Setup failure (exit ${worst}), not a regression."
+          fi
+          exit "${worst}"
+
+      - name: "Push Baselines"
+        shell: "bash"
+        env:
+          RUN_ID: "${{ steps.run.outputs.id }}"
+          RUN_SHA: "${{ steps.run.outputs.sha }}"
+        run: |
+          cd baselines
+          git add desktop.json web.json
+          # A re-run of a recorded run changes nothing.
+          if git diff --cached --quiet; then
+            echo "Baselines unchanged: nothing to push."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Baselines from run ${RUN_ID} (${RUN_SHA:0:7})"
+          git push origin HEAD:benchmark-baselines

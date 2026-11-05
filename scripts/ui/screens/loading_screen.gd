@@ -1,5 +1,5 @@
-## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## Loading Screen Script: loading_screen.gd
 ##
 ## Manages background loading of the next scene with smooth progress bar.
@@ -115,7 +115,9 @@ func _change_to_next_scene() -> void:
 	)
 
 	# 1-second pause at 100% so the player clearly sees completion
-	await get_tree().create_timer(1.0).timeout
+	# FIX: ignore_time_scale = true forces the timer to use OS time,
+	# preventing CI lag spikes from resolving it early
+	await get_tree().create_timer(1.0, true, false, true).timeout
 
 	if target_path == "":
 		Globals.log_message("Empty next_scene - returning to main menu.", Globals.LogLevel.ERROR)

@@ -7,7 +7,7 @@ on:  # yamllint disable-line rule:truthy
 
 jobs:
   lint:
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-24.04"
     # Adding 'timeout-minutes: 10' would prevent jobs from running
     # indefinitely if something goes wrong
     timeout-minutes: 10
@@ -23,7 +23,6 @@ jobs:
 
       - name: "Lint MARKDOWN Files"
         # Lints Markdown for formatting/spelling
-        # Pinned to SHA for security (was @v19)
         # yamllint disable rule:line-length
         uses: "DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff"
         # yamllint enable rule:line-length

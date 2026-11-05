@@ -1,5 +1,5 @@
-## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## volume_slider.gd
 ##
 ## Handles the volume control slider UI component.
@@ -75,6 +75,8 @@ func _ready() -> void:
 
 ## Safe method for external scripts to update the slider without triggering SFX or saves.
 ## Use this instead of modifying `value` directly when restoring settings.
+## Routes through AudioManager.change_volume() as a programmatic call (Issue #1042): the
+## near-zero auto-mute rule still applies, silently, and AudioManager owns the mixer write.
 ## :param new_value: The target volume (0.0 to 1.0).
 ## :type new_value: float
 ## :rtype: void
@@ -93,11 +95,25 @@ func set_value_programmatically(new_value: float) -> void:
 	# Godot 4 native method: updates visual value without emitting 'value_changed'
 	set_value_no_signal(clamped_value)
 
-	# Explicitly sync the audio backend, since the signal was bypassed
-	AudioServer.set_bus_volume_db(bus_index, linear_to_db(clamped_value))
-	AudioManager.set_volume(bus_name, clamped_value)
+	# Sync the delta tracker first: change_volume() emits volume_changed, and listeners
+	# mirror the new value back through sync_from_manager().
+	_previous_value = clamped_value
 
-	# Sync the delta tracker so the next manual interaction calculates correctly
+	# The signal was bypassed, so hand the change to AudioManager explicitly (not manual).
+	AudioManager.change_volume(bus_name, clamped_value, false)
+
+
+## Mirrors a volume change that already happened in AudioManager (web bridge, unmute-from-zero
+## restore, reset). Updates the visual value and the delta tracker without emitting
+## 'value_changed', touching AudioServer, or writing back to AudioManager.
+## Keeping _previous_value in sync matters: if it went stale, a later manual move to that stale
+## value would be swallowed by _on_value_changed's early return (Issue #1046).
+## :param new_value: The volume AudioManager now holds (0.0 to 1.0).
+## :type new_value: float
+## :rtype: void
+func sync_from_manager(new_value: float) -> void:
+	var clamped_value: float = clamp(new_value, min_value, max_value)
+	set_value_no_signal(clamped_value)
 	_previous_value = clamped_value
 
 
@@ -128,6 +144,11 @@ func _notification(what: int) -> void:
 
 
 ## Signal listener for when the slider value changes manually.
+## Routes through AudioManager.change_volume() (Issue #1042). The slider states its own intent:
+## a change is manual only while it is being dragged or has focus, the same check as
+## _handle_slider_sfx(). AudioManager applies the near-zero auto-mute rule and writes the mixer.
+## change_volume() is not awaited: the feedback hold (Master, SFX or SFX_Menu) finishes inside
+## the autoload.
 ## :param new_value: The new volume level from the slider (0.0 to 1.0).
 ## :type new_value: float
 ## :rtype: void
@@ -142,8 +163,7 @@ func _on_value_changed(new_value: float) -> void:
 	# Commit the delta tracker immediately
 	_previous_value = new_value
 
-	AudioServer.set_bus_volume_db(bus_index, linear_to_db(new_value))
-	AudioManager.set_volume(bus_name, new_value)
+	AudioManager.change_volume(bus_name, new_value, _is_dragging or has_focus())
 
 	# Attempt to play interaction feedback
 	_handle_slider_sfx(new_value)
@@ -174,12 +194,19 @@ func _handle_slider_sfx(_new_value: float) -> void:
 	_last_sfx_time = current_time
 
 	# Use get_node to allow for GUT testing/doubling of the autoload
-	get_node("/root/AudioManager").play_sfx(AudioConstants.SFX_SLIDER)
+	get_node("/root/SfxManager").play_sfx(AudioConstants.SFX_SLIDER)
 
 
 ## Called on timer timeout—performs the batched disk save.
+## While the pointer is still held, the save is postponed instead: a save is a commit point
+## for the last audible volume, so a pause mid-drag on its way to 0 must not record a
+## near-silent step (Issue #1046). The timer re-arms and the save lands within one
+## debounce interval after release.
 ## :rtype: void
 func _on_debounce_timeout() -> void:
+	if _is_dragging:
+		save_debounce_timer.start()
+		return
 	AudioManager.save_volumes()
 	Globals.log_message("Debounced settings save triggered.", Globals.LogLevel.DEBUG)
 

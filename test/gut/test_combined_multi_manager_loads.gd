@@ -1,5 +1,5 @@
 ## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_combined_multi_manager_loads.gd
 ## GUT unit tests for combined/multi-manager config loads/saves.
 ## Covers TC-SL-11 to TC-SL-15 from test plan.

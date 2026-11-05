@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copyright (C) 2025-2026 Egor Kostan
-# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 # Set variables
 PROJECT_DIR="/project"
@@ -16,8 +16,10 @@ check_exit() {
   fi
 }
 
-# Ensure Git trusts the container directory
+# Ensure Git trusts the mounted repo (owned by the host user) for both
+# normal commands (/project) and local clones (/project/.git, git >= 2.45.1)
 git config --global --add safe.directory "$PROJECT_DIR" 2>/dev/null || true
+git config --global --add safe.directory "$PROJECT_DIR/.git" 2>/dev/null || true
 
 # 🧹 0. Reset working tree to clean slate before running any tests
 echo "🧹 Resetting repository to pristine state..."

@@ -1,5 +1,5 @@
-## Copyright (C) 2025 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 # input_remap_button.gd (full updated script - removes Godot 3.x methods, uses custom dicts only)
 # Extends to handle joypad remapping and display (keys, buttons, axes).
 # Use device = -1 for "all controllers".

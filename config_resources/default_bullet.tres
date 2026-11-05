@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="BulletResource" format=3 uid="uid://bogi2fdxpfn23"]
+
+[ext_resource type="Texture2D" uid="uid://b7utqr70u1mex" path="res://files/sprite/laser_sprites/01.png" id="1_le8fa"]
+[ext_resource type="Script" uid="uid://ce7ssgxid8ypt" path="res://scripts/resources/bullet_resource.gd" id="2_2dbea"]
+[ext_resource type="AudioStream" uid="uid://881t7na373tm" path="res://files/sounds/sfx/retro-laser-1-236669.mp3" id="3_u7yt8"]
+
+[resource]
+script = ExtResource("2_2dbea")
+metadata/_custom_type_script = "uid://ce7ssgxid8ypt"

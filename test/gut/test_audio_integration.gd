@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_audio_integration.gd
 ##
 ## Comprehensive GUT integration test suite verified against headless runner environments.
@@ -40,7 +40,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	if AudioManager.has_method("cleanup_for_test"):
 		AudioManager.cleanup_for_test()
 	AudioManager.reset_volumes()
@@ -68,8 +68,8 @@ func test_sfx_mute_silences_ui_accept_at_audioserver_level() -> void:
 
 	assert_true(AudioManager.get_muted(TARGET_BUS), "Logical: Manager must track bus as muted.")
 	assert_true(AudioServer.is_bus_mute(bus_idx), "Hardware: Native AudioServer bus must be muted.")
-	assert_true(AudioManager.is_any_sfx_playing(), "Pool should successfully allocate stream despite hardware mute.")
-	assert_eq(AudioManager.get_active_sfx_playback_count(), 1, "Exactly one AudioStreamPlayer should be active.")
+	assert_true(SfxManager.is_any_sfx_playing(), "Pool should successfully allocate stream despite hardware mute.")
+	assert_eq(SfxManager.get_active_sfx_playback_count(), 1, "Exactly one AudioStreamPlayer should be active.")
 
 
 ## Scenario B: Verify that unmuted UI interactions audibly play and leave the hardware server unmuted.
@@ -85,7 +85,7 @@ func test_sfx_unmuted_plays_audibly_at_audioserver_level() -> void:
 	await wait_process_frames(1)
 
 	assert_false(AudioServer.is_bus_mute(bus_idx), "Hardware: Native AudioServer bus must be unmuted.")
-	assert_true(AudioManager.is_any_sfx_playing(), "Pool should actively play allocated stream.")
+	assert_true(SfxManager.is_any_sfx_playing(), "Pool should actively play allocated stream.")
 
 
 ## Scenario C: Verify navigation SFX routing, focus-gating, and stale focus safeguards.
@@ -113,18 +113,18 @@ func test_ui_navigation_sfx_requires_gui_focus() -> void:
 
 	# FIX VERIFIED: Because we added the stale focus safeguard to UiManager._input,
 	# navigation audio is now INTENTIONALLY allowed to play in menu contexts even if the focus owner flag is stale.
-	assert_true(AudioManager.is_any_sfx_playing(), "Stale Focus Safeguard: Navigation audio should play in menu context even if focus is transiently empty.") 
+	assert_true(SfxManager.is_any_sfx_playing(), "Stale Focus Safeguard: Navigation audio should play in menu context even if focus is transiently empty.") 
 
 	# Reset the playback state cleanly so we can isolate the active focus test scenario right below
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 
 	unfocused_slider.grab_focus() 
 	await wait_process_frames(1) 
 	UiManager._input(nav_event)
 	await wait_process_frames(1)
 
-	assert_true(AudioManager.is_any_sfx_playing(), "Navigation audio should trigger when GUI element has active focus.") 
-	assert_true(AudioManager.get_active_sfx_stream_path().contains("ui_navigation"), "Active stream path should point to ui_navigation asset.") 
+	assert_true(SfxManager.is_any_sfx_playing(), "Navigation audio should trigger when GUI element has active focus.") 
+	assert_true(SfxManager.get_active_sfx_stream_path().contains("ui_navigation"), "Active stream path should point to ui_navigation asset.") 
 	# FIX: Removed Globals.options_open = false from here to avoid short-circuit skips
 
 
@@ -143,18 +143,57 @@ func test_signal_isolation_from_setup_pollution() -> void:
 	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [TARGET_BUS, true])
 
 
-## Scenario F: Verify rapid mute toggling cancels pending hardware cutoffs.
+## Scenario F: a quick re-toggle during the mute cutoff delay must win (Issue #1053).
+## Drives the real Audio Settings menu: a manual mute defers its AudioServer cutoff by
+## MUTE_HARDWARE_DELAY, and an unmute inside that window must not be overwritten when the
+## delay ends. Nothing is actually cancelled: the first coroutine still runs, but it re-reads
+## the newest state from AudioManager (AudioManager.toggle_mute, Issue #1048), so it is
+## harmless. Fails if the post-delay write uses the stale pre-delay state, or if the unmute
+## step is removed.
+## The unmute is sent in the same frame as the mute, so the cutoff is guaranteed to still be
+## pending; no wall-clock window is asserted. No focus step: since #1048 every real press
+## is a manual interaction and defers the cutoff.
 func test_rapid_mute_toggle_cancels_pending_hardware_cutoff() -> void:
-	AudioManager.set_muted(TARGET_BUS, false)
+	var menu_scene: PackedScene = load(GamePaths.AUDIO_SETTINGS_SCENE)
+	assert_not_null(menu_scene, "FAIL-FAST: Failed to load the Audio Settings scene.")
+	var audio_menu: Control = menu_scene.instantiate() as Control
+	assert_not_null(audio_menu, "FAIL-FAST: Audio Settings root is not a Control.")
+	add_child_autofree(audio_menu)
+	await wait_process_frames(1)
+
+	var sfx_mute_btn: CheckButton = audio_menu.get("mute_sfx") as CheckButton
+	assert_not_null(sfx_mute_btn, "FAIL-FAST: 'mute_sfx' could not be read from the menu.")
+
+	# Preconditions: SFX unmuted at full volume, in state and in the mixer
+	AudioManager.set_bus_state(TARGET_BUS, 1.0, false)
 	AudioManager.apply_volume_to_bus(TARGET_BUS, 1.0, false)
+	assert_false(AudioManager.get_muted(TARGET_BUS), "Precondition: SFX unmuted in AudioManager")
+	assert_almost_eq(AudioServer.get_bus_volume_db(bus_idx), 0.0, 0.01, "Precondition: 1.0")
+	assert_false(AudioServer.is_bus_mute(bus_idx), "Precondition: SFX unmuted in AudioServer")
+	watch_signals(AudioManager)
+
+	# Real presses are manual interactions: the mute defers its hardware cutoff.
+	# No await between the presses, so the cutoff is still pending when the unmute arrives.
+	sfx_mute_btn.toggled.emit(false)  # mute (button pressed = unmuted)
+	assert_true(AudioManager.get_muted(TARGET_BUS), "The mute press must reach AudioManager")
+	assert_false(AudioServer.is_bus_mute(bus_idx), "Manual mute must defer the cutoff")
+
+	sfx_mute_btn.toggled.emit(true)  # unmute while that cutoff is still pending
+	assert_false(AudioManager.get_muted(TARGET_BUS), "The unmute press must apply immediately")
+	assert_false(AudioServer.is_bus_mute(bus_idx), "Unmute must leave the hardware audible immediately")
 	
-	AudioManager.set_muted(TARGET_BUS, true)
-	await wait_seconds(0.05)
-	
-	AudioManager.set_muted(TARGET_BUS, false)
-	await wait_seconds(0.15)
-	
-	assert_false(AudioServer.is_bus_mute(bus_idx), "Hardware bus must remain unmuted; rapid updates abort pending cutoff timers.")
+	# Waiting longer than the delay is always safe.
+	await wait_seconds(GutTestHelper.MUTE_CUTOFF_WAIT)
+
+	assert_false(AudioManager.get_muted(TARGET_BUS), "AudioManager must keep the newest state")
+	assert_false(
+		AudioServer.is_bus_mute(bus_idx),
+		"The pending cutoff must apply the newest (unmuted) state, not the stale mute"
+	)
+	assert_almost_eq(AudioServer.get_bus_volume_db(bus_idx), 0.0, 0.01, "Full volume must survive the pending cutoff")
+	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [TARGET_BUS, true], 0)
+	assert_signal_emitted_with_parameters(AudioManager, "mute_toggled", [TARGET_BUS, false], 1)
+	assert_eq(get_signal_emit_count(AudioManager, "mute_toggled"), 2, "The pending cutoff must not toggle state again")
 
 
 ## Scenario D: Verify hardware cutoff safety window.
@@ -187,10 +226,10 @@ func test_ui_mute_toggle_defers_hardware_cutoff_for_click_feedback() -> void:
 	# ASSERT IMMEDIATE LOGICAL FLIP
 	assert_true(AudioManager.get_muted(TARGET_BUS), "Logical state should flip immediately.")
 	assert_false(AudioServer.is_bus_mute(bus_idx), "Hardware cutoff should be deferred to allow click audio to stream out.")
-	assert_true(AudioManager.is_any_sfx_playing(), "Confirmation click SFX should be playing.")
+	assert_true(SfxManager.is_any_sfx_playing(), "Confirmation click SFX should be playing.")
 
-	# AWAIT HARDWARE CUTOFF WINDOW (0.15s + buffer)
-	await wait_seconds(0.2)
+	# AWAIT HARDWARE CUTOFF WINDOW (MUTE_HARDWARE_DELAY + margin)
+	await wait_seconds(GutTestHelper.MUTE_CUTOFF_WAIT)
 	assert_true(AudioServer.is_bus_mute(bus_idx), "Hardware bus must be muted after safety cutoff timer expires.")
 
 
@@ -219,4 +258,4 @@ func test_ui_mute_controls_sync_state_dynamically() -> void:
 	assert_not_null(candidate_btn, "Layout Validation: Audio menu must contain at least one CheckButton matching a 'mute' naming convention.")
 	candidate_btn.toggled.emit(false) # Simulate UI mute press
 	
-	assert_true(AudioManager.is_any_sfx_playing(), "Triggering any audio menu CheckButton should invoke confirmation SFX.")
+	assert_true(SfxManager.is_any_sfx_playing(), "Triggering any audio menu CheckButton should invoke confirmation SFX.")

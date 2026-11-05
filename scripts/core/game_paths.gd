@@ -1,5 +1,5 @@
 ## Copyright (C) 2026 Egor Kostan
-## SPDX-License-Identifier: GPL-3.0-or-later
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## game_paths.gd
 ## Centralized repository for all hardcoded script and scene paths.
 ## Use this class to reference paths globally to avoid fragility and improve refactoring.
@@ -25,6 +25,9 @@ const INPUT_REMAP_BUTTON: String = "res://scripts/ui/components/input_remap_butt
 
 ## Path to the gameplay settings menu script.
 const GAMEPLAY_SETTINGS: String = "res://scripts/ui/menus/gameplay_settings.gd"
+
+## Path to the shared settings menu base class script.
+const SETTINGS_MENU_BASE: String = "res://scripts/ui/menus/settings_menu_base.gd"
 
 ## Path to the core settings singleton/script.
 const SETTINGS: String = "res://scripts/core/settings.gd"

@@ -1,0 +1,391 @@
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+## sfx_manager.gd
+## Autoload singleton for non-positional SFX playback, split out of AudioManager.
+## Owns the pooled AudioStreamPlayers, the LRU stream cache, the playback diagnostics
+## used by tests, and the global UI button click hook (Issue #800).
+## Volume and mute state stay in AudioManager. Access as SfxManager.play_sfx(...), etc.
+
+extends Node
+
+## Hard cap for cached SFX streams to prevent unbounded memory growth.
+const MAX_SFX_CACHE_SIZE: int = 20
+
+## Number of reusable AudioStreamPlayers to keep in memory for UI sounds.
+const SFX_POOL_SIZE: int = 8
+
+# --- SFX CACHE STATE ---
+## Dictionary to store preloaded AudioStreams to prevent disk I/O stutter.
+var _sfx_cache: Dictionary = {}
+
+## Dictionary acting as a set to track missing SFX and prevent repeated load attempts/log spam.
+var _missing_sfx_cache: Dictionary = {}
+
+## Array of pre-instantiated AudioStreamPlayers to prevent node instantiation churn.
+var _sfx_pool: Array[AudioStreamPlayer] = []
+
+
+func _ready() -> void:
+	# Initialize the SFX object pool
+	_initialize_sfx_pool()
+
+	# Connect global listener with a safety guard to ensure only one listener attaches (Issue #800)
+	if not get_tree().node_added.is_connected(_on_node_added):
+		get_tree().node_added.connect(_on_node_added)
+
+	# Retroactively scan for any buttons that snuck into the tree during the initialization frame
+	_retroactive_ui_scan(get_tree().root)
+
+
+## Recursively passes existing tree nodes into the parsing logic to catch early initializations
+func _retroactive_ui_scan(node: Node) -> void:
+	if not is_instance_valid(node):
+		return
+
+	# FIX: Optimize tree traversal by skipping function call churn on non-Button components
+	if node.get_class() == "Button":
+		_on_node_added(node)
+
+	# Always traverse children so we don't miss buttons nested inside containers/panels
+	for child: Node in node.get_children():
+		_retroactive_ui_scan(child)
+
+
+## Private helper to initialize the SFX object pool matching production setup.
+func _initialize_sfx_pool() -> void:
+	for i in range(SFX_POOL_SIZE):
+		var p := AudioStreamPlayer.new()
+		add_child(p)
+		_sfx_pool.append(p)
+
+
+## Plays non-positional audio using LRU caching and auto-cleanup.
+##
+## Handles centralized SFX playback with LRU caching, pool reuse, and safety checks.
+##
+## [param sfx_name]: The logical identifier such as "ui_navigation" or "slider".
+## [param bus_name]: Target audio bus, defaulting to SFX_Menu.
+## [param pitch_scale]: Pitch override used for variety.
+## [param volume_db]: Volume offset in decibels.
+func play_sfx(
+	sfx_name: String,
+	bus_name: String = AudioConstants.BUS_SFX_MENU,
+	pitch_scale: float = 1.0,
+	volume_db: float = 0.0
+) -> void:
+	# LAZY-INIT SAFEGUARD: If the pool hasn't been initialized yet, build it on the fly
+	if _sfx_pool.is_empty():
+		_initialize_sfx_pool()  # Assumes this is your pool setup function name
+
+	if sfx_name.is_empty():
+		return
+
+	# Short-circuit: If we already know this file is missing, do not attempt to load it again.
+	if _missing_sfx_cache.has(sfx_name):
+		return
+
+	# 1. Resolve and Cache the AudioStream (with LRU Eviction)
+	if not _sfx_cache.has(sfx_name):
+		# Resolve the logical name to its exact mapped file name
+		var file_name: String = sfx_name
+		if sfx_name in AudioConstants.SFX_ASSET_MAP:
+			file_name = AudioConstants.SFX_ASSET_MAP[sfx_name]
+		else:
+			# Structural fallback safely preserving legacy/direct calls
+			file_name += ".wav"
+
+		var full_path: String = AudioConstants.SFX_DIR_PATH + file_name
+
+		# Safety guard against non-existent files to block core engine loader errors from polluting tests
+		if not ResourceLoader.exists(full_path):
+			Globals.log_message(
+				"SFX file not found or failed to load: " + full_path, Globals.LogLevel.WARNING
+			)
+			# Cache the failure so we don't spam the disk and logs on subsequent requests
+			_missing_sfx_cache[sfx_name] = true
+			return
+
+		var stream: AudioStream = load(full_path)
+
+		if stream:
+			_store_in_cache(sfx_name, stream)
+		else:
+			Globals.log_message(
+				"SFX file found but failed to parse correctly: " + full_path,
+				Globals.LogLevel.WARNING
+			)
+			_missing_sfx_cache[sfx_name] = true
+			return
+	else:
+		# LRU Update: Godot 4 Dictionaries preserve insertion order.
+		# By erasing and re-inserting, we push this active sound to the "newest" end of the dictionary.
+		var stream: AudioStream = _sfx_cache[sfx_name]
+		_sfx_cache.erase(sfx_name)
+		_sfx_cache[sfx_name] = stream
+
+	# 2. Grab an available player from the object pool (Safe against freed/dangling instances!)
+	var player: AudioStreamPlayer = null
+	for p: AudioStreamPlayer in _sfx_pool:
+		if is_instance_valid(p) and not p.playing:
+			player = p
+			break
+
+	# Fallback: If all players are busy, hijack the first valid one in the pool
+	if player == null:
+		for p: AudioStreamPlayer in _sfx_pool:
+			if is_instance_valid(p):
+				player = p
+				break
+
+	# Final safety guard in case the pool somehow contains zero valid instances
+	if player == null:
+		push_error("AudioManager: No valid AudioStreamPlayer instances found in pool.")
+		return
+
+	player.stream = _sfx_cache[sfx_name]
+	player.pitch_scale = pitch_scale
+	player.volume_db = volume_db
+
+	# 3. Bus Validation & Routing
+	if AudioServer.get_bus_index(bus_name) == -1:
+		Globals.log_message(
+			"Invalid bus '%s' requested for SFX. Falling back to SFX_Menu." % bus_name,
+			Globals.LogLevel.WARNING
+		)
+		player.bus = AudioConstants.BUS_SFX_MENU
+	else:
+		player.bus = bus_name
+
+	# 4. Play (No queue_free needed since we reuse the nodes)
+	player.play()
+
+
+## Inserts a stream into the LRU cache, evicting the least recently used entry when full.
+## Shared by play_sfx() and cache_sfx_for_test() so both follow the same eviction rule.
+## :param sfx_name: Logical SFX identifier used as the cache key.
+## :param stream: Loaded AudioStream to cache.
+## :rtype: void
+func _store_in_cache(sfx_name: String, stream: AudioStream) -> void:
+	# Eviction strategy: If cache is full, remove the oldest (first) entry
+	if _sfx_cache.size() >= MAX_SFX_CACHE_SIZE and not _sfx_cache.has(sfx_name):
+		var oldest_key: String = _sfx_cache.keys()[0]
+		_sfx_cache.erase(oldest_key)
+		Globals.log_message("SFX cache full. Evicted: " + oldest_key, Globals.LogLevel.DEBUG)
+
+	# Erase first so a re-insert moves the key to the "newest" end of the dictionary.
+	_sfx_cache.erase(sfx_name)
+	_sfx_cache[sfx_name] = stream
+
+
+## Returns how many SFX streams are currently held in the LRU cache.
+##
+## Never exceeds MAX_SFX_CACHE_SIZE.
+## Returns the total count of cached sound effects as an [code]int[/code]
+func get_cached_sfx_count() -> int:
+	return _sfx_cache.size()
+
+
+## Returns true if the given logical SFX identifier has a stream in the LRU cache.
+##
+## Read-only check that does not refresh the entry's LRU position.
+##
+## [param sfx_name]: Logical SFX identifier such as slider.
+## Returns true if the stream is cached, otherwise false.
+func is_sfx_cached(sfx_name: String) -> bool:
+	return _sfx_cache.has(sfx_name)
+
+
+## Return true if the logical SFX identifier is in the missing-asset table.
+##
+## Short-circuits playback without touching disk if the asset previously failed to load.
+##
+## [param sfx_name]: Logical SFX identifier to check against the missing asset cache.
+## Returns true if the SFX is marked as missing, otherwise false.
+func is_sfx_missing(sfx_name: String) -> bool:
+	return _missing_sfx_cache.has(sfx_name)
+
+
+## Return the number of identifiers in the missing-asset table.
+##
+## Returns the number of identifiers in the missing-asset table as part of diagnostics for
+## Issue #726.
+## Returns the total count of missing sound effect identifiers.
+func get_missing_sfx_count() -> int:
+	return _missing_sfx_cache.size()
+
+
+## Return the cached SFX identifiers in LRU order, least recently used first.
+##
+## Returns a copy of the cached SFX names; editing the returned array has no effect.
+## Returns an array of cached SFX identifier strings.
+func get_cached_sfx_names() -> Array[String]:
+	var names: Array[String] = []
+	for key: String in _sfx_cache.keys():
+		names.append(key)
+	return names
+
+
+## Return a copy of the pooled players array in pool order for inspection.
+##
+## Entries may be freed instances; check is_instance_valid before use. Resizing the returned
+## array does not change the pool.
+## Returns an array of pooled AudioStreamPlayer instances.
+func get_sfx_pool_players() -> Array[AudioStreamPlayer]:
+	return _sfx_pool.duplicate()
+
+
+## Empties the stream cache and missing-asset table.
+##
+## Safe at runtime: streams reload lazily on the next play_sfx(), and previously missing assets
+## get one fresh load attempt. Does not touch the player pool; see cleanup_for_test().
+func clear_diagnostic_caches() -> void:
+	_sfx_cache.clear()
+	_missing_sfx_cache.clear()
+
+
+## Seeds the LRU cache with a stream for testing.
+##
+## FOR GUT UNIT TEST ONLY. Seeds the LRU cache with a stream under the given key, using the
+## same eviction rule as play_sfx(). Lets tests fill the cache to MAX_SFX_CACHE_SIZE without
+## needing that many real asset files (Issue #726). Strictly guarded to no-op in production
+## builds.
+##
+## [param sfx_name]: Cache key to seed.
+## [param stream]: Stream to store under that key.
+func cache_sfx_for_test(sfx_name: String, stream: AudioStream) -> void:
+	if not OS.is_debug_build():
+		return
+	_store_in_cache(sfx_name, stream)
+
+
+## Checks if any AudioStreamPlayer node within the pre-allocated pool is currently active.
+## Returns true if any pooled player is currently playing, otherwise false.
+func is_any_sfx_playing() -> bool:
+	for player: AudioStreamPlayer in _sfx_pool:
+		if is_instance_valid(player) and player.playing:
+			return true
+	return false
+
+
+## Return the total number of AudioStreamPlayer channels currently active.
+## Returns the total number of active audio stream player channels as an integer.
+func get_active_sfx_playback_count() -> int:
+	var count: int = 0
+	for player: AudioStreamPlayer in _sfx_pool:
+		if is_instance_valid(player) and player.playing:
+			count += 1
+	return count
+
+
+## Stops all active audio layers and clears streamed audio resources across the object pool.
+func stop_all_sfx() -> void:
+	for player: AudioStreamPlayer in _sfx_pool:
+		if is_instance_valid(player):
+			player.stop()
+			player.stream = null
+
+
+## Returns the resource path of the active SFX with the highest pool index.
+##
+## Scans the pool backwards, so the result is deterministic but is not start order: play_sfx()
+## reuses the first idle player, so a newer sound on a lower index is not the one returned.
+## Returns the resource path of that stream, or an empty string if no sounds are playing.
+func get_active_sfx_stream_path() -> String:
+	# Iterate backwards through the pool so the choice is deterministic.
+	# Pool index does not reflect start order; see the docstring.
+	for i in range(_sfx_pool.size() - 1, -1, -1):
+		var player: AudioStreamPlayer = _sfx_pool[i]
+		if is_instance_valid(player) and player.playing and player.stream:
+			return player.stream.resource_path
+	return ""
+
+
+## Returns the target audio bus name of the active SFX with the highest pool index.
+##
+## Scans the pool backwards, so the result is deterministic but is not start order: play_sfx()
+## reuses the first idle player, so a newer sound on a lower index is not the one returned.
+## Returns the name of that player's bus, or an empty string if no sounds are playing.
+func get_active_sfx_bus_name() -> String:
+	# Iterate backwards through the pool so the choice is deterministic.
+	# Pool index does not reflect start order; see the docstring.
+	for i in range(_sfx_pool.size() - 1, -1, -1):
+		var player: AudioStreamPlayer = _sfx_pool[i]
+		if is_instance_valid(player) and player.playing:
+			return player.bus
+	return ""
+
+
+## FOR GUT UNIT TEST ONLY
+## Forcefully clear resources to prevent leaks between unit tests.
+## Strictly guarded to prevent accidental execution in production builds.
+func cleanup_for_test() -> void:
+	# 0. Production safety guards
+	if not OS.is_debug_build():
+		return
+
+	clear_diagnostic_caches()
+	_free_sfx_pool()
+
+	# Re-create the pool matching production configuration
+	_initialize_sfx_pool()
+
+
+## FOR GUT UNIT TEST ONLY
+## Frees every pooled player and leaves the pool empty, so tests can verify that play_sfx()
+## lazily rebuilds it (Issue #726). Strictly guarded to no-op in production builds.
+## Call cleanup_for_test() afterwards to restore a full pool.
+func clear_sfx_pool_for_test() -> void:
+	if not OS.is_debug_build():
+		return
+	_free_sfx_pool()
+
+
+## Frees all pooled players (and orphaned player children) and empties the pool array.
+func _free_sfx_pool() -> void:
+	# 1. Clean the pool deterministically
+	for i in range(_sfx_pool.size() - 1, -1, -1):
+		var player := _sfx_pool[i]
+		if is_instance_valid(player):
+			player.stop()
+			# Reset bus before freeing to avoid dangling references
+			player.bus = "Master"
+			if player.get_parent() == self:
+				remove_child(player)
+			player.free()
+		_sfx_pool.remove_at(i)
+
+	# 1b. Free orphaned players left behind when a test swapped this node's script
+	# (set_script() resets _sfx_pool but keeps the child nodes).
+	for child: Node in get_children():
+		if child is AudioStreamPlayer:
+			child.stop()
+			remove_child(child)
+			child.free()
+
+
+## Automatically hooks up base Button elements for confirmation sfx (Ported via Issue #800)
+func _on_node_added(node: Node) -> void:
+	# Use strict string evaluation to satisfy the verification contract
+	if node.get_class() == "Button":
+		var btn := node as Button
+		if is_instance_valid(btn):
+			# Flat Button Protection: Avoid superimposing global audio over theme audio
+			if btn.flat or btn.has_meta("no_global_sound"):
+				return
+
+			# Dialog Protection: Exclude internal buttons of Accept/ConfirmationDialogs
+			var parent: Node = btn.get_parent()
+			while parent:
+				if parent is AcceptDialog:
+					return
+				parent = parent.get_parent()
+
+			# Guard against duplicate connections using CONNECT_DEFERRED for thread safety
+			if not btn.pressed.is_connected(_on_global_button_pressed):
+				btn.pressed.connect(_on_global_button_pressed, CONNECT_DEFERRED)
+
+
+## Centralized button audio execution target routed natively within AudioManager
+func _on_global_button_pressed() -> void:
+	# Route button accepts directly through the internal SFX bus configuration
+	play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)

@@ -1,4 +1,5 @@
-## SPDX-License-Identifier: GPL-3.0-or-later
+## Copyright (C) 2026 Egor Kostan
+## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## Use for exiting game levels back to main menu without quitting.
 ## pause_menu.gd
 ##
