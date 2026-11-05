@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "created": "2026-11-04T05:29:42Z",
-  "commit": "bdba0d79c13c4158ba3b8e8c18dda055335a1ae0",
-  "runner": "GitHub Actions 1000043070",
+  "created": "2026-11-05T05:21:17Z",
+  "commit": "1dcb7dbd8c7a508f87ad9747da2045a89a159068",
+  "runner": "GitHub Actions 1000043207",
   "godot": "4.7.1-stable (official)",
   "runs": 3,
   "baseline": {
@@ -33,11 +33,31 @@
         "phys_worst_avg_ms": 0.4656,
         "mem_static_growth": 149392.0
       }
+    },
+    {
+      "run_id": "41971415885",
+      "commit": "1dcb7dbd8c7a508f87ad9747da2045a89a159068",
+      "date": "2026-11-05T05:21:17Z",
+      "metrics": {
+        "saves": 0.0,
+        "objects_avg": 2543.9666666666667,
+        "nodes_avg": 503.6,
+        "resources_avg": 206.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": 2.0,
+        "frame_p95_ms": 16.997,
+        "frames_over_33.4ms": 0.0,
+        "proc_worst_avg_ms": 0.1606,
+        "phys_worst_avg_ms": 0.3078,
+        "mem_static_growth": 153604.0
+      }
     }
   ],
   "accepted": null,
   "seen_runs": [
-    "41777577668"
+    "41777577668",
+    "41971415885"
   ],
   "profile": "desktop"
 }
