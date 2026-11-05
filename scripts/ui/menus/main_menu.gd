@@ -137,6 +137,12 @@ func _run_fade_in_sequence() -> void:
 	else:
 		Globals.log_message("Invalid tween—grabbing focus immediately.", Globals.LogLevel.WARNING)
 
+	# GUARD 3: Another menu (e.g. Options) opened during the intro hid this one. Taking focus
+	# now would move keyboard/gamepad focus to a hidden StartButton and strand that menu.
+	if not start_button.is_visible_in_tree():
+		Globals.log_message("Main menu hidden—skipping intro focus.", Globals.LogLevel.DEBUG)
+		return
+
 	Globals.ensure_initial_focus(
 		start_button, [start_button, options_button, quit_button], "Main Menu"
 	)
@@ -259,7 +265,7 @@ func _on_start_pressed(_args: Array = []) -> void:
 	Globals.log_message("Start Game menu button pressed.", Globals.LogLevel.DEBUG)
 
 	# Play confirmation sound locally due to no_global_sound metadata block
-	AudioManager.play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)
+	SfxManager.play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)
 
 	if Settings.has_unbound_critical_actions_for_current_device():
 		# Guard: Disable button to prevent spamming while dialog is open
@@ -280,7 +286,7 @@ func _on_options_button_pressed(_args: Array = []) -> void:
 	Globals.log_message("Options button pressed.", Globals.LogLevel.DEBUG)
 
 	# Play confirmation sound locally due to no_global_sound metadata block
-	AudioManager.play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)
+	SfxManager.play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)
 
 	Globals.load_options(ui_panel)  # Your existing load
 
@@ -296,7 +302,7 @@ func _on_quit_pressed(_args: Array = []) -> void:
 	Globals.log_message("Quit button pressed.", Globals.LogLevel.DEBUG)
 
 	# Play confirmation sound locally due to no_global_sound metadata block
-	AudioManager.play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)
+	SfxManager.play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)
 
 	# Show confirmation dialog
 	if is_instance_valid(quit_dialog):
@@ -314,7 +320,7 @@ func _on_quit_dialog_confirmed() -> void:
 	## :rtype: void
 
 	# 1. Fire the confirmation sound asset
-	AudioManager.play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)
+	SfxManager.play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)
 
 	# 2. Hide the panel immediately so the player gets immediate feedback
 	if is_instance_valid(quit_dialog):
@@ -349,7 +355,7 @@ func _on_quit_dialog_confirmed() -> void:
 func _on_quit_dialog_canceled() -> void:
 	## Handles quit dialog cancellation visual resets and focus recovery.
 	## :rtype: void
-	AudioManager.play_sfx("ui_cancel", AudioConstants.BUS_SFX_MENU)
+	SfxManager.play_sfx("ui_cancel", AudioConstants.BUS_SFX_MENU)
 	quit_dialog.hide()
 	Globals.log_message("Quit canceled.", Globals.LogLevel.DEBUG)
 

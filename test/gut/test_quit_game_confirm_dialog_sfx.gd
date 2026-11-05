@@ -12,11 +12,11 @@ var original_audio_script: Script
 var original_fields := {}
 
 
-## Suite setup: Double the AudioManager using an inherited script to preserve real node-wiring behavior.
+## Suite setup: Double the SfxManager using an inherited script to preserve real node-wiring behavior.
 ## :rtype: void
 func before_all() -> void:
-	if is_instance_valid(AudioManager):
-		original_audio_script = AudioManager.get_script()
+	if is_instance_valid(SfxManager):
+		original_audio_script = SfxManager.get_script()
 		var script_path: String = original_audio_script.resource_path
 		var mock_script := GDScript.new()
 		
@@ -33,17 +33,17 @@ func play_sfx(sfx_name: String, bus_name: String = "SFX_Menu", pitch_scale: floa
 """ % script_path
 		
 		mock_script.reload()
-		AudioManager.set_script(mock_script)
+		SfxManager.set_script(mock_script)
 
 
 ## Suite cleanup: Safely restore original production script after all tests execute.
 ## :rtype: void
 func after_all() -> void:
-	if original_audio_script and is_instance_valid(AudioManager):
-		AudioManager.set_script(original_audio_script)
+	if original_audio_script and is_instance_valid(SfxManager):
+		SfxManager.set_script(original_audio_script)
 		# FIX: Re-populate and rebuild the internal variable states wiped by set_script()
-		if AudioManager.has_method("cleanup_for_test"):
-			AudioManager.cleanup_for_test()
+		if SfxManager.has_method("cleanup_for_test"):
+			SfxManager.cleanup_for_test()
 
 
 ## Per-test setup: Instantiate target menu scene layout tree and clear call logs.
@@ -58,8 +58,8 @@ func before_each() -> void:
 		
 	add_child_autofree(main_menu_instance)
 	
-	if AudioManager.get("sfx_calls") != null:
-		AudioManager.set("sfx_calls", [])
+	if SfxManager.get("sfx_calls") != null:
+		SfxManager.set("sfx_calls", [])
 		
 	await get_tree().process_frame
 
@@ -76,7 +76,7 @@ func after_each() -> void:
 ## Helper assertions for tracking explicit mock array triggers
 func _assert_sfx_called(key: String) -> void:
 	var found := false
-	var calls: Array = AudioManager.get("sfx_calls")
+	var calls: Array = SfxManager.get("sfx_calls")
 	for c: Array in calls:
 		if c[0] == key:
 			found = true
@@ -85,13 +85,13 @@ func _assert_sfx_called(key: String) -> void:
 
 
 func _assert_sfx_call_count(count: int) -> void:
-	var actual_count: int = AudioManager.get("sfx_calls").size()
+	var actual_count: int = SfxManager.get("sfx_calls").size()
 	assert_eq(actual_count, count, "Expected play_sfx to be called %d times. Got %d." % [count, actual_count])
 
 
 func _assert_sfx_not_called(key: String) -> void:
 	var found := false
-	var calls: Array = AudioManager.get("sfx_calls")
+	var calls: Array = SfxManager.get("sfx_calls")
 	for c: Array in calls:
 		if c[0] == key:
 			found = true

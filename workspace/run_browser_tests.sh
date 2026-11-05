@@ -19,8 +19,10 @@ check_exit() {
   fi
 }
 
-# Ensure Git trusts the container directory to avoid dubious ownership errors
+# Ensure Git trusts the mounted repo (owned by the host user) for both
+# normal commands (/project) and local clones (/project/.git, git >= 2.45.1)
 git config --global --add safe.directory "$PROJECT_DIR" 2>/dev/null || true
+git config --global --add safe.directory "$PROJECT_DIR/.git" 2>/dev/null || true
 
 # 2. Inject dummy salt for test runtime consistency
 echo "⚙️ Injecting dummy salt for Playwright tests..."

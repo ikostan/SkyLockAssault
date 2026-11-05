@@ -56,11 +56,10 @@ class StatManager:
 	var timer: Timer
 
 	## Initializes the manager with required node references and color states.
-	## @param _label: The target Label node to manipulate.
-	## @param _timer: The Timer node controlling the blink cycle.
-	## @param _base: The default Color of the label text.
-	## @param _warning: The active warning Color of the label text.
-	## @return: void
+	## [param _label]: The target Label node to manipulate.
+	## [param _timer]: The Timer node controlling the blink cycle.
+	## [param _base]: The default Color of the label text.
+	## [param _warning]: The active warning Color of the label text.
 	func _init(_label: Label, _timer: Timer, _base: Color, _warning: Color) -> void:
 		label = _label
 		timer = _timer
@@ -69,7 +68,6 @@ class StatManager:
 
 	## Activates the warning state, starting the timer and applying the initial color toggle.
 	## Fails gracefully if node references have been queued for deletion.
-	## @return: void
 	func start_blinking() -> void:
 		# Defensive check to ensure SceneTree nodes are still valid before manipulating
 		if not is_instance_valid(label) or not is_instance_valid(timer):
@@ -81,7 +79,6 @@ class StatManager:
 
 	## Deactivates the warning state, stops the timer, and restores the base color.
 	## Handles cleanup defensively to ensure logical resets even if nodes are partially freed.
-	## @return: void
 	func stop_blinking() -> void:
 		# Always reset the logical flag immediately
 		is_blinking = false
@@ -95,7 +92,6 @@ class StatManager:
 
 	## Swaps the label's text color between base_color and warning_color.
 	## Internally called by the timer's timeout mechanism.
-	## @return: void
 	func toggle_label() -> void:
 		if not is_instance_valid(label):
 			return
@@ -116,14 +112,13 @@ class StatManager:
 
 	## Safely checks if the underlying SceneTree timer is actively ticking.
 	## Useful for external state queries or unit tests.
-	## @return: bool - True if the timer is valid and running, false otherwise.
+	## Returns bool - True if the timer is valid and running, false otherwise.
 	func is_timer_running() -> bool:
 		return is_instance_valid(timer) and not timer.is_stopped()
 
 
 ## Called when the node enters the scene tree for the first time.
 ## Initializes UI styles and establishes local states.
-## @return: void
 func _ready() -> void:
 	# --- Fuel UI Setup ---
 	_fuel_bar_style = StyleBoxFlat.new()
@@ -162,10 +157,9 @@ func _ready() -> void:
 
 ## Wires the HUD to the injected data resources.
 ## Call this from your main level script when instantiating the player and UI.
-## @param fuel_res: The authoritative FuelResource instance.
-## @param speed_res: The authoritative SpeedResource instance.
-## @param weapon_res: The authoritative WeaponResource instance.
-## @return: void
+## [param fuel_res]: The authoritative FuelResource instance.
+## [param speed_res]: The authoritative SpeedResource instance.
+## [param weapon_res]: The authoritative WeaponResource instance.
 func setup_hud(
 	fuel_res: FuelResource, speed_res: SpeedResource, weapon_res: WeaponResource
 ) -> void:
@@ -264,7 +258,6 @@ func get_label_text_color(label: Label) -> Color:
 
 ## Lifecycle callback triggered right before the node is removed from the tree.
 ## Safely disconnects global resource signals to prevent memory leaks.
-## @return: void
 func _exit_tree() -> void:
 	# Explicitly sever the connection to the data resources
 	if is_instance_valid(_speed_resource):
@@ -296,8 +289,7 @@ func _exit_tree() -> void:
 
 
 ## Compatibility bridge to route the new SpeedResource signal into the legacy logic.
-## @param new_speed: The updated speed value from the resource.
-## @return: void
+## [param new_speed]: The updated speed value from the resource.
 func _on_speed_updated_bridge(_new_speed: float) -> void:
 	# Route directly to the UI updaters instead of the legacy pathway
 	update_speed_bar()
@@ -306,7 +298,6 @@ func _on_speed_updated_bridge(_new_speed: float) -> void:
 
 ## Signal handler for global engine failure.
 ## Triggers immediate UI feedback for a flameout state.
-## @return: void
 func _on_fuel_depleted() -> void:
 	# The physics controller sets the resource speed to 0.0. We just update the UI.
 	update_speed_bar()
@@ -319,7 +310,6 @@ func _on_fuel_depleted() -> void:
 
 
 ## Updates the fuel bar's visual fill and color based on the current fuel level.
-## @return: void
 func update_fuel_bar() -> void:
 	if not is_instance_valid(_fuel_resource):
 		return
@@ -357,7 +347,6 @@ func update_fuel_bar() -> void:
 
 
 ## Updates the speed bar value and color based on current speed.
-## @return: void
 func update_speed_bar() -> void:
 	if not is_instance_valid(_speed_resource):
 		return
@@ -401,7 +390,6 @@ func update_speed_bar() -> void:
 
 ## Checks if the current fuel has dropped below the low-fuel threshold.
 ## Activates or deactivates the UI warning blinker accordingly.
-## @return: void
 func check_fuel_warning() -> void:
 	if not is_instance_valid(_fuel_resource):
 		return
@@ -419,7 +407,6 @@ func check_fuel_warning() -> void:
 
 
 ## Checks speed and starts/stops label blinking if approaching or exceeding limits.
-## @return: void
 func check_speed_warning() -> void:
 	if not is_instance_valid(_speed_resource):
 		return
@@ -448,14 +435,12 @@ func check_speed_warning() -> void:
 
 
 ## Timer callback that toggles the visual state of the fuel warning label.
-## @return: void
 func _on_fuel_blink_timer_timeout() -> void:
 	if fuel_stat != null and fuel_stat.is_blinking:
 		fuel_stat.toggle_label()
 
 
 ## Timer callback that toggles the visual state of the speed warning label.
-## @return: void
 func _on_speed_blink_timer_timeout() -> void:
 	if speed_stat != null and speed_stat.is_blinking:
 		speed_stat.toggle_label()
@@ -467,9 +452,8 @@ func _on_speed_blink_timer_timeout() -> void:
 
 
 ## Applies standard corner radiuses and assigns a custom stylebox to a ProgressBar.
-## @param bar: The ProgressBar node to style.
-## @param bar_fill_style: The StyleBoxFlat to configure and apply.
-## @return: void
+## [param bar]: The ProgressBar node to style.
+## [param bar_fill_style]: The StyleBoxFlat to configure and apply.
 func set_bar_fill_style(bar: ProgressBar, bar_fill_style: StyleBoxFlat) -> void:
 	var corner_radius: int = 10
 	bar_fill_style.corner_radius_bottom_left = corner_radius
@@ -485,7 +469,7 @@ func set_bar_fill_style(bar: ProgressBar, bar_fill_style: StyleBoxFlat) -> void:
 
 
 ## Retrieves the current forward speed directly from the injected SpeedResource.
-## @return: float - The current speed value.
+## Returns float - The current speed value.
 func get_current_speed() -> float:
 	if is_instance_valid(_speed_resource):
 		return _speed_resource.current_speed
@@ -494,7 +478,7 @@ func get_current_speed() -> float:
 
 ## Retrieves the current computed background color of the fuel progress bar.
 ## Useful for verifying threshold lerping logic in unit tests.
-## @return: Color - The current StyleBoxFlat background color, or Color.
+## Returns Color - The current StyleBoxFlat background color, or Color.
 ## TRANSPARENT if uninitialized.
 func get_fuel_bar_color() -> Color:
 	if _fuel_bar_style:
@@ -504,7 +488,7 @@ func get_fuel_bar_color() -> Color:
 
 ## Retrieves the current computed background color of the speed progress bar.
 ## Useful for verifying threshold lerping logic in unit tests.
-## @return: Color - The current StyleBoxFlat background color, or Color.
+## Returns Color - The current StyleBoxFlat background color, or Color.
 ## TRANSPARENT if uninitialized.
 func get_speed_bar_color() -> Color:
 	if _speed_bar_style:
@@ -513,35 +497,33 @@ func get_speed_bar_color() -> Color:
 
 
 ## Checks if the fuel warning label is currently in a blinking state.
-## @return: bool - True if the fuel warning is active and blinking, false otherwise.
+## Returns bool - True if the fuel warning is active and blinking, false otherwise.
 func is_fuel_warning_active() -> bool:
 	return fuel_stat != null and fuel_stat.is_blinking
 
 
 ## Checks if the speed warning label is currently in a blinking state.
-## @return: bool - True if the speed warning is active and blinking, false otherwise.
+## Returns bool - True if the speed warning is active and blinking, false otherwise.
 func is_speed_warning_active() -> bool:
 	return speed_stat != null and speed_stat.is_blinking
 
 
 ## Verifies if the underlying SceneTree Timer for the speed blinker is actively running.
-## @return: bool - True if the timer node is valid and not stopped, false otherwise.
+## Returns bool - True if the timer node is valid and not stopped, false otherwise.
 func is_speed_timer_running() -> bool:
 	return speed_stat != null and speed_stat.is_timer_running()
 
 
 ## Compatibility bridge to route the new FuelResource signal into the UI updates.
-## @param _new_fuel: The updated fuel value from the resource.
-## @return: void
+## [param _new_fuel]: The updated fuel value from the resource.
 func _on_fuel_changed_bridge(_new_fuel: float) -> void:
 	update_fuel_bar()
 	check_fuel_warning()
 
 
 ## Callback triggered when the WeaponResource index changes.
-## @param _index: The array index of the newly equipped weapon.
-## @param weapon_name: The string identifier of the weapon.
-## @return: void
+## [param _index]: The array index of the newly equipped weapon.
+## [param weapon_name]: The string identifier of the weapon.
 func _on_weapon_swapped(_index: int, weapon_name: String) -> void:
 	Globals.log_message("HUD: Weapon swapped to " + weapon_name, Globals.LogLevel.DEBUG)
 
@@ -552,9 +534,8 @@ func _on_weapon_swapped(_index: int, weapon_name: String) -> void:
 
 
 ## Callback triggered when the WeaponResource ammo count changes.
-## @param current: The current ammo count.
-## @param max_ammo: The maximum ammo capacity.
-## @return: void
+## [param current]: The current ammo count.
+## [param max_ammo]: The maximum ammo capacity.
 func _on_ammo_updated(current: int, max_ammo: int) -> void:
 	if is_instance_valid(ammo_bar):
 		ammo_bar.max_value = float(max_ammo)
@@ -563,7 +544,6 @@ func _on_ammo_updated(current: int, max_ammo: int) -> void:
 
 ## Signal handler for extreme low speed (stall warning).
 ## Activates the warning blinker.
-## @return: void
 func _on_speed_low() -> void:
 	if speed_stat != null and not speed_stat.is_blinking:
 		speed_stat.start_blinking()
@@ -571,14 +551,12 @@ func _on_speed_low() -> void:
 
 ## Signal handler for maximum forward velocity.
 ## Activates the warning blinker to indicate structural stress.
-## @return: void
 func _on_speed_maxed() -> void:
 	if speed_stat != null and not speed_stat.is_blinking:
 		speed_stat.start_blinking()
 
 
 ## Callback triggered when the SpeedResource modifies its visual warning fractions.
-## @return: void
 func _on_speed_thresholds_changed() -> void:
 	update_speed_bar()
 	check_speed_warning()

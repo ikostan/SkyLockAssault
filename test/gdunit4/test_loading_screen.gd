@@ -14,14 +14,35 @@ const EPSILON: float = 0.001
 const MAX_POLL_FRAMES: int = 120
 
 var _original_next_scene: String
+var _original_current_scene: Node
 
 
 func before_test() -> void:
 	_original_next_scene = Globals.next_scene
+	_original_current_scene = get_tree().current_scene
 
 
 func after_test() -> void:
 	Globals.next_scene = _original_next_scene
+	_free_scene_installed_by_test()
+
+
+## Frees a scene a test installed as the SceneTree's current scene and restores the previous
+## one. LS-TRANS-03 adds a real main menu to the root, and LS-FALLBACK-03/04 reach
+## change_scene_to_file(); left alive, that main menu's intro (intro_delay + fade_duration)
+## ends in Globals.ensure_initial_focus(start_button) and takes focus from whatever suite is
+## running about 4 s later. In CI that was test_options_menu_navigation_sfx (focus owner
+## "<Button>" at test_gdunit_all_menus_navigation_regression.gd:159), depending on suite order.
+## free() rather than queue_free(): the menu's pending timer and deferred calls die with it.
+func _free_scene_installed_by_test() -> void:
+	var current: Node = get_tree().current_scene
+	if not is_instance_valid(current) or current == _original_current_scene:
+		return
+	if is_instance_valid(_original_current_scene):
+		get_tree().current_scene = _original_current_scene
+	else:
+		get_tree().current_scene = null
+	current.free()
 
 
 ## Helper to instantiate an isolated loading screen node tree via auto_free.

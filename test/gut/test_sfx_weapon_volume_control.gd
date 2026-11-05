@@ -93,7 +93,7 @@ func test_tc_weapon_01() -> void:
 ## :rtype: void
 func test_tc_weapon_02() -> void:
 	audio_instance.mute_weapon.button_pressed = false  # Simulate toggle to muted, emits toggled(false)
-	await get_tree().create_timer(0.2).timeout  # Allow the 0.15s background mute safety delay to complete
+	await get_tree().create_timer(GutTestHelper.MUTE_CUTOFF_WAIT).timeout  # Wait out the deferred mute cutoff (MUTE_HARDWARE_DELAY + margin)
 	assert_false(audio_instance.mute_weapon.button_pressed)
 	assert_true(AudioManager.weapon_muted)
 	assert_false(audio_instance.weapon_slider.editable)
@@ -145,7 +145,7 @@ func test_tc_weapon_05() -> void:
 	if not AudioManager.master_muted and not AudioManager.sfx_muted:  # If not handled (no warning), simulate propagation to toggle
 		audio_instance.mute_weapon.button_pressed = not was_pressed
 	
-	await get_tree().create_timer(0.2).timeout  # Allow the 0.15s background mute safety delay to complete
+	await get_tree().create_timer(GutTestHelper.MUTE_CUTOFF_WAIT).timeout  # Wait out the deferred mute cutoff (MUTE_HARDWARE_DELAY + margin)
 	
 	assert_false(audio_instance.mute_weapon.button_pressed)  # Toggled to muted
 	assert_true(AudioManager.weapon_muted)  # Toggled

@@ -31,7 +31,7 @@ func before_each() -> void:
 	_initial_root_children = get_tree().root.get_children()
 	_initial_current_scene = get_tree().current_scene
 	
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	AudioManager.reset_volumes()
 
 
@@ -62,7 +62,7 @@ func after_each() -> void:
 			child.queue_free()
 
 	# 4. Flush all hardware audio registers completely
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	if AudioManager.has_method("cleanup_for_test"):
 		AudioManager.cleanup_for_test()
 	AudioManager.reset_volumes()
@@ -91,10 +91,10 @@ func test_main_menu_buttons_execute_accept_audio() -> void:
 	# end-of-frame scene transition destroys the tree and kills the audio.
 	await get_tree().process_frame
 	
-	assert_true(AudioManager.is_any_sfx_playing(), "Start Game button must trigger confirmation audio.")
-	assert_string_contains(AudioManager.get_active_sfx_stream_path(), "ui_accept", "Start Game button must play the 'ui_accept' sound effect asset.")
+	assert_true(SfxManager.is_any_sfx_playing(), "Start Game button must trigger confirmation audio.")
+	assert_string_contains(SfxManager.get_active_sfx_stream_path(), "ui_accept", "Start Game button must play the 'ui_accept' sound effect asset.")
 	
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 
 	# --- TEST OPTIONS BUTTON ---
 	var options_btn: Button = menu_instance.options_button
@@ -104,10 +104,10 @@ func test_main_menu_buttons_execute_accept_audio() -> void:
 	
 	await get_tree().process_frame
 	
-	assert_true(AudioManager.is_any_sfx_playing(), "Options button must trigger confirmation audio.")
-	assert_string_contains(AudioManager.get_active_sfx_stream_path(), "ui_accept", "Options button must play the 'ui_accept' sound effect asset.")
+	assert_true(SfxManager.is_any_sfx_playing(), "Options button must trigger confirmation audio.")
+	assert_string_contains(SfxManager.get_active_sfx_stream_path(), "ui_accept", "Options button must play the 'ui_accept' sound effect asset.")
 	
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 
 	# --- TEST QUIT BUTTON ---
 	var quit_btn: Button = menu_instance.quit_button
@@ -117,5 +117,5 @@ func test_main_menu_buttons_execute_accept_audio() -> void:
 	
 	await get_tree().process_frame
 	
-	assert_true(AudioManager.is_any_sfx_playing(), "Quit button must trigger confirmation audio.")
-	assert_string_contains(AudioManager.get_active_sfx_stream_path(), "ui_accept", "Quit button must play the 'ui_accept' sound effect asset.")
+	assert_true(SfxManager.is_any_sfx_playing(), "Quit button must trigger confirmation audio.")
+	assert_string_contains(SfxManager.get_active_sfx_stream_path(), "ui_accept", "Quit button must play the 'ui_accept' sound effect asset.")

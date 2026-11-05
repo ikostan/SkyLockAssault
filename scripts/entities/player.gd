@@ -8,8 +8,13 @@ extends Node2D
 ## Completely decoupled from UI logic via Observer Patterns.
 
 ## Emitted when the player's forward speed changes.
+##
+## [param new_speed]: The current speed of the player.
+## [param max_speed]: The maximum allowed speed for the player.
 signal speed_changed(new_speed: float, max_speed: float)
 ## Emitted when speed falls below the safe threshold.
+##
+## [param threshold]: The safe speed limit value triggering the signal.
 signal speed_low(threshold: float)
 ## Emitted when the plane hits maximum velocity.
 signal speed_maxed
@@ -56,7 +61,6 @@ var _settings: GameSettingsResource = null
 ## Called when the node enters the scene tree for the first time.
 ## Initializes the player state, calculates screen boundaries, binds inputs,
 ## and connects core signals for the fuel system.
-## @return: void
 func _ready() -> void:
 	# Safely cache the settings resource
 	_settings = Globals.settings if is_instance_valid(Globals) else null
@@ -156,7 +160,6 @@ func _ready() -> void:
 
 ## Lifecycle callback triggered right before the node is removed from the tree.
 ## Safely disconnects global resource signals to prevent dangling references and memory leaks.
-## @return: void
 func _exit_tree() -> void:
 	if fuel_resource.fuel_depleted.is_connected(_on_player_out_of_fuel):
 		fuel_resource.fuel_depleted.disconnect(_on_player_out_of_fuel)
@@ -168,8 +171,7 @@ func _exit_tree() -> void:
 
 ## Observer pattern callback to react to updates from the local fuel resource.
 ## Re-ignites engines if refueled.
-## @param new_fuel: The updated value of the property.
-## @return: void
+## [param new_fuel]: The updated value of the property.
 func _on_fuel_changed(new_fuel: float) -> void:
 	# --- EXPLICIT COMPATIBILITY BRIDGE ---
 	# Safely sync fuel drops back to Globals.settings so legacy UI/Parallax consumers
@@ -203,7 +205,6 @@ func _set_speed(target_speed: float) -> void:
 
 ## Signal handler for engine failure triggered by the global fuel_depleted signal.
 ## Stops the plane, halts rotors, and broadcasts the flameout state.
-## @return: void
 func _on_player_out_of_fuel() -> void:
 	Globals.log_message("Player is out of fuel! Engine flameout.", Globals.LogLevel.WARNING)
 
@@ -215,8 +216,7 @@ func _on_player_out_of_fuel() -> void:
 
 
 ## Captures core input events for the player, specifically weapon firing and swapping.
-## @param event: The input event detected by the engine.
-## @return: void
+## [param event]: The input event detected by the engine.
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("fire"):
 		if weapon and weapon.has_method("fire"):
@@ -231,9 +231,9 @@ func _input(event: InputEvent) -> void:
 
 
 ## Starts rotor animation and SFX if available.
-## @param rotor: The rotor Node2D to animate.
-## @param rotor_sfx: The optional AudioStreamPlayer2D for sound.
-## @return: void
+##
+## [param rotor]: The rotor Node2D to animate.
+## [param rotor_sfx]: The optional AudioStreamPlayer2D for sound.
 func rotor_start(rotor: Node2D, rotor_sfx: AudioStreamPlayer2D) -> void:
 	if rotor.has_node("AnimatedSprite2D"):
 		var anim_sprite: AnimatedSprite2D = rotor.get_node("AnimatedSprite2D") as AnimatedSprite2D
@@ -243,9 +243,9 @@ func rotor_start(rotor: Node2D, rotor_sfx: AudioStreamPlayer2D) -> void:
 
 
 ## Stops rotor animation and SFX if available.
-## @param rotor: The rotor Node2D to stop.
-## @param rotor_sfx: The optional AudioStreamPlayer2D for sound.
-## @return: void
+##
+## [param rotor]: The rotor Node2D to stop.
+## [param rotor_sfx]: The optional AudioStreamPlayer2D for sound.
 func rotor_stop(rotor: Node2D, rotor_sfx: AudioStreamPlayer2D) -> void:
 	if rotor.has_node("AnimatedSprite2D"):
 		var anim_sprite: AnimatedSprite2D = rotor.get_node("AnimatedSprite2D") as AnimatedSprite2D
@@ -256,7 +256,6 @@ func rotor_stop(rotor: Node2D, rotor_sfx: AudioStreamPlayer2D) -> void:
 
 ## Timer callback triggered every tick of the fuel timer.
 ## Calculates dynamic fuel consumption based on current speed and game difficulty.
-## @return: void
 func _on_fuel_timer_timeout() -> void:
 	if not is_instance_valid(_settings):
 		return
@@ -273,8 +272,7 @@ func _on_fuel_timer_timeout() -> void:
 ## The main physics loop for the player.
 ## Handles forward acceleration/deceleration, lateral movement, boundary constraints,
 ## and broadcasts speed state changes to external observers.
-## @param _delta: The time elapsed since the last physics frame.
-## @return: void
+## [param _delta]: The time elapsed since the last physics frame.
 func _physics_process(_delta: float) -> void:
 	if not is_instance_valid(_settings):
 		return
@@ -309,9 +307,8 @@ func _physics_process(_delta: float) -> void:
 ## Guarded compatibility listener for legacy external fuel mutations.
 ## Ensures that if legacy code or tests modify Globals.settings directly,
 ## the authoritative FuelResource stays in sync.
-## @param setting_name: The name of the modified setting.
-## @param new_value: The updated value.
-## @return: void
+## [param setting_name]: The name of the modified setting.
+## [param new_value]: The updated value.
 func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	if setting_name == "current_fuel" and fuel_resource.current_fuel != float(new_value):
 		fuel_resource.current_fuel = float(new_value)

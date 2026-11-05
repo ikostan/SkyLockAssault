@@ -81,7 +81,7 @@ func before_each() -> void:
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
 		AudioManager.set_bus_state(bus, START_VOLUME, false)
 	AudioManager.load_volumes(TEST_CONFIG_PATH)  # no file: applies the state above
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 
 
 ## Lets pending cutoff timers finish, then restores the original audio state.
@@ -95,7 +95,7 @@ func after_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
 
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	AudioManager.current_config_path = _original_config_path
 	for bus: String in _original_states.keys():
 		var state: Dictionary = _original_states[bus]
@@ -151,7 +151,7 @@ func test_manual_mute_clicks_and_defers_hardware_cutoff() -> void:
 
 	assert_true(AudioManager.get_muted(BUS), "Logical state flips immediately")
 	assert_false(_hw_muted(BUS), "Hardware cutoff waits for the click to stream out")
-	assert_true(AudioManager.is_any_sfx_playing(), "Confirmation click plays")
+	assert_true(SfxManager.is_any_sfx_playing(), "Confirmation click plays")
 
 	await get_tree().create_timer(CUTOFF_WAIT).timeout
 	assert_true(_hw_muted(BUS), "Hardware is muted after the delay")
@@ -164,20 +164,20 @@ func test_programmatic_mute_is_silent_and_immediate() -> void:
 
 	assert_true(AudioManager.get_muted(BUS))
 	assert_true(_hw_muted(BUS), "No deferral without a click")
-	assert_false(AudioManager.is_any_sfx_playing(), "Programmatic toggles are silent")
+	assert_false(SfxManager.is_any_sfx_playing(), "Programmatic toggles are silent")
 
 
 ## Manual unmute: click plays and the bus is audible immediately.
 ## :rtype: void
 func test_manual_unmute_clicks_and_applies_immediately() -> void:
 	AudioManager.toggle_mute(BUS, true, false)
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 
 	AudioManager.toggle_mute(BUS, false, true)
 
 	assert_false(AudioManager.get_muted(BUS))
 	assert_false(_hw_muted(BUS), "Unmute is never deferred")
-	assert_true(AudioManager.is_any_sfx_playing(), "Confirmation click plays")
+	assert_true(SfxManager.is_any_sfx_playing(), "Confirmation click plays")
 
 
 ## A newer toggle issued during the cutoff delay wins over the pending mute.
@@ -215,7 +215,7 @@ func test_unknown_bus_is_ignored() -> void:
 
 	AudioManager.mute_toggled.disconnect(on_toggled)
 	assert_eq(emitted.size(), 0, "No state change for an unknown bus")
-	assert_false(AudioManager.is_any_sfx_playing(), "No click for an unknown bus")
+	assert_false(SfxManager.is_any_sfx_playing(), "No click for an unknown bus")
 
 
 # ==========================================
@@ -314,7 +314,7 @@ func test_ui_press_clicks_regardless_of_focus() -> void:
 	audio_instance.mute_music.button_pressed = false  # press = mute
 
 	assert_true(AudioManager.get_muted(BUS))
-	assert_true(AudioManager.is_any_sfx_playing(), "Real presses are manual interactions")
+	assert_true(SfxManager.is_any_sfx_playing(), "Real presses are manual interactions")
 	await get_tree().create_timer(CUTOFF_WAIT).timeout
 	assert_true(_hw_muted(BUS))
 	assert_eq(_saved_muted(BUS), true, "Menu toggles are persisted")
@@ -342,7 +342,7 @@ func test_mute_persists_when_menu_closes_during_cutoff_delay() -> void:
 func test_locked_slider_click_is_manual_unmute() -> void:
 	await _open_menu()
 	AudioManager.toggle_mute(BUS, true, false)
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 
 	var click := InputEventMouseButton.new()
 	click.button_index = MOUSE_BUTTON_LEFT
@@ -352,7 +352,7 @@ func test_locked_slider_click_is_manual_unmute() -> void:
 
 	assert_false(AudioManager.get_muted(BUS))
 	assert_false(_hw_muted(BUS))
-	assert_true(AudioManager.is_any_sfx_playing(), "Slider-click proxy counts as a user action")
+	assert_true(SfxManager.is_any_sfx_playing(), "Slider-click proxy counts as a user action")
 
 
 ## Background sync (e.g. reset, web bridge) never runs the pipeline: no click.
@@ -364,7 +364,7 @@ func test_background_sync_does_not_click() -> void:
 	await get_tree().process_frame
 
 	assert_false(audio_instance.mute_music.button_pressed, "Button mirrors the new state")
-	assert_false(AudioManager.is_any_sfx_playing(), "Sync is silent")
+	assert_false(SfxManager.is_any_sfx_playing(), "Sync is silent")
 
 
 # ==========================================
@@ -381,7 +381,7 @@ func test_web_mute_is_silent_immediate_and_saved() -> void:
 
 	assert_true(AudioManager.get_muted(BUS))
 	assert_true(_hw_muted(BUS), "Programmatic cutoff is immediate")
-	assert_false(AudioManager.is_any_sfx_playing(), "Web toggles are silent")
+	assert_false(SfxManager.is_any_sfx_playing(), "Web toggles are silent")
 	assert_eq(_saved_muted(BUS), true, "Web toggles are persisted")
 
 

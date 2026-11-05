@@ -23,12 +23,12 @@ func before_all() -> void:
 
 
 func before_each() -> void:
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	AudioManager.reset_volumes()
 
 
 func after_each() -> void:
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	if AudioManager.has_method("cleanup_for_test"):
 		AudioManager.cleanup_for_test()
 	AudioManager.reset_volumes()
@@ -48,9 +48,9 @@ func test_global_button_press_routes_to_menu_sfx_bus() -> void:
 	await wait_process_frames(1)
 
 	# 3. Assert: Verify routing destination via decoupled public diagnostic API
-	var targeted_bus := AudioManager.get_active_sfx_bus_name()
+	var targeted_bus := SfxManager.get_active_sfx_bus_name()
 
-	assert_true(AudioManager.is_any_sfx_playing(), "A pool channel must be actively streaming the confirmation click.")
+	assert_true(SfxManager.is_any_sfx_playing(), "A pool channel must be actively streaming the confirmation click.")
 	assert_eq(targeted_bus, MENU_BUS, "Centralized button click confirmation audio must route over the dedicated Menu SFX layer.")
 
 
@@ -69,11 +69,11 @@ func test_button_suppression_gating_is_respected() -> void:
 	# Act: Trigger both suppressed elements
 	flat_btn.pressed.emit()
 	await wait_process_frames(1)
-	assert_false(AudioManager.is_any_sfx_playing(), "Flat buttons must bypass the global interceptor and remain silent.")
+	assert_false(SfxManager.is_any_sfx_playing(), "Flat buttons must bypass the global interceptor and remain silent.")
 
 	muted_btn.pressed.emit()
 	await wait_process_frames(1)
-	assert_false(AudioManager.is_any_sfx_playing(), "Buttons with explicit 'no_global_sound' metadata must remain silent.")
+	assert_false(SfxManager.is_any_sfx_playing(), "Buttons with explicit 'no_global_sound' metadata must remain silent.")
 
 
 ## Test Case 3: Verifies that standard engine Dialog components do not trigger global interceptor sounds.
@@ -88,4 +88,4 @@ func test_dialog_internal_buttons_are_excluded() -> void:
 	ok_button.pressed.emit()
 	await wait_process_frames(1)
 
-	assert_false(AudioManager.is_any_sfx_playing(), "Internal dialog controls must be excluded from centralized button sound loops.")
+	assert_false(SfxManager.is_any_sfx_playing(), "Internal dialog controls must be excluded from centralized button sound loops.")

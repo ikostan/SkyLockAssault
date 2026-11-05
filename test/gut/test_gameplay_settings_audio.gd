@@ -23,10 +23,10 @@ func before_each() -> void:
 	Globals.settings = GameSettingsResource.new()
 	Globals.settings.difficulty = 1.0
 
-	# Defensively locate or fallback mock the AudioManager singleton to shield headless runners
-	_audio_manager = get_tree().root.get_node_or_null("AudioManager")
+	# Defensively locate or fallback mock the SfxManager singleton to shield headless runners
+	_audio_manager = get_tree().root.get_node_or_null("SfxManager")
 	if not is_instance_valid(_audio_manager):
-		_audio_manager = DummyAudioManager.new()
+		_audio_manager = DummySfxManager.new()
 
 	# FIX: Clear out lingering audio playback from preceding test files to prevent bleed contamination
 	_clear_pool_players()
@@ -176,7 +176,7 @@ func test_invalid_js_input_rejection_remains_silent() -> void:
 
 ## Isolated dummy placeholder class used to prevent null reference errors 
 ## when running tests inside bare environments lacking Autoload initializations.
-class DummyAudioManager:
+class DummySfxManager:
 	
 	## Mock interface matching production playing state evaluation.
 	## :rtype: bool

@@ -25,7 +25,13 @@ import yaml
 
 WORKFLOWS = [
     pathlib.Path(".github/workflows") / name
-    for name in ("gdunit4_tests.yml", "browser_test.yml", "test_ci_scripts.yml")
+    for name in (
+        "gdunit4_tests.yml",
+        "browser_test.yml",
+        "test_ci_scripts.yml",
+        "benchmark.yml",
+        "benchmark_baselines.yml",
+    )
 ]
 """Workflows under policy. Add files here as they get step timeouts."""
 
@@ -61,7 +67,7 @@ def _jobs():
         form ``<workflow>.yml:<job_id>``.
     """
     for wf in WORKFLOWS:
-        data = yaml.safe_load(wf.read_text()) or {}
+        data = yaml.safe_load(wf.read_text(encoding="utf-8")) or {}
         for job_id, job in (data.get("jobs") or {}).items():
             yield pytest.param(wf.name, job_id, job, id=f"{wf.name}:{job_id}")
 

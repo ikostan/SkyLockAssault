@@ -30,13 +30,17 @@ const SFX_CHECK: String = "check"
 ## Linear volume at or below which a bus is treated as silent and auto-muted
 ## (and above which an auto-muted bus is restored).
 const AUTO_MUTE_VOLUME_THRESHOLD: float = 0.001
+
 ## Seconds to defer a hardware mute/volume cutoff so the confirmation click
 ## can finish streaming to the audio device first.
 const MUTE_HARDWARE_DELAY: float = 0.15
-## Temporary linear volume the Master bus is held at while its auto-mute
-## confirmation click plays. A volume level, not a duration: it only shares
-## its numeric value with MUTE_HARDWARE_DELAY.
+
+## Temporary linear volume a bus on the click's feedback path (SFX_Menu, SFX,
+## Master) is held at while an auto-mute confirmation click plays (Issue #1047).
+## A volume level, not a duration: it only shares its numeric value with
+## MUTE_HARDWARE_DELAY.
 const FEEDBACK_HOLD_VOLUME_LINEAR: float = 0.15
+
 ## Linear volume a bus is restored to when it is unmuted at or below
 ## AUTO_MUTE_VOLUME_THRESHOLD and no last audible volume is known yet
 ## (e.g. after a restart). Sits on the sliders' 0.033 step grid (15 steps).

@@ -33,7 +33,7 @@ func after_each() -> void:
 	Globals.next_scene = original_next_scene
 	Globals.settings = original_settings
 	
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	
 	var focus_owner := get_viewport().gui_get_focus_owner()
 	if is_instance_valid(focus_owner):

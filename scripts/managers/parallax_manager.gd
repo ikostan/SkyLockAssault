@@ -27,10 +27,9 @@ var _settings: GameSettingsResource
 
 ## Injects the required data resources and wires up observer signals.
 ## Prevents tight coupling to global singletons in the process loop.
-## @param speed: SpeedResource - The player's speed state.
-## @param fuel: FuelResource - The player's fuel state.
-## @param settings: GameSettingsResource - The configuration resource.
-## @return: void
+## [param speed]: SpeedResource - The player's speed state.
+## [param fuel]: FuelResource - The player's fuel state.
+## [param settings]: GameSettingsResource - The configuration resource.
 func setup(speed: SpeedResource, fuel: FuelResource, settings: GameSettingsResource) -> void:
 	# 1. Disconnect previously observed resources
 	_disconnect_signals()
@@ -56,7 +55,6 @@ func setup(speed: SpeedResource, fuel: FuelResource, settings: GameSettingsResou
 
 
 ## Helper to disconnect signals during teardown or replacement.
-## @return: void
 func _disconnect_signals() -> void:
 	if (
 		is_instance_valid(_speed_resource)
@@ -96,7 +94,6 @@ func _lcm(a: int, b: int) -> int:
 ## IMPORTANT: For flawless wrapping, (motion_mirroring.y / motion_scale.y) MUST result
 ## in a whole number. Fractional periods will be rounded and may cause visual drift over time.
 ## Must be called after all layers have had their mirroring and scale set.
-## @return: void
 func auto_calculate_wrap_period() -> void:
 	var computed_lcm: int = 1
 	var periods: Array[int] = []
@@ -150,31 +147,27 @@ func auto_calculate_wrap_period() -> void:
 
 
 ## Observer callback for speed updates.
-## @param new_speed: float - The new forward speed.
-## @return: void
+## [param new_speed]: float - The new forward speed.
 func _on_speed_updated(new_speed: float) -> void:
 	_current_speed = new_speed
 
 
 ## Observer callback for specific setting updates (difficulty).
-## @param setting_name: String - The name of the changed setting.
-## @param new_value: Variant - The updated value.
-## @return: void
+## [param setting_name]: String - The name of the changed setting.
+## [param new_value]: Variant - The updated value.
 func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
 	if setting_name == "difficulty":
 		_difficulty = float(new_value)
 
 
 ## Observer callback for fuel changes to recover from flameout.
-## @param new_value: float - The current fuel value.
-## @return: void
+## [param new_value]: float - The current fuel value.
 func _on_fuel_changed(new_value: float) -> void:
 	if new_value > 0.0:
 		_out_of_fuel = false
 
 
 ## Observer callback to instantly snap the background when fuel runs out.
-## @return: void
 func _on_fuel_depleted() -> void:
 	_out_of_fuel = true
 	scroll_offset = Vector2.ZERO
@@ -183,8 +176,7 @@ func _on_fuel_depleted() -> void:
 ## Called every physics/rendering frame.
 ## Updates scroll offset based entirely on cached local variables
 ## and wraps to preserve float precision.
-## @param delta: float - The elapsed time since the previous frame.
-## @return: void
+## [param delta]: float - The elapsed time since the previous frame.
 func _process(delta: float) -> void:
 	if _out_of_fuel:
 		scroll_offset = Vector2.ZERO

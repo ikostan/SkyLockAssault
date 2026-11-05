@@ -23,7 +23,7 @@ func before_each() -> void:
 	Globals.options_open = true
 	
 	# Clear out any lingering playback frames
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	if AudioManager.has_method("cleanup_for_test"):
 		AudioManager.cleanup_for_test()
 
@@ -40,7 +40,7 @@ func after_each() -> void:
 	if is_instance_valid(focus_owner):
 		focus_owner.release_focus()
 		
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 
 
 # ==========================================================================
@@ -119,7 +119,7 @@ func _assert_menu_navigation_sfx_trigger(scene_path: String) -> void:
 	assert_eq(get_viewport().gui_get_focus_owner(), target_control, "Focus grab confirmation failed for layout: %s" % scene_path)
 	
 	# Prime viewport and trigger directional UI navigation
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	var event := InputEventAction.new()
 	event.action = "ui_down"
 	event.pressed = true
@@ -129,11 +129,11 @@ func _assert_menu_navigation_sfx_trigger(scene_path: String) -> void:
 	
 	# Assertions targeting the input consumption regression bug
 	assert_true(
-		AudioManager.is_any_sfx_playing(),
+		SfxManager.is_any_sfx_playing(),
 		"Regression: Focused node in '%s' swallowed navigation event, blocking menu SFX playback." % scene_path
 	)
 	
-	var active_path := AudioManager.get_active_sfx_stream_path()
+	var active_path := SfxManager.get_active_sfx_stream_path()
 	assert_true(
 		active_path.contains("ui_navigation.wav"),
 		"Expected '%s' to play 'ui_navigation.wav', but played '%s' instead." % [scene_path, active_path]
@@ -160,7 +160,7 @@ func test_pause_menu_navigation_sfx_while_paused() -> void:
 	assert_true(get_tree().paused, "Precondition: SceneTree must be successfully paused.")
 	
 	# 4. Clear old audio streams and push navigation input
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	var event := InputEventAction.new()
 	event.action = "ui_down"
 	event.pressed = true
@@ -173,11 +173,11 @@ func test_pause_menu_navigation_sfx_while_paused() -> void:
 	
 	# 6. Assertions to verify the pause-state silent failure
 	assert_true(
-		AudioManager.is_any_sfx_playing(),
+		SfxManager.is_any_sfx_playing(),
 		"Regression: Focused node in paused Pause Menu swallowed navigation event or UiManager was frozen."
 	)
 	
-	var active_path := AudioManager.get_active_sfx_stream_path()
+	var active_path := SfxManager.get_active_sfx_stream_path()
 	assert_true(
 		active_path.contains("ui_navigation.wav"),
 		"Expected paused menu to play 'ui_navigation.wav', but played '%s' instead." % active_path

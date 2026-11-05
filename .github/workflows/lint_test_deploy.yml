@@ -65,6 +65,16 @@ jobs:
     needs:
       - "tests_ubuntu_24"
     uses: "./.github/workflows/trivy.yml"
+  benchmark:
+    name: "Performance Benchmark"
+    needs:
+      - "tests_ubuntu_24"
+    uses: "./.github/workflows/benchmark.yml"
+  benchmark_baselines:
+    name: "Benchmark Baselines"
+    needs:
+      - "benchmark"
+    uses: "./.github/workflows/benchmark_baselines.yml"
   release_drafter:
     name: "Release Drafter"
     needs:

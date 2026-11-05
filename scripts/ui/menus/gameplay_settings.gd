@@ -322,15 +322,15 @@ func _extract_js_difficulty(args: Array) -> Variant:
 	return first_arg
 
 
-## Helper to cleanly trigger interactive feedback via the global AudioManager
+## Helper to cleanly trigger interactive feedback via the global SfxManager
 ## Prevents engine-level environment execution faults during headless unit testing pipelines.
 ##
 ## :rtype: void
 func _play_slider_sfx() -> void:
-	if is_instance_valid(AudioManager) and AudioManager.has_method("play_sfx"):
-		AudioManager.play_sfx("slider")
+	if is_instance_valid(SfxManager) and SfxManager.has_method("play_sfx"):
+		SfxManager.play_sfx("slider")
 	elif is_instance_valid(Globals):
 		Globals.log_message(
-			"Gameplay Settings: AudioManager unavailable or missing play_sfx method.",
+			"Gameplay Settings: SfxManager unavailable or missing play_sfx method.",
 			Globals.LogLevel.DEBUG
 		)

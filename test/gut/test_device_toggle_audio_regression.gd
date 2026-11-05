@@ -20,7 +20,7 @@ func before_each() -> void:
 	Globals.options_open = true
 	
 	# Purge running streams from the shared singleton pool
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	if AudioManager.has_method("cleanup_for_test"):
 		AudioManager.cleanup_for_test()
 
@@ -35,7 +35,7 @@ func after_each() -> void:
 	if is_instance_valid(focus_owner):
 		focus_owner.release_focus()
 		
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 
 
 ## Test Scenario: Verify that toggling the Keyboard CheckButton in the Key Mapping Menu
@@ -53,17 +53,17 @@ func test_keyboard_toggle_triggers_check_sfx() -> void:
 	assert_not_null(keyboard_btn, "Precondition: Keyboard CheckButton must exist in layout.")
 
 	# 3. Simulate toggling the button
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	keyboard_btn.toggled.emit(true)
 	await wait_process_frames(1)
 
 	# 4. Assert that the correct sound played
 	assert_true(
-		AudioManager.is_any_sfx_playing(),
+		SfxManager.is_any_sfx_playing(),
 		"Regression Failure: Toggling the Keyboard button did not trigger any UI audio feedback."
 	)
 	
-	var active_path := AudioManager.get_active_sfx_stream_path()
+	var active_path := SfxManager.get_active_sfx_stream_path()
 	assert_true(
 		active_path.contains("check.wav"),
 		"Regression Failure: Expected 'check.wav' to play, but played '%s' instead." % active_path
@@ -84,17 +84,17 @@ func test_gamepad_toggle_triggers_check_sfx() -> void:
 	assert_not_null(gamepad_btn, "Precondition: Gamepad CheckButton must exist in layout.")
 
 	# 3. Simulate toggling the button
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 	gamepad_btn.toggled.emit(true)
 	await wait_process_frames(1)
 
 	# 4. Assert that the correct sound played
 	assert_true(
-		AudioManager.is_any_sfx_playing(),
+		SfxManager.is_any_sfx_playing(),
 		"Regression Failure: Toggling the Gamepad button did not trigger any UI audio feedback."
 	)
 	
-	var active_path := AudioManager.get_active_sfx_stream_path()
+	var active_path := SfxManager.get_active_sfx_stream_path()
 	assert_true(
 		active_path.contains("check.wav"),
 		"Regression Failure: Expected 'check.wav' to play, but played '%s' instead." % active_path

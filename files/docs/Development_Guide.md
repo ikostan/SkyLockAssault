@@ -67,6 +67,7 @@ func _ready() -> void:
 ### Top-Down Movement (player.gd)
 
 Use CharacterBody2D for physics. Example code:
+
 ```gdscript
 extends CharacterBody2D
 

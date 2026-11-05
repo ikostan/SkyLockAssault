@@ -45,19 +45,19 @@ func after_each() -> void:
 ## Silences active audio signals via public API.
 ## @return void
 func _clear_pool_players() -> void:
-	AudioManager.stop_all_sfx()
+	SfxManager.stop_all_sfx()
 
 
 ## Helper: Checks if any sound is actively streaming using public API.
 ## @return bool
 func _is_sound_playing() -> bool:
-	return AudioManager.is_any_sfx_playing()
+	return SfxManager.is_any_sfx_playing()
 
 
 ## Helper: Inspects the pool via public API to find the playing stream's resource path.
 ## @return String
 func _get_playing_stream_path() -> String:
-	return AudioManager.get_active_sfx_stream_path()
+	return SfxManager.get_active_sfx_stream_path()
 
 
 # ==========================================================================
@@ -143,7 +143,7 @@ func test_interaction_spam_is_bounded() -> void:
 	audio_instance._on_music_mute_toggled(false)
 	await Engine.get_main_loop().process_frame
 	
-	var play_count: int = AudioManager.get_active_sfx_playback_count()
+	var play_count: int = SfxManager.get_active_sfx_playback_count()
 	
 	# Assert exact count instead of inequality
 	assert_eq(play_count, 3, "Interaction spam should result in exactly 3 requests. Was: " + str(play_count))
@@ -229,7 +229,7 @@ func test_audio_pool_no_leak_under_stress() -> void:
 	var btn: CheckButton = audio_instance.mute_music
 	btn.grab_focus()
 	
-	var initial_count := AudioManager.get_active_sfx_playback_count()
+	var initial_count := SfxManager.get_active_sfx_playback_count()
 	
 	for i in range(20):
 		audio_instance._on_music_mute_toggled(i % 2 == 0)
@@ -238,7 +238,7 @@ func test_audio_pool_no_leak_under_stress() -> void:
 	# Wait for sounds to finish naturally
 	await get_tree().create_timer(0.5).timeout
 	
-	var final_count := AudioManager.get_active_sfx_playback_count()
+	var final_count := SfxManager.get_active_sfx_playback_count()
 	
 	# Update threshold to 10 (or whatever realistic steady-state number you see)
 	# The important part of a "leak" test is that it doesn't grow to 20+.
@@ -267,7 +267,7 @@ func test_play_invalid_sfx_key_is_resilient() -> void:
 	_clear_pool_players()
 	
 	# Attempt to play a non-existent sound key
-	AudioManager.play_sfx("INVALID_CORRUPT_KEY_999")
+	SfxManager.play_sfx("INVALID_CORRUPT_KEY_999")
 	await Engine.get_main_loop().process_frame
 	
 	# Assert system is still functional and didn't crash

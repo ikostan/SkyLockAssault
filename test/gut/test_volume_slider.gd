@@ -11,7 +11,7 @@ extends "res://addons/gut/test.gd"
 # MOCKS
 # ==========================================
 
-class MockAudioManager extends Node:
+class MockSfxManager extends Node:
 	var played_sfx: Array[String] = []
 	
 	func play_sfx(sfx_name: String, _bus_name: String = "", _pitch_scale: float = 1.0, _volume_db: float = 0.0) -> void:
@@ -131,14 +131,14 @@ func test_sfx_guard_blocks_identical_values() -> void:
 ## EXPECTED: All guards pass; _last_sfx_time is updated and _previous_value is committed.
 func test_sfx_guard_allows_valid_interaction() -> void:
 	# 1. Setup the manual mock to block real audio I/O
-	var mock_am: MockAudioManager = MockAudioManager.new()
+	var mock_am: MockSfxManager = MockSfxManager.new()
 	
-	# Swap out the real AudioManager in the scene tree
+	# Swap out the real SfxManager in the scene tree
 	var root := get_tree().root
-	var real_am := root.get_node("AudioManager")
+	var real_am := root.get_node("SfxManager")
 	root.remove_child(real_am)
 	root.add_child(mock_am)
-	mock_am.name = "AudioManager"
+	mock_am.name = "SfxManager"
 	
 	# 2. Setup slider interaction variables
 	_slider._previous_value = 0.2
@@ -156,7 +156,7 @@ func test_sfx_guard_allows_valid_interaction() -> void:
 	assert_eq(mock_am.played_sfx.size(), 1, "play_sfx should be called exactly once.")
 	assert_eq(mock_am.played_sfx[0], AudioConstants.SFX_SLIDER, "The correct SFX constant should be played.")
 	
-	# 6. Cleanup: Safely restore the original AudioManager
+	# 6. Cleanup: Safely restore the original SfxManager
 	root.remove_child(mock_am)
 	root.add_child(real_am)
 	mock_am.free()
