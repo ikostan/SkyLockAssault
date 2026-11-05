@@ -9,6 +9,7 @@
 **PR:** [#1132](https://github.com/ikostan/SkyLockAssault/pull/1132)  
 **Branch:** `run-the-benchmark-on-pull-requests-report-only` → `main`  
 **Author:** @ikostan  
+**Merged:** Nov 5, 2026 as `1dcb7db` (final PR commit `29ac8ed`)  
 **Resolves:**
 
 - [#1112 – [TASK] Run the benchmark on pull requests (report-only)](https://github.com/ikostan/SkyLockAssault/issues/1112)
@@ -85,14 +86,14 @@ It also corrects the Part 8 note (#1129), and it carries the weekly GDScript doc
 
 ## Verification
 
-- **PR CI on `72f4cb8` (final commit):** [run 41964350772](https://github.com/ikostan/SkyLockAssault/actions/runs/41964350772): the whole pipeline passes, and `pytest tests/ci/` gives 966 passed. Markdown Lint gives 0 issues, and YAML Lint, GDScript Lint, GUT, GDUnit4 and all browser shards pass.
+- **PR CI on `72f4cb8` (last commit before this note, `29ac8ed`):** [run 41964350772](https://github.com/ikostan/SkyLockAssault/actions/runs/41964350772): the whole pipeline passes, and `pytest tests/ci/` gives 966 passed. Markdown Lint gives 0 issues, and YAML Lint, GDScript Lint, GUT, GDUnit4 and all browser shards pass.
 - **Benchmark on the same run:** Desktop and Web both pass in about 4 to 5 minutes, each showing its table and the "Report only" line. All rows are ✅.
 - **Noise seen on real runs:** Web `OBJECT_NODE_COUNT` was 481.6 on `6097271` and 514.3 on `72f4cb8`, with only test and doc changes between them. That is why those averages only warn on web, and it means a 🟢 there can be noise too.
 - **Test strength:** breaking 8 key lines on purpose makes the tests fail, including each filter pattern, the output, `||` to `&&`, write permission and a job needing `benchmark`. `|| true` and a full-reference gate call got through CodeRabbit's first version, and fail now.
 - **Merge rules:** the branch protection API shows no required status checks on `main`, and the repository has no rulesets.
 - **Locally:** `ruff`, `yamllint`, `actionlint` 1.7.12 (CI pins 1.7.7) and markdownlint-cli2 0.23.2 pass. `gdlint` and `gdformat` pass on `game_settings_resource.gd`.
 - **Local failures, not from this PR:** `test_injection_readonly_file` also fails without these changes, most likely because the sandbox runs as root. One `test_docstrings_workflow.py` setup hit a 10-second `git clone` timeout, on a different test each run. Both pass in CI.
-- **`main` after merge:** to confirm on the first run.
+- **`main` after merge:** [Run 41971415885](https://github.com/ikostan/SkyLockAssault/actions/runs/41971415885) passed on `1dcb7db`, with baseline commit `56557c9` and the deploy green.
 
 ---
 

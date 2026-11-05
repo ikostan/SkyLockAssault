@@ -2,13 +2,15 @@
 
 Design doc, Oct 30, 2026
 
-Status: in progress in [#1107](https://github.com/ikostan/SkyLockAssault/issues/1107).
+Status: done in [#1107](https://github.com/ikostan/SkyLockAssault/issues/1107).
 [#1109](https://github.com/ikostan/SkyLockAssault/issues/1109) added the ratchet,
 the rolling medians and the accept rule to `compare.py`.
 [#1111](https://github.com/ikostan/SkyLockAssault/issues/1111) turns them on
 in CI.
 [#1112](https://github.com/ikostan/SkyLockAssault/issues/1112) runs the benchmark
 on pull requests, report-only.
+[#1113](https://github.com/ikostan/SkyLockAssault/issues/1113) removes the
+committed baselines from `main`.
 
 Source: the design doc in
 [[EPIC] Automatic CI benchmark baselines #1107](https://github.com/ikostan/SkyLockAssault/issues/1107).
@@ -17,18 +19,17 @@ How the benchmark itself runs is in
 
 ## Problem
 
-The CI benchmark baselines (`test/benchmark/baseline_ci.json`,
-`baseline_web_ci.json`) are committed files that only change by hand, so
-improvements are never locked in. They still come from the PR
-[#1094](https://github.com/ikostan/SkyLockAssault/pull/1094) merge run
-(`ee128f9`).
+The CI benchmark baselines were committed files on `main` that only changed by
+hand, so improvements were never locked in. When this was written they still
+came from the PR [#1094](https://github.com/ikostan/SkyLockAssault/pull/1094)
+merge run (`ee128f9`).
 
 The first `main` run after PR
-[#1098](https://github.com/ikostan/SkyLockAssault/pull/1098) shows why that
+[#1098](https://github.com/ikostan/SkyLockAssault/pull/1098) showed why that
 matters: settings saves dropped from 61 to 0 on desktop and from 60 to 0 on
-web, and CI marked both green, but the baseline still says 61. With a count
-tolerance of 2, a change that brought the per-tick save back would show 61
-against 61 and pass. Goal: baselines that maintain themselves, with no manual
+web, and CI marked both green, but the baseline still said 61. With a count
+tolerance of 2, a change that brought the per-tick save back would have shown 61
+against 61 and passed. Goal: baselines that maintain themselves, with no manual
 file edits.
 
 ## Counts: a ratchet that only moves down
@@ -188,7 +189,7 @@ count baseline plus the last 5 passing runs the two rules need.
 |---------------------------|---------------------------------------------------------|
 | Actions cache             | Evicted after 7 days without use                        |
 | Workflow artifacts        | Expire, and cannot be read back reliably by a later run |
-| Committed files on `main` | Today's manual process; `main` is protected             |
+| Committed files on `main` | The old manual process; `main` is protected             |
 <!-- markdownlint-enable MD013 -->
 
 ### Seed
@@ -217,7 +218,7 @@ day or two.
 <!-- markdownlint-disable MD013 -->
 | # | Sub-task                                                                                                                                                                                                                                                                                          | Size | Needs | Done when                                                                                             |
 |---|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|-------|-------------------------------------------------------------------------------------------------------|
-| 1 | Refresh `baseline_ci.json` and `baseline_web_ci.json` from the first `main` run after #1098                                                                                                                                                                                                       | XS   | —     | Both show 0 saves, so a return to 61 fails                                                            |
+| 1 | Refresh the two committed baselines from the first `main` run after #1098                                                                                                                                                                                                                         | XS   | —     | Both show 0 saves, so a return to 61 fails                                                            |
 | 2 | Baseline rules in `compare.py`: history format, ratchet with tolerance margin, rolling median, accept raises failing counts only, summary says why a baseline moved. Tests in `tests/ci/test_benchmark_compare.py`, existing cases kept                                                           | M    | —     | Each rule has tests and the suite passes                                                              |
 | 3 | Create the orphan `benchmark-baselines` branch and seed `desktop.json` and `web.json` from task 1's files. Manual, no PR                                                                                                                                                                          | XS   | 1, 2  | Both files are on the branch in the new format, and the ruleset question is answered                  |
 | 4 | New `benchmark_baselines.yml` with one `baselines` job: gate, update, push once, concurrency group, `contents: write`. `benchmark.yml` jobs only measure and report. Accept path: `benchmark-accept` label, label lookup by commit SHA, `workflow_dispatch` with the failed run's ID and `accept` | M    | 2, 3  | A `main` run commits to the branch; a labelled merge and a manual run both raise failing counts       |

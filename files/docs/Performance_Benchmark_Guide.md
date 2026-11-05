@@ -96,9 +96,10 @@ All under `test/benchmark/`:
 | `benchmark_runner.tscn` | A plain `Node` with the script attached          |
 | `run_desktop.py`        | Runs it N times, checks validity, writes medians |
 | `run_web.py`            | Same, in Chromium (`Web_benchmark` export)       |
-| `compare.py`            | Compares medians with the CI baseline            |
-| `baseline_ci.json`      | Desktop CI baseline (committed from a CI run)    |
-| `baseline_web_ci.json`  | Web CI baseline (committed from a CI run)        |
+| `compare.py`            | Compares medians with a baseline, updates it     |
+
+The CI baselines are not in this folder. They live on the `benchmark-baselines`
+branch (see [How the baselines update](#how-the-baselines-update)).
 
 GUT only scans `res://test/gut/`, so nothing in `test/benchmark/` runs as a
 unit test.
@@ -521,16 +522,20 @@ The "after" Docker run is the Step 3 command with `--name after`.
 The workflow `.github/workflows/benchmark.yml` runs two jobs in parallel on
 GitHub runners (`ubuntu-24.04`):
 
-- **Desktop:** `run_desktop.py` (headless Godot). Baseline
-  `baseline_ci.json`, artifact `benchmark-results`.
+- **Desktop:** `run_desktop.py` (headless Godot). Baseline `desktop.json`,
+  artifact `benchmark-results`.
 - **Web:** `run_web.py` (`Web_benchmark` in headless Chromium). Baseline
-  `baseline_web_ci.json`, artifact `benchmark-web-results`.
+  `web.json`, artifact `benchmark-web-results`.
+
+Both jobs only measure and report. On `main`, a third job, `baselines`
+(`benchmark_baselines.yml`), applies the gate to their results.
 
 It is a reusable workflow, called from two pipelines. Each job runs the
 benchmark 3 times.
 
 - **Main pipeline** (`lint_test_deploy.yml`, on every push to `main`): runs after
-  the Ubuntu 24.04 tests pass. Neither job blocks the release or deploy jobs.
+  the Ubuntu 24.04 tests pass. None of the three jobs blocks the release or deploy
+  jobs.
 - **Pull requests** (`lint_test_on_pull.yml`): runs when a PR changes game code
   (`.gd`, `.tscn` or `.tres` files outside `test/`, or `project.godot`),
   anything under `test/benchmark/`, `benchmark.yml` or `export_presets.cfg`. It
@@ -547,9 +552,10 @@ a real browser and only warn. Its counts are as reliable as on desktop.
 What it checks (medians of the runs):
 
 - **Counts** (settings saves, live objects, orphans, reload leak). Worse than
-  the baseline beyond a small tolerance **fails** the job. Fewer is shown as
-  🟢 better and passes. On the web job, `OBJECT_COUNT` and
-  `OBJECT_NODE_COUNT` only **warn** (see below).
+  the baseline beyond a small tolerance **fails** the `baselines` job on `main`
+  and shows ❌ in the benchmark jobs' tables. Fewer is shown as 🟢 better and
+  passes. On web, `OBJECT_COUNT` and `OBJECT_NODE_COUNT` only **warn** (see
+  below).
 - **Timings** (frame p95, dropped frames, process and physics time, memory
   growth). Shared runners are noisy, so these only **warn**.
 
@@ -570,52 +576,101 @@ reload growth 2 to 12, desktop node count 503.6 to 509.2, web node count 506 to
 520); each applies only to the platform that needs it. The desktop values cover
 those whole spreads, so a baseline anywhere inside them cannot fail on noise.
 
-On the web job, `OBJECT_COUNT` and `OBJECT_NODE_COUNT` past their tolerance
-only warn. The web job runs software-rendered in Chromium, and those averages
+On web, `OBJECT_COUNT` and `OBJECT_NODE_COUNT` past their tolerance only warn.
+The web job runs software-rendered in Chromium, and those averages
 follow how fast the runner draws frames: two `main` runs with no code change
 between them gave `OBJECT_NODE_COUNT` 459 on a fast runner and 519 on a slower
 one. The desktop job measures the same game logic headless, without that
 effect, so it keeps both on the gate. On web, settings saves, resources,
-orphans and reload growth still fail the job.
+orphans and reload growth still fail the gate.
 
 Each job adds its table to the run's **Summary** page. All files are in the
 job's artifact.
 
-### Creating or updating the baseline
+### How the baselines update
 
-CI numbers differ from your PC and Docker, so the baseline must come from CI:
+Nobody edits the baselines by hand. They are `desktop.json` and `web.json` on the
+`benchmark-baselines` branch, and only the `baselines` job writes them. After each
+`main` run it downloads both results artifacts, applies the rules below and
+pushes one commit named `Baselines from run <run ID> (<SHA>)`. A re-run of a
+recorded run changes nothing. Never merge or delete this branch, and ignore
+GitHub's "Compare & pull request" banner for it.
 
-1. Open the **Main CI/CD Pipeline** run on `main` for the commit you want as
-   the reference.
-2. Download its `benchmark-results` and `benchmark-web-results` artifacts.
-3. Copy `baseline_ci.json` and `baseline_web_ci.json` from them to
-   `test/benchmark/` and commit both.
+Only passing or accepted `main` runs are recorded. Each file keeps the last 5.
 
-Downloading artifacts needs a GitHub sign-in. `main` is protected, so commit
-the files on a branch and merge them through a pull request.
+- **Counts: a ratchet.** A count baseline drops to the worst of the last 3
+  recorded runs when all 3 beat it by more than its tolerance. It never rises on
+  its own, so an improvement locks in and small regressions cannot add up.
+- **Timings: a rolling median.** Each timing is compared with the median of the
+  last 5 recorded runs, so it follows runner, Godot and Chromium changes and
+  still flags a sudden jump. On web, `OBJECT_COUNT` and `OBJECT_NODE_COUNT` work
+  the same way. The warning goes quiet after about 3 runs, because the median
+  absorbs a real jump.
 
-The first baselines come from the PR #1094 merge run (commit `ee128f9`) and
-were added in [#1097](https://github.com/ikostan/SkyLockAssault/pull/1097).
-Without a baseline file a job only reports the numbers and passes. Update the
-baselines the same way after an intended change (for example, after a fix
-that lowers settings saves), so later runs are compared with the new numbers.
+A count past its tolerance fails the `baselines` job. Nothing is pushed and the
+run is not recorded, so every later `main` run keeps failing until the count is
+fixed or accepted. A failed gate does not stop the deploy.
+
+The reasoning is in
+[Automatic_Benchmark_Baselines.md](Automatic_Benchmark_Baselines.md).
+
+### Pull request runs
+
+A PR that touches game code or the benchmark gets both tables, compared with the
+current baselines. Read them before merging: a ❌ there will fail the gate on
+`main` unless it is fixed or accepted. Timing and web object warnings do not need
+an accept.
+
+### Accepting an intended regression
+
+New gameplay can legitimately add objects and nodes. There are two ways to accept
+it. Both raise only the counts that failed, to that run's values, and record the
+PR or run that accepted them. Every other count stays on the ratchet.
+
+- **Before merging:** add the `benchmark-accept` label to the PR. It must be on
+  the PR when it merges, and it raises nothing if no count fails.
+- **After a failed run (forgot the label):** in **Actions**, open **Benchmark
+  Baselines**, choose **Run workflow** on `main`, and enter the failed **Main
+  CI/CD Pipeline** run's ID as `run_id` with `accept` ticked.
+
+The manual run refuses a run unless it is a finished push to `main` in this
+repository, its `baselines` job failed, its `desktop` and `web` jobs passed, and
+its two results artifacts still exist and match its commit. Artifacts are kept for
+30 days. The reason for a refusal is on the job's Summary page, and the full list
+is in the [design doc](Automatic_Benchmark_Baselines.md#when-a-count-is-meant-to-get-worse).
 
 ### Running the comparison locally
 
+Fetch the baselines into `bench_results/`, which git ignores:
+
 ```bash
-python test/benchmark/compare.py \
-    --results bench_results/desktop/<run>/runs.csv --profile desktop
-python test/benchmark/compare.py \
-    --results bench_results/web_headless/<run>/runs.csv \
-    --baseline test/benchmark/baseline_web_ci.json --profile web
+git fetch origin benchmark-baselines
+git show origin/benchmark-baselines:desktop.json > bench_results/desktop.json
+git show origin/benchmark-baselines:web.json > bench_results/web.json
 ```
 
-Other options: `--write-baseline <file>` writes a baseline from the results,
-`--summary <file>` appends the table to a Markdown file, `--title <text>`
-changes its heading.
+In PowerShell, run each `git show` through `cmd`, for example
+`cmd /c "git show origin/benchmark-baselines:web.json > bench_results\web.json"`.
+Windows PowerShell's own `>` writes UTF-16, and `compare.py` then exits 2 with
+`Cannot read the baseline`.
 
-Only compare results from the same kind of machine: local runs against
-`baseline_ci.json` are not meaningful for timings.
+Then compare:
+
+```bash
+python test/benchmark/compare.py \
+    --results bench_results/desktop/<run>/runs.csv \
+    --baseline bench_results/desktop.json --profile desktop --report-only
+python test/benchmark/compare.py \
+    --results bench_results/web_headless/<run>/runs.csv \
+    --baseline bench_results/web.json --profile web --report-only
+```
+
+Without `--baseline`, `compare.py` only reports the numbers. Other options:
+`--write-baseline <file>` writes a baseline from the results, `--summary <file>`
+appends the table to a Markdown file, `--title <text>` changes its heading.
+
+Only compare results from the same kind of machine: local runs against the CI
+baselines are not meaningful for timings.
 
 ## Design decisions
 

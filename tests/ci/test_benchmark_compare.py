@@ -432,25 +432,58 @@ def test_invalid_profile_is_rejected(compare, capsys):
     assert "invalid choice" in capsys.readouterr().err
 
 
+# The numbers CI measured on GitHub's runners in run 41155653694 (400d734). These
+# seeded benchmark-baselines (#1110); the copies on main were removed in #1113.
+CI_SEEDS = {
+    "desktop": {
+        "saves": 0.0,
+        "objects_avg": 2545.1833333333334,
+        "nodes_avg": 503.98333333333335,
+        "resources_avg": 206.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": 2.0,
+        "frame_p95_ms": 16.837,
+        "frames_over_33.4ms": 0.0,
+        "proc_worst_avg_ms": 0.0996,
+        "phys_worst_avg_ms": 0.1585,
+        "mem_static_growth": 148908.0,
+    },
+    "web": {
+        "saves": 0.0,
+        "objects_avg": 2222.55,
+        "nodes_avg": 458.95,
+        "resources_avg": 206.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": 0.0,
+        "frame_p95_ms": 35.7,
+        "frames_over_33.4ms": 680.0,
+        "proc_worst_avg_ms": 5.9467,
+        "phys_worst_avg_ms": 0.9767,
+        "mem_static_growth": 722056.0,
+    },
+}
+
+
 @pytest.mark.parametrize(
-    ("profile", "baseline_name", "metric", "tolerance", "gated"),
+    ("profile", "metric", "tolerance", "gated"),
     [
-        ("desktop", "baseline_ci.json", "reload_object_growth", 10, True),
-        ("desktop", "baseline_ci.json", "nodes_avg", 6, True),
-        ("web", "baseline_web_ci.json", "nodes_avg", 15, False),
-        ("web", "baseline_web_ci.json", "reload_object_growth", 1, True),
+        ("desktop", "reload_object_growth", 10, True),
+        ("desktop", "nodes_avg", 6, True),
+        ("web", "nodes_avg", 15, False),
+        ("web", "reload_object_growth", 1, True),
     ],
 )
-def test_committed_baseline_and_profile_gate(
-    compare, tmp_path, capsys, profile, baseline_name, metric, tolerance, gated
+def test_ci_seed_baseline_and_profile_gate(
+    compare, tmp_path, capsys, profile, metric, tolerance, gated
 ):
-    """Each committed CI baseline supplies all metrics and enforces its limit.
+    """Each platform's CI seed supplies all metrics and enforces its limit.
 
     Past the limit a gated metric fails; web nodes_avg only warns.
     """
-    baseline_path = PROJECT_ROOT / "test/benchmark" / baseline_name
-    doc = json.loads(baseline_path.read_text(encoding="utf-8"))
-    metrics = doc["metrics"]
+    metrics = CI_SEEDS[profile]
+    baseline_path = write_baseline(tmp_path / f"{profile}.json", metrics)
     assert set(metrics) == {
         "saves",
         "objects_avg",
@@ -493,22 +526,22 @@ def test_committed_baseline_and_profile_gate(
 
 
 @pytest.mark.parametrize(
-    ("profile", "baseline_name", "old_saves"),
+    ("profile", "old_saves"),
     [
-        ("desktop", "baseline_ci.json", 61),
-        ("web", "baseline_web_ci.json", 60),
+        ("desktop", 61),
+        ("web", 60),
     ],
 )
 @pytest.mark.parametrize(
     ("saves", "exit_code", "icon"),
     [(0, 0, "✅"), (2, 0, "✅"), (3, 1, "❌"), ("old", 1, "❌")],
 )
-def test_refreshed_baselines_gate_settings_saves(
-    compare, tmp_path, capsys, profile, baseline_name, old_saves, saves, exit_code, icon
+def test_ci_seeds_gate_settings_saves(
+    compare, tmp_path, capsys, profile, old_saves, saves, exit_code, icon
 ):
-    """Both zero-save baselines catch a return to their former save counts."""
-    baseline_path = PROJECT_ROOT / "test/benchmark" / baseline_name
-    metrics = json.loads(baseline_path.read_text(encoding="utf-8"))["metrics"]
+    """Both zero-save seeds catch a return to their former save counts."""
+    metrics = CI_SEEDS[profile]
+    baseline_path = write_baseline(tmp_path / f"{profile}.json", metrics)
     assert metrics["saves"] == 0
     saves = old_saves if saves == "old" else saves
     results = write_runs(tmp_path / "runs.csv", [{**metrics, "saves": saves}] * 3)
@@ -921,10 +954,11 @@ def test_version_1_seed_is_updated_to_version_2(compare, tmp_path):
     assert compare.build_reference(doc, "desktop")["frame_p95_ms"] == 30.0
 
 
-@pytest.mark.parametrize("name", ["baseline_ci.json", "baseline_web_ci.json"])
-def test_committed_baselines_load_as_version_2(compare, name):
-    """Task 3 can seed the branch from both committed files."""
-    doc = compare.load_baseline(PROJECT_ROOT / "test/benchmark" / name)
+@pytest.mark.parametrize("profile", ["desktop", "web"])
+def test_ci_seeds_load_as_version_2(compare, tmp_path, profile):
+    """A version 1 file with either seed's numbers loads as a version 2 baseline."""
+    path = write_baseline(tmp_path / f"{profile}.json", CI_SEEDS[profile])
+    doc = compare.load_baseline(path)
     assert doc["history"] == []
     assert doc["baseline"]["saves"] == 0
 
@@ -1495,3 +1529,75 @@ def test_desktop_node_count_observed_spread(
         {"nodes_avg": current_nodes}, {"nodes_avg": baseline_nodes}, "desktop"
     )
     assert rows[0][-1] == expected_status
+
+
+def test_no_baseline_files_are_left_in_the_benchmark_folder():
+    """The baselines live on benchmark-baselines, so stale copies cannot mislead."""
+    assert not list((PROJECT_ROOT / "test/benchmark").glob("*.json"))
+
+
+def test_baseline_argument_has_no_default(compare):
+    """Leaving out --baseline means no baseline, not a file next to the script."""
+    assert compare.parse_args(["--results", "runs.csv"]).baseline is None
+    assert not hasattr(compare, "DEFAULT_BASELINE")
+
+
+def test_no_baseline_argument_reports_and_passes(compare, tmp_path, capsys):
+    """Without --baseline the numbers are reported, and a bad count cannot fail."""
+    results = write_runs(tmp_path / "runs.csv", [{**BASE_METRICS, "saves": 9999.0}])
+    assert compare.main(["--results", str(results)]) == 0
+    out = capsys.readouterr().out
+    assert "No baseline yet" in out
+    assert "Regressions: 0. Warnings: 0." in out
+
+
+def test_write_baseline_works_without_baseline_argument(compare, tmp_path):
+    """#625's first comparison command writes a baseline with no --baseline."""
+    results = write_runs(tmp_path / "runs.csv", [BASE_METRICS] * 3)
+    new_base = tmp_path / "before.json"
+    code = compare.main(["--results", str(results), "--write-baseline", str(new_base)])
+    assert code == 0
+    doc = json.loads(new_base.read_text(encoding="utf-8"))
+    assert doc["version"] == 1
+    assert doc["metrics"]["reload_object_growth"] == 9.0
+    assert compare.main(["--results", str(results), "--baseline", str(new_base)]) == 0
+
+
+def test_update_requires_baseline_argument(compare, tmp_path, capsys):
+    """--update has nothing to gate on without --baseline, so it writes nothing."""
+    results = write_runs(tmp_path / "runs.csv", [BASE_METRICS])
+    out = tmp_path / "out.json"
+    args = ["--results", str(results), "--update", str(out), "--run-id", "r1"]
+    with pytest.raises(SystemExit) as exc:
+        compare.main([*args, "--profile", "desktop"])
+    assert exc.value.code == 2
+    assert "--update requires --baseline" in capsys.readouterr().err
+    assert not out.exists()
+
+
+@pytest.mark.parametrize("has_baseline", [True, False])
+def test_report_only_does_not_say_counts_fail_the_job(
+    compare, tmp_path, capsys, has_baseline
+):
+    """A report-only table must not promise a failure that cannot happen."""
+    results = write_runs(tmp_path / "runs.csv", [{**BASE_METRICS, "saves": 99.0}])
+    args = ["--results", str(results), "--report-only"]
+    if has_baseline:
+        path = write_baseline(tmp_path / "base.json", BASE_METRICS)
+        args += ["--baseline", str(path)]
+    assert compare.main(args) == 0
+    out = capsys.readouterr().out
+    assert "fail the job" not in out
+    assert "does not fail this job" in out
+    assert "Timings only warn" in out
+    assert "Report only: this run does not fail or update the baseline." in out
+
+
+def test_gating_report_still_says_counts_fail_the_job(compare, tmp_path, capsys):
+    """The gate's own table keeps the warning, where it is true."""
+    results = write_runs(tmp_path / "runs.csv", [BASE_METRICS])
+    path = write_baseline(tmp_path / "base.json", BASE_METRICS)
+    assert compare.main(["--results", str(results), "--baseline", str(path)]) == 0
+    out = capsys.readouterr().out
+    assert "Counts fail the job if they get worse" in out
+    assert "does not fail this job" not in out

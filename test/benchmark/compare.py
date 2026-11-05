@@ -17,7 +17,7 @@ metric across the runs and compares it with the baseline file:
 Usage:
 
     python test/benchmark/compare.py --results <out>/runs.csv
-        [--baseline test/benchmark/baseline_ci.json]
+        [--baseline <baseline file>]
         [--summary <markdown file to append the table to>]
         [--write-baseline <path for a new version 1 baseline file>]
         [--title <report heading>]
@@ -25,11 +25,13 @@ Usage:
         [--report-only]
         [--update <path> --run-id <id> [--commit <sha>] [--accept <id>]]
 
-With no baseline file yet, it only reports the numbers (exit 0). Use
---write-baseline to produce a baseline file from these results.
+The CI baselines live on the benchmark-baselines branch (desktop.json, web.json);
+CI passes them with --baseline. With no --baseline, or a path with no file there, it
+only reports the numbers (exit 0). Use --write-baseline to produce a baseline file
+from these results.
 
 --update writes the updated version 2 file, which needs a passing or accepted
-run and an existing baseline. A version 2 file holds:
+run and an existing --baseline file. A version 2 file holds:
 
 - baseline: the count baselines the gate compares against. A seed file also
   holds the values that later follow the rolling median; each one is the
@@ -73,7 +75,6 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-DEFAULT_BASELINE = Path(__file__).resolve().parent / "baseline_ci.json"
 BASELINE_VERSION = 1
 HISTORY_VERSION = 2
 HISTORY_RUNS = 5
@@ -153,8 +154,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--baseline",
         type=Path,
-        default=DEFAULT_BASELINE,
-        help="Baseline JSON (default: test/benchmark/baseline_ci.json).",
+        help="Baseline JSON. Without it, the numbers are only reported.",
     )
     parser.add_argument(
         "--summary", type=Path, help="Append the Markdown report to this file."
@@ -209,6 +209,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         parser.error("--update requires --run-id")
     if args.update and not args.profile:
         parser.error("--update requires --profile")
+    if args.update and not args.baseline:
+        parser.error("--update requires --baseline")
     return args
 
 
@@ -512,6 +514,7 @@ def render(
     baseline_meta: dict | None,
     title: str = DEFAULT_TITLE,
     profile: str | None = None,
+    report_only: bool = False,
 ) -> str:
     """Render the comparison as Markdown."""
     lines = [f"## {title}", ""]
@@ -525,10 +528,17 @@ def render(
         history = baseline_meta.get("history", [])[-HISTORY_RUNS:]
         if history:
             lines.append(f"Timings: median of the last {len(history)} passing runs.")
-    lines += [
-        f"Medians of {runs} runs. Counts fail the job if they get worse;",
-        "timings only warn (shared CI runners are noisy).",
-    ]
+    if report_only:
+        lines += [
+            f"Medians of {runs} runs. A worse count shows ❌ but does not fail this job;",
+            "on `main`, the baselines gate fails on it unless it is accepted.",
+            "Timings only warn (shared CI runners are noisy).",
+        ]
+    else:
+        lines += [
+            f"Medians of {runs} runs. Counts fail the job if they get worse;",
+            "timings only warn (shared CI runners are noisy).",
+        ]
     warn_only = PROFILE_WARN_ONLY.get(profile or "", frozenset())
     if warn_only:
         labels = [rule.label for rule in COUNT_RULES if rule.key in warn_only]
@@ -569,7 +579,7 @@ def build_baseline(medians: dict[str, float], runs: int, info: dict[str, str]) -
 
 def read_baseline(args: argparse.Namespace) -> dict | None:
     """Load the baseline; raise ValueError if it is unusable for this run."""
-    doc = load_baseline(args.baseline)
+    doc = load_baseline(args.baseline) if args.baseline else None
     if args.update and doc is None:
         # Seeding from this run would silently reset the gate.
         raise ValueError(f"--update needs a baseline: {args.baseline} not found")
@@ -661,7 +671,9 @@ def main(argv: list[str] | None = None) -> int:
             baseline_doc, medians, failing, args, info, runs
         )
 
-    report = render(rows, runs, baseline_doc, args.title, args.profile)
+    report = render(
+        rows, runs, baseline_doc, args.title, args.profile, args.report_only
+    )
     report = finish_report(report, changes, args.report_only)
     print(report)
     write_outputs(args, report, build_baseline(medians, runs, info), updated)
