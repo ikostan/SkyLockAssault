@@ -6,7 +6,7 @@ FROM ubuntu:24.04
 # Install base dependencies (added nodejs, npm, libglib2.0-bin, kio, gvfs, xvfb, aria2)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip wget unzip curl git zip libxml2-utils netcat-openbsd python3-venv nodejs npm \
-    libglib2.0-bin kio gvfs xvfb ca-certificates aria2 \
+    libglib2.0-bin kio gvfs xvfb ca-certificates aria2 jq \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user to run the container (fixes DS002)
