@@ -1623,3 +1623,86 @@ def test_gating_report_still_says_counts_fail_the_job(compare, tmp_path, capsys)
     out = capsys.readouterr().out
     assert "Counts fail the job if they get worse" in out
     assert "does not fail this job" not in out
+
+
+@pytest.mark.parametrize("profile", ["desktop", "web"])
+@pytest.mark.parametrize("report_only", [False, True])
+@pytest.mark.parametrize("missing_path", [False, True])
+def test_baseline_free_summary_has_uncompared_metrics(
+    compare, tmp_path, capsys, profile, report_only, missing_path
+):
+    """Omitted and nonexistent baselines produce the same unjudged summary."""
+    results = write_runs(tmp_path / "runs.csv", [BASE_METRICS] * 3)
+    summary = tmp_path / "summary.md"
+    summary.write_text("existing\n", encoding="utf-8")
+    args = [
+        "--results", str(results), "--summary", str(summary), "--profile", profile
+    ]
+    if missing_path:
+        args += ["--baseline", str(tmp_path / "missing.json")]
+    if report_only:
+        args += ["--report-only"]
+
+    assert compare.main(args) == 0
+    report = capsys.readouterr().out
+    assert summary.read_text(encoding="utf-8") == "existing\n" + report
+    assert "Medians of 3 runs. With no baseline, no count can fail." in report
+    assert "Regressions: 0. Warnings: 0." in report
+    assert "Counts fail the job" not in report
+    assert "A count marked ❌" not in report
+    assert "Baseline: commit" not in report
+    assert "| Settings saves in 60 s | count | — | 61 | — |" in report
+    assert ("Report only:" in report) is report_only
+
+
+def test_omitted_baseline_never_loads_a_local_file(compare, tmp_path, monkeypatch):
+    """A stale local baseline must not restore the removed implicit gate."""
+    write_baseline(tmp_path / "baseline_ci.json", {"saves": 0})
+    monkeypatch.chdir(tmp_path)
+    results = write_runs(tmp_path / "runs.csv", [BASE_METRICS])
+
+    def unexpected_load(path):
+        pytest.fail(f"Loaded a baseline without --baseline: {path}")
+
+    monkeypatch.setattr(compare, "load_baseline", unexpected_load)
+    assert compare.main(["--results", str(results)]) == 0
+
+
+@pytest.mark.parametrize("profile", ["desktop", "web"])
+@pytest.mark.parametrize("accept", [False, True])
+def test_missing_baseline_argument_rejected_before_io(
+    compare, tmp_path, capsys, profile, accept
+):
+    """Even acceptance cannot bypass the explicit-baseline update requirement."""
+    summary = tmp_path / "summary.md"
+    summary.write_text("existing\n", encoding="utf-8")
+    output = tmp_path / "updated.json"
+    candidate = tmp_path / "candidate.json"
+    args = [
+        "--results", str(tmp_path / "nonexistent.csv"),
+        "--update", str(output), "--run-id", "r1", "--profile", profile,
+        "--summary", str(summary), "--write-baseline", str(candidate),
+    ]
+    if accept:
+        args += ["--accept", "1155"]
+
+    with pytest.raises(SystemExit) as exc:
+        compare.main(args)
+    assert exc.value.code == 2
+    captured = capsys.readouterr()
+    assert "--update requires --baseline" in captured.err
+    assert captured.out == ""
+    assert summary.read_text(encoding="utf-8") == "existing\n"
+    assert not output.exists()
+    assert not candidate.exists()
+
+
+@pytest.mark.parametrize("report_only", [False, True])
+def test_empty_baseline_metadata_is_still_a_comparison(compare, report_only):
+    """Only None means no baseline; empty metadata keeps the chosen gate wording."""
+    report = compare.render([], 1, {}, report_only=report_only)
+    assert "No baseline yet" not in report
+    assert "no count can fail" not in report
+    assert "Baseline: commit `unknown`" in report
+    assert ("A count marked ❌ does not fail this job" in report) is report_only
+    assert ("Counts fail the job if they get worse" in report) is not report_only
