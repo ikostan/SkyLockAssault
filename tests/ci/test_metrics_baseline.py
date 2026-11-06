@@ -13,6 +13,9 @@ import pytest
 from tests import conftest
 from tests.conftest import _determine_final_outcome, _record_test_profiling
 
+# The real session state, captured at import before any fixture replaces it.
+_REAL_SESSION_STATE = conftest._SESSION_STATE
+
 # ==============================================================================
 # Helper Classes & Utilities
 # ==============================================================================
@@ -79,6 +82,9 @@ def isolate_profiling_globals(monkeypatch: pytest.MonkeyPatch) -> None:
         conftest, "_SUMMARY_COUNTS", {"passed": 0, "failed": 0, "skipped": 0}
     )
     monkeypatch.setattr(conftest, "_TEST_PROFILING_DATA", [])
+    monkeypatch.setattr(
+        conftest, "_SESSION_STATE", {"start_time": 0.0, "timestamp": ""}
+    )
 
 
 # ==============================================================================
@@ -198,6 +204,24 @@ def test_metrics_baseline_io_failure_is_graceful(
 
     with pytest.warns(UserWarning, match="Failed to write metrics baseline"):
         _invoke_sessionfinish(conftest, tmp_path, payload=payload)
+
+
+def test_invoke_sessionfinish_leaves_real_session_state_unchanged(
+    tmp_path: Path,
+) -> None:
+    """Verify the helper's fake values never reach the real session state (#1157)."""
+    state_before = dict(_REAL_SESSION_STATE)
+    payload = {
+        "start_time": 0.0,
+        "timestamp": "1999-01-01T00:00:00Z",
+        "summary_counts": {},
+        "test_profiling_data": [],
+    }
+
+    _invoke_sessionfinish(conftest, tmp_path, payload=payload)
+
+    assert conftest._SESSION_STATE["timestamp"] == payload["timestamp"]
+    assert _REAL_SESSION_STATE == state_before
 
 
 def test_runtest_makereport_aggregates_phases() -> None:
