@@ -282,7 +282,9 @@ def test_isolated_sessions_preserve_exported_and_displayed_duration(
     assert data["timestamp"] == state["timestamp"]
 
     lines: list[str] = []
-    reporter = SimpleNamespace(section=lambda *args, **kwargs: None, write_line=lines.append)
+    reporter = SimpleNamespace(
+        section=lambda *args, **kwargs: None, write_line=lines.append
+    )
     conftest.pytest_terminal_summary(reporter, exitstatus=0, config=None)
     assert "Total Suite Duration : 12.5s" in lines
 
