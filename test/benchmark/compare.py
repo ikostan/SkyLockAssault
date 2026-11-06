@@ -528,10 +528,12 @@ def render(
         history = baseline_meta.get("history", [])[-HISTORY_RUNS:]
         if history:
             lines.append(f"Timings: median of the last {len(history)} passing runs.")
-    if report_only:
+    if baseline_meta is None:
+        lines.append(f"Medians of {runs} runs. With no baseline, no count can fail.")
+    elif report_only:
         lines += [
-            f"Medians of {runs} runs. A worse count shows ❌ but does not fail this job;",
-            "on `main`, the baselines gate fails on it unless it is accepted.",
+            f"Medians of {runs} runs. A count marked ❌ does not fail this job;",
+            "on `main`, it fails the baselines gate unless it is accepted.",
             "Timings only warn (shared CI runners are noisy).",
         ]
     else:

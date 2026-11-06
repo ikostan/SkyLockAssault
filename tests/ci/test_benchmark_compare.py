@@ -1548,6 +1548,8 @@ def test_no_baseline_argument_reports_and_passes(compare, tmp_path, capsys):
     assert compare.main(["--results", str(results)]) == 0
     out = capsys.readouterr().out
     assert "No baseline yet" in out
+    assert "no count can fail" in out
+    assert "fail the job" not in out
     assert "Regressions: 0. Warnings: 0." in out
 
 
@@ -1575,9 +1577,15 @@ def test_update_requires_baseline_argument(compare, tmp_path, capsys):
     assert not out.exists()
 
 
-@pytest.mark.parametrize("has_baseline", [True, False])
+@pytest.mark.parametrize(
+    ("has_baseline", "wording"),
+    [
+        (True, "does not fail this job"),
+        (False, "no count can fail"),
+    ],
+)
 def test_report_only_does_not_say_counts_fail_the_job(
-    compare, tmp_path, capsys, has_baseline
+    compare, tmp_path, capsys, has_baseline, wording
 ):
     """A report-only table must not promise a failure that cannot happen."""
     results = write_runs(tmp_path / "runs.csv", [{**BASE_METRICS, "saves": 99.0}])
@@ -1588,9 +1596,22 @@ def test_report_only_does_not_say_counts_fail_the_job(
     assert compare.main(args) == 0
     out = capsys.readouterr().out
     assert "fail the job" not in out
-    assert "does not fail this job" in out
-    assert "Timings only warn" in out
+    assert wording in out
     assert "Report only: this run does not fail or update the baseline." in out
+
+
+def test_report_only_web_warning_is_not_marked_as_failing(compare, tmp_path, capsys):
+    """A web node rise shows the warning icon, so the ❌ wording does not cover it."""
+    worse = {**BASE_METRICS, "nodes_avg": BASE_METRICS["nodes_avg"] + 1000}
+    results = write_runs(tmp_path / "runs.csv", [worse])
+    path = write_baseline(tmp_path / "base.json", BASE_METRICS)
+    args = ["--results", str(results), "--baseline", str(path)]
+    assert compare.main([*args, "--profile", "web", "--report-only"]) == 0
+    out = capsys.readouterr().out
+    node_row = next(line for line in out.splitlines() if "| OBJECT_NODE_COUNT" in line)
+    assert node_row.startswith("| ⚠️ |")
+    assert "A count marked ❌ does not fail this job" in out
+    assert "Regressions: 0. Warnings: 1." in out
 
 
 def test_gating_report_still_says_counts_fail_the_job(compare, tmp_path, capsys):
