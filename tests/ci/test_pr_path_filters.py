@@ -58,8 +58,15 @@ BENCHMARK_PATTERNS = {
 """The benchmark's own files, which must run it even with no game change."""
 
 BENCHMARK_CONDITION = (
-    "${{ needs.detect-changes.outputs.gdscript == 'true' || "
-    "needs.detect-changes.outputs.benchmark == 'true' }}"
+    "${{ always() && ( needs.detect-changes.outputs.gdscript == 'true' || "
+    "needs.detect-changes.outputs.benchmark == 'true' ) && "
+    "needs.gdlint.result != 'failure' && "
+    "needs.readmelint.result != 'failure' && "
+    "needs.yamllint.result != 'failure' && "
+    "needs.gdunit4_tests.result != 'failure' && "
+    "needs.gut_tests.result != 'failure' && "
+    "needs.ci_script_tests.result != 'failure' && "
+    "needs.browser_tests.result != 'failure' }}"
 )
 """The exact condition of the PR ``benchmark`` job, whitespace collapsed."""
 
@@ -332,12 +339,23 @@ def test_benchmark_job_calls_the_workflow_on_either_filter(workflow):
     """
     The job must call ``benchmark.yml`` when either filter matches.
 
-    Compares the whole condition: an ``&&`` would skip game-only and
-    benchmark-only PRs, and an ``always()`` would run docs-only ones.
+    Compares the whole condition: an ``&&`` between the filters would skip game-only
+    and benchmark-only PRs, and an ``always()`` outside the check on them would run
+    docs-only ones. Without ``always()``, a needed job skipped by its own filter
+    would skip the benchmark too. The job waits for every lint and test job.
     """
     job = workflow["jobs"]["benchmark"]
     assert job["uses"] == "./.github/workflows/benchmark.yml"
-    assert job["needs"] == "detect-changes"
+    assert set(job["needs"]) == {
+        "browser_tests",
+        "detect-changes",
+        "gdlint",
+        "readmelint",
+        "yamllint",
+        "gdunit4_tests",
+        "gut_tests",
+        "ci_script_tests",
+    }
     assert _job_if(workflow, "benchmark") == BENCHMARK_CONDITION
 
 

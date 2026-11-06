@@ -260,6 +260,8 @@ jobs:
   # Report-only (#1112): shows the desktop and web tables on the PR, so the
   # benchmark-accept label is set from real numbers. A count regression shows in the
   # table but passes. No job here needs this one, so it stays out of the merge path.
+  # always() is required: most PRs skip at least one needed job through its path
+  # filter, and without it GitHub would skip this job too.
   # Read-only on purpose: updating the baselines is a separate, main-only workflow.
   benchmark:
     name: "Performance Benchmark"
@@ -276,7 +278,17 @@ jobs:
       contents: "read"
     if: >-
       ${{
-        needs.detect-changes.outputs.gdscript == 'true' ||
-        needs.detect-changes.outputs.benchmark == 'true'
+        always() &&
+        (
+          needs.detect-changes.outputs.gdscript == 'true' ||
+          needs.detect-changes.outputs.benchmark == 'true'
+        ) &&
+        needs.gdlint.result != 'failure' &&
+        needs.readmelint.result != 'failure' &&
+        needs.yamllint.result != 'failure' &&
+        needs.gdunit4_tests.result != 'failure' &&
+        needs.gut_tests.result != 'failure' &&
+        needs.ci_script_tests.result != 'failure' &&
+        needs.browser_tests.result != 'failure'
       }}
     uses: "./.github/workflows/benchmark.yml"
