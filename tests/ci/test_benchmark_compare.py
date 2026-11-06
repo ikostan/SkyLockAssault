@@ -1635,9 +1635,7 @@ def test_baseline_free_summary_has_uncompared_metrics(
     results = write_runs(tmp_path / "runs.csv", [BASE_METRICS] * 3)
     summary = tmp_path / "summary.md"
     summary.write_text("existing\n", encoding="utf-8")
-    args = [
-        "--results", str(results), "--summary", str(summary), "--profile", profile
-    ]
+    args = ["--results", str(results), "--summary", str(summary), "--profile", profile]
     if missing_path:
         args += ["--baseline", str(tmp_path / "missing.json")]
     if report_only:
@@ -1679,9 +1677,18 @@ def test_missing_baseline_argument_rejected_before_io(
     output = tmp_path / "updated.json"
     candidate = tmp_path / "candidate.json"
     args = [
-        "--results", str(tmp_path / "nonexistent.csv"),
-        "--update", str(output), "--run-id", "r1", "--profile", profile,
-        "--summary", str(summary), "--write-baseline", str(candidate),
+        "--results",
+        str(tmp_path / "nonexistent.csv"),
+        "--update",
+        str(output),
+        "--run-id",
+        "r1",
+        "--profile",
+        profile,
+        "--summary",
+        str(summary),
+        "--write-baseline",
+        str(candidate),
     ]
     if accept:
         args += ["--accept", "1155"]
