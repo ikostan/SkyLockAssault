@@ -263,7 +263,15 @@ jobs:
   # Read-only on purpose: updating the baselines is a separate, main-only workflow.
   benchmark:
     name: "Performance Benchmark"
-    needs: "detect-changes"
+    needs:
+      - "browser_tests"
+      - "detect-changes"
+      - "gdlint"
+      - "readmelint"
+      - "yamllint"
+      - "gdunit4_tests"
+      - "gut_tests"
+      - "ci_script_tests"
     permissions:
       contents: "read"
     if: >-
