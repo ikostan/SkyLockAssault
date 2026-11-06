@@ -222,6 +222,7 @@ All pipelines run on GitHub Actions:
 - gdUnit4: Godot → gdUnit4 inspector → run `test/gdunit4`
 - All suites, including Playwright: run in CI on pull requests to `main` when the PR changes files they cover
 - Benchmark: `python test/benchmark/run_desktop.py --godot <Godot console exe>` (desktop) or `python test/benchmark/run_web.py --godot <Godot console exe>` (web); see the [Performance Benchmark Guide](files/docs/Performance_Benchmark_Guide.md)
+- CI helper tests (`tests/ci`): run in Docker on Windows; see [Running the CI Helper Tests](files/docs/Local_CI_Pipeline_for_Godot_Project_using_Docker.md#running-the-ci-helper-tests-testsci)
 
 Testing is required for gameplay logic changes.
 

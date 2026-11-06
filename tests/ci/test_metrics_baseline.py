@@ -13,6 +13,9 @@ import pytest
 from tests import conftest
 from tests.conftest import _determine_final_outcome, _record_test_profiling
 
+# The real session state, captured at import before any fixture replaces it.
+_REAL_SESSION_STATE = conftest._SESSION_STATE
+
 # ==============================================================================
 # Helper Classes & Utilities
 # ==============================================================================
@@ -79,6 +82,9 @@ def isolate_profiling_globals(monkeypatch: pytest.MonkeyPatch) -> None:
         conftest, "_SUMMARY_COUNTS", {"passed": 0, "failed": 0, "skipped": 0}
     )
     monkeypatch.setattr(conftest, "_TEST_PROFILING_DATA", [])
+    monkeypatch.setattr(
+        conftest, "_SESSION_STATE", {"start_time": 0.0, "timestamp": ""}
+    )
 
 
 # ==============================================================================
@@ -198,6 +204,112 @@ def test_metrics_baseline_io_failure_is_graceful(
 
     with pytest.warns(UserWarning, match="Failed to write metrics baseline"):
         _invoke_sessionfinish(conftest, tmp_path, payload=payload)
+
+
+def test_invoke_sessionfinish_leaves_real_session_state_unchanged(
+    tmp_path: Path,
+) -> None:
+    """Verify the helper's fake values never reach the real session state (#1157)."""
+    state_before = dict(_REAL_SESSION_STATE)
+    payload = {
+        "start_time": 0.0,
+        "timestamp": "1999-01-01T00:00:00Z",
+        "summary_counts": {},
+        "test_profiling_data": [],
+    }
+
+    _invoke_sessionfinish(conftest, tmp_path, payload=payload)
+
+    assert conftest._SESSION_STATE["timestamp"] == payload["timestamp"]
+    assert _REAL_SESSION_STATE == state_before
+
+
+@pytest.mark.parametrize("fail_during_test", [False, True], ids=["success", "failure"])
+def test_isolation_restores_session_state_after_test(
+    tmp_path: Path, fail_during_test: bool
+) -> None:
+    """Fixture teardown restores the original state even after a failing test."""
+    original_state = conftest._SESSION_STATE
+    state_before = dict(original_state)
+
+    def simulate_test() -> None:
+        """Run the isolation fixture with pytest's normal monkeypatch teardown."""
+        with pytest.MonkeyPatch.context() as patch:
+            isolate_profiling_globals.__wrapped__(patch)
+            assert conftest._SESSION_STATE is not original_state
+            assert conftest._SESSION_STATE == {"start_time": 0.0, "timestamp": ""}
+            _invoke_sessionfinish(
+                conftest,
+                tmp_path,
+                payload={"start_time": 99.0, "timestamp": "fake session"},
+            )
+            if fail_during_test:
+                raise RuntimeError("Simulated test failure")
+
+    if fail_during_test:
+        with pytest.raises(RuntimeError, match="Simulated test failure"):
+            simulate_test()
+    else:
+        simulate_test()
+
+    assert conftest._SESSION_STATE is original_state
+    assert original_state == state_before
+
+
+def test_isolated_sessions_preserve_exported_and_displayed_duration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Fake sessions cannot zero the enclosing session's baseline duration (#1157)."""
+    state = {"start_time": 100.0, "timestamp": "2026-08-06T03:00:00Z"}
+    monkeypatch.setattr(conftest, "_SESSION_STATE", state)
+    monkeypatch.setattr(conftest, "ARTIFACTS_DIR", tmp_path)
+    monkeypatch.setattr(conftest, "_TRACKED_PIDS", set())
+    monkeypatch.setattr(conftest, "_LIFECYCLE_METRICS", [])
+    monkeypatch.setattr(conftest, "time", SimpleNamespace(perf_counter=lambda: 112.5))
+
+    for start_time in (0.0, 90.0):
+        with pytest.MonkeyPatch.context() as patch:
+            isolate_profiling_globals.__wrapped__(patch)
+            _invoke_sessionfinish(
+                conftest,
+                tmp_path,
+                payload={"start_time": start_time, "timestamp": "fake session"},
+            )
+
+    conftest.pytest_sessionfinish(SimpleNamespace(), exitstatus=0)
+    data = json.loads((tmp_path / "metrics_baseline.json").read_text(encoding="utf-8"))
+    assert data["total_duration_sec"] == 12.5
+    assert data["timestamp"] == state["timestamp"]
+
+    lines: list[str] = []
+    reporter = SimpleNamespace(
+        section=lambda *args, **kwargs: None, write_line=lines.append
+    )
+    conftest.pytest_terminal_summary(reporter, exitstatus=0, config=None)
+    assert "Total Suite Duration : 12.5s" in lines
+
+
+@pytest.mark.parametrize(
+    ("nodeid", "expected_output"),
+    [
+        ("tests/ci/test_metrics_baseline.py::test_example", ""),
+        ("tests/ci/nested/test_example.py::TestGroup::test_case[value]", ""),
+        ("tests/ci/test_example.py::test_case[tests/audio_flow_test.py]", ""),
+        ("tests/audio_flow_test.py::test_example", "\n"),
+        ("tests/circuit/test_example.py::test_case", "\n"),
+        ("tests/ci_extra/test_example.py::test_case", "\n"),
+        ("tests/test_example.py::test_case[tests/ci/example]", "\n"),
+    ],
+)
+def test_runtest_logstart_output(
+    nodeid: str, expected_output: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Only node IDs inside the CI directory suppress the separating blank line."""
+    conftest.pytest_runtest_logstart(nodeid)
+
+    captured = capsys.readouterr()
+    assert captured.out == expected_output
+    assert captured.err == ""
 
 
 def test_runtest_makereport_aggregates_phases() -> None:
