@@ -644,7 +644,7 @@ is in the [design doc](Automatic_Benchmark_Baselines.md#when-a-count-is-meant-to
 Fetch the baselines into `bench_results/`, which git ignores:
 
 ```bash
-git fetch origin benchmark-baselines
+git fetch origin +refs/heads/benchmark-baselines:refs/remotes/origin/benchmark-baselines
 git show origin/benchmark-baselines:desktop.json > bench_results/desktop.json
 git show origin/benchmark-baselines:web.json > bench_results/web.json
 ```
