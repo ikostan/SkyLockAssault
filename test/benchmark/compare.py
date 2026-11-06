@@ -508,6 +508,33 @@ def compare(
     return rows
 
 
+def render_intro(runs: int, baseline_meta: dict | None, report_only: bool) -> list[str]:
+    """Return the report lines on the baseline used and what can fail the job."""
+    if baseline_meta is None:
+        return [
+            "No baseline yet: these numbers are not compared.",
+            f"Medians of {runs} runs. With no baseline, no count can fail.",
+        ]
+    commit = baseline_meta.get("commit", "unknown")
+    created = baseline_meta.get("created", "unknown")
+    lines = [f"Baseline: commit `{commit}`, created {created}."]
+    history = baseline_meta.get("history", [])[-HISTORY_RUNS:]
+    if history:
+        lines.append(f"Timings: median of the last {len(history)} passing runs.")
+    if report_only:
+        return [
+            *lines,
+            f"Medians of {runs} runs. A count marked ❌ does not fail this job;",
+            "on `main`, it fails the baselines gate unless it is accepted.",
+            "Timings only warn (shared CI runners are noisy).",
+        ]
+    return [
+        *lines,
+        f"Medians of {runs} runs. Counts fail the job if they get worse;",
+        "timings only warn (shared CI runners are noisy).",
+    ]
+
+
 def render(
     rows: list[tuple[str, str, float | None, float, str]],
     runs: int,
@@ -517,30 +544,7 @@ def render(
     report_only: bool = False,
 ) -> str:
     """Render the comparison as Markdown."""
-    lines = [f"## {title}", ""]
-    if baseline_meta is None:
-        lines.append("No baseline yet: these numbers are not compared.")
-    else:
-        lines.append(
-            f"Baseline: commit `{baseline_meta.get('commit', 'unknown')}`, "
-            f"created {baseline_meta.get('created', 'unknown')}."
-        )
-        history = baseline_meta.get("history", [])[-HISTORY_RUNS:]
-        if history:
-            lines.append(f"Timings: median of the last {len(history)} passing runs.")
-    if baseline_meta is None:
-        lines.append(f"Medians of {runs} runs. With no baseline, no count can fail.")
-    elif report_only:
-        lines += [
-            f"Medians of {runs} runs. A count marked ❌ does not fail this job;",
-            "on `main`, it fails the baselines gate unless it is accepted.",
-            "Timings only warn (shared CI runners are noisy).",
-        ]
-    else:
-        lines += [
-            f"Medians of {runs} runs. Counts fail the job if they get worse;",
-            "timings only warn (shared CI runners are noisy).",
-        ]
+    lines = [f"## {title}", "", *render_intro(runs, baseline_meta, report_only)]
     warn_only = PROFILE_WARN_ONLY.get(profile or "", frozenset())
     if warn_only:
         labels = [rule.label for rule in COUNT_RULES if rule.key in warn_only]
