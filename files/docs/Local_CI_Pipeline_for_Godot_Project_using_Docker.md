@@ -272,6 +272,25 @@ docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline:latest 
   on your host machine.
 - If errors occur (e.g., missing files), the script exits early.
 
+
+## Running the CI Helper Tests (`tests/ci`)
+
+Run the full `tests/ci` suite in the container on Windows. Many of these tests
+need Linux `bash` and LF line endings, so they fail or are skipped when run
+directly on Windows, even when the code is correct. Use plain `pytest` on Windows
+only for individual test files that don't depend on these.
+
+Start Docker Desktop, then run this from the project root in PowerShell:
+
+```powershell
+docker run --rm -v "${PWD}:/project" sky-lock-assault-pipeline:latest bash -c "git config --global --add safe.directory /project; git config --global --add safe.directory /project/.git; python -m pytest tests/ci/ -q --tb=short -rfE"
+```
+
+Both `safe.directory` entries are required. Without `/project/.git`, the tests
+that make a local clone of the repository fail during setup with
+`CalledProcessError` and exit status 128.
+
+
 ## Step 4: Running Individual Workflows
 
 To run workflows separately (e.g., for quick checks while developing a new
