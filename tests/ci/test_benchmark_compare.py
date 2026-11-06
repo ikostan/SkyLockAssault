@@ -1608,8 +1608,9 @@ def test_report_only_web_warning_is_not_marked_as_failing(compare, tmp_path, cap
     args = ["--results", str(results), "--baseline", str(path)]
     assert compare.main([*args, "--profile", "web", "--report-only"]) == 0
     out = capsys.readouterr().out
-    node_row = next(line for line in out.splitlines() if "| OBJECT_NODE_COUNT" in line)
-    assert node_row.startswith("| ⚠️ |")
+    node_rows = [line for line in out.splitlines() if "| OBJECT_NODE_COUNT" in line]
+    assert len(node_rows) == 1
+    assert node_rows[0].startswith("| ⚠️ |")
     assert "A count marked ❌ does not fail this job" in out
     assert "Regressions: 0. Warnings: 1." in out
 
