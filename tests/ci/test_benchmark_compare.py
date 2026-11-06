@@ -1660,6 +1660,7 @@ def test_omitted_baseline_never_loads_a_local_file(compare, tmp_path, monkeypatc
     results = write_runs(tmp_path / "runs.csv", [BASE_METRICS])
 
     def unexpected_load(path):
+        """Fail the test if main tries to load any baseline."""
         pytest.fail(f"Loaded a baseline without --baseline: {path}")
 
     monkeypatch.setattr(compare, "load_baseline", unexpected_load)
