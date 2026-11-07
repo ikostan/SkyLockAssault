@@ -200,7 +200,7 @@ func test_tc_sl_25() -> void:
 	config = ConfigFile.new()
 	config.load_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
 	
-	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:3:-1.0:-1"])
+	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:1:-1.0:-1"])
 	
 	# Save audio after
 	AudioManager.master_volume = 0.5
@@ -210,7 +210,7 @@ func test_tc_sl_25() -> void:
 	config = ConfigFile.new()
 	config.load_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
 	
-	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:3:-1.0:-1"])
+	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:1:-1.0:-1"])
 	assert_eq(config.get_value("audio", "master_volume"), 0.5)
 	
 	# No re-migration

@@ -165,7 +165,7 @@ func test_tc_sl_13() -> void:
 	assert_true(events[0] is InputEventKey)
 	assert_eq(events[0].physical_keycode, 87)
 	assert_true(events[1] is InputEventJoypadMotion)
-	assert_eq(events[1].axis, JOY_AXIS_RIGHT_Y)
+	assert_eq(events[1].axis, JOY_AXIS_LEFT_Y)
 	assert_eq(events[1].axis_value, - 1.0)
 	assert_eq(events[1].device, -1)
 	
@@ -173,7 +173,7 @@ func test_tc_sl_13() -> void:
 	config = ConfigFile.new()
 	# FIX: Load using encryption
 	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
-	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:3:-1.0:-1"])
+	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:1:-1.0:-1"])
 	
 	# Now save audio changes
 	AudioManager.master_volume = 0.5
@@ -184,7 +184,7 @@ func test_tc_sl_13() -> void:
 	# FIX: Load using encryption
 	config.load_encrypted_pass(test_config_path, Globals.save_encryption_pass)
 	assert_almost_eq(config.get_value("audio", "master_volume"), 0.5, 0.01)
-	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:3:-1.0:-1"])
+	assert_eq(config.get_value("input", "speed_up"), ["key:87", "joyaxis:1:-1.0:-1"])
 
 
 ## TC-SL-14 | Multiple saves: Config with all; Change audio, save; Change settings, save; Change inputs, save. | Sequence of saves from different managers | Each save loads existing, updates own section, saves; All sections preserved across calls; No data loss.
