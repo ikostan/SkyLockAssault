@@ -194,7 +194,7 @@ func test_km_04_update_remap_buttons() -> void:
 	gamepad_btn.button_pressed = true
 	gamepad_btn.toggled.emit(true)
 	assert_eq(speed_up_btn.current_device, InputRemapButton.DeviceType.GAMEPAD)
-	assert_eq(speed_up_btn.text, "Right Stick (Up)")  # Default gamepad axis label
+	assert_eq(speed_up_btn.text, "Left Stick (Up)")  # Default gamepad axis label
 
 
 ## KM-05 | Reset current device (gamepad mode) | Switch to gamepad, remap speed_up, reset | Gamepad binding resets to default; keyboard unchanged.
@@ -213,7 +213,7 @@ func test_km_05_reset_current_device() -> void:
 	await get_tree().process_frame
 	
 	# Gamepad should revert to default
-	assert_eq(speed_up_btn.text, "Right Stick (Up)", "Gamepad should reset to default")
+	assert_eq(speed_up_btn.text, "Left Stick (Up)", "Gamepad should reset to default")
 	
 	# Keyboard should remain untouched
 	keyboard_btn.button_pressed = true
@@ -323,7 +323,7 @@ func test_km_12_ui_label_sync() -> void:
 	assert_eq(speed_up_btn.text, "W")
 	gamepad_btn.button_pressed = true
 	gamepad_btn.toggled.emit(true)
-	assert_eq(speed_up_btn.text, "Right Stick (Up)")
+	assert_eq(speed_up_btn.text, "Left Stick (Up)")
 	# Move left (axis example)
 	assert_eq(move_left_btn.text, "Left Stick (Left)")
 
@@ -338,6 +338,6 @@ func test_km_13_reset_with_defaults() -> void:
 	gamepad_btn.button_pressed = true
 	gamepad_btn.toggled.emit(true)
 	reset_btn.pressed.emit()
-	assert_eq(speed_up_btn.text, "Right Stick (Up)")
+	assert_eq(speed_up_btn.text, "Left Stick (Up)")
 	# No extra events or unbound
 	assert_eq(InputMap.action_get_events(TEST_ACTION_SPEED_UP).size(), 2)  # One key + one joy

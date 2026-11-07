@@ -500,8 +500,8 @@ func test_backfill_preserves_saved_gamepad_owners(
 	scenario: Array = use_parameters(
 		[
 			["fire", "joybtn:bad:-1", "joybtn:%d:-1" % JOY_BUTTON_A],
-			["speed_up", "joyaxis:bad:-1:-1", "joyaxis:%d:-1.0:-1" % JOY_AXIS_RIGHT_Y],
-			["speed_down", "joyaxis:bad:1:-1", "joyaxis:%d:1.0:-1" % JOY_AXIS_RIGHT_Y],
+			["speed_up", "joyaxis:bad:-1:-1", "joyaxis:%d:-1.0:-1" % JOY_AXIS_LEFT_Y],
+			["speed_down", "joyaxis:bad:1:-1", "joyaxis:%d:1.0:-1" % JOY_AXIS_LEFT_Y],
 		]
 	)
 ) -> void:
@@ -524,8 +524,8 @@ func test_backfill_restores_available_gamepad_defaults(
 	scenario: Array = use_parameters(
 		[
 			["fire", "joybtn:bad:-1", "joybtn:%d:-1" % JOY_BUTTON_A],
-			["speed_up", "joyaxis:bad:-1:-1", "joyaxis:%d:-1.0:-1" % JOY_AXIS_RIGHT_Y],
-			["speed_down", "joyaxis:bad:1:-1", "joyaxis:%d:1.0:-1" % JOY_AXIS_RIGHT_Y],
+			["speed_up", "joyaxis:bad:-1:-1", "joyaxis:%d:-1.0:-1" % JOY_AXIS_LEFT_Y],
+			["speed_down", "joyaxis:bad:1:-1", "joyaxis:%d:1.0:-1" % JOY_AXIS_LEFT_Y],
 		]
 	)
 ) -> void:
