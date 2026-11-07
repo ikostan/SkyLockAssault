@@ -463,11 +463,103 @@ func test_mig_04_does_not_steal_from_same_group() -> void:
 	)
 
 
-## MIG-05 | A default is restored even if an action in the other group uses the same input.
+## MIG-05 | A stripped slot is restored even if an action in the other group uses the input.
 func test_mig_05_restores_across_groups() -> void:
-	_set_events("ui_accept", [_key(KEY_ENTER)])  # gamepad A lost
+	_set_events("speed_up", [_key(KEY_W)])  # left stick stripped by the bug
+	_set_events("ui_up", [_key(KEY_UP), _axis(JOY_AXIS_LEFT_Y, -1.0)])  # player's own choice
 
 	Settings._migrate_input_layout_v3()
 
-	assert_eq(_labels_for("ui_accept", "gamepad"), ["A"] as Array[String], "A is shared with Fire")
-	assert_eq(_labels_for("fire", "gamepad"), ["A"] as Array[String], "Fire keeps A")
+	assert_eq(
+		_labels_for("speed_up", "gamepad"),
+		["Left Stick (Up)"] as Array[String],
+		"menu and flight may share the left stick"
+	)
+	assert_eq(
+		_labels_for("ui_up", "gamepad"),
+		["Left Stick (Up)"] as Array[String],
+		"the only gamepad binding of ui_up is kept"
+	)
+
+
+## MIG-06 | A remap made on top of a legacy extra wins over the legacy binding (review fix).
+## The remap button erases the first key and appends the new one, so the legacy Up was first.
+func test_mig_06_keeps_remap_over_legacy_extra() -> void:
+	_set_events("speed_up", [_axis(JOY_AXIS_LEFT_Y, -1.0), _key(KEY_UP), _key(KEY_I)])
+
+	Settings._migrate_input_layout_v3()
+
+	assert_eq(_labels_for("speed_up", "keyboard"), ["I"] as Array[String], "the remap survives")
+	assert_true(Settings.needs_save(), "the removal is persisted")
+
+
+## MIG-07 | Extra bindings that are not legacy defaults are left alone.
+func test_mig_07_keeps_non_legacy_extras() -> void:
+	_set_events("fire", [_key(KEY_SPACE), _key(KEY_F), _button(JOY_BUTTON_A)])
+	_set_events("ui_up", [_key(KEY_UP), _button(JOY_BUTTON_DPAD_UP), _button(JOY_BUTTON_Y)])
+
+	Settings._migrate_input_layout_v3()
+
+	assert_eq(_labels_for("fire", "keyboard"), ["Space", "F"] as Array[String])
+	assert_eq(_labels_for("ui_up", "gamepad"), ["D-Pad Up", "Y"] as Array[String])
+	assert_false(Settings.needs_save(), "nothing changed")
+
+
+## MIG-08 | A legacy binding that is the only one for its device is kept: the player chose it.
+func test_mig_08_keeps_legacy_binding_when_it_is_the_only_one() -> void:
+	_set_events("speed_up", [_key(KEY_UP), _axis(JOY_AXIS_LEFT_Y, -1.0)])
+	_set_events("ui_up", [_key(KEY_UP), _axis(JOY_AXIS_LEFT_Y, -1.0)])
+
+	Settings._migrate_input_layout_v3()
+
+	assert_eq(_labels_for("speed_up", "keyboard"), ["Up"] as Array[String])
+	assert_eq(_labels_for("ui_up", "gamepad"), ["Left Stick (Up)"] as Array[String])
+	assert_false(Settings.needs_save(), "nothing changed")
+
+
+## MIG-09 | A device unbind outside the slots the bug stripped is kept (review fix).
+func test_mig_09_keeps_explicit_device_unbind(
+	row: Array = use_parameters(
+		[
+			["next_weapon", "keyboard", [_button(JOY_BUTTON_Y)]],
+			["fire", "gamepad", [_key(KEY_SPACE)]],
+			["ui_accept", "gamepad", [_key(KEY_ENTER)]],
+			["ui_focus_next", "keyboard", [_button(JOY_BUTTON_RIGHT_SHOULDER)]],
+		]
+	)
+) -> void:
+	_set_events(row[0], row[2])
+
+	Settings._migrate_input_layout_v3()
+
+	assert_eq(_events_for(row[0], row[1]).size(), 0, "%s stays unbound on %s" % [row[0], row[1]])
+	assert_false(Settings.needs_save(), "nothing changed")
+
+
+## MIG-10 | A fully unbound action (saved as []) stays unbound, even in a stripped slot.
+func test_mig_10_keeps_fully_unbound_action(
+	action: String = use_parameters(["speed_up", "ui_up"])
+) -> void:
+	_set_events(action, [])
+
+	Settings._migrate_input_layout_v3()
+
+	assert_true(InputMap.action_get_events(action).is_empty(), action + " stays unbound")
+	assert_false(Settings.needs_save(), "nothing changed")
+
+
+## MIG-11 | Explicit unbinds survive a full load: saved config through migration.
+func test_mig_11_explicit_unbinds_survive_load_and_migration() -> void:
+	_write_config(
+		{
+			"next_weapon": ["joybtn:%d:-1" % JOY_BUTTON_Y],
+			"fire": [],
+		}
+	)
+	Settings.load_input_mappings(TEST_CONFIG_PATH)
+	Settings.set_needs_save_for_test(false)
+
+	Settings._migrate_input_layout_v3()
+
+	assert_eq(_events_for("next_weapon", "keyboard").size(), 0, "keyboard unbind kept")
+	assert_true(InputMap.action_get_events("fire").is_empty(), "full unbind kept")
