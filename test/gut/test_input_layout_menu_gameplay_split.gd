@@ -9,8 +9,9 @@
 ## actions, so the load-time conflict check stripped one side.
 ##
 ## Covers: one default per action per device, project.godot matching Settings defaults,
-## the agreed layout, scoped conflict groups, keycode fallback in serialize_event,
-## save/reload keeping both sides, and the one-time v3 migration of broken saves.
+## the agreed layout, the default event factory, scoped conflict groups, key:/lkey:
+## serialization and matching, save/reload keeping both sides, and the one-time v3
+## migration of broken saves.
 ## :references: settings.gd, project.godot [input]
 
 extends GutTest
@@ -761,7 +762,7 @@ func test_ser_08_corrupt_saved_key_is_backfilled(
 	assert_eq(_labels_for("fire", "gamepad"), ["A"] as Array[String], "gamepad entry kept")
 
 
-## Default factories must not share mutable events between actions, resets or callers.
+## DEF-01 | Default factories must not share mutable events between actions, resets or callers.
 func test_default_events_are_independent(
 	row: Array = use_parameters(
 		[["ui_focus_prev", "keyboard"], ["fire", "gamepad"], ["speed_up", "gamepad"]]
@@ -788,7 +789,7 @@ func test_default_events_are_independent(
 	)
 
 
-## Unknown actions/devices have no default; they must not silently select a device.
+## DEF-02 | Unknown actions/devices have no default; they must not silently select a device.
 func test_default_factory_rejects_unknown_inputs(
 	row: Array = use_parameters(
 		[["unknown", "keyboard"], ["unknown", "gamepad"], ["fire", ""], ["fire", "mouse"]]
@@ -797,7 +798,7 @@ func test_default_factory_rejects_unknown_inputs(
 	assert_null(Settings.InputDefaults.make_event(row[0], row[1]))
 
 
-## Scope respects the caller's subset and ordering, including Pause's group union.
+## GROUP-06 | Scope respects the caller's subset and ordering, including Pause's group union.
 func test_conflict_scope_preserves_subset_order(
 	row: Array = use_parameters(
 		[
@@ -817,7 +818,7 @@ func test_conflict_scope_preserves_subset_order(
 	assert_true(Settings.InputDefaults.conflict_scope(row[0], [] as Array[String]).is_empty())
 
 
-## Every modifier combination survives serialization of logical printable keys.
+## SER-09 | Every modifier combination survives serialization of logical printable keys.
 func test_logical_key_round_trip_all_modifiers(mask: int = use_parameters(range(16))) -> void:
 	var original: InputEventKey = _keycode_only(KEY_Z)
 	original.shift_pressed = bool(mask & 1)
@@ -840,9 +841,11 @@ func test_logical_key_round_trip_all_modifiers(mask: int = use_parameters(range(
 	assert_eq(Settings.serialize_event(restored), serialized, "encoding is stable")
 
 
-## Each modifier is part of a logical key's identity when checking conflicts.
+## SER-10 | Each modifier is part of a logical key's identity when checking conflicts.
 func test_logical_key_modifiers_distinguish_conflicts(
-	modifier: String = use_parameters(["shift_pressed", "ctrl_pressed", "alt_pressed", "meta_pressed"])
+	modifier: String = use_parameters(
+		["shift_pressed", "ctrl_pressed", "alt_pressed", "meta_pressed"]
+	)
 ) -> void:
 	var plain: InputEventKey = _keycode_only(KEY_Z)
 	var modified: InputEventKey = _keycode_only(KEY_Z)
@@ -851,12 +854,10 @@ func test_logical_key_modifiers_distinguish_conflicts(
 	assert_false(Settings.events_match(plain, modified))
 	assert_false(Settings.events_match(modified, plain), "matching is symmetric")
 	assert_eq(Settings.get_conflicting_actions(plain, "next_weapon"), [] as Array[String])
-	assert_eq(
-		Settings.get_conflicting_actions(modified, "next_weapon"), ["fire"] as Array[String]
-	)
+	assert_eq(Settings.get_conflicting_actions(modified, "next_weapon"), ["fire"] as Array[String])
 
 
-## Repair all hidden extras, then prove another migration cannot change the repaired map.
+## MIG-14 | Repair all hidden extras, then prove another migration cannot change the repaired map.
 func test_migration_trims_all_legacy_extras_and_is_idempotent() -> void:
 	_apply_pre_fix_layout()
 	var migration = Settings.InputLayoutMigration
@@ -866,19 +867,23 @@ func test_migration_trims_all_legacy_extras_and_is_idempotent() -> void:
 		assert_eq(_events_for(action, "gamepad").size(), 1, action + " keeps its flight stick")
 	assert_eq(_labels_for("speed_down", "keyboard"), ["X"] as Array[String], "keep old remaps")
 	for action: String in ["ui_up", "ui_down", "ui_left", "ui_right"]:
-		assert_eq(_events_for(action, "gamepad").size(), 1, action + " loses its hidden stick")
-		assert_true(_events_for(action, "gamepad")[0] is InputEventJoypadButton)
+		var pads: Array[InputEvent] = _events_for(action, "gamepad")
+		assert_eq(pads.size(), 1, action + " loses its hidden stick")
+		if pads.size() == 1:
+			assert_true(pads[0] is InputEventJoypadButton, action + " keeps its D-pad button")
 	var repaired: Dictionary = _snapshot()
 	assert_false(migration.migrate(Settings), "a second repair reports no changes")
 	assert_eq(_snapshot(), repaired, "a second repair preserves all bindings")
 
 
-## A lookalike legacy arrow with a modifier is a custom binding, even beside another key.
+## MIG-15 | A lookalike legacy arrow with a modifier is a custom binding, even beside another key.
 func test_migration_preserves_modified_legacy_arrows(
 	row: Array = use_parameters(
 		[
-			["speed_up", KEY_UP], ["speed_down", KEY_DOWN],
-			["move_left", KEY_LEFT], ["move_right", KEY_RIGHT],
+			["speed_up", KEY_UP],
+			["speed_down", KEY_DOWN],
+			["move_left", KEY_LEFT],
+			["move_right", KEY_RIGHT],
 		]
 	)
 ) -> void:
