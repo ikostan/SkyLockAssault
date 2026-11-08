@@ -145,6 +145,17 @@ func _set_events(action: String, events: Array) -> void:
 		InputMap.action_add_event(action, ev)
 
 
+## Serialized bindings of every managed action, to check that nothing changed.
+func _snapshot() -> Dictionary:
+	var snap: Dictionary = {}
+	for action: String in Settings.ACTIONS:
+		var events: Array[String] = []
+		for ev: InputEvent in InputMap.action_get_events(action):
+			events.append(Settings.serialize_event(ev))
+		snap[action] = events
+	return snap
+
+
 func _write_config(bindings: Dictionary) -> void:
 	var config := ConfigFile.new()
 	for action: String in bindings:
@@ -315,15 +326,27 @@ func test_group_05_pause_conflicts_with_both_groups() -> void:
 
 
 ## SER-01 | A keycode-only key (Godot built-in style) is saved by its keycode, not as key:0.
+## Special keys are the same key on every layout, so they are stored as physical keys;
+## printable keys are stored as logical "lkey:" and restored as a keycode.
 func test_ser_01_keycode_only_event_is_not_saved_as_zero(
-	code: int = use_parameters([KEY_UP, KEY_ENTER, KEY_TAB, KEY_W])
+	row: Array = use_parameters(
+		[
+			[KEY_UP, "key:%d" % KEY_UP],
+			[KEY_ENTER, "key:%d" % KEY_ENTER],
+			[KEY_TAB, "key:%d" % KEY_TAB],
+			[KEY_W, "lkey:%d" % KEY_W],
+		]
+	)
 ) -> void:
+	var code: int = row[0]
 	var serialized: String = Settings.serialize_event(_keycode_only(code))
-	assert_eq(serialized, "key:%d" % code)
+	assert_eq(serialized, row[1])
 	var restored: InputEvent = Settings.deserialize_event(serialized)
 	assert_not_null(restored, "the saved key loads back")
 	if restored:
-		assert_eq(restored.physical_keycode, code, "loads back as the same physical key")
+		var physical: bool = row[1].begins_with("key:")
+		assert_eq(restored.physical_keycode, code if physical else 0, "physical keycode")
+		assert_eq(restored.keycode, 0 if physical else code, "logical keycode")
 
 
 ## SER-02 | Modifiers are kept for keycode-only events (built-in Shift+Tab).
@@ -441,8 +464,9 @@ func test_mig_02_flag_persists_across_save_and_load() -> void:
 
 ## MIG-03 | A clean default layout is left untouched.
 func test_mig_03_noop_on_clean_layout() -> void:
+	var before: Dictionary = _snapshot()
 	Settings._migrate_input_layout_v3()
-	assert_false(Settings.needs_save(), "nothing changed, nothing to save")
+	assert_eq(_snapshot(), before, "nothing changed")
 	for row: Array in LAYOUT:
 		assert_eq(_labels_for(row[0], "keyboard"), [row[1]] as Array[String], row[0] + " keyboard")
 		assert_eq(_labels_for(row[0], "gamepad"), [row[2]] as Array[String], row[0] + " gamepad")
@@ -498,11 +522,12 @@ func test_mig_07_keeps_non_legacy_extras() -> void:
 	_set_events("fire", [_key(KEY_SPACE), _key(KEY_F), _button(JOY_BUTTON_A)])
 	_set_events("ui_up", [_key(KEY_UP), _button(JOY_BUTTON_DPAD_UP), _button(JOY_BUTTON_Y)])
 
+	var before: Dictionary = _snapshot()
 	Settings._migrate_input_layout_v3()
 
 	assert_eq(_labels_for("fire", "keyboard"), ["Space", "F"] as Array[String])
 	assert_eq(_labels_for("ui_up", "gamepad"), ["D-Pad Up", "Y"] as Array[String])
-	assert_false(Settings.needs_save(), "nothing changed")
+	assert_eq(_snapshot(), before, "nothing changed")
 
 
 ## MIG-08 | A legacy binding that is the only one for its device is kept: the player chose it.
@@ -510,11 +535,12 @@ func test_mig_08_keeps_legacy_binding_when_it_is_the_only_one() -> void:
 	_set_events("speed_up", [_key(KEY_UP), _axis(JOY_AXIS_LEFT_Y, -1.0)])
 	_set_events("ui_up", [_key(KEY_UP), _axis(JOY_AXIS_LEFT_Y, -1.0)])
 
+	var before: Dictionary = _snapshot()
 	Settings._migrate_input_layout_v3()
 
 	assert_eq(_labels_for("speed_up", "keyboard"), ["Up"] as Array[String])
 	assert_eq(_labels_for("ui_up", "gamepad"), ["Left Stick (Up)"] as Array[String])
-	assert_false(Settings.needs_save(), "nothing changed")
+	assert_eq(_snapshot(), before, "nothing changed")
 
 
 ## MIG-09 | A device unbind outside the slots the bug stripped is kept (review fix).
@@ -530,10 +556,11 @@ func test_mig_09_keeps_explicit_device_unbind(
 ) -> void:
 	_set_events(row[0], row[2])
 
+	var before: Dictionary = _snapshot()
 	Settings._migrate_input_layout_v3()
 
 	assert_eq(_events_for(row[0], row[1]).size(), 0, "%s stays unbound on %s" % [row[0], row[1]])
-	assert_false(Settings.needs_save(), "nothing changed")
+	assert_eq(_snapshot(), before, "nothing changed")
 
 
 ## MIG-10 | A fully unbound action (saved as []) stays unbound, even in a stripped slot.
@@ -542,10 +569,11 @@ func test_mig_10_keeps_fully_unbound_action(
 ) -> void:
 	_set_events(action, [])
 
+	var before: Dictionary = _snapshot()
 	Settings._migrate_input_layout_v3()
 
 	assert_true(InputMap.action_get_events(action).is_empty(), action + " stays unbound")
-	assert_false(Settings.needs_save(), "nothing changed")
+	assert_eq(_snapshot(), before, "nothing changed")
 
 
 ## MIG-11 | Explicit unbinds survive a full load: saved config through migration.
@@ -563,3 +591,92 @@ func test_mig_11_explicit_unbinds_survive_load_and_migration() -> void:
 
 	assert_eq(_events_for("next_weapon", "keyboard").size(), 0, "keyboard unbind kept")
 	assert_true(InputMap.action_get_events("fire").is_empty(), "full unbind kept")
+
+
+## MIG-12 | A migration that changes nothing still flags a save, so the run-once flag is
+## persisted and the migration does not run again on the next launch (review fix).
+func test_mig_12_noop_migration_still_persists_flag() -> void:
+	_set_flag(Settings.INPUT_LAYOUT_MIGRATION_KEY, false)
+	var before: Dictionary = _snapshot()
+
+	Settings._migrate_input_layout_v3()
+
+	assert_eq(_snapshot(), before, "nothing changed")
+	assert_true(Settings.needs_save(), "a save is flagged anyway")
+	Settings.save_input_mappings(TEST_CONFIG_PATH)
+	var config := ConfigFile.new()
+	assert_eq(config.load_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass), OK)
+	assert_true(
+		config.get_value("meta", Settings.INPUT_LAYOUT_MIGRATION_KEY, false),
+		"the flag is in the saved config"
+	)
+
+
+# ── Logical keys (review fix) ────────────────────────────────────────────────
+
+
+## SER-04 | A logical printable key round-trips as a keycode, so it keeps following the
+## keyboard layout instead of becoming the physical key at that position.
+func test_ser_04_logical_key_round_trip(
+	row: Array = use_parameters(
+		[
+			[KEY_W, false, "lkey:%d" % KEY_W],
+			[KEY_Z, true, "lkey:%d:shift" % KEY_Z],
+			[KEY_1, false, "lkey:%d" % KEY_1],
+		]
+	)
+) -> void:
+	var ev: InputEventKey = _keycode_only(row[0])
+	ev.shift_pressed = row[1]
+	var serialized: String = Settings.serialize_event(ev)
+	assert_eq(serialized, row[2])
+	var restored: InputEvent = Settings.deserialize_event(serialized)
+	assert_not_null(restored, "lkey loads back")
+	if restored:
+		assert_eq(restored.keycode, row[0], "restored as a logical keycode")
+		assert_eq(restored.physical_keycode, 0, "not turned into a physical key")
+		assert_eq(restored.shift_pressed, row[1], "modifier kept")
+		assert_true(Settings.events_match(restored, ev), "matches the original")
+
+
+## SER-05 | lkey follows the same validation as key: no zero code, known modifiers only.
+func test_ser_05_invalid_lkey_rejected(
+	serialized: String = use_parameters(
+		["lkey:0", "lkey:", "lkey:abc", "lkey:87:bogus", "lkey:87:shift:shift"]
+	)
+) -> void:
+	assert_null(Settings.deserialize_event(serialized), serialized + " is rejected")
+
+
+## SER-06 | Matching: physical vs physical and logical vs logical compare codes; a logical and
+## a physical printable key never match; special keys match whichever form they come in.
+func test_ser_06_key_matching_rules() -> void:
+	assert_true(Settings.events_match(_keycode_only(KEY_W), _keycode_only(KEY_W)), "logical W")
+	assert_false(
+		Settings.events_match(_keycode_only(KEY_W), _key(KEY_W)),
+		"logical W is not physical W: layouts can differ"
+	)
+	assert_true(
+		Settings.events_match(_keycode_only(KEY_UP), _key(KEY_UP)),
+		"Up is the same key in either form"
+	)
+	assert_false(
+		Settings.events_match(_keycode_only(KEY_TAB), _key(KEY_TAB, true)),
+		"modifiers still distinguish Tab and Shift+Tab"
+	)
+
+
+## SER-07 | The reviewer's scenario end to end: a logical binding saved and reloaded is still
+## the logical key, not the physical key at that position.
+func test_ser_07_logical_binding_survives_save_and_load() -> void:
+	_set_events("next_weapon", [_keycode_only(KEY_Z), _button(JOY_BUTTON_Y)])
+	Settings.save_input_mappings(TEST_CONFIG_PATH)
+	_load_project_defaults()
+
+	Settings.load_input_mappings(TEST_CONFIG_PATH)
+
+	var keys: Array[InputEvent] = _events_for("next_weapon", "keyboard")
+	assert_eq(keys.size(), 1, "one keyboard binding")
+	if keys.size() == 1:
+		assert_eq(keys[0].keycode, KEY_Z, "still logical Z")
+		assert_eq(keys[0].physical_keycode, 0, "not physical Z")

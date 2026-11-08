@@ -224,10 +224,11 @@ func is_event_bound(event: InputEvent) -> bool:
 func serialize_event(ev: InputEvent) -> String:
 	if ev is InputEventKey:
 		# Godot's built-in actions and editor-made bindings can set only keycode, leaving
-		# physical_keycode 0. Writing "key:0" would be rejected on the next load and the
-		# action would lose its key, so fall back to keycode.
-		var code: int = int(ev.physical_keycode) if ev.physical_keycode != 0 else int(ev.keycode)
-		var s: String = "key:" + str(code)
+		# physical_keycode 0; "key:0" would be rejected on load. See [method _key_identity]:
+		# a logical printable key is written as "lkey:" so it is restored as a keycode and
+		# keeps following the keyboard layout, instead of becoming a physical position.
+		var identity: Vector2i = _key_identity(ev)
+		var s: String = ("lkey:" if identity.y == 1 else "key:") + str(identity.x)
 		if ev.shift_pressed:
 			s += ":shift"
 		if ev.ctrl_pressed:
@@ -263,10 +264,11 @@ func _remove_event_from_conflicts(event: InputEvent, conflicts: Array[String]) -
 
 ## Deserializes a string back to an InputEvent.
 ##
-## Handles serialized strings starting with key, joybtn, or joyaxis to restore the
+## Handles serialized strings starting with key, lkey, joybtn, or joyaxis to restore the
 ## corresponding input event.
 ##
-## [param serialized]: The serialized string starting with key, joybtn, or joyaxis.
+## [param serialized]: The serialized string starting with key, lkey, joybtn, or joyaxis.
+## [code]key:[/code] restores a physical keycode, [code]lkey:[/code] a logical keycode.
 ## Returns the deserialized InputEvent, or null if the string is invalid.
 ## A key string accepts the modifiers in [constant KEY_MODIFIER_TOKENS] in any order; an
 ## unknown, empty or repeated token makes the whole string invalid.
@@ -276,6 +278,7 @@ func deserialize_event(serialized: String) -> InputEvent:
 	# 1. Reject invalid prefixes immediately
 	if not (
 		serialized.begins_with("key:")
+		or serialized.begins_with("lkey:")
 		or serialized.begins_with("joybtn:")
 		or serialized.begins_with("joyaxis:")
 	):
@@ -286,7 +289,7 @@ func deserialize_event(serialized: String) -> InputEvent:
 		return null
 
 	match parts[0]:
-		"key":
+		"key", "lkey":
 			if parts.size() >= 2 and parts[1].is_valid_int():
 				# serialize_event only writes known modifiers, each at most once, so any
 				# other token means the saved binding is corrupt or hand-edited (#1090).
@@ -315,7 +318,10 @@ func deserialize_event(serialized: String) -> InputEvent:
 					return null
 
 				var ev := InputEventKey.new()
-				ev.physical_keycode = code
+				if parts[0] == "lkey":
+					ev.keycode = code  # Logical: follows the keyboard layout.
+				else:
+					ev.physical_keycode = code
 				ev.shift_pressed = "shift" in modifiers
 				ev.ctrl_pressed = "ctrl" in modifiers
 				ev.alt_pressed = "alt" in modifiers
@@ -414,9 +420,11 @@ func events_match(a: InputEvent, b: InputEvent) -> bool:
 		return false
 
 	if a is InputEventKey:
-		# FIXED: Must compare modifiers to distinguish between Tab and Shift+Tab
+		# Compare what serialize_event would store (see _key_identity), plus modifiers so
+		# Tab and Shift+Tab stay distinct. A logical and a physical printable key never match:
+		# which physical key a logical one lands on depends on the keyboard layout.
 		return (
-			a.physical_keycode == b.physical_keycode
+			_key_identity(a) == _key_identity(b)
 			and a.shift_pressed == b.shift_pressed
 			and a.ctrl_pressed == b.ctrl_pressed
 			and a.alt_pressed == b.alt_pressed
@@ -428,6 +436,25 @@ func events_match(a: InputEvent, b: InputEvent) -> bool:
 	if a is InputEventJoypadMotion:
 		return a.axis == b.axis and a.axis_value == b.axis_value and a.device == b.device
 	return false
+
+
+## Returns how a key event is identified: [code]x[/code] is the code and [code]y[/code] is 1
+## for a logical (layout-following) key or 0 for a physical (position) key.
+##
+## [code]physical_keycode[/code] wins when set. A keycode-only event is physical too when its
+## keycode is a special key (arrows, Enter, Tab, Escape, F-keys, numpad...), because Godot uses
+## the same value for both and those keys do not move between layouts. Only a keycode-only
+## printable key (letters, digits, symbols) is logical.
+##
+## [param ev]: The key event.
+## Returns [code]Vector2i(code, is_logical)[/code].
+static func _key_identity(ev: InputEventKey) -> Vector2i:
+	if ev.physical_keycode != 0:
+		return Vector2i(int(ev.physical_keycode), 0)
+	var code: int = int(ev.keycode)
+	if code == 0 or code & KEY_SPECIAL:
+		return Vector2i(code, 0)
+	return Vector2i(code, 1)
 
 
 ## Finds every other managed action that already uses this exact event.
@@ -552,12 +579,17 @@ func _migrate_legacy_unbound_states() -> void:
 
 ## One-time repair for saves written before the menu/gameplay input split.
 ##
-## Delegates to [code]input_layout_migration.gd[/code], flags a save if anything changed, and
-## sets the meta flag so it runs once; [method save_input_mappings] persists the flag.
+## Delegates to [code]input_layout_migration.gd[/code], sets the meta flag and always flags a
+## save, even when no binding changed: [method save_input_mappings] is what persists the flag,
+## and without it the migration would run again on every launch until something else saved.
 func _migrate_input_layout_v3() -> void:
-	if InputLayoutMigration.migrate(self):
-		_needs_save = true
+	var changed: bool = InputLayoutMigration.migrate(self)
 	Globals.set_meta(INPUT_LAYOUT_MIGRATION_KEY, true)
+	_needs_save = true
+	Globals.log_message(
+		"Migration v3 done (%s)" % ("bindings repaired" if changed else "no changes"),
+		Globals.LogLevel.DEBUG
+	)
 
 
 ## Returns a human-readable label for an InputEvent.
