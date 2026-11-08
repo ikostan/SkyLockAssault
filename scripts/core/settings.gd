@@ -124,7 +124,7 @@ func _add_missing_defaults(config: ConfigFile) -> bool:
 					var has_saved_joy: bool = false
 					for item: Variant in saved_val:
 						if item is String:
-							if item.begins_with("key:"):
+							if item.begins_with("key:") or item.begins_with("lkey:"):
 								has_saved_key = true
 							elif item.begins_with("joybtn:") or item.begins_with("joyaxis:"):
 								has_saved_joy = true

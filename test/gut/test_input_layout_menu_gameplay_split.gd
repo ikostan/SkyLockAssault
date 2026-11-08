@@ -742,4 +742,20 @@ func test_mig_13_repairs_post_bug_input_map_without_loader() -> void:
 	for row: Array in expected:
 		assert_eq(_labels_for(row[0], "keyboard"), [row[1]] as Array[String], row[0] + " keyboard")
 		assert_eq(_labels_for(row[0], "gamepad"), [row[2]] as Array[String], row[0] + " gamepad")
-	
+
+
+## SER-08 | A saved keyboard entry that fails to load is backfilled with the default for both
+## prefixes: an "lkey:" entry counts as a saved keyboard binding, not an explicit unbind.
+func test_ser_08_corrupt_saved_key_is_backfilled(
+	entry: String = use_parameters(["key:0", "lkey:0"])
+) -> void:
+	_write_config({"fire": [entry, "joybtn:%d:-1" % JOY_BUTTON_A]})
+
+	Settings.load_input_mappings(TEST_CONFIG_PATH)
+
+	assert_eq(
+		_labels_for("fire", "keyboard"),
+		["Space"] as Array[String],
+		entry + " is replaced by the default, not treated as an unbind"
+	)
+	assert_eq(_labels_for("fire", "gamepad"), ["A"] as Array[String], "gamepad entry kept")
