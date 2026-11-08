@@ -759,3 +759,131 @@ func test_ser_08_corrupt_saved_key_is_backfilled(
 		entry + " is replaced by the default, not treated as an unbind"
 	)
 	assert_eq(_labels_for("fire", "gamepad"), ["A"] as Array[String], "gamepad entry kept")
+
+
+## Default factories must not share mutable events between actions, resets or callers.
+func test_default_events_are_independent(
+	row: Array = use_parameters(
+		[["ui_focus_prev", "keyboard"], ["fire", "gamepad"], ["speed_up", "gamepad"]]
+	)
+) -> void:
+	var first: InputEvent = Settings.InputDefaults.make_event(row[0], row[1])
+	var second: InputEvent = Settings.InputDefaults.make_event(row[0], row[1])
+	var expected: String = Settings.serialize_event(second)
+	assert_ne(first.get_instance_id(), second.get_instance_id(), "each call creates an event")
+	if first is InputEventKey:
+		first.physical_keycode = KEY_F
+		first.shift_pressed = false
+	elif first is InputEventJoypadButton:
+		first.button_index = JOY_BUTTON_Y
+		first.device = 3
+	elif first is InputEventJoypadMotion:
+		first.axis_value = 1.0
+		first.device = 3
+	assert_eq(Settings.serialize_event(second), expected, "existing events are independent")
+	assert_eq(
+		Settings.serialize_event(Settings.InputDefaults.make_event(row[0], row[1])),
+		expected,
+		"mutating an event does not change future defaults"
+	)
+
+
+## Unknown actions/devices have no default; they must not silently select a device.
+func test_default_factory_rejects_unknown_inputs(
+	row: Array = use_parameters(
+		[["unknown", "keyboard"], ["unknown", "gamepad"], ["fire", ""], ["fire", "mouse"]]
+	)
+) -> void:
+	assert_null(Settings.InputDefaults.make_event(row[0], row[1]))
+
+
+## Scope respects the caller's subset and ordering, including Pause's group union.
+func test_conflict_scope_preserves_subset_order(
+	row: Array = use_parameters(
+		[
+			["fire", ["pause", "fire", "move_left"]],
+			["ui_up", ["ui_down", "pause", "ui_up"]],
+			["pause", ["ui_down", "pause", "fire", "ui_up", "move_left"]],
+			["unknown", ["ui_down", "pause", "fire", "ui_up", "move_left", "custom"]],
+		]
+	)
+) -> void:
+	var actions: Array[String] = ["ui_down", "pause", "fire", "ui_up", "move_left", "custom"]
+	var original: Array[String] = actions.duplicate()
+	var scope: Array[String] = Settings.InputDefaults.conflict_scope(row[0], actions)
+	assert_eq(scope, row[1] as Array[String])
+	scope.clear()
+	assert_eq(actions, original, "returned scopes must not alias the caller's array")
+	assert_true(Settings.InputDefaults.conflict_scope(row[0], [] as Array[String]).is_empty())
+
+
+## Every modifier combination survives serialization of logical printable keys.
+func test_logical_key_round_trip_all_modifiers(mask: int = use_parameters(range(16))) -> void:
+	var original: InputEventKey = _keycode_only(KEY_Z)
+	original.shift_pressed = bool(mask & 1)
+	original.ctrl_pressed = bool(mask & 2)
+	original.alt_pressed = bool(mask & 4)
+	original.meta_pressed = bool(mask & 8)
+	var serialized: String = Settings.serialize_event(original)
+	assert_true(serialized.begins_with("lkey:"), "printable keys remain logical")
+	var restored: InputEventKey = Settings.deserialize_event(serialized) as InputEventKey
+	assert_not_null(restored)
+	if restored == null:
+		return
+	assert_eq(restored.keycode, KEY_Z)
+	assert_eq(restored.physical_keycode, 0)
+	assert_eq(restored.shift_pressed, original.shift_pressed)
+	assert_eq(restored.ctrl_pressed, original.ctrl_pressed)
+	assert_eq(restored.alt_pressed, original.alt_pressed)
+	assert_eq(restored.meta_pressed, original.meta_pressed)
+	assert_true(Settings.events_match(original, restored))
+	assert_eq(Settings.serialize_event(restored), serialized, "encoding is stable")
+
+
+## Each modifier is part of a logical key's identity when checking conflicts.
+func test_logical_key_modifiers_distinguish_conflicts(
+	modifier: String = use_parameters(["shift_pressed", "ctrl_pressed", "alt_pressed", "meta_pressed"])
+) -> void:
+	var plain: InputEventKey = _keycode_only(KEY_Z)
+	var modified: InputEventKey = _keycode_only(KEY_Z)
+	modified.set(modifier, true)
+	_set_events("fire", [modified])
+	assert_false(Settings.events_match(plain, modified))
+	assert_false(Settings.events_match(modified, plain), "matching is symmetric")
+	assert_eq(Settings.get_conflicting_actions(plain, "next_weapon"), [] as Array[String])
+	assert_eq(
+		Settings.get_conflicting_actions(modified, "next_weapon"), ["fire"] as Array[String]
+	)
+
+
+## Repair all hidden extras, then prove another migration cannot change the repaired map.
+func test_migration_trims_all_legacy_extras_and_is_idempotent() -> void:
+	_apply_pre_fix_layout()
+	var migration = Settings.InputLayoutMigration
+	assert_true(migration.migrate(Settings), "the legacy layout needs repair")
+	for action: String in ["speed_up", "speed_down", "move_left", "move_right"]:
+		assert_eq(_events_for(action, "keyboard").size(), 1, action + " loses its hidden arrow")
+		assert_eq(_events_for(action, "gamepad").size(), 1, action + " keeps its flight stick")
+	assert_eq(_labels_for("speed_down", "keyboard"), ["X"] as Array[String], "keep old remaps")
+	for action: String in ["ui_up", "ui_down", "ui_left", "ui_right"]:
+		assert_eq(_events_for(action, "gamepad").size(), 1, action + " loses its hidden stick")
+		assert_true(_events_for(action, "gamepad")[0] is InputEventJoypadButton)
+	var repaired: Dictionary = _snapshot()
+	assert_false(migration.migrate(Settings), "a second repair reports no changes")
+	assert_eq(_snapshot(), repaired, "a second repair preserves all bindings")
+
+
+## A lookalike legacy arrow with a modifier is a custom binding, even beside another key.
+func test_migration_preserves_modified_legacy_arrows(
+	row: Array = use_parameters(
+		[
+			["speed_up", KEY_UP], ["speed_down", KEY_DOWN],
+			["move_left", KEY_LEFT], ["move_right", KEY_RIGHT],
+		]
+	)
+) -> void:
+	var action: String = row[0]
+	_set_events(action, [_key(row[1], true), _key(KEY_I), _button(JOY_BUTTON_Y)])
+	var before: Dictionary = _snapshot()
+	assert_false(Settings.InputLayoutMigration.migrate(Settings))
+	assert_eq(_snapshot(), before, "modified legacy keys are player remaps")
