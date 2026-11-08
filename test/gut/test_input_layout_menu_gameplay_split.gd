@@ -156,6 +156,15 @@ func _snapshot() -> Dictionary:
 	return snap
 
 
+## Reads the saved entries for [param action] straight from the test config file, so a
+## test can check what was written before the loader's default backfill runs.
+func _saved_entries(action: String) -> Array:
+	var config := ConfigFile.new()
+	var err: int = config.load_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass)
+	assert_eq(err, OK, "Precondition: saved config readable")
+	return config.get_value("input", action, [])
+
+
 func _write_config(bindings: Dictionary) -> void:
 	var config := ConfigFile.new()
 	for action: String in bindings:
@@ -368,9 +377,26 @@ func test_ser_03_physical_keycode_preferred() -> void:
 
 
 ## REG-01 | Save then reload keeps menu arrows and flight sticks bound (the original bug).
+## The saved entries are checked before reload: load_input_mappings backfills missing
+## defaults, which would hide a binding that was never written (e.g. "key:0").
 func test_reg_01_save_reload_keeps_menu_and_flight_bindings() -> void:
 	_apply_pre_fix_layout()
 	Settings.save_input_mappings(TEST_CONFIG_PATH)
+
+	for row: Array in [
+		["ui_up", KEY_UP], ["ui_down", KEY_DOWN], ["ui_left", KEY_LEFT], ["ui_right", KEY_RIGHT]
+	]:
+		var saved: Array = _saved_entries(row[0])
+		assert_has(saved, "key:%d" % row[1], row[0] + " arrow is written to the save")
+		assert_does_not_have(saved, "key:0", row[0] + " has no invalid key:0 entry")
+	for row: Array in [
+		["speed_up", "joyaxis:1:-1.0:-1"],
+		["speed_down", "joyaxis:1:1.0:-1"],
+		["move_left", "joyaxis:0:-1.0:-1"],
+		["move_right", "joyaxis:0:1.0:-1"],
+	]:
+		assert_has(_saved_entries(row[0]), row[1], row[0] + " stick is written to the save")
+
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 
 	for row: Array in [["ui_up", "Up"], ["ui_down", "Down"], ["ui_left", "Left"]]:
@@ -429,6 +455,11 @@ func test_mig_01_repairs_broken_save() -> void:
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	Settings.set_needs_save_for_test(false)
 	_set_flag(Settings.INPUT_LAYOUT_MIGRATION_KEY, false)
+	# Guard: the loader's backfill must not have filled these yet, or the asserts below would
+	# pass without the migration. If this fails, the loader changed; see MIG-13 for the
+	# migration-only check.
+	assert_eq(_events_for("ui_up", "keyboard").size(), 0, "Precondition: ui_up arrow missing")
+	assert_eq(_events_for("speed_up", "gamepad").size(), 0, "Precondition: speed_up stick missing")
 
 	Settings._migrate_input_layout_v3()
 
@@ -680,3 +711,35 @@ func test_ser_07_logical_binding_survives_save_and_load() -> void:
 	if keys.size() == 1:
 		assert_eq(keys[0].keycode, KEY_Z, "still logical Z")
 		assert_eq(keys[0].physical_keycode, 0, "not physical Z")
+
+
+## MIG-13 | The migration alone repairs the post-bug state: InputMap is set directly, so the
+## loader's default backfill cannot supply any binding (review fix).
+func test_mig_13_repairs_post_bug_input_map_without_loader() -> void:
+	# What the InputMap held after the bug, with no defaults backfilled.
+	_set_events("speed_up", [_key(KEY_W), _key(KEY_UP)])
+	_set_events("speed_down", [_key(KEY_S), _key(KEY_DOWN)])
+	_set_events("move_left", [_key(KEY_A), _key(KEY_LEFT)])
+	_set_events("move_right", [_key(KEY_D), _key(KEY_RIGHT)])
+	_set_events("ui_up", [_button(JOY_BUTTON_DPAD_UP), _axis(JOY_AXIS_LEFT_Y, -1.0)])
+	_set_events("ui_down", [_button(JOY_BUTTON_DPAD_DOWN), _axis(JOY_AXIS_LEFT_Y, 1.0)])
+	_set_events("ui_left", [_button(JOY_BUTTON_DPAD_LEFT), _axis(JOY_AXIS_LEFT_X, -1.0)])
+	_set_events("ui_right", [_button(JOY_BUTTON_DPAD_RIGHT), _axis(JOY_AXIS_LEFT_X, 1.0)])
+	_set_flag(Settings.INPUT_LAYOUT_MIGRATION_KEY, false)
+
+	Settings._migrate_input_layout_v3()
+
+	var expected: Array = [
+		["speed_up", "W", "Left Stick (Up)"],
+		["speed_down", "S", "Left Stick (Down)"],
+		["move_left", "A", "Left Stick (Left)"],
+		["move_right", "D", "Left Stick (Right)"],
+		["ui_up", "Up", "D-Pad Up"],
+		["ui_down", "Down", "D-Pad Down"],
+		["ui_left", "Left", "D-Pad Left"],
+		["ui_right", "Right", "D-Pad Right"],
+	]
+	for row: Array in expected:
+		assert_eq(_labels_for(row[0], "keyboard"), [row[1]] as Array[String], row[0] + " keyboard")
+		assert_eq(_labels_for(row[0], "gamepad"), [row[2]] as Array[String], row[0] + " gamepad")
+	
