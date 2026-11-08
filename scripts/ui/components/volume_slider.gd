@@ -73,13 +73,13 @@ func _ready() -> void:
 	add_child(save_debounce_timer)
 
 
-## Safe method for external scripts to update the slider without triggering SFX or saves.
-## Use this instead of modifying `value` directly when restoring settings.
-## Routes through AudioManager.change_volume() as a programmatic call (Issue #1042): the
-## near-zero auto-mute rule still applies, silently, and AudioManager owns the mixer write.
-## :param new_value: The target volume (0.0 to 1.0).
-## :type new_value: float
-## :rtype: void
+## Updates the slider value safely without triggering SFX or saves.
+##
+## Use this instead of modifying value directly when restoring settings. Routes through
+## AudioManager.change_volume as a programmatic call where the near-zero auto-mute rule still
+## applies silently and AudioManager owns the mixer write.
+##
+## [param new_value]: The target volume from 0.0 to 1.0.
 func set_value_programmatically(new_value: float) -> void:
 	# Guard against external updates if the bus is invalid
 	if bus_index == -1:
@@ -103,14 +103,12 @@ func set_value_programmatically(new_value: float) -> void:
 	AudioManager.change_volume(bus_name, clamped_value, false)
 
 
-## Mirrors a volume change that already happened in AudioManager (web bridge, unmute-from-zero
-## restore, reset). Updates the visual value and the delta tracker without emitting
-## 'value_changed', touching AudioServer, or writing back to AudioManager.
-## Keeping _previous_value in sync matters: if it went stale, a later manual move to that stale
-## value would be swallowed by _on_value_changed's early return (Issue #1046).
-## :param new_value: The volume AudioManager now holds (0.0 to 1.0).
-## :type new_value: float
-## :rtype: void
+## Mirrors an external volume change without triggering signals.
+##
+## Updates the visual value and delta tracker to match AudioManager without emitting
+## value_changed, touching AudioServer, or writing back.
+##
+## [param new_value]: The volume AudioManager now holds from 0.0 to 1.0.
 func sync_from_manager(new_value: float) -> void:
 	var clamped_value: float = clamp(new_value, min_value, max_value)
 	set_value_no_signal(clamped_value)

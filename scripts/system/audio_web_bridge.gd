@@ -6,7 +6,9 @@
 extends Node
 
 # Custom signals for the UI to listen to
+## Emitted when a web back request is received.
 signal web_back_requested
+## Emitted when a web reset is requested.
 signal web_reset_requested
 
 var os_wrapper: OSWrapper = OSWrapper.new()
@@ -63,10 +65,10 @@ func _ready() -> void:
 
 
 ## Toggles visibility of all audio DOM overlays in the HTML shell.
+##
 ## Instantly syncs Godot values to the DOM when shown.
-## :param show: Pass true to display elements ("block"), false to hide ("none").
-## :type show: bool
-## :rtype: void
+##
+## [param show]: Pass true to display elements ("block"), false to hide ("none").
 func toggle_dom_visibility(show: bool) -> void:
 	if not js_window:
 		return

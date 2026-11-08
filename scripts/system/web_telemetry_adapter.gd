@@ -22,6 +22,11 @@ func _ready() -> void:
 
 
 ## Safely binds the adapter to a specific FuelResource instance.
+##
+## Clears any existing connections to prevent memory leaks and connects to the fuel_changed
+## signal.
+##
+## [param resource]: The FuelResource instance to bind to the adapter.
 func setup(resource: FuelResource) -> void:
 	# Clear any existing connections first to prevent memory leaks
 	teardown()
