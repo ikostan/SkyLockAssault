@@ -232,13 +232,11 @@ Three issues combined:
     - Found that the same load also stripped the gamepad left stick from flight.
     - Proposed the arcade layout and the gameplay and menu conflict groups.
   - **#1161 code and tests**
-    - Wrote the new GUT suite, and updated the 5 existing files without removing cases.
     - Broke the code on purpose for every fix to show the tests catch it.
   - **Review findings**
     - Checked each Sourcery and CodeRabbit finding against the code and confirmed all six, then wrote the fixes and the thread replies.
   - **#1159**
     - Traced the 0.0 s duration to `_invoke_sessionfinish` leaking into the real `_SESSION_STATE`, drafted and filed #1157, and wrote the fixture fix and its regression test.
-    - Worked out the `docker run` command with both `safe.directory` entries during #1155, which the new docs section uses.
 
 - **@sourcery-ai**
   - Posted the PR summaries, Reviewer's Guides and linked-issue checks on both PRs.
