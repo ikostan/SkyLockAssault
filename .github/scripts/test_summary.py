@@ -160,7 +160,8 @@ def read_case(testcase: ET.Element) -> Case:
 
 def declared_tests(root: ET.Element, recorded: int) -> int:
     """Return how many tests the leaf suites declare (recorded if they don't say)."""
-    suites = [root] if root.tag == "testsuite" else list(root.iter("testsuite"))
+    # iter() includes the root itself when the root is a testsuite.
+    suites = list(root.iter("testsuite"))
     leaves = [suite for suite in suites if suite.find("testsuite") is None]
     total = 0
     for suite in leaves:
