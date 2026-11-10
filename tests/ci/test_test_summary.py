@@ -971,25 +971,26 @@ def test_read_error_keeps_other_files_results(summary, tmp_path, monkeypatch):
     assert "✅" not in summary.render("Read failure", results)
 
 
-@pytest.mark.parametrize("size", [199, 200, 201])
-def test_failure_message_truncation_boundary(summary, size):
+@pytest.mark.parametrize("offset", [-1, 0, 1])
+def test_failure_message_truncation_boundary(summary, offset):
     """Messages at the display limit stay intact; overflow gets one ellipsis."""
-    message = "é" * size
+    message = "é" * (summary.MAX_MESSAGE + offset)
     case = summary.Case("boundary", summary.FAILED, message=message)
     lines = summary.render_failures(summary.Results(cases=[case]))
-    expected = message if size <= 200 else "é" * 199 + "…"
+    expected = message if offset <= 0 else "é" * (summary.MAX_MESSAGE - 1) + "…"
 
     assert lines[-1] == f"- `boundary` (failed): `{expected}`"
 
 
 def test_exact_failure_limit_has_no_overflow_note(summary):
     """The truncation note appears only when there are undisplayed failures."""
-    cases = [summary.Case(f"f{i}", summary.ERROR) for i in range(50)]
+    limit = summary.MAX_FAILURES
+    cases = [summary.Case(f"f{i}", summary.ERROR) for i in range(limit)]
     lines = summary.render_failures(summary.Results(cases=cases))
 
-    assert len([line for line in lines if line.startswith("- ")]) == 50
+    assert len([line for line in lines if line.startswith("- ")]) == limit
     assert "more; see the job log" not in "\n".join(lines)
-    assert lines[-1] == "- `f49` (error): (no message)"
+    assert lines[-1] == f"- `f{limit - 1}` (error): (no message)"
 
 
 def test_render_exception_is_reported_and_appended(
