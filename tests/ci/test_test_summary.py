@@ -18,6 +18,7 @@ failing, skipped and erroring tests:
 """
 
 import importlib.util
+import re
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
@@ -40,13 +41,6 @@ SAMPLES = (
     "pytest_xunit2.xml",
 )
 WORKFLOWS = PROJECT_ROOT / ".github/workflows"
-
-# The XML browser_test.yml writes when a shard matches no test files.
-EMPTY_SHARD_XML = """<?xml version="1.0" encoding="utf-8"?>
-<testsuites>
-  <testsuite name="empty" tests="0" failures="0" errors="0" skipped="0"/>
-</testsuites>
-"""
 
 PASSING_XML = """<?xml version="1.0" encoding="utf-8"?>
 <testsuites name="pytest tests">
@@ -360,7 +354,7 @@ def test_unreadable_file_among_good_ones_is_still_flagged(summary, tmp_path):
 def test_zero_tests_says_so(summary, tmp_path):
     """The browser job's empty-shard XML (0 tests) is reported, not ticked."""
     xml = tmp_path / "junit.xml"
-    xml.write_text(EMPTY_SHARD_XML, encoding="utf-8")
+    xml.write_text(empty_shard_xml(), encoding="utf-8")
 
     report = run(summary, tmp_path, str(xml))
 
@@ -369,13 +363,24 @@ def test_zero_tests_says_so(summary, tmp_path):
     assert "✅" not in report
 
 
-def test_browser_empty_shard_xml_matches_the_workflow(summary):
-    """EMPTY_SHARD_XML above is what browser_test.yml writes for an empty shard."""
-    workflow = (WORKFLOWS / "browser_test.yml").read_text(encoding="utf-8")
-    empty = '<testsuite name="empty" tests="0" failures="0" errors="0" skipped="0"/>'
+def test_browser_empty_shard_xml_is_valid_junit(summary, tmp_path):
+    """The whole XML browser_test.yml writes for an empty shard reads as 0 tests.
 
-    assert empty in workflow
-    assert empty in EMPTY_SHARD_XML
+    Parsing it catches a broken here-doc, such as an indented XML declaration
+    or a missing root, which checking for one line would miss.
+    """
+    xml = tmp_path / "junit.xml"
+    xml.write_text(empty_shard_xml(), encoding="utf-8")
+
+    root = ET.parse(xml).getroot()
+    results = summary.read_results(str(xml))
+
+    assert root.tag == "testsuites"
+    assert [suite.get("tests") for suite in root.iter("testsuite")] == ["0"]
+    assert results.problems == []
+    assert results.files == [str(xml)]
+    assert results.cases == []
+    assert results.declared == 0
 
 
 # ---------------------------------------------------------------------------
@@ -691,6 +696,21 @@ def find_step(job: dict[str, Any], name: str) -> dict[str, Any]:
     raise AssertionError(f"Step '{name}' not found in the job")
 
 
+def empty_shard_xml() -> str:
+    """Return the XML the browser shards write when no test files match."""
+    script = find_step(load_job("browser_test.yml"), "Run Sharded Tests")["run"]
+    found = re.search(r"cat <<EOF > artifacts/junit\.xml\n(.*?)\nEOF\n", script, re.S)
+
+    assert found, "empty-shard here-doc not found in 'Run Sharded Tests'"
+    return found.group(1) + "\n"
+
+
+def upload_matches(pattern: str, path: str) -> bool:
+    """Match a path against an upload-artifact glob (* stays within one folder)."""
+    regex = re.escape(pattern).replace(r"\*\*", ".*").replace(r"\*", "[^/]*")
+    return re.fullmatch(regex, path) is not None
+
+
 def summary_step(job: dict[str, Any]) -> tuple[int, dict[str, Any]]:
     """Return the index and step that runs test_summary.py."""
     found = [
@@ -757,9 +777,27 @@ def test_gdunit4_report_path_matches_where_gdunit4_writes():
     """gdUnit4 writes reports/report_<n>/results.xml, which the upload step keeps."""
     job = load_job("gdunit4_tests.yml")
     upload = find_step(job, "Upload Test Reports Artifacts")
+    written = "reports/report_1/results.xml"
+    patterns = [line.strip() for line in upload["with"]["path"].splitlines()]
 
-    assert "reports/**" in upload["with"]["path"]
     assert ET.parse(DATA / "gdunit4_results.xml").getroot().get("name") == "report_1"
+    assert any(upload_matches(p, written) for p in patterns if p), patterns
+
+
+@pytest.mark.parametrize(
+    "pattern, matches",
+    [
+        ("reports/**", True),
+        ("reports/**/results.xml", True),
+        ("reports/*/results.xml", True),
+        ("reports/**/results.html", False),
+        ("reports/*.xml", False),
+        ("artifacts/gdunit-reports/**", False),
+    ],
+)
+def test_upload_matches_follows_upload_glob_rules(pattern, matches):
+    """** crosses folders and * does not, as in actions/upload-artifact."""
+    assert upload_matches(pattern, "reports/report_1/results.xml") is matches
 
 
 @pytest.mark.parametrize(
