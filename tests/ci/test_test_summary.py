@@ -812,3 +812,186 @@ def test_upload_matches_follows_upload_glob_rules(pattern, matches):
 def test_job_permissions_are_unchanged(workflow, permissions):
     """Writing the step summary needs no extra permission."""
     assert load_job(workflow).get("permissions") == permissions
+
+
+# ---------------------------------------------------------------------------
+# Additional parser and reporting regressions
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("root_tag", ["testsuite", "testsuites"])
+def test_nested_suite_counts_only_leaf_declarations(summary, tmp_path, root_tag):
+    """Parent totals must not double-count missing tests in nested reports."""
+    xml = tmp_path / "nested.xml"
+    xml.write_text(
+        f'<{root_tag} tests="3"><testsuite tests="3">'
+        '<testsuite tests="1"><testcase name="done"/></testsuite>'
+        '<testsuite tests="2"/>'
+        f'</testsuite></{root_tag}>',
+        encoding="utf-8",
+    )
+
+    results = summary.read_results(str(xml))
+    report = summary.render("Nested", results)
+
+    assert results.declared == 3
+    assert results.not_run == 2
+    assert "2 tests declared in the XML have no result" in report
+    assert "| 1 | 0 | 0 | 0 | 1 |" in report
+    assert "✅" not in report
+
+
+@pytest.mark.parametrize("declaration", ["", 'tests="unknown"', 'tests="1.5"'])
+def test_invalid_leaf_count_falls_back_to_recorded_cases(
+    summary, tmp_path, declaration
+):
+    """Missing or non-integer metadata must not invent unexecuted tests."""
+    xml = tmp_path / "metadata.xml"
+    xml.write_text(
+        '<testsuites><testsuite tests="100"><testcase name="a"/></testsuite>'
+        f'<testsuite {declaration}><testcase name="b"/></testsuite></testsuites>',
+        encoding="utf-8",
+    )
+
+    results = summary.read_results(str(xml))
+
+    assert results.declared == 2
+    assert results.not_run == 0
+    assert summary.status_line(results) == "✅ All 2 tests passed."
+
+
+@pytest.mark.parametrize(
+    "children, outcome, message, more",
+    [
+        ('<skipped/><error message="setup"/>', "error", "setup", 0),
+        (
+            '<error message="cleanup"/><failure message="assertion"/><skipped/>',
+            "failed", "assertion", 1,
+        ),
+        ('<error message="first"/><error message="second"/>', "error", "first", 1),
+    ],
+)
+def test_mixed_outcomes_count_one_case_and_preserve_diagnostics(
+    summary, children, outcome, message, more
+):
+    """Failure/error diagnostics take precedence over skips regardless of order."""
+    case = summary.read_case(ET.fromstring(f'<testcase name="mixed">{children}</testcase>'))
+
+    assert case.name == "mixed"
+    assert case.outcome == outcome
+    assert case.message == message
+    assert case.more == more
+    results = summary.Results(cases=[case], files=["junit.xml"], declared=1)
+    assert summary.status_line(results).startswith("❌")
+    assert sum(results.count(kind) for kind in ("passed", "failed", "error", "skipped")) == 1
+
+
+@pytest.mark.parametrize("attributes", ["", 'name=""', 'classname=""'])
+def test_case_without_a_name_has_a_visible_fallback(summary, attributes):
+    """Incomplete testcase metadata still gives failures an identifiable label."""
+    case = summary.read_case(ET.fromstring(f'<testcase {attributes}><failure/></testcase>'))
+
+    assert case.name == "(unnamed)"
+    assert "- `(unnamed)` (failed): (no message)" in summary.render_failures(
+        summary.Results(cases=[case])
+    )
+
+
+@pytest.mark.parametrize("duration", ["", "n/a", "-0.001", "NaN"])
+def test_invalid_duration_preserves_case_but_omits_timing(summary, tmp_path, duration):
+    """Bad timing metadata must neither lose a result nor pollute the slowest list."""
+    xml = tmp_path / "timing.xml"
+    xml.write_text(
+        f'<testsuite tests="1"><testcase name="a" time="{duration}"/></testsuite>',
+        encoding="utf-8",
+    )
+
+    results = summary.read_results(str(xml))
+    report = summary.render("Timing", results)
+
+    assert len(results.cases) == 1
+    assert results.cases[0].time is None
+    assert "✅ All 1 test passed." in report
+    assert "<details>" not in report
+
+
+def test_zero_duration_is_a_valid_timed_result(summary):
+    """A fast test rounded to zero still belongs in the timing section."""
+    case = summary.read_case(ET.fromstring('<testcase name="fast" time="0"/>'))
+
+    assert case.time == 0.0
+    assert "| `fast` | 0.000 s |" in summary.render_slowest(
+        summary.Results(cases=[case])
+    )
+
+
+def test_recursive_glob_ignores_directories_and_sorts_files(summary, tmp_path):
+    """A directory with an XML suffix is not treated as an unreadable report."""
+    (tmp_path / "directory.xml").mkdir()
+    nested = tmp_path / "nested"
+    nested.mkdir()
+    second = passing_xml(nested / "z.xml", passed=1)
+    first = passing_xml(tmp_path / "a.xml", passed=1)
+
+    results = summary.read_results(str(tmp_path / "**/*.xml"))
+
+    assert results.files == sorted([str(first), str(second)])
+    assert results.problems == []
+    assert results.count(summary.PASSED) == 2
+
+
+def test_read_error_keeps_other_files_results(summary, tmp_path, monkeypatch):
+    """An OS read failure warns while preserving the reports that remain readable."""
+    good = passing_xml(tmp_path / "a.xml", passed=1)
+    bad = passing_xml(tmp_path / "b.xml", passed=1)
+    original_parse = summary.ET.parse
+
+    def deny_one(path):
+        """Simulate permissions without depending on the test runner's user ID."""
+        if path == str(bad):
+            raise PermissionError("access denied")
+        return original_parse(path)
+
+    monkeypatch.setattr(summary.ET, "parse", deny_one)
+    results = summary.read_results(str(tmp_path / "*.xml"))
+
+    assert results.files == [str(good)]
+    assert results.count(summary.PASSED) == 1
+    assert len(results.problems) == 1
+    assert "access denied" in results.problems[0]
+    assert "✅" not in summary.render("Read failure", results)
+
+
+@pytest.mark.parametrize("size", [199, 200, 201])
+def test_failure_message_truncation_boundary(summary, size):
+    """Messages at the display limit stay intact; overflow gets one ellipsis."""
+    message = "é" * size
+    case = summary.Case("boundary", summary.FAILED, message=message)
+    lines = summary.render_failures(summary.Results(cases=[case]))
+    expected = message if size <= 200 else "é" * 199 + "…"
+
+    assert lines[-1] == f"- `boundary` (failed): `{expected}`"
+
+
+def test_exact_failure_limit_has_no_overflow_note(summary):
+    """The truncation note appears only when there are undisplayed failures."""
+    cases = [summary.Case(f"f{i}", summary.ERROR) for i in range(50)]
+    lines = summary.render_failures(summary.Results(cases=cases))
+
+    assert len([line for line in lines if line.startswith("- ")]) == 50
+    assert "more; see the job log" not in "\n".join(lines)
+    assert lines[-1] == "- `f49` (error): (no message)"
+
+
+def test_render_exception_is_reported_and_appended(summary, tmp_path, monkeypatch, capsys):
+    """Rendering failures keep the report-only exit contract and a visible warning."""
+    def broken_render(_title, _results):
+        """Raise after parsing succeeded to exercise the rendering crash path."""
+        raise ValueError("cannot render")
+
+    monkeypatch.setattr(summary, "render", broken_render)
+    report = run(summary, tmp_path, str(DATA / "gut_junit.xml"), title="Résumé")
+
+    assert report.startswith("## Résumé\n\n⚠️ The summary script failed: ValueError: cannot render")
+    assert "✅" not in report
+    assert report.strip() in capsys.readouterr().out
