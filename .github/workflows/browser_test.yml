@@ -394,6 +394,18 @@ jobs:
           if-no-files-found: "ignore"
           retention-days: 7
 
+      # Results table on the run's Summary page, one per shard (#1156). Report
+      # only: the script always exits 0, so the test step alone decides the result.
+      - name: "Test Results Summary"
+        if: "always()"
+        env:
+          SUITE: "${{ matrix.suite }}"
+        run: |
+          python3 .github/scripts/test_summary.py \
+            --title "Browser tests: ${SUITE}${RUNNER_SUFFIX}" \
+            --results "artifacts/junit.xml" \
+            --summary "${GITHUB_STEP_SUMMARY}"
+
       - name: "Upload Coverage to Codecov"
         if: "${{ !cancelled() && inputs.upload_coverage }}"
         uses: "codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5"  # v7.1.1

@@ -291,6 +291,43 @@ that make a local clone of the repository fail during setup with
 `CalledProcessError` and exit status 128.
 
 
+## Test Result Summaries on the Run Page
+
+Each test job adds a results table to its GitHub Actions run's **Summary**
+page, like the benchmark jobs do: GUT, GDUnit4, `tests/ci/` and one table per
+browser shard. Each table shows passed, failed, errors, skipped and total,
+then every failing test with its name and the first line of its message, and
+a collapsed list of the 5 slowest tests.
+
+`.github/scripts/test_summary.py` builds the table from the job's JUnit XML,
+using only the Python standard library:
+
+| Job            | Workflow              | XML it reads                   |
+|----------------|-----------------------|--------------------------------|
+| GUT            | `gut_tests.yml`       | `gut-reports/*/gut_junit.xml`  |
+| GDUnit4        | `gdunit4_tests.yml`   | `reports/report_*/results.xml` |
+| `tests/ci/`    | `test_ci_scripts.yml` | `reports/ci-scripts/junit.xml` |
+| Browser shards | `browser_test.yml`    | `artifacts/junit.xml`          |
+
+The step runs with `if: "always()"`, so the table also appears when the tests
+fail. It only reports: the script always exits 0, so the test step alone
+decides whether the job passes. A run never shows ✅ when the XML is missing
+(for example, Godot crashed before the tests started), unreadable, holds 0
+tests, or declares tests that have no result.
+
+To see the report for a local run, point the script at the XML. Leave out
+`--summary` to print it only, or pass a file to append it to:
+
+```bash
+python3 .github/scripts/test_summary.py --title "GUT unit tests" \
+  --results "gut-reports/*/gut_junit.xml" --summary summary.md
+```
+
+Quote a glob so the script expands it, not the shell. Its tests are in
+`tests/ci/test_test_summary.py`, with a real XML sample from each job in
+`tests/ci/data/test_summary/`.
+
+
 ## Step 4: Running Individual Workflows
 
 To run workflows separately (e.g., for quick checks while developing a new
