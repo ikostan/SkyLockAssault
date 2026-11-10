@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="2" skipped="2" tests="7" time="0.039" timestamp="2026-11-10T04:23:10.915784+00:00" hostname="vm"><testcase classname="test_summary_sample" name="test_passes" file="test_summary_sample.py" line="10" time="0.021" /><testcase classname="test_summary_sample" name="test_fails_with_message" file="test_summary_sample.py" line="14" time="0.000"><failure message="AssertionError: pipe | and &lt;angle&gt; &amp; chars&#10;assert 'a|b' == 'c'&#10;  &#10;  - c&#10;  + a|b">def test_fails_with_message():
+&gt;       assert "a|b" == "c", "pipe | and &lt;angle&gt; &amp; chars"
+E       AssertionError: pipe | and &lt;angle&gt; &amp; chars
+E       assert 'a|b' == 'c'
+E
+E         - c
+E         + a|b
+
+test_summary_sample.py:16: AssertionError</failure></testcase><testcase classname="test_summary_sample" name="test_errors_in_setup" file="test_summary_sample.py" line="18" time="0.000"><error message="failed on setup with &quot;RuntimeError: fixture setup exploded&quot;">@pytest.fixture
+    def broken():
+&gt;       raise RuntimeError("fixture setup exploded")
+E       RuntimeError: fixture setup exploded
+
+test_summary_sample.py:8: RuntimeError</error></testcase><testcase classname="test_summary_sample" name="test_is_skipped" file="test_summary_sample.py" line="22" time="0.000"><skipped type="pytest.skip" message="waiting on #1156">/home/claude/work/py/test_summary_sample.py:23: waiting on #1156</skipped></testcase><testcase classname="test_summary_sample" name="test_expected_failure" file="test_summary_sample.py" line="27" time="0.000"><skipped type="pytest.xfail" message="known bug" /></testcase><testcase classname="test_summary_sample" name="test_param[a|b]" file="test_summary_sample.py" line="32" time="0.000" /><testcase classname="test_summary_sample" name="test_param[c]" file="test_summary_sample.py" line="32" time="0.000"><failure message="AssertionError: assert 'c' != 'c'">value = 'c'
+
+    @pytest.mark.parametrize("value", ["a|b", "c"])
+    def test_param(value):
+&gt;       assert value != "c"
+E       AssertionError: assert 'c' != 'c'
+
+test_summary_sample.py:35: AssertionError</failure></testcase></testsuite></testsuites>
