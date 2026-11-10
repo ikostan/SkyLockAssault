@@ -185,8 +185,10 @@ def test_failure_shows_name_and_first_message_line(summary, sample, name, messag
 def test_extra_failures_in_one_test_are_noted(summary):
     """gdUnit4 writes one failure element per failed assert; the test counts once."""
     results = summary.read_results(str(DATA / "gdunit4_results.xml"))
-    case = next(c for c in results.cases if c.name.endswith("test_fails_twice"))
+    cases = [c for c in results.cases if c.name.endswith("test_fails_twice")]
 
+    assert len(cases) == 1, "expected one test_fails_twice result in the sample"
+    case = cases[0]
     assert case.outcome == summary.FAILED
     assert case.more == 1
     assert "`Expecting: 'true' but is 'false'` (+1 more)" in summary.render(
@@ -201,6 +203,49 @@ def test_error_is_labelled_apart_from_failures(summary):
     assert "`test_summary_sample::test_errors_in_setup` (error):" in report
     assert "`test_summary_sample::test_param[c]` (failed):" in report
     assert report.splitlines()[2] == "❌ 2 failed, 1 error of 7 tests."
+
+
+def test_gut_test_with_no_assertions_gets_a_note(summary):
+    """GUT's risky test stays counted as passed, with a note under the status."""
+    results = summary.read_results(str(DATA / "gut_junit.xml"))
+    risky = [case.name for case in results.cases if case.no_asserts]
+
+    assert risky == ["test/gut_sample/test_summary_sample.gd::test_has_no_asserts"]
+    report = summary.render("T", results)
+    lines = report.splitlines()
+    assert lines[2] == "❌ 2 failed of 5 tests."
+    assert lines[4] == "- ⚠️ 1 GUT test made no assertions."
+    assert "| 2 | 2 | 0 | 1 | 5 |" in report
+
+
+def test_no_assertion_note_keeps_a_clean_run_ticked(summary, tmp_path):
+    """The note does not change the counts or the verdict of a clean run."""
+    xml = tmp_path / "gut_junit.xml"
+    xml.write_text(
+        '<testsuites name="GutTests" failures="0" tests="3">'
+        '<testsuite name="test/gut/test_a.gd" tests="3" failures="0" skipped="0">'
+        '<testcase name="test_ok" status="pass" classname="a" time="0.1"/>'
+        '<testcase name="test_x" status="no asserts" classname="a" time="0.1"/>'
+        '<testcase name="test_y" status="no asserts" classname="a" time="0.1"/>'
+        "</testsuite></testsuites>",
+        encoding="utf-8",
+    )
+
+    report = run(summary, tmp_path, str(xml))
+
+    assert report.splitlines()[2] == "✅ All 3 tests passed."
+    assert "- ⚠️ 2 GUT tests made no assertions." in report
+    assert "| 3 | 0 | 0 | 0 | 3 |" in report
+
+
+@pytest.mark.parametrize(
+    "sample", ["gdunit4_results.xml", "pytest_xunit2.xml", "pytest_legacy.xml"]
+)
+def test_other_jobs_get_no_assertion_note(summary, sample):
+    """Only GUT marks tests with status="no asserts"."""
+    report = summary.render("T", summary.read_results(str(DATA / sample)))
+
+    assert "made no assertions" not in report
 
 
 def test_fail_fast_run_reports_tests_that_did_not_run(summary, tmp_path):
@@ -605,6 +650,14 @@ def load_job(workflow: str) -> dict[str, Any]:
     return data["jobs"][JOBS[workflow][0]]
 
 
+def find_step(job: dict[str, Any], name: str) -> dict[str, Any]:
+    """Return the job's step with this name, failing clearly if there is none."""
+    for step in job["steps"]:
+        if step.get("name") == name:
+            return step
+    raise AssertionError(f"Step '{name}' not found in the job")
+
+
 def summary_step(job: dict[str, Any]) -> tuple[int, dict[str, Any]]:
     """Return the index and step that runs test_summary.py."""
     found = [
@@ -661,7 +714,7 @@ def test_summary_step_uses_the_runner_python(workflow):
 def test_ci_scripts_pytest_writes_junit_xml():
     """pytest tests/ci/ must write the XML the summary step reads."""
     job = load_job("test_ci_scripts.yml")
-    step = next(s for s in job["steps"] if s.get("name") == "Run CI Injection Tests")
+    step = find_step(job, "Run CI Injection Tests")
 
     assert "pytest tests/ci/" in step["run"]
     assert "--junitxml=reports/ci-scripts/junit.xml" in step["run"]
@@ -670,9 +723,7 @@ def test_ci_scripts_pytest_writes_junit_xml():
 def test_gdunit4_report_path_matches_where_gdunit4_writes():
     """gdUnit4 writes reports/report_<n>/results.xml, which the upload step keeps."""
     job = load_job("gdunit4_tests.yml")
-    upload = next(
-        s for s in job["steps"] if s.get("name") == "Upload Test Reports Artifacts"
-    )
+    upload = find_step(job, "Upload Test Reports Artifacts")
 
     assert "reports/**" in upload["with"]["path"]
     assert ET.parse(DATA / "gdunit4_results.xml").getroot().get("name") == "report_1"
