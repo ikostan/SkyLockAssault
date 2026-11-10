@@ -209,6 +209,10 @@ func _input(event: InputEvent) -> void:
 # :param axis_value: The raw axis value from the event.
 # :type axis_value: float
 # :rtype: float
+## Calculates the normalized axis direction based on the provided value.
+##
+## [param axis_value]: The raw float value of the input axis to evaluate.
+## Returns the signed direction multiplied by the normalized value constant.
 func get_normalized_axis_direction(axis_value: float) -> float:
 	return sign(axis_value) * AXIS_NORMALIZED_VALUE
 
@@ -216,14 +220,18 @@ func get_normalized_axis_direction(axis_value: float) -> float:
 # Helper to erase old event at index
 # Erase old event at index.
 # :rtype: void
+## Removes the existing matching input event from the action map.
 func erase_old_event() -> void:
 	var old_ev: InputEvent = get_matching_event()
 	if old_ev:
 		InputMap.action_erase_event(action, old_ev)
 
 
-## Gets matching event for current device.
-## :rtype: InputEvent|null
+## Returns the first event bound to [member action] for [member current_device].
+##
+## Keyboard buttons match an [InputEventKey]; gamepad buttons match an [InputEventJoypadButton]
+## or [InputEventJoypadMotion]. Returns [code]null[/code] when the action has no event for that
+## device.
 func get_matching_event() -> InputEvent:
 	var events: Array[InputEvent] = InputMap.action_get_events(action)
 	for ev: InputEvent in events:
@@ -241,6 +249,10 @@ func get_matching_event() -> InputEvent:
 # In input_remap_button.gd, inside finish_remap() func (before Settings.save_input_mappings())
 # Finish remap: update display, stop listening, save
 # :rtype: void
+## Finalizes the input remapping process and saves changes.
+##
+## Updates the button text, resets state flags, persists input mappings, and marks the input
+## event as handled.
 func finish_remap() -> void:
 	update_button_text()
 	button_pressed = false
@@ -251,6 +263,10 @@ func finish_remap() -> void:
 
 # Updated to display key, joypad button, or axis label
 # :rtype: void
+## Refresh the button text using the matching input event label.
+##
+## Retrieves the matching input event, formats the assigned label, removes non-breaking spaces,
+## and assigns the resulting string to the button text.
 func update_button_text() -> void:
 	var ev: InputEvent = get_matching_event()
 	text = Settings.get_event_label(ev).strip_edges() if ev else "Unbound"

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="GutTests" failures="2" tests="5" >
+  <testsuite name="test/gut_sample/test_summary_sample.gd" tests="5" failures="3" skipped="1" time="0.000546" >
+      <testcase name="test_passes" assertions="1" status="pass" classname="test/gut_sample/test_summary_sample.gd" time="0.000125" >
+      </testcase>
+      <testcase name="test_fails_with_message" assertions="1" status="fail" classname="test/gut_sample/test_summary_sample.gd" time="0.000137" >
+      <failure message="failed"><![CDATA[["a|b"] expected to equal ["c"]:  pipe | and <angle> & quote " chars
+            at line 9]]></failure></testcase>
+      <testcase name="test_fails_twice" assertions="2" status="fail" classname="test/gut_sample/test_summary_sample.gd" time="0.00018" >
+      <failure message="failed"><![CDATA[first failure
+            at line 13]]></failure></testcase>
+      <testcase name="test_is_pending" assertions="0" status="pending" classname="test/gut_sample/test_summary_sample.gd" time="0.000055" >
+      <skipped message="pending"><![CDATA[waiting on #1156]]></skipped></testcase>
+      <testcase name="test_has_no_asserts" assertions="0" status="no asserts" classname="test/gut_sample/test_summary_sample.gd" time="0.000049" >
+      </testcase>
+  </testsuite>
+</testsuites>

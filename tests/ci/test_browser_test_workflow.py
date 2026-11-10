@@ -157,8 +157,25 @@ def test_wait_step_tracks_readiness_explicitly(
 def test_test_report_runs_even_when_tests_fail(
     test_shard_steps: list[dict[str, Any]],
 ) -> None:
-    """The xmllint summary is most useful on failed runs, so it must not skip."""
-    assert _find_step(test_shard_steps, "Test Report")["if"] == "always()"
+    """The results summary is most useful on failed runs, so it must not skip."""
+    assert _find_step(test_shard_steps, "Test Results Summary")["if"] == "always()"
+
+
+def test_xmllint_report_and_its_apt_install_were_removed(
+    test_shard_steps: list[dict[str, Any]],
+) -> None:
+    """Regression guard (#1156): the summary step replaced the xmllint report.
+
+    xmllint was the only reason the shards ran apt-get, so neither may return:
+    each apt-get call is a network step that can hang on a dead mirror.
+    """
+    names = {step.get("name") for step in test_shard_steps}
+    scripts = "\n".join(step.get("run", "") for step in test_shard_steps)
+
+    assert "Test Report" not in names
+    assert "Install System Dependencies" not in names
+    assert "xmllint" not in scripts
+    assert "apt-get" not in scripts
 
 
 def test_coverage_conversion_runs_for_failed_tests(

@@ -41,7 +41,17 @@ jobs:
 
       - name: "Run CI Injection Tests"
         run: |
-          pytest tests/ci/ -v -s
+          pytest tests/ci/ -v -s --junitxml=reports/ci-scripts/junit.xml
+
+      # Results table on the run's Summary page (#1156). Report only: the script
+      # always exits 0, so the test step alone decides the job's result.
+      - name: "Test Results Summary"
+        if: "always()"
+        run: |
+          python3 .github/scripts/test_summary.py \
+            --title "CI/CD infrastructure tests (tests/ci/)" \
+            --results "reports/ci-scripts/junit.xml" \
+            --summary "${GITHUB_STEP_SUMMARY}"
 
   verify-godot:
     name: "Test Godot Asset Infrastructure and Signature Verification"

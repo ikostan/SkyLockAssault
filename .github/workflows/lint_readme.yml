@@ -24,7 +24,7 @@ jobs:
       - name: "Lint MARKDOWN Files"
         # Lints Markdown for formatting/spelling
         # yamllint disable rule:line-length
-        uses: "DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff"
+        uses: "DavidAnson/markdownlint-cli2-action@696eb3f2509270d7b882d2aa68347bc676e7af34"
         # yamllint enable rule:line-length
         with:
           config: ".markdownlint-cli2.yaml"

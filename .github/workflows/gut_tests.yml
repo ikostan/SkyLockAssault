@@ -114,6 +114,16 @@ jobs:
             echo "No valid report directory to list."
           fi
 
+      # Results table on the run's Summary page (#1156). Report only: the script
+      # always exits 0, so the test step alone decides the job's result.
+      - name: "Test Results Summary"
+        if: "always()"
+        run: |
+          python3 .github/scripts/test_summary.py \
+            --title "GUT unit tests${RUNNER_SUFFIX}" \
+            --results "gut-reports/*/gut_junit.xml" \
+            --summary "${GITHUB_STEP_SUMMARY}"
+
       - name: "Upload GUT Test Reports Artifacts"
         if: "always()"
         uses: "actions/upload-artifact@v7"
