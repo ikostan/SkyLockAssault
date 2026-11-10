@@ -31,6 +31,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PROJECT_ROOT / ".github/scripts/test_summary.py"
 SCRIPT_REF = ".github/scripts/test_summary.py"
 DATA = PROJECT_ROOT / "tests/ci/data/test_summary"
+# Listed by name, not globbed: a missing sample must fail, not skip its tests.
+SAMPLES = (
+    "gdunit4_fail_fast.xml",
+    "gdunit4_results.xml",
+    "gut_junit.xml",
+    "pytest_legacy.xml",
+    "pytest_xunit2.xml",
+)
 WORKFLOWS = PROJECT_ROOT / ".github/workflows"
 
 # The XML browser_test.yml writes when a shard matches no test files.
@@ -92,6 +100,13 @@ def passing_xml(path: Path, passed: int, skipped: int = 0) -> Path:
 # ---------------------------------------------------------------------------
 # Real XML from each job
 # ---------------------------------------------------------------------------
+
+
+def test_every_sample_is_present():
+    """The tests below read these files; without them they can't check anything."""
+    missing = [name for name in SAMPLES if not (DATA / name).is_file()]
+
+    assert not missing, f"missing from tests/ci/data/test_summary/: {missing}"
 
 
 @pytest.mark.parametrize(
@@ -543,7 +558,7 @@ def test_report_is_printed_to_the_log(summary, capsys):
     assert "## Log" in capsys.readouterr().out
 
 
-@pytest.mark.parametrize("sample", sorted(p.name for p in DATA.glob("*.xml")))
+@pytest.mark.parametrize("sample", SAMPLES)
 def test_failing_results_exit_zero_as_a_script(sample, tmp_path):
     """Run as the workflows do: failures in the XML never fail the step."""
     out = tmp_path / "s.md"
@@ -589,6 +604,7 @@ def test_crash_exits_zero_and_does_not_look_clean(summary, tmp_path, monkeypatch
     """An unexpected exception is reported on the page, never as ✅."""
 
     def explode(_pattern: str) -> Any:
+        """Stand in for read_results and fail the way an unexpected bug would."""
         raise RuntimeError("boom")
 
     monkeypatch.setattr(summary, "read_results", explode)
