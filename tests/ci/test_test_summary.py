@@ -827,7 +827,7 @@ def test_nested_suite_counts_only_leaf_declarations(summary, tmp_path, root_tag)
         f'<{root_tag} tests="3"><testsuite tests="3">'
         '<testsuite tests="1"><testcase name="done"/></testsuite>'
         '<testsuite tests="2"/>'
-        f'</testsuite></{root_tag}>',
+        f"</testsuite></{root_tag}>",
         encoding="utf-8",
     )
 
@@ -866,7 +866,9 @@ def test_invalid_leaf_count_falls_back_to_recorded_cases(
         ('<skipped/><error message="setup"/>', "error", "setup", 0),
         (
             '<error message="cleanup"/><failure message="assertion"/><skipped/>',
-            "failed", "assertion", 1,
+            "failed",
+            "assertion",
+            1,
         ),
         ('<error message="first"/><error message="second"/>', "error", "first", 1),
     ],
@@ -875,7 +877,9 @@ def test_mixed_outcomes_count_one_case_and_preserve_diagnostics(
     summary, children, outcome, message, more
 ):
     """Failure/error diagnostics take precedence over skips regardless of order."""
-    case = summary.read_case(ET.fromstring(f'<testcase name="mixed">{children}</testcase>'))
+    case = summary.read_case(
+        ET.fromstring(f'<testcase name="mixed">{children}</testcase>')
+    )
 
     assert case.name == "mixed"
     assert case.outcome == outcome
@@ -883,13 +887,18 @@ def test_mixed_outcomes_count_one_case_and_preserve_diagnostics(
     assert case.more == more
     results = summary.Results(cases=[case], files=["junit.xml"], declared=1)
     assert summary.status_line(results).startswith("❌")
-    assert sum(results.count(kind) for kind in ("passed", "failed", "error", "skipped")) == 1
+    assert (
+        sum(results.count(kind) for kind in ("passed", "failed", "error", "skipped"))
+        == 1
+    )
 
 
 @pytest.mark.parametrize("attributes", ["", 'name=""', 'classname=""'])
 def test_case_without_a_name_has_a_visible_fallback(summary, attributes):
     """Incomplete testcase metadata still gives failures an identifiable label."""
-    case = summary.read_case(ET.fromstring(f'<testcase {attributes}><failure/></testcase>'))
+    case = summary.read_case(
+        ET.fromstring(f"<testcase {attributes}><failure/></testcase>")
+    )
 
     assert case.name == "(unnamed)"
     assert "- `(unnamed)` (failed): (no message)" in summary.render_failures(
@@ -983,8 +992,11 @@ def test_exact_failure_limit_has_no_overflow_note(summary):
     assert lines[-1] == "- `f49` (error): (no message)"
 
 
-def test_render_exception_is_reported_and_appended(summary, tmp_path, monkeypatch, capsys):
+def test_render_exception_is_reported_and_appended(
+    summary, tmp_path, monkeypatch, capsys
+):
     """Rendering failures keep the report-only exit contract and a visible warning."""
+
     def broken_render(_title, _results):
         """Raise after parsing succeeded to exercise the rendering crash path."""
         raise ValueError("cannot render")
@@ -992,6 +1004,8 @@ def test_render_exception_is_reported_and_appended(summary, tmp_path, monkeypatc
     monkeypatch.setattr(summary, "render", broken_render)
     report = run(summary, tmp_path, str(DATA / "gut_junit.xml"), title="Résumé")
 
-    assert report.startswith("## Résumé\n\n⚠️ The summary script failed: ValueError: cannot render")
+    assert report.startswith(
+        "## Résumé\n\n⚠️ The summary script failed: ValueError: cannot render"
+    )
     assert "✅" not in report
     assert report.strip() in capsys.readouterr().out
