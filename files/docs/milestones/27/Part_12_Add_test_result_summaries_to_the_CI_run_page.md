@@ -107,19 +107,19 @@ The branch carries 8 commits that are not on `main`, so the PR shows them too:
 
 ## Review Decisions
 
-| Reviewer   | Finding                                                          | Decision                                                                                                                                                                                                                                                                                                      |
-|------------|------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Sourcery   | CI summary tests lack fixtures (Critical)                        | **Fixed in `d2e645e`:** the 5 XML samples were missing from the branch, which caused all 18 failures on the first PR run.                                                                                                                                                                                     |
-| CodeRabbit | Commit the five XML fixtures (Major)                             | **Fixed in `d2e645e` and `5acb995`:** the samples were added, then listed by name with `test_every_sample_is_present`, so a missing sample fails instead of skipping the script test.                                                                                                                         |
-| Sourcery   | CI test step fails before reporting (Critical)                   | **Not applied:** pytest creates the `--junitxml` parent directory itself (`os.makedirs` in `LogXML.pytest_sessionfinish`). The first PR run, on a fresh runner, logged `generated xml file: …/reports/ci-scripts/junit.xml`.                                                                                  |
-| Sourcery   | Backticks expose failure text as Markdown (Medium)               | **Fixed in `5d2dc3b`:** the code-span fence is one backtick longer than the longest run in the text. 4 new test cases.                                                                                                                                                                                        |
-| Sourcery   | Incorrect artifact path passes the check (Medium)                | **Fixed in `c28da42`:** the test matches `reports/report_1/results.xml` against each upload pattern with the upload action's glob rules, instead of a substring check.                                                                                                                                        |
-| Sourcery   | Malformed empty-shard XML passes the check (Medium)              | **Fixed in `c28da42`:** the tests read the here-doc from `browser_test.yml` and parse it whole. The `EMPTY_SHARD_XML` copy was removed.                                                                                                                                                                       |
-| DeepSource | Call to `next()` should be wrapped in `try-except` (Critical ×3) | **Fixed in `7eb901d`, differently:** `find_step()` and an assert with a message replace the 3 `next()` calls, so a missing match fails clearly instead of with a bare `StopIteration`. `try-except` would have hidden it.                                                                                     |
-| DeepSource | Docstring missing for `explode` (Minor)                          | **Fixed in `5acb995`.**                                                                                                                                                                                                                                                                                       |
-| CodeRabbit | Use supported tags for the event types (Minor)                   | **Won't fix (owner):** valid. `validate_gdscript_docs.py` reports 3 unapproved tags in `get_matching_event()`. The docstring came from `d1d9704`, not #1156.                                                                                                                                                  |
-| CodeRabbit | Generated 23 test cases (`f1dca52`)                              | **Kept.** One found a real bug: under a single `testsuite` root, nested suites weren't counted, so the not-run check was off. **Fixed in `<COMMIT_1>`:** `declared_tests()` now walks the root itself too. **Reworked in `<COMMIT_2>`:** two tests read the script's limits instead of hardcoding 200 and 50. |
-| DeepSource | Formatting of the generated tests                                | **Fixed by autofix in `5a6eb23`** (Black and isort).                                                                                                                                                                                                                                                          |
+| Reviewer   | Finding                                                          | Decision                                                                                                                                                                                                                                                                                                |
+|------------|------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Sourcery   | CI summary tests lack fixtures (Critical)                        | **Fixed in `d2e645e`:** the 5 XML samples were missing from the branch, which caused all 18 failures on the first PR run.                                                                                                                                                                               |
+| CodeRabbit | Commit the five XML fixtures (Major)                             | **Fixed in `d2e645e` and `5acb995`:** the samples were added, then listed by name with `test_every_sample_is_present`, so a missing sample fails instead of skipping the script test.                                                                                                                   |
+| Sourcery   | CI test step fails before reporting (Critical)                   | **Not applied:** pytest creates the `--junitxml` parent directory itself (`os.makedirs` in `LogXML.pytest_sessionfinish`). The first PR run, on a fresh runner, logged `generated xml file: …/reports/ci-scripts/junit.xml`.                                                                            |
+| Sourcery   | Backticks expose failure text as Markdown (Medium)               | **Fixed in `5d2dc3b`:** the code-span fence is one backtick longer than the longest run in the text. 4 new test cases.                                                                                                                                                                                  |
+| Sourcery   | Incorrect artifact path passes the check (Medium)                | **Fixed in `c28da42`:** the test matches `reports/report_1/results.xml` against each upload pattern with the upload action's glob rules, instead of a substring check.                                                                                                                                  |
+| Sourcery   | Malformed empty-shard XML passes the check (Medium)              | **Fixed in `c28da42`:** the tests read the here-doc from `browser_test.yml` and parse it whole. The `EMPTY_SHARD_XML` copy was removed.                                                                                                                                                                 |
+| DeepSource | Call to `next()` should be wrapped in `try-except` (Critical ×3) | **Fixed in `7eb901d`, differently:** `find_step()` and an assert with a message replace the 3 `next()` calls, so a missing match fails clearly instead of with a bare `StopIteration`. `try-except` would have hidden it.                                                                               |
+| DeepSource | Docstring missing for `explode` (Minor)                          | **Fixed in `5acb995`.**                                                                                                                                                                                                                                                                                 |
+| CodeRabbit | Use supported tags for the event types (Minor)                   | **Won't fix (owner):** valid. `validate_gdscript_docs.py` reports 3 unapproved tags in `get_matching_event()`. The docstring came from `d1d9704`, not #1156.                                                                                                                                            |
+| CodeRabbit | Generated 23 test cases (`f1dca52`)                              | **Kept.** One found a real bug: under a single `testsuite` root, nested suites weren't counted, so the not-run check was off. **Fixed in `e6b0aee`:** `declared_tests()` now walks the root itself too. **Reworked in `4f4042f`:** two tests read the script's limits instead of hardcoding 200 and 50. |
+| DeepSource | Formatting of the generated tests                                | **Fixed by autofix in `5a6eb23`** (Black and isort).                                                                                                                                                                                                                                                    |
 
 ---
 
@@ -129,8 +129,9 @@ The branch carries 8 commits that are not on `main`, so the PR shows them too:
 - **Real suites through the script:** the full GUT suite (874 tests) rendered "✅ All 874 tests passed." with its 5 slowest tests. A full `tests/ci/` run rendered its failure with name and message.
 - **First PR run (`329b97f`, Pull Request Pipeline #3202):** the Test Results Summary step succeeded in the GUT, GDUnit4 and `tests/ci/` jobs, and ran after the `tests/ci/` test step failed (the 18 failures from the missing samples). The browser shards were skipped in that run.
 - **Later PR runs:** the runs on `d2e645e`, `5acb995`, `5d2dc3b` and `f1dca52` were cancelled by newer pushes.
-- **PR run on `c28da42` (Pull Request Pipeline):** every test job passed: GUT, GDUnit4, `tests/ci/`, and all three browser shards (Core Web Flows, Refactor Suite, CI & Security). The Test Results Summary step succeeded in each of them. The benchmark jobs were still running.
-- **PR run on `5a6eb23`:** CodeRabbit's tests without the `declared_tests()` fix, so `test_nested_suite_counts_only_leaf_declarations[testsuite]` fails there. The final run is the one after `<COMMIT_1>` and `<COMMIT_2>`.
+- **PR run on `c28da42` (Pull Request Pipeline):** every job succeeded: GUT, GDUnit4, `tests/ci/`, all three browser shards (Core Web Flows, Refactor Suite, CI & Security) and both benchmarks. The Test Results Summary step succeeded in each test job. The run as a whole shows as cancelled.
+- **PR run on `5a6eb23`:** failed in the `tests/ci/` job, as expected: CodeRabbit's tests without the `declared_tests()` fix, so `test_nested_suite_counts_only_leaf_declarations[testsuite]` fails there.
+- **PR run on `76a11b5` (after `e6b0aee` and `4f4042f`):** every test job passed: GUT, GDUnit4, `tests/ci/` and all three browser shards. The benchmarks were still running when this note was updated.
 - **Locally on the final code:** `tests/ci/test_test_summary.py` 108 passed, and the full `tests/ci/` run passed except `test_injection_readonly_file`, which fails only when tests run as root (sandbox). yamllint, black and markdownlint are clean.
 - **Tests catch the bugs:** breaking the code on purpose made the tests fail each time:
   - deleting the samples: 20 failures, none skipped;
@@ -180,7 +181,7 @@ The branch carries 8 commits that are not on `main`, so the PR shows them too:
 | <https://github.com/ikostan/SkyLockAssault/issues/1156> | The script always exits 0                                                       | ✅         | Tested with failing samples, bad arguments, a crash and an unwritable summary file.                                                     |
 | <https://github.com/ikostan/SkyLockAssault/issues/1156> | The parser is tested with a real XML sample from each of the four jobs          | ✅         | Real output of each job's tool and version, from a small sample suite.                                                                  |
 | <https://github.com/ikostan/SkyLockAssault/issues/1156> | Permissions don't change, and no third-party action is added                    | ✅         | Tested: permissions unchanged, no `uses` in the summary steps.                                                                          |
-| <https://github.com/ikostan/SkyLockAssault/issues/1156> | `pytest tests/ci/` passes; no test cases removed                                | 🟡        | Passed on `c28da42`. Fails on `5a6eb23` until `<COMMIT_1>` is pushed. One test was rewritten, none removed.                             |
+| <https://github.com/ikostan/SkyLockAssault/issues/1156> | `pytest tests/ci/` passes; no test cases removed                                | ✅         | Passed on `76a11b5`, with the `declared_tests()` fix. One test was rewritten, none removed.                                             |
 
 ---
 
@@ -203,29 +204,26 @@ The branch carries 8 commits that are not on `main`, so the PR shows them too:
     - `5acb995` Make test summary fixtures explicit
     - `5d2dc3b` Handle backtick runs in Markdown code spans
     - `c28da42` Verify browser shard XML and report globs
-    - `<COMMIT_1>` Count nested suites under a testsuite root
-    - `<COMMIT_2>` Use the script's limits in the truncation tests
+    - `e6b0aee` Simplify test suite traversal
+    - `4f4042f` Use configured limits in summary tests
+    - `27788d4` Document CI test summary implementation
+    - `76a11b5` Document nested-suite summary fixes
   - Not #1156:
     - `d1d9704` Clarify input remap and slider docs
     - `19d2f3d` Merge pull request #1164 from ikostan/main
     - `44e27e7` Merge pull request #1172 from ikostan/automation/weekly-gdscript-docs
     - `93da30f` Merge pull request #1173 (markdownlint-cli2-action 25.0.0)
     - `a6cb5ae` Merge pull request #1174 (create-pull-request 8.1.2)
-- Commits by the bi-weekly docs automation (as ikostan):
-  - `81386e9` docs(gdscript): update and enhance Native BBCode docstrings
 
 ### Bots / AI contributions
 
 - **@claude (Opus 5.5)**
-  - **Reporter, steps and docs**
   - **Real samples**
     - Ran Godot 4.7.1-stable with GUT 9.7.1 and gdUnit4 6.2.0, and pytest 9.1.1 in both XML formats, to capture the 5 samples.
     - Found that gdUnit4 stops at the first failing test without `-c`, that GUT's suite `failures` attribute counts asserts, and that GUT and gdUnit4 keep the message in the element text.
     - Ran the real GUT suite and the real `tests/ci/` run through the script.
   - **Open questions**
     - Raised gdUnit4 fail-fast, GUT risky tests, the empty shard and the redundant xmllint step, with a recommendation for each.
-  - **CI failure**
-    - Traced the 18 failures on the first PR run to the missing sample files, and showed they were never created locally.
   - **Review findings**
     - Checked each DeepSource, Sourcery and CodeRabbit finding against the code. Wrote the fixes for 8 findings. Showed the Sourcery `--junitxml` finding was wrong, with pytest's source and the PR's own log. Confirmed the CodeRabbit docstring finding with `validate_gdscript_docs.py`.
   - **CodeRabbit's generated tests**
