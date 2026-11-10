@@ -12,6 +12,8 @@ Markdown report to --summary (in CI, the $GITHUB_STEP_SUMMARY file):
   0 tests, or tests the XML declares but has no result for (gdUnit4 stops
   at the first failure unless it runs with -c);
 - a table of passed, failed, errors, skipped and total;
+- a note for GUT tests that made no assertions (GUT calls them risky); the
+  XML has no failure for them, so the table still counts them as passed;
 - the failing tests, each with its name and the first line of its message;
 - a collapsed list of the 5 slowest tests.
 
@@ -66,6 +68,7 @@ class Case:
     time: float | None = None
     message: str = ""
     more: int = 0  # Further failure or error elements in the same test case.
+    no_asserts: bool = False  # GUT's status="no asserts" (a risky test).
 
 
 @dataclass
@@ -80,6 +83,11 @@ class Results:
     def count(self, outcome: str) -> int:
         """Return how many test cases had this outcome."""
         return sum(1 for case in self.cases if case.outcome == outcome)
+
+    @property
+    def no_asserts(self) -> int:
+        """GUT tests that made no assertions; they are still counted as passed."""
+        return sum(1 for case in self.cases if case.no_asserts)
 
     @property
     def not_run(self) -> int:
@@ -146,7 +154,8 @@ def read_case(testcase: ET.Element) -> Case:
             return Case(full_name, outcome, time, message_of(found[0]), extra)
     if testcase.find("skipped") is not None:
         return Case(full_name, SKIPPED, time)
-    return Case(full_name, PASSED, time)
+    no_asserts = testcase.get("status") == "no asserts"
+    return Case(full_name, PASSED, time, no_asserts=no_asserts)
 
 
 def declared_tests(root: ET.Element, recorded: int) -> int:
@@ -277,15 +286,19 @@ def render_slowest(results: Results) -> list[str]:
 def render(title: str, results: Results) -> str:
     """Render the report as Markdown."""
     lines = [f"## {title}", "", status_line(results)]
-    if results.problems or results.not_run:
-        lines.append("")
-        lines += [f"- ⚠️ {problem}" for problem in results.problems]
-        if results.not_run:
-            verb = "has" if results.not_run == 1 else "have"
-            lines.append(
-                f"- ⚠️ {plural(results.not_run, 'test')} declared in the XML "
-                f"{verb} no result: the runner stopped before running them."
-            )
+    notes = [f"- ⚠️ {problem}" for problem in results.problems]
+    if results.not_run:
+        verb = "has" if results.not_run == 1 else "have"
+        notes.append(
+            f"- ⚠️ {plural(results.not_run, 'test')} declared in the XML "
+            f"{verb} no result: the runner stopped before running them."
+        )
+    if results.no_asserts:
+        notes.append(
+            f"- ⚠️ {plural(results.no_asserts, 'GUT test')} made no assertions."
+        )
+    if notes:
+        lines += ["", *notes]
     if results.files:
         passed, failed = results.count(PASSED), results.count(FAILED)
         errors, skipped = results.count(ERROR), results.count(SKIPPED)
