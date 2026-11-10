@@ -164,15 +164,6 @@ jobs:
           key: "${{ runner.os }}-pip-v2-${{ hashFiles('requirements.txt', '.github/scripts/requirements-docs.txt') }}"
           restore-keys: "${{ runner.os }}-pip-v2-"
 
-      - name: "Install System Dependencies"
-        timeout-minutes: 5
-        env:
-          DEBIAN_FRONTEND: "noninteractive"
-        run: |
-          APT_OPTS=(-o Acquire::Retries=3)
-          sudo apt-get "${APT_OPTS[@]}" update
-          sudo apt-get "${APT_OPTS[@]}" install -y --no-install-recommends libxml2-utils
-
       - name: "Install Python Dependencies"
         timeout-minutes: 8
         run: |
@@ -339,27 +330,6 @@ jobs:
           name: "lcov-report-${{ matrix.artifact_suffix }}${{ env.RUNNER_SUFFIX }}"
           path: "./coverage/lcov/lcov.info"
           retention-days: 5
-
-      - name: "Test Report"
-        if: "always()"
-        run: |
-          JUNIT_FILE="artifacts/junit.xml"
-          if [ ! -f "$JUNIT_FILE" ]; then JUNIT_FILE="junit.xml"; fi
-          if [ -f "$JUNIT_FILE" ]; then
-            total=$(xmllint --xpath 'count(//testcase)' "$JUNIT_FILE")
-            failures=$(xmllint --xpath 'count(//testcase/failure)' "$JUNIT_FILE")
-            errors=$(xmllint --xpath 'count(//testcase/error)' "$JUNIT_FILE")
-            skipped=$(xmllint --xpath 'count(//testcase/skipped)' "$JUNIT_FILE")
-            passed=$((total - failures - errors - skipped))
-            echo "Test Report Summary (${{ matrix.suite }}):"
-            echo "- Total tests: $total"
-            echo "- Passed: $passed"
-            echo "- Failed: $failures"
-            echo "- Errors: $errors"
-            echo "- Skipped: $skipped"
-          else
-            echo "No junit.xml found—tests may not have run."
-          fi
 
       - name: "Upload Test Report Artifact"
         if: "always()"
