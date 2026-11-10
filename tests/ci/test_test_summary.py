@@ -475,6 +475,23 @@ def test_backtick_in_name_or_message_keeps_the_code_span(summary):
     assert summary.code("two\nlines") == "`two lines`"
 
 
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("a``b", "``` a``b ```"),
+        ("``", "``` `` ```"),
+        (
+            "x ``` [link](https://example.com) ```",
+            "```` x ``` [link](https://example.com) ``` ````",
+        ),
+        ("`one` and ``two``", "``` `one` and ``two`` ```"),
+    ],
+)
+def test_backtick_runs_cannot_close_the_code_span(summary, text, expected):
+    """The fence is longer than any backtick run, so the text stays inside it."""
+    assert summary.code(text) == expected
+
+
 def test_long_message_is_cut(summary):
     """A message longer than the limit ends with an ellipsis."""
     text = "x" * 500

@@ -227,10 +227,16 @@ def status_line(results: Results) -> str:
 
 
 def code(text: str) -> str:
-    """Return the text as a Markdown code span, so `|`, `<` and `*` show as typed."""
+    """Return the text as a Markdown code span, so `|`, `<` and `*` show as typed.
+
+    The fence is one backtick longer than the longest run of backticks in the
+    text, so no backtick inside can close the span early and let the rest of a
+    test name or message render as Markdown.
+    """
     text = text.replace("\n", " ")
-    fence = "``" if "`" in text else "`"
-    pad = " " if fence == "``" else ""
+    longest = max((len(run) for run in re.findall(r"`+", text)), default=0)
+    fence = "`" * (longest + 1)
+    pad = " " if longest else ""
     return f"{fence}{pad}{text}{pad}{fence}"
 
 
