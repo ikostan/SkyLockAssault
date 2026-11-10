@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "created": "2026-11-09T03:50:24Z",
-  "commit": "e841d249df1650d2ae191a370f687135a151c308",
-  "runner": "GitHub Actions 1000043556",
+  "created": "2026-11-10T13:33:11Z",
+  "commit": "0dab7ae90f434c08d6549284a4b81eebbc837303",
+  "runner": "GitHub Actions 1000043742",
   "godot": "4.7.1-stable (official)",
   "runs": 3,
   "baseline": {
@@ -13,25 +13,6 @@
     "reload_object_growth": 0.0
   },
   "history": [
-    {
-      "run_id": "41777577668",
-      "commit": "bdba0d79c13c4158ba3b8e8c18dda055335a1ae0",
-      "date": "2026-11-04T05:29:42Z",
-      "metrics": {
-        "saves": 0.0,
-        "objects_avg": 2296.5333333333333,
-        "nodes_avg": 510.1666666666667,
-        "resources_avg": 206.0,
-        "orphans_max": 0.0,
-        "reload_orphans_max": 0.0,
-        "reload_object_growth": 0.0,
-        "frame_p95_ms": 44.5,
-        "frames_over_33.4ms": 1444.0,
-        "proc_worst_avg_ms": 6.3367,
-        "phys_worst_avg_ms": 1.1217,
-        "mem_static_growth": 663464.0
-      }
-    },
     {
       "run_id": "41971415885",
       "commit": "1dcb7dbd8c7a508f87ad9747da2045a89a159068",
@@ -107,6 +88,25 @@
         "phys_worst_avg_ms": 0.975,
         "mem_static_growth": 669908.0
       }
+    },
+    {
+      "run_id": "42822606768",
+      "commit": "0dab7ae90f434c08d6549284a4b81eebbc837303",
+      "date": "2026-11-10T13:33:11Z",
+      "metrics": {
+        "saves": 0.0,
+        "objects_avg": 2296.45,
+        "nodes_avg": 505.21666666666664,
+        "resources_avg": 208.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": 0.0,
+        "frame_p95_ms": 45.5,
+        "frames_over_33.4ms": 1432.0,
+        "proc_worst_avg_ms": 6.6633,
+        "phys_worst_avg_ms": 1.2417,
+        "mem_static_growth": 713972.0
+      }
     }
   ],
   "accepted": null,
@@ -115,7 +115,8 @@
     "41971415885",
     "42147635867",
     "42174285266",
-    "42556564496"
+    "42556564496",
+    "42822606768"
   ],
   "profile": "web"
 }
