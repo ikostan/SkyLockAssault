@@ -7,12 +7,15 @@ extends "res://addons/gut/test.gd"
 
 const TEST_CONFIG_PATH: String = "user://test_fuel_persistence.cfg"
 
+var _previous_settings: GameSettingsResource
+
 
 ## Per-test setup: Isolate filesystem and stub logging.
 ## :rtype: void
 func before_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
+	_previous_settings = Globals.settings
 		
 	# FIX: GUT's stub() requires a Double, not a live Autoload/Singleton.
 	# To silence logs during the test, we just set the log level to NONE (4).
@@ -25,23 +28,27 @@ func before_each() -> void:
 func after_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
+	# Restore the live settings so later suites don't inherit this fresh instance.
+	Globals.settings = _previous_settings
 
 # --- 1. Signal Tests (Observer Pattern) ---
 
 ## test_fuel_depletion_signal_emitted_once | Ensure signal fires exactly once
+## FuelResource is the source of truth for fuel state (#1142).
 ## :rtype: void
 func test_fuel_depletion_signal_emitted_once() -> void:
 	gut.p("Testing: Depletion signal fires once upon hitting 0.0.")
-	watch_signals(Globals.settings)
+	var fuel: FuelResource = FuelResource.new()
+	watch_signals(fuel)
 	
-	Globals.settings.current_fuel = 0.1
-	Globals.settings.current_fuel = 0.0 # Deplete
+	fuel.current_fuel = 0.1
+	fuel.current_fuel = 0.0 # Deplete
 	
-	assert_signal_emitted(Globals.settings, "fuel_depleted", "Signal should fire at zero")
+	assert_signal_emitted(fuel, "fuel_depleted", "Signal should fire at zero")
 	
 	# Simulate continued consumption attempt to check for signal spam
-	Globals.settings.current_fuel = 0.0 
-	assert_signal_emit_count(Globals.settings, "fuel_depleted", 1, "Signal should not fire twice")
+	fuel.current_fuel = 0.0 
+	assert_signal_emit_count(fuel, "fuel_depleted", 1, "Signal should not fire twice")
 
 # --- 2. Persistence Tests ---
 ## test_persistence_invalid_types_fallback | Ensure robustness against invalid data

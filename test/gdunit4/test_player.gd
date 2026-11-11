@@ -14,21 +14,18 @@ const GameSettingsResource = preload("res://scripts/resources/game_settings_reso
 const TestHelpers = preload("res://test/gdunit4/test_helpers.gd")
 
 var original_difficulty: float
-var original_current_fuel: float
 var original_max_fuel: float
 
 
 func before_test() -> void:
 	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
 	original_difficulty = settings.difficulty
-	original_current_fuel = settings.current_fuel
 	original_max_fuel = settings.max_fuel
 
 
 func after_test() -> void:
 	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
 	settings.difficulty = original_difficulty
-	settings.current_fuel = original_current_fuel
 	settings.max_fuel = original_max_fuel
 
 
@@ -87,15 +84,17 @@ func test_fuel_colors() -> void:
 	await await_idle_frame()
 
 	var hud: HUDScript = main_scene.get_node("PlayerStatsPanel") as HUDScript
+	# The HUD observes the player's FuelResource (injected by main_scene.setup_hud()).
+	var fuel: FuelResource = (main_scene.get_node("Player") as PlayerScript).fuel_resource
 
 	# High fuel → Green
-	settings.current_fuel = settings.max_fuel * 0.95
+	fuel.current_fuel = settings.max_fuel * 0.95
 	hud.update_fuel_bar()
 	var style_1: StyleBoxFlat = hud.fuel_bar.get_theme_stylebox("fill").duplicate() as StyleBoxFlat
 	assert_that(style_1.bg_color).is_equal(Color.GREEN)
 
 	# Low fuel → Dark Red
-	settings.current_fuel = settings.max_fuel * 0.10
+	fuel.current_fuel = settings.max_fuel * 0.10
 	hud.update_fuel_bar()
 	var style_2: StyleBoxFlat = hud.fuel_bar.get_theme_stylebox("fill").duplicate() as StyleBoxFlat
 	assert_that(style_2.bg_color).is_equal(Color(0.5, 0, 0, 1.0))
@@ -109,15 +108,17 @@ func test_fuel_colors_fixed() -> void:
 	await await_idle_frame()
 
 	var hud: HUDScript = main_scene.get_node("PlayerStatsPanel") as HUDScript
+	# The HUD observes the player's FuelResource (injected by main_scene.setup_hud()).
+	var fuel: FuelResource = (main_scene.get_node("Player") as PlayerScript).fuel_resource
 
 	# Full fuel → Green
-	settings.current_fuel = settings.max_fuel * 0.95
+	fuel.current_fuel = settings.max_fuel * 0.95
 	hud.update_fuel_bar()
 	var style: StyleBoxFlat = hud.fuel_bar.get_theme_stylebox("fill").duplicate() as StyleBoxFlat
 	assert_that(style.bg_color).is_equal(Color.GREEN)
 
 	# Between 90% and 50% → Lerp green to yellow
-	settings.current_fuel = settings.max_fuel * 0.70
+	fuel.current_fuel = settings.max_fuel * 0.70
 	hud.update_fuel_bar()
 	style = hud.fuel_bar.get_theme_stylebox("fill").duplicate() as StyleBoxFlat
 	var expected: Color = Color.GREEN.lerp(Color.YELLOW, (0.90 - 0.70) / (0.90 - 0.50))
@@ -132,21 +133,23 @@ func test_fuel_gradual_depletion_colors() -> void:
 	await await_idle_frame()
 
 	var hud: HUDScript = main_scene.get_node("PlayerStatsPanel") as HUDScript
+	# The HUD observes the player's FuelResource (injected by main_scene.setup_hud()).
+	var fuel: FuelResource = (main_scene.get_node("Player") as PlayerScript).fuel_resource
 
 	# 30% fuel → Red
-	settings.current_fuel = settings.max_fuel * 0.30
+	fuel.current_fuel = settings.max_fuel * 0.30
 	hud.update_fuel_bar()
 	var style: StyleBoxFlat = hud.fuel_bar.get_theme_stylebox("fill").duplicate() as StyleBoxFlat
 	assert_that(style.bg_color).is_equal(Color.RED)
 
 	# 15% fuel → Dark Red
-	settings.current_fuel = settings.max_fuel * 0.15
+	fuel.current_fuel = settings.max_fuel * 0.15
 	hud.update_fuel_bar()
 	style = hud.fuel_bar.get_theme_stylebox("fill").duplicate() as StyleBoxFlat
 	assert_that(style.bg_color).is_equal(Color(0.5, 0, 0))
 
 	# 10% fuel → Dark Red
-	settings.current_fuel = settings.max_fuel * 0.10
+	fuel.current_fuel = settings.max_fuel * 0.10
 	hud.update_fuel_bar()
 	style = hud.fuel_bar.get_theme_stylebox("fill").duplicate() as StyleBoxFlat
 	assert_that(style.bg_color).is_equal(Color(0.5, 0, 0))
@@ -265,8 +268,9 @@ func test_fuel_depletion() -> void:
 
 	var player_root: PlayerScript = main_scene.get_node("Player") as PlayerScript
 	var hud: HUDScript = main_scene.get_node("PlayerStatsPanel") as HUDScript
+	var fuel: FuelResource = player_root.fuel_resource
 
-	assert_float(settings.current_fuel).is_equal(settings.max_fuel)
+	assert_float(fuel.current_fuel).is_equal(settings.max_fuel)
 	assert_float(hud.fuel_bar.value).is_equal(settings.max_fuel)
 
 	# Simulate timer tick
@@ -274,11 +278,11 @@ func test_fuel_depletion() -> void:
 	var expected_depletion: float = settings.base_consumption_rate * normalized_speed * settings.difficulty
 
 	player_root._on_fuel_timer_timeout()
-	assert_float(settings.current_fuel).is_equal_approx(settings.max_fuel - expected_depletion, 0.1)
+	assert_float(fuel.current_fuel).is_equal_approx(settings.max_fuel - expected_depletion, 0.1)
 	assert_float(hud.fuel_bar.value).is_equal_approx(settings.max_fuel - expected_depletion, 0.1)
 
 	# Force zero fuel
-	settings.current_fuel = 0.0
+	fuel.current_fuel = 0.0
 	player_root._on_fuel_timer_timeout()
 	assert_float(player_root.current_speed).is_equal(0.0)
 	assert_bool(player_root.fuel_timer.is_stopped()).is_true()
@@ -324,9 +328,10 @@ func test_independent_blinking() -> void:
 
 	var hud: HUDScript = main_scene.get_node("PlayerStatsPanel") as HUDScript
 	var player_root: PlayerScript = main_scene.get_node("Player") as PlayerScript
+	var fuel: FuelResource = player_root.fuel_resource
 
 	# 1. Establish Safe State
-	settings.current_fuel = settings.max_fuel
+	fuel.current_fuel = settings.max_fuel
 	player_root.speed_resource.current_speed = (settings.min_speed + settings.max_speed) / 2.0
 	hud.check_fuel_warning()
 	hud.check_speed_warning()
@@ -335,7 +340,7 @@ func test_independent_blinking() -> void:
 	assert_bool(hud.speed_stat.is_blinking).is_false()
 
 	# 2. Trigger ONLY fuel warning
-	settings.current_fuel = settings.max_fuel * 0.10
+	fuel.current_fuel = settings.max_fuel * 0.10
 	hud.check_fuel_warning()
 	hud.check_speed_warning() # Check speed again to ensure it ignores the fuel drop
 
@@ -343,7 +348,7 @@ func test_independent_blinking() -> void:
 	assert_bool(hud.speed_stat.is_blinking).is_false() # Speed must remain completely unchanged
 
 	# 3. Trigger ONLY speed warning, recover fuel
-	settings.current_fuel = settings.max_fuel
+	fuel.current_fuel = settings.max_fuel
 	player_root.speed_resource.current_speed = settings.max_speed * 0.95
 	hud.check_fuel_warning()
 	hud.check_speed_warning()

@@ -12,14 +12,12 @@ const PlayerScript = preload("res://scripts/entities/player.gd")
 const GameSettingsResource = preload("res://scripts/resources/game_settings_resource.gd")
 
 var original_difficulty: float
-var original_current_fuel: float
 var original_max_fuel: float
 
 
 func before_test() -> void:
 	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
 	original_difficulty = settings.difficulty
-	original_current_fuel = settings.current_fuel
 	original_max_fuel = settings.max_fuel
 
 
@@ -27,7 +25,6 @@ func after_test() -> void:
 	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
 	settings.difficulty = original_difficulty
 	settings.max_fuel = original_max_fuel
-	settings.current_fuel = original_current_fuel
 
 
 func test_difficulty_scales_fuel_and_weapon() -> void:
@@ -48,8 +45,10 @@ func test_difficulty_scales_fuel_and_weapon() -> void:
 	# Force a known difficulty for deterministic assertions
 	settings.difficulty = 2.0
 
-	var start_fuel: float = settings.max_fuel
-	settings.current_fuel = start_fuel
+	# Fuel state lives on the player's FuelResource; the settings resource holds tuning only.
+	var fuel: FuelResource = player.fuel_resource
+	var start_fuel: float = fuel.max_fuel
+	fuel.current_fuel = start_fuel
 
 	# --- TEST 1: Fuel depletion scales with difficulty ---
 	var normalized_speed: float = player.current_speed / settings.max_speed
@@ -60,7 +59,7 @@ func test_difficulty_scales_fuel_and_weapon() -> void:
 	player._on_fuel_timer_timeout()
 
 	var expected_fuel: float = start_fuel - expected_depletion
-	assert_float(settings.current_fuel).is_equal_approx(expected_fuel, 0.01)
+	assert_float(fuel.current_fuel).is_equal_approx(expected_fuel, 0.01)
 
 	# --- TEST 2: Weapon cooldown scales with difficulty ---
 	# Expected: base fire_rate 0.15 * difficulty 2.0 = 0.30

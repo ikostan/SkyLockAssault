@@ -331,6 +331,8 @@ func test_replacing_settings_ignores_old_difficulty_and_fuel_settings() -> void:
 	assert_false(old_settings.setting_changed.is_connected(_parallax_manager._on_setting_changed))
 	assert_eq(_parallax_manager._difficulty, 1.5, "Setup must cache the replacement difficulty.")
 	old_settings.difficulty = 2.0
+	# BRIDGE TEST (#1143): settings-side fuel must not drive the background. #1143 removes
+	# current_fuel from GameSettingsResource; rewrite this part to confirm it's gone.
 	old_settings.current_fuel = 0.0
 	assert_eq(_parallax_manager._difficulty, 1.5, "Old settings must not change the multiplier.")
 	assert_false(_parallax_manager._out_of_fuel, "Settings fuel must not drive the background.")

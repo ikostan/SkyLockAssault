@@ -5,25 +5,19 @@
 extends "res://addons/gut/test.gd"
 
 ## test_ui_updates_on_fuel_change_signal | Validate UI reacts to fuel updates
+## Observes a local FuelResource (the source of truth since #1142), so no global state
+## is touched and no listener outlives the test.
 ## :rtype: void
-var original_fuel: float
-
-func before_each() -> void:
-	original_fuel = Globals.settings.current_fuel
-
-func after_each() -> void:
-	Globals.settings.current_fuel = original_fuel
-
 func test_ui_updates_on_fuel_change_signal() -> void:
 	gut.p("Testing: UI Progressbar reflects resource value via signal.")
 	var fuel_bar: ProgressBar = ProgressBar.new()
 	add_child_autofree(fuel_bar)
+	var fuel: FuelResource = FuelResource.new()
 	
-	# Connect UI to the settings observer
-	Globals.settings.setting_changed.connect(func(name: String, val: Variant) -> void:
-		if name == "current_fuel":
-			fuel_bar.value = float(val)
+	# Connect UI to the fuel observer
+	fuel.fuel_changed.connect(func(val: float) -> void:
+		fuel_bar.value = val
 	)
 	
-	Globals.settings.current_fuel = 45.5
+	fuel.current_fuel = 45.5
 	assert_eq(fuel_bar.value, 45.5, "UI failed to update from fuel signal")

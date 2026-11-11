@@ -32,39 +32,42 @@ func test_fuel_consumption_with_scaling() -> void:
 	add_child_autoqfree(main_scene)
 	player_root = main_scene.get_node("Player")
 	player_root.fuel_timer.stop()
+	# Fuel state lives on the player's FuelResource, not on Globals.settings (#1142).
+	var fuel: FuelResource = player_root.fuel_resource
 	
 	# NEW: Establish a clean baseline for fuel and difficulty.
-	Globals.settings.current_fuel = 100.0
+	fuel.current_fuel = 100.0
 	Globals.settings.difficulty = 1.0
 	
 	# CHANGED: Use current_speed instead of speed["speed"]
 	player_root.current_speed = Globals.settings.min_speed
 	player_root._on_fuel_timer_timeout()
-	var base_depletion: float = 100.0 - Globals.settings.current_fuel
+	var base_depletion: float = 100.0 - fuel.current_fuel
 	
 	# NEW: Reset the fuel tank for the second measurement.
-	Globals.settings.current_fuel = 100.0
+	fuel.current_fuel = 100.0
 	
 	# CHANGED: Use current_speed instead of speed["speed"]
 	player_root.current_speed = Globals.settings.max_speed
 	player_root._on_fuel_timer_timeout()
-	var high_speed_depletion: float = 100.0 - Globals.settings.current_fuel
+	var high_speed_depletion: float = 100.0 - fuel.current_fuel
 	
 	# NEW: Assert that the high-speed state drained strictly more fuel than the base-speed state.
 	assert_gt(high_speed_depletion, base_depletion, "High speed state must consume more fuel than base speed.")
 
 
-## test_refuel_negative_input | Resource | Validate handling of invalid refuel input
+## test_refuel_negative_input | FuelResource | Validate handling of invalid refuel input
 ## :rtype: void
 func test_refuel_negative_input() -> void:
 	gut.p("Testing: Refueling with a negative value should be ignored.")
+	var fuel: FuelResource = FuelResource.new()
 	
 	# NEW: Set an initial baseline fuel level.
 	var initial_fuel: float = 50.0
-	Globals.settings.current_fuel = initial_fuel
+	fuel.current_fuel = initial_fuel
 	
 	# NEW: Attempt to apply a negative refuel amount (-10.0) which should be caught by the refuel logic.
-	Globals.settings.refuel(-10.0)
+	fuel.refuel(-10.0)
 	
 	# NEW: Assert the fuel level remained completely unchanged and did not accidentally subtract fuel.
-	assert_eq(Globals.settings.current_fuel, initial_fuel, "Negative refuel inputs must not drain the current fuel.")
+	assert_eq(fuel.current_fuel, initial_fuel, "Negative refuel inputs must not drain the current fuel.")
