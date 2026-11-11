@@ -457,16 +457,11 @@ static func _key_identity(ev: InputEventKey) -> Vector2i:
 	return Vector2i(code, 1)
 
 
-## Finds every other managed action that already uses this exact event.
+## Finds every other managed action that already uses the exact event.
 ##
-## Only actions listed in [constant ACTIONS] are checked. Godot's built-in actions (for example
-## [code]ui_select[/code], [code]ui_cancel[/code] and the [code]ui_text_*[/code] family) are
-## ignored on purpose, because they share common keys and would report false conflicts.
-##
-## Conflicts are scoped by group: a gameplay action only conflicts with other actions in
-## [constant GAMEPLAY_ACTIONS], and a menu action only with others in [constant MENU_ACTIONS],
-## because flight and menus never read input at the same time. With an empty or unknown
-## [param exclude_action], every managed action is checked.
+## Only actions listed in [constant ACTIONS] are checked. Conflicts are scoped by group, and
+## built-in actions are ignored. With an empty or unknown action, every managed action is
+## checked.
 ##
 ## [param event]: The event the player just pressed, compared with [method events_match].
 ## [param exclude_action]: The action being remapped, skipped during the check.

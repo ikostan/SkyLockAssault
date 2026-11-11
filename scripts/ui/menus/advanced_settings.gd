@@ -279,6 +279,8 @@ func _on_advanced_back_button_pressed_js(args: Array) -> void:
 	_on_advanced_back_button_pressed()
 
 
+## Retrieves the index of the current log level in the enum values.
+## Returns The index of the current log level.
 func get_log_level_index() -> int:
 	## Retrieves the index of the current log level in the enum values.
 	##
