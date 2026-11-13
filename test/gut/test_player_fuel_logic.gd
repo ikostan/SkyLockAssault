@@ -77,21 +77,24 @@ func test_engine_stops_on_zero_fuel() -> void:
 	assert_true(_player.fuel_timer.is_stopped(), "Fuel timer must stop running on flameout.")
 	assert_false(anim_r.is_playing(), "Rotors must stop animating when fuel is empty.")
 
+
 ## test_engine_reignites_on_refuel | Component State
 ## :rtype: void
 func test_engine_reignites_on_refuel() -> void:
 	gut.p("Testing: Refueling from an empty tank restarts rotors and timers.")
-	
-	# Simulate dead engine
-	_player.fuel_timer.stop()
 	var anim_l: AnimatedSprite2D = _player.rotor_left.get_node("AnimatedSprite2D")
-	anim_l.stop()
+	
+	# Empty the tank so the real flameout handler stops the engine
+	_player.fuel_resource.current_fuel = 0.0
+	assert_true(_player.fuel_timer.is_stopped(), "Precondition: flameout must stop the fuel timer.")
+	assert_false(anim_l.is_playing(), "Precondition: flameout must stop the rotors.")
 	
 	# Refuel through the player's FuelResource, the source of truth for fuel state (#1142)
 	_player.fuel_resource.current_fuel = 50.0 
 	
 	assert_false(_player.fuel_timer.is_stopped(), "Fuel timer must reignite on refuel.")
 	assert_true(anim_l.is_playing(), "Rotors must automatically resume spinning.")
+
 
 ## test_bridge_settings_fuel_write_reaches_fuel_resource | Compatibility Bridge
 ## BRIDGE TEST (#1143): legacy writes to Globals.settings.current_fuel still reach the
@@ -100,10 +103,12 @@ func test_engine_reignites_on_refuel() -> void:
 ## :rtype: void
 func test_bridge_settings_fuel_write_reaches_fuel_resource() -> void:
 	gut.p("Testing: Bridge copies a Globals.settings fuel write into the FuelResource.")
-	
-	_player.fuel_timer.stop()
 	var anim_l: AnimatedSprite2D = _player.rotor_left.get_node("AnimatedSprite2D")
-	anim_l.stop()
+	
+	# Empty the tank so the real flameout handler stops the engine
+	_player.fuel_resource.current_fuel = 0.0
+	assert_true(_player.fuel_timer.is_stopped(), "Precondition: flameout must stop the fuel timer.")
+	assert_false(anim_l.is_playing(), "Precondition: flameout must stop the rotors.")
 	
 	Globals.settings.current_fuel = 50.0
 	
