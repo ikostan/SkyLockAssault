@@ -13,20 +13,20 @@ const HUDScript = preload("res://scripts/ui/hud.gd")
 const GameSettingsResource = preload("res://scripts/resources/game_settings_resource.gd")
 const TestHelpers = preload("res://test/gdunit4/test_helpers.gd")
 
-var original_difficulty: float
-var original_max_fuel: float
+## The live settings resource, swapped out for each test and put back afterwards.
+var _original_settings: GameSettingsResource
 
 
+## Gives each test a fresh settings resource, like the GUT player suites do. Every write
+## during the test (difficulty, max_fuel, and the player's fuel bridge mirroring
+## current_fuel until #1143) lands on that copy, so nothing leaks into later suites.
 func before_test() -> void:
-	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
-	original_difficulty = settings.difficulty
-	original_max_fuel = settings.max_fuel
+	_original_settings = Globals.settings
+	Globals.settings = GameSettingsResource.new()
 
 
 func after_test() -> void:
-	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
-	settings.difficulty = original_difficulty
-	settings.max_fuel = original_max_fuel
+	Globals.settings = _original_settings
 
 
 ## Validates that the shared calculation helper produces expected depletion values.
