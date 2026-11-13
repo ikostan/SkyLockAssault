@@ -46,7 +46,7 @@ func test_each_persisted_key_saves_and_logs_once(
 func test_runtime_properties_never_save_or_log(
 	prop: String = use_parameters(
 		[
-			"current_fuel",
+			"low_yellow_fraction",
 			"max_speed",
 			"min_speed",
 			"lateral_speed",
@@ -80,9 +80,11 @@ func test_filter_follows_schema_extensions() -> void:
 
 func test_resource_signals_end_to_end_save_only_for_persisted_changes() -> void:
 	_globals.settings.setting_changed.connect(_globals._on_setting_changed)
-	# Simulates one minute of fuel ticks plus speed changes during flight.
+	# Simulates one minute of runtime-only changes, one per second, plus a speed change
+	# during flight. Fuel no longer goes through the settings resource (#1142), so the
+	# per-tick changes use another property outside persisted_schema.
 	for i: int in range(60):
-		_globals.settings.current_fuel = 100.0 - i
+		_globals.settings.lateral_speed = 250.0 - i
 	_globals.settings.max_speed = 600.0
 	assert_not_called(_globals._save_settings)
 	_globals.settings.difficulty = 1.5
@@ -112,7 +114,7 @@ func test_benchmark_counts_only_persisted_changes_during_measurement() -> void:
 	runner._measuring = true
 	for prop: String in GlobalsScript.persisted_schema:
 		runner._on_setting_changed(prop, null)
-	runner._on_setting_changed("current_fuel", 42.0)
+	runner._on_setting_changed("max_speed", 42.0)
 	runner._on_setting_changed("unknown", true)
 	assert_eq(runner._saves, 5)
 	# The same setting can be saved more than once during a measurement.

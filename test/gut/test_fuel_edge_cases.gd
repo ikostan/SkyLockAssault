@@ -35,26 +35,28 @@ func after_each() -> void:
 
 
 ## test_fuel_depleted_signal_fires_once | Signal Constraints | Verify fuel_depleted does not spam | Single emission
+## FuelResource is the source of truth for fuel state (#1142).
 ## :rtype: void
 func test_fuel_depleted_signal_fires_once() -> void:
 	gut.p("Testing: 'fuel_depleted' signal must emit exactly once when reaching zero.")
+	var fuel: FuelResource = FuelResource.new()
 	
-	watch_signals(Globals.settings)
+	watch_signals(fuel)
 	
 	# 1. Start with a positive amount
-	Globals.settings.current_fuel = 10.0
+	fuel.current_fuel = 10.0
 	
 	# 2. Drain to exactly zero (this should trigger the first and only emission)
-	Globals.settings.current_fuel = 0.0
+	fuel.current_fuel = 0.0
 	
-	assert_signal_emitted(Globals.settings, "fuel_depleted", "Signal should fire when transitioning to zero.")
+	assert_signal_emitted(fuel, "fuel_depleted", "Signal should fire when transitioning to zero.")
 	
 	# 3. Simulate continued consumption attempts while already empty 
 	# The setter should clamp this and prevent further signal emissions
-	Globals.settings.current_fuel -= 5.0
-	Globals.settings.current_fuel -= 5.0
+	fuel.current_fuel -= 5.0
+	fuel.current_fuel -= 5.0
 	
-	assert_signal_emit_count(Globals.settings, "fuel_depleted", 1, "Signal must not spam when fuel is already depleted.")
+	assert_signal_emit_count(fuel, "fuel_depleted", 1, "Signal must not spam when fuel is already depleted.")
 
 # NOTE: The test_fuel_persistence test was removed from this file. 
 # current_fuel is volatile and no longer saved to disk. 

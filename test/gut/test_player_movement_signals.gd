@@ -51,7 +51,7 @@ func test_physics_emits_speed_changed_on_acceleration() -> void:
 	gut.p("Testing: _physics_process emits speed_changed exactly once per frame when accelerating.")
 	watch_signals(_player)
 	
-	Globals.settings.current_fuel = 100.0
+	_player.fuel_resource.current_fuel = 100.0
 	_player.current_speed = 100.0
 	
 	# Simulate acceleration input
@@ -71,7 +71,7 @@ func test_physics_does_not_spam_speed_changed() -> void:
 	gut.p("Testing: _physics_process suppresses speed_changed emissions when cruising.")
 	watch_signals(_player)
 	
-	Globals.settings.current_fuel = 100.0
+	_player.fuel_resource.current_fuel = 100.0
 	_player.current_speed = 250.0 
 	
 	# Process multiple frames without active input
@@ -133,7 +133,7 @@ func test_ui_updates_on_speed_signal() -> void:
 func test_speed_clamps_to_max_and_min() -> void:
 	gut.p("Testing: Speed values obey MIN and MAX constraints.")
 	
-	Globals.settings.current_fuel = 100.0
+	_player.fuel_resource.current_fuel = 100.0
 	
 	var max_cap: float = Globals.settings.max_speed
 	var min_cap: float = Globals.settings.min_speed

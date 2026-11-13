@@ -61,6 +61,16 @@ func _snapshot() -> Dictionary:
 	}
 
 
+## Every script property on the settings resource, so a test can prove a load changed
+## nothing at all, including runtime-only fields that persisted_schema doesn't cover.
+func _all_properties() -> Dictionary:
+	var values := {}
+	for prop: Dictionary in _globals.settings.get_property_list():
+		if prop["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			values[prop["name"]] = _globals.settings.get(prop["name"])
+	return values
+
+
 func _read_saved_config() -> ConfigFile:
 	var saved := ConfigFile.new()
 	assert_eq(saved.load_encrypted_pass(TEST_PATH, TEST_KEY), OK)
@@ -163,11 +173,14 @@ func test_invalid_entries_do_not_prevent_later_valid_entries_loading() -> void:
 
 func test_load_ignores_unknown_keys_resource_names_and_wrong_section_case() -> void:
 	var before := _snapshot()
+	var before_all := _all_properties()
+	# A stale "current_fuel" key (runtime state, never persisted) stays as test data: it
+	# must load without error and change nothing on the resource (#1142).
 	_populate_config({"current_log_level": 4, "current_fuel": 0.0, "future_option": true})
 	_config.set_value("settings", "difficulty", 2.0)
 	_globals._load_settings(TEST_PATH)
 	assert_eq(_snapshot(), before)
-	assert_eq(_globals.settings.current_fuel, 100.0)
+	assert_eq(_all_properties(), before_all)
 
 
 func test_load_still_uses_resource_validation_for_unbounded_schema_fields(
