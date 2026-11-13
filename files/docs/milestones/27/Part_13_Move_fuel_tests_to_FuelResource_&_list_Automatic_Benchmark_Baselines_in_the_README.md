@@ -3,10 +3,10 @@
 
 ---
 
-## PR #TBD Summary
+## PR #1178 Summary
 
 **Title:** Move fuel tests from the settings resource to FuelResource  
-**PR:** #TBD  
+**PR:** [#1178](https://github.com/ikostan/SkyLockAssault/pull/1178)  
 **Branch:** `test/1142-fuel-tests-to-fuel-resource` → `main`  
 **Author:** @ikostan  
 **Resolves:**
@@ -48,8 +48,9 @@ The search from #1142 found 63 references in 14 files (the issue listed about 59
 Tests whose purpose is the settings ↔ player bridge are kept and marked `BRIDGE TEST (#1143)`, so #1143 rewrites them to confirm the bridge is gone:
 
 - **`test_player_fuel_logic.gd`, 2 new tests:** `test_engine_reignites_on_refuel` used to refuel through `Globals.settings`, so it was the only test that exercised the settings → player direction. It now refuels through `fuel_resource`. To keep the bridge covered until #1143, two new tests check it directly:
-  - `test_bridge_settings_fuel_write_reaches_fuel_resource`: a settings write reaches `fuel_resource` and reignites the engine and rotors.
+  - `test_bridge_settings_fuel_write_reaches_fuel_resource`: from an empty tank, a settings write reaches `fuel_resource` and reignites the engine and rotors.
   - `test_bridge_fuel_resource_change_mirrors_to_settings`: a `fuel_resource` change is mirrored into `Globals.settings.current_fuel`.
+- **Refuel from empty:** `test_engine_reignites_on_refuel` and the settings-write bridge test now empty the tank first, so the real flameout handler stops the engine before the refuel, and both check that it did. They used to start full and stop the timer by hand, so the "refuel" to 50 actually lowered fuel from 100 (raised by CodeRabbit in review).
 - **`test_parallax_manager.gd`:** the "settings fuel must not drive the background" part of `test_replacing_settings_ignores_old_difficulty_and_fuel_settings`.
 - **`test_player_lifecycle.gd`:** the `setting_changed` bridge connect and disconnect checks. No API reference, marked so #1143 finds it.
 
@@ -57,7 +58,7 @@ Tests whose purpose is the settings ↔ player bridge are kept and marked `BRIDG
 
 - **`test_fuel_integration.gd`** replaced `Globals.settings` in `before_each()` and never restored it. It now saves and restores it, as #1142's acceptance criteria require.
 - **`test_fuel_ui.gd`** connected a lambda to `Globals.settings.setting_changed` and never disconnected it, so the listener outlived the test. It now observes a local `FuelResource`, and its `before_each()`/`after_each()` (which only saved and restored `current_fuel`) were removed.
-- **`before_test()`/`after_test()`** in `test_player.gd`, `test_difficulty.gd` and `test_difficulty_integration.gd` no longer save and restore `settings.current_fuel`. The tests don't set it any more. The player's bridge still writes it until #1143, but nothing reads it, and the next player's `_ready()` resets it from `fuel_resource`.
+- **`before_test()`/`after_test()`** in `test_player.gd`, `test_difficulty.gd` and `test_difficulty_integration.gd` now swap in a fresh `GameSettingsResource` for each test and put the live one back afterwards, like the GUT player suites already do. They used to save and restore `difficulty`, `max_fuel` and `current_fuel` on the shared resource. The tests no longer set `current_fuel`, but the player's bridge still writes it until #1143, so restoring only some fields would leak it. With the swap, every write lands on the throwaway copy (raised by CodeRabbit in review).
 
 ### 4. README (#1134)
 
@@ -101,8 +102,10 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 | `test_player_lifecycle.gd`               | GUT       | 2 → 2   |
 
 - **Simulated #1143:** in a scratch copy, `current_fuel`, `fuel_depleted` and `refuel()` were removed from `GameSettingsResource`, and the player's mirror and listener body were removed. GUT then ran 876 cases and only the three marked tests failed: the two new bridge tests and the marked part of `test_replacing_settings_ignores_old_difficulty_and_fuel_settings`. gdUnit4 passed all 155. So no unmarked test still depends on the API.
-- **Remaining matches** for the #1142 search: the two new bridge tests (`test_player_fuel_logic.gd:108`, `:124`), the marked parallax line (`test_parallax_manager.gd:336`), and the stale config key test data (`test_globals_settings_serialization.gd:179`, `:268`).
-- **Not verified yet:** the PR pipeline run.
+- **Remaining matches** for the #1142 search: the two new bridge tests (`test_player_fuel_logic.gd:113`, `:129`), the marked parallax line (`test_parallax_manager.gd:336`), and the stale config key test data (`test_globals_settings_serialization.gd:179`, `:268`).
+- **Settings isolation:** in a probe copy, each of the three gdUnit4 suites recorded `current_fuel`, `difficulty` and `max_fuel` on the live resource before every test and compared them after. All 18 tests reported no change. gdUnit4 still passed 155/155 with the same per-file counts.
+- **Review fixes:** after both fixes, GUT still passed 876/876. `test_player_fuel_logic.gd` still has 6 tests, and the two refuel tests gained 2 assertions each.
+- **PR pipeline:** GUT and gdUnit4 both passed on `1723cfe`.
 
 ---
 
@@ -110,7 +113,6 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 
 - **#1143:** rewrite the four `BRIDGE TEST (#1143)` spots to confirm the bridge is gone, and remove the API from `GameSettingsResource` and `player.gd`.
 - **`test_player_lifecycle.gd`:** its marked bridge checks didn't fail in the simulation, because the scratch copy kept `_on_setting_changed()` as an empty function. They fail once #1143 deletes it.
-- **Until #1143:** the bridge still writes `Globals.settings.current_fuel` during tests, and the suites no longer restore it. Nothing reads it, so this has no effect.
 
 ---
 
@@ -118,26 +120,26 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 
 ### File-Level Changes
 
-| Change                | Details                                                                                                                          | Files                                                                                                                                                                                                                  |
-|-----------------------|----------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Player and HUD tests. | <ul><li>Fuel set and read through `player.fuel_resource`.</li><li>`current_fuel` save and restore removed from setup.</li></ul>  | `test/gdunit4/test_player.gd`<br/>`test/gdunit4/test_difficulty.gd`<br/>`test/gdunit4/test_difficulty_integration.gd`<br/>`test/gut/test_fuel_additional_edge_cases.gd`<br/>`test/gut/test_player_movement_signals.gd` |
-| Fuel rule tests.      | <ul><li>Depletion signal and negative refuel on a `FuelResource`.</li><li>`Globals.settings` restored after each test.</li></ul> | `test/gut/test_fuel_edge_cases.gd`<br/>`test/gut/test_fuel_integration.gd`<br/>`test/gut/test_fuel_additional_edge_cases.gd`                                                                                           |
-| UI signal tests.      | <ul><li>`fuel_changed` drives the bar value.</li><li>No listener left on `Globals.settings`.</li></ul>                           | `test/gut/test_fuel_ui.gd`<br/>`test/gut/test_fuel_persistence_integration.gd`                                                                                                                                         |
-| Globals filter tests. | <ul><li>Runtime-only keys instead of `current_fuel`.</li><li>Full property snapshot on load.</li></ul>                           | `test/gut/test_globals_setting_change_filter.gd`<br/>`test/gut/test_globals_fuel_telemetry.gd`<br/>`test/gut/test_globals_settings_serialization.gd`                                                                   |
-| Bridge tests.         | <ul><li>2 new tests, both directions.</li><li>Existing bridge checks marked for #1143.</li></ul>                                 | `test/gut/test_player_fuel_logic.gd`<br/>`test/gut/test_parallax_manager.gd`<br/>`test/gut/test_player_lifecycle.gd`                                                                                                   |
-| README.               | <ul><li>Automatic Benchmark Baselines row added; Milestone notes renumbered.</li></ul>                                           | `README.md`                                                                                                                                                                                                            |
-| Milestone note.       | <ul><li>This note.</li></ul>                                                                                                     | `files/docs/milestones/27/Part_13_Move_fuel_tests_to_FuelResource_&_list_Automatic_Benchmark_Baselines_in_the_README.md`                                                                                               |
+| Change                | Details                                                                                                                                | Files                                                                                                                                                                                                                  |
+|-----------------------|----------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Player and HUD tests. | <ul><li>Fuel set and read through `player.fuel_resource`.</li><li>gdUnit4 setup swaps in a fresh settings resource per test.</li></ul> | `test/gdunit4/test_player.gd`<br/>`test/gdunit4/test_difficulty.gd`<br/>`test/gdunit4/test_difficulty_integration.gd`<br/>`test/gut/test_fuel_additional_edge_cases.gd`<br/>`test/gut/test_player_movement_signals.gd` |
+| Fuel rule tests.      | <ul><li>Depletion signal and negative refuel on a `FuelResource`.</li><li>`Globals.settings` restored after each test.</li></ul>       | `test/gut/test_fuel_edge_cases.gd`<br/>`test/gut/test_fuel_integration.gd`<br/>`test/gut/test_fuel_additional_edge_cases.gd`                                                                                           |
+| UI signal tests.      | <ul><li>`fuel_changed` drives the bar value.</li><li>No listener left on `Globals.settings`.</li></ul>                                 | `test/gut/test_fuel_ui.gd`<br/>`test/gut/test_fuel_persistence_integration.gd`                                                                                                                                         |
+| Globals filter tests. | <ul><li>Runtime-only keys instead of `current_fuel`.</li><li>Full property snapshot on load.</li></ul>                                 | `test/gut/test_globals_setting_change_filter.gd`<br/>`test/gut/test_globals_fuel_telemetry.gd`<br/>`test/gut/test_globals_settings_serialization.gd`                                                                   |
+| Bridge tests.         | <ul><li>2 new tests, both directions.</li><li>Existing bridge checks marked for #1143.</li></ul>                                       | `test/gut/test_player_fuel_logic.gd`<br/>`test/gut/test_parallax_manager.gd`<br/>`test/gut/test_player_lifecycle.gd`                                                                                                   |
+| README.               | <ul><li>Automatic Benchmark Baselines row added; Milestone notes renumbered.</li></ul>                                                 | `README.md`                                                                                                                                                                                                            |
+| Milestone note.       | <ul><li>This note.</li></ul>                                                                                                           | `files/docs/milestones/27/Part_13_Move_fuel_tests_to_FuelResource_&_list_Automatic_Benchmark_Baselines_in_the_README.md`                                                                                               |
 
 ### Assessment against linked issues
 
-| Issue                                                   | Objective                                                                      | Addressed | Explanation                                                                                   |
-|---------------------------------------------------------|--------------------------------------------------------------------------------|-----------|-----------------------------------------------------------------------------------------------|
-| <https://github.com/ikostan/SkyLockAssault/issues/1142> | All migrated files pass in GUT and gdUnit4                                     | ✅         | Locally; the PR run is still to come.                                                         |
-| <https://github.com/ikostan/SkyLockAssault/issues/1142> | Test cases per file are the same or higher, with before and after counts       | ✅         | Table above. `test_player_fuel_logic.gd` 4 → 6; every other file unchanged.                   |
-| <https://github.com/ikostan/SkyLockAssault/issues/1142> | Remaining references to the settings fuel API are only the marked bridge tests | ✅         | Plus the stale config key, which #1142 keeps as test data. Confirmed by the #1143 simulation. |
-| <https://github.com/ikostan/SkyLockAssault/issues/1142> | Tests restore any `Globals.settings` values they change                        | ✅         | `test_fuel_integration.gd` now restores it.                                                   |
-| <https://github.com/ikostan/SkyLockAssault/issues/1142> | No change under `scripts/`                                                     | ✅         | Tests, README and this note only.                                                             |
-| <https://github.com/ikostan/SkyLockAssault/issues/1134> | Every doc in `files/docs/` is listed in the README                             | ✅         | Row 14 added, Milestone notes renumbered to 15.                                               |
+| Issue                                                   | Objective                                                                      | Addressed | Explanation                                                                                                                                       |
+|---------------------------------------------------------|--------------------------------------------------------------------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| <https://github.com/ikostan/SkyLockAssault/issues/1142> | All migrated files pass in GUT and gdUnit4                                     | ✅         | Locally (GUT 876, gdUnit4 155) and in the PR run on `1723cfe`.                                                                                    |
+| <https://github.com/ikostan/SkyLockAssault/issues/1142> | Test cases per file are the same or higher, with before and after counts       | ✅         | Table above. `test_player_fuel_logic.gd` 4 → 6; every other file unchanged.                                                                       |
+| <https://github.com/ikostan/SkyLockAssault/issues/1142> | Remaining references to the settings fuel API are only the marked bridge tests | ✅         | Plus the stale config key, which #1142 keeps as test data. Confirmed by the #1143 simulation.                                                     |
+| <https://github.com/ikostan/SkyLockAssault/issues/1142> | Tests restore any `Globals.settings` values they change                        | ✅         | `test_fuel_integration.gd` now restores it. The gdUnit4 player suites swap in a fresh resource per test, so the bridge can't leak `current_fuel`. |
+| <https://github.com/ikostan/SkyLockAssault/issues/1142> | No change under `scripts/`                                                     | ✅         | Tests, README and this note only.                                                                                                                 |
+| <https://github.com/ikostan/SkyLockAssault/issues/1134> | Every doc in `files/docs/` is listed in the README                             | ✅         | Row 14 added, Milestone notes renumbered to 15.                                                                                                   |
 
 ---
 
@@ -147,6 +149,7 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 
 - Filed #1142 and #1134 and set their scope.
 - Picked #1142 as the next task and added #1134 to the same PR.
+- Applied the two review fixes and re-aligned the tables in this note.
 
 ### Bots / AI contributions
 
@@ -159,9 +162,17 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
   - **Verification**
     - Ran GUT and gdUnit4 locally before and after, with the CI commands, and compared counts per file.
     - Simulated #1143 in a scratch copy to show that only the marked tests still use the API.
-  - **README**
-    - Added the #1134 row.
+  - **Review**
+    - Checked CodeRabbit's settings-isolation finding, confirmed it, and fixed the fixtures instead of downgrading the assessment.
+    - Took the refuel-from-empty nitpick and made both tests go through a real flameout. Re-ran GUT, gdUnit4 and a settings-leak probe.
   - Commits:
     - `2e483b6` Move fuel tests from the settings resource to FuelResource
+    - `0ba3a99` Add Milestone 27 Part 13 note for #1142 and #1134
+- **@coderabbitai**
+  - Found that the gdUnit4 player suites no longer restored `Globals.settings.current_fuel`, which the bridge still writes (fixed in `28d11ae`).
+  - Nitpick: the reignite tests started from a full tank, so they never refuelled from empty (fixed in `1723cfe`).
+  - Posted a summary of the PR in its description.
+- **@sourcery-ai**
+  - Posted a summary of the PR in its description.
 
 <!-- markdownlint-enable MD001 MD036 MD013 MD033 table-column-style -->
