@@ -227,11 +227,11 @@ func erase_old_event() -> void:
 		InputMap.action_erase_event(action, old_ev)
 
 
-## Returns the first event bound to [member action] for [member current_device].
+## Returns the first event bound to action for the current device.
 ##
-## Keyboard buttons match an [InputEventKey]; gamepad buttons match an [InputEventJoypadButton]
-## or [InputEventJoypadMotion]. Returns [code]null[/code] when the action has no event for that
-## device.
+## Keyboard buttons match an InputEventKey; gamepad buttons match an InputEventJoypadButton or
+## InputEventJoypadMotion. Returns null when the action has no event for that device.
+## Returns the matching InputEvent, or [code]null[/code] if none is found
 func get_matching_event() -> InputEvent:
 	var events: Array[InputEvent] = InputMap.action_get_events(action)
 	for ev: InputEvent in events:

@@ -49,10 +49,10 @@ const BUG_STRIPPED: Dictionary = {
 
 ## Repairs the InputMap in place.
 ##
-## [br]1. Removes each [constant LEGACY_EXTRAS] binding, but only while the action has another
+## 1. Removes each [constant LEGACY_EXTRAS] binding, but only while the action has another
 ## binding for that device. The key mapping menu shows and edits one binding per device, so
 ## the legacy one was hidden and could be the one shown instead of a newer remap.
-## [br]2. Restores the default for each [constant BUG_STRIPPED] slot that is empty, but only if
+## 2. Restores the default for each [constant BUG_STRIPPED] slot that is empty, but only if
 ## the action still has a binding on its other device (the bug never cleared a whole action, so
 ## a fully unbound action is the player's choice) and the default is free in its conflict group.
 ##
@@ -127,7 +127,8 @@ static func _restore_stripped_defaults(settings: Node) -> bool:
 ##
 ## [param settings]: The Settings autoload.
 ## [param action]: Action name in the InputMap.
-## [param device]: [code]keyboard[/code] or [code]gamepad[/code].
+## [param device]: The target device, either [code]keyboard[/code] or [code]gamepad[/code].
+## Returns the number of matching event bindings.
 static func count_bindings_for_device(settings: Node, action: String, device: String) -> int:
 	var count: int = 0
 	for ev: InputEvent in InputMap.action_get_events(action):

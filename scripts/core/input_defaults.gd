@@ -73,13 +73,15 @@ const GAMEPAD: Dictionary = {
 }
 
 
-## Builds the default event for [param action] on [param device].
+## Builds the default event for an action on a specified device.
 ##
-## Keys are physical (layout-independent); joypad events use device -1 (all controllers).
+## Keys are physical and layout-independent. Joypad events use device -1 for all controllers.
 ##
-## [param action]: Action name.
-## [param device]: [code]keyboard[/code] or [code]gamepad[/code].
-## Returns a new event, or [code]null[/code] if the action has no default for that device.
+## [param action]: Name of the input action.
+## [param device]: Target device type, accepted values are [code]keyboard[/code] or
+## [code]gamepad[/code].
+## Returns a new input event, or [code]null[/code] if the action has no default for that
+## device.
 static func make_event(action: String, device: String) -> InputEvent:
 	if device == "keyboard" and KEYBOARD.has(action):
 		var def: Variant = KEYBOARD[action]
