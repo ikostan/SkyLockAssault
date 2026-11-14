@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "created": "2026-11-13T07:11:20Z",
-  "commit": "3aa0228020663eef1be4550f53db1d092d910182",
-  "runner": "GitHub Actions 1000043812",
+  "created": "2026-11-14T11:58:49Z",
+  "commit": "1a8f329e5b68eaafd8de34f139a008f296beca91",
+  "runner": "GitHub Actions 1000043890",
   "godot": "4.7.1-stable (official)",
   "runs": 3,
   "baseline": {
@@ -15,25 +15,6 @@
     "reload_object_growth": 2.0
   },
   "history": [
-    {
-      "run_id": "42147635867",
-      "commit": "b2bb2b1b94fc86bbf0da89288169b1d238f702ce",
-      "date": "2026-11-06T02:22:38Z",
-      "metrics": {
-        "saves": 0.0,
-        "objects_avg": 2543.383333333333,
-        "nodes_avg": 503.3833333333333,
-        "resources_avg": 206.0,
-        "orphans_max": 0.0,
-        "reload_orphans_max": 0.0,
-        "reload_object_growth": 6.0,
-        "frame_p95_ms": 17.18,
-        "frames_over_33.4ms": 0.0,
-        "proc_worst_avg_ms": 0.2507,
-        "phys_worst_avg_ms": 0.5231,
-        "mem_static_growth": 149404.0
-      }
-    },
     {
       "run_id": "42174285266",
       "commit": "af54f9148e92d0f357bd0ee63954f0b2c80aca24",
@@ -109,6 +90,25 @@
         "phys_worst_avg_ms": 0.3109,
         "mem_static_growth": 144212.0
       }
+    },
+    {
+      "run_id": "43590949880",
+      "commit": "1a8f329e5b68eaafd8de34f139a008f296beca91",
+      "date": "2026-11-14T11:58:49Z",
+      "metrics": {
+        "saves": 0.0,
+        "objects_avg": 2547.4166666666665,
+        "nodes_avg": 503.4166666666667,
+        "resources_avg": 208.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": -7.0,
+        "frame_p95_ms": 17.044,
+        "frames_over_33.4ms": 0.0,
+        "proc_worst_avg_ms": 0.1796,
+        "phys_worst_avg_ms": 0.3146,
+        "mem_static_growth": 185248.0
+      }
     }
   ],
   "accepted": null,
@@ -119,7 +119,8 @@
     "42174285266",
     "42556564496",
     "42822606768",
-    "43381869542"
+    "43381869542",
+    "43590949880"
   ],
   "profile": "desktop"
 }
