@@ -49,11 +49,15 @@ const BUG_STRIPPED: Dictionary = {
 
 ## Repairs the InputMap in place.
 ##
-## Removes legacy extra bindings that hid newer remaps, and restores default bindings for
-## stripped empty slots if safe.
+## 1. Removes each [constant LEGACY_EXTRAS] binding, but only while the action has another
+## binding for that device. The key mapping menu shows and edits one binding per device, so
+## the legacy one was hidden and could be the one shown instead of a newer remap.
+## 2. Restores the default for each [constant BUG_STRIPPED] slot that is empty, but only if
+## the action still has a binding on its other device (the bug never cleared a whole action, so
+## a fully unbound action is the player's choice) and the default is free in its conflict group.
 ##
 ## [param settings]: The Settings autoload, for event helpers and conflict checks.
-## Returns true if any binding was removed or added.
+## Returns [code]true[/code] if any binding was removed or added.
 static func migrate(settings: Node) -> bool:
 	var trimmed: bool = _remove_legacy_extras(settings)
 	var restored: bool = _restore_stripped_defaults(settings)
