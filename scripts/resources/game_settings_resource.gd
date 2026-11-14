@@ -22,13 +22,6 @@ extends Resource
 ## [param new_value]: The updated value assigned to the setting.
 signal setting_changed(setting_name: String, new_value: Variant)
 
-## SIGNAL: fuel_depleted
-##
-## Emitted when current_fuel reaches exactly 0.0.
-## External systems (like the Player or UI) can connect to this to trigger
-## game-over states or low-fuel warnings without polling every frame.
-signal fuel_depleted
-
 @export_group("Speed System")
 
 @export var max_speed: float = 713.0:
@@ -117,7 +110,9 @@ signal fuel_depleted
 
 @export_group("Fuel System")
 
-## Maximum fuel capacity.
+## Maximum fuel capacity, copied into the player's [FuelResource] at spawn.
+##
+## Live fuel is runtime state and lives only on [FuelResource] (#1143).
 @export var max_fuel: float = 100.0:
 	set(value):
 		# NEW: Enforce a logical minimum capacity of 1.0. This prevents a misconfigured
@@ -128,35 +123,9 @@ signal fuel_depleted
 		if _max_fuel == new_max:
 			return
 		_max_fuel = new_max
-
-		# Use the backing field for comparisons, but trigger the public
-		# setter for current_fuel if needed
-		if _current_fuel > _max_fuel:
-			self.current_fuel = _max_fuel
-
 		setting_changed.emit("max_fuel", _max_fuel)
 	get:
 		return _max_fuel
-
-## Current fuel level. Clamped between 0.0 and max_fuel.
-@export var current_fuel: float = 100.0:
-	set(value):
-		# NEW: Use private backing field to safely clamp and check values without recursion
-		var old_value: float = _current_fuel
-		var new_fuel: float = clamp(value, 0.0, _max_fuel)
-
-		if _current_fuel == new_fuel:
-			return
-
-		_current_fuel = new_fuel
-
-		if old_value > 0.0 and _current_fuel == 0.0:
-			fuel_depleted.emit()
-
-		setting_changed.emit("current_fuel", _current_fuel)
-	get:
-		# NEW: Return the backing field
-		return _current_fuel
 
 ## Base rate of fuel consumption per second.
 @export var base_consumption_rate: float = 1.0
@@ -259,7 +228,6 @@ signal fuel_depleted
 # Moved these from the bottom of the script to the top to resolve
 # the "Identifier not declared" scope error.
 var _max_fuel: float = 100.0
-var _current_fuel: float = _max_fuel  # ← Automatically syncs to whatever max_fuel is
 var _current_log_level: int = 1
 var _difficulty: float = 1.0
 var _enable_debug_logging: bool = false
@@ -278,19 +246,3 @@ var _acceleration: float = 200.0
 var _deceleration: float = 100.0
 var _high_yellow_fraction: float = 0.80
 var _low_yellow_fraction: float = 0.10
-
-
-func _init() -> void:
-	# Safely enforce the invariant that a brand new resource
-	# always starts with a full tank, without bypassing the validation setters.
-	_current_fuel = _max_fuel
-
-
-## Increases fuel level by specified amount, clamped to max_fuel.
-##
-## Helper method to increase fuel safely.
-##
-## [param amount]: The quantity of fuel to add, which must be greater than zero.
-func refuel(amount: float) -> void:
-	if amount > 0:
-		current_fuel += amount

@@ -75,6 +75,31 @@ func test_gs_res_07_redundant_assignment() -> void:
 	assert_signal_emit_count(_resource, "setting_changed", 0, "Redundant assignment should not re-emit")
 
 
+## GS-RES-08 | No runtime fuel state on the settings resource (#1143)
+func test_gs_res_08_no_runtime_fuel_state() -> void:
+	assert_false("current_fuel" in _resource, "current_fuel must not be a settings property.")
+	assert_false("_current_fuel" in _resource, "The current_fuel backing field must be gone.")
+	assert_false(_resource.has_signal("fuel_depleted"), "fuel_depleted belongs to FuelResource only.")
+	assert_false(_resource.has_method("refuel"), "refuel() belongs to FuelResource only.")
+
+
+## GS-RES-09 | max_fuel still validates and notifies, with no current_fuel to clamp (#1143)
+func test_gs_res_09_max_fuel_change_without_fuel_clamp() -> void:
+	watch_signals(_resource)
+	
+	_resource.max_fuel = 50.0
+	assert_eq(_resource.max_fuel, 50.0, "Lowering max_fuel must apply as written.")
+	assert_signal_emit_count(_resource, "setting_changed", 1, "Only max_fuel may notify observers.")
+	assert_signal_emitted_with_parameters(_resource, "setting_changed", ["max_fuel", 50.0], 0)
+	
+	_resource.max_fuel = 250.0
+	assert_eq(_resource.max_fuel, 250.0, "Raising max_fuel must apply as written.")
+	
+	_resource.max_fuel = 0.0
+	assert_eq(_resource.max_fuel, 1.0, "max_fuel must keep its minimum of 1.0.")
+	assert_signal_emit_count(_resource, "setting_changed", 3, "Each max_fuel change must notify once.")
+
+
 # --- SECTION 3: MENU INITIALIZATION TESTS (GS-READY) ---
 
 ## GS-READY-01/02 | Confirm UI syncs to resource state on load

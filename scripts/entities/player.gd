@@ -67,9 +67,8 @@ func _ready() -> void:
 
 	if not is_instance_valid(_settings):
 		push_error("Player couldn't find Globals.settings! Using fallback defaults.")
+		# Local fallback only: an entity must not replace global state (#1143)
 		_settings = GameSettingsResource.new()
-		if is_instance_valid(Globals):
-			Globals.settings = _settings
 
 	if stats == null:
 		stats = DEFAULT_PLAYER_STATS
@@ -105,7 +104,6 @@ func _ready() -> void:
 	# Ensure the player always spawns with a full tank and default properties
 	fuel_resource.max_fuel = _settings.max_fuel
 	fuel_resource.current_fuel = _settings.max_fuel
-	_settings.current_fuel = fuel_resource.current_fuel
 	fuel_resource.base_consumption_rate = _settings.base_consumption_rate
 	fuel_resource.high_fuel_threshold = _settings.high_fuel_threshold
 	fuel_resource.medium_fuel_threshold = _settings.medium_fuel_threshold
@@ -148,10 +146,6 @@ func _ready() -> void:
 	fuel_resource.fuel_depleted.connect(_on_player_out_of_fuel)
 	fuel_resource.fuel_changed.connect(_on_fuel_changed)
 
-	# Guarded reverse-compatibility listener
-	if not _settings.setting_changed.is_connected(_on_setting_changed):
-		_settings.setting_changed.connect(_on_setting_changed)
-
 	if weapon:
 		Globals.log_message("Player ready. Weapons loaded.", Globals.LogLevel.DEBUG)
 	else:
@@ -159,26 +153,19 @@ func _ready() -> void:
 
 
 ## Lifecycle callback triggered right before the node is removed from the tree.
-## Safely disconnects global resource signals to prevent dangling references and memory leaks.
+## Safely disconnects the fuel resource signals to prevent dangling references and memory leaks.
 func _exit_tree() -> void:
 	if fuel_resource.fuel_depleted.is_connected(_on_player_out_of_fuel):
 		fuel_resource.fuel_depleted.disconnect(_on_player_out_of_fuel)
 	if fuel_resource.fuel_changed.is_connected(_on_fuel_changed):
 		fuel_resource.fuel_changed.disconnect(_on_fuel_changed)
-	if is_instance_valid(_settings) and _settings.setting_changed.is_connected(_on_setting_changed):
-		_settings.setting_changed.disconnect(_on_setting_changed)
 
 
 ## Observer pattern callback to react to updates from the local fuel resource.
-## Re-ignites engines if refueled.
+## Re-ignites engines if refueled. [member fuel_resource] is the only source of truth
+## for live fuel; nothing is copied into the settings resource (#1143).
 ## [param new_fuel]: The updated value of the property.
 func _on_fuel_changed(new_fuel: float) -> void:
-	# --- EXPLICIT COMPATIBILITY BRIDGE ---
-	# Safely sync fuel drops back to Globals.settings so legacy UI/Parallax consumers
-	# remain accurate until they are fully migrated.
-	if is_instance_valid(_settings) and _settings.current_fuel != new_fuel:
-		_settings.current_fuel = new_fuel
-
 	# Reignite the engine if previously dead and we just got refueled
 	if new_fuel > 0.0 and fuel_timer.is_stopped():
 		fuel_timer.start()
@@ -203,7 +190,7 @@ func _set_speed(target_speed: float) -> void:
 	speed_resource.current_speed = target_speed
 
 
-## Signal handler for engine failure triggered by the global fuel_depleted signal.
+## Signal handler for engine failure triggered by [signal FuelResource.fuel_depleted].
 ## Stops the plane, halts rotors, and broadcasts the flameout state.
 func _on_player_out_of_fuel() -> void:
 	Globals.log_message("Player is out of fuel! Engine flameout.", Globals.LogLevel.WARNING)
@@ -302,13 +289,3 @@ func _physics_process(_delta: float) -> void:
 	player.position.y = clamp(player.position.y, player_y_min, player_y_max)
 
 	player.move_and_slide()
-
-
-## Guarded compatibility listener for legacy external fuel mutations.
-## Ensures that if legacy code or tests modify Globals.settings directly,
-## the authoritative FuelResource stays in sync.
-## [param setting_name]: The name of the modified setting.
-## [param new_value]: The updated value.
-func _on_setting_changed(setting_name: String, new_value: Variant) -> void:
-	if setting_name == "current_fuel" and fuel_resource.current_fuel != float(new_value):
-		fuel_resource.current_fuel = float(new_value)

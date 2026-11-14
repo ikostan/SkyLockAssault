@@ -149,9 +149,10 @@ func _ready() -> void:
 ##
 ## Triggers centralized side effects whenever a persisted setting is mutated: DEBUG
 ## logging and encrypted disk persistence. Properties outside persisted_schema (runtime
-## state such as current_fuel, which the player mirrors every fuel tick) are ignored,
-## because _save_settings never writes them and each save is a full decrypt + encrypt +
-## write of settings.cfg (issue #616).
+## tuning such as max_speed or the fuel thresholds) are ignored, because _save_settings
+## never writes them and each save is a full decrypt + encrypt + write of settings.cfg
+## (issue #616). Live fuel is not on the settings resource at all: it lives on the
+## player's FuelResource (#1143).
 ## On web builds, current_log_level is also mirrored to window.currentLogLevel for
 ## Playwright E2E tests.
 ##

@@ -18,8 +18,8 @@ var _original_settings: GameSettingsResource
 
 
 ## Gives each test a fresh settings resource, like the GUT player suites do. Every write
-## during the test (difficulty, max_fuel, and the player's fuel bridge mirroring
-## current_fuel until #1143) lands on that copy, so nothing leaks into later suites.
+## during the test (difficulty, max_fuel) lands on that copy, so nothing leaks into later
+## suites.
 func before_test() -> void:
 	_original_settings = Globals.settings
 	Globals.settings = GameSettingsResource.new()

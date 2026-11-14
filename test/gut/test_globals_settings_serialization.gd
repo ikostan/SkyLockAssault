@@ -268,6 +268,20 @@ func test_save_writes_all_compatible_keys_and_excludes_runtime_properties() -> v
 	assert_false(saved.has_section_key("Settings", "current_fuel"))
 
 
+func test_stale_current_fuel_key_loads_cleanly_and_save_never_writes_it() -> void:
+	# A file can still carry a current_fuel key from older builds. It must load without
+	# error, and a save must leave it exactly as found: the settings resource has no live
+	# fuel since #1143, so Globals never writes a value for it.
+	_populate_config({"current_fuel": 12.5, "difficulty": 1.5})
+	_globals._load_settings(TEST_PATH)
+	assert_false("current_fuel" in _globals.settings)
+	assert_eq(_globals.settings.difficulty, 1.5)
+	_globals._save_settings(TEST_PATH)
+	var saved := _read_saved_config()
+	assert_eq(saved.get_value("Settings", "current_fuel"), 12.5, "Unknown keys are kept as found")
+	assert_eq(saved.get_value("Settings", "difficulty"), 1.5)
+
+
 func test_save_preserves_other_managers_and_unknown_settings() -> void:
 	_config.set_value("audio", "master_volume", 0.375)
 	_config.set_value("audio", "mute", true)

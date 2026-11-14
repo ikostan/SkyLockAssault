@@ -96,13 +96,13 @@ func test_engine_reignites_on_refuel() -> void:
 	assert_true(anim_l.is_playing(), "Rotors must automatically resume spinning.")
 
 
-## test_bridge_settings_fuel_write_reaches_fuel_resource | Compatibility Bridge
-## BRIDGE TEST (#1143): legacy writes to Globals.settings.current_fuel still reach the
-## player's FuelResource (and reignite the engine). #1143 removes the bridge; rewrite this
-## test to confirm the settings write no longer exists or no longer affects the player.
+## test_settings_writes_do_not_reach_fuel_resource | Fuel Ownership
+## Rewritten from the #1142 bridge test: #1143 removed the settings -> player fuel bridge,
+## so no settings write can refuel the player or reignite the engine. Refueling goes
+## through FuelResource only (see test_engine_reignites_on_refuel).
 ## :rtype: void
-func test_bridge_settings_fuel_write_reaches_fuel_resource() -> void:
-	gut.p("Testing: Bridge copies a Globals.settings fuel write into the FuelResource.")
+func test_settings_writes_do_not_reach_fuel_resource() -> void:
+	gut.p("Testing: Settings writes cannot refuel the player or reignite the engine.")
 	var anim_l: AnimatedSprite2D = _player.rotor_left.get_node("AnimatedSprite2D")
 	
 	# Empty the tank so the real flameout handler stops the engine
@@ -110,23 +110,58 @@ func test_bridge_settings_fuel_write_reaches_fuel_resource() -> void:
 	assert_true(_player.fuel_timer.is_stopped(), "Precondition: flameout must stop the fuel timer.")
 	assert_false(anim_l.is_playing(), "Precondition: flameout must stop the rotors.")
 	
-	Globals.settings.current_fuel = 50.0
+	assert_false("current_fuel" in Globals.settings, "The settings resource must not hold live fuel.")
+	Globals.settings.max_fuel = 50.0
+	Globals.settings.difficulty = 1.5
 	
-	assert_eq(_player.fuel_resource.current_fuel, 50.0, "Bridge must copy settings fuel into FuelResource.")
-	assert_false(_player.fuel_timer.is_stopped(), "Fuel timer must reignite on a bridged refuel.")
-	assert_true(anim_l.is_playing(), "Rotors must resume spinning on a bridged refuel.")
+	assert_eq(_player.fuel_resource.current_fuel, 0.0, "Settings writes must not change live fuel.")
+	assert_true(_player.fuel_timer.is_stopped(), "Settings writes must not reignite the engine.")
+	assert_false(anim_l.is_playing(), "Settings writes must not restart the rotors.")
 
 
-## test_bridge_fuel_resource_change_mirrors_to_settings | Compatibility Bridge
-## BRIDGE TEST (#1143): FuelResource changes are mirrored into Globals.settings.current_fuel.
-## #1143 removes the mirror; rewrite this test to confirm settings no longer change.
+## test_fuel_resource_change_leaves_settings_untouched | Fuel Ownership
+## Rewritten from the #1142 bridge test: #1143 removed the FuelResource -> settings
+## mirror, so a fuel change must not notify settings observers or change any setting.
 ## :rtype: void
-func test_bridge_fuel_resource_change_mirrors_to_settings() -> void:
-	gut.p("Testing: Bridge mirrors a FuelResource change back into Globals.settings.")
+func test_fuel_resource_change_leaves_settings_untouched() -> void:
+	gut.p("Testing: A FuelResource change no longer touches the settings resource.")
+	var max_fuel_before: float = Globals.settings.max_fuel
+	watch_signals(Globals.settings)
 	
 	_player.fuel_resource.current_fuel = 42.0
 	
-	assert_eq(Globals.settings.current_fuel, 42.0, "Bridge must mirror FuelResource fuel into settings.")
+	assert_eq(_player.fuel_resource.current_fuel, 42.0, "FuelResource must hold the new fuel level.")
+	assert_signal_not_emitted(Globals.settings, "setting_changed", "Fuel changes must not notify settings observers.")
+	assert_eq(Globals.settings.max_fuel, max_fuel_before, "Fuel changes must not change max_fuel.")
+
+
+## test_full_fuel_run_emits_no_setting_changed | Fuel Ownership (#1143)
+## Drains the tank through the real fuel timer callback, then refuels. Before #1143 every
+## tick emitted setting_changed("current_fuel", ...); now none of it reaches the settings.
+## :rtype: void
+func test_full_fuel_run_emits_no_setting_changed() -> void:
+	gut.p("Testing: Draining and refueling the tank never emits setting_changed.")
+	# Full speed and a high consumption rate empty the tank in a few ticks.
+	_player.current_speed = _player.speed_resource.max_speed
+	_player.fuel_resource.base_consumption_rate = 25.0
+	watch_signals(Globals.settings)
+	watch_signals(_player.fuel_resource)
+	
+	var ticks: int = 0
+	while _player.fuel_resource.current_fuel > 0.0 and ticks < 100:
+		_player._on_fuel_timer_timeout()
+		ticks += 1
+	
+	assert_eq(_player.fuel_resource.current_fuel, 0.0, "Precondition: the tank must run dry.")
+	assert_gt(ticks, 1, "Precondition: the drain must take several ticks.")
+	assert_signal_emit_count(_player.fuel_resource, "fuel_depleted", 1, "The tank must run dry exactly once.")
+	assert_true(_player.fuel_timer.is_stopped(), "Precondition: flameout must stop the fuel timer.")
+	
+	_player.fuel_resource.current_fuel = _player.fuel_resource.max_fuel
+	
+	assert_false(_player.fuel_timer.is_stopped(), "Refueling must reignite the engine.")
+	assert_signal_emitted(_player.fuel_resource, "fuel_changed", "Fuel changes must go through FuelResource.")
+	assert_signal_not_emitted(Globals.settings, "setting_changed", "A full fuel run must not emit setting_changed.")
 
 
 ## test_lateral_movement_blocked_without_fuel | Movement Constraints
