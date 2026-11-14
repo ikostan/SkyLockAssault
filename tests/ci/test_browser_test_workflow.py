@@ -297,8 +297,8 @@ def _run_sharded_tests(
     harness = (
         'pytest() { printf "pytest-arg: <%s>\\n" "$@"; '
         'echo "pytest-called: $*"; '
-        f'return {pytest_exit_code}; '
-        '}\n'
+        f"return {pytest_exit_code}; "
+        "}\n"
     )
     return subprocess.run(
         ["bash", "--noprofile", "--norc", "-eo", "pipefail", "-c", harness + script],
@@ -412,7 +412,9 @@ def test_shard_passes_only_matches_as_individual_arguments(
     result = _run_sharded_tests(test_shard_steps, "tests/*_test.py", tmp_path)
 
     assert result.returncode == 0, result.stdout + result.stderr
-    args = [line for line in result.stdout.splitlines() if line.startswith("pytest-arg:")]
+    args = [
+        line for line in result.stdout.splitlines() if line.startswith("pytest-arg:")
+    ]
     assert args[:2] == [
         "pytest-arg: <tests/a_test.py>",
         "pytest-arg: <tests/with space_test.py>",
@@ -426,7 +428,9 @@ def test_empty_shard_overwrites_stale_success_report(
     """An empty shard must leave valid zero-test XML rather than stale success data."""
     (tmp_path / "artifacts").mkdir()
     report = tmp_path / "artifacts" / "junit.xml"
-    report.write_text('<testsuites><testsuite tests="42"/></testsuites>', encoding="utf-8")
+    report.write_text(
+        '<testsuites><testsuite tests="42"/></testsuites>', encoding="utf-8"
+    )
     (tmp_path / "tests").mkdir()
     (tmp_path / "tests" / "helper.py").touch()
 
