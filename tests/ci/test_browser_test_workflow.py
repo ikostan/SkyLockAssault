@@ -13,6 +13,7 @@ SHA pinning, and the Node.js version used for coverage conversion.
 
 import re
 import subprocess
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
@@ -279,7 +280,10 @@ EXPECTED_SHARDS = {
 
 
 def _run_sharded_tests(
-    test_shard_steps: list[dict[str, Any]], test_path: str, cwd: Path
+    test_shard_steps: list[dict[str, Any]],
+    test_path: str,
+    cwd: Path,
+    pytest_exit_code: int = 0,
 ) -> subprocess.CompletedProcess[str]:
     """Execute the real Run Sharded Tests script with pytest replaced by a stub.
 
@@ -290,7 +294,12 @@ def _run_sharded_tests(
     script = script.replace("${{ matrix.test_path }}", test_path).replace(
         "${{ inputs.pw_timeout }}", "30000"
     )
-    harness = 'pytest() { echo "pytest-called: $*"; }\n'
+    harness = (
+        'pytest() { printf "pytest-arg: <%s>\\n" "$@"; '
+        'echo "pytest-called: $*"; '
+        f'return {pytest_exit_code}; '
+        '}\n'
+    )
     return subprocess.run(
         ["bash", "--noprofile", "--norc", "-eo", "pipefail", "-c", harness + script],
         cwd=cwd,
@@ -371,3 +380,63 @@ def test_shard_with_matching_files_runs_pytest(
     assert "pytest-called: tests/a_test.py tests/b_test.py" in result.stdout
     assert "--junitxml=artifacts/junit.xml" in result.stdout
     assert "No test files matched" not in result.stdout
+
+
+@pytest.mark.parametrize("pytest_exit_code", [1, 2, 5])
+def test_nonempty_shard_propagates_pytest_failure(
+    test_shard_steps: list[dict[str, Any]],
+    tmp_path: Path,
+    pytest_exit_code: int,
+) -> None:
+    """Failed tests, collection errors, and zero collected tests fail the shard."""
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "a_test.py").touch()
+
+    result = _run_sharded_tests(
+        test_shard_steps, "tests/*_test.py", tmp_path, pytest_exit_code
+    )
+
+    assert result.returncode == pytest_exit_code, result.stdout + result.stderr
+    assert "pytest-called" in result.stdout
+    assert "No test files matched" not in result.stdout
+
+
+def test_shard_passes_only_matches_as_individual_arguments(
+    test_shard_steps: list[dict[str, Any]], tmp_path: Path
+) -> None:
+    """Glob expansion excludes unrelated files and preserves spaces in filenames."""
+    (tmp_path / "tests").mkdir()
+    for name in ("a_test.py", "with space_test.py", "helper.py", "a_test.py.bak"):
+        (tmp_path / "tests" / name).touch()
+
+    result = _run_sharded_tests(test_shard_steps, "tests/*_test.py", tmp_path)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    args = [line for line in result.stdout.splitlines() if line.startswith("pytest-arg:")]
+    assert args[:2] == [
+        "pytest-arg: <tests/a_test.py>",
+        "pytest-arg: <tests/with space_test.py>",
+    ]
+    assert not any("helper.py" in arg or ".bak" in arg for arg in args)
+
+
+def test_empty_shard_overwrites_stale_success_report(
+    test_shard_steps: list[dict[str, Any]], tmp_path: Path
+) -> None:
+    """An empty shard must leave valid zero-test XML rather than stale success data."""
+    (tmp_path / "artifacts").mkdir()
+    report = tmp_path / "artifacts" / "junit.xml"
+    report.write_text('<testsuites><testsuite tests="42"/></testsuites>', encoding="utf-8")
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "helper.py").touch()
+
+    result = _run_sharded_tests(test_shard_steps, "tests/*_test.py", tmp_path)
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "pytest-called" not in result.stdout
+    root = ET.parse(report).getroot()
+    assert root.tag == "testsuites"
+    suites = root.findall("testsuite")
+    assert len(suites) == 1
+    for counter in ("tests", "failures", "errors", "skipped"):
+        assert suites[0].get(counter) == "0"

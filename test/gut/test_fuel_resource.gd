@@ -249,3 +249,48 @@ func test_single_setters_respect_0_and_100() -> void:
 	fuel_res.high_fuel_threshold = 95.0
 	fuel_res.no_fuel_threshold = 10.0
 	assert_eq(_thresholds(), [95.0, 50.0, 30.0, 10.0], "In-range single writes must apply exactly.")
+
+
+## Every neighbour gap independently enforces the one percentage point minimum.
+func test_threshold_gap_boundaries(
+	values: Array = use_parameters([
+		[100.0, 99.5, 1.0, 0.0],
+		[100.0, 50.0, 49.5, 0.0],
+		[100.0, 50.0, 0.5, 0.0],
+	])
+) -> void:
+	assert_true(fuel_res.set_thresholds(100.0, 99.0, 1.0, 0.0))
+	assert_false(fuel_res.set_thresholds(values[0], values[1], values[2], values[3]))
+	assert_push_warning("FuelResource: rejected fuel thresholds")
+	assert_eq(_thresholds(), [100.0, 99.0, 1.0, 0.0], "Every rejected gap preserves the whole set.")
+
+
+## Non-finite values must be rejected in every position, without changing live fuel.
+func test_nonfinite_thresholds_are_atomic(
+	index: int = use_parameters([0, 1, 2, 3])
+) -> void:
+	assert_true(fuel_res.set_thresholds(80.0, 60.0, 40.0, 20.0))
+	fuel_res.current_fuel = 42.0
+	watch_signals(fuel_res)
+	for invalid: float in [NAN, INF, -INF]:
+		var values: Array = [80.0, 60.0, 40.0, 20.0]
+		values[index] = invalid
+		assert_false(fuel_res.set_thresholds(values[0], values[1], values[2], values[3]))
+		assert_push_warning("FuelResource: rejected fuel thresholds")
+		assert_eq(_thresholds(), [80.0, 60.0, 40.0, 20.0])
+	assert_eq(fuel_res.current_fuel, 42.0)
+	assert_signal_not_emitted(fuel_res, "fuel_changed")
+	assert_signal_not_emitted(fuel_res, "fuel_depleted")
+
+
+## Percent thresholds may be fractional and must not depend on tank capacity.
+func test_fractional_thresholds_preserve_live_fuel() -> void:
+	fuel_res.max_fuel = 200.0
+	fuel_res.current_fuel = 42.0
+	watch_signals(fuel_res)
+	assert_true(fuel_res.set_thresholds(75.5, 50.25, 25.125, 0.5))
+	assert_eq(_thresholds(), [75.5, 50.25, 25.125, 0.5])
+	assert_eq(fuel_res.current_fuel, 42.0)
+	assert_eq(fuel_res.max_fuel, 200.0)
+	assert_signal_not_emitted(fuel_res, "fuel_changed")
+	assert_signal_not_emitted(fuel_res, "fuel_depleted")

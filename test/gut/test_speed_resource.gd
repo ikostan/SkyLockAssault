@@ -245,3 +245,43 @@ func test_single_limit_setters_still_clamp() -> void:
 	speed_res.min_speed = 0.0
 	speed_res.max_speed = 0.0
 	assert_eq(speed_res.max_speed, 1.0, "max_speed must not drop below 1.")
+
+
+## Observers must see the complete new pair when a range change clamps speed.
+func test_limit_change_observers_see_atomic_pair() -> void:
+	speed_res.current_speed = 300.0
+	var snapshots: Array = []
+	speed_res.speed_updated.connect(func(value: float) -> void:
+		snapshots.append([speed_res.min_speed, speed_res.max_speed, value])
+	)
+	assert_true(speed_res.set_speed_limits(900.0, 1000.0))
+	assert_true(speed_res.set_speed_limits(10.0, 50.0))
+	assert_eq(snapshots, [[900.0, 1000.0, 900.0], [10.0, 50.0, 50.0]])
+
+
+## Reapplying a pair with equal limits must not emit duplicate speed events.
+func test_equal_limits_notify_once() -> void:
+	speed_res.current_speed = 300.0
+	watch_signals(speed_res)
+	assert_true(speed_res.set_speed_limits(500.0, 500.0))
+	assert_eq(speed_res.current_speed, 500.0)
+	assert_true(speed_res.set_speed_limits(500.0, 500.0))
+	assert_signal_emit_count(speed_res, "speed_updated", 1)
+	assert_signal_emit_count(speed_res, "speed_maxed", 1)
+
+
+## Invalid pairs cannot trigger notifications or prevent a later valid update.
+func test_rejected_limits_are_silent_and_recoverable(
+	pair: Array = use_parameters([[INF, INF], [-INF, 500.0], [0.0, -INF]])
+) -> void:
+	assert_true(speed_res.set_speed_limits(120.0, 640.0))
+	speed_res.current_speed = 300.0
+	watch_signals(speed_res)
+	assert_false(speed_res.set_speed_limits(pair[0], pair[1]))
+	assert_push_warning("SpeedResource: rejected speed limits")
+	assert_eq([speed_res.min_speed, speed_res.max_speed, speed_res.current_speed], [120.0, 640.0, 300.0])
+	assert_signal_not_emitted(speed_res, "speed_updated")
+	assert_signal_not_emitted(speed_res, "speed_low")
+	assert_signal_not_emitted(speed_res, "speed_maxed")
+	assert_true(speed_res.set_speed_limits(0.0, 1.0))
+	assert_eq(speed_res.current_speed, 1.0, "A rejected pair must not poison later updates.")

@@ -120,3 +120,23 @@ func test_out_of_order_fuel_thresholds_keep_the_defaults() -> void:
 		fuel.no_fuel_threshold,
 	]
 	assert_eq(thresholds, [90.0, 50.0, 30.0, 15.0], "The thresholds must keep their defaults.")
+
+
+## Refueling restores the spawn tuning even if global tuning has since changed.
+func test_refuel_restores_custom_spawn_minimum(
+	limits: Array = use_parameters([[900.0, 1000.0], [10.0, 50.0]])
+) -> void:
+	Globals.settings.min_speed = limits[0]
+	Globals.settings.max_speed = limits[1]
+	var player: Variant = _spawn_player()
+	assert_eq(player.speed_resource.min_speed, limits[0])
+	assert_eq(player.speed_resource.max_speed, limits[1])
+	Globals.settings.min_speed = 25.0
+	player.fuel_resource.current_fuel = 0.0
+	assert_eq(player.speed_resource.min_speed, 0.0)
+	assert_eq(player.current_speed, 0.0)
+	player.fuel_resource.refuel(1.0)
+	player._set_speed(0.0)
+	assert_eq(player.speed_resource.min_speed, limits[0])
+	assert_eq(player.current_speed, limits[0])
+	assert_false(player.fuel_timer.is_stopped())
