@@ -204,11 +204,11 @@ func _fuel_thresholds(player: Variant) -> Array[float]:
 
 ## test_player_receives_custom_thresholds_exactly | Fuel Thresholds (#1147)
 ## The old one-by-one copy clamped a lowered set: high 20 became 51 while medium was 50.
-## [param params]: [label, [high, medium, low, no_fuel], order to assign them in settings].
+## [param params]: [label, [high, medium, low, no_fuel]].
 func test_player_receives_custom_thresholds_exactly(
 	params: Array = use_parameters([
-		["lowered", [20.0, 15.0, 10.0, 5.0], [3, 2, 1, 0]],
-		["raised", [98.0, 80.0, 70.0, 60.0], [0, 1, 2, 3]],
+		["lowered", [20.0, 15.0, 10.0, 5.0]],
+		["raised", [98.0, 80.0, 70.0, 60.0]],
 	])
 ) -> void:
 	var label: String = params[0]
@@ -217,9 +217,8 @@ func test_player_receives_custom_thresholds_exactly(
 	var properties: Array[String] = [
 		"high_fuel_threshold", "medium_fuel_threshold", "low_fuel_threshold", "no_fuel_threshold"
 	]
-	# The settings setters still clamp one at a time (until #1148), so set them in an
-	# order that lets each value through: lowest first when lowering, highest first when raising.
-	for i: int in params[2]:
+	# The settings fields are plain exports since #1148, so any assignment order works.
+	for i: int in properties.size():
 		Globals.settings.set(properties[i], wanted[i])
 	var in_settings: Array = [
 		Globals.settings.high_fuel_threshold,
@@ -237,7 +236,7 @@ func test_player_receives_custom_thresholds_exactly(
 ## test_player_keeps_default_thresholds_when_settings_are_invalid | Fuel Thresholds (#1147)
 func test_player_keeps_default_thresholds_when_settings_are_invalid() -> void:
 	gut.p("Testing: Out-of-range settings thresholds are rejected and the defaults kept.")
-	# The settings setter only keeps high above medium; it allows 150.
+	# The settings fields are plain exports since #1148, so 150 is stored as written.
 	Globals.settings.high_fuel_threshold = 150.0
 	assert_eq(Globals.settings.high_fuel_threshold, 150.0, "Precondition: settings hold 150.")
 	

@@ -14,7 +14,10 @@ extends Resource
 ## Core observer signal. Allows external systems to react to data changes without explicit
 ## persistence calls. Setting a property to its current value does not emit it.
 ##
-## Plain exported properties have no setter and never emit it: [member base_consumption_rate],
+## Plain exported properties have no setter and never emit it: the speed tuning values
+## ([member max_speed], [member min_speed], [member lateral_speed], [member acceleration],
+## [member deceleration], [member high_yellow_fraction], [member low_yellow_fraction]),
+## the fuel tuning values ([member base_consumption_rate] and the four fuel thresholds),
 ## [member remap_prompt_keyboard], [member remap_prompt_gamepad], [member key_mapping_scene]
 ## and [member options_scene].
 ##
@@ -23,90 +26,24 @@ extends Resource
 signal setting_changed(setting_name: String, new_value: Variant)
 
 @export_group("Speed System")
+# Plain tuning values, copied into the player's SpeedResource at spawn. SpeedResource
+# validates them; this resource stores them as written (#1148).
 
-@export var max_speed: float = 713.0:
-	set(value):
-		var new_val: float = max(1.0, value)
-		if _max_speed == new_val:
-			return
-		_max_speed = new_val
-
-		# NEW FIX: Enforce invariant - push min_speed down if max_speed drops below it
-		if _min_speed > _max_speed:
-			self.min_speed = _max_speed
-
-		setting_changed.emit("max_speed", _max_speed)
-	get:
-		return _max_speed
-
-@export var min_speed: float = 95.0:
-	set(value):
-		# NEW FIX: Clamp new min_speed so it cannot exceed the current max_speed
-		var new_val: float = clamp(value, 0.0, _max_speed)
-
-		if _min_speed == new_val:
-			return
-		_min_speed = new_val
-		setting_changed.emit("min_speed", _min_speed)
-	get:
-		return _min_speed
-
-@export var lateral_speed: float = 250.0:
-	set(value):
-		var new_val: float = max(0.0, value)
-		if _lateral_speed == new_val:
-			return
-		_lateral_speed = new_val
-		setting_changed.emit("lateral_speed", _lateral_speed)
-	get:
-		return _lateral_speed
-
-@export var acceleration: float = 200.0:
-	set(value):
-		var new_val: float = max(0.0, value)
-		if _acceleration == new_val:
-			return
-		_acceleration = new_val
-		setting_changed.emit("acceleration", _acceleration)
-	get:
-		return _acceleration
-
-@export var deceleration: float = 100.0:
-	set(value):
-		var new_val: float = max(0.0, value)
-		if _deceleration == new_val:
-			return
-		_deceleration = new_val
-		setting_changed.emit("deceleration", _deceleration)
-	get:
-		return _deceleration
-
-@export var high_yellow_fraction: float = 0.80:
-	set(value):
-		var new_val: float = clamp(value, 0.0, 1.0)
-		if _high_yellow_fraction == new_val:
-			return
-		_high_yellow_fraction = new_val
-
-		# NEW FIX: Enforce invariant - push low_yellow down if high_yellow drops below it
-		if _low_yellow_fraction > _high_yellow_fraction:
-			self.low_yellow_fraction = _high_yellow_fraction
-
-		setting_changed.emit("high_yellow_fraction", _high_yellow_fraction)
-	get:
-		return _high_yellow_fraction
-
-@export var low_yellow_fraction: float = 0.10:
-	set(value):
-		# NEW FIX: Clamp new low_yellow so it cannot exceed the current high_yellow
-		var new_val: float = clamp(value, 0.0, _high_yellow_fraction)
-
-		if _low_yellow_fraction == new_val:
-			return
-		_low_yellow_fraction = new_val
-		setting_changed.emit("low_yellow_fraction", _low_yellow_fraction)
-	get:
-		return _low_yellow_fraction
+## Top speed, copied with [member min_speed] through [method SpeedResource.set_speed_limits].
+@export var max_speed: float = 713.0
+## Lowest speed while fueled, copied with [member max_speed] as a pair.
+@export var min_speed: float = 95.0
+## Sideways speed, copied into [member SpeedResource.lateral_speed].
+@export var lateral_speed: float = 250.0
+## Forward acceleration, copied into [member SpeedResource.acceleration].
+@export var acceleration: float = 200.0
+## Forward deceleration, copied into [member SpeedResource.deceleration].
+@export var deceleration: float = 100.0
+## Fraction of [member max_speed] (0-1) at or above which the HUD speed warning blinks.
+@export var high_yellow_fraction: float = 0.80
+## Fraction of the min-to-max speed range (0-1, at most [member high_yellow_fraction])
+## at or below which the HUD speed warning blinks.
+@export var low_yellow_fraction: float = 0.10
 
 @export_group("Fuel System")
 
@@ -130,53 +67,18 @@ signal setting_changed(setting_name: String, new_value: Variant)
 ## Base rate of fuel consumption per second.
 @export var base_consumption_rate: float = 1.0
 
-# NEW: Migrated thresholds from player.gd to centralize all fuel configuration.
-# All four are percentages of max_fuel (0-100), copied into the player's FuelResource
-# with FuelResource.set_thresholds(), which validates them as a group (#1147).
+# Plain tuning values: all four are percentages of max_fuel (0-100), copied into the
+# player's FuelResource with FuelResource.set_thresholds(), which validates them as a
+# group (#1147). This resource stores them as written (#1148).
 
 ## Percent of [member max_fuel] above which the HUD fuel bar is solid green.
-@export var high_fuel_threshold: float = 90.0:
-	set(value):
-		var new_val: float = max(value, _medium_fuel_threshold + 1.0)  # Must be greater than medium
-		if _high_fuel_threshold == new_val:
-			return
-		_high_fuel_threshold = new_val
-		setting_changed.emit("high_fuel_threshold", _high_fuel_threshold)
-	get:
-		return _high_fuel_threshold
-
+@export var high_fuel_threshold: float = 90.0
 ## Percent of [member max_fuel] at which the HUD fuel bar reaches yellow.
-@export var medium_fuel_threshold: float = 50.0:
-	set(value):
-		var new_val: float = clamp(value, _low_fuel_threshold + 1.0, _high_fuel_threshold - 1.0)
-		if _medium_fuel_threshold == new_val:
-			return
-		_medium_fuel_threshold = new_val
-		setting_changed.emit("medium_fuel_threshold", _medium_fuel_threshold)
-	get:
-		return _medium_fuel_threshold
-
+@export var medium_fuel_threshold: float = 50.0
 ## Percent of [member max_fuel] at or below which the HUD low-fuel warning blinks.
-@export var low_fuel_threshold: float = 30.0:
-	set(value):
-		var new_val: float = clamp(value, _no_fuel_threshold + 1.0, _medium_fuel_threshold - 1.0)
-		if _low_fuel_threshold == new_val:
-			return
-		_low_fuel_threshold = new_val
-		setting_changed.emit("low_fuel_threshold", _low_fuel_threshold)
-	get:
-		return _low_fuel_threshold
-
+@export var low_fuel_threshold: float = 30.0
 ## Percent of [member max_fuel] below which the HUD fuel bar is solid dark red.
-@export var no_fuel_threshold: float = 15.0:
-	set(value):
-		var new_val: float = min(value, _low_fuel_threshold - 1.0)  # Must be lower than low
-		if _no_fuel_threshold == new_val:
-			return
-		_no_fuel_threshold = new_val
-		setting_changed.emit("no_fuel_threshold", _no_fuel_threshold)
-	get:
-		return _no_fuel_threshold
+@export var no_fuel_threshold: float = 15.0
 
 @export_group("Logging")
 # Current log level: 0=DEBUG, 1=INFO, 2=WARNING, 3=ERROR, 4=NONE
@@ -229,27 +131,10 @@ signal setting_changed(setting_name: String, new_value: Variant)
 	get:
 		return _show_fps
 
-# Private member variables moved to bottom to satisfy class-definitions-order
-# NEW: GDScript requires backing fields to be declared BEFORE
-# the properties that reference them.
-# Moved these from the bottom of the script to the top to resolve
-# the "Identifier not declared" scope error.
+# Backing fields for the settings that validate and notify. They must be declared before
+# the properties that reference them are used.
 var _max_fuel: float = 100.0
 var _current_log_level: int = 1
 var _difficulty: float = 1.0
 var _enable_debug_logging: bool = false
-# NEW: Add backing fields
-var _high_fuel_threshold: float = 90.0
-var _medium_fuel_threshold: float = 50.0
-var _low_fuel_threshold: float = 30.0
-var _no_fuel_threshold: float = 15.0
 var _show_fps: bool = false
-
-# Speed Backing Fields
-var _max_speed: float = 713.0
-var _min_speed: float = 95.0
-var _lateral_speed: float = 250.0
-var _acceleration: float = 200.0
-var _deceleration: float = 100.0
-var _high_yellow_fraction: float = 0.80
-var _low_yellow_fraction: float = 0.10

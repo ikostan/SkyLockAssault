@@ -48,6 +48,9 @@ var current_speed: float:
 # Cache the global settings to avoid singleton lookups in hot paths
 var _settings: GameSettingsResource = null
 
+# The min_speed applied at spawn, restored when the engine has fuel again (#1148)
+var _fueled_min_speed: float = 0.0
+
 # Core Node References
 @onready var rotor_right: Node2D = $CharacterBody2D/RotorRight
 @onready var rotor_left: Node2D = $CharacterBody2D/RotorLeft
@@ -115,9 +118,12 @@ func _ready() -> void:
 		_settings.no_fuel_threshold
 	)
 
-	# Setup speed boundaries and tuning properties from global settings
-	speed_resource.max_speed = _settings.max_speed
-	speed_resource.min_speed = _settings.min_speed
+	# Setup speed boundaries and tuning properties from global settings.
+	# The limits go in as a pair, so raising or lowering both applies exactly. An invalid
+	# pair is rejected with a warning and the resource keeps its defaults (#1148).
+	@warning_ignore("return_value_discarded")
+	speed_resource.set_speed_limits(_settings.min_speed, _settings.max_speed)
+	_fueled_min_speed = speed_resource.min_speed
 	speed_resource.acceleration = _settings.acceleration
 	speed_resource.deceleration = _settings.deceleration
 	speed_resource.lateral_speed = _settings.lateral_speed
@@ -187,9 +193,10 @@ func _set_speed(target_speed: float) -> void:
 	# If out of fuel, drop min_speed so the setter allows clamping to 0.0
 	if fuel_resource.current_fuel <= 0.0:
 		speed_resource.min_speed = 0.0
-	elif is_instance_valid(_settings):
-		# Restore standard min_speed when fueled
-		speed_resource.min_speed = _settings.min_speed
+	else:
+		# Restore the min_speed applied at spawn, which is the settings value unless
+		# set_speed_limits() rejected it (#1148)
+		speed_resource.min_speed = _fueled_min_speed
 
 	# Assignment automatically triggers clamping and observers inside SpeedResource
 	speed_resource.current_speed = target_speed

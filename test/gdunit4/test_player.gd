@@ -18,8 +18,8 @@ var _original_settings: GameSettingsResource
 
 
 ## Gives each test a fresh settings resource, like the GUT player suites do. Every write
-## during the test (difficulty, max_fuel) lands on that copy, so nothing leaks into later
-## suites.
+## during the test (difficulty, max_fuel, tuning values) lands on that copy, so nothing
+## leaks into later suites.
 func before_test() -> void:
 	_original_settings = Globals.settings
 	Globals.settings = GameSettingsResource.new()
@@ -459,3 +459,69 @@ func test_speed_colors() -> void:
 	hud.update_speed_bar()
 	style = speed_bar.get_theme_stylebox("fill").duplicate() as StyleBoxFlat
 	assert_that(style.bg_color).is_equal(hud.DARK_RED)
+
+
+## A player created with custom tuning values receives them exactly (#1148).
+## The raised speed pair fails with one-at-a-time copies: min 900 clamps to the old max 713.
+func test_custom_tuning_values_reach_player_exactly() -> void:
+	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
+	settings.min_speed = 900.0
+	settings.max_speed = 1000.0
+	settings.acceleration = 300.0
+	settings.deceleration = 50.0
+	settings.lateral_speed = 400.0
+	settings.high_yellow_fraction = 0.9
+	settings.low_yellow_fraction = 0.3
+	settings.base_consumption_rate = 2.0
+	settings.max_fuel = 150.0
+	settings.high_fuel_threshold = 20.0
+	settings.medium_fuel_threshold = 15.0
+	settings.low_fuel_threshold = 10.0
+	settings.no_fuel_threshold = 5.0
+
+	var player_root: PlayerScript = auto_free(PlayerScene.instantiate()) as PlayerScript
+	add_child(player_root)
+	await await_idle_frame()
+
+	var speed: SpeedResource = player_root.speed_resource
+	assert_float(speed.min_speed).is_equal(900.0)
+	assert_float(speed.max_speed).is_equal(1000.0)
+	assert_float(speed.acceleration).is_equal(300.0)
+	assert_float(speed.deceleration).is_equal(50.0)
+	assert_float(speed.lateral_speed).is_equal(400.0)
+	assert_float(speed.high_yellow_fraction).is_equal(0.9)
+	assert_float(speed.low_yellow_fraction).is_equal(0.3)
+	# The spawn speed of 250 is clamped into the raised range
+	assert_float(speed.current_speed).is_equal(900.0)
+
+	var fuel: FuelResource = player_root.fuel_resource
+	assert_float(fuel.base_consumption_rate).is_equal(2.0)
+	assert_float(fuel.max_fuel).is_equal(150.0)
+	assert_float(fuel.current_fuel).is_equal(150.0)
+	assert_float(fuel.high_fuel_threshold).is_equal(20.0)
+	assert_float(fuel.medium_fuel_threshold).is_equal(15.0)
+	assert_float(fuel.low_fuel_threshold).is_equal(10.0)
+	assert_float(fuel.no_fuel_threshold).is_equal(5.0)
+
+
+## The zero-fuel min_speed behavior still works with custom limits (#1148): flameout
+## drops min_speed to 0 so the plane can stop, and refueling restores the custom value.
+func test_zero_fuel_min_speed_drop_and_restore() -> void:
+	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
+	settings.min_speed = 120.0
+	settings.max_speed = 800.0
+
+	var player_root: PlayerScript = auto_free(PlayerScene.instantiate()) as PlayerScript
+	add_child(player_root)
+	await await_idle_frame()
+	var speed: SpeedResource = player_root.speed_resource
+	assert_float(speed.min_speed).is_equal(120.0)
+
+	player_root.fuel_resource.current_fuel = 0.0
+	assert_float(speed.min_speed).is_equal(0.0)
+	assert_float(player_root.current_speed).is_equal(0.0)
+
+	player_root.fuel_resource.current_fuel = player_root.fuel_resource.max_fuel
+	player_root._physics_process(1.0 / 60.0)
+	assert_float(speed.min_speed).is_equal(120.0)
+	assert_float(player_root.current_speed).is_greater_equal(120.0)

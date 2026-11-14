@@ -3,7 +3,8 @@
 ## test_speed_resource.gd
 ##
 ## GUT unit tests for SpeedResource.
-## Validates boundary enforcements, shifting limit invariants, and deterministic signal crossings.
+## Validates boundary enforcements, shifting limit invariants, deterministic signal crossings,
+## and setting both speed limits as a pair (#1148).
 
 extends "res://addons/gut/test.gd"
 
@@ -137,3 +138,110 @@ func test_speed_boundaries_cannot_be_negative() -> void:
 	speed_res.min_speed = 0.0
 	speed_res.max_speed = -10.0
 	assert_eq(speed_res.max_speed, 1.0, "max_speed must clamp to a hard floor of 1.0.")
+
+
+# ==========================================
+# SPEED LIMITS AS A PAIR (#1148)
+# ==========================================
+
+## test_set_speed_limits_raises_both_exactly | Speed Limits
+## The #1148 bug: one at a time, min 900 clamps to the old max 713 before max is raised.
+func test_set_speed_limits_raises_both_exactly() -> void:
+	gut.p("Testing: Raising both limits applies exactly from the defaults.")
+	assert_true(speed_res.set_speed_limits(900.0, 1000.0), "A valid raised pair must apply.")
+	assert_eq(speed_res.min_speed, 900.0, "min_speed must apply as written.")
+	assert_eq(speed_res.max_speed, 1000.0, "max_speed must apply as written.")
+
+
+## test_set_speed_limits_lowers_both_exactly | Speed Limits
+func test_set_speed_limits_lowers_both_exactly() -> void:
+	gut.p("Testing: Lowering both limits applies exactly, after raising them.")
+	assert_true(speed_res.set_speed_limits(900.0, 1000.0))
+	assert_true(speed_res.set_speed_limits(10.0, 50.0), "A valid lowered pair must apply.")
+	assert_eq(speed_res.min_speed, 10.0, "min_speed must apply as written.")
+	assert_eq(speed_res.max_speed, 50.0, "max_speed must apply as written.")
+
+
+## test_set_speed_limits_accepts_the_bounds | Speed Limits
+func test_set_speed_limits_accepts_the_bounds() -> void:
+	gut.p("Testing: min 0, max 1, and min == max are allowed.")
+	assert_true(speed_res.set_speed_limits(0.0, 1.0), "min 0 with max 1 must apply.")
+	assert_eq([speed_res.min_speed, speed_res.max_speed], [0.0, 1.0])
+	assert_true(speed_res.set_speed_limits(500.0, 500.0), "Equal limits must apply.")
+	assert_eq([speed_res.min_speed, speed_res.max_speed], [500.0, 500.0])
+
+
+## test_set_speed_limits_clamps_current_speed_up | Speed Limits
+func test_set_speed_limits_clamps_current_speed_up() -> void:
+	gut.p("Testing: current_speed rises into a raised range.")
+	speed_res.current_speed = 250.0
+	watch_signals(speed_res)
+	
+	assert_true(speed_res.set_speed_limits(900.0, 1000.0))
+	
+	assert_eq(speed_res.current_speed, 900.0, "current_speed must rise to the new min_speed.")
+	assert_signal_emit_count(speed_res, "speed_updated", 1, "The clamp must notify once.")
+	assert_signal_emitted_with_parameters(speed_res, "speed_updated", [900.0])
+
+
+## test_set_speed_limits_clamps_current_speed_down | Speed Limits
+func test_set_speed_limits_clamps_current_speed_down() -> void:
+	gut.p("Testing: current_speed drops into a lowered range.")
+	speed_res.current_speed = 600.0
+	
+	assert_true(speed_res.set_speed_limits(10.0, 50.0))
+	
+	assert_eq(speed_res.current_speed, 50.0, "current_speed must drop to the new max_speed.")
+
+
+## test_set_speed_limits_keeps_current_speed_inside_range | Speed Limits
+func test_set_speed_limits_keeps_current_speed_inside_range() -> void:
+	gut.p("Testing: current_speed already inside the new range is left alone.")
+	speed_res.current_speed = 300.0
+	watch_signals(speed_res)
+	
+	assert_true(speed_res.set_speed_limits(200.0, 400.0))
+	
+	assert_eq(speed_res.current_speed, 300.0, "current_speed must stay where it was.")
+	assert_signal_not_emitted(speed_res, "speed_updated", "An unchanged speed must not notify.")
+
+
+## test_set_speed_limits_rejects_invalid_pairs | Speed Limits
+## Each invalid pair must return false, warn, and leave both limits and the speed unchanged.
+func test_set_speed_limits_rejects_invalid_pairs(
+	params: Array = use_parameters([
+		["min above max", [900.0, 800.0]],
+		["negative min", [-1.0, 500.0]],
+		["max below 1", [0.0, 0.5]],
+		["NaN min", [NAN, 500.0]],
+		["NaN max", [100.0, NAN]],
+		["infinite max", [100.0, INF]],
+	])
+) -> void:
+	var label: String = params[0]
+	var pair: Array = params[1]
+	gut.p("Testing: set_speed_limits() rejects a pair with %s." % label)
+	# Start from a custom pair, so "unchanged" can't pass by matching the defaults.
+	assert_true(speed_res.set_speed_limits(120.0, 640.0))
+	speed_res.current_speed = 300.0
+	
+	var applied: bool = speed_res.set_speed_limits(pair[0], pair[1])
+	
+	assert_false(applied, "A pair with %s must be rejected." % label)
+	assert_push_warning("SpeedResource: rejected speed limits")
+	assert_eq([speed_res.min_speed, speed_res.max_speed], [120.0, 640.0], "Limits must not change.")
+	assert_eq(speed_res.current_speed, 300.0, "A rejected pair must not move current_speed.")
+
+
+## test_single_limit_setters_still_clamp | Speed Limits
+## Inspector edits and the zero-fuel path still set one limit at a time.
+func test_single_limit_setters_still_clamp() -> void:
+	gut.p("Testing: min_speed and max_speed setters keep clamping after the backing-field change.")
+	speed_res.min_speed = 5000.0
+	assert_eq(speed_res.min_speed, 713.0, "min_speed must clamp to max_speed.")
+	speed_res.min_speed = 95.0
+	speed_res.max_speed = 0.0
+	assert_eq(speed_res.max_speed, 95.0, "max_speed must not drop below min_speed.")
+	speed_res.min_speed = 0.0
+	speed_res.max_speed = 0.0
+	assert_eq(speed_res.max_speed, 1.0, "max_speed must not drop below 1.")

@@ -100,6 +100,47 @@ func test_gs_res_09_max_fuel_change_without_fuel_clamp() -> void:
 	assert_signal_emit_count(_resource, "setting_changed", 3, "Each max_fuel change must notify once.")
 
 
+## Plain tuning fields (#1148): name, default value, and a value the old setters rejected.
+const PLAIN_TUNING_FIELDS: Array = [
+	["max_speed", 713.0, -5.0],
+	["min_speed", 95.0, 5000.0],
+	["lateral_speed", 250.0, -1.0],
+	["acceleration", 200.0, -1.0],
+	["deceleration", 100.0, -1.0],
+	["high_yellow_fraction", 0.80, 1.5],
+	["low_yellow_fraction", 0.10, 0.95],
+	["high_fuel_threshold", 90.0, 150.0],
+	["medium_fuel_threshold", 50.0, 95.0],
+	["low_fuel_threshold", 30.0, 60.0],
+	["no_fuel_threshold", 15.0, -3.0],
+]
+
+
+## GS-RES-10 | Plain tuning fields keep their names and defaults (#1148)
+func test_gs_res_10_plain_tuning_defaults_unchanged(
+	field: Array = use_parameters(PLAIN_TUNING_FIELDS)
+) -> void:
+	var prop: String = field[0]
+	assert_true(prop in _resource, "%s must still be a settings property." % prop)
+	assert_almost_eq(float(_resource.get(prop)), float(field[1]), 0.0001, "%s keeps its default." % prop)
+
+
+## GS-RES-11 | Plain tuning fields store values as written and never notify (#1148)
+## Validation lives in SpeedResource and FuelResource; see test_speed_resource.gd,
+## test_fuel_resource.gd and test_player_tuning_copy.gd for the same rules there.
+func test_gs_res_11_plain_tuning_fields_do_not_validate_or_notify(
+	field: Array = use_parameters(PLAIN_TUNING_FIELDS)
+) -> void:
+	var prop: String = field[0]
+	watch_signals(_resource)
+	
+	_resource.set(prop, field[2])
+	
+	assert_almost_eq(float(_resource.get(prop)), float(field[2]), 0.0001, "%s must store the value as written." % prop)
+	assert_signal_not_emitted(_resource, "setting_changed", "%s must not emit setting_changed." % prop)
+	assert_false(("_" + prop) in _resource, "%s must not keep a backing field." % prop)
+
+
 # --- SECTION 3: MENU INITIALIZATION TESTS (GS-READY) ---
 
 ## GS-READY-01/02 | Confirm UI syncs to resource state on load
