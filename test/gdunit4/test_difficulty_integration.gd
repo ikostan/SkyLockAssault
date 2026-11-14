@@ -11,23 +11,20 @@ const PlayerScene: PackedScene = preload("res://scenes/Player.tscn")
 const PlayerScript = preload("res://scripts/entities/player.gd")
 const GameSettingsResource = preload("res://scripts/resources/game_settings_resource.gd")
 
-var original_difficulty: float
-var original_current_fuel: float
-var original_max_fuel: float
+## The live settings resource, swapped out for each test and put back afterwards.
+var _original_settings: GameSettingsResource
 
 
+## Gives each test a fresh settings resource, like the GUT player suites do. Every write
+## during the test (difficulty, max_fuel, and the player's fuel bridge mirroring
+## current_fuel until #1143) lands on that copy, so nothing leaks into later suites.
 func before_test() -> void:
-	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
-	original_difficulty = settings.difficulty
-	original_current_fuel = settings.current_fuel
-	original_max_fuel = settings.max_fuel
+	_original_settings = Globals.settings
+	Globals.settings = GameSettingsResource.new()
 
 
 func after_test() -> void:
-	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
-	settings.difficulty = original_difficulty
-	settings.max_fuel = original_max_fuel
-	settings.current_fuel = original_current_fuel
+	Globals.settings = _original_settings
 
 
 func test_difficulty_scales_fuel_and_weapon() -> void:
@@ -48,8 +45,10 @@ func test_difficulty_scales_fuel_and_weapon() -> void:
 	# Force a known difficulty for deterministic assertions
 	settings.difficulty = 2.0
 
-	var start_fuel: float = settings.max_fuel
-	settings.current_fuel = start_fuel
+	# Fuel state lives on the player's FuelResource; the settings resource holds tuning only.
+	var fuel: FuelResource = player.fuel_resource
+	var start_fuel: float = fuel.max_fuel
+	fuel.current_fuel = start_fuel
 
 	# --- TEST 1: Fuel depletion scales with difficulty ---
 	var normalized_speed: float = player.current_speed / settings.max_speed
@@ -60,7 +59,7 @@ func test_difficulty_scales_fuel_and_weapon() -> void:
 	player._on_fuel_timer_timeout()
 
 	var expected_fuel: float = start_fuel - expected_depletion
-	assert_float(settings.current_fuel).is_equal_approx(expected_fuel, 0.01)
+	assert_float(fuel.current_fuel).is_equal_approx(expected_fuel, 0.01)
 
 	# --- TEST 2: Weapon cooldown scales with difficulty ---
 	# Expected: base fire_rate 0.15 * difficulty 2.0 = 0.30

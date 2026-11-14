@@ -38,6 +38,8 @@ func test_exit_tree_disconnects_signals() -> void:
 	add_child(main_scene)
 	player_root = main_scene.get_node("Player")
 	
+	# BRIDGE TEST (#1143): the settings -> player fuel bridge listener. #1143 removes the
+	# bridge; rewrite this and the matching disconnect check below to confirm it's gone.
 	assert_true(
 		Globals.settings.setting_changed.is_connected(player_root._on_setting_changed), 
 		"setting_changed reverse-compatibility bridge must be connected."

@@ -96,34 +96,39 @@ func test_persistence_missing_keys_fallback() -> void:
 	assert_eq(Globals.settings.difficulty, 2.0, "Present keys (difficulty) should still load successfully.")
 
 
-## test_ui_updates_on_fuel_change_signal | Integration | Verify UI elements react to global signals
+## test_ui_updates_on_fuel_change_signal | Integration | Verify UI elements react to fuel signals
+## max_fuel is a persisted setting and comes through Globals.settings.setting_changed.
+## current_fuel is runtime state and comes through FuelResource.fuel_changed (#1142).
 ## :rtype: void
 func test_ui_updates_on_fuel_change_signal() -> void:
-	gut.p("Testing: UI ProgressBar updates reactively via setting_changed signal.")
+	gut.p("Testing: UI ProgressBar updates reactively via setting_changed and fuel_changed.")
 	
 	# 1. Create a mock UI ProgressBar and safely queue it for deletion to prevent orphans
 	var progress_bar: ProgressBar = ProgressBar.new()
 	add_child_autoqfree(progress_bar)
+	var fuel: FuelResource = FuelResource.new()
 	
-	# 2. Define a local lambda to act as the Observer pattern UI handler
+	# 2. Define local lambdas to act as the Observer pattern UI handlers
 	var _on_setting_changed := func(setting_name: String, new_value: Variant) -> void:
 		# Add a safety check to ensure the lambda doesn't try to access a freed node
+		if is_instance_valid(progress_bar) and setting_name == "max_fuel":
+			progress_bar.max_value = new_value
+	var _on_fuel_changed := func(new_value: float) -> void:
 		if is_instance_valid(progress_bar):
-			if setting_name == "current_fuel":
-				progress_bar.value = new_value
-			elif setting_name == "max_fuel":
-				progress_bar.max_value = new_value
+			progress_bar.value = new_value
 			
-	# 3. Connect the signal
+	# 3. Connect the signals
 	Globals.settings.setting_changed.connect(_on_setting_changed)
+	fuel.fuel_changed.connect(_on_fuel_changed)
 	
-	# 4. Mutate the global resource, which should implicitly fire the signals
+	# 4. Mutate the resources, which should implicitly fire the signals
 	Globals.settings.max_fuel = 200.0
-	Globals.settings.current_fuel = 150.0
+	fuel.max_fuel = 200.0
+	fuel.current_fuel = 150.0
 	
 	# 5. Assert the UI element automatically synchronized with the backend data
 	assert_eq(progress_bar.max_value, 200.0, "ProgressBar max_value should react automatically to the max_fuel signal.")
-	assert_eq(progress_bar.value, 150.0, "ProgressBar value should react automatically to the current_fuel signal.")
+	assert_eq(progress_bar.value, 150.0, "ProgressBar value should react automatically to the fuel_changed signal.")
 
 	# Explicitly disconnect the signal at the end of the test.
 	# This prevents the lambda from becoming a "ghost" listener that crashes subsequent tests.

@@ -77,28 +77,64 @@ func test_engine_stops_on_zero_fuel() -> void:
 	assert_true(_player.fuel_timer.is_stopped(), "Fuel timer must stop running on flameout.")
 	assert_false(anim_r.is_playing(), "Rotors must stop animating when fuel is empty.")
 
+
 ## test_engine_reignites_on_refuel | Component State
 ## :rtype: void
 func test_engine_reignites_on_refuel() -> void:
 	gut.p("Testing: Refueling from an empty tank restarts rotors and timers.")
-	
-	# Simulate dead engine
-	_player.fuel_timer.stop()
 	var anim_l: AnimatedSprite2D = _player.rotor_left.get_node("AnimatedSprite2D")
-	anim_l.stop()
 	
-	# Trigger the global setting change to simulate refuel logic
-	Globals.settings.current_fuel = 50.0 
+	# Empty the tank so the real flameout handler stops the engine
+	_player.fuel_resource.current_fuel = 0.0
+	assert_true(_player.fuel_timer.is_stopped(), "Precondition: flameout must stop the fuel timer.")
+	assert_false(anim_l.is_playing(), "Precondition: flameout must stop the rotors.")
+	
+	# Refuel through the player's FuelResource, the source of truth for fuel state (#1142)
+	_player.fuel_resource.current_fuel = 50.0 
 	
 	assert_false(_player.fuel_timer.is_stopped(), "Fuel timer must reignite on refuel.")
 	assert_true(anim_l.is_playing(), "Rotors must automatically resume spinning.")
+
+
+## test_bridge_settings_fuel_write_reaches_fuel_resource | Compatibility Bridge
+## BRIDGE TEST (#1143): legacy writes to Globals.settings.current_fuel still reach the
+## player's FuelResource (and reignite the engine). #1143 removes the bridge; rewrite this
+## test to confirm the settings write no longer exists or no longer affects the player.
+## :rtype: void
+func test_bridge_settings_fuel_write_reaches_fuel_resource() -> void:
+	gut.p("Testing: Bridge copies a Globals.settings fuel write into the FuelResource.")
+	var anim_l: AnimatedSprite2D = _player.rotor_left.get_node("AnimatedSprite2D")
+	
+	# Empty the tank so the real flameout handler stops the engine
+	_player.fuel_resource.current_fuel = 0.0
+	assert_true(_player.fuel_timer.is_stopped(), "Precondition: flameout must stop the fuel timer.")
+	assert_false(anim_l.is_playing(), "Precondition: flameout must stop the rotors.")
+	
+	Globals.settings.current_fuel = 50.0
+	
+	assert_eq(_player.fuel_resource.current_fuel, 50.0, "Bridge must copy settings fuel into FuelResource.")
+	assert_false(_player.fuel_timer.is_stopped(), "Fuel timer must reignite on a bridged refuel.")
+	assert_true(anim_l.is_playing(), "Rotors must resume spinning on a bridged refuel.")
+
+
+## test_bridge_fuel_resource_change_mirrors_to_settings | Compatibility Bridge
+## BRIDGE TEST (#1143): FuelResource changes are mirrored into Globals.settings.current_fuel.
+## #1143 removes the mirror; rewrite this test to confirm settings no longer change.
+## :rtype: void
+func test_bridge_fuel_resource_change_mirrors_to_settings() -> void:
+	gut.p("Testing: Bridge mirrors a FuelResource change back into Globals.settings.")
+	
+	_player.fuel_resource.current_fuel = 42.0
+	
+	assert_eq(Globals.settings.current_fuel, 42.0, "Bridge must mirror FuelResource fuel into settings.")
+
 
 ## test_lateral_movement_blocked_without_fuel | Movement Constraints
 ## :rtype: void
 func test_lateral_movement_blocked_without_fuel() -> void:
 	gut.p("Testing: Lateral turning is disabled if fuel is completely empty.")
 	
-	Globals.settings.current_fuel = 0.0
+	_player.fuel_resource.current_fuel = 0.0
 	_player.current_speed = 150.0 
 	_player.player.velocity.x = 0.0
 	

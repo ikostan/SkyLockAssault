@@ -121,7 +121,8 @@ The game is browser-first and landscape-oriented. Mobile browsers are not suppor
 | 11 | [Browser DevTools Guide — Verifying Web Save Encryption](files/docs/Browser_DevTools_Guide_Verifying_Web_Save_Encryption.md)           |
 | 12 | [AI Models Summary Matrix](files/docs/AI_Models_Summary_Matrix.md)                                                                     |
 | 13 | [Performance Benchmark Guide](files/docs/Performance_Benchmark_Guide.md)                                                               |
-| 14 | [Milestone notes](files/docs/milestones)                                                                                               |
+| 14 | [Automatic Benchmark Baselines](files/docs/Automatic_Benchmark_Baselines.md)                                                           |
+| 15 | [Milestone notes](files/docs/milestones)                                                                                               |
 
 External reference: [Godot Documentation](https://docs.godotengine.org/en/stable/index.html).
 
