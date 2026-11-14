@@ -130,7 +130,11 @@ signal setting_changed(setting_name: String, new_value: Variant)
 ## Base rate of fuel consumption per second.
 @export var base_consumption_rate: float = 1.0
 
-# NEW: Migrated thresholds from player.gd to centralize all fuel configuration
+# NEW: Migrated thresholds from player.gd to centralize all fuel configuration.
+# All four are percentages of max_fuel (0-100), copied into the player's FuelResource
+# with FuelResource.set_thresholds(), which validates them as a group (#1147).
+
+## Percent of [member max_fuel] above which the HUD fuel bar is solid green.
 @export var high_fuel_threshold: float = 90.0:
 	set(value):
 		var new_val: float = max(value, _medium_fuel_threshold + 1.0)  # Must be greater than medium
@@ -141,6 +145,7 @@ signal setting_changed(setting_name: String, new_value: Variant)
 	get:
 		return _high_fuel_threshold
 
+## Percent of [member max_fuel] at which the HUD fuel bar reaches yellow.
 @export var medium_fuel_threshold: float = 50.0:
 	set(value):
 		var new_val: float = clamp(value, _low_fuel_threshold + 1.0, _high_fuel_threshold - 1.0)
@@ -151,6 +156,7 @@ signal setting_changed(setting_name: String, new_value: Variant)
 	get:
 		return _medium_fuel_threshold
 
+## Percent of [member max_fuel] at or below which the HUD low-fuel warning blinks.
 @export var low_fuel_threshold: float = 30.0:
 	set(value):
 		var new_val: float = clamp(value, _no_fuel_threshold + 1.0, _medium_fuel_threshold - 1.0)
@@ -161,6 +167,7 @@ signal setting_changed(setting_name: String, new_value: Variant)
 	get:
 		return _low_fuel_threshold
 
+## Percent of [member max_fuel] below which the HUD fuel bar is solid dark red.
 @export var no_fuel_threshold: float = 15.0:
 	set(value):
 		var new_val: float = min(value, _low_fuel_threshold - 1.0)  # Must be lower than low

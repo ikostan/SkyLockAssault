@@ -4,7 +4,8 @@
 ##
 ## GUT unit tests for FuelResource.
 ## Covers initialization, deterministic consumption, boundary enforcements, 
-## invariants, and deterministic signal crossing semantics.
+## invariants, deterministic signal crossing semantics, and fuel threshold
+## validation (#1147).
 
 extends "res://addons/gut/test.gd"
 
@@ -137,3 +138,114 @@ func test_fuel_depleted_crossing_semantics() -> void:
 	
 	fuel_res.current_fuel = 0.0
 	assert_signal_emit_count(fuel_res, "fuel_depleted", 2, "Crossing to 0.0 again should emit fuel_depleted a second time.")
+
+
+# ==========================================
+# 5. FUEL THRESHOLD VALIDATION (#1147)
+# ==========================================
+
+## Returns the four thresholds as [high, medium, low, no_fuel].
+## :rtype: Array[float]
+func _thresholds() -> Array[float]:
+	return [
+		fuel_res.high_fuel_threshold,
+		fuel_res.medium_fuel_threshold,
+		fuel_res.low_fuel_threshold,
+		fuel_res.no_fuel_threshold,
+	]
+
+
+## test_default_thresholds_are_valid | Thresholds
+func test_default_thresholds_are_valid() -> void:
+	gut.p("Testing: The default thresholds form a valid set.")
+	assert_eq(_thresholds(), [90.0, 50.0, 30.0, 15.0], "Defaults must stay 90/50/30/15.")
+	assert_true(fuel_res.set_thresholds(90.0, 50.0, 30.0, 15.0), "The defaults must pass validation.")
+
+
+## test_set_thresholds_lowers_all_exactly_from_defaults | Thresholds
+## The #1147 bug: one by one, (20, 15, 10, 5) clamps high to 51 because medium is still 50.
+func test_set_thresholds_lowers_all_exactly_from_defaults() -> void:
+	gut.p("Testing: Lowering every threshold applies exactly from the defaults.")
+	assert_true(fuel_res.set_thresholds(20.0, 15.0, 10.0, 5.0), "A valid lowered set must apply.")
+	assert_eq(_thresholds(), [20.0, 15.0, 10.0, 5.0], "Lowered thresholds must apply as written.")
+
+
+## test_set_thresholds_raises_all_exactly_from_defaults | Thresholds
+func test_set_thresholds_raises_all_exactly_from_defaults() -> void:
+	gut.p("Testing: Raising every threshold applies exactly from the defaults.")
+	assert_true(fuel_res.set_thresholds(98.0, 80.0, 70.0, 60.0), "A valid raised set must apply.")
+	assert_eq(_thresholds(), [98.0, 80.0, 70.0, 60.0], "Raised thresholds must apply as written.")
+
+
+## test_set_thresholds_accepts_the_bounds | Thresholds
+func test_set_thresholds_accepts_the_bounds() -> void:
+	gut.p("Testing: 0, 100, and gaps of exactly 1 are allowed.")
+	assert_true(fuel_res.set_thresholds(100.0, 2.0, 1.0, 0.0), "0, 100 and a gap of 1 must apply.")
+	assert_eq(_thresholds(), [100.0, 2.0, 1.0, 0.0], "Boundary thresholds must apply as written.")
+
+
+## test_set_thresholds_is_independent_of_current_values | Thresholds
+func test_set_thresholds_is_independent_of_current_values() -> void:
+	gut.p("Testing: The result doesn't depend on the previous thresholds.")
+	assert_true(fuel_res.set_thresholds(98.0, 80.0, 70.0, 60.0))
+	assert_true(fuel_res.set_thresholds(20.0, 15.0, 10.0, 5.0), "Lowering after raising must apply.")
+	assert_eq(_thresholds(), [20.0, 15.0, 10.0, 5.0], "The second set must apply as written.")
+	assert_true(fuel_res.set_thresholds(98.0, 80.0, 70.0, 60.0), "Raising after lowering must apply.")
+	assert_eq(_thresholds(), [98.0, 80.0, 70.0, 60.0], "The third set must apply as written.")
+
+
+## test_set_thresholds_rejects_invalid_sets | Thresholds
+## Each invalid set must return false, warn, and leave every threshold unchanged.
+func test_set_thresholds_rejects_invalid_sets(
+	params: Array = use_parameters([
+		["out of order", [50.0, 90.0, 30.0, 15.0]],
+		["high equals medium", [50.0, 50.0, 30.0, 15.0]],
+		["low equals no_fuel", [90.0, 50.0, 15.0, 15.0]],
+		["too close", [90.0, 89.5, 30.0, 15.0]],
+		["below 0", [90.0, 50.0, 30.0, -1.0]],
+		["above 100", [101.0, 50.0, 30.0, 15.0]],
+		["NaN", [90.0, NAN, 30.0, 15.0]],
+		["infinite", [INF, 50.0, 30.0, 15.0]],
+	])
+) -> void:
+	var label: String = params[0]
+	var values: Array = params[1]
+	gut.p("Testing: set_thresholds() rejects a set that is %s." % label)
+	# Start from a custom set, so "unchanged" can't pass by matching the defaults.
+	assert_true(fuel_res.set_thresholds(80.0, 60.0, 40.0, 20.0))
+	
+	var applied: bool = fuel_res.set_thresholds(values[0], values[1], values[2], values[3])
+	
+	assert_false(applied, "A set that is %s must be rejected." % label)
+	assert_push_warning("FuelResource: rejected fuel thresholds")
+	assert_eq(_thresholds(), [80.0, 60.0, 40.0, 20.0], "A rejected set must change nothing.")
+
+
+## test_single_setters_keep_the_order | Thresholds
+## The Inspector and existing callers still set thresholds one at a time.
+func test_single_setters_keep_the_order() -> void:
+	gut.p("Testing: Single-value setters clamp against their neighbours.")
+	fuel_res.high_fuel_threshold = 10.0
+	assert_eq(fuel_res.high_fuel_threshold, 51.0, "high must stay above medium + 1.")
+	fuel_res.medium_fuel_threshold = 95.0
+	assert_eq(fuel_res.medium_fuel_threshold, 50.0, "medium must stay below high - 1.")
+	fuel_res.medium_fuel_threshold = 10.0
+	assert_eq(fuel_res.medium_fuel_threshold, 31.0, "medium must stay above low + 1.")
+	fuel_res.low_fuel_threshold = 40.0
+	assert_eq(fuel_res.low_fuel_threshold, 30.0, "low must stay below medium - 1.")
+	fuel_res.low_fuel_threshold = 5.0
+	assert_eq(fuel_res.low_fuel_threshold, 16.0, "low must stay above no_fuel + 1.")
+	fuel_res.no_fuel_threshold = 25.0
+	assert_eq(fuel_res.no_fuel_threshold, 15.0, "no_fuel must stay below low - 1.")
+
+
+## test_single_setters_respect_0_and_100 | Thresholds
+func test_single_setters_respect_0_and_100() -> void:
+	gut.p("Testing: Single-value setters can't leave the 0-100 range.")
+	fuel_res.high_fuel_threshold = 150.0
+	assert_eq(fuel_res.high_fuel_threshold, 100.0, "high must not exceed 100.")
+	fuel_res.no_fuel_threshold = -5.0
+	assert_eq(fuel_res.no_fuel_threshold, 0.0, "no_fuel must not go below 0.")
+	fuel_res.high_fuel_threshold = 95.0
+	fuel_res.no_fuel_threshold = 10.0
+	assert_eq(_thresholds(), [95.0, 50.0, 30.0, 10.0], "In-range single writes must apply exactly.")

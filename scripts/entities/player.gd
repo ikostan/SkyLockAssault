@@ -105,10 +105,15 @@ func _ready() -> void:
 	fuel_resource.max_fuel = _settings.max_fuel
 	fuel_resource.current_fuel = _settings.max_fuel
 	fuel_resource.base_consumption_rate = _settings.base_consumption_rate
-	fuel_resource.high_fuel_threshold = _settings.high_fuel_threshold
-	fuel_resource.medium_fuel_threshold = _settings.medium_fuel_threshold
-	fuel_resource.low_fuel_threshold = _settings.low_fuel_threshold
-	fuel_resource.no_fuel_threshold = _settings.no_fuel_threshold
+	# One group call, so a valid custom set applies exactly whatever the old values were.
+	# An invalid set is rejected with a warning and the resource keeps its defaults (#1147).
+	@warning_ignore("return_value_discarded")
+	fuel_resource.set_thresholds(
+		_settings.high_fuel_threshold,
+		_settings.medium_fuel_threshold,
+		_settings.low_fuel_threshold,
+		_settings.no_fuel_threshold
+	)
 
 	# Setup speed boundaries and tuning properties from global settings
 	speed_resource.max_speed = _settings.max_speed

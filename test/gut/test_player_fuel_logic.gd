@@ -5,6 +5,7 @@
 extends "res://addons/gut/test.gd"
 
 const GutTestHelper = preload("res://test/gut/gut_test_helper.gd")
+const PlayerScene: PackedScene = preload("res://scenes/Player.tscn")
 
 var _mock_root: Node
 var _player: Variant # CHANGED: Use Variant to allow dynamic property access to player.gd variables
@@ -177,3 +178,70 @@ func test_lateral_movement_blocked_without_fuel() -> void:
 	_player._physics_process(0.1)
 	
 	assert_eq(float(_player.player.velocity.x), 0.0, "Plane must not turn without fuel, ignoring inputs.")
+
+
+## Spawns a real player scene with the current Globals.settings.
+## The real scene, not the shared mock: the mock's HUD panel lacks weapon and ammo
+## nodes, and their engine errors would be charged to the test calling this.
+## :rtype: Variant
+func _spawn_real_player() -> Variant:
+	var player: Variant = PlayerScene.instantiate()
+	add_child_autoqfree(player)
+	return player
+
+
+## Returns the four FuelResource thresholds as [high, medium, low, no_fuel].
+## :rtype: Array[float]
+func _fuel_thresholds(player: Variant) -> Array[float]:
+	var fuel: FuelResource = player.fuel_resource
+	return [
+		fuel.high_fuel_threshold,
+		fuel.medium_fuel_threshold,
+		fuel.low_fuel_threshold,
+		fuel.no_fuel_threshold,
+	]
+
+
+## test_player_receives_custom_thresholds_exactly | Fuel Thresholds (#1147)
+## The old one-by-one copy clamped a lowered set: high 20 became 51 while medium was 50.
+## [param params]: [label, [high, medium, low, no_fuel], order to assign them in settings].
+func test_player_receives_custom_thresholds_exactly(
+	params: Array = use_parameters([
+		["lowered", [20.0, 15.0, 10.0, 5.0], [3, 2, 1, 0]],
+		["raised", [98.0, 80.0, 70.0, 60.0], [0, 1, 2, 3]],
+	])
+) -> void:
+	var label: String = params[0]
+	var wanted: Array = params[1]
+	gut.p("Testing: A player spawned with %s settings thresholds gets them exactly." % label)
+	var properties: Array[String] = [
+		"high_fuel_threshold", "medium_fuel_threshold", "low_fuel_threshold", "no_fuel_threshold"
+	]
+	# The settings setters still clamp one at a time (until #1148), so set them in an
+	# order that lets each value through: lowest first when lowering, highest first when raising.
+	for i: int in params[2]:
+		Globals.settings.set(properties[i], wanted[i])
+	var in_settings: Array = [
+		Globals.settings.high_fuel_threshold,
+		Globals.settings.medium_fuel_threshold,
+		Globals.settings.low_fuel_threshold,
+		Globals.settings.no_fuel_threshold,
+	]
+	assert_eq(in_settings, wanted, "Precondition: the settings must hold the %s set." % label)
+	
+	var player: Variant = _spawn_real_player()
+	
+	assert_eq(_fuel_thresholds(player), wanted, "The player must receive the %s set exactly." % label)
+
+
+## test_player_keeps_default_thresholds_when_settings_are_invalid | Fuel Thresholds (#1147)
+func test_player_keeps_default_thresholds_when_settings_are_invalid() -> void:
+	gut.p("Testing: Out-of-range settings thresholds are rejected and the defaults kept.")
+	# The settings setter only keeps high above medium; it allows 150.
+	Globals.settings.high_fuel_threshold = 150.0
+	assert_eq(Globals.settings.high_fuel_threshold, 150.0, "Precondition: settings hold 150.")
+	
+	var player: Variant = _spawn_real_player()
+	
+	assert_push_warning("FuelResource: rejected fuel thresholds")
+	assert_eq(_fuel_thresholds(player), [90.0, 50.0, 30.0, 15.0], "The player must keep the defaults.")
