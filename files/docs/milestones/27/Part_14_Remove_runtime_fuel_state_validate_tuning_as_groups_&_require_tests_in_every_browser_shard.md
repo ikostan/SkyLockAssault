@@ -48,7 +48,9 @@ The four issues touch the same files in a fixed order (#1143 → #1147 → #1148
   - No longer listens to `setting_changed` (`_on_setting_changed()` and its connect and disconnect are gone).
   - A player without `Globals.settings` still logs an error and uses a fallback `GameSettingsResource`, but keeps it local instead of assigning it to `Globals.settings`.
 - **Nothing replaces the removed code.** The HUD, parallax and web telemetry already read `FuelResource` directly (`hud.gd`, `parallax_manager.gd`, `web_telemetry_adapter.gd`). Refueling goes through `fuel_resource.current_fuel` or `refuel()`, and `_on_fuel_changed()` still reignites the engine.
-- **`globals.gd`:** updated the `persisted_schema` filter comment. Its example no longer mentions `current_fuel`.
+- **`globals.gd`:**
+  - Updated the `persisted_schema` filter comment. Its example no longer mentions `current_fuel`.
+  - New `RETIRED_SETTINGS_KEYS` (`["current_fuel"]`). `_save_settings()` erases these keys from the `[Settings]` section, so old files drop `current_fuel` on the next save. Every other unknown key is still kept.
 
 ### 3. Fuel thresholds validated as a group (#1147)
 
@@ -73,7 +75,7 @@ The four issues touch the same files in a fixed order (#1143 → #1147 → #1148
 
 - **One PR, one commit per issue.** #1143, #1147 and #1148 must land in that order and change the same lines in `game_settings_resource.gd` and `player.gd`. Separate PRs would have meant rebasing those lines twice. Each commit stays reviewable on its own.
 - **#1194 rides along as the first commit.** It's a workflow-only change, and putting it first meant this PR's own runs skipped the empty shard.
-- **Stale `current_fuel` keys are kept as found.** A `current_fuel` key in an old `settings.cfg` loads without an error, and a save leaves it untouched. Globals never writes a value for it. This follows the existing rule of keeping unknown keys (`future_option`). Removing the key would be a save-format change, which #1143 rules out.
+- **Stale `current_fuel` keys are dropped on save.** A `current_fuel` key in an old `settings.cfg` loads without an error, and the next save erases it, as #1143 asks ("doesn't write the key back"). Only keys listed in `RETIRED_SETTINGS_KEYS` are erased. Other unknown keys (`future_option`) are still kept, as before. The format of what the game writes doesn't change, and `current_fuel` was never in `persisted_schema`, so this stays within #1143's "no save format change" scope. The first version kept the key as found; Sourcery flagged it in review.
 - **Group setters write backing fields.** Going through the single setters would still clamp against the old neighbours, which is the bug itself. Validating the whole set first and then writing the fields directly makes the result independent of the current values.
 - **`push_warning()` in the resources.** `FuelResource` and `SpeedResource` don't depend on `Globals`, so the rejection warning stays engine-level. `player.gd` ignores the return values with `@warning_ignore("return_value_discarded")`, because the resource already logs the warning.
 - **Settings setters were left alone in #1147.** #1148 removes them, so #1147 only documented their units. Between the two commits, a settings value like `high = 150` was rejected at spawn.
@@ -95,6 +97,7 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 | + #1143                  | 881       | 10,187      | 155           |
 | + #1147                  | 893       | 10,265      | 155           |
 | + #1148                  | 909       | 10,388      | 157           |
+| + stale key fix (review) | 910       | 10,392      | 157           |
 
 - **Test counts per changed file (`main` → this PR):**
 
@@ -106,7 +109,7 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 | `test_player_lifecycle.gd`               | GUT       | 2 → 3                       |
 | `test_parallax_manager.gd`               | GUT       | 16 → 16                     |
 | `test_game_settings_resource.gd`         | GUT       | 9 → 13                      |
-| `test_globals_settings_serialization.gd` | GUT       | 26 → 27                     |
+| `test_globals_settings_serialization.gd` | GUT       | 26 → 28                     |
 | `test_fuel_resource.gd`                  | GUT       | 9 → 17                      |
 | `test_hud.gd`                            | GUT       | 10 → 12                     |
 | `test_speed_resource.gd`                 | GUT       | 6 → 14                      |
@@ -121,6 +124,7 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
   - **#1143:** the old production code fails 9 new or rewritten tests across 5 suites.
   - **#1147:** the one-by-one player copy, `set_thresholds()` through the single setters, no 0/100 limits, and no range check are each caught.
   - **#1148:** the one-by-one speed copy, restoring from `settings.min_speed`, `set_speed_limits()` through the setters, and the old validating settings file are each caught.
+  - **Stale key fix:** without the erase in `_save_settings()`, both stale-key tests fail.
 - **`tests/ci`:** 1117 passed locally. `test_salt_injection.py::test_injection_readonly_file` fails in the sandbox and on unchanged `main`, because it runs as root, which ignores read-only permissions. It passes in CI.
 - **PR pipeline:**
   - **Earlier commits:** all jobs passed on `77563a26`, `58f05e1f` and `5323d5a7`, including both browser shards and the benchmark.
@@ -136,7 +140,6 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 ## Known Limitations / Follow-ups
 
 - **Manual web check (#1143):** HUD fuel warnings, the engine stopping on flameout, and the background stopping still need a check on the web build (locally, or on itch.io after merge).
-- **Stale `current_fuel` keys** stay in old save files. Removing them on save would need its own issue, since it changes the save format.
 - **#1150** depends on #1146, #1139 and #1141 (Region 5), so #617 can't close until Region 5 is done. Either move #1150 under #620 or accept that #617 stays open.
 - **#617 is still a sub-issue of the closed #616.**
 - **`workspace/run_pipeline.sh`** still passes `--ignore=tests/refactor`. It does nothing now that the folder is gone and can be cleaned up later.
@@ -150,7 +153,7 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 | Change                       | Details                                                                                                                                                                                               | Files                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 |------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Browser shards (#1194).      | <ul><li>Refactor Suite shard and `allow_empty` removed.</li><li>Empty shards write a zero-test report, then fail.</li></ul>                                                                           | `.github/workflows/browser_test.yml`<br/>`tests/ci/test_browser_test_workflow.py`<br/>`tests/ci/test_pr_path_filters.py`                                                                                                                                                                                                                                                                                                                                                                           |
-| Fuel ownership (#1143).      | <ul><li>Settings fuel API and the player's two-way copy removed.</li><li>Fallback settings stay local.</li></ul>                                                                                      | `scripts/resources/game_settings_resource.gd`<br/>`scripts/entities/player.gd`<br/>`scripts/core/globals.gd`                                                                                                                                                                                                                                                                                                                                                                                       |
+| Fuel ownership (#1143).      | <ul><li>Settings fuel API and the player's two-way copy removed.</li><li>Fallback settings stay local.</li><li>Saves drop the retired `current_fuel` key.</li></ul>                                   | `scripts/resources/game_settings_resource.gd`<br/>`scripts/entities/player.gd`<br/>`scripts/core/globals.gd`                                                                                                                                                                                                                                                                                                                                                                                       |
 | Fuel thresholds (#1147).     | <ul><li>`FuelResource.set_thresholds()` validates a set atomically.</li><li>Single setters limited to 0–100.</li><li>Percentage unit documented.</li></ul>                                            | `scripts/resources/fuel_resource.gd`<br/>`scripts/entities/player.gd`<br/>`scripts/resources/game_settings_resource.gd`                                                                                                                                                                                                                                                                                                                                                                            |
 | Plain tuning values (#1148). | <ul><li>11 settings fields are plain exports.</li><li>`SpeedResource.set_speed_limits()` copies the limits as a pair.</li><li>Zero-fuel path restores the applied `min_speed`.</li></ul>              | `scripts/resources/game_settings_resource.gd`<br/>`scripts/resources/speed_resource.gd`<br/>`scripts/entities/player.gd`                                                                                                                                                                                                                                                                                                                                                                           |
 | Tests.                       | <ul><li>Bridge tests rewritten to confirm the bridge is gone.</li><li>New tests for group setters, HUD percentages, plain settings fields and player copies.</li><li>No test cases removed.</li></ul> | `test/gut/test_player_fuel_logic.gd`<br/>`test/gut/test_player_lifecycle.gd`<br/>`test/gut/test_parallax_manager.gd`<br/>`test/gut/test_game_settings_resource.gd`<br/>`test/gut/test_globals_settings_serialization.gd`<br/>`test/gut/test_fuel_resource.gd`<br/>`test/gut/test_hud.gd`<br/>`test/gut/test_speed_resource.gd`<br/>`test/gut/test_player_tuning_copy.gd`<br/>`test/gdunit4/test_player.gd`<br/>`test/gdunit4/test_difficulty.gd`<br/>`test/gdunit4/test_difficulty_integration.gd` |
@@ -166,7 +169,7 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 | <https://github.com/ikostan/SkyLockAssault/issues/1194> | yamllint, actionlint and `tests/ci` pass                                       | ✅         | YAML Lint job (yamllint + actionlint) and the CI & Security shard passed.                                                                   |
 | <https://github.com/ikostan/SkyLockAssault/issues/1143> | Runtime fuel state and the `max_fuel` clamp removed from the settings resource | ✅         | `current_fuel`, `fuel_depleted`, `refuel()` and the clamp are gone; a test checks they don't exist.                                         |
 | <https://github.com/ikostan/SkyLockAssault/issues/1143> | Player bridge removed; fallback settings stay local                            | ✅         | Tests check that settings writes can't change fuel, fuel changes can't touch the settings, and the fallback leaves `Globals.settings` null. |
-| <https://github.com/ikostan/SkyLockAssault/issues/1143> | A stale `current_fuel` key loads cleanly and isn't written                     | ✅         | It loads without an error and a save leaves it as found (see Design Decisions).                                                             |
+| <https://github.com/ikostan/SkyLockAssault/issues/1143> | A stale `current_fuel` key loads cleanly and isn't written                     | ✅         | It loads without an error, and the next save drops it while keeping other unknown keys.                                                     |
 | <https://github.com/ikostan/SkyLockAssault/issues/1143> | A full fuel run emits no `setting_changed`                                     | ✅         | Drained through the real timer callback, then refuelled; no emission.                                                                       |
 | <https://github.com/ikostan/SkyLockAssault/issues/1143> | HUD, engine and background checked on the web build                            | ⏳         | Manual check still to do.                                                                                                                   |
 | <https://github.com/ikostan/SkyLockAssault/issues/1147> | `set_thresholds()` applies a set all at once or not at all                     | ✅         | Lowered, raised, boundary and 8 invalid sets tested.                                                                                        |
@@ -191,10 +194,10 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 - Asked for the changes as fully updated files, applied them, committed one commit per issue, and opened the PR.
 - Reviewed the bot findings and asked for this note.
 - Commits:
-  - `77563a26` Require tests in every browser shard
-  - `58f05e1f` Move live fuel state out of settings
-  - `5323d5a7` Apply fuel thresholds atomically
-  - `161b2b70` Apply tuning settings atomically at player spawn
+    - `77563a26` Require tests in every browser shard
+    - `58f05e1f` Move live fuel state out of settings
+    - `5323d5a7` Apply fuel thresholds atomically
+    - `161b2b70` Apply tuning settings atomically at player spawn
 
 ### Bots / AI contributions
 
@@ -207,10 +210,12 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
     - Mutation-tested each issue by putting the old behaviour back and confirming the new tests fail.
   - **Review**
     - Checked Sourcery's test count finding against the CI logs (65 and 1118, the extra 6 being the new tests) and the web benchmark ⚠️ against `main`'s run history.
+    - Agreed with Sourcery's stale-key finding, added `RETIRED_SETTINGS_KEYS`, and covered it with two tests and a mutation check.
 - **@sourcery-ai**
   - Flagged that `tests/refactor/` changes would no longer run; resolved, since the folder is empty and the empty-shard guard now covers it.
   - Flagged that the zero-test report wouldn't be uploaded after a failing shard; resolved, since the upload step already runs with `if: always()`.
   - Flagged the CI & Security count rising from 1112 to 1118; the extra tests are the new #1194 regression tests.
+  - Flagged that a stale `current_fuel` key was kept on save instead of dropped (fixed with `RETIRED_SETTINGS_KEYS`).
   - Posted a linked-issues assessment and a summary of the PR in its description.
 - **@coderabbitai**
   - Flagged that the PR description was still the template and didn't mention the GDScript changes.

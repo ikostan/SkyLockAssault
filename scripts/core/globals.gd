@@ -27,6 +27,11 @@ enum LogLevel { DEBUG, INFO, WARNING, ERROR, NONE = 4 }
 ## sections to the same settings.cfg, so Globals must never touch anything outside this one.
 const SETTINGS_SECTION: String = "Settings"
 
+## Keys that older builds wrote to SETTINGS_SECTION and that nothing reads anymore.
+## _save_settings() erases them, so old files are cleaned on the next save. Any other
+## unknown key is kept. current_fuel: live fuel moved to FuelResource (#1143).
+const RETIRED_SETTINGS_KEYS: Array[String] = ["current_fuel"]
+
 # --- ISSUE #470: Table-driven settings serialization ---
 ## Persistence schema for GameSettingsResource properties.
 ##
@@ -340,8 +345,9 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 ## Persists current settings to an encrypted config file.
 ##
 ## Re-reads the existing file first so sections owned by other managers (audio, input)
-## survive, then writes every persisted_schema property into SETTINGS_SECTION.
-## Does not touch _is_loading_settings.
+## survive, then writes every persisted_schema property into SETTINGS_SECTION and erases
+## the RETIRED_SETTINGS_KEYS. Other unknown keys are kept. Does not touch
+## _is_loading_settings.
 ##
 ## :param path: Config file path (default: Settings.CONFIG_PATH).
 ## :type path: String
@@ -371,6 +377,10 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 			)
 			continue
 		config.set_value(SETTINGS_SECTION, persisted_schema[prop]["key"], settings.get(prop))
+
+	for retired_key: String in RETIRED_SETTINGS_KEYS:
+		if config.has_section_key(SETTINGS_SECTION, retired_key):
+			config.erase_section_key(SETTINGS_SECTION, retired_key)
 
 	# FIX: Re-added the branch to properly handle the plaintext failsafe
 	var key: String = ensure_encryption_key()

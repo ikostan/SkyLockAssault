@@ -268,18 +268,34 @@ func test_save_writes_all_compatible_keys_and_excludes_runtime_properties() -> v
 	assert_false(saved.has_section_key("Settings", "current_fuel"))
 
 
-func test_stale_current_fuel_key_loads_cleanly_and_save_never_writes_it() -> void:
+func test_stale_current_fuel_key_loads_cleanly_and_save_drops_it() -> void:
 	# A file can still carry a current_fuel key from older builds. It must load without
-	# error, and a save must leave it exactly as found: the settings resource has no live
-	# fuel since #1143, so Globals never writes a value for it.
-	_populate_config({"current_fuel": 12.5, "difficulty": 1.5})
+	# error, and the next save must drop it: the settings resource has no live fuel since
+	# #1143. Other unknown keys are still kept.
+	_populate_config({"current_fuel": 12.5, "difficulty": 1.5, "future_option": "keep me"})
 	_globals._load_settings(TEST_PATH)
 	assert_false("current_fuel" in _globals.settings)
 	assert_eq(_globals.settings.difficulty, 1.5)
 	_globals._save_settings(TEST_PATH)
 	var saved := _read_saved_config()
-	assert_eq(saved.get_value("Settings", "current_fuel"), 12.5, "Unknown keys are kept as found")
+	assert_false(saved.has_section_key("Settings", "current_fuel"), "Retired key must be dropped")
+	assert_eq(saved.get_value("Settings", "future_option"), "keep me", "Other unknown keys stay")
 	assert_eq(saved.get_value("Settings", "difficulty"), 1.5)
+
+
+func test_every_retired_key_is_dropped_on_save_and_outside_the_schema() -> void:
+	# A retired key must never be a persisted property too, or the save would write it
+	# and then erase it.
+	var on_disk: Dictionary = {}
+	for prop: String in GlobalsScript.persisted_schema:
+		on_disk[GlobalsScript.persisted_schema[prop]["key"]] = true
+	for retired_key: String in GlobalsScript.RETIRED_SETTINGS_KEYS:
+		assert_false(on_disk.has(retired_key), "%s must not be a persisted key" % retired_key)
+		_config.set_value("Settings", retired_key, 1)
+	_globals._save_settings(TEST_PATH)
+	var saved := _read_saved_config()
+	for retired_key: String in GlobalsScript.RETIRED_SETTINGS_KEYS:
+		assert_false(saved.has_section_key("Settings", retired_key), "%s must be dropped" % retired_key)
 
 
 func test_save_preserves_other_managers_and_unknown_settings() -> void:
