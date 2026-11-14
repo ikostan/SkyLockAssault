@@ -280,12 +280,10 @@ func _on_advanced_back_button_pressed_js(args: Array) -> void:
 
 
 ## Retrieves the index of the current log level in the enum values.
-## Returns The index of the current log level.
+##
+## :returns: The index of the current log level.
+## :rtype: int
 func get_log_level_index() -> int:
-	## Retrieves the index of the current log level in the enum values.
-	##
-	## :returns: The index of the current log level.
-	## :rtype: int
 	return Globals.LogLevel.values().find(Globals.current_log_level)
 
 
