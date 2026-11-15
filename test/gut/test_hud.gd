@@ -251,6 +251,76 @@ func test_fuel_bar_visual_states() -> void:
 	assert_true(_hud.get_fuel_bar_color().is_equal_approx(expected_dark_lerp), "Critical fuel must lerp towards Dark Red.")
 
 
+## test_fuel_bar_follows_percentages_with_larger_tank | UI Rendering (#1147)
+## Thresholds are percentages of max_fuel, so doubling the tank doubles the fuel amount
+## at which each color band and the low-fuel warning start.
+func test_fuel_bar_follows_percentages_with_larger_tank() -> void:
+	gut.p("Testing: With max_fuel = 200, colors and the warning follow percentages.")
+	_fuel.max_fuel = 200.0
+	
+	# 95% of 200 is 190: above high (90%), so solid green
+	_fuel.current_fuel = 190.0
+	assert_eq(_hud.get_fuel_bar_color(), Color.GREEN, "95% must be solid Green.")
+	assert_false(_hud.is_fuel_warning_active(), "95% must not warn.")
+	
+	# 70% is halfway between high (90%) and medium (50%)
+	_fuel.current_fuel = 140.0
+	var expected_yellow: Color = Color.GREEN.lerp(Color.YELLOW, 0.5)
+	assert_true(_hud.get_fuel_bar_color().is_equal_approx(expected_yellow), "70% must be halfway to Yellow.")
+	
+	# 40% is halfway between medium (50%) and low (30%)
+	_fuel.current_fuel = 80.0
+	var expected_red: Color = Color.YELLOW.lerp(Color.RED, 0.5)
+	assert_true(_hud.get_fuel_bar_color().is_equal_approx(expected_red), "40% must be halfway to Red.")
+	assert_false(_hud.is_fuel_warning_active(), "40% is above low (30%), so no warning yet.")
+	
+	# 30% of 200 is 60: at low, the warning starts. As a raw amount, 60 would be "60%".
+	_fuel.current_fuel = 60.0
+	assert_true(_hud.is_fuel_warning_active(), "30% must start the low-fuel warning.")
+	
+	# 22.5% is halfway between low (30%) and no_fuel (15%)
+	_fuel.current_fuel = 45.0
+	var expected_dark: Color = Color.RED.lerp(_hud.DARK_RED, 0.5)
+	assert_true(_hud.get_fuel_bar_color().is_equal_approx(expected_dark), "22.5% must be halfway to Dark Red.")
+	
+	# 10% is below no_fuel (15%)
+	_fuel.current_fuel = 20.0
+	assert_eq(_hud.get_fuel_bar_color(), _hud.DARK_RED, "10% must be solid Dark Red.")
+
+
+## test_fuel_bar_uses_custom_thresholds | UI Rendering (#1147)
+func test_fuel_bar_uses_custom_thresholds() -> void:
+	gut.p("Testing: Custom thresholds (20, 15, 10, 5) produce the expected color bands.")
+	assert_true(_fuel.set_thresholds(20.0, 15.0, 10.0, 5.0), "Precondition: the custom set must apply.")
+	var max_f: float = _fuel.max_fuel
+	
+	# 50% is above high (20%): with the defaults this would be yellow
+	_fuel.current_fuel = 0.50 * max_f
+	assert_eq(_hud.get_fuel_bar_color(), Color.GREEN, "50% must be solid Green above a 20% high.")
+	assert_false(_hud.is_fuel_warning_active(), "50% must not warn above a 10% low.")
+	
+	# 17.5% is halfway between high (20%) and medium (15%)
+	_fuel.current_fuel = 0.175 * max_f
+	var expected_yellow: Color = Color.GREEN.lerp(Color.YELLOW, 0.5)
+	assert_true(_hud.get_fuel_bar_color().is_equal_approx(expected_yellow), "17.5% must be halfway to Yellow.")
+	
+	# 12.5% is halfway between medium (15%) and low (10%)
+	_fuel.current_fuel = 0.125 * max_f
+	var expected_red: Color = Color.YELLOW.lerp(Color.RED, 0.5)
+	assert_true(_hud.get_fuel_bar_color().is_equal_approx(expected_red), "12.5% must be halfway to Red.")
+	assert_false(_hud.is_fuel_warning_active(), "12.5% must not warn above a 10% low.")
+	
+	# 7.5% is halfway between low (10%) and no_fuel (5%), and below low, so it warns
+	_fuel.current_fuel = 0.075 * max_f
+	var expected_dark: Color = Color.RED.lerp(_hud.DARK_RED, 0.5)
+	assert_true(_hud.get_fuel_bar_color().is_equal_approx(expected_dark), "7.5% must be halfway to Dark Red.")
+	assert_true(_hud.is_fuel_warning_active(), "7.5% must warn below a 10% low.")
+	
+	# 2% is below no_fuel (5%)
+	_fuel.current_fuel = 0.02 * max_f
+	assert_eq(_hud.get_fuel_bar_color(), _hud.DARK_RED, "2% must be solid Dark Red.")
+
+
 # ==========================================
 # VISUAL STATE TESTS: SPEED
 # ==========================================

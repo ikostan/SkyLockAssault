@@ -110,10 +110,6 @@ jobs:
           - suite: "Core Web Flows"
             test_path: "tests/*_test.py"
             artifact_suffix: "core"
-          - suite: "Refactor Suite"
-            test_path: "tests/refactor/*.py"
-            artifact_suffix: "refactor"
-            allow_empty: "true"
           - suite: "CI & Security"
             test_path: "tests/ci/*.py"
             artifact_suffix: "ci"
@@ -243,6 +239,8 @@ jobs:
               --timeout-method=thread \
               --junitxml=artifacts/junit.xml -o junit_family=legacy
           else
+            # Write an empty results file first, so the summary still shows
+            # which shard broke, then fail: every shard must run tests (#1194)
             echo "⚠️ No test files matched pattern: ${{ matrix.test_path }}."
             cat <<EOF > artifacts/junit.xml
           <?xml version="1.0" encoding="utf-8"?>
@@ -250,10 +248,8 @@ jobs:
             <testsuite name="empty" tests="0" failures="0" errors="0" skipped="0"/>
           </testsuites>
           EOF
-            if [ "${{ matrix.allow_empty }}" != "true" ]; then
-              echo "❌ Required suite failed: no test files matched pattern." >&2
-              exit 1
-            fi
+            echo "❌ Required suite failed: no test files matched pattern." >&2
+            exit 1
           fi
 
       - name: "Preserve Baseline Profiling Metrics (#776)"
