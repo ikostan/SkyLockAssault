@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "created": "2026-11-15T12:35:59Z",
-  "commit": "e317b8078f17188b199f73eabbb5d00a7f4b0511",
-  "runner": "GitHub Actions 1000044040",
+  "created": "2026-11-15T14:03:30Z",
+  "commit": "8d550f90bb2068c7f50469199d6c59df3551a8fa",
+  "runner": "GitHub Actions 1000044091",
   "godot": "4.7.1-stable (official)",
   "runs": 3,
   "baseline": {
@@ -13,25 +13,6 @@
     "reload_object_growth": 0.0
   },
   "history": [
-    {
-      "run_id": "42556564496",
-      "commit": "e841d249df1650d2ae191a370f687135a151c308",
-      "date": "2026-11-09T03:50:24Z",
-      "metrics": {
-        "saves": 0.0,
-        "objects_avg": 2223.866666666667,
-        "nodes_avg": 454.8833333333333,
-        "resources_avg": 208.0,
-        "orphans_max": 0.0,
-        "reload_orphans_max": 0.0,
-        "reload_object_growth": 0.0,
-        "frame_p95_ms": 37.1,
-        "frames_over_33.4ms": 908.0,
-        "proc_worst_avg_ms": 6.2683,
-        "phys_worst_avg_ms": 0.975,
-        "mem_static_growth": 669908.0
-      }
-    },
     {
       "run_id": "42822606768",
       "commit": "0dab7ae90f434c08d6549284a4b81eebbc837303",
@@ -107,6 +88,25 @@
         "phys_worst_avg_ms": 0.9417,
         "mem_static_growth": 659824.0
       }
+    },
+    {
+      "run_id": "43720643176",
+      "commit": "8d550f90bb2068c7f50469199d6c59df3551a8fa",
+      "date": "2026-11-15T14:03:30Z",
+      "metrics": {
+        "saves": 0.0,
+        "objects_avg": 2218.133333333333,
+        "nodes_avg": 450.6166666666667,
+        "resources_avg": 208.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": 0.0,
+        "frame_p95_ms": 38.9,
+        "frames_over_33.4ms": 1575.0,
+        "proc_worst_avg_ms": 5.3833,
+        "phys_worst_avg_ms": 0.7867,
+        "mem_static_growth": 443204.0
+      }
     }
   ],
   "accepted": null,
@@ -119,7 +119,8 @@
     "42822606768",
     "43381869542",
     "43590949880",
-    "43712895718"
+    "43712895718",
+    "43720643176"
   ],
   "profile": "web"
 }
