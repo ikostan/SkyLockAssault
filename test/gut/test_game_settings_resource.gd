@@ -13,9 +13,11 @@ extends "res://addons/gut/test.gd"
 const GameplaySettings = preload(GamePaths.GAMEPLAY_SETTINGS)
 var gameplay_menu: Control
 var _resource: GameSettingsResource
+var _original_settings: GameSettingsResource
 
 func before_each() -> void:
 	# Initialize a fresh resource for every test to ensure isolation
+	_original_settings = Globals.settings
 	_resource = GameSettingsResource.new()
 	Globals.settings = _resource
 	
@@ -26,6 +28,12 @@ func before_each() -> void:
 	
 	add_child_autofree(gameplay_menu)
 	await get_tree().process_frame
+
+
+func after_each() -> void:
+	# Restore the shared settings, so values written by these tests don't leak into
+	# later suites
+	Globals.settings = _original_settings
 
 
 # --- SECTION 2: RESOURCE CONTRACT TESTS (GS-RES) ---
