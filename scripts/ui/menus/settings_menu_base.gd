@@ -61,19 +61,14 @@ func _ready() -> void:
 # ==============================================================================
 
 
-## Connects signal_obj to callable and tracks it for automatic teardown cleanup.
+## Connects a signal to a callable and tracks it for automatic teardown cleanup.
 ##
-## Ownership rule: only connections created here are tracked (and later disconnected).
-## If the connection already exists (e.g. made in the .tscn or by other code), it is
-## left alone and NOT tracked, so teardown never removes a connection it does not own.
+## Only connections created here are tracked and later disconnected. Existing connections are
+## left alone and not tracked.
 ##
-## :param signal_obj: The signal to connect, e.g. `button.pressed`.
-## :type signal_obj: Signal
-## :param callable: The handler to connect.
-## :type callable: Callable
-## :param flags: Optional Object.ConnectFlags.
-## :type flags: int
-## :rtype: void
+## [param signal_obj]: The signal to connect, e.g. button.pressed.
+## [param callable]: The handler to connect.
+## [param flags]: Optional Object.ConnectFlags.
 func safe_connect(signal_obj: Signal, callable: Callable, flags: int = 0) -> void:
 	if signal_obj.is_null() or not callable.is_valid():
 		_log("safe_connect: null signal or invalid callable - skipping.", Globals.LogLevel.WARNING)
@@ -84,17 +79,13 @@ func safe_connect(signal_obj: Signal, callable: Callable, flags: int = 0) -> voi
 	_tracked_connections.append({"signal": signal_obj, "callable": callable})
 
 
-## Disconnects callable from signal_obj if, and only if, that is safe.
+## Disconnects callable from signal_obj if safely possible.
 ##
-## Safe when the emitter has already been freed (Signal only stores the object ID, so
-## get_object() returns null) and when the connection does not exist.
+## Safe when the emitter has already been freed and when the connection does not exist.
 ##
-## :param signal_obj: The signal to disconnect from.
-## :type signal_obj: Signal
-## :param callable: The connected handler.
-## :type callable: Callable
-## :returns: True if a connection was actually removed.
-## :rtype: bool
+## [param signal_obj]: The signal to disconnect from.
+## [param callable]: The connected handler.
+## Returns true if a connection was actually removed.
 func safe_disconnect(signal_obj: Signal, callable: Callable) -> bool:
 	if signal_obj.is_null():
 		return false
@@ -123,14 +114,10 @@ func _disconnect_tracked_signals() -> void:
 
 ## Shows visible_ids and hides hidden_ids in the DOM with a single eval() call.
 ##
-## No-op off web, without a bridge, or when both lists are empty. IDs must be plain DOM
-## ids (they are interpolated into single-quoted JS strings).
+## No-op off web, without a bridge, or when both lists are empty. IDs must be plain DOM ids.
 ##
-## :param visible_ids: DOM element ids to set to display 'block'.
-## :type visible_ids: Array
-## :param hidden_ids: DOM element ids to set to display 'none'.
-## :type hidden_ids: Array
-## :rtype: void
+## [param visible_ids]: DOM element ids to set to display 'block'.
+## [param hidden_ids]: DOM element ids to set to display 'none'.
 func update_web_overlays(visible_ids: Array, hidden_ids: Array) -> void:
 	if visible_ids.is_empty() and hidden_ids.is_empty():
 		return
