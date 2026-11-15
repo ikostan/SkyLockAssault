@@ -114,7 +114,9 @@ func _disconnect_tracked_signals() -> void:
 
 ## Shows visible_ids and hides hidden_ids in the DOM with a single eval() call.
 ##
-## No-op off web, without a bridge, or when both lists are empty. IDs must be plain DOM ids.
+## No-op off web, without a bridge, or when both lists are empty. Every id is escaped for a
+## single-quoted JS string (see _escape_js_single_quoted()), so an id containing an
+## apostrophe, backslash or line break cannot break out of the generated script.
 ##
 ## [param visible_ids]: DOM element ids to set to display 'block'.
 ## [param hidden_ids]: DOM element ids to set to display 'none'.
@@ -135,12 +137,24 @@ func _is_web() -> bool:
 ## Builds the DOM display toggles used by update_web_overlays().
 ## :rtype: String
 static func _build_overlay_js(visible_ids: Array, hidden_ids: Array) -> String:
+	var statement: String = "document.getElementById('%s').style.display = '%s';"
 	var lines: PackedStringArray = []
 	for id: Variant in visible_ids:
-		lines.append("document.getElementById('%s').style.display = 'block';" % str(id))
+		lines.append(statement % [_escape_js_single_quoted(str(id)), "block"])
 	for id: Variant in hidden_ids:
-		lines.append("document.getElementById('%s').style.display = 'none';" % str(id))
+		lines.append(statement % [_escape_js_single_quoted(str(id)), "none"])
 	return "\n".join(lines)
+
+
+## Escapes value for use inside a single-quoted JS string literal.
+##
+## Backslash goes first so the escapes added afterwards are not doubled. Plain DOM ids come
+## back unchanged, so the generated statements keep the format the DOM/Playwright tests use.
+## :rtype: String
+static func _escape_js_single_quoted(value: String) -> String:
+	var escaped: String = value.replace("\\", "\\\\").replace("'", "\\'")
+	escaped = escaped.replace("\n", "\\n").replace("\r", "\\r")
+	return escaped.replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
 
 
 # ==============================================================================

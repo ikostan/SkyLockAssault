@@ -298,6 +298,21 @@ func test_smb_11_overlay_js_format() -> void:
 	)
 
 
+## SMB-15 | Ids with quotes, backslashes or line breaks are escaped and cannot break out of
+## the single-quoted JS string; plain ids stay unchanged (covered by SMB-11).
+func test_smb_15_overlay_js_escapes_ids() -> void:
+	var base_script: GDScript = load(GamePaths.SETTINGS_MENU_BASE)
+	var code: String = base_script._build_overlay_js(["it's", "x');alert(1);//"], ["a\\b\nc"])
+	assert_eq(
+		code,
+		(
+			"document.getElementById('it\\'s').style.display = 'block';\n"
+			+ "document.getElementById('x\\');alert(1);//').style.display = 'block';\n"
+			+ "document.getElementById('a\\\\b\\nc').style.display = 'none';"
+		)
+	)
+
+
 # --- DATA SAFETY ---
 
 
