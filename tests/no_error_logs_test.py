@@ -91,7 +91,7 @@ def test_no_error_logs_after_load(page: Page) -> None:
             len(all_errors) == 0
         ), f"Found {len(all_errors)} error(s) during load:\n{error_details}"
 
-        # A normal start must not take the save-file recovery path or show its notice (#1144)
+        # A normal start must not take the save-file recovery path or show its notice
         reset_logs = [
             log["text"]
             for log in logs
