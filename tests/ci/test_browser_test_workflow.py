@@ -13,6 +13,7 @@ SHA pinning, and the Node.js version used for coverage conversion.
 
 import re
 import subprocess
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
@@ -268,3 +269,178 @@ trap 'echo "probes=$probes headers=$headers"' EXIT
         assert "did not respond after 20 attempts" in result.stderr
     else:
         assert f"Server ready (attempt {attempts})" in result.stdout
+
+
+# --- Issue #1194 regression guards ---
+
+EXPECTED_SHARDS = {
+    "Core Web Flows": ("tests/*_test.py", "core"),
+    "CI & Security": ("tests/ci/*.py", "ci"),
+}
+
+
+def _run_sharded_tests(
+    test_shard_steps: list[dict[str, Any]],
+    test_path: str,
+    cwd: Path,
+    pytest_exit_code: int = 0,
+) -> subprocess.CompletedProcess[str]:
+    """Execute the real Run Sharded Tests script with pytest replaced by a stub.
+
+    The stub only records its arguments, so the test checks the script's own
+    branching (files found vs. none) without running a browser.
+    """
+    script = _find_step(test_shard_steps, "Run Sharded Tests")["run"]
+    script = script.replace("${{ matrix.test_path }}", test_path).replace(
+        "${{ inputs.pw_timeout }}", "30000"
+    )
+    harness = (
+        'pytest() { printf "pytest-arg: <%s>\\n" "$@"; '
+        'echo "pytest-called: $*"; '
+        f"return {pytest_exit_code}; "
+        "}\n"
+    )
+    return subprocess.run(
+        ["bash", "--noprofile", "--norc", "-eo", "pipefail", "-c", harness + script],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        timeout=5,
+        check=False,
+    )
+
+
+def test_shard_matrix_runs_only_core_and_ci_suites(workflow: dict[str, Any]) -> None:
+    """The matrix holds exactly the two suites that have tests (#1194)."""
+    include = workflow["jobs"]["test-shard"]["strategy"]["matrix"]["include"]
+    shards = {
+        entry["suite"]: (entry["test_path"], entry["artifact_suffix"])
+        for entry in include
+    }
+
+    assert shards == EXPECTED_SHARDS
+    assert len(include) == len(EXPECTED_SHARDS), "duplicate shard entry"
+
+
+def test_no_shard_can_opt_out_of_requiring_tests(
+    workflow: dict[str, Any],
+    test_shard_steps: list[dict[str, Any]],
+) -> None:
+    """The allow_empty switch is gone from the matrix and the run step (#1194)."""
+    include = workflow["jobs"]["test-shard"]["strategy"]["matrix"]["include"]
+    script = _find_step(test_shard_steps, "Run Sharded Tests")["run"]
+
+    for entry in include:
+        assert "allow_empty" not in entry, entry["suite"]
+    assert "allow_empty" not in script
+
+
+@pytest.mark.parametrize("suite", sorted(EXPECTED_SHARDS))
+def test_every_shard_pattern_matches_test_files(suite: str) -> None:
+    """Each shard's pattern finds files in the repo, so no shard fails as empty."""
+    pattern = EXPECTED_SHARDS[suite][0]
+
+    assert sorted(PROJECT_ROOT.glob(pattern)), f"{suite}: nothing matches {pattern}"
+
+
+def test_empty_shard_fails_after_writing_zero_test_results(
+    test_shard_steps: list[dict[str, Any]],
+    tmp_path: Path,
+) -> None:
+    """A pattern with no matches fails the step but still leaves a 0-test XML.
+
+    The XML lets the Test Results Summary step show which shard broke.
+    """
+    (tmp_path / "artifacts").mkdir()
+
+    result = _run_sharded_tests(test_shard_steps, "tests/missing/*.py", tmp_path)
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "pytest-called" not in result.stdout
+    assert "No test files matched pattern: tests/missing/*.py" in result.stdout
+    assert "Required suite failed" in result.stderr
+    junit = (tmp_path / "artifacts" / "junit.xml").read_text(encoding="utf-8")
+    assert junit.startswith('<?xml version="1.0" encoding="utf-8"?>')
+    assert 'tests="0"' in junit
+
+
+def test_shard_with_matching_files_runs_pytest(
+    test_shard_steps: list[dict[str, Any]],
+    tmp_path: Path,
+) -> None:
+    """A pattern with matches passes every file to pytest and succeeds."""
+    (tmp_path / "artifacts").mkdir()
+    (tmp_path / "tests").mkdir()
+    for name in ("a_test.py", "b_test.py"):
+        (tmp_path / "tests" / name).write_text("", encoding="utf-8")
+
+    result = _run_sharded_tests(test_shard_steps, "tests/*_test.py", tmp_path)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "pytest-called: tests/a_test.py tests/b_test.py" in result.stdout
+    assert "--junitxml=artifacts/junit.xml" in result.stdout
+    assert "No test files matched" not in result.stdout
+
+
+@pytest.mark.parametrize("pytest_exit_code", [1, 2, 5])
+def test_nonempty_shard_propagates_pytest_failure(
+    test_shard_steps: list[dict[str, Any]],
+    tmp_path: Path,
+    pytest_exit_code: int,
+) -> None:
+    """Failed tests, collection errors, and zero collected tests fail the shard."""
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "a_test.py").touch()
+
+    result = _run_sharded_tests(
+        test_shard_steps, "tests/*_test.py", tmp_path, pytest_exit_code
+    )
+
+    assert result.returncode == pytest_exit_code, result.stdout + result.stderr
+    assert "pytest-called" in result.stdout
+    assert "No test files matched" not in result.stdout
+
+
+def test_shard_passes_only_matches_as_individual_arguments(
+    test_shard_steps: list[dict[str, Any]], tmp_path: Path
+) -> None:
+    """Glob expansion excludes unrelated files and preserves spaces in filenames."""
+    (tmp_path / "tests").mkdir()
+    for name in ("a_test.py", "with space_test.py", "helper.py", "a_test.py.bak"):
+        (tmp_path / "tests" / name).touch()
+
+    result = _run_sharded_tests(test_shard_steps, "tests/*_test.py", tmp_path)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    args = [
+        line for line in result.stdout.splitlines() if line.startswith("pytest-arg:")
+    ]
+    assert args[:2] == [
+        "pytest-arg: <tests/a_test.py>",
+        "pytest-arg: <tests/with space_test.py>",
+    ]
+    assert not any("helper.py" in arg or ".bak" in arg for arg in args)
+
+
+def test_empty_shard_overwrites_stale_success_report(
+    test_shard_steps: list[dict[str, Any]], tmp_path: Path
+) -> None:
+    """An empty shard must leave valid zero-test XML rather than stale success data."""
+    (tmp_path / "artifacts").mkdir()
+    report = tmp_path / "artifacts" / "junit.xml"
+    report.write_text(
+        '<testsuites><testsuite tests="42"/></testsuites>', encoding="utf-8"
+    )
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "helper.py").touch()
+
+    result = _run_sharded_tests(test_shard_steps, "tests/*_test.py", tmp_path)
+
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "pytest-called" not in result.stdout
+    root = ET.parse(report).getroot()
+    assert root.tag == "testsuites"
+    suites = root.findall("testsuite")
+    assert len(suites) == 1
+    for counter in ("tests", "failures", "errors", "skipped"):
+        assert suites[0].get(counter) == "0"

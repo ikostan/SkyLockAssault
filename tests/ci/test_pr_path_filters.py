@@ -192,8 +192,8 @@ def test_python_tests_excludes_ci_tests(filters):
     """
     ``python_tests`` must exclude ``tests/ci/**`` but keep matching other tests.
 
-    Playwright suites (``tests/*_test.py``, ``tests/refactor/``) still need the
-    browser run; only the CI infrastructure tests are routed elsewhere.
+    Playwright suites (``tests/*_test.py``) still need the browser run; only
+    the CI infrastructure tests are routed elsewhere.
     """
     python_tests = filters["python_tests"]
     assert "!tests/ci/**" in python_tests

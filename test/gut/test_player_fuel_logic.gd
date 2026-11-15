@@ -5,6 +5,7 @@
 extends "res://addons/gut/test.gd"
 
 const GutTestHelper = preload("res://test/gut/gut_test_helper.gd")
+const PlayerScene: PackedScene = preload("res://scenes/Player.tscn")
 
 var _mock_root: Node
 var _player: Variant # CHANGED: Use Variant to allow dynamic property access to player.gd variables
@@ -96,13 +97,13 @@ func test_engine_reignites_on_refuel() -> void:
 	assert_true(anim_l.is_playing(), "Rotors must automatically resume spinning.")
 
 
-## test_bridge_settings_fuel_write_reaches_fuel_resource | Compatibility Bridge
-## BRIDGE TEST (#1143): legacy writes to Globals.settings.current_fuel still reach the
-## player's FuelResource (and reignite the engine). #1143 removes the bridge; rewrite this
-## test to confirm the settings write no longer exists or no longer affects the player.
+## test_settings_writes_do_not_reach_fuel_resource | Fuel Ownership
+## Rewritten from the #1142 bridge test: #1143 removed the settings -> player fuel bridge,
+## so no settings write can refuel the player or reignite the engine. Refueling goes
+## through FuelResource only (see test_engine_reignites_on_refuel).
 ## :rtype: void
-func test_bridge_settings_fuel_write_reaches_fuel_resource() -> void:
-	gut.p("Testing: Bridge copies a Globals.settings fuel write into the FuelResource.")
+func test_settings_writes_do_not_reach_fuel_resource() -> void:
+	gut.p("Testing: Settings writes cannot refuel the player or reignite the engine.")
 	var anim_l: AnimatedSprite2D = _player.rotor_left.get_node("AnimatedSprite2D")
 	
 	# Empty the tank so the real flameout handler stops the engine
@@ -110,23 +111,58 @@ func test_bridge_settings_fuel_write_reaches_fuel_resource() -> void:
 	assert_true(_player.fuel_timer.is_stopped(), "Precondition: flameout must stop the fuel timer.")
 	assert_false(anim_l.is_playing(), "Precondition: flameout must stop the rotors.")
 	
-	Globals.settings.current_fuel = 50.0
+	assert_false("current_fuel" in Globals.settings, "The settings resource must not hold live fuel.")
+	Globals.settings.max_fuel = 50.0
+	Globals.settings.difficulty = 1.5
 	
-	assert_eq(_player.fuel_resource.current_fuel, 50.0, "Bridge must copy settings fuel into FuelResource.")
-	assert_false(_player.fuel_timer.is_stopped(), "Fuel timer must reignite on a bridged refuel.")
-	assert_true(anim_l.is_playing(), "Rotors must resume spinning on a bridged refuel.")
+	assert_eq(_player.fuel_resource.current_fuel, 0.0, "Settings writes must not change live fuel.")
+	assert_true(_player.fuel_timer.is_stopped(), "Settings writes must not reignite the engine.")
+	assert_false(anim_l.is_playing(), "Settings writes must not restart the rotors.")
 
 
-## test_bridge_fuel_resource_change_mirrors_to_settings | Compatibility Bridge
-## BRIDGE TEST (#1143): FuelResource changes are mirrored into Globals.settings.current_fuel.
-## #1143 removes the mirror; rewrite this test to confirm settings no longer change.
+## test_fuel_resource_change_leaves_settings_untouched | Fuel Ownership
+## Rewritten from the #1142 bridge test: #1143 removed the FuelResource -> settings
+## mirror, so a fuel change must not notify settings observers or change any setting.
 ## :rtype: void
-func test_bridge_fuel_resource_change_mirrors_to_settings() -> void:
-	gut.p("Testing: Bridge mirrors a FuelResource change back into Globals.settings.")
+func test_fuel_resource_change_leaves_settings_untouched() -> void:
+	gut.p("Testing: A FuelResource change no longer touches the settings resource.")
+	var max_fuel_before: float = Globals.settings.max_fuel
+	watch_signals(Globals.settings)
 	
 	_player.fuel_resource.current_fuel = 42.0
 	
-	assert_eq(Globals.settings.current_fuel, 42.0, "Bridge must mirror FuelResource fuel into settings.")
+	assert_eq(_player.fuel_resource.current_fuel, 42.0, "FuelResource must hold the new fuel level.")
+	assert_signal_not_emitted(Globals.settings, "setting_changed", "Fuel changes must not notify settings observers.")
+	assert_eq(Globals.settings.max_fuel, max_fuel_before, "Fuel changes must not change max_fuel.")
+
+
+## test_full_fuel_run_emits_no_setting_changed | Fuel Ownership (#1143)
+## Drains the tank through the real fuel timer callback, then refuels. Before #1143 every
+## tick emitted setting_changed("current_fuel", ...); now none of it reaches the settings.
+## :rtype: void
+func test_full_fuel_run_emits_no_setting_changed() -> void:
+	gut.p("Testing: Draining and refueling the tank never emits setting_changed.")
+	# Full speed and a high consumption rate empty the tank in a few ticks.
+	_player.current_speed = _player.speed_resource.max_speed
+	_player.fuel_resource.base_consumption_rate = 25.0
+	watch_signals(Globals.settings)
+	watch_signals(_player.fuel_resource)
+	
+	var ticks: int = 0
+	while _player.fuel_resource.current_fuel > 0.0 and ticks < 100:
+		_player._on_fuel_timer_timeout()
+		ticks += 1
+	
+	assert_eq(_player.fuel_resource.current_fuel, 0.0, "Precondition: the tank must run dry.")
+	assert_gt(ticks, 1, "Precondition: the drain must take several ticks.")
+	assert_signal_emit_count(_player.fuel_resource, "fuel_depleted", 1, "The tank must run dry exactly once.")
+	assert_true(_player.fuel_timer.is_stopped(), "Precondition: flameout must stop the fuel timer.")
+	
+	_player.fuel_resource.current_fuel = _player.fuel_resource.max_fuel
+	
+	assert_false(_player.fuel_timer.is_stopped(), "Refueling must reignite the engine.")
+	assert_signal_emitted(_player.fuel_resource, "fuel_changed", "Fuel changes must go through FuelResource.")
+	assert_signal_not_emitted(Globals.settings, "setting_changed", "A full fuel run must not emit setting_changed.")
 
 
 ## test_lateral_movement_blocked_without_fuel | Movement Constraints
@@ -142,3 +178,69 @@ func test_lateral_movement_blocked_without_fuel() -> void:
 	_player._physics_process(0.1)
 	
 	assert_eq(float(_player.player.velocity.x), 0.0, "Plane must not turn without fuel, ignoring inputs.")
+
+
+## Spawns a real player scene with the current Globals.settings.
+## The real scene, not the shared mock: the mock's HUD panel lacks weapon and ammo
+## nodes, and their engine errors would be charged to the test calling this.
+## :rtype: Variant
+func _spawn_real_player() -> Variant:
+	var player: Variant = PlayerScene.instantiate()
+	add_child_autoqfree(player)
+	return player
+
+
+## Returns the four FuelResource thresholds as [high, medium, low, no_fuel].
+## :rtype: Array[float]
+func _fuel_thresholds(player: Variant) -> Array[float]:
+	var fuel: FuelResource = player.fuel_resource
+	return [
+		fuel.high_fuel_threshold,
+		fuel.medium_fuel_threshold,
+		fuel.low_fuel_threshold,
+		fuel.no_fuel_threshold,
+	]
+
+
+## test_player_receives_custom_thresholds_exactly | Fuel Thresholds (#1147)
+## The old one-by-one copy clamped a lowered set: high 20 became 51 while medium was 50.
+## [param params]: [label, [high, medium, low, no_fuel]].
+func test_player_receives_custom_thresholds_exactly(
+	params: Array = use_parameters([
+		["lowered", [20.0, 15.0, 10.0, 5.0]],
+		["raised", [98.0, 80.0, 70.0, 60.0]],
+	])
+) -> void:
+	var label: String = params[0]
+	var wanted: Array = params[1]
+	gut.p("Testing: A player spawned with %s settings thresholds gets them exactly." % label)
+	var properties: Array[String] = [
+		"high_fuel_threshold", "medium_fuel_threshold", "low_fuel_threshold", "no_fuel_threshold"
+	]
+	# The settings fields are plain exports since #1148, so any assignment order works.
+	for i: int in properties.size():
+		Globals.settings.set(properties[i], wanted[i])
+	var in_settings: Array = [
+		Globals.settings.high_fuel_threshold,
+		Globals.settings.medium_fuel_threshold,
+		Globals.settings.low_fuel_threshold,
+		Globals.settings.no_fuel_threshold,
+	]
+	assert_eq(in_settings, wanted, "Precondition: the settings must hold the %s set." % label)
+	
+	var player: Variant = _spawn_real_player()
+	
+	assert_eq(_fuel_thresholds(player), wanted, "The player must receive the %s set exactly." % label)
+
+
+## test_player_keeps_default_thresholds_when_settings_are_invalid | Fuel Thresholds (#1147)
+func test_player_keeps_default_thresholds_when_settings_are_invalid() -> void:
+	gut.p("Testing: Out-of-range settings thresholds are rejected and the defaults kept.")
+	# The settings fields are plain exports since #1148, so 150 is stored as written.
+	Globals.settings.high_fuel_threshold = 150.0
+	assert_eq(Globals.settings.high_fuel_threshold, 150.0, "Precondition: settings hold 150.")
+	
+	var player: Variant = _spawn_real_player()
+	
+	assert_push_warning("FuelResource: rejected fuel thresholds")
+	assert_eq(_fuel_thresholds(player), [90.0, 50.0, 30.0, 15.0], "The player must keep the defaults.")
