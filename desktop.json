@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "created": "2026-11-15T14:03:30Z",
-  "commit": "8d550f90bb2068c7f50469199d6c59df3551a8fa",
-  "runner": "GitHub Actions 1000044091",
+  "created": "2026-11-15T21:31:40Z",
+  "commit": "203d4c5a7d6703648b509f089a30786143c71669",
+  "runner": "GitHub Actions 1000044192",
   "godot": "4.7.1-stable (official)",
   "runs": 3,
   "baseline": {
@@ -15,25 +15,6 @@
     "reload_object_growth": 2.0
   },
   "history": [
-    {
-      "run_id": "42822606768",
-      "commit": "0dab7ae90f434c08d6549284a4b81eebbc837303",
-      "date": "2026-11-10T13:33:11Z",
-      "metrics": {
-        "saves": 0.0,
-        "objects_avg": 2547.883333333333,
-        "nodes_avg": 503.56666666666666,
-        "resources_avg": 208.0,
-        "orphans_max": 0.0,
-        "reload_orphans_max": 0.0,
-        "reload_object_growth": -3.0,
-        "frame_p95_ms": 17.151,
-        "frames_over_33.4ms": 0.0,
-        "proc_worst_avg_ms": 0.2364,
-        "phys_worst_avg_ms": 0.4454,
-        "mem_static_growth": 153628.0
-      }
-    },
     {
       "run_id": "43381869542",
       "commit": "3aa0228020663eef1be4550f53db1d092d910182",
@@ -109,6 +90,25 @@
         "phys_worst_avg_ms": 0.4147,
         "mem_static_growth": 154076.0
       }
+    },
+    {
+      "run_id": "43762379900",
+      "commit": "203d4c5a7d6703648b509f089a30786143c71669",
+      "date": "2026-11-15T21:31:40Z",
+      "metrics": {
+        "saves": 0.0,
+        "objects_avg": 2549.2166666666667,
+        "nodes_avg": 504.0,
+        "resources_avg": 208.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": -7.0,
+        "frame_p95_ms": 17.016,
+        "frames_over_33.4ms": 0.0,
+        "proc_worst_avg_ms": 0.2039,
+        "phys_worst_avg_ms": 0.2607,
+        "mem_static_growth": 149552.0
+      }
     }
   ],
   "accepted": null,
@@ -122,7 +122,8 @@
     "43381869542",
     "43590949880",
     "43712895718",
-    "43720643176"
+    "43720643176",
+    "43762379900"
   ],
   "profile": "desktop"
 }
