@@ -15,6 +15,7 @@
 
 extends GutTest
 
+const InputDefaults = preload("res://scripts/core/input_defaults.gd")
 const TEST_CONFIG_PATH: String = "user://test_save_file_recovery.cfg"
 const BACKUP_PATH: String = TEST_CONFIG_PATH + Globals.CORRUPT_BACKUP_SUFFIX
 const KEY_A: String = "test_recovery_key_a"
@@ -32,6 +33,9 @@ var _original_settings: GameSettingsResource
 var _original_notice_pending: bool
 var _original_audio_path: String
 var _original_bus_states: Dictionary = {}
+## AudioManager's last-audible volume per bus. load_volumes() and save_volumes() rebuild it,
+## and a later unmute from zero restores it, so it is restored along with the bus values.
+var _original_last_audible: Dictionary = {}
 var _original_input_events: Dictionary = {}
 var _original_needs_save: bool
 
@@ -40,6 +44,7 @@ func before_all() -> void:
 	_original_audio_path = AudioManager.current_config_path
 	for bus: String in AudioConstants.BUS_CONFIG.keys():
 		_original_bus_states[bus] = AudioManager.get_bus_state(bus)
+	_original_last_audible = AudioManager._last_audible_volume.duplicate()
 	for action: String in Settings.ACTIONS:
 		_original_input_events[action] = InputMap.action_get_events(action)
 	_original_needs_save = Settings.needs_save()
@@ -51,6 +56,8 @@ func after_all() -> void:
 		var state: Dictionary = _original_bus_states[bus]
 		AudioManager.set_bus_state(bus, state["volume"], state["muted"])
 	AudioManager.apply_all_volumes()
+	# After the bus values, so nothing rebuilds the history again
+	AudioManager._last_audible_volume = _original_last_audible.duplicate()
 	for action: String in _original_input_events:
 		InputMap.action_erase_events(action)
 		for event: InputEvent in _original_input_events[action]:
@@ -189,7 +196,9 @@ func test_existing_backup_is_replaced() -> void:
 func test_failed_rename_keeps_file_and_returns_original_error() -> void:
 	var original_bytes: PackedByteArray = _write_encrypted_file(KEY_A)
 	DirAccess.make_dir_recursive_absolute(BACKUP_PATH)
-	var blocker: FileAccess = FileAccess.open(BACKUP_PATH.path_join("blocker.txt"), FileAccess.WRITE)
+	var blocker: FileAccess = FileAccess.open(
+		BACKUP_PATH.path_join("blocker.txt"), FileAccess.WRITE
+	)
 	blocker.store_string("keeps the directory non-empty")
 	blocker.close()
 	Globals.set_test_encryption_key(KEY_B)
@@ -287,7 +296,15 @@ func test_reset_loads_defaults_everywhere_and_next_save_is_readable() -> void:
 	var default_difficulty: float = GameSettingsResource.new().difficulty
 	AudioManager._init_to_defaults()
 	var default_master: float = AudioManager.get_bus_state(AudioConstants.BUS_MASTER)["volume"]
-	var fire_before: Array[InputEvent] = InputMap.action_get_events("fire")
+	# Start from the default fire binding (Space + gamepad A), not whatever an earlier suite
+	# left in the shared InputMap. The saved file binds KEY_K, so K can only appear if the
+	# unreadable file was applied. Both devices are bound, so backfill adds nothing.
+	# after_all() restores the original InputMap.
+	var fire_key: InputEventKey = InputDefaults.make_event("fire", "keyboard")
+	assert_ne(fire_key.physical_keycode, KEY_K, "known binding must differ from the saved one")
+	InputMap.action_erase_events("fire")
+	InputMap.action_add_event("fire", fire_key)
+	InputMap.action_add_event("fire", InputDefaults.make_event("fire", "gamepad"))
 
 	_write_encrypted_file(KEY_A)
 	Globals.set_test_encryption_key(KEY_B)
@@ -305,12 +322,15 @@ func test_reset_loads_defaults_everywhere_and_next_save_is_readable() -> void:
 		0.0001,
 		"AudioManager default"
 	)
-	for event: InputEvent in InputMap.action_get_events("fire"):
+	var fire_after: Array[InputEvent] = InputMap.action_get_events("fire")
+	assert_eq(fire_after.size(), 2, "fire keeps exactly its known keyboard and gamepad binding")
+	for event: InputEvent in fire_after:
 		if event is InputEventKey:
-			assert_ne(
-				(event as InputEventKey).physical_keycode, KEY_K, "saved fire binding not applied"
+			assert_eq(
+				(event as InputEventKey).physical_keycode,
+				fire_key.physical_keycode,
+				"saved KEY_K binding not applied"
 			)
-	assert_eq(InputMap.action_get_events("fire").size(), fire_before.size(), "fire unchanged")
 	assert_true(Globals.consume_settings_reset_notice(), "the reset is reported once")
 
 	Globals._save_settings(TEST_CONFIG_PATH)
