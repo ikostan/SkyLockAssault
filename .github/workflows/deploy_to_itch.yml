@@ -59,6 +59,10 @@ jobs:
           source .github/scripts/ci_utils.sh
           disable_editor_plugins "project.godot"
 
+      # Do not rotate PRODUCTION_SALT without a migration path: a new salt makes every
+      # web save unreadable, so all players are reset to defaults (#1144). See section 6,
+      # "Salt Rotation Rule", in
+      # files/docs/Production_Salt_Injection_&_Security_Guard_Architecture.md
       - name: "Inject Production Salt into GDScript"
         env:
           PRODUCTION_SALT: "${{ secrets.PRODUCTION_SALT }}"

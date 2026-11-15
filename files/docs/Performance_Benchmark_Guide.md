@@ -727,8 +727,9 @@ Then call it with its full path and `&`, as in Step 1.
 
 The real `user://settings.cfg` was written with the GUT test encryption key,
 usually by a local GUT run (see
-[#1095](https://github.com/ikostan/SkyLockAssault/issues/1095)). Godot deletes
-the file and loads defaults; the benchmark is not affected.
+[#1095](https://github.com/ikostan/SkyLockAssault/issues/1095)). Godot moves
+the file to `user://settings.cfg.corrupt` and loads defaults (#1144); the
+benchmark is not affected.
 
 ### `ObjectDB instances were leaked at exit` / `resources still in use at exit`
 

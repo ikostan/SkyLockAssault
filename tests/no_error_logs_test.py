@@ -15,6 +15,7 @@ Test Flow
 - Attach console and uncaught exception listeners to a fresh page context.
 - Navigate to index page and wait for Godot engine initialization signal.
 - Assert that no logs with type="error" or uncaught exceptions exist.
+- Assert that the settings reset notice (#1144) is not logged on a normal start.
 """
 
 import json
@@ -89,6 +90,17 @@ def test_no_error_logs_after_load(page: Page) -> None:
         assert (
             len(all_errors) == 0
         ), f"Found {len(all_errors)} error(s) during load:\n{error_details}"
+
+        # A normal start must not take the save-file recovery path or show its notice
+        reset_logs = [
+            log["text"]
+            for log in logs
+            if "Settings reset to defaults" in log["text"]
+            or "Showing the settings reset notice" in log["text"]
+        ]
+        assert (
+            not reset_logs
+        ), "Settings reset notice appeared on a normal start:\n" + "\n".join(reset_logs)
 
     except Exception as e:
         print(f"Test: 'test_no_error_logs_after_load' failed: {e!s}")

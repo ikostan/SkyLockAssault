@@ -235,7 +235,8 @@ Possible causes:
 
 * save was never created
 * game failed before save
-* corrupted file got auto-deleted
+* the file could not be decrypted and was moved to
+  `settings.cfg.corrupt` (#1144)
 * wrong execution context selected
 
 ---
@@ -591,7 +592,8 @@ Expected logs:
 
 ```text
 🚨 DECRYPTION FAILED
-🗑️ Auto-deleting corrupted/orphaned save file
+📦 Moving unreadable save file to: user://settings.cfg.corrupt
+⚠️ Settings reset to defaults. The unreadable file was kept as: user://settings.cfg.corrupt
 ```
 
 ---
@@ -602,6 +604,8 @@ After refresh:
 
 * game boots normally
 * settings reset cleanly
+* the main menu shows "Settings could not be read and were reset." once
+* the old file is kept as `settings.cfg.corrupt`
 * no infinite loop
 * new save file generated
 

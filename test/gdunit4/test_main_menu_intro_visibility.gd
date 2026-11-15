@@ -147,6 +147,10 @@ func _create_menu(delay: float = 0.1, duration: float = 0.0) -> IntroMenu:
 		var button: Button = Button.new()
 		button.name = button_name
 		buttons.add_child(button)
+	var reset_notice: Label = Label.new()
+	reset_notice.name = "SettingsResetNotice"
+	reset_notice.visible = false
+	video.add_child(reset_notice)
 	var audio: AudioStreamPlayer2D = AudioStreamPlayer2D.new()
 	audio.name = "AudioStreamPlayer2D"
 	main_menu.add_child(audio)
