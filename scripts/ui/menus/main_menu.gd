@@ -112,6 +112,10 @@ func _ready() -> void:
 func _show_settings_reset_notice_if_pending() -> void:
 	if not Globals.consume_settings_reset_notice():
 		return
+	
+	# Label defaults, set here so the notice never blocks the menu even if the scene changes
+	settings_reset_notice.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	settings_reset_notice.focus_mode = Control.FOCUS_NONE
 
 	settings_reset_notice.visible = true
 	Globals.log_message("Showing the settings reset notice.", Globals.LogLevel.INFO)
