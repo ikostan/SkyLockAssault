@@ -111,11 +111,10 @@ static func make_event(action: String, device: String) -> InputEvent:
 	return null
 
 
-## Returns the actions in [param all_actions] that may not share an input with [param action].
+## Returns actions from all_actions that may not share an input with action.
 ##
-## A gameplay action is scoped to [constant GAMEPLAY_ACTIONS], a menu action to
-## [constant MENU_ACTIONS], and [code]pause[/code] (in both groups) to their union. An empty or
-## unknown action is scoped to all of [param all_actions].
+## A gameplay action is scoped to GAMEPLAY_ACTIONS, a menu action to MENU_ACTIONS, and pause to
+## their union. An empty or unknown action is scoped to all of all_actions.
 ##
 ## [param action]: The action whose conflict group is wanted.
 ## [param all_actions]: Every managed action, in the order results should keep.

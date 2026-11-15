@@ -81,7 +81,15 @@ func _ready() -> void:
 	update_all_remap_buttons()
 
 
-## Called from InputRemapButton when a duplicate binding is detected.
+## Display a confirmation dialog when a duplicate input binding is detected.
+##
+## Called from InputRemapButton when a keyboard key, gamepad button or gamepad axis is already
+## bound to another action. Populates and centers the conflict dialog.
+##
+## [param btn]: The InputRemapButton that triggered the duplicate binding.
+## [param new_event]: The InputEvent (key, joypad button or joypad motion) that caused the
+## conflict.
+## [param conflicts]: An array of conflicting action names.
 func show_conflict_dialog(
 	btn: InputRemapButton, new_event: InputEvent, conflicts: Array[String]
 ) -> void:

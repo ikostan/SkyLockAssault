@@ -61,19 +61,14 @@ func _ready() -> void:
 # ==============================================================================
 
 
-## Connects signal_obj to callable and tracks it for automatic teardown cleanup.
+## Connects a signal to a callable and tracks it for automatic teardown cleanup.
 ##
-## Ownership rule: only connections created here are tracked (and later disconnected).
-## If the connection already exists (e.g. made in the .tscn or by other code), it is
-## left alone and NOT tracked, so teardown never removes a connection it does not own.
+## Only connections created here are tracked and later disconnected. Existing connections are
+## left alone and not tracked.
 ##
-## :param signal_obj: The signal to connect, e.g. `button.pressed`.
-## :type signal_obj: Signal
-## :param callable: The handler to connect.
-## :type callable: Callable
-## :param flags: Optional Object.ConnectFlags.
-## :type flags: int
-## :rtype: void
+## [param signal_obj]: The signal to connect, e.g. button.pressed.
+## [param callable]: The handler to connect.
+## [param flags]: Optional Object.ConnectFlags.
 func safe_connect(signal_obj: Signal, callable: Callable, flags: int = 0) -> void:
 	if signal_obj.is_null() or not callable.is_valid():
 		_log("safe_connect: null signal or invalid callable - skipping.", Globals.LogLevel.WARNING)
@@ -84,17 +79,13 @@ func safe_connect(signal_obj: Signal, callable: Callable, flags: int = 0) -> voi
 	_tracked_connections.append({"signal": signal_obj, "callable": callable})
 
 
-## Disconnects callable from signal_obj if, and only if, that is safe.
+## Disconnects callable from signal_obj if safely possible.
 ##
-## Safe when the emitter has already been freed (Signal only stores the object ID, so
-## get_object() returns null) and when the connection does not exist.
+## Safe when the emitter has already been freed and when the connection does not exist.
 ##
-## :param signal_obj: The signal to disconnect from.
-## :type signal_obj: Signal
-## :param callable: The connected handler.
-## :type callable: Callable
-## :returns: True if a connection was actually removed.
-## :rtype: bool
+## [param signal_obj]: The signal to disconnect from.
+## [param callable]: The connected handler.
+## Returns true if a connection was actually removed.
 func safe_disconnect(signal_obj: Signal, callable: Callable) -> bool:
 	if signal_obj.is_null():
 		return false
@@ -123,14 +114,12 @@ func _disconnect_tracked_signals() -> void:
 
 ## Shows visible_ids and hides hidden_ids in the DOM with a single eval() call.
 ##
-## No-op off web, without a bridge, or when both lists are empty. IDs must be plain DOM
-## ids (they are interpolated into single-quoted JS strings).
+## No-op off web, without a bridge, or when both lists are empty. Every id is escaped for a
+## single-quoted JS string (see _escape_js_single_quoted()), so an id containing an
+## apostrophe, backslash or line break cannot break out of the generated script.
 ##
-## :param visible_ids: DOM element ids to set to display 'block'.
-## :type visible_ids: Array
-## :param hidden_ids: DOM element ids to set to display 'none'.
-## :type hidden_ids: Array
-## :rtype: void
+## [param visible_ids]: DOM element ids to set to display 'block'.
+## [param hidden_ids]: DOM element ids to set to display 'none'.
 func update_web_overlays(visible_ids: Array, hidden_ids: Array) -> void:
 	if visible_ids.is_empty() and hidden_ids.is_empty():
 		return
@@ -148,12 +137,24 @@ func _is_web() -> bool:
 ## Builds the DOM display toggles used by update_web_overlays().
 ## :rtype: String
 static func _build_overlay_js(visible_ids: Array, hidden_ids: Array) -> String:
+	var statement: String = "document.getElementById('%s').style.display = '%s';"
 	var lines: PackedStringArray = []
 	for id: Variant in visible_ids:
-		lines.append("document.getElementById('%s').style.display = 'block';" % str(id))
+		lines.append(statement % [_escape_js_single_quoted(str(id)), "block"])
 	for id: Variant in hidden_ids:
-		lines.append("document.getElementById('%s').style.display = 'none';" % str(id))
+		lines.append(statement % [_escape_js_single_quoted(str(id)), "none"])
 	return "\n".join(lines)
+
+
+## Escapes value for use inside a single-quoted JS string literal.
+##
+## Backslash goes first so the escapes added afterwards are not doubled. Plain DOM ids come
+## back unchanged, so the generated statements keep the format the DOM/Playwright tests use.
+## :rtype: String
+static func _escape_js_single_quoted(value: String) -> String:
+	var escaped: String = value.replace("\\", "\\\\").replace("'", "\\'")
+	escaped = escaped.replace("\n", "\\n").replace("\r", "\\r")
+	return escaped.replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
 
 
 # ==============================================================================

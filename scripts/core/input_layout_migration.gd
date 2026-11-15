@@ -123,7 +123,7 @@ static func _restore_stripped_defaults(settings: Node) -> bool:
 	return changed
 
 
-## Returns how many bindings [param action] has for [param device].
+## Returns how many bindings an action has for a device.
 ##
 ## [param settings]: The Settings autoload.
 ## [param action]: Action name in the InputMap.
