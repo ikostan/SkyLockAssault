@@ -116,3 +116,40 @@ validation paths via automated testing:
   where the safety check contains a typo or structural deviation. Asserts
   that the script actively blocks the compilation process, enforcing code
   discipline prior to any external deployment.
+
+---
+
+## 6. Salt Rotation Rule
+
+**Do not rotate `PRODUCTION_SALT` without a migration path.**
+
+The save key is `sha256(device_id + salt)`. On web builds `device_id` is
+the fixed string `"web_fallback"`, so every web player's
+`user://settings.cfg` is encrypted with the same key, and that key
+depends only on the salt.
+
+If the salt changes, the next build can't decrypt any existing save.
+`Globals.safe_load_config()` gets `ERR_FILE_CORRUPT`, moves the file to
+`settings.cfg.corrupt` and loads defaults
+([#1144](https://github.com/ikostan/SkyLockAssault/issues/1144)). For
+every web player, at once:
+
+* Gameplay settings, key bindings and audio volumes reset to defaults.
+* The main menu shows "Settings could not be read and were reset." once.
+* The old file stays as `settings.cfg.corrupt`, but the game never reads
+  it again.
+
+Desktop saves react the same way to a salt change, and also to a change
+in `OS.get_unique_id()` on that machine.
+
+A rotation needs a migration first, for example:
+
+1. Keep the previous salt in the build next to the new one.
+2. When decryption with the new key fails, try the previous key.
+3. If that works, re-save the file with the new key.
+4. Remove the previous salt only after enough players have loaded the
+   game once.
+
+Neither the migration nor restoring settings from a `.corrupt` file is
+implemented yet. The "Inject Production Salt into GDScript" step in
+`deploy_to_itch.yml` links to this section.

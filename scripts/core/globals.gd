@@ -7,6 +7,8 @@
 ##   (persisted_schema, _load_settings/_save_settings). Only schema keys are saved;
 ##   runtime state on the resource (fuel, speed, thresholds) is never written to disk.
 ## - Config file I/O shared by other autoloads: encryption key, safe_load_config().
+##   An unreadable encrypted file is kept as <path>.corrupt, and the main menu is told once
+##   through consume_settings_reset_notice() (#1144).
 ## - Menu overlay stack: hidden_menus, options_open, options_instance,
 ##   load_options(), load_key_mapping().
 ## - Scene transitions: load_scene_with_loading() and next_scene.
@@ -31,6 +33,10 @@ const SETTINGS_SECTION: String = "Settings"
 ## _save_settings() erases them, so old files are cleaned on the next save. Any other
 ## unknown key is kept. current_fuel: live fuel moved to FuelResource (#1143).
 const RETIRED_SETTINGS_KEYS: Array[String] = ["current_fuel"]
+
+## Suffix for the copy of an encrypted config file that could not be decrypted (#1144).
+## safe_load_config() keeps one copy per path, so a later failure replaces it.
+const CORRUPT_BACKUP_SUFFIX: String = ".corrupt"
 
 # --- ISSUE #470: Table-driven settings serialization ---
 ## Persistence schema for GameSettingsResource properties.
@@ -109,6 +115,9 @@ var current_input_device: String = "keyboard"  # "keyboard" or "gamepad"
 ## Mockable wrapper for JavaScriptBridge calls (web builds only).
 var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
 var _is_loading_settings: bool = false  # Guard flag
+## Set when safe_load_config() moved an unreadable file aside and defaults were used.
+## Read and cleared by consume_settings_reset_notice(). Never saved, so the notice shows once.
+var _settings_reset_notice_pending: bool = false
 
 
 func _ready() -> void:
@@ -667,9 +676,11 @@ func is_file_encrypted(path: String) -> bool:
 ##
 ## Loads an encrypted file with the device key, or a plaintext file as a legacy fallback that
 ## needs migration. If an encrypted file fails with [code]ERR_FILE_CORRUPT[/code] or
-## [code]ERR_INVALID_DATA[/code], it is deleted and reported as
-## [code]ERR_FILE_NOT_FOUND[/code], so callers fall back to defaults. Other decryption errors
-## and all plaintext load errors are returned unchanged and the file is kept.
+## [code]ERR_INVALID_DATA[/code] (damaged, or written with another key), it is moved to
+## [code]path + CORRUPT_BACKUP_SUFFIX[/code] by [method _preserve_unreadable_config] and
+## reported as [code]ERR_FILE_NOT_FOUND[/code], so callers fall back to defaults. If that
+## move fails, the file stays in place and the original error is returned. Other decryption
+## errors and all plaintext load errors are returned unchanged and the file is kept.
 ##
 ## [param path]: The file system path to the configuration file to load.
 ## Returns a Dictionary with [code]config[/code] ([code]ConfigFile[/code]), [code]err[/code]
@@ -695,35 +706,14 @@ func safe_load_config(path: String) -> Dictionary:
 				LogLevel.ERROR
 			)
 
-			# --- AUTO-RECOVERY FIX: TIGHTENED CONDITIONS ---
-			# Only delete if the file is explicitly corrupted or has invalid data (bad password/hash).
+			# Only a damaged file or a wrong key (bad password/hash) is moved aside (#1144).
 			if err == ERR_FILE_CORRUPT or err == ERR_INVALID_DATA:
-				log_message(
-					"🗑️ Attempting to auto-delete corrupted/orphaned save file to allow clean recovery.",
-					LogLevel.INFO
-				)
-
-				var remove_err: int = DirAccess.remove_absolute(path)
-				if remove_err == OK:
-					log_message("✅ Corrupted file successfully deleted.", LogLevel.DEBUG)
-					# Treat as a first-time boot so the game generates fresh defaults
-					err = ERR_FILE_NOT_FOUND
-				else:
-					log_message(
-						(
-							"❌ FAILED to delete corrupted file at "
-							+ path
-							+ " (Error: "
-							+ str(remove_err)
-							+ "). Game may be unable to save!"
-						),
-						LogLevel.ERROR
-					)
+				err = _preserve_unreadable_config(path, err)
 			else:
 				log_message(
 					(
 						"⚠️ File is unreadable but NOT explicitly corrupted. "
-						+ "Skipping auto-deletion to prevent accidental data loss."
+						+ "Keeping it in place to prevent accidental data loss."
 					),
 					LogLevel.WARNING
 				)
@@ -744,6 +734,64 @@ func safe_load_config(path: String) -> Dictionary:
 			)
 
 	return {"config": config, "err": err, "is_legacy": is_legacy}
+
+
+## Moves an encrypted config file that could not be decrypted out of the way.
+##
+## The file goes to [code]path + CORRUPT_BACKUP_SUFFIX[/code] with its contents unchanged, so
+## it can still be inspected. Only the latest copy is kept: an existing backup is removed
+## first. On success, the settings reset notice is set and [code]ERR_FILE_NOT_FOUND[/code] is
+## returned, so callers take the first-boot path and load defaults. If the old backup can't be
+## removed or the rename fails, the file is left in place and [param load_err] is returned, so
+## callers don't save over it.
+##
+## [param path]: The config file that failed to decrypt.
+## [param load_err]: The error from the failed decryption.
+## Returns [code]ERR_FILE_NOT_FOUND[/code] after a successful move, otherwise [param load_err].
+func _preserve_unreadable_config(path: String, load_err: int) -> int:
+	var backup_path: String = path + CORRUPT_BACKUP_SUFFIX
+	log_message("📦 Moving unreadable save file to: " + backup_path, LogLevel.INFO)
+
+	if FileAccess.file_exists(backup_path):
+		var remove_err: int = DirAccess.remove_absolute(backup_path)
+		if remove_err != OK:
+			log_message(
+				(
+					"❌ FAILED to remove the old backup at %s (Error: %d). Keeping %s in place."
+					% [backup_path, remove_err, path]
+				),
+				LogLevel.ERROR
+			)
+			return load_err
+
+	var rename_err: int = DirAccess.rename_absolute(path, backup_path)
+	if rename_err != OK:
+		log_message(
+			(
+				"❌ FAILED to move unreadable file %s to %s (Error: %d). Game may be unable to save!"
+				% [path, backup_path, rename_err]
+			),
+			LogLevel.ERROR
+		)
+		return load_err
+
+	_settings_reset_notice_pending = true
+	log_message(
+		"⚠️ Settings reset to defaults. The unreadable file was kept as: " + backup_path,
+		LogLevel.WARNING
+	)
+	# Treat as a first-time boot so the game generates fresh defaults
+	return ERR_FILE_NOT_FOUND
+
+
+## Returns true once after a save file was preserved and reset to defaults.
+##
+## Clears the flag, so a second call returns false until another file is moved aside. The
+## main menu calls this at startup to show its reset notice.
+func consume_settings_reset_notice() -> bool:
+	var pending: bool = _settings_reset_notice_pending
+	_settings_reset_notice_pending = false
+	return pending
 
 
 ## Overrides the encryption key with a deterministic value for unit tests.

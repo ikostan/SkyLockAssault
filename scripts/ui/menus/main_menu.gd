@@ -30,6 +30,8 @@ const QUIT_DIALOG_DEFAULT_PATH: String = "VideoStreamPlayer/Panel/VBoxContainer/
 @export_range(0.0, 5.0, 0.1) var intro_delay: float = 3.0
 @export_range(0.0, 3.0, 0.1) var fade_duration: float = 1.0
 @export_range(0.0, 2.0, 0.05) var audio_flush_delay: float = 0.2
+## Seconds the settings reset notice stays visible (#1144).
+@export_range(0.0, 30.0, 0.1) var settings_reset_notice_duration: float = 5.0
 
 # Reference to the quit dialog node, assigned in setup_quit_dialog or _ready()
 var quit_dialog: ConfirmationDialog
@@ -50,6 +52,7 @@ var _quit_pressed_cb: JavaScriptObject
 @onready var quit_button: Button = $VideoStreamPlayer/Panel/VBoxContainer/QuitButton
 @onready var background_music: AudioStreamPlayer2D = $AudioStreamPlayer2D
 @onready var menu: Panel = $VideoStreamPlayer/Panel
+@onready var settings_reset_notice: Label = $VideoStreamPlayer/SettingsResetNotice
 
 
 func _ready() -> void:
@@ -95,6 +98,30 @@ func _ready() -> void:
 
 	# 4. Handle visual fade-in sequence asynchronously in the background
 	_run_fade_in_sequence()
+
+	# 5. Tell the player once if their save file was unreadable and reset (#1144)
+	_show_settings_reset_notice_if_pending()
+
+
+## Shows the settings reset notice if Globals moved an unreadable save file aside.
+##
+## Reads the one-shot flag through [method Globals.consume_settings_reset_notice], so the
+## notice appears on the first main menu load only. The label ignores the mouse and can't take
+## focus, so it never blocks the buttons. It hides after
+## [member settings_reset_notice_duration] seconds.
+func _show_settings_reset_notice_if_pending() -> void:
+	if not Globals.consume_settings_reset_notice():
+		return
+
+	settings_reset_notice.visible = true
+	Globals.log_message("Showing the settings reset notice.", Globals.LogLevel.INFO)
+
+	await get_tree().create_timer(settings_reset_notice_duration).timeout
+
+	# Safe exit if the menu scene was torn down while the notice was showing
+	if not is_inside_tree() or not is_instance_valid(settings_reset_notice):
+		return
+	settings_reset_notice.visible = false
 
 
 func _enter_tree() -> void:
