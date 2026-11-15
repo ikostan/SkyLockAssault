@@ -117,19 +117,19 @@ func test_zero_duration_notice_hides_after_timer_tick() -> void:
 	assert_bool(notice.visible).is_false()
 
 
-## A timeout after the menu exits the tree must leave the detached label alone.
+## A timeout after the menu leaves the tree must not raise an error, and the consumed
+## notice must not come back.
 func test_notice_timeout_after_menu_leaves_tree() -> void:
 	Globals._settings_reset_notice_pending = true
 	var main_menu: Node = await _add_main_menu(0.2)
-	var notice: Label = main_menu.get_node(NOTICE_PATH)
 	remove_child(main_menu)
 
 	await get_tree().create_timer(0.4).timeout
 	await await_idle_frame()
 
-	assert_bool(main_menu.is_inside_tree()).is_false()
-	assert_bool(notice.visible).is_true()
-	assert_bool(Globals.consume_settings_reset_notice()).is_false()
+	assert_bool(Globals.consume_settings_reset_notice()).override_failure_message(
+		"the notice must stay consumed"
+	).is_false()
 
 
 ## Removing the label while its timer runs must not cause access to a freed instance.

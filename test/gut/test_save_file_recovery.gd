@@ -354,12 +354,12 @@ func test_missing_source_keeps_backup_and_pending_notice() -> void:
 
 	var result: Dictionary = Globals.safe_load_config(TEST_CONFIG_PATH)
 
-	assert_eq(result["err"], ERR_FILE_NOT_FOUND)
-	assert_false(result["is_legacy"])
-	assert_eq((result["config"] as ConfigFile).get_sections().size(), 0)
-	assert_eq(FileAccess.get_file_as_bytes(BACKUP_PATH), original_bytes)
+	assert_eq(result["err"], ERR_FILE_NOT_FOUND, "a second read sees no file")
+	assert_false(result["is_legacy"], "a missing file is not a legacy file")
+	assert_eq((result["config"] as ConfigFile).get_sections().size(), 0, "config is empty")
+	assert_eq(FileAccess.get_file_as_bytes(BACKUP_PATH), original_bytes, "backup is untouched")
 	assert_true(Globals.consume_settings_reset_notice(), "later reads must retain the notice")
-	assert_false(Globals.consume_settings_reset_notice())
+	assert_false(Globals.consume_settings_reset_notice(), "the notice is consumed once")
 
 
 ## A successful save with the new key must leave the recovery copy byte-identical.
@@ -368,19 +368,23 @@ func test_readable_replacement_keeps_backup_and_does_not_repeat_notice() -> void
 	Globals.set_test_encryption_key(KEY_B)
 	Globals.safe_load_config(TEST_CONFIG_PATH)
 	assert_engine_error(MD5_ERROR_TEXT)
-	assert_true(Globals.consume_settings_reset_notice())
+	assert_true(Globals.consume_settings_reset_notice(), "the first read is a reset")
 	var replacement_bytes: PackedByteArray = _write_encrypted_file(KEY_B, 1.8)
 
 	var result: Dictionary = Globals.safe_load_config(TEST_CONFIG_PATH)
 
-	assert_eq(result["err"], OK)
-	assert_false(result["is_legacy"])
+	assert_eq(result["err"], OK, "the new save must load")
+	assert_false(result["is_legacy"], "the new save is encrypted")
 	assert_almost_eq(
 		(result["config"] as ConfigFile).get_value(Globals.SETTINGS_SECTION, "difficulty"),
-		1.8, 0.0001
+		1.8,
+		0.0001,
+		"the new save's value is read"
 	)
-	assert_eq(FileAccess.get_file_as_bytes(TEST_CONFIG_PATH), replacement_bytes)
-	assert_eq(FileAccess.get_file_as_bytes(BACKUP_PATH), original_bytes)
+	assert_eq(
+		FileAccess.get_file_as_bytes(TEST_CONFIG_PATH), replacement_bytes, "new save untouched"
+	)
+	assert_eq(FileAccess.get_file_as_bytes(BACKUP_PATH), original_bytes, "backup is untouched")
 	assert_false(Globals.consume_settings_reset_notice(), "reading a new save is not a reset")
 
 
@@ -390,17 +394,17 @@ func test_second_recovery_rearms_consumed_notice() -> void:
 	Globals.set_test_encryption_key(KEY_B)
 	Globals.safe_load_config(TEST_CONFIG_PATH)
 	assert_engine_error(MD5_ERROR_TEXT)
-	assert_true(Globals.consume_settings_reset_notice())
-	assert_false(Globals.consume_settings_reset_notice())
+	assert_true(Globals.consume_settings_reset_notice(), "the first recovery notifies")
+	assert_false(Globals.consume_settings_reset_notice(), "the first notice is consumed once")
 
 	var latest_bytes: PackedByteArray = _write_encrypted_file(KEY_A, 1.9)
 	var result: Dictionary = Globals.safe_load_config(TEST_CONFIG_PATH)
 	assert_engine_error(MD5_ERROR_TEXT)
 
-	assert_eq(result["err"], ERR_FILE_NOT_FOUND)
-	assert_eq(FileAccess.get_file_as_bytes(BACKUP_PATH), latest_bytes)
+	assert_eq(result["err"], ERR_FILE_NOT_FOUND, "the second failure is preserved too")
+	assert_eq(FileAccess.get_file_as_bytes(BACKUP_PATH), latest_bytes, "the latest copy is kept")
 	assert_true(Globals.consume_settings_reset_notice(), "a new recovery must notify again")
-	assert_false(Globals.consume_settings_reset_notice())
+	assert_false(Globals.consume_settings_reset_notice(), "the second notice is consumed once")
 
 
 ## Failed recovery must preserve a notice already raised by another settings file.
@@ -412,17 +416,22 @@ func test_failed_preservation_does_not_clear_existing_notice() -> void:
 	assert_eq(result, ERR_INVALID_DATA, "return the caller's original load error")
 	assert_false(FileAccess.file_exists(BACKUP_PATH), "a failed move creates no backup")
 	assert_true(Globals.consume_settings_reset_notice(), "earlier reset still needs reporting")
-	assert_false(Globals.consume_settings_reset_notice())
+	assert_false(Globals.consume_settings_reset_notice(), "the notice is consumed once")
 
 
-## The preservation helper accepts both documented corruption error codes.
-func test_invalid_data_preserves_bytes_and_sets_notice() -> void:
+## The helper moves the file and sets the notice no matter which error code the caller
+## passes, so it treats ERR_INVALID_DATA the same as ERR_FILE_CORRUPT. Choosing which codes
+## reach the helper happens in safe_load_config(), and the wrong-key and damaged-file tests
+## cover that.
+func test_preserve_helper_handles_invalid_data_like_corrupt() -> void:
 	var original_bytes: PackedByteArray = _write_encrypted_file(KEY_A)
 
 	var result: int = Globals._preserve_unreadable_config(TEST_CONFIG_PATH, ERR_INVALID_DATA)
 
-	assert_eq(result, ERR_FILE_NOT_FOUND)
-	assert_false(FileAccess.file_exists(TEST_CONFIG_PATH))
-	assert_eq(FileAccess.get_file_as_bytes(BACKUP_PATH), original_bytes)
-	assert_true(Globals.consume_settings_reset_notice())
-	assert_false(Globals.consume_settings_reset_notice())
+	assert_eq(result, ERR_FILE_NOT_FOUND, "callers must take the first-boot path")
+	assert_false(FileAccess.file_exists(TEST_CONFIG_PATH), "original path must be gone")
+	assert_eq(
+		FileAccess.get_file_as_bytes(BACKUP_PATH), original_bytes, "backup must be byte-identical"
+	)
+	assert_true(Globals.consume_settings_reset_notice(), "the move sets the notice")
+	assert_false(Globals.consume_settings_reset_notice(), "the notice is consumed once")
