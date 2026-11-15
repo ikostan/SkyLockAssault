@@ -343,3 +343,86 @@ func test_reset_loads_defaults_everywhere_and_next_save_is_readable() -> void:
 	assert_true(reloaded.has_section("input"), "input section saved")
 	assert_true(reloaded.has_section("audio"), "audio section saved")
 	assert_true(FileAccess.file_exists(BACKUP_PATH), "backup is still kept")
+
+
+## Reading the now-missing source must not disturb the only recoverable copy or the notice.
+func test_missing_source_keeps_backup_and_pending_notice() -> void:
+	var original_bytes: PackedByteArray = _write_encrypted_file(KEY_A)
+	Globals.set_test_encryption_key(KEY_B)
+	Globals.safe_load_config(TEST_CONFIG_PATH)
+	assert_engine_error(MD5_ERROR_TEXT)
+
+	var result: Dictionary = Globals.safe_load_config(TEST_CONFIG_PATH)
+
+	assert_eq(result["err"], ERR_FILE_NOT_FOUND)
+	assert_false(result["is_legacy"])
+	assert_eq((result["config"] as ConfigFile).get_sections().size(), 0)
+	assert_eq(FileAccess.get_file_as_bytes(BACKUP_PATH), original_bytes)
+	assert_true(Globals.consume_settings_reset_notice(), "later reads must retain the notice")
+	assert_false(Globals.consume_settings_reset_notice())
+
+
+## A successful save with the new key must leave the recovery copy byte-identical.
+func test_readable_replacement_keeps_backup_and_does_not_repeat_notice() -> void:
+	var original_bytes: PackedByteArray = _write_encrypted_file(KEY_A)
+	Globals.set_test_encryption_key(KEY_B)
+	Globals.safe_load_config(TEST_CONFIG_PATH)
+	assert_engine_error(MD5_ERROR_TEXT)
+	assert_true(Globals.consume_settings_reset_notice())
+	var replacement_bytes: PackedByteArray = _write_encrypted_file(KEY_B, 1.8)
+
+	var result: Dictionary = Globals.safe_load_config(TEST_CONFIG_PATH)
+
+	assert_eq(result["err"], OK)
+	assert_false(result["is_legacy"])
+	assert_almost_eq(
+		(result["config"] as ConfigFile).get_value(Globals.SETTINGS_SECTION, "difficulty"),
+		1.8, 0.0001
+	)
+	assert_eq(FileAccess.get_file_as_bytes(TEST_CONFIG_PATH), replacement_bytes)
+	assert_eq(FileAccess.get_file_as_bytes(BACKUP_PATH), original_bytes)
+	assert_false(Globals.consume_settings_reset_notice(), "reading a new save is not a reset")
+
+
+## One-shot consumption must rearm for a subsequent, independent recovery.
+func test_second_recovery_rearms_consumed_notice() -> void:
+	_write_encrypted_file(KEY_A)
+	Globals.set_test_encryption_key(KEY_B)
+	Globals.safe_load_config(TEST_CONFIG_PATH)
+	assert_engine_error(MD5_ERROR_TEXT)
+	assert_true(Globals.consume_settings_reset_notice())
+	assert_false(Globals.consume_settings_reset_notice())
+
+	var latest_bytes: PackedByteArray = _write_encrypted_file(KEY_A, 1.9)
+	var result: Dictionary = Globals.safe_load_config(TEST_CONFIG_PATH)
+	assert_engine_error(MD5_ERROR_TEXT)
+
+	assert_eq(result["err"], ERR_FILE_NOT_FOUND)
+	assert_eq(FileAccess.get_file_as_bytes(BACKUP_PATH), latest_bytes)
+	assert_true(Globals.consume_settings_reset_notice(), "a new recovery must notify again")
+	assert_false(Globals.consume_settings_reset_notice())
+
+
+## Failed recovery must preserve a notice already raised by another settings file.
+func test_failed_preservation_does_not_clear_existing_notice() -> void:
+	Globals._settings_reset_notice_pending = true
+	# A missing source deterministically fails the rename without platform permissions.
+	var result: int = Globals._preserve_unreadable_config(TEST_CONFIG_PATH, ERR_INVALID_DATA)
+
+	assert_eq(result, ERR_INVALID_DATA, "return the caller's original load error")
+	assert_false(FileAccess.file_exists(BACKUP_PATH), "a failed move creates no backup")
+	assert_true(Globals.consume_settings_reset_notice(), "earlier reset still needs reporting")
+	assert_false(Globals.consume_settings_reset_notice())
+
+
+## The preservation helper accepts both documented corruption error codes.
+func test_invalid_data_preserves_bytes_and_sets_notice() -> void:
+	var original_bytes: PackedByteArray = _write_encrypted_file(KEY_A)
+
+	var result: int = Globals._preserve_unreadable_config(TEST_CONFIG_PATH, ERR_INVALID_DATA)
+
+	assert_eq(result, ERR_FILE_NOT_FOUND)
+	assert_false(FileAccess.file_exists(TEST_CONFIG_PATH))
+	assert_eq(FileAccess.get_file_as_bytes(BACKUP_PATH), original_bytes)
+	assert_true(Globals.consume_settings_reset_notice())
+	assert_false(Globals.consume_settings_reset_notice())

@@ -84,3 +84,65 @@ func test_start_button_keeps_focus_while_notice_shows() -> void:
 
 	assert_bool(notice.visible).is_true()
 	assert_object(get_viewport().gui_get_focus_owner()).is_same(start_button)
+
+
+## Recreating the menu must not redisplay a notice consumed by the previous instance.
+func test_notice_is_not_repeated_on_menu_reload() -> void:
+	Globals._settings_reset_notice_pending = true
+	var first_menu: Node = await _add_main_menu(5.0)
+	assert_bool((first_menu.get_node(NOTICE_PATH) as Label).visible).is_true()
+	first_menu.queue_free()
+	await await_idle_frame()
+
+	var second_menu: Node = await _add_main_menu(5.0)
+
+	assert_bool((second_menu.get_node(NOTICE_PATH) as Label).visible).is_false()
+	assert_bool(Globals.consume_settings_reset_notice()).is_false()
+
+
+## The exported minimum duration still consumes the notice and hides it on the next tick.
+func test_zero_duration_notice_hides_after_timer_tick() -> void:
+	Globals._settings_reset_notice_pending = true
+	var main_menu: Node = auto_free(load(MAIN_MENU_PATH).instantiate())
+	main_menu.intro_delay = 0.0
+	main_menu.fade_duration = 0.0
+	main_menu.settings_reset_notice_duration = 0.0
+	add_child(main_menu)
+	var notice: Label = main_menu.get_node(NOTICE_PATH)
+
+	assert_bool(notice.visible).is_true()
+	assert_bool(Globals.consume_settings_reset_notice()).is_false()
+	await get_tree().create_timer(0.1).timeout
+	await await_idle_frame()
+	assert_bool(notice.visible).is_false()
+
+
+## A timeout after the menu exits the tree must leave the detached label alone.
+func test_notice_timeout_after_menu_leaves_tree() -> void:
+	Globals._settings_reset_notice_pending = true
+	var main_menu: Node = await _add_main_menu(0.2)
+	var notice: Label = main_menu.get_node(NOTICE_PATH)
+	remove_child(main_menu)
+
+	await get_tree().create_timer(0.4).timeout
+	await await_idle_frame()
+
+	assert_bool(main_menu.is_inside_tree()).is_false()
+	assert_bool(notice.visible).is_true()
+	assert_bool(Globals.consume_settings_reset_notice()).is_false()
+
+
+## Removing the label while its timer runs must not cause access to a freed instance.
+func test_notice_timeout_after_label_is_freed() -> void:
+	Globals._settings_reset_notice_pending = true
+	var main_menu: Node = await _add_main_menu(0.2)
+	var notice: Label = main_menu.get_node(NOTICE_PATH)
+	notice.queue_free()
+	await await_idle_frame()
+
+	await get_tree().create_timer(0.4).timeout
+	await await_idle_frame()
+
+	assert_bool(is_instance_valid(notice)).is_false()
+	assert_bool(main_menu.is_inside_tree()).is_true()
+	assert_bool(Globals.consume_settings_reset_notice()).is_false()
