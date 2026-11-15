@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "created": "2026-11-14T11:58:49Z",
-  "commit": "1a8f329e5b68eaafd8de34f139a008f296beca91",
-  "runner": "GitHub Actions 1000043890",
+  "created": "2026-11-15T12:35:59Z",
+  "commit": "e317b8078f17188b199f73eabbb5d00a7f4b0511",
+  "runner": "GitHub Actions 1000044040",
   "godot": "4.7.1-stable (official)",
   "runs": 3,
   "baseline": {
@@ -15,25 +15,6 @@
     "reload_object_growth": 2.0
   },
   "history": [
-    {
-      "run_id": "42174285266",
-      "commit": "af54f9148e92d0f357bd0ee63954f0b2c80aca24",
-      "date": "2026-11-06T06:44:20Z",
-      "metrics": {
-        "saves": 0.0,
-        "objects_avg": 2545.15,
-        "nodes_avg": 503.98333333333335,
-        "resources_avg": 206.0,
-        "orphans_max": 0.0,
-        "reload_orphans_max": 0.0,
-        "reload_object_growth": 2.0,
-        "frame_p95_ms": 17.044,
-        "frames_over_33.4ms": 0.0,
-        "proc_worst_avg_ms": 0.2234,
-        "phys_worst_avg_ms": 0.3376,
-        "mem_static_growth": 149556.0
-      }
-    },
     {
       "run_id": "42556564496",
       "commit": "e841d249df1650d2ae191a370f687135a151c308",
@@ -109,6 +90,25 @@
         "phys_worst_avg_ms": 0.3146,
         "mem_static_growth": 185248.0
       }
+    },
+    {
+      "run_id": "43712895718",
+      "commit": "e317b8078f17188b199f73eabbb5d00a7f4b0511",
+      "date": "2026-11-15T12:35:59Z",
+      "metrics": {
+        "saves": 0.0,
+        "objects_avg": 2549.15,
+        "nodes_avg": 503.98333333333335,
+        "resources_avg": 208.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": -13.0,
+        "frame_p95_ms": 17.08,
+        "frames_over_33.4ms": 0.0,
+        "proc_worst_avg_ms": 0.2452,
+        "phys_worst_avg_ms": 0.3003,
+        "mem_static_growth": 180780.0
+      }
     }
   ],
   "accepted": null,
@@ -120,7 +120,8 @@
     "42556564496",
     "42822606768",
     "43381869542",
-    "43590949880"
+    "43590949880",
+    "43712895718"
   ],
   "profile": "desktop"
 }
