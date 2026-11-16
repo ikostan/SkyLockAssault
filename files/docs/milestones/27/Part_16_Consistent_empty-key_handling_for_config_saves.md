@@ -3,10 +3,10 @@
 
 ---
 
-## PR #_TBD_ Summary
+## PR #1204 Summary
 
-**Title:** Consistent empty-key handling for config saves & use BulletResource as the single source for weapon tuning  
-**PR:** _TBD_  
+**Title:** Consistent empty key handling for config saves  
+**PR:** [#1204](https://github.com/ikostan/SkyLockAssault/pull/1204)  
 **Branch:** `consistent-empty-key-handling-for-config-saves` → `main`  
 **Author:** @ikostan  
 **Resolves:**
@@ -15,7 +15,7 @@
 - [#1146 – [FEATURE] Use BulletResource as the single source for weapon tuning](https://github.com/ikostan/SkyLockAssault/issues/1146)
 
 **Milestone:** Milestone 27: Audio feedback fixes, architecture refactor & performance validation  
-**Labels:** enhancement, testing, refactoring, mechanics, GUT
+**Labels:** documentation, dependencies, dependabot, FEATURE
 
 ### Purpose
 
@@ -81,6 +81,23 @@ Weapon tuning existed in two places with different defaults:
 - **`Browser_DevTools_Guide_Verifying_Web_Save_Encryption.md`:** "Why This Happens" now says that Godot accepts an empty password, and that since #1145 an empty key saves readable plaintext with no `GDEC` header.
 - **`globals.gd` header:** lists `save_config()` with the other shared config I/O.
 
+#### 5. Tests
+
+- **`test_config_save_failsafe.gd` (new GUT suite, 16 cases):** 11 written with the change, 5 added by CodeRabbit (`df4d9f4`).
+
+| Area                     | Cases                                                                                                                                                                                                                                                                          |
+|--------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `save_config()`          | Encrypted with a valid key; readable plaintext and warning with an empty key; seam keeps the cached key                                                                                                                                                                        |
+| Empty key, no file       | Each of the four paths saves plaintext; all four sections share one file and reload from it; a missing file stays a first boot (CodeRabbit)                                                                                                                                    |
+| Empty key, existing file | Load keeps an encrypted file, makes no `.corrupt` copy, sets no notice; all four saves leave it byte-identical; `_load_settings()` keeps defaults; an earlier `.corrupt` copy and a pending notice survive (CodeRabbit); malformed plaintext is never overwritten (CodeRabbit) |
+| Unknown values           | Each of the four paths keeps unknown sections and keys in a plaintext file (CodeRabbit, 4 parameters)                                                                                                                                                                          |
+| Key returns              | A plaintext file from an empty key is encrypted by the existing migration, with every section kept; an encrypted file skipped during the outage loads and saves again (CodeRabbit)                                                                                             |
+| Write failures           | `save_config()` returns the error in both modes; each of the four callers logs its own error                                                                                                                                                                                   |
+
+- **Review fixes:**
+  - The suite saves and restores the real `user://settings.cfg.corrupt` recovery copy (#1144), as it already did for `settings.cfg` (CodeRabbit, `168dfdf`).
+  - CodeRabbit's unknown-values test: the `seed` variable, which shadowed the global `seed()`, is renamed, and its asserts name the caller (`fa4bd87`).
+
 ### Part B: Use BulletResource as the single source for weapon tuning (#1146)
 
 #### 1. Validation moves to `BulletResource` (`bullet_resource.gd`)
@@ -110,7 +127,8 @@ Weapon tuning existed in two places with different defaults:
 | _(new)_                                                             | `test_switch_leaves_default_bullet_config_unchanged`            | In the tree, a config-less bullet uses `default_bullet.tres`, which stays 0.15 / 10 after swaps |
 | _(new)_                                                             | `test_two_firers_sharing_one_config_stay_unchanged_after_swaps` | Two controllers share one config through several swaps; values unchanged                        |
 
-- **`test_bullet_resource.gd`:** 4 new cases: `fire_rate` below 0.01 clamps (0.0, -1.0, 0.005), negative `damage` clamps to 0 (-1, -50), valid values including both bounds are kept, and `default_bullet.tres` loads 0.15 / 10.
+- **`test_weapon_firing_state.gd`, added by CodeRabbit (`df4d9f4`):** `test_switch_between_distinct_configs_preserves_each_weapons_tuning` swaps between two differently tuned bullets in one controller and checks that neither config changes. Its loop asserts now name the swap (`fa4bd87`).
+- **`test_bullet_resource.gd`:** 4 new cases: `fire_rate` below 0.01 clamps (0.0, -1.0, 0.005), negative `damage` clamps to 0 (-1, -50), valid values including both bounds are kept, and `default_bullet.tres` loads 0.15 / 10. CodeRabbit added 2 more: valid values replace previously clamped ones, and 0.010001 is kept as is.
 - **`test_weapon_resource.gd`:** 1 new case: `WeaponResource` has no `fire_rate` or `damage` property.
 - The mock weapon classes (`TunedWeapon`, `RateOnlyWeapon`, `DamageOnlyWeapon`) stay. The ammo and `weapon_fired` cases are unchanged.
 
@@ -133,6 +151,11 @@ Weapon tuning existed in two places with different defaults:
 - **Mock-stat cases kept, with new meaning.** The classes no longer feed any stat sync. They now check that a weapon node with stray `fire_rate` / `damage` properties still equips, gets its name and index, and keeps its own values.
 - **The default-config case runs in the tree.** `bullet.gd` assigns `default_bullet.tres` in `_ready()`. With the controller outside the tree, the bullet's config stays null and the case would test nothing.
 
+### Review
+
+- **CodeRabbit's `.corrupt` finding was valid.** Local GUT runs share `user://` with the game run from the editor, so the suite deleted a real recovery copy. A seeded copy was gone after the old suite ran and came back byte-identical with the fix.
+- **CodeRabbit's generated tests: 8 kept, 2 tidied.** All 8 are correct and pass. 3 of them fail when the fix is removed (see Mutation checks); the other 5 guard behaviour that already worked. The tidy-ups only rename a variable and add assert messages, so a failure says which caller or swap broke.
+
 ---
 
 ## Verification
@@ -141,19 +164,20 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 
 - **Totals:**
 
-| State                             | GUT scripts | GUT tests | GUT asserts | gdUnit4 cases |
-|-----------------------------------|-------------|-----------|-------------|---------------|
-| `main` (`6940a1c`, branch base)   | 106         | 932       | 10,623      | 164           |
-| Part A (`172373b`)                | 107         | 943       | 10,682      | 164           |
-| Part B (`1f9a0e0`)                | 107         | 950       | 10,718      | 164           |
+| State                                           | GUT scripts | GUT tests | GUT asserts | gdUnit4 cases |
+|-------------------------------------------------|-------------|-----------|-------------|---------------|
+| `main` (`6940a1c`, branch base)                 | 106         | 932       | 10,623      | 164           |
+| Part A (`c82e269`)                              | 107         | 943       | 10,682      | 164           |
+| Part B (`4b64000`)                              | 107         | 950       | 10,718      | 164           |
+| + CodeRabbit tests and review fixes (`fa4bd87`) | 107         | 958       | 10,803      | 164           |
 
 - **Test counts per changed file (`main` → this PR):**
 
 | File                                  | Framework | Cases   |
 |---------------------------------------|-----------|---------|
-| `test_config_save_failsafe.gd` (new)  | GUT       | 0 → 11  |
-| `test_weapon_firing_state.gd`         | GUT       | 14 → 16 |
-| `test_bullet_resource.gd`             | GUT       | 3 → 7   |
+| `test_config_save_failsafe.gd` (new)  | GUT       | 0 → 16  |
+| `test_weapon_firing_state.gd`         | GUT       | 14 → 17 |
+| `test_bullet_resource.gd`             | GUT       | 3 → 9   |
 | `test_weapon_resource.gd`             | GUT       | 10 → 11 |
 
 - **No test cases removed.** The existing suites the issues name pass unchanged:
@@ -161,13 +185,16 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
   - Part B: `test_bullet_configuration.gd` (GUT), `test_bullet.gd`, `test_difficulty_integration.gd` (gdUnit4). `test_difficulty_integration.gd` still expects the cooldown to scale from `BulletResource.fire_rate` (0.15 × difficulty).
 - **Engine output:** the same engine errors as on `main`, apart from the start-up read of `user://settings.cfg`, which depends on what earlier local runs left in `user://`.
 - **Mutation checks:** the old behaviour was put back in a scratch copy, and the tests had to fail:
-  - **Part A, no empty-key guard in `safe_load_config()`:** 3 fail. The encrypted file is moved to `.corrupt`.
-  - **Part A, old `save_encrypted_pass()` calls in `Settings` and `AudioManager`:** 3 fail. Input, last device and audio save hollow `GDEC` files, and the coexist and upgrade cases can't read the file.
-  - **Part B, `main`'s `weapon.gd`, `weapon_resource.gd` and `bullet_resource.gd`:** 3 fail: both clamp cases and the `WeaponResource` field check. The 16 `test_weapon_firing_state.gd` cases pass on `main` too: with valid values, the old write-back stored the same numbers it read, so the shared config never visibly changed. The fix is that nothing writes to it now; the field check and the clamp cases are what fail without it.
+  - **Part A, no empty-key guard in `safe_load_config()`:** 5 fail, 2 of them CodeRabbit's (earlier backup and pending notice; updates after the key returns). The encrypted file is moved to `.corrupt`.
+  - **Part A, old `save_encrypted_pass()` calls in `Settings` and `AudioManager`:** 4 fail, 1 of them CodeRabbit's (unknown values). Input, last device and audio save hollow `GDEC` files, and the coexist, upgrade and unknown-values cases can't read the file.
+  - **Part B, `main`'s `weapon.gd`, `weapon_resource.gd` and `bullet_resource.gd`:** 4 fail: both clamp cases, CodeRabbit's clamped-then-valid case, and the `WeaponResource` field check. The 17 `test_weapon_firing_state.gd` cases pass on `main` too: with valid values, the old write-back stored the same numbers it read, so the shared config never visibly changed. The fix is that nothing writes to it now; the field check and the clamp cases are what fail without it.
 - **Engine probe (Part A):** `ConfigFile.save_encrypted_pass(path, "")` returns `OK` and writes a 60-byte `GDEC` file that `load_encrypted_pass(path, "")` reads back.
 - **`tests/ci/test_salt_injection.py`:** 23 passed. `test_injection_readonly_file` fails in the sandbox and on unchanged `main`, because it runs as root, as in Part 15.
 - **Not run locally:** Playwright (Part A: `volume_sliders_mutes_test.py`, `no_error_logs_test.py`; Part B: `weapon_firing_test.py`, `difficulty_flow_test.py`, `difficulty_integration_test.py`) and the benchmark. _Confirm from the PR run._
-- **PR pipeline:** _confirm all jobs from the final run._
+- **PR pipeline:**
+  - **`df4d9f4`:** GDScript lint, YAML and Markdown lint, GUT, gdUnit4, both CI infrastructure jobs, the web build and the CI & Security browser shard passed. Core Web Flows was still running when this note was updated.
+  - **`168dfdf`:** cancelled by the next push.
+  - **Final commit (`fa4bd87`):** _confirm all jobs from the final run._
 - **Benchmark:** _fill in from the PR run._ No per-frame code changes; `switch_to()` now does less work.
 
 ---
@@ -187,32 +214,32 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 
 ### File-Level Changes
 
-| Change                         | Details                                                                                                                                                        | Files                                                                                                                                            |
-|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
-| A: One save helper.            | <ul><li>`save_config()`: encrypted with a key, plaintext without one.</li><li>All four save paths use it; their log lines are unchanged.</li></ul>             | `scripts/core/globals.gd`<br/>`scripts/core/settings.gd`<br/>`scripts/managers/audio_manager.gd`                                                 |
-| A: Empty-key load guard.       | <ul><li>`safe_load_config()` returns `ERR_UNCONFIGURED` for an encrypted file with an empty key, without decrypting or moving it.</li></ul>                    | `scripts/core/globals.gd`                                                                                                                        |
-| A: Test seam.                  | <ul><li>`set_test_empty_encryption_key()` forces an empty key without touching the cached one.</li></ul>                                                       | `scripts/core/globals.gd`                                                                                                                        |
-| A: Tests.                      | <ul><li>11 GUT cases.</li><li>`CONFIG_PATH` bytes saved and restored.</li><li>Log lines read with `OS.add_logger()`.</li></ul>                                 | `test/gut/test_config_save_failsafe.gd`                                                                                                          |
-| A: Docs.                       | <ul><li>Hollow-encryption note corrected.</li></ul>                                                                                                            | `files/docs/Browser_DevTools_Guide_Verifying_Web_Save_Encryption.md`                                                                             |
-| B: Validation in the resource. | <ul><li>`fire_rate` and `damage` setters clamp in `BulletResource`.</li></ul>                                                                                  | `scripts/resources/bullet_resource.gd`                                                                                                           |
-| B: Mirrors removed.            | <ul><li>`WeaponResource.fire_rate` / `damage` removed.</li><li>`switch_to()` stat sync, write-back and fallback removed.</li></ul>                             | `scripts/resources/weapon_resource.gd`<br/>`scripts/entities/weapon.gd`                                                                          |
-| B: Tests.                      | <ul><li>7 `switch_to()` cases rewritten, 2 added.</li><li>4 `BulletResource` cases and 1 `WeaponResource` case added.</li><li>No test cases removed.</li></ul> | `test/gut/test_weapon_firing_state.gd`<br/>`test/gut/test_bullet_resource.gd`<br/>`test/gut/test_weapon_resource.gd`                             |
-| Milestone note.                | <ul><li>This note.</li></ul>                                                                                                                                   | `files/docs/milestones/27/Part_16_Consistent_empty-key_handling_for_config_saves_&_use_BulletResource_as_the_single_source_for_weapon_tuning.md` |
+| Change                         | Details                                                                                                                                                                                                | Files                                                                                                                |
+|--------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| A: One save helper.            | <ul><li>`save_config()`: encrypted with a key, plaintext without one.</li><li>All four save paths use it; their log lines are unchanged.</li></ul>                                                     | `scripts/core/globals.gd`<br/>`scripts/core/settings.gd`<br/>`scripts/managers/audio_manager.gd`                     |
+| A: Empty-key load guard.       | <ul><li>`safe_load_config()` returns `ERR_UNCONFIGURED` for an encrypted file with an empty key, without decrypting or moving it.</li></ul>                                                            | `scripts/core/globals.gd`                                                                                            |
+| A: Test seam.                  | <ul><li>`set_test_empty_encryption_key()` forces an empty key without touching the cached one.</li></ul>                                                                                               | `scripts/core/globals.gd`                                                                                            |
+| A: Tests.                      | <ul><li>16 GUT cases, 5 of them from CodeRabbit.</li><li>`CONFIG_PATH` and its `.corrupt` copy saved and restored.</li><li>Log lines read with `OS.add_logger()`.</li></ul>                            | `test/gut/test_config_save_failsafe.gd`                                                                              |
+| A: Docs.                       | <ul><li>Hollow-encryption note corrected.</li></ul>                                                                                                                                                    | `files/docs/Browser_DevTools_Guide_Verifying_Web_Save_Encryption.md`                                                 |
+| B: Validation in the resource. | <ul><li>`fire_rate` and `damage` setters clamp in `BulletResource`.</li></ul>                                                                                                                          | `scripts/resources/bullet_resource.gd`                                                                               |
+| B: Mirrors removed.            | <ul><li>`WeaponResource.fire_rate` / `damage` removed.</li><li>`switch_to()` stat sync, write-back and fallback removed.</li></ul>                                                                     | `scripts/resources/weapon_resource.gd`<br/>`scripts/entities/weapon.gd`                                              |
+| B: Tests.                      | <ul><li>7 `switch_to()` cases rewritten, 3 added (1 from CodeRabbit).</li><li>6 `BulletResource` cases (2 from CodeRabbit) and 1 `WeaponResource` case added.</li><li>No test cases removed.</li></ul> | `test/gut/test_weapon_firing_state.gd`<br/>`test/gut/test_bullet_resource.gd`<br/>`test/gut/test_weapon_resource.gd` |
+| Milestone note.                | <ul><li>This note.</li></ul>                                                                                                                                                                           | `files/docs/milestones/27/Part_16_Consistent_empty-key_handling_for_config_saves.md`                                 |
 
 ### Assessment against linked issues
 
-| Issue                                                   | Objective                                                                           | Addressed | Explanation                                                                              |
-|---------------------------------------------------------|-------------------------------------------------------------------------------------|-----------|------------------------------------------------------------------------------------------|
-| <https://github.com/ikostan/SkyLockAssault/issues/1145> | All four save paths use `save_config()`                                             | ✅         | No other `save_encrypted_pass()` or `ConfigFile.save()` call left in `scripts/`.         |
-| <https://github.com/ikostan/SkyLockAssault/issues/1145> | With an empty key, new files save as plaintext for every section                    | ✅         | Each path tested alone and all four together.                                            |
-| <https://github.com/ikostan/SkyLockAssault/issues/1145> | An existing encrypted file is never overwritten, renamed or deleted                 | ✅         | Load and all four saves leave it byte-identical; no `.corrupt`, no notice.               |
-| <https://github.com/ikostan/SkyLockAssault/issues/1145> | Behavior with a valid key is unchanged                                              | ✅         | Full GUT and gdUnit4 runs pass unchanged.                                                |
-| <https://github.com/ikostan/SkyLockAssault/issues/1146> | `BulletResource` is the only source of `fire_rate` and `damage`, and validates them | ✅         | Setters clamp; clamp, bound and `.tres` cases added.                                     |
-| <https://github.com/ikostan/SkyLockAssault/issues/1146> | `WeaponResource` no longer has those fields                                         | ✅         | Field check added.                                                                       |
-| <https://github.com/ikostan/SkyLockAssault/issues/1146> | `switch_to()` no longer changes any `BulletResource`                                | ✅         | Write-back removed; default and shared-config cases check the values.                    |
-| <https://github.com/ikostan/SkyLockAssault/issues/1146> | Firing rate, damage and difficulty scaling stay the same in the game                | ⏳         | Defaults unchanged and gdUnit4 difficulty test passes; confirm Playwright on the PR run. |
-| Both                                                    | All GUT, gdUnit4, Playwright, CI script and lint jobs pass, no cases removed        | ⏳         | GUT, gdUnit4, lint and `tests/ci` pass locally; confirm Playwright on the PR run.        |
-| Both                                                    | The PR's milestone note is added                                                    | ✅         | This note.                                                                               |
+| Issue                                                   | Objective                                                                           | Addressed | Explanation                                                                                     |
+|---------------------------------------------------------|-------------------------------------------------------------------------------------|-----------|-------------------------------------------------------------------------------------------------|
+| <https://github.com/ikostan/SkyLockAssault/issues/1145> | All four save paths use `save_config()`                                             | ✅         | No other `save_encrypted_pass()` or `ConfigFile.save()` call left in `scripts/`.                |
+| <https://github.com/ikostan/SkyLockAssault/issues/1145> | With an empty key, new files save as plaintext for every section                    | ✅         | Each path tested alone and all four together.                                                   |
+| <https://github.com/ikostan/SkyLockAssault/issues/1145> | An existing encrypted file is never overwritten, renamed or deleted                 | ✅         | Load and all four saves leave it byte-identical; no `.corrupt`, no notice.                      |
+| <https://github.com/ikostan/SkyLockAssault/issues/1145> | Behavior with a valid key is unchanged                                              | ✅         | Full GUT and gdUnit4 runs pass unchanged.                                                       |
+| <https://github.com/ikostan/SkyLockAssault/issues/1146> | `BulletResource` is the only source of `fire_rate` and `damage`, and validates them | ✅         | Setters clamp; clamp, bound and `.tres` cases added.                                            |
+| <https://github.com/ikostan/SkyLockAssault/issues/1146> | `WeaponResource` no longer has those fields                                         | ✅         | Field check added.                                                                              |
+| <https://github.com/ikostan/SkyLockAssault/issues/1146> | `switch_to()` no longer changes any `BulletResource`                                | ✅         | Write-back removed; default and shared-config cases check the values.                           |
+| <https://github.com/ikostan/SkyLockAssault/issues/1146> | Firing rate, damage and difficulty scaling stay the same in the game                | ⏳         | Defaults unchanged and gdUnit4 difficulty test passes; confirm Playwright on the PR run.        |
+| Both                                                    | All GUT, gdUnit4, Playwright, CI script and lint jobs pass, no cases removed        | ⏳         | GUT, gdUnit4, lint and CI jobs passed on `df4d9f4`; confirm the browser tests on the final run. |
+| Both                                                    | The PR's milestone note is added                                                    | ✅         | This note.                                                                                      |
 
 ---
 
@@ -223,6 +250,12 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 - Filed #1145 and #1146 and set their scope.
 - Asked for the next Milestone 27 tasks, to add a second issue to this PR, and to work through #1145 and #1146 one at a time.
 - Created the `consistent-empty-key-handling-for-config-saves` branch.
+- Applied the changes, committed, and opened the PR.
+- Ran CodeRabbit's unit test generation, asked to apply its `.corrupt` finding, asked for a review of the generated tests, and asked to push the tidy-ups.
+- Commits:
+  - `c82e269` Unify config saves for empty-key failsafe
+  - `4b64000` Make BulletResource the weapon tuning source
+  - `168dfdf` Restore config recovery backup in tests
 
 ### Bots / AI contributions
 
@@ -234,5 +267,21 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
     - Found that Godot accepts an empty password, so the three saves wrote hollow files instead of failing as #1145 said.
     - Ran GUT, gdUnit4, `tests/ci` and the linters locally with the CI commands, on `main` and after each part, and mutation-tested the new and rewritten tests.
     - Wrote this note.
+  - **Review**
+    - Confirmed CodeRabbit's `.corrupt` finding against the code, wrote the fix (applied as `168dfdf`), and checked that a seeded recovery copy survives the suite.
+    - Reviewed CodeRabbit's 8 generated tests: all kept, 2 tidied, and mutation-tested them.
+    - Commit: `fa4bd87` Tidy CodeRabbit's generated failsafe and weapon swap tests (pushed on request).
+- **@coderabbitai**
+  - Flagged that the new suite deleted the real `settings.cfg.corrupt` recovery copy without restoring it (fixed in `168dfdf`).
+  - Generated 8 unit tests on request (`df4d9f4`): 5 in `test_config_save_failsafe.gd`, 2 in `test_bullet_resource.gd`, 1 in `test_weapon_firing_state.gd`. All kept, 2 tidied in `fa4bd87`.
+  - Its summary comment shows the free review limit warning; its review still posted the finding above.
+  - Failed its pre-merge "Description check": the PR description still has template placeholders. _Outcome: fill in._
+- **@sourcery-ai**
+  - Posted a reviewer's guide and a linked-issues checklist: #1145 7 of 8 met, #1146 6 of 9 met. The rest are runtime checks (Playwright, benchmark, in-game behaviour) to confirm by hand.
+  - Didn't review the code: the 7-day review budget ran out.
+- **@deepsource-io**
+  - Graded the PR A with the Python and JavaScript analyzers; no inline issues.
+- **@qodo-code-review**
+  - Reviews paused for this account; no findings.
 
 <!-- markdownlint-enable MD001 MD036 MD013 MD033 table-column-style -->
