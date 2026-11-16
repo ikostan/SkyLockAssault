@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "created": "2026-11-15T21:31:40Z",
-  "commit": "203d4c5a7d6703648b509f089a30786143c71669",
-  "runner": "GitHub Actions 1000044192",
+  "created": "2026-11-16T18:44:07Z",
+  "commit": "65a82512b847ce138f6be5d0db642a3ff8955d11",
+  "runner": "GitHub Actions 1000044306",
   "godot": "4.7.1-stable (official)",
   "runs": 3,
   "baseline": {
@@ -15,25 +15,6 @@
     "reload_object_growth": 2.0
   },
   "history": [
-    {
-      "run_id": "43381869542",
-      "commit": "3aa0228020663eef1be4550f53db1d092d910182",
-      "date": "2026-11-13T07:11:20Z",
-      "metrics": {
-        "saves": 0.0,
-        "objects_avg": 2547.45,
-        "nodes_avg": 503.43333333333334,
-        "resources_avg": 208.0,
-        "orphans_max": 0.0,
-        "reload_orphans_max": 0.0,
-        "reload_object_growth": -7.0,
-        "frame_p95_ms": 17.048,
-        "frames_over_33.4ms": 0.0,
-        "proc_worst_avg_ms": 0.1794,
-        "phys_worst_avg_ms": 0.3109,
-        "mem_static_growth": 144212.0
-      }
-    },
     {
       "run_id": "43590949880",
       "commit": "1a8f329e5b68eaafd8de34f139a008f296beca91",
@@ -109,6 +90,25 @@
         "phys_worst_avg_ms": 0.2607,
         "mem_static_growth": 149552.0
       }
+    },
+    {
+      "run_id": "43928499033",
+      "commit": "65a82512b847ce138f6be5d0db642a3ff8955d11",
+      "date": "2026-11-16T18:44:07Z",
+      "metrics": {
+        "saves": 0.0,
+        "objects_avg": 2549.15,
+        "nodes_avg": 503.96666666666664,
+        "resources_avg": 208.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": -7.0,
+        "frame_p95_ms": 16.961,
+        "frames_over_33.4ms": 0.0,
+        "proc_worst_avg_ms": 0.2156,
+        "phys_worst_avg_ms": 0.2492,
+        "mem_static_growth": 149384.0
+      }
     }
   ],
   "accepted": null,
@@ -123,7 +123,8 @@
     "43590949880",
     "43712895718",
     "43720643176",
-    "43762379900"
+    "43762379900",
+    "43928499033"
   ],
   "profile": "desktop"
 }
