@@ -759,7 +759,7 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 				serials.append(s)
 		config.set_value("input", action, serials)
 
-	err = config.save_encrypted_pass(path, Globals.ensure_encryption_key())
+	err = Globals.save_config(config, path)
 
 	if err != OK:
 		Globals.log_message(
@@ -801,8 +801,8 @@ func save_last_input_device(device: String) -> void:
 
 	config.set_value("input", "last_input_device", device)
 
-	# FIX: Use the centralized key helper and capture the save error
-	err = config.save_encrypted_pass(CONFIG_PATH, Globals.ensure_encryption_key())
+	# Shared save helper: encrypted, or plaintext if the key is empty (#1145)
+	err = Globals.save_config(config, CONFIG_PATH)
 
 	if err != OK:
 		Globals.log_message(

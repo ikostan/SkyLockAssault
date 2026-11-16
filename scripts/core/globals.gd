@@ -6,9 +6,10 @@
 ## - Gameplay settings: the shared GameSettingsResource and its encrypted persistence
 ##   (persisted_schema, _load_settings/_save_settings). Only schema keys are saved;
 ##   runtime state on the resource (fuel, speed, thresholds) is never written to disk.
-## - Config file I/O shared by other autoloads: encryption key, safe_load_config().
-##   An unreadable encrypted file is kept as <path>.corrupt, and the main menu is told once
-##   through consume_settings_reset_notice() (#1144).
+## - Config file I/O shared by other autoloads: encryption key, safe_load_config(),
+##   save_config(). An unreadable encrypted file is kept as <path>.corrupt, and the main menu
+##   is told once through consume_settings_reset_notice() (#1144). Every save goes through
+##   save_config(), which falls back to plaintext when the key is empty (#1145).
 ## - Menu overlay stack: hidden_menus, options_open, options_instance,
 ##   load_options(), load_key_mapping().
 ## - Scene transitions: load_scene_with_loading() and next_scene.
@@ -118,6 +119,9 @@ var _is_loading_settings: bool = false  # Guard flag
 ## Set when safe_load_config() moved an unreadable file aside and defaults were used.
 ## Read and cleared by consume_settings_reset_notice(). Never saved, so the notice shows once.
 var _settings_reset_notice_pending: bool = false
+## Test-only: makes ensure_encryption_key() return an empty key without regenerating it.
+## Set and cleared only by set_test_empty_encryption_key().
+var _force_empty_key_for_tests: bool = false
 
 
 func _ready() -> void:
@@ -355,8 +359,8 @@ func _load_settings(path: String = Settings.CONFIG_PATH) -> void:
 ##
 ## Re-reads the existing file first so sections owned by other managers (audio, input)
 ## survive, then writes every persisted_schema property into SETTINGS_SECTION and erases
-## the RETIRED_SETTINGS_KEYS. Other unknown keys are kept. Does not touch
-## _is_loading_settings.
+## the RETIRED_SETTINGS_KEYS. Other unknown keys are kept. Writes through save_config(), so
+## an empty key saves plaintext. Does not touch _is_loading_settings.
 ##
 ## :param path: Config file path (default: Settings.CONFIG_PATH).
 ## :type path: String
@@ -391,31 +395,18 @@ func _save_settings(path: String = Settings.CONFIG_PATH) -> void:
 		if config.has_section_key(SETTINGS_SECTION, retired_key):
 			config.erase_section_key(SETTINGS_SECTION, retired_key)
 
-	# FIX: Re-added the branch to properly handle the plaintext failsafe
-	var key: String = ensure_encryption_key()
-
-	if key.is_empty():
-		err = config.save(path)
-		if err != OK:
-			log_message(
-				"🚨 CRITICAL FAILURE: Failed to save plaintext settings (Error: " + str(err) + ")",
-				LogLevel.ERROR
-			)
-		else:
-			log_message("⚠️ FAILSAFE ACTIVE: Settings saved in PLAINTEXT.", LogLevel.WARNING)
+	err = save_config(config, path)
+	if err != OK:
+		log_message(
+			(
+				"🚨 CRITICAL ENCRYPTION FAILURE: Failed to save encrypted settings (Error: "
+				+ str(err)
+				+ ")"
+			),
+			LogLevel.ERROR
+		)
 	else:
-		err = config.save_encrypted_pass(path, key)
-		if err != OK:
-			log_message(
-				(
-					"🚨 CRITICAL ENCRYPTION FAILURE: Failed to save encrypted settings (Error: "
-					+ str(err)
-					+ ")"
-				),
-				LogLevel.ERROR
-			)
-		else:
-			log_message("🔒 Encrypted settings persisted successfully.", LogLevel.DEBUG)
+		log_message("🔒 Encrypted settings persisted successfully.", LogLevel.DEBUG)
 
 
 func _on_options_exited_unexpectedly() -> void:
@@ -578,6 +569,8 @@ static func set_game_version_for_tests(value: String) -> void:
 ## Ensures the encryption key is initialized and returns it.
 ## Centralizes the safety check so other scripts don't have to repeat it.
 func ensure_encryption_key() -> String:
+	if _force_empty_key_for_tests:
+		return ""
 	if save_encryption_pass.is_empty():
 		save_encryption_pass = _get_encryption_key()
 		if save_encryption_pass.is_empty():
@@ -672,6 +665,33 @@ func is_file_encrypted(path: String) -> bool:
 	return magic == 0x43454447
 
 
+## Saves a config file with the current key, or as plaintext if the key is empty.
+##
+## The only place that writes config files, so every section of [code]settings.cfg[/code]
+## follows one rule (#1145). An empty key is rare: [method _get_encryption_key] returns one
+## only when the salt is empty. A plaintext file is read back by [method safe_load_config] as
+## legacy and re-encrypted by the existing migration once a key is available. Logs only the
+## plaintext case; callers keep their own success and error messages.
+##
+## [param config]: The ConfigFile to write.
+## [param path]: Destination file path.
+## Returns the error from [method ConfigFile.save_encrypted_pass] or [method ConfigFile.save].
+func save_config(config: ConfigFile, path: String) -> int:
+	var key: String = ensure_encryption_key()
+	if not key.is_empty():
+		return config.save_encrypted_pass(path, key)
+
+	var err: int = config.save(path)
+	if err == OK:
+		log_message("⚠️ FAILSAFE ACTIVE: Saved in PLAINTEXT: " + path, LogLevel.WARNING)
+	else:
+		log_message(
+			"🚨 CRITICAL FAILURE: Failed to save plaintext %s (Error: %d)" % [path, err],
+			LogLevel.ERROR
+		)
+	return err
+
+
 ## Safely loads a config file, handling encrypted and legacy plaintext formats.
 ##
 ## Loads an encrypted file with the device key, or a plaintext file as a legacy fallback that
@@ -681,6 +701,10 @@ func is_file_encrypted(path: String) -> bool:
 ## reported as [code]ERR_FILE_NOT_FOUND[/code], so callers fall back to defaults. If that
 ## move fails, the file stays in place and the original error is returned. Other decryption
 ## errors and all plaintext load errors are returned unchanged and the file is kept.
+##
+## With an empty key, an encrypted file is not decrypted or moved: that doesn't mean it is
+## corrupt. [code]ERR_UNCONFIGURED[/code] is returned, so callers skip saving and the file
+## is never overwritten (#1145).
 ##
 ## [param path]: The file system path to the configuration file to load.
 ## Returns a Dictionary with [code]config[/code] ([code]ConfigFile[/code]), [code]err[/code]
@@ -692,13 +716,25 @@ func safe_load_config(path: String) -> Dictionary:
 	var config: ConfigFile = ConfigFile.new()
 	var err: int = OK
 	var is_legacy: bool = false
+	var file_exists: bool = FileAccess.file_exists(path)
+	var encrypted: bool = file_exists and is_file_encrypted(path)
 
-	if not FileAccess.file_exists(path):
+	if not file_exists:
 		err = ERR_FILE_NOT_FOUND
 		log_message(
 			"Config file not found at: " + path + " (Normal for first-time boot)", LogLevel.DEBUG
 		)
-	elif is_file_encrypted(path):
+	elif encrypted and key.is_empty():
+		err = ERR_UNCONFIGURED
+		log_message(
+			(
+				"⚠️ No encryption key: can't read encrypted file "
+				+ path
+				+ ". Keeping it unchanged and skipping saves to it."
+			),
+			LogLevel.WARNING
+		)
+	elif encrypted:
 		err = config.load_encrypted_pass(path, key)
 		if err != OK:
 			log_message(
@@ -802,3 +838,15 @@ func consume_settings_reset_notice() -> bool:
 func set_test_encryption_key(override_key: String = "test_deterministic_key_123") -> void:
 	save_encryption_pass = override_key
 	log_message("Encryption key overridden for testing.", LogLevel.DEBUG)
+
+
+## Test-only: forces [method ensure_encryption_key] to return an empty key.
+##
+## Setting [member save_encryption_pass] to "" doesn't simulate a failed key, because
+## [method ensure_encryption_key] regenerates a blank key. Tests that enable this must call it
+## again with [code]false[/code] in their cleanup. The cached key is not changed.
+##
+## [param enabled]: True to force an empty key, false to restore normal behavior.
+func set_test_empty_encryption_key(enabled: bool = true) -> void:
+	_force_empty_key_for_tests = enabled
+	log_message("Empty encryption key forced for testing: " + str(enabled), LogLevel.DEBUG)

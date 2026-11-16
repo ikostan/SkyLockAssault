@@ -20,6 +20,13 @@ func after_each() -> void:
 # BOUNDARY & INVARIANT TESTS
 # ==========================================
 
+## #1146: fire_rate and damage live only in BulletResource, so WeaponResource must not
+## bring back the mirror fields that switch_to() used to copy into.
+func test_has_no_firing_tuning_fields() -> void:
+	assert_false("fire_rate" in weapon_res, "fire_rate belongs to BulletResource.")
+	assert_false("damage" in weapon_res, "damage belongs to BulletResource.")
+
+
 func test_ammo_clamps_to_bounds() -> void:
 	gut.p("Testing: current_ammo cannot exceed [0, max_ammo].")
 	weapon_res.max_ammo = 100

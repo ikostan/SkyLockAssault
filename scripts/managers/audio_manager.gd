@@ -668,8 +668,8 @@ func save_volumes(path: String = "") -> void:
 		config.set_value("audio", config_data["volume_var"], state["volume"])
 		config.set_value("audio", config_data["muted_var"], state["muted"])
 
-	# FIX: Use the centralized key helper
-	err = config.save_encrypted_pass(path, Globals.ensure_encryption_key())
+	# Shared save helper: encrypted, or plaintext if the key is empty (#1145)
+	err = Globals.save_config(config, path)
 
 	if err == OK:
 		Globals.log_message("Saved volumes to config.", Globals.LogLevel.DEBUG)
