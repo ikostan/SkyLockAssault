@@ -16,8 +16,11 @@
 ## save_encryption_pass only makes ensure_encryption_key() regenerate the key.
 ##
 ## Settings.save_last_input_device() always writes Settings.CONFIG_PATH, so tests that use it
-## work on that path and restore its original bytes afterwards. Log lines are read through a
-## Logger added with OS.add_logger(), which receives everything Globals.log_message() prints.
+## work on that path. The suite saves the bytes of that file and of its settings.cfg.corrupt
+## recovery copy (#1144) before each test and writes them back afterwards.
+##
+## Log lines are read through a Logger added with OS.add_logger(), which receives everything
+## Globals.log_message() prints.
 ##
 ## Issue: https://github.com/ikostan/SkyLockAssault/issues/1145
 
@@ -62,6 +65,9 @@ var _original_last_audible: Dictionary = {}
 ## Bytes of Settings.CONFIG_PATH before the test, or empty if it didn't exist.
 var _original_config_bytes: PackedByteArray = PackedByteArray()
 var _original_config_existed: bool = false
+## Bytes of the real settings.cfg.corrupt recovery copy (#1144), or empty if it didn't exist.
+var _original_backup_bytes: PackedByteArray = PackedByteArray()
+var _original_backup_existed: bool = false
 var _log: LogCapture
 
 
@@ -78,6 +84,10 @@ func before_each() -> void:
 	_original_config_bytes = PackedByteArray()
 	if _original_config_existed:
 		_original_config_bytes = FileAccess.get_file_as_bytes(Settings.CONFIG_PATH)
+	_original_backup_existed = FileAccess.file_exists(CONFIG_BACKUP_PATH)
+	_original_backup_bytes = PackedByteArray()
+	if _original_backup_existed:
+		_original_backup_bytes = FileAccess.get_file_as_bytes(CONFIG_BACKUP_PATH)
 	_remove_test_files()
 
 	Globals.set_test_encryption_key(KEY_A)
@@ -99,6 +109,10 @@ func after_each() -> void:
 		var file: FileAccess = FileAccess.open(Settings.CONFIG_PATH, FileAccess.WRITE)
 		file.store_buffer(_original_config_bytes)
 		file.close()
+	if _original_backup_existed:
+		var backup: FileAccess = FileAccess.open(CONFIG_BACKUP_PATH, FileAccess.WRITE)
+		backup.store_buffer(_original_backup_bytes)
+		backup.close()
 
 
 ## Removes the test files, a directory left at CONFIG_PATH, and any .corrupt copies.
