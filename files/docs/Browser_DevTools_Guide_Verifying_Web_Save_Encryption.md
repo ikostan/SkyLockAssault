@@ -282,10 +282,19 @@ returns an empty string:
 ""
 ```
 
-Godot still creates a file with encryption headers (`GDEC`) even
-though the content is effectively plaintext.
+Godot's `save_encrypted_pass()` still accepts it and writes a file with
+encryption headers (`GDEC`), keyed only by the MD5 of the empty
+password. Anyone can decrypt it.
 
 This creates “fake encryption.”
+
+Since [#1145](https://github.com/ikostan/SkyLockAssault/issues/1145),
+every save goes through `Globals.save_config()`, which writes an empty
+key as plain text with no `GDEC` header and logs
+`⚠️ FAILSAFE ACTIVE: Saved in PLAINTEXT`. A current build with an empty
+key therefore shows readable settings (see below), not a `GDEC` file.
+Before #1145, only gameplay settings were saved as plain text, and key
+bindings and audio volumes were saved this hollow way.
 
 ---
 
