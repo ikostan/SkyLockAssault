@@ -367,3 +367,104 @@ func test_each_caller_logs_write_failure_with_empty_key() -> void:
 		"last device save must log its error"
 	)
 	assert_false(FileAccess.file_exists(INVALID_CONFIG_PATH), "no file may be written")
+
+
+## A missing file remains a first-boot condition even when the key is unavailable.
+func test_missing_file_with_empty_key_does_not_create_file_or_reset_notice() -> void:
+	Globals.set_test_empty_encryption_key()
+
+	var result: Dictionary = Globals.safe_load_config(TEST_CONFIG_PATH)
+
+	assert_eq(result["err"], ERR_FILE_NOT_FOUND)
+	assert_false(result["is_legacy"])
+	assert_true(result["config"].get_sections().is_empty())
+	assert_false(FileAccess.file_exists(TEST_CONFIG_PATH))
+	assert_false(FileAccess.file_exists(BACKUP_PATH))
+	assert_false(Globals.consume_settings_reset_notice())
+
+
+## Each caller must preserve unfamiliar sections while updating existing plaintext.
+func test_each_save_path_preserves_unknown_values_with_empty_key(
+	caller: String = use_parameters(["gameplay", "input", "device", "audio"])
+) -> void:
+	Globals.set_test_empty_encryption_key()
+	var seed := ConfigFile.new()
+	seed.set_value("extension", "options", {"enabled": true, "levels": [1, 3]})
+	seed.set_value(Globals.SETTINGS_SECTION, "future_setting", "keep gameplay")
+	seed.set_value("input", "future_binding", "keep input")
+	seed.set_value("audio", "future_bus", "keep audio")
+	assert_eq(seed.save(Settings.CONFIG_PATH), OK)
+
+	match caller:
+		"gameplay": Globals._save_settings(Settings.CONFIG_PATH)
+		"input": Settings.save_input_mappings(Settings.CONFIG_PATH, ["fire"])
+		"device": Settings.save_last_input_device("gamepad")
+		"audio": AudioManager.save_volumes(Settings.CONFIG_PATH)
+
+	var saved := ConfigFile.new()
+	assert_eq(saved.load(Settings.CONFIG_PATH), OK, caller + " must retain plaintext")
+	assert_eq(saved.get_value("extension", "options"), {"enabled": true, "levels": [1, 3]})
+	assert_eq(saved.get_value(Globals.SETTINGS_SECTION, "future_setting"), "keep gameplay")
+	assert_eq(saved.get_value("input", "future_binding"), "keep input")
+	assert_eq(saved.get_value("audio", "future_bus"), "keep audio")
+
+
+## A key outage must not replace an earlier recovery copy or consume a pending notice.
+func test_empty_key_keeps_existing_backup_and_pending_notice() -> void:
+	var original: PackedByteArray = _write_encrypted_file(TEST_CONFIG_PATH)
+	var backup := ConfigFile.new()
+	backup.set_value("recovery", "value", "earlier save")
+	assert_eq(backup.save(BACKUP_PATH), OK)
+	var backup_bytes: PackedByteArray = FileAccess.get_file_as_bytes(BACKUP_PATH)
+	Globals._settings_reset_notice_pending = true
+	Globals.set_test_empty_encryption_key()
+
+	assert_eq(Globals.safe_load_config(TEST_CONFIG_PATH)["err"], ERR_UNCONFIGURED)
+
+	assert_eq(FileAccess.get_file_as_bytes(TEST_CONFIG_PATH), original)
+	assert_eq(FileAccess.get_file_as_bytes(BACKUP_PATH), backup_bytes)
+	assert_true(Globals.consume_settings_reset_notice(), "an earlier reset still needs reporting")
+	assert_false(Globals.consume_settings_reset_notice(), "notice remains one-shot")
+
+
+## Skipped writes during an outage must not prevent loading and saving when the key returns.
+func test_encrypted_file_resumes_updates_after_key_returns() -> void:
+	var original: PackedByteArray = _write_encrypted_file(Settings.CONFIG_PATH)
+	Globals.set_test_empty_encryption_key()
+	_run_all_save_paths()
+	assert_eq(FileAccess.get_file_as_bytes(Settings.CONFIG_PATH), original)
+
+	Globals.set_test_empty_encryption_key(false)
+	Globals._load_settings(Settings.CONFIG_PATH)
+	assert_eq(Globals.settings.difficulty, 1.7)
+	Settings.save_last_input_device("gamepad")
+
+	var saved := ConfigFile.new()
+	assert_eq(saved.load_encrypted_pass(Settings.CONFIG_PATH, KEY_A), OK)
+	assert_eq(saved.get_value(Globals.SETTINGS_SECTION, "difficulty"), 1.7)
+	assert_eq(saved.get_value("audio", "master_volume"), 0.3)
+	assert_eq(saved.get_value("input", "fire"), ["key:%d" % KEY_K])
+	assert_eq(saved.get_value("input", "last_input_device"), "gamepad")
+	assert_false(FileAccess.file_exists(CONFIG_BACKUP_PATH))
+	assert_false(Globals.consume_settings_reset_notice())
+
+
+## Plaintext parse failures must still stop all callers from overwriting the source.
+func test_malformed_plaintext_is_preserved_with_empty_key() -> void:
+	var file := FileAccess.open(Settings.CONFIG_PATH, FileAccess.WRITE)
+	file.store_string("[broken section\nvalue=42\n")
+	file.close()
+	var original: PackedByteArray = FileAccess.get_file_as_bytes(Settings.CONFIG_PATH)
+	Globals.set_test_empty_encryption_key()
+
+	var result: Dictionary = Globals.safe_load_config(Settings.CONFIG_PATH)
+	assert_eq(result["err"], ERR_PARSE_ERROR)
+	assert_false(result["is_legacy"])
+	_run_all_save_paths()
+	# One explicit read and one read per save path each report the malformed source.
+	for _read: int in range(5):
+		assert_engine_error("ConfigFile parse error")
+
+	assert_eq(FileAccess.get_file_as_bytes(Settings.CONFIG_PATH), original)
+	assert_false(FileAccess.file_exists(CONFIG_BACKUP_PATH))
+	assert_false(Globals.consume_settings_reset_notice())

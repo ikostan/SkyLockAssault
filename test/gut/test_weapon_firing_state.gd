@@ -276,3 +276,29 @@ func test_two_firers_sharing_one_config_stay_unchanged_after_swaps() -> void:
 	assert_eq(second_firer.current_weapon.config, shared_config)
 	assert_eq(shared_config.fire_rate, 0.3)
 	assert_eq(shared_config.damage, 21)
+
+
+## Swapping between differently tuned bullets must not copy tuning from the previous slot.
+func test_switch_between_distinct_configs_preserves_each_weapons_tuning() -> void:
+	var fast := BulletResource.new()
+	fast.fire_rate = 0.02
+	fast.damage = 1
+	var slow := BulletResource.new()
+	slow.fire_rate = 2.0
+	slow.damage = 120
+	var fast_bullet: Node2D = BULLET_SCENE.instantiate()
+	fast_bullet.config = fast
+	var slow_bullet: Node2D = BULLET_SCENE.instantiate()
+	slow_bullet.config = slow
+	weapon.weapon_types.assign([_pack(fast_bullet), _pack(slow_bullet)])
+
+	for index: int in [0, 1, 0]:
+		weapon.switch_to(index)
+		var expected: BulletResource = fast if index == 0 else slow
+		assert_eq(weapon.current_weapon.config, expected)
+		assert_eq(weapon.weapon_resource.current_index, index)
+		assert_eq(weapon.weapon_resource.current_ammo, 3)
+		assert_eq(fast.fire_rate, 0.02)
+		assert_eq(fast.damage, 1)
+		assert_eq(slow.fire_rate, 2.0)
+		assert_eq(slow.damage, 120)

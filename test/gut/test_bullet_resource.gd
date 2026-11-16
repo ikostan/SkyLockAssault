@@ -100,3 +100,24 @@ func test_valid_tuning_is_unchanged() -> void:
 func test_default_bullet_tres_tuning_loads_unchanged() -> void:
 	assert_eq(DEFAULT_BULLET.fire_rate, 0.15)
 	assert_eq(DEFAULT_BULLET.damage, 10)
+
+
+## Clamping must not latch the resource at its lower bounds after an invalid assignment.
+func test_valid_tuning_can_replace_previously_clamped_values() -> void:
+	var config := BulletResource.new()
+	config.fire_rate = -10.0
+	config.damage = -10
+	assert_eq(config.fire_rate, 0.01)
+	assert_eq(config.damage, 0)
+
+	config.fire_rate = 2.5
+	config.damage = 1000
+	assert_eq(config.fire_rate, 2.5)
+	assert_eq(config.damage, 1000)
+
+
+## The fire-rate boundary must preserve nearby valid values without rounding them down.
+func test_fire_rate_immediately_above_minimum_is_preserved() -> void:
+	var config := BulletResource.new()
+	config.fire_rate = 0.010001
+	assert_eq(config.fire_rate, 0.010001)
