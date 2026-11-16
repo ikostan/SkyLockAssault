@@ -295,10 +295,11 @@ func test_switch_between_distinct_configs_preserves_each_weapons_tuning() -> voi
 	for index: int in [0, 1, 0]:
 		weapon.switch_to(index)
 		var expected: BulletResource = fast if index == 0 else slow
-		assert_eq(weapon.current_weapon.config, expected)
-		assert_eq(weapon.weapon_resource.current_index, index)
-		assert_eq(weapon.weapon_resource.current_ammo, 3)
-		assert_eq(fast.fire_rate, 0.02)
-		assert_eq(fast.damage, 1)
-		assert_eq(slow.fire_rate, 2.0)
-		assert_eq(slow.damage, 120)
+		var step: String = "after switch_to(%d)" % index
+		assert_eq(weapon.current_weapon.config, expected, step + ": active config")
+		assert_eq(weapon.weapon_resource.current_index, index, step + ": index")
+		assert_eq(weapon.weapon_resource.current_ammo, 3, step + ": ammo")
+		assert_eq(fast.fire_rate, 0.02, step + ": fast fire_rate")
+		assert_eq(fast.damage, 1, step + ": fast damage")
+		assert_eq(slow.fire_rate, 2.0, step + ": slow fire_rate")
+		assert_eq(slow.damage, 120, step + ": slow damage")

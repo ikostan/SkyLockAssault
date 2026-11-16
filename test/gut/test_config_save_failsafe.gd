@@ -388,12 +388,12 @@ func test_each_save_path_preserves_unknown_values_with_empty_key(
 	caller: String = use_parameters(["gameplay", "input", "device", "audio"])
 ) -> void:
 	Globals.set_test_empty_encryption_key()
-	var seed := ConfigFile.new()
-	seed.set_value("extension", "options", {"enabled": true, "levels": [1, 3]})
-	seed.set_value(Globals.SETTINGS_SECTION, "future_setting", "keep gameplay")
-	seed.set_value("input", "future_binding", "keep input")
-	seed.set_value("audio", "future_bus", "keep audio")
-	assert_eq(seed.save(Settings.CONFIG_PATH), OK)
+	var seed_config := ConfigFile.new()
+	seed_config.set_value("extension", "options", {"enabled": true, "levels": [1, 3]})
+	seed_config.set_value(Globals.SETTINGS_SECTION, "future_setting", "keep gameplay")
+	seed_config.set_value("input", "future_binding", "keep input")
+	seed_config.set_value("audio", "future_bus", "keep audio")
+	assert_eq(seed_config.save(Settings.CONFIG_PATH), OK, "plaintext seed file must save")
 
 	match caller:
 		"gameplay": Globals._save_settings(Settings.CONFIG_PATH)
@@ -403,10 +403,26 @@ func test_each_save_path_preserves_unknown_values_with_empty_key(
 
 	var saved := ConfigFile.new()
 	assert_eq(saved.load(Settings.CONFIG_PATH), OK, caller + " must retain plaintext")
-	assert_eq(saved.get_value("extension", "options"), {"enabled": true, "levels": [1, 3]})
-	assert_eq(saved.get_value(Globals.SETTINGS_SECTION, "future_setting"), "keep gameplay")
-	assert_eq(saved.get_value("input", "future_binding"), "keep input")
-	assert_eq(saved.get_value("audio", "future_bus"), "keep audio")
+	assert_eq(
+		saved.get_value("extension", "options"),
+		{"enabled": true, "levels": [1, 3]},
+		caller + " must keep an unknown section"
+	)
+	assert_eq(
+		saved.get_value(Globals.SETTINGS_SECTION, "future_setting"),
+		"keep gameplay",
+		caller + " must keep an unknown gameplay key"
+	)
+	assert_eq(
+		saved.get_value("input", "future_binding"),
+		"keep input",
+		caller + " must keep an unknown input key"
+	)
+	assert_eq(
+		saved.get_value("audio", "future_bus"),
+		"keep audio",
+		caller + " must keep an unknown audio key"
+	)
 
 
 ## A key outage must not replace an earlier recovery copy or consume a pending notice.
