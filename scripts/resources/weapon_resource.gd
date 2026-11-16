@@ -2,8 +2,9 @@
 ## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## weapon_resource.gd
 ##
-## DATA CONTAINER: Manages weapon states, ammo, and firing configurations.
+## DATA CONTAINER: Manages weapon states and ammo.
 ## Operates as an independent, platform-agnostic Subject in the Observer Pattern.
+## Firing tuning (fire_rate, damage) lives only in BulletResource (#1146).
 class_name WeaponResource
 extends Resource
 
@@ -96,16 +97,6 @@ signal ammo_updated(current: int, max_ammo: int)
 
 		current_ammo = new_ammo
 		ammo_updated.emit(current_ammo, max_ammo)
-
-# --- Tuning Properties ---
-
-@export var fire_rate: float = 0.1:
-	set(value):
-		fire_rate = max(0.01, value)
-
-@export var damage: float = 10.0:
-	set(value):
-		damage = max(0.0, value)
 
 
 func _init() -> void:

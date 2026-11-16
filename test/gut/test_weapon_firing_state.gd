@@ -5,6 +5,7 @@ extends "res://addons/gut/test.gd"
 
 const WEAPON_SCRIPT: GDScript = preload("res://scripts/entities/weapon.gd")
 const BULLET_SCENE: PackedScene = preload("res://scenes/bullet.tscn")
+const BULLET_SCRIPT: GDScript = preload("res://scripts/entities/bullet.gd")
 
 var weapon: Node2D
 var child_weapon: FireResultWeapon
@@ -128,73 +129,97 @@ func test_active_node_without_fire_method_does_not_emit() -> void:
 	assert_signal_not_emitted(weapon, "weapon_fired")
 
 
-func test_switch_copies_direct_stats_without_replacing_shared_resource() -> void:
+## Swapping to a node with its own stat properties keeps the shared WeaponResource and its
+## ammo, and leaves the node's properties alone (#1146: nothing is copied anymore).
+func test_switch_keeps_shared_resource_and_node_stats() -> void:
 	weapon.weapon_types.assign([_pack(TunedWeapon.new())])
 	var shared: WeaponResource = weapon.weapon_resource
 	weapon.switch_to(0)
 
 	assert_eq(weapon.weapon_resource, shared)
-	assert_eq(shared.fire_rate, 0.65)
-	assert_eq(shared.damage, 31.0)
+	assert_eq(shared.available_weapons[0], "Test Cannon")
+	assert_eq(shared.current_index, 0)
 	assert_eq(shared.current_ammo, 3)
+	assert_eq(weapon.current_weapon.fire_rate, 0.65, "node stats must not be rewritten")
+	assert_eq(weapon.current_weapon.damage, 31.0, "node stats must not be rewritten")
 	assert_signal_not_emitted(weapon, "weapon_fired")
 
 
-func test_switch_updates_stats_again_for_next_weapon() -> void:
+## Swapping to the next weapon updates the name and index, and the new node keeps its stats.
+func test_switch_to_next_weapon_updates_name_and_index() -> void:
 	var second := TunedWeapon.new()
+	second.weapon_name = "Heavy Cannon"
 	second.fire_rate = 1.2
 	second.damage = 75.0
 	weapon.weapon_types.assign([_pack(TunedWeapon.new()), _pack(second)])
 	weapon.switch_to(0)
 	weapon.switch_to(1)
 
-	assert_eq(weapon.weapon_resource.fire_rate, 1.2)
-	assert_eq(weapon.weapon_resource.damage, 75.0)
 	assert_eq(weapon.weapon_resource.current_index, 1)
+	assert_eq(weapon.weapon_resource.available_weapons[1], "Heavy Cannon")
 	assert_eq(weapon.weapon_resource.current_ammo, 3)
+	assert_eq(weapon.current_weapon.fire_rate, 1.2)
+	assert_eq(weapon.current_weapon.damage, 75.0)
 	assert_signal_not_emitted(weapon, "weapon_fired")
 
 
-func test_switch_without_optional_stats_preserves_resource_values() -> void:
-	weapon.weapon_resource.fire_rate = 0.9
-	weapon.weapon_resource.damage = 19.0
+## A weapon node with no stats or name still equips, with the "Machine Gun" fallback name.
+func test_switch_without_optional_stats_still_equips() -> void:
 	weapon.weapon_types.assign([_pack(Node2D.new())])
 	weapon.switch_to(0)
 
-	assert_eq(weapon.weapon_resource.fire_rate, 0.9)
-	assert_eq(weapon.weapon_resource.damage, 19.0)
+	assert_not_null(weapon.current_weapon)
+	assert_eq(weapon.current_index, 0)
+	assert_eq(weapon.weapon_resource.current_index, 0)
+	assert_eq(weapon.weapon_resource.available_weapons[0], "Machine Gun")
 
 
-func test_switch_with_only_fire_rate_preserves_damage() -> void:
-	weapon.weapon_resource.damage = 19.0
-	weapon.weapon_types.assign([_pack(RateOnlyWeapon.new())])
+## A node with only fire_rate equips and updates the name and index.
+func test_switch_with_only_fire_rate_updates_name_and_index() -> void:
+	weapon.weapon_types.assign([_pack(Node2D.new()), _pack(RateOnlyWeapon.new())])
+	watch_signals(weapon.weapon_resource)
+	weapon.switch_to(1)
+
+	assert_eq(weapon.weapon_resource.current_index, 1)
+	assert_eq(weapon.weapon_resource.available_weapons[1], "Machine Gun")
+	assert_signal_emitted_with_parameters(
+		weapon.weapon_resource, "weapon_swapped", [1, "Machine Gun"]
+	)
+	assert_eq(weapon.current_weapon.fire_rate, 0.8)
+
+
+## A node with only damage equips and updates the name and index.
+func test_switch_with_only_damage_updates_name_and_index() -> void:
+	weapon.weapon_types.assign([_pack(Node2D.new()), _pack(DamageOnlyWeapon.new())])
+	watch_signals(weapon.weapon_resource)
+	weapon.switch_to(1)
+
+	assert_eq(weapon.weapon_resource.current_index, 1)
+	assert_eq(weapon.weapon_resource.available_weapons[1], "Machine Gun")
+	assert_signal_emitted_with_parameters(
+		weapon.weapon_resource, "weapon_swapped", [1, "Machine Gun"]
+	)
+	assert_eq(weapon.current_weapon.damage, 53.0)
+
+
+## Out-of-range tuning is clamped by BulletResource itself, so the equipped bullet fires with
+## the clamped values. The bounds used to be applied by switch_to() through WeaponResource.
+func test_switch_to_bullet_uses_resource_bounds() -> void:
+	var bullet: Node2D = BULLET_SCENE.instantiate()
+	var bullet_config := BulletResource.new()
+	bullet_config.fire_rate = 0.0
+	bullet_config.damage = -5
+	bullet.config = bullet_config
+	weapon.weapon_types.assign([_pack(bullet)])
 	weapon.switch_to(0)
 
-	assert_eq(weapon.weapon_resource.fire_rate, 0.8)
-	assert_eq(weapon.weapon_resource.damage, 19.0)
+	assert_eq(weapon.current_weapon.config.fire_rate, 0.01)
+	assert_eq(weapon.current_weapon.config.damage, 0)
 
 
-func test_switch_with_only_damage_preserves_fire_rate() -> void:
-	weapon.weapon_resource.fire_rate = 0.9
-	weapon.weapon_types.assign([_pack(DamageOnlyWeapon.new())])
-	weapon.switch_to(0)
-
-	assert_eq(weapon.weapon_resource.fire_rate, 0.9)
-	assert_eq(weapon.weapon_resource.damage, 53.0)
-
-
-func test_switch_applies_resource_bounds_to_imported_stats() -> void:
-	var invalid := TunedWeapon.new()
-	invalid.fire_rate = 0.0
-	invalid.damage = -5.0
-	weapon.weapon_types.assign([_pack(invalid)])
-	weapon.switch_to(0)
-
-	assert_eq(weapon.weapon_resource.fire_rate, 0.01)
-	assert_eq(weapon.weapon_resource.damage, 0.0)
-
-
-func test_switch_to_configured_bullet_synchronizes_shared_stats() -> void:
+## Regression: bullet tuning moved from node properties into BulletResource. After a swap the
+## firer uses its own config, unchanged.
+func test_switch_to_configured_bullet_uses_its_own_config() -> void:
 	var bullet: Node2D = BULLET_SCENE.instantiate()
 	var bullet_config := BulletResource.new()
 	bullet_config.fire_rate = 0.75
@@ -203,7 +228,51 @@ func test_switch_to_configured_bullet_synchronizes_shared_stats() -> void:
 	weapon.weapon_types.assign([_pack(bullet)])
 	weapon.switch_to(0)
 
-	# Regression: bullet tuning moved from node properties into BulletResource.
-	assert_eq(weapon.weapon_resource.fire_rate, 0.75)
-	assert_eq(weapon.weapon_resource.damage, 48.0)
+	assert_eq(weapon.current_weapon.config.fire_rate, 0.75)
+	assert_eq(weapon.current_weapon.config.damage, 48)
 	assert_eq(weapon.weapon_resource.current_ammo, 3)
+
+
+## A bullet without its own config uses the shared default_bullet.tres. Equipping it, in the
+## tree so bullet._ready() assigns the default, and swapping again leave that file unchanged.
+func test_switch_leaves_default_bullet_config_unchanged() -> void:
+	var default_config: BulletResource = BULLET_SCRIPT.DEFAULT_BULLET_CONFIG
+	var fire_rate_before: float = default_config.fire_rate
+	var damage_before: int = default_config.damage
+	var firer: Node2D = WEAPON_SCRIPT.new()
+	firer.weapon_types.assign([BULLET_SCENE])
+	add_child_autofree(firer)  # _ready() equips index 0
+	firer.switch_to(0)
+
+	assert_eq(firer.current_weapon.config, default_config, "default config must be used")
+	assert_eq(default_config.fire_rate, fire_rate_before)
+	assert_eq(default_config.damage, damage_before)
+	assert_eq(default_config.fire_rate, 0.15, "default_bullet.tres fire_rate")
+	assert_eq(default_config.damage, 10, "default_bullet.tres damage")
+
+
+## Two firers sharing one BulletResource both use it, and swaps leave its values unchanged.
+func test_two_firers_sharing_one_config_stay_unchanged_after_swaps() -> void:
+	var shared_config := BulletResource.new()
+	shared_config.fire_rate = 0.3
+	shared_config.damage = 21
+	var first_bullet: Node2D = BULLET_SCENE.instantiate()
+	first_bullet.config = shared_config
+	var second_bullet: Node2D = BULLET_SCENE.instantiate()
+	second_bullet.config = shared_config
+	var other := TunedWeapon.new()
+
+	var first_firer: Node2D = autofree(WEAPON_SCRIPT.new())
+	first_firer.weapon_types.assign([_pack(first_bullet), _pack(other)])
+	var second_firer: Node2D = autofree(WEAPON_SCRIPT.new())
+	second_firer.weapon_types.assign([_pack(second_bullet)])
+
+	first_firer.switch_to(0)
+	second_firer.switch_to(0)
+	first_firer.switch_to(1)
+	first_firer.switch_to(0)
+
+	assert_eq(first_firer.current_weapon.config, shared_config)
+	assert_eq(second_firer.current_weapon.config, shared_config)
+	assert_eq(shared_config.fire_rate, 0.3)
+	assert_eq(shared_config.damage, 21)

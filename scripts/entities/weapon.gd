@@ -28,8 +28,9 @@ func _ready() -> void:
 
 ## Switch the active weapon to the specified index.
 ##
-## Instantiates the weapon scene at the given index, synchronizes stats, and updates the
-## resource index.
+## Instantiates the weapon scene at the given index and updates the resource's weapon name
+## and index. Firing stats stay in the weapon's own BulletResource and are never copied or
+## written back, so equipping a weapon can't change a shared config (#1146).
 ##
 ## [param index]: The array index of the weapon type to activate.
 func switch_to(index: int) -> void:
@@ -60,32 +61,14 @@ func switch_to(index: int) -> void:
 		if current_weapon.get("weapon_name") != null:
 			safe_weapon_name = String(current_weapon.get("weapon_name"))
 
-		# 2. Sync unique weapon stats into the active resource
-		if "config" in current_weapon and current_weapon.config != null:
-			# Pull from BulletResource if the weapon uses the new architecture
-			weapon_resource.fire_rate = current_weapon.config.fire_rate
-			weapon_resource.damage = current_weapon.config.damage
-			# Write the (possibly clamped) values back so Bullet.fire() and
-			# projectile hit handling, which read current_weapon.config
-			# directly, stay consistent with the selected weapon_resource's
-			# normalized fire_rate/damage rather than the original values.
-			current_weapon.config.fire_rate = weapon_resource.fire_rate
-			current_weapon.config.damage = int(weapon_resource.damage)
-		else:
-			# Fallback for simple/legacy weapons (like Gut test mocks)
-			if current_weapon.get("fire_rate") != null:
-				weapon_resource.fire_rate = current_weapon.get("fire_rate")
-			if current_weapon.get("damage") != null:
-				weapon_resource.damage = current_weapon.get("damage")
-
-		# 3. Sync the resource's available_weapons array
+		# 2. Sync the resource's available_weapons array
 		var updated_weapons: Array[String] = weapon_resource.available_weapons
 		if updated_weapons.size() < weapon_types.size():
 			updated_weapons.resize(weapon_types.size())
 		updated_weapons[index] = safe_weapon_name
 		weapon_resource.available_weapons = updated_weapons
 
-		# 4. Update the resource index (this automatically triggers the weapon_swapped signal)
+		# 3. Update the resource index (this automatically triggers the weapon_swapped signal)
 		weapon_resource.current_index = index
 
 		Globals.log_message("Switched to " + safe_weapon_name, Globals.LogLevel.INFO)

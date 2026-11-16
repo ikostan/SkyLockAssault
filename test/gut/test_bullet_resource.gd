@@ -4,6 +4,7 @@
 extends "res://addons/gut/test.gd"
 
 const BULLET_SCENE: PackedScene = preload("res://scenes/bullet.tscn")
+const DEFAULT_BULLET: BulletResource = preload("res://config_resources/default_bullet.tres")
 
 
 func test_defaults_preserve_existing_projectile_behavior() -> void:
@@ -66,3 +67,36 @@ func test_new_resources_do_not_share_mutable_tuning() -> void:
 	assert_eq(second.scale, Vector2(0.25, 0.25))
 	assert_not_null(second.projectile_texture)
 	assert_not_null(second.shot_sound)
+
+
+## #1146: BulletResource validates its own tuning. fire_rate below 0.01 clamps to 0.01.
+func test_fire_rate_below_minimum_clamps(value: float = use_parameters([0.0, -1.0, 0.005])) -> void:
+	var config := BulletResource.new()
+	config.fire_rate = value
+	assert_eq(config.fire_rate, 0.01, "fire_rate %s must clamp to 0.01" % value)
+
+
+## #1146: negative damage clamps to 0.
+func test_negative_damage_clamps_to_zero(value: int = use_parameters([-1, -50])) -> void:
+	var config := BulletResource.new()
+	config.damage = value
+	assert_eq(config.damage, 0, "damage %d must clamp to 0" % value)
+
+
+## #1146: valid values, including the bounds, are stored unchanged.
+func test_valid_tuning_is_unchanged() -> void:
+	var config := BulletResource.new()
+	config.fire_rate = 0.01
+	assert_eq(config.fire_rate, 0.01, "minimum fire_rate is valid")
+	config.fire_rate = 0.7
+	assert_eq(config.fire_rate, 0.7)
+	config.damage = 0
+	assert_eq(config.damage, 0, "zero damage is valid")
+	config.damage = 42
+	assert_eq(config.damage, 42)
+
+
+## #1146: default_bullet.tres loads with the same tuning as before the setters were added.
+func test_default_bullet_tres_tuning_loads_unchanged() -> void:
+	assert_eq(DEFAULT_BULLET.fire_rate, 0.15)
+	assert_eq(DEFAULT_BULLET.damage, 10)
