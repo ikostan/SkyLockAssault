@@ -3,11 +3,11 @@
 
 ---
 
-## PR #TBD Summary
+## PR #1206 Summary
 
 **Title:** Clean up AudioConstants and reduce small resource loading costs  
-**PR:** _TBD_  
-**Branch:** `clean-up-audioconstants-and-resource-loading-costs` → `main`  
+**PR:** [#1206](https://github.com/ikostan/SkyLockAssault/pull/1206)  
+**Branch:** `architect-review-region-2` → `main`  
 **Author:** @ikostan  
 **Resolves:**
 
@@ -94,7 +94,7 @@ Neither part runs per frame, so no visible performance change is expected.
   - **Rewritten:** `test_new_resources_do_not_share_mutable_tuning` assigns both assets to both resources first, then checks that clearing them on one leaves the other's.
   - **New:** `test_new_resource_has_no_default_assets`, `test_default_bullet_tres_assigns_assets` (the `.tres` assigns both, with the same numeric tuning as a new resource), `test_bullet_resource_script_does_not_preload_assets`.
   - `test_custom_configuration_survives_scene_packing` is unchanged and passes.
-- **`test_bullet_configuration.gd` (12 → 13 cases):** new `test_default_config_firer_uses_assets_from_default_bullet_tres`. A config-less firer in the tree spawns a projectile with the laser texture and plays the laser sound. The missing-texture and silent-firing cases are unchanged and pass.
+- **`test_bullet_configuration.gd` (12 → 13 cases):** new `test_default_config_firer_uses_assets_from_default_bullet_tres`. A config-less firer in the tree fires through `fire()` and must produce one projectile with the laser texture and one sound player with the laser sound, so the test also fails if `fire()` stops spawning or playing the sound. The missing-texture and silent-firing cases are unchanged and pass.
 - **`test_weapon_resource.gd` (11 → 19 cases):** new cases for names by index, out-of-range `"None"` (-1, -50, 2, 99), the empty-list placeholder, the default list, the returned string not aliasing the list, a `.tres` save and load round trip, `Resource.duplicate()`, and `weapon_swapped` names on all three emit paths. Both `available_weapons` mutation cases are unchanged and pass.
 - **`test_hud.gd` (12 → 15 cases):** new cases for the default name after setup, setup on a resource already at index 1, and setup again after a swap.
 
@@ -112,6 +112,7 @@ Neither part runs per frame, so no visible performance change is expected.
 
 - **A private backing array.** The issue's sketch adds `get_weapon_name()` next to the existing property. In Godot 4 a property's getter also runs when its own class reads it, so a lookup that read `available_weapons` would still copy the list. A probe on 4.7.1 confirmed it: one read inside the class called the getter once. Godot's docs suggest a separate variable for direct access, so the list lives in `_weapons`, and the export, setter, copying getter and saved `.tres` format stay the same.
 - **`_weapons` repeats the export default.** Godot doesn't call the setter for a member's initial value, so `_weapons` starts as `["Machine Gun"]` too. `test_default_weapon_list_matches_lookup` fails if they drift apart.
+- **`"None"` kept as the missing-weapon name.** Review suggested a nullable result or a validity check, because a weapon named `"None"` and an out-of-range index return the same string. #1150 specifies the `String` return with `"None"`, the old code already used it for both cases, and no caller needs to tell them apart, so a `Variant` return or `has_weapon()` waits for a feature that needs it.
 - **HUD bounds check removed.** It only guarded against an index outside the list, which the setters prevent. If it ever happened, the HUD would now show `{NONE}` instead of keeping a stale label.
 
 ---
@@ -145,15 +146,27 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
   - 12 cases fail in `test_bullet_resource.gd` and `test_audio_constants_discoverability.gd`: no-default-assets, `.tres` assigns assets, no preload, not an autoload, check sound mapped once, and every case that uses the rotor constants.
   - `test_weapon_resource.gd` and `test_hud.gd` don't load, because `get_weapon_name()` is missing.
 - **Engine probe (Part B):** a property getter that counts calls ran once for one read from inside its own class.
-- **Not run locally:** Playwright (`audio_flow_test.py`, `reset_audio_flow_test.py`, `volume_sliders_mutes_test.py`, `weapon_firing_test.py`, `no_error_logs_test.py`) and the benchmark. _Confirm from the PR run._
-- **Benchmark:** _fill in from the PR run._ No per-frame code changes.
-- **Manual check on itch.io:** _menu clicks, mute clicks, rotor sounds, bullet sprite and shot sound unchanged._
+- **PR run (`41aae08`):** GUT, gdUnit4, GDScript lint and format, Markdown lint and DeepSource pass.
+- **Playwright (PR run):** Core Web Flows shard 65 passed; CI & Security shard 1123 passed (plus 3 passed, 2 skipped in its own check).
+- **Benchmark (PR run, report only, baseline `65a8251`):** 0 regressions, 0 warnings on both platforms.
+
+| Metric                      | Desktop baseline → now | Web baseline → now  |
+|-----------------------------|------------------------|---------------------|
+| Frame interval p95 (ms)     | 17.044 → 17.008        | 43.900 → 33.700     |
+| Dropped frames (> 33.4 ms)  | 0 → 0                  | 1,495 → 111         |
+| Process, worst/s avg (ms)   | 0.214 → 0.165          | 6.692 → 5.760       |
+| Physics, worst/s avg (ms)   | 0.300 → 0.316          | 0.942 → 1.163       |
+| OBJECT_RESOURCE_COUNT avg   | 206 → 208              | 206 → 208           |
+
+  No per-frame code changed, so the web timing gains are runner variation, not this PR.
+
+- **Manual check on itch.io:** _after deploy: menu clicks, mute clicks, rotor sounds, bullet sprite and shot sound unchanged._
 
 ---
 
 ## Known Limitations / Follow-ups
 
-- **#1139 and #1141 are still open.** #1150 asked to land after them to avoid conflicts. This PR's changes to `bullet_resource.gd`, `default_bullet.tres` and the bullet tests are small, so whichever lands second needs a short rebase.
+- **#1139 and #1141 are still open.** #1150 asked to land after them to avoid conflicts. Neither has a branch yet, so there is nothing to rebase; when they start, they'll build on this PR and update `test_default_config_firer_uses_assets_from_default_bullet_tres` for the new projectile spawning and SFX pool playback. #1150's Additional Context records this decision.
 - **The `.wav` fallback stays in `SfxManager`** with no shipped sound using it. Removing it would change SFX resolution, which belongs with the SFX pool work in #1141.
 - **`BulletResource.new()` has no assets.** Code that builds a bullet config in code must assign a texture and sound, or get a projectile without a sprite and silent firing. Only tests do this today.
 - **#617 can close** once this merges. Its Findings list still has three unticked items for #1145 and #1146, which are already closed.
@@ -182,12 +195,12 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 | <https://github.com/ikostan/SkyLockAssault/issues/1149> | `AudioConstants` is a `class_name` script, not an autoload        | ✅         | Autoload setting and `/root` node checked.                                                   |
 | <https://github.com/ikostan/SkyLockAssault/issues/1149> | The check sound has one constant and one map entry                | ✅         | Map entry, file, and one-ID-per-file checks.                                                 |
 | <https://github.com/ikostan/SkyLockAssault/issues/1149> | Rotor bus names come from `AudioConstants`                        | ✅         | Player scene test checks both buses.                                                         |
-| <https://github.com/ikostan/SkyLockAssault/issues/1149> | Sounds and volume behavior are unchanged                          | ⏳         | GUT audio suites pass; confirm Playwright and the itch.io check.                             |
+| <https://github.com/ikostan/SkyLockAssault/issues/1149> | Sounds and volume behavior are unchanged                          | ⏳         | GUT audio suites and Playwright pass; itch.io check after deploy.                            |
 | <https://github.com/ikostan/SkyLockAssault/issues/1150> | `bullet_resource.gd` no longer preloads assets                    | ✅         | Null-default and no-preload checks.                                                          |
 | <https://github.com/ikostan/SkyLockAssault/issues/1150> | `default_bullet.tres` assigns the texture and sound directly      | ✅         | `.tres` content and loaded paths checked.                                                    |
 | <https://github.com/ikostan/SkyLockAssault/issues/1150> | Reading one weapon name doesn't copy the list                     | ✅         | `get_weapon_name()` reads `_weapons`; engine probe confirms why the backing array is needed. |
-| <https://github.com/ikostan/SkyLockAssault/issues/1150> | The shipped game looks and sounds the same                        | ⏳         | Default firer test passes; confirm Playwright and the itch.io check.                         |
-| Both                                                    | All GUT, gdUnit4, Playwright and lint jobs pass, no cases removed | ⏳         | GUT, gdUnit4 and lint pass locally; confirm Playwright on the PR run.                        |
+| <https://github.com/ikostan/SkyLockAssault/issues/1150> | The shipped game looks and sounds the same                        | ⏳         | Default firer test through `fire()` and Playwright pass; itch.io check after deploy.         |
+| Both                                                    | All GUT, gdUnit4, Playwright and lint jobs pass, no cases removed | ✅         | All pass on the PR run (`41aae08`); no test cases removed.                                   |
 | Both                                                    | The PR's milestone note is added                                  | ✅         | This note.                                                                                   |
 
 ---
@@ -198,13 +211,14 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 
 - Filed #1149 and #1150 and set their scope.
 - Asked to finish both remaining #617 tasks in one last PR to close the epic.
-- _Branch, commits and PR: fill in._
+- Created the `architect-review-region-2` branch and PR #1206, and applied the changes in four commits: `d4ccced`, `fc7ce88` (tests and this note), `efa6d9a` (production changes), `41aae08` (restored the `default_bullet.tres` asset lines and the `SFX_CHECK` call, and the `fire()` test fix).
+- Took the Sourcery and CodeRabbit review through to resolution, and updated #1150's Additional Context to record why this PR lands before #1139 and #1141.
 
 ### Bots / AI contributions
 
 - **@claude (Opus 5.5)**
   - **Planning**
-    - Flagged that #1150 asked to land after #1139 and #1141, which are still open, and that only a short rebase is needed.
+    - Flagged that #1150 asked to land after #1139 and #1141, which are still open, and checked that their changes don't overlap this PR's production files.
     - Found that `get_weapon_name()` needs a backing array, because Godot 4 runs the getter for reads inside the class.
   - **Implementation**
     - Wrote the production and test changes for #1149 and #1150, and the README autoload line fix.
@@ -212,3 +226,9 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
     - Ran GUT, gdUnit4, `gdformat` and `gdlint` locally with the CI commands, on `main` and on the branch, and mutation-tested the new tests.
     - Probed the getter behavior on Godot 4.7.1.
     - Wrote this note.
+  - **Review follow-up**
+    - Found that `efa6d9a` dropped the two asset lines from `default_bullet.tres` (bullets would ship without sprite or sound) and the `SFX_CHECK` call in `advanced_settings.gd`.
+    - Rewrote the default-firer test to go through `fire()` (Sourcery) and confirmed it fails when either call is removed.
+    - Checked the remaining Sourcery and CodeRabbit comments against the branch head: the ones made on `fc7ce88` were already fixed by `efa6d9a`/`41aae08`; the `"None"` collision and the landing-order comments were answered with reasons.
+    - Updated #1150's Additional Context line.
+  
