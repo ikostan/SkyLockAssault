@@ -436,6 +436,37 @@ func test_hud_reacts_to_weapon_swapped() -> void:
 	assert_eq(_hud.weapon_label.text, expected_text, "HUD must format the text correctly to '{PLASMA=CANNON}'.")
 
 
+## test_hud_shows_initial_weapon_name | Deterministic Initial Sync (#1150)
+## setup_hud() reads the starting name with get_weapon_name() instead of copying the list.
+func test_hud_shows_initial_weapon_name() -> void:
+	assert_eq(_hud.weapon_label.text, "{MACHINE=GUN}", "The default weapon must show after setup.")
+
+
+## test_hud_initial_sync_uses_current_index | Deterministic Initial Sync (#1150)
+## A resource that is already past index 0 shows the weapon at its current index.
+func test_hud_initial_sync_uses_current_index() -> void:
+	var armed: WeaponResource = WeaponResource.new()
+	armed.available_weapons = ["Cannon", "Heavy Missile"]
+	armed.current_index = 1
+
+	_hud.setup_hud(_fuel, _speed, armed)
+
+	assert_eq(_hud.weapon_label.text, "{HEAVY=MISSILE}", "Setup must show the weapon at current_index.")
+
+
+## test_hud_shows_swapped_weapon_after_resetup | Deterministic Initial Sync (#1150)
+## After a swap, setting up the HUD again still shows the active weapon.
+func test_hud_shows_swapped_weapon_after_resetup() -> void:
+	_weapon.available_weapons = ["Cannon", "Laser"]
+	_weapon.current_index = 1
+	assert_eq(_hud.weapon_label.text, "{LASER}", "The swap must update the label.")
+
+	_hud.weapon_label.text = ""
+	_hud.setup_hud(_fuel, _speed, _weapon)
+
+	assert_eq(_hud.weapon_label.text, "{LASER}", "Setup after a swap must show the active weapon.")
+
+
 ## test_hud_reacts_to_ammo_updated | Observer Integration
 func test_hud_reacts_to_ammo_updated() -> void:
 	gut.p("Testing: HUD correctly updates the ammo progress bar observing ammo_updated.")
@@ -446,3 +477,32 @@ func test_hud_reacts_to_ammo_updated() -> void:
 	
 	assert_eq(_hud.ammo_bar.max_value, 500.0, "HUD must dynamically sync the ammo bar maximum value.")
 	assert_eq(_hud.ammo_bar.value, 250.0, "HUD must dynamically sync the ammo bar current value.")
+
+
+## Empty inventories must clear a previously displayed weapon during initial sync.
+func test_initial_sync_of_empty_inventory_replaces_stale_label() -> void:
+	var empty_weapon := WeaponResource.new()
+	empty_weapon.available_weapons = []
+	_hud.weapon_label.text = "{STALE}"
+
+	_hud.setup_hud(_fuel, _speed, empty_weapon)
+
+	assert_eq(_hud.weapon_label.text, "{NONE}")
+	empty_weapon.available_weapons = ["Heavy Laser"]
+	assert_eq(_hud.weapon_label.text, "{HEAVY=LASER}")
+
+
+## Setup must show the clamped selection even when the clamp happened before wiring.
+func test_initial_sync_after_inventory_shrink_uses_clamped_weapon() -> void:
+	var armed := WeaponResource.new()
+	armed.available_weapons = ["Cannon", "Missile", "Laser"]
+	armed.current_index = 2
+	armed.available_weapons = ["Heavy Cannon"]
+
+	_hud.setup_hud(_fuel, _speed, armed)
+
+	assert_eq(_hud.weapon_label.text, "{HEAVY=CANNON}")
+	_weapon.available_weapons = ["Obsolete Weapon"]
+	assert_eq(
+		_hud.weapon_label.text, "{HEAVY=CANNON}", "The replaced resource must no longer drive the HUD."
+	)

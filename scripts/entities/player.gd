@@ -81,9 +81,9 @@ func _ready() -> void:
 	rotor_right_sfx = rotor_right.get_node_or_null("AudioStreamPlayer2D")
 
 	if rotor_left_sfx:
-		rotor_left_sfx.bus = "SFX_Rotor_Left"
+		rotor_left_sfx.bus = AudioConstants.BUS_SFX_ROTOR_LEFT
 	if rotor_right_sfx:
-		rotor_right_sfx.bus = "SFX_Rotor_Right"
+		rotor_right_sfx.bus = AudioConstants.BUS_SFX_ROTOR_RIGHT
 
 	rotor_start(rotor_right, rotor_right_sfx)
 	rotor_start(rotor_left, rotor_left_sfx)

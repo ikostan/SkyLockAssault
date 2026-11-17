@@ -13,6 +13,29 @@
 extends "res://addons/gut/test.gd"
 
 
+## Collects every logged line while it is added with OS.add_logger().
+class LogCapture:
+	extends Logger
+	var lines: Array[String] = []
+	var _mutex: Mutex = Mutex.new()
+
+	func _log_message(message: String, _error: bool) -> void:
+		_mutex.lock()
+		lines.append(message)
+		_mutex.unlock()
+
+	## Returns true if any captured line contains [param text].
+	func has_text(text: String) -> bool:
+		_mutex.lock()
+		var found: bool = false
+		for line: String in lines:
+			if line.contains(text):
+				found = true
+				break
+		_mutex.unlock()
+		return found
+
+
 ## Starts every test from empty caches and a silent pool.
 ## :rtype: void
 func before_each() -> void:
@@ -176,20 +199,49 @@ func test_play_sfx_resolves_via_asset_map() -> void:
 
 ## Verification 8 |
 ## Validates that fallback handling automatically appends the default .wav extension to unmapped sound identifiers.
+##
+## Since #1149 every shipped .wav has a map entry ("check" was the last unmapped one), so no
+## real file can reach the fallback. The test uses an ID with no entry and no file, and reads
+## the path the fallback built from SfxManager's "file not found" warning.
 ## :rtype: void
 func test_play_sfx_unmapped_legacy_fallback() -> void:
 	AudioManager.cleanup_for_test()
+	var unmapped_id: String = "unmapped_fallback_probe"
+	assert_false(
+		AudioConstants.SFX_ASSET_MAP.has(unmapped_id), "The probe ID must not be in SFX_ASSET_MAP."
+	)
 
-	# FIX: Pass an unmapped logical string identifier ("check") instead of a mapped one ("slider")
-	# to correctly exercise the .wav fallback branch.
-	SfxManager.play_sfx("check")
+	# A fresh settings resource logs WARNING by default and isn't observed by Globals, so
+	# the test can't save settings.cfg.
+	var original_settings: GameSettingsResource = Globals.settings
+	Globals.settings = GameSettingsResource.new()
+	var log_capture: LogCapture = LogCapture.new()
+	OS.add_logger(log_capture)
+	SfxManager.play_sfx(unmapped_id)
+	OS.remove_logger(log_capture)
+	Globals.settings = original_settings
 
-	var active_path := SfxManager.get_active_sfx_stream_path()
-	assert_string_contains(
-		active_path,
-		"check.wav",
+	assert_true(
+		log_capture.has_text(AudioConstants.SFX_DIR_PATH + unmapped_id + ".wav"),
 		"Unmapped IDs should automatically append .wav for fallback compatibility."
 	)
+	assert_true(SfxManager.is_sfx_missing(unmapped_id), "A missing fallback file must be cached as missing.")
+	assert_false(SfxManager.is_any_sfx_playing(), "Nothing should play for a missing file.")
+
+
+## Verification 8b |
+## The check sound resolves through SFX_ASSET_MAP instead of the .wav fallback (#1149).
+## :rtype: void
+func test_play_sfx_check_resolves_through_asset_map() -> void:
+	AudioManager.cleanup_for_test()
+	SfxManager.play_sfx(AudioConstants.SFX_CHECK)
+
+	assert_string_contains(
+		SfxManager.get_active_sfx_stream_path(),
+		AudioConstants.SFX_DIR_PATH + AudioConstants.SFX_ASSET_MAP[AudioConstants.SFX_CHECK],
+		"SFX_CHECK must play the file its map entry names."
+	)
+	assert_true(SfxManager.is_sfx_cached(AudioConstants.SFX_CHECK), "The check sound must be cached.")
 
 
 ## Verification 9 |
@@ -214,3 +266,17 @@ func test_input_ignores_mouse_motion() -> void:
 		SfxManager.is_any_sfx_playing(),
 		"Mouse motion wiggles must drop immediately out of the input loop without triggering audio players."
 	)
+
+
+## Both a cold lookup and a cache hit must resolve the corrected check identifier.
+func test_check_sound_replays_from_cache_on_menu_bus() -> void:
+	for playback in range(2):
+		SfxManager.play_sfx(AudioConstants.SFX_CHECK)
+		assert_eq(
+			SfxManager.get_active_sfx_stream_path(),
+			AudioConstants.SFX_DIR_PATH + AudioConstants.SFX_ASSET_MAP[AudioConstants.SFX_CHECK],
+			"Check playback %d must resolve the confirmation asset." % playback
+		)
+		assert_eq(SfxManager.get_active_sfx_bus_name(), AudioConstants.BUS_SFX_MENU)
+		assert_true(SfxManager.is_sfx_cached(AudioConstants.SFX_CHECK))
+		SfxManager.stop_all_sfx()

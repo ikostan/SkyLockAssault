@@ -87,6 +87,38 @@ func test_unconfigured_scenes_receive_independent_default_resources() -> void:
 	assert_eq(second.config.fire_rate, 0.15)
 
 
+## #1150: a firer without its own config fires with the assets from default_bullet.tres,
+## the same sprite and sound as before the script defaults were removed. The test goes
+## through fire(), so it also fails if the firing path stops spawning or playing the sound.
+func test_default_config_firer_uses_assets_from_default_bullet_tres() -> void:
+	var default_firer: Node2D = add_child_autofree(BULLET_SCENE.instantiate())
+	var default_config: BulletResource = load("res://config_resources/default_bullet.tres")
+	assert_eq(default_firer.config, default_config, "A config-less firer uses default_bullet.tres.")
+	assert_eq(
+		default_firer.config.projectile_texture.resource_path,
+		"res://files/sprite/laser_sprites/01.png"
+	)
+	assert_eq(
+		default_firer.config.shot_sound.resource_path,
+		"res://files/sounds/sfx/retro-laser-1-236669.mp3"
+	)
+
+	assert_true(default_firer.fire(), "The first shot of a ready firer must fire.")
+
+	var projectiles := _projectiles()
+	assert_eq(projectiles.size(), 1, "fire() must spawn one projectile.")
+	if projectiles.size() == 1:
+		var sprite := _child_of_type(projectiles[0], "Sprite2D") as Sprite2D
+		assert_not_null(sprite, "The projectile must have a Sprite2D.")
+		if sprite:
+			assert_eq(sprite.texture, default_config.projectile_texture)
+
+	var players := _sound_players()
+	assert_eq(players.size(), 1, "fire() must play the shot sound.")
+	if players.size() == 1:
+		assert_eq(players[0].stream, default_config.shot_sound)
+
+
 func test_ready_preserves_injected_resource() -> void:
 	assert_eq(firer.config, config, "Inspector configuration must not be replaced by defaults.")
 	assert_eq(firer.config.damage, 37)
@@ -222,3 +254,24 @@ func test_configured_sound_uses_weapon_bus_and_cleans_up_on_finish() -> void:
 	assert_true(player.playing)
 	player.finished.emit()
 	assert_true(player.is_queued_for_deletion())
+
+
+## A fresh resource has no assets (#1150): firing with it spawns an untextured projectile
+## and plays no sound, and default_bullet.tres keeps its own assets.
+func test_fresh_resource_fires_without_inheriting_default_assets() -> void:
+	var fresh := BulletResource.new()
+	firer.config = fresh
+
+	assert_true(firer.fire())
+	assert_eq(firer.config, fresh)
+	var projectiles := _projectiles()
+	assert_eq(projectiles.size(), 1)
+	if projectiles.size() == 1:
+		var sprite := _child_of_type(projectiles[0], "Sprite2D") as Sprite2D
+		assert_not_null(sprite)
+		if sprite:
+			assert_null(sprite.texture)
+	assert_eq(_sound_players().size(), 0, "A fresh resource explicitly means silent firing.")
+	var defaults: BulletResource = load("res://config_resources/default_bullet.tres")
+	assert_not_null(defaults.projectile_texture, "Silent firing must not modify shared defaults.")
+	assert_not_null(defaults.shot_sound)

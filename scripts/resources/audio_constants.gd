@@ -1,11 +1,11 @@
 ## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## audio_constants.gd
-## Centralized audio bus name constants and config as autoload singleton.
+## Centralized audio bus names, SFX IDs and bus config.
 ## Use as AudioConstants.BUS_MASTER, etc., to prevent typos and ease renaming.
-## Extends Node for autoload compatibility.
-
-extends Node
+## A class_name script with constants only, not an autoload (#1149): it has no state or
+## functions, so it needs no node in the scene tree.
+class_name AudioConstants
 
 ## Base path for all UI sound effects.
 const SFX_DIR_PATH: String = "res://files/sounds/sfx/"
@@ -15,15 +15,17 @@ const BUS_MASTER: String = "Master"
 const BUS_MUSIC: String = "Music"
 const BUS_SFX: String = "SFX"
 const BUS_SFX_ROTORS: String = "SFX_Rotors"
+## Playback buses of the left and right rotors. Both send to SFX_Rotors, which owns their
+## volume and mute, so they are not in BUS_CONFIG.
+const BUS_SFX_ROTOR_LEFT: String = "SFX_Rotor_Left"
+const BUS_SFX_ROTOR_RIGHT: String = "SFX_Rotor_Right"
 const BUS_SFX_WEAPON: String = "SFX_Weapon"
 const BUS_SFX_MENU: String = "SFX_Menu"
 
 # --- SFX Asset IDs ---
 const SFX_SLIDER: String = "slider"
-const SFX_MUTE_TOGGLE: String = "mute_toggle"  # For future CheckButton task
 const SFX_UI_NAVIGATION: String = "ui_navigation"
-
-## Centralized SFX keys
+## Confirmation click for toggles, mute buttons and key binding.
 const SFX_CHECK: String = "check"
 
 # --- Auto-Mute / Hardware Timing ---
@@ -111,7 +113,7 @@ const UI_SFX: Dictionary = {
 # This prevents asset changes from requiring script alterations.
 const SFX_ASSET_MAP: Dictionary = {
 	"slider": "slider.wav",
-	"mute_toggle": "check.wav",
+	"check": "check.wav",
 	"ui_navigation": "ui_navigation.wav",
 	"ui_accept": "ui_accept.wav",
 	"ui_cancel": "ui_cancel.wav",

@@ -5,7 +5,8 @@
 ## Tuning data for one projectile weapon. The single source of fire_rate and damage (#1146):
 ## bullet.gd reads them for the cooldown and for hits, and nothing copies them elsewhere.
 ## default_bullet.tres is shared by every bullet without its own config, so code must not
-## write to a config at runtime.
+## write to a config at runtime. Asset choices (texture, sound) live in the data file, not in
+## script defaults (#1150).
 class_name BulletResource
 extends Resource
 
@@ -20,8 +21,13 @@ extends Resource
 @export var damage: int = 10:
 	set(value):
 		damage = maxi(0, value)
-@export var projectile_texture: Texture2D = preload("res://files/sprite/laser_sprites/01.png")
-@export var shot_sound: AudioStream = preload("res://files/sounds/sfx/retro-laser-1-236669.mp3")
+## Sprite of the projectile. No default (#1150): data files such as default_bullet.tres
+## assign it, so loading this class doesn't load the asset. Null spawns a projectile
+## without a texture.
+@export var projectile_texture: Texture2D
+## Sound played on each shot. No default (#1150), as with [member projectile_texture].
+## Null fires silently.
+@export var shot_sound: AudioStream
 
 # Added specifically for Issue #284 requirements
 @export var scale: Vector2 = Vector2(0.25, 0.25)

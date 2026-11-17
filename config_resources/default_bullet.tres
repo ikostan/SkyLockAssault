@@ -6,4 +6,6 @@
 
 [resource]
 script = ExtResource("2_2dbea")
+projectile_texture = ExtResource("1_le8fa")
+shot_sound = ExtResource("3_u7yt8")
 metadata/_custom_type_script = "uid://ce7ssgxid8ypt"
