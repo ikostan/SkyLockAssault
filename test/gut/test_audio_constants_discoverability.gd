@@ -7,9 +7,8 @@
 
 extends "res://addons/gut/test.gd"
 
-## Rotor playback buses used by player.gd (not exposed in AudioConstants).
-const BUS_SFX_ROTOR_LEFT: String = "SFX_Rotor_Left"
-const BUS_SFX_ROTOR_RIGHT: String = "SFX_Rotor_Right"
+const PlayerScene: PackedScene = preload("res://scenes/Player.tscn")
+const AdvancedSettingsScript: GDScript = preload("res://scripts/ui/menus/advanced_settings.gd")
 
 # ==========================================================================
 # 1. BUS NAME CONSTANTS VERIFICATION
@@ -23,6 +22,22 @@ func test_bus_name_constants() -> void:
 	assert_eq(AudioConstants.BUS_SFX_ROTORS, "SFX_Rotors", "BUS_SFX_ROTORS mismatch.")
 	assert_eq(AudioConstants.BUS_SFX_WEAPON, "SFX_Weapon", "BUS_SFX_WEAPON mismatch.")
 	assert_eq(AudioConstants.BUS_SFX_MENU, "SFX_Menu", "BUS_SFX_MENU mismatch.")
+	assert_eq(AudioConstants.BUS_SFX_ROTOR_LEFT, "SFX_Rotor_Left", "BUS_SFX_ROTOR_LEFT mismatch.")
+	assert_eq(
+		AudioConstants.BUS_SFX_ROTOR_RIGHT, "SFX_Rotor_Right", "BUS_SFX_ROTOR_RIGHT mismatch."
+	)
+
+
+## AudioConstants is a class_name script with constants only, not an autoload (#1149).
+func test_audio_constants_is_not_an_autoload() -> void:
+	assert_false(
+		ProjectSettings.has_setting("autoload/AudioConstants"),
+		"project.godot must not list AudioConstants as an autoload."
+	)
+	assert_null(
+		get_tree().root.get_node_or_null("AudioConstants"),
+		"No AudioConstants node should exist under /root."
+	)
 
 
 # ==========================================================================
@@ -33,7 +48,7 @@ func test_bus_name_constants() -> void:
 ## without relying on or exposing internal engine folder layout paths.
 func test_sfx_asset_map_structural_integrity() -> void:
 	assert_true(
-		"SFX_ASSET_MAP" in AudioConstants, 
+		"SFX_ASSET_MAP" in AudioConstants,
 		"AudioConstants must expose SFX_ASSET_MAP for dynamic path builds."
 	)
 	
@@ -49,6 +64,35 @@ func test_sfx_asset_map_structural_integrity() -> void:
 	for sfx_key: String in asset_map.keys():
 		assert_true(asset_map[sfx_key] is String, "Mapping value for '%s' must be a String." % sfx_key)
 		assert_true(not asset_map[sfx_key].is_empty(), "Mapping value for '%s' must not be empty." % sfx_key)
+
+
+## The check sound has one constant and one map entry (#1149). It used to play only
+## through the .wav fallback, with SFX_MUTE_TOGGLE as a second name for the same file.
+func test_check_sound_is_mapped_once() -> void:
+	var asset_map: Dictionary = AudioConstants.SFX_ASSET_MAP
+	assert_true(
+		asset_map.has(AudioConstants.SFX_CHECK),
+		"SFX_CHECK must have its own SFX_ASSET_MAP entry instead of relying on the fallback."
+	)
+	assert_eq(asset_map.get(AudioConstants.SFX_CHECK, ""), "check.wav", "SFX_CHECK must map to check.wav.")
+	assert_true(
+		ResourceLoader.exists(AudioConstants.SFX_DIR_PATH + "check.wav"),
+		"The file mapped by SFX_CHECK must exist."
+	)
+	assert_false(asset_map.has("mute_toggle"), "The unused 'mute_toggle' alias must be gone.")
+
+
+## Every sound file has exactly one logical name, so one sound can't drift into
+## several IDs again (#1149).
+func test_each_sfx_file_has_one_logical_id() -> void:
+	var owners: Dictionary = {}
+	for sfx_key: String in AudioConstants.SFX_ASSET_MAP:
+		var file_name: String = AudioConstants.SFX_ASSET_MAP[sfx_key]
+		assert_false(
+			owners.has(file_name),
+			"'%s' is mapped by both '%s' and '%s'." % [file_name, owners.get(file_name, ""), sfx_key]
+		)
+		owners[file_name] = sfx_key
 
 
 # ==========================================================================
@@ -157,8 +201,8 @@ func test_bus_routing_matches_ui_hierarchy() -> void:
 		AudioConstants.BUS_SFX_WEAPON: AudioConstants.BUS_SFX,
 		AudioConstants.BUS_SFX_ROTORS: AudioConstants.BUS_SFX,
 		AudioConstants.BUS_SFX_MENU: AudioConstants.BUS_SFX,
-		BUS_SFX_ROTOR_LEFT: AudioConstants.BUS_SFX_ROTORS,
-		BUS_SFX_ROTOR_RIGHT: AudioConstants.BUS_SFX_ROTORS,
+		AudioConstants.BUS_SFX_ROTOR_LEFT: AudioConstants.BUS_SFX_ROTORS,
+		AudioConstants.BUS_SFX_ROTOR_RIGHT: AudioConstants.BUS_SFX_ROTORS,
 	}
 	for bus: String in expected_sends:
 		var bus_idx: int = AudioServer.get_bus_index(bus)
@@ -186,7 +230,13 @@ func _layout_bus_index(layout: AudioBusLayout, bus_name: String) -> int:
 ## Both stereo channels and direct rotor playback must pass through the SFX
 ## volume/mute control before reaching Master (regression for Issue #1045).
 func test_saved_rotor_output_path_includes_sfx(
-	source: String = use_parameters(["SFX_Rotors", "SFX_Rotor_Left", "SFX_Rotor_Right"])
+	source: String = use_parameters(
+		[
+			AudioConstants.BUS_SFX_ROTORS,
+			AudioConstants.BUS_SFX_ROTOR_LEFT,
+			AudioConstants.BUS_SFX_ROTOR_RIGHT
+		]
+	)
 ) -> void:
 	var layout: AudioBusLayout = load("res://default_bus_layout.tres") as AudioBusLayout
 	assert_not_null(layout, "The shipped default audio layout must load")
@@ -210,7 +260,14 @@ func test_saved_rotor_output_path_includes_sfx(
 ## Godot only sends audio to buses on the left. A correct send name alone
 ## cannot protect against a reordered layout silently falling back to Master.
 func test_saved_rotor_send_targets_precede_their_sources(
-	source: String = use_parameters(["SFX_Rotors", "SFX_Rotor_Left", "SFX_Rotor_Right", "SFX"])
+	source: String = use_parameters(
+		[
+			AudioConstants.BUS_SFX_ROTORS,
+			AudioConstants.BUS_SFX_ROTOR_LEFT,
+			AudioConstants.BUS_SFX_ROTOR_RIGHT,
+			AudioConstants.BUS_SFX
+		]
+	)
 ) -> void:
 	var layout: AudioBusLayout = load("res://default_bus_layout.tres") as AudioBusLayout
 	assert_not_null(layout)
@@ -233,7 +290,13 @@ func test_saved_rotor_output_path_is_enabled_by_default() -> void:
 	assert_not_null(layout)
 	if layout == null:
 		return
-	for bus_name: String in ["Master", "SFX", "SFX_Rotors", "SFX_Rotor_Left", "SFX_Rotor_Right"]:
+	for bus_name: String in [
+		AudioConstants.BUS_MASTER,
+		AudioConstants.BUS_SFX,
+		AudioConstants.BUS_SFX_ROTORS,
+		AudioConstants.BUS_SFX_ROTOR_LEFT,
+		AudioConstants.BUS_SFX_ROTOR_RIGHT
+	]:
 		var bus_idx: int = _layout_bus_index(layout, bus_name)
 		assert_gt(bus_idx, -1, "Rotor output bus '%s' must exist" % bus_name)
 		if bus_idx == -1:
@@ -277,3 +340,46 @@ func test_play_sfx_resilience_to_freed_players() -> void:
 	
 	# Assert that play_sfx gracefully bypassed the dead node and still executed on a living one
 	assert_true(SfxManager.is_any_sfx_playing(), "AudioManager failed to play SFX after a pool node was freed.")
+
+
+## The rotor buses are handled through their parent SFX_Rotors bus, so they stay out of
+## BUS_CONFIG and get no volume or mute settings of their own (#1149).
+func test_rotor_playback_buses_are_not_in_bus_config() -> void:
+	assert_false(AudioConstants.BUS_CONFIG.has(AudioConstants.BUS_SFX_ROTOR_LEFT))
+	assert_false(AudioConstants.BUS_CONFIG.has(AudioConstants.BUS_SFX_ROTOR_RIGHT))
+	assert_true(
+		AudioConstants.BUS_CONFIG.has(AudioConstants.BUS_SFX_ROTORS),
+		"The parent SFX_Rotors bus keeps the rotor volume and mute settings."
+	)
+
+
+## The player routes each rotor's sound to its own playback bus (#1149).
+func test_player_rotors_use_left_and_right_buses() -> void:
+	var original_settings: GameSettingsResource = Globals.settings
+	Globals.settings = GameSettingsResource.new()
+	var player: Node2D = PlayerScene.instantiate()
+	add_child(player)
+
+	assert_not_null(player.rotor_left_sfx, "The left rotor must have an AudioStreamPlayer2D.")
+	assert_not_null(player.rotor_right_sfx, "The right rotor must have an AudioStreamPlayer2D.")
+	if player.rotor_left_sfx and player.rotor_right_sfx:
+		assert_eq(String(player.rotor_left_sfx.bus), AudioConstants.BUS_SFX_ROTOR_LEFT)
+		assert_eq(String(player.rotor_right_sfx.bus), AudioConstants.BUS_SFX_ROTOR_RIGHT)
+
+	player.free()
+	Globals.settings = original_settings
+
+
+## The FPS toggle in Advanced Settings still plays the check sound, now through
+## AudioConstants.SFX_CHECK instead of a string literal (#1149).
+func test_advanced_settings_fps_toggle_plays_check_sound() -> void:
+	SfxManager.stop_all_sfx()
+	var advanced: Control = AdvancedSettingsScript.new()
+	advanced._on_fps_toggle_pressed()
+
+	assert_string_contains(
+		SfxManager.get_active_sfx_stream_path(),
+		"check.wav",
+		"The FPS toggle must play check.wav."
+	)
+	advanced.free()
