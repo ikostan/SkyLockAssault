@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "created": "2026-11-16T18:44:07Z",
-  "commit": "65a82512b847ce138f6be5d0db642a3ff8955d11",
-  "runner": "GitHub Actions 1000044306",
+  "created": "2026-11-17T18:35:28Z",
+  "commit": "64ef0722a68712141159c6023c08cb811a7eacee",
+  "runner": "GitHub Actions 1000044404",
   "godot": "4.7.1-stable (official)",
   "runs": 3,
   "baseline": {
@@ -13,25 +13,6 @@
     "reload_object_growth": 0.0
   },
   "history": [
-    {
-      "run_id": "43590949880",
-      "commit": "1a8f329e5b68eaafd8de34f139a008f296beca91",
-      "date": "2026-11-14T11:58:49Z",
-      "metrics": {
-        "saves": 0.0,
-        "objects_avg": 2261.3166666666666,
-        "nodes_avg": 481.48333333333335,
-        "resources_avg": 208.0,
-        "orphans_max": 0.0,
-        "reload_orphans_max": 0.0,
-        "reload_object_growth": 0.0,
-        "frame_p95_ms": 32.8,
-        "frames_over_33.4ms": 64.0,
-        "proc_worst_avg_ms": 5.2233,
-        "phys_worst_avg_ms": 0.8883,
-        "mem_static_growth": 680384.0
-      }
-    },
     {
       "run_id": "43712895718",
       "commit": "e317b8078f17188b199f73eabbb5d00a7f4b0511",
@@ -107,6 +88,25 @@
         "phys_worst_avg_ms": 1.1833,
         "mem_static_growth": 695248.0
       }
+    },
+    {
+      "run_id": "44145980922",
+      "commit": "64ef0722a68712141159c6023c08cb811a7eacee",
+      "date": "2026-11-17T18:35:28Z",
+      "metrics": {
+        "saves": 0.0,
+        "objects_avg": 2259.766666666667,
+        "nodes_avg": 480.1666666666667,
+        "resources_avg": 208.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": 0.0,
+        "frame_p95_ms": 33.2,
+        "frames_over_33.4ms": 78.0,
+        "proc_worst_avg_ms": 5.26,
+        "phys_worst_avg_ms": 0.91,
+        "mem_static_growth": 663356.0
+      }
     }
   ],
   "accepted": null,
@@ -122,7 +122,8 @@
     "43712895718",
     "43720643176",
     "43762379900",
-    "43928499033"
+    "43928499033",
+    "44145980922"
   ],
   "profile": "web"
 }
