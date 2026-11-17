@@ -281,3 +281,87 @@ func test_available_weapons_getter_prevents_external_mutation() -> void:
 		"Internal array must resist mutation from getter references."
 	)
 	assert_eq(weapon_res.available_weapons[0], "Pistol", "Array data must remain intact.")
+
+
+## Read-only lookups, including misses, must not select weapons or notify the HUD.
+func test_lookup_does_not_change_selection_or_emit_signals() -> void:
+	weapon_res.available_weapons = ["Cannon", "Missile"]
+	weapon_res.current_index = 1
+	watch_signals(weapon_res)
+
+	assert_eq(weapon_res.get_weapon_name(0), "Cannon")
+	assert_eq(weapon_res.get_weapon_name(-1), "None")
+	assert_eq(weapon_res.get_weapon_name(2), "None")
+	assert_eq(weapon_res.current_index, 1)
+	assert_eq(weapon_res.get_weapon_name(1), "Missile")
+	assert_signal_not_emitted(weapon_res, "weapon_swapped")
+	assert_signal_not_emitted(weapon_res, "ammo_updated")
+
+
+## Clearing an inventory must clamp a selected last slot and notify exactly once.
+func test_empty_assignment_clamps_selection_and_can_be_repopulated() -> void:
+	weapon_res.available_weapons = ["Cannon", "Missile"]
+	weapon_res.current_index = 1
+	watch_signals(weapon_res)
+
+	weapon_res.available_weapons = []
+	assert_eq(weapon_res.current_index, 0)
+	assert_eq(weapon_res.get_weapon_name(0), "None")
+	assert_signal_emitted_with_parameters(weapon_res, "weapon_swapped", [0, "None"], 0)
+
+	weapon_res.available_weapons = []
+	assert_signal_emit_count(weapon_res, "weapon_swapped", 1, "Repeated clear is a no-op.")
+	weapon_res.available_weapons = ["Railgun"]
+	assert_eq(weapon_res.get_weapon_name(0), "Railgun")
+	assert_signal_emit_count(weapon_res, "weapon_swapped", 2)
+	assert_signal_emitted_with_parameters(weapon_res, "weapon_swapped", [0, "Railgun"], 1)
+
+
+## Even identical names in different slots must announce an effective index change.
+func test_shrink_emits_when_clamped_weapon_has_same_name() -> void:
+	weapon_res.available_weapons = ["Cannon", "Cannon"]
+	weapon_res.current_index = 1
+	watch_signals(weapon_res)
+
+	weapon_res.available_weapons = ["Cannon"]
+
+	assert_eq(weapon_res.current_index, 0)
+	assert_eq(weapon_res.get_weapon_name(0), "Cannon")
+	assert_signal_emit_count(weapon_res, "weapon_swapped", 1)
+	assert_signal_emitted_with_parameters(weapon_res, "weapon_swapped", [0, "Cannon"])
+
+
+## Copies at both array boundaries must also protect the direct lookup path.
+func test_lookup_is_isolated_from_input_and_output_array_edits() -> void:
+	var supplied: Array[String] = ["Cannon", "Missile"]
+	weapon_res.available_weapons = supplied
+	weapon_res.current_index = 1
+	var returned: Array[String] = weapon_res.available_weapons
+	watch_signals(weapon_res)
+
+	supplied[1] = "External input"
+	returned[1] = "External output"
+	returned.append("Extra slot")
+
+	assert_eq(weapon_res.get_weapon_name(1), "Missile")
+	assert_eq(weapon_res.get_weapon_name(2), "None")
+	assert_eq(weapon_res.current_index, 1)
+	assert_signal_not_emitted(weapon_res, "weapon_swapped")
+
+
+## The new backing array must belong to each instance, including default instances.
+func test_weapon_lists_are_isolated_between_instances() -> void:
+	var other := WeaponResource.new()
+	weapon_res.available_weapons = ["Cannon", "Missile"]
+	weapon_res.current_index = 1
+	assert_eq(other.get_weapon_name(0), "Machine Gun")
+	assert_eq(other.get_weapon_name(1), "None")
+	assert_eq(other.current_index, 0)
+
+
+## Names are opaque data; lookup must preserve empty strings, case and whitespace.
+func test_lookup_preserves_weapon_name_text() -> void:
+	weapon_res.available_weapons = ["", " Heavy Laser ", "MiXeD"]
+	assert_eq(weapon_res.get_weapon_name(0), "")
+	assert_eq(weapon_res.get_weapon_name(1), " Heavy Laser ")
+	assert_eq(weapon_res.get_weapon_name(2), "MiXeD")

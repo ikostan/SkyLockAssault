@@ -162,3 +162,23 @@ func test_fire_rate_immediately_above_minimum_is_preserved() -> void:
 	var config := BulletResource.new()
 	config.fire_rate = 0.010001
 	assert_eq(config.fire_rate, 0.010001)
+
+
+## Asset choices remain independent when a configuration is packed and instantiated.
+func test_optional_assets_survive_scene_packing(
+	assets: Array = use_parameters([[false, false], [true, false], [false, true]])
+) -> void:
+	var config := BulletResource.new()
+	if assets[0]:
+		config.projectile_texture = GradientTexture2D.new()
+	if assets[1]:
+		config.shot_sound = AudioStreamWAV.new()
+	var source: Node2D = autofree(BULLET_SCENE.instantiate())
+	source.config = config
+	var packed := PackedScene.new()
+	assert_eq(packed.pack(source), OK)
+	var restored: Node2D = autofree(packed.instantiate())
+	assert_not_null(restored.config)
+	if restored.config:
+		assert_eq(restored.config.projectile_texture, config.projectile_texture)
+		assert_eq(restored.config.shot_sound, config.shot_sound)

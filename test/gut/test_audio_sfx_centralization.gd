@@ -266,3 +266,17 @@ func test_input_ignores_mouse_motion() -> void:
 		SfxManager.is_any_sfx_playing(),
 		"Mouse motion wiggles must drop immediately out of the input loop without triggering audio players."
 	)
+
+
+## Both a cold lookup and a cache hit must resolve the corrected check identifier.
+func test_check_sound_replays_from_cache_on_menu_bus() -> void:
+	for playback in range(2):
+		SfxManager.play_sfx(AudioConstants.SFX_CHECK)
+		assert_eq(
+			SfxManager.get_active_sfx_stream_path(),
+			"res://files/sounds/sfx/check.wav",
+			"Check playback %d must resolve the confirmation asset." % playback
+		)
+		assert_eq(SfxManager.get_active_sfx_bus_name(), AudioConstants.BUS_SFX_MENU)
+		assert_true(SfxManager.is_sfx_cached(AudioConstants.SFX_CHECK))
+		SfxManager.stop_all_sfx()

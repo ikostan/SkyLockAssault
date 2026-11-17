@@ -477,3 +477,30 @@ func test_hud_reacts_to_ammo_updated() -> void:
 	
 	assert_eq(_hud.ammo_bar.max_value, 500.0, "HUD must dynamically sync the ammo bar maximum value.")
 	assert_eq(_hud.ammo_bar.value, 250.0, "HUD must dynamically sync the ammo bar current value.")
+
+
+## Empty inventories must clear a previously displayed weapon during initial sync.
+func test_initial_sync_of_empty_inventory_replaces_stale_label() -> void:
+	var empty_weapon := WeaponResource.new()
+	empty_weapon.available_weapons = []
+	_hud.weapon_label.text = "{STALE}"
+
+	_hud.setup_hud(_fuel, _speed, empty_weapon)
+
+	assert_eq(_hud.weapon_label.text, "{NONE}")
+	empty_weapon.available_weapons = ["Heavy Laser"]
+	assert_eq(_hud.weapon_label.text, "{HEAVY=LASER}")
+
+
+## Setup must show the clamped selection even when the clamp happened before wiring.
+func test_initial_sync_after_inventory_shrink_uses_clamped_weapon() -> void:
+	var armed := WeaponResource.new()
+	armed.available_weapons = ["Cannon", "Missile", "Laser"]
+	armed.current_index = 2
+	armed.available_weapons = ["Heavy Cannon"]
+
+	_hud.setup_hud(_fuel, _speed, armed)
+
+	assert_eq(_hud.weapon_label.text, "{HEAVY=CANNON}")
+	_weapon.available_weapons = ["Obsolete Weapon"]
+	assert_eq(_hud.weapon_label.text, "{HEAVY=CANNON}", "Replaced weapons cannot overwrite initial sync.")

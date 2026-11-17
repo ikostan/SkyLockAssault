@@ -254,3 +254,23 @@ func test_configured_sound_uses_weapon_bus_and_cleans_up_on_finish() -> void:
 	assert_true(player.playing)
 	player.finished.emit()
 	assert_true(player.is_queued_for_deletion())
+
+
+## A deliberately asset-free resource must not fall back to default_bullet.tres.
+func test_fresh_resource_fires_without_inheriting_default_assets() -> void:
+	var fresh := BulletResource.new()
+	firer.config = fresh
+
+	assert_true(firer.fire())
+	assert_eq(firer.config, fresh)
+	var projectiles := _projectiles()
+	assert_eq(projectiles.size(), 1)
+	if projectiles.size() == 1:
+		var sprite := _child_of_type(projectiles[0], "Sprite2D") as Sprite2D
+		assert_not_null(sprite)
+		if sprite:
+			assert_null(sprite.texture)
+	assert_eq(_sound_players().size(), 0, "A fresh resource explicitly means silent firing.")
+	var defaults: BulletResource = load("res://config_resources/default_bullet.tres")
+	assert_not_null(defaults.projectile_texture, "Silent firing must not modify shared defaults.")
+	assert_not_null(defaults.shot_sound)
