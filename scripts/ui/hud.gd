@@ -238,11 +238,10 @@ func setup_hud(
 	check_speed_warning()
 
 	# Sync Weapon & Ammo
-	if _weapon_resource.available_weapons.size() > _weapon_resource.current_index:
-		var initial_weapon: String = _weapon_resource.available_weapons[
-			_weapon_resource.current_index
-		]
-		_on_weapon_swapped(_weapon_resource.current_index, initial_weapon)
+	# get_weapon_name() reads one name without copying the list (#1150). The resource keeps
+	# current_index inside a non-empty list, so the old bounds check here never failed.
+	var initial_weapon: String = _weapon_resource.get_weapon_name(_weapon_resource.current_index)
+	_on_weapon_swapped(_weapon_resource.current_index, initial_weapon)
 
 	_on_ammo_updated(_weapon_resource.current_ammo, _weapon_resource.max_ammo)
 

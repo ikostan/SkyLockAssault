@@ -26,54 +26,50 @@ signal weapon_swapped(index: int, weapon_name: String)
 ## [param max_ammo]: The maximum capacity for ammo.
 signal ammo_updated(current: int, max_ammo: int)
 
+## Name returned for a missing weapon, and the placeholder list when an empty list is assigned.
+const NO_WEAPON_NAME: String = "None"
+
 # --- State Properties ---
 
+## The weapon names. The getter returns a copy, so outside code can't change the list
+## without going through the setter. Read one name with [method get_weapon_name], which
+## doesn't copy the list (#1150).
 @export var available_weapons: Array[String] = ["Machine Gun"]:
 	set(value):
 		# 1. Cache the old active weapon name
-		var old_name: String = "None"
-		if (
-			not available_weapons.is_empty()
-			and current_index >= 0
-			and current_index < available_weapons.size()
-		):
-			old_name = available_weapons[current_index]
+		var old_name: String = get_weapon_name(current_index)
 
 		# 2. Update the array (with duplicate() to prevent reference mutation)
 		if value.is_empty():
-			available_weapons = ["None"]
+			_weapons = [NO_WEAPON_NAME]
 		else:
-			available_weapons = value.duplicate()
+			_weapons = value.duplicate()
 
 		# 3. Check for clamping or silent swaps
-		if current_index >= available_weapons.size():
+		if current_index >= _weapons.size():
 			# The array shrank. Triggering self.current_index will handle clamping
 			# and automatically emit the signal since the index number is changing.
-			self.current_index = max(0, available_weapons.size() - 1)
+			self.current_index = maxi(0, _weapons.size() - 1)
 		else:
 			# The index stayed the same. Did the weapon name at this index change?
-			var new_name: String = available_weapons[current_index]
+			var new_name: String = _weapons[current_index]
 			if old_name != new_name:
 				weapon_swapped.emit(current_index, new_name)
 	get:
 		# Protect the output boundary: return a copy so external callers cannot
 		# mutate the internal array by reference and bypass the setter validations.
-		return available_weapons.duplicate()
+		return _weapons.duplicate()
 
 @export var current_index: int = 0:
 	set(value):
 		# Invariant: Cannot select a weapon outside the available array bounds
-		var new_index: int = clampi(value, 0, max(0, available_weapons.size() - 1))
+		var new_index: int = clampi(value, 0, maxi(0, _weapons.size() - 1))
 
 		if current_index == new_index:
 			return
 
 		current_index = new_index
-
-		var w_name: String = (
-			available_weapons[current_index] if not available_weapons.is_empty() else "None"
-		)
-		weapon_swapped.emit(current_index, w_name)
+		weapon_swapped.emit(current_index, get_weapon_name(current_index))
 
 @export var max_ammo: int = 1000:
 	set(value):
@@ -98,6 +94,21 @@ signal ammo_updated(current: int, max_ammo: int)
 		current_ammo = new_ammo
 		ammo_updated.emit(current_ammo, max_ammo)
 
+## Storage behind [member available_weapons]. Godot 4 runs a property's getter even when
+## its own class reads it, and that getter copies the list, so code in this class reads
+## and writes this array instead (#1150). Starts with the same value as the export default.
+var _weapons: Array[String] = ["Machine Gun"]
+
 
 func _init() -> void:
 	current_ammo = max_ammo
+
+
+## Returns the weapon name at [param index], or [constant NO_WEAPON_NAME] ("None") if the
+## index is out of range. Unlike [member available_weapons], it doesn't copy the list.
+##
+## [param index]: The weapon index to look up.
+func get_weapon_name(index: int) -> String:
+	if index < 0 or index >= _weapons.size():
+		return NO_WEAPON_NAME
+	return _weapons[index]
