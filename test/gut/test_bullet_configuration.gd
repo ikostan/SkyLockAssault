@@ -88,7 +88,8 @@ func test_unconfigured_scenes_receive_independent_default_resources() -> void:
 
 
 ## #1150: a firer without its own config fires with the assets from default_bullet.tres,
-## the same sprite and sound as before the script defaults were removed.
+## the same sprite and sound as before the script defaults were removed. The test goes
+## through fire(), so it also fails if the firing path stops spawning or playing the sound.
 func test_default_config_firer_uses_assets_from_default_bullet_tres() -> void:
 	var default_firer: Node2D = add_child_autofree(BULLET_SCENE.instantiate())
 	var default_config: BulletResource = load("res://config_resources/default_bullet.tres")
@@ -102,18 +103,18 @@ func test_default_config_firer_uses_assets_from_default_bullet_tres() -> void:
 		"res://files/sounds/sfx/retro-laser-1-236669.mp3"
 	)
 
-	default_firer.spawn_projectile()
-	var spawned: RigidBody2D = null
-	for node: Node in _projectiles():
-		spawned = node as RigidBody2D
-	assert_not_null(spawned, "The default firer must spawn a projectile.")
-	if spawned:
-		var sprite := _child_of_type(spawned, "Sprite2D") as Sprite2D
-		assert_eq(sprite.texture, default_config.projectile_texture)
+	assert_true(default_firer.fire(), "The first shot of a ready firer must fire.")
 
-	default_firer.play_sfx_with_volume()
+	var projectiles := _projectiles()
+	assert_eq(projectiles.size(), 1, "fire() must spawn one projectile.")
+	if projectiles.size() == 1:
+		var sprite := _child_of_type(projectiles[0], "Sprite2D") as Sprite2D
+		assert_not_null(sprite, "The projectile must have a Sprite2D.")
+		if sprite:
+			assert_eq(sprite.texture, default_config.projectile_texture)
+
 	var players := _sound_players()
-	assert_eq(players.size(), 1, "The default firer must play its shot sound.")
+	assert_eq(players.size(), 1, "fire() must play the shot sound.")
 	if players.size() == 1:
 		assert_eq(players[0].stream, default_config.shot_sound)
 
