@@ -274,7 +274,7 @@ func test_check_sound_replays_from_cache_on_menu_bus() -> void:
 		SfxManager.play_sfx(AudioConstants.SFX_CHECK)
 		assert_eq(
 			SfxManager.get_active_sfx_stream_path(),
-			"res://files/sounds/sfx/check.wav",
+			AudioConstants.SFX_DIR_PATH + AudioConstants.SFX_ASSET_MAP[AudioConstants.SFX_CHECK],
 			"Check playback %d must resolve the confirmation asset." % playback
 		)
 		assert_eq(SfxManager.get_active_sfx_bus_name(), AudioConstants.BUS_SFX_MENU)

@@ -256,7 +256,8 @@ func test_configured_sound_uses_weapon_bus_and_cleans_up_on_finish() -> void:
 	assert_true(player.is_queued_for_deletion())
 
 
-## A deliberately asset-free resource must not fall back to default_bullet.tres.
+## A fresh resource has no assets (#1150): firing with it spawns an untextured projectile
+## and plays no sound, and default_bullet.tres keeps its own assets.
 func test_fresh_resource_fires_without_inheriting_default_assets() -> void:
 	var fresh := BulletResource.new()
 	firer.config = fresh

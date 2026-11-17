@@ -503,4 +503,6 @@ func test_initial_sync_after_inventory_shrink_uses_clamped_weapon() -> void:
 
 	assert_eq(_hud.weapon_label.text, "{HEAVY=CANNON}")
 	_weapon.available_weapons = ["Obsolete Weapon"]
-	assert_eq(_hud.weapon_label.text, "{HEAVY=CANNON}", "Replaced weapons cannot overwrite initial sync.")
+	assert_eq(
+		_hud.weapon_label.text, "{HEAVY=CANNON}", "The replaced resource must no longer drive the HUD."
+	)

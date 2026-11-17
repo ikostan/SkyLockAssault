@@ -182,3 +182,9 @@ func test_optional_assets_survive_scene_packing(
 	if restored.config:
 		assert_eq(restored.config.projectile_texture, config.projectile_texture)
 		assert_eq(restored.config.shot_sound, config.shot_sound)
+		# #1150: an asset left unassigned stays null after packing instead of
+		# coming back as a script default.
+		if not assets[0]:
+			assert_null(restored.config.projectile_texture)
+		if not assets[1]:
+			assert_null(restored.config.shot_sound)

@@ -66,7 +66,7 @@ Neither part runs per frame, so no visible performance change is expected.
   - `test_bus_name_constants` also checks the two rotor constants.
   - The `"SFX_ASSET_MAP" in AudioConstants` assertion works on the class unchanged, so it was kept.
   - **New:** `test_audio_constants_is_not_an_autoload` (no `autoload/AudioConstants` setting, no `/root/AudioConstants` node), `test_check_sound_is_mapped_once` (`SFX_CHECK` is mapped to an existing `check.wav`, `"mute_toggle"` is gone), `test_each_sfx_file_has_one_logical_id`, `test_rotor_playback_buses_are_not_in_bus_config`, `test_player_rotors_use_left_and_right_buses` (instantiates `Player.tscn`), `test_advanced_settings_fps_toggle_plays_check_sound`.
-- **`test_audio_sfx_centralization.gd` (9 → 10 cases):**
+- **`test_audio_sfx_centralization.gd` (9 → 11 cases):**
   - **Rewritten:** `test_play_sfx_unmapped_legacy_fallback` played `"check"` to reach the `.wav` fallback. Every shipped `.wav` is mapped now, so it plays an ID with no entry and no file and reads the path the fallback built from SfxManager's "file not found" warning. It also checks that the ID is cached as missing and nothing plays.
   - **New:** `test_play_sfx_check_resolves_through_asset_map`.
 
@@ -89,14 +89,24 @@ Neither part runs per frame, so no visible performance change is expected.
 
 #### 3. Tests
 
-- **`test_bullet_resource.gd` (9 → 12 cases):**
+- **`test_bullet_resource.gd` (9 → 13 cases):**
   - **Rewritten:** `test_defaults_preserve_existing_projectile_behavior` keeps every numeric check, and its asset checks now load `default_bullet.tres`.
   - **Rewritten:** `test_new_resources_do_not_share_mutable_tuning` assigns both assets to both resources first, then checks that clearing them on one leaves the other's.
   - **New:** `test_new_resource_has_no_default_assets`, `test_default_bullet_tres_assigns_assets` (the `.tres` assigns both, with the same numeric tuning as a new resource), `test_bullet_resource_script_does_not_preload_assets`.
   - `test_custom_configuration_survives_scene_packing` is unchanged and passes.
-- **`test_bullet_configuration.gd` (12 → 13 cases):** new `test_default_config_firer_uses_assets_from_default_bullet_tres`. A config-less firer in the tree fires through `fire()` and must produce one projectile with the laser texture and one sound player with the laser sound, so the test also fails if `fire()` stops spawning or playing the sound. The missing-texture and silent-firing cases are unchanged and pass.
-- **`test_weapon_resource.gd` (11 → 19 cases):** new cases for names by index, out-of-range `"None"` (-1, -50, 2, 99), the empty-list placeholder, the default list, the returned string not aliasing the list, a `.tres` save and load round trip, `Resource.duplicate()`, and `weapon_swapped` names on all three emit paths. Both `available_weapons` mutation cases are unchanged and pass.
-- **`test_hud.gd` (12 → 15 cases):** new cases for the default name after setup, setup on a resource already at index 1, and setup again after a swap.
+- **`test_bullet_configuration.gd` (12 → 14 cases):** new `test_default_config_firer_uses_assets_from_default_bullet_tres`. A config-less firer in the tree fires through `fire()` and must produce one projectile with the laser texture and one sound player with the laser sound, so the test also fails if `fire()` stops spawning or playing the sound. The missing-texture and silent-firing cases are unchanged and pass.
+- **`test_weapon_resource.gd` (11 → 25 cases):** new cases for names by index, out-of-range `"None"` (-1, -50, 2, 99), the empty-list placeholder, the default list, the returned string not aliasing the list, a `.tres` save and load round trip, `Resource.duplicate()`, and `weapon_swapped` names on all three emit paths. Both `available_weapons` mutation cases are unchanged and pass.
+- **`test_hud.gd` (12 → 17 cases):** new cases for the default name after setup, setup on a resource already at index 1, and setup again after a swap.
+
+#### 4. Review follow-up tests (CodeRabbit, `18bb313`)
+
+CodeRabbit added 11 cases on the PR, counted in the numbers above. @claude reviewed them and adjusted four.
+
+- **`test_weapon_resource.gd` (+6):** lookups don't change the selection or emit; clearing the list clamps a selected last slot and emits `(0, "None")` once, a second clear is a no-op, and refilling emits again; a shrink emits even when the clamped slot has the same name; the lookup is isolated from edits to the input and returned arrays; instances don't share `_weapons` (fails with a `static` backing array); names keep empty strings, case and whitespace.
+- **`test_hud.gd` (+2):** setup on an empty list replaces a stale label with `{NONE}` and follows the new resource; setup after a shrink shows the clamped weapon, and the replaced resource no longer drives the HUD (message reworded).
+- **`test_bullet_resource.gd` (+1):** `test_optional_assets_survive_scene_packing`, for texture-only, sound-only and no assets. Added `assert_null` for unassigned assets, without which the test also passed with the old script defaults; it now fails if a default comes back.
+- **`test_bullet_configuration.gd` (+1):** firing with a fresh resource spawns an untextured projectile, plays nothing, and leaves `default_bullet.tres` unchanged. Comment corrected: the test can't detect a fall-back to `default_bullet.tres`, because `bullet.gd` only uses it when `config` is null at `_ready()`.
+- **`test_audio_sfx_centralization.gd` (+1):** the check sound resolves on a cold lookup and on a cache hit, on the menu bus. The expected path now comes from `AudioConstants` instead of a hard-coded string.
 
 ---
 
@@ -126,18 +136,18 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 | State                     | GUT scripts | GUT tests | GUT asserts | gdUnit4 cases |
 |---------------------------|-------------|-----------|-------------|---------------|
 | `main` (`65a8251`, base)  | 107         | 958       | 10,803      | 164           |
-| This PR                   | 107         | 980       | 10,885      | 164           |
+| This PR                   | 107         | 991       | 10,950      | 164           |
 
 - **Test counts per changed file (`main` → this PR):**
 
 | File                                      | Framework | Cases   |
 |-------------------------------------------|-----------|---------|
 | `test_audio_constants_discoverability.gd` | GUT       | 12 → 18 |
-| `test_audio_sfx_centralization.gd`        | GUT       | 9 → 10  |
-| `test_bullet_resource.gd`                 | GUT       | 9 → 12  |
-| `test_bullet_configuration.gd`            | GUT       | 12 → 13 |
-| `test_weapon_resource.gd`                 | GUT       | 11 → 19 |
-| `test_hud.gd`                             | GUT       | 12 → 15 |
+| `test_audio_sfx_centralization.gd`        | GUT       | 9 → 11  |
+| `test_bullet_resource.gd`                 | GUT       | 9 → 13  |
+| `test_bullet_configuration.gd`            | GUT       | 12 → 14 |
+| `test_weapon_resource.gd`                 | GUT       | 11 → 25 |
+| `test_hud.gd`                             | GUT       | 12 → 17 |
 
 - **No test cases removed.** Three were rewritten: the fallback case and the two `BulletResource` default cases. The suites the issues name pass: `test_sfx_cache_diagnostics.gd`, `test_audio_settings_comprehensive.gd`, `test_audio_sfx_centralization.gd`, `test_weapon_firing_state.gd` (GUT), `test_player.gd`, `test_bullet.gd` (gdUnit4). The issue's `test_weapon_firing_bullet.gd` doesn't exist; the gdUnit4 firing case is in `test_bullet.gd`.
 - **GUT warnings:** 3, the same 3 as on `main`.
@@ -146,6 +156,7 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
   - 12 cases fail in `test_bullet_resource.gd` and `test_audio_constants_discoverability.gd`: no-default-assets, `.tres` assigns assets, no preload, not an autoload, check sound mapped once, and every case that uses the rotor constants.
   - `test_weapon_resource.gd` and `test_hud.gd` don't load, because `get_weapon_name()` is missing.
 - **Engine probe (Part B):** a property getter that counts calls ran once for one read from inside its own class.
+- **Full GUT suite after the review follow-up tests:** 991/991 locally, same 3 warnings as `main`.
 - **PR run (`41aae08`):** GUT, gdUnit4, GDScript lint and format, Markdown lint and DeepSource pass.
 - **Playwright (PR run):** Core Web Flows shard 65 passed; CI & Security shard 1123 passed (plus 3 passed, 2 skipped in its own check).
 - **Benchmark (PR run, report only, baseline `65a8251`):** 0 regressions, 0 warnings on both platforms.
@@ -186,6 +197,7 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 | B: Assets in the data file. | <ul><li>No asset preloads in `BulletResource`.</li><li>`default_bullet.tres` assigns both.</li></ul>                               | `scripts/resources/bullet_resource.gd`<br/>`config_resources/default_bullet.tres`                                                                |
 | B: Single-name lookup.      | <ul><li>`get_weapon_name()`, `NO_WEAPON_NAME`, private `_weapons`.</li><li>Setters and HUD sync no longer copy the list.</li></ul> | `scripts/resources/weapon_resource.gd`<br/>`scripts/ui/hud.gd`                                                                                   |
 | B: Tests.                   | <ul><li>2 cases rewritten, 15 added.</li><li>No test cases removed.</li></ul>                                                      | `test/gut/test_bullet_resource.gd`<br/>`test/gut/test_bullet_configuration.gd`<br/>`test/gut/test_weapon_resource.gd`<br/>`test/gut/test_hud.gd` |
+| Review follow-up tests.     | <ul><li>11 cases from CodeRabbit (`18bb313`); 4 adjusted.</li></ul>                                                                | `test/gut/test_weapon_resource.gd`<br/>`test/gut/test_hud.gd`<br/>`test/gut/test_bullet_resource.gd`<br/>`test/gut/test_bullet_configuration.gd`<br/>`test/gut/test_audio_sfx_centralization.gd` |
 | Milestone note.             | <ul><li>This note.</li></ul>                                                                                                       | `files/docs/milestones/27/Part_17_Clean_up_AudioConstants_&_reduce_small_resource_loading_and_copy_costs.md`                                     |
 
 ### Assessment against linked issues
@@ -212,6 +224,7 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
 - Filed #1149 and #1150 and set their scope.
 - Asked to finish both remaining #617 tasks in one last PR to close the epic.
 - Created the `architect-review-region-2` branch and PR #1206, and applied the changes in four commits: `d4ccced`, `fc7ce88` (tests and this note), `efa6d9a` (production changes), `41aae08` (restored the `default_bullet.tres` asset lines and the `SFX_CHECK` call, and the `fire()` test fix).
+- Committed the PR results and review follow-up in `e52e5e0`.
 - Took the Sourcery and CodeRabbit review through to resolution, and updated #1150's Additional Context to record why this PR lands before #1139 and #1141.
 
 ### Bots / AI contributions
@@ -231,4 +244,7 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, using the same
     - Rewrote the default-firer test to go through `fire()` (Sourcery) and confirmed it fails when either call is removed.
     - Checked the remaining Sourcery and CodeRabbit comments against the branch head: the ones made on `fc7ce88` were already fixed by `efa6d9a`/`41aae08`; the `"None"` collision and the landing-order comments were answered with reasons.
     - Updated #1150's Additional Context line.
+    - Reviewed CodeRabbit's `18bb313` tests, checked the backing-array test with a `static` mutation, and fixed four of them: null checks in the packing test (now fails on restored script defaults), an accurate comment on the fresh-resource firing test, a correct message on the HUD rewiring assertion, and constants instead of a hard-coded path in the check-sound test. Ran the full GUT suite (991/991).
+- **@coderabbitai**
+  - Reviewed the PR and added 11 regression tests in `18bb313` (weapon lookups and list edge cases, HUD initial sync, optional bullet assets, check sound on the menu bus).
   
