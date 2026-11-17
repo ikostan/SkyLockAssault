@@ -436,6 +436,37 @@ func test_hud_reacts_to_weapon_swapped() -> void:
 	assert_eq(_hud.weapon_label.text, expected_text, "HUD must format the text correctly to '{PLASMA=CANNON}'.")
 
 
+## test_hud_shows_initial_weapon_name | Deterministic Initial Sync (#1150)
+## setup_hud() reads the starting name with get_weapon_name() instead of copying the list.
+func test_hud_shows_initial_weapon_name() -> void:
+	assert_eq(_hud.weapon_label.text, "{MACHINE=GUN}", "The default weapon must show after setup.")
+
+
+## test_hud_initial_sync_uses_current_index | Deterministic Initial Sync (#1150)
+## A resource that is already past index 0 shows the weapon at its current index.
+func test_hud_initial_sync_uses_current_index() -> void:
+	var armed: WeaponResource = WeaponResource.new()
+	armed.available_weapons = ["Cannon", "Heavy Missile"]
+	armed.current_index = 1
+
+	_hud.setup_hud(_fuel, _speed, armed)
+
+	assert_eq(_hud.weapon_label.text, "{HEAVY=MISSILE}", "Setup must show the weapon at current_index.")
+
+
+## test_hud_shows_swapped_weapon_after_resetup | Deterministic Initial Sync (#1150)
+## After a swap, setting up the HUD again still shows the active weapon.
+func test_hud_shows_swapped_weapon_after_resetup() -> void:
+	_weapon.available_weapons = ["Cannon", "Laser"]
+	_weapon.current_index = 1
+	assert_eq(_hud.weapon_label.text, "{LASER}", "The swap must update the label.")
+
+	_hud.weapon_label.text = ""
+	_hud.setup_hud(_fuel, _speed, _weapon)
+
+	assert_eq(_hud.weapon_label.text, "{LASER}", "Setup after a swap must show the active weapon.")
+
+
 ## test_hud_reacts_to_ammo_updated | Observer Integration
 func test_hud_reacts_to_ammo_updated() -> void:
 	gut.p("Testing: HUD correctly updates the ammo progress bar observing ammo_updated.")

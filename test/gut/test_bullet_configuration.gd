@@ -87,6 +87,37 @@ func test_unconfigured_scenes_receive_independent_default_resources() -> void:
 	assert_eq(second.config.fire_rate, 0.15)
 
 
+## #1150: a firer without its own config fires with the assets from default_bullet.tres,
+## the same sprite and sound as before the script defaults were removed.
+func test_default_config_firer_uses_assets_from_default_bullet_tres() -> void:
+	var default_firer: Node2D = add_child_autofree(BULLET_SCENE.instantiate())
+	var default_config: BulletResource = load("res://config_resources/default_bullet.tres")
+	assert_eq(default_firer.config, default_config, "A config-less firer uses default_bullet.tres.")
+	assert_eq(
+		default_firer.config.projectile_texture.resource_path,
+		"res://files/sprite/laser_sprites/01.png"
+	)
+	assert_eq(
+		default_firer.config.shot_sound.resource_path,
+		"res://files/sounds/sfx/retro-laser-1-236669.mp3"
+	)
+
+	default_firer.spawn_projectile()
+	var spawned: RigidBody2D = null
+	for node: Node in _projectiles():
+		spawned = node as RigidBody2D
+	assert_not_null(spawned, "The default firer must spawn a projectile.")
+	if spawned:
+		var sprite := _child_of_type(spawned, "Sprite2D") as Sprite2D
+		assert_eq(sprite.texture, default_config.projectile_texture)
+
+	default_firer.play_sfx_with_volume()
+	var players := _sound_players()
+	assert_eq(players.size(), 1, "The default firer must play its shot sound.")
+	if players.size() == 1:
+		assert_eq(players[0].stream, default_config.shot_sound)
+
+
 func test_ready_preserves_injected_resource() -> void:
 	assert_eq(firer.config, config, "Inspector configuration must not be replaced by defaults.")
 	assert_eq(firer.config.damage, 37)
