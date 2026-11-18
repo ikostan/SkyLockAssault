@@ -64,6 +64,31 @@ def _overlay_display(page: Page, element_id: str) -> str:
     )
 
 
+def _wait_for_overlays(
+    page: Page, shown: tuple[str, ...], hidden: tuple[str, ...], path: str
+) -> None:
+    """
+    Wait until every id in ``shown`` has display ``block`` and every id in
+    ``hidden`` has display ``none``; on timeout, fail listing every element.
+    """
+    try:
+        page.wait_for_function(
+            "([shown, hidden]) => {"
+            " const d = (id) => { const el = document.getElementById(id);"
+            " return el ? window.getComputedStyle(el).display : 'missing'; };"
+            " return shown.every((id) => d(id) === 'block')"
+            " && hidden.every((id) => d(id) === 'none'); }",
+            arg=[list(shown), list(hidden)],
+            timeout=TEST_TIMEOUT,
+        )
+    except PlaywrightTimeoutError:
+        displays = {i: _overlay_display(page, i) for i in (*shown, *hidden)}
+        raise AssertionError(
+            f"{path}: expected shown {list(shown)} and hidden {list(hidden)},"
+            f" got {displays}"
+        ) from None
+
+
 def _assert_options_overlays_restored(page: Page, path: str) -> None:
     """Assert all five Options buttons are shown and difficulty-slider is hidden."""
     displays = {
@@ -270,17 +295,19 @@ def test_back_restores_options_overlays(page: Page) -> None:
         )
         _assert_options_overlays_restored(page, "Options opened")
 
-        # BACK-05: Audio -> Back
+        # BACK-05: Audio -> Back. The Options buttons must be hidden while Audio
+        # is open, so the check after Back sees them change from none to block.
         open_audio_menu(page)
-        page.evaluate("window.audioBackPressed([])")
-        page.wait_for_function(
-            "() => window.getComputedStyle("
-            "document.getElementById('master-slider')"
-            ").display === 'none'",
-            timeout=TEST_TIMEOUT,
+        _wait_for_overlays(
+            page, ("master-slider",), OPTIONS_MENU_OVERLAY_IDS, "Audio opened"
         )
-        # Let any trailing overlay update from the same Back press land.
-        page.wait_for_timeout(500)
+        page.evaluate("window.audioBackPressed([])")
+        _wait_for_overlays(
+            page,
+            OPTIONS_MENU_OVERLAY_IDS,
+            ("master-slider", "difficulty-slider"),
+            "Audio -> Back",
+        )
         _assert_options_overlays_restored(page, "Audio -> Back")
 
         # BACK-06: Controls -> Back
@@ -289,18 +316,20 @@ def test_back_restores_options_overlays(page: Page) -> None:
             timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.controlsPressed([])")
-        page.wait_for_selector(
-            "#controls-back-button", state="visible", timeout=TEST_TIMEOUT
+        _wait_for_overlays(
+            page, ("controls-back-button",), OPTIONS_MENU_OVERLAY_IDS, "Controls opened"
         )
         page.wait_for_function(
             "() => typeof window.controlsBackPressed === 'function'",
             timeout=TEST_TIMEOUT,
         )
         page.evaluate("window.controlsBackPressed([])")
-        page.wait_for_selector(
-            "#controls-back-button", state="hidden", timeout=TEST_TIMEOUT
+        _wait_for_overlays(
+            page,
+            OPTIONS_MENU_OVERLAY_IDS,
+            ("controls-back-button", "difficulty-slider"),
+            "Controls -> Back",
         )
-        page.wait_for_timeout(500)
         _assert_options_overlays_restored(page, "Controls -> Back")
 
     except Exception as e:
