@@ -223,7 +223,6 @@ Run locally with Godot 4.7.1-stable and GUT 9.7.1, using the same commands as `g
 - **Full Playwright Core Web Flows:** 70 passed, including the 5 new tests and the 2 rewritten ones.
 - **CI & Security shard (local):** 1,122 of 1,123 pass. `test_salt_injection.py::test_injection_readonly_file` fails only because the sandbox runs as root, which can write read-only files; it passed in CI on the last PR.
 - **GDScript lint and format:** `gdlint scripts` and `gdformat --check scripts` pass.
-- **PR run:** _fill in after CI._
 
 ---
 
