@@ -15,6 +15,8 @@ var _toggle_pause_cb: JavaScriptObject
 var _back_to_main_cb: JavaScriptObject
 var _resume_cb: JavaScriptObject
 var _options_cb: JavaScriptObject
+## JS `window` interface; only set on web. Variant so tests can inject a Dictionary.
+var _js_window: Variant
 
 @onready var resume_button: Button = $VBoxContainer/ResumeButton
 @onready var back_to_main_button: Button = $VBoxContainer/BackToMainButton
@@ -52,27 +54,53 @@ func _ready() -> void:
 
 	# Expose JS Web callbacks for automated testing & browser interaction
 	if OS.get_name() == "Web":
-		var js_window := JavaScriptBridge.get_interface("window")
-		if js_window:
+		_js_window = JavaScriptBridge.get_interface("window")
+		if _js_window:
 			_toggle_pause_cb = JavaScriptBridge.create_callback(
 				Callable(self, "_on_js_toggle_pause")
 			)
-			js_window.togglePause = _toggle_pause_cb
+			_js_window.togglePause = _toggle_pause_cb
 			_back_to_main_cb = JavaScriptBridge.create_callback(
 				Callable(self, "_on_back_to_main_button_pressed")
 			)
-			js_window.mainMenuPressed = _back_to_main_cb
+			_js_window.mainMenuPressed = _back_to_main_cb
 			_resume_cb = JavaScriptBridge.create_callback(
 				Callable(self, "_on_resume_button_pressed")
 			)
-			js_window.resumePressed = _resume_cb
+			_js_window.resumePressed = _resume_cb
 			_options_cb = JavaScriptBridge.create_callback(
 				Callable(self, "_on_options_button_pressed")
 			)
-			js_window.pauseOptionsPressed = _options_cb
+			_js_window.pauseOptionsPressed = _options_cb
 			Globals.log_message(
 				"Exposed pause menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
 			)
+
+
+## Clears the pause menu's JS entry points whenever the menu leaves the tree (#1166).
+func _exit_tree() -> void:
+	_unset_pause_menu_window_callbacks()
+
+
+## Detaches the pause menu JS entry points from `window` and drops the callback refs.
+## _js_window is only set on web, so this does nothing off web. Idempotent.
+func _unset_pause_menu_window_callbacks() -> void:
+	# This can run inside one of these callbacks (a JS press that frees the menu), so drop the
+	# refs after the call returns: a callback must not be freed during its own call.
+	_drop_pause_menu_callback_refs.call_deferred()
+	if not _js_window:
+		return
+	_js_window.togglePause = null
+	_js_window.mainMenuPressed = null
+	_js_window.resumePressed = null
+	_js_window.pauseOptionsPressed = null
+
+
+func _drop_pause_menu_callback_refs() -> void:
+	_toggle_pause_cb = null
+	_back_to_main_cb = null
+	_resume_cb = null
+	_options_cb = null
 
 
 func _unhandled_input(event: InputEvent) -> void:

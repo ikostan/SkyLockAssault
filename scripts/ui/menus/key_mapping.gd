@@ -16,6 +16,8 @@ var current_conflicts: Array[String] = []
 # local
 var _controls_back_button_pressed_cb: Variant
 var _intentional_exit: bool = false
+## True once this instance cleared its window callback (#1166).
+var _window_callbacks_unset: bool = false
 
 @onready var controls_back_button: Button = $Panel/Options/BtnContainer/ControlsBackButton
 @onready var controls_reset_button: Button = $Panel/Options/BtnContainer/ControlResetButton
@@ -202,6 +204,9 @@ func _on_controls_back_button_pressed() -> void:
 		"Back (controls_back_button) button pressed in controls.", Globals.LogLevel.DEBUG
 	)
 	var hidden_menu_found: bool = false
+	# Only the Options menu owns the Options DOM buttons. When the main menu's "Unbound
+	# Controls" dialog opened Key Mapping, Back returns to the main menu instead (#1165).
+	var returned_to_options: bool = false
 	if not Globals.hidden_menus.is_empty():
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
 		if is_instance_valid(prev_menu):
@@ -210,6 +215,7 @@ func _on_controls_back_button_pressed() -> void:
 			hidden_menu_found = true
 			# NEW: When returning from Key Mapping menu → focus the Key Mapping button in Options
 			if prev_menu is OptionsMenu:
+				returned_to_options = true
 				(prev_menu as OptionsMenu).grab_focus_on_key_mapping_button()
 			# NEW: When returning to Main Menu → focus Start Game button
 			elif prev_menu.name == "Panel" or prev_menu is Panel:  # ← this is the fix
@@ -224,38 +230,48 @@ func _on_controls_back_button_pressed() -> void:
 
 	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
 	if os_wrapper.has_feature("web") and js_window:
-		js_window.controlsBackPressed = null
-		# Set AUDIO & CONTROLS button visible in DOM (if bridge available for eval)
-		# Hide controls-back-button even when no hidden menu is found.
+		_unset_key_mapping_window_callbacks()
+		# Always hide controls-back-button, even when no hidden menu is found. Show the
+		# Options buttons only when Back returns to the Options menu.
 		if js_bridge_wrapper:
-			(
-				js_bridge_wrapper
-				. eval(
-					"""
-					document.getElementById('controls-back-button').style.display = 'none';
-					""",
-					true
-				)
+			var visible_ids: Array[String] = []
+			if returned_to_options:
+				visible_ids = SettingsMenuBase.OPTIONS_MENU_OVERLAY_IDS
+			js_bridge_wrapper.eval(
+				SettingsMenuBase._build_overlay_js(visible_ids, ["controls-back-button"]), true
 			)
-			# Only showing all five when a previous menu exists.
-			if hidden_menu_found:
-				(
-					js_bridge_wrapper
-					. eval(
-						"""
-						document.getElementById('audio-button').style.display = 'block';
-						document.getElementById('advanced-button').style.display = 'block';
-						document.getElementById('controls-button').style.display = 'block';
-						document.getElementById('difficulty-slider').style.display = 'block';
-						document.getElementById('options-back-button').style.display = 'block';
-						""",
-						true
-					)
-				)
 	if not hidden_menu_found:
 		Globals.log_message("No hidden menu to show.", Globals.LogLevel.INFO)
 	_intentional_exit = true
 	queue_free()
+
+
+## Unexpected exits (scene change, parent freed) skip the Back path, so clear the JS entry
+## point here too (#1166).
+func _exit_tree() -> void:
+	_unset_key_mapping_window_callbacks()
+
+
+## Detaches the Key Mapping JS entry point from `window` (web only) and drops the callback ref.
+##
+## Clears `window` at most once per instance. The Back path clears it straight away, but
+## _exit_tree() runs only at the end of the frame: by then a Key Mapping reopened in the same
+## frame has registered its own callback, which this instance must not clear (#1166).
+## Idempotent.
+func _unset_key_mapping_window_callbacks() -> void:
+	# This can run inside one of these callbacks (a JS press that frees the menu), so drop the
+	# refs after the call returns: a callback must not be freed during its own call.
+	_drop_key_mapping_callback_refs.call_deferred()
+	if _window_callbacks_unset:
+		return
+	if not os_wrapper.has_feature("web") or not js_window:
+		return
+	js_window.controlsBackPressed = null
+	_window_callbacks_unset = true
+
+
+func _drop_key_mapping_callback_refs() -> void:
+	_controls_back_button_pressed_cb = null
 
 
 func _on_controls_back_button_pressed_js(args: Array) -> void:

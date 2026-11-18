@@ -25,11 +25,14 @@ var audio_scene: PackedScene = preload("res://scenes/audio_settings.tscn")
 var controls_scene: PackedScene = preload("res://scenes/key_mapping_menu.tscn")
 var advanced_scene: PackedScene = preload("res://scenes/advanced_settings.tscn")
 var gameplay_settings_scene: PackedScene = preload("res://scenes/gameplay_settings.tscn")
-var _options_back_button_pressed_cb: JavaScriptObject
-var _controls_pressed_cb: JavaScriptObject
-var _audio_pressed_cb: JavaScriptObject
-var _advanced_pressed_cb: JavaScriptObject
-var _gameplay_settings_pressed_cb: JavaScriptObject
+## JS `window` interface; only set on web. Variant so tests can inject a Dictionary.
+var js_window: Variant
+# Variant (not JavaScriptObject) so tests can inject wrapper doubles.
+var _options_back_button_pressed_cb: Variant
+var _controls_pressed_cb: Variant
+var _audio_pressed_cb: Variant
+var _advanced_pressed_cb: Variant
+var _gameplay_settings_pressed_cb: Variant
 var _torn_down: bool = false  # Guard against multiple teardown calls
 
 @onready var options_back_button: Button = $Panel/OptionsVBoxContainer/OptionsBackButton
@@ -92,7 +95,7 @@ func _ready() -> void:
 		)
 
 		# Expose callbacks to JS (store refs to prevent GC)
-		var js_window: JavaScriptObject = js_bridge_wrapper.get_interface("window")
+		js_window = js_bridge_wrapper.get_interface("window")
 		if js_window:
 			_options_back_button_pressed_cb = js_bridge_wrapper.create_callback(
 				Callable(self, "_on_options_back_button_pressed_js")
@@ -226,6 +229,7 @@ func _teardown() -> void:
 	if _torn_down:
 		return
 	_torn_down = true
+	_unset_options_menu_window_callbacks()
 	if not Globals.hidden_menus.is_empty():
 		var prev_menu: Node = Globals.hidden_menus.pop_back()
 		if is_instance_valid(prev_menu):
@@ -248,6 +252,29 @@ func _teardown() -> void:
 	Globals.options_open = false
 	Globals.options_instance = null
 	Globals.log_message("Options menu exited.", Globals.LogLevel.DEBUG)
+
+
+## Detaches the Options JS entry points from `window` (web only) and drops the callback refs.
+## Idempotent; runs from _teardown() on every exit path (#1166).
+func _unset_options_menu_window_callbacks() -> void:
+	# This can run inside one of these callbacks (a JS press that frees the menu), so drop the
+	# refs after the call returns: a callback must not be freed during its own call.
+	_drop_options_menu_callback_refs.call_deferred()
+	if not os_wrapper.has_feature("web") or not js_window:
+		return
+	js_window.optionsBackPressed = null
+	js_window.controlsPressed = null
+	js_window.audioPressed = null
+	js_window.advancedPressed = null
+	js_window.gameplayPressed = null
+
+
+func _drop_options_menu_callback_refs() -> void:
+	_options_back_button_pressed_cb = null
+	_controls_pressed_cb = null
+	_audio_pressed_cb = null
+	_advanced_pressed_cb = null
+	_gameplay_settings_pressed_cb = null
 
 
 func _grab_options_focus(menu_node: Node, log_context: String) -> void:

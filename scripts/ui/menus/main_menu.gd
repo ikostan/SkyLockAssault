@@ -44,6 +44,8 @@ var bypass_quit_for_testing: bool = false
 var _start_pressed_cb: JavaScriptObject
 var _options_pressed_cb: JavaScriptObject
 var _quit_pressed_cb: JavaScriptObject
+## JS `window` interface; only set on web. Variant so tests can inject a Dictionary.
+var _js_window: Variant
 
 @onready var ui_panel: Panel = $VideoStreamPlayer/Panel
 @onready var ui_container: VBoxContainer = $VideoStreamPlayer/Panel/VBoxContainer
@@ -80,18 +82,18 @@ func _ready() -> void:
 
 	# 3. Expose JS Web callbacks right away if on Web platform
 	if OS.get_name() == "Web":
-		var js_window := JavaScriptBridge.get_interface("window")
-		if js_window:
+		_js_window = JavaScriptBridge.get_interface("window")
+		if _js_window:
 			_start_pressed_cb = JavaScriptBridge.create_callback(
 				Callable(self, "_on_start_pressed")
 			)
-			js_window.startPressed = _start_pressed_cb
+			_js_window.startPressed = _start_pressed_cb
 			_options_pressed_cb = JavaScriptBridge.create_callback(
 				Callable(self, "_on_options_button_pressed")
 			)
-			js_window.optionsPressed = _options_pressed_cb
+			_js_window.optionsPressed = _options_pressed_cb
 			_quit_pressed_cb = JavaScriptBridge.create_callback(Callable(self, "_on_quit_pressed"))
-			js_window.quitPressed = _quit_pressed_cb
+			_js_window.quitPressed = _quit_pressed_cb
 			Globals.log_message(
 				"Exposed main menu callbacks to JS for web overlays.", Globals.LogLevel.DEBUG
 			)
@@ -133,6 +135,30 @@ func _enter_tree() -> void:
 	get_node(path + "StartButton").set_meta("no_global_sound", true)
 	get_node(path + "OptionsButton").set_meta("no_global_sound", true)
 	get_node(path + "QuitButton").set_meta("no_global_sound", true)
+
+
+## Clears the main menu's JS entry points whenever the menu leaves the tree (#1166).
+func _exit_tree() -> void:
+	_unset_main_menu_window_callbacks()
+
+
+## Detaches the main menu JS entry points from `window` and drops the callback refs.
+## _js_window is only set on web, so this does nothing off web. Idempotent.
+func _unset_main_menu_window_callbacks() -> void:
+	# This can run inside one of these callbacks (a JS press that frees the menu), so drop the
+	# refs after the call returns: a callback must not be freed during its own call.
+	_drop_main_menu_callback_refs.call_deferred()
+	if not _js_window:
+		return
+	_js_window.startPressed = null
+	_js_window.optionsPressed = null
+	_js_window.quitPressed = null
+
+
+func _drop_main_menu_callback_refs() -> void:
+	_start_pressed_cb = null
+	_options_pressed_cb = null
+	_quit_pressed_cb = null
 
 
 func _run_fade_in_sequence() -> void:

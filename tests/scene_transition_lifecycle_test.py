@@ -283,11 +283,14 @@ def test_pw_trans_03_forward_transition_idempotency(page: Page) -> None:
 
         pre_burst_idx = len(logs)
 
-        # Rapidly dispatch duplicate start calls before first transition completes
+        # Rapidly dispatch duplicate start calls before first transition completes.
+        # The first call frees the main menu, which clears window.startPressed (#1166),
+        # so capture the callback first: all three calls still reach the leaving menu.
         page.evaluate("""() => {
-            window.startPressed([]);
-            window.startPressed([]);
-            window.startPressed([]);
+            const startPressed = window.startPressed;
+            startPressed([]);
+            startPressed([]);
+            startPressed([]);
         }""")
 
         # Await gameplay initialization
@@ -354,11 +357,14 @@ def test_pw_trans_04_reverse_transition_idempotency(page: Page) -> None:
 
         pre_burst_idx = len(logs)
 
-        # Rapidly dispatch multiple return activations
+        # Rapidly dispatch multiple return activations. The first call frees the pause
+        # menu, which clears window.mainMenuPressed (#1166), so capture the callback
+        # first: all three calls still reach the leaving menu.
         page.evaluate("""() => {
-            window.mainMenuPressed([]);
-            window.mainMenuPressed([]);
-            window.mainMenuPressed([]);
+            const mainMenuPressed = window.mainMenuPressed;
+            mainMenuPressed([]);
+            mainMenuPressed([]);
+            mainMenuPressed([]);
         }""")
 
         wait_for_console_log(
