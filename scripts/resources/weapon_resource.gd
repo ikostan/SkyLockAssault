@@ -104,10 +104,14 @@ func _init() -> void:
 	current_ammo = max_ammo
 
 
-## Returns the weapon name at [param index], or [constant NO_WEAPON_NAME] ("None") if the
-## index is out of range. Unlike [member available_weapons], it doesn't copy the list.
+## Return the weapon name at the specified index, or a fallback constant if out of range.
+##
+## Returns the weapon name at the given index, or [constant NO_WEAPON_NAME] ("None") if the
+## index is out of range. Unlike [member available_weapons], it does not copy the list.
 ##
 ## [param index]: The weapon index to look up.
+## Returns the weapon name as a [code]String[/code], or [constant NO_WEAPON_NAME] if out of
+## range.
 func get_weapon_name(index: int) -> String:
 	if index < 0 or index >= _weapons.size():
 		return NO_WEAPON_NAME
