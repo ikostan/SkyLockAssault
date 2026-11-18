@@ -193,6 +193,58 @@ func test_wcb_18_old_options_exit_keeps_reopened_options_tracked() -> void:
 	await get_tree().process_frame
 
 
+## WCB-19 | Options cleanup with no window still drops all five refs, one frame later
+func test_wcb_19_options_missing_window_still_drops_refs() -> void:
+	var menu: CanvasLayer = _add_options()
+	menu.js_window = null
+
+	menu._unset_options_menu_window_callbacks()
+
+	assert_eq(menu._audio_pressed_cb, "mock_callback", "Active callback survives this call")
+	await get_tree().process_frame
+	assert_null(menu._options_back_button_pressed_cb)
+	assert_null(menu._controls_pressed_cb)
+	assert_null(menu._audio_pressed_cb)
+	assert_null(menu._advanced_pressed_cb)
+	assert_null(menu._gameplay_settings_pressed_cb)
+
+## WCB-20 | Options' deferred ref drop doesn't touch callbacks registered after its cleanup
+func test_wcb_20_options_deferred_cleanup_keeps_later_registration() -> void:
+	var menu: CanvasLayer = _add_options()
+	menu._unset_options_menu_window_callbacks()
+	for callback_name: String in OPTIONS_CALLBACKS:
+		_window[callback_name] = "replacement_" + callback_name
+
+	await get_tree().process_frame
+
+	assert_null(menu._audio_pressed_cb, "Old references were released")
+	for callback_name: String in OPTIONS_CALLBACKS:
+		assert_eq(_window[callback_name], "replacement_" + callback_name)
+
+## WCB-21 | A tracked Options that is out of the tree counts as exited: the exit handler restores
+## only the top parent and resets the Options state
+func test_wcb_21_options_exit_with_detached_instance_restores_top_parent() -> void:
+	var outer: Panel = Panel.new()
+	var parent: Panel = Panel.new()
+	add_child_autofree(outer)
+	add_child_autofree(parent)
+	outer.hide()
+	parent.hide()
+	Globals.hidden_menus.assign([outer, parent])
+	var detached: CanvasLayer = CanvasLayer.new()
+	autofree(detached)
+	Globals.options_instance = detached
+	Globals.options_open = true
+
+	Globals._on_options_exited_unexpectedly()
+
+	assert_true(parent.visible)
+	assert_false(outer.visible, "Only the immediate parent is restored")
+	assert_eq(Globals.hidden_menus, [outer])
+	assert_false(Globals.options_open)
+	assert_null(Globals.options_instance)
+
+
 # ==============================================================================
 # KEY MAPPING
 # ==============================================================================
@@ -295,6 +347,23 @@ func test_wcb_10_key_mapping_cleanup_twice_is_safe() -> void:
 	assert_null(menu._controls_back_button_pressed_cb)
 
 
+## WCB-22 | Key Mapping cleanup run twice, then a newer Key Mapping registers: the newer one keeps
+## and later clears its slot
+func test_wcb_22_key_mapping_repeated_cleanup_keeps_later_owner() -> void:
+	var older: CanvasLayer = _add_key_mapping(true, "older_callback")
+	older._unset_key_mapping_window_callbacks()
+	older._unset_key_mapping_window_callbacks()
+	var newer: CanvasLayer = _add_key_mapping(true, "newer_callback")
+
+	await get_tree().process_frame
+
+	assert_null(older._controls_back_button_pressed_cb)
+	assert_eq(_window["controlsBackPressed"], "newer_callback")
+	assert_eq(newer._controls_back_button_pressed_cb, "newer_callback")
+	await _exit(newer)
+	assert_null(_window["controlsBackPressed"], "The replacement still owns and clears its slot")
+
+
 # ==============================================================================
 # MAIN MENU
 # ==============================================================================
@@ -356,6 +425,24 @@ func test_wcb_13_old_main_menu_deferred_cleanup_keeps_new_callbacks() -> void:
 		assert_eq(_window[callback_name], "new_" + callback_name, "New callback kept")
 
 
+## WCB-23 | Main menu cleanup with no window still drops the seeded refs, one frame later
+func test_wcb_23_main_menu_missing_window_still_drops_refs() -> void:
+	var menu: Control = load(MAIN_MENU_SCENE).instantiate()
+	add_child_autofree(menu)
+	menu._start_pressed_cb = "active_start"
+	menu._options_pressed_cb = "active_options"
+	menu._quit_pressed_cb = "active_quit"
+	menu._js_window = null
+
+	menu._unset_main_menu_window_callbacks()
+
+	assert_eq(menu._start_pressed_cb, "active_start")
+	await get_tree().process_frame
+	assert_null(menu._start_pressed_cb)
+	assert_null(menu._options_pressed_cb)
+	assert_null(menu._quit_pressed_cb)
+
+
 # ==============================================================================
 # PAUSE MENU
 # ==============================================================================
@@ -397,56 +484,9 @@ func test_wcb_15_pause_menu_off_web_and_twice_is_safe() -> void:
 	assert_null(menu._toggle_pause_cb)
 
 
-## Missing window interfaces must still release callback references after the active call.
-func test_options_missing_window_defers_all_reference_cleanup() -> void:
-	var menu: CanvasLayer = _add_options()
-	menu.js_window = null
-
-	menu._unset_options_menu_window_callbacks()
-
-	assert_eq(menu._audio_pressed_cb, "mock_callback", "Active callback survives this call")
-	await get_tree().process_frame
-	assert_null(menu._options_back_button_pressed_cb)
-	assert_null(menu._controls_pressed_cb)
-	assert_null(menu._audio_pressed_cb)
-	assert_null(menu._advanced_pressed_cb)
-	assert_null(menu._gameplay_settings_pressed_cb)
-
-
-## An older Options' deferred ref drop cannot erase a registration made after cleanup.
-func test_options_deferred_cleanup_preserves_later_registration() -> void:
-	var menu: CanvasLayer = _add_options()
-	menu._unset_options_menu_window_callbacks()
-	for callback_name: String in OPTIONS_CALLBACKS:
-		_window[callback_name] = "replacement_" + callback_name
-
-	await get_tree().process_frame
-
-	assert_null(menu._audio_pressed_cb, "Old references were released")
-	for callback_name: String in OPTIONS_CALLBACKS:
-		assert_eq(_window[callback_name], "replacement_" + callback_name)
-
-
-## Cleanup with no window must release a seeded main-menu ref, even off web.
-func test_main_missing_window_releases_seeded_reference_after_call() -> void:
-	var menu: Control = load(MAIN_MENU_SCENE).instantiate()
-	add_child_autofree(menu)
-	menu._start_pressed_cb = "active_start"
-	menu._options_pressed_cb = "active_options"
-	menu._quit_pressed_cb = "active_quit"
-	menu._js_window = null
-
-	menu._unset_main_menu_window_callbacks()
-
-	assert_eq(menu._start_pressed_cb, "active_start")
-	await get_tree().process_frame
-	assert_null(menu._start_pressed_cb)
-	assert_null(menu._options_pressed_cb)
-	assert_null(menu._quit_pressed_cb)
-
-
-## Pause cleanup may run inside Resume; its deferred work must preserve later callbacks.
-func test_pause_deferred_cleanup_preserves_later_registration() -> void:
+## WCB-24 | Pause cleanup runs in _exit_tree(), inside the Main Menu callback when the scene change
+## takes Pause out of the tree; its deferred ref drop keeps callbacks registered afterwards
+func test_wcb_24_pause_deferred_cleanup_keeps_later_registration() -> void:
 	var menu: CanvasLayer = load(GamePaths.PAUSE_MENU_SCENE).instantiate()
 	add_child_autofree(menu)
 	menu._js_window = _window
@@ -464,42 +504,3 @@ func test_pause_deferred_cleanup_preserves_later_registration() -> void:
 	assert_null(menu._resume_cb)
 	for callback_name: String in PAUSE_CALLBACKS:
 		assert_eq(_window[callback_name], "replacement_" + callback_name)
-
-
-## Cleanup requested twice before a new owner registers cannot clear that new owner later.
-func test_key_mapping_repeated_cleanup_preserves_later_owner() -> void:
-	var older: CanvasLayer = _add_key_mapping(true, "older_callback")
-	older._unset_key_mapping_window_callbacks()
-	older._unset_key_mapping_window_callbacks()
-	var newer: CanvasLayer = _add_key_mapping(true, "newer_callback")
-
-	await get_tree().process_frame
-
-	assert_null(older._controls_back_button_pressed_cb)
-	assert_eq(_window["controlsBackPressed"], "newer_callback")
-	assert_eq(newer._controls_back_button_pressed_cb, "newer_callback")
-	await _exit(newer)
-	assert_null(_window["controlsBackPressed"], "The replacement still owns and clears its slot")
-
-
-## A detached tracked Options is not a live replacement: restore only the top hidden menu.
-func test_options_exit_with_detached_instance_restores_top_parent() -> void:
-	var outer: Panel = Panel.new()
-	var parent: Panel = Panel.new()
-	add_child_autofree(outer)
-	add_child_autofree(parent)
-	outer.hide()
-	parent.hide()
-	Globals.hidden_menus.assign([outer, parent])
-	var detached: CanvasLayer = CanvasLayer.new()
-	autofree(detached)
-	Globals.options_instance = detached
-	Globals.options_open = true
-
-	Globals._on_options_exited_unexpectedly()
-
-	assert_true(parent.visible)
-	assert_false(outer.visible, "Only the immediate parent is restored")
-	assert_eq(Globals.hidden_menus, [outer])
-	assert_false(Globals.options_open)
-	assert_null(Globals.options_instance)

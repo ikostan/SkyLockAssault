@@ -212,8 +212,9 @@ func test_km_web_09_older_back_shows_no_options_buttons_over_newer() -> void:
 	)
 
 
-## A stale hidden parent cannot make Options overlays appear or consume a deeper parent.
-func test_back_with_freed_hidden_parent_shows_no_options() -> void:
+## KM-WEB-10 | A freed entry on top of the stack is skipped: Back shows the next valid menu, shows
+## no Options buttons (it isn't Options) and hides controls-back-button (#1211)
+func test_km_web_10_back_skips_freed_hidden_parent() -> void:
 	var outer: Panel = Panel.new()
 	add_child_autofree(outer)
 	outer.hide()
@@ -225,15 +226,16 @@ func test_back_with_freed_hidden_parent_shows_no_options() -> void:
 
 	_menu._on_controls_back_button_pressed()
 
-	assert_eq(Globals.hidden_menus, [outer])
-	assert_false(outer.visible)
+	assert_true(Globals.hidden_menus.is_empty(), "The freed entry and the outer menu are popped")
+	assert_true(outer.visible, "The next valid menu is shown")
 	assert_eq(_last_eval_code(), SettingsMenuBase._build_overlay_js([], ["controls-back-button"]))
 	assert_null(_window["controlsBackPressed"])
 	assert_true(_menu.is_queued_for_deletion())
 
 
-## Browser callbacks can arrive in a burst even after the hidden-menu stack is exhausted.
-func test_js_back_burst_without_parent_has_one_overlay_update() -> void:
+## KM-WEB-11 | Two Back calls through the JS entry point with no menu on the stack: one overlay
+## update, the callback cleared, and the menu freed
+func test_km_web_11_js_back_burst_without_parent_has_one_overlay_update() -> void:
 	_add_menu()
 
 	_menu._on_controls_back_button_pressed_js([])

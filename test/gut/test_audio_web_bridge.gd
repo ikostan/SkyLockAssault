@@ -296,8 +296,12 @@ func test_tc_awb_16_restore_options_menu_dom_no_js_window() -> void:
 	assert_not_called(bridge.js_bridge_wrapper, "eval")
 
 
-## Restoring after a missing window becomes available must resume normal DOM delivery.
-func test_restore_options_after_window_recovery() -> void:
+func test_tc_awb_17_restore_options_menu_dom_after_window_recovery() -> void:
+	## Category: Public API
+	## Scenario: restore_options_menu_dom() is called with no js_window, then again once the
+	## window is available.
+	## Expected Result: The first call makes no eval(); the second shows exactly the five
+	## Options buttons in one eval() run in the global JavaScript context, and hides nothing.
 	var bridge: Node = _create_active_bridge()
 	var window: Variant = bridge.js_window
 	bridge.js_window = null

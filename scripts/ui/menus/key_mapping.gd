@@ -219,26 +219,33 @@ func _on_controls_back_button_pressed() -> void:
 	# Only the Options menu owns the Options DOM buttons. When the main menu's "Unbound
 	# Controls" dialog opened Key Mapping, Back returns to the main menu instead (#1165).
 	var returned_to_options: bool = false
-	if not Globals.hidden_menus.is_empty():
-		var prev_menu: Node = Globals.hidden_menus.pop_back()
-		if is_instance_valid(prev_menu):
-			prev_menu.visible = true
-			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
-			hidden_menu_found = true
-			# NEW: When returning from Key Mapping menu → focus the Key Mapping button in Options
-			if prev_menu is OptionsMenu:
-				returned_to_options = true
-				(prev_menu as OptionsMenu).grab_focus_on_key_mapping_button()
-			# NEW: When returning to Main Menu → focus Start Game button
-			elif prev_menu.name == "Panel" or prev_menu is Panel:  # ← this is the fix
-				var start_button: Button = prev_menu.get_node_or_null("VBoxContainer/StartButton")
-				if is_instance_valid(start_button):
-					# Triple-deferred to be 100% sure after visibility change
-					start_button.call_deferred("call_deferred", "call_deferred", "grab_focus")
-					Globals.log_message(
-						"Focus restored to Start Game button (triple deferred)",
-						Globals.LogLevel.DEBUG
-					)
+	var prev_menu: Node = null
+	# Pop into a Variant first: assigning a freed instance straight to a typed Node var raises
+	# "Trying to assign invalid previously freed instance" and stops Back. Freed entries are
+	# skipped and the next valid menu is shown, as SettingsMenuBase does (#1211).
+	while prev_menu == null and not Globals.hidden_menus.is_empty():
+		var popped: Variant = Globals.hidden_menus.pop_back()
+		if is_instance_valid(popped):
+			prev_menu = popped
+		else:
+			Globals.log_message("Discarding freed entry from hidden_menus.", Globals.LogLevel.DEBUG)
+	if prev_menu != null:
+		prev_menu.visible = true
+		Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
+		hidden_menu_found = true
+		# NEW: When returning from Key Mapping menu → focus the Key Mapping button in Options
+		if prev_menu is OptionsMenu:
+			returned_to_options = true
+			(prev_menu as OptionsMenu).grab_focus_on_key_mapping_button()
+		# NEW: When returning to Main Menu → focus Start Game button
+		elif prev_menu.name == "Panel" or prev_menu is Panel:  # ← this is the fix
+			var start_button: Button = prev_menu.get_node_or_null("VBoxContainer/StartButton")
+			if is_instance_valid(start_button):
+				# Triple-deferred to be 100% sure after visibility change
+				start_button.call_deferred("call_deferred", "call_deferred", "grab_focus")
+				Globals.log_message(
+					"Focus restored to Start Game button (triple deferred)", Globals.LogLevel.DEBUG
+				)
 
 	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
 	if os_wrapper.has_feature("web") and js_window:
