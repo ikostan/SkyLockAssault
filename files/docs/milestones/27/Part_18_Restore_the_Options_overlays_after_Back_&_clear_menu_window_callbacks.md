@@ -125,11 +125,16 @@ Each follows `gameplay_settings.gd`'s `_unset_gameplay_settings_window_callbacks
   - **Key Mapping:** Back clears and keeps the running callback's ref until the call returns (WCB-06); an unexpected exit clears (WCB-07); reopening in the same frame as Back keeps the new callback (WCB-08); off web (WCB-09); twice is safe (WCB-10).
   - **Main:** exit clears all three (WCB-11); off web no window is stored, and the cleanup is safe twice (WCB-12); a reloaded menu keeps its callbacks (WCB-13).
   - **Pause:** exit clears all four (WCB-14); off web and twice (WCB-15).
-- **New `tests/menu_window_callbacks_test.py` (3 tests):**
+- **New `tests/menu_window_callbacks_test.py` (4 tests):**
   - PW-CB-01: after Start, the Main callbacks are `null`; after returning, the Pause callbacks are `null` and the reloaded Main menu's work; a second game's Pause callbacks work.
   - PW-CB-02: after Options → Back and Controls → Back, their callbacks are `null`; reopened menus work.
   - PW-CB-03: Controls and Options reopened in the same JS call as their Back keep working callbacks.
+  - PW-CB-04: Options Back clicked twice through the DOM in one JS task. The first click navigates back; the second does nothing and throws no page error. A later forced click still navigates. Added for the review fix below.
 - **`tests/scene_transition_lifecycle_test.py` (2 tests rewritten, none removed):** PW-TRANS-03 and PW-TRANS-04 fire three presses in one JS call. The first press frees the menu, which now clears the `window` property, so presses 2 and 3 threw `TypeError: ... is not a function`. Both now capture the callback before the burst, so all three presses still reach the leaving menu. A probe confirmed it: 3 presses reached Godot and the main scene initialized once.
+
+### Review fix (CodeRabbit)
+
+- **`custom_shell.html`, Options Back overlay:** the handler now calls `window.optionsBackPressed && window.optionsBackPressed([])`, like the Pause handlers. Options Back clears `window.optionsBackPressed` straight away, so a second activation in the same frame threw `TypeError: window.optionsBackPressed is not a function`. PW-CB-04 failed that way before the fix and passes after it.
 
 ### Other changes in this PR
 
@@ -163,7 +168,7 @@ Run locally with Godot 4.7.1-stable and GUT 9.7.1, using the same commands as `g
 | State                    | GUT scripts | GUT tests | GUT asserts | Playwright (Core Web Flows) |
 |--------------------------|-------------|-----------|-------------|-----------------------------|
 | `main` (`64ef072`, base) | 107         | 991       | 10,950      | 65                          |
-| This PR                  | 109         | 1,012     | 11,052      | 69                          |
+| This PR                  | 109         | 1,012     | 11,052      | 70                          |
 
 - **Test counts per changed file (`main` → this PR):**
 
@@ -173,7 +178,7 @@ Run locally with Godot 4.7.1-stable and GUT 9.7.1, using the same commands as `g
 | `test_key_mapping_web_overlays.gd`    | GUT        | new, 4               |
 | `test_menu_window_callbacks.gd`       | GUT        | new, 15              |
 | `back_flow_test.py`                   | Playwright | 1 → 2                |
-| `menu_window_callbacks_test.py`       | Playwright | new, 3               |
+| `menu_window_callbacks_test.py`       | Playwright | new, 4               |
 | `scene_transition_lifecycle_test.py`  | Playwright | 6 → 6 (2 rewritten)  |
 
 - **No test cases removed.**
@@ -184,7 +189,7 @@ Run locally with Godot 4.7.1-stable and GUT 9.7.1, using the same commands as `g
   - Without Key Mapping's `_exit_tree()`, WCB-07 fails.
   - With Key Mapping's old hand-written list, 3 of the 4 KM-WEB cases fail.
 - **Full GUT suite:** 1,012/1,012, same 3 warnings as `main`.
-- **Full Playwright Core Web Flows:** 69 passed, including the 4 new tests and the 2 rewritten ones.
+- **Full Playwright Core Web Flows:** 70 passed, including the 5 new tests and the 2 rewritten ones.
 - **CI & Security shard (local):** 1,122 of 1,123 pass. `test_salt_injection.py::test_injection_readonly_file` fails only because the sandbox runs as root, which can write read-only files; it passed in CI on the last PR.
 - **GDScript lint and format:** `gdlint scripts` and `gdformat --check scripts` pass.
 - **PR run:** _fill in after CI._
@@ -193,7 +198,7 @@ Run locally with Godot 4.7.1-stable and GUT 9.7.1, using the same commands as `g
 
 ## Known Limitations / Follow-ups
 
-- **The overlay's `onclick` handlers read `window.*` on every click.** With callbacks now cleared, a second click on a menu's overlay in the same frame as the first (before the next menu registers) throws a `TypeError` in the browser console instead of reaching the leaving menu. No test clicks that fast. Making the handlers null-safe belongs with the JS separation work, which #1165 and #1166 leave the overlay to.
+- **Two more overlay handlers can throw on a second click.** Options Back is now guarded (see Review fix). Start (`start-button`) and Controls → Back (`controls-back-button`) still call `window.*` unguarded, and their menus clear those callbacks on the same press, so a second click in the same frame throws a `TypeError` in the console. The other handlers only hide their menu, so their callbacks stay set. No test clicks that fast. Making all handlers null-safe belongs with the JS separation work (#1184).
 - **Main and Pause still call `JavaScriptBridge` directly,** so their GUT tests can't run the real web registration. They inject the window that `_ready()` stores on web; Playwright PW-CB-01 covers the real path.
 - **The Key Mapping guard assumes one Key Mapping at a time,** which is true today: opening it hides the menu that opened it.
 - **#618 can close** once this merges.
@@ -212,7 +217,8 @@ Run locally with Godot 4.7.1-stable and GUT 9.7.1, using the same commands as `g
 | B: Options callbacks.         | <ul><li>Cleared in `_teardown()`.</li><li>`js_window` member; `Variant` fields.</li></ul>                                   | `scripts/ui/menus/options_menu.gd`                                                                                                |
 | B: Key Mapping callback.      | <ul><li>New `_exit_tree()`; clear-once guard.</li></ul>                                                                     | `scripts/ui/menus/key_mapping.gd`                                                                                                 |
 | B: Main and Pause callbacks.  | <ul><li>New `_exit_tree()`; `_js_window` member.</li></ul>                                                                  | `scripts/ui/menus/main_menu.gd`<br/>`scripts/ui/menus/pause_menu.gd`                                                              |
-| B: Tests.                     | <ul><li>1 new GUT suite (15 cases), 1 new Playwright suite (3 tests).</li><li>2 Playwright burst tests rewritten.</li></ul> | `test/gut/test_menu_window_callbacks.gd`<br/>`tests/menu_window_callbacks_test.py`<br/>`tests/scene_transition_lifecycle_test.py` |
+| B: Tests.                     | <ul><li>1 new GUT suite (15 cases), 1 new Playwright suite (4 tests).</li><li>2 Playwright burst tests rewritten.</li></ul> | `test/gut/test_menu_window_callbacks.gd`<br/>`tests/menu_window_callbacks_test.py`<br/>`tests/scene_transition_lifecycle_test.py` |
+| Review fix: Options Back.     | <ul><li>Guarded call, like the Pause handlers.</li></ul>                                                                    | `custom_shell.html`                                                                                                               |
 | Docstring sync.               | <ul><li>`get_weapon_name()` return value documented.</li></ul>                                                              | `scripts/resources/weapon_resource.gd`                                                                                            |
 | Milestone note.               | <ul><li>This note.</li></ul>                                                                                                | `files/docs/milestones/27/Part_18_Restore_the_Options_overlays_after_Back_&_clear_menu_window_callbacks.md`                       |
 
@@ -225,7 +231,7 @@ Run locally with Godot 4.7.1-stable and GUT 9.7.1, using the same commands as `g
 | <https://github.com/ikostan/SkyLockAssault/issues/1165> | Both use `OPTIONS_MENU_OVERLAY_IDS` instead of hand-written lists     | ✅         | TC-AWB-15 and KM-WEB-01 compare against `_build_overlay_js(OPTIONS_MENU_OVERLAY_IDS, …)`. |
 | <https://github.com/ikostan/SkyLockAssault/issues/1166> | Confirm-first results recorded, for both questions                    | ✅         | See Confirm-first results.                                                                |
 | <https://github.com/ikostan/SkyLockAssault/issues/1166> | Every menu that registers `window.*` callbacks clears them when freed | ✅         | PW-CB-01/02 in the browser; WCB-01, 07, 11, 14.                                           |
-| <https://github.com/ikostan/SkyLockAssault/issues/1166> | Reopening a menu keeps its callbacks working                          | ✅         | PW-CB-01/02/03; WCB-03, 08, 13.                                                           |
+| <https://github.com/ikostan/SkyLockAssault/issues/1166> | Reopening a menu keeps its callbacks working                          | ✅         | PW-CB-01/02/03/04; WCB-03, 08, 13.                                                        |
 | <https://github.com/ikostan/SkyLockAssault/issues/1166> | Desktop builds are unaffected                                         | ✅         | Off-web cases WCB-04, 09, 12, 15 and KM-WEB-02; full GUT suite passes.                    |
 | Both                                                    | All GUT, Playwright and lint jobs pass, no cases removed              | ⏳         | Pass locally; PR run to confirm.                                                          |
 | Both                                                    | The PR's milestone note is added                                      | ✅         | This note.                                                                                |
@@ -251,6 +257,8 @@ Run locally with Godot 4.7.1-stable and GUT 9.7.1, using the same commands as `g
   - **Verification**
     - Ran the full GUT suite, the full Core Web Flows Playwright suite, the CI & Security shard, `gdformat` and `gdlint` locally, and mutation-tested the guard, the new `_exit_tree()` and the overlay list.
     - Wrote this note and the PR description, and checked Sourcery's linked-issues report against #618.
+  - **Review fixes**
+    - Confirmed CodeRabbit's Options Back finding with a failing DOM-click test (PW-CB-04), guarded the handler, and found which other handlers have the same problem (Start, Controls → Back).
 - **@sourcery-ai**
   - Wrote the PR summary and Reviewer's Guide.
   - Checked the linked issues: #1165 and #1166 met, apart from CI to check by hand. #618 showed 3 of 10 because its body still listed findings that moved to #1185–#1188.
@@ -258,4 +266,7 @@ Run locally with Godot 4.7.1-stable and GUT 9.7.1, using the same commands as `g
 - **@deepsource-io / @deepsource-autofix**
   - Static analysis of the Python and JavaScript changes: no issues reported.
   - Formatted `tests/menu_window_callbacks_test.py` with Black and isort (`314282b`).
-- **@coderabbitai and @qodo-code-review:** no review. CodeRabbit doesn't review this repo automatically, and Qodo reviews are paused.
+- **@coderabbitai**
+  - Reviewed on request, since it doesn't review this repo automatically.
+  - Found that the Options Back overlay handler throws on a second activation after cleanup (fixed, see Review fix).
+- **@qodo-code-review:** no review; Qodo reviews are paused.

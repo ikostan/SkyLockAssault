@@ -12,6 +12,7 @@ same menu must keep working.
 - PW-CB-01: Main and Pause callbacks across two game cycles.
 - PW-CB-02: Options and Controls callbacks after Back, and after reopening.
 - PW-CB-03: Options and Controls reopened in the same frame as their Back.
+- PW-CB-04: A second Options Back click after cleanup does nothing (DOM path).
 
 Prerequisites
 -------------
@@ -246,3 +247,48 @@ def test_pw_cb_03_reopen_in_same_frame_keeps_new_callbacks(page: Page) -> None:
         raise
     finally:
         _save_coverage(cdp_session, "pw_cb_03")
+
+
+def test_pw_cb_04_options_back_click_after_cleanup_is_ignored(page: Page) -> None:
+    """
+    PW-CB-04: Options Back clicked twice through the DOM in one JS task. The
+    first click navigates back and clears window.optionsBackPressed; the second
+    must do nothing instead of throwing a TypeError.
+    """
+    logs: list[dict[str, str]] = []
+    page_errors: list[str] = []
+    page.on("pageerror", lambda err: page_errors.append(str(err)))
+    cdp_session = None
+    try:
+        cdp_session = _setup_mock_page(page, logs)
+        open_options_menu(page)
+        page.wait_for_selector(
+            "#options-back-button", state="visible", timeout=TEST_TIMEOUT
+        )
+
+        page.evaluate(
+            "() => { const el = document.getElementById('options-back-button');"
+            " el.click(); el.click(); }"
+        )
+
+        # The first click still navigates back to the main menu.
+        page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
+        _assert_callbacks(page, OPTIONS_MENU_CALLBACKS, "null", "After Options -> Back")
+        page.wait_for_timeout(500)  # let any error from the second click surface
+        assert not page_errors, f"Second Options Back click threw: {page_errors}"
+
+        # A normal activation after reopening still navigates.
+        open_options_menu(page)
+        page.wait_for_selector(
+            "#options-back-button", state="visible", timeout=TEST_TIMEOUT
+        )
+        # Overlay buttons use pointer-events: none, so force the DOM click.
+        page.locator("#options-back-button").click(force=True)
+        page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
+        assert not page_errors, f"Options Back click threw: {page_errors}"
+    except Exception as e:
+        print(f"Test PW-CB-04 failed: {e}")
+        _dump_failure_artifacts(page, logs, "pw_cb_04")
+        raise
+    finally:
+        _save_coverage(cdp_session, "pw_cb_04")
