@@ -207,6 +207,14 @@ func _on_controls_back_button_pressed() -> void:
 	Globals.log_message(
 		"Back (controls_back_button) button pressed in controls.", Globals.LogLevel.DEBUG
 	)
+	# queue_free() frees the menu only at the end of the frame. A second Back before then (a
+	# double press or a JS burst) must not pop the menu stack or change the overlays again.
+	if _intentional_exit:
+		Globals.log_message(
+			"Back ignored: controls menu is already closing.", Globals.LogLevel.DEBUG
+		)
+		return
+	_intentional_exit = true
 	var hidden_menu_found: bool = false
 	# Only the Options menu owns the Options DOM buttons. When the main menu's "Unbound
 	# Controls" dialog opened Key Mapping, Back returns to the main menu instead (#1165).
@@ -246,14 +254,21 @@ func _on_controls_back_button_pressed() -> void:
 			)
 	if not hidden_menu_found:
 		Globals.log_message("No hidden menu to show.", Globals.LogLevel.INFO)
-	_intentional_exit = true
 	queue_free()
 
 
 ## Unexpected exits (scene change, parent freed) skip the Back path, so clear the JS entry
-## point here too (#1166).
+## point here too, and hide its overlay button so no shown control is left without a
+## callback (#1166).
 func _exit_tree() -> void:
+	# Only while this instance owns the slot: after Back (which already hid the button and reset
+	# the owner) or once a newer Key Mapping took over, the button belongs to someone else.
+	var owned_slot: bool = _window_callback_owner_id == get_instance_id()
 	_unset_key_mapping_window_callbacks()
+	if owned_slot and js_bridge_wrapper:
+		js_bridge_wrapper.eval(
+			SettingsMenuBase._build_overlay_js([], ["controls-back-button"]), true
+		)
 	Globals.log_message("Key Mapping menu exited (left the tree).", Globals.LogLevel.DEBUG)
 
 

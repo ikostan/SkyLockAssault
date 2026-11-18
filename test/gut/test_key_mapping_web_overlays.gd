@@ -116,3 +116,68 @@ func test_km_web_04_back_to_main_menu_shows_no_options_buttons() -> void:
 	assert_eq(code, SettingsMenuBase._build_overlay_js([], ["controls-back-button"]))
 	for id: String in SettingsMenuBase.OPTIONS_MENU_OVERLAY_IDS:
 		assert_false(code.contains(id), id + " is not shown")
+
+
+## KM-WEB-05 | A second Back before the menu is freed changes nothing: Main → Options → Key
+## Mapping, Back twice in one frame, leaves Main hidden on the stack and Options shown
+func test_km_web_05_second_back_before_free_is_ignored() -> void:
+	var main_panel: Panel = Panel.new()
+	main_panel.name = "Panel"
+	add_child_autofree(main_panel)
+	main_panel.visible = false
+	Globals.hidden_menus.push_back(main_panel)
+	var options: Node = _push_hidden_options_menu()
+	_add_menu()
+
+	_menu._on_controls_back_button_pressed()
+	_menu._on_controls_back_button_pressed()  # same frame: queue_free() hasn't run yet
+
+	assert_true(options.visible, "First Back shows Options")
+	assert_false(main_panel.visible, "Second Back must not show the main menu")
+	assert_eq(Globals.hidden_menus, [main_panel], "Second Back must not pop the stack")
+	assert_called_count(_js_bridge.eval, 2)  # _ready() shows Back; first Back swaps overlays
+	assert_eq(
+		_last_eval_code(),
+		SettingsMenuBase._build_overlay_js(
+			SettingsMenuBase.OPTIONS_MENU_OVERLAY_IDS, ["controls-back-button"]
+		),
+		"The overlays stay as the first Back left them"
+	)
+
+
+## KM-WEB-06 | Unexpected exit (no Back) hides controls-back-button and nothing else
+func test_km_web_06_unexpected_exit_hides_controls_back_button() -> void:
+	_add_menu()
+	await get_tree().process_frame  # let _ready()'s deferred focus calls run in the tree
+
+	remove_child(_menu)  # leaves the tree without Back
+
+	assert_called_count(_js_bridge.eval, 2)  # _ready() shows Back; the exit hides it
+	assert_eq(_last_eval_code(), SettingsMenuBase._build_overlay_js([], ["controls-back-button"]))
+
+
+## KM-WEB-07 | Exit after Back doesn't touch the overlays again: Back already hid the button,
+## and a Key Mapping reopened in the same frame may have shown it again
+func test_km_web_07_exit_after_back_leaves_overlays_alone() -> void:
+	_push_hidden_options_menu()
+	_add_menu()
+	_menu._on_controls_back_button_pressed()
+	var back_code: String = _last_eval_code()
+
+	await get_tree().process_frame  # queue_free(): _exit_tree() runs now
+
+	assert_called_count(_js_bridge.eval, 2)  # _ready() and Back only
+	assert_eq(_last_eval_code(), back_code)
+
+
+## KM-WEB-08 | An older Key Mapping's exit leaves the newer one's Back button shown
+func test_km_web_08_older_exit_leaves_newer_back_button_shown() -> void:
+	var older: CanvasLayer = _add_menu()
+	var older_js: Variant = _js_bridge
+	_add_menu()  # the newer instance owns window.controlsBackPressed now
+	await get_tree().process_frame
+
+	remove_child(older)
+
+	assert_called_count(older_js.eval, 1)  # only _ready()'s show; no hide on exit
+	older.free()
