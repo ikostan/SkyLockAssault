@@ -4,6 +4,11 @@
 
 extends CanvasLayer
 
+## Instance ID of the Key Mapping whose callback is in `window.controlsBackPressed`, or 0
+## (#1166). Reading the slot back returns a new JavaScriptObject wrapper, so ownership is tracked
+## here instead of by comparing callbacks.
+static var _window_callback_owner_id: int = 0
+
 # global
 var js_window: Variant
 var os_wrapper: OSWrapper = OSWrapper.new()
@@ -16,8 +21,6 @@ var current_conflicts: Array[String] = []
 # local
 var _controls_back_button_pressed_cb: Variant
 var _intentional_exit: bool = false
-## True once this instance cleared its window callback (#1166).
-var _window_callbacks_unset: bool = false
 
 @onready var controls_back_button: Button = $Panel/Options/BtnContainer/ControlsBackButton
 @onready var controls_reset_button: Button = $Panel/Options/BtnContainer/ControlResetButton
@@ -79,6 +82,7 @@ func _ready() -> void:
 				Callable(self, "_on_controls_back_button_pressed_js")
 			)
 			js_window.controlsBackPressed = _controls_back_button_pressed_cb
+			_window_callback_owner_id = get_instance_id()
 
 	update_all_remap_buttons()
 
@@ -254,20 +258,20 @@ func _exit_tree() -> void:
 
 ## Detaches the Key Mapping JS entry point from `window` (web only) and drops the callback ref.
 ##
-## Clears `window` at most once per instance. The Back path clears it straight away, but
-## _exit_tree() runs only at the end of the frame: by then a Key Mapping reopened in the same
-## frame has registered its own callback, which this instance must not clear (#1166).
-## Idempotent.
+## Clears the slot only while this instance owns it. Another Key Mapping can take it over before
+## this one exits: one reopened in the same frame as Back (this instance's _exit_tree() runs at
+## the end of the frame), or a second one opened while this one is still open. That instance's
+## callback must stay (#1166). Idempotent.
 func _unset_key_mapping_window_callbacks() -> void:
 	# This can run inside one of these callbacks (a JS press that frees the menu), so drop the
 	# refs after the call returns: a callback must not be freed during its own call.
 	_drop_key_mapping_callback_refs.call_deferred()
-	if _window_callbacks_unset:
-		return
 	if not os_wrapper.has_feature("web") or not js_window:
 		return
+	if _window_callback_owner_id != get_instance_id():
+		return
 	js_window.controlsBackPressed = null
-	_window_callbacks_unset = true
+	_window_callback_owner_id = 0
 
 
 func _drop_key_mapping_callback_refs() -> void:

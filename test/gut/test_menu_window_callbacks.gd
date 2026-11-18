@@ -43,12 +43,13 @@ func after_each() -> void:
 
 
 ## Injects OS/JS wrapper doubles into a menu that supports them, before _ready() runs.
-func _inject_wrappers(menu: Node, on_web: bool) -> void:
+## [param callback] is what create_callback() returns, so tests can tell instances apart.
+func _inject_wrappers(menu: Node, on_web: bool, callback: String = "mock_callback") -> void:
 	var mock_os: Variant = double(OSWrapper).new()
 	stub(mock_os, "has_feature").to_return(on_web)
 	var mock_js: Variant = double(JavaScriptBridgeWrapper).new()
 	stub(mock_js, "get_interface").to_return(_window)
-	stub(mock_js, "create_callback").to_return("mock_callback")
+	stub(mock_js, "create_callback").to_return(callback)
 	menu.os_wrapper = mock_os
 	menu.js_bridge_wrapper = mock_js
 
@@ -60,9 +61,9 @@ func _add_options(on_web: bool = true) -> CanvasLayer:
 	return menu
 
 
-func _add_key_mapping(on_web: bool = true) -> CanvasLayer:
+func _add_key_mapping(on_web: bool = true, callback: String = "mock_callback") -> CanvasLayer:
 	var menu: CanvasLayer = load(GamePaths.KEY_MAPPING_SCENE).instantiate()
-	_inject_wrappers(menu, on_web)
+	_inject_wrappers(menu, on_web, callback)
 	add_child_autofree(menu)
 	return menu
 
@@ -198,6 +199,35 @@ func test_wcb_08_key_mapping_reopened_after_back_keeps_new_callback() -> void:
 	assert_false(is_instance_valid(old_menu), "Old Key Mapping instance was freed")
 	assert_eq(_window["controlsBackPressed"], "mock_callback", "Old exit kept the new callback")
 	assert_eq(new_menu._controls_back_button_pressed_cb, "mock_callback")
+
+
+## WCB-16 | Two Key Mappings open (Controls pressed twice): the older one's exit keeps the newer
+## one's callback, and the newer one's exit still clears it
+func test_wcb_16_key_mapping_older_exit_keeps_newer_callback() -> void:
+	var older: CanvasLayer = _add_key_mapping(true, "cb_older")
+	var newer: CanvasLayer = _add_key_mapping(true, "cb_newer")
+	assert_eq(_window["controlsBackPressed"], "cb_newer", "The newer instance owns the slot")
+
+	await _exit(older)
+
+	assert_eq(_window["controlsBackPressed"], "cb_newer", "Older exit kept the newer callback")
+	await get_tree().process_frame
+	assert_null(older._controls_back_button_pressed_cb, "Older instance released its own ref")
+	assert_eq(newer._controls_back_button_pressed_cb, "cb_newer")
+
+	await _exit(newer)
+
+	assert_null(_window["controlsBackPressed"], "The owner still clears the slot")
+
+
+## WCB-17 | Two Key Mappings open: the older one's Back keeps the newer one's callback
+func test_wcb_17_key_mapping_older_back_keeps_newer_callback() -> void:
+	var older: CanvasLayer = _add_key_mapping(true, "cb_older")
+	_add_key_mapping(true, "cb_newer")
+
+	older._on_controls_back_button_pressed()
+
+	assert_eq(_window["controlsBackPressed"], "cb_newer", "Older Back kept the newer callback")
 
 
 ## WCB-09 | Off web: freeing Key Mapping touches no window
