@@ -294,3 +294,23 @@ func test_tc_awb_16_restore_options_menu_dom_no_js_window() -> void:
 	bridge.restore_options_menu_dom()
 
 	assert_not_called(bridge.js_bridge_wrapper, "eval")
+
+
+## Restoring after a missing window becomes available must resume normal DOM delivery.
+func test_restore_options_after_window_recovery() -> void:
+	var bridge: Node = _create_active_bridge()
+	var window: Variant = bridge.js_window
+	bridge.js_window = null
+	bridge.restore_options_menu_dom()
+	assert_not_called(bridge.js_bridge_wrapper, "eval")
+
+	bridge.js_window = window
+	bridge.restore_options_menu_dom()
+
+	assert_called_count(bridge.js_bridge_wrapper.eval, 1)
+	var params: Array = get_call_parameters(bridge.js_bridge_wrapper, "eval")
+	assert_true(params[1], "DOM restoration runs in the global JavaScript context")
+	var code: String = params[0]
+	assert_eq(code.count("'block'"), 5)
+	assert_false(code.contains("difficulty-slider"), "Gameplay controls remain untouched")
+	assert_false(code.contains("'none'"), "Restoring Options must not hide another overlay")
