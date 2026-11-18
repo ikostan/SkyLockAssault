@@ -14,12 +14,10 @@ var _window: Dictionary
 
 func before_each() -> void:
 	Globals.hidden_menus.clear()
-	Globals.settings.current_log_level = Globals.LogLevel.NONE
 
 
 func after_each() -> void:
 	Globals.hidden_menus.clear()
-	Globals.settings.current_log_level = Globals.LogLevel.DEBUG
 
 
 ## Adds a Key Mapping menu that believes it runs on web (or not, with on_web = false).

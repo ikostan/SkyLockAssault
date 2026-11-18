@@ -242,16 +242,25 @@ func _on_controls_back_button_pressed() -> void:
 
 	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
 	if os_wrapper.has_feature("web") and js_window:
+		# controls-back-button is shared by every Key Mapping: hide it only if this instance owns
+		# it, or no instance does. A newer Key Mapping that took over still needs it (#1166).
+		var owns_back_button: bool = (
+			_window_callback_owner_id == get_instance_id() or _window_callback_owner_id == 0
+		)
 		_unset_key_mapping_window_callbacks()
-		# Always hide controls-back-button, even when no hidden menu is found. Show the
-		# Options buttons only when Back returns to the Options menu.
+		# Hide controls-back-button even when no hidden menu is found. Show the Options buttons
+		# only when Back returns to the Options menu.
 		if js_bridge_wrapper:
 			var visible_ids: Array[String] = []
 			if returned_to_options:
 				visible_ids = SettingsMenuBase.OPTIONS_MENU_OVERLAY_IDS
-			js_bridge_wrapper.eval(
-				SettingsMenuBase._build_overlay_js(visible_ids, ["controls-back-button"]), true
-			)
+			var hidden_ids: Array[String] = []
+			if owns_back_button:
+				hidden_ids = ["controls-back-button"]
+			if not visible_ids.is_empty() or not hidden_ids.is_empty():
+				js_bridge_wrapper.eval(
+					SettingsMenuBase._build_overlay_js(visible_ids, hidden_ids), true
+				)
 	if not hidden_menu_found:
 		Globals.log_message("No hidden menu to show.", Globals.LogLevel.INFO)
 	queue_free()

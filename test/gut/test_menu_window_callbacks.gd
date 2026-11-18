@@ -25,7 +25,6 @@ var _window: Dictionary
 
 func before_each() -> void:
 	Globals.hidden_menus.clear()
-	Globals.settings.current_log_level = Globals.LogLevel.NONE
 	_window = {"is_valid_mock": true}
 
 
@@ -34,7 +33,6 @@ func after_each() -> void:
 	Globals.options_open = false
 	Globals.options_instance = null
 	get_tree().paused = false
-	Globals.settings.current_log_level = Globals.LogLevel.DEBUG
 
 
 # ==============================================================================
@@ -79,6 +77,15 @@ func _exit(menu: Node) -> void:
 func _assert_window_values(names: Array[String], expected: Variant, context: String) -> void:
 	for callback_name: String in names:
 		assert_eq(_window.get(callback_name, "missing"), expected, context + ": " + callback_name)
+
+
+## Every eval() code string sent through a menu's JS bridge double, oldest first.
+func _eval_codes(menu: Node) -> Array[String]:
+	var codes: Array[String] = []
+	var bridge: Variant = menu.js_bridge_wrapper
+	for i: int in get_call_count(bridge, "eval"):
+		codes.append(get_call_parameters(bridge, "eval", i)[0])
+	return codes
 
 
 ## Puts registered-looking callbacks on the fake window, as Main/Pause _ready() would on web.
@@ -228,6 +235,11 @@ func test_wcb_17_key_mapping_older_back_keeps_newer_callback() -> void:
 	older._on_controls_back_button_pressed()
 
 	assert_eq(_window["controlsBackPressed"], "cb_newer", "Older Back kept the newer callback")
+	for code: String in _eval_codes(older):
+		assert_false(
+			code.contains("getElementById('controls-back-button').style.display = 'none'"),
+			"Older Back must leave the shared Back button shown for the newer instance"
+		)
 
 
 ## WCB-09 | Off web: freeing Key Mapping touches no window
@@ -266,10 +278,15 @@ func test_wcb_11_main_menu_exit_clears_callbacks() -> void:
 	add_child_autofree(menu)
 	menu._js_window = _window  # what _ready() stores on web
 	_fill_window(MAIN_CALLBACKS)
+	# What _ready() stores on web (off web they stay null, which would prove nothing).
+	menu._start_pressed_cb = "start_cb"
+	menu._options_pressed_cb = "options_cb"
+	menu._quit_pressed_cb = "quit_cb"
 
 	await _exit(menu)
 
 	_assert_window_values(MAIN_CALLBACKS, null, "Cleared on exit")
+	assert_eq(menu._start_pressed_cb, "start_cb", "Refs are kept until the current call returns")
 	await get_tree().process_frame
 	assert_null(menu._start_pressed_cb)
 	assert_null(menu._options_pressed_cb)
@@ -289,17 +306,26 @@ func test_wcb_12_main_menu_off_web_no_window_changes() -> void:
 	assert_null(menu._start_pressed_cb)
 
 
-## WCB-13 | A new main menu keeps its callbacks when the old one is freed first
-func test_wcb_13_main_menu_reloaded_keeps_new_callbacks() -> void:
+## WCB-13 | The old main menu's deferred cleanup doesn't touch a newer menu's callbacks:
+## a new registration made after the old menu exits, but before its deferred ref drop runs,
+## survives that drop. Real web registration is covered by PW-CB-01.
+func test_wcb_13_old_main_menu_deferred_cleanup_keeps_new_callbacks() -> void:
 	var old_menu: Control = load(MAIN_MENU_SCENE).instantiate()
 	add_child_autofree(old_menu)
 	old_menu._js_window = _window
+	old_menu._start_pressed_cb = "old_start_cb"
 	_fill_window(MAIN_CALLBACKS)
-	await _exit(old_menu)  # Start Game: the scene change frees the old menu
+	await _exit(old_menu)  # Start Game: the scene change takes the old menu out of the tree
+	assert_eq(old_menu._start_pressed_cb, "old_start_cb", "Old ref drop is still pending")
 
-	_fill_window(MAIN_CALLBACKS)  # the reloaded main menu registers
+	# A newer main menu registers in the same frame (off web its _ready() can't, so write it).
+	for callback_name: String in MAIN_CALLBACKS:
+		_window[callback_name] = "new_" + callback_name
+	await get_tree().process_frame  # the old menu's deferred ref drop runs now
 
-	_assert_window_values(MAIN_CALLBACKS, "registered", "Reloaded main menu keeps its callbacks")
+	assert_null(old_menu._start_pressed_cb, "Old menu released its own ref")
+	for callback_name: String in MAIN_CALLBACKS:
+		assert_eq(_window[callback_name], "new_" + callback_name, "New callback kept")
 
 
 # ==============================================================================
@@ -313,10 +339,16 @@ func test_wcb_14_pause_menu_exit_clears_callbacks() -> void:
 	add_child_autofree(menu)
 	menu._js_window = _window
 	_fill_window(PAUSE_CALLBACKS)
+	# What _ready() stores on web (off web they stay null, which would prove nothing).
+	menu._toggle_pause_cb = "toggle_cb"
+	menu._back_to_main_cb = "back_cb"
+	menu._resume_cb = "resume_cb"
+	menu._options_cb = "options_cb"
 
 	await _exit(menu)
 
 	_assert_window_values(PAUSE_CALLBACKS, null, "Cleared on exit")
+	assert_eq(menu._toggle_pause_cb, "toggle_cb", "Refs are kept until the current call returns")
 	await get_tree().process_frame
 	assert_null(menu._toggle_pause_cb)
 	assert_null(menu._back_to_main_cb)

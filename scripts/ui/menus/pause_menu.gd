@@ -11,10 +11,11 @@ extends CanvasLayer
 var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 
 # Store JS callback objects to prevent garbage collection on Web export
-var _toggle_pause_cb: JavaScriptObject
-var _back_to_main_cb: JavaScriptObject
-var _resume_cb: JavaScriptObject
-var _options_cb: JavaScriptObject
+# Variant (not JavaScriptObject) so tests can seed them: off web they'd always be null.
+var _toggle_pause_cb: Variant
+var _back_to_main_cb: Variant
+var _resume_cb: Variant
+var _options_cb: Variant
 ## JS `window` interface; only set on web. Variant so tests can inject a Dictionary.
 var _js_window: Variant
 

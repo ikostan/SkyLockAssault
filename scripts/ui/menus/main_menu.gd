@@ -41,9 +41,10 @@ var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 var last_focused_button: Button = null  # Tracks which button opened the dialog
 # FIX: Safety flag to shield test runners from process termination loops
 var bypass_quit_for_testing: bool = false
-var _start_pressed_cb: JavaScriptObject
-var _options_pressed_cb: JavaScriptObject
-var _quit_pressed_cb: JavaScriptObject
+# Variant (not JavaScriptObject) so tests can seed them: off web they'd always be null.
+var _start_pressed_cb: Variant
+var _options_pressed_cb: Variant
+var _quit_pressed_cb: Variant
 ## JS `window` interface; only set on web. Variant so tests can inject a Dictionary.
 var _js_window: Variant
 ## True once Start has requested the game scene. Later presses before the menu is freed (a
