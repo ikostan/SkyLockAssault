@@ -392,6 +392,22 @@ def test_pw_trans_04_reverse_transition_idempotency(page: Page) -> None:
             timeout_ms=TEST_TIMEOUT,
         )
 
+        # All three presses reach Godot; the two after the scene change are ignored
+        # (the pause menu has left the tree) without touching get_tree().
+        burst_logs = logs[pre_burst_idx:]
+        pressed_count = _count_logs(burst_logs, "back to main menu button pressed")
+        ignored_count = _count_logs(
+            burst_logs, "back to main menu ignored: pause menu already left the tree"
+        )
+        assert (
+            pressed_count == 3
+        ), f"Expected 3 presses to reach Godot, observed: {pressed_count}"
+        assert (
+            ignored_count == 2
+        ), f"Expected 2 ignored presses, observed: {ignored_count}"
+        godot_errors = [log["text"] for log in burst_logs if log["type"] == "error"]
+        assert not godot_errors, f"Reverse burst logged Godot errors: {godot_errors}"
+
         # Verify exactly one Main Menu instance active
         page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
         expect(page.locator("#start-button")).to_be_attached()

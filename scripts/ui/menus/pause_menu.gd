@@ -165,6 +165,14 @@ func _on_back_to_main_button_pressed(_args: Array = []) -> void:
 	## :type _args: Array
 	## :rtype: void
 	Globals.log_message("Back To Main Menu button pressed.", Globals.LogLevel.DEBUG)
+	# The first press changes the scene, which takes this menu out of the tree at once. A second
+	# press before it is freed (a double press or a JS burst) has no tree to unpause and must
+	# not request another transition.
+	if not is_inside_tree():
+		Globals.log_message(
+			"Back To Main Menu ignored: pause menu already left the tree.", Globals.LogLevel.DEBUG
+		)
+		return
 	get_tree().paused = false
 	visible = false
 	Globals.load_scene_with_loading("res://scenes/main_menu.tscn")

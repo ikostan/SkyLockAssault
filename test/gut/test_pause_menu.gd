@@ -195,3 +195,21 @@ func test_pm_05_pause_while_paused_no_duplicate() -> void:
 	pause_menu._unhandled_input(pause_event)
 	assert_false(get_tree().paused, "Second pause should toggle to unpaused")
 	assert_false(pause_menu.visible, "Menu should hide on second pause")
+
+
+## PM-06 | pause_menu.gd | Pause menu already out of the tree | Back To Main Menu pressed again (double press or JS burst after the scene change) | Ignored: no tree access, no second transition request | Unit (GUT) | Defensive test
+func test_pm_06_back_to_main_after_leaving_tree_is_ignored() -> void:
+	gut.p("PM-06: Back To Main Menu on a pause menu outside the tree is ignored.")
+	var previous_next_scene: String = Globals.next_scene
+	Globals.next_scene = "res://second_request_sentinel.tscn"
+	get_tree().root.remove_child(pause_menu)  # what the first press's scene change does
+
+	pause_menu._on_back_to_main_button_pressed()
+
+	assert_eq(
+		Globals.next_scene,
+		"res://second_request_sentinel.tscn",
+		"No second transition request may be made"
+	)
+	get_tree().root.add_child(pause_menu)  # back in the tree for after_each()
+	Globals.next_scene = previous_next_scene
