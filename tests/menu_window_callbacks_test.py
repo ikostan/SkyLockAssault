@@ -60,7 +60,9 @@ def _callback_states(page: Page, names: tuple[str, ...]) -> dict[str, str]:
     )
 
 
-def _assert_callbacks(page: Page, names: tuple[str, ...], state: str, when: str) -> None:
+def _assert_callbacks(
+    page: Page, names: tuple[str, ...], state: str, when: str
+) -> None:
     """Assert every named window callback is in the given state."""
     states = _callback_states(page, names)
     wrong = {name: s for name, s in states.items() if s != state}
