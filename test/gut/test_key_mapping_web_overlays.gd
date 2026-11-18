@@ -179,3 +179,34 @@ func test_km_web_08_older_exit_leaves_newer_back_button_shown() -> void:
 
 	assert_called_count(older_js.eval, 1)  # only _ready()'s show; no hide on exit
 	older.free()
+
+
+## KM-WEB-09 | Two Key Mappings opened from Options (Options is on the stack twice): the older
+## one's Back shows no Options buttons while the newer one is still open; the newer one's Back
+## then shows them and hides the Back button
+func test_km_web_09_older_back_shows_no_options_buttons_over_newer() -> void:
+	var options: Node = _push_hidden_options_menu()
+	Globals.hidden_menus.push_back(options)  # Options pushes itself once per Key Mapping
+	var older: CanvasLayer = _add_menu()
+	var older_js: Variant = _js_bridge
+	var newer: CanvasLayer = _add_menu()
+
+	older._on_controls_back_button_pressed()
+
+	for i: int in get_call_count(older_js, "eval"):
+		var code: String = get_call_parameters(older_js, "eval", i)[0]
+		for id: String in SettingsMenuBase.OPTIONS_MENU_OVERLAY_IDS:
+			assert_false(
+				code.contains("getElementById('%s').style.display = 'block'" % id),
+				id + " must stay hidden while the newer Key Mapping is open"
+			)
+
+	newer._on_controls_back_button_pressed()
+
+	assert_eq(
+		_last_eval_code(),
+		SettingsMenuBase._build_overlay_js(
+			SettingsMenuBase.OPTIONS_MENU_OVERLAY_IDS, ["controls-back-button"]
+		),
+		"The owner's Back shows the Options buttons and hides the Back button"
+	)

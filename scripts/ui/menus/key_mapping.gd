@@ -252,7 +252,8 @@ func _on_controls_back_button_pressed() -> void:
 		# only when Back returns to the Options menu.
 		if js_bridge_wrapper:
 			var visible_ids: Array[String] = []
-			if returned_to_options:
+			# Not while a newer Key Mapping still owns the Back button: it is open over Options.
+			if returned_to_options and owns_back_button:
 				visible_ids = SettingsMenuBase.OPTIONS_MENU_OVERLAY_IDS
 			var hidden_ids: Array[String] = []
 			if owns_back_button:
