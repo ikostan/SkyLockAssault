@@ -91,12 +91,14 @@ So the guard from fix step 4 is added, for Key Mapping only. See Design Decision
 #### 3. Tests (#1165)
 
 - **`test_audio_web_bridge.gd` (14 → 16 cases):** new TC-AWB-15 (one `eval()`, exactly the five IDs including `controls-button`, nothing hidden) and TC-AWB-16 (no `eval()` when `js_window` is null).
-- **New `test_key_mapping_web_overlays.gd` (4 cases, wrapper doubles):**
+- **New `test_key_mapping_web_overlays.gd` (8 cases, wrapper doubles):**
   - KM-WEB-01: Back to Options shows exactly the five IDs, hides `controls-back-button`, and doesn't mention `difficulty-slider`.
   - KM-WEB-02: off web, Back makes no `eval()` call and doesn't touch `window`.
   - KM-WEB-03: with no hidden menu, Back shows none of the five and still hides `controls-back-button`.
   - KM-WEB-04: opened from the main menu, Back shows none of the five, still hides `controls-back-button`, and shows the main menu again.
-- **`tests/back_flow_test.py` (1 → 2 tests):** new `test_back_restores_options_overlays` (BACK-05, BACK-06). Each Back path checks the computed `display` of all five Options buttons and of `difficulty-slider`, and reports every wrong one. It uses a fresh page, so it doesn't depend on where `test_back_flow` leaves the shared page.
+  - KM-WEB-05: a second Back in the same frame changes neither the menu stack nor the overlays. Added for the review fix below.
+  - KM-WEB-06 to KM-WEB-08: an unexpected exit hides `controls-back-button`; an exit after Back, or by an older instance, leaves the overlays alone. Added for the review fix below.
+- **`tests/back_flow_test.py` (1 → 2 tests):** new `test_back_restores_options_overlays` (BACK-05, BACK-06). Each Back path checks the computed `display` of all five Options buttons and of `difficulty-slider`, and reports every wrong one. It uses a fresh page, so it doesn't depend on where `test_back_flow` leaves the shared page. Before each Back it waits for the five Options buttons to be hidden while the submenu is shown, so it sees them change from `none` to `block` (see Review fixes).
 
 ### Part B: Clear menu window callbacks (#1166)
 
@@ -114,27 +116,39 @@ Each follows `gameplay_settings.gd`'s `_unset_gameplay_settings_window_callbacks
 #### 2. Supporting changes
 
 - **Options (`options_menu.gd`):** `js_window` is now a member (it was a local in `_ready()`), so the cleanup can reach it. It and the five `*_cb` fields are `Variant` instead of `JavaScriptObject`, so tests can inject the wrapper doubles the menu already supports.
-- **Main and Pause (`main_menu.gd`, `pause_menu.gd`):** the window is stored in a new `_js_window: Variant` member. They still call `JavaScriptBridge` directly; the switch to the wrappers is deferred to the JS separation work, as the issue says.
+- **Main and Pause (`main_menu.gd`, `pause_menu.gd`):** the window is stored in a new `_js_window: Variant` member. They still call `JavaScriptBridge` directly; the switch to the wrappers is deferred to the JS separation work, as the issue says. Their callback fields are `Variant` too (see Review fixes), so tests can seed them.
 - **Callback refs are dropped one call later.** Each helper clears `window` at once and drops the stored `*_cb` refs with `call_deferred()`. See Design Decisions.
-- **Key Mapping guard:** new `_window_callbacks_unset` flag, so an instance clears `window` at most once.
+- **Key Mapping guard:** new `static var _window_callback_owner_id`, set when an instance registers its callback. An instance clears `window.controlsBackPressed` only while it owns the slot.
 
 #### 3. Tests (#1166)
 
-- **New `test_menu_window_callbacks.gd` (15 cases).** Options and Key Mapping use wrapper doubles. Main and Pause inject the `window` Dictionary that `_ready()` stores on web.
+- **New `test_menu_window_callbacks.gd` (17 cases).** Options and Key Mapping use wrapper doubles. Main and Pause inject the `window` Dictionary that `_ready()` stores on web.
   - **Options:** exit clears all five and drops the refs one frame later (WCB-01); Back clears them before the deferred free (WCB-02); reopening straight after Back keeps the new instance's callbacks (WCB-03); off web nothing is written (WCB-04); twice is safe (WCB-05).
   - **Key Mapping:** Back clears and keeps the running callback's ref until the call returns (WCB-06); an unexpected exit clears (WCB-07); reopening in the same frame as Back keeps the new callback (WCB-08); off web (WCB-09); twice is safe (WCB-10).
-  - **Main:** exit clears all three (WCB-11); off web no window is stored, and the cleanup is safe twice (WCB-12); a reloaded menu keeps its callbacks (WCB-13).
+  - **Main:** exit clears all three (WCB-11); off web no window is stored, and the cleanup is safe twice (WCB-12); the old menu's deferred cleanup leaves a newer menu's callbacks alone (WCB-13).
   - **Pause:** exit clears all four (WCB-14); off web and twice (WCB-15).
+  - **Two Key Mappings open at once:** the older one's exit (WCB-16) or Back (WCB-17) keeps the newer one's callback, and the newer one still clears it on exit. Added for the second review fix below.
 - **New `tests/menu_window_callbacks_test.py` (4 tests):**
   - PW-CB-01: after Start, the Main callbacks are `null`; after returning, the Pause callbacks are `null` and the reloaded Main menu's work; a second game's Pause callbacks work.
   - PW-CB-02: after Options → Back and Controls → Back, their callbacks are `null`; reopened menus work.
-  - PW-CB-03: Controls and Options reopened in the same JS call as their Back keep working callbacks.
+  - PW-CB-03: Controls and Options reopened in the same JS call as their Back keep working callbacks. Each check waits for the old instance's "(left the tree)" exit log, so it runs after the old cleanup.
   - PW-CB-04: Options Back clicked twice through the DOM in one JS task. The first click navigates back; the second does nothing and throws no page error. A later forced click still navigates. Added for the review fix below.
-- **`tests/scene_transition_lifecycle_test.py` (2 tests rewritten, none removed):** PW-TRANS-03 and PW-TRANS-04 fire three presses in one JS call. The first press frees the menu, which now clears the `window` property, so presses 2 and 3 threw `TypeError: ... is not a function`. Both now capture the callback before the burst, so all three presses still reach the leaving menu. A probe confirmed it: 3 presses reached Godot and the main scene initialized once.
+- **`tests/scene_transition_lifecycle_test.py` (2 tests rewritten, none removed):** PW-TRANS-03 and PW-TRANS-04 fire three presses in one JS call. The first press frees the menu, which now clears the `window` property, so presses 2 and 3 threw `TypeError: ... is not a function`. Both now capture the callback before the burst, so all three presses still reach the leaving menu. A probe confirmed it: 3 presses reached Godot and the main scene initialized once. PW-TRANS-03 also counts accepted Start requests (see Review fixes).
 
-### Review fix (CodeRabbit)
+### Review fixes (CodeRabbit)
 
 - **`custom_shell.html`, Options Back overlay:** the handler now calls `window.optionsBackPressed && window.optionsBackPressed([])`, like the Pause handlers. Options Back clears `window.optionsBackPressed` straight away, so a second activation in the same frame threw `TypeError: window.optionsBackPressed is not a function`. PW-CB-04 failed that way before the fix and passes after it.
+- **`key_mapping.gd`, owner of `window.controlsBackPressed`:** Options' `_open_sub_menu()` has no guard, and Options stays alive while Key Mapping is open, so a second `controlsPressed` call opens a second Key Mapping that takes over the slot. The first instance's flag (`_window_callbacks_unset`) was still false, so its Back or exit cleared the newer instance's callback. Ownership is now tracked by instance ID (`_window_callback_owner_id`), which replaces the flag and also covers the same-frame reopen (WCB-08). An instance that no longer owns the slot only releases its own ref. WCB-16 and WCB-17 failed before the fix and pass after it.
+- **`tests/menu_window_callbacks_test.py`, PW-CB-03 waits:** the test slept a fixed 500 ms after each same-frame Back and reopen before checking the new callbacks. If the old instance hadn't left the tree by then, the check could pass before the old cleanup ran, and miss the bug it tests for. It now waits for the old instance's exit log instead. Key Mapping's `_exit_tree()` gains a "Key Mapping menu exited (left the tree)." log, and Options' existing `_exit_tree()` log becomes "Options menu exited (left the tree).". The old text is still a prefix, so the tests that match "options menu exited" are unaffected, and `_teardown()`'s own "Options menu exited." line on Back doesn't satisfy the wait. With Key Mapping's owner check removed, PW-CB-03 now fails at the Controls check.
+- **`main_menu.gd`, one transition request per Start burst:** `_on_start_pressed()` had no re-entry guard, so each press in a burst called `Globals.load_scene_with_loading()`. In 4.7.1, `change_scene_to_node()` instantiates the new loading screen and `queue_delete()`s the pending one each time, so a burst of three built three loading screens and played the accept sound three times; only one mounted, which is why PW-TRANS-03 still passed. A new `_start_transition_requested` flag is set when Start requests the game scene, and later presses log "Start Game ignored: transition already requested." and return before the sound and the request. The "Unbound Controls" dialog path doesn't set it. PW-TRANS-03 now also asserts 3 presses reached Godot, 1 accepted request ("Start Game transition requested.") and 2 ignored presses. New GUT test `test_start_burst_requests_one_transition` in `test_main_menu_audio.gd` checks that a second press makes no request and plays no sound. Without the guard, both fail.
+- **`key_mapping.gd`, second Back before the menu is freed:** `_intentional_exit` was set only at the end of `_on_controls_back_button_pressed()`, just before `queue_free()`, and nothing checked it on entry. A second Back in the same frame (a double press, or a JS burst through a captured `controlsBackPressed`) popped the stack again: from Main → Options → Key Mapping it showed the main menu as well and hid the Options overlay buttons again. Back now checks and sets `_intentional_exit` first, and later calls log "Back ignored: controls menu is already closing." and return. New GUT test KM-WEB-05 runs Back twice in one frame and checks that Options is shown, the main menu stays hidden and on the stack, and the overlays stay as the first Back left them. It failed on all four checks before the fix.
+- **`key_mapping.gd`, Back button left shown on an unexpected exit:** `_ready()` shows `#controls-back-button`, but only Back hid it again. With `_exit_tree()` now clearing `window.controlsBackPressed`, an exit without Back left a shown button whose handler throws a `TypeError`. `_exit_tree()` now also hides the button, but only while this instance still owns the slot: after Back (which already hid it and reset the owner), or once a newer Key Mapping took over, the button is the newer instance's. Key Mapping is added to the root, so in the game only Back removes it; unexpected exits come from tests and from quitting. New GUT tests: KM-WEB-06 (unexpected exit hides the button, failed before the fix), KM-WEB-07 (exit after Back doesn't touch the overlays again) and KM-WEB-08 (an older instance's exit leaves the newer one's button shown). Hiding on every exit fails KM-WEB-07 and KM-WEB-08.
+- **`key_mapping.gd`, shared Back button on an older instance's Back:** Back always hid `controls-back-button`. With two Key Mappings open, the older one's Back hid the button the newer one still uses. Back now hides it only if this instance owns `window.controlsBackPressed`, or no instance does, and skips the `eval()` when there is nothing to change. The Options overlay restore is unchanged. WCB-17 now also checks that the older Back sends no hide for the button; it failed before the fix.
+- **`test_menu_window_callbacks.gd`, tests that couldn't fail:**
+  - **WCB-11 and WCB-14** checked that Main's and Pause's callback refs are dropped, but off web those refs are always null, since a `JavaScriptObject` can't be created there (`ClassDB.can_instantiate()` is false and `create_callback()` returns null). The tests now seed the refs and check that they survive the current call and are null one frame later. For that, Main's and Pause's callback fields are now `Variant`, as Options' already were. Without the deferred ref drop, WCB-11, WCB-13 and WCB-14 fail.
+  - **WCB-13** wrote values to the fake window and read them back, which proved nothing. Rewritten (not removed): a newer registration is written after the old main menu exits but before its deferred ref drop runs, and must survive that drop. Real web registration is covered by PW-CB-01.
+- **`test_menu_window_callbacks.gd` and `test_key_mapping_web_overlays.gd`, log level:** both set `current_log_level` in `before_each()` and `after_each()`. That setting is persisted, so every test saved `user://settings.cfg` twice and left the level at DEBUG. The override isn't needed and is removed from both. 14 older suites use the same pattern; they aren't changed here.
+- **`tests/back_flow_test.py`, BACK-05/06:** the test never checked that the Options buttons were hidden while Audio or Controls was open, so a Back handler that never restored anything would pass if the buttons simply stayed shown. It also slept 500 ms after each Back, having waited only for the submenu to close. A new `_wait_for_overlays()` helper waits for a set of elements to be shown and another to be hidden, in one browser-side check, and on timeout fails with every element's state. Before each Back it now waits for the submenu control to be shown and the five Options buttons hidden. After Back it waits for the five to be shown and the submenu control and `difficulty-slider` hidden. Both sleeps are gone. Checked with mutant builds: with Options no longer hiding `controls-button` on submenu open, the test fails at "Audio opened"; with the old Audio restore list, it fails at "Audio -> Back".
 
 ### Other changes in this PR
 
@@ -152,7 +166,7 @@ Each follows `gameplay_settings.gd`'s `_unset_gameplay_settings_window_callbacks
 
 ### Part B (#1166)
 
-- **Key Mapping guard: clear at most once, not "only if it's still ours".** Step 4 suggests clearing a callback only if it still belongs to this instance. Comparing `window.controlsBackPressed` with the stored callback can't work: Godot wraps every JS object it reads in a new `JavaScriptObjectImpl` (`_js2variant()` in 4.7.1), so the two never compare equal. Instead, an instance that has already cleared `window` (on Back) doesn't clear it again in `_exit_tree()`. Anything registered after that belongs to a newer instance. The other menus don't need the flag: Options already tears down once (`_torn_down`), and Main and Pause are freed long before a new instance loads.
+- **Key Mapping guard: track the owner in GDScript, not by comparing callbacks.** Step 4 suggests clearing a callback only if it still belongs to this instance. Comparing `window.controlsBackPressed` with the stored callback can't work: Godot wraps every JS object it reads in a new `JavaScriptObjectImpl` (`_js2variant()` in 4.7.1), so the two never compare equal. Instead, a static `_window_callback_owner_id` records which instance last registered; Back and `_exit_tree()` clear the slot only for that instance. The first version used a per-instance "cleared once" flag, which missed two Key Mappings open at once (see Review fixes). The other menus don't need a guard: Options already tears down once (`_torn_down`), and Main and Pause are freed long before a new instance loads.
 - **Refs are dropped with `call_deferred()`.** Several exits run inside one of the menu's own callbacks: Options and Key Mapping Back pressed from JS, Start (the scene change removes the main menu at once), and Main Menu from Pause. Dropping the stored ref there frees the `JavaScriptObject` whose callback is still running. Godot 4.7.1's `_callback()` doesn't read the object after the call returns, so it worked, but that's an engine detail to rely on. A deferred drop runs after the call. If the node is freed first, the deferred call is skipped with no error, and the refs go with the node (checked with a probe on 4.7.1).
 - **Main and Pause check `_js_window`, not `OS.get_name()`.** `_js_window` is only set on web, so the result is the same, and GUT can test the helper by injecting a window.
 - **PW-CB-03 reopens in the same JS call.** That's the tightest version of "reopened straight after", and the only one where the old exit can overlap the new registration.
@@ -168,27 +182,29 @@ Run locally with Godot 4.7.1-stable and GUT 9.7.1, using the same commands as `g
 | State                    | GUT scripts | GUT tests | GUT asserts | Playwright (Core Web Flows) |
 |--------------------------|-------------|-----------|-------------|-----------------------------|
 | `main` (`64ef072`, base) | 107         | 991       | 10,950      | 65                          |
-| This PR                  | 109         | 1,012     | 11,052      | 70                          |
+| This PR                  | 109         | 1,019     | 11,077      | 70                          |
 
 - **Test counts per changed file (`main` → this PR):**
 
 | File                                  | Framework  | Cases                |
 |---------------------------------------|------------|----------------------|
 | `test_audio_web_bridge.gd`            | GUT        | 14 → 16              |
-| `test_key_mapping_web_overlays.gd`    | GUT        | new, 4               |
-| `test_menu_window_callbacks.gd`       | GUT        | new, 15              |
+| `test_key_mapping_web_overlays.gd`    | GUT        | new, 8               |
+| `test_menu_window_callbacks.gd`       | GUT        | new, 17              |
 | `back_flow_test.py`                   | Playwright | 1 → 2                |
 | `menu_window_callbacks_test.py`       | Playwright | new, 4               |
 | `scene_transition_lifecycle_test.py`  | Playwright | 6 → 6 (2 rewritten)  |
+| `test_main_menu_audio.gd`             | GUT        | 1 → 2                |
 
 - **No test cases removed.**
 - **The checkbox to "update the existing `restore_options_menu_dom()` test" in #1165:** no such test existed anywhere in `test/`. TC-AWB-15 and TC-AWB-16 are new.
 - **Suites the issues name:** `navigation_to_audio_test.py`, `difficulty_flow_test.py`, `back_flow_test.py`, `scene_transition_invariants_test.py`, `scene_transition_lifecycle_test.py`, `no_error_logs_test.py` (Playwright), `test_gameplay_settings_lifecycle.gd`, `test_pause_menu.gd`, `test_main_menu_audio.gd` and the Key Mapping suites (GUT) all pass.
 - **Mutation checks:**
-  - Without the Key Mapping guard, WCB-08 fails.
+  - Without the Key Mapping owner check, WCB-08, WCB-16 and WCB-17 fail.
+  - Without the Start guard, `test_start_burst_requests_one_transition` and PW-TRANS-03 fail (3 accepted requests).
   - Without Key Mapping's `_exit_tree()`, WCB-07 fails.
   - With Key Mapping's old hand-written list, 3 of the 4 KM-WEB cases fail.
-- **Full GUT suite:** 1,012/1,012, same 3 warnings as `main`.
+- **Full GUT suite:** 1,019/1,019, same 3 warnings as `main`.
 - **Full Playwright Core Web Flows:** 70 passed, including the 5 new tests and the 2 rewritten ones.
 - **CI & Security shard (local):** 1,122 of 1,123 pass. `test_salt_injection.py::test_injection_readonly_file` fails only because the sandbox runs as root, which can write read-only files; it passed in CI on the last PR.
 - **GDScript lint and format:** `gdlint scripts` and `gdformat --check scripts` pass.
@@ -198,9 +214,10 @@ Run locally with Godot 4.7.1-stable and GUT 9.7.1, using the same commands as `g
 
 ## Known Limitations / Follow-ups
 
-- **Two more overlay handlers can throw on a second click.** Options Back is now guarded (see Review fix). Start (`start-button`) and Controls → Back (`controls-back-button`) still call `window.*` unguarded, and their menus clear those callbacks on the same press, so a second click in the same frame throws a `TypeError` in the console. The other handlers only hide their menu, so their callbacks stay set. No test clicks that fast. Making all handlers null-safe belongs with the JS separation work (#1184).
-- **Main and Pause still call `JavaScriptBridge` directly,** so their GUT tests can't run the real web registration. They inject the window that `_ready()` stores on web; Playwright PW-CB-01 covers the real path.
-- **The Key Mapping guard assumes one Key Mapping at a time,** which is true today: opening it hides the menu that opened it.
+- **Two more overlay handlers can throw on a second click.** Options Back is now guarded (see Review fixes). Start (`start-button`) and Controls → Back (`controls-back-button`) still call `window.*` unguarded, and their menus clear those callbacks on the same press, so a second click in the same frame throws a `TypeError` in the console. The other handlers only hide their menu, so their callbacks stay set. No test clicks that fast. Making all handlers null-safe belongs with the JS separation work (#1184).
+- **Main Menu from Pause has no burst guard either.** `pause_menu.gd` `_on_back_to_main_button_pressed()` calls `Globals.load_scene_with_loading()` on every press, like Start did, so a burst there still builds extra loading screens. PW-TRANS-04 passes because only one mounts. Not changed here: the review flagged only Start.
+- **Main and Pause still call `JavaScriptBridge` directly,** so their GUT tests can't run the real web registration. They inject the window and seed the callback refs that `_ready()` stores on web; Playwright PW-CB-01 covers the real path.
+- **Options can open a second Key Mapping.** `_open_sub_menu()` has no guard against a repeated `controlsPressed` call. Hiding Options doesn't prevent it: `window.controlsPressed` stays callable while Key Mapping is open. The Key Mapping cleanup doesn't depend on a single instance (the slot owner is tracked by instance ID; WCB-16/17, KM-WEB-08), but the second instance also pushes Options onto `Globals.hidden_menus` a second time. Not changed here: only a repeated `window.controlsPressed` call reaches it, and nothing in the game makes one.
 - **#618 can close** once this merges.
 
 ---
@@ -213,12 +230,19 @@ Run locally with Godot 4.7.1-stable and GUT 9.7.1, using the same commands as `g
 |-------------------------------|-----------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
 | A: Audio → Back restore list. | <ul><li>`OPTIONS_MENU_OVERLAY_IDS` in one `eval()`.</li></ul>                                                               | `scripts/system/audio_web_bridge.gd`                                                                                              |
 | A: Controls → Back overlays.  | <ul><li>Five Options buttons only when returning to Options.</li><li>`difficulty-slider` no longer shown.</li></ul>         | `scripts/ui/menus/key_mapping.gd`                                                                                                 |
-| A: Tests.                     | <ul><li>2 GUT cases added, 1 new GUT suite (4 cases).</li><li>1 Playwright test added.</li></ul>                            | `test/gut/test_audio_web_bridge.gd`<br/>`test/gut/test_key_mapping_web_overlays.gd`<br/>`tests/back_flow_test.py`                 |
+| A: Tests.                     | <ul><li>2 GUT cases added, 1 new GUT suite (8 cases).</li><li>1 Playwright test added.</li></ul>                            | `test/gut/test_audio_web_bridge.gd`<br/>`test/gut/test_key_mapping_web_overlays.gd`<br/>`tests/back_flow_test.py`                 |
 | B: Options callbacks.         | <ul><li>Cleared in `_teardown()`.</li><li>`js_window` member; `Variant` fields.</li></ul>                                   | `scripts/ui/menus/options_menu.gd`                                                                                                |
-| B: Key Mapping callback.      | <ul><li>New `_exit_tree()`; clear-once guard.</li></ul>                                                                     | `scripts/ui/menus/key_mapping.gd`                                                                                                 |
+| B: Key Mapping callback.      | <ul><li>New `_exit_tree()`; slot owner tracked by instance ID.</li></ul>                                                    | `scripts/ui/menus/key_mapping.gd`                                                                                                 |
 | B: Main and Pause callbacks.  | <ul><li>New `_exit_tree()`; `_js_window` member.</li></ul>                                                                  | `scripts/ui/menus/main_menu.gd`<br/>`scripts/ui/menus/pause_menu.gd`                                                              |
-| B: Tests.                     | <ul><li>1 new GUT suite (15 cases), 1 new Playwright suite (4 tests).</li><li>2 Playwright burst tests rewritten.</li></ul> | `test/gut/test_menu_window_callbacks.gd`<br/>`tests/menu_window_callbacks_test.py`<br/>`tests/scene_transition_lifecycle_test.py` |
+| B: Tests.                     | <ul><li>1 new GUT suite (17 cases), 1 new Playwright suite (4 tests).</li><li>2 Playwright burst tests rewritten.</li></ul> | `test/gut/test_menu_window_callbacks.gd`<br/>`tests/menu_window_callbacks_test.py`<br/>`tests/scene_transition_lifecycle_test.py` |
 | Review fix: Options Back.     | <ul><li>Guarded call, like the Pause handlers.</li></ul>                                                                    | `custom_shell.html`                                                                                                               |
+| Review fix: exit logs.        | <ul><li>"(left the tree)" exit logs in Key Mapping and Options.</li></ul>                                                   | `scripts/ui/menus/key_mapping.gd`<br/>`scripts/ui/menus/options_menu.gd`<br/>`tests/menu_window_callbacks_test.py`                |
+| Review fix: Start guard.      | <ul><li>One transition request per Start burst.</li></ul>                                                                   | `scripts/ui/menus/main_menu.gd`<br/>`test/gut/test_main_menu_audio.gd`<br/>`tests/scene_transition_lifecycle_test.py`             |
+| Review fix: Back re-entry.    | <ul><li>Second Back before the free is ignored.</li></ul>                                                                   | `scripts/ui/menus/key_mapping.gd`<br/>`test/gut/test_key_mapping_web_overlays.gd`                                                 |
+| Review fix: exit overlay.     | <ul><li>Unexpected exit hides the Back button (owner only).</li></ul>                                                       | `scripts/ui/menus/key_mapping.gd`<br/>`test/gut/test_key_mapping_web_overlays.gd`                                                 |
+| Review fix: shared Back.      | <ul><li>Older Back leaves a newer instance's button shown.</li></ul>                                                        | `scripts/ui/menus/key_mapping.gd`                                                                                                 |
+| Review fix: test checks.      | <ul><li>Seeded refs (`Variant` fields), WCB-13 rewritten, no log-level writes.</li></ul>                                    | `scripts/ui/menus/main_menu.gd`<br/>`scripts/ui/menus/pause_menu.gd`<br/>`test/gut/test_menu_window_callbacks.gd`<br/>`test/gut/test_key_mapping_web_overlays.gd`|
+| Review fix: BACK-05/06 waits. | <ul><li>Options buttons hidden before Back; no fixed sleeps.</li></ul>                                                      | `tests/back_flow_test.py`                                                                                                                                        |
 | Docstring sync.               | <ul><li>`get_weapon_name()` return value documented.</li></ul>                                                              | `scripts/resources/weapon_resource.gd`                                                                                            |
 | Milestone note.               | <ul><li>This note.</li></ul>                                                                                                | `files/docs/milestones/27/Part_18_Restore_the_Options_overlays_after_Back_&_clear_menu_window_callbacks.md`                       |
 
@@ -231,7 +255,7 @@ Run locally with Godot 4.7.1-stable and GUT 9.7.1, using the same commands as `g
 | <https://github.com/ikostan/SkyLockAssault/issues/1165> | Both use `OPTIONS_MENU_OVERLAY_IDS` instead of hand-written lists     | ✅         | TC-AWB-15 and KM-WEB-01 compare against `_build_overlay_js(OPTIONS_MENU_OVERLAY_IDS, …)`. |
 | <https://github.com/ikostan/SkyLockAssault/issues/1166> | Confirm-first results recorded, for both questions                    | ✅         | See Confirm-first results.                                                                |
 | <https://github.com/ikostan/SkyLockAssault/issues/1166> | Every menu that registers `window.*` callbacks clears them when freed | ✅         | PW-CB-01/02 in the browser; WCB-01, 07, 11, 14.                                           |
-| <https://github.com/ikostan/SkyLockAssault/issues/1166> | Reopening a menu keeps its callbacks working                          | ✅         | PW-CB-01/02/03/04; WCB-03, 08, 13.                                                        |
+| <https://github.com/ikostan/SkyLockAssault/issues/1166> | Reopening a menu keeps its callbacks working                          | ✅         | PW-CB-01/02/03/04; WCB-03, 08, 13, 16, 17.                                                |
 | <https://github.com/ikostan/SkyLockAssault/issues/1166> | Desktop builds are unaffected                                         | ✅         | Off-web cases WCB-04, 09, 12, 15 and KM-WEB-02; full GUT suite passes.                    |
 | Both                                                    | All GUT, Playwright and lint jobs pass, no cases removed              | ⏳         | Pass locally; PR run to confirm.                                                          |
 | Both                                                    | The PR's milestone note is added                                      | ✅         | This note.                                                                                |
@@ -256,9 +280,6 @@ Run locally with Godot 4.7.1-stable and GUT 9.7.1, using the same commands as `g
     - Ran question 2 with the simple cleanup and found the Key Mapping same-frame case, then added the guard.
   - **Verification**
     - Ran the full GUT suite, the full Core Web Flows Playwright suite, the CI & Security shard, `gdformat` and `gdlint` locally, and mutation-tested the guard, the new `_exit_tree()` and the overlay list.
-    - Wrote this note and the PR description, and checked Sourcery's linked-issues report against #618.
-  - **Review fixes**
-    - Confirmed CodeRabbit's Options Back finding with a failing DOM-click test (PW-CB-04), guarded the handler, and found which other handlers have the same problem (Start, Controls → Back).
 - **@sourcery-ai**
   - Wrote the PR summary and Reviewer's Guide.
   - Checked the linked issues: #1165 and #1166 met, apart from CI to check by hand. #618 showed 3 of 10 because its body still listed findings that moved to #1185–#1188.
@@ -268,5 +289,12 @@ Run locally with Godot 4.7.1-stable and GUT 9.7.1, using the same commands as `g
   - Formatted `tests/menu_window_callbacks_test.py` with Black and isort (`314282b`).
 - **@coderabbitai**
   - Reviewed on request, since it doesn't review this repo automatically.
-  - Found that the Options Back overlay handler throws on a second activation after cleanup (fixed, see Review fix).
+  - Found that the Options Back overlay handler throws on a second activation after cleanup (fixed, see Review fixes).
+  - Found that an older Key Mapping could clear a newer one's `controlsBackPressed` (fixed, see Review fixes).
+  - Nitpick: PW-CB-03's fixed 500 ms waits could check the new callbacks before the old cleanup ran (fixed, see Review fixes).
+  - Nitpick: PW-TRANS-03 couldn't see repeated Start requests, since only one scene mounts (fixed, see Review fixes).
+  - Found that a second Key Mapping Back before the menu is freed popped the menu stack again (fixed, see Review fixes).
+  - Found that an unexpected Key Mapping exit left `#controls-back-button` shown without a callback (fixed, see Review fixes).
+  - Found that an older Key Mapping's Back hid the newer one's Back button, that WCB-11/13/14 couldn't fail, and that the new suites saved settings through the log-level override (all fixed, see Review fixes).
+  - Found that BACK-05/06 never checked the Options buttons were hidden before Back, and slept 500 ms instead of waiting for the restored state (fixed, see Review fixes).
 - **@qodo-code-review:** no review; Qodo reviews are paused.
