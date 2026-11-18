@@ -222,10 +222,18 @@ def test_pw_cb_03_reopen_in_same_frame_keeps_new_callbacks(page: Page) -> None:
             "#options-back-button", state="visible", timeout=TEST_TIMEOUT
         )
 
-        # Controls: Back and reopen in the same frame.
+        # Controls: Back and reopen in the same frame. Wait until the old
+        # instance has left the tree, so its cleanup has run before the check.
         _open_controls(page)
+        idx = len(logs)
         page.evaluate("window.controlsBackPressed([]); window.controlsPressed([]);")
-        page.wait_for_timeout(500)  # let the old instance's deferred free run
+        wait_for_console_log(
+            logs,
+            lambda text: "key mapping menu exited (left the tree)" in text,
+            idx,
+            page,
+            timeout_ms=TEST_TIMEOUT,
+        )
         _assert_callbacks(
             page, KEY_MAPPING_CALLBACKS, "function", "Controls reopened in same frame"
         )
@@ -234,9 +242,17 @@ def test_pw_cb_03_reopen_in_same_frame_keeps_new_callbacks(page: Page) -> None:
             "#controls-back-button", state="hidden", timeout=TEST_TIMEOUT
         )
 
-        # Options: Back and reopen in the same frame.
+        # Options: Back and reopen in the same frame, then wait for the old
+        # instance's exit (Back's own teardown log has no "(left the tree)").
+        idx = len(logs)
         page.evaluate("window.optionsBackPressed([]); window.optionsPressed([]);")
-        page.wait_for_timeout(500)
+        wait_for_console_log(
+            logs,
+            lambda text: "options menu exited (left the tree)" in text,
+            idx,
+            page,
+            timeout_ms=TEST_TIMEOUT,
+        )
         _assert_callbacks(
             page, OPTIONS_MENU_CALLBACKS, "function", "Options reopened in same frame"
         )

@@ -307,7 +307,8 @@ func _exit_tree() -> void:
 	##
 	## :rtype: void
 	_teardown()  # Centralized cleanup
-	Globals.log_message("Options menu exited.", Globals.LogLevel.DEBUG)
+	# "(left the tree)" marks the real exit; _teardown() also logs "Options menu exited."
+	Globals.log_message("Options menu exited (left the tree).", Globals.LogLevel.DEBUG)
 
 
 # New: JS callback for audio button

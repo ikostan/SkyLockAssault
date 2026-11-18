@@ -254,6 +254,7 @@ func _on_controls_back_button_pressed() -> void:
 ## point here too (#1166).
 func _exit_tree() -> void:
 	_unset_key_mapping_window_callbacks()
+	Globals.log_message("Key Mapping menu exited (left the tree).", Globals.LogLevel.DEBUG)
 
 
 ## Detaches the Key Mapping JS entry point from `window` (web only) and drops the callback ref.
