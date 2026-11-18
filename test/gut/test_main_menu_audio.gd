@@ -13,6 +13,9 @@ const MENU_BUS: String = AudioConstants.BUS_SFX_MENU
 # Lifecycle tracking references to prevent scene leakage between test runs
 var _initial_root_children: Array[Node] = []
 var _initial_current_scene: Node = null
+# Input state a test changed; after_each() restores it, even if the test stopped partway.
+var _saved_input_device: String = ""
+var _saved_critical_events: Dictionary = {}
 
 
 func before_all() -> void:
@@ -36,6 +39,12 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	# 0. Restore the input bindings and device a test changed (empty when untouched)
+	if not _saved_critical_events.is_empty():
+		_restore_critical_actions(_saved_critical_events)
+		Globals.current_input_device = _saved_input_device
+		_saved_critical_events = {}
+
 	# 1. Reset global menu state toggles to prevent cross-contamination
 	if is_instance_valid(Globals.options_instance):
 		Globals.options_instance.queue_free()
@@ -124,10 +133,10 @@ func test_main_menu_buttons_execute_accept_audio() -> void:
 ## Scenario: A second Start press before the menu is freed (double click or JS burst) is
 ## ignored: no second transition request and no second accept sound. Binds every critical
 ## action for the keyboard first, so Start always loads the game instead of opening the
-## Unbound Controls dialog; the bindings and device are restored afterwards.
+## Unbound Controls dialog; after_each() restores the bindings and device.
 func test_start_burst_requests_one_transition() -> void:
-	var saved_device: String = Globals.current_input_device
-	var saved_events: Dictionary = _bind_critical_actions_for_keyboard()
+	_saved_input_device = Globals.current_input_device
+	_saved_critical_events = _bind_critical_actions_for_keyboard()
 	var menu_instance := (load(MAIN_MENU_SCENE_PATH) as PackedScene).instantiate() as Control
 	add_child_autofree(menu_instance)
 	await wait_process_frames(1)
@@ -160,12 +169,10 @@ func test_start_burst_requests_one_transition() -> void:
 	# Restore the accepted request before the loading screen reads it at the end of the frame.
 	Globals.next_scene = "res://scenes/main_scene.tscn"
 	await get_tree().process_frame
-	_restore_critical_actions(saved_events)
-	Globals.current_input_device = saved_device
 
 
 ## Selects the keyboard and gives every critical action without a key a test key binding.
-## Returns each critical action's original events for _restore_critical_actions().
+## Returns each critical action's original events, for after_each() to restore.
 func _bind_critical_actions_for_keyboard() -> Dictionary:
 	var saved: Dictionary = {}
 	Globals.current_input_device = "keyboard"
