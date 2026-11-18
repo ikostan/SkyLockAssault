@@ -3,19 +3,20 @@
 
 ---
 
-## PR #_fill in_ Summary
+## PR #1210 Summary
 
-**Title:** Restore the Options overlays after Back and clear menu window callbacks  
-**PR:** _fill in_  
-**Branch:** `architect-review-region-3` → `main`  
+**Title:** System abstractions web interoperability hardening  
+**PR:** <https://github.com/ikostan/SkyLockAssault/pull/1210>  
+**Branch:** `system-abstractions-web-interoperability-hardening` → `main`  
 **Author:** @ikostan  
 **Resolves:**
 
 - [#1165 – [BUG] Web test overlay shows wrong Options buttons after Audio or Controls → Back](https://github.com/ikostan/SkyLockAssault/issues/1165)
 - [#1166 – [BUG] Web test callbacks stay on window after menus are freed](https://github.com/ikostan/SkyLockAssault/issues/1166)
+- [#618 – [ARCHITECT-REVIEW] Region 3: System Abstractions & Web Interoperability Hardening](https://github.com/ikostan/SkyLockAssault/issues/618) (epic; its remaining findings are tracked in #1184)
 
 **Milestone:** Milestone 27: Audio feedback fixes, architecture refactor & performance validation  
-**Labels:** _fill in_
+**Labels:** `documentation`, `refactoring`, `EPIC`
 
 ### Purpose
 
@@ -130,6 +131,11 @@ Each follows `gameplay_settings.gd`'s `_unset_gameplay_settings_window_callbacks
   - PW-CB-03: Controls and Options reopened in the same JS call as their Back keep working callbacks.
 - **`tests/scene_transition_lifecycle_test.py` (2 tests rewritten, none removed):** PW-TRANS-03 and PW-TRANS-04 fire three presses in one JS call. The first press frees the menu, which now clears the `window` property, so presses 2 and 3 threw `TypeError: ... is not a function`. Both now capture the callback before the burst, so all three presses still reach the leaving menu. A probe confirmed it: 3 presses reached Godot and the main scene initialized once.
 
+### Other changes in this PR
+
+- **`scripts/resources/weapon_resource.gd`:** docstring update to `get_weapon_name()` from the weekly GDScript docs sync (`fe3276c`, #1209). No code change.
+- **`tests/menu_window_callbacks_test.py`:** formatted by DeepSource (Black and isort, `314282b`). No test change.
+
 ---
 
 ## Design Decisions
@@ -207,6 +213,7 @@ Run locally with Godot 4.7.1-stable and GUT 9.7.1, using the same commands as `g
 | B: Key Mapping callback.      | <ul><li>New `_exit_tree()`; clear-once guard.</li></ul>                                                                     | `scripts/ui/menus/key_mapping.gd`                                                                                                 |
 | B: Main and Pause callbacks.  | <ul><li>New `_exit_tree()`; `_js_window` member.</li></ul>                                                                  | `scripts/ui/menus/main_menu.gd`<br/>`scripts/ui/menus/pause_menu.gd`                                                              |
 | B: Tests.                     | <ul><li>1 new GUT suite (15 cases), 1 new Playwright suite (3 tests).</li><li>2 Playwright burst tests rewritten.</li></ul> | `test/gut/test_menu_window_callbacks.gd`<br/>`tests/menu_window_callbacks_test.py`<br/>`tests/scene_transition_lifecycle_test.py` |
+| Docstring sync.               | <ul><li>`get_weapon_name()` return value documented.</li></ul>                                                              | `scripts/resources/weapon_resource.gd`                                                                                            |
 | Milestone note.               | <ul><li>This note.</li></ul>                                                                                                | `files/docs/milestones/27/Part_18_Restore_the_Options_overlays_after_Back_&_clear_menu_window_callbacks.md`                       |
 
 ### Assessment against linked issues
@@ -230,12 +237,25 @@ Run locally with Godot 4.7.1-stable and GUT 9.7.1, using the same commands as `g
 ### Human contribution (@ikostan)
 
 - Filed #1165 and #1166 and set their scope, including the confirm-first steps.
+- Applied the changes in `6936da5`, generated the `.uid` files and aligned the note's tables.
+- Brought in the weekly GDScript docs sync (#1209), including the `get_weapon_name()` docstring (`fe3276c`).
 
 ### Bots / AI contributions
 
 - **@claude (Opus 5.5)**
   - **Planning**
     - Checked that the code #1165 points at was still as described after PR #1206, and found the `restore_options_menu_dom()` test the issue mentions doesn't exist.
+  - **Confirm-first**
+    - Built the web export as CI does and ran the new Playwright checks on `main`: both #1165 paths and all four #1166 menus were broken as described.
+    - Ran question 2 with the simple cleanup and found the Key Mapping same-frame case, then added the guard.
   - **Verification**
     - Ran the full GUT suite, the full Core Web Flows Playwright suite, the CI & Security shard, `gdformat` and `gdlint` locally, and mutation-tested the guard, the new `_exit_tree()` and the overlay list.
-    - Wrote this note.
+    - Wrote this note and the PR description, and checked Sourcery's linked-issues report against #618.
+- **@sourcery-ai**
+  - Wrote the PR summary and Reviewer's Guide.
+  - Checked the linked issues: #1165 and #1166 met, apart from CI to check by hand. #618 showed 3 of 10 because its body still listed findings that moved to #1185–#1188.
+  - No code review: the 7-day review budget was used up.
+- **@deepsource-io / @deepsource-autofix**
+  - Static analysis of the Python and JavaScript changes: no issues reported.
+  - Formatted `tests/menu_window_callbacks_test.py` with Black and isort (`314282b`).
+- **@coderabbitai and @qodo-code-review:** no review. CodeRabbit doesn't review this repo automatically, and Qodo reviews are paused.
