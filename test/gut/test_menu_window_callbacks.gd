@@ -165,6 +165,34 @@ func test_wcb_05_options_cleanup_twice_is_safe() -> void:
 	assert_null(menu._audio_pressed_cb)
 
 
+## WCB-18 | Options reopened through Globals.load_options() in the same frame as Back: the old
+## instance's tree_exited handler must not pop the new instance's parent or clear its state
+func test_wcb_18_old_options_exit_keeps_reopened_options_tracked() -> void:
+	var main_panel: Panel = Panel.new()
+	main_panel.name = "Panel"
+	add_child_autofree(main_panel)
+	Globals.load_options(main_panel)
+	var old_options: CanvasLayer = Globals.options_instance
+	await get_tree().process_frame  # let _ready()'s deferred focus calls run
+
+	old_options._on_options_back_button_pressed()  # queue_free(): exits at end of frame
+	Globals.load_options(main_panel)  # reopened in the same frame
+	var new_options: CanvasLayer = Globals.options_instance
+	await get_tree().process_frame  # the old instance leaves the tree now
+
+	assert_false(is_instance_valid(old_options), "Old Options was freed")
+	assert_eq(Globals.options_instance, new_options, "Reopened Options is still tracked")
+	assert_true(Globals.options_open, "Options is still open")
+	assert_eq(Globals.hidden_menus, [main_panel], "The parent is still on the stack")
+	assert_false(main_panel.visible, "The parent stays hidden while Options is open")
+
+	new_options._on_options_back_button_pressed()
+
+	assert_true(main_panel.visible, "The reopened Options' Back restores its parent")
+	assert_eq(Globals.hidden_menus.size(), 0)
+	await get_tree().process_frame
+
+
 # ==============================================================================
 # KEY MAPPING
 # ==============================================================================

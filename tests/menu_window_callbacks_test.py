@@ -256,7 +256,25 @@ def test_pw_cb_03_reopen_in_same_frame_keeps_new_callbacks(page: Page) -> None:
         _assert_callbacks(
             page, OPTIONS_MENU_CALLBACKS, "function", "Options reopened in same frame"
         )
+        # The old instance's exit must not reset the reopened Options' state.
+        stale_resets = [
+            log["text"]
+            for log in logs[idx:]
+            if "options instance exited unexpectedly" in log["text"].lower()
+        ]
+        assert not stale_resets, f"Old Options exit reset the new one: {stale_resets}"
         _open_and_close_audio(page)
+
+        # The reopened Options still has its parent on the stack, so Back shows it.
+        idx = len(logs)
+        page.evaluate("window.optionsBackPressed([])")
+        wait_for_console_log(
+            logs,
+            lambda text: "showing menu:" in text,
+            idx,
+            page,
+            timeout_ms=TEST_TIMEOUT,
+        )
     except Exception as e:
         print(f"Test PW-CB-03 failed: {e}")
         _dump_failure_artifacts(page, logs, "pw_cb_03")
