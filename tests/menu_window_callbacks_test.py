@@ -300,10 +300,18 @@ def test_pw_cb_04_options_back_click_after_cleanup_is_ignored(page: Page) -> Non
             "#options-back-button", state="visible", timeout=TEST_TIMEOUT
         )
 
-        page.evaluate(
+        # Record the callback between the clicks: cleanup must have run before the
+        # second click, not merely by the time the test checks afterwards.
+        state_between_clicks = page.evaluate(
             "() => { const el = document.getElementById('options-back-button');"
-            " el.click(); el.click(); }"
+            " el.click();"
+            " const cb = window.optionsBackPressed;"
+            " const state = cb === null ? 'null' : typeof cb;"
+            " el.click(); return state; }"
         )
+        assert (
+            state_between_clicks == "null"
+        ), f"optionsBackPressed after the first click: {state_between_clicks}"
 
         # The first click still navigates back to the main menu.
         page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
@@ -316,8 +324,10 @@ def test_pw_cb_04_options_back_click_after_cleanup_is_ignored(page: Page) -> Non
         page.wait_for_selector(
             "#options-back-button", state="visible", timeout=TEST_TIMEOUT
         )
-        # Overlay buttons use pointer-events: none, so force the DOM click.
-        page.locator("#options-back-button").click(force=True)
+        # Dispatch the click on the element itself: overlay buttons use
+        # pointer-events: none, so a (forced) pointer click lands on the canvas below
+        # and would go through Godot's own button, not the DOM handler.
+        page.locator("#options-back-button").dispatch_event("click")
         page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
         assert not page_errors, f"Options Back click threw: {page_errors}"
     except Exception as e:
