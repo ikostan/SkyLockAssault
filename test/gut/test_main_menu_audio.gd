@@ -119,3 +119,35 @@ func test_main_menu_buttons_execute_accept_audio() -> void:
 	
 	assert_true(SfxManager.is_any_sfx_playing(), "Quit button must trigger confirmation audio.")
 	assert_string_contains(SfxManager.get_active_sfx_stream_path(), "ui_accept", "Quit button must play the 'ui_accept' sound effect asset.")
+
+
+## Scenario: A second Start press before the menu is freed (double click or JS burst) is
+## ignored: no second transition request and no second accept sound.
+func test_start_burst_requests_one_transition() -> void:
+	var menu_instance := (load(MAIN_MENU_SCENE_PATH) as PackedScene).instantiate() as Control
+	add_child_autofree(menu_instance)
+	await wait_process_frames(1)
+	if Settings.has_unbound_critical_actions_for_current_device():
+		pending("Start opens the Unbound Controls dialog instead of loading the game.")
+		return
+	var start_btn: Button = menu_instance.start_button
+
+	start_btn.pressed.emit()
+
+	assert_true(menu_instance._start_transition_requested, "First press requests the transition.")
+	assert_eq(Globals.next_scene, "res://scenes/main_scene.tscn")
+	SfxManager.stop_all_sfx()
+	# Detect a second request: load_scene_with_loading() would overwrite this value.
+	Globals.next_scene = "res://second_request_sentinel.tscn"
+
+	start_btn.pressed.emit()
+
+	assert_eq(
+		Globals.next_scene,
+		"res://second_request_sentinel.tscn",
+		"Second press must not request another transition."
+	)
+	assert_false(SfxManager.is_any_sfx_playing(), "Second press must not play the accept sound.")
+	# Restore the accepted request before the loading screen reads it at the end of the frame.
+	Globals.next_scene = "res://scenes/main_scene.tscn"
+	await get_tree().process_frame

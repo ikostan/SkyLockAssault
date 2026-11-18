@@ -46,6 +46,9 @@ var _options_pressed_cb: JavaScriptObject
 var _quit_pressed_cb: JavaScriptObject
 ## JS `window` interface; only set on web. Variant so tests can inject a Dictionary.
 var _js_window: Variant
+## True once Start has requested the game scene. Later presses before the menu is freed (a
+## double click or a burst of JS calls) are ignored, so Start makes one transition request.
+var _start_transition_requested: bool = false
 
 @onready var ui_panel: Panel = $VideoStreamPlayer/Panel
 @onready var ui_container: VBoxContainer = $VideoStreamPlayer/Panel/VBoxContainer
@@ -319,6 +322,11 @@ func _on_start_pressed(_args: Array = []) -> void:
 	## :type _args: Array
 	## :rtype: void
 	Globals.log_message("Start Game menu button pressed.", Globals.LogLevel.DEBUG)
+	if _start_transition_requested:
+		Globals.log_message(
+			"Start Game ignored: transition already requested.", Globals.LogLevel.DEBUG
+		)
+		return
 
 	# Play confirmation sound locally due to no_global_sound metadata block
 	SfxManager.play_sfx("ui_accept", AudioConstants.BUS_SFX_MENU)
@@ -328,6 +336,8 @@ func _on_start_pressed(_args: Array = []) -> void:
 		start_button.disabled = true
 		unbound_dialog.popup_centered()  # Show the reused dialog
 	else:
+		_start_transition_requested = true
+		Globals.log_message("Start Game transition requested.", Globals.LogLevel.DEBUG)
 		Globals.load_scene_with_loading("res://scenes/main_scene.tscn")
 
 

@@ -305,6 +305,23 @@ def test_pw_trans_03_forward_transition_idempotency(page: Page) -> None:
         new_logs = logs[pre_burst_idx:]
         init_main_scene_count = _count_logs(new_logs, "initializing main scene")
         hud_wired_count = _count_logs(new_logs, "hud successfully wired")
+        start_pressed_count = _count_logs(new_logs, "start game menu button pressed")
+        start_requested_count = _count_logs(new_logs, "start game transition requested")
+        start_ignored_count = _count_logs(
+            new_logs, "start game ignored: transition already requested"
+        )
+
+        # All three presses reach Godot, but Start accepts exactly one transition
+        # request; Godot would otherwise replace the pending scene twice.
+        assert (
+            start_pressed_count == 3
+        ), f"Expected 3 Start presses to reach Godot, observed: {start_pressed_count}"
+        assert (
+            start_requested_count == 1
+        ), f"Expected 1 accepted transition request, observed: {start_requested_count}"
+        assert (
+            start_ignored_count == 2
+        ), f"Expected 2 ignored Start presses, observed: {start_ignored_count}"
 
         # Verify idempotency guards: exactly 1 scene is loaded and initialized
         if init_main_scene_count > 0:
