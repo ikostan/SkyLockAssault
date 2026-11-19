@@ -539,7 +539,9 @@ func test_empty_action_name_still_suppresses_cancel() -> void:
 func test_removing_scene_marker_stops_navigation_and_cancel_audio() -> void:
 	var previous_scene: Node = get_tree().current_scene
 	var scene := Node.new()
-	add_child_autofree(scene)
+	# current_scene must be a direct child of the root; under the test node it is refused
+	get_tree().root.add_child(scene)
+	autofree(scene)
 	get_tree().current_scene = scene
 	Globals.options_open = false
 	Globals.hidden_menus.clear()
@@ -599,7 +601,9 @@ func test_missing_scene_preserves_runtime_context_checks() -> void:
 func test_child_menu_markers_do_not_enable_scene_context() -> void:
 	var previous_scene: Node = get_tree().current_scene
 	var scene := Node.new()
-	add_child_autofree(scene)
+	# current_scene must be a direct child of the root; under the test node it is refused
+	get_tree().root.add_child(scene)
+	autofree(scene)
 	var child := Node.new()
 	scene.add_child(child)
 	child.add_to_group(MENU_CONTEXT_GROUP)
