@@ -1,3 +1,4 @@
+# gdlint: disable=max-public-methods
 ## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_hidden_menu_stack.gd
@@ -11,8 +12,8 @@
 ##
 ## Each Back / exit test puts a freed entry on top of a live menu: the function must finish
 ## (menu freed / state reset) and show the live menu. The failed-load rollbacks
-## (HMS-11, 13, 14) undo only their own push, so another screen's menu stays on the stack. Key Mapping and
-## SettingsMenuBase are covered by KM-WEB-10, SMB-09 and SMB-14.
+## (HMS-11, 13, 14) undo only their own push, so another screen's menu stays on the stack.
+## Key Mapping and SettingsMenuBase are covered by KM-WEB-10, SMB-09 and SMB-14.
 
 extends "res://addons/gut/test.gd"
 
@@ -329,3 +330,180 @@ func test_hms_14_load_options_instantiate_failure_rollback_keeps_unrelated_menu(
 		assert_false(Globals.options_open, case + ": options_open is reset")
 		assert_null(Globals.options_instance, case)
 		Globals.hidden_menus.clear()
+
+
+# ==============================================================================
+# ADDITIONAL STACK AND ROLLBACK BOUNDARIES
+# ==============================================================================
+
+
+## Null slots are discarded just like freed entries, across consecutive pops.
+func test_pop_mixed_stack_preserves_lifo_order_without_showing_menus() -> void:
+	var lower: Panel = _push_live_menu("LowerMenu")
+	_push_freed_menu()
+	var upper: Panel = _push_live_menu("UpperMenu")
+	Globals.hidden_menus.push_back(null)
+	_push_freed_menu()
+
+	assert_eq(Globals.pop_hidden_menu(), upper)
+	assert_eq(Globals.hidden_menus.size(), 2, "Entries below the returned menu stay queued")
+	assert_false(upper.visible, "Popping must leave visibility to the caller")
+	assert_eq(Globals.pop_hidden_menu(), lower)
+	assert_false(lower.visible)
+	assert_null(Globals.pop_hidden_menu(), "Repeated pops after exhaustion are safe")
+	assert_true(Globals.hidden_menus.is_empty())
+
+
+## Rollback with no pushed menu must leave even a live top entry untouched.
+func test_rollback_null_preserves_unrelated_live_top() -> void:
+	var unrelated: Panel = _push_live_menu()
+
+	assert_false(Globals._roll_back_hidden_menu(null))
+	assert_eq(Globals.hidden_menus, [unrelated])
+	assert_false(unrelated.visible)
+
+
+## A missing caller must not cause a different menu to be popped or shown.
+func test_rollback_absent_menu_leaves_stack_and_caller_untouched() -> void:
+	var unrelated: Panel = _push_live_menu()
+	var absent: Panel = _new_caller()
+	absent.hide()
+
+	assert_false(Globals._roll_back_hidden_menu(absent))
+	assert_eq(Globals.hidden_menus, [unrelated])
+	assert_false(unrelated.visible)
+	assert_false(absent.visible, "An entry that was never pushed is not restored")
+
+
+## Duplicate references can belong to earlier navigation; undo only the latest push.
+func test_rollback_removes_last_matching_entry_only() -> void:
+	var caller: Panel = _push_live_menu("Caller")
+	var middle: Panel = _push_live_menu("Middle")
+	Globals.hidden_menus.push_back(caller)
+	var top: Panel = _push_live_menu("Top")
+
+	assert_true(Globals._roll_back_hidden_menu(caller))
+	assert_eq(Globals.hidden_menus, [caller, middle, top])
+	assert_true(caller.visible)
+	assert_false(middle.visible)
+	assert_false(top.visible, "A later screen's entry must not be shown by rollback")
+
+
+## A stale entry above the caller does not prevent targeted removal from the middle.
+func test_rollback_preserves_freed_entries_above_caller() -> void:
+	var lower: Panel = _push_live_menu("Lower")
+	var caller: Panel = _push_live_menu("Caller")
+	_push_freed_menu()
+
+	assert_true(Globals._roll_back_hidden_menu(caller))
+	assert_true(caller.visible)
+	assert_eq(Globals.hidden_menus.size(), 2)
+	assert_eq(Globals.hidden_menus[0], lower)
+	assert_false(is_instance_valid(Globals.hidden_menus[1]))
+	assert_false(lower.visible)
+
+
+## A second rollback is a no-op after its own entry has already been removed.
+func test_rollback_twice_does_not_consume_previous_menu() -> void:
+	var lower: Panel = _push_live_menu("Lower")
+	var caller: Panel = _push_live_menu("Caller")
+
+	assert_true(Globals._roll_back_hidden_menu(caller))
+	caller.hide()
+	assert_false(Globals._roll_back_hidden_menu(caller))
+	assert_eq(Globals.hidden_menus, [lower])
+	assert_false(lower.visible)
+	assert_false(caller.visible)
+
+
+## Recovery with an exhausted stale stack must still clear the Options state.
+func test_options_unexpected_exit_with_only_freed_entries_resets_state() -> void:
+	Globals.options_open = true
+	Globals.options_instance = null
+	_push_freed_menu()
+	_push_freed_menu()
+
+	Globals._on_options_exited_unexpectedly()
+
+	assert_true(Globals.hidden_menus.is_empty())
+	assert_false(Globals.options_open)
+	assert_null(Globals.options_instance)
+
+
+## An older Options exit must not disturb a newer instance or prune its stale stack.
+func test_options_unexpected_exit_preserves_current_live_instance() -> void:
+	var current: CanvasLayer = CanvasLayer.new()
+	add_child_autofree(current)
+	Globals.options_instance = current
+	Globals.options_open = true
+	var live: Panel = _push_live_menu()
+	_push_freed_menu()
+
+	Globals._on_options_exited_unexpectedly()
+
+	assert_eq(Globals.options_instance, current)
+	assert_true(Globals.options_open)
+	assert_eq(Globals.hidden_menus.size(), 2)
+	assert_eq(Globals.hidden_menus[0], live)
+	assert_false(is_instance_valid(Globals.hidden_menus[1]))
+	assert_false(live.visible)
+
+
+# ==============================================================================
+# BACK FOLLOWED BY TREE EXIT MUST RESTORE ONLY ONE ANCESTOR
+# ==============================================================================
+
+
+func test_audio_back_then_tree_exit_keeps_lower_menu_hidden() -> void:
+	var audio: Control = load(GamePaths.AUDIO_SETTINGS_SCENE).instantiate()
+	add_child(audio)
+	var lower: Panel = _push_live_menu("Lower")
+	var nearest: Panel = _push_live_menu("Nearest")
+	_push_freed_menu()
+	_push_freed_menu()
+
+	audio._on_back_button_pressed()
+	await get_tree().process_frame
+
+	assert_false(is_instance_valid(audio))
+	assert_true(nearest.visible)
+	assert_false(lower.visible, "Intentional tree exit must not restore a second ancestor")
+	assert_eq(Globals.hidden_menus, [lower])
+
+
+func test_advanced_back_then_tree_exit_keeps_lower_menu_hidden() -> void:
+	var advanced: Control = load(ADVANCED_SETTINGS_SCENE).instantiate()
+	add_child(advanced)
+	var lower: Panel = _push_live_menu("Lower")
+	var nearest: Control = _push_options_like_menu()
+	_push_freed_menu()
+	_push_freed_menu()
+
+	advanced._on_advanced_back_button_pressed()
+	await get_tree().process_frame
+
+	assert_false(is_instance_valid(advanced))
+	assert_true(nearest.visible)
+	assert_false(lower.visible, "Intentional tree exit must not restore a second ancestor")
+	assert_eq(Globals.hidden_menus, [lower])
+
+
+func test_options_back_then_tree_exit_keeps_lower_menu_hidden() -> void:
+	var options: CanvasLayer = load(GamePaths.OPTIONS_MENU_SCENE).instantiate()
+	add_child(options)
+	Globals.options_instance = options
+	Globals.options_open = true
+	var lower: Panel = _push_live_menu("Lower")
+	var nearest: Panel = _push_live_menu("Nearest")
+	_push_freed_menu()
+	_push_freed_menu()
+
+	options._on_options_back_button_pressed()
+	await get_tree().process_frame
+
+	assert_false(is_instance_valid(options))
+	assert_true(nearest.visible)
+	assert_false(lower.visible, "Repeated teardown must not consume a second ancestor")
+	assert_eq(Globals.hidden_menus, [lower])
+	assert_false(Globals.options_open)
+	assert_null(Globals.options_instance)
