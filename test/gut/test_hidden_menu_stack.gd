@@ -507,17 +507,22 @@ func test_hms_24_advanced_back_then_tree_exit_keeps_lower_menu_hidden() -> void:
 	assert_eq(Globals.hidden_menus, [lower])
 
 
-## HMS-25 | Options Back, then Options' own tree exit: teardown runs once, shows the nearest
-## menu and resets the Options state; the second teardown doesn't pop the menu below it
+## HMS-25 | Options Back, then Options' own tree exit, opened through Globals.load_options() so
+## Globals' tree_exited handler is connected as in the game: teardown runs once, shows the
+## nearest menu and resets the Options state; neither the second teardown nor Globals' exit
+## handler pops the menu below it
 func test_hms_25_options_back_then_tree_exit_keeps_lower_menu_hidden() -> void:
-	var options: CanvasLayer = load(GamePaths.OPTIONS_MENU_SCENE).instantiate()
-	add_child(options)
-	Globals.options_instance = options
-	Globals.options_open = true
 	var lower: Panel = _push_live_menu("Lower")
 	var nearest: Panel = _push_live_menu("Nearest")
 	_push_freed_menu()
 	_push_freed_menu()
+	Globals.load_options(null)  # Nearest is already hidden and on the stack
+	var options: CanvasLayer = Globals.options_instance
+	assert_true(
+		options.tree_exited.is_connected(Globals._on_options_exited_unexpectedly),
+		"Options is wired as in the game"
+	)
+	await get_tree().process_frame  # let _ready()'s deferred focus calls run
 
 	options._on_options_back_button_pressed()
 	await get_tree().process_frame

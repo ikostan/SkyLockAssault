@@ -462,11 +462,16 @@ func _on_options_exited_unexpectedly() -> void:
 	## exited is an older Options (freed at the end of the frame after its Back, while a new one
 	## was opened in the same frame), and the new one's parent and state must stay (#1166 review).
 	##
+	## Also does nothing when options_open is already false: Options' own _teardown() runs from
+	## _exit_tree() before tree_exited fires, has restored its menu and reset the state, so a pop
+	## here would show a second menu (#1211 review).
+	##
 	## :rtype: void
 	if is_instance_valid(options_instance) and options_instance.is_inside_tree():
 		return
-	if options_open:  # Guard: Only log if it was still "open" (unexpected exit)
-		log_message("Options instance exited unexpectedly—resetting flag.", LogLevel.WARNING)
+	if not options_open:
+		return
+	log_message("Options instance exited unexpectedly—resetting flag.", LogLevel.WARNING)
 
 	var prev_menu: Node = pop_hidden_menu()
 	if prev_menu != null:

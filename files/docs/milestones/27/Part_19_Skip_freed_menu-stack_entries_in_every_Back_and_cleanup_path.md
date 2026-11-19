@@ -75,7 +75,7 @@ Each `if not …hidden_menus.is_empty(): var prev_menu: Node = …pop_back(); if
     - Consecutive pops over freed and null entries keep LIFO order and show nothing (HMS-15).
     - `_roll_back_hidden_menu()` directly: nothing pushed (HMS-16), menu not on the stack (HMS-17), caller on the stack twice (HMS-18), freed entry above the caller (HMS-19), second rollback of the same menu (HMS-20). HMS-18 and HMS-19 check the helper's contract; in the game a failed load rolls back right after its own push.
     - Options unexpected exit with only freed entries still resets the state (HMS-21), and an older exit leaves a newer live instance, the stack and the live menu alone (HMS-22).
-    - Back followed by the menu's own tree exit restores only one menu: Audio (HMS-23), Advanced (HMS-24) and Options (HMS-25).
+    - Back followed by the menu's own tree exit restores only one menu: Audio (HMS-23), Advanced (HMS-24) and Options (HMS-25). HMS-25 opens Options through `Globals.load_options()`, so Globals' `tree_exited` handler is connected as in the game (see Review fixes).
 - Key Mapping and `SettingsMenuBase` keep their existing freed-entry tests, which now go through the helper: KM-WEB-10, SMB-09 and SMB-14.
 
 ### Review fixes
@@ -97,6 +97,8 @@ Each `if not …hidden_menus.is_empty(): var prev_menu: Node = …pop_back(); if
 | No `_intentional_exit` guard in Audio / Advanced           | HMS-23 / HMS-24             | ❌                     |
 | No `_torn_down` guard in Options                           | HMS-25                      | ❌                     |
 
+- **HMS-25 skipped the game's `tree_exited` connection, which hid a double restore:** HMS-25 created Options directly, so `Globals._on_options_exited_unexpectedly()` was never connected. It now opens Options through `Globals.load_options()` and checks the connection is there. With that wiring, the test failed on the PR code: Options' `_exit_tree()` runs `_teardown()`, which restores the nearest menu and sets `options_open = false`; then `tree_exited` fires and the Globals handler popped and showed the menu below as well. The handler now returns when `options_open` is already false, since Options' own teardown has done the restoring. When Options is open, `options_open` is true until `_teardown()` runs, so a real unexpected exit is still handled. HMS-12, HMS-21, HMS-22, WCB-18, WCB-21 and `test_options_teardown.gd` (gdUnit4) pass unchanged. The double restore predates this PR: before it, the handler's typed pop showed the menu below too, or stopped on a freed entry. In the game, Options is opened from the main or pause menu, so the stack holds one entry and the second pop found nothing; it shows only with two or more menus below Options.
+
 #### Sourcery (not applied)
 
 - **"Recovery paths bypass helper" (`globals.gd`):** the three failed-load rollbacks deliberately don't use `pop_hidden_menu()`. When the load pushed its caller, the caller is on top and both remove the same entry. When it pushed nothing, the helper would skip the freed entry and pop and show another screen's menu, which is the bug CodeRabbit found. Key Mapping, `SettingsMenuBase` and every Back / exit path do use the helper.
@@ -107,6 +109,7 @@ Each `if not …hidden_menus.is_empty(): var prev_menu: Node = …pop_back(); if
 ## Design Decisions
 
 - **Skip, don't stop.** The rule from `SettingsMenuBase` and Key Mapping after #1210: a freed entry is discarded and the next live menu is shown. A freed entry means that menu is gone; the one below it is still the right screen to go back to.
+- **Globals' Options exit handler is only a safety net.** Options restores its menu itself in `_teardown()`, from Back or `_exit_tree()`. The handler acts only when Options left the tree without that (`options_open` still true), so one exit never restores two menus.
 - **A failed load undoes its own push, not "the top of the stack".** The rollback finds the entry it pushed with `rfind()` and removes that, so it can't touch a menu another screen left there, freed or not.
 - **The helper returns the menu and does nothing else.** Every caller restores something different (focus target, DOM overlays, log text), so only the popping is shared.
 - **Audio Back with only freed entries now uses the empty-stack fallback.** Before, that case had a non-empty stack, so the `else:` branch (`change_scene_to_file(Globals.previous_scene)`) never ran; with the fix the function would finish with no menu shown. Now `prev_menu == null` covers both "empty" and "only freed entries", so Back goes to `previous_scene` in both. HMS-07 blanks `previous_scene`, as the other Audio tests do, and checks that the menu still closes.
@@ -121,7 +124,7 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gu
 | State                    | GUT tests | GUT asserts | gdUnit4 test cases |
 |--------------------------|-----------|-------------|--------------------|
 | `main` (`0f28ac9`, base) | 1,031     | 11,143      | 164                |
-| This PR                  | 1,056     | 11,260      | 164                |
+| This PR                  | 1,056     | 11,261      | 164                |
 
 - **No test cases removed.**
 - **Full GUT suite:** 1,056/1,056.
@@ -129,6 +132,7 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gu
 - **New suite on `main`:** HMS-01 – HMS-14 fail, 14/14 (see Confirm-first results).
 - **Rollback fix on the previous commit:** HMS-11, HMS-13 and HMS-14 fail with the old rollback (see Review fixes).
 - **CodeRabbit's tests:** each fails when the code it guards is broken (see Review fixes).
+- **Options exit handler fix:** the rewritten HMS-25 fails without the `options_open` guard (the menu below is shown and popped) and passes with it.
 - **No typed `pop_back()` left:** `grep -rn "hidden_menus.pop_back" scripts/` finds only the one inside `pop_hidden_menu()`, which pops into a `Variant`.
 - **GDScript lint and format:** `gdlint scripts` and `gdformat --check scripts` pass, and so do `gdlint` and `gdformat --check` on `test_hidden_menu_stack.gd`.
 
@@ -144,14 +148,14 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gu
 
 ### File-Level Changes
 
-| Change           | Details                                                                                                                                                           | Files                                                                                                                   |
-|------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
-| Helpers.         | <ul><li>`pop_hidden_menu()`: skips freed entries, returns the live menu or `null`.</li><li>`_roll_back_hidden_menu()`: undoes a failed load's own push.</li></ul> | `scripts/core/globals.gd`                                                                                               |
-| Globals callers. | <ul><li>Options exit handler uses `pop_hidden_menu()`.</li><li>3 failed-load rollbacks use `_roll_back_hidden_menu()`.</li></ul>                                  | `scripts/core/globals.gd`                                                                                               |
-| Menu callers.    | <ul><li>5 Back / exit paths use the helper.</li></ul>                                                                                                             | `scripts/ui/menus/options_menu.gd`<br/>`scripts/ui/menus/audio_settings.gd`<br/>`scripts/ui/menus/advanced_settings.gd` |
-| Existing loops.  | <ul><li>Replaced by the helper.</li></ul>                                                                                                                         | `scripts/ui/menus/key_mapping.gd`<br/>`scripts/ui/menus/settings_menu_base.gd`                                          |
-| Tests.           | <ul><li>New GUT suite, 25 cases (HMS-15 – HMS-25 by CodeRabbit).</li></ul>                                                                                        | `test/gut/test_hidden_menu_stack.gd`<br/>`test/gut/test_hidden_menu_stack.gd.uid`                                       |
-| Milestone note.  | <ul><li>This note.</li></ul>                                                                                                                                      | `files/docs/milestones/27/Part_19_Skip_freed_menu-stack_entries_in_every_Back_and_cleanup_path.md`                      |
+| Change           | Details                                                                                                                                                                               | Files                                                                                                                   |
+|------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| Helpers.         | <ul><li>`pop_hidden_menu()`: skips freed entries, returns the live menu or `null`.</li><li>`_roll_back_hidden_menu()`: undoes a failed load's own push.</li></ul>                     | `scripts/core/globals.gd`                                                                                               |
+| Globals callers. | <ul><li>Options exit handler uses `pop_hidden_menu()`, and does nothing once Options' own teardown has run.</li><li>3 failed-load rollbacks use `_roll_back_hidden_menu()`.</li></ul> | `scripts/core/globals.gd`                                                                                               |
+| Menu callers.    | <ul><li>5 Back / exit paths use the helper.</li></ul>                                                                                                                                 | `scripts/ui/menus/options_menu.gd`<br/>`scripts/ui/menus/audio_settings.gd`<br/>`scripts/ui/menus/advanced_settings.gd` |
+| Existing loops.  | <ul><li>Replaced by the helper.</li></ul>                                                                                                                                             | `scripts/ui/menus/key_mapping.gd`<br/>`scripts/ui/menus/settings_menu_base.gd`                                          |
+| Tests.           | <ul><li>New GUT suite, 25 cases (HMS-15 – HMS-25 by CodeRabbit).</li></ul>                                                                                                            | `test/gut/test_hidden_menu_stack.gd`<br/>`test/gut/test_hidden_menu_stack.gd.uid`                                       |
+| Milestone note.  | <ul><li>This note.</li></ul>                                                                                                                                                          | `files/docs/milestones/27/Part_19_Skip_freed_menu-stack_entries_in_every_Back_and_cleanup_path.md`                      |
 
 ### Assessment against linked issues
 
@@ -178,7 +182,7 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gu
 
 - **@coderabbitai**
   - Review: failed loads should roll back only the menu they pushed (`globals.gd`), applied (see Review fixes).
-  - Added 11 edge-case tests (`6398d99`), now HMS-15 – HMS-25.
+  - Review: HMS-25 should use the game's `tree_exited` connection, applied; it exposed a double restore in the Options exit handler (see Review fixes).
 - **@sourcery-ai**
   - Review: two comments asking for the helper in the rollback paths and for the rollback tests to expect the other screen's menu shown; not applied (see Review fixes).
 - **@claude (Opus 5.5)**
@@ -190,6 +194,7 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gu
   - **Review fixes**
     - Applied CodeRabbit's rollback finding: added `_roll_back_hidden_menu()`, rewrote HMS-11, 13 and 14 and checked them against the previous commit.
     - Reviewed CodeRabbit's 11 tests by breaking the code each one guards, gave them IDs HMS-15 – HMS-25 and doc comments, and corrected the HMS-18 comment.
+    - Applied CodeRabbit's HMS-25 finding: opened Options through `Globals.load_options()`, which exposed the double restore, and added the `options_open` guard to `_on_options_exited_unexpectedly()`.
     - Answered the two Sourcery comments.
   - **Verification**
     - Ran the full GUT and gdUnit4 suites, `gdformat` and `gdlint` locally.
