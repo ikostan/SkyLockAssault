@@ -22,6 +22,8 @@ var _meta_was_preexisting: bool = false
 var _saved_options_open: bool = false
 var _saved_hidden_menus: Array[Node] = []
 var _saved_paused: bool = false
+## Restore the scene even if a context regression test stops before its cleanup.
+var _saved_test_scene: Node = null
 
 ## Suite setup: Double the SfxManager using a decoupled script to bypass lifecycle destruction guards.
 ## :rtype: void
@@ -72,6 +74,8 @@ func before_each() -> void:
 		original_scene_name = ""
 		scene_was_in_menu_group = false
 			
+	_saved_test_scene = get_tree().current_scene
+
 	if SfxManager.get("sfx_calls") != null:
 		SfxManager.set("sfx_calls", [])
 		
@@ -81,6 +85,9 @@ func before_each() -> void:
 ## Per-test cleanup: Restore the shared engine scene tree name wrapper cleanly.
 ## :rtype: void
 func after_each() -> void:
+	if is_instance_valid(_saved_test_scene):
+		get_tree().current_scene = _saved_test_scene
+	_saved_test_scene = null
 	# FIX: Cleanly teardown and unmount the dummy scene tracker if initialized
 	if dummy_scene_node and is_instance_valid(dummy_scene_node):
 		if get_tree().current_scene == dummy_scene_node:
@@ -473,3 +480,162 @@ func test_plain_button_cancel_plays_on_menu_bus() -> void:
 	_simulate_input(_action_event("ui_cancel"))
 	_assert_sfx_call_count(1)
 	_assert_sfx_bus("ui_cancel", AudioConstants.BUS_SFX_MENU)
+
+
+## A legacy method alone no longer identifies a control as an input remapper.
+class LegacyCancelButton extends Button:
+	var cancel_calls: int = 0
+
+	func cancel_remap() -> void:
+		cancel_calls += 1
+
+
+## Null properties represent a normal control; empty strings still mark remappers.
+class RemapPropertyButton extends Button:
+	var action: Variant = null
+	var action_name: Variant = null
+
+
+func test_cancel_remap_method_alone_does_not_suppress_menu_audio() -> void:
+	var button := LegacyCancelButton.new()
+	add_child_autofree(button)
+
+	UiManager._handle_ui_cancel_action(button, "ui_cancel")
+
+	assert_eq(SfxManager.get("sfx_calls"), [["ui_cancel", AudioConstants.BUS_SFX_MENU]])
+	assert_eq(button.cancel_calls, 0, "Audio dispatch must not invoke a control's cancel method.")
+
+
+func test_null_remap_properties_allow_cancel_on_menu_bus() -> void:
+	var button := RemapPropertyButton.new()
+	add_child_autofree(button)
+
+	UiManager._handle_ui_cancel_action(button, "ui_cancel")
+
+	assert_eq(SfxManager.get("sfx_calls"), [["ui_cancel", AudioConstants.BUS_SFX_MENU]])
+
+
+func test_empty_action_still_suppresses_cancel() -> void:
+	var button := RemapPropertyButton.new()
+	button.action = ""
+	add_child_autofree(button)
+
+	UiManager._handle_ui_cancel_action(button, "ui_cancel")
+
+	_assert_sfx_not_called()
+
+
+func test_empty_action_name_still_suppresses_cancel() -> void:
+	var button := RemapPropertyButton.new()
+	button.action_name = ""
+	add_child_autofree(button)
+
+	UiManager._handle_ui_cancel_action(button, "ui_cancel")
+
+	_assert_sfx_not_called()
+
+
+## Root markers must be evaluated afresh, including immediately after removal.
+func test_removing_scene_marker_stops_navigation_and_cancel_audio() -> void:
+	var previous_scene: Node = get_tree().current_scene
+	var scene := Node.new()
+	add_child_autofree(scene)
+	get_tree().current_scene = scene
+	Globals.options_open = false
+	Globals.hidden_menus.clear()
+	get_tree().paused = false
+
+	for marker: String in [MENU_CONTEXT_GROUP, MENU_CONTEXT_META]:
+		if marker == MENU_CONTEXT_GROUP:
+			scene.add_to_group(marker)
+		else:
+			scene.set_meta(marker, true)
+		_simulate_input(_action_event("ui_cancel"))
+		_simulate_input(_action_event("ui_up"))
+		assert_eq(SfxManager.get("sfx_calls"), [
+			["ui_cancel", AudioConstants.BUS_SFX_MENU],
+			["ui_navigation", AudioConstants.BUS_SFX_MENU],
+		])
+		SfxManager.set("sfx_calls", [])
+		if marker == MENU_CONTEXT_GROUP:
+			scene.remove_from_group(marker)
+		else:
+			scene.remove_meta(marker)
+		_simulate_input(_action_event("ui_cancel"))
+		_simulate_input(_action_event("ui_up"))
+		_assert_sfx_not_called()
+
+	get_tree().current_scene = previous_scene
+
+
+## With no current scene, focus and runtime state still determine the context.
+func test_missing_scene_preserves_runtime_context_checks() -> void:
+	var previous_scene: Node = get_tree().current_scene
+	get_tree().current_scene = null
+	Globals.options_open = false
+	Globals.hidden_menus.clear()
+	get_tree().paused = false
+
+	assert_false(UiManager._check_menu_context(false))
+	assert_true(UiManager._check_menu_context(true), "Focus works during scene transitions.")
+	Globals.options_open = true
+	assert_true(UiManager._check_menu_context(false))
+	Globals.options_open = false
+	get_tree().paused = true
+	var paused_context: bool = UiManager._check_menu_context(false)
+	get_tree().paused = false
+	assert_true(paused_context)
+	var menu := Control.new()
+	add_child_autofree(menu)
+	Globals.hidden_menus.append(menu)
+	assert_true(UiManager._check_menu_context(false))
+	Globals.hidden_menus.clear()
+	assert_false(UiManager._check_menu_context(false), "Context must not be cached.")
+
+	get_tree().current_scene = previous_scene
+
+
+## A marker on a descendant must not opt the entire scene into UI audio.
+func test_child_menu_markers_do_not_enable_scene_context() -> void:
+	var previous_scene: Node = get_tree().current_scene
+	var scene := Node.new()
+	add_child_autofree(scene)
+	var child := Node.new()
+	scene.add_child(child)
+	child.add_to_group(MENU_CONTEXT_GROUP)
+	child.set_meta(MENU_CONTEXT_META, true)
+	get_tree().current_scene = scene
+	Globals.options_open = false
+	Globals.hidden_menus.clear()
+	get_tree().paused = false
+
+	var context: bool = UiManager._check_menu_context(false)
+	get_tree().current_scene = previous_scene
+
+	assert_false(context, "Only the active scene root can opt in with a marker.")
+
+
+## Slider value changes stay quiet; moving vertically still uses the Menu bus.
+func test_slider_vertical_navigation_routes_to_menu_bus() -> void:
+	var slider := HSlider.new()
+	add_child_autofree(slider)
+
+	for action: String in ["ui_left", "ui_right"]:
+		UiManager._handle_ui_navigation_action(action, slider, true)
+	_assert_sfx_not_called()
+	for action: String in ["ui_up", "ui_down"]:
+		UiManager._handle_ui_navigation_action(action, slider, true)
+	assert_eq(SfxManager.get("sfx_calls"), [
+		["ui_navigation", AudioConstants.BUS_SFX_MENU],
+		["ui_navigation", AudioConstants.BUS_SFX_MENU],
+	])
+
+
+## Releasing a key must not emit a second Menu-bus sound after its press.
+func test_released_navigation_and_cancel_actions_are_silent() -> void:
+	_set_menu_context(true)
+	for action: String in ["ui_up", "ui_down", "ui_left", "ui_right", "ui_cancel"]:
+		var event: InputEventAction = _action_event(action)
+		event.pressed = false
+		_simulate_input(event)
+	_assert_sfx_not_called()
