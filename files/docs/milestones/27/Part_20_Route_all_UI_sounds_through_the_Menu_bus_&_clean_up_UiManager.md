@@ -6,8 +6,8 @@
 ## PR Summary
 
 **Title:** Route all UI sounds through the Menu bus and clean up UiManager  
-**PR:** _fill in after opening the PR._  
-**Branch:** `issue-1152-menu-bus-ui-sounds` → `main`  
+**PR:** [#1215](https://github.com/ikostan/SkyLockAssault/pull/1215)  
+**Branch:** `feature-route-all-ui-sounds-through-the-menu-bus-and-clean-up-uimanager` → `main`  
 **Author:** @ikostan  
 **Resolves:**
 
@@ -67,11 +67,11 @@ Measured in the benchmark scenario with temporary timing around the handler (not
 | Per frame                      | 1.36 µs (0.008 % of the 16.67 ms frame budget)  |
 | Benchmark process time (avg)   | 0.49 ms, so the handler is about 0.3 % of it    |
 
-The cost isn't visible, so, as the issue says, the code is unchanged and no follow-up was filed. An A/B run with the hook disconnected wasn't used: its frame-time noise is far larger than 1.4 µs per frame. The figures include the timing calls, so they slightly overstate the real cost.
+The cost isn't visible, so, as the issue says, the code is unchanged and no follow-up was filed. An A/B run with the hook disconnected wasn't used: its frame-time noise is far larger than 1.4 µs per frame. The figures include the timing calls, so they slightly overstate the real cost. The result is also recorded in [#619](https://github.com/ikostan/SkyLockAssault/issues/619#issuecomment-7017802027), and #1152's section 5 links to it.
 
 ### 5. Tests
 
-- **`test/gut/test_nav_escape_sfx.gd` (9 → 18 cases):**
+- **`test/gut/test_nav_escape_sfx.gd` (9 → 27 cases, 9 of them added by CodeRabbit, see Review fixes):**
   - `_set_menu_context()` adds or removes the `menu_context` group instead of renaming the scene to `MainMenu` / `GameLevel`. `after_each()` restores the scene's original name, group membership and metadata, and releases any focus a test left behind.
   - Existing cases unchanged and still running: context suppression, exit cleanup, echo, single dispatch, text field, slider and unrelated actions. The cancel and focused-navigation cases also assert the requested bus is `SFX_Menu`.
   - New: navigation without focus requests `SFX_Menu` for all four directions; no UI sound requests `SFX`; a scene named `MainMenu` / `OptionsMenu` / `Menu` without a marker is not a menu context; the group and the metadata each make one; the runtime checks (paused tree, `options_open`, `hidden_menus`, focus) still work without a marker; a focused `InputRemapButton` (`action`) and a control with `action_name` suppress the cancel sound; a plain focused button gets it on `SFX_Menu`.
@@ -88,6 +88,7 @@ The cost isn't visible, so, as the issue says, the code is unchanged and no foll
 #### CodeRabbit
 
 - **`test_nav_escape_sfx.gd`, restore runtime menu state in the hooks:** `test_runtime_flags_open_menu_context_without_scene_marker` reset `Globals.options_open` and removed its dummy entry from `Globals.hidden_menus` in the test body. The review said a failed assertion would skip that cleanup. That part is wrong for GUT: a failed assert doesn't stop the test (checked with a probe), so the body's cleanup still runs. A runtime script error in the body does stop it, though. With an error injected right after `push_back(dummy_menu)`, the dummy entry was still on `Globals.hidden_menus` at the end of the suite, which keeps a menu context on for every later test. `before_each()` now saves `options_open`, `hidden_menus` and `get_tree().paused`, and `after_each()` restores them (`hidden_menus` in place with `assign()`). With the same injected error, the state is clean at the end of the suite. The test body's own cleanup is kept.
+- **Edge-case tests (`4ed2088`):** CodeRabbit added 9 tests to `test_nav_escape_sfx.gd`: a control with only `cancel_remap()` gets the cancel sound; `null` `action` / `action_name` don't suppress it and empty strings do; removing a scene marker stops the sounds; no current scene keeps the runtime checks; markers on a child don't opt the scene in; vertical slider navigation uses the Menu bus; released actions are silent. It also made `after_each()` restore the current scene. Two of the tests failed locally: `test_removing_scene_marker_stops_navigation_and_cancel_audio` (2 failed asserts plus an engine error) and `test_child_menu_markers_do_not_enable_scene_context` (engine error). Both added their scene with `add_child_autofree()`, under the test node, and Godot refuses a `current_scene` that isn't a direct child of the root (`p_scene->get_parent() != root`). So the current scene stayed the per-test dummy: the first test's markers had no effect, and the second passed its assert without checking anything. Both now add the scene to `get_tree().root` and `autofree()` it. Checked by breaking the code: with the group and meta checks removed, the marker-removal test fails; with any node in the `menu_context` group counting, the child-marker test fails.
 
 ---
 
@@ -107,10 +108,10 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gu
 | State                    | GUT tests | GUT asserts | gdUnit4 test cases |
 |--------------------------|-----------|-------------|--------------------|
 | `main` (`8cd7cce`, base) | 1,056     | 11,261      | 164                |
-| This PR                  | 1,074     | 11,380      | 164                |
+| This PR                  | 1,083     | 11,399      | 164                |
 
 - **No test cases removed.**
-- **Full GUT suite:** 1,074/1,074, including `test_all_menus_navigation_regression.gd`, `test_globals_input_guards.gd` and `test_audio_sfx_centralization.gd`.
+- **Full GUT suite:** 1,083/1,083, including `test_all_menus_navigation_regression.gd`, `test_globals_input_guards.gd` and `test_audio_sfx_centralization.gd`.
 - **gdUnit4 suite:** 164/164, including `test_gdunit_all_menus_navigation_regression.gd`.
 - **New tests on `main`:** 11 cases fail (see Confirm-first results).
 - **Breaking each change:** each change below, applied to this PR's `ui_manager.gd`, makes at least one new test fail.
@@ -133,7 +134,6 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gu
 
 - **Manual itch.io checks** from the issue are still to do on the web build: Menu slider at 0 silences navigation, cancel and button sounds; navigation and cancel follow the Menu slider at normal volume; sounds still play in the main, options, pause and key mapping menus.
 - **#1101 also changes `ui_manager.gd`** (`_track_input_device()`, lines 47–51). This PR doesn't touch those lines, so the rebase should be trivial.
-- **The `_on_node_added` result should also be recorded in #619,** as the issue asks.
 
 ---
 
@@ -157,7 +157,7 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gu
 | <https://github.com/ikostan/SkyLockAssault/issues/1152> | No dead branch, scene-name heuristic or `cancel_remap` check in `UiManager` | ✅         | All three removed.                                                                                                                     |
 | <https://github.com/ikostan/SkyLockAssault/issues/1152> | `menu_context` group on the scenes that need it                             | ✅         | No scene needs it: the heuristic never matched in production, and adding it to the main menu would change behavior (Design Decisions). |
 | <https://github.com/ikostan/SkyLockAssault/issues/1152> | UI sounds still play in every menu                                          | ✅ / ⏳     | Covered by GUT and gdUnit4 navigation suites; manual itch.io check still to do.                                                        |
-| <https://github.com/ikostan/SkyLockAssault/issues/1152> | `_on_node_added` result recorded                                            | ✅ / ⏳     | Recorded here (Key Changes 4); still to add on the PR and in #619.                                                                     |
+| <https://github.com/ikostan/SkyLockAssault/issues/1152> | `_on_node_added` result recorded                                            | ✅         | Recorded here (Key Changes 4), in [#619](https://github.com/ikostan/SkyLockAssault/issues/619#issuecomment-7017802027) and in #1152's section 5.                                                                  |
 | <https://github.com/ikostan/SkyLockAssault/issues/1152> | GUT, gdUnit4, Playwright and lint pass, no test cases removed               | ✅ / ⏳     | GUT, gdUnit4 and lint pass locally; Playwright runs in CI.                                                                             |
 | <https://github.com/ikostan/SkyLockAssault/issues/1152> | Milestone note added                                                        | ✅         | This note.                                                                                                                             |
 
@@ -174,18 +174,14 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gu
 
 - **@coderabbitai**
   - Review: restore `options_open` and `hidden_menus` in `test_nav_escape_sfx.gd`'s hooks, applied (see Review fixes).
+  - Added 9 edge-case tests and a current-scene restore in `after_each()` (`4ed2088`); two of the tests were fixed to parent their scene to the root (see Review fixes).
 - **@claude (Opus 5.5)**
   - **Confirm-first**
     - Checked the issue's line references against `main` and found that `main_menu.tscn`'s root is `Control`, so the scene-name heuristic never matched in production; confirmed it with a probe on the real main menu.
     - Ran the new and updated tests against `main`'s `ui_manager.gd`: 11 cases fail.
-  - **Fix**
-    - Routed navigation and cancel through `BUS_SFX_MENU`, removed the dead fallback, the name heuristic and the `cancel_remap` check.
-    - Reworked `test_nav_escape_sfx.gd` to use the `menu_context` group and added 9 cases, added Menu-bus asserts and Scenario D to `test_audio_integration.gd`, and wrote `test_ui_sfx_menu_bus.gd`.
-  - **Measurement**
-    - Timed `_on_node_added` during the benchmark's 60 s firing window with temporary instrumentation (not committed).
   - **Review fixes**
     - Checked CodeRabbit's hook-cleanup finding: a failed GUT assert doesn't stop a test, but a script error does and leaked the dummy menu. Moved the state restore into `before_each()` / `after_each()` (also covering `paused`) and confirmed it with an injected error.
+    - Found why two of CodeRabbit's tests failed (scene not a child of the root, so `current_scene` was refused), fixed them, and checked both by breaking the code they guard.
   - **Verification**
     - Ran the full GUT and gdUnit4 suites, `gdformat` and `gdlint` locally, and broke each change to confirm a new test catches it.
     - Wrote this note.
-  
