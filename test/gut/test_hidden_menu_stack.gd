@@ -14,6 +14,11 @@
 ## (menu freed / state reset) and show the live menu. The failed-load rollbacks
 ## (HMS-11, 13, 14) undo only their own push, so another screen's menu stays on the stack.
 ## Key Mapping and SettingsMenuBase are covered by KM-WEB-10, SMB-09 and SMB-14.
+##
+## HMS-15 to HMS-25 cover the edges: consecutive pops over freed and null entries, what
+## Globals._roll_back_hidden_menu() promises when called directly, Options exit handling
+## with only freed entries or a newer live instance, and Back followed by the menu's own tree
+## exit, which must restore only one menu.
 
 extends "res://addons/gut/test.gd"
 
@@ -333,12 +338,13 @@ func test_hms_14_load_options_instantiate_failure_rollback_keeps_unrelated_menu(
 
 
 # ==============================================================================
-# ADDITIONAL STACK AND ROLLBACK BOUNDARIES
+# ROLLBACK AND OPTIONS EXIT BOUNDARIES
 # ==============================================================================
 
 
-## Null slots are discarded just like freed entries, across consecutive pops.
-func test_pop_mixed_stack_preserves_lifo_order_without_showing_menus() -> void:
+## HMS-15 | Consecutive pops over freed and null entries: each returns the next live menu in
+## LIFO order, keeps the entries below it, and shows nothing; popping an empty stack is safe
+func test_hms_15_pop_mixed_stack_preserves_lifo_order_without_showing_menus() -> void:
 	var lower: Panel = _push_live_menu("LowerMenu")
 	_push_freed_menu()
 	var upper: Panel = _push_live_menu("UpperMenu")
@@ -354,8 +360,9 @@ func test_pop_mixed_stack_preserves_lifo_order_without_showing_menus() -> void:
 	assert_true(Globals.hidden_menus.is_empty())
 
 
-## Rollback with no pushed menu must leave even a live top entry untouched.
-func test_rollback_null_preserves_unrelated_live_top() -> void:
+## HMS-16 | Rollback when the load pushed nothing: even a live menu on top is left on the
+## stack and hidden
+func test_hms_16_rollback_null_preserves_unrelated_live_top() -> void:
 	var unrelated: Panel = _push_live_menu()
 
 	assert_false(Globals._roll_back_hidden_menu(null))
@@ -363,8 +370,9 @@ func test_rollback_null_preserves_unrelated_live_top() -> void:
 	assert_false(unrelated.visible)
 
 
-## A missing caller must not cause a different menu to be popped or shown.
-func test_rollback_absent_menu_leaves_stack_and_caller_untouched() -> void:
+## HMS-17 | Rollback of a menu that isn't on the stack: returns false, pops nothing and
+## shows neither that menu nor the one on the stack
+func test_hms_17_rollback_absent_menu_leaves_stack_and_caller_untouched() -> void:
 	var unrelated: Panel = _push_live_menu()
 	var absent: Panel = _new_caller()
 	absent.hide()
@@ -375,8 +383,10 @@ func test_rollback_absent_menu_leaves_stack_and_caller_untouched() -> void:
 	assert_false(absent.visible, "An entry that was never pushed is not restored")
 
 
-## Duplicate references can belong to earlier navigation; undo only the latest push.
-func test_rollback_removes_last_matching_entry_only() -> void:
+## HMS-18 | Rollback with the caller on the stack twice: only its last entry is removed, and
+## a menu pushed after it stays on the stack and hidden. Checks the helper's contract
+## directly; in the game a failed load rolls back right after its own push.
+func test_hms_18_rollback_removes_last_matching_entry_only() -> void:
 	var caller: Panel = _push_live_menu("Caller")
 	var middle: Panel = _push_live_menu("Middle")
 	Globals.hidden_menus.push_back(caller)
@@ -389,8 +399,10 @@ func test_rollback_removes_last_matching_entry_only() -> void:
 	assert_false(top.visible, "A later screen's entry must not be shown by rollback")
 
 
-## A stale entry above the caller does not prevent targeted removal from the middle.
-func test_rollback_preserves_freed_entries_above_caller() -> void:
+## HMS-19 | Rollback with a freed entry above the caller: the caller's entry is removed from
+## the middle, the freed entry and the menu below are kept, and only the caller is shown.
+## Checks the helper's contract directly; in the game the caller is on top.
+func test_hms_19_rollback_preserves_freed_entries_above_caller() -> void:
 	var lower: Panel = _push_live_menu("Lower")
 	var caller: Panel = _push_live_menu("Caller")
 	_push_freed_menu()
@@ -403,8 +415,9 @@ func test_rollback_preserves_freed_entries_above_caller() -> void:
 	assert_false(lower.visible)
 
 
-## A second rollback is a no-op after its own entry has already been removed.
-func test_rollback_twice_does_not_consume_previous_menu() -> void:
+## HMS-20 | A second rollback of the same menu does nothing: the menu below stays on the
+## stack and hidden
+func test_hms_20_rollback_twice_does_not_consume_previous_menu() -> void:
 	var lower: Panel = _push_live_menu("Lower")
 	var caller: Panel = _push_live_menu("Caller")
 
@@ -416,8 +429,9 @@ func test_rollback_twice_does_not_consume_previous_menu() -> void:
 	assert_false(caller.visible)
 
 
-## Recovery with an exhausted stale stack must still clear the Options state.
-func test_options_unexpected_exit_with_only_freed_entries_resets_state() -> void:
+## HMS-21 | Options exits unexpectedly with only freed entries: they are discarded and
+## options_open / options_instance are still reset
+func test_hms_21_options_unexpected_exit_with_only_freed_entries_resets_state() -> void:
 	Globals.options_open = true
 	Globals.options_instance = null
 	_push_freed_menu()
@@ -430,8 +444,9 @@ func test_options_unexpected_exit_with_only_freed_entries_resets_state() -> void
 	assert_null(Globals.options_instance)
 
 
-## An older Options exit must not disturb a newer instance or prune its stale stack.
-func test_options_unexpected_exit_preserves_current_live_instance() -> void:
+## HMS-22 | An older Options exit while a newer instance is in the tree: the handler leaves
+## the Options state, the stack (freed entry included) and the live menu alone
+func test_hms_22_options_unexpected_exit_preserves_current_live_instance() -> void:
 	var current: CanvasLayer = CanvasLayer.new()
 	add_child_autofree(current)
 	Globals.options_instance = current
@@ -450,11 +465,13 @@ func test_options_unexpected_exit_preserves_current_live_instance() -> void:
 
 
 # ==============================================================================
-# BACK FOLLOWED BY TREE EXIT MUST RESTORE ONLY ONE ANCESTOR
+# BACK FOLLOWED BY TREE EXIT
 # ==============================================================================
 
 
-func test_audio_back_then_tree_exit_keeps_lower_menu_hidden() -> void:
+## HMS-23 | Audio Back, then Audio's own tree exit: Back skips the freed entries and shows the
+## nearest menu; the intentional exit doesn't pop and show the menu below it
+func test_hms_23_audio_back_then_tree_exit_keeps_lower_menu_hidden() -> void:
 	var audio: Control = load(GamePaths.AUDIO_SETTINGS_SCENE).instantiate()
 	add_child(audio)
 	var lower: Panel = _push_live_menu("Lower")
@@ -471,7 +488,9 @@ func test_audio_back_then_tree_exit_keeps_lower_menu_hidden() -> void:
 	assert_eq(Globals.hidden_menus, [lower])
 
 
-func test_advanced_back_then_tree_exit_keeps_lower_menu_hidden() -> void:
+## HMS-24 | Advanced Back, then Advanced's own tree exit: Back skips the freed entries and
+## shows the nearest menu; the intentional exit doesn't pop and show the menu below it
+func test_hms_24_advanced_back_then_tree_exit_keeps_lower_menu_hidden() -> void:
 	var advanced: Control = load(ADVANCED_SETTINGS_SCENE).instantiate()
 	add_child(advanced)
 	var lower: Panel = _push_live_menu("Lower")
@@ -488,7 +507,9 @@ func test_advanced_back_then_tree_exit_keeps_lower_menu_hidden() -> void:
 	assert_eq(Globals.hidden_menus, [lower])
 
 
-func test_options_back_then_tree_exit_keeps_lower_menu_hidden() -> void:
+## HMS-25 | Options Back, then Options' own tree exit: teardown runs once, shows the nearest
+## menu and resets the Options state; the second teardown doesn't pop the menu below it
+func test_hms_25_options_back_then_tree_exit_keeps_lower_menu_hidden() -> void:
 	var options: CanvasLayer = load(GamePaths.OPTIONS_MENU_SCENE).instantiate()
 	add_child(options)
 	Globals.options_instance = options
