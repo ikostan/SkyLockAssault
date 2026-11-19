@@ -9,8 +9,9 @@
 ## returns the nearest live menu. Before the fix, a typed `var prev_menu: Node = pop_back()`
 ## raised "Trying to assign invalid previously freed instance" and stopped the function.
 ##
-## Each per-path test puts a freed entry on top of a live menu: the function must finish
-## (menu freed / state reset / rollback done) and show the live menu. Key Mapping and
+## Each Back / exit test puts a freed entry on top of a live menu: the function must finish
+## (menu freed / state reset) and show the live menu. The failed-load rollbacks
+## (HMS-11, 13, 14) undo only their own push, so another screen's menu stays on the stack. Key Mapping and
 ## SettingsMenuBase are covered by KM-WEB-10, SMB-09 and SMB-14.
 
 extends "res://addons/gut/test.gd"
@@ -80,6 +81,34 @@ func _push_options_like_menu() -> Control:
 	menu.hide()
 	Globals.hidden_menus.push_back(menu)
 	return menu
+
+
+## Leaves another screen's hidden live menu on the stack with a freed entry above it, as a
+## failed load finds it. Returns the live menu.
+func _push_unrelated_with_freed_above() -> Panel:
+	var unrelated: Panel = _push_live_menu("UnrelatedMenu")
+	_push_freed_menu()
+	return unrelated
+
+
+## A visible menu in the tree for a load to hide.
+func _new_caller() -> Panel:
+	var caller: Panel = Panel.new()
+	caller.name = "CallerMenu"
+	add_child_autofree(caller)
+	return caller
+
+
+## The failed load removed only its own entry (and showed its caller again); the unrelated
+## menu and the freed entry above it are still on the stack, and the unrelated menu stays
+## hidden.
+func _assert_only_own_entry_rolled_back(unrelated: Panel, caller: Panel, case: String) -> void:
+	assert_eq(Globals.hidden_menus.size(), 2, case + ": unrelated + freed entries left alone")
+	assert_eq(Globals.hidden_menus[0], unrelated, case + ": unrelated menu still on the stack")
+	assert_false(unrelated.visible, case + ": unrelated menu not shown")
+	if caller != null:
+		assert_true(caller.visible, case + ": caller shown again")
+		assert_false(Globals.hidden_menus.has(caller), case + ": caller's entry removed")
 
 
 # ==============================================================================
@@ -236,17 +265,20 @@ func test_hms_10_advanced_unexpected_exit_skips_freed_entry() -> void:
 # ==============================================================================
 
 
-## HMS-11 | load_key_mapping() with no Key Mapping scene: the rollback skips the freed entry
-## and shows the live menu
-func test_hms_11_load_key_mapping_rollback_skips_freed_entry() -> void:
+## HMS-11 | load_key_mapping() with no Key Mapping scene: the rollback undoes only this
+## load's push. A freed entry above another screen's live menu doesn't make it pop and show
+## that menu, with or without a caller to hide
+func test_hms_11_load_key_mapping_rollback_keeps_unrelated_menu() -> void:
 	Globals.settings.key_mapping_scene = null
-	var live: Panel = _push_live_menu()
-	_push_freed_menu()
+	for with_caller: bool in [false, true]:
+		var case := "with caller" if with_caller else "null caller"
+		var unrelated := _push_unrelated_with_freed_above()
+		var caller: Panel = _new_caller() if with_caller else null
 
-	Globals.load_key_mapping(null)
+		Globals.load_key_mapping(caller)
 
-	assert_true(live.visible, "Rollback shows the live menu")
-	assert_true(Globals.hidden_menus.is_empty())
+		_assert_only_own_entry_rolled_back(unrelated, caller, case)
+		Globals.hidden_menus.clear()
 
 
 ## HMS-12 | Options exits unexpectedly with a freed entry on top: the live menu is shown and
@@ -265,31 +297,35 @@ func test_hms_12_options_exited_unexpectedly_skips_freed_entry() -> void:
 	assert_null(Globals.options_instance, "options_instance is reset")
 
 
-## HMS-13 | load_options() with no Options scene: the rollback skips the freed entry and
-## shows the live menu
-func test_hms_13_load_options_missing_scene_rollback_skips_freed_entry() -> void:
+## HMS-13 | load_options() with no Options scene: the rollback undoes only this load's push
+## and leaves another screen's live menu on the stack, with or without a caller to hide
+func test_hms_13_load_options_missing_scene_rollback_keeps_unrelated_menu() -> void:
 	Globals.settings.options_scene = null
-	var live: Panel = _push_live_menu()
-	_push_freed_menu()
+	for with_caller: bool in [false, true]:
+		var case := "with caller" if with_caller else "null caller"
+		var unrelated := _push_unrelated_with_freed_above()
+		var caller: Panel = _new_caller() if with_caller else null
 
-	Globals.load_options(null)
+		Globals.load_options(caller)
 
-	assert_true(live.visible, "Rollback shows the live menu")
-	assert_true(Globals.hidden_menus.is_empty())
-	assert_false(Globals.options_open)
+		_assert_only_own_entry_rolled_back(unrelated, caller, case)
+		assert_false(Globals.options_open, case + ": options_open stays false")
+		Globals.hidden_menus.clear()
 
 
-## HMS-14 | load_options() whose scene fails to instantiate: the rollback skips the freed
-## entry, shows the live menu and resets options_open
-func test_hms_14_load_options_instantiate_failure_rollback_skips_freed_entry() -> void:
+## HMS-14 | load_options() whose scene fails to instantiate: the rollback undoes only this
+## load's push, leaves another screen's live menu on the stack and resets options_open
+func test_hms_14_load_options_instantiate_failure_rollback_keeps_unrelated_menu() -> void:
 	Globals.settings.options_scene = PackedScene.new()  # Empty: instantiate() returns null
-	var live: Panel = _push_live_menu()
-	_push_freed_menu()
+	for with_caller: bool in [false, true]:
+		var case := "with caller" if with_caller else "null caller"
+		var unrelated := _push_unrelated_with_freed_above()
+		var caller: Panel = _new_caller() if with_caller else null
 
-	Globals.load_options(null)
+		Globals.load_options(caller)
 
-	assert_engine_error("Failed to instantiate scene state")
-	assert_true(live.visible, "Rollback shows the live menu")
-	assert_true(Globals.hidden_menus.is_empty())
-	assert_false(Globals.options_open, "options_open is reset")
-	assert_null(Globals.options_instance)
+		assert_engine_error("Failed to instantiate scene state")
+		_assert_only_own_entry_rolled_back(unrelated, caller, case)
+		assert_false(Globals.options_open, case + ": options_open is reset")
+		assert_null(Globals.options_instance, case)
+		Globals.hidden_menus.clear()

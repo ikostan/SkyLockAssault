@@ -259,6 +259,29 @@ func pop_hidden_menu() -> Node:
 	return null
 
 
+## Undoes a failed load's push onto hidden_menus and shows that menu again.
+##
+## Removes only the entry the load pushed, so a menu another screen left on the stack is
+## never popped or shown by the rollback. Does nothing when the load pushed nothing (its
+## menu_to_hide was null or freed) (#1211).
+##
+## :param pushed_menu: The menu the failed load pushed, or null if it pushed none.
+## :type pushed_menu: Node
+## :returns: True if the pushed menu was removed from the stack and shown again.
+## :rtype: bool
+func _roll_back_hidden_menu(pushed_menu: Node) -> bool:
+	if pushed_menu == null:
+		return false
+	var index: int = hidden_menus.rfind(pushed_menu)
+	if index == -1:
+		return false
+	hidden_menus.remove_at(index)
+	if not is_instance_valid(pushed_menu):
+		return false
+	pushed_menu.visible = true
+	return true
+
+
 ## Loads Key Mapping menu directly while keeping background video visible.
 ##
 ## Loads the Key Mapping menu, hides the specified menu node, and keeps the background video
@@ -266,8 +289,10 @@ func pop_hidden_menu() -> Node:
 ##
 ## [param menu_to_hide]: The menu node to hide while the key mapping menu is displayed.
 func load_key_mapping(menu_to_hide: Node) -> void:
+	var pushed_menu: Node = null
 	if is_instance_valid(menu_to_hide):
 		hidden_menus.push_back(menu_to_hide)
+		pushed_menu = menu_to_hide
 		menu_to_hide.visible = false
 
 		# Robust video lookup (works for both Panel and root Control)
@@ -280,9 +305,7 @@ func load_key_mapping(menu_to_hide: Node) -> void:
 	# FIX: We must call .instantiate() on the PackedScene inside settings
 	if settings.key_mapping_scene == null:
 		log_message("Error: Key mapping scene not configured.", LogLevel.ERROR)
-		var prev_menu: Node = pop_hidden_menu()
-		if prev_menu != null:
-			prev_menu.visible = true
+		_roll_back_hidden_menu(pushed_menu)
 		return
 	var km_instance: CanvasLayer = settings.key_mapping_scene.instantiate()
 	get_tree().root.add_child(km_instance)
@@ -471,6 +494,7 @@ func load_options(menu_to_hide: Node) -> void:
 		log_message("Options menu already open—ignoring load request.", LogLevel.WARNING)
 		return
 
+	var pushed_menu: Node = null
 	if menu_to_hide == null:
 		log_message("load_options: Called with null menu_to_hide—skipping hide.", LogLevel.WARNING)
 	elif not is_instance_valid(menu_to_hide):
@@ -480,6 +504,7 @@ func load_options(menu_to_hide: Node) -> void:
 		)
 	else:
 		hidden_menus.push_back(menu_to_hide)
+		pushed_menu = menu_to_hide
 		menu_to_hide.visible = false
 		log_message("Hiding menu: " + menu_to_hide.name, LogLevel.DEBUG)
 
@@ -491,9 +516,7 @@ func load_options(menu_to_hide: Node) -> void:
 		if options_instance == null:
 			log_message("Failed to instantiate options scene—resetting flag.", LogLevel.ERROR)
 			options_open = false  # Reset to avoid stuck state
-			var prev_menu: Node = pop_hidden_menu()
-			if prev_menu != null:
-				prev_menu.visible = true  # Restore if we bailed
+			_roll_back_hidden_menu(pushed_menu)  # Restore if we bailed
 			return
 
 		# Optional: Connect to tree_exited for unexpected free (extra safety)
@@ -501,10 +524,8 @@ func load_options(menu_to_hide: Node) -> void:
 		get_tree().root.add_child(options_instance)
 	else:
 		log_message("Error: Options scene not found!", LogLevel.ERROR)
-		var prev_menu: Node = pop_hidden_menu()
-		if prev_menu != null:
-			prev_menu.visible = true
-			log_message("Restored visibility of menu: " + prev_menu.name, LogLevel.WARNING)
+		if _roll_back_hidden_menu(pushed_menu):
+			log_message("Restored visibility of menu: " + pushed_menu.name, LogLevel.WARNING)
 
 
 # Custom logging function with timestamp and level filtering.
