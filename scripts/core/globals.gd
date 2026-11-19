@@ -237,6 +237,28 @@ func ensure_initial_focus(
 		)
 
 
+## Pops hidden_menus down to the nearest live menu and returns it.
+##
+## A menu freed while it is still on the stack leaves a stale entry. Freed entries are
+## discarded, so a live menu below them is still returned. Every caller that restores the
+## previous menu uses this, so a stale entry never stops a Back or cleanup path (#1211).
+##
+## Only pops; showing the returned menu, focus and overlays stay with the caller.
+##
+## :returns: The nearest live menu, or null if the stack is empty or holds only freed
+##   entries (they are all popped).
+## :rtype: Node
+func pop_hidden_menu() -> Node:
+	while not hidden_menus.is_empty():
+		# Pop into a Variant first: assigning a freed instance straight to a typed Node var
+		# raises "Trying to assign invalid previously freed instance" and aborts the caller.
+		var popped: Variant = hidden_menus.pop_back()
+		if is_instance_valid(popped):
+			return popped
+		log_message("Discarding freed entry from hidden_menus.", LogLevel.DEBUG)
+	return null
+
+
 ## Loads Key Mapping menu directly while keeping background video visible.
 ##
 ## Loads the Key Mapping menu, hides the specified menu node, and keeps the background video
@@ -258,10 +280,9 @@ func load_key_mapping(menu_to_hide: Node) -> void:
 	# FIX: We must call .instantiate() on the PackedScene inside settings
 	if settings.key_mapping_scene == null:
 		log_message("Error: Key mapping scene not configured.", LogLevel.ERROR)
-		if not hidden_menus.is_empty():
-			var prev_menu: Node = hidden_menus.pop_back()
-			if is_instance_valid(prev_menu):
-				prev_menu.visible = true
+		var prev_menu: Node = pop_hidden_menu()
+		if prev_menu != null:
+			prev_menu.visible = true
 		return
 	var km_instance: CanvasLayer = settings.key_mapping_scene.instantiate()
 	get_tree().root.add_child(km_instance)
@@ -424,10 +445,9 @@ func _on_options_exited_unexpectedly() -> void:
 	if options_open:  # Guard: Only log if it was still "open" (unexpected exit)
 		log_message("Options instance exited unexpectedly—resetting flag.", LogLevel.WARNING)
 
-	if not hidden_menus.is_empty():
-		var prev_menu: Node = hidden_menus.pop_back()
-		if is_instance_valid(prev_menu):
-			prev_menu.visible = true
+	var prev_menu: Node = pop_hidden_menu()
+	if prev_menu != null:
+		prev_menu.visible = true
 
 	options_open = false
 	options_instance = null
@@ -471,10 +491,9 @@ func load_options(menu_to_hide: Node) -> void:
 		if options_instance == null:
 			log_message("Failed to instantiate options scene—resetting flag.", LogLevel.ERROR)
 			options_open = false  # Reset to avoid stuck state
-			if not hidden_menus.is_empty():
-				var prev_menu: Node = hidden_menus.pop_back()
-				if is_instance_valid(prev_menu):
-					prev_menu.visible = true  # Restore if we bailed
+			var prev_menu: Node = pop_hidden_menu()
+			if prev_menu != null:
+				prev_menu.visible = true  # Restore if we bailed
 			return
 
 		# Optional: Connect to tree_exited for unexpected free (extra safety)
@@ -482,11 +501,10 @@ func load_options(menu_to_hide: Node) -> void:
 		get_tree().root.add_child(options_instance)
 	else:
 		log_message("Error: Options scene not found!", LogLevel.ERROR)
-		if not hidden_menus.is_empty():
-			var prev_menu: Node = hidden_menus.pop_back()
-			if is_instance_valid(prev_menu):
-				prev_menu.visible = true
-				log_message("Restored visibility of menu: " + prev_menu.name, LogLevel.WARNING)
+		var prev_menu: Node = pop_hidden_menu()
+		if prev_menu != null:
+			prev_menu.visible = true
+			log_message("Restored visibility of menu: " + prev_menu.name, LogLevel.WARNING)
 
 
 # Custom logging function with timestamp and level filtering.

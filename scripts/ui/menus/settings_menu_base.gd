@@ -230,7 +230,8 @@ func _run_cleanup() -> void:
 ## Pops Globals.hidden_menus down to the nearest live menu and makes it visible.
 ##
 ## Freed entries are stale and are discarded, so a live menu below them is still restored
-## instead of leaving the player with no visible screen.
+## instead of leaving the player with no visible screen. The popping is done by
+## Globals.pop_hidden_menu(), shared with every other menu that restores the previous one.
 ##
 ## :returns: The restored menu, or null if no live menu was left on the stack or Globals
 ##   is unavailable.
@@ -238,18 +239,12 @@ func _run_cleanup() -> void:
 func _restore_previous_menu() -> Node:
 	if not is_instance_valid(Globals):
 		return null
-	while not Globals.hidden_menus.is_empty():
-		# Pop into a Variant first: assigning a freed instance straight to a typed Node var
-		# raises "Trying to assign invalid previously freed instance" and aborts the function.
-		var popped: Variant = Globals.hidden_menus.pop_back()
-		if not is_instance_valid(popped):
-			_log("Discarding freed entry from hidden_menus.", Globals.LogLevel.DEBUG)
-			continue
-		var prev_menu: Node = popped
-		prev_menu.visible = true
-		_log("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
-		return prev_menu
-	return null
+	var prev_menu: Node = Globals.pop_hidden_menu()
+	if prev_menu == null:
+		return null
+	prev_menu.visible = true
+	_log("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
+	return prev_menu
 
 
 # ==============================================================================

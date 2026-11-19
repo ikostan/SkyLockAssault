@@ -181,30 +181,29 @@ func _on_back_button_pressed() -> void:
 		web_bridge.toggle_dom_visibility(false)
 
 	# 2. Restore the previous menu AND its HTML DOM AND focus
-	if Globals.hidden_menus.size() > 0:
-		var prev_menu: Node = Globals.hidden_menus.pop_back()
-		if is_instance_valid(prev_menu):
-			prev_menu.show()
+	var prev_menu: Node = Globals.pop_hidden_menu()
+	if prev_menu != null:
+		prev_menu.show()
 
-			# --- Focus Restoration (Moved here from the old function!) ---
-			if prev_menu.has_method("grab_focus_on_audio_settings_button"):
-				prev_menu.call("grab_focus_on_audio_settings_button")
-			elif prev_menu.name == "Panel" or prev_menu is Panel:
-				var start_button: Button = prev_menu.get_node_or_null("VBoxContainer/StartButton")
-				if is_instance_valid(start_button):
-					# FIX: Changed from triple-nested call_deferred to a single call
-					start_button.call_deferred("grab_focus")
+		# --- Focus Restoration (Moved here from the old function!) ---
+		if prev_menu.has_method("grab_focus_on_audio_settings_button"):
+			prev_menu.call("grab_focus_on_audio_settings_button")
+		elif prev_menu.name == "Panel" or prev_menu is Panel:
+			var start_button: Button = prev_menu.get_node_or_null("VBoxContainer/StartButton")
+			if is_instance_valid(start_button):
+				# FIX: Changed from triple-nested call_deferred to a single call
+				start_button.call_deferred("grab_focus")
 
-			# --- HTML DOM Restoration ---
-			if prev_menu.has_method("toggle_dom_visibility"):
-				prev_menu.toggle_dom_visibility(true)
-			elif "_web_bridge" in prev_menu and prev_menu.get("_web_bridge") != null:
-				var prev_bridge: Node = prev_menu.get("_web_bridge")
-				if prev_bridge.has_method("toggle_dom_visibility"):
-					prev_bridge.toggle_dom_visibility(true)
-			elif web_bridge and web_bridge.has_method("restore_options_menu_dom"):
-				# Clean fallback via the bridge! (Replaces the raw JS evals)
-				web_bridge.restore_options_menu_dom()
+		# --- HTML DOM Restoration ---
+		if prev_menu.has_method("toggle_dom_visibility"):
+			prev_menu.toggle_dom_visibility(true)
+		elif "_web_bridge" in prev_menu and prev_menu.get("_web_bridge") != null:
+			var prev_bridge: Node = prev_menu.get("_web_bridge")
+			if prev_bridge.has_method("toggle_dom_visibility"):
+				prev_bridge.toggle_dom_visibility(true)
+		elif web_bridge and web_bridge.has_method("restore_options_menu_dom"):
+			# Clean fallback via the bridge! (Replaces the raw JS evals)
+			web_bridge.restore_options_menu_dom()
 	else:
 		# --- Fallback to previous scene ---
 		if Globals.previous_scene != "":
@@ -535,10 +534,9 @@ func _on_tree_exited() -> void:
 	if _intentional_exit:
 		return
 
-	if not Globals.hidden_menus.is_empty():
-		var prev_menu: Node = Globals.hidden_menus.pop_back()
-		if is_instance_valid(prev_menu):
-			prev_menu.visible = true
+	var prev_menu: Node = Globals.pop_hidden_menu()
+	if prev_menu != null:
+		prev_menu.visible = true
 
 
 # ==========================================

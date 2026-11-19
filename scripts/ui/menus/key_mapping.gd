@@ -219,16 +219,8 @@ func _on_controls_back_button_pressed() -> void:
 	# Only the Options menu owns the Options DOM buttons. When the main menu's "Unbound
 	# Controls" dialog opened Key Mapping, Back returns to the main menu instead (#1165).
 	var returned_to_options: bool = false
-	var prev_menu: Node = null
-	# Pop into a Variant first: assigning a freed instance straight to a typed Node var raises
-	# "Trying to assign invalid previously freed instance" and stops Back. Freed entries are
-	# skipped and the next valid menu is shown, as SettingsMenuBase does (#1211).
-	while prev_menu == null and not Globals.hidden_menus.is_empty():
-		var popped: Variant = Globals.hidden_menus.pop_back()
-		if is_instance_valid(popped):
-			prev_menu = popped
-		else:
-			Globals.log_message("Discarding freed entry from hidden_menus.", Globals.LogLevel.DEBUG)
+	# Freed entries on the stack are skipped and the next valid menu is shown (#1211).
+	var prev_menu: Node = Globals.pop_hidden_menu()
 	if prev_menu != null:
 		prev_menu.visible = true
 		Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
