@@ -38,11 +38,68 @@ from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from tests.test_utils import (
     DEFAULT_TIMEOUT,
     TEST_TIMEOUT,
+    init_page_and_wait_ready,
     open_audio_menu,
     open_options_menu,
     set_log_level,
     wait_for_console_log,
 )
+
+# Must match SettingsMenuBase.OPTIONS_MENU_OVERLAY_IDS (#1165).
+OPTIONS_MENU_OVERLAY_IDS: tuple[str, ...] = (
+    "controls-button",
+    "audio-button",
+    "advanced-button",
+    "gameplay-button",
+    "options-back-button",
+)
+
+
+def _overlay_display(page: Page, element_id: str) -> str:
+    """Return the computed CSS display of a DOM overlay ("missing" if absent)."""
+    return page.evaluate(
+        "(id) => { const el = document.getElementById(id);"
+        " return el ? window.getComputedStyle(el).display : 'missing'; }",
+        element_id,
+    )
+
+
+def _wait_for_overlays(
+    page: Page, shown: tuple[str, ...], hidden: tuple[str, ...], path: str
+) -> None:
+    """
+    Wait until every id in ``shown`` has display ``block`` and every id in
+    ``hidden`` has display ``none``; on timeout, fail listing every element.
+    """
+    try:
+        page.wait_for_function(
+            "([shown, hidden]) => {"
+            " const d = (id) => { const el = document.getElementById(id);"
+            " return el ? window.getComputedStyle(el).display : 'missing'; };"
+            " return shown.every((id) => d(id) === 'block')"
+            " && hidden.every((id) => d(id) === 'none'); }",
+            arg=[list(shown), list(hidden)],
+            timeout=TEST_TIMEOUT,
+        )
+    except PlaywrightTimeoutError:
+        displays = {i: _overlay_display(page, i) for i in (*shown, *hidden)}
+        raise AssertionError(
+            f"{path}: expected shown {list(shown)} and hidden {list(hidden)},"
+            f" got {displays}"
+        ) from None
+
+
+def _assert_options_overlays_restored(page: Page, path: str) -> None:
+    """Assert all five Options buttons are shown and difficulty-slider is hidden."""
+    displays = {
+        element_id: _overlay_display(page, element_id)
+        for element_id in (*OPTIONS_MENU_OVERLAY_IDS, "difficulty-slider")
+    }
+    hidden = [i for i in OPTIONS_MENU_OVERLAY_IDS if displays[i] != "block"]
+    assert not hidden, f"{path}: Options buttons not shown: {hidden} ({displays})"
+    assert (
+        displays["difficulty-slider"] == "none"
+    ), f"{path}: difficulty-slider (a Gameplay control) is shown ({displays})"
 
 
 def test_back_flow(shared_page: Page) -> None:
@@ -212,3 +269,81 @@ def test_back_flow(shared_page: Page) -> None:
             cdp_session.send("Profiler.disable")
             with open("v8_coverage_back_flow_test.json", "w", encoding="utf-8") as f:
                 json.dump(coverage, f)
+
+
+def test_back_restores_options_overlays(page: Page) -> None:
+    """
+    BACK-05 / BACK-06 (#1165): Back from Audio or Controls restores exactly the
+    Options menu's five DOM buttons, and shows no Gameplay control.
+
+    BACK-05: Options -> Audio -> Back. All five Options buttons are visible.
+    BACK-06: Options -> Controls -> Back. All five Options buttons are visible
+    and difficulty-slider is hidden.
+
+    :param page: Function-scoped Playwright page (fresh engine boot).
+    :type page: Page
+    :rtype: None
+    """
+    logs: list[dict[str, str]] = []
+    page.on("console", lambda msg: logs.append({"type": msg.type, "text": msg.text}))
+
+    try:
+        init_page_and_wait_ready(page)
+        open_options_menu(page)
+        page.wait_for_selector(
+            "#options-back-button", state="visible", timeout=TEST_TIMEOUT
+        )
+        _assert_options_overlays_restored(page, "Options opened")
+
+        # BACK-05: Audio -> Back. The Options buttons must be hidden while Audio
+        # is open, so the check after Back sees them change from none to block.
+        open_audio_menu(page)
+        _wait_for_overlays(
+            page, ("master-slider",), OPTIONS_MENU_OVERLAY_IDS, "Audio opened"
+        )
+        page.evaluate("window.audioBackPressed([])")
+        _wait_for_overlays(
+            page,
+            OPTIONS_MENU_OVERLAY_IDS,
+            ("master-slider", "difficulty-slider"),
+            "Audio -> Back",
+        )
+        _assert_options_overlays_restored(page, "Audio -> Back")
+
+        # BACK-06: Controls -> Back
+        page.wait_for_function(
+            "() => typeof window.controlsPressed === 'function'",
+            timeout=TEST_TIMEOUT,
+        )
+        page.evaluate("window.controlsPressed([])")
+        _wait_for_overlays(
+            page, ("controls-back-button",), OPTIONS_MENU_OVERLAY_IDS, "Controls opened"
+        )
+        page.wait_for_function(
+            "() => typeof window.controlsBackPressed === 'function'",
+            timeout=TEST_TIMEOUT,
+        )
+        page.evaluate("window.controlsBackPressed([])")
+        _wait_for_overlays(
+            page,
+            OPTIONS_MENU_OVERLAY_IDS,
+            ("controls-back-button", "difficulty-slider"),
+            "Controls -> Back",
+        )
+        _assert_options_overlays_restored(page, "Controls -> Back")
+
+    except Exception as e:
+        print(f"Test BACK-05/06 failed: {str(e)}")
+        os.makedirs("artifacts", exist_ok=True)
+        timestamp: int = int(time.time())
+        page.screenshot(
+            path=f"artifacts/test_back_overlays_failure_screenshot_{timestamp}.png"
+        )
+        with open(
+            f"artifacts/test_back_overlays_failure_console_logs_{timestamp}.txt",
+            "w",
+            encoding="utf-8",
+        ) as f:
+            for log in logs:
+                f.write(f"[{log['type']}] {log['text']}\n")
+        raise

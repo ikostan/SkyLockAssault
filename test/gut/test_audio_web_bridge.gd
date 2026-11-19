@@ -257,3 +257,64 @@ func test_tc_awb_14_js_to_godot_reset_button() -> void:
 	watch_signals(bridge)
 	bridge._on_audio_reset_js([])
 	assert_signal_emitted(bridge, "web_reset_requested")
+
+
+# ==========================================
+# OPTIONS MENU DOM RESTORE (#1165)
+# ==========================================
+
+func test_tc_awb_15_restore_options_menu_dom_shows_all_five() -> void:
+	## Category: Public API
+	## Scenario: Audio Settings falls back to restore_options_menu_dom() on Back.
+	## Expected Result: One eval() shows exactly SettingsMenuBase.OPTIONS_MENU_OVERLAY_IDS,
+	## including controls-button, and hides nothing.
+	var bridge: Node = _create_active_bridge()
+	bridge.restore_options_menu_dom()
+
+	assert_called_count(bridge.js_bridge_wrapper.eval, 1)
+	var params: Array = get_call_parameters(bridge.js_bridge_wrapper, "eval")
+	var code: String = params[0]
+	assert_eq(
+		code, SettingsMenuBase._build_overlay_js(SettingsMenuBase.OPTIONS_MENU_OVERLAY_IDS, [])
+	)
+	for id: String in SettingsMenuBase.OPTIONS_MENU_OVERLAY_IDS:
+		assert_true(
+			code.contains("getElementById('%s').style.display = 'block'" % id), id + " shown"
+		)
+	assert_eq(code.count("'block'"), 5, "Exactly the five Options buttons are shown")
+	assert_false(code.contains("'none'"), "Nothing is hidden")
+
+
+func test_tc_awb_16_restore_options_menu_dom_no_js_window() -> void:
+	## Category: Public API
+	## Scenario: restore_options_menu_dom() is called while js_window is null.
+	## Expected Result: Returns early without calling eval().
+	var bridge: Node = _create_active_bridge()
+	bridge.js_window = null
+	bridge.restore_options_menu_dom()
+
+	assert_not_called(bridge.js_bridge_wrapper, "eval")
+
+
+func test_tc_awb_17_restore_options_menu_dom_after_window_recovery() -> void:
+	## Category: Public API
+	## Scenario: restore_options_menu_dom() is called with no js_window, then again once the
+	## window is available.
+	## Expected Result: The first call makes no eval(); the second shows exactly the five
+	## Options buttons in one eval() run in the global JavaScript context, and hides nothing.
+	var bridge: Node = _create_active_bridge()
+	var window: Variant = bridge.js_window
+	bridge.js_window = null
+	bridge.restore_options_menu_dom()
+	assert_not_called(bridge.js_bridge_wrapper, "eval")
+
+	bridge.js_window = window
+	bridge.restore_options_menu_dom()
+
+	assert_called_count(bridge.js_bridge_wrapper.eval, 1)
+	var params: Array = get_call_parameters(bridge.js_bridge_wrapper, "eval")
+	assert_true(params[1], "DOM restoration runs in the global JavaScript context")
+	var code: String = params[0]
+	assert_eq(code.count("'block'"), 5)
+	assert_false(code.contains("difficulty-slider"), "Gameplay controls remain untouched")
+	assert_false(code.contains("'none'"), "Restoring Options must not hide another overlay")

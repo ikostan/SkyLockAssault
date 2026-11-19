@@ -514,13 +514,13 @@ func _get_mute_id_for_bus(bus_name: String) -> String:
 
 
 ## Fallback to restore the Options Menu DOM elements.
+##
+## Shows all of [constant SettingsMenuBase.OPTIONS_MENU_OVERLAY_IDS] with one eval() call,
+## so the list can't drift from the one the settings menus use (#1165).
 func restore_options_menu_dom() -> void:
 	if not js_window:
 		return
 
-	var ids: Array[String] = [
-		"gameplay-button", "audio-button", "advanced-button", "options-back-button"
-	]
-
-	for id: String in ids:
-		js_bridge_wrapper.eval("document.getElementById('%s').style.display = 'block';" % id)
+	js_bridge_wrapper.eval(
+		SettingsMenuBase._build_overlay_js(SettingsMenuBase.OPTIONS_MENU_OVERLAY_IDS, []), true
+	)

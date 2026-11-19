@@ -4,6 +4,11 @@
 
 extends CanvasLayer
 
+## Instance ID of the Key Mapping whose callback is in `window.controlsBackPressed`, or 0
+## (#1166). Reading the slot back returns a new JavaScriptObject wrapper, so ownership is tracked
+## here instead of by comparing callbacks.
+static var _window_callback_owner_id: int = 0
+
 # global
 var js_window: Variant
 var os_wrapper: OSWrapper = OSWrapper.new()
@@ -77,6 +82,7 @@ func _ready() -> void:
 				Callable(self, "_on_controls_back_button_pressed_js")
 			)
 			js_window.controlsBackPressed = _controls_back_button_pressed_cb
+			_window_callback_owner_id = get_instance_id()
 
 	update_all_remap_buttons()
 
@@ -201,61 +207,108 @@ func _on_controls_back_button_pressed() -> void:
 	Globals.log_message(
 		"Back (controls_back_button) button pressed in controls.", Globals.LogLevel.DEBUG
 	)
+	# queue_free() frees the menu only at the end of the frame. A second Back before then (a
+	# double press or a JS burst) must not pop the menu stack or change the overlays again.
+	if _intentional_exit:
+		Globals.log_message(
+			"Back ignored: controls menu is already closing.", Globals.LogLevel.DEBUG
+		)
+		return
+	_intentional_exit = true
 	var hidden_menu_found: bool = false
-	if not Globals.hidden_menus.is_empty():
-		var prev_menu: Node = Globals.hidden_menus.pop_back()
-		if is_instance_valid(prev_menu):
-			prev_menu.visible = true
-			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
-			hidden_menu_found = true
-			# NEW: When returning from Key Mapping menu → focus the Key Mapping button in Options
-			if prev_menu is OptionsMenu:
-				(prev_menu as OptionsMenu).grab_focus_on_key_mapping_button()
-			# NEW: When returning to Main Menu → focus Start Game button
-			elif prev_menu.name == "Panel" or prev_menu is Panel:  # ← this is the fix
-				var start_button: Button = prev_menu.get_node_or_null("VBoxContainer/StartButton")
-				if is_instance_valid(start_button):
-					# Triple-deferred to be 100% sure after visibility change
-					start_button.call_deferred("call_deferred", "call_deferred", "grab_focus")
-					Globals.log_message(
-						"Focus restored to Start Game button (triple deferred)",
-						Globals.LogLevel.DEBUG
-					)
+	# Only the Options menu owns the Options DOM buttons. When the main menu's "Unbound
+	# Controls" dialog opened Key Mapping, Back returns to the main menu instead (#1165).
+	var returned_to_options: bool = false
+	var prev_menu: Node = null
+	# Pop into a Variant first: assigning a freed instance straight to a typed Node var raises
+	# "Trying to assign invalid previously freed instance" and stops Back. Freed entries are
+	# skipped and the next valid menu is shown, as SettingsMenuBase does (#1211).
+	while prev_menu == null and not Globals.hidden_menus.is_empty():
+		var popped: Variant = Globals.hidden_menus.pop_back()
+		if is_instance_valid(popped):
+			prev_menu = popped
+		else:
+			Globals.log_message("Discarding freed entry from hidden_menus.", Globals.LogLevel.DEBUG)
+	if prev_menu != null:
+		prev_menu.visible = true
+		Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
+		hidden_menu_found = true
+		# NEW: When returning from Key Mapping menu → focus the Key Mapping button in Options
+		if prev_menu is OptionsMenu:
+			returned_to_options = true
+			(prev_menu as OptionsMenu).grab_focus_on_key_mapping_button()
+		# NEW: When returning to Main Menu → focus Start Game button
+		elif prev_menu.name == "Panel" or prev_menu is Panel:  # ← this is the fix
+			var start_button: Button = prev_menu.get_node_or_null("VBoxContainer/StartButton")
+			if is_instance_valid(start_button):
+				# Triple-deferred to be 100% sure after visibility change
+				start_button.call_deferred("call_deferred", "call_deferred", "grab_focus")
+				Globals.log_message(
+					"Focus restored to Start Game button (triple deferred)", Globals.LogLevel.DEBUG
+				)
 
 	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
 	if os_wrapper.has_feature("web") and js_window:
-		js_window.controlsBackPressed = null
-		# Set AUDIO & CONTROLS button visible in DOM (if bridge available for eval)
-		# Hide controls-back-button even when no hidden menu is found.
+		# controls-back-button is shared by every Key Mapping: hide it only if this instance owns
+		# it, or no instance does. A newer Key Mapping that took over still needs it (#1166).
+		var owns_back_button: bool = (
+			_window_callback_owner_id == get_instance_id() or _window_callback_owner_id == 0
+		)
+		_unset_key_mapping_window_callbacks()
+		# Hide controls-back-button even when no hidden menu is found. Show the Options buttons
+		# only when Back returns to the Options menu.
 		if js_bridge_wrapper:
-			(
-				js_bridge_wrapper
-				. eval(
-					"""
-					document.getElementById('controls-back-button').style.display = 'none';
-					""",
-					true
-				)
-			)
-			# Only showing all five when a previous menu exists.
-			if hidden_menu_found:
-				(
-					js_bridge_wrapper
-					. eval(
-						"""
-						document.getElementById('audio-button').style.display = 'block';
-						document.getElementById('advanced-button').style.display = 'block';
-						document.getElementById('controls-button').style.display = 'block';
-						document.getElementById('difficulty-slider').style.display = 'block';
-						document.getElementById('options-back-button').style.display = 'block';
-						""",
-						true
-					)
+			var visible_ids: Array[String] = []
+			# Not while a newer Key Mapping still owns the Back button: it is open over Options.
+			if returned_to_options and owns_back_button:
+				visible_ids = SettingsMenuBase.OPTIONS_MENU_OVERLAY_IDS
+			var hidden_ids: Array[String] = []
+			if owns_back_button:
+				hidden_ids = ["controls-back-button"]
+			if not visible_ids.is_empty() or not hidden_ids.is_empty():
+				js_bridge_wrapper.eval(
+					SettingsMenuBase._build_overlay_js(visible_ids, hidden_ids), true
 				)
 	if not hidden_menu_found:
 		Globals.log_message("No hidden menu to show.", Globals.LogLevel.INFO)
-	_intentional_exit = true
 	queue_free()
+
+
+## Unexpected exits (scene change, parent freed) skip the Back path, so clear the JS entry
+## point here too, and hide its overlay button so no shown control is left without a
+## callback (#1166).
+func _exit_tree() -> void:
+	# Only while this instance owns the slot: after Back (which already hid the button and reset
+	# the owner) or once a newer Key Mapping took over, the button belongs to someone else.
+	var owned_slot: bool = _window_callback_owner_id == get_instance_id()
+	_unset_key_mapping_window_callbacks()
+	if owned_slot and js_bridge_wrapper:
+		js_bridge_wrapper.eval(
+			SettingsMenuBase._build_overlay_js([], ["controls-back-button"]), true
+		)
+	Globals.log_message("Key Mapping menu exited (left the tree).", Globals.LogLevel.DEBUG)
+
+
+## Detaches the Key Mapping JS entry point from `window` (web only) and drops the callback ref.
+##
+## Clears the slot only while this instance owns it. Another Key Mapping can take it over before
+## this one exits: one reopened in the same frame as Back (this instance's _exit_tree() runs at
+## the end of the frame), or a second one opened while this one is still open. That instance's
+## callback must stay (#1166). Idempotent.
+func _unset_key_mapping_window_callbacks() -> void:
+	# This can run inside one of these callbacks (a JS press that frees the menu), so drop the
+	# refs after the call returns: a callback must not be freed during its own call.
+	_drop_key_mapping_callback_refs.call_deferred()
+	if not os_wrapper.has_feature("web") or not js_window:
+		return
+	if _window_callback_owner_id != get_instance_id():
+		return
+	js_window.controlsBackPressed = null
+	_window_callback_owner_id = 0
+
+
+func _drop_key_mapping_callback_refs() -> void:
+	_controls_back_button_pressed_cb = null
 
 
 func _on_controls_back_button_pressed_js(args: Array) -> void:

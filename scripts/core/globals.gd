@@ -414,7 +414,13 @@ func _on_options_exited_unexpectedly() -> void:
 	##
 	## Resets flag if stuck open; cleans ref.
 	##
+	## Does nothing when the tracked options_instance is still in the tree: then the node that
+	## exited is an older Options (freed at the end of the frame after its Back, while a new one
+	## was opened in the same frame), and the new one's parent and state must stay (#1166 review).
+	##
 	## :rtype: void
+	if is_instance_valid(options_instance) and options_instance.is_inside_tree():
+		return
 	if options_open:  # Guard: Only log if it was still "open" (unexpected exit)
 		log_message("Options instance exited unexpectedly—resetting flag.", LogLevel.WARNING)
 
