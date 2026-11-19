@@ -3,8 +3,8 @@
 ## ui_manager.gd
 ##
 ## Global controller responsible for capturing UI input events, tracking user
-## hardware control schemes, and routing global navigation, acceptance, and
-## cancellation sound effects through the central AudioManager.
+## hardware control schemes, and routing global navigation and cancellation
+## sound effects through SfxManager on the Menu bus ([code]SFX_Menu[/code]).
 
 extends Node
 
@@ -67,23 +67,12 @@ func _check_menu_context(ui_has_focus: bool) -> bool:
 	if not is_instance_valid(active_scene):
 		return is_menu_context
 
-	# Use explicit group/metadata markers with a fallback string match for safety
+	# Explicit opt-in markers on the scene root. A scene's name is deliberately not used:
+	# a root named e.g. "Menu" must not turn on UI sounds by accident (Issue #1152).
 	if not is_menu_context:
-		if (
-			active_scene.is_in_group("menu_context")
-			or active_scene.has_meta("is_menu_context")
-			or "Menu" in active_scene.name
-		):
-			is_menu_context = true
-
-	# Test Environment Fallback: Support test runner assertions during automated pipelines
-	if (OS.has_feature("debug") or OS.has_feature("ci")) and not is_menu_context:
-		if (
-			"Menu" in active_scene.name
-			or active_scene.has_meta("is_menu_context")
-			or active_scene.is_in_group("menu_context")
-		):
-			is_menu_context = true
+		is_menu_context = (
+			active_scene.is_in_group("menu_context") or active_scene.has_meta("is_menu_context")
+		)
 
 	return is_menu_context
 
@@ -134,15 +123,13 @@ func _handle_ui_cancel_action(focus_owner: Control, action: String) -> void:
 	var is_remap_control: bool = false
 	if is_instance_valid(focus_owner):
 		is_remap_control = (
-			focus_owner.has_method("cancel_remap")
-			or focus_owner.get("action") != null
-			or focus_owner.get("action_name") != null
+			focus_owner.get("action") != null or focus_owner.get("action_name") != null
 		)
 
 	if not is_editing_control and not is_remap_control:
 		var logical_id: String = AudioConstants.UI_SFX[action]
-		# Explicitly route all cancellation SFX through the SFX bus (Issue #490)
-		SfxManager.play_sfx(logical_id, AudioConstants.BUS_SFX)
+		# Route cancellation SFX through the Menu bus, like button accepts (Issue #1152)
+		SfxManager.play_sfx(logical_id, AudioConstants.BUS_SFX_MENU)
 
 
 ## Evaluates focus transitions and triggers directional UI navigation sounds.
@@ -161,5 +148,5 @@ func _handle_ui_navigation_action(action: String, focus_owner: Control, ui_has_f
 
 	if should_play_nav_sfx:
 		var logical_id: String = AudioConstants.UI_SFX[action]
-		# Explicitly route navigation SFX through the SFX bus (Issue #490)
-		SfxManager.play_sfx(logical_id, AudioConstants.BUS_SFX)
+		# Route navigation SFX through the Menu bus, like button accepts (Issue #1152)
+		SfxManager.play_sfx(logical_id, AudioConstants.BUS_SFX_MENU)
