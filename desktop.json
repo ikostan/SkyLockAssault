@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "created": "2026-11-17T18:35:28Z",
-  "commit": "64ef0722a68712141159c6023c08cb811a7eacee",
-  "runner": "GitHub Actions 1000044404",
+  "created": "2026-11-19T07:41:23Z",
+  "commit": "0f28ac94a44b9b4b542bb394e62a4604ff4681b3",
+  "runner": "GitHub Actions 1000044647",
   "godot": "4.7.1-stable (official)",
   "runs": 3,
   "baseline": {
@@ -15,25 +15,6 @@
     "reload_object_growth": 2.0
   },
   "history": [
-    {
-      "run_id": "43712895718",
-      "commit": "e317b8078f17188b199f73eabbb5d00a7f4b0511",
-      "date": "2026-11-15T12:35:59Z",
-      "metrics": {
-        "saves": 0.0,
-        "objects_avg": 2549.15,
-        "nodes_avg": 503.98333333333335,
-        "resources_avg": 208.0,
-        "orphans_max": 0.0,
-        "reload_orphans_max": 0.0,
-        "reload_object_growth": -13.0,
-        "frame_p95_ms": 17.08,
-        "frames_over_33.4ms": 0.0,
-        "proc_worst_avg_ms": 0.2452,
-        "phys_worst_avg_ms": 0.3003,
-        "mem_static_growth": 180780.0
-      }
-    },
     {
       "run_id": "43720643176",
       "commit": "8d550f90bb2068c7f50469199d6c59df3551a8fa",
@@ -109,6 +90,25 @@
         "phys_worst_avg_ms": 0.5516,
         "mem_static_growth": 149208.0
       }
+    },
+    {
+      "run_id": "44478908213",
+      "commit": "0f28ac94a44b9b4b542bb394e62a4604ff4681b3",
+      "date": "2026-11-19T07:41:23Z",
+      "metrics": {
+        "saves": 0.0,
+        "objects_avg": 2546.4666666666667,
+        "nodes_avg": 502.43333333333334,
+        "resources_avg": 208.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": -7.0,
+        "frame_p95_ms": 17.057,
+        "frames_over_33.4ms": 0.0,
+        "proc_worst_avg_ms": 0.197,
+        "phys_worst_avg_ms": 0.3339,
+        "mem_static_growth": 185244.0
+      }
     }
   ],
   "accepted": null,
@@ -125,7 +125,8 @@
     "43720643176",
     "43762379900",
     "43928499033",
-    "44145980922"
+    "44145980922",
+    "44478908213"
   ],
   "profile": "desktop"
 }
