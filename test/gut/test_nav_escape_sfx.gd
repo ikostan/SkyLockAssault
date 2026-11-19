@@ -17,6 +17,11 @@ var dummy_scene_node: Node = null
 var scene_was_in_menu_group: bool = false
 ## Whether the shared current scene already had the is_menu_context meta before the test.
 var _meta_was_preexisting: bool = false
+## Runtime menu state snapshotted in before_each() and restored in after_each(), so a test
+## that stops on a script error can't leave a menu context on for later tests.
+var _saved_options_open: bool = false
+var _saved_hidden_menus: Array[Node] = []
+var _saved_paused: bool = false
 
 ## Suite setup: Double the SfxManager using a decoupled script to bypass lifecycle destruction guards.
 ## :rtype: void
@@ -49,6 +54,9 @@ func after_all() -> void:
 ## :rtype: void
 func before_each() -> void:
 	globals_instance = Globals
+	_saved_options_open = Globals.options_open
+	_saved_hidden_menus = Globals.hidden_menus.duplicate()
+	_saved_paused = get_tree().paused
 	
 	# Securely snapshot the active root scene name and group before any mutations occur
 	if get_tree().current_scene:
@@ -93,6 +101,11 @@ func after_each() -> void:
 	original_scene_name = ""
 	scene_was_in_menu_group = false
 	_meta_was_preexisting = false
+	# Restore runtime menu state in place (hidden_menus is never reassigned in production)
+	get_tree().paused = _saved_paused
+	Globals.options_open = _saved_options_open
+	Globals.hidden_menus.assign(_saved_hidden_menus)
+	_saved_hidden_menus = []
 	# Release any focus a test left behind so the next test starts outside a menu context
 	var focus_owner: Control = get_viewport().gui_get_focus_owner()
 	if is_instance_valid(focus_owner):

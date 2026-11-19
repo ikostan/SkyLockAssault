@@ -28,11 +28,11 @@ The PR also removes dead code from `UiManager._check_menu_context()` and `_handl
 
 The new and updated tests were run against unchanged `main` (`8cd7cce`) with only `ui_manager.gd` reverted. 11 cases fail, and each failure is one of the issue's findings:
 
-| Suite                       | Fails on `main`                                                                                                                                                                                                                    |
-|-----------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `test_nav_escape_sfx.gd`    | 6 of 18: cancel and navigation request `SFX` instead of `SFX_Menu` (5 cases), and a scene named `MainMenu` / `OptionsMenu` / `Menu` with no marker turns on UI sounds (`test_scene_named_menu_without_group_is_not_menu_context`). |
-| `test_ui_sfx_menu_bus.gd`   | 3 of 8: navigation and cancel play on `SFX`, so muting Menu or setting it to 0 leaves them audible.                                                                                                                                |
-| `test_audio_integration.gd` | 2 of 8: navigation (Scenario C) and cancel (Scenario D) play on `SFX`.                                                                                                                                                             |
+| Suite                       | Fails on `main`                                                                                                                                                                                                                                               |
+|-----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `test_nav_escape_sfx.gd`    | 6 of 18: cancel and navigation request `SFX` instead of `SFX_Menu` (5 cases), and a scene named `MainMenu` / `OptionsMenu` / `Menu` with no marker turns on UI sounds (`test_scene_named_menu_without_group_is_not_menu_context`).                             |
+| `test_ui_sfx_menu_bus.gd`   | 3 of 8: navigation and cancel play on `SFX`, so muting Menu or setting it to 0 leaves them audible.                                                                                                                                                           |
+| `test_audio_integration.gd` | 2 of 8: navigation (Scenario C) and cancel (Scenario D) play on `SFX`.                                                                                                                                                                                        |
 
 **The scene-name heuristic never matched in production.** `main_menu.tscn`'s root node is named `Control`, and no other scene that can become `current_scene` has "Menu" in its root name (`SplashScreen`, `LoadingScreen`, `Node2D`). A probe on the real main menu during its intro (before Start has focus) gave `_check_menu_context()` = `false`, and `true` once the root was in the `menu_context` group. Only the GUT suite matched the heuristic, by renaming the test scene to `MainMenu`. See Design Decisions for why the group was not added to `main_menu.tscn`.
 
@@ -82,6 +82,12 @@ The cost isn't visible, so, as the issue says, the code is unchanged and no foll
   - Muting Menu or setting it to 0 leaves `SFX_Weapon` and `SFX_Rotors` audible, unmuted, and at the same volume.
   - Bus state is set with `set_bus_state()` and `apply_volume_to_bus()` and restored after each test, so nothing is saved to `settings.cfg`.
 - **`test/gut/test_audio_integration.gd` (7 → 8 cases):** Scenario C also asserts that both navigation sounds play on `SFX_Menu`; new Scenario D checks that the cancel sound plays on `SFX_Menu`, not `SFX`. `TARGET_BUS` stays `SFX`, because Scenarios A and B and the mute tests check muting the parent SFX bus.
+
+### Review fixes
+
+#### CodeRabbit
+
+- **`test_nav_escape_sfx.gd`, restore runtime menu state in the hooks:** `test_runtime_flags_open_menu_context_without_scene_marker` reset `Globals.options_open` and removed its dummy entry from `Globals.hidden_menus` in the test body. The review said a failed assertion would skip that cleanup. That part is wrong for GUT: a failed assert doesn't stop the test (checked with a probe), so the body's cleanup still runs. A runtime script error in the body does stop it, though. With an error injected right after `push_back(dummy_menu)`, the dummy entry was still on `Globals.hidden_menus` at the end of the suite, which keeps a menu context on for every later test. `before_each()` now saves `options_open`, `hidden_menus` and `get_tree().paused`, and `after_each()` restores them (`hidden_menus` in place with `assign()`). With the same injected error, the state is clean at the end of the suite. The test body's own cleanup is kept.
 
 ---
 
@@ -135,25 +141,25 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gu
 
 ### File-Level Changes
 
-| Change          | Details                                                                                                                                                                                            | Files                                                                                                                                                        |
-|-----------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Menu bus.       | <ul><li>Navigation and cancel play on `BUS_SFX_MENU`.</li></ul>                                                                                                                                    | `scripts/managers/ui_manager.gd`                                                                                                                             |
-| Menu context.   | <ul><li>Dead debug/CI fallback removed.</li><li>Scene-name heuristic removed; group and metadata opt-ins kept.</li></ul>                                                                           | `scripts/managers/ui_manager.gd`                                                                                                                             |
-| Remap check.    | <ul><li>`has_method("cancel_remap")` removed; `action` / `action_name` kept.</li></ul>                                                                                                             | `scripts/managers/ui_manager.gd`                                                                                                                             |
-| Tests.          | <ul><li>Helper uses the `menu_context` group; bus assertions; 9 new cases.</li><li>New real-manager suite, 8 cases.</li><li>Navigation bus asserts in Scenario C; new cancel Scenario D.</li></ul> | `test/gut/test_nav_escape_sfx.gd`<br/>`test/gut/test_ui_sfx_menu_bus.gd`<br/>`test/gut/test_ui_sfx_menu_bus.gd.uid`<br/>`test/gut/test_audio_integration.gd` |
-| Milestone note. | <ul><li>This note.</li></ul>                                                                                                                                                                       | `files/docs/milestones/27/Part_20_Route_all_UI_sounds_through_the_Menu_bus_&_clean_up_UiManager.md`                                                          |
+| Change          | Details                                                                                                                                                                                                         | Files                                                             |
+|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|
+| Menu bus.       | <ul><li>Navigation and cancel play on `BUS_SFX_MENU`.</li></ul>                                                                                                                                                 | `scripts/managers/ui_manager.gd`                                  |
+| Menu context.   | <ul><li>Dead debug/CI fallback removed.</li><li>Scene-name heuristic removed; group and metadata opt-ins kept.</li></ul>                                                                                        | `scripts/managers/ui_manager.gd`                                  |
+| Remap check.    | <ul><li>`has_method("cancel_remap")` removed; `action` / `action_name` kept.</li></ul>                                                                                                                          | `scripts/managers/ui_manager.gd`                                  |
+| Tests.          | <ul><li>Helper uses the `menu_context` group; bus assertions; 9 new cases.</li><li>New real-manager suite, 8 cases.</li><li>Navigation bus asserts in Scenario C; new cancel Scenario D.</li></ul>              | `test/gut/test_nav_escape_sfx.gd`<br/>`test/gut/test_ui_sfx_menu_bus.gd`<br/>`test/gut/test_ui_sfx_menu_bus.gd.uid`<br/>`test/gut/test_audio_integration.gd` |
+| Milestone note. | <ul><li>This note.</li></ul>                                                                                                                                                                                    | `files/docs/milestones/27/Part_20_Route_all_UI_sounds_through_the_Menu_bus_&_clean_up_UiManager.md` |
 
 ### Assessment against linked issues
 
-| Issue                                                   | Objective                                                                   | Addressed | Explanation                                                                                                                            |
-|---------------------------------------------------------|-----------------------------------------------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------|
-| <https://github.com/ikostan/SkyLockAssault/issues/1152> | All UI sounds use `BUS_SFX_MENU`                                            | ✅         | Navigation and cancel moved; accept already used it.                                                                                   |
-| <https://github.com/ikostan/SkyLockAssault/issues/1152> | No dead branch, scene-name heuristic or `cancel_remap` check in `UiManager` | ✅         | All three removed.                                                                                                                     |
+| Issue                                                   | Objective                                                                   | Addressed | Explanation                                                                                                     |
+|---------------------------------------------------------|-----------------------------------------------------------------------------|-----------|-----------------------------------------------------------------------------------------------------------------|
+| <https://github.com/ikostan/SkyLockAssault/issues/1152> | All UI sounds use `BUS_SFX_MENU`                                            | ✅         | Navigation and cancel moved; accept already used it.                                                            |
+| <https://github.com/ikostan/SkyLockAssault/issues/1152> | No dead branch, scene-name heuristic or `cancel_remap` check in `UiManager` | ✅         | All three removed.                                                                                              |
 | <https://github.com/ikostan/SkyLockAssault/issues/1152> | `menu_context` group on the scenes that need it                             | ✅         | No scene needs it: the heuristic never matched in production, and adding it to the main menu would change behavior (Design Decisions). |
-| <https://github.com/ikostan/SkyLockAssault/issues/1152> | UI sounds still play in every menu                                          | ✅ / ⏳     | Covered by GUT and gdUnit4 navigation suites; manual itch.io check still to do.                                                        |
-| <https://github.com/ikostan/SkyLockAssault/issues/1152> | `_on_node_added` result recorded                                            | ✅ / ⏳     | Recorded here (Key Changes 4); still to add on the PR and in #619.                                                                     |
-| <https://github.com/ikostan/SkyLockAssault/issues/1152> | GUT, gdUnit4, Playwright and lint pass, no test cases removed               | ✅ / ⏳     | GUT, gdUnit4 and lint pass locally; Playwright runs in CI.                                                                             |
-| <https://github.com/ikostan/SkyLockAssault/issues/1152> | Milestone note added                                                        | ✅         | This note.                                                                                                                             |
+| <https://github.com/ikostan/SkyLockAssault/issues/1152> | UI sounds still play in every menu                                          | ✅ / ⏳     | Covered by GUT and gdUnit4 navigation suites; manual itch.io check still to do.                                 |
+| <https://github.com/ikostan/SkyLockAssault/issues/1152> | `_on_node_added` result recorded                                            | ✅ / ⏳     | Recorded here (Key Changes 4); still to add on the PR and in #619.                                              |
+| <https://github.com/ikostan/SkyLockAssault/issues/1152> | GUT, gdUnit4, Playwright and lint pass, no test cases removed               | ✅ / ⏳     | GUT, gdUnit4 and lint pass locally; Playwright runs in CI.                                                      |
+| <https://github.com/ikostan/SkyLockAssault/issues/1152> | Milestone note added                                                        | ✅         | This note.                                                                                                      |
 
 ---
 
@@ -166,6 +172,8 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gu
 
 ### Bots / AI contributions
 
+- **@coderabbitai**
+  - Review: restore `options_open` and `hidden_menus` in `test_nav_escape_sfx.gd`'s hooks, applied (see Review fixes).
 - **@claude (Opus 5.5)**
   - **Confirm-first**
     - Checked the issue's line references against `main` and found that `main_menu.tscn`'s root is `Control`, so the scene-name heuristic never matched in production; confirmed it with a probe on the real main menu.
@@ -175,6 +183,9 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gu
     - Reworked `test_nav_escape_sfx.gd` to use the `menu_context` group and added 9 cases, added Menu-bus asserts and Scenario D to `test_audio_integration.gd`, and wrote `test_ui_sfx_menu_bus.gd`.
   - **Measurement**
     - Timed `_on_node_added` during the benchmark's 60 s firing window with temporary instrumentation (not committed).
+  - **Review fixes**
+    - Checked CodeRabbit's hook-cleanup finding: a failed GUT assert doesn't stop a test, but a script error does and leaked the dummy menu. Moved the state restore into `before_each()` / `after_each()` (also covering `paused`) and confirmed it with an injected error.
   - **Verification**
     - Ran the full GUT and gdUnit4 suites, `gdformat` and `gdlint` locally, and broke each change to confirm a new test catches it.
     - Wrote this note.
+  
