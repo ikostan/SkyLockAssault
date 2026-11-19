@@ -134,15 +134,13 @@ func _on_tree_exited() -> void:
 		return
 
 	var hidden_menu_found: bool = false
-	if not Globals.hidden_menus.is_empty():
-		var prev_menu: Node = Globals.hidden_menus.pop_back()
-		if is_instance_valid(prev_menu):
-			prev_menu.visible = true
-			Globals.log_message(
-				"Advanced menu exited unexpectedly, restored previous menu.",
-				Globals.LogLevel.WARNING
-			)
-			hidden_menu_found = true
+	var prev_menu: Node = Globals.pop_hidden_menu()
+	if prev_menu != null:
+		prev_menu.visible = true
+		Globals.log_message(
+			"Advanced menu exited unexpectedly, restored previous menu.", Globals.LogLevel.WARNING
+		)
+		hidden_menu_found = true
 
 	if os_wrapper.has_feature("web") and js_window:
 		_unset_advanced_window_callbacks()
@@ -216,23 +214,22 @@ func _on_advanced_back_button_pressed() -> void:
 	Globals.log_message("Advanced Back button pressed.", Globals.LogLevel.DEBUG)
 
 	var hidden_menu_found: bool = false
-	if not Globals.hidden_menus.is_empty():
-		var prev_menu: Node = Globals.hidden_menus.pop_back()
-		if is_instance_valid(prev_menu):
-			prev_menu.visible = true
-			hidden_menu_found = true
-			# Restore focus using helper for consistency
-			var advanced_btn: Button = prev_menu.get_node(
-				"Panel/OptionsVBoxContainer/AdvancedSettingsButton"
+	var prev_menu: Node = Globals.pop_hidden_menu()
+	if prev_menu != null:
+		prev_menu.visible = true
+		hidden_menu_found = true
+		# Restore focus using helper for consistency
+		var advanced_btn: Button = prev_menu.get_node(
+			"Panel/OptionsVBoxContainer/AdvancedSettingsButton"
+		)
+		if is_instance_valid(advanced_btn):
+			Globals.ensure_initial_focus(
+				advanced_btn, [advanced_btn], "Options Menu - Advanced Button"
 			)
-			if is_instance_valid(advanced_btn):
-				Globals.ensure_initial_focus(
-					advanced_btn, [advanced_btn], "Options Menu - Advanced Button"
-				)
-			else:
-				Globals.log_message(
-					"AdvancedSettingsButton not found—skipping focus.", Globals.LogLevel.WARNING
-				)
+		else:
+			Globals.log_message(
+				"AdvancedSettingsButton not found—skipping focus.", Globals.LogLevel.WARNING
+			)
 
 	# Decoupled cleanup: Run if web and js_window available, but gate eval on js_bridge_wrapper
 	if os_wrapper.has_feature("web") and js_window:

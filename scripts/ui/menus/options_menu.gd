@@ -230,24 +230,23 @@ func _teardown() -> void:
 		return
 	_torn_down = true
 	_unset_options_menu_window_callbacks()
-	if not Globals.hidden_menus.is_empty():
-		var prev_menu: Node = Globals.hidden_menus.pop_back()
-		if is_instance_valid(prev_menu):
-			prev_menu.visible = true
-			Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
+	var prev_menu: Node = Globals.pop_hidden_menu()
+	if prev_menu != null:
+		prev_menu.visible = true
+		Globals.log_message("Showing menu: " + prev_menu.name, Globals.LogLevel.DEBUG)
 
-			# Unified check using the "MenuWithOptions" group you added in Editor
-			if prev_menu.is_in_group("MenuWithOptions"):
-				# Log context for debug (pause vs main, using node name)
-				var log_context: String = (
-					"from " + ("PAUSE menu" if prev_menu.name == "PauseMenu" else "MAIN menu")
-				)
-				_grab_options_focus(prev_menu, log_context)
-			else:
-				Globals.log_message(
-					"No MenuWithOptions group on " + prev_menu.name + " - skipping focus grab",
-					Globals.LogLevel.DEBUG
-				)
+		# Unified check using the "MenuWithOptions" group you added in Editor
+		if prev_menu.is_in_group("MenuWithOptions"):
+			# Log context for debug (pause vs main, using node name)
+			var log_context: String = (
+				"from " + ("PAUSE menu" if prev_menu.name == "PauseMenu" else "MAIN menu")
+			)
+			_grab_options_focus(prev_menu, log_context)
+		else:
+			Globals.log_message(
+				"No MenuWithOptions group on " + prev_menu.name + " - skipping focus grab",
+				Globals.LogLevel.DEBUG
+			)
 
 	Globals.options_open = false
 	Globals.options_instance = null

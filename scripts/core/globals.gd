@@ -237,6 +237,51 @@ func ensure_initial_focus(
 		)
 
 
+## Pops hidden_menus down to the nearest live menu and returns it.
+##
+## A menu freed while it is still on the stack leaves a stale entry. Freed entries are
+## discarded, so a live menu below them is still returned. Every caller that restores the
+## previous menu uses this, so a stale entry never stops a Back or cleanup path (#1211).
+##
+## Only pops; showing the returned menu, focus and overlays stay with the caller.
+##
+## :returns: The nearest live menu, or null if the stack is empty or holds only freed
+##   entries (they are all popped).
+## :rtype: Node
+func pop_hidden_menu() -> Node:
+	while not hidden_menus.is_empty():
+		# Pop into a Variant first: assigning a freed instance straight to a typed Node var
+		# raises "Trying to assign invalid previously freed instance" and aborts the caller.
+		var popped: Variant = hidden_menus.pop_back()
+		if is_instance_valid(popped):
+			return popped
+		log_message("Discarding freed entry from hidden_menus.", LogLevel.DEBUG)
+	return null
+
+
+## Undoes a failed load's push onto hidden_menus and shows that menu again.
+##
+## Removes only the entry the load pushed, so a menu another screen left on the stack is
+## never popped or shown by the rollback. Does nothing when the load pushed nothing (its
+## menu_to_hide was null or freed) (#1211).
+##
+## :param pushed_menu: The menu the failed load pushed, or null if it pushed none.
+## :type pushed_menu: Node
+## :returns: True if the pushed menu was removed from the stack and shown again.
+## :rtype: bool
+func _roll_back_hidden_menu(pushed_menu: Node) -> bool:
+	if pushed_menu == null:
+		return false
+	var index: int = hidden_menus.rfind(pushed_menu)
+	if index == -1:
+		return false
+	hidden_menus.remove_at(index)
+	if not is_instance_valid(pushed_menu):
+		return false
+	pushed_menu.visible = true
+	return true
+
+
 ## Loads Key Mapping menu directly while keeping background video visible.
 ##
 ## Loads the Key Mapping menu, hides the specified menu node, and keeps the background video
@@ -244,8 +289,10 @@ func ensure_initial_focus(
 ##
 ## [param menu_to_hide]: The menu node to hide while the key mapping menu is displayed.
 func load_key_mapping(menu_to_hide: Node) -> void:
+	var pushed_menu: Node = null
 	if is_instance_valid(menu_to_hide):
 		hidden_menus.push_back(menu_to_hide)
+		pushed_menu = menu_to_hide
 		menu_to_hide.visible = false
 
 		# Robust video lookup (works for both Panel and root Control)
@@ -258,10 +305,7 @@ func load_key_mapping(menu_to_hide: Node) -> void:
 	# FIX: We must call .instantiate() on the PackedScene inside settings
 	if settings.key_mapping_scene == null:
 		log_message("Error: Key mapping scene not configured.", LogLevel.ERROR)
-		if not hidden_menus.is_empty():
-			var prev_menu: Node = hidden_menus.pop_back()
-			if is_instance_valid(prev_menu):
-				prev_menu.visible = true
+		_roll_back_hidden_menu(pushed_menu)
 		return
 	var km_instance: CanvasLayer = settings.key_mapping_scene.instantiate()
 	get_tree().root.add_child(km_instance)
@@ -418,16 +462,20 @@ func _on_options_exited_unexpectedly() -> void:
 	## exited is an older Options (freed at the end of the frame after its Back, while a new one
 	## was opened in the same frame), and the new one's parent and state must stay (#1166 review).
 	##
+	## Also does nothing when options_open is already false: Options' own _teardown() runs from
+	## _exit_tree() before tree_exited fires, has restored its menu and reset the state, so a pop
+	## here would show a second menu (#1211 review).
+	##
 	## :rtype: void
 	if is_instance_valid(options_instance) and options_instance.is_inside_tree():
 		return
-	if options_open:  # Guard: Only log if it was still "open" (unexpected exit)
-		log_message("Options instance exited unexpectedly—resetting flag.", LogLevel.WARNING)
+	if not options_open:
+		return
+	log_message("Options instance exited unexpectedly—resetting flag.", LogLevel.WARNING)
 
-	if not hidden_menus.is_empty():
-		var prev_menu: Node = hidden_menus.pop_back()
-		if is_instance_valid(prev_menu):
-			prev_menu.visible = true
+	var prev_menu: Node = pop_hidden_menu()
+	if prev_menu != null:
+		prev_menu.visible = true
 
 	options_open = false
 	options_instance = null
@@ -451,6 +499,7 @@ func load_options(menu_to_hide: Node) -> void:
 		log_message("Options menu already open—ignoring load request.", LogLevel.WARNING)
 		return
 
+	var pushed_menu: Node = null
 	if menu_to_hide == null:
 		log_message("load_options: Called with null menu_to_hide—skipping hide.", LogLevel.WARNING)
 	elif not is_instance_valid(menu_to_hide):
@@ -460,6 +509,7 @@ func load_options(menu_to_hide: Node) -> void:
 		)
 	else:
 		hidden_menus.push_back(menu_to_hide)
+		pushed_menu = menu_to_hide
 		menu_to_hide.visible = false
 		log_message("Hiding menu: " + menu_to_hide.name, LogLevel.DEBUG)
 
@@ -471,10 +521,7 @@ func load_options(menu_to_hide: Node) -> void:
 		if options_instance == null:
 			log_message("Failed to instantiate options scene—resetting flag.", LogLevel.ERROR)
 			options_open = false  # Reset to avoid stuck state
-			if not hidden_menus.is_empty():
-				var prev_menu: Node = hidden_menus.pop_back()
-				if is_instance_valid(prev_menu):
-					prev_menu.visible = true  # Restore if we bailed
+			_roll_back_hidden_menu(pushed_menu)  # Restore if we bailed
 			return
 
 		# Optional: Connect to tree_exited for unexpected free (extra safety)
@@ -482,11 +529,8 @@ func load_options(menu_to_hide: Node) -> void:
 		get_tree().root.add_child(options_instance)
 	else:
 		log_message("Error: Options scene not found!", LogLevel.ERROR)
-		if not hidden_menus.is_empty():
-			var prev_menu: Node = hidden_menus.pop_back()
-			if is_instance_valid(prev_menu):
-				prev_menu.visible = true
-				log_message("Restored visibility of menu: " + prev_menu.name, LogLevel.WARNING)
+		if _roll_back_hidden_menu(pushed_menu):
+			log_message("Restored visibility of menu: " + pushed_menu.name, LogLevel.WARNING)
 
 
 # Custom logging function with timestamp and level filtering.
