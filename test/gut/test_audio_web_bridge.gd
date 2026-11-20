@@ -411,6 +411,10 @@ func test_tc_awb_19_mute_toggle_blocked_by_muted_ancestor(
 	var before: Dictionary = AudioManager.get_bus_state(bus)
 	# HTML checked = unmuted: ask for the opposite of the current state.
 	stub(bridge, "_validate_mute_args").to_return(before["muted"])
+	# _set_bridge_mutes() already sent mute_toggled for this bus to the connected bridge, so
+	# count the matching resync calls from here and require exactly one more.
+	var resync_args: Array = [bus, before["muted"]]
+	var resyncs_before: int = get_call_count(bridge, "_on_godot_mute_toggled", resync_args)
 	Globals.settings.current_log_level = Globals.LogLevel.WARNING
 	var log_capture: LogCapture = LogCapture.new()
 	OS.add_logger(log_capture)
@@ -418,7 +422,11 @@ func test_tc_awb_19_mute_toggle_blocked_by_muted_ancestor(
 	OS.remove_logger(log_capture)
 
 	assert_eq(AudioManager.get_bus_state(bus), before, "%s must not change." % bus)
-	assert_called(bridge, "_on_godot_mute_toggled", [bus, before["muted"]])
+	assert_eq(
+		get_call_count(bridge, "_on_godot_mute_toggled", resync_args),
+		resyncs_before + 1,
+		"%s: the rejected toggle must resync the DOM checkbox once." % bus
+	)
 	assert_true(
 		log_capture.has_text("Warning dialog: %s muted, cannot adjust sub-mute state" % params[2]),
 		"%s: warning must name %s." % [bus, params[2]]
