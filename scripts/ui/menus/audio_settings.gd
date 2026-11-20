@@ -212,33 +212,17 @@ func _on_back_button_pressed() -> void:
 	queue_free()
 
 
-## Syncs the disabled/editable state of all UI elements based on the hierarchy rules
+## Syncs the disabled/editable state of every mute button and slider from AudioManager's
+## hierarchy rules (Issue #1154): a mute button is disabled while a muted ancestor locks its
+## bus, and a slider is editable only while its bus is not effectively muted.
 func _update_ui_interactivity() -> void:
-	var is_master_muted: bool = AudioManager.master_muted
-
-	# 1. MASTER HIERARCHY
-	master_slider.editable = not is_master_muted
-
-	# 2. LEVEL 1 CHILDREN (Music & SFX)
-	# Mute buttons are disabled if Master is muted.
-	# Sliders are disabled if Master is muted OR their own bus is muted.
-	mute_music.disabled = is_master_muted
-	music_slider.editable = not (is_master_muted or AudioManager.music_muted)
-
-	mute_sfx.disabled = is_master_muted
-	sfx_slider.editable = not (is_master_muted or AudioManager.sfx_muted)
-
-	# 3. LEVEL 2 CHILDREN (SFX Sub-buses: Weapon, Rotors, Menu)
-	var is_sfx_hierarchy_muted: bool = is_master_muted or AudioManager.sfx_muted
-
-	mute_weapon.disabled = is_sfx_hierarchy_muted
-	weapon_slider.editable = not (is_sfx_hierarchy_muted or AudioManager.weapon_muted)
-
-	mute_rotor.disabled = is_sfx_hierarchy_muted
-	rotor_slider.editable = not (is_sfx_hierarchy_muted or AudioManager.rotors_muted)
-
-	mute_menu.disabled = is_sfx_hierarchy_muted
-	menu_slider.editable = not (is_sfx_hierarchy_muted or AudioManager.menu_muted)
+	for bus: String in AudioConstants.BUS_CONFIG.keys():
+		var mute_button: CheckButton = _get_mute_button_for_bus(bus)
+		var slider: HSlider = _get_slider_for_bus(bus)
+		if mute_button == null or slider == null:
+			continue
+		mute_button.disabled = not AudioManager.get_muted_ancestor(bus).is_empty()
+		slider.editable = not AudioManager.is_effectively_muted(bus)
 
 
 # ==========================================================================
@@ -337,135 +321,54 @@ func _update_label_colors() -> void:
 
 
 # ==========================================
-# MASTER VOLUME
+# SLIDER AND MUTE BUTTON INPUT (warning dialogs)
 # ==========================================
+# Each wrapper names its bus; _handle_slider_gui_input() and _handle_mute_gui_input() ask
+# AudioManager which muted ancestor, if any, locks it (Issue #1154).
+
+
 func _on_master_volume_control_gui_input(event: InputEvent) -> void:
-	_handle_slider_gui_input(
-		event,
-		false,  # Prevents Master row from triggering warning dialogs against itself
-		false,
-		AudioManager.master_muted,
-		mute_master,
-		master_warning_dialog,
-		sfx_warning_dialog
-	)
+	_handle_slider_gui_input(event, AudioConstants.BUS_MASTER, mute_master)
 
 
-# ==========================================
-# MUSIC VOLUME
-# ==========================================
 func _on_music_volume_control_gui_input(event: InputEvent) -> void:
-	_handle_slider_gui_input(
-		event,
-		AudioManager.master_muted,
-		false,
-		AudioManager.music_muted,
-		mute_music,
-		master_warning_dialog,
-		sfx_warning_dialog
-	)
+	_handle_slider_gui_input(event, AudioConstants.BUS_MUSIC, mute_music)
 
 
 func _on_music_mute_gui_input(event: InputEvent) -> void:
-	_handle_mute_gui_input(
-		event, AudioManager.master_muted, false, master_warning_dialog, sfx_warning_dialog
-	)
+	_handle_mute_gui_input(event, AudioConstants.BUS_MUSIC)
 
 
-# ==========================================
-# SFX VOLUME
-# ==========================================
 func _on_sfx_volume_control_gui_input(event: InputEvent) -> void:
-	_handle_slider_gui_input(
-		event,
-		AudioManager.master_muted,
-		false,
-		AudioManager.sfx_muted,
-		mute_sfx,
-		master_warning_dialog,
-		sfx_warning_dialog
-	)
+	_handle_slider_gui_input(event, AudioConstants.BUS_SFX, mute_sfx)
 
 
 func _on_sfx_mute_gui_input(event: InputEvent) -> void:
-	_handle_mute_gui_input(
-		event, AudioManager.master_muted, false, master_warning_dialog, sfx_warning_dialog
-	)
+	_handle_mute_gui_input(event, AudioConstants.BUS_SFX)
 
 
-# ==========================================
-# WEAPON VOLUME
-# ==========================================
 func _on_weapon_volume_control_gui_input(event: InputEvent) -> void:
-	_handle_slider_gui_input(
-		event,
-		AudioManager.master_muted,
-		AudioManager.sfx_muted,
-		AudioManager.weapon_muted,
-		mute_weapon,
-		master_warning_dialog,
-		sfx_warning_dialog
-	)
+	_handle_slider_gui_input(event, AudioConstants.BUS_SFX_WEAPON, mute_weapon)
 
 
 func _on_weapon_mute_gui_input(event: InputEvent) -> void:
-	_handle_mute_gui_input(
-		event,
-		AudioManager.master_muted,
-		AudioManager.sfx_muted,
-		master_warning_dialog,
-		sfx_warning_dialog
-	)
+	_handle_mute_gui_input(event, AudioConstants.BUS_SFX_WEAPON)
 
 
-# ==========================================
-# ROTORS VOLUME
-# ==========================================
 func _on_rotor_volume_control_gui_input(event: InputEvent) -> void:
-	_handle_slider_gui_input(
-		event,
-		AudioManager.master_muted,
-		AudioManager.sfx_muted,
-		AudioManager.rotors_muted,
-		mute_rotor,
-		master_warning_dialog,
-		sfx_warning_dialog
-	)
+	_handle_slider_gui_input(event, AudioConstants.BUS_SFX_ROTORS, mute_rotor)
 
 
 func _on_rotor_mute_gui_input(event: InputEvent) -> void:
-	_handle_mute_gui_input(
-		event,
-		AudioManager.master_muted,
-		AudioManager.sfx_muted,
-		master_warning_dialog,
-		sfx_warning_dialog
-	)
+	_handle_mute_gui_input(event, AudioConstants.BUS_SFX_ROTORS)
 
 
-# ==========================================
-# MENU VOLUME
-# ==========================================
 func _on_menu_volume_control_gui_input(event: InputEvent) -> void:
-	_handle_slider_gui_input(
-		event,
-		AudioManager.master_muted,
-		AudioManager.sfx_muted,
-		AudioManager.menu_muted,
-		mute_menu,
-		master_warning_dialog,
-		sfx_warning_dialog
-	)
+	_handle_slider_gui_input(event, AudioConstants.BUS_SFX_MENU, mute_menu)
 
 
 func _on_menu_mute_gui_input(event: InputEvent) -> void:
-	_handle_mute_gui_input(
-		event,
-		AudioManager.master_muted,
-		AudioManager.sfx_muted,
-		master_warning_dialog,
-		sfx_warning_dialog
-	)
+	_handle_mute_gui_input(event, AudioConstants.BUS_SFX_MENU)
 
 
 # ==========================================
@@ -544,54 +447,67 @@ func _on_tree_exited() -> void:
 # ==========================================
 
 
+## A click or ui_accept on a slider: if a muted ancestor locks the bus, shows its warning
+## dialog; otherwise, if the bus itself is muted, presses its mute button to unmute it.
+## :param event: The slider's input event.
+## :type event: InputEvent
+## :param bus_name: The slider's bus.
+## :type bus_name: String
+## :param mute_button: The bus's mute button.
+## :type mute_button: CheckButton
+## :rtype: void
 func _handle_slider_gui_input(
-	event: InputEvent,
-	master_muted: bool,
-	sfx_muted: bool,
-	bus_muted: bool,
-	mute_button: CheckButton,
-	master_dialog: AcceptDialog,
-	sfx_dialog: AcceptDialog
+	event: InputEvent, bus_name: String, mute_button: CheckButton
 ) -> void:
+	if not _is_activation(event):
+		return
+	if _show_parent_mute_warning(AudioManager.get_muted_ancestor(bus_name)):
+		return
+	if AudioManager.get_muted(bus_name):
+		mute_button.button_pressed = true
+
+
+## A click or ui_accept on a mute button: if a muted ancestor locks the bus, shows its
+## warning dialog and consumes the input.
+## :param event: The mute button's input event.
+## :type event: InputEvent
+## :param bus_name: The mute button's bus.
+## :type bus_name: String
+## :rtype: void
+func _handle_mute_gui_input(event: InputEvent, bus_name: String) -> void:
+	if _is_activation(event):
+		_show_parent_mute_warning(AudioManager.get_muted_ancestor(bus_name))
+
+
+## True for a left mouse press or a ui_accept press.
+## :param event: The input event.
+## :type event: InputEvent
+## :rtype: bool
+func _is_activation(event: InputEvent) -> bool:
 	var is_mouse_click: bool = (
 		event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
 	)
-	var is_ui_accept: bool = event.is_action_pressed("ui_accept")
+	return is_mouse_click or event.is_action_pressed("ui_accept")
 
-	if is_mouse_click or is_ui_accept:
-		if master_muted:
-			master_dialog.popup_centered()
+
+## Shows the warning dialog for the muted ancestor that locks a control ("unmute Master" or
+## "unmute SFX") and consumes the input. Returns false, showing nothing, when [param locked_by]
+## is "" or has no dialog.
+## :param locked_by: The locking ancestor from AudioManager.get_muted_ancestor().
+## :type locked_by: String
+## :rtype: bool
+func _show_parent_mute_warning(locked_by: String) -> bool:
+	match locked_by:
+		AudioConstants.BUS_MASTER:
+			master_warning_dialog.popup_centered()
 			master_warning_shown = true
-			get_viewport().set_input_as_handled()
-		elif sfx_muted:
-			sfx_dialog.popup_centered()
+		AudioConstants.BUS_SFX:
+			sfx_warning_dialog.popup_centered()
 			sfx_warning_shown = true
-			get_viewport().set_input_as_handled()
-		elif bus_muted:
-			mute_button.button_pressed = true
-
-
-func _handle_mute_gui_input(
-	event: InputEvent,
-	master_muted: bool,
-	sfx_muted: bool,
-	master_dialog: AcceptDialog,
-	sfx_dialog: AcceptDialog
-) -> void:
-	var is_mouse_click: bool = (
-		event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
-	)
-	var is_ui_accept: bool = event.is_action_pressed("ui_accept")
-
-	if is_mouse_click or is_ui_accept:
-		if master_muted:
-			master_dialog.popup_centered()
-			master_warning_shown = true
-			get_viewport().set_input_as_handled()
-		elif sfx_muted:
-			sfx_dialog.popup_centered()
-			sfx_warning_shown = true
-			get_viewport().set_input_as_handled()
+		_:
+			return false
+	get_viewport().set_input_as_handled()
+	return true
 
 
 func _reset_master_warning_shown() -> void:
@@ -635,6 +551,35 @@ func _get_slider_for_bus(bus_name: String) -> HSlider:
 			)
 
 	return target_slider
+
+
+## Maps an audio bus to its mute button. Returns null (and logs an error) for an unknown bus.
+## :param bus_name: The constant identifier name of the audio channel.
+## :type bus_name: String
+## :rtype: CheckButton
+func _get_mute_button_for_bus(bus_name: String) -> CheckButton:
+	var target_button: CheckButton = null
+
+	match bus_name:
+		AudioConstants.BUS_MASTER:
+			target_button = mute_master
+		AudioConstants.BUS_MUSIC:
+			target_button = mute_music
+		AudioConstants.BUS_SFX:
+			target_button = mute_sfx
+		AudioConstants.BUS_SFX_WEAPON:
+			target_button = mute_weapon
+		AudioConstants.BUS_SFX_ROTORS:
+			target_button = mute_rotor
+		AudioConstants.BUS_SFX_MENU:
+			target_button = mute_menu
+		_:
+			Globals.log_message(
+				"Critical: Unknown bus_name passed to mute button lookup: " + bus_name,
+				Globals.LogLevel.ERROR
+			)
+
+	return target_button
 
 
 # ==========================================================================

@@ -49,10 +49,14 @@ const FEEDBACK_HOLD_VOLUME_LINEAR: float = 0.15
 ## Issue #1046.
 const UNMUTE_FROM_ZERO_FALLBACK_VOLUME: float = 0.495
 
-# Centralized config with defaults and var mappings
+## Centralized per-bus config: the AudioManager variable names, defaults, and the parent bus.
+## "parent" is the bus whose mute locks this bus's controls ("" for Master). It mirrors the
+## sends in default_bus_layout.tres, and AudioManager.get_parent_bus(),
+## get_muted_ancestor() and is_effectively_muted() read it (Issue #1154).
 const BUS_CONFIG: Dictionary = {
 	BUS_MASTER:
 	{
+		"parent": "",
 		"volume_var": "master_volume",
 		"muted_var": "master_muted",
 		"default_volume": 1.0,
@@ -60,6 +64,7 @@ const BUS_CONFIG: Dictionary = {
 	},
 	BUS_MUSIC:
 	{
+		"parent": BUS_MASTER,
 		"volume_var": "music_volume",
 		"muted_var": "music_muted",
 		"default_volume": 1.0,
@@ -67,6 +72,7 @@ const BUS_CONFIG: Dictionary = {
 	},
 	BUS_SFX:
 	{
+		"parent": BUS_MASTER,
 		"volume_var": "sfx_volume",
 		"muted_var": "sfx_muted",
 		"default_volume": 1.0,
@@ -74,6 +80,7 @@ const BUS_CONFIG: Dictionary = {
 	},
 	BUS_SFX_WEAPON:
 	{
+		"parent": BUS_SFX,
 		"volume_var": "weapon_volume",
 		"muted_var": "weapon_muted",
 		"default_volume": 1.0,
@@ -81,6 +88,7 @@ const BUS_CONFIG: Dictionary = {
 	},
 	BUS_SFX_ROTORS:
 	{
+		"parent": BUS_SFX,
 		"volume_var": "rotors_volume",
 		"muted_var": "rotors_muted",
 		"default_volume": 1.0,
@@ -88,6 +96,7 @@ const BUS_CONFIG: Dictionary = {
 	},
 	BUS_SFX_MENU:
 	{
+		"parent": BUS_SFX,
 		"volume_var": "menu_volume",
 		"muted_var": "menu_muted",
 		"default_volume": 1.0,

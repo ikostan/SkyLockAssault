@@ -32,23 +32,23 @@ signal mute_toggled(bus_name: String, is_muted: bool)
 ## path has been re-synced (Issue #1047). change_volume() awaits it for its own hold.
 signal feedback_path_settled
 
-@export_category("Master Volume")
-@export var master_volume: float
-@export var master_muted: bool
-
-@export_category("Music Volume")
-@export var music_volume: float
-@export var music_muted: bool
-
-@export_category("SFX Volume")
-@export var sfx_volume: float
-@export var sfx_muted: bool
-@export var weapon_volume: float
-@export var weapon_muted: bool
-@export var rotors_volume: float
-@export var rotors_muted: bool
-@export var menu_volume: float
-@export var menu_muted: bool
+# --- BUS STATE (Issue #1153) ---
+# One volume and one mute variable per bus. AudioConstants.BUS_CONFIG maps each bus name to
+# these names ("volume_var" / "muted_var"), and get_volume(), set_volume(), get_muted() and
+# set_muted() look them up there, so a new bus needs a BUS_CONFIG entry and a variable pair.
+# Plain vars: the autoload has no scene, so @export did nothing.
+var master_volume: float
+var master_muted: bool
+var music_volume: float
+var music_muted: bool
+var sfx_volume: float
+var sfx_muted: bool
+var weapon_volume: float
+var weapon_muted: bool
+var rotors_volume: float
+var rotors_muted: bool
+var menu_volume: float
+var menu_muted: bool
 
 var current_config_path: String = Settings.CONFIG_PATH
 
@@ -122,38 +122,25 @@ func set_bus_state(bus_name: String, volume: float, muted: bool) -> void:
 
 ## Return the current volume level for the specified audio bus.
 ##
-## Retrieves the volume level associated with the given bus name, matching against predefined
-## audio constants.
+## Reads the variable that AudioConstants.BUS_CONFIG maps to the bus (Issue #1153).
+## An unknown bus logs a warning and returns 0.0.
 ##
 ## [param bus_name]: Name of the audio bus to query.
 ## Returns the current volume as a float value.
 func get_volume(bus_name: String) -> float:
-	var current_vol: float = 0.0
-
-	match bus_name:
-		AudioConstants.BUS_MASTER:
-			current_vol = master_volume
-		AudioConstants.BUS_MUSIC:
-			current_vol = music_volume
-		AudioConstants.BUS_SFX:
-			current_vol = sfx_volume
-		AudioConstants.BUS_SFX_WEAPON:
-			current_vol = weapon_volume
-		AudioConstants.BUS_SFX_ROTORS:
-			current_vol = rotors_volume
-		AudioConstants.BUS_SFX_MENU:
-			current_vol = menu_volume
-		_:
-			Globals.log_message("Unknown bus for get_volume: " + bus_name, Globals.LogLevel.WARNING)
-
-	return current_vol
+	if not AudioConstants.BUS_CONFIG.has(bus_name):
+		Globals.log_message("Unknown bus for get_volume: " + bus_name, Globals.LogLevel.WARNING)
+		return 0.0
+	return float(get(AudioConstants.BUS_CONFIG[bus_name]["volume_var"]))
 
 
 ## Set volume for a bus raw setter without audio server or save side effects.
 ##
-## Updates state and emits volume_changed only. Never applies the near-zero auto-mute rule,
-## never touches AudioServer, and never saves. Use change_volume() when a volume change should
-## be able to auto-mute or auto-unmute the bus.
+## Writes the variable that AudioConstants.BUS_CONFIG maps to the bus (Issue #1153) and emits
+## volume_changed only. Never applies the near-zero auto-mute rule, never touches
+## AudioServer, and never saves. Use change_volume() when a volume change should be able to
+## auto-mute or auto-unmute the bus. An unknown bus logs a warning, changes nothing and emits
+## nothing.
 ##
 ## [param bus_name]: Name of the bus.
 ## [param vol]: Volume level from 0.0 to 1.0.
@@ -162,104 +149,89 @@ func set_volume(bus_name: String, vol: float) -> void:
 		Globals.log_message("Unknown bus for set_volume: " + bus_name, Globals.LogLevel.WARNING)
 		return
 
-	var success: bool = true
-	match bus_name:
-		AudioConstants.BUS_MASTER:
-			master_volume = vol
-			Globals.log_message(
-				"Master Volume Level in AudioManager: " + str(vol), Globals.LogLevel.DEBUG
-			)
-		AudioConstants.BUS_MUSIC:
-			music_volume = vol
-			Globals.log_message(
-				"Music Volume Level in AudioManager: " + str(vol), Globals.LogLevel.DEBUG
-			)
-		AudioConstants.BUS_SFX:
-			sfx_volume = vol
-			Globals.log_message(
-				"SFX Volume Level in AudioManager: " + str(vol), Globals.LogLevel.DEBUG
-			)
-		AudioConstants.BUS_SFX_WEAPON:
-			weapon_volume = vol
-			Globals.log_message(
-				"Weapon Volume Level in AudioManager: " + str(vol), Globals.LogLevel.DEBUG
-			)
-		AudioConstants.BUS_SFX_ROTORS:
-			rotors_volume = vol
-			Globals.log_message(
-				"Rotors Volume Level in AudioManager: " + str(vol), Globals.LogLevel.DEBUG
-			)
-		AudioConstants.BUS_SFX_MENU:
-			menu_volume = vol
-			Globals.log_message(
-				"Menu Volume Level in AudioManager: " + str(vol), Globals.LogLevel.DEBUG
-			)
-		_:
-			Globals.log_message(
-				"Unsupported bus in set_volume match (check config drift): " + bus_name,
-				Globals.LogLevel.ERROR
-			)
-			success = false
-
-	# NEW: Emit the signal if the volume was successfully updated
-	if success:
-		volume_changed.emit(bus_name, vol)
+	set(AudioConstants.BUS_CONFIG[bus_name]["volume_var"], vol)
+	Globals.log_message(
+		bus_name + " volume level in AudioManager: " + str(vol), Globals.LogLevel.DEBUG
+	)
+	volume_changed.emit(bus_name, vol)
 
 
 ## Return muted state for a bus.
 ##
+## Reads the variable that AudioConstants.BUS_CONFIG maps to the bus (Issue #1153).
+## An unknown bus logs a warning and returns false.
+##
 ## [param bus_name]: Name of the bus.
 ## Returns true if the specified audio bus is muted, otherwise false.
 func get_muted(bus_name: String) -> bool:
-	var is_muted: bool = false
-
-	match bus_name:
-		AudioConstants.BUS_MASTER:
-			is_muted = master_muted
-		AudioConstants.BUS_MUSIC:
-			is_muted = music_muted
-		AudioConstants.BUS_SFX:
-			is_muted = sfx_muted
-		AudioConstants.BUS_SFX_WEAPON:
-			is_muted = weapon_muted
-		AudioConstants.BUS_SFX_ROTORS:
-			is_muted = rotors_muted
-		AudioConstants.BUS_SFX_MENU:
-			is_muted = menu_muted
-		_:
-			Globals.log_message("Unknown bus for get_muted: " + bus_name, Globals.LogLevel.WARNING)
-
-	return is_muted
+	if not AudioConstants.BUS_CONFIG.has(bus_name):
+		Globals.log_message("Unknown bus for get_muted: " + bus_name, Globals.LogLevel.WARNING)
+		return false
+	return bool(get(AudioConstants.BUS_CONFIG[bus_name]["muted_var"]))
 
 
 ## Set muted state for a bus.
 ##
-## Updates the mute state for the specified audio bus and emits a signal if successful.
+## Writes the variable that AudioConstants.BUS_CONFIG maps to the bus (Issue #1153) and emits
+## mute_toggled. An unknown bus logs a warning, changes nothing and emits nothing.
 ##
 ## [param bus_name]: Name of the audio bus.
 ## [param muted]: Mute flag.
 func set_muted(bus_name: String, muted: bool) -> void:
-	var success: bool = true
-	match bus_name:
-		AudioConstants.BUS_MASTER:
-			master_muted = muted
-		AudioConstants.BUS_MUSIC:
-			music_muted = muted
-		AudioConstants.BUS_SFX:
-			sfx_muted = muted
-		AudioConstants.BUS_SFX_WEAPON:
-			weapon_muted = muted
-		AudioConstants.BUS_SFX_ROTORS:
-			rotors_muted = muted
-		AudioConstants.BUS_SFX_MENU:
-			menu_muted = muted
-		_:
-			Globals.log_message("Unknown bus for set_muted: " + bus_name, Globals.LogLevel.WARNING)
-			success = false
+	if not AudioConstants.BUS_CONFIG.has(bus_name):
+		Globals.log_message("Unknown bus for set_muted: " + bus_name, Globals.LogLevel.WARNING)
+		return
 
-	# NEW: Emit the signal if the mute state was successfully updated
-	if success:
-		mute_toggled.emit(bus_name, muted)
+	set(AudioConstants.BUS_CONFIG[bus_name]["muted_var"], muted)
+	mute_toggled.emit(bus_name, muted)
+
+
+# --- BUS HIERARCHY (Issue #1154) ---
+# A muted bus locks the controls of every bus below it: the Audio Settings menu disables
+# their mute buttons and sliders, and the web bridge rejects their changes. The hierarchy
+# comes from the "parent" field in AudioConstants.BUS_CONFIG, so callers ask these methods
+# instead of naming buses themselves.
+
+
+## Returns the parent bus from AudioConstants.BUS_CONFIG: "" for Master.
+## An unknown bus logs a warning and returns "".
+##
+## [param bus_name]: Name of the bus.
+## Returns the parent bus name, or "".
+func get_parent_bus(bus_name: String) -> String:
+	if not AudioConstants.BUS_CONFIG.has(bus_name):
+		Globals.log_message("Unknown bus for get_parent_bus: " + bus_name, Globals.LogLevel.WARNING)
+		return ""
+	return String(AudioConstants.BUS_CONFIG[bus_name]["parent"])
+
+
+## Returns the muted ancestor that locks a bus's controls, or "" if no ancestor is muted.
+## The bus's own mute does not count. When several ancestors are muted, returns the one
+## nearest Master: the mute buttons of the muted buses below it are locked, so it is the bus
+## the player must unmute first. Both callers already warn about Master before SFX.
+## The walk is capped at the BUS_CONFIG size, so a parent cycle cannot loop forever.
+##
+## [param bus_name]: Name of the bus.
+## Returns the locking ancestor's name, or "".
+func get_muted_ancestor(bus_name: String) -> String:
+	var locked_by: String = ""
+	var ancestor: String = get_parent_bus(bus_name)
+	for _step in range(AudioConstants.BUS_CONFIG.size()):
+		if ancestor.is_empty():
+			break
+		if get_muted(ancestor):
+			locked_by = ancestor
+		ancestor = get_parent_bus(ancestor)
+	return locked_by
+
+
+## True when the bus or any of its ancestors is muted, i.e. the bus is silent and its
+## volume slider is locked.
+##
+## [param bus_name]: Name of the bus.
+## Returns true if the bus is muted or locked by a muted ancestor.
+func is_effectively_muted(bus_name: String) -> bool:
+	return get_muted(bus_name) or not get_muted_ancestor(bus_name).is_empty()
 
 
 ## Returns the volume a bus should be restored to when unmuted from (near) zero:

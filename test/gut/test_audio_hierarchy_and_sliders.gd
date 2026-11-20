@@ -201,3 +201,142 @@ func test_slider_focus_loss_does_not_toggle_drag_state_unintentionally() -> void
 
 	# Assert
 	assert_false(slider.is_user_dragging(), "Slider drag state must strictly remain false; no accidental inversion.")
+
+
+# ==========================================================================
+# 4. HIERARCHY RULES FROM AUDIOMANAGER (Issue #1154)
+# ==========================================================================
+# The menu now asks AudioManager.get_muted_ancestor() and is_effectively_muted() instead of
+# encoding the hierarchy itself. These tests pin the control states and warning dialogs to
+# the rules the menu used before the change, written out here independently.
+
+const ALL_BUSES: Array = ["Master", "Music", "SFX", "SFX_Weapon", "SFX_Rotors", "SFX_Menu"]
+const SFX_CHILDREN: Array = ["SFX_Weapon", "SFX_Rotors", "SFX_Menu"]
+
+
+## Unmutes every bus, then mutes only [param muted_buses], through AudioManager's signals.
+func _set_mutes(muted_buses: Array) -> void:
+	for bus: String in ALL_BUSES:
+		AudioManager.set_muted(bus, bus in muted_buses)
+
+
+## Returns [mute button, slider] for a bus.
+func _controls_for(bus: String) -> Array:
+	match bus:
+		"Master":
+			return [audio_instance.mute_master, audio_instance.master_slider]
+		"Music":
+			return [audio_instance.mute_music, audio_instance.music_slider]
+		"SFX":
+			return [audio_instance.mute_sfx, audio_instance.sfx_slider]
+		"SFX_Weapon":
+			return [audio_instance.mute_weapon, audio_instance.weapon_slider]
+		"SFX_Rotors":
+			return [audio_instance.mute_rotor, audio_instance.rotor_slider]
+	return [audio_instance.mute_menu, audio_instance.menu_slider]
+
+
+## The lock rules the menu used before Issue #1154, as [mute disabled, slider editable].
+func _legacy_locks(bus: String, muted_buses: Array) -> Array:
+	var master: bool = "Master" in muted_buses
+	var sfx_hierarchy: bool = master or "SFX" in muted_buses
+	var own: bool = bus in muted_buses
+	match bus:
+		"Master":
+			return [false, not master]
+		"Music", "SFX":
+			return [master, not (master or own)]
+	return [sfx_hierarchy, not (sfx_hierarchy or own)]
+
+
+## Returns a left mouse press, the input the warning handlers react to.
+func _left_click() -> InputEventMouseButton:
+	var event := InputEventMouseButton.new()
+	event.button_index = MOUSE_BUTTON_LEFT
+	event.pressed = true
+	return event
+
+
+## Every mute button and slider has the same disabled/editable state as before the change,
+## under each of the 64 mute combinations.
+func test_controls_match_legacy_locks_for_all_mute_combinations() -> void:
+	for mask: int in range(1 << ALL_BUSES.size()):
+		var muted_buses: Array = []
+		for index: int in range(ALL_BUSES.size()):
+			if mask & (1 << index):
+				muted_buses.append(ALL_BUSES[index])
+		_set_mutes(muted_buses)
+		for bus: String in ALL_BUSES:
+			var controls: Array = _controls_for(bus)
+			var expected: Array = _legacy_locks(bus, muted_buses)
+			assert_eq(
+				(controls[0] as CheckButton).disabled,
+				expected[0],
+				"%s mute button disabled with %s muted." % [bus, muted_buses]
+			)
+			assert_eq(
+				(controls[1] as HSlider).editable,
+				expected[1],
+				"%s slider editable with %s muted." % [bus, muted_buses]
+			)
+	_set_mutes([])
+
+
+## Clicking a locked slider or mute button shows the warning for the locking ancestor:
+## Master before SFX, as before the change. Unlocked controls show nothing.
+func test_warning_dialog_matches_locking_ancestor(
+	params: Array = use_parameters(
+		[
+			["Master", ["SFX", "Music"], ""],
+			["Music", ["Master"], "Master"],
+			["SFX", ["Master"], "Master"],
+			["SFX_Weapon", ["Master"], "Master"],
+			["SFX_Rotors", ["Master"], "Master"],
+			["SFX_Menu", ["Master"], "Master"],
+			["Music", ["SFX"], ""],
+			["SFX", ["SFX"], ""],
+			["SFX_Weapon", ["SFX"], "SFX"],
+			["SFX_Rotors", ["SFX"], "SFX"],
+			["SFX_Menu", ["SFX"], "SFX"],
+			["SFX_Weapon", ["Master", "SFX"], "Master"],
+			["SFX_Rotors", ["Master", "SFX"], "Master"],
+			["SFX_Menu", ["Master", "SFX"], "Master"],
+			["SFX_Menu", ["Music", "SFX_Weapon"], ""],
+		]
+	)
+) -> void:
+	var bus: String = params[0]
+	var muted_buses: Array = params[1]
+	var expected: String = params[2]
+	_set_mutes(muted_buses)
+	var handlers: Dictionary = {
+		"Master": ["_on_master_volume_control_gui_input", ""],
+		"Music": ["_on_music_volume_control_gui_input", "_on_music_mute_gui_input"],
+		"SFX": ["_on_sfx_volume_control_gui_input", "_on_sfx_mute_gui_input"],
+		"SFX_Weapon": ["_on_weapon_volume_control_gui_input", "_on_weapon_mute_gui_input"],
+		"SFX_Rotors": ["_on_rotor_volume_control_gui_input", "_on_rotor_mute_gui_input"],
+		"SFX_Menu": ["_on_menu_volume_control_gui_input", "_on_menu_mute_gui_input"],
+	}
+	for handler: String in handlers[bus]:
+		if handler.is_empty():
+			continue
+		audio_instance.master_warning_shown = false
+		audio_instance.sfx_warning_shown = false
+		# Only buses the test muted stay muted; a slider click on an own-muted bus would
+		# unmute it, which test_tc_*_04 cover per bus.
+		if bus in muted_buses and handler.ends_with("_volume_control_gui_input"):
+			continue
+		audio_instance.call(handler, _left_click())
+		assert_eq(
+			audio_instance.master_warning_shown,
+			expected == "Master",
+			"%s %s: Master warning with %s muted." % [bus, handler, muted_buses]
+		)
+		assert_eq(
+			audio_instance.sfx_warning_shown,
+			expected == "SFX",
+			"%s %s: SFX warning with %s muted." % [bus, handler, muted_buses]
+		)
+		audio_instance.master_warning_dialog.hide()
+		audio_instance.sfx_warning_dialog.hide()
+	_set_mutes([])
