@@ -114,6 +114,7 @@ func test_ui_navigation_sfx_requires_gui_focus() -> void:
 	# FIX VERIFIED: Because we added the stale focus safeguard to UiManager._input,
 	# navigation audio is now INTENTIONALLY allowed to play in menu contexts even if the focus owner flag is stale.
 	assert_true(SfxManager.is_any_sfx_playing(), "Stale Focus Safeguard: Navigation audio should play in menu context even if focus is transiently empty.") 
+	assert_eq(SfxManager.get_active_sfx_bus_name(), MENU_BUS, "Navigation audio must play on the Menu bus (Issue #1152).")
 
 	# Reset the playback state cleanly so we can isolate the active focus test scenario right below
 	SfxManager.stop_all_sfx()
@@ -125,6 +126,7 @@ func test_ui_navigation_sfx_requires_gui_focus() -> void:
 
 	assert_true(SfxManager.is_any_sfx_playing(), "Navigation audio should trigger when GUI element has active focus.") 
 	assert_true(SfxManager.get_active_sfx_stream_path().contains("ui_navigation"), "Active stream path should point to ui_navigation asset.") 
+	assert_eq(SfxManager.get_active_sfx_bus_name(), MENU_BUS, "Focused navigation audio must play on the Menu bus (Issue #1152).")
 	# FIX: Removed Globals.options_open = false from here to avoid short-circuit skips
 
 
@@ -259,3 +261,22 @@ func test_ui_mute_controls_sync_state_dynamically() -> void:
 	candidate_btn.toggled.emit(false) # Simulate UI mute press
 	
 	assert_true(SfxManager.is_any_sfx_playing(), "Triggering any audio menu CheckButton should invoke confirmation SFX.")
+
+
+## Scenario D (Issue #1152): the cancel sound plays on the Menu bus, not on SFX.
+func test_ui_cancel_sfx_plays_on_menu_bus() -> void:
+	Globals.options_open = true
+	var current_focus := get_viewport().gui_get_focus_owner()
+	if is_instance_valid(current_focus):
+		current_focus.release_focus()
+
+	var cancel_event := InputEventAction.new()
+	cancel_event.action = "ui_cancel"
+	cancel_event.pressed = true
+	UiManager._input(cancel_event)
+	await wait_process_frames(1)
+
+	assert_true(SfxManager.is_any_sfx_playing(), "Cancel audio should play in a menu context.")
+	assert_true(SfxManager.get_active_sfx_stream_path().contains("ui_cancel"), "Active stream path should point to the ui_cancel asset.")
+	assert_eq(SfxManager.get_active_sfx_bus_name(), MENU_BUS, "Cancel audio must play on the Menu bus.")
+	assert_ne(SfxManager.get_active_sfx_bus_name(), TARGET_BUS, "Cancel audio must not play on the SFX bus.")
