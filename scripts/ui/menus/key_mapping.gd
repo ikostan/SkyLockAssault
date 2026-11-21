@@ -50,8 +50,8 @@ func _ready() -> void:
 
 	# FIX: Use set_pressed_no_signal() to set the default state without
 	# triggering the _on_keyboard_toggled / _on_gamepad_toggled audio callbacks
-	keyboard.set_pressed_no_signal(Globals.current_input_device == "keyboard")
-	gamepad.set_pressed_no_signal(Globals.current_input_device == "gamepad")
+	keyboard.set_pressed_no_signal(Settings.get_input_device() == "keyboard")
+	gamepad.set_pressed_no_signal(Settings.get_input_device() == "gamepad")
 
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_grab_initial_focus()
@@ -119,7 +119,7 @@ func _on_conflict_confirmed() -> void:
 	# 1. Unbind ONLY the conflicting event of the SAME DEVICE (keyboard or gamepad)
 	for act in current_conflicts:
 		for ev: InputEvent in InputMap.action_get_events(act):
-			if Settings.events_match(ev, current_pending_event):  # exact same binding
+			if InputEventCodec.events_match(ev, current_pending_event):  # exact same binding
 				InputMap.action_erase_event(act, ev)
 				Globals.log_message(
 					"Unbound specific device event for " + act, Globals.LogLevel.DEBUG
@@ -340,12 +340,7 @@ func _grab_initial_focus() -> void:
 ## [param toggled_on]: The current boolean state of the toggle button.
 func _on_keyboard_toggled(toggled_on: bool) -> void:
 	if toggled_on:
-		Globals.current_input_device = "keyboard"
-		Settings.save_last_input_device("keyboard")
-		update_all_remap_buttons()
-		# FIX: Pass BUS_SFX_MENU explicitly as requested by reviewer
-		SfxManager.play_sfx(AudioConstants.SFX_CHECK, AudioConstants.BUS_SFX_MENU)
-		Globals.log_message("Current input device set to: keyboard", Globals.LogLevel.DEBUG)
+		_select_device("keyboard")
 
 
 ## Callback triggered when the gamepad device toggle is interacted with.
@@ -354,9 +349,16 @@ func _on_keyboard_toggled(toggled_on: bool) -> void:
 ## [param toggled_on]: The current boolean state of the toggle button.
 func _on_gamepad_toggled(toggled_on: bool) -> void:
 	if toggled_on:
-		Globals.current_input_device = "gamepad"
-		Settings.save_last_input_device("gamepad")
-		update_all_remap_buttons()
-		# FIX: Pass BUS_SFX_MENU explicitly as requested by reviewer
-		SfxManager.play_sfx(AudioConstants.SFX_CHECK, AudioConstants.BUS_SFX_MENU)
-		Globals.log_message("Current input device set to: gamepad", Globals.LogLevel.DEBUG)
+		_select_device("gamepad")
+
+
+## Makes [param device] current in Settings, saves it, refreshes the remap buttons and plays
+## the toggle confirmation sound.
+## [param device]: [code]keyboard[/code] or [code]gamepad[/code].
+func _select_device(device: String) -> void:
+	Settings.set_input_device(device)
+	Settings.save_last_input_device(device)
+	update_all_remap_buttons()
+	# FIX: Pass BUS_SFX_MENU explicitly as requested by reviewer
+	SfxManager.play_sfx(AudioConstants.SFX_CHECK, AudioConstants.BUS_SFX_MENU)
+	Globals.log_message("Current input device set to: " + device, Globals.LogLevel.DEBUG)

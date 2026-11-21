@@ -7,11 +7,21 @@
 
 extends Node
 
+## Emitted when the current input device changes, see [method set_input_device].
+## [param device]: The new device, [code]keyboard[/code] or [code]gamepad[/code].
+signal input_device_changed(device: String)
+
 # Change to v3 if you add another migration etc...
 const LEGACY_MIGRATION_KEY: String = "settings_migrated_v2"
 ## One-time repair of saves broken by the shared arrow-key and left-stick defaults (see
 ## [method _migrate_input_layout_v3]).
 const INPUT_LAYOUT_MIGRATION_KEY: String = "input_layout_migrated_v3"
+## Run-once migration flags. Each is saved as [code]true[/code] under the config's
+## [code][meta][/code] section, with its key as the name. The on-disk keys must never change,
+## or existing saves would run their migrations again.
+const MIGRATION_KEYS: Array[String] = [LEGACY_MIGRATION_KEY, INPUT_LAYOUT_MIGRATION_KEY]
+## Input devices the player can pick in Key Mapping.
+const INPUT_DEVICES: Array[String] = ["keyboard", "gamepad"]
 const CONFIG_PATH: String = "user://settings.cfg"
 const InputDefaults = preload("res://scripts/core/input_defaults.gd")
 const InputLayoutMigration = preload("res://scripts/core/input_layout_migration.gd")
@@ -55,15 +65,18 @@ const GAMEPLAY_ACTIONS: Array[String] = InputDefaults.GAMEPLAY_ACTIONS
 const MENU_ACTIONS: Array[String] = InputDefaults.MENU_ACTIONS
 const DEFAULT_KEYBOARD: Dictionary = InputDefaults.KEYBOARD
 const DEFAULT_GAMEPAD: Dictionary = InputDefaults.GAMEPAD
-## Modifier tokens [method serialize_event] can write after the keycode in a
-## [code]key:[/code] string. Any other token makes [method deserialize_event] return null.
-const KEY_MODIFIER_TOKENS: PackedStringArray = ["shift", "ctrl", "alt", "meta"]
 
 # Flag for legacy upgrade OR missing defaults (first-run, new actions)
 var _needs_save: bool = false
 # Set by apply_config_to_input_map when it skips a saved binding it cannot parse, so
 # load_input_mappings re-saves and the corrupt entry does not come back on every start.
 var _skipped_invalid_bindings: bool = false
+# Device the UI shows bindings and prompts for. Written only by set_input_device(), so
+# input_device_changed always fires; read it with get_input_device().
+var _current_input_device: String = "keyboard"
+# Keys from MIGRATION_KEYS whose migration has run. Restored from the config's [meta] section
+# by load_input_mappings() and written back by save_input_mappings().
+var _completed_migrations: Dictionary[String, bool] = {}
 
 
 ## Initializes the settings by loading input mappings.
@@ -76,15 +89,14 @@ func _ready() -> void:
 	load_last_input_device()
 	# ONE-TIME MIGRATION: Fix legacy unbound/empty states from old saves (PR#409)
 	# Runs only on first load after the unbound refactor.
-	if not Globals.has_meta(LEGACY_MIGRATION_KEY):
+	if not is_migration_done(LEGACY_MIGRATION_KEY):
 		_migrate_legacy_unbound_states()
-		Globals.set_meta(LEGACY_MIGRATION_KEY, true)
 		Globals.log_message(
 			"Legacy settings migration completed (first run after unbound refactor)",
 			Globals.LogLevel.INFO
 		)
 	# ONE-TIME MIGRATION: Repair saves broken by the old shared arrow-key/left-stick defaults.
-	if not Globals.has_meta(INPUT_LAYOUT_MIGRATION_KEY):
+	if not is_migration_done(INPUT_LAYOUT_MIGRATION_KEY):
 		_migrate_input_layout_v3()
 
 	if _needs_save:
@@ -196,10 +208,46 @@ func has_unbound_critical_actions() -> bool:
 	return false
 
 
-## Returns the pause binding label in ALL CAPS.
-## Strictly follows the last selected device in Key Mapping menu.
+## Returns the pause binding label in ALL CAPS for the current input device.
 func get_pause_binding_label() -> String:
-	return get_pause_binding_label_for_device(Globals.current_input_device)
+	return get_pause_binding_label_for_device(_current_input_device)
+
+
+## Returns the current input device, [code]keyboard[/code] or [code]gamepad[/code].
+func get_input_device() -> String:
+	return _current_input_device
+
+
+## Sets the current input device and emits [signal input_device_changed] if it changed.
+##
+## The only writer of the device. It does not save it: Key Mapping, where the player picks the
+## device, also calls [method save_last_input_device].
+##
+## [param device]: [code]keyboard[/code] or [code]gamepad[/code]. Any other value is logged
+## and ignored.
+func set_input_device(device: String) -> void:
+	if device not in INPUT_DEVICES:
+		Globals.log_message(
+			"Ignoring unknown input device: '%s'" % device, Globals.LogLevel.WARNING
+		)
+		return
+	if device == _current_input_device:
+		return
+	_current_input_device = device
+	input_device_changed.emit(device)
+
+
+## Returns true if the run-once migration saved under [param key] has run.
+##
+## [param key]: One of [constant MIGRATION_KEYS].
+func is_migration_done(key: String) -> bool:
+	return _completed_migrations.get(key, false)
+
+
+## Records that the migration saved under [param key] has run. The flag is written to disk on
+## the next [method save_input_mappings].
+func _mark_migration_done(key: String) -> void:
+	_completed_migrations[key] = true
 
 
 ## Determine if the given input event is bound to any action in InputMap.
@@ -213,41 +261,6 @@ func is_event_bound(event: InputEvent) -> bool:
 	return false
 
 
-## Serializes an InputEvent to string for ConfigFile storage.
-##
-## Handles Key without device, JoypadButton, and JoypadMotion with device, preserving modifiers
-## like shift, ctrl, alt, and meta.
-##
-## [param ev]: The InputEvent instance to serialize, supporting Key, JoypadButton, and
-## JoypadMotion.
-## Returns a serialized string representation of the event or an empty string if unsupported.
-func serialize_event(ev: InputEvent) -> String:
-	if ev is InputEventKey:
-		# Godot's built-in actions and editor-made bindings can set only keycode, leaving
-		# physical_keycode 0; "key:0" would be rejected on load. See [method _key_identity]:
-		# a logical printable key is written as "lkey:" so it is restored as a keycode and
-		# keeps following the keyboard layout, instead of becoming a physical position.
-		var identity: Vector2i = _key_identity(ev)
-		var s: String = ("lkey:" if identity.y == 1 else "key:") + str(identity.x)
-		if ev.shift_pressed:
-			s += ":shift"
-		if ev.ctrl_pressed:
-			s += ":ctrl"
-		if ev.alt_pressed:  # NEW: Persist Alt
-			s += ":alt"
-		if ev.meta_pressed:  # NEW: Persist Meta/Cmd
-			s += ":meta"
-		return s
-
-	if ev is InputEventJoypadButton:
-		return "joybtn:" + str(ev.button_index) + ":" + str(ev.device)
-
-	if ev is InputEventJoypadMotion:
-		return "joyaxis:" + str(ev.axis) + ":" + str(ev.axis_value) + ":" + str(ev.device)
-
-	return ""
-
-
 ## Removes `event` from all actions listed in `conflicts`.
 ## Used on load to preserve the loaded mapping and unbind duplicates elsewhere.
 ## :param event: The event to remove from conflicting actions.
@@ -257,96 +270,9 @@ func _remove_event_from_conflicts(event: InputEvent, conflicts: Array[String]) -
 	for other_action: String in conflicts:
 		var events: Array[InputEvent] = InputMap.action_get_events(other_action)
 		for existing: InputEvent in events:
-			if events_match(existing, event):
+			if InputEventCodec.events_match(existing, event):
 				InputMap.action_erase_event(other_action, existing)
 				break
-
-
-## Deserializes a string back to an InputEvent.
-##
-## Handles serialized strings starting with key, lkey, joybtn, or joyaxis to restore the
-## corresponding input event.
-##
-## [param serialized]: The serialized string starting with key, lkey, joybtn, or joyaxis.
-## [code]key:[/code] restores a physical keycode, [code]lkey:[/code] a logical keycode.
-## Returns the deserialized InputEvent, or null if the string is invalid.
-## A key string accepts the modifiers in [constant KEY_MODIFIER_TOKENS] in any order; an
-## unknown, empty or repeated token makes the whole string invalid.
-func deserialize_event(serialized: String) -> InputEvent:
-	var event_to_return: InputEvent = null
-
-	# 1. Reject invalid prefixes immediately
-	if not (
-		serialized.begins_with("key:")
-		or serialized.begins_with("lkey:")
-		or serialized.begins_with("joybtn:")
-		or serialized.begins_with("joyaxis:")
-	):
-		return null
-
-	var parts: PackedStringArray = serialized.split(":", true)
-	if parts.size() < 2:
-		return null
-
-	match parts[0]:
-		"key", "lkey":
-			if parts.size() >= 2 and parts[1].is_valid_int():
-				# serialize_event only writes known modifiers, each at most once, so any
-				# other token means the saved binding is corrupt or hand-edited (#1090).
-				var modifiers: PackedStringArray = parts.slice(2)
-				for token: String in modifiers:
-					var problem: String = ""
-					if token not in KEY_MODIFIER_TOKENS:
-						problem = "unknown modifier token '%s'" % token
-					elif modifiers.count(token) > 1:
-						problem = "duplicate modifier token '%s'" % token
-					if not problem.is_empty():
-						Globals.log_message(
-							"Rejecting key event with %s: %s" % [problem, serialized],
-							Globals.LogLevel.WARNING
-						)
-						return null
-
-				var code := parts[1].to_int()
-
-				# OPINION: Explicitly reject 0 to prevent "silent drops"
-				# as suggested by Sourcery.
-				if code == 0:
-					Globals.log_message(
-						"Ignoring key event with keycode 0", Globals.LogLevel.WARNING
-					)
-					return null
-
-				var ev := InputEventKey.new()
-				if parts[0] == "lkey":
-					ev.keycode = code  # Logical: follows the keyboard layout.
-				else:
-					ev.physical_keycode = code
-				ev.shift_pressed = "shift" in modifiers
-				ev.ctrl_pressed = "ctrl" in modifiers
-				ev.alt_pressed = "alt" in modifiers
-				ev.meta_pressed = "meta" in modifiers
-				event_to_return = ev
-		"joybtn":
-			if parts.size() == 3 and parts[1].is_valid_int() and parts[2].is_valid_int():
-				var ev := InputEventJoypadButton.new()
-				ev.button_index = parts[1].to_int()
-				ev.device = parts[2].to_int()
-				event_to_return = ev
-		"joyaxis":
-			if (
-				parts.size() == 4
-				and parts[1].is_valid_int()
-				and parts[2].is_valid_float()
-				and parts[3].is_valid_int()
-			):
-				var ev := InputEventJoypadMotion.new()
-				ev.axis = parts[1].to_int()
-				ev.axis_value = parts[2].to_float()
-				ev.device = parts[3].to_int()
-				event_to_return = ev
-
-	return event_to_return
 
 
 ## Deserializes a string to an InputEvent and adds it to the specified action.
@@ -360,7 +286,7 @@ func deserialize_event(serialized: String) -> InputEvent:
 ## :rtype: void
 func _deserialize_and_add(action: String, serialized: String) -> void:
 	# Use the shared logic from deserialize_event
-	var ev: InputEvent = deserialize_event(serialized)
+	var ev: InputEvent = InputEventCodec.deserialize_event(serialized)
 
 	if ev != null:
 		InputMap.action_add_event(action, ev)
@@ -404,66 +330,14 @@ func reset_to_defaults(device_type: String) -> void:
 	)
 
 
-## Returns true if two events are exactly the same binding.
-##
-## Key events match on [code]physical_keycode[/code] and all four modifiers (Shift, Ctrl, Alt,
-## Meta). Joypad buttons match on button index and device; joypad axes match on axis,
-## direction value and device. Events of different classes never match.
-##
-## [param a]: First event to compare. [code]null[/code] never matches.
-## [param b]: Second event to compare. [code]null[/code] never matches.
-## Returns [code]true[/code] if both events describe the same binding.
-func events_match(a: InputEvent, b: InputEvent) -> bool:
-	if a == null or b == null:
-		return false
-	if a.get_class() != b.get_class():
-		return false
-
-	if a is InputEventKey:
-		# Compare what serialize_event would store (see _key_identity), plus modifiers so
-		# Tab and Shift+Tab stay distinct. A logical and a physical printable key never match:
-		# which physical key a logical one lands on depends on the keyboard layout.
-		return (
-			_key_identity(a) == _key_identity(b)
-			and a.shift_pressed == b.shift_pressed
-			and a.ctrl_pressed == b.ctrl_pressed
-			and a.alt_pressed == b.alt_pressed
-			and a.meta_pressed == b.meta_pressed
-		)
-
-	if a is InputEventJoypadButton:
-		return a.button_index == b.button_index and a.device == b.device
-	if a is InputEventJoypadMotion:
-		return a.axis == b.axis and a.axis_value == b.axis_value and a.device == b.device
-	return false
-
-
-## Returns how a key event is identified: [code]x[/code] is the code and [code]y[/code] is 1
-## for a logical (layout-following) key or 0 for a physical (position) key.
-##
-## [code]physical_keycode[/code] wins when set. A keycode-only event is physical too when its
-## keycode is a special key (arrows, Enter, Tab, Escape, F-keys, numpad...), because Godot uses
-## the same value for both and those keys do not move between layouts. Only a keycode-only
-## printable key (letters, digits, symbols) is logical.
-##
-## [param ev]: The key event.
-## Returns [code]Vector2i(code, is_logical)[/code].
-static func _key_identity(ev: InputEventKey) -> Vector2i:
-	if ev.physical_keycode != 0:
-		return Vector2i(int(ev.physical_keycode), 0)
-	var code: int = int(ev.keycode)
-	if code == 0 or code & KEY_SPECIAL:
-		return Vector2i(code, 0)
-	return Vector2i(code, 1)
-
-
 ## Finds every other managed action that already uses the exact event.
 ##
 ## Only actions listed in [constant ACTIONS] are checked. Conflicts are scoped by group, and
 ## built-in actions are ignored. With an empty or unknown action, every managed action is
 ## checked.
 ##
-## [param event]: The event the player just pressed, compared with [method events_match].
+## [param event]: The event the player just pressed, compared with
+## [method InputEventCodec.events_match].
 ## [param exclude_action]: The action being remapped, skipped during the check.
 ## Returns the conflicting action names, e.g. [code]["fire"][/code], or an empty array.
 func get_conflicting_actions(event: InputEvent, exclude_action: String = "") -> Array[String]:
@@ -473,22 +347,10 @@ func get_conflicting_actions(event: InputEvent, exclude_action: String = "") -> 
 		if action == exclude_action:
 			continue
 		for ev: InputEvent in InputMap.action_get_events(action):
-			if events_match(ev, event):
+			if InputEventCodec.events_match(ev, event):
 				conflicts.append(action)
 				break  # one match per action is enough
 	return conflicts
-
-
-## Return keyboard or gamepad based on the type of the event.
-##
-## [param event]: The input event to check for device type.
-## Returns a string representing the device type such as keyboard or gamepad.
-func get_event_device_type(event: InputEvent) -> String:
-	if event is InputEventKey:
-		return "keyboard"
-	if event is InputEventJoypadButton or event is InputEventJoypadMotion:
-		return "gamepad"
-	return "unknown"
 
 
 ## Return the pause binding label in ALL CAPS for the specific device.
@@ -511,16 +373,16 @@ func get_pause_binding_label_for_device(device_type: String) -> String:
 				and (ev is InputEventJoypadButton or ev is InputEventJoypadMotion)
 			)
 		):
-			return get_event_label(ev).to_upper()
+			return InputEventCodec.get_event_label(ev).to_upper()
 
 	# Fallback
-	return get_event_label(events[0]).to_upper()
+	return InputEventCodec.get_event_label(events[0]).to_upper()
 
 
 ## Returns true if there is at least one unbound critical action for the currently selected device.
-## This respects Globals.current_input_device.
+## This respects [method get_input_device].
 func has_unbound_critical_actions_for_current_device() -> bool:
-	var preferred: String = Globals.current_input_device
+	var preferred: String = _current_input_device
 	for action: String in CRITICAL_ACTIONS:
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
 		if events.is_empty():
@@ -548,7 +410,7 @@ func has_unbound_critical_actions_for_current_device() -> bool:
 ## One-time migration for legacy configs.
 ## Forces defaults for CRITICAL_ACTIONS that are unbound/empty.
 ## Ensures "Unbound" labels appear correctly for UI actions.
-## Sets the meta flag to prevent re-run (works even if called directly in tests).
+## Sets the run-once flag to prevent re-run (works even if called directly in tests).
 ## :rtype: void
 func _migrate_legacy_unbound_states() -> void:
 	var changed: bool = false
@@ -568,113 +430,23 @@ func _migrate_legacy_unbound_states() -> void:
 	if changed:
 		save_input_mappings()  # Persist the migration
 
-	# Set the meta flag HERE (so direct calls in tests work, and _ready() is consistent)
-	Globals.set_meta(LEGACY_MIGRATION_KEY, true)
+	# Set the flag HERE (so direct calls in tests work, and _ready() is consistent)
+	_mark_migration_done(LEGACY_MIGRATION_KEY)
 
 
 ## One-time repair for saves written before the menu/gameplay input split.
 ##
-## Delegates to [code]input_layout_migration.gd[/code], sets the meta flag and always flags a
+## Delegates to [code]input_layout_migration.gd[/code], sets the run-once flag and always flags a
 ## save, even when no binding changed: [method save_input_mappings] is what persists the flag,
 ## and without it the migration would run again on every launch until something else saved.
 func _migrate_input_layout_v3() -> void:
 	var changed: bool = InputLayoutMigration.migrate(self)
-	Globals.set_meta(INPUT_LAYOUT_MIGRATION_KEY, true)
+	_mark_migration_done(INPUT_LAYOUT_MIGRATION_KEY)
 	_needs_save = true
 	Globals.log_message(
 		"Migration v3 done (%s)" % ("bindings repaired" if changed else "no changes"),
 		Globals.LogLevel.DEBUG
 	)
-
-
-## Returns a human-readable label for an InputEvent.
-##
-## Keys use [method OS.get_keycode_string] with Ctrl, Alt, Shift and Meta prefixes, preferring
-## [code]physical_keycode[/code] and falling back to [code]keycode[/code]. Joypad buttons
-## always use Xbox-style names (A, B, X, Y, LB, RB, ...) regardless of controller brand.
-## Joypad axes use stick and trigger names such as "Left Stick (Right)" or "Left Trigger (+)".
-##
-## [param ev]: The event to label.
-## Returns the label, "Unbound" for a key with no keycode, or "Unknown" for other events.
-static func get_event_label(ev: InputEvent) -> String:
-	if ev is InputEventKey:
-		var modifiers: Array[String] = []
-		if ev.ctrl_pressed:
-			modifiers.append("Ctrl")
-		if ev.alt_pressed:
-			modifiers.append("Alt")
-		if ev.shift_pressed:
-			modifiers.append("Shift")
-		if ev.meta_pressed:
-			modifiers.append("Meta")
-		# Prefer physical_keycode (layout-independent),
-		# but it can be 0 for project defaults/migration.
-		var code: int = int(ev.physical_keycode) if ev.physical_keycode != 0 else int(ev.keycode)
-		if code == 0:
-			return "Unbound"
-
-		var key_name: String = OS.get_keycode_string(code)
-		if modifiers.is_empty():
-			return key_name
-
-		return "+".join(modifiers) + "+" + key_name
-
-	if ev is InputEventJoypadButton:
-		match ev.button_index:
-			JOY_BUTTON_A:
-				return "A"
-			JOY_BUTTON_B:
-				return "B"
-			JOY_BUTTON_X:
-				return "X"
-			JOY_BUTTON_Y:
-				return "Y"
-			JOY_BUTTON_BACK:
-				return "Back"
-			JOY_BUTTON_GUIDE:
-				return "Guide"
-			JOY_BUTTON_START:
-				return "Start"
-			JOY_BUTTON_LEFT_STICK:
-				return "LS Press"
-			JOY_BUTTON_RIGHT_STICK:
-				return "RS Press"
-			JOY_BUTTON_LEFT_SHOULDER:
-				return "LB"
-			JOY_BUTTON_RIGHT_SHOULDER:
-				return "RB"
-			JOY_BUTTON_DPAD_UP:
-				return "D-Pad Up"
-			JOY_BUTTON_DPAD_DOWN:
-				return "D-Pad Down"
-			JOY_BUTTON_DPAD_LEFT:
-				return "D-Pad Left"
-			JOY_BUTTON_DPAD_RIGHT:
-				return "D-Pad Right"
-			_:
-				return "Button " + str(ev.button_index)
-	if ev is InputEventJoypadMotion:
-		var dir: String = " (+)" if ev.axis_value > 0 else " (-)"
-		match ev.axis:
-			JOY_AXIS_LEFT_X:
-				return "Left Stick (Right)" if ev.axis_value > 0 else "Left Stick (Left)"
-			JOY_AXIS_LEFT_Y:
-				return "Left Stick (Down)" if ev.axis_value > 0 else "Left Stick (Up)"
-			JOY_AXIS_RIGHT_X:
-				return "Right Stick (Right)" if ev.axis_value > 0 else "Right Stick (Left)"
-			JOY_AXIS_RIGHT_Y:
-				return "Right Stick (Down)" if ev.axis_value > 0 else "Right Stick (Up)"
-			JOY_AXIS_TRIGGER_LEFT:
-				Globals.log_message("Left Trigger dir: " + str(dir), Globals.LogLevel.DEBUG)
-				return ("Left Trigger" + dir).strip_edges()
-			JOY_AXIS_TRIGGER_RIGHT:
-				Globals.log_message("Right Trigger dir: " + str(dir), Globals.LogLevel.DEBUG)
-				return ("Right Trigger" + dir).strip_edges()
-			_:
-				# return "Axis " + str(ev.axis) + dir
-				# normalize the non-trigger fallback line:
-				return ("Axis " + str(ev.axis) + dir).strip_edges()
-	return "Unknown"
 
 
 ## Loads input mappings from config, overriding project defaults only if saved.
@@ -701,16 +473,14 @@ func load_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 			"Error loading settings file at " + path + ": " + str(err), Globals.LogLevel.ERROR
 		)
 
-	# 2. Metadata restoring
-	if config.has_section_key("meta", LEGACY_MIGRATION_KEY):
-		var migrated: bool = config.get_value("meta", LEGACY_MIGRATION_KEY, false)
-		if migrated:
-			Globals.set_meta(LEGACY_MIGRATION_KEY, true)
+	# 2. Metadata restoring: a flag missing from the config leaves the in-memory flag as is.
+	for key: String in MIGRATION_KEYS:
+		var saved_flag: Variant = config.get_value("meta", key, false)
+		if saved_flag is bool and saved_flag:
+			_mark_migration_done(key)
 			Globals.log_message(
-				"Restored legacy migration flag from config.", Globals.LogLevel.DEBUG
+				"Restored migration flag '%s' from config." % key, Globals.LogLevel.DEBUG
 			)
-	if config.get_value("meta", INPUT_LAYOUT_MIGRATION_KEY, false):
-		Globals.set_meta(INPUT_LAYOUT_MIGRATION_KEY, true)
 
 	# 3. Apply memory configuration to InputMap & collect conflict resolution status
 	var conflicts_resolved: bool = apply_config_to_input_map(config, actions)
@@ -739,22 +509,15 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 		)
 		return
 
-	if (
-		Globals.has_meta(LEGACY_MIGRATION_KEY)
-		and bool(Globals.get_meta(LEGACY_MIGRATION_KEY)) == true
-	):
-		config.set_value("meta", LEGACY_MIGRATION_KEY, true)
-	if (
-		Globals.has_meta(INPUT_LAYOUT_MIGRATION_KEY)
-		and bool(Globals.get_meta(INPUT_LAYOUT_MIGRATION_KEY)) == true
-	):
-		config.set_value("meta", INPUT_LAYOUT_MIGRATION_KEY, true)
+	for key: String in MIGRATION_KEYS:
+		if is_migration_done(key):
+			config.set_value("meta", key, true)
 
 	for action: String in actions:
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
 		var serials: Array[String] = []
 		for ev: InputEvent in events:
-			var s: String = serialize_event(ev)
+			var s: String = InputEventCodec.serialize_event(ev)
 			if not s.is_empty():
 				serials.append(s)
 		config.set_value("input", action, serials)
@@ -783,7 +546,7 @@ func save_input_mappings(path: String = CONFIG_PATH, actions: Array[String] = AC
 ##
 ## [param device]: The input device type, accepted values are keyboard or gamepad.
 func save_last_input_device(device: String) -> void:
-	if device not in ["keyboard", "gamepad"]:
+	if device not in INPUT_DEVICES:
 		return
 
 	# Use the helper to safely pre-load
@@ -817,18 +580,20 @@ func save_last_input_device(device: String) -> void:
 		Globals.log_message("🔒 Encrypted last input device saved.", Globals.LogLevel.DEBUG)
 
 
-## Loads the last selected input device (defaults to keyboard).
+## Loads the last selected input device and makes it current through [method set_input_device].
+## A missing, unreadable or unknown saved value selects [code]keyboard[/code].
 func load_last_input_device() -> void:
 	# Use the helper to safely load
 	var load_data: Dictionary = Globals.safe_load_config(CONFIG_PATH)
 	var config: ConfigFile = load_data["config"]
 	var err: int = load_data["err"]
 
+	var device: String = "keyboard"
 	if err == OK and config.has_section_key("input", "last_input_device"):
-		var device: String = config.get_value("input", "last_input_device")
-		Globals.current_input_device = device if device in ["keyboard", "gamepad"] else "keyboard"
-	else:
-		Globals.current_input_device = "keyboard"
+		var saved: Variant = config.get_value("input", "last_input_device")
+		if saved is String and saved in INPUT_DEVICES:
+			device = saved
+	set_input_device(device)
 
 
 ## Applies input mapping definitions from an in-memory ConfigFile to the global InputMap.
@@ -869,7 +634,7 @@ func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTI
 		InputMap.action_erase_events(action)
 
 		for serialized: String in serialized_events:
-			var ev: InputEvent = deserialize_event(serialized)
+			var ev: InputEvent = InputEventCodec.deserialize_event(serialized)
 			if ev == null:
 				# _add_missing_defaults restores the device default if nothing else binds it.
 				Globals.log_message(
@@ -881,7 +646,7 @@ func apply_config_to_input_map(config: ConfigFile, actions: Array[String] = ACTI
 
 			var already_present := false
 			for existing_ev in InputMap.action_get_events(action):
-				if events_match(existing_ev, ev):
+				if InputEventCodec.events_match(existing_ev, ev):
 					already_present = true
 					break
 
@@ -952,6 +717,19 @@ func backfill_missing_defaults(config: ConfigFile) -> bool:
 ## [param value]: The boolean value to assign to the internal save state flag.
 func set_needs_save_for_test(value: bool = false) -> void:
 	_needs_save = value
+
+
+## Marks a run-once migration as done or not done, so a test can force or skip it.
+##
+## Test only. Production code marks migrations through the migrations themselves.
+##
+## [param key]: One of [constant MIGRATION_KEYS].
+## [param done]: [code]true[/code] to mark it done, [code]false[/code] to make it run again.
+func set_migration_done_for_test(key: String, done: bool) -> void:
+	if done:
+		_completed_migrations[key] = true
+	else:
+		_completed_migrations.erase(key)
 
 
 ## Returns current state of _needs_save for test assertions.

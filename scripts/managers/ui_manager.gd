@@ -8,6 +8,9 @@
 
 extends Node
 
+## Group the Key Mapping screen joins while it is open (see key_mapping.gd).
+const KEY_MAPPING_GROUP: String = "key_mapping_menu"
+
 
 func _ready() -> void:
 	# Ensure this manager continues processing inputs when the SceneTree is paused
@@ -41,14 +44,32 @@ func _input(event: InputEvent) -> void:
 	_process_ui_navigation_sfx(event, focus_owner, ui_has_focus)
 
 
-## Tracks the active input device scheme and updates the global state.
+## Switches the current input device through [method Settings.set_input_device] when the
+## player uses another device.
+##
+## Mouse motion never switches it: the mouse can be nudged while the player uses a gamepad.
+## While the Key Mapping screen is open nothing is switched, because that screen's
+## Keyboard/Gamepad toggle picks the device (#619).
 ## [param event]: The current InputEvent being evaluated.
-## :rtype: void
 func _track_input_device(event: InputEvent) -> void:
-	if event is InputEventKey or event is InputEventMouseButton or event is InputEventMouseMotion:
-		Globals.current_input_device = "keyboard"
-	elif event is InputEventJoypadButton or event is InputEventJoypadMotion:
-		Globals.current_input_device = "gamepad"
+	var device: String = _device_for_event(event)
+	if device.is_empty() or device == Settings.get_input_device():
+		return
+	if get_tree().get_first_node_in_group(KEY_MAPPING_GROUP) != null:
+		return
+	Settings.set_input_device(device)
+
+
+## Returns the input device an event comes from: [code]keyboard[/code] for keys and mouse
+## buttons, [code]gamepad[/code] for joypad buttons and axes, or an empty string for any other
+## event, including mouse motion.
+## [param event]: The event to classify.
+static func _device_for_event(event: InputEvent) -> String:
+	if event is InputEventKey or event is InputEventMouseButton:
+		return "keyboard"
+	if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+		return "gamepad"
+	return ""
 
 
 ## Evaluates the current SceneTree state and system flags to verify menu boundaries.

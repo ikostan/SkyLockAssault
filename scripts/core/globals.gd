@@ -13,7 +13,7 @@
 ## - Menu overlay stack: hidden_menus, options_open, options_instance,
 ##   load_options(), load_key_mapping().
 ## - Scene transitions: load_scene_with_loading() and next_scene.
-## - UI focus helper and the last-used input device label.
+## - UI focus helper. (The current input device lives in Settings, #1101.)
 ##
 ## Autoload order contract (project.godot): Globals must stay the FIRST autoload.
 ## Settings and AudioManager call Globals.safe_load_config() from their _ready(),
@@ -110,9 +110,6 @@ var options_open: bool = false
 var previous_scene: String = "res://scenes/main_menu.tscn"
 # var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 var next_scene: String = ""  # Path to the next scene to load via loading screen.
-## Last selected input device for UI messages and labels.
-## Updated when player toggles Keyboard/Gamepad in Key Mapping.
-var current_input_device: String = "keyboard"  # "keyboard" or "gamepad"
 ## Mockable wrapper for JavaScriptBridge calls (web builds only).
 var js_bridge_wrapper: JavaScriptBridgeWrapper = JavaScriptBridgeWrapper.new()
 var _is_loading_settings: bool = false  # Guard flag

@@ -3,7 +3,7 @@
 ## test_events_match_meta.gd
 ## Regression tests: events_match must treat Meta (Cmd/Win) as a distinct modifier.
 ##
-## Background (Sourcery review on PR #1024): [method Settings.events_match] compared
+## Background (Sourcery review on PR #1024): [method InputEventCodec.events_match] compared
 ## [code]physical_keycode[/code], Shift, Ctrl and Alt, but not [code]meta_pressed[/code]. Two key
 ## events that differed only by Meta were treated as the same binding, so on macOS (where Meta is
 ## Cmd) a binding such as Cmd+Q collided with plain Q. That had two visible effects:
@@ -11,10 +11,10 @@
 ## [br]- On load, [method Settings.apply_config_to_input_map] passed the false conflict to
 ## [code]_remove_event_from_conflicts[/code], which silently unbound the other action.
 ##
-## The rest of Settings already handles Meta: [method Settings.serialize_event] writes
-## [code]:meta[/code], [method Settings.deserialize_event] reads it back, and
-## [method Settings.get_event_label] prints a "Meta+" prefix. These tests pin
-## [method Settings.events_match] to the same rule.
+## The rest of Settings already handles Meta: [method InputEventCodec.serialize_event] writes
+## [code]:meta[/code], [method InputEventCodec.deserialize_event] reads it back, and
+## [method InputEventCodec.get_event_label] prints a "Meta+" prefix. These tests pin
+## [method InputEventCodec.events_match] to the same rule.
 ##
 ## Coverage:
 ## [br]- Meta+key and the plain key are different bindings (the original bug).
@@ -58,7 +58,7 @@ func after_each() -> void:
 
 ## Builds a key event the same way Settings stores bindings.
 ##
-## Only [code]physical_keycode[/code] is set, matching how [method Settings.deserialize_event]
+## Only [code]physical_keycode[/code] is set, matching how [method InputEventCodec.deserialize_event]
 ## and the defaults create events. Shift, Ctrl and Alt stay [code]false[/code] so the only
 ## difference between two events under test is Meta.
 ##
@@ -77,7 +77,7 @@ func _key(code: Key, meta: bool = false) -> InputEventKey:
 ## Fails without the fix, because the Meta modifier was not compared.
 func test_meta_and_plain_key_do_not_match() -> void:
 	assert_false(
-		Settings.events_match(_key(KEY_Q, true), _key(KEY_Q)),
+		InputEventCodec.events_match(_key(KEY_Q, true), _key(KEY_Q)),
 		"Meta+Q and Q must be different bindings"
 	)
 
@@ -88,7 +88,7 @@ func test_meta_and_plain_key_do_not_match() -> void:
 ## is held), which would let duplicate Meta bindings through conflict detection.
 func test_meta_keys_match_each_other() -> void:
 	assert_true(
-		Settings.events_match(_key(KEY_Q, true), _key(KEY_Q, true)), "Meta+Q must match Meta+Q"
+		InputEventCodec.events_match(_key(KEY_Q, true), _key(KEY_Q, true)), "Meta+Q must match Meta+Q"
 	)
 
 
@@ -112,7 +112,7 @@ func test_meta_binding_is_not_a_conflict_with_plain_key() -> void:
 ## if serialization ever dropped [code]:meta[/code], this test would fail.
 func test_meta_round_trips_through_serialization() -> void:
 	var original: InputEventKey = _key(KEY_Q, true)
-	var restored: InputEvent = Settings.deserialize_event(Settings.serialize_event(original))
+	var restored: InputEvent = InputEventCodec.deserialize_event(InputEventCodec.serialize_event(original))
 	assert_true(
-		Settings.events_match(original, restored), "Serialized Meta+Q must restore as Meta+Q"
+		InputEventCodec.events_match(original, restored), "Serialized Meta+Q must restore as Meta+Q"
 	)

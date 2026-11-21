@@ -42,7 +42,7 @@ func after_each() -> void:
 	# 0. Restore the input bindings and device a test changed (empty when untouched)
 	if not _saved_critical_events.is_empty():
 		_restore_critical_actions(_saved_critical_events)
-		Globals.current_input_device = _saved_input_device
+		Settings.set_input_device(_saved_input_device)
 		_saved_critical_events = {}
 
 	# 1. Reset global menu state toggles to prevent cross-contamination
@@ -135,7 +135,7 @@ func test_main_menu_buttons_execute_accept_audio() -> void:
 ## action for the keyboard first, so Start always loads the game instead of opening the
 ## Unbound Controls dialog; after_each() restores the bindings and device.
 func test_start_burst_requests_one_transition() -> void:
-	_saved_input_device = Globals.current_input_device
+	_saved_input_device = Settings.get_input_device()
 	_saved_critical_events = _bind_critical_actions_for_keyboard()
 	var menu_instance := (load(MAIN_MENU_SCENE_PATH) as PackedScene).instantiate() as Control
 	add_child_autofree(menu_instance)
@@ -175,7 +175,7 @@ func test_start_burst_requests_one_transition() -> void:
 ## Returns each critical action's original events, for after_each() to restore.
 func _bind_critical_actions_for_keyboard() -> Dictionary:
 	var saved: Dictionary = {}
-	Globals.current_input_device = "keyboard"
+	Settings.set_input_device("keyboard")
 	for action: String in Settings.CRITICAL_ACTIONS:
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
 		saved[action] = events.duplicate()

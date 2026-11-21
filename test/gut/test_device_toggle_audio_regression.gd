@@ -16,7 +16,7 @@ var _original_input_device: String
 func before_each() -> void:
 	# Snapshot the initial global options state to prevent pollution
 	_original_options_open = Globals.options_open
-	_original_input_device = Globals.current_input_device
+	_original_input_device = Settings.get_input_device()
 	Globals.options_open = true
 	
 	# Purge running streams from the shared singleton pool
@@ -28,7 +28,7 @@ func before_each() -> void:
 func after_each() -> void:
 	# Restore state cleanly
 	Globals.options_open = _original_options_open
-	Globals.current_input_device = _original_input_device
+	Settings.set_input_device(_original_input_device)
 	Settings.save_last_input_device(_original_input_device)
 	
 	var focus_owner := get_viewport().gui_get_focus_owner()

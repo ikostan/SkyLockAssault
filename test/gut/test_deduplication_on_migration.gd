@@ -31,7 +31,7 @@ func before_each() -> void:
 	def_ev.physical_keycode = Settings.DEFAULT_KEYBOARD[TEST_ACTION]
 	InputMap.action_add_event(TEST_ACTION, def_ev)
 	InputMap.action_add_event(TEST_ACTION, def_ev.duplicate())
-	Globals.remove_meta(Settings.LEGACY_MIGRATION_KEY)  # Force migration
+	Settings.set_migration_done_for_test(Settings.LEGACY_MIGRATION_KEY, false)  # Force migration
 
 
 ## Per-test: Cleanup.
@@ -40,8 +40,7 @@ func after_each() -> void:
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
 
 	InputMap.action_erase_events(TEST_ACTION)
-	if Globals.has_meta(Settings.LEGACY_MIGRATION_KEY):
-		Globals.remove_meta(Settings.LEGACY_MIGRATION_KEY)
+	Settings.set_migration_done_for_test(Settings.LEGACY_MIGRATION_KEY, false)
 
 	await get_tree().process_frame
 

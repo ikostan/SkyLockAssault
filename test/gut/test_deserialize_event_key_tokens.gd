@@ -3,16 +3,16 @@
 ## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_deserialize_event_key_tokens.gd
-## Regression tests: Settings.deserialize_event must reject unknown tokens in key: strings (#1090).
+## Regression tests: InputEventCodec.deserialize_event must reject unknown tokens in key: strings (#1090).
 ##
 ## Background (Sourcery review on PR #1089): the [code]key:[/code] branch of
-## [method Settings.deserialize_event] only validated the keycode. Modifiers were read with
+## [method InputEventCodec.deserialize_event] only validated the keycode. Modifiers were read with
 ## [code]"shift" in parts[/code] and similar, so every other token was silently ignored:
 ## [br]- [code]key:42:bogus[/code] loaded as a plain key 42 binding instead of being rejected.
 ## [br]- [code]key:42:shfit[/code] (typo) loaded as key 42 [b]without[/b] Shift, a different
 ## binding from the one the player saved, with no warning.
 ##
-## [method Settings.serialize_event] only writes [code]key:<physical_keycode>[/code] followed by
+## [method InputEventCodec.serialize_event] only writes [code]key:<physical_keycode>[/code] followed by
 ## zero or more of [code]:shift[/code], [code]:ctrl[/code], [code]:alt[/code],
 ## [code]:meta[/code], so any other token means the saved binding is corrupt or hand-edited.
 ##
@@ -100,7 +100,7 @@ func after_each() -> void:
 ## [param reason]: Why the string is invalid, used in the failure message.
 func _assert_rejected(serialized: String, reason: String) -> void:
 	assert_null(
-		Settings.deserialize_event(serialized), "'%s' must be rejected: %s" % [serialized, reason]
+		InputEventCodec.deserialize_event(serialized), "'%s' must be rejected: %s" % [serialized, reason]
 	)
 
 
@@ -112,7 +112,7 @@ func _assert_rejected(serialized: String, reason: String) -> void:
 ## [param alt]: Expected Alt state.
 ## [param meta]: Expected Meta state.
 func _assert_key(serialized: String, shift: bool, ctrl: bool, alt: bool, meta: bool) -> void:
-	var ev: InputEvent = Settings.deserialize_event(serialized)
+	var ev: InputEvent = InputEventCodec.deserialize_event(serialized)
 	assert_true(ev is InputEventKey, "'%s' must load as an InputEventKey" % serialized)
 	if not ev is InputEventKey:
 		return
@@ -157,12 +157,12 @@ func test_trailing_colon_is_rejected() -> void:
 
 ## Verifies a repeated modifier is rejected.
 ##
-## [method Settings.serialize_event] writes each modifier at most once.
+## [method InputEventCodec.serialize_event] writes each modifier at most once.
 func test_duplicate_modifier_is_rejected() -> void:
 	_assert_rejected("key:42:shift:shift", "duplicate modifier")
 
 
-## Verifies modifier tokens are case-sensitive, as [method Settings.serialize_event] writes them.
+## Verifies modifier tokens are case-sensitive, as [method InputEventCodec.serialize_event] writes them.
 func test_uppercase_modifier_is_rejected() -> void:
 	_assert_rejected("key:42:SHIFT", "modifiers are lower-case")
 
@@ -190,7 +190,7 @@ func test_reordered_modifiers_load() -> void:
 	_assert_key("key:42:meta:shift", true, false, false, true)
 
 
-## Verifies every string [method Settings.serialize_event] can produce still round-trips.
+## Verifies every string [method InputEventCodec.serialize_event] can produce still round-trips.
 ##
 ## Builds all 16 combinations of Shift, Ctrl, Alt and Meta, serializes each one, deserializes
 ## the result, and checks that the restored event matches the original.
@@ -202,12 +202,12 @@ func test_every_modifier_combination_round_trips() -> void:
 		original.ctrl_pressed = (mask & 2) != 0
 		original.alt_pressed = (mask & 4) != 0
 		original.meta_pressed = (mask & 8) != 0
-		var serialized: String = Settings.serialize_event(original)
-		var restored: InputEvent = Settings.deserialize_event(serialized)
+		var serialized: String = InputEventCodec.serialize_event(original)
+		var restored: InputEvent = InputEventCodec.deserialize_event(serialized)
 		assert_not_null(restored, "'%s' must deserialize" % serialized)
 		if restored == null:
 			continue
-		assert_true(Settings.events_match(original, restored), "'%s' must round-trip" % serialized)
+		assert_true(InputEventCodec.events_match(original, restored), "'%s' must round-trip" % serialized)
 
 
 ## Verifies keycode 0 is still rejected (existing behaviour, unchanged by the fix).
@@ -257,7 +257,7 @@ func _default_config() -> ConfigFile:
 	for action: String in Settings.ACTIONS:
 		var serialized: Array[String] = []
 		for ev: InputEvent in InputMap.action_get_events(action):
-			serialized.append(Settings.serialize_event(ev))
+			serialized.append(InputEventCodec.serialize_event(ev))
 		config.set_value("input", action, serialized)
 	return config
 
@@ -433,7 +433,7 @@ func test_all_modifiers_load_in_reverse_order() -> void:
 func _serialized_bindings(action: String) -> Array[String]:
 	var bindings: Array[String] = []
 	for event: InputEvent in InputMap.action_get_events(action):
-		bindings.append(Settings.serialize_event(event))
+		bindings.append(InputEventCodec.serialize_event(event))
 	return bindings
 
 

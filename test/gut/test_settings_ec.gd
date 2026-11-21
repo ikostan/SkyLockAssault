@@ -131,7 +131,7 @@ func test_ec_08_conflict_unbind_persists_after_reload() -> void:
 
 	var next_serials: Array[String] = []
 	for ev: InputEvent in InputMap.action_get_events("next_weapon"):
-		next_serials.append(Settings.serialize_event(ev))
+		next_serials.append(InputEventCodec.serialize_event(ev))
 	cfg.set_value("input", "next_weapon", next_serials)
 
 	Settings.apply_config_to_input_map(cfg)
@@ -156,14 +156,14 @@ func test_ec_09_last_input_device_validation() -> void:
 
 	DirAccess.copy_absolute(test_config_path, real_path)
 	Settings.load_last_input_device()
-	assert_eq(Globals.current_input_device, "keyboard", "Corrupted device must default to keyboard")
+	assert_eq(Settings.get_input_device(), "keyboard", "Corrupted device must default to keyboard")
 
 	cfg.set_value("input", "last_input_device", "gamepad")
 	cfg.save_encrypted_pass(test_config_path, Globals.ensure_encryption_key())
 
 	DirAccess.copy_absolute(test_config_path, real_path)
 	Settings.load_last_input_device()
-	assert_eq(Globals.current_input_device, "gamepad", "Valid device must load")
+	assert_eq(Settings.get_input_device(), "gamepad", "Valid device must load")
 
 	cfg.erase_section_key("input", "last_input_device")
 	cfg.set_value("meta", "empty", true)
@@ -171,7 +171,7 @@ func test_ec_09_last_input_device_validation() -> void:
 
 	DirAccess.copy_absolute(test_config_path, real_path)
 	Settings.load_last_input_device()
-	assert_eq(Globals.current_input_device, "keyboard", "Missing key must default")
+	assert_eq(Settings.get_input_device(), "keyboard", "Missing key must default")
 
 	if FileAccess.file_exists(backup_path):
 		DirAccess.copy_absolute(backup_path, real_path)
@@ -187,7 +187,7 @@ func test_ec_10_legacy_migration() -> void:
 
 	Settings.apply_config_to_input_map(cfg)
 
-	Globals.remove_meta(Settings.LEGACY_MIGRATION_KEY)
+	Settings.set_migration_done_for_test(Settings.LEGACY_MIGRATION_KEY, false)
 	Settings._migrate_legacy_unbound_states()
 
 	var fire_events: Array[InputEvent] = InputMap.action_get_events("fire")
@@ -201,20 +201,20 @@ func test_ec_10_legacy_migration() -> void:
 func test_ec_11_keyboard_event_label() -> void:
 	var ev: InputEventKey = InputEventKey.new()
 	ev.physical_keycode = KEY_SPACE
-	assert_eq(Settings.get_event_label(ev), "Space", "Keyboard label must be 'Space'")
+	assert_eq(InputEventCodec.get_event_label(ev), "Space", "Keyboard label must be 'Space'")
 
 	ev.physical_keycode = KEY_ESCAPE
-	assert_eq(Settings.get_event_label(ev), "Escape", "Keyboard label must be 'Escape'")
+	assert_eq(InputEventCodec.get_event_label(ev), "Escape", "Keyboard label must be 'Escape'")
 
 
 ## EC-12 | Event labels | Gamepad buttons | Cross-platform
 func test_ec_12_gamepad_button_label() -> void:
 	var ev: InputEventJoypadButton = InputEventJoypadButton.new()
 	ev.button_index = JOY_BUTTON_A
-	assert_eq(Settings.get_event_label(ev), "A", "Button A must be 'A'")
+	assert_eq(InputEventCodec.get_event_label(ev), "A", "Button A must be 'A'")
 
 	ev.button_index = JOY_BUTTON_START
-	assert_eq(Settings.get_event_label(ev), "Start", "Start button label is not correct")
+	assert_eq(InputEventCodec.get_event_label(ev), "Start", "Start button label is not correct")
 
 
 ## EC-13 | Event labels | Gamepad axes | Direction-aware
@@ -222,22 +222,22 @@ func test_ec_13_gamepad_axis_label() -> void:
 	var ev: InputEventJoypadMotion = InputEventJoypadMotion.new()
 	ev.axis = JOY_AXIS_TRIGGER_RIGHT
 	ev.axis_value = 1.0
-	assert_eq(Settings.get_event_label(ev), "Right Trigger (+)", "Positive RT axis label correct")
+	assert_eq(InputEventCodec.get_event_label(ev), "Right Trigger (+)", "Positive RT axis label correct")
 
 	ev.axis_value = -1.0
-	assert_eq(Settings.get_event_label(ev), "Right Trigger (-)", "Negative RT axis label correct")
+	assert_eq(InputEventCodec.get_event_label(ev), "Right Trigger (-)", "Negative RT axis label correct")
 
 	ev.axis = JOY_AXIS_LEFT_X
 	ev.axis_value = 1.0
-	assert_eq(Settings.get_event_label(ev), "Left Stick (Right)", "Left Stick right label correct")
+	assert_eq(InputEventCodec.get_event_label(ev), "Left Stick (Right)", "Left Stick right label correct")
 
 
 ## EC-14 | Pause label | Per device | Uppercase, unbound fallback
 func test_ec_14_pause_binding_label_for_device() -> void:
-	Globals.current_input_device = "keyboard"
+	Settings.set_input_device("keyboard")
 	assert_eq(Settings.get_pause_binding_label_for_device("keyboard"), "ESCAPE", "Keyboard pause label should be 'ESCAPE'")
 
-	Globals.current_input_device = "gamepad"
+	Settings.set_input_device("gamepad")
 	assert_eq(Settings.get_pause_binding_label_for_device("gamepad"), "START", "Gamepad pause label is not correct")
 
 	InputMap.action_erase_events("pause")

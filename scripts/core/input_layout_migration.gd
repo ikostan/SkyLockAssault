@@ -56,33 +56,32 @@ const BUG_STRIPPED: Dictionary = {
 ## the action still has a binding on its other device (the bug never cleared a whole action, so
 ## a fully unbound action is the player's choice) and the default is free in its conflict group.
 ##
-## [param settings]: The Settings autoload, for event helpers and conflict checks.
+## [param settings]: The Settings autoload, for conflict checks.
 ## Returns [code]true[/code] if any binding was removed or added.
 static func migrate(settings: Node) -> bool:
-	var trimmed: bool = _remove_legacy_extras(settings)
+	var trimmed: bool = _remove_legacy_extras()
 	var restored: bool = _restore_stripped_defaults(settings)
 	return trimmed or restored
 
 
 ## Removes the hidden legacy second bindings listed in [constant LEGACY_EXTRAS].
 ##
-## [param settings]: The Settings autoload.
 ## Returns [code]true[/code] if any binding was removed.
-static func _remove_legacy_extras(settings: Node) -> bool:
+static func _remove_legacy_extras() -> bool:
 	var changed: bool = false
 	for action: String in LEGACY_EXTRAS:
-		var legacy: InputEvent = settings.deserialize_event(LEGACY_EXTRAS[action])
-		var device: String = settings.get_event_device_type(legacy)
-		if count_bindings_for_device(settings, action, device) < 2:
+		var legacy: InputEvent = InputEventCodec.deserialize_event(LEGACY_EXTRAS[action])
+		var device: String = InputEventCodec.get_event_device_type(legacy)
+		if count_bindings_for_device(action, device) < 2:
 			continue  # The only binding for this device: the player kept or chose it.
 		for ev: InputEvent in InputMap.action_get_events(action).duplicate():
-			if settings.events_match(ev, legacy):
+			if InputEventCodec.events_match(ev, legacy):
 				InputMap.action_erase_event(action, ev)
 				changed = true
 				Globals.log_message(
 					(
 						"Migration v3: removed legacy %s binding %s from %s"
-						% [device, settings.get_event_label(ev), action]
+						% [device, InputEventCodec.get_event_label(ev), action]
 					),
 					Globals.LogLevel.INFO
 				)
@@ -97,7 +96,7 @@ static func _restore_stripped_defaults(settings: Node) -> bool:
 	var changed: bool = false
 	for action: String in BUG_STRIPPED:
 		var device: String = BUG_STRIPPED[action]
-		if count_bindings_for_device(settings, action, device) > 0:
+		if count_bindings_for_device(action, device) > 0:
 			continue
 		if InputMap.action_get_events(action).is_empty():
 			continue  # Fully unbound: an explicit unbind, not the bug.
@@ -125,13 +124,12 @@ static func _restore_stripped_defaults(settings: Node) -> bool:
 
 ## Returns how many bindings an action has for a device.
 ##
-## [param settings]: The Settings autoload.
 ## [param action]: Action name in the InputMap.
 ## [param device]: The target device, either [code]keyboard[/code] or [code]gamepad[/code].
 ## Returns the number of matching event bindings.
-static func count_bindings_for_device(settings: Node, action: String, device: String) -> int:
+static func count_bindings_for_device(action: String, device: String) -> int:
 	var count: int = 0
 	for ev: InputEvent in InputMap.action_get_events(action):
-		if settings.get_event_device_type(ev) == device:
+		if InputEventCodec.get_event_device_type(ev) == device:
 			count += 1
 	return count

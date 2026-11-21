@@ -50,9 +50,9 @@ func before_each() -> void:
 		for ev: InputEvent in InputMap.action_get_events(action):
 			copies.append(ev.duplicate())
 		_saved_events[action] = copies
-	_saved_device = Globals.current_input_device
-	_had_v2_flag = Globals.has_meta(Settings.LEGACY_MIGRATION_KEY)
-	_had_v3_flag = Globals.has_meta(Settings.INPUT_LAYOUT_MIGRATION_KEY)
+	_saved_device = Settings.get_input_device()
+	_had_v2_flag = Settings.is_migration_done(Settings.LEGACY_MIGRATION_KEY)
+	_had_v3_flag = Settings.is_migration_done(Settings.INPUT_LAYOUT_MIGRATION_KEY)
 	_remove_file(TEST_CONFIG_PATH)
 	_load_project_defaults()
 	Settings.set_needs_save_for_test(false)
@@ -64,7 +64,7 @@ func after_each() -> void:
 		InputMap.action_erase_events(action)
 		for ev: InputEvent in _saved_events[action]:
 			InputMap.action_add_event(action, ev)
-	Globals.current_input_device = _saved_device
+	Settings.set_input_device(_saved_device)
 	_set_flag(Settings.LEGACY_MIGRATION_KEY, _had_v2_flag)
 	_set_flag(Settings.INPUT_LAYOUT_MIGRATION_KEY, _had_v3_flag)
 	Settings.set_needs_save_for_test(false)
@@ -81,10 +81,7 @@ func _remove_file(path: String) -> void:
 
 
 func _set_flag(key: String, value: bool) -> void:
-	if value:
-		Globals.set_meta(key, true)
-	elif Globals.has_meta(key):
-		Globals.remove_meta(key)
+	Settings.set_migration_done_for_test(key, value)
 
 
 ## Resets the managed actions to project.godot [input] without touching other actions.
@@ -99,7 +96,7 @@ func _load_project_defaults() -> void:
 func _events_for(action: String, device: String) -> Array[InputEvent]:
 	var found: Array[InputEvent] = []
 	for ev: InputEvent in InputMap.action_get_events(action):
-		if Settings.get_event_device_type(ev) == device:
+		if InputEventCodec.get_event_device_type(ev) == device:
 			found.append(ev)
 	return found
 
@@ -107,7 +104,7 @@ func _events_for(action: String, device: String) -> Array[InputEvent]:
 func _labels_for(action: String, device: String) -> Array[String]:
 	var labels: Array[String] = []
 	for ev: InputEvent in _events_for(action, device):
-		labels.append(Settings.get_event_label(ev))
+		labels.append(InputEventCodec.get_event_label(ev))
 	return labels
 
 
@@ -152,7 +149,7 @@ func _snapshot() -> Dictionary:
 	for action: String in Settings.ACTIONS:
 		var events: Array[String] = []
 		for ev: InputEvent in InputMap.action_get_events(action):
-			events.append(Settings.serialize_event(ev))
+			events.append(InputEventCodec.serialize_event(ev))
 		snap[action] = events
 	return snap
 
@@ -221,14 +218,14 @@ func test_layout_02_project_matches_settings_defaults(
 		if expected == null or actual.size() != 1:
 			continue
 		assert_true(
-			Settings.events_match(actual[0], expected),
+			InputEventCodec.events_match(actual[0], expected),
 			(
 				"%s %s: project.godot %s != Settings %s"
 				% [
 					action,
 					device,
-					Settings.get_event_label(actual[0]),
-					Settings.get_event_label(expected)
+					InputEventCodec.get_event_label(actual[0]),
+					InputEventCodec.get_event_label(expected)
 				]
 			)
 		)
@@ -257,7 +254,7 @@ func test_layout_04_defaults_have_no_group_conflicts(
 ## LAYOUT-05 | With project defaults, no critical action is unbound on either device.
 func test_layout_05_no_unbound_critical_on_either_device() -> void:
 	for device: String in ["keyboard", "gamepad"]:
-		Globals.current_input_device = device
+		Settings.set_input_device(device)
 		assert_false(
 			Settings.has_unbound_critical_actions_for_current_device(),
 			"no Unbound Controls dialog for " + device
@@ -349,9 +346,9 @@ func test_ser_01_keycode_only_event_is_not_saved_as_zero(
 	)
 ) -> void:
 	var code: int = row[0]
-	var serialized: String = Settings.serialize_event(_keycode_only(code))
+	var serialized: String = InputEventCodec.serialize_event(_keycode_only(code))
 	assert_eq(serialized, row[1])
-	var restored: InputEvent = Settings.deserialize_event(serialized)
+	var restored: InputEvent = InputEventCodec.deserialize_event(serialized)
 	assert_not_null(restored, "the saved key loads back")
 	if restored:
 		var physical: bool = row[1].begins_with("key:")
@@ -363,7 +360,7 @@ func test_ser_01_keycode_only_event_is_not_saved_as_zero(
 func test_ser_02_keycode_only_keeps_modifiers() -> void:
 	var ev: InputEventKey = _keycode_only(KEY_TAB)
 	ev.shift_pressed = true
-	assert_eq(Settings.serialize_event(ev), "key:%d:shift" % KEY_TAB)
+	assert_eq(InputEventCodec.serialize_event(ev), "key:%d:shift" % KEY_TAB)
 
 
 ## SER-03 | physical_keycode still wins when both are set.
@@ -371,7 +368,7 @@ func test_ser_03_physical_keycode_preferred() -> void:
 	var ev := InputEventKey.new()
 	ev.physical_keycode = KEY_W
 	ev.keycode = KEY_Z
-	assert_eq(Settings.serialize_event(ev), "key:%d" % KEY_W)
+	assert_eq(InputEventCodec.serialize_event(ev), "key:%d" % KEY_W)
 
 
 # ── Save / reload regression (the reported bug) ──────────────────────────────
@@ -418,7 +415,7 @@ func test_reg_01_save_reload_keeps_menu_and_flight_bindings() -> void:
 		"move_left keeps its stick"
 	)
 	for device: String in ["keyboard", "gamepad"]:
-		Globals.current_input_device = device
+		Settings.set_input_device(device)
 		assert_false(
 			Settings.has_unbound_critical_actions_for_current_device(),
 			"no Unbound Controls dialog for " + device
@@ -480,7 +477,7 @@ func test_mig_01_repairs_broken_save() -> void:
 	)
 	assert_eq(_labels_for("speed_down", "keyboard"), ["X"] as Array[String], "saved X is kept")
 	assert_true(Settings.needs_save(), "repair is persisted on the next save")
-	assert_true(Globals.has_meta(Settings.INPUT_LAYOUT_MIGRATION_KEY), "runs once")
+	assert_true(Settings.is_migration_done(Settings.INPUT_LAYOUT_MIGRATION_KEY), "runs once")
 
 
 ## MIG-02 | The migration flag is saved and restored on the next load.
@@ -491,7 +488,9 @@ func test_mig_02_flag_persists_across_save_and_load() -> void:
 
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 
-	assert_true(Globals.has_meta(Settings.INPUT_LAYOUT_MIGRATION_KEY), "flag restored from config")
+	assert_true(
+		Settings.is_migration_done(Settings.INPUT_LAYOUT_MIGRATION_KEY), "flag restored from config"
+	)
 
 
 ## MIG-03 | A clean default layout is left untouched.
@@ -660,15 +659,15 @@ func test_ser_04_logical_key_round_trip(
 ) -> void:
 	var ev: InputEventKey = _keycode_only(row[0])
 	ev.shift_pressed = row[1]
-	var serialized: String = Settings.serialize_event(ev)
+	var serialized: String = InputEventCodec.serialize_event(ev)
 	assert_eq(serialized, row[2])
-	var restored: InputEvent = Settings.deserialize_event(serialized)
+	var restored: InputEvent = InputEventCodec.deserialize_event(serialized)
 	assert_not_null(restored, "lkey loads back")
 	if restored:
 		assert_eq(restored.keycode, row[0], "restored as a logical keycode")
 		assert_eq(restored.physical_keycode, 0, "not turned into a physical key")
 		assert_eq(restored.shift_pressed, row[1], "modifier kept")
-		assert_true(Settings.events_match(restored, ev), "matches the original")
+		assert_true(InputEventCodec.events_match(restored, ev), "matches the original")
 
 
 ## SER-05 | lkey follows the same validation as key: no zero code, known modifiers only.
@@ -677,23 +676,23 @@ func test_ser_05_invalid_lkey_rejected(
 		["lkey:0", "lkey:", "lkey:abc", "lkey:87:bogus", "lkey:87:shift:shift"]
 	)
 ) -> void:
-	assert_null(Settings.deserialize_event(serialized), serialized + " is rejected")
+	assert_null(InputEventCodec.deserialize_event(serialized), serialized + " is rejected")
 
 
 ## SER-06 | Matching: physical vs physical and logical vs logical compare codes; a logical and
 ## a physical printable key never match; special keys match whichever form they come in.
 func test_ser_06_key_matching_rules() -> void:
-	assert_true(Settings.events_match(_keycode_only(KEY_W), _keycode_only(KEY_W)), "logical W")
+	assert_true(InputEventCodec.events_match(_keycode_only(KEY_W), _keycode_only(KEY_W)), "logical W")
 	assert_false(
-		Settings.events_match(_keycode_only(KEY_W), _key(KEY_W)),
+		InputEventCodec.events_match(_keycode_only(KEY_W), _key(KEY_W)),
 		"logical W is not physical W: layouts can differ"
 	)
 	assert_true(
-		Settings.events_match(_keycode_only(KEY_UP), _key(KEY_UP)),
+		InputEventCodec.events_match(_keycode_only(KEY_UP), _key(KEY_UP)),
 		"Up is the same key in either form"
 	)
 	assert_false(
-		Settings.events_match(_keycode_only(KEY_TAB), _key(KEY_TAB, true)),
+		InputEventCodec.events_match(_keycode_only(KEY_TAB), _key(KEY_TAB, true)),
 		"modifiers still distinguish Tab and Shift+Tab"
 	)
 
@@ -770,7 +769,7 @@ func test_default_events_are_independent(
 ) -> void:
 	var first: InputEvent = Settings.InputDefaults.make_event(row[0], row[1])
 	var second: InputEvent = Settings.InputDefaults.make_event(row[0], row[1])
-	var expected: String = Settings.serialize_event(second)
+	var expected: String = InputEventCodec.serialize_event(second)
 	assert_ne(first.get_instance_id(), second.get_instance_id(), "each call creates an event")
 	if first is InputEventKey:
 		first.physical_keycode = KEY_F
@@ -781,9 +780,9 @@ func test_default_events_are_independent(
 	elif first is InputEventJoypadMotion:
 		first.axis_value = 1.0
 		first.device = 3
-	assert_eq(Settings.serialize_event(second), expected, "existing events are independent")
+	assert_eq(InputEventCodec.serialize_event(second), expected, "existing events are independent")
 	assert_eq(
-		Settings.serialize_event(Settings.InputDefaults.make_event(row[0], row[1])),
+		InputEventCodec.serialize_event(Settings.InputDefaults.make_event(row[0], row[1])),
 		expected,
 		"mutating an event does not change future defaults"
 	)
@@ -825,9 +824,9 @@ func test_logical_key_round_trip_all_modifiers(mask: int = use_parameters(range(
 	original.ctrl_pressed = bool(mask & 2)
 	original.alt_pressed = bool(mask & 4)
 	original.meta_pressed = bool(mask & 8)
-	var serialized: String = Settings.serialize_event(original)
+	var serialized: String = InputEventCodec.serialize_event(original)
 	assert_true(serialized.begins_with("lkey:"), "printable keys remain logical")
-	var restored: InputEventKey = Settings.deserialize_event(serialized) as InputEventKey
+	var restored: InputEventKey = InputEventCodec.deserialize_event(serialized) as InputEventKey
 	assert_not_null(restored)
 	if restored == null:
 		return
@@ -837,8 +836,8 @@ func test_logical_key_round_trip_all_modifiers(mask: int = use_parameters(range(
 	assert_eq(restored.ctrl_pressed, original.ctrl_pressed)
 	assert_eq(restored.alt_pressed, original.alt_pressed)
 	assert_eq(restored.meta_pressed, original.meta_pressed)
-	assert_true(Settings.events_match(original, restored))
-	assert_eq(Settings.serialize_event(restored), serialized, "encoding is stable")
+	assert_true(InputEventCodec.events_match(original, restored))
+	assert_eq(InputEventCodec.serialize_event(restored), serialized, "encoding is stable")
 
 
 ## SER-10 | Each modifier is part of a logical key's identity when checking conflicts.
@@ -851,8 +850,8 @@ func test_logical_key_modifiers_distinguish_conflicts(
 	var modified: InputEventKey = _keycode_only(KEY_Z)
 	modified.set(modifier, true)
 	_set_events("fire", [modified])
-	assert_false(Settings.events_match(plain, modified))
-	assert_false(Settings.events_match(modified, plain), "matching is symmetric")
+	assert_false(InputEventCodec.events_match(plain, modified))
+	assert_false(InputEventCodec.events_match(modified, plain), "matching is symmetric")
 	assert_eq(Settings.get_conflicting_actions(plain, "next_weapon"), [] as Array[String])
 	assert_eq(Settings.get_conflicting_actions(modified, "next_weapon"), ["fire"] as Array[String])
 
