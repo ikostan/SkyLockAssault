@@ -8,7 +8,14 @@
 
 extends GutTest
 
+## Copy of Settings.CONFIG_PATH taken before a test saves the device, restored in after_each().
+const SETTINGS_BACKUP_PATH: String = "user://settings_backup_ui_manager_input_device.cfg"
+
 var _saved_device: String = ""
+## Set by _backup_settings_file(): after_each() must put Settings.CONFIG_PATH back.
+var _restore_settings_file: bool = false
+## Whether Settings.CONFIG_PATH existed when it was backed up.
+var _had_settings_file: bool = false
 
 
 func before_each() -> void:
@@ -21,7 +28,33 @@ func before_each() -> void:
 
 func after_each() -> void:
 	Settings.set_input_device(_saved_device)
+	_restore_settings_file_if_backed_up()
 	await get_tree().process_frame
+
+
+## Backs up Settings.CONFIG_PATH before a test writes the device to it, so after_each() can
+## put the file back exactly as it was, even if the test stops early.
+func _backup_settings_file() -> void:
+	_had_settings_file = FileAccess.file_exists(Settings.CONFIG_PATH)
+	if _had_settings_file:
+		assert_eq(
+			DirAccess.copy_absolute(Settings.CONFIG_PATH, SETTINGS_BACKUP_PATH),
+			OK,
+			"Precondition: settings file backed up"
+		)
+	_restore_settings_file = true
+
+
+## Restores the file saved by _backup_settings_file(), or removes the one the test created.
+func _restore_settings_file_if_backed_up() -> void:
+	if not _restore_settings_file:
+		return
+	_restore_settings_file = false
+	if _had_settings_file:
+		DirAccess.copy_absolute(SETTINGS_BACKUP_PATH, Settings.CONFIG_PATH)
+		DirAccess.remove_absolute(SETTINGS_BACKUP_PATH)
+	elif FileAccess.file_exists(Settings.CONFIG_PATH):
+		DirAccess.remove_absolute(Settings.CONFIG_PATH)
 
 
 func _key_press(keycode: Key) -> InputEventKey:
@@ -121,12 +154,12 @@ func test_uidev_07_key_mapping_toggle_switches_device() -> void:
 	var menu: CanvasLayer = (load(GamePaths.KEY_MAPPING_SCENE) as PackedScene).instantiate()
 	add_child_autofree(menu)
 	await wait_process_frames(1)
+	# The toggle saves the device to Settings.CONFIG_PATH; after_each() restores the file.
+	_backup_settings_file()
 
 	menu._on_keyboard_toggled(true)
 
 	assert_eq(Settings.get_input_device(), "keyboard", "the toggle picks the device")
-	# The toggle saves the device to Settings.CONFIG_PATH; put the saved value back.
-	Settings.save_last_input_device(_saved_device)
 
 
 ## UIDEV-08 | Once Key Mapping is closed, input switches the device again.
