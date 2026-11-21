@@ -189,27 +189,12 @@ func _on_change_volume_js(args: Array, bus_name: String) -> void:
 	if value < 0.0:
 		return
 
-	# Check parent mute states before allowing sub-bus adjustments
-	if bus_name != AudioConstants.BUS_MASTER and AudioManager.master_muted:
+	# A muted ancestor locks this bus (Issue #1154): reject the change and resync the DOM
+	var locked_by: String = AudioManager.get_muted_ancestor(bus_name)
+	if not locked_by.is_empty():
 		Globals.log_message(
-			"Warning dialog: Master muted, cannot adjust sub-volume", Globals.LogLevel.WARNING
-		)
-		# Resync DOM to actual Godot value
-		_on_godot_volume_changed(bus_name, AudioManager.get_volume(bus_name))
-		return
-	if (
-		(
-			bus_name
-			in [
-				AudioConstants.BUS_SFX_WEAPON,
-				AudioConstants.BUS_SFX_ROTORS,
-				AudioConstants.BUS_SFX_MENU
-			]
-		)
-		and AudioManager.sfx_muted
-	):
-		Globals.log_message(
-			"Warning dialog: SFX muted, cannot adjust sub-volume", Globals.LogLevel.WARNING
+			"Warning dialog: %s muted, cannot adjust sub-volume" % locked_by,
+			Globals.LogLevel.WARNING
 		)
 		# Resync DOM to actual Godot value
 		_on_godot_volume_changed(bus_name, AudioManager.get_volume(bus_name))
@@ -234,34 +219,16 @@ func _on_toggle_mute_js(args: Array, bus_name: String) -> void:
 	if checked == null:
 		return
 
-	# --- NEW: Parent-Mute Guard ---
-	# Check parent mute states before allowing sub-bus adjustments
-	if bus_name != AudioConstants.BUS_MASTER and AudioManager.master_muted:
+	# A muted ancestor locks this bus (Issue #1154): reject the change and resync the DOM
+	var locked_by: String = AudioManager.get_muted_ancestor(bus_name)
+	if not locked_by.is_empty():
 		Globals.log_message(
-			"Warning dialog: Master muted, cannot adjust sub-mute state", Globals.LogLevel.WARNING
+			"Warning dialog: %s muted, cannot adjust sub-mute state" % locked_by,
+			Globals.LogLevel.WARNING
 		)
 		# Force the HTML DOM checkbox to revert to its previous (muted) state
 		_on_godot_mute_toggled(bus_name, AudioManager.get_muted(bus_name))
 		return
-
-	if (
-		(
-			bus_name
-			in [
-				AudioConstants.BUS_SFX_WEAPON,
-				AudioConstants.BUS_SFX_ROTORS,
-				AudioConstants.BUS_SFX_MENU
-			]
-		)
-		and AudioManager.sfx_muted
-	):
-		Globals.log_message(
-			"Warning dialog: SFX muted, cannot adjust sub-mute state", Globals.LogLevel.WARNING
-		)
-		# Force the HTML DOM checkbox to revert to its previous (muted) state
-		_on_godot_mute_toggled(bus_name, AudioManager.get_muted(bus_name))
-		return
-	# ------------------------------
 
 	var is_muted: bool = not bool(checked)  # Checkbox checked = unmuted
 

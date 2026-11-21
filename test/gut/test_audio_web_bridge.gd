@@ -318,3 +318,146 @@ func test_tc_awb_17_restore_options_menu_dom_after_window_recovery() -> void:
 	assert_eq(code.count("'block'"), 5)
 	assert_false(code.contains("difficulty-slider"), "Gameplay controls remain untouched")
 	assert_false(code.contains("'none'"), "Restoring Options must not hide another overlay")
+
+
+# ==========================================
+# PARENT-MUTE GUARDS (Issue #1154)
+# ==========================================
+# Both guards ask AudioManager.get_muted_ancestor(). A change to a bus locked by a muted
+# ancestor is rejected, the DOM control is resynced, and the warning names the ancestor
+# (Master before SFX), exactly as before the change.
+
+const GUARD_CASES: Array = [
+	["Music", ["Master"], "Master"],
+	["SFX", ["Master"], "Master"],
+	["SFX_Weapon", ["Master"], "Master"],
+	["SFX_Rotors", ["Master"], "Master"],
+	["SFX_Menu", ["Master"], "Master"],
+	["SFX_Weapon", ["SFX"], "SFX"],
+	["SFX_Rotors", ["SFX"], "SFX"],
+	["SFX_Menu", ["SFX"], "SFX"],
+	["SFX_Menu", ["Master", "SFX"], "Master"],
+]
+const BRIDGE_BUSES: Array = ["Master", "Music", "SFX", "SFX_Weapon", "SFX_Rotors", "SFX_Menu"]
+
+
+## Collects every logged line while it is added with OS.add_logger().
+class LogCapture:
+	extends Logger
+	var lines: Array[String] = []
+	var _mutex: Mutex = Mutex.new()
+
+	func _log_message(message: String, _error: bool) -> void:
+		_mutex.lock()
+		lines.append(message)
+		_mutex.unlock()
+
+	## Returns true if any captured line contains [param text].
+	func has_text(text: String) -> bool:
+		_mutex.lock()
+		var found: bool = false
+		for line: String in lines:
+			if line.contains(text):
+				found = true
+				break
+		_mutex.unlock()
+		return found
+
+
+## Mutes exactly [param muted_buses] in AudioManager.
+func _set_bridge_mutes(muted_buses: Array) -> void:
+	for bus: String in BRIDGE_BUSES:
+		AudioManager.set_muted(bus, bus in muted_buses)
+
+
+func test_tc_awb_18_volume_change_blocked_by_muted_ancestor(
+	params: Array = use_parameters(GUARD_CASES)
+) -> void:
+	## Category: JS -> Godot
+	## Scenario: JS changes the volume of a bus whose parent (Master or SFX) is muted.
+	## Expected Result: The volume is unchanged, the DOM slider is resynced to it, and the
+	## warning names the locking ancestor.
+	var bus: String = params[0]
+	var bridge: Variant = _create_spy_bridge()
+	stub(bridge, "_validate_volume_args").to_return(0.25)
+	_set_bridge_mutes(params[1])
+	var before: Dictionary = AudioManager.get_bus_state(bus)
+	Globals.settings.current_log_level = Globals.LogLevel.WARNING
+	var log_capture: LogCapture = LogCapture.new()
+	OS.add_logger(log_capture)
+	bridge._on_change_volume_js([0.25], bus)
+	OS.remove_logger(log_capture)
+
+	assert_eq(AudioManager.get_bus_state(bus), before, "%s must not change." % bus)
+	assert_called(bridge, "_on_godot_volume_changed", [bus, before["volume"]])
+	assert_true(
+		log_capture.has_text("Warning dialog: %s muted, cannot adjust sub-volume" % params[2]),
+		"%s: warning must name %s." % [bus, params[2]]
+	)
+	if params[2] == "Master":
+		assert_false(log_capture.has_text("Warning dialog: SFX muted"), "Master is reported first.")
+
+
+func test_tc_awb_19_mute_toggle_blocked_by_muted_ancestor(
+	params: Array = use_parameters(GUARD_CASES)
+) -> void:
+	## Category: JS -> Godot
+	## Scenario: JS toggles the mute of a bus whose parent (Master or SFX) is muted.
+	## Expected Result: The mute state is unchanged, the DOM checkbox is resynced to it, and
+	## the warning names the locking ancestor.
+	var bus: String = params[0]
+	var bridge: Variant = _create_spy_bridge()
+	_set_bridge_mutes(params[1])
+	var before: Dictionary = AudioManager.get_bus_state(bus)
+	# HTML checked = unmuted: ask for the opposite of the current state.
+	stub(bridge, "_validate_mute_args").to_return(before["muted"])
+	# _set_bridge_mutes() already sent mute_toggled for this bus to the connected bridge, so
+	# count the matching resync calls from here and require exactly one more.
+	var resync_args: Array = [bus, before["muted"]]
+	var resyncs_before: int = get_call_count(bridge, "_on_godot_mute_toggled", resync_args)
+	Globals.settings.current_log_level = Globals.LogLevel.WARNING
+	var log_capture: LogCapture = LogCapture.new()
+	OS.add_logger(log_capture)
+	await bridge._on_toggle_mute_js([], bus)
+	OS.remove_logger(log_capture)
+
+	assert_eq(AudioManager.get_bus_state(bus), before, "%s must not change." % bus)
+	assert_eq(
+		get_call_count(bridge, "_on_godot_mute_toggled", resync_args),
+		resyncs_before + 1,
+		"%s: the rejected toggle must resync the DOM checkbox once." % bus
+	)
+	assert_true(
+		log_capture.has_text("Warning dialog: %s muted, cannot adjust sub-mute state" % params[2]),
+		"%s: warning must name %s." % [bus, params[2]]
+	)
+	if params[2] == "Master":
+		assert_false(log_capture.has_text("Warning dialog: SFX muted"), "Master is reported first.")
+
+
+func test_tc_awb_20_unlocked_buses_accept_changes(
+	params: Array = use_parameters(
+		[
+			["Master", ["Master"]],
+			["Music", ["Music", "SFX"]],
+			["SFX", ["SFX_Weapon"]],
+			["SFX_Weapon", ["SFX_Weapon", "Music"]],
+			["SFX_Rotors", ["SFX_Menu"]],
+		]
+	)
+) -> void:
+	## Category: JS -> Godot
+	## Scenario: JS changes a bus whose own, sibling or child bus is muted, but no ancestor.
+	## Expected Result: The change is applied and no parent-mute warning is logged.
+	var bus: String = params[0]
+	var bridge: Variant = _create_spy_bridge()
+	stub(bridge, "_validate_volume_args").to_return(0.66)
+	_set_bridge_mutes(params[1])
+	Globals.settings.current_log_level = Globals.LogLevel.WARNING
+	var log_capture: LogCapture = LogCapture.new()
+	OS.add_logger(log_capture)
+	bridge._on_change_volume_js([0.66], bus)
+	OS.remove_logger(log_capture)
+
+	assert_almost_eq(AudioManager.get_volume(bus), 0.66, 0.0001, "%s volume applied." % bus)
+	assert_false(log_capture.has_text("Warning dialog:"), "%s: no parent-mute warning." % bus)
