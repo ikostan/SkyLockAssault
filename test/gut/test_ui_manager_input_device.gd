@@ -177,7 +177,8 @@ func test_uidev_08_tracking_resumes_after_key_mapping_closes() -> void:
 	assert_eq(Settings.get_input_device(), "keyboard")
 
 
-func test_unsupported_action_event_keeps_device() -> void:
+## UIDEV-09 | An event from no device (here an InputEventAction) changes nothing and emits nothing.
+func test_uidev_09_unsupported_action_event_keeps_device() -> void:
 	Settings.set_input_device("gamepad")
 	watch_signals(Settings)
 	var event := InputEventAction.new()
@@ -190,8 +191,9 @@ func test_unsupported_action_event_keeps_device() -> void:
 	assert_signal_not_emitted(Settings, "input_device_changed")
 
 
-## Automatic detection is temporary; loading the player's selection publishes an actual change.
-func test_loading_saved_selection_reverses_temporary_device_switch() -> void:
+## UIDEV-10 | A device switch from UiManager is not saved: loading the saved device undoes it
+## and emits once, and a second load emits nothing.
+func test_uidev_10_loading_saved_selection_reverses_temporary_device_switch() -> void:
 	_backup_settings_file()
 	Settings.set_input_device("gamepad")
 	Settings.save_last_input_device("gamepad")
@@ -207,8 +209,9 @@ func test_loading_saved_selection_reverses_temporary_device_switch() -> void:
 	assert_signal_emitted_with_parameters(Settings, "input_device_changed", ["gamepad"])
 
 
-## ConfigFile also accepts non-string values; a malformed value uses the keyboard fallback.
-func test_invalid_saved_device_falls_back_and_emits() -> void:
+## UIDEV-11 | A saved device that is not a String (ConfigFile accepts any value) falls back to
+## keyboard and emits the change.
+func test_uidev_11_invalid_saved_device_falls_back_and_emits() -> void:
 	_backup_settings_file()
 	var cfg := ConfigFile.new()
 	cfg.set_value("input", "last_input_device", 42)

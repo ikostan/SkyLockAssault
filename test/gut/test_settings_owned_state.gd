@@ -84,9 +84,7 @@ func test_dev_03_unknown_device_is_ignored() -> void:
 
 ## DEV-04 | Globals no longer holds the input device, so nothing can write it there.
 func test_dev_04_globals_has_no_input_device_field() -> void:
-	assert_false(
-		"current_input_device" in Globals, "the device lives in Settings, not on Globals"
-	)
+	assert_false("current_input_device" in Globals, "the device lives in Settings, not on Globals")
 
 
 # ── Migration flags ──────────────────────────────────────────────────────────
@@ -159,8 +157,9 @@ func test_flag_04_not_done_flag_is_not_saved() -> void:
 	assert_true(saved.get_value("meta", Settings.INPUT_LAYOUT_MIGRATION_KEY, false), "v3 saved")
 
 
-## A partial config can add a completed migration without undoing one already run.
-func test_loading_partial_metadata_preserves_completed_migrations() -> void:
+## FLAG-05 | Loading a config that sets only one flag marks that migration done and keeps a
+## migration that already ran; an unknown key is never done.
+func test_flag_05_loading_partial_metadata_preserves_completed_migrations() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("meta", Settings.INPUT_LAYOUT_MIGRATION_KEY, true)
 	assert_eq(cfg.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass), OK)
@@ -174,8 +173,8 @@ func test_loading_partial_metadata_preserves_completed_migrations() -> void:
 	assert_false(Settings.is_migration_done("unknown_migration"))
 
 
-## The pause hint follows the current device on each call.
-func test_pause_label_follows_current_input_device() -> void:
+## DEV-05 | get_pause_binding_label() follows the current device on each call.
+func test_dev_05_pause_label_follows_current_input_device() -> void:
 	InputMap.action_erase_events("pause")
 	var key := InputEventKey.new()
 	key.physical_keycode = KEY_ESCAPE
