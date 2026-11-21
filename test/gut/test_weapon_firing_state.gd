@@ -7,11 +7,12 @@ const WEAPON_SCRIPT: GDScript = preload("res://scripts/entities/weapon.gd")
 const BULLET_SCENE: PackedScene = preload("res://scenes/bullet.tscn")
 const BULLET_SCRIPT: GDScript = preload("res://scripts/entities/bullet.gd")
 
-var weapon: Node2D
+var weapon: Weapon
 var child_weapon: FireResultWeapon
 
 
-class FireResultWeapon extends Node2D:
+# Every mock extends WeaponFirer, the type Weapon equips (#1138).
+class FireResultWeapon extends WeaponFirer:
 	var succeeds: bool = true
 	var fire_calls: int = 0
 
@@ -20,18 +21,34 @@ class FireResultWeapon extends Node2D:
 		return succeeds
 
 
-class TunedWeapon extends Node2D:
-	@export var weapon_name: String = "Test Cannon"
+class TunedWeapon extends WeaponFirer:
 	@export var fire_rate: float = 0.65
 	@export var damage: float = 31.0
 
+	func _init() -> void:
+		weapon_name = "Test Cannon"
 
-class RateOnlyWeapon extends Node2D:
+	func fire() -> bool:
+		return true
+
+
+class RateOnlyWeapon extends WeaponFirer:
 	@export var fire_rate: float = 0.8
 
+	func fire() -> bool:
+		return true
 
-class DamageOnlyWeapon extends Node2D:
+
+class DamageOnlyWeapon extends WeaponFirer:
 	@export var damage: float = 53.0
+
+	func fire() -> bool:
+		return true
+
+
+# Implements nothing beyond the base type: no stats, default name, fire() not overridden.
+class BareWeapon extends WeaponFirer:
+	pass
 
 
 func before_each() -> void:
@@ -113,18 +130,35 @@ func test_missing_active_weapon_does_not_emit() -> void:
 	weapon.current_weapon = null
 	weapon.fire()
 
-	assert_push_error("current_weapon null or no 'fire()' method")
+	assert_push_error("no weapon equipped")
 	assert_eq(weapon.weapon_resource.current_ammo, 3)
 	assert_signal_not_emitted(weapon, "weapon_fired")
 
 
+## Rewritten for #1138: a plain node can no longer become the active weapon. Its scene fails
+## to equip, the previous firer stays active, and firing still goes to that firer.
 func test_active_node_without_fire_method_does_not_emit() -> void:
-	var inert := Node2D.new()
-	weapon.add_child(inert)
-	weapon.current_weapon = inert
+	weapon.weapon_types.assign([_pack(Node2D.new())])
+	weapon.switch_to(0)
+
+	assert_push_error("not a WeaponFirer")
+	assert_eq(weapon.current_weapon, child_weapon, "the previous firer must stay active")
+	assert_eq(weapon.get_child_count(), 1, "the rejected instance must not be kept")
+
+	weapon.fire()
+	assert_eq(child_weapon.fire_calls, 1)
+	assert_eq(weapon.weapon_resource.current_ammo, 2)
+	assert_signal_emit_count(weapon, "weapon_fired", 1)
+
+
+## A firer that doesn't override fire() reports it, fires nothing, and keeps the ammo (#1138).
+func test_active_firer_without_fire_override_does_not_emit() -> void:
+	var bare := BareWeapon.new()
+	weapon.add_child(bare)
+	weapon.current_weapon = bare
 	weapon.fire()
 
-	assert_push_error("current_weapon null or no 'fire()' method")
+	assert_push_error("WeaponFirer.fire() must be overridden.")
 	assert_eq(weapon.weapon_resource.current_ammo, 3)
 	assert_signal_not_emitted(weapon, "weapon_fired")
 
@@ -163,20 +197,22 @@ func test_switch_to_next_weapon_updates_name_and_index() -> void:
 	assert_signal_not_emitted(weapon, "weapon_fired")
 
 
-## A weapon node with no stats or name still equips, with the "Machine Gun" fallback name.
+## A firer with no stats and no name of its own still equips, with the base type's
+## "Machine Gun" default name. weapon_resource.current_index is the only index (#1138).
 func test_switch_without_optional_stats_still_equips() -> void:
-	weapon.weapon_types.assign([_pack(Node2D.new())])
+	weapon.weapon_types.assign([_pack(BareWeapon.new())])
 	weapon.switch_to(0)
 
 	assert_not_null(weapon.current_weapon)
-	assert_eq(weapon.current_index, 0)
+	assert_true(weapon.current_weapon is BareWeapon)
+	assert_false("current_index" in weapon, "Weapon must not keep its own index copy")
 	assert_eq(weapon.weapon_resource.current_index, 0)
 	assert_eq(weapon.weapon_resource.available_weapons[0], "Machine Gun")
 
 
 ## A node with only fire_rate equips and updates the name and index.
 func test_switch_with_only_fire_rate_updates_name_and_index() -> void:
-	weapon.weapon_types.assign([_pack(Node2D.new()), _pack(RateOnlyWeapon.new())])
+	weapon.weapon_types.assign([_pack(BareWeapon.new()), _pack(RateOnlyWeapon.new())])
 	watch_signals(weapon.weapon_resource)
 	weapon.switch_to(1)
 
@@ -190,7 +226,7 @@ func test_switch_with_only_fire_rate_updates_name_and_index() -> void:
 
 ## A node with only damage equips and updates the name and index.
 func test_switch_with_only_damage_updates_name_and_index() -> void:
-	weapon.weapon_types.assign([_pack(Node2D.new()), _pack(DamageOnlyWeapon.new())])
+	weapon.weapon_types.assign([_pack(BareWeapon.new()), _pack(DamageOnlyWeapon.new())])
 	watch_signals(weapon.weapon_resource)
 	weapon.switch_to(1)
 
@@ -239,7 +275,7 @@ func test_switch_leaves_default_bullet_config_unchanged() -> void:
 	var default_config: BulletResource = BULLET_SCRIPT.DEFAULT_BULLET_CONFIG
 	var fire_rate_before: float = default_config.fire_rate
 	var damage_before: int = default_config.damage
-	var firer: Node2D = WEAPON_SCRIPT.new()
+	var firer: Weapon = WEAPON_SCRIPT.new()
 	firer.weapon_types.assign([BULLET_SCENE])
 	add_child_autofree(firer)  # _ready() equips index 0
 	firer.switch_to(0)
@@ -262,9 +298,9 @@ func test_two_firers_sharing_one_config_stay_unchanged_after_swaps() -> void:
 	second_bullet.config = shared_config
 	var other := TunedWeapon.new()
 
-	var first_firer: Node2D = autofree(WEAPON_SCRIPT.new())
+	var first_firer: Weapon = autofree(WEAPON_SCRIPT.new())
 	first_firer.weapon_types.assign([_pack(first_bullet), _pack(other)])
-	var second_firer: Node2D = autofree(WEAPON_SCRIPT.new())
+	var second_firer: Weapon = autofree(WEAPON_SCRIPT.new())
 	second_firer.weapon_types.assign([_pack(second_bullet)])
 
 	first_firer.switch_to(0)

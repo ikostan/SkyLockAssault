@@ -101,3 +101,23 @@ func test_stress_input_simulation() -> void:
 		main_scene.setup_decor_layer(viewport_mock)
 		await get_tree().process_frame
 	verify_no_orphan_leaks(baseline_orphans, "Stable memory after stress.")
+
+## #1138: Weapon keeps a hidden firer per slot instead of freeing it on a swap. Freeing the
+## level with several cached slots must still return the orphan count to its baseline.
+func test_freeing_level_with_cached_weapon_slots_leaves_no_orphans() -> void:
+	var weapon: Weapon = main_scene.player.weapon
+	weapon.weapon_types.append(preload("res://scenes/bullet.tscn"))
+	weapon.switch_to(1)
+	weapon.switch_to(0)
+	await get_tree().process_frame
+	assert_eq(
+		weapon.get_children().filter(func(c: Node) -> bool: return c is WeaponFirer).size(),
+		2,
+		"Both slots should be cached before the level is freed."
+	)
+	var baseline_orphans: int = Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)
+
+	GutHelper.safe_hard_free(main_scene)
+	main_scene = null
+	await get_tree().process_frame
+	verify_no_orphan_leaks(baseline_orphans, "Cached weapon slots are freed with the level.")

@@ -17,7 +17,7 @@ var web_telemetry_adapter: Node
 var _showing_unbound_warning: bool = false
 var _showing_unbound_key_message: bool = false
 
-@onready var player: Node2D = $Player
+@onready var player: Player = $Player
 @onready var stats_panel: Panel = $PlayerStatsPanel
 @onready var background: ParallaxBackground = $Background
 @onready var bushes_layer: ParallaxLayer = $Background/Bushes  # Reference to the bushes layer

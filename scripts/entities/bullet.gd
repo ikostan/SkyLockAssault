@@ -1,8 +1,13 @@
 ## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## bullet.gd - FIXED for Web SFX Volume Control
+##
+## The projectile weapon a [code]Weapon[/code] slot equips (root of bullet.tscn). It fires
+## projectiles but isn't one itself. Its cooldown lives here and keeps running while
+## [code]Weapon[/code] has another slot active (#1138).
 
-extends Node2D
+class_name BulletFirer
+extends WeaponFirer
 
 # Preload the default configuration at the class level to satisfy gdlint
 const DEFAULT_BULLET_CONFIG: BulletResource = preload("res://config_resources/default_bullet.tres")

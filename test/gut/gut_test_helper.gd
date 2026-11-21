@@ -124,17 +124,21 @@ static func build_mock_player_scene() -> Node:
 	var weapon: Node2D = Node2D.new()
 	weapon.name = "Weapon"
 	
-	# Create a dummy script so player.gd's _ready() and _input() don't crash
+	# Create a dummy script so player.gd's _ready() and _input() don't crash.
+	# It extends Weapon because Player.weapon is typed as Weapon (#1138); the overrides keep it
+	# inert (no slots to equip, no firing, no swapping).
 	var mock_weapon_script: GDScript = GDScript.new()
 	mock_weapon_script.source_code = """
-extends Node2D
-var weapon_types: Array = []
-var current_index: int = 0
-func fire() -> void: 
+extends Weapon
+func _ready() -> void:
 	pass
-func get_num_weapons() -> int: 
+func fire() -> void:
+	pass
+func get_num_weapons() -> int:
 	return 1
-func switch_to(idx: int) -> void: 
+func switch_to(_idx: int) -> void:
+	pass
+func switch_to_next() -> void:
 	pass
 """
 
