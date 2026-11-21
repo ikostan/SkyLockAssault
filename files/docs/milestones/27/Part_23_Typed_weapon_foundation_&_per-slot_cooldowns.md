@@ -24,7 +24,7 @@ The first part of #620 (Region 5: Gameplay Entities). It covers three #620 findi
 - **Weapon index duplicated:** the active slot was stored in both `Weapon.current_index` and `weapon_resource.current_index`.
 - **Switching weapons resets the fire cooldown:** `switch_to()` freed the active firer, so its `can_fire` state and `CooldownTimer` were lost and the replacement could fire at once. Fire, swap and fire again skipped the fire rate. It couldn't happen yet because `Player.tscn` has one weapon, but it would as soon as a second one was added.
 
-#1139 (projectile scene), #1141 (shot SFX) and #1137 (hold-to-fire) build on the types added here.
+The types added here are the base for #1139 (projectile scene), #1141 (shot SFX) and #1137 (hold-to-fire).
 
 ---
 
