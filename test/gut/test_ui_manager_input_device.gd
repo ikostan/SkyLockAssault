@@ -175,3 +175,49 @@ func test_uidev_08_tracking_resumes_after_key_mapping_closes() -> void:
 	UiManager._track_input_device(_key_press(KEY_F12))
 
 	assert_eq(Settings.get_input_device(), "keyboard")
+
+
+func test_unsupported_action_event_keeps_device() -> void:
+	Settings.set_input_device("gamepad")
+	watch_signals(Settings)
+	var event := InputEventAction.new()
+	event.action = &"ui_accept"
+	event.pressed = true
+
+	UiManager._track_input_device(event)
+
+	assert_eq(Settings.get_input_device(), "gamepad")
+	assert_signal_not_emitted(Settings, "input_device_changed")
+
+
+## Automatic detection is temporary; loading the player's selection publishes an actual change.
+func test_loading_saved_selection_reverses_temporary_device_switch() -> void:
+	_backup_settings_file()
+	Settings.set_input_device("gamepad")
+	Settings.save_last_input_device("gamepad")
+	UiManager._track_input_device(_key_press(KEY_F12))
+	assert_eq(Settings.get_input_device(), "keyboard", "precondition: auto-detection switched")
+	watch_signals(Settings)
+
+	Settings.load_last_input_device()
+	Settings.load_last_input_device()
+
+	assert_eq(Settings.get_input_device(), "gamepad", "auto-detection did not overwrite the save")
+	assert_signal_emit_count(Settings, "input_device_changed", 1)
+	assert_signal_emitted_with_parameters(Settings, "input_device_changed", ["gamepad"])
+
+
+## ConfigFile also accepts non-string values; a malformed value uses the keyboard fallback.
+func test_invalid_saved_device_falls_back_and_emits() -> void:
+	_backup_settings_file()
+	var cfg := ConfigFile.new()
+	cfg.set_value("input", "last_input_device", 42)
+	assert_eq(Globals.save_config(cfg, Settings.CONFIG_PATH), OK)
+	Settings.set_input_device("gamepad")
+	watch_signals(Settings)
+
+	Settings.load_last_input_device()
+
+	assert_eq(Settings.get_input_device(), "keyboard")
+	assert_signal_emit_count(Settings, "input_device_changed", 1)
+	assert_signal_emitted_with_parameters(Settings, "input_device_changed", ["keyboard"])

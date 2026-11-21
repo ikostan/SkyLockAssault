@@ -157,3 +157,34 @@ func test_flag_04_not_done_flag_is_not_saved() -> void:
 	assert_eq(saved.load_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass), OK)
 	assert_false(saved.has_section_key("meta", Settings.LEGACY_MIGRATION_KEY), "v2 not saved")
 	assert_true(saved.get_value("meta", Settings.INPUT_LAYOUT_MIGRATION_KEY, false), "v3 saved")
+
+
+## A partial config can add a completed migration without undoing one already run.
+func test_loading_partial_metadata_preserves_completed_migrations() -> void:
+	var cfg := ConfigFile.new()
+	cfg.set_value("meta", Settings.INPUT_LAYOUT_MIGRATION_KEY, true)
+	assert_eq(cfg.save_encrypted_pass(TEST_CONFIG_PATH, Globals.save_encryption_pass), OK)
+	Settings.set_migration_done_for_test(Settings.LEGACY_MIGRATION_KEY, true)
+	Settings.set_migration_done_for_test(Settings.INPUT_LAYOUT_MIGRATION_KEY, false)
+
+	Settings.load_input_mappings(TEST_CONFIG_PATH)
+
+	assert_true(Settings.is_migration_done(Settings.LEGACY_MIGRATION_KEY))
+	assert_true(Settings.is_migration_done(Settings.INPUT_LAYOUT_MIGRATION_KEY))
+	assert_false(Settings.is_migration_done("unknown_migration"))
+
+
+## The pause hint follows the current device on each call.
+func test_pause_label_follows_current_input_device() -> void:
+	InputMap.action_erase_events("pause")
+	var key := InputEventKey.new()
+	key.physical_keycode = KEY_ESCAPE
+	InputMap.action_add_event("pause", key)
+	var button := InputEventJoypadButton.new()
+	button.button_index = JOY_BUTTON_START
+	InputMap.action_add_event("pause", button)
+
+	Settings.set_input_device("keyboard")
+	assert_eq(Settings.get_pause_binding_label(), "ESCAPE")
+	Settings.set_input_device("gamepad")
+	assert_eq(Settings.get_pause_binding_label(), "START")
