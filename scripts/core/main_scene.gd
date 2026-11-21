@@ -130,7 +130,7 @@ func _input(event: InputEvent) -> void:
 	# Player pressed a completely unbound key/button/axis
 	if not Settings.is_event_bound(event) and not _showing_unbound_key_message:
 		_showing_unbound_key_message = true
-		var device_type: String = Settings.get_event_device_type(event)
+		var device_type: String = InputEventCodec.get_event_device_type(event)
 		var pause_label: String = Settings.get_pause_binding_label_for_device(device_type)
 		show_message(
 			"{UNBOUND=KEY=PRESSED}\n{PRESS='" + pause_label + "'=AND=GO=TO='CONTROLS'=TO=FIX}",

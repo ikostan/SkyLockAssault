@@ -37,7 +37,7 @@ var _original_input_device: String = "keyboard"
 func before_all() -> void:
 	# Cache the current state before this suite modifies it
 	if is_instance_valid(Globals):
-		_original_input_device = Globals.current_input_device
+		_original_input_device = Settings.get_input_device()
 
 	var backup_path: String = "user://settings_backup.cfg"
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
@@ -49,7 +49,7 @@ func before_all() -> void:
 func before_each() -> void:
 	# Enforce a clean keyboard baseline for each test within this suite
 	if is_instance_valid(Globals):
-		Globals.current_input_device = "keyboard" 
+		Settings.set_input_device("keyboard")
 
 	if FileAccess.file_exists(TEST_CONFIG_PATH): 
 		var err: Error = DirAccess.remove_absolute(TEST_CONFIG_PATH) 
@@ -78,7 +78,7 @@ func after_each() -> void:
 func after_all() -> void:
 	# RESTORE: Safely put back the global state exactly how we found it
 	if is_instance_valid(Globals):
-		Globals.current_input_device = _original_input_device
+		Settings.set_input_device(_original_input_device)
 
 	var backup_path: String = "user://settings_backup.cfg"
 	if FileAccess.file_exists(backup_path):

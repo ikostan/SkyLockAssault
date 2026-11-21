@@ -85,7 +85,7 @@ func _get_label_for(action: String, device: int) -> String:
 	var ev: InputEvent = button.get_matching_event()
 	if ev == null:
 		return "Unbound"
-	return Settings.get_event_label(ev)
+	return InputEventCodec.get_event_label(ev)
 
 
 ## Helper: create and save a config file that contains a single joypad mapping for OTHER_ACTION,
@@ -96,7 +96,7 @@ func _get_label_for(action: String, device: int) -> String:
 func _write_partial_config_with_other_action_gamepad(path: String) -> void:
 	var cfg: ConfigFile = ConfigFile.new()
 
-	# Note: Settings.deserialize_event expects formats like "joy:btn:<index>" / "joy:axis:..."
+	# Note: InputEventCodec.deserialize_event expects formats like "joy:btn:<index>" / "joy:axis:..."
 	# We mirror the same scheme used elsewhere in the project tests.
 	cfg.set_value("input", OTHER_ACTION, ["joy:btn:%d" % JOY_BUTTON_A])
 

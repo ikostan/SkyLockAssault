@@ -35,9 +35,8 @@ func before_each() -> void:
 	if FileAccess.file_exists(TEST_CONFIG_PATH):
 		DirAccess.remove_absolute(TEST_CONFIG_PATH)
 
-	# Reset legacy-migration meta so tests are independent.
-	if Globals.has_meta(Settings.LEGACY_MIGRATION_KEY):
-		Globals.remove_meta(Settings.LEGACY_MIGRATION_KEY)
+	# Reset the legacy-migration flag so tests are independent.
+	Settings.set_migration_done_for_test(Settings.LEGACY_MIGRATION_KEY, false)
 
 	for action: String in Settings.ACTIONS:
 		if InputMap.has_action(action):
@@ -48,7 +47,7 @@ func before_each() -> void:
 	add_child(menu)
 	speed_up_btn = menu.get_node("Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingSpeedUp/SpeedUpInputRemap")
 	# Default keyboard
-	Globals.current_input_device = "keyboard"
+	Settings.set_input_device("keyboard")
 	menu.keyboard.button_pressed = true
 	menu.update_all_remap_buttons()
 
@@ -174,7 +173,7 @@ func test_scn_05_invalid_entries_skip() -> void:
 
 ## SCN-06 | Legacy migration critical empty → force defaults.
 func test_scn_06_legacy_migration_defaults() -> void:
-	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, false)
+	Settings.set_migration_done_for_test(Settings.LEGACY_MIGRATION_KEY, false)
 	config.set_value("input", CRITICAL_ACTION, [])
 	
 	# FIX: Save using encryption
@@ -182,14 +181,14 @@ func test_scn_06_legacy_migration_defaults() -> void:
 	
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	Settings._migrate_legacy_unbound_states()  # Manual call for test.
-	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, true)  # Mimic.
+	Settings.set_migration_done_for_test(Settings.LEGACY_MIGRATION_KEY, true)  # Mimic.
 	var events: Array[InputEvent] = InputMap.action_get_events(CRITICAL_ACTION)
 	assert_eq(events.size(), 2, "Migration defaults")
 
 
 ## SCN-07 | Legacy migration critical empty adds defaults.
 func test_scn_07_legacy_critical_empty_adds_defaults() -> void:
-	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, false)
+	Settings.set_migration_done_for_test(Settings.LEGACY_MIGRATION_KEY, false)
 	config.set_value("input", TEST_ACTION, [])  # Empty.
 	
 	# FIX: Save using encryption
@@ -197,18 +196,18 @@ func test_scn_07_legacy_critical_empty_adds_defaults() -> void:
 	
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	Settings._migrate_legacy_unbound_states()  # Manual call for test.
-	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, true)  # Mimic.
+	Settings.set_migration_done_for_test(Settings.LEGACY_MIGRATION_KEY, true)  # Mimic.
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
 	assert_eq(events.size(), 2, "Critical legacy empty adds defaults")
 	menu.update_all_remap_buttons()
 	assert_ne(speed_up_btn.text, "Unbound")
-	assert_true(Globals.has_meta(Settings.LEGACY_MIGRATION_KEY))
+	assert_true(Settings.is_migration_done(Settings.LEGACY_MIGRATION_KEY))
 
 
 ## SCN-08 | Legacy menu controls empty → force defaults after migration (mimic screenshot bug).
 func test_scn_08_legacy_menu_unbound_defaults() -> void:
 	# Simulate legacy: explicit [] for unbound menu actions (ui_accept, ui_up, etc.), default for pause/player.
-	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, false)
+	Settings.set_migration_done_for_test(Settings.LEGACY_MIGRATION_KEY, false)
 	# Set [] for unbound in screenshot.
 	var menu_actions: Array[String] = ["ui_accept", "ui_up", "ui_down", "ui_left", "ui_right"]
 	for act: String in menu_actions:
@@ -226,7 +225,7 @@ func test_scn_08_legacy_menu_unbound_defaults() -> void:
 	
 	Settings.load_input_mappings(TEST_CONFIG_PATH)
 	Settings._migrate_legacy_unbound_states()  # Manual call.
-	Globals.set_meta(Settings.LEGACY_MIGRATION_KEY, true)
+	Settings.set_migration_done_for_test(Settings.LEGACY_MIGRATION_KEY, true)
 	# Update GUI.
 	menu.update_all_remap_buttons()
 	# Assert unbound in screenshot are now defaults (fails now, passes after fix).
@@ -277,17 +276,17 @@ func test_scn_11_new_menu_critical_actions() -> void:
 func test_scn_15_joypad_labels_simplified() -> void:
 	var ev: InputEventJoypadButton = InputEventJoypadButton.new()
 	ev.button_index = JOY_BUTTON_A
-	assert_eq(Settings.get_event_label(ev), "A", "Simplified A")
+	assert_eq(InputEventCodec.get_event_label(ev), "A", "Simplified A")
 	ev.button_index = JOY_BUTTON_B
-	assert_eq(Settings.get_event_label(ev), "B", "Simplified B")
+	assert_eq(InputEventCodec.get_event_label(ev), "B", "Simplified B")
 	ev.button_index = JOY_BUTTON_X
-	assert_eq(Settings.get_event_label(ev), "X", "Simplified X")
+	assert_eq(InputEventCodec.get_event_label(ev), "X", "Simplified X")
 	ev.button_index = JOY_BUTTON_Y
-	assert_eq(Settings.get_event_label(ev), "Y", "Simplified Y")
+	assert_eq(InputEventCodec.get_event_label(ev), "Y", "Simplified Y")
 	ev.button_index = JOY_BUTTON_LEFT_SHOULDER
-	assert_eq(Settings.get_event_label(ev), "LB", "Simplified LB")
+	assert_eq(InputEventCodec.get_event_label(ev), "LB", "Simplified LB")
 	ev.button_index = JOY_BUTTON_RIGHT_SHOULDER
-	assert_eq(Settings.get_event_label(ev), "RB", "Simplified RB")
+	assert_eq(InputEventCodec.get_event_label(ev), "RB", "Simplified RB")
 
 
 ## SCN-16 | Migration flag persists in config.

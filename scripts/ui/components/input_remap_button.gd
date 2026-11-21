@@ -185,7 +185,10 @@ func _input(event: InputEvent) -> void:
 	# ── CONFLICT CHECK ──
 	var conflicts: Array[String] = Settings.get_conflicting_actions(new_event, action)
 
-	if not conflicts.is_empty() and not Settings.events_match(new_event, get_matching_event()):
+	if (
+		not conflicts.is_empty()
+		and not InputEventCodec.events_match(new_event, get_matching_event())
+	):
 		var km_menu: Node = get_tree().get_first_node_in_group("key_mapping_menu")
 		if is_instance_valid(km_menu) and km_menu.has_method("show_conflict_dialog"):
 			km_menu.show_conflict_dialog(self, new_event.duplicate(), conflicts)
@@ -197,7 +200,7 @@ func _input(event: InputEvent) -> void:
 	InputMap.action_add_event(action, new_event)
 
 	Globals.log_message(
-		"Remapped '%s' to '%s'" % [action, Settings.get_event_label(new_event)],
+		"Remapped '%s' to '%s'" % [action, InputEventCodec.get_event_label(new_event)],
 		Globals.LogLevel.DEBUG
 	)
 
@@ -269,6 +272,6 @@ func finish_remap() -> void:
 ## and assigns the resulting string to the button text.
 func update_button_text() -> void:
 	var ev: InputEvent = get_matching_event()
-	text = Settings.get_event_label(ev).strip_edges() if ev else "Unbound"
+	text = InputEventCodec.get_event_label(ev).strip_edges() if ev else "Unbound"
 	# Remove NBSP (common cause of “looks like a space” failures) + trim.
 	text = text.replace("\u00A0", " ").strip_edges()

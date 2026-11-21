@@ -43,8 +43,8 @@ func after_all() -> void:
 ## call log to ensure test isolation.
 func before_each() -> void:
 	# Force 'gamepad' to ensure the initial state triggers the signal emission
-	Globals.current_input_device = "gamepad"
-	
+	Settings.set_input_device("gamepad")
+
 	if SfxManager.get("sfx_calls") != null:
 		SfxManager.set("sfx_calls", [])
 
