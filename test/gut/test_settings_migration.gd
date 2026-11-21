@@ -15,8 +15,7 @@ func before_each() -> void:
 	
 	# Reset singletons/flags for a clean slate
 	Settings._needs_save = false
-	if Globals.has_meta(Settings.LEGACY_MIGRATION_KEY):
-		Globals.remove_meta(Settings.LEGACY_MIGRATION_KEY)
+	Settings.set_migration_done_for_test(Settings.LEGACY_MIGRATION_KEY, false)
 	
 	# Clear InputMap to test clean defaults loading
 	for action: String in Settings.ACTIONS:
