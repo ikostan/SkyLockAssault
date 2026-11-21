@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "created": "2026-11-21T14:54:30Z",
-  "commit": "c670d785646f4c7fff5acf283297ca85c50e1c28",
-  "runner": "GitHub Actions 1000045029",
+  "created": "2026-11-21T19:21:12Z",
+  "commit": "4c21c6d0b64c5a17c3ce66a84453375236acac61",
+  "runner": "GitHub Actions 1000045080",
   "godot": "4.7.1-stable (official)",
   "runs": 3,
   "baseline": {
@@ -13,25 +13,6 @@
     "reload_object_growth": 0.0
   },
   "history": [
-    {
-      "run_id": "44478908213",
-      "commit": "0f28ac94a44b9b4b542bb394e62a4604ff4681b3",
-      "date": "2026-11-19T07:41:23Z",
-      "metrics": {
-        "saves": 0.0,
-        "objects_avg": 2283.55,
-        "nodes_avg": 496.55,
-        "resources_avg": 208.0,
-        "orphans_max": 0.0,
-        "reload_orphans_max": 0.0,
-        "reload_object_growth": 0.0,
-        "frame_p95_ms": 31.0,
-        "frames_over_33.4ms": 13.0,
-        "proc_worst_avg_ms": 5.3833,
-        "phys_worst_avg_ms": 0.525,
-        "mem_static_growth": 651756.0
-      }
-    },
     {
       "run_id": "44555633959",
       "commit": "8cd7cce7c04682485bb4e18682e1584a00a445f2",
@@ -107,6 +88,25 @@
         "phys_worst_avg_ms": 0.8117,
         "mem_static_growth": 656696.0
       }
+    },
+    {
+      "run_id": "44938433913",
+      "commit": "4c21c6d0b64c5a17c3ce66a84453375236acac61",
+      "date": "2026-11-21T19:21:12Z",
+      "metrics": {
+        "saves": 0.0,
+        "objects_avg": 2269.766666666667,
+        "nodes_avg": 485.3333333333333,
+        "resources_avg": 210.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": 0.0,
+        "frame_p95_ms": 32.4,
+        "frames_over_33.4ms": 41.0,
+        "proc_worst_avg_ms": 5.1417,
+        "phys_worst_avg_ms": 0.925,
+        "mem_static_growth": 651840.0
+      }
     }
   ],
   "accepted": {
@@ -139,7 +139,8 @@
     "44555633959",
     "44692486020",
     "44889313948",
-    "44912395192"
+    "44912395192",
+    "44938433913"
   ],
   "profile": "web"
 }
