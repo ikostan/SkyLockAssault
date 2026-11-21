@@ -6,8 +6,8 @@
 ## PR Summary
 
 **Title:** Simplify AudioManager bus state and move bus hierarchy rules into AudioManager  
-**PR:** _fill in after the PR is opened_  
-**Branch:** `feature-audiomanager-bus-config-and-hierarchy` → `main`  
+**PR:** [#1217](https://github.com/ikostan/SkyLockAssault/pull/1217)  
+**Branch:** `simplify-audiomanager-bus-state-lookups` → `main`  
 **Author:** @ikostan  
 **Resolves:**
 
@@ -86,7 +86,19 @@ No existing test case was removed or changed.
 - **`test/gut/test_audio_hierarchy_and_sliders.gd` (+2 tests):**
   - All 64 mute combinations: every mute button's `disabled` and slider's `editable` match the rules the menu used on `main`, written out independently in the test.
   - Warning dialogs for 15 cases, slider and mute button: the locking ancestor's dialog (Master before SFX), and none for unlocked controls. This also covers the Menu bus, which had no warning test.
-- **`test/gut/test_audio_web_bridge.gd` (+3 tests, TC-AWB-18 to 20):** volume and mute changes to a bus under a muted Master or SFX are rejected, resynced to the DOM, and logged with the ancestor's name, for every child bus, with Master reported first when both are muted; a bus whose own, sibling or child bus is muted still accepts changes.
+- **`test/gut/test_audio_web_bridge.gd` (+3 tests, TC-AWB-18 to 20):** volume and mute changes to a bus under a muted Master or SFX are rejected, resynced to the DOM, and logged with the ancestor's name, for every child bus, with Master reported first when both are muted; a bus whose own, sibling or child bus is muted still accepts changes. TC-AWB-19 counts only the checkbox resync caused by the rejected toggle (see Review fixes).
+
+### Review fixes
+
+#### CodeRabbit
+
+- **`test_audio_web_bridge.gd`, TC-AWB-19 checkbox resync (`825312b`):** the test checked the resync with `assert_called(bridge, "_on_godot_mute_toggled", [bus, muted])`. The spy bridge is in the tree and connected to `AudioManager.mute_toggled`, and `_set_bridge_mutes()` calls `set_muted(bus, false)` on the bus under test, so the spy recorded that call during setup and the assert passed without a resync. CodeRabbit flagged the Music/Master case; it applied to all 9 cases. Checked by deleting the resync from the mute guard: all 20 bridge tests still passed. The test now takes the matching call count after setup and requires exactly one more after the rejected toggle; with the resync deleted, TC-AWB-19 fails. TC-AWB-18 was left as is: setup never emits `volume_changed`, and it already failed when the volume resync was deleted.
+
+#### Sourcery
+
+- **`get_muted_ancestor()` should return the nearest muted ancestor** (Medium): not changed. Returning the nearest ancestor would break #1154's own criteria of unchanged locking and warning messages (Design Decisions). Answered on the thread.
+- **Tests should extend an existing AudioManager suite** (Low): not changed (Design Decisions). Answered on the thread.
+- **Linked-issues check** at `825312b`: #1153 8 of 11 met, #1154 9 of 13 met. Every row not met is one of these two decisions, the CI results (passed, see Verification) or the manual itch.io check.
 
 ---
 
@@ -101,7 +113,7 @@ No existing test case was removed or changed.
 
 ## Verification
 
-Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gut_tests.yml` and `gdunit4_tests.yml` do. `gdformat --check` and `gdlint` as in CI.
+Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gut_tests.yml` and `gdunit4_tests.yml` do. `gdformat --check` and `gdlint` as in CI. The PR's CI run at `825312b` ([Pull Request Pipeline](https://github.com/ikostan/SkyLockAssault/actions/runs/44822117581)) gives the same GUT and gdUnit4 numbers.
 
 | State                    | GUT tests | GUT asserts | gdUnit4 test cases |
 |--------------------------|-----------|-------------|--------------------|
@@ -123,18 +135,24 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gu
 | `is_effectively_muted()` ignores the bus's own mute       | 4 in `test_audio_manager_bus_state.gd`, 2 in `test_audio_hierarchy_and_sliders.gd`                                                                        |
 | `SFX_Menu`'s parent set to `Master`                       | `test_get_parent_bus`, `test_parent_matches_layout_send`, 2 more in the bus state suite, 2 UI pins, TC-AWB-18, TC-AWB-19                                  |
 | Bridge volume guard checks only the direct parent         | TC-AWB-18                                                                                                                                                 |
+| Bridge mute guard skips the DOM checkbox resync           | TC-AWB-19 (after the review fix)                                                                                                                          |
 | Mute buttons disabled by `is_effectively_muted()`         | `test_controls_match_legacy_locks_for_all_mute_combinations`                                                                                              |
 | SFX lock shows the Master dialog                          | `test_warning_dialog_matches_locking_ancestor`                                                                                                            |
 
 - **GDScript lint and format:** `gdlint scripts` and `gdformat --check scripts` pass, and so does `gdlint` on `test_audio_manager_bus_state.gd`.
-- **Not run locally:** Playwright (`volume_sliders_mutes_test.py`, `reset_audio_flow_test.py`, `audio_flow_test.py`), the PR benchmark table, and the manual itch.io check. PR run: _fill in after CI._
+- **PR CI at `825312b`:** every job passed.
+  - GUT 1,111/1,111 (13,355 asserts), gdUnit4 164/164, GDScript lint and format, Markdown lint.
+  - Playwright: Core Web Flows shard 70/70, including `volume_sliders_mutes_test.py`, `reset_audio_flow_test.py` and `audio_flow_test.py`; CI & Security shard 1,123/1,123.
+  - **Benchmark, desktop:** 0 regressions, 0 warnings. Frame interval p95 17.057 → 17.058 ms, 0 dropped frames.
+  - **Benchmark, web:** 0 regressions, 3 timing warnings, all runner noise: frame interval p95 33.2 → 44.5 ms, dropped frames 78 → 1,481, and `OBJECT_NODE_COUNT` avg +3% (on web this count follows runner speed). The PR's first run at `58643c9` has the same production code (`825312b` only changes a test) and had 0 warnings: p95 32.3 ms and 38 dropped frames. Swings of this size also show up on `main`'s own baselines: the #1215 runs compared against a baseline with 1,431 dropped frames. The job is report-only and didn't update the baseline.
+- **Not run:** the manual itch.io check.
 
 ---
 
 ## Known Limitations / Follow-ups
 
 - **Manual itch.io check** from #1154 is still to do on the web build: muting Master or SFX locks and unlocks the same controls as before.
-- **#1154's wording:** its method comment says "nearest muted ancestor"; this PR returns the one nearest Master (Design Decisions). The issue text can be updated to match.
+- **Issue wording not updated yet:** #1154 still says "nearest muted ancestor" (lines 35 and 60), and #1153 still says "add to an existing AudioManager suite" (line 53). The Sourcery replies on the PR say both will be updated to match this PR (Design Decisions).
 - **#1153's "Do this after #1152"** no longer matters: #1152 merged in PR #1215.
 
 ---
@@ -161,7 +179,8 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gu
 | <https://github.com/ikostan/SkyLockAssault/issues/1153> | Audio behavior, signals and saved settings unchanged                  | ✅         | Full GUT and gdUnit4 suites pass unchanged; signal and unknown-bus tests added.                       |
 | <https://github.com/ikostan/SkyLockAssault/issues/1154> | `AudioManager` owns the hierarchy rules, no caller re-implements them | ✅         | Menu locks, menu warnings and both bridge guards use the new methods (Design Decisions).              |
 | <https://github.com/ikostan/SkyLockAssault/issues/1154> | Control locking and web behavior unchanged                            | ✅ / ⏳     | 64-combination and warning pins pass on `main` and this PR; manual itch.io check still to do.         |
-| Both                                                    | GUT, Playwright and lint pass, no test cases removed                  | ✅ / ⏳     | GUT, gdUnit4 and lint pass locally; Playwright runs in CI.                                            |
+| Both                                                    | GUT, Playwright and lint pass, no test cases removed                  | ✅         | Locally and in the PR's CI run; Playwright 70/70 and 1,123/1,123 in CI.                               |
+| Both                                                    | Benchmark unchanged, no unexplained regression                        | ✅         | Desktop clean; the 3 web timing warnings are runner noise (Verification).                             |
 | Both                                                    | Milestone note added                                                  | ✅         | This note.                                                                                            |
 
 ---
@@ -172,13 +191,23 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gu
 
 - Filed #1153 and #1154 from the #619 (Region 4) review.
 - Decided to do both issues in one PR.
+- Opened #1217, applied the TC-AWB-19 review fix (`825312b`), and answered and resolved the Sourcery threads.
 
 ### Bots / AI contributions
 
+- **@coderabbitai**
+  - Review: TC-AWB-19 passed on a resync recorded during setup, applied (see Review fixes).
+- **@sourcery-ai**
+  - Review: nearest muted ancestor and new test suite, both kept as designed (see Review fixes).
+  - Linked-issues check against #1153 and #1154.
 - **@claude (Opus 5.5)**
   - **Confirm-first**
     - Checked both issues against `main`: #1152 had merged, and #1154's "nearest muted ancestor" conflicts with its own criterion of unchanged warnings, since both callers report Master first.
     - Ran the new UI and bridge pins against `main`'s code (30/30 pass) and the bus state suite (only the `@export` test and the new hierarchy methods fail).
+  - **Review fixes**
+    - Confirmed CodeRabbit's TC-AWB-19 finding by deleting the mute resync (all bridge tests still passed), found it affected all 9 cases, wrote the fix, and checked that the test now fails without the resync.
+    - Checked both Sourcery findings against #1153 and #1154 and drafted the replies.
   - **Verification**
-    - Ran the full GUT and gdUnit4 suites, `gdformat` and `gdlint` locally, and broke each change (10 mutations) to confirm a test catches it.
+    - Ran the full GUT and gdUnit4 suites, `gdformat` and `gdlint` locally, and broke each change (11 mutations) to confirm a test catches it.
+    - Went through the PR's CI run and compared the web benchmark with the PR's first run and the #1215 runs.
     - Wrote this note.
