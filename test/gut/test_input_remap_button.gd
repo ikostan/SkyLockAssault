@@ -96,7 +96,7 @@ func test_irb_02() -> void:
 	assert_eq(events.size(), 2)
 	assert_true(events.any(func(ev: InputEvent) -> bool: return ev is InputEventJoypadButton and ev.button_index == JOY_BUTTON_B))
 	assert_true(events.any(func(ev: InputEvent) -> bool: return ev is InputEventKey and ev.physical_keycode == KEY_A))
-	assert_eq(button.text, Settings.get_event_label(new_gamepad))
+	assert_eq(button.text, InputEventCodec.get_event_label(new_gamepad))
 	assert_false(button.listening)
 
 
@@ -189,5 +189,5 @@ func test_irb_08() -> void:
 	assert_eq(events.size(), 1)
 	assert_true(events[0] is InputEventKey)
 	assert_eq(events[0].physical_keycode, KEY_D)
-	assert_eq(button.text, Settings.get_event_label(new_key))
+	assert_eq(button.text, InputEventCodec.get_event_label(new_key))
 	assert_false(button.listening)

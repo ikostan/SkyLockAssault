@@ -235,7 +235,7 @@ func test_irb_08() -> void:
 	assert_eq(events.size(), 1)
 	assert_true(events[0] is InputEventKey)
 	assert_eq(events[0].physical_keycode, KEY_D)
-	assert_eq(button.text, Settings.get_event_label(new_key))
+	assert_eq(button.text, InputEventCodec.get_event_label(new_key))
 	assert_false(button.listening)
 
 
