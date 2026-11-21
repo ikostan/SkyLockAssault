@@ -1,6 +1,7 @@
 ## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## player.gd
+class_name Player
 extends Node2D
 
 ## Player controller for P-38 Lightning in SkyLockAssault.
@@ -58,7 +59,7 @@ var _fueled_min_speed: float = 0.0
 @onready var player_sprite: Sprite2D = $CharacterBody2D/Sprite2D
 @onready var collision_shape: CollisionPolygon2D = $CharacterBody2D/CollisionPolygon2D
 @onready var fuel_timer: Timer = $FuelTimer
-@onready var weapon: Node2D = $CharacterBody2D/Weapon
+@onready var weapon: Weapon = $CharacterBody2D/Weapon
 
 
 ## Called when the node enters the scene tree for the first time.
@@ -218,14 +219,13 @@ func _on_player_out_of_fuel() -> void:
 ## [param event]: The input event detected by the engine.
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("fire"):
-		if weapon and weapon.has_method("fire"):
+		if weapon:
 			weapon.fire()
 		get_viewport().set_input_as_handled()
 
 	if event.is_action_pressed("next_weapon"):
-		if weapon and weapon.has_method("switch_to") and weapon.get_num_weapons() > 1:
-			var next: int = (weapon.current_index + 1) % weapon.get_num_weapons()
-			weapon.switch_to(next)
+		if weapon:
+			weapon.switch_to_next()  # Weapon owns the slot order and the wrap-around (#1138)
 		get_viewport().set_input_as_handled()
 
 
