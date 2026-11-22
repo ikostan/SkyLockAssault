@@ -195,6 +195,23 @@ func test_cooldown_rejects_second_shot_until_timeout() -> void:
 	assert_eq(_projectiles().size(), 2)
 
 
+func test_cooldown_rejection_does_not_play_another_shot_sound() -> void:
+	var sound := AudioStreamWAV.new()
+	sound.data = PackedByteArray([0, 0, 0, 0])
+	config.shot_sound = sound
+
+	assert_true(firer.fire())
+	assert_eq(_pool_players_playing(sound).size(), 1)
+	assert_false(firer.fire())
+	assert_eq(_pool_players_playing(sound).size(), 1, "A rejected shot must not play audio.")
+	assert_eq(_root_sound_players().size(), 0)
+
+	firer.timer.stop()
+	firer.timer.timeout.emit()
+	assert_true(firer.fire())
+	assert_eq(_pool_players_playing(sound).size(), 2, "The next accepted shot plays normally.")
+
+
 func test_projectile_uses_configured_motion_and_global_muzzle_offset() -> void:
 	var mount: Node2D = add_child_autofree(Node2D.new())
 	firer.reparent(mount)

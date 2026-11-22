@@ -286,3 +286,24 @@ func test_play_stream_on_saturated_pool_replaces_first_player_without_allocating
 	assert_eq(first.stream, shot, "The first player is taken over, as in play_sfx().")
 	assert_eq(first.bus, AudioConstants.BUS_SFX_WEAPON)
 	assert_eq(SfxManager.get_active_sfx_playback_count(), SfxManager.SFX_POOL_SIZE)
+
+
+## A weapon sound reuses an idle UI player without changing the cache's eviction order.
+## :rtype: void
+func test_play_stream_reuses_named_player_without_touching_full_cache() -> void:
+	SfxManager.play_sfx("slider", AudioConstants.BUS_SFX_MENU, 1.5, -9.0)
+	_seed_cache(SfxManager.MAX_SFX_CACHE_SIZE - 1)
+	var cached_names: Array[String] = SfxManager.get_cached_sfx_names()
+	var player := _pool_player(0)
+	var shot := AudioStreamWAV.new()
+	shot.data = PackedByteArray([0, 0, 0, 0])
+	player.stop()
+
+	SfxManager.play_stream(shot, AudioConstants.BUS_SFX_WEAPON)
+
+	assert_true(player.playing, "Both playback paths use the same player pool.")
+	assert_eq(player.stream, shot)
+	assert_eq(player.bus, AudioConstants.BUS_SFX_WEAPON)
+	assert_eq(player.pitch_scale, 1.0)
+	assert_eq(player.volume_db, 0.0)
+	assert_eq(SfxManager.get_cached_sfx_names(), cached_names)

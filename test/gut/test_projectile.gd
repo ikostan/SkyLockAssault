@@ -119,6 +119,45 @@ func test_two_targets_in_the_same_tick_only_the_first_takes_damage() -> void:
 	assert_eq(second.hits.size(), 0, "One projectile must never damage two targets.")
 
 
+func test_first_contact_without_damage_handler_blocks_later_damage() -> void:
+	var blocker: StaticBody2D = autofree(StaticBody2D.new())
+	var enemy: AreaTarget = autofree(AreaTarget.new())
+	var projectile := _spawn()
+	var hit_area := _hit_area(projectile)
+
+	hit_area.body_entered.emit(blocker)
+	hit_area.area_entered.emit(enemy)
+
+	assert_true(projectile.is_queued_for_deletion())
+	assert_eq(enemy.hits.size(), 0, "A non-damageable contact still consumes the shot.")
+
+
+func test_physics_detects_only_enemy_hurtboxes(
+	layer: int = use_parameters([LAYER_ENEMIES, LAYER_PLAYER, LAYER_PLAYER_PROJECTILES])
+) -> void:
+	var target: AreaTarget = autofree(AreaTarget.new())
+	target.collision_layer = layer
+	target.collision_mask = 0
+	target.monitoring = false
+	var hitbox := CollisionShape2D.new()
+	hitbox.shape = CircleShape2D.new()
+	target.add_child(hitbox)
+	target.position = Vector2(300, 200)
+	add_child(target)
+
+	config.projectile_speed = 0.0
+	var projectile := _spawn(config, target.global_position)
+	# Let the physics server register both shapes and dispatch the overlap signal.
+	await wait_physics_frames(4)
+
+	if layer == LAYER_ENEMIES:
+		assert_eq(target.hits, [17] as Array[int])
+		assert_false(is_instance_valid(projectile), "An enemy overlap removes the shot.")
+	else:
+		assert_eq(target.hits.size(), 0)
+		assert_true(is_instance_valid(projectile), "A filtered overlap leaves the shot alive.")
+
+
 func test_zero_damage_still_counts_as_the_hit() -> void:
 	config.damage = 0
 	var first: BodyTarget = autofree(BodyTarget.new())
