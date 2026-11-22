@@ -1,0 +1,29 @@
+[gd_scene format=3 uid="uid://cgxvbsk2xq0is"]
+
+[ext_resource type="Script" uid="uid://c6mnrn7f1i63b" path="res://scripts/entities/projectile.gd" id="1_proj"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_shared"]
+radius = 3.0
+
+[node name="Projectile" type="RigidBody2D" groups=["bullets"]]
+collision_layer = 0
+collision_mask = 0
+gravity_scale = 0.0
+script = ExtResource("1_proj")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+
+[node name="HitArea" type="Area2D" parent="."]
+collision_layer = 4
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HitArea"]
+shape = SubResource("CircleShape2D_shared")
+
+[node name="LifetimeTimer" type="Timer" parent="."]
+wait_time = 5.0
+one_shot = true
+
+[connection signal="area_entered" from="HitArea" to="." method="_on_hit"]
+[connection signal="body_entered" from="HitArea" to="." method="_on_hit"]
+[connection signal="timeout" from="LifetimeTimer" to="." method="queue_free"]

@@ -2,6 +2,7 @@
 ## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## sfx_manager.gd
 ## Autoload singleton for non-positional SFX playback, split out of AudioManager.
+## Plays sounds by logical name (play_sfx) or from a loaded stream (play_stream, #1141).
 ## Owns the pooled AudioStreamPlayers, the LRU stream cache, the playback diagnostics
 ## used by tests, and the global UI button click hook (Issue #800).
 ## Volume and mute state stay in AudioManager. Access as SfxManager.play_sfx(...), etc.
@@ -11,7 +12,7 @@ extends Node
 ## Hard cap for cached SFX streams to prevent unbounded memory growth.
 const MAX_SFX_CACHE_SIZE: int = 20
 
-## Number of reusable AudioStreamPlayers to keep in memory for UI sounds.
+## Number of reusable AudioStreamPlayers shared by UI sounds and weapon shots.
 const SFX_POOL_SIZE: int = 8
 
 # --- SFX CACHE STATE ---
@@ -73,9 +74,7 @@ func play_sfx(
 	pitch_scale: float = 1.0,
 	volume_db: float = 0.0
 ) -> void:
-	# LAZY-INIT SAFEGUARD: If the pool hasn't been initialized yet, build it on the fly
-	if _sfx_pool.is_empty():
-		_initialize_sfx_pool()  # Assumes this is your pool setup function name
+	_ensure_sfx_pool()
 
 	if sfx_name.is_empty():
 		return
@@ -123,7 +122,50 @@ func play_sfx(
 		_sfx_cache.erase(sfx_name)
 		_sfx_cache[sfx_name] = stream
 
-	# 2. Grab an available player from the object pool (Safe against freed/dangling instances!)
+	_play_on_pool(_sfx_cache[sfx_name], bus_name, pitch_scale, volume_db)
+
+
+## Plays an already loaded stream on the pooled, non-positional players.
+##
+## For callers that hold their own [code]AudioStream[/code], such as a weapon's shot sound
+## (#1141). Uses the same pool and bus routing as [method play_sfx], but skips the name
+## lookup and the LRU cache. A null stream logs a warning and plays nothing.
+##
+## [param stream]: The stream to play.
+## [param bus_name]: Target audio bus. An unknown bus falls back to SFX_Menu, as in
+## [method play_sfx].
+## [param pitch_scale]: Pitch override used for variety.
+## [param volume_db]: Volume offset in decibels.
+func play_stream(
+	stream: AudioStream, bus_name: String, pitch_scale: float = 1.0, volume_db: float = 0.0
+) -> void:
+	_ensure_sfx_pool()
+
+	if stream == null:
+		Globals.log_message("play_stream() called with a null stream.", Globals.LogLevel.WARNING)
+		return
+
+	_play_on_pool(stream, bus_name, pitch_scale, volume_db)
+
+
+## Rebuilds the pool if it is empty (lazy-init safeguard).
+func _ensure_sfx_pool() -> void:
+	if _sfx_pool.is_empty():
+		_initialize_sfx_pool()
+
+
+## Plays [param stream] on an idle pooled player and routes it to [param bus_name].
+## Shared by play_sfx() and play_stream(). When every player is busy, the first valid one is
+## reused. An unknown bus falls back to SFX_Menu.
+## :param stream: Loaded stream to play.
+## :param bus_name: Target audio bus.
+## :param pitch_scale: Pitch override.
+## :param volume_db: Volume offset in decibels.
+## :rtype: void
+func _play_on_pool(
+	stream: AudioStream, bus_name: String, pitch_scale: float, volume_db: float
+) -> void:
+	# 1. Grab an available player from the object pool (Safe against freed/dangling instances!)
 	var player: AudioStreamPlayer = null
 	for p: AudioStreamPlayer in _sfx_pool:
 		if is_instance_valid(p) and not p.playing:
@@ -142,11 +184,11 @@ func play_sfx(
 		push_error("AudioManager: No valid AudioStreamPlayer instances found in pool.")
 		return
 
-	player.stream = _sfx_cache[sfx_name]
+	player.stream = stream
 	player.pitch_scale = pitch_scale
 	player.volume_db = volume_db
 
-	# 3. Bus Validation & Routing
+	# 2. Bus Validation & Routing
 	if AudioServer.get_bus_index(bus_name) == -1:
 		Globals.log_message(
 			"Invalid bus '%s' requested for SFX. Falling back to SFX_Menu." % bus_name,
@@ -156,7 +198,7 @@ func play_sfx(
 	else:
 		player.bus = bus_name
 
-	# 4. Play (No queue_free needed since we reuse the nodes)
+	# 3. Play (No queue_free needed since we reuse the nodes)
 	player.play()
 
 

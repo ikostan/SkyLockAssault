@@ -1,36 +1,35 @@
 ## Copyright (C) 2026 Egor Kostan
 ## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-## bullet.gd - FIXED for Web SFX Volume Control
+## bullet.gd
 ##
 ## The projectile weapon a [code]Weapon[/code] slot equips (root of bullet.tscn). It fires
 ## projectiles but isn't one itself. Its cooldown lives here and keeps running while
 ## [code]Weapon[/code] has another slot active (#1138).
+##
+## Each shot instantiates projectile.tscn (#1139) and plays its sound through the
+## [code]SfxManager[/code] pool on the Weapon bus (#1141), so firing adds no audio node.
 
 class_name BulletFirer
 extends WeaponFirer
 
-# Preload the default configuration at the class level to satisfy gdlint
+## Shared config for firers without their own. Code must never write to it.
 const DEFAULT_BULLET_CONFIG: BulletResource = preload("res://config_resources/default_bullet.tres")
 
-# Inject the dedicated projectile configuration here via the Inspector (.tres)
+## Scene instantiated for every shot.
+const PROJECTILE_SCENE: PackedScene = preload("res://scenes/projectile.tscn")
+
+## Projectile tuning for this firer, injected via the Inspector (.tres).
+## Null falls back to [constant DEFAULT_BULLET_CONFIG].
 @export var config: BulletResource
 
-# var projectile_texture: Texture2D
-# var shot_sound: AudioStream
 var can_fire: bool = true
 var timer: Timer
 
 
-# NO @onready for ShotSFX — we’ll create players dynamically
 func _ready() -> void:
 	# Load the shared default configuration to save memory across all default bullets.
 	if not config:
 		config = DEFAULT_BULLET_CONFIG
-
-	# Set Texture Filter to Nearest
-	get_viewport().canvas_item_default_texture_filter = (
-		Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
-	)
 
 	timer = Timer.new()
 	timer.one_shot = true
@@ -62,80 +61,29 @@ func fire() -> bool:
 	)
 
 	spawn_projectile()
-	play_sfx_with_volume()
+	play_shot_sound()
 
 	return true
 
 
-# NEW: Play SFX with correct bus + volume scaling
-## Plays the configured shot sound effect on the weapon SFX bus.
+## Plays the configured shot sound through the [code]SfxManager[/code] pool on the Weapon bus.
 ##
-## Instantiates an [code]AudioStreamPlayer2D[/code], assigns the shot sound and SFX bus, adds
-## it to the root tree to prevent early freeing, and connects the finished signal to auto-
-## cleanup.
-func play_sfx_with_volume() -> void:
+## The pooled players are non-positional, so the shot sounds the same anywhere on screen,
+## and no player node is created per shot. A null [member BulletResource.shot_sound] fires
+## silently.
+func play_shot_sound() -> void:
 	if not config.shot_sound:
 		return
-
-	var sfx_player := AudioStreamPlayer2D.new()
-	sfx_player.stream = config.shot_sound
-	sfx_player.bus = AudioConstants.BUS_SFX_WEAPON  # Critical: assign to SFX bus
-	sfx_player.volume_db = 0.0  # Base volume (will be scaled by bus)
-
-	# Add to root to avoid being freed with bullet
-	get_tree().root.add_child(sfx_player)
-
-	# Play and auto-cleanup
-	sfx_player.play()
-	sfx_player.finished.connect(func() -> void: sfx_player.queue_free())
-	# Globals.log_message("SFX played on Web with bus volume control.", Globals.LogLevel.DEBUG)
+	SfxManager.play_stream(config.shot_sound, AudioConstants.BUS_SFX_WEAPON)
 
 
-## Instantiates and configures a new projectile with physics, visuals, and lifetime.
+## Instantiates projectile.tscn, configures it, and adds it to the scene root.
 ##
-## Creates a RigidBody2D projectile using configuration values, sets up collision detection,
-## applies visual sprite and shape settings, and adds it to the root tree with a lifetime
-## timer.
+## The projectile spawns at this firer's global position plus
+## [member BulletResource.muzzle_offset], and frees itself on its first hit or when its
+## lifetime ends.
 func spawn_projectile() -> void:
-	var proj: RigidBody2D = RigidBody2D.new()  # Projectile body – physics for movement/collision
-	proj.name = "BulletProjectile"
-	proj.gravity_scale = 0.0  # No gravity – top-down space flight
-	# Up velocity (negative y = up in Godot 2D)
-	proj.linear_velocity = Vector2(0, -config.projectile_speed)
-	proj.global_position = global_position + config.muzzle_offset  # Spawn at muzzle
-	proj.global_rotation = -PI / 2  # Rotate sprite up if needed
-
-	# Collision detection – Area2D for hit events (learning: lighter than RigidBody collisions)
-	var area: Area2D = Area2D.new()
-	proj.add_child(area)
-	area.area_entered.connect(
-		func(body: Node2D) -> void:
-			Globals.log_message("Projectile hit: " + body.name, Globals.LogLevel.DEBUG)
-			if body.has_method("take_damage"):
-				body.take_damage(config.damage)  # Apply damage to enemy
-			if is_instance_valid(proj):  # Safe check (handles any rare race)
-				proj.queue_free()  # Destroy on hit
-	)
-
-	# Sprite for visuals – drag texture in Inspector
-	var sprite: Sprite2D = Sprite2D.new()
-	sprite.texture = config.projectile_texture
-	sprite.scale = config.scale  # Scale for bullet size – tweak
-	proj.add_child(sprite)
-
-	# Collision shape – rectangle for bullet hitbox (learning: match sprite size)
-	var collision: CollisionShape2D = CollisionShape2D.new()
-	var shape: CircleShape2D = CircleShape2D.new()
-	shape.radius = config.collision_radius
-	collision.shape = shape
-	area.add_child(collision)
-
-	get_tree().root.add_child(proj)  # Add to root – global for bullets
-	proj.add_to_group("bullets")  # Group for cleanup/query (e.g., count bullets)
-
-	# Timer destroy – prevents off-screen leaks (learning: memory management)
-	var lifetime_timer: Timer = Timer.new()
-	lifetime_timer.one_shot = true  # Only fire once (like create_timer)
-	proj.add_child(lifetime_timer)
-	lifetime_timer.timeout.connect(proj.queue_free)  # Bound callable: safe, no lambda/capture
-	lifetime_timer.start(config.projectile_lifetime)
+	var projectile := PROJECTILE_SCENE.instantiate() as Projectile
+	projectile.configure(config, global_position + config.muzzle_offset)
+	# The scene root stays the parent here; the level-owned container is a later sub-task.
+	get_tree().root.add_child(projectile)
