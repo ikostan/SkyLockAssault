@@ -237,9 +237,12 @@ func set_input_device(device: String) -> void:
 	input_device_changed.emit(device)
 
 
-## Returns true if the run-once migration saved under [param key] has run.
+## Determine if the run-once migration has completed.
+##
+## Returns true if the run-once migration saved under the specified key has run.
 ##
 ## [param key]: One of [constant MIGRATION_KEYS].
+## Returns true if the migration under the key has completed, otherwise false.
 func is_migration_done(key: String) -> bool:
 	return _completed_migrations.get(key, false)
 
