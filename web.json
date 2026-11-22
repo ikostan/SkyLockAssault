@@ -1,37 +1,18 @@
 {
   "version": 2,
-  "created": "2026-11-21T19:21:12Z",
-  "commit": "4c21c6d0b64c5a17c3ce66a84453375236acac61",
-  "runner": "GitHub Actions 1000045080",
+  "created": "2026-11-22T14:57:42Z",
+  "commit": "e702742f5fb6baf119ea2be84729b65465b7192c",
+  "runner": "GitHub Actions 1000045203",
   "godot": "4.7.1-stable (official)",
   "runs": 3,
   "baseline": {
     "saves": 0.0,
-    "resources_avg": 209.0,
+    "resources_avg": 213.0,
     "orphans_max": 0.0,
     "reload_orphans_max": 0.0,
     "reload_object_growth": 0.0
   },
   "history": [
-    {
-      "run_id": "44555633959",
-      "commit": "8cd7cce7c04682485bb4e18682e1584a00a445f2",
-      "date": "2026-11-19T15:52:16Z",
-      "metrics": {
-        "saves": 0.0,
-        "objects_avg": 2299.9,
-        "nodes_avg": 506.55,
-        "resources_avg": 208.0,
-        "orphans_max": 0.0,
-        "reload_orphans_max": 0.0,
-        "reload_object_growth": 0.0,
-        "frame_p95_ms": 46.0,
-        "frames_over_33.4ms": 1431.0,
-        "proc_worst_avg_ms": 6.8433,
-        "phys_worst_avg_ms": 1.1317,
-        "mem_static_growth": 650788.0
-      }
-    },
     {
       "run_id": "44692486020",
       "commit": "f7cd427818290badfce5eb637631ac7f789f00dc",
@@ -107,17 +88,36 @@
         "phys_worst_avg_ms": 0.925,
         "mem_static_growth": 651840.0
       }
+    },
+    {
+      "run_id": "45022422204",
+      "commit": "e702742f5fb6baf119ea2be84729b65465b7192c",
+      "date": "2026-11-22T14:57:42Z",
+      "metrics": {
+        "saves": 0.0,
+        "objects_avg": 2209.4,
+        "nodes_avg": 480.0,
+        "resources_avg": 213.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": 0.0,
+        "frame_p95_ms": 32.7,
+        "frames_over_33.4ms": 54.0,
+        "proc_worst_avg_ms": 4.8183,
+        "phys_worst_avg_ms": 0.8483,
+        "mem_static_growth": 674328.0
+      }
     }
   ],
   "accepted": {
-    "id": "44912395192",
-    "run_id": "44912395192",
-    "commit": "c670d785646f4c7fff5acf283297ca85c50e1c28",
-    "date": "2026-11-21T14:54:30Z",
+    "id": "45022422204",
+    "run_id": "45022422204",
+    "commit": "e702742f5fb6baf119ea2be84729b65465b7192c",
+    "date": "2026-11-22T14:57:42Z",
     "raised": {
       "resources_avg": {
-        "from": 206.0,
-        "to": 209.0
+        "from": 209.0,
+        "to": 213.0
       }
     }
   },
@@ -140,7 +140,8 @@
     "44692486020",
     "44889313948",
     "44912395192",
-    "44938433913"
+    "44938433913",
+    "45022422204"
   ],
   "profile": "web"
 }
