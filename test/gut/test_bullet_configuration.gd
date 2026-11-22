@@ -12,15 +12,32 @@ var original_filter: int
 var original_root_children: Array[Node]
 
 
-## Collects every logged line while it is added with OS.add_logger().
+## Collects logs while it is added with OS.add_logger(): printed lines (Globals.log_message)
+## in [member lines], and warnings and errors from Godot's error callback, such as
+## push_warning(), in [member error_events]. GUT doesn't fail a test on push_warning().
 class LogCapture:
 	extends Logger
 	var lines: Array[String] = []
+	var error_events: Array[String] = []
 	var _mutex: Mutex = Mutex.new()
 
 	func _log_message(message: String, _error: bool) -> void:
 		_mutex.lock()
 		lines.append(message)
+		_mutex.unlock()
+
+	func _log_error(
+		function: String,
+		_file: String,
+		_line: int,
+		code: String,
+		rationale: String,
+		_editor_notify: bool,
+		error_type: int,
+		_script_backtraces: Array[ScriptBacktrace]
+	) -> void:
+		_mutex.lock()
+		error_events.append("[type %d] %s: %s %s" % [error_type, function, code, rationale])
 		_mutex.unlock()
 
 
@@ -278,6 +295,11 @@ func test_null_sound_allows_silent_firing() -> void:
 	for line: String in log_capture.lines:
 		assert_false(line.contains("WARNING"), "Silent firing logged a warning: " + line)
 		assert_false(line.contains("ERROR"), "Silent firing logged an error: " + line)
+	assert_eq(
+		log_capture.error_events,
+		[] as Array[String],
+		"Silent firing must not raise a warning or error (push_warning() included)."
+	)
 
 
 ## #1141: the shot sound plays on a pooled, non-positional player on the Weapon bus, adds no
