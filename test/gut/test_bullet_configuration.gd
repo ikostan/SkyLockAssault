@@ -108,6 +108,18 @@ func _root_sound_players() -> Array[Node]:
 	return result
 
 
+## A tiny WAV that loops, so a pooled player stays playing until after_each() stops it.
+## A one-shot 4-sample WAV lasts about 0.09 ms, and the audio thread can finish it between
+## two assertions.
+func _looping_test_sound() -> AudioStreamWAV:
+	var sound := AudioStreamWAV.new()
+	sound.data = PackedByteArray([0, 0, 0, 0])
+	sound.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	sound.loop_begin = 0
+	sound.loop_end = 4
+	return sound
+
+
 ## Pooled SfxManager players that are currently playing [param stream].
 func _pool_players_playing(stream: AudioStream) -> Array[AudioStreamPlayer]:
 	var result: Array[AudioStreamPlayer] = []
@@ -198,8 +210,7 @@ func test_cooldown_rejects_second_shot_until_timeout() -> void:
 ## #1141: a shot rejected by the cooldown plays no sound; the next accepted shot plays through
 ## the SFX pool as usual, and no player is added to the root.
 func test_cooldown_rejection_does_not_play_another_shot_sound() -> void:
-	var sound := AudioStreamWAV.new()
-	sound.data = PackedByteArray([0, 0, 0, 0])
+	var sound := _looping_test_sound()
 	config.shot_sound = sound
 
 	assert_true(firer.fire())
@@ -324,8 +335,7 @@ func test_null_sound_allows_silent_firing() -> void:
 ## #1141: the shot sound plays on a pooled, non-positional player on the Weapon bus, adds no
 ## player to the root, and leaves the player in the pool when it finishes.
 func test_configured_sound_uses_weapon_bus_and_cleans_up_on_finish() -> void:
-	var sound := AudioStreamWAV.new()
-	sound.data = PackedByteArray([0, 0, 0, 0])
+	var sound := _looping_test_sound()
 	config.shot_sound = sound
 	var pool_size: int = SfxManager.get_sfx_pool_players().size()
 	var manager_children: int = SfxManager.get_child_count()
