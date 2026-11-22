@@ -119,6 +119,8 @@ func test_two_targets_in_the_same_tick_only_the_first_takes_damage() -> void:
 	assert_eq(second.hits.size(), 0, "One projectile must never damage two targets.")
 
 
+## The first contact uses up the projectile even when the target can't take damage, so a
+## damageable target touched afterwards takes no damage.
 func test_first_contact_without_damage_handler_blocks_later_damage() -> void:
 	var blocker: StaticBody2D = autofree(StaticBody2D.new())
 	var enemy: AreaTarget = autofree(AreaTarget.new())
@@ -132,6 +134,9 @@ func test_first_contact_without_damage_handler_blocks_later_damage() -> void:
 	assert_eq(enemy.hits.size(), 0, "A non-damageable contact still consumes the shot.")
 
 
+## Real overlap, not an emitted signal: HitArea detects an Area2D hurtbox only on the enemies
+## layer (2). Hurtboxes on the player (1) or player_projectiles (3) layer are ignored and the
+## projectile stays alive.
 func test_physics_detects_only_enemy_hurtboxes(
 	layer: int = use_parameters([LAYER_ENEMIES, LAYER_PLAYER, LAYER_PLAYER_PROJECTILES])
 ) -> void:

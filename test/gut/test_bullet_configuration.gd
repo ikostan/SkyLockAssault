@@ -195,6 +195,8 @@ func test_cooldown_rejects_second_shot_until_timeout() -> void:
 	assert_eq(_projectiles().size(), 2)
 
 
+## #1141: a shot rejected by the cooldown plays no sound; the next accepted shot plays through
+## the SFX pool as usual, and no player is added to the root.
 func test_cooldown_rejection_does_not_play_another_shot_sound() -> void:
 	var sound := AudioStreamWAV.new()
 	sound.data = PackedByteArray([0, 0, 0, 0])
