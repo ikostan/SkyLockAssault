@@ -280,3 +280,80 @@ func test_check_sound_replays_from_cache_on_menu_bus() -> void:
 		assert_eq(SfxManager.get_active_sfx_bus_name(), AudioConstants.BUS_SFX_MENU)
 		assert_true(SfxManager.is_sfx_cached(AudioConstants.SFX_CHECK))
 		SfxManager.stop_all_sfx()
+
+
+## Verification 10 | #1141
+## play_stream() plays a loaded stream on the requested bus through the pool, and leaves the
+## name cache alone.
+## :rtype: void
+func test_play_stream_plays_on_requested_bus_through_the_pool() -> void:
+	var stream: AudioStream = load(AudioConstants.SFX_DIR_PATH + "slider.wav")
+	var initial_children: int = SfxManager.get_child_count()
+
+	SfxManager.play_stream(stream, AudioConstants.BUS_SFX_WEAPON)
+
+	assert_eq(SfxManager.get_active_sfx_playback_count(), 1)
+	assert_eq(SfxManager.get_active_sfx_stream_path(), stream.resource_path)
+	assert_eq(SfxManager.get_active_sfx_bus_name(), AudioConstants.BUS_SFX_WEAPON)
+	assert_eq(SfxManager.get_child_count(), initial_children, "play_stream() must not add nodes.")
+	assert_eq(SfxManager.get_cached_sfx_count(), 0, "play_stream() must not use the name cache.")
+
+
+## Verification 11 | #1141
+## play_stream() reuses the pooled players: repeated shots never add players, and an idle
+## player is picked again after a stop.
+## :rtype: void
+func test_play_stream_reuses_pool_players() -> void:
+	var stream: AudioStream = load(AudioConstants.SFX_DIR_PATH + "slider.wav")
+	var pool: Array[AudioStreamPlayer] = SfxManager.get_sfx_pool_players()
+
+	SfxManager.play_stream(stream, AudioConstants.BUS_SFX_WEAPON)
+	SfxManager.play_stream(stream, AudioConstants.BUS_SFX_WEAPON)
+	assert_eq(SfxManager.get_active_sfx_playback_count(), 2, "Overlapping shots use two players.")
+
+	SfxManager.stop_all_sfx()
+	for i: int in range(SfxManager.SFX_POOL_SIZE + 2):
+		SfxManager.play_stream(stream, AudioConstants.BUS_SFX_WEAPON)
+
+	assert_eq(SfxManager.get_active_sfx_playback_count(), SfxManager.SFX_POOL_SIZE)
+	assert_eq(
+		SfxManager.get_sfx_pool_players(), pool, "The same pooled players must be reused."
+	)
+
+
+## Verification 12 | #1141
+## An unknown bus falls back to SFX_Menu with a warning, as play_sfx() does.
+## :rtype: void
+func test_play_stream_invalid_bus_falls_back_to_menu_bus() -> void:
+	var stream: AudioStream = load(AudioConstants.SFX_DIR_PATH + "slider.wav")
+	var original_settings: GameSettingsResource = Globals.settings
+	Globals.settings = GameSettingsResource.new()
+	var log_capture: LogCapture = LogCapture.new()
+	OS.add_logger(log_capture)
+	SfxManager.play_stream(stream, "NoSuchBus_1141")
+	OS.remove_logger(log_capture)
+	Globals.settings = original_settings
+
+	assert_eq(SfxManager.get_active_sfx_bus_name(), AudioConstants.BUS_SFX_MENU)
+	assert_true(
+		log_capture.has_text("Invalid bus 'NoSuchBus_1141'"), "The fallback must be logged."
+	)
+
+
+## Verification 13 | #1141
+## A null stream fails cleanly: nothing plays, nothing is cached, and a warning is logged.
+## :rtype: void
+func test_play_stream_null_stream_fails_cleanly() -> void:
+	SfxManager.play_sfx("slider")
+	var original_settings: GameSettingsResource = Globals.settings
+	Globals.settings = GameSettingsResource.new()
+	var log_capture: LogCapture = LogCapture.new()
+	OS.add_logger(log_capture)
+	SfxManager.play_stream(null, AudioConstants.BUS_SFX_WEAPON)
+	OS.remove_logger(log_capture)
+	Globals.settings = original_settings
+
+	assert_eq(SfxManager.get_active_sfx_playback_count(), 1, "A null stream must not take a player.")
+	assert_string_contains(SfxManager.get_active_sfx_stream_path(), "slider.wav")
+	assert_eq(SfxManager.get_cached_sfx_count(), 1, "A null stream must not touch the cache.")
+	assert_true(log_capture.has_text("null stream"), "A null stream must be reported.")

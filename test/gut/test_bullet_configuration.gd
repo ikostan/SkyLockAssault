@@ -12,6 +12,35 @@ var original_filter: int
 var original_root_children: Array[Node]
 
 
+## Collects logs while it is added with OS.add_logger(): printed lines (Globals.log_message)
+## in [member lines], and warnings and errors from Godot's error callback, such as
+## push_warning(), in [member error_events]. GUT doesn't fail a test on push_warning().
+class LogCapture:
+	extends Logger
+	var lines: Array[String] = []
+	var error_events: Array[String] = []
+	var _mutex: Mutex = Mutex.new()
+
+	func _log_message(message: String, _error: bool) -> void:
+		_mutex.lock()
+		lines.append(message)
+		_mutex.unlock()
+
+	func _log_error(
+		function: String,
+		_file: String,
+		_line: int,
+		code: String,
+		rationale: String,
+		_editor_notify: bool,
+		error_type: int,
+		_script_backtraces: Array[ScriptBacktrace]
+	) -> void:
+		_mutex.lock()
+		error_events.append("[type %d] %s: %s %s" % [error_type, function, code, rationale])
+		_mutex.unlock()
+
+
 class DamageTarget extends Area2D:
 	var hits: Array[int] = []
 
@@ -34,17 +63,20 @@ func before_each() -> void:
 	config.collision_radius = 6.5
 	config.projectile_texture = GradientTexture2D.new()
 	config.shot_sound = null
+	SfxManager.stop_all_sfx()
 	firer = autofree(BULLET_SCENE.instantiate())
 	firer.config = config
 	add_child(firer)
 
 
 func after_each() -> void:
-	# Projectiles and sound players are parented to root, outside GUT's fixture.
+	# Projectiles are parented to root, outside GUT's fixture. Sound players are freed too,
+	# in case a regression brings back a per-shot player.
 	for node in get_tree().root.get_children():
 		if node not in original_root_children:
-			if node is RigidBody2D or node is AudioStreamPlayer2D:
+			if node is RigidBody2D or node is AudioStreamPlayer2D or node is AudioStreamPlayer:
 				node.free()
+	SfxManager.stop_all_sfx()
 	Globals.settings = original_settings
 	get_viewport().canvas_item_default_texture_filter = original_filter
 
@@ -64,11 +96,36 @@ func _spawn_projectile() -> RigidBody2D:
 	return projectiles[0] as RigidBody2D if projectiles.size() == 1 else null
 
 
-func _sound_players() -> Array[AudioStreamPlayer2D]:
-	var result: Array[AudioStreamPlayer2D] = []
+## Audio players added to the scene root since before_each(). Shot sounds use the SfxManager
+## pool (#1141), so firing must never add one.
+func _root_sound_players() -> Array[Node]:
+	var result: Array[Node] = []
 	for node in get_tree().root.get_children():
-		if node is AudioStreamPlayer2D and node not in original_root_children:
+		if node in original_root_children:
+			continue
+		if node is AudioStreamPlayer2D or node is AudioStreamPlayer:
 			result.append(node)
+	return result
+
+
+## A tiny WAV that loops, so a pooled player stays playing until after_each() stops it.
+## A one-shot 4-sample WAV lasts about 0.09 ms, and the audio thread can finish it between
+## two assertions.
+func _looping_test_sound() -> AudioStreamWAV:
+	var sound := AudioStreamWAV.new()
+	sound.data = PackedByteArray([0, 0, 0, 0])
+	sound.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	sound.loop_begin = 0
+	sound.loop_end = 4
+	return sound
+
+
+## Pooled SfxManager players that are currently playing [param stream].
+func _pool_players_playing(stream: AudioStream) -> Array[AudioStreamPlayer]:
+	var result: Array[AudioStreamPlayer] = []
+	for player: AudioStreamPlayer in SfxManager.get_sfx_pool_players():
+		if is_instance_valid(player) and player.playing and player.stream == stream:
+			result.append(player)
 	return result
 
 
@@ -113,10 +170,11 @@ func test_default_config_firer_uses_assets_from_default_bullet_tres() -> void:
 		if sprite:
 			assert_eq(sprite.texture, default_config.projectile_texture)
 
-	var players := _sound_players()
-	assert_eq(players.size(), 1, "fire() must play the shot sound.")
+	var players := _pool_players_playing(default_config.shot_sound)
+	assert_eq(players.size(), 1, "fire() must play the shot sound through the SFX pool.")
 	if players.size() == 1:
-		assert_eq(players[0].stream, default_config.shot_sound)
+		assert_eq(players[0].bus, AudioConstants.BUS_SFX_WEAPON)
+	assert_eq(_root_sound_players().size(), 0, "fire() must not add a sound player to the root.")
 
 
 func test_ready_preserves_injected_resource() -> void:
@@ -149,6 +207,24 @@ func test_cooldown_rejects_second_shot_until_timeout() -> void:
 	assert_eq(_projectiles().size(), 2)
 
 
+## #1141: a shot rejected by the cooldown plays no sound; the next accepted shot plays through
+## the SFX pool as usual, and no player is added to the root.
+func test_cooldown_rejection_does_not_play_another_shot_sound() -> void:
+	var sound := _looping_test_sound()
+	config.shot_sound = sound
+
+	assert_true(firer.fire())
+	assert_eq(_pool_players_playing(sound).size(), 1)
+	assert_false(firer.fire())
+	assert_eq(_pool_players_playing(sound).size(), 1, "A rejected shot must not play audio.")
+	assert_eq(_root_sound_players().size(), 0)
+
+	firer.timer.stop()
+	firer.timer.timeout.emit()
+	assert_true(firer.fire())
+	assert_eq(_pool_players_playing(sound).size(), 2, "The next accepted shot plays normally.")
+
+
 func test_projectile_uses_configured_motion_and_global_muzzle_offset() -> void:
 	var mount: Node2D = add_child_autofree(Node2D.new())
 	firer.reparent(mount)
@@ -162,6 +238,8 @@ func test_projectile_uses_configured_motion_and_global_muzzle_offset() -> void:
 	assert_eq(projectile.linear_velocity, Vector2(0, -720))
 	assert_eq(projectile.gravity_scale, 0.0)
 	assert_eq(projectile.get_parent(), get_tree().root)
+	assert_true(projectile is Projectile, "Projectiles come from projectile.tscn (#1139).")
+	assert_eq(projectile.scene_file_path, "res://scenes/projectile.tscn")
 
 
 func test_projectile_uses_configured_texture_scale_and_hitbox() -> void:
@@ -232,28 +310,72 @@ func test_missing_texture_and_zero_speed_still_create_collision_projectile() -> 
 	assert_not_null(collision.shape)
 
 
+## A null shot sound fires silently: nothing plays, no player is added, and nothing is
+## logged as a warning or error (#1141).
 func test_null_sound_allows_silent_firing() -> void:
-	assert_true(firer.fire())
+	var log_capture := LogCapture.new()
+	OS.add_logger(log_capture)
+	var fired: bool = firer.fire()
+	OS.remove_logger(log_capture)
+
+	assert_true(fired)
 	assert_eq(_projectiles().size(), 1)
-	assert_eq(_sound_players().size(), 0)
+	assert_eq(_root_sound_players().size(), 0)
+	assert_false(SfxManager.is_any_sfx_playing(), "A null shot sound must not use the pool.")
+	for line: String in log_capture.lines:
+		assert_false(line.contains("WARNING"), "Silent firing logged a warning: " + line)
+		assert_false(line.contains("ERROR"), "Silent firing logged an error: " + line)
+	assert_eq(
+		log_capture.error_events,
+		[] as Array[String],
+		"Silent firing must not raise a warning or error (push_warning() included)."
+	)
 
 
+## #1141: the shot sound plays on a pooled, non-positional player on the Weapon bus, adds no
+## player to the root, and leaves the player in the pool when it finishes.
 func test_configured_sound_uses_weapon_bus_and_cleans_up_on_finish() -> void:
-	var sound := AudioStreamWAV.new()
-	sound.data = PackedByteArray([0, 0, 0, 0])
+	var sound := _looping_test_sound()
 	config.shot_sound = sound
-	firer.play_sfx_with_volume()
-	var players := _sound_players()
-	assert_eq(players.size(), 1)
+	var pool_size: int = SfxManager.get_sfx_pool_players().size()
+	var manager_children: int = SfxManager.get_child_count()
+
+	firer.play_shot_sound()
+
+	var players := _pool_players_playing(sound)
+	assert_eq(players.size(), 1, "The shot sound must play on one pooled player.")
+	assert_eq(_root_sound_players().size(), 0, "No sound player may be added to the root.")
+	assert_eq(SfxManager.get_child_count(), manager_children, "The pool must not grow.")
 	if players.size() != 1:
 		return
 	var player := players[0]
-	assert_eq(player.stream, sound)
+	assert_true(player is AudioStreamPlayer, "Pooled players are non-positional.")
 	assert_eq(player.bus, AudioConstants.BUS_SFX_WEAPON)
 	assert_eq(player.volume_db, 0.0)
-	assert_true(player.playing)
+	assert_eq(player.pitch_scale, 1.0)
+	player.stop()
 	player.finished.emit()
-	assert_true(player.is_queued_for_deletion())
+	assert_false(player.is_queued_for_deletion(), "Pooled players are reused, not freed.")
+	assert_eq(SfxManager.get_sfx_pool_players().size(), pool_size)
+
+
+## #1139: the firer no longer sets the viewport-wide default texture filter; the project
+## setting (nearest) decides it.
+func test_firer_does_not_change_viewport_texture_filter() -> void:
+	var viewport := get_viewport()
+	viewport.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_LINEAR
+	var another: Node2D = add_child_autofree(BULLET_SCENE.instantiate())
+	assert_true(another.fire())
+	assert_eq(
+		viewport.canvas_item_default_texture_filter,
+		Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_LINEAR,
+		"A firer must not write the viewport's default texture filter."
+	)
+	assert_eq(
+		ProjectSettings.get_setting("rendering/textures/canvas_textures/default_texture_filter"),
+		0,
+		"Projectiles rely on the project-wide nearest filter."
+	)
 
 
 ## A fresh resource has no assets (#1150): firing with it spawns an untextured projectile
@@ -271,7 +393,8 @@ func test_fresh_resource_fires_without_inheriting_default_assets() -> void:
 		assert_not_null(sprite)
 		if sprite:
 			assert_null(sprite.texture)
-	assert_eq(_sound_players().size(), 0, "A fresh resource explicitly means silent firing.")
+	assert_eq(_root_sound_players().size(), 0, "A fresh resource explicitly means silent firing.")
+	assert_false(SfxManager.is_any_sfx_playing(), "A fresh resource must not use the SFX pool.")
 	var defaults: BulletResource = load("res://config_resources/default_bullet.tres")
 	assert_not_null(defaults.projectile_texture, "Silent firing must not modify shared defaults.")
 	assert_not_null(defaults.shot_sound)

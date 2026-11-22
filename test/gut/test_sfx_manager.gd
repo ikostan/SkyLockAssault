@@ -254,3 +254,56 @@ func test_playback_initializes_an_empty_pool() -> void:
 	assert_true(SfxManager.is_any_sfx_playing())
 	assert_eq(SfxManager.get_active_sfx_playback_count(), 1)
 	assert_eq(SfxManager.get_active_sfx_stream_path(), AudioConstants.SFX_DIR_PATH + "slider.wav")
+
+
+## play_stream() shares the lazy pool rebuild with play_sfx() (#1141).
+## :rtype: void
+func test_play_stream_initializes_an_empty_pool() -> void:
+	SfxManager.clear_sfx_pool_for_test()
+	assert_true(SfxManager.get_sfx_pool_players().is_empty(), "Precondition: pool is empty")
+	var stream: AudioStream = load(AudioConstants.SFX_DIR_PATH + "slider.wav")
+
+	SfxManager.play_stream(stream, AudioConstants.BUS_SFX_WEAPON)
+
+	assert_eq(SfxManager.get_sfx_pool_players().size(), SfxManager.SFX_POOL_SIZE)
+	assert_eq(SfxManager.get_child_count(), SfxManager.SFX_POOL_SIZE)
+	assert_eq(SfxManager.get_active_sfx_playback_count(), 1)
+	assert_eq(SfxManager.get_active_sfx_bus_name(), AudioConstants.BUS_SFX_WEAPON)
+
+
+## A saturated pool replaces the first player for play_stream() too, without allocating.
+## :rtype: void
+func test_play_stream_on_saturated_pool_replaces_first_player_without_allocating() -> void:
+	for i: int in range(SfxManager.SFX_POOL_SIZE):
+		SfxManager.play_sfx("slider")
+	var first: AudioStreamPlayer = _pool_player(0)
+	var shot := AudioStreamWAV.new()
+	shot.data = PackedByteArray([0, 0, 0, 0])
+
+	SfxManager.play_stream(shot, AudioConstants.BUS_SFX_WEAPON)
+
+	assert_eq(SfxManager.get_child_count(), SfxManager.SFX_POOL_SIZE, "No player may be added.")
+	assert_eq(first.stream, shot, "The first player is taken over, as in play_sfx().")
+	assert_eq(first.bus, AudioConstants.BUS_SFX_WEAPON)
+	assert_eq(SfxManager.get_active_sfx_playback_count(), SfxManager.SFX_POOL_SIZE)
+
+
+## A weapon sound reuses an idle UI player without changing the cache's eviction order.
+## :rtype: void
+func test_play_stream_reuses_named_player_without_touching_full_cache() -> void:
+	SfxManager.play_sfx("slider", AudioConstants.BUS_SFX_MENU, 1.5, -9.0)
+	_seed_cache(SfxManager.MAX_SFX_CACHE_SIZE - 1)
+	var cached_names: Array[String] = SfxManager.get_cached_sfx_names()
+	var player := _pool_player(0)
+	var shot := AudioStreamWAV.new()
+	shot.data = PackedByteArray([0, 0, 0, 0])
+	player.stop()
+
+	SfxManager.play_stream(shot, AudioConstants.BUS_SFX_WEAPON)
+
+	assert_true(player.playing, "Both playback paths use the same player pool.")
+	assert_eq(player.stream, shot)
+	assert_eq(player.bus, AudioConstants.BUS_SFX_WEAPON)
+	assert_eq(player.pitch_scale, 1.0)
+	assert_eq(player.volume_db, 0.0)
+	assert_eq(SfxManager.get_cached_sfx_names(), cached_names)
