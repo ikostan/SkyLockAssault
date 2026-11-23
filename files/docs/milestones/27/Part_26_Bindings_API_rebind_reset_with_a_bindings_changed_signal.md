@@ -152,7 +152,7 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 6.2.0, set up as `gut
 
 The gdUnit4 count on `main` is from Part 25. On this branch it was run at `d4779e7`; later commits change only GUT tests and docs.
 
-- **PR CI at `585026e`:** GUT, gdUnit4, GDScript lint and format, Markdown lint, CI infrastructure tests, the web build and both browser shards ("Core Web Flows", "CI & Security") pass; YAML lint skipped (no workflow changes). At `c898abb` the desktop and web benchmarks also passed (report only). The pipeline at `59e24d4` and the PR benchmark table: _fill in after CI._
+- **PR CI at `59e24d4` (last code change):** all jobs pass: GUT, gdUnit4, GDScript lint and format, Markdown lint, CI infrastructure tests, the web build, both browser shards ("Core Web Flows", "CI & Security") and the desktop and web benchmarks (report only). YAML lint skipped (no workflow changes). `ec6b0d3` adds only this note.
 - **Full GUT suite locally at `59e24d4`:** 1,224/1,224.
 - **Restoring the old behavior:** each change below was made on its own; these tests fail:
 
@@ -177,7 +177,6 @@ CodeRabbit's MS-10, BIND-08 and RESET-03 are the only tests that catch three of 
 
 ## Known Limitations / Follow-ups
 
-- **`Settings.reset(device)` vs `reset_to_defaults(device)`:** the rename the issue names isn't done (Design Decisions).
 - **`load_input_mappings()` doesn't emit `bindings_changed`.** It only runs at startup, before any observer exists.
 - **Local CI scripts and image, found while updating the guide (not changed):**
   - Mounting the clone on `/project` hides the gdUnit4 and GUT copies baked into the image; `run_gdunit4_unit_tests.sh` copies `addons/gdUnit4` onto itself, and `run_pipeline.sh` looks for `/opt/addons`, which the `Dockerfile` never creates.
@@ -195,24 +194,24 @@ CodeRabbit's MS-10, BIND-08 and RESET-03 are the only tests that catch three of 
 
 ### File-Level Changes
 
-| Change             | Details                                                                                                                                                                             | Files                                                                                                                                  |
-|--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
-| Bindings API.      | <ul><li>`bindings_changed`, `rebind()`; `reset_to_defaults()` emits after saving.</li><li>Four device checks use `InputEventCodec.get_event_device_type()`.</li></ul>              | `scripts/core/settings.gd`                                                                                                             |
-| UI routing.        | <ul><li>Remap and conflict confirm call `Settings.rebind()`; `erase_old_event()` removed.</li><li>No calls into `MainScene`.</li></ul>                                             | `scripts/ui/components/input_remap_button.gd`<br/>`scripts/ui/menus/key_mapping.gd`                                                     |
-| Warning.           | <ul><li>No `_process()`; checks at level start and on the Settings signals, deferred while paused.</li></ul>                                                                       | `scripts/core/main_scene.gd`                                                                                                           |
-| Tests.             | <ul><li>New bindings suite; performance test rewritten.</li><li>CodeRabbit: BIND-07, BIND-08, RESET-03, UI-05, MS-10.</li></ul>                                                    | `test/gut/test_bindings_api.gd`<br/>`test/gut/test_main_scene_parallax_and_performance.gd`                                             |
-| Templates.         | <ul><li>Project-specific fields, testing and acceptance sections; PR template follows the milestone note.</li></ul>                                                               | `.github/ISSUE_TEMPLATE/bug_report.md`<br/>`.github/ISSUE_TEMPLATE/feature_request.md`<br/>`.github/pull_request_template.md`          |
-| Local CI guide.    | <ul><li>Current image, `workspace/` scripts, outputs and troubleshooting.</li></ul>                                                                                                | `files/docs/Local_CI_Pipeline_for_Godot_Project_using_Docker.md`                                                                       |
-| Milestone note.    | <ul><li>This note.</li></ul>                                                                                                                                                        | `files/docs/milestones/27/Part_26_Bindings_API_rebind_reset_with_a_bindings_changed_signal.md`                                         |
+| Change          | Details                                                                                                                                                               | Files                                                                                                                         |
+|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| Bindings API.   | <ul><li>`bindings_changed`, `rebind()`; `reset_to_defaults()` emits after saving.</li><li>Four device checks use `InputEventCodec.get_event_device_type()`.</li></ul> | `scripts/core/settings.gd`                                                                                                    |
+| UI routing.     | <ul><li>Remap and conflict confirm call `Settings.rebind()`; `erase_old_event()` removed.</li><li>No calls into `MainScene`.</li></ul>                                | `scripts/ui/components/input_remap_button.gd`<br/>`scripts/ui/menus/key_mapping.gd`                                           |
+| Warning.        | <ul><li>No `_process()`; checks at level start and on the Settings signals, deferred while paused.</li></ul>                                                          | `scripts/core/main_scene.gd`                                                                                                  |
+| Tests.          | <ul><li>New bindings suite; performance test rewritten.</li><li>CodeRabbit: BIND-07, BIND-08, RESET-03, UI-05, MS-10.</li></ul>                                       | `test/gut/test_bindings_api.gd`<br/>`test/gut/test_main_scene_parallax_and_performance.gd`                                    |
+| Templates.      | <ul><li>Project-specific fields, testing and acceptance sections; PR template follows the milestone note.</li></ul>                                                   | `.github/ISSUE_TEMPLATE/bug_report.md`<br/>`.github/ISSUE_TEMPLATE/feature_request.md`<br/>`.github/pull_request_template.md` |
+| Local CI guide. | <ul><li>Current image, `workspace/` scripts, outputs and troubleshooting.</li></ul>                                                                                   | `files/docs/Local_CI_Pipeline_for_Godot_Project_using_Docker.md`                                                              |
+| Milestone note. | <ul><li>This note.</li></ul>                                                                                                                                          | `files/docs/milestones/27/Part_26_Bindings_API_rebind_reset_with_a_bindings_changed_signal.md`                                |
 
 ### Assessment against linked issues
 
-| Issue                                                   | Objective                                                                          | Addressed | Explanation                                                                                                |
-|---------------------------------------------------------|------------------------------------------------------------------------------------|-----------|------------------------------------------------------------------------------------------------------------|
-| <https://github.com/ikostan/SkyLockAssault/issues/1102> | No direct `InputMap.action_add_event` / `action_erase_event` calls in UI scripts   | ✅         | UI-01 scans every script under `scripts/ui/`.                                                              |
-| <https://github.com/ikostan/SkyLockAssault/issues/1102> | `main_scene._process` no longer checks bindings; the warning still appears         | ✅         | `_process()` removed; MS-02, MS-04, MS-06, MS-07, MS-10.                                                   |
-| <https://github.com/ikostan/SkyLockAssault/issues/1102> | `key_mapping.gd` no longer calls into `main_scene`; fixing bindings clears warning | ✅         | UI-02; MS-03 and MS-08.                                                                                    |
-| <https://github.com/ikostan/SkyLockAssault/issues/1102> | Key-mapping GUT/gdUnit4 and Playwright suites pass; no test cases removed         | ✅ / ⏳     | GUT, gdUnit4 and both browser shards pass in CI at `585026e`, no cases removed; CI at `59e24d4` pending.   |
+| Issue                                                   | Objective                                                                          | Addressed | Explanation                                                                     |
+|---------------------------------------------------------|------------------------------------------------------------------------------------|-----------|---------------------------------------------------------------------------------|
+| <https://github.com/ikostan/SkyLockAssault/issues/1102> | No direct `InputMap.action_add_event` / `action_erase_event` calls in UI scripts   | ✅         | UI-01 scans every script under `scripts/ui/`.                                   |
+| <https://github.com/ikostan/SkyLockAssault/issues/1102> | `main_scene._process` no longer checks bindings; the warning still appears         | ✅         | `_process()` removed; MS-02, MS-04, MS-06, MS-07, MS-10.                        |
+| <https://github.com/ikostan/SkyLockAssault/issues/1102> | `key_mapping.gd` no longer calls into `main_scene`; fixing bindings clears warning | ✅         | UI-02; MS-03 and MS-08.                                                         |
+| <https://github.com/ikostan/SkyLockAssault/issues/1102> | Key-mapping GUT/gdUnit4 and Playwright suites pass; no test cases removed          | ✅         | GUT, gdUnit4 and both browser shards pass in CI at `59e24d4`; no cases removed. |
 
 ---
 
