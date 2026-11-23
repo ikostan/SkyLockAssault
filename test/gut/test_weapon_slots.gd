@@ -306,6 +306,8 @@ func test_projectile_parent_injected_before_ready_reaches_first_slot() -> void:
 	assert_same(weapon.current_weapon.projectile_parent, container)
 
 
+## #1140: a slot created after the parent was replaced or cleared gets the current value,
+## not the first one injected.
 func test_lazily_created_slots_use_the_latest_projectile_parent() -> void:
 	_arm(3)
 	var original: Node2D = add_child_autofree(Node2D.new())
@@ -318,4 +320,6 @@ func test_lazily_created_slots_use_the_latest_projectile_parent() -> void:
 
 	weapon.set_projectile_parent(null)
 	weapon.switch_to(2)
-	assert_null(weapon.current_weapon.projectile_parent, "A new slot must not inherit a stale parent.")
+	assert_null(
+		weapon.current_weapon.projectile_parent, "A new slot must not inherit a stale parent."
+	)

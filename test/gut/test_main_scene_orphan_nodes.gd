@@ -155,6 +155,8 @@ func test_projectiles_spawn_under_the_level_container() -> void:
 	assert_same(main_scene.player.weapon.current_weapon.projectile_parent, main_scene.projectiles)
 
 
+## #1140: the Projectiles container keeps the default process mode, so a shot in a paused
+## level stops processing, its lifetime timer included, and starts again on resume.
 func test_level_projectile_stops_processing_while_tree_is_paused() -> void:
 	_fire_player_weapon(main_scene)
 	var fired := _level_projectiles(main_scene)
@@ -171,7 +173,7 @@ func test_level_projectile_stops_processing_while_tree_is_paused() -> void:
 	var processes_when_resumed := projectile.can_process()
 	tree.paused = was_paused
 
-	assert_false(processes_while_paused, "The level's projectile should freeze on pause.")
+	assert_false(processes_while_paused, "The level's projectile should stop processing on pause.")
 	assert_true(processes_when_resumed, "The projectile should process again on resume.")
 
 
