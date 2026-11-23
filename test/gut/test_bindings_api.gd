@@ -315,12 +315,12 @@ func test_reset_03_gamepad_reset_persists_before_notification() -> void:
 	Settings.rebind("fire", custom_button)
 	InputMap.action_add_event("fire", custom_axis)
 	Settings.save_input_mappings()
-	var saved_on_signal := ConfigFile.new()
+	var saved_on_signal: Array[ConfigFile] = []
 	var observe := func() -> void:
-		var err := saved_on_signal.load_encrypted_pass(
-			Settings.CONFIG_PATH, Globals.save_encryption_pass
-		)
-		assert_eq(err, OK, "an observer can read the saved settings")
+		# Read the file the way Settings does: encrypted, or plaintext when there is no key.
+		var load_data: Dictionary = Globals.safe_load_config(Settings.CONFIG_PATH)
+		assert_eq(load_data["err"], OK, "an observer can read the saved settings")
+		saved_on_signal.append(load_data["config"])
 	Settings.bindings_changed.connect(observe)
 	watch_signals(Settings)
 
@@ -331,7 +331,8 @@ func test_reset_03_gamepad_reset_persists_before_notification() -> void:
 	assert_eq(_events_for("fire", "gamepad").size(), 1, "all custom gamepad inputs are removed")
 	assert_true(_has_event("fire", default_pad), "the gamepad default is restored")
 	assert_true(_has_event("fire", custom_key), "the custom keyboard binding survives")
-	var saved_events: Array = saved_on_signal.get_value("input", "fire", [])
+	assert_eq(saved_on_signal.size(), 1, "the observer read the file once")
+	var saved_events: Array = saved_on_signal[0].get_value("input", "fire", [])
 	assert_eq(saved_events.size(), 2, "only the custom key and default gamepad input are saved")
 	assert_has(saved_events, InputEventCodec.serialize_event(custom_key))
 	assert_has(saved_events, InputEventCodec.serialize_event(default_pad))
