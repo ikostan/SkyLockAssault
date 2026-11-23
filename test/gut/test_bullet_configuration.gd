@@ -312,6 +312,34 @@ func test_freeing_injected_parent_frees_its_projectiles() -> void:
 	assert_eq(_projectiles().size(), 0)
 
 
+func test_changing_projectile_parent_only_redirects_new_shots() -> void:
+	var original: Node2D = add_child_autofree(Node2D.new())
+	var replacement: Node2D = add_child_autofree(Node2D.new())
+	var root := get_tree().root
+	firer.set_projectile_parent(original)
+	var first_shot := _spawn_projectile()
+	if first_shot == null:
+		return
+
+	firer.set_projectile_parent(replacement)
+	firer.spawn_projectile()
+	var replacement_shots := replacement.get_children()
+	assert_eq(replacement_shots.size(), 1, "The next shot should use the replacement container.")
+
+	firer.set_projectile_parent(null)
+	firer.spawn_projectile()
+
+	var shots := _projectiles()
+	assert_eq(shots.size(), 3, "Each spawn should create one projectile.")
+	assert_same(first_shot.get_parent(), original, "Changing the parent keeps shots in flight.")
+	assert_eq(replacement.get_children(), replacement_shots, "Clearing keeps earlier shots in flight.")
+	assert_eq(
+		shots.filter(func(shot: Node) -> bool: return shot.get_parent() == root).size(),
+		1,
+		"Clearing the parent should restore root fallback for subsequent shots."
+	)
+
+
 func test_projectile_uses_configured_texture_scale_and_hitbox() -> void:
 	var projectile := _spawn_projectile()
 	if projectile == null:

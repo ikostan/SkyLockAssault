@@ -304,3 +304,18 @@ func test_projectile_parent_injected_before_ready_reaches_first_slot() -> void:
 	weapon.set_projectile_parent(container)
 	_arm(1)
 	assert_same(weapon.current_weapon.projectile_parent, container)
+
+
+func test_lazily_created_slots_use_the_latest_projectile_parent() -> void:
+	_arm(3)
+	var original: Node2D = add_child_autofree(Node2D.new())
+	var replacement: Node2D = add_child_autofree(Node2D.new())
+
+	weapon.set_projectile_parent(original)
+	weapon.set_projectile_parent(replacement)
+	weapon.switch_to(1)
+	assert_same(weapon.current_weapon.projectile_parent, replacement)
+
+	weapon.set_projectile_parent(null)
+	weapon.switch_to(2)
+	assert_null(weapon.current_weapon.projectile_parent, "A new slot must not inherit a stale parent.")

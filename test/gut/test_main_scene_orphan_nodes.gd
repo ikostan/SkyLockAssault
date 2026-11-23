@@ -155,6 +155,26 @@ func test_projectiles_spawn_under_the_level_container() -> void:
 	assert_same(main_scene.player.weapon.current_weapon.projectile_parent, main_scene.projectiles)
 
 
+func test_level_projectile_stops_processing_while_tree_is_paused() -> void:
+	_fire_player_weapon(main_scene)
+	var fired := _level_projectiles(main_scene)
+	assert_eq(fired.size(), 1, "One shot should be in flight.")
+	if fired.size() != 1:
+		return
+
+	var projectile: Node = fired[0]
+	var tree := get_tree()
+	var was_paused := tree.paused
+	tree.paused = true
+	var processes_while_paused := projectile.can_process()
+	tree.paused = false
+	var processes_when_resumed := projectile.can_process()
+	tree.paused = was_paused
+
+	assert_false(processes_while_paused, "The level's projectile should freeze on pause.")
+	assert_true(processes_when_resumed, "The projectile should process again on resume.")
+
+
 ## #1140: projectiles still in flight are freed with the level, and the orphan count returns
 ## to its baseline.
 func test_freeing_level_with_in_flight_projectiles_leaves_no_orphans() -> void:
