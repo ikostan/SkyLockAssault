@@ -109,28 +109,34 @@ func test_parallax_sprite_density_is_optimized() -> void:
 
 
 ## test_process_script_execution_time |
-## A proxy performance test to ensure the _process block runs in under 1 millisecond.
+## MainScene does no per-frame script work, and its event-driven unbound-controls check stays
+## lightweight. The check used to run in _process every frame; it now runs on
+## Settings.bindings_changed and Settings.input_device_changed (#1102).
 ## :rtype: void
 func test_process_script_execution_time() -> void:
-	gut.p("Testing: MainScene._process execution must remain lightweight (under 1ms).")
+	gut.p("Testing: MainScene has no _process, and its unbound-controls check runs under 2 ms.")
+
+	assert_false(
+		main_scene.has_method("_process"),
+		"MainScene must not poll per frame; react to Settings signals instead."
+	)
+	assert_false(main_scene.is_processing(), "MainScene must not be processing every frame.")
 
 	# Pre-warm: absorb any one-shot work (e.g. show_message on first call).
-	main_scene._process(0.016)
+	main_scene._on_bindings_changed()
 
 	var iterations: int = 60
 	var start_time: int = Time.get_ticks_usec()
 	for i in range(iterations):
-		main_scene._process(0.016)
+		main_scene._on_bindings_changed()
 	var total_time_usec: int = Time.get_ticks_usec() - start_time
-	var average_time_per_frame_usec: float = float(total_time_usec) / iterations
+	var average_time_per_call_usec: float = float(total_time_usec) / iterations
 
-	# 2000 µs = 2 ms — loose bound to avoid CI flakiness while still catching
-	# regressions (the profiler screenshot shows ~9 ms total SceneTree process,
-	# so the script-only portion is well under 1 ms on a local machine).
+	# 2000 µs = 2 ms, the same loose bound the old per-frame check had, to avoid CI flakiness.
 	assert_lt(
-		average_time_per_frame_usec,
+		average_time_per_call_usec,
 		2000.0,
-		"MainScene._process is taking too long. Look for expensive operations in _process."
+		"MainScene's unbound-controls check is taking too long."
 	)
 
 ## test_bushes_layer_chunk_size_and_density |
@@ -225,3 +231,4 @@ func test_legacy_signals_are_disconnected() -> void:
 		var fuel_connections: Array = player.get_signal_connection_list("fuel_depleted")
 		for conn in fuel_connections:
 			assert_ne(conn.callable.get_object(), background, "Legacy 'fuel_depleted' signal must not be connected to ParallaxManager.")
+		

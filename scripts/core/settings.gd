@@ -10,6 +10,9 @@ extends Node
 ## Emitted when the current input device changes, see [method set_input_device].
 ## [param device]: The new device, [code]keyboard[/code] or [code]gamepad[/code].
 signal input_device_changed(device: String)
+## Emitted after [method rebind] or [method reset_to_defaults] changed the bindings in InputMap.
+## Observers re-read what they need, for example the unbound-controls check in MainScene.
+signal bindings_changed
 
 # Change to v3 if you add another migration etc...
 const LEGACY_MIGRATION_KEY: String = "settings_migrated_v2"
@@ -117,9 +120,10 @@ func _add_missing_defaults(config: ConfigFile) -> bool:
 		var has_keyboard: bool = false
 		var has_gamepad: bool = false
 		for ev: InputEvent in events:
-			if ev is InputEventKey:
+			var ev_device: String = InputEventCodec.get_event_device_type(ev)
+			if ev_device == "keyboard":
 				has_keyboard = true
-			elif ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
+			elif ev_device == "gamepad":
 				has_gamepad = true
 
 		# ── Explicitly unbound check (handles [] and non-empty) ──
@@ -265,12 +269,16 @@ func is_event_bound(event: InputEvent) -> bool:
 
 
 ## Removes `event` from all actions listed in `conflicts`.
-## Used on load to preserve the loaded mapping and unbind duplicates elsewhere.
+## Used on load to preserve the loaded mapping and unbind duplicates elsewhere, and by
+## [method rebind] when the player confirms a conflicting remap.
 ## :param event: The event to remove from conflicting actions.
-## :param conflicts: Action names that currently contain the same event.
+## :param conflicts: Action names that currently contain the same event. Unknown names are
+## skipped.
 ## :rtype: void
 func _remove_event_from_conflicts(event: InputEvent, conflicts: Array[String]) -> void:
 	for other_action: String in conflicts:
+		if not InputMap.has_action(other_action):
+			continue
 		var events: Array[InputEvent] = InputMap.action_get_events(other_action)
 		for existing: InputEvent in events:
 			if InputEventCodec.events_match(existing, event):
@@ -301,25 +309,59 @@ func _deserialize_and_add(action: String, serialized: String) -> void:
 		)
 
 
+## Binds [param event] to [param action], replacing the action's binding for the same device.
+##
+## The only way UI code changes a single binding. The first event of [param action] on the
+## event's device (keyboard or gamepad) is removed, so the other device keeps its binding.
+## Before that, the same input is removed from each action in [param unbind_from]: the Key
+## Mapping conflict dialog passes the actions the player agreed to unbind. Does not save; the
+## caller saves with [method save_input_mappings]. Emits [signal bindings_changed].
+##
+## [param action]: Action to bind, e.g. [code]"fire"[/code]. Must exist in InputMap.
+## [param event]: The new key, joypad button or joypad axis event.
+## [param unbind_from]: Actions that lose this exact input first. Empty by default, which
+## leaves other actions untouched.
+func rebind(action: String, event: InputEvent, unbind_from: Array[String] = []) -> void:
+	if event == null or not InputMap.has_action(action):
+		Globals.log_message(
+			"Ignoring rebind of '%s': unknown action or null event" % action,
+			Globals.LogLevel.WARNING
+		)
+		return
+	var device: String = InputEventCodec.get_event_device_type(event)
+	if device not in INPUT_DEVICES:
+		Globals.log_message(
+			"Ignoring rebind of '%s': not a keyboard or gamepad event" % action,
+			Globals.LogLevel.WARNING
+		)
+		return
+
+	_remove_event_from_conflicts(event, unbind_from)
+
+	for old_ev: InputEvent in InputMap.action_get_events(action):
+		if InputEventCodec.get_event_device_type(old_ev) == device:
+			InputMap.action_erase_event(action, old_ev)
+			break  # only the first binding for this device, as the remap button shows it
+
+	InputMap.action_add_event(action, event)
+	bindings_changed.emit()
+
+
 ## Resets input mappings to defaults for the specified device type.
 ##
 ## Fully erases all events for the specified device type and forces defaults to fix duplicates.
+## Saves the result and emits [signal bindings_changed].
 ##
 ## [param device_type]: The target device type, accepting either keyboard or gamepad.
 func reset_to_defaults(device_type: String) -> void:
-	if device_type not in ["keyboard", "gamepad"]:
+	if device_type not in INPUT_DEVICES:
 		return
 	for action: String in ACTIONS:
 		# FULL erase for the device
 		# (prevents cross-action duplicates like Space on FIRE + NEXT_WEAPON)
 		var events: Array[InputEvent] = InputMap.action_get_events(action).duplicate()
 		for ev: InputEvent in events:
-			if device_type == "keyboard" and ev is InputEventKey:
-				InputMap.action_erase_event(action, ev)
-			elif (
-				device_type == "gamepad"
-				and (ev is InputEventJoypadButton or ev is InputEventJoypadMotion)
-			):
+			if InputEventCodec.get_event_device_type(ev) == device_type:
 				InputMap.action_erase_event(action, ev)
 
 		# Add fresh defaults
@@ -331,6 +373,7 @@ func reset_to_defaults(device_type: String) -> void:
 	Globals.log_message(
 		"🔄 Full RESET for " + device_type + " — defaults forced!", Globals.LogLevel.INFO
 	)
+	bindings_changed.emit()
 
 
 ## Finds every other managed action that already uses the exact event.
@@ -369,13 +412,7 @@ func get_pause_binding_label_for_device(device_type: String) -> String:
 		return "UNBOUND"
 
 	for ev: InputEvent in events:
-		if (
-			(device_type == "keyboard" and ev is InputEventKey)
-			or (
-				device_type == "gamepad"
-				and (ev is InputEventJoypadButton or ev is InputEventJoypadMotion)
-			)
-		):
+		if InputEventCodec.get_event_device_type(ev) == device_type:
 			return InputEventCodec.get_event_label(ev).to_upper()
 
 	# Fallback
@@ -394,13 +431,7 @@ func has_unbound_critical_actions_for_current_device() -> bool:
 
 		var has_binding_for_device: bool = false
 		for ev: InputEvent in events:
-			if (
-				(preferred == "keyboard" and ev is InputEventKey)
-				or (
-					preferred == "gamepad"
-					and (ev is InputEventJoypadButton or ev is InputEventJoypadMotion)
-				)
-			):
+			if InputEventCodec.get_event_device_type(ev) == preferred:
 				has_binding_for_device = true
 				break
 

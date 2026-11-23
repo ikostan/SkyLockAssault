@@ -195,9 +195,8 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			return  # Wait for user to confirm or cancel via dialog
 
-	# ── APPLY MAPPING ──
-	erase_old_event()
-	InputMap.action_add_event(action, new_event)
+	# ── APPLY MAPPING ── (Settings replaces this device's binding and emits bindings_changed)
+	Settings.rebind(action, new_event)
 
 	Globals.log_message(
 		"Remapped '%s' to '%s'" % [action, InputEventCodec.get_event_label(new_event)],
@@ -218,16 +217,6 @@ func _input(event: InputEvent) -> void:
 ## Returns the signed direction multiplied by the normalized value constant.
 func get_normalized_axis_direction(axis_value: float) -> float:
 	return sign(axis_value) * AXIS_NORMALIZED_VALUE
-
-
-# Helper to erase old event at index
-# Erase old event at index.
-# :rtype: void
-## Removes the existing matching input event from the action map.
-func erase_old_event() -> void:
-	var old_ev: InputEvent = get_matching_event()
-	if old_ev:
-		InputMap.action_erase_event(action, old_ev)
 
 
 ## Returns the first event bound to action for the current device.
