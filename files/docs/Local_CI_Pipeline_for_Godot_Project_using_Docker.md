@@ -74,6 +74,11 @@ The scripts are in `workspace/`, not the project root. Running
 
 ### Full Pipeline
 
+> [!WARNING]
+> This script runs `git restore export_presets.cfg scripts/core/globals.gd`,
+> which discards uncommitted edits to those two files. Commit or stash them
+> before you run it.
+
 ```powershell
 docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/workspace/run_pipeline.sh
 ```
@@ -111,6 +116,11 @@ docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/ba
 ```
 
 ### Browser Tests
+
+> [!WARNING]
+> This script runs `git restore export_presets.cfg scripts/core/globals.gd`,
+> which discards uncommitted edits to those two files. Commit or stash them
+> before you run it.
 
 All Playwright tests in `tests/`:
 
@@ -235,7 +245,9 @@ Quote a glob so the script expands it, not the shell. Its tests are in
   its cleanup ran. Rename the folder back to `addons/gdUnit4`.
 - **`globals.gd` or `export_presets.cfg` still modified**: a browser run
   was stopped during the export, before the files were restored. Run
-  `git restore export_presets.cfg scripts/core/globals.gd`.
+  `git restore export_presets.cfg scripts/core/globals.gd`. This also
+  discards your own uncommitted edits to those files, so check
+  `git diff` first and keep anything you need.
 - **Git reports `dubious ownership`**: the scripts add `/project` and
   `/project/.git` as safe directories themselves. For your own commands, add
   the two `git config` lines from the `tests/ci` command.
