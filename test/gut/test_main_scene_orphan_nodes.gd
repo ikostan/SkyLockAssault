@@ -121,3 +121,76 @@ func test_freeing_level_with_cached_weapon_slots_leaves_no_orphans() -> void:
 	main_scene = null
 	await get_tree().process_frame
 	verify_no_orphan_leaks(baseline_orphans, "Cached weapon slots are freed with the level.")
+
+
+## Projectiles fired by the real level's player, found by ancestry so leftovers from other
+## suites don't count.
+func _level_projectiles(level: Node) -> Array[Node]:
+	var result: Array[Node] = []
+	for node: Node in get_tree().get_nodes_in_group("bullets"):
+		if level.is_ancestor_of(node):
+			result.append(node)
+	return result
+
+
+## Fires the player's weapon once, letting earlier cooldowns end first.
+func _fire_player_weapon(level: MainScene) -> void:
+	var weapon: Weapon = level.player.weapon
+	weapon.weapon_resource.current_ammo = max(weapon.weapon_resource.current_ammo, 10)
+	var firer := weapon.current_weapon as BulletFirer
+	if firer and not firer.can_fire:
+		firer.timer.stop()
+		firer.timer.timeout.emit()
+	weapon.fire()
+
+
+## #1140: the level injects its Projectiles container, so shots are its children and never
+## the scene root's.
+func test_projectiles_spawn_under_the_level_container() -> void:
+	_fire_player_weapon(main_scene)
+	var fired := _level_projectiles(main_scene)
+	assert_eq(fired.size(), 1, "One shot should be in flight.")
+	for projectile: Node in fired:
+		assert_eq(projectile.get_parent(), main_scene.projectiles)
+	assert_same(main_scene.player.weapon.current_weapon.projectile_parent, main_scene.projectiles)
+
+
+## #1140: projectiles still in flight are freed with the level, and the orphan count returns
+## to its baseline.
+func test_freeing_level_with_in_flight_projectiles_leaves_no_orphans() -> void:
+	_fire_player_weapon(main_scene)
+	_fire_player_weapon(main_scene)
+	await get_tree().process_frame
+	var fired: Array = _level_projectiles(main_scene)  # Untyped: holds freed instances later
+	assert_eq(fired.size(), 2, "Both shots should still be in flight.")
+	var baseline_orphans: int = Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)
+
+	GutHelper.safe_hard_free(main_scene)
+	main_scene = null
+	await get_tree().process_frame
+
+	for projectile: Variant in fired:
+		assert_false(is_instance_valid(projectile), "In-flight shots are freed with the level.")
+	verify_no_orphan_leaks(baseline_orphans, "In-flight projectiles leave no orphans.")
+
+
+## #1140: after the level is replaced, none of the old level's projectiles remain.
+func test_replacing_level_leaves_no_old_projectiles() -> void:
+	_fire_player_weapon(main_scene)
+	var fired: Array = _level_projectiles(main_scene)
+	assert_eq(fired.size(), 1)
+	var bullets_before_replace: int = get_tree().get_nodes_in_group("bullets").size()
+
+	GutHelper.safe_hard_free(main_scene)
+	main_scene = preload(GamePaths.MAIN_SCENE).instantiate()
+	add_child(main_scene)
+	await get_tree().process_frame
+
+	for projectile: Variant in fired:
+		assert_false(is_instance_valid(projectile), "Old projectiles don't outlive their level.")
+	assert_eq(_level_projectiles(main_scene).size(), 0, "The new level starts without shots.")
+	assert_lt(
+		get_tree().get_nodes_in_group("bullets").size(),
+		bullets_before_replace,
+		"Replacing the level removes its projectiles from the bullets group."
+	)

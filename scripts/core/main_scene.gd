@@ -25,6 +25,8 @@ var _showing_unbound_key_message: bool = false
 @onready var texture_preloader: ResourcePreloader = $ResourcePreloader  # Reference to preloader
 @onready var hud: CanvasLayer = $HUD
 @onready var message_label: Label = $HUD/MessageLabel
+## Level-owned container for projectiles, so they're freed with this level (#1140).
+@onready var projectiles: Node2D = $Projectiles
 
 
 func _ready() -> void:
@@ -33,6 +35,9 @@ func _ready() -> void:
 	player.position = Vector2(viewport_size.x / 2, viewport_size.y / 1.2)
 	stats_panel.visible = true
 	Globals.log_message("Initializing main scene...", Globals.LogLevel.DEBUG)
+
+	# Projectiles belong to this level, so leaving it frees them at once (#1140).
+	player.weapon.set_projectile_parent(projectiles)
 
 	# =========================================================
 	# DEPENDENCY INJECTION: HUD Data Layer

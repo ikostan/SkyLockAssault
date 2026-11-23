@@ -553,3 +553,78 @@ def test_pw_trans_06_multi_cycle_transition_lifecycle(page: Page) -> None:
         raise
     finally:
         _save_coverage(cdp_session, "pw_trans_06")
+
+
+def test_pw_trans_07_leaving_level_mid_fire_is_clean(page: Page) -> None:
+    """
+    PW-TRANS-07: Firing and then using pause menu -> Back To Main Menu with
+    projectiles in flight loads the Main Menu with no error logs (#1140).
+
+    Projectiles belong to the level's Projectiles container, so they are
+    freed with the level instead of running on into the menu.
+    """
+    logs: list[dict[str, str]] = []
+    page_errors: list[str] = []
+    page.on("pageerror", lambda err: page_errors.append(str(err)))
+    cdp_session = None
+
+    try:
+        cdp_session = _setup_mock_page(page, logs)
+
+        # 1. Enter gameplay
+        page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
+        page.wait_for_function(
+            "() => typeof window.startPressed !== 'undefined'", timeout=TEST_TIMEOUT
+        )
+        pre_start_idx = len(logs)
+        page.evaluate("window.startPressed([])")
+        wait_for_console_log(
+            logs,
+            _gameplay_ready_predicate,
+            pre_start_idx,
+            page,
+            timeout_ms=TEST_TIMEOUT,
+        )
+
+        # 2. Fire, so a projectile (5 s default lifetime) is in flight
+        canvas = page.locator("canvas")
+        expect(canvas).to_be_visible(timeout=DEFAULT_TIMEOUT)
+        canvas.focus()
+        pre_fire_idx = len(logs)
+        page.keyboard.press("Space")
+        wait_for_console_log(
+            logs,
+            lambda text: "firing with scaled cooldown:" in text.lower(),
+            pre_fire_idx,
+            page,
+            timeout_ms=DEFAULT_TIMEOUT,
+        )
+
+        # 3. Pause menu -> Back To Main Menu while the shot is in flight
+        pre_return_idx = len(logs)
+        _return_to_main_menu_from_gameplay(page)
+        wait_for_console_log(
+            logs,
+            _main_menu_ready_predicate,
+            pre_return_idx,
+            page,
+            timeout_ms=TEST_TIMEOUT,
+        )
+        page.wait_for_selector("#start-button", state="visible", timeout=TEST_TIMEOUT)
+
+        # 4. Give a leftover projectile time to act in the menu, then check the logs
+        page.wait_for_timeout(1000)
+        godot_errors = [
+            log["text"] for log in logs[pre_fire_idx:] if log["type"] == "error"
+        ]
+        assert (
+            not godot_errors
+        ), f"Leaving the level mid-fire logged errors: {godot_errors}"
+        assert not page_errors, f"Uncaught page errors after leaving: {page_errors}"
+
+    except Exception as e:
+        print(f"Test PW-TRANS-07 failed: {e}")
+        _dump_failure_artifacts(page, logs, "pw_trans_07")
+        raise
+    finally:
+        _save_coverage(cdp_session, "pw_trans_07")
