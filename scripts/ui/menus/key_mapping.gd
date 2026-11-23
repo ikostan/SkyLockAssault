@@ -112,42 +112,30 @@ func show_conflict_dialog(
 	conflict_dialog.popup_centered()
 
 
+## Applies the pending remap after the player confirms the conflict dialog.
+##
+## [method Settings.rebind] unbinds the same input from the conflicting actions (only that
+## device's event), replaces the button's binding and emits [signal Settings.bindings_changed],
+## which clears and re-checks the unbound-controls warning in MainScene.
 func _on_conflict_confirmed() -> void:
 	if not current_remap_button or not current_pending_event:
 		return
 
-	# 1. Unbind ONLY the conflicting event of the SAME DEVICE (keyboard or gamepad)
-	for act in current_conflicts:
-		for ev: InputEvent in InputMap.action_get_events(act):
-			if InputEventCodec.events_match(ev, current_pending_event):  # exact same binding
-				InputMap.action_erase_event(act, ev)
-				Globals.log_message(
-					"Unbound specific device event for " + act, Globals.LogLevel.DEBUG
-				)
-				break  # only one match per device
-
-	# 2. Apply the new binding
-	current_remap_button.erase_old_event()
-	InputMap.action_add_event(current_remap_button.action, current_pending_event)
+	Settings.rebind(current_remap_button.action, current_pending_event, current_conflicts)
 
 	Globals.log_message(
-		"Remapped %s (device-specific unbind)" % current_remap_button.action, Globals.LogLevel.DEBUG
+		(
+			"Remapped %s (device-specific unbind of %s)"
+			% [current_remap_button.action, str(current_conflicts)]
+		),
+		Globals.LogLevel.DEBUG
 	)
 
-	# 3. Save (now only the right device is affected)
-	Settings.save_input_mappings()
-
-	# 4. Finish UI
+	# Saves the bindings and updates the button text
 	current_remap_button.finish_remap()
 	update_all_remap_buttons()
 
-	# Cleanup
 	_clear_conflict_state()
-
-	# NEW: Clear critical warning flag when player fixes unbound (once-per-session)
-	var main := get_tree().current_scene
-	if main and main is MainScene:
-		main.clear_unbound_warning()
 
 
 func _on_conflict_canceled() -> void:
@@ -180,18 +168,15 @@ func update_all_remap_buttons() -> void:
 		btn.update_button_text()
 
 
-# NEW: Reset button handler—resets InputMap to defaults and updates buttons
+## Resets the selected device's bindings (keyboard or gamepad) to defaults and refreshes the
+## buttons. [method Settings.reset_to_defaults] saves and emits
+## [signal Settings.bindings_changed].
 func _on_reset_pressed() -> void:
-	# Function resets only the selected device type (keyboard or gamepad)
 	var device_type: String = "keyboard" if keyboard.button_pressed else "gamepad"
 	Settings.reset_to_defaults(device_type)
 	# You must update the UI buttons so they show the new defaults!
 	update_all_remap_buttons()
 	Globals.log_message("Resetting " + device_type + " controls.", Globals.LogLevel.DEBUG)
-	# NEW: Clear critical warning flag when player fixes unbound (once-per-session)
-	var main := get_tree().current_scene
-	if main and main is MainScene:
-		main.clear_unbound_warning()
 
 
 func _on_controls_back_button_pressed() -> void:

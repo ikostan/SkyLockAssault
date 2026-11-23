@@ -16,6 +16,10 @@ enum MessageType { CRITICAL_UNBOUND, KEY_PRESS_UNBOUND }
 var web_telemetry_adapter: Node
 var _showing_unbound_warning: bool = false
 var _showing_unbound_key_message: bool = false
+# Set when bindings or the device changed while this scene was paused (Key Mapping is opened
+# from the pause menu). The check runs on NOTIFICATION_UNPAUSED, so the warning is shown when
+# the player is back in the game, as the old per-frame check in _process did.
+var _unbound_check_pending: bool = false
 
 @onready var player: Player = $Player
 @onready var stats_panel: Panel = $PlayerStatsPanel
@@ -106,6 +110,34 @@ func _ready() -> void:
 	# 3. Inject the active resource from the player
 	if OS.has_feature("web"):
 		web_telemetry_adapter.setup(player.fuel_resource)
+
+	# First check at level start; later checks run on the Settings signals (see _enter_tree).
+	_check_unbound_controls()
+
+
+## Connects to the Settings signals. Bindings and the input device change only through
+## Settings, which announces both, so the unbound-controls check runs on those signals instead
+## of every frame (#1102).
+func _enter_tree() -> void:
+	if not Settings.bindings_changed.is_connected(_on_bindings_changed):
+		Settings.bindings_changed.connect(_on_bindings_changed)
+	if not Settings.input_device_changed.is_connected(_on_input_device_changed):
+		Settings.input_device_changed.connect(_on_input_device_changed)
+
+
+## Disconnects from the Settings autoload, which outlives this scene.
+func _exit_tree() -> void:
+	if Settings.bindings_changed.is_connected(_on_bindings_changed):
+		Settings.bindings_changed.disconnect(_on_bindings_changed)
+	if Settings.input_device_changed.is_connected(_on_input_device_changed):
+		Settings.input_device_changed.disconnect(_on_input_device_changed)
+
+
+## Runs an unbound-controls check that was deferred while the scene was paused.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_UNPAUSED and _unbound_check_pending:
+		_unbound_check_pending = false
+		_check_unbound_controls()
 
 
 # 2. Detect when player presses a key/button that has NO binding at all
@@ -284,17 +316,46 @@ func setup_decor_layer(viewport: Vector2) -> void:
 	decor_layer.motion_mirroring = Vector2(0, layer_height)
 
 
-func _process(_delta: float) -> void:
-	# 1. Critical unbound controls warning (shown ONCE per session)
-	# Flag stays true until player fixes bindings (e.g., in key_mapping.gd after remap).
-	# Do NOT reset here — that would make it repeat every 4s (bug fixed).
-	if Settings.has_unbound_critical_actions_for_current_device() and not _showing_unbound_warning:
-		_showing_unbound_warning = true
-		var pause_key: String = Settings.get_pause_binding_label()
-		show_message(
-			"{SOME=CONTROLS=ARE=UNBOUND}\n{PRESS='" + pause_key + "'=AND=GO=TO='CONTROLS'=TO=FIX}",
-			MessageType.CRITICAL_UNBOUND  # explicit
-		)
+## Shows the critical unbound-controls warning, once, if a critical action has no binding for
+## the current device.
+##
+## The warning shows once per session: [member _showing_unbound_warning] stays set until the
+## bindings change ([method _on_bindings_changed]), so it doesn't repeat every 4 seconds.
+func _check_unbound_controls() -> void:
+	if _showing_unbound_warning:
+		return
+	if not Settings.has_unbound_critical_actions_for_current_device():
+		return
+	_showing_unbound_warning = true
+	var pause_key: String = Settings.get_pause_binding_label()
+	show_message(
+		"{SOME=CONTROLS=ARE=UNBOUND}\n{PRESS='" + pause_key + "'=AND=GO=TO='CONTROLS'=TO=FIX}",
+		MessageType.CRITICAL_UNBOUND  # explicit
+	)
+
+
+## Runs [method _check_unbound_controls] now, or on unpause if the scene is paused.
+func _request_unbound_check() -> void:
+	if not is_inside_tree():
+		return
+	if can_process():
+		_check_unbound_controls()
+	else:
+		_unbound_check_pending = true
+
+
+## Reacts to [signal Settings.bindings_changed]: the player rebound or reset controls, so the
+## warning may show again, then re-checks.
+func _on_bindings_changed() -> void:
+	_showing_unbound_warning = false
+	_request_unbound_check()
+
+
+## Reacts to [signal Settings.input_device_changed]: the other device may have unbound critical
+## actions. Doesn't reset the once-per-session flag.
+## [param _device]: The new device; the check reads it from Settings.
+func _on_input_device_changed(_device: String) -> void:
+	_request_unbound_check()
 
 
 ## Shows a temporary on-screen message non-blocking and centralizes flags.
@@ -302,7 +363,7 @@ func _process(_delta: float) -> void:
 ## Displays the specified text on the message label and hides it after four seconds.
 ## When the message expires, only the KEY_PRESS_UNBOUND flag is reset. The
 ## CRITICAL_UNBOUND flag stays set so the warning shows once per session, until
-## [method clear_unbound_warning] is called after the bindings are fixed.
+## [signal Settings.bindings_changed] clears it.
 ##
 ## [param text]: The message text to display on the label.
 ## [param type]: The message type; KEY_PRESS_UNBOUND resets its flag on expiry.
@@ -322,8 +383,3 @@ func show_message(text: String, type: MessageType = MessageType.CRITICAL_UNBOUND
 	match type:
 		MessageType.KEY_PRESS_UNBOUND:
 			_showing_unbound_key_message = false
-
-
-## Public: Clears the unbound warning flag after fixes.
-func clear_unbound_warning() -> void:
-	_showing_unbound_warning = false
