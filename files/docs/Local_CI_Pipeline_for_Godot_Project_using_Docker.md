@@ -1,277 +1,162 @@
 # Local CI Pipeline Setup for Sky Lock Assault
 <!-- markdownlint-disable line-length -->
 
-This README provides instructions to run the combined CI pipeline
-(linting, unit tests, and browser functional tests) locally on your
-Windows 10 64-bit machine using Docker Desktop. The pipeline
-replicates the sequence from the GitHub Actions workflows:
-`GDScript` lint/format check, `Markdown` lint, `YAML` lint, `Godot`
-unit tests (using `GDUnit4 v6`), and browser functional tests
-(using `Playwright` with `Python`).
+This guide runs the project's CI checks locally on Windows with Docker
+Desktop: GDScript format and lint, Markdown lint, YAML lint, gdUnit4 and GUT
+unit tests, Playwright browser tests, and the `tests/ci` helper tests.
 
-This setup is tailored for your `Godot v4.5` game development project.
-It uses a Docker container to ensure a consistent Ubuntu-based environment,
-avoiding dependency issues on Windows. All test and lint commands are
-centralized in `run_pipeline.sh` for easy execution and maintenance.
-The Docker image handles setup of tools like `Godot`, `GDToolkit`,
-`GDUnit4`, `yamllint`, `markdownlint-cli2`, and `Playwright`.
+The image is built from the `Dockerfile` in the project root, so every check
+runs in the same Ubuntu 24.04 environment as the GitHub Actions runners. The
+scripts that run the checks are in `workspace/`.
 
-As you're learning game dev with Godot v4.5 on Windows 10 64-bit, this
-pipeline helps you maintain code quality: linting ensures clean GDScript,
-unit tests verify logic (e.g., player movement or enemy AI), and browser
-tests check web-exported functionality like difficulty persistence.
-Running these separately lets you iterate quickly on specific parts, like
-testing a new script without full exports.
+## What the Image Contains
+
+| Tool                         | Version                                           | Source in the `Dockerfile`           |
+|------------------------------|---------------------------------------------------|--------------------------------------|
+| Godot + Web export templates | 4.7.1 stable (SHA512-verified)                    | `godotengine/godot-builds` release   |
+| gdUnit4                      | 6.2.0                                             | baked into `/project/addons/gdUnit4` |
+| GUT                          | 9.7.1                                             | baked into `/project/addons/gut`     |
+| pytest, Playwright, plugins  | pinned in `requirements.txt`                      | Chromium only                        |
+| gdtoolkit (gdformat, gdlint) | 4.5.0 (CI: latest 4.*)                            | Python venv in `/opt/venv`           |
+| yamllint                     | 1.38.0                                            | Python venv in `/opt/venv`           |
+| markdownlint-cli2            | 0.12.1                                            | npm (CI uses v0.24.0)                |
+
+The container runs as the non-root user `godotuser`, with `/project` as its
+working directory.
+
+Mounting your clone on `/project` hides the addons baked into the image. The
+tests use the addons in your own `addons/` folder, which Git ignores, so keep
+gdUnit4 and GUT installed there (see [Prerequisites](#prerequisites)).
 
 ## Prerequisites
 
-- **OS**: Windows 10 64-bit.
-- **Docker Desktop**: Version 4.45 or compatible (ensure it's installed
-    and running; enable WSL2 backend if prompted).
-- **Project Setup**: Ensure your project is cloned from
-    <https://github.com/ikostan/SkyLockAssault> and you're in the project
-    root directory.
-- **Godot Project**: Your Godot v4.5 project files (e.g., scripts in
-    `./scripts`, tests in `./test`, etc.) must be present.
-- No additional local installations needed—everything runs inside Docker.
+- **OS**: Windows 10 or 11, 64-bit.
+- **Docker Desktop**: installed and running, with the WSL2 backend.
+- **Project**: a clone of <https://github.com/ikostan/SkyLockAssault>, with
+  PowerShell open in the project root.
+- **Addons in your clone**: `addons/gdUnit4` (6.2.0) and `addons/gut`
+  (9.7.1), the versions CI uses. `run_gut_unit_tests.sh` downloads GUT 9.5.0
+  if `addons/gut` is missing; `run_gdunit4_unit_tests.sh` doesn't download
+  gdUnit4.
 
-## Step 1: Create Required Files
+## Step 1: Build the Image
 
-Create the following files in your project root (e.g.,
-`C:\path\to\SkyLockAssault`):
-
-### Dockerfile
-
-This builds an Ubuntu-based image with all dependencies. Save it as
-`Dockerfile` (no extension).
-
-The previous Dockerfile failed due to conflicts with system-installed
-Python packages (e.g., wheel from Debian). To resolve this, we've
-switched to using a virtual environment (venv) for all Python installations.
-This isolates the tools from the system Python, avoiding uninstall issues
-and the need for --break-system-packages. Save this updated version as
-Dockerfile (no extension).
-
-The previous build failed because `gvfs-bin` is unavailable in `Ubuntu 24.04`.
-We've replaced it with `gvfs`, which provides `gvfs-trash`. The `Dockerfile`
-also includes `libglib2.0-bin` (for `gio`) and `kio` (for `kioclient5`)
-to support `OS.move_to_trash` in your tests.
-
-We've updated the Dockerfile to install Node.js and npm in the base
-dependencies, then globally install markdownlint-cli2 via npm. This matches
-the original GitHub Action, which uses a Node.js-based tool. Save this
-updated version as Dockerfile (no extension).
-
-```bash
-# Use Ubuntu 24.04 as base (matches GitHub Actions runner)
-FROM ubuntu:24.04
-
-# Install base dependencies (added nodejs, npm, libglib2.0-bin, kio, gvfs)
-RUN apt-get update && apt-get install -y \
-    python3 python3-pip wget unzip curl git zip libxml2-utils netcat-openbsd python3-venv nodejs npm \
-    libglib2.0-bin kio gvfs \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create and activate virtual environment for Python tools
-RUN python3 -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# Upgrade pip, setuptools, and wheel in venv
-RUN pip install --upgrade pip setuptools wheel
-
-# Install GDToolkit for GDScript lint/format (gdtoolkit==4.* for Godot 4.x)
-RUN pip install gdtoolkit==4.*
-
-# Install yamllint
-RUN pip install yamllint
-
-# Install markdownlint-cli2 via npm (Node.js tool)
-RUN npm install -g markdownlint-cli2
-
-# Download Godot v4.5 binary and export templates
-RUN wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip \
-    && unzip Godot_v4.5-stable_linux.x86_64.zip \
-    && mv Godot_v4.5-stable_linux.x86_64 /usr/local/bin/godot \
-    && chmod +x /usr/local/bin/godot \
-    && rm Godot_v4.5-stable_linux.x86_64.zip
-
-RUN wget https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz \
-    && mkdir -p ~/.local/share/godot/export_templates/4.5.stable/ \
-    && unzip Godot_v4.5-stable_export_templates.tpz -d ~/.local/share/godot/export_templates/4.5.stable/ \
-    && rm Godot_v4.5-stable_export_templates.tpz
-
-# Install GDUnit4 v6
-RUN mkdir -p /project/addons \
-    && wget https://github.com/MikeSchulze/gdUnit4/archive/refs/tags/v6.0.0.zip \
-    && unzip v6.0.0.zip -d /project/addons \
-    && mv /project/addons/gdUnit4-6.0.0/addons/gdUnit4 /project/addons/gdUnit4 \
-    && rm -rf /project/addons/gdUnit4-6.0.0 v6.0.0.zip
-
-# Install Playwright and dependencies for browser tests (in venv)
-RUN pip install playwright pytest-playwright pytest-asyncio \
-    && playwright install-deps \
-    && playwright install
-
-# Set working directory
-WORKDIR /project
-
-# Default command (overridden when running the script)
-CMD ["/bin/bash"]
-```
-
-### run_pipeline.sh
-
-This script runs all steps in sequence. Save it as `run_pipeline.sh`
-in the project root. Make it executable if needed (on Windows, Docker
-will handle it).
-
-```bash
-#!/bin/bash
-
-# Set variables
-PROJECT_DIR="/project"
-EXPORT_DIR="$PROJECT_DIR/export/web"
-SERVER_PORT=8080
-PW_TIMEOUT=10000  # Default timeout in ms; adjustable
-
-# Function to check if a step failed
-check_exit() {
-  if [ $? -ne 0 ]; then
-    echo "Error in $1. Exiting pipeline."
-    exit 1
-  fi
-}
-
-# 1. GDScript Lint and Format Check
-echo "Running GDScript Format Check..."
-gdformat --diff --check $PROJECT_DIR/scripts
-check_exit "GDScript Format Check"
-
-echo "Running GDScript Lint..."
-gdlint $PROJECT_DIR/scripts
-check_exit "GDScript Lint"
-
-# 2. Markdown Lint
-echo "Running Markdown Lint..."
-markdownlint-cli2 "**/*.md" --config .markdownlint-cli2.yaml --fix
-check_exit "Markdown Lint"
-
-# 3. YAML Lint
-echo "Running YAML Lint..."
-yamllint -c .yamllint.yaml .github/workflows/*.yml
-check_exit "YAML Lint"
-
-# 4. Godot Unit Tests (GDUnit4 v6)
-echo "Downloading GDUnit4 if needed (already in image, but ensure project addons)..."
-cp -r /project/addons/gdUnit4 $PROJECT_DIR/addons/ || true  # Copy if not present
-
-echo "Importing Resources..."
-godot --headless --path $PROJECT_DIR --import --quit
-check_exit "Resource Import"
-
-echo "Running GDUnit4 Tests..."
-godot --headless --path $PROJECT_DIR -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --verbose --ignoreHeadlessMode --add res://test
-check_exit "GDUnit4 Tests"
-
-# Upload reports (simulate artifact upload by copying to a reports dir)
-mkdir -p $PROJECT_DIR/reports
-cp -r reports/** $PROJECT_DIR/reports || true
-
-# 5. Browser Functional Tests
-echo "Exporting Godot Project to Web..."
-mkdir -p $EXPORT_DIR
-
-# Simulate firebelley/godot-export action: Run Godot export to HTML5
-godot --headless --path $PROJECT_DIR --export-release "Web" $EXPORT_DIR/index.html
-check_exit "Godot Web Export"
-
-# Start web server in background
-python3 -m http.server $SERVER_PORT --directory $EXPORT_DIR &
-SERVER_PID=$!
-
-# Wait for server to be ready
-for i in {1..20}; do
-  if curl -f http://localhost:$SERVER_PORT/index.html >/dev/null 2>&1; then
-    echo "Web server ready"
-    break
-  fi
-  sleep 1
-done
-if [ $i -eq 20 ]; then
-  echo "Web server failed to start"
-  kill $SERVER_PID
-  exit 1
-fi
-
-# Run Playwright tests
-echo "Running Playwright Browser Tests..."
-pytest tests/difficulty_persistence_test.py -v --junitxml=$PROJECT_DIR/report.xml
-check_exit "Playwright Tests"
-
-# Generate test report summary
-if [ -f $PROJECT_DIR/report.xml ]; then
-  total=$(xmllint --xpath 'count(//testcase)' $PROJECT_DIR/report.xml)
-  failures=$(xmllint --xpath 'count(//testcase/failure)' $PROJECT_DIR/report.xml)
-  errors=$(xmllint --xpath 'count(//testcase/error)' $PROJECT_DIR/report.xml)
-  skipped=$(xmllint --xpath 'count(//testcase/skipped)' $PROJECT_DIR/report.xml)
-  passed=$((total - failures - errors - skipped))
-  echo "Test Report Summary:"
-  echo "- Total tests: $total"
-  echo "- Passed: $passed"
-  echo "- Failed: $failures"
-  echo "- Errors: $errors"
-  echo "- Skipped: $skipped"
-else
-  echo "No report.xml found—tests may not have run."
-fi
-
-# Cleanup: Stop server
-kill $SERVER_PID
-
-# Simulate artifact uploads (copy to host via mounted volume)
-mkdir -p $PROJECT_DIR/artifacts
-cp $PROJECT_DIR/report.xml $PROJECT_DIR/artifacts/ || true
-cp main_menu.png $PROJECT_DIR/artifacts/ || true  # If screenshot exists
-cp -r $PROJECT_DIR/reports $PROJECT_DIR/artifacts/gdunit-reports || true
-
-echo "Pipeline completed successfully!"
-```
-
-### Additional Files
-
-- Ensure `.markdownlint-cli2.yaml` and `.yamllint.yaml` exist in the
-  project root (from your existing setup).
-- For browser tests, ensure `tests/difficulty_persistence_test.py` and
-  `requirements.txt` (if any) are in place.
-- The `docker-compose.yml` and `default.conf` are not integrated here,
-  as they are for deployment. Use them separately for serving the game
-  (e.g., `docker compose up` after exporting to `./export/web`).
-
-## Step 2: Build the Docker Image
-
-Open PowerShell or Command Prompt in the project root and run:
-
-```bash
+```powershell
 docker build -t sky-lock-assault-pipeline:latest .
 ```
 
-This builds the image named `sky-lock-assault-pipeline`. Run it once or
-when dependencies change.
+Rebuild after a change to the `Dockerfile`, `requirements.txt` or
+`.github/scripts/requirements-docs.txt`. To check the image's `HEALTHCHECK`,
+see [Local CI/CD Container Health Validation](Local_CI_CD_Container_Health_Validation.md).
 
-## Step 3: Run the Full Pipeline
+## Step 2: Run a Script
 
-Mount your project directory into the container and execute `run_pipeline.sh`:
+Every script runs the same way. Replace `<script>` with a name from the
+table below:
 
-```bash
-docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline:latest /bin/bash /project/run_pipeline.sh
+```powershell
+docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/workspace/<script>
 ```
 
-- `-v %CD%:/project`: Mounts your current directory (project root) to
-  `/project` in the container.
-- Outputs (reports, artifacts) will appear in `./reports`, `./artifacts`, etc.,
-  on your host machine.
-- If errors occur (e.g., missing files), the script exits early.
+| Script                      | What it runs                                                     | Output                                     |
+|-----------------------------|------------------------------------------------------------------|--------------------------------------------|
+| `run_pipeline.sh`           | Every check below, in order; stops at the first failure          | `artifacts/`                               |
+| `run_gdlint.sh`             | `gdformat --diff --check` and `gdlint` on `scripts/`             | console                                    |
+| `run_markdown_lint.sh`      | `markdownlint-cli2` on all Markdown files, **with `--fix`**      | fixes files in place                       |
+| `run_yaml_lint.sh`          | `yamllint` on `.github/workflows/*.yml`                          | console                                    |
+| `run_gdunit4_unit_tests.sh` | gdUnit4 suites in `test/gdunit4`                                 | `reports/`                                 |
+| `run_gut_unit_tests.sh`     | GUT suites in `test/gut`, using `.gutconfig.json`                | console                                    |
+| `run_browser_tests.sh`      | Web export, local server, Playwright tests                       | `artifacts/report_<suite>.html` and `.xml` |
+| `test_injection.sh`         | Production-style Web export with a test salt, served for playing | `export/web/`                              |
 
+The scripts are in `workspace/`, not the project root. Running
+`/project/run_unit_tests.sh` fails with `No such file or directory`.
+
+### Full Pipeline
+
+```powershell
+docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/workspace/run_pipeline.sh
+```
+
+The steps run in this order:
+
+1. GDScript format check and lint.
+2. Markdown lint (with `--fix`).
+3. YAML lint.
+4. gdUnit4 tests.
+5. GUT tests.
+6. Salt and `ci` feature-flag injection, then the `Web_thread_off` export.
+7. Playwright tests in `tests/` (except `tests/refactor`), against a local
+   server on port 8080 inside the container.
+
+Results go to `artifacts/`: `report_all.html`, `report.xml` and
+`gdunit-reports/`.
+
+### Unit Tests
+
+GUT (`test/gut`):
+
+```powershell
+docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/workspace/run_gut_unit_tests.sh
+```
+
+The GUT script keeps the gdUnit4 plugin out of the run: it renames
+`addons/gdUnit4` to `addons/gdUnit4_disabled` first and renames it back when
+the script exits.
+
+gdUnit4 (`test/gdunit4`):
+
+```powershell
+docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/workspace/run_gdunit4_unit_tests.sh
+```
+
+### Browser Tests
+
+All Playwright tests in `tests/`:
+
+```powershell
+docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/workspace/run_browser_tests.sh
+```
+
+The script takes two optional arguments: the test target (default
+`tests/`) and a suite name for the report files (default `all`). For one
+test file:
+
+```powershell
+docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/workspace/run_browser_tests.sh tests/weapon_firing_test.py weapon_firing
+```
+
+This writes `artifacts/report_weapon_firing.html` and `.xml`.
+
+The script exports the `Web_thread_off` preset after injecting a dummy salt
+into `scripts/core/globals.gd` and the `ci` feature into
+`export_presets.cfg`. It restores both files with `git restore` after the
+export.
+
+### Lint Only
+
+```powershell
+docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/workspace/run_gdlint.sh
+docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/workspace/run_markdown_lint.sh
+docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/workspace/run_yaml_lint.sh
+```
+
+`run_markdown_lint.sh` passes `--fix`, so it can change Markdown files in
+your clone. Check `git diff` afterwards.
+
+### Play a Local Web Build
+
+`test_injection.sh` exports the threaded `Web` preset (the one used on
+itch.io) with a test salt and serves it with the COOP/COEP headers that
+threads need. Publish port 8080 so the browser on Windows can reach it:
+
+```powershell
+docker run -it --rm -p 8080:8080 -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/workspace/test_injection.sh
+```
+
+Open <http://localhost:8080>, and press `Ctrl+C` to stop the server. The
+script restores `scripts/core/globals.gd`, `project.godot` and
+`export_presets.cfg` from backups when it exits.
 
 ## Running the CI Helper Tests (`tests/ci`)
 
@@ -289,7 +174,6 @@ docker run --rm -v "${PWD}:/project" sky-lock-assault-pipeline:latest bash -c "g
 Both `safe.directory` entries are required. Without `/project/.git`, the tests
 that make a local clone of the repository fail during setup with
 `CalledProcessError` and exit status 128.
-
 
 ## Test Result Summaries on the Run Page
 
@@ -327,249 +211,40 @@ Quote a glob so the script expands it, not the shell. Its tests are in
 `tests/ci/test_test_summary.py`, with a real XML sample from each job in
 `tests/ci/data/test_summary/`.
 
+## Where the Tests Live
 
-## Step 4: Running Individual Workflows
-
-To run workflows separately (e.g., for quick checks while developing a new
-Godot script or test), use the same Docker image. Below are sample scripts
-for each major workflow. Create these as separate `.sh` files in your project
-root, then run them with similar `docker run` commands.
-
-These are extracted from the full pipeline for isolation—great for learning:
-e.g., run GDScript lint after editing a script to catch errors early.
-
-### run_gdlint.sh (GDScript Lint and Format Check)
-
-```bash
-#!/bin/bash
-
-PROJECT_DIR="/project"
-
-echo "Running GDScript Format Check..."
-gdformat --diff --check $PROJECT_DIR/scripts
-if [ $? -ne 0 ]; then echo "Format check failed."; exit 1; fi
-
-echo "Running GDScript Lint..."
-gdlint $PROJECT_DIR/scripts
-if [ $? -ne 0 ]; then echo "Lint failed."; exit 1; fi
-
-echo "GDScript Lint and Format Check completed!"
-```
-
-Run it:
-
-```bash
-docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/run_gdlint.sh
-```
-
-### run_markdown_lint.sh (Markdown Lint)
-
-```bash
-#!/bin/bash
-
-echo "Running Markdown Lint..."
-markdownlint-cli2 "**/*.md" --config .markdownlint-cli2.yaml --fix
-if [ $? -ne 0 ]; then echo "Markdown lint failed."; exit 1; fi
-
-echo "Markdown Lint completed!"
-```
-
-Run it:
-
-```bash
-docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/run_markdown_lint.sh
-```
-
-### run_yaml_lint.sh (YAML Lint)
-
-```bash
-#!/bin/bash
-
-echo "Running YAML Lint..."
-yamllint -c .yamllint.yaml .github/workflows/*.yml
-if [ $? -ne 0 ]; then echo "YAML lint failed."; exit 1; fi
-
-echo "YAML Lint completed!"
-```
-
-Run it:
-
-```bash
-docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/run_yaml_lint.sh
-```
-
-### run_unit_tests.sh (Godot Unit Tests with GDUnit4)
-
-```bash
-#!/bin/bash
-
-PROJECT_DIR="/project"
-
-echo "Ensuring GDUnit4 in project addons..."
-cp -r /project/addons/gdUnit4 $PROJECT_DIR/addons/ || true
-
-echo "Importing Resources..."
-godot --headless --path $PROJECT_DIR --import --quit
-if [ $? -ne 0 ]; then echo "Resource import failed."; exit 1; fi
-
-echo "Running GDUnit4 Tests..."
-godot --headless --path $PROJECT_DIR -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --verbose --ignoreHeadlessMode --add res://test
-if [ $? -ne 0 ]; then echo "Unit tests failed."; exit 1; fi
-
-# Simulate artifact: Copy reports
-mkdir -p $PROJECT_DIR/reports
-cp -r reports/** $PROJECT_DIR/reports || true
-
-echo "Godot Unit Tests completed!"
-```
-
-Run it:
-
-```bash
-docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash /project/run_unit_tests.sh
-```
-
-### run_browser_tests.sh (Browser Functional Tests with Playwright)
-
-```bash
-#!/bin/bash
-
-PROJECT_DIR="/project"
-EXPORT_DIR="$PROJECT_DIR/export/web"
-SERVER_PORT=8080
-PW_TIMEOUT=10000
-
-echo "Exporting Godot Project to Web..."
-mkdir -p $EXPORT_DIR
-godot --headless --path $PROJECT_DIR --export-release "Web" $EXPORT_DIR/index.html
-if [ $? -ne 0 ]; then echo "Web export failed."; exit 1; fi
-
-# Start web server
-python3 -m http.server $SERVER_PORT --directory $EXPORT_DIR &
-SERVER_PID=$!
-
-# Wait for server
-for i in {1..20}; do
-  if curl -f http://localhost:$SERVER_PORT/index.html >/dev/null 2>&1; then
-    echo "Web server ready"
-    break
-  fi
-  sleep 1
-done
-if [ $i -eq 20 ]; then
-  echo "Web server failed to start"
-  kill $SERVER_PID
-  exit 1
-fi
-
-# Run tests
-echo "Running Playwright Browser Tests..."
-pytest tests/difficulty_persistence_test.py -v --junitxml=$PROJECT_DIR/report.xml
-if [ $? -ne 0 ]; then echo "Browser tests failed."; kill $SERVER_PID; exit 1; fi
-
-# Report summary
-if [ -f $PROJECT_DIR/report.xml ]; then
-  total=$(xmllint --xpath 'count(//testcase)' $PROJECT_DIR/report.xml)
-  failures=$(xmllint --xpath 'count(//testcase/failure)' $PROJECT_DIR/report.xml)
-  errors=$(xmllint --xpath 'count(//testcase/error)' $PROJECT_DIR/report.xml)
-  skipped=$(xmllint --xpath 'count(//testcase/skipped)' $PROJECT_DIR/report.xml)
-  passed=$((total - failures - errors - skipped))
-  echo "Test Report Summary:"
-  echo "- Total tests: $total"
-  echo "- Passed: $passed"
-  echo "- Failed: $failures"
-  echo "- Errors: $errors"
-  echo "- Skipped: $skipped"
-else
-  echo "No report.xml found."
-fi
-
-# Cleanup
-kill $SERVER_PID
-
-# Simulate artifacts
-mkdir -p $PROJECT_DIR/artifacts
-cp $PROJECT_DIR/report.xml $PROJECT_DIR/artifacts/ || true
-cp main_menu.png $PROJECT_DIR/artifacts/ || true
-
-echo "Browser Functional Tests completed!"
-```
-
-Run it:
-
-```bash
-docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline:latest /bin/bash /project/run_browser_tests.sh
-```
+| Folder            | Framework              | Run with                                                       |
+|-------------------|------------------------|----------------------------------------------------------------|
+| `test/gut/`       | GUT                    | `run_gut_unit_tests.sh`                                        |
+| `test/gdunit4/`   | gdUnit4                | `run_gdunit4_unit_tests.sh`                                    |
+| `tests/`          | pytest + Playwright    | `run_browser_tests.sh`                                         |
+| `tests/ci/`       | pytest                 | [the `tests/ci` command](#running-the-ci-helper-tests-testsci) |
+| `test/benchmark/` | Godot benchmark runner | CI only (`benchmark.yml`)                                      |
 
 ## Troubleshooting
 
-- **Docker Desktop Issues**: Ensure Docker is running and has enough
-    resources (e.g., 4GB RAM allocated).
-- **Permissions**: If file access issues arise, run Docker Desktop as
-    administrator.
-- **Timeouts**: Adjust `PW_TIMEOUT` in scripts if browser tests are slow.
-- **Godot Export Failures**: Verify your project has a valid export
-    preset for "Web" in Godot Editor (Project > Export > Add "Web" preset).
-- **Missing Dependencies**: If a tool fails, check the Dockerfile and
-    rebuild the image.
-- **Windows Path Issues**: Use forward slashes in paths if editing
-    scripts manually (e.g., C:/Users/...).
-- **Docker Build Errors**: If the build fails, try rebuilding with
-    no cache: `docker build -t sky-lock-assault-pipeline . --no-cache`.
-    Ensure your internet connection is stable for downloading packages.
-- **Test Failures**: If test_settings.gd or test_settings_persistence.gd
-    still fail, verify that DirAccess.remove_absolute is used correctly.
-    You can test interactively:
-
-    ```bash
-    docker run -it --rm -v "$($PWD.Path):/project" sky-lock-assault-pipeline /bin/bash
-    ```
-
-    then check: `gio --version`, `kioclient5 --version`, and `gvfs-trash --version`
-    to confirm installations. If issues persist, the DirAccess approach should bypass
-    these dependencies.
-- **Slow Test Scanning**: The warnings about test suite scanning
-    taking >300ms (e.g., test_settings.gd took 962ms) are normal for
-    complex scenes but indicate potential optimization (e.g., simplify
-    test setup or reduce resource loading).
-
-## Testing Requirement Example
-
-As per guidelines, here's an example GDUnit4 test for a new feature
-(e.g., fuel management script in `./scripts/fuel_manager.gd`):
-
-```gdscript
-# test_fuel_manager.gd in ./test/
-extends GdUnitTestSuite
-
-func test_fuel_depletion():
-    var fuel_manager = load("res://scripts/fuel_manager.gd").new()
-    fuel_manager.max_fuel = 100
-    fuel_manager.current_fuel = 100
-    fuel_manager.deplete(10)
-    assert_int(fuel_manager.current_fuel).is_equal(90)
-```
-
-For Playwright (browser automation):
-
-```python
-# example_test.py
-import pytest
-from playwright.async_api import async_playwright
-
-@pytest.mark.asyncio
-async def test_game_loads():
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
-        await page.goto("http://localhost:8080/index.html")
-        assert await page.title() == "Sky Lock Assault"  # Adjust to actual title
-        await browser.close()
-```
-
-Run these via the pipeline or manually in the container for coverage.
-
-This setup ensures the pipeline runs sequentially and locally, aligning
-with your Godot v4.5 development workflow. If project changes
-(e.g., new tools), update the Dockerfile/script accordingly.
+- **`/bin/bash: /project/<name>.sh: No such file or directory`**: the
+  scripts are in `workspace/`. Use `/project/workspace/<name>.sh`.
+- **`$'\r': command not found`**: a script was saved with Windows (CRLF)
+  line endings. `.gitattributes` checks files out with LF; if an editor
+  converted one, save it with LF again.
+- **gdUnit4 can't find `GdUnitCmdTool.gd`**: `addons/gdUnit4` is missing
+  from your clone. The copy in the image is hidden by the mount, so install
+  gdUnit4 6.2.0 into `addons/gdUnit4`.
+- **`addons/gdUnit4_disabled` left behind**: a GUT run was killed before
+  its cleanup ran. Rename the folder back to `addons/gdUnit4`.
+- **`globals.gd` or `export_presets.cfg` still modified**: a browser run
+  was stopped during the export, before the files were restored. Run
+  `git restore export_presets.cfg scripts/core/globals.gd`.
+- **Git reports `dubious ownership`**: the scripts add `/project` and
+  `/project/.git` as safe directories themselves. For your own commands, add
+  the two `git config` lines from the `tests/ci` command.
+- **Port 8080 already in use**: stop whatever uses it on Windows, or
+  publish another host port, for example `-p 8081:8080`, and open
+  <http://localhost:8081>.
+- **Markdown lint differs from CI**: the image has markdownlint-cli2 0.12.1,
+  while CI uses v0.24.0, so a few rules can differ.
+- **Docker build fails**: check your connection, then rebuild without the
+  cache: `docker build --no-cache -t sky-lock-assault-pipeline:latest .`
+- **Docker runs out of memory**: give Docker Desktop at least 4 GB of RAM.
 <!-- markdownlint-enable line-length -->
