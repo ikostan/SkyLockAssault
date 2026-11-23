@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "created": "2026-11-22T14:57:42Z",
-  "commit": "e702742f5fb6baf119ea2be84729b65465b7192c",
-  "runner": "GitHub Actions 1000045203",
+  "created": "2026-11-23T12:18:47Z",
+  "commit": "c312188fa090943b23035a8ec30b6379335067bd",
+  "runner": "GitHub Actions 1000045315",
   "godot": "4.7.1-stable (official)",
   "runs": 3,
   "baseline": {
@@ -13,25 +13,6 @@
     "reload_object_growth": 0.0
   },
   "history": [
-    {
-      "run_id": "44692486020",
-      "commit": "f7cd427818290badfce5eb637631ac7f789f00dc",
-      "date": "2026-11-20T07:28:25Z",
-      "metrics": {
-        "saves": 0.0,
-        "objects_avg": 2268.733333333333,
-        "nodes_avg": 485.98333333333335,
-        "resources_avg": 208.0,
-        "orphans_max": 0.0,
-        "reload_orphans_max": 0.0,
-        "reload_object_growth": 0.0,
-        "frame_p95_ms": 32.5,
-        "frames_over_33.4ms": 47.0,
-        "proc_worst_avg_ms": 4.8667,
-        "phys_worst_avg_ms": 0.8367,
-        "mem_static_growth": 655256.0
-      }
-    },
     {
       "run_id": "44889313948",
       "commit": "8ecdd346b5c3e0239700376f35926e2cb5e5b29d",
@@ -107,6 +88,25 @@
         "phys_worst_avg_ms": 0.8483,
         "mem_static_growth": 674328.0
       }
+    },
+    {
+      "run_id": "45169909421",
+      "commit": "c312188fa090943b23035a8ec30b6379335067bd",
+      "date": "2026-11-23T12:18:47Z",
+      "metrics": {
+        "saves": 0.0,
+        "objects_avg": 2246.6833333333334,
+        "nodes_avg": 510.1666666666667,
+        "resources_avg": 213.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": -4.0,
+        "frame_p95_ms": 44.2,
+        "frames_over_33.4ms": 1501.0,
+        "proc_worst_avg_ms": 6.4467,
+        "phys_worst_avg_ms": 0.9633,
+        "mem_static_growth": 691304.0
+      }
     }
   ],
   "accepted": {
@@ -141,7 +141,8 @@
     "44889313948",
     "44912395192",
     "44938433913",
-    "45022422204"
+    "45022422204",
+    "45169909421"
   ],
   "profile": "web"
 }
