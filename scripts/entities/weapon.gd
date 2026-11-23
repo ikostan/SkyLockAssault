@@ -177,7 +177,11 @@ func _get_or_create_slot(index: int) -> WeaponFirer:
 
 	firer.position = Vector2.ZERO
 	firer.hide()  # switch_to() shows the active firer
-	firer.set_projectile_parent(_projectile_parent)
+	# A freed container can't be passed to the typed Node argument; the slot then falls back
+	# to the scene root, like a firer whose parent was freed.
+	firer.set_projectile_parent(
+		_projectile_parent if is_instance_valid(_projectile_parent) else null
+	)
 	add_child(firer)
 	_slots[index] = firer
 	return firer

@@ -323,3 +323,19 @@ func test_lazily_created_slots_use_the_latest_projectile_parent() -> void:
 	assert_null(
 		weapon.current_weapon.projectile_parent, "A new slot must not inherit a stale parent."
 	)
+
+
+## #1140: a slot created after the injected container was freed still equips, gets no
+## parent (so its firer falls back to the scene root), and raises no script error.
+func test_slot_created_after_container_is_freed_still_equips() -> void:
+	_arm(2)
+	var container := Node2D.new()
+	add_child(container)
+	weapon.set_projectile_parent(container)
+	container.free()
+
+	weapon.switch_to(1)
+
+	assert_eq(weapon.weapon_resource.current_index, 1, "The swap must still succeed.")
+	assert_eq(_firers().size(), 2, "The new slot must be added, not leaked.")
+	assert_null(weapon.current_weapon.projectile_parent, "A freed container is not passed on.")
