@@ -252,3 +252,90 @@ func test_freeing_weapon_frees_cached_slots() -> void:
 	weapon.free()
 	for firer: Variant in firers:
 		assert_false(is_instance_valid(firer), "cached slots are freed with Weapon")
+
+
+## #1140: Weapon._ready() equips slot 0 before the level injects its projectile container,
+## so the slot that already exists must get it on injection.
+func test_projectile_parent_reaches_slot_created_before_injection() -> void:
+	_arm(2)
+	var first: WeaponFirer = weapon.current_weapon
+	assert_null(first.projectile_parent, "No parent until the level injects one.")
+	var container: Node2D = add_child_autofree(Node2D.new())
+
+	weapon.set_projectile_parent(container)
+
+	assert_same(first.projectile_parent, container)
+
+
+## #1140: a slot first selected after injection gets the same container.
+func test_projectile_parent_reaches_slot_created_after_injection() -> void:
+	_arm(3)
+	var container: Node2D = add_child_autofree(Node2D.new())
+	weapon.set_projectile_parent(container)
+
+	weapon.switch_to(2)
+	weapon.switch_to(1)
+
+	assert_eq(_firers().size(), 3)
+	for firer: WeaponFirer in _firers():
+		assert_same(firer.projectile_parent, container, firer.weapon_name + " has the container.")
+
+
+## #1140: injecting again replaces the container on every slot, and null clears it.
+func test_projectile_parent_can_be_replaced_and_cleared() -> void:
+	_arm(2)
+	weapon.switch_to(1)
+	var first_container: Node2D = add_child_autofree(Node2D.new())
+	var second_container: Node2D = add_child_autofree(Node2D.new())
+
+	weapon.set_projectile_parent(first_container)
+	weapon.set_projectile_parent(second_container)
+	for firer: WeaponFirer in _firers():
+		assert_same(firer.projectile_parent, second_container)
+
+	weapon.set_projectile_parent(null)
+	for firer: WeaponFirer in _firers():
+		assert_null(firer.projectile_parent)
+
+
+## #1140: injecting before any slot exists is kept for the first slot.
+func test_projectile_parent_injected_before_ready_reaches_first_slot() -> void:
+	var container: Node2D = add_child_autofree(Node2D.new())
+	weapon.set_projectile_parent(container)
+	_arm(1)
+	assert_same(weapon.current_weapon.projectile_parent, container)
+
+
+## #1140: a slot created after the parent was replaced or cleared gets the current value,
+## not the first one injected.
+func test_lazily_created_slots_use_the_latest_projectile_parent() -> void:
+	_arm(3)
+	var original: Node2D = add_child_autofree(Node2D.new())
+	var replacement: Node2D = add_child_autofree(Node2D.new())
+
+	weapon.set_projectile_parent(original)
+	weapon.set_projectile_parent(replacement)
+	weapon.switch_to(1)
+	assert_same(weapon.current_weapon.projectile_parent, replacement)
+
+	weapon.set_projectile_parent(null)
+	weapon.switch_to(2)
+	assert_null(
+		weapon.current_weapon.projectile_parent, "A new slot must not inherit a stale parent."
+	)
+
+
+## #1140: a slot created after the injected container was freed still equips, gets no
+## parent (so its firer falls back to the scene root), and raises no script error.
+func test_slot_created_after_container_is_freed_still_equips() -> void:
+	_arm(2)
+	var container := Node2D.new()
+	add_child(container)
+	weapon.set_projectile_parent(container)
+	container.free()
+
+	weapon.switch_to(1)
+
+	assert_eq(weapon.weapon_resource.current_index, 1, "The swap must still succeed.")
+	assert_eq(_firers().size(), 2, "The new slot must be added, not leaked.")
+	assert_null(weapon.current_weapon.projectile_parent, "A freed container is not passed on.")

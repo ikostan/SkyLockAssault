@@ -144,8 +144,9 @@ func _run_gameplay_phase() -> Dictionary:
 	return {"ok": ok, "fuel": fuel, "ammo": ammo, "speed": speed, "max_speed": max_speed}
 
 
-## Bullets live under the scene root until their lifetime timer expires; wait for them so
-## they don't pollute the reload-loop counts.
+## Waits until the scene root has no more children than before the gameplay phase, so nothing
+## left over pollutes the reload-loop counts. Projectiles are freed with their level since
+## #1140, so this normally returns at once; it stays as a guard against nodes left on the root.
 func _wait_for_bullets_to_clear(root_children_before: int) -> void:
 	var waited: float = 0.0
 	while get_tree().root.get_child_count() > root_children_before:

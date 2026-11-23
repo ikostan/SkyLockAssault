@@ -7,6 +7,10 @@
 ## Each slot's [code]WeaponFirer[/code] is created the first time the slot is selected and kept as a
 ## hidden child while another slot is active, so its cooldown keeps running and a swap can't
 ## bypass the fire rate (#1138). The firers are freed with this node.
+##
+## The level injects its projectile container with [method set_projectile_parent]. Weapon
+## passes it to every slot, including slots created later, so projectiles are freed with the
+## level (#1140).
 
 class_name Weapon
 extends Node2D
@@ -28,6 +32,8 @@ var weapon_resource: WeaponResource = WeaponResource.new()
 
 # Cached firer per slot, indexed like weapon_types. null until the slot is first selected.
 var _slots: Array[WeaponFirer] = []
+# Level-owned container passed to every slot. null until the level injects one.
+var _projectile_parent: Node
 
 
 func _ready() -> void:
@@ -118,6 +124,20 @@ func fire() -> void:
 		weapon_fired.emit(weapon_resource.current_ammo)
 
 
+## Sets the node that receives the projectiles of every slot.
+##
+## The level calls this with its [code]Projectiles[/code] container. Slots that already exist
+## get it now, and slots created later get it when they're first selected. Until then, firers
+## fall back to the scene root.
+##
+## [param parent]: The level-owned container, or [code]null[/code] to clear it.
+func set_projectile_parent(parent: Node) -> void:
+	_projectile_parent = parent
+	for firer: WeaponFirer in _slots:
+		if is_instance_valid(firer):
+			firer.set_projectile_parent(parent)
+
+
 ## Return the total number of weapon types available.
 ## Returns the size of the weapon types array.
 func get_num_weapons() -> int:
@@ -157,6 +177,11 @@ func _get_or_create_slot(index: int) -> WeaponFirer:
 
 	firer.position = Vector2.ZERO
 	firer.hide()  # switch_to() shows the active firer
+	# A freed container can't be passed to the typed Node argument; the slot then falls back
+	# to the scene root, like a firer whose parent was freed.
+	firer.set_projectile_parent(
+		_projectile_parent if is_instance_valid(_projectile_parent) else null
+	)
 	add_child(firer)
 	_slots[index] = firer
 	return firer

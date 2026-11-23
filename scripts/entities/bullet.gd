@@ -6,8 +6,9 @@
 ## projectiles but isn't one itself. Its cooldown lives here and keeps running while
 ## [code]Weapon[/code] has another slot active (#1138).
 ##
-## Each shot instantiates projectile.tscn (#1139) and plays its sound through the
-## [code]SfxManager[/code] pool on the Weapon bus (#1141), so firing adds no audio node.
+## Each shot instantiates projectile.tscn (#1139) under the level's projectile container
+## (#1140) and plays its sound through the [code]SfxManager[/code] pool on the Weapon bus
+## (#1141), so firing adds no audio node.
 
 class_name BulletFirer
 extends WeaponFirer
@@ -77,13 +78,25 @@ func play_shot_sound() -> void:
 	SfxManager.play_stream(config.shot_sound, AudioConstants.BUS_SFX_WEAPON)
 
 
-## Instantiates projectile.tscn, configures it, and adds it to the scene root.
+## Instantiates projectile.tscn, adds it to the projectile parent, and configures it.
+##
+## The parent is the level's [code]Projectiles[/code] container injected through
+## [member WeaponFirer.projectile_parent], so projectiles are freed with their level (#1140).
+## A firer without a valid injected parent, such as one in an isolated test, falls back to
+## the scene root.
 ##
 ## The projectile spawns at this firer's global position plus
 ## [member BulletResource.muzzle_offset], and frees itself on its first hit or when its
-## lifetime ends.
+## lifetime ends. It's configured after [method Node.add_child], so the spawn position is
+## applied in global coordinates under any parent transform.
 func spawn_projectile() -> void:
 	var projectile := PROJECTILE_SCENE.instantiate() as Projectile
+	_get_spawn_parent().add_child(projectile)
 	projectile.configure(config, global_position + config.muzzle_offset)
-	# The scene root stays the parent here; the level-owned container is a later sub-task.
-	get_tree().root.add_child(projectile)
+
+
+# The injected projectile parent, or the scene root when none is set or it was freed.
+func _get_spawn_parent() -> Node:
+	if is_instance_valid(projectile_parent):
+		return projectile_parent
+	return get_tree().root

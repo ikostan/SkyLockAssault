@@ -70,8 +70,8 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	# Projectiles are parented to root, outside GUT's fixture. Sound players are freed too,
-	# in case a regression brings back a per-shot player.
+	# Firers without an injected parent add projectiles to the root, outside GUT's fixture
+	# (#1140). Sound players are freed too, in case a regression brings back a per-shot player.
 	for node in get_tree().root.get_children():
 		if node not in original_root_children:
 			if node is RigidBody2D or node is AudioStreamPlayer2D or node is AudioStreamPlayer:
@@ -242,6 +242,76 @@ func test_projectile_uses_configured_motion_and_global_muzzle_offset() -> void:
 	assert_eq(projectile.scene_file_path, "res://scenes/projectile.tscn")
 
 
+## #1140: a firer with no injected parent keeps adding projectiles to the scene root, so
+## isolated firers (like the ones in this suite) still work.
+func test_firer_without_injected_parent_falls_back_to_root() -> void:
+	assert_null(firer.projectile_parent, "A firer outside a level has no projectile parent.")
+	var projectile := _spawn_projectile()
+	if projectile == null:
+		return
+	assert_eq(projectile.get_parent(), get_tree().root)
+
+
+## #1140: projectiles go to the injected parent instead of the scene root.
+func test_projectile_is_added_to_injected_parent() -> void:
+	var container: Node2D = add_child_autofree(Node2D.new())
+	firer.set_projectile_parent(container)
+	assert_true(firer.fire())
+	var projectiles := _projectiles()
+	assert_eq(projectiles.size(), 1, "fire() must spawn one projectile.")
+	if projectiles.size() != 1:
+		return
+	assert_eq(projectiles[0].get_parent(), container)
+	assert_false(
+		projectiles[0] in get_tree().root.get_children(),
+		"An injected parent replaces the scene root."
+	)
+
+
+## #1140: the projectile is configured after it enters its parent, so its spawn point and
+## rotation are global even when the parent is moved and rotated.
+func test_spawn_position_is_global_under_transformed_parent() -> void:
+	var container: Node2D = add_child_autofree(Node2D.new())
+	container.position = Vector2(300, -120)
+	container.rotation = 0.6
+	firer.set_projectile_parent(container)
+	firer.position = Vector2(40, 90)
+	var expected_position := firer.global_position + config.muzzle_offset
+
+	var projectile := _spawn_projectile()
+	if projectile == null:
+		return
+	assert_eq(projectile.get_parent(), container)
+	assert_almost_eq(projectile.global_position, expected_position, Vector2(0.001, 0.001))
+	assert_almost_eq(projectile.global_rotation, Projectile.UP_ROTATION, 0.0001)
+	assert_eq(projectile.linear_velocity, Vector2(0, -720), "Velocity is already global.")
+
+
+## #1140: a parent that was freed is treated as no parent, so the shot still spawns.
+func test_freed_projectile_parent_falls_back_to_root() -> void:
+	var container := Node2D.new()
+	add_child(container)
+	firer.set_projectile_parent(container)
+	container.free()
+	var projectile := _spawn_projectile()
+	if projectile == null:
+		return
+	assert_eq(projectile.get_parent(), get_tree().root)
+
+
+## #1140: projectiles under an injected parent are freed with it.
+func test_freeing_injected_parent_frees_its_projectiles() -> void:
+	var container := Node2D.new()
+	add_child(container)
+	firer.set_projectile_parent(container)
+	var projectile := _spawn_projectile()
+	if projectile == null:
+		return
+	container.free()
+	assert_false(is_instance_valid(projectile), "Projectiles are freed with their parent.")
+	assert_eq(_projectiles().size(), 0)
+
+
 func test_projectile_uses_configured_texture_scale_and_hitbox() -> void:
 	var projectile := _spawn_projectile()
 	if projectile == null:
@@ -375,6 +445,38 @@ func test_firer_does_not_change_viewport_texture_filter() -> void:
 		ProjectSettings.get_setting("rendering/textures/canvas_textures/default_texture_filter"),
 		0,
 		"Projectiles rely on the project-wide nearest filter."
+	)
+
+
+## #1140: changing the firer's parent only redirects later shots. Shots already in flight
+## stay where they are, and clearing the parent brings back the root fallback.
+func test_changing_projectile_parent_only_redirects_new_shots() -> void:
+	var original: Node2D = add_child_autofree(Node2D.new())
+	var replacement: Node2D = add_child_autofree(Node2D.new())
+	var root := get_tree().root
+	firer.set_projectile_parent(original)
+	var first_shot := _spawn_projectile()
+	if first_shot == null:
+		return
+
+	firer.set_projectile_parent(replacement)
+	firer.spawn_projectile()
+	var replacement_shots := replacement.get_children()
+	assert_eq(replacement_shots.size(), 1, "The next shot should use the replacement container.")
+
+	firer.set_projectile_parent(null)
+	firer.spawn_projectile()
+
+	var shots := _projectiles()
+	assert_eq(shots.size(), 3, "Each spawn should create one projectile.")
+	assert_same(first_shot.get_parent(), original, "Changing the parent keeps shots in flight.")
+	assert_eq(
+		replacement.get_children(), replacement_shots, "Clearing keeps earlier shots in flight."
+	)
+	assert_eq(
+		shots.filter(func(shot: Node) -> bool: return shot.get_parent() == root).size(),
+		1,
+		"Clearing the parent should restore root fallback for subsequent shots."
 	)
 
 
