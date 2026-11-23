@@ -98,6 +98,14 @@ func _joy_button(index: JoyButton) -> InputEventJoypadButton:
 	return ev
 
 
+func _joy_axis(axis: JoyAxis, value: float) -> InputEventJoypadMotion:
+	var ev: InputEventJoypadMotion = InputEventJoypadMotion.new()
+	ev.axis = axis
+	ev.axis_value = value
+	ev.device = -1
+	return ev
+
+
 func _unbind(action: String, device: String) -> void:
 	for ev: InputEvent in _events_for(action, device):
 		InputMap.action_erase_event(action, ev)
@@ -218,6 +226,54 @@ func test_bind_06_rebind_unmanaged_action() -> void:
 	InputMap.erase_action("test_bind_06")
 
 
+## BIND-07 | Listeners see the complete transfer, even if a named conflict no longer exists.
+func test_bind_07_axis_transfer_resolves_only_exact_listed_conflicts() -> void:
+	var moved_axis := _joy_axis(JOY_AXIS_RIGHT_X, -1.0)
+	var opposite_axis := _joy_axis(JOY_AXIS_RIGHT_X, 1.0)
+	var old_fire_pad: InputEvent = _events_for("fire", "gamepad")[0]
+	var fire_keys: Array[InputEvent] = _events_for("fire", "keyboard")
+	InputMap.action_add_event("move_left", moved_axis.duplicate())
+	InputMap.action_add_event("move_right", moved_axis.duplicate())
+	InputMap.action_add_event("move_right", opposite_axis)
+	InputMap.action_add_event("ui_left", moved_axis.duplicate())
+	var signal_states: Array[Array] = []
+	var observe := func() -> void:
+		signal_states.append([
+			_has_event("fire", moved_axis),
+			_has_event("move_left", moved_axis),
+			_has_event("move_right", moved_axis),
+		])
+	Settings.bindings_changed.connect(observe)
+
+	Settings.rebind("fire", moved_axis, ["stale_binding_action", "move_left", "move_right"])
+
+	Settings.bindings_changed.disconnect(observe)
+	assert_eq(signal_states, [[true, false, false]], "one notification after the full transfer")
+	assert_false(_has_event("fire", old_fire_pad), "the old gamepad button is replaced")
+	assert_eq(_events_for("fire", "keyboard"), fire_keys, "fire's keyboard binding is kept")
+	assert_true(_has_event("move_right", opposite_axis), "the opposite direction is kept")
+	assert_true(_has_event("ui_left", moved_axis), "an unlisted action can keep the same input")
+
+
+## BIND-08 | Remapping replaces the displayed binding and leaves extra bindings and disk alone.
+func test_bind_08_rebind_keeps_secondary_key_and_does_not_save() -> void:
+	var old_key: InputEvent = _events_for("fire", "keyboard")[0]
+	var secondary_key := _key(KEY_F9)
+	var new_key := _key(KEY_F10)
+	InputMap.action_add_event("fire", secondary_key)
+	Settings.save_input_mappings()
+	assert_file_exists(Settings.CONFIG_PATH)
+	var saved_before := FileAccess.get_file_as_bytes(Settings.CONFIG_PATH)
+
+	Settings.rebind("fire", new_key)
+
+	assert_eq(_events_for("fire", "keyboard").size(), 2)
+	assert_false(_has_event("fire", old_key), "the displayed key is replaced")
+	assert_true(_has_event("fire", secondary_key), "the secondary key is kept")
+	assert_true(_has_event("fire", new_key), "the requested key is applied")
+	assert_eq(FileAccess.get_file_as_bytes(Settings.CONFIG_PATH), saved_before, "caller saves")
+
+
 # ── Settings.reset_to_defaults() ─────────────────────────────────────────────
 
 
@@ -248,6 +304,38 @@ func test_reset_02_unknown_device_is_ignored() -> void:
 
 	assert_eq(_events_for("fire", "keyboard")[0].physical_keycode, KEY_F, "binding kept")
 	assert_signal_not_emitted(Settings, "bindings_changed")
+
+
+## RESET-03 | A gamepad reset removes custom buttons and axes and saves before notifying.
+func test_reset_03_gamepad_reset_persists_before_notification() -> void:
+	var custom_key := _key(KEY_F)
+	var custom_button := _joy_button(JOY_BUTTON_MISC1)
+	var custom_axis := _joy_axis(JOY_AXIS_RIGHT_X, -1.0)
+	Settings.rebind("fire", custom_key)
+	Settings.rebind("fire", custom_button)
+	InputMap.action_add_event("fire", custom_axis)
+	Settings.save_input_mappings()
+	var saved_on_signal := ConfigFile.new()
+	var observe := func() -> void:
+		var err := saved_on_signal.load_encrypted_pass(
+			Settings.CONFIG_PATH, Globals.save_encryption_pass
+		)
+		assert_eq(err, OK, "an observer can read the saved settings")
+	Settings.bindings_changed.connect(observe)
+	watch_signals(Settings)
+
+	Settings.reset_to_defaults("gamepad")
+
+	Settings.bindings_changed.disconnect(observe)
+	var default_pad: InputEvent = InputDefaults.make_event("fire", "gamepad")
+	assert_eq(_events_for("fire", "gamepad").size(), 1, "all custom gamepad inputs are removed")
+	assert_true(_has_event("fire", default_pad), "the gamepad default is restored")
+	assert_true(_has_event("fire", custom_key), "the custom keyboard binding survives")
+	var saved_events: Array = saved_on_signal.get_value("input", "fire", [])
+	assert_eq(saved_events.size(), 2, "only the custom key and default gamepad input are saved")
+	assert_has(saved_events, InputEventCodec.serialize_event(custom_key))
+	assert_has(saved_events, InputEventCodec.serialize_event(default_pad))
+	assert_signal_emit_count(Settings, "bindings_changed", 1)
 
 
 # ── Device checks through InputEventCodec ────────────────────────────────────
@@ -342,6 +430,27 @@ func test_ui_04_reset_button_emits_bindings_changed() -> void:
 		"fire is back on its default key"
 	)
 	assert_signal_emit_count(Settings, "bindings_changed", 1)
+
+
+## UI-05 | A non-conflicting axis remap publishes once and refreshes the button.
+func test_ui_05_direct_axis_remap_emits_bindings_changed() -> void:
+	var button := InputRemapButton.new()
+	button.action = "fire"
+	button.current_device = InputRemapButton.DeviceType.GAMEPAD
+	add_child_autofree(button)
+	var keys_before: Array[InputEvent] = _events_for("fire", "keyboard")
+	button.button_pressed = true
+	button._on_pressed()
+	watch_signals(Settings)
+
+	button._input(_joy_axis(JOY_AXIS_RIGHT_X, -0.75))
+
+	assert_signal_emit_count(Settings, "bindings_changed", 1)
+	assert_eq(_events_for("fire", "gamepad").size(), 1)
+	assert_true(_has_event("fire", _joy_axis(JOY_AXIS_RIGHT_X, -1.0)), "axis is normalized")
+	assert_eq(_events_for("fire", "keyboard"), keys_before)
+	assert_eq(button.text, "Right Stick (Left)")
+	assert_false(button.listening, "the button exits capture mode")
 
 
 # ── MainScene ────────────────────────────────────────────────────────────────
@@ -462,3 +571,25 @@ func test_ms_09_exit_tree_disconnects_signals() -> void:
 
 	assert_true(Settings.bindings_changed.is_connected(scene._on_bindings_changed))
 	assert_true(Settings.input_device_changed.is_connected(scene._on_input_device_changed))
+
+
+## MS-10 | Device changes while paused use the device selected at resume.
+func test_ms_10_paused_device_switch_checks_current_device_on_resume() -> void:
+	_unbind("fire", "gamepad")
+	Settings.rebind("pause", _joy_button(JOY_BUTTON_BACK))
+	var scene: MainScene = await _spawn_main_scene()
+
+	get_tree().paused = true
+	Settings.set_input_device("gamepad")
+	assert_false(_warning_visible(scene), "switching to an unbound device while paused is silent")
+	Settings.set_input_device("keyboard")
+	get_tree().paused = false
+	assert_false(_warning_visible(scene), "the final device is fully bound")
+
+	get_tree().paused = true
+	Settings.set_input_device("gamepad")
+	assert_false(_warning_visible(scene), "the warning still waits for resume")
+	get_tree().paused = false
+
+	assert_true(_warning_visible(scene), "the final device now has an unbound critical action")
+	assert_true(scene.message_label.text.contains("PRESS='BACK'"), "uses the gamepad pause label")
