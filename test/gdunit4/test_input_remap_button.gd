@@ -300,7 +300,7 @@ func test_finish_remap_invalid_index() -> void:
 	
 	InputMap.erase_action("test_action")
 
-## Test keyboard fallback label for key not in custom dict
+## Test keyboard label for a key with no special-case name (KEY_F)
 ## :rtype: void
 func test_keyboard_fallback_label() -> void:
 	if InputMap.has_action("test_action"):
@@ -308,7 +308,7 @@ func test_keyboard_fallback_label() -> void:
 	
 	InputMap.add_action("test_action")
 	var event: InputEventKey = InputEventKey.new()
-	event.physical_keycode = KEY_F  # Not in KEY_LABELS
+	event.physical_keycode = KEY_F  # Labeled by InputEventCodec.get_event_label()
 	InputMap.action_add_event("test_action", event)
 	
 	var button: InputRemapButton = auto_free(InputRemapButton.new())

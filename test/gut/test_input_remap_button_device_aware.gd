@@ -48,7 +48,7 @@ func test_irb_01() -> void:
 	key_event.physical_keycode = KEY_A
 	InputMap.action_add_event(TEST_ACTION, key_event)
 	button.update_button_text()
-	assert_eq(button.text, "A")  # From KEY_LABELS fallback OS.get_keycode_string(KEY_A) = "A"
+	assert_eq(button.text, "A")  # InputEventCodec.get_event_label() for KEY_A
 	# Non-keyboard: add gamepad
 	var gamepad_event: InputEventJoypadButton = InputEventJoypadButton.new()
 	gamepad_event.button_index = JOY_BUTTON_A
@@ -67,7 +67,7 @@ func test_irb_02a() -> void:
 	button_event.button_index = JOY_BUTTON_A
 	InputMap.action_add_event(TEST_ACTION, button_event)
 	button.update_button_text()
-	assert_eq(button.text, "A")  # From JOY_BUTTON_LABELS
+	assert_eq(button.text, "A")  # InputEventCodec.get_event_label() for JOY_BUTTON_A
 	# Missing mapping
 	InputMap.action_erase_events(TEST_ACTION)
 	button.update_button_text()
@@ -83,7 +83,7 @@ func test_irb_02b() -> void:
 	axis_event.axis_value = 1.0
 	InputMap.action_add_event(TEST_ACTION, axis_event)
 	button.update_button_text()
-	assert_eq(button.text, "Left Stick (Right)")  # From JOY_AXIS_LABELS
+	assert_eq(button.text, "Left Stick (Right)")  # InputEventCodec.get_event_label() for the axis
 
 
 ## IRB-03 | Remap keyboard binding | Keyboard mapping enabled | Press new key | Mapping updates to new key; old removed | When no key pressed, mapping unchanged | ✔ | Remapping mode active
