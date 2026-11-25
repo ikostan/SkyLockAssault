@@ -345,6 +345,10 @@ func test_transition_gating_mechanics_fire_on_full_completion() -> void:
 	dummy_root.free()
 	
 	splash_instance.scene = dummy_packed
+	# _ready() requested the main menu. Fetch it before replacing the path, so the request can't
+	# leak into a later test (after_each() only drains the path set below).
+	splash_instance.set_process(false)
+	await _drain_threaded_load(splash_instance.resolved_next_scene)
 	# The router routes to the path resolved in _ready() (#1167) and still clears next_scene.
 	splash_instance.resolved_next_scene = "res://scenes/dummy_test_scene.tscn"
 	Globals.next_scene = "res://scenes/dummy_test_scene.tscn"
