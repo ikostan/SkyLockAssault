@@ -62,7 +62,7 @@ signal speed_maxed
 		current_speed = new_speed
 		speed_updated.emit(current_speed)
 
-		var low_thresh: float = min_speed + (max_speed - min_speed) * low_yellow_fraction
+		var low_thresh: float = get_low_threshold()
 		if old_speed > low_thresh and current_speed <= low_thresh:
 			speed_low.emit()
 
@@ -117,6 +117,13 @@ func _enforce_current_speed_bounds() -> void:
 	if current_speed < min_speed or current_speed > max_speed:
 		# Using 'self.' intentionally triggers the setter to handle clamps and signals
 		self.current_speed = current_speed
+
+
+## Returns the low-speed warning threshold: [member low_yellow_fraction] of the way from
+## [member min_speed] to [member max_speed]. At or below it, [signal speed_low] fires and
+## the HUD speed warning blinks. Equals [member min_speed] when both limits are the same.
+func get_low_threshold() -> float:
+	return min_speed + (max_speed - min_speed) * low_yellow_fraction
 
 
 ## Sets both speed limits at once. Returns false and changes nothing when invalid.

@@ -506,3 +506,37 @@ func test_initial_sync_after_inventory_shrink_uses_clamped_weapon() -> void:
 	assert_eq(
 		_hud.weapon_label.text, "{HEAVY=CANNON}", "The replaced resource must no longer drive the HUD."
 	)
+
+
+# ==========================================
+# SHARED LOW THRESHOLD (#1151)
+# ==========================================
+
+## The HUD's low-speed color and warning switch at SpeedResource.get_low_threshold(), the
+## same point where speed_low fires.
+func test_hud_low_speed_states_switch_at_shared_threshold(
+	case: Array = use_parameters([
+		[95.0, 713.0, 0.10],
+		[100.0, 500.0, 0.25],
+		[0.0, 1000.0, 0.5],
+	])
+) -> void:
+	assert_true(_speed.set_speed_limits(case[0], case[1]))
+	_speed.low_yellow_fraction = case[2]
+	var threshold: float = _speed.get_low_threshold()
+	watch_signals(_speed)
+
+	_speed.current_speed = threshold + 0.5
+	assert_false(_hud.is_speed_warning_active(), "no warning just above the threshold")
+	assert_eq(_hud.get_speed_bar_color(), Color.GREEN, "green just above the threshold")
+	assert_signal_emit_count(_speed, "speed_low", 0, "no speed_low just above")
+
+	_speed.current_speed = threshold
+	assert_true(_hud.is_speed_warning_active(), "warning at the threshold")
+	assert_signal_emit_count(_speed, "speed_low", 1, "speed_low at the threshold")
+	if threshold > _speed.min_speed:
+		assert_eq(
+			_hud.get_speed_bar_color(), Color.GREEN, "the lerp toward yellow starts at the threshold"
+		)
+		_speed.current_speed = (threshold + _speed.min_speed) / 2.0
+		assert_ne(_hud.get_speed_bar_color(), Color.GREEN, "below the threshold turns yellow")

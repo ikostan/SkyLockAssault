@@ -99,11 +99,15 @@ func _ready() -> void:
 	else:
 		push_warning("Player sprite texture missing! Using fallback size.")
 
-	# --- RESTORED BOUNDARY CALCULATIONS ---
+	# Bounds are relative to the spawn point. main_scene.gd spawns the player at
+	# spawn_y_fraction of the screen height, so the plane can move up to the top edge and
+	# down to the bottom edge, minus the sprite margin.
 	player_x_min = (screen_size.x * -0.5) + (sprite_size[0] * stats.hitbox_scale)
 	player_x_max = (screen_size.x * 0.5) - (sprite_size[0] * stats.hitbox_scale)
-	player_y_min = (screen_size.y * -0.83) + (sprite_size[1] * stats.hitbox_scale)
-	player_y_max = (screen_size.y / 6) - (sprite_size[1] * stats.hitbox_scale)
+	player_y_min = (screen_size.y * -stats.spawn_y_fraction) + (sprite_size[1] * stats.hitbox_scale)
+	player_y_max = (
+		(screen_size.y * (1.0 - stats.spawn_y_fraction)) - (sprite_size[1] * stats.hitbox_scale)
+	)
 
 	# Ensure the player always spawns with a full tank and default properties
 	fuel_resource.max_fuel = _settings.max_fuel
@@ -130,7 +134,7 @@ func _ready() -> void:
 	speed_resource.lateral_speed = _settings.lateral_speed
 	speed_resource.high_yellow_fraction = _settings.high_yellow_fraction
 	speed_resource.low_yellow_fraction = _settings.low_yellow_fraction
-	speed_resource.current_speed = 250.0
+	speed_resource.current_speed = stats.starting_speed
 
 	# Initialize timers and observers
 	fuel_timer.timeout.connect(_on_fuel_timer_timeout)
@@ -141,17 +145,7 @@ func _ready() -> void:
 		func(spd: float): speed_changed.emit(spd, speed_resource.max_speed)
 	)
 
-	speed_resource.speed_low.connect(
-		func():
-			var threshold: float = (
-				speed_resource.min_speed
-				+ (
-					(speed_resource.max_speed - speed_resource.min_speed)
-					* speed_resource.low_yellow_fraction
-				)
-			)
-			speed_low.emit(threshold)
-	)
+	speed_resource.speed_low.connect(func(): speed_low.emit(speed_resource.get_low_threshold()))
 
 	speed_resource.speed_maxed.connect(func(): speed_maxed.emit())
 
@@ -262,6 +256,7 @@ func _on_fuel_timer_timeout() -> void:
 	var normalized_speed: float = clamp(
 		speed_resource.current_speed / speed_resource.max_speed, 0.0, 1.0
 	)
+	# Higher difficulty burns fuel faster (see GameSettingsResource.difficulty)
 	var consumption: float = (
 		fuel_resource.base_consumption_rate * normalized_speed * _settings.difficulty
 	)
