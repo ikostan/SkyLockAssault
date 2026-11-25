@@ -285,3 +285,47 @@ func test_rejected_limits_are_silent_and_recoverable(
 	assert_signal_not_emitted(speed_res, "speed_maxed")
 	assert_true(speed_res.set_speed_limits(0.0, 1.0))
 	assert_eq(speed_res.current_speed, 1.0, "A rejected pair must not poison later updates.")
+
+
+# ==========================================
+# SHARED LOW THRESHOLD (#1151)
+# ==========================================
+
+## get_low_threshold() uses the shipped defaults: 95 + (713 - 95) * 0.10 = 156.8.
+func test_low_threshold_with_default_values() -> void:
+	assert_almost_eq(speed_res.get_low_threshold(), 156.8, 0.0001)
+
+
+## get_low_threshold() follows custom limits and fractions.
+func test_low_threshold_with_custom_values(
+	case: Array = use_parameters([
+		[100.0, 500.0, 0.25, 200.0],
+		[0.0, 1000.0, 0.5, 500.0],
+		[50.0, 450.0, 0.0, 50.0],
+		[200.0, 600.0, 0.8, 520.0],
+	])
+) -> void:
+	assert_true(speed_res.set_speed_limits(case[0], case[1]))
+	speed_res.low_yellow_fraction = case[2]
+	assert_almost_eq(speed_res.get_low_threshold(), case[3], 0.0001)
+
+
+## With min_speed equal to max_speed, the threshold is that speed, whatever the fraction.
+func test_low_threshold_when_limits_are_equal() -> void:
+	assert_true(speed_res.set_speed_limits(300.0, 300.0))
+	for fraction: float in [0.0, 0.1, 0.8]:
+		speed_res.low_yellow_fraction = fraction
+		assert_eq(speed_res.get_low_threshold(), 300.0, "fraction %s" % fraction)
+
+
+## speed_low fires exactly at get_low_threshold(): not just above it, and at it.
+func test_speed_low_fires_at_shared_threshold() -> void:
+	var threshold: float = speed_res.get_low_threshold()
+	speed_res.current_speed = threshold + 50.0
+	watch_signals(speed_res)
+
+	speed_res.current_speed = threshold + 0.01
+	assert_signal_emit_count(speed_res, "speed_low", 0, "just above the threshold")
+
+	speed_res.current_speed = threshold
+	assert_signal_emit_count(speed_res, "speed_low", 1, "at the threshold")

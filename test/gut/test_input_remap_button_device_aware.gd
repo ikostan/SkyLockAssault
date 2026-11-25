@@ -158,7 +158,7 @@ func test_irb_04() -> void:
 ## :rtype: void
 func test_irb_05() -> void:
 	button.current_device = InputRemapButton.DeviceType.GAMEPAD
-	var deadzone_threshold: float = InputRemapButton.AXIS_DEADZONE_THRESHOLD
+	var deadzone_threshold: float = Settings.AXIS_DEADZONE_THRESHOLD
 	button.button_pressed = true
 	button.pressed.emit()
 	assert_true(button.listening)
@@ -279,3 +279,36 @@ func test_irb_10() -> void:
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
 	assert_eq(events.size(), 0)  # No apply
 	assert_true(button.listening)  # Continues
+
+
+## Key Mapping and gameplay share one boundary: an axis at exactly the deadzone remaps here,
+## just as MainScene treats it as deliberate input. Just below it is ignored.
+func test_gamepad_remap_accepts_motion_at_deadzone(
+	direction: float = use_parameters([-1.0, 1.0])
+) -> void:
+	button.current_device = InputRemapButton.DeviceType.GAMEPAD
+	var prior := InputEventJoypadButton.new()
+	prior.button_index = JOY_BUTTON_A
+	InputMap.action_add_event(TEST_ACTION, prior)
+	button.button_pressed = true
+	button.pressed.emit()
+	assert_true(button.listening, "precondition: remapping is active")
+
+	var motion := InputEventJoypadMotion.new()
+	motion.axis = JOY_AXIS_RIGHT_X
+	motion.axis_value = direction * (Settings.AXIS_DEADZONE_THRESHOLD - 0.01)
+	Input.parse_input_event(motion)
+	await get_tree().process_frame
+	assert_eq(button.get_matching_event(), prior, "below the boundary keeps the existing binding")
+	assert_true(button.listening, "below the boundary does not finish remapping")
+
+	motion = motion.duplicate() as InputEventJoypadMotion
+	motion.axis_value = direction * Settings.AXIS_DEADZONE_THRESHOLD
+	Input.parse_input_event(motion)
+	await get_tree().process_frame
+	var binding := button.get_matching_event() as InputEventJoypadMotion
+	assert_not_null(binding, "motion at the boundary replaces the gamepad binding")
+	if binding != null:
+		assert_eq(binding.axis, JOY_AXIS_RIGHT_X)
+		assert_eq(binding.axis_value, direction, "the normalized direction retains its sign")
+	assert_false(button.listening)

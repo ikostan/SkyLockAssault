@@ -363,7 +363,7 @@ func update_speed_bar() -> void:
 
 	var high_red_thresh: float = max_s * HIGH_RED_FRACTION
 	var high_yellow_thresh: float = max_s * _speed_resource.high_yellow_fraction
-	var low_yellow_thresh: float = min_s + (max_s - min_s) * _speed_resource.low_yellow_fraction
+	var low_yellow_thresh: float = _speed_resource.get_low_threshold()
 	var low_red_thresh: float = min_s
 
 	if current_spd >= high_red_thresh:
@@ -415,13 +415,7 @@ func check_speed_warning() -> void:
 
 	var current_spd: float = _speed_resource.current_speed
 	var high_yellow_thresh: float = _speed_resource.max_speed * _speed_resource.high_yellow_fraction
-	var low_yellow_thresh: float = (
-		_speed_resource.min_speed
-		+ (
-			(_speed_resource.max_speed - _speed_resource.min_speed)
-			* _speed_resource.low_yellow_fraction
-		)
-	)
+	var low_yellow_thresh: float = _speed_resource.get_low_threshold()
 
 	# BUG FIX: Treat exact threshold equality as a warning state.
 	if (

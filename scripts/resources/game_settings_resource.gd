@@ -103,7 +103,14 @@ signal setting_changed(setting_name: String, new_value: Variant)
 		return _enable_debug_logging
 
 @export_group("Gameplay")
-# Multiplier: 1.0=Normal, <1=Easy, >1=Hard
+## Difficulty multiplier, clamped to 0.5-2.0: 1.0 is Normal, below 1 is Easier, above 1 is
+## Harder. Higher difficulty scales three things up by this factor:
+## [br]- the fire cooldown, so weapons fire more slowly ([code]bullet.gd[/code] multiplies
+## [member BulletResource.fire_rate] by it);
+## [br]- fuel burn, so the tank empties faster ([code]player.gd[/code] multiplies each fuel
+## tick's consumption by it);
+## [br]- background scroll speed ([code]parallax_manager.gd[/code] multiplies the scroll step
+## by it).
 @export var difficulty: float = 1.0:
 	set(value):
 		var new_val: float = clamp(value, 0.5, 2.0)

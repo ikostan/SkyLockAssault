@@ -26,6 +26,11 @@ const MIGRATION_KEYS: Array[String] = [LEGACY_MIGRATION_KEY, INPUT_LAYOUT_MIGRAT
 ## Input devices the player can pick in Key Mapping.
 const INPUT_DEVICES: Array[String] = ["keyboard", "gamepad"]
 const CONFIG_PATH: String = "user://settings.cfg"
+## Smallest joystick axis value treated as deliberate input: an axis at or above it counts,
+## as Godot counts an action pressed from its deadzone up. Smaller movements are stick
+## noise: Key Mapping ignores them when remapping, and the main scene ignores them when
+## checking for unbound inputs.
+const AXIS_DEADZONE_THRESHOLD: float = 0.5
 const InputDefaults = preload("res://scripts/core/input_defaults.gd")
 const InputLayoutMigration = preload("res://scripts/core/input_layout_migration.gd")
 

@@ -181,6 +181,7 @@ func _process(delta: float) -> void:
 	if _out_of_fuel:
 		scroll_offset = Vector2.ZERO
 	else:
+		# Higher difficulty scrolls faster (see GameSettingsResource.difficulty)
 		var scroll_amount: float = _current_speed * delta * _difficulty * SCROLL_MULTIPLIER
 		scroll_offset.y += scroll_amount
 
