@@ -529,3 +529,38 @@ func test_empty_resolved_scene_logs_warning_and_loads_default() -> void:
 	assert_called(splash_instance, "_change_scene_to_file", [DEFAULT_STARTUP_SCENE])
 	assert_eq(_log.lines_with("[ERROR]"), [] as Array[String])
 	assert_eq(_log.lines_with("Empty startup scene - returning to main menu.").size(), 1)
+
+
+## Changing the global after _ready() must not redirect the in-flight threaded load.
+func test_startup_load_keeps_original_target_after_global_changes() -> void:
+	Globals.next_scene = ALT_TARGET_SCENE
+	splash_instance = _create_stubbed_splash_instance()
+	splash_instance.min_load_time = 0.0
+	splash_instance.presentation_speed = 500.0
+
+	Globals.next_scene = MISSING_SCENE
+	await _run_until_transition(splash_instance)
+
+	assert_false(splash_instance.load_failed, "The splash must poll the original request.")
+	assert_called(splash_instance, "_change_scene_to_packed", [splash_instance.scene])
+	assert_eq(splash_instance.scene.resource_path if splash_instance.scene else "", ALT_TARGET_SCENE)
+	assert_not_called(splash_instance, "_change_scene_to_file")
+	assert_eq(Globals.next_scene, "", "The router must consume the global startup path.")
+
+
+## If the default request fails, fallback must load the resolved default exactly once.
+func test_failed_default_request_uses_default_for_direct_load() -> void:
+	Globals.next_scene = ""
+	splash_instance = _create_stubbed_splash_instance(ERR_CANT_OPEN)
+	splash_instance.set_process(false)
+	splash_instance.min_load_time = 0.0
+	Globals.next_scene = ALT_TARGET_SCENE
+
+	splash_instance._process(2.0)
+	splash_instance._process(2.0)
+
+	assert_called(splash_instance, "_request_threaded_load", [DEFAULT_STARTUP_SCENE])
+	assert_called(splash_instance, "_change_scene_to_file", [DEFAULT_STARTUP_SCENE])
+	assert_call_count(splash_instance, "_change_scene_to_file", 1)
+	assert_not_called(splash_instance, "_change_scene_to_packed")
+	assert_eq(Globals.next_scene, "")

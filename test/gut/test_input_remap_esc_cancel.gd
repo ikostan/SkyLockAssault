@@ -435,3 +435,52 @@ func test_esc_echo_is_not_bound() -> void:
 	button._input(_key_press(KEY_ESCAPE))
 	assert_false(button.listening, "A non-echo Esc press must still cancel.")
 	assert_eq(_keyboard_keys(TEST_ACTION), [KEY_A] as Array[Key])
+
+
+## Synthetic input can report Escape without a physical keycode.
+func test_esc_cancels_with_logical_keycode_only() -> void:
+	var original_text: String = button.text
+	_start_listening(button)
+	var event: InputEventKey = InputEventKey.new()
+	event.keycode = KEY_ESCAPE
+	event.pressed = true
+
+	button._input(event)
+
+	assert_false(button.listening)
+	assert_false(button.button_pressed)
+	assert_eq(button.text, original_text)
+	assert_eq(_keyboard_keys(TEST_ACTION), [KEY_A] as Array[Key])
+	assert_true(_config_unchanged())
+
+
+## Gamepad input must not apply a binding or interrupt keyboard listening.
+func test_keyboard_listening_ignores_gamepad_events() -> void:
+	_start_listening(button)
+	var joy_button: InputEventJoypadButton = InputEventJoypadButton.new()
+	joy_button.button_index = JOY_BUTTON_B
+	joy_button.pressed = true
+	var motion: InputEventJoypadMotion = InputEventJoypadMotion.new()
+	motion.axis = JOY_AXIS_LEFT_X
+	motion.axis_value = 1.0
+
+	button._input(joy_button)
+	button._input(motion)
+
+	assert_true(button.listening)
+	assert_eq(button.text, Globals.settings.remap_prompt_keyboard)
+	assert_eq(InputMap.action_get_events(TEST_ACTION).size(), 2)
+	assert_eq(_keyboard_keys(TEST_ACTION), [KEY_A] as Array[Key])
+	assert_eq(_gamepad_buttons(TEST_ACTION), [JOY_BUTTON_A] as Array[JoyButton])
+	assert_true(_config_unchanged())
+
+
+## The keyboard prompt still tells the player how to cancel when settings are unavailable.
+func test_keyboard_fallback_prompt_explains_esc_cancellation() -> void:
+	var original_settings: GameSettingsResource = Globals.settings
+	Globals.settings = null
+	_start_listening(button)
+	Globals.settings = original_settings
+
+	assert_push_error("'Globals.settings' resource is NULL")
+	assert_eq(button.text, "Press a key (Esc to cancel)")
