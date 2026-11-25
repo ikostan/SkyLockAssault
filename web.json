@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "created": "2026-11-23T17:47:09Z",
-  "commit": "23f338b1fdaf4bcccd5f2da4aeaf6c26e5e932b3",
-  "runner": "GitHub Actions 1000045439",
+  "created": "2026-11-25T21:58:54Z",
+  "commit": "00cb22cde78d77beb371af92664fc3596432474d",
+  "runner": "GitHub Actions 1000045560",
   "godot": "4.7.1-stable (official)",
   "runs": 3,
   "baseline": {
@@ -10,28 +10,9 @@
     "resources_avg": 213.0,
     "orphans_max": 0.0,
     "reload_orphans_max": 0.0,
-    "reload_object_growth": 0.0
+    "reload_object_growth": -3.0
   },
   "history": [
-    {
-      "run_id": "44912395192",
-      "commit": "c670d785646f4c7fff5acf283297ca85c50e1c28",
-      "date": "2026-11-21T14:54:30Z",
-      "metrics": {
-        "saves": 0.0,
-        "objects_avg": 2267.8166666666666,
-        "nodes_avg": 484.6,
-        "resources_avg": 209.0,
-        "orphans_max": 0.0,
-        "reload_orphans_max": 0.0,
-        "reload_object_growth": 0.0,
-        "frame_p95_ms": 32.3,
-        "frames_over_33.4ms": 32.0,
-        "proc_worst_avg_ms": 4.815,
-        "phys_worst_avg_ms": 0.8117,
-        "mem_static_growth": 656696.0
-      }
-    },
     {
       "run_id": "44938433913",
       "commit": "4c21c6d0b64c5a17c3ce66a84453375236acac61",
@@ -107,6 +88,25 @@
         "phys_worst_avg_ms": 0.9817,
         "mem_static_growth": 671340.0
       }
+    },
+    {
+      "run_id": "45706285649",
+      "commit": "00cb22cde78d77beb371af92664fc3596432474d",
+      "date": "2026-11-25T21:58:54Z",
+      "metrics": {
+        "saves": 0.0,
+        "objects_avg": 2245.1833333333334,
+        "nodes_avg": 508.8333333333333,
+        "resources_avg": 213.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": -4.0,
+        "frame_p95_ms": 44.4,
+        "frames_over_33.4ms": 1483.0,
+        "proc_worst_avg_ms": 6.915,
+        "phys_worst_avg_ms": 0.9383,
+        "mem_static_growth": 634044.0
+      }
     }
   ],
   "accepted": {
@@ -143,7 +143,8 @@
     "44938433913",
     "45022422204",
     "45169909421",
-    "45227832274"
+    "45227832274",
+    "45706285649"
   ],
   "profile": "web"
 }

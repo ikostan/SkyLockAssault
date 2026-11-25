@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "created": "2026-11-23T17:47:09Z",
-  "commit": "23f338b1fdaf4bcccd5f2da4aeaf6c26e5e932b3",
-  "runner": "GitHub Actions 1000045439",
+  "created": "2026-11-25T21:58:54Z",
+  "commit": "00cb22cde78d77beb371af92664fc3596432474d",
+  "runner": "GitHub Actions 1000045560",
   "godot": "4.7.1-stable (official)",
   "runs": 3,
   "baseline": {
@@ -15,25 +15,6 @@
     "reload_object_growth": 2.0
   },
   "history": [
-    {
-      "run_id": "44912395192",
-      "commit": "c670d785646f4c7fff5acf283297ca85c50e1c28",
-      "date": "2026-11-21T14:54:30Z",
-      "metrics": {
-        "saves": 0.0,
-        "objects_avg": 2547.4333333333334,
-        "nodes_avg": 502.4166666666667,
-        "resources_avg": 209.0,
-        "orphans_max": 0.0,
-        "reload_orphans_max": 0.0,
-        "reload_object_growth": -7.0,
-        "frame_p95_ms": 17.149,
-        "frames_over_33.4ms": 0.0,
-        "proc_worst_avg_ms": 0.2575,
-        "phys_worst_avg_ms": 0.4108,
-        "mem_static_growth": 189792.0
-      }
-    },
     {
       "run_id": "44938433913",
       "commit": "4c21c6d0b64c5a17c3ce66a84453375236acac61",
@@ -109,6 +90,25 @@
         "phys_worst_avg_ms": 0.4128,
         "mem_static_growth": 147728.0
       }
+    },
+    {
+      "run_id": "45706285649",
+      "commit": "00cb22cde78d77beb371af92664fc3596432474d",
+      "date": "2026-11-25T21:58:54Z",
+      "metrics": {
+        "saves": 0.0,
+        "objects_avg": 2496.383333333333,
+        "nodes_avg": 507.0,
+        "resources_avg": 213.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": -7.0,
+        "frame_p95_ms": 17.046,
+        "frames_over_33.4ms": 0.0,
+        "proc_worst_avg_ms": 0.1593,
+        "phys_worst_avg_ms": 0.2901,
+        "mem_static_growth": 183740.0
+      }
     }
   ],
   "accepted": {
@@ -145,7 +145,8 @@
     "44938433913",
     "45022422204",
     "45169909421",
-    "45227832274"
+    "45227832274",
+    "45706285649"
   ],
   "profile": "desktop"
 }
