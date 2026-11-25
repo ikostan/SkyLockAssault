@@ -313,8 +313,8 @@ func _deserialize_and_add(action: String, serialized: String) -> void:
 ##
 ## Binds an event to an action, replacing the action's binding for the same device. The first
 ## event of the action on the event's device is removed so the other device keeps its binding.
-## Before that, the same input is removed from each action in unbind_from. Does not save;
-## caller saves with save_input_mappings. Emits bindings_changed.
+## Before that, the same input is removed from each action in [param unbind_from]. Does not save;
+## caller saves with [method save_input_mappings]. Emits [signal bindings_changed].
 ##
 ## [param action]: Action to bind, e.g. "fire". Must exist in InputMap.
 ## [param event]: The new key, joypad button or joypad axis event.
