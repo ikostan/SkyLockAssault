@@ -218,3 +218,36 @@ func test_main_scene_spawn_follows_player_stats(
 	assert_almost_eq(
 		player.position.y + player.player_y_max, 600.0 - margin, 0.001, "Bottom reachable"
 	)
+
+
+func test_spawn_tuning_changes_apply_to_the_next_player_only() -> void:
+	var config := _config(0.5, Vector2(120, 40))
+	config.spawn_y_fraction = 0.5
+	config.starting_speed = 350.0
+	var original := _spawn(config, null)
+	original.speed_resource.current_speed = 300.0
+
+	config.spawn_y_fraction = 0.0
+	config.starting_speed = 450.0
+	var next := _spawn(config, null)
+
+	_assert_bounds(original, Vector4(-440, 440, -280, 280))
+	assert_eq(original.speed_resource.current_speed, 300.0, "the first player keeps live speed")
+	_assert_bounds(next, Vector4(-440, 440, 20, 580))
+	assert_eq(next.speed_resource.current_speed, 450.0, "the next player uses the new speed")
+
+
+func test_player_speed_low_reports_updated_limits_and_fraction() -> void:
+	var player := _spawn(null, _texture(Vector2(200, 80)))
+	var speed: SpeedResource = player.speed_resource
+	var reported: Array[float] = []
+	player.speed_low.connect(func(threshold: float) -> void: reported.append(threshold))
+
+	assert_true(speed.set_speed_limits(100.0, 500.0))
+	speed.low_yellow_fraction = 0.5
+	speed.current_speed = 301.0
+	assert_eq(reported.size(), 0, "a speed just above 300 does not warn")
+
+	speed.current_speed = 300.0
+	speed.current_speed = 299.0
+	assert_eq(reported, [300.0], "the threshold is emitted once per downward crossing")

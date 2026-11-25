@@ -216,3 +216,37 @@ func test_dz_03_large_axis_movement_on_unbound_axis_warns() -> void:
 
 	assert_true(_main_scene._showing_unbound_key_message, "flag set")
 	assert_true(_main_scene.message_label.visible, "message shown")
+
+
+func test_message_expiry_releases_key_warning_when_label_was_freed() -> void:
+	_unbind_axis(JOY_AXIS_RIGHT_X)
+	_main_scene._input(_joy_axis(JOY_AXIS_RIGHT_X, 1.0))
+	assert_true(_main_scene.message_label.visible, "precondition: the key warning is visible")
+	assert_true(_main_scene._showing_unbound_key_message, "precondition: the warning is active")
+	_main_scene.message_label.free()
+
+	await _wait_game_seconds(_main_scene.MESSAGE_DURATION + MARGIN)
+
+	assert_false(_main_scene._showing_unbound_key_message, "expiry releases the warning")
+
+
+func test_unbound_axis_at_exact_deadzone_warns_in_either_direction(
+	direction: float = use_parameters([-1.0, 1.0])
+) -> void:
+	_unbind_axis(JOY_AXIS_RIGHT_X)
+	var motion := _joy_axis(JOY_AXIS_RIGHT_X, direction * Settings.AXIS_DEADZONE_THRESHOLD)
+
+	_main_scene._input(motion)
+
+	assert_true(_main_scene.message_label.visible, "gameplay includes the deadzone boundary")
+
+
+func test_bound_axis_at_exact_deadzone_does_not_warn() -> void:
+	_unbind_axis(JOY_AXIS_RIGHT_X)
+	InputMap.action_add_event("ui_right", _joy_axis(JOY_AXIS_RIGHT_X, 1.0))
+	var motion := _joy_axis(JOY_AXIS_RIGHT_X, Settings.AXIS_DEADZONE_THRESHOLD)
+	assert_true(Settings.is_event_bound(motion), "precondition: the axis direction is bound")
+
+	_main_scene._input(motion)
+
+	assert_false(_main_scene.message_label.visible, "a deliberate bound input is not a warning")

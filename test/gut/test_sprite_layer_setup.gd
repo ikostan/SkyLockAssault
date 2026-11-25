@@ -208,3 +208,22 @@ func test_layer_10_rebuild_leaves_no_orphans() -> void:
 	)
 	assert_eq(_sprites(main_scene.bushes_layer).size(), _texture_count("bush_") * 2)
 	assert_eq(_sprites(main_scene.decor_layer).size(), _texture_count("decor_") * 2)
+
+
+func test_rebuilding_decor_preserves_bush_sprites_and_mirroring() -> void:
+	main_scene.setup_bushes_layer(viewport_mock)
+	main_scene.setup_decor_layer(viewport_mock)
+	var bushes: Array[int] = []
+	for sprite: Sprite2D in _sprites(main_scene.bushes_layer):
+		bushes.append(sprite.get_instance_id())
+	var bush_mirroring := main_scene.bushes_layer.motion_mirroring
+	var smaller_viewport := Vector2(viewport_mock.x, viewport_mock.y / 2.0)
+
+	main_scene.setup_decor_layer(smaller_viewport)
+
+	var remaining_bushes: Array[int] = []
+	for sprite: Sprite2D in _sprites(main_scene.bushes_layer):
+		remaining_bushes.append(sprite.get_instance_id())
+	assert_eq(remaining_bushes, bushes, "the original bush sprites stay in place")
+	assert_eq(main_scene.bushes_layer.motion_mirroring, bush_mirroring)
+	assert_eq(main_scene.decor_layer.motion_mirroring, bush_mirroring / 2.0)

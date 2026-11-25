@@ -279,3 +279,34 @@ func test_irb_10() -> void:
 	var events: Array[InputEvent] = InputMap.action_get_events(TEST_ACTION)
 	assert_eq(events.size(), 0)  # No apply
 	assert_true(button.listening)  # Continues
+
+
+func test_gamepad_remap_requires_motion_beyond_deadzone(
+	direction: float = use_parameters([-1.0, 1.0])
+) -> void:
+	button.current_device = InputRemapButton.DeviceType.GAMEPAD
+	var prior := InputEventJoypadButton.new()
+	prior.button_index = JOY_BUTTON_A
+	InputMap.action_add_event(TEST_ACTION, prior)
+	button.button_pressed = true
+	button.pressed.emit()
+	assert_true(button.listening, "precondition: remapping is active")
+
+	var motion := InputEventJoypadMotion.new()
+	motion.axis = JOY_AXIS_RIGHT_X
+	motion.axis_value = direction * Settings.AXIS_DEADZONE_THRESHOLD
+	Input.parse_input_event(motion)
+	await get_tree().process_frame
+	assert_eq(button.get_matching_event(), prior, "the boundary preserves the existing binding")
+	assert_true(button.listening, "the boundary does not finish remapping")
+
+	motion = motion.duplicate() as InputEventJoypadMotion
+	motion.axis_value = direction * (Settings.AXIS_DEADZONE_THRESHOLD + 0.01)
+	Input.parse_input_event(motion)
+	await get_tree().process_frame
+	var binding := button.get_matching_event() as InputEventJoypadMotion
+	assert_not_null(binding, "motion beyond the boundary replaces the gamepad binding")
+	if binding != null:
+		assert_eq(binding.axis, JOY_AXIS_RIGHT_X)
+		assert_eq(binding.axis_value, direction, "the normalized direction retains its sign")
+	assert_false(button.listening)
