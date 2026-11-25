@@ -172,7 +172,8 @@ func _input(event: InputEvent) -> void:
 		new_event.button_index = event.button_index
 		new_event.device = -1
 	elif (
-		event is InputEventJoypadMotion and abs(event.axis_value) > Settings.AXIS_DEADZONE_THRESHOLD
+		event is InputEventJoypadMotion
+		and abs(event.axis_value) >= Settings.AXIS_DEADZONE_THRESHOLD
 	):
 		new_event = InputEventJoypadMotion.new()
 		new_event.axis = event.axis
