@@ -53,6 +53,7 @@ func fire() -> bool:
 		return false
 	can_fire = false
 
+	# Higher difficulty lengthens the cooldown (see GameSettingsResource.difficulty)
 	var scaled_cooldown: float = config.fire_rate * Globals.settings.difficulty
 	timer.start(scaled_cooldown)
 

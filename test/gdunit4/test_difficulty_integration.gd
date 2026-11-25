@@ -67,3 +67,49 @@ func test_difficulty_scales_fuel_and_weapon() -> void:
 	var bullet_firer: Node2D = weapon.get_child(0)
 	var cooldown_timer: Timer = bullet_firer.get_node("CooldownTimer") as Timer
 	assert_float(cooldown_timer.wait_time).is_equal_approx(0.30, 0.001)
+
+
+## Confirms the directions documented at GameSettingsResource.difficulty (#1151): higher
+## difficulty lengthens the fire cooldown, burns fuel faster and scrolls faster. Lower
+## difficulty does the opposite.
+func test_higher_difficulty_lengthens_cooldown_burns_fuel_and_scrolls_faster() -> void:
+	var settings: GameSettingsResource = Globals.settings as GameSettingsResource
+	var player: PlayerScript = auto_free(PlayerScene.instantiate()) as PlayerScript
+	add_child(player)
+	await await_idle_frame()
+	var weapon: Weapon = player.weapon
+	var fuel: FuelResource = player.fuel_resource
+
+	var parallax: ParallaxManager = auto_free(ParallaxManager.new()) as ParallaxManager
+	add_child(parallax)
+	parallax.set_process(false)
+	parallax.setup(player.speed_resource, fuel, settings)
+
+	var cooldowns: Array[float] = []
+	var burns: Array[float] = []
+	var scrolls: Array[float] = []
+	for difficulty: float in [0.5, 1.0, 2.0]:
+		settings.difficulty = difficulty
+
+		var firer: Node2D = weapon.current_weapon
+		var cooldown_timer: Timer = firer.get_node("CooldownTimer") as Timer
+		firer.can_fire = true
+		weapon.fire()
+		cooldowns.append(cooldown_timer.wait_time)
+
+		fuel.current_fuel = fuel.max_fuel
+		player._on_fuel_timer_timeout()
+		burns.append(fuel.max_fuel - fuel.current_fuel)
+
+		parallax.scroll_offset = Vector2.ZERO
+		parallax._process(0.1)
+		scrolls.append(parallax.scroll_offset.y)
+
+	for i: int in range(1, 3):
+		assert_float(cooldowns[i]).is_greater(cooldowns[i - 1])
+		assert_float(burns[i]).is_greater(burns[i - 1])
+		assert_float(scrolls[i]).is_greater(scrolls[i - 1])
+	# Each effect is proportional to difficulty: 2.0 is twice Normal.
+	assert_float(cooldowns[2]).is_equal_approx(cooldowns[1] * 2.0, 0.0001)
+	assert_float(burns[2]).is_equal_approx(burns[1] * 2.0, 0.0001)
+	assert_float(scrolls[2]).is_equal_approx(scrolls[1] * 2.0, 0.0001)

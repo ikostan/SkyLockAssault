@@ -6,7 +6,9 @@
 ## Authored configuration: values are meant to be set in the editor (or on a resource
 ## assigned to the player), not changed during play. It stores no runtime state and emits
 ## no signals. player.gd reads these values once in _ready() to compute the movement
-## bounds, so changes made at runtime are not picked up until the player is spawned again.
+## bounds and starting speed, and main_scene.gd reads [member spawn_y_fraction] once to
+## place the player, so changes made at runtime are not picked up until the player is
+## spawned again.
 ## Shipped defaults live in res://config_resources/default_player_stats.tres.
 
 class_name PlayerStatsResource
@@ -19,3 +21,13 @@ extends Resource
 ## Sprite size (in pixels) used for the movement bounds only when the player sprite has
 ## no texture. When a texture is present, its own size takes priority.
 @export var fallback_sprite_size: Vector2 = Vector2(174.0, 132.0)
+
+## Vertical spawn position as a fraction of the viewport height, measured from the top.
+## The default, 5/6, spawns the plane in the lower part of the screen. The movement bounds
+## use the same fraction, so the plane can always reach the top and bottom edges: it moves
+## up by [code]spawn_y_fraction * height[/code] and down by
+## [code](1 - spawn_y_fraction) * height[/code], minus the sprite margin.
+@export_range(0.0, 1.0, 0.001) var spawn_y_fraction: float = 5.0 / 6.0
+
+## Forward speed when the plane spawns, before [SpeedResource] clamps it to its speed limits.
+@export var starting_speed: float = 250.0

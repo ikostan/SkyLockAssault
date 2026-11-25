@@ -88,9 +88,7 @@ const JOY_AXIS_LABELS: Dictionary = {
 	JOY_AXIS_TRIGGER_RIGHT: {1.0: "Right Trigger"}
 }
 
-# Add these new constants here for clarity and easy tweaking
-# Minimum axis value to consider for remapping (avoids jitter)
-const AXIS_DEADZONE_THRESHOLD: float = 0.5
+# The axis deadzone is Settings.AXIS_DEADZONE_THRESHOLD, shared with gameplay.
 # Value to normalize axis direction to (e.g., +1.0 or -1.0)
 const AXIS_NORMALIZED_VALUE: float = 1.0
 
@@ -173,7 +171,9 @@ func _input(event: InputEvent) -> void:
 		new_event = InputEventJoypadButton.new()
 		new_event.button_index = event.button_index
 		new_event.device = -1
-	elif event is InputEventJoypadMotion and abs(event.axis_value) > AXIS_DEADZONE_THRESHOLD:
+	elif (
+		event is InputEventJoypadMotion and abs(event.axis_value) > Settings.AXIS_DEADZONE_THRESHOLD
+	):
 		new_event = InputEventJoypadMotion.new()
 		new_event.axis = event.axis
 		new_event.axis_value = get_normalized_axis_direction(event.axis_value)

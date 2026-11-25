@@ -10,12 +10,20 @@ extends Node2D
 
 enum MessageType { CRITICAL_UNBOUND, KEY_PRESS_UNBOUND }
 
+## How long [method show_message] keeps a message on screen, in seconds.
+const MESSAGE_DURATION: float = 4.0
+## Cardinal rotations, in degrees, that decor sprites pick from.
+const DECOR_ROTATIONS: Array[float] = [0.0, 90.0, 180.0, -90.0]
+
 # At the top of main_scene.gd
 @export var parallax_screens_tall: float = 8.0
 
-var web_telemetry_adapter: Node
+var web_telemetry_adapter: WebTelemetryAdapter
 var _showing_unbound_warning: bool = false
 var _showing_unbound_key_message: bool = false
+# Increased by every show_message() call. A message's timer hides the label only if no newer
+# message was shown in the meantime, so an older timer can't hide a newer message early.
+var _message_generation: int = 0
 # Set when bindings or the device changed while this scene was paused (Key Mapping is opened
 # from the pause menu). The check runs on NOTIFICATION_UNPAUSED, so the warning is shown when
 # the player is back in the game, as the old per-frame check in _process did.
@@ -35,8 +43,11 @@ var _unbound_check_pending: bool = false
 
 func _ready() -> void:
 	var viewport_size: Vector2 = get_viewport_rect().size
-	print("Viewport size: ", viewport_size)  # Debug output
-	player.position = Vector2(viewport_size.x / 2, viewport_size.y / 1.2)
+	Globals.log_message("Viewport size: " + str(viewport_size), Globals.LogLevel.DEBUG)
+	# Same fraction the player uses for its vertical bounds, so both move together.
+	player.position = Vector2(
+		viewport_size.x / 2, viewport_size.y * _get_player_stats().spawn_y_fraction
+	)
 	stats_panel.visible = true
 	Globals.log_message("Initializing main scene...", Globals.LogLevel.DEBUG)
 
@@ -101,8 +112,7 @@ func _ready() -> void:
 		background.auto_calculate_wrap_period()
 
 	# 1. Instantiate the adapter
-	var TelemetryScript = load("res://scripts/system/web_telemetry_adapter.gd")
-	web_telemetry_adapter = TelemetryScript.new()
+	web_telemetry_adapter = WebTelemetryAdapter.new()
 
 	# 2. Add it to the Scene Tree so _ready() fires (allowing it to self-destruct if not on web)
 	add_child(web_telemetry_adapter)
@@ -155,13 +165,10 @@ func _input(event: InputEvent) -> void:
 	# ────────────────────────────────────────────────────────────────
 	# Ignore tiny axis movements (perpendicular stick noise when
 	# you use split-stick mapping, e.g. Left Stick X + Right Stick Y).
-	# We use the exact same threshold that the remap buttons use.
-	# Matches AXIS_DEADZONE_THRESHOLD from input_remap_button.gd.
+	# Settings owns the threshold, so gameplay and the remap buttons
+	# share one value without gameplay depending on a UI class.
 	# ────────────────────────────────────────────────────────────────
-	if (
-		event is InputEventJoypadMotion
-		and abs(event.axis_value) < InputRemapButton.AXIS_DEADZONE_THRESHOLD
-	):
+	if event is InputEventJoypadMotion and abs(event.axis_value) < Settings.AXIS_DEADZONE_THRESHOLD:
 		return
 
 	# Player pressed a completely unbound key/button/axis
@@ -208,46 +215,7 @@ func setup_parallax_layer(sprite: Sprite2D, viewport: Vector2, buffer_mult: floa
 ## [code]y[/code] multiplied by [member parallax_screens_tall] sets the layer height and
 ## vertical mirroring interval.
 func setup_bushes_layer(viewport: Vector2) -> void:
-	if not bushes_layer:
-		return
-
-	# Clear existing children (Safely detach first, then instantly destroy)
-	for child in bushes_layer.get_children():
-		bushes_layer.remove_child(child)
-		child.free()
-
-	# Get bush IDs from preloader (Array[String])
-	var bush_ids: Array = Array(texture_preloader.get_resource_list()).filter(
-		func(id: String) -> bool: return id.begins_with("bush_")
-	)
-
-	if bush_ids.is_empty():
-		return
-
-	# THE GOLDILOCKS ZONE:
-	# 8 screens is the sweet spot for infinite illusion vs CPU overhead
-	var layer_height: float = viewport.y * parallax_screens_tall
-
-	# Drop density multiplier to match
-	var num_bushes: int = bush_ids.size() * 2
-
-	for i in range(num_bushes):
-		var bush: Sprite2D = Sprite2D.new()
-		var random_index: int = randi_range(0, bush_ids.size() - 1)
-		var id: String = bush_ids[random_index]
-		bush.texture = texture_preloader.get_resource(id)
-		bush.centered = false
-
-		var scale_factor: float = randf_range(0.5, 1.5)
-		bush.scale = Vector2(scale_factor, scale_factor)
-
-		bush.position.x = randf_range(0, viewport.x - (bush.texture.get_width() * scale_factor))
-		bush.position.y = randf_range(0, layer_height - (bush.texture.get_height() * scale_factor))
-
-		bushes_layer.add_child(bush)
-
-	bushes_layer.motion_scale = Vector2(1, 0.5)
-	bushes_layer.motion_mirroring = Vector2(0, layer_height)
+	_populate_sprite_layer(bushes_layer, "bush_", viewport, Callable())
 
 
 ## Clears existing children and repopulates the decor layer with sprites from the
@@ -260,60 +228,82 @@ func setup_bushes_layer(viewport: Vector2) -> void:
 ## [code]y[/code] multiplied by [member parallax_screens_tall] sets the layer height and
 ## vertical mirroring interval.
 func setup_decor_layer(viewport: Vector2) -> void:
-	if not decor_layer:
+	_populate_sprite_layer(decor_layer, "decor_", viewport, _configure_decor_sprite)
+
+
+## Shared setup for the bushes and decor layers.
+##
+## Frees the layer's children, then adds two sprites per texture whose preloader ID starts
+## with [param id_prefix]. Each sprite gets a random texture from that set, a random uniform
+## scale from 0.5 to 1.5, and a random position that keeps it inside the viewport width and
+## the layer height. The layer height is [code]viewport.y[/code] times
+## [member parallax_screens_tall]; the layer mirrors vertically at that height and scrolls at
+## [code]motion_scale = (1, 0.5)[/code]. A layer with no matching textures stays empty and
+## keeps its motion settings.
+##
+## [param layer]: The layer to rebuild. Does nothing when null.
+## [param id_prefix]: Preloader ID prefix that selects the textures, such as
+## [code]"bush_"[/code].
+## [param viewport]: Viewport size in pixels.
+## [param configure]: Optional [code]func(sprite: Sprite2D) -> void[/code] for anything
+## specific to one layer, such as decor rotation and flips. It runs after the scale is set
+## and before the position is chosen. Pass an empty [Callable] for none.
+func _populate_sprite_layer(
+	layer: ParallaxLayer, id_prefix: String, viewport: Vector2, configure: Callable
+) -> void:
+	if not layer:
 		return
 
 	# Clear existing children (Safely detach first, then instantly destroy)
-	for child in decor_layer.get_children():
-		decor_layer.remove_child(child)
+	for child in layer.get_children():
+		layer.remove_child(child)
 		child.free()
 
-	# Get decor IDs from preloader (Array[String])
-	var decor_ids: Array = Array(texture_preloader.get_resource_list()).filter(
-		func(id: String) -> bool: return id.begins_with("decor_")
+	var ids: Array = Array(texture_preloader.get_resource_list()).filter(
+		func(id: String) -> bool: return id.begins_with(id_prefix)
 	)
 
-	if decor_ids.is_empty():
+	if ids.is_empty():
 		return
 
 	# THE GOLDILOCKS ZONE:
-	# Match the bushes layer height
+	# 8 screens is the sweet spot for infinite illusion vs CPU overhead
 	var layer_height: float = viewport.y * parallax_screens_tall
 
-	# Drop density multiplier to match
-	var num_decors: int = decor_ids.size() * 2
+	# Two sprites per texture
+	var sprite_count: int = ids.size() * 2
 
-	# Define strict rotation angles (0, 90, 180, -90 degrees)
-	var allowed_rotations: Array[float] = [0.0, 90.0, 180.0, -90.0]
+	for i in range(sprite_count):
+		var sprite: Sprite2D = Sprite2D.new()
+		var id: String = ids[randi_range(0, ids.size() - 1)]
+		sprite.texture = texture_preloader.get_resource(id)
+		sprite.centered = false
 
-	for i in range(num_decors):
-		var decor: Sprite2D = Sprite2D.new()
-		var random_index: int = randi_range(0, decor_ids.size() - 1)
-		var id: String = decor_ids[random_index]
-		decor.texture = texture_preloader.get_resource(id)
-		decor.centered = false
-
-		# SCALING TRICK 1: Wider scale range (0.5 to 1.5) for more size variance
 		var scale_factor: float = randf_range(0.5, 1.5)
-		decor.scale = Vector2(scale_factor, scale_factor)
+		sprite.scale = Vector2(scale_factor, scale_factor)
 
-		# SCALING TRICK 2: Randomly mirror the sprite horizontally and/or vertically
-		decor.flip_h = randf() < 0.5
-		decor.flip_v = randf() < 0.5
+		if configure.is_valid():
+			configure.call(sprite)
 
-		# Apply random cardinal rotation to ALL decor sprites
-		var random_degrees: float = allowed_rotations.pick_random()
-		decor.rotation = deg_to_rad(random_degrees)
-
-		decor.position.x = randf_range(0, viewport.x - (decor.texture.get_width() * scale_factor))
-		decor.position.y = randf_range(
-			0, layer_height - (decor.texture.get_height() * scale_factor)
+		sprite.position.x = randf_range(0, viewport.x - (sprite.texture.get_width() * scale_factor))
+		sprite.position.y = randf_range(
+			0, layer_height - (sprite.texture.get_height() * scale_factor)
 		)
 
-		decor_layer.add_child(decor)
+		layer.add_child(sprite)
 
-	decor_layer.motion_scale = Vector2(1, 0.5)
-	decor_layer.motion_mirroring = Vector2(0, layer_height)
+	layer.motion_scale = Vector2(1, 0.5)
+	layer.motion_mirroring = Vector2(0, layer_height)
+
+
+## Decor-only sprite setup for [method _populate_sprite_layer]: random horizontal and
+## vertical flips, and a random cardinal rotation (0, 90, 180 or -90 degrees).
+## [param decor]: The decor sprite to configure.
+func _configure_decor_sprite(decor: Sprite2D) -> void:
+	decor.flip_h = randf() < 0.5
+	decor.flip_v = randf() < 0.5
+	var degrees: float = DECOR_ROTATIONS.pick_random()
+	decor.rotation = deg_to_rad(degrees)
 
 
 ## Shows the critical unbound-controls warning, once, if a critical action has no binding for
@@ -360,10 +350,14 @@ func _on_input_device_changed(_device: String) -> void:
 
 ## Shows a temporary on-screen message non-blocking and centralizes flags.
 ##
-## Displays the specified text on the message label and hides it after four seconds.
-## When the message expires, only the KEY_PRESS_UNBOUND flag is reset. The
-## CRITICAL_UNBOUND flag stays set so the warning shows once per session, until
-## [signal Settings.bindings_changed] clears it.
+## Displays the specified text on the message label for [constant MESSAGE_DURATION]
+## seconds. Each call starts a new message generation. When a message's time is up, the
+## label is hidden only if no newer message was shown since, so an older timer can't hide a
+## newer message early.
+##
+## The KEY_PRESS_UNBOUND flag resets when its own message expires, even if a newer message
+## is still showing, so that warning can appear again. The CRITICAL_UNBOUND flag stays set
+## so the warning shows once per session, until [signal Settings.bindings_changed] clears it.
 ##
 ## [param text]: The message text to display on the label.
 ## [param type]: The message type; KEY_PRESS_UNBOUND resets its flag on expiry.
@@ -371,15 +365,26 @@ func show_message(text: String, type: MessageType = MessageType.CRITICAL_UNBOUND
 	if not is_instance_valid(message_label):
 		return
 
+	_message_generation += 1
+	var generation: int = _message_generation
 	message_label.text = text
 	message_label.visible = true
 
-	# Auto-hide after 4 seconds and reset the *correct* flag
-	await get_tree().create_timer(4.0).timeout
-	if is_instance_valid(message_label):
+	await get_tree().create_timer(MESSAGE_DURATION).timeout
+
+	# Hide only if this is still the newest message
+	if generation == _message_generation and is_instance_valid(message_label):
 		message_label.visible = false
 
 	# Reset the right flag based on message type
 	match type:
 		MessageType.KEY_PRESS_UNBOUND:
 			_showing_unbound_key_message = false
+
+
+## Returns the player's stats, or the shipped defaults when the player has none yet. The
+## player assigns its defaults in its own _ready(), which runs before this scene's.
+func _get_player_stats() -> PlayerStatsResource:
+	if player.stats != null:
+		return player.stats
+	return Player.DEFAULT_PLAYER_STATS

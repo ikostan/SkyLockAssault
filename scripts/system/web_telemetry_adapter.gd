@@ -4,6 +4,7 @@
 ## Dedicated telemetry adapter for WebGL E2E testing synchronization.
 ## Acts as a strict observer of FuelResource to push DOM updates to window.currentFuel.
 
+class_name WebTelemetryAdapter
 extends Node
 
 var os_wrapper: OSWrapper = OSWrapper.new()

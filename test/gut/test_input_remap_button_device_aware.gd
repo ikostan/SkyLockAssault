@@ -158,7 +158,7 @@ func test_irb_04() -> void:
 ## :rtype: void
 func test_irb_05() -> void:
 	button.current_device = InputRemapButton.DeviceType.GAMEPAD
-	var deadzone_threshold: float = InputRemapButton.AXIS_DEADZONE_THRESHOLD
+	var deadzone_threshold: float = Settings.AXIS_DEADZONE_THRESHOLD
 	button.button_pressed = true
 	button.pressed.emit()
 	assert_true(button.listening)

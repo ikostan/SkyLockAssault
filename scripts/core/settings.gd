@@ -26,6 +26,10 @@ const MIGRATION_KEYS: Array[String] = [LEGACY_MIGRATION_KEY, INPUT_LAYOUT_MIGRAT
 ## Input devices the player can pick in Key Mapping.
 const INPUT_DEVICES: Array[String] = ["keyboard", "gamepad"]
 const CONFIG_PATH: String = "user://settings.cfg"
+## Smallest joystick axis value treated as deliberate input. Smaller movements are stick
+## noise: Key Mapping ignores them when remapping, and the main scene ignores them when
+## checking for unbound inputs.
+const AXIS_DEADZONE_THRESHOLD: float = 0.5
 const InputDefaults = preload("res://scripts/core/input_defaults.gd")
 const InputLayoutMigration = preload("res://scripts/core/input_layout_migration.gd")
 
@@ -309,14 +313,15 @@ func _deserialize_and_add(action: String, serialized: String) -> void:
 		)
 
 
-## Binds an event to an action, replacing the action's binding for the same device.
+## Binds [param event] to [param action], replacing the action's binding for the same device.
 ##
-## Binds an event to an action, replacing the action's binding for the same device. The first
-## event of the action on the event's device is removed so the other device keeps its binding.
-## Before that, the same input is removed from each action in [param unbind_from]. Does not save;
+## The only way UI code changes a single binding. The first event of [param action] on the
+## event's device (keyboard or gamepad) is removed, so the other device keeps its binding.
+## Before that, the same input is removed from each action in [param unbind_from]: the Key
+## Mapping conflict dialog passes the actions the player agreed to unbind. Does not save; the
 ## caller saves with [method save_input_mappings]. Emits [signal bindings_changed].
 ##
-## [param action]: Action to bind, e.g. "fire". Must exist in InputMap.
+## [param action]: Action to bind, e.g. [code]"fire"[/code]. Must exist in InputMap.
 ## [param event]: The new key, joypad button or joypad axis event.
 ## [param unbind_from]: Actions that lose this exact input first. Empty by default, which
 ## leaves other actions untouched.
