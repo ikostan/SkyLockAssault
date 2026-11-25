@@ -164,24 +164,25 @@ func _is_event_for_current_device(event: InputEvent) -> bool:
 
 
 ## Handles Esc while listening on keyboard (#1168). Returns true if [param event] was an Esc
-## press, so the caller must not bind it.
+## press, echoes included, so the caller must not bind it.
 ##
-## Cancels listening, unless the conflict dialog is waiting for this button: then Esc belongs to
-## the dialog and the button keeps listening.
+## A non-echo press cancels listening, unless the conflict dialog is waiting for this button:
+## then Esc belongs to the dialog and the button keeps listening. An echo (Esc held since before
+## listening started) is ignored: it neither cancels nor binds.
 func _consume_escape(event: InputEvent) -> bool:
 	if current_device != DeviceType.KEYBOARD or not _is_escape_press(event):
 		return false
-	if not _has_pending_conflict():
+	if not event.is_echo() and not _has_pending_conflict():
 		cancel_listening()
 	return true
 
 
-## Returns true for a non-echo Esc press. Checks [member InputEventKey.physical_keycode], which
-## binding uses, and falls back to [member InputEventKey.keycode] for synthetic events that only
-## set the logical key.
+## Returns true for an Esc press, echoes included. Checks [member InputEventKey.physical_keycode],
+## which binding uses, and falls back to [member InputEventKey.keycode] for synthetic events that
+## only set the logical key.
 ## [param event]: The event to check.
 static func _is_escape_press(event: InputEvent) -> bool:
-	if not (event is InputEventKey and event.pressed and not event.is_echo()):
+	if not (event is InputEventKey and event.pressed):
 		return false
 	var key_event: InputEventKey = event
 	return key_event.physical_keycode == KEY_ESCAPE or key_event.keycode == KEY_ESCAPE

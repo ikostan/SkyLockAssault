@@ -280,10 +280,19 @@ func test_esc_in_key_mapping_menu_keeps_menu_open() -> void:
 	var menu: CanvasLayer = load(GamePaths.KEY_MAPPING_SCENE).instantiate()
 	add_child(menu)
 	var keyboard_btn: CheckButton = menu.get_node("Panel/Options/DeviceTypeContainer/Keyboard")
-	keyboard_btn.button_pressed = true
+	var gamepad_btn: CheckButton = menu.get_node("Panel/Options/DeviceTypeContainer/Gamepad")
+	# Select Keyboard without emitting toggled: _on_keyboard_toggled() would save the device
+	# preference and break the "nothing saved" check below.
+	keyboard_btn.set_pressed_no_signal(true)
+	gamepad_btn.set_pressed_no_signal(false)
 	menu.update_all_remap_buttons()
 	var left_btn: InputRemapButton = menu.get_node(
 		"Panel/Options/KeyMapContainer/PlayerKeyMap/KeyMappingLeft/LeftInputRemap"
+	)
+	assert_eq(
+		left_btn.current_device,
+		InputRemapButton.DeviceType.KEYBOARD,
+		"Precondition: the remap buttons must be in keyboard mode."
 	)
 	var keys_before: Array[Key] = _keyboard_keys(left_btn.action)
 	var text_before: String = left_btn.text
@@ -407,3 +416,22 @@ func test_pause_cannot_be_bound_to_esc_and_reset_restores_it() -> void:
 		[KEY_ESCAPE] as Array[Key],
 		"Reset to defaults must restore Pause to Esc."
 	)
+
+
+## A held Esc (echo) while listening on keyboard is never bound and doesn't cancel: the button
+## keeps listening and nothing is saved. Happens when listening starts while Esc is held.
+func test_esc_echo_is_not_bound() -> void:
+	_start_listening(button)
+	var esc_echo: InputEventKey = _key_press(KEY_ESCAPE)
+	esc_echo.echo = true
+
+	button._input(esc_echo)
+
+	assert_true(button.listening, "An Esc echo must not end listening.")
+	assert_eq(_keyboard_keys(TEST_ACTION), [KEY_A] as Array[Key], "An Esc echo must not be bound.")
+	assert_true(_config_unchanged(), "An Esc echo must not save the input mappings.")
+
+	# A real Esc press afterwards still cancels.
+	button._input(_key_press(KEY_ESCAPE))
+	assert_false(button.listening, "A non-echo Esc press must still cancel.")
+	assert_eq(_keyboard_keys(TEST_ACTION), [KEY_A] as Array[Key])
