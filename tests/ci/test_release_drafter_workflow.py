@@ -14,7 +14,9 @@ WORKFLOW_PATH = PROJECT_ROOT / ".github" / "workflows" / "release_drafter_pr.yml
 def test_release_drafter_refreshes_for_open_reopen_and_new_commits_only():
     """Editing pull request metadata alone must not trigger a draft update."""
     # BaseLoader preserves GitHub Actions' unquoted "on" as a string.
-    workflow = yaml.load(WORKFLOW_PATH.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    workflow = yaml.load(
+        WORKFLOW_PATH.read_text(encoding="utf-8"), Loader=yaml.BaseLoader
+    )
     assert set(workflow["on"]["pull_request"]["types"]) == {
         "opened",
         "reopened",
