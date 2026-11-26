@@ -122,7 +122,7 @@ signal setting_changed(setting_name: String, new_value: Variant)
 		return _difficulty
 
 @export_group("UI & Scenes")
-@export var remap_prompt_keyboard: String = "Press a key..."
+@export var remap_prompt_keyboard: String = "Press a key (Esc to cancel)"
 @export var remap_prompt_gamepad: String = "Press a gamepad button/axis..."
 
 # Use type-hinting without forced preloading to break circular dependencies

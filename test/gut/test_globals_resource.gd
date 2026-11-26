@@ -89,8 +89,8 @@ func test_scene_resource_validity() -> void:
 func test_remap_prompt_strings() -> void:
 	gut.p("Testing: Remap prompt strings are correctly retrieved from Resource.")
 	# Verifies migration of hard-coded constants
-	assert_eq(Globals.settings.remap_prompt_keyboard, "Press a key...", "Keyboard prompt mismatch")
-	assert_string_contains(Globals.settings.remap_prompt_gamepad, "gamepad", "Gamepad prompt should mention device")
+	assert_eq(Globals.settings.remap_prompt_keyboard, "Press a key (Esc to cancel)", "Keyboard prompt mismatch")
+	assert_string_contains(Globals.settings.remap_prompt_keyboard, "Esc", "Keyboard prompt should say Esc cancels (#1168)")
 
 # --- 4. Edge Case: Corrupted Resource ---
 

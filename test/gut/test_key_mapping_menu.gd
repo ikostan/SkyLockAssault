@@ -74,7 +74,7 @@ func test_ui_02_switch_to_gamepad() -> void:
 			"Remap button device should be GAMEPAD after gamepad switch")
 	
 	# ROBUST GAMEPAD LABEL CHECK (replaces brittle != "Unbound")
-	# Checks for typical gamepad label patterns (from JOY_BUTTON_LABELS / JOY_AXIS_LABELS)
+	# Checks for typical gamepad label patterns (from InputEventCodec.get_event_label())
 	# Allows "Right Trigger", "D-Pad Left", "Misc 1", etc.
 	# Explicitly rejects "Unbound" (the bug the reviewer caught)
 	# Still rejects single-key keyboard labels.
@@ -179,4 +179,4 @@ func test_ui_05_label_update_after_remapping() -> void:
 	await get_tree().process_frame
 	
 	assert_false(left_btn.listening, "Listening should stop after valid gamepad input")
-	assert_eq(left_btn.text, "Button 15", "Gamepad label should update to new button (from JOY_BUTTON_LABELS)")
+	assert_eq(left_btn.text, "Button 15", "Gamepad label should update to new button (from InputEventCodec.get_event_label())")

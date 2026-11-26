@@ -4,12 +4,10 @@
 # Extends to handle joypad remapping and display (keys, buttons, axes).
 # Use device = -1 for "all controllers".
 # Handles listening, updating text, saving. Extends Button.
+# Button text comes from InputEventCodec.get_event_label().
+# Esc cancels keyboard listening, so Esc can't be bound by remapping (#1168).
 # :vartype action: String
 # :vartype action_event_index: int
-# :vartype KEY_LABELS: Dictionary
-# :vartype JOY_BUTTON_LABELS: Dictionary
-# :vartype JOY_AXIS_BASE_LABELS: Dictionary
-# :vartype JOY_AXIS_LABELS: Dictionary
 # :vartype listening: bool
 
 # gdlint:ignore = class-definitions-order
@@ -21,71 +19,6 @@ extends Button
 enum DeviceType {
 	KEYBOARD,
 	GAMEPAD,
-}
-
-const KEY_LABELS: Dictionary = {
-	Key.KEY_W: "W",
-	Key.KEY_S: "S",
-	Key.KEY_X: "X",
-	Key.KEY_A: "A",
-	Key.KEY_D: "D",
-	Key.KEY_SPACE: "Space",
-	Key.KEY_Q: "Q",
-	Key.KEY_LEFT: "Left",
-	Key.KEY_RIGHT: "Right",
-	Key.KEY_UP: "Up",
-	Key.KEY_DOWN: "Down",
-	Key.KEY_ESCAPE: "Esc",
-	Key.KEY_ENTER: "Enter",
-	Key.KEY_TAB: "Tab",
-	Key.KEY_SHIFT: "Shift",
-	# Add more as needed for arrow keys, etc.
-}
-
-# Custom labels for joypad buttons (replaces removed Input.get_joy_button_string)
-const JOY_BUTTON_LABELS: Dictionary = {
-	JOY_BUTTON_A: "A",
-	JOY_BUTTON_B: "B",
-	JOY_BUTTON_X: "X",
-	JOY_BUTTON_Y: "Y",
-	JOY_BUTTON_BACK: "Back",
-	JOY_BUTTON_GUIDE: "Guide",
-	JOY_BUTTON_START: "Start",
-	JOY_BUTTON_LEFT_STICK: "Left Stick",
-	JOY_BUTTON_RIGHT_STICK: "Right Stick",
-	JOY_BUTTON_LEFT_SHOULDER: "L1",
-	JOY_BUTTON_RIGHT_SHOULDER: "R1",
-	JOY_BUTTON_DPAD_UP: "D-Pad Up",
-	JOY_BUTTON_DPAD_DOWN: "D-Pad Down",
-	JOY_BUTTON_DPAD_LEFT: "D-Pad Left",
-	JOY_BUTTON_DPAD_RIGHT: "D-Pad Right",
-	JOY_BUTTON_MISC1: "Misc 1",
-	JOY_BUTTON_PADDLE1: "Paddle 1",
-	JOY_BUTTON_PADDLE2: "Paddle 2",
-	JOY_BUTTON_PADDLE3: "Paddle 3",
-	JOY_BUTTON_PADDLE4: "Paddle 4",
-	JOY_BUTTON_TOUCHPAD: "Touchpad"
-	# Add more from Godot docs if needed (e.g., for PS/Xbox specifics)
-}
-
-# Custom base labels for axes (replaces removed Input.get_joy_axis_string)
-const JOY_AXIS_BASE_LABELS: Dictionary = {
-	JOY_AXIS_LEFT_X: "Left Stick X",
-	JOY_AXIS_LEFT_Y: "Left Stick Y",
-	JOY_AXIS_RIGHT_X: "Right Stick X",
-	JOY_AXIS_RIGHT_Y: "Right Stick Y",
-	JOY_AXIS_TRIGGER_LEFT: "Left Trigger",
-	JOY_AXIS_TRIGGER_RIGHT: "Right Trigger",
-}
-
-# Custom labels for common joypad axes/directions (for nice display)
-const JOY_AXIS_LABELS: Dictionary = {
-	JOY_AXIS_LEFT_X: {-1.0: "Left Stick Left", 1.0: "Left Stick Right"},
-	JOY_AXIS_LEFT_Y: {-1.0: "Left Stick Up", 1.0: "Left Stick Down"},
-	JOY_AXIS_RIGHT_X: {-1.0: "Right Stick Left", 1.0: "Right Stick Right"},
-	JOY_AXIS_RIGHT_Y: {-1.0: "Right Stick Up", 1.0: "Right Stick Down"},
-	JOY_AXIS_TRIGGER_LEFT: {1.0: "Left Trigger"},
-	JOY_AXIS_TRIGGER_RIGHT: {1.0: "Right Trigger"}
 }
 
 # The axis deadzone is Settings.AXIS_DEADZONE_THRESHOLD, shared with gameplay.
@@ -126,7 +59,11 @@ func _on_pressed() -> void:
 			# Globals.log_message("'Globals.settings' resource is NULL", Globals.LogLevel.ERROR)
 			push_error("ERROR: 'Globals.settings' resource is NULL")
 			# Fallback prompt so the UI still reflects that we are listening
-			text = ("Press a key" if current_device == DeviceType.KEYBOARD else "Press a button")
+			text = (
+				"Press a key (Esc to cancel)"
+				if current_device == DeviceType.KEYBOARD
+				else "Press a button"
+			)
 	else:
 		update_button_text()
 
@@ -137,16 +74,12 @@ func _on_pressed() -> void:
 # :type event: InputEvent
 # :rtype: void
 func _input(event: InputEvent) -> void:
-	if not listening:
+	# Device-specific filtering
+	if not listening or not _is_event_for_current_device(event):
 		return
 
-	# Device-specific filtering
-	if current_device == DeviceType.KEYBOARD and not event is InputEventKey:
-		return
-	if (
-		current_device == DeviceType.GAMEPAD
-		and not (event is InputEventJoypadButton or event is InputEventJoypadMotion)
-	):
+	# ── KEYBOARD CANCEL ── Esc stops listening before any binding logic (#1168).
+	if _consume_escape(event):
 		return
 
 	var new_event: InputEvent = null
@@ -205,6 +138,62 @@ func _input(event: InputEvent) -> void:
 	)
 
 	finish_remap()
+
+
+## Stops listening without changing the binding (#1168).
+##
+## Restores the button text and resets the listening state. Doesn't touch [InputMap] and doesn't
+## save. Marks the input as handled, so the Esc press that cancels doesn't also reach the menus or
+## play the menu cancel sound.
+func cancel_listening() -> void:
+	update_button_text()
+	button_pressed = false
+	listening = false
+	var viewport: Viewport = get_viewport()
+	if viewport:
+		viewport.set_input_as_handled()
+	Globals.log_message("Remap of '%s' canceled." % action, Globals.LogLevel.DEBUG)
+
+
+## Returns true if [param event] comes from the device this button remaps: a key for keyboard,
+## a joypad button or axis for gamepad.
+func _is_event_for_current_device(event: InputEvent) -> bool:
+	if current_device == DeviceType.KEYBOARD:
+		return event is InputEventKey
+	return event is InputEventJoypadButton or event is InputEventJoypadMotion
+
+
+## Handles Esc while listening on keyboard (#1168). Returns true if [param event] was an Esc
+## press, echoes included, so the caller must not bind it.
+##
+## A non-echo press cancels listening, unless the conflict dialog is waiting for this button:
+## then Esc belongs to the dialog and the button keeps listening. An echo (Esc held since before
+## listening started) is ignored: it neither cancels nor binds.
+func _consume_escape(event: InputEvent) -> bool:
+	if current_device != DeviceType.KEYBOARD or not _is_escape_press(event):
+		return false
+	if not event.is_echo() and not _has_pending_conflict():
+		cancel_listening()
+	return true
+
+
+## Returns true for an Esc press, echoes included. Checks [member InputEventKey.physical_keycode],
+## which binding uses, and falls back to [member InputEventKey.keycode] for synthetic events that
+## only set the logical key.
+## [param event]: The event to check.
+static func _is_escape_press(event: InputEvent) -> bool:
+	if not (event is InputEventKey and event.pressed):
+		return false
+	var key_event: InputEventKey = event
+	return key_event.physical_keycode == KEY_ESCAPE or key_event.keycode == KEY_ESCAPE
+
+
+## Returns true while the Key Mapping conflict dialog waits for a decision about this button.
+func _has_pending_conflict() -> bool:
+	if not is_inside_tree():
+		return false
+	var km_menu: Node = get_tree().get_first_node_in_group("key_mapping_menu")
+	return is_instance_valid(km_menu) and km_menu.get("current_remap_button") == self
 
 
 # New helper function: Normalizes axis value to a direction (+1.0 or -1.0)
