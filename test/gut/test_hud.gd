@@ -680,7 +680,9 @@ func test_exit_tree_disconnects_every_hud_signal() -> void:
 ## Freeing a HUD leaves no connections on the resources, and the resources keep working.
 func test_freeing_hud_leaves_no_connections() -> void:
 	var hud: Panel = _build_isolated_hud_tree()
-	add_child(hud)
+	# Autofree is only a fallback if the test aborts early; the explicit free() below is
+	# what this test checks. Autofree skips nodes that are already freed.
+	add_child_autofree(hud)
 	hud._ready()
 	hud.setup_hud(_fuel, _speed, _weapon)
 	assert_eq(_count_hud_connections(_speed, hud), 2, "Second HUD is connected.")
