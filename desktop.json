@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "created": "2026-11-25T21:58:54Z",
-  "commit": "00cb22cde78d77beb371af92664fc3596432474d",
-  "runner": "GitHub Actions 1000045560",
+  "created": "2026-11-26T15:05:58Z",
+  "commit": "4f35da2a98afe745c1265ee9be38796dcd2a181b",
+  "runner": "GitHub Actions 1000045723",
   "godot": "4.7.1-stable (official)",
   "runs": 3,
   "baseline": {
@@ -15,25 +15,6 @@
     "reload_object_growth": 2.0
   },
   "history": [
-    {
-      "run_id": "44938433913",
-      "commit": "4c21c6d0b64c5a17c3ce66a84453375236acac61",
-      "date": "2026-11-21T19:21:12Z",
-      "metrics": {
-        "saves": 0.0,
-        "objects_avg": 2550.1666666666665,
-        "nodes_avg": 502.98333333333335,
-        "resources_avg": 210.0,
-        "orphans_max": 0.0,
-        "reload_orphans_max": 0.0,
-        "reload_object_growth": -7.0,
-        "frame_p95_ms": 16.972,
-        "frames_over_33.4ms": 0.0,
-        "proc_worst_avg_ms": 0.1562,
-        "phys_worst_avg_ms": 0.2232,
-        "mem_static_growth": 149192.0
-      }
-    },
     {
       "run_id": "45022422204",
       "commit": "e702742f5fb6baf119ea2be84729b65465b7192c",
@@ -109,6 +90,25 @@
         "phys_worst_avg_ms": 0.2901,
         "mem_static_growth": 183740.0
       }
+    },
+    {
+      "run_id": "45842112031",
+      "commit": "4f35da2a98afe745c1265ee9be38796dcd2a181b",
+      "date": "2026-11-26T15:05:58Z",
+      "metrics": {
+        "saves": 0.0,
+        "objects_avg": 2490.5666666666666,
+        "nodes_avg": 502.0,
+        "resources_avg": 213.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": -7.0,
+        "frame_p95_ms": 17.131,
+        "frames_over_33.4ms": 0.0,
+        "proc_worst_avg_ms": 0.2079,
+        "phys_worst_avg_ms": 0.3316,
+        "mem_static_growth": 183704.0
+      }
     }
   ],
   "accepted": {
@@ -146,7 +146,8 @@
     "45022422204",
     "45169909421",
     "45227832274",
-    "45706285649"
+    "45706285649",
+    "45842112031"
   ],
   "profile": "desktop"
 }
