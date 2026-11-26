@@ -2,7 +2,8 @@
 ## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## test_menu_click_logging.gd
 ##
-## GUT tests for #1169: the pause menu and Options no longer log every left click.
+## GUT tests for #1169: the pause menu and Options no longer log every left click, and the
+## main and pause menus open and close Options without their own Options scene preload.
 
 extends GutTest
 
