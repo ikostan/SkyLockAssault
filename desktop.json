@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "created": "2026-11-26T15:05:58Z",
-  "commit": "4f35da2a98afe745c1265ee9be38796dcd2a181b",
-  "runner": "GitHub Actions 1000045723",
+  "created": "2026-11-26T17:24:23Z",
+  "commit": "4e4a44de8732982416c6993a607912188e128b60",
+  "runner": "GitHub Actions 1000045802",
   "godot": "4.7.1-stable (official)",
   "runs": 3,
   "baseline": {
@@ -15,25 +15,6 @@
     "reload_object_growth": 2.0
   },
   "history": [
-    {
-      "run_id": "45022422204",
-      "commit": "e702742f5fb6baf119ea2be84729b65465b7192c",
-      "date": "2026-11-22T14:57:42Z",
-      "metrics": {
-        "saves": 0.0,
-        "objects_avg": 2490.2833333333333,
-        "nodes_avg": 501.0833333333333,
-        "resources_avg": 213.0,
-        "orphans_max": 0.0,
-        "reload_orphans_max": 0.0,
-        "reload_object_growth": 4.0,
-        "frame_p95_ms": 17.162,
-        "frames_over_33.4ms": 0.0,
-        "proc_worst_avg_ms": 0.2984,
-        "phys_worst_avg_ms": 0.4842,
-        "mem_static_growth": 148188.0
-      }
-    },
     {
       "run_id": "45169909421",
       "commit": "c312188fa090943b23035a8ec30b6379335067bd",
@@ -109,6 +90,25 @@
         "phys_worst_avg_ms": 0.3316,
         "mem_static_growth": 183704.0
       }
+    },
+    {
+      "run_id": "45864180441",
+      "commit": "4e4a44de8732982416c6993a607912188e128b60",
+      "date": "2026-11-26T17:24:23Z",
+      "metrics": {
+        "saves": 0.0,
+        "objects_avg": 2496.383333333333,
+        "nodes_avg": 507.0,
+        "resources_avg": 213.0,
+        "orphans_max": 0.0,
+        "reload_orphans_max": 0.0,
+        "reload_object_growth": -7.0,
+        "frame_p95_ms": 17.053,
+        "frames_over_33.4ms": 0.0,
+        "proc_worst_avg_ms": 0.1561,
+        "phys_worst_avg_ms": 0.2841,
+        "mem_static_growth": 184364.0
+      }
     }
   ],
   "accepted": {
@@ -147,7 +147,8 @@
     "45169909421",
     "45227832274",
     "45706285649",
-    "45842112031"
+    "45842112031",
+    "45864180441"
   ],
   "profile": "desktop"
 }
