@@ -218,3 +218,26 @@ func test_quit_dialog_setup_keeps_single_confirm_and_cancel_connections() -> voi
 	assert_eq(confirmed_count, 1, "Exactly one confirmed connection.")
 	assert_eq(canceled_count, 1, "Exactly one canceled connection.")
 	assert_false(dialog.visible, "Setup leaves the dialog hidden.")
+
+
+## Reusing an open dialog resets it, and reopening preserves each button's sound.
+func test_reopened_quit_dialog_plays_one_sound_after_repeated_setup() -> void:
+	var dialog: ConfirmationDialog = main_menu_instance.quit_dialog
+	main_menu_instance.quit_button.pressed.emit()
+	assert_true(dialog.visible, "The Quit button opens the dialog.")
+	main_menu_instance._setup_quit_dialog()
+	assert_false(dialog.visible, "Setup hides an already open dialog.")
+
+	for confirm: bool in [false, true]:
+		main_menu_instance.quit_button.pressed.emit()
+		assert_true(dialog.visible, "The dialog can be reopened.")
+		await wait_process_frames(2)
+		SfxManager.set("sfx_calls", [])
+
+		var button := dialog.get_ok_button() if confirm else dialog.get_cancel_button()
+		button.pressed.emit()
+		await wait_process_frames(2)
+
+		var expected_sound := "ui_accept" if confirm else "ui_cancel"
+		assert_eq(SfxManager.get("sfx_calls"), [[expected_sound, AudioConstants.BUS_SFX_MENU]])
+		assert_false(dialog.visible, "The dialog closes after either choice.")
