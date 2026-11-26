@@ -221,10 +221,10 @@ Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gu
     - Checked CodeRabbit's nitpick against how GUT assertions work, found its stated reason was wrong but the fix still useful, and wrote the fix and the reply.
     - Reviewed CodeRabbit's 4 generated tests: ran them, checked they leave no state behind (full suite 1,311/1,311), and broke the code each one covers to confirm it fails.
     - Reviewed PR #1273 and updated this note.
-- **CodeRabbit**
+- **@coderabbitai**
   - Reviewed the PR: 1 nitpick, fixed (`67ab118`).
   - Generated 4 unit tests (`93e16be`): threshold changes after a speed swap, shared resource listeners, the Options round trip, and the reopened quit dialog.
-- **Sourcery**
+- **@sourcery-ai**
   - Posted a reviewer's guide and a linked-issue check (11 of 14 requirements met, 3 to check by hand). No code review: the weekly review budget was used up.
-- **DeepSource**
+- **@deepsource-io**
   - Static analysis (Python, JavaScript): no issues.
