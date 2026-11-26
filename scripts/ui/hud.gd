@@ -174,27 +174,12 @@ func setup_hud(
 	# ==========================================
 	# STEP 1: Safely Disconnect Old Resources
 	# ==========================================
-	if is_instance_valid(_speed_resource) and _speed_resource != speed_res:
-		if _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
-			_speed_resource.speed_updated.disconnect(_on_speed_updated_bridge)
-		if _speed_resource.speed_low.is_connected(_on_speed_low):
-			_speed_resource.speed_low.disconnect(_on_speed_low)
-		if _speed_resource.speed_maxed.is_connected(_on_speed_maxed):
-			_speed_resource.speed_maxed.disconnect(_on_speed_maxed)
-		if _speed_resource.thresholds_changed.is_connected(_on_speed_thresholds_changed):
-			_speed_resource.thresholds_changed.disconnect(_on_speed_thresholds_changed)
-
-	if is_instance_valid(_fuel_resource) and _fuel_resource != fuel_res:
-		if _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
-			_fuel_resource.fuel_changed.disconnect(_on_fuel_changed_bridge)
-		if _fuel_resource.fuel_depleted.is_connected(_on_fuel_depleted):
-			_fuel_resource.fuel_depleted.disconnect(_on_fuel_depleted)
-
-	if is_instance_valid(_weapon_resource) and _weapon_resource != weapon_res:
-		if _weapon_resource.weapon_swapped.is_connected(_on_weapon_swapped):
-			_weapon_resource.weapon_swapped.disconnect(_on_weapon_swapped)
-		if _weapon_resource.ammo_updated.is_connected(_on_ammo_updated):
-			_weapon_resource.ammo_updated.disconnect(_on_ammo_updated)
+	# Only the resources being replaced; passing the same instance again keeps its wiring.
+	_disconnect_resources(
+		_speed_resource if _speed_resource != speed_res else null,
+		_fuel_resource if _fuel_resource != fuel_res else null,
+		_weapon_resource if _weapon_resource != weapon_res else null
+	)
 
 	# ==========================================
 	# STEP 2: Assign New Resource References
@@ -208,10 +193,6 @@ func setup_hud(
 	# ==========================================
 	if not _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
 		_speed_resource.speed_updated.connect(_on_speed_updated_bridge)
-	if not _speed_resource.speed_low.is_connected(_on_speed_low):
-		_speed_resource.speed_low.connect(_on_speed_low)
-	if not _speed_resource.speed_maxed.is_connected(_on_speed_maxed):
-		_speed_resource.speed_maxed.connect(_on_speed_maxed)
 	if not _speed_resource.thresholds_changed.is_connected(_on_speed_thresholds_changed):
 		_speed_resource.thresholds_changed.connect(_on_speed_thresholds_changed)
 
@@ -262,27 +243,34 @@ func get_label_text_color(label: Label) -> Color:
 ## Safely disconnects global resource signals to prevent memory leaks.
 func _exit_tree() -> void:
 	# Explicitly sever the connection to the data resources
-	if is_instance_valid(_speed_resource):
-		if _speed_resource.speed_updated.is_connected(_on_speed_updated_bridge):
-			_speed_resource.speed_updated.disconnect(_on_speed_updated_bridge)
-		if _speed_resource.speed_low.is_connected(_on_speed_low):
-			_speed_resource.speed_low.disconnect(_on_speed_low)
-		if _speed_resource.speed_maxed.is_connected(_on_speed_maxed):
-			_speed_resource.speed_maxed.disconnect(_on_speed_maxed)
-		if _speed_resource.thresholds_changed.is_connected(_on_speed_thresholds_changed):
-			_speed_resource.thresholds_changed.disconnect(_on_speed_thresholds_changed)
+	_disconnect_resources(_speed_resource, _fuel_resource, _weapon_resource)
 
-	if is_instance_valid(_fuel_resource):
-		if _fuel_resource.fuel_changed.is_connected(_on_fuel_changed_bridge):
-			_fuel_resource.fuel_changed.disconnect(_on_fuel_changed_bridge)
-		if _fuel_resource.fuel_depleted.is_connected(_on_fuel_depleted):
-			_fuel_resource.fuel_depleted.disconnect(_on_fuel_depleted)
 
-	if is_instance_valid(_weapon_resource):
-		if _weapon_resource.weapon_swapped.is_connected(_on_weapon_swapped):
-			_weapon_resource.weapon_swapped.disconnect(_on_weapon_swapped)
-		if _weapon_resource.ammo_updated.is_connected(_on_ammo_updated):
-			_weapon_resource.ammo_updated.disconnect(_on_ammo_updated)
+## Disconnects this HUD's handlers from whichever resources are given.
+## Pass [code]null[/code] to leave a resource connected (#1169).
+## [param speed]: The SpeedResource to disconnect from, or [code]null[/code].
+## [param fuel]: The FuelResource to disconnect from, or [code]null[/code].
+## [param weapon]: The WeaponResource to disconnect from, or [code]null[/code].
+func _disconnect_resources(
+	speed: SpeedResource, fuel: FuelResource, weapon: WeaponResource
+) -> void:
+	if is_instance_valid(speed):
+		if speed.speed_updated.is_connected(_on_speed_updated_bridge):
+			speed.speed_updated.disconnect(_on_speed_updated_bridge)
+		if speed.thresholds_changed.is_connected(_on_speed_thresholds_changed):
+			speed.thresholds_changed.disconnect(_on_speed_thresholds_changed)
+
+	if is_instance_valid(fuel):
+		if fuel.fuel_changed.is_connected(_on_fuel_changed_bridge):
+			fuel.fuel_changed.disconnect(_on_fuel_changed_bridge)
+		if fuel.fuel_depleted.is_connected(_on_fuel_depleted):
+			fuel.fuel_depleted.disconnect(_on_fuel_depleted)
+
+	if is_instance_valid(weapon):
+		if weapon.weapon_swapped.is_connected(_on_weapon_swapped):
+			weapon.weapon_swapped.disconnect(_on_weapon_swapped)
+		if weapon.ammo_updated.is_connected(_on_ammo_updated):
+			weapon.ammo_updated.disconnect(_on_ammo_updated)
 
 
 # ==========================================
@@ -536,20 +524,6 @@ func _on_ammo_updated(current: int, max_ammo: int) -> void:
 	if is_instance_valid(ammo_bar):
 		ammo_bar.max_value = float(max_ammo)
 		ammo_bar.value = float(current)
-
-
-## Signal handler for extreme low speed (stall warning).
-## Activates the warning blinker.
-func _on_speed_low() -> void:
-	if speed_stat != null and not speed_stat.is_blinking:
-		speed_stat.start_blinking()
-
-
-## Signal handler for maximum forward velocity.
-## Activates the warning blinker to indicate structural stress.
-func _on_speed_maxed() -> void:
-	if speed_stat != null and not speed_stat.is_blinking:
-		speed_stat.start_blinking()
 
 
 ## Callback triggered when the SpeedResource modifies its visual warning fractions.

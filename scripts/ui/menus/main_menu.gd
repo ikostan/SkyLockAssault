@@ -12,7 +12,6 @@
 ##
 ## :vartype quit_dialog: ConfirmationDialog
 ## :vartype game_scene: PackedScene
-## :vartype options_menu: PackedScene
 ## :vartype ui_panel: Panel
 ## :vartype ui_container: VBoxContainer
 ## :vartype start_button: Button
@@ -37,7 +36,6 @@ const QUIT_DIALOG_DEFAULT_PATH: String = "VideoStreamPlayer/Panel/VBoxContainer/
 var quit_dialog: ConfirmationDialog
 # The unbound controls warning dialog
 var unbound_dialog: ConfirmationDialog
-var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
 var last_focused_button: Button = null  # Tracks which button opened the dialog
 # FIX: Safety flag to shield test runners from process termination loops
 var bypass_quit_for_testing: bool = false
@@ -278,33 +276,12 @@ func _setup_quit_dialog() -> void:
 		if not quit_dialog.canceled.is_connected(_on_quit_dialog_canceled):
 			quit_dialog.canceled.connect(_on_quit_dialog_canceled)
 
-		# Clear generic audio connections on the internal Cancel button
-		var cancel_button := quit_dialog.get_cancel_button()
-		if is_instance_valid(cancel_button):
-			for connection: Dictionary in cancel_button.pressed.get_connections():
-				# Check both the object and the explicit audio handler name
-				if (
-					connection.callable.get_object() == Globals
-					and connection.callable.get_method() == "_on_global_button_pressed"
-				):
-					cancel_button.pressed.disconnect(connection.callable)
-
-		# Do the same for the OK button to prevent double-triggering the accept sound
-		var ok_button := quit_dialog.get_ok_button()
-		if is_instance_valid(ok_button):
-			for connection: Dictionary in ok_button.pressed.get_connections():
-				# Explicitly target only the Globals singleton audio hook by object and method
-				if (
-					connection.callable.get_object() == Globals
-					and connection.callable.get_method() == "_on_global_button_pressed"
-				):
-					ok_button.pressed.disconnect(connection.callable)
+		# No sanitizing needed on the internal OK and Cancel buttons: SfxManager skips
+		# buttons inside an AcceptDialog, so confirming or canceling plays one sound (#1169).
 
 		# Ensure initially hidden
 		quit_dialog.hide()
-		Globals.log_message(
-			"QuitDialog signals connected and internal buttons sanitized.", Globals.LogLevel.DEBUG
-		)
+		Globals.log_message("QuitDialog signals connected.", Globals.LogLevel.DEBUG)
 	else:
 		Globals.log_message(
 			"QuitDialog not found at path: " + str(quit_dialog_path), Globals.LogLevel.ERROR

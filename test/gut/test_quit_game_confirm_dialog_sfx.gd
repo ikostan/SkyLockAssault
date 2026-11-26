@@ -117,3 +117,127 @@ func test_dialog_cancellation_audio() -> void:
 		
 	_assert_sfx_called("ui_cancel")
 	_assert_sfx_call_count(1)
+
+
+# ==========================================================================
+# #1169 CONFIRM-FIRST: THE QUIT DIALOG NEEDS NO HANDLER SANITIZING
+# ==========================================================================
+
+## Counts connections on [param button]'s pressed signal to any method named
+## _on_global_button_pressed, whichever object owns it (SfxManager or the old Globals hook).
+func _count_global_sound_connections(button: BaseButton) -> int:
+	var count: int = 0
+	for connection: Dictionary in button.pressed.get_connections():
+		var callable: Callable = connection.get("callable", Callable())
+		if callable.get_method() == "_on_global_button_pressed":
+			count += 1
+	return count
+
+
+## The global click sound handler lives on SfxManager only; Globals no longer has one.
+func test_globals_has_no_global_button_sound_handler() -> void:
+	assert_false(
+		Globals.has_method("_on_global_button_pressed"),
+		"Globals must not own a global button sound handler; SfxManager does."
+	)
+	assert_true(
+		SfxManager.has_method("_on_global_button_pressed"),
+		"SfxManager must own the global button sound handler."
+	)
+
+
+## SfxManager never hooks the internal OK and Cancel buttons of a dialog, even one that
+## main_menu.gd never touches, so the quit dialog has nothing to disconnect.
+func test_sfx_manager_skips_internal_dialog_buttons() -> void:
+	var dialog := ConfirmationDialog.new()
+	add_child_autofree(dialog)
+	await wait_process_frames(2)
+
+	assert_eq(
+		_count_global_sound_connections(dialog.get_ok_button()),
+		0,
+		"SfxManager must not connect to a dialog's internal OK button."
+	)
+	assert_eq(
+		_count_global_sound_connections(dialog.get_cancel_button()),
+		0,
+		"SfxManager must not connect to a dialog's internal Cancel button."
+	)
+
+
+## The main menu's quit dialog buttons have no global sound connection.
+func test_quit_dialog_buttons_have_no_global_sound_connection() -> void:
+	var dialog: ConfirmationDialog = main_menu_instance.quit_dialog
+	assert_true(is_instance_valid(dialog), "Quit dialog must be found.")
+	assert_eq(
+		_count_global_sound_connections(dialog.get_ok_button()),
+		0,
+		"Quit dialog OK button must have no global sound connection."
+	)
+	assert_eq(
+		_count_global_sound_connections(dialog.get_cancel_button()),
+		0,
+		"Quit dialog Cancel button must have no global sound connection."
+	)
+
+
+## Pressing the quit dialog's OK button plays exactly one accept sound.
+func test_quit_dialog_ok_button_plays_one_sound() -> void:
+	var dialog: ConfirmationDialog = main_menu_instance.quit_dialog
+	dialog.get_ok_button().pressed.emit()
+	# Deferred handlers (CONNECT_DEFERRED) would fire here, so wait before counting.
+	await wait_process_frames(2)
+
+	_assert_sfx_called("ui_accept")
+	_assert_sfx_call_count(1)
+
+
+## Pressing the quit dialog's Cancel button plays exactly one cancel sound.
+func test_quit_dialog_cancel_button_plays_one_sound() -> void:
+	var dialog: ConfirmationDialog = main_menu_instance.quit_dialog
+	dialog.get_cancel_button().pressed.emit()
+	await wait_process_frames(2)
+
+	_assert_sfx_called("ui_cancel")
+	_assert_sfx_not_called("ui_accept")
+	_assert_sfx_call_count(1)
+
+
+## Setting the dialog up again keeps one confirmed and one canceled connection.
+func test_quit_dialog_setup_keeps_single_confirm_and_cancel_connections() -> void:
+	main_menu_instance._setup_quit_dialog()
+	var dialog: ConfirmationDialog = main_menu_instance.quit_dialog
+	var confirmed_count: int = 0
+	for connection: Dictionary in dialog.confirmed.get_connections():
+		if connection.callable == main_menu_instance._on_quit_dialog_confirmed:
+			confirmed_count += 1
+	var canceled_count: int = 0
+	for connection: Dictionary in dialog.canceled.get_connections():
+		if connection.callable == main_menu_instance._on_quit_dialog_canceled:
+			canceled_count += 1
+	assert_eq(confirmed_count, 1, "Exactly one confirmed connection.")
+	assert_eq(canceled_count, 1, "Exactly one canceled connection.")
+	assert_false(dialog.visible, "Setup leaves the dialog hidden.")
+
+
+## Reusing an open dialog resets it, and reopening preserves each button's sound.
+func test_reopened_quit_dialog_plays_one_sound_after_repeated_setup() -> void:
+	var dialog: ConfirmationDialog = main_menu_instance.quit_dialog
+	main_menu_instance.quit_button.pressed.emit()
+	assert_true(dialog.visible, "The Quit button opens the dialog.")
+	main_menu_instance._setup_quit_dialog()
+	assert_false(dialog.visible, "Setup hides an already open dialog.")
+
+	for confirm: bool in [false, true]:
+		main_menu_instance.quit_button.pressed.emit()
+		assert_true(dialog.visible, "The dialog can be reopened.")
+		await wait_process_frames(2)
+		SfxManager.set("sfx_calls", [])
+
+		var button := dialog.get_ok_button() if confirm else dialog.get_cancel_button()
+		button.pressed.emit()
+		await wait_process_frames(2)
+
+		var expected_sound := "ui_accept" if confirm else "ui_cancel"
+		assert_eq(SfxManager.get("sfx_calls"), [[expected_sound, AudioConstants.BUS_SFX_MENU]])
+		assert_false(dialog.visible, "The dialog closes after either choice.")
