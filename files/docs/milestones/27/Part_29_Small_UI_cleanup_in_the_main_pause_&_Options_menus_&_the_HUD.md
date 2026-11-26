@@ -5,16 +5,16 @@
 
 ## PR Summary
 
-**Title:** Small UI cleanup in the main, pause and Options menus, and the HUD  
-**PR:** TBD (not opened yet)  
-**Branch:** `ui-cleanup-main-pause-options-menus-and-hud-1169` → `main`  
+**Title:** Clean up menus and HUD signal handling  
+**PR:** [#1273](https://github.com/ikostan/SkyLockAssault/pull/1273)  
+**Branch:** `small-ui-cleanup-in-the-main-pause-and-options-menus-and-the-hud` → `main`  
 **Author:** @ikostan  
 **Resolves:**
 
 - [#1169 – [FEATURE] Small UI cleanup in the main, pause, and Options menus, and the HUD](https://github.com/ikostan/SkyLockAssault/issues/1169)
 
 **Milestone:** Milestone 27: Audio feedback fixes, architecture refactor & performance validation  
-**Labels:** `enhancement`, `GUT`, `refactoring`
+**Labels:** `testing`, `menu`, `refactoring`
 
 ### Purpose
 
@@ -77,16 +77,17 @@ Both points were checked against `main` (`4f35da2`) before any code changed, wit
 
 ### 6. Tests
 
-**No test case was removed.**
+**No test case was removed.** CodeRabbit added 4 more tests during review (`93e16be`); they are listed with the file they went into and marked *(CodeRabbit)*.
 
 - **Updated:** `test/gdunit4/test_pause_menu.gd` PM-07 called `menu._input()` directly with a left and a right click. It now checks that `pause_menu.gd` defines no `_input()`. The pause toggle checks in the same case are unchanged.
-- **`test/gut/test_quit_game_confirm_dialog_sfx.gd` (+6, 8 in total):**
+- **`test/gut/test_quit_game_confirm_dialog_sfx.gd` (+7, 9 in total):**
   - `Globals` has no global button sound handler; `SfxManager` does.
   - A plain `ConfirmationDialog` gets no global sound connection on its OK and Cancel buttons.
   - The quit dialog's OK and Cancel buttons have none either.
   - Pressing OK plays one `ui_accept`; pressing Cancel plays one `ui_cancel` and no `ui_accept`, counted after deferred calls.
   - Setting the dialog up again keeps one `confirmed` and one `canceled` connection, and leaves it hidden.
-- **`test/gut/test_hud.gd` (+8, 26 in total):**
+  - *(CodeRabbit)* Setting up an open dialog hides it; after reopening, Cancel and OK each play exactly one sound, on the Menu bus.
+- **`test/gut/test_hud.gd` (+10, 28 in total):**
   - Speed blinking starts at the low threshold and at maximum speed and stops in the normal range, with no HUD handler on `speed_low` or `speed_maxed` (the confirm-first case).
   - Maximum speed is inside the warning band even with `high_yellow_fraction` set to 1.0.
   - The HUD doesn't connect to `speed_low` or `speed_maxed`.
@@ -94,11 +95,14 @@ Both points were checked against `main` (`4f35da2`) before any code changed, wit
   - `setup_hud()` with the same resources disconnects nothing.
   - `setup_hud()` with one new resource (speed, fuel or weapon, parameterized) disconnects only the replaced one.
   - Leaving the tree removes every HUD connection from all three resources.
-  - Freeing a second HUD leaves no connections to it, and the first HUD still reacts.
-- **New `test/gut/test_menu_click_logging.gd` (3 tests):**
+  - Freeing a second HUD leaves no connections to it, and the first HUD still reacts. The second HUD is added with `add_child_autofree()` as a fallback, and is still freed explicitly (review fix, `67ab118`).
+  - *(CodeRabbit)* After the speed resource is replaced, changing only `high_yellow_fraction` starts and stops the warning and its timer.
+  - *(CodeRabbit)* Replacing a HUD's resources, or removing it from the tree, leaves a second HUD on the same resources working, and the first HUD ignores them (parameterized: replace, exit tree).
+- **New `test/gut/test_menu_click_logging.gd` (4 tests):**
   - A left click pushed through the viewport with the pause menu or Options open logs no "Clicked at" line (captured with `OS.add_logger()`, at DEBUG level), and neither script defines `_input()`.
   - Neither the main nor the pause menu keeps an `options_menu` scene.
-  - On `main`, all three failed, so they do catch the old logging.
+  - On `main`, these three failed, so they do catch the old logging and the preloads.
+  - *(CodeRabbit)* From the main menu and from the pause menu (parameterized), the Options button opens the configured Options scene and hides the caller, and Back frees Options and shows the caller again.
 
 ---
 
@@ -113,18 +117,43 @@ Both points were checked against `main` (`4f35da2`) before any code changed, wit
 
 ## Verification
 
-Run locally on the branch with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gut_tests.yml` and `gdunit4_tests.yml` do. `gdlint ./scripts` and `gdformat --check ./scripts` as in CI.
+Run locally with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0, set up as `gut_tests.yml` and `gdunit4_tests.yml` do. `gdlint ./scripts` and `gdformat --check ./scripts` as in CI.
 
-| State              | GUT scripts | GUT tests | GUT asserts |
-|--------------------|-------------|-----------|-------------|
-| `main` (`4f35da2`) | 121         | 1,290     | 16,176      |
-| This branch        | 122         | 1,307     | 16,237      |
+| State                                  | GUT scripts | GUT tests | GUT asserts |
+|----------------------------------------|-------------|-----------|-------------|
+| `main` (`4f35da2`)                     | 121         | 1,290     | 16,176      |
+| First commit (`46c6a85`)               | 122         | 1,307     | 16,237      |
+| PR head, after review (`eac69b1`)      | 122         | 1,311     | 16,277      |
 
-- **Full GUT suite locally:** 1,307/1,307.
-- **Full gdUnit4 suite locally:** 170/170 (27 suites), including PM-07 and the `check_speed_warning()` cases in `test_player.gd`.
+- **Full GUT suite locally on `eac69b1`:** 1,311/1,311.
+- **Full gdUnit4 suite locally on `46c6a85`:** 170/170 (27 suites), including PM-07 and the `check_speed_warning()` cases in `test_player.gd`. The review commits changed only GUT tests.
 - **GDScript lint and format:** pass.
 - **Before the code change,** the new tests that describe the new code failed as expected (7 failures: the HUD speed connections, the click logs and the preloads), and all confirm-first cases passed.
+- **Breaking the code on purpose** (in a local copy, undone after each run) shows CodeRabbit's tests catch real regressions:
+
+| Change                                                                  | Fails                                                                                                           |
+|-------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| `setup_hud()` no longer connects `thresholds_changed`                   | `test_speed_warning_tracks_threshold_changes_after_speed_replacement` and 4 more HUD tests                      |
+| `_disconnect_resources()` disconnects every listener, not only this HUD | `test_hud_cleanup_preserves_shared_resource_subscribers` (both cases), `test_freeing_hud_leaves_no_connections` |
+| The main menu's Options button isn't connected                          | `test_options_button_round_trip_without_a_menu_local_scene` (main)                                              |
+| The quit dialog's OK button is also connected to the global click sound | `test_reopened_quit_dialog_plays_one_sound_after_repeated_setup` and 2 more quit dialog tests                   |
+
+  Removing the pause menu's Options `connect()` line doesn't fail the pause case, and that is correct: `pause_menu.tscn` also connects the button.
+
+- **CI on `eac69b1`:** GDScript lint and format, Markdown lint, GUT, gdUnit4 and the web build pass. The browser test shards and the benchmark were still running when this note was updated.
 - **Not run locally:** Playwright (`back_flow_test.py`, `telemetry_and_hold_test.py`, `no_error_logs_test.py`), the benchmark and the manual itch.io checks.
+
+---
+
+## Review
+
+| Reviewer   | Finding                                                                                           | Outcome                                                                                                                                                             |
+|------------|---------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| CodeRabbit | Nitpick: register the second HUD in `test_freeing_hud_leaves_no_connections` for autofree         | Fixed (`67ab118`). The stated reason was corrected in the reply: a failed GUT assertion doesn't stop the test; the real risk is a script error before `hud.free()`. |
+| CodeRabbit | Generated unit tests (`93e16be`): 4 tests in 3 files                                              | All kept. Each one fails when the code it covers is broken (see Verification).                                                                                      |
+| Sourcery   | No code review (weekly review budget used up); posted a reviewer's guide and a linked-issue check | Linked issues: 11 of 14 #1169 requirements met; the other 3 (Playwright, benchmark, itch.io checks) are runtime checks to do by hand.                               |
+| DeepSource | Static analysis (Python, JavaScript)                                                              | No issues reported.                                                                                                                                                 |
+| Qodo       | Reviews paused for this account                                                                   | No review.                                                                                                                                                          |
 
 ---
 
@@ -134,6 +163,7 @@ Run locally on the branch with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0,
   - Quit plays one confirm or cancel sound.
   - The speed label blinks at low and maximum speed as before.
 - **Benchmark:** the scenario is unchanged; check the PR table.
+- **CodeRabbit's Options round-trip test sits in `test_menu_click_logging.gd`,** a file named for click logging. It fits there loosely (it checks the menus work without the removed preloads); moving it to a navigation suite is optional.
 - **Found while testing, not part of this PR:** `test/gut/test_weapon_slot_cooldown.gd` (#1138) extends `GdUnitTestSuite` but sits in the GUT folder. GUT can't parse it and skips it ("Could not find base class GdUnitTestSuite"), and the gdUnit4 job only runs `test/gdunit4`, so neither runner runs it. Moving it to `test/gdunit4/` should be a separate small fix.
 - **Next in #621:** #1182 (Advanced), #1180 (Audio) and #1181 (Key Mapping) onto `SettingsMenuBase`, then #1183 (shared loader).
 
@@ -149,19 +179,19 @@ Run locally on the branch with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0,
 | Preloads.       | <ul><li>Unused `options_menu` variables and doc line removed.</li></ul>                                                             | `scripts/ui/menus/main_menu.gd`<br/>`scripts/ui/menus/pause_menu.gd`                                                 |
 | Click logging.  | <ul><li>`_input()` removed.</li></ul>                                                                                               | `scripts/ui/menus/pause_menu.gd`<br/>`scripts/ui/menus/options_menu.gd`                                              |
 | HUD.            | <ul><li>`_disconnect_resources()` used by `setup_hud()` and `_exit_tree()`.</li><li>Speed low and maxed handlers removed.</li></ul> | `scripts/ui/hud.gd`                                                                                                  |
-| GUT tests.      | <ul><li>6 quit dialog tests; 8 HUD tests; new click logging suite (3).</li></ul>                                                    | `test/gut/test_quit_game_confirm_dialog_sfx.gd`<br/>`test/gut/test_hud.gd`<br/>`test/gut/test_menu_click_logging.gd` |
+| GUT tests.      | <ul><li>7 quit dialog tests; 10 HUD tests; new click logging suite (4). 4 of the 21 are from CodeRabbit.</li></ul>                  | `test/gut/test_quit_game_confirm_dialog_sfx.gd`<br/>`test/gut/test_hud.gd`<br/>`test/gut/test_menu_click_logging.gd` |
 | gdUnit4 tests.  | <ul><li>PM-07 checks there's no `_input()` instead of calling it.</li></ul>                                                         | `test/gdunit4/test_pause_menu.gd`                                                                                    |
 | Milestone note. | <ul><li>This note.</li></ul>                                                                                                        | `files/docs/milestones/27/Part_29_Small_UI_cleanup_in_the_main_pause_&_Options_menus_&_the_HUD.md`                   |
 
 ### Assessment against linked issues
 
-| Issue                                                   | Objective                                                               | Addressed | Explanation                                         |
-|---------------------------------------------------------|-------------------------------------------------------------------------|-----------|-----------------------------------------------------|
-| <https://github.com/ikostan/SkyLockAssault/issues/1169> | The confirm-first results are recorded on the PR                        | ✅        | Confirm-first results.                              |
-| <https://github.com/ikostan/SkyLockAssault/issues/1169> | The five items are removed or simplified as described                   | ✅        | Key Changes 1-5.                                    |
-| <https://github.com/ikostan/SkyLockAssault/issues/1169> | Menu sounds, Options access and HUD warnings behave as before           | ✅        | GUT and gdUnit4 suites; manual checks still to do.  |
-| <https://github.com/ikostan/SkyLockAssault/issues/1169> | All GUT, gdUnit4, Playwright and lint jobs pass; no cases removed       | ⏳        | GUT, gdUnit4 and lint pass locally; CI not run yet. |
-| <https://github.com/ikostan/SkyLockAssault/issues/1169> | The PR's milestone note is added under `files/docs/milestones/`         | ✅        | This note.                                          |
+| Issue                                                   | Objective                                                         | Addressed | Explanation                                                                        |
+|---------------------------------------------------------|-------------------------------------------------------------------|-----------|------------------------------------------------------------------------------------|
+| <https://github.com/ikostan/SkyLockAssault/issues/1169> | The confirm-first results are recorded on the PR                  | ✅        | Confirm-first results.                                                             |
+| <https://github.com/ikostan/SkyLockAssault/issues/1169> | The five items are removed or simplified as described             | ✅        | Key Changes 1-5.                                                                   |
+| <https://github.com/ikostan/SkyLockAssault/issues/1169> | Menu sounds, Options access and HUD warnings behave as before     | ✅        | GUT and gdUnit4 suites; manual checks still to do.                                 |
+| <https://github.com/ikostan/SkyLockAssault/issues/1169> | All GUT, gdUnit4, Playwright and lint jobs pass; no cases removed | ⏳        | Lint, GUT and gdUnit4 pass in CI; Playwright and the benchmark were still running. |
+| <https://github.com/ikostan/SkyLockAssault/issues/1169> | The PR's milestone note is added under `files/docs/milestones/`   | ✅        | This note.                                                                         |
 
 ---
 
@@ -171,6 +201,9 @@ Run locally on the branch with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0,
 
 - Filed #1169 from the #621 (Region 6) review, with the confirm-first steps and the proposed changes.
 - Picked #1169 as the next PR.
+- Opened PR #1273 (`46c6a85`).
+- Requested CodeRabbit's generated unit tests (`93e16be`).
+- Applied CodeRabbit's autofree fix (`67ab118`) and replied to the review.
 
 ### Bots / AI contributions
 
@@ -178,11 +211,20 @@ Run locally on the branch with Godot 4.7.1-stable, GUT 9.7.1 and gdUnit4 v6.2.0,
   - **Confirm-first**
     - Checked both points on `main` with GUT before changing code, and traced why the speed blink can't depend on `speed_low` or `speed_maxed` (signal order and the clamped `high_yellow_fraction`).
     - Found the moved line numbers in `main_menu.gd`.
-  - **Changes**
-    - Implemented the five cleanups and the `_disconnect_resources()` helper.
   - **Tests**
     - Wrote the 17 new GUT tests and rewrote PM-07 without removing it.
   - **Verification**
     - Ran the full GUT and gdUnit4 suites, `gdlint` and `gdformat` before and after the change.
     - Found that `test_weapon_slot_cooldown.gd` never runs in either test job.
     - Wrote this note.
+  - **Review**
+    - Checked CodeRabbit's nitpick against how GUT assertions work, found its stated reason was wrong but the fix still useful, and wrote the fix and the reply.
+    - Reviewed CodeRabbit's 4 generated tests: ran them, checked they leave no state behind (full suite 1,311/1,311), and broke the code each one covers to confirm it fails.
+    - Reviewed PR #1273 and updated this note.
+- **CodeRabbit**
+  - Reviewed the PR: 1 nitpick, fixed (`67ab118`).
+  - Generated 4 unit tests (`93e16be`): threshold changes after a speed swap, shared resource listeners, the Options round trip, and the reopened quit dialog.
+- **Sourcery**
+  - Posted a reviewer's guide and a linked-issue check (11 of 14 requirements met, 3 to check by hand). No code review: the weekly review budget was used up.
+- **DeepSource**
+  - Static analysis (Python, JavaScript): no issues.
