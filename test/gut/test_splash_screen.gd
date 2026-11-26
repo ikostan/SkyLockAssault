@@ -95,8 +95,9 @@ func after_each() -> void:
 
 ## Waits for a threaded load of [param path] to finish and fetches it, so the loader cache holds
 ## no pending request for it. A failed load is fetched too: Godot keeps a failed request until
-## its result is fetched, and a later request for the same path would reuse it. An invalid or
-## unrequested path is left alone.
+## its result is fetched, and a later request for the same path would reuse it. A load still in
+## progress after MAX_FRAMES fails the test and is fetched anyway (load_threaded_get() waits for
+## it), so it can't leak into a later test. An invalid or unrequested path is left alone.
 func _drain_threaded_load(path: String) -> void:
 	if path.is_empty():
 		return
@@ -108,7 +109,12 @@ func _drain_threaded_load(path: String) -> void:
 		await get_tree().process_frame
 		frames += 1
 	var status: int = ResourceLoader.load_threaded_get_status(path)
-	if status == ResourceLoader.THREAD_LOAD_LOADED or status == ResourceLoader.THREAD_LOAD_FAILED:
+	if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		fail_test(
+			"Threaded load of '%s' still in progress after %d frames; fetching it." % [path, frames]
+		)
+		ResourceLoader.load_threaded_get(path)
+	elif status == ResourceLoader.THREAD_LOAD_LOADED or status == ResourceLoader.THREAD_LOAD_FAILED:
 		ResourceLoader.load_threaded_get(path)
 
 
