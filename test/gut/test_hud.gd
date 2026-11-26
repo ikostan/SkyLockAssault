@@ -540,3 +540,160 @@ func test_hud_low_speed_states_switch_at_shared_threshold(
 		)
 		_speed.current_speed = (threshold + _speed.min_speed) / 2.0
 		assert_ne(_hud.get_speed_bar_color(), Color.GREEN, "below the threshold turns yellow")
+
+
+# ==========================================
+# SIGNAL CLEANUP AND SPEED BLINK (#1169)
+# ==========================================
+
+## Counts every connection on [param res], across all of its signals, whose target is
+## [param hud].
+func _count_hud_connections(res: Resource, hud: Object) -> int:
+	var count: int = 0
+	for sig: Dictionary in res.get_signal_list():
+		for connection: Dictionary in res.get_signal_connection_list(sig["name"]):
+			var callable: Callable = connection.get("callable", Callable())
+			if callable.get_object() == hud:
+				count += 1
+	return count
+
+
+## Disconnects every HUD handler from one signal of [param res], whatever its method name.
+func _disconnect_hud_from(sig: Signal) -> void:
+	for connection: Dictionary in sig.get_connections():
+		var callable: Callable = connection.get("callable", Callable())
+		if callable.get_object() == _hud:
+			sig.disconnect(callable)
+
+
+## Confirm-first point 2: speed blinking starts at low and maximum speed through
+## check_speed_warning() alone, with no handler on speed_low or speed_maxed.
+func test_speed_blink_needs_no_speed_low_or_maxed_handler() -> void:
+	gut.p("Testing: speed_updated alone drives the speed blink at low and maximum speed.")
+	_disconnect_hud_from(_speed.speed_low)
+	_disconnect_hud_from(_speed.speed_maxed)
+
+	# Normal range: no blink
+	_speed.current_speed = (_speed.min_speed + _speed.max_speed) / 2.0
+	assert_false(_hud.is_speed_warning_active(), "No blink in the normal range.")
+
+	# Low threshold: speed_low fires here, but the HUD no longer listens to it
+	_speed.current_speed = _speed.get_low_threshold()
+	assert_true(_hud.is_speed_warning_active(), "Blink starts at the low threshold.")
+	assert_true(_hud.is_speed_timer_running(), "Blink timer runs at the low threshold.")
+
+	# Back to normal
+	_speed.current_speed = (_speed.min_speed + _speed.max_speed) / 2.0
+	assert_false(_hud.is_speed_warning_active(), "Blink stops back in the normal range.")
+	assert_false(_hud.is_speed_timer_running(), "Blink timer stops in the normal range.")
+
+	# Maximum speed: speed_maxed fires here
+	_speed.current_speed = _speed.max_speed
+	assert_true(_hud.is_speed_warning_active(), "Blink starts at maximum speed.")
+	assert_true(_hud.is_speed_timer_running(), "Blink timer runs at maximum speed.")
+
+	_speed.current_speed = (_speed.min_speed + _speed.max_speed) / 2.0
+	assert_false(_hud.is_speed_warning_active(), "Blink stops after leaving maximum speed.")
+
+
+## Maximum speed always reaches the high warning band, because high_yellow_fraction is
+## clamped to 1.0, so check_speed_warning() covers every case _on_speed_maxed() covered.
+func test_max_speed_is_always_inside_high_warning_band() -> void:
+	_speed.high_yellow_fraction = 5.0
+	assert_eq(_speed.high_yellow_fraction, 1.0, "high_yellow_fraction is clamped to 1.0.")
+	_disconnect_hud_from(_speed.speed_maxed)
+	_speed.current_speed = _speed.max_speed
+	assert_true(_hud.is_speed_warning_active(), "Blink starts at maximum speed with fraction 1.0.")
+
+
+## The HUD no longer listens to speed_low or speed_maxed.
+func test_hud_does_not_connect_speed_low_or_maxed() -> void:
+	for sig: Signal in [_speed.speed_low, _speed.speed_maxed]:
+		var hud_connections: int = 0
+		for connection: Dictionary in sig.get_connections():
+			if connection.callable.get_object() == _hud:
+				hud_connections += 1
+		assert_eq(hud_connections, 0, "HUD must not connect to %s." % sig.get_name())
+
+
+## Initial wiring connects exactly the expected handlers on each resource.
+func test_setup_hud_connection_counts() -> void:
+	# speed_updated, thresholds_changed
+	assert_eq(_count_hud_connections(_speed, _hud), 2, "Speed: two HUD connections.")
+	# fuel_changed, fuel_depleted
+	assert_eq(_count_hud_connections(_fuel, _hud), 2, "Fuel: two HUD connections.")
+	# weapon_swapped, ammo_updated
+	assert_eq(_count_hud_connections(_weapon, _hud), 2, "Weapon: two HUD connections.")
+
+
+## setup_hud() with the same resources disconnects nothing.
+func test_setup_hud_with_same_resources_disconnects_nothing() -> void:
+	var before: Array[int] = [
+		_count_hud_connections(_speed, _hud),
+		_count_hud_connections(_fuel, _hud),
+		_count_hud_connections(_weapon, _hud),
+	]
+	_hud.setup_hud(_fuel, _speed, _weapon)
+	assert_eq(_count_hud_connections(_speed, _hud), before[0], "Speed connections unchanged.")
+	assert_eq(_count_hud_connections(_fuel, _hud), before[1], "Fuel connections unchanged.")
+	assert_eq(_count_hud_connections(_weapon, _hud), before[2], "Weapon connections unchanged.")
+
+
+## setup_hud() with one new resource disconnects only the replaced one, for each resource.
+func test_setup_hud_disconnects_only_replaced_resources(
+	case: String = use_parameters(["speed", "fuel", "weapon"])
+) -> void:
+	var new_fuel: FuelResource = _fuel
+	var new_speed: SpeedResource = _speed
+	var new_weapon: WeaponResource = _weapon
+	match case:
+		"speed":
+			new_speed = SpeedResource.new()
+		"fuel":
+			new_fuel = FuelResource.new()
+		"weapon":
+			new_weapon = WeaponResource.new()
+
+	_hud.setup_hud(new_fuel, new_speed, new_weapon)
+
+	var old_speed_count: int = _count_hud_connections(_speed, _hud)
+	var old_fuel_count: int = _count_hud_connections(_fuel, _hud)
+	var old_weapon_count: int = _count_hud_connections(_weapon, _hud)
+	assert_eq(old_speed_count, 0 if case == "speed" else 2, "Old speed connections.")
+	assert_eq(old_fuel_count, 0 if case == "fuel" else 2, "Old fuel connections.")
+	assert_eq(old_weapon_count, 0 if case == "weapon" else 2, "Old weapon connections.")
+	assert_eq(_count_hud_connections(new_speed, _hud), 2, "Active speed is connected.")
+	assert_eq(_count_hud_connections(new_fuel, _hud), 2, "Active fuel is connected.")
+	assert_eq(_count_hud_connections(new_weapon, _hud), 2, "Active weapon is connected.")
+
+
+## Leaving the tree disconnects every HUD signal from every resource.
+func test_exit_tree_disconnects_every_hud_signal() -> void:
+	remove_child(_hud)
+	assert_eq(_count_hud_connections(_speed, _hud), 0, "No speed connections after exit.")
+	assert_eq(_count_hud_connections(_fuel, _hud), 0, "No fuel connections after exit.")
+	assert_eq(_count_hud_connections(_weapon, _hud), 0, "No weapon connections after exit.")
+	# Back in the tree so autoqfree frees it as usual
+	add_child(_hud)
+
+
+## Freeing a HUD leaves no connections on the resources, and the resources keep working.
+func test_freeing_hud_leaves_no_connections() -> void:
+	var hud: Panel = _build_isolated_hud_tree()
+	add_child(hud)
+	hud._ready()
+	hud.setup_hud(_fuel, _speed, _weapon)
+	assert_eq(_count_hud_connections(_speed, hud), 2, "Second HUD is connected.")
+
+	hud.free()
+
+	var connections: int = 0
+	for res: Resource in [_speed, _fuel, _weapon]:
+		for sig: Dictionary in res.get_signal_list():
+			for connection: Dictionary in res.get_signal_connection_list(sig["name"]):
+				if not is_instance_valid(connection.callable.get_object()):
+					connections += 1
+	assert_eq(connections, 0, "No connections to a freed HUD remain.")
+	# The first HUD still follows the resources
+	_speed.current_speed = _speed.max_speed
+	assert_true(_hud.is_speed_warning_active(), "The remaining HUD still reacts.")

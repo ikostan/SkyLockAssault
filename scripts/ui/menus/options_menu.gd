@@ -206,19 +206,6 @@ func _grab_first_button_focus() -> void:
 		)
 
 
-func _input(event: InputEvent) -> void:
-	## Handles input events for the options menu.
-	##
-	## Logs mouse click positions for debugging.
-	##
-	## :param event: The input event to process.
-	## :type event: InputEvent
-	## :rtype: void
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var pos: Vector2 = event.position  # Explicitly type as Vector2
-		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
-
-
 func _teardown() -> void:
 	## Cleans up on options close.
 	##

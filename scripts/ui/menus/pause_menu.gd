@@ -8,8 +8,6 @@
 
 extends CanvasLayer
 
-var options_menu: PackedScene = preload("res://scenes/options_menu.tscn")
-
 # Store JS callback objects to prevent garbage collection on Web export
 # Variant (not JavaScriptObject) so tests can seed them: off web they'd always be null.
 var _toggle_pause_cb: Variant
@@ -22,19 +20,6 @@ var _js_window: Variant
 @onready var resume_button: Button = $VBoxContainer/ResumeButton
 @onready var back_to_main_button: Button = $VBoxContainer/BackToMainButton
 @onready var options_button: Button = $VBoxContainer/OptionsButton
-
-
-func _input(event: InputEvent) -> void:
-	## Handles input events.
-	##
-	## Logs mouse clicks for debugging.
-	##
-	## :param event: Input event.
-	## :type event: InputEvent
-	## :rtype: void
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var pos: Vector2 = event.position
-		Globals.log_message("Clicked at: (%s, %s)" % [pos.x, pos.y], Globals.LogLevel.DEBUG)
 
 
 func _ready() -> void:

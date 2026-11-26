@@ -145,24 +145,18 @@ func test_pm_06_options_button_pressed() -> void:
 	assert_bool(Globals.options_open).is_true()
 
 
-## PM-07 | Test unhandled input and mouse click debug handler.
+## PM-07 | Test unhandled input. Mouse clicks are no longer logged, so the menu has no
+## _input() debug handler (#1169).
 func test_pm_07_input_events() -> void:
 	var menu: CanvasLayer = _create_pause_menu()
 	add_child(menu)
 	await await_idle_frame()
 
-	# Mouse click input
-	var mouse_event := InputEventMouseButton.new()
-	mouse_event.button_index = MOUSE_BUTTON_LEFT
-	mouse_event.pressed = true
-	mouse_event.position = Vector2(100, 200)
-	menu._input(mouse_event)
-
-	# Non-matching mouse input (ignored)
-	var right_click := InputEventMouseButton.new()
-	right_click.button_index = MOUSE_BUTTON_RIGHT
-	right_click.pressed = true
-	menu._input(right_click)
+	# No mouse click debug handler: the script must not define _input()
+	var script_methods: Array = []
+	for method: Dictionary in menu.get_script().get_script_method_list():
+		script_methods.append(method["name"])
+	assert_array(script_methods).not_contains(["_input"])
 
 	# Pause action when options are open (early return guard)
 	Globals.options_open = true
