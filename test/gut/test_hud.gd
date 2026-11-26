@@ -697,3 +697,47 @@ func test_freeing_hud_leaves_no_connections() -> void:
 	# The first HUD still follows the resources
 	_speed.current_speed = _speed.max_speed
 	assert_true(_hud.is_speed_warning_active(), "The remaining HUD still reacts.")
+
+
+## Changing a threshold alone updates the warning after the speed source is replaced.
+func test_speed_warning_tracks_threshold_changes_after_speed_replacement() -> void:
+	var replacement := SpeedResource.new()
+	replacement.current_speed = replacement.max_speed * 0.75
+	_hud.setup_hud(_fuel, replacement, _weapon)
+	assert_false(_hud.is_speed_warning_active(), "Speed starts below the high warning band.")
+
+	replacement.high_yellow_fraction = 0.75
+	assert_true(_hud.is_speed_warning_active(), "The new threshold reaches the current speed.")
+	assert_true(_hud.is_speed_timer_running(), "The label timer starts without a speed update.")
+
+	replacement.high_yellow_fraction = 0.76
+	assert_false(_hud.is_speed_warning_active(), "Moving the threshold above speed clears it.")
+	assert_false(_hud.is_speed_timer_running(), "The label timer stops without a speed update.")
+
+
+## Replacing or detaching one HUD must leave another subscriber to the same resources live.
+func test_hud_cleanup_preserves_shared_resource_subscribers(
+	cleanup: String = use_parameters(["replace", "exit_tree"])
+) -> void:
+	var other_hud: Panel = _build_isolated_hud_tree()
+	add_child_autoqfree(other_hud)
+	other_hud.setup_hud(_fuel, _speed, _weapon)
+
+	if cleanup == "replace":
+		_hud.setup_hud(FuelResource.new(), SpeedResource.new(), WeaponResource.new())
+	else:
+		remove_child(_hud)
+
+	var previous_speed: float = _hud.speed_bar.value
+	var previous_fuel: float = _hud.fuel_bar.value
+	var previous_ammo: float = _hud.ammo_bar.value
+	_speed.current_speed = _speed.max_speed
+	_fuel.current_fuel = _fuel.max_fuel * 0.5
+	_weapon.current_ammo = 25
+
+	assert_eq(other_hud.speed_bar.value, _speed.max_speed, "The other HUD still tracks speed.")
+	assert_eq(other_hud.fuel_bar.value, _fuel.current_fuel, "The other HUD still tracks fuel.")
+	assert_eq(other_hud.ammo_bar.value, 25.0, "The other HUD still tracks ammo.")
+	assert_eq(_hud.speed_bar.value, previous_speed, "The old speed signal has no effect.")
+	assert_eq(_hud.fuel_bar.value, previous_fuel, "The old fuel signal has no effect.")
+	assert_eq(_hud.ammo_bar.value, previous_ammo, "The old ammo signal has no effect.")

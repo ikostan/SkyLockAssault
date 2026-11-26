@@ -111,3 +111,36 @@ func test_menus_do_not_preload_options_scene() -> void:
 		var menu: Node = load(path).instantiate()
 		assert_false("options_menu" in menu, "%s must not keep an options_menu scene." % path)
 		menu.free()
+
+
+## Both callers still open the configured Options scene and are restored by its Back button.
+func test_options_button_round_trip_without_a_menu_local_scene(
+	caller: String = use_parameters(["main", "pause"])
+) -> void:
+	Globals.options_open = false
+	Globals.options_instance = null
+	Globals.hidden_menus = []
+	Globals.settings.options_scene = load(GamePaths.OPTIONS_MENU_SCENE)
+
+	var scene_path := GamePaths.PAUSE_MENU_SCENE if caller == "pause" else "res://scenes/main_menu.tscn"
+	var menu: Node = load(scene_path).instantiate()
+	add_child_autofree(menu)
+	menu.show()
+	var menu_to_hide: Node = menu if caller == "pause" else menu.ui_panel
+
+	menu.options_button.pressed.emit()
+	var options: CanvasLayer = Globals.options_instance
+	assert_not_null(options, "The Options button opens the configured scene.")
+	if options == null:
+		return
+	autoqfree(options)
+	await wait_process_frames(1)
+	assert_true(Globals.options_open)
+	assert_false(menu_to_hide.visible, "Opening Options hides the caller.")
+
+	options.options_back_button.pressed.emit()
+	await wait_process_frames(2)
+	assert_false(is_instance_valid(options), "Back closes the Options scene.")
+	assert_false(Globals.options_open)
+	assert_null(Globals.options_instance)
+	assert_true(menu_to_hide.visible, "Back restores the caller.")
