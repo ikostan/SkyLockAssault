@@ -4,24 +4,29 @@ Nov 26, 2026
 
 ## Summary
 
-Do Milestone 27.6 first. Then add two bots inside existing milestones: the
-code-smell report in 29 (read-only) and API docs in 33 (no AI). Types go into
-the refactor work, with no bot. Milestone 28 (game dev) gets nothing added.
-Sentry waits for the JS separation and real players.
+Do Milestone 27.6 first. Then add two bots across Milestones 29–35, with at most
+3 automation PRs per milestone: the code-smell report in 29–30 (read-only) and
+API docs in 31–32 (no AI), then the project guides in 33–34. Types go into the
+refactor work, with no bot. Milestone 28 (game dev) gets nothing added. Sentry
+waits for the JS separation and real players.
 
 <!-- markdownlint-disable MD013 -->
 ```mermaid
 flowchart TD
   M276["27.6 · CI/CD security<br/>Epic #1227: deploy path, scans, workflow scanners"]
   M28["28 · Game dev, nothing added<br/>3D P-38, hold-to-fire"]
-  M29["29 · Refactor + code-smell report<br/>Report bot, docstring bot weekly, untyped_declaration warning<br/>Refactor tasks add static types to the code they touch"]
-  M33["33 · Docs + Harden-Runner<br/>API docs, project guides (#162), Harden-Runner"]
+  M29["29 · Code-smell metrics script (no AI)<br/>Docstring bot weekly, untyped_declaration warning<br/>Refactor tasks add static types to the code they touch"]
+  M30["30 · Code-smell AI review + workflow wiring<br/>First full baseline scan, then weekly read-only reports"]
+  M31["31 · API docs: generate + convert (no AI)<br/>Harden-Runner audit mode"]
+  M32["32 · API docs: deploy to the chosen host<br/>Harden-Runner block mode"]
+  M33["33 · Project guides: pages (#162 part 1)"]
+  M34["34 · Project guides on the docs site (#162 part 2)"]
+  M35["35 · Buffer for follow-ups"]
   LATER["Later · Sentry crash reports<br/>Real error data from the itch.io build"]
   TOOLS["Claude Code tools<br/>Godot MCP, DeepWiki MCP<br/>Local setup, no PR, any time"]
   M276 -->|gate: workflows hardened| M28
-  M28 --> M29
-  M29 --> M33
-  M33 -->|gate: JS separated, real players| LATER
+  M28 --> M29 --> M30 --> M31 --> M32 --> M33 --> M34 --> M35
+  M35 -->|gate: JS separated, real players| LATER
   style M28 stroke-width:3px
 ```
 <!-- markdownlint-enable MD013 -->
@@ -44,7 +49,10 @@ the project.
 - **Cleanup before features.** Automation supports the architecture refactor. It
   doesn't replace it, and no bot touches game features.
 - **One bot per day, one quota per bot.** Scheduled bots never share a day, and
-  each new flow gets its own API key so it can't starve the docstring workflow.
+  each new flow gets its own quota: a separate Google project, or a provider
+  with its own limits. A second key in the docstring bot's project isn't enough,
+  because Gemini's free limits are per project, so it could still starve the
+  docstring workflow.
 - **Bots open PRs, you merge.** No pushes to `main`, no auto-merge.
 - **No new PR review bots.** You already triage four.
 - **The refactor stays sequential.** One task at a time, no parallel agents on
@@ -81,18 +89,18 @@ access to a public repo that deploys to itch.io.
 Gemini key, the itch.io deploy credentials) or to slip code into `main`.
 
 <!-- markdownlint-disable MD013 -->
-| Plan item                      | Covered by                                                                      |
-|--------------------------------|---------------------------------------------------------------------------------|
-| The epic                       | #1227                                                                           |
-| CodeQL `actions` scan + zizmor | #1240 (report-only first, made blocking later)                                  |
-| Godot 4.5 vs 4.7.1 mismatch    | #1234 (drops CodeQL's own 4.5 export, scans the deployed build, gates the push) |
-| `patch_index_js.sh`            | #1239 (review in depth first, then harden it or drop it)                        |
-| Findings                       | #1228–#1238, #1241–#1245                                                        |
+| Plan item | Covered by |
+| --- | --- |
+| The epic | #1227 |
+| CodeQL `actions` scan + zizmor | #1240 (report-only first, made blocking later) |
+| Godot 4.5 vs 4.7.1 mismatch | #1234 (drops CodeQL's own 4.5 export, scans the deployed build, gates the push) |
+| `patch_index_js.sh` | #1239 (review in depth first, then harden it or drop it) |
+| Findings | #1228–#1238, #1241–#1245 |
 <!-- markdownlint-enable MD013 -->
 
-**Moved out of 27.6:** Harden-Runner, audit then block mode, goes to Milestone
-33. The fork-PR approval setting (Settings → Actions → "Require approval for all
-outside collaborators") is a settings change with no PR, so do it any time.
+**Moved out of 27.6:** Harden-Runner, audit then block mode, goes to Milestones
+31–32. The fork-PR approval setting (Settings → Actions → "Require approval for
+all outside collaborators") is a settings change with no PR, so do it any time.
 
 ## Phase 2 — Code-smell report
 
@@ -114,8 +122,8 @@ trend.
   Reuses `gdlint` where it already covers a rule.
 - **Layer 2, AI review of flagged files only:** god classes, autoload overuse,
   duplicated logic, tight coupling between scenes, direct calls where a signal
-  fits, test-only JS code in production paths. Runs on its own key; the provider
-  is chosen in task 2.2 (see Open decisions).
+  fits, test-only JS code in production paths. Runs on its own quota; the
+  provider is chosen in task 2.2 (see Open decisions).
 - **Output:** `files/docs/code_health/YYYY-MM-DD.md`, with:
   - a summary table per smell type, and the trend since the last report
   - one row per finding: file:line, severity, smell, why it matters, suggested
@@ -149,7 +157,8 @@ map during the refactor and the GUT migration. Test reports, also planned, can
 go on the same site later.
 
 - **Trigger:** a push to `main` that changes `scripts/**/*.gd` (merged docstring
-  PRs included), plus manual dispatch.
+  PRs included) or the guides in `files/docs/guides/**` (#162), plus manual
+  dispatch.
 - **Steps:** Godot 4.7.1 headless doctool exports the class reference from
   GDScript docstrings, a converter turns the XML into HTML or markdown, and the
   result deploys to the chosen host (see Open decisions).
@@ -224,15 +233,16 @@ suite gives you.
 
 ## Bot calendar and AI quotas
 
-Each bot gets its own day and its own key. Gemini's free limits are per Google
-project, so a new flow on the docstring bot's key would eat its quota.
+Each bot gets its own day and its own quota. Gemini's free limits are per Google
+project, so a new flow in the docstring bot's project would eat its quota, even
+with a separate key.
 
 <!-- markdownlint-disable MD013 -->
-| Bot                       | When (UTC)         | AI and key                               | What it may change                        |
-|---------------------------|--------------------|------------------------------------------|-------------------------------------------|
-| Docstring sync (existing) | Sun 00:00 (weekly) | Gemini, existing key                     | Docstrings in the 6 production folders    |
-| Code-smell report         | Fri 00:00          | Provider chosen in task 2.2, its own key | One new file in `files/docs/code_health/` |
-| API docs publish          | On push to `main`  | None                                     | The docs site only                        |
+| Bot | When (UTC) | AI and key | What it may change |
+| --- | --- | --- | --- |
+| Docstring sync (existing) | Sun 00:00 (weekly) | Gemini, existing key | Docstrings in the 6 production folders |
+| Code-smell report | Fri 00:00 | Provider chosen in task 2.2, its own quota | One new file in `files/docs/code_health/` |
+| API docs publish | On push to `main` | None | The docs site only |
 <!-- markdownlint-enable MD013 -->
 
 **Task:** make the docstring bot weekly in one small PR: change its cron to
@@ -268,15 +278,15 @@ free for follow-ups. Nothing goes into 27, 27.5, 27.6 or 28, and no milestone
 gets more than 3 automation PRs. The order follows the dependencies.
 
 <!-- markdownlint-disable MD013 -->
-| Milestone | PRs                                                                                                                                       | Why there                                                                                                                         |
-|-----------|-------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
-| 29        | Code-smell 2.1 metrics script · docstring bot weekly (cron + rename to `weekly_gd_docstrings.yml`) · `untyped_declaration` warning → Warn | The warning goes on while the Globals refactor rewrites the most code; 2.1 has no AI and no workflow, so it's safe to start first |
-| 30        | Code-smell 2.2 AI review (test providers, choose one) · 2.3 workflow wiring                                                               | First full baseline scan at the end of 30, weekly reports from then on                                                            |
-| 31        | API docs 3.1 generate + convert · Harden-Runner audit mode                                                                                | Both read-only; audit mode needs time to collect logs                                                                             |
-| 32        | API docs 3.2 deploy (test hosts, choose one) · Harden-Runner block mode                                                                   | Block mode gets 2+ weeks of audit logs from 31                                                                                    |
-| 33        | #162 part 1: guide pages                                                                                                                  | The Globals refactor (29) is done, so the architecture guide describes the final code                                             |
-| 34        | #162 part 2: add the guides to the docs site                                                                                              | Needs the docs site (32) and the pages (33)                                                                                       |
-| 35        | Buffer only                                                                                                                               | Room for follow-ups without pushing anything                                                                                      |
+| Milestone | PRs | Why there |
+| --- | --- | --- |
+| 29 | Code-smell 2.1 metrics script · docstring bot weekly (cron + rename to `weekly_gd_docstrings.yml`) · `untyped_declaration` warning → Warn | The warning goes on while the Globals refactor rewrites the most code; 2.1 has no AI and no workflow, so it's safe to start first |
+| 30 | Code-smell 2.2 AI review (test providers, choose one) · 2.3 workflow wiring | First full baseline scan at the end of 30, weekly reports from then on |
+| 31 | API docs 3.1 generate + convert · Harden-Runner audit mode | Both read-only; audit mode needs time to collect logs |
+| 32 | API docs 3.2 deploy (test hosts, choose one) · Harden-Runner block mode | Block mode gets 2+ weeks of audit logs from 31 |
+| 33 | #162 part 1: guide pages | The Globals refactor (29) is done, so the architecture guide describes the final code |
+| 34 | #162 part 2: add the guides to the docs site | Needs the docs site (32) and the pages (33) |
+| 35 | Buffer only | Room for follow-ups without pushing anything |
 <!-- markdownlint-enable MD013 -->
 
 **No PR needed:** the "touched code is typed" criterion on the refactor issues,
@@ -325,4 +335,7 @@ players.
   *How to test:* publish the output from task 3.1 to the top two candidates and
   compare setup effort, how it looks and secrets needed.
 
-**Next step:** file the code-smell epic and its 3 sub-tasks in Milestone 29.
+**Next step:** Phase 2 is filed as epic #1259 (Milestone 30), with sub-tasks
+in the table's milestones: #1260 in 29, #1261 and #1262 in 30. Next, file the
+Phase 3 docs epic, the Harden-Runner epic and their sub-tasks in the milestones
+from the table above.
