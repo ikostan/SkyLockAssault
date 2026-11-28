@@ -34,8 +34,8 @@ func before_each() -> void:
 	_orig_previous_scene = Globals.previous_scene
 	_orig_options_scene = Globals.settings.options_scene
 	_orig_key_mapping_scene = Globals.settings.key_mapping_scene
-	# Audio Back falls back to this scene when no live menu is left; blank it so the test
-	# runner's scene is never replaced.
+	# Audio Back used to fall back to this scene when no live menu was left (removed in
+	# #1180); kept blank so the test runner's scene can never be replaced.
 	Globals.previous_scene = ""
 
 
@@ -203,8 +203,8 @@ func test_hms_06_audio_back_skips_freed_entry() -> void:
 	assert_true(audio.is_queued_for_deletion(), "The player is not stuck in Audio Settings")
 
 
-## HMS-07 | Audio Back with only freed entries: handled like an empty stack (the
-## previous_scene fallback, blanked here), and Audio is still freed
+## HMS-07 | Audio Back with only freed entries: handled like an empty stack (no menu is
+## restored), and Audio is still freed
 func test_hms_07_audio_back_only_freed_entries_still_closes() -> void:
 	var audio: Control = load(GamePaths.AUDIO_SETTINGS_SCENE).instantiate()
 	add_child_autofree(audio)

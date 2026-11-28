@@ -2,7 +2,7 @@
 ## SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 ## res://scripts/ui/menus/settings_menu_base.gd
 ##
-## Shared base class for settings sub-menus (Gameplay today; Audio and Advanced next).
+## Shared base class for settings sub-menus (Gameplay and Audio today; Advanced next).
 ##
 ## Owns the boilerplate every settings menu used to repeat:
 ##   * Signal cleanup: connections created by safe_connect() are tracked and removed on

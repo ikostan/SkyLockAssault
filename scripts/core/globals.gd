@@ -104,9 +104,9 @@ var hidden_menus: Array[Node] = []
 var options_open: bool = false
 ## Key Mapping scene for direct loading from warning dialogs.
 # var key_mapping_scene: PackedScene = preload("res://scenes/key_mapping_menu.tscn")
-## Scene that audio_settings.gd falls back to when Back is pressed with an empty
-## hidden_menus stack. Never reassigned in production; tests blank it so that path
-## does not replace the test runner's scene.
+## No longer read by any menu: audio_settings.gd used it as its Back fallback with an empty
+## hidden_menus stack until it moved onto SettingsMenuBase (#1180). Some tests still blank
+## it; it can be removed together with those lines.
 var previous_scene: String = "res://scenes/main_menu.tscn"
 # var options_scene: PackedScene = preload("res://scenes/options_menu.tscn")
 var next_scene: String = ""  # Path to the next scene to load via loading screen.
