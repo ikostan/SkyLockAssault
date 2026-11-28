@@ -5,13 +5,22 @@
 ## Audio Settings Script
 ## Handles UI logic, slider inputs, warning dialogs, and menu navigation.
 ## Web integration is now decoupled and managed by the AudioWebBridge Autoload.
+## Signal cleanup, Back / unexpected-exit handling, menu-stack navigation and focus are
+## inherited from SettingsMenuBase (settings_menu_base.gd) (#1180).
 
-extends Control
+extends SettingsMenuBase
+
+## Label color while its slider or mute button has focus.
+const LABEL_FOCUS_COLOR: Color = Color("f5f50d")
+## Label color otherwise.
+const LABEL_IDLE_COLOR: Color = Color("ffffff")
 
 # Test flags for warning popups
 var master_warning_shown: bool = false
 var sfx_warning_shown: bool = false
-var _intentional_exit: bool = false
+## The AudioWebBridge autoload, or null off web (it frees itself there). Cached in _ready()
+## so _cleanup() can hide the overlay after this menu has left the tree.
+var _audio_web_bridge: Node = null
 
 # Master Volume Controls
 @onready var master_slider: HSlider = $Panel/VolumeControls/Master/HSlider
@@ -46,6 +55,8 @@ var _intentional_exit: bool = false
 
 
 func _ready() -> void:
+	super()  # process_mode = ALWAYS (usable while paused) + tree_exited -> teardown
+
 	# Warning popup messages
 	master_warning_dialog.title = "Warning"
 	master_warning_dialog.dialog_text = "To adjust this volume, please unmute the Master volume first."
@@ -53,14 +64,10 @@ func _ready() -> void:
 	sfx_warning_dialog.dialog_text = "To adjust this volume, please unmute the SFX volume first."
 
 	# Connect dialog close signals for flag reset
-	if not master_warning_dialog.confirmed.is_connected(_reset_master_warning_shown):
-		master_warning_dialog.confirmed.connect(_reset_master_warning_shown)
-	if not master_warning_dialog.canceled.is_connected(_reset_master_warning_shown):
-		master_warning_dialog.canceled.connect(_reset_master_warning_shown)
-	if not sfx_warning_dialog.confirmed.is_connected(_reset_sfx_warning_shown):
-		sfx_warning_dialog.confirmed.connect(_reset_sfx_warning_shown)
-	if not sfx_warning_dialog.canceled.is_connected(_reset_sfx_warning_shown):
-		sfx_warning_dialog.canceled.connect(_reset_sfx_warning_shown)
+	safe_connect(master_warning_dialog.confirmed, _reset_master_warning_shown)
+	safe_connect(master_warning_dialog.canceled, _reset_master_warning_shown)
+	safe_connect(sfx_warning_dialog.confirmed, _reset_sfx_warning_shown)
+	safe_connect(sfx_warning_dialog.canceled, _reset_sfx_warning_shown)
 
 	# --- Connect UI Signals ---
 	_connect_bus_ui(
@@ -107,31 +114,81 @@ func _ready() -> void:
 	)
 
 	# Connect specific mute button warning interceptors
-	if not mute_music.gui_input.is_connected(_on_music_mute_gui_input):
-		mute_music.gui_input.connect(_on_music_mute_gui_input)
-	if not mute_sfx.gui_input.is_connected(_on_sfx_mute_gui_input):
-		mute_sfx.gui_input.connect(_on_sfx_mute_gui_input)
-	if not mute_weapon.gui_input.is_connected(_on_weapon_mute_gui_input):
-		mute_weapon.gui_input.connect(_on_weapon_mute_gui_input)
-	if not mute_rotor.gui_input.is_connected(_on_rotor_mute_gui_input):
-		mute_rotor.gui_input.connect(_on_rotor_mute_gui_input)
-	if not mute_menu.gui_input.is_connected(_on_menu_mute_gui_input):
-		mute_menu.gui_input.connect(_on_menu_mute_gui_input)
+	safe_connect(mute_music.gui_input, _on_music_mute_gui_input)
+	safe_connect(mute_sfx.gui_input, _on_sfx_mute_gui_input)
+	safe_connect(mute_weapon.gui_input, _on_weapon_mute_gui_input)
+	safe_connect(mute_rotor.gui_input, _on_rotor_mute_gui_input)
+	safe_connect(mute_menu.gui_input, _on_menu_mute_gui_input)
 
 	# Buttons
-	if not audio_back_button.pressed.is_connected(_on_back_button_pressed):
-		audio_back_button.pressed.connect(_on_back_button_pressed)
+	safe_connect(audio_back_button.pressed, _on_back_button_pressed)
+	safe_connect(audio_reset_button.pressed, _on_audio_reset_button_pressed)
 
-	if not audio_reset_button.pressed.is_connected(_on_audio_reset_button_pressed):
-		audio_reset_button.pressed.connect(_on_audio_reset_button_pressed)
-
-	tree_exited.connect(_on_tree_exited)
-	process_mode = Node.PROCESS_MODE_ALWAYS
+	# Label highlight follows focus (no per-frame polling)
+	_connect_label_focus(master_label, master_slider, mute_master)
+	_connect_label_focus(music_label, music_slider, mute_music)
+	_connect_label_focus(sfx_label, sfx_slider, mute_sfx)
+	_connect_label_focus(weapon_label, weapon_slider, mute_weapon)
+	_connect_label_focus(rotor_label, rotor_slider, mute_rotor)
+	_connect_label_focus(menu_label, menu_slider, mute_menu)
 
 	_sync_ui_from_manager()
 
-	# Initial Focus
-	var menu_controls: Array[Control] = [
+	# Initial Focus (deferred grab; the label highlight follows through focus_entered)
+	_grab_initial_focus()
+
+	# 1. Listen for changes coming from Playwright/Web
+	safe_connect(AudioManager.volume_changed, _on_global_volume_changed)
+	safe_connect(AudioManager.mute_toggled, _on_global_mute_toggled)
+
+	# Apply the hierarchy locks immediately when the menu opens
+	_update_ui_interactivity()
+
+	# --- WEB BRIDGE CONNECTIONS ---
+	_audio_web_bridge = get_node_or_null("/root/AudioWebBridge")
+	if _audio_web_bridge:
+		# Show the HTML overlays when the menu opens
+		_audio_web_bridge.toggle_dom_visibility(true)
+
+		# Listen for the browser's Back button!
+		safe_connect(_audio_web_bridge.web_back_requested, _on_back_button_pressed)
+
+		# Listen for the browser's Reset button!
+		safe_connect(_audio_web_bridge.web_reset_requested, _on_audio_reset_button_pressed)
+
+
+## Back button (Godot and browser).
+##
+## Delegates to SettingsMenuBase._go_back(): restores exactly one previous menu, shows the
+## Options overlay and frees this menu. A second press before the free is ignored. The Audio
+## overlay is hidden by _cleanup() when the menu leaves the tree.
+## :rtype: void
+func _on_back_button_pressed() -> void:
+	_go_back()
+
+
+# ==========================================================================
+# SettingsMenuBase HOOKS
+# ==========================================================================
+
+
+func _get_menu_name() -> String:
+	return "Audio Settings"
+
+
+## AudioWebBridge owns the Audio overlay (toggle_dom_visibility()), so the base hides
+## nothing itself; _cleanup() hides the overlay. The base still shows the Options overlay
+## (OPTIONS_MENU_OVERLAY_IDS) on both exit paths.
+func _get_overlay_ids() -> Array[String]:
+	return []
+
+
+func _get_initial_focus_control() -> Control:
+	return master_slider
+
+
+func _get_focus_controls() -> Array[Control]:
+	return [
 		master_slider,
 		mute_master,
 		music_slider,
@@ -147,69 +204,29 @@ func _ready() -> void:
 		audio_back_button,
 		audio_reset_button
 	]
-	Globals.ensure_initial_focus(master_slider, menu_controls, "Audio Settings")
-
-	# 1. Listen for changes coming from Playwright/Web
-	AudioManager.volume_changed.connect(_on_global_volume_changed)
-	AudioManager.mute_toggled.connect(_on_global_mute_toggled)
-
-	# Apply the hierarchy locks immediately when the menu opens
-	_update_ui_interactivity()
-
-	# --- WEB BRIDGE CONNECTIONS ---
-	var web_bridge: Node = get_node_or_null("/root/AudioWebBridge")
-	if web_bridge:
-		# Show the HTML overlays when the menu opens
-		web_bridge.toggle_dom_visibility(true)
-
-		# Listen for the browser's Back button!
-		if not web_bridge.web_back_requested.is_connected(_on_back_button_pressed):
-			web_bridge.web_back_requested.connect(_on_back_button_pressed)
-
-		# Listen for the browser's Reset button!
-		if not web_bridge.web_reset_requested.is_connected(_on_audio_reset_button_pressed):
-			web_bridge.web_reset_requested.connect(_on_audio_reset_button_pressed)
 
 
-func _on_back_button_pressed() -> void:
-	Globals.log_message("Audio Settings: Back button pressed.", Globals.LogLevel.DEBUG)
-	_intentional_exit = true
+## Back path only: return focus to the Audio button in Options, or to Start in the main menu.
+## The name / type checks are replaced by the menu stack in #1100.
+## :param prev_menu: The menu that was just restored.
+## :type prev_menu: Node
+## :rtype: void
+func _on_previous_menu_restored(prev_menu: Node) -> void:
+	if prev_menu.has_method("grab_focus_on_audio_settings_button"):
+		prev_menu.call("grab_focus_on_audio_settings_button")
+	elif prev_menu.name == "Panel" or prev_menu is Panel:
+		var start_button: Button = prev_menu.get_node_or_null("VBoxContainer/StartButton")
+		if is_instance_valid(start_button):
+			start_button.call_deferred("grab_focus")
 
-	# 1. Safely hide the Audio HTML DOM
-	var web_bridge: Node = get_node_or_null("/root/AudioWebBridge")
-	if web_bridge:
-		web_bridge.toggle_dom_visibility(false)
 
-	# 2. Restore the previous menu AND its HTML DOM AND focus
-	var prev_menu: Node = Globals.pop_hidden_menu()
-	if prev_menu != null:
-		prev_menu.show()
-
-		# --- Focus Restoration (Moved here from the old function!) ---
-		if prev_menu.has_method("grab_focus_on_audio_settings_button"):
-			prev_menu.call("grab_focus_on_audio_settings_button")
-		elif prev_menu.name == "Panel" or prev_menu is Panel:
-			var start_button: Button = prev_menu.get_node_or_null("VBoxContainer/StartButton")
-			if is_instance_valid(start_button):
-				# FIX: Changed from triple-nested call_deferred to a single call
-				start_button.call_deferred("grab_focus")
-
-		# --- HTML DOM Restoration ---
-		if prev_menu.has_method("toggle_dom_visibility"):
-			prev_menu.toggle_dom_visibility(true)
-		elif "_web_bridge" in prev_menu and prev_menu.get("_web_bridge") != null:
-			var prev_bridge: Node = prev_menu.get("_web_bridge")
-			if prev_bridge.has_method("toggle_dom_visibility"):
-				prev_bridge.toggle_dom_visibility(true)
-		elif web_bridge and web_bridge.has_method("restore_options_menu_dom"):
-			# Clean fallback via the bridge! (Replaces the raw JS evals)
-			web_bridge.restore_options_menu_dom()
-	else:
-		# --- Fallback to previous scene ---
-		if Globals.previous_scene != "":
-			get_tree().change_scene_to_file(Globals.previous_scene)
-
-	queue_free()
+## Teardown hook (runs once, on Back and on unexpected exit, before the base disconnects the
+## tracked signals): hides the Audio overlay through AudioWebBridge.
+## :rtype: void
+func _cleanup() -> void:
+	if is_instance_valid(_audio_web_bridge):
+		_audio_web_bridge.toggle_dom_visibility(false)
+	_audio_web_bridge = null
 
 
 ## Syncs the disabled/editable state of every mute button and slider from AudioManager's
@@ -292,32 +309,47 @@ func _connect_bus_ui(
 	gui_callback: Callable,
 	is_muted: bool
 ) -> void:
-	if not mute_btn.toggled.is_connected(mute_callback):
-		mute_btn.toggled.connect(mute_callback)
+	safe_connect(mute_btn.toggled, mute_callback)
 	# FIX: Use set_pressed_no_signal so it doesn't trigger the callback during setup
 	mute_btn.set_pressed_no_signal(not is_muted)
-	if not slider.gui_input.is_connected(gui_callback):
-		slider.gui_input.connect(gui_callback)
+	safe_connect(slider.gui_input, gui_callback)
 
 
-func _process(_delta: float) -> void:
-	_update_label_colors()
+# ==========================================
+# LABEL HIGHLIGHT (focus-driven, #1180)
+# ==========================================
 
 
-func _update_label_colors() -> void:
-	var yellow := Color("f5f50d")
-	var white := Color("ffffff")
+## Keeps a bus label's color in step with its slider's and mute button's focus, and sets it
+## once now. Focus moving between the two fires focus_exited first (nothing focused yet),
+## then focus_entered, so the label ends up highlighted.
+## :param label: The bus label.
+## :type label: Label
+## :param slider: The bus's volume slider.
+## :type slider: HSlider
+## :param mute_btn: The bus's mute button.
+## :type mute_btn: CheckButton
+## :rtype: void
+func _connect_label_focus(label: Label, slider: HSlider, mute_btn: CheckButton) -> void:
+	var update: Callable = _update_label_color.bind(label, slider, mute_btn)
+	for control: Control in [slider, mute_btn]:
+		safe_connect(control.focus_entered, update)
+		safe_connect(control.focus_exited, update)
+	_update_label_color(label, slider, mute_btn)
 
-	master_label.modulate = (
-		yellow if (master_slider.has_focus() or mute_master.has_focus()) else white
-	)
-	music_label.modulate = yellow if (music_slider.has_focus() or mute_music.has_focus()) else white
-	sfx_label.modulate = yellow if (sfx_slider.has_focus() or mute_sfx.has_focus()) else white
-	weapon_label.modulate = (
-		yellow if (weapon_slider.has_focus() or mute_weapon.has_focus()) else white
-	)
-	rotor_label.modulate = yellow if (rotor_slider.has_focus() or mute_rotor.has_focus()) else white
-	menu_label.modulate = yellow if (menu_slider.has_focus() or mute_menu.has_focus()) else white
+
+## Colors a bus label: LABEL_FOCUS_COLOR while its slider or mute button has focus,
+## LABEL_IDLE_COLOR otherwise.
+## :param label: The bus label.
+## :type label: Label
+## :param slider: The bus's volume slider.
+## :type slider: HSlider
+## :param mute_btn: The bus's mute button.
+## :type mute_btn: CheckButton
+## :rtype: void
+func _update_label_color(label: Label, slider: HSlider, mute_btn: CheckButton) -> void:
+	var focused: bool = slider.has_focus() or mute_btn.has_focus()
+	label.modulate = LABEL_FOCUS_COLOR if focused else LABEL_IDLE_COLOR
 
 
 # ==========================================
@@ -410,36 +442,6 @@ func _sync_ui_from_manager() -> void:
 
 	# Delegate all lock/unlock hierarchy logic to the single source of truth
 	_update_ui_interactivity()
-
-
-func _on_tree_exited() -> void:
-	# --- CLEANUP: Disconnect from Autoloads to prevent memory leaks/errors ---
-	if AudioManager.volume_changed.is_connected(_on_global_volume_changed):
-		AudioManager.volume_changed.disconnect(_on_global_volume_changed)
-
-	if AudioManager.mute_toggled.is_connected(_on_global_mute_toggled):
-		AudioManager.mute_toggled.disconnect(_on_global_mute_toggled)
-
-	# FIX: Safely grab the web bridge during teardown without absolute path crashing
-	var web_bridge: Node = null
-	if is_inside_tree():
-		web_bridge = get_node_or_null("/root/AudioWebBridge")
-	elif Engine.get_main_loop() is SceneTree:  # Ultimate fallback for tests
-		web_bridge = (Engine.get_main_loop() as SceneTree).root.get_node_or_null("AudioWebBridge")
-
-	if web_bridge:
-		if web_bridge.web_back_requested.is_connected(_on_back_button_pressed):
-			web_bridge.web_back_requested.disconnect(_on_back_button_pressed)
-		if web_bridge.web_reset_requested.is_connected(_on_audio_reset_button_pressed):
-			web_bridge.web_reset_requested.disconnect(_on_audio_reset_button_pressed)
-	# -------------------------------------------------------------------------
-
-	if _intentional_exit:
-		return
-
-	var prev_menu: Node = Globals.pop_hidden_menu()
-	if prev_menu != null:
-		prev_menu.visible = true
 
 
 # ==========================================
